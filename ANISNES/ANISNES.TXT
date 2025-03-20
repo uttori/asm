@@ -1,0 +1,52 @@
+ANIM2PCX
+________
+
+This is a program from the DeluxePaint Animation development kit which
+turns .ANM files into a series of .PCX files. You simply invoke the
+program with the filename of the .ANM file (without the .ANM extension)
+that you wish to convert.
+
+Eg. ANIM2PCX CRY
+
+    - this will convert CRY.ANM into CRY0001.PCX, CRY0002.PCX etc...
+
+Note this program may be freely distributed.
+
+
+ANISNES
+_______
+
+This is my program which will turn a series of 320x200 pixel 256 colour 
+.PCX files into SNES format animation data. You simply invoke the program
+with the name of the .PCX file series that you wish to convert.
+
+Eg. ANISNES CRY
+
+    - this will convert CRY0001.PCX, CRY0002.PCX etc... into CRY.SAF and
+      CRY.SAD.
+
+These .SAF and .SAD files can then be included in the TEST.SRC source
+code.
+
+Full C++ source codes for this program is contained in the SOURCE.CPP
+directory.
+
+
+TEST.SRC and other .SRC files
+_____________________________
+
+These are the 65816 source codes required for playing back animations
+generated with ANISNES. If you look at the bottom of TEST.SRC I hope it
+is obvious where you include the .SAF and .SAD files and the tables that
+you have to update. 
+
+Note that I have included my assembler with this package because a lot
+of people were having problems using other assemblers when including 
+binary files that crossed bank boundaries with >32K files generated
+with my GIF2SOPT/PCX2SOPT convertors.
+
+Having modified TEST.SRC you'll simply need to assemble it with
+
+    SNASM TEST.SRC
+
+When you run TEST.SMC, press B to go onto the next animation.

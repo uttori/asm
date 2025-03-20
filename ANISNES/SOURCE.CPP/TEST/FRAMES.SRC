@@ -1,0 +1,43 @@
+readyNextFrame
+    php
+
+    rep #$30                                ; A, X & Y 16-bits
+
+    ldy.b frameIndex                        ; get frame index
+
+    lda [framePointer],y                    ; get frame pointer
+
+    cmp.w #$FFFF                            ; end of frame?
+    bne nextFrame
+
+    ldy.w #$0006                            ; then reset to second frame
+    lda [framePointer],y
+
+nextFrame
+    iny                                     ; update frame index
+    iny
+    clc                                     ; add frame pointer to animation pointer, checking for
+    adc animationPointer                    ; crossing a bank boundary
+    bcc noOverflow
+    ora.w #$8000
+
+noOverflow
+    sta.b sourceOffset
+
+    lda [framePointer],y                    ; get frame bank
+    iny ; update frame index
+    iny
+    adc animationPointer+$02                ; add frame bank to animation bank
+    stz.b sourcePointer
+    sta.b sourcePointer+$02
+
+    lda [framePointer],y                    ; get length of uncompressed data
+    iny                                     ; update frame index
+    iny
+    sta.b decompressLength
+
+    sty.b frameIndex                        ; save frame index
+
+    plp                                     ; restore processor status
+
+    rts                                     ; return
