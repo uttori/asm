@@ -2073,7 +2073,16 @@
 	<span class="hljs-opcodes">bra</span> <span class="hljs-label">++</span>
 <span class="hljs-label">++</span>			<span class="hljs-comment">; :pos_2_1</span>
 <span class="hljs-label">+++</span>			<span class="hljs-comment">; :pos_3_0</span></code></pre>
-		<h4 id="macro-labels">Macro Labels</h4>
+
+
+
+
+
+
+
+
+
+<h4 id="macro-labels">Macro Labels</h4>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes">[#]?{<span class="hljs-label">identifier</span>}:</code></pre>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes">?{<span class="hljs-label">identifier</span>} = {<span class="hljs-label">snes_address</span>}</code></pre>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes">[#]?.{<span class="hljs-label">identifier</span>}[:]</code></pre>
@@ -2101,6 +2110,17 @@
 		Like all other labels, macro labels are converted to main labels internally and prefixed with an identifier of<br>
 		<code class="65c816_asar">:macro_x_</code><br>
 		where <code>x</code> = total macro call instance. They can't be referenced in code directly, except inside their respective macro and using the respective macro label syntax seen above. They can, however, be accessed via the Asar DLL API, and their full name may appear in error messages printed by Asar.
+
+
+
+
+
+
+
+
+
+
+
 
 
 

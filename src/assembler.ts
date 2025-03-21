@@ -78,7 +78,6 @@ export class Assembler {
   public mapper: string = "lorom"; // Possible values: lorom, hirom, exlorom, exhirom, sa1rom, sfxrom, bigsa1rom, norom
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
   public romdata: number[] = []; // Placeholder for ROM
-  public romlen: number = 0;
   public default_freespacebyte: number = 0x00;
 
   public pass: number = 0;
@@ -307,17 +306,15 @@ export class Assembler {
 
     // debug('write1_65816 this.pass', this.pass);
     if (this.pass === 2) {
-      this.romdata[pcpos] = num & 0xFF;
-
-      // debug("write1_65816 romdata[pcpos]", this.romdata[pcpos].toString(16));
-
       if (pcpos >= this.romdata.length) {
-        debug("write1_65816 pcpos >= romdata.length", pcpos, this.romdata.length);
+        // debug("write1_65816 pcpos >= romdata.length", pcpos, this.romdata.length);
         if (pcpos - this.romdata.length > 0) {
           this.fillRomData(this.romdata.length, this.default_freespacebyte, pcpos - this.romdata.length);
         }
-        this.romlen = pcpos + 1;
       }
+
+      this.romdata[pcpos] = num & 0xFF;
+      // debug("write1_65816 romdata[pcpos]", pcpos, this.romdata[pcpos].toString(16));
     }
 
     this.step(1);
@@ -332,7 +329,7 @@ export class Assembler {
   fillRomData(start: number, value: number, length: number): void {
     debug("fillRomData", start, value, length);
     for (let i = 0; i < length; i++) {
-      this.romdata[start + i] = value;
+      this.romdata[start + i] = value & 0xFF;
     }
   }
 
@@ -434,7 +431,7 @@ export class Assembler {
    */
   read1(insnespos: number): number {
     const addr = this.snestopc(insnespos);
-    if (addr < 0 || addr + 1 > this.romlen) {
+    if (addr < 0 || addr + 1 > this.romdata.length) {
       return -1;
     }
     return this.romdata[addr];
@@ -442,7 +439,7 @@ export class Assembler {
 
   read2(insnespos: number): number {
     const addr = this.snestopc(insnespos);
-    if (addr < 0 || addr + 2 > this.romlen) {
+    if (addr < 0 || addr + 2 > this.romdata.length) {
       return -1;
     }
     return this.romdata[addr] | (this.romdata[addr + 1] << 8);
@@ -450,7 +447,7 @@ export class Assembler {
 
   read3(insnespos: number): number {
     const addr = this.snestopc(insnespos);
-    if (addr < 0 || addr + 3 > this.romlen) {
+    if (addr < 0 || addr + 3 > this.romdata.length) {
       return -1;
     }
     return this.romdata[addr] | (this.romdata[addr + 1] << 8) | (this.romdata[addr + 2] << 16);
@@ -580,7 +577,6 @@ export class Assembler {
     if (command.trim().startsWith(";`+")) {
       debug("Test file directive detected; loading target ROM and setting ROM length to 512 KB.");
       const testRomSize = 512 * 1024; // 512 KB
-      this.romlen = testRomSize;
       // If a target ROM data buffer is provided (assume it's stored in this.targetRom)
       if (this.targetRom && this.targetRom.length > 0) {
         // Copy up to testRomSize bytes from targetRom into our romdata array.
@@ -1137,8 +1133,6 @@ export class Assembler {
     this.addAddressToLine(this.realsnespos & 0xFFFFFF);
   }
 
-
-
   /**
    * Handles the ARCH command.
    * @param {string[]} words - The words from the ARCH command.
@@ -1275,7 +1269,7 @@ export class Assembler {
    * @returns {string} The expanded macro line.
    */
   expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string {
-    debug("expandMacroLine", line, fixedArgs, variadicArgs, variadicCount)
+    debug("expandMacroLine", { line, fixedArgs, variadicArgs, variadicCount })
     let expanded = line;
     // Replace fixed parameters of the form <param>
     expanded = expanded.replace(/<(\w+)>/g, (match: string, paramName: string) => {
@@ -2624,8 +2618,7 @@ export class Assembler {
       throw new Error("expandRom requires a number for newSize and fsByte");
     }
     if (newSize > this.romdata.length) {
-      this.writeDataBytes(this.romlen, fsByte, newSize - this.romlen);
-      this.romlen = newSize;
+      this.writeDataBytes(this.romdata.length, fsByte, newSize - this.romdata.length);
     } else {
       debug("expandRom newSize <= this.romdata.length, no expansion needed");
     }
@@ -2952,14 +2945,14 @@ export class Assembler {
       headerOffset = 0xFFC0;
     }
 
-    if (this.romlen < headerOffset + 0x20) {
+    if (this.romdata.length < headerOffset + 0x20) {
       debug("ROM too small for header update.");
       return;
     }
 
     // Calculate the 16-bit checksum (the sum of all bytes modulo 0x10000).
     let checksum = 0;
-    for (let i = 0; i < this.romlen; i++) {
+    for (let i = 0; i < this.romdata.length; i++) {
       checksum = (checksum + (this.romdata[i] & 0xFF)) & 0xFFFF;
     }
     const complement = (~checksum) & 0xFFFF;
