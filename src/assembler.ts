@@ -606,7 +606,7 @@ export class Assembler {
             // If we couldn't find a macro-specific ?+ label, try the regular + label as fallback
             if (nextAddr === null) {
               debug("processCommand no macro-local + label found, falling back to global + label");
-              nextAddr = this.findNextLabel("+");
+              nextAddr = this.findNextLabel("?+");
             }
 
             debug("processCommand resolved ?+ to address:", nextAddr);
@@ -646,7 +646,7 @@ export class Assembler {
             // If we couldn't find a macro-specific ?- label, try the regular - label as fallback
             if (prevAddr === null) {
               debug("processCommand no macro-local - label found, falling back to global - label");
-              prevAddr = this.findPreviousLabel("-");
+              prevAddr = this.findPreviousLabel("?-");
             }
 
             debug("processCommand resolved ?- to address", prevAddr);
@@ -1718,7 +1718,8 @@ export class Assembler {
     debug("findNextLabel", label);
     debug("findNextLabel this.forwardLabels", this.forwardLabels);
 
-    const depth = label.length; // Number of `+` signs
+    const isPositive = label.includes("+");
+    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
     const currentAddress = this.snespos;
     const isMacroLocal = label.startsWith("?");
 
@@ -1760,7 +1761,8 @@ export class Assembler {
   findPreviousLabel(label: string): number {
     debug("findPreviousLabel", label);
 
-    const depth = label.length; // Number of `-` signs
+    const isPositive = label.includes("+");
+    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
     const currentAddress = this.snespos;
     const isMacroLocal = label.startsWith("?");
 
