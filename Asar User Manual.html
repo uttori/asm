@@ -1978,6 +1978,21 @@
 	<span class="hljs-opcodes">dl</span> <span class="hljs-label">MyNewRoutine</span>
 	<span class="hljs-opcodes">dl</span> <span class="hljs-label">Main_Sub</span></code></pre>
 		Asar includes a label optimizer which attempts to optimize performance by shortening opcodes accessing labels from 24-bit to 16-bit whenever possible. See section <a href="https://rpghacker.github.io/asar/asar_19/manual/#program-counter">Program Counter</a> for details.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		<h4 id="sub-labels">Sub Labels</h4>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes">[#].{<span class="hljs-label">identifier</span>}[:]</code></pre>
 		Sub labels are the second-most level of labels supported by Asar. They're local to the last main label declared and their identifiers can contain the same characters as main labels.
@@ -2023,6 +2038,21 @@
 <span class="hljs-keywords">Table</span>:
 	<span class="hljs-opcodes">dl</span> <span class="hljs-label">Main1_Sub_Deeper_TheEnd</span></code></pre>
 		Prefixing a sub label definition with a <code>#</code> will define the sub label without modifying existing label hierarchies, but there is probably no practical use for this and it's unintuitive, so it should be avoided.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		<h4 id="plus-minus-labels">+/- Labels</h4>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes"><span class="hljs-label">+</span>[<span class="hljs-label">+</span>...][:]</code></pre>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes"><span class="hljs-label">-</span>[<span class="hljs-label">-</span>...][:]</code></pre>
@@ -2295,6 +2325,18 @@
 		<h4 id="pushns">pushns/pullns</h4>
 		<code>pushns</code> saves the current namespace. <code>pullns</code> restores the last-pushed value of the namespace.
 
+
+
+
+
+
+
+
+
+
+
+
+
 		<h4 id="global-labels">Global labels</h4>
 		While in a namespace, you can use the keyword <code class="65c816_asar">global</code> to define labels outside all namespaces. The syntax is <code class="65c816_asar">global [#]{identifier}:</code>. For example:
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes">
@@ -2441,6 +2483,22 @@
 			</tr>
 		</tbody></table><br>
 		<a href="https://rpghacker.github.io/asar/asar_19/manual/#contents">Return to top</a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		<hr>
 		<div id="macros"><h3>Macros</h3>
 		Macros are a mechanism for recording a sequence of commands that can be used in other places. The main purpose of this is to include commonly used code in multiple places without actually having to rewrite or copy that code every time. Instead you can move it into a macro and write it only once. Macros, in concept, work similarly to defines in that they are a text-replacement mechanism, but they have a few key differences:

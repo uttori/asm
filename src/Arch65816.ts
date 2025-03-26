@@ -976,6 +976,12 @@ export class Arch65816 {
   handleJump(opcode: string, operand: string): boolean {
     debug("handleJump", { opcode, operand });
 
+    // If the operand is a number, convert it to a base 16 string prefixed with $
+    if (/^\d+$/.test(operand)) {
+      operand = "$" + parseInt(operand, 10).toString(16);
+      debug("handleJump converted numeric operand to hex:", operand);
+    }
+
     const jumpOpcodes: { [key: string]: number } = {
         JMP: 0x4C,     // JMP Absolute
         JSR: 0x20,     // JSR Absolute
@@ -1053,7 +1059,8 @@ export class Arch65816 {
 
   /**
    * Handles the PER (Push Effective Relative Address) instruction.
-   * @param operand
+   * @param {string} operand The operand to handle.
+   * @returns {boolean} true if the instruction was handled, false otherwise
    */
   private handlePER(operand: string): boolean {
     debug("handlePER", operand);

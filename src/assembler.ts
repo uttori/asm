@@ -47,6 +47,8 @@ export type WhileTracker = {
 export type LabelEntry = {
   value: number;
   isStatic: boolean;
+  isMacroLabel?: boolean;
+  macroInstance?: number; // Tracks which macro instance this label belongs to
 };
 
 // Represents a structure definition.
@@ -127,9 +129,9 @@ export class Assembler {
   public labelTable: Map<string, LabelEntry> = new Map();
 
   /** Track multiple `+` labels */
-  public forwardLabels: { [depth: number]: number[] } = {};
+  public forwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
   /** Track multiple `-` labels */
-  public backwardLabels: { [depth: number]: number[] } = {};
+  public backwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
 
   public padUnit: number = 1;
   public padbyte: number[] = []
@@ -157,6 +159,9 @@ export class Assembler {
   public currentLoop: LoopBlock | null = null; // Reference to the loop block currently being constructed
   public collectingLoop: boolean = false; // Flag to indicate we're collecting loop commands
   public loopNestingLevel: number = 0; // Current nesting level for loops
+
+  public macroLabelInstance: number = 0; // Tracks the current macro instance
+  public inMacroExpansion: boolean = false; // Flag to track if we're inside a macro expansion
 
   constructor(targetRom?: number[]) {
     this.targetRom = targetRom ?? [];
@@ -345,11 +350,36 @@ export class Assembler {
       return true;
     }
 
-    // In pass 0, allow forward references by returning a dummy value.
+    // In pass 0, we need to still increment the position counter,
+    // but we don't need to actually write bytes to ROM
     if (this.pass === 0) {
+      // Determine approximate instruction size based on operand
+      let size = 1; // Default size for instructions with no operand
+
+      if (words.length > 1) {
+        const operand = words.slice(1).join(" ");
+
+        // Handle immediate addressing mode
+        if (operand.startsWith("#")) {
+          size = 2; // Immediate byte or word (most common)
+        }
+        // Handle absolute addressing or other multi-byte instructions
+        else if (operand.includes("$") || operand.includes(",")) {
+          size = 3; // Most instructions with operands are 2-3 bytes
+        }
+      }
+
+      // Instructions like JSL, JML are typically 4 bytes
+      if (["JSL", "JML"].includes(words[0].toUpperCase())) {
+        size = 4;
+      }
+
+      // Step the counter by our estimated instruction size
+      this.step(size);
       return true;
     }
 
+    // For pass > 0, proceed with actual architecture-specific handling
     if (this.arch === "spc700") {
       return this.asblock_spc700(words);
     } else if (this.arch === "superfx") {
@@ -382,6 +412,11 @@ export class Assembler {
     return true;
   }
 
+  /**
+   * SuperFX instruction handler.
+   * @param {string[]} words - The words to pick.
+   * @returns {boolean} True if the instruction was handled, false otherwise.
+   */
   asblock_superfx(words: string[]): boolean {
     debug("asblock_superfx", words);
     if (!this.archSuperFX.asblock_superfx(words)) {
@@ -390,6 +425,11 @@ export class Assembler {
     return true;
   }
 
+  /**
+   * 65816 instruction handler.
+   * @param {string[]} words - The words to pick.
+   * @returns {boolean} True if the instruction was handled, false otherwise.
+   */
   asblock_65816(words: string[]): boolean {
     debug("asblock_65816", words);
     if (!this.arch65816.asblock_65816(words)) {
@@ -519,7 +559,160 @@ export class Assembler {
    */
   processCommand(command: string): void {
     if (command.trim() === "") return;
-    debug("processCommand", { command }, this.snespos, "/", this.snespos.toString(16));
+    debug("processCommand", { command }, this.snespos, "/", this.snespos.toString(16), `pass ${this.pass}`);
+
+    // Inside processCommand method, modify the section that handles macro label references
+    // Check for macro label references (?label or #label) in operands
+    if (this.inMacroExpansion && (command.includes("?") || command.includes("#"))) {
+      debug("processCommand found potential macro label reference", command);
+
+      // Create a modified copy of the command for label substitution
+      let modifiedCommand = command;
+
+      // Handle ?+ and ?- special references
+      if (modifiedCommand.includes("?+") || modifiedCommand.includes("?-")) {
+        debug("processCommand processing ?+ or ?- references:", modifiedCommand);
+
+        // Replace ?+ with the next label address
+        if (modifiedCommand.includes("?+")) {
+          // For macros, we need to look ahead in the macro body to find the next ?+ label
+          // not the global + label
+          const currentMacroInstance = this.macroLabelInstance;
+
+          // First check if there's a ?+ label definition coming up in the macro
+          const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
+          let nextAddr = null;
+
+          // Check if we're at the label definition itself
+          if (modifiedCommand.trim().startsWith("?+:")) {
+            // Don't resolve label references in a label definition
+            debug("processCommand skipping ?+ resolution in label definition");
+          } else {
+            // Look for the label in our stored labels
+            for (const [key, info] of this.labelTable.entries()) {
+              // Check for various possible formats of macro-local + labels
+              if (key.startsWith(macroLabelPrefix) && (
+                  key === `${macroLabelPrefix}+` ||     // Direct format: :macro_X_+
+                  key.endsWith("_+") ||                 // Parent_SubLabel format: :macro_X_Parent_+
+                  key === `:pos_${currentMacroInstance}_1` // Encoded format: :pos_X_1 (internal)
+                ) && info.value > this.snespos) {
+                debug(`processCommand found macro-local + label: ${key} = ${info.value}`);
+                if (nextAddr === null || info.value < nextAddr) {
+                  nextAddr = info.value;
+                }
+              }
+            }
+
+            // If we couldn't find a macro-specific ?+ label, try the regular + label as fallback
+            if (nextAddr === null) {
+              debug("processCommand no macro-local + label found, falling back to global + label");
+              nextAddr = this.findNextLabel("+");
+            }
+
+            debug("processCommand resolved ?+ to address:", nextAddr);
+            modifiedCommand = modifiedCommand.replace(/\?\+/g, "$" + nextAddr.toString(16));
+          }
+        }
+
+        // Replace ?- with the previous label address
+        if (modifiedCommand.includes("?-")) {
+          // For macros, we should look for a previous ?- label, not the global - label
+          const currentMacroInstance = this.macroLabelInstance;
+
+          // First check if there's a ?- label definition previously in the macro
+          const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
+          let prevAddr = null;
+
+          // Check if we're at the label definition itself
+          if (modifiedCommand.trim().startsWith("?-:")) {
+            // Don't resolve label references in a label definition
+            debug("processCommand skipping ?- resolution in label definition");
+          } else {
+            // Look for the label in our stored labels
+            for (const [key, info] of this.labelTable.entries()) {
+              // Check for various possible formats of macro-local - labels
+              if (key.startsWith(macroLabelPrefix) && (
+                  key === `${macroLabelPrefix}-` ||     // Direct format: :macro_X_-
+                  key.endsWith("_-") ||                 // Parent_SubLabel format: :macro_X_Parent_-
+                  key === `:neg_${currentMacroInstance}_1` // Encoded format: :neg_X_1 (internal)
+                ) && info.value < this.snespos) {
+                debug(`processCommand found macro-local - label: ${key} = ${info.value}`);
+                if (prevAddr === null || info.value > prevAddr) {
+                  prevAddr = info.value;
+                }
+              }
+            }
+
+            // If we couldn't find a macro-specific ?- label, try the regular - label as fallback
+            if (prevAddr === null) {
+              debug("processCommand no macro-local - label found, falling back to global - label");
+              prevAddr = this.findPreviousLabel("-");
+            }
+
+            debug("processCommand resolved ?- to address", prevAddr);
+            modifiedCommand = modifiedCommand.replace(/\?-/g, "$" + prevAddr.toString(16));
+          }
+        }
+
+        debug("processCommand after resolving ?+/- references:", modifiedCommand);
+      }
+
+      // Handle ?Label references with correct scope
+      if (modifiedCommand.includes("?")) {
+        debug("processCommand resolving ?Label references in command", modifiedCommand);
+
+        // First, handle Parent_SubLabel pattern (?Parent_SubLabel) which is common in macros
+        modifiedCommand = modifiedCommand.replace(/(?<!\w)(\?[\w+.\-]+_[\w+.\-]+)(?!:)/g, (match: string, labelRef: string) => {
+          // Skip if this appears to be a label definition, not a reference
+          if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
+            return match;
+          }
+
+          try {
+            // Try to get the label value using our getLabelValue method
+            const labelValue = this.getLabelValue(labelRef, false);
+            debug(`processCommand resolved Parent_SubLabel ${labelRef} to ${labelValue} (${labelValue.toString(16)})`);
+            return "$" + labelValue.toString(16);
+          } catch (e: unknown) {
+            debug(`processCommand failed to resolve Parent_SubLabel ${labelRef}: ${e instanceof Error ? e.message : ""}`, e);
+            // If in pass 0, return a placeholder
+            if (this.pass === 0) {
+              return "$0000";
+            }
+            throw e;
+          }
+        });
+
+        // Then handle regular ?Label references
+        modifiedCommand = modifiedCommand.replace(/(?<!\w)(\?[\w+.\-]+)(?!:)/g, (match, labelRef) => {
+          // Skip if this appears to be a label definition, not a reference
+          if (modifiedCommand.trim().startsWith(match) &&
+              (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
+            return match;
+          }
+
+          try {
+            // Try to get the label value using our getLabelValue method
+            const labelValue = this.getLabelValue(labelRef, false);
+            debug(`processCommand resolved ${labelRef} to ${labelValue} (${labelValue.toString(16)})`);
+            return "$" + labelValue.toString(16);
+          } catch (e) {
+            debug(`processCommand failed to resolve ${labelRef}: ${e.message}`);
+            // If in pass 0, return a placeholder
+            if (this.pass === 0) {
+              return "$0000";
+            }
+            throw e;
+          }
+        });
+      }
+
+      // Update the command if it was modified
+      if (modifiedCommand !== command) {
+        debug("processCommand modified command with macro label references", modifiedCommand);
+        command = modifiedCommand;
+      }
+    }
 
     // If we're in a loop body and not processing an inner loop or endfor, store the command
     if (this.collectingLoop && !command.match(/^\s*(for|while|endfor|endwhile)/i)) {
@@ -604,7 +797,7 @@ export class Assembler {
     }
 
     // Function Definition Mode
-    if (keyword.toLowerCase().startsWith("function ")) {
+    if (keyword && keyword.toLowerCase().startsWith("function ")) {
       // If it ends with "\" we keep collecting
       if (keyword.endsWith("\\")) {
         this.inFunctionDefinition = true;
@@ -779,49 +972,10 @@ export class Assembler {
       return;
     }
 
-      // New: handle fillbyte (and fillword, filllong, filldword)
-    if (
-      keyword === "fillbyte" ||
-      keyword === "fillword" ||
-      keyword === "filllong" ||
-      keyword === "filldword"
-    ) {
-      debug(`processCommand ${keyword}`, words);
-      let len: number;
-      if (keyword === "fillbyte") len = 1;
-      else if (keyword === "fillword") len = 2;
-      else if (keyword === "filllong") len = 3;
-      else if (keyword === "filldword") len = 4;
-      else throw new Error("Unrecognized fillbyte directive.");
-
-      if (words.length !== 2) {
-        throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
-      }
-      const val = this.getnum(this.resolvedefines(words[1]));
-      debug(`processCommand ${keyword} value`, val);
-      // Optionally warn if a label is used here.
-      // Fill our fill pattern array in 12-byte blocks.
-      for (let i = 0; i < 12; i += len) {
-        let tmpVal = val;
-        for (let j = 0; j < len; j++) {
-          this.fillbyte[i + j] = tmpVal & 0xFF;
-          tmpVal >>>= 8;
-        }
-      }
-      return; // done processing this line.
-    }
-
-    // New: handle "fill" command.
-    if (keyword === "fill") {
-      debug("processCommand fill", words);
-      // Syntax: fill {number_of_bytes}
-      if (words.length !== 2) {
-        throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
-      }
-      const count = this.getnum(this.resolvedefines(words[1]));
-      for (let i = 0; i < count; i++) {
-        this.write1(this.fillbyte[i % 12]);
-      }
+    // Handle relative labels (+ and -)
+    if ((keyword.startsWith("+") || keyword.startsWith("-")) && keyword.endsWith(":")) {
+      this.handleRelativeLabel(keyword);
+      // Record mapping and finish.
       this.addAddressToLine(this.realsnespos & 0xFFFFFF);
       return;
     }
@@ -830,7 +984,7 @@ export class Assembler {
     // (Dynamic labels get their value from the current PC.)
     // Check if the first token ends with a colon.
     while (words.length > 0 && keyword.endsWith(":")) {
-      debug("non-relative (named) label assignment", words)
+      debug("processCommand non-relative (named) label assignment", words)
       // Remove the colon to get the label name.
       const labelName = keyword.slice(0, -1);
       // Define the label at the current SNES position.
@@ -897,7 +1051,47 @@ export class Assembler {
         this.handleInclude("include", words[1], true);
         break;
       }
+      case "fillbyte":
+      case "fillword":
+      case "filllong":
+      case "filldword": {
+        debug(`processCommand ${keyword}`, words);
+        let len: number;
+        if (keyword === "fillbyte") len = 1;
+        else if (keyword === "fillword") len = 2;
+        else if (keyword === "filllong") len = 3;
+        else if (keyword === "filldword") len = 4;
+        else throw new Error("Unrecognized fillbyte directive.");
 
+        if (words.length !== 2) {
+          throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
+        }
+        const val = this.getnum(this.resolvedefines(words[1]));
+        debug(`processCommand ${keyword} value`, val);
+        // Optionally warn if a label is used here.
+        // Fill our fill pattern array in 12-byte blocks.
+        for (let i = 0; i < 12; i += len) {
+          let tmpVal = val;
+          for (let j = 0; j < len; j++) {
+            this.fillbyte[i + j] = tmpVal & 0xFF;
+            tmpVal >>>= 8;
+          }
+        }
+        break;
+      }
+      case "fill": {
+        debug("processCommand fill", words);
+        // Syntax: fill {number_of_bytes}
+        if (words.length !== 2) {
+          throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
+        }
+        const count = this.getnum(this.resolvedefines(words[1]));
+        for (let i = 0; i < count; i++) {
+          this.write1(this.fillbyte[i % 12]);
+        }
+        // this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+        break;
+      }
       case "padbyte":
       case "padword":
       case "padlong":
@@ -956,7 +1150,7 @@ export class Assembler {
         for (let i = 0; i < gap; i++) {
           this.write1(this.padbyte[i % this.padUnit]);
         }
-        this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+        // this.addAddressToLine(this.realsnespos & 0xFFFFFF);
         break;
       }
       case "base": {
@@ -1034,21 +1228,26 @@ export class Assembler {
         break;
       }
         case "+":
-        case "-":
+        case "-": {
           this.handleRelativeLabel(command);
           break;
-        case "if":
-            this.handleIf(words.slice(1));
-            break;
-        case "elseif":
-            this.handleElseIf(words.slice(1));
-            break;
-        case "else":
+        }
+        case "if": {
+          this.handleIf(words.slice(1));
+          break;
+        }
+        case "elseif": {
+          this.handleElseIf(words.slice(1));
+          break;
+        }
+        case "else": {
             this.handleElse();
             break;
-        case "endif":
+        }
+        case "endif": {
             this.handleEndIf();
             break;
+        }
         case "while":
             this.handleWhile(words.slice(1));
             break;
@@ -1140,8 +1339,8 @@ export class Assembler {
    */
   handleArch(words: string[]): void {
     debug("handleArch", words)
-    if (words.length < 2) {
-      throw new Error("ARCH command requires an architecture parameter.");
+    if (!words[1]) {
+      throw new Error("ARCH command requires an architecture parameter.")
     }
     const archParam = words[1].toLowerCase();
     if (archParam === "65816") {
@@ -1176,87 +1375,139 @@ export class Assembler {
    * @param {string} invocation The macro invocation to expand and call.
    */
   callMacro(invocation: string): void {
-    debug("callMacro", invocation)
+    debug("callMacro", invocation);
+
+    // Increment the macro instance counter at the start
+    this.macroLabelInstance++;
+    debug("Incremented macro instance counter to", this.macroLabelInstance);
+
+    // Track if we're in a macro expansion
+    const previousMacroExpansionState = this.inMacroExpansion;
+    this.inMacroExpansion = true;
+
     // Use a regex to extract macro name and arguments.
     const invocationRegex = /^(\w+)\((.*)\)$/;
-    const match = invocation.match(invocationRegex);
-    if (!match) {
-      throw new Error(`Invalid macro invocation: ${invocation}`);
-    }
-    const macroName = match[1].trim();
-    const argsString = match[2].trim();
-    // Parse arguments handling quoted strings properly
-    const args: string[] = [];
-    if (argsString) {
-      debug("callMacro argsString =", argsString)
+    const m = invocation.match(invocationRegex);
+    debug("callMacro m", m)
+
+    if (!m) {
+      // Simple macro without arguments.
+      const macroName = invocation.substring(1);
+      debug("callMacro macroName", macroName)
+      if (!this.macros.has(macroName)) {
+        throw new Error(`Error: Macro '${macroName}' not defined.`);
+      }
+      const macro = this.macros.get(macroName);
+
+      // Handle the case where a macro has parameters but was called without them.
+      if (macro.params.length > 0) {
+        debug("callMacro macro.params args", macro.params)
+        const fixedArgs = new Map<string, string>();
+        for (let i = 0; i < macro.params.length; i++) {
+          fixedArgs.set(macro.params[i], "");
+        }
+
+        // Expand each line of the macro.
+        for (const line of macro.body) {
+          const expandedLine = this.expandMacroLine(line, fixedArgs, [], 0);
+          debug(`callMacro (${macroName}, no args): ${expandedLine}`);
+          // Use processMacroLine instead of assembleblock
+          this.processMacroLine(expandedLine);
+        }
+      } else {
+        debug("callMacro macro.body no args", macro.body)
+        // No parameters, just process each line.
+        for (const line of macro.body) {
+          debug(`callMacro (${macroName}, no args): ${line}`);
+          // Use processMacroLine instead of assembleblock
+          this.processMacroLine(line);
+        }
+      }
+    } else {
+      // Macro with arguments.
+      const macroName = m[1];
+      const args = m[2].trim();
+      if (!this.macros.has(macroName)) {
+        throw new Error(`Error: Macro '${macroName}' not defined.`);
+      }
+      const macro = this.macros.get(macroName);
+
+      // Split the arguments. Handle quoted strings and escaped sequences.
+      const argValues: string[] = [];
       let currentArg = "";
       let inQuotes = false;
-      let i = 0;
+      let escapeNext = false;
 
-      while (i < argsString.length) {
-        const char = argsString[i];
+      for (let i = 0; i < args.length; i++) {
+        const c = args[i];
 
-        // Handle escaped quotes inside quoted strings
-        if (char === '"' && inQuotes && argsString[i+1] === '"') {
-          currentArg += '"';
-          i += 2; // Skip both quote characters
+        if (escapeNext) {
+          currentArg += c;
+          escapeNext = false;
           continue;
         }
 
-        // Toggle quote state
-        if (char === '"') {
-          inQuotes = !inQuotes;
-          i++;
+        if (c === "\\") {
+          escapeNext = true;
           continue;
         }
 
-        // If we hit a comma outside of quotes, we've reached the end of an argument
-        if (char === "," && !inQuotes) {
-          args.push(currentArg.trim());
+        if (c === '"' && !inQuotes) {
+          inQuotes = true;
+          continue;
+        }
+
+        if (c === '"' && inQuotes) {
+          inQuotes = false;
+          continue;
+        }
+
+        if (c === "," && !inQuotes) {
+          argValues.push(currentArg.trim());
           currentArg = "";
-          i++;
           continue;
         }
 
-        // Add the current character to the argument
-        currentArg += char;
-        i++;
+        currentArg += c;
       }
 
-      // Add the last argument if there is one
-      if (currentArg.trim() || args.length > 0) {
-        args.push(currentArg.trim());
+      if (currentArg.length > 0) {
+        argValues.push(currentArg.trim());
+      }
+
+      // Create a mapping of argument names to values.
+      const fixedArgs = new Map<string, string>();
+
+      for (let i = 0; i < macro.params.length; i++) {
+        if (i < argValues.length) {
+          fixedArgs.set(macro.params[i], argValues[i]);
+        } else {
+          fixedArgs.set(macro.params[i], "");
+        }
+      }
+
+      // Handle variadic arguments if the macro expects them.
+      const variadicArgs: string[] = [];
+      let variadicCount = 0;
+
+      if (macro.variadic && argValues.length > macro.params.length) {
+        variadicCount = argValues.length - macro.params.length;
+        for (let i = macro.params.length; i < argValues.length; i++) {
+          variadicArgs.push(argValues[i]);
+        }
+      }
+
+      // Expand each line of the macro.
+      for (const line of macro.body) {
+        const expandedLine = this.expandMacroLine(line, fixedArgs, variadicArgs, variadicCount);
+        debug(`callMacro (${macroName}, with args): ${expandedLine}`);
+        // Use processMacroLine instead of assembleblock
+        this.processMacroLine(expandedLine);
       }
     }
-    if (!this.macros.has(macroName)) {
-      throw new Error(`Macro '${macroName}' is not defined.`);
-    }
-    const macroDef = this.macros.get(macroName);
-    if (!macroDef) {
-      throw new Error(`Macro '${macroName}' is not defined.`);
-    }
-    // Validate argument counts.
-    if (!macroDef.variadic && args.length !== macroDef.params.length) {
-      throw new Error(`Macro '${macroName}' expects ${macroDef.params.length} parameters, but got ${args.length}.`);
-    }
-    if (macroDef.variadic && args.length < macroDef.params.length) {
-      throw new Error(`Macro '${macroName}' expects at least ${macroDef.params.length} parameters, but got ${args.length}.`);
-    }
-    debug("callMacro args =", args)
-    // Build a mapping for fixed parameters.
-    const fixedArgs = new Map<string, string>();
-    for (let i = 0; i < macroDef.params.length; i++) {
-      fixedArgs.set(macroDef.params[i], args[i]);
-    }
-    // The remaining arguments (if any) are variadic.
-    const variadicArgs = macroDef.variadic ? args.slice(macroDef.params.length) : [];
-    const variadicCount = variadicArgs.length;
-    // Expand each line of the macro body.
-    for (const line of macroDef.body) {
-      const expandedLine = this.expandMacroLine(line, fixedArgs, variadicArgs, variadicCount);
-      // Process the expanded line just as if it were written in the source.
-      this.assembleblock(expandedLine);
-    }
+
+    // Restore the previous macro expansion state
+    this.inMacroExpansion = previousMacroExpansionState;
   }
 
   /**
@@ -1269,7 +1520,21 @@ export class Assembler {
    * @returns {string} The expanded macro line.
    */
   expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string {
-    debug("expandMacroLine", { line, fixedArgs, variadicArgs, variadicCount })
+    debug("expandMacroLine", { line, fixedArgs, variadicArgs, variadicCount });
+
+    // First check if this line contains a label definition (ends with :)
+    if (line.match(/^\s*[#?][\w+.\-]+:/)) {
+      debug("expandMacroLine: found label definition, passing through", line);
+      return line;
+    }
+
+    // Check if this line contains a label assignment (contains =)
+    // This needs to be handled before parameter substitution
+    if (line.match(/^\s*[#?][\w+.\-]+\s*=/)) {
+      debug("expandMacroLine: found label assignment, passing through", line);
+      return line;
+    }
+
     let expanded = line;
     // Replace fixed parameters of the form <param>
     expanded = expanded.replace(/<(\w+)>/g, (match: string, paramName: string) => {
@@ -1394,12 +1659,17 @@ export class Assembler {
    */
   handleRelativeLabel(label: string): number {
     debug("handleRelativeLabel", label);
+    debug("handleRelativeLabel this.forwardLabels", this.forwardLabels);
+    debug("handleRelativeLabel this.backwardLabels", this.backwardLabels);
 
-    const depth = label.length;
-    const isPositive = label.startsWith("+");
+    const isPositive = label.includes("+");
+    const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
     const snesAddress = this.snespos;
 
-    if (this.pass > 0) {
+    // Check if this is a macro-local relative label (starts with ?)
+    const isMacroLocal = label.startsWith("?");
+
+    if (this.pass === 2) {
       // Search in stored labels
       if (isPositive) {
         if (!this.forwardLabels[depth] || this.forwardLabels[depth].length === 0) {
@@ -1410,18 +1680,32 @@ export class Assembler {
           throw new Error(`Error: Undefined backward label '${label}'.`);
         }
       }
+      debug("handleRelativeLabel =", snesAddress);
       return snesAddress;
     }
 
     // Pass 0: Store labels properly
     if (isPositive) {
       if (!this.forwardLabels[depth]) this.forwardLabels[depth] = [];
-      this.forwardLabels[depth].push(snesAddress);
+      debug(`handleRelativeLabel this.forwardLabels[${depth}] =`, snesAddress, "/", snesAddress.toString(16));
+      // Store with macro instance info if it's a macro-local label
+      if (isMacroLocal && this.inMacroExpansion) {
+        this.forwardLabels[depth].push({ addr: snesAddress, macroInstance: this.macroLabelInstance });
+      } else {
+        this.forwardLabels[depth].push({ addr: snesAddress });
+      }
     } else {
       if (!this.backwardLabels[depth]) this.backwardLabels[depth] = [];
-      this.backwardLabels[depth].push(snesAddress);
+      debug(`handleRelativeLabel this.backwardLabels[${depth}] =`, snesAddress, "/", snesAddress.toString(16));
+      // Store with macro instance info if it's a macro-local label
+      if (isMacroLocal && this.inMacroExpansion) {
+        this.backwardLabels[depth].push({ addr: snesAddress, macroInstance: this.macroLabelInstance });
+      } else {
+        this.backwardLabels[depth].push({ addr: snesAddress });
+      }
     }
 
+    debug("handleRelativeLabel =", snesAddress);
     return snesAddress;
   }
 
@@ -1432,24 +1716,36 @@ export class Assembler {
    */
   findNextLabel(label: string): number {
     debug("findNextLabel", label);
+    debug("findNextLabel this.forwardLabels", this.forwardLabels);
 
     const depth = label.length; // Number of `+` signs
     const currentAddress = this.snespos;
+    const isMacroLocal = label.startsWith("?");
 
     // **Pass 0: Don't resolve labels yet, just track**
-    if (this.pass === 0) {
+    if (this.pass < 2) {
       return 0; // Temporary placeholder value, will be resolved in Pass 2
     }
 
     // **Pass 2: Resolve properly**
     if (!this.forwardLabels[depth] || this.forwardLabels[depth].length === 0) {
-        throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
+      throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
     }
 
     // **Find the first label that is AFTER the current address**
-    const possibleTargets = this.forwardLabels[depth].filter(addr => addr > currentAddress);
+    const possibleTargets = this.forwardLabels[depth]
+      .filter(entry => {
+        // For macro-local labels, only consider labels from the current macro instance
+        if (isMacroLocal && this.inMacroExpansion) {
+          return entry.addr > currentAddress && entry.macroInstance === this.macroLabelInstance;
+        }
+        // For global labels, only consider non-macro labels
+        return entry.addr > currentAddress && !entry.macroInstance;
+      })
+      .map(entry => entry.addr);
+
     if (possibleTargets.length === 0) {
-        throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
+      throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
     }
 
     debug("findNextLabel possibleTargets", possibleTargets);
@@ -1466,19 +1762,30 @@ export class Assembler {
 
     const depth = label.length; // Number of `-` signs
     const currentAddress = this.snespos;
+    const isMacroLocal = label.startsWith("?");
 
     // **Pass 0: Don't resolve labels yet, just track**
     if (this.pass === 0) {
-        return 0; // Temporary placeholder, will be resolved in Pass 2
+      return 0; // Temporary placeholder, will be resolved in Pass 2
     }
 
     // **Pass 2: Resolve properly**
     if (!this.backwardLabels[depth] || this.backwardLabels[depth].length === 0) {
-        throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
+      throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
     }
 
     // **Find the first label that is BEFORE the current address**
-    const possibleTargets = this.backwardLabels[depth].filter(addr => addr < currentAddress);
+    const possibleTargets = this.backwardLabels[depth]
+      .filter(entry => {
+        // For macro-local labels, only consider labels from the current macro instance
+        if (isMacroLocal && this.inMacroExpansion) {
+          return entry.addr < currentAddress && entry.macroInstance === this.macroLabelInstance;
+        }
+        // For global labels, only consider non-macro labels
+        return entry.addr < currentAddress && !entry.macroInstance;
+      })
+      .map(entry => entry.addr);
+
     if (possibleTargets.length === 0) {
         throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
     }
@@ -1492,26 +1799,100 @@ export class Assembler {
    * @param {string} label - The label to set.
    * @param {number} value - The value to set the label to.
    * @param {boolean} isStatic - Whether the label is static.
+   * @param {boolean} isMacroLabel - Whether this is a macro label.
    */
-  setLabel(label: string, value?: number, isStatic: boolean = false): void {
-    debug("setLabel", { label, value, isStatic })
-    const fullLabel = this.currentNamespace ? `${this.currentNamespace}:${label}` : label;
+  setLabel(label: string, value?: number, isStatic: boolean = false, isMacroLabel: boolean = false): void {
+    debug("setLabel", { label, value, isStatic, isMacroLabel });
+
+    let fullLabel = label;
+
+    // Handle macro label format - they start with ? or #
+    if (isMacroLabel && (label.startsWith("?") || label.startsWith("#"))) {
+      const prefix = label.charAt(0);
+      const labelName = label.substring(1); // Remove the ? or # prefix
+
+      if (prefix === "?") {
+        // Check if this is a sub-label (starts with a dot)
+        if (labelName.startsWith(".")) {
+          // Store both the direct sub-label and a Parent_SubLabel version for compatibility
+          // First, find the most recent ?Label we've set
+          let recentMainLabel = "";
+          for (const [key, entry] of this.labelTable.entries()) {
+            if (entry.isMacroLabel && key.startsWith(`:macro_${this.macroLabelInstance}_`) &&
+                !key.includes("_SubLabel_")) {
+              // Extract the part after the instance prefix
+              const labelPart = key.substring(`:macro_${this.macroLabelInstance}_`.length);
+              // Skip if it's a sub-label itself (starts with .)
+              if (!labelPart.startsWith(".")) {
+                recentMainLabel = labelPart;
+              }
+            }
+          }
+
+          // Store the direct sub-label
+          fullLabel = `:macro_${this.macroLabelInstance}_${labelName}`;
+          debug("setLabel: creating instance-scoped macro sub-label", fullLabel);
+
+          // If we found a recent main label, also store a Parent_SubLabel version
+          if (recentMainLabel) {
+            // Store the name without the dot too
+            const subLabelWithoutDot = labelName.substring(1); // Remove the leading dot
+            const parentChildLabel = `:macro_${this.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
+            debug("setLabel: also creating parent-child macro label", parentChildLabel);
+
+            // Set the label table entry for the parent-child reference too
+            const subAddr = (value !== undefined) ? value : this.snespos;
+            this.labelTable.set(parentChildLabel, {
+              value: subAddr,
+              isStatic,
+              isMacroLabel: true,
+              macroInstance: this.macroLabelInstance
+            });
+          }
+        } else {
+          // Regular ?Label - scoped to the macro instance
+          fullLabel = `:macro_${this.macroLabelInstance}_${labelName}`;
+          debug("setLabel: creating instance-scoped macro label", fullLabel);
+        }
+      } else if (prefix === "#") {
+        // #Labels are globally available (still in current namespace)
+        fullLabel = this.currentNamespace ? `${this.currentNamespace}:${labelName}` : labelName;
+        debug("setLabel: creating global macro label", fullLabel);
+      }
+    } else if (!label.includes(":")) {
+      // Regular label with namespace
+      fullLabel = this.currentNamespace ? `${this.currentNamespace}:${label}` : label;
+    }
+
+    // If no value was provided, use the current SNES position
     const addr = (value !== undefined) ? value : this.snespos;
+
     if (this.pass === 0) {
-      debug("setLabel pass 0", { fullLabel, addr, addrHex: addr.toString(16), isStatic })
+      debug("setLabel pass 0", { fullLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel });
       if (this.labelTable.has(fullLabel)) {
         debug(`setLabel ⚠️ Warning: Label '${fullLabel}' redefined.`);
       }
-      this.labelTable.set(fullLabel, { value: addr, isStatic });
+      this.labelTable.set(fullLabel, {
+        value: addr,
+        isStatic,
+        isMacroLabel,
+        macroInstance: isMacroLabel ? this.macroLabelInstance : undefined
+      });
     } else if (this.pass === 1) {
-      debug("setLabel pass 1", { fullLabel, addr, addrHex: addr.toString(16), isStatic });
-      this.labelTable.set(fullLabel, { value: addr, isStatic });
+      debug("setLabel pass 1", { fullLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel });
+      this.labelTable.set(fullLabel, {
+        value: addr,
+        isStatic,
+        isMacroLabel,
+        macroInstance: isMacroLabel ? this.macroLabelInstance : undefined
+      });
     } else if (this.pass === 2) {
       if (!this.labelTable.has(fullLabel)) {
         throw new Error(`Error: Label '${fullLabel}' used but not defined.`);
       }
-      debug("setLabel pass 2", { fullLabel, addr, addrHex: addr.toString(16), isStatic });
-      // Optionally, you might check that a label expected to be static actually is.
+      debug("setLabel pass 2", { fullLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel });
+
+      // Optionally, check that a label expected to be static actually is
       const entry = this.labelTable.get(fullLabel);
       if (isStatic && !entry.isStatic) {
         throw new Error(`Error: Label '${fullLabel}' is not static and cannot be used in conditionals.`);
@@ -1529,22 +1910,172 @@ export class Assembler {
    */
   getLabelValue(label: string, requireStatic: boolean): number {
     debug("getLabelValue", { label, requireStatic });
-    const fullLabel = this.currentNamespace ? `${this.currentNamespace}:${label}` : label;
-    debug("getLabelValue fullLabel", fullLabel);
-    // debug("getLabelValue labelTable", this.labelTable);
-    if (!this.labelTable.has(fullLabel)) {
-      // In pass 0, allow forward references by returning a dummy value.
-      // if (this.pass === 0) {
-      //   debug('getLabelValue =', 0)
-      //   return 0;
-      // }
-      return 0;
+    debug("getLabelValue labelTable", this.labelTable);
+
+    // Check if it's a macro label reference
+    const isMacroLabelRef = label.startsWith("?");
+
+    // For macro label references, try to find the label in the current macro instance
+    if (isMacroLabelRef && this.inMacroExpansion) {
+      const labelName = label.substring(1); // Remove the ? prefix
+
+      // Check if this is a parent_sublabel reference (contains underscore)
+      if (labelName.includes("_")) {
+        const [parentPart, subPart] = labelName.split("_", 2);
+        debug("getLabelValue: detected parent_sublabel reference", { parentPart, subPart });
+
+        // Look for the combined parent_sublabel reference
+        const childLabel = `:macro_${this.macroLabelInstance}_.${subPart}`;
+        debug("getLabelValue: looking for macro sublabel", childLabel);
+
+        if (this.labelTable.has(childLabel)) {
+          const entry = this.labelTable.get(childLabel);
+          if (requireStatic && !entry.isStatic) {
+            throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+          }
+          debug("getLabelValue (macro sublabel) =", entry.value, "/", entry.value.toString(16), entry);
+          return entry.value;
+        }
+
+        // Look for the combined parent_sublabel reference
+        const parentChildLabel = `:macro_${this.macroLabelInstance}_${parentPart}_${subPart}`;
+        debug("getLabelValue: looking for macro parent_sublabel", parentChildLabel);
+
+        if (this.labelTable.has(parentChildLabel)) {
+          const entry = this.labelTable.get(parentChildLabel);
+          if (requireStatic && !entry.isStatic) {
+            throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+          }
+          debug("getLabelValue (macro parent_sublabel) =", entry.value, "/", entry.value.toString(16), entry);
+          return entry.value;
+        }
+      }
+
+      // Try normal macro label reference
+      const macroLabel = `:macro_${this.macroLabelInstance}_${labelName}`;
+      debug("getLabelValue macro instance label", macroLabel);
+
+      if (this.labelTable.has(macroLabel)) {
+        const entry = this.labelTable.get(macroLabel);
+        if (requireStatic && !entry.isStatic) {
+          throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+        }
+        debug("getLabelValue (macro) =", entry.value, "/", entry.value.toString(16));
+        return entry.value;
+      }
+
+      // Try without the dot - if the label starts with a dot, the dot might be part of the macro label key
+      if (labelName.startsWith(".")) {
+        const macroLabelNoDot = `:macro_${this.macroLabelInstance}_${labelName}`;
+        debug("getLabelValue trying macro instance label without dot prefix", macroLabelNoDot);
+
+        if (this.labelTable.has(macroLabelNoDot)) {
+          const entry = this.labelTable.get(macroLabelNoDot);
+          if (requireStatic && !entry.isStatic) {
+            throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+          }
+          debug("getLabelValue (macro without dot) =", entry.value, "/", entry.value.toString(16));
+          return entry.value;
+        }
+      }
+
+      // If not found with macro instance, check if it's a regular label reference
+      // without the ? prefix - this handles cases where a global label is referenced with ?
+      const fullLabel = this.currentNamespace && !labelName.includes(":") ?
+        `${this.currentNamespace}:${labelName}` : labelName;
+      debug("getLabelValue checking regular label", fullLabel);
+
+      if (this.labelTable.has(fullLabel)) {
+        const entry = this.labelTable.get(fullLabel);
+        if (requireStatic && !entry.isStatic) {
+          throw new Error(`Error: Non-static label '${label}' used in conditional.`);
+        }
+        debug("getLabelValue (found regular label) =", entry.value, "/", entry.value.toString(16));
+        return entry.value;
+      }
+
+      // At this point we've tried everything for a macro label reference and didn't find it
+      if (this.pass === 0) {
+        debug("getLabelValue (macro label not found, pass 0) =", 0);
+        return 0;
+      }
+      throw new Error(`Error: Macro label '${label}' not found.`);
     }
+
+    // Check for underscore superator (e.g., "Main_Sub")
+    // This is a special syntax that combines a parent label with a local label
+    if (label.includes("_") && !label.includes(":")) {
+      const parts = label.split("_");
+      if (parts.length === 2) {
+        const parentLabel = parts[0];
+        const localLabel = "." + parts[1];
+
+        // Try to find the combined label
+        const combinedLabel = parentLabel + "_" + localLabel.replace(/^\./, "");
+        debug("getLabelValue checking underscore superator", { parentLabel, localLabel, combinedLabel });
+
+        // Check if the combined label exists in the label table
+        if (this.labelTable.has(combinedLabel)) {
+          const entry = this.labelTable.get(combinedLabel);
+          if (requireStatic && !entry.isStatic) {
+            throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
+          }
+          debug("getLabelValue (combined label) =", entry.value, "/", entry.value.toString(16));
+          return entry.value;
+        }
+
+        // Check if the local label exists in the label table
+        if (this.labelTable.has(localLabel)) {
+          const entry = this.labelTable.get(localLabel);
+          if (requireStatic && !entry.isStatic) {
+            throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
+          }
+          debug("getLabelValue (underscore superator) =", entry.value, "/", entry.value.toString(16));
+          return entry.value;
+        }
+
+        // If we have a namespace, try with the namespace
+        if (this.currentNamespace) {
+          const namespacedCombined = `${this.currentNamespace}:${localLabel}`;
+          if (this.labelTable.has(namespacedCombined)) {
+            const entry = this.labelTable.get(namespacedCombined);
+            if (requireStatic && !entry.isStatic) {
+              throw new Error(`Error: Non-static label '${namespacedCombined}' used in conditional.`);
+            }
+            debug("getLabelValue (namespaced underscore superator) =", entry.value, "/", entry.value.toString(16));
+            return entry.value;
+          }
+        }
+
+        // If not found and in pass 0, return a dummy value
+        if (this.pass === 0) {
+          debug("getLabelValue (underscore superator not found, pass 0) =", 0);
+          return 0;
+        }
+      }
+    }
+
+    // For non-macro labels, use namespace if provided
+    const fullLabel = this.currentNamespace && !label.includes(":") ?
+      `${this.currentNamespace}:${label}` : label;
+
+    debug("getLabelValue fullLabel", fullLabel);
+
+    if (!this.labelTable.has(fullLabel)) {
+      // In pass 0, allow forward references by returning a dummy value
+      if (this.pass === 0) {
+        debug("getLabelValue (pass 0) =", 0);
+        return 0;
+      }
+      throw new Error(`Error: Label '${label}' not found (resolved to '${fullLabel}').`);
+    }
+
     const entry = this.labelTable.get(fullLabel);
     if (requireStatic && !entry.isStatic) {
       throw new Error(`Error: Non-static label '${label}' used in conditional.`);
     }
-    debug("getLabelValue =", entry.value, "/", entry.value.toString(16))
+
+    debug("getLabelValue =", entry.value, "/", entry.value.toString(16));
     return entry.value;
   }
 
@@ -1574,9 +2105,9 @@ export class Assembler {
    * @param {number} address The SNES address to add to the mapping.
    */
   addAddressToLine(address: number): void {
-    if (this.pass === 2) {
-      this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
-    }
+    // if (this.pass === 2) {
+    this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
+    // }
   }
 
   /**
@@ -1608,27 +2139,6 @@ export class Assembler {
       throw new Error("Misplaced elseif");
     }
 
-    // Get the current conditional context
-    const current = this.condStack[this.condStack.length - 1];
-
-    // If any previous branch in this if-block was already taken,
-    // or if the current condition is false, set cond to false
-    if (current.branchTaken) {
-      // A previous branch was already taken, so this elseif should be skipped
-      current.cond = false;
-    } else {
-      // No branch taken yet, evaluate this condition
-      const conditionStr = condition.join(" ");
-      const conditionResult = this.evaluateExpression(conditionStr);
-      current.cond = conditionResult;
-
-      // If this condition is true, mark that a branch has been taken
-      if (conditionResult) {
-        current.branchTaken = true;
-      }
-    }
-
-    this.moreonlinecond = this.condStack.every(entry => entry.cond);
   }
 
   /**
@@ -1729,6 +2239,7 @@ export class Assembler {
 
     if (this.pass === 0) {
       debug("handleDataDirective pass 0, skipping");
+      this.addAddressToLine(this.realsnespos & 0xFFFFFF);
       return;
     }
 
@@ -1768,6 +2279,7 @@ export class Assembler {
           this.writeDataByLength(len, charValue);
         }
       } else {
+        // TODO we need support for labels, relative labels, and macro labels
         debug("handleDataDirective numeric values", value);
         // Handle numeric values
         if (value.startsWith("#")) {
@@ -1861,7 +2373,6 @@ export class Assembler {
     }
     this.currentNamespace = this.namespaceStack.pop()!;
   }
-
   /**
    * Handles `namespace` definitions.
    * @param {string[]} params - The parameters for the namespace directive.
@@ -2318,17 +2829,17 @@ export class Assembler {
         this.realstartpos = targetAddress;
       } else {
         // Handle as label name
-        if (this.pass === 0) {
-          debug("handleIncbin targetLocation is label, pass 0");
-          // On pass 0, create a freespace block first
-          // this.handleFreespace("freespace", ["align"]);
-          // Now that freespace has set snespos, we can set the label
-          this.setLabel(targetLocation, this.snespos);
+        // if (this.pass === 0) {
+        //   debug("handleIncbin targetLocation is label, pass 0");
+        //   // On pass 0, create a freespace block first
+        //   // this.handleFreespace("freespace", ["align"]);
+        //   // Now that freespace has set snespos, we can set the label
+        //   this.setLabel(targetLocation, this.snespos);
 
-          // Don't write data on pass 0
-          this.handlePullPC();
-          return;
-        } else {
+        //   // Don't write data on pass 0
+        //   this.handlePullPC();
+        //   return;
+        // } else {
           // On later passes, look up the label's address
           targetAddress = this.getLabelValue(targetLocation, false);
           debug("handleIncbin targetAddress", targetAddress);
@@ -2336,7 +2847,7 @@ export class Assembler {
           this.realsnespos = targetAddress;
           this.startpos = targetAddress;
           this.realstartpos = targetAddress;
-        }
+        // }
       }
 
       // Write the data
@@ -2392,10 +2903,50 @@ export class Assembler {
    * @returns {string} The string with defines resolved.
    */
   resolvedefines(input: string): string {
-    debug("resolvedefines", input);
+    debug("resolvedefines", { input });
+    if (!input) {
+      debug("resolvedefines input is empty, returning empty string");
+      return "";
+    }
     debug("resolvedefines defines", this.defines);
     let result = "";
     let index = 0;
+
+    // Handle special case for relative labels
+    if (input === "+" || input === "-" || input === "?+" || input === "?-") {
+      debug(`resolvedefines handling relative label: ${input}`);
+      try {
+        if (input === "+") {
+          // Handle standard relative labels
+          const address = this.findNextLabel("+");
+          debug(`resolvedefines ${input} =`, "$" + address.toString(16));
+          return "$" + address.toString(16);
+        } else if (input === "-") {
+          // Handle standard relative labels
+          const address = this.findPreviousLabel("-");
+          debug(`resolvedefines ${input} =`, "$" + address.toString(16));
+          return "$" + address.toString(16);
+        } else if (input === "?+") {
+          // Handle macro-specific forward relative label
+          const address = this.findNextLabel("?+");
+          debug("resolvedefines ?+ =", "$" + address.toString(16));
+          return "$" + address.toString(16);
+        } else if (input === "?-") {
+          // Handle macro-specific backward relative label
+          const address = this.findPreviousLabel("?-");
+          debug("resolvedefines ?- =", "$" + address.toString(16));
+          return "$" + address.toString(16);
+        }
+      } catch (e) {
+        // If in pass 0, return a placeholder
+        if (this.pass < 2) {
+          debug(`resolvedefines pass ${this.pass} < 2, returning placeholder`);
+          return "$0000";
+        }
+        debug(`resolvedefines failed to resolve relative label ${input}: ${e instanceof Error ? e.message : ""} on pass ${this.pass}`);
+        throw e;
+      }
+    }
 
     // Special case for expressions with != operator
     // This prevents issues with != being misinterpreted as a define
@@ -2443,6 +2994,37 @@ export class Assembler {
 
       if (value !== undefined) {
         return value;
+      }
+    }
+
+    // Special case for macro labels with prefixes #?, ?, #?., ?., ?+, ?-
+    // These should be treated as macro labels and not be resolved as defines
+    const prefixMatch = input.match(/^(#\?|\?|#\?\.|\?\+|\?-)(.*)/);
+    if (prefixMatch) {
+      const prefix = prefixMatch[1];
+      const labelName = prefixMatch[2];
+      debug("resolvedefines macro label found with prefix", { prefix, labelName });
+
+      const value = this.getLabelValue(labelName, false);
+
+      if (value !== undefined) {
+        return value.toString();
+      }
+    }
+
+    // Check if this is a label reference before checking defines or structs
+    if (input.match(/^\.+\w+|^\w+(\.\w+)*(\[\d+])?(\.\w+)*$/)) {
+      debug("resolvedefines checking if input is a label reference", input);
+      try {
+        // First try to resolve as a label
+        const labelValue = this.getLabelValue(input, false);
+        if (labelValue !== undefined) {
+          debug(`resolvedefines found label ${input} with value ${labelValue}`);
+          return labelValue.toString();
+        }
+      } catch (e) {
+        // Not a label, continue to other checks
+        debug("resolvedefines not a label, continuing", e.message);
       }
     }
 
@@ -2511,6 +3093,19 @@ export class Assembler {
     // Remove whitespace
     operand = operand.trim();
 
+    // Check if the operand is a simple numeric string (no math, no labels)
+    // This is an optimization to avoid unnecessary processing for simple numbers
+    if (/^\d+$/.test(operand)) {
+      // Simple decimal number
+      return parseInt(operand, 10);
+    } else if (/^\$[\dA-Fa-f]+$/.test(operand)) {
+      // Simple hex number
+      return parseInt(operand.substring(1), 16);
+    } else if (/^%[01]+$/.test(operand)) {
+      // Simple binary number
+      return parseInt(operand.substring(1), 2);
+    }
+
     // First, expand any defines.
     operand = this.resolvedefines(operand);
 
@@ -2555,6 +3150,8 @@ export class Assembler {
   setPass(pass: number): void {
     debug("🏁 setPass", pass);
     this.pass = pass;
+    // Reset the macro macroLabelInstance
+    this.macroLabelInstance = null;
   }
 
   /**
@@ -3368,7 +3965,6 @@ export class Assembler {
     if (this.mapper === "norom") {
       return addr;
     }
-
     return -1;
   }
 
@@ -3722,5 +4318,69 @@ export class Assembler {
     const match = line.trim().match(/^!([A-Z_a-z]\w*)\s*=/);
     return match ? match[1] : undefined;
   }
-}
 
+  /**
+   * Process a line from a macro expansion.
+   * @param {string} line The line to process from a macro.
+   */
+  processMacroLine(line: string): void {
+    debug("processMacroLine", line);
+
+    // Check for labels that start with ? or # (indicating macro-scoped labels)
+    if (/^\s*[#?][\w+.\-]+:/.test(line)) {
+      debug("processMacroLine found potential macro label definition", line);
+
+      // Special handling for ?+: and ?-: relative labels
+      if (line.trim().startsWith("?+:") || line.trim().startsWith("?-:")) {
+        const labelChar = line.trim();
+        const remainder = line.trim().substring(3).trim(); // Skip ?+: or ?-:
+
+        debug("processMacroLine found macro relative label", { labelChar, remainder });
+
+        // Handle the relative label using the existing functionality
+        this.handleRelativeLabel(labelChar);
+
+        // Process any remaining part of the line
+        if (remainder) {
+          this.processCommand(remainder);
+        }
+        return;
+      }
+
+      // Extract the label name (preserving the ? or # prefix)
+      const match = line.match(/^\s*([#?][\w+.\-]+):/);
+      if (match) {
+        const labelName = match[1];
+        const remainder = line.substring(match[0].length).trim();
+        debug("processMacroLine found macro label definition with colon", { labelName, remainder });
+
+        // Set the label (isMacroLabel=true for both ? and # labels)
+        this.setLabel(labelName, undefined, false, true);
+
+        // Process the remainder of the line if any
+        if (remainder) {
+          this.processCommand(remainder);
+        }
+        return;
+      }
+    }
+
+    // Handle macro-local variable assignment (e.g., ?varname = expression)
+    if (/^\s*\?[\w+.\-]+ *=/.test(line)) {
+      const match = line.match(/^\s*(\?[\w+.\-]+) *=\s*(.*)/);
+      if (match) {
+        const labelName = match[1];
+        const expression = match[2].trim();
+        debug("processMacroLine found macro variable assignment", { labelName, expression });
+
+        // Evaluate the expression and set the label value
+        const value = this.mathCore.math(expression);
+        this.setLabel(labelName, value, true, true);
+        return;
+      }
+    }
+
+    // Otherwise, process the line as a regular command
+    this.processCommand(line);
+  }
+}
