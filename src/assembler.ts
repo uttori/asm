@@ -797,14 +797,14 @@ export class Assembler {
     }
 
     // Function Definition Mode
-    if (keyword && keyword.toLowerCase().startsWith("function ")) {
+    if (keyword && keyword.toLowerCase().startsWith("function")) {
       // If it ends with "\" we keep collecting
       if (keyword.endsWith("\\")) {
         this.inFunctionDefinition = true;
         this.functionDefinitionLines.push(keyword.slice(0, -1));
       } else {
         // Single-line definition
-        this.parseFunctionDefinition(keyword);
+        this.parseFunctionDefinition(words.join(" "));
       }
       return;
     }
@@ -1362,6 +1362,7 @@ export class Assembler {
    * @param {string} defLine - The function definition line.
    */
   parseFunctionDefinition(defLine: string): void {
+    debug("parseFunctionDefinition", defLine)
     // Set the string to parse in mathCore
     this.mathCore.str = defLine;
     // Call the parseFunctionDefinition method without arguments
@@ -2266,8 +2267,8 @@ export class Assembler {
       throw new Error(`Invalid data directive: ${type}`);
     }
 
-    // Split by comma to correctly handle multiple values
-    const values = params.join(" ").split(",").map(val => val.trim());
+    // Split by comma while respecting function calls
+    const values = this.splitRespectingFunctions(params.join(" "));
 
     for (let value of values) {
       if (value.startsWith('"') || value.startsWith("'")) {
@@ -2303,9 +2304,9 @@ export class Assembler {
             continue;
           }
         } catch (error) {
-          debug("handleDataDirective struct resolution failed, trying math evaluation");
+          debug("handleDataDirective struct resolution failed, trying math evaluation", value);
           // If struct resolution fails, continue with normal evaluation
-          num = this.mathCore.math(resolved);
+          num = this.mathCore.math(value);
         }
         if (Number.isNaN(num)) {
           // As a fallback, try to look up a label (this assumes it's a static label).
@@ -4384,5 +4385,53 @@ export class Assembler {
 
     // Otherwise, process the line as a regular command
     this.processCommand(line);
+  }
+
+  /**
+   * Splits a string by commas while respecting function calls and parentheses.
+   * @param {string} input - The input string to split.
+   * @returns {string[]} Array of split values.
+   */
+  splitRespectingFunctions(input: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let parenDepth = 0;
+    let inQuotes = false;
+    let quoteChar = "";
+
+    for (let i = 0; i < input.length; i++) {
+      const char = input[i];
+
+      // Handle quotes
+      if ((char === '"' || char === "'") && (i === 0 || input[i-1] !== "\\")) {
+        if (!inQuotes) {
+          inQuotes = true;
+          quoteChar = char;
+        } else if (char === quoteChar) {
+          inQuotes = false;
+        }
+      }
+
+      // Only process special characters if we're not in quotes
+      if (!inQuotes) {
+        if (char === "(") {
+          parenDepth++;
+        } else if (char === ")") {
+          parenDepth--;
+        } else if (char === "," && parenDepth === 0) {
+          result.push(current.trim());
+          current = "";
+          continue;
+        }
+      }
+
+      current += char;
+    }
+
+    if (current) {
+      result.push(current.trim());
+    }
+
+    return result;
   }
 }
