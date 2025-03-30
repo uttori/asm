@@ -20,6 +20,7 @@ export type MacroDefinition = {
   params: string[]; // fixed parameter names
   variadic: boolean;
   body: string[];   // lines of code
+  sourceFile?: string; // Track the file where this macro was defined
 };
 
 export type LoopBlock = {
@@ -831,7 +832,8 @@ export class Assembler {
             name: this.currentMacroName,
             params: this.currentMacroParams,
             variadic,
-            body: this.currentMacroBody
+            body: this.currentMacroBody,
+            sourceFile: this.currentFile  // Store the file where this macro was defined
           };
           if (this.macros.has(macroDef.name)) {
             // If already defined on pass 0, that's an error.
@@ -1421,6 +1423,9 @@ export class Assembler {
     const previousMacroExpansionState = this.inMacroExpansion;
     this.inMacroExpansion = true;
 
+    // Save the previous macro name
+    const previousMacroName = this.currentMacroName;
+
     // Use a regex to extract macro name and arguments.
     const invocationRegex = /^(\w+)\((.*)\)$/;
     const m = invocation.match(invocationRegex);
@@ -1433,6 +1438,9 @@ export class Assembler {
       if (!this.macros.has(macroName)) {
         throw new Error(`Error: Macro '${macroName}' not defined.`);
       }
+
+      // Set the current macro name
+      this.currentMacroName = macroName;
       const macro = this.macros.get(macroName);
 
       // Handle the case where a macro has parameters but was called without them.
@@ -1466,6 +1474,9 @@ export class Assembler {
       if (!this.macros.has(macroName)) {
         throw new Error(`Error: Macro '${macroName}' not defined.`);
       }
+
+      // Set the current macro name
+      this.currentMacroName = macroName;
       const macro = this.macros.get(macroName);
 
       // Split the arguments. Handle quoted strings and escaped sequences.
@@ -1541,6 +1552,9 @@ export class Assembler {
         this.processMacroLine(expandedLine);
       }
     }
+
+    // Restore the previous macro name
+    this.currentMacroName = previousMacroName;
 
     // Restore the previous macro expansion state
     this.inMacroExpansion = previousMacroExpansionState;
@@ -3760,10 +3774,27 @@ export class Assembler {
   readFile(filePath: string, encoding?: BufferEncoding): Uint8Array | string {
     debug("readFile", filePath, encoding)
     try {
-      // Get the directory of the current file.
-      const currentDir = this.currentFile ? path.dirname(this.currentFile) : process.cwd();
-      // Resolve the full path relative to the current file.
-      const fullPath = path.resolve(currentDir, filePath);
+      // Get the directory to resolve from
+      let resolveDir: string;
+
+      // Check if we're in a macro expansion and should use the macro's source directory
+      if (this.inMacroExpansion && this.currentMacroName) {
+        const macroDef = this.macros.get(this.currentMacroName);
+
+        // If the macro has a source file, use its directory, otherwise fall back to current
+        if (macroDef?.sourceFile) {
+          resolveDir = path.dirname(macroDef.sourceFile);
+          debug("readFile using macro source directory:", resolveDir);
+        } else {
+          resolveDir = this.currentFile ? path.dirname(this.currentFile) : process.cwd();
+        }
+      } else {
+        // Normal file operations - use current file directory
+        resolveDir = this.currentFile ? path.dirname(this.currentFile) : process.cwd();
+      }
+
+      // Resolve the full path relative to the resolve directory
+      const fullPath = path.resolve(resolveDir, filePath);
       debug("readFile:", fullPath);
 
       if (encoding) {
