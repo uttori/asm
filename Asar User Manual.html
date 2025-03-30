@@ -2248,6 +2248,12 @@
 
 
 
+
+
+
+
+
+
 		<h4 id="namespaces">Namespaces</h4>
 		Namespaces are a feature which makes it easier to avoid name conflicts between different labels without having to give them long or cryptic names. They work similarly to C++ namespaces and accomplish this by automatically adding a prefix to all labels declared or accessed within them. This prefix consists of an identifier, followed by an underscore <code>_</code> . Namespaces can be stacked if desired by enabling the <a href="https://rpghacker.github.io/asar/asar_19/manual/#namespace-nested">namespace nested</a> setting. When you try to access a label from within a namespace and Asar doesn't find it in there, it automatically looks in the upper namespaces (up to the global namespace). Use<br>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes"><span class="hljs-keywords">namespace</span> {<span class="hljs-label">identifier</span>}</code></pre>
@@ -2362,6 +2368,17 @@
 		Note that you cannot use the <code>global</code> command with sublabels or macro labels. Outside of a namespace, <code>global</code> acts just like a regular label definition.<br>
 		<a href="https://rpghacker.github.io/asar/asar_19/manual/#contents">Return to top</a></div>
 		<hr>
+
+
+
+
+
+
+
+
+
+
+
 		<div id="defines"><h3>Defines</h3>
 		Asar supports a define system that functions similarly to defines in other programming languages, such as C++. Defines are identifiers that you can assign any kind of text to and use in other places as substitues for that text. During compilation, Asar replaces each define it encounters with the respective text assigned to it. Defines are prefixed with a <code class="65c816_asar">!</code> and declared as follows:<br>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes"><span class="hljs-define">!{identifier}</span> = {<span class="hljs-label">value</span>}</code></pre>

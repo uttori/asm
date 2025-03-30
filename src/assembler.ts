@@ -50,6 +50,7 @@ export type LabelEntry = {
   isStatic: boolean;
   isMacroLabel?: boolean;
   macroInstance?: number; // Tracks which macro instance this label belongs to
+  modifiesHierarchy?: boolean; // Whether this label affects the sublabel hierarchy
 };
 
 // Represents a structure definition.
@@ -91,6 +92,8 @@ export class Assembler {
 
   public namespaceStack: string[] = [];
   public currentNamespace: string = "";
+  public namespaceNestingEnabled: boolean = false;
+  public namespaceNestingPath: string[] = [];
 
   // Macro definition state:
   public inMacroDefinition: boolean = false;
@@ -163,6 +166,9 @@ export class Assembler {
 
   public macroLabelInstance: number = 0; // Tracks the current macro instance
   public inMacroExpansion: boolean = false; // Flag to track if we're inside a macro expansion
+
+  public currentParentLabel: string = "";  // Track the most recent parent label
+  public currentParentIsGlobal: boolean = false;  // Track if the parent label is global
 
   constructor(targetRom?: number[]) {
     this.targetRom = targetRom ?? [];
@@ -981,15 +987,42 @@ export class Assembler {
       return;
     }
 
+    // Handle global label declarations
+    if (keyword.toLowerCase() === "global") {
+      debug("processCommand global label", words);
+      if (words.length < 2) {
+        throw new Error("global requires a label name");
+      }
+      const labelDecl = words[1];
+      const modifiesHierarchy = labelDecl.startsWith("#");
+      const labelName = modifiesHierarchy ? labelDecl.substring(1) : labelDecl;
+      const hasColon = labelName.endsWith(":");
+      const cleanName = hasColon ? labelName.slice(0, -1) : labelName;
+
+      // Set the label at the global scope (no namespace prefix)
+      this.setLabel(cleanName, undefined, false, false, true, !modifiesHierarchy);
+
+      // If this isn't a #-prefixed global, it becomes the new parent for sublabels
+      if (!modifiesHierarchy) {
+        this.currentParentLabel = cleanName;
+        this.currentParentIsGlobal = true;
+      }
+
+      // Process any remaining commands after the label
+      if (words.length > 2) {
+        this.processCommand(words.slice(2).join(" "));
+      }
+      return;
+    }
+
     // Handle non-relative (named) labels that use the colon syntax.
     // (Dynamic labels get their value from the current PC.)
-    // Check if the first token ends with a colon.
-    while (words.length > 0 && keyword.endsWith(":")) {
+    // Check if the first token ends with a colon or starts with a dot.
+    while (words.length > 0 && (keyword.endsWith(":") || keyword.startsWith("."))) {
       debug("processCommand non-relative (named) label assignment", words)
-      // Remove the colon to get the label name.
-      const labelName = keyword.slice(0, -1);
-      // Define the label at the current SNES position.
-      this.setLabel(labelName);
+      // Remove the colon if present to get the label name.
+      const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+      this.handleLabelDefinition(labelName);
       // Remove the label token.
       words.shift();
     }
@@ -1800,20 +1833,24 @@ export class Assembler {
 
   /**
    * Handles setting a label in the assembler.
-   * @param {string} label - The label to set.
-   * @param {number} value - The value to set the label to.
-   * @param {boolean} isStatic - Whether the label is static.
-   * @param {boolean} isMacroLabel - Whether this is a macro label.
+   * @param {string} label The label to set.
+   * @param {number} value The value to set the label to.
+   * @param {boolean} isStatic Whether the label is static.
+   * @param {boolean} isMacroLabel Whether this is a macro label.
+   * @param {boolean} isGlobal Whether this is a global label.
+   * @param {boolean} modifiesHierarchy Whether this label affects the sublabel hierarchy.
    */
-  setLabel(label: string, value?: number, isStatic: boolean = false, isMacroLabel: boolean = false): void {
-    debug("setLabel", { label, value, isStatic, isMacroLabel });
+  setLabel(label: string, value?: number, isStatic: boolean = false, isMacroLabel: boolean = false, isGlobal: boolean = false, modifiesHierarchy: boolean = true): void {
+    debug("setLabel", { label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy });
 
     let fullLabel = label;
+    let directScopeLabel: string | null = null;  // For storing the direct scope version
 
     // Handle macro label format - they start with ? or #
     if (isMacroLabel && (label.startsWith("?") || label.startsWith("#"))) {
       const prefix = label.charAt(0);
       const labelName = label.substring(1); // Remove the ? or # prefix
+      const modifiesHierarchy = prefix !== "#"; // Only non-# labels modify hierarchy
 
       if (prefix === "?") {
         // Check if this is a sub-label (starts with a dot)
@@ -1850,7 +1887,8 @@ export class Assembler {
               value: subAddr,
               isStatic,
               isMacroLabel: true,
-              macroInstance: this.macroLabelInstance
+              macroInstance: this.macroLabelInstance,
+              modifiesHierarchy
             });
           }
         } else {
@@ -1860,41 +1898,82 @@ export class Assembler {
         }
       } else if (prefix === "#") {
         // #Labels are globally available (still in current namespace)
-        fullLabel = this.currentNamespace ? `${this.currentNamespace}:${labelName}` : labelName;
+        fullLabel = this.currentNamespace && !isGlobal ? `${this.currentNamespace}_${labelName}` : labelName;
         debug("setLabel: creating global macro label", fullLabel);
       }
     } else if (!label.includes(":")) {
-      // Regular label with namespace
-      fullLabel = this.currentNamespace ? `${this.currentNamespace}:${label}` : label;
+      // Check if the label already includes the current namespace
+      const namespacePrefix = this.namespaceNestingEnabled ?
+        this.namespaceNestingPath.join("_") :
+        this.currentNamespace;
+
+      if (this.currentNamespace && !isGlobal) {
+        // Check if the label already starts with the namespace
+        if (!label.startsWith(namespacePrefix + "_")) {
+          fullLabel = `${namespacePrefix}_${label}`;
+        }
+        // For non-global labels in a namespace, also store the direct scope version
+        if (label.includes("_") && !label.startsWith(namespacePrefix + "_")) {
+          directScopeLabel = label;
+        }
+      } else {
+        fullLabel = label;
+      }
     }
 
     // If no value was provided, use the current SNES position
     const addr = (value !== undefined) ? value : this.snespos;
 
     if (this.pass === 0) {
-      debug("setLabel pass 0", { fullLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel });
+      debug("setLabel pass 0", { fullLabel, directScopeLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel, modifiesHierarchy });
       if (this.labelTable.has(fullLabel)) {
         debug(`setLabel ⚠️ Warning: Label '${fullLabel}' redefined.`);
       }
+      // Store the full namespaced version
       this.labelTable.set(fullLabel, {
         value: addr,
         isStatic,
         isMacroLabel,
-        macroInstance: isMacroLabel ? this.macroLabelInstance : undefined
+        macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
+        modifiesHierarchy
       });
+
+      // Also store the direct scope version if we have one
+      if (directScopeLabel) {
+        debug(`setLabel also storing direct scope version: ${directScopeLabel}`);
+        this.labelTable.set(directScopeLabel, {
+          value: addr,
+          isStatic,
+          isMacroLabel,
+          macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
+          modifiesHierarchy
+        });
+      }
     } else if (this.pass === 1) {
-      debug("setLabel pass 1", { fullLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel });
+      debug("setLabel pass 1", { fullLabel, directScopeLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel, modifiesHierarchy });
+      // Store both versions in pass 1 as well
       this.labelTable.set(fullLabel, {
         value: addr,
         isStatic,
         isMacroLabel,
-        macroInstance: isMacroLabel ? this.macroLabelInstance : undefined
+        macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
+        modifiesHierarchy
       });
+
+      if (directScopeLabel) {
+        this.labelTable.set(directScopeLabel, {
+          value: addr,
+          isStatic,
+          isMacroLabel,
+          macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
+          modifiesHierarchy
+        });
+      }
     } else if (this.pass === 2) {
       if (!this.labelTable.has(fullLabel)) {
         throw new Error(`Error: Label '${fullLabel}' used but not defined.`);
       }
-      debug("setLabel pass 2", { fullLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel });
+      debug("setLabel pass 2", { fullLabel, directScopeLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel, modifiesHierarchy });
 
       // Optionally, check that a label expected to be static actually is
       const entry = this.labelTable.get(fullLabel);
@@ -1982,31 +2061,47 @@ export class Assembler {
           return entry.value;
         }
       }
-
-      // If not found with macro instance, check if it's a regular label reference
-      // without the ? prefix - this handles cases where a global label is referenced with ?
-      const fullLabel = this.currentNamespace && !labelName.includes(":") ?
-        `${this.currentNamespace}:${labelName}` : labelName;
-      debug("getLabelValue checking regular label", fullLabel);
-
-      if (this.labelTable.has(fullLabel)) {
-        const entry = this.labelTable.get(fullLabel);
-        if (requireStatic && !entry.isStatic) {
-          throw new Error(`Error: Non-static label '${label}' used in conditional.`);
-        }
-        debug("getLabelValue (found regular label) =", entry.value, "/", entry.value.toString(16));
-        return entry.value;
-      }
-
-      // At this point we've tried everything for a macro label reference and didn't find it
-      if (this.pass === 0) {
-        debug("getLabelValue (macro label not found, pass 0) =", 0);
-        return 0;
-      }
-      throw new Error(`Error: Macro label '${label}' not found.`);
     }
 
-    // Check for underscore superator (e.g., "Main_Sub")
+    // If the label already includes a namespace separator, use it directly
+    if (label.includes(":") || label.includes("_")) {
+      return this.getLabelValueDirect(label, requireStatic);
+    }
+
+    // For nested namespaces, try each parent namespace in order
+    if (this.namespaceNestingEnabled && this.namespaceNestingPath.length > 0) {
+      // Try from most specific to least specific namespace
+      for (let i = this.namespaceNestingPath.length; i >= 0; i--) {
+        const namespacePath = this.namespaceNestingPath.slice(0, i);
+        const namespacePrefix = namespacePath.join("_");
+        const fullLabel = namespacePrefix ? `${namespacePrefix}_${label}` : label;
+
+        try {
+          return this.getLabelValueDirect(fullLabel, requireStatic);
+        } catch (e) {
+          // Not found in this namespace, continue to parent
+          continue;
+        }
+      }
+    }
+
+    // Fall back to current namespace or global
+    return this.getLabelValueDirect(
+      this.currentNamespace ? `${this.currentNamespace}_${label}` : label,
+      requireStatic
+    );
+  }
+
+  /**
+   * Direct label lookup without namespace resolution.
+   * @param {string} label The fully qualified label to look up.
+   * @param {boolean} requireStatic Whether the label must be static.
+   * @returns {number} The label's value.
+   */
+  getLabelValueDirect(label: string, requireStatic: boolean): number {
+    debug("getLabelValueDirect", { label, requireStatic });
+
+    // Check for underscore separator (e.g., "Main_Sub")
     // This is a special syntax that combines a parent label with a local label
     if (label.includes("_") && !label.includes(":")) {
       const parts = label.split("_");
@@ -2016,7 +2111,7 @@ export class Assembler {
 
         // Try to find the combined label
         const combinedLabel = parentLabel + "_" + localLabel.replace(/^\./, "");
-        debug("getLabelValue checking underscore superator", { parentLabel, localLabel, combinedLabel });
+        debug("getLabelValueDirect checking underscore separator", { parentLabel, localLabel, combinedLabel });
 
         // Check if the combined label exists in the label table
         if (this.labelTable.has(combinedLabel)) {
@@ -2024,7 +2119,7 @@ export class Assembler {
           if (requireStatic && !entry.isStatic) {
             throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
           }
-          debug("getLabelValue (combined label) =", entry.value, "/", entry.value.toString(16));
+          debug("getLabelValueDirect (combined label) =", entry.value, "/", entry.value.toString(16));
           return entry.value;
         }
 
@@ -2034,52 +2129,33 @@ export class Assembler {
           if (requireStatic && !entry.isStatic) {
             throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
           }
-          debug("getLabelValue (underscore superator) =", entry.value, "/", entry.value.toString(16));
+          debug("getLabelValueDirect (underscore separator) =", entry.value, "/", entry.value.toString(16));
           return entry.value;
-        }
-
-        // If we have a namespace, try with the namespace
-        if (this.currentNamespace) {
-          const namespacedCombined = `${this.currentNamespace}:${localLabel}`;
-          if (this.labelTable.has(namespacedCombined)) {
-            const entry = this.labelTable.get(namespacedCombined);
-            if (requireStatic && !entry.isStatic) {
-              throw new Error(`Error: Non-static label '${namespacedCombined}' used in conditional.`);
-            }
-            debug("getLabelValue (namespaced underscore superator) =", entry.value, "/", entry.value.toString(16));
-            return entry.value;
-          }
         }
 
         // If not found and in pass 0, return a dummy value
         if (this.pass === 0) {
-          debug("getLabelValue (underscore superator not found, pass 0) =", 0);
+          debug("getLabelValueDirect (underscore separator not found, pass 0) =", 0);
           return 0;
         }
       }
     }
 
-    // For non-macro labels, use namespace if provided
-    const fullLabel = this.currentNamespace && !label.includes(":") ?
-      `${this.currentNamespace}:${label}` : label;
-
-    debug("getLabelValue fullLabel", fullLabel);
-
-    if (!this.labelTable.has(fullLabel)) {
+    if (!this.labelTable.has(label)) {
       // In pass 0, allow forward references by returning a dummy value
       if (this.pass === 0) {
-        debug("getLabelValue (pass 0) =", 0);
+        debug("getLabelValueDirect (pass 0) =", 0);
         return 0;
       }
-      throw new Error(`Error: Label '${label}' not found (resolved to '${fullLabel}').`);
+      throw new Error(`Error: Label '${label}' not found.`);
     }
 
-    const entry = this.labelTable.get(fullLabel);
+    const entry = this.labelTable.get(label);
     if (requireStatic && !entry.isStatic) {
       throw new Error(`Error: Non-static label '${label}' used in conditional.`);
     }
 
-    debug("getLabelValue =", entry.value, "/", entry.value.toString(16));
+    debug("getLabelValueDirect =", entry.value, "/", entry.value.toString(16));
     return entry.value;
   }
 
@@ -2393,6 +2469,10 @@ export class Assembler {
   handlePushNamespace(): void {
     debug("handlePushNamespace")
     this.namespaceStack.push(this.currentNamespace);
+    if (this.namespaceNestingEnabled) {
+      // Also save the nesting path
+      this.namespaceStack.push(JSON.stringify(this.namespaceNestingPath));
+    }
   }
 
   /**
@@ -2403,7 +2483,12 @@ export class Assembler {
     if (this.namespaceStack.length === 0) {
       throw new Error("pullns without pushns");
     }
-    this.currentNamespace = this.namespaceStack.pop()!;
+    if (this.namespaceNestingEnabled) {
+      // Restore the nesting path first
+      const pathJson = this.namespaceStack.pop();
+      this.namespaceNestingPath = JSON.parse(pathJson);
+    }
+    this.currentNamespace = this.namespaceStack.pop();
   }
   /**
    * Handles `namespace` definitions.
@@ -2411,29 +2496,69 @@ export class Assembler {
    */
   handleNamespace(params: string[]): void {
     debug("handleNamespace", params);
+
+    // Handle namespace nesting directive
+    if (params.length >= 2 && params[0].toLowerCase() === "nested") {
+      const action = params[1].toLowerCase();
+      if (action === "on") {
+        this.namespaceNestingEnabled = true;
+        return;
+      } else if (action === "off") {
+        this.namespaceNestingEnabled = false;
+        this.namespaceNestingPath = [];
+        this.currentNamespace = "";
+        return;
+      }
+    }
+
     if (params.length === 0) {
       debug("handleNamespace empty, resetting namespace");
+      if (this.namespaceNestingEnabled) {
+        this.namespaceNestingPath = [];
+      }
       this.currentNamespace = "";
       return;
     }
 
     if (params.length === 1 && params[0].toLowerCase() === "off") {
       debug("handleNamespace disable", this.currentNamespace);
-      this.currentNamespace = "";
+      if (this.namespaceNestingEnabled) {
+        // Pop the last namespace from the path
+        this.namespaceNestingPath.pop();
+        // Reconstruct the current namespace from the remaining path
+        this.currentNamespace = this.namespaceNestingPath.join("_");
+      } else {
+        this.currentNamespace = "";
+      }
       return;
     } else if (params.length === 1) {
       debug("handleNamespace enable", params[0]);
-      this.currentNamespace = params[0];
+      if (this.namespaceNestingEnabled) {
+        this.namespaceNestingPath.push(params[0]);
+        this.currentNamespace = this.namespaceNestingPath.join("_");
+      } else {
+        this.currentNamespace = params[0];
+      }
       return;
     }
 
     const action = params[1].toLowerCase();
     if (action === "off") {
       debug("handleNamespace disable action", params[0]);
-      this.currentNamespace = "";
+      if (this.namespaceNestingEnabled) {
+        this.namespaceNestingPath.pop();
+        this.currentNamespace = this.namespaceNestingPath.join("_");
+      } else {
+        this.currentNamespace = "";
+      }
     } else {
       debug("handleNamespace enable action", params[0]);
-      this.currentNamespace = params[0];
+      if (this.namespaceNestingEnabled) {
+        this.namespaceNestingPath.push(params[0]);
+        this.currentNamespace = this.namespaceNestingPath.join("_");
+      } else {
+        this.currentNamespace = params[0];
+      }
     }
   }
 
@@ -3293,6 +3418,9 @@ export class Assembler {
    */
   expandOperand(operand: string): { expanded: string; length: number } {
     debug("expandOperand", operand)
+    if (!operand) {
+      return { expanded: "", length: 2 };
+    }
     let expanded = operand.trim()
     let expectedLength = 2; // Default to 2 bytes for most operands
     let forceTwoBytes = false; // Flag to force 2 bytes for bank operations
@@ -3475,7 +3603,7 @@ export class Assembler {
       if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
         try {
           const labelValue = this.getLabelValue(inner, false);
-          if (labelValue !== 0 || this.labelTable.has(inner) || this.labelTable.has(`${this.currentNamespace}:${inner}`)) {
+          if (labelValue !== 0 || this.labelTable.has(inner) || this.labelTable.has(`${this.currentNamespace}_${inner}`)) {
             debug("tryResolveLabelInOperand immediate mode", inner, "labelValue", labelValue, "/", labelValue.toString(16).toUpperCase());
             return "#$" + labelValue.toString(16).toUpperCase();
           }
@@ -3492,7 +3620,7 @@ export class Assembler {
       if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
         try {
           const labelValue = this.getLabelValue(inner, false);
-          if (labelValue !== 0 || this.labelTable.has(inner) || this.labelTable.has(`${this.currentNamespace}:${inner}`)) {
+          if (labelValue !== 0 || this.labelTable.has(inner) || this.labelTable.has(`${this.currentNamespace}_${inner}`)) {
             return "[$" + labelValue.toString(16).toUpperCase() + "]";
           }
         } catch (e) {
@@ -3511,7 +3639,7 @@ export class Assembler {
       if (!basePart.match(/^[\d$%(]/)) {
         try {
           const labelValue = this.getLabelValue(basePart, false);
-          if (labelValue !== 0 || this.labelTable.has(basePart) || this.labelTable.has(`${this.currentNamespace}:${basePart}`)) {
+          if (labelValue !== 0 || this.labelTable.has(basePart) || this.labelTable.has(`${this.currentNamespace}_${basePart}`)) {
             return "$" + labelValue.toString(16).toUpperCase() + indexPart;
           }
         } catch (e) {
@@ -3525,7 +3653,7 @@ export class Assembler {
     if (!operand.match(/^[\d#$%([]/) && !operand.includes(",")) {
       try {
         const labelValue = this.getLabelValue(operand, false);
-        if (labelValue !== 0 || this.labelTable.has(operand) || this.labelTable.has(`${this.currentNamespace}:${operand}`)) {
+        if (labelValue !== 0 || this.labelTable.has(operand) || this.labelTable.has(`${this.currentNamespace}_${operand}`)) {
           return "$" + labelValue.toString(16).toUpperCase();
         }
       } catch (e) {
@@ -4493,5 +4621,140 @@ export class Assembler {
     }
 
     return result;
+  }
+
+  /**
+   * Handles a label definition, whether it has a colon or not.
+   * @param {string} labelName - The label name (without colon).
+   */
+  private handleLabelDefinition(labelName: string): void {
+    debug("handleLabelDefinition", labelName);
+
+    // Check if this is a sublabel (starts with one or more dots)
+    if (labelName.startsWith(".") || labelName.startsWith("#.")) {
+      debug("handleLabelDefinition sublabel", labelName);
+      if (!this.currentParentLabel) {
+        throw new Error("Sublabel without parent label");
+      }
+
+      const isHashLabel = labelName.startsWith("#");
+      const modifiesHierarchy = !isHashLabel; // Regular labels and non-# global labels modify hierarchy
+
+      // Count the number of dots to determine nesting level
+      let dotCount = 0;
+      while (labelName[dotCount] === ".") {
+        dotCount++;
+      }
+
+      // Get the actual label name without dots
+      const subLabelName = labelName.substring(dotCount);
+      debug("handleLabelDefinition subLabelName", subLabelName);
+
+      // For single dot, use the immediate parent
+      if (dotCount === 1) {
+        // Create the direct scope version (Parent_SubLabel)
+        const directScopeLabel = this.currentParentLabel + "_" + subLabelName;
+        debug("handleLabelDefinition directScopeLabel", directScopeLabel);
+        this.setLabel(directScopeLabel, undefined, false, false, this.currentParentIsGlobal, modifiesHierarchy);
+
+        // If we're in a namespace and not a global label, create the namespaced version
+        if (this.currentNamespace) {
+          // Get the namespace prefix
+          const namespacePrefix = this.namespaceNestingEnabled ?
+            this.namespaceNestingPath.join("_") :
+            this.currentNamespace;
+
+          // Check if the directScopeLabel already includes the namespace
+          if (!directScopeLabel.startsWith(namespacePrefix + "_")) {
+            // Create the namespaced version by combining namespace prefix with the direct scope label
+            const namespacedLabel = namespacePrefix + "_" + directScopeLabel;
+            debug("handleLabelDefinition creating namespaced sublabel:", namespacedLabel);
+            this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
+          }
+        }
+      } else {
+        // For multiple dots, we need to find the most recent label that includes sublabels
+        // First, try to find the namespaced version of the current parent
+        const namespacePrefix = this.namespaceNestingEnabled ?
+          this.namespaceNestingPath.join("_") :
+          this.currentNamespace;
+
+        const namespacedParent = this.currentNamespace ?
+          `${namespacePrefix}_${this.currentParentLabel}` :
+          this.currentParentLabel;
+
+        // Look for all labels that start with our parent to find sublabels
+        let fullParentPath = this.currentParentLabel;
+        for (const [key, entry] of this.labelTable.entries()) {
+          if (entry.modifiesHierarchy && key.includes("_") &&
+              (key === namespacedParent || key.startsWith(`${namespacedParent}_`))) {
+            // Found a longer matching path that includes sublabels
+            const localPart = key.substring(key.indexOf(this.currentParentLabel));
+            if (localPart.split("_").length > fullParentPath.split("_").length) {
+              fullParentPath = localPart;
+            }
+          }
+        }
+
+        debug("handleLabelDefinition fullParentPath:", fullParentPath);
+        const parentParts = fullParentPath.split("_");
+        debug("handleLabelDefinition parentParts:", parentParts);
+
+        // For each dot after the first, we need to add the sublabel part
+        let relevantParent = parentParts[0];
+        for (let i = 1; i < parentParts.length; i++) {
+          // For each level of dots, we include one more part of the parent
+          if (i < dotCount) {
+            relevantParent += "_" + parentParts[i];
+          }
+        }
+        debug("handleLabelDefinition relevantParent:", relevantParent);
+
+        // Create the direct scope version
+        const directScopeLabel = relevantParent + "_" + subLabelName;
+        debug("handleLabelDefinition directScopeLabel:", directScopeLabel);
+        this.setLabel(directScopeLabel, undefined, false, false, this.currentParentIsGlobal, modifiesHierarchy);
+
+        // If we're in a namespace and not a global label, create the namespaced version
+        if (this.currentNamespace) {
+          // Check if the directScopeLabel already includes the namespace
+          if (!directScopeLabel.startsWith(namespacePrefix + "_")) {
+            // Create the namespaced version by combining namespace prefix with the direct scope label
+            const namespacedLabel = namespacePrefix + "_" + directScopeLabel;
+            debug("handleLabelDefinition creating namespaced sublabel", namespacedLabel);
+            this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
+          }
+        }
+      }
+    } else {
+      // Regular label - becomes the new parent for subsequent sublabels
+      // Only update currentParentLabel if this label modifies hierarchy
+      const isHashLabel = labelName.startsWith("#");
+      const modifiesHierarchy = !isHashLabel; // Regular labels and non-# global labels modify hierarchy
+
+      if (modifiesHierarchy) {
+        this.currentParentLabel = labelName;
+        this.currentParentIsGlobal = false;
+      }
+
+      // Create the direct scope version
+      this.setLabel(labelName, undefined, false, false, false, modifiesHierarchy);
+
+      // If we're in a namespace, create the namespaced version
+      if (this.currentNamespace) {
+        // Get the namespace prefix
+        const namespacePrefix = this.namespaceNestingEnabled ?
+          this.namespaceNestingPath.join("_") :
+          this.currentNamespace;
+
+        // Check if the label already includes the namespace
+        if (!labelName.startsWith(namespacePrefix + "_")) {
+          // Create the namespaced version
+          const namespacedLabel = namespacePrefix + "_" + labelName;
+          debug("handleLabelDefinition creating namespaced label", namespacedLabel);
+          this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
+        }
+      }
+    }
   }
 }
