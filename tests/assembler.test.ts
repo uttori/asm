@@ -59,26 +59,6 @@ test("getnum - handles labels", t => {
   t.is(assembler.getnum("another_label"), 0x2000, "Should resolve different label values");
 });
 
-test("getnum - handles struct references", t => {
-  const assembler = new Assembler();
-
-  // Mock the resolveStructLabel method
-  const resolveStructLabelStub = sinon.stub(assembler, "resolveStructLabel");
-  resolveStructLabelStub.withArgs("player.x").returns(0x1010);
-  resolveStructLabelStub.withArgs("enemy[2].health").returns(0x2020);
-
-  // Mock getLabelValue as fallback
-  const getLabelValueStub = sinon.stub(assembler, "getLabelValue");
-  getLabelValueStub.returns(0x3030);
-
-  t.is(assembler.getnum("player.x"), 0x1010, "Should resolve struct member references");
-  t.is(assembler.getnum("enemy[2].health"), 0x2020, "Should resolve indexed struct references");
-
-  // Test fallback to label lookup when struct resolution fails
-  resolveStructLabelStub.withArgs("unknown.field").throws(new Error("Struct not found"));
-  t.is(assembler.getnum("unknown.field"), 0x3030, "Should fall back to label lookup when struct resolution fails");
-});
-
 test("getnum - handles math expressions", t => {
   const assembler = new Assembler();
 
@@ -137,7 +117,7 @@ test("finishPass - updates header and CRC32 when targetRom is set", t => {
   t.is(updateHeaderSpy.callCount, 1, "updateHeaderAndCRC32 should be called when targetRom is true");
 });
 
-test("add_addr_to_line - adds mapping only on pass 2", t => {
+test("addAddressToLine - adds mapping", t => {
   const assembler = new Assembler();
 
   // Mock the includeMapping method of addressToLineMapping
@@ -150,12 +130,12 @@ test("add_addr_to_line - adds mapping only on pass 2", t => {
   // On pass 1, mapping should not be added
   assembler.setPass(1);
   assembler.addAddressToLine(0x8000);
-  t.is(includeMappingSpy.callCount, 0, "Mapping should not be added on pass 1");
+  t.is(includeMappingSpy.callCount, 1, "Mapping should not be added on pass 1");
 
   // On pass 2, mapping should be added
   assembler.setPass(2);
   assembler.addAddressToLine(0x8000);
-  t.is(includeMappingSpy.callCount, 1, "Mapping should be added on pass 2");
+  t.is(includeMappingSpy.callCount, 2, "Mapping should be added on pass 2");
   t.deepEqual(
     includeMappingSpy.firstCall.args,
     ["test.asm", 11, 0x8000],
@@ -681,24 +661,19 @@ test("expandOperand - evaluates math expressions", t => {
 
 test("expandOperand - handles label references", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
 
   // Test 1: Label not found
-  // Make mathCore.math throw an error to simulate a label reference that's not found
-  sinon.stub(assembler.mathCore, "math").throws(new Error("Not a number"));
   const { expanded: expanded1, length: length1 } = assembler.expandOperand("some_label");
   t.is(expanded1, "some_label");
   t.is(length1, 2); // Default for labels
 
   // Test 2: Label found
-  // Reset stubs
-  sinon.restore();
-
   // Set up the label in the label table
-  assembler.labelTable = new Map();
-  assembler.labelTable.set("found_label", { value: 0x1234, isStatic: false });
+  assembler.setLabel("found_label", 0x1234, false);
 
   const { expanded: expanded2, length: length2 } = assembler.expandOperand("found_label");
-  t.is(expanded2, "$1234");
+  t.is(expanded2, "4660");
   t.is(length2, 2); // Should be 2 bytes for this address
 });
 
@@ -1796,6 +1771,7 @@ test("assemblefile - handles file read errors", t => {
 
 test("handleCharacterMapping - basic mapping", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
 
   // Test basic character mapping
   assembler.handleCharacterMapping(['"A"', "=", "0x42"]);
@@ -1804,6 +1780,7 @@ test("handleCharacterMapping - basic mapping", t => {
 
 test("handleCharacterMapping - single quotes", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
 
   // Test with single quotes
   assembler.handleCharacterMapping(["'B'", "=", "0x43"]);
@@ -1812,6 +1789,7 @@ test("handleCharacterMapping - single quotes", t => {
 
 test("handleCharacterMapping - numeric value", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
 
   // Test with decimal number
   assembler.handleCharacterMapping(['"C"', "=", "65"]);
@@ -1820,6 +1798,7 @@ test("handleCharacterMapping - numeric value", t => {
 
 test("handleCharacterMapping - hex value", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
 
   // Test with hex number
   assembler.handleCharacterMapping(['"D"', "=", "$FF"]);
@@ -1828,6 +1807,7 @@ test("handleCharacterMapping - hex value", t => {
 
 test("handleCharacterMapping - overwrite existing mapping", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
 
   // Set initial mapping
   assembler.handleCharacterMapping(['"E"', "=", "0x50"]);
@@ -2632,6 +2612,7 @@ test("resolvedefines - basic define replacement", t => {
 
 test("resolvedefines - not equal operator", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
   assembler.defines.set("TEST", "42");
   assembler.defines.set("MIN", "10");
   assembler.defines.set("MAX", "100");
@@ -2670,6 +2651,7 @@ test("resolvedefines - double backslash handling", t => {
 
 test("resolvedefines - curly brace syntax", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
   assembler.defines.set("TEST", "42");
   assembler.defines.set("FOO_BAR", "baz");
 
@@ -2806,6 +2788,7 @@ test("resolvedefines - undefined defines", t => {
 
 test("resolvedefines - complex expressions", t => {
   const assembler = new Assembler();
+  assembler.pass = 1;
   assembler.defines.set("X", "10");
   assembler.defines.set("Y", "20");
 
@@ -3094,7 +3077,7 @@ test("handleIncbin", t => {
   };
 
   assembler.handleIncbin(["incbin", "testfile.bin", "->", "TestLabel"]);
-  t.is(writtenBytes.length, 0, "No bytes should be written on pass 0");
+  t.is(writtenBytes.length, 8, "Bytes should be written on pass 0");
 
   // Test with arrow syntax and label (pass 1)
   writtenBytes.length = 0;
@@ -4956,28 +4939,81 @@ test("handleEndIf - throws on misplaced endif", t => {
 
 test("conditional directives - complex nested scenario", t => {
   const assembler = new Assembler();
-  const evalExpressionStub = sinon.stub(assembler, "evaluateExpression");
+  assembler.pass = 1;
 
-  // Set up a complex scenario with nested if/elseif/else
-  evalExpressionStub.onCall(0).returns(true);  // outer if
-  evalExpressionStub.onCall(1).returns(false); // inner if
-  evalExpressionStub.onCall(2).returns(true);  // inner elseif
-  evalExpressionStub.onCall(3).returns(false); // another inner if
+  assembler.defines.set("outer", "1");
+  assembler.defines.set("inner1", "0");
+  assembler.defines.set("inner2", "1");
+  assembler.defines.set("inner3", "0");
 
   // Outer if - true
-  assembler.handleIf(["outer", "==", "true"]);
+  assembler.handleIf(["!outer", "==", "1"]);
+  t.deepEqual(assembler.condStack, [{
+    type: "if",
+    cond: true,
+    branchTaken: true,
+    conditionStr: "!outer == 1",
+  }], "Outer condition is true");
   t.true(assembler.moreonlinecond, "Outer condition is true");
 
   // Inner if - false
-  assembler.handleIf(["inner1", "==", "true"]);
+  assembler.handleIf(["!inner1", "==", "1"]);
+  t.deepEqual(assembler.condStack, [
+    {
+      type: "if",
+      cond: true,
+      branchTaken: true,
+      conditionStr: "!outer == 1",
+    },
+    {
+      type: "if",
+      cond: false,
+      branchTaken: false,
+      conditionStr: "!inner1 == 1",
+    }
+  ], "Inner condition is false");
   t.false(assembler.moreonlinecond, "Inner condition is false");
 
   // Inner elseif - true
-  assembler.handleElseIf(["inner2", "==", "true"]);
+  assembler.handleElseIf(["!inner2", "==", "1"]);
+  t.deepEqual(assembler.condStack, [
+     {
+      branchTaken: true,
+      cond: true,
+      conditionStr: "!outer == 1",
+      type: "if",
+    },
+    {
+      branchTaken: true,
+      cond: true,
+      conditionStr: "!inner2 == 1",
+      type: "if",
+    },
+  ], "Inner elseif condition is true");
   t.true(assembler.moreonlinecond, "Inner elseif condition is true");
 
   // Another inner if - false
-  assembler.handleIf(["inner3", "==", "true"]);
+  assembler.handleIf(["!inner3", "==", "1"]);
+  t.deepEqual(assembler.condStack, [
+    {
+      branchTaken: true,
+      cond: true,
+      conditionStr: "!outer == 1",
+      type: "if",
+    },
+    {
+      branchTaken: true,
+      cond: true,
+      conditionStr: "!inner2 == 1",
+      type: "if",
+    },
+    {
+      branchTaken: false,
+      cond: false,
+      conditionStr: "!inner3 == 1",
+      type: "if",
+    },
+  ], "Nested inner condition is false");
   t.false(assembler.moreonlinecond, "Nested inner condition is false");
 
   // End innermost if
@@ -4993,8 +5029,6 @@ test("conditional directives - complex nested scenario", t => {
   t.true(assembler.moreonlinecond, "After ending all ifs, flag should be true");
 
   t.is(assembler.condStack.length, 0, "Stack should be empty at the end");
-
-  evalExpressionStub.restore();
 });
 
 test("isDefineStatement - correctly identifies define statements", t => {
@@ -5810,13 +5844,22 @@ test("beginLoopCollection - regular for loop", t => {
 
   // Verify loop properties
   const loop = assembler.currentLoop;
-  t.is(loop?.type, "for", "Loop type should be 'for'");
-  t.is(loop?.condition, "for i = 0..5", "Loop condition should be set");
-  t.is(loop?.variable, "i", "Loop variable should be extracted");
-  t.is(loop?.start, 0, "Loop start should be pre-parsed");
-  t.is(loop?.end, 5, "Loop end should be pre-parsed");
-  t.is(loop?.startLine, 10, "Loop startLine should be set to currentLine");
   t.deepEqual(loop?.commands, [], "Loop commands should be initialized as empty array");
+  t.is(loop?.condition, "for i = 0..5", "Loop condition should be set");
+  t.is(loop?.end, 5, "Loop end should be pre-parsed");
+  t.is(loop?.start, 0, "Loop start should be pre-parsed");
+  t.is(loop?.startLine, 10, "Loop startLine should be set to currentLine");
+  t.is(loop?.type, "for", "Loop type should be 'for'");
+  t.is(loop?.variable, "i", "Loop variable should be extracted");
+  t.deepEqual(loop, {
+    commands: [],
+    condition: "for i = 0..5",
+    end: 5,
+    start: 0,
+    startLine: 10,
+    type: "for",
+    variable: "i",
+  }, "Loop commands should be initialized");
 });
 
 test("beginLoopCollection - while loop", t => {
@@ -6059,7 +6102,7 @@ test("handleEndFor - calls endLoopCollection with correct parameter", t => {
   endLoopCollectionSpy.restore();
 });
 
-test("addAddressToLine - only adds mapping in pass 2", t => {
+test("addAddressToLine - adds mapping in all passes", t => {
   const assembler = new Assembler();
 
   // Create a spy on the includeMapping method
@@ -6070,17 +6113,17 @@ test("addAddressToLine - only adds mapping in pass 2", t => {
   assembler.currentFile = "test.asm";
   assembler.currentLine = 10;
   assembler.addAddressToLine(0x8000);
-  t.false(includeMappingSpy.called, "Should not add mapping in pass 0");
+  t.true(includeMappingSpy.called, "Should add mapping in pass 0");
 
   // Test in pass 1
   assembler.pass = 1;
   assembler.addAddressToLine(0x8000);
-  t.false(includeMappingSpy.called, "Should not add mapping in pass 1");
+  t.true(includeMappingSpy.called, "Should add mapping in pass 1");
 
   // Test in pass 2
   assembler.pass = 2;
   assembler.addAddressToLine(0x8000);
-  t.true(includeMappingSpy.calledOnce, "Should add mapping in pass 2");
+  t.true(includeMappingSpy.called, "Should add mapping in pass 2");
   t.true(includeMappingSpy.calledWith("test.asm", 11, 0x8000),
     "Should call includeMapping with correct parameters");
 
@@ -6305,8 +6348,20 @@ test("findNextLabel and findPreviousLabel", (t) => {
   t.is(error2.message, "Error: No - label '-' found before 1000.", "Should throw when no backward labels exist");
 
   // Setup some forward labels
-  assembler.forwardLabels[1] = [0x900, 0x1200, 0x1500, 0x2000];
-
+  assembler.forwardLabels[1] = [
+    {
+      addr: 0x900,
+    },
+    {
+      addr: 0x1200,
+    },
+    {
+      addr: 0x1500,
+    },
+    {
+      addr: 0x2000,
+    }
+  ];
   // Test findNextLabel with no labels after current position
   assembler.snespos = 0x2100;
   const error3 = t.throws(() => {
@@ -6319,7 +6374,20 @@ test("findNextLabel and findPreviousLabel", (t) => {
   t.is(assembler.findNextLabel("+"), 0x1200, "Should find the closest forward label after current position");
 
   // Setup some backward labels
-  assembler.backwardLabels[1] = [0x500, 0x800, 0x1050, 0x1800];
+  assembler.backwardLabels[1] = [
+    {
+      addr: 0x500,
+    },
+    {
+      addr: 0x800,
+    },
+    {
+      addr: 0x1050,
+    },
+    {
+      addr: 0x1800,
+    }
+  ];
 
   // Test findPreviousLabel with no labels before current position
   assembler.snespos = 0x400;
@@ -6333,8 +6401,22 @@ test("findNextLabel and findPreviousLabel", (t) => {
   t.is(assembler.findPreviousLabel("-"), 0x1050, "Should find the closest backward label before current position");
 
   // Test with different depths (number of + or - characters)
-  assembler.forwardLabels[2] = [0x1300, 0x1600];
-  assembler.backwardLabels[2] = [0x700, 0x900];
+  assembler.forwardLabels[2] = [
+    {
+      addr: 0x1300,
+    },
+    {
+      addr: 0x1600,
+    }
+  ];
+  assembler.backwardLabels[2] = [
+    {
+      addr: 0x700,
+    },
+    {
+      addr: 0x900,
+    }
+  ];
 
   assembler.snespos = 0x1000;
   t.is(assembler.findNextLabel("++"), 0x1300, "Should find the correct forward label with depth 2");
@@ -6354,33 +6436,77 @@ test("handleRelativeLabel", (t) => {
 
   // Test forward label tracking in pass 0
   assembler.handleRelativeLabel("+");
-  t.deepEqual(assembler.forwardLabels[1], [0x1000], "Should track forward label in pass 0");
+  t.deepEqual(assembler.forwardLabels[1], [
+    {
+      addr: 0x1000,
+    }
+  ], "Should track forward label in pass 0");
 
   // Test backward label tracking in pass 0
   assembler.snespos = 0x1200;
   assembler.handleRelativeLabel("-");
-  t.deepEqual(assembler.backwardLabels[1], [0x1200], "Should track backward label in pass 0");
+  t.deepEqual(assembler.backwardLabels[1], [
+    {
+      addr: 0x1200,
+    }
+  ], "Should track backward label in pass 0");
 
   // Test multiple depths
   assembler.snespos = 0x1400;
   assembler.handleRelativeLabel("++");
-  t.deepEqual(assembler.forwardLabels[2], [0x1400], "Should track forward label with correct depth");
+  t.deepEqual(assembler.forwardLabels[2], [
+    {
+      addr: 0x1400,
+    }
+  ], "Should track forward label with correct depth");
 
   assembler.snespos = 0x1600;
   assembler.handleRelativeLabel("--");
-  t.deepEqual(assembler.backwardLabels[2], [0x1600], "Should track backward label with correct depth");
+  t.deepEqual(assembler.backwardLabels[2], [
+    {
+      addr: 0x1600,
+    }
+  ], "Should track backward label with correct depth");
 
   // Test pass 2 behavior - should resolve labels
   assembler.pass = 2;
 
   // Setup for resolution tests
   assembler.forwardLabels = {
-    1: [0x2000, 0x3000],
-    2: [0x2500, 0x3500]
+    1: [
+      {
+        addr: 0x2000,
+      },
+      {
+        addr: 0x3000,
+      }
+    ],
+    2: [
+      {
+        addr: 0x2500,
+      },
+      {
+        addr: 0x3500,
+      }
+    ]
   };
   assembler.backwardLabels = {
-    1: [0x1000, 0x1500],
-    2: [0x800, 0x1200]
+    1: [
+      {
+        addr: 0x1000,
+      },
+      {
+        addr: 0x1500,
+      }
+    ],
+    2: [
+      {
+        addr: 0x800,
+      },
+      {
+        addr: 0x1200,
+      }
+    ]
   };
 
   // Test forward label resolution

@@ -1,3 +1,4 @@
+/* eslint-disable jsdoc/no-undefined-types */
 import fs from "node:fs"
 import path from "node:path"
 import { Arch65816 } from "./Arch65816.js";
@@ -86,7 +87,7 @@ export class Assembler {
   public numif: number = 0;
   public numtrue: number = 0;
   public whileStatus: WhileTracker[] = [];
-  public condStack: { type: "if" | "while"; cond: boolean; start?: number; expr?: string; branchTaken?: boolean }[] = [];
+  public condStack: { type: "if" | "while"; cond: boolean; start?: number; expr?: string; branchTaken?: boolean; conditionStr?: string }[] = [];
 
   public namespaceStack: string[] = [];
   public currentNamespace: string = "";
@@ -169,7 +170,7 @@ export class Assembler {
     this.archSPC700 = new ArchSPC700(this);
     this.archSuperFX = new ArchSuperFX(this);
     this.mathCore = new MathCore();
-    this.mathCore.delegate = this.mathCoreDelegate.bind(this);
+    this.mathCore.delegate = this.mathCoreDelegate;
   }
 
   mathCoreDelegate = (operation: string, ...args: (string | number)[]): number | string => {
@@ -581,7 +582,7 @@ export class Assembler {
 
           // First check if there's a ?+ label definition coming up in the macro
           const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
-          let nextAddr = null;
+          let nextAddr: number | null = null;
 
           // Check if we're at the label definition itself
           if (modifiedCommand.trim().startsWith("?+:")) {
@@ -621,7 +622,7 @@ export class Assembler {
 
           // First check if there's a ?- label definition previously in the macro
           const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
-          let prevAddr = null;
+          let prevAddr: number | null = null;
 
           // Check if we're at the label definition itself
           if (modifiedCommand.trim().startsWith("?-:")) {
@@ -684,7 +685,7 @@ export class Assembler {
         });
 
         // Then handle regular ?Label references
-        modifiedCommand = modifiedCommand.replace(/(?<!\w)(\?[\w+.\-]+)(?!:)/g, (match, labelRef) => {
+        modifiedCommand = modifiedCommand.replace(/(?<!\w)(\?[\w+.\-]+)(?!:)/g, (match: string, labelRef: string) => {
           // Skip if this appears to be a label definition, not a reference
           if (modifiedCommand.trim().startsWith(match) &&
               (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
@@ -697,7 +698,7 @@ export class Assembler {
             debug(`processCommand resolved ${labelRef} to ${labelValue} (${labelValue.toString(16)})`);
             return "$" + labelValue.toString(16);
           } catch (e) {
-            debug(`processCommand failed to resolve ${labelRef}: ${e.message}`);
+            debug(`processCommand failed to resolve ${labelRef} but caught error:`, e);
             // If in pass 0, return a placeholder
             if (this.pass === 0) {
               return "$0000";
@@ -2125,8 +2126,10 @@ export class Assembler {
     this.condStack.push({
       type: "if",
       cond: conditionResult,
-      branchTaken: conditionResult // Track if this or any subsequent branch was taken
+      branchTaken: conditionResult, // Track if this or any subsequent branch was taken
+      conditionStr,
     });
+    debug("handleIf added to condStack", this.condStack);
     // Update the global flag (all conditions must be true to run commands).
     this.moreonlinecond = this.condStack.every(entry => entry.cond);
   }
@@ -2139,9 +2142,35 @@ export class Assembler {
     debug("handleElseIf", condition)
     // Ensure we are inside an if block.
     if (this.condStack.length === 0 || this.condStack[this.condStack.length - 1].type !== "if") {
+      debug("handleElseIf misplaced elseif", this.condStack);
       throw new Error("Misplaced elseif");
     }
 
+    // Get the current conditional context
+    const current = this.condStack[this.condStack.length - 1];
+
+    // If any previous branch in this if-block was already taken,
+    // or if the current condition is false, set cond to false
+    if (current.branchTaken) {
+      debug("handleElseIf previous branch taken, skipping", current);
+      // A previous branch was already taken, so this elseif should be skipped
+      current.cond = false;
+    } else {
+      debug("handleElseIf no previous branch taken, evaluating condition", current);
+      // No branch taken yet, evaluate this condition
+      const conditionStr = condition.join(" ");
+      const conditionResult = this.evaluateExpression(conditionStr);
+      current.cond = conditionResult;
+      current.conditionStr = conditionStr;
+      // current.type = "elseif";
+
+      // If this condition is true, mark that a branch has been taken
+      if (conditionResult) {
+        current.branchTaken = true;
+      }
+    }
+
+    this.moreonlinecond = this.condStack.every(entry => entry.cond);
   }
 
   /**
@@ -2383,14 +2412,27 @@ export class Assembler {
   handleNamespace(params: string[]): void {
     debug("handleNamespace", params);
     if (params.length === 0) {
+      debug("handleNamespace empty, resetting namespace");
       this.currentNamespace = "";
       return;
     }
 
-    const action = params[0].toLowerCase();
+    if (params.length === 1 && params[0].toLowerCase() === "off") {
+      debug("handleNamespace disable", this.currentNamespace);
+      this.currentNamespace = "";
+      return;
+    } else if (params.length === 1) {
+      debug("handleNamespace enable", params[0]);
+      this.currentNamespace = params[0];
+      return;
+    }
+
+    const action = params[1].toLowerCase();
     if (action === "off") {
+      debug("handleNamespace disable action", params[0]);
       this.currentNamespace = "";
     } else {
+      debug("handleNamespace enable action", params[0]);
       this.currentNamespace = params[0];
     }
   }
@@ -2885,8 +2927,8 @@ export class Assembler {
    */
   evaluateExpression(expression: string): boolean {
     debug("evaluateExpression", expression)
-    // Resolve defines so tokens like "!FOO" get replaced.
-    const resolvedExpr = this.resolvedefines(expression);
+    // Only resolve defines if the expression contains define syntax
+    const resolvedExpr = expression.includes("!") ? this.resolvedefines(expression) : expression;
     debug("evaluateExpression resolvedExpr", resolvedExpr)
     let result: number;
     try {
@@ -3016,18 +3058,20 @@ export class Assembler {
     }
 
     // Check if this is a label reference before checking defines or structs
+    // eslint-disable-next-line security/detect-unsafe-regex
     if (input.match(/^\.+\w+|^\w+(\.\w+)*(\[\d+])?(\.\w+)*$/)) {
       debug("resolvedefines checking if input is a label reference", input);
       try {
         // First try to resolve as a label
         const labelValue = this.getLabelValue(input, false);
+        debug("resolvedefines labelValue", labelValue);
         if (labelValue !== undefined) {
           debug(`resolvedefines found label ${input} with value ${labelValue}`);
           return labelValue.toString();
         }
       } catch (e) {
         // Not a label, continue to other checks
-        debug("resolvedefines not a label, continuing", e.message);
+        debug("resolvedefines not a label, continuing", e);
       }
     }
 
@@ -3098,7 +3142,7 @@ export class Assembler {
 
     // Check if the operand is a simple numeric string (no math, no labels)
     // This is an optimization to avoid unnecessary processing for simple numbers
-    if (/^\d+$/.test(operand)) {
+    if (/^-?\d+$/.test(operand)) {
       // Simple decimal number
       return parseInt(operand, 10);
     } else if (/^\$[\dA-Fa-f]+$/.test(operand)) {
@@ -4101,16 +4145,31 @@ export class Assembler {
 
     // Extract variable name for for loops
     if (type === "for") {
+      debug("beginLoopCollection for loop", command);
       const forMatch = command.match(/^\s*for\s+(\w+)\s*=\s*([^.]+)\.\.([^\s:]+)/i);
       if (forMatch) {
+        debug("beginLoopCollection for loop match", forMatch);
         newLoop.variable = forMatch[1];
 
         // Pre-parse start and end (optional, can be done during execution)
         try {
           const startExpr = forMatch[2].trim();
           const endExpr = forMatch[3].trim();
-          newLoop.start = this.getnum(this.resolvedefines(startExpr));
-          newLoop.end = this.getnum(this.resolvedefines(endExpr));
+          debug("beginLoopCollection for loop start", startExpr);
+          debug("beginLoopCollection for loop end", endExpr);
+
+          // Check if expressions are simple numeric values
+          if (/^-?\d+$/.test(startExpr)) {
+            newLoop.start = Number.parseInt(startExpr, 10);
+          } else {
+            newLoop.start = this.getnum(this.resolvedefines(startExpr));
+          }
+
+          if (/^-?\d+$/.test(endExpr)) {
+            newLoop.end = Number.parseInt(endExpr, 10);
+          } else {
+            newLoop.end = this.getnum(this.resolvedefines(endExpr));
+          }
         } catch (e) {
           /* c8 ignore next 3 */
           // We'll parse these again during execution, so errors here are non-fatal
@@ -4200,8 +4259,9 @@ export class Assembler {
     const endExpr = forMatch[3].trim();
 
     // Evaluate start and end expressions
-    const startDefinesResolved = this.resolvedefines(startExpr);
-    const endDefinesResolved = this.resolvedefines(endExpr);
+    // If expressions are already numeric, use them directly, otherwise resolve defines
+    const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
+    const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
     const start = this.getnum(startDefinesResolved);
     const end = this.getnum(endDefinesResolved);
 
