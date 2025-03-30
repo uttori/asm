@@ -1342,6 +1342,7 @@ export class Assembler {
         case "table":
         case "optimize":
         case "includefrom":
+        case "asar":
             debug(`${keyword} unsupported`, words.slice(1))
             break;
         default: {
@@ -2927,7 +2928,7 @@ export class Assembler {
 
     // Parse filename and range
     const filenameWithRange = words[1];
-    debug("handleIncbin filenameWithRange", filenameWithRange)
+    debug("handleIncbin filenameWithRange", filenameWithRange);
     let filename: string;
     let rangeStr: string | null = null;
     const colonIndex = filenameWithRange.indexOf(":");
