@@ -100,6 +100,23 @@ test("setPass - updates the current pass of assembly", t => {
   t.is(assembler.pass, 1, "Pass should be updated to 1");
 });
 
+test("setPass - resets guarded status for included files", t => {
+  const assembler = new Assembler();
+
+  // Add a guarded file to the included files map
+  const testFile = "/test/path/guarded.asm";
+  assembler.includedFiles.set(testFile, { included: true, guarded: true });
+
+  // Verify it's marked as guarded
+  t.true(assembler.includedFiles.get(testFile).guarded);
+
+  // Change to a new pass
+  assembler.setPass(1);
+
+  // Verify guard has been reset
+  t.false(assembler.includedFiles.get(testFile).guarded);
+});
+
 test("finishPass - updates header and CRC32 when targetRom is set", t => {
   const assembler = new Assembler();
 
@@ -1590,7 +1607,7 @@ test("handleInclude - includeonce adds current file to guarded set", t => {
 
   assembler.handleInclude("include", "file.asm", true);
 
-  t.true(assembler.includeGuardedFiles.has("/test/path/current.asm"));
+  t.true(assembler.includedFiles.get("/test/path/current.asm")?.guarded);
   t.true(assemblefileStub.called);
 
   // Cleanup
@@ -1606,6 +1623,8 @@ test("handleInclude - regular include calls assemblefile", t => {
   assembler.handleInclude("include", "file.asm", false);
 
   t.true(assembler.includedFiles.has("file.asm"));
+  t.true(assembler.includedFiles.get("file.asm").included);
+  t.false(assembler.includedFiles.get("file.asm").guarded);
   t.true(assemblefileStub.calledOnce);
   t.true(assemblefileStub.calledWith("file.asm", true));
 
@@ -1622,6 +1641,8 @@ test("handleInclude - adds file to included files set", t => {
   assembler.handleInclude("include", "newfile.asm", false);
 
   t.true(assembler.includedFiles.has("newfile.asm"));
+  t.true(assembler.includedFiles.get("newfile.asm").included);
+  t.false(assembler.includedFiles.get("newfile.asm").guarded);
 
   // Cleanup
   assemblefileStub.restore();
@@ -1636,6 +1657,8 @@ test("handleInclude - handles undefined filename", t => {
   assembler.handleInclude("include", undefined, false);
 
   t.true(assembler.includedFiles.has(undefined));
+  t.true(assembler.includedFiles.get(undefined).included);
+  t.false(assembler.includedFiles.get(undefined).guarded);
   t.true(assemblefileStub.calledWith(undefined, true));
 
   // Cleanup
@@ -1678,7 +1701,7 @@ test("assemblefile - respects include guards", t => {
   resolvePathStub.returns(testFilePath);
 
   // Add file to guarded set
-  assembler.includeGuardedFiles.add(testFilePath);
+  assembler.includedFiles.set(testFilePath, { included: true, guarded: true });
 
   // Verify file is not processed
   const processCommandStub = sinon.stub(assembler, "processCommand");

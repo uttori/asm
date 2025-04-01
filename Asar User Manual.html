@@ -1709,11 +1709,31 @@
 
 <span class="hljs-comment">; !some_number contains 0.75 after this line</span>
 <span class="hljs-define">!some_number</span> #= <span class="hljs-number">0.75</span></code></pre>
-		<h4 id="namespace-nested">namespace nested</h4>
+
+
+
+
+
+
+
+<h4 id="namespace-nested">namespace nested</h4>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes"><span class="hljs-keywords">namespace</span> <span class="hljs-keywords">nested</span> {<span class="hljs-keywords">on</span>/<span class="hljs-keywords">off</span>}</code></pre>
 		The <code class="65c816_asar">namespace nested</code> command enables (<code class="65c816_asar">on</code>) or disables (<code class="65c816_asar">off</code>) nested namespaces. The default is <code class="65c816_asar">off</code>. See section <a href="https://rpghacker.github.io/asar/asar_19/manual/#namespaces">Namespaces</a> for details.<br><br>
 <a href="https://rpghacker.github.io/asar/asar_19/manual/#contents">Return to top</a></div>
 		<hr>
+
+
+
+
+
+
+
+
+
+
+
+
+
 		<div id="formatting"><h3>Code Formatting</h3>
 		<h4 id="comments">Comments</h4>
 		You can use ; to add comments to your code, making it easier to read and understand for other people. Everything from the ; to the end of the line is silently ignored by Asar.
@@ -2456,6 +2476,14 @@
 	<span class="hljs-keywords">print</span> <span class="hljs-string">"This won't be printed!"</span>
 <span class="hljs-keywords">endif</span></code></pre>
 		Note that Asar tries to replace defines wherever possible, even inside strings. In some occasions, this might be undesirable. See section <a href="https://rpghacker.github.io/asar/asar_19/manual/#tables">Tables</a> for details on how to escape certain characters.
+
+
+
+
+
+
+
+
 		<h4 id="nested-defines">Nested Defines</h4>
 		By default, the define parser in Asar considers every supported character in a connected string to be a part of the define's name. This may not always be desired as it can lead to a certain define becoming inaccessible in a certain situation. In cases like that, the <code>{}</code> operator makes it possible to still use those defines by resovling everything inside the braces immediately.
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes"><span class="hljs-define">!hex</span> = $
@@ -2476,7 +2504,17 @@
 <span class="hljs-define">!modenamestring</span> = <span class="hljs-define">!{modename</span><span class="hljs-define">!{mode}}</span>
 
 <span class="hljs-keywords">print</span> <span class="hljs-string">"Building in mode: !modenamestring"</span></code></pre>
-		<h4 id="built-in-defines">Built-in Defines</h4>
+
+
+
+
+
+
+
+
+
+
+<h4 id="built-in-defines">Built-in Defines</h4>
 		Aside from user defines, Asar also supports a number of built-in defines. These defines are read-only and any attempt to modify them will throw an error.<br><br>
 		<table>
 			<tbody><tr>
@@ -3219,7 +3257,17 @@ ceil(number)</code></td>
 <span class="hljs-keywords">if</span> <span class="hljs-define">!is_sa1_rom</span>
 	<span class="hljs-comment">; ...</span>
 <span class="hljs-keywords">endif</span></code></pre>
-		<h4 id="includeonce">includeonce</h4>
+
+
+
+
+
+
+
+
+
+
+<h4 id="includeonce">includeonce</h4>
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes"><span class="hljs-keywords">includeonce</span></code></pre>
 		The includeonce command places an include guard on the file that is currently being assembled. This prevents it from being assembled again in the same pass. This is intended for shared files which may be included from multiple source files, but should only be assembled once to prevent redefinition errors etc.
 		<pre><code class="65c816_asar hljs language-65c816_asar" data-highlighted="yes"><span class="hljs-comment">; Contents of shared.asm:</span>
@@ -3239,6 +3287,20 @@ ceil(number)</code></td>
 <span class="hljs-opcodes">jsl</span> <span class="hljs-label">MyOtherRoutine</span>
 </code></pre>
 		<a href="https://rpghacker.github.io/asar/asar_19/manual/#contents">Return to top</a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		<hr>
 		<div id="freespace"><h3>Freespace</h3>
 		Freespace is a concept that comes into play when extending an existing ROM. To insert new code or data into a ROM, the ROM must contain enough continuous unused space for everything to fit into. Space like that is referred to as freespace. Many tools attempt to find freespace in a ROM by looking for continuous blocks of a certain value (most commonly $00). This method on its own isn't reliable as freespace finders could erroneously detect binary data or code with a certain pattern as freespace. For this reason, the RATS format was invented to protect data inserted into a ROM (see <a href="https://web.archive.org/web/20180525193101/http://old.smwiki.net/wiki/ROM_Allocation_Tag_System">SMW Wiki</a> for details on the RATS format). When placing RATS tags at the beginning of occupied memory blocks inside a ROM, freespace finders can search for them to know which parts of the ROM not to overwrite. Asar supports a number of commands for working with freespace directly, including freespace finders with automatic RATS tag generation.

@@ -14,13 +14,18 @@ let debug = (..._) => {};
 try { const { default: d } = await import("debug"); debug = d("Assembler"); } catch {}
 // }
 
-// Add a type for macro definitions:
+/** Represents a macro definition. */
 export type MacroDefinition = {
+  /** The name of the macro. */
   name: string;
-  params: string[]; // fixed parameter names
+  /** Fixed parameter names. */
+  params: string[];
+  /** Whether the macro has a variable number of parameters. */
   variadic: boolean;
-  body: string[];   // lines of code
-  sourceFile?: string; // Track the file where this macro was defined
+  /** Lines of code. */
+  body: string[];
+  /** The file where this macro was defined. */
+  sourceFile?: string;
 };
 
 export type LoopBlock = {
@@ -71,6 +76,13 @@ export type PushPcStackEntry = {
   startpos: number;
   realsnespos: number;
   realstartpos: number;
+}
+
+export interface IncludedFileInfo {
+  /** Whether the file has been included */
+  included: boolean;
+  /** Whether the file has been guarded with includeonce */
+  guarded: boolean;
 }
 
 export class Assembler {
@@ -152,8 +164,7 @@ export class Assembler {
   // Add a static property to hold our CRC table.
   public static crcTable: number[] | null = null;
 
-  public includedFiles: Set<string> = new Set();
-  public includeGuardedFiles: Set<string> = new Set();
+  public includedFiles: Map<string, IncludedFileInfo> = new Map();
   public includeStack: string[] = [];
   public includePaths: string[] = ["./"];
 
@@ -1084,7 +1095,10 @@ export class Assembler {
         break;
       }
       case "includeonce": {
-        this.handleInclude("include", words[1], true);
+        // Mark the current file as guarded (no parameters needed)
+        const fileInfo = this.includedFiles.get(this.currentFile) || { included: true, guarded: false };
+        fileInfo.guarded = true;
+        this.includedFiles.set(this.currentFile, fileInfo);
         break;
       }
       case "fillbyte":
@@ -1345,6 +1359,8 @@ export class Assembler {
         case "optimize":
         case "includefrom":
         case "asar":
+        case "{":
+        case "}":
             debug(`${keyword} unsupported`, words.slice(1))
             break;
         default: {
@@ -1926,6 +1942,42 @@ export class Assembler {
         // Check if the label already starts with the namespace
         if (!label.startsWith(namespacePrefix + "_")) {
           fullLabel = `${namespacePrefix}_${label}`;
+
+          // When nested namespaces are enabled, also create intermediate labels
+          if (this.namespaceNestingEnabled && this.namespaceNestingPath.length > 0 && modifiesHierarchy) {
+            // Create intermediate namespace labels
+
+            // 1. Create a label with just the leaf namespace (e.g., Third_Main)
+            const leafNamespace = this.namespaceNestingPath[this.namespaceNestingPath.length - 1];
+            const leafLabel = `${leafNamespace}_${label}`;
+
+            // Set the address for the current position
+            const addr = (value !== undefined) ? value : this.snespos;
+
+            debug(`setLabel creating leaf namespace label ${leafLabel}`);
+            this.labelTable.set(leafLabel, {
+              value: addr,
+              isStatic,
+              isMacroLabel,
+              macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
+              modifiesHierarchy
+            });
+
+            // 2. Create labels for intermediate namespace paths
+            for (let i = this.namespaceNestingPath.length - 2; i >= 0; i--) {
+              const partialPath = this.namespaceNestingPath.slice(i);
+              const partialLabel = `${partialPath.join("_")}_${label}`;
+
+              debug(`setLabel creating intermediate namespace label ${partialLabel}`);
+              this.labelTable.set(partialLabel, {
+                value: addr,
+                isStatic,
+                isMacroLabel,
+                macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
+                modifiesHierarchy
+              });
+            }
+          }
         }
         // For non-global labels in a namespace, also store the direct scope version
         if (label.includes("_") && !label.startsWith(namespacePrefix + "_")) {
@@ -1953,7 +2005,7 @@ export class Assembler {
         modifiesHierarchy
       });
 
-      // Also store the direct scope version if we have one
+      // Also store the direct scope version if needed
       if (directScopeLabel) {
         debug(`setLabel also storing direct scope version: ${directScopeLabel}`);
         this.labelTable.set(directScopeLabel, {
@@ -1961,42 +2013,67 @@ export class Assembler {
           isStatic,
           isMacroLabel,
           macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
-          modifiesHierarchy
+          modifiesHierarchy: false // Don't modify hierarchy for these
         });
       }
-    } else if (this.pass === 1) {
-      debug("setLabel pass 1", { fullLabel, directScopeLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel, modifiesHierarchy });
-      // Store both versions in pass 1 as well
-      this.labelTable.set(fullLabel, {
+      return; // Exit early for pass 0
+    }
+
+    if (this.pass === 2) {
+      // Check if this is a non-static label that already exists with a different address
+      const existingEntry = this.labelTable.get(fullLabel);
+      if (existingEntry && !isStatic) {
+        const existingAddr = existingEntry.value;
+
+        if (existingAddr !== addr) {
+          debug("setLabel pass error", { fullLabel, oldAddr: existingAddr, newAddr: addr });
+
+          // Throw error for changed labels between passes only when not a macro label
+          if (!isMacroLabel) {
+            throw new Error(`Label "${fullLabel}" changed from $${existingAddr.toString(16)} to $${addr.toString(16)}`);
+          }
+        }
+      }
+    }
+
+    // Handle the current parent label tracking for sublabels
+    if (modifiesHierarchy) {
+      // Only update parent if this is a regular label (not a sub-label starting with .)
+      if (!label.startsWith(".")) {
+        if (!isGlobal) {
+          // If this is a namespace label, set the parent with the namespace
+          this.currentParentLabel = fullLabel;
+          this.currentParentIsGlobal = isGlobal;
+          debug(`setLabel updating parent label to "${fullLabel}"`);
+        } else {
+          // Global labels reset the parent tracking
+          this.currentParentLabel = fullLabel;
+          this.currentParentIsGlobal = true;
+          debug(`setLabel updating parent label to global "${fullLabel}"`);
+        }
+      }
+    }
+
+    debug("setLabel setting", { fullLabel, addr: addr, addrHex: addr.toString(16) });
+
+    // Update the label table with this label
+    this.labelTable.set(fullLabel, {
+      value: addr,
+      isStatic,
+      isMacroLabel,
+      macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
+      modifiesHierarchy
+    });
+
+    // Also set the direct scope version if needed (for better label lookup)
+    if (directScopeLabel) {
+      this.labelTable.set(directScopeLabel, {
         value: addr,
         isStatic,
         isMacroLabel,
         macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
-        modifiesHierarchy
+        modifiesHierarchy: false // Don't modify hierarchy for these
       });
-
-      if (directScopeLabel) {
-        this.labelTable.set(directScopeLabel, {
-          value: addr,
-          isStatic,
-          isMacroLabel,
-          macroInstance: isMacroLabel ? this.macroLabelInstance : undefined,
-          modifiesHierarchy
-        });
-      }
-    } else if (this.pass === 2) {
-      if (!this.labelTable.has(fullLabel)) {
-        throw new Error(`Error: Label '${fullLabel}' used but not defined.`);
-      }
-      debug("setLabel pass 2", { fullLabel, directScopeLabel, addr, addrHex: addr.toString(16), isStatic, isMacroLabel, modifiesHierarchy });
-
-      // Optionally, check that a label expected to be static actually is
-      const entry = this.labelTable.get(fullLabel);
-      if (isStatic && !entry.isStatic) {
-        throw new Error(`Error: Label '${fullLabel}' is not static and cannot be used in conditionals.`);
-      }
-    } else {
-      throw new Error(`Error: Label '${fullLabel}' used in pass ${this.pass}.`);
     }
   }
 
@@ -2501,6 +2578,7 @@ export class Assembler {
     if (this.namespaceNestingEnabled) {
       // Restore the nesting path first
       const pathJson = this.namespaceStack.pop();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       this.namespaceNestingPath = JSON.parse(pathJson);
     }
     this.currentNamespace = this.namespaceStack.pop();
@@ -3339,6 +3417,13 @@ export class Assembler {
     this.pass = pass;
     // Reset the macro macroLabelInstance
     this.macroLabelInstance = null;
+
+    // Reset guarded status for all files when starting a new pass
+    // This ensures files with includeonce are processed in each pass
+    for (const [filePath, fileInfo] of this.includedFiles.entries()) {
+      fileInfo.guarded = false;
+      this.includedFiles.set(filePath, fileInfo);
+    }
   }
 
   /**
@@ -3864,13 +3949,19 @@ export class Assembler {
     debug("handleInclude", command, filename, once);
 
     // Mark file as included
-    this.includedFiles.add(filename);
+    const resolvedPath = this.resolveIncludePath(filename);
+    if (!this.includedFiles.has(resolvedPath)) {
+      this.includedFiles.set(resolvedPath, { included: true, guarded: false });
+    }
+
     this.assemblefile(filename, true);
 
     // Add current file to guarded set if once is true
     if (once) {
       debug("handleInclude once", this.currentFile);
-      this.includeGuardedFiles.add(this.currentFile);
+      const fileInfo = this.includedFiles.get(this.currentFile) || { included: true, guarded: false };
+      fileInfo.guarded = true;
+      this.includedFiles.set(this.currentFile, fileInfo);
     }
   }
 
@@ -3886,10 +3977,12 @@ export class Assembler {
     const resolvedPath = this.resolveIncludePath(filename);
 
     // Check for include guards
-    if (this.includeGuardedFiles.has(resolvedPath)) {
+    const fileInfo = this.includedFiles.get(resolvedPath);
+    if (fileInfo?.guarded) {
       debug("assemblefile include guard hit, skipping");
       return;
     }
+
     // Check for recursion limit
     if (this.includeStack.length >= 512) {
       throw new Error("Recursion limit exceeded (512 levels)");
@@ -3904,6 +3997,15 @@ export class Assembler {
       // TODO: Use readFile instead of fs.readFileSync
       const content = fs.readFileSync(resolvedPath, "utf8");
       this.currentFile = resolvedPath;
+
+      // Mark this file as included
+      if (!this.includedFiles.has(resolvedPath)) {
+        this.includedFiles.set(resolvedPath, { included: true, guarded: false });
+      } else {
+        const info = this.includedFiles.get(resolvedPath);
+        info.included = true;
+        this.includedFiles.set(resolvedPath, info);
+      }
 
       // Process the file line by line
       const lines = content.split("\n");
