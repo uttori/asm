@@ -676,7 +676,11 @@ export class MathCore {
       }
       // --- SNES/PC Address Conversion ---
       case "snestopc":
-      case "pctosnes":
+      case "pctosnes": {
+        if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+        const value = this.numArg(name, args[0]);
+        return this.delegate(name, value) as number;
+      }
       // --- Filesize & File Status ---
       case "filesize":
       case "getfilestatus":

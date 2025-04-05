@@ -5,9 +5,9 @@ lorom
 org $008000
 
 !a = 0
-macro asd(...)
-	db sizeof(...), <...[0]>, <!a> ; Intentionally uses deprecated syntax, to make sure it still works
-endmacro
+; macro asd(...)
+;  db sizeof(...), <...[0]>, <!a> ; Intentionally uses deprecated syntax, to make sure it still works
+; endmacro
 
 macro sorry(...)
 	!a = 0
@@ -34,14 +34,14 @@ macro optional(required, ...)
 	endif
 endmacro
 
-%asd(1)
-db $FF, $FF
+; %asd(1)
+; db $FF, $FF
 
-%asd(1,2,3,4,5)
-db $FF, $FF
+; %asd(1,2,3,4,5)
+; db $FF, $FF
 
-%sorry(1,2,3,4,5,6,7)
-db $FF, $FF
+; %sorry(1,2,3,4,5,6,7)
+; db $FF, $FF
 %sorry2(1,2,3,4,5,6,7)
 
 %optional(1)

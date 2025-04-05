@@ -1055,6 +1055,7 @@ export class ArchSPC700 {
     const bitBranchRegex = /^(bbc|bbs)([0-7])$/i;
     const match = opcode.match(bitBranchRegex);
     if (!match) {
+      debug("handleTwoOperandsBitBranch no match", { opcode, left, right })
       return false;
     }
 

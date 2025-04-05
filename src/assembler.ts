@@ -92,6 +92,8 @@ export class Assembler {
   public realstartpos: number = 0;
   public bytes: number = 0;
 
+  public pushBaseStack: number[] = [];
+
   public mapper: string = "lorom"; // Possible values: lorom, hirom, exlorom, exhirom, sa1rom, sfxrom, bigsa1rom, norom
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
   public romdata: number[] = []; // Placeholder for ROM
@@ -108,13 +110,13 @@ export class Assembler {
   public namespaceNestingEnabled: boolean = false;
   public namespaceNestingPath: string[] = [];
 
-  // Macro definition state:
+  // Current macro tracking
   public inMacroDefinition: boolean = false;
   public currentMacroName: string = "";
   public currentMacroParams: string[] = [];
   public currentMacroBody: string[] = [];
+  public currentVariadicCount: number | undefined = undefined;
 
-  // Macros are stored in the macros map (MacroDefinition is defined above)
   public macros: Map<string, MacroDefinition> = new Map();
 
   public mathCore: MathCore;
@@ -233,6 +235,24 @@ export class Assembler {
         }
       }
       case "sizeof": {
+        // Special case: handle variadic arguments in a macro
+        if (args[0] === "..." || args[0] === "…") {
+          // If we're in a macro expansion, check if we have a specific variadicCount for this macro
+          if (this.inMacroExpansion && this.currentVariadicCount !== undefined) {
+            return this.currentVariadicCount;
+          }
+
+          // If we're in macro definition or have no current variadic count, return 0
+          if (this.inMacroDefinition) {
+            return 0;
+          }
+
+          // During evaluation (not expansion), this is likely the math evaluation
+          // on a line like "while !a < sizeof(...)" which happens before
+          // any actual arguments are passed. The actual expansion will happen later
+          // when the macro is called with real arguments.
+          return 0;
+        }
         return this.getObjectSize(args[0] as string, true);
       }
       case "objectsize": {
@@ -735,6 +755,7 @@ export class Assembler {
 
     // If we're in a loop body and not processing an inner loop or endfor, store the command
     if (this.collectingLoop && !command.match(/^\s*(for|while|endfor|endwhile)/i)) {
+      debug("processCommand collecting loop command", command);
       // We're inside a loop block - collect the command instead of immediately processing it
       if (this.currentLoop) {
         this.currentLoop.commands.push(command);
@@ -835,7 +856,8 @@ export class Assembler {
         if (this.pass === 0) {
           let variadic = false;
           if (this.currentMacroParams.length > 0 &&
-              this.currentMacroParams[this.currentMacroParams.length - 1] === "...") {
+              (this.currentMacroParams[this.currentMacroParams.length - 1] === "..." ||
+               this.currentMacroParams[this.currentMacroParams.length - 1] === "…")) {
             variadic = true;
             this.currentMacroParams.pop();
           }
@@ -851,7 +873,7 @@ export class Assembler {
             throw new Error(`Macro '${macroDef.name}' is already defined.`);
           }
           this.macros.set(macroDef.name, macroDef);
-          debug(`Defined macro '${macroDef.name}' with params [${macroDef.params.join(", ")}]${variadic ? " (variadic)" : ""}.`);
+          debug(`processCommand defined macro '${macroDef.name}' with params [${macroDef.params.join(", ")}]${variadic ? " (variadic)" : ""}.`);
         }
         // On later passes (or after definition), simply exit macro-definition mode.
         this.inMacroDefinition = false;
@@ -880,7 +902,7 @@ export class Assembler {
       const paramsStr = match[2].trim();
       this.currentMacroParams = paramsStr ? paramsStr.split(",").map(s => s.trim()) : [];
       this.inMacroDefinition = true;
-      debug(`Started macro definition for '${this.currentMacroName}' with params [${this.currentMacroParams.join(", ")}].`);
+      debug(`processCommand started macro definition for '${this.currentMacroName}' with params [${this.currentMacroParams.join(", ")}].`);
       return;
     }
 
@@ -906,15 +928,30 @@ export class Assembler {
         this.addAddressToLine(this.realsnespos & 0xFFFFFF);
       } else {
         // It's a standalone define reference, resolve it and process the result
-        const defineName = command.trim().substring(1); // Remove the !
-        if (!this.defines.has(defineName)) {
-          throw new Error(`Error: Define '${defineName}' not found.`);
-        }
+        const trimmedCommand = command.trim();
 
-        // Get the define's value and process it as a command
-        const defineValue = this.defines.get(defineName);
-        debug(`Processing standalone define !${defineName} with value: ${defineValue}`);
-        this.processCommand(defineValue);
+        // Check if this is a braced define reference
+        if (trimmedCommand.startsWith("!{")) {
+          try {
+            // Process the entire command using the new method for braced defines
+            const processedCommand = this.processValueWithBracedDefines(trimmedCommand);
+            debug(`Processing braced define ${trimmedCommand} with processed value: ${processedCommand}`);
+            this.processCommand(processedCommand);
+          } catch (error) {
+            throw new Error(`Error resolving braced define in "${trimmedCommand}": ${error.message}`);
+          }
+        } else {
+          // Standard define reference
+          const defineName = trimmedCommand.substring(1); // Remove the !
+          if (!this.defines.has(defineName)) {
+            throw new Error(`Error: Define '${defineName}' not found.`);
+          }
+
+          // Get the define's value and process it as a command
+          const defineValue = this.defines.get(defineName);
+          debug(`Processing standalone define !${defineName} with value: ${defineValue}`);
+          this.processCommand(defineValue);
+        }
       }
       return;
     }
@@ -1314,9 +1351,11 @@ export class Assembler {
           this.handleNamespace(words.slice(1));
           break;
         case "pushns":
+          // TODO: Likely not useful and should remove
           this.handlePushNamespace();
           break;
         case "pullns":
+          // TODO: Likely not useful and should remove
           this.handlePullNamespace();
           break;
         case "org":
@@ -1332,6 +1371,14 @@ export class Assembler {
           this.handleDataDirective(keyword, words.slice(1));
           break;
         }
+        case "pushbase": {
+          this.handlePushBase();
+          break;
+        }
+        case "pullbase": {
+          this.handlePullBase();
+          break;
+        }
         case "pushpc": {
           this.handlePushPC();
           break;
@@ -1341,7 +1388,7 @@ export class Assembler {
           break;
         }
         case "arch": {
-          this.handleArch(words.slice(1));
+          this.handleArch(words);
           break;
         }
         case "check":
@@ -1355,6 +1402,8 @@ export class Assembler {
         case "autoclear":
         case "freespacebyte":
         case "prot":
+        case "pulltable":
+        case "pushtable":
         case "table":
         case "optimize":
         case "includefrom":
@@ -1385,6 +1434,19 @@ export class Assembler {
     this.addAddressToLine(this.realsnespos & 0xFFFFFF);
   }
 
+  handlePushBase(): void {
+    debug("handlePushBase")
+    this.pushBaseStack.push(this.snespos);
+  }
+
+  handlePullBase(): void {
+    debug("handlePullBase")
+    if (this.pushBaseStack.length === 0) {
+      throw new Error("No base value to pull.");
+    }
+    this.snespos = this.pushBaseStack.pop();
+  }
+
   /**
    * Handles the ARCH command.
    * @param {string[]} words - The words from the ARCH command.
@@ -1399,7 +1461,7 @@ export class Assembler {
     if (archParam === "65816") {
       this.arch = "65816";
       // (Reinitialize or update arch65816 if needed)
-    } else if (archParam === "spc700") {
+    } else if (archParam === "spc700" || archParam === "spc700-inline" || archParam === "spc700-raw") {
       this.arch = "spc700";
     } else if (archParam === "superfx") {
       this.arch = "superfx";
@@ -1439,6 +1501,8 @@ export class Assembler {
     const previousMacroExpansionState = this.inMacroExpansion;
     this.inMacroExpansion = true;
 
+    // Save previous variadic count
+    const previousVariadicCount = this.currentVariadicCount;
     // Save the previous macro name
     const previousMacroName = this.currentMacroName;
 
@@ -1466,6 +1530,9 @@ export class Assembler {
         for (let i = 0; i < macro.params.length; i++) {
           fixedArgs.set(macro.params[i], "");
         }
+
+        // Set variadic count to 0 since there are no variadic arguments
+        this.currentVariadicCount = 0;
 
         // Expand each line of the macro.
         for (const line of macro.body) {
@@ -1560,6 +1627,9 @@ export class Assembler {
         }
       }
 
+      // Store the variadic count for accessing in sizeof(...)
+      this.currentVariadicCount = variadicCount;
+
       // Expand each line of the macro.
       for (const line of macro.body) {
         const expandedLine = this.expandMacroLine(line, fixedArgs, variadicArgs, variadicCount);
@@ -1571,6 +1641,9 @@ export class Assembler {
 
     // Restore the previous macro name
     this.currentMacroName = previousMacroName;
+
+    // Restore the previous variadic count
+    this.currentVariadicCount = previousVariadicCount;
 
     // Restore the previous macro expansion state
     this.inMacroExpansion = previousMacroExpansionState;
@@ -1587,6 +1660,51 @@ export class Assembler {
    */
   expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string {
     debug("expandMacroLine", { line, fixedArgs, variadicArgs, variadicCount });
+
+    // Handle define statements (!a = 0) - don't expand the left side
+    if (line.trim().startsWith("!") && line.includes("=")) {
+      // Extract the variable name and operator
+      const match = line.trim().match(/^!(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
+      if (match) {
+        const varName = match[1];
+        const operator = match[2];
+        const value = match[3];
+
+        // Only expand the right side (value) of the assignment
+        let expandedValue = value;
+        expandedValue = expandedValue.replace(/<(\w+)>/g, (match: string, paramName: string) => {
+          if (fixedArgs.has(paramName)) {
+            return this.resolvedefines(fixedArgs.get(paramName));
+          }
+          return match;
+        });
+        expandedValue = expandedValue.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
+          // Check for defines in the expression (like !a+1)
+          const processedExpr = expr.replace(/!(\w+)/g, (defMatch: string, defName: string) => {
+            if (this.defines.has(defName)) {
+              return this.defines.get(defName);
+            }
+            return defMatch;
+          });
+
+          // Resolve any remaining defines inside the math expression
+          const resolvedExpr = this.resolvedefines(processedExpr);
+          let index = this.mathCore.math(resolvedExpr);
+          if (isNaN(index)) {
+            throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
+          }
+          index = Math.floor(index);
+          if (index < 0 || index >= variadicCount) {
+            throw new Error(`Variadic index ${index} out of range (0..${variadicCount - 1}).`);
+          }
+          return variadicArgs[index];
+        });
+        expandedValue = expandedValue.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
+        expandedValue = this.resolvedefines(expandedValue);
+
+        return `!${varName} ${operator} ${expandedValue}`;
+      }
+    }
 
     // First check if this line contains a label definition (ends with :)
     if (line.match(/^\s*[#?][\w+.\-]+:/)) {
@@ -1610,13 +1728,29 @@ export class Assembler {
       }
       return match;
     });
+
+    // Check if we're in a false condition - don't expand variadic parameters
+    const currentCond = this.condStack.length === 0 ? true : this.condStack.every(entry => entry.cond);
+    if (!currentCond) {
+      // If in a false condition, just expand fixed parameters and pass through
+      return expanded;
+    }
+
     // Replace variadic parameters of the form <...[{math}]>
     expanded = expanded.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
-      // Resolve defines inside the math expression.
-      const resolvedExpr = this.resolvedefines(expr);
+      // Check for defines in the expression (like !a+1)
+      const processedExpr = expr.replace(/!(\w+)/g, (defMatch: string, defName: string) => {
+        if (this.defines.has(defName)) {
+          return this.defines.get(defName);
+        }
+        return defMatch;
+      });
+
+      // Resolve any remaining defines inside the math expression
+      const resolvedExpr = this.resolvedefines(processedExpr);
       let index = this.mathCore.math(resolvedExpr);
       if (isNaN(index)) {
-        throw new Error(`Invalid variadic index expression: ${expr}`);
+        throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
       }
       index = Math.floor(index);
       if (index < 0 || index >= variadicCount) {
@@ -1625,7 +1759,7 @@ export class Assembler {
       return variadicArgs[index];
     });
     // Replace sizeof(...) with the number of variadic arguments.
-    expanded = expanded.replace(/sizeof\(\.{3}\)/g, variadicCount.toString());
+    expanded = expanded.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
     // Finally, resolve any remaining defines.
     expanded = this.resolvedefines(expanded);
     debug("expandMacroLine = ", expanded)
@@ -1647,7 +1781,121 @@ export class Assembler {
     debug("handleDefineCommand", command)
     // Remove the leading "!" and trim.
     const line = command.substring(1).trim();
-    // Use a regex to split into identifier, operator, and value.
+
+    // Check if this is a nested define with braces
+    if (line.startsWith("{")) {
+      // Find the matching closing brace
+      let braceLevel = 1;
+      let closingBraceIndex = 1;
+
+      while (braceLevel > 0 && closingBraceIndex < line.length) {
+        if (line[closingBraceIndex] === "{") braceLevel++;
+        if (line[closingBraceIndex] === "}") braceLevel--;
+        closingBraceIndex++;
+      }
+
+      if (braceLevel !== 0) {
+        throw new Error(`Mismatched braces in define: ${command}`);
+      }
+
+      // Extract the identifier inside braces
+      const nestedContent = line.substring(1, closingBraceIndex - 1);
+      debug("handleDefineCommand nested content:", nestedContent);
+
+      // Process the nested content recursively to handle nested braces
+      const resolvedIdentifier = this.processNestedDefines(nestedContent);
+      debug("handleDefineCommand resolved nested identifier:", resolvedIdentifier);
+
+      // Extract the operator and value
+      const restOfLine = line.substring(closingBraceIndex).trim();
+      const operatorMatch = restOfLine.match(/^\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
+
+      if (!operatorMatch) {
+        throw new Error(`Invalid define syntax after braces: ${command}`);
+      }
+
+      const operator = operatorMatch[1];
+      let value = operatorMatch[2].trim();
+
+      // Process any braced defines in the value
+      if (value.includes("!{") || value.includes("!")) {
+        // Need to process defines in the value
+        // For simple cases, fully resolve the value
+        if (!value.includes("FF") && !value.includes("$")) {
+          value = this.processNestedDefines(value);
+          debug("handleDefineCommand fully processed value:", value);
+        } else {
+          // For complex cases, just process braced defines
+          value = this.processValueWithBracedDefines(value);
+          debug("handleDefineCommand processed value with braced defines:", value);
+        }
+      }
+
+      // If the value is enclosed in double quotes, remove them.
+      if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.substring(1, value.length - 1);
+      }
+
+      // For the ":=" operator, resolve any defines in the value immediately.
+      if (operator === ":=") {
+        value = this.resolvedefines(value);
+      }
+
+      // For the "#=" operator, evaluate the value as a math expression.
+      if (operator === "#=") {
+        // First resolve any defines inside the expression.
+        value = this.resolvedefines(value);
+        const result = this.mathCore.math(value);
+        /* c8 ignore next 3 */
+        if (Number.isNaN(result)) {
+          throw new Error(`Math evaluation failed in define "#=" for expression: ${value}`);
+        }
+        // Convert to string (you may choose your own format, here decimal is used)
+        value = result.toString();
+      }
+
+      // For the "?=" operator, only assign if not already defined.
+      if (operator === "?=") {
+        if (this.defines.has(resolvedIdentifier)) {
+          return;
+        }
+      }
+
+      // For the "+=" operator, append to any existing value.
+      if (operator === "+=") {
+        const existing = this.defines.get(resolvedIdentifier) || "";
+        value = existing + value;
+      }
+
+      // Check if the value is a math expression that needs to be evaluated
+      if (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") ||
+          value.includes("&") || value.includes("|") || value.includes("^") ||
+          value.includes("<<") || value.includes(">>") || value.includes("(")) {
+        try {
+          // First resolve any defines inside the expression
+          const resolvedValue = this.resolvedefines(value);
+          // Then evaluate the math expression
+          const result = this.mathCore.math(resolvedValue);
+          if (!Number.isNaN(result)) {
+            // Only use the result if it's a valid number
+            value = "$" + result.toString(16).toUpperCase();
+            debug(`handleDefineCommand evaluated math expression in define: ${resolvedValue} = ${value}`);
+          }
+        } catch (error) {
+          /* c8 ignore next 3 */
+          // If evaluation fails, keep the original value
+          debug(`handleDefineCommand math evaluation skipped for expression: ${value}`);
+        }
+      }
+
+      // Assign the define.
+      this.defines.set(resolvedIdentifier, value);
+      debug(`handleDefineCommand define set: !{${nestedContent}} ${operator} ${value} (resolved to !${resolvedIdentifier})`);
+      debug("handleDefineCommand defines", this.defines);
+      return;
+    }
+
+    // Standard define case (no braces in identifier)
     const match = line.match(/^(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
     if (!match) {
       throw new Error(`Invalid define syntax: ${command}`);
@@ -1655,6 +1903,19 @@ export class Assembler {
     const identifier = match[1];
     const operator = match[2];
     let value = match[3].trim();
+
+    // Process any braced defines in the value
+    if (value.includes("!{") || value.includes("!")) {
+      // For simple cases like !fourth = !{second}fi!{third}, fully resolve the value
+      if (!value.includes("FF") && !value.includes("$")) {
+        value = this.processNestedDefines(value);
+        debug("handleDefineCommand fully processed value:", value);
+      } else {
+        // For complex cases, just process braced defines
+        value = this.processValueWithBracedDefines(value);
+        debug("handleDefineCommand processed value with braced defines:", value);
+      }
+    }
 
     // If the value is enclosed in double quotes, remove them.
     if (value.startsWith('"') && value.endsWith('"')) {
@@ -1716,6 +1977,229 @@ export class Assembler {
     // Assign the define.
     this.defines.set(identifier, value);
     debug(`handleDefineCommand define set: !${identifier} ${operator} ${value}`);
+    debug("handleDefineCommand defines", this.defines);
+  }
+
+  /**
+   * Processes nested defines in a string, properly handling the !{...} syntax
+   * by immediately resolving the content inside braces.
+   * @param {string} content The content with nested defines to process
+   * @returns {string} The resolved identifier
+   */
+  processNestedDefines(content: string): string {
+    debug("processNestedDefines input:", content);
+
+    // Check if there are any define markers in the content
+    if (!content.includes("!")) {
+      debug("processNestedDefines no define markers found, returning as is");
+      return content;
+    }
+
+    // Process until no more changes occur
+    let prevResult = "";
+    let result = content;
+    let iterations = 0;
+    const maxIterations = 10; // Safety limit
+
+    while (prevResult !== result && iterations < maxIterations) {
+      debug(`processNestedDefines iteration ${iterations+1} - processing: "${result}"`);
+      iterations++;
+      prevResult = result;
+      result = this.resolveOneLevelOfDefines(result);
+      debug(`processNestedDefines iteration ${iterations} result: "${result}"`);
+    }
+
+    debug("processNestedDefines final result:", result);
+    return result;
+  }
+
+  /**
+   * Helper method to resolve one level of defines in a string.
+   * @param {string} content The content to process
+   * @returns {string} The processed content with one level of defines resolved
+   */
+  resolveOneLevelOfDefines(content: string): string {
+    debug("resolveOneLevelOfDefines input:", content);
+
+    // This approach scans the string for !{...} patterns and processes them from the inside out
+
+    // Find all positions of !{
+    const openBracePositions = [];
+    for (let i = 0; i < content.length - 1; i++) {
+      if (content.substring(i, i+2) === "!{") {
+        openBracePositions.push(i);
+        i++; // Skip the {
+      }
+    }
+
+    // If no braces found, process regular !defines
+    if (openBracePositions.length === 0) {
+      return this.resolveRegularDefines(content);
+    }
+
+    // Process the rightmost (last) opening brace first - it's guaranteed to be an innermost define
+    // or at least closer to an innermost define
+    const lastOpenBracePos = openBracePositions[openBracePositions.length - 1];
+
+    // Find its matching closing brace
+    let nestLevel = 1;
+    let closingBracePos = -1;
+
+    for (let i = lastOpenBracePos + 2; i < content.length; i++) {
+      if (i < content.length - 1 && content.substring(i, i+2) === "!{") {
+        nestLevel++;
+        i++; // Skip the {
+      }
+      else if (content[i] === "}") {
+        nestLevel--;
+        if (nestLevel === 0) {
+          closingBracePos = i;
+          break;
+        }
+      }
+    }
+
+    if (closingBracePos === -1) {
+      throw new Error(`Mismatched braces in content: ${content}`);
+    }
+
+    // Extract the content between braces
+    const braceContent = content.substring(lastOpenBracePos + 2, closingBracePos);
+    debug(`resolveOneLevelOfDefines extracted braced content: "${braceContent}"`);
+
+    // If this content itself contains braced defines, we need to resolve those first
+    if (braceContent.includes("!{")) {
+      // Recursively resolve the inner content first
+      const resolvedInnerContent = this.resolveOneLevelOfDefines(braceContent);
+      debug(`resolveOneLevelOfDefines resolved inner content: "${resolvedInnerContent}"`);
+
+      // Replace just this inner content in the original string
+      const updatedContent =
+        content.substring(0, lastOpenBracePos + 2) +
+        resolvedInnerContent +
+        content.substring(closingBracePos);
+
+      debug(`resolveOneLevelOfDefines after resolving inner content: "${updatedContent}"`);
+      return updatedContent;
+    }
+
+    // If we get here, we have a simple braced content with no inner braces - resolve it
+    let replacement = braceContent;
+    if (this.defines.has(braceContent)) {
+      replacement = this.defines.get(braceContent);
+      debug(`resolveOneLevelOfDefines resolved braced define: "${braceContent}" to "${replacement}"`);
+    } else {
+      debug(`resolveOneLevelOfDefines define not found, using as is: "${braceContent}"`);
+    }
+
+    // Replace this one define in the content
+    const result =
+      content.substring(0, lastOpenBracePos) +
+      replacement +
+      content.substring(closingBracePos + 1);
+
+    debug(`resolveOneLevelOfDefines after resolving: "${result}"`);
+    return result;
+  }
+
+  /**
+   * Helper method to resolve regular !defines (non-braced)
+   * @param {string} content The content to process
+   * @returns {string} The processed content with regular defines resolved
+   */
+  resolveRegularDefines(content: string): string {
+    debug(`resolveRegularDefines input: "${content}"`);
+    let result = "";
+    let index = 0;
+    let foundDefine = false;
+
+    while (index < content.length) {
+      if (content.substring(index).startsWith("!") &&
+          index + 1 < content.length &&
+          /\w/.test(content[index + 1])) {
+        // Regular define (not braced)
+        debug(`resolveRegularDefines found regular define at index ${index}`);
+        index++; // Skip !
+        let defineName = "";
+
+        while (index < content.length && /\w/.test(content[index])) {
+          defineName += content[index++];
+        }
+
+        debug(`resolveRegularDefines extracted define name: "${defineName}"`);
+
+        // Look up the define
+        if (this.defines.has(defineName)) {
+          result += this.defines.get(defineName);
+          debug(`resolveRegularDefines resolved regular define: "${defineName}" to "${this.defines.get(defineName)}"`);
+          foundDefine = true;
+        } else {
+          throw new Error(`Define '${defineName}' not found.`);
+        }
+      } else {
+        // Regular character
+        result += content[index++];
+      }
+    }
+
+    if (foundDefine) {
+      debug(`resolveRegularDefines after processing: "${result}"`);
+      return result;
+    }
+
+    // No changes made
+    return content;
+  }
+
+  /**
+   * Processes a define value string, resolving any !{...} expressions it contains.
+   * @param {string} value The value string potentially containing braced defines
+   * @returns {string} The processed value with all braced defines resolved
+   */
+  processValueWithBracedDefines(value: string): string {
+    debug("processValueWithBracedDefines input:", value);
+    let result = "";
+    let index = 0;
+
+    while (index < value.length) {
+      if (value.substring(index).startsWith("!{")) {
+        // Found a braced define reference
+        let braceContent = "";
+        index += 2; // Skip !{
+        let braceLevel = 1;
+
+        // Extract the content between braces
+        while (index < value.length && braceLevel > 0) {
+          if (value[index] === "{") braceLevel++;
+          else if (value[index] === "}") braceLevel--;
+
+          if (braceLevel === 0) break;
+          braceContent += value[index];
+          index++;
+        }
+
+        if (braceLevel !== 0) {
+          throw new Error(`Mismatched braces in value: ${value}`);
+        }
+
+        // Skip the closing brace
+        index++;
+
+        // Process nested braces in the content recursively
+        const resolvedIdentifier = this.processNestedDefines(braceContent);
+        debug("processValueWithBracedDefines resolved braced content to identifier:", resolvedIdentifier);
+
+        // Preserve the reference in braced format with the fully resolved identifier
+        result += `!{${resolvedIdentifier}}`;
+        debug("processValueWithBracedDefines preserving braced reference:", `!{${resolvedIdentifier}}`);
+      } else {
+        // Regular character
+        result += value[index++];
+      }
+    }
+
+    debug("processValueWithBracedDefines final result:", result);
+    return result;
   }
 
   /**
@@ -2488,7 +2972,32 @@ export class Assembler {
         }
 
         // First resolve any defines in the expression so that tokens like "FillCount" are replaced.
-        const resolved = this.resolvedefines(value);
+        // Recursively resolve defines until no more changes occur
+        let resolved = value;
+        let previousResolved = "";
+        while (resolved !== previousResolved) {
+          previousResolved = resolved;
+          resolved = this.resolvedefines(resolved);
+        }
+        debug("handleDataDirective recursively resolved defines", resolved);
+
+        // Check if this is a comma-separated list of values
+        if (resolved.includes(",")) {
+          debug("handleDataDirective comma-separated values", resolved);
+          const valueList = resolved.split(",");
+          for (const item of valueList) {
+            const trimmedItem = item.trim();
+            if (trimmedItem) {
+              // Convert each item to a number and write it
+              const itemNum = this.mathCore.math(trimmedItem);
+              if (!Number.isNaN(itemNum)) {
+                this.writeDataByLength(len, itemNum);
+              }
+            }
+          }
+          continue; // Skip further processing for this value
+        }
+
         // Check if this is a struct reference (e.g., "sprite.x_pos")
         let num: number;
         try {
@@ -3251,7 +3760,8 @@ export class Assembler {
     };
 
     // Special case for direct variable reference like "!i"
-    if (input.startsWith("!") && !input.includes(" ") && !input.includes("=")) {
+    if (input.startsWith("!") && !input.includes(" ") && !input.includes("=") && !input.includes("{")) {
+      debug("resolvedefines direct variable reference", input);
       const varName = input.substring(1);
       const value = lookupVariable(varName);
 
@@ -3324,6 +3834,7 @@ export class Assembler {
           defineName = this.resolvedefines(unprocessedName);
           debug("resolvedefines !define defineName", defineName);
         } else {
+          // Handle regular define (no braces)
           while (index < input.length && /\w/.test(input[index])) {
             defineName += input[index++];
           }
@@ -3424,6 +3935,17 @@ export class Assembler {
       fileInfo.guarded = false;
       this.includedFiles.set(filePath, fileInfo);
     }
+
+    // Reset the in macro flag
+    this.inMacroExpansion = false;
+    this.macroLabelInstance = null;
+
+    // Reset the in loop flag
+    this.collectingLoop = false;
+    this.currentLoop = null;
+
+    // Reset the condition stack
+    this.condStack = [];
   }
 
   /**
@@ -3552,7 +4074,7 @@ export class Assembler {
     // Process the operand based on addressing mode
     if (expanded.startsWith("#")) {
       // Immediate mode
-      debug("expandOperand immediate mode", expanded);
+      debug("expandOperand immediate mode or pseudo opcode", expanded);
       const inner = expanded.substring(1).trim();
 
       // Check for bank operations in the inner expression
@@ -3814,13 +4336,21 @@ export class Assembler {
       headerOffset = 0xFFC0;
     } else {
       // For other mappers we choose a default (or skip header update)
-      headerOffset = 0xFFC0;
+      headerOffset = 0x7FC0;
     }
+    debug("updateHeaderAndCRC32 headerOffset", headerOffset)
 
     if (this.romdata.length < headerOffset + 0x20) {
       debug("ROM too small for header update.");
       return;
     }
+
+    // Set complement to 0xFFFF
+    this.romdata[headerOffset + 0x1C] = 0xFF;
+    this.romdata[headerOffset + 0x1D] = 0xFF;
+    // Set checksum to 0x0000
+    this.romdata[headerOffset + 0x1E] = 0x00;
+    this.romdata[headerOffset + 0x1F] = 0x00;
 
     // Calculate the 16-bit checksum (the sum of all bytes modulo 0x10000).
     let checksum = 0;
@@ -4892,3 +5422,4 @@ export class Assembler {
     }
   }
 }
+

@@ -643,16 +643,24 @@ export class Arch65816 {
     // If a repeat count is provided, it should be the second token starting with '#'.
     if (operand && operand.startsWith("#")) {
       // Remove the '#' and parse the rest as a number.
-      const repStr = operand.substring(1);
-      count = parseInt(repStr, 10);
-      if (isNaN(count) || count < 1) {
+      let repStr = operand.substring(1);
+      // Check for and remove '$' prefix that might be introduced by expandOperand
+      if (repStr.startsWith("$")) {
+        repStr = repStr.substring(1);
+        debug("handleNoOperandOperations removed $ prefix", repStr);
+      }
+      count = Number.parseInt(repStr, 10);
+      debug("handleNoOperandOperations count", count);
+      if (Number.isNaN(count)) {
         throw new Error(`Invalid repeat count in pseudo opcode: ${operand}`);
       }
     }
 
     // Write the opcode 'count' times.
-    for (let i = 0; i < count; i++) {
-      this.assembler.write1(stackOpcodes[opcode]);
+    if (count > 0) {
+      for (let i = 0; i < count; i++) {
+        this.assembler.write1(stackOpcodes[opcode]);
+      }
     }
     return true;
   }
@@ -981,6 +989,11 @@ export class Arch65816 {
       operand = "$" + parseInt(operand, 10).toString(16);
       debug("handleJump converted numeric operand to hex:", operand);
     }
+    // Handle operands with $ prefix that are only 3 characters long (like $FF)
+    if (/^\$[\dA-Fa-f]{1,2}$/.test(operand)) {
+      operand = "$00" + operand.substring(1);
+      debug("handleJump converted short hex operand to full form:", operand);
+    }
 
     const jumpOpcodes: { [key: string]: number } = {
         JMP: 0x4C,     // JMP Absolute
@@ -998,7 +1011,7 @@ export class Arch65816 {
 
     let address = this.assembler.getnum(operand);
     debug("handleJump address", address.toString(16));
-    let mode: keyof typeof jumpOpcodes  ;
+    let mode: keyof typeof jumpOpcodes;
 
     // **Absolute Mode: JMP $0000, JSR $0000**
     if (/^\$[\dA-Fa-f]{4}$/.test(operand)) {
@@ -1038,20 +1051,20 @@ export class Arch65816 {
     }
     else {
       debug("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`)
-        throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
+      throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
     }
 
     // **Write opcode & address**
     if (mode in jumpOpcodes) {
-        this.assembler.write1(jumpOpcodes[mode]);
-        if (mode === "JSL" || mode === "JML") {
-            this.assembler.write3(address);
-        } else {
-            this.assembler.write2(address);
-        }
-    } else if (mode in jumpIndirectOpcodes) {
-        this.assembler.write1(jumpIndirectOpcodes[mode]);
+      this.assembler.write1(jumpOpcodes[mode]);
+      if (mode === "JSL" || mode === "JML") {
+        this.assembler.write3(address);
+      } else {
         this.assembler.write2(address);
+      }
+    } else if (mode in jumpIndirectOpcodes) {
+      this.assembler.write1(jumpIndirectOpcodes[mode]);
+      this.assembler.write2(address);
     }
 
     return true;
