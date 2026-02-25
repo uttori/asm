@@ -171,7 +171,7 @@ BOOL PcxFile::readHeader(FILE* filePtr) {
 /////////////////////////////////////////////////////////////////////////////
 
 void PcxFile::evaluateSnesPalette(void) {
-    printf ("evaluateSnesPalette\n");
+    printf ("PcxFile::evaluateSnesPalette\n");
     // loop over all colour registers
     for (unsigned int index = 0; index < 256; index++) {
         // convert from 8-bit RGB to 5-bit RGB
@@ -200,7 +200,7 @@ void PcxFile::evaluateSnesPalette(void) {
 /////////////////////////////////////////////////////////////////////////////
 
 BOOL PcxFile::decode(FILE* filePtr) {
-    printf ("decode\n");
+    printf ("PcxFile::decode\n");
     BOOL error = FALSE;
     unsigned long screenIndex = 0;
 
@@ -320,6 +320,7 @@ BOOL PcxFile::decode(FILE* filePtr) {
 /////////////////////////////////////////////////////////////////////////////
 
 BYTE PcxFile::getBitPlane (unsigned int x, unsigned int y, unsigned int line, unsigned int plane) {
+    // printf ("PcxFile::getBitPlane\n");
     BYTE bitPlane = 0;
     BYTE* displayPtr = &(screenData[320 * ((y << 3) + line) + (x << 3) + 32]);
 
@@ -353,7 +354,7 @@ BYTE PcxFile::getBitPlane (unsigned int x, unsigned int y, unsigned int line, un
 /////////////////////////////////////////////////////////////////////////////
 
 void PcxFile::convertToSnesData(void) {
-    printf ("convertToSnesData\n");
+    printf ("PcxFile::convertToSnesData\n");
     unsigned int index = 0;
 
     // allocate memory to hold SNES screen data
@@ -361,7 +362,7 @@ void PcxFile::convertToSnesData(void) {
 
     // loop over every row of tiles
     for (unsigned int y = 0; y < 25; y++) {
-        // loop over every tiles in the row
+        // loop over each tile in the row
         for (unsigned int x = 0; x < 32; x++) {
             // make 4 passes over 256 colour data
             for (unsigned int pass = 0; pass < 4; pass++) {

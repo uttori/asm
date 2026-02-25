@@ -1,21 +1,22 @@
-const process = require('process');
-const fs = require('fs');
-const path = require('path');
-const PNG = require('pngjs').PNG;
+import process from 'process';
+import fs from 'fs';
+import path from 'path';
+import PNG from 'pngjs';
 
 // PCXFILE
 class SNESImage {
-  constructor(data) {
+  constructor(data, filename) {
+    this.filename = filename;
     this.data = data;
-    this.snesPalette = Buffer.alloc(1024, 0);
+    this.snesPalette = new Uint32Array(1024);
     this.outputData = [];
-    this.snesData = Buffer.alloc(64000); // width * height
+    this.snesData = new Uint8ClampedArray(64000); // width * height
 
     this.parsePixelData();
     this.convertToSnesData8bpp();
 
-    fs.writeFileSync('test.palette', this.snesPalette);
-    fs.writeFileSync('test.snes_data', Buffer.from(this.outputData));
+    fs.writeFileSync(`${filename}.palette`, this.snesPalette);
+    fs.writeFileSync(`${filename}.snes_data`, Buffer.from(this.outputData));
   }
 
   parsePixelData() {
@@ -128,18 +129,34 @@ class Animator {
     this.animationIndex = 0;
   }
 
+  /**
+   * Write the specified word out in low byte, high byte format.
+   * @param {number} value The value to write
+   * @param {number} [index] The index to write the value to, if not specified, the current animation index is used.
+   */
   writeWord(value, index) {
+    console.log('Animator::writeWord value:', value, 'index:', index);
+    if (index === undefined) {
+      index = this.animationIndex;
+    }
+
     // write out low byte
     this.animationData[index++] = value & 0x00FF;
     // write out high byte
     this.animationData[index++] = value >> 8;
-
-    return index;
   }
 
+  /**
+   * Write out all the animation data for the very first frame.
+   * Note that it is assumed the screen will be disabled when the first frame is output.
+   * @param {SNESImage} screen The screen to write out.
+   * @returns {[number, Uint8ClampedArray]} The new animation index and the animation data.
+   */
   writeOutFirstScreenData(screen) {
+    console.log('Animator::writeOutFirstScreenData screen:', screen.filename);
     // write out number of colour palette bytes
-    this.animationIndex = this.writeWord(0x0200, this.animationIndex);
+    this.writeWord(0x0200);
+    this.animationIndex += 2;
 
     // write out colour register $00
     this.animationData[this.animationIndex++] = 0x00;
@@ -151,13 +168,16 @@ class Animator {
       this.animationData[this.animationIndex++] = screen.snesPalette[index] >> 8;
     }
 
-    this.animationIndex = this.writeWord(END_OF_PALETTE, this.animationIndex);
+    this.writeWord(END_OF_PALETTE);
+    this.animationIndex += 2;
 
     // write out VRAM address $0000
-    this.animationIndex = this.writeWord(0x0000, this.animationIndex);
+    this.writeWord(0x0000);
+    this.animationIndex += 2;
 
     // write out length
-    this.animationIndex = this.writeWord(NUM_DISPLAY_BYTES, this.animationIndex);
+    this.writeWord(NUM_DISPLAY_BYTES);
+    this.animationIndex += 2;
 
     // write out data
     // memcpy(&(animationData[animationIndex]), screen->snesData, NUM_DISPLAY_BYTES);
@@ -165,27 +185,37 @@ class Animator {
       console.error(`Screen SNES Data incorrect length! ${screen.outputData.length} !== ${NUM_DISPLAY_BYTES}`);
     }
     // this.animationData[this.animationIndex] = screen.outputData.slice(0, NUM_DISPLAY_BYTES);
+    // this.animationIndex += NUM_DISPLAY_BYTES;
     screen.outputData.forEach(value => {
       this.animationData[this.animationIndex++] = value;
     });
 
-    // this.animationIndex += NUM_DISPLAY_BYTES;
+    // Values seen at the end of the CUSTOM files
+    this.animationData[this.animationIndex++] = 0x01;
+    this.animationData[this.animationIndex++] = 0xFF;
+    this.animationData[this.animationIndex++] = 0x01;
+    this.animationData[this.animationIndex++] = 0xFF;
 
-    this.animationIndex = this.writeWord(END_OF_FRAME, this.animationIndex);
+    this.writeWord(END_OF_FRAME);
+    this.animationIndex += 2;
 
     return [this.animationIndex, this.animationData];
   }
 
   evaluateDifferences(screen1, screen2) {
+    this.animationData = [];
+    console.log('Animator::evaluateDifferences screen1:', screen1.filename, 'screen2:', screen2.filename);
     let index = 0;
     // TODO: Is this really local?
     let animationIndex = 0;
     let byteCount = 0;
+    console.log('Animator::evaluateDifferences animationIndex:', animationIndex);
 
     // loop over all colour registers
     while (index < 256) {
       // if colour registers are different
       if (screen1.snesPalette[index] !== screen2.snesPalette[index]) {
+        console.log('Animator::evaluateDifferences different at index:', index);
         const startIndex = index;
 
         // find end of colour palette differences
@@ -195,7 +225,8 @@ class Animator {
         byteCount += OVERHEAD_PER_DMA_XFER + (index - startIndex);
 
         // write out the number of bytes of colour palette data
-        animationIndex = this.writeWord((index - startIndex) << 1, animationIndex);
+        this.writeWord((index - startIndex) << 1, animationIndex);
+        animationIndex += 2;
 
         // write out the colour palette number
         this.animationData[animationIndex++] = startIndex;
@@ -206,10 +237,14 @@ class Animator {
           this.animationData[animationIndex++] = screen2.snesPalette[loop] & 0xFF;
           this.animationData[animationIndex++] = screen2.snesPalette[loop] >> 8;
         }
-      } else index++;
+      } else {
+        index++;
+      }
     }
 
-    animationIndex = this.writeWord(END_OF_PALETTE, animationIndex);
+    console.log('Animator::evaluateDifferences END_OF_PALETTE', animationIndex);
+    this.writeWord(END_OF_PALETTE, animationIndex);
+    animationIndex += 2;
 
     // initialise index into screen data
     index = 0;
@@ -218,6 +253,7 @@ class Animator {
     while (index < NUM_DISPLAY_BYTES) {
       // if screens are different
       if (screen1.outputData[index] !== screen2.outputData[index]) {
+        console.log('Animator::evaluateDifferences different pixel at index:', index);
         // if not at a word VRAM boundary
         if (index & 0x0001) {
           // position to previous VRAM boundary
@@ -236,17 +272,20 @@ class Animator {
         // if too many bytes output
         if (byteCount >= MAX_BYTES_PER_FRAME) {
           // then insert an intermediate frame
-          animationIndex = this.writeWord(INTERMEDIATE_FRAME, animationIndex);
+          this.writeWord(INTERMEDIATE_FRAME, animationIndex);
+          animationIndex += 2;
 
           // and reset byte count
           byteCount = 0;
         }
 
         // write out VRAM address
-        animationIndex = this.writeWord(startIndex >> 1, animationIndex);
+        this.writeWord(startIndex >> 1, animationIndex);
+        animationIndex += 2;
 
         // write out number of bytes
-        animationIndex = this.writeWord(index - startIndex, animationIndex);
+        this.writeWord(index - startIndex, animationIndex);
+        animationIndex += 2;
 
         // write out changed data
         // memcpy (&(animationData[animationIndex]), &(screen2->snesData[startIndex]), index - startIndex);
@@ -266,8 +305,11 @@ class Animator {
       }
     }
 
-    animationIndex = this.writeWord(END_OF_FRAME, animationIndex);
+    console.log('Animator::evaluateDifferences END_OF_FRAME', animationIndex);
+    this.writeWord(END_OF_FRAME, animationIndex);
+    animationIndex += 2;
 
+    console.log('Animator::evaluateDifferences animationIndex:', animationIndex);
     return [animationIndex, this.animationData];
   }
 
@@ -391,17 +433,17 @@ class Compressor {
     this.sourceLength = 0;
     this.sourceIndex = 0;
 
-    this.destinationData = [];
+    this.destinationData = new Uint8ClampedArray();
     this.destinationIndex = 0;
 
-    this.repeatCode = new Uint8ClampedArray(1);
+    this.repeatCode = 0;
     this.repeatCount = 0;
 
     this.collectionCodes = new Uint8ClampedArray(128);
     this.collectionCount = 0;
 
-    this.previousCode = new Uint8ClampedArray(1);
-    this.nextCode = new Uint8ClampedArray(1);
+    this.previousCode = 0;
+    this.nextCode = 0;
 
     this.state = '';
     // enum {
@@ -413,7 +455,9 @@ class Compressor {
     // } state;
   }
 
-  // This method is invoked when no bytes have been read from the source data.
+  /**
+   * This method is invoked when no bytes have been read from the source data.
+   */
   nothingReadProcessing() {
     // get first byte from source data
     this.previousCode = this.sourceData[this.sourceIndex];
@@ -435,7 +479,9 @@ class Compressor {
     }
   }
 
-  // This method is invoked when one byte has been read from the source data.
+  /**
+   * This method is invoked when one byte has been read from the source data.
+   */
   oneCodeReadProcessing() {
     // get second byte from source data
     this.nextCode = this.sourceData[this.sourceIndex];
@@ -476,7 +522,9 @@ class Compressor {
     }
   }
 
-  // This method is invoked when a number of repeated bytes have been read from the source data.
+  /**
+   * This method is invoked when a number of repeated bytes have been read from the source data.
+   */
   buildRepeatStringProcessing() {
     // get next byte from source data
     this.nextCode = this.sourceData[this.sourceIndex];
@@ -518,7 +566,9 @@ class Compressor {
     }
   }
 
-  // This method is invoked when a number of different bytes have been read from the source data.
+  /**
+   * This method is invoked when a number of different bytes have been read from the source data.
+   */
   buildCollectionStringProcessing() {
     // get next byte from source data
     this.nextCode = this.sourceData[this.sourceIndex];
@@ -577,10 +627,17 @@ class Compressor {
     }
   }
 
-  // This method will compress the specified source data bytes into the area pointed to by the destination data pointer.
+  /**
+   * This method will compress the specified source data bytes into the area pointed to by the destination data pointer.
+   * @param {Uint8ClampedArray} data The source data to compress.
+   * @returns {[number, Uint8ClampedArray]} The new destination index and the destination data.
+   */
   compress(data) {
-    this.sourceData = Uint8Array.from(data);
+    console.log('Compressor::compress');
+    console.log('Compressor::compress data.length:', data.length);
+    this.sourceData = Uint8ClampedArray.from(data);
     this.sourceLength = this.sourceData.byteLength;
+    this.destinationIndex = 0;
 
     // make 2 passes over the source data, once over even bytes, once over odd bytes
     let pass = 0;
@@ -614,6 +671,7 @@ class Compressor {
     }
 
     // return the number of bytes the source data was compressed into
+    console.log('Compressor::compress destinationIndex:', this.destinationIndex);
     return [this.destinationIndex, this.destinationData];
   }
 }
@@ -621,113 +679,105 @@ class Compressor {
 class FileWriter {
   constructor() {
     this.frameFileData = [];
-    this.animationOffset = 0;
+    this.animationFileData = [];
   }
 
-  closeFile(compressedData) {
-    // write out FF FF FF FF FF FF to indicate end of animation
-    let value = new Uint8ClampedArray(1);
-    value = 0xFF;
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-
-    console.log('frameFileData', Uint16Array.from(this.frameFileData));
-    fs.writeFileSync('test.saf', Buffer.from(Uint8ClampedArray.from(this.frameFileData)));
-
-    // write out compressed data to animation file
-    // fwrite(compressedData, compressedLength, 1, animationFile);
-    fs.writeFileSync('test.sad', Buffer.from(compressedData));
-  }
-
-  saveData(compressedLength, animationLength) {
-    let value = new Uint8ClampedArray(1);
-
+  saveData(animationOffset, compressedLength, animationLength, compressedData) {
+    console.log('FileWriter::saveData animationOffset:', animationOffset, 'compressedLength:', compressedLength, 'animationLength:', animationLength);
     // if gone over a bank boundary
-    if ((this.animationOffset & 0xFFFF) >= 0x8000) {
+    if ((animationOffset & 0xFFFF) >= 0x8000) {
       // then adjust to next bank
-      this.animationOffset += 0x8000;
+      animationOffset += 0x8000;
     }
 
     // write out offset of compressed data to frame file
-    value = this.animationOffset & 0xFF;
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    console.log(`animationOffset & 0xFF = ${value.toString(16)}`);
-
-    value = (this.animationOffset >> 8) & 0xFF;
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    console.log(`(animationOffset >> 8) & 0xFF = ${value.toString(16)}`);
-
-    value = (this.animationOffset >> 16) & 0xFF;
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    console.log(`(animationOffset >> 16) & 0xFF = ${value.toString(16)}`);
-
-    value = (this.animationOffset >> 24) & 0xFF;
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    console.log(`(animationOffset >> 24) & 0xFF = ${value.toString(16)}`);
+    this.frameFileData.push(animationOffset & 0xFF); // fwrite(value, 1, 1, frameFile);
+    this.frameFileData.push((animationOffset >> 8) & 0xFF); // fwrite(value, 1, 1, frameFile);
+    this.frameFileData.push((animationOffset >> 16) & 0xFF); // fwrite(value, 1, 1, frameFile);
+    this.frameFileData.push((animationOffset >> 24) & 0xFF); // fwrite(value, 1, 1, frameFile);
 
     // write out length of animation data to frame file
-    value = animationLength & 0xFF;
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    console.log(`animationLength & 0xFF = ${value.toString(16)}`);
+    this.frameFileData.push(animationLength & 0xFF); // fwrite(value, 1, 1, frameFile);
+    this.frameFileData.push((animationLength >> 8) & 0xFF); // fwrite(value, 1, 1, frameFile);
 
-    value = animationLength >> 8;
-    this.frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
-    console.log(`animationLength >> 8 = ${value.toString(16)}`);
+    this.animationFileData.push(...compressedData); // fwrite(value, 1, 1, frameFile);
 
     // if gone over a bank boundary
     while (compressedLength >= 0x8000) {
       // then adjust to next bank
-      this.animationOffset += 0x10000;
+      animationOffset += 0x10000;
       compressedLength -= 0x8000;
     }
 
     // update animation offset
-    this.animationOffset += compressedLength;
+    animationOffset += compressedLength;
+    return animationOffset;
   }
 }
 
 // Read Folder
 fs.readdir(process.argv[2], (err, items) => {
   for (let i = 0; i < items.length; i++) {
+    if (!items[i].endsWith('.png')) {
+      continue;
+    }
     const file = path.join(process.argv[2], items[i]);
     console.log('File:', file);
+    const filename = `P0${i}`;
     const data = fs.readFileSync(file);
     const png = PNG.sync.read(data);
+    // console.log('PNG:', png);
 
-
-    const fileSaver = new FileWriter();
+    const fileWriter = new FileWriter();
     const compressor = new Compressor();
     const animator = new Animator();
-    const screen = new SNESImage(png);
-    // const screenLast = new SNESImage(png);
+    const screen = new SNESImage(png, filename);
+    const screenLast = new SNESImage(png, filename);
 
     // Animation Data
     let compressedLength = 0;
     let compressedData = [];
     let animationData = []; // unsigned char* animationData;
     let animationLength = 0; // unsigned int animationLength;
+    let animationOffset = 0;
     // const totalAnimationLength = 0; // unsigned long totalAnimationLength;
 
-    [animationLength, animationData] = animator.writeOutFirstScreenData(screen, animationData);
+    [animationLength, animationData] = animator.writeOutFirstScreenData(screen);
+    console.log('main 1: animationLength:', animationLength);
+    // console.log('Animation Data:', animationData);
 
     [compressedLength, compressedData] = compressor.compress(animationData);
+    console.log('main 1: compressedLength:', compressedLength);
+    // console.log('Compressed Data:', compressedData);
 
-    fileSaver.saveData(compressedLength, animationLength);
+    // fileSaver.saveData(compressedLength, animationLength);
+    animationOffset = fileWriter.saveData(animationOffset, compressedLength, animationLength, compressedData);
 
     // Loop through next files
 
     // Last File
-    // [animationLength, animationData] = animator.evaluateDifferences(screen, screenLast);
-    //
-    // [compressedLength, compressedData] = compressor.compress(animationData);
+    [animationLength, animationData] = animator.evaluateDifferences(screen, screenLast, animationData);
+    console.log('main 2: animationLength:', animationLength);
 
-    fileSaver.saveData(compressedLength, animationLength);
+    [compressedLength, compressedData] = compressor.compress(animationData);
+    console.log('main 2: compressedLength:', compressedLength);
 
-    fileSaver.closeFile(compressedData);
+    animationOffset = fileWriter.saveData(animationOffset, compressedLength, animationLength, compressedData);
+
+    console.log('Frame File Data:', fileWriter.frameFileData.length, fileWriter.frameFileData);
+
+        // write out FF FF FF FF FF FF to indicate end of animation
+    fileWriter.frameFileData.push(0xFF); // fwrite(value, 1, 1, frameFile);
+    fileWriter.frameFileData.push(0xFF); // fwrite(value, 1, 1, frameFile);
+    fileWriter.frameFileData.push(0xFF); // fwrite(value, 1, 1, frameFile);
+    fileWriter.frameFileData.push(0xFF); // fwrite(value, 1, 1, frameFile);
+    fileWriter.frameFileData.push(0xFF); // fwrite(value, 1, 1, frameFile);
+    fileWriter.frameFileData.push(0xFF); // fwrite(value, 1, 1, frameFile);
+    fs.writeFileSync(`${filename}.saf`, Buffer.from(fileWriter.frameFileData));
+
+    // write out compressed data to animation file
+    // fwrite(compressedData, compressedLength, 1, animationFile);
+    fs.writeFileSync(`${filename}.sad`, Buffer.from(fileWriter.animationFileData));
 
     // animationData = Uint32Array.from(animationData);
     // fs.writeFileSync('test.animation_data', Buffer.from(animator.animationData));

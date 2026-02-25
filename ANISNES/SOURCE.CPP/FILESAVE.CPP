@@ -58,8 +58,7 @@ FileSaver::FileSaver(char* filename)
     char extendedFilename[256];
 
     // search for end of filename or begining of extender
-    while (filename[length] && (filename[length] != '.'))
-    {
+    while (filename[length] && (filename[length] != '.')) {
         // copy to extended filename
         extendedFilename[length] = filename[length];
 
@@ -67,8 +66,7 @@ FileSaver::FileSaver(char* filename)
     }
 
     // if too long
-    if (length > 4)
-    {
+    if (length > 4) {
         length = 4;
     }
 
@@ -157,52 +155,63 @@ FileSaver::~FileSaver()
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-void FileSaver::saveData(BYTE* compressedData,
-                         unsigned int compressedLength,
-                         unsigned int animationLength)
-{
+void FileSaver::saveData(BYTE* compressedData, unsigned int compressedLength, unsigned int animationLength) {
+    printf("FileSaver::saveData: animationLength (%u) compressedLength (%u)\n", animationLength, compressedLength);;
     BYTE value;
 
     // if gone over a bank boundary
-    if ((animationOffset & 0xFFFF) >= 0x8000)
+    if ((animationOffset & 0xFFFF) >= 0x8000) {
+        printf("FileSaver::saveData: animationOffset & 0xFFFF >= 0x8000\n");
         // then adjust to next bank
         animationOffset += 0x8000;
+        printf("FileSaver::saveData: animationOffset += 0x8000\n");
+        printf("FileSaver::saveData: animationOffset: %u\n", animationOffset);
+    }
+
+    printf("FileSaver::saveData: animationOffset: %u\n", animationOffset);
 
     // write out offset of compressed data to frame file
     value = animationOffset & 0xFF;
-    printf("animationOffset & 0xFF = %02x\n", value);
+    printf("FileSaver::saveData animationOffset & 0xFF = %x\n", value);
     fwrite(&value, 1, 1, frameFile);
 
     value = (animationOffset >> 8) & 0xFF;
-    printf("(animationOffset >> 8) & 0xFF = %02x\n", value);
+    printf("FileSaver::saveData (animationOffset >> 8) & 0xFF = %x\n", value);
     fwrite(&value, 1, 1, frameFile);
 
     value = (animationOffset >> 16) & 0xFF;
-    printf("(animationOffset >> 16) & 0xFF = %02x\n", value);
+    printf("FileSaver::saveData (animationOffset >> 16) & 0xFF = %x\n", value);
     fwrite(&value, 1, 1, frameFile);
 
     value = (animationOffset >> 24) & 0xFF;
-    printf("(animationOffset >> 24) & 0xFF = %02x\n", value);
+    printf("FileSaver::saveData (animationOffset >> 24) & 0xFF = %x\n", value);
     fwrite(&value, 1, 1, frameFile);
+
+    printf("FileSaver::saveData: animationLength (%u)\n", animationLength);
 
     // write out length of animation data to frame file
     value = animationLength & 0xFF;
-    printf("animationLength & 0xFF = %02x\n", value);
+    printf("FileSaver::saveData animationLength & 0xFF = %x\n", value);
     fwrite(&value, 1, 1, frameFile);
 
     value = animationLength >> 8;
-    printf("animationLength >> 8 = %02x\n", value);
+    printf("FileSaver::saveData animationLength >> 8 = %x\n", value);
     fwrite(&value, 1, 1, frameFile);
 
     // write out compressed data to animation file
+    printf("FileSaver::saveData compressedLength: %d\n", compressedLength);
     fwrite(compressedData, compressedLength, 1, animationFile);
 
     // if gone over a bank boundary
-    while (compressedLength >= 0x8000)
-    {
+    while (compressedLength >= 0x8000) {
+        printf("FileSaver::saveData: compressedLength >= 0x8000\n");
         // then adjust to next bank
         animationOffset += 0x10000;
+        printf("FileSaver::saveData: animationOffset += 0x10000\n");
+        printf("FileSaver::saveData: animationOffset: %u\n", animationOffset);
         compressedLength -= 0x8000;
+        printf("FileSaver::saveData: compressedLength -= 0x8000\n");
+        printf("FileSaver::saveData: compressedLength: %u\n", compressedLength);
     }
 
     // update animation offset

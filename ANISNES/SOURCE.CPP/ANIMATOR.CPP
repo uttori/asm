@@ -79,10 +79,7 @@
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-void Animator::writeWord(unsigned int word,
-                         unsigned int& animationIndex,
-                         BYTE* animationData)
-{
+void Animator::writeWord(unsigned int word, unsigned int& animationIndex, BYTE* animationData) {
     // write out low byte
     animationData[animationIndex++] = word&0x00FF;
 
@@ -110,56 +107,39 @@ void Animator::writeWord(unsigned int word,
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-unsigned int Animator::writeOutFirstScreenData(PcxFile* screen,
-                                               BYTE* animationData)
-{
+unsigned int Animator::writeOutFirstScreenData(PcxFile* screen, BYTE* animationData) {
+    printf("Animator::writeOutFirstScreenData\n");
     unsigned int animationIndex = 0;
 
     // write out number of colour palette bytes
-    writeWord(0x0200,
-              animationIndex,
-              animationData);
+    writeWord(0x0200, animationIndex, animationData);
 
     // write out colour register $00
     animationData[animationIndex++] = 0x00;
 
     // write out value of all colour registers
-    for (unsigned int index = 0; index < 256; index++)
-    {
+    for (unsigned int index = 0; index < 256; index++) {
         animationData[animationIndex++] = screen->snesPalette[index] & 0xFF;
         animationData[animationIndex++] = screen->snesPalette[index] >> 8;
     }
 
-    writeWord(END_OF_PALETTE,
-              animationIndex,
-              animationData);
+    writeWord(END_OF_PALETTE, animationIndex, animationData);
 
     // write out VRAM address $0000
-    writeWord(0x0000,
-              animationIndex,
-              animationData);
+    writeWord(0x0000, animationIndex, animationData);
 
     // write out length
-    writeWord(NUM_DISPLAY_BYTES,
-              animationIndex,
-              animationData);
+    writeWord(NUM_DISPLAY_BYTES, animationIndex, animationData);
 
     // write out data
-    memcpy (&(animationData[animationIndex]),
-            screen->snesData,
-            NUM_DISPLAY_BYTES);
+    memcpy (&(animationData[animationIndex]), screen->snesData, NUM_DISPLAY_BYTES);
 
     animationIndex += NUM_DISPLAY_BYTES;
 
-    writeWord(END_OF_FRAME,
-              animationIndex,
-              animationData);
+    writeWord(END_OF_FRAME, animationIndex, animationData);
 
     return animationIndex;
 }
-
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 //                                                                         //
@@ -185,20 +165,18 @@ unsigned int Animator::writeOutFirstScreenData(PcxFile* screen,
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-unsigned int Animator::evaluateDifferences(PcxFile* screen1,
-                                           PcxFile* screen2,
-                                           BYTE* animationData)
-{
+unsigned int Animator::evaluateDifferences(PcxFile* screen1, PcxFile* screen2, BYTE* animationData) {
+    printf("Animator::evaluateDifferences\n");
     unsigned int index = 0;
     unsigned int animationIndex = 0;
     unsigned int byteCount = 0;
+    printf("Animator::evaluateDifferences animationIndex: %u\n", animationIndex);
 
     // loop over all colour registers
-    while (index < 256)
-    {
+    while (index < 256) {
         // if colour registers are different
-        if (screen1->snesPalette[index] != screen2->snesPalette[index])
-        {
+        if (screen1->snesPalette[index] != screen2->snesPalette[index]) {
+            printf("Animator::evaluateDifferences different at index: %u\n", index);
             unsigned int startIndex = index;
 
             // find end of colour palette differences
@@ -221,24 +199,22 @@ unsigned int Animator::evaluateDifferences(PcxFile* screen1,
                 animationData[animationIndex++] = screen2->snesPalette[loop] & 0xFF;
                 animationData[animationIndex++] = screen2->snesPalette[loop] >> 8;
             }
-        }
-        else
+        } else {
             index++;
+        }
     }
 
-    writeWord(END_OF_PALETTE,
-              animationIndex,
-              animationData);
+    printf("Animator::evaluateDifferences END_OF_PALETTE: %u\n", animationIndex);
+    writeWord(END_OF_PALETTE, animationIndex, animationData);
 
     // initialise index into screen data
     index = 0;
 
     // while more data to check
-    while (index < NUM_DISPLAY_BYTES)
-    {
+    while (index < NUM_DISPLAY_BYTES) {
         // if screens are different
-        if (screen1->snesData[index] != screen2->snesData[index])
-        {
+        if (screen1->snesData[index] != screen2->snesData[index]) {
+            printf("Animator::evaluateDifferences different pixel at index: %u\n", index);
             unsigned int startIndex;
 
             // if not at a word VRAM boundary
@@ -284,15 +260,15 @@ unsigned int Animator::evaluateDifferences(PcxFile* screen1,
 
             // update animation index
             animationIndex += (index - startIndex);
-        }
-        else
+        } else {
             index++;
+        }
     }
 
-    writeWord(END_OF_FRAME,
-              animationIndex,
-              animationData);
+    printf("Animator::evaluateDifferences END_OF_FRAME: %u\n", animationIndex);
+    writeWord(END_OF_FRAME, animationIndex, animationData);
 
+    printf("Animator::evaluateDifferences animationIndex: %u\n", animationIndex);;
     return animationIndex;
 }
 
@@ -324,32 +300,25 @@ unsigned int Animator::evaluateDifferences(PcxFile* screen1,
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-unsigned int Animator::findColourChangeEnd(unsigned int startIndex,
-                                           PcxFile* screen1,
-                                           PcxFile* screen2)
-{
+unsigned int Animator::findColourChangeEnd(unsigned int startIndex, PcxFile* screen1, PcxFile* screen2) {
+    printf("Animator::findColourChangeEnd\n");
     unsigned int index = startIndex;
     unsigned int sameCount = 0;
     unsigned int lastIndex;
     BOOL finished = FALSE;
 
-    while (!finished)
-    {
+    while (!finished) {
         // if more colour registers
-        if (index < 256)
-        {
+        if (index < 256) {
             // if registers different
-            if (screen1->snesPalette[index] != screen2->snesPalette[index])
-            {
+            if (screen1->snesPalette[index] != screen2->snesPalette[index]) {
                 // update index
                 index++;
 
                 // indicate registers different at this position
                 sameCount = 0;
                 lastIndex = index;
-            }
-            else
-            {
+            } else {
                 // update index
                 index++;
 
@@ -357,20 +326,16 @@ unsigned int Animator::findColourChangeEnd(unsigned int startIndex,
                 sameCount++;
 
                 // if enough registers are the same
-                if (sameCount >= NUM_WORDS_SAME)
-                {
+                if (sameCount >= NUM_WORDS_SAME) {
                     // then return index to the last different index
                     index = lastIndex;
 
                     finished = TRUE;
                 }
             }
-        }
-        else
-        {
+        } else {
             // if some registers were the same
-            if (sameCount)
-            {
+            if (sameCount) {
                 // then return to last different index
                 index = lastIndex;
             }
@@ -410,25 +375,19 @@ unsigned int Animator::findColourChangeEnd(unsigned int startIndex,
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-unsigned int Animator::findAnimateEnd(unsigned int startIndex,
-                                      PcxFile* screen1,
-                                      PcxFile* screen2)
-{
+unsigned int Animator::findAnimateEnd(unsigned int startIndex, PcxFile* screen1, PcxFile* screen2) {
+    printf("Animator::findAnimateEnd\n");
     unsigned int index = startIndex;
     unsigned int totalCount = 0;
     unsigned int sameCount = 0;
     unsigned int lastIndex;
     BOOL finished = FALSE;
 
-    while (!finished)
-    {
+    while (!finished) {
         // if more screen data
-        if (index < NUM_DISPLAY_BYTES)
-        {
+        if (index < NUM_DISPLAY_BYTES) {
             // if screen data is different
-            if ((screen1->snesData[index] != screen2->snesData[index]) ||
-                (screen1->snesData[index+1] != screen2->snesData[index+1]))
-            {
+            if ((screen1->snesData[index] != screen2->snesData[index]) || (screen1->snesData[index+1] != screen2->snesData[index+1])) {
                 // update index
                 index += 2;
 
@@ -436,19 +395,14 @@ unsigned int Animator::findAnimateEnd(unsigned int startIndex,
                 totalCount++;
 
                 // if too many words
-                if (totalCount >= MAX_WORDS_PER_DMA_XFER)
-                {
+                if (totalCount >= MAX_WORDS_PER_DMA_XFER) {
                     finished = TRUE;
-                }
-                else
-                {
+                } else {
                     // indicate screen data different at this position
                     sameCount = 0;
                     lastIndex = index;
                 }
-            }
-            else
-            {
+            } else {
                 // update index
                 index += 2;
 
@@ -456,32 +410,25 @@ unsigned int Animator::findAnimateEnd(unsigned int startIndex,
                 sameCount++;
 
                 // if enough screen data words are the same
-                if (sameCount >= NUM_WORDS_SAME)
-                {
+                if (sameCount >= NUM_WORDS_SAME) {
                     // then return to last different index
                     index = lastIndex;
                     finished = TRUE;
-                }
-                else
-                {
+                } else {
                     // update total number of words
                     totalCount++;
 
                     // if too many words
-                    if (totalCount >= MAX_WORDS_PER_DMA_XFER)
-                    {
+                    if (totalCount >= MAX_WORDS_PER_DMA_XFER) {
                         // then return to last different index
                         index = lastIndex;
                         finished = TRUE;
                     }
                 }
             }
-        }
-        else
-        {
+        } else {
             // if some words were the same
-            if (sameCount)
-            {
+            if (sameCount) {
                 // then return to last different index
                 index = lastIndex;
             }

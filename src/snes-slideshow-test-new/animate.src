@@ -11,7 +11,7 @@ frameColourLoop:
     cmp.w #$FFFF                            ; check to see if color palette is done by comparing value to FFFF
     beq animationFrameLoop
 
-    sta.b !animatedBytes                    ; set number of colour palette bytes to copy
+    sta.b !animatedBytes                     ; set number of colour palette bytes to copy
     sta $4305                               ; then store size of data block
 
     lda.w #$2200                            ; DMA to $2122

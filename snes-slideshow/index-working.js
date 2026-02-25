@@ -14,7 +14,8 @@ function toHex(d) {
 
 // PCXFILE
 class SNESImage {
-  constructor(data) {
+  constructor(data, filename) {
+    this.filename = filename;
     this.data = data;
     this.snesPalette = new Uint32Array(1024);
     this.testPalette = Buffer.allocUnsafe(256);
@@ -26,9 +27,9 @@ class SNESImage {
     this.parsePixelData();
     this.convertToSnesData8bpp();
 
-    fs.writeFileSync('test.palette', this.testPalette);
-    fs.writeFileSync('test.snes_data', Buffer.from(this.snesData));
-    fs.writeFileSync('test.output_data', Buffer.from(this.outputData));
+    fs.writeFileSync(`${filename}.palette`, this.testPalette);
+    fs.writeFileSync(`${filename}.snes_data`, Buffer.from(this.snesData));
+    fs.writeFileSync(`${filename}.output_data`, Buffer.from(this.outputData));
   }
 
   parsePixelData() {
@@ -52,8 +53,9 @@ class SNESImage {
         view.setUint32(0, color, false);
         this.testPalette.writeInt32LE(view, colors);
 
-        indexedColors.push(color);
-        console.log(`index ${index} color ${view.getInt32(0, false)}`);
+        // indexedColors.push(color);
+        indexedColors[colors] = color;
+        // console.log(`index ${index} color ${view.getInt32(0, false)}`);
         colors++;
       }
 
@@ -626,8 +628,8 @@ class Compressor {
 }
 
 class FileWriter {
-  static saveData(compressedData, compressedLength, animationLength) {
-    let value = new Uint8ClampedArray(1);
+  static saveData(filename, compressedData, compressedLength, animationLength) {
+    let value = 0;
     // initialise animation offset
     let animationOffset = 0;
 
@@ -673,11 +675,11 @@ class FileWriter {
     frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
     frameFileData.push(value); // fwrite(value, 1, 1, frameFile);
 
-    fs.writeFileSync('test.saf', Buffer.from(frameFileData));
+    fs.writeFileSync(`${filename}.saf`, Buffer.from(frameFileData));
 
     // write out compressed data to animation file
     // fwrite(compressedData, compressedLength, 1, animationFile);
-    fs.writeFileSync('test.sad', Buffer.from(compressedData));
+    fs.writeFileSync(`${filename}.sad`, Buffer.from(compressedData));
   }
 }
 
@@ -691,11 +693,16 @@ function bufferToHex(buffer) {
 // Read Folder
 fs.readdir(process.argv[2], (err, items) => {
   for (let i = 0; i < items.length; i++) {
+    if (!items[i].endsWith('.png')) {
+      continue;
+    }
     const file = path.join(process.argv[2], items[i]);
     console.log('File:', file);
     const data = fs.readFileSync(file);
     const png = PNG.sync.read(data);
-    const screen = new SNESImage(png);
+
+    const filename = `P0${i}`;
+    const screen = new SNESImage(png, filename);
 
     // Animation Data
     let animationData = []; // unsigned char* animationData;
@@ -707,9 +714,9 @@ fs.readdir(process.argv[2], (err, items) => {
     const compressor = new Compressor();
     const [compressedLength, compressedData] = compressor.compress(animationData);
     console.log('Compressed Length:', compressedLength);
-    console.log('Compressed Data:', bufferToHex(compressedData));
+    // console.log('Compressed Data:', bufferToHex(compressedData));
 
-    FileWriter.saveData(compressedData, compressedLength, animationLength);
+    FileWriter.saveData(filename, compressedData, compressedLength, animationLength);
   }
 });
 

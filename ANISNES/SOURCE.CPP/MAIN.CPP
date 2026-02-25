@@ -36,8 +36,8 @@
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-int main(void)
-{
+int main(void) {
+    printf("main\n");
     Filename* namer;
     Animator animator;
     Compressor compressor;
@@ -89,44 +89,39 @@ int main(void)
     // try and read first file
     screen1 = new PcxFile(firstFilename, success);
 
-    // FILE* paletteFile = fopen("P01.palette", "wb");
-    // fwrite(screen1->snesPalette, sizeof(screen1->snesPalette), 1, paletteFile);
-    // fclose(paletteFile);
-    //
-    // FILE* snesDataFile = fopen("P01.snes_data", "wb");
-    // fwrite(screen1->snesData, sizeof(screen1->snesData), 1, snesDataFile);
-    // fclose(snesDataFile);
+    FILE* paletteFile = fopen("P01.palette", "wb");
+    fwrite(screen1->snesPalette, sizeof(screen1->snesPalette), 1, paletteFile);
+    fclose(paletteFile);
+
+    FILE* snesDataFile = fopen("P01.snes_data", "wb");
+    fwrite(screen1->snesData, sizeof(screen1->snesData), 1, snesDataFile);
+    fclose(snesDataFile);
 
     // if successful
     if (success) {
         // get the data for the first screen
-        animationLength = animator.writeOutFirstScreenData(screen1,
-                                                           animationData);
+        animationLength = animator.writeOutFirstScreenData(screen1, animationData);
 
-        // FILE* animationFile = fopen("P01.animation_data", "wb");
-        // fwrite(animationData, animationLength, 1, animationFile);
-        // fclose(animationFile);
+        FILE* animationFile = fopen("P01.animation_data", "wb");
+        fwrite(animationData, animationLength, 1, animationFile);
+        fclose(animationFile);
 
         // compress it
-        compressedLength = compressor.compress(animationData,
-                                               animationLength,
-                                               compressedData);
+        compressedLength = compressor.compress(animationData, animationLength, compressedData);
 
         // save the data
-        fileSaver->saveData(compressedData,
-                            compressedLength,
-                            animationLength);
+        fileSaver->saveData(compressedData, compressedLength, animationLength);
 
         // inform the user
-        printf ("%s : (%u) %u\n", firstFilename,
-                                  animationLength,
-                                  compressedLength);
+        printf ("main: 1 %s : animationLength (%u) compressedLength (%u)\n", firstFilename, animationLength, compressedLength);
 
         totalAnimationLength = animationLength;
         totalCompressedLength = compressedLength;
     } else {
       printf ("Couldn't read file: %s\n", filename);
     }
+
+    printf("main: stage 1 totalAnimationLength (%lu) totalCompressedLength (%lu)\n", totalAnimationLength, totalCompressedLength);
 
     // // while successful
     // while (success)
@@ -178,35 +173,29 @@ int main(void)
     screen2 = new PcxFile(firstFilename, success);
 
     // if successful
-    if (success)
-    {
+    if (success) {
         // get the number of bytes that are different
-        animationLength = animator.evaluateDifferences(screen1,
-                                                       screen2,
-                                                       animationData);
+        animationLength = animator.evaluateDifferences(screen1, screen2, animationData);
 
         // compress it
-        compressedLength = compressor.compress(animationData,
-                                               animationLength,
-                                               compressedData);
+        printf("main: 2 animationData: %p\n", animationData);
+        compressedLength = compressor.compress(animationData, animationLength, compressedData);
 
         // save the data
-        fileSaver->saveData(compressedData,
-                            compressedLength,
-                            animationLength);
+        fileSaver->saveData(compressedData, compressedLength, animationLength);
 
         // inform the user
-        printf ("%s : (%u) %u\n", firstFilename,
-                                  animationLength,
-                                  compressedLength);
+        printf ("main: 2 %s : animationLength (%u) compressedLength (%u)\n", firstFilename, animationLength, compressedLength);
 
         totalAnimationLength += animationLength;
         totalCompressedLength += compressedLength;
     }
 
+    printf("main: stage 2 totalAnimationLength (%lu) totalCompressedLength (%lu)\n", totalAnimationLength, totalCompressedLength);
+
     // inform user of total length
-    printf ("%lu animation bytes\n", totalAnimationLength);
-    printf ("%lu compressed bytes\n", totalCompressedLength);
+    printf ("main: %lu total animation bytes\n", totalAnimationLength);
+    printf ("main: %lu total compressed bytes\n", totalCompressedLength);
 
     // delete objects
     delete namer;

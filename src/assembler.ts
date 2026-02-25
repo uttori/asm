@@ -3,9 +3,10 @@ import fs from "node:fs"
 import path from "node:path"
 import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js"
+import { ArchSuperFX } from "./ArchSuperFX.js";
+
 import { AddressToLineMapping } from "./addr2line.js";
 import { MathCore } from "./mathcore.js";
-import { ArchSuperFX } from "./ArchSuperFX.js";
 import { CRC32 } from "./crc32.js";
 
 let debug = (..._) => {};
@@ -34,7 +35,8 @@ export type LoopBlock = {
   variable?: string;
   start?: number;
   end?: number;
-  commands: (string | LoopBlock)[];  // Can contain nested loops
+  /** Can contain nested loops */
+  commands: (string | LoopBlock)[];
   startLine: number;
   endLine?: number;
 };
@@ -45,7 +47,8 @@ export type WhileTracker = {
   cond: boolean;
   is_for: boolean;
   for_variable?: string;
-  for_internal_variable?: string; // Internal representation of the variable to avoid collisions
+  /** Internal representation of the variable to avoid collisions */
+  for_internal_variable?: string;
   for_start?: number;
   for_end?: number;
   for_cur?: number;
@@ -55,20 +58,29 @@ export type LabelEntry = {
   value: number;
   isStatic: boolean;
   isMacroLabel?: boolean;
-  macroInstance?: number; // Tracks which macro instance this label belongs to
-  modifiesHierarchy?: boolean; // Whether this label affects the sublabel hierarchy
+  /** Tracks which macro instance this label belongs to */
+  macroInstance?: number;
+  /** Whether this label affects the sublabel hierarchy */
+  modifiesHierarchy?: boolean;
 };
 
 // Represents a structure definition.
 export interface StructDefinition {
   name: string;
-  base: number;                // The SNES start address for the struct.
-  offset: number;              // Running offset as member commands are processed.
-  size: number;                // Final size (after alignment, etc.)
-  labels: Map<string, number>; // Mapping from member name (without the leading dot) to its offset.
-  align?: number;              // Optional alignment (if specified in endstruct).
-  parent?: string;             // If this struct extends a parent.
-  extensionSize?: number;      // For parent structs, the maximum extension size.
+  /** The SNES start address for the struct. */
+  base: number;
+  /** Running offset as member commands are processed. */
+  offset: number;
+  /** Final size (after alignment, etc.) */
+  size: number;
+  /** Mapping from member name (without the leading dot) to its offset. */
+  labels: Map<string, number>;
+  /** Optional alignment (if specified in endstruct). */
+  align?: number;
+  /** If this struct extends a parent. */
+  parent?: string;
+  /** For parent structs, the maximum extension size. */
+  extensionSize?: number;
 }
 
 export type PushPcStackEntry = {
@@ -94,9 +106,11 @@ export class Assembler {
 
   public pushBaseStack: number[] = [];
 
-  public mapper: string = "lorom"; // Possible values: lorom, hirom, exlorom, exhirom, sa1rom, sfxrom, bigsa1rom, norom
+  /** Possible values: lorom, hirom, exlorom, exhirom, sa1rom, sfxrom, bigsa1rom, norom */
+  public mapper: string = "lorom";
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
-  public romdata: number[] = []; // Placeholder for ROM
+  /** Placeholder for ROM */
+  public romdata: number[] = [];
   public default_freespacebyte: number = 0x00;
 
   public pass: number = 0;
@@ -159,7 +173,8 @@ export class Assembler {
   public currentStruct: StructDefinition | null = null;
   public savedPCStack: number[] = [];
 
-  public fillbyte: number[] = [0,0,0,0, 0,0,0,0, 0,0,0,0]; // initialize fill pattern
+  /** Initialize fill pattern */
+  public fillbyte: number[] = [0,0,0,0, 0,0,0,0, 0,0,0,0];
 
   public targetRom: number[];
 
@@ -309,16 +324,16 @@ export class Assembler {
 
   /**
    * Advances memory position while handling bank crossing.
-   * @param {number} num - The number of bytes to advance.
+   * @param {number} num The number of bytes to advance.
    */
   step(num: number): void {
+    // debug("step", num);
     if (num === 0) {
       return;
     }
     if (num < 0) {
       throw new Error("step num is negative");
     }
-    // debug("step", num);
     this.snespos = (this.snespos & 0xff000000) | this.fixsnespos(this.snespos & 0xffffff, num);
     this.realsnespos = (this.realsnespos & 0xff000000) | this.fixsnespos(this.realsnespos & 0xffffff, num);
     this.startpos = this.snespos;
@@ -1525,7 +1540,7 @@ export class Assembler {
 
       // Handle the case where a macro has parameters but was called without them.
       if (macro.params.length > 0) {
-        debug("callMacro macro.params args", macro.params)
+        debug("callMacro macro.params args", macro.params);
         const fixedArgs = new Map<string, string>();
         for (let i = 0; i < macro.params.length; i++) {
           fixedArgs.set(macro.params[i], "");
@@ -3952,10 +3967,12 @@ export class Assembler {
    * Completes the current pass, performing any necessary cleanup.
    */
   finishPass(): void {
+    debug("finishPass", { targetRom: this.targetRom });
     // TODO Make an option
-    if (this.targetRom && this.targetRom.length > 0) {
+    // if (this.targetRom && this.targetRom.length > 0) {
       this.updateHeaderAndCRC32();
-    }
+      debug("finishPass updateHeaderAndCRC32");
+    // }
   }
 
   /**

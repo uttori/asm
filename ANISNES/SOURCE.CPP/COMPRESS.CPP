@@ -59,8 +59,8 @@ const BYTE COLLECTION_INDICATOR = 0x80;
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-void Compressor::nothingReadProcessing (void)
-{
+void Compressor::nothingReadProcessing (void) {
+    // printf("Compressor::nothingReadProcessing\n");
     // get first byte from source data
     previousCode = sourceData[sourceIndex];
 
@@ -68,13 +68,10 @@ void Compressor::nothingReadProcessing (void)
     sourceIndex += 2;
 
     // if more source data
-    if (sourceIndex < sourceLength)
-    {
+    if (sourceIndex < sourceLength) {
         // update state
         state = oneCodeRead;
-    }
-    else
-    {
+    } else {
         // write out compressed data
         destinationData[destinationIndex++] = COLLECTION_INDICATOR;
         destinationData[destinationIndex++] = previousCode;
@@ -102,8 +99,8 @@ void Compressor::nothingReadProcessing (void)
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-void Compressor::oneCodeReadProcessing (void)
-{
+void Compressor::oneCodeReadProcessing (void) {
+    // printf("Compressor::oneCodeReadProcessing\n");
     // get second byte from source data
     nextCode = sourceData[sourceIndex];
 
@@ -111,36 +108,27 @@ void Compressor::oneCodeReadProcessing (void)
     sourceIndex += 2;
 
     // if more source data
-    if (sourceIndex < sourceLength)
-    {
+    if (sourceIndex < sourceLength) {
         // if bytes are the same
-        if (previousCode == nextCode)
-        {
+        if (previousCode == nextCode) {
             // then start building a repeat string
             repeatCode = previousCode;
             repeatCount = 2;
             state = buildRepeatString;
-        }
-        else
-        {
+        } else {
             // else start building a collection string
             collectionCount = 0;
             collectionCodes[collectionCount++] = previousCode;
             collectionCodes[collectionCount++] = nextCode;
             state = buildCollectionString;
         }
-    }
-    else
-    {
+    } else {
         // if bytes are the same
-        if (previousCode == nextCode)
-        {
+        if (previousCode == nextCode) {
             // then write out a repeat string
             destinationData[destinationIndex++] = REPEAT_INDICATOR | 0x01;
             destinationData[destinationIndex++] = previousCode;
-        }
-        else
-        {
+        } else {
             // else write out a collection string
             destinationData[destinationIndex++] = COLLECTION_INDICATOR | 0x01;
             destinationData[destinationIndex++] = previousCode;
@@ -170,14 +158,13 @@ void Compressor::oneCodeReadProcessing (void)
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-void Compressor::buildRepeatStringProcessing (void)
-{
+void Compressor::buildRepeatStringProcessing (void) {
+    // printf("Compressor::buildRepeatStringProcessing\n");
     // get next byte from source data
     nextCode = sourceData[sourceIndex];
 
     // if it's the same as the repeat string we're building
-    if (repeatCode == nextCode)
-    {
+    if (repeatCode == nextCode) {
         // update count on times byte repeated
         repeatCount++;
 
@@ -185,33 +172,25 @@ void Compressor::buildRepeatStringProcessing (void)
         sourceIndex += 2;
 
         // if more source data
-        if (sourceIndex < sourceLength)
-        {
+        if (sourceIndex < sourceLength) {
             // if maximum repeat count
-            if (repeatCount == 128)
-            {
+            if (repeatCount == 128) {
                 // then write out repeat string
-                destinationData[destinationIndex++] = REPEAT_INDICATOR |
-                                                      (repeatCount-1);
+                destinationData[destinationIndex++] = REPEAT_INDICATOR | (repeatCount-1);
                 destinationData[destinationIndex++] = repeatCode;
 
                 // return to nothing read state
                 state = nothingRead;
             }
-        }
-        else
-        {
+        } else {
             // else write out repeat string
-            destinationData[destinationIndex++] = REPEAT_INDICATOR |
-                                                  (repeatCount-1);
+            destinationData[destinationIndex++] = REPEAT_INDICATOR | (repeatCount-1);
             destinationData[destinationIndex++] = repeatCode;
 
             // indicate compression finished
             state = finished;
         }
-    }
-    else
-    {
+    } else {
         // write out repeat string
         destinationData[destinationIndex++] = REPEAT_INDICATOR |
                                               (repeatCount-1);
@@ -240,34 +219,30 @@ void Compressor::buildRepeatStringProcessing (void)
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-void Compressor::buildCollectionStringProcessing (void)
-{
+void Compressor::buildCollectionStringProcessing (void) {
+    // printf("Compressor::buildCollectionStringProcessing\n");
     // get next byte from source data
     nextCode = sourceData[sourceIndex];
 
     // if it is the same as the last byte read in the collection string
-    if (nextCode == collectionCodes[collectionCount-1])
-    {
+    if (nextCode == collectionCodes[collectionCount-1]) {
         // decrement the number of bytes in the collection string
         collectionCount--;
 
         // if there are some bytes left in the collection string
-        if (collectionCount)
-        {
+        if (collectionCount) {
             // write out the collection string
-            destinationData[destinationIndex++] = COLLECTION_INDICATOR |
-                                                  (collectionCount-1);
-            for (unsigned int index = 0; index < collectionCount; index++)
+            destinationData[destinationIndex++] = COLLECTION_INDICATOR | (collectionCount-1);
+            for (unsigned int index = 0; index < collectionCount; index++   ) {
                 destinationData[destinationIndex++] = collectionCodes[index];
+            }
         }
 
         // start building a repeat string
         repeatCode = nextCode;
         repeatCount = 1;
         state = buildRepeatString;
-    }
-    else
-    {
+    } else {
         // add byte to the collection string
         collectionCodes[collectionCount++] = nextCode;
 
@@ -275,28 +250,24 @@ void Compressor::buildCollectionStringProcessing (void)
         sourceIndex += 2;
 
         // if more source data
-        if (sourceIndex < sourceLength)
-        {
+        if (sourceIndex < sourceLength) {
             // if maximum collection count
-            if (collectionCount == 128)
-            {
+            if (collectionCount == 128) {
                 // then write out collection string
-                destinationData[destinationIndex++] = COLLECTION_INDICATOR |
-                                                      (collectionCount-1);
-                for (unsigned int index = 0; index < collectionCount; index++)
+                destinationData[destinationIndex++] = COLLECTION_INDICATOR | (collectionCount-1);
+                for (unsigned int index = 0; index < collectionCount; index++) {
                     destinationData[destinationIndex++] = collectionCodes[index];
+                }
 
                 // return to nothing read state
                 state = nothingRead;
             }
-        }
-        else
-        {
+        } else {
             // else write out collection string
-            destinationData[destinationIndex++] = COLLECTION_INDICATOR |
-                                                  (collectionCount-1);
-            for (unsigned int index = 0; index < collectionCount; index++)
+            destinationData[destinationIndex++] = COLLECTION_INDICATOR | (collectionCount-1);
+            for (unsigned int index = 0; index < collectionCount; index++) {
                 destinationData[destinationIndex++] = collectionCodes[index];
+            }
 
             // indicate compression finished
             state = finished;
@@ -327,28 +298,24 @@ void Compressor::buildCollectionStringProcessing (void)
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-unsigned int Compressor::compress(BYTE* sourceDataPtr,
-                                  unsigned int sourceDataLength,
-                                  BYTE* destinationDataPtr)
-{
+unsigned int Compressor::compress(BYTE* sourceDataPtr, unsigned int sourceDataLength, BYTE* destinationDataPtr) {
+    printf("Compressor::compress\n");
     // initialise data members
     sourceData = sourceDataPtr;
     sourceLength = sourceDataLength;
+    printf("Compressor::compress sourceLength: %u\n", sourceLength);
     destinationData = destinationDataPtr;
     destinationIndex = 0;
 
     // make 2 passes over the source data, once over even bytes, once over
     // odd bytes
-    for (unsigned int pass = 0; pass < 2; pass++)
-    {
+    for (unsigned int pass = 0; pass < 2; pass++) {
         sourceIndex = pass;
         state = nothingRead;
 
         // while compressing
-        while (state != finished)
-        {
-            switch (state)
-            {
+        while (state != finished) {
+            switch (state) {
                 case nothingRead:
                     nothingReadProcessing ();
                     break;
@@ -364,10 +331,15 @@ unsigned int Compressor::compress(BYTE* sourceDataPtr,
                 case buildCollectionString:
                     buildCollectionStringProcessing ();
                     break;
+
+                default:
+                    printf("Compressor::compress: unknown state\n: %d\n", state);
+                    break;
             }
         }
     }
 
     // return the number of bytes the source data was compressed into
+    printf("Compressor::compress destinationIndex: %d\n", destinationIndex);
     return destinationIndex;
 }

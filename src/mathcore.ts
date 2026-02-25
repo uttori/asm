@@ -159,10 +159,9 @@ export class MathCore {
   }
 
   /**
-   * Helper function to peek ahead at the next 1-2 characters
-   * and return a matching operator if found and depth-allowed.
-   * @param {object} operators - The operators to check.
-   * @param {number} depth - The current depth of nested expressions.
+   * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
+   * @param {object} operators The operators to check.
+   * @param {number} depth The current depth of nested expressions.
    * @returns {string | null} The matching operator or null if no match.
    */
   peekNextOperator(
@@ -200,7 +199,7 @@ export class MathCore {
 
   /**
    * Parses numbers from a string while consuming valid characters.
-   * @param {RegExp} regex - The regular expression to test against the string.
+   * @param {RegExp} regex The regular expression to test against the string.
    * @returns {string} The substring of the string that matches the regular expression.
    */
   consumeWhile(regex: RegExp): string {
@@ -440,11 +439,10 @@ export class MathCore {
   }
 
   /**
-   * Calls either a built-in or user-defined function by name,
-   * passing an array of arguments which can be strings or numbers.
-   * @param {string} name - The name of the function to call.
-   * @param {Array<number | string>} args - The arguments to pass to the function.
-   * @returns {number} - The result of the function call.
+   * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
+   * @param {string} name The name of the function to call.
+   * @param {Array<number | string>} args The arguments to pass to the function.
+   * @returns {number} The result of the function call.
    */
   callFunction = (name: string, args: (number | string)[]): number => {
     debug("callFunction", { name, args });
@@ -458,9 +456,9 @@ export class MathCore {
 
   /**
    * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name - The name of the function to call.
-   * @param {Array<number | string>} args - The arguments to pass to the function.
-   * @returns {number} - The result of the function call.
+   * @param {string} name The name of the function to call.
+   * @param {Array<number | string>} args The arguments to pass to the function.
+   * @returns {number} The result of the function call.
    */
   callUserFunction = (name: string, args: (number | string)[]): number => {
     debug("callUserFunction", { name, args });
@@ -510,9 +508,9 @@ export class MathCore {
 
   /**
    * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
-   * @param {string} name - The name of the function to call.
-   * @param {Array<number | string>} args - The arguments to pass to the function.
-   * @returns {number} - The result of the function call.
+   * @param {string} name The name of the function to call.
+   * @param {Array<number | string>} args The arguments to pass to the function.
+   * @returns {number} The result of the function call.
    */
   callBuiltInFunction = (name: string, args: (number | string)[]): number => {
     debug("callBuiltInFunction", { name, args });
@@ -555,7 +553,7 @@ export class MathCore {
           floor: Math.floor,
         };
         const result = mapping[name](val);
-        if (isNaN(result)) {
+        if (Number.isNaN(result)) {
           throw new Error(`${name} returned NaN for argument ${val}`);
         }
         return result;
@@ -770,9 +768,9 @@ export class MathCore {
 
   /**
    * Validates an argument as a number.
-   * @param {string} funcName - The name of the function.
-   * @param {number | string} arg - The argument to validate.
-   * @returns {number} - The validated number.
+   * @param {string} funcName The name of the function.
+   * @param {number | string} arg The argument to validate.
+   * @returns {number} The validated number.
    */
   numArg = (funcName: string, arg: number | string): number => {
     if (typeof arg === "string") {
@@ -793,6 +791,7 @@ export class MathCore {
     // Remove line continuations (backslash-newline)
     const cleanDef = this.str.replace(/\\\s*\n/g, "");
     // Regex: function <name>([param1, param2, ...]) = <expression>
+    // eslint-disable-next-line security/detect-unsafe-regex
     const regex = /^function\s+(\w+)(?:\(([\s\w,]*)\))?\s*=\s*(.+)$/;
     const match = cleanDef.match(regex);
     if (!match || !match[1] || !match[3]) {

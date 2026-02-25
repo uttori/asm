@@ -57,7 +57,7 @@ function runTest(baseName: string): TestResult {
   try {
     execSync(command, { stdio: "inherit" });
   } catch (error: unknown) {
-    runError = error instanceof Error ? error.message : String(error);
+    runError = error instanceof Error ? error.message : JSON.stringify(error);
     console.error(`Error running command for ${baseName}:`, runError);
   }
 

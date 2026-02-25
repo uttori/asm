@@ -8,7 +8,7 @@ decompressData:
     ldy.b !sourceOffset
 
 decompressLoop:
-    cpx.b !decompressLength                 ; end of decompression
+    cpx.b !decompressLength                  ; end of decompression
     beq checkForSecondPass
     bcc continueDecompression
 
@@ -27,7 +27,7 @@ decompressSecondPass:
     ldx.w #$0001
 
 continueDecompression:
-    lda [!sourcePointer],y                  ; get code
+    lda [!sourcePointer],y                   ; get code
     iny                                     ; update index, check for crossing bank boundary
     bne noWrap1
     ldy.b !sourcePointer+$02
@@ -44,7 +44,7 @@ doCollectionString:
     sta.b !collectCount
 
 expandCollectionString:
-    lda [!sourcePointer],y                  ; get byte
+    lda [!sourcePointer],y                   ; get byte
     iny                                     ; update index, check for crossing bank boundary
     bne noWrap2
     ldy.b !sourcePointer+$02
@@ -57,7 +57,7 @@ noWrap2:
     inx
     inx
 
-    dec.b !collectCount                     ; repeat for collection count
+    dec.b !collectCount                      ; repeat for collection count
     bpl expandCollectionString
 
     bra decompressLoop
@@ -65,7 +65,7 @@ noWrap2:
 doRepeatString:
     sta.b !repeatCount
 
-    lda [!sourcePointer],y                  ; get byte
+    lda [!sourcePointer],y                   ; get byte
     iny                                     ; update index, check for crossing bank boundary
     bne noWrap3
     ldy.b !sourcePointer+$02
@@ -79,7 +79,7 @@ expandRepeatString:
     inx
     inx
 
-    dec.b !repeatCount                      ; repeat for repeat count
+    dec.b !repeatCount                       ; repeat for repeat count
     bpl expandRepeatString
 
     bra decompressLoop
