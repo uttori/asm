@@ -311,7 +311,15 @@ export class MathCore {
         // parse arguments until ')'
         if (!this.str.startsWith(")")) {
           while (true) {
+            this.str = this.str.trim();
+            // Consume leading comma so next argument is parsed without it (e.g. after string literal)
+            if (this.str.startsWith(",")) {
+              this.str = this.str.substring(1).trim();
+            }
             debug("getnum this.str while 1 =", this.str);
+            if (this.str.startsWith(")")) {
+              break;
+            }
             // Check if next argument starts with double quote => string argument
             if (this.str.startsWith('"')) {
               // parse string literal
@@ -381,11 +389,27 @@ export class MathCore {
       value = parseFloat(this.consumeWhile(/[\d.]/));
     } else {
       // Fallback: try to resolve identifiers (e.g. label resolver).
+      // Parse compound ids: StructName.member, StructName[index].member, StructName.Child.member
       const idMatch = this.str.match(/^([A-Z_a-z]\w*)/);
       if (idMatch) {
-        const id = idMatch[1];
-        this.str = this.str.substring(id.length).trim();
-        const resolved = this.delegate("resolveLabel", id);
+        let compoundId = idMatch[1];
+        this.str = this.str.substring(idMatch[1].length).trim();
+        while (this.str.startsWith(".") || this.str.startsWith("[")) {
+          if (this.str.startsWith(".")) {
+            this.str = this.str.substring(1).trim();
+            const memberMatch = this.str.match(/^([A-Z_a-z]\w*)/);
+            if (!memberMatch) break;
+            compoundId += "." + memberMatch[1];
+            this.str = this.str.substring(memberMatch[1].length).trim();
+          } else if (this.str.startsWith("[")) {
+            this.str = this.str.substring(1).trim();
+            const indexVal = this.evalMath(0, "]");
+            if (!this.str.startsWith("]")) throw new Error("Mismatched brackets in struct index");
+            this.str = this.str.substring(1).trim();
+            compoundId += "[" + indexVal + "]";
+          }
+        }
+        const resolved = this.delegate("resolveLabel", compoundId);
         if (typeof resolved === "number") {
           value = resolved;
         } else {

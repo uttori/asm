@@ -330,6 +330,12 @@ test("evalMath - NaN handling", t => {
     mathCore.str = "sqrt(-1)";
     mathCore.evalMath();
   }, { message: "sqrt returned NaN for argument -1" });
+
+  // Force getnum() to return NaN so evalMath() hits its explicit NaN guard.
+  t.throws(() => {
+    mathCore.str = "$";
+    mathCore.evalMath();
+  }, { message: "Invalid number: NaN" });
 });
 
 test("evalMath - depth and operator precedence", t => {
@@ -829,7 +835,7 @@ test("getnum - function calls", t => {
   mathCore.str = "sqrt(,)";
   t.throws(() => {
     mathCore.getnum();
-  }, { message: "Invalid number: ,)" });
+  }, { message: "sqrt expects exactly 1 numeric argument." });
 });
 
 test("getnum - identifier resolution", t => {
@@ -860,6 +866,45 @@ test("getnum - identifier resolution", t => {
   t.throws(() => {
     mathCore.getnum();
   }, { message: "Invalid number: @invalid" });
+});
+
+test("getnum - compound identifier resolution", t => {
+  const mathCore = new MathCore();
+
+  mathCore.delegate = (operation: string, value: string): number | string => {
+    if (operation !== "resolveLabel") return 0;
+    if (value === "MyStruct.Child") return 321;
+    if (value === "MyStruct[2].field") return 654;
+    if (value === "Config.Section") return "ConfigSection";
+    if (value === "TrailingDot") return 777;
+    return 0;
+  };
+
+  // Dot-member parsing
+  mathCore.str = "MyStruct.Child";
+  t.is(mathCore.getnum(), 321);
+  t.is(mathCore.str, "");
+
+  // Index + member parsing (evalMath for index and bracket handling)
+  mathCore.str = "MyStruct[1+1].field + 5";
+  t.is(mathCore.getnum(), 654);
+  t.is(mathCore.str, "+ 5");
+
+  // String passthrough path when delegate returns a struct-like identifier
+  mathCore.str = "Config.Section";
+  t.is(mathCore.getnum(), "ConfigSection" as unknown as number);
+  t.is(mathCore.str, "");
+
+  // Gracefully handles trailing "." (member regex miss => break loop)
+  mathCore.str = "TrailingDot.";
+  t.is(mathCore.getnum(), 777);
+  t.is(mathCore.str, "");
+
+  // Mismatched bracket error path
+  mathCore.str = "MyStruct[2.field";
+  t.throws(() => {
+    mathCore.getnum();
+  }, { message: "Mismatched brackets in struct index" });
 });
 
 test("getnum - user-defined functions", t => {
@@ -1399,8 +1444,8 @@ test("callBuiltInFunction - delegate functions with exactly 1 argument", t => {
 
   // Set up delegate to return specific values for various functions
   mathCore.delegate = (name: string, value: string | number) => {
-    if (name === "snestopc" && value === "0x8000") return 0x018000;
-    if (name === "pctosnes" && value === "0x018000") return 0x8000;
+    if (name === "snestopc" && value === 0x8000) return 0x018000;
+    if (name === "pctosnes" && value === 0x018000) return 0x8000;
     if (name === "filesize" && value === "test.bin") return 1024;
     if (name === "getfilestatus" && value === "test.bin") return 1;
     if (name === "defined" && value === "LABEL") return 1;
@@ -1411,10 +1456,10 @@ test("callBuiltInFunction - delegate functions with exactly 1 argument", t => {
   };
 
   // Test snestopc function
-  t.is(mathCore.callBuiltInFunction("snestopc", ["0x8000"]), 0x018000);
+  t.is(mathCore.callBuiltInFunction("snestopc", [0x8000]), 0x018000);
 
   // Test pctosnes function
-  t.is(mathCore.callBuiltInFunction("pctosnes", ["0x018000"]), 0x8000);
+  t.is(mathCore.callBuiltInFunction("pctosnes", [0x018000]), 0x8000);
 
   // Test filesize function
   t.is(mathCore.callBuiltInFunction("filesize", ["test.bin"]), 1024);
@@ -1788,11 +1833,11 @@ test("callBuiltInFunction - unhandled", t => {
   };
 
   t.throws(() => {
-    mathCore.callBuiltInFunction("snestopc", ["0x8000"]);
+    mathCore.callBuiltInFunction("snestopc", [0x8000]);
   }, { message: "Delegate not implemented for snestopc" });
 
   t.throws(() => {
-    mathCore.callBuiltInFunction("pctosnes", ["0x018000"]);
+    mathCore.callBuiltInFunction("pctosnes", [0x018000]);
   }, { message: "Delegate not implemented for pctosnes" });
 
   // Test with delegate that returns unexpected values

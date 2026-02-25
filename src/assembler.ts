@@ -210,15 +210,44 @@ export class Assembler {
 
   mathCoreDelegate = (operation: string, ...args: (string | number)[]): number | string => {
     debug("mathCoreDelegate", { operation, args })
+    const readLittleEndian = (bytes: Uint8Array, pos: number, width: number): number | undefined => {
+      if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes.length) {
+        return undefined;
+      }
+      let out = 0;
+      for (let i = 0; i < width; i++) {
+        out |= (bytes[pos + i] ?? 0) << (8 * i);
+      }
+      return out >>> 0;
+    };
+    const resolveReadablePath = (filename: string): string | undefined => {
+      if (path.isAbsolute(filename)) {
+        return fs.existsSync(filename) ? filename : undefined;
+      }
+      const candidates = [
+        path.resolve(path.dirname(this.currentFile || "."), filename),
+        path.resolve(process.cwd(), filename),
+      ];
+      return candidates.find((p) => fs.existsSync(p));
+    };
     switch (operation) {
       case "resolveLabel": {
+        const id = args[0] as string;
+        // Compound struct member (e.g. TestStruct.count, TestStruct[0].count)
+        if (id.includes(".")) {
+          try {
+            return this.resolveStructMember(id);
+          } catch (_e) {
+            // Fall through to getLabelValue
+          }
+        }
         try {
-          return this.getLabelValue(args[0] as string, false);
+          return this.getLabelValue(id, false);
         } catch (e) {
           // If not found as a label, check if it's defined as a struct.
-          if (this.structs.has(args[0] as string)) {
+          if (this.structs.has(id)) {
             // Return the identifier as a string for built-in functions that expect one.
-            return args[0] as string;
+            return id;
           }
           throw e;
         }
@@ -302,20 +331,78 @@ export class Assembler {
       case "read2":
       case "read3":
       case "read4":
+      {
+        const width = Number.parseInt(operation.slice(-1), 10);
+        const pos = Math.trunc(args[0] as number);
+        const defaultValue = args.length > 1 ? Number(args[1]) : undefined;
+        const romBytes = Uint8Array.from(this.romdata);
+        const value = readLittleEndian(romBytes, pos, width);
+        if (value === undefined) {
+          if (defaultValue !== undefined) return defaultValue;
+          throw new Error(`${operation} out of bounds at ${pos}`);
+        }
+        return value;
+      }
       case "readfile1":
       case "readfile2":
       case "readfile3":
       case "readfile4":
+      {
+        const width = Number.parseInt(operation.slice(-1), 10);
+        const filename = args[0] as string;
+        const pos = Math.trunc(args[1] as number);
+        const defaultValue = args.length > 2 ? Number(args[2]) : undefined;
+        const resolvedPath = resolveReadablePath(filename);
+        if (!resolvedPath) {
+          if (defaultValue !== undefined) return defaultValue;
+          throw new Error(`Could not read file: ${filename}`);
+        }
+        const fileBytes = fs.readFileSync(resolvedPath);
+        const value = readLittleEndian(fileBytes, pos, width);
+        if (value === undefined) {
+          if (defaultValue !== undefined) return defaultValue;
+          throw new Error(`${operation} out of bounds at ${pos}`);
+        }
+        return value;
+      }
       case "canread":
+      {
+        const pos = Math.trunc(args[0] as number);
+        const num = Math.trunc(args[1] as number);
+        return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= this.romdata.length) ? 1 : 0;
+      }
       case "canread1":
       case "canread2":
       case "canread3":
       case "canread4":
+      {
+        const pos = Math.trunc(args[0] as number);
+        const num = Math.trunc(args[1] as number);
+        return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= this.romdata.length) ? 1 : 0;
+      }
       case "canreadfile1":
       case "canreadfile2":
       case "canreadfile3":
       case "canreadfile4":
+      {
+        const width = Number.parseInt(operation.slice(-1), 10);
+        const filename = args[0] as string;
+        const pos = Math.trunc(args[1] as number);
+        const resolvedPath = resolveReadablePath(filename);
+        if (!resolvedPath) return 0;
+        const size = fs.statSync(resolvedPath).size;
+        return (Number.isInteger(pos) && pos >= 0 && pos + width <= size) ? 1 : 0;
+      }
       case "canreadfile":
+      {
+        const filename = args[0] as string;
+        const pos = Math.trunc(args[1] as number);
+        const num = Math.trunc(args[2] as number);
+        const resolvedPath = resolveReadablePath(filename);
+        if (!resolvedPath) return 0;
+        const size = fs.statSync(resolvedPath).size;
+        return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= size) ? 1 : 0;
+      }
       default: {
         throw new Error(`delegate ${operation} not implemented`);
       }
@@ -768,6 +855,12 @@ export class Assembler {
       }
     }
 
+    // When collecting a while loop, asar uses "endif" to close the while (not "endwhile")
+    if (this.collectingLoop && this.currentLoop?.type === "while" && command.trim().toLowerCase().startsWith("endif")) {
+      this.handleEndIf();
+      return;
+    }
+
     // If we're in a loop body and not processing an inner loop or endfor, store the command
     if (this.collectingLoop && !command.match(/^\s*(for|while|endfor|endwhile)/i)) {
       debug("processCommand collecting loop command", command);
@@ -778,28 +871,30 @@ export class Assembler {
       return;
     }
 
-    // Parse for loop definitions
-    if (command.match(/^\s*for\s+/i)) {
-      this.beginLoopCollection("for", command);
-      return;
-    }
+    // Parse loop definitions using directive handlers so stack state stays consistent.
+    // Do not intercept loop tokens while defining a macro; those lines must be stored verbatim.
+    if (!this.inMacroDefinition) {
+      if (command.match(/^\s*for\s+/i)) {
+        const loopWords = this.splitCommandIntoWords(this.removeInlineComment(command));
+        this.handleFor(loopWords.slice(1));
+        return;
+      }
 
-    // Parse while loop definitions
-    if (command.match(/^\s*while\s+/i)) {
-      this.beginLoopCollection("while", command);
-      return;
-    }
+      if (command.match(/^\s*while\s+/i)) {
+        const loopWords = this.splitCommandIntoWords(this.removeInlineComment(command));
+        this.handleWhile(loopWords.slice(1));
+        return;
+      }
 
-    // Handle endfor
-    if (command.match(/^\s*endfor/i)) {
-      this.endLoopCollection("for");
-      return;
-    }
+      if (command.match(/^\s*endfor/i)) {
+        this.handleEndFor();
+        return;
+      }
 
-    // Handle endwhile
-    if (command.match(/^\s*endwhile/i)) {
-      this.endLoopCollection("while");
-      return;
+      if (command.match(/^\s*endwhile/i)) {
+        this.handleEndWhile();
+        return;
+      }
     }
 
     // If we already started a function definition, gather more lines if the last line ended with "\"
@@ -1715,7 +1810,6 @@ export class Assembler {
           return variadicArgs[index];
         });
         expandedValue = expandedValue.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
-        expandedValue = this.resolvedefines(expandedValue);
 
         return `!${varName} ${operator} ${expandedValue}`;
       }
@@ -1775,8 +1869,7 @@ export class Assembler {
     });
     // Replace sizeof(...) with the number of variadic arguments.
     expanded = expanded.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
-    // Finally, resolve any remaining defines.
-    expanded = this.resolvedefines(expanded);
+    // Keep regular !defines for runtime evaluation (important for loop bodies in macros).
     debug("expandMacroLine = ", expanded)
     return expanded;
   }
@@ -1883,9 +1976,9 @@ export class Assembler {
       }
 
       // Check if the value is a math expression that needs to be evaluated
-      if (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") ||
+      if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") ||
           value.includes("&") || value.includes("|") || value.includes("^") ||
-          value.includes("<<") || value.includes(">>") || value.includes("(")) {
+          value.includes("<<") || value.includes(">>") || value.includes("("))) {
         try {
           // First resolve any defines inside the expression
           const resolvedValue = this.resolvedefines(value);
@@ -1969,9 +2062,9 @@ export class Assembler {
     }
 
     // Check if the value is a math expression that needs to be evaluated
-    if (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") ||
+    if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") ||
         value.includes("&") || value.includes("|") || value.includes("^") ||
-        value.includes("<<") || value.includes(">>") || value.includes("(")) {
+        value.includes("<<") || value.includes(">>") || value.includes("("))) {
       try {
         // First resolve any defines inside the expression
         const resolvedValue = this.resolvedefines(value);
@@ -2521,18 +2614,27 @@ export class Assembler {
     if (this.pass === 2) {
       // Check if this is a non-static label that already exists with a different address
       const existingEntry = this.labelTable.get(fullLabel);
-      if (existingEntry && !isStatic) {
-        const existingAddr = existingEntry.value;
+      if (existingEntry) {
+        if (existingEntry.isStatic !== isStatic) {
+          throw new Error(`Label '${fullLabel}' is not static and cannot be used in conditionals.`);
+        }
+        if (!isStatic) {
+          const existingAddr = existingEntry.value;
 
-        if (existingAddr !== addr) {
-          debug("setLabel pass error", { fullLabel, oldAddr: existingAddr, newAddr: addr });
+          if (existingAddr !== addr) {
+            debug("setLabel pass error", { fullLabel, oldAddr: existingAddr, newAddr: addr });
 
-          // Throw error for changed labels between passes only when not a macro label
-          if (!isMacroLabel) {
-            throw new Error(`Label "${fullLabel}" changed from $${existingAddr.toString(16)} to $${addr.toString(16)}`);
+            // Throw error for changed labels between passes only when not a macro label
+            if (!isMacroLabel) {
+              throw new Error(`Label "${fullLabel}" changed from $${existingAddr.toString(16)} to $${addr.toString(16)}`);
+            }
           }
         }
       }
+    }
+
+    if (this.pass === 3) {
+      throw new Error(`Label '${fullLabel}' used in pass 3.`);
     }
 
     // Handle the current parent label tracking for sublabels
@@ -2574,6 +2676,53 @@ export class Assembler {
         modifiesHierarchy: false // Don't modify hierarchy for these
       });
     }
+  }
+
+  /**
+   * Resolves a compound struct member id (e.g. TestStruct.count, TestStruct[0].count, TestStruct.NewStruct.new).
+   * @param compoundId e.g. "TestStruct.count", "TestStruct[0].count", "TestStruct.NewStruct.new"
+   * @returns {number} The offset or address (base + index*size + memberOffset for indexed).
+   */
+  resolveStructMember(compoundId: string): number {
+    // Parse: StructName ( "." ( MemberName | ChildStructName ) | "[" index "]" )* ( "." MemberName )?
+    const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
+    if (!firstId || !this.structs.has(firstId)) throw new Error(`Struct not found: ${compoundId}`);
+    let rest = compoundId.substring(firstId.length).trim();
+    let base = 0;
+    let currentStruct = this.structs.get(firstId);
+
+    while (rest.length > 0) {
+      if (rest.startsWith(".")) {
+        rest = rest.substring(1).trim();
+        const memberMatch = rest.match(/^([A-Z_a-z]\w*)/);
+        if (!memberMatch) throw new Error(`Invalid struct member: ${compoundId}`);
+        const memberName = memberMatch[1];
+        rest = rest.substring(memberName.length).trim();
+
+        const memberOffset = currentStruct.labels.get(memberName);
+        if (memberOffset !== undefined) {
+          return base + memberOffset;
+        }
+        const childStruct = this.structs.get(memberName);
+        if (childStruct && childStruct.parent === currentStruct.name) {
+          currentStruct = childStruct;
+        } else {
+          throw new Error(`Struct member not found: ${currentStruct.name}.${memberName}`);
+        }
+      } else if (rest.startsWith("[")) {
+        const bracketEnd = rest.indexOf("]");
+        if (bracketEnd === -1) throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
+        const indexStr = rest.substring(1, bracketEnd).trim();
+        const index = parseInt(indexStr, 10);
+        if (isNaN(index) || index < 0) throw new Error(`Invalid struct index: ${indexStr}`);
+        rest = rest.substring(bracketEnd + 1).trim();
+        base += index * currentStruct.size;
+      } else {
+        break;
+      }
+    }
+
+    return base;
   }
 
   /**
@@ -2864,14 +3013,21 @@ export class Assembler {
   }
 
   /**
-   * Handles the end of an `if` statement.
+   * Handles the end of an `if` statement (or `while`, since asar uses endif for both).
    */
   handleEndIf(): void {
     debug("handleEndIf")
-    if (this.condStack.length === 0 || this.condStack[this.condStack.length - 1].type !== "if") {
+    if (this.condStack.length === 0) {
+      throw new Error("Misplaced endif");
+    }
+    const top = this.condStack[this.condStack.length - 1];
+    if (top.type !== "if" && top.type !== "while") {
       throw new Error("Misplaced endif");
     }
     this.condStack.pop();
+    if (top.type === "while" && top.cond) {
+      this.endLoopCollection("while");
+    }
     this.moreonlinecond = this.condStack.every(entry => entry.cond);
   }
 
@@ -2880,7 +3036,18 @@ export class Assembler {
    * @param {string[]} condition - The condition for the loop.
    */
   handleWhile(condition: string[]): void {
-    if (this.pass === 0) return; // Skip in pass 0
+    // Determine whether this while is in an active branch.
+    // If the parent condition is false, we still push a stack frame so `endif` balances,
+    // but we do not collect/execute the loop body.
+    const parentCond = this.condStack.length === 0 ? true : this.condStack.every(entry => entry.cond);
+
+    // Push while onto condStack so endif can pop it (asar uses endif for both if and while).
+    this.condStack.push({
+      type: "while",
+      cond: parentCond,
+    });
+
+    if (this.pass === 0 || !parentCond) return; // Skip collection when inactive or on pass 0
 
     // Build the original while statement to pass to the new method
     const whileStatement = `while ${condition.join(" ")}`;
@@ -2996,23 +3163,6 @@ export class Assembler {
         }
         debug("handleDataDirective recursively resolved defines", resolved);
 
-        // Check if this is a comma-separated list of values
-        if (resolved.includes(",")) {
-          debug("handleDataDirective comma-separated values", resolved);
-          const valueList = resolved.split(",");
-          for (const item of valueList) {
-            const trimmedItem = item.trim();
-            if (trimmedItem) {
-              // Convert each item to a number and write it
-              const itemNum = this.mathCore.math(trimmedItem);
-              if (!Number.isNaN(itemNum)) {
-                this.writeDataByLength(len, itemNum);
-              }
-            }
-          }
-          continue; // Skip further processing for this value
-        }
-
         // Check if this is a struct reference (e.g., "sprite.x_pos")
         let num: number;
         try {
@@ -3025,9 +3175,9 @@ export class Assembler {
             continue;
           }
         } catch (error) {
-          debug("handleDataDirective struct resolution failed, trying math evaluation", value);
-          // If struct resolution fails, continue with normal evaluation
-          num = this.mathCore.math(value);
+          debug("handleDataDirective struct resolution failed, trying math evaluation", resolved);
+          // If struct resolution fails, continue with normal evaluation of the resolved expression
+          num = this.mathCore.math(resolved);
         }
         if (Number.isNaN(num)) {
           // As a fallback, try to look up a label (this assumes it's a static label).
@@ -3223,15 +3373,19 @@ export class Assembler {
   handleStruct(words: string[]): void {
     debug("handleStruct", words)
     // Syntax:
+    // struct {identifier}                    (base defaults to $000000)
     // struct {identifier} {snes_address}      OR
     // struct {extension_identifier} extends {parent_identifier}
-    if (words.length < 3) {
+    if (words.length < 2) {
       throw new Error("Struct definition requires at least two parameters.");
     }
     const structName = words[1];
     let base: number;
     let parent: string | undefined;
-    if (words[2].toLowerCase() === "extends") {
+    if (words.length === 2) {
+      // struct Name with no base – use $000000
+      base = 0;
+    } else if (words[2].toLowerCase() === "extends") {
       // Format: struct ExtensionName extends ParentName
       if (words.length < 4) {
         throw new Error("Struct extension must specify a parent struct.");
@@ -3309,10 +3463,10 @@ export class Assembler {
       if (!parentStruct.extensionSize || extSize > parentStruct.extensionSize) {
         parentStruct.extensionSize = extSize;
       }
-      // Also register this extension's labels under a combined name,
-      // for example "Parent.Extension.Member" if desired.
-      // (For simplicity we can also store the extension as a separate entry.)
+      // Also register this extension's labels under a combined name.
       this.structs.set(`${parentName}.${this.currentStruct.name}`, this.currentStruct);
+      // Register by short name so resolveStructMember can find child struct (e.g. NewStruct when resolving TestStruct.NewStruct.new).
+      this.structs.set(this.currentStruct.name, this.currentStruct);
       debug(`handleEndStruct defined extension struct: "${this.currentStruct.name}" extending "${parentName}", size ${finalSize}`);
     } else {
       // Normal (non-extension) struct: store it by its name.
@@ -4352,8 +4506,8 @@ export class Assembler {
     } else if (this.mapper === "hirom" || this.mapper === "exhirom") {
       headerOffset = 0xFFC0;
     } else {
-      // For other mappers we choose a default (or skip header update)
-      headerOffset = 0x7FC0;
+      // For other mappers default to 0xFFC0 (same as HiROM)
+      headerOffset = 0xFFC0;
     }
     debug("updateHeaderAndCRC32 headerOffset", headerOffset)
 
@@ -4369,10 +4523,14 @@ export class Assembler {
     this.romdata[headerOffset + 0x1E] = 0x00;
     this.romdata[headerOffset + 0x1F] = 0x00;
 
-    // Calculate the 16-bit checksum (the sum of all bytes modulo 0x10000).
+    // Calculate the 16-bit checksum (sum of all bytes modulo 0x10000).
+    // Exclude the 4 checksum/complement bytes at 0x1C..0x1F so the result is deterministic.
     let checksum = 0;
+    const skipStart = headerOffset + 0x1C;
+    const skipEnd = headerOffset + 0x20;
     for (let i = 0; i < this.romdata.length; i++) {
-      checksum = (checksum + (this.romdata[i] & 0xFF)) & 0xFFFF;
+      const byte = (i >= skipStart && i < skipEnd) ? 0 : (this.romdata[i] & 0xFF);
+      checksum = (checksum + byte) & 0xFFFF;
     }
     const complement = (~checksum) & 0xFFFF;
 
@@ -4451,8 +4609,11 @@ export class Assembler {
    */
   resolveIncludePath = (filename: string): string => {
     debug("resolveIncludePath", filename);
+    if (filename == null || filename === undefined) {
+      throw new Error("Invalid or missing filename");
+    }
     // Strip quotes if present
-    if ((filename.startsWith('"') && filename.endsWith('"')) ||
+    if ((filename && filename.startsWith('"') && filename.endsWith('"')) ||
         (filename.startsWith("'") && filename.endsWith("'")) ||
         (filename.startsWith("`") && filename.endsWith("`"))) {
       filename = filename.slice(1, -1);
@@ -4494,6 +4655,12 @@ export class Assembler {
    */
   handleInclude = (command: string, filename?: string, once = false): void => {
     debug("handleInclude", command, filename, once);
+
+    if (filename == null || filename === undefined) {
+      this.includedFiles.set(undefined as unknown as string, { included: true, guarded: false });
+      this.assemblefile(undefined as unknown as string, true);
+      return;
+    }
 
     // Mark file as included
     const resolvedPath = this.resolveIncludePath(filename);
