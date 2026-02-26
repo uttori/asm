@@ -1329,8 +1329,8 @@ test("updateHeaderAndCRC32 - checksum calculation is correct", t => {
 
   assembler.updateHeaderAndCRC32();
 
-  // Checksum excludes the 4 header bytes at 0x1C..0x1F, so sum = (0x8000 - 4) * 1 = 32764
-  const expectedChecksum = 0x8000 - 4;
+  // Asar seeds header bytes as FF FF 00 00 first, then sums the full ROM.
+  const expectedChecksum = 0x81FA;
   const expectedComplement = (~expectedChecksum) & 0xFFFF;
 
   const actualChecksum = (assembler.romdata[0x7FC0 + 0x1E] | (assembler.romdata[0x7FC0 + 0x1F] << 8)) & 0xFFFF;
@@ -6609,6 +6609,38 @@ test("handleDefineCommand - basic define operations", t => {
   t.is(assembler.defines.get("complex"), "5", "Complex math expressions should be evaluated correctly");
 });
 
+test("handleUndef - removes defines from processCommand", t => {
+  const assembler = new Assembler();
+
+  assembler.handleDefineCommand('!testdefine = "poop"');
+  t.true(assembler.defines.has("testdefine"), "Define should exist before undef");
+
+  assembler.processCommand('undef "testdefine"');
+  t.false(assembler.defines.has("testdefine"), "Quoted undef should remove define");
+
+  assembler.handleDefineCommand('!testdefine = "poop"');
+  assembler.processCommand("undef testdefine");
+  t.false(assembler.defines.has("testdefine"), "Unquoted undef should remove define");
+
+  const error = t.throws(() => {
+    assembler.handleUndef([]);
+  }, { instanceOf: Error });
+  t.is(error.message, "undef requires exactly one identifier parameter");
+});
+
+test("define helpers - defined and string expansion behavior", t => {
+  const assembler = new Assembler();
+  assembler.defines.set("testdefine", "poop");
+  assembler.defines.set("a", "x");
+
+  t.is(assembler.mathCoreDelegate("defined", "testdefine"), 1, "defined() should detect preprocessor defines");
+  t.is(assembler.mathCoreDelegate("defined", "missing_define"), 0, "defined() should return 0 for missing defines");
+
+  t.is(assembler.resolveDefinesInStringLiteral("!a"), "x", "Unescaped string define should expand");
+  t.is(assembler.resolveDefinesInStringLiteral("\\!a"), "!a", "Escaped bang should stay literal");
+  t.is(assembler.resolveDefinesInStringLiteral("\\\\!a"), "\\x", "Double slash should keep slash and expand define");
+});
+
 test("handleDefineCommand - error cases", t => {
   const assembler = new Assembler();
 
@@ -7105,35 +7137,49 @@ test("mathCoreDelegate - sizeof, objectsize, datasize", t => {
 
 test("mathCoreDelegate - filesize", t => {
   const assembler = new Assembler();
+  const expectedPath = `${process.cwd()}/existing_file.txt`;
 
-  // Mock fs.statSync
-  const originalStatSync = fs.statSync;
-
-  // @ts-ignore - Mocking fs.statSync
-  fs.statSync = (path: string) => {
-    if (path === "existing_file.txt") {
-      return { size: 1024 };
+  const existsStub = sinon.stub(fs, "existsSync").callsFake((filePath: fs.PathLike) => {
+    return filePath === expectedPath;
+  });
+  const statStub = sinon.stub(fs, "statSync").callsFake((filePath: fs.PathLike) => {
+    if (filePath === expectedPath) {
+      return { size: 1024 } as fs.Stats;
     }
-    throw new Error(`ENOENT: no such file or directory, stat '${path}'`);
-  };
+    throw new Error(`ENOENT: no such file or directory, stat '${String(filePath)}'`);
+  });
 
   // Test filesize with existing file
   t.is(assembler.mathCoreDelegate("filesize", "existing_file.txt"), 1024, "Should return correct file size");
+  t.true(existsStub.called, "Should check file existence before stat");
+  t.true(statStub.calledOnce, "Should stat resolved file path");
 
   // Test filesize with non-existent file
   const error = t.throws(() => {
     assembler.mathCoreDelegate("filesize", "nonexistent_file.txt");
   });
   t.truthy(error, "Should throw error for non-existent file");
+  t.true(existsStub.callCount > 1, "Should check candidate paths for missing files");
+  t.is(statStub.callCount, 1, "Should not stat missing files");
 
-  // Restore original method
-  // @ts-ignore - Restoring fs.statSync
-  fs.statSync = originalStatSync;
+  existsStub.restore();
+  statStub.restore();
 });
 
-// TODO: This needs mock files made for it.
-test.skip("mathCoreDelegate - getfilestatus", t => {
+test("mathCoreDelegate - getfilestatus", t => {
   const assembler = new Assembler();
+  const readablePath = `${process.cwd()}/readable_file.txt`;
+  const unreadablePath = `${process.cwd()}/unreadable_file.txt`;
+
+  const existsStub = sinon.stub(fs, "existsSync").callsFake((filePath: fs.PathLike) => {
+    return filePath === readablePath || filePath === unreadablePath;
+  });
+  const accessStub = sinon.stub(fs, "accessSync").callsFake((filePath: fs.PathLike) => {
+    if (filePath === readablePath) {
+      return;
+    }
+    throw new Error("EACCES: permission denied");
+  });
 
   // Test getfilestatus with readable file
   t.is(assembler.mathCoreDelegate("getfilestatus", "readable_file.txt"), 0, "Should return 0 for readable file");
@@ -7143,6 +7189,12 @@ test.skip("mathCoreDelegate - getfilestatus", t => {
 
   // Test getfilestatus with non-existent file
   t.is(assembler.mathCoreDelegate("getfilestatus", "nonexistent_file.txt"), 1, "Should return 1 for non-existent file");
+
+  t.true(existsStub.callCount >= 3, "Should check file existence for each query");
+  t.is(accessStub.callCount, 2, "Should only check access for existing files");
+
+  existsStub.restore();
+  accessStub.restore();
 });
 
 test("mathCoreDelegate - unimplemented operations", t => {

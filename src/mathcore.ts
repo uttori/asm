@@ -508,17 +508,11 @@ export class MathCore {
       const paramName = func.args[i];
       const argValue = args[i];
 
-      // Check argument type
-      if (typeof argValue === "string") {
-        throw new Error(
-          `User function '${name}' got string argument for param '${paramName}', expected number.`
-        );
-      }
-
       // Replace all occurrences of the parameter name with its value
       // Use word boundaries to avoid partial matches
       const regex = new RegExp(`\\b${paramName}\\b`, "g");
-      content = content.replace(regex, argValue.toString());
+      const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
+      content = content.replace(regex, replacement);
     }
 
     debug("callUserFunction content =", content);

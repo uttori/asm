@@ -1092,11 +1092,29 @@ test("callUserFunction - error cases", t => {
   t.throws(() => {
     mathCore.callUserFunction("multiply", [5]);
   }, { message: "Function 'multiply' expects at least 2 argument(s)." });
+});
 
-  // Test string arguments
-  t.throws(() => {
-    mathCore.callUserFunction("multiply", [5, "string"]);
-  }, { message: "User function 'multiply' got string argument for param 'b', expected number." });
+test("callUserFunction - supports string arguments", t => {
+  const mathCore = new MathCore();
+  mathCore.delegate = (id: string, ...args: (number | string)[]): number | string => {
+    if (id === "readfile1") {
+      const filename = args[0] as string;
+      const pos = args[1] as number;
+      if (filename === "data/64kb.bin" && pos === 1) {
+        return 0x20;
+      }
+      return 0x10;
+    }
+    return 0;
+  };
+
+  mathCore.userFunctions.set("readfile1_incremented", {
+    args: ["filename", "pos"],
+    content: "readfile1(filename, pos) + 1",
+  });
+
+  t.is(mathCore.callUserFunction("readfile1_incremented", ["data/64kb.bin", 0]), 0x11);
+  t.is(mathCore.callUserFunction("readfile1_incremented", ["data/64kb.bin", 1]), 0x21);
 });
 
 test("callUserFunction - nested expressions", t => {

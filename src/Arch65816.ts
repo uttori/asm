@@ -1009,13 +1009,13 @@ export class Arch65816 {
         JSR_INDEXED_INDIRECT: 0xFC,  // JSR (Absolute Indexed Indirect,X)
     };
 
-    let address = this.assembler.getnum(operand);
-    debug("handleJump address", address.toString(16));
+    let address = 0;
     let mode: keyof typeof jumpOpcodes;
 
     // **Absolute Mode: JMP $0000, JSR $0000**
     if (/^\$[\dA-Fa-f]{4}$/.test(operand)) {
         mode = opcode as keyof typeof jumpOpcodes; // Matches standard Absolute JMP/JSR
+        address = this.assembler.getnum(operand);
         debug("handleJump mode", mode)
     }
     // **Absolute Long Mode: JMP $000000, JSL $000000, JSR $000000**
@@ -1023,6 +1023,7 @@ export class Arch65816 {
         if (opcode === "JMP") mode = "JML";  // Convert to JML (JMP Long)
         else if (opcode === "JSR") mode = "JSL";  // Convert to JSL (JSR Long)
         else mode = opcode as keyof typeof jumpOpcodes;
+        address = this.assembler.getnum(operand);
         debug("handleJump mode", mode)
     }
     // **Absolute Indirect Long Mode: JMP [$0000]**
@@ -1053,6 +1054,8 @@ export class Arch65816 {
       debug("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`)
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
     }
+
+    debug("handleJump address", address.toString(16));
 
     // **Write opcode & address**
     if (mode in jumpOpcodes) {

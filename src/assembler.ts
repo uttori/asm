@@ -265,18 +265,12 @@ export class Assembler {
         return this.realsnespos;
       }
       case "defined": {
-        try {
-          // TODO: This is no longer working as expected.
-          this.getLabelValue(args[0] as string, false);
-          return 1; // Label exists
-        } catch (e) {
-          // Check if it's a defined struct
-          if (this.structs.has(args[0] as string)) {
-            return 1; // Struct exists
-          }
-          // Not found as a label or struct
-          return 0;
-        }
+        const id = args[0] as string;
+        if (this.defines.has(id)) return 1;
+        if (this.structs.has(id)) return 1;
+        if (this.labelTable.has(id)) return 1;
+        if (this.currentNamespace && this.labelTable.has(`${this.currentNamespace}_${id}`)) return 1;
+        return 0;
       }
       case "sizeof": {
         // Special case: handle variadic arguments in a macro
@@ -307,7 +301,12 @@ export class Assembler {
       }
       case "filesize": {
         try {
-          const stats = fs.statSync(args[0] as string);
+          const filename = args[0] as string;
+          const resolvedPath = resolveReadablePath(filename);
+          if (!resolvedPath) {
+            throw new Error(`Could not get filesize for '${filename}'`);
+          }
+          const stats = fs.statSync(resolvedPath);
           return stats.size;
         } catch (error: unknown) {
           debug(`Could not get filesize for '${args[0]}'`, error);
@@ -315,16 +314,16 @@ export class Assembler {
         }
       }
       case "getfilestatus": {
-        try {
-          // Check if file exists and is readable
-          try {
-            fs.accessSync(args[0] as string, fs.constants.R_OK);
-            return 0; // File exists and is readable
-          } catch (e) {
-            return 2; // File exists but can't be read
-          }
-        } catch (e) {
+        const filename = args[0] as string;
+        const resolvedPath = resolveReadablePath(filename);
+        if (!resolvedPath) {
           return 1; // File doesn't exist
+        }
+        try {
+          fs.accessSync(resolvedPath, fs.constants.R_OK);
+          return 0; // File exists and is readable
+        } catch (error: unknown) {
+          return 2; // File exists but can't be read
         }
       }
       case "read1":
@@ -1460,6 +1459,9 @@ export class Assembler {
         case "namespace":
           this.handleNamespace(words.slice(1));
           break;
+      case "undef":
+        this.handleUndef(words.slice(1));
+        break;
         case "pushns":
           // TODO: Likely not useful and should remove
           this.handlePushNamespace();
@@ -2089,6 +2091,30 @@ export class Assembler {
   }
 
   /**
+   * Handles undef commands.
+   * Example:
+   * @example
+   * undef "identifier"
+   * undef identifier
+   * @param {string[]} params The undef parameters.
+   */
+  handleUndef(params: string[]): void {
+    debug("handleUndef", params);
+    if (params.length < 1) {
+      throw new Error("undef requires exactly one identifier parameter");
+    }
+
+    const raw = params[0].trim();
+    const unquoted = raw.startsWith("\"") && raw.endsWith("\"") ? raw.slice(1, -1) : raw;
+    const identifier = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
+
+    if (!identifier) {
+      throw new Error("undef requires a non-empty identifier");
+    }
+    this.defines.delete(identifier);
+  }
+
+  /**
    * Processes nested defines in a string, properly handling the !{...} syntax
    * by immediately resolving the content inside braces.
    * @param {string} content The content with nested defines to process
@@ -2257,6 +2283,67 @@ export class Assembler {
 
     // No changes made
     return content;
+  }
+
+  /**
+   * Resolves !define references inside db string literals, honoring escaped exclamation marks.
+   * @param {string} content The unquoted string literal content.
+   * @returns {string} The string with defines expanded.
+   */
+  resolveDefinesInStringLiteral(content: string): string {
+    let result = "";
+    let index = 0;
+
+    while (index < content.length) {
+      const char = content[index];
+
+      if (char === "\\") {
+        const next = content[index + 1];
+        if (next === undefined) {
+          result += "\\";
+          index++;
+          continue;
+        }
+        if (next === "!") {
+          // Escaped ! keeps literal text (e.g. \!a -> !a)
+          result += "!";
+          index += 2;
+          while (index < content.length && /\w/.test(content[index])) {
+            result += content[index];
+            index++;
+          }
+          continue;
+        }
+        if (next === "\\") {
+          // Preserve one literal slash; following content is processed normally.
+          result += "\\";
+          index += 2;
+          continue;
+        }
+        result += next;
+        index += 2;
+        continue;
+      }
+
+      if (char === "!" && index + 1 < content.length && /\w/.test(content[index + 1])) {
+        index++;
+        let defineName = "";
+        while (index < content.length && /\w/.test(content[index])) {
+          defineName += content[index];
+          index++;
+        }
+        if (!this.defines.has(defineName)) {
+          throw new Error(`Define '${defineName}' not found.`);
+        }
+        result += this.defines.get(defineName);
+        continue;
+      }
+
+      result += char;
+      index++;
+    }
+
+    return result;
   }
 
   /**
@@ -3138,9 +3225,11 @@ export class Assembler {
         debug("handleDataDirective string literals", value);
         // Handle string literals
         const unquoted = value.slice(1, -1);
+        const expandedString = this.resolveDefinesInStringLiteral(unquoted);
         debug("handleDataDirective string literal unquoted", unquoted);
+        debug("handleDataDirective string literal expanded", expandedString);
         // Use character mapping for each character
-        const mappedChars = this.processStringWithMapping(unquoted);
+        const mappedChars = this.processStringWithMapping(expandedString);
         for (const charValue of mappedChars) {
           this.writeDataByLength(len, charValue);
         }
@@ -4501,7 +4590,7 @@ export class Assembler {
     debug("updateHeaderAndCRC32");
     let headerOffset: number;
     // TODO: Validate header offset for other mappers.
-    if (this.mapper === "lorom") {
+    if (this.mapper === "lorom" || this.mapper === "sa1rom" || this.mapper === "bigsa1rom") {
       headerOffset = 0x7FC0;
     } else if (this.mapper === "hirom" || this.mapper === "exhirom") {
       headerOffset = 0xFFC0;
@@ -4524,13 +4613,10 @@ export class Assembler {
     this.romdata[headerOffset + 0x1F] = 0x00;
 
     // Calculate the 16-bit checksum (sum of all bytes modulo 0x10000).
-    // Exclude the 4 checksum/complement bytes at 0x1C..0x1F so the result is deterministic.
+    // Asar seeds header bytes as FF FF 00 00 first, then sums the full ROM.
     let checksum = 0;
-    const skipStart = headerOffset + 0x1C;
-    const skipEnd = headerOffset + 0x20;
     for (let i = 0; i < this.romdata.length; i++) {
-      const byte = (i >= skipStart && i < skipEnd) ? 0 : (this.romdata[i] & 0xFF);
-      checksum = (checksum + byte) & 0xFFFF;
+      checksum = (checksum + (this.romdata[i] & 0xFF)) & 0xFFFF;
     }
     const complement = (~checksum) & 0xFFFF;
 
