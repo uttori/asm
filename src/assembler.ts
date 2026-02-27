@@ -132,6 +132,7 @@ export class Assembler {
   public currentMacroParams: string[] = [];
   public currentMacroBody: string[] = [];
   public currentVariadicCount: number | undefined = undefined;
+  public currentVariadicArgs: string[] = [];
 
   public macros: Map<string, MacroDefinition> = new Map();
 
@@ -948,6 +949,14 @@ export class Assembler {
     // First remove any inline comment (ignoring semicolons inside quotes)
     command = this.removeInlineComment(command);
 
+    // Resolve Variadic Placeholders
+    if (this.inMacroExpansion && this.pass !== 0 && (command.includes("...") || command.includes("…"))) {
+      const currentCond = this.condStack.length === 0 ? true : this.condStack.every((entry) => entry.cond);
+      if (currentCond) {
+        command = this.resolveVariadicPlaceholders(command);
+      }
+    }
+
     // Split by whitespace, but preserve quoted strings
     let words = this.splitCommandIntoWords(command);
     if (words.length === 0) return;
@@ -1752,16 +1761,19 @@ export class Assembler {
     this.macroLabelInstance++;
     debug("Incremented macro instance counter to", this.macroLabelInstance);
 
-    // Track if we're in a macro expansion
+    /** Save the previous macro expansion state */
     const previousMacroExpansionState = this.inMacroExpansion;
+    // Track if we're in a macro expansion
     this.inMacroExpansion = true;
 
-    // Save previous variadic count
+    /** Save the previous variadic count */
     const previousVariadicCount = this.currentVariadicCount;
-    // Save the previous macro name
+    /** Save the previous variadic arguments */
+    const previousVariadicArgs = this.currentVariadicArgs;
+    /** Save the previous macro name */
     const previousMacroName = this.currentMacroName;
 
-    // Use a regex to extract macro name and arguments.
+    /** Use a regex to extract macro name and arguments. */
     const invocationRegex = /^(\w+)\((.*)\)$/;
     const m = invocation.match(invocationRegex);
     debug("callMacro m", m)
@@ -1788,6 +1800,7 @@ export class Assembler {
 
         // Set variadic count to 0 since there are no variadic arguments
         this.currentVariadicCount = 0;
+        this.currentVariadicArgs = [];
 
         // Expand each line of the macro.
         for (const line of macro.body) {
@@ -1884,6 +1897,7 @@ export class Assembler {
 
       // Store the variadic count for accessing in sizeof(...)
       this.currentVariadicCount = variadicCount;
+      this.currentVariadicArgs = variadicArgs;
 
       // Expand each line of the macro.
       for (const line of macro.body) {
@@ -1899,6 +1913,7 @@ export class Assembler {
 
     // Restore the previous variadic count
     this.currentVariadicCount = previousVariadicCount;
+    this.currentVariadicArgs = previousVariadicArgs;
 
     // Restore the previous macro expansion state
     this.inMacroExpansion = previousMacroExpansionState;
@@ -1916,6 +1931,30 @@ export class Assembler {
   expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string {
     debug("expandMacroLine", { line, fixedArgs, variadicArgs, variadicCount });
 
+      /**
+       * Resolve deprecated bang angle syntax
+       * @param {string} match - The match to resolve.
+       * @param {string} name - The name to resolve.
+       * @returns {string} The resolved value.
+       */
+    const resolveDeprecatedBangAngle = (match: string, name: string): string => {
+      if (fixedArgs.has(name)) {
+        const fixedValue = fixedArgs.get(name);
+        return fixedValue !== undefined ? this.resolvedefines(fixedValue) : match;
+      }
+
+      // Legacy Asar syntax maps <!a>, <!b>, ... to variadic args [0], [1], ...
+      if (/^[A-Za-z]$/.test(name)) {
+        const index = name.toLowerCase().charCodeAt(0) - 97;
+        if (index >= 0 && index < variadicCount) {
+          return variadicArgs[index];
+        }
+      }
+
+      const defineValue = this.defines.get(name);
+      return defineValue !== undefined ? defineValue : match;
+    };
+
     // Handle define statements (!a = 0) - don't expand the left side
     if (line.trim().startsWith("!") && line.includes("=")) {
       // Extract the variable name and operator
@@ -1927,6 +1966,7 @@ export class Assembler {
 
         // Only expand the right side (value) of the assignment
         let expandedValue = value;
+        expandedValue = expandedValue.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
         expandedValue = expandedValue.replace(/<(\w+)>/g, (match: string, paramName: string) => {
           if (fixedArgs.has(paramName)) {
             return this.resolvedefines(fixedArgs.get(paramName));
@@ -1934,6 +1974,10 @@ export class Assembler {
           return match;
         });
         expandedValue = expandedValue.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
+          // Defer loop-body variadic evaluation until command execution so !loopVar can change per iteration.
+          if (this.collectingLoop) {
+            return match;
+          }
           // Check for defines in the expression (like !a+1)
           const processedExpr = expr.replace(/!(\w+)/g, (defMatch: string, defName: string) => {
             if (this.defines.has(defName)) {
@@ -1974,6 +2018,9 @@ export class Assembler {
     }
 
     let expanded = line;
+    // Deprecated syntax support: <!define> should resolve to raw define value.
+    expanded = expanded.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
+
     // Replace fixed parameters of the form <param>
     expanded = expanded.replace(/<(\w+)>/g, (match: string, paramName: string) => {
       if (fixedArgs.has(paramName)) {
@@ -1992,6 +2039,10 @@ export class Assembler {
 
     // Replace variadic parameters of the form <...[{math}]>
     expanded = expanded.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
+      // Defer loop-body variadic evaluation until command execution so !loopVar can change per iteration.
+      if (this.collectingLoop) {
+        return match;
+      }
       // Check for defines in the expression (like !a+1)
       const processedExpr = expr.replace(/!(\w+)/g, (defMatch: string, defName: string) => {
         if (this.defines.has(defName)) {
@@ -2231,6 +2282,42 @@ export class Assembler {
     this.defines.set(identifier, value);
     debug(`handleDefineCommand define set: !${identifier} ${operator} ${value}`);
     debug("handleDefineCommand defines", this.defines);
+  }
+
+  /**
+   * Resolves variadic placeholders in already-expanded macro lines.
+   * This is needed for loop bodies where <...[expr]> must be re-evaluated each iteration.
+   * @param {string} command The command line to resolve.
+   * @returns {string} `command` with variadic placeholders resolved.
+   */
+  resolveVariadicPlaceholders(command: string): string {
+    if (!command.includes("...") && !command.includes("…")) {
+      return command;
+    }
+
+    const variadicCount = this.currentVariadicArgs.length;
+    let resolved = command.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
+    resolved = resolved.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
+      const processedExpr = expr.replace(/!(\w+)/g, (defMatch: string, defName: string) => {
+        const defineValue = this.defines.get(defName);
+        if (defineValue !== undefined) {
+          return defineValue;
+        }
+        return defMatch;
+      });
+      const resolvedExpr = this.resolvedefines(processedExpr);
+      let index = this.mathCore.math(resolvedExpr);
+      if (Number.isNaN(index)) {
+        throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
+      }
+      index = Math.floor(index);
+      if (index < 0 || index >= variadicCount) {
+        throw new Error(`Variadic index ${index} out of range (0..${variadicCount - 1}).`);
+      }
+      return this.currentVariadicArgs[index];
+    });
+
+    return resolved;
   }
 
   /**
