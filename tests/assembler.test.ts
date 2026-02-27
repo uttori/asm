@@ -6762,10 +6762,17 @@ test("handleArch - valid architectures", t => {
   // Test spc700 architecture
   assembler.handleArch(["arch", "spc700"]);
   t.is(assembler.arch, "spc700", "Should set architecture to spc700");
+  t.false(assembler.spcInlineCompatMode, "spc700 should not enable inline compatibility mode");
+
+  // Test spc700-inline architecture
+  assembler.handleArch(["arch", "spc700-inline"]);
+  t.is(assembler.arch, "spc700", "spc700-inline should compile with spc700 arch backend");
+  t.true(assembler.spcInlineCompatMode, "spc700-inline should enable inline compatibility mode");
 
   // Test superfx architecture
   assembler.handleArch(["arch", "superfx"]);
   t.is(assembler.arch, "superfx", "Should set architecture to superfx");
+  t.false(assembler.spcInlineCompatMode, "superfx should disable inline compatibility mode");
 
   // Test case insensitivity
   assembler.handleArch(["arch", "65816"]);
@@ -6801,12 +6808,84 @@ test("handleArch - architecture switching", t => {
 
   assembler.handleArch(["arch", "spc700"]);
   t.is(assembler.arch, "spc700", "Should switch to spc700 architecture");
+  t.false(assembler.spcInlineCompatMode, "spc700 should not use inline compatibility mode");
+
+  assembler.handleArch(["arch", "spc700-inline"]);
+  t.is(assembler.arch, "spc700", "spc700-inline should still use spc700 backend");
+  t.true(assembler.spcInlineCompatMode, "spc700-inline should enable inline compatibility mode");
 
   assembler.handleArch(["arch", "superfx"]);
   t.is(assembler.arch, "superfx", "Should switch to superfx architecture");
+  t.false(assembler.spcInlineCompatMode, "switching away should clear inline compatibility mode");
 
   assembler.handleArch(["arch", "65816"]);
   t.is(assembler.arch, "65816", "Should switch back to 65816 architecture");
+  t.false(assembler.spcInlineCompatMode, "65816 should keep inline compatibility mode disabled");
+});
+
+test("processCommand - spcblock emits expected nspc stream", t => {
+  const assembler = new Assembler(new Uint8Array(0x80000));
+  assembler.setCurrentFile("../tests/assembler.test.ts");
+
+  const lines = [
+    "org $008000",
+    "lda #$AA",
+    "spcblock $6000",
+    "mov $33,#$44",
+    "endspcblock",
+    "spcblock $5000",
+    "start:",
+    "jmp lab",
+    "lab:",
+    "mov $11,#$22",
+    "endspcblock execute start",
+    "lda #$BB",
+  ];
+
+  for (let pass = 0; pass <= 2; pass++) {
+    assembler.setPass(pass);
+    for (const [lineNumber, line] of lines.entries()) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.processCommand(line);
+    }
+    assembler.finishPass();
+  }
+
+  const result = Array.from(assembler.getBinaryOutput());
+  t.deepEqual(
+    result,
+    [0xA9, 0xAA, 0x03, 0x00, 0x00, 0x60, 0x8F, 0x44, 0x33, 0x06, 0x00, 0x00, 0x50, 0x5F, 0x03, 0x50, 0x8F, 0x22, 0x11, 0x00, 0x00, 0x00, 0x50, 0xA9, 0xBB],
+    "spcblock stream should match Asar reference bytes"
+  );
+});
+
+test("processCommand - spc700-inline auto-wraps in implicit spcblock", t => {
+  const assembler = new Assembler(new Uint8Array(0x80000));
+  assembler.setCurrentFile("../tests/assembler.test.ts");
+
+  const lines = [
+    "org $008000",
+    "arch spc700-inline",
+    "org $5000",
+    "jmp lab",
+    "lab:",
+  ];
+
+  for (let pass = 0; pass <= 2; pass++) {
+    assembler.setPass(pass);
+    for (const [lineNumber, line] of lines.entries()) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.processCommand(line);
+    }
+    assembler.finishPass();
+  }
+
+  const result = Array.from(assembler.getBinaryOutput());
+  t.deepEqual(
+    result,
+    [0x03, 0x00, 0x00, 0x50, 0x5F, 0x03, 0x50, 0x00, 0x00, 0x00, 0x00],
+    "spc700-inline output should match legacy inline stream format"
+  );
 });
 
 test("step - basic functionality", t => {

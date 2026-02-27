@@ -1232,17 +1232,24 @@ export class ArchSPC700 {
   handleCallJump(opcode: string, operand: string): boolean {
     debug("handleCallJump", { opcode, operand })
     const upper = opcode.toUpperCase();
+    const resolveOperand = (value: string): number => {
+      try {
+        return this.assembler.getnum(value) & 0xffff;
+      } catch {
+        return parseInt(value.replace(/\$/g, ""), 16) & 0xffff;
+      }
+    };
     if (upper === "CALL") {
       // => 3F  lo hi
       this.assembler.write1(0x3f);
-      const val = parseInt(operand.replace(/\$/g, ""), 16) & 0xffff;
+      const val = resolveOperand(operand);
       this.assembler.write2(val);
       return true;
     }
     if (upper === "PCALL") {
       // => 4F dp
       this.assembler.write1(0x4f);
-      const val = parseInt(operand.replace(/\$/g, ""), 16) & 0xff;
+      const val = resolveOperand(operand) & 0xff;
       this.assembler.write1(val);
       return true;
     }
@@ -1254,14 +1261,14 @@ export class ArchSPC700 {
         // => 0x1f
         this.assembler.write1(0x1f);
         // Extract value between ( and +X)
-        const inner = trimmed.slice(1, trimmed.length - 3).trim();
-        const val = parseInt(inner.replace(/\$/g, ""), 16) & 0xffff;
+        const inner = operand.trim().slice(1, operand.trim().length - 3).trim();
+        const val = resolveOperand(inner);
         this.assembler.write2(val);
         return true;
       } else {
         // => 0x5f
         this.assembler.write1(0x5f);
-        const val = parseInt(operand.replace(/\$/g, ""), 16) & 0xffff;
+        const val = resolveOperand(operand);
         this.assembler.write2(val);
         return true;
       }

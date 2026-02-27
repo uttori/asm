@@ -90,6 +90,16 @@ export type PushPcStackEntry = {
   realstartpos: number;
 }
 
+type SpcblockType = "nspc" | "custom";
+
+type SpcblockData = {
+  destination: number;
+  type: SpcblockType;
+  sizeAddress: number;
+  executeAddress: number | null;
+  namespaceBackup: string;
+};
+
 export interface IncludedFileInfo {
   /** Whether the file has been included */
   included: boolean;
@@ -180,7 +190,7 @@ export class Assembler {
   /** Initialize fill pattern */
   public fillbyte: number[] = [0,0,0,0, 0,0,0,0, 0,0,0,0];
 
-  public targetRom: number[];
+  public targetRom: number[] | Uint8Array;
 
   // Add a static property to hold our CRC table.
   public static crcTable: number[] | null = null;
@@ -203,7 +213,11 @@ export class Assembler {
   public currentParentLabel: string = "";  // Track the most recent parent label
   public currentParentIsGlobal: boolean = false;  // Track if the parent label is global
 
-  constructor(targetRom?: number[]) {
+  public inSpcblock: boolean = false;
+  public spcblockData: SpcblockData | null = null;
+  public spcInlineCompatMode: boolean = false;
+
+  constructor(targetRom?: number[] | Uint8Array) {
     this.targetRom = targetRom ?? [];
     this.arch65816 = new Arch65816(this);
     this.archSPC700 = new ArchSPC700(this);
@@ -530,7 +544,7 @@ export class Assembler {
     }
 
     // For pass > 0, proceed with actual architecture-specific handling
-    if (this.arch === "spc700") {
+    if (this.inSpcblock || this.arch === "spc700") {
       return this.asblock_spc700(words);
     } else if (this.arch === "superfx") {
       // (Implement superfx handling if needed)
@@ -1402,29 +1416,37 @@ export class Assembler {
         // Removed but in the tests
         break;
       case "lorom":
+        if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         this.mapper = "lorom";
         break;
       case "hirom":
+        if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         this.mapper = "hirom";
         break;
       case "exlorom":
+        if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         this.mapper = "exlorom";
         break;
       case "exhirom":
+        if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         this.mapper = "exhirom";
         break;
       case "sfxrom":
+        if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         this.mapper = "sfxrom";
         break;
       case "norom":
+        if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         this.mapper = "norom";
         // For norom, you might disable checksum fix:
         // if (!this.force_checksum_fix) this.checksum_fix_enabled = false;
         break;
       case "fullsa1rom":
+        if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         this.mapper = "bigsa1rom";
         break;
       case "sa1rom": {
+        if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         if (words.length > 1) {
           // Expect a parameter in the form "X,Y,Z,W" where each X is a single digit.
           const parts = words[1].split(",");
@@ -1481,21 +1503,29 @@ export class Assembler {
           this.handleEndFor();
           break;
         case "namespace":
+          if (this.inSpcblock) throw new Error("NAMESPACE is unavailable inside spcblock.");
           this.handleNamespace(words.slice(1));
           break;
       case "undef":
         this.handleUndef(words.slice(1));
         break;
         case "pushns":
+          if (this.inSpcblock) throw new Error("PUSHNS is unavailable inside spcblock.");
           // TODO: Likely not useful and should remove
           this.handlePushNamespace();
           break;
         case "pullns":
+          if (this.inSpcblock) throw new Error("PULLNS is unavailable inside spcblock.");
           // TODO: Likely not useful and should remove
           this.handlePullNamespace();
           break;
         case "org":
-          this.handleOrg(words.slice(1));
+          if (this.inSpcblock) throw new Error("ORG is unavailable inside spcblock.");
+          if (this.spcInlineCompatMode) {
+            this.handleSpcblock(["spcblock", ...(words.slice(1))]);
+          } else {
+            this.handleOrg(words.slice(1));
+          }
           break;
         case "db":
         case "dw":
@@ -1524,7 +1554,20 @@ export class Assembler {
           break;
         }
         case "arch": {
+          if (this.inSpcblock) throw new Error("ARCH is unavailable inside spcblock.");
           this.handleArch(words);
+          break;
+        }
+        case "spcblock": {
+          this.handleSpcblock(words);
+          break;
+        }
+        case "endspcblock": {
+          this.handleEndSpcblock(words);
+          break;
+        }
+        case "startpos": {
+          this.handleStartpos(words.slice(1));
           break;
         }
         case "pulltable": {
@@ -1552,6 +1595,7 @@ export class Assembler {
         case "freecode":
         case "freespace":
         case "freedata": {
+          if (this.inSpcblock) throw new Error(`${keyword} is unavailable inside spcblock.`);
           this.handleFreespace(keyword, words.slice(1));
           break;
         }
@@ -1711,6 +1755,108 @@ export class Assembler {
     this.snespos = this.pushBaseStack.pop();
   }
 
+  handleSpcblock(words: string[]): void {
+    if (words.length < 2) {
+      throw new Error("spcblock requires at least a destination address.");
+    }
+    if (words.length > 4) {
+      throw new Error("spcblock has too many arguments.");
+    }
+    if (this.inSpcblock) {
+      throw new Error("Nested spcblock directives are not supported.");
+    }
+
+    const destination = this.getnum(this.resolvedefines(words[1]));
+    if ((destination & ~0xFFFF) !== 0) {
+      throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
+    }
+
+    let type: SpcblockType = "nspc";
+    if (words.length === 3) {
+      const kind = words[2].toLowerCase();
+      if (kind === "nspc") {
+        type = "nspc";
+      } else if (kind === "custom") {
+        throw new Error("Custom spcblock mode requires a macro and is not implemented.");
+      } else {
+        throw new Error(`Unknown spcblock type: ${words[2]}`);
+      }
+    } else if (words.length === 4) {
+      const kind = words[2].toLowerCase();
+      if (kind !== "custom") {
+        throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
+      }
+      throw new Error("Custom spcblock mode is not implemented.");
+    }
+
+    if (type !== "nspc") {
+      throw new Error("Custom spcblock mode is not implemented.");
+    }
+
+    const sizeAddress = this.realsnespos;
+    this.write2(0x0000);
+    this.write2(destination);
+    this.snespos = destination;
+    this.startpos = destination;
+    this.spcblockData = {
+      destination,
+      type,
+      sizeAddress,
+      executeAddress: null,
+      namespaceBackup: this.currentNamespace,
+    };
+
+    this.currentNamespace = `:SPCBLOCK:_${this.currentNamespace}`;
+    this.inSpcblock = true;
+  }
+
+  handleEndSpcblock(words: string[]): void {
+    if (!this.inSpcblock || !this.spcblockData) {
+      throw new Error("endspcblock used without an active spcblock.");
+    }
+
+    if (this.spcblockData.type !== "nspc") {
+      throw new Error("Custom spcblock mode is not implemented.");
+    }
+
+    if (this.pass === 2) {
+      const sizePc = this.snestopc(this.spcblockData.sizeAddress & 0xFFFFFF);
+      if (sizePc < 0) {
+        throw new Error("spcblock size address does not map to ROM.");
+      }
+      const blockSize = (this.snespos - this.spcblockData.destination) & 0xFFFF;
+      this.writeDataBytes(sizePc, blockSize & 0xFF, 1);
+      this.writeDataBytes(sizePc + 1, (blockSize >> 8) & 0xFF, 1);
+    }
+
+    if (words.length === 3) {
+      if (words[1].toLowerCase() !== "execute") {
+        throw new Error(`Invalid endspcblock argument: ${words[1]}`);
+      }
+      this.write2(0x0000);
+      this.write2(this.getnum(this.resolvedefines(words[2])) & 0xFFFF);
+    } else if (words.length !== 1) {
+      throw new Error("Unknown endspcblock format.");
+    } else if (this.spcblockData.executeAddress !== null) {
+      this.write2(0x0000);
+      this.write2(this.spcblockData.executeAddress & 0xFFFF);
+    }
+
+    this.currentNamespace = this.spcblockData.namespaceBackup;
+    this.spcblockData = null;
+    this.inSpcblock = false;
+  }
+
+  handleStartpos(params: string[]): void {
+    if (!this.inSpcblock || !this.spcblockData) {
+      throw new Error("startpos used without an active spcblock.");
+    }
+    if (params.length !== 1) {
+      throw new Error("startpos requires exactly one parameter.");
+    }
+    this.spcblockData.executeAddress = this.getnum(this.resolvedefines(params[0])) & 0xFFFF;
+  }
+
   /**
    * Handles the ARCH command.
    * @param {string[]} words - The words from the ARCH command.
@@ -1724,11 +1870,17 @@ export class Assembler {
     const archParam = words[1].toLowerCase();
     if (archParam === "65816") {
       this.arch = "65816";
+      this.spcInlineCompatMode = false;
       // (Reinitialize or update arch65816 if needed)
-    } else if (archParam === "spc700" || archParam === "spc700-inline" || archParam === "spc700-raw") {
+    } else if (archParam === "spc700" || archParam === "spc700-raw") {
       this.arch = "spc700";
+      this.spcInlineCompatMode = false;
+    } else if (archParam === "spc700-inline") {
+      this.arch = "spc700";
+      this.spcInlineCompatMode = true;
     } else if (archParam === "superfx") {
       this.arch = "superfx";
+      this.spcInlineCompatMode = false;
     } else {
       throw new Error("Unsupported architecture: " + archParam);
     }
@@ -4434,6 +4586,9 @@ export class Assembler {
 
     // Reset the condition stack
     this.condStack = [];
+    this.inSpcblock = false;
+    this.spcblockData = null;
+    this.spcInlineCompatMode = false;
   }
 
   /**
@@ -4441,6 +4596,13 @@ export class Assembler {
    */
   finishPass(): void {
     debug("finishPass", { targetRom: this.targetRom });
+    if (this.spcInlineCompatMode && this.inSpcblock) {
+      // Legacy spc700-inline behavior appends a null execute vector.
+      this.handleEndSpcblock(["endspcblock", "execute", "0"]);
+    }
+    if (this.inSpcblock) {
+      throw new Error("Missing endspcblock before end of pass.");
+    }
     if (this.pass === 2 && this.activeFreespaceStartPc !== null && this.activeFreespaceContentStartPc !== null) {
       const contentEndPc = this.snestopc(this.realsnespos & 0xFFFFFF) - 1;
       if (contentEndPc >= this.activeFreespaceContentStartPc) {
@@ -5803,7 +5965,7 @@ export class Assembler {
 
   /**
    * Handles a label definition, whether it has a colon or not.
-   * @param {string} labelName - The label name (without colon).
+   * @param {string} labelName The label name (without colon).
    */
   private handleLabelDefinition(labelName: string): void {
     debug("handleLabelDefinition", labelName);
