@@ -120,7 +120,7 @@ function main() {
 
   // Prepare summary table with separate columns for file size and checksum mismatches.
   const summary = results
-    .filter(r => r.expectedSize !== 0)
+    // .filter(r => r.expectedSize !== 0)
     .map((r) => ({
       Test: r.test,
       "Output Size": r.outputSize,

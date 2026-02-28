@@ -165,15 +165,17 @@ export class ArchSuperFX {
 
     // Mapping for short branches (8-bit offset)
     const shortBranchMap: {[key: string]: number} = {
-      "BRA": 0x05,
-      "BEQ": 0x03,
-      "BNE": 0x04,
-      "BPL": 0x06,
-      "BMI": 0x07,
-      "BCC": 0x08,
-      "BCS": 0x09,
-      "BVC": 0x0A,
-      "BVS": 0x0B,
+      BRA: 0x05,
+      BGE: 0x06,
+      BLT: 0x07,
+      BNE: 0x08,
+      BEQ: 0x09,
+      BPL: 0x0A,
+      BMI: 0x0B,
+      BCC: 0x0C,
+      BCS: 0x0D,
+      BVC: 0x0E,
+      BVS: 0x0F,
     };
 
     if (opcode in shortBranchMap) {
@@ -581,8 +583,6 @@ export class ArchSuperFX {
     // reg_r => rN
     // reg_hash => #N
     // Return null if parse fails
-    const index = 0;
-
     if (type === "parr") {
       // Must start with '('
       if (!str.startsWith("(")) {
@@ -622,8 +622,10 @@ export class ArchSuperFX {
       if (!str.startsWith("#")) {
         return null;
       }
-      const regnum = this.parseRegisterNumber(str.slice(1));
-      if (regnum === -1) {
+      // Accept normalized forms like #$0 in addition to #0.
+      const regnum = this.assembler.getnum(str.slice(1));
+      if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
+        console.error("Invalid register number", str, regnum);
         return null;
       }
       return regnum;

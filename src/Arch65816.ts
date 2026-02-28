@@ -1115,6 +1115,7 @@ export class Arch65816 {
 
     let address = 0;
     let mode: keyof typeof storeOpcodes.STZ; // Determines which mode we're using
+    void mode;
     let isIndexed = false;
 
     // Detect indexed addressing.
@@ -1409,6 +1410,9 @@ export class Arch65816 {
 
       if (opcode in opcodeMap) {
           const opcodeByte = opcodeMap[opcode];
+          if ((opcode === "REP" || opcode === "SEP") && (len !== 1 || num < 0 || num > 0xFF)) {
+            throw new Error("Error: invalid_number");
+          }
           if (!explicitlen && !hexconstant) {
             console.warn(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
           }

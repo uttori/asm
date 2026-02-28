@@ -118,6 +118,10 @@ export class Assembler {
 
   /** Possible values: lorom, hirom, exlorom, exhirom, sa1rom, sfxrom, bigsa1rom, norom */
   public mapper: string = "lorom";
+  /** Disabled after `norom` to match Asar checksum behavior. */
+  public checksumFixEnabled: boolean = true;
+  /** Bank crossing policy controlled by `check bankcross ...`. */
+  public bankCrossCheckMode: "off" | "full" | "half" = "off";
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
   /** Placeholder for ROM */
   public romdata: number[] = [];
@@ -216,6 +220,7 @@ export class Assembler {
   public inSpcblock: boolean = false;
   public spcblockData: SpcblockData | null = null;
   public spcInlineCompatMode: boolean = false;
+  public requireStaticLabelLookup: boolean = false;
 
   constructor(targetRom?: number[] | Uint8Array) {
     this.targetRom = targetRom ?? [];
@@ -260,7 +265,7 @@ export class Assembler {
           }
         }
         try {
-          return this.getLabelValue(id, false);
+          return this.getLabelValue(id, this.requireStaticLabelLookup);
         } catch (e) {
           // If not found as a label, check if it's defined as a struct.
           if (this.structs.has(id)) {
@@ -611,21 +616,43 @@ export class Assembler {
   }
 
   write2(num: number): void {
+    this.assertBankCrossAllowed(2);
     this.write1(num & 0xFF);
     this.write1((num >> 8) & 0xFF);
   }
 
   write3(num: number): void {
+    this.assertBankCrossAllowed(3);
     this.write1(num & 0xFF);
     this.write1((num >> 8) & 0xFF);
     this.write1((num >> 16) & 0xFF);
   }
 
   write4(num: number): void {
+    this.assertBankCrossAllowed(4);
     this.write1(num & 0xFF);
     this.write1((num >> 8) & 0xFF);
     this.write1((num >> 16) & 0xFF);
     this.write1((num >> 24) & 0xFF);
+  }
+
+  /**
+   * Validates `check bankcross` constraints for a multi-byte write.
+   * @param {number} length The number of bytes that will be written.
+   */
+  assertBankCrossAllowed(length: number): void {
+    if (this.bankCrossCheckMode === "off" || length <= 1) {
+      return;
+    }
+
+    const start = this.realsnespos & 0xFFFFFF;
+    const end = (start + length - 1) & 0xFFFFFF;
+    const mask = (this.bankCrossCheckMode === "half") ? 0x7FFF8000 : 0x7FFF0000;
+
+    if (((start ^ end) & mask) !== 0) {
+      const errorAddr = (start + length) & 0xFFFFFF;
+      throw new Error(`Ebank_border_crossed: A bank border was crossed, SNES address $${errorAddr.toString(16).toUpperCase().padStart(6, "0")}.`);
+    }
   }
 
   /**
@@ -1441,8 +1468,7 @@ export class Assembler {
       case "norom":
         if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
         this.mapper = "norom";
-        // For norom, you might disable checksum fix:
-        // if (!this.force_checksum_fix) this.checksum_fix_enabled = false;
+        this.checksumFixEnabled = false;
         break;
       case "fullsa1rom":
         if (this.inSpcblock) throw new Error("Mapper directives are unavailable inside spcblock.");
@@ -1581,7 +1607,22 @@ export class Assembler {
           this.handlePushTable();
           break;
         }
-        case "check":
+        case "check": {
+          if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
+            throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
+          }
+          const mode = words[2].toLowerCase();
+          if (mode === "off") {
+            this.bankCrossCheckMode = "off";
+          } else if (mode === "half") {
+            this.bankCrossCheckMode = "half";
+          } else if (mode === "full" || mode === "on") {
+            this.bankCrossCheckMode = "full";
+          } else {
+            throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+          }
+          break;
+        }
         case "dpbase":
         case "warnings":
         case "print":
@@ -1927,6 +1968,9 @@ export class Assembler {
     const previousVariadicArgs = this.currentVariadicArgs;
     /** Save the previous macro name */
     const previousMacroName = this.currentMacroName;
+    /** Save parent-label context so macro labels do not leak scope. */
+    const previousParentLabel = this.currentParentLabel;
+    const previousParentIsGlobal = this.currentParentIsGlobal;
 
     /** Use a regex to extract macro name and arguments. */
     const invocationRegex = /^(\w+)\((.*)\)$/;
@@ -1985,7 +2029,8 @@ export class Assembler {
       this.currentMacroName = macroName;
       const macro = this.macros.get(macroName);
 
-      // Split the arguments. Handle quoted strings and escaped sequences.
+      // Split arguments on commas, but preserve commas inside quoted strings.
+      // Supports Asar-style doubled quotes ("") as escaped quote characters.
       const argValues: string[] = [];
       let currentArg = "";
       let inQuotes = false;
@@ -2005,13 +2050,14 @@ export class Assembler {
           continue;
         }
 
-        if (c === '"' && !inQuotes) {
-          inQuotes = true;
-          continue;
-        }
-
-        if (c === '"' && inQuotes) {
-          inQuotes = false;
+        if (c === '"') {
+          // Inside a quoted string, doubled quotes represent a literal quote.
+          if (inQuotes && i + 1 < args.length && args[i + 1] === '"') {
+            currentArg += '"';
+            i++;
+            continue;
+          }
+          inQuotes = !inQuotes;
           continue;
         }
 
@@ -2065,6 +2111,8 @@ export class Assembler {
 
     // Restore the previous macro name
     this.currentMacroName = previousMacroName;
+    this.currentParentLabel = previousParentLabel;
+    this.currentParentIsGlobal = previousParentIsGlobal;
 
     // Restore the previous variadic count
     this.currentVariadicCount = previousVariadicCount;
@@ -2276,8 +2324,8 @@ export class Assembler {
       const operator = operatorMatch[1];
       let value = operatorMatch[2].trim();
 
-      // Process any braced defines in the value
-      if (value.includes("!{") || value.includes("!")) {
+      // Process only braced defines in the value; preserve plain !defines for runtime expansion.
+      if (value.includes("!{")) {
         // Need to process defines in the value
         // For simple cases, fully resolve the value
         if (!value.includes("FF") && !value.includes("$")) {
@@ -2363,8 +2411,8 @@ export class Assembler {
     const operator = match[2];
     let value = match[3].trim();
 
-    // Process any braced defines in the value
-    if (value.includes("!{") || value.includes("!")) {
+    // Process only braced defines in the value; preserve plain !defines for runtime expansion.
+    if (value.includes("!{")) {
       // For simple cases like !fourth = !{second}fi!{third}, fully resolve the value
       if (!value.includes("FF") && !value.includes("$")) {
         value = this.processNestedDefines(value);
@@ -3207,6 +3255,16 @@ export class Assembler {
     debug("getLabelValue", { label, requireStatic });
     debug("getLabelValue labelTable", this.labelTable);
 
+    // Local sublabels (e.g. ".Sub") resolve against the current parent label.
+    if (label.startsWith(".") && this.currentParentLabel) {
+      const parentScoped = `${this.currentParentLabel}_${label.substring(1)}`;
+      try {
+        return this.getLabelValueDirect(parentScoped, requireStatic);
+      } catch (_e) {
+        // Fall through to existing resolution behavior.
+      }
+    }
+
     // Check if it's a macro label reference
     const isMacroLabelRef = label.startsWith("?");
 
@@ -3409,7 +3467,13 @@ export class Assembler {
   handleIf(condition: string[]): void {
     debug("handleIf", condition)
     const conditionStr = condition.join(" ");
-    const conditionResult = this.evaluateExpression(conditionStr);
+    this.requireStaticLabelLookup = true;
+    let conditionResult: boolean;
+    try {
+      conditionResult = this.evaluateExpression(conditionStr);
+    } finally {
+      this.requireStaticLabelLookup = false;
+    }
     // Push an "if" entry with an additional flag to indicate if this branch was taken
     this.condStack.push({
       type: "if",
@@ -3447,7 +3511,13 @@ export class Assembler {
       debug("handleElseIf no previous branch taken, evaluating condition", current);
       // No branch taken yet, evaluate this condition
       const conditionStr = condition.join(" ");
-      const conditionResult = this.evaluateExpression(conditionStr);
+      this.requireStaticLabelLookup = true;
+      let conditionResult: boolean;
+      try {
+        conditionResult = this.evaluateExpression(conditionStr);
+      } finally {
+        this.requireStaticLabelLookup = false;
+      }
       current.cond = conditionResult;
       current.conditionStr = conditionStr;
       // current.type = "elseif";
@@ -3650,8 +3720,8 @@ export class Assembler {
           }
         } catch (error) {
           debug("handleDataDirective struct resolution failed, trying math evaluation", resolved);
-          // If struct resolution fails, continue with normal evaluation of the resolved expression
-          num = this.mathCore.math(resolved);
+          // If struct resolution fails, evaluate using the standard numeric resolver.
+          num = this.getnum(resolved);
         }
         if (Number.isNaN(num)) {
           // As a fallback, try to look up a label (this assumes it's a static label).
@@ -4200,6 +4270,11 @@ export class Assembler {
       if (rangeStr.indexOf("..") !== -1) {
         parts = rangeStr.split("..");
       } else if (rangeStr.indexOf("-") !== -1) {
+        // Legacy "start-end" range style is intentionally strict and deprecated.
+        // Match Asar behavior for malformed legacy expressions.
+        if (rangeStr.includes("(") || rangeStr.includes(")")) {
+          throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+        }
         parts = rangeStr.split("-");
       } else {
         throw new Error(`Invalid range specification: ${rangeStr}`);
@@ -4557,9 +4632,18 @@ export class Assembler {
     }
 
     // Otherwise, assume the operand is a literal math expression.
-    const value = this.mathCore.math(operand);
-    debug("getnum (literal) =", value, "/", value.toString(16));
-    return value;
+    try {
+      const value = this.mathCore.math(operand);
+      debug("getnum (literal) =", value, "/", value.toString(16));
+      return value;
+    } catch (error) {
+      // Forward-label math can transiently divide by zero before final resolution.
+      if (this.pass < 2) {
+        debug("getnum expression deferred until final pass", { operand, error });
+        return 0;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -4624,11 +4708,10 @@ export class Assembler {
         this.writeDataBytes(this.activeFreespaceStartPc + 7, (ratsComp >> 8) & 0xFF, 1);
       }
     }
-    // TODO Make an option
-    // if (this.targetRom && this.targetRom.length > 0) {
+    if (this.checksumFixEnabled) {
       this.updateHeaderAndCRC32();
       debug("finishPass updateHeaderAndCRC32");
-    // }
+    }
   }
 
   /**
