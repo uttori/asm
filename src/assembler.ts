@@ -122,6 +122,8 @@ export class Assembler {
   public checksumFixEnabled: boolean = true;
   /** Bank crossing policy controlled by `check bankcross ...`. */
   public bankCrossCheckMode: "off" | "full" | "half" = "off";
+  /** Read* functions are enabled when patch-style title check is active. */
+  public readFunctionsEnabled: boolean = false;
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
   /** Placeholder for ROM */
   public romdata: number[] = [];
@@ -357,6 +359,9 @@ export class Assembler {
         const width = Number.parseInt(operation.slice(-1), 10);
         const pos = Math.trunc(args[0] as number);
         const defaultValue = args.length > 1 ? Number(args[1]) : undefined;
+        if (!this.readFunctionsEnabled && defaultValue === undefined) {
+          throw new Error(`Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`);
+        }
         const pcPos = this.snestopc(pos);
         const source = (this.targetRom && this.targetRom.length > 0) ? this.targetRom : this.romdata;
         const romBytes = Uint8Array.from(source);
@@ -1608,6 +1613,11 @@ export class Assembler {
           break;
         }
         case "check": {
+          if (words.length >= 2 && words[1].toLowerCase() === "title") {
+            // Asar accepts "check title ..." in patch workflows; keep as compatibility no-op.
+            this.readFunctionsEnabled = true;
+            break;
+          }
           if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
             throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
           }
@@ -3255,13 +3265,31 @@ export class Assembler {
     debug("getLabelValue", { label, requireStatic });
     debug("getLabelValue labelTable", this.labelTable);
 
-    // Local sublabels (e.g. ".Sub") resolve against the current parent label.
+    // Local sublabels (e.g. ".Sub") resolve against the current hierarchy.
     if (label.startsWith(".") && this.currentParentLabel) {
-      const parentScoped = `${this.currentParentLabel}_${label.substring(1)}`;
-      try {
-        return this.getLabelValueDirect(parentScoped, requireStatic);
-      } catch (_e) {
-        // Fall through to existing resolution behavior.
+      const localName = label.substring(1);
+      const parentParts = this.currentParentLabel.split("_").filter(Boolean);
+      const candidates: string[] = [];
+
+      // If already positioned on the matching sublabel, resolve to it directly.
+      if (parentParts[parentParts.length - 1] === localName) {
+        candidates.push(this.currentParentLabel);
+      }
+
+      // Immediate child in current scope.
+      candidates.push(`${this.currentParentLabel}_${localName}`);
+
+      // Walk up scope chain and try each parent level.
+      for (let i = parentParts.length - 1; i > 0; i--) {
+        candidates.push(`${parentParts.slice(0, i).join("_")}_${localName}`);
+      }
+
+      for (const candidate of candidates) {
+        try {
+          return this.getLabelValueDirect(candidate, requireStatic);
+        } catch (_e) {
+          // Try next candidate.
+        }
       }
     }
 
@@ -3675,7 +3703,9 @@ export class Assembler {
     // Split by comma while respecting function calls
     const values = this.splitRespectingFunctions(params.join(" "));
 
-    for (let value of values) {
+    const pendingValues = [...values];
+    while (pendingValues.length > 0) {
+      let value = (pendingValues.shift() ?? "").trim();
       if (value.startsWith('"') || value.startsWith("'")) {
         debug("handleDataDirective string literals", value);
         // Handle string literals
@@ -3706,6 +3736,14 @@ export class Assembler {
           resolved = this.resolvedefines(resolved);
         }
         debug("handleDataDirective recursively resolved defines", resolved);
+
+        // A define used as a db/dw parameter may expand to multiple comma-separated values.
+        // Re-queue each expanded token so it is processed like native directive arguments.
+        const expandedValues = this.splitRespectingFunctions(resolved);
+        if (expandedValues.length > 1) {
+          pendingValues.unshift(...expandedValues);
+          continue;
+        }
 
         // Check if this is a struct reference (e.g., "sprite.x_pos")
         let num: number;
@@ -4608,6 +4646,22 @@ export class Assembler {
       operand = operand.substring(1).trim();
     }
 
+    // Built-in math/function expressions (e.g. sizeof(...), read1(...))
+    // must be evaluated before dot-based struct/label heuristics.
+    if (/^[A-Z_a-z]\w*\s*\(/.test(operand)) {
+      try {
+        const value = this.mathCore.math(operand);
+        debug("getnum (function expression) =", value, "/", value.toString(16));
+        return value;
+      } catch (error) {
+        if (this.pass < 2) {
+          debug("getnum function expression deferred until final pass", { operand, error });
+          return 0;
+        }
+        throw error;
+      }
+    }
+
     // If the operand does not start with a literal indicator,
     // assume it is a label or a struct reference.
     if (!operand.match(/^[\d$%]/)) {
@@ -4963,6 +5017,10 @@ export class Assembler {
     if (!expression || typeof expression !== "string") {
       return false;
     }
+    // MathCore function calls like sizeof(...), read1(...), canread(...), etc.
+    if (/^[A-Z_a-z]\w*\s*\(/.test(expression.trim())) {
+      return true;
+    }
     return expression.includes("+") ||
            expression.includes("-") ||
            expression.includes("*") ||
@@ -5062,6 +5120,41 @@ export class Assembler {
     if (identifier.startsWith('"') && identifier.endsWith('"')) {
       identifier = identifier.substring(1, identifier.length - 1);
     }
+    // Prefer exact struct IDs first (e.g. "parent.child" extension keys).
+    if (this.structs.has(identifier)) {
+      const def = this.structs.get(identifier);
+      if (baseOnly) {
+        debug("getObjectSize (baseOnly exact) =", def.size);
+        return def.size;
+      }
+      let value = 0;
+      if (!def.parent) {
+        value = def.size + (def.extensionSize || 0);
+      } else {
+        value = def.size;
+      }
+      debug("getObjectSize (exact) =", value);
+      return value;
+    }
+
+    // Support extension paths like "base.child" by validating parent linkage.
+    if (identifier.includes(".")) {
+      const parts = identifier.split(".").filter(Boolean);
+      let current = parts[0];
+      if (!this.structs.has(current)) {
+        throw new Error(`Struct '${identifier}' doesn't exist.`);
+      }
+      for (let i = 1; i < parts.length; i++) {
+        const child = parts[i];
+        const childDef = this.structs.get(child);
+        if (!childDef || childDef.parent !== current) {
+          throw new Error(`Struct '${identifier}' doesn't exist.`);
+        }
+        current = child;
+      }
+      identifier = current;
+    }
+
     if (!this.structs.has(identifier)) {
       throw new Error(`Struct '${identifier}' doesn't exist.`);
     }
