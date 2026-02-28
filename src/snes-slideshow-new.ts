@@ -50,6 +50,11 @@ function runTest(baseName: string): TestResult {
   const outputFile = path.join(testsDir, `${baseName}.sfc`);
   const expectedFile = path.join(testsDir, "SLIDES-GOOD-NEW.sfc");
 
+  // Remove stale output so failures cannot be masked by old binaries.
+  if (fs.existsSync(outputFile)) {
+    fs.rmSync(outputFile);
+  }
+
   const command = `bun ${cliScript} ${asmFile} ${outputFile} ${targetRom}`;
   console.log(`\nRunning: ${command}`);
 

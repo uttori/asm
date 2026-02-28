@@ -124,6 +124,8 @@ export class Assembler {
   public bankCrossCheckMode: "off" | "full" | "half" = "off";
   /** Read* functions are enabled when patch-style title check is active. */
   public readFunctionsEnabled: boolean = false;
+  /** Controls direct-page shortening for 65816 when no explicit length is given. */
+  public optimizeDirectPage: boolean = true;
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
   /** Placeholder for ROM */
   public romdata: number[] = [];
@@ -1639,13 +1641,25 @@ export class Assembler {
         case "autoclean":
         case "autoclear":
         case "table":
-        case "optimize":
         case "includefrom":
         case "asar":
         case "{":
         case "}":
             debug(`${keyword} unsupported`, words.slice(1))
             break;
+        case "optimize": {
+          // Partial compatibility for Asar's optimizer toggles used by fixtures.
+          // We currently only need DP mode for opcode size selection behavior.
+          if (words.length >= 3 && words[1].toLowerCase() === "dp") {
+            const mode = words[2].toLowerCase();
+            if (mode === "none") {
+              this.optimizeDirectPage = false;
+            } else if (mode === "ram" || mode === "always") {
+              this.optimizeDirectPage = true;
+            }
+          }
+          break;
+        }
         case "freecode":
         case "freespace":
         case "freedata": {
@@ -5208,12 +5222,36 @@ export class Assembler {
     this.romdata[headerOffset + 0x1E] = 0x00;
     this.romdata[headerOffset + 0x1F] = 0x00;
 
-    // Calculate the 16-bit checksum (sum of all bytes modulo 0x10000).
-    // Asar seeds header bytes as FF FF 00 00 first, then sums the full ROM.
+    // Calculate the 16-bit checksum using Asar's ROM-size handling:
+    // - power-of-two sizes: plain sum
+    // - non-power-of-two sizes: split into two parts and repeat the tail
+    //   contribution to emulate mirrored mapping behavior.
+    const romLength = this.romdata.length;
+    const isPowerOfTwo = romLength > 0 && (romLength & (romLength - 1)) === 0;
     let checksum = 0;
-    for (let i = 0; i < this.romdata.length; i++) {
-      checksum = (checksum + (this.romdata[i] & 0xFF)) & 0xFFFF;
+    if (isPowerOfTwo) {
+      for (let i = 0; i < romLength; i++) {
+        checksum += this.romdata[i] & 0xFF;
+      }
+    } else {
+      let bitround = 1;
+      while (bitround < romLength) {
+        bitround <<= 1;
+      }
+      const firstPart = bitround >> 1;
+      const secondPart = romLength - firstPart;
+      const repeatCount = Math.floor(firstPart / secondPart);
+
+      let secondPartSum = 0;
+      for (let i = 0; i < firstPart; i++) {
+        checksum += this.romdata[i] & 0xFF;
+      }
+      for (let i = firstPart; i < romLength; i++) {
+        secondPartSum += this.romdata[i] & 0xFF;
+      }
+      checksum += secondPartSum * repeatCount;
     }
+    checksum &= 0xFFFF;
     const complement = (~checksum) & 0xFFFF;
 
     // In a SNES header the checksum complement is typically stored at offset 0x1C

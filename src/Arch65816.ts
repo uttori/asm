@@ -242,7 +242,7 @@ export class Arch65816 {
     }
 
     // DP Indexed, X
-    if (operand.toLowerCase().endsWith(",x")) {
+    if (this.assembler.optimizeDirectPage && operand.toLowerCase().endsWith(",x")) {
       debug("handleMemoryOperations DP Indexed,X", opcode, operand);
 
       const dpIndexedXOpcodes: { [key: string]: number } = {
@@ -376,15 +376,27 @@ export class Arch65816 {
       }
     }
 
-    // Direct Page
-    debug("handleMemoryOperations Direct Page", opcode, operand);
-    const directPageOpcodes: { [key: string]: number } = {
+    // Direct page shortening can be disabled by "optimize dp none".
+    if (this.assembler.optimizeDirectPage) {
+      debug("handleMemoryOperations Direct Page", opcode, operand);
+      const directPageOpcodes: { [key: string]: number } = {
         ADC: 0x65, STA: 0x85, LDA: 0xA5, SBC: 0xE5,
-    };
-    if (opcode in directPageOpcodes) {
+      };
+      if (opcode in directPageOpcodes) {
         this.assembler.write1(directPageOpcodes[opcode]);
         this.assembler.write1(this.assembler.getnum(operand));
         return true;
+      }
+    } else {
+      debug("handleMemoryOperations Direct Page optimization disabled; using absolute", opcode, operand);
+      const absoluteOpcodes: { [key: string]: number } = {
+        ADC: 0x6D, STA: 0x8D, LDA: 0xAD, SBC: 0xED,
+      };
+      if (opcode in absoluteOpcodes) {
+        this.assembler.write1(absoluteOpcodes[opcode]);
+        this.assembler.write2(this.assembler.getnum(operand));
+        return true;
+      }
     }
 
     return false;
