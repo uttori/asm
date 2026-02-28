@@ -364,7 +364,7 @@ export class Arch65816 {
     }
 
     // Absolute
-    if (operand.startsWith("$")) {
+    if (/^\$[\da-f]{4}$/i.test(operand)) {
       debug("handleMemoryOperations Absolute", opcode, operand);
       const absoluteOpcodes: { [key: string]: number } = {
         ADC: 0x6D, STA: 0x8D, LDA: 0xAD, SBC: 0xED,
@@ -439,40 +439,40 @@ export class Arch65816 {
       return true;
     }
 
-  // Check for indexed addressing.
-  let isIndexed = false;
-  if (operand.toLowerCase().endsWith(",x")) {
-    isIndexed = true;
-    operand = operand.slice(0, -2).trim();
-  }
-
     // If an explicit length was given, use it to choose the number of operand bytes.
     if (explicitlen) {
+      // For forced-size modes we normalize ",x" here only.
+      let isIndexed = false;
+      let explicitOperand = operand;
+      if (explicitOperand.toLowerCase().endsWith(",x")) {
+        isIndexed = true;
+        explicitOperand = explicitOperand.slice(0, -2).trim();
+      }
       if (isIndexed) {
         // For indexed addressing:
         if (len === 1) {
           this.assembler.write1(dpXMap[opcode]);
-          this.assembler.write1(this.assembler.getnum(operand));
+          this.assembler.write1(this.assembler.getnum(explicitOperand));
         } else if (len === 2) {
           this.assembler.write1(absXMap[opcode]);
-          this.assembler.write2(this.assembler.getnum(operand));
+          this.assembler.write2(this.assembler.getnum(explicitOperand));
         } else if (len === 3) {
           // For long indexed, assume the opcode is 2 greater than the absoluteX variant.
           this.assembler.write1(absXMap[opcode] + 2);
-          this.assembler.write3(this.assembler.getnum(operand));
+          this.assembler.write3(this.assembler.getnum(explicitOperand));
         }
         return true;
       } else {
         // Non-indexed addressing:
         if (len === 1) {
           this.assembler.write1(dpMap[opcode]);
-          this.assembler.write1(this.assembler.getnum(operand));
+          this.assembler.write1(this.assembler.getnum(explicitOperand));
         } else if (len === 2) {
           this.assembler.write1(absMap[opcode]);
-          this.assembler.write2(this.assembler.getnum(operand));
+          this.assembler.write2(this.assembler.getnum(explicitOperand));
         } else if (len === 3) {
           this.assembler.write1(absLongMap[opcode]);
-          this.assembler.write3(this.assembler.getnum(operand));
+          this.assembler.write3(this.assembler.getnum(explicitOperand));
         }
         return true;
       }
@@ -692,12 +692,10 @@ export class Arch65816 {
       }
     }
 
-    // Determine if this is an indexed addressing mode.
-    let isIndexed = false;
-    if (operand.toLowerCase().endsWith(",x")) {
-      isIndexed = true;
-      operand = operand.slice(0, -2).trim();
-    }
+    // Track indexed addressing without mutating the raw operand.
+    const rawOperand = operand;
+    const isIndexed = rawOperand.toLowerCase().endsWith(",x");
+    const normalizedOperand = isIndexed ? rawOperand.slice(0, -2).trim() : rawOperand;
 
     // If an explicit length was given, choose the forced opcode variant.
     if (explicitlen) {
@@ -714,11 +712,11 @@ export class Arch65816 {
         if (!(opcode in forcedIndexed)) {
           throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
         }
-        this.assembler.write1(forcedIndexed[opcode][len]);
+          this.assembler.write1(forcedIndexed[opcode][len]);
         if (len === 1) {
-          this.assembler.write1(this.assembler.getnum(operand));
+          this.assembler.write1(this.assembler.getnum(normalizedOperand));
         } else if (len === 2) {
-          this.assembler.write2(this.assembler.getnum(operand));
+          this.assembler.write2(this.assembler.getnum(normalizedOperand));
         } else {
           throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
         }
@@ -738,9 +736,9 @@ export class Arch65816 {
         }
         this.assembler.write1(forcedNonIndexed[opcode][len]);
         if (len === 1) {
-          this.assembler.write1(this.assembler.getnum(operand));
+          this.assembler.write1(this.assembler.getnum(normalizedOperand));
         } else if (len === 2) {
-          this.assembler.write2(this.assembler.getnum(operand));
+          this.assembler.write2(this.assembler.getnum(normalizedOperand));
         } else {
           throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
         }
@@ -749,8 +747,8 @@ export class Arch65816 {
     }
 
     // DP Indexed, X Mode (Opcode $16, $36, $56, etc.)
-    if (/^\$[\da-f]{2},x$/i.test(operand)) {
-      debug("handleArithmeticOperations DP Indexed,X", opcode, operand);
+    if (/^\$[\da-f]{2},x$/i.test(rawOperand)) {
+      debug("handleArithmeticOperations DP Indexed,X", opcode, rawOperand);
 
       const dpIndexedXOpcodes: { [key: string]: number } = {
         ASL: 0x16, ROL: 0x36, LSR: 0x56, ROR: 0x76,
@@ -759,33 +757,33 @@ export class Arch65816 {
 
       if (opcode in dpIndexedXOpcodes) {
         this.assembler.write1(dpIndexedXOpcodes[opcode]);
-        this.assembler.write1(this.assembler.getnum(operand.slice(0, -2))); // Extract DP address
+        this.assembler.write1(this.assembler.getnum(rawOperand.slice(0, -2))); // Extract DP address
         return true;
       }
     }
 
     // Absolute,X Mode
-    if (/^\$[\da-f]{4},x$/i.test(operand)) {
+    if (/^\$[\da-f]{4},x$/i.test(rawOperand)) {
         const absoluteXOpcodes: { [key: string]: number } = {
           ASL: 0x1E, LSR: 0x5E, ROL: 0x3E, ROR: 0x7E,
           INC: 0xFE, DEC: 0xDE,
         };
         if (opcode in absoluteXOpcodes) {
           this.assembler.write1(absoluteXOpcodes[opcode]);
-          this.assembler.write2(this.assembler.getnum(operand.slice(0, -2)));
+          this.assembler.write2(this.assembler.getnum(rawOperand.slice(0, -2)));
           return true;
         }
     }
 
     // Absolute Mode
-    if (operand.startsWith("$") && operand.length === 5) {
+    if (rawOperand.startsWith("$") && rawOperand.length === 5) {
         const absoluteOpcodes: { [key: string]: number } = {
           ASL: 0x0E, LSR: 0x4E, ROL: 0x2E, ROR: 0x6E,
           INC: 0xEE, DEC: 0xCE,
         };
         if (opcode in absoluteOpcodes) {
           this.assembler.write1(absoluteOpcodes[opcode]);
-          this.assembler.write2(this.assembler.getnum(operand));
+          this.assembler.write2(this.assembler.getnum(rawOperand));
           return true;
         }
     }
@@ -797,7 +795,7 @@ export class Arch65816 {
     };
     if (opcode in directPageOpcodes) {
       this.assembler.write1(directPageOpcodes[opcode]);
-      this.assembler.write1(this.assembler.getnum(operand));
+      this.assembler.write1(this.assembler.getnum(rawOperand));
       return true;
     }
 
@@ -831,7 +829,7 @@ export class Arch65816 {
       }
       address = this.assembler.getnum(operand.slice(1));
       this.assembler.write1(opcodeByte);
-      if (explicitlen && len === 1) {
+      if (len === 1) {
         this.assembler.write1(address);
       } else {
         this.assembler.write2(address);
@@ -1103,6 +1101,7 @@ export class Arch65816 {
    */
   private handleStoreOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
     debug("handleStoreOperations", { opcode, operand, len, explicitlen });
+    const rawOperand = operand;
 
     const storeOpcodes: { [key: string]: { direct: number; directX?: number; directY?: number; absolute: number; absoluteX?: number } } = {
       STX: { direct: 0x86, absolute: 0x8E, directY: 0x96 }, // STX Direct Page, Absolute, Indexed Y
@@ -1120,19 +1119,19 @@ export class Arch65816 {
 
     // Detect indexed addressing.
     // For STX, indexed mode is indicated by a trailing ",Y"
-    if (opcode === "STX" && operand.toLowerCase().endsWith(",y")) {
+    if (opcode === "STX" && rawOperand.toLowerCase().endsWith(",y")) {
       isIndexed = true;
-      operand = operand.slice(0, -2).trim();
+      operand = rawOperand.slice(0, -2).trim();
     }
     // For STY, indexed mode is indicated by a trailing ",X"
-    else if (opcode === "STY" && operand.toLowerCase().endsWith(",x")) {
+    else if (opcode === "STY" && rawOperand.toLowerCase().endsWith(",x")) {
       isIndexed = true;
-      operand = operand.slice(0, -2).trim();
+      operand = rawOperand.slice(0, -2).trim();
     }
     // For STZ, check for indexed mode (",X")
-    else if (opcode === "STZ" && operand.toLowerCase().endsWith(",x")) {
+    else if (opcode === "STZ" && rawOperand.toLowerCase().endsWith(",x")) {
       isIndexed = true;
-      operand = operand.slice(0, -2).trim();
+      operand = rawOperand.slice(0, -2).trim();
     }
 
     // Forced (explicit) mode: if the user appended a suffix, force the operand length.
@@ -1178,23 +1177,23 @@ export class Arch65816 {
     }
 
     // DP Indexed, X Mode: STZ $00,x
-    if (/^\$[\da-f]{2},x$/i.test(operand) && storeOpcodes[opcode].directX) {
+    if (/^\$[\da-f]{2},x$/i.test(rawOperand) && storeOpcodes[opcode].directX) {
       mode = "directX";
-      address = this.assembler.getnum(operand.slice(0, -2)); // Extract DP address
+      address = this.assembler.getnum(rawOperand.slice(0, -2)); // Extract DP address
     }
     // DP Indexed, Y Mode: STX $00,y
-    else if (operand.toLowerCase().endsWith(",y") && storeOpcodes[opcode].directY) {
+    else if (rawOperand.toLowerCase().endsWith(",y") && storeOpcodes[opcode].directY) {
       mode = "directY";
-      address = this.assembler.getnum(operand.slice(0, -2)); // Extract absolute address
+      address = this.assembler.getnum(rawOperand.slice(0, -2)); // Extract absolute address
     }
     // Absolute Indexed, X Mode: STX $0000,X, STY $0000,X, STZ $0000,X
-    else if (/^\$[\da-f]{4},x$/i.test(operand) && storeOpcodes[opcode].absoluteX) {
+    else if (/^\$[\da-f]{4},x$/i.test(rawOperand) && storeOpcodes[opcode].absoluteX) {
       mode = "absoluteX";
-      address = this.assembler.getnum(operand.slice(0, -2)); // Extract absolute address
+      address = this.assembler.getnum(rawOperand.slice(0, -2)); // Extract absolute address
     }
 
     // Absolute Mode: STX $0000, STY $0000, STZ $0000
-    if (/^\$[\dA-Fa-f]{4}$/.test(operand)) {
+    if (!isIndexed && /^\$[\dA-Fa-f]{4}$/.test(operand)) {
       mode = "absolute";
       address = this.assembler.getnum(operand);
       this.assembler.write1(storeOpcodes[opcode].absolute);
@@ -1202,7 +1201,7 @@ export class Arch65816 {
       return true;
     }
     // Direct Page Mode: STX $00, STY $00, STZ $00
-    else if (/^\$[\dA-Fa-f]{2}$/.test(operand)) {
+    else if (!isIndexed && /^\$[\dA-Fa-f]{2}$/.test(operand)) {
       mode = "direct";
       address = this.assembler.getnum(operand);
       this.assembler.write1(storeOpcodes[opcode].direct);
@@ -1211,22 +1210,40 @@ export class Arch65816 {
     } else if (isIndexed) {
       // Default indexed: use the indexed variant from the lookup table.
       if (opcode === "STX") {
-        mode = "directY";
         address = this.assembler.getnum(operand);
-        this.assembler.write1(storeOpcodes[opcode].directY);
-        this.assembler.write1(address);
+        if (/^\$[\da-f]{4}$/i.test(operand)) {
+          mode = "absolute";
+          this.assembler.write1(storeOpcodes[opcode].absolute);
+          this.assembler.write2(address);
+        } else {
+          mode = "directY";
+          this.assembler.write1(storeOpcodes[opcode].directY);
+          this.assembler.write1(address);
+        }
         return true;
       } else if (opcode === "STY") {
-        mode = "directX";
         address = this.assembler.getnum(operand);
-        this.assembler.write1(storeOpcodes[opcode].directX);
-        this.assembler.write1(address);
+        if (/^\$[\da-f]{4}$/i.test(operand)) {
+          mode = "absolute";
+          this.assembler.write1(storeOpcodes[opcode].absolute);
+          this.assembler.write2(address);
+        } else {
+          mode = "directX";
+          this.assembler.write1(storeOpcodes[opcode].directX);
+          this.assembler.write1(address);
+        }
         return true;
       } else if (opcode === "STZ") {
-        mode = "directX";
         address = this.assembler.getnum(operand);
-        this.assembler.write1(storeOpcodes[opcode].directX);
-        this.assembler.write1(address);
+        if (/^\$[\da-f]{4}$/i.test(operand) && storeOpcodes[opcode].absoluteX) {
+          mode = "absoluteX";
+          this.assembler.write1(storeOpcodes[opcode].absoluteX);
+          this.assembler.write2(address);
+        } else {
+          mode = "directX";
+          this.assembler.write1(storeOpcodes[opcode].directX);
+          this.assembler.write1(address);
+        }
         return true;
       }
     }
@@ -1309,17 +1326,16 @@ export class Arch65816 {
         outLength = (len === 1) ? 1 : 2;
       } else {
         this.assembler.write1(opcodes[opcode].immediate);
-        outLength = 1;
+        // Match Asar behavior: #$0000 emits a 16-bit immediate operand.
+        outLength = operand.length === 6 ? 2 : 1;
       }
     }
     else {
-      // Determine whether this is indexed addressing.
-      let isIndexed = false;
-      if (operand.toLowerCase().endsWith(",x")) {
-        isIndexed = true;
-        operand = operand.slice(0, -2).trim();
-      }
-      address = this.assembler.getnum(operand);
+      // Determine whether this is indexed addressing without mutating operand.
+      const rawOperand = operand;
+      const isIndexed = rawOperand.toLowerCase().endsWith(",x");
+      const normalizedOperand = isIndexed ? rawOperand.slice(0, -2).trim() : rawOperand;
+      address = this.assembler.getnum(normalizedOperand);
       if (explicitlen) {
         if (isIndexed) {
           // Forced indexed mode for BIT.
@@ -1335,10 +1351,13 @@ export class Arch65816 {
         }
       } else {
         // Default mode: use operand format to choose addressing.
-        if (/^\$[\da-f]{1,2}$/i.test(operand)) {
+        if (/^\$[\da-f]{1,2},x$/i.test(rawOperand) && isIndexed && opcodes[opcode].directX) {
+          this.assembler.write1(opcodes[opcode].directX);
+          outLength = 1;
+        } else if (/^\$[\da-f]{1,2}$/i.test(normalizedOperand)) {
           this.assembler.write1(opcodes[opcode].direct);
           outLength = 1;
-        } else if (/^\$[\da-f]{4}$/i.test(operand)) {
+        } else if (/^\$[\da-f]{4}$/i.test(normalizedOperand)) {
           // For 4-digit operands, use the absolute opcode.
           if (isIndexed && opcodes[opcode].absoluteX) {
             this.assembler.write1(opcodes[opcode].absoluteX);
@@ -1394,10 +1413,11 @@ export class Arch65816 {
             console.warn(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
           }
           this.assembler.write1(opcodeByte);
-          if (len === 0 || len === 1) {
-              this.assembler.write1(num);
+          // These opcodes have fixed operand widths in 65816 encoding.
+          if (opcode === "PEA") {
+            this.assembler.write2(num);
           } else {
-              this.assembler.write2(num);
+            this.assembler.write1(num);
           }
           return true;
       }
@@ -1424,23 +1444,16 @@ export class Arch65816 {
 
     // Handle +/- labels
     let targetAddress: number;
-    let isPositiveLabel = false;
-    let isNegativeLabel = false;
+    const instructionSize = (opcode === "BRL") ? 3 : 2;
+    const branchReferenceAddress = this.assembler.snespos + instructionSize;
     if (/^\++$/.test(operand)) {
-      isPositiveLabel = true;
-      isNegativeLabel = false;
-      targetAddress = this.assembler.findNextLabel(operand);
+      targetAddress = this.assembler.findNextLabel(operand, branchReferenceAddress);
     } else if (/^-+$/.test(operand)) {
-      isPositiveLabel = false;
-      isNegativeLabel = true;
-      targetAddress = this.assembler.findPreviousLabel(operand);
+      targetAddress = this.assembler.findPreviousLabel(operand, branchReferenceAddress);
     } else {
-      isPositiveLabel = false;
-      isNegativeLabel = false;
       targetAddress = this.assembler.getnum(operand);
     }
 
-    const instructionSize = (opcode === "BRL") ? 3 : 2;
     const currentAddress = this.assembler.snespos + instructionSize; // Offset by instruction size
     const relativeAddress = targetAddress - currentAddress;
 

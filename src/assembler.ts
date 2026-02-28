@@ -1176,9 +1176,12 @@ export class Assembler {
       return;
     }
 
-    // Handle relative labels (+ and -)
-    if ((keyword.startsWith("+") || keyword.startsWith("-")) && keyword.endsWith(":")) {
-      this.handleRelativeLabel(keyword);
+    // Handle relative labels (+ and -), with or without trailing colon.
+    // Asar test fixtures commonly declare bare "+" / "-" labels on a line by themselves.
+    const isRelativeLabelDefinition = (/^\++:?$/.test(keyword) || /^-+:?$/.test(keyword));
+    if (isRelativeLabelDefinition) {
+      const relativeLabel = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+      this.handleRelativeLabel(relativeLabel);
       // Record mapping and finish.
       this.addAddressToLine(this.realsnespos & 0xFFFFFF);
       return;
@@ -2841,13 +2844,13 @@ export class Assembler {
    * @param {string} label The label to find.
    * @returns {number} The address of the next label.
    */
-  findNextLabel(label: string): number {
+  findNextLabel(label: string, currentAddressOverride?: number): number {
     debug("findNextLabel", label);
     debug("findNextLabel this.forwardLabels", this.forwardLabels);
 
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-    const currentAddress = this.snespos;
+    const currentAddress = currentAddressOverride ?? this.snespos;
     const isMacroLocal = label.startsWith("?");
 
     // **Pass 0: Don't resolve labels yet, just track**
@@ -2885,12 +2888,12 @@ export class Assembler {
    * @param {string} label The label to find.
    * @returns {number} The address of the previous label.
    */
-  findPreviousLabel(label: string): number {
+  findPreviousLabel(label: string, currentAddressOverride?: number): number {
     debug("findPreviousLabel", label);
 
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-    const currentAddress = this.snespos;
+    const currentAddress = currentAddressOverride ?? this.snespos;
     const isMacroLocal = label.startsWith("?");
 
     // **Pass 0: Don't resolve labels yet, just track**
@@ -4566,6 +4569,11 @@ export class Assembler {
   setPass(pass: number): void {
     debug("🏁 setPass", pass);
     this.pass = pass;
+    if (pass === 1) {
+      // Rebuild relative-label tables from pass 1 sizing only.
+      this.forwardLabels = {};
+      this.backwardLabels = {};
+    }
     // Reset the macro macroLabelInstance
     this.macroLabelInstance = null;
 
@@ -4712,6 +4720,11 @@ export class Assembler {
     let expectedLength = 2; // Default to 2 bytes for most operands
     let forceTwoBytes = false; // Flag to force 2 bytes for bank operations
 
+    // Preserve anonymous relative label placeholders for branch resolution.
+    if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-") {
+      return { expanded, length: 2 };
+    }
+
     try {
       expanded = this.resolvedefines(expanded);
     } catch (e) {
@@ -4785,8 +4798,11 @@ export class Assembler {
       expectedLength = 2; // Default for labels
     }
 
+    // Preserve branch placeholders like "+" / "++" / "-" / "--" for branch handlers.
+    const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded);
+
     // Evaluate math expressions
-    if (this.isMathExpression(expanded)) {
+    if (!isRelativeLabelPlaceholder && this.isMathExpression(expanded)) {
       try {
         const resolvedValue = this.resolvedefines(expanded);
         const result = this.mathCore.math(resolvedValue);
@@ -4872,8 +4888,7 @@ export class Assembler {
            expression.includes("|") ||
            expression.includes("^") ||
            expression.includes("<<") ||
-           expression.includes(">>") ||
-           expression.includes("(");
+           expression.includes(">>");
   }
 
   /**
