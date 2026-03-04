@@ -120,12 +120,14 @@ export class Assembler {
   public mapper: string = "lorom";
   /** Disabled after `norom` to match Asar checksum behavior. */
   public checksumFixEnabled: boolean = true;
+  /** Header checksum algorithm mode: "asar" (default) or "simple". */
+  public checksumMode: "asar" | "simple" = "asar";
   /** Bank crossing policy controlled by `check bankcross ...`. */
   public bankCrossCheckMode: "off" | "full" | "half" = "off";
   /** Read* functions are enabled when patch-style title check is active. */
   public readFunctionsEnabled: boolean = false;
   /** Controls direct-page shortening for 65816 when no explicit length is given. */
-  public optimizeDirectPage: boolean = true;
+  public optimizeDirectPage: boolean = false;
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
   /** Placeholder for ROM */
   public romdata: number[] = [];
@@ -233,6 +235,14 @@ export class Assembler {
     this.archSuperFX = new ArchSuperFX(this);
     this.mathCore = new MathCore();
     this.mathCore.delegate = this.mathCoreDelegate;
+  }
+
+  /**
+   * Sets ROM header checksum calculation mode.
+   * @param {"asar" | "simple"} mode The checksum mode to use.
+   */
+  setChecksumMode(mode: "asar" | "simple"): void {
+    this.checksumMode = mode;
   }
 
   mathCoreDelegate = (operation: string, ...args: (string | number)[]): number | string => {
@@ -5222,34 +5232,41 @@ export class Assembler {
     this.romdata[headerOffset + 0x1E] = 0x00;
     this.romdata[headerOffset + 0x1F] = 0x00;
 
-    // Calculate the 16-bit checksum using Asar's ROM-size handling:
-    // - power-of-two sizes: plain sum
-    // - non-power-of-two sizes: split into two parts and repeat the tail
-    //   contribution to emulate mirrored mapping behavior.
+    // Calculate the 16-bit checksum.
+    // - "simple": plain 16-bit sum over ROM bytes
+    // - "asar": Asar-compatible handling for non power-of-two ROM sizes
+    //   by repeating tail contribution to emulate mirrored mapping.
     const romLength = this.romdata.length;
-    const isPowerOfTwo = romLength > 0 && (romLength & (romLength - 1)) === 0;
     let checksum = 0;
-    if (isPowerOfTwo) {
+
+    if (this.checksumMode === "simple") {
       for (let i = 0; i < romLength; i++) {
         checksum += this.romdata[i] & 0xFF;
       }
     } else {
-      let bitround = 1;
-      while (bitround < romLength) {
-        bitround <<= 1;
-      }
-      const firstPart = bitround >> 1;
-      const secondPart = romLength - firstPart;
-      const repeatCount = Math.floor(firstPart / secondPart);
+      const isPowerOfTwo = romLength > 0 && (romLength & (romLength - 1)) === 0;
+      if (isPowerOfTwo) {
+        for (let i = 0; i < romLength; i++) {
+          checksum += this.romdata[i] & 0xFF;
+        }
+      } else {
+        let bitround = 1;
+        while (bitround < romLength) {
+          bitround <<= 1;
+        }
+        const firstPart = bitround >> 1;
+        const secondPart = romLength - firstPart;
+        const repeatCount = Math.floor(firstPart / secondPart);
 
-      let secondPartSum = 0;
-      for (let i = 0; i < firstPart; i++) {
-        checksum += this.romdata[i] & 0xFF;
+        let secondPartSum = 0;
+        for (let i = 0; i < firstPart; i++) {
+          checksum += this.romdata[i] & 0xFF;
+        }
+        for (let i = firstPart; i < romLength; i++) {
+          secondPartSum += this.romdata[i] & 0xFF;
+        }
+        checksum += secondPartSum * repeatCount;
       }
-      for (let i = firstPart; i < romLength; i++) {
-        secondPartSum += this.romdata[i] & 0xFF;
-      }
-      checksum += secondPartSum * repeatCount;
     }
     checksum &= 0xFFFF;
     const complement = (~checksum) & 0xFFFF;

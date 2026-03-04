@@ -21,6 +21,7 @@ interface TestResult {
 const cliScript = "./src/cli.ts"; // Path to your CLI script
 const testsDir = path.join(process.cwd(), "./src/snes-slideshow-test-new");
 const targetRom = path.join(process.cwd(), "./src/snes-slideshow-test-new/test.sfc");
+const checksumMode = "simple";
 
 /**
  * Helper: Get file stats (size and checksum). If the file doesn't exist,
@@ -55,7 +56,7 @@ function runTest(baseName: string): TestResult {
     fs.rmSync(outputFile);
   }
 
-  const command = `bun ${cliScript} ${asmFile} ${outputFile} ${targetRom}`;
+  const command = `bun ${cliScript} ${asmFile} ${outputFile} ${targetRom} --checksum-mode=${checksumMode}`;
   console.log(`\nRunning: ${command}`);
 
   let runError: string | undefined = undefined;

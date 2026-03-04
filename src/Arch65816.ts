@@ -51,7 +51,7 @@ export class Arch65816 {
     }
 
     if (["SBC", "STA", "LDA", "ADC"].includes(opcode)) {
-      return this.handleMemoryOperations(opcode, operand, len, explicitlen);
+      return this.handleMemoryOperations(opcode, operand, len, explicitlen, rawOperand);
     }
 
     if (["AND", "EOR", "ORA", "CMP", "CPX", "CPY"].includes(opcode)) {
@@ -112,13 +112,18 @@ export class Arch65816 {
    * @param {string} operand The operand to handle.
    * @param {number} len The length of the operand.
    * @param {boolean} explicitlen Whether the operand length is explicit.
+   * @param {string} rawOperand The raw source operand before expansion.
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
-  handleMemoryOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
+  handleMemoryOperations(opcode: string, operand: string, len: number, explicitlen: boolean, rawOperand = operand): boolean {
     debug("handleMemoryOperations", { opcode, operand, len, explicitlen });
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
+    // In Asar, "optimize dp none" still allows explicit direct-page forms like "$42" / "$42,x".
+    const raw = rawOperand.trim();
+    const isExplicitDirectPage = /^\$[\da-f]{1,2}$/i.test(raw);
+    const isExplicitDirectPageIndexedX = /^\$[\da-f]{1,2},x$/i.test(raw);
 
     // Immediate Mode (#$XX)
     if (operand.startsWith("#")) {
@@ -242,7 +247,7 @@ export class Arch65816 {
     }
 
     // DP Indexed, X
-    if (this.assembler.optimizeDirectPage && operand.toLowerCase().endsWith(",x")) {
+    if ((this.assembler.optimizeDirectPage || isExplicitDirectPageIndexedX) && operand.toLowerCase().endsWith(",x")) {
       debug("handleMemoryOperations DP Indexed,X", opcode, operand);
 
       const dpIndexedXOpcodes: { [key: string]: number } = {
@@ -377,7 +382,7 @@ export class Arch65816 {
     }
 
     // Direct page shortening can be disabled by "optimize dp none".
-    if (this.assembler.optimizeDirectPage) {
+    if (this.assembler.optimizeDirectPage || isExplicitDirectPage) {
       debug("handleMemoryOperations Direct Page", opcode, operand);
       const directPageOpcodes: { [key: string]: number } = {
         ADC: 0x65, STA: 0x85, LDA: 0xA5, SBC: 0xE5,

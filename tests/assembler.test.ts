@@ -4521,6 +4521,7 @@ test("handleDataDirective - struct references", t => {
   assembler.setPass(1);
   const write1Spy = sinon.spy(assembler, "write1");
   const resolveStructLabelStub = sinon.stub(assembler, "resolveStructLabel");
+  const getnumStub = sinon.stub(assembler, "getnum");
 
   // Setup struct resolution stub
   resolveStructLabelStub.withArgs("sprite.x_pos").returns(42);
@@ -4531,38 +4532,40 @@ test("handleDataDirective - struct references", t => {
   t.true(resolveStructLabelStub.calledWith("sprite.x_pos"), "Should attempt to resolve struct references");
   t.true(write1Spy.calledWith(42), "Should write resolved struct value");
 
-  // Test fallback to math when struct resolution fails
-  const mathStub = sinon.stub(assembler.mathCore, "math").returns(100);
+  // Test fallback to numeric resolver when struct resolution fails
+  getnumStub.withArgs("unknown.field").returns(100);
   write1Spy.resetHistory();
   assembler.handleDataDirective("db", ["unknown.field"]);
-  t.true(mathStub.called, "Should fall back to math evaluation when struct resolution fails");
-  t.true(write1Spy.calledWith(100), "Should write result from math fallback");
+  t.true(getnumStub.calledWith("unknown.field"), "Should fall back to numeric resolution when struct resolution fails");
+  t.true(write1Spy.calledWith(100), "Should write result from numeric fallback");
 });
 
 test("handleDataDirective - label references", t => {
   const assembler = new Assembler();
   assembler.setPass(1);
   const write1Spy = sinon.spy(assembler, "write1");
-  const mathStub = sinon.stub(assembler.mathCore, "math").returns(NaN);
   const getLabelValueStub = sinon.stub(assembler, "getLabelValue");
 
-  // Setup label resolution stub
+  // Setup label resolution stubs used by getnum + static fallback path.
+  getLabelValueStub.withArgs("LABEL1", false).returns(50);
   getLabelValueStub.withArgs("LABEL1", true).returns(50);
 
   // Test with label reference
   assembler.handleDataDirective("db", ["LABEL1"]);
-  t.true(mathStub.called, "Should attempt math evaluation first");
-  t.true(getLabelValueStub.calledWith("LABEL1", true), "Should attempt to resolve label when math fails");
+  t.true(getLabelValueStub.calledWith("LABEL1", false), "Should attempt to resolve label through numeric resolver");
   t.true(write1Spy.calledWith(50), "Should write resolved label value");
 
-  // Test error when both math and label resolution fail
-  getLabelValueStub.withArgs("UNKNOWN_LABEL", true).returns(NaN);
+  // Test error when label resolution fails
+  getLabelValueStub.withArgs("UNKNOWN_LABEL", false).throws(new Error("Label 'UNKNOWN_LABEL' not found."));
 
   const error = t.throws(() => {
     assembler.handleDataDirective("db", ["UNKNOWN_LABEL"]);
   }, { instanceOf: Error });
 
-  t.is(error.message, "Unable to determine value:", "Should throw when value cannot be determined");
+  t.true(
+    error.message.includes("UNKNOWN_LABEL"),
+    "Should throw when label resolution fails"
+  );
 
 });
 

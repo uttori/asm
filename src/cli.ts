@@ -14,9 +14,35 @@ class CLI {
    */
   public run(): void {
     console.log("cli run");
-    const args = process.argv.slice(2);
+    const rawArgs = process.argv.slice(2);
+    let checksumMode: "asar" | "simple" = "asar";
+    const args: string[] = [];
+    for (let i = 0; i < rawArgs.length; i++) {
+      const arg = rawArgs[i];
+      if (arg.startsWith("--checksum-mode=")) {
+        const value = arg.split("=")[1] as "asar" | "simple" | undefined;
+        if (value === "asar" || value === "simple") {
+          checksumMode = value;
+          continue;
+        }
+        console.error(`Error: Invalid checksum mode '${value}'. Use 'asar' or 'simple'.`);
+        process.exit(1);
+      }
+      if (arg === "--checksum-mode") {
+        const value = rawArgs[i + 1] as "asar" | "simple" | undefined;
+        if (value === "asar" || value === "simple") {
+          checksumMode = value;
+          i++;
+          continue;
+        }
+        console.error("Error: --checksum-mode requires 'asar' or 'simple'.");
+        process.exit(1);
+      }
+      args.push(arg);
+    }
+
     if (args.length < 2) {
-      console.error("Usage: node cli.js <input.asm> <output.bin>");
+      console.error("Usage: node cli.js <input.asm> <output.bin> [target.sfc] [--checksum-mode=asar|simple]");
       process.exit(1);
     }
 
@@ -43,6 +69,8 @@ class CLI {
 
     try {
       this.assembler = new Assembler(targetRom);
+      this.assembler.setChecksumMode(checksumMode);
+      console.log(`Checksum mode: ${checksumMode}`);
 
       const assemblyCode = fs.readFileSync(inputFile, "utf8");
       console.log(`Compiling: ${inputFile} → ${outputFile}`);
