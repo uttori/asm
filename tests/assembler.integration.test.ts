@@ -30,7 +30,7 @@ const PROJECT_ROOT = path.resolve(TEST_FILE_DIR, "..");
 const FIXTURES_DIR = path.resolve(PROJECT_ROOT, "src/tests");
 const EXPECTED_DIR = path.resolve(PROJECT_ROOT, "src/tests_tmp_app");
 const TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/dummy_rom.sfc");
-const PARSER_PARITY_ENABLED = process.env.PARSER_PARITY === "1";
+const PARSER_PARITY_ENABLED = process.env.PARSER_PARITY !== "0";
 
 const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
@@ -165,7 +165,7 @@ test("integration fixtures - includes all top-level .asm tests from src/test.ts"
 });
 
 test("integration parser parity mode", t => {
-  t.pass(`Parser parity ${PARSER_PARITY_ENABLED ? "enabled" : "disabled"} (set PARSER_PARITY=1 to enable).`);
+  t.pass(`Parser parity ${PARSER_PARITY_ENABLED ? "enabled" : "disabled"} (set PARSER_PARITY=0 to disable).`);
 });
 
 for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {

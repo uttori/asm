@@ -4,7 +4,6 @@ import type {
   ParsedFallbackCommand,
   ParsedInstructionCommand,
   ParsedLabelCommand,
-  ParsedMacroCallCommand,
   TokenizedCommand
 } from "./ir.js";
 
@@ -55,6 +54,51 @@ const isLikelyLabel = (raw: string): boolean => {
   return trimmed.endsWith(":") && !trimmed.includes(" ");
 };
 
+const splitArguments = (input: string): string[] => {
+  if (!input.trim()) {
+    return [];
+  }
+
+  const out: string[] = [];
+  let current = "";
+  let inQuote = false;
+  let quoteChar = "";
+  let parenDepth = 0;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === "\"" || char === "'") && input[i - 1] !== "\\") {
+      if (!inQuote) {
+        inQuote = true;
+        quoteChar = char;
+      } else if (quoteChar === char) {
+        inQuote = false;
+      }
+      current += char;
+      continue;
+    }
+
+    if (!inQuote) {
+      if (char === "(") {
+        parenDepth++;
+      } else if (char === ")" && parenDepth > 0) {
+        parenDepth--;
+      } else if (char === "," && parenDepth === 0) {
+        out.push(current.trim());
+        current = "";
+        continue;
+      }
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    out.push(current.trim());
+  }
+  return out;
+};
+
 const isDirective = (firstWord: string): boolean => {
   if (!firstWord) {
     return false;
@@ -64,18 +108,6 @@ const isDirective = (firstWord: string): boolean => {
   }
   const lowercase = firstWord.toLowerCase();
   return COMMON_DIRECTIVES.has(lowercase);
-};
-
-const isMacroCall = (firstWord: string): boolean => {
-  if (!firstWord) {
-    return false;
-  }
-  if (firstWord.startsWith("!")) {
-    return false;
-  }
-  // Keep this permissive; parser is allowed to classify uncertain inputs
-  // into macro-call and rely on legacy execution behavior.
-  return /^[A-Za-z_?][\w?.-]*$/.test(firstWord);
 };
 
 const parseOne = (tokenized: TokenizedCommand): ParsedCommand => {
@@ -97,40 +129,37 @@ const parseOne = (tokenized: TokenizedCommand): ParsedCommand => {
       kind: "label",
       raw,
       sourceLine: tokenized.sourceLine,
-      label: raw.slice(0, -1)
+      labelKind: "declaration",
+      labelName: raw.slice(0, -1)
     };
     return label;
   }
 
   if (isDirective(firstWord)) {
+    const argumentsRaw = raw.slice(firstWord.length).trim();
     const directive: ParsedDirectiveCommand = {
       kind: "directive",
       raw,
       sourceLine: tokenized.sourceLine,
-      directive: firstWord
+      directive: firstWord,
+      argumentsRaw,
+      arguments: splitArguments(argumentsRaw)
     };
     return directive;
   }
 
   if (tokenized.words.length >= 2) {
+    const operandRaw = raw.slice(firstWord.length).trim();
     const instruction: ParsedInstructionCommand = {
       kind: "instruction",
       raw,
       sourceLine: tokenized.sourceLine,
       mnemonic: firstWord,
-      operand: raw.slice(firstWord.length).trim() || undefined
+      operand: operandRaw || undefined,
+      operands: splitArguments(operandRaw),
+      isImmediate: operandRaw.startsWith("#")
     };
     return instruction;
-  }
-
-  if (isMacroCall(firstWord)) {
-    const macroCall: ParsedMacroCallCommand = {
-      kind: "macro-call",
-      raw,
-      sourceLine: tokenized.sourceLine,
-      macroName: firstWord
-    };
-    return macroCall;
   }
 
   const fallback: ParsedFallbackCommand = {

@@ -11,6 +11,8 @@ export type ParsedCommandKind =
   | "macro-call"
   | "fallback";
 
+export type LabelKind = "declaration";
+
 export interface ParsedCommandBase {
   kind: ParsedCommandKind;
   raw: string;
@@ -19,18 +21,23 @@ export interface ParsedCommandBase {
 
 export interface ParsedLabelCommand extends ParsedCommandBase {
   kind: "label";
-  label: string;
+  labelKind: LabelKind;
+  labelName: string;
 }
 
 export interface ParsedInstructionCommand extends ParsedCommandBase {
   kind: "instruction";
   mnemonic: string;
   operand?: string;
+  operands: string[];
+  isImmediate: boolean;
 }
 
 export interface ParsedDirectiveCommand extends ParsedCommandBase {
   kind: "directive";
   directive: string;
+  argumentsRaw: string;
+  arguments: string[];
 }
 
 export interface ParsedMacroCallCommand extends ParsedCommandBase {
