@@ -2924,6 +2924,7 @@ export class Assembler {
   /**
    * Finds the next occurrence of a `+` label based on SNES memory position.
    * @param {string} label The label to find.
+   * @param currentAddressOverride
    * @returns {number} The address of the next label.
    */
   findNextLabel(label: string, currentAddressOverride?: number): number {
@@ -2968,6 +2969,7 @@ export class Assembler {
   /**
    * Finds the previous occurrence of a `-` label based on SNES memory position.
    * @param {string} label The label to find.
+   * @param currentAddressOverride
    * @returns {number} The address of the previous label.
    */
   findPreviousLabel(label: string, currentAddressOverride?: number): number {

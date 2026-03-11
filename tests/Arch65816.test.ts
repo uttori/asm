@@ -428,7 +428,7 @@ test("Arch65816.handleGenericOpcode returns false for unmapped opcodes", t => {
 test("Arch65816.handleJump encodes numeric JMP operands as absolute addresses", t => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler, "getnum");
-  getnumStub.withArgs("$00ff").returns(0x00FF);
+  getnumStub.withArgs("255").returns(0x00FF);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   const write3Stub = sinon.stub(assembler, "write3");
@@ -440,7 +440,7 @@ test("Arch65816.handleJump encodes numeric JMP operands as absolute addresses", 
   });
 
   t.true(arch.handleJump("JMP", "255"));
-  t.true(getnumStub.calledOnceWithExactly("$00ff"));
+  t.true(getnumStub.calledOnceWithExactly("255"));
   t.true(write1Stub.calledOnceWithExactly(0x4C));
   t.true(write2Stub.calledOnceWithExactly(0x00FF));
   t.true(write3Stub.notCalled);
@@ -449,7 +449,7 @@ test("Arch65816.handleJump encodes numeric JMP operands as absolute addresses", 
 test("Arch65816.handleJump normalizes short hex JSR operands", t => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler, "getnum");
-  getnumStub.withArgs("$00FF").returns(0x00FF);
+  getnumStub.withArgs("$FF").returns(0x00FF);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   const write3Stub = sinon.stub(assembler, "write3");
@@ -461,7 +461,7 @@ test("Arch65816.handleJump normalizes short hex JSR operands", t => {
   });
 
   t.true(arch.handleJump("JSR", "$FF"));
-  t.true(getnumStub.calledOnceWithExactly("$00FF"));
+  t.true(getnumStub.calledOnceWithExactly("$FF"));
   t.true(write1Stub.calledOnceWithExactly(0x20));
   t.true(write2Stub.calledOnceWithExactly(0x00FF));
   t.true(write3Stub.notCalled);
@@ -1645,7 +1645,6 @@ test("Arch65816.asblock_65816 routes branch helpers before generic fallback", t 
   expandOperandStub.withArgs("$1234").returns({ expanded: "$1234", length: 2 });
   const noOperandStub = sinon.stub(arch, "handleNoOperandOperations").returns(false);
   const branchStub = sinon.stub(arch, "handleBranchInstructions").returns(false);
-  const memoryBitStub = sinon.stub(arch as any, "handleMemoryBitInstructions").returns(false);
   const getnumStub = sinon.stub(assembler, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const genericStub = sinon.stub(arch, "handleGenericOpcode").returns(true);
@@ -1653,14 +1652,12 @@ test("Arch65816.asblock_65816 routes branch helpers before generic fallback", t 
     expandOperandStub.restore();
     noOperandStub.restore();
     branchStub.restore();
-    memoryBitStub.restore();
     getnumStub.restore();
     genericStub.restore();
   });
 
   t.true(arch.asblock_65816(["bra", "$1234"]));
   t.true(branchStub.calledOnceWithExactly("BRA", "$1234"));
-  t.true(memoryBitStub.calledOnceWithExactly("BRA", "$1234"));
   t.true(genericStub.calledOnceWithExactly("BRA", 0x1234, 2, false, true));
 });
 
@@ -1670,7 +1667,6 @@ test("Arch65816.asblock_65816 falls back to generic opcode handling with resolve
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
   const noOperandStub = sinon.stub(arch, "handleNoOperandOperations").returns(false);
   const branchStub = sinon.stub(arch, "handleBranchInstructions").returns(false);
-  const memoryBitStub = sinon.stub(arch as any, "handleMemoryBitInstructions").returns(false);
   const getnumStub = sinon.stub(assembler, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   const genericStub = sinon.stub(arch, "handleGenericOpcode").returns(true);
@@ -1678,13 +1674,29 @@ test("Arch65816.asblock_65816 falls back to generic opcode handling with resolve
     expandOperandStub.restore();
     noOperandStub.restore();
     branchStub.restore();
-    memoryBitStub.restore();
     getnumStub.restore();
     genericStub.restore();
   });
 
   t.true(arch.asblock_65816(["wdm", "$12"]));
   t.true(genericStub.calledOnceWithExactly("WDM", 0x12, 1, false, true));
+});
+
+test("Arch65816.asblock_65816 routes bit-test opcodes without falling through to memory-bit helper", t => {
+  const { assembler, arch } = createArch65816();
+  const expandOperandStub = sinon.stub(assembler, "expandOperand");
+  expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
+  const bitTestStub = sinon.stub(arch as any, "handleBitTestOperations").returns(true);
+  const memoryBitStub = sinon.stub(arch as any, "handleMemoryBitInstructions").returns(true);
+  t.teardown(() => {
+    expandOperandStub.restore();
+    bitTestStub.restore();
+    memoryBitStub.restore();
+  });
+
+  t.true(arch.asblock_65816(["trb", "$12"]));
+  t.true(bitTestStub.calledOnceWithExactly("TRB", "$12", 1, false));
+  t.true(memoryBitStub.notCalled);
 });
 
 test("Arch65816.asblock_65816 routes memory and load-register opcodes using expanded operands", t => {

@@ -91,9 +91,6 @@ export class Arch65816 {
     // Handle Branch Instructions
     if (this.handleBranchInstructions(opcode, operand)) return true;
 
-    // Handle new opcodes
-    if (this.handleMemoryBitInstructions(opcode, operand)) return true;
-
     // Handle special cases where length is on the opcode
     let hexconstant = false;
     let num = 0;
@@ -996,17 +993,6 @@ export class Arch65816 {
   handleJump(opcode: string, operand: string): boolean {
     debug("handleJump", { opcode, operand });
 
-    // If the operand is a number, convert it to a base 16 string prefixed with $
-    if (/^\d+$/.test(operand)) {
-      operand = "$" + parseInt(operand, 10).toString(16);
-      debug("handleJump converted numeric operand to hex:", operand);
-    }
-    // Handle operands with $ prefix that are only 3 characters long (like $FF)
-    if (/^\$[\dA-Fa-f]{1,2}$/.test(operand)) {
-      operand = "$00" + operand.substring(1);
-      debug("handleJump converted short hex operand to full form:", operand);
-    }
-
     const jumpOpcodes: { [key: string]: number } = {
         JMP: 0x4C,     // JMP Absolute
         JSR: 0x20,     // JSR Absolute
@@ -1023,19 +1009,23 @@ export class Arch65816 {
 
     let address = 0;
     let mode: keyof typeof jumpOpcodes;
+    const longMode = (currentOpcode: string): keyof typeof jumpOpcodes => {
+      if (currentOpcode === "JMP") return "JML";
+      if (currentOpcode === "JSR") return "JSL";
+      return currentOpcode as keyof typeof jumpOpcodes;
+    };
+    const shortMode = (currentOpcode: string): keyof typeof jumpOpcodes => currentOpcode as keyof typeof jumpOpcodes;
 
-    // **Absolute Mode: JMP $0000, JSR $0000**
-    if (/^\$[\dA-Fa-f]{4}$/.test(operand)) {
-        mode = opcode as keyof typeof jumpOpcodes; // Matches standard Absolute JMP/JSR
+    // **Plain numeric / hex literal mode**
+    if (/^\d+$/.test(operand)) {
         address = this.assembler.getnum(operand);
+        mode = address > 0xFFFF ? longMode(opcode) : shortMode(opcode);
         debug("handleJump mode", mode)
     }
-    // **Absolute Long Mode: JMP $000000, JSL $000000, JSR $000000**
-    else if (/^\$[\dA-Fa-f]{6}$/.test(operand)) {
-        if (opcode === "JMP") mode = "JML";  // Convert to JML (JMP Long)
-        else if (opcode === "JSR") mode = "JSL";  // Convert to JSL (JSR Long)
-        else mode = opcode as keyof typeof jumpOpcodes;
+    // **Plain hex literal mode**
+    else if (/^\$[\dA-Fa-f]{1,6}$/.test(operand)) {
         address = this.assembler.getnum(operand);
+        mode = operand.length > 5 ? longMode(opcode) : shortMode(opcode);
         debug("handleJump mode", mode)
     }
     // **Absolute Indirect Long Mode: JMP [$0000]**
