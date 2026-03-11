@@ -43,6 +43,9 @@ export interface ParsedDirectiveCommand extends ParsedCommandBase {
 export interface ParsedMacroCallCommand extends ParsedCommandBase {
   kind: "macro-call";
   macroName: string;
+  /** Rest of line after %name (e.g. "(arg1, arg2)"). Used to parse call arguments. */
+  argumentsRaw: string;
+  arguments: string[];
 }
 
 export interface ParsedFallbackCommand extends ParsedCommandBase {

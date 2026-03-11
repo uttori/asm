@@ -78,6 +78,7 @@
     "lint": "eslint --config eslint.config.js ./src",
     "make-types": "tsc --module nodenext --project ./tsconfig.json",
     "test": "NODE_ENV=test c8 ava --serial --concurrency=1",
+    "test:ava": "NODE_ENV=test c8 ava --serial --concurrency=1",
     "test:debug": "NODE_ENV=test DEBUG=Uttori* c8 ava --serial --concurrency=1",
     "test:watch": "NODE_ENV=test DEBUG=Assembler,MathCore ava --watch",
     "validate": "npm ls"

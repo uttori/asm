@@ -60,3 +60,7 @@ typings/
 .env
 
 .tsimp/*
+
+# Parity check output
+parity-result.txt
+parity-error.txt

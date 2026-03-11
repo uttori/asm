@@ -4,11 +4,13 @@ import type {
   ParsedFallbackCommand,
   ParsedInstructionCommand,
   ParsedLabelCommand,
+  ParsedMacroCallCommand,
   TokenizedCommand
 } from "./ir.js";
 
 const COMMON_DIRECTIVES = new Set([
   "arch",
+  "asar",
   "base",
   "bank",
   "db",
@@ -16,6 +18,10 @@ const COMMON_DIRECTIVES = new Set([
   "dl",
   "dd",
   "fill",
+  "fillbyte",
+  "fillword",
+  "filllong",
+  "filldword",
   "incbin",
   "incsrc",
   "include",
@@ -38,6 +44,7 @@ const COMMON_DIRECTIVES = new Set([
   "table",
   "pushtable",
   "pulltable",
+  "undef",
   "pushpc",
   "pullpc",
   "org",
@@ -46,7 +53,11 @@ const COMMON_DIRECTIVES = new Set([
   "padbyte",
   "lorom",
   "hirom",
-  "norom"
+  "norom",
+  "exlorom",
+  "exhirom",
+  "pushbase",
+  "pullbase"
 ]);
 
 const isLikelyLabel = (raw: string): boolean => {
@@ -54,7 +65,34 @@ const isLikelyLabel = (raw: string): boolean => {
   return trimmed.endsWith(":") && !trimmed.includes(" ");
 };
 
-const splitArguments = (input: string): string[] => {
+/** Find index of closing ")" matching the "(" at openIndex. Respects quotes. */
+export function findMatchingCloseParen(s: string, openIndex: number): number {
+  let depth = 1;
+  let inQuote = false;
+  let quoteChar = "";
+  for (let i = openIndex + 1; i < s.length; i++) {
+    const c = s[i];
+    if ((c === "\"" || c === "'") && (i === 0 || s[i - 1] !== "\\")) {
+      if (!inQuote) {
+        inQuote = true;
+        quoteChar = c;
+      } else if (quoteChar === c) {
+        inQuote = false;
+      }
+      continue;
+    }
+    if (!inQuote) {
+      if (c === "(") depth++;
+      else if (c === ")") {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+  }
+  return -1;
+}
+
+export const splitArguments = (input: string): string[] => {
   if (!input.trim()) {
     return [];
   }
@@ -135,6 +173,40 @@ const parseOne = (tokenized: TokenizedCommand): ParsedCommand => {
     return label;
   }
 
+  if (firstWord.startsWith("!") && raw.includes("=")) {
+    const fallback: ParsedFallbackCommand = {
+      kind: "fallback",
+      raw,
+      sourceLine: tokenized.sourceLine,
+      reason: "define-or-assign"
+    };
+    return fallback;
+  }
+
+  const trimmedRaw = raw.trimStart();
+  if (trimmedRaw.startsWith("%")) {
+    const rest = trimmedRaw.slice(1).trim();
+    const openParen = rest.indexOf("(");
+    let macroName: string;
+    let argsRaw: string;
+    if (openParen < 0) {
+      macroName = rest;
+      argsRaw = "";
+    } else {
+      macroName = rest.slice(0, openParen).trim();
+      const closeParen = findMatchingCloseParen(rest, openParen);
+      argsRaw = closeParen >= 0 ? rest.slice(openParen + 1, closeParen).trim() : "";
+    }
+    return {
+      kind: "macro-call",
+      raw,
+      sourceLine: tokenized.sourceLine,
+      macroName,
+      argumentsRaw: argsRaw,
+      arguments: splitArguments(argsRaw)
+    } as ParsedMacroCallCommand;
+  }
+
   if (isDirective(firstWord)) {
     const argumentsRaw = raw.slice(firstWord.length).trim();
     const directive: ParsedDirectiveCommand = {
@@ -148,7 +220,7 @@ const parseOne = (tokenized: TokenizedCommand): ParsedCommand => {
     return directive;
   }
 
-  if (tokenized.words.length >= 2) {
+  if (tokenized.words.length >= 1 && !isDirective(firstWord)) {
     const operandRaw = raw.slice(firstWord.length).trim();
     const instruction: ParsedInstructionCommand = {
       kind: "instruction",
@@ -156,7 +228,7 @@ const parseOne = (tokenized: TokenizedCommand): ParsedCommand => {
       sourceLine: tokenized.sourceLine,
       mnemonic: firstWord,
       operand: operandRaw || undefined,
-      operands: splitArguments(operandRaw),
+      operands: operandRaw ? splitArguments(operandRaw) : [],
       isImmediate: operandRaw.startsWith("#")
     };
     return instruction;

@@ -1,8 +1,11 @@
 import ava, { type TestFn } from "ava";
 import sinon from "sinon";
 
+import { CompilationBackend } from "../../src/compiler/backend/CompilationBackend.js";
 import { executeParsedCommands } from "../../src/parser/execute-ir.js";
 import type { ParsedCommand } from "../../src/parser/ir.js";
+import { parseTokenizedCommands } from "../../src/parser/parser.js";
+import { tokenizeSource } from "../../src/parser/tokenizer.js";
 const test = ava as unknown as TestFn;
 
 const createAssemblerDouble = () => {
@@ -16,7 +19,6 @@ const createAssemblerDouble = () => {
     processCommand: sinon.spy(),
     setLabel: sinon.spy(),
     handleDataDirective: sinon.spy(),
-    callMacro: sinon.spy(),
     handleIf: sinon.spy(),
     handleElseIf: sinon.spy(),
     handleElse: sinon.spy(),
@@ -56,21 +58,30 @@ test("executeParsedCommands executes db directive via CodeEmitter service", t =>
   }];
 
   executeParsedCommands(assembler as never, parsed, { nativeSemanticSlices: true });
-  t.true(assembler.handleDataDirective.calledOnceWithExactly("db", ["$01, $02"]));
+  t.true(assembler.handleDataDirective.calledOnceWithExactly("db", ["$01", "$02"]));
   t.true(assembler.processCommand.notCalled);
 });
 
-test("executeParsedCommands delegates macro invocations to MacroExpander", t => {
-  const assembler = createAssemblerDouble();
+test("executeParsedCommands expands macro calls via backend.getMacro", t => {
+  const backend = new CompilationBackend();
+  backend.registerMacro("NopMacro", [], ["org $008000", "NOP"]);
   const parsed: ParsedCommand[] = [{
     kind: "macro-call",
-    raw: "SomeMacro 1, 2",
+    raw: "%NopMacro()",
     sourceLine: 4,
-    macroName: "SomeMacro"
+    macroName: "NopMacro",
+    argumentsRaw: "",
+    arguments: []
   }];
 
-  executeParsedCommands(assembler as never, parsed);
-  t.true(assembler.callMacro.calledOnceWithExactly("SomeMacro 1, 2"));
+  for (const pass of [0, 1, 2]) {
+    backend.setPass(pass);
+    executeParsedCommands(backend, parsed);
+    backend.finishPass();
+  }
+  const rom = backend.getBinaryOutput();
+  const pc = 0x8000 - 0x8000; // lorom: $008000 -> offset 0
+  t.is(rom[pc], 0xea, "NOP (0xEA) emitted at $8000");
 });
 
 test("executeParsedCommands executes control flow directives via manager", t => {
@@ -85,5 +96,24 @@ test("executeParsedCommands executes control flow directives via manager", t => 
   }];
 
   executeParsedCommands(assembler as never, parsed);
-  t.true(assembler.processCommand.calledOnceWithExactly("if 1"));
+  t.true(assembler.handleIf.calledOnceWithExactly("1"));
+});
+
+test("struct body populates backend and TestStruct.count resolves", t => {
+  const backend = new CompilationBackend();
+  const source = [
+    "org $008000",
+    "struct TestStruct",
+    ".first: skip 1",
+    ".second: skip 1",
+    ".count: skip 1",
+    "endstruct",
+    "if TestStruct.count == 2",
+    "endif"
+  ].join("\n");
+  const tokenized = tokenizeSource(source);
+  const parsed = parseTokenizedCommands(tokenized);
+  executeParsedCommands(backend, parsed);
+  const val = backend.evaluateExpression!("TestStruct.count");
+  t.is(val, 2, "TestStruct.count should be 2 after struct is built");
 });

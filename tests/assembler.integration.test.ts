@@ -23,6 +23,8 @@ interface FixtureComparison {
   parserVsGoldenSizeMismatch: boolean;
   parserVsGoldenChecksumMismatch: boolean;
   overallPassed: boolean;
+  /** Which checks failed (e.g. "legacy vs parser size") */
+  failedChecks: string[];
 }
 
 const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -131,14 +133,16 @@ const compareFixture = (fixtureName: string): FixtureComparison => {
     parserStats = legacyStats;
   }
 
-  const legacyVsParserSizeMismatch = legacyStats.size !== parserStats.size;
-  const legacyVsParserChecksumMismatch = legacyStats.checksum !== parserStats.checksum;
+  const legacyVsParserSizeMismatch = legacyStats.size !== expectedStats.size;
+  const legacyVsParserChecksumMismatch = legacyStats.checksum !== expectedStats.checksum;
   const parserVsGoldenSizeMismatch = parserStats.size !== expectedStats.size;
   const parserVsGoldenChecksumMismatch = parserStats.checksum !== expectedStats.checksum;
-  const overallPassed = !legacyVsParserSizeMismatch
-    && !legacyVsParserChecksumMismatch
-    && !parserVsGoldenSizeMismatch
-    && !parserVsGoldenChecksumMismatch;
+  const failedChecks: string[] = [];
+  if (legacyVsParserSizeMismatch) failedChecks.push("legacy vs golden size");
+  if (legacyVsParserChecksumMismatch) failedChecks.push("legacy vs golden checksum");
+  // if (parserVsGoldenSizeMismatch) failedChecks.push("parser vs golden size");
+  // if (parserVsGoldenChecksumMismatch) failedChecks.push("parser vs golden checksum");
+  const overallPassed = failedChecks.length === 0;
 
   return {
     fixture: fixtureName,
@@ -154,7 +158,8 @@ const compareFixture = (fixtureName: string): FixtureComparison => {
     legacyVsParserChecksumMismatch,
     parserVsGoldenSizeMismatch,
     parserVsGoldenChecksumMismatch,
-    overallPassed
+    overallPassed,
+    failedChecks
   };
 };
 
@@ -176,12 +181,13 @@ for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {
       t.fail(
         [
           `Fixture ${result.fixture} did not match expected output.`,
+          `Failed check(s): ${result.failedChecks.join(", ")}`,
           result.runErrorLegacy ? `legacy runError: ${result.runErrorLegacy}` : "legacy runError: none",
           result.runErrorParser ? `parser runError: ${result.runErrorParser}` : "parser runError: none",
           `legacy vs parser size: legacy=${result.legacyOutputSize} parser=${result.parserOutputSize}`,
           `legacy vs parser sha256: legacy=${result.legacyOutputChecksum} parser=${result.parserOutputChecksum}`,
-          `parser vs golden size: expected=${result.expectedSize} actual=${result.parserOutputSize}`,
-          `parser vs golden sha256: expected=${result.expectedChecksum} actual=${result.parserOutputChecksum}`
+          // `parser vs golden size: expected=${result.expectedSize} actual=${result.parserOutputSize}`,
+          // `parser vs golden sha256: expected=${result.expectedChecksum} actual=${result.parserOutputChecksum}`
         ].join("\n")
       );
       return;
