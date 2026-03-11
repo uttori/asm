@@ -2,11 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import ava, { type TestFn } from "ava";
+import { test } from "./ava-helper.js";
 
 import { Assembler } from "../src/assembler.js";
 import { compileSourceWithParser } from "../src/parser/compile-with-parser.js";
-const test = ava as unknown as TestFn;
 
 interface FixtureComparison {
   fixture: string;

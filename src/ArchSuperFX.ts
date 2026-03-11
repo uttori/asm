@@ -683,7 +683,8 @@ export class ArchSuperFX {
   /**
    * Returns an approximate operand length (1 or 2) by checking the operand format.
    * This is a simple approximation for short vs. relative addressing.
-   * @param operand
+   * @param {string} operand the operand
+   * @returns {number} The operand length.
    */
   private getOperandLength(operand: string): number {
     // This is a simplified logic: if it looks hex with 2 digits, assume 1; else 2

@@ -1,4 +1,4 @@
-import ava, { type TestFn } from "ava";
+import { test } from "../ava-helper.js";
 import sinon from "sinon";
 
 import { CompilationBackend } from "../../src/compiler/backend/CompilationBackend.js";
@@ -6,7 +6,6 @@ import { executeParsedCommands } from "../../src/parser/execute-ir.js";
 import type { ParsedCommand } from "../../src/parser/ir.js";
 import { parseTokenizedCommands } from "../../src/parser/parser.js";
 import { tokenizeSource } from "../../src/parser/tokenizer.js";
-const test = ava as unknown as TestFn;
 
 const createAssemblerDouble = () => {
   const assembler = {

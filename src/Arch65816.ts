@@ -580,11 +580,8 @@ export class Arch65816 {
     // **Write opcode & address**
     debug("handleLogicAndCompareOperations mode", mode, operand);
     this.assembler.write1(opcodes[opcode][mode]);
-    // TODO: this AND logic seems wrong, but matches the tests
     if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode ===  "directIndirectLong") {
       this.assembler.write1(address);
-    } else if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode === "immediate" && operand.length === 6) {
-      this.assembler.write2(address);
     } else if (["absolute", "absoluteX", "absoluteY", "directIndirectLong"].includes(mode)) {
       this.assembler.write2(address);
     } else if (["absoluteLong", "absoluteLongX", "indirectLong", "indirectLongY"].includes(mode)) {
@@ -1526,7 +1523,7 @@ export class Arch65816 {
    * @param {string} operand (absolute or direct)
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  private handleMemoryBitInstructions(opcode: string, operand: string): boolean {
+  handleMemoryBitInstructions(opcode: string, operand: string): boolean {
     debug("handleMemoryBitInstructions", opcode, operand);
     const memoryBitOpcodes: { [key: string]: { direct: number; absolute: number } } = {
         TSB: { direct: 0x04, absolute: 0x0C },
@@ -1549,19 +1546,6 @@ export class Arch65816 {
     }
 
     return false;
-  }
-
-  /**
-   * Determines the operand length from a given string.
-   * @param {string} operand The operand to determine the length of.
-   * @returns {number} The operand length.
-   */
-  getOperandLength(operand: string): number {
-    debug("getOperandLength", operand)
-    if (/^\$[\dA-Fa-f]{1,2}$/.test(operand)) return 1;
-    if (/^\$[\dA-Fa-f]{3,4}$/.test(operand)) return 2;
-    if (/^\$[\dA-Fa-f]{5,6}$/.test(operand)) return 3;
-    return 1;
   }
 
   /**

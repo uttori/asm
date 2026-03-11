@@ -1,7 +1,6 @@
-import ava, { type TestFn } from "ava";
+import { test } from "../ava-helper.js";
 
 import { tokenizeSource } from "../../src/parser/tokenizer.js";
-const test = ava as unknown as TestFn;
 
 test("tokenizeSource strips inline comments but preserves ;`+ directives", (t) => {
   const source = [

@@ -1,4 +1,4 @@
-import test from "ava";
+import { test } from "./ava-helper.js";
 import { MathCore } from "../src/mathcore.js";
 
 test("reset - resets math core state", t => {

@@ -1,6 +1,6 @@
 import fs from "fs";
 import sinon from "sinon";
-import test from "ava";
+import { test } from "./ava-helper.js";
 
 import { Assembler, LoopBlock } from "../src/assembler.js";
 
