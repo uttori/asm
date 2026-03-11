@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { test } from "./ava-helper.js";
 
 import { Assembler } from "../src/assembler.js";
-import { compileSourceWithParser } from "../src/parser/compile-with-parser.js";
+// import { compileSourceWithParser } from "../src-parser/parser/compile-with-parser.js";
 
 interface FixtureComparison {
   fixture: string;
@@ -74,18 +74,18 @@ const assembleFixtureLegacy = (fixtureName: string): Buffer => {
 };
 
 const assembleFixtureParser = (fixtureName: string): Buffer => {
-  const sourcePath = path.resolve(FIXTURES_DIR, `${fixtureName}.asm`);
-  const source = fs.readFileSync(sourcePath, "utf8");
-  const targetRom = fs.existsSync(TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(TARGET_ROM_PATH)) : undefined;
-  const includePaths = ["./", path.dirname(sourcePath)];
+  // const sourcePath = path.resolve(FIXTURES_DIR, `${fixtureName}.asm`);
+  // const source = fs.readFileSync(sourcePath, "utf8");
+  // const targetRom = fs.existsSync(TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(TARGET_ROM_PATH)) : undefined;
+  // const includePaths = ["./", path.dirname(sourcePath)];
 
-  const output = compileSourceWithParser(source, {
-    targetRom,
-    sourcePath,
-    includePaths
-  });
+  // const output = compileSourceWithParser(source, {
+  //   targetRom,
+  //   sourcePath,
+  //   includePaths
+  // });
 
-  return Buffer.from(output);
+  // return Buffer.from(output);
 };
 
 const discoverTopLevelFixtures = (): string[] => fs

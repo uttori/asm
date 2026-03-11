@@ -1,14 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { Arch65816 } from "../../Arch65816.js";
-import { MathCore } from "../../mathcore.js";
+import { Arch65816 } from "../../../src/Arch65816.js";
+import { MathCore } from "../../../src/mathcore.js";
 import { parseNum } from "./parseNum.js";
 
+/**
+ *
+ * @param bytes
+ * @param pos
+ * @param width
+ */
 function readLittleEndian(bytes: Uint8Array, pos: number, width: number): number | undefined {
   if (pos < 0 || pos + width > bytes.length) return undefined;
   let v = 0;
-  for (let i = 0; i < width; i++) v |= bytes[pos + i]! << (i * 8);
+  for (let i = 0; i < width; i++) v |= bytes[pos + i] << (i * 8);
   return v >>> 0;
 }
 
@@ -46,6 +52,7 @@ function pctosnesLorom(pc: number): number {
 
 /**
  * Hirom: SNES addr to PC offset. Invalid addresses return -1.
+ * @param addr
  */
 function snestopcHirom(addr: number): number {
   addr = addr & LOROM_MASK;
@@ -57,6 +64,7 @@ function snestopcHirom(addr: number): number {
 
 /**
  * Hirom: PC offset to SNES address.
+ * @param pc
  */
 function pctosnesHirom(pc: number): number {
   if (pc < 0 || pc >= 0x400000) return -1;
@@ -65,6 +73,7 @@ function pctosnesHirom(pc: number): number {
 
 /**
  * Exlorom: SNES addr to PC offset. Invalid addresses return -1.
+ * @param addr
  */
 function snestopcExlorom(addr: number): number {
   addr = addr & LOROM_MASK;
@@ -79,6 +88,7 @@ function snestopcExlorom(addr: number): number {
 
 /**
  * Exlorom: PC offset to SNES address.
+ * @param pc
  */
 function pctosnesExlorom(pc: number): number {
   if (pc < 0 || pc >= 0x800000) return -1;
@@ -87,12 +97,13 @@ function pctosnesExlorom(pc: number): number {
     addr = (((addr << 1) & 0x7f0000) | (addr & 0x7fff)) | 0x8000;
     return addr;
   }
-  let addr = (((pc << 1) & 0x7f0000) | (pc & 0x7fff)) | 0x8000;
+  const addr = (((pc << 1) & 0x7f0000) | (pc & 0x7fff)) | 0x8000;
   return addr | 0x800000;
 }
 
 /**
  * Exhirom: SNES addr to PC offset. Invalid addresses return -1.
+ * @param addr
  */
 function snestopcExhirom(addr: number): number {
   const a = addr & LOROM_MASK;
@@ -105,6 +116,7 @@ function snestopcExhirom(addr: number): number {
 
 /**
  * Exhirom: PC offset to SNES address.
+ * @param pc
  */
 function pctosnesExhirom(pc: number): number {
   if (pc < 0 || pc >= 0x800000) return -1;

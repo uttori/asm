@@ -1,7 +1,7 @@
 import { test } from "../ava-helper.js";
 
-import { parseTokenizedCommands } from "../../src/parser/parser.js";
-import { tokenizeSource } from "../../src/parser/tokenizer.js";
+import { parseTokenizedCommands } from "../../src-parser/parser/parser.js";
+import { tokenizeSource } from "../../src-parser/parser/tokenizer.js";
 
 test("parseTokenizedCommands parses labels with explicit label form", (t) => {
   const [parsed] = parseTokenizedCommands(tokenizeSource("MainLabel:"));

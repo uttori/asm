@@ -17,7 +17,7 @@ function writeResult(text: string): void {
 
 async function main(): Promise<void> {
   const { Assembler } = await import("../src/assembler.js");
-  const { compileSourceWithParser } = await import("../src/parser/compile-with-parser.js");
+  const { compileSourceWithParser } = await import("../src-parser/parser/compile-with-parser.js");
 
   const FIXTURES_DIR = path.resolve(PROJECT_ROOT, "src/tests");
   const TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/dummy_rom.sfc");

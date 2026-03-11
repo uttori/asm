@@ -1,4 +1,4 @@
-import type { Assembler } from "../../assembler.js";
+import type { Assembler } from "../../../src/assembler.js";
 
 export class ControlFlowManager {
   constructor(private readonly assembler: Assembler) {}

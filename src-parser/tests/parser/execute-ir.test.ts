@@ -1,11 +1,11 @@
 import { test } from "../ava-helper.js";
 import sinon from "sinon";
 
-import { CompilationBackend } from "../../src/compiler/backend/CompilationBackend.js";
-import { executeParsedCommands } from "../../src/parser/execute-ir.js";
-import type { ParsedCommand } from "../../src/parser/ir.js";
-import { parseTokenizedCommands } from "../../src/parser/parser.js";
-import { tokenizeSource } from "../../src/parser/tokenizer.js";
+import { CompilationBackend } from "../../src-parser/compiler/backend/CompilationBackend.js";
+import { executeParsedCommands } from "../../src-parser/parser/execute-ir.js";
+import type { ParsedCommand } from "../../src-parser/parser/ir.js";
+import { parseTokenizedCommands } from "../../src-parser/parser/parser.js";
+import { tokenizeSource } from "../../src-parser/parser/tokenizer.js";
 
 const createAssemblerDouble = () => {
   const assembler = {

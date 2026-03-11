@@ -25,7 +25,13 @@ function findMatchingEnd(commands: ParsedCommand[], startIndex: number, openName
   return findMatchingEndWithAlternates(commands, startIndex, openName, [closeName]);
 }
 
-/** Asar allows while to be closed by endif; accept multiple close names. */
+/**
+ * Asar allows while to be closed by endif; accept multiple close names.
+ * @param commands
+ * @param startIndex
+ * @param openName
+ * @param closeNames
+ */
 function findMatchingEndWithAlternates(commands: ParsedCommand[], startIndex: number, openName: string, closeNames: string[]): number {
   const closeSet = new Set(closeNames.map((n) => n.toLowerCase()));
   let depth = 1;
@@ -273,6 +279,8 @@ function executeOne(
 /**
  * Run only struct and macro definitions so structs and macros are available before any
  * other commands (e.g. if TestStruct.count) run. Called once at start of executeParsedCommands.
+ * @param backend
+ * @param parsedCommands
  */
 function runStructAndMacroDefinitionsOnly(
   backend: ICompilationBackend,

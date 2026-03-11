@@ -1,6 +1,6 @@
 import { test } from "../ava-helper.js";
 
-import { tokenizeSource } from "../../src/parser/tokenizer.js";
+import { tokenizeSource } from "../../src-parser/parser/tokenizer.js";
 
 test("tokenizeSource strips inline comments but preserves ;`+ directives", (t) => {
   const source = [

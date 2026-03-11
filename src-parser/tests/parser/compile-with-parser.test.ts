@@ -3,8 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "../ava-helper.js";
 
-import { compileSourceWithParser } from "../../src/parser/compile-with-parser.js";
-import { DiagnosticError } from "../../src/compiler/diagnostics/Diagnostic.js";
+import { compileSourceWithParser } from "../../src-parser/parser/compile-with-parser.js";
+import { DiagnosticError } from "../../src-parser/compiler/diagnostics/Diagnostic.js";
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.resolve(TEST_DIR, "../../src/tests");
 
