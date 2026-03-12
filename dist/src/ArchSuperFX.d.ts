@@ -1,0 +1,76 @@
+import type { ArchitectureEncoder, SuperFXContext } from "./architecture-types.js";
+export declare class ArchSuperFX implements ArchitectureEncoder {
+    private assembler;
+    constructor(assembler: SuperFXContext);
+    encode(words: string[]): boolean;
+    estimateSize(words: string[]): number;
+    /**
+     * Processes a SuperFX assembly instruction.
+     * @param {string[]} words The tokenized instruction.
+     * @returns {boolean} True if the instruction was handled, false otherwise.
+     */
+    asblock_superfx(words: string[]): boolean;
+    /**
+     * Handles single-word (no-operand) opcodes for SuperFX.
+     * @param {string} opcode - the opcode
+     * @returns {boolean} True if the instruction was handled, false otherwise.
+     */
+    handleSingleWordOpcode(opcode: string): boolean;
+    /**
+     * Handles two-word opcodes (one opcode + one operand).
+     * @param {string} opcode - the opcode
+     * @param {string} operand - the operand
+     * @returns {boolean} True if the instruction was handled, false otherwise.
+     */
+    handleTwoWordOpcode(opcode: string, operand: string): boolean;
+    /**
+     * Handles instructions with a single operand (e.g., "TO R1", "BRA label").
+     * @param {string} opcode - the opcode
+     * @param {string} operand - the operand
+     * @param {number} operandLength - the length of the operand
+     * @returns {boolean} True if the instruction was handled, false otherwise.
+     */
+    handleOneOperandOpcode(opcode: string, operand: string, operandLength: number): boolean;
+    /**
+     * Handles instructions with two operands (e.g., MOVE r1, r2).
+     * @param {string} opcode - the opcode
+     * @param {string} leftOp - the left operand
+     * @param {string} rightOp - the right operand
+     * @returns {boolean} True if the instruction was handled, false otherwise.
+     */
+    handleTwoOperandOpcode(opcode: string, leftOp: string, rightOp: string): boolean;
+    /**
+     * Attempts to parse a register from a string, e.g. "r0", "(r3)", "#3".
+     * @param str the operand string
+     * @param type "r" | "parr" | "hash"
+     * @returns register number or null if it doesn't match
+     */
+    private getRegister;
+    /**
+     * Parses the register number. E.g. '5', '10', '15'. Returns -1 if invalid.
+     * @param str
+     */
+    private parseRegisterNumber;
+    /**
+     * Raises an error if `mid < min` or `mid > max`.
+     * @param min
+     * @param mid
+     * @param max
+     */
+    private rangeCheck;
+    /**
+     * For "LMS" or "SMS" short addressing forms, we need to ensure the address is
+     * even and in range [0x000..0x1FE].
+     * @param {number} num - the address
+     * @returns {boolean} True if the address is valid, false otherwise.
+     */
+    checkShortAddr(num: number): boolean;
+    /**
+     * Returns an approximate operand length (1 or 2) by checking the operand format.
+     * This is a simple approximation for short vs. relative addressing.
+     * @param {string} operand the operand
+     * @returns {number} The operand length.
+     */
+    private getOperandLength;
+}
+//# sourceMappingURL=ArchSuperFX.d.ts.map
