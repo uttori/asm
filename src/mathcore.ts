@@ -1,3 +1,5 @@
+import type { ExpressionHost } from "./architecture-types.js";
+
 let debug = (..._: unknown[]) => {};
 /* c8 ignore next 4 */
 try {
@@ -6,6 +8,7 @@ try {
 } catch {}
 
 export class MathCore {
+  host?: ExpressionHost;
   math_round: boolean = false;
 
   userFunctions: Map<string, { args: string[]; content: string }> = new Map();
@@ -409,7 +412,7 @@ export class MathCore {
             compoundId += "[" + indexVal + "]";
           }
         }
-        const resolved = this.delegate("resolveLabel", compoundId);
+        const resolved = this.getHost().resolveLabel(compoundId);
         if (typeof resolved === "number") {
           value = resolved;
         } else {
@@ -695,11 +698,19 @@ export class MathCore {
       case "pctosnes": {
         if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
         const value = this.numArg(name, args[0]);
-        return this.delegate(name, value) as number;
+        return name === "snestopc"
+          ? this.getHost().convertSnesToPc(value)
+          : this.getHost().convertPcToSnes(value);
       }
       // --- Filesize & File Status ---
       case "filesize":
-      case "getfilestatus":
+      case "getfilestatus": {
+        if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+        const value = this.strArg(name, args[0]);
+        return name === "filesize"
+          ? this.getHost().getFileSize(value)
+          : this.getHost().getFileStatus(value);
+      }
       // --- Preprocessor/Struct & Data Size Functions ---
       case "defined":
       case "sizeof":
@@ -707,7 +718,10 @@ export class MathCore {
       case "datasize": {
         if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
         const value = this.strArg(name, args[0]);
-        return this.delegate(name, value) as number;
+        if (name === "defined") {
+          return this.getHost().isDefined(value);
+        }
+        return this.getHost().getObjectSize(value, name === "sizeof");
       }
       // --- File Can-Read functions ---
       case "canreadfile1":
@@ -717,14 +731,14 @@ export class MathCore {
         if (args.length !== 2) throw new Error(`${name}() expects exactly 2 arguments.`);
         const filename = this.strArg(name, args[0]);
         const pos = this.numArg(name, args[1]);
-        return this.delegate(name, filename, pos) as number;
+        return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
       }
       case "canreadfile": {
         if (args.length !== 3) throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
         const filename = this.strArg(name, args[0]);
         const pos = this.numArg(name, args[1]);
         const num = this.numArg(name, args[2]);
-        return this.delegate(name, filename, pos, num) as number;
+        return this.getHost().canReadFile(filename, pos, num);
       }
       // --- ROM Can-Read functions ---
       case "canread1":
@@ -734,13 +748,13 @@ export class MathCore {
         if (args.length !== 1) throw new Error(`${name} expects exactly 1 numeric argument.`);
         const pos = this.numArg(name, args[0]);
         const size = parseInt(name.slice(-1), 10);
-        return this.delegate(name, pos, size) as number;
+        return this.getHost().canReadRom(pos, size);
       }
       case "canread": {
         if (args.length !== 2) throw new Error("canread expects exactly 2 numeric arguments (pos, num).");
         const pos = this.numArg(name, args[0]);
         const num = this.numArg(name, args[1]);
-        return this.delegate(name, pos, num) as number;
+        return this.getHost().canReadRom(pos, num);
       }
       // --- ROM Reading functions ---
       case "read1":
@@ -750,11 +764,12 @@ export class MathCore {
         if (args.length < 1 || args.length > 2)
           throw new Error(`${name} expects 1 or 2 numeric arguments.`);
         const pos = this.numArg(name, args[0]);
+        const size = parseInt(name.slice(-1), 10);
         if (args.length === 1) {
-          return this.delegate(name, pos) as number;
+          return this.getHost().readRom(pos, size);
         } else {
           const defVal = this.numArg(name, args[1]);
-          return this.delegate(name, pos, defVal) as number;
+          return this.getHost().readRom(pos, size, defVal);
         }
       }
       // --- File Reading functions ---
@@ -765,18 +780,21 @@ export class MathCore {
         if (args.length < 2 || args.length > 3) throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
         const filename = this.strArg(name, args[0]);
         const pos = this.numArg(name, args[1]);
+        const size = parseInt(name.slice(-1), 10);
         if (args.length === 3) {
           const defVal = this.numArg(name, args[2]);
-          return this.delegate(name, filename, pos, defVal) as number;
+          return this.getHost().readFile(filename, pos, size, defVal);
         } else {
-          return this.delegate(name, filename, pos) as number;
+          return this.getHost().readFile(filename, pos, size);
         }
       }
       // --- PC/Realbase ---
       case "pc":
       case "realbase": {
         if (args.length !== 0) throw new Error(`${name}() expects no arguments.`);
-        return this.delegate(name) as number;
+        return name === "pc"
+          ? this.getHost().getCurrentAddress()
+          : this.getHost().getCurrentBaseAddress();
       }
       default: {
         throw new Error(`Unknown built-in function '${name}'`);
@@ -830,12 +848,10 @@ export class MathCore {
     debug("parseFunctionDefinition =", { args: params, content });
   }
 
-  /**
-   * Delegate method for handling external operations.
-   * @param {string} id The identifier for the operation.
-   * @param {...(string | number)} args The arguments for the operation.
-   */
-  delegate: (id: string, ...args: (string | number)[]) => number | string = (id, ...args) => {
-    throw new Error(`Delegate not set for ${id}, ${args.join(", ")}`);
+  private getHost(): ExpressionHost {
+    if (!this.host) {
+      throw new Error("ExpressionHost not set.");
+    }
+    return this.host;
   }
 }

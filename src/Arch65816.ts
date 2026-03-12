@@ -1,4 +1,4 @@
-import { Assembler } from "./assembler.js";
+import type { ArchitectureContext, ArchitectureEncoder } from "./architecture-types.js";
 
 let debug = (..._) => {};
 /* c8 ignore next */
@@ -6,11 +6,80 @@ let debug = (..._) => {};
 try { const { default: d } = await import("debug"); debug = d("Arch65816"); } catch {}
 // }
 
-export class Arch65816 {
-  private assembler: Assembler;
+export class Arch65816 implements ArchitectureEncoder {
+  private assembler: ArchitectureContext;
 
-  constructor(assembler: Assembler) {
+  constructor(assembler: ArchitectureContext) {
     this.assembler = assembler;
+  }
+
+  encode(words: string[]): boolean {
+    return this.asblock_65816(words);
+  }
+
+  estimateSize(words: string[]): number {
+    if (words.length === 0) {
+      return 0;
+    }
+
+    let opcode = words[0].toUpperCase();
+    const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
+    const noOperandOpcodes = new Set([
+      "CLC", "CLD", "CLI", "CLV", "DEX", "DEY", "INX", "INY", "NOP", "PHA", "PHB", "PHD", "PHK",
+      "PHP", "PHX", "PHY", "PLA", "PLB", "PLD", "PLP", "PLX", "PLY", "RTI", "RTL", "RTS", "SEC",
+      "SED", "SEI", "STP", "TAX", "TAY", "TCD", "TCS", "TDC", "TSC", "TSX", "TXA", "TXS", "TXY",
+      "TYA", "TYX", "WAI", "XBA", "XCE",
+    ]);
+    const branchOpcodes = new Set(["BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ", "BRA", "BRL"]);
+
+    if (noOperandOpcodes.has(opcode)) {
+      if (rawOperand.startsWith("#")) {
+        try {
+          return Math.max(1, this.assembler.operandResolver.getnum(rawOperand));
+        } catch {
+          return 1;
+        }
+      }
+      return 1;
+    }
+
+    if (opcode.includes(".")) {
+      const len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
+      opcode = opcode.substring(0, opcode.indexOf("."));
+      return 1 + len;
+    }
+
+    if (branchOpcodes.has(opcode)) {
+      return opcode === "BRL" ? 3 : 2;
+    }
+
+    if (opcode === "MVP" || opcode === "MVN") {
+      return 3;
+    }
+    if (opcode === "PER") {
+      return 3;
+    }
+    if (opcode === "JSL" || opcode === "JML") {
+      return 4;
+    }
+    if (opcode === "JMP" || opcode === "JSR") {
+      return 3;
+    }
+    if (opcode === "PEA") {
+      return 3;
+    }
+    if (["BRK", "COP", "PEI", "REP", "SEP", "WDM"].includes(opcode)) {
+      return 2;
+    }
+
+    const { expanded: operand, length } = this.assembler.operandResolver.expandOperand(rawOperand);
+    if (operand.startsWith("#")) {
+      return 1 + length;
+    }
+    if (/^\$[\dA-Fa-f]{6}(,x)?$/i.test(operand)) {
+      return 4;
+    }
+    return 1 + length;
   }
 
   /**
@@ -27,7 +96,7 @@ export class Arch65816 {
     let opcode = words[0].toUpperCase();
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
     // Expand inner math/labels while keeping addressing markers (like '#' or ',x') intact.
-    const { expanded: operand, length: operandLength } = this.assembler.expandOperand(rawOperand);
+    const { expanded: operand, length: operandLength } = this.assembler.operandResolver.expandOperand(rawOperand);
     debug("asblock_65816 operand expanded", operand, "expected length:", operandLength);
 
     // Handle special cases where length is on the opcode
@@ -95,7 +164,7 @@ export class Arch65816 {
     let hexconstant = false;
     let num = 0;
     if (operand) {
-      num = this.assembler.getnum(operand);
+      num = this.assembler.operandResolver.getnum(operand);
       hexconstant = /^[$%]/.test(operand);
     }
 
@@ -132,10 +201,10 @@ export class Arch65816 {
         this.assembler.write1(immediateOpcodes[opcode]);
         // Force operand length based on explicit setting:
         if (len === 1) {
-          this.assembler.write1(this.assembler.getnum(operand));
+          this.assembler.write1(this.assembler.operandResolver.getnum(operand));
         } else {
           // Default immediate mode uses 2 bytes (even if operand value is small)
-          this.assembler.write2(this.assembler.getnum(operand));
+          this.assembler.write2(this.assembler.operandResolver.getnum(operand));
         }
         return true;
       }
@@ -158,11 +227,11 @@ export class Arch65816 {
         }
         this.assembler.write1(forcedIndexed[opcode][len]);
         if (len === 1) {
-          this.assembler.write1(this.assembler.getnum(baseOperand));
+          this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
         } else if (len === 2) {
-          this.assembler.write2(this.assembler.getnum(baseOperand));
+          this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
         } else if (len === 3) {
-          this.assembler.write3(this.assembler.getnum(baseOperand));
+          this.assembler.write3(this.assembler.operandResolver.getnum(baseOperand));
         }
         return true;
       } else {
@@ -178,11 +247,11 @@ export class Arch65816 {
         }
         this.assembler.write1(forcedNonIndexed[opcode][len]);
         if (len === 1) {
-          this.assembler.write1(this.assembler.getnum(operand));
+          this.assembler.write1(this.assembler.operandResolver.getnum(operand));
         } else if (len === 2) {
-          this.assembler.write2(this.assembler.getnum(operand));
+          this.assembler.write2(this.assembler.operandResolver.getnum(operand));
         } else if (len === 3) {
-          this.assembler.write3(this.assembler.getnum(operand));
+          this.assembler.write3(this.assembler.operandResolver.getnum(operand));
         }
         return true;
       }
@@ -197,9 +266,9 @@ export class Arch65816 {
       if (opcode in absoluteIndexedXOpcodes) {
         debug("handleMemoryOperations =", absoluteIndexedXOpcodes[opcode].toString(16));
         this.assembler.write1(absoluteIndexedXOpcodes[opcode]);
-        debug("handleMemoryOperations =", this.assembler.getnum(operand.slice(0, -2)).toString(16));
+        debug("handleMemoryOperations =", this.assembler.operandResolver.getnum(operand.slice(0, -2)).toString(16));
         // Extract absolute address
-        this.assembler.write2(this.assembler.getnum(operand.slice(0, -2)));
+        this.assembler.write2(this.assembler.operandResolver.getnum(operand.slice(0, -2)));
         return true;
       }
     }
@@ -212,7 +281,7 @@ export class Arch65816 {
       };
       if (opcode in absoluteLongIndexedXOpcodes) {
         this.assembler.write1(absoluteLongIndexedXOpcodes[opcode]);
-        this.assembler.write3(this.assembler.getnum(operand.slice(0, -2))); // Extract absolute long address
+        this.assembler.write3(this.assembler.operandResolver.getnum(operand.slice(0, -2))); // Extract absolute long address
         return true;
       }
     }
@@ -225,7 +294,7 @@ export class Arch65816 {
       };
       if (opcode in indexedIndirectOpcodes) {
         this.assembler.write1(indexedIndirectOpcodes[opcode]);
-        this.assembler.write1(this.assembler.getnum(operand.slice(1, -3)));
+        this.assembler.write1(this.assembler.operandResolver.getnum(operand.slice(1, -3)));
         return true;
       }
     }
@@ -238,7 +307,7 @@ export class Arch65816 {
       };
       if (opcode in indirectDPIndirect) {
           this.assembler.write1(indirectDPIndirect[opcode]);
-          this.assembler.write1(this.assembler.getnum(operand.slice(1, -1)));
+          this.assembler.write1(this.assembler.operandResolver.getnum(operand.slice(1, -1)));
           return true;
       }
     }
@@ -255,7 +324,7 @@ export class Arch65816 {
         debug("handleMemoryOperations = 1", dpIndexedXOpcodes[opcode].toString(16));
         this.assembler.write1(dpIndexedXOpcodes[opcode]);
         debug("handleMemoryOperations = 1.5", operand.slice(0, -2));
-        const dpAddress = this.assembler.getnum(operand.slice(0, -2));
+        const dpAddress = this.assembler.operandResolver.getnum(operand.slice(0, -2));
         debug("handleMemoryOperations = 2", dpAddress.toString(16));
         this.assembler.write1(dpAddress); // Extract DP address
         return true;
@@ -270,7 +339,7 @@ export class Arch65816 {
         };
         if (opcode in stackRelativeOpcodes) {
           this.assembler.write1(stackRelativeOpcodes[opcode]);
-          this.assembler.write1(this.assembler.getnum(operand.slice(1, -3)));
+          this.assembler.write1(this.assembler.operandResolver.getnum(operand.slice(1, -3)));
           return true;
         }
     }
@@ -283,7 +352,7 @@ export class Arch65816 {
         };
         if (opcode in stackIndexedOpcodes) {
             this.assembler.write1(stackIndexedOpcodes[opcode]);
-            this.assembler.write1(this.assembler.getnum(operand.slice(1, -6)));
+            this.assembler.write1(this.assembler.operandResolver.getnum(operand.slice(1, -6)));
             return true;
         }
     }
@@ -295,7 +364,7 @@ export class Arch65816 {
       };
       if (opcode in indirectLongOpcodes) {
           this.assembler.write1(indirectLongOpcodes[opcode]);
-          this.assembler.write1(this.assembler.getnum(operand.slice(1, -1))); // Remove `[$00]`
+          this.assembler.write1(this.assembler.operandResolver.getnum(operand.slice(1, -1))); // Remove `[$00]`
           return true;
       }
     }
@@ -307,7 +376,7 @@ export class Arch65816 {
         };
         if (opcode in indirectLongIndexedOpcodes) {
             this.assembler.write1(indirectLongIndexedOpcodes[opcode]);
-            this.assembler.write1(this.assembler.getnum(operand.slice(1, -3))); // Remove `[$00],Y`
+            this.assembler.write1(this.assembler.operandResolver.getnum(operand.slice(1, -3))); // Remove `[$00],Y`
             return true;
         }
     }
@@ -320,7 +389,7 @@ export class Arch65816 {
         };
         if (opcode in indirectIndexedOpcodes) {
             this.assembler.write1(indirectIndexedOpcodes[opcode]);
-            this.assembler.write1(this.assembler.getnum(operand.slice(1, -3)));
+            this.assembler.write1(this.assembler.operandResolver.getnum(operand.slice(1, -3)));
             return true;
         }
     }
@@ -333,7 +402,7 @@ export class Arch65816 {
         };
         if (opcode in absoluteXOpcodes) {
             this.assembler.write1(absoluteXOpcodes[opcode]);
-            this.assembler.write2(this.assembler.getnum(operand.slice(0, -2)));
+            this.assembler.write2(this.assembler.operandResolver.getnum(operand.slice(0, -2)));
             return true;
         }
     }
@@ -346,7 +415,7 @@ export class Arch65816 {
         };
         if (opcode in absoluteYOpcodes) {
             this.assembler.write1(absoluteYOpcodes[opcode]);
-            this.assembler.write2(this.assembler.getnum(operand.slice(0, -2)));
+            this.assembler.write2(this.assembler.operandResolver.getnum(operand.slice(0, -2)));
             return true;
         }
     }
@@ -360,7 +429,7 @@ export class Arch65816 {
 
       if (opcode in longOpcodes) {
           this.assembler.write1(longOpcodes[opcode]);
-          this.assembler.write3(this.assembler.getnum(operand));
+          this.assembler.write3(this.assembler.operandResolver.getnum(operand));
           return true;
       }
     }
@@ -373,7 +442,7 @@ export class Arch65816 {
       };
       if (opcode in absoluteOpcodes) {
         this.assembler.write1(absoluteOpcodes[opcode]);
-        this.assembler.write2(this.assembler.getnum(operand));
+        this.assembler.write2(this.assembler.operandResolver.getnum(operand));
         return true;
       }
     }
@@ -386,7 +455,7 @@ export class Arch65816 {
       };
       if (opcode in directPageOpcodes) {
         this.assembler.write1(directPageOpcodes[opcode]);
-        this.assembler.write1(this.assembler.getnum(operand));
+        this.assembler.write1(this.assembler.operandResolver.getnum(operand));
         return true;
       }
     } else {
@@ -396,7 +465,7 @@ export class Arch65816 {
       };
       if (opcode in absoluteOpcodes) {
         this.assembler.write1(absoluteOpcodes[opcode]);
-        this.assembler.write2(this.assembler.getnum(operand));
+        this.assembler.write2(this.assembler.operandResolver.getnum(operand));
         return true;
       }
     }
@@ -442,7 +511,7 @@ export class Arch65816 {
       debug("handleLogicAndCompareOperations Immediate Mode", opcode, operand);
       mode = "immediate";
       // Remove `#`
-      address = this.assembler.getnum(operand.slice(1));
+      address = this.assembler.operandResolver.getnum(operand.slice(1));
       this.assembler.write1(opcodes[opcode].immediate);
       if (len === 1) {
         this.assembler.write1(address);
@@ -466,27 +535,27 @@ export class Arch65816 {
         // For indexed addressing:
         if (len === 1) {
           this.assembler.write1(dpXMap[opcode]);
-          this.assembler.write1(this.assembler.getnum(explicitOperand));
+          this.assembler.write1(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 2) {
           this.assembler.write1(absXMap[opcode]);
-          this.assembler.write2(this.assembler.getnum(explicitOperand));
+          this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 3) {
           // For long indexed, assume the opcode is 2 greater than the absoluteX variant.
           this.assembler.write1(absXMap[opcode] + 2);
-          this.assembler.write3(this.assembler.getnum(explicitOperand));
+          this.assembler.write3(this.assembler.operandResolver.getnum(explicitOperand));
         }
         return true;
       } else {
         // Non-indexed addressing:
         if (len === 1) {
           this.assembler.write1(dpMap[opcode]);
-          this.assembler.write1(this.assembler.getnum(explicitOperand));
+          this.assembler.write1(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 2) {
           this.assembler.write1(absMap[opcode]);
-          this.assembler.write2(this.assembler.getnum(explicitOperand));
+          this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 3) {
           this.assembler.write1(absLongMap[opcode]);
-          this.assembler.write3(this.assembler.getnum(explicitOperand));
+          this.assembler.write3(this.assembler.operandResolver.getnum(explicitOperand));
         }
         return true;
       }
@@ -495,81 +564,81 @@ export class Arch65816 {
     // **Absolute Indexed, X Mode (e.g., ORA $0000,X)**
     if (/^\$[\da-f]{4},x$/i.test(operand) && opcodes[opcode].absoluteX) {
       mode = "absoluteX";
-      address = this.assembler.getnum(operand.slice(0, -2)); // Extract absolute address
+      address = this.assembler.operandResolver.getnum(operand.slice(0, -2)); // Extract absolute address
     }
     // **Absolute Indexed, Y Mode (e.g., ORA $0000,Y)**
     else if (/^\$[\da-f]{4},y$/i.test(operand) && opcodes[opcode].absoluteY) {
       mode = "absoluteY";
-      address = this.assembler.getnum(operand.slice(0, -2)); // Extract absolute address
+      address = this.assembler.operandResolver.getnum(operand.slice(0, -2)); // Extract absolute address
     }
     // **Absolute Long**
     else if (/^\$[\dA-Fa-f]{6}$/.test(operand)) {
       mode = "absoluteLong";
-      this.assembler.getnum(operand);
+      this.assembler.operandResolver.getnum(operand);
     }
     else if (/^\$[\da-f]{6},x$/i.test(operand) && opcodes[opcode].absoluteLongX) {
       mode = "absoluteLongX";
-      address = this.assembler.getnum(operand.slice(0, -2));
+      address = this.assembler.operandResolver.getnum(operand.slice(0, -2));
     }
     // **Stack Relative Mode (e.g., ORA $00,s)**
     else if (operand.toLowerCase().endsWith(",s") && opcodes[opcode].stackRelative) {
       mode = "stackRelative";
-      address = this.assembler.getnum(operand.slice(0, -2)); // Extract stack relative address
+      address = this.assembler.operandResolver.getnum(operand.slice(0, -2)); // Extract stack relative address
     }
     // **Stack Relative Indexed Indirect Mode (e.g., ORA ($00,s),Y)**
     else if (operand.startsWith("(") && operand.toLowerCase().endsWith(",s),y") && opcodes[opcode].stackRelativeIndirectY) {
       mode = "stackRelativeIndirectY";
-      address = this.assembler.getnum(operand.slice(1, -6)); // Extract indirect address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -6)); // Extract indirect address
     }
     // **Direct Page Mode (e.g., ORA $00, CMP $00)**
     else if (/^\$[\dA-Fa-f]{2}$/.test(operand)) {
       mode = "direct";
-      this.assembler.getnum(operand);
+      this.assembler.operandResolver.getnum(operand);
     }
     // **Direct Page Indexed, X Mode (e.g., ORA $00,X)**
     else if (operand.toLowerCase().endsWith(",x") && opcodes[opcode].directX) {
       mode = "directX";
-      address = this.assembler.getnum(operand.slice(0, -2)); // Extract DP address
+      address = this.assembler.operandResolver.getnum(operand.slice(0, -2)); // Extract DP address
     }
     // **Indexed Indirect, X Mode (e.g., ORA ($00,X))**
     else if (operand.startsWith("(") && operand.toLowerCase().endsWith(",x)")) {
       mode = "indirectX";
-      address = this.assembler.getnum(operand.slice(1, -3)); // Extract indirect address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -3)); // Extract indirect address
     }
     // **Indirect Indexed, Y Mode (e.g., ORA ($00),Y)**
     else if (operand.startsWith("(") && operand.toLowerCase().endsWith("),y")) {
       mode = "indirectY";
-      address = this.assembler.getnum(operand.slice(1, -3)); // Extract indirect address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -3)); // Extract indirect address
     }
     // **Indirect Mode (e.g., ORA ($00))**
     else if (operand.startsWith("(") && operand.endsWith(")")) {
       mode = "indirect";
-      address = this.assembler.getnum(operand.slice(1, -1)); // Extract indirect address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -1)); // Extract indirect address
     }
     // **Direct Page Indirect Long (ORA [$00])**
     else if (operand.startsWith("[") && operand.endsWith("]") && opcodes[opcode].directIndirectLong) {
       mode = "directIndirectLong";
-      address = this.assembler.getnum(operand.slice(1, -1));
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -1));
     }
     // **Direct Page Indirect Long Indexed, Y (ORA [$00],Y)**
     else if (operand.startsWith("[") && operand.toLowerCase().endsWith("],y") && opcodes[opcode].directIndirectLongY) {
       mode = "directIndirectLongY";
-      address = this.assembler.getnum(operand.slice(1, -3));
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -3));
     }
     // **Indirect Long Mode (e.g., ORA [$00])**
     else if (operand.startsWith("[") && operand.endsWith("]")) {
       mode = "indirectLong";
-      address = this.assembler.getnum(operand.slice(1, -1)); // Extract indirect long address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -1)); // Extract indirect long address
     }
     // **Indirect Long Indexed, Y Mode (e.g., ORA [$00],Y)**
     else if (operand.startsWith("[") && operand.toLowerCase().endsWith("],y")) {
       mode = "indirectLongY";
-      address = this.assembler.getnum(operand.slice(1, -3)); // Extract indirect long address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -3)); // Extract indirect long address
     }
     // **Absolute Mode (e.g., ORA $0000, CMP $0000)**
     else if (/^\$[\dA-Fa-f]{4}$/.test(operand)) {
       mode = "absolute";
-      address = this.assembler.getnum(operand);
+      address = this.assembler.operandResolver.getnum(operand);
     } else {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
     }
@@ -725,9 +794,9 @@ export class Arch65816 {
         }
           this.assembler.write1(forcedIndexed[opcode][len]);
         if (len === 1) {
-          this.assembler.write1(this.assembler.getnum(normalizedOperand));
+          this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
         } else if (len === 2) {
-          this.assembler.write2(this.assembler.getnum(normalizedOperand));
+          this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
         } else {
           throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
         }
@@ -747,9 +816,9 @@ export class Arch65816 {
         }
         this.assembler.write1(forcedNonIndexed[opcode][len]);
         if (len === 1) {
-          this.assembler.write1(this.assembler.getnum(normalizedOperand));
+          this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
         } else if (len === 2) {
-          this.assembler.write2(this.assembler.getnum(normalizedOperand));
+          this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
         } else {
           throw new Error("Forced length for arithmetic operations must be 1 or 2 bytes.");
         }
@@ -768,7 +837,7 @@ export class Arch65816 {
 
       if (opcode in dpIndexedXOpcodes) {
         this.assembler.write1(dpIndexedXOpcodes[opcode]);
-        this.assembler.write1(this.assembler.getnum(rawOperand.slice(0, -2))); // Extract DP address
+        this.assembler.write1(this.assembler.operandResolver.getnum(rawOperand.slice(0, -2))); // Extract DP address
         return true;
       }
     }
@@ -781,7 +850,7 @@ export class Arch65816 {
         };
         if (opcode in absoluteXOpcodes) {
           this.assembler.write1(absoluteXOpcodes[opcode]);
-          this.assembler.write2(this.assembler.getnum(rawOperand.slice(0, -2)));
+          this.assembler.write2(this.assembler.operandResolver.getnum(rawOperand.slice(0, -2)));
           return true;
         }
     }
@@ -794,7 +863,7 @@ export class Arch65816 {
         };
         if (opcode in absoluteOpcodes) {
           this.assembler.write1(absoluteOpcodes[opcode]);
-          this.assembler.write2(this.assembler.getnum(rawOperand));
+          this.assembler.write2(this.assembler.operandResolver.getnum(rawOperand));
           return true;
         }
     }
@@ -806,7 +875,7 @@ export class Arch65816 {
     };
     if (opcode in directPageOpcodes) {
       this.assembler.write1(directPageOpcodes[opcode]);
-      this.assembler.write1(this.assembler.getnum(rawOperand));
+      this.assembler.write1(this.assembler.operandResolver.getnum(rawOperand));
       return true;
     }
 
@@ -838,7 +907,7 @@ export class Arch65816 {
       } else if (isLDY) {
         opcodeByte = 0xA0; // Immediate LDY
       }
-      address = this.assembler.getnum(operand.slice(1));
+      address = this.assembler.operandResolver.getnum(operand.slice(1));
       this.assembler.write1(opcodeByte);
       if (len === 1) {
         this.assembler.write1(address);
@@ -881,7 +950,7 @@ export class Arch65816 {
           opcodeByte = forcedLDYX[len] ?? 0xBC;
         }
       }
-      address = this.assembler.getnum(operand);
+      address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(opcodeByte);
       if (len === 1) {
         this.assembler.write1(address);
@@ -900,24 +969,24 @@ export class Arch65816 {
       if (!isIndexed) {
         if (/^\$[\da-f]{4}$/i.test(operand)) {
           opcodeByte = 0xAE; // Absolute LDX
-          address = this.assembler.getnum(operand);
+          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
           opcodeByte = 0xA6; // Direct page LDX
-          address = this.assembler.getnum(operand);
+          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
       } else {
         if (/^\$[\da-f]{4}$/i.test(operand)) {
           opcodeByte = 0xBE; // Absolute Indexed Y LDX
-          address = this.assembler.getnum(operand);
+          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
           opcodeByte = 0xB6; // Direct page Indexed Y LDX
-          address = this.assembler.getnum(operand);
+          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
@@ -926,24 +995,24 @@ export class Arch65816 {
       if (!isIndexed) {
         if (/^\$[\da-f]{4}$/i.test(operand)) {
           opcodeByte = 0xAC; // Absolute LDY
-          address = this.assembler.getnum(operand);
+          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
           opcodeByte = 0xA4; // Direct page LDY
-          address = this.assembler.getnum(operand);
+          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
       } else {
         if (/^\$[\da-f]{4}$/i.test(operand)) {
           opcodeByte = 0xBC; // Absolute Indexed X LDY
-          address = this.assembler.getnum(operand);
+          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
           opcodeByte = 0xB4; // Direct page Indexed X LDY
-          address = this.assembler.getnum(operand);
+          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
@@ -953,25 +1022,25 @@ export class Arch65816 {
 
     // if (operand.startsWith("#")) {
     //     opcodeByte = isLDX ? 0xA2 : 0xA0; // Immediate: LDX = 0xA2, LDY = 0xA0
-    //     address = this.assembler.getnum(operand.slice(1));
+    //     address = this.assembler.operandResolver.getnum(operand.slice(1));
     // } else if (/^\$[\da-f]{4},y$/i.test(operand) && isLDX) {
     //     opcodeByte = 0xBE; // LDX Absolute Indexed,Y
-    //     address = this.assembler.getnum(operand.slice(0, -2));
+    //     address = this.assembler.operandResolver.getnum(operand.slice(0, -2));
     // } else if (/^\$[\da-f]{2},y$/i.test(operand) && isLDX) {
     //     opcodeByte = 0xB6; // LDX DP Indexed,Y
-    //     address = this.assembler.getnum(operand.slice(0, -2));
+    //     address = this.assembler.operandResolver.getnum(operand.slice(0, -2));
     // } else if (/^\$[\da-f]{4},x$/i.test(operand) && isLDY) {
     //     opcodeByte = 0xBC; // LDY Absolute Indexed,X
-    //     address = this.assembler.getnum(operand.slice(0, -2));
+    //     address = this.assembler.operandResolver.getnum(operand.slice(0, -2));
     // } else if (/^\$[\da-f]{2},x$/i.test(operand) && isLDY) {
     //     opcodeByte = 0xB4; // LDY DP Indexed,X
-    //     address = this.assembler.getnum(operand.slice(0, -2));
+    //     address = this.assembler.operandResolver.getnum(operand.slice(0, -2));
     // } else if (/^\$[\dA-Fa-f]{4}$/.test(operand)) {
     //     opcodeByte = isLDX ? 0xAE : 0xAC; // Absolute: LDX = 0xAE, LDY = 0xAC
-    //     address = this.assembler.getnum(operand);
+    //     address = this.assembler.operandResolver.getnum(operand);
     // } else {
     //     opcodeByte = isLDX ? 0xA6 : 0xA4; // Direct Page: LDX = 0xA6, LDY = 0xA4
-    //     address = this.assembler.getnum(operand);
+    //     address = this.assembler.operandResolver.getnum(operand);
     // }
 
     // this.assembler.write1(opcodeByte);
@@ -1018,13 +1087,13 @@ export class Arch65816 {
 
     // **Plain numeric / hex literal mode**
     if (/^\d+$/.test(operand)) {
-        address = this.assembler.getnum(operand);
+        address = this.assembler.operandResolver.getnum(operand);
         mode = address > 0xFFFF ? longMode(opcode) : shortMode(opcode);
         debug("handleJump mode", mode)
     }
     // **Plain hex literal mode**
     else if (/^\$[\dA-Fa-f]{1,6}$/.test(operand)) {
-        address = this.assembler.getnum(operand);
+        address = this.assembler.operandResolver.getnum(operand);
         mode = operand.length > 5 ? longMode(opcode) : shortMode(opcode);
         debug("handleJump mode", mode)
     }
@@ -1032,25 +1101,25 @@ export class Arch65816 {
     else if (/^\[.*]$/.test(operand)) {
         mode = "JMP_INDIRECT_LONG";
         debug("handleJump mode", mode)
-        address = this.assembler.getnum(operand.slice(1, -1)); // Extract indirect long address
+        address = this.assembler.operandResolver.getnum(operand.slice(1, -1)); // Extract indirect long address
     }
     // **JSR Absolute Indexed Indirect Mode: JSR ($0000,X)**
     else if (opcode === "JSR" && /^\(\$[\dA-Fa-f]{4},x\)$/.test(operand)) {
       mode = "JSR_INDEXED_INDIRECT";
       debug("handleJump mode", mode)
-      address = this.assembler.getnum(operand.slice(1, -3)); // Extract absolute indexed indirect address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -3)); // Extract absolute indexed indirect address
     }
     // **Absolute Indexed Indirect Mode: JMP ($0000,X)**
     else if (/^\(\$[\dA-Fa-f]{4},x\)$/.test(operand)) {
       mode = "JMP_INDEXED_INDIRECT";
       debug("handleJump mode", mode)
-      address = this.assembler.getnum(operand.slice(1, -3)); // Extract absolute indexed indirect address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -3)); // Extract absolute indexed indirect address
     }
     // **Absolute Indirect Mode: JMP ($0000)**
     else if (/^\(\$[\dA-Fa-f]{4}\)$/.test(operand)) {
       mode = "JMP_INDIRECT";
       debug("handleJump mode", mode)
-      address = this.assembler.getnum(operand.slice(1, -1)); // Extract indirect address
+      address = this.assembler.operandResolver.getnum(operand.slice(1, -1)); // Extract indirect address
     }
     else {
       debug("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`)
@@ -1086,7 +1155,7 @@ export class Arch65816 {
         throw new Error("Error: PER requires an operand.");
     }
 
-    const offset = this.assembler.getnum(operand);
+    const offset = this.assembler.operandResolver.getnum(operand);
     const address = offset; // (this.assembler.snespos + offset) & 0xFFFF; // 16-bit wraparound
 
     this.assembler.write1(0x62); // Opcode for PER
@@ -1170,7 +1239,7 @@ export class Arch65816 {
           this.assembler.write1(forcedSTZ[len] ?? 0x9C);
         }
       }
-      address = this.assembler.getnum(operand);
+      address = this.assembler.operandResolver.getnum(operand);
       if (len === 1) {
         this.assembler.write1(address);
       } else if (len === 2) {
@@ -1184,23 +1253,23 @@ export class Arch65816 {
     // DP Indexed, X Mode: STZ $00,x
     if (/^\$[\da-f]{2},x$/i.test(rawOperand) && storeOpcodes[opcode].directX) {
       mode = "directX";
-      address = this.assembler.getnum(rawOperand.slice(0, -2)); // Extract DP address
+      address = this.assembler.operandResolver.getnum(rawOperand.slice(0, -2)); // Extract DP address
     }
     // DP Indexed, Y Mode: STX $00,y
     else if (rawOperand.toLowerCase().endsWith(",y") && storeOpcodes[opcode].directY) {
       mode = "directY";
-      address = this.assembler.getnum(rawOperand.slice(0, -2)); // Extract absolute address
+      address = this.assembler.operandResolver.getnum(rawOperand.slice(0, -2)); // Extract absolute address
     }
     // Absolute Indexed, X Mode: STX $0000,X, STY $0000,X, STZ $0000,X
     else if (/^\$[\da-f]{4},x$/i.test(rawOperand) && storeOpcodes[opcode].absoluteX) {
       mode = "absoluteX";
-      address = this.assembler.getnum(rawOperand.slice(0, -2)); // Extract absolute address
+      address = this.assembler.operandResolver.getnum(rawOperand.slice(0, -2)); // Extract absolute address
     }
 
     // Absolute Mode: STX $0000, STY $0000, STZ $0000
     if (!isIndexed && /^\$[\dA-Fa-f]{4}$/.test(operand)) {
       mode = "absolute";
-      address = this.assembler.getnum(operand);
+      address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[opcode].absolute);
       this.assembler.write2(address);
       return true;
@@ -1208,14 +1277,14 @@ export class Arch65816 {
     // Direct Page Mode: STX $00, STY $00, STZ $00
     else if (!isIndexed && /^\$[\dA-Fa-f]{2}$/.test(operand)) {
       mode = "direct";
-      address = this.assembler.getnum(operand);
+      address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[opcode].direct);
       this.assembler.write1(address);
       return true;
     } else if (isIndexed) {
       // Default indexed: use the indexed variant from the lookup table.
       if (opcode === "STX") {
-        address = this.assembler.getnum(operand);
+        address = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{4}$/i.test(operand)) {
           mode = "absolute";
           this.assembler.write1(storeOpcodes[opcode].absolute);
@@ -1227,7 +1296,7 @@ export class Arch65816 {
         }
         return true;
       } else if (opcode === "STY") {
-        address = this.assembler.getnum(operand);
+        address = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{4}$/i.test(operand)) {
           mode = "absolute";
           this.assembler.write1(storeOpcodes[opcode].absolute);
@@ -1239,7 +1308,7 @@ export class Arch65816 {
         }
         return true;
       } else if (opcode === "STZ") {
-        address = this.assembler.getnum(operand);
+        address = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{4}$/i.test(operand) && storeOpcodes[opcode].absoluteX) {
           mode = "absoluteX";
           this.assembler.write1(storeOpcodes[opcode].absoluteX);
@@ -1269,8 +1338,8 @@ export class Arch65816 {
       throw new Error(`Error: ${opcode} requires two parameters (source, destination).`);
     }
 
-    const srcBank = this.assembler.getnum(params[0]);
-    const destBank = this.assembler.getnum(params[1]);
+    const srcBank = this.assembler.operandResolver.getnum(params[0]);
+    const destBank = this.assembler.operandResolver.getnum(params[1]);
 
     this.assembler.write1(opcode === "MVP" ? 0x44 : 0x54); // MVP = 0x44, MVN = 0x54
     this.assembler.write1(srcBank);
@@ -1325,7 +1394,7 @@ export class Arch65816 {
     // Immediate mode (only BIT supports immediate)
     if (operand.startsWith("#")) {
       debug("handleBitTestOperations immediate", { opcode, operand, value: forcedMaps[opcode].immediate?.toString(16) });
-      address = this.assembler.getnum(operand.slice(1));
+      address = this.assembler.operandResolver.getnum(operand.slice(1));
       if (explicitlen) {
         this.assembler.write1(forcedMaps[opcode].immediate);
         outLength = (len === 1) ? 1 : 2;
@@ -1340,7 +1409,7 @@ export class Arch65816 {
       const rawOperand = operand;
       const isIndexed = rawOperand.toLowerCase().endsWith(",x");
       const normalizedOperand = isIndexed ? rawOperand.slice(0, -2).trim() : rawOperand;
-      address = this.assembler.getnum(normalizedOperand);
+      address = this.assembler.operandResolver.getnum(normalizedOperand);
       if (explicitlen) {
         if (isIndexed) {
           // Forced indexed mode for BIT.
@@ -1459,7 +1528,7 @@ export class Arch65816 {
     } else if (/^-+$/.test(operand)) {
       targetAddress = this.assembler.findPreviousLabel(operand, branchReferenceAddress);
     } else {
-      targetAddress = this.assembler.getnum(operand);
+      targetAddress = this.assembler.operandResolver.getnum(operand);
     }
 
     const currentAddress = this.assembler.snespos + instructionSize; // Offset by instruction size
@@ -1521,7 +1590,7 @@ export class Arch65816 {
     };
 
     if (opcode in memoryBitOpcodes) {
-        const address = this.assembler.getnum(operand);
+        const address = this.assembler.operandResolver.getnum(operand);
         const opcodeByte = operand.length === 5 ? memoryBitOpcodes[opcode].absolute : memoryBitOpcodes[opcode].direct;
 
         this.assembler.write1(opcodeByte);

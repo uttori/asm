@@ -1,5 +1,23 @@
 import { test } from "./ava-helper.js";
+import type { ExpressionHost } from "../src/architecture-types.js";
 import { MathCore } from "../src/mathcore.js";
+
+const createExpressionHost = (overrides: Partial<ExpressionHost> = {}): ExpressionHost => ({
+  resolveLabel: () => 0,
+  convertSnesToPc: (address) => address,
+  convertPcToSnes: (offset) => offset,
+  getCurrentAddress: () => 0,
+  getCurrentBaseAddress: () => 0,
+  isDefined: () => 0,
+  getObjectSize: () => 0,
+  getFileSize: () => 0,
+  getFileStatus: () => 1,
+  canReadFile: () => 0,
+  readFile: () => 0,
+  canReadRom: () => 0,
+  readRom: () => 0,
+  ...overrides,
+});
 
 test("reset - resets math core state", t => {
   const mathCore = new MathCore();
@@ -245,12 +263,13 @@ test("math - depth parameter", t => {
 test("math - with label resolver", t => {
   const mathCore = new MathCore();
 
-  // Set up a mock label resolver
-  mathCore.delegate = (name: string, id: string) => {
-    if (id === "LABEL1") return 10;
-    if (id === "LABEL2") return 20;
-    throw new Error(`Unknown label: ${id}`);
-  };
+  mathCore.host = createExpressionHost({
+    resolveLabel: (id) => {
+      if (id === "LABEL1") return 10;
+      if (id === "LABEL2") return 20;
+      throw new Error(`Unknown label: ${id}`);
+    },
+  });
 
   // Test with labels
   t.is(mathCore.math("LABEL1 + LABEL2"), 30);
@@ -733,16 +752,17 @@ test("getnum - parentheses", t => {
 test("getnum - struct functions with bitwise operators", t => {
   const mathCore = new MathCore();
 
-  // Setup delegate for sizeof and objectsize
-  mathCore.delegate = (operation: string, value: string): number => {
-    if (operation === "sizeof" && value === "MyStruct") {
-      return 24;
-    }
-    if (operation === "objectsize" && value === "MyObject") {
-      return 48;
-    }
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    getObjectSize: (value, baseOnly = false) => {
+      if (baseOnly && value === "MyStruct") {
+        return 24;
+      }
+      if (!baseOnly && value === "MyObject") {
+        return 48;
+      }
+      return 0;
+    },
+  });
 
   // Test sizeof with identifier
   t.is(mathCore.math("sizeof(MyStruct)"), 24);
@@ -841,15 +861,13 @@ test("getnum - function calls", t => {
 test("getnum - identifier resolution", t => {
   const mathCore = new MathCore();
 
-  // Setup delegate for resolveLabel
-  mathCore.delegate = (operation: string, value: string): number | string => {
-    if (operation === "resolveLabel") {
+  mathCore.host = createExpressionHost({
+    resolveLabel: (value) => {
       if (value === "LABEL1") return 100;
-      if (value === "STRUCT_NAME") return "MyStruct"; // Return string for struct names
+      if (value === "STRUCT_NAME") return "MyStruct";
       return 0;
-    }
-    return 0;
-  };
+    },
+  });
 
   // Test label resolution
   mathCore.str = "LABEL1";
@@ -871,14 +889,15 @@ test("getnum - identifier resolution", t => {
 test("getnum - compound identifier resolution", t => {
   const mathCore = new MathCore();
 
-  mathCore.delegate = (operation: string, value: string): number | string => {
-    if (operation !== "resolveLabel") return 0;
-    if (value === "MyStruct.Child") return 321;
-    if (value === "MyStruct[2].field") return 654;
-    if (value === "Config.Section") return "ConfigSection";
-    if (value === "TrailingDot") return 777;
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    resolveLabel: (value) => {
+      if (value === "MyStruct.Child") return 321;
+      if (value === "MyStruct[2].field") return 654;
+      if (value === "Config.Section") return "ConfigSection";
+      if (value === "TrailingDot") return 777;
+      return 0;
+    },
+  });
 
   // Dot-member parsing
   mathCore.str = "MyStruct.Child";
@@ -1019,13 +1038,9 @@ test("callFunction - dispatches to built-in functions", t => {
 test("callFunction - handles string arguments for appropriate functions", t => {
   const mathCore = new MathCore();
 
-  // Mock the delegate method for testing
-  mathCore.delegate = (name: string): number => {
-    if (name === "defined") {
-      return 1; // Simulate that the symbol is defined
-    }
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    isDefined: (name) => (name === "some_symbol" ? 1 : 0),
+  });
 
   // Test with a function that can accept string arguments
   t.is(mathCore.callFunction("defined", ["some_symbol"]), 1);
@@ -1096,17 +1111,14 @@ test("callUserFunction - error cases", t => {
 
 test("callUserFunction - supports string arguments", t => {
   const mathCore = new MathCore();
-  mathCore.delegate = (id: string, ...args: (number | string)[]): number | string => {
-    if (id === "readfile1") {
-      const filename = args[0] as string;
-      const pos = args[1] as number;
-      if (filename === "data/64kb.bin" && pos === 1) {
+  mathCore.host = createExpressionHost({
+    readFile: (filename, pos, size) => {
+      if (size === 1 && filename === "data/64kb.bin" && pos === 1) {
         return 0x20;
       }
       return 0x10;
-    }
-    return 0;
-  };
+    },
+  });
 
   mathCore.userFunctions.set("readfile1_incremented", {
     args: ["filename", "pos"],
@@ -1457,21 +1469,21 @@ test("callBuiltInFunction - round function", t => {
   }, { message: "round() expects exactly 2 numeric arguments." });
 });
 
-test("callBuiltInFunction - delegate functions with exactly 1 argument", t => {
+test("callBuiltInFunction - host functions with exactly 1 argument", t => {
   const mathCore = new MathCore();
-
-  // Set up delegate to return specific values for various functions
-  mathCore.delegate = (name: string, value: string | number) => {
-    if (name === "snestopc" && value === 0x8000) return 0x018000;
-    if (name === "pctosnes" && value === 0x018000) return 0x8000;
-    if (name === "filesize" && value === "test.bin") return 1024;
-    if (name === "getfilestatus" && value === "test.bin") return 1;
-    if (name === "defined" && value === "LABEL") return 1;
-    if (name === "sizeof" && value === "STRUCT") return 16;
-    if (name === "objectsize" && value === "OBJECT") return 32;
-    if (name === "datasize" && value === "DATA") return 64;
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    convertSnesToPc: (value) => value === 0x8000 ? 0x018000 : 0,
+    convertPcToSnes: (value) => value === 0x018000 ? 0x8000 : 0,
+    getFileSize: (value) => value === "test.bin" ? 1024 : 0,
+    getFileStatus: (value) => value === "test.bin" ? 1 : 0,
+    isDefined: (value) => value === "LABEL" ? 1 : 0,
+    getObjectSize: (value, baseOnly = false) => {
+      if (baseOnly && value === "STRUCT") return 16;
+      if (!baseOnly && value === "OBJECT") return 32;
+      if (!baseOnly && value === "DATA") return 64;
+      return 0;
+    },
+  });
 
   // Test snestopc function
   t.is(mathCore.callBuiltInFunction("snestopc", [0x8000]), 0x018000);
@@ -1517,34 +1529,9 @@ test("callBuiltInFunction - delegate functions with exactly 1 argument", t => {
 
 test("callBuiltInFunction - canreadfile", t => {
   const mathCore = new MathCore();
-
-  // Mock the delegate function to handle canreadfile calls
-  mathCore.delegate = (operation, ...args) => {
-    if (operation === "canreadfile") {
-      const filename = args[0] as string;
-      const pos = args[1] as number;
-      // const num = args[2] as number;
-
-      // Return 1 if filename is valid and position is within range
-      if (filename === "test.bin" && pos >= 0 && pos < 0x1000) {
-        return 1;
-      }
-      return 0;
-    }
-
-    if (operation.match(/^canreadfile[1-4]$/)) {
-      const filename = args[0] as string;
-      const pos = args[1] as number;
-
-      // Return 1 if filename is valid and position is within range
-      if (filename === "test.bin" && pos >= 0 && pos < 0x1000) {
-        return 1;
-      }
-      return 0;
-    }
-
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    canReadFile: (filename, pos) => (filename === "test.bin" && pos >= 0 && pos < 0x1000) ? 1 : 0,
+  });
 
   // Test canreadfile with valid filename and position
   t.is(mathCore.callBuiltInFunction("canreadfile", ["test.bin", 100, 10]), 1);
@@ -1602,25 +1589,9 @@ test("callBuiltInFunction - canreadfile", t => {
 
 test("callBuiltInFunction - canread", t => {
   const mathCore = new MathCore();
-
-  // Mock the delegate function to handle canread calls
-  mathCore.delegate = (operation, ...args) => {
-    if (operation === "canread") {
-      const pos = args[0] as number;
-      // const num = args[1] as number;
-      // Return 1 if position is valid, 0 otherwise
-      return (pos >= 0 && pos < 0x1000) ? 1 : 0;
-    }
-
-    if (operation.startsWith("canread") && operation.length === 8) {
-      const pos = args[0] as number;
-      // const size = args[1] as number;
-      // Return 1 if position is valid, 0 otherwise
-      return (pos >= 0 && pos < 0x1000) ? 1 : 0;
-    }
-
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    canReadRom: (pos) => (pos >= 0 && pos < 0x1000) ? 1 : 0,
+  });
 
   // Test canread with valid position
   t.is(mathCore.callBuiltInFunction("canread", [100, 10]), 1);
@@ -1668,25 +1639,14 @@ test("callBuiltInFunction - canread", t => {
 
 test("callBuiltInFunction - read", t => {
   const mathCore = new MathCore();
-
-  // Mock the delegate function to handle read calls
-  mathCore.delegate = (operation, ...args) => {
-    if (operation.startsWith("read")) {
-      const pos = args[0] as number;
-
-      // Return different values based on the function
-      if (operation === "read1") return pos + 1;
-      if (operation === "read2") return pos + 2;
-      if (operation === "read3") return pos + 3;
-      if (operation === "read4") return pos + 4;
-
-      // Handle default value case
-      if (args.length === 2) {
-        return args[1]; // Return the default value
+  mathCore.host = createExpressionHost({
+    readRom: (pos, size, defaultValue) => {
+      if (pos === 0xFFFFFF && defaultValue !== undefined) {
+        return defaultValue;
       }
-    }
-    return 0;
-  };
+      return pos + size;
+    },
+  });
 
   // Test read1, read2, read3, read4 with 1 argument
   t.is(mathCore.callBuiltInFunction("read1", [10]), 11);
@@ -1699,14 +1659,6 @@ test("callBuiltInFunction - read", t => {
   t.is(mathCore.callBuiltInFunction("read2", [20, 99]), 22);
   t.is(mathCore.callBuiltInFunction("read3", [30, 99]), 33);
   t.is(mathCore.callBuiltInFunction("read4", [40, 99]), 44);
-
-  // Test with invalid position but with default value
-  mathCore.delegate = (operation, ...args) => {
-    if (operation.startsWith("read") && args.length === 2) {
-      return args[1]; // Return the default value
-    }
-    throw new Error("Invalid position");
-  };
 
   t.is(mathCore.callBuiltInFunction("read1", [0xFFFFFF, 99]), 99);
   t.is(mathCore.callBuiltInFunction("read2", [0xFFFFFF, 99]), 99);
@@ -1730,33 +1682,17 @@ test("callBuiltInFunction - read", t => {
 
 test("callBuiltInFunction - readfile", t => {
   const mathCore = new MathCore();
-
-  // Mock the delegate function to handle readfile calls
-  mathCore.delegate = (operation, ...args) => {
-    if (operation.startsWith("readfile")) {
-      const filename = args[0] as string;
-      const pos = args[1] as number;
-
-      // Return different values based on the function and arguments
+  mathCore.host = createExpressionHost({
+    readFile: (filename, pos, size, defaultValue) => {
       if (filename === "test.bin") {
-        if (operation === "readfile1") return pos + 1;
-        if (operation === "readfile2") return pos + 2;
-        if (operation === "readfile3") return pos + 3;
-        if (operation === "readfile4") return pos + 4;
+        return pos + size;
       }
-
-      // Handle default value case
-      if (args.length === 3) {
-        return args[2]; // Return the default value
+      if (defaultValue !== undefined) {
+        return defaultValue;
       }
-
-      // Simulate file not found or read error
-      if (filename === "nonexistent.bin") {
-        throw new Error("File not found");
-      }
-    }
-    return 0;
-  };
+      throw new Error("File not found");
+    },
+  });
 
   // Test readfile1, readfile2, readfile3, readfile4 with 2 arguments
   t.is(mathCore.callBuiltInFunction("readfile1", ["test.bin", 10]), 11);
@@ -1805,13 +1741,10 @@ test("callBuiltInFunction - readfile", t => {
 
 test("callBuiltInFunction - pc & realbase", t => {
   const mathCore = new MathCore();
-
-  // Set up delegate to return specific values for pc and realbase
-  mathCore.delegate = (name: string) => {
-    if (name === "pc") return 0x8000;
-    if (name === "realbase") return 0xC000;
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    getCurrentAddress: () => 0x8000,
+    getCurrentBaseAddress: () => 0xC000,
+  });
 
   // Test pc function
   t.is(mathCore.callBuiltInFunction("pc", []), 0x8000);
@@ -1845,10 +1778,14 @@ test("callBuiltInFunction - unhandled", t => {
     mathCore.callBuiltInFunction("unknownFunction", []);
   }, { message: "Unknown built-in function 'unknownFunction'" });
 
-  // Test with unimplemented delegate functions
-  mathCore.delegate = (name: string) => {
-    throw new Error(`Delegate not implemented for ${name}`);
-  };
+  mathCore.host = createExpressionHost({
+    convertSnesToPc: () => {
+      throw new Error("Delegate not implemented for snestopc");
+    },
+    convertPcToSnes: () => {
+      throw new Error("Delegate not implemented for pctosnes");
+    },
+  });
 
   t.throws(() => {
     mathCore.callBuiltInFunction("snestopc", [0x8000]);
@@ -1858,15 +1795,35 @@ test("callBuiltInFunction - unhandled", t => {
     mathCore.callBuiltInFunction("pctosnes", [0x018000]);
   }, { message: "Delegate not implemented for pctosnes" });
 
-  // Test with delegate that returns unexpected values
-  mathCore.delegate = (name: string) => {
-    return "not a number" as any;
+  mathCore.host = createExpressionHost({
+    isDefined: () => 1,
+  });
+  t.is(mathCore.callBuiltInFunction("defined", ["LABEL"]), 1);
+});
+
+test("callBuiltInFunction - typed host routes address and file helpers", t => {
+  const mathCore = new MathCore();
+  mathCore.host = {
+    resolveLabel: () => 0,
+    convertSnesToPc: (address) => address - 0x7F0000,
+    convertPcToSnes: (offset) => offset + 0x800000,
+    getCurrentAddress: () => 0x808000,
+    getCurrentBaseAddress: () => 0x008000,
+    isDefined: (identifier) => identifier === "LABEL" ? 1 : 0,
+    getObjectSize: () => 4,
+    getFileSize: () => 16,
+    getFileStatus: () => 0,
+    canReadFile: () => 1,
+    readFile: (_filename, _position, _size, __value) => 0x34,
+    canReadRom: () => 1,
+    readRom: () => 0x12,
   };
 
-  // This should not throw as the delegate is responsible for proper type conversion
-  const result = mathCore.callBuiltInFunction("defined", ["LABEL"]);
-  t.is(typeof result, "string");
-  t.is(result, "not a number");
+  t.is(mathCore.callBuiltInFunction("snestopc", [0x808000]), 0x18000);
+  t.is(mathCore.callBuiltInFunction("pctosnes", [0x008000]), 0x808000);
+  t.is(mathCore.callBuiltInFunction("defined", ["LABEL"]), 1);
+  t.is(mathCore.callBuiltInFunction("read1", [0x808000]), 0x12);
+  t.is(mathCore.callBuiltInFunction("readfile1", ["demo.bin", 0]), 0x34);
 });
 
 test("callBuiltInFunction - string comparison", t => {
@@ -1923,16 +1880,10 @@ test("callBuiltInFunction - string comparison", t => {
 test("callBuiltInFunction - pc, realbase", (t) => {
   const mathCore = new MathCore();
 
-  // Setup delegate function to handle these operations
-  mathCore.delegate = (operation: string, value?: string): number => {
-    if (operation === "pc") {
-      return 0x8000;
-    }
-    if (operation === "realbase") {
-      return 0xC00000;
-    }
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    getCurrentAddress: () => 0x8000,
+    getCurrentBaseAddress: () => 0xC00000,
+  });
 
   // Test pc function
   t.is(mathCore.callBuiltInFunction("pc", []), 0x8000);
@@ -2043,33 +1994,29 @@ test("parseFunctionDefinition", t => {
   }, { message: "Invalid function definition syntax." });
 });
 
-test("delegate & labelResolver", (t) => {
+test("host requirement & labelResolver", (t) => {
   const mathCore = new MathCore();
 
-  // Test delegate function with default behavior
   t.throws(() => {
-    mathCore.delegate("sizeof", "myStruct");
-  }, { message: "Delegate not set for sizeof, myStruct" });
+    mathCore.callBuiltInFunction("sizeof", ["myStruct"]);
+  }, { message: "ExpressionHost not set." });
 
   t.throws(() => {
-    mathCore.delegate("objectsize", "myObject");
-  }, { message: "Delegate not set for objectsize, myObject" });
+    mathCore.callBuiltInFunction("objectsize", ["myObject"]);
+  }, { message: "ExpressionHost not set." });
 
-  // Test setting and using custom delegate function
-  mathCore.delegate = (operation: string, value: string): number => {
-    if (operation === "sizeof" && value === "myStruct") {
-      return 42;
-    } else if (operation === "objectsize" && value === "myObject") {
-      return 24;
-    }
-    return 0;
-  };
+  mathCore.host = createExpressionHost({
+    getObjectSize: (value, baseOnly = false) => {
+      if (baseOnly && value === "myStruct") {
+        return 42;
+      }
+      if (!baseOnly && value === "myObject") {
+        return 24;
+      }
+      return 0;
+    },
+  });
 
-  t.is(mathCore.delegate("sizeof", "myStruct"), 42);
-  t.is(mathCore.delegate("objectsize", "myObject"), 24);
-  t.is(mathCore.delegate("unknown", "value"), 0);
-
-  // Test built-in functions that use delegate
   t.is(mathCore.callBuiltInFunction("sizeof", ["myStruct"]), 42);
   t.is(mathCore.callBuiltInFunction("objectsize", ["myObject"]), 24);
 });

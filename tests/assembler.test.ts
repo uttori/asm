@@ -8,31 +8,31 @@ test("getnum - handles numeric literals", t => {
   const assembler = new Assembler();
 
   // Decimal literals
-  t.is(assembler.getnum("10"), 10, "Should parse decimal literals");
-  t.is(assembler.getnum("0"), 0, "Should parse zero");
-  t.is(assembler.getnum("255"), 255, "Should parse larger decimal values");
+  t.is(assembler.operandResolver.getnum("10"), 10, "Should parse decimal literals");
+  t.is(assembler.operandResolver.getnum("0"), 0, "Should parse zero");
+  t.is(assembler.operandResolver.getnum("255"), 255, "Should parse larger decimal values");
 
   // Hexadecimal literals
-  t.is(assembler.getnum("$10"), 16, "Should parse hex literals with $ prefix");
-  t.is(assembler.getnum("$FF"), 255, "Should parse larger hex values");
-  t.is(assembler.getnum("$0"), 0, "Should parse hex zero");
+  t.is(assembler.operandResolver.getnum("$10"), 16, "Should parse hex literals with $ prefix");
+  t.is(assembler.operandResolver.getnum("$FF"), 255, "Should parse larger hex values");
+  t.is(assembler.operandResolver.getnum("$0"), 0, "Should parse hex zero");
 
   // Binary literals
-  t.is(assembler.getnum("%1010"), 10, "Should parse binary literals");
-  t.is(assembler.getnum("%11111111"), 255, "Should parse larger binary values");
-  t.is(assembler.getnum("%0"), 0, "Should parse binary zero");
+  t.is(assembler.operandResolver.getnum("%1010"), 10, "Should parse binary literals");
+  t.is(assembler.operandResolver.getnum("%11111111"), 255, "Should parse larger binary values");
+  t.is(assembler.operandResolver.getnum("%0"), 0, "Should parse binary zero");
 
   // With whitespace
-  t.is(assembler.getnum(" 42 "), 42, "Should handle whitespace");
+  t.is(assembler.operandResolver.getnum(" 42 "), 42, "Should handle whitespace");
 });
 
 test("getnum - handles immediate values", t => {
   const assembler = new Assembler();
 
   // Immediate values with # prefix
-  t.is(assembler.getnum("#10"), 10, "Should parse immediate decimal values");
-  t.is(assembler.getnum("#$FF"), 255, "Should parse immediate hex values");
-  t.is(assembler.getnum("# 42"), 42, "Should handle whitespace after #");
+  t.is(assembler.operandResolver.getnum("#10"), 10, "Should parse immediate decimal values");
+  t.is(assembler.operandResolver.getnum("#$FF"), 255, "Should parse immediate hex values");
+  t.is(assembler.operandResolver.getnum("# 42"), 42, "Should handle whitespace after #");
 });
 
 test("getnum - resolves defines", t => {
@@ -42,9 +42,9 @@ test("getnum - resolves defines", t => {
   assembler.defines.set("TEST_VALUE", "42");
   assembler.defines.set("HEX_VALUE", "$FF");
 
-  t.is(assembler.getnum("!TEST_VALUE"), 42, "Should resolve defines to their values");
-  t.is(assembler.getnum("#!TEST_VALUE"), 42, "Should resolve defines in immediate mode");
-  t.is(assembler.getnum("!HEX_VALUE"), 255, "Should resolve defines with hex values");
+  t.is(assembler.operandResolver.getnum("!TEST_VALUE"), 42, "Should resolve defines to their values");
+  t.is(assembler.operandResolver.getnum("#!TEST_VALUE"), 42, "Should resolve defines in immediate mode");
+  t.is(assembler.operandResolver.getnum("!HEX_VALUE"), 255, "Should resolve defines with hex values");
 });
 
 test("getnum - handles labels", t => {
@@ -55,8 +55,8 @@ test("getnum - handles labels", t => {
   getLabelValueStub.withArgs("label1", false).returns(0x1000);
   getLabelValueStub.withArgs("another_label", false).returns(0x2000);
 
-  t.is(assembler.getnum("label1"), 0x1000, "Should resolve label values");
-  t.is(assembler.getnum("another_label"), 0x2000, "Should resolve different label values");
+  t.is(assembler.operandResolver.getnum("label1"), 0x1000, "Should resolve label values");
+  t.is(assembler.operandResolver.getnum("another_label"), 0x2000, "Should resolve different label values");
 });
 
 test("getnum - handles math expressions", t => {
@@ -68,9 +68,9 @@ test("getnum - handles math expressions", t => {
   mathStub.withArgs("$10*2").returns(32);
   mathStub.withArgs("(20-5)/3").returns(5);
 
-  t.is(assembler.getnum("10+5"), 15, "Should evaluate addition expressions");
-  t.is(assembler.getnum("$10*2"), 32, "Should evaluate multiplication with hex values");
-  t.is(assembler.getnum("(20-5)/3"), 5, "Should evaluate complex expressions with parentheses");
+  t.is(assembler.operandResolver.getnum("10+5"), 15, "Should evaluate addition expressions");
+  t.is(assembler.operandResolver.getnum("$10*2"), 32, "Should evaluate multiplication with hex values");
+  t.is(assembler.operandResolver.getnum("(20-5)/3"), 5, "Should evaluate complex expressions with parentheses");
 });
 
 test("getnum - throws error for undefined defines", t => {
@@ -81,7 +81,7 @@ test("getnum - throws error for undefined defines", t => {
   resolvedefinesStub.withArgs("UNDEFINED_DEFINE").throws(new Error("Define 'UNDEFINED_DEFINE' not found."));
 
   t.throws(() => {
-    assembler.getnum("UNDEFINED_DEFINE");
+    assembler.operandResolver.getnum("UNDEFINED_DEFINE");
   }, { message: "Define 'UNDEFINED_DEFINE' not found." }, "Should throw for undefined defines");
 });
 
@@ -535,15 +535,15 @@ test("expandOperand - handles resolvedefines errors", t => {
   sinon.stub(assembler, "resolvedefines").throws(new Error("Define not found"));
 
   // Call expandOperand with an operand that would trigger resolvedefines
-  const { expanded, length } = assembler.expandOperand("SOME_DEFINE");
+  const { expanded, length } = assembler.operandResolver.expandOperand("SOME_DEFINE");
 
   // Verify that the original operand is returned unchanged
   t.is(expanded, "SOME_DEFINE");
   t.is(length, 2); // Default length should be used
 
-  // Verify that resolvedefines was called
-  t.true(assembler.resolvedefines.calledOnce);
-  t.true(assembler.resolvedefines.calledWith("SOME_DEFINE"));
+  const resolvedefinesStub = assembler.resolvedefines as unknown as sinon.SinonStub;
+  t.true(resolvedefinesStub.calledOnce);
+  t.true(resolvedefinesStub.calledWith("SOME_DEFINE"));
 
   // Clean up
   sinon.restore();
@@ -551,7 +551,7 @@ test("expandOperand - handles resolvedefines errors", t => {
 
 test("expandOperand - immediate mode with small value", t => {
   const assembler = new Assembler();
-  const { expanded, length } = assembler.expandOperand("#$10");
+  const { expanded, length } = assembler.operandResolver.expandOperand("#$10");
 
   t.is(expanded, "#$10");
   t.is(length, 1);
@@ -559,7 +559,7 @@ test("expandOperand - immediate mode with small value", t => {
 
 test("expandOperand - immediate mode with large value", t => {
   const assembler = new Assembler();
-  const { expanded, length } = assembler.expandOperand("#$1000");
+  const { expanded, length } = assembler.operandResolver.expandOperand("#$1000");
 
   t.is(expanded, "#$1000");
   t.is(length, 2);
@@ -567,7 +567,7 @@ test("expandOperand - immediate mode with large value", t => {
 
 test("expandOperand - immediate mode with very large value", t => {
   const assembler = new Assembler();
-  const { expanded, length } = assembler.expandOperand("#$100000");
+  const { expanded, length } = assembler.operandResolver.expandOperand("#$100000");
 
   t.is(expanded, "#$100000");
   t.is(length, 3);
@@ -575,7 +575,7 @@ test("expandOperand - immediate mode with very large value", t => {
 
 test("expandOperand - immediate mode with decimal value", t => {
   const assembler = new Assembler();
-  const { expanded, length } = assembler.expandOperand("#42");
+  const { expanded, length } = assembler.operandResolver.expandOperand("#42");
 
   t.is(expanded, "#$2A");
   t.is(length, 1);
@@ -583,7 +583,7 @@ test("expandOperand - immediate mode with decimal value", t => {
 
 test("expandOperand - immediate mode with expression", t => {
   const assembler = new Assembler();
-  const { expanded, length } = assembler.expandOperand("#10+20");
+  const { expanded, length } = assembler.operandResolver.expandOperand("#10+20");
 
   t.is(expanded, "#$1E");
   t.is(length, 1);
@@ -591,30 +591,29 @@ test("expandOperand - immediate mode with expression", t => {
 
 test("expandOperand - immediate mode with failed expression evaluation", t => {
   const assembler = new Assembler();
-  sinon.stub(assembler, "getnum").throws(new Error("Invalid expression"));
+  sinon.stub(assembler.operandResolver, "getnum").throws(new Error("Invalid expression"));
 
-  const { expanded, length } = assembler.expandOperand("#invalid_expr");
+  const { expanded, length } = assembler.operandResolver.expandOperand("#invalid_expr");
 
   t.is(expanded, "#invalid_expr");
-  t.is(length, 2); // Default length for immediate mode
+  t.is(length, 2);
 });
 
 test("expandOperand - immediate mode with unresolved label", t => {
   const assembler = new Assembler();
-  sinon.stub(assembler, "tryResolveLabelInOperand").returns("#unknown_label");
-  sinon.stub(assembler, "getnum").throws(new Error("Label not found"));
+  sinon.stub(assembler.operandResolver, "getnum").throws(new Error("Label not found"));
 
-  const { expanded, length } = assembler.expandOperand("#unknown_label");
+  const { expanded, length } = assembler.operandResolver.expandOperand("#unknown_label");
 
   t.is(expanded, "#unknown_label");
-  t.is(length, 2); // Default length for immediate mode
+  t.is(length, 2);
 });
 
 test("expandOperand - bank operation forces two bytes", t => {
   const assembler = new Assembler();
   sinon.stub(assembler.mathCore, "math").returns(0x10); // Return a small value that would normally be 1 byte
 
-  const { expanded, length } = assembler.expandOperand("bank(label)");
+  const { expanded, length } = assembler.operandResolver.expandOperand("bank(label)");
 
   t.is(expanded, "$10");
   t.is(length, 2); // Should force 2 bytes despite small value
@@ -624,7 +623,7 @@ test("expandOperand - immediate mode with bank operation", t => {
   const assembler = new Assembler();
   sinon.stub(assembler.mathCore, "math").returns(0x10);
 
-  const { expanded, length } = assembler.expandOperand("#bank(label)");
+  const { expanded, length } = assembler.operandResolver.expandOperand("#bank(label)");
 
   t.is(expanded, "#$10");
   t.is(length, 2); // Should force 2 bytes despite small value
@@ -632,7 +631,7 @@ test("expandOperand - immediate mode with bank operation", t => {
 
 test("expandOperand - indexed mode", t => {
   const assembler = new Assembler();
-  const { expanded, length } = assembler.expandOperand("$1000,X");
+  const { expanded, length } = assembler.operandResolver.expandOperand("$1000,X");
 
   t.is(expanded, "$1000,X");
   t.is(length, 2);
@@ -640,7 +639,7 @@ test("expandOperand - indexed mode", t => {
 
 test("expandOperand - indirect mode", t => {
   const assembler = new Assembler();
-  const { expanded, length } = assembler.expandOperand("[$1234]");
+  const { expanded, length } = assembler.operandResolver.expandOperand("[$1234]");
 
   t.is(expanded, "[$1234]");
   t.is(length, 2);
@@ -650,7 +649,7 @@ test("expandOperand - resolves defines", t => {
   const assembler = new Assembler();
   assembler.defines.set("TEST_DEFINE", "$2000");
 
-  const { expanded, length } = assembler.expandOperand("!TEST_DEFINE");
+  const { expanded, length } = assembler.operandResolver.expandOperand("!TEST_DEFINE");
 
   t.is(expanded, "$2000");
   t.is(length, 2);
@@ -663,7 +662,7 @@ test("expandOperand - evaluates math expressions", t => {
   sinon.stub(assembler.mathCore, "math").returns(0x30);
   sinon.stub(assembler, "resolvedefines").returns("10+20");
 
-  const { expanded, length } = assembler.expandOperand("10+20");
+  const { expanded, length } = assembler.operandResolver.expandOperand("10+20");
 
   t.is(expanded, "$30");
   t.is(length, 1); // Small value, so 1 byte
@@ -674,7 +673,7 @@ test("expandOperand - handles label references", t => {
   assembler.pass = 1;
 
   // Test 1: Label not found
-  const { expanded: expanded1, length: length1 } = assembler.expandOperand("some_label");
+  const { expanded: expanded1, length: length1 } = assembler.operandResolver.expandOperand("some_label");
   t.is(expanded1, "some_label");
   t.is(length1, 2); // Default for labels
 
@@ -682,7 +681,7 @@ test("expandOperand - handles label references", t => {
   // Set up the label in the label table
   assembler.setLabel("found_label", 0x1234, false);
 
-  const { expanded: expanded2, length: length2 } = assembler.expandOperand("found_label");
+  const { expanded: expanded2, length: length2 } = assembler.operandResolver.expandOperand("found_label");
   t.is(expanded2, "4660");
   t.is(length2, 2); // Should be 2 bytes for this address
 });
@@ -694,7 +693,7 @@ test("expandOperand - handles complex math expressions", t => {
   sinon.stub(assembler, "resolvedefines").returns("($1000 + $20) & $FF");
   sinon.stub(assembler.mathCore, "math").returns(0x20);
 
-  const { expanded, length } = assembler.expandOperand("($1000 + $20) & $FF");
+  const { expanded, length } = assembler.operandResolver.expandOperand("($1000 + $20) & $FF");
 
   t.is(expanded, "$20");
   t.is(length, 1);
@@ -707,7 +706,7 @@ test("expandOperand - skips math evaluation when it fails", t => {
   sinon.stub(assembler, "resolvedefines").returns("complex_expression");
   sinon.stub(assembler.mathCore, "math").throws(new Error("Invalid expression"));
 
-  const { expanded, length } = assembler.expandOperand("complex_expression");
+  const { expanded, length } = assembler.operandResolver.expandOperand("complex_expression");
 
   t.is(expanded, "complex_expression");
   t.is(length, 2); // Default length
@@ -721,398 +720,15 @@ test("expandOperand - handles math expressions that throw errors", t => {
   sinon.stub(assembler.mathCore, "math").throws(new Error("Math evaluation error"));
 
   // Call expandOperand with the expression
-  const { expanded, length } = assembler.expandOperand("(1 + 2) * 3");
+  const { expanded, length } = assembler.operandResolver.expandOperand("(1 + 2) * 3");
 
   // Verify that the original expression is returned unchanged
   t.is(expanded, "(1 + 2) * 3");
   t.is(length, 2); // Default length should be used
 
-  // Verify that the math method was called
-  t.true(assembler.mathCore.math.calledOnce);
-  t.true(assembler.mathCore.math.calledWith("(1 + 2) * 3"));
-});
-
-test("determineValueLength - handles 8-bit values", t => {
-  const assembler = new Assembler();
-
-  // Zero
-  t.is(assembler.determineValueLength(0, false), 1);
-
-  // Minimum 8-bit value
-  t.is(assembler.determineValueLength(1, false), 1);
-
-  // Maximum 8-bit value
-  t.is(assembler.determineValueLength(0xFF, false), 1);
-});
-
-test("determineValueLength - handles 16-bit values", t => {
-  const assembler = new Assembler();
-
-  // Just above 8-bit range
-  t.is(assembler.determineValueLength(0x100, false), 2);
-
-  // Middle of 16-bit range
-  t.is(assembler.determineValueLength(0x8000, false), 2);
-
-  // Maximum 16-bit value
-  t.is(assembler.determineValueLength(0xFFFF, false), 2);
-});
-
-test("determineValueLength - handles 24-bit values", t => {
-  const assembler = new Assembler();
-
-  // Just above 16-bit range
-  t.is(assembler.determineValueLength(0x10000, false), 3);
-
-  // Middle of 24-bit range
-  t.is(assembler.determineValueLength(0x800000, false), 3);
-
-  // Maximum 24-bit value
-  t.is(assembler.determineValueLength(0xFFFFFF, false), 3);
-});
-
-test("determineValueLength - respects forceTwoBytes flag", t => {
-  const assembler = new Assembler();
-
-  // 8-bit value forced to 2 bytes
-  t.is(assembler.determineValueLength(0x42, true), 2);
-
-  // 16-bit value with force flag (should still be 2)
-  t.is(assembler.determineValueLength(0x1234, true), 2);
-
-  // 24-bit value with force flag (should still be 2, not 3)
-  t.is(assembler.determineValueLength(0x123456, true), 2);
-});
-
-test("determineValueLength - handles edge cases", t => {
-  const assembler = new Assembler();
-
-  // Negative values (should be treated as their two's complement)
-  t.is(assembler.determineValueLength(-1, false), 1); // -1 is 0xFF in two's complement (8-bit)
-  t.is(assembler.determineValueLength(-256, false), 2); // -256 is 0xFF00 in two's complement (16-bit)
-
-  // Very large values (beyond 24-bit)
-  t.is(assembler.determineValueLength(0x1000000, false), 3); // Still treated as 3 bytes
-});
-
-test("determineValueLength - handles zero page addresses", t => {
-  const assembler = new Assembler();
-
-  // Single digit hex
-  t.is(assembler.determineValueLength("1"), 1);
-
-  // Two digit hex (max zero page)
-  t.is(assembler.determineValueLength("FF"), 1);
-
-  // Empty string edge case
-  t.is(assembler.determineValueLength(""), 1);
-});
-
-test("determineValueLength - handles absolute addresses", t => {
-  const assembler = new Assembler();
-
-  // Three digit hex
-  t.is(assembler.determineValueLength("100"), 2);
-
-  // Four digit hex (max absolute)
-  t.is(assembler.determineValueLength("FFFF"), 2);
-});
-
-test("determineValueLength - handles long addresses", t => {
-  const assembler = new Assembler();
-
-  // Five digit hex
-  t.is(assembler.determineValueLength("10000"), 3);
-
-  // Six digit hex (typical bank address)
-  t.is(assembler.determineValueLength("7E0000"), 3);
-});
-
-test("determineValueLength - handles mixed case input", t => {
-  const assembler = new Assembler();
-
-  // Mixed case should work the same
-  t.is(assembler.determineValueLength("ff"), 1);
-  t.is(assembler.determineValueLength("FFff"), 2);
-  t.is(assembler.determineValueLength("7e0000"), 3);
-});
-
-test("determineValueLength - handles $ prefix input", t => {
-  const assembler = new Assembler();
-
-  // Mixed case should work the same
-  t.is(assembler.determineValueLength("$ff"), 1);
-  t.is(assembler.determineValueLength("$FFff"), 2);
-  t.is(assembler.determineValueLength("$7e0000"), 3);
-});
-
-test("determineValueLength - handles invalid input", t => {
-  const assembler = new Assembler();
-
-  // Invalid types should throw an error
-  t.throws(() => {
-    assembler.determineValueLength(null);
-  }, { message: /Invalid value type for length determination/ });
-
-  t.throws(() => {
-    assembler.determineValueLength(undefined);
-  }, { message: /Invalid value type for length determination/ });
-
-  t.throws(() => {
-    assembler.determineValueLength({} as unknown as string);
-  }, { message: /Invalid value type for length determination/ });
-
-  t.throws(() => {
-    assembler.determineValueLength([] as unknown as string);
-  }, { message: /Invalid value type for length determination/ });
-
-  t.throws(() => {
-    assembler.determineValueLength(true as unknown as string);
-  }, { message: /Invalid value type for length determination/ });
-
-  t.throws(() => {
-    assembler.determineValueLength(Number.NaN as unknown as string);
-  }, { message: /Invalid value for length determination/ });
-});
-
-test("determineValueLength - respects forceTwoBytes parameter", t => {
-  const assembler = new Assembler();
-
-  // When forceTwoBytes is true, should always return 2
-  t.is(assembler.determineValueLength("10", true), 2);
-  t.is(assembler.determineValueLength("FF", true), 2);
-  t.is(assembler.determineValueLength(15, true), 2);
-  t.is(assembler.determineValueLength(65536, true), 2);
-});
-
-test("isMathExpression - detects addition", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("1+2"));
-  t.true(assembler.isMathExpression("$10 + $20"));
-});
-
-test("isMathExpression - detects subtraction", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("10-5"));
-  t.true(assembler.isMathExpression("$30 - $10"));
-});
-
-test("isMathExpression - detects multiplication", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("2*3"));
-  t.true(assembler.isMathExpression("$10 * 4"));
-});
-
-test("isMathExpression - detects division", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("10/2"));
-  t.true(assembler.isMathExpression("$100 / $10"));
-});
-
-test("isMathExpression - detects bitwise AND", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("$FF & $0F"));
-  t.true(assembler.isMathExpression("255 & 15"));
-});
-
-test("isMathExpression - detects bitwise OR", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("$10 | $01"));
-  t.true(assembler.isMathExpression("16 | 1"));
-});
-
-test("isMathExpression - detects bitwise XOR", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("$FF ^ $0F"));
-  t.true(assembler.isMathExpression("255 ^ 15"));
-});
-
-test("isMathExpression - detects left shift", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("1 << 4"));
-  t.true(assembler.isMathExpression("$01 << 8"));
-});
-
-test("isMathExpression - detects right shift", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("16 >> 2"));
-  t.true(assembler.isMathExpression("$100 >> 4"));
-});
-
-test("isMathExpression - detects parentheses", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("(1 + 2) * 3"));
-  t.true(assembler.isMathExpression("($10 + $20) & $FF"));
-});
-
-test("isMathExpression - returns false for non-math expressions", t => {
-  const assembler = new Assembler();
-  t.false(assembler.isMathExpression("label"));
-  t.false(assembler.isMathExpression("$1000"));
-  t.false(assembler.isMathExpression("#$10"));
-  t.false(assembler.isMathExpression(""));
-  t.false(assembler.isMathExpression(null));
-  t.false(assembler.isMathExpression(undefined));
-  t.false(assembler.isMathExpression(Number.NaN));
-});
-
-test("isMathExpression - handles complex expressions", t => {
-  const assembler = new Assembler();
-  t.true(assembler.isMathExpression("(($10 << 8) | $20) & $FF00"));
-  t.true(assembler.isMathExpression("1 + 2 * 3 / 4 & 5 | 6 ^ 7"));
-});
-
-test("tryResolveLabelInOperand - handles immediate mode (#label)", t => {
-  const assembler = new Assembler();
-
-  // Set up the label in the label table
-  assembler.labelTable = new Map();
-  assembler.labelTable.set("test_label", { value: 0x1234, isStatic: false });
-
-  // Test successful label resolution in immediate mode
-  let result = assembler.tryResolveLabelInOperand("#test_label");
-  t.is(result, "#$1234");
-
-  // Test with label that starts with a number or special character (should not resolve)
-  sinon.restore();
-  result = assembler.tryResolveLabelInOperand("#$1234");
-  t.is(result, "#$1234");
-
-  // Test with label that includes a comma (should not resolve)
-  result = assembler.tryResolveLabelInOperand("#label,x");
-  t.is(result, "#label,x");
-
-  // Test when getLabelValue throws an error
-  result = assembler.tryResolveLabelInOperand("#unknown_label");
-  t.is(result, "#unknown_label");
-
-  // Test when getLabelValue throws an error directly
-  sinon.restore();
-  sinon.stub(assembler, "getLabelValue").throws(new Error("Label not found"));
-  result = assembler.tryResolveLabelInOperand("#error_label");
-  t.is(result, "#error_label");
-});
-
-test("tryResolveLabelInOperand - handles indirect mode ([label])", t => {
-  const assembler = new Assembler();
-
-  // Set up the label in the label table
-  assembler.labelTable = new Map();
-  assembler.labelTable.set("test_label", { value: 0x1234, isStatic: false });
-
-  // Test successful label resolution in indirect mode
-  let result = assembler.tryResolveLabelInOperand("[test_label]");
-  t.is(result, "[$1234]");
-
-  // Test with label that starts with a number or special character (should not resolve)
-  sinon.restore();
-  result = assembler.tryResolveLabelInOperand("[$1234]");
-  t.is(result, "[$1234]");
-
-  // Test with label that includes a comma (should not resolve)
-  result = assembler.tryResolveLabelInOperand("[label,x]");
-  t.is(result, "[label,x]");
-
-  // Test when getLabelValue throws an error
-  result = assembler.tryResolveLabelInOperand("[unknown_label]");
-  t.is(result, "[unknown_label]");
-
-  // Test when getLabelValue throws an error directly
-  sinon.restore();
-  sinon.stub(assembler, "getLabelValue").throws(new Error("Label not found"));
-  result = assembler.tryResolveLabelInOperand("[error_label]");
-  t.is(result, "[error_label]");
-});
-
-test("tryResolveLabelInOperand - handles indexed mode (label,x)", t => {
-  const assembler = new Assembler();
-
-  // Set up the label in the label table
-  assembler.labelTable = new Map();
-  assembler.labelTable.set("test_label", { value: 0x1234, isStatic: false });
-
-  // Test successful label resolution in indexed mode
-  let result = assembler.tryResolveLabelInOperand("test_label,x");
-  t.is(result, "$1234,x");
-
-  // Test with label that starts with a number or special character (should not resolve)
-  sinon.restore();
-  result = assembler.tryResolveLabelInOperand("$1234,x");
-  t.is(result, "$1234,x");
-
-  // Test when getLabelValue throws an error
-  result = assembler.tryResolveLabelInOperand("unknown_label,y");
-  t.is(result, "unknown_label,y");
-
-  // Test when getLabelValue throws an error directly
-  sinon.restore();
-  sinon.stub(assembler, "getLabelValue").throws(new Error("Label not found"));
-  result = assembler.tryResolveLabelInOperand("error_label,y");
-  t.is(result, "error_label,y");
-});
-
-test("tryResolveLabelInOperand - handles direct label references", t => {
-  const assembler = new Assembler();
-
-  // Set up the label in the label table
-  assembler.labelTable = new Map();
-  assembler.labelTable.set("test_label", { value: 0x1234, isStatic: false });
-
-  // Test successful direct label resolution
-  let result = assembler.tryResolveLabelInOperand("test_label");
-  t.is(result, "$1234");
-
-  // Test with label that starts with a number or special character (should not resolve)
-  sinon.restore();
-  result = assembler.tryResolveLabelInOperand("$1234");
-  t.is(result, "$1234");
-
-  // Test with label that starts with # (should resolve as direct)
-  result = assembler.tryResolveLabelInOperand("#test_label");
-  t.is(result, "#$1234");
-
-  // Test with label that starts with [ (should resolve as direct)
-  result = assembler.tryResolveLabelInOperand("[test_label]");
-  t.is(result, "[$1234]");
-
-  // Test when getLabelValue throws an error
-  result = assembler.tryResolveLabelInOperand("unknown_label");
-  t.is(result, "unknown_label");
-
-  // Test when getLabelValue throws an error directly
-  sinon.restore();
-  sinon.stub(assembler, "getLabelValue").throws(new Error("Label not found"));
-  result = assembler.tryResolveLabelInOperand("error_label");
-  t.is(result, "error_label");
-});
-
-test("tryResolveLabelInOperand - handles namespaced labels", t => {
-  const assembler = new Assembler();
-
-  // Set up the current namespace and label
-  assembler.currentNamespace = "namespace";
-  assembler.labelTable = new Map();
-  assembler.labelTable.set("namespace:test_label", { value: 0x1234, isStatic: false });
-
-  // Test with namespaced label
-  sinon.stub(assembler, "getLabelValue").returns(0x1234);
-  const result = assembler.tryResolveLabelInOperand("test_label");
-  t.is(result, "$1234");
-
-  // Verify getLabelValue was called with the correct parameters
-  t.true(assembler.getLabelValue.calledWith("test_label", false));
-});
-
-test("tryResolveLabelInOperand - handles zero value labels", t => {
-  const assembler = new Assembler();
-
-  // Set up the label with zero value
-  assembler.labelTable = new Map();
-  assembler.labelTable.set("zero_label", { value: 0, isStatic: false });
-
-  // Test with zero value label - should still resolve since the label exists
-  const result = assembler.tryResolveLabelInOperand("zero_label");
-  t.is(result, "$0");
+  const mathStub = assembler.mathCore.math as unknown as sinon.SinonStub;
+  t.true(mathStub.calledOnce);
+  t.true(mathStub.calledWith("(1 + 2) * 3"));
 });
 
 test("getObjectSize - returns size for non-extended struct", t => {
@@ -3082,7 +2698,7 @@ test("handleIncbin", t => {
   writtenBytes.length = 0;
   assembler.handlePushPC = () => {}; // Mock
   assembler.handlePullPC = () => {}; // Mock
-  assembler.getnum = (val) => parseInt(val.replace("$", ""), 16); // Mock
+  assembler.operandResolver.getnum = (val) => parseInt(val.replace("$", ""), 16); // Mock
   assembler.addAddressToLine = () => {}; // Mock
 
   assembler.handleIncbin(["incbin", "testfile.bin", "->", "$1000"]);
@@ -4521,7 +4137,7 @@ test("handleDataDirective - struct references", t => {
   assembler.setPass(1);
   const write1Spy = sinon.spy(assembler, "write1");
   const resolveStructLabelStub = sinon.stub(assembler, "resolveStructLabel");
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
 
   // Setup struct resolution stub
   resolveStructLabelStub.withArgs("sprite.x_pos").returns(42);
@@ -4946,7 +4562,7 @@ test("handleEndIf - throws on misplaced endif", t => {
   t.is(emptyStackError.message, "Misplaced endif", "Should throw with empty stack");
 
   // Test with wrong condition type (endif closes if/while only; "for" is invalid for endif)
-  assembler.condStack.push({ type: "for", cond: true, start: 0, expr: "" });
+  assembler.condStack.push({ type: "for", cond: true, start: 0, expr: "" } as unknown as { type: "if" | "while"; cond: boolean; start?: number; expr?: string; branchTaken?: boolean; conditionStr?: string });
 
   const wrongTypeError = t.throws(() => {
     assembler.handleEndIf();
@@ -5466,7 +5082,7 @@ test("executeForLoop - expression evaluation", t => {
   const assembler = new Assembler();
 
   // Stub getnum to simulate expression evaluation
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("5+5").returns(10);
   getnumStub.withArgs("20-5").returns(15);
 
@@ -5637,13 +5253,13 @@ test("executeLoopBlock - unsupported loop type", t => {
   const assembler = new Assembler();
 
   // Create a loop with an unsupported type
-  const unsupportedLoop: LoopBlock = {
+  const unsupportedLoop = {
     type: "foreach", // Unsupported type
     condition: "foreach item in list",
     commands: ["command1"],
     startLine: 1,
     endLine: 3
-  };
+  } as unknown as LoopBlock;
 
   // Spy on both executeForLoop and executeWhileLoop
   const executeForLoopSpy = sinon.spy(assembler, "executeForLoop");
@@ -6631,13 +6247,13 @@ test("handleUndef - removes defines from processCommand", t => {
   t.is(error.message, "undef requires exactly one identifier parameter");
 });
 
-test("define helpers - defined and string expansion behavior", t => {
+test("expressionHost - defined and string expansion behavior", t => {
   const assembler = new Assembler();
   assembler.defines.set("testdefine", "poop");
   assembler.defines.set("a", "x");
 
-  t.is(assembler.mathCoreDelegate("defined", "testdefine"), 1, "defined() should detect preprocessor defines");
-  t.is(assembler.mathCoreDelegate("defined", "missing_define"), 0, "defined() should return 0 for missing defines");
+  t.is(assembler.expressionHost.isDefined("testdefine"), 1, "defined() should detect preprocessor defines");
+  t.is(assembler.expressionHost.isDefined("missing_define"), 0, "defined() should return 0 for missing defines");
 
   t.is(assembler.resolveDefinesInStringLiteral("!a"), "x", "Unescaped string define should expand");
   t.is(assembler.resolveDefinesInStringLiteral("\\!a"), "!a", "Escaped bang should stay literal");
@@ -7096,7 +6712,7 @@ test("step - negative step", t => {
   t.is(error2?.message, "step num is negative", "Should throw error for negative step");
 });
 
-test("mathCoreDelegate - resolveLabel", t => {
+test("expressionHost - resolveLabel", t => {
   const assembler = new Assembler();
 
   // Setup a label
@@ -7106,7 +6722,7 @@ test("mathCoreDelegate - resolveLabel", t => {
   });
 
   // Test resolving an existing label
-  t.is(assembler.mathCoreDelegate("resolveLabel", "test_label"), 0x1234, "Should resolve existing label");
+  t.is(assembler.expressionHost.resolveLabel("test_label"), 0x1234, "Should resolve existing label");
 
   // Setup a struct
   assembler.structs.set("test_struct", {
@@ -7117,11 +6733,11 @@ test("mathCoreDelegate - resolveLabel", t => {
     labels: new Map(),
   });
 
-  // Test resolving a struct name
-  t.is(assembler.mathCoreDelegate("resolveLabel", "test_struct"), 0, "Should return the struct offset");
+  // Structs currently resolve as zero-valued label-like identifiers for math usage.
+  t.is(assembler.expressionHost.resolveLabel("test_struct"), 0, "Should resolve struct names consistently with assembler label lookup");
 });
 
-test("mathCoreDelegate - snestopc and pctosnes", t => {
+test("expressionHost - snestopc and pctosnes", t => {
   const assembler = new Assembler();
 
   // Mock the snestopc and pctosnes methods
@@ -7132,17 +6748,17 @@ test("mathCoreDelegate - snestopc and pctosnes", t => {
   assembler.pctosnes = (addr: number) => addr - 0x1000;
 
   // Test snestopc
-  t.is(assembler.mathCoreDelegate("snestopc", 0x8000), 0x9000, "Should convert SNES to PC address");
+  t.is(assembler.expressionHost.convertSnesToPc(0x8000), 0x9000, "Should convert SNES to PC address");
 
   // Test pctosnes
-  t.is(assembler.mathCoreDelegate("pctosnes", 0x9000), 0x8000, "Should convert PC to SNES address");
+  t.is(assembler.expressionHost.convertPcToSnes(0x9000), 0x8000, "Should convert PC to SNES address");
 
   // Restore original methods
   assembler.snestopc = originalSnestopc;
   assembler.pctosnes = originalPctosnes;
 });
 
-test("mathCoreDelegate - pc and realbase", t => {
+test("expressionHost - pc and realbase", t => {
   const assembler = new Assembler();
 
   // Set positions
@@ -7150,14 +6766,13 @@ test("mathCoreDelegate - pc and realbase", t => {
   assembler.realsnespos = 0x9000;
 
   // Test pc
-  t.is(assembler.mathCoreDelegate("pc"), 0x8000, "Should return current snespos");
+  t.is(assembler.expressionHost.getCurrentAddress(), 0x8000, "Should return current snespos");
 
   // Test realbase
-  t.is(assembler.mathCoreDelegate("realbase"), 0x9000, "Should return current realsnespos");
+  t.is(assembler.expressionHost.getCurrentBaseAddress(), 0x9000, "Should return current realsnespos");
 });
 
-// TODO: This is no longer working as expected.
-test.skip("mathCoreDelegate - defined", t => {
+test("expressionHost - defined", t => {
   const assembler = new Assembler();
 
   // Setup a label
@@ -7176,16 +6791,16 @@ test.skip("mathCoreDelegate - defined", t => {
   });
 
   // Test defined with existing label
-  t.is(assembler.mathCoreDelegate("defined", "defined_label"), 1, "Should return 1 for defined label");
+  t.is(assembler.expressionHost.isDefined("defined_label"), 1, "Should return 1 for defined label");
 
   // Test defined with existing struct
-  t.is(assembler.mathCoreDelegate("defined", "defined_struct"), 1, "Should return 1 for defined struct");
+  t.is(assembler.expressionHost.isDefined("defined_struct"), 1, "Should return 1 for defined struct");
 
   // Test defined with non-existent identifier
-  t.is(assembler.mathCoreDelegate("defined", "undefined_item"), 0, "Should return 0 for undefined item");
+  t.is(assembler.expressionHost.isDefined("undefined_item"), 0, "Should return 0 for undefined item");
 });
 
-test("mathCoreDelegate - sizeof, objectsize, datasize", t => {
+test("expressionHost - sizeof, objectsize, datasize", t => {
   const assembler = new Assembler();
 
   // Mock getObjectSize method
@@ -7199,17 +6814,17 @@ test("mathCoreDelegate - sizeof, objectsize, datasize", t => {
   };
 
   // Test sizeof (with includeParent=true)
-  t.is(assembler.mathCoreDelegate("sizeof", "test_object"), 0x200, "sizeof should include parent size");
+  t.is(assembler.expressionHost.getObjectSize("test_object", true), 0x200, "sizeof should include parent size");
 
   // Test objectsize (with default includeParent=false)
-  t.is(assembler.mathCoreDelegate("objectsize", "test_object"), 0x100, "objectsize should not include parent size");
+  t.is(assembler.expressionHost.getObjectSize("test_object", false), 0x100, "objectsize should not include parent size");
 
   // Test datasize (same as objectsize)
-  t.is(assembler.mathCoreDelegate("datasize", "test_object"), 0x100, "datasize should be same as objectsize");
+  t.is(assembler.expressionHost.getObjectSize("test_object", false), 0x100, "datasize should be same as objectsize");
 
   // Test with non-existent object
   const error = t.throws(() => {
-    assembler.mathCoreDelegate("sizeof", "nonexistent_object");
+    assembler.expressionHost.getObjectSize("nonexistent_object", true);
   });
   t.truthy(error, "Should throw error for non-existent object");
 
@@ -7217,7 +6832,7 @@ test("mathCoreDelegate - sizeof, objectsize, datasize", t => {
   assembler.getObjectSize = originalGetObjectSize;
 });
 
-test("mathCoreDelegate - filesize", t => {
+test("expressionHost - filesize", t => {
   const assembler = new Assembler();
   const expectedPath = `${process.cwd()}/existing_file.txt`;
 
@@ -7232,13 +6847,13 @@ test("mathCoreDelegate - filesize", t => {
   });
 
   // Test filesize with existing file
-  t.is(assembler.mathCoreDelegate("filesize", "existing_file.txt"), 1024, "Should return correct file size");
+  t.is(assembler.expressionHost.getFileSize("existing_file.txt"), 1024, "Should return correct file size");
   t.true(existsStub.called, "Should check file existence before stat");
   t.true(statStub.calledOnce, "Should stat resolved file path");
 
   // Test filesize with non-existent file
   const error = t.throws(() => {
-    assembler.mathCoreDelegate("filesize", "nonexistent_file.txt");
+    assembler.expressionHost.getFileSize("nonexistent_file.txt");
   });
   t.truthy(error, "Should throw error for non-existent file");
   t.true(existsStub.callCount > 1, "Should check candidate paths for missing files");
@@ -7248,7 +6863,7 @@ test("mathCoreDelegate - filesize", t => {
   statStub.restore();
 });
 
-test("mathCoreDelegate - getfilestatus", t => {
+test("expressionHost - getfilestatus", t => {
   const assembler = new Assembler();
   const readablePath = `${process.cwd()}/readable_file.txt`;
   const unreadablePath = `${process.cwd()}/unreadable_file.txt`;
@@ -7264,13 +6879,13 @@ test("mathCoreDelegate - getfilestatus", t => {
   });
 
   // Test getfilestatus with readable file
-  t.is(assembler.mathCoreDelegate("getfilestatus", "readable_file.txt"), 0, "Should return 0 for readable file");
+  t.is(assembler.expressionHost.getFileStatus("readable_file.txt"), 0, "Should return 0 for readable file");
 
   // Test getfilestatus with unreadable file
-  t.is(assembler.mathCoreDelegate("getfilestatus", "unreadable_file.txt"), 2, "Should return 2 for unreadable file");
+  t.is(assembler.expressionHost.getFileStatus("unreadable_file.txt"), 2, "Should return 2 for unreadable file");
 
   // Test getfilestatus with non-existent file
-  t.is(assembler.mathCoreDelegate("getfilestatus", "nonexistent_file.txt"), 1, "Should return 1 for non-existent file");
+  t.is(assembler.expressionHost.getFileStatus("nonexistent_file.txt"), 1, "Should return 1 for non-existent file");
 
   t.true(existsStub.callCount >= 3, "Should check file existence for each query");
   t.is(accessStub.callCount, 2, "Should only check access for existing files");
@@ -7279,21 +6894,6 @@ test("mathCoreDelegate - getfilestatus", t => {
   accessStub.restore();
 });
 
-test("mathCoreDelegate - unimplemented operations", t => {
-  const assembler = new Assembler();
-
-  // Test unimplemented operations
-  const unimplementedOps = [
-    "unknown_operation"
-  ];
-
-  for (const op of unimplementedOps) {
-    const error = t.throws(() => {
-      assembler.mathCoreDelegate(op, "dummy");
-    });
-    t.is(error?.message, `delegate ${op} not implemented`, `Should throw error for unimplemented operation ${op}`);
-  }
-});
 
 test("write1_65816 - basic functionality", t => {
   const assembler = new Assembler();
@@ -7560,19 +7160,17 @@ test("asblock_pick - spc700 architecture", t => {
   assembler.pass = 2;
   assembler.arch = "spc700";
 
-  // Mock the asblock_spc700 method
-  const originalMethod = assembler.asblock_spc700;
+  const originalMethod = assembler.archSPC700.encode;
   let wasCalled = false;
-  assembler.asblock_spc700 = (words) => {
+  assembler.archSPC700.encode = (words) => {
     wasCalled = true;
     return true;
   };
 
-  t.true(assembler.asblock_pick(["mov", "a", "#$42"]), "Should delegate to asblock_spc700");
-  t.true(wasCalled, "Should call asblock_spc700");
+  t.true(assembler.asblock_pick(["mov", "a", "#$42"]), "Should delegate to the SPC700 encoder");
+  t.true(wasCalled, "Should call the SPC700 encoder");
 
-  // Restore original method
-  assembler.asblock_spc700 = originalMethod;
+  assembler.archSPC700.encode = originalMethod;
 });
 
 test("asblock_pick - spc700 architecture error handling", t => {
@@ -7580,11 +7178,8 @@ test("asblock_pick - spc700 architecture error handling", t => {
   assembler.pass = 2;
   assembler.arch = "spc700";
 
-  // Mock the asblock_spc700 method to throw an error
-  const originalMethod = assembler.asblock_spc700;
-  assembler.asblock_spc700 = (words) => {
-    throw new Error(`Unknown instruction: ${words[0]}`);
-  };
+  const originalMethod = assembler.archSPC700.encode;
+  assembler.archSPC700.encode = () => false;
 
   const error = t.throws(() => {
     assembler.asblock_pick(["unknown_instruction"]);
@@ -7592,8 +7187,7 @@ test("asblock_pick - spc700 architecture error handling", t => {
 
   t.is(error.message, "Unknown instruction: unknown_instruction", "Should throw error for unknown SPC700 instruction");
 
-  // Restore original method
-  assembler.asblock_spc700 = originalMethod;
+  assembler.archSPC700.encode = originalMethod;
 });
 
 test("asblock_pick - superfx architecture", t => {
@@ -7601,19 +7195,17 @@ test("asblock_pick - superfx architecture", t => {
   assembler.pass = 2;
   assembler.arch = "superfx";
 
-  // Mock the asblock_superfx method
-  const originalMethod = assembler.asblock_superfx;
+  const originalMethod = assembler.archSuperFX.encode;
   let wasCalled = false;
-  assembler.asblock_superfx = (words) => {
+  assembler.archSuperFX.encode = (words) => {
     wasCalled = true;
     return true;
   };
 
-  t.true(assembler.asblock_pick(["move", "r0", "#$42"]), "Should delegate to asblock_superfx");
-  t.true(wasCalled, "Should call asblock_superfx");
+  t.true(assembler.asblock_pick(["move", "r0", "#$42"]), "Should delegate to the SuperFX encoder");
+  t.true(wasCalled, "Should call the SuperFX encoder");
 
-  // Restore original method
-  assembler.asblock_superfx = originalMethod;
+  assembler.archSuperFX.encode = originalMethod;
 });
 
 test("asblock_pick - superfx architecture failure", t => {
@@ -7621,16 +7213,12 @@ test("asblock_pick - superfx architecture failure", t => {
   assembler.pass = 2;
   assembler.arch = "superfx";
 
-  // Mock the asblock_superfx method to return false
-  const originalMethod = assembler.asblock_superfx;
-  assembler.asblock_superfx = (words) => {
-    return false;
-  };
+  const originalMethod = assembler.archSuperFX.encode;
+  assembler.archSuperFX.encode = () => false;
 
-  t.false(assembler.asblock_pick(["unknown_instruction"]), "Should return false when asblock_superfx fails");
+  t.false(assembler.asblock_pick(["unknown_instruction"]), "Should return false when the SuperFX encoder fails");
 
-  // Restore original method
-  assembler.asblock_superfx = originalMethod;
+  assembler.archSuperFX.encode = originalMethod;
 });
 
 test("asblock_pick - superfx architecture error handling", t => {
@@ -7638,9 +7226,8 @@ test("asblock_pick - superfx architecture error handling", t => {
   assembler.pass = 2;
   assembler.arch = "superfx";
 
-  // Mock the asblock_superfx method to throw an error
-  const originalMethod = assembler.asblock_superfx;
-  assembler.asblock_superfx = (words) => {
+  const originalMethod = assembler.archSuperFX.encode;
+  assembler.archSuperFX.encode = (words) => {
     throw new Error(`Unknown instruction: ${words[0]}`);
   };
 
@@ -7650,8 +7237,7 @@ test("asblock_pick - superfx architecture error handling", t => {
 
   t.is(error.message, "Unknown instruction: unknown_instruction", "Should throw error for unknown SuperFX instruction");
 
-  // Restore original method
-  assembler.asblock_superfx = originalMethod;
+  assembler.archSuperFX.encode = originalMethod;
 });
 
 test("asblock_pick - 65816 architecture", t => {
@@ -7659,19 +7245,17 @@ test("asblock_pick - 65816 architecture", t => {
   assembler.pass = 2;
   assembler.arch = "65816";
 
-  // Mock the asblock_65816 method
-  const originalMethod = assembler.asblock_65816;
+  const originalMethod = assembler.arch65816.encode;
   let wasCalled = false;
-  assembler.asblock_65816 = (words) => {
+  assembler.arch65816.encode = (words) => {
     wasCalled = true;
     return true;
   };
 
-  t.true(assembler.asblock_pick(["lda", "#$42"]), "Should delegate to asblock_65816");
-  t.true(wasCalled, "Should call asblock_65816");
+  t.true(assembler.asblock_pick(["lda", "#$42"]), "Should delegate to the 65816 encoder");
+  t.true(wasCalled, "Should call the 65816 encoder");
 
-  // Restore original method
-  assembler.asblock_65816 = originalMethod;
+  assembler.arch65816.encode = originalMethod;
 });
 
 test("asblock_pick - 65816 architecture failure", t => {
@@ -7679,16 +7263,16 @@ test("asblock_pick - 65816 architecture failure", t => {
   assembler.pass = 2;
   assembler.arch = "65816";
 
-  // Mock the asblock_65816 method to return false
-  const originalMethod = assembler.asblock_65816;
-  assembler.asblock_65816 = (words) => {
-    return false;
-  };
+  const originalMethod = assembler.arch65816.encode;
+  assembler.arch65816.encode = () => false;
 
-  t.false(assembler.asblock_pick(["unknown_instruction"]), "Should return false when asblock_65816 fails");
+  const error = t.throws(() => {
+    assembler.asblock_pick(["unknown_instruction"]);
+  }, { instanceOf: Error });
 
-  // Restore original method
-  assembler.asblock_65816 = originalMethod;
+  t.is(error.message, "Unknown instruction: unknown_instruction", "Should throw error for unknown 65816 instruction");
+
+  assembler.arch65816.encode = originalMethod;
 });
 
 test("asblock_pick - default architecture", t => {
@@ -7700,110 +7284,33 @@ test("asblock_pick - default architecture", t => {
   t.true(assembler.asblock_pick(["some_instruction"]), "Should return true for unrecognized architectures");
 });
 
-test("asblock_spc700 - successful instruction handling", t => {
+test("asblock_pick - pass 0 uses active encoder estimateSize", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.pass = 0;
   assembler.arch = "spc700";
+  const originalMethod = assembler.archSPC700.estimateSize;
+  assembler.archSPC700.estimateSize = () => 5;
 
-  // Mock the archSPC700.asblock_spc700 method
-  const originalMethod = assembler.archSPC700.asblock_spc700;
-  assembler.archSPC700.asblock_spc700 = (words) => {
-    return true;
-  };
+  t.true(assembler.asblock_pick(["mov", "a", "#$42"]), "Should succeed during pass 0");
+  t.is(assembler.snespos, 5, "Should step by the encoder-provided estimated size");
 
-  t.true(assembler.asblock_spc700(["mov", "a, #$42"]), "Should return true for valid SPC700 instruction");
-
-  // Restore original method
-  assembler.archSPC700.asblock_spc700 = originalMethod;
+  assembler.archSPC700.estimateSize = originalMethod;
 });
 
-test("asblock_spc700 - unknown instruction", t => {
-  const assembler = new Assembler();
-  assembler.pass = 2;
-  assembler.arch = "spc700";
-
-  // Mock the archSPC700.asblock_spc700 method
-  const originalMethod = assembler.archSPC700.asblock_spc700;
-  assembler.archSPC700.asblock_spc700 = (words) => {
-    return false;
-  };
-
-  t.throws(() => {
-    assembler.asblock_spc700(["unknown_instruction"]);
-  }, { message: "Unknown instruction: unknown_instruction" }, "Should throw error for unknown SPC700 instruction");
-
-  // Restore original method
-  assembler.archSPC700.asblock_spc700 = originalMethod;
-});
-
-test("asblock_superfx - successful instruction handling", t => {
-  const assembler = new Assembler();
-  assembler.pass = 2;
-  assembler.arch = "superfx";
-
-  // Mock the archSuperFX.asblock_superfx method
-  const originalMethod = assembler.archSuperFX.asblock_superfx;
-  assembler.archSuperFX.asblock_superfx = (words) => {
-    return true;
-  };
-
-  t.true(assembler.asblock_superfx(["move", "r0, #$42"]), "Should return true for valid SuperFX instruction");
-
-  // Restore original method
-  assembler.archSuperFX.asblock_superfx = originalMethod;
-});
-
-test("asblock_superfx - unknown instruction", t => {
-  const assembler = new Assembler();
-  assembler.pass = 2;
-  assembler.arch = "superfx";
-
-  // Mock the archSuperFX.asblock_superfx method
-  const originalMethod = assembler.archSuperFX.asblock_superfx;
-  assembler.archSuperFX.asblock_superfx = (words) => {
-    return false;
-  };
-
-  t.throws(() => {
-    assembler.asblock_superfx(["unknown_instruction"]);
-  }, { message: "Unknown instruction: unknown_instruction" }, "Should throw error for unknown SuperFX instruction");
-
-  // Restore original method
-  assembler.archSuperFX.asblock_superfx = originalMethod;
-});
-
-test("asblock_65816 - successful instruction handling", t => {
+test("asblock_pick - inSpcblock uses spc700 encoder", t => {
   const assembler = new Assembler();
   assembler.pass = 2;
   assembler.arch = "65816";
-
-  // Mock the arch65816.asblock_65816 method
-  const originalMethod = assembler.arch65816.asblock_65816;
-  assembler.arch65816.asblock_65816 = (words) => {
+  assembler.inSpcblock = true;
+  const originalMethod = assembler.archSPC700.encode;
+  let wasCalled = false;
+  assembler.archSPC700.encode = () => {
+    wasCalled = true;
     return true;
   };
 
-  t.true(assembler.asblock_65816(["lda", "#$42"]), "Should return true for valid 65816 instruction");
+  t.true(assembler.asblock_pick(["mov", "a", "#$42"]), "Should route SPC block instructions through the SPC700 encoder");
+  t.true(wasCalled, "Should use the SPC700 encoder inside SPC blocks");
 
-  // Restore original method
-  assembler.arch65816.asblock_65816 = originalMethod;
-});
-
-test("asblock_65816 - unknown instruction", t => {
-  const assembler = new Assembler();
-  assembler.pass = 2;
-  assembler.arch = "65816";
-
-  // Mock the arch65816.asblock_65816 method
-  const originalMethod = assembler.arch65816.asblock_65816;
-  assembler.arch65816.asblock_65816 = (words) => {
-    return false;
-  };
-
-  t.throws(() => {
-    assembler.asblock_65816(["unknown_instruction"]);
-  }, { message: "Unknown instruction: unknown_instruction" }, "Should throw error for unknown 65816 instruction");
-
-  // Restore original method
-  assembler.arch65816.asblock_65816 = originalMethod;
+  assembler.archSPC700.encode = originalMethod;
 });

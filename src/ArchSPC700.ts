@@ -1,5 +1,4 @@
-import { Assembler } from "./assembler.js";
-import { hex } from "./cppstring.js";
+import type { ArchitectureEncoder, Spc700Context } from "./architecture-types.js";
 
 let debug = (..._: any[]) => {};
 try {
@@ -11,7 +10,8 @@ try {
  * Returns the "length" or "type" of operand, to help decide
  * whether the user typed e.g. $12 vs. $1234, or #$12, etc.
  * - This is used for distinguishing e.g. direct page vs. absolute.
- * @param operand
+ * @param {string} operand the operand
+ * @returns {number} The address size.
  */
 function getAddressSize(operand: string): number {
   // e.g. $12 => 1-byte, $1234 => 2-byte
@@ -34,7 +34,8 @@ function getAddressSize(operand: string): number {
  * Parse an expression like "$12+X" => { base: "$12", index: "X" }.
  * Or "($12)+Y" => { base: "$12", index: "Y", isIndirect: true }.
  * Or "($12+X)" => { base: "$12", index: "X", isIndirect: true }.
- * @param operand
+ * @param {string} operand the operand
+ * @returns {object} The parsed indexed operand.
  */
 function parseIndexed(operand: string): {
   base: string;
@@ -86,35 +87,40 @@ function parseIndexed(operand: string): {
 
 /**
  * Checks if the operand is something like "A", "(X)", etc.
- * @param op
+ * @param {string} op the operand
+ * @returns {boolean} True if the operand is an accumulator, false otherwise.
  */
 function isAccumulator(op: string): boolean {
   return op.toUpperCase() === "A";
 }
 /**
  *
- * @param op
+ * @param {string} op the operand
+ * @returns {boolean} True if the operand is a register X, false otherwise.
  */
 function isRegisterX(op: string): boolean {
   return op.toUpperCase() === "X";
 }
 /**
  *
- * @param op
+ * @param {string} op the operand
+ * @returns {boolean} True if the operand is a register Y, false otherwise.
  */
 function isRegisterY(op: string): boolean {
   return op.toUpperCase() === "Y";
 }
 /**
  *
- * @param op
+ * @param {string} op the operand
+ * @returns {boolean} True if the operand is a parenthesis X, false otherwise.
  */
 function isParenX(op: string): boolean {
   return op.trim().toUpperCase() === "(X)";
 }
 /**
  *
- * @param op
+ * @param {string} op the operand
+ * @returns {boolean} True if the operand is a parenthesis Y, false otherwise.
  */
 function isParenY(op: string): boolean {
   return op.trim().toUpperCase() === "(Y)";
@@ -123,7 +129,8 @@ function isParenY(op: string): boolean {
 /**
  * For DP (direct page) vs. absolute, we rely on getAddressSize()
  * to see if it's 1 byte or 2 bytes. Then we also see if it's e.g. "$12" or "$1234".
- * @param operand
+ * @param {string} operand the operand
+ * @returns {object} The parsed direct page or absolute operand.
  */
 function parseDpOrAbs(operand: string): { isDp: boolean; value: number } {
   const val = parseInt(operand.replace(/\$/g, ""), 16) >>> 0;
@@ -263,11 +270,35 @@ const memOpTables: Record<
  * differ in syntax. We'll handle that in code directly.
  */
 
-export class ArchSPC700 {
-  private assembler: Assembler;
+export class ArchSPC700 implements ArchitectureEncoder {
+  private assembler: Spc700Context;
 
-  constructor(assembler: Assembler) {
+  constructor(assembler: Spc700Context) {
     this.assembler = assembler;
+  }
+
+  encode(words: string[]): boolean {
+    return this.asblock_spc700(words);
+  }
+
+  estimateSize(words: string[]): number {
+    if (words.length === 0) {
+      return 0;
+    }
+
+    let size = 1;
+    if (words.length > 1) {
+      const operand = words.slice(1).join(" ");
+      if (operand.startsWith("#")) {
+        size = 2;
+      } else if (operand.includes("$") || operand.includes(",")) {
+        size = 3;
+      }
+    }
+    if (["JSL", "JML"].includes(words[0].toUpperCase())) {
+      size = 4;
+    }
+    return size;
   }
 
   asblock_spc700(words: string[]): boolean {
@@ -292,7 +323,7 @@ export class ArchSPC700 {
     opcode = opcode.toUpperCase().trim();
 
     // Expand inner math/label expressions while preserving addressing markers.
-    const { expanded: operand, length: operandLength } = this.assembler.expandOperand(rawOperand);
+    const { expanded: operand, length: operandLength } = this.assembler.operandResolver.expandOperand(rawOperand);
     debug("asblock_spc700", { opcode, operand, operandLength, forcedLen, explicitlen });
 
     // 1) Single word no-opcode or built-ins? E.g. NOP, BRK, RET, etc.
@@ -1016,7 +1047,7 @@ export class ArchSPC700 {
     //   The +2 accounts for the branch instruction's 2 bytes
     // - Result must fit in signed byte (-128 to +127)
     // - For now, if operand is a label, we need a second pass to resolve
-    const targetAddr = this.assembler.getnum(operand);
+    const targetAddr = this.assembler.operandResolver.getnum(operand);
     debug("handleBranch targetAddr", targetAddr)
     const currentAddr = this.assembler.snespos;
     debug("handleBranch currentAddr", currentAddr)
@@ -1106,7 +1137,7 @@ export class ArchSPC700 {
       // Second pass: try to resolve the label or use calculated offset
       let offset = 0xff;
 
-      const target = this.assembler.getnum(right);
+      const target = this.assembler.operandResolver.getnum(right);
       const pc = this.assembler.snespos;
       // The offset is relative to the position after this 3-byte instruction
       const relativeOffset = target - (pc + 1);
@@ -1135,7 +1166,7 @@ export class ArchSPC700 {
 
     // Calculate relative offset for the branch target
     let offset: number;
-    const target = this.assembler.getnum(right);
+    const target = this.assembler.operandResolver.getnum(right);
     offset = target - (this.assembler.snespos + 3);
     debug("handleDbnzCbne offset", offset)
     if (offset < -128 || offset > 127) {
@@ -1234,7 +1265,7 @@ export class ArchSPC700 {
     const upper = opcode.toUpperCase();
     const resolveOperand = (value: string): number => {
       try {
-        return this.assembler.getnum(value) & 0xffff;
+        return this.assembler.operandResolver.getnum(value) & 0xffff;
       } catch {
         return parseInt(value.replace(/\$/g, ""), 16) & 0xffff;
       }

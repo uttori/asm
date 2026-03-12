@@ -4,10 +4,12 @@ import path from "node:path"
 import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
+import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, Spc700Context, SuperFXContext } from "./architecture-types.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
+import { OperandResolver } from "./operand-resolver.js";
 
 let debug = (..._) => {};
 /* c8 ignore next */
@@ -130,7 +132,7 @@ export class Assembler {
   public optimizeDirectPage: boolean = false;
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
   /** Placeholder for ROM */
-  public romdata: number[] = [];
+  public romdata: number[] | Uint8Array = [];
   public default_freespacebyte: number = 0x00;
   public activeFreespaceStartPc: number | null = null;
   public activeFreespaceContentStartPc: number | null = null;
@@ -157,6 +159,7 @@ export class Assembler {
   public macros: Map<string, MacroDefinition> = new Map();
 
   public mathCore: MathCore;
+  public operandResolver: OperandResolver;
 
   public moreonlinecond: boolean = true;
   public addressToLineMapping: AddressToLineMapping = new AddressToLineMapping();
@@ -228,13 +231,30 @@ export class Assembler {
   public spcInlineCompatMode: boolean = false;
   public requireStaticLabelLookup: boolean = false;
 
+  get currentAddress(): number {
+    return this.getCurrentTargetAddress();
+  }
+
+  get directPageOptimizationEnabled(): boolean {
+    return this.optimizeDirectPage;
+  }
+
   constructor(targetRom?: number[] | Uint8Array) {
     this.targetRom = targetRom ?? [];
-    this.arch65816 = new Arch65816(this);
-    this.archSPC700 = new ArchSPC700(this);
-    this.archSuperFX = new ArchSuperFX(this);
+    this.operandResolver = new OperandResolver({
+      resolveDefines: (input) => this.resolvedefines(input),
+      resolveStructLabel: (input) => this.resolveStructLabel(input),
+      resolveLabel: (input, requireStatic) => this.getLabelValue(input, requireStatic),
+      hasLabel: (input) => this.hasLabelInScope(input),
+      evaluateMath: (input) => this.mathCore.math(input),
+      getPass: () => this.pass,
+      requireStaticLabelLookup: () => this.requireStaticLabelLookup,
+    });
+    this.arch65816 = new Arch65816(this.create65816Context());
+    this.archSPC700 = new ArchSPC700(this.createSPC700Context());
+    this.archSuperFX = new ArchSuperFX(this.createSuperFXContext());
     this.mathCore = new MathCore();
-    this.mathCore.delegate = this.mathCoreDelegate;
+    this.mathCore.host = this.expressionHost;
   }
 
   /**
@@ -245,214 +265,217 @@ export class Assembler {
     this.checksumMode = mode;
   }
 
-  mathCoreDelegate = (operation: string, ...args: (string | number)[]): number | string => {
-    debug("mathCoreDelegate", { operation, args })
-    const readLittleEndian = (bytes: Uint8Array, pos: number, width: number): number | undefined => {
-      if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes.length) {
-        return undefined;
-      }
-      let out = 0;
-      for (let i = 0; i < width; i++) {
-        out |= (bytes[pos + i] ?? 0) << (8 * i);
-      }
-      return out >>> 0;
-    };
-    const resolveReadablePath = (filename: string): string | undefined => {
-      if (path.isAbsolute(filename)) {
-        return fs.existsSync(filename) ? filename : undefined;
-      }
-      const candidates = [
-        path.resolve(path.dirname(this.currentFile || "."), filename),
-        path.resolve(process.cwd(), filename),
-      ];
-      return candidates.find((p) => fs.existsSync(p));
-    };
-    switch (operation) {
-      case "resolveLabel": {
-        const id = args[0] as string;
-        // Compound struct member (e.g. TestStruct.count, TestStruct[0].count)
-        if (id.includes(".")) {
-          try {
-            return this.resolveStructMember(id);
-          } catch (_e) {
-            // Fall through to getLabelValue
-          }
-        }
-        try {
-          return this.getLabelValue(id, this.requireStaticLabelLookup);
-        } catch (e) {
-          // If not found as a label, check if it's defined as a struct.
-          if (this.structs.has(id)) {
-            // Return the identifier as a string for built-in functions that expect one.
-            return id;
-          }
-          throw e;
-        }
-      }
-      case "snestopc": {
-        return this.snestopc(args[0] as number);
-      }
-      case "pctosnes": {
-        return this.pctosnes(args[0] as number);
-      }
-      case "pc": {
-        return this.snespos;
-      }
-      case "realbase": {
-        return this.realsnespos;
-      }
-      case "defined": {
-        const id = args[0] as string;
-        if (this.defines.has(id)) return 1;
-        if (this.structs.has(id)) return 1;
-        if (this.labelTable.has(id)) return 1;
-        if (this.currentNamespace && this.labelTable.has(`${this.currentNamespace}_${id}`)) return 1;
-        return 0;
-      }
-      case "sizeof": {
-        // Special case: handle variadic arguments in a macro
-        if (args[0] === "..." || args[0] === "…") {
-          // If we're in a macro expansion, check if we have a specific variadicCount for this macro
-          if (this.inMacroExpansion && this.currentVariadicCount !== undefined) {
-            return this.currentVariadicCount;
-          }
+  readLittleEndian(bytes: Uint8Array, pos: number, width: number): number | undefined {
+    if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes.length) {
+      return undefined;
+    }
+    let out = 0;
+    for (let i = 0; i < width; i++) {
+      out |= (bytes[pos + i] ?? 0) << (8 * i);
+    }
+    return out >>> 0;
+  }
 
-          // If we're in macro definition or have no current variadic count, return 0
-          if (this.inMacroDefinition) {
-            return 0;
-          }
+  resolveReadablePath(filename: string): string | undefined {
+    if (path.isAbsolute(filename)) {
+      return fs.existsSync(filename) ? filename : undefined;
+    }
+    const candidates = [
+      path.resolve(path.dirname(this.currentFile || "."), filename),
+      path.resolve(process.cwd(), filename),
+    ];
+    return candidates.find((candidate) => fs.existsSync(candidate));
+  }
 
-          // During evaluation (not expansion), this is likely the math evaluation
-          // on a line like "while !a < sizeof(...)" which happens before
-          // any actual arguments are passed. The actual expansion will happen later
-          // when the macro is called with real arguments.
-          return 0;
-        }
-        return this.getObjectSize(args[0] as string, true);
-      }
-      case "objectsize": {
-        return this.getObjectSize(args[0] as string);
-      }
-      case "datasize": {
-        return this.getObjectSize(args[0] as string);
-      }
-      case "filesize": {
-        try {
-          const filename = args[0] as string;
-          const resolvedPath = resolveReadablePath(filename);
-          if (!resolvedPath) {
-            throw new Error(`Could not get filesize for '${filename}'`);
-          }
-          const stats = fs.statSync(resolvedPath);
-          return stats.size;
-        } catch (error: unknown) {
-          debug(`Could not get filesize for '${args[0]}'`, error);
-          throw error;
-        }
-      }
-      case "getfilestatus": {
-        const filename = args[0] as string;
-        const resolvedPath = resolveReadablePath(filename);
-        if (!resolvedPath) {
-          return 1; // File doesn't exist
-        }
-        try {
-          fs.accessSync(resolvedPath, fs.constants.R_OK);
-          return 0; // File exists and is readable
-        } catch (error: unknown) {
-          return 2; // File exists but can't be read
-        }
-      }
-      case "read1":
-      case "read2":
-      case "read3":
-      case "read4":
-      {
-        const width = Number.parseInt(operation.slice(-1), 10);
-        const pos = Math.trunc(args[0] as number);
-        const defaultValue = args.length > 1 ? Number(args[1]) : undefined;
-        if (!this.readFunctionsEnabled && defaultValue === undefined) {
-          throw new Error(`Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`);
-        }
-        const pcPos = this.snestopc(pos);
-        const source = (this.targetRom && this.targetRom.length > 0) ? this.targetRom : this.romdata;
-        const romBytes = Uint8Array.from(source);
-        const value = pcPos < 0 ? undefined : readLittleEndian(romBytes, pcPos, width);
-        if (value === undefined) {
-          if (defaultValue !== undefined) return defaultValue;
-          throw new Error(`${operation} out of bounds at ${pos}`);
-        }
-        return value;
-      }
-      case "readfile1":
-      case "readfile2":
-      case "readfile3":
-      case "readfile4":
-      {
-        const width = Number.parseInt(operation.slice(-1), 10);
-        const filename = args[0] as string;
-        const pos = Math.trunc(args[1] as number);
-        const defaultValue = args.length > 2 ? Number(args[2]) : undefined;
-        const resolvedPath = resolveReadablePath(filename);
-        if (!resolvedPath) {
-          if (defaultValue !== undefined) return defaultValue;
-          throw new Error(`Could not read file: ${filename}`);
-        }
-        const fileBytes = fs.readFileSync(resolvedPath);
-        const value = readLittleEndian(fileBytes, pos, width);
-        if (value === undefined) {
-          if (defaultValue !== undefined) return defaultValue;
-          throw new Error(`${operation} out of bounds at ${pos}`);
-        }
-        return value;
-      }
-      case "canread":
-      {
-        const pos = Math.trunc(args[0] as number);
-        const num = Math.trunc(args[1] as number);
-        // Use targetRom if available, otherwise use romdata.length
-        const sourceLength = (this.targetRom && this.targetRom.length > 0) ? this.targetRom.length : this.romdata.length;
-        return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength) ? 1 : 0;
-      }
-      case "canread1":
-      case "canread2":
-      case "canread3":
-      case "canread4":
-      {
-        const pos = Math.trunc(args[0] as number);
-        const num = Math.trunc(args[1] as number);
-        // Use targetRom if available, otherwise use romdata.length
-        const sourceLength = (this.targetRom && this.targetRom.length > 0) ? this.targetRom.length : this.romdata.length;
-        return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength) ? 1 : 0;
-      }
-      case "canreadfile1":
-      case "canreadfile2":
-      case "canreadfile3":
-      case "canreadfile4":
-      {
-        const width = Number.parseInt(operation.slice(-1), 10);
-        const filename = args[0] as string;
-        const pos = Math.trunc(args[1] as number);
-        const resolvedPath = resolveReadablePath(filename);
-        if (!resolvedPath) return 0;
-        const size = fs.statSync(resolvedPath).size;
-        return (Number.isInteger(pos) && pos >= 0 && pos + width <= size) ? 1 : 0;
-      }
-      case "canreadfile":
-      {
-        const filename = args[0] as string;
-        const pos = Math.trunc(args[1] as number);
-        const num = Math.trunc(args[2] as number);
-        const resolvedPath = resolveReadablePath(filename);
-        if (!resolvedPath) return 0;
-        const size = fs.statSync(resolvedPath).size;
-        return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= size) ? 1 : 0;
-      }
-      default: {
-        throw new Error(`delegate ${operation} not implemented`);
+  hasLabelInScope(identifier: string): boolean {
+    return this.labelTable.has(identifier) ||
+      (this.currentNamespace ? this.labelTable.has(`${this.currentNamespace}_${identifier}`) : false);
+  }
+
+  getCurrentTargetAddress(): number {
+    return this.snespos;
+  }
+
+  getCurrentTargetBaseAddress(): number {
+    return this.realsnespos;
+  }
+
+  convertTargetAddressToRomOffset(address: number): number {
+    return this.snestopc(address);
+  }
+
+  convertRomOffsetToTargetAddress(offset: number): number {
+    return this.pctosnes(offset);
+  }
+
+  resolveExpressionLabel(identifier: string): number | string {
+    if (identifier.includes(".")) {
+      try {
+        return this.resolveStructMember(identifier);
+      } catch {
+        // Fall through to normal label lookup.
       }
     }
+    try {
+      return this.getLabelValue(identifier, this.requireStaticLabelLookup);
+    } catch (error) {
+      if (this.structs.has(identifier)) {
+        return identifier;
+      }
+      throw error;
+    }
   }
+
+  getExpressionObjectSize(identifier: string, baseOnly = false): number {
+    if (baseOnly && (identifier === "..." || identifier === "…")) {
+      if (this.inMacroExpansion && this.currentVariadicCount !== undefined) {
+        return this.currentVariadicCount;
+      }
+      if (this.inMacroDefinition) {
+        return 0;
+      }
+      return 0;
+    }
+    return this.getObjectSize(identifier, baseOnly);
+  }
+
+  canReadTargetRom(position: number, size: number): number {
+    const pos = Math.trunc(position);
+    const num = Math.trunc(size);
+    const sourceLength = (this.targetRom && this.targetRom.length > 0) ? this.targetRom.length : this.romdata.length;
+    return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength) ? 1 : 0;
+  }
+
+  readTargetRom(position: number, size: number, defaultValue?: number): number {
+    const pos = Math.trunc(position);
+    if (!this.readFunctionsEnabled && defaultValue === undefined) {
+      throw new Error(`Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`);
+    }
+    const pcPos = this.convertTargetAddressToRomOffset(pos);
+    const source = (this.targetRom && this.targetRom.length > 0) ? this.targetRom : this.romdata;
+    const romBytes = Uint8Array.from(source);
+    const value = pcPos < 0 ? undefined : this.readLittleEndian(romBytes, pcPos, size);
+    if (value === undefined) {
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+      throw new Error(`read${size} out of bounds at ${pos}`);
+    }
+    return value;
+  }
+
+  canReadExpressionFile(filename: string, position: number, size: number): number {
+    const pos = Math.trunc(position);
+    const resolvedPath = this.resolveReadablePath(filename);
+    if (!resolvedPath) {
+      return 0;
+    }
+    const fileSize = fs.statSync(resolvedPath).size;
+    return (Number.isInteger(pos) && pos >= 0 && pos + size <= fileSize) ? 1 : 0;
+  }
+
+  readExpressionFile(filename: string, position: number, size: number, defaultValue?: number): number {
+    const pos = Math.trunc(position);
+    const resolvedPath = this.resolveReadablePath(filename);
+    if (!resolvedPath) {
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+      throw new Error(`Could not read file: ${filename}`);
+    }
+    const fileBytes = fs.readFileSync(resolvedPath);
+    const value = this.readLittleEndian(fileBytes, pos, size);
+    if (value === undefined) {
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+      throw new Error(`readfile${size} out of bounds at ${pos}`);
+    }
+    return value;
+  }
+
+  create65816Context(): ArchitectureContext {
+    const context = {
+      operandResolver: this.operandResolver,
+      write1: (value: number) => this.write1(value),
+      write2: (value: number) => this.write2(value),
+      write3: (value: number) => this.write3(value),
+      emitByte: (value: number) => this.emitByte(value),
+      emitWord: (value: number) => this.emitWord(value),
+      emitLong: (value: number) => this.emitLong(value),
+      findNextLabel: (reference: string, fromAddress: number) => this.findNextLabel(reference, fromAddress),
+      findPreviousLabel: (reference: string, fromAddress: number) => this.findPreviousLabel(reference, fromAddress),
+      findNextRelativeLabel: (reference: string, fromAddress: number) => this.findNextRelativeLabel(reference, fromAddress),
+      findPreviousRelativeLabel: (reference: string, fromAddress: number) => this.findPreviousRelativeLabel(reference, fromAddress),
+    };
+    return Object.defineProperties(context, {
+      pass: { get: () => this.pass },
+      snespos: { get: () => this.getCurrentTargetAddress() },
+      currentAddress: { get: () => this.getCurrentTargetAddress() },
+      optimizeDirectPage: { get: () => this.optimizeDirectPage },
+      directPageOptimizationEnabled: { get: () => this.optimizeDirectPage },
+    }) as unknown as ArchitectureContext;
+  }
+
+  createSPC700Context(): Spc700Context {
+    const context = {
+      operandResolver: this.operandResolver,
+      write1: (value: number) => this.write1(value),
+      write2: (value: number) => this.write2(value),
+    };
+    return Object.defineProperties(context, {
+      pass: { get: () => this.pass },
+      snespos: { get: () => this.getCurrentTargetAddress() },
+    }) as unknown as Spc700Context;
+  }
+
+  createSuperFXContext(): SuperFXContext {
+    const context = {
+      operandResolver: this.operandResolver,
+      write1: (value: number) => this.write1(value),
+      write2: (value: number) => this.write2(value),
+    };
+    return Object.defineProperties(context, {
+      snespos: { get: () => this.getCurrentTargetAddress() },
+    }) as unknown as SuperFXContext;
+  }
+
+  readonly expressionHost: ExpressionHost = {
+    resolveLabel: (identifier) => this.resolveExpressionLabel(identifier),
+    convertSnesToPc: (address) => this.convertTargetAddressToRomOffset(address),
+    convertPcToSnes: (offset) => this.convertRomOffsetToTargetAddress(offset),
+    getCurrentAddress: () => this.getCurrentTargetAddress(),
+    getCurrentBaseAddress: () => this.getCurrentTargetBaseAddress(),
+    isDefined: (identifier) => {
+      if (this.defines.has(identifier)) return 1;
+      if (this.structs.has(identifier)) return 1;
+      return this.hasLabelInScope(identifier) ? 1 : 0;
+    },
+    getObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
+    getFileSize: (filename) => {
+      const resolvedPath = this.resolveReadablePath(filename);
+      if (!resolvedPath) {
+        throw new Error(`Could not get filesize for '${filename}'`);
+      }
+      return fs.statSync(resolvedPath).size;
+    },
+    getFileStatus: (filename) => {
+      const resolvedPath = this.resolveReadablePath(filename);
+      if (!resolvedPath) {
+        return 1;
+      }
+      try {
+        fs.accessSync(resolvedPath, fs.constants.R_OK);
+        return 0;
+      } catch {
+        return 2;
+      }
+    },
+    canReadFile: (filename, position, size) => this.canReadExpressionFile(filename, position, size),
+    readFile: (filename, position, size, defaultValue) => this.readExpressionFile(filename, position, size, defaultValue),
+    canReadRom: (position, size) => this.canReadTargetRom(position, size),
+    readRom: (position, size, defaultValue) => this.readTargetRom(position, size, defaultValue),
+  };
 
   /**
    * Advances memory position while handling bank crossing.
@@ -536,92 +559,49 @@ export class Assembler {
       return true;
     }
 
-    // In pass 0, we need to still increment the position counter,
-    // but we don't need to actually write bytes to ROM
+    const encoder = this.getActiveArchitectureEncoder();
     if (this.pass === 0) {
-      // Determine approximate instruction size based on operand
-      let size = 1; // Default size for instructions with no operand
-
-      if (words.length > 1) {
-        const operand = words.slice(1).join(" ");
-
-        // Handle immediate addressing mode
-        if (operand.startsWith("#")) {
-          size = 2; // Immediate byte or word (most common)
-        }
-        // Handle absolute addressing or other multi-byte instructions
-        else if (operand.includes("$") || operand.includes(",")) {
-          size = 3; // Most instructions with operands are 2-3 bytes
-        }
+      if (!encoder) {
+        return true;
       }
-
-      // Instructions like JSL, JML are typically 4 bytes
-      if (["JSL", "JML"].includes(words[0].toUpperCase())) {
-        size = 4;
-      }
-
-      // Step the counter by our estimated instruction size
+      const size = encoder.estimateSize(words);
       this.step(size);
       return true;
     }
 
-    // For pass > 0, proceed with actual architecture-specific handling
-    if (this.inSpcblock || this.arch === "spc700") {
-      return this.asblock_spc700(words);
-    } else if (this.arch === "superfx") {
-      // (Implement superfx handling if needed)
-      // For now, fallback to 65816 handling.
-      if (this.asblock_superfx(words)) {
-        return true;
-      }
-      return false;
-    } else if (this.arch === "65816") {
-      if (this.asblock_65816(words)) {
-        return true;
-      } else {
+    if (!encoder) {
+      return true;
+    }
+
+    if (!encoder.encode(words)) {
+      if (this.arch === "superfx") {
         return false;
       }
+      throw new Error(`Unknown instruction: ${words[0]}`);
     }
+
     return true;
   }
 
-  /**
-   * Placeholder for architecture-specific instruction handling.
-   * @param {string[]} words - The words to pick.
-   * @returns {boolean} True if the instruction was handled, false otherwise.
-   */
-  asblock_spc700(words: string[]): boolean {
-    debug("asblock_spc700", words);
-    if (!this.archSPC700.asblock_spc700(words)) {
-      throw new Error(`Unknown instruction: ${words[0]}`);
+  private getActiveArchitectureEncoder(): ArchitectureEncoder | undefined {
+    if (this.inSpcblock || this.arch === "spc700") {
+      return this.archSPC700;
     }
-    return true;
+    if (this.arch === "superfx") {
+      return this.archSuperFX;
+    }
+    if (this.arch === "65816") {
+      return this.arch65816;
+    }
+    return undefined;
   }
 
-  /**
-   * SuperFX instruction handler.
-   * @param {string[]} words - The words to pick.
-   * @returns {boolean} True if the instruction was handled, false otherwise.
-   */
-  asblock_superfx(words: string[]): boolean {
-    debug("asblock_superfx", words);
-    if (!this.archSuperFX.asblock_superfx(words)) {
-      throw new Error(`Unknown instruction: ${words[0]}`);
-    }
-    return true;
+  findNextRelativeLabel(reference: string, fromAddress: number): number {
+    return this.findNextLabel(reference, fromAddress);
   }
 
-  /**
-   * 65816 instruction handler.
-   * @param {string[]} words - The words to pick.
-   * @returns {boolean} True if the instruction was handled, false otherwise.
-   */
-  asblock_65816(words: string[]): boolean {
-    debug("asblock_65816", words);
-    if (!this.arch65816.asblock_65816(words)) {
-      throw new Error(`Unknown instruction: ${words[0]}`);
-    }
-    return true;
+  findPreviousRelativeLabel(reference: string, fromAddress: number): number {
+    return this.findPreviousLabel(reference, fromAddress);
   }
 
   /**
@@ -632,10 +612,18 @@ export class Assembler {
     this.write1_65816(num);
   }
 
+  emitByte(num: number): void {
+    this.write1(num);
+  }
+
   write2(num: number): void {
     this.assertBankCrossAllowed(2);
     this.write1(num & 0xFF);
     this.write1((num >> 8) & 0xFF);
+  }
+
+  emitWord(num: number): void {
+    this.write2(num);
   }
 
   write3(num: number): void {
@@ -643,6 +631,10 @@ export class Assembler {
     this.write1(num & 0xFF);
     this.write1((num >> 8) & 0xFF);
     this.write1((num >> 16) & 0xFF);
+  }
+
+  emitLong(num: number): void {
+    this.write3(num);
   }
 
   write4(num: number): void {
@@ -1174,7 +1166,7 @@ export class Assembler {
           if (words.length !== 3) {
             throw new Error(`skip directive in struct requires exactly one parameter: ${words.length}`);
           }
-          const skipAmount = this.getnum(words[2]);
+          const skipAmount = this.operandResolver.getnum(words[2]);
           this.currentStruct.offset += skipAmount;
           debug(`processCommand struct "${this.currentStruct.name}": skipAmount ${skipAmount}, offset now ${this.currentStruct.offset}`);
           return;
@@ -1347,7 +1339,7 @@ export class Assembler {
         if (words.length !== 2) {
           throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
         }
-        const val = this.getnum(this.resolvedefines(words[1]));
+        const val = this.operandResolver.getnum(this.resolvedefines(words[1]));
         debug(`processCommand ${keyword} value`, val);
         // Optionally warn if a label is used here.
         // Fill our fill pattern array in 12-byte blocks.
@@ -1366,7 +1358,7 @@ export class Assembler {
         if (words.length !== 2) {
           throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
         }
-        const count = this.getnum(this.resolvedefines(words[1]));
+        const count = this.operandResolver.getnum(this.resolvedefines(words[1]));
         for (let i = 0; i < count; i++) {
           this.write1(this.fillbyte[i % 12]);
         }
@@ -1388,7 +1380,7 @@ export class Assembler {
         if (words.length !== 2) {
           throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
         }
-        const val = this.getnum(this.resolvedefines(words[1]));
+        const val = this.operandResolver.getnum(this.resolvedefines(words[1]));
         debug(`${keyword} val`, val);
         // Save the pad unit (i.e. number of bytes in the pad pattern)
         this.padUnit = len;
@@ -1413,7 +1405,7 @@ export class Assembler {
           gap = nextBank;
         } else if (words.length === 2) {
           // We must convert the target SNES address into a PC offset.
-          const targetSNES = this.getnum(words[1]);
+          const targetSNES = this.operandResolver.getnum(words[1]);
           const targetPC = this.snestopc(targetSNES);
           if (targetPC < 0) {
             throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
@@ -1447,7 +1439,7 @@ export class Assembler {
           debug("BASE turned off. snespos and startpos reset to their real values.");
         } else {
           // Parse the parameter as a number.
-          const num = this.getnum(param);
+          const num = this.operandResolver.getnum(param);
           if (num > 0xFFFFFF) {
             throw new Error(`Invalid base address: ${param}. Must be within 24 bits.`);
           }
@@ -1783,7 +1775,7 @@ export class Assembler {
     if (params.length !== 1) {
       throw new Error("FREESPACEBYTE requires exactly one parameter.");
     }
-    this.default_freespacebyte = this.getnum(this.resolvedefines(params[0])) & 0xFF;
+    this.default_freespacebyte = this.operandResolver.getnum(this.resolvedefines(params[0])) & 0xFF;
   }
 
   /**
@@ -1844,7 +1836,7 @@ export class Assembler {
       throw new Error("Nested spcblock directives are not supported.");
     }
 
-    const destination = this.getnum(this.resolvedefines(words[1]));
+    const destination = this.operandResolver.getnum(this.resolvedefines(words[1]));
     if ((destination & ~0xFFFF) !== 0) {
       throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
     }
@@ -1912,7 +1904,7 @@ export class Assembler {
         throw new Error(`Invalid endspcblock argument: ${words[1]}`);
       }
       this.write2(0x0000);
-      this.write2(this.getnum(this.resolvedefines(words[2])) & 0xFFFF);
+      this.write2(this.operandResolver.getnum(this.resolvedefines(words[2])) & 0xFFFF);
     } else if (words.length !== 1) {
       throw new Error("Unknown endspcblock format.");
     } else if (this.spcblockData.executeAddress !== null) {
@@ -1932,7 +1924,7 @@ export class Assembler {
     if (params.length !== 1) {
       throw new Error("startpos requires exactly one parameter.");
     }
-    this.spcblockData.executeAddress = this.getnum(this.resolvedefines(params[0])) & 0xFFFF;
+    this.spcblockData.executeAddress = this.operandResolver.getnum(this.resolvedefines(params[0])) & 0xFFFF;
   }
 
   /**
@@ -3785,7 +3777,7 @@ export class Assembler {
         } catch (error) {
           debug("handleDataDirective struct resolution failed, trying math evaluation", resolved);
           // If struct resolution fails, evaluate using the standard numeric resolver.
-          num = this.getnum(resolved);
+          num = this.operandResolver.getnum(resolved);
         }
         if (Number.isNaN(num)) {
           // As a fallback, try to look up a label (this assumes it's a static label).
@@ -4007,7 +3999,7 @@ export class Assembler {
       base = this.structs.get(parent).base;
     } else {
       // Otherwise, words[2] is the SNES address.
-      base = this.getnum(words[2]);
+      base = this.operandResolver.getnum(words[2]);
       if (base < 0 || base > 0xFFFFFF) {
         throw new Error(`Invalid SNES address for struct: ${words[2]}`);
       }
@@ -4047,7 +4039,7 @@ export class Assembler {
       if (words.length !== 3) {
         throw new Error("endstruct align requires a single alignment parameter.");
       }
-      align = this.getnum(words[2]);
+      align = this.operandResolver.getnum(words[2]);
       if (align < 1) {
         throw new Error("Alignment must be at least 1.");
       }
@@ -4373,7 +4365,7 @@ export class Assembler {
       // Check if target location starts with $ or is a valid number
       if (/^\$?[\dA-Fa-f]+$/.test(targetLocation)) {
         // Handle as numeric address
-        targetAddress = this.getnum(targetLocation);
+        targetAddress = this.operandResolver.getnum(targetLocation);
         debug("handleIncbin targetAddress", targetAddress);
 
         // Set the position for numeric address
@@ -4642,91 +4634,6 @@ export class Assembler {
   }
 
   /**
-   * Gets a numeric value from an operand.
-   * @param {string} operand The operand to get the numeric value of.
-   * @returns {number} The numeric value of the operand.
-   */
-  getnum(operand: string): number {
-    debug("getnum", operand)
-    // Remove whitespace
-    operand = operand.trim();
-
-    // Check if the operand is a simple numeric string (no math, no labels)
-    // This is an optimization to avoid unnecessary processing for simple numbers
-    if (/^-?\d+$/.test(operand)) {
-      // Simple decimal number
-      return parseInt(operand, 10);
-    } else if (/^\$[\dA-Fa-f]+$/.test(operand)) {
-      // Simple hex number
-      return parseInt(operand.substring(1), 16);
-    } else if (/^%[01]+$/.test(operand)) {
-      // Simple binary number
-      return parseInt(operand.substring(1), 2);
-    }
-
-    // First, expand any defines.
-    operand = this.resolvedefines(operand);
-
-    // If immediate, strip the '#' but keep everything else
-    if (operand.startsWith("#")) {
-      operand = operand.substring(1).trim();
-    }
-
-    // Built-in math/function expressions (e.g. sizeof(...), read1(...))
-    // must be evaluated before dot-based struct/label heuristics.
-    if (/^[A-Z_a-z]\w*\s*\(/.test(operand)) {
-      try {
-        const value = this.mathCore.math(operand);
-        debug("getnum (function expression) =", value, "/", value.toString(16));
-        return value;
-      } catch (error) {
-        if (this.pass < 2) {
-          debug("getnum function expression deferred until final pass", { operand, error });
-          return 0;
-        }
-        throw error;
-      }
-    }
-
-    // If the operand does not start with a literal indicator,
-    // assume it is a label or a struct reference.
-    if (!operand.match(/^[\d$%]/)) {
-      // If it contains a dot or an opening bracket, treat it as a struct reference.
-      if (operand.indexOf(".") !== -1 || operand.indexOf("[") !== -1) {
-        try {
-          const addr = this.resolveStructLabel(operand);
-          debug("getnum (struct resolved) =", addr);
-          return addr;
-        } catch (e) {
-          // Fall back to a normal label lookup.
-          const labelValue = this.getLabelValue(operand, false);
-          debug("getnum (label resolved) =", labelValue, "/", labelValue.toString(16));
-          return labelValue;
-        }
-      } else if (/^\w+$/.test(operand)) {
-        // Otherwise, treat the operand as a label.
-        const labelValue = this.getLabelValue(operand, false);
-        debug("getnum (label resolved) =", labelValue, "/", labelValue.toString(16));
-        return labelValue;
-      }
-    }
-
-    // Otherwise, assume the operand is a literal math expression.
-    try {
-      const value = this.mathCore.math(operand);
-      debug("getnum (literal) =", value, "/", value.toString(16));
-      return value;
-    } catch (error) {
-      // Forward-label math can transiently divide by zero before final resolution.
-      if (this.pass < 2) {
-        debug("getnum expression deferred until final pass", { operand, error });
-        return 0;
-      }
-      throw error;
-    }
-  }
-
-  /**
    * Sets the current pass of assembly.
    * @param {number} pass - The pass number to set.
    */
@@ -4867,270 +4774,6 @@ export class Assembler {
       }
     }
     return true;
-  }
-
-  /**
-   * Expands an operand string into its expanded form and determines its expected length.
-   * @param {string} operand The operand to expand.
-   * @returns {{ expanded: string; length: number }} An object containing the expanded operand and its expected length.
-   */
-  expandOperand(operand: string): { expanded: string; length: number } {
-    debug("expandOperand", operand)
-    if (!operand) {
-      return { expanded: "", length: 2 };
-    }
-    let expanded = operand.trim()
-    let expectedLength = 2; // Default to 2 bytes for most operands
-    let forceTwoBytes = false; // Flag to force 2 bytes for bank operations
-
-    // Preserve anonymous relative label placeholders for branch resolution.
-    if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-") {
-      return { expanded, length: 2 };
-    }
-
-    try {
-      expanded = this.resolvedefines(expanded);
-    } catch (e) {
-      debug("expandOperand not a define")
-    }
-    debug("expandOperand: after resolvedefines:", { expanded });
-    try {
-      expanded = `$${this.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
-    } catch (e) {
-      debug("expandOperand not a struct label")
-    }
-    debug("expandOperand: after resolveStructLabel:", { expanded });
-
-    // Check for bank shorthand operations before any other processing
-    if (expanded.includes("<:") || expanded.includes("bank(") || expanded.includes("bankbyte(")) {
-      forceTwoBytes = true;
-      debug("expandOperand detected bank operation, forcing 2 bytes");
-    }
-
-    // Try to resolve label references before processing specific addressing modes
-    // This handles cases like "label", "label,x", "[label]", etc.
-    expanded = this.tryResolveLabelInOperand(expanded);
-    debug("expandOperand: after label resolution:", { expanded });
-
-    // Process the operand based on addressing mode
-    if (expanded.startsWith("#")) {
-      // Immediate mode
-      debug("expandOperand immediate mode or pseudo opcode", expanded);
-      const inner = expanded.substring(1).trim();
-
-      // Check for bank operations in the inner expression
-      if (inner.includes("<:") || inner.includes("bank(") || inner.includes("bankbyte(")) {
-        forceTwoBytes = true;
-        debug("expandOperand detected bank operation in immediate mode, forcing 2 bytes");
-      }
-
-      // Evaluate the inner expression if it's a hex value or numeric expression
-      if (inner.startsWith("$")) {
-        expectedLength = this.determineValueLength(inner.substring(1), forceTwoBytes);
-      } else {
-        try {
-          const value = this.getnum(inner);
-          expectedLength = this.determineValueLength(value, forceTwoBytes);
-
-          // Format the value as a hex literal and reconstruct immediate operand
-          const literal = "$" + value.toString(16).toUpperCase();
-          expanded = "#" + literal;
-        } catch (e) {
-          debug(`Failed to evaluate immediate expression: ${inner}`);
-        }
-      }
-    } else if (expanded.includes(",")) {
-      // Indexed addressing mode
-      debug("expandOperand indexed mode", expanded);
-      if (expanded.startsWith("$")) {
-        const hexPart = expanded.substring(1, expanded.indexOf(","));
-        expectedLength = this.determineValueLength(hexPart);
-      }
-    } else if (expanded.startsWith("[") && expanded.endsWith("]")) {
-      // Indirect addressing mode
-      debug("expandOperand indirect addressing mode", expanded);
-      expectedLength = 2;
-    } else if (expanded.startsWith("$")) {
-      // Direct addressing mode
-      debug("expandOperand direct addressing mode", expanded);
-      const hexPart = expanded.substring(1);
-      expectedLength = this.determineValueLength(hexPart);
-    } else {
-      // Other modes (likely labels)
-      debug("expandOperand other mode", expanded);
-      expectedLength = 2; // Default for labels
-    }
-
-    // Preserve branch placeholders like "+" / "++" / "-" / "--" for branch handlers.
-    const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded);
-
-    // Evaluate math expressions
-    if (!isRelativeLabelPlaceholder && this.isMathExpression(expanded)) {
-      try {
-        const resolvedValue = this.resolvedefines(expanded);
-        const result = this.mathCore.math(resolvedValue);
-
-        if (!Number.isNaN(result)) {
-          expanded = "$" + result.toString(16).toUpperCase();
-          expectedLength = this.determineValueLength(result, forceTwoBytes);
-          debug(`Evaluated math expression in define: ${resolvedValue} = ${expanded}`);
-        }
-      } catch (error) {
-        debug(`Math evaluation skipped for expression: ${expanded}`);
-      }
-    }
-
-    // Force 2 bytes if needed
-    if (forceTwoBytes) {
-      expectedLength = 2;
-    }
-
-    debug("expandOperand =", expanded, "length =", expectedLength);
-    return { expanded, length: expectedLength };
-  }
-
-  /**
-   * Determines the expected length based on a numeric value
-   * @param {string|number} value The value to check (either hex string or numeric)
-   * @param {boolean} [forceTwoBytes] Whether to force 2 bytes
-   * @returns {number} The expected length in bytes
-   */
-  determineValueLength(value: string | number, forceTwoBytes?: boolean): number {
-    debug("determineValueLength", value, forceTwoBytes);
-    // Validate input
-    if (typeof value !== "string" && typeof value !== "number") {
-      throw new Error(`Invalid value type for length determination: ${typeof value}`);
-    }
-    if (Number.isNaN(value)) {
-      throw new Error(`Invalid value for length determination: ${value}`);
-    }
-
-    if (typeof value === "string" && value.trim() === "") {
-      return 1;
-    }
-
-    if (forceTwoBytes) {
-      return 2;
-    }
-
-    // Convert the value to a hex string and handle each case
-    let hexString: string;
-
-    if (typeof value === "number") {
-      // Convert number to hex string WITHOUT leading zeros
-      hexString = value.toString(16).toUpperCase();
-    } else if (typeof value === "string") {
-      // If already a string, strip any '$' prefix if present
-      hexString = value.startsWith("$") ? value.substring(1) : value;
-    }
-
-    // Get the length based on number of hex digits (2 hex digits = 1 byte)
-    if (hexString.length <= 2) {
-      return 1; // 1 byte (zero page)
-    } else if (hexString.length <= 4) {
-      return 2; // 2 bytes (absolute)
-    } else {
-      return 3; // 3 bytes (long)
-    }
-  }
-
-  /**
-   * Checks if a string contains math operators
-   * @param {string} expression - The expression to check
-   * @returns {boolean} True if the expression contains math operators
-   */
-  isMathExpression(expression: string): boolean {
-    if (!expression || typeof expression !== "string") {
-      return false;
-    }
-    // MathCore function calls like sizeof(...), read1(...), canread(...), etc.
-    if (/^[A-Z_a-z]\w*\s*\(/.test(expression.trim())) {
-      return true;
-    }
-    return expression.includes("+") ||
-           expression.includes("-") ||
-           expression.includes("*") ||
-           expression.includes("/") ||
-           expression.includes("&") ||
-           expression.includes("|") ||
-           expression.includes("^") ||
-           expression.includes("<<") ||
-           expression.includes(">>");
-  }
-
-  /**
-   * Helper method to try resolving labels in different addressing modes
-   * @param {string} operand - The operand to process
-   * @returns {string} The operand with labels resolved to their values
-   */
-  tryResolveLabelInOperand(operand: string): string {
-    debug("tryResolveLabelInOperand", operand);
-
-    // Handle immediate mode (#label)
-    if (operand.startsWith("#")) {
-      const inner = operand.substring(1).trim();
-      if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
-        try {
-          const labelValue = this.getLabelValue(inner, false);
-          if (labelValue !== 0 || this.labelTable.has(inner) || this.labelTable.has(`${this.currentNamespace}_${inner}`)) {
-            debug("tryResolveLabelInOperand immediate mode", inner, "labelValue", labelValue, "/", labelValue.toString(16).toUpperCase());
-            return "#$" + labelValue.toString(16).toUpperCase();
-          }
-        } catch (e) {
-          debug(`tryResolveLabelInOperand label resolution failed for immediate: ${inner}`);
-        }
-      }
-      return operand;
-    }
-
-    // Handle indirect mode ([label])
-    if (operand.startsWith("[") && operand.endsWith("]")) {
-      const inner = operand.substring(1, operand.length - 1).trim();
-      if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
-        try {
-          const labelValue = this.getLabelValue(inner, false);
-          if (labelValue !== 0 || this.labelTable.has(inner) || this.labelTable.has(`${this.currentNamespace}_${inner}`)) {
-            return "[$" + labelValue.toString(16).toUpperCase() + "]";
-          }
-        } catch (e) {
-          debug(`tryResolveLabelInOperand label resolution failed for indirect: ${inner}`);
-        }
-      }
-      return operand;
-    }
-
-    // Handle indexed mode (label,x or label,y or label,s)
-    if (operand.includes(",")) {
-      const lastCommaIndex = operand.lastIndexOf(",");
-      const basePart = operand.substring(0, lastCommaIndex).trim();
-      const indexPart = operand.substring(lastCommaIndex).trim(); // Includes the comma
-
-      if (!basePart.match(/^[\d$%(]/)) {
-        try {
-          const labelValue = this.getLabelValue(basePart, false);
-          if (labelValue !== 0 || this.labelTable.has(basePart) || this.labelTable.has(`${this.currentNamespace}_${basePart}`)) {
-            return "$" + labelValue.toString(16).toUpperCase() + indexPart;
-          }
-        } catch (e) {
-          debug(`tryResolveLabelInOperand label resolution failed for indexed: ${basePart}`);
-        }
-      }
-      return operand;
-    }
-
-    // Handle direct label (no special characters)
-    if (!operand.match(/^[\d#$%([]/) && !operand.includes(",")) {
-      try {
-        const labelValue = this.getLabelValue(operand, false);
-        if (labelValue !== 0 || this.labelTable.has(operand) || this.labelTable.has(`${this.currentNamespace}_${operand}`)) {
-          return "$" + labelValue.toString(16).toUpperCase();
-        }
-      } catch (e) {
-        debug(`tryResolveLabelInOperand label resolution failed for direct: ${operand}`);
-      }
-    }
-
-    return operand;
   }
 
   /**
@@ -5484,7 +5127,7 @@ export class Assembler {
       throw new Error("Character mapping requires format: 'char' = value");
     }
     const char = words[0].replace(/["']/g, "");
-    const value = this.getnum(words[2]);
+    const value = this.operandResolver.getnum(words[2]);
     this.characterMappings.set(char, value);
   }
 
@@ -5815,8 +5458,8 @@ export class Assembler {
         const endExpr = forMatch[3].trim();
 
         // Process the inline for loop directly without collecting
-        const start = this.getnum(this.resolvedefines(startExpr));
-        const end = this.getnum(this.resolvedefines(endExpr));
+        const start = this.operandResolver.getnum(this.resolvedefines(startExpr));
+        const end = this.operandResolver.getnum(this.resolvedefines(endExpr));
 
         // Save the original variable value before we modify it
         const originalValue = this.defines.get(variable);
@@ -5878,13 +5521,13 @@ export class Assembler {
           if (/^-?\d+$/.test(startExpr)) {
             newLoop.start = Number.parseInt(startExpr, 10);
           } else {
-            newLoop.start = this.getnum(this.resolvedefines(startExpr));
+            newLoop.start = this.operandResolver.getnum(this.resolvedefines(startExpr));
           }
 
           if (/^-?\d+$/.test(endExpr)) {
             newLoop.end = Number.parseInt(endExpr, 10);
           } else {
-            newLoop.end = this.getnum(this.resolvedefines(endExpr));
+            newLoop.end = this.operandResolver.getnum(this.resolvedefines(endExpr));
           }
         } catch (e) {
           /* c8 ignore next 3 */
@@ -5978,8 +5621,8 @@ export class Assembler {
     // If expressions are already numeric, use them directly, otherwise resolve defines
     const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
     const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
-    const start = this.getnum(startDefinesResolved);
-    const end = this.getnum(endDefinesResolved);
+    const start = this.operandResolver.getnum(startDefinesResolved);
+    const end = this.operandResolver.getnum(endDefinesResolved);
 
     // Save the original variable value before we modify it
     const originalValue = this.defines.get(variable);
@@ -6215,7 +5858,7 @@ export class Assembler {
    * Handles a label definition, whether it has a colon or not.
    * @param {string} labelName The label name (without colon).
    */
-  private handleLabelDefinition(labelName: string): void {
+  handleLabelDefinition(labelName: string): void {
     debug("handleLabelDefinition", labelName);
 
     // Check if this is a sublabel (starts with one or more dots)

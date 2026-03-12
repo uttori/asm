@@ -10,7 +10,7 @@ import { Assembler } from "../src/assembler.js";
 
 const createArch65816 = () => {
   const assembler = new Assembler();
-  const arch = new Arch65816(assembler);
+  const arch = new Arch65816(assembler.create65816Context());
   return { assembler, arch };
 };
 
@@ -34,9 +34,18 @@ test("Arch65816.getlenfromchar throws for invalid suffixes", t => {
   }, { message: "Error: Invalid opcode length." });
 });
 
+test("Arch65816.estimateSize uses architecture-aware sizing", t => {
+  const { arch } = createArch65816();
+
+  t.is(arch.estimateSize(["BRA", "$8005"]), 2, "Short branches reserve 2 bytes");
+  t.is(arch.estimateSize(["BRL", "$8100"]), 3, "Long branches reserve 3 bytes");
+  t.is(arch.estimateSize(["JSL", "$808000"]), 4, "Long jumps reserve 4 bytes");
+  t.is(arch.estimateSize(["LDA", "#$1000"]), 3, "Immediate word operands reserve 3 bytes");
+});
+
 test("Arch65816.handleMemoryBitInstructions encodes direct TSB", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -54,7 +63,7 @@ test("Arch65816.handleMemoryBitInstructions encodes direct TSB", t => {
 
 test("Arch65816.handleMemoryBitInstructions encodes absolute TRB", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -72,7 +81,7 @@ test("Arch65816.handleMemoryBitInstructions encodes absolute TRB", t => {
 
 test("Arch65816.handleMemoryBitInstructions returns false for unsupported opcodes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -89,7 +98,7 @@ test("Arch65816.handleMemoryBitInstructions returns false for unsupported opcode
 
 test("Arch65816.handleBranchInstructions returns false for unsupported opcodes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -108,7 +117,7 @@ test("Arch65816.handleBranchInstructions writes short-branch placeholders during
   const { assembler, arch } = createArch65816();
   assembler.pass = 0;
   assembler.snespos = 0x8000;
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$8005").returns(0x8005);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -128,7 +137,7 @@ test("Arch65816.handleBranchInstructions writes BRL placeholders during pass 1",
   const { assembler, arch } = createArch65816();
   assembler.pass = 1;
   assembler.snespos = 0x8000;
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$8100").returns(0x8100);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -150,7 +159,7 @@ test("Arch65816.handleBranchInstructions resolves forward + labels using the bra
   assembler.snespos = 0x8000;
   const findNextLabelStub = sinon.stub(assembler, "findNextLabel");
   findNextLabelStub.withArgs("++", 0x8002).returns(0x8007);
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -173,7 +182,7 @@ test("Arch65816.handleBranchInstructions resolves backward - labels for negative
   assembler.snespos = 0x8000;
   const findPreviousLabelStub = sinon.stub(assembler, "findPreviousLabel");
   findPreviousLabelStub.withArgs("--", 0x8002).returns(0x7FFD);
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -194,7 +203,7 @@ test("Arch65816.handleBranchInstructions uses numeric operands for BRL", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
   assembler.snespos = 0x8000;
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$8013").returns(0x8013);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -213,7 +222,7 @@ test("Arch65816.handleBranchInstructions uses numeric operands for BRL", t => {
 test("Arch65816.handleBranchInstructions throws when the relative target is NaN", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("bad_label").returns(Number.NaN);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -234,7 +243,7 @@ test("Arch65816.handleBranchInstructions throws when short branches are out of r
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
   assembler.snespos = 0x8000;
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$8082").returns(0x8082);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -255,7 +264,7 @@ test("Arch65816.handleBranchInstructions throws when BRL targets are out of rang
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
   assembler.snespos = 0x8000;
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$10003").returns(0x10003);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -274,7 +283,7 @@ test("Arch65816.handleBranchInstructions throws when BRL targets are out of rang
 
 test("Arch65816.handlePER encodes a resolved operand", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("target_label").returns(0x3456);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -292,7 +301,7 @@ test("Arch65816.handlePER encodes a resolved operand", t => {
 
 test("Arch65816.handlePER throws when no operand is provided", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -311,7 +320,7 @@ test("Arch65816.handlePER throws when no operand is provided", t => {
 
 test("Arch65816.handleBlockMove encodes MVP with trimmed banks", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$01").returns(0x01);
   getnumStub.withArgs("$02").returns(0x02);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -327,7 +336,7 @@ test("Arch65816.handleBlockMove encodes MVP with trimmed banks", t => {
 
 test("Arch65816.handleBlockMove encodes MVN", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$7E").returns(0x7E);
   getnumStub.withArgs("$40").returns(0x40);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -342,7 +351,7 @@ test("Arch65816.handleBlockMove encodes MVN", t => {
 
 test("Arch65816.handleBlockMove throws when operand count is invalid", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   t.teardown(() => {
     getnumStub.restore();
@@ -427,7 +436,7 @@ test("Arch65816.handleGenericOpcode returns false for unmapped opcodes", t => {
 
 test("Arch65816.handleJump encodes numeric JMP operands as absolute addresses", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("255").returns(0x00FF);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -448,7 +457,7 @@ test("Arch65816.handleJump encodes numeric JMP operands as absolute addresses", 
 
 test("Arch65816.handleJump normalizes short hex JSR operands", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$FF").returns(0x00FF);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -469,7 +478,7 @@ test("Arch65816.handleJump normalizes short hex JSR operands", t => {
 
 test("Arch65816.handleJump upgrades long JMP operands to JML", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$123456").returns(0x123456);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -489,7 +498,7 @@ test("Arch65816.handleJump upgrades long JMP operands to JML", t => {
 
 test("Arch65816.handleJump upgrades long JSR operands and preserves JML mode", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$123456").returns(0x123456);
   getnumStub.withArgs("$654321").returns(0x654321);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -511,7 +520,7 @@ test("Arch65816.handleJump upgrades long JSR operands and preserves JML mode", t
 
 test("Arch65816.handleJump encodes indirect long and indexed indirect modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$5678").returns(0x5678);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -533,7 +542,7 @@ test("Arch65816.handleJump encodes indirect long and indexed indirect modes", t 
 
 test("Arch65816.handleJump encodes JMP indexed indirect", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -553,7 +562,7 @@ test("Arch65816.handleJump encodes JMP indexed indirect", t => {
 
 test("Arch65816.handleJump encodes absolute indirect JMP", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -573,7 +582,7 @@ test("Arch65816.handleJump encodes absolute indirect JMP", t => {
 
 test("Arch65816.handleJump throws on invalid operands", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   const write3Stub = sinon.stub(assembler, "write3");
@@ -595,7 +604,7 @@ test("Arch65816.handleJump throws on invalid operands", t => {
 
 test("Arch65816.handleStoreOperations returns false for unsupported opcodes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -612,7 +621,7 @@ test("Arch65816.handleStoreOperations returns false for unsupported opcodes", t 
 
 test("Arch65816.handleStoreOperations encodes explicit indexed STZ word operands", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -629,7 +638,7 @@ test("Arch65816.handleStoreOperations encodes explicit indexed STZ word operands
 
 test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY fallback opcodes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$34").returns(0x34);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -648,7 +657,7 @@ test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY fallb
 
 test("Arch65816.handleStoreOperations encodes forced non-indexed STY and STZ", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -667,7 +676,7 @@ test("Arch65816.handleStoreOperations encodes forced non-indexed STY and STZ", t
 
 test("Arch65816.handleStoreOperations encodes direct and indexed store modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$34").returns(0x34);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -686,7 +695,7 @@ test("Arch65816.handleStoreOperations encodes direct and indexed store modes", t
 
 test("Arch65816.handleStoreOperations encodes absolute indexed STZ", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -703,7 +712,7 @@ test("Arch65816.handleStoreOperations encodes absolute indexed STZ", t => {
 
 test("Arch65816.handleStoreOperations encodes absolute indexed STX and STY", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$5678").returns(0x5678);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -722,7 +731,7 @@ test("Arch65816.handleStoreOperations encodes absolute indexed STX and STY", t =
 
 test("Arch65816.handleStoreOperations encodes non-indexed absolute and directY STX", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$9ABC").returns(0x9ABC);
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -741,7 +750,7 @@ test("Arch65816.handleStoreOperations encodes non-indexed absolute and directY S
 
 test("Arch65816.handleStoreOperations encodes indexed direct-page STZ fallback", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -758,7 +767,7 @@ test("Arch65816.handleStoreOperations encodes indexed direct-page STZ fallback",
 
 test("Arch65816.handleStoreOperations throws on unsupported forced lengths and invalid operands", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -779,7 +788,7 @@ test("Arch65816.handleStoreOperations throws on unsupported forced lengths and i
 
 test("Arch65816.handleBitTestOperations returns false for unsupported opcodes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -796,7 +805,7 @@ test("Arch65816.handleBitTestOperations returns false for unsupported opcodes", 
 
 test("Arch65816.handleBitTestOperations encodes BIT immediate in default and forced modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$0000").returns(0x0000);
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -815,7 +824,7 @@ test("Arch65816.handleBitTestOperations encodes BIT immediate in default and for
 
 test("Arch65816.handleBitTestOperations encodes indexed and absolute modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -834,7 +843,7 @@ test("Arch65816.handleBitTestOperations encodes indexed and absolute modes", t =
 
 test("Arch65816.handleBitTestOperations encodes forced non-indexed and default non-forced branches", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$34").returns(0x34);
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -856,7 +865,7 @@ test("Arch65816.handleBitTestOperations encodes forced non-indexed and default n
 
 test("Arch65816.handleBitTestOperations encodes TSB direct mode and rejects forced indexed mode", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -877,7 +886,7 @@ test("Arch65816.handleBitTestOperations encodes TSB direct mode and rejects forc
 
 test("Arch65816.handleBitTestOperations throws on invalid operands", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -893,7 +902,7 @@ test("Arch65816.handleBitTestOperations throws on invalid operands", t => {
 
 test("Arch65816.handleLoadRegister handles immediate and indexed modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -912,7 +921,7 @@ test("Arch65816.handleLoadRegister handles immediate and indexed modes", t => {
 
 test("Arch65816.handleLoadRegister handles LDY immediate word operands", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -929,7 +938,7 @@ test("Arch65816.handleLoadRegister handles LDY immediate word operands", t => {
 
 test("Arch65816.handleLoadRegister handles LDY fallback direct and absolute forms", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -948,7 +957,7 @@ test("Arch65816.handleLoadRegister handles LDY fallback direct and absolute form
 
 test("Arch65816.handleLoadRegister supports forced addressing and errors", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -973,7 +982,7 @@ test("Arch65816.handleLoadRegister supports forced addressing and errors", t => 
 
 test("Arch65816.handleLoadRegister covers forced LDX and forced indexed LDY word forms", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$5678").returns(0x5678);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -992,7 +1001,7 @@ test("Arch65816.handleLoadRegister covers forced LDX and forced indexed LDY word
 
 test("Arch65816.handleLoadRegister covers LDX fallback direct, absolute, and indexed-Y modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$5678").returns(0x5678);
@@ -1013,7 +1022,7 @@ test("Arch65816.handleLoadRegister covers LDX fallback direct, absolute, and ind
 
 test("Arch65816.handleLoadRegister covers LDX indexed direct-page and LDY direct-page fallback", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$34").returns(0x34);
   getnumStub.withArgs("$56").returns(0x56);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1032,7 +1041,7 @@ test("Arch65816.handleLoadRegister covers LDX indexed direct-page and LDY direct
 
 test("Arch65816.handleArithmeticOperations handles accumulator and addressing variants", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1052,7 +1061,7 @@ test("Arch65816.handleArithmeticOperations handles accumulator and addressing va
 
 test("Arch65816.handleArithmeticOperations supports forced modes and rejects invalid inputs", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1078,7 +1087,7 @@ test("Arch65816.handleArithmeticOperations supports forced modes and rejects inv
 
 test("Arch65816.handleArithmeticOperations covers successful forced byte and word encodings", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$56").returns(0x56);
@@ -1099,7 +1108,7 @@ test("Arch65816.handleArithmeticOperations covers successful forced byte and wor
 
 test("Arch65816.handleArithmeticOperations returns false for unsupported opcodes with operands", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
@@ -1116,7 +1125,7 @@ test("Arch65816.handleArithmeticOperations returns false for unsupported opcodes
 
 test("Arch65816.handleArithmeticOperations throws for unsupported forced opcode branches", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -1141,7 +1150,7 @@ test("Arch65816.handleArithmeticOperations throws for unsupported forced opcode 
 
 test("Arch65816.handleArithmeticOperations covers absolute-X and direct-page fallback modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$78").returns(0x78);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1160,7 +1169,7 @@ test("Arch65816.handleArithmeticOperations covers absolute-X and direct-page fal
 
 test("Arch65816.handleLogicAndCompareOperations handles immediate and routed modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$0000").returns(0x0000);
   getnumStub.withArgs("$34").returns(0x34);
@@ -1184,7 +1193,7 @@ test("Arch65816.handleLogicAndCompareOperations handles immediate and routed mod
 
 test("Arch65816.handleLogicAndCompareOperations supports forced sizes and invalid formats", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$123456").returns(0x123456);
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1211,7 +1220,7 @@ test("Arch65816.handleLogicAndCompareOperations supports forced sizes and invali
 
 test("Arch65816.handleLogicAndCompareOperations covers successful explicit-size indexed and non-indexed modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$123456").returns(0x123456);
@@ -1238,7 +1247,7 @@ test("Arch65816.handleLogicAndCompareOperations covers successful explicit-size 
 
 test("Arch65816.handleLogicAndCompareOperations reaches indirect-long fallback branches", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$34").returns(0x34);
   getnumStub.withArgs("$56").returns(0x56);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -1260,7 +1269,7 @@ test("Arch65816.handleLogicAndCompareOperations reaches indirect-long fallback b
 
 test("Arch65816.handleLogicAndCompareOperations writes 16-bit immediate operands", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -1280,7 +1289,7 @@ test("Arch65816.handleLogicAndCompareOperations writes 16-bit immediate operands
 
 test("Arch65816.handleLogicAndCompareOperations writes 16-bit ORA immediates", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$5678").returns(0x5678);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -1300,7 +1309,7 @@ test("Arch65816.handleLogicAndCompareOperations writes 16-bit ORA immediates", t
 
 test("Arch65816.handleLogicAndCompareOperations writes direct-page operands through write1", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$34").returns(0x34);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -1320,7 +1329,7 @@ test("Arch65816.handleLogicAndCompareOperations writes direct-page operands thro
 
 test("Arch65816.handleLogicAndCompareOperations covers remaining indexed and indirect modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$5678").returns(0x5678);
   getnumStub.withArgs("$12").returns(0x12);
@@ -1365,7 +1374,7 @@ test("Arch65816.handleLogicAndCompareOperations covers remaining indexed and ind
 
 test("Arch65816.handleLogicAndCompareOperations covers non-forced absolute-X mode", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -1385,7 +1394,7 @@ test("Arch65816.handleLogicAndCompareOperations covers non-forced absolute-X mod
 
 test("Arch65816.handleLogicAndCompareOperations covers long and stack-relative modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$123456").returns(0x123456);
   getnumStub.withArgs("$34").returns(0x34);
   getnumStub.withArgs("$56").returns(0x56);
@@ -1411,7 +1420,7 @@ test("Arch65816.handleLogicAndCompareOperations covers long and stack-relative m
 
 test("Arch65816.handleMemoryOperations handles immediate and forced addressing", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("#$12").returns(0x12);
   getnumStub.withArgs("$123456").returns(0x123456);
   getnumStub.withArgs("$1234").returns(0x1234);
@@ -1455,7 +1464,7 @@ test("Arch65816.handleMemoryOperations throws for unsupported forced opcode maps
 test("Arch65816.handleMemoryOperations handles direct-page optimization and indirect forms", t => {
   const { assembler, arch } = createArch65816();
   assembler.optimizeDirectPage = false;
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$34").returns(0x34);
   getnumStub.withArgs("VALUE").returns(0x1234);
@@ -1480,7 +1489,7 @@ test("Arch65816.handleMemoryOperations handles direct-page optimization and indi
 
 test("Arch65816.handleMemoryOperations covers absolute indexed X and unsupported fallthrough", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -1502,7 +1511,7 @@ test("Arch65816.handleMemoryOperations covers absolute indexed X and unsupported
 test("Arch65816.handleMemoryOperations covers symbolic absolute indexed X fallback", t => {
   const { assembler, arch } = createArch65816();
   assembler.optimizeDirectPage = false;
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("VALUE").returns(0x1234);
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
@@ -1522,7 +1531,7 @@ test("Arch65816.handleMemoryOperations covers symbolic absolute indexed X fallba
 
 test("Arch65816.handleMemoryOperations covers absolute-Y, absolute-long, and absolute modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   getnumStub.withArgs("$123456").returns(0x123456);
   getnumStub.withArgs("$5678").returns(0x5678);
@@ -1546,7 +1555,7 @@ test("Arch65816.handleMemoryOperations covers absolute-Y, absolute-long, and abs
 
 test("Arch65816.handleMemoryOperations covers stack-relative and indirect-long modes", t => {
   const { assembler, arch } = createArch65816();
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   getnumStub.withArgs("$34").returns(0x34);
   getnumStub.withArgs("$56").returns(0x56);
@@ -1605,7 +1614,7 @@ test("Arch65816.asblock_65816 returns false for empty input", t => {
 
 test("Arch65816.asblock_65816 routes arithmetic opcodes with explicit length suffixes", t => {
   const { assembler, arch } = createArch65816();
-  const expandOperandStub = sinon.stub(assembler, "expandOperand");
+  const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
   const getlenStub = sinon.stub(arch, "getlenfromchar");
   getlenStub.withArgs("B").returns(1);
@@ -1624,7 +1633,7 @@ test("Arch65816.asblock_65816 routes arithmetic opcodes with explicit length suf
 
 test("Arch65816.asblock_65816 routes no-operand opcodes before other helpers", t => {
   const { assembler, arch } = createArch65816();
-  const expandOperandStub = sinon.stub(assembler, "expandOperand");
+  const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("#3").returns({ expanded: "#3", length: 1 });
   const noOperandStub = sinon.stub(arch, "handleNoOperandOperations").returns(true);
   const loadRegisterStub = sinon.stub(arch as any, "handleLoadRegister").returns(true);
@@ -1641,11 +1650,11 @@ test("Arch65816.asblock_65816 routes no-operand opcodes before other helpers", t
 
 test("Arch65816.asblock_65816 routes branch helpers before generic fallback", t => {
   const { assembler, arch } = createArch65816();
-  const expandOperandStub = sinon.stub(assembler, "expandOperand");
+  const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$1234").returns({ expanded: "$1234", length: 2 });
   const noOperandStub = sinon.stub(arch, "handleNoOperandOperations").returns(false);
   const branchStub = sinon.stub(arch, "handleBranchInstructions").returns(false);
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$1234").returns(0x1234);
   const genericStub = sinon.stub(arch, "handleGenericOpcode").returns(true);
   t.teardown(() => {
@@ -1663,11 +1672,11 @@ test("Arch65816.asblock_65816 routes branch helpers before generic fallback", t 
 
 test("Arch65816.asblock_65816 falls back to generic opcode handling with resolved num and hexconstant", t => {
   const { assembler, arch } = createArch65816();
-  const expandOperandStub = sinon.stub(assembler, "expandOperand");
+  const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
   const noOperandStub = sinon.stub(arch, "handleNoOperandOperations").returns(false);
   const branchStub = sinon.stub(arch, "handleBranchInstructions").returns(false);
-  const getnumStub = sinon.stub(assembler, "getnum");
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
   const genericStub = sinon.stub(arch, "handleGenericOpcode").returns(true);
   t.teardown(() => {
@@ -1684,7 +1693,7 @@ test("Arch65816.asblock_65816 falls back to generic opcode handling with resolve
 
 test("Arch65816.asblock_65816 routes bit-test opcodes without falling through to memory-bit helper", t => {
   const { assembler, arch } = createArch65816();
-  const expandOperandStub = sinon.stub(assembler, "expandOperand");
+  const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
   const bitTestStub = sinon.stub(arch as any, "handleBitTestOperations").returns(true);
   const memoryBitStub = sinon.stub(arch as any, "handleMemoryBitInstructions").returns(true);
@@ -1701,7 +1710,7 @@ test("Arch65816.asblock_65816 routes bit-test opcodes without falling through to
 
 test("Arch65816.asblock_65816 routes memory and load-register opcodes using expanded operands", t => {
   const { assembler, arch } = createArch65816();
-  const expandOperandStub = sinon.stub(assembler, "expandOperand");
+  const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("#!VALUE").returns({ expanded: "#$34", length: 1 });
   expandOperandStub.withArgs("$1234,y").returns({ expanded: "$1234,y", length: 2 });
   const memoryStub = sinon.stub(arch, "handleMemoryOperations").returns(true);

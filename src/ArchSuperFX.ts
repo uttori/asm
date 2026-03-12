@@ -1,4 +1,4 @@
-import { Assembler } from "./assembler.js";
+import type { ArchitectureEncoder, SuperFXContext } from "./architecture-types.js";
 
 let debug = (..._: unknown[]) => {};
 try {
@@ -6,11 +6,35 @@ try {
   debug = d("ArchSuperFX");
 } catch {}
 
-export class ArchSuperFX {
-  private assembler: Assembler;
+export class ArchSuperFX implements ArchitectureEncoder {
+  private assembler: SuperFXContext;
 
-  constructor(assembler: Assembler) {
+  constructor(assembler: SuperFXContext) {
     this.assembler = assembler;
+  }
+
+  encode(words: string[]): boolean {
+    return this.asblock_superfx(words);
+  }
+
+  estimateSize(words: string[]): number {
+    if (words.length === 0) {
+      return 0;
+    }
+
+    let size = 1;
+    if (words.length > 1) {
+      const operand = words.slice(1).join(" ");
+      if (operand.startsWith("#")) {
+        size = 2;
+      } else if (operand.includes("$") || operand.includes(",")) {
+        size = 3;
+      }
+    }
+    if (["JSL", "JML"].includes(words[0].toUpperCase())) {
+      size = 4;
+    }
+    return size;
   }
 
   /**
@@ -25,7 +49,7 @@ export class ArchSuperFX {
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
 
     // Expand the operand using the new method that returns both expanded operand and its length
-    const { expanded: operand, length: operandLength } = this.assembler.expandOperand(rawOperand);
+    const { expanded: operand, length: operandLength } = this.assembler.operandResolver.expandOperand(rawOperand);
     debug("asblock_superfx operand expanded", operand, "expected length:", operandLength);
 
     debug("asblock_superfx opcode", opcode);
@@ -182,7 +206,7 @@ export class ArchSuperFX {
       const branchOpcode = shortBranchMap[opcode];
       // We interpret the operand as an address for branching
       // If the user wants an 8-bit offset, we allow direct or label
-      const val = this.assembler.getnum(operand);
+      const val = this.assembler.operandResolver.getnum(operand);
       // Use operandLength determined by expandOperand
       if (operandLength === 1) {
         // direct offset
@@ -409,7 +433,7 @@ export class ArchSuperFX {
 
     // Rn, #imm combos
     if (reg1r !== null && rightOp.startsWith("#")) {
-      const immVal = this.assembler.getnum(rightOp.slice(1)) & 0xffff;
+      const immVal = this.assembler.operandResolver.getnum(rightOp.slice(1)) & 0xffff;
       switch (opcode) {
         case "IBT":
           // => 0xA0+reg1, then immVal
@@ -497,7 +521,7 @@ export class ArchSuperFX {
     // Rn, (imm)
     // e.g. "MOVE R0, (0x1234)" or "SMS (0x40), R3"
     if (reg1r !== null && leftOp.toLowerCase().startsWith("r")) {
-      const addrVal = this.assembler.getnum(rightOp);
+      const addrVal = this.assembler.operandResolver.getnum(rightOp);
       switch (opcode) {
         case "LM":
           // => 0x3D, 0xF0 + reg1, then lo, hi
@@ -539,7 +563,7 @@ export class ArchSuperFX {
     // (imm), Rn
     if (reg2r !== null && rightOp.startsWith("R")) {
       if (leftOp.startsWith("(") && leftOp.endsWith(")")) {
-        const addrVal = this.assembler.getnum(leftOp);
+        const addrVal = this.assembler.operandResolver.getnum(leftOp);
         switch (opcode) {
           case "SM":
             this.assembler.write1(0x3E);
@@ -623,7 +647,7 @@ export class ArchSuperFX {
         return null;
       }
       // Accept normalized forms like #$0 in addition to #0.
-      const regnum = this.assembler.getnum(str.slice(1));
+      const regnum = this.assembler.operandResolver.getnum(str.slice(1));
       if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
         console.error("Invalid register number", str, regnum);
         return null;
