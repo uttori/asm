@@ -1,18 +1,17 @@
-type FrontEndCommandHost = {
+export type FrontEndCommandHost = {
   inFunctionDefinition: boolean;
   functionDefinitionLines: string[];
-  realsnespos: number;
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   parseFunctionDefinition(defLine: string): void;
-  processCommand(command: string): void;
+  processNestedCommand(command: string): void;
   handleRelativeLabel(label: string): number;
   handleLabelDefinition(labelName: string): void;
   setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
   resolvedefines(input: string): string;
   evaluateMath(input: string): number;
   getLabelValue(label: string, requireStatic: boolean): number;
-  addAddressToLine(address: number): void;
+  recordCurrentAddress(): void;
 };
 
 export class FrontEndCommandService {
@@ -59,7 +58,7 @@ export class FrontEndCommandService {
 
     const relativeLabel = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
     this.host.handleRelativeLabel(relativeLabel);
-    this.host.addAddressToLine(this.host.realsnespos & 0xFFFFFF);
+    this.host.recordCurrentAddress();
     return true;
   }
 
@@ -86,7 +85,7 @@ export class FrontEndCommandService {
     }
 
     if (words.length > 2) {
-      this.host.processCommand(words.slice(2).join(" "));
+      this.host.processNestedCommand(words.slice(2).join(" "));
     }
 
     return true;
@@ -121,7 +120,7 @@ export class FrontEndCommandService {
     }
 
     this.host.setLabel(labelName, value, true);
-    this.host.addAddressToLine(this.host.realsnespos & 0xFFFFFF);
+    this.host.recordCurrentAddress();
     return true;
   }
 }

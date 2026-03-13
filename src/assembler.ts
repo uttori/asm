@@ -4,6 +4,7 @@ import path from "node:path"
 import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
+import type { AssemblerServices, CursorAddressFacade } from "./assembler-internals.js";
 import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, Spc700Context, SuperFXContext } from "./architecture-types.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
@@ -12,12 +13,14 @@ import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { createDirectiveRegistry, type DirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
-import { DefineEngine } from "./services/define-engine.js";
-import { FrontEndCommandService } from "./services/front-end-command-service.js";
-import { MacroEngine } from "./services/macro-engine.js";
-import { RomWriterService } from "./services/rom-writer-service.js";
-import { StructEngine } from "./services/struct-engine.js";
-import { SymbolScopeService } from "./services/symbol-scope-service.js";
+import { CommandPipelineService, type CommandPipelineHost } from "./services/command-pipeline-service.js";
+import { DefineEngine, type DefineHost } from "./services/define-engine.js";
+import { FrontEndCommandService, type FrontEndCommandHost } from "./services/front-end-command-service.js";
+import { MacroEngine, type MacroEngineHost } from "./services/macro-engine.js";
+import { PreDispatchPipelineService, type PreDispatchPipelineHost } from "./services/pre-dispatch-pipeline-service.js";
+import { RomWriterService, type RomWriterHost } from "./services/rom-writer-service.js";
+import { StructEngine, type StructHost } from "./services/struct-engine.js";
+import { SymbolScopeService, type SymbolScopeHost } from "./services/symbol-scope-service.js";
 
 let debug = (..._) => {};
 /* c8 ignore next */
@@ -239,12 +242,42 @@ export class Assembler implements AssemblySession {
   public spcInlineCompatMode: boolean = false;
   public requireStaticLabelLookup: boolean = false;
   private readonly directiveRegistry: DirectiveRegistry;
-  private readonly defineEngine: DefineEngine;
-  private readonly frontEndCommandService: FrontEndCommandService;
-  private readonly macroEngine: MacroEngine;
-  private readonly symbolScope: SymbolScopeService;
-  private readonly romWriter: RomWriterService;
-  private readonly structEngine: StructEngine;
+  private readonly cursorAddress: CursorAddressFacade;
+  private readonly services: AssemblerServices;
+
+  private get commandPipelineService(): CommandPipelineService {
+    return this.services.commandPipelineService;
+  }
+
+  private get defineEngine(): DefineEngine {
+    return this.services.defineEngine;
+  }
+
+  private get frontEndCommandService(): FrontEndCommandService {
+    return this.services.frontEndCommandService;
+  }
+
+  private get macroEngine(): MacroEngine {
+    return this.services.macroEngine;
+  }
+
+  private get preDispatchPipelineService(): PreDispatchPipelineService {
+    return this.services.preDispatchPipelineService;
+  }
+
+  private get symbolScope(): SymbolScopeService {
+    return this.services.symbolScope;
+  }
+
+  private get romWriter(): RomWriterService {
+    return this.services.romWriter;
+  }
+
+  private get structEngine(): StructEngine {
+    return this.services.structEngine;
+  }
+
+  // Core assembler wrapper helpers
 
   get currentAddress(): number {
     return this.getCurrentTargetAddress();
@@ -254,14 +287,436 @@ export class Assembler implements AssemblySession {
     return this.optimizeDirectPage;
   }
 
+  recordCurrentAddress(): void {
+    this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+  }
+
+  setWritePosition(address: number): void {
+    this.snespos = address;
+    this.realsnespos = address;
+    this.startpos = address;
+    this.realstartpos = address;
+  }
+
+  syncWriteStarts(): void {
+    this.startpos = this.snespos;
+    this.realstartpos = this.realsnespos;
+  }
+
+  incrementBytesWritten(num: number): void {
+    this.bytes += num;
+  }
+
+  processNestedCommand(command: string): void {
+    this.processCommand(command);
+  }
+
+  loadTestRomData(): void {
+    const testRomSize = 512 * 1024;
+    if (!this.targetRom || this.targetRom.length === 0) {
+      return;
+    }
+
+    for (let i = 0; i < Math.min(testRomSize, this.targetRom.length); i++) {
+      this.romdata[i] = this.targetRom[i];
+    }
+  }
+
+  // Shared adapter infrastructure
+
+  private createCursorAddressFacade(): CursorAddressFacade {
+    return {
+      recordCurrentAddress: () => this.recordCurrentAddress(),
+      setWritePosition: (address: number) => this.setWritePosition(address),
+      syncWriteStarts: () => this.syncWriteStarts(),
+      incrementBytesWritten: (num: number) => this.incrementBytesWritten(num),
+    };
+  }
+
+  // Pre-dispatch and front-end adapters
+
+  private createDefineHost(): DefineHost {
+    const defineHost: DefineHost = {
+      defines: this.defines,
+      resolvedefines: (input: string) => this.resolvedefines(input),
+      evaluateMath: (input: string) => this.evaluateMath(input),
+      processNestedCommand: (command: string) => this.processNestedCommand(command),
+    };
+
+    return defineHost;
+  }
+
+  private createFrontEndCommandHost(): FrontEndCommandHost {
+    return Object.create(null, {
+      inFunctionDefinition: {
+        get: () => this.inFunctionDefinition,
+        set: (value: boolean) => {
+          this.inFunctionDefinition = value;
+        },
+        enumerable: true,
+      },
+      functionDefinitionLines: {
+        get: () => this.functionDefinitionLines,
+        set: (value: string[]) => {
+          this.functionDefinitionLines = value;
+        },
+        enumerable: true,
+      },
+      currentParentLabel: {
+        get: () => this.currentParentLabel,
+        set: (value: string) => {
+          this.currentParentLabel = value;
+        },
+        enumerable: true,
+      },
+      currentParentIsGlobal: {
+        get: () => this.currentParentIsGlobal,
+        set: (value: boolean) => {
+          this.currentParentIsGlobal = value;
+        },
+        enumerable: true,
+      },
+      parseFunctionDefinition: { value: (defLine: string) => this.parseFunctionDefinition(defLine), enumerable: true },
+      processNestedCommand: { value: (command: string) => this.processNestedCommand(command), enumerable: true },
+      handleRelativeLabel: { value: (label: string) => this.handleRelativeLabel(label), enumerable: true },
+      handleLabelDefinition: { value: (labelName: string) => this.handleLabelDefinition(labelName), enumerable: true },
+      setLabel: {
+        value: (
+          label: string,
+          value?: number,
+          isStatic?: boolean,
+          isMacroLabel?: boolean,
+          isGlobal?: boolean,
+          modifiesHierarchy?: boolean,
+        ) => this.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy),
+        enumerable: true,
+      },
+      resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
+      evaluateMath: { value: (input: string) => this.evaluateMath(input), enumerable: true },
+      getLabelValue: {
+        value: (label: string, requireStatic: boolean) => this.getLabelValue(label, requireStatic),
+        enumerable: true,
+      },
+      recordCurrentAddress: { value: () => this.cursorAddress.recordCurrentAddress(), enumerable: true },
+    }) as FrontEndCommandHost;
+  }
+
+  private createPreDispatchPipelineHost(): PreDispatchPipelineHost {
+    return Object.create(null, {
+      collectingLoop: { get: () => this.collectingLoop, enumerable: true },
+      currentLoop: { get: () => this.currentLoop, enumerable: true },
+      inMacroDefinition: { get: () => this.inMacroDefinition, enumerable: true },
+      inMacroExpansion: { get: () => this.inMacroExpansion, enumerable: true },
+      pass: { get: () => this.pass, enumerable: true },
+      condStack: { get: () => this.condStack, enumerable: true },
+      moreonlinecond: { get: () => this.moreonlinecond, enumerable: true },
+      numtrue: { get: () => this.numtrue, enumerable: true },
+      numif: { get: () => this.numif, enumerable: true },
+      handleEndIf: { value: () => this.handleEndIf(), enumerable: true },
+      handleFor: { value: (args: string[]) => this.handleFor(args), enumerable: true },
+      handleWhile: { value: (args: string[]) => this.handleWhile(args), enumerable: true },
+      handleEndFor: { value: () => this.handleEndFor(), enumerable: true },
+      handleEndWhile: { value: () => this.handleEndWhile(), enumerable: true },
+      removeInlineComment: { value: (line: string) => this.removeInlineComment(line), enumerable: true },
+      splitCommandIntoWords: { value: (command: string) => this.splitCommandIntoWords(command), enumerable: true },
+      resolveVariadicPlaceholders: { value: (command: string) => this.resolveVariadicPlaceholders(command), enumerable: true },
+      resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
+      loadTestRomData: { value: () => this.loadTestRomData(), enumerable: true },
+    }) as PreDispatchPipelineHost;
+  }
+
+  private createCommandPipelineHost(): CommandPipelineHost {
+    return {
+      splitCommandIntoWords: (command) => this.splitCommandIntoWords(command),
+      handleCharacterMapping: (words) => this.handleCharacterMapping(words),
+      recordCurrentAddress: () => this.cursorAddress.recordCurrentAddress(),
+    };
+  }
+
+  // Symbol, macro, and struct adapters
+
+  private createStructHost(): StructHost {
+    return Object.create(null, {
+      currentStruct: {
+        get: () => this.currentStruct,
+        set: (value: StructDefinition | null) => {
+          this.currentStruct = value;
+        },
+        enumerable: true,
+      },
+      structs: {
+        get: () => this.structs,
+        enumerable: true,
+      },
+      operandResolver: {
+        get: () => this.operandResolver,
+        enumerable: true,
+      },
+      write1: {
+        value: (value: number) => this.write1(value),
+        enumerable: true,
+      },
+      readFile: {
+        value: (filename: string) => this.readFile(filename),
+        enumerable: true,
+      },
+      recordCurrentAddress: {
+        value: () => this.cursorAddress.recordCurrentAddress(),
+        enumerable: true,
+      },
+      handlePushPC: {
+        value: () => this.handlePushPC(),
+        enumerable: true,
+      },
+      handlePullPC: {
+        value: () => this.handlePullPC(),
+        enumerable: true,
+      },
+      getLabelValue: {
+        value: (label: string, requireStatic: boolean) => this.getLabelValue(label, requireStatic),
+        enumerable: true,
+      },
+      evaluateRangeExpression: {
+        value: (expression: string) => this.evaluateRangeExpression(expression),
+        enumerable: true,
+      },
+      enterStructDefinition: {
+        value: (base: number) => {
+          this.savedPCStack.push(this.snespos);
+          this.cursorAddress.setWritePosition(base);
+        },
+        enumerable: true,
+      },
+      restoreStructDefinition: {
+        value: () => {
+          if (this.savedPCStack.length === 0) {
+            return;
+          }
+          const previousPosition = this.savedPCStack.pop();
+          if (previousPosition !== undefined) {
+            this.cursorAddress.setWritePosition(previousPosition);
+          }
+        },
+        enumerable: true,
+      },
+      setWritePosition: {
+        value: (address: number) => this.cursorAddress.setWritePosition(address),
+        enumerable: true,
+      },
+    }) as StructHost;
+  }
+
+  private createMacroEngineHost(): MacroEngineHost {
+    return Object.create(null, {
+      pass: { get: () => this.pass, enumerable: true },
+      currentFile: { get: () => this.currentFile, enumerable: true },
+      snespos: { get: () => this.snespos, enumerable: true },
+      collectingLoop: { get: () => this.collectingLoop, enumerable: true },
+      condStack: { get: () => this.condStack, enumerable: true },
+      defines: { get: () => this.defines, enumerable: true },
+      labelTable: { get: () => this.labelTable, enumerable: true },
+      inMacroDefinition: {
+        get: () => this.inMacroDefinition,
+        set: (value: boolean) => {
+          this.inMacroDefinition = value;
+        },
+        enumerable: true,
+      },
+      currentMacroName: {
+        get: () => this.currentMacroName,
+        set: (value: string) => {
+          this.currentMacroName = value;
+        },
+        enumerable: true,
+      },
+      currentMacroParams: {
+        get: () => this.currentMacroParams,
+        set: (value: string[]) => {
+          this.currentMacroParams = value;
+        },
+        enumerable: true,
+      },
+      currentMacroBody: {
+        get: () => this.currentMacroBody,
+        set: (value: string[]) => {
+          this.currentMacroBody = value;
+        },
+        enumerable: true,
+      },
+      currentVariadicCount: {
+        get: () => this.currentVariadicCount,
+        set: (value: number | undefined) => {
+          this.currentVariadicCount = value;
+        },
+        enumerable: true,
+      },
+      currentVariadicArgs: {
+        get: () => this.currentVariadicArgs,
+        set: (value: string[]) => {
+          this.currentVariadicArgs = value;
+        },
+        enumerable: true,
+      },
+      macros: { get: () => this.macros, enumerable: true },
+      macroLabelInstance: {
+        get: () => this.macroLabelInstance,
+        set: (value: number) => {
+          this.macroLabelInstance = value;
+        },
+        enumerable: true,
+      },
+      inMacroExpansion: {
+        get: () => this.inMacroExpansion,
+        set: (value: boolean) => {
+          this.inMacroExpansion = value;
+        },
+        enumerable: true,
+      },
+      currentParentLabel: {
+        get: () => this.currentParentLabel,
+        set: (value: string) => {
+          this.currentParentLabel = value;
+        },
+        enumerable: true,
+      },
+      currentParentIsGlobal: {
+        get: () => this.currentParentIsGlobal,
+        set: (value: boolean) => {
+          this.currentParentIsGlobal = value;
+        },
+        enumerable: true,
+      },
+      resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
+      processNestedCommand: { value: (command: string) => this.processNestedCommand(command), enumerable: true },
+      setLabel: {
+        value: (
+          label: string,
+          value?: number,
+          isStatic?: boolean,
+          isMacroLabel?: boolean,
+          isGlobal?: boolean,
+          modifiesHierarchy?: boolean,
+        ) => this.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy),
+        enumerable: true,
+      },
+      handleRelativeLabel: { value: (label: string) => this.handleRelativeLabel(label), enumerable: true },
+      getLabelValue: { value: (label: string, requireStatic: boolean) => this.getLabelValue(label, requireStatic), enumerable: true },
+      findNextLabel: { value: (label: string, currentAddressOverride?: number) => this.findNextLabel(label, currentAddressOverride), enumerable: true },
+      findPreviousLabel: { value: (label: string, currentAddressOverride?: number) => this.findPreviousLabel(label, currentAddressOverride), enumerable: true },
+      evaluateMath: { value: (input: string) => this.evaluateMath(input), enumerable: true },
+    }) as MacroEngineHost;
+  }
+
+  private createSymbolScopeHost(): SymbolScopeHost {
+    return Object.create(null, {
+      pass: { get: () => this.pass, enumerable: true },
+      snespos: { get: () => this.snespos, enumerable: true },
+      currentNamespace: {
+        get: () => this.currentNamespace,
+        set: (value: string) => {
+          this.currentNamespace = value;
+        },
+        enumerable: true,
+      },
+      namespaceNestingEnabled: { get: () => this.namespaceNestingEnabled, enumerable: true },
+      namespaceNestingPath: { get: () => this.namespaceNestingPath, enumerable: true },
+      inMacroExpansion: { get: () => this.inMacroExpansion, enumerable: true },
+      macroLabelInstance: { get: () => this.macroLabelInstance, enumerable: true },
+      labelTable: { get: () => this.labelTable, enumerable: true },
+      forwardLabels: { get: () => this.forwardLabels, enumerable: true },
+      backwardLabels: { get: () => this.backwardLabels, enumerable: true },
+      currentParentLabel: {
+        get: () => this.currentParentLabel,
+        set: (value: string) => {
+          this.currentParentLabel = value;
+        },
+        enumerable: true,
+      },
+      currentParentIsGlobal: {
+        get: () => this.currentParentIsGlobal,
+        set: (value: boolean) => {
+          this.currentParentIsGlobal = value;
+        },
+        enumerable: true,
+      },
+      structs: { get: () => this.structs, enumerable: true },
+    }) as SymbolScopeHost;
+  }
+
+  // Address-space and ROM adapters
+
+  private createRomWriterHost(): RomWriterHost {
+    return Object.create(null, {
+      snespos: {
+        get: () => this.snespos,
+        set: (value: number) => {
+          this.snespos = value;
+        },
+        enumerable: true,
+      },
+      realsnespos: {
+        get: () => this.realsnespos,
+        set: (value: number) => {
+          this.realsnespos = value;
+        },
+        enumerable: true,
+      },
+      mapper: { get: () => this.mapper, enumerable: true },
+      sa1banks: { get: () => this.sa1banks, enumerable: true },
+      romdata: { get: () => this.romdata, enumerable: true },
+      default_freespacebyte: { get: () => this.default_freespacebyte, enumerable: true },
+      pass: { get: () => this.pass, enumerable: true },
+      bankCrossCheckMode: { get: () => this.bankCrossCheckMode, enumerable: true },
+      spcInlineCompatMode: { get: () => this.spcInlineCompatMode, enumerable: true },
+      inSpcblock: { get: () => this.inSpcblock, enumerable: true },
+      activeFreespaceStartPc: { get: () => this.activeFreespaceStartPc, enumerable: true },
+      activeFreespaceContentStartPc: { get: () => this.activeFreespaceContentStartPc, enumerable: true },
+      checksumFixEnabled: { get: () => this.checksumFixEnabled, enumerable: true },
+      fillRomData: { value: (start: number, value: number, length: number) => this.fillRomData(start, value, length), enumerable: true },
+      writeDataBytes: { value: (start: number, value: number, length?: number) => this.writeDataBytes(start, value, length), enumerable: true },
+      updateHeaderAndCRC32: { value: () => this.updateHeaderAndCRC32(), enumerable: true },
+      handleEndSpcblock: { value: (words: string[]) => this.handleEndSpcblock(words), enumerable: true },
+      setWritePosition: { value: (address: number) => this.cursorAddress.setWritePosition(address), enumerable: true },
+      syncWriteStarts: { value: () => this.cursorAddress.syncWriteStarts(), enumerable: true },
+      incrementBytesWritten: { value: (num: number) => this.cursorAddress.incrementBytesWritten(num), enumerable: true },
+    }) as RomWriterHost;
+  }
+
+  // Service assembly
+
+  private createServices(): AssemblerServices {
+    const defineEngine = new DefineEngine(this.createDefineHost());
+    const frontEndCommandService = new FrontEndCommandService(this.createFrontEndCommandHost());
+    const symbolScope = new SymbolScopeService(this.createSymbolScopeHost());
+    const romWriter = new RomWriterService(this.createRomWriterHost());
+    const macroEngine = new MacroEngine(this.createMacroEngineHost());
+    const preDispatchPipelineService = new PreDispatchPipelineService(this.createPreDispatchPipelineHost());
+    const structEngine = new StructEngine(this.createStructHost());
+    const commandPipelineService = new CommandPipelineService(
+      this.createCommandPipelineHost(),
+      frontEndCommandService,
+      macroEngine,
+      defineEngine,
+      structEngine,
+      preDispatchPipelineService,
+    );
+
+    return {
+      commandPipelineService,
+      defineEngine,
+      frontEndCommandService,
+      macroEngine,
+      preDispatchPipelineService,
+      romWriter,
+      structEngine,
+      symbolScope,
+    };
+  }
+
   constructor(targetRom?: number[] | Uint8Array) {
     this.targetRom = targetRom ?? [];
-    this.defineEngine = new DefineEngine(this);
-    this.frontEndCommandService = new FrontEndCommandService(this);
-    this.symbolScope = new SymbolScopeService(this);
-    this.romWriter = new RomWriterService(this);
-    this.macroEngine = new MacroEngine(this);
-    this.structEngine = new StructEngine(this);
+    this.cursorAddress = this.createCursorAddressFacade();
+    this.services = this.createServices();
     this.operandResolver = new OperandResolver({
       resolveDefines: (input) => this.resolvedefines(input),
       resolveStructLabel: (input) => this.resolveStructLabel(input),
@@ -731,180 +1186,43 @@ export class Assembler implements AssemblySession {
     if (command.trim() === "") return;
     debug("processCommand", { command }, this.snespos, "/", this.snespos.toString(16), `pass ${this.pass}`);
 
-    command = this.macroEngine.rewriteMacroLabelReferences(command);
+    command = this.commandPipelineService.rewriteRawCommand(command);
 
-    // When collecting a while loop, asar uses "endif" to close the while (not "endwhile")
-    if (this.collectingLoop && this.currentLoop?.type === "while" && command.trim().toLowerCase().startsWith("endif")) {
-      this.handleEndIf();
+    if (this.commandPipelineService.interceptRawCommand(command)) {
       return;
     }
 
-    // If we're in a loop body and not processing an inner loop or endfor, store the command
-    if (this.collectingLoop && !command.match(/^\s*(for|while|endfor|endwhile)/i)) {
-      debug("processCommand collecting loop command", command);
-      // We're inside a loop block - collect the command instead of immediately processing it
-      if (this.currentLoop) {
-        this.currentLoop.commands.push(command);
-      }
+    const state = this.commandPipelineService.create(command);
+    if (!state) {
       return;
     }
 
-    // Parse loop definitions using directive handlers so stack state stays consistent.
-    // Do not intercept loop tokens while defining a macro; those lines must be stored verbatim.
-    if (!this.inMacroDefinition) {
-      if (command.match(/^\s*for\s+/i)) {
-        const loopWords = this.splitCommandIntoWords(this.removeInlineComment(command));
-        this.handleFor(loopWords.slice(1));
-        return;
-      }
-
-      if (command.match(/^\s*while\s+/i)) {
-        const loopWords = this.splitCommandIntoWords(this.removeInlineComment(command));
-        this.handleWhile(loopWords.slice(1));
-        return;
-      }
-
-      if (command.match(/^\s*endfor/i)) {
-        this.handleEndFor();
-        return;
-      }
-
-      if (command.match(/^\s*endwhile/i)) {
-        this.handleEndWhile();
-        return;
-      }
-    }
-
-    // If we already started a function definition, gather more lines if the last line ended with "\"
-    if (this.frontEndCommandService.continueFunctionDefinition(command)) {
+    const preprocessResult = this.commandPipelineService.preprocess(state);
+    if (preprocessResult === "skipped_for_condition") {
+      debug(`processCommand ❎ Skipping command "${state.command}" because condition is false.`);
       return;
     }
-
-    // Check for the special test directive comment.
-    // The test file is marked by a line that is exactly ";`+"
-    if (command.trim().startsWith(";`+")) {
-      debug("Test file directive detected; loading target ROM and setting ROM length to 512 KB.");
-      const testRomSize = 512 * 1024; // 512 KB
-      // If a target ROM data buffer is provided (assume it's stored in this.targetRom)
-      if (this.targetRom && this.targetRom.length > 0) {
-        // Copy up to testRomSize bytes from targetRom into our romdata array.
-        for (let i = 0; i < Math.min(testRomSize, this.targetRom.length); i++) {
-          this.romdata[i] = this.targetRom[i];
-        }
-      }
-      // No further processing needed for this line.
-        return;
-      }
-
-    // First remove any inline comment (ignoring semicolons inside quotes)
-    command = this.removeInlineComment(command);
-
-    // Resolve Variadic Placeholders
-    if (this.inMacroExpansion && this.pass !== 0 && (command.includes("...") || command.includes("…"))) {
-      const currentCond = this.condStack.length === 0 ? true : this.condStack.every((entry) => entry.cond);
-      if (currentCond) {
-        command = this.resolveVariadicPlaceholders(command);
-      }
-    }
-
-    // Split by whitespace, but preserve quoted strings
-    let words = this.splitCommandIntoWords(command);
-    if (words.length === 0) return;
-
-    const keyword = words[0];
-
-    // Handle character mappings (both inside and outside tables)
-    if (words.length === 3 && words[1] === "=" && (words[0].startsWith("'") || words[0].startsWith('"'))) {
-      this.handleCharacterMapping(words);
+    if (preprocessResult === "handled") {
       return;
     }
-
-    // Function Definition Mode
-    if (this.frontEndCommandService.startFunctionDefinition(keyword, words)) {
-      return;
-    }
-
-    if (this.macroEngine.handleDefinitionCommand(command, keyword, words)) {
-      return;
-    }
-
-    // Define a set of directives that must always be processed (i.e. that update the condition stack)
-    const conditionDirectives = new Set([
-      "if", "elseif", "else", "endif",
-      "while", "endwhile", "for", "endfor"
-    ]);
-
-    // Check if we are inside a false conditional block.
-    // (If any entry in condStack is false then overall condition is false.)
-    const currentCond = this.condStack.length === 0 ? true : this.condStack.every(entry => entry.cond);
-    if (!currentCond && !conditionDirectives.has(keyword)) {
-      debug(`processCommand ❎ Skipping command "${command}" because condition is false.`);
-      return;
-    }
-
-    // If the command starts with "!", handle it appropriately
-    if (this.defineEngine.handleCommand(command)) {
-      if (command.includes("=")) {
-        this.addAddressToLine(this.realsnespos & 0xFFFFFF);
-      }
-      return;
-    }
-
-    // If we're in struct mode, intercept struct member commands.
-    if (this.structEngine.handleStructMode(words)) {
-      return;
-    }
-
-    // Handle relative labels (+ and -), with or without trailing colon.
-    // Asar test fixtures commonly declare bare "+" / "-" labels on a line by themselves.
-    if (this.frontEndCommandService.handleRelativeLabelDefinition(keyword)) {
-      return;
-    }
-
-    if (this.frontEndCommandService.handleGlobalLabel(words)) {
-      return;
-    }
-
-    // Handle non-relative (named) labels that use the colon syntax.
-    // (Dynamic labels get their value from the current PC.)
-    // Check if the first token ends with a colon or starts with a dot.
-    words = this.frontEndCommandService.consumeNamedLabelDefinitions(words, keyword);
-    if (words.length === 0) return;
-
-    // Handle static label assignment
-    // Format: LabelName = <expression>
-    if (this.frontEndCommandService.handleStaticLabelAssignment(words, keyword)) {
-      return;
-    }
-
-    let resolved = "";
 
     // Capture the starting PC (before processing this command)
     const startPC = this.realsnespos & 0xFFFFFF;
 
-    // Ensure proper condition handling
-    if (!this.moreonlinecond && !["elseif", "else", "endif", "endwhile"].includes(keyword.toLowerCase())) {
+    if (!this.commandPipelineService.prepareForDispatch(state)) {
       return;
     }
 
-    // TODO: inmacro is external and resolvedefines is external
-    // RPG Hacker: Fix issue where defines in elseifs weren't resolving correctly
-    if (keyword.toLowerCase() === "elseif" && this.numtrue + 1 === this.numif) {
-        const tmp =  command; //this.macros.inmacro ? this.macros.replace_macro_args(command) : command;
-        resolved = this.resolvedefines(tmp);
-        words = resolved.trim().split(/\s+/);
-    }
-
-    const handledDirective = this.directiveRegistry.dispatch(keyword, words, command);
+    const handledDirective = this.directiveRegistry.dispatch(state.keyword, state.words, state.command);
     if (!handledDirective) {
-      if (keyword.startsWith(";")) {
+      if (state.keyword.startsWith(";")) {
         // debug(`handleInstruction comment: ${words.join(" ")}`);
-      } else if (keyword === "") {
+      } else if (state.keyword === "") {
         // debug(`handleInstruction white space: ${words.join(" ")}`);
       } else {
-        const wasOpcode = this.asblock_pick(words);
+        const wasOpcode = this.asblock_pick(state.words);
         if (!wasOpcode) {
-          debug("💥 assembler processCommand unknown operation", keyword)
+          debug("💥 assembler processCommand unknown operation", state.keyword)
         }
       }
     }

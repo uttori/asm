@@ -1,12 +1,12 @@
 import type { MacroDefinition } from "../assembler.js";
-type MacroLabelEntry = {
+export type MacroLabelEntry = {
     value: number;
     isStatic: boolean;
     isMacroLabel?: boolean;
     macroInstance?: number;
     modifiesHierarchy?: boolean;
 };
-type MacroConditionalEntry = {
+export type MacroConditionalEntry = {
     cond: boolean;
 };
 export interface MacroEngineHost {
@@ -29,7 +29,7 @@ export interface MacroEngineHost {
     currentParentLabel: string;
     currentParentIsGlobal: boolean;
     resolvedefines(input: string): string;
-    processCommand(command: string): void;
+    processNestedCommand(command: string): void;
     setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
     handleRelativeLabel(label: string): number;
     getLabelValue(label: string, requireStatic: boolean): number;
@@ -47,5 +47,4 @@ export declare class MacroEngine {
     resolveVariadicPlaceholders(command: string): string;
     processMacroLine(line: string): void;
 }
-export {};
 //# sourceMappingURL=macro-engine.d.ts.map

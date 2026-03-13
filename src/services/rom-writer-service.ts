@@ -1,9 +1,6 @@
 export interface RomWriterHost {
   snespos: number;
   realsnespos: number;
-  startpos: number;
-  realstartpos: number;
-  bytes: number;
   mapper: string;
   sa1banks: number[];
   romdata: number[] | Uint8Array;
@@ -19,6 +16,9 @@ export interface RomWriterHost {
   writeDataBytes(start: number, value: number, length?: number): void;
   updateHeaderAndCRC32(): void;
   handleEndSpcblock(words: string[]): void;
+  setWritePosition(address: number): void;
+  syncWriteStarts(): void;
+  incrementBytesWritten(num: number): void;
 }
 
 export class RomWriterService {
@@ -33,9 +33,8 @@ export class RomWriterService {
     }
     this.host.snespos = (this.host.snespos & 0xff000000) | this.fixsnespos(this.host.snespos & 0xffffff, num);
     this.host.realsnespos = (this.host.realsnespos & 0xff000000) | this.fixsnespos(this.host.realsnespos & 0xffffff, num);
-    this.host.startpos = this.host.snespos;
-    this.host.realstartpos = this.host.realsnespos;
-    this.host.bytes += num;
+    this.host.syncWriteStarts();
+    this.host.incrementBytesWritten(num);
   }
 
   write1_65816(num: number): void {
@@ -265,10 +264,7 @@ export class RomWriterService {
 
   verifysnespos(): void {
     if (this.host.snespos < 0 || this.host.realsnespos < 0) {
-      this.host.snespos = 0x008000;
-      this.host.realsnespos = 0x008000;
-      this.host.startpos = 0x008000;
-      this.host.realstartpos = 0x008000;
+      this.host.setWritePosition(0x008000);
     }
   }
 

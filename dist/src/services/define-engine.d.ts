@@ -1,10 +1,8 @@
-type DefineHost = {
+export type DefineHost = {
     defines: Map<string, string>;
-    collectingLoop: boolean;
-    currentVariadicArgs: string[];
     resolvedefines(input: string): string;
     evaluateMath(input: string): number;
-    processCommand(command: string): void;
+    processNestedCommand(command: string): void;
 };
 export declare class DefineEngine {
     private readonly host;
@@ -18,5 +16,4 @@ export declare class DefineEngine {
     processValueWithBracedDefines(value: string): string;
     private applyDefineOperation;
 }
-export {};
 //# sourceMappingURL=define-engine.d.ts.map

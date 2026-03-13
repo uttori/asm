@@ -1,23 +1,20 @@
 import type { StructDefinition } from "../assembler.js";
-type StructHost = {
+export type StructHost = {
     currentStruct: StructDefinition | null;
-    savedPCStack: number[];
     structs: Map<string, StructDefinition>;
-    snespos: number;
-    realsnespos: number;
-    startpos: number;
-    realstartpos: number;
     operandResolver: {
         getnum(input: string): number;
     };
     write1(value: number): void;
     readFile(filename: string): Uint8Array | string;
-    addAddressToLine(address: number): void;
+    recordCurrentAddress(): void;
     handlePushPC(): void;
     handlePullPC(): void;
     getLabelValue(label: string, requireStatic: boolean): number;
-    snestopc(address: number): number;
     evaluateRangeExpression(expression: string): number;
+    enterStructDefinition(base: number): void;
+    restoreStructDefinition(): void;
+    setWritePosition(address: number): void;
 };
 export declare class StructEngine {
     private readonly host;
@@ -28,5 +25,4 @@ export declare class StructEngine {
     resolveStructLabel(labelRef: string): number;
     handleIncbin(words: string[]): void;
 }
-export {};
 //# sourceMappingURL=struct-engine.d.ts.map

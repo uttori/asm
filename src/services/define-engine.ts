@@ -1,10 +1,8 @@
-type DefineHost = {
+export type DefineHost = {
   defines: Map<string, string>;
-  collectingLoop: boolean;
-  currentVariadicArgs: string[];
   resolvedefines(input: string): string;
   evaluateMath(input: string): number;
-  processCommand(command: string): void;
+  processNestedCommand(command: string): void;
 };
 
 export class DefineEngine {
@@ -23,7 +21,7 @@ export class DefineEngine {
     const trimmedCommand = command.trim();
     if (trimmedCommand.startsWith("!{")) {
       const processedCommand = this.processValueWithBracedDefines(trimmedCommand);
-      this.host.processCommand(processedCommand);
+      this.host.processNestedCommand(processedCommand);
       return true;
     }
 
@@ -32,7 +30,7 @@ export class DefineEngine {
       throw new Error(`Error: Define '${defineName}' not found.`);
     }
 
-    this.host.processCommand(this.host.defines.get(defineName) ?? "");
+    this.host.processNestedCommand(this.host.defines.get(defineName) ?? "");
     return true;
   }
 

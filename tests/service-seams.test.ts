@@ -63,6 +63,64 @@ test("front-end service handles global labels before directive dispatch", (t) =>
   t.is(assembler.arch, "spc700");
 });
 
+test("pre-dispatch pipeline collects loop body commands", (t) => {
+  const assembler = new Assembler();
+  assembler.collectingLoop = true;
+  assembler.currentLoop = {
+    type: "for",
+    condition: "",
+    commands: [],
+    startLine: 1,
+  };
+
+  assembler.processCommand("db $01");
+
+  t.deepEqual(assembler.currentLoop.commands, ["db $01"]);
+});
+
+test("pre-dispatch pipeline maps while endif to handleEndIf", (t) => {
+  const assembler = new Assembler();
+  const endIf = stub(assembler, "handleEndIf");
+  assembler.collectingLoop = true;
+  assembler.currentLoop = {
+    type: "while",
+    condition: "",
+    commands: [],
+    startLine: 1,
+  };
+
+  assembler.processCommand("endif");
+
+  t.true(endIf.calledOnce);
+});
+
+test("pre-dispatch pipeline intercepts raw loop directives", (t) => {
+  const assembler = new Assembler();
+  const handleFor = stub(assembler, "handleFor");
+
+  assembler.processCommand("for i = 0..2");
+
+  t.true(handleFor.calledOnce);
+  t.deepEqual(handleFor.firstCall.args[0], ["i", "=", "0..2"]);
+});
+
+test("pre-dispatch pipeline loads test rom directive", (t) => {
+  const targetRom = new Uint8Array([1, 2, 3, 4]);
+  const assembler = new Assembler(targetRom);
+
+  assembler.processCommand(";`+");
+
+  t.deepEqual(Array.from(assembler.romdata.slice(0, 4)), [1, 2, 3, 4]);
+});
+
+test("command pipeline handles character mappings through processCommand", (t) => {
+  const assembler = new Assembler();
+
+  assembler.processCommand('"A" = $42');
+
+  t.is(assembler.characterMappings.get("A"), 0x42);
+});
+
 test("symbol scope resolves stored local relative labels", (t) => {
   const assembler = new Assembler();
   assembler.pass = 0;
@@ -82,6 +140,29 @@ test("symbol scope resolves nested sublabels through current parent", (t) => {
 
   t.is(assembler.getLabelValue(".Child", false), assembler.snespos);
   t.is(assembler.getLabelValue("Main_Child", false), assembler.snespos);
+});
+
+test("pre-dispatch pipeline skips non-conditional commands in false blocks", (t) => {
+  const assembler = new Assembler();
+  assembler.condStack.push({ type: "if", cond: false });
+  stub(assembler, "addAddressToLine");
+
+  assembler.processCommand("!skipped = 1");
+
+  t.false(assembler.defines.has("skipped"));
+});
+
+test("pre-dispatch pipeline re-resolves elseif before dispatch", (t) => {
+  const assembler = new Assembler();
+  const handleElseIf = stub(assembler, "handleElseIf");
+  stub(assembler, "addAddressToLine");
+  assembler.defines.set("cond_value", "1");
+  assembler.numtrue = 0;
+  assembler.numif = 1;
+
+  assembler.processCommand("elseif !cond_value");
+
+  t.true(handleElseIf.calledOnceWithExactly(["1"]));
 });
 
 test("front-end service handles named and static labels through processCommand", (t) => {

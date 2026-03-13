@@ -1,6 +1,6 @@
 import type { MacroDefinition } from "../assembler.js";
 
-type MacroLabelEntry = {
+export type MacroLabelEntry = {
   value: number;
   isStatic: boolean;
   isMacroLabel?: boolean;
@@ -8,7 +8,7 @@ type MacroLabelEntry = {
   modifiesHierarchy?: boolean;
 };
 
-type MacroConditionalEntry = {
+export type MacroConditionalEntry = {
   cond: boolean;
 };
 
@@ -32,7 +32,7 @@ export interface MacroEngineHost {
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   resolvedefines(input: string): string;
-  processCommand(command: string): void;
+  processNestedCommand(command: string): void;
   setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
   handleRelativeLabel(label: string): number;
   getLabelValue(label: string, requireStatic: boolean): number;
@@ -484,7 +484,7 @@ export class MacroEngine {
         const remainder = line.trim().substring(3).trim();
         this.host.handleRelativeLabel(labelChar);
         if (remainder) {
-          this.host.processCommand(remainder);
+          this.host.processNestedCommand(remainder);
         }
         return;
       }
@@ -495,7 +495,7 @@ export class MacroEngine {
         const remainder = line.substring(match[0].length).trim();
         this.host.setLabel(labelName, undefined, false, true);
         if (remainder) {
-          this.host.processCommand(remainder);
+          this.host.processNestedCommand(remainder);
         }
         return;
       }
@@ -512,6 +512,6 @@ export class MacroEngine {
       }
     }
 
-    this.host.processCommand(line);
+    this.host.processNestedCommand(line);
   }
 }

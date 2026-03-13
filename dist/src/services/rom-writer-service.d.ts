@@ -1,9 +1,6 @@
 export interface RomWriterHost {
     snespos: number;
     realsnespos: number;
-    startpos: number;
-    realstartpos: number;
-    bytes: number;
     mapper: string;
     sa1banks: number[];
     romdata: number[] | Uint8Array;
@@ -19,6 +16,9 @@ export interface RomWriterHost {
     writeDataBytes(start: number, value: number, length?: number): void;
     updateHeaderAndCRC32(): void;
     handleEndSpcblock(words: string[]): void;
+    setWritePosition(address: number): void;
+    syncWriteStarts(): void;
+    incrementBytesWritten(num: number): void;
 }
 export declare class RomWriterService {
     private readonly host;

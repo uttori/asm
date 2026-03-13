@@ -1,22 +1,19 @@
 import type { StructDefinition } from "../assembler.js";
 
-type StructHost = {
+export type StructHost = {
   currentStruct: StructDefinition | null;
-  savedPCStack: number[];
   structs: Map<string, StructDefinition>;
-  snespos: number;
-  realsnespos: number;
-  startpos: number;
-  realstartpos: number;
   operandResolver: { getnum(input: string): number };
   write1(value: number): void;
   readFile(filename: string): Uint8Array | string;
-  addAddressToLine(address: number): void;
+  recordCurrentAddress(): void;
   handlePushPC(): void;
   handlePullPC(): void;
   getLabelValue(label: string, requireStatic: boolean): number;
-  snestopc(address: number): number;
   evaluateRangeExpression(expression: string): number;
+  enterStructDefinition(base: number): void;
+  restoreStructDefinition(): void;
+  setWritePosition(address: number): void;
 };
 
 export class StructEngine {
@@ -81,11 +78,7 @@ export class StructEngine {
       }
     }
 
-    this.host.savedPCStack.push(this.host.snespos);
-    this.host.snespos = base;
-    this.host.startpos = base;
-    this.host.realsnespos = base;
-    this.host.realstartpos = base;
+    this.host.enterStructDefinition(base);
     this.host.currentStruct = {
       name: structName,
       base,
@@ -132,12 +125,7 @@ export class StructEngine {
       this.host.structs.set(this.host.currentStruct.name, this.host.currentStruct);
     }
 
-    if (this.host.savedPCStack.length > 0) {
-      this.host.snespos = this.host.savedPCStack.pop();
-      this.host.startpos = this.host.snespos;
-      this.host.realsnespos = this.host.snespos;
-      this.host.realstartpos = this.host.snespos;
-    }
+    this.host.restoreStructDefinition();
 
     this.host.currentStruct = null;
   }
@@ -309,17 +297,10 @@ export class StructEngine {
       let targetAddress: number;
       if (/^\$?[\dA-Fa-f]+$/.test(targetLocation ?? "")) {
         targetAddress = this.host.operandResolver.getnum(targetLocation ?? "");
-        this.host.snespos = targetAddress;
-        this.host.realsnespos = targetAddress;
-        this.host.startpos = targetAddress;
-        this.host.realstartpos = targetAddress;
       } else {
         targetAddress = this.host.getLabelValue(targetLocation ?? "", false);
-        this.host.snespos = targetAddress;
-        this.host.realsnespos = targetAddress;
-        this.host.startpos = targetAddress;
-        this.host.realstartpos = targetAddress;
       }
+      this.host.setWritePosition(targetAddress);
 
       for (const byte of incbinData) {
         this.host.write1(byte);
@@ -332,6 +313,6 @@ export class StructEngine {
       }
     }
 
-    this.host.addAddressToLine(this.host.realsnespos & 0xFFFFFF);
+    this.host.recordCurrentAddress();
   }
 }
