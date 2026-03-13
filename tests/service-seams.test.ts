@@ -29,6 +29,40 @@ test("macro engine handles definition lifecycle through processCommand", (t) => 
   t.is(assembler.defines.get("macro_value"), "3");
 });
 
+test("define engine resolves standalone define commands through processCommand", (t) => {
+  const assembler = new Assembler();
+  stub(assembler, "addAddressToLine");
+
+  assembler.processCommand("!emit = arch spc700");
+  assembler.processCommand("!emit");
+
+  t.is(assembler.arch, "spc700");
+});
+
+test("front-end service finalizes collected function definitions", (t) => {
+  const assembler = new Assembler();
+  const parseFunctionDefinition = stub(assembler, "parseFunctionDefinition");
+
+  assembler.inFunctionDefinition = true;
+  assembler.functionDefinitionLines = ["function sum(x, y) = x +"];
+  assembler.processCommand("y");
+
+  t.true(parseFunctionDefinition.calledOnceWithExactly("function sum(x, y) = x + y"));
+  t.false(assembler.inFunctionDefinition);
+  t.deepEqual(assembler.functionDefinitionLines, []);
+});
+
+test("front-end service handles global labels before directive dispatch", (t) => {
+  const assembler = new Assembler();
+  stub(assembler, "addAddressToLine");
+
+  assembler.processCommand("global Main: arch spc700");
+
+  t.is(assembler.currentParentLabel, "Main");
+  t.true(assembler.currentParentIsGlobal);
+  t.is(assembler.arch, "spc700");
+});
+
 test("symbol scope resolves stored local relative labels", (t) => {
   const assembler = new Assembler();
   assembler.pass = 0;
@@ -48,6 +82,31 @@ test("symbol scope resolves nested sublabels through current parent", (t) => {
 
   t.is(assembler.getLabelValue(".Child", false), assembler.snespos);
   t.is(assembler.getLabelValue("Main_Child", false), assembler.snespos);
+});
+
+test("front-end service handles named and static labels through processCommand", (t) => {
+  const assembler = new Assembler();
+  stub(assembler, "addAddressToLine");
+
+  assembler.processCommand("Main:");
+  assembler.processCommand("Const = $10");
+
+  t.is(assembler.getLabelValue("Main", false), assembler.snespos);
+  t.is(assembler.getLabelValue("Const", true), 0x10);
+});
+
+test("struct engine records struct members through processCommand", (t) => {
+  const assembler = new Assembler();
+  stub(assembler, "addAddressToLine");
+
+  assembler.processCommand("struct Sprite");
+  assembler.processCommand(".x: skip 2");
+  assembler.processCommand(".y: skip 1");
+  assembler.processCommand("endstruct");
+
+  t.is(assembler.structs.get("Sprite")?.labels.get("x"), 0);
+  t.is(assembler.structs.get("Sprite")?.labels.get("y"), 2);
+  t.is(assembler.structs.get("Sprite")?.size, 3);
 });
 
 test("rom writer converts lorom pc offsets to snes and back", (t) => {

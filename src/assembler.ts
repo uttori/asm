@@ -12,8 +12,11 @@ import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { createDirectiveRegistry, type DirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
+import { DefineEngine } from "./services/define-engine.js";
+import { FrontEndCommandService } from "./services/front-end-command-service.js";
 import { MacroEngine } from "./services/macro-engine.js";
 import { RomWriterService } from "./services/rom-writer-service.js";
+import { StructEngine } from "./services/struct-engine.js";
 import { SymbolScopeService } from "./services/symbol-scope-service.js";
 
 let debug = (..._) => {};
@@ -236,9 +239,12 @@ export class Assembler implements AssemblySession {
   public spcInlineCompatMode: boolean = false;
   public requireStaticLabelLookup: boolean = false;
   private readonly directiveRegistry: DirectiveRegistry;
+  private readonly defineEngine: DefineEngine;
+  private readonly frontEndCommandService: FrontEndCommandService;
   private readonly macroEngine: MacroEngine;
   private readonly symbolScope: SymbolScopeService;
   private readonly romWriter: RomWriterService;
+  private readonly structEngine: StructEngine;
 
   get currentAddress(): number {
     return this.getCurrentTargetAddress();
@@ -250,9 +256,12 @@ export class Assembler implements AssemblySession {
 
   constructor(targetRom?: number[] | Uint8Array) {
     this.targetRom = targetRom ?? [];
+    this.defineEngine = new DefineEngine(this);
+    this.frontEndCommandService = new FrontEndCommandService(this);
     this.symbolScope = new SymbolScopeService(this);
     this.romWriter = new RomWriterService(this);
     this.macroEngine = new MacroEngine(this);
+    this.structEngine = new StructEngine(this);
     this.operandResolver = new OperandResolver({
       resolveDefines: (input) => this.resolvedefines(input),
       resolveStructLabel: (input) => this.resolveStructLabel(input),
@@ -767,20 +776,7 @@ export class Assembler implements AssemblySession {
     }
 
     // If we already started a function definition, gather more lines if the last line ended with "\"
-    if (this.inFunctionDefinition) {
-      // Remove trailing backslash if present
-      if (command.trimEnd().endsWith("\\")) {
-        this.functionDefinitionLines.push(command.trimEnd().slice(0, -1));
-      } else {
-        // This is the final line in the function definition
-        this.functionDefinitionLines.push(command.trim());
-        // Now parse the complete definition
-        const fullDefinition = this.functionDefinitionLines.join(" ");
-        this.functionDefinitionLines = [];
-        this.inFunctionDefinition = false;
-
-        this.parseFunctionDefinition(fullDefinition);
-      }
+    if (this.frontEndCommandService.continueFunctionDefinition(command)) {
       return;
     }
 
@@ -824,15 +820,7 @@ export class Assembler implements AssemblySession {
     }
 
     // Function Definition Mode
-    if (keyword && keyword.toLowerCase().startsWith("function")) {
-      // If it ends with "\" we keep collecting
-      if (keyword.endsWith("\\")) {
-        this.inFunctionDefinition = true;
-        this.functionDefinitionLines.push(keyword.slice(0, -1));
-      } else {
-        // Single-line definition
-        this.parseFunctionDefinition(words.join(" "));
-      }
+    if (this.frontEndCommandService.startFunctionDefinition(keyword, words)) {
       return;
     }
 
@@ -855,178 +843,37 @@ export class Assembler implements AssemblySession {
     }
 
     // If the command starts with "!", handle it appropriately
-    if (command.trim().startsWith("!")) {
-      // Check if it's a define declaration (contains =, +=, :=, etc.)
+    if (this.defineEngine.handleCommand(command)) {
       if (command.includes("=")) {
-        this.handleDefineCommand(command);
         this.addAddressToLine(this.realsnespos & 0xFFFFFF);
-      } else {
-        // It's a standalone define reference, resolve it and process the result
-        const trimmedCommand = command.trim();
-
-        // Check if this is a braced define reference
-        if (trimmedCommand.startsWith("!{")) {
-          try {
-            // Process the entire command using the new method for braced defines
-            const processedCommand = this.processValueWithBracedDefines(trimmedCommand);
-            debug(`Processing braced define ${trimmedCommand} with processed value: ${processedCommand}`);
-            this.processCommand(processedCommand);
-          } catch (error) {
-            throw new Error(`Error resolving braced define in "${trimmedCommand}": ${error.message}`);
-          }
-        } else {
-          // Standard define reference
-          const defineName = trimmedCommand.substring(1); // Remove the !
-          if (!this.defines.has(defineName)) {
-            throw new Error(`Error: Define '${defineName}' not found.`);
-          }
-
-          // Get the define's value and process it as a command
-          const defineValue = this.defines.get(defineName);
-          debug(`Processing standalone define !${defineName} with value: ${defineValue}`);
-          this.processCommand(defineValue);
-        }
       }
       return;
     }
 
     // If we're in struct mode, intercept struct member commands.
-    if (this.currentStruct) {
-      debug("processCommand currentStruct keyword", keyword);
-      // A member label starts with a dot.
-      if (keyword.startsWith(".")) {
-        // Check if this is a label definition or just a label reference
-        const hasColon = keyword.endsWith(":");
-
-        // For example: ".PosY:" – remove the colon and the dot
-        const labelName = keyword.replace(/:$/, "").substring(1);
-
-        // Record this label's offset within the struct.
-        this.currentStruct.labels.set(labelName, this.currentStruct.offset);
-        debug(`processCommand struct "${this.currentStruct.name}": defined member "${labelName}" at offset ${this.currentStruct.offset} hasColon=${hasColon}`);
-
-        // A skip command inside a struct adds to the current offset.
-        if (words[1]?.toLowerCase() === "skip") {
-          if (words.length !== 3) {
-            throw new Error(`skip directive in struct requires exactly one parameter: ${words.length}`);
-          }
-          const skipAmount = this.operandResolver.getnum(words[2]);
-          this.currentStruct.offset += skipAmount;
-          debug(`processCommand struct "${this.currentStruct.name}": skipAmount ${skipAmount}, offset now ${this.currentStruct.offset}`);
-          return;
-        } else {
-          // IMPORTANT: NEVER increment the offset for:
-          // 1. Any label that ends with a colon (organizational labels)
-          // 2. Unless it's followed by a skip command
-          if (hasColon && words.length === 1) {
-            debug(`processCommand struct "${this.currentStruct.name}": not incrementing offset for organizational label "${labelName}"`);
-          } else if (!hasColon) {
-            // If there's no colon, this is a label used in an expression, not a declaration
-            debug(`processCommand struct "${this.currentStruct.name}": not incrementing offset for label reference "${labelName}"`);
-          } else {
-            // This is a label followed by something other than skip - we should not increment for nested structs
-            debug(`processCommand struct "${this.currentStruct.name}": not incrementing offset for struct member "${labelName}" with ${words.length} words`);
-          }
-          // Do NOT increment the offset for ANY labels inside structs (removed the offset increment)
-          // The only way to increase the offset should be with skip directives
-        }
-      }
-      // End the struct
-      if (keyword.toLowerCase() === "endstruct") {
-        this.handleEndStruct(words);
-      }
-      // Other commands inside a struct might be allowed.
-      // For now, assume only labels and skip commands appear.
-      return;
-    }
-
-    // Not in struct mode. Process regular commands.
-    if (keyword.toLowerCase() === "struct") {
-      this.handleStruct(words);
-      return;
-    }
-    if (keyword.toLowerCase() === "endstruct") {
-      this.handleEndStruct(words);
-      return;
-    }
-
-    // New: support for incbin.
-    if (keyword.toLowerCase() === "incbin") {
-      this.handleIncbin(words);
+    if (this.structEngine.handleStructMode(words)) {
       return;
     }
 
     // Handle relative labels (+ and -), with or without trailing colon.
     // Asar test fixtures commonly declare bare "+" / "-" labels on a line by themselves.
-    const isRelativeLabelDefinition = (/^\++:?$/.test(keyword) || /^-+:?$/.test(keyword));
-    if (isRelativeLabelDefinition) {
-      const relativeLabel = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-      this.handleRelativeLabel(relativeLabel);
-      // Record mapping and finish.
-      this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+    if (this.frontEndCommandService.handleRelativeLabelDefinition(keyword)) {
       return;
     }
 
-    // Handle global label declarations
-    if (keyword.toLowerCase() === "global") {
-      debug("processCommand global label", words);
-      if (words.length < 2) {
-        throw new Error("global requires a label name");
-      }
-      const labelDecl = words[1];
-      const modifiesHierarchy = labelDecl.startsWith("#");
-      const labelName = modifiesHierarchy ? labelDecl.substring(1) : labelDecl;
-      const hasColon = labelName.endsWith(":");
-      const cleanName = hasColon ? labelName.slice(0, -1) : labelName;
-
-      // Set the label at the global scope (no namespace prefix)
-      this.setLabel(cleanName, undefined, false, false, true, !modifiesHierarchy);
-
-      // If this isn't a #-prefixed global, it becomes the new parent for sublabels
-      if (!modifiesHierarchy) {
-        this.currentParentLabel = cleanName;
-        this.currentParentIsGlobal = true;
-      }
-
-      // Process any remaining commands after the label
-      if (words.length > 2) {
-        this.processCommand(words.slice(2).join(" "));
-      }
+    if (this.frontEndCommandService.handleGlobalLabel(words)) {
       return;
     }
 
     // Handle non-relative (named) labels that use the colon syntax.
     // (Dynamic labels get their value from the current PC.)
     // Check if the first token ends with a colon or starts with a dot.
-    while (words.length > 0 && (keyword.endsWith(":") || keyword.startsWith("."))) {
-      debug("processCommand non-relative (named) label assignment", words)
-      // Remove the colon if present to get the label name.
-      const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-      this.handleLabelDefinition(labelName);
-      // Remove the label token.
-      words.shift();
-    }
+    words = this.frontEndCommandService.consumeNamedLabelDefinitions(words, keyword);
     if (words.length === 0) return;
 
     // Handle static label assignment
     // Format: LabelName = <expression>
-    if (words.length === 3 && words[1] === "=") {
-      debug("static label assignment", words)
-      const labelName = keyword;
-      const expr = words[2];
-      // First, resolve any defines in the expression.
-      const resolvedExpr = this.resolvedefines(expr);
-      // Try to evaluate it as a math expression.
-      let value = this.mathCore.math(resolvedExpr);
-      // If evaluation fails (i.e. not a numeric literal), try to resolve it as a label.
-      if (Number.isNaN(value)) {
-        value = this.getLabelValue(resolvedExpr, true);
-      }
-      // Mark this label as static.
-      debug("static label assignment value", value)
-      this.setLabel(labelName, value, true);
-      // Record mapping and finish.
-      this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+    if (this.frontEndCommandService.handleStaticLabelAssignment(words, keyword)) {
       return;
     }
 
@@ -1375,206 +1222,7 @@ export class Assembler implements AssemblySession {
    * @param {string} command The define command to handle.
    */
   handleDefineCommand(command: string): void {
-    debug("handleDefineCommand", command)
-    // Remove the leading "!" and trim.
-    const line = command.substring(1).trim();
-
-    // Check if this is a nested define with braces
-    if (line.startsWith("{")) {
-      // Find the matching closing brace
-      let braceLevel = 1;
-      let closingBraceIndex = 1;
-
-      while (braceLevel > 0 && closingBraceIndex < line.length) {
-        if (line[closingBraceIndex] === "{") braceLevel++;
-        if (line[closingBraceIndex] === "}") braceLevel--;
-        closingBraceIndex++;
-      }
-
-      if (braceLevel !== 0) {
-        throw new Error(`Mismatched braces in define: ${command}`);
-      }
-
-      // Extract the identifier inside braces
-      const nestedContent = line.substring(1, closingBraceIndex - 1);
-      debug("handleDefineCommand nested content:", nestedContent);
-
-      // Process the nested content recursively to handle nested braces
-      const resolvedIdentifier = this.processNestedDefines(nestedContent);
-      debug("handleDefineCommand resolved nested identifier:", resolvedIdentifier);
-
-      // Extract the operator and value
-      const restOfLine = line.substring(closingBraceIndex).trim();
-      const operatorMatch = restOfLine.match(/^\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
-
-      if (!operatorMatch) {
-        throw new Error(`Invalid define syntax after braces: ${command}`);
-      }
-
-      const operator = operatorMatch[1];
-      let value = operatorMatch[2].trim();
-
-      // Process only braced defines in the value; preserve plain !defines for runtime expansion.
-      if (value.includes("!{")) {
-        // Need to process defines in the value
-        // For simple cases, fully resolve the value
-        if (!value.includes("FF") && !value.includes("$")) {
-          value = this.processNestedDefines(value);
-          debug("handleDefineCommand fully processed value:", value);
-        } else {
-          // For complex cases, just process braced defines
-          value = this.processValueWithBracedDefines(value);
-          debug("handleDefineCommand processed value with braced defines:", value);
-        }
-      }
-
-      // If the value is enclosed in double quotes, remove them.
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.substring(1, value.length - 1);
-      }
-
-      // For the ":=" operator, resolve any defines in the value immediately.
-      if (operator === ":=") {
-        value = this.resolvedefines(value);
-      }
-
-      // For the "#=" operator, evaluate the value as a math expression.
-      if (operator === "#=") {
-        // First resolve any defines inside the expression.
-        value = this.resolvedefines(value);
-        const result = this.mathCore.math(value);
-        /* c8 ignore next 3 */
-        if (Number.isNaN(result)) {
-          throw new Error(`Math evaluation failed in define "#=" for expression: ${value}`);
-        }
-        // Convert to string (you may choose your own format, here decimal is used)
-        value = result.toString();
-      }
-
-      // For the "?=" operator, only assign if not already defined.
-      if (operator === "?=") {
-        if (this.defines.has(resolvedIdentifier)) {
-          return;
-        }
-      }
-
-      // For the "+=" operator, append to any existing value.
-      if (operator === "+=") {
-        const existing = this.defines.get(resolvedIdentifier) || "";
-        value = existing + value;
-      }
-
-      // Check if the value is a math expression that needs to be evaluated
-      if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") ||
-          value.includes("&") || value.includes("|") || value.includes("^") ||
-          value.includes("<<") || value.includes(">>") || value.includes("("))) {
-        try {
-          // First resolve any defines inside the expression
-          const resolvedValue = this.resolvedefines(value);
-          // Then evaluate the math expression
-          const result = this.mathCore.math(resolvedValue);
-          if (!Number.isNaN(result)) {
-            // Only use the result if it's a valid number
-            value = "$" + result.toString(16).toUpperCase();
-            debug(`handleDefineCommand evaluated math expression in define: ${resolvedValue} = ${value}`);
-          }
-        } catch (error) {
-          /* c8 ignore next 3 */
-          // If evaluation fails, keep the original value
-          debug(`handleDefineCommand math evaluation skipped for expression: ${value}`);
-        }
-      }
-
-      // Assign the define.
-      this.defines.set(resolvedIdentifier, value);
-      debug(`handleDefineCommand define set: !{${nestedContent}} ${operator} ${value} (resolved to !${resolvedIdentifier})`);
-      debug("handleDefineCommand defines", this.defines);
-      return;
-    }
-
-    // Standard define case (no braces in identifier)
-    const match = line.match(/^(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
-    if (!match) {
-      throw new Error(`Invalid define syntax: ${command}`);
-    }
-    const identifier = match[1];
-    const operator = match[2];
-    let value = match[3].trim();
-
-    // Process only braced defines in the value; preserve plain !defines for runtime expansion.
-    if (value.includes("!{")) {
-      // For simple cases like !fourth = !{second}fi!{third}, fully resolve the value
-      if (!value.includes("FF") && !value.includes("$")) {
-        value = this.processNestedDefines(value);
-        debug("handleDefineCommand fully processed value:", value);
-      } else {
-        // For complex cases, just process braced defines
-        value = this.processValueWithBracedDefines(value);
-        debug("handleDefineCommand processed value with braced defines:", value);
-      }
-    }
-
-    // If the value is enclosed in double quotes, remove them.
-    if (value.startsWith('"') && value.endsWith('"')) {
-      value = value.substring(1, value.length - 1);
-    }
-
-    // For the ":=" operator, resolve any defines in the value immediately.
-    if (operator === ":=") {
-      value = this.resolvedefines(value);
-    }
-
-    // For the "#=" operator, evaluate the value as a math expression.
-    if (operator === "#=") {
-      // First resolve any defines inside the expression.
-      value = this.resolvedefines(value);
-      const result = this.mathCore.math(value);
-      /* c8 ignore next 3 */
-      if (Number.isNaN(result)) {
-        throw new Error(`Math evaluation failed in define "#=" for expression: ${value}`);
-      }
-      // Convert to string (you may choose your own format, here decimal is used)
-      value = result.toString();
-    }
-
-    // For the "?=" operator, only assign if not already defined.
-    if (operator === "?=") {
-      if (this.defines.has(identifier)) {
-        return;
-      }
-    }
-
-    // For the "+=" operator, append to any existing value.
-    if (operator === "+=") {
-      const existing = this.defines.get(identifier) || "";
-      value = existing + value;
-    }
-
-    // Check if the value is a math expression that needs to be evaluated
-    if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") ||
-        value.includes("&") || value.includes("|") || value.includes("^") ||
-        value.includes("<<") || value.includes(">>") || value.includes("("))) {
-      try {
-        // First resolve any defines inside the expression
-        const resolvedValue = this.resolvedefines(value);
-        // Then evaluate the math expression
-        const result = this.mathCore.math(resolvedValue);
-        if (!Number.isNaN(result)) {
-          // Only use the result if it's a valid number
-          value = "$" + result.toString(16).toUpperCase();
-          debug(`handleDefineCommand evaluated math expression in define: ${resolvedValue} = ${value}`);
-        }
-      } catch (error) {
-        /* c8 ignore next 3 */
-        // If evaluation fails, keep the original value
-        debug(`handleDefineCommand math evaluation skipped for expression: ${value}`);
-      }
-    }
-
-    // Assign the define.
-    this.defines.set(identifier, value);
-    debug(`handleDefineCommand define set: !${identifier} ${operator} ${value}`);
-    debug("handleDefineCommand defines", this.defines);
+    this.defineEngine.handleDefineCommand(command);
   }
 
   /**
@@ -1618,30 +1266,7 @@ export class Assembler implements AssemblySession {
    * @returns {string} The resolved identifier
    */
   processNestedDefines(content: string): string {
-    debug("processNestedDefines input:", content);
-
-    // Check if there are any define markers in the content
-    if (!content.includes("!")) {
-      debug("processNestedDefines no define markers found, returning as is");
-      return content;
-    }
-
-    // Process until no more changes occur
-    let prevResult = "";
-    let result = content;
-    let iterations = 0;
-    const maxIterations = 10; // Safety limit
-
-    while (prevResult !== result && iterations < maxIterations) {
-      debug(`processNestedDefines iteration ${iterations+1} - processing: "${result}"`);
-      iterations++;
-      prevResult = result;
-      result = this.resolveOneLevelOfDefines(result);
-      debug(`processNestedDefines iteration ${iterations} result: "${result}"`);
-    }
-
-    debug("processNestedDefines final result:", result);
-    return result;
+    return this.defineEngine.processNestedDefines(content);
   }
 
   /**
@@ -1650,87 +1275,7 @@ export class Assembler implements AssemblySession {
    * @returns {string} The processed content with one level of defines resolved
    */
   resolveOneLevelOfDefines(content: string): string {
-    debug("resolveOneLevelOfDefines input:", content);
-
-    // This approach scans the string for !{...} patterns and processes them from the inside out
-
-    // Find all positions of !{
-    const openBracePositions = [];
-    for (let i = 0; i < content.length - 1; i++) {
-      if (content.substring(i, i+2) === "!{") {
-        openBracePositions.push(i);
-        i++; // Skip the {
-      }
-    }
-
-    // If no braces found, process regular !defines
-    if (openBracePositions.length === 0) {
-      return this.resolveRegularDefines(content);
-    }
-
-    // Process the rightmost (last) opening brace first - it's guaranteed to be an innermost define
-    // or at least closer to an innermost define
-    const lastOpenBracePos = openBracePositions[openBracePositions.length - 1];
-
-    // Find its matching closing brace
-    let nestLevel = 1;
-    let closingBracePos = -1;
-
-    for (let i = lastOpenBracePos + 2; i < content.length; i++) {
-      if (i < content.length - 1 && content.substring(i, i+2) === "!{") {
-        nestLevel++;
-        i++; // Skip the {
-      }
-      else if (content[i] === "}") {
-        nestLevel--;
-        if (nestLevel === 0) {
-          closingBracePos = i;
-          break;
-        }
-      }
-    }
-
-    if (closingBracePos === -1) {
-      throw new Error(`Mismatched braces in content: ${content}`);
-    }
-
-    // Extract the content between braces
-    const braceContent = content.substring(lastOpenBracePos + 2, closingBracePos);
-    debug(`resolveOneLevelOfDefines extracted braced content: "${braceContent}"`);
-
-    // If this content itself contains braced defines, we need to resolve those first
-    if (braceContent.includes("!{")) {
-      // Recursively resolve the inner content first
-      const resolvedInnerContent = this.resolveOneLevelOfDefines(braceContent);
-      debug(`resolveOneLevelOfDefines resolved inner content: "${resolvedInnerContent}"`);
-
-      // Replace just this inner content in the original string
-      const updatedContent =
-        content.substring(0, lastOpenBracePos + 2) +
-        resolvedInnerContent +
-        content.substring(closingBracePos);
-
-      debug(`resolveOneLevelOfDefines after resolving inner content: "${updatedContent}"`);
-      return updatedContent;
-    }
-
-    // If we get here, we have a simple braced content with no inner braces - resolve it
-    let replacement = braceContent;
-    if (this.defines.has(braceContent)) {
-      replacement = this.defines.get(braceContent);
-      debug(`resolveOneLevelOfDefines resolved braced define: "${braceContent}" to "${replacement}"`);
-    } else {
-      debug(`resolveOneLevelOfDefines define not found, using as is: "${braceContent}"`);
-    }
-
-    // Replace this one define in the content
-    const result =
-      content.substring(0, lastOpenBracePos) +
-      replacement +
-      content.substring(closingBracePos + 1);
-
-    debug(`resolveOneLevelOfDefines after resolving: "${result}"`);
-    return result;
+    return this.defineEngine.resolveOneLevelOfDefines(content);
   }
 
   /**
@@ -1739,47 +1284,7 @@ export class Assembler implements AssemblySession {
    * @returns {string} The processed content with regular defines resolved
    */
   resolveRegularDefines(content: string): string {
-    debug(`resolveRegularDefines input: "${content}"`);
-    let result = "";
-    let index = 0;
-    let foundDefine = false;
-
-    while (index < content.length) {
-      if (content.substring(index).startsWith("!") &&
-          index + 1 < content.length &&
-          /\w/.test(content[index + 1])) {
-        // Regular define (not braced)
-        debug(`resolveRegularDefines found regular define at index ${index}`);
-        index++; // Skip !
-        let defineName = "";
-
-        while (index < content.length && /\w/.test(content[index])) {
-          defineName += content[index++];
-        }
-
-        debug(`resolveRegularDefines extracted define name: "${defineName}"`);
-
-        // Look up the define
-        if (this.defines.has(defineName)) {
-          result += this.defines.get(defineName);
-          debug(`resolveRegularDefines resolved regular define: "${defineName}" to "${this.defines.get(defineName)}"`);
-          foundDefine = true;
-        } else {
-          throw new Error(`Define '${defineName}' not found.`);
-        }
-      } else {
-        // Regular character
-        result += content[index++];
-      }
-    }
-
-    if (foundDefine) {
-      debug(`resolveRegularDefines after processing: "${result}"`);
-      return result;
-    }
-
-    // No changes made
-    return content;
+    return this.defineEngine.resolveRegularDefines(content);
   }
 
   /**
@@ -1788,59 +1293,7 @@ export class Assembler implements AssemblySession {
    * @returns {string} The string with defines expanded.
    */
   resolveDefinesInStringLiteral(content: string): string {
-    let result = "";
-    let index = 0;
-
-    while (index < content.length) {
-      const char = content[index];
-
-      if (char === "\\") {
-        const next = content[index + 1];
-        if (next === undefined) {
-          result += "\\";
-          index++;
-          continue;
-        }
-        if (next === "!") {
-          // Escaped ! keeps literal text (e.g. \!a -> !a)
-          result += "!";
-          index += 2;
-          while (index < content.length && /\w/.test(content[index])) {
-            result += content[index];
-            index++;
-          }
-          continue;
-        }
-        if (next === "\\") {
-          // Preserve one literal slash; following content is processed normally.
-          result += "\\";
-          index += 2;
-          continue;
-        }
-        result += next;
-        index += 2;
-        continue;
-      }
-
-      if (char === "!" && index + 1 < content.length && /\w/.test(content[index + 1])) {
-        index++;
-        let defineName = "";
-        while (index < content.length && /\w/.test(content[index])) {
-          defineName += content[index];
-          index++;
-        }
-        if (!this.defines.has(defineName)) {
-          throw new Error(`Define '${defineName}' not found.`);
-        }
-        result += this.defines.get(defineName);
-        continue;
-      }
-
-      result += char;
-      index++;
-    }
-
-    return result;
+    return this.defineEngine.resolveDefinesInStringLiteral(content);
   }
 
   /**
@@ -1849,49 +1302,7 @@ export class Assembler implements AssemblySession {
    * @returns {string} The processed value with all braced defines resolved
    */
   processValueWithBracedDefines(value: string): string {
-    debug("processValueWithBracedDefines input:", value);
-    let result = "";
-    let index = 0;
-
-    while (index < value.length) {
-      if (value.substring(index).startsWith("!{")) {
-        // Found a braced define reference
-        let braceContent = "";
-        index += 2; // Skip !{
-        let braceLevel = 1;
-
-        // Extract the content between braces
-        while (index < value.length && braceLevel > 0) {
-          if (value[index] === "{") braceLevel++;
-          else if (value[index] === "}") braceLevel--;
-
-          if (braceLevel === 0) break;
-          braceContent += value[index];
-          index++;
-        }
-
-        if (braceLevel !== 0) {
-          throw new Error(`Mismatched braces in value: ${value}`);
-        }
-
-        // Skip the closing brace
-        index++;
-
-        // Process nested braces in the content recursively
-        const resolvedIdentifier = this.processNestedDefines(braceContent);
-        debug("processValueWithBracedDefines resolved braced content to identifier:", resolvedIdentifier);
-
-        // Preserve the reference in braced format with the fully resolved identifier
-        result += `!{${resolvedIdentifier}}`;
-        debug("processValueWithBracedDefines preserving braced reference:", `!{${resolvedIdentifier}}`);
-      } else {
-        // Regular character
-        result += value[index++];
-      }
-    }
-
-    debug("processValueWithBracedDefines final result:", result);
-    return result;
+    return this.defineEngine.processValueWithBracedDefines(value);
   }
 
   /**
@@ -2461,57 +1872,7 @@ export class Assembler implements AssemblySession {
    * @param {string[]} words The parameters for the struct directive.
    */
   handleStruct(words: string[]): void {
-    debug("handleStruct", words)
-    // Syntax:
-    // struct {identifier}                    (base defaults to $000000)
-    // struct {identifier} {snes_address}      OR
-    // struct {extension_identifier} extends {parent_identifier}
-    if (words.length < 2) {
-      throw new Error("Struct definition requires at least two parameters.");
-    }
-    const structName = words[1];
-    let base: number;
-    let parent: string | undefined;
-    if (words.length === 2) {
-      // struct Name with no base – use $000000
-      base = 0;
-    } else if (words[2].toLowerCase() === "extends") {
-      // Format: struct ExtensionName extends ParentName
-      if (words.length < 4) {
-        throw new Error("Struct extension must specify a parent struct.");
-      }
-      parent = words[3];
-      // Look up the parent struct – it must exist.
-      if (!this.structs.has(parent)) {
-        throw new Error(`Parent struct '${parent}' not defined.`);
-      }
-      // For an extension, we use the parent's base.
-      base = this.structs.get(parent).base;
-    } else {
-      // Otherwise, words[2] is the SNES address.
-      base = this.operandResolver.getnum(words[2]);
-      if (base < 0 || base > 0xFFFFFF) {
-        throw new Error(`Invalid SNES address for struct: ${words[2]}`);
-      }
-    }
-    // Save current PC before changing it.
-    this.savedPCStack.push(this.snespos);
-    // Set the base for the struct.
-    this.snespos = base;
-    this.startpos = base;
-    this.realsnespos = base;
-    this.realstartpos = base;
-    // Create a new struct definition with an initial offset of zero.
-    this.currentStruct = {
-      name: structName,
-      base,
-      offset: 0,
-      size: 0, // will be set in endstruct
-      labels: new Map(),
-      parent,
-    };
-    debug(`handleStruct entered struct mode: ${structName}, base ${base.toString(16)}` +
-      (parent ? `, extending ${parent}` : ""));
+    this.structEngine.handleStruct(words);
   }
 
   /**
@@ -2519,59 +1880,7 @@ export class Assembler implements AssemblySession {
    * @param {string[]} words The parameters for the endstruct directive.
    */
   handleEndStruct(words: string[]): void {
-    debug("handleEndStruct", words)
-    if (!this.currentStruct) {
-      throw new Error("endstruct encountered but not inside a struct definition.");
-    }
-    // Optionally, words might be: endstruct align {num}
-    let align: number | undefined;
-    if (words.length >= 2 && words[1].toLowerCase() === "align") {
-      if (words.length !== 3) {
-        throw new Error("endstruct align requires a single alignment parameter.");
-      }
-      align = this.operandResolver.getnum(words[2]);
-      if (align < 1) {
-        throw new Error("Alignment must be at least 1.");
-      }
-    }
-    // Final computed size is the current offset.
-    let finalSize = this.currentStruct.offset;
-    if (align !== undefined) {
-      // Round up to the next multiple of align.
-      finalSize = Math.ceil(finalSize / align) * align;
-      this.currentStruct.align = align;
-    }
-    debug("handleEndStruct finalSize", finalSize)
-    this.currentStruct.size = finalSize;
-
-    // If this is an extension struct, update the parent's extensionSize.
-    if (this.currentStruct.parent) {
-      const parentName = this.currentStruct.parent;
-      const parentStruct = this.structs.get(parentName);
-      const extSize = this.currentStruct.size;
-      // If parent's extensionSize is not defined or this extension is larger, update it.
-      if (!parentStruct.extensionSize || extSize > parentStruct.extensionSize) {
-        parentStruct.extensionSize = extSize;
-      }
-      // Also register this extension's labels under a combined name.
-      this.structs.set(`${parentName}.${this.currentStruct.name}`, this.currentStruct);
-      // Register by short name so resolveStructMember can find child struct (e.g. NewStruct when resolving TestStruct.NewStruct.new).
-      this.structs.set(this.currentStruct.name, this.currentStruct);
-      debug(`handleEndStruct defined extension struct: "${this.currentStruct.name}" extending "${parentName}", size ${finalSize}`);
-    } else {
-      // Normal (non-extension) struct: store it by its name.
-      this.structs.set(this.currentStruct.name, this.currentStruct);
-      debug(`handleEndStruct defined struct: "${this.currentStruct.name}", size ${finalSize}`);
-    }
-    // Restore the previous PC.
-    if (this.savedPCStack.length > 0) {
-      this.snespos = this.savedPCStack.pop()!;
-      this.startpos = this.snespos;
-      this.realsnespos = this.snespos;
-      this.realstartpos = this.snespos;
-    }
-    // Clear current struct.
-    this.currentStruct = null;
+    this.structEngine.handleEndStruct(words);
   }
 
   /**
@@ -2580,169 +1889,7 @@ export class Assembler implements AssemblySession {
    * @returns {number} The resolved base address.
    */
   resolveStructLabel(labelRef: string): number {
-    debug("resolveStructLabel", labelRef)
-
-    // First check if the reference contains dots that might indicate a parent-extension relationship
-    const refParts = labelRef.split(".");
-    if (refParts.length === 2 && !labelRef.includes("[")) {
-      debug("resolveStructLabel parent.extension reference", refParts)
-      // This could be a parent.extension reference
-      const parentName = refParts[0];
-      const extensionName = refParts[1];
-
-      // Check if parent exists
-      if (this.structs.has(parentName)) {
-        const parentDef = this.structs.get(parentName);
-        // Check if the extension exists as a struct
-        if (this.structs.has(labelRef) && this.structs.get(labelRef).parent === parentName) {
-          // This is a valid parent.extension reference
-          // Return the parent's base address + parent's size
-          debug(`resolveStructLabel parent.extension reference: ${parentName}.${extensionName}, base=${parentDef.base}, size=${parentDef.size}`);
-          return parentDef.base + parentDef.size;
-        }
-      }
-    }
-
-    // Next, if the entire reference exists in our struct map, assume it's a full struct reference.
-    if (this.structs.has(labelRef)) {
-      debug("resolveStructLabel found entire reference =", labelRef)
-      return this.structs.get(labelRef).base;
-    }
-
-    // Example labelRef: "ObjectList.PosY" or "ObjectList[2].PosY"
-    // Check if an array index is specified, e.g. "TestStruct.NewStruct[2].new"
-    // Otherwise, check if an array index is specified, e.g. "TestStruct[2].member"
-    let arrayIndex = 0;
-    let candidate = labelRef;
-    let extraMember = "";
-    const arrayRegex = /^(.*?)\[(\d+)](.*)$/;
-    const arrayMatch = candidate.match(arrayRegex);
-    if (arrayMatch) {
-      candidate = arrayMatch[1];
-      arrayIndex = Number.parseInt(arrayMatch[2], 10);
-      extraMember = arrayMatch[3];
-      if (extraMember.startsWith(".")) {
-        extraMember = extraMember.substring(1);
-      }
-    }
-
-    debug("resolveStructLabel candidate", candidate)
-    debug("resolveStructLabel arrayIndex", arrayIndex)
-    debug("resolveStructLabel extraMember", extraMember)
-    // Split candidate by dot
-    const parts = candidate.split(".");
-    // Try to find the longest prefix that is a defined struct.
-    for (let i = parts.length; i >= 1; i--) {
-      const potential = parts.slice(0, i).join(".");
-      if (this.structs.has(potential)) {
-        const def = this.structs.get(potential);
-        // Everything after the prefix (plus any extraMember from an array index) is the member name.
-        const memberPart = parts.slice(i).join(".");
-        const memberName = memberPart + (extraMember ? (memberPart ? "." : "") + extraMember : "");
-
-        // Calculate the effective struct size, accounting for extensions and alignment
-        const baseStructSize = def.size;
-        let effectiveSize = baseStructSize;
-
-        // Check if the struct has an alignment that would affect its effective size
-        if (def.align) {
-          // Adjust to the next multiple of the alignment
-          const alignedSize = Math.ceil(baseStructSize / def.align) * def.align;
-          debug(`resolveStructLabel struct has alignment: ${def.align}, adjusting size from ${baseStructSize} to ${alignedSize}`);
-          effectiveSize = alignedSize;
-        }
-
-        // Find the largest extension of this struct
-        let maxExtensionSize = 0;
-        for (const [_structName, structDef] of this.structs.entries()) {
-          if (structDef.parent === potential && structDef.size > maxExtensionSize) {
-            maxExtensionSize = structDef.size;
-          }
-        }
-
-        // If we have extensions, add the largest one's size to our effective size
-        if (maxExtensionSize > 0) {
-          debug(`resolveStructLabel maxExtensionSize: ${maxExtensionSize}, adding to effectiveSize: ${effectiveSize} -> ${effectiveSize + maxExtensionSize}`);
-          effectiveSize += maxExtensionSize;
-        }
-
-        // If no member was specified, this is a reference to the struct itself.
-        // But we still need to account for array indexing.
-        if (memberName.trim() === "") {
-          if (arrayIndex > 0) {
-            // For array indexing without a member, return base + (index * size)
-            const arrayAddress = def.base + (arrayIndex * effectiveSize);
-            debug(`resolveStructLabel array indexing without member: ${def.base} + (${arrayIndex} * ${effectiveSize}) = ${arrayAddress}`);
-            return arrayAddress;
-          } else {
-            debug("resolveStructLabel no memberName =", def.base, "/", def.base.toString(16));
-            return def.base;
-          }
-        }
-
-        // Print all struct labels for debugging
-        debug("resolveStructLabel struct labels for", potential);
-        for (const [key, value] of def.labels.entries()) {
-          debug(`  ${key}: ${value}`);
-        }
-
-        // When accessing a nested member, we need to parse the member path to get the correct offset
-        // For example: for "DMA.size" we need just the offset of "size"
-        // and NOT include the sizes of "size_low" and "size_high"
-        const memberParts = memberName.split(".");
-        const topLevelMember = memberParts[0];
-
-        // Check if the top-level member exists in the struct
-        if (!def.labels.has(topLevelMember)) {
-          throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
-        }
-
-        // Get the offset of the top-level member only
-        const offset = def.labels.get(topLevelMember);
-
-        // Debug the exact member we're looking up and its offset
-        debug(`resolveStructLabel looking up member "${topLevelMember}" with offset ${offset}`);
-
-        let finalAddress: number;
-
-        if (def.parent) {
-          debug("resolveStructLabel parent", def.parent);
-          const parentDef = this.structs.get(def.parent);
-          if (!parentDef) {
-            throw new Error(`Parent struct '${def.parent}' not defined for extension '${potential}'.`);
-          }
-
-          // Determine parent's aligned size if it has alignment
-          let parentSize = parentDef.size;
-          if (parentDef.align) {
-            parentSize = Math.ceil(parentSize / parentDef.align) * parentDef.align;
-            debug(`resolveStructLabel parent has alignment: ${parentDef.align}, adjusted size: ${parentSize}`);
-          }
-
-          // For extension struct array members, we need to:
-          // 1. Start at the base address
-          // 2. Add parent size once (to get to the extension part)
-          // 3. For array indexing, multiply index by the extension size only
-          // 4. Add offset to the specific member
-          if (arrayIndex === 0) {
-            // For the first instance, we need to add the parent size to get to the extension
-            finalAddress = parentDef.base + parentSize + offset;
-            debug(`resolveStructLabel extension struct with no array: ${parentDef.base} + ${parentSize} + ${offset} = ${finalAddress}`);
-          } else {
-            // For array indexing, use parent size once plus array index * extension size
-            finalAddress = parentDef.base + parentSize + (arrayIndex * def.size) + offset;
-            debug(`resolveStructLabel extension struct with array: ${parentDef.base} + ${parentSize} + (${arrayIndex} * ${def.size}) + ${offset} = ${finalAddress}`);
-          }
-        } else {
-          // For regular structs, use the aligned struct size for array indexing
-          debug("resolveStructLabel no parent finalAddress:", def.base, "+", "(", arrayIndex, "*", effectiveSize, ")" , "+", offset);
-          finalAddress = def.base + (arrayIndex * effectiveSize) + offset;
-        }
-        debug("resolveStructLabel =", finalAddress, "/", finalAddress.toString(16));
-        return finalAddress;
-      }
-    }
-    throw new Error(`Struct not defined in reference: ${labelRef}`);
+    return this.structEngine.resolveStructLabel(labelRef);
   }
 
   /**
@@ -2770,137 +1917,7 @@ export class Assembler implements AssemblySession {
    * @param {string[]} words The words from the `incbin` directive.
    */
   handleIncbin(words: string[]): void {
-    debug("handleIncbin", words)
-    // Check for deprecated target syntax with "->"
-    let targetLocationSpecified = false;
-    let targetLocation: string | null = null;
-    const arrowIndex = words.indexOf("->");
-    if (arrowIndex !== -1) {
-      targetLocationSpecified = true;
-      if (arrowIndex + 1 >= words.length) {
-        throw new Error("incbin '->' syntax requires a target location.");
-      }
-      targetLocation = words[arrowIndex + 1];
-      debug("handleIncbin arrow syntax targetLocation", targetLocation)
-      // Remove the arrow and target from the tokens
-      words = words.slice(0, arrowIndex);
-    }
-
-    // Parse filename and range
-    const filenameWithRange = words[1];
-    debug("handleIncbin filenameWithRange", filenameWithRange);
-    let filename: string;
-    let rangeStr: string | null = null;
-    const colonIndex = filenameWithRange.indexOf(":");
-    if (colonIndex !== -1) {
-      filename = filenameWithRange.substring(0, colonIndex);
-      rangeStr = filenameWithRange.substring(colonIndex + 1);
-    } else {
-      filename = filenameWithRange;
-    }
-    // Remove quotes from filename if present
-    filename = filename.replace(/^"(.*)"$/, "$1");
-
-    // Read the file
-    const fileData: Uint8Array = this.readFile(filename) as Uint8Array;
-    if (!fileData) {
-      throw new Error(`Failed to read file: ${filename}`);
-    }
-
-    // Determine range to copy
-    let startOffset = 0;
-    let endOffset = fileData.length;
-    if (rangeStr) {
-      // Use new ".." syntax if present, otherwise try deprecated "-" syntax
-      let parts: string[];
-      if (rangeStr.indexOf("..") !== -1) {
-        parts = rangeStr.split("..");
-      } else if (rangeStr.indexOf("-") !== -1) {
-        // Legacy "start-end" range style is intentionally strict and deprecated.
-        // Match Asar behavior for malformed legacy expressions.
-        if (rangeStr.includes("(") || rangeStr.includes(")")) {
-          throw new Error("Emismatched_parentheses: Mismatched parentheses.");
-        }
-        parts = rangeStr.split("-");
-      } else {
-        throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-      if (parts[0] === "" || parts[1] === "") {
-        throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-      startOffset = this.evaluateRangeExpression(parts[0]);
-      endOffset = this.evaluateRangeExpression(parts[1]);
-      // A value of 0 for endOffset means "until EOF"
-      if (endOffset === 0) {
-        endOffset = fileData.length;
-      }
-    }
-
-    if (startOffset > endOffset || startOffset < 0 || startOffset > fileData.length) {
-      throw new Error(`Start offset ${startOffset} out of bounds for file ${filename}`);
-    }
-    if (endOffset < startOffset || endOffset > fileData.length) {
-      throw new Error(`End offset ${endOffset} out of bounds for file ${filename}`);
-    }
-
-    const incbinData = fileData.slice(startOffset, endOffset);
-    debug(`handleIncbin copying ${incbinData.length} bytes from '${filename}' (offset ${startOffset} to ${endOffset}) at ${this.snespos.toString(16)} (PC: ${this.snestopc(this.realsnespos & 0xFFFFFF).toString(16)})`);
-
-    if (targetLocationSpecified) {
-      debug("handleIncbin targetLocation", targetLocation)
-      // Save current position
-      this.handlePushPC();
-
-      let targetAddress: number;
-      // Check if target location starts with $ or is a valid number
-      if (/^\$?[\dA-Fa-f]+$/.test(targetLocation)) {
-        // Handle as numeric address
-        targetAddress = this.operandResolver.getnum(targetLocation);
-        debug("handleIncbin targetAddress", targetAddress);
-
-        // Set the position for numeric address
-        this.snespos = targetAddress;
-        this.realsnespos = targetAddress;
-        this.startpos = targetAddress;
-        this.realstartpos = targetAddress;
-      } else {
-        // Handle as label name
-        // if (this.pass === 0) {
-        //   debug("handleIncbin targetLocation is label, pass 0");
-        //   // On pass 0, create a freespace block first
-        //   // this.handleFreespace("freespace", ["align"]);
-        //   // Now that freespace has set snespos, we can set the label
-        //   this.setLabel(targetLocation, this.snespos);
-
-        //   // Don't write data on pass 0
-        //   this.handlePullPC();
-        //   return;
-        // } else {
-          // On later passes, look up the label's address
-          targetAddress = this.getLabelValue(targetLocation, false);
-          debug("handleIncbin targetAddress", targetAddress);
-          this.snespos = targetAddress;
-          this.realsnespos = targetAddress;
-          this.startpos = targetAddress;
-          this.realstartpos = targetAddress;
-        // }
-      }
-
-      // Write the data
-      for (const byte of incbinData) {
-        this.write1(byte);
-      }
-
-      // Restore original position
-      this.handlePullPC();
-    } else {
-      // Normal incbin: write at current position
-      for (const byte of incbinData) {
-        this.write1(byte);
-      }
-    }
-
-    this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+    this.structEngine.handleIncbin(words);
   }
 
   /**

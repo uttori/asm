@@ -37,6 +37,9 @@ export interface AssemblySession {
   handlePullNamespace(): void;
   handleOrg(args: string[]): void;
   handleDataDirective(keyword: string, args: string[]): void;
+  handleStruct(words: string[]): void;
+  handleEndStruct(words: string[]): void;
+  handleIncbin(words: string[]): void;
   handlePushBase(): void;
   handlePullBase(): void;
   handlePushPC(): void;

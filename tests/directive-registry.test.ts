@@ -29,6 +29,20 @@ test("directive registry returns false for unknown directives", t => {
   t.false(handled);
 });
 
+test("directive registry dispatches struct and incbin directives", t => {
+  const assembler = new Assembler();
+  const structSpy = sinon.stub(assembler, "handleStruct");
+  const incbinSpy = sinon.stub(assembler, "handleIncbin");
+
+  const handledStruct = (assembler as any).directiveRegistry.dispatch("struct", ["struct", "Sprite"], "struct Sprite");
+  const handledIncbin = (assembler as any).directiveRegistry.dispatch("incbin", ["incbin", "test.bin"], 'incbin "test.bin"');
+
+  t.true(handledStruct);
+  t.true(handledIncbin);
+  t.true(structSpy.calledOnceWithExactly(["struct", "Sprite"]));
+  t.true(incbinSpy.calledOnceWithExactly(["incbin", "test.bin"]));
+});
+
 test("processCommand routes extracted directives through the registry", t => {
   const assembler = new Assembler();
   assembler.setCurrentFile("test.asm");

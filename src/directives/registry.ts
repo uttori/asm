@@ -8,6 +8,7 @@ import { registerMemoryDirectives } from "./memory.js";
 import { registerMiscDirectives } from "./misc.js";
 import { registerNamespaceDirectives } from "./namespace.js";
 import { registerSpcDirectives } from "./spc.js";
+import { registerStructBinaryDirectives } from "./struct-binary.js";
 import type { AssemblySession, DirectiveContext, DirectiveHandler } from "./types.js";
 
 export class DirectiveRegistry {
@@ -46,6 +47,7 @@ export const createDirectiveRegistry = (
   registerLayoutDirectives(registry);
   registerDataDirectives(registry);
   registerSpcDirectives(registry);
+  registerStructBinaryDirectives(registry);
   registerMiscDirectives(registry);
   registerMemoryDirectives(registry);
 

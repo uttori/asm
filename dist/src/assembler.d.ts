@@ -195,9 +195,12 @@ export declare class Assembler implements AssemblySession {
     spcInlineCompatMode: boolean;
     requireStaticLabelLookup: boolean;
     private readonly directiveRegistry;
+    private readonly defineEngine;
+    private readonly frontEndCommandService;
     private readonly macroEngine;
     private readonly symbolScope;
     private readonly romWriter;
+    private readonly structEngine;
     get currentAddress(): number;
     get directPageOptimizationEnabled(): boolean;
     constructor(targetRom?: number[] | Uint8Array);
