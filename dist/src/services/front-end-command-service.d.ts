@@ -1,3 +1,4 @@
+import { type ExpressionNode } from "../ir/expression-node.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
 export type FrontEndCommandHost = {
     inFunctionDefinition: boolean;
@@ -10,7 +11,7 @@ export type FrontEndCommandHost = {
     handleLabelDefinition(labelName: string): void;
     setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
     resolvedefines(input: string): string;
-    evaluateMath(input: string): number;
+    evaluateMath(input: string | ExpressionNode): number;
     getLabelValue(label: string, requireStatic: boolean): number;
     recordCurrentAddress(): void;
 };

@@ -218,3 +218,90 @@ test("rom writer enforces bank crossing checks before multi-byte writes", (t) =>
   t.truthy(error);
   t.true(error.message.includes("Ebank_border_crossed"));
 });
+
+test("node parser lifts loops and conditionals into typed nodes", (t) => {
+  const assembler = new Assembler();
+  const nodes = assembler.parseCommandStreamToNodes([
+    "if 1",
+    "for i = 0..2",
+    "db !i",
+    "endfor",
+    "else",
+    "db $ff",
+    "endif",
+  ]);
+
+  t.is(nodes.length, 1);
+  const ifNode = nodes[0];
+  if (!ifNode || !("type" in ifNode) || ifNode.type !== "if") {
+    t.fail();
+    return;
+  }
+  t.is(ifNode.branches.length, 2);
+  t.is(ifNode.branches[0].kind, "if");
+  t.is(ifNode.branches[1].kind, "else");
+  const firstBranchNode = ifNode.branches[0].commands[0];
+  t.truthy(firstBranchNode && typeof firstBranchNode !== "string" && "type" in firstBranchNode && firstBranchNode.type === "for");
+});
+
+test("node execution seam replays typed command and conditional nodes", (t) => {
+  const assembler = new Assembler();
+  const processed: string[] = [];
+  stub(assembler, "processCommand").callsFake((command: string) => {
+    processed.push(command);
+  });
+
+  assembler.executeNodeStream(assembler.parseCommandStreamToNodes([
+    "if 1",
+    "db $01",
+    "else",
+    "db $ff",
+    "endif",
+  ]));
+
+  t.deepEqual(processed, ["db $01"]);
+});
+
+test("macro/include lifting exposes typed macro and include nodes", (t) => {
+  const assembler = new Assembler();
+  stub(assembler, "addAddressToLine");
+  assembler.setPass(0);
+  assembler.processCommand("macro emit(v)");
+  assembler.processCommand("db <v>");
+  assembler.processCommand("endmacro");
+
+  const macroNode = assembler.getMacroDefinitionNode("emit");
+  t.truthy(macroNode);
+  t.is(macroNode?.type, "macroDefinition");
+  t.is(macroNode?.body.length, 1);
+  if (macroNode && macroNode.body.length > 0) {
+    const command = macroNode.body[0];
+    t.true(typeof command !== "string" && "source" in command);
+  }
+
+  const includeNode = assembler.createIncludeNode("inline.asm", "if 1\ndb $01\nendif");
+  t.is(includeNode.type, "include");
+  t.is(includeNode.commands.length, 1);
+  const includeChild = includeNode.commands[0];
+  t.true(typeof includeChild !== "string" && "type" in includeChild && includeChild.type === "if");
+});
+
+test("typed parser keeps nested condition-loop structures executable", (t) => {
+  const assembler = new Assembler();
+  const executed: string[] = [];
+  stub(assembler, "processCommand").callsFake((command: string) => {
+    executed.push(command);
+  });
+
+  const nodes = assembler.parseCommandStreamToNodes([
+    "if 1",
+    "for i = 0..1",
+    "db $01",
+    "endfor",
+    "else",
+    "db $ff",
+    "endif",
+  ]);
+  assembler.executeNodeStream(nodes);
+  t.deepEqual(executed, ["db $01"]);
+});

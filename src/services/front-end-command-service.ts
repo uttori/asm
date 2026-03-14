@@ -1,3 +1,4 @@
+import { renderExpressionNode, type ExpressionNode } from "../ir/expression-node.js";
 import { setCommandKind, setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
 
 export type FrontEndCommandHost = {
@@ -11,7 +12,7 @@ export type FrontEndCommandHost = {
   handleLabelDefinition(labelName: string): void;
   setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
   resolvedefines(input: string): string;
-  evaluateMath(input: string): number;
+  evaluateMath(input: string | ExpressionNode): number;
   getLabelValue(label: string, requireStatic: boolean): number;
   recordCurrentAddress(): void;
 };
@@ -38,16 +39,16 @@ export class FrontEndCommandService {
   }
 
   startFunctionDefinition(command: NormalizedCommand): boolean {
-    const { keyword, words } = command;
-    if (!keyword || !keyword.toLowerCase().startsWith("function")) {
+    const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
+    if (!functionSource || !functionSource.toLowerCase().startsWith("function")) {
       return false;
     }
 
-    if (keyword.endsWith("\\")) {
+    if (functionSource.trimEnd().endsWith("\\")) {
       this.host.inFunctionDefinition = true;
-      this.host.functionDefinitionLines.push(keyword.slice(0, -1));
+      this.host.functionDefinitionLines.push(functionSource.trimEnd().slice(0, -1));
     } else {
-      this.host.parseFunctionDefinition(words.join(" "));
+      this.host.parseFunctionDefinition(functionSource.trim());
     }
 
     setCommandKind(command, "directive");
@@ -71,15 +72,17 @@ export class FrontEndCommandService {
 
   handleGlobalLabel(command: NormalizedCommand): boolean {
     const { words } = command;
-    if ((words[0] ?? "").toLowerCase() !== "global") {
+    const directiveArgs = command.parsed.directiveArgs;
+    if ((directiveArgs?.name ?? words[0] ?? "").toLowerCase() !== "global") {
       return false;
     }
 
-    if (words.length < 2) {
+    const payload = directiveArgs?.args?.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
+    if (payload.length < 1) {
       throw new Error("global requires a label name");
     }
 
-    const labelDecl = words[1];
+    const labelDecl = payload[0];
     const modifiesHierarchy = labelDecl.startsWith("#");
     const labelName = modifiesHierarchy ? labelDecl.substring(1) : labelDecl;
     const hasColon = labelName.endsWith(":");
@@ -92,8 +95,8 @@ export class FrontEndCommandService {
       this.host.currentParentIsGlobal = true;
     }
 
-    if (words.length > 2) {
-      this.host.processNestedCommand(words.slice(2).join(" "));
+    if (payload.length > 1) {
+      this.host.processNestedCommand(payload.slice(1).join(" "));
     }
 
     command.labelName = cleanName;
@@ -129,10 +132,11 @@ export class FrontEndCommandService {
       return false;
     }
 
-    const labelName = keyword;
-    const expr = words[2];
+    const assignment = command.parsed.assignment;
+    const labelName = assignment?.target ?? keyword;
+    const expr = assignment ? renderExpressionNode(assignment.expression) : words[2];
     const resolvedExpr = this.host.resolvedefines(expr);
-    let value = this.host.evaluateMath(resolvedExpr);
+    let value = this.host.evaluateMath(assignment?.expression ?? resolvedExpr);
 
     if (Number.isNaN(value)) {
       value = this.host.getLabelValue(resolvedExpr, true);

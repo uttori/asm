@@ -1,3 +1,5 @@
+import { parseExpressionNode, type ExpressionNode, type RangeExpressionNode } from "./expression-node.js";
+
 export type CommandKind =
   | "unknown"
   | "directive"
@@ -25,6 +27,73 @@ export type NormalizedCommand = {
   keyword: string;
   labelName?: string;
   assignmentTarget?: string;
+  parsed: CommandSemantics;
+};
+
+export type ParsedCondition = {
+  expression: ExpressionNode;
+};
+
+export type ParsedAssignment = {
+  target: string;
+  expression: ExpressionNode;
+};
+
+export type ParsedForLoop = {
+  variable: string;
+  range: RangeExpressionNode;
+  start: ExpressionNode;
+  end: ExpressionNode;
+};
+
+export type ParsedIncbinRange = {
+  range: RangeExpressionNode;
+  start: ExpressionNode;
+  end: ExpressionNode;
+};
+
+export type ParsedMacroInvocation = {
+  name: string;
+  args: string[];
+};
+
+export type ParsedIncludeTarget = {
+  directive: "include" | "incsrc";
+  target: string;
+};
+
+export type ParsedLabelSplit = {
+  label: string;
+  trailing?: string;
+};
+
+export type ParsedDataDirective = {
+  directive: string;
+  operands: string[];
+};
+
+export type ParsedDirectiveArgs = {
+  name: string;
+  args: string[];
+};
+
+export type ParsedOpcodeOperands = {
+  mnemonic: string;
+  operandText: string;
+  operands: string[];
+};
+
+export type CommandSemantics = {
+  condition?: ParsedCondition;
+  assignment?: ParsedAssignment;
+  forLoop?: ParsedForLoop;
+  incbinRange?: ParsedIncbinRange;
+  macroInvocation?: ParsedMacroInvocation;
+  includeTarget?: ParsedIncludeTarget;
+  labelSplit?: ParsedLabelSplit;
+  dataDirective?: ParsedDataDirective;
+  directiveArgs?: ParsedDirectiveArgs;
+  opcodeOperands?: ParsedOpcodeOperands;
 };
 
 /**
@@ -58,6 +127,7 @@ export function createNormalizedCommand(
     keyword,
     labelName: deriveLabelName(keyword),
     assignmentTarget: deriveAssignmentTarget(words),
+    parsed: deriveCommandSemantics(command, words),
   };
 }
 
@@ -66,21 +136,32 @@ export function createNormalizedCommand(
  * @param {string} raw The unprocessed source line.
  * @param {string} file The current source file.
  * @param {number} line The current source line number.
+ * @param {string} [normalized] Optional normalized form without inline comments.
+ * @param {string[]} [words] Optional tokenized words for semantic payload derivation.
  * @returns {NormalizedCommand} The pending command node.
  */
-export function createPendingCommand(raw: string, file: string, line: number): NormalizedCommand {
-  const trimmed = raw.trim();
+export function createPendingCommand(
+  raw: string,
+  file: string,
+  line: number,
+  normalized?: string,
+  words: string[] = [],
+): NormalizedCommand {
+  const command = (normalized ?? raw).trim();
   return {
-    kind: classifyCommand(trimmed, []),
+    kind: classifyCommand(command, words),
     source: {
       file,
       line,
       raw,
-      normalized: raw,
+      normalized: normalized ?? raw,
     },
-    command: trimmed,
-    words: [],
-    keyword: "",
+    command,
+    words,
+    keyword: words[0] ?? "",
+    labelName: deriveLabelName(words[0] ?? ""),
+    assignmentTarget: deriveAssignmentTarget(words),
+    parsed: deriveCommandSemantics(command, words),
   };
 }
 
@@ -98,6 +179,7 @@ export function setCommandWords(command: NormalizedCommand, words: string[], nor
   command.source.normalized = normalized ?? command.command;
   command.labelName = deriveLabelName(command.keyword);
   command.assignmentTarget = deriveAssignmentTarget(words);
+  command.parsed = deriveCommandSemantics(command.command, words);
   command.kind = classifyCommand(command.command, words);
   return command;
 }
@@ -174,4 +256,177 @@ function deriveAssignmentTarget(words: string[]): string | undefined {
     return words[0];
   }
   return undefined;
+}
+
+/**
+ * Derives semantic payloads from a normalized command's stable syntax.
+ * @param {string} command The normalized command text.
+ * @param {string[]} words The tokenized command words.
+ * @returns {CommandSemantics} Parsed semantic payloads keyed by construct type.
+ */
+function deriveCommandSemantics(command: string, words: string[]): CommandSemantics {
+  const keyword = (words[0] ?? "").toLowerCase();
+  const semantics: CommandSemantics = {};
+
+  if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
+    semantics.condition = {
+      expression: parseExpressionNode(words.slice(1).join(" ")),
+    };
+  }
+
+  if (keyword === "for" && words.length >= 4 && words[2] === "=") {
+    const variable = words[1];
+    const parsedRange = parseExpressionNode(words.slice(3).join(" "));
+    if (parsedRange.type === "range") {
+      semantics.forLoop = {
+        variable,
+        range: parsedRange,
+        start: parsedRange.start,
+        end: parsedRange.end,
+      };
+    }
+  }
+
+  if (words.length === 3 && words[1] === "=" && !(words[0]?.startsWith("'") || words[0]?.startsWith("\""))) {
+    semantics.assignment = {
+      target: words[0],
+      expression: parseExpressionNode(words[2]),
+    };
+  }
+
+  if (keyword === "incbin" && words.length >= 2) {
+    const rangeCandidate = extractIncbinRange(words[1]);
+    if (rangeCandidate) {
+      const parsedRange = parseExpressionNode(rangeCandidate);
+      if (parsedRange.type === "range") {
+        semantics.incbinRange = {
+          range: parsedRange,
+          start: parsedRange.start,
+          end: parsedRange.end,
+        };
+      }
+    }
+  }
+
+  if (keyword.startsWith("%")) {
+    const invocationText = command.trim().slice(1);
+    const openParen = invocationText.indexOf("(");
+    if (openParen !== -1 && invocationText.endsWith(")")) {
+      const name = invocationText.slice(0, openParen).trim();
+      const argsText = invocationText.slice(openParen + 1, -1);
+      const args = splitCommaArguments(argsText);
+      semantics.macroInvocation = { name, args };
+    } else if (invocationText) {
+      semantics.macroInvocation = { name: invocationText.trim(), args: [] };
+    }
+  }
+
+  if ((keyword === "include" || keyword === "incsrc") && words.length >= 2) {
+    semantics.includeTarget = {
+      directive: keyword,
+      target: words.slice(1).join(" ").trim(),
+    };
+  }
+
+  const labelSplit = extractLabelSplit(command);
+  if (labelSplit) {
+    semantics.labelSplit = labelSplit;
+  }
+
+  if (["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"].includes(keyword) && words.length >= 2) {
+    const payload = command.slice((words[0] ?? "").length).trim();
+    semantics.dataDirective = {
+      directive: keyword,
+      operands: splitCommaArguments(payload),
+    };
+  }
+
+  if (keyword && !keyword.startsWith("%") && !keyword.startsWith("!")) {
+    const payload = command.slice((words[0] ?? "").length).trim();
+    semantics.directiveArgs = {
+      name: keyword,
+      args: payload ? splitCommaArguments(payload) : [],
+    };
+    if (!deriveLabelName(words[0] ?? "") && payload) {
+      semantics.opcodeOperands = {
+        mnemonic: words[0] ?? "",
+        operandText: payload,
+        operands: splitCommaArguments(payload),
+      };
+    }
+  }
+
+  void command;
+  return semantics;
+}
+
+/**
+ * Extracts the optional `incbin` range suffix from a file argument.
+ * @param {string} argument The raw filename or filename-with-range token.
+ * @returns {string | undefined} The trailing range expression when present.
+ */
+function extractIncbinRange(argument: string): string | undefined {
+  const colonIndex = argument.indexOf(":");
+  if (colonIndex === -1) {
+    return undefined;
+  }
+  return argument.slice(colonIndex + 1);
+}
+
+function extractLabelSplit(command: string): ParsedLabelSplit | undefined {
+  const trimmed = command.trim();
+  const labelMatch = trimmed.match(/^([A-Za-z_.$?][\w.$?]*):\s*(.*)$/);
+  if (!labelMatch) {
+    return undefined;
+  }
+  const trailing = labelMatch[2].trim();
+  return {
+    label: labelMatch[1],
+    trailing: trailing || undefined,
+  };
+}
+
+function splitCommaArguments(input: string): string[] {
+  const values: string[] = [];
+  let current = "";
+  let depth = 0;
+  let inQuote = false;
+  let quoteChar = "";
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === "\"" || char === "'") && input[i - 1] !== "\\") {
+      if (!inQuote) {
+        inQuote = true;
+        quoteChar = char;
+      } else if (quoteChar === char) {
+        inQuote = false;
+      }
+      current += char;
+      continue;
+    }
+    if (!inQuote && char === "(") {
+      depth++;
+      current += char;
+      continue;
+    }
+    if (!inQuote && char === ")") {
+      depth = Math.max(0, depth - 1);
+      current += char;
+      continue;
+    }
+    if (!inQuote && depth === 0 && char === ",") {
+      const normalized = current.trim();
+      if (normalized) {
+        values.push(normalized);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const tail = current.trim();
+  if (tail) {
+    values.push(tail);
+  }
+  return values;
 }

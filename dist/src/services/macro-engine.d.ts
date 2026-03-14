@@ -21,7 +21,7 @@ export interface MacroEngineHost {
     inMacroDefinition: boolean;
     currentMacroName: string;
     currentMacroParams: string[];
-    currentMacroBody: string[];
+    currentMacroBody: NormalizedCommand[];
     currentVariadicCount: number | undefined;
     currentVariadicArgs: string[];
     macros: Map<string, MacroDefinition>;

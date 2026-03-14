@@ -3,9 +3,9 @@ import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { ArchitectureContext, ExpressionHost, Spc700Context, SuperFXContext } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addr2line.js";
-import type { LoopNode } from "./ir/assembly-tree.js";
+import type { IncludeNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";
 import { type ExpressionNode } from "./ir/expression-node.js";
-import type { NormalizedCommand } from "./ir/normalized-command.js";
+import { type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import type { AssemblySession } from "./directives/types.js";
@@ -17,12 +17,30 @@ export type MacroDefinition = {
     params: string[];
     /** Whether the macro has a variable number of parameters. */
     variadic: boolean;
-    /** Lines of code. */
-    body: string[];
+    /** Typed commands captured inside the macro body. */
+    body: NormalizedCommand[];
     /** The file where this macro was defined. */
     sourceFile?: string;
 };
 export type LoopBlock = LoopNode;
+type RuntimeConditionalBranch = {
+    kind: "if" | "elseif" | "else";
+    header?: NormalizedCommand;
+    conditionText?: string;
+    conditionNode?: ExpressionNode;
+    commands: ExecutableNode[];
+    startLine: number;
+    endLine?: number;
+};
+type RuntimeConditionalNode = {
+    type: "if";
+    header?: NormalizedCommand;
+    branches: RuntimeConditionalBranch[];
+    startLine: number;
+    endLine?: number;
+};
+export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
+type ExecutableNode = string | NormalizedCommand | LoopNode | RuntimeConditionalNode;
 export type WhileTracker = {
     iswhile: boolean;
     startline: number;
@@ -125,7 +143,7 @@ export declare class Assembler implements AssemblySession {
     inMacroDefinition: boolean;
     currentMacroName: string;
     currentMacroParams: string[];
-    currentMacroBody: string[];
+    currentMacroBody: NormalizedCommand[];
     currentVariadicCount: number | undefined;
     currentVariadicArgs: string[];
     macros: Map<string, MacroDefinition>;
@@ -187,6 +205,10 @@ export declare class Assembler implements AssemblySession {
     spcblockData: SpcblockData | null;
     spcInlineCompatMode: boolean;
     requireStaticLabelLookup: boolean;
+    useTreePassDriver: boolean;
+    /** Temporary bisection toggle to force legacy line-driven execution. */
+    useLegacyPassDriver: boolean;
+    private readonly passProgramCache;
     private readonly directiveRegistry;
     private readonly cursorAddress;
     private readonly services;
@@ -292,6 +314,9 @@ export declare class Assembler implements AssemblySession {
     read2(insnespos: number): number;
     read3(insnespos: number): number;
     assembleblock(block: string): void;
+    preprocessBlockCommands(block: string): string[];
+    splitInlineCommands(commands: string[]): string[];
+    setExecutionDriver(mode: "tree" | "legacy"): void;
     removeInlineComment(line: string): string;
     /**
      * Processes a single command from `assembleblock`.
@@ -767,6 +792,15 @@ export declare class Assembler implements AssemblySession {
      * @returns {string | undefined} The variable name or null if the line is not a define statement.
      */
     getDefineVariable(line: string): string | null;
+    private createLoopCommandNode;
+    lowerNode(command: NormalizedCommand): NormalizedCommand;
+    executeNode(node: ExecutableNode): void;
+    executeNodeStream(nodes: RuntimeNode[]): void;
+    executeConditionalNode(node: RuntimeConditionalNode): void;
+    parseCommandStreamToNodes(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
+    getOrBuildPassProgram(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
+    getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined;
+    createIncludeNode(file: string, source: string): IncludeNode;
     /**
      * Process a line from a macro expansion.
      * @param {string} line The line to process from a macro.

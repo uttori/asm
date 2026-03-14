@@ -24,7 +24,7 @@ export interface MacroEngineHost {
   inMacroDefinition: boolean;
   currentMacroName: string;
   currentMacroParams: string[];
-  currentMacroBody: string[];
+  currentMacroBody: NormalizedCommand[];
   currentVariadicCount: number | undefined;
   currentVariadicArgs: string[];
   macros: Map<string, MacroDefinition>;
@@ -85,7 +85,7 @@ export class MacroEngine {
       }
 
       if (this.host.pass === 0) {
-        this.host.currentMacroBody.push(command.trim());
+        this.host.currentMacroBody.push(commandNode);
       }
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
@@ -107,7 +107,12 @@ export class MacroEngine {
     }
 
     if (keyword.startsWith("%")) {
-      const invocation = words.join(" ").substring(1);
+      const parsedInvocation = commandNode.parsed.macroInvocation;
+      const invocation = parsedInvocation
+        ? (parsedInvocation.args.length > 0
+          ? `${parsedInvocation.name}(${parsedInvocation.args.join(", ")})`
+          : parsedInvocation.name)
+        : words.join(" ").substring(1);
       this.callMacro(invocation);
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
@@ -231,7 +236,7 @@ export class MacroEngine {
       const match = invocation.match(invocationRegex);
 
       if (!match) {
-        const macroName = invocation.substring(1);
+        const macroName = invocation.startsWith("%") ? invocation.substring(1) : invocation;
         const macro = this.host.macros.get(macroName);
         if (!macro) {
           throw new Error(`Error: Macro '${macroName}' not defined.`);
@@ -247,13 +252,13 @@ export class MacroEngine {
           this.host.currentVariadicCount = 0;
           this.host.currentVariadicArgs = [];
 
-          for (const line of macro.body) {
-            const expandedLine = this.expandMacroLine(line, fixedArgs, [], 0);
+          for (const lineNode of macro.body) {
+            const expandedLine = this.expandMacroLine(lineNode.command, fixedArgs, [], 0);
             this.processMacroLine(expandedLine);
           }
         } else {
-          for (const line of macro.body) {
-            this.processMacroLine(line);
+          for (const lineNode of macro.body) {
+            this.processMacroLine(lineNode.command);
           }
         }
 
@@ -328,8 +333,8 @@ export class MacroEngine {
       this.host.currentVariadicCount = variadicCount;
       this.host.currentVariadicArgs = variadicArgs;
 
-      for (const line of macro.body) {
-        const expandedLine = this.expandMacroLine(line, fixedArgs, variadicArgs, variadicCount);
+      for (const lineNode of macro.body) {
+        const expandedLine = this.expandMacroLine(lineNode.command, fixedArgs, variadicArgs, variadicCount);
         this.processMacroLine(expandedLine);
       }
     } finally {

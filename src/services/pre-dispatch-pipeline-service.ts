@@ -42,7 +42,11 @@ export class PreDispatchPipelineService {
     }
 
     if (this.host.collectingLoop && !command.match(/^\s*(for|while|endfor|endwhile)/i)) {
-      this.host.currentLoop?.commands.push(createPendingCommand(command, this.host.currentFile, this.host.currentLine));
+      const normalized = this.normalizeCommand(command);
+      const words = this.host.splitCommandIntoWords(normalized);
+      this.host.currentLoop?.commands.push(
+        createPendingCommand(command, this.host.currentFile, this.host.currentLine, normalized, words),
+      );
       return true;
     }
 
@@ -112,12 +116,11 @@ export class PreDispatchPipelineService {
   }
 
   parseConditionNode(command: NormalizedCommand) {
-    if (command.keyword === "while") {
-      return parseExpressionNode(command.words.slice(1).join(" "));
+    if (command.keyword === "if" || command.keyword === "elseif" || command.keyword === "while") {
+      return command.parsed.condition?.expression ?? parseExpressionNode(command.words.slice(1).join(" "));
     }
     if (command.keyword === "for") {
-      const rangeExpr = command.words.slice(3).join(" ");
-      return parseExpressionNode(rangeExpr);
+      return command.parsed.forLoop?.range ?? parseExpressionNode(command.words.slice(3).join(" "));
     }
     return undefined;
   }

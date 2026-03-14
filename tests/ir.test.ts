@@ -43,6 +43,81 @@ test("pending command preserves raw loop body input", (t) => {
   t.is(command.command, "db $01 ; loop body");
 });
 
+test("normalized command derives semantic payloads for conditions, ranges, assignments, and incbin", (t) => {
+  const whileCommand = createNormalizedCommand("while !COUNT < 2", "while !COUNT < 2", ["while", "!COUNT", "<", "2"], "test.asm", 3);
+  const forCommand = createNormalizedCommand("for i = 0..2", "for i = 0..2", ["for", "i", "=", "0..2"], "test.asm", 4);
+  const assignmentCommand = createNormalizedCommand("Label = bank($123456)", "Label = bank($123456)", ["Label", "=", "bank($123456)"], "test.asm", 5);
+  const incbinCommand = createNormalizedCommand("incbin \"test.bin\":$1..$3", "incbin \"test.bin\":$1..$3", ["incbin", "\"test.bin\":$1..$3"], "test.asm", 6);
+
+  t.deepEqual(whileCommand.parsed.condition?.expression, parseExpressionNode("!COUNT < 2"));
+  t.deepEqual(forCommand.parsed.forLoop, {
+    variable: "i",
+    range: parseExpressionNode("0..2"),
+    start: parseExpressionNode("0"),
+    end: parseExpressionNode("2"),
+  });
+  t.deepEqual(assignmentCommand.parsed.assignment, {
+    target: "Label",
+    expression: parseExpressionNode("bank($123456)"),
+  });
+  t.deepEqual(incbinCommand.parsed.incbinRange, {
+    range: parseExpressionNode("$1..$3"),
+    start: parseExpressionNode("$1"),
+    end: parseExpressionNode("$3"),
+  });
+});
+
+test("normalized command derives macro include data and label split semantics", (t) => {
+  const macroInvoke = createNormalizedCommand("%emit($10, bank($123456))", "%emit($10, bank($123456))", ["%emit($10,", "bank($123456))"], "test.asm", 7);
+  const include = createNormalizedCommand('include "macros.asm"', 'include "macros.asm"', ["include", "\"macros.asm\""], "test.asm", 8);
+  const data = createNormalizedCommand("db $01, bank($123456), \"TEXT\"", "db $01, bank($123456), \"TEXT\"", ["db", "$01,", "bank($123456),", "\"TEXT\""], "test.asm", 9);
+  const labeled = createNormalizedCommand("Main: db $01", "Main: db $01", ["Main:", "db", "$01"], "test.asm", 10);
+  const opcode = createNormalizedCommand("lda #$10", "lda #$10", ["lda", "#$10"], "test.asm", 11);
+  const directive = createNormalizedCommand("org $808000", "org $808000", ["org", "$808000"], "test.asm", 12);
+
+  t.deepEqual(macroInvoke.parsed.macroInvocation, {
+    name: "emit",
+    args: ["$10", "bank($123456)"],
+  });
+  t.deepEqual(include.parsed.includeTarget, {
+    directive: "include",
+    target: "\"macros.asm\"",
+  });
+  t.deepEqual(data.parsed.dataDirective, {
+    directive: "db",
+    operands: ["$01", "bank($123456)", "\"TEXT\""],
+  });
+  t.deepEqual(labeled.parsed.labelSplit, {
+    label: "Main",
+    trailing: "db $01",
+  });
+  t.deepEqual(opcode.parsed.opcodeOperands, {
+    mnemonic: "lda",
+    operandText: "#$10",
+    operands: ["#$10"],
+  });
+  t.deepEqual(directive.parsed.directiveArgs, {
+    name: "org",
+    args: ["$808000"],
+  });
+});
+
+test("pending command can capture normalized loop-body semantics", (t) => {
+  const command = createPendingCommand(
+    "Label = 1 ; keep comment",
+    "loop.asm",
+    9,
+    "Label = 1",
+    ["Label", "=", "1"],
+  );
+
+  t.is(command.command, "Label = 1");
+  t.deepEqual(command.parsed.assignment, {
+    target: "Label",
+    expression: parseExpressionNode("1"),
+  });
+});
+
 test("expression nodes parse range and call syntax", (t) => {
   const rangeNode = parseExpressionNode("0..$20");
   const callNode = parseExpressionNode("incbin($10, $20)");
@@ -106,11 +181,66 @@ test("loop collection creates a structural condition node", (t) => {
   const assembler = new Assembler();
   assembler.beginLoopCollection("for", "for i = 0..2");
 
-  t.deepEqual(assembler.currentLoop?.conditionNode, {
+  t.deepEqual(assembler.currentLoop?.rangeNode, {
     type: "range",
-    start: { type: "raw", value: "i = 0" },
+    start: { type: "literal", value: "0" },
     end: { type: "literal", value: "2" },
   });
+  t.is(assembler.currentLoop?.variable, "i");
+  t.deepEqual(assembler.currentLoop?.startExpression, { type: "literal", value: "0" });
+  t.deepEqual(assembler.currentLoop?.endExpression, { type: "literal", value: "2" });
+});
+
+test("loop collection stores normalized command nodes in loop bodies", (t) => {
+  const assembler = new Assembler();
+  assembler.currentFile = "loop.asm";
+  assembler.currentLine = 0;
+  assembler.setPass(1);
+
+  assembler.beginLoopCollection("while", "while !COUNT < 2");
+  assembler.currentLine = 1;
+  assembler.processCommand("Label = 1 ; comment");
+
+  t.is(assembler.currentLoop?.commands.length, 1);
+  const bodyCommand = assembler.currentLoop?.commands[0];
+  if (!bodyCommand || typeof bodyCommand === "string" || "type" in bodyCommand) {
+    t.fail();
+    return;
+  }
+
+  t.is(bodyCommand.source.raw, "Label = 1 ; comment");
+  t.is(bodyCommand.command, "Label = 1");
+  t.deepEqual(bodyCommand.parsed.assignment, {
+    target: "Label",
+    expression: parseExpressionNode("1"),
+  });
+});
+
+test("typed loop nodes still execute through the legacy process pipeline", (t) => {
+  const assembler = new Assembler();
+  assembler.setPass(2);
+  assembler.currentFile = "/Users/matthew/uttori/snes-asm-js/tests/ir.test.ts";
+  const executed: Array<{ command: string; value: string | undefined }> = [];
+  stub(assembler, "processCommand").callsFake((command: string) => {
+    executed.push({ command, value: assembler.defines.get("i") });
+  });
+  assembler.beginLoopCollection("for", "for i = 0..3");
+  assembler.currentLoop?.commands.push(createPendingCommand("db !i", "loop.asm", 1, "db !i", ["db", "!i"]));
+  const loop = assembler.currentLoop;
+  if (!loop) {
+    t.fail();
+    return;
+  }
+
+  assembler.currentLoop = null;
+  assembler.collectingLoop = false;
+  assembler.executeLoopBlock(loop);
+
+  t.deepEqual(executed, [
+    { command: "db !i", value: "0" },
+    { command: "db !i", value: "1" },
+    { command: "db !i", value: "2" },
+  ]);
 });
 
 test("math and operand resolver accept expression nodes", (t) => {

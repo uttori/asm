@@ -1,35 +1,49 @@
-import type { ExpressionNode } from "./expression-node.js";
+import type { ExpressionNode, RangeExpressionNode } from "./expression-node.js";
 import type { NormalizedCommand } from "./normalized-command.js";
 export type LoopNode = {
     type: "for" | "while";
     condition: string;
+    header?: NormalizedCommand;
     conditionNode?: ExpressionNode;
+    rangeNode?: RangeExpressionNode;
     variable?: string;
     start?: number;
     end?: number;
-    commands: Array<string | NormalizedCommand | LoopNode>;
+    startExpression?: ExpressionNode;
+    endExpression?: ExpressionNode;
+    commands: ExecutableNode[];
+    startLine: number;
+    endLine?: number;
+};
+export type ConditionalBranch = {
+    kind: "if" | "elseif" | "else";
+    header?: NormalizedCommand;
+    conditionText?: string;
+    conditionNode?: ExpressionNode;
+    commands: ExecutableNode[];
     startLine: number;
     endLine?: number;
 };
 export type ConditionalBranchNode = {
     type: "if";
-    condition?: ExpressionNode;
-    commands: NormalizedCommand[];
-    elseIfBranches?: ConditionalBranchNode[];
-    elseBranch?: NormalizedCommand[];
+    header?: NormalizedCommand;
+    branches: ConditionalBranch[];
+    startLine: number;
+    endLine?: number;
 };
 export type MacroDefinitionNode = {
     type: "macroDefinition";
     name: string;
     params: string[];
     variadic: boolean;
-    body: NormalizedCommand[];
+    body: ExecutableNode[];
     sourceFile?: string;
 };
 export type IncludeNode = {
     type: "include";
     file: string;
-    commands: NormalizedCommand[];
+    commands: ExecutableNode[];
 };
+export type ExecutableNode = string | NormalizedCommand | LoopNode | ConditionalBranchNode;
 export type AssemblyTreeNode = LoopNode | ConditionalBranchNode | MacroDefinitionNode | IncludeNode;
 //# sourceMappingURL=assembly-tree.d.ts.map

@@ -1,3 +1,4 @@
+import { type ExpressionNode, type RangeExpressionNode } from "./expression-node.js";
 export type CommandKind = "unknown" | "directive" | "opcodeCandidate" | "labelDefinition" | "staticAssignment" | "characterMapping" | "macroDefinitionOrInvoke" | "defineCommand" | "structCommand" | "commentOrEmpty";
 export type CommandProvenance = {
     file: string;
@@ -13,6 +14,62 @@ export type NormalizedCommand = {
     keyword: string;
     labelName?: string;
     assignmentTarget?: string;
+    parsed: CommandSemantics;
+};
+export type ParsedCondition = {
+    expression: ExpressionNode;
+};
+export type ParsedAssignment = {
+    target: string;
+    expression: ExpressionNode;
+};
+export type ParsedForLoop = {
+    variable: string;
+    range: RangeExpressionNode;
+    start: ExpressionNode;
+    end: ExpressionNode;
+};
+export type ParsedIncbinRange = {
+    range: RangeExpressionNode;
+    start: ExpressionNode;
+    end: ExpressionNode;
+};
+export type ParsedMacroInvocation = {
+    name: string;
+    args: string[];
+};
+export type ParsedIncludeTarget = {
+    directive: "include" | "incsrc";
+    target: string;
+};
+export type ParsedLabelSplit = {
+    label: string;
+    trailing?: string;
+};
+export type ParsedDataDirective = {
+    directive: string;
+    operands: string[];
+};
+export type ParsedDirectiveArgs = {
+    name: string;
+    args: string[];
+};
+export type ParsedOpcodeOperands = {
+    mnemonic: string;
+    operandText: string;
+    operands: string[];
+};
+export type CommandSemantics = {
+    condition?: ParsedCondition;
+    assignment?: ParsedAssignment;
+    forLoop?: ParsedForLoop;
+    incbinRange?: ParsedIncbinRange;
+    macroInvocation?: ParsedMacroInvocation;
+    includeTarget?: ParsedIncludeTarget;
+    labelSplit?: ParsedLabelSplit;
+    dataDirective?: ParsedDataDirective;
+    directiveArgs?: ParsedDirectiveArgs;
+    opcodeOperands?: ParsedOpcodeOperands;
 };
 /**
  * Builds the normalized command node used by the command pipeline.
@@ -29,9 +86,11 @@ export declare function createNormalizedCommand(raw: string, normalized: string,
  * @param {string} raw The unprocessed source line.
  * @param {string} file The current source file.
  * @param {number} line The current source line number.
+ * @param {string} [normalized] Optional normalized form without inline comments.
+ * @param {string[]} [words] Optional tokenized words for semantic payload derivation.
  * @returns {NormalizedCommand} The pending command node.
  */
-export declare function createPendingCommand(raw: string, file: string, line: number): NormalizedCommand;
+export declare function createPendingCommand(raw: string, file: string, line: number, normalized?: string, words?: string[]): NormalizedCommand;
 /**
  * Replaces a command node's tokenized words and derived fields.
  * @param {NormalizedCommand} command The command node to update.

@@ -45,17 +45,34 @@ const assembleFixtureLegacy = (fixtureName: string): Buffer => {
   const sourcePath = path.resolve(FIXTURES_DIR, `${fixtureName}.asm`);
   const source = fs.readFileSync(sourcePath, "utf8");
   const targetRom = fs.existsSync(TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(TARGET_ROM_PATH)) : undefined;
+  return assembleSource(source, sourcePath, targetRom, false);
+};
+
+const assembleFixtureTree = (fixtureName: string): Buffer => {
+  const sourcePath = path.resolve(FIXTURES_DIR, `${fixtureName}.asm`);
+  const source = fs.readFileSync(sourcePath, "utf8");
+  const targetRom = fs.existsSync(TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(TARGET_ROM_PATH)) : undefined;
+  return assembleSource(source, sourcePath, targetRom, true);
+};
+
+const assembleSource = (source: string, sourcePath: string, targetRom?: Uint8Array, useTreePassDriver = false): Buffer => {
   const assembler = new Assembler(targetRom);
+  assembler.useTreePassDriver = useTreePassDriver;
   const inputDir = path.dirname(sourcePath);
   assembler.setIncludePaths(["./", inputDir]);
   assembler.setCurrentFile(sourcePath);
 
   for (const pass of [0, 1, 2]) {
     assembler.setPass(pass);
-    const lines = source.split("\n");
-    for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
-      assembler.setCurrentLine(lineNumber);
-      assembler.assembleblock(lines[lineNumber].trim());
+    if (useTreePassDriver) {
+      assembler.setCurrentLine(0);
+      assembler.assembleblock(source);
+    } else {
+      const lines = source.split("\n");
+      for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+        assembler.setCurrentLine(lineNumber);
+        assembler.assembleblock(lines[lineNumber].trim());
+      }
     }
     assembler.finishPass();
   }
@@ -109,6 +126,41 @@ const ALL_TOP_LEVEL_FIXTURES = discoverTopLevelFixtures();
 
 test("integration fixtures - includes all top-level .asm tests from src/test.ts", t => {
   t.true(ALL_TOP_LEVEL_FIXTURES.length > 0, "At least one fixture should be discovered");
+});
+
+test("integration parity gates keep loop and conditional fixtures green", (t) => {
+  const loopResult = compareFixture("forloop");
+  const conditionalResult = compareFixture("elseif");
+
+  t.true(loopResult.overallPassed, loopResult.failedChecks.join(", "));
+  t.true(conditionalResult.overallPassed, conditionalResult.failedChecks.join(", "));
+});
+
+test("integration parity gates keep legacy and tree drivers byte-identical on key fixtures", (t) => {
+  const fixtures = ["elseif", "includehierarchy", "macrolabels"];
+  for (const fixtureName of fixtures) {
+    const legacy = assembleFixtureLegacy(fixtureName);
+    const tree = assembleFixtureTree(fixtureName);
+    t.is(hashBuffer(legacy), hashBuffer(tree), fixtureName);
+  }
+});
+
+test("integration tree-pass driver executes typed loop/conditional blocks", (t) => {
+  const sourcePath = path.resolve(FIXTURES_DIR, "forloop.asm");
+  const source = [
+    "for i = 0..2",
+    "if 1",
+    "db $11",
+    "else",
+    "db $22",
+    "endif",
+    "endfor",
+  ].join("\n");
+  const targetRom = fs.existsSync(TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(TARGET_ROM_PATH)) : undefined;
+
+  const legacy = assembleSource(source, sourcePath, targetRom, false);
+  const tree = assembleSource(source, sourcePath, targetRom, true);
+  t.is(hashBuffer(legacy), hashBuffer(tree));
 });
 
 
