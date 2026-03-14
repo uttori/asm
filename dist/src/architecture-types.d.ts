@@ -1,3 +1,4 @@
+import type { ExpressionNode } from "./ir/expression-node.js";
 export type MathValue = number | string;
 export interface ExpandedOperand {
     expanded: string;
@@ -5,7 +6,7 @@ export interface ExpandedOperand {
 }
 export interface OperandResolutionContext {
     expandOperand(operand: string): ExpandedOperand;
-    getnum(expression: string): number;
+    getnum(expression: string | ExpressionNode): number;
 }
 export interface ExpressionHost {
     resolveLabel(identifier: string): MathValue;

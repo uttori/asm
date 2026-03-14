@@ -1,4 +1,5 @@
 import type { MacroDefinition } from "../assembler.js";
+import { type NormalizedCommand } from "../ir/normalized-command.js";
 export type MacroLabelEntry = {
     value: number;
     isStatic: boolean;
@@ -40,7 +41,7 @@ export interface MacroEngineHost {
 export declare class MacroEngine {
     private readonly host;
     constructor(host: MacroEngineHost);
-    handleDefinitionCommand(command: string, keyword: string, words: string[]): boolean;
+    handleDefinitionCommand(commandNode: NormalizedCommand): boolean;
     rewriteMacroLabelReferences(command: string): string;
     callMacro(invocation: string): void;
     expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string;

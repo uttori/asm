@@ -75,7 +75,13 @@ test("pre-dispatch pipeline collects loop body commands", (t) => {
 
   assembler.processCommand("db $01");
 
-  t.deepEqual(assembler.currentLoop.commands, ["db $01"]);
+  t.is(assembler.currentLoop.commands.length, 1);
+  const [command] = assembler.currentLoop.commands;
+  t.true(typeof command !== "string" && "source" in command);
+  if (typeof command !== "string" && "source" in command) {
+    t.is(command.source.raw, "db $01");
+    t.is(command.kind, "unknown");
+  }
 });
 
 test("pre-dispatch pipeline maps while endif to handleEndIf", (t) => {

@@ -1,3 +1,4 @@
+import { type NormalizedCommand } from "../ir/normalized-command.js";
 export type FrontEndCommandHost = {
     inFunctionDefinition: boolean;
     functionDefinitionLines: string[];
@@ -17,10 +18,10 @@ export declare class FrontEndCommandService {
     private readonly host;
     constructor(host: FrontEndCommandHost);
     continueFunctionDefinition(command: string): boolean;
-    startFunctionDefinition(keyword: string, words: string[]): boolean;
-    handleRelativeLabelDefinition(keyword: string): boolean;
-    handleGlobalLabel(words: string[]): boolean;
-    consumeNamedLabelDefinitions(words: string[], keyword: string): string[];
-    handleStaticLabelAssignment(words: string[], keyword: string): boolean;
+    startFunctionDefinition(command: NormalizedCommand): boolean;
+    handleRelativeLabelDefinition(command: NormalizedCommand): boolean;
+    handleGlobalLabel(command: NormalizedCommand): boolean;
+    consumeNamedLabelDefinitions(command: NormalizedCommand): boolean;
+    handleStaticLabelAssignment(command: NormalizedCommand): boolean;
 }
 //# sourceMappingURL=front-end-command-service.d.ts.map

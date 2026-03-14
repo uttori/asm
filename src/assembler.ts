@@ -8,6 +8,16 @@ import type { AssemblerServices, CursorAddressFacade } from "./assembler-interna
 import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, Spc700Context, SuperFXContext } from "./architecture-types.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
+import type { LoopNode } from "./ir/assembly-tree.js";
+import {
+  isReferenceExpressionNode,
+  parseExpressionNode,
+  renderExpressionNode,
+  renderReferenceExpressionNode,
+  type ExpressionNode,
+  type ReferenceExpressionNode,
+} from "./ir/expression-node.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
@@ -28,6 +38,15 @@ let debug = (..._) => {};
 try { const { default: d } = await import("debug"); debug = d("Assembler"); } catch {}
 // }
 
+/**
+ * Converts a parsed expression node back into source-like text for diagnostics and fallbacks.
+ * @param {ExpressionNode} expression The expression node to stringify.
+ * @returns {string} The rendered expression text.
+ */
+function expressionNodeToString(expression: ExpressionNode): string {
+  return renderExpressionNode(expression);
+}
+
 /** Represents a macro definition. */
 export type MacroDefinition = {
   /** The name of the macro. */
@@ -42,17 +61,7 @@ export type MacroDefinition = {
   sourceFile?: string;
 };
 
-export type LoopBlock = {
-  type: "for" | "while";
-  condition: string;
-  variable?: string;
-  start?: number;
-  end?: number;
-  /** Can contain nested loops */
-  commands: (string | LoopBlock)[];
-  startLine: number;
-  endLine?: number;
-};
+export type LoopBlock = LoopNode;
 
 export type WhileTracker = {
   iswhile: boolean;
@@ -422,15 +431,19 @@ export class Assembler implements AssemblySession {
       resolveVariadicPlaceholders: { value: (command: string) => this.resolveVariadicPlaceholders(command), enumerable: true },
       resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
       loadTestRomData: { value: () => this.loadTestRomData(), enumerable: true },
+      currentFile: { get: () => this.currentFile, enumerable: true },
+      currentLine: { get: () => this.currentLine, enumerable: true },
     }) as PreDispatchPipelineHost;
   }
 
   private createCommandPipelineHost(): CommandPipelineHost {
-    return {
-      splitCommandIntoWords: (command) => this.splitCommandIntoWords(command),
-      handleCharacterMapping: (words) => this.handleCharacterMapping(words),
-      recordCurrentAddress: () => this.cursorAddress.recordCurrentAddress(),
-    };
+    return Object.create(null, {
+      currentFile: { get: () => this.currentFile, enumerable: true },
+      currentLine: { get: () => this.currentLine, enumerable: true },
+      splitCommandIntoWords: { value: (command: string) => this.splitCommandIntoWords(command), enumerable: true },
+      handleCharacterMapping: { value: (command: NormalizedCommand) => this.handleCharacterMapping(command), enumerable: true },
+      recordCurrentAddress: { value: () => this.cursorAddress.recordCurrentAddress(), enumerable: true },
+    }) as CommandPipelineHost;
   }
 
   // Symbol, macro, and struct adapters
@@ -477,7 +490,7 @@ export class Assembler implements AssemblySession {
         enumerable: true,
       },
       evaluateRangeExpression: {
-        value: (expression: string) => this.evaluateRangeExpression(expression),
+        value: (expression: string | ExpressionNode) => this.evaluateRangeExpression(expression),
         enumerable: true,
       },
       enterStructDefinition: {
@@ -788,22 +801,12 @@ export class Assembler implements AssemblySession {
     return this.pctosnes(offset);
   }
 
-  resolveExpressionLabel(identifier: string): number | string {
-    if (identifier.includes(".")) {
-      try {
-        return this.resolveStructMember(identifier);
-      } catch {
-        // Fall through to normal label lookup.
-      }
+  private resolveExpressionHostLabel(identifier: string): number | string {
+    const parsed = parseExpressionNode(identifier.trim());
+    if (isReferenceExpressionNode(parsed)) {
+      return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
     }
-    try {
-      return this.getLabelValue(identifier, this.requireStaticLabelLookup);
-    } catch (error) {
-      if (this.structs.has(identifier)) {
-        return identifier;
-      }
-      throw error;
-    }
+    return this.getLabelValue(identifier, this.requireStaticLabelLookup);
   }
 
   getExpressionObjectSize(identifier: string, baseOnly = false): number {
@@ -817,6 +820,22 @@ export class Assembler implements AssemblySession {
       return 0;
     }
     return this.getObjectSize(identifier, baseOnly);
+  }
+
+  private lookupDefineValue(varName: string): string | undefined {
+    const defineValue = this.defines.get(varName);
+    if (defineValue !== undefined) {
+      return defineValue;
+    }
+
+    for (let i = this.whileStatus.length - 1; i >= 0; i--) {
+      const loop = this.whileStatus[i];
+      if (loop.is_for && loop.for_variable === varName) {
+        return loop.for_cur.toString();
+      }
+    }
+
+    return undefined;
   }
 
   canReadTargetRom(position: number, size: number): number {
@@ -921,7 +940,7 @@ export class Assembler implements AssemblySession {
   }
 
   readonly expressionHost: ExpressionHost = {
-    resolveLabel: (identifier) => this.resolveExpressionLabel(identifier),
+    resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
     convertSnesToPc: (address) => this.convertTargetAddressToRomOffset(address),
     convertPcToSnes: (offset) => this.convertRomOffsetToTargetAddress(offset),
     getCurrentAddress: () => this.getCurrentTargetAddress(),
@@ -2215,19 +2234,22 @@ export class Assembler implements AssemblySession {
    * @param {string} expr The expression to evaluate.
    * @returns {number} The result of the expression.
    */
-  evaluateRangeExpression(expr: string): number {
+  evaluateRangeExpression(expr: string | ExpressionNode): number {
     debug("assemlber evaluateRangeExpression", expr)
-    expr = expr.trim();
+    const resolvedExpr = this.resolveExpressionInput(expr);
+    if (isReferenceExpressionNode(resolvedExpr)) {
+      return this.evaluateReferenceExpressionNode(resolvedExpr, true);
+    }
     // Try evaluating the expression numerically.
     try {
-      const result = this.mathCore.math(expr);
+      const result = this.mathCore.math(resolvedExpr);
       if (result && !Number.isNaN(result)) {
         return result;
       }
     } catch (error) {}
     // If that fails, assume it's a static label.
     // (Pass 'true' to require that the label be static.)
-    return this.getLabelValue(expr, true);
+    return this.getLabelValue(expressionNodeToString(resolvedExpr), true);
   }
 
   /**
@@ -2251,21 +2273,146 @@ export class Assembler implements AssemblySession {
    * @param {string} expression - The expression to evaluate.
    * @returns {boolean} True if the expression is true, false otherwise.
    */
-  evaluateExpression(expression: string): boolean {
+  evaluateExpression(expression: string | ExpressionNode): boolean {
     debug("evaluateExpression", expression)
-    // Only resolve defines if the expression contains define syntax
-    const resolvedExpr = expression.includes("!") ? this.resolvedefines(expression) : expression;
+    const resolvedExpr = this.resolveExpressionInput(expression);
     debug("evaluateExpression resolvedExpr", resolvedExpr)
     let result: number;
     try {
-      result = this.mathCore.math(resolvedExpr);
+      result = isReferenceExpressionNode(resolvedExpr)
+        ? this.evaluateReferenceExpressionNode(resolvedExpr)
+        : this.mathCore.math(resolvedExpr);
     } catch (e) {
-      throw new Error(`Error evaluating expression "${expression}" (resolved to "${resolvedExpr}"): ${e}`);
+      const originalExpr = typeof expression === "string" ? expression : expressionNodeToString(expression);
+      const resolvedText = expressionNodeToString(resolvedExpr);
+      throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e}`);
     }
     // In our assembler, a condition is true if the result is nonzero.
     debug("evaluateExpression result", result, "=>", result !== 0)
     debug("evaluateExpression =", result !== 0)
     return result !== 0;
+  }
+
+  private resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode {
+    const parsed = typeof expression === "string" ? parseExpressionNode(expression.trim()) : expression;
+    return this.resolveExpressionNode(parsed);
+  }
+
+  private resolveExpressionNode(expression: ExpressionNode): ExpressionNode {
+    if (isReferenceExpressionNode(expression)) {
+      return this.resolveReferenceExpressionNode(expression);
+    }
+
+    switch (expression.type) {
+      case "binary":
+        return {
+          ...expression,
+          left: this.resolveExpressionNode(expression.left),
+          right: this.resolveExpressionNode(expression.right),
+        };
+      case "unary":
+        return {
+          ...expression,
+          argument: this.resolveExpressionNode(expression.argument),
+        };
+      case "range":
+        return {
+          ...expression,
+          start: this.resolveExpressionNode(expression.start),
+          end: this.resolveExpressionNode(expression.end),
+        };
+      case "call":
+        return {
+          ...expression,
+          arguments: expression.arguments.map((argument) => this.resolveExpressionNode(argument)),
+        };
+      case "raw":
+        if (/(^|[^!<=>])![\w{]/.test(expression.value)) {
+          return this.resolveExpressionInput(this.resolvedefines(expression.value));
+        }
+        return expression;
+      default:
+        return expression;
+    }
+  }
+
+  private resolveReferenceExpressionNode(expression: ReferenceExpressionNode): ExpressionNode {
+    switch (expression.type) {
+      case "identifier":
+        return expression;
+      case "defineReference": {
+        const defineName = expression.braced
+          ? this.resolvedefines(expression.content ?? "")
+          : (expression.name ?? "");
+        const value = this.lookupDefineValue(defineName);
+        if (value === undefined) {
+          throw new Error(`Define '${defineName}' not found.`);
+        }
+        return this.resolveExpressionInput(value);
+      }
+      case "member": {
+        const object = this.resolveReferenceExpressionNode(expression.object);
+        if (!isReferenceExpressionNode(object)) {
+          return { type: "raw", value: `${expressionNodeToString(object)}.${expression.property.name}` };
+        }
+        return {
+          ...expression,
+          object,
+        };
+      }
+      case "index": {
+        const object = this.resolveReferenceExpressionNode(expression.object);
+        const index = this.resolveExpressionNode(expression.index);
+        if (!isReferenceExpressionNode(object)) {
+          return { type: "raw", value: `${expressionNodeToString(object)}[${expressionNodeToString(index)}]` };
+        }
+        return {
+          ...expression,
+          object,
+          index,
+        };
+      }
+      default:
+        return expression;
+    }
+  }
+
+  private evaluateReferenceExpressionNode(expression: ReferenceExpressionNode, requireStatic = false): number {
+    const resolved = this.resolveReferenceLabelValue(expression, requireStatic);
+    if (typeof resolved === "number") {
+      return resolved;
+    }
+    throw new Error(`Reference '${resolved}' did not resolve to a numeric value.`);
+  }
+
+  private resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic = false): number | string {
+    const resolved = this.resolveReferenceExpressionNode(expression);
+    if (!isReferenceExpressionNode(resolved)) {
+      return this.mathCore.math(resolved);
+    }
+
+    const normalizedReference = this.normalizeReferenceExpressionNode(resolved);
+    if (normalizedReference.includes(".")) {
+      try {
+        return this.resolveStructMember(normalizedReference);
+      } catch {
+        // Fall back to normal label lookup.
+      }
+    }
+    return this.getLabelValue(normalizedReference, requireStatic);
+  }
+
+  private normalizeReferenceExpressionNode(expression: ReferenceExpressionNode): string {
+    return renderReferenceExpressionNode(expression, {
+      renderIndex: (indexExpression) => {
+        const resolvedIndex = this.resolveExpressionNode(indexExpression);
+        try {
+          return this.mathCore.math(resolvedIndex).toString();
+        } catch {
+          return expressionNodeToString(resolvedIndex);
+        }
+      },
+    });
   }
 
   /**
@@ -2334,35 +2481,11 @@ export class Assembler implements AssemblySession {
       return input;
     }
 
-    // Helper function to look up a variable name with priority for loop variables
-    const lookupVariable = (varName: string): string | undefined => {
-      debug("resolvedefines lookupVariable", varName);
-
-      // First check if this variable is directly defined
-      const defineValue = this.defines.get(varName);
-      if (defineValue !== undefined) {
-        debug(`resolvedefines found variable ${varName} with value ${defineValue}`);
-        return defineValue;
-      }
-
-      // Check active loops from innermost to outermost (for backward compatibility)
-      for (let i = this.whileStatus.length - 1; i >= 0; i--) {
-        const loop = this.whileStatus[i];
-        if (loop.is_for && loop.for_variable === varName) {
-          debug(`resolvedefines found loop variable ${varName} with value ${loop.for_cur}`);
-          return loop.for_cur.toString();
-        }
-      }
-
-      // Not found - return undefined
-      return undefined;
-    };
-
     // Special case for direct variable reference like "!i"
     if (input.startsWith("!") && !input.includes(" ") && !input.includes("=") && !input.includes("{")) {
       debug("resolvedefines direct variable reference", input);
       const varName = input.substring(1);
-      const value = lookupVariable(varName);
+      const value = this.lookupDefineValue(varName);
 
       if (value !== undefined) {
         return value;
@@ -2441,7 +2564,7 @@ export class Assembler implements AssemblySession {
         }
 
         // Look up the variable using our helper function
-        const value = lookupVariable(defineName);
+        const value = this.lookupDefineValue(defineName);
 
         if (value === undefined) {
           throw new Error(`Define '${defineName}' not found.`);
@@ -2859,10 +2982,11 @@ export class Assembler implements AssemblySession {
 
   /**
    * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
-   * @param {string[]} words The processed words to use as key, `=`, value.
+   * @param {NormalizedCommand | string[]} command The normalized command node or legacy words tuple.
    * @throws {Error} If the format is incorrect.
    */
-  handleCharacterMapping(words: string[]): void {
+  handleCharacterMapping(command: NormalizedCommand | string[]): void {
+    const words = Array.isArray(command) ? command : command.words;
     debug("handleCharacterMapping", words);
     if (words.length !== 3) {
       throw new Error("Character mapping requires format: 'char' = value");
@@ -3028,6 +3152,7 @@ export class Assembler implements AssemblySession {
     const newLoop: LoopBlock = {
       type,
       condition: command,
+      conditionNode: parseExpressionNode(command.replace(/^\s*(for|while)\s+/i, "")),
       commands: [],
       startLine: this.currentLine
     };
@@ -3167,8 +3292,10 @@ export class Assembler implements AssemblySession {
         // Process each command in the loop body
         for (const cmd of forBlock.commands) {
           if (typeof cmd === "string") {
-            // Process the command with our variable set in the defines map
             this.processCommand(cmd);
+          } else if ("source" in cmd) {
+            // Process the command with our variable set in the defines map
+            this.processCommand(cmd.source.raw);
           } else {
             // Execute nested loops
             this.executeLoopBlock(cmd);
@@ -3207,13 +3334,14 @@ export class Assembler implements AssemblySession {
     const originalValues = new Map<string, string | undefined>();
 
     // Continue looping as long as the condition evaluates to true
-    while (this.evaluateExpression(conditionExpr) && iteration < MAX_ITERATIONS) {
+    while (this.evaluateExpression(whileBlock.conditionNode ?? conditionExpr) && iteration < MAX_ITERATIONS) {
       // Process each command in the loop body
       for (const cmd of whileBlock.commands) {
-        if (typeof cmd === "string") {
+        if (typeof cmd === "string" || "source" in cmd) {
+          const rawCommand = typeof cmd === "string" ? cmd : cmd.source.raw;
           // Check if this is a variable definition
-          if (this.isDefineStatement(cmd)) {
-            const varName = this.getDefineVariable(cmd);
+          if (this.isDefineStatement(rawCommand)) {
+            const varName = this.getDefineVariable(rawCommand);
             if (varName && !loopVars.has(varName)) {
               // First time seeing this variable in the loop
               loopVars.add(varName);
@@ -3223,7 +3351,7 @@ export class Assembler implements AssemblySession {
           }
 
           // Process the command
-          this.processCommand(cmd);
+          this.processCommand(rawCommand);
         } else {
           // Execute nested loops
           this.executeLoopBlock(cmd);

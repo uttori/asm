@@ -2698,7 +2698,7 @@ test("handleIncbin", t => {
   writtenBytes.length = 0;
   assembler.handlePushPC = () => {}; // Mock
   assembler.handlePullPC = () => {}; // Mock
-  assembler.operandResolver.getnum = (val) => parseInt(val.replace("$", ""), 16); // Mock
+  assembler.operandResolver.getnum = (val) => parseInt((typeof val === "string" ? val : "").replace("$", ""), 16); // Mock
   assembler.addAddressToLine = () => {}; // Mock
 
   assembler.handleIncbin(["incbin", "testfile.bin", "->", "$1000"]);
@@ -5488,6 +5488,11 @@ test("beginLoopCollection - regular for loop", t => {
   t.deepEqual(loop, {
     commands: [],
     condition: "for i = 0..5",
+    conditionNode: {
+      type: "range",
+      start: { type: "raw", value: "i = 0" },
+      end: { type: "literal", value: "5" },
+    },
     end: 5,
     start: 0,
     startLine: 10,

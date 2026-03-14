@@ -1,15 +1,14 @@
+import { createPendingCommand, setCommandKind, setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { LoopNode } from "../ir/assembly-tree.js";
+import { parseExpressionNode } from "../ir/expression-node.js";
+
 export type ConditionalEntry = {
   cond: boolean;
 };
 
-export type LoopBlock = {
-  type: "for" | "while";
-  commands: (string | LoopBlock)[];
-};
-
 export type PreDispatchPipelineHost = {
   collectingLoop: boolean;
-  currentLoop: LoopBlock | null;
+  currentLoop: LoopNode | null;
   inMacroDefinition: boolean;
   inMacroExpansion: boolean;
   pass: number;
@@ -27,6 +26,8 @@ export type PreDispatchPipelineHost = {
   resolveVariadicPlaceholders(command: string): string;
   resolvedefines(input: string): string;
   loadTestRomData(): void;
+  currentFile: string;
+  currentLine: number;
 };
 
 export class PreDispatchPipelineService {
@@ -41,7 +42,7 @@ export class PreDispatchPipelineService {
     }
 
     if (this.host.collectingLoop && !command.match(/^\s*(for|while|endfor|endwhile)/i)) {
-      this.host.currentLoop?.commands.push(command);
+      this.host.currentLoop?.commands.push(createPendingCommand(command, this.host.currentFile, this.host.currentLine));
       return true;
     }
 
@@ -90,21 +91,34 @@ export class PreDispatchPipelineService {
     return normalized;
   }
 
-  shouldSkipForCondition(keyword: string): boolean {
+  shouldSkipForCondition(command: NormalizedCommand): boolean {
     const currentCond = this.host.condStack.length === 0 ? true : this.host.condStack.every((entry) => entry.cond);
-    return !currentCond && !this.conditionDirectives.has(keyword);
+    return !currentCond && !this.conditionDirectives.has(command.keyword);
   }
 
-  shouldSkipForInlineCondition(keyword: string): boolean {
-    return !this.host.moreonlinecond && !["elseif", "else", "endif", "endwhile"].includes(keyword.toLowerCase());
+  shouldSkipForInlineCondition(command: NormalizedCommand): boolean {
+    return !this.host.moreonlinecond && !["elseif", "else", "endif", "endwhile"].includes(command.keyword.toLowerCase());
   }
 
-  resolveElseIfWords(keyword: string, command: string, words: string[]): string[] {
-    if (keyword.toLowerCase() !== "elseif" || this.host.numtrue + 1 !== this.host.numif) {
-      return words;
+  resolveElseIf(command: NormalizedCommand): void {
+    if (command.keyword.toLowerCase() !== "elseif" || this.host.numtrue + 1 !== this.host.numif) {
+      return;
     }
 
-    const resolved = this.host.resolvedefines(command);
-    return resolved.trim().split(/\s+/);
+    const resolved = this.host.resolvedefines(command.command);
+    const words = resolved.trim().split(/\s+/);
+    setCommandWords(command, words, resolved);
+    setCommandKind(command, "directive");
+  }
+
+  parseConditionNode(command: NormalizedCommand) {
+    if (command.keyword === "while") {
+      return parseExpressionNode(command.words.slice(1).join(" "));
+    }
+    if (command.keyword === "for") {
+      const rangeExpr = command.words.slice(3).join(" ");
+      return parseExpressionNode(rangeExpr);
+    }
+    return undefined;
   }
 }

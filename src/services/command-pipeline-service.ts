@@ -1,43 +1,46 @@
-export type CommandPipelineState = {
-  command: string;
-  words: string[];
-  keyword: string;
-};
+import {
+  createNormalizedCommand,
+  setCommandKind,
+  setCommandWords,
+  type NormalizedCommand,
+} from "../ir/normalized-command.js";
 
 export type CommandPipelineHost = {
   splitCommandIntoWords(command: string): string[];
-  handleCharacterMapping(words: string[]): void;
+  currentFile: string;
+  currentLine: number;
+  handleCharacterMapping(command: NormalizedCommand): void;
   recordCurrentAddress(): void;
 };
 
 export type FrontEndHandlers = {
   continueFunctionDefinition(command: string): boolean;
-  startFunctionDefinition(keyword: string, words: string[]): boolean;
-  handleRelativeLabelDefinition(keyword: string): boolean;
-  handleGlobalLabel(words: string[]): boolean;
-  consumeNamedLabelDefinitions(words: string[], keyword: string): string[];
-  handleStaticLabelAssignment(words: string[], keyword: string): boolean;
+  startFunctionDefinition(command: NormalizedCommand): boolean;
+  handleRelativeLabelDefinition(command: NormalizedCommand): boolean;
+  handleGlobalLabel(command: NormalizedCommand): boolean;
+  consumeNamedLabelDefinitions(command: NormalizedCommand): boolean;
+  handleStaticLabelAssignment(command: NormalizedCommand): boolean;
 };
 
 export type MacroHandlers = {
   rewriteMacroLabelReferences(command: string): string;
-  handleDefinitionCommand(command: string, keyword: string, words: string[]): boolean;
+  handleDefinitionCommand(command: NormalizedCommand): boolean;
 };
 
 export type DefineHandlers = {
-  handleCommand(command: string): boolean;
+  handleCommand(command: NormalizedCommand): boolean;
 };
 
 export type StructHandlers = {
-  handleStructMode(words: string[]): boolean;
+  handleStructMode(command: NormalizedCommand): boolean;
 };
 
 export type PreDispatchHandlers = {
   interceptRawCommand(command: string): boolean;
   normalizeCommand(command: string): string;
-  shouldSkipForCondition(keyword: string): boolean;
-  shouldSkipForInlineCondition(keyword: string): boolean;
-  resolveElseIfWords(keyword: string, command: string, words: string[]): string[];
+  shouldSkipForCondition(command: NormalizedCommand): boolean;
+  shouldSkipForInlineCondition(command: NormalizedCommand): boolean;
+  resolveElseIf(command: NormalizedCommand): void;
 };
 
 export type PreprocessResult = "continue" | "handled" | "skipped_for_condition";
@@ -60,77 +63,75 @@ export class CommandPipelineService {
     return this.preDispatchHandlers.interceptRawCommand(command) || this.frontEndHandlers.continueFunctionDefinition(command);
   }
 
-  create(command: string): CommandPipelineState | null {
+  create(command: string): NormalizedCommand | null {
     const normalizedCommand = this.preDispatchHandlers.normalizeCommand(command);
     const words = this.host.splitCommandIntoWords(normalizedCommand);
     if (words.length === 0) {
       return null;
     }
 
-    return {
-      command: normalizedCommand,
-      words,
-      keyword: words[0],
-    };
+    return createNormalizedCommand(command, normalizedCommand, words, this.host.currentFile, this.host.currentLine);
   }
 
-  preprocess(state: CommandPipelineState): PreprocessResult {
+  preprocess(state: NormalizedCommand): PreprocessResult {
     if (state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
-      this.host.handleCharacterMapping(state.words);
+      setCommandKind(state, "characterMapping");
+      this.host.handleCharacterMapping(state);
       return "handled";
     }
 
-    if (this.frontEndHandlers.startFunctionDefinition(state.keyword, state.words)) {
+    if (this.frontEndHandlers.startFunctionDefinition(state)) {
       return "handled";
     }
 
-    if (this.macroHandlers.handleDefinitionCommand(state.command, state.keyword, state.words)) {
+    if (this.macroHandlers.handleDefinitionCommand(state)) {
       return "handled";
     }
 
-    if (this.preDispatchHandlers.shouldSkipForCondition(state.keyword)) {
+    if (this.preDispatchHandlers.shouldSkipForCondition(state)) {
       return "skipped_for_condition";
     }
 
-    if (this.defineHandlers.handleCommand(state.command)) {
+    if (this.defineHandlers.handleCommand(state)) {
       if (state.command.includes("=")) {
         this.host.recordCurrentAddress();
       }
       return "handled";
     }
 
-    if (this.structHandlers.handleStructMode(state.words)) {
+    if (this.structHandlers.handleStructMode(state)) {
       return "handled";
     }
 
-    if (this.frontEndHandlers.handleRelativeLabelDefinition(state.keyword)) {
+    if (this.frontEndHandlers.handleRelativeLabelDefinition(state)) {
       return "handled";
     }
 
-    if (this.frontEndHandlers.handleGlobalLabel(state.words)) {
+    if (this.frontEndHandlers.handleGlobalLabel(state)) {
       return "handled";
     }
 
-    state.words = this.frontEndHandlers.consumeNamedLabelDefinitions(state.words, state.keyword);
-    if (state.words.length === 0) {
+    if (this.frontEndHandlers.consumeNamedLabelDefinitions(state)) {
       return "handled";
     }
 
-    if (this.frontEndHandlers.handleStaticLabelAssignment(state.words, state.keyword)) {
+    if (this.frontEndHandlers.handleStaticLabelAssignment(state)) {
       return "handled";
     }
 
-    state.keyword = state.words[0] ?? state.keyword;
     return "continue";
   }
 
-  prepareForDispatch(state: CommandPipelineState): boolean {
-    if (this.preDispatchHandlers.shouldSkipForInlineCondition(state.keyword)) {
+  prepareForDispatch(state: NormalizedCommand): boolean {
+    if (this.preDispatchHandlers.shouldSkipForInlineCondition(state)) {
       return false;
     }
 
-    state.words = this.preDispatchHandlers.resolveElseIfWords(state.keyword, state.command, state.words);
-    state.keyword = state.words[0] ?? state.keyword;
+    this.preDispatchHandlers.resolveElseIf(state);
+    if (state.kind === "unknown") {
+      setCommandWords(state, state.words, state.command);
+      setCommandKind(state, "opcodeCandidate");
+    }
     return true;
   }
 }

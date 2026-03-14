@@ -1,3 +1,5 @@
+import { setCommandKind, setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
+
 export type FrontEndCommandHost = {
   inFunctionDefinition: boolean;
   functionDefinitionLines: string[];
@@ -35,7 +37,8 @@ export class FrontEndCommandService {
     return true;
   }
 
-  startFunctionDefinition(keyword: string, words: string[]): boolean {
+  startFunctionDefinition(command: NormalizedCommand): boolean {
+    const { keyword, words } = command;
     if (!keyword || !keyword.toLowerCase().startsWith("function")) {
       return false;
     }
@@ -47,10 +50,12 @@ export class FrontEndCommandService {
       this.host.parseFunctionDefinition(words.join(" "));
     }
 
+    setCommandKind(command, "directive");
     return true;
   }
 
-  handleRelativeLabelDefinition(keyword: string): boolean {
+  handleRelativeLabelDefinition(command: NormalizedCommand): boolean {
+    const { keyword } = command;
     const isRelativeLabelDefinition = /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
     if (!isRelativeLabelDefinition) {
       return false;
@@ -59,10 +64,13 @@ export class FrontEndCommandService {
     const relativeLabel = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
     this.host.handleRelativeLabel(relativeLabel);
     this.host.recordCurrentAddress();
+    command.labelName = relativeLabel;
+    setCommandKind(command, "labelDefinition");
     return true;
   }
 
-  handleGlobalLabel(words: string[]): boolean {
+  handleGlobalLabel(command: NormalizedCommand): boolean {
+    const { words } = command;
     if ((words[0] ?? "").toLowerCase() !== "global") {
       return false;
     }
@@ -88,11 +96,15 @@ export class FrontEndCommandService {
       this.host.processNestedCommand(words.slice(2).join(" "));
     }
 
+    command.labelName = cleanName;
+    setCommandKind(command, "labelDefinition");
     return true;
   }
 
-  consumeNamedLabelDefinitions(words: string[], keyword: string): string[] {
-    const remainingWords = [...words];
+  consumeNamedLabelDefinitions(command: NormalizedCommand): boolean {
+    const remainingWords = [...command.words];
+    let keyword = remainingWords[0] ?? command.keyword;
+    let consumed = false;
 
     // Preserve current behavior exactly: once the first token qualifies as a label,
     // keep consuming tokens until the command is exhausted.
@@ -100,12 +112,19 @@ export class FrontEndCommandService {
       const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
       this.host.handleLabelDefinition(labelName);
       remainingWords.shift();
+      keyword = remainingWords[0] ?? "";
+      consumed = true;
     }
 
-    return remainingWords;
+    setCommandWords(command, remainingWords);
+    if (consumed && remainingWords.length === 0) {
+      setCommandKind(command, "labelDefinition");
+    }
+    return remainingWords.length === 0;
   }
 
-  handleStaticLabelAssignment(words: string[], keyword: string): boolean {
+  handleStaticLabelAssignment(command: NormalizedCommand): boolean {
+    const { words, keyword } = command;
     if (words.length !== 3 || words[1] !== "=") {
       return false;
     }
@@ -121,6 +140,8 @@ export class FrontEndCommandService {
 
     this.host.setLabel(labelName, value, true);
     this.host.recordCurrentAddress();
+    command.assignmentTarget = labelName;
+    setCommandKind(command, "staticAssignment");
     return true;
   }
 }

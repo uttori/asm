@@ -1,11 +1,13 @@
 import type { ExpandedOperand } from "./architecture-types.js";
+import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
+import { isReferenceExpressionNode, renderExpressionNode, renderReferenceExpressionNode } from "./ir/expression-node.js";
 
 export type OperandResolverDependencies = {
   resolveDefines(input: string): string;
   resolveStructLabel(input: string): number;
   resolveLabel(input: string, requireStatic: boolean): number;
   hasLabel(input: string): boolean;
-  evaluateMath(input: string): number;
+  evaluateMath(input: string | ExpressionNode): number;
   getPass(): number;
   requireStaticLabelLookup(): boolean;
 };
@@ -16,6 +18,14 @@ try {
   const { default: d } = await import("debug");
   debug = d("OperandResolver");
 } catch {}
+
+/**
+ *
+ * @param expression
+ */
+function expressionNodeToString(expression: ExpressionNode): string {
+  return renderExpressionNode(expression);
+}
 
 export class OperandResolver {
   constructor(private readonly deps: OperandResolverDependencies) {}
@@ -131,8 +141,11 @@ export class OperandResolver {
     return operand;
   }
 
-  getnum(operand: string): number {
+  getnum(operand: string | ExpressionNode): number {
     debug("getnum", operand);
+    if (typeof operand !== "string") {
+      return this.getnumFromNode(operand);
+    }
     operand = operand.trim();
 
     if (/^-?\d+$/.test(operand)) {
@@ -185,6 +198,47 @@ export class OperandResolver {
       }
       throw error;
     }
+  }
+
+  private getnumFromNode(operand: ExpressionNode): number {
+    if (isReferenceExpressionNode(operand)) {
+      if (operand.type === "defineReference") {
+        return this.getnum(this.deps.resolveDefines(expressionNodeToString(operand)));
+      }
+      return this.resolveReferenceValue(this.renderReference(operand));
+    }
+
+    switch (operand.type) {
+      case "range":
+        throw new Error(`Range expression is not a numeric operand: ${expressionNodeToString(operand)}`);
+      default:
+        try {
+          return this.deps.evaluateMath(operand);
+        } catch (error) {
+          if (this.deps.getPass() < 2) {
+            debug("expression node deferred until final pass", { operand, error });
+            return 0;
+          }
+          throw error;
+        }
+    }
+  }
+
+  private resolveReferenceValue(reference: string): number {
+    if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
+      try {
+        return this.deps.resolveStructLabel(reference);
+      } catch {
+        return this.deps.resolveLabel(reference, false);
+      }
+    }
+    return this.deps.resolveLabel(reference, false);
+  }
+
+  private renderReference(expression: ReferenceExpressionNode): string {
+    return renderReferenceExpressionNode(expression, {
+      renderIndex: (node) => this.getnum(node).toString(),
+    });
   }
 
   expandOperand(operand: string): ExpandedOperand {

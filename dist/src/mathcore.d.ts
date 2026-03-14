@@ -1,4 +1,5 @@
 import type { ExpressionHost } from "./architecture-types.js";
+import type { ExpressionNode } from "./ir/expression-node.js";
 export declare class MathCore {
     host?: ExpressionHost;
     math_round: boolean;
@@ -25,7 +26,27 @@ export declare class MathCore {
      * @param {string} expression The expression to evaluate.
      * @returns {number} The result of the expression.
      */
-    math: (expression: string) => number;
+    math: (expression: string | ExpressionNode) => number;
+    /**
+     * Evaluates a string expression using the legacy parser.
+     * @param {string} expression The expression to evaluate.
+     * @returns {number} The result of the expression.
+     */
+    evaluateStringExpression(expression: string): number;
+    /**
+     * Evaluates an expression node using typed dispatch before falling back to string parsing.
+     * @param {ExpressionNode} expression The expression node to evaluate.
+     * @returns {number} The numeric result.
+     */
+    evaluateExpressionNode(expression: ExpressionNode): number;
+    private evaluateCallArgument;
+    private evaluateUnaryExpressionNode;
+    private evaluateBinaryExpressionNode;
+    private resolveNumericIdentifierArgument;
+    private evaluateReferenceExpressionNode;
+    private renderReference;
+    private isStringArgument;
+    private parseLiteralNode;
     /**
      * Evaluates a mathematical expression.
      * This replaces the C++ `eval` function.

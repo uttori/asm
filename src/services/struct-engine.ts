@@ -1,4 +1,7 @@
 import type { StructDefinition } from "../assembler.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
+import { parseExpressionNode } from "../ir/expression-node.js";
+import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 
 export type StructHost = {
   currentStruct: StructDefinition | null;
@@ -10,7 +13,7 @@ export type StructHost = {
   handlePushPC(): void;
   handlePullPC(): void;
   getLabelValue(label: string, requireStatic: boolean): number;
-  evaluateRangeExpression(expression: string): number;
+  evaluateRangeExpression(expression: string | ExpressionNode): number;
   enterStructDefinition(base: number): void;
   restoreStructDefinition(): void;
   setWritePosition(address: number): void;
@@ -19,11 +22,12 @@ export type StructHost = {
 export class StructEngine {
   constructor(private readonly host: StructHost) {}
 
-  handleStructMode(words: string[]): boolean {
+  handleStructMode(command: NormalizedCommand): boolean {
     if (!this.host.currentStruct) {
       return false;
     }
 
+    const { words } = command;
     const keyword = words[0] ?? "";
 
     if (keyword.startsWith(".")) {
@@ -40,14 +44,17 @@ export class StructEngine {
       }
 
       void hasColon;
+      setCommandKind(command, "structCommand");
       return true;
     }
 
     if (keyword.toLowerCase() === "endstruct") {
       this.handleEndStruct(words);
+      setCommandKind(command, "structCommand");
       return true;
     }
 
+    setCommandKind(command, "structCommand");
     return true;
   }
 
@@ -261,24 +268,35 @@ export class StructEngine {
     let startOffset = 0;
     let endOffset = fileData.length;
     if (rangeStr) {
-      let parts: string[];
       if (rangeStr.indexOf("..") !== -1) {
-        parts = rangeStr.split("..");
+        const parts = rangeStr.split("..");
+        if (parts[0] === "" || parts[1] === "") {
+          throw new Error(`Invalid range specification: ${rangeStr}`);
+        }
+        const rangeNode = parseExpressionNode(rangeStr);
+        if (rangeNode.type !== "range") {
+          throw new Error(`Invalid range specification: ${rangeStr}`);
+        }
+        startOffset = this.host.evaluateRangeExpression(rangeNode.start);
+        endOffset = this.host.evaluateRangeExpression(rangeNode.end);
+        if (endOffset === 0) {
+          endOffset = fileData.length;
+        }
       } else if (rangeStr.indexOf("-") !== -1) {
         if (rangeStr.includes("(") || rangeStr.includes(")")) {
           throw new Error("Emismatched_parentheses: Mismatched parentheses.");
         }
-        parts = rangeStr.split("-");
+        const parts = rangeStr.split("-");
+        if (parts[0] === "" || parts[1] === "") {
+          throw new Error(`Invalid range specification: ${rangeStr}`);
+        }
+        startOffset = this.host.evaluateRangeExpression(parts[0]);
+        endOffset = this.host.evaluateRangeExpression(parts[1]);
+        if (endOffset === 0) {
+          endOffset = fileData.length;
+        }
       } else {
         throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-      if (parts[0] === "" || parts[1] === "") {
-        throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-      startOffset = this.host.evaluateRangeExpression(parts[0]);
-      endOffset = this.host.evaluateRangeExpression(parts[1]);
-      if (endOffset === 0) {
-        endOffset = fileData.length;
       }
     }
 

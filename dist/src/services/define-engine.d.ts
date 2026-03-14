@@ -1,3 +1,4 @@
+import { type NormalizedCommand } from "../ir/normalized-command.js";
 export type DefineHost = {
     defines: Map<string, string>;
     resolvedefines(input: string): string;
@@ -7,7 +8,7 @@ export type DefineHost = {
 export declare class DefineEngine {
     private readonly host;
     constructor(host: DefineHost);
-    handleCommand(command: string): boolean;
+    handleCommand(commandNode: NormalizedCommand): boolean;
     handleDefineCommand(command: string): void;
     processNestedDefines(content: string): string;
     resolveOneLevelOfDefines(content: string): string;

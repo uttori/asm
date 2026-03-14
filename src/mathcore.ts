@@ -1,4 +1,18 @@
 import type { ExpressionHost } from "./architecture-types.js";
+import type {
+  BinaryExpressionNode,
+  ExpressionNode,
+  RawExpressionNode,
+  ReferenceExpressionNode,
+  StringExpressionNode,
+  UnaryExpressionNode,
+} from "./ir/expression-node.js";
+import {
+  isReferenceExpressionNode,
+  parseLeadingReferenceExpression,
+  renderExpressionNode,
+  renderReferenceExpressionNode,
+} from "./ir/expression-node.js";
 
 let debug = (..._: unknown[]) => {};
 /* c8 ignore next 4 */
@@ -6,6 +20,24 @@ try {
   const { default: d } = await import("debug");
   debug = d("MathCore");
 } catch {}
+
+/**
+ * Renders an expression node back into source-like text.
+ * @param {ExpressionNode} expression The expression node to stringify.
+ * @returns {string} The rendered expression text.
+ */
+function expressionNodeToString(expression: ExpressionNode): string {
+  return renderExpressionNode(expression);
+}
+
+/**
+ * Escapes a string for safe use inside a regular expression pattern.
+ * @param {string} value The raw string value.
+ * @returns {string} The escaped regular-expression fragment.
+ */
+function escapeRegExp(value: string): string {
+  return value.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
+}
 
 export class MathCore {
   host?: ExpressionHost;
@@ -67,7 +99,20 @@ export class MathCore {
    * @param {string} expression The expression to evaluate.
    * @returns {number} The result of the expression.
    */
-  math = (expression: string): number => {
+  math = (expression: string | ExpressionNode): number => {
+    if (typeof expression !== "string") {
+      return this.evaluateExpressionNode(expression);
+    }
+
+    return this.evaluateStringExpression(expression);
+  }
+
+  /**
+   * Evaluates a string expression using the legacy parser.
+   * @param {string} expression The expression to evaluate.
+   * @returns {number} The result of the expression.
+   */
+  evaluateStringExpression(expression: string): number {
     debug("math", expression);
     this.str = expression.trim();
 
@@ -83,6 +128,163 @@ export class MathCore {
 
     debug(`math: ${expression} = ${rval}`);
     return rval;
+  }
+
+  /**
+   * Evaluates an expression node using typed dispatch before falling back to string parsing.
+   * @param {ExpressionNode} expression The expression node to evaluate.
+   * @returns {number} The numeric result.
+   */
+  evaluateExpressionNode(expression: ExpressionNode): number {
+    if (isReferenceExpressionNode(expression)) {
+      return this.evaluateReferenceExpressionNode(expression);
+    }
+
+    switch (expression.type) {
+      case "literal":
+        return this.parseLiteralNode(expression.value);
+      case "string":
+        throw new Error(`String expression is not directly numeric: ${expression.value}`);
+      case "call":
+        return this.callFunction(
+          expression.callee.name,
+          expression.arguments.map((argument, index) => this.evaluateCallArgument(expression.callee.name, index, argument)),
+        );
+      case "unary": {
+        const unaryExpression: UnaryExpressionNode = expression;
+        return this.evaluateUnaryExpressionNode(unaryExpression.operator, unaryExpression.argument);
+      }
+      case "binary": {
+        const binaryExpression: BinaryExpressionNode = expression;
+        return this.evaluateBinaryExpressionNode(binaryExpression.operator, binaryExpression.left, binaryExpression.right);
+      }
+      case "range":
+        throw new Error(`Range expression is not directly numeric: ${expressionNodeToString(expression)}`);
+      case "raw":
+      default:
+        return this.evaluateStringExpression(expression.value);
+    }
+  }
+
+  private evaluateCallArgument(functionName: string, argumentIndex: number, argument: ExpressionNode): number | string {
+    if (this.isStringArgument(functionName, argumentIndex)) {
+      switch (argument.type) {
+        case "identifier":
+          return argument.name;
+        case "string": {
+          const stringArgument: StringExpressionNode = argument;
+          return stringArgument.value;
+        }
+        case "raw": {
+          const rawArgument: RawExpressionNode = argument;
+          return rawArgument.value.replace(/^["']|["']$/g, "");
+        }
+        default:
+          return expressionNodeToString(argument);
+      }
+    }
+
+    switch (argument.type) {
+      case "string": {
+        const stringArgument: StringExpressionNode = argument;
+        return stringArgument.value;
+      }
+      case "range":
+        return expressionNodeToString(argument);
+      case "raw":
+        return this.evaluateStringExpression(argument.value);
+      default:
+        if (isReferenceExpressionNode(argument)) {
+          return argument.type === "defineReference"
+            ? renderReferenceExpressionNode(argument)
+            : this.resolveNumericIdentifierArgument(this.renderReference(argument));
+        }
+        return this.evaluateExpressionNode(argument);
+    }
+  }
+
+  private evaluateUnaryExpressionNode(operator: "<:" | "~" | "-" | "+", argument: ExpressionNode): number {
+    const value = this.evaluateExpressionNode(argument);
+    switch (operator) {
+      case "<:":
+        return value >>> 16;
+      case "~":
+        return ~value;
+      case "-":
+        return -value;
+      case "+":
+      default:
+        return value;
+    }
+  }
+
+  private evaluateBinaryExpressionNode(
+    operator: keyof MathCore["operators"],
+    left: ExpressionNode,
+    right: ExpressionNode,
+  ): number {
+    const operation = this.operators[operator];
+    if (!operation) {
+      throw new Error(`Unsupported binary operator '${operator}'`);
+    }
+    return operation.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
+  }
+
+  private resolveNumericIdentifierArgument(identifier: string): number | string {
+    try {
+      const resolved = this.getHost().resolveLabel(identifier);
+      return typeof resolved === "number" ? resolved : identifier;
+    } catch {
+      return identifier;
+    }
+  }
+
+  private evaluateReferenceExpressionNode(expression: ReferenceExpressionNode): number {
+    if (expression.type === "defineReference") {
+      throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
+    }
+
+    const reference = this.renderReference(expression);
+    const resolved = this.getHost().resolveLabel(reference);
+    if (typeof resolved === "number") {
+      return resolved;
+    }
+    throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
+  }
+
+  private renderReference(expression: ReferenceExpressionNode): string {
+    return renderReferenceExpressionNode(expression, {
+      renderIndex: (node) => this.evaluateExpressionNode(node).toString(),
+    });
+  }
+
+  private isStringArgument(functionName: string, argumentIndex: number): boolean {
+    if (["defined", "sizeof", "objectsize", "datasize", "filesize", "getfilestatus"].includes(functionName)) {
+      return argumentIndex === 0;
+    }
+    if (["stringsequal", "stringsequalnocase"].includes(functionName)) {
+      return argumentIndex < 2;
+    }
+    if (/^(?:canreadfile|readfile)\d?$/.test(functionName)) {
+      return argumentIndex === 0;
+    }
+    return false;
+  }
+
+  private parseLiteralNode(value: string): number {
+    if (/^-?\d+$/.test(value)) {
+      return Number.parseInt(value, 10);
+    }
+    if (/^\$[\dA-Fa-f]+$/.test(value)) {
+      return Number.parseInt(value.slice(1), 16);
+    }
+    if (/^0x[\da-f]+$/i.test(value)) {
+      return Number.parseInt(value.slice(2), 16);
+    }
+    if (/^%[01]+$/.test(value)) {
+      return Number.parseInt(value.slice(1), 2);
+    }
+    throw new Error(`Unsupported literal expression: ${value}`);
   }
 
   /**
@@ -392,27 +594,10 @@ export class MathCore {
       value = parseFloat(this.consumeWhile(/[\d.]/));
     } else {
       // Fallback: try to resolve identifiers (e.g. label resolver).
-      // Parse compound ids: StructName.member, StructName[index].member, StructName.Child.member
-      const idMatch = this.str.match(/^([A-Z_a-z]\w*)/);
-      if (idMatch) {
-        let compoundId = idMatch[1];
-        this.str = this.str.substring(idMatch[1].length).trim();
-        while (this.str.startsWith(".") || this.str.startsWith("[")) {
-          if (this.str.startsWith(".")) {
-            this.str = this.str.substring(1).trim();
-            const memberMatch = this.str.match(/^([A-Z_a-z]\w*)/);
-            if (!memberMatch) break;
-            compoundId += "." + memberMatch[1];
-            this.str = this.str.substring(memberMatch[1].length).trim();
-          } else if (this.str.startsWith("[")) {
-            this.str = this.str.substring(1).trim();
-            const indexVal = this.evalMath(0, "]");
-            if (!this.str.startsWith("]")) throw new Error("Mismatched brackets in struct index");
-            this.str = this.str.substring(1).trim();
-            compoundId += "[" + indexVal + "]";
-          }
-        }
-        const resolved = this.getHost().resolveLabel(compoundId);
+      const reference = parseLeadingReferenceExpression(this.str);
+      if (reference) {
+        this.str = this.str.substring(reference.length).trim();
+        const resolved = this.getHost().resolveLabel(this.renderReference(reference.node));
         if (typeof resolved === "number") {
           value = resolved;
         } else {
@@ -421,6 +606,10 @@ export class MathCore {
           return resolved as unknown as number;
         }
       } else {
+        const rootMatch = this.str.match(/^([A-Z_a-z]\w*)/);
+        if (rootMatch && this.str.substring(rootMatch[1].length).trimStart().startsWith("[")) {
+          throw new Error("Mismatched brackets in struct index");
+        }
         throw new Error(`Invalid number: ${this.str}`);
       }
     }
@@ -513,7 +702,8 @@ export class MathCore {
 
       // Replace all occurrences of the parameter name with its value
       // Use word boundaries to avoid partial matches
-      const regex = new RegExp(`\\b${paramName}\\b`, "g");
+      // eslint-disable-next-line security/detect-non-literal-regexp
+      const regex = new RegExp(`\\b${escapeRegExp(paramName)}\\b`, "g");
       const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
       content = content.replace(regex, replacement);
     }

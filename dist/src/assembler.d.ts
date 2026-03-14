@@ -3,6 +3,9 @@ import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { ArchitectureContext, ExpressionHost, Spc700Context, SuperFXContext } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addr2line.js";
+import type { LoopNode } from "./ir/assembly-tree.js";
+import { type ExpressionNode } from "./ir/expression-node.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import type { AssemblySession } from "./directives/types.js";
@@ -19,17 +22,7 @@ export type MacroDefinition = {
     /** The file where this macro was defined. */
     sourceFile?: string;
 };
-export type LoopBlock = {
-    type: "for" | "while";
-    condition: string;
-    variable?: string;
-    start?: number;
-    end?: number;
-    /** Can contain nested loops */
-    commands: (string | LoopBlock)[];
-    startLine: number;
-    endLine?: number;
-};
+export type LoopBlock = LoopNode;
 export type WhileTracker = {
     iswhile: boolean;
     startline: number;
@@ -237,8 +230,9 @@ export declare class Assembler implements AssemblySession {
     evaluateMath(input: string): number;
     convertTargetAddressToRomOffset(address: number): number;
     convertRomOffsetToTargetAddress(offset: number): number;
-    resolveExpressionLabel(identifier: string): number | string;
+    private resolveExpressionHostLabel;
     getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
+    private lookupDefineValue;
     canReadTargetRom(position: number, size: number): number;
     readTargetRom(position: number, size: number, defaultValue?: number): number;
     canReadExpressionFile(filename: string, position: number, size: number): number;
@@ -574,7 +568,7 @@ export declare class Assembler implements AssemblySession {
      * @param {string} expr The expression to evaluate.
      * @returns {number} The result of the expression.
      */
-    evaluateRangeExpression(expr: string): number;
+    evaluateRangeExpression(expr: string | ExpressionNode): number;
     /**
      * Handles the `incbin` directive.
      * @param {string[]} words The words from the `incbin` directive.
@@ -590,7 +584,13 @@ export declare class Assembler implements AssemblySession {
      * @param {string} expression - The expression to evaluate.
      * @returns {boolean} True if the expression is true, false otherwise.
      */
-    evaluateExpression(expression: string): boolean;
+    evaluateExpression(expression: string | ExpressionNode): boolean;
+    private resolveExpressionInput;
+    private resolveExpressionNode;
+    private resolveReferenceExpressionNode;
+    private evaluateReferenceExpressionNode;
+    private resolveReferenceLabelValue;
+    private normalizeReferenceExpressionNode;
     /**
      * Resolves all define replacements in a given string.
      * @param {string} input The string to resolve defines in.
@@ -687,10 +687,10 @@ export declare class Assembler implements AssemblySession {
     assemblefile: (filename: string, isInclude: boolean) => void;
     /**
      * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
-     * @param {string[]} words The processed words to use as key, `=`, value.
+     * @param {NormalizedCommand | string[]} command The normalized command node or legacy words tuple.
      * @throws {Error} If the format is incorrect.
      */
-    handleCharacterMapping(words: string[]): void;
+    handleCharacterMapping(command: NormalizedCommand | string[]): void;
     /**
      * Processes a string and maps characters to their corresponding values in `characterMappings`.
      * If a character is not found in `characterMappings`, its charCode is used instead.

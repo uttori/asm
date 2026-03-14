@@ -1,3 +1,5 @@
+import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+
 export type DefineHost = {
   defines: Map<string, string>;
   resolvedefines(input: string): string;
@@ -8,13 +10,15 @@ export type DefineHost = {
 export class DefineEngine {
   constructor(private readonly host: DefineHost) {}
 
-  handleCommand(command: string): boolean {
+  handleCommand(commandNode: NormalizedCommand): boolean {
+    const command = commandNode.command;
     if (!command.trim().startsWith("!")) {
       return false;
     }
 
     if (command.includes("=")) {
       this.handleDefineCommand(command);
+      setCommandKind(commandNode, "defineCommand");
       return true;
     }
 
@@ -22,6 +26,7 @@ export class DefineEngine {
     if (trimmedCommand.startsWith("!{")) {
       const processedCommand = this.processValueWithBracedDefines(trimmedCommand);
       this.host.processNestedCommand(processedCommand);
+      setCommandKind(commandNode, "defineCommand");
       return true;
     }
 
@@ -31,6 +36,7 @@ export class DefineEngine {
     }
 
     this.host.processNestedCommand(this.host.defines.get(defineName) ?? "");
+    setCommandKind(commandNode, "defineCommand");
     return true;
   }
 

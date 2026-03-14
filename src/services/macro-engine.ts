@@ -1,4 +1,5 @@
 import type { MacroDefinition } from "../assembler.js";
+import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 
 export type MacroLabelEntry = {
   value: number;
@@ -44,7 +45,9 @@ export interface MacroEngineHost {
 export class MacroEngine {
   constructor(private readonly host: MacroEngineHost) {}
 
-  handleDefinitionCommand(command: string, keyword: string, words: string[]): boolean {
+  handleDefinitionCommand(commandNode: NormalizedCommand): boolean {
+    const command = commandNode.command;
+    const { keyword, words } = commandNode;
     if (this.host.inMacroDefinition) {
       if (command.trim().toLowerCase() === "endmacro") {
         if (this.host.pass === 0) {
@@ -77,12 +80,14 @@ export class MacroEngine {
         this.host.currentMacroName = "";
         this.host.currentMacroParams = [];
         this.host.currentMacroBody = [];
+        setCommandKind(commandNode, "macroDefinitionOrInvoke");
         return true;
       }
 
       if (this.host.pass === 0) {
         this.host.currentMacroBody.push(command.trim());
       }
+      setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }
 
@@ -97,12 +102,14 @@ export class MacroEngine {
       this.host.currentMacroParams = paramsStr ? paramsStr.split(",").map((entry) => entry.trim()) : [];
       this.host.inMacroDefinition = true;
       this.host.currentMacroBody = [];
+      setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }
 
     if (keyword.startsWith("%")) {
       const invocation = words.join(" ").substring(1);
       this.callMacro(invocation);
+      setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }
 
