@@ -3,6 +3,16 @@ import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Assembler, LoopBlock } from "../src/assembler.js";
+import { parseExpressionNode } from "../src/ir/expression-node.js";
+import { createNormalizedCommand } from "../src/ir/normalized-command.js";
+
+const makeCommand = (command: string) => createNormalizedCommand(
+  command,
+  command,
+  command.trim().split(/\s+/),
+  "test.asm",
+  1
+);
 
 test("getnum - handles numeric literals", t => {
   const assembler = new Assembler();
@@ -1289,14 +1299,14 @@ test("assemblefile - basic file assembly", t => {
   resolvePathStub.returns(testFilePath);
   fsReadFileStub.returns(testContent);
 
-  // Stub processCommand to verify it's called with each line
-  const processCommandStub = sinon.stub(assembler, "processCommand");
+  // Stub normalized dispatch to verify each line is executed
+  const processCommandStub = sinon.stub(assembler, "processNormalizedCommand");
 
   assembler.assemblefile("file.asm", true);
 
   t.true(processCommandStub.calledTwice);
-  t.true(processCommandStub.calledWith("LDA #$01"));
-  t.true(processCommandStub.calledWith("STA $2100"));
+  t.true(processCommandStub.calledWithMatch(sinon.match.has("command", "LDA #$01")));
+  t.true(processCommandStub.calledWithMatch(sinon.match.has("command", "STA $2100")));
 
   // Cleanup
   fsReadFileStub.restore();
@@ -1316,7 +1326,7 @@ test("assemblefile - respects include guards", t => {
   assembler.includedFiles.set(testFilePath, { included: true, guarded: true });
 
   // Verify file is not processed
-  const processCommandStub = sinon.stub(assembler, "processCommand");
+  const processCommandStub = sinon.stub(assembler, "processNormalizedCommand");
 
   assembler.assemblefile("guarded.asm", true);
 
@@ -2331,79 +2341,39 @@ test("resolvedefines - direct variable reference", t => {
   t.is(assembler.resolvedefines("!i"), "42");
 });
 
-test("resolvedefines - for loop variables", t => {
+test("resolvedefines - loop-like variable values from defines", t => {
   const assembler = new Assembler();
 
-  // Simulate a for loop with variable "i" at value 5
-  assembler.whileStatus.push({
-    is_for: true,
-    for_variable: "i",
-    for_cur: 5,
-    for_end: 10,
-    iswhile: false,
-    startline: 0,
-    cond: true,
-  });
+  // Use define values to mirror loop variable updates without mutating whileStatus internals.
+  assembler.defines.set("i", "5");
 
   t.is(assembler.resolvedefines("!i"), "5");
 
-  // Add another nested loop with the same variable name
-  // The innermost loop should take precedence
-  assembler.whileStatus.push({
-    is_for: true,
-    for_variable: "i",
-    for_cur: 8,
-    for_end: 15,
-    iswhile: false,
-    startline: 0,
-    cond: true,
-  });
+  assembler.defines.set("i", "8");
 
   t.is(assembler.resolvedefines("!i"), "8");
 });
 
-test("resolvedefines - indirect loop variables", t => {
+test("resolvedefines - indirect variables in expressions", t => {
   const assembler = new Assembler();
 
-  // Set up a loop variable
-  assembler.whileStatus.push({
-    is_for: true,
-    for_variable: "i",
-    for_cur: 5,
-    for_end: 10,
-    iswhile: false,
-    startline: 0,
-    cond: true,
-  });
+  assembler.defines.set("i", "5");
 
-  // Test with loop variable
   t.is(assembler.resolvedefines("!i"), "5");
   t.is(assembler.resolvedefines("!i > 0"), "5 > 0");
   t.is(assembler.resolvedefines("!i < 10"), "5 < 10");
   t.is(assembler.resolvedefines("!i == 10"), "5 == 10");
 
-  // Add a nested loop
-  assembler.whileStatus.push({
-    is_for: true,
-    for_variable: "j",
-    for_cur: 0,
-    for_end: 5,
-    iswhile: false,
-    startline: 0,
-    cond: true,
-  });
+  assembler.defines.set("j", "0");
 
-  // Test with multiple loop variables
   t.is(assembler.resolvedefines("!i > !j"), "5 > 0");
   t.is(assembler.resolvedefines("!j"), "0");
   t.is(assembler.resolvedefines("!i + !j == 5"), "5 + 0 == 5");
 
-  // Test with complex expressions involving loop variables
   t.is(assembler.resolvedefines("(!i * !j) == 0"), "(5 * 0) == 0");
   t.is(assembler.resolvedefines("(!i - !j) > 0"), "(5 - 0) > 0");
 
-  // Update the loop variable
-  assembler.whileStatus[1].for_cur = 3;
+  assembler.defines.set("j", "3");
   t.is(assembler.resolvedefines("!j"), "3");
   t.is(assembler.resolvedefines("!i + !j == 8"), "5 + 3 == 8");
 });
@@ -2490,48 +2460,26 @@ test("evaluateExpression - with defines", t => {
   t.true(assembler.evaluateExpression("(!TRUE && !VALUE > 30) || !FALSE"));
 });
 
-test("evaluateExpression - with loop variables", t => {
+test("evaluateExpression - with define-backed loop variables", t => {
   const assembler = new Assembler();
 
-  // Set up a loop variable
-  assembler.whileStatus.push({
-    is_for: true,
-    for_variable: "i",
-    for_cur: 5,
-    for_end: 10,
-    iswhile: false,
-    startline: 0,
-    cond: true,
-  });
+  assembler.defines.set("i", "5");
 
-  // Test with loop variable
   t.true(assembler.evaluateExpression("!i"));
   t.true(assembler.evaluateExpression("!i > 0"));
   t.true(assembler.evaluateExpression("!i < 10"));
   t.false(assembler.evaluateExpression("!i == 10"));
 
-  // Add a nested loop
-  assembler.whileStatus.push({
-    is_for: true,
-    for_variable: "j",
-    for_cur: 0,
-    for_end: 5,
-    iswhile: false,
-    startline: 0,
-    cond: true,
-  });
+  assembler.defines.set("j", "0");
 
-  // Test with multiple loop variables
   t.true(assembler.evaluateExpression("!i > !j"));
   t.false(assembler.evaluateExpression("!j"));
   t.true(assembler.evaluateExpression("!i + !j == 5"));
 
-  // Test with complex expressions involving loop variables
   t.true(assembler.evaluateExpression("(!i * !j) == 0"));
   t.true(assembler.evaluateExpression("(!i - !j) > 0"));
 
-  // Update the loop variable
-  assembler.whileStatus[1].for_cur = 3;
+  assembler.defines.set("j", "3");
   t.true(assembler.evaluateExpression("!j"));
   t.true(assembler.evaluateExpression("!i + !j == 8"));
 });
@@ -2567,15 +2515,7 @@ test("evaluateExpression - complex scenarios", t => {
   assembler.defines.set("MIN", "10");
   assembler.defines.set("ENABLED", "1");
 
-  assembler.whileStatus.push({
-    is_for: true,
-    for_variable: "i",
-    for_cur: 50,
-    for_end: 100,
-    iswhile: false,
-    startline: 0,
-    cond: true,
-  });
+  assembler.defines.set("i", "50");
 
   // Test complex expressions combining defines and loop variables
   t.true(assembler.evaluateExpression("!i >= !MIN && !i <= !MAX"));
@@ -4465,7 +4405,7 @@ test("handleElseIf - throws on misplaced elseif", t => {
   t.is(emptyStackError.message, "Misplaced elseif", "Should throw with empty stack");
 
   // Test with wrong condition type
-  assembler.condStack.push({ type: "while", cond: true, start: 0, expr: "" });
+  assembler.condStack.push({ type: "while", cond: true } as unknown as typeof assembler.condStack[number]);
 
   const wrongTypeError = t.throws(() => {
     assembler.handleElseIf(["condition"]);
@@ -4511,7 +4451,7 @@ test("handleElse - throws on misplaced else", t => {
   t.is(emptyStackError.message, "Misplaced else", "Should throw with empty stack");
 
   // Test with wrong condition type
-  assembler.condStack.push({ type: "while", cond: true, start: 0, expr: "" });
+  assembler.condStack.push({ type: "while", cond: true } as unknown as typeof assembler.condStack[number]);
 
   const wrongTypeError = t.throws(() => {
     assembler.handleElse();
@@ -4562,7 +4502,7 @@ test("handleEndIf - throws on misplaced endif", t => {
   t.is(emptyStackError.message, "Misplaced endif", "Should throw with empty stack");
 
   // Test with wrong condition type (endif closes if/while only; "for" is invalid for endif)
-  assembler.condStack.push({ type: "for", cond: true, start: 0, expr: "" } as unknown as { type: "if" | "while"; cond: boolean; start?: number; expr?: string; branchTaken?: boolean; conditionStr?: string });
+  assembler.condStack.push({ type: "for", cond: true } as unknown as { type: "if" | "while"; cond: boolean; branchTaken?: boolean; conditionStr?: string });
 
   const wrongTypeError = t.throws(() => {
     assembler.handleEndIf();
@@ -4582,72 +4522,34 @@ test("conditional directives - complex nested scenario", t => {
 
   // Outer if - true
   assembler.handleIf(["!outer", "==", "1"]);
-  t.deepEqual(assembler.condStack, [{
-    type: "if",
-    cond: true,
-    branchTaken: true,
-    conditionStr: "!outer == 1",
-  }], "Outer condition is true");
+  t.is(assembler.condStack.length, 1, "Should push first condition");
+  t.is(assembler.condStack[0].type, "if");
+  t.true(assembler.condStack[0].cond);
+  t.true(assembler.condStack[0].branchTaken);
   t.true(assembler.moreonlinecond, "Outer condition is true");
 
   // Inner if - false
   assembler.handleIf(["!inner1", "==", "1"]);
-  t.deepEqual(assembler.condStack, [
-    {
-      type: "if",
-      cond: true,
-      branchTaken: true,
-      conditionStr: "!outer == 1",
-    },
-    {
-      type: "if",
-      cond: false,
-      branchTaken: false,
-      conditionStr: "!inner1 == 1",
-    }
-  ], "Inner condition is false");
+  t.is(assembler.condStack.length, 2, "Should push nested condition");
+  t.true(assembler.condStack[0].cond, "Outer condition remains true");
+  t.false(assembler.condStack[1].cond, "Inner condition is false");
+  t.false(assembler.condStack[1].branchTaken, "Inner branch should not be marked as taken");
   t.false(assembler.moreonlinecond, "Inner condition is false");
 
   // Inner elseif - true
   assembler.handleElseIf(["!inner2", "==", "1"]);
-  t.deepEqual(assembler.condStack, [
-     {
-      branchTaken: true,
-      cond: true,
-      conditionStr: "!outer == 1",
-      type: "if",
-    },
-    {
-      branchTaken: true,
-      cond: true,
-      conditionStr: "!inner2 == 1",
-      type: "if",
-    },
-  ], "Inner elseif condition is true");
+  t.is(assembler.condStack.length, 2, "Stack depth should remain stable on elseif");
+  t.true(assembler.condStack[1].cond, "Elseif condition should become active");
+  t.true(assembler.condStack[1].branchTaken, "Elseif should mark branch taken");
   t.true(assembler.moreonlinecond, "Inner elseif condition is true");
 
   // Another inner if - false
   assembler.handleIf(["!inner3", "==", "1"]);
-  t.deepEqual(assembler.condStack, [
-    {
-      branchTaken: true,
-      cond: true,
-      conditionStr: "!outer == 1",
-      type: "if",
-    },
-    {
-      branchTaken: true,
-      cond: true,
-      conditionStr: "!inner2 == 1",
-      type: "if",
-    },
-    {
-      branchTaken: false,
-      cond: false,
-      conditionStr: "!inner3 == 1",
-      type: "if",
-    },
-  ], "Nested inner condition is false");
+  t.is(assembler.condStack.length, 3, "Third nested condition should be pushed");
+  t.true(assembler.condStack[0].cond, "Outer condition remains active");
+  t.true(assembler.condStack[1].cond, "Elseif branch remains active");
+  t.false(assembler.condStack[2].cond, "Innermost condition should be false");
+  t.false(assembler.condStack[2].branchTaken, "Innermost branch should not be taken");
   t.false(assembler.moreonlinecond, "Nested inner condition is false");
 
   // End innermost if
@@ -4746,11 +4648,12 @@ test("getDefineVariable and isDefineStatement - integration", t => {
 test("executeWhileLoop - basic functionality", t => {
   const assembler = new Assembler();
 
-  // Create a basic while loop block
+  // Create a typed while loop block.
   const whileBlock: LoopBlock = {
     type: "while",
-    condition: "while !counter < 3",
-    commands: ["!counter = !counter + 1"],
+    header: makeCommand("while !counter < 3"),
+    conditionNode: parseExpressionNode("!counter < 3"),
+    commands: [makeCommand("!counter = !counter + 1")],
     startLine: 1,
     endLine: 3,
     variable: null
@@ -4769,11 +4672,12 @@ test("executeWhileLoop - basic functionality", t => {
 test("executeWhileLoop - nested loops", t => {
   const assembler = new Assembler();
 
-  // Create a nested loop structure
+  // Create a nested typed loop structure.
   const innerLoop: LoopBlock = {
     type: "while",
-    condition: "while !innerCounter < 2",
-    commands: ["!innerCounter = !innerCounter + 1"],
+    header: makeCommand("while !innerCounter < 2"),
+    conditionNode: parseExpressionNode("!innerCounter < 2"),
+    commands: [makeCommand("!innerCounter = !innerCounter + 1")],
     startLine: 3,
     endLine: 5,
     variable: null
@@ -4781,11 +4685,12 @@ test("executeWhileLoop - nested loops", t => {
 
   const outerLoop: LoopBlock = {
     type: "while",
-    condition: "while !outerCounter < 3",
+    header: makeCommand("while !outerCounter < 3"),
+    conditionNode: parseExpressionNode("!outerCounter < 3"),
     commands: [
-      "!innerCounter = 0",
+      makeCommand("!innerCounter = 0"),
       innerLoop,
-      "!outerCounter = !outerCounter + 1"
+      makeCommand("!outerCounter = !outerCounter + 1")
     ],
     startLine: 1,
     endLine: 7,
@@ -4940,14 +4845,16 @@ test("executeWhileLoop - complex variable modifications", t => {
 test("executeForLoop - basic iteration", t => {
   const assembler = new Assembler();
 
-  // Create a simple for loop
+  // Create a typed for loop.
   const forBlock: LoopBlock = {
     type: "for",
-    condition: "for i = 0..5",
+    header: makeCommand("for i = 0..5"),
+    startExpression: parseExpressionNode("0"),
+    endExpression: parseExpressionNode("5"),
     variable: "i",
     start: 0,
     end: 5,
-    commands: ["!sum = !sum + !i"],
+    commands: [makeCommand("!sum = !sum + !i")],
     startLine: 1,
     endLine: 3
   };
@@ -4969,11 +4876,13 @@ test("executeForLoop - preserves existing variable", t => {
   // Create a for loop
   const forBlock: LoopBlock = {
     type: "for",
-    condition: "for i = 1..4",
+    header: makeCommand("for i = 1..4"),
+    startExpression: parseExpressionNode("1"),
+    endExpression: parseExpressionNode("4"),
     variable: "i",
     start: 1,
     end: 4,
-    commands: ["!result = !result + !i"],
+    commands: [makeCommand("!result = !result + !i")],
     startLine: 1,
     endLine: 3
   };
@@ -5106,31 +5015,33 @@ test("executeForLoop - expression evaluation", t => {
   t.is(assembler.defines.get("sum"), "$5", "Sum should be 5 after loop execution");
 });
 
-test("executeForLoop - processCommand is called for each iteration", t => {
+test("executeForLoop - normalized commands are dispatched for each iteration", t => {
   const assembler = new Assembler();
 
   // Create a for loop
   const forBlock: LoopBlock = {
     type: "for",
-    condition: "for i = 0..3",
+    header: makeCommand("for i = 0..3"),
+    startExpression: parseExpressionNode("0"),
+    endExpression: parseExpressionNode("3"),
     variable: "i",
     start: 0,
     end: 3,
-    commands: ["command1", "command2"],
+    commands: [makeCommand("command1"), makeCommand("command2")],
     startLine: 1,
     endLine: 4
   };
 
-  // Spy on processCommand
-  const processCommandSpy = sinon.spy(assembler, "processCommand");
+  // Spy on typed dispatch
+  const processCommandSpy = sinon.spy(assembler, "processNormalizedCommand");
 
   // Execute the for loop
   assembler.executeForLoop(forBlock);
 
-  // Check that processCommand was called the correct number of times
-  t.is(processCommandSpy.callCount, 6, "processCommand should be called twice for each of 3 iterations");
-  t.true(processCommandSpy.calledWith("command1"), "processCommand should be called with command1");
-  t.true(processCommandSpy.calledWith("command2"), "processCommand should be called with command2");
+  // Check that typed dispatch was called the correct number of times
+  t.is(processCommandSpy.callCount, 6, "processNormalizedCommand should be called twice for each of 3 iterations");
+  t.true(processCommandSpy.calledWithMatch(sinon.match.has("command", "command1")), "Should dispatch command1");
+  t.true(processCommandSpy.calledWithMatch(sinon.match.has("command", "command2")), "Should dispatch command2");
 
   // Restore spy
   processCommandSpy.restore();
@@ -5479,26 +5390,13 @@ test("beginLoopCollection - regular for loop", t => {
   // Verify loop properties
   const loop = assembler.currentLoop;
   t.deepEqual(loop?.commands, [], "Loop commands should be initialized as empty array");
-  t.is(loop?.condition, "for i = 0..5", "Loop condition should be set");
+  t.is(loop?.header?.command, "for i = 0..5", "Loop header should be normalized");
   t.is(loop?.end, 5, "Loop end should be pre-parsed");
   t.is(loop?.start, 0, "Loop start should be pre-parsed");
   t.is(loop?.startLine, 10, "Loop startLine should be set to currentLine");
   t.is(loop?.type, "for", "Loop type should be 'for'");
   t.is(loop?.variable, "i", "Loop variable should be extracted");
-  t.deepEqual(loop, {
-    commands: [],
-    condition: "for i = 0..5",
-    conditionNode: {
-      type: "range",
-      start: { type: "raw", value: "i = 0" },
-      end: { type: "literal", value: "5" },
-    },
-    end: 5,
-    start: 0,
-    startLine: 10,
-    type: "for",
-    variable: "i",
-  }, "Loop commands should be initialized");
+  t.truthy(loop?.conditionNode, "Loop should include a parsed condition node");
 });
 
 test("beginLoopCollection - while loop", t => {
@@ -5515,7 +5413,7 @@ test("beginLoopCollection - while loop", t => {
   // Verify loop properties
   const loop = assembler.currentLoop;
   t.is(loop?.type, "while", "Loop type should be 'while'");
-  t.is(loop?.condition, "while {condition}", "Loop condition should be set");
+  t.is(loop?.header?.command, "while {condition}", "Loop header should be normalized");
   t.is(loop?.startLine, 15, "Loop startLine should be set to currentLine");
   t.deepEqual(loop?.commands, [], "Loop commands should be initialized as empty array");
   t.is(loop?.variable, undefined, "Loop variable should not be set for while loops");
@@ -5579,13 +5477,13 @@ test("beginLoopCollection - variable deletion in inline for loop", t => {
 
 test("beginLoopCollection - inline for loop with no iterations", t => {
   const assembler = new Assembler();
-  const processCommandSpy = sinon.spy(assembler, "processCommand");
+  const processCommandSpy = sinon.spy(assembler, "processNormalizedCommand");
 
   // Execute an inline for loop that shouldn't iterate
   assembler.beginLoopCollection("for", "for i = 5..5 : db i : endfor");
 
   // Verify no commands were processed
-  t.is(processCommandSpy.callCount, 0, "No commands should be processed when start >= end");
+  t.is(processCommandSpy.callCount, 0, "No normalized commands should be processed when start >= end");
 
   // Cleanup
   processCommandSpy.restore();

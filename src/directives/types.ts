@@ -1,4 +1,5 @@
 import type { OperandResolver } from "../operand-resolver.js";
+import type { NormalizedCommand } from "../ir/normalized-command.js";
 
 export interface AssemblySession {
   currentFile: string;
@@ -62,4 +63,4 @@ export interface DirectiveContext {
   operandResolver: OperandResolver;
 }
 
-export type DirectiveHandler = (ctx: DirectiveContext, words: string[], raw: string) => void;
+export type DirectiveHandler = (ctx: DirectiveContext, words: string[], raw: string, command?: NormalizedCommand) => void;

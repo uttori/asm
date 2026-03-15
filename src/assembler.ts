@@ -9,6 +9,8 @@ import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, Spc700Co
 
 import { AddressToLineMapping } from "./addr2line.js";
 import type {
+  ConditionalBranch,
+  ConditionalBranchNode,
   IncludeNode,
   LoopNode,
   MacroDefinitionNode,
@@ -21,7 +23,7 @@ import {
   type ExpressionNode,
   type ReferenceExpressionNode,
 } from "./ir/expression-node.js";
-import { createNormalizedCommand, type NormalizedCommand } from "./ir/normalized-command.js";
+import { createNormalizedCommand, setCommandWords, type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
@@ -66,25 +68,9 @@ export type MacroDefinition = {
 };
 
 export type LoopBlock = LoopNode;
-type RuntimeConditionalBranch = {
-  kind: "if" | "elseif" | "else";
-  header?: NormalizedCommand;
-  conditionText?: string;
-  conditionNode?: ExpressionNode;
-  commands: ExecutableNode[];
-  startLine: number;
-  endLine?: number;
-};
-type RuntimeConditionalNode = {
-  type: "if";
-  header?: NormalizedCommand;
-  branches: RuntimeConditionalBranch[];
-  startLine: number;
-  endLine?: number;
-};
+type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
 type ExecutableNode = string | NormalizedCommand | LoopNode | RuntimeConditionalNode;
-type ConditionalBranch = RuntimeConditionalBranch;
 
 export type WhileTracker = {
   iswhile: boolean;
@@ -277,6 +263,7 @@ export class Assembler implements AssemblySession {
   /** Temporary bisection toggle to force legacy line-driven execution. */
   public useLegacyPassDriver: boolean = false;
   private readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
+  private inTreeProgramExecution: boolean = false;
   private readonly directiveRegistry: DirectiveRegistry;
   private readonly cursorAddress: CursorAddressFacade;
   private readonly services: AssemblerServices;
@@ -626,8 +613,12 @@ export class Assembler implements AssemblySession {
         },
         enumerable: true,
       },
+      currentLine: { get: () => this.currentLine, enumerable: true },
+      splitCommandIntoWords: { value: (command: string) => this.splitCommandIntoWords(command), enumerable: true },
+      normalizeCommand: { value: (command: string) => this.preDispatchPipelineService.normalizeCommand(command), enumerable: true },
       resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
       processNestedCommand: { value: (command: string) => this.processNestedCommand(command), enumerable: true },
+      processNestedNormalizedCommand: { value: (command: NormalizedCommand) => this.processNormalizedCommand(command), enumerable: true },
       setLabel: {
         value: (
           label: string,
@@ -1175,8 +1166,14 @@ export class Assembler implements AssemblySession {
 
     const splitCommands = this.splitInlineCommands(processedCommands);
     if (this.useTreePassDriver && !this.useLegacyPassDriver && block.includes("\n")) {
-      const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
-      this.executeNodeStream(nodes);
+      const previousTreeExecution = this.inTreeProgramExecution;
+      this.inTreeProgramExecution = true;
+      try {
+        const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
+        this.executeNodeStream(nodes);
+      } finally {
+        this.inTreeProgramExecution = previousTreeExecution;
+      }
       return;
     }
 
@@ -1267,6 +1264,24 @@ export class Assembler implements AssemblySession {
       return;
     }
 
+    this.processNormalizedCommand(state, false);
+  }
+
+  processNormalizedCommand(state: NormalizedCommand, rewriteRaw: boolean = true): void {
+    if (state.command.trim() === "") {
+      return;
+    }
+
+    if (rewriteRaw) {
+      const rewrittenRaw = this.commandPipelineService.rewriteRawCommand(state.source.raw);
+      const rewrittenNormalized = this.preDispatchPipelineService.normalizeCommand(rewrittenRaw);
+      const rewrittenWords = this.splitCommandIntoWords(rewrittenNormalized);
+      if (rewrittenRaw !== state.source.raw || rewrittenNormalized !== state.command) {
+        state.source.raw = rewrittenRaw;
+        setCommandWords(state, rewrittenWords, rewrittenNormalized);
+      }
+    }
+
     const preprocessResult = this.commandPipelineService.preprocess(state);
     if (preprocessResult === "skipped_for_condition") {
       debug(`processCommand ❎ Skipping command "${state.command}" because condition is false.`);
@@ -1283,7 +1298,7 @@ export class Assembler implements AssemblySession {
       return;
     }
 
-    const handledDirective = this.directiveRegistry.dispatch(state.keyword, state.words, state.command);
+    const handledDirective = this.directiveRegistry.dispatchCommand(state);
     if (!handledDirective) {
       if (state.keyword.startsWith(";")) {
         // debug(`handleInstruction comment: ${words.join(" ")}`);
@@ -2026,7 +2041,6 @@ export class Assembler implements AssemblySession {
           this.writeDataByLength(len, charValue);
         }
       } else {
-        // TODO we need support for labels, relative labels, and macro labels
         debug("handleDataDirective numeric values", value);
         // Handle numeric values
         if (value.startsWith("#")) {
@@ -3021,7 +3035,7 @@ export class Assembler implements AssemblySession {
         this.includedFiles.set(resolvedPath, info);
       }
 
-      if (this.useTreePassDriver && !this.useLegacyPassDriver) {
+      if (this.useTreePassDriver && !this.useLegacyPassDriver && this.inTreeProgramExecution) {
         const includeNode = this.createIncludeNode(resolvedPath, content);
         for (const node of includeNode.commands) {
           this.executeNode(node);
@@ -3160,52 +3174,18 @@ export class Assembler implements AssemblySession {
    */
   beginLoopCollection(type: "for" | "while", command: string): void {
     debug("beginLoopCollection", type, command);
-    // Check for inline for loop with colon separators
+    // Normalize inline loops through the typed node parser/executor path.
     if (type === "for" && command.includes(":")) {
-      // This is an inline for loop like "for i = 0..5 : db 1 : endfor"
-      const parts = command.split(":");
-      const forDeclaration = parts[0].trim();
-      const forMatch = forDeclaration.match(/^\s*for\s+(\w+)\s*=\s*([^.]+)\.\.([^\s:]+)/i);
-
-      if (forMatch) {
-        const variable = forMatch[1];
-        const startExpr = forMatch[2].trim();
-        const endExpr = forMatch[3].trim();
-
-        // Process the inline for loop directly without collecting
-        const start = this.operandResolver.getnum(this.resolvedefines(startExpr));
-        const end = this.operandResolver.getnum(this.resolvedefines(endExpr));
-
-        // Save the original variable value before we modify it
-        const originalValue = this.defines.get(variable);
-
-        // Execute the inline loop
-        if (start < end) {
-          for (let i = start; i < end; i++) {
-            // Set the variable
-            this.defines.set(variable, i.toString());
-
-            // Process each command in the inline for loop
-            for (let j = 1; j < parts.length; j++) {
-              const cmd = parts[j].trim();
-              if (cmd !== "endfor") {
-                this.processCommand(cmd);
-              }
-            }
-          }
+      const inlineCommands = command.split(":").map((entry) => entry.trim()).filter(Boolean);
+      const inlineNodes = this.parseCommandStreamToNodes(inlineCommands, this.currentFile, this.currentLine);
+      if (this.collectingLoop && this.currentLoop) {
+        for (const node of inlineNodes) {
+          this.currentLoop.commands.push(node);
         }
-
-        // Restore original value
-        if (originalValue !== undefined) {
-          debug(`beginLoopCollection restoring ${variable} to ${originalValue}`);
-          this.defines.set(variable, originalValue);
-        } else {
-          debug(`beginLoopCollection deleting ${variable}`);
-          this.defines.delete(variable);
-        }
-
-        return; // Skip the normal loop collection
+      } else {
+        this.executeNodeStream(inlineNodes);
       }
+      return;
     }
 
     // Regular non-inline loop
@@ -3329,22 +3309,20 @@ export class Assembler implements AssemblySession {
   executeForLoop(forBlock: LoopBlock): void {
     debug("executeForLoop", forBlock);
     const parsedForLoop = forBlock.header?.parsed.forLoop;
-    let variable = forBlock.variable;
-    let start = forBlock.start;
-    let end = forBlock.end;
+    let variable = forBlock.variable ?? parsedForLoop?.variable;
+    let start: number | undefined = forBlock.start;
+    let end: number | undefined = forBlock.end;
 
-    if (parsedForLoop) {
-      variable ||= parsedForLoop.variable;
-      const startExpr = expressionNodeToString(forBlock.startExpression ?? parsedForLoop.start);
-      const endExpr = expressionNodeToString(forBlock.endExpression ?? parsedForLoop.end);
-
-      // Evaluate start and end expressions
-      // If expressions are already numeric, use them directly, otherwise resolve defines
+    const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
+    const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
+    if (startExpression && endExpression) {
+      const startExpr = expressionNodeToString(startExpression);
+      const endExpr = expressionNodeToString(endExpression);
       const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
       const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
       start = this.operandResolver.getnum(startDefinesResolved);
       end = this.operandResolver.getnum(endDefinesResolved);
-    } else {
+    } else if ((start === undefined || end === undefined) && forBlock.condition) {
       const forMatch = forBlock.condition.match(/^\s*for\s+(\w+)\s*=\s*([^.]+)\.\.([^\s:]+)/i);
       if (!forMatch) {
         debug("executeForLoop invalid for loop syntax:", forBlock.condition);
@@ -3361,7 +3339,7 @@ export class Assembler implements AssemblySession {
       }
     }
 
-    if (variable === undefined || start === undefined || end === undefined) {
+    if (!variable || start === undefined || end === undefined) {
       debug("executeForLoop missing loop semantics:", forBlock);
       return;
     }
@@ -3398,12 +3376,12 @@ export class Assembler implements AssemblySession {
   executeWhileLoop(whileBlock: LoopBlock): void {
     debug("executeWhileLoop", whileBlock);
     const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
-    const condMatch = whileBlock.condition.match(/^\s*while\s+(.+)/i);
+    const condMatch = whileBlock.condition?.match(/^\s*while\s+(.+)/i);
     if (!conditionNode && !condMatch) {
       debug("executeWhileLoop invalid while loop syntax:", whileBlock.condition);
       return;
     }
-    const conditionExpr = condMatch?.[1]?.trim() ?? whileBlock.condition;
+    const conditionExpr = condMatch?.[1]?.trim() ?? whileBlock.condition ?? "";
 
     let iteration = 0;
     const MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
@@ -3416,14 +3394,10 @@ export class Assembler implements AssemblySession {
     while (this.evaluateExpression(conditionNode ?? conditionExpr) && iteration < MAX_ITERATIONS) {
       // Process each command in the loop body
       for (const cmd of whileBlock.commands) {
-        const rawCommand = typeof cmd === "string" ? cmd : ("source" in cmd ? cmd.source.raw : undefined);
-        // Track define statements before executing body commands.
-        if (rawCommand && this.isDefineStatement(rawCommand)) {
-          const varName = this.getDefineVariable(rawCommand);
-          if (varName && !loopVars.has(varName)) {
-            loopVars.add(varName);
-            originalValues.set(varName, this.defines.get(varName));
-          }
+        const defineTarget = this.getDefineVariableFromNode(cmd);
+        if (defineTarget && !loopVars.has(defineTarget)) {
+          loopVars.add(defineTarget);
+          originalValues.set(defineTarget, this.defines.get(defineTarget));
         }
         this.executeNode(cmd);
       }
@@ -3445,6 +3419,16 @@ export class Assembler implements AssemblySession {
         this.defines.delete(varName);
       }
     }
+  }
+
+  getDefineVariableFromNode(node: ExecutableNode): string | null {
+    if (typeof node === "string") {
+      return this.getDefineVariable(node);
+    }
+    if ("source" in node && node.kind === "defineCommand") {
+      return this.getDefineVariable(node.command);
+    }
+    return null;
   }
 
   /**
@@ -3487,7 +3471,7 @@ export class Assembler implements AssemblySession {
 
     if ("source" in node) {
       const lowered = this.lowerNode(node);
-      this.processCommand(lowered.source.raw);
+      this.processNormalizedCommand(lowered);
       return;
     }
 
@@ -3583,7 +3567,6 @@ export class Assembler implements AssemblySession {
         const branch: ConditionalBranch = {
           kind: "if",
           header: command,
-          conditionText: command.words.slice(1).join(" "),
           conditionNode: command.parsed.condition?.expression,
           commands: [],
           startLine: command.source.line,
@@ -3615,7 +3598,6 @@ export class Assembler implements AssemblySession {
         const branch: ConditionalBranch = {
           kind: keyword,
           header: command,
-          conditionText: keyword === "elseif" ? command.words.slice(1).join(" ") : undefined,
           conditionNode: keyword === "elseif" ? command.parsed.condition?.expression : undefined,
           commands: [],
           startLine: command.source.line,

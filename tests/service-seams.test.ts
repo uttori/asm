@@ -2,6 +2,15 @@ import { stub } from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Assembler } from "../src/assembler.js";
+import { createNormalizedCommand } from "../src/ir/normalized-command.js";
+
+const commandNode = (command: string) => createNormalizedCommand(
+  command,
+  command,
+  command.trim().split(/\s+/),
+  "test.asm",
+  1
+);
 
 test("macro engine expands fixed and variadic parameters", (t) => {
   const assembler = new Assembler();
@@ -16,25 +25,25 @@ test("macro engine expands fixed and variadic parameters", (t) => {
   t.is(expanded, "db $10, $20, 2");
 });
 
-test("macro engine handles definition lifecycle through processCommand", (t) => {
+test("macro engine handles definition lifecycle through normalized dispatch", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
 
-  assembler.processCommand("macro set_define()");
-  assembler.processCommand("!macro_value = 3");
-  assembler.processCommand("endmacro");
-  assembler.processCommand("%set_define()");
+  assembler.processNormalizedCommand(commandNode("macro set_define()"), false);
+  assembler.processNormalizedCommand(commandNode("!macro_value = 3"), false);
+  assembler.processNormalizedCommand(commandNode("endmacro"), false);
+  assembler.processNormalizedCommand(commandNode("%set_define()"), false);
 
   t.true(assembler.macros.has("set_define"));
   t.is(assembler.defines.get("macro_value"), "3");
 });
 
-test("define engine resolves standalone define commands through processCommand", (t) => {
+test("define engine resolves standalone define commands through normalized dispatch", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
 
-  assembler.processCommand("!emit = arch spc700");
-  assembler.processCommand("!emit");
+  assembler.processNormalizedCommand(commandNode("!emit = arch spc700"), false);
+  assembler.processNormalizedCommand(commandNode("!emit"), false);
 
   t.is(assembler.arch, "spc700");
 });
@@ -56,7 +65,7 @@ test("front-end service handles global labels before directive dispatch", (t) =>
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
 
-  assembler.processCommand("global Main: arch spc700");
+  assembler.processNormalizedCommand(commandNode("global Main: arch spc700"), false);
 
   t.is(assembler.currentParentLabel, "Main");
   t.true(assembler.currentParentIsGlobal);
@@ -119,10 +128,10 @@ test("pre-dispatch pipeline loads test rom directive", (t) => {
   t.deepEqual(Array.from(assembler.romdata.slice(0, 4)), [1, 2, 3, 4]);
 });
 
-test("command pipeline handles character mappings through processCommand", (t) => {
+test("command pipeline handles character mappings through normalized dispatch", (t) => {
   const assembler = new Assembler();
 
-  assembler.processCommand('"A" = $42');
+  assembler.processNormalizedCommand(commandNode('"A" = $42'), false);
 
   t.is(assembler.characterMappings.get("A"), 0x42);
 });
@@ -171,25 +180,25 @@ test("pre-dispatch pipeline re-resolves elseif before dispatch", (t) => {
   t.true(handleElseIf.calledOnceWithExactly(["1"]));
 });
 
-test("front-end service handles named and static labels through processCommand", (t) => {
+test("front-end service handles named and static labels through normalized dispatch", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
 
-  assembler.processCommand("Main:");
-  assembler.processCommand("Const = $10");
+  assembler.processNormalizedCommand(commandNode("Main:"), false);
+  assembler.processNormalizedCommand(commandNode("Const = $10"), false);
 
   t.is(assembler.getLabelValue("Main", false), assembler.snespos);
   t.is(assembler.getLabelValue("Const", true), 0x10);
 });
 
-test("struct engine records struct members through processCommand", (t) => {
+test("struct engine records struct members through normalized dispatch", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
 
-  assembler.processCommand("struct Sprite");
-  assembler.processCommand(".x: skip 2");
-  assembler.processCommand(".y: skip 1");
-  assembler.processCommand("endstruct");
+  assembler.processNormalizedCommand(commandNode("struct Sprite"), false);
+  assembler.processNormalizedCommand(commandNode(".x: skip 2"), false);
+  assembler.processNormalizedCommand(commandNode(".y: skip 1"), false);
+  assembler.processNormalizedCommand(commandNode("endstruct"), false);
 
   t.is(assembler.structs.get("Sprite")?.labels.get("x"), 0);
   t.is(assembler.structs.get("Sprite")?.labels.get("y"), 2);
@@ -244,11 +253,11 @@ test("node parser lifts loops and conditionals into typed nodes", (t) => {
   t.truthy(firstBranchNode && typeof firstBranchNode !== "string" && "type" in firstBranchNode && firstBranchNode.type === "for");
 });
 
-test("node execution seam replays typed command and conditional nodes", (t) => {
+test("node execution seam dispatches typed command and conditional nodes", (t) => {
   const assembler = new Assembler();
   const processed: string[] = [];
-  stub(assembler, "processCommand").callsFake((command: string) => {
-    processed.push(command);
+  stub(assembler, "processNormalizedCommand").callsFake((command) => {
+    processed.push(command.command);
   });
 
   assembler.executeNodeStream(assembler.parseCommandStreamToNodes([
@@ -289,8 +298,8 @@ test("macro/include lifting exposes typed macro and include nodes", (t) => {
 test("typed parser keeps nested condition-loop structures executable", (t) => {
   const assembler = new Assembler();
   const executed: string[] = [];
-  stub(assembler, "processCommand").callsFake((command: string) => {
-    executed.push(command);
+  stub(assembler, "processNormalizedCommand").callsFake((command) => {
+    executed.push(command.command);
   });
 
   const nodes = assembler.parseCommandStreamToNodes([

@@ -2,6 +2,15 @@ import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Assembler } from "../src/assembler.js";
+import { createNormalizedCommand } from "../src/ir/normalized-command.js";
+
+const commandNode = (command: string) => createNormalizedCommand(
+  command,
+  command,
+  command.trim().split(/\s+/),
+  "test.asm",
+  1
+);
 
 test("directive registry dispatches fill aliases", t => {
   const assembler = new Assembler();
@@ -43,26 +52,26 @@ test("directive registry dispatches struct and incbin directives", t => {
   t.true(incbinSpy.calledOnceWithExactly(["incbin", "test.bin"]));
 });
 
-test("processCommand routes extracted directives through the registry", t => {
+test("normalized dispatch routes extracted directives through the registry", t => {
   const assembler = new Assembler();
   assembler.setCurrentFile("test.asm");
   assembler.includedFiles.set("test.asm", { included: true, guarded: false });
   const opcodeSpy = sinon.spy(assembler, "asblock_pick");
   sinon.stub(assembler, "addAddressToLine");
 
-  assembler.processCommand("includeonce");
+  assembler.processNormalizedCommand(commandNode("includeonce"), false);
 
   t.true(assembler.includedFiles.get("test.asm")?.guarded ?? false);
   t.false(opcodeSpy.called);
 });
 
-test("processCommand preserves check bankcross behavior", t => {
+test("normalized dispatch preserves check bankcross behavior", t => {
   const assembler = new Assembler();
   sinon.stub(assembler, "addAddressToLine");
 
-  assembler.processCommand("check bankcross half");
+  assembler.processNormalizedCommand(commandNode("check bankcross half"), false);
   t.is(assembler.bankCrossCheckMode, "half");
 
-  assembler.processCommand("check bankcross on");
+  assembler.processNormalizedCommand(commandNode("check bankcross on"), false);
   t.is(assembler.bankCrossCheckMode, "full");
 });

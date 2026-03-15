@@ -1,16 +1,21 @@
 import type { DirectiveRegistry } from "./registry.js";
 
 export const registerIncludeSourceDirectives = (registry: DirectiveRegistry): void => {
-  registry.register("incsrc", ({ session }, words) => {
-    if (words.length !== 2) {
+  registry.register("incsrc", ({ session }, words, _raw, command) => {
+    const target = command?.parsed.includeTarget?.target ?? words[1];
+    if (!target) {
       throw new Error("incsrc requires exactly one filename parameter");
     }
 
-    session.assemblefile(words[1], false);
+    session.assemblefile(target, false);
   });
 
-  registry.register("include", ({ session }, words) => {
-    session.handleInclude("include", words[1], false);
+  registry.register("include", ({ session }, words, _raw, command) => {
+    const target = command?.parsed.includeTarget?.target ?? words[1];
+    if (!target) {
+      throw new Error("include requires exactly one filename parameter");
+    }
+    session.handleInclude("include", target, false);
   });
 
   registry.register("includeonce", ({ session }) => {

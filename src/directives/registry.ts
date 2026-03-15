@@ -1,4 +1,5 @@
 import type { OperandResolver } from "../operand-resolver.js";
+import type { NormalizedCommand } from "../ir/normalized-command.js";
 import { registerDataDirectives } from "./data.js";
 import { registerFillPadDirectives } from "./fill-pad.js";
 import { registerFlowControlDirectives } from "./flow-control.js";
@@ -23,14 +24,18 @@ export class DirectiveRegistry {
     }
   }
 
-  dispatch(keyword: string, words: string[], raw: string): boolean {
+  dispatch(keyword: string, words: string[], raw: string, command?: NormalizedCommand): boolean {
     const handler = this.handlers.get(keyword);
     if (!handler) {
       return false;
     }
 
-    handler(this.ctx, words, raw);
+    handler(this.ctx, words, raw, command);
     return true;
+  }
+
+  dispatchCommand(command: NormalizedCommand): boolean {
+    return this.dispatch(command.keyword, command.words, command.command, command);
   }
 }
 

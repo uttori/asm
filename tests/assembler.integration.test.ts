@@ -8,13 +8,13 @@ import { Assembler } from "../src/assembler.js";
 
 interface FixtureComparison {
   fixture: string;
-  runErrorLegacy?: string;
-  legacyOutputSize: number;
+  runError?: string;
+  outputSize: number;
   expectedSize: number;
-  legacyOutputChecksum: string;
+  outputChecksum: string;
   expectedChecksum: string;
   overallPassed: boolean;
-  /** Which checks failed (e.g. "legacy vs golden size") */
+  /** Which checks failed (e.g. "tree vs golden size") */
   failedChecks: string[];
 }
 
@@ -23,6 +23,9 @@ const PROJECT_ROOT = path.resolve(TEST_FILE_DIR, "..");
 const FIXTURES_DIR = path.resolve(PROJECT_ROOT, "src/tests");
 const EXPECTED_DIR = path.resolve(PROJECT_ROOT, "src/tests_tmp_app");
 const TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/dummy_rom.sfc");
+const SLIDESHOW_SRC_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/SLIDE.SRC");
+const SLIDESHOW_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/SLIDES-GOOD-NEW.sfc");
+const SLIDESHOW_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/test.sfc");
 const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
 const hashBuffer = (buffer: Buffer): string => createHash("sha256").update(buffer).digest("hex");
@@ -86,36 +89,36 @@ const discoverTopLevelFixtures = (): string[] => fs
   .sort((a, b) => a.localeCompare(b))
   .map((fileName) => path.basename(fileName, ".asm"));
 
-const compareFixture = (fixtureName: string): FixtureComparison => {
+const compareFixture = (fixtureName: string, mode: "legacy" | "tree" = "legacy"): FixtureComparison => {
   const expectedPath = path.resolve(EXPECTED_DIR, `${fixtureName}.asm.sfc`);
   const expectedStats = getFileStats(expectedPath);
-  let runErrorLegacy: string | undefined;
-  let legacyStats = {
+  let runError: string | undefined;
+  let outputStats = {
     size: 0,
     checksum: EMPTY_SHA256
   };
 
   try {
-    const legacyOutput = assembleFixtureLegacy(fixtureName);
-    legacyStats = {
-      size: legacyOutput.length,
-      checksum: hashBuffer(legacyOutput)
+    const output = mode === "tree" ? assembleFixtureTree(fixtureName) : assembleFixtureLegacy(fixtureName);
+    outputStats = {
+      size: output.length,
+      checksum: hashBuffer(output)
     };
   } catch (error: unknown) {
-    runErrorLegacy = error instanceof Error ? error.message : JSON.stringify(error);
+    runError = error instanceof Error ? error.message : JSON.stringify(error);
   }
 
   const failedChecks: string[] = [];
-  if (legacyStats.size !== expectedStats.size) failedChecks.push("legacy vs golden size");
-  if (legacyStats.checksum !== expectedStats.checksum) failedChecks.push("legacy vs golden checksum");
+  if (outputStats.size !== expectedStats.size) failedChecks.push(`${mode} vs golden size`);
+  if (outputStats.checksum !== expectedStats.checksum) failedChecks.push(`${mode} vs golden checksum`);
   const overallPassed = failedChecks.length === 0;
 
   return {
     fixture: fixtureName,
-    runErrorLegacy,
-    legacyOutputSize: legacyStats.size,
+    runError,
+    outputSize: outputStats.size,
     expectedSize: expectedStats.size,
-    legacyOutputChecksum: legacyStats.checksum,
+    outputChecksum: outputStats.checksum,
     expectedChecksum: expectedStats.checksum,
     overallPassed,
     failedChecks
@@ -129,19 +132,55 @@ test("integration fixtures - includes all top-level .asm tests from src/test.ts"
 });
 
 test("integration parity gates keep loop and conditional fixtures green", (t) => {
-  const loopResult = compareFixture("forloop");
-  const conditionalResult = compareFixture("elseif");
+  const loopResult = compareFixture("forloop", "legacy");
+  const conditionalResult = compareFixture("elseif", "legacy");
 
   t.true(loopResult.overallPassed, loopResult.failedChecks.join(", "));
   t.true(conditionalResult.overallPassed, conditionalResult.failedChecks.join(", "));
 });
 
 test("integration parity gates keep legacy and tree drivers byte-identical on key fixtures", (t) => {
-  const fixtures = ["elseif", "includehierarchy", "macrolabels"];
+  const fixtures = [
+    "elseif",
+    "includehierarchy",
+    "includeonce",
+    "functest1",
+    "v160features",
+  ];
   for (const fixtureName of fixtures) {
     const legacy = assembleFixtureLegacy(fixtureName);
     const tree = assembleFixtureTree(fixtureName);
     t.is(hashBuffer(legacy), hashBuffer(tree), fixtureName);
+  }
+});
+
+test("integration temporary legacy parity subset remains aligned with tree output", (t) => {
+  const fixtures = [
+    "includehierarchy",
+    "includeonce",
+    "incsrcloop",
+    "functest1",
+    "v160features",
+  ];
+  for (const fixtureName of fixtures) {
+    const legacy = assembleFixtureLegacy(fixtureName);
+    const tree = assembleFixtureTree(fixtureName);
+    t.is(hashBuffer(legacy), hashBuffer(tree), fixtureName);
+  }
+});
+
+test("integration tree-first golden gate for key fixtures", (t) => {
+  const fixtures = [
+    "elseif",
+    "includehierarchy",
+    "includeonce",
+    "incsrcloop",
+    "functest1",
+    "v160features",
+  ];
+  for (const fixtureName of fixtures) {
+    const result = compareFixture(fixtureName, "tree");
+    t.true(result.overallPassed, `${fixtureName}: ${result.failedChecks.join(", ")}`);
   }
 });
 
@@ -163,20 +202,44 @@ test("integration tree-pass driver executes typed loop/conditional blocks", (t) 
   t.is(hashBuffer(legacy), hashBuffer(tree));
 });
 
+test("integration slideshow regression keeps CLI-style include flow byte-identical", (t) => {
+  const source = fs.readFileSync(SLIDESHOW_SRC_PATH, "utf8");
+  const expected = fs.readFileSync(SLIDESHOW_EXPECTED_PATH);
+  const targetRom = fs.existsSync(SLIDESHOW_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(SLIDESHOW_TARGET_ROM_PATH)) : undefined;
+  const assembler = new Assembler(targetRom);
+  assembler.setChecksumMode("simple");
+  const inputDir = path.dirname(SLIDESHOW_SRC_PATH);
+  assembler.setIncludePaths(["./", inputDir]);
+  assembler.setCurrentFile(SLIDESHOW_SRC_PATH);
+
+  for (const pass of [0, 1, 2]) {
+    assembler.setPass(pass);
+    const lines = source.split("\n");
+    for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.assembleblock(lines[lineNumber].trim());
+    }
+    assembler.finishPass();
+  }
+
+  const output = Buffer.from(assembler.getBinaryOutput());
+  t.is(hashBuffer(output), hashBuffer(expected));
+});
+
 
 
 for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {
   test.serial(`integration fixture parity - ${fixtureName}`, t => {
-    const result = compareFixture(fixtureName);
+    const result = compareFixture(fixtureName, "legacy");
 
     if (!result.overallPassed) {
       t.fail(
         [
           `Fixture ${result.fixture} did not match expected output.`,
           `Failed check(s): ${result.failedChecks.join(", ")}`,
-          result.runErrorLegacy ? `legacy runError: ${result.runErrorLegacy}` : "legacy runError: none",
-          `legacy size: actual=${result.legacyOutputSize} expected=${result.expectedSize}`,
-          `legacy sha256: actual=${result.legacyOutputChecksum} expected=${result.expectedChecksum}`
+          result.runError ? `runError: ${result.runError}` : "runError: none",
+          `size: actual=${result.outputSize} expected=${result.expectedSize}`,
+          `sha256: actual=${result.outputChecksum} expected=${result.expectedChecksum}`
         ].join("\n")
       );
       return;

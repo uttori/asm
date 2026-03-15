@@ -216,13 +216,13 @@ test("loop collection stores normalized command nodes in loop bodies", (t) => {
   });
 });
 
-test("typed loop nodes still execute through the legacy process pipeline", (t) => {
+test("typed loop nodes execute through normalized dispatch", (t) => {
   const assembler = new Assembler();
   assembler.setPass(2);
   assembler.currentFile = "/Users/matthew/uttori/snes-asm-js/tests/ir.test.ts";
   const executed: Array<{ command: string; value: string | undefined }> = [];
-  stub(assembler, "processCommand").callsFake((command: string) => {
-    executed.push({ command, value: assembler.defines.get("i") });
+  stub(assembler, "processNormalizedCommand").callsFake((command) => {
+    executed.push({ command: command.command, value: assembler.defines.get("i") });
   });
   assembler.beginLoopCollection("for", "for i = 0..3");
   assembler.currentLoop?.commands.push(createPendingCommand("db !i", "loop.asm", 1, "db !i", ["db", "!i"]));

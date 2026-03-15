@@ -3,7 +3,7 @@ import type { NormalizedCommand } from "./normalized-command.js";
 
 export type LoopNode = {
   type: "for" | "while";
-  condition: string;
+  condition?: string;
   header?: NormalizedCommand;
   conditionNode?: ExpressionNode;
   rangeNode?: RangeExpressionNode;
@@ -20,7 +20,6 @@ export type LoopNode = {
 export type ConditionalBranch = {
   kind: "if" | "elseif" | "else";
   header?: NormalizedCommand;
-  conditionText?: string;
   conditionNode?: ExpressionNode;
   commands: ExecutableNode[];
   startLine: number;
