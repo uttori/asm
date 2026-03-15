@@ -1,12 +1,27 @@
 /**
+ * Information mapping a rom address to a source file and line number.
+ */
+interface AddrToLineInfo {
+    fileIdx: number;
+    line: number;
+    addr: number;
+}
+/**
+ * Represents an entry for a source file, storing its name and its file contents' CRC.
+ */
+interface FileEntry {
+    name: string;
+    crc: number;
+}
+/**
  * Class to store address-to-line mappings for richer symbolic information.
  * During assembly, included files and information about generated assembly
  * should be added here, and then read back during symbol file generation.
  */
 export declare class AddressToLineMapping {
-    private fileList;
-    private filenameCrcs;
-    private addrToLineInfo;
+    fileList: FileEntry[];
+    filenameCrcs: number[];
+    addrToLineInfo: AddrToLineInfo[];
     constructor();
     /**
      * Clears all stored mappings and file information.
@@ -27,4 +42,5 @@ export declare class AddressToLineMapping {
      */
     getFileIndex(filename: string): number;
 }
+export {};
 //# sourceMappingURL=addr2line.d.ts.map

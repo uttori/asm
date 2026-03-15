@@ -1,10 +1,13 @@
-import type { ArchitectureEncoder, LoweredInstruction, Spc700Context } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, Spc700Context } from "./architecture-types.js";
 
-let debug = (..._: any[]) => {};
+let debug = (..._: unknown[]) => {};
 try {
   const { default: d } = await import("debug");
   debug = d("ArchSPC700");
 } catch {}
+
+const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
+  Object.prototype.hasOwnProperty.call(obj, key);
 
 /**
  * Returns the "length" or "type" of operand, to help decide
@@ -31,98 +34,63 @@ function getAddressSize(operand: string): number {
 }
 
 /**
- * Parse an expression like "$12+X" => { base: "$12", index: "X" }.
- * Or "($12)+Y" => { base: "$12", index: "Y", isIndirect: true }.
- * Or "($12+X)" => { base: "$12", index: "X", isIndirect: true }.
- * @param {string} operand the operand
- * @returns {object} The parsed indexed operand.
- */
-function parseIndexed(operand: string): {
-  base: string;
-  index: "X" | "Y" | "" | null;
-  isIndirect: boolean;
-} {
-  let isIndirect = false;
-  let index: "X" | "Y" | "" | null = null;
-  let base = operand.trim();
-
-  // Check for parentheses
-  if (base.startsWith("(") && base.endsWith(")")) {
-    isIndirect = true;
-    base = base.slice(1, -1).trim(); // remove outer parentheses
-  }
-
-  // Possibly "($12+X)" => base "$12", index X
-  // or "$12+X"
-  // or "($12)+Y"
-  const plusSplit = base.split("+");
-  if (plusSplit.length === 2) {
-    const left = plusSplit[0].trim();
-    const right = plusSplit[1].trim();
-    // e.g. left = "$12", right = "X"
-    // or left = "($12)", right = "X" but we've already stripped parentheses.
-    if (right.toUpperCase() === "X" || right.toUpperCase() === "Y") {
-      index = right.toUpperCase() === "X" ? "X" : "Y";
-      base = left;
-    }
-  } else {
-    // might be "($12)+Y"
-    const plusParMatch = base.match(/\)\s*\+\s*(x|y)$/i);
-    if (plusParMatch) {
-      // e.g. "($12) + Y" -> but we've already stripped outer parentheses,
-      // so we might see something like "$12) + Y"? Let's handle carefully:
-      // If we get here, it might be "($12)+Y" originally => isIndirect stays true
-      index = plusParMatch[1].toUpperCase() === "X" ? "X" : "Y";
-      // remove the trailing "+Y"
-      base = base.replace(/\)\s*\+\s*(x|y)$/i, ")").trim();
-      // we now have "$12)" leftover? remove trailing ')':
-      if (base.endsWith(")")) {
-        base = base.slice(0, -1).trim();
-      }
-    }
-  }
-
-  return { base, index, isIndirect };
-}
-
-/**
  * Checks if the operand is something like "A", "(X)", etc.
  * @param {string} op the operand
+ * @param {LoweredOperand} lowered the lowered operand metadata
  * @returns {boolean} True if the operand is an accumulator, false otherwise.
  */
-function isAccumulator(op: string): boolean {
+function isAccumulator(op: string, lowered?: LoweredOperand): boolean {
+  if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "A") {
+    return true;
+  }
   return op.toUpperCase() === "A";
 }
 /**
  *
  * @param {string} op the operand
+ * @param {LoweredOperand} lowered the lowered operand metadata
  * @returns {boolean} True if the operand is a register X, false otherwise.
  */
-function isRegisterX(op: string): boolean {
+function isRegisterX(op: string, lowered?: LoweredOperand): boolean {
+  if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "X") {
+    return true;
+  }
   return op.toUpperCase() === "X";
 }
 /**
  *
  * @param {string} op the operand
+ * @param {LoweredOperand} lowered the lowered operand metadata
  * @returns {boolean} True if the operand is a register Y, false otherwise.
  */
-function isRegisterY(op: string): boolean {
+function isRegisterY(op: string, lowered?: LoweredOperand): boolean {
+  if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "Y") {
+    return true;
+  }
   return op.toUpperCase() === "Y";
 }
 /**
  *
  * @param {string} op the operand
+ * @param {LoweredOperand} lowered the lowered operand metadata
  * @returns {boolean} True if the operand is a parenthesis X, false otherwise.
  */
-function isParenX(op: string): boolean {
+function isParenX(op: string, lowered?: LoweredOperand): boolean {
+  if (lowered?.mode === "registerIndirect" && lowered.registerName?.toUpperCase() === "X") {
+    return true;
+  }
   return op.trim().toUpperCase() === "(X)";
 }
 /**
  *
  * @param {string} op the operand
+ * @param {LoweredOperand} lowered the lowered operand metadata
  * @returns {boolean} True if the operand is a parenthesis Y, false otherwise.
  */
-function isParenY(op: string): boolean {
+function isParenY(op: string, lowered?: LoweredOperand): boolean {
+  if (lowered?.mode === "registerIndirect" && lowered.registerName?.toUpperCase() === "Y") {
+    return true;
+  }
   return op.trim().toUpperCase() === "(Y)";
 }
 
@@ -160,23 +128,22 @@ function parseDpOrAbs(operand: string): { isDp: boolean; value: number } {
  *   dp_dp: 0x89,         // e.g. ADC $dp,$dp
  * }
  */
-const memOpTables: Record<
-  string,
-  {
-    a_indirectX: number;
-    a_indirectDpX: number;
-    a_imm: number;
-    a_absX: number;
-    a_dpX: number;
-    a_absY: number;
-    a_indirectDpY: number;
-    a_abs: number;
-    a_dp: number;
-    xy_indirect: number;
-    dp_imm: number;
-    dp_dp: number;
-  }
-> = {
+type MemOpcode = "ADC" | "AND" | "EOR" | "OR" | "SBC" | "CMP";
+type MemOpTable = {
+  a_indirectX: number;
+  a_indirectDpX: number;
+  a_imm: number;
+  a_absX: number;
+  a_dpX: number;
+  a_absY: number;
+  a_indirectDpY: number;
+  a_abs: number;
+  a_dp: number;
+  xy_indirect: number;
+  dp_imm: number;
+  dp_dp: number;
+};
+const memOpTables: Record<MemOpcode, MemOpTable> = {
   ADC: {
     a_indirectX: 0x86,
     a_indirectDpX: 0x87,
@@ -264,6 +231,86 @@ const memOpTables: Record<
   },
 };
 
+type BranchOpcode = "BPL" | "BMI" | "BVC" | "BVS" | "BCC" | "BCS" | "BNE" | "BEQ" | "BRA";
+const branchOpcodes: Record<BranchOpcode, number> = {
+  BPL: 0x10,
+  BMI: 0x30,
+  BVC: 0x50,
+  BVS: 0x70,
+  BCC: 0x90,
+  BCS: 0xb0,
+  BNE: 0xd0,
+  BEQ: 0xf0,
+  BRA: 0x2f,
+};
+
+type BitSetClearOpcode =
+  | "SET0" | "SET1" | "SET2" | "SET3" | "SET4" | "SET5" | "SET6" | "SET7"
+  | "CLR0" | "CLR1" | "CLR2" | "CLR3" | "CLR4" | "CLR5" | "CLR6" | "CLR7";
+const bitSetClearOpcodes: Record<BitSetClearOpcode, number> = {
+  SET0: 0x02,
+  SET1: 0x22,
+  SET2: 0x42,
+  SET3: 0x62,
+  SET4: 0x82,
+  SET5: 0xA2,
+  SET6: 0xC2,
+  SET7: 0xE2,
+  CLR0: 0x12,
+  CLR1: 0x32,
+  CLR2: 0x52,
+  CLR3: 0x72,
+  CLR4: 0x92,
+  CLR5: 0xB2,
+  CLR6: 0xD2,
+  CLR7: 0xF2,
+};
+
+type BitBranchOpcode =
+  | "BBC0" | "BBC1" | "BBC2" | "BBC3" | "BBC4" | "BBC5" | "BBC6" | "BBC7"
+  | "BBS0" | "BBS1" | "BBS2" | "BBS3" | "BBS4" | "BBS5" | "BBS6" | "BBS7";
+const bitBranchOpcodes: Record<BitBranchOpcode, number> = {
+  BBC0: 0x13,
+  BBC1: 0x33,
+  BBC2: 0x53,
+  BBC3: 0x73,
+  BBC4: 0x93,
+  BBC5: 0xB3,
+  BBC6: 0xD3,
+  BBC7: 0xF3,
+  BBS0: 0x03,
+  BBS1: 0x23,
+  BBS2: 0x43,
+  BBS3: 0x63,
+  BBS4: 0x83,
+  BBS5: 0xA3,
+  BBS6: 0xC3,
+  BBS7: 0xE3,
+};
+
+type WordOpWithYaLeft = "CMPW" | "ADDW" | "SUBW" | "MOVW";
+const wordOpsWithYaLeft: Record<WordOpWithYaLeft, number> = {
+  CMPW: 0x5a,
+  ADDW: 0x7a,
+  SUBW: 0x9a,
+  MOVW: 0xba,
+};
+
+const wordOpsWithYaRight: Record<"MOVW", number> = {
+  MOVW: 0xda,
+};
+
+const singleWordOps: Record<"DECW" | "INCW", number> = {
+  DECW: 0x1a,
+  INCW: 0x3a,
+};
+
+const bit1Opcodes: Record<"OR1" | "AND1" | "EOR1", number> = {
+  OR1: 0x0A,
+  AND1: 0x4A,
+  EOR1: 0x8A,
+};
+
 /**
  * Additional instructions share similar addressing forms but have unique opcodes,
  * e.g. "(X),(Y)" or "$dp,#$imm", etc. However, some instructions (like "CMP X,#imm")
@@ -282,11 +329,23 @@ export class ArchSPC700 implements ArchitectureEncoder {
   }
 
   estimateInstruction(instruction: LoweredInstruction): number {
-    return this.estimateSize(instruction.words);
+    const loweredOperands = instruction.loweredOperands ?? [];
+    return this.estimateResolvedInstruction(
+      instruction.mnemonic,
+      instruction.operandText,
+      instruction.loweredOperand,
+      loweredOperands,
+    );
   }
 
   encodeInstruction(instruction: LoweredInstruction): boolean {
-    return this.encode(instruction.words);
+    const loweredOperands = instruction.loweredOperands ?? [];
+    return this.encodeResolvedInstruction(
+      instruction.mnemonic,
+      instruction.operands,
+      instruction.loweredOperand,
+      loweredOperands,
+    );
   }
 
   estimateSize(words: string[]): number {
@@ -294,16 +353,27 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return 0;
     }
 
+    return this.estimateResolvedInstruction(words[0], words.slice(1).join(" "));
+  }
+
+  estimateResolvedInstruction(
+    mnemonic: string,
+    operandText: string,
+    loweredOperand?: LoweredOperand,
+    loweredOperands: LoweredOperand[] = [],
+  ): number {
     let size = 1;
-    if (words.length > 1) {
-      const operand = words.slice(1).join(" ");
-      if (operand.startsWith("#")) {
+    const opcode = mnemonic.toUpperCase();
+    const firstLowered = loweredOperands[0] ?? loweredOperand;
+    const expandedOperand = firstLowered?.expanded ?? operandText;
+    if (expandedOperand) {
+      if (expandedOperand.startsWith("#")) {
         size = 2;
-      } else if (operand.includes("$") || operand.includes(",")) {
+      } else if (expandedOperand.includes("$") || loweredOperands.length > 1 || expandedOperand.includes(",")) {
         size = 3;
       }
     }
-    if (["JSL", "JML"].includes(words[0].toUpperCase())) {
+    if (["JSL", "JML"].includes(opcode)) {
       size = 4;
     }
     return size;
@@ -314,10 +384,24 @@ export class ArchSPC700 implements ArchitectureEncoder {
     if (words.length === 0) {
       return false;
     }
-
-    // Extract the opcode and raw operand text.
-    let opcode = words[0];
+    const opcode = words[0];
     const rawOperand = words.slice(1).join(" ").trim();
+    const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperands = parsedOperands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
+    return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
+  }
+
+  encodeResolvedInstruction(
+    mnemonic: string,
+    operands: string[],
+    loweredOperand?: LoweredOperand,
+    loweredOperands: LoweredOperand[] = [],
+  ): boolean {
+    // Extract the opcode and raw operand text.
+    let opcode = mnemonic;
+    const operand = loweredOperand?.expanded ?? "";
+    const normalizedOperands = operands.map((operandText, index) => loweredOperands[index]?.expanded ?? operandText).filter((value) => value !== "");
 
     // Check for an explicit length suffix (.b, .w, .l).
     let forcedLen: number | null = null;
@@ -329,10 +413,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
       opcode = opcode.substring(0, dotIndex);
     }
     opcode = opcode.toUpperCase().trim();
-
-    // Expand inner math/label expressions while preserving addressing markers.
-    const { expanded: operand, length: operandLength } = this.assembler.operandResolver.expandOperand(rawOperand);
-    debug("asblock_spc700", { opcode, operand, operandLength, forcedLen, explicitlen });
+    debug("asblock_spc700", { opcode, operand, forcedLen, explicitlen });
 
     // 1) Single word no-opcode or built-ins? E.g. NOP, BRK, RET, etc.
     if (this.handleSingleNoOperand(opcode)) {
@@ -340,13 +421,13 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
 
     // 2) We'll see if it's an instruction with one or two operands, e.g. "ADC A,(X)", "MOV $12,#$34", etc.
-    // Break the line by commas (at top level).
-    const commaSplit = this.splitTopLevelComma(operand);
-    if (commaSplit.length === 1) {
+    const firstLowered = loweredOperands[0];
+    const secondLowered = loweredOperands[1];
+    if (normalizedOperands.length === 1) {
       // e.g. "BRA label", etc.
-      return this.handleOneOperand(opcode, commaSplit[0], forcedLen, explicitlen);
-    } else if (commaSplit.length === 2) {
-      return this.handleTwoOperands(opcode, commaSplit[0], commaSplit[1], forcedLen, explicitlen);
+      return this.handleOneOperand(opcode, normalizedOperands[0], forcedLen, explicitlen, firstLowered);
+    } else if (normalizedOperands.length === 2) {
+      return this.handleTwoOperands(opcode, normalizedOperands[0], normalizedOperands[1], forcedLen, explicitlen, firstLowered, secondLowered);
     }
 
     return false;
@@ -392,7 +473,9 @@ export class ArchSPC700 implements ArchitectureEncoder {
   handleSingleNoOperand(opcode: string): boolean {
     debug("handleSingleNoOperand", opcode);
 
-    const singleByte: Record<string, number> = {
+    type SingleByteOpcode =
+      "NOP" | "BRK" | "RET" | "RETI" | "CLRP" | "SETP" | "CLRC" | "SETC" | "EI" | "DI" | "CLRV" | "NOTC" | "SLEEP" | "STOP" | "XCN";
+    const singleByte: Record<SingleByteOpcode, number> = {
       NOP: 0x00,
       BRK: 0x0f,
       RET: 0x6f,
@@ -410,7 +493,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
       XCN: 0x9f,
     };
 
-    if (opcode in singleByte) {
+    if (hasOwn(singleByte, opcode)) {
       this.assembler.write1(singleByte[opcode]);
       return true;
     }
@@ -426,9 +509,10 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * @param {string} operand - the operand
    * @param {number | null} forcedLen - the forced length
    * @param {boolean} explicitlen - the explicit length
+   * @param {LoweredOperand} loweredOperand - optional lowered metadata
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  handleOneOperand(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean): boolean {
+  handleOneOperand(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean, loweredOperand?: LoweredOperand): boolean {
     debug("handleOneOperand", { opcode, operand, forcedLen, explicitlen });
 
     // 1) check if it's a shift / inc / dec with A or dp, etc.
@@ -437,14 +521,14 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
 
     // 2) handle SETn / CLRn
-    if (opcode.startsWith("SET") || opcode.startsWith("CLR")) {
+    if (hasOwn(bitSetClearOpcodes, opcode)) {
       if (this.handleBitSetClear(opcode, operand)) {
         return true;
       }
     }
 
     // 3) handle branch instructions: BPL, BMI, BVC, BVS, BCC, BCS, BNE, BEQ, BRA
-    if (["BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ", "BRA"].includes(opcode)) {
+    if (hasOwn(branchOpcodes, opcode)) {
       if (this.handleBranch(opcode, operand)) {
         return true;
       }
@@ -462,12 +546,12 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
 
     // 5) handle push/pop instructions with a single operand: e.g. PUSH A => 0x2D
-    if (this.handlePushPop(opcode, operand)) {
+    if (this.handlePushPop(opcode, operand, loweredOperand)) {
       return true;
     }
 
     // 6) handle calls/jumps with single operand (CALL $1234, PCALL $12, JMP $1234, etc.)
-    if (this.handleCallJump(opcode, operand)) {
+    if (this.handleCallJump(opcode, operand, loweredOperand)) {
       return true;
     }
 
@@ -492,13 +576,23 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * @param {string} right - the right operand
    * @param {number | null} forcedLen - the forced length
    * @param {boolean} explicitlen - the explicit length
+   * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
+   * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  handleTwoOperands(opcode: string, left: string, right: string,   forcedLen: number | null, explicitlen: boolean): boolean {
+  handleTwoOperands(
+    opcode: string,
+    left: string,
+    right: string,
+    forcedLen: number | null,
+    explicitlen: boolean,
+    leftLowered?: LoweredOperand,
+    rightLowered?: LoweredOperand,
+  ): boolean {
     debug("handleTwoOperands", { opcode, left, right, forcedLen, explicitlen })
 
     // check BBSn / BBCn
-    if (opcode.startsWith("BBS") || opcode.startsWith("BBC")) {
+    if (hasOwn(bitBranchOpcodes, opcode)) {
       if (this.handleTwoOperandsBitBranch(opcode, left, right)) {
         return true;
       }
@@ -506,19 +600,19 @@ export class ArchSPC700 implements ArchitectureEncoder {
 
     // e.g. "DBNZ Y,Mylabel" => 0xFE FF, "DBNZ $12,Mylabel => 6E 12 FF
     if (opcode === "DBNZ" || opcode === "CBNE") {
-      if (this.handleDbnzCbne(opcode, left, right)) {
+      if (this.handleDbnzCbne(opcode, left, right, leftLowered, rightLowered)) {
         return true;
       }
     }
 
     // 7) handle "CMP X,#$12" or "CMP Y,#$12" or "MOV X,#$12" or "MOV Y,#$12"
     //    or "CMP X,$1234" etc.
-    if (this.handleCmpXyOrMovXy(opcode, [left, right].join(","), forcedLen, explicitlen)) {
+    if (this.handleCmpXyOrMovXy(opcode, [left, right].join(","), forcedLen, explicitlen, leftLowered, rightLowered)) {
       return true;
     }
 
     // 1) Memory instructions like "ADC A,(X)" or "OR A,($12+X)", etc.
-    if (this.handleMemoryInstruction(opcode, left, right, forcedLen, explicitlen)) {
+    if (this.handleMemoryInstruction(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered)) {
       return true;
     }
 
@@ -527,7 +621,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     //    So we probably never get here for shift instructions.
 
     // 3) TSET / TCLR => e.g. "TSET $1234,A" or "TCLR $1234,A"
-    if (this.handleTsetTclr(opcode, left, right)) {
+    if (this.handleTsetTclr(opcode, left, right, rightLowered)) {
       return true;
     }
 
@@ -588,41 +682,19 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // The test code's hex shows: e.g. "CMPW YA,$12 => 5A 12" => just 2 bytes. So we skip absolute addressing.
 
     // 1) If left = "YA" and right = "$dp"
-    if (leftUp === "YA" && /^\$[\da-f]{1,2}$/i.test(right.trim())) {
+    if (leftUp === "YA" && /^\$[\da-f]{1,2}$/i.test(right.trim()) && hasOwn(wordOpsWithYaLeft, upOp)) {
       const dpVal = parseInt(right.replace(/\$/g, ""), 16) & 0xff;
-
-      switch (upOp) {
-        case "CMPW":
-          // => 0x5A dp
-          this.assembler.write1(0x5a);
-          this.assembler.write1(dpVal);
-          return true;
-        case "ADDW":
-          // => 0x7A dp
-          this.assembler.write1(0x7a);
-          this.assembler.write1(dpVal);
-          return true;
-        case "SUBW":
-          // => 0x9A dp
-          this.assembler.write1(0x9a);
-          this.assembler.write1(dpVal);
-          return true;
-        case "MOVW":
-          // => 0xBA dp
-          this.assembler.write1(0xba);
-          this.assembler.write1(dpVal);
-          return true;
-      }
+      this.assembler.write1(wordOpsWithYaLeft[upOp]);
+      this.assembler.write1(dpVal);
+      return true;
     }
 
     // 2) If right = "YA" and left = "$dp" => "MOVW $12,YA => 0xDA 12"
-    if (rightUp === "YA" && /^\$[\da-f]{1,2}$/i.test(left.trim())) {
+    if (rightUp === "YA" && /^\$[\da-f]{1,2}$/i.test(left.trim()) && hasOwn(wordOpsWithYaRight, upOp)) {
       const dpVal = parseInt(left.replace(/\$/g, ""), 16) & 0xff;
-      if (upOp === "MOVW") {
-        this.assembler.write1(0xda);
-        this.assembler.write1(dpVal);
-        return true;
-      }
+      this.assembler.write1(wordOpsWithYaRight[upOp]);
+      this.assembler.write1(dpVal);
+      return true;
     }
 
     return false;
@@ -635,21 +707,31 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * @param {string} right - the right operand
    * @param {number | null} forcedLen - the forced length
    * @param {boolean} explicitlen - the explicit length
+   * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
+   * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  handleMemoryInstruction(opcode: string, left: string, right: string, forcedLen: number | null, explicitlen: boolean): boolean {
+  handleMemoryInstruction(
+    opcode: string,
+    left: string,
+    right: string,
+    forcedLen: number | null,
+    explicitlen: boolean,
+    leftLowered?: LoweredOperand,
+    rightLowered?: LoweredOperand,
+  ): boolean {
     debug("handleMemoryInstruction", { opcode, left, right })
     const opName = opcode.toUpperCase();
-    if (!(opName in memOpTables)) {
+    if (!hasOwn(memOpTables, opName)) {
       debug("handleMemoryInstruction not in table", { opcode, left, right })
       return false;
     }
     const table = memOpTables[opName];
 
     // 1) If left is "A" => we interpret the right side as addressing
-    if (isAccumulator(left)) {
+    if (isAccumulator(left, leftLowered)) {
       debug("handleMemoryInstruction left is A", { opcode, left, right })
-      const modeInfo = this.classifySpc700Addressing(right);
+      const modeInfo = this.classifySpc700Addressing(right, rightLowered);
       const addr = modeInfo.val;
       const mode = modeInfo.mode;
 
@@ -724,16 +806,17 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
 
     // 2) If left is "(X)" and right is "(Y)" => xy_indirect
-    if (isParenX(left) && isParenY(right)) {
+    if (isParenX(left, leftLowered) && isParenY(right, rightLowered)) {
       this.assembler.write1(table.xy_indirect);
       return true;
     }
 
     // 3) If left is "dp" or "abs" and right is "#imm" => dp_imm
-    if (this.isDpOrAbs(left) && right.startsWith("#")) {
+    if (this.isDpOrAbs(left) && (rightLowered?.immediate ?? right.startsWith("#"))) {
       this.assembler.write1(table.dp_imm);
       // immediate then dp:
-      const immVal = parseInt(right.replace(/[^\dA-Fa-f]/g, ""), 16) & 0xff;
+      const immSource = rightLowered?.baseExpression ?? right;
+      const immVal = this.assembler.operandResolver.getnum(immSource) & 0xff;
       this.assembler.write1(immVal);
       const leftVal = parseInt(left.replace(/\$/g, ""), 16) & 0xff;
       this.assembler.write1(leftVal);
@@ -771,9 +854,10 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * Classify operand for "A,(X)" style memory instructions,
    * returning an address mode name that matches e.g. a_indirectX, a_dp, a_abs, etc.
    * @param {string} operand - the operand
+   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
    * @returns {{ mode: string; val: number }} the address mode and value
    */
-  classifySpc700Addressing(operand: string): {
+  classifySpc700Addressing(operand: string, loweredOperand?: LoweredOperand): {
     mode:
       | "indirectX"
       | "indirectDpX"
@@ -787,6 +871,27 @@ export class ArchSPC700 implements ArchitectureEncoder {
     val: number;
   } {
     debug("classifySpc700Addressing", operand)
+    const resolveValue = (value: string): number => {
+      try {
+        return this.assembler.operandResolver.getnum(value) & 0xffff;
+      } catch {
+        return parseInt(value.replace(/\$/g, ""), 16) & 0xffff;
+      }
+    };
+
+    if (loweredOperand?.mode === "registerIndirect" && loweredOperand.registerName?.toUpperCase() === "X") {
+      return { mode: "indirectX", val: 0 };
+    }
+    if (loweredOperand?.mode === "directPageIndexedXIndirect" && loweredOperand.baseExpression) {
+      return { mode: "indirectDpX", val: resolveValue(loweredOperand.baseExpression) & 0xff };
+    }
+    if (loweredOperand?.immediate) {
+      return { mode: "imm", val: resolveValue(loweredOperand.baseExpression ?? loweredOperand.expanded) & 0xff };
+    }
+    if (loweredOperand?.mode === "directPageIndirectIndexedY" && loweredOperand.baseExpression) {
+      return { mode: "indirectDpY", val: resolveValue(loweredOperand.baseExpression) & 0xff };
+    }
+
     const trimmed = operand.trim().toUpperCase();
     // (X)
     if (trimmed === "(X)") {
@@ -997,31 +1102,14 @@ export class ArchSPC700 implements ArchitectureEncoder {
    */
   handleBitSetClear(opcode: string, operand: string): boolean {
     debug("handleBitSetClear", { opcode, operand })
-    // e.g. "SET0 $12" => 0x02 12
-    // The pattern is SETn => 0x02 + (n<<5). Actually the test shows "SET0 $12 => 0x02 12," "SET1 $12 => 0x22 12," etc.
-    // That means for n=0 => 0x02, n=1 => 0x22, n=2=>0x42, n=3=>0x62, n=4=>0x82, n=5=>0xA2, n=6=>0xC2, n=7=>0xE2
-    const setMatch = opcode.match(/^set([0-7])$/i);
-    if (setMatch) {
-      const bit = parseInt(setMatch[1], 10);
-      const code = 0x02 | (bit << 5);
-      const val = parseInt(operand.replace(/\$/g, ""), 16) & 0xff;
-      this.assembler.write1(code);
-      this.assembler.write1(val);
-      return true;
+    const normalizedOpcode = opcode.toUpperCase();
+    if (!hasOwn(bitSetClearOpcodes, normalizedOpcode)) {
+      return false;
     }
-
-    // e.g. CLR0 => 0x12, CLR1 => 0x32, ...
-    const clrMatch = opcode.match(/^clr([0-7])$/i);
-    if (clrMatch) {
-      const bit = parseInt(clrMatch[1], 10);
-      const code = 0x12 | (bit << 5);
-      const val = parseInt(operand.replace(/\$/g, ""), 16) & 0xff;
-      this.assembler.write1(code);
-      this.assembler.write1(val);
-      return true;
-    }
-
-    return false;
+    const val = parseInt(operand.replace(/\$/g, ""), 16) & 0xff;
+    this.assembler.write1(bitSetClearOpcodes[normalizedOpcode]);
+    this.assembler.write1(val);
+    return true;
   }
 
   /**
@@ -1032,22 +1120,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
    */
   handleBranch(opcode: string, operand: string): boolean {
     debug("handleBranch", { opcode, operand })
-    const branchMap: Record<string, number> = {
-      BPL: 0x10,
-      BMI: 0x30,
-      BVC: 0x50,
-      BVS: 0x70,
-      BCC: 0x90,
-      BCS: 0xb0,
-      BNE: 0xd0,
-      BEQ: 0xf0,
-      BRA: 0x2f,
-    };
-    if (!(opcode in branchMap)) {
+    if (!hasOwn(branchOpcodes, opcode)) {
       return false;
     }
 
-    const opByte = branchMap[opcode];
+    const opByte = branchOpcodes[opcode];
     this.assembler.write1(opByte);
 
     // Calculate relative branch offset:
@@ -1089,33 +1166,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
    */
   handleTwoOperandsBitBranch(opcode: string, left: string, right: string): boolean {
     debug("handleTwoOperandsBitBranch", { opcode, left, right })
-    // Only handle the bit test and branch instructions
-    // Format: BBCn $dp,Mylabel or BBSn $dp,Mylabel
-    const bitBranchRegex = /^(bbc|bbs)([0-7])$/i;
-    const match = opcode.match(bitBranchRegex);
-    if (!match) {
+    const bitOpcode = opcode.toUpperCase();
+    if (!hasOwn(bitBranchOpcodes, bitOpcode)) {
       debug("handleTwoOperandsBitBranch no match", { opcode, left, right })
       return false;
     }
-
-    const bitBranchMap: Record<string, number> = {
-      BBC0: 0x13,
-      BBC1: 0x33,
-      BBC2: 0x53,
-      BBC3: 0x73,
-      BBC4: 0x93,
-      BBC5: 0xB3,
-      BBC6: 0xD3,
-      BBC7: 0xF3,
-      BBS0: 0x03,
-      BBS1: 0x23,
-      BBS2: 0x43,
-      BBS3: 0x63,
-      BBS4: 0x83,
-      BBS5: 0xA3,
-      BBS6: 0xC3,
-      BBS7: 0xE3
-    };
 
     // Parse the direct page value from the first operand
     const dpVal = parseInt(left.replace(/\$/g, ""), 16) & 0xff;
@@ -1130,8 +1185,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // 3. The offset must fit in a signed byte (-128 to +127)
 
     // Write the opcode and direct page value
-    debug("handleTwoOperandsBitBranch =", bitBranchMap[opcode.toUpperCase()].toString(16))
-    this.assembler.write1(bitBranchMap[opcode.toUpperCase()]);
+    debug("handleTwoOperandsBitBranch =", bitBranchOpcodes[bitOpcode].toString(16))
+    this.assembler.write1(bitBranchOpcodes[bitOpcode]);
     debug("handleTwoOperandsBitBranch =", dpVal.toString(16))
     this.assembler.write1(dpVal);
 
@@ -1167,9 +1222,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * @param {string} opcode - the opcode
    * @param {string} left - the left operand
    * @param {string} right - the right operand
+   * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
+   * @param {LoweredOperand} _rightLowered - optional lowered metadata for the right operand
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  handleDbnzCbne(opcode: string, left: string, right: string): boolean {
+  handleDbnzCbne(opcode: string, left: string, right: string, leftLowered?: LoweredOperand, _rightLowered?: LoweredOperand): boolean {
     debug("handleDbnzCbne", { opcode, left, right })
 
     // Calculate relative offset for the branch target
@@ -1183,7 +1240,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     offset &= 0xff;
 
     if (opcode.toUpperCase() === "DBNZ") {
-      if (isRegisterY(left)) {
+      if (isRegisterY(left, leftLowered)) {
         // DBNZ Y, label => 0xFE offset
         this.assembler.write1(0xfe);
         // +1 because the branch instruction is 1 byte and we already wrote the opcode
@@ -1202,7 +1259,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // CBNE => if left= $dp+X => 0xDE dp offset, else $dp => 0x2E dp offset
     if (opcode.toUpperCase() === "CBNE") {
       const upper = left.toUpperCase();
-      if (upper.endsWith("+X")) {
+      if (leftLowered?.mode === "directPageIndexedX" || upper.endsWith("+X")) {
         // e.g. "CBNE $12+X,label => DE 12 offset"
         const base = upper.replace(/\+X$/, "").trim();
         const val = parseInt(base.replace(/\$/g, ""), 16) & 0xff;
@@ -1227,17 +1284,19 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * handle push/pop with single operand => e.g. PUSH A => 0x2D, PUSH X => 0x4D, etc.
    * @param {string} opcode - the opcode
    * @param {string} operand - the operand
+   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  handlePushPop(opcode: string, operand: string): boolean {
+  handlePushPop(opcode: string, operand: string, loweredOperand?: LoweredOperand): boolean {
     debug("handlePushPop", { opcode, operand })
-    const pushMap: Record<string, number> = {
+    type PushPopRegister = "P" | "A" | "X" | "Y";
+    const pushMap: Record<PushPopRegister, number> = {
       P: 0x0d,
       A: 0x2d,
       X: 0x4d,
       Y: 0x6d,
     };
-    const popMap: Record<string, number> = {
+    const popMap: Record<PushPopRegister, number> = {
       P: 0x8e,
       A: 0xae,
       X: 0xce,
@@ -1245,15 +1304,15 @@ export class ArchSPC700 implements ArchitectureEncoder {
     };
 
     if (opcode.toUpperCase() === "PUSH") {
-      const key = operand.toUpperCase();
-      if (key in pushMap) {
+      const key = (loweredOperand?.registerName ?? operand).toUpperCase();
+      if (hasOwn(pushMap, key)) {
         this.assembler.write1(pushMap[key]);
         return true;
       }
     }
     if (opcode.toUpperCase() === "POP") {
-      const key = operand.toUpperCase();
-      if (key in popMap) {
+      const key = (loweredOperand?.registerName ?? operand).toUpperCase();
+      if (hasOwn(popMap, key)) {
         this.assembler.write1(popMap[key]);
         return true;
       }
@@ -1266,9 +1325,10 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * "JMP $1234", "JMP ($1234+X)"
    * @param {string} opcode - the opcode
    * @param {string} operand - the operand
+   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  handleCallJump(opcode: string, operand: string): boolean {
+  handleCallJump(opcode: string, operand: string, loweredOperand?: LoweredOperand): boolean {
     debug("handleCallJump", { opcode, operand })
     const upper = opcode.toUpperCase();
     const resolveOperand = (value: string): number => {
@@ -1296,11 +1356,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const trimmed = operand.trim().toUpperCase();
       debug("handleCallJump JMP trimmed", trimmed)
       // if operand is "($1234+X)" => 1F lo hi, else => 5F lo hi
-      if (trimmed.startsWith("(") && trimmed.endsWith("+X)")) {
+      if (loweredOperand?.mode === "directPageIndexedXIndirect" || (trimmed.startsWith("(") && trimmed.endsWith("+X)"))) {
         // => 0x1f
         this.assembler.write1(0x1f);
         // Extract value between ( and +X)
-        const inner = operand.trim().slice(1, operand.trim().length - 3).trim();
+        const inner = loweredOperand?.baseExpression ?? operand.trim().slice(1, operand.trim().length - 3).trim();
         const val = resolveOperand(inner);
         this.assembler.write2(val);
         return true;
@@ -1329,9 +1389,18 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * @param {string} operand - the operand
    * @param {number | null} forcedLen - the forced length
    * @param {boolean} explicitlen - whether the length is explicit
+   * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
+   * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  handleCmpXyOrMovXy(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean): boolean {
+  handleCmpXyOrMovXy(
+    opcode: string,
+    operand: string,
+    forcedLen: number | null,
+    explicitlen: boolean,
+    leftLowered?: LoweredOperand,
+    rightLowered?: LoweredOperand,
+  ): boolean {
     debug("handleCmpXyOrMovXy", { opcode, operand, forcedLen, explicitlen })
     const upper = opcode.toUpperCase();
 
@@ -1345,10 +1414,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
       // from test: "CMP X,#$12 => C8 12" / "CMP X,$1234 => 1E 34 12" / "CMP X,$12 => 3E 12"
       //            "CMP Y,#$12 => AD 12" / "CMP Y,$1234 => 5E 34 12" / "CMP Y,$12 => 7E 12"
       const upOp = operand.toUpperCase();
-      if (upOp.startsWith("X,")) {
-        // e.g. "X,#$12"
-        const tail = upOp.slice(2).trim();
-        if (tail.startsWith("#")) {
+      const leftOperandIsX = leftLowered ? isRegisterX("", leftLowered) : upOp.startsWith("X,");
+      const leftOperandIsY = leftLowered ? isRegisterY("", leftLowered) : upOp.startsWith("Y,");
+      const tail = rightLowered ? rightLowered.expanded.toUpperCase() : (leftOperandIsX || leftOperandIsY ? upOp.slice(2).trim() : "");
+      if (leftOperandIsX) {
+        if (rightLowered?.immediate ?? tail.startsWith("#")) {
           // => 0xC8
           this.assembler.write1(0xc8);
           const imm = parseInt(tail.replace(/[^\da-f]/gi, ""), 16) & 0xff;
@@ -1379,10 +1449,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
           return true;
         }
       }
-      if (upOp.startsWith("Y,")) {
-        // e.g. "Y,#$12"
-        const tail = upOp.slice(2).trim();
-        if (tail.startsWith("#")) {
+      if (leftOperandIsY) {
+        if (rightLowered?.immediate ?? tail.startsWith("#")) {
           // => 0xAD
           this.assembler.write1(0xad);
           const imm = parseInt(tail.replace(/[^\da-f]/gi, ""), 16) & 0xff;
@@ -1419,17 +1487,23 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // also "MOV A,#$12 => E8 12" is in handleMemoryInstruction. We keep it consistent if not matched there?
     if (upper === "MOV") {
       const upOp = operand.toUpperCase();
-      if (upOp.startsWith("X,#")) {
+      const leftOperandIsX = leftLowered ? isRegisterX("", leftLowered) : upOp.startsWith("X,#");
+      const leftOperandIsY = leftLowered ? isRegisterY("", leftLowered) : upOp.startsWith("Y,#");
+      if (leftOperandIsX && (rightLowered?.immediate ?? upOp.startsWith("X,#"))) {
         // => 0xCD imm
         this.assembler.write1(0xcd);
-        const imm = parseInt(upOp.replace(/[^\da-f]/gi, ""), 16) & 0xff;
+        const imm = rightLowered?.baseExpression
+          ? this.assembler.operandResolver.getnum(rightLowered.baseExpression) & 0xff
+          : parseInt(upOp.replace(/[^\da-f]/gi, ""), 16) & 0xff;
         this.assembler.write1(imm);
         return true;
       }
-      if (upOp.startsWith("Y,#")) {
+      if (leftOperandIsY && (rightLowered?.immediate ?? upOp.startsWith("Y,#"))) {
         // => 0x8D imm
         this.assembler.write1(0x8d);
-        const imm = parseInt(upOp.replace(/[^\da-f]/gi, ""), 16) & 0xff;
+        const imm = rightLowered?.baseExpression
+          ? this.assembler.operandResolver.getnum(rightLowered.baseExpression) & 0xff
+          : parseInt(upOp.replace(/[^\da-f]/gi, ""), 16) & 0xff;
         this.assembler.write1(imm);
         return true;
       }
@@ -1443,9 +1517,10 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * @param {string} opcode - the opcode
    * @param {string} left - the left operand
    * @param {string} right - the right operand
+   * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  handleTsetTclr(opcode: string, left: string, right: string): boolean {
+  handleTsetTclr(opcode: string, left: string, right: string, rightLowered?: LoweredOperand): boolean {
     debug("handleTsetTclr", { opcode, left, right })
     const up = opcode.toUpperCase();
     if (up !== "TSET" && up !== "TCLR") {
@@ -1456,7 +1531,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // TSET $1234,a => 0x0E 34 12
     // TCLR $1234,a => 0x4E 34 12
     // That means the difference is 0x0E vs 0x4E. Then we write lo, hi. The second operand must be "A".
-    if (right.toUpperCase() !== "A") {
+    if (!isAccumulator(right, rightLowered)) {
       return false;
     }
 
@@ -1523,7 +1598,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // mov.b $0000, Y => CB 00
     // mov.w $0000, Y => CC 00 00
 
-    const memoryMoves = {
+    type MovMemoryKey = "A,$" | "A,$+X" | "X,$" | "Y,$" | "$,A" | "$+X,A" | "$,X" | "$,Y";
+    const memoryMoves: Record<MovMemoryKey, { byte: number; word: number }> = {
       "A,$": { byte: 0xE4, word: 0xE5 },
       "A,$+X": { byte: 0xF4, word: 0xF5 },
       "X,$": { byte: 0xF8, word: 0xE9 },
@@ -1535,30 +1611,31 @@ export class ArchSPC700 implements ArchitectureEncoder {
     };
 
     // Parse the operands into a key format
-    let key = "";
+    let key: MovMemoryKey | null = null;
     if (/^\$[\da-f]+$/i.test(left)) {
-      key = "$," + right.toUpperCase();
+      key = `$,${right.toUpperCase()}` as MovMemoryKey;
     } else if (/^\$[\da-f]+\+x$/i.test(left)) {
-      key = "$+X," + right.toUpperCase();
+      key = `$+X,${right.toUpperCase()}` as MovMemoryKey;
     } else if (/^\$[\da-f]+$/i.test(right)) {
-      key = left.toUpperCase() + ",$";
+      key = `${left.toUpperCase()},$` as MovMemoryKey;
     } else if (/^\$[\da-f]+\+x$/i.test(right)) {
-      key = left.toUpperCase() + ",$+X";
+      key = `${left.toUpperCase()},$+X` as MovMemoryKey;
     }
 
-    if (key && key in memoryMoves) {
+    if (key && hasOwn(memoryMoves, key)) {
       // Extract the value from whichever operand contains the $ address
       const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
       const match = /\$([^+]+)/.exec(operandWithAddr);
       if (!match) return false;
 
       const val = parseInt(match[1], 16);
+      const mode = memoryMoves[key];
       const opcode = explicitlen ?
-        (forcedLen === 1 ? memoryMoves[key].byte : memoryMoves[key].word) :
-        (val <= 0xff ? memoryMoves[key].byte : memoryMoves[key].word);
+        (forcedLen === 1 ? mode.byte : mode.word) :
+        (val <= 0xff ? mode.byte : mode.word);
 
       this.assembler.write1(opcode);
-      if (opcode === memoryMoves[key].word) {
+      if (opcode === mode.word) {
         this.assembler.write2(val);
       } else {
         this.assembler.write1(val & 0xff);
@@ -1826,15 +1903,6 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // We'll unify the pattern:
     //   OR1 C,$1234 => 0x0A 34 12
     //   OR1 C,!$1234 => 0x2A 34 12  (the difference is 0x20 in the opcode if there's a '!'?)
-    // We'll define a small table:
-    const tableBit1: Record<
-      string,
-      { base: number; invertBit?: boolean; hasC?: boolean }
-    > = {
-      OR1: { base: 0x0A },
-      AND1: { base: 0x4A },
-      EOR1: { base: 0x8A },
-    };
     // "OR1 C,$1234" => write1(0x0A?), then lo, hi
     // "OR1 C,!$1234 => 0x2A => base+0x20
     // We parse if left= "C" or right= "C" ?
@@ -1881,15 +1949,14 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return true;
     }
 
-    const found = tableBit1[up];
-    if (!found) {
+    if (!hasOwn(bit1Opcodes, up)) {
       return false;
     }
     // e.g. "OR1 C,$1234" => base=0x0A, if left= "C", right= "$1234" => write(0x0A)
     // if we see "OR1 C,!$1234 => 0x2A => base+0x20
     const leftUp = left.trim().toUpperCase();
     const rightUp = right.trim().toUpperCase();
-    let baseOpcode = found.base;
+    let baseOpcode = bit1Opcodes[up];
     let val: number;
     let hasExclamation = false;
 
@@ -1995,13 +2062,9 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // but the test code lumps it as "CMPW YA,$12" => we can parse it as "one operand with a comma?" The code uses top-level comma splitting though => "YA,$12" => two.
     // We'll do single operand for DECW, INCW only.
     const up = opcode.toUpperCase();
-    if (up === "DECW" || up === "INCW") {
+    if (hasOwn(singleWordOps, up)) {
       const val = parseInt(operand.replace(/\$/g, ""), 16) & 0xff;
-      if (up === "DECW") {
-        this.assembler.write1(0x1a);
-      } else {
-        this.assembler.write1(0x3a);
-      }
+      this.assembler.write1(singleWordOps[up]);
       this.assembler.write1(val);
       return true;
     }

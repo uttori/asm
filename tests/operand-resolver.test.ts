@@ -159,3 +159,28 @@ test("tryResolveLabelInOperand - forwards direct lookups to resolveLabel", t => 
   t.is(resolver.tryResolveLabelInOperand("test_label"), "$1234");
   t.true(resolveLabel.calledWithExactly("test_label", false));
 });
+
+test("lowerOperand - returns typed lowered operand metadata", t => {
+  const resolver = createResolver({
+    resolveDefines: (input) => input.replace("!IMM", "$12"),
+  });
+
+  const lowered = resolver.lowerOperand("#!IMM");
+  t.is(lowered.raw, "#!IMM");
+  t.is(lowered.expanded, "#$12");
+  t.is(lowered.length, 1);
+  t.is(lowered.indexRegister, undefined);
+  t.true(lowered.immediate);
+  t.false(lowered.indirect);
+});
+
+test("lowerOperand - classifies addressing mode and base expression", t => {
+  const resolver = createResolver();
+  const loweredIndexed = resolver.lowerOperand("$1234,x");
+  t.is(loweredIndexed.mode, "absoluteIndexedX");
+  t.is(loweredIndexed.baseExpression, "$1234");
+
+  const loweredStack = resolver.lowerOperand("$12,s");
+  t.is(loweredStack.mode, "stackRelative");
+  t.is(loweredStack.baseExpression, "$12");
+});

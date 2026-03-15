@@ -2526,7 +2526,7 @@ export class Assembler implements AssemblySession {
       debug("resolvedefines input is empty, returning empty string");
       return "";
     }
-    debug("resolvedefines defines", this.defines);
+    // debug("resolvedefines defines", this.defines);
     let result = "";
     let index = 0;
 
@@ -3488,12 +3488,16 @@ export class Assembler implements AssemblySession {
     const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
     const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
     const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
+    const loweredOperands = operands.map((operand) => this.operandResolver.lowerOperand(operand));
+    const loweredOperand = this.operandResolver.lowerOperand(operandText);
 
     return {
       kind: "instruction",
       mnemonic,
       operandText,
       operands,
+      loweredOperands,
+      loweredOperand,
       words: command.words,
       sourceFile: command.source.file,
       sourceLine: command.source.line,

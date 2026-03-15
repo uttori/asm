@@ -1,5 +1,5 @@
 import type { ExpressionHost } from "./architecture-types.js";
-import type { ExpressionNode } from "./ir/expression-node.js";
+import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
 export declare class MathCore {
     host?: ExpressionHost;
     math_round: boolean;
@@ -39,14 +39,14 @@ export declare class MathCore {
      * @returns {number} The numeric result.
      */
     evaluateExpressionNode(expression: ExpressionNode): number;
-    private evaluateCallArgument;
-    private evaluateUnaryExpressionNode;
-    private evaluateBinaryExpressionNode;
-    private resolveNumericIdentifierArgument;
-    private evaluateReferenceExpressionNode;
-    private renderReference;
-    private isStringArgument;
-    private parseLiteralNode;
+    evaluateCallArgument(functionName: string, argumentIndex: number, argument: ExpressionNode): number | string;
+    evaluateUnaryExpressionNode(operator: "<:" | "~" | "-" | "+", argument: ExpressionNode): number;
+    evaluateBinaryExpressionNode(operator: keyof MathCore["operators"], left: ExpressionNode, right: ExpressionNode): number;
+    resolveNumericIdentifierArgument(identifier: string): number | string;
+    evaluateReferenceExpressionNode(expression: ReferenceExpressionNode): number;
+    renderReference(expression: ReferenceExpressionNode): string;
+    isStringArgument(functionName: string, argumentIndex: number): boolean;
+    parseLiteralNode(value: string): number;
     /**
      * Evaluates a mathematical expression.
      * This replaces the C++ `eval` function.
@@ -118,6 +118,6 @@ export declare class MathCore {
     numArg: (funcName: string, arg: number | string) => number;
     strArg: (funcName: string, arg: number | string) => string;
     parseFunctionDefinition: () => void;
-    private getHost;
+    getHost(): ExpressionHost;
 }
 //# sourceMappingURL=mathcore.d.ts.map

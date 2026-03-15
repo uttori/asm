@@ -43,6 +43,74 @@ test("Arch65816.estimateSize uses architecture-aware sizing", t => {
   t.is(arch.estimateSize(["LDA", "#$1000"]), 3, "Immediate word operands reserve 3 bytes");
 });
 
+test("Arch65816.estimateInstruction consumes lowered operand metadata", t => {
+  const { arch } = createArch65816();
+  const size = arch.estimateInstruction({
+    kind: "instruction",
+    mnemonic: "LDA",
+    operandText: "#!IMM",
+    operands: ["#!IMM"],
+    loweredOperands: [{
+      raw: "#!IMM",
+      expanded: "#$12",
+      length: 1,
+      immediate: true,
+      indirect: false,
+    }],
+    loweredOperand: {
+      raw: "#!IMM",
+      expanded: "#$12",
+      length: 1,
+      immediate: true,
+      indirect: false,
+    },
+    words: ["LDA", "#!IMM"],
+    sourceFile: "fixture.asm",
+    sourceLine: 1,
+    sourceRaw: "LDA #!IMM",
+  });
+  t.is(size, 2);
+});
+
+test("Arch65816.encodeInstruction routes lowered operands without re-expansion", t => {
+  const { assembler, arch } = createArch65816();
+  const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
+  const memoryStub = sinon.stub(arch, "handleMemoryOperations").returns(true);
+  t.teardown(() => {
+    expandOperandStub.restore();
+    memoryStub.restore();
+  });
+
+  const encoded = arch.encodeInstruction({
+    kind: "instruction",
+    mnemonic: "LDA",
+    operandText: "#!IMM",
+    operands: ["#!IMM"],
+    loweredOperands: [{
+      raw: "#!IMM",
+      expanded: "#$12",
+      length: 1,
+      immediate: true,
+      indirect: false,
+    }],
+    loweredOperand: {
+      raw: "#!IMM",
+      expanded: "#$12",
+      length: 1,
+      immediate: true,
+      indirect: false,
+    },
+    words: ["LDA", "#!IMM"],
+    sourceFile: "fixture.asm",
+    sourceLine: 1,
+    sourceRaw: "LDA #!IMM",
+  });
+
+  t.true(encoded);
+  t.true(memoryStub.calledOnceWithExactly("LDA", "#$12", 1, false, "#!IMM"));
+  t.true(expandOperandStub.notCalled);
+});
+
 test("Arch65816.handleMemoryBitInstructions encodes direct TSB", t => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
@@ -1191,6 +1259,166 @@ test("Arch65816.handleLogicAndCompareOperations handles immediate and routed mod
   t.true(write3Stub.notCalled);
 });
 
+test("Arch65816.handleLogicAndCompareOperations consumes lowered addressing metadata", t => {
+  const { assembler, arch } = createArch65816();
+  const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
+  lowerOperandStub.withArgs("TARGET,x").returns({
+    raw: "TARGET,x",
+    expanded: "TARGET,x",
+    length: 2,
+    indexRegister: "x",
+    immediate: false,
+    indirect: false,
+    mode: "absoluteIndexedX",
+    baseExpression: "TARGET",
+    explicitDirectPage: false,
+    explicitDirectPageIndexedX: false,
+  });
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("TARGET").returns(0x1234);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    lowerOperandStub.restore();
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true((arch as any).handleLogicAndCompareOperations("ORA", "TARGET,x", 2, false));
+  t.true(lowerOperandStub.calledOnceWithExactly("TARGET,x"));
+  t.true(write1Stub.calledOnceWithExactly(0x1D));
+  t.true(write2Stub.calledOnceWithExactly(0x1234));
+});
+
+test("Arch65816.handleArithmeticOperations consumes lowered addressing metadata", t => {
+  const { assembler, arch } = createArch65816();
+  const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
+  lowerOperandStub.withArgs("TARGET,x").returns({
+    raw: "TARGET,x",
+    expanded: "TARGET,x",
+    length: 2,
+    indexRegister: "x",
+    immediate: false,
+    indirect: false,
+    mode: "absoluteIndexedX",
+    baseExpression: "TARGET",
+    explicitDirectPage: false,
+    explicitDirectPageIndexedX: false,
+  });
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("TARGET").returns(0x1234);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    lowerOperandStub.restore();
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleArithmeticOperations("ASL", "TARGET,x", 2, false));
+  t.true(lowerOperandStub.calledOnceWithExactly("TARGET,x"));
+  t.true(write1Stub.calledOnceWithExactly(0x1E));
+  t.true(write2Stub.calledOnceWithExactly(0x1234));
+});
+
+test("Arch65816.handleLoadRegister consumes lowered addressing metadata", t => {
+  const { assembler, arch } = createArch65816();
+  const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
+  lowerOperandStub.withArgs("$1234,y").returns({
+    raw: "$1234,y",
+    expanded: "$1234,y",
+    length: 2,
+    indexRegister: "y",
+    immediate: false,
+    indirect: false,
+    mode: "absoluteIndexedY",
+    baseExpression: "$1234",
+    explicitDirectPage: false,
+    explicitDirectPageIndexedX: false,
+  });
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("$1234").returns(0x1234);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    lowerOperandStub.restore();
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleLoadRegister("LDX", "$1234,y", 2, false));
+  t.true(lowerOperandStub.calledOnceWithExactly("$1234,y"));
+  t.true(write1Stub.calledOnceWithExactly(0xBE));
+  t.true(write2Stub.calledOnceWithExactly(0x1234));
+});
+
+test("Arch65816.handleStoreOperations consumes lowered addressing metadata", t => {
+  const { assembler, arch } = createArch65816();
+  const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
+  lowerOperandStub.withArgs("$1234,x").returns({
+    raw: "$1234,x",
+    expanded: "$1234,x",
+    length: 2,
+    indexRegister: "x",
+    immediate: false,
+    indirect: false,
+    mode: "absoluteIndexedX",
+    baseExpression: "$1234",
+    explicitDirectPage: false,
+    explicitDirectPageIndexedX: false,
+  });
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("$1234").returns(0x1234);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    lowerOperandStub.restore();
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleStoreOperations("STZ", "$1234,x", 2, false));
+  t.true(lowerOperandStub.calledOnceWithExactly("$1234,x"));
+  t.true(write1Stub.calledOnceWithExactly(0x9E));
+  t.true(write2Stub.calledOnceWithExactly(0x1234));
+});
+
+test("Arch65816.handleBitTestOperations consumes lowered addressing metadata", t => {
+  const { assembler, arch } = createArch65816();
+  const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
+  lowerOperandStub.withArgs("$1234,x").returns({
+    raw: "$1234,x",
+    expanded: "$1234,x",
+    length: 2,
+    indexRegister: "x",
+    immediate: false,
+    indirect: false,
+    mode: "absoluteIndexedX",
+    baseExpression: "$1234",
+    explicitDirectPage: false,
+    explicitDirectPageIndexedX: false,
+  });
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("$1234").returns(0x1234);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    lowerOperandStub.restore();
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleBitTestOperations("BIT", "$1234,x", 2, false));
+  t.true(lowerOperandStub.calledOnceWithExactly("$1234,x"));
+  t.true(write1Stub.calledOnceWithExactly(0x3C));
+  t.true(write2Stub.calledOnceWithExactly(0x1234));
+});
+
 test("Arch65816.handleLogicAndCompareOperations supports forced sizes and invalid formats", t => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
@@ -1575,6 +1803,38 @@ test("Arch65816.handleMemoryOperations covers stack-relative and indirect-long m
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x73, undefined, 0xA7, 0x34, 0xF7, 0x56]);
   t.true(write2Stub.notCalled);
   t.true(write3Stub.notCalled);
+});
+
+test("Arch65816.handleMemoryOperations consumes lowered addressing metadata", t => {
+  const { assembler, arch } = createArch65816();
+  const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
+  lowerOperandStub.withArgs("TARGET,x").returns({
+    raw: "TARGET,x",
+    expanded: "TARGET,x",
+    length: 2,
+    indexRegister: "x",
+    immediate: false,
+    indirect: false,
+    mode: "absoluteIndexedX",
+    baseExpression: "TARGET",
+    explicitDirectPage: false,
+    explicitDirectPageIndexedX: false,
+  });
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("TARGET").returns(0x1234);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    lowerOperandStub.restore();
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleMemoryOperations("LDA", "TARGET,x", 2, false, "TARGET,x"));
+  t.true(lowerOperandStub.calledOnceWithExactly("TARGET,x"));
+  t.true(write1Stub.calledOnceWithExactly(0xBD));
+  t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
 test("Arch65816.handleNoOperandOperations writes single and repeated opcodes", t => {

@@ -3,7 +3,7 @@ import { Assembler } from "./assembler.js";
 import path from "path";
 
 class CLI {
-  private assembler: Assembler | null;
+  assembler: Assembler | null;
 
   constructor() {
     this.assembler = null;

@@ -1,5 +1,5 @@
-import type { ExpandedOperand } from "./architecture-types.js";
-import type { ExpressionNode } from "./ir/expression-node.js";
+import type { ExpandedOperand, LoweredOperand } from "./architecture-types.js";
+import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
 export type OperandResolverDependencies = {
     resolveDefines(input: string): string;
     resolveStructLabel(input: string): number;
@@ -10,15 +10,16 @@ export type OperandResolverDependencies = {
     requireStaticLabelLookup(): boolean;
 };
 export declare class OperandResolver {
-    private readonly deps;
+    readonly deps: OperandResolverDependencies;
     constructor(deps: OperandResolverDependencies);
     determineValueLength(value: string | number, forceTwoBytes?: boolean): number;
     isMathExpression(expression: string): boolean;
     tryResolveLabelInOperand(operand: string): string;
     getnum(operand: string | ExpressionNode): number;
-    private getnumFromNode;
-    private resolveReferenceValue;
-    private renderReference;
+    getnumFromNode(operand: ExpressionNode): number;
+    resolveReferenceValue(reference: string): number;
+    renderReference(expression: ReferenceExpressionNode): string;
     expandOperand(operand: string): ExpandedOperand;
+    lowerOperand(operand: string): LoweredOperand;
 }
 //# sourceMappingURL=operand-resolver.d.ts.map

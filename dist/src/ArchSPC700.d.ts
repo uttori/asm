@@ -1,4 +1,4 @@
-import type { ArchitectureEncoder, LoweredInstruction, Spc700Context } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, Spc700Context } from "./architecture-types.js";
 /**
  * Additional instructions share similar addressing forms but have unique opcodes,
  * e.g. "(X),(Y)" or "$dp,#$imm", etc. However, some instructions (like "CMP X,#imm")
@@ -11,7 +11,9 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
     estimateSize(words: string[]): number;
+    estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     asblock_spc700(words: string[]): boolean;
+    encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
      * Splits by commas at top-level, ignoring any parentheses grouping.
      * For spc700 code, we typically do not nest parentheses deeply, so a simpler approach may suffice.
@@ -33,9 +35,10 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * @param {string} operand - the operand
      * @param {number | null} forcedLen - the forced length
      * @param {boolean} explicitlen - the explicit length
+     * @param {LoweredOperand} loweredOperand - optional lowered metadata
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    handleOneOperand(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean): boolean;
+    handleOneOperand(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean, loweredOperand?: LoweredOperand): boolean;
     /**
      * Handle instructions that have exactly two operands, e.g. "ADC A,($12+X)" or "MOV $12,#$34".
      * @param {string} opcode - the opcode
@@ -43,9 +46,11 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * @param {string} right - the right operand
      * @param {number | null} forcedLen - the forced length
      * @param {boolean} explicitlen - the explicit length
+     * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
+     * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    handleTwoOperands(opcode: string, left: string, right: string, forcedLen: number | null, explicitlen: boolean): boolean;
+    handleTwoOperands(opcode: string, left: string, right: string, forcedLen: number | null, explicitlen: boolean, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
      * handleWordOpsTwoOperands: covers
      *   CMPW YA,$12  => 5A dp
@@ -76,9 +81,11 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * @param {string} right - the right operand
      * @param {number | null} forcedLen - the forced length
      * @param {boolean} explicitlen - the explicit length
+     * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
+     * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    handleMemoryInstruction(opcode: string, left: string, right: string, forcedLen: number | null, explicitlen: boolean): boolean;
+    handleMemoryInstruction(opcode: string, left: string, right: string, forcedLen: number | null, explicitlen: boolean, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
      * Writes dp or abs address (1 or 2 bytes) depending on getAddressSize
      * @param {number} value - the value to write
@@ -88,9 +95,10 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * Classify operand for "A,(X)" style memory instructions,
      * returning an address mode name that matches e.g. a_indirectX, a_dp, a_abs, etc.
      * @param {string} operand - the operand
+     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
      * @returns {{ mode: string; val: number }} the address mode and value
      */
-    classifySpc700Addressing(operand: string): {
+    classifySpc700Addressing(operand: string, loweredOperand?: LoweredOperand): {
         mode: "indirectX" | "indirectDpX" | "imm" | "absX" | "dpX" | "absY" | "indirectDpY" | "abs" | "dp";
         val: number;
     };
@@ -136,24 +144,28 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * @param {string} opcode - the opcode
      * @param {string} left - the left operand
      * @param {string} right - the right operand
+     * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
+     * @param {LoweredOperand} _rightLowered - optional lowered metadata for the right operand
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    handleDbnzCbne(opcode: string, left: string, right: string): boolean;
+    handleDbnzCbne(opcode: string, left: string, right: string, leftLowered?: LoweredOperand, _rightLowered?: LoweredOperand): boolean;
     /**
      * handle push/pop with single operand => e.g. PUSH A => 0x2D, PUSH X => 0x4D, etc.
      * @param {string} opcode - the opcode
      * @param {string} operand - the operand
+     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    handlePushPop(opcode: string, operand: string): boolean;
+    handlePushPop(opcode: string, operand: string, loweredOperand?: LoweredOperand): boolean;
     /**
      * handle call/jump instructions with single operand => e.g. "CALL $1234", "PCALL $12"
      * "JMP $1234", "JMP ($1234+X)"
      * @param {string} opcode - the opcode
      * @param {string} operand - the operand
+     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    handleCallJump(opcode: string, operand: string): boolean;
+    handleCallJump(opcode: string, operand: string, loweredOperand?: LoweredOperand): boolean;
     /**
      * handle "CMP X,#$12" or "CMP X,$1234" or "MOV X,#$12" or "MOV Y,#$12" etc.
      * We see from the test code lines like:
@@ -168,17 +180,20 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * @param {string} operand - the operand
      * @param {number | null} forcedLen - the forced length
      * @param {boolean} explicitlen - whether the length is explicit
+     * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
+     * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    handleCmpXyOrMovXy(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean): boolean;
+    handleCmpXyOrMovXy(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
      * TSET / TCLR => e.g. "TSET $1234,A" => 0x0E 34 12
      * @param {string} opcode - the opcode
      * @param {string} left - the left operand
      * @param {string} right - the right operand
+     * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    handleTsetTclr(opcode: string, left: string, right: string): boolean;
+    handleTsetTclr(opcode: string, left: string, right: string, rightLowered?: LoweredOperand): boolean;
     /**
      * handle e.g. "MOV X,A" or "MOV (X+),A" or "MOV $12,#$34".
      * Some are covered by memory instructions if the left side is A.

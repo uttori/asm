@@ -41,9 +41,9 @@ interface FileEntry {
  * should be added here, and then read back during symbol file generation.
  */
 export class AddressToLineMapping {
-  private fileList: FileEntry[];
-  private filenameCrcs: number[];
-  private addrToLineInfo: AddrToLineInfo[];
+  fileList: FileEntry[];
+  filenameCrcs: number[];
+  addrToLineInfo: AddrToLineInfo[];
 
   constructor() {
     this.fileList = [];

@@ -1,4 +1,4 @@
-import type { ArchitectureEncoder, LoweredInstruction, SuperFXContext } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, SuperFXContext } from "./architecture-types.js";
 export declare class ArchSuperFX implements ArchitectureEncoder {
     assembler: SuperFXContext;
     constructor(assembler: SuperFXContext);
@@ -6,12 +6,14 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
     estimateSize(words: string[]): number;
+    estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     /**
      * Processes a SuperFX assembly instruction.
      * @param {string[]} words The tokenized instruction.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     asblock_superfx(words: string[]): boolean;
+    encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
      * Handles single-word (no-operand) opcodes for SuperFX.
      * @param {string} opcode - the opcode
@@ -22,25 +24,31 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      * Handles two-word opcodes (one opcode + one operand).
      * @param {string} opcode - the opcode
      * @param {string} operand - the operand
+     * @param {number} operandLength - the lowered operand length
+     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
-    handleTwoWordOpcode(opcode: string, operand: string): boolean;
+    handleTwoWordOpcode(opcode: string, operand: string, operandLength: number, loweredOperand?: LoweredOperand): boolean;
     /**
      * Handles instructions with a single operand (e.g., "TO R1", "BRA label").
      * @param {string} opcode - the opcode
      * @param {string} operand - the operand
      * @param {number} operandLength - the length of the operand
+     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
-    handleOneOperandOpcode(opcode: string, operand: string, operandLength: number): boolean;
+    handleOneOperandOpcode(opcode: string, operand: string, operandLength: number, loweredOperand?: LoweredOperand): boolean;
     /**
      * Handles instructions with two operands (e.g., MOVE r1, r2).
      * @param {string} opcode - the opcode
      * @param {string} leftOp - the left operand
      * @param {string} rightOp - the right operand
+     * @param {LoweredOperand} leftLowered - optional lowered metadata for left operand
+     * @param {LoweredOperand} rightLowered - optional lowered metadata for right operand
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
-    handleTwoOperandOpcode(opcode: string, leftOp: string, rightOp: string): boolean;
+    handleTwoOperandOpcode(opcode: string, leftOp: string, rightOp: string, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
+    resolveRegister(str: string, lowered: LoweredOperand | undefined, type: "r" | "parr" | "hash"): number | null;
     /**
      * Attempts to parse a register from a string, e.g. "r0", "(r3)", "#3".
      * @param {string} str The operand string.

@@ -7,8 +7,44 @@ export interface ExpandedOperand {
   length: number;
 }
 
+export interface LoweredOperand {
+  mode?: "unknown"
+    | "immediate"
+    | "register"
+    | "registerIndirect"
+    | "registerIndirectAutoIncrement"
+    | "directPageIndexedXIndirect"
+    | "directPageIndirectIndexedY"
+    | "directPageBit"
+    | "absoluteBit"
+    | "absolute"
+    | "absoluteLong"
+    | "absoluteIndexedX"
+    | "absoluteIndexedY"
+    | "absoluteLongIndexedX"
+    | "indexedIndirectX"
+    | "directPageIndirect"
+    | "directPageIndexedX"
+    | "stackRelative"
+    | "stackRelativeIndexedIndirectY"
+    | "indirectLong"
+    | "indirectLongIndexedY"
+    | "indirectIndexedY";
+  baseExpression?: string;
+  registerName?: string;
+  explicitDirectPage?: boolean;
+  explicitDirectPageIndexedX?: boolean;
+  raw: string;
+  expanded: string;
+  length: number;
+  indexRegister?: "x" | "y" | "s";
+  immediate: boolean;
+  indirect: boolean;
+}
+
 export interface OperandResolutionContext {
   expandOperand(operand: string): ExpandedOperand;
+  lowerOperand(operand: string): LoweredOperand;
   getnum(expression: string | ExpressionNode): number;
 }
 
@@ -67,6 +103,8 @@ export interface LoweredInstruction {
   mnemonic: string;
   operandText: string;
   operands: string[];
+  loweredOperands: LoweredOperand[];
+  loweredOperand: LoweredOperand;
   words: string[];
   sourceFile: string;
   sourceLine: number;

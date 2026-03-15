@@ -1,4 +1,4 @@
-import type { ExpandedOperand } from "./architecture-types.js";
+import type { ExpandedOperand, LoweredOperand } from "./architecture-types.js";
 import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
 import { isReferenceExpressionNode, renderExpressionNode, renderReferenceExpressionNode } from "./ir/expression-node.js";
 
@@ -21,14 +21,15 @@ try {
 
 /**
  *
- * @param expression
+ * @param {ExpressionNode} expression The expression to convert to a string.
+ * @returns {string} The string representation of the expression.
  */
 function expressionNodeToString(expression: ExpressionNode): string {
   return renderExpressionNode(expression);
 }
 
 export class OperandResolver {
-  constructor(private readonly deps: OperandResolverDependencies) {}
+  constructor(readonly deps: OperandResolverDependencies) {}
 
   determineValueLength(value: string | number, forceTwoBytes?: boolean): number {
     debug("determineValueLength", value, forceTwoBytes);
@@ -200,7 +201,7 @@ export class OperandResolver {
     }
   }
 
-  private getnumFromNode(operand: ExpressionNode): number {
+  getnumFromNode(operand: ExpressionNode): number {
     if (isReferenceExpressionNode(operand)) {
       if (operand.type === "defineReference") {
         return this.getnum(this.deps.resolveDefines(expressionNodeToString(operand)));
@@ -224,7 +225,7 @@ export class OperandResolver {
     }
   }
 
-  private resolveReferenceValue(reference: string): number {
+  resolveReferenceValue(reference: string): number {
     if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
       try {
         return this.deps.resolveStructLabel(reference);
@@ -235,7 +236,7 @@ export class OperandResolver {
     return this.deps.resolveLabel(reference, false);
   }
 
-  private renderReference(expression: ReferenceExpressionNode): string {
+  renderReference(expression: ReferenceExpressionNode): string {
     return renderReferenceExpressionNode(expression, {
       renderIndex: (node) => this.getnum(node).toString(),
     });
@@ -321,5 +322,107 @@ export class OperandResolver {
     }
 
     return { expanded, length: expectedLength };
+  }
+
+  lowerOperand(operand: string): LoweredOperand {
+    const raw = operand.trim();
+    const { expanded, length } = this.expandOperand(raw);
+    const lowered = expanded.toLowerCase();
+    const indexMatch = expanded.match(/,\s*([sxy])$/i);
+    const indexRegister = indexMatch ? indexMatch[1].toLowerCase() as "x" | "y" | "s" : undefined;
+    const normalizedExpanded = expanded.trim();
+    const normalizedUpper = normalizedExpanded.toUpperCase();
+    const explicitDirectPage = /^\$[\da-f]{1,2}$/i.test(raw);
+    const explicitDirectPageIndexedX = /^\$[\da-f]{1,2},x$/i.test(raw);
+    let mode: LoweredOperand["mode"] = "unknown";
+    let baseExpression = expanded;
+    let registerName: string | undefined;
+
+    const registerOperandMatch = normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
+    const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
+    const registerIndirectAutoIncrementMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/);
+    const directPageIndexedXIndirectMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\+\s*X\s*\)$/i);
+    const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*Y$/i);
+    const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
+
+    if (registerOperandMatch) {
+      mode = "register";
+      registerName = registerOperandMatch[1].toLowerCase();
+      baseExpression = normalizedExpanded;
+    } else if (registerIndirectAutoIncrementMatch) {
+      mode = "registerIndirectAutoIncrement";
+      registerName = registerIndirectAutoIncrementMatch[1].toLowerCase();
+      baseExpression = registerIndirectAutoIncrementMatch[1];
+    } else if (registerIndirectMatch) {
+      mode = "registerIndirect";
+      registerName = registerIndirectMatch[1].toLowerCase();
+      baseExpression = registerIndirectMatch[1];
+    } else if (directPageIndexedXIndirectMatch) {
+      mode = "directPageIndexedXIndirect";
+      baseExpression = directPageIndexedXIndirectMatch[1].trim();
+    } else if (directPageIndirectIndexedYMatch) {
+      mode = "directPageIndirectIndexedY";
+      baseExpression = directPageIndirectIndexedYMatch[1].trim();
+    } else if (bitAddressMatch) {
+      mode = bitAddressMatch[1].length <= 3 ? "directPageBit" : "absoluteBit";
+      baseExpression = bitAddressMatch[1].toUpperCase();
+    }
+
+    if (mode === "unknown" && expanded.startsWith("#")) {
+      mode = "immediate";
+      baseExpression = expanded.slice(1).trim();
+    } else if (mode === "unknown" && /^\$[\da-f]{6},x$/i.test(expanded)) {
+      mode = "absoluteLongIndexedX";
+      baseExpression = expanded.slice(0, -2).trim();
+    } else if (mode === "unknown" && /^\$[\da-f]{4},x$/i.test(expanded)) {
+      mode = "absoluteIndexedX";
+      baseExpression = expanded.slice(0, -2).trim();
+    } else if (mode === "unknown" && /^\$[\da-f]{4},y$/i.test(expanded)) {
+      mode = "absoluteIndexedY";
+      baseExpression = expanded.slice(0, -2).trim();
+    } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(",x)")) {
+      mode = "indexedIndirectX";
+      baseExpression = expanded.slice(1, -3).trim();
+    } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
+      mode = "directPageIndirect";
+      baseExpression = expanded.slice(1, -1).trim();
+    } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(",s),y")) {
+      mode = "stackRelativeIndexedIndirectY";
+      baseExpression = expanded.slice(1, -6).trim();
+    } else if (mode === "unknown" && lowered.endsWith(",s")) {
+      mode = "stackRelative";
+      baseExpression = expanded.slice(0, -2).trim();
+    } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("],y")) {
+      mode = "indirectLongIndexedY";
+      baseExpression = expanded.slice(1, -3).trim();
+    } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
+      mode = "indirectLong";
+      baseExpression = expanded.slice(1, -1).trim();
+    } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith("),y")) {
+      mode = "indirectIndexedY";
+      baseExpression = expanded.slice(1, -3).trim();
+    } else if (mode === "unknown" && lowered.endsWith(",x")) {
+      mode = "directPageIndexedX";
+      baseExpression = expanded.slice(0, -2).trim();
+    } else if (mode === "unknown" && /^\$[\da-f]{6}$/i.test(expanded)) {
+      mode = "absoluteLong";
+      baseExpression = expanded;
+    } else if (mode === "unknown" && /^\$[\da-f]{4}$/i.test(expanded)) {
+      mode = "absolute";
+      baseExpression = expanded;
+    }
+    return {
+      mode,
+      baseExpression,
+      registerName,
+      explicitDirectPage,
+      explicitDirectPageIndexedX,
+      raw,
+      expanded,
+      length,
+      indexRegister,
+      immediate: expanded.startsWith("#"),
+      indirect: expanded.startsWith("(") || expanded.startsWith("["),
+    };
   }
 }

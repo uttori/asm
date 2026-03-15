@@ -2,8 +2,8 @@
  * A utility class for computing CRC32 checksums.
  */
 export declare class CRC32 {
-    private static table;
-    private static makeCRCTable;
+    static table: Uint32Array;
+    static makeCRCTable(): Uint32Array;
     /**
      * Computes the CRC32 checksum for the given data.
      * @param {number[] | Uint8Array} data A Uint8Array (or Node.js Buffer) of data.

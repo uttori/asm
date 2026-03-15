@@ -1,10 +1,13 @@
-import type { ArchitectureEncoder, LoweredInstruction, SuperFXContext } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, SuperFXContext } from "./architecture-types.js";
 
 let debug = (..._: unknown[]) => {};
 try {
   const { default: d } = await import("debug");
   debug = d("ArchSuperFX");
 } catch {}
+
+const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
+  Object.prototype.hasOwnProperty.call(obj, key);
 
 export class ArchSuperFX implements ArchitectureEncoder {
   assembler: SuperFXContext;
@@ -18,28 +21,50 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   estimateInstruction(instruction: LoweredInstruction): number {
-    return this.estimateSize(instruction.words);
+    const loweredOperands = instruction.loweredOperands ?? [];
+    return this.estimateResolvedInstruction(
+      instruction.mnemonic,
+      instruction.operandText,
+      instruction.loweredOperand,
+      loweredOperands,
+    );
   }
 
   encodeInstruction(instruction: LoweredInstruction): boolean {
-    return this.encode(instruction.words);
+    const loweredOperands = instruction.loweredOperands ?? [];
+    return this.encodeResolvedInstruction(
+      instruction.mnemonic,
+      instruction.operands,
+      instruction.loweredOperand,
+      loweredOperands,
+    );
   }
 
   estimateSize(words: string[]): number {
     if (words.length === 0) {
       return 0;
     }
+    return this.estimateResolvedInstruction(words[0], words.slice(1).join(" "));
+  }
 
+  estimateResolvedInstruction(
+    mnemonic: string,
+    operandText: string,
+    loweredOperand?: LoweredOperand,
+    loweredOperands: LoweredOperand[] = [],
+  ): number {
+    const opcode = mnemonic.toUpperCase();
     let size = 1;
-    if (words.length > 1) {
-      const operand = words.slice(1).join(" ");
-      if (operand.startsWith("#")) {
+    const firstLowered = loweredOperands[0] ?? loweredOperand;
+    const expandedOperand = firstLowered?.expanded ?? operandText;
+    if (expandedOperand) {
+      if (expandedOperand.startsWith("#")) {
         size = 2;
-      } else if (operand.includes("$") || operand.includes(",")) {
+      } else if (expandedOperand.includes("$") || loweredOperands.length > 1 || expandedOperand.includes(",")) {
         size = 3;
       }
     }
-    if (["JSL", "JML"].includes(words[0].toUpperCase())) {
+    if (["JSL", "JML"].includes(opcode)) {
       size = 4;
     }
     return size;
@@ -52,14 +77,29 @@ export class ArchSuperFX implements ArchitectureEncoder {
    */
   public asblock_superfx(words: string[]): boolean {
     debug("asblock_superfx", words);
+    if (words.length === 0) {
+      return false;
+    }
 
-    const opcode = words[0].toUpperCase();
+    const opcode = words[0];
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
+    const parsedOperands = rawOperand ? rawOperand.split(",").map((operand) => operand.trim()) : [];
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperands = parsedOperands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
+    return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
+  }
 
-    // Expand the operand using the new method that returns both expanded operand and its length
-    const { expanded: operand, length: operandLength } = this.assembler.operandResolver.expandOperand(rawOperand);
-    debug("asblock_superfx operand expanded", operand, "expected length:", operandLength);
-
+  encodeResolvedInstruction(
+    mnemonic: string,
+    operands: string[],
+    loweredOperand?: LoweredOperand,
+    loweredOperands: LoweredOperand[] = [],
+  ): boolean {
+    const opcode = mnemonic.toUpperCase();
+    const firstLowered = loweredOperands[0] ?? loweredOperand;
+    const secondLowered = loweredOperands[1];
+    const operand = firstLowered?.expanded ?? "";
+    const operandLength = firstLowered?.length ?? this.getOperandLength(operand);
     debug("asblock_superfx opcode", opcode);
     debug("asblock_superfx operand", operand);
 
@@ -68,18 +108,21 @@ export class ArchSuperFX implements ArchitectureEncoder {
       return true;
     }
 
-    if (this.handleTwoWordOpcode(opcode, operand)) {
+    if (operands.length === 1 && this.handleTwoWordOpcode(opcode, operand, operandLength, firstLowered)) {
       return true;
     }
 
-    // Split into args for instructions with multiple operands
-    const args = operand.split(",").map((arg) => arg.trim());
-
-    if (args.length === 1) {
+    if (operands.length === 1) {
       // Single argument instructions
-      return this.handleOneOperandOpcode(opcode, args[0], operandLength);
-    } else if (args.length === 2) {
-      return this.handleTwoOperandOpcode(opcode, args[0], args[1]);
+      return this.handleOneOperandOpcode(opcode, operand, operandLength, firstLowered);
+    } else if (operands.length === 2) {
+      return this.handleTwoOperandOpcode(
+        opcode,
+        firstLowered?.expanded ?? operands[0],
+        secondLowered?.expanded ?? operands[1],
+        firstLowered,
+        secondLowered,
+      );
     }
 
     return false;
@@ -94,7 +137,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
     debug("handleSingleWordOpcode", opcode);
 
     // Simple single-byte instructions
-    const singleOpcodes: { [key: string]: number } = {
+    type SingleOpcode =
+      | "STOP" | "NOP" | "CACHE" | "LSR" | "ROL" | "LOOP" | "ALT1" | "ALT2" | "ALT3"
+      | "PLOT" | "SWAP" | "COLOR" | "NOT" | "MERGE" | "SBK" | "SEX" | "ASR" | "ROR"
+      | "LOB" | "FMULT" | "HIB" | "GETC" | "GETB";
+    const singleOpcodes: Record<SingleOpcode, number> = {
       STOP: 0x00,
       NOP: 0x01,
       CACHE: 0x02,
@@ -144,7 +191,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
     ];
 
     // Check simple single-byte opcodes
-    if (opcode in singleOpcodes) {
+    if (hasOwn(singleOpcodes, opcode)) {
       this.assembler.write1(singleOpcodes[opcode]);
       return true;
     }
@@ -165,24 +212,13 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * Handles two-word opcodes (one opcode + one operand).
    * @param {string} opcode - the opcode
    * @param {string} operand - the operand
+   * @param {number} operandLength - the lowered operand length
+   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
-  handleTwoWordOpcode(opcode: string, operand: string): boolean {
+  handleTwoWordOpcode(opcode: string, operand: string, operandLength: number, loweredOperand?: LoweredOperand): boolean {
     debug("handleTwoWordOpcode", opcode, operand);
-
-    // For instructions like "TO Rn", "ADD Rn", "CMP Rn", etc., we parse the second token carefully.
-    // In the original C++ code, the logic was embedded in the big if-else block. We'll replicate that.
-
-    // If there's a comma, let's split it for further analysis
-    const args = operand.split(",").map((a) => a.trim());
-    if (args.length === 1) {
-      // Single argument instructions
-      return this.handleOneOperandOpcode(opcode, args[0], this.getOperandLength(args[0]));
-    } else if (args.length === 2) {
-      return this.handleTwoOperandOpcode(opcode, args[0], args[1]);
-    }
-
-    return false;
+    return this.handleOneOperandOpcode(opcode, operand, operandLength, loweredOperand);
   }
 
   /**
@@ -190,13 +226,15 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @param {string} opcode - the opcode
    * @param {string} operand - the operand
    * @param {number} operandLength - the length of the operand
+   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
-  handleOneOperandOpcode(opcode: string, operand: string, operandLength: number): boolean {
+  handleOneOperandOpcode(opcode: string, operand: string, operandLength: number, loweredOperand?: LoweredOperand): boolean {
     debug("handleOneOperandOpcode", opcode, operand, operandLength);
 
     // Mapping for short branches (8-bit offset)
-    const shortBranchMap: {[key: string]: number} = {
+    type ShortBranchOpcode = "BRA" | "BGE" | "BLT" | "BNE" | "BEQ" | "BPL" | "BMI" | "BCC" | "BCS" | "BVC" | "BVS";
+    const shortBranchMap: Record<ShortBranchOpcode, number> = {
       BRA: 0x05,
       BGE: 0x06,
       BLT: 0x07,
@@ -210,7 +248,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
       BVS: 0x0F,
     };
 
-    if (opcode in shortBranchMap) {
+    if (hasOwn(shortBranchMap, opcode)) {
       const branchOpcode = shortBranchMap[opcode];
       // We interpret the operand as an address for branching
       // If the user wants an 8-bit offset, we allow direct or label
@@ -231,9 +269,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
     }
 
     // Attempt to parse the operand as register
-    const regR = this.getRegister(operand, "r");
-    const regHash = this.getRegister(operand, "hash");
-    const regParr = this.getRegister(operand, "parr");
+    const regR = this.resolveRegister(operand, loweredOperand, "r");
+    const regHash = this.resolveRegister(operand, loweredOperand, "hash");
+    const regParr = this.resolveRegister(operand, loweredOperand, "parr");
 
     // Potential second-level variants for ALT instructions
     // Example: "ADC Rn" => write1(0x3D), write1(0x50 + n)
@@ -407,20 +445,24 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @param {string} opcode - the opcode
    * @param {string} leftOp - the left operand
    * @param {string} rightOp - the right operand
+   * @param {LoweredOperand} leftLowered - optional lowered metadata for left operand
+   * @param {LoweredOperand} rightLowered - optional lowered metadata for right operand
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleTwoOperandOpcode(
     opcode: string,
     leftOp: string,
-    rightOp: string
+    rightOp: string,
+    leftLowered?: LoweredOperand,
+    rightLowered?: LoweredOperand,
   ): boolean {
     debug("handleTwoOperandOpcode", { opcode, leftOp, rightOp });
 
     // e.g. "MOVE Rn, Rm", "MOVES Rn, Rm", etc.
-    const reg1r = this.getRegister(leftOp, "r");
-    const reg1parr = this.getRegister(leftOp, "parr");
-    const reg2r = this.getRegister(rightOp, "r");
-    const reg2parr = this.getRegister(rightOp, "parr");
+    const reg1r = this.resolveRegister(leftOp, leftLowered, "r");
+    const reg1parr = this.resolveRegister(leftOp, leftLowered, "parr");
+    const reg2r = this.resolveRegister(rightOp, rightLowered, "r");
+    const reg2parr = this.resolveRegister(rightOp, rightLowered, "parr");
     debug("handleTwoOperandOpcode", { reg1r, reg1parr, reg2r, reg2parr });
 
     // Rn, Rm combos
@@ -440,8 +482,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
     }
 
     // Rn, #imm combos
-    if (reg1r !== null && rightOp.startsWith("#")) {
-      const immVal = this.assembler.operandResolver.getnum(rightOp.slice(1)) & 0xffff;
+    if (reg1r !== null && (rightLowered?.immediate ?? rightOp.startsWith("#"))) {
+      const immediateExpression = rightLowered?.baseExpression ?? rightOp.slice(1);
+      const immVal = this.assembler.operandResolver.getnum(immediateExpression) & 0xffff;
       switch (opcode) {
         case "IBT":
           // => 0xA0+reg1, then immVal
@@ -528,7 +571,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
 
     // Rn, (imm)
     // e.g. "MOVE R0, (0x1234)" or "SMS (0x40), R3"
-    if (reg1r !== null && leftOp.toLowerCase().startsWith("r")) {
+    if (reg1r !== null) {
       const addrVal = this.assembler.operandResolver.getnum(rightOp);
       switch (opcode) {
         case "LM":
@@ -569,9 +612,10 @@ export class ArchSuperFX implements ArchitectureEncoder {
     }
 
     // (imm), Rn
-    if (reg2r !== null && rightOp.startsWith("R")) {
-      if (leftOp.startsWith("(") && leftOp.endsWith(")")) {
-        const addrVal = this.assembler.operandResolver.getnum(leftOp);
+    const leftIsRegisterIndirect = leftLowered?.mode === "registerIndirect";
+    if (reg2r !== null && !leftIsRegisterIndirect && (leftLowered?.indirect ?? (leftOp.startsWith("(") && leftOp.endsWith(")")))) {
+      const addressExpression = leftLowered?.baseExpression ?? leftOp;
+      const addrVal = this.assembler.operandResolver.getnum(addressExpression);
         switch (opcode) {
           case "SM":
             this.assembler.write1(0x3E);
@@ -597,11 +641,31 @@ export class ArchSuperFX implements ArchitectureEncoder {
               this.assembler.write1(addrVal & 0xff);
             }
             return true;
-        }
       }
     }
 
     return false;
+  }
+
+  resolveRegister(str: string, lowered: LoweredOperand | undefined, type: "r" | "parr" | "hash"): number | null {
+    if (lowered) {
+      if (type === "r" && lowered.mode === "register" && lowered.registerName?.toLowerCase().startsWith("r")) {
+        const regnum = this.parseRegisterNumber(lowered.registerName.slice(1));
+        return regnum === -1 ? null : regnum;
+      }
+      if (type === "parr" && lowered.mode === "registerIndirect" && lowered.registerName?.toLowerCase().startsWith("r")) {
+        const regnum = this.parseRegisterNumber(lowered.registerName.slice(1));
+        return regnum === -1 ? null : regnum;
+      }
+      if (type === "hash" && lowered.immediate) {
+        const regnum = this.assembler.operandResolver.getnum(lowered.baseExpression ?? lowered.expanded.slice(1));
+        if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
+          return null;
+        }
+        return regnum;
+      }
+    }
+    return this.getRegister(str, type);
   }
 
   /**

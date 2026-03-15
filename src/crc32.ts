@@ -3,10 +3,10 @@
  */
 export class CRC32 {
   // Precomputed CRC32 table.
-  private static table: Uint32Array = CRC32.makeCRCTable();
+  static table: Uint32Array = CRC32.makeCRCTable();
 
   // Builds the lookup table used for CRC32 computation.
-  private static makeCRCTable(): Uint32Array {
+  static makeCRCTable(): Uint32Array {
     const table = new Uint32Array(256);
     for (let i = 0; i < 256; i++) {
       let c = i;

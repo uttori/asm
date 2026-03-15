@@ -6,12 +6,14 @@ export declare class Arch65816 implements ArchitectureEncoder {
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
     estimateSize(words: string[]): number;
+    estimateResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): number;
     /**
      * Processes a 65816 assembly instruction.
      * @param {string[]} words The tokenized instruction.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     asblock_65816(words: string[]): boolean;
+    encodeResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): boolean;
     /**
      * Handles ORA, SBC, STA, LDA, EOR, CMP, AND, ADC with all valid addressing modes.
      * @param {string} opcode The opcode to handle.

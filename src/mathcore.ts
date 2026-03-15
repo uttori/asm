@@ -166,7 +166,7 @@ export class MathCore {
     }
   }
 
-  private evaluateCallArgument(functionName: string, argumentIndex: number, argument: ExpressionNode): number | string {
+  evaluateCallArgument(functionName: string, argumentIndex: number, argument: ExpressionNode): number | string {
     if (this.isStringArgument(functionName, argumentIndex)) {
       switch (argument.type) {
         case "identifier":
@@ -203,7 +203,7 @@ export class MathCore {
     }
   }
 
-  private evaluateUnaryExpressionNode(operator: "<:" | "~" | "-" | "+", argument: ExpressionNode): number {
+  evaluateUnaryExpressionNode(operator: "<:" | "~" | "-" | "+", argument: ExpressionNode): number {
     const value = this.evaluateExpressionNode(argument);
     switch (operator) {
       case "<:":
@@ -218,7 +218,7 @@ export class MathCore {
     }
   }
 
-  private evaluateBinaryExpressionNode(
+  evaluateBinaryExpressionNode(
     operator: keyof MathCore["operators"],
     left: ExpressionNode,
     right: ExpressionNode,
@@ -230,7 +230,7 @@ export class MathCore {
     return operation.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
   }
 
-  private resolveNumericIdentifierArgument(identifier: string): number | string {
+  resolveNumericIdentifierArgument(identifier: string): number | string {
     try {
       const resolved = this.getHost().resolveLabel(identifier);
       return typeof resolved === "number" ? resolved : identifier;
@@ -239,7 +239,7 @@ export class MathCore {
     }
   }
 
-  private evaluateReferenceExpressionNode(expression: ReferenceExpressionNode): number {
+  evaluateReferenceExpressionNode(expression: ReferenceExpressionNode): number {
     if (expression.type === "defineReference") {
       throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
     }
@@ -252,13 +252,13 @@ export class MathCore {
     throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
   }
 
-  private renderReference(expression: ReferenceExpressionNode): string {
+  renderReference(expression: ReferenceExpressionNode): string {
     return renderReferenceExpressionNode(expression, {
       renderIndex: (node) => this.evaluateExpressionNode(node).toString(),
     });
   }
 
-  private isStringArgument(functionName: string, argumentIndex: number): boolean {
+  isStringArgument(functionName: string, argumentIndex: number): boolean {
     if (["defined", "sizeof", "objectsize", "datasize", "filesize", "getfilestatus"].includes(functionName)) {
       return argumentIndex === 0;
     }
@@ -271,7 +271,7 @@ export class MathCore {
     return false;
   }
 
-  private parseLiteralNode(value: string): number {
+  parseLiteralNode(value: string): number {
     if (/^-?\d+$/.test(value)) {
       return Number.parseInt(value, 10);
     }
@@ -1038,7 +1038,7 @@ export class MathCore {
     debug("parseFunctionDefinition =", { args: params, content });
   }
 
-  private getHost(): ExpressionHost {
+  getHost(): ExpressionHost {
     if (!this.host) {
       throw new Error("ExpressionHost not set.");
     }
