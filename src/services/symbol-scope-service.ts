@@ -34,13 +34,23 @@ export interface SymbolScopeHost {
 }
 
 export class SymbolScopeService {
-  constructor(private readonly host: SymbolScopeHost) {}
+  constructor(readonly host: SymbolScopeHost) {}
 
+  /**
+   * Checks if a label is in scope.
+   * @param {string} identifier The label to check.
+   * @returns {boolean} `true` if the label is in scope, `false` otherwise.
+   */
   hasLabelInScope(identifier: string): boolean {
     return this.host.labelTable.has(identifier) ||
       (this.host.currentNamespace ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`) : false);
   }
 
+  /**
+   * Handles a relative label.
+   * @param {string} label The label to handle.
+   * @returns {number} The address of the label.
+   */
   handleRelativeLabel(label: string): number {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
@@ -77,6 +87,12 @@ export class SymbolScopeService {
     return snesAddress;
   }
 
+  /**
+   * Finds the next label.
+   * @param {string} label The label to find.
+   * @param {number} currentAddressOverride The current address to override.
+   * @returns {number} The address of the next label.
+   */
   findNextLabel(label: string, currentAddressOverride?: number): number {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
@@ -107,6 +123,12 @@ export class SymbolScopeService {
     return Math.min(...possibleTargets);
   }
 
+  /**
+   * Finds the previous label.
+   * @param {string} label The label to find.
+   * @param {number} currentAddressOverride The current address to override.
+   * @returns {number} The address of the previous label.
+   */
   findPreviousLabel(label: string, currentAddressOverride?: number): number {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
@@ -137,6 +159,15 @@ export class SymbolScopeService {
     return Math.max(...possibleTargets);
   }
 
+  /**
+   * Sets a label.
+   * @param {string} label The label to set.
+   * @param {number} value The value of the label.
+   * @param {boolean} isStatic Whether the label is static.
+   * @param {boolean} isMacroLabel Whether the label is a macro label.
+   * @param {boolean} isGlobal Whether the label is global.
+   * @param {boolean} modifiesHierarchy Whether the label modifies the hierarchy.
+   */
   setLabel(label: string, value?: number, isStatic = false, isMacroLabel = false, isGlobal = false, modifiesHierarchy = true): void {
     let fullLabel = label;
     let directScopeLabel: string | null = null;
@@ -289,13 +320,18 @@ export class SymbolScopeService {
     }
   }
 
+  /**
+   * Resolves a struct member.
+   * @param {string} compoundId The compound ID of the struct member.
+   * @returns {number} The address of the struct member.
+   */
   resolveStructMember(compoundId: string): number {
     const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
     if (!firstId || !this.host.structs.has(firstId)) throw new Error(`Struct not found: ${compoundId}`);
 
     let rest = compoundId.substring(firstId.length).trim();
     let base = 0;
-    let currentStruct = this.host.structs.get(firstId)!;
+    let currentStruct = this.host.structs.get(firstId);
 
     while (rest.length > 0) {
       if (rest.startsWith(".")) {
@@ -332,6 +368,12 @@ export class SymbolScopeService {
     return base;
   }
 
+  /**
+   * Gets the value of a label.
+   * @param {string} label The label to get the value of.
+   * @param {boolean} requireStatic Whether the label must be static.
+   * @returns {number} The value of the label.
+   */
   getLabelValue(label: string, requireStatic: boolean): number {
     if (label.startsWith(".") && this.host.currentParentLabel) {
       const localName = label.substring(1);
@@ -363,7 +405,7 @@ export class SymbolScopeService {
         const [parentPart, subPart] = labelName.split("_", 2);
         const childLabel = `:macro_${this.host.macroLabelInstance}_.${subPart}`;
         if (this.host.labelTable.has(childLabel)) {
-          const entry = this.host.labelTable.get(childLabel)!;
+          const entry = this.host.labelTable.get(childLabel);
           if (requireStatic && !entry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
@@ -372,7 +414,7 @@ export class SymbolScopeService {
 
         const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${parentPart}_${subPart}`;
         if (this.host.labelTable.has(parentChildLabel)) {
-          const entry = this.host.labelTable.get(parentChildLabel)!;
+          const entry = this.host.labelTable.get(parentChildLabel);
           if (requireStatic && !entry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
@@ -382,7 +424,7 @@ export class SymbolScopeService {
 
       const macroLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
       if (this.host.labelTable.has(macroLabel)) {
-        const entry = this.host.labelTable.get(macroLabel)!;
+        const entry = this.host.labelTable.get(macroLabel);
         if (requireStatic && !entry.isStatic) {
           throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
         }
@@ -392,7 +434,7 @@ export class SymbolScopeService {
       if (labelName.startsWith(".")) {
         const macroLabelNoDot = `:macro_${this.host.macroLabelInstance}_${labelName}`;
         if (this.host.labelTable.has(macroLabelNoDot)) {
-          const entry = this.host.labelTable.get(macroLabelNoDot)!;
+          const entry = this.host.labelTable.get(macroLabelNoDot);
           if (requireStatic && !entry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
@@ -425,6 +467,12 @@ export class SymbolScopeService {
     );
   }
 
+  /**
+   * Gets the value of a label directly.
+   * @param {string} label The label to get the value of.
+   * @param {boolean} requireStatic Whether the label must be static.
+   * @returns {number} The value of the label.
+   */
   getLabelValueDirect(label: string, requireStatic: boolean): number {
     if (label.includes("_") && !label.includes(":")) {
       const parts = label.split("_");
@@ -434,7 +482,7 @@ export class SymbolScopeService {
         const combinedLabel = `${parentLabel}_${localLabel.replace(/^\./, "")}`;
 
         if (this.host.labelTable.has(combinedLabel)) {
-          const entry = this.host.labelTable.get(combinedLabel)!;
+          const entry = this.host.labelTable.get(combinedLabel);
           if (requireStatic && !entry.isStatic) {
             throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
           }
@@ -442,7 +490,7 @@ export class SymbolScopeService {
         }
 
         if (this.host.labelTable.has(localLabel)) {
-          const entry = this.host.labelTable.get(localLabel)!;
+          const entry = this.host.labelTable.get(localLabel);
           if (requireStatic && !entry.isStatic) {
             throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
           }
@@ -462,7 +510,7 @@ export class SymbolScopeService {
       throw new Error(`Error: Label '${label}' not found.`);
     }
 
-    const entry = this.host.labelTable.get(label)!;
+    const entry = this.host.labelTable.get(label);
     if (requireStatic && !entry.isStatic) {
       throw new Error(`Error: Non-static label '${label}' used in conditional.`);
     }
@@ -470,6 +518,12 @@ export class SymbolScopeService {
     return entry.value;
   }
 
+  /**
+   * Gets the size of an object.
+   * @param {string} identifier The identifier of the object.
+   * @param {boolean} baseOnly Whether to only get the base size.
+   * @returns {number} The size of the object.
+   */
   getObjectSize(identifier: string, baseOnly = false): number {
     let workingIdentifier = identifier;
     if (workingIdentifier.startsWith('"') && workingIdentifier.endsWith('"')) {
@@ -477,7 +531,7 @@ export class SymbolScopeService {
     }
 
     if (this.host.structs.has(workingIdentifier)) {
-      const def = this.host.structs.get(workingIdentifier)!;
+      const def = this.host.structs.get(workingIdentifier);
       if (baseOnly) {
         return def.size;
       }
@@ -505,7 +559,7 @@ export class SymbolScopeService {
       throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
     }
 
-    const def = this.host.structs.get(workingIdentifier)!;
+    const def = this.host.structs.get(workingIdentifier);
     if (baseOnly) {
       return def.size;
     }
@@ -513,6 +567,10 @@ export class SymbolScopeService {
     return !def.parent ? def.size + (def.extensionSize || 0) : def.size;
   }
 
+  /**
+   * Handles a label definition.
+   * @param {string} labelName The name of the label.
+   */
   handleLabelDefinition(labelName: string): void {
     if (labelName.startsWith(".") || labelName.startsWith("#.")) {
       if (!this.host.currentParentLabel) {

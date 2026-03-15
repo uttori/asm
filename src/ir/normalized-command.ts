@@ -356,7 +356,7 @@ function deriveCommandSemantics(command: string, words: string[]): CommandSemant
     }
   }
 
-  void command;
+  // void command;
   return semantics;
 }
 
@@ -373,9 +373,14 @@ function extractIncbinRange(argument: string): string | undefined {
   return argument.slice(colonIndex + 1);
 }
 
+/**
+ * Extracts the label split from a command.
+ * @param {string} command The command to extract the label split from.
+ * @returns {ParsedLabelSplit | undefined} The label split when present.
+ */
 function extractLabelSplit(command: string): ParsedLabelSplit | undefined {
   const trimmed = command.trim();
-  const labelMatch = trimmed.match(/^([A-Za-z_.$?][\w.$?]*):\s*(.*)$/);
+  const labelMatch = trimmed.match(/^([$.?A-Z_a-z][\w$.?]*):\s*(.*)$/);
   if (!labelMatch) {
     return undefined;
   }
@@ -386,6 +391,12 @@ function extractLabelSplit(command: string): ParsedLabelSplit | undefined {
   };
 }
 
+/**
+ * Splits comma-separated arguments into an array of strings.
+ * Handles quoted strings and nested parentheses.
+ * @param {string} input The input string to split.
+ * @returns {string[]} An array of split values.
+ */
 function splitCommaArguments(input: string): string[] {
   const values: string[] = [];
   let current = "";

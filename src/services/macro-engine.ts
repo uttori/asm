@@ -43,8 +43,13 @@ export interface MacroEngineHost {
 }
 
 export class MacroEngine {
-  constructor(private readonly host: MacroEngineHost) {}
+  constructor(readonly host: MacroEngineHost) {}
 
+  /**
+   * Handles a macro definition command.
+   * @param {NormalizedCommand} commandNode The command node to handle.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   handleDefinitionCommand(commandNode: NormalizedCommand): boolean {
     const command = commandNode.command;
     const { keyword, words } = commandNode;
@@ -121,6 +126,11 @@ export class MacroEngine {
     return false;
   }
 
+  /**
+   * Rewrites macro label references.
+   * @param {string} command The command to rewrite.
+   * @returns {string} The rewritten command.
+   */
   rewriteMacroLabelReferences(command: string): string {
     if (!this.host.inMacroExpansion || (!command.includes("?") && !command.includes("#"))) {
       return command;
@@ -219,6 +229,10 @@ export class MacroEngine {
     return modifiedCommand;
   }
 
+  /**
+   * Calls a macro.
+   * @param {string} invocation The invocation to call.
+   */
   callMacro(invocation: string): void {
     this.host.macroLabelInstance++;
 
@@ -347,6 +361,14 @@ export class MacroEngine {
     }
   }
 
+  /**
+   * Expands a macro line.
+   * @param {string} line The line to expand.
+   * @param {Map<string, string>} fixedArgs The fixed arguments.
+   * @param {string[]} variadicArgs The variadic arguments.
+   * @param {number} variadicCount The variadic count.
+   * @returns {string} The expanded line.
+   */
   expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string {
     const resolveDeprecatedBangAngle = (match: string, name: string): string => {
       if (fixedArgs.has(name)) {
@@ -459,6 +481,11 @@ export class MacroEngine {
     return expanded;
   }
 
+  /**
+   * Resolves variadic placeholders.
+   * @param {string} command The command to resolve.
+   * @returns {string} The resolved command.
+   */
   resolveVariadicPlaceholders(command: string): string {
     if (!command.includes("...") && !command.includes("…")) {
       return command;
@@ -489,6 +516,10 @@ export class MacroEngine {
     return resolved;
   }
 
+  /**
+   * Processes a macro line.
+   * @param {string} line The line to process.
+   */
   processMacroLine(line: string): void {
     if (/^\s*[#?][\w+.\-]+:/.test(line)) {
       if (line.trim().startsWith("?+:") || line.trim().startsWith("?-:")) {

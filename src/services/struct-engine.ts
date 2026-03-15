@@ -20,8 +20,13 @@ export type StructHost = {
 };
 
 export class StructEngine {
-  constructor(private readonly host: StructHost) {}
+  constructor(readonly host: StructHost) {}
 
+  /**
+   * Handles a struct mode command.
+   * @param {NormalizedCommand} command The command to handle.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   handleStructMode(command: NormalizedCommand): boolean {
     if (!this.host.currentStruct) {
       return false;
@@ -58,6 +63,10 @@ export class StructEngine {
     return true;
   }
 
+  /**
+   * Handles a struct command.
+   * @param {string[]} words The words of the command.
+   */
   handleStruct(words: string[]): void {
     if (words.length < 2) {
       throw new Error("Struct definition requires at least two parameters.");
@@ -96,6 +105,10 @@ export class StructEngine {
     };
   }
 
+  /**
+   * Handles an endstruct command.
+   * @param {string[]} words The words of the command.
+   */
   handleEndStruct(words: string[]): void {
     if (!this.host.currentStruct) {
       throw new Error("endstruct encountered but not inside a struct definition.");
@@ -137,6 +150,11 @@ export class StructEngine {
     this.host.currentStruct = null;
   }
 
+  /**
+   * Resolves a struct label.
+   * @param {string} labelRef The label to resolve.
+   * @returns {number} The resolved address.
+   */
   resolveStructLabel(labelRef: string): number {
     const refParts = labelRef.split(".");
     if (refParts.length === 2 && !labelRef.includes("[")) {
@@ -235,6 +253,10 @@ export class StructEngine {
     throw new Error(`Struct not defined in reference: ${labelRef}`);
   }
 
+  /**
+   * Handles an incbin command.
+   * @param {string[]} words The words of the command.
+   */
   handleIncbin(words: string[]): void {
     let targetLocationSpecified = false;
     let targetLocation: string | null = null;

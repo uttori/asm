@@ -18,8 +18,13 @@ export type FrontEndCommandHost = {
 };
 
 export class FrontEndCommandService {
-  constructor(private readonly host: FrontEndCommandHost) {}
+  constructor(readonly host: FrontEndCommandHost) {}
 
+  /**
+   * Continues a function definition.
+   * @param {string} command The command to continue.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   continueFunctionDefinition(command: string): boolean {
     if (!this.host.inFunctionDefinition) {
       return false;
@@ -38,6 +43,11 @@ export class FrontEndCommandService {
     return true;
   }
 
+  /**
+   * Starts a function definition.
+   * @param {NormalizedCommand} command The command to start.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   startFunctionDefinition(command: NormalizedCommand): boolean {
     const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
     if (!functionSource || !functionSource.toLowerCase().startsWith("function")) {
@@ -55,6 +65,11 @@ export class FrontEndCommandService {
     return true;
   }
 
+  /**
+   * Handles a relative label definition.
+   * @param {NormalizedCommand} command The command to handle.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   handleRelativeLabelDefinition(command: NormalizedCommand): boolean {
     const { keyword } = command;
     const isRelativeLabelDefinition = /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
@@ -70,6 +85,11 @@ export class FrontEndCommandService {
     return true;
   }
 
+  /**
+   * Handles a global label definition.
+   * @param {NormalizedCommand} command The command to handle.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   handleGlobalLabel(command: NormalizedCommand): boolean {
     const { words } = command;
     const directiveArgs = command.parsed.directiveArgs;
@@ -104,6 +124,11 @@ export class FrontEndCommandService {
     return true;
   }
 
+  /**
+   * Consumes named label definitions.
+   * @param {NormalizedCommand} command The command to consume.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   consumeNamedLabelDefinitions(command: NormalizedCommand): boolean {
     const remainingWords = [...command.words];
     let keyword = remainingWords[0] ?? command.keyword;
@@ -126,6 +151,11 @@ export class FrontEndCommandService {
     return remainingWords.length === 0;
   }
 
+  /**
+   * Handles a static label assignment.
+   * @param {NormalizedCommand} command The command to handle.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   handleStaticLabelAssignment(command: NormalizedCommand): boolean {
     const { words, keyword } = command;
     if (words.length !== 3 || words[1] !== "=") {

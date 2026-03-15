@@ -22,8 +22,12 @@ export interface RomWriterHost {
 }
 
 export class RomWriterService {
-  constructor(private readonly host: RomWriterHost) {}
+  constructor(readonly host: RomWriterHost) {}
 
+  /**
+   * Steps the SNES position.
+   * @param {number} num The number of bytes to step.
+   */
   step(num: number): void {
     if (num === 0) {
       return;
@@ -37,6 +41,10 @@ export class RomWriterService {
     this.host.incrementBytesWritten(num);
   }
 
+  /**
+   * Writes a 16-bit value to the ROM.
+   * @param {number} num The value to write.
+   */
   write1_65816(num: number): void {
     if (Number.isNaN(num)) {
       throw new Error("write1_65816 num is NaN");
@@ -60,16 +68,28 @@ export class RomWriterService {
     this.step(1);
   }
 
+  /**
+   * Writes a 8-bit value to the ROM.
+   * @param {number} num The value to write.
+   */
   write1(num: number): void {
     this.write1_65816(num);
   }
 
+  /**
+   * Writes a 16-bit value to the ROM.
+   * @param {number} num The value to write.
+   */
   write2(num: number): void {
     this.assertBankCrossAllowed(2);
     this.write1(num & 0xFF);
     this.write1((num >> 8) & 0xFF);
   }
 
+  /**
+   * Writes a 24-bit value to the ROM.
+   * @param {number} num The value to write.
+   */
   write3(num: number): void {
     this.assertBankCrossAllowed(3);
     this.write1(num & 0xFF);
@@ -77,6 +97,10 @@ export class RomWriterService {
     this.write1((num >> 16) & 0xFF);
   }
 
+  /**
+   * Writes a 32-bit value to the ROM.
+   * @param {number} num The value to write.
+   */
   write4(num: number): void {
     this.assertBankCrossAllowed(4);
     this.write1(num & 0xFF);
@@ -85,6 +109,10 @@ export class RomWriterService {
     this.write1((num >> 24) & 0xFF);
   }
 
+  /**
+   * Asserts that bank cross is allowed.
+   * @param {number} length The length of the value to write.
+   */
   assertBankCrossAllowed(length: number): void {
     if (this.host.bankCrossCheckMode === "off" || length <= 1) {
       return;
@@ -100,6 +128,9 @@ export class RomWriterService {
     }
   }
 
+  /**
+   * Finishes the pass.
+   */
   finishPass(): void {
     if (this.host.spcInlineCompatMode && this.host.inSpcblock) {
       this.host.handleEndSpcblock(["endspcblock", "execute", "0"]);
@@ -125,6 +156,11 @@ export class RomWriterService {
     }
   }
 
+  /**
+   * Converts a SNES address to a PC offset.
+   * @param {number} addr The SNES address to convert.
+   * @returns {number} The PC offset.
+   */
   snestopc(addr: number): number {
     if (addr < 0 || addr > 0xFFFFFF) return -1;
 
@@ -196,6 +232,11 @@ export class RomWriterService {
     return -1;
   }
 
+  /**
+   * Converts a PC offset to a SNES address.
+   * @param {number} addr The PC offset to convert.
+   * @returns {number} The SNES address.
+   */
   pctosnes(addr: number): number {
     if (addr < 0) return -1;
 
@@ -262,12 +303,21 @@ export class RomWriterService {
     return -1;
   }
 
+  /**
+   * Verifies the SNES position.
+   */
   verifysnespos(): void {
     if (this.host.snespos < 0 || this.host.realsnespos < 0) {
       this.host.setWritePosition(0x008000);
     }
   }
 
+  /**
+   * Fixes the SNES position.
+   * @param {number} inaddr The address to fix.
+   * @param {number} step The number of bytes to step.
+   * @returns {number} The fixed address.
+   */
   fixsnespos(inaddr: number, step = 0): number {
     const newAddr = inaddr + step;
 

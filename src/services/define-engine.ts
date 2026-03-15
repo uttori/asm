@@ -8,8 +8,13 @@ export type DefineHost = {
 };
 
 export class DefineEngine {
-  constructor(private readonly host: DefineHost) {}
+  constructor(readonly host: DefineHost) {}
 
+  /**
+   * Handles a define command.
+   * @param {NormalizedCommand} commandNode The command node to handle.
+   * @returns {boolean} `true` if the command was handled, `false` otherwise.
+   */
   handleCommand(commandNode: NormalizedCommand): boolean {
     const command = commandNode.command;
     if (!command.trim().startsWith("!")) {
@@ -40,6 +45,10 @@ export class DefineEngine {
     return true;
   }
 
+  /**
+   * Handles a define command.
+   * @param {string} command The command to handle.
+   */
   handleDefineCommand(command: string): void {
     const line = command.substring(1).trim();
 
@@ -78,6 +87,11 @@ export class DefineEngine {
     this.applyDefineOperation(match[1], match[2], match[3].trim());
   }
 
+  /**
+   * Resolves nested defines in a string.
+   * @param {string} content The content to process.
+   * @returns {string} The processed content with nested defines resolved.
+   */
   processNestedDefines(content: string): string {
     if (!content.includes("!")) {
       return content;
@@ -97,8 +111,13 @@ export class DefineEngine {
     return result;
   }
 
+  /**
+   * Resolves one level of defines in a string.
+   * @param {string} content The content to process.
+   * @returns {string} The processed content with one level of defines resolved.
+   */
   resolveOneLevelOfDefines(content: string): string {
-    const openBracePositions = [];
+    const openBracePositions: number[] = [];
     for (let i = 0; i < content.length - 1; i++) {
       if (content.substring(i, i + 2) === "!{") {
         openBracePositions.push(i);
@@ -141,6 +160,11 @@ export class DefineEngine {
     return content.substring(0, lastOpenBracePos) + replacement + content.substring(closingBracePos + 1);
   }
 
+  /**
+   * Resolves regular defines in a string.
+   * @param {string} content The content to process.
+   * @returns {string} The processed content with regular defines resolved.
+   */
   resolveRegularDefines(content: string): string {
     let result = "";
     let index = 0;
@@ -169,6 +193,11 @@ export class DefineEngine {
     return foundDefine ? result : content;
   }
 
+  /**
+   * Resolves defines in a string literal.
+   * @param {string} content The content to process.
+   * @returns {string} The processed content with defines in string literal resolved.
+   */
   resolveDefinesInStringLiteral(content: string): string {
     let result = "";
     let index = 0;
@@ -223,6 +252,11 @@ export class DefineEngine {
     return result;
   }
 
+  /**
+   * Processes a value with braced defines.
+   * @param {string} value The value to process.
+   * @returns {string} The processed value with braced defines resolved.
+   */
   processValueWithBracedDefines(value: string): string {
     let result = "";
     let index = 0;
@@ -257,7 +291,13 @@ export class DefineEngine {
     return result;
   }
 
-  private applyDefineOperation(identifier: string, operator: string, initialValue: string): void {
+  /**
+   * Applies a define operation.
+   * @param {string} identifier The identifier to apply the operation to.
+   * @param {string} operator The operator to apply.
+   * @param {string} initialValue The initial value to apply the operation to.
+   */
+  applyDefineOperation(identifier: string, operator: string, initialValue: string): void {
     let value = initialValue;
 
     if (value.includes("!{")) {

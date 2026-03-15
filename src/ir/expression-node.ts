@@ -465,8 +465,9 @@ const binaryOperators = [
 ] as const;
 
 /**
- *
- * @param input
+ * Tokenizes an expression string into a list of tokens.
+ * @param {string} input The expression source text.
+ * @returns {Token[]} The list of tokens.
  */
 function tokenizeExpression(input: string): Token[] {
   const tokens: Token[] = [];
@@ -570,9 +571,10 @@ function tokenizeExpression(input: string): Token[] {
 }
 
 /**
- *
- * @param input
- * @param start
+ * Reads a quoted string literal from the source text.
+ * @param {string} input The source text.
+ * @param {number} start The starting offset.
+ * @returns {{ value: string; nextIndex: number; quote: "\"" | "'" }} The quoted string value and next index.
  */
 function readQuotedString(input: string, start: number): { value: string; nextIndex: number; quote: "\"" | "'" } {
   const quote = input[start] as "\"" | "'";
@@ -590,9 +592,10 @@ function readQuotedString(input: string, start: number): { value: string; nextIn
 }
 
 /**
- *
- * @param input
- * @param start
+ * Reads an identifier from the source text.
+ * @param {string} input The source text.
+ * @param {number} start The starting offset.
+ * @returns {{ value: string; nextIndex: number }} The identifier value and next index.
  */
 function readIdentifier(input: string, start: number): { value: string; nextIndex: number } {
   let index = start;
@@ -603,9 +606,11 @@ function readIdentifier(input: string, start: number): { value: string; nextInde
 }
 
 /**
- *
- * @param input
- * @param start
+ * Reads a define reference from the source text.
+ * Handles braced define references.
+ * @param {string} input The source text.
+ * @param {number} start The starting offset.
+ * @returns {{ token: Extract<Token, { type: "defineReference" }>; nextIndex: number }} The define reference token and next index.
  */
 function readDefineReference(input: string, start: number): { token: Extract<Token, { type: "defineReference" }>; nextIndex: number } {
   if (input[start + 1] === "{") {
@@ -642,9 +647,9 @@ function readDefineReference(input: string, start: number): { token: Extract<Tok
 }
 
 class ExpressionParser {
-  private index = 0;
+  index = 0;
 
-  constructor(private readonly tokens: Token[]) {}
+  constructor(readonly tokens: Token[]) {}
 
   parseExpression(minPrecedence = 0): ExpressionNode {
     let left = this.parsePrefix();
@@ -676,7 +681,7 @@ class ExpressionParser {
     return this.index >= this.tokens.length;
   }
 
-  private parsePrefix(): ExpressionNode {
+  parsePrefix(): ExpressionNode {
     const token = this.peek();
     if (!token) {
       throw new Error("Unexpected end of expression");
@@ -692,7 +697,7 @@ class ExpressionParser {
     return this.parsePostfix(this.parsePrimary());
   }
 
-  private parsePrimary(): ExpressionNode {
+  parsePrimary(): ExpressionNode {
     const token = this.consume();
     if (!token) {
       throw new Error("Unexpected end of expression");
@@ -718,7 +723,7 @@ class ExpressionParser {
     }
   }
 
-  private parsePostfix(expression: ExpressionNode): ExpressionNode {
+  parsePostfix(expression: ExpressionNode): ExpressionNode {
     let current = expression;
     while (true) {
       if (this.match({ type: "lparen" })) {
@@ -764,7 +769,7 @@ class ExpressionParser {
     }
   }
 
-  private parseCallArguments(): ExpressionNode[] {
+  parseCallArguments(): ExpressionNode[] {
     const args: ExpressionNode[] = [];
     if (this.match({ type: "rparen" })) {
       return args;
@@ -776,14 +781,14 @@ class ExpressionParser {
     return args;
   }
 
-  private expect(type: Token["type"]): void {
+  expect(type: Token["type"]): void {
     const token = this.consume();
     if (!token || token.type !== type) {
       throw new Error(`Expected token ${type}`);
     }
   }
 
-  private match(expected: Pick<Token, "type">): boolean {
+  match(expected: Pick<Token, "type">): boolean {
     const token = this.peek();
     if (token && token.type === expected.type) {
       this.index++;
@@ -792,20 +797,21 @@ class ExpressionParser {
     return false;
   }
 
-  private consume(): Token | undefined {
+  consume(): Token | undefined {
     const token = this.tokens[this.index];
     this.index++;
     return token;
   }
 
-  private peek(): Token | undefined {
+  peek(): Token | undefined {
     return this.tokens[this.index];
   }
 }
 
 /**
- *
- * @param value
+ * Checks whether an operator is a binary operator.
+ * @param {UnaryOperator | BinaryOperator} value The operator to check.
+ * @returns {boolean} `true` when the operator is a binary operator.
  */
 function isBinaryOperator(value: UnaryOperator | BinaryOperator): value is BinaryOperator {
   return value in binaryPrecedence;

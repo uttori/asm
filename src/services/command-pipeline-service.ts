@@ -47,12 +47,12 @@ export type PreprocessResult = "continue" | "handled" | "skipped_for_condition";
 
 export class CommandPipelineService {
   constructor(
-    private readonly host: CommandPipelineHost,
-    private readonly frontEndHandlers: FrontEndHandlers,
-    private readonly macroHandlers: MacroHandlers,
-    private readonly defineHandlers: DefineHandlers,
-    private readonly structHandlers: StructHandlers,
-    private readonly preDispatchHandlers: PreDispatchHandlers,
+    readonly host: CommandPipelineHost,
+    readonly frontEndHandlers: FrontEndHandlers,
+    readonly macroHandlers: MacroHandlers,
+    readonly defineHandlers: DefineHandlers,
+    readonly structHandlers: StructHandlers,
+    readonly preDispatchHandlers: PreDispatchHandlers,
   ) {}
 
   rewriteRawCommand(command: string): string {

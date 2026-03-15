@@ -1,6 +1,6 @@
 import { createPendingCommand, setCommandKind, setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
 import type { LoopNode } from "../ir/assembly-tree.js";
-import { parseExpressionNode } from "../ir/expression-node.js";
+import { ExpressionNode, parseExpressionNode } from "../ir/expression-node.js";
 
 export type ConditionalEntry = {
   cond: boolean;
@@ -31,10 +31,15 @@ export type PreDispatchPipelineHost = {
 };
 
 export class PreDispatchPipelineService {
-  private readonly conditionDirectives = new Set(["if", "elseif", "else", "endif", "while", "endwhile", "for", "endfor"]);
+  readonly conditionDirectives = new Set(["if", "elseif", "else", "endif", "while", "endwhile", "for", "endfor"]);
 
-  constructor(private readonly host: PreDispatchPipelineHost) {}
+  constructor(readonly host: PreDispatchPipelineHost) {}
 
+  /**
+   * Intercepts a raw command.
+   * @param {string} command The command to intercept.
+   * @returns {boolean} `true` if the command was intercepted, `false` otherwise.
+   */
   interceptRawCommand(command: string): boolean {
     if (this.host.collectingLoop && this.host.currentLoop?.type === "while" && command.trim().toLowerCase().startsWith("endif")) {
       this.host.handleEndIf();
@@ -82,6 +87,11 @@ export class PreDispatchPipelineService {
     return false;
   }
 
+  /**
+   * Normalizes a command.
+   * @param {string} command The command to normalize.
+   * @returns {string} The normalized command.
+   */
   normalizeCommand(command: string): string {
     let normalized = this.host.removeInlineComment(command);
 
@@ -95,15 +105,29 @@ export class PreDispatchPipelineService {
     return normalized;
   }
 
+  /**
+   * Checks if a command should be skipped for condition.
+   * @param {NormalizedCommand} command The command to check.
+   * @returns {boolean} `true` if the command should be skipped for condition, `false` otherwise.
+   */
   shouldSkipForCondition(command: NormalizedCommand): boolean {
     const currentCond = this.host.condStack.length === 0 ? true : this.host.condStack.every((entry) => entry.cond);
     return !currentCond && !this.conditionDirectives.has(command.keyword);
   }
 
+  /**
+   * Checks if a command should be skipped for inline condition.
+   * @param {NormalizedCommand} command The command to check.
+   * @returns {boolean} `true` if the command should be skipped for inline condition, `false` otherwise.
+   */
   shouldSkipForInlineCondition(command: NormalizedCommand): boolean {
     return !this.host.moreonlinecond && !["elseif", "else", "endif", "endwhile"].includes(command.keyword.toLowerCase());
   }
 
+  /**
+   * Resolves an else if command.
+   * @param {NormalizedCommand} command The command to resolve.
+   */
   resolveElseIf(command: NormalizedCommand): void {
     if (command.keyword.toLowerCase() !== "elseif" || this.host.numtrue + 1 !== this.host.numif) {
       return;
@@ -115,7 +139,12 @@ export class PreDispatchPipelineService {
     setCommandKind(command, "directive");
   }
 
-  parseConditionNode(command: NormalizedCommand) {
+  /**
+   * Parses a condition node.
+   * @param {NormalizedCommand} command The command to parse.
+   * @returns {ExpressionNode | undefined} The parsed condition node.
+   */
+  parseConditionNode(command: NormalizedCommand): ExpressionNode {
     if (command.keyword === "if" || command.keyword === "elseif" || command.keyword === "while") {
       return command.parsed.condition?.expression ?? parseExpressionNode(command.words.slice(1).join(" "));
     }
