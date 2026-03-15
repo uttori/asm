@@ -1,0 +1,42 @@
+/**
+ * Centralized ASAR-compatibility profile used by the transitional assembler.
+ * Keeping these rules in one place makes it easier to tighten or replace
+ * compatibility behavior without scattering quirks across core execution.
+ */
+
+/**
+ * Directives that are accepted as compatibility no-ops.
+ */
+export const ASAR_COMPAT_NO_OP_DIRECTIVES = [
+  "dpbase",
+  "warnings",
+  "print",
+  "autoclean",
+  "autoclear",
+  "table",
+  "includefrom",
+  "asar",
+  "{",
+  "}",
+] as const;
+
+/**
+ * In inline SPC compatibility mode, `org` is treated as a `spcblock` entry.
+ * @param {boolean} spcInlineCompatMode Whether the SPC inline compatibility mode is enabled.
+ * @returns {boolean} True if the `org` directive should be redirected to the `spcblock` directive.
+ */
+export const shouldRedirectOrgToSpcblock = (spcInlineCompatMode: boolean): boolean => spcInlineCompatMode;
+
+/**
+ * ASAR quirk: `endif` may close an innermost `while` instead of an `if` chain.
+ * @param {string} currentLoopType The type of the current loop.
+ * @param {number} currentLoopStartLine The start line of the current loop.
+ * @param {number} currentIfStartLine The start line of the current if.
+ * @returns {boolean} True if the `endif` directive should close the innermost `while` block.
+ */
+export const shouldEndifCloseInnermostWhile = (
+  currentLoopType: "for" | "while" | undefined,
+  currentLoopStartLine: number | undefined,
+  currentIfStartLine: number | undefined,
+): boolean => currentLoopType === "while"
+  && (currentIfStartLine === undefined || (currentLoopStartLine ?? -1) >= currentIfStartLine);

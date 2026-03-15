@@ -6,6 +6,7 @@ import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { AssemblerServices, CursorAddressFacade } from "./assembler-internals.js";
 import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, LoweredInstruction, Spc700Context, SuperFXContext } from "./architecture-types.js";
+import { shouldEndifCloseInnermostWhile } from "./compatibility/asar-compatibility-profile.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
 import type {
@@ -24,7 +25,7 @@ import {
   type ExpressionNode,
   type ReferenceExpressionNode,
 } from "./ir/expression-node.js";
-import { createNormalizedCommand, setCommandWords, type NormalizedCommand } from "./ir/normalized-command.js";
+import { createNormalizedCommand, type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
@@ -269,7 +270,6 @@ export class Assembler implements AssemblySession {
   public spcInlineCompatMode: boolean = false;
   public requireStaticLabelLookup: boolean = false;
   readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
-  public inTreeProgramExecution: boolean = false;
   readonly directiveRegistry: DirectiveRegistry;
   readonly cursorAddress: CursorAddressFacade;
   public readonly services: AssemblerServices;
@@ -1178,14 +1178,8 @@ export class Assembler implements AssemblySession {
 
     const splitCommands = this.splitInlineCommands(processedCommands);
     if (block.includes("\n")) {
-      const previousTreeExecution = this.inTreeProgramExecution;
-      this.inTreeProgramExecution = true;
-      try {
-        const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
-        this.executeNodeStream(nodes);
-      } finally {
-        this.inTreeProgramExecution = previousTreeExecution;
-      }
+      const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
+      this.executeNodeStream(nodes);
       return;
     }
 
@@ -1275,30 +1269,46 @@ export class Assembler implements AssemblySession {
   }
 
   processNormalizedCommand(state: NormalizedCommand, rewriteRaw: boolean = true): void {
+    // Treat incoming commands as immutable execution inputs. Downstream pipeline
+    // stages still mutate `kind/words`, so run them against a per-dispatch clone
+    // instead of mutating cached pass-program nodes.
+    let workingState = createNormalizedCommand(
+      state.source.raw,
+      state.source.normalized,
+      [...state.words],
+      state.source.file,
+      state.source.line,
+    );
+
     // Preserve legacy fixture bootstrap behavior in tree/normalized execution:
     // `;`+ means "seed assembler ROM with target ROM bytes" before reads/writes.
-    if (state.source.raw.trim().startsWith(";`+")) {
+    if (workingState.source.raw.trim().startsWith(";`+")) {
       this.loadTestRomData();
       return;
     }
 
-    if (state.command.trim() === "") {
+    if (workingState.command.trim() === "") {
       return;
     }
 
     if (rewriteRaw) {
-      const rewrittenRaw = this.commandPipelineService.rewriteRawCommand(state.source.raw);
+      const rewrittenRaw = this.commandPipelineService.rewriteRawCommand(workingState.source.raw);
       const rewrittenNormalized = this.preDispatchPipelineService.normalizeCommand(rewrittenRaw);
       const rewrittenWords = this.splitCommandIntoWords(rewrittenNormalized);
-      if (rewrittenRaw !== state.source.raw || rewrittenNormalized !== state.command) {
-        state.source.raw = rewrittenRaw;
-        setCommandWords(state, rewrittenWords, rewrittenNormalized);
+      if (rewrittenRaw !== workingState.source.raw || rewrittenNormalized !== workingState.command) {
+        workingState = createNormalizedCommand(
+          rewrittenRaw,
+          rewrittenNormalized,
+          rewrittenWords,
+          workingState.source.file,
+          workingState.source.line,
+        );
       }
     }
 
-    const preprocessResult = this.commandPipelineService.preprocess(state);
+    const preprocessResult = this.commandPipelineService.preprocess(workingState);
     if (preprocessResult === "skipped_for_condition") {
-      debug(`processCommand ❎ Skipping command "${state.command}" because condition is false.`);
+      debug(`processCommand ❎ Skipping command "${workingState.command}" because condition is false.`);
       return;
     }
     if (preprocessResult === "handled") {
@@ -1308,11 +1318,11 @@ export class Assembler implements AssemblySession {
     // Capture the starting PC (before processing this command)
     const startPC = this.realsnespos & 0xFFFFFF;
 
-    if (!this.commandPipelineService.prepareForDispatch(state)) {
+    if (!this.commandPipelineService.prepareForDispatch(workingState)) {
       return;
     }
 
-    const lowered = this.lowerNode(state);
+    const lowered = this.lowerNode(workingState);
     this.dispatchLoweredNode(lowered);
 
     // Determine how many bytes were written in this command.
@@ -3060,17 +3070,11 @@ export class Assembler implements AssemblySession {
         this.includedFiles.set(resolvedPath, info);
       }
 
-      if (this.inTreeProgramExecution) {
-        const includeNode = this.createIncludeNode(resolvedPath, content);
-        for (const node of includeNode.commands) {
-          this.executeNode(node);
-        }
-      } else {
-        // Process the file line by line
-        const lines = content.split("\n");
-        for (const line of lines) {
-          this.processCommand(line);
-        }
+      // Includes now execute through the typed pass-program path so include
+      // semantics match top-level tree execution.
+      const includeNode = this.createIncludeNode(resolvedPath, content);
+      for (const node of includeNode.commands) {
+        this.executeNode(node);
       }
     } catch (error) {
       debug("assemblefile error 💥", error);
@@ -3499,10 +3503,7 @@ export class Assembler implements AssemblySession {
 
   executeNode(node: ExecutableNode): void {
     if ("source" in node) {
-      // Pass-program nodes are cached across passes; re-normalize from source to
-      // avoid mutable command state leaking between passes.
-      const freshNode = this.createLoopCommandNode(node.source.raw, node.source.file, node.source.line);
-      this.processNormalizedCommand(freshNode);
+      this.processNormalizedCommand(node);
       return;
     }
 
@@ -3677,8 +3678,11 @@ export class Assembler implements AssemblySession {
       if (keyword === "endif") {
         const currentIf = ifStack[ifStack.length - 1];
         const currentLoop = loopStack[loopStack.length - 1];
-        const whileIsInnermost = currentLoop?.type === "while"
-          && (!currentIf || currentLoop.startLine >= currentIf.startLine);
+        const whileIsInnermost = shouldEndifCloseInnermostWhile(
+          currentLoop?.type,
+          currentLoop?.startLine,
+          currentIf?.startLine,
+        );
 
         // Asar-compatible quirk: `endif` can terminate either an `if` chain or a
         // `while` block. Resolve ambiguity by closing the most recently opened

@@ -280,6 +280,20 @@ test("node execution seam dispatches typed command and conditional nodes", (t) =
   t.deepEqual(processed, ["db $01"]);
 });
 
+test("node execution seam does not re-normalize cached command nodes", (t) => {
+  const assembler = new Assembler();
+  const [commandNode] = assembler.parseCommandStreamToNodes(["db $01"]);
+  if (!commandNode || !("source" in commandNode)) {
+    t.fail();
+    return;
+  }
+
+  const createLoopNodeStub = stub(assembler, "createLoopCommandNode");
+  stub(assembler, "processNormalizedCommand").callsFake(() => {});
+  assembler.executeNode(commandNode);
+  t.false(createLoopNodeStub.called);
+});
+
 test("macro/include lifting exposes typed macro and include nodes", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");

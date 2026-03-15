@@ -1,4 +1,5 @@
 import type { DirectiveRegistry } from "./registry.js";
+import { shouldRedirectOrgToSpcblock } from "../compatibility/asar-compatibility-profile.js";
 
 const assertMapperAvailable = (inSpcblock: boolean): void => {
   if (inSpcblock) {
@@ -98,7 +99,7 @@ export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
       throw new Error("ORG is unavailable inside spcblock.");
     }
 
-    if (session.spcInlineCompatMode) {
+    if (shouldRedirectOrgToSpcblock(session.spcInlineCompatMode)) {
       session.handleSpcblock(["spcblock", ...words.slice(1)]);
       return;
     }

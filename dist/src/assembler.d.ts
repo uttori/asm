@@ -207,7 +207,6 @@ export declare class Assembler implements AssemblySession {
     spcInlineCompatMode: boolean;
     requireStaticLabelLookup: boolean;
     readonly passProgramCache: Map<string, RuntimeNode[]>;
-    inTreeProgramExecution: boolean;
     readonly directiveRegistry: DirectiveRegistry;
     readonly cursorAddress: CursorAddressFacade;
     readonly services: AssemblerServices;

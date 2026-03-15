@@ -5,8 +5,7 @@
   ],
   "exclude": [
     "dist",
-    "node_modules",
-    "src-parser"
+    "node_modules"
   ],
   "compilerOptions": {
     "allowJs": true,
