@@ -1,6 +1,5 @@
 import { createPendingCommand, setCommandKind, setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
-import type { LoopNode } from "../ir/assembly-tree.js";
-import { ExpressionNode, parseExpressionNode } from "../ir/expression-node.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
 
 export type ConditionalEntry = {
   cond: boolean;
@@ -8,7 +7,11 @@ export type ConditionalEntry = {
 
 export type PreDispatchPipelineHost = {
   collectingLoop: boolean;
-  currentLoop: LoopNode | null;
+  currentLoop: {
+    type: "for" | "while";
+    conditionNode?: ExpressionNode;
+    commands: unknown[];
+  } | null;
   inMacroDefinition: boolean;
   inMacroExpansion: boolean;
   pass: number;
@@ -144,12 +147,12 @@ export class PreDispatchPipelineService {
    * @param {NormalizedCommand} command The command to parse.
    * @returns {ExpressionNode | undefined} The parsed condition node.
    */
-  parseConditionNode(command: NormalizedCommand): ExpressionNode {
+  parseConditionNode(command: NormalizedCommand): ExpressionNode | undefined {
     if (command.keyword === "if" || command.keyword === "elseif" || command.keyword === "while") {
-      return command.parsed.condition?.expression ?? parseExpressionNode(command.words.slice(1).join(" "));
+      return command.parsed.condition?.expression;
     }
     if (command.keyword === "for") {
-      return command.parsed.forLoop?.range ?? parseExpressionNode(command.words.slice(3).join(" "));
+      return command.parsed.forLoop?.range;
     }
     return undefined;
   }

@@ -1,8 +1,10 @@
-import type { ArchitectureEncoder, SuperFXContext } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, SuperFXContext } from "./architecture-types.js";
 export declare class ArchSuperFX implements ArchitectureEncoder {
-    private assembler;
+    assembler: SuperFXContext;
     constructor(assembler: SuperFXContext);
     encode(words: string[]): boolean;
+    estimateInstruction(instruction: LoweredInstruction): number;
+    encodeInstruction(instruction: LoweredInstruction): boolean;
     estimateSize(words: string[]): number;
     /**
      * Processes a SuperFX assembly instruction.
@@ -41,23 +43,25 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
     handleTwoOperandOpcode(opcode: string, leftOp: string, rightOp: string): boolean;
     /**
      * Attempts to parse a register from a string, e.g. "r0", "(r3)", "#3".
-     * @param str the operand string
-     * @param type "r" | "parr" | "hash"
-     * @returns register number or null if it doesn't match
+     * @param {string} str The operand string.
+     * @param {"r" | "parr" | "hash"} type The type of register.
+     * @returns {number | null} The register number or null if it doesn't match.
      */
-    private getRegister;
+    getRegister(str: string, type: "r" | "parr" | "hash"): number | null;
     /**
      * Parses the register number. E.g. '5', '10', '15'. Returns -1 if invalid.
-     * @param str
+     * @param {string} str The string to parse.
+     * @returns {number} The register number.
      */
-    private parseRegisterNumber;
+    parseRegisterNumber(str: string): number;
     /**
      * Raises an error if `mid < min` or `mid > max`.
-     * @param min
-     * @param mid
-     * @param max
+     * @param {number} min The minimum value.
+     * @param {number} mid The middle value.
+     * @param {number} max The maximum value.
+     * @throws {Error} If the middle value is out of range.
      */
-    private rangeCheck;
+    rangeCheck(min: number, mid: number, max: number): void;
     /**
      * For "LMS" or "SMS" short addressing forms, we need to ensure the address is
      * even and in range [0x000..0x1FE].
@@ -71,6 +75,6 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      * @param {string} operand the operand
      * @returns {number} The operand length.
      */
-    private getOperandLength;
+    getOperandLength(operand: string): number;
 }
 //# sourceMappingURL=ArchSuperFX.d.ts.map

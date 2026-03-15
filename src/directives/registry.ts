@@ -13,15 +13,19 @@ import { registerStructBinaryDirectives } from "./struct-binary.js";
 import type { AssemblySession, DirectiveContext, DirectiveHandler } from "./types.js";
 
 export class DirectiveRegistry {
-  private readonly handlers = new Map<string, DirectiveHandler>();
+  readonly handlers = new Map<string, DirectiveHandler>();
 
-  constructor(private readonly ctx: DirectiveContext) {}
+  constructor(public readonly ctx: DirectiveContext) {}
 
   register(keyword: string | string[], handler: DirectiveHandler): void {
     const keywords = Array.isArray(keyword) ? keyword : [keyword];
     for (const entry of keywords) {
       this.handlers.set(entry, handler);
     }
+  }
+
+  has(keyword: string): boolean {
+    return this.handlers.has(keyword);
   }
 
   dispatch(keyword: string, words: string[], raw: string, command?: NormalizedCommand): boolean {

@@ -1,4 +1,4 @@
-import type { ArchitectureEncoder, SuperFXContext } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, SuperFXContext } from "./architecture-types.js";
 
 let debug = (..._: unknown[]) => {};
 try {
@@ -7,7 +7,7 @@ try {
 } catch {}
 
 export class ArchSuperFX implements ArchitectureEncoder {
-  private assembler: SuperFXContext;
+  assembler: SuperFXContext;
 
   constructor(assembler: SuperFXContext) {
     this.assembler = assembler;
@@ -15,6 +15,14 @@ export class ArchSuperFX implements ArchitectureEncoder {
 
   encode(words: string[]): boolean {
     return this.asblock_superfx(words);
+  }
+
+  estimateInstruction(instruction: LoweredInstruction): number {
+    return this.estimateSize(instruction.words);
+  }
+
+  encodeInstruction(instruction: LoweredInstruction): boolean {
+    return this.encode(instruction.words);
   }
 
   estimateSize(words: string[]): number {
@@ -598,11 +606,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
 
   /**
    * Attempts to parse a register from a string, e.g. "r0", "(r3)", "#3".
-   * @param str the operand string
-   * @param type "r" | "parr" | "hash"
-   * @returns register number or null if it doesn't match
+   * @param {string} str The operand string.
+   * @param {"r" | "parr" | "hash"} type The type of register.
+   * @returns {number | null} The register number or null if it doesn't match.
    */
-  private getRegister(str: string, type: "r" | "parr" | "hash"): number | null {
+  getRegister(str: string, type: "r" | "parr" | "hash"): number | null {
     // reg_parr => (rN)
     // reg_r => rN
     // reg_hash => #N
@@ -660,9 +668,10 @@ export class ArchSuperFX implements ArchitectureEncoder {
 
   /**
    * Parses the register number. E.g. '5', '10', '15'. Returns -1 if invalid.
-   * @param str
+   * @param {string} str The string to parse.
+   * @returns {number} The register number.
    */
-  private parseRegisterNumber(str: string): number {
+  parseRegisterNumber(str: string): number {
     // e.g. '10' => r10
     // valid registers are 0..15, but we also need to check for weird digits
     const match = str.match(/^\d{1,2}$/);
@@ -678,11 +687,12 @@ export class ArchSuperFX implements ArchitectureEncoder {
 
   /**
    * Raises an error if `mid < min` or `mid > max`.
-   * @param min
-   * @param mid
-   * @param max
+   * @param {number} min The minimum value.
+   * @param {number} mid The middle value.
+   * @param {number} max The maximum value.
+   * @throws {Error} If the middle value is out of range.
    */
-  private rangeCheck(min: number, mid: number, max: number) {
+  rangeCheck(min: number, mid: number, max: number) {
     if (mid < min || mid > max) {
       throw new Error(`Register out of valid range ${min}-${max}: ${mid}`);
     }
@@ -710,7 +720,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @param {string} operand the operand
    * @returns {number} The operand length.
    */
-  private getOperandLength(operand: string): number {
+  getOperandLength(operand: string): number {
     // This is a simplified logic: if it looks hex with 2 digits, assume 1; else 2
     // If there's a label, or more digits, we guess 2.
     // You can refine as needed.

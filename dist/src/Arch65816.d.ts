@@ -1,8 +1,10 @@
-import type { ArchitectureContext, ArchitectureEncoder } from "./architecture-types.js";
+import type { ArchitectureContext, ArchitectureEncoder, LoweredInstruction } from "./architecture-types.js";
 export declare class Arch65816 implements ArchitectureEncoder {
-    private assembler;
+    assembler: ArchitectureContext;
     constructor(assembler: ArchitectureContext);
     encode(words: string[]): boolean;
+    estimateInstruction(instruction: LoweredInstruction): number;
+    encodeInstruction(instruction: LoweredInstruction): boolean;
     estimateSize(words: string[]): number;
     /**
      * Processes a 65816 assembly instruction.
@@ -28,7 +30,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
      * @param {boolean} explicitlen Whether the operand length is explicit.
      * @returns {boolean} True if the opcode was handled, false otherwise.
      */
-    private handleLogicAndCompareOperations;
+    handleLogicAndCompareOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean;
     /**
      * Handles operators that do not take operands.
      * @param {string} opcode The opcode to handle.
@@ -48,12 +50,13 @@ export declare class Arch65816 implements ArchitectureEncoder {
     handleArithmeticOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean;
     /**
      * Handles Load X/Y Register instructions.
-     * @param opcode
-     * @param operand
-     * @param len
-     * @param explicitlen
+     * @param {string} opcode The opcode to handle.
+     * @param {string} operand The operand to handle.
+     * @param {number} len The length of the operand.
+     * @param {boolean} explicitlen Whether the operand length is explicit.
+     * @returns {boolean} True if the opcode was handled, false otherwise.
      */
-    private handleLoadRegister;
+    handleLoadRegister(opcode: string, operand: string, len: number, explicitlen: boolean): boolean;
     /**
      * Handles the JMP (Jump), JSR (Jump to Subroutine), and JSL (Jump to Subroutine Long) instructions.
      * @param {string} opcode - The opcode to handle.
@@ -66,16 +69,16 @@ export declare class Arch65816 implements ArchitectureEncoder {
      * @param {string} operand The operand to handle.
      * @returns {boolean} true if the instruction was handled, false otherwise
      */
-    private handlePER;
+    handlePER(operand: string): boolean;
     /**
      * Handles STX, STY, and STZ instructions.
-     * @param {string} opcode
-     * @param {string} operand
-     * @param {number} len
-     * @param {boolean} explicitlen
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * @param {string} opcode The opcode to handle.
+     * @param {string} operand The operand to handle.
+     * @param {number} len The length of the operand.
+     * @param {boolean} explicitlen Whether the operand length is explicit.
+     * @returns {boolean} True if the instruction was handled, false otherwise
      */
-    private handleStoreOperations;
+    handleStoreOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean;
     /**
      * Handles MVN (Move Negative) and MVP (Move Positive) instructions.
      * @param {string} opcode The opcode to handle.

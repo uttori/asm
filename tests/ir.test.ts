@@ -243,6 +243,61 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
   ]);
 });
 
+test("tree pass programs are cached per source block key", (t) => {
+  const assembler = new Assembler();
+  const commands = ["db $01", "db $02"];
+  const first = assembler.getOrBuildPassProgram(commands, "cache.asm", 0);
+  const second = assembler.getOrBuildPassProgram(commands, "cache.asm", 0);
+
+  t.is(first, second);
+});
+
+test("include nodes and parsed programs keep typed executable leaves", (t) => {
+  const assembler = new Assembler();
+  const includeNode = assembler.createIncludeNode("include.asm", "db $01\ndb $02");
+  const rootNodes = assembler.getOrBuildPassProgram(["db $01", "db $02"], "root.asm", 0);
+
+  t.true(includeNode.commands.every((node) => typeof node !== "string"));
+  t.true(rootNodes.every((node) => typeof node !== "string"));
+});
+
+test("tree parser resolves ambiguous endif to innermost while block", (t) => {
+  const assembler = new Assembler();
+  const nodes = assembler.parseCommandStreamToNodes([
+    "if 1",
+    "while 1",
+    "db $01",
+    "endif",
+    "db $02",
+    "endif",
+  ]);
+
+  t.is(nodes.length, 1);
+  const root = nodes[0];
+  if (!root || !("type" in root) || root.type !== "if") {
+    t.fail();
+    return;
+  }
+
+  const [ifBranch] = root.branches;
+  t.truthy(ifBranch);
+  t.is(ifBranch.commands.length, 2);
+
+  const whileNode = ifBranch.commands[0];
+  if (!whileNode || !("type" in whileNode) || whileNode.type !== "while") {
+    t.fail();
+    return;
+  }
+  t.is(whileNode.commands.length, 1);
+
+  const trailingCommand = ifBranch.commands[1];
+  if (!trailingCommand || !("source" in trailingCommand)) {
+    t.fail();
+    return;
+  }
+  t.is(trailingCommand.command, "db $02");
+});
+
 test("math and operand resolver accept expression nodes", (t) => {
   const assembler = new Assembler();
 
@@ -251,6 +306,23 @@ test("math and operand resolver accept expression nodes", (t) => {
   t.true(assembler.evaluateExpression(parseExpressionNode("5 > 3")));
   t.is(assembler.mathCore.math(parseExpressionNode("1 + 2 * 3")), 7);
   t.is(assembler.mathCore.math(parseExpressionNode("<:$123456")), 0x12);
+});
+
+test("evaluateExpression wraps node resolution errors with contextual message", (t) => {
+  const assembler = new Assembler();
+  const missingDefineExpression: ExpressionNode = {
+    type: "defineReference",
+    name: "MISSING_DEFINE",
+    braced: false,
+  };
+
+  // Node-based expressions must surface the same diagnostic wrapper as string
+  // expressions so integration parity compares equivalent error text.
+  const error = t.throws(() => {
+    assembler.evaluateExpression(missingDefineExpression);
+  });
+  t.truthy(error);
+  t.true(error.message.startsWith("Error evaluating expression \"!MISSING_DEFINE\""));
 });
 
 test("define references and member/index nodes resolve structurally", (t) => {

@@ -75,3 +75,22 @@ test("normalized dispatch preserves check bankcross behavior", t => {
   assembler.processNormalizedCommand(commandNode("check bankcross on"), false);
   t.is(assembler.bankCrossCheckMode, "full");
 });
+
+test("lowered directive dispatch preserves data directive behavior", t => {
+  const assembler = new Assembler();
+  const dataSpy = sinon.spy(assembler, "handleDataDirective");
+  sinon.stub(assembler, "addAddressToLine");
+
+  const normalized = createNormalizedCommand(
+    "db $01, bank($123456), \"TEXT\"",
+    "db $01, bank($123456), \"TEXT\"",
+    ["db", "$01,", "bank($123456),", "\"TEXT\""],
+    "test.asm",
+    1
+  );
+
+  assembler.processNormalizedCommand(normalized, false);
+
+  t.true(dataSpy.calledOnce);
+  t.truthy(dataSpy.firstCall.args[1]?.length);
+});

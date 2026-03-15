@@ -1,4 +1,5 @@
 import type { OperandResolver } from "../operand-resolver.js";
+import type { NormalizedCommand } from "../ir/normalized-command.js";
 export interface AssemblySession {
     currentFile: string;
     includedFiles: Map<string, {
@@ -62,5 +63,5 @@ export interface DirectiveContext {
     session: AssemblySession;
     operandResolver: OperandResolver;
 }
-export type DirectiveHandler = (ctx: DirectiveContext, words: string[], raw: string) => void;
+export type DirectiveHandler = (ctx: DirectiveContext, words: string[], raw: string, command?: NormalizedCommand) => void;
 //# sourceMappingURL=types.d.ts.map

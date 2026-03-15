@@ -1,13 +1,11 @@
-import type { ArchitectureContext, ArchitectureEncoder } from "./architecture-types.js";
+import type { ArchitectureContext, ArchitectureEncoder, LoweredInstruction } from "./architecture-types.js";
 
 let debug = (..._) => {};
 /* c8 ignore next */
-// if (process.env.UTTORI_DATA_DEBUG || true) {
 try { const { default: d } = await import("debug"); debug = d("Arch65816"); } catch {}
-// }
 
 export class Arch65816 implements ArchitectureEncoder {
-  private assembler: ArchitectureContext;
+  assembler: ArchitectureContext;
 
   constructor(assembler: ArchitectureContext) {
     this.assembler = assembler;
@@ -15,6 +13,14 @@ export class Arch65816 implements ArchitectureEncoder {
 
   encode(words: string[]): boolean {
     return this.asblock_65816(words);
+  }
+
+  estimateInstruction(instruction: LoweredInstruction): number {
+    return this.estimateSize(instruction.words);
+  }
+
+  encodeInstruction(instruction: LoweredInstruction): boolean {
+    return this.encode(instruction.words);
   }
 
   estimateSize(words: string[]): number {
@@ -76,7 +82,7 @@ export class Arch65816 implements ArchitectureEncoder {
     if (operand.startsWith("#")) {
       return 1 + length;
     }
-    if (/^\$[\dA-Fa-f]{6}(,x)?$/i.test(operand)) {
+    if (/^\$[\da-f]{6}(,x)?$/i.test(operand)) {
       return 4;
     }
     return 1 + length;
@@ -481,7 +487,7 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {boolean} explicitlen Whether the operand length is explicit.
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
-  private handleLogicAndCompareOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
+  handleLogicAndCompareOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
     debug("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
 
     const opcodes: { [key: string]: { immediate: number; direct: number; directX?: number; absolute: number; absoluteX?: number; absoluteY?: number; indirectX?: number; indirectY?: number; indirect?: number; indirectLong?: number; indirectLongY?: number; stackRelative?: number; stackRelativeIndirectY?: number; absoluteLong?: number; absoluteLongX?: number; directIndirectLong?: number; directIndirectLongY?: number } } = {
@@ -884,12 +890,13 @@ export class Arch65816 implements ArchitectureEncoder {
 
   /**
    * Handles Load X/Y Register instructions.
-   * @param opcode
-   * @param operand
-   * @param len
-   * @param explicitlen
+   * @param {string} opcode The opcode to handle.
+   * @param {string} operand The operand to handle.
+   * @param {number} len The length of the operand.
+   * @param {boolean} explicitlen Whether the operand length is explicit.
+   * @returns {boolean} True if the opcode was handled, false otherwise.
    */
-  private handleLoadRegister(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
+  handleLoadRegister(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
     debug("handleLoadRegister", { opcode, operand, len, explicitlen });
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
@@ -1149,7 +1156,7 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {string} operand The operand to handle.
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
-  private handlePER(operand: string): boolean {
+  handlePER(operand: string): boolean {
     debug("handlePER", operand);
     if (!operand) {
         throw new Error("Error: PER requires an operand.");
@@ -1166,13 +1173,13 @@ export class Arch65816 implements ArchitectureEncoder {
 
   /**
    * Handles STX, STY, and STZ instructions.
-   * @param {string} opcode
-   * @param {string} operand
-   * @param {number} len
-   * @param {boolean} explicitlen
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * @param {string} opcode The opcode to handle.
+   * @param {string} operand The operand to handle.
+   * @param {number} len The length of the operand.
+   * @param {boolean} explicitlen Whether the operand length is explicit.
+   * @returns {boolean} True if the instruction was handled, false otherwise
    */
-  private handleStoreOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
+  handleStoreOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
     debug("handleStoreOperations", { opcode, operand, len, explicitlen });
     const rawOperand = operand;
 

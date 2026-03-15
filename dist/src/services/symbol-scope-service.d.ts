@@ -41,17 +41,75 @@ export interface SymbolScopeHost {
     structs: Map<string, StructDefinition>;
 }
 export declare class SymbolScopeService {
-    private readonly host;
+    readonly host: SymbolScopeHost;
     constructor(host: SymbolScopeHost);
+    /**
+     * Checks if a label is in scope.
+     * @param {string} identifier The label to check.
+     * @returns {boolean} `true` if the label is in scope, `false` otherwise.
+     */
     hasLabelInScope(identifier: string): boolean;
+    /**
+     * Handles a relative label.
+     * @param {string} label The label to handle.
+     * @returns {number} The address of the label.
+     */
     handleRelativeLabel(label: string): number;
+    /**
+     * Finds the next label.
+     * @param {string} label The label to find.
+     * @param {number} currentAddressOverride The current address to override.
+     * @returns {number} The address of the next label.
+     */
     findNextLabel(label: string, currentAddressOverride?: number): number;
+    /**
+     * Finds the previous label.
+     * @param {string} label The label to find.
+     * @param {number} currentAddressOverride The current address to override.
+     * @returns {number} The address of the previous label.
+     */
     findPreviousLabel(label: string, currentAddressOverride?: number): number;
+    /**
+     * Sets a label.
+     * @param {string} label The label to set.
+     * @param {number} value The value of the label.
+     * @param {boolean} isStatic Whether the label is static.
+     * @param {boolean} isMacroLabel Whether the label is a macro label.
+     * @param {boolean} isGlobal Whether the label is global.
+     * @param {boolean} modifiesHierarchy Whether the label modifies the hierarchy.
+     */
     setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
+    /**
+     * Resolves a struct member.
+     * @param {string} compoundId The compound ID of the struct member.
+     * @returns {number} The address of the struct member.
+     */
     resolveStructMember(compoundId: string): number;
+    /**
+     * Gets the value of a label.
+     * @param {string} label The label to get the value of.
+     * @param {boolean} requireStatic Whether the label must be static.
+     * @returns {number} The value of the label.
+     */
     getLabelValue(label: string, requireStatic: boolean): number;
+    /**
+     * Gets the value of a label directly.
+     * @param {string} label The label to get the value of.
+     * @param {boolean} requireStatic Whether the label must be static.
+     * @returns {number} The value of the label.
+     */
     getLabelValueDirect(label: string, requireStatic: boolean): number;
+    /**
+     * Gets the size of an object.
+     * @param {string} identifier The identifier of the object.
+     * @param {boolean} baseOnly Whether to only get the base size.
+     * @returns {number} The size of the object.
+     */
     getObjectSize(identifier: string, baseOnly?: boolean): number;
+    /**
+     * Handles a label definition.
+     * @param {string} labelName The name of the label.
+     */
     handleLabelDefinition(labelName: string): void;
 }
 export {};

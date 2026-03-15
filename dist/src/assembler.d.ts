@@ -1,14 +1,24 @@
 import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
-import type { ArchitectureContext, ExpressionHost, Spc700Context, SuperFXContext } from "./architecture-types.js";
+import type { AssemblerServices, CursorAddressFacade } from "./assembler-internals.js";
+import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, LoweredInstruction, Spc700Context, SuperFXContext } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addr2line.js";
-import type { IncludeNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";
-import { type ExpressionNode } from "./ir/expression-node.js";
+import type { ConditionalBranchNode, ExecutableNode, IncludeNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";
+import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expression-node.js";
 import { type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
+import { type DirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
+import { CommandPipelineService, type CommandPipelineHost } from "./services/command-pipeline-service.js";
+import { DefineEngine, type DefineHost } from "./services/define-engine.js";
+import { FrontEndCommandService, type FrontEndCommandHost } from "./services/front-end-command-service.js";
+import { MacroEngine, type MacroEngineHost } from "./services/macro-engine.js";
+import { PreDispatchPipelineService, type PreDispatchPipelineHost } from "./services/pre-dispatch-pipeline-service.js";
+import { RomWriterService, type RomWriterHost } from "./services/rom-writer-service.js";
+import { StructEngine, type StructHost } from "./services/struct-engine.js";
+import { SymbolScopeService, type SymbolScopeHost } from "./services/symbol-scope-service.js";
 /** Represents a macro definition. */
 export type MacroDefinition = {
     /** The name of the macro. */
@@ -23,24 +33,15 @@ export type MacroDefinition = {
     sourceFile?: string;
 };
 export type LoopBlock = LoopNode;
-type RuntimeConditionalBranch = {
-    kind: "if" | "elseif" | "else";
-    header?: NormalizedCommand;
-    conditionText?: string;
-    conditionNode?: ExpressionNode;
-    commands: ExecutableNode[];
-    startLine: number;
-    endLine?: number;
-};
-type RuntimeConditionalNode = {
-    type: "if";
-    header?: NormalizedCommand;
-    branches: RuntimeConditionalBranch[];
-    startLine: number;
-    endLine?: number;
-};
+type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
-type ExecutableNode = string | NormalizedCommand | LoopNode | RuntimeConditionalNode;
+type LoweredDirective = {
+    kind: "directive";
+    keyword: string;
+    words: string[];
+    source: NormalizedCommand["source"];
+};
+type LoweredCommand = LoweredDirective | LoweredInstruction;
 export type WhileTracker = {
     iswhile: boolean;
     startline: number;
@@ -205,21 +206,19 @@ export declare class Assembler implements AssemblySession {
     spcblockData: SpcblockData | null;
     spcInlineCompatMode: boolean;
     requireStaticLabelLookup: boolean;
-    useTreePassDriver: boolean;
-    /** Temporary bisection toggle to force legacy line-driven execution. */
-    useLegacyPassDriver: boolean;
-    private readonly passProgramCache;
-    private readonly directiveRegistry;
-    private readonly cursorAddress;
-    private readonly services;
-    private get commandPipelineService();
-    private get defineEngine();
-    private get frontEndCommandService();
-    private get macroEngine();
-    private get preDispatchPipelineService();
-    private get symbolScope();
-    private get romWriter();
-    private get structEngine();
+    readonly passProgramCache: Map<string, RuntimeNode[]>;
+    inTreeProgramExecution: boolean;
+    readonly directiveRegistry: DirectiveRegistry;
+    readonly cursorAddress: CursorAddressFacade;
+    readonly services: AssemblerServices;
+    get commandPipelineService(): CommandPipelineService;
+    get defineEngine(): DefineEngine;
+    get frontEndCommandService(): FrontEndCommandService;
+    get macroEngine(): MacroEngine;
+    get preDispatchPipelineService(): PreDispatchPipelineService;
+    get symbolScope(): SymbolScopeService;
+    get romWriter(): RomWriterService;
+    get structEngine(): StructEngine;
     get currentAddress(): number;
     get directPageOptimizationEnabled(): boolean;
     recordCurrentAddress(): void;
@@ -228,16 +227,16 @@ export declare class Assembler implements AssemblySession {
     incrementBytesWritten(num: number): void;
     processNestedCommand(command: string): void;
     loadTestRomData(): void;
-    private createCursorAddressFacade;
-    private createDefineHost;
-    private createFrontEndCommandHost;
-    private createPreDispatchPipelineHost;
-    private createCommandPipelineHost;
-    private createStructHost;
-    private createMacroEngineHost;
-    private createSymbolScopeHost;
-    private createRomWriterHost;
-    private createServices;
+    createCursorAddressFacade(): CursorAddressFacade;
+    createDefineHost(): DefineHost;
+    createFrontEndCommandHost(): FrontEndCommandHost;
+    createPreDispatchPipelineHost(): PreDispatchPipelineHost;
+    createCommandPipelineHost(): CommandPipelineHost;
+    createStructHost(): StructHost;
+    createMacroEngineHost(): MacroEngineHost;
+    createSymbolScopeHost(): SymbolScopeHost;
+    createRomWriterHost(): RomWriterHost;
+    createServices(): AssemblerServices;
     constructor(targetRom?: number[] | Uint8Array);
     /**
      * Sets ROM header checksum calculation mode.
@@ -252,9 +251,9 @@ export declare class Assembler implements AssemblySession {
     evaluateMath(input: string): number;
     convertTargetAddressToRomOffset(address: number): number;
     convertRomOffsetToTargetAddress(offset: number): number;
-    private resolveExpressionHostLabel;
+    resolveExpressionHostLabel(identifier: string): number | string;
     getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
-    private lookupDefineValue;
+    lookupDefineValue(varName: string): string | undefined;
     canReadTargetRom(position: number, size: number): number;
     readTargetRom(position: number, size: number, defaultValue?: number): number;
     canReadExpressionFile(filename: string, position: number, size: number): number;
@@ -282,11 +281,11 @@ export declare class Assembler implements AssemblySession {
     fillRomData(start: number, value: number, length: number): void;
     /**
      * Picks the appropriate instruction handler based on architecture.
-     * @param {string[]} words The words to pick.
+     * @param {string[] | LoweredInstruction} input The instruction to pick.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
-    asblock_pick(words: string[]): boolean;
-    private getActiveArchitectureEncoder;
+    asblock_pick(input: string[] | LoweredInstruction): boolean;
+    getActiveArchitectureEncoder(): ArchitectureEncoder | undefined;
     findNextRelativeLabel(reference: string, fromAddress: number): number;
     findPreviousRelativeLabel(reference: string, fromAddress: number): number;
     /**
@@ -316,13 +315,14 @@ export declare class Assembler implements AssemblySession {
     assembleblock(block: string): void;
     preprocessBlockCommands(block: string): string[];
     splitInlineCommands(commands: string[]): string[];
-    setExecutionDriver(mode: "tree" | "legacy"): void;
     removeInlineComment(line: string): string;
     /**
      * Processes a single command from `assembleblock`.
      * @param {string} command - The command to process.
      */
     processCommand(command: string): void;
+    processNormalizedCommand(state: NormalizedCommand, rewriteRaw?: boolean): void;
+    dispatchLoweredNode(lowered: LoweredCommand): void;
     handlePushBase(): void;
     /**
      * Saves the current character mapping table.
@@ -610,12 +610,12 @@ export declare class Assembler implements AssemblySession {
      * @returns {boolean} True if the expression is true, false otherwise.
      */
     evaluateExpression(expression: string | ExpressionNode): boolean;
-    private resolveExpressionInput;
-    private resolveExpressionNode;
-    private resolveReferenceExpressionNode;
-    private evaluateReferenceExpressionNode;
-    private resolveReferenceLabelValue;
-    private normalizeReferenceExpressionNode;
+    resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode;
+    resolveExpressionNode(expression: ExpressionNode): ExpressionNode;
+    resolveReferenceExpressionNode(expression: ReferenceExpressionNode): ExpressionNode;
+    evaluateReferenceExpressionNode(expression: ReferenceExpressionNode, requireStatic?: boolean): number;
+    resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic?: boolean): number | string;
+    normalizeReferenceExpressionNode(expression: ReferenceExpressionNode): string;
     /**
      * Resolves all define replacements in a given string.
      * @param {string} input The string to resolve defines in.
@@ -780,6 +780,7 @@ export declare class Assembler implements AssemblySession {
      * @param {LoopBlock} whileBlock The while loop block to execute.
      */
     executeWhileLoop(whileBlock: LoopBlock): void;
+    getDefineVariableFromNode(node: ExecutableNode): string | null;
     /**
      * Checks if a line is a define statement.
      * @param {string} line The line to check.
@@ -792,8 +793,8 @@ export declare class Assembler implements AssemblySession {
      * @returns {string | undefined} The variable name or null if the line is not a define statement.
      */
     getDefineVariable(line: string): string | null;
-    private createLoopCommandNode;
-    lowerNode(command: NormalizedCommand): NormalizedCommand;
+    createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
+    lowerNode(command: NormalizedCommand): LoweredCommand;
     executeNode(node: ExecutableNode): void;
     executeNodeStream(nodes: RuntimeNode[]): void;
     executeConditionalNode(node: RuntimeConditionalNode): void;

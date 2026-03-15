@@ -77,7 +77,6 @@ test("pre-dispatch pipeline collects loop body commands", (t) => {
   assembler.collectingLoop = true;
   assembler.currentLoop = {
     type: "for",
-    condition: "",
     commands: [],
     startLine: 1,
   };
@@ -99,7 +98,6 @@ test("pre-dispatch pipeline maps while endif to handleEndIf", (t) => {
   assembler.collectingLoop = true;
   assembler.currentLoop = {
     type: "while",
-    condition: "",
     commands: [],
     startLine: 1,
   };
@@ -124,6 +122,17 @@ test("pre-dispatch pipeline loads test rom directive", (t) => {
   const assembler = new Assembler(targetRom);
 
   assembler.processCommand(";`+");
+
+  t.deepEqual(Array.from(assembler.romdata.slice(0, 4)), [1, 2, 3, 4]);
+});
+
+test("normalized dispatch also loads test rom directive", (t) => {
+  const targetRom = new Uint8Array([1, 2, 3, 4]);
+  const assembler = new Assembler(targetRom);
+
+  // Tree execution enters through processNormalizedCommand, so this directive
+  // must retain the same bootstrap semantics as raw processCommand.
+  assembler.processNormalizedCommand(commandNode(";`+"), false);
 
   t.deepEqual(Array.from(assembler.romdata.slice(0, 4)), [1, 2, 3, 4]);
 });

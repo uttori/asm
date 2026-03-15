@@ -4718,11 +4718,12 @@ test("executeWhileLoop - variable tracking and restoration", t => {
   // Create a while loop that modifies variables
   const whileBlock: LoopBlock = {
     type: "while",
-    condition: "while !counter < 2",
+    header: makeCommand("while !counter < 2"),
+    conditionNode: parseExpressionNode("!counter < 2"),
     commands: [
-      "!counter = !counter + 1",
-      "!existingVar = modified",
-      "!newVar = created"
+      makeCommand("!counter = !counter + 1"),
+      makeCommand("!existingVar = modified"),
+      makeCommand("!newVar = created")
     ],
     startLine: 1,
     endLine: 5,
@@ -4747,8 +4748,9 @@ test("executeWhileLoop - infinite loop prevention", t => {
   // Create a while loop that would run forever
   const whileBlock: LoopBlock = {
     type: "while",
-    condition: "while 1 == 1", // Always true
-    commands: ["nop"], // Do nothing
+    header: makeCommand("while 1 == 1"), // Always true
+    conditionNode: parseExpressionNode("1 == 1"),
+    commands: [makeCommand("nop")], // Do nothing
     startLine: 1,
     endLine: 3,
     variable: null
@@ -4766,23 +4768,24 @@ test("executeWhileLoop - infinite loop prevention", t => {
   evalStub.restore();
 });
 
-test("executeWhileLoop - invalid condition syntax", t => {
+test("executeWhileLoop - invalid condition expression throws", t => {
   const assembler = new Assembler();
 
   // Create a while loop with invalid syntax
   const invalidBlock: LoopBlock = {
     type: "while",
-    condition: "invalid syntax",
-    commands: ["!counter = !counter + 1"],
+    header: makeCommand("while invalid syntax"),
+    commands: [makeCommand("!counter = !counter + 1")],
     startLine: 1,
     endLine: 3,
     variable: null
   };
 
   // Execute the while loop
-  t.notThrows(() => {
+  const error = t.throws(() => {
     assembler.executeWhileLoop(invalidBlock);
   });
+  t.truthy(error);
 });
 
 test("executeWhileLoop - condition immediately false", t => {
@@ -4791,8 +4794,9 @@ test("executeWhileLoop - condition immediately false", t => {
   // Create a while loop with a condition that's immediately false
   const whileBlock: LoopBlock = {
     type: "while",
-    condition: "while !counter > 10",
-    commands: ["!counter = !counter + 1"],
+    header: makeCommand("while !counter > 10"),
+    conditionNode: parseExpressionNode("!counter > 10"),
+    commands: [makeCommand("!counter = !counter + 1")],
     startLine: 1,
     endLine: 3,
     variable: null
@@ -4820,10 +4824,11 @@ test("executeWhileLoop - complex variable modifications", t => {
   // Create a while loop with complex variable modifications
   const whileBlock: LoopBlock = {
     type: "while",
-    condition: "while !index < 3",
+    header: makeCommand("while !index < 3"),
+    conditionNode: parseExpressionNode("!index < 3"),
     commands: [
-      "!result = !result + !index",
-      "!index = !index + 1"
+      makeCommand("!result = !result + !index"),
+      makeCommand("!index = !index + 1")
     ],
     startLine: 1,
     endLine: 4,
@@ -4905,11 +4910,11 @@ test("executeForLoop - start equals end (no iterations)", t => {
   // Create a for loop where start equals end
   const forBlock: LoopBlock = {
     type: "for",
-    condition: "for i = 5..5",
+    header: makeCommand("for i = 5..5"),
     variable: "i",
     start: 5,
     end: 5,
-    commands: ["!counter = !counter + 1"],
+    commands: [makeCommand("!counter = !counter + 1")],
     startLine: 1,
     endLine: 3
   };
@@ -4930,11 +4935,11 @@ test("executeForLoop - start greater than end (no iterations)", t => {
   // Create a for loop where start > end
   const forBlock: LoopBlock = {
     type: "for",
-    condition: "for i = 10..5",
+    header: makeCommand("for i = 10..5"),
     variable: "i",
     start: 10,
     end: 5,
-    commands: ["!counter = !counter + 1"],
+    commands: [makeCommand("!counter = !counter + 1")],
     startLine: 1,
     endLine: 3
   };
@@ -4955,18 +4960,18 @@ test("executeForLoop - nested loop execution", t => {
   // Create a nested loop structure
   const innerLoop: LoopBlock = {
     type: "for",
-    condition: "for j = 0..3",
+    header: makeCommand("for j = 0..3"),
     variable: "j",
     start: 0,
     end: 3,
-    commands: ["!matrix = !matrix + (!i * 10 + !j)"],
+    commands: [makeCommand("!matrix = !matrix + (!i * 10 + !j)")],
     startLine: 2,
     endLine: 4
   };
 
   const outerLoop: LoopBlock = {
     type: "for",
-    condition: "for i = 0..2",
+    header: makeCommand("for i = 0..2"),
     variable: "i",
     start: 0,
     end: 2,
@@ -4992,15 +4997,19 @@ test("executeForLoop - expression evaluation", t => {
 
   // Stub getnum to simulate expression evaluation
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("5 + 5").returns(10);
+  getnumStub.withArgs("20 - 5").returns(15);
   getnumStub.withArgs("5+5").returns(10);
   getnumStub.withArgs("20-5").returns(15);
 
   // Create a for loop with expressions
   const forBlock: LoopBlock = {
     type: "for",
-    condition: "for i = 5+5..20-5",
+    header: makeCommand("for i = 5+5..20-5"),
     variable: "i",
-    commands: ["!sum = !sum + 1"],
+    startExpression: parseExpressionNode("5+5"),
+    endExpression: parseExpressionNode("20-5"),
+    commands: [makeCommand("!sum = !sum + 1")],
     startLine: 1,
     endLine: 3
   };
@@ -5053,9 +5062,9 @@ test("executeForLoop - invalid for loop syntax", t => {
   // Create a for loop with invalid syntax
   const forBlock: LoopBlock = {
     type: "for",
-    condition: "for i in 0 to 5", // Invalid syntax (should be i = 0..5)
+    header: makeCommand("for i in 0 to 5"), // Invalid syntax (should be i = 0..5)
     variable: "i",
-    commands: ["!counter = !counter + 1"],
+    commands: [makeCommand("!counter = !counter + 1")],
     startLine: 1,
     endLine: 3
   };
@@ -5076,9 +5085,9 @@ test("executeLoopBlock - for loop", t => {
   // Create a for loop block
   const forBlock: LoopBlock = {
     type: "for",
-    condition: "for i = 0..3",
+    header: makeCommand("for i = 0..3"),
     variable: "i",
-    commands: ["command1", "command2"],
+    commands: [makeCommand("command1"), makeCommand("command2")],
     startLine: 1,
     endLine: 4
   };
@@ -5103,8 +5112,9 @@ test("executeLoopBlock - while loop", t => {
   // Create a while loop block
   const whileBlock: LoopBlock = {
     type: "while",
-    condition: "while x < 5",
-    commands: ["command1", "command2"],
+    header: makeCommand("while x < 5"),
+    conditionNode: parseExpressionNode("x < 5"),
+    commands: [makeCommand("command1"), makeCommand("command2")],
     startLine: 1,
     endLine: 4
   };
@@ -5129,18 +5139,18 @@ test("executeLoopBlock - nested loops", t => {
   // Create a nested loop structure
   const innerLoop: LoopBlock = {
     type: "for",
-    condition: "for j = 0..2",
+    header: makeCommand("for j = 0..2"),
     variable: "j",
-    commands: ["inner_command"],
+    commands: [makeCommand("inner_command")],
     startLine: 2,
     endLine: 3
   };
 
   const outerLoop: LoopBlock = {
     type: "for",
-    condition: "for i = 0..2",
+    header: makeCommand("for i = 0..2"),
     variable: "i",
-    commands: ["outer_command", innerLoop],
+    commands: [makeCommand("outer_command"), innerLoop],
     startLine: 1,
     endLine: 4
   };
@@ -5166,8 +5176,7 @@ test("executeLoopBlock - unsupported loop type", t => {
   // Create a loop with an unsupported type
   const unsupportedLoop = {
     type: "foreach", // Unsupported type
-    condition: "foreach item in list",
-    commands: ["command1"],
+    commands: [makeCommand("command1")],
     startLine: 1,
     endLine: 3
   } as unknown as LoopBlock;
@@ -5197,9 +5206,9 @@ test("endLoopCollection - normal for loop completion", t => {
   assembler.currentLine = 10;
   assembler.currentLoop = {
     type: "for",
-    condition: "for i = 0..5",
+    header: makeCommand("for i = 0..5"),
     variable: "i",
-    commands: ["command1", "command2"],
+    commands: [makeCommand("command1"), makeCommand("command2")],
     startLine: 5
   };
 
@@ -5222,8 +5231,9 @@ test("endLoopCollection - normal while loop completion", t => {
   assembler.currentLine = 15;
   assembler.currentLoop = {
     type: "while",
-    condition: "while x < 10",
-    commands: ["command1", "command2"],
+    header: makeCommand("while x < 10"),
+    conditionNode: parseExpressionNode("x < 10"),
+    commands: [makeCommand("command1"), makeCommand("command2")],
     startLine: 10
   };
 
@@ -5242,7 +5252,7 @@ test("endLoopCollection - nested loops", t => {
   // Setup parent loop
   const parentLoop = {
     type: "for" as const,
-    condition: "for i = 0..3",
+    header: makeCommand("for i = 0..3"),
     variable: "i",
     commands: [],
     startLine: 5
@@ -5251,9 +5261,9 @@ test("endLoopCollection - nested loops", t => {
   // Setup child loop
   const childLoop = {
     type: "for" as const,
-    condition: "for j = 0..2",
+    header: makeCommand("for j = 0..2"),
     variable: "j",
-    commands: ["inner_command"],
+    commands: [makeCommand("inner_command")],
     startLine: 6
   };
 
@@ -5290,9 +5300,9 @@ test("endLoopCollection - mismatched loop types", t => {
   assembler.currentLine = 10;
   assembler.currentLoop = {
     type: "for",
-    condition: "for i = 0..5",
+    header: makeCommand("for i = 0..5"),
     variable: "i",
-    commands: ["command1", "command2"],
+    commands: [makeCommand("command1"), makeCommand("command2")],
     startLine: 5
   };
 
@@ -5331,9 +5341,9 @@ test("endLoopCollection - sets endLine property", t => {
   assembler.currentLine = 25;
   assembler.currentLoop = {
     type: "for",
-    condition: "for i = 0..5",
+    header: makeCommand("for i = 0..5"),
     variable: "i",
-    commands: ["command1"],
+    commands: [makeCommand("command1")],
     startLine: 20
   };
 
@@ -5351,9 +5361,9 @@ test("endLoopCollection - sets endLine property", t => {
   assembler.loopNestingLevel = 1;
   assembler.currentLoop = {
     type: "for",
-    condition: "for i = 0..5",
+    header: makeCommand("for i = 0..5"),
     variable: "i",
-    commands: ["command1"],
+    commands: [makeCommand("command1")],
     startLine: 20
   };
   assembler.endLoopCollection("for");
@@ -7056,6 +7066,33 @@ test("asblock_pick - pass 0 handling", t => {
 
   // In pass 0, should always return true to allow forward references
   t.true(assembler.asblock_pick(["unknown_instruction"]), "Should return true in pass 0 regardless of instruction");
+});
+
+test("asblock_pick - lowered instruction path uses architecture adapters", t => {
+  const assembler = new Assembler();
+  assembler.pass = 2;
+  assembler.arch = "65816";
+  let calledWithWords: string[] | undefined;
+  const original = assembler.arch65816.encodeInstruction;
+  assembler.arch65816.encodeInstruction = (instruction) => {
+    calledWithWords = instruction.words;
+    return true;
+  };
+
+  const handled = assembler.asblock_pick({
+    kind: "instruction",
+    mnemonic: "lda",
+    operandText: "#$10",
+    operands: ["#$10"],
+    words: ["lda", "#$10"],
+    sourceFile: "test.asm",
+    sourceLine: 1,
+    sourceRaw: "lda #$10",
+  });
+
+  t.true(handled);
+  t.deepEqual(calledWithWords, ["lda", "#$10"]);
+  assembler.arch65816.encodeInstruction = original;
 });
 
 test("asblock_pick - spc700 architecture", t => {

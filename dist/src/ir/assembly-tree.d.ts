@@ -2,7 +2,6 @@ import type { ExpressionNode, RangeExpressionNode } from "./expression-node.js";
 import type { NormalizedCommand } from "./normalized-command.js";
 export type LoopNode = {
     type: "for" | "while";
-    condition: string;
     header?: NormalizedCommand;
     conditionNode?: ExpressionNode;
     rangeNode?: RangeExpressionNode;
@@ -18,7 +17,6 @@ export type LoopNode = {
 export type ConditionalBranch = {
     kind: "if" | "elseif" | "else";
     header?: NormalizedCommand;
-    conditionText?: string;
     conditionNode?: ExpressionNode;
     commands: ExecutableNode[];
     startLine: number;
@@ -44,6 +42,6 @@ export type IncludeNode = {
     file: string;
     commands: ExecutableNode[];
 };
-export type ExecutableNode = string | NormalizedCommand | LoopNode | ConditionalBranchNode;
+export type ExecutableNode = NormalizedCommand | LoopNode | ConditionalBranchNode;
 export type AssemblyTreeNode = LoopNode | ConditionalBranchNode | MacroDefinitionNode | IncludeNode;
 //# sourceMappingURL=assembly-tree.d.ts.map

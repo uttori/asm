@@ -30,6 +30,40 @@ const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
 const hashBuffer = (buffer: Buffer): string => createHash("sha256").update(buffer).digest("hex");
 
+interface TreeLegacyComparison {
+  fixture: string;
+  legacyHash?: string;
+  treeHash?: string;
+  legacyError?: string;
+  treeError?: string;
+  overallPassed: boolean;
+}
+
+// Some fixtures are intentionally "error fixtures". For these cases, parity
+// means both drivers fail the same way, not that both produce ROM bytes.
+const TREE_LEGACY_ERROR_EQUIVALENCE_FIXTURES = new Set([
+  "0x",
+  "advanced-prints",
+  "assert-fail",
+  "assert-pass",
+  "badrep",
+  "badsublabel",
+  "global_label_error_macrolabel",
+  "half_bank_check",
+  "incbin_error",
+  "include-dir",
+  "labels_static_fail",
+  "readoob",
+]);
+
+const equivalentFixtureErrors = (fixtureName: string, legacyError?: string, treeError?: string): boolean => {
+  if (!legacyError || !treeError || !TREE_LEGACY_ERROR_EQUIVALENCE_FIXTURES.has(fixtureName)) {
+    return false;
+  }
+
+  return legacyError === treeError;
+};
+
 const getFileStats = (filePath: string): { size: number; checksum: string } => {
   if (!fs.existsSync(filePath)) {
     return {
@@ -58,16 +92,15 @@ const assembleFixtureTree = (fixtureName: string): Buffer => {
   return assembleSource(source, sourcePath, targetRom, true);
 };
 
-const assembleSource = (source: string, sourcePath: string, targetRom?: Uint8Array, useTreePassDriver = false): Buffer => {
+const assembleSource = (source: string, sourcePath: string, targetRom?: Uint8Array, useTreeExecution = false): Buffer => {
   const assembler = new Assembler(targetRom);
-  assembler.useTreePassDriver = useTreePassDriver;
   const inputDir = path.dirname(sourcePath);
   assembler.setIncludePaths(["./", inputDir]);
   assembler.setCurrentFile(sourcePath);
 
   for (const pass of [0, 1, 2]) {
     assembler.setPass(pass);
-    if (useTreePassDriver) {
+    if (useTreeExecution) {
       assembler.setCurrentLine(0);
       assembler.assembleblock(source);
     } else {
@@ -81,6 +114,37 @@ const assembleSource = (source: string, sourcePath: string, targetRom?: Uint8Arr
   }
 
   return Buffer.from(assembler.getBinaryOutput());
+};
+
+const compareTreeVsLegacy = (fixtureName: string): TreeLegacyComparison => {
+  let legacyHash: string | undefined;
+  let treeHash: string | undefined;
+  let legacyError: string | undefined;
+  let treeError: string | undefined;
+
+  try {
+    legacyHash = hashBuffer(assembleFixtureLegacy(fixtureName));
+  } catch (error) {
+    legacyError = error instanceof Error ? error.message : String(error);
+  }
+
+  try {
+    treeHash = hashBuffer(assembleFixtureTree(fixtureName));
+  } catch (error) {
+    treeError = error instanceof Error ? error.message : String(error);
+  }
+
+  const outputsMatch = Boolean(legacyHash && treeHash && legacyHash === treeHash);
+  const equivalentErrors = equivalentFixtureErrors(fixtureName, legacyError, treeError);
+
+  return {
+    fixture: fixtureName,
+    legacyHash,
+    treeHash,
+    legacyError,
+    treeError,
+    overallPassed: outputsMatch || equivalentErrors,
+  };
 };
 
 const discoverTopLevelFixtures = (): string[] => fs
@@ -126,6 +190,31 @@ const compareFixture = (fixtureName: string, mode: "legacy" | "tree" = "legacy")
 };
 
 const ALL_TOP_LEVEL_FIXTURES = discoverTopLevelFixtures();
+const TREE_GOLDEN_KNOWN_FAILURES = new Set<string>([]);
+const TREE_LEGACY_KNOWN_FAILURES = new Set<string>([]);
+
+test("integration parity helper treats selected equivalent errors as parity", (t) => {
+  for (const fixtureName of [
+    "0x",
+    "advanced-prints",
+    "assert-fail",
+    "assert-pass",
+    "badrep",
+    "badsublabel",
+    "global_label_error_macrolabel",
+    "half_bank_check",
+    "incbin_error",
+    "include-dir",
+    "labels_static_fail",
+    "readoob",
+  ]) {
+    const result = compareTreeVsLegacy(fixtureName);
+    t.true(
+      result.overallPassed,
+      `${fixtureName}: tree=${result.treeHash ?? result.treeError} legacy=${result.legacyHash ?? result.legacyError}`
+    );
+  }
+});
 
 test("integration fixtures - includes all top-level .asm tests from src/test.ts", t => {
   t.true(ALL_TOP_LEVEL_FIXTURES.length > 0, "At least one fixture should be discovered");
@@ -181,6 +270,40 @@ test("integration tree-first golden gate for key fixtures", (t) => {
   for (const fixtureName of fixtures) {
     const result = compareFixture(fixtureName, "tree");
     t.true(result.overallPassed, `${fixtureName}: ${result.failedChecks.join(", ")}`);
+  }
+});
+
+test.serial("integration tree-first golden gate covers all top-level fixtures", (t) => {
+  for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {
+    const result = compareFixture(fixtureName, "tree");
+    if (TREE_GOLDEN_KNOWN_FAILURES.has(fixtureName)) {
+      t.false(
+        result.overallPassed,
+        `${fixtureName} unexpectedly passed tree-vs-golden; remove from TREE_GOLDEN_KNOWN_FAILURES`
+      );
+      continue;
+    }
+    t.true(
+      result.overallPassed,
+      `${fixtureName}: ${result.failedChecks.join(", ")}${result.runError ? ` (${result.runError})` : ""}`
+    );
+  }
+});
+
+test.serial("integration tree and legacy outputs remain byte-identical for all top-level fixtures", (t) => {
+  for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {
+    const result = compareTreeVsLegacy(fixtureName);
+    if (TREE_LEGACY_KNOWN_FAILURES.has(fixtureName)) {
+      t.false(
+        result.overallPassed,
+        `${fixtureName} unexpectedly reached tree-vs-legacy parity; remove from TREE_LEGACY_KNOWN_FAILURES`
+      );
+      continue;
+    }
+    t.true(
+      result.overallPassed,
+      `${fixtureName}: tree=${result.treeHash ?? result.treeError} legacy=${result.legacyHash ?? result.legacyError}`
+    );
   }
 });
 

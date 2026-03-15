@@ -1,4 +1,4 @@
-import type { ArchitectureEncoder, Spc700Context } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, Spc700Context } from "./architecture-types.js";
 
 let debug = (..._: any[]) => {};
 try {
@@ -271,7 +271,7 @@ const memOpTables: Record<
  */
 
 export class ArchSPC700 implements ArchitectureEncoder {
-  private assembler: Spc700Context;
+  assembler: Spc700Context;
 
   constructor(assembler: Spc700Context) {
     this.assembler = assembler;
@@ -279,6 +279,14 @@ export class ArchSPC700 implements ArchitectureEncoder {
 
   encode(words: string[]): boolean {
     return this.asblock_spc700(words);
+  }
+
+  estimateInstruction(instruction: LoweredInstruction): number {
+    return this.estimateSize(instruction.words);
+  }
+
+  encodeInstruction(instruction: LoweredInstruction): boolean {
+    return this.encode(instruction.words);
   }
 
   estimateSize(words: string[]): number {
@@ -845,7 +853,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     return { mode: "dp", val: 0 };
   }
 
-  private isDpOrAbs(operand: string): boolean {
+  isDpOrAbs(operand: string): boolean {
     debug("isDpOrAbs", operand)
     const cleaned = operand.replace(/\$/g, "");
     if (!/^[\dA-Fa-f]+$/.test(cleaned)) {
@@ -1607,10 +1615,10 @@ export class ArchSPC700 implements ArchitectureEncoder {
     //   MOV A,($12)+Y => 0xF7 12
 
     const combined = `${left.trim()},${right.trim()}`.toUpperCase();
-    const reLeft = /^\(\$([\dA-F]{1,4})\+X\)$/;
-    const reLeftY = /^\(\$([\dA-F]{1,4})\)\+Y$/;
-    const reRight = /\(\$([\dA-F]{1,4})\+X\)$/;
-    const reRightY = /\(\$([\dA-F]{1,4})\)\+Y$/;
+    // const reLeft = /^\(\$([\dA-F]{1,4})\+X\)$/;
+    // const reLeftY = /^\(\$([\dA-F]{1,4})\)\+Y$/;
+    // const reRight = /\(\$([\dA-F]{1,4})\+X\)$/;
+    // const reRightY = /\(\$([\dA-F]{1,4})\)\+Y$/;
 
     debug("handleMovMemoryCombo combined", combined)
     // ($dp+X),A => 0xC7 dp

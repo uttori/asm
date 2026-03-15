@@ -54,8 +54,20 @@ export interface SuperFXContext {
     write1(value: number): void;
     write2(value: number): void;
 }
+export interface LoweredInstruction {
+    kind: "instruction";
+    mnemonic: string;
+    operandText: string;
+    operands: string[];
+    words: string[];
+    sourceFile: string;
+    sourceLine: number;
+    sourceRaw: string;
+}
 export interface ArchitectureEncoder {
     estimateSize(words: string[]): number;
     encode(words: string[]): boolean;
+    estimateInstruction?(instruction: LoweredInstruction): number;
+    encodeInstruction?(instruction: LoweredInstruction): boolean;
 }
 //# sourceMappingURL=architecture-types.d.ts.map

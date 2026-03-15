@@ -1,13 +1,15 @@
-import type { ArchitectureEncoder, Spc700Context } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, Spc700Context } from "./architecture-types.js";
 /**
  * Additional instructions share similar addressing forms but have unique opcodes,
  * e.g. "(X),(Y)" or "$dp,#$imm", etc. However, some instructions (like "CMP X,#imm")
  * differ in syntax. We'll handle that in code directly.
  */
 export declare class ArchSPC700 implements ArchitectureEncoder {
-    private assembler;
+    assembler: Spc700Context;
     constructor(assembler: Spc700Context);
     encode(words: string[]): boolean;
+    estimateInstruction(instruction: LoweredInstruction): number;
+    encodeInstruction(instruction: LoweredInstruction): boolean;
     estimateSize(words: string[]): number;
     asblock_spc700(words: string[]): boolean;
     /**
@@ -92,7 +94,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
         mode: "indirectX" | "indirectDpX" | "imm" | "absX" | "dpX" | "absY" | "indirectDpY" | "abs" | "dp";
         val: number;
     };
-    private isDpOrAbs;
+    isDpOrAbs(operand: string): boolean;
     /**
      * SHIFT, INC, DEC instructions. e.g. "ASL A" => 0x1C, "ASL $12+X" => 0x1B 12, etc.
      * @param {string} opcode - the opcode

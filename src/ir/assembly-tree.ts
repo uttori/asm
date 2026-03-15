@@ -3,7 +3,6 @@ import type { NormalizedCommand } from "./normalized-command.js";
 
 export type LoopNode = {
   type: "for" | "while";
-  condition?: string;
   header?: NormalizedCommand;
   conditionNode?: ExpressionNode;
   rangeNode?: RangeExpressionNode;
@@ -49,5 +48,5 @@ export type IncludeNode = {
   commands: ExecutableNode[];
 };
 
-export type ExecutableNode = string | NormalizedCommand | LoopNode | ConditionalBranchNode;
+export type ExecutableNode = NormalizedCommand | LoopNode | ConditionalBranchNode;
 export type AssemblyTreeNode = LoopNode | ConditionalBranchNode | MacroDefinitionNode | IncludeNode;

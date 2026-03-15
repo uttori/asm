@@ -5,12 +5,13 @@ import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { AssemblerServices, CursorAddressFacade } from "./assembler-internals.js";
-import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, Spc700Context, SuperFXContext } from "./architecture-types.js";
+import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, LoweredInstruction, Spc700Context, SuperFXContext } from "./architecture-types.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
 import type {
   ConditionalBranch,
   ConditionalBranchNode,
+  ExecutableNode,
   IncludeNode,
   LoopNode,
   MacroDefinitionNode,
@@ -70,7 +71,15 @@ export type MacroDefinition = {
 export type LoopBlock = LoopNode;
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
-type ExecutableNode = string | NormalizedCommand | LoopNode | RuntimeConditionalNode;
+
+type LoweredDirective = {
+  kind: "directive";
+  keyword: string;
+  words: string[];
+  source: NormalizedCommand["source"];
+};
+
+type LoweredCommand = LoweredDirective | LoweredInstruction;
 
 export type WhileTracker = {
   iswhile: boolean;
@@ -259,44 +268,41 @@ export class Assembler implements AssemblySession {
   public spcblockData: SpcblockData | null = null;
   public spcInlineCompatMode: boolean = false;
   public requireStaticLabelLookup: boolean = false;
-  public useTreePassDriver: boolean = true;
-  /** Temporary bisection toggle to force legacy line-driven execution. */
-  public useLegacyPassDriver: boolean = false;
-  private readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
-  private inTreeProgramExecution: boolean = false;
-  private readonly directiveRegistry: DirectiveRegistry;
-  private readonly cursorAddress: CursorAddressFacade;
-  private readonly services: AssemblerServices;
+  readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
+  public inTreeProgramExecution: boolean = false;
+  readonly directiveRegistry: DirectiveRegistry;
+  readonly cursorAddress: CursorAddressFacade;
+  public readonly services: AssemblerServices;
 
-  private get commandPipelineService(): CommandPipelineService {
+  get commandPipelineService(): CommandPipelineService {
     return this.services.commandPipelineService;
   }
 
-  private get defineEngine(): DefineEngine {
+  get defineEngine(): DefineEngine {
     return this.services.defineEngine;
   }
 
-  private get frontEndCommandService(): FrontEndCommandService {
+  get frontEndCommandService(): FrontEndCommandService {
     return this.services.frontEndCommandService;
   }
 
-  private get macroEngine(): MacroEngine {
+  get macroEngine(): MacroEngine {
     return this.services.macroEngine;
   }
 
-  private get preDispatchPipelineService(): PreDispatchPipelineService {
+  get preDispatchPipelineService(): PreDispatchPipelineService {
     return this.services.preDispatchPipelineService;
   }
 
-  private get symbolScope(): SymbolScopeService {
+  get symbolScope(): SymbolScopeService {
     return this.services.symbolScope;
   }
 
-  private get romWriter(): RomWriterService {
+  get romWriter(): RomWriterService {
     return this.services.romWriter;
   }
 
-  private get structEngine(): StructEngine {
+  get structEngine(): StructEngine {
     return this.services.structEngine;
   }
 
@@ -347,7 +353,7 @@ export class Assembler implements AssemblySession {
 
   // Shared adapter infrastructure
 
-  private createCursorAddressFacade(): CursorAddressFacade {
+  createCursorAddressFacade(): CursorAddressFacade {
     return {
       recordCurrentAddress: () => this.recordCurrentAddress(),
       setWritePosition: (address: number) => this.setWritePosition(address),
@@ -358,7 +364,7 @@ export class Assembler implements AssemblySession {
 
   // Pre-dispatch and front-end adapters
 
-  private createDefineHost(): DefineHost {
+  createDefineHost(): DefineHost {
     const defineHost: DefineHost = {
       defines: this.defines,
       resolvedefines: (input: string) => this.resolvedefines(input),
@@ -369,7 +375,7 @@ export class Assembler implements AssemblySession {
     return defineHost;
   }
 
-  private createFrontEndCommandHost(): FrontEndCommandHost {
+  createFrontEndCommandHost(): FrontEndCommandHost {
     return Object.create(null, {
       inFunctionDefinition: {
         get: () => this.inFunctionDefinition,
@@ -424,7 +430,7 @@ export class Assembler implements AssemblySession {
     }) as FrontEndCommandHost;
   }
 
-  private createPreDispatchPipelineHost(): PreDispatchPipelineHost {
+  createPreDispatchPipelineHost(): PreDispatchPipelineHost {
     return Object.create(null, {
       collectingLoop: { get: () => this.collectingLoop, enumerable: true },
       currentLoop: { get: () => this.currentLoop, enumerable: true },
@@ -450,7 +456,7 @@ export class Assembler implements AssemblySession {
     }) as PreDispatchPipelineHost;
   }
 
-  private createCommandPipelineHost(): CommandPipelineHost {
+  createCommandPipelineHost(): CommandPipelineHost {
     return Object.create(null, {
       currentFile: { get: () => this.currentFile, enumerable: true },
       currentLine: { get: () => this.currentLine, enumerable: true },
@@ -462,7 +468,7 @@ export class Assembler implements AssemblySession {
 
   // Symbol, macro, and struct adapters
 
-  private createStructHost(): StructHost {
+  createStructHost(): StructHost {
     return Object.create(null, {
       currentStruct: {
         get: () => this.currentStruct,
@@ -533,7 +539,7 @@ export class Assembler implements AssemblySession {
     }) as StructHost;
   }
 
-  private createMacroEngineHost(): MacroEngineHost {
+  createMacroEngineHost(): MacroEngineHost {
     return Object.create(null, {
       pass: { get: () => this.pass, enumerable: true },
       currentFile: { get: () => this.currentFile, enumerable: true },
@@ -638,7 +644,7 @@ export class Assembler implements AssemblySession {
     }) as MacroEngineHost;
   }
 
-  private createSymbolScopeHost(): SymbolScopeHost {
+  createSymbolScopeHost(): SymbolScopeHost {
     return Object.create(null, {
       pass: { get: () => this.pass, enumerable: true },
       snespos: { get: () => this.snespos, enumerable: true },
@@ -676,7 +682,7 @@ export class Assembler implements AssemblySession {
 
   // Address-space and ROM adapters
 
-  private createRomWriterHost(): RomWriterHost {
+  createRomWriterHost(): RomWriterHost {
     return Object.create(null, {
       snespos: {
         get: () => this.snespos,
@@ -715,7 +721,7 @@ export class Assembler implements AssemblySession {
 
   // Service assembly
 
-  private createServices(): AssemblerServices {
+  createServices(): AssemblerServices {
     const defineEngine = new DefineEngine(this.createDefineHost());
     const frontEndCommandService = new FrontEndCommandService(this.createFrontEndCommandHost());
     const symbolScope = new SymbolScopeService(this.createSymbolScopeHost());
@@ -819,7 +825,7 @@ export class Assembler implements AssemblySession {
     return this.pctosnes(offset);
   }
 
-  private resolveExpressionHostLabel(identifier: string): number | string {
+  resolveExpressionHostLabel(identifier: string): number | string {
     const parsed = parseExpressionNode(identifier.trim());
     if (isReferenceExpressionNode(parsed)) {
       return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
@@ -840,7 +846,7 @@ export class Assembler implements AssemblySession {
     return this.getObjectSize(identifier, baseOnly);
   }
 
-  private lookupDefineValue(varName: string): string | undefined {
+  lookupDefineValue(varName: string): string | undefined {
     const defineValue = this.defines.get(varName);
     if (defineValue !== undefined) {
       return defineValue;
@@ -1025,10 +1031,11 @@ export class Assembler implements AssemblySession {
 
   /**
    * Picks the appropriate instruction handler based on architecture.
-   * @param {string[]} words The words to pick.
+   * @param {string[] | LoweredInstruction} input The instruction to pick.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
-  asblock_pick(words: string[]): boolean {
+  asblock_pick(input: string[] | LoweredInstruction): boolean {
+    const words = Array.isArray(input) ? input : input.words;
     debug("asblock_pick", words);
     debug("asblock_pick arch", this.arch);
     if (words.length === 0) {
@@ -1040,7 +1047,9 @@ export class Assembler implements AssemblySession {
       if (!encoder) {
         return true;
       }
-      const size = encoder.estimateSize(words);
+      const size = Array.isArray(input)
+        ? encoder.estimateSize(words)
+        : (encoder.estimateInstruction?.(input) ?? encoder.estimateSize(words));
       this.step(size);
       return true;
     }
@@ -1049,7 +1058,10 @@ export class Assembler implements AssemblySession {
       return true;
     }
 
-    if (!encoder.encode(words)) {
+    const encoded = Array.isArray(input)
+      ? encoder.encode(words)
+      : (encoder.encodeInstruction?.(input) ?? encoder.encode(words));
+    if (!encoded) {
       if (this.arch === "superfx") {
         return false;
       }
@@ -1059,7 +1071,7 @@ export class Assembler implements AssemblySession {
     return true;
   }
 
-  private getActiveArchitectureEncoder(): ArchitectureEncoder | undefined {
+  getActiveArchitectureEncoder(): ArchitectureEncoder | undefined {
     if (this.inSpcblock || this.arch === "spc700") {
       return this.archSPC700;
     }
@@ -1165,7 +1177,7 @@ export class Assembler implements AssemblySession {
     }
 
     const splitCommands = this.splitInlineCommands(processedCommands);
-    if (this.useTreePassDriver && !this.useLegacyPassDriver && block.includes("\n")) {
+    if (block.includes("\n")) {
       const previousTreeExecution = this.inTreeProgramExecution;
       this.inTreeProgramExecution = true;
       try {
@@ -1227,11 +1239,6 @@ export class Assembler implements AssemblySession {
     return output;
   }
 
-  setExecutionDriver(mode: "tree" | "legacy"): void {
-    this.useTreePassDriver = mode === "tree";
-    this.useLegacyPassDriver = mode === "legacy";
-  }
-
   removeInlineComment(line: string): string {
     let inQuote = false;
     for (let i = 0; i < line.length; i++) {
@@ -1268,6 +1275,13 @@ export class Assembler implements AssemblySession {
   }
 
   processNormalizedCommand(state: NormalizedCommand, rewriteRaw: boolean = true): void {
+    // Preserve legacy fixture bootstrap behavior in tree/normalized execution:
+    // `;`+ means "seed assembler ROM with target ROM bytes" before reads/writes.
+    if (state.source.raw.trim().startsWith(";`+")) {
+      this.loadTestRomData();
+      return;
+    }
+
     if (state.command.trim() === "") {
       return;
     }
@@ -1298,25 +1312,33 @@ export class Assembler implements AssemblySession {
       return;
     }
 
-    const handledDirective = this.directiveRegistry.dispatchCommand(state);
-    if (!handledDirective) {
-      if (state.keyword.startsWith(";")) {
-        // debug(`handleInstruction comment: ${words.join(" ")}`);
-      } else if (state.keyword === "") {
-        // debug(`handleInstruction white space: ${words.join(" ")}`);
-      } else {
-        const wasOpcode = this.asblock_pick(state.words);
-        if (!wasOpcode) {
-          debug("💥 assembler processCommand unknown operation", state.keyword)
-        }
-      }
-    }
+    const lowered = this.lowerNode(state);
+    this.dispatchLoweredNode(lowered);
 
     // Determine how many bytes were written in this command.
     const commandSize = (this.realsnespos & 0xFFFFFF) - startPC;
     debug("processCommand bytes written", commandSize)
 
     this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+  }
+
+  dispatchLoweredNode(lowered: LoweredCommand): void {
+    if (lowered.kind === "directive") {
+      const handledDirective = this.directiveRegistry.dispatch(
+        lowered.keyword,
+        lowered.words,
+        lowered.source.raw,
+      );
+      if (!handledDirective && lowered.keyword) {
+        debug("💥 assembler dispatchLoweredNode unknown directive", lowered.keyword);
+      }
+      return;
+    }
+
+    const wasOpcode = this.asblock_pick(lowered);
+    if (!wasOpcode) {
+      debug("💥 assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
+    }
   }
 
   handlePushBase(): void {
@@ -2340,16 +2362,19 @@ export class Assembler implements AssemblySession {
    */
   evaluateExpression(expression: string | ExpressionNode): boolean {
     debug("evaluateExpression", expression)
-    const resolvedExpr = this.resolveExpressionInput(expression);
-    debug("evaluateExpression resolvedExpr", resolvedExpr)
+    let resolvedExpr: ExpressionNode | undefined;
     let result: number;
     try {
+      // Resolve inside the guarded block so failures from define/label/static checks
+      // are reported with the same contextual wrapper as math failures.
+      resolvedExpr = this.resolveExpressionInput(expression);
+      debug("evaluateExpression resolvedExpr", resolvedExpr)
       result = isReferenceExpressionNode(resolvedExpr)
         ? this.evaluateReferenceExpressionNode(resolvedExpr)
         : this.mathCore.math(resolvedExpr);
     } catch (e) {
       const originalExpr = typeof expression === "string" ? expression : expressionNodeToString(expression);
-      const resolvedText = expressionNodeToString(resolvedExpr);
+      const resolvedText = resolvedExpr ? expressionNodeToString(resolvedExpr) : "<unresolved>";
       throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e}`);
     }
     // In our assembler, a condition is true if the result is nonzero.
@@ -2358,12 +2383,12 @@ export class Assembler implements AssemblySession {
     return result !== 0;
   }
 
-  private resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode {
+  resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode {
     const parsed = typeof expression === "string" ? parseExpressionNode(expression.trim()) : expression;
     return this.resolveExpressionNode(parsed);
   }
 
-  private resolveExpressionNode(expression: ExpressionNode): ExpressionNode {
+  resolveExpressionNode(expression: ExpressionNode): ExpressionNode {
     if (isReferenceExpressionNode(expression)) {
       return this.resolveReferenceExpressionNode(expression);
     }
@@ -2401,7 +2426,7 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  private resolveReferenceExpressionNode(expression: ReferenceExpressionNode): ExpressionNode {
+  resolveReferenceExpressionNode(expression: ReferenceExpressionNode): ExpressionNode {
     switch (expression.type) {
       case "identifier":
         return expression;
@@ -2442,7 +2467,7 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  private evaluateReferenceExpressionNode(expression: ReferenceExpressionNode, requireStatic = false): number {
+  evaluateReferenceExpressionNode(expression: ReferenceExpressionNode, requireStatic = false): number {
     const resolved = this.resolveReferenceLabelValue(expression, requireStatic);
     if (typeof resolved === "number") {
       return resolved;
@@ -2450,7 +2475,7 @@ export class Assembler implements AssemblySession {
     throw new Error(`Reference '${resolved}' did not resolve to a numeric value.`);
   }
 
-  private resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic = false): number | string {
+  resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic = false): number | string {
     const resolved = this.resolveReferenceExpressionNode(expression);
     if (!isReferenceExpressionNode(resolved)) {
       return this.mathCore.math(resolved);
@@ -2467,7 +2492,7 @@ export class Assembler implements AssemblySession {
     return this.getLabelValue(normalizedReference, requireStatic);
   }
 
-  private normalizeReferenceExpressionNode(expression: ReferenceExpressionNode): string {
+  normalizeReferenceExpressionNode(expression: ReferenceExpressionNode): string {
     return renderReferenceExpressionNode(expression, {
       renderIndex: (indexExpression) => {
         const resolvedIndex = this.resolveExpressionNode(indexExpression);
@@ -3035,7 +3060,7 @@ export class Assembler implements AssemblySession {
         this.includedFiles.set(resolvedPath, info);
       }
 
-      if (this.useTreePassDriver && !this.useLegacyPassDriver && this.inTreeProgramExecution) {
+      if (this.inTreeProgramExecution) {
         const includeNode = this.createIncludeNode(resolvedPath, content);
         for (const node of includeNode.commands) {
           this.executeNode(node);
@@ -3193,18 +3218,15 @@ export class Assembler implements AssemblySession {
     // Create a new loop block
     const newLoop: LoopBlock = {
       type,
-      condition: command,
-      conditionNode: parseExpressionNode(command.replace(/^\s*(for|while)\s+/i, "")),
+      header,
+      conditionNode: type === "while" ? header.parsed.condition?.expression : header.parsed.forLoop?.range,
+      rangeNode: header.parsed.forLoop?.range,
+      startExpression: header.parsed.forLoop?.start,
+      endExpression: header.parsed.forLoop?.end,
       variable: header.parsed.forLoop?.variable,
       commands: [],
       startLine: this.currentLine
     };
-    Object.defineProperties(newLoop, {
-      header: { value: header, enumerable: false, writable: true, configurable: true },
-      rangeNode: { value: header.parsed.forLoop?.range, enumerable: false, writable: true, configurable: true },
-      startExpression: { value: header.parsed.forLoop?.start, enumerable: false, writable: true, configurable: true },
-      endExpression: { value: header.parsed.forLoop?.end, enumerable: false, writable: true, configurable: true },
-    });
 
     // Extract variable name for for loops
     if (type === "for") {
@@ -3309,7 +3331,7 @@ export class Assembler implements AssemblySession {
   executeForLoop(forBlock: LoopBlock): void {
     debug("executeForLoop", forBlock);
     const parsedForLoop = forBlock.header?.parsed.forLoop;
-    let variable = forBlock.variable ?? parsedForLoop?.variable;
+    const variable = forBlock.variable ?? parsedForLoop?.variable;
     let start: number | undefined = forBlock.start;
     let end: number | undefined = forBlock.end;
 
@@ -3322,21 +3344,6 @@ export class Assembler implements AssemblySession {
       const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
       start = this.operandResolver.getnum(startDefinesResolved);
       end = this.operandResolver.getnum(endDefinesResolved);
-    } else if ((start === undefined || end === undefined) && forBlock.condition) {
-      const forMatch = forBlock.condition.match(/^\s*for\s+(\w+)\s*=\s*([^.]+)\.\.([^\s:]+)/i);
-      if (!forMatch) {
-        debug("executeForLoop invalid for loop syntax:", forBlock.condition);
-        return;
-      }
-      variable ||= forMatch[1];
-      if (start === undefined || end === undefined) {
-        const startExpr = forMatch[2].trim();
-        const endExpr = forMatch[3].trim();
-        const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
-        const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
-        start = this.operandResolver.getnum(startDefinesResolved);
-        end = this.operandResolver.getnum(endDefinesResolved);
-      }
     }
 
     if (!variable || start === undefined || end === undefined) {
@@ -3376,12 +3383,10 @@ export class Assembler implements AssemblySession {
   executeWhileLoop(whileBlock: LoopBlock): void {
     debug("executeWhileLoop", whileBlock);
     const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
-    const condMatch = whileBlock.condition?.match(/^\s*while\s+(.+)/i);
-    if (!conditionNode && !condMatch) {
-      debug("executeWhileLoop invalid while loop syntax:", whileBlock.condition);
+    if (!conditionNode) {
+      debug("executeWhileLoop missing condition expression", whileBlock);
       return;
     }
-    const conditionExpr = condMatch?.[1]?.trim() ?? whileBlock.condition ?? "";
 
     let iteration = 0;
     const MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
@@ -3391,7 +3396,7 @@ export class Assembler implements AssemblySession {
     const originalValues = new Map<string, string | undefined>();
 
     // Continue looping as long as the condition evaluates to true
-    while (this.evaluateExpression(conditionNode ?? conditionExpr) && iteration < MAX_ITERATIONS) {
+    while (this.evaluateExpression(conditionNode) && iteration < MAX_ITERATIONS) {
       // Process each command in the loop body
       for (const cmd of whileBlock.commands) {
         const defineTarget = this.getDefineVariableFromNode(cmd);
@@ -3422,9 +3427,6 @@ export class Assembler implements AssemblySession {
   }
 
   getDefineVariableFromNode(node: ExecutableNode): string | null {
-    if (typeof node === "string") {
-      return this.getDefineVariable(node);
-    }
     if ("source" in node && node.kind === "defineCommand") {
       return this.getDefineVariable(node.command);
     }
@@ -3453,25 +3455,54 @@ export class Assembler implements AssemblySession {
     return match ? match[1] : undefined;
   }
 
-  private createLoopCommandNode(command: string, sourceFile = this.currentFile, sourceLine = this.currentLine): NormalizedCommand {
+  createLoopCommandNode(command: string, sourceFile = this.currentFile, sourceLine = this.currentLine): NormalizedCommand {
     const normalized = this.preDispatchPipelineService.normalizeCommand(command);
     const words = this.splitCommandIntoWords(normalized);
     return createNormalizedCommand(command, normalized, words, sourceFile, sourceLine);
   }
 
-  lowerNode(command: NormalizedCommand): NormalizedCommand {
-    return command;
+  lowerNode(command: NormalizedCommand): LoweredCommand {
+    const keyword = command.keyword.toLowerCase();
+
+    if (this.directiveRegistry.has(keyword)) {
+      let directiveWords = command.words;
+      if (command.parsed.includeTarget) {
+        directiveWords = [command.parsed.includeTarget.directive, command.parsed.includeTarget.target];
+      } else if (keyword === "incbin" && command.parsed.directiveArgs?.args?.length) {
+        directiveWords = [keyword, ...command.parsed.directiveArgs.args];
+      }
+
+      return {
+        kind: "directive",
+        keyword,
+        words: directiveWords,
+        source: command.source,
+      };
+    }
+
+    const parsedOperands = command.parsed.opcodeOperands;
+    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
+    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
+    const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
+
+    return {
+      kind: "instruction",
+      mnemonic,
+      operandText,
+      operands,
+      words: command.words,
+      sourceFile: command.source.file,
+      sourceLine: command.source.line,
+      sourceRaw: command.source.raw,
+    };
   }
 
   executeNode(node: ExecutableNode): void {
-    if (typeof node === "string") {
-      this.processCommand(node);
-      return;
-    }
-
     if ("source" in node) {
-      const lowered = this.lowerNode(node);
-      this.processNormalizedCommand(lowered);
+      // Pass-program nodes are cached across passes; re-normalize from source to
+      // avoid mutable command state leaking between passes.
+      const freshNode = this.createLoopCommandNode(node.source.raw, node.source.file, node.source.line);
+      this.processNormalizedCommand(freshNode);
       return;
     }
 
@@ -3503,7 +3534,16 @@ export class Assembler implements AssemblySession {
       if (!branch.conditionNode) {
         continue;
       }
-      if (this.evaluateExpression(branch.conditionNode)) {
+      let branchConditionMatched = false;
+      this.requireStaticLabelLookup = true;
+      try {
+        // Match legacy `if` / `elseif` behavior: condition labels must resolve as
+        // static and any failure should be wrapped by evaluateExpression.
+        branchConditionMatched = this.evaluateExpression(branch.conditionNode);
+      } finally {
+        this.requireStaticLabelLookup = false;
+      }
+      if (branchConditionMatched) {
         for (const child of branch.commands) {
           this.executeNode(child);
         }
@@ -3517,14 +3557,25 @@ export class Assembler implements AssemblySession {
     const loopStack: LoopNode[] = [];
     const ifStack: RuntimeConditionalNode[] = [];
     const branchStack: ConditionalBranch[] = [];
+    let inMacroDefinition = false;
 
     const pushToCurrent = (node: RuntimeNode): void => {
       const currentBranch = branchStack[branchStack.length - 1];
+      const currentLoop = loopStack[loopStack.length - 1];
+      if (currentBranch && currentLoop) {
+        // Route to the most recently opened container so loop bodies nested in
+        // conditionals (and vice-versa) keep their intended structure.
+        if (currentLoop.startLine >= currentBranch.startLine) {
+          currentLoop.commands.push(node);
+        } else {
+          currentBranch.commands.push(node);
+        }
+        return;
+      }
       if (currentBranch) {
         currentBranch.commands.push(node);
         return;
       }
-      const currentLoop = loopStack[loopStack.length - 1];
       if (currentLoop) {
         currentLoop.commands.push(node);
         return;
@@ -3537,12 +3588,28 @@ export class Assembler implements AssemblySession {
       const command = this.createLoopCommandNode(rawCommand, sourceFile, startLine + index);
       const keyword = command.keyword.toLowerCase();
 
+      if (keyword === "macro") {
+        // Macro bodies are consumed later by macro-definition handling. Keep the
+        // raw command stream intact here so body semantics are deferred until
+        // expansion time, matching legacy line-by-line behavior.
+        inMacroDefinition = true;
+        pushToCurrent(command);
+        continue;
+      }
+
+      if (inMacroDefinition) {
+        pushToCurrent(command);
+        if (keyword === "endmacro") {
+          inMacroDefinition = false;
+        }
+        continue;
+      }
+
       if (keyword === "for" || keyword === "while") {
         const loopNode: LoopNode = {
           type: keyword,
-          condition: command.command,
           header: command,
-          conditionNode: command.parsed.condition?.expression,
+          conditionNode: keyword === "while" ? command.parsed.condition?.expression : command.parsed.forLoop?.range,
           variable: command.parsed.forLoop?.variable,
           rangeNode: command.parsed.forLoop?.range,
           startExpression: command.parsed.forLoop?.start,
@@ -3608,14 +3675,30 @@ export class Assembler implements AssemblySession {
       }
 
       if (keyword === "endif") {
+        const currentIf = ifStack[ifStack.length - 1];
+        const currentLoop = loopStack[loopStack.length - 1];
+        const whileIsInnermost = currentLoop?.type === "while"
+          && (!currentIf || currentLoop.startLine >= currentIf.startLine);
+
+        // Asar-compatible quirk: `endif` can terminate either an `if` chain or a
+        // `while` block. Resolve ambiguity by closing the most recently opened
+        // structural block so tree parsing mirrors line-by-line behavior.
+        if (whileIsInnermost) {
+          const loopNode = loopStack.pop();
+          if (loopNode) {
+            loopNode.endLine = command.source.line;
+          }
+          continue;
+        }
+
         if (branchStack.length > 0) {
           const closedBranch = branchStack.pop();
           if (closedBranch) {
             closedBranch.endLine = command.source.line;
           }
         }
-        const currentIf = ifStack.pop();
         if (currentIf) {
+          ifStack.pop();
           currentIf.endLine = command.source.line;
         }
         continue;

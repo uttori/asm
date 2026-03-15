@@ -33,12 +33,12 @@ export type PreDispatchHandlers = {
 };
 export type PreprocessResult = "continue" | "handled" | "skipped_for_condition";
 export declare class CommandPipelineService {
-    private readonly host;
-    private readonly frontEndHandlers;
-    private readonly macroHandlers;
-    private readonly defineHandlers;
-    private readonly structHandlers;
-    private readonly preDispatchHandlers;
+    readonly host: CommandPipelineHost;
+    readonly frontEndHandlers: FrontEndHandlers;
+    readonly macroHandlers: MacroHandlers;
+    readonly defineHandlers: DefineHandlers;
+    readonly structHandlers: StructHandlers;
+    readonly preDispatchHandlers: PreDispatchHandlers;
     constructor(host: CommandPipelineHost, frontEndHandlers: FrontEndHandlers, macroHandlers: MacroHandlers, defineHandlers: DefineHandlers, structHandlers: StructHandlers, preDispatchHandlers: PreDispatchHandlers);
     rewriteRawCommand(command: string): string;
     interceptRawCommand(command: string): boolean;
