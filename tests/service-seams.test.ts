@@ -38,6 +38,19 @@ test("macro engine handles definition lifecycle through normalized dispatch", (t
   t.is(assembler.defines.get("macro_value"), "3");
 });
 
+test("macro engine handles labeled invocations after label consumption", (t) => {
+  const assembler = new Assembler();
+  stub(assembler, "addAddressToLine");
+
+  assembler.processNormalizedCommand(commandNode("macro set_define()"), false);
+  assembler.processNormalizedCommand(commandNode("!macro_value = 7"), false);
+  assembler.processNormalizedCommand(commandNode("endmacro"), false);
+  assembler.processNormalizedCommand(commandNode("Entry: %set_define()"), false);
+
+  t.is(assembler.currentParentLabel, "Entry");
+  t.is(assembler.defines.get("macro_value"), "7");
+});
+
 test("define engine resolves standalone define commands through normalized dispatch", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
@@ -164,6 +177,202 @@ test("symbol scope resolves nested sublabels through current parent", (t) => {
 
   t.is(assembler.getLabelValue(".Child", false), assembler.snespos);
   t.is(assembler.getLabelValue("Main_Child", false), assembler.snespos);
+});
+
+test("symbol scope preserves nested hierarchy during pass zero label collection", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("arthur_sprites");
+  assembler.handleLabelDefinition(".underwear");
+  assembler.handleLabelDefinition("..idle");
+
+  t.true(assembler.labelTable.has("arthur_sprites_underwear_idle"));
+  t.is(assembler.currentParentLabel, "arthur_sprites_underwear_idle");
+});
+
+test("symbol scope keeps sibling single-dot labels under the enclosing global label", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("_018049");
+  assembler.handleLabelDefinition(".804D");
+  assembler.handleLabelDefinition(".8051");
+  assembler.handleLabelDefinition(".8053");
+
+  t.true(assembler.labelTable.has("_018049_804D"));
+  t.true(assembler.labelTable.has("_018049_8051"));
+  t.true(assembler.labelTable.has("_018049_8053"));
+  t.false(assembler.labelTable.has("_018049_804D_8051"));
+  t.false(assembler.labelTable.has("_018049_804D_8051_8053"));
+});
+
+test("symbol scope preserves underscore-containing global parents for single-dot labels", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("stage1_earthquake");
+  assembler.handleLabelDefinition("stage1_earthquake_tiles");
+  assembler.handleLabelDefinition(".1");
+  assembler.handleLabelDefinition(".2");
+
+  t.true(assembler.labelTable.has("stage1_earthquake_tiles_1"));
+  t.true(assembler.labelTable.has("stage1_earthquake_tiles_2"));
+  t.false(assembler.labelTable.has("stage1_earthquake_1"));
+  t.false(assembler.labelTable.has("stage1_earthquake_2"));
+});
+
+test("symbol scope keeps sibling double-dot labels under the enclosing local label", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("random_values");
+  assembler.handleLabelDefinition(".idx");
+  assembler.handleLabelDefinition("..beginner");
+  assembler.handleLabelDefinition("..normal");
+
+  t.true(assembler.labelTable.has("random_values_idx_beginner"));
+  t.true(assembler.labelTable.has("random_values_idx_normal"));
+  t.false(assembler.labelTable.has("random_values_idx_beginner_normal"));
+});
+
+test("symbol scope keeps underscore-containing single-dot labels as double-dot parents", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("spc_0E00");
+  assembler.handleLabelDefinition(".stage1");
+  assembler.handleLabelDefinition("..ch8");
+  assembler.snespos += 1;
+  assembler.handleLabelDefinition(".stage1_boss");
+  assembler.handleLabelDefinition("..ch8");
+  assembler.snespos += 1;
+  assembler.handleLabelDefinition("..ch7");
+
+  t.true(assembler.labelTable.has("spc_0E00_stage1_ch8"));
+  t.true(assembler.labelTable.has("spc_0E00_stage1_boss_ch8"));
+  t.true(assembler.labelTable.has("spc_0E00_stage1_boss_ch7"));
+  t.is(assembler.labelTable.get("spc_0E00_stage1_ch8")?.value, 0);
+  t.is(assembler.labelTable.get("spc_0E00_stage1_boss_ch8")?.value, 1);
+  t.is(assembler.labelTable.get("spc_0E00_stage1_boss_ch7")?.value, 2);
+});
+
+test("symbol scope prefers exact single-dot locals before shortened underscore fallbacks", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("_00ED00");
+  assembler.handleLabelDefinition(".arthur_underwear");
+  assembler.handleLabelDefinition("..knockback");
+  assembler.snespos += 1;
+  assembler.handleLabelDefinition(".arthur_steel");
+  assembler.handleLabelDefinition("..knockback");
+  assembler.snespos += 1;
+  assembler.handleLabelDefinition(".arthur_upgraded_armor");
+  assembler.handleLabelDefinition(".gold");
+
+  t.is(assembler.getLabelValue(".arthur_underwear_knockback", false), 0);
+});
+
+test("symbol scope returns single-dot labels to the top-level parent after nested locals", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("_00ED00");
+  assembler.handleLabelDefinition(".arthur_underwear");
+  assembler.handleLabelDefinition("..knockback");
+  assembler.handleLabelDefinition(".arthur_steel");
+
+  t.true(assembler.labelTable.has("_00ED00_arthur_underwear"));
+  t.true(assembler.labelTable.has("_00ED00_arthur_underwear_knockback"));
+  t.true(assembler.labelTable.has("_00ED00_arthur_steel"));
+  t.false(assembler.labelTable.has("_00ED00_arthur_underwear_arthur_steel"));
+});
+
+test("symbol scope keeps double-dot labels under the active global root when shorter prefixes exist", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("arthur");
+  assembler.handleLabelDefinition("arthur_sprites");
+  assembler.handleLabelDefinition(".underwear");
+  assembler.handleLabelDefinition("..idle");
+
+  t.true(assembler.labelTable.has("arthur_sprites_underwear_idle"));
+  t.false(assembler.labelTable.has("arthur_sprites_idle"));
+});
+
+test("symbol scope resolves namespaced local sibling labels without collapsing doubled separators", (t) => {
+  const assembler = new Assembler();
+  assembler.currentNamespace = "knife";
+  assembler.pass = 0;
+
+  assembler.handleLabelDefinition("_E449");
+  assembler.handleLabelDefinition(".E44C");
+  assembler.handleLabelDefinition(".E4CA");
+
+  assembler.pass = 1;
+  assembler.currentNamespace = "knife";
+  assembler.currentParentLabel = "knife__E449_E44C";
+
+  t.true(assembler.labelTable.has("knife__E449_E4CA"));
+  t.is(assembler.getLabelValue(".E4CA", false), assembler.labelTable.get("knife__E449_E4CA")?.value);
+});
+
+test("symbol scope falls back to global labels when a namespace-local symbol is absent", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 1;
+
+  assembler.setLabel("difficulty", 0x27C, true);
+  assembler.currentNamespace = "zombie";
+
+  t.false(assembler.labelTable.has("zombie_difficulty"));
+  t.is(assembler.getLabelValue("difficulty", false), 0x27C);
+});
+
+test("symbol scope resolves local labels under underscore-prefixed parents", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 1;
+
+  assembler.currentParentLabel = "_0083C2_83C3_83DE";
+  assembler.labelTable.set("_0083C2_83EB", {
+    value: 0x83EB,
+    isStatic: false,
+    isMacroLabel: false,
+    modifiesHierarchy: true,
+  });
+
+  t.is(assembler.getLabelValue(".83EB", false), 0x83EB);
+});
+
+test("symbol scope resolves compressed nested local label references", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 1;
+
+  assembler.currentParentLabel = "random_values_difficulty_offset";
+  assembler.labelTable.set("random_values_difficulty_offset_idx_beginner", {
+    value: 0x1234,
+    isStatic: false,
+    isMacroLabel: false,
+    modifiesHierarchy: true,
+  });
+
+  t.is(assembler.getLabelValue(".idx_beginner", false), 0x1234);
+});
+
+test("symbol scope resolves double-dot local label references", (t) => {
+  const assembler = new Assembler();
+  assembler.pass = 1;
+
+  assembler.currentParentLabel = "_00ED00_arthur_underwear";
+  assembler.labelTable.set("_00ED00_arthur_underwear_idle", {
+    value: 0xED39,
+    isStatic: false,
+    isMacroLabel: false,
+    modifiesHierarchy: true,
+  });
+
+  t.is(assembler.getLabelValue("..idle", false), 0xED39);
 });
 
 test("pre-dispatch pipeline skips non-conditional commands in false blocks", (t) => {

@@ -51,6 +51,7 @@ export class Arch65816 implements ArchitectureEncoder {
       "SED", "SEI", "STP", "TAX", "TAY", "TCD", "TCS", "TDC", "TSC", "TSX", "TXA", "TXS", "TXY",
       "TYA", "TYX", "WAI", "XBA", "XCE",
     ]);
+    const accumulatorRepeatOpcodes = new Set(["ASL", "LSR", "ROL", "ROR", "INC", "DEC"]);
     const branchOpcodes = new Set(["BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ", "BRA", "BRL"]);
 
     if (noOperandOpcodes.has(opcode)) {
@@ -68,6 +69,14 @@ export class Arch65816 implements ArchitectureEncoder {
       const len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
       opcode = opcode.substring(0, opcode.indexOf("."));
       return 1 + len;
+    }
+
+    if (accumulatorRepeatOpcodes.has(opcode) && !rawOperand.trim()) {
+      return 1;
+    }
+
+    if (accumulatorRepeatOpcodes.has(opcode) && rawOperand.startsWith("#")) {
+      return this.assembler.operandResolver.getnum(rawOperand.substring(1));
     }
 
     if (branchOpcodes.has(opcode)) {
@@ -160,7 +169,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     if (["JSL", "JSR", "JMP", "JML"].includes(opcode)) {
-      return this.handleJump(opcode, operand);
+      return this.handleJump(opcode, operand, rawOperand);
     }
 
     if (["BIT", "TSB", "TRB"].includes(opcode)) {
@@ -237,7 +246,6 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // If an explicit length is specified, override the normal guess.
     if (explicitlen) {
-      // For indexed mode, current explicit-size support tracks `,x`.
       if (loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
         const forcedIndexed: { [key: string]: { [L: number]: number } } = {
           ADC: { 1: 0x75, 2: 0x7D, 3: 0x7F },
@@ -256,6 +264,19 @@ export class Arch65816 implements ArchitectureEncoder {
         } else if (len === 3) {
           this.assembler.write3(this.assembler.operandResolver.getnum(baseOperand));
         }
+        return true;
+      } else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect) {
+        const forcedIndexedY: { [key: string]: { [L: number]: number } } = {
+          ADC: { 2: 0x79 },
+          STA: { 2: 0x99 },
+          LDA: { 2: 0xB9 },
+          SBC: { 2: 0xF9 }
+        };
+        if (!(opcode in forcedIndexedY) || !(len in forcedIndexedY[opcode])) {
+          throw new Error(`Error: Opcode ${opcode} not supported in forced indexed-Y mode.`);
+        }
+        this.assembler.write1(forcedIndexedY[opcode][len]);
+        this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
         return true;
       } else {
         // Non-indexed forced addressing:
@@ -545,6 +566,7 @@ export class Arch65816 implements ArchitectureEncoder {
     const absLongMap: Partial<Record<LogicOpcode, number>> = { AND: 0x2F, ORA: 0x0F, EOR: 0x4F, CMP: 0xCF };
     const dpXMap: Partial<Record<LogicOpcode, number>> = { AND: 0x35, ORA: 0x15, EOR: 0x55, CMP: 0xD5 };
     const absXMap: Partial<Record<LogicOpcode, number>> = { AND: 0x3D, ORA: 0x1D, EOR: 0x5D, CMP: 0xDD };
+    const absYMap: Partial<Record<LogicOpcode, number>> = { AND: 0x39, ORA: 0x19, EOR: 0x59, CMP: 0xD9 };
     if (!(opcode in opcodes)) {
       return false; // Not a logic or compare instruction
     }
@@ -574,11 +596,18 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // If an explicit length was given, use it to choose the number of operand bytes.
     if (explicitlen) {
-      // For forced-size modes we currently normalize ",x" only.
-      const isIndexed = loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
-      const explicitOperand = isIndexed ? baseOperand : resolvedOperand;
-      if (isIndexed) {
-        // For indexed addressing:
+      // Forced-size operands still need indexed base extraction so `.w foo,Y`
+      // resolves `foo` numerically instead of handing `foo,Y` to the math parser.
+      const forcedIndexedMode = !loweredOperand.indirect
+        ? loweredOperand.indexRegister === "x"
+          ? "x"
+          : loweredOperand.mode === "absoluteIndexedY"
+            ? "y"
+            : undefined
+        : undefined;
+      const explicitOperand = forcedIndexedMode ? baseOperand : resolvedOperand;
+      if (forcedIndexedMode === "x") {
+        // For indexed X addressing:
         if (len === 1) {
           const forcedOpcode = dpXMap[logicOpcode];
           if (forcedOpcode === undefined) {
@@ -602,6 +631,17 @@ export class Arch65816 implements ArchitectureEncoder {
           this.assembler.write1(forcedOpcode + 2);
           this.assembler.write3(this.assembler.operandResolver.getnum(explicitOperand));
         }
+        return true;
+      } else if (forcedIndexedMode === "y") {
+        if (len !== 2) {
+          throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+        }
+        const forcedOpcode = absYMap[logicOpcode];
+        if (forcedOpcode === undefined) {
+          throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
+        }
+        this.assembler.write1(forcedOpcode);
+        this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
         return true;
       } else {
         // Non-indexed addressing:
@@ -655,7 +695,7 @@ export class Arch65816 implements ArchitectureEncoder {
     // **Direct Page Mode (e.g., ORA $00, CMP $00)**
     else if (/^\$[\dA-Fa-f]{2}$/.test(resolvedOperand)) {
       mode = "direct";
-      this.assembler.operandResolver.getnum(resolvedOperand);
+      address = this.assembler.operandResolver.getnum(resolvedOperand);
     }
     // **Direct Page Indexed, X Mode (e.g., ORA $00,X)**
     else if (loweredOperand.mode === "directPageIndexedX" && opcodes[logicOpcode].directX) {
@@ -820,25 +860,45 @@ export class Arch65816 implements ArchitectureEncoder {
    */
   handleArithmeticOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
     debug("handleArithmeticOperations", opcode, operand);
-    if (!operand) {
-      throw new Error(`Error: ${opcode} requires an operand.`);
+    // 65816 accepts accumulator unary forms either as an explicit `A`
+    // operand (`DEC A`) or as an implied accumulator instruction (`DEC`).
+    const operandText = operand?.trim() || "A";
+    const accumulatorOpcodes: { [key: string]: number } = {
+      ASL: 0x0A, LSR: 0x4A, ROL: 0x2A, ROR: 0x6A,
+      INC: 0x1A, DEC: 0x3A,
+    };
+
+    // Pseudo forms such as `asl #3` mean "repeat the accumulator shift 3 times"
+    // rather than "shift direct-page address $03".
+    if (operandText.startsWith("#")) {
+      const repeatCount = this.assembler.operandResolver.getnum(operandText.substring(1));
+      if (!Number.isInteger(repeatCount) || repeatCount < 1) {
+        throw new Error(`Invalid repeat count in pseudo opcode: ${operandText}`);
+      }
+      if (opcode in accumulatorOpcodes) {
+        for (let i = 0; i < repeatCount; i++) {
+          this.assembler.write1(accumulatorOpcodes[opcode]);
+        }
+        return true;
+      }
     }
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
 
     // Accumulator mode
-    if (operand === "A") {
-      const accumulatorOpcodes: { [key: string]: number } = {
-        ASL: 0x0A, LSR: 0x4A, ROL: 0x2A, ROR: 0x6A,
-        INC: 0x1A, DEC: 0x3A,
-      };
+    if (operandText === "A") {
       if (opcode in accumulatorOpcodes) {
         this.assembler.write1(accumulatorOpcodes[opcode]);
         return true;
       }
     }
 
+    if (!operand) {
+      throw new Error(`Error: ${opcode} requires an operand.`);
+    }
+
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
+
     // Track indexed addressing without mutating the raw operand.
-    const rawOperand = operand;
+    const rawOperand = operandText;
     const isIndexed = loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
     const normalizedOperand = isIndexed ? rawOperand.slice(0, -2).trim() : rawOperand;
 
@@ -990,6 +1050,9 @@ export class Arch65816 implements ArchitectureEncoder {
     if (isIndexed) {
       operand = operand.slice(0, -2).trim();
     }
+    const isDirectPageLiteral = /^\$[\da-f]{1,2}$/i.test(operand);
+    const isAbsoluteLiteral = /^\$[\da-f]{4}$/i.test(operand);
+    const inferredAbsoluteWidth = !isDirectPageLiteral && (loweredOperand.length === 2 || len === 2);
 
     // If an explicit length is provided, use forced maps:
     if (explicitlen) {
@@ -1031,52 +1094,48 @@ export class Arch65816 implements ArchitectureEncoder {
     // For non-indexed, if operand is 4 digits, use absolute; otherwise, use direct page.
     if (isLDX) {
       if (!isIndexed) {
-        if (/^\$[\da-f]{4}$/i.test(operand)) {
+        address = this.assembler.operandResolver.getnum(operand);
+        if ((loweredOperand.mode === "absolute" && !isDirectPageLiteral) || isAbsoluteLiteral || inferredAbsoluteWidth || address > 0xFF) {
           opcodeByte = 0xAE; // Absolute LDX
-          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
           opcodeByte = 0xA6; // Direct page LDX
-          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
       } else {
-        if (/^\$[\da-f]{4}$/i.test(operand)) {
+        address = this.assembler.operandResolver.getnum(operand);
+        if ((loweredOperand.mode === "absoluteIndexedY" && !isDirectPageLiteral) || isAbsoluteLiteral || inferredAbsoluteWidth || address > 0xFF) {
           opcodeByte = 0xBE; // Absolute Indexed Y LDX
-          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
           opcodeByte = 0xB6; // Direct page Indexed Y LDX
-          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
       }
     } else if (isLDY) {
       if (!isIndexed) {
-        if (/^\$[\da-f]{4}$/i.test(operand)) {
+        address = this.assembler.operandResolver.getnum(operand);
+        if ((loweredOperand.mode === "absolute" && !isDirectPageLiteral) || isAbsoluteLiteral || inferredAbsoluteWidth || address > 0xFF) {
           opcodeByte = 0xAC; // Absolute LDY
-          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
           opcodeByte = 0xA4; // Direct page LDY
-          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
       } else {
-        if (/^\$[\da-f]{4}$/i.test(operand)) {
+        address = this.assembler.operandResolver.getnum(operand);
+        if ((loweredOperand.mode === "absoluteIndexedX" && !isDirectPageLiteral) || isAbsoluteLiteral || inferredAbsoluteWidth || address > 0xFF) {
           opcodeByte = 0xBC; // Absolute Indexed X LDY
-          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
           opcodeByte = 0xB4; // Direct page Indexed X LDY
-          address = this.assembler.operandResolver.getnum(operand);
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
@@ -1088,13 +1147,15 @@ export class Arch65816 implements ArchitectureEncoder {
   /**
    * Handles the JMP (Jump), JSR (Jump to Subroutine), and JSL (Jump to Subroutine Long) instructions.
    * @param {string} opcode - The opcode to handle.
-   * @param {string} operand - The operand to handle.
+   * @param {string} operand - The resolved operand to handle.
+   * @param {string} rawOperand - The original source operand before expansion.
    * @returns {boolean} True if the opcode and operand were handled successfully, false otherwise.
    */
-  handleJump(opcode: string, operand: string): boolean {
-    debug("handleJump", { opcode, operand });
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
-    const baseOperand = loweredOperand.baseExpression ?? operand;
+  handleJump(opcode: string, operand: string, rawOperand = operand): boolean {
+    debug("handleJump", { opcode, operand, rawOperand });
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const baseOperand = loweredOperand.baseExpression ?? rawOperand;
+    const symbolicOperand = rawOperand.trim();
 
     const jumpOpcodes: { [key: string]: number } = {
         JMP: 0x4C,     // JMP Absolute
@@ -1112,52 +1173,101 @@ export class Arch65816 implements ArchitectureEncoder {
 
     let address = 0;
     let mode: keyof typeof jumpOpcodes;
+    const hintedBank = (() => {
+      const simpleBankedLabel = symbolicOperand.startsWith("_")
+        && symbolicOperand.length >= 7
+        && /^[\da-f]{6}$/i.test(symbolicOperand.slice(1, 7));
+      if (!simpleBankedLabel) {
+        return null;
+      }
+      return Number.parseInt(symbolicOperand.slice(1, 3), 16);
+    })();
     const longMode = (currentOpcode: string): keyof typeof jumpOpcodes => {
       if (currentOpcode === "JMP") return "JML";
       if (currentOpcode === "JSR") return "JSL";
       return currentOpcode as keyof typeof jumpOpcodes;
     };
     const shortMode = (currentOpcode: string): keyof typeof jumpOpcodes => currentOpcode as keyof typeof jumpOpcodes;
+    const absolutePointer = (value: number): number => value & 0xFFFF;
+    const selectDirectJumpMode = (currentOpcode: string, resolvedAddress: number): { mode: keyof typeof jumpOpcodes; address: number } => {
+      if (currentOpcode === "JML" || currentOpcode === "JSL") {
+        return { mode: currentOpcode, address: resolvedAddress };
+      }
+
+      if (resolvedAddress > 0xFFFF) {
+        const currentBank = (this.assembler.snespos >>> 16) & 0xFF;
+        const targetBank = (resolvedAddress >>> 16) & 0xFF;
+
+        // The disassembly stores banked SNES labels even for in-bank subroutine
+        // calls. Preserve JSR/JMP when the destination remains in the current
+        // program bank, and only upgrade to the long form for cross-bank jumps.
+        if ((currentOpcode === "JMP" || currentOpcode === "JSR") && targetBank === currentBank) {
+          return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+        }
+
+        // Early passes can temporarily push forward labels near a bank boundary
+        // into the next bank even when the source operand explicitly names the
+        // current bank (for example `_02FF22`). Keep sizing stable by trusting
+        // that bank hint for same-bank JMP/JSR decisions until later passes
+        // converge on the final absolute address.
+        if ((currentOpcode === "JMP" || currentOpcode === "JSR") && hintedBank === currentBank) {
+          return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+        }
+
+        return { mode: longMode(currentOpcode), address: resolvedAddress };
+      }
+
+      return { mode: shortMode(currentOpcode), address: resolvedAddress };
+    };
 
     // **Plain numeric / hex literal mode**
     if (/^\d+$/.test(operand)) {
-        address = this.assembler.operandResolver.getnum(operand);
-        mode = address > 0xFFFF ? longMode(opcode) : shortMode(opcode);
+        ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(operand)));
         debug("handleJump mode", mode)
     }
     // **Plain hex literal mode**
     else if (/^\$[\dA-Fa-f]{1,6}$/.test(operand)) {
-        address = this.assembler.operandResolver.getnum(operand);
-        mode = operand.length > 5 ? longMode(opcode) : shortMode(opcode);
+        ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(operand)));
         debug("handleJump mode", mode)
     }
     // **Absolute Indirect Long Mode: JMP [$0000]**
     else if (loweredOperand.mode === "indirectLong") {
         mode = "JMP_INDIRECT_LONG";
         debug("handleJump mode", mode)
-        address = this.assembler.operandResolver.getnum(baseOperand); // Extract indirect long address
+        address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand)); // Extract 16-bit indirect long pointer
     }
-    // **JSR Absolute Indexed Indirect Mode: JSR ($0000,X)**
-    else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX" && /^\$[\dA-Fa-f]{4}$/.test(baseOperand)) {
+    // **Absolute indexed/indirect jump modes accept expressions, not just raw
+    // hex literals, as long as they resolve to a 16-bit absolute pointer.**
+    else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX") {
+      // Local labels resolve to banked SNES addresses, but JSR (abs,X) only
+      // encodes the absolute pointer within the current program bank.
+      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JSR_INDEXED_INDIRECT";
       debug("handleJump mode", mode)
-      address = this.assembler.operandResolver.getnum(baseOperand); // Extract absolute indexed indirect address
     }
     // **Absolute Indexed Indirect Mode: JMP ($0000,X)**
-    else if (loweredOperand.mode === "indexedIndirectX" && /^\$[\dA-Fa-f]{4}$/.test(baseOperand)) {
+    else if (loweredOperand.mode === "indexedIndirectX") {
+      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JMP_INDEXED_INDIRECT";
       debug("handleJump mode", mode)
-      address = this.assembler.operandResolver.getnum(baseOperand); // Extract absolute indexed indirect address
     }
     // **Absolute Indirect Mode: JMP ($0000)**
-    else if (loweredOperand.mode === "directPageIndirect" && /^\$[\dA-Fa-f]{4}$/.test(baseOperand)) {
+    else if (loweredOperand.mode === "directPageIndirect") {
+      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JMP_INDIRECT";
       debug("handleJump mode", mode)
-      address = this.assembler.operandResolver.getnum(baseOperand); // Extract indirect address
     }
     else {
-      debug("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`)
-      throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
+      try {
+        // Long/short jump operands are often labels such as `_018049_8053`
+        // rather than raw numeric literals. Resolve those through the common
+        // operand pipeline before rejecting the instruction shape outright.
+        ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(baseOperand)));
+        debug("handleJump mode", mode)
+      } catch {
+        debug("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`)
+        throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
+      }
     }
 
     debug("handleJump address", address?.toString(16));

@@ -3,6 +3,7 @@ import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Assembler, LoopBlock } from "../src/assembler.js";
+import { createTraceCollector } from "../src/debug-tracing.js";
 import { parseExpressionNode } from "../src/ir/expression-node.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";
 
@@ -83,6 +84,84 @@ test("getnum - handles math expressions", t => {
   t.is(assembler.operandResolver.getnum("(20-5)/3"), 5, "Should evaluate complex expressions with parentheses");
 });
 
+test("resolvedefines - preserves local label arithmetic expressions", t => {
+  const assembler = new Assembler();
+
+  assembler.setLabel("zombie_spawner_data", 0xDA6E, false, false, true);
+  assembler.setLabel("zombie_spawner_data_zone", 0xDA8A);
+  assembler.setLabel("zombie_spawner_data_zone_difficulty_offset", 0xDA8A);
+  assembler.setLabel("zombie_spawner_data_zone_max", 0xDA8E);
+  assembler.setLabel("zombie_spawner_data_zone_n", 0xDA98);
+
+  assembler.currentParentLabel = "zombie_spawner_data_zone_difficulty_offset";
+  assembler.currentGlobalParentLabel = "zombie_spawner_data";
+  assembler.currentParentIsGlobal = false;
+  assembler.pass = 2;
+
+  t.is(
+    assembler.resolvedefines(".zone_n-.zone_max"),
+    ".zone_n-.zone_max",
+    "Should leave dotted local arithmetic intact for later evaluation",
+  );
+  t.is(assembler.operandResolver.getnum(".zone_n-.zone_max"), 0x0A);
+});
+
+test("getnum - keeps parent stride for extended struct array members", t => {
+  const assembler = new Assembler();
+
+  assembler.assembleblock("struct obj 0");
+  assembler.assembleblock(".base: skip 0");
+  assembler.assembleblock(".active: skip 1");
+  assembler.assembleblock(".timer: skip 1");
+  assembler.assembleblock(".state: skip 4");
+  assembler.assembleblock(".type: skip 1");
+  assembler.assembleblock(".init_param: skip 1");
+  assembler.assembleblock(".flags1: skip 1");
+  assembler.assembleblock(".flags2: skip 1");
+  assembler.assembleblock("._0A_0D: skip 4");
+  assembler.assembleblock(".hp: skip 1");
+  assembler.assembleblock("._0F: skip 1");
+  assembler.assembleblock("._10: skip 1");
+  assembler.assembleblock(".direction: skip 1");
+  assembler.assembleblock(".facing: skip 1");
+  assembler.assembleblock("._13: skip 2");
+  assembler.assembleblock("._15: skip 1");
+  assembler.assembleblock(".speed_x: skip 3");
+  assembler.assembleblock(".speed_y: skip 3");
+  assembler.assembleblock(".gravity: skip 1");
+  assembler.assembleblock("._1D: skip 1");
+  assembler.assembleblock(".pos_x: skip 3");
+  assembler.assembleblock(".pos_y: skip 3");
+  assembler.assembleblock(".anim_timer: skip 1");
+  assembler.assembleblock("._25: skip 1");
+  assembler.assembleblock("._26: skip 1");
+  assembler.assembleblock("._27: skip 2");
+  assembler.assembleblock("._29: skip 2");
+  assembler.assembleblock("._2B: skip 2");
+  assembler.assembleblock("endstruct");
+
+  assembler.assembleblock("struct ext extends obj");
+  assembler.assembleblock("._2D_3D: skip 17");
+  assembler.assembleblock("._3E_3F: skip 2");
+  assembler.assembleblock(".index: skip 1");
+  assembler.assembleblock(".len: skip 0");
+  assembler.assembleblock("endstruct");
+
+  assembler.setLabel("obj_start", 0x043C, false, false, true);
+  assembler.defines.set("obj_objects", "obj_start+obj[19]");
+
+  t.is(
+    assembler.resolveStructLabel("obj[19].ext.index"),
+    0x0513,
+    "Extended array members should use the parent object stride",
+  );
+  t.is(
+    assembler.operandResolver.getnum("!obj_objects.ext.index"),
+    0x094F,
+    "Define math should keep the parent stride for extension members",
+  );
+});
+
 test("getnum - throws error for undefined defines", t => {
   const assembler = new Assembler();
 
@@ -125,6 +204,94 @@ test("setPass - resets guarded status for included files", t => {
 
   // Verify guard has been reset
   t.false(assembler.includedFiles.get(testFile).guarded);
+});
+
+test("splitInlineCommands splits relative-label command fragments after inline separators", t => {
+  const assembler = new Assembler();
+
+  t.deepEqual(
+    assembler.splitInlineCommands(["jmp (+,X) : +: dw .mode1, .mode2, .mode3"]),
+    ["jmp (+,X)", "+:", "dw .mode1, .mode2, .mode3"],
+  );
+  t.deepEqual(
+    assembler.splitInlineCommands(["bra + : ++: db $01"]),
+    ["bra +", "++:", "db $01"],
+  );
+  t.deepEqual(
+    assembler.splitInlineCommands(["set_hp: lda #$01"]),
+    ["set_hp: lda #$01"],
+  );
+});
+
+test("trace listener captures command and write events", t => {
+  const assembler = new Assembler();
+  assembler.pass = 2;
+  assembler.romdata = new Uint8Array(0x100000);
+  assembler.currentFile = new URL(import.meta.url).pathname;
+  assembler.currentLine = 1;
+  assembler.setWritePosition(0x808000);
+
+  const collector = createTraceCollector({ startAddress: 0x808000, endAddress: 0x808000 });
+  assembler.setTraceListener(collector.listener);
+
+  assembler.processNormalizedCommand(makeCommand("db $42"), false);
+
+  t.deepEqual(
+    collector.events.map((event) => event.type),
+    ["command-start", "write", "command-end"],
+    "Trace listener should receive command boundaries and byte writes in order",
+  );
+
+  const writeEvent = collector.events.find((event) => event.type === "write");
+  if (!writeEvent || writeEvent.type !== "write") {
+    t.fail("Expected a write trace event");
+    return;
+  }
+  t.is(writeEvent.file, "test.asm");
+  t.is(writeEvent.line, 1);
+  t.is(writeEvent.raw, "db $42");
+  t.is(writeEvent.snesAddress, 0x808000);
+  t.is(writeEvent.value, 0x42);
+
+  const endEvent = collector.events.find((event) => event.type === "command-end");
+  if (!endEvent || endEvent.type !== "command-end") {
+    t.fail("Expected a command-end trace event");
+    return;
+  }
+  t.is(endEvent.bytesWritten, 1);
+  t.is(endEvent.endSnesAddress, 0x808001);
+});
+
+test("trace collector filters to matching address ranges", t => {
+  const collector = createTraceCollector({ startAddress: 0x1234, endAddress: 0x1234, eventTypes: ["write"] });
+
+  collector.listener({
+    type: "write",
+    pass: 2,
+    arch: "spc700",
+    file: "trace.asm",
+    line: 12,
+    raw: "db $10",
+    normalized: "db $10",
+    snesAddress: 0x1234,
+    pcAddress: 0x5678,
+    value: 0x10,
+  });
+  collector.listener({
+    type: "write",
+    pass: 2,
+    arch: "spc700",
+    file: "trace.asm",
+    line: 13,
+    raw: "db $11",
+    normalized: "db $11",
+    snesAddress: 0x1235,
+    pcAddress: 0x5679,
+    value: 0x11,
+  });
+
+  t.is(collector.events.length, 1);
+  t.is(collector.events[0].snesAddress, 0x1234);
 });
 
 test("finishPass - updates header and CRC32", t => {
@@ -830,6 +997,71 @@ test("getObjectSize - handles quoted struct names", t => {
   t.is(size, 15);
 });
 
+test("resolveReferenceLabelValue - resolves indexed struct base references", t => {
+  const assembler = new Assembler();
+  assembler.structs.set("obj", {
+    name: "obj",
+    base: 0,
+    offset: 16,
+    size: 16,
+    labels: new Map([
+      ["base", 0],
+    ]),
+  });
+
+  const expression = parseExpressionNode("obj[1]");
+  if (expression.type !== "index") {
+    t.fail("Expected indexed reference expression");
+    return;
+  }
+
+  t.is(assembler.resolveReferenceLabelValue(expression), 16);
+});
+
+test("resolveReferenceLabelValue - resolves bare struct base references", t => {
+  const assembler = new Assembler();
+  assembler.structs.set("obj", {
+    name: "obj",
+    base: 0,
+    offset: 32,
+    size: 16,
+    labels: new Map([
+      ["base", 0],
+    ]),
+  });
+
+  const expression = parseExpressionNode("obj");
+  if (expression.type !== "identifier") {
+    t.fail("Expected identifier reference expression");
+    return;
+  }
+
+  t.is(assembler.resolveReferenceLabelValue(expression), 0);
+});
+
+test("resolveReferenceLabelValue - preserves struct members after define expansion", t => {
+  const assembler = new Assembler();
+  assembler.defines.set("task_offset", "$004E+task");
+  assembler.structs.set("task", {
+    name: "task",
+    base: 0,
+    offset: 0,
+    size: 24,
+    labels: new Map([
+      ["base", 0],
+      ["stack_id", 4],
+    ]),
+  });
+
+  const expression = parseExpressionNode("!task_offset.stack_id+0");
+  if (expression.type !== "binary") {
+    t.fail("Expected binary expression");
+    return;
+  }
+
+  t.is(assembler.mathCore.math(assembler.resolveExpressionInput(expression)), 0x52);
+});
+
 test("getObjectSize - throws error for non-existent struct", t => {
   const assembler = new Assembler();
   const nonExistentStruct = "NonExistentStruct";
@@ -1359,17 +1591,37 @@ test("assemblefile - throws on recursion limit", t => {
   resolvePathStub.restore();
 });
 
+test("assemblefile - throws on recursive include cycle before recursion limit", t => {
+  const assembler = new Assembler();
+  const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+
+  assembler.currentFile = "/test/path/loop1.asm";
+  assembler.includeStack.push("/test/path/root.asm");
+  resolvePathStub.returns("/test/path/loop1.asm");
+
+  const error = t.throws(() => {
+    assembler.assemblefile("loop1.asm", true);
+  });
+
+  t.is(error.message, "Recursive include detected for '/test/path/loop1.asm'");
+
+  resolvePathStub.restore();
+});
+
 test("assemblefile - maintains include stack", t => {
   const assembler = new Assembler();
   const fsReadFileStub = sinon.stub(fs, "readFileSync");
   const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+  t.teardown(() => {
+    fsReadFileStub.restore();
+    resolvePathStub.restore();
+  });
 
   // Setup test file
   const mainFile = "/test/path/main.asm";
   const includedFile = "/test/path/included.asm";
 
-  resolvePathStub.onFirstCall().returns(mainFile);
-  resolvePathStub.onSecondCall().returns(includedFile);
+  resolvePathStub.returns(includedFile);
 
   fsReadFileStub.returns(""); // Empty file for simplicity
 
@@ -1382,15 +1634,16 @@ test("assemblefile - maintains include stack", t => {
   // Verify stack was maintained
   t.is(assembler.currentFile, mainFile);
   t.is(assembler.includeStack.length, 0);
-
-  // Cleanup
-  fsReadFileStub.restore();
 });
 
 test("assemblefile - handles file read errors", t => {
   const assembler = new Assembler();
   const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
   const fsReadFileStub = sinon.stub(fs, "readFileSync");
+  t.teardown(() => {
+    fsReadFileStub.restore();
+    resolvePathStub.restore();
+  });
 
   const testFilePath = "/test/path/error.asm";
   resolvePathStub.returns(testFilePath);
@@ -1402,16 +1655,15 @@ test("assemblefile - handles file read errors", t => {
   const originalFile = "/test/path/original.asm";
   assembler.currentFile = originalFile;
 
-  // Should not throw but handle error internally
-  t.notThrows(() => {
+  // Include failures should bubble up so callers cannot silently keep going
+  // after dropping an entire include tree.
+  const error = t.throws(() => {
     assembler.assemblefile("error.asm", true);
   });
+  t.regex(error.message, /Failed to assemble include '\/test\/path\/error\.asm': File read error/);
 
   // Verify state is restored
   t.is(assembler.currentFile, originalFile);
-
-  // Cleanup
-  fsReadFileStub.restore();
 });
 
 test("handleCharacterMapping - basic mapping", t => {
@@ -2592,6 +2844,7 @@ test("setIncludePaths", t => {
 
 test("handleIncbin", t => {
   const assembler = new Assembler();
+  assembler.pass = 2;
 
   // Mock the readFile method
   const mockData = new Uint8Array([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
@@ -2618,6 +2871,11 @@ test("handleIncbin", t => {
   writtenBytes.length = 0;
   assembler.handleIncbin(["incbin", "testfile.bin:2..5"]);
   t.deepEqual(writtenBytes, [0x03, 0x04, 0x05], "Range with .. syntax should work");
+
+  // Preserve spaced math expressions that have already been tokenized.
+  writtenBytes.length = 0;
+  assembler.handleIncbin(["incbin", "testfile.bin:(000", "*", "2)..(003", "*", "2)"]);
+  t.deepEqual(writtenBytes, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06], "Range math with spaces should work");
 
   // 0 should be treated as EOF
   writtenBytes.length = 0;
@@ -2842,6 +3100,16 @@ test("resolveStructLabel", (t) => {
     0x2016,
     "Should resolve array struct member with index"
   );
+  t.is(
+    assembler.resolveStructLabel("ArrayStruct[-1]"),
+    0x1FF6,
+    "Should resolve array struct bases with negative indices"
+  );
+  t.is(
+    assembler.resolveStructLabel("ArrayStruct[-1].value"),
+    0x1FF8,
+    "Should resolve array struct members with negative indices"
+  );
 
   // Test 4: Extension struct
   t.is(
@@ -2867,6 +3135,11 @@ test("resolveStructLabel", (t) => {
     assembler.resolveStructLabel("ParentStruct.ExtensionStruct.data"),
     0x3010,
     "Should resolve nested struct member reference"
+  );
+  t.is(
+    assembler.resolveStructLabel("ParentStruct[1].ExtensionStruct.data"),
+    0x3024,
+    "Should resolve extension members through a parent array element"
   );
 
   // Test 7: Error cases
@@ -2919,6 +3192,23 @@ test("resolveStructLabel", (t) => {
   t.throws(() => {
     assembler.resolveStructLabel("OrphanExtension.data");
   }, { message: /Parent struct 'MissingParent' not defined for extension/ }, "Should throw when parent struct is missing");
+});
+
+test("resolveStructMember supports negative indices", (t) => {
+  const assembler = new Assembler();
+
+  assembler.structs.set("Task", {
+    name: "Task",
+    base: 0,
+    size: 16,
+    offset: 16,
+    labels: new Map([
+      ["base", 0],
+      ["state", 2],
+    ]),
+  });
+
+  t.is(assembler.resolveStructMember("Task[-1].state"), -14);
 });
 
 test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
@@ -3998,6 +4288,24 @@ test("handleDataDirective - different directives", t => {
   // Test dd (4 bytes)
   assembler.handleDataDirective("dd", ["12345678"]);
   t.true(write4Spy.calledWith(12345678), "dd should write 4 bytes");
+});
+
+test("handleDataDirective - pass 0 estimates byte size", t => {
+  const assembler = new Assembler();
+  assembler.setPass(0);
+  assembler.defines.set("bytes", "1,2,3");
+  const stepSpy = sinon.spy(assembler, "step");
+
+  assembler.handleDataDirective("db", ['"Hi"']);
+  assembler.handleDataDirective("dw", ["!bytes"]);
+
+  t.deepEqual(
+    stepSpy.getCalls().map((call) => call.args[0]),
+    [2, 6],
+    "Pass 0 should advance by the estimated byte count for strings and expanded lists"
+  );
+
+  stepSpy.restore();
 });
 
 test("handleDataDirective - string values", t => {
@@ -5919,6 +6227,7 @@ test("findNextLabel and findPreviousLabel", (t) => {
   // Test findNextLabel with labels after current position
   assembler.snespos = 0x1100;
   t.is(assembler.findNextLabel("+"), 0x1200, "Should find the closest forward label after current position");
+  t.is(assembler.findNextLabel("+", 0x1200), 0x1200, "Should allow inline + labels at the branch reference address");
 
   // Setup some backward labels
   assembler.backwardLabels[1] = [
@@ -6139,6 +6448,9 @@ test("handleDefineCommand - basic define operations", t => {
   // Test complex expressions
   assembler.handleDefineCommand("!complex #= (10 * 2) / 4");
   t.is(assembler.defines.get("complex"), "5", "Complex math expressions should be evaluated correctly");
+
+  assembler.handleDefineCommand("!task_offset = $004E+task");
+  t.is(assembler.defines.get("task_offset"), "$004E+task", "Symbolic math defines should retain struct references for later member access");
 });
 
 test("handleUndef - removes defines from processCommand", t => {
@@ -6646,8 +6958,9 @@ test("expressionHost - resolveLabel", t => {
     labels: new Map(),
   });
 
-  // Structs currently resolve as zero-valued label-like identifiers for math usage.
-  t.is(assembler.expressionHost.resolveLabel("test_struct"), 0, "Should resolve struct names consistently with assembler label lookup");
+  // Bare struct identifiers now resolve to their declared base address so later
+  // math and indexed operands can treat them like canonical labels.
+  t.is(assembler.expressionHost.resolveLabel("test_struct"), 0x2000, "Should resolve bare struct names to their base address");
 });
 
 test("expressionHost - snestopc and pctosnes", t => {

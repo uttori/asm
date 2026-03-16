@@ -174,7 +174,7 @@ export class StructEngine {
     let arrayIndex = 0;
     let candidate = labelRef;
     let extraMember = "";
-    const arrayMatch = candidate.match(/^(.*?)\[(\d+)](.*)$/);
+    const arrayMatch = candidate.match(/^(.*?)\[(-?\d+)](.*)$/);
     if (arrayMatch) {
       candidate = arrayMatch[1];
       arrayIndex = Number.parseInt(arrayMatch[2], 10);
@@ -201,6 +201,9 @@ export class StructEngine {
         effectiveSize = Math.ceil(baseStructSize / def.align) * def.align;
       }
 
+      // Arrays of a parent struct must reserve enough room for whichever child
+      // extension is largest, otherwise `parent[n].ext.member` resolves into
+      // the wrong element once an extension increases the total record size.
       let maxExtensionSize = 0;
       for (const [, structDef] of this.host.structs.entries()) {
         if (structDef.parent === potential && structDef.size > maxExtensionSize) {
@@ -212,7 +215,7 @@ export class StructEngine {
       }
 
       if (memberName.trim() === "") {
-        if (arrayIndex > 0) {
+        if (arrayIndex !== 0) {
           return def.base + (arrayIndex * effectiveSize);
         }
         return def.base;
@@ -221,6 +224,16 @@ export class StructEngine {
       const memberParts = memberName.split(".");
       const topLevelMember = memberParts[0];
       if (!def.labels.has(topLevelMember)) {
+        const childStruct = this.host.structs.get(topLevelMember);
+        if (childStruct && childStruct.parent === potential) {
+          const childMemberName = memberParts.slice(1).join(".");
+          // Extended members such as `obj[19].ext.index` still live inside the
+          // parent array element. Reusing `ext[19].index` would scale by the
+          // extension size alone and drop the parent object stride.
+          const childReference = `${topLevelMember}${childMemberName ? `.${childMemberName}` : ""}`;
+          const childOffset = this.resolveStructLabel(childReference) - childStruct.base;
+          return def.base + (arrayIndex * effectiveSize) + childOffset;
+        }
         throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
       }
 
@@ -261,6 +274,7 @@ export class StructEngine {
     let targetLocationSpecified = false;
     let targetLocation: string | null = null;
     const arrowIndex = words.indexOf("->");
+    const sourceWords = arrowIndex === -1 ? words.slice(1) : words.slice(1, arrowIndex);
     if (arrowIndex !== -1) {
       targetLocationSpecified = true;
       if (arrowIndex + 1 >= words.length) {
@@ -270,7 +284,10 @@ export class StructEngine {
       words = words.slice(0, arrowIndex);
     }
 
-    const filenameWithRange = words[1];
+    // Normalized commands split on whitespace, so range expressions like
+    // `(000 * 32)..(014 * 32)` arrive as multiple tokens. Rejoin the source
+    // operand before extracting the optional `:start..end` suffix.
+    const filenameWithRange = sourceWords.join(" ");
     let filename: string;
     let rangeStr: string | null = null;
     const colonIndex = filenameWithRange.indexOf(":");

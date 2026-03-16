@@ -30,11 +30,97 @@ export interface SymbolScopeHost {
   backwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
+  currentGlobalParentLabel: string;
+  labelParents: Map<string, string | null>;
   structs: Map<string, StructDefinition>;
 }
 
 export class SymbolScopeService {
   constructor(readonly host: SymbolScopeHost) {}
+
+  private isMissingLabelError(error: unknown): boolean {
+    return error instanceof Error && error.message.startsWith("Error: Label '");
+  }
+
+  private findNearestHierarchyAncestor(label: string): string | null {
+    for (let i = label.length - 1; i >= 0; i--) {
+      if (label[i] !== "_") {
+        continue;
+      }
+      const candidate = label.slice(0, i);
+      if (!candidate) {
+        continue;
+      }
+      const entry = this.host.labelTable.get(candidate);
+      if (entry?.modifiesHierarchy) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  private getHierarchyChain(label: string): string[] {
+    const rootLabel = this.host.currentGlobalParentLabel;
+    const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
+    const chain = [label];
+    let cursor = label;
+    while (true) {
+      const explicitParent = this.host.labelParents.get(cursor);
+      const parent = explicitParent === undefined ? this.findNearestHierarchyAncestor(cursor) : explicitParent;
+      if (!parent) {
+        break;
+      }
+      chain.unshift(parent);
+      // Labels such as `arthur_sprites` can coexist with unrelated globals like
+      // `arthur`. Once we have climbed back to the active global root, stop so
+      // shorter prefix labels do not hijack nested local ancestry.
+      if (rootApplies && parent === rootLabel) {
+        break;
+      }
+      cursor = parent;
+    }
+    return chain;
+  }
+
+  private getAncestorPrefixes(label: string): string[] {
+    const prefixes: string[] = [];
+    for (let i = label.length - 1; i >= 0; i--) {
+      if (label[i] !== "_") {
+        continue;
+      }
+      const candidate = label.slice(0, i);
+      if (candidate) {
+        prefixes.push(candidate);
+      }
+    }
+    return prefixes;
+  }
+
+  private getScopedParentLabel(dotCount: number): string {
+    const current = this.host.currentParentLabel;
+    if (dotCount === 1) {
+      if (this.host.currentGlobalParentLabel) {
+        return this.host.currentGlobalParentLabel;
+      }
+      if (this.host.currentParentIsGlobal) {
+        // Global labels such as `stage1_earthquake_tiles` legitimately contain
+        // underscores. Preserve the full global label as the parent for `.child`
+        // definitions instead of treating those underscores as hierarchy breaks.
+        return current;
+      }
+      const chain = this.getHierarchyChain(current);
+      return chain[0] ?? current;
+    }
+
+    if (this.host.currentParentIsGlobal) {
+      return current;
+    }
+
+    const chain = this.getHierarchyChain(current);
+    const targetDepth = dotCount - 1;
+    return chain[targetDepth] ?? current;
+  }
 
   /**
    * Checks if a label is in scope.
@@ -112,7 +198,10 @@ export class SymbolScopeService {
         if (isMacroLocal && this.host.inMacroExpansion) {
           return entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance;
         }
-        return entry.addr > currentAddress && !entry.macroInstance;
+        // Inline constructs such as `bcs + : +:` define the target label at the
+        // branch reference address itself (right after the branch instruction),
+        // so treat same-address forward labels as valid next targets.
+        return entry.addr >= currentAddress && !entry.macroInstance;
       })
       .map((entry) => entry.addr);
 
@@ -258,6 +347,11 @@ export class SymbolScopeService {
     const addr = value !== undefined ? value : this.host.snespos;
 
     if (this.host.pass === 0) {
+      if (modifiesHierarchy && !label.startsWith(".")) {
+        this.host.currentParentLabel = fullLabel;
+        this.host.currentParentIsGlobal = isGlobal;
+      }
+
       this.host.labelTable.set(fullLabel, {
         value: addr,
         isStatic,
@@ -357,7 +451,7 @@ export class SymbolScopeService {
         if (bracketEnd === -1) throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
         const indexStr = rest.substring(1, bracketEnd).trim();
         const index = Number.parseInt(indexStr, 10);
-        if (Number.isNaN(index) || index < 0) throw new Error(`Invalid struct index: ${indexStr}`);
+        if (Number.isNaN(index)) throw new Error(`Invalid struct index: ${indexStr}`);
         rest = rest.substring(bracketEnd + 1).trim();
         base += index * currentStruct.size;
       } else {
@@ -376,18 +470,54 @@ export class SymbolScopeService {
    */
   getLabelValue(label: string, requireStatic: boolean): number {
     if (label.startsWith(".") && this.host.currentParentLabel) {
-      const localName = label.substring(1);
-      const parentParts = this.host.currentParentLabel.split("_").filter(Boolean);
-      const candidates: string[] = [];
+      let dotCount = 0;
+      while (label[dotCount] === ".") {
+        dotCount++;
+      }
+      const localName = label.substring(dotCount);
+      const candidates = new Set<string>();
+      const nestedLocalParts = localName.split("_").filter(Boolean);
+      const hierarchyChain = this.getHierarchyChain(this.host.currentParentLabel);
 
-      if (parentParts[parentParts.length - 1] === localName) {
-        candidates.push(this.host.currentParentLabel);
+      if (dotCount === 1 && this.host.currentParentLabel.endsWith(`_${localName}`)) {
+        candidates.add(this.host.currentParentLabel);
       }
 
-      candidates.push(`${this.host.currentParentLabel}_${localName}`);
+      const addExactLocalCandidate = (parentPrefix: string): void => {
+        candidates.add(`${parentPrefix}_${localName}`);
+      };
 
-      for (let i = parentParts.length - 1; i > 0; i--) {
-        candidates.push(`${parentParts.slice(0, i).join("_")}_${localName}`);
+      const addShortenedLocalCandidates = (parentPrefix: string): void => {
+        // Local labels such as `.idx_beginner` are used to reference nested
+        // multi-dot labels defined under `.idx` as `..beginner`. Since `_` is
+        // both a legal label character and our hierarchy separator, also try
+        // progressively shorter local tails against ancestor prefixes.
+        for (let i = 1; i < nestedLocalParts.length; i++) {
+          candidates.add(`${parentPrefix}_${nestedLocalParts.slice(i).join("_")}`);
+        }
+      };
+
+      // Prefer labels nested directly under the current local block. Source
+      // trees such as `.underwear` -> `..idle` rely on this producing
+      // `parent_underwear_idle` rather than collapsing back to an ancestor.
+      addExactLocalCandidate(this.host.currentParentLabel);
+
+      for (const ancestorPrefix of this.getAncestorPrefixes(this.host.currentParentLabel)) {
+        addExactLocalCandidate(ancestorPrefix);
+      }
+
+      for (let i = hierarchyChain.length - 2; i >= 0; i--) {
+        addExactLocalCandidate(hierarchyChain[i]);
+      }
+
+      addShortenedLocalCandidates(this.host.currentParentLabel);
+
+      for (const ancestorPrefix of this.getAncestorPrefixes(this.host.currentParentLabel)) {
+        addShortenedLocalCandidates(ancestorPrefix);
+      }
+
+      for (let i = hierarchyChain.length - 2; i >= 0; i--) {
+        addShortenedLocalCandidates(hierarchyChain[i]);
       }
 
       for (const candidate of candidates) {
@@ -455,16 +585,29 @@ export class SymbolScopeService {
 
         try {
           return this.getLabelValueDirect(fullLabel, requireStatic);
-        } catch {
+        } catch (error) {
+          if (!this.isMissingLabelError(error)) {
+            throw error;
+          }
           continue;
         }
       }
     }
 
-    return this.getLabelValueDirect(
-      this.host.currentNamespace ? `${this.host.currentNamespace}_${label}` : label,
-      requireStatic,
-    );
+    if (this.host.currentNamespace) {
+      try {
+        return this.getLabelValueDirect(`${this.host.currentNamespace}_${label}`, requireStatic);
+      } catch (error) {
+        if (!this.isMissingLabelError(error)) {
+          throw error;
+        }
+        // Object namespaces frequently reference shared globals such as
+        // `difficulty`. If the namespaced symbol is absent, fall back to the
+        // unqualified global label before reporting an error.
+      }
+    }
+
+    return this.getLabelValueDirect(label, requireStatic);
   }
 
   /**
@@ -586,48 +729,23 @@ export class SymbolScopeService {
       }
 
       const subLabelName = labelName.substring(dotCount);
+      const parentLabel = this.getScopedParentLabel(dotCount);
+      const directScopeLabel = `${parentLabel}_${subLabelName}`;
+      this.host.labelParents.set(directScopeLabel, parentLabel);
+      this.setLabel(directScopeLabel, undefined, false, false, false, modifiesHierarchy);
 
-      if (dotCount === 1) {
-        const directScopeLabel = `${this.host.currentParentLabel}_${subLabelName}`;
-        this.setLabel(directScopeLabel, undefined, false, false, this.host.currentParentIsGlobal, modifiesHierarchy);
+      if (modifiesHierarchy) {
+        this.host.currentParentLabel = directScopeLabel;
+        // Single-dot labels become the local root for following `..` labels even
+        // when their names contain underscores, e.g. `.stage1_boss` -> `..ch8`.
+        this.host.currentParentIsGlobal = dotCount === 1;
+      }
 
-        if (this.host.currentNamespace) {
-          const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
-          if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
-            const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
-            this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
-          }
-        }
-      } else {
+      if (this.host.currentNamespace) {
         const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
-        const namespacedParent = this.host.currentNamespace ? `${namespacePrefix}_${this.host.currentParentLabel}` : this.host.currentParentLabel;
-
-        let fullParentPath = this.host.currentParentLabel;
-        for (const [key, entry] of this.host.labelTable.entries()) {
-          if (entry.modifiesHierarchy && key.includes("_") && (key === namespacedParent || key.startsWith(`${namespacedParent}_`))) {
-            const localPart = key.substring(key.indexOf(this.host.currentParentLabel));
-            if (localPart.split("_").length > fullParentPath.split("_").length) {
-              fullParentPath = localPart;
-            }
-          }
-        }
-
-        const parentParts = fullParentPath.split("_");
-        let relevantParent = parentParts[0];
-        for (let i = 1; i < parentParts.length; i++) {
-          if (i < dotCount) {
-            relevantParent += `_${parentParts[i]}`;
-          }
-        }
-
-        const directScopeLabel = `${relevantParent}_${subLabelName}`;
-        this.setLabel(directScopeLabel, undefined, false, false, this.host.currentParentIsGlobal, modifiesHierarchy);
-
-        if (this.host.currentNamespace) {
-          if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
-            const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
-            this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
-          }
+        if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
+          const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
+          this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
         }
       }
 
@@ -639,10 +757,18 @@ export class SymbolScopeService {
 
     if (modifiesHierarchy) {
       this.host.currentParentLabel = labelName;
-      this.host.currentParentIsGlobal = false;
+      this.host.currentParentIsGlobal = true;
+      this.host.currentGlobalParentLabel = labelName;
     }
 
+    this.host.labelParents.set(labelName, null);
     this.setLabel(labelName, undefined, false, false, false, modifiesHierarchy);
+
+    if (modifiesHierarchy) {
+      this.host.currentParentLabel = labelName;
+      this.host.currentParentIsGlobal = true;
+      this.host.currentGlobalParentLabel = labelName;
+    }
 
     if (this.host.currentNamespace) {
       const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;

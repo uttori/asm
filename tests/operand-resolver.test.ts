@@ -14,6 +14,7 @@ const createResolver = (overrides: Partial<ConstructorParameters<typeof OperandR
   hasLabel: () => false,
   evaluateMath: () => 0,
   getPass: () => 2,
+  getCurrentAddress: () => 0,
   requireStaticLabelLookup: () => false,
   ...overrides,
 });
@@ -160,6 +161,84 @@ test("tryResolveLabelInOperand - forwards direct lookups to resolveLabel", t => 
   t.true(resolveLabel.calledWithExactly("test_label", false));
 });
 
+test("getnum - falls back to math for compound struct expressions", t => {
+  const resolveStructLabel = sinon.stub().throws(new Error("Struct not found"));
+  const resolveLabel = sinon.stub().throws(new Error("Label not found"));
+  const evaluateMath = sinon.stub().withArgs("obj_start+obj[19].base").returns(0x0911);
+  const resolver = createResolver({ resolveStructLabel, resolveLabel, evaluateMath });
+
+  t.is(resolver.getnum("obj_start+obj[19].base"), 0x0911);
+  t.true(resolveStructLabel.calledOnceWithExactly("obj_start+obj[19].base"));
+  t.true(resolveLabel.notCalled);
+  t.true(evaluateMath.calledOnceWithExactly("obj_start+obj[19].base"));
+});
+
+test("getnum - resolves bare struct base labels before plain labels", t => {
+  const resolveStructLabel = sinon.stub().withArgs("options").returns(0x1FD9);
+  const resolveLabel = sinon.stub().throws(new Error("Label not found"));
+  const resolver = createResolver({ resolveStructLabel, resolveLabel });
+
+  t.is(resolver.getnum("options"), 0x1FD9);
+  t.true(resolveStructLabel.calledOnceWithExactly("options"));
+  t.true(resolveLabel.notCalled);
+});
+
+test("getnum - resolves local label arithmetic before generic math fallback", t => {
+  const resolveStructLabel = sinon.stub().throws(new Error("Struct not found"));
+  const resolveLabel = sinon.stub().withArgs(".8741", false).returns(0x8741);
+  const evaluateMath = sinon.stub().throws(new Error("Invalid number"));
+  const resolver = createResolver({ resolveStructLabel, resolveLabel, evaluateMath });
+
+  t.is(resolver.getnum(".8741-2"), 0x873F);
+  t.true(resolveLabel.calledOnceWithExactly(".8741", false));
+  t.true(evaluateMath.notCalled);
+});
+
+test("getnum - resolves local label subtraction on both sides before generic math fallback", t => {
+  const resolveStructLabel = sinon.stub().throws(new Error("Struct not found"));
+  const resolveLabel = sinon.stub().callsFake((label: string) => {
+    if (label === ".zone_n") {
+      return 0xDA98;
+    }
+    if (label === ".zone_max") {
+      return 0xDA8E;
+    }
+    throw new Error("Label not found");
+  });
+  const evaluateMath = sinon.stub().throws(new Error("Invalid number"));
+  const resolver = createResolver({ resolveStructLabel, resolveLabel, evaluateMath });
+
+  t.is(resolver.getnum(".zone_n-.zone_max"), 0x0A);
+  t.true(resolveLabel.calledWithExactly(".zone_n", false));
+  t.true(resolveLabel.calledWithExactly(".zone_max", false));
+  t.true(evaluateMath.notCalled);
+});
+
+test("getnum - resolves local label bitshifts before generic math fallback", t => {
+  const resolveStructLabel = sinon.stub().throws(new Error("Struct not found"));
+  const resolveLabel = sinon.stub().withArgs(".src", false).returns(0x1234);
+  const evaluateMath = sinon.stub().throws(new Error("Invalid number"));
+  const resolver = createResolver({ resolveStructLabel, resolveLabel, evaluateMath });
+
+  t.is(resolver.getnum(".src>>8"), 0x12);
+  t.true(resolveLabel.calledOnceWithExactly(".src", false));
+  t.true(evaluateMath.notCalled);
+});
+
+test("getnum - leaves plain numeric math on the evaluator path", t => {
+  const evaluateMath = sinon.stub().withArgs("10+5").returns(15);
+  const resolver = createResolver({ evaluateMath });
+
+  t.is(resolver.getnum("10+5"), 15);
+  t.true(evaluateMath.calledOnceWithExactly("10+5"));
+});
+
+test("getnum - normalizes numeric literal base members", t => {
+  const resolver = createResolver();
+
+  t.is(resolver.getnum("$90F.base"), 0x090F);
+});
+
 test("lowerOperand - returns typed lowered operand metadata", t => {
   const resolver = createResolver({
     resolveDefines: (input) => input.replace("!IMM", "$12"),
@@ -183,4 +262,90 @@ test("lowerOperand - classifies addressing mode and base expression", t => {
   const loweredStack = resolver.lowerOperand("$12,s");
   t.is(loweredStack.mode, "stackRelative");
   t.is(loweredStack.baseExpression, "$12");
+});
+
+test("lowerOperand - tolerates whitespace in indexed indirect operands", t => {
+  const resolver = createResolver();
+
+  const loweredIndexedIndirect = resolver.lowerOperand("(.C8BD, X)");
+  t.is(loweredIndexedIndirect.mode, "indexedIndirectX");
+  t.is(loweredIndexedIndirect.baseExpression, ".C8BD");
+
+  const loweredIndirectIndexed = resolver.lowerOperand("($12), Y");
+  t.is(loweredIndirectIndexed.mode, "indirectIndexedY");
+  t.is(loweredIndirectIndexed.baseExpression, "$12");
+});
+
+test("lowerOperand - classifies generic indexed Y operands", t => {
+  const resolver = createResolver();
+
+  const lowered = resolver.lowerOperand("obj.active, Y");
+
+  t.is(lowered.mode, "absoluteIndexedY");
+  t.is(lowered.baseExpression, "obj.active");
+  t.is(lowered.indexRegister, "y");
+});
+
+test("lowerOperand - keeps resolved 24-bit indexed X operands long", t => {
+  const evaluateMath = sinon.stub().withArgs("_04984F_9879-$02").returns(0x049877);
+  const resolver = createResolver({ evaluateMath });
+
+  const lowered = resolver.lowerOperand("_04984F_9879-$02,X");
+
+  t.is(lowered.expanded, "$49877,X");
+  t.is(lowered.length, 3);
+  t.is(lowered.mode, "absoluteLongIndexedX");
+  t.is(lowered.baseExpression, "$49877");
+  t.is(lowered.indexRegister, "x");
+});
+
+test("lowerOperand - shortens same-bank resolved indexed X operands", t => {
+  const resolveLabel = sinon.stub().withArgs("_048AD3", false).returns(0x048AD3);
+  const resolver = createResolver({
+    resolveLabel,
+    getCurrentAddress: () => 0x048AFD,
+  });
+
+  const lowered = resolver.lowerOperand("_048AD3,X");
+
+  t.is(lowered.expanded, "$48AD3,X");
+  t.is(lowered.length, 2);
+  t.is(lowered.mode, "absoluteIndexedX");
+  t.is(lowered.baseExpression, "$48AD3");
+  t.is(lowered.indexRegister, "x");
+});
+
+test("lowerOperand - collapses immediate bitmask expressions to operand width", t => {
+  const resolveDefines = sinon.stub().callsFake((input: string) => input.replaceAll("!x", "$40").replaceAll("!a", "$80"));
+  const evaluateMath = sinon.stub().withArgs("$40|$80").returns(0xC0);
+  const resolver = createResolver({ resolveDefines, evaluateMath });
+
+  const lowered = resolver.lowerOperand("#!x|!a");
+
+  t.is(lowered.expanded, "#$C0");
+  t.is(lowered.length, 1);
+  t.true(lowered.immediate);
+  t.is(lowered.baseExpression, "$C0");
+});
+
+test("expandOperand - evaluates only the indexed base expression", t => {
+  const evaluateMath = sinon.stub().withArgs("stack_offsets+0").returns(0xA307);
+  const resolver = createResolver({ evaluateMath });
+
+  const expanded = resolver.expandOperand("stack_offsets+0,X");
+
+  t.is(expanded.expanded, "$A307,X");
+  t.is(expanded.length, 2);
+  t.true(evaluateMath.calledOnceWithExactly("stack_offsets+0"));
+});
+
+test("expandOperand - normalizes immediate numeric base members", t => {
+  const resolver = createResolver({
+    resolveDefines: (input) => input.replace("!OBJ_BASE", "$90F"),
+  });
+
+  const expanded = resolver.expandOperand("#!OBJ_BASE.base");
+
+  t.is(expanded.expanded, "#$90F");
+  t.is(expanded.length, 2);
 });

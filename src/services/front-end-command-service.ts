@@ -6,6 +6,7 @@ export type FrontEndCommandHost = {
   functionDefinitionLines: string[];
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
+  currentGlobalParentLabel: string;
   parseFunctionDefinition(defLine: string): void;
   processNestedCommand(command: string): void;
   handleRelativeLabel(label: string): number;
@@ -113,6 +114,7 @@ export class FrontEndCommandService {
     if (!modifiesHierarchy) {
       this.host.currentParentLabel = cleanName;
       this.host.currentParentIsGlobal = true;
+      this.host.currentGlobalParentLabel = cleanName;
     }
 
     if (payload.length > 1) {

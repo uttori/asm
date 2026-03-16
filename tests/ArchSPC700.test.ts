@@ -152,3 +152,141 @@ test("ArchSPC700.handleCallJump consumes lowered indexed-indirect mode", t => {
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
+test("ArchSPC700.handleTwoOperands supports parenthesized direct-page mov pairs", t => {
+  const { assembler, arch } = createArchSPC700();
+  const write1Stub = sinon.stub(assembler, "write1");
+  t.teardown(() => {
+    write1Stub.restore();
+  });
+
+  const handled = arch.handleTwoOperands("MOV", "($D1)", "($D0)", null, false);
+
+  t.true(handled);
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xFA, 0xD0, 0xD1]);
+});
+
+test("ArchSPC700.handleTwoOperands supports symbolic indexed mov sources", t => {
+  const { assembler, arch } = createArchSPC700();
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("spc_0E00_0E02+1").returns(0x0E01);
+  const write1Stub = sinon.stub(assembler, "write1");
+  t.teardown(() => {
+    getnumStub.restore();
+    write1Stub.restore();
+  });
+
+  const handled = arch.handleTwoOperands("MOV", "A", "spc_0E00_0E02+1+x", null, false);
+
+  t.true(handled);
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xF5, 0x01, 0x0E]);
+});
+
+test("ArchSPC700.handleMovInstruction keeps zero-padded SPC registers absolute", t => {
+  const { assembler, arch } = createArchSPC700();
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleMovInstruction("$00F1", "A", null, false));
+  t.true(arch.handleMovInstruction("$F1", "A", null, false));
+
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xC5, 0xC4, 0xF1]);
+  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x00F1]);
+});
+
+test("ArchSPC700.handleMemoryInstruction keeps symbolic SPC operands absolute", t => {
+  const { assembler, arch } = createArchSPC700();
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("spc_0E00").returns(0x0E00);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  const handled = arch.handleMemoryInstruction(
+    "CMP",
+    "A",
+    "spc_0E00",
+    null,
+    false,
+    { raw: "A", expanded: "A", length: 0, immediate: false, indirect: false, mode: "register", registerName: "A" },
+    { raw: "spc_0E00", expanded: "spc_0E00", length: 2, immediate: false, indirect: false, baseExpression: "spc_0E00" },
+  );
+
+  t.true(handled);
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x65]);
+  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x0E00]);
+});
+
+test("ArchSPC700.handleMemoryInstruction keeps symbolic indexed Y operands absolute", t => {
+  const { assembler, arch } = createArchSPC700();
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("spc_07C2").returns(0x07C2);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  const handled = arch.handleMemoryInstruction(
+    "ADC",
+    "A",
+    "spc_07C2+Y",
+    null,
+    false,
+    { raw: "A", expanded: "A", length: 0, immediate: false, indirect: false, mode: "register", registerName: "A" },
+    { raw: "spc_07C2+Y", expanded: "spc_07C2+Y", length: 2, immediate: false, indirect: false, baseExpression: "spc_07C2", mode: "absoluteIndexedY", indexRegister: "y" },
+  );
+
+  t.true(handled);
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x96]);
+  t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x07C2]);
+});
+
+test("ArchSPC700.handleBranch resolves multi-depth forward relative labels", t => {
+  const { assembler, arch } = createArchSPC700();
+  assembler.setPass(2);
+  assembler.snespos = 0x1200;
+  const findNextLabelStub = sinon.stub((arch as any).assembler, "findNextLabel").returns(0x1208);
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  const write1Values: number[] = [];
+  const write1Stub = sinon.stub(assembler, "write1").callsFake((value: number) => {
+    write1Values.push(value);
+    assembler.snespos += 1;
+  });
+  t.teardown(() => {
+    findNextLabelStub.restore();
+    getnumStub.restore();
+    write1Stub.restore();
+  });
+
+  const handled = arch.handleBranch("BRA", "++");
+
+  t.true(handled);
+  t.true(findNextLabelStub.calledOnce);
+  t.deepEqual(findNextLabelStub.firstCall.args, ["++", 0x1202]);
+  t.true(getnumStub.notCalled);
+  t.deepEqual(write1Values, [0x2F, 0x06]);
+});
+
+test("ArchSPC700.handleTwoOperands supports parenthesized direct-page OR pairs", t => {
+  const { assembler, arch } = createArchSPC700();
+  const write1Stub = sinon.stub(assembler, "write1");
+  t.teardown(() => {
+    write1Stub.restore();
+  });
+
+  const handled = arch.handleTwoOperands("OR", "($CE)", "($CD)", null, false);
+
+  t.true(handled);
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x09, 0xCD, 0xCE]);
+});
+

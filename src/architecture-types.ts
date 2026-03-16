@@ -89,6 +89,8 @@ export interface Spc700Context {
   readonly operandResolver: OperandResolutionContext;
   write1(value: number): void;
   write2(value: number): void;
+  findNextLabel(reference: string, fromAddress: number): number;
+  findPreviousLabel(reference: string, fromAddress: number): number;
 }
 
 export interface SuperFXContext {

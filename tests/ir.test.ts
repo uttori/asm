@@ -400,7 +400,7 @@ test("assembler reference seam resolves defines and normalizes label paths", (t)
   const normalized = access.normalizeReferenceExpressionNode(resolved);
   t.is(normalized, "Player[2].hp");
 
-  const structStub = stub(assembler, "resolveStructMember");
+  const structStub = stub(assembler, "resolveStructLabel");
   structStub.withArgs("Player[2].hp").returns(99);
   t.is(access.evaluateReferenceExpressionNode(reference), 99);
 });
@@ -416,7 +416,8 @@ test("expression host label resolution delegates to canonical reference seam", (
   };
   assembler.structs.set("MyStruct", structDefinition);
 
-  const structStub = stub(assembler, "resolveStructMember");
+  const structStub = stub(assembler, "resolveStructLabel");
+  structStub.withArgs("MyStruct").returns(0);
   structStub.withArgs("Player[2].hp").returns(33);
 
   t.is(assembler.expressionHost.resolveLabel("MyStruct"), 0);
@@ -425,7 +426,7 @@ test("expression host label resolution delegates to canonical reference seam", (
 
 test("mathcore legacy string parsing routes compound references through the reference subtree", (t) => {
   const assembler = new Assembler();
-  const structStub = stub(assembler, "resolveStructMember");
+  const structStub = stub(assembler, "resolveStructLabel");
   structStub.withArgs("Player[2].hp").returns(2);
 
   t.true(assembler.evaluateExpression("Player[1 + 1].hp == 2"));

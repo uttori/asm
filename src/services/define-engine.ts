@@ -10,6 +10,10 @@ export type DefineHost = {
 export class DefineEngine {
   constructor(readonly host: DefineHost) {}
 
+  private isPureMathExpression(value: string): boolean {
+    return /^\s*(?:\$[0-9A-Fa-f]+|%[01]+|\d+|[()+\-*/&|^<>]|\s)+$/.test(value);
+  }
+
   /**
    * Handles a define command.
    * @param {NormalizedCommand} commandNode The command node to handle.
@@ -341,9 +345,13 @@ export class DefineEngine {
     ) {
       try {
         const resolvedValue = this.host.resolvedefines(value);
-        const result = this.host.evaluateMath(resolvedValue);
-        if (!Number.isNaN(result)) {
-          value = `$${result.toString(16).toUpperCase()}`;
+        // Keep symbolic expressions such as `$004E+task` intact so member/index
+        // suffixes can bind to the surviving struct token later (`!task_offset.stack_id`).
+        if (this.isPureMathExpression(resolvedValue)) {
+          const result = this.host.evaluateMath(resolvedValue);
+          if (!Number.isNaN(result)) {
+            value = `$${result.toString(16).toUpperCase()}`;
+          }
         }
       } catch {}
     }

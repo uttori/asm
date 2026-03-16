@@ -258,6 +258,14 @@ export class MathCore {
     });
   }
 
+  resolveLeadingLocalLabelReference(input: string): { label: string; length: number } | undefined {
+    const match = input.match(/^(\.+\w+)/);
+    if (!match) {
+      return undefined;
+    }
+    return { label: match[1], length: match[1].length };
+  }
+
   isStringArgument(functionName: string, argumentIndex: number): boolean {
     if (["defined", "sizeof", "objectsize", "datasize", "filesize", "getfilestatus"].includes(functionName)) {
       return argumentIndex === 0;
@@ -606,11 +614,22 @@ export class MathCore {
           return resolved as unknown as number;
         }
       } else {
-        const rootMatch = this.str.match(/^([A-Z_a-z]\w*)/);
-        if (rootMatch && this.str.substring(rootMatch[1].length).trimStart().startsWith("[")) {
-          throw new Error("Mismatched brackets in struct index");
+        const localReference = this.resolveLeadingLocalLabelReference(this.str);
+        if (localReference) {
+          this.str = this.str.substring(localReference.length).trim();
+          const resolved = this.getHost().resolveLabel(localReference.label);
+          if (typeof resolved === "number") {
+            value = resolved;
+          } else {
+            return resolved as unknown as number;
+          }
+        } else {
+          const rootMatch = this.str.match(/^([A-Z_a-z]\w*)/);
+          if (rootMatch && this.str.substring(rootMatch[1].length).trimStart().startsWith("[")) {
+            throw new Error("Mismatched brackets in struct index");
+          }
+          throw new Error(`Invalid number: ${this.str}`);
         }
-        throw new Error(`Invalid number: ${this.str}`);
       }
     }
 
@@ -814,6 +833,10 @@ export class MathCore {
         if (args.length !== 1) throw new Error("bank() expects exactly 1 numeric argument.");
         // Return the bank of the value by shifting 16 bits to the right and masking with 0xFF
         return (this.numArg(name, args[0]) >> 16) & 0xFF;
+      }
+      case "offset": {
+        if (args.length !== 2) throw new Error("offset() expects exactly 2 numeric arguments.");
+        return this.numArg(name, args[1]) - this.numArg(name, args[0]);
       }
       // --- Comparison Functions ---
       case "equal": {

@@ -212,6 +212,28 @@ test("math - number formats", t => {
   t.is(mathCore.math("10.5 + 20.5"), 31);
 });
 
+test("math - resolves local labels in arithmetic", t => {
+  const mathCore = new MathCore();
+  mathCore.host = createExpressionHost({
+    resolveLabel: (label) => label === ".src" ? 0x1234 : 0,
+  });
+
+  t.is(mathCore.math(".src >> 8"), 0x12);
+});
+
+test("math - offset handles local label arguments", t => {
+  const mathCore = new MathCore();
+  mathCore.host = createExpressionHost({
+    resolveLabel: (label) => {
+      if (label === ".base") return 0x8871;
+      if (label === ".target") return 0x888A;
+      return 0;
+    },
+  });
+
+  t.is(mathCore.math("offset(.base, .target)"), 0x19);
+});
+
 test("math - operator precedence", t => {
   const mathCore = new MathCore();
 

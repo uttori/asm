@@ -9,6 +9,7 @@ import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, LoweredI
 import { shouldEndifCloseInnermostWhile } from "./compatibility/asar-compatibility-profile.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
+import type { AssemblerTraceCommandEvent, AssemblerTraceEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import type {
   ConditionalBranch,
   ConditionalBranchNode,
@@ -55,6 +56,104 @@ function expressionNodeToString(expression: ExpressionNode): string {
   return renderExpressionNode(expression);
 }
 
+/**
+ * Checks whether a character can start a label identifier segment.
+ * @param {string} char The single character to test.
+ * @returns {boolean} `true` when the character can start an identifier.
+ */
+function isLabelIdentifierStart(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return char === "_" || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+}
+
+/**
+ * Checks whether a character can appear after the first character of a label identifier segment.
+ * @param {string} char The single character to test.
+ * @returns {boolean} `true` when the character can continue an identifier.
+ */
+function isLabelIdentifierPart(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return char === "_" || (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+}
+
+/**
+ * Checks whether a token is a plain label/struct reference rather than an
+ * arithmetic expression. This intentionally accepts dotted names and one
+ * optional numeric index segment, but rejects operators such as `-` or `+`.
+ * Purely numeric tokens are also treated as lookup candidates to preserve
+ * legacy label-resolution behavior for values like `1`.
+ * @param {string} input The token to classify.
+ * @returns {boolean} `true` when the token is a bare label-style reference.
+ */
+function isBareLabelReference(input: string): boolean {
+  if (!input) {
+    return false;
+  }
+
+  let numericOnly = true;
+  for (const char of input) {
+    if (char < "0" || char > "9") {
+      numericOnly = false;
+      break;
+    }
+  }
+  if (numericOnly) {
+    return true;
+  }
+
+  let index = 0;
+  while (input[index] === ".") {
+    index += 1;
+  }
+
+  if (index >= input.length || !isLabelIdentifierStart(input[index])) {
+    return false;
+  }
+
+  const consumeIdentifier = (): boolean => {
+    if (index >= input.length || !isLabelIdentifierStart(input[index])) {
+      return false;
+    }
+    index += 1;
+    while (index < input.length && isLabelIdentifierPart(input[index])) {
+      index += 1;
+    }
+    return true;
+  };
+
+  if (!consumeIdentifier()) {
+    return false;
+  }
+
+  while (index < input.length && input[index] === ".") {
+    index += 1;
+    if (!consumeIdentifier()) {
+      return false;
+    }
+  }
+
+  if (index < input.length && input[index] === "[") {
+    index += 1;
+    const digitStart = index;
+    while (index < input.length && input[index] >= "0" && input[index] <= "9") {
+      index += 1;
+    }
+    if (digitStart === index || input[index] !== "]") {
+      return false;
+    }
+    index += 1;
+
+    while (index < input.length && input[index] === ".") {
+      index += 1;
+      if (!consumeIdentifier()) {
+        return false;
+      }
+    }
+  }
+
+  return index === input.length;
+}
+
 /** Represents a macro definition. */
 export type MacroDefinition = {
   /** The name of the macro. */
@@ -81,6 +180,9 @@ type LoweredDirective = {
 };
 
 type LoweredCommand = LoweredDirective | LoweredInstruction;
+// Source context stack used to associate low-level byte writes with the
+// currently executing normalized command, even when directives recurse.
+type TraceCommandContext = Pick<AssemblerTraceCommandEvent, "file" | "line" | "raw" | "normalized">;
 
 export type WhileTracker = {
   iswhile: boolean;
@@ -204,6 +306,10 @@ export class Assembler implements AssemblySession {
   public addressToLineMapping: AddressToLineMapping = new AddressToLineMapping();
   public currentFile: string = "";
   public currentLine: number = 0;
+  /** Optional sink for structured tracing used by tests and ad-hoc debug scripts. */
+  public traceListener: AssemblerTraceListener | null = null;
+  /** Active command contexts so nested byte writes inherit the right source line. */
+  public traceCommandStack: TraceCommandContext[] = [];
 
   public defines: Map<string, string> = new Map();
 
@@ -264,6 +370,8 @@ export class Assembler implements AssemblySession {
 
   public currentParentLabel: string = "";  // Track the most recent parent label
   public currentParentIsGlobal: boolean = false;  // Track if the parent label is global
+  public currentGlobalParentLabel: string = "";  // Track the active top-level parent for single-dot labels
+  public labelParents: Map<string, string | null> = new Map();  // Track explicit label ancestry without relying on underscores
 
   public inSpcblock: boolean = false;
   public spcblockData: SpcblockData | null = null;
@@ -336,6 +444,22 @@ export class Assembler implements AssemblySession {
     this.bytes += num;
   }
 
+  /**
+   * Installs or clears the structured trace listener.
+   * @param {AssemblerTraceListener | null} listener The listener to receive trace events.
+   */
+  setTraceListener(listener: AssemblerTraceListener | null): void {
+    this.traceListener = listener;
+  }
+
+  /**
+   * Emits a structured trace event if tracing is enabled.
+   * @param {AssemblerTraceEvent} event The event to emit.
+   */
+  emitTraceEvent(event: AssemblerTraceEvent): void {
+    this.traceListener?.(event);
+  }
+
   processNestedCommand(command: string): void {
     this.processCommand(command);
   }
@@ -405,6 +529,14 @@ export class Assembler implements AssemblySession {
         },
         enumerable: true,
       },
+      currentGlobalParentLabel: {
+        get: () => this.currentGlobalParentLabel,
+        set: (value: string) => {
+          this.currentGlobalParentLabel = value;
+        },
+        enumerable: true,
+      },
+      labelParents: { get: () => this.labelParents, enumerable: true },
       parseFunctionDefinition: { value: (defLine: string) => this.parseFunctionDefinition(defLine), enumerable: true },
       processNestedCommand: { value: (command: string) => this.processNestedCommand(command), enumerable: true },
       handleRelativeLabel: { value: (label: string) => this.handleRelativeLabel(label), enumerable: true },
@@ -619,6 +751,14 @@ export class Assembler implements AssemblySession {
         },
         enumerable: true,
       },
+      currentGlobalParentLabel: {
+        get: () => this.currentGlobalParentLabel,
+        set: (value: string) => {
+          this.currentGlobalParentLabel = value;
+        },
+        enumerable: true,
+      },
+      labelParents: { get: () => this.labelParents, enumerable: true },
       currentLine: { get: () => this.currentLine, enumerable: true },
       splitCommandIntoWords: { value: (command: string) => this.splitCommandIntoWords(command), enumerable: true },
       normalizeCommand: { value: (command: string) => this.preDispatchPipelineService.normalizeCommand(command), enumerable: true },
@@ -676,6 +816,14 @@ export class Assembler implements AssemblySession {
         },
         enumerable: true,
       },
+      currentGlobalParentLabel: {
+        get: () => this.currentGlobalParentLabel,
+        set: (value: string) => {
+          this.currentGlobalParentLabel = value;
+        },
+        enumerable: true,
+      },
+      labelParents: { get: () => this.labelParents, enumerable: true },
       structs: { get: () => this.structs, enumerable: true },
     }) as SymbolScopeHost;
   }
@@ -716,6 +864,22 @@ export class Assembler implements AssemblySession {
       setWritePosition: { value: (address: number) => this.cursorAddress.setWritePosition(address), enumerable: true },
       syncWriteStarts: { value: () => this.cursorAddress.syncWriteStarts(), enumerable: true },
       incrementBytesWritten: { value: (num: number) => this.cursorAddress.incrementBytesWritten(num), enumerable: true },
+      traceWrite: {
+        value: (event: Omit<AssemblerTraceWriteEvent, "type">) => {
+          // Byte writes happen below the command dispatcher, so recover the
+          // most specific source context from the active command stack.
+          const source = this.traceCommandStack[this.traceCommandStack.length - 1];
+          this.emitTraceEvent({
+            type: "write",
+            ...event,
+            file: source?.file ?? this.currentFile,
+            line: source?.line ?? this.currentLine,
+            raw: source?.raw ?? "",
+            normalized: source?.normalized ?? "",
+          });
+        },
+        enumerable: true,
+      },
     }) as RomWriterHost;
   }
 
@@ -761,6 +925,7 @@ export class Assembler implements AssemblySession {
       hasLabel: (input) => this.hasLabelInScope(input),
       evaluateMath: (input) => this.mathCore.math(input),
       getPass: () => this.pass,
+      getCurrentAddress: () => this.snespos,
       requireStaticLabelLookup: () => this.requireStaticLabelLookup,
     });
     this.arch65816 = new Arch65816(this.create65816Context());
@@ -945,6 +1110,8 @@ export class Assembler implements AssemblySession {
       operandResolver: this.operandResolver,
       write1: (value: number) => this.write1(value),
       write2: (value: number) => this.write2(value),
+      findNextLabel: (reference: string, fromAddress: number) => this.findNextLabel(reference, fromAddress),
+      findPreviousLabel: (reference: string, fromAddress: number) => this.findPreviousLabel(reference, fromAddress),
     };
     return Object.defineProperties(context, {
       pass: { get: () => this.pass },
@@ -1228,7 +1395,14 @@ export class Assembler implements AssemblySession {
       if (split.length === 0) {
         continue;
       }
-      output.push(...split);
+      for (const entry of split) {
+        const relativeLabelMatch = entry.match(/^([+-]+:)\s+(.+)$/);
+        if (relativeLabelMatch) {
+          output.push(relativeLabelMatch[1].trim(), relativeLabelMatch[2].trim());
+          continue;
+        }
+        output.push(entry);
+      }
     }
     return output;
   }
@@ -1322,12 +1496,48 @@ export class Assembler implements AssemblySession {
       return;
     }
 
-    const lowered = this.lowerNode(workingState);
-    this.dispatchLoweredNode(lowered);
+    const traceContext: TraceCommandContext = {
+      file: workingState.source.file,
+      line: workingState.source.line,
+      raw: workingState.source.raw,
+      normalized: workingState.command,
+    };
+
+    this.emitTraceEvent({
+      type: "command-start",
+      pass: this.pass,
+      arch: this.arch,
+      ...traceContext,
+      snesAddress: startPC,
+      pcAddress: this.snestopc(startPC),
+    });
+
+    // Nested directives can emit additional writes while this command is still
+    // active, so keep the current source context on a stack until dispatch ends.
+    this.traceCommandStack.push(traceContext);
+    try {
+      const lowered = this.lowerNode(workingState);
+      this.dispatchLoweredNode(lowered);
+    } finally {
+      this.traceCommandStack.pop();
+    }
 
     // Determine how many bytes were written in this command.
     const commandSize = (this.realsnespos & 0xFFFFFF) - startPC;
     debug("processCommand bytes written", commandSize)
+
+    const endPC = this.realsnespos & 0xFFFFFF;
+    this.emitTraceEvent({
+      type: "command-end",
+      pass: this.pass,
+      arch: this.arch,
+      ...traceContext,
+      snesAddress: startPC,
+      pcAddress: this.snestopc(startPC),
+      endSnesAddress: endPC,
+      endPcAddress: this.snestopc(endPC),
+      bytesWritten: commandSize,
+    });
 
     this.addAddressToLine(this.realsnespos & 0xFFFFFF);
   }
@@ -1752,7 +1962,7 @@ export class Assembler implements AssemblySession {
   /**
    * Finds the next occurrence of a `+` label based on SNES memory position.
    * @param {string} label The label to find.
-   * @param currentAddressOverride
+   * @param {number} [currentAddressOverride] Optional SNES address to resolve against instead of the current cursor.
    * @returns {number} The address of the next label.
    */
   findNextLabel(label: string, currentAddressOverride?: number): number {
@@ -1762,7 +1972,7 @@ export class Assembler implements AssemblySession {
   /**
    * Finds the previous occurrence of a `-` label based on SNES memory position.
    * @param {string} label The label to find.
-   * @param currentAddressOverride
+   * @param {number} [currentAddressOverride] Optional SNES address to resolve against instead of the current cursor.
    * @returns {number} The address of the previous label.
    */
   findPreviousLabel(label: string, currentAddressOverride?: number): number {
@@ -1784,7 +1994,7 @@ export class Assembler implements AssemblySession {
 
   /**
    * Resolves a compound struct member id (e.g. TestStruct.count, TestStruct[0].count, TestStruct.NewStruct.new).
-   * @param compoundId e.g. "TestStruct.count", "TestStruct[0].count", "TestStruct.NewStruct.new"
+   * @param {string} compoundId e.g. "TestStruct.count", "TestStruct[0].count", "TestStruct.NewStruct.new"
    * @returns {number} The offset or address (base + index*size + memberOffset for indexed).
    */
   resolveStructMember(compoundId: string): number {
@@ -2027,12 +2237,6 @@ export class Assembler implements AssemblySession {
       throw new Error(`${type.toUpperCase()} directive requires at least one parameter.`);
     }
 
-    if (this.pass === 0) {
-      debug("handleDataDirective pass 0, skipping");
-      this.addAddressToLine(this.realsnespos & 0xFFFFFF);
-      return;
-    }
-
     // Support for SNASM-style data directives.
     if (type.toLowerCase() === "dc.b") {
       type = "db";
@@ -2052,6 +2256,55 @@ export class Assembler implements AssemblySession {
     const len = lengthMap[type.toLowerCase()];
     if (!len) {
       throw new Error(`Invalid data directive: ${type}`);
+    }
+
+    if (this.pass === 0) {
+      debug("handleDataDirective pass 0, estimating");
+      const pendingValues = [...this.splitRespectingFunctions(params.join(" "))];
+      let estimatedItems = 0;
+      while (pendingValues.length > 0) {
+        let value = (pendingValues.shift() ?? "").trim();
+        if (!value) {
+          continue;
+        }
+
+        if (value.startsWith('"') || value.startsWith("'")) {
+          const unquoted = value.slice(1, -1);
+          try {
+            estimatedItems += this.resolveDefinesInStringLiteral(unquoted).length;
+          } catch {
+            estimatedItems += unquoted.length;
+          }
+          continue;
+        }
+
+        if (value.startsWith("#")) {
+          value = value.substring(1);
+        }
+
+        let resolved = value;
+        let previousResolved = "";
+        try {
+          while (resolved !== previousResolved) {
+            previousResolved = resolved;
+            resolved = this.resolvedefines(resolved);
+          }
+        } catch {
+          // Pass 0 only needs byte counts, so unresolved symbols still consume one item.
+        }
+
+        const expandedValues = this.splitRespectingFunctions(resolved);
+        if (expandedValues.length > 1) {
+          pendingValues.unshift(...expandedValues);
+          continue;
+        }
+
+        estimatedItems += 1;
+      }
+
+      this.step(estimatedItems * len);
+      this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+      return;
     }
 
     // Split by comma while respecting function calls
@@ -2340,7 +2593,10 @@ export class Assembler implements AssemblySession {
     // Try evaluating the expression numerically.
     try {
       const result = this.mathCore.math(resolvedExpr);
-      if (result && !Number.isNaN(result)) {
+      // Range bounds such as `(000 * 32)` legitimately evaluate to zero, so
+      // treat any numeric result as valid instead of falling through to label
+      // lookup on falsy `0`.
+      if (!Number.isNaN(result)) {
         return result;
       }
     } catch (error) {}
@@ -2389,15 +2645,24 @@ export class Assembler implements AssemblySession {
     }
     // In our assembler, a condition is true if the result is nonzero.
     debug("evaluateExpression result", result, "=>", result !== 0)
-    debug("evaluateExpression =", result !== 0)
     return result !== 0;
   }
 
+  /**
+   * Parses string input into an expression node and resolves nested references/defines.
+   * @param {string | ExpressionNode} expression The expression source or parsed node.
+   * @returns {ExpressionNode} The resolved expression tree.
+   */
   resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode {
     const parsed = typeof expression === "string" ? parseExpressionNode(expression.trim()) : expression;
     return this.resolveExpressionNode(parsed);
   }
 
+  /**
+   * Recursively resolves define references and nested reference-expression nodes.
+   * @param {ExpressionNode} expression The expression node to resolve.
+   * @returns {ExpressionNode} The resolved expression node.
+   */
   resolveExpressionNode(expression: ExpressionNode): ExpressionNode {
     if (isReferenceExpressionNode(expression)) {
       return this.resolveReferenceExpressionNode(expression);
@@ -2436,6 +2701,13 @@ export class Assembler implements AssemblySession {
     }
   }
 
+  /**
+   * Resolves reference-style expressions such as identifiers, define references,
+   * member access, and indexed access into either simpler reference nodes or
+   * raw/math expressions when defines collapse them further.
+   * @param {ReferenceExpressionNode} expression The reference expression to resolve.
+   * @returns {ExpressionNode} The resolved expression tree.
+   */
   resolveReferenceExpressionNode(expression: ReferenceExpressionNode): ExpressionNode {
     switch (expression.type) {
       case "identifier":
@@ -2453,6 +2725,10 @@ export class Assembler implements AssemblySession {
       case "member": {
         const object = this.resolveReferenceExpressionNode(expression.object);
         if (!isReferenceExpressionNode(object)) {
+          const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
+          if (expandedReference) {
+            return expandedReference;
+          }
           return { type: "raw", value: `${expressionNodeToString(object)}.${expression.property.name}` };
         }
         return {
@@ -2464,6 +2740,10 @@ export class Assembler implements AssemblySession {
         const object = this.resolveReferenceExpressionNode(expression.object);
         const index = this.resolveExpressionNode(expression.index);
         if (!isReferenceExpressionNode(object)) {
+          const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
+          if (expandedReference) {
+            return expandedReference;
+          }
           return { type: "raw", value: `${expressionNodeToString(object)}[${expressionNodeToString(index)}]` };
         }
         return {
@@ -2477,6 +2757,12 @@ export class Assembler implements AssemblySession {
     }
   }
 
+  /**
+   * Resolves a reference expression all the way to a numeric value.
+   * @param {ReferenceExpressionNode} expression The reference expression to evaluate.
+   * @param {boolean} [requireStatic] Whether labels must be static.
+   * @returns {number} The numeric value of the reference.
+   */
   evaluateReferenceExpressionNode(expression: ReferenceExpressionNode, requireStatic = false): number {
     const resolved = this.resolveReferenceLabelValue(expression, requireStatic);
     if (typeof resolved === "number") {
@@ -2485,34 +2771,183 @@ export class Assembler implements AssemblySession {
     throw new Error(`Reference '${resolved}' did not resolve to a numeric value.`);
   }
 
+  /**
+   * Resolves a reference expression to either a numeric value or a normalized
+   * label/struct lookup target, depending on how far the expression collapses.
+   * @param {ReferenceExpressionNode} expression The reference expression to resolve.
+   * @param {boolean} [requireStatic] Whether labels must be static.
+   * @returns {number | string} The resolved numeric value.
+   */
   resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic = false): number | string {
     const resolved = this.resolveReferenceExpressionNode(expression);
     if (!isReferenceExpressionNode(resolved)) {
       return this.mathCore.math(resolved);
     }
 
-    const normalizedReference = this.normalizeReferenceExpressionNode(resolved);
-    if (normalizedReference.includes(".")) {
+    return this.resolveNormalizedReferenceLabelValue(this.normalizeReferenceExpressionNode(resolved), requireStatic);
+  }
+
+  /**
+   * Resolves an already-normalized reference string as either a struct member/base
+   * or a plain label lookup.
+   * @param {string} normalizedReference The normalized reference text.
+   * @param {boolean} [requireStatic] Whether labels must be static.
+   * @returns {number} The resolved numeric address/value.
+   */
+  resolveNormalizedReferenceLabelValue(normalizedReference: string, requireStatic = false): number {
+    // Dotted and indexed references may name either a struct member or a plain
+    // label. Try the struct path first, then fall back to standard label lookup.
+    if (normalizedReference.includes(".") || normalizedReference.includes("[")) {
       try {
-        return this.resolveStructMember(normalizedReference);
+        return this.resolveStructLabel(normalizedReference);
       } catch {
         // Fall back to normal label lookup.
       }
     }
+    if (this.structs.has(normalizedReference)) {
+      return this.resolveStructLabel(normalizedReference);
+    }
     return this.getLabelValue(normalizedReference, requireStatic);
   }
 
-  normalizeReferenceExpressionNode(expression: ReferenceExpressionNode): string {
+  /**
+   * Renders an index expression for a normalized reference string.
+   * @param {ExpressionNode} indexExpression The index expression to render.
+   * @returns {string} The rendered numeric or source-like index text.
+   */
+  resolveReferenceIndexText(indexExpression: ExpressionNode): string {
+    const resolvedIndex = this.resolveExpressionNode(indexExpression);
+    try {
+      return this.mathCore.math(resolvedIndex).toString();
+    } catch {
+      return expressionNodeToString(resolvedIndex);
+    }
+  }
+
+  /**
+   * Renders a reference expression after resolving any nested index expressions.
+   * @param {ReferenceExpressionNode} expression The reference expression to render.
+   * @returns {string} The normalized reference text.
+   */
+  renderResolvedReferenceExpression(expression: ReferenceExpressionNode): string {
     return renderReferenceExpressionNode(expression, {
-      renderIndex: (indexExpression) => {
-        const resolvedIndex = this.resolveExpressionNode(indexExpression);
-        try {
-          return this.mathCore.math(resolvedIndex).toString();
-        } catch {
-          return expressionNodeToString(resolvedIndex);
-        }
-      },
+      renderIndex: (indexExpression) => this.resolveReferenceIndexText(indexExpression),
     });
+  }
+
+  /**
+   * Re-runs `resolvedefines()` across a rendered reference expression and reparses
+   * it only when define expansion materially changes the text.
+   * @param {ReferenceExpressionNode} expression The reference expression to expand.
+   * @returns {ExpressionNode | undefined} The reparsed expression, if expansion changed it.
+   */
+  tryResolveExpandedReferenceExpression(expression: ReferenceExpressionNode): ExpressionNode | undefined {
+    const renderedReference = this.renderResolvedReferenceExpression(expression);
+    const expandedReference = this.resolvedefines(renderedReference);
+    if (expandedReference === renderedReference) {
+      return undefined;
+    }
+    return this.resolveExpressionInput(expandedReference);
+  }
+
+  /**
+   * Normalizes a reference expression to the string form used by downstream
+   * struct and label resolution helpers.
+   * @param {ReferenceExpressionNode} expression The reference expression to normalize.
+   * @returns {string} The normalized reference string.
+   */
+  normalizeReferenceExpressionNode(expression: ReferenceExpressionNode): string {
+    return this.renderResolvedReferenceExpression(expression);
+  }
+
+  /**
+   * Resolves standalone relative-label tokens used in define contexts.
+   * @param {string} input The token to resolve.
+   * @returns {string | undefined} The resolved address string, if applicable.
+   */
+  tryResolveRelativeLabelToken(input: string): string | undefined {
+    if (input !== "+" && input !== "-" && input !== "?+" && input !== "?-") {
+      return undefined;
+    }
+
+    debug(`resolvedefines handling relative label: ${input}`);
+    try {
+      switch (input) {
+        case "+":
+          return `$${this.findNextLabel("+").toString(16)}`;
+        case "-":
+          return `$${this.findPreviousLabel("-").toString(16)}`;
+        case "?+":
+          return `$${this.findNextLabel("?+").toString(16)}`;
+        case "?-":
+          return `$${this.findPreviousLabel("?-").toString(16)}`;
+        default:
+          return undefined;
+      }
+    } catch (error) {
+      if (this.pass < 2) {
+        debug(`resolvedefines pass ${this.pass} < 2, returning placeholder`);
+        return "$0000";
+      }
+      debug(`resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} on pass ${this.pass}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Resolves direct `!name` define references that are not assignments.
+   * @param {string} input The token to resolve.
+   * @returns {string | undefined} The resolved define value, if applicable.
+   */
+  tryResolveDirectDefineReference(input: string): string | undefined {
+    if (!input.startsWith("!") || input.includes(" ") || input.includes("=") || input.includes("{")) {
+      return undefined;
+    }
+
+    debug("resolvedefines direct variable reference", input);
+    const varName = input.substring(1);
+    return this.lookupDefineValue(varName);
+  }
+
+  /**
+   * Resolves macro-label references such as `?label` or `#+?label`.
+   * @param {string} input The token to resolve.
+   * @returns {string | undefined} The resolved macro-label value, if applicable.
+   */
+  tryResolveMacroLabelReference(input: string): string | undefined {
+    const prefixMatch = input.match(/^(#\?|\?|#\?\.|\?\+|\?-)(.*)/);
+    if (!prefixMatch) {
+      return undefined;
+    }
+
+    const prefix = prefixMatch[1];
+    const labelName = prefixMatch[2];
+    debug("resolvedefines macro label found with prefix", { prefix, labelName });
+    return this.getLabelValue(labelName, false).toString();
+  }
+
+  /**
+   * Resolves bare label-like tokens before the generic character-by-character
+   * define scanner runs.
+   * @param {string} input The token to resolve.
+   * @returns {string | undefined} The resolved label value, if applicable.
+   */
+  tryResolveBareLabelReference(input: string): string | undefined {
+    if (!isBareLabelReference(input)) {
+      return undefined;
+    }
+
+    // Expressions like `.zone_n-.zone_max` must stay intact so later arithmetic
+    // can evaluate both sides instead of collapsing to the first local label.
+    debug("resolvedefines checking if input is a label reference", input);
+    try {
+      const labelValue = this.getLabelValue(input, false);
+      debug("resolvedefines labelValue", labelValue);
+      return labelValue.toString();
+    } catch (error) {
+      debug("resolvedefines not a label, continuing", error);
+      return undefined;
+    }
   }
 
   /**
@@ -2530,40 +2965,9 @@ export class Assembler implements AssemblySession {
     let result = "";
     let index = 0;
 
-    // Handle special case for relative labels
-    if (input === "+" || input === "-" || input === "?+" || input === "?-") {
-      debug(`resolvedefines handling relative label: ${input}`);
-      try {
-        if (input === "+") {
-          // Handle standard relative labels
-          const address = this.findNextLabel("+");
-          debug(`resolvedefines ${input} =`, "$" + address.toString(16));
-          return "$" + address.toString(16);
-        } else if (input === "-") {
-          // Handle standard relative labels
-          const address = this.findPreviousLabel("-");
-          debug(`resolvedefines ${input} =`, "$" + address.toString(16));
-          return "$" + address.toString(16);
-        } else if (input === "?+") {
-          // Handle macro-specific forward relative label
-          const address = this.findNextLabel("?+");
-          debug("resolvedefines ?+ =", "$" + address.toString(16));
-          return "$" + address.toString(16);
-        } else if (input === "?-") {
-          // Handle macro-specific backward relative label
-          const address = this.findPreviousLabel("?-");
-          debug("resolvedefines ?- =", "$" + address.toString(16));
-          return "$" + address.toString(16);
-        }
-      } catch (e) {
-        // If in pass 0, return a placeholder
-        if (this.pass < 2) {
-          debug(`resolvedefines pass ${this.pass} < 2, returning placeholder`);
-          return "$0000";
-        }
-        debug(`resolvedefines failed to resolve relative label ${input}: ${e instanceof Error ? e.message : ""} on pass ${this.pass}`);
-        throw e;
-      }
+    const resolvedRelativeLabel = this.tryResolveRelativeLabelToken(input);
+    if (resolvedRelativeLabel !== undefined) {
+      return resolvedRelativeLabel;
     }
 
     // Special case for expressions with != operator
@@ -2581,48 +2985,19 @@ export class Assembler implements AssemblySession {
       return input;
     }
 
-    // Special case for direct variable reference like "!i"
-    if (input.startsWith("!") && !input.includes(" ") && !input.includes("=") && !input.includes("{")) {
-      debug("resolvedefines direct variable reference", input);
-      const varName = input.substring(1);
-      const value = this.lookupDefineValue(varName);
-
-      if (value !== undefined) {
-        return value;
-      }
+    const resolvedDirectDefine = this.tryResolveDirectDefineReference(input);
+    if (resolvedDirectDefine !== undefined) {
+      return resolvedDirectDefine;
     }
 
-    // Special case for macro labels with prefixes #?, ?, #?., ?., ?+, ?-
-    // These should be treated as macro labels and not be resolved as defines
-    const prefixMatch = input.match(/^(#\?|\?|#\?\.|\?\+|\?-)(.*)/);
-    if (prefixMatch) {
-      const prefix = prefixMatch[1];
-      const labelName = prefixMatch[2];
-      debug("resolvedefines macro label found with prefix", { prefix, labelName });
-
-      const value = this.getLabelValue(labelName, false);
-
-      if (value !== undefined) {
-        return value.toString();
-      }
+    const resolvedMacroLabel = this.tryResolveMacroLabelReference(input);
+    if (resolvedMacroLabel !== undefined) {
+      return resolvedMacroLabel;
     }
 
-    // Check if this is a label reference before checking defines or structs
-    // eslint-disable-next-line security/detect-unsafe-regex
-    if (input.match(/^\.+\w+|^\w+(\.\w+)*(\[\d+])?(\.\w+)*$/)) {
-      debug("resolvedefines checking if input is a label reference", input);
-      try {
-        // First try to resolve as a label
-        const labelValue = this.getLabelValue(input, false);
-        debug("resolvedefines labelValue", labelValue);
-        if (labelValue !== undefined) {
-          debug(`resolvedefines found label ${input} with value ${labelValue}`);
-          return labelValue.toString();
-        }
-      } catch (e) {
-        // Not a label, continue to other checks
-        debug("resolvedefines not a label, continuing", e);
-      }
+    const resolvedBareLabel = this.tryResolveBareLabelReference(input);
+    if (resolvedBareLabel !== undefined) {
+      return resolvedBareLabel;
     }
 
     // Process any explicit !defines
@@ -2688,10 +3063,14 @@ export class Assembler implements AssemblySession {
   setPass(pass: number): void {
     debug("🏁 setPass", pass);
     this.pass = pass;
-    if (pass === 1) {
-      // Rebuild relative-label tables from pass 1 sizing only.
-      this.forwardLabels = {};
-      this.backwardLabels = {};
+    switch (pass) {
+      case 1:
+        // Rebuild relative-label tables from pass 1 sizing only.
+        this.forwardLabels = {};
+        this.backwardLabels = {};
+        break;
+      default:
+        break;
     }
     // Reset the macro macroLabelInstance
     this.macroLabelInstance = null;
@@ -2705,7 +3084,6 @@ export class Assembler implements AssemblySession {
 
     // Reset the in macro flag
     this.inMacroExpansion = false;
-    this.macroLabelInstance = null;
 
     // Reset the in loop flag
     this.collectingLoop = false;
@@ -3051,11 +3429,19 @@ export class Assembler implements AssemblySession {
       throw new Error("Recursion limit exceeded (512 levels)");
     }
 
+    // Fail immediately on include cycles so callers get one stable error
+    // instead of hundreds of nested "Failed to assemble include" wrappers.
+    if (resolvedPath === this.currentFile || this.includeStack.includes(resolvedPath)) {
+      throw new Error(`Recursive include detected for '${resolvedPath}'`);
+    }
+
     // Save current state
     const previousFile = this.currentFile;
     this.includeStack.push(previousFile);
 
-    // Read and process the file
+    // Includes now execute through the typed pass-program path so include
+    // semantics match top-level tree execution. Surface failures to callers so
+    // broken includes cannot silently zero-fill large ROM regions.
     try {
       // TODO: Use readFile instead of fs.readFileSync
       const content = fs.readFileSync(resolvedPath, "utf8");
@@ -3070,14 +3456,14 @@ export class Assembler implements AssemblySession {
         this.includedFiles.set(resolvedPath, info);
       }
 
-      // Includes now execute through the typed pass-program path so include
-      // semantics match top-level tree execution.
       const includeNode = this.createIncludeNode(resolvedPath, content);
       for (const node of includeNode.commands) {
         this.executeNode(node);
       }
     } catch (error) {
       debug("assemblefile error 💥", error);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
     } finally {
       // Restore state
       this.currentFile = this.includeStack.pop() || "";

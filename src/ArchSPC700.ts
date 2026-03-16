@@ -10,21 +10,17 @@ const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
   Object.prototype.hasOwnProperty.call(obj, key);
 
 /**
- * Returns the "length" or "type" of operand, to help decide
- * whether the user typed e.g. $12 vs. $1234, or #$12, etc.
- * - This is used for distinguishing e.g. direct page vs. absolute.
+ * Infers the encoded address width from the source spelling of an operand.
+ * This intentionally prefers "$12" vs. "$1234" over the resolved numeric value
+ * so symbolic operands do not get shortened to direct-page just because their
+ * final address currently fits in one byte.
  * @param {string} operand the operand
  * @returns {number} The address size.
  */
 function getAddressSize(operand: string): number {
-  // e.g. $12 => 1-byte, $1234 => 2-byte
-  // We'll do a naive check: if exactly 2 hex digits => 1; if 3-4 => 2, etc.
-  // The test code specifically uses "$12" vs. "$1234".
-  // Also, if it's labeled or something, we assume 2.
-  // You can refine as needed if you have label references, etc.
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
-    return 2; // default to 2 for absolute, label, etc.
+    return 2;
   }
   const hexpart = match[1];
   if (hexpart.length <= 2) {
@@ -92,21 +88,6 @@ function isParenY(op: string, lowered?: LoweredOperand): boolean {
     return true;
   }
   return op.trim().toUpperCase() === "(Y)";
-}
-
-/**
- * For DP (direct page) vs. absolute, we rely on getAddressSize()
- * to see if it's 1 byte or 2 bytes. Then we also see if it's e.g. "$12" or "$1234".
- * @param {string} operand the operand
- * @returns {object} The parsed direct page or absolute operand.
- */
-function parseDpOrAbs(operand: string): { isDp: boolean; value: number } {
-  const val = parseInt(operand.replace(/\$/g, ""), 16) >>> 0;
-  const size = getAddressSize(operand);
-  return {
-    isDp: size === 1,
-    value: val,
-  };
 }
 
 /**
@@ -823,6 +804,18 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return true;
     }
 
+    if (/^\(\$[\da-f]+\)$/i.test(left) && /^\(\$[\da-f]+\)$/i.test(right)) {
+      // Some SPC700 disassemblies keep dp,dp memory-op forms wrapped, e.g.
+      // `or ($CE), ($CD)`. Encode those the same way as the plain `$CE,$CD`
+      // form so the parser does not reject otherwise valid source.
+      this.assembler.write1(table.dp_dp);
+      const rightVal = parseInt(right.replace(/[^\da-f]/gi, ""), 16) & 0xff;
+      this.assembler.write1(rightVal);
+      const leftVal = parseInt(left.replace(/[^\da-f]/gi, ""), 16) & 0xff;
+      this.assembler.write1(leftVal);
+      return true;
+    }
+
     // 4) If left is dp and right is dp => dp_dp
     if (this.isDpOrAbs(left) && this.isDpOrAbs(right)) {
       this.assembler.write1(table.dp_dp);
@@ -892,7 +885,10 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return { mode: "indirectDpY", val: resolveValue(loweredOperand.baseExpression) & 0xff };
     }
 
-    const trimmed = operand.trim().toUpperCase();
+    // Keep the original case for symbolic operands so label lookups like
+    // `spc_07C2+Y` survive mode classification unchanged.
+    const trimmedRaw = operand.trim();
+    const trimmed = trimmedRaw.toUpperCase();
     // (X)
     if (trimmed === "(X)") {
       return { mode: "indirectX", val: 0 };
@@ -900,7 +896,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // e.g. "($12+X)"
     if (trimmed.startsWith("(") && trimmed.endsWith(")") && trimmed.includes("+X")) {
       // parse dp
-      const inside = trimmed.slice(1, -1); // e.g. "$12+X"
+      const inside = trimmedRaw.slice(1, -1); // e.g. "$12+X"
       const dpStr = inside.split("+")[0].trim(); // e.g. "$12"
       const val = parseInt(dpStr.replace(/\$/g, ""), 16);
       return { mode: "indirectDpX", val };
@@ -912,8 +908,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
     // e.g. "$1234+X" vs. "$12+X"
     if (trimmed.endsWith("+X")) {
-      const baseStr = trimmed.replace(/\+x$/i, "").trim();
-      const val = parseInt(baseStr.replace(/\$/g, ""), 16) >>> 0;
+      const baseStr = trimmedRaw.replace(/\+x$/i, "").trim();
+      const val = resolveValue(baseStr);
       const size = getAddressSize(baseStr);
       if (size === 1) {
         return { mode: "dpX", val };
@@ -923,30 +919,25 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
     // e.g. "$1234+Y", "$12+Y", or "($12)+Y"
     if (trimmed.endsWith("+Y")) {
-      const baseStr = trimmed.replace(/\+y$/i, "").trim();
+      const baseStr = trimmedRaw.replace(/\+y$/i, "").trim();
       if (baseStr.startsWith("(") && baseStr.endsWith(")")) {
         // => "($12)+Y" => indirectDpY
         const inner = baseStr.slice(1, -1).trim();
-        const val = parseInt(inner.replace(/\$/g, ""), 16) & 0xffff;
+        const val = resolveValue(inner) & 0xffff;
         return { mode: "indirectDpY", val };
-      } else {
-        // => $dp+Y or $abs+Y
-        const val = parseInt(baseStr.replace(/\$/g, ""), 16) >>> 0;
-        const size = getAddressSize(baseStr);
-        if (size === 1) {
-          // dp+Y is not used for these instructions, but the official doc has e.g. LDA $dp+Y for some, but let's see the test code: "ADC A,$1234+Y => 0x96"
-          // We'll call it "absY" if it's bigger than 1 byte, else dpY. But in the test code, there's no dp+Y form for these. Actually we do see a pattern: "ADC A,$12+X => 0x94"? "ADC A,$1234+Y => 0x96" => yeah same pattern for Y.
-          return { mode: "absY", val }; // the test uses 0x96 for 16-bit addresses, if we see 2 hex digits it might be dp, but the official test doesn't show dp+Y for these ops, except "ADC A,($12)+Y => 0x97" => that's the indirectDpY case above
-        } else {
-          return { mode: "absY", val };
-        }
       }
+
+      // The opcode tables used here only distinguish `absY` and `(dp)+Y`.
+      // Keep plain `value+Y` operands in the `absY` bucket instead of trying
+      // to invent a separate direct-page-Y mode for these instruction families.
+      const val = resolveValue(baseStr);
+      return { mode: "absY", val };
     }
     // e.g. "($12)+Y" => covered above
     // e.g. "$1234" or "$12"
-    if (/^\$[\da-f]+$/i.test(trimmed)) {
-      const val = parseInt(trimmed.replace(/\$/g, ""), 16) >>> 0;
-      const size = getAddressSize(trimmed);
+    if (/^\$[\da-f]+$/i.test(trimmedRaw)) {
+      const val = parseInt(trimmedRaw.replace(/\$/g, ""), 16) >>> 0;
+      const size = getAddressSize(trimmedRaw);
       if (size === 1) {
         return { mode: "dp", val };
       } else {
@@ -954,8 +945,14 @@ export class ArchSPC700 implements ArchitectureEncoder {
       }
     }
 
-    // Fallback
-    return { mode: "dp", val: 0 };
+    const fallbackSource = loweredOperand?.baseExpression ?? operand;
+    const fallbackValue = resolveValue(fallbackSource);
+    // Use the expanded source text rather than the resolved value so symbolic
+    // operands preserve the width the author wrote.
+    const fallbackLength = getAddressSize(loweredOperand?.expanded ?? fallbackSource);
+    return fallbackLength === 1
+      ? { mode: "dp", val: fallbackValue & 0xff }
+      : { mode: "abs", val: fallbackValue };
   }
 
   isDpOrAbs(operand: string): boolean {
@@ -1131,8 +1128,17 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // - For a label: needs to be (label_addr - (current_addr + 2))
     //   The +2 accounts for the branch instruction's 2 bytes
     // - Result must fit in signed byte (-128 to +127)
-    // - For now, if operand is a label, we need a second pass to resolve
-    const targetAddr = this.assembler.operandResolver.getnum(operand);
+    // Relative +/- labels are anchored to the address immediately after the
+    // branch instruction, matching the 65816 path and the original assembler.
+    const branchReferenceAddress = this.assembler.snespos + 1;
+    let targetAddr: number;
+    if (/^\++$/.test(operand)) {
+      targetAddr = this.assembler.findNextLabel(operand, branchReferenceAddress);
+    } else if (/^-+$/.test(operand)) {
+      targetAddr = this.assembler.findPreviousLabel(operand, branchReferenceAddress);
+    } else {
+      targetAddr = this.assembler.operandResolver.getnum(operand);
+    }
     debug("handleBranch targetAddr", targetAddr)
     const currentAddr = this.assembler.snespos;
     debug("handleBranch currentAddr", currentAddr)
@@ -1630,9 +1636,10 @@ export class ArchSPC700 implements ArchitectureEncoder {
 
       const val = parseInt(match[1], 16);
       const mode = memoryMoves[key];
+      const inferredLength = getAddressSize(`$${match[1]}`);
       const opcode = explicitlen ?
         (forcedLen === 1 ? mode.byte : mode.word) :
-        (val <= 0xff ? mode.byte : mode.word);
+        (inferredLength === 1 ? mode.byte : mode.word);
 
       this.assembler.write1(opcode);
       if (opcode === mode.word) {
@@ -1657,6 +1664,18 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const imm = parseInt(right.replace(/[^\da-f]/gi, ""), 16) & 0xff;
       this.assembler.write1(imm);
       const leftVal = parseInt(left.replace(/\$/g, ""), 16) & 0xff;
+      this.assembler.write1(leftVal);
+      return true;
+    }
+
+    if (/^\(\$[\da-f]+\)$/i.test(left) && /^\(\$[\da-f]+\)$/i.test(right)) {
+      // The Ghouls'n Ghosts SPC disassembly keeps some MOV dp,dp forms wrapped
+      // in parentheses, e.g. `mov ($D1), ($D0)`. Treat those as the normal
+      // direct-page move opcode rather than rejecting the syntax outright.
+      this.assembler.write1(0xfa);
+      const rightVal = parseInt(right.replace(/[^\da-f]/gi, ""), 16) & 0xff;
+      this.assembler.write1(rightVal);
+      const leftVal = parseInt(left.replace(/[^\da-f]/gi, ""), 16) & 0xff;
       this.assembler.write1(leftVal);
       return true;
     }
@@ -1756,6 +1775,56 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // We'll define small tables for left->right and right->left. We'll parse the "+X" or "+Y."
 
     const combined = `${left.trim()},${right.trim()}`.toUpperCase();
+    const resolveIndexedExpression = (operand: string): { value: number; index: "X" | "Y"; length: number } | null => {
+      if (operand.includes("(") || operand.includes(")")) {
+        return null;
+      }
+      const match = operand.trim().match(/^(.*)\+([xy])$/i);
+      if (!match) {
+        return null;
+      }
+      const baseExpression = match[1].trim();
+      if (!baseExpression) {
+        return null;
+      }
+      return {
+        value: this.assembler.operandResolver.getnum(baseExpression),
+        index: match[2].toUpperCase() as "X" | "Y",
+        length: getAddressSize(baseExpression),
+      };
+    };
+
+    const leftIndexed = resolveIndexedExpression(left);
+    if (leftIndexed) {
+      const leftIndexedOpcodes: Record<string, Partial<Record<"X" | "Y", { dp: number; abs: number }>>> = {
+        A: { X: { dp: 0xD4, abs: 0xD5 }, Y: { dp: 0xD6, abs: 0xD6 } },
+        X: { Y: { dp: 0xD9, abs: 0xD9 } },
+        Y: { X: { dp: 0xDB, abs: 0xDB } },
+      };
+      const rightRegister = right.trim().toUpperCase();
+      const modes = leftIndexedOpcodes[rightRegister]?.[leftIndexed.index];
+      if (modes) {
+        this.assembler.write1(leftIndexed.length === 1 ? modes.dp : modes.abs);
+        this.writeDpOrAbs(leftIndexed.value);
+        return true;
+      }
+    }
+
+    const rightIndexed = resolveIndexedExpression(right);
+    if (rightIndexed) {
+      const rightIndexedOpcodes: Record<string, Partial<Record<"X" | "Y", { dp: number; abs: number }>>> = {
+        A: { X: { dp: 0xF4, abs: 0xF5 }, Y: { dp: 0xF6, abs: 0xF6 } },
+        X: { Y: { dp: 0xF9, abs: 0xF9 } },
+        Y: { X: { dp: 0xFB, abs: 0xFB } },
+      };
+      const leftRegister = left.trim().toUpperCase();
+      const modes = rightIndexedOpcodes[leftRegister]?.[rightIndexed.index];
+      if (modes) {
+        this.assembler.write1(rightIndexed.length === 1 ? modes.dp : modes.abs);
+        this.writeDpOrAbs(rightIndexed.value);
+        return true;
+      }
+    }
 
     // e.g. "^(?:\$([0-9A-F]+)\+X),A$"
     // We'll do direct regex approach:

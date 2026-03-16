@@ -51,6 +51,7 @@ const TREE_LEGACY_ERROR_EQUIVALENCE_FIXTURES = new Set([
   "global_label_error_macrolabel",
   "half_bank_check",
   "incbin_error",
+  "incsrcloop",
   "include-dir",
   "labels_static_fail",
   "readoob",
@@ -252,9 +253,11 @@ test("integration temporary legacy parity subset remains aligned with tree outpu
     "v160features",
   ];
   for (const fixtureName of fixtures) {
-    const legacy = assembleFixtureLegacy(fixtureName);
-    const tree = assembleFixtureTree(fixtureName);
-    t.is(hashBuffer(legacy), hashBuffer(tree), fixtureName);
+    const result = compareTreeVsLegacy(fixtureName);
+    t.true(
+      result.overallPassed,
+      `${fixtureName}: tree=${result.treeHash ?? result.treeError} legacy=${result.legacyHash ?? result.legacyError}`
+    );
   }
 });
 

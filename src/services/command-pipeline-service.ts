@@ -115,6 +115,10 @@ export class CommandPipelineService {
       return "handled";
     }
 
+    if (this.macroHandlers.handleDefinitionCommand(state)) {
+      return "handled";
+    }
+
     if (this.frontEndHandlers.handleStaticLabelAssignment(state)) {
       return "handled";
     }

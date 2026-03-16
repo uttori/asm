@@ -1,3 +1,5 @@
+import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
+
 export interface RomWriterHost {
   snespos: number;
   realsnespos: number;
@@ -19,6 +21,8 @@ export interface RomWriterHost {
   setWritePosition(address: number): void;
   syncWriteStarts(): void;
   incrementBytesWritten(num: number): void;
+  /** Optional structured trace hook invoked once per emitted byte. */
+  traceWrite?(event: Omit<AssemblerTraceWriteEvent, "type">): void;
 }
 
 export class RomWriterService {
@@ -42,7 +46,7 @@ export class RomWriterService {
   }
 
   /**
-   * Writes a 16-bit value to the ROM.
+   * Writes a single byte at the current position using 65816/ROM addressing.
    * @param {number} num The value to write.
    */
   write1_65816(num: number): void {
@@ -57,6 +61,20 @@ export class RomWriterService {
     const newPos = bankByte | wrappedPos;
     const pcpos = this.snestopc(newPos & 0xFFFFFF);
 
+    // Emit tracing before the position advances so listeners see the exact byte
+    // address that will be written for this pass.
+    this.host.traceWrite?.({
+      pass: this.host.pass,
+      arch: this.host.inSpcblock ? "spc700" : "65816",
+      file: "",
+      line: 0,
+      raw: "",
+      normalized: "",
+      snesAddress: newPos & 0xFFFFFF,
+      pcAddress: pcpos,
+      value: num & 0xFF,
+    });
+
     if (this.host.pass === 2) {
       if (pcpos >= this.host.romdata.length && pcpos - this.host.romdata.length > 0) {
         this.host.fillRomData(this.host.romdata.length, this.host.default_freespacebyte, pcpos - this.host.romdata.length);
@@ -69,7 +87,7 @@ export class RomWriterService {
   }
 
   /**
-   * Writes a 8-bit value to the ROM.
+   * Writes a single byte to the ROM.
    * @param {number} num The value to write.
    */
   write1(num: number): void {
