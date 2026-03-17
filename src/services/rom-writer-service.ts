@@ -3,6 +3,10 @@ import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 export interface RomWriterHost {
   snespos: number;
   realsnespos: number;
+  arch: string;
+  mode: "layout" | "emit";
+  canEmitBytes: boolean;
+  canFinalize: boolean;
   mapper: string;
   sa1banks: number[];
   romdata: number[] | Uint8Array;
@@ -65,7 +69,7 @@ export class RomWriterService {
     // address that will be written for this pass.
     this.host.traceWrite?.({
       pass: this.host.pass,
-      arch: this.host.inSpcblock ? "spc700" : "65816",
+      arch: this.host.inSpcblock ? "spc700" : this.host.arch,
       file: "",
       line: 0,
       raw: "",
@@ -75,7 +79,7 @@ export class RomWriterService {
       value: num & 0xFF,
     });
 
-    if (this.host.pass === 2) {
+    if (this.host.canEmitBytes) {
       if (pcpos >= this.host.romdata.length && pcpos - this.host.romdata.length > 0) {
         this.host.fillRomData(this.host.romdata.length, this.host.default_freespacebyte, pcpos - this.host.romdata.length);
       }
@@ -156,7 +160,7 @@ export class RomWriterService {
     if (this.host.inSpcblock) {
       throw new Error("Missing endspcblock before end of pass.");
     }
-    if (this.host.pass === 2 && this.host.activeFreespaceStartPc !== null && this.host.activeFreespaceContentStartPc !== null) {
+    if (this.host.canFinalize && this.host.activeFreespaceStartPc !== null && this.host.activeFreespaceContentStartPc !== null) {
       const contentEndPc = this.snestopc(this.host.realsnespos & 0xFFFFFF) - 1;
       if (contentEndPc >= this.host.activeFreespaceContentStartPc) {
         const contentLen = (contentEndPc - this.host.activeFreespaceContentStartPc) + 1;
@@ -169,7 +173,7 @@ export class RomWriterService {
         this.host.writeDataBytes(this.host.activeFreespaceStartPc + 7, (ratsComp >> 8) & 0xFF, 1);
       }
     }
-    if (this.host.checksumFixEnabled) {
+    if (this.host.canFinalize && this.host.checksumFixEnabled) {
       this.host.updateHeaderAndCRC32();
     }
   }

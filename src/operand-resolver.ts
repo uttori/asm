@@ -1,6 +1,7 @@
 import type { ExpandedOperand, LoweredOperand } from "./architecture-types.js";
 import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
 import { isReferenceExpressionNode, renderExpressionNode, renderReferenceExpressionNode } from "./ir/expression-node.js";
+import { classifyGenericOperand } from "./operand-classifiers.js";
 
 export type OperandResolverDependencies = {
   resolveDefines(input: string): string;
@@ -461,114 +462,6 @@ export class OperandResolver {
   lowerOperand(operand: string): LoweredOperand {
     const raw = operand.trim();
     const { expanded, length } = this.expandOperand(raw);
-    const lowered = expanded.toLowerCase();
-    const indexMatch = expanded.match(/,\s*([sxy])$/i);
-    const indexRegister = indexMatch ? indexMatch[1].toLowerCase() as "x" | "y" | "s" : undefined;
-    const normalizedExpanded = expanded.trim();
-    const normalizedUpper = normalizedExpanded.toUpperCase();
-    const explicitDirectPage = /^\$[\da-f]{1,2}$/i.test(raw);
-    const explicitDirectPageIndexedX = /^\$[\da-f]{1,2},x$/i.test(raw);
-    let mode: LoweredOperand["mode"] = "unknown";
-    let baseExpression = expanded;
-    let registerName: string | undefined;
-
-    const registerOperandMatch = normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
-    const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
-    const registerIndirectAutoIncrementMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/);
-    const directPageIndexedXIndirectMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\+\s*x\s*\)$/i);
-    const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*y$/i);
-    const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
-
-    if (registerOperandMatch) {
-      mode = "register";
-      registerName = registerOperandMatch[1].toLowerCase();
-      baseExpression = normalizedExpanded;
-    } else if (registerIndirectAutoIncrementMatch) {
-      mode = "registerIndirectAutoIncrement";
-      registerName = registerIndirectAutoIncrementMatch[1].toLowerCase();
-      baseExpression = registerIndirectAutoIncrementMatch[1];
-    } else if (registerIndirectMatch) {
-      mode = "registerIndirect";
-      registerName = registerIndirectMatch[1].toLowerCase();
-      baseExpression = registerIndirectMatch[1];
-    } else if (directPageIndexedXIndirectMatch) {
-      mode = "directPageIndexedXIndirect";
-      baseExpression = directPageIndexedXIndirectMatch[1].trim();
-    } else if (directPageIndirectIndexedYMatch) {
-      mode = "directPageIndirectIndexedY";
-      baseExpression = directPageIndirectIndexedYMatch[1].trim();
-    } else if (bitAddressMatch) {
-      mode = bitAddressMatch[1].length <= 3 ? "directPageBit" : "absoluteBit";
-      baseExpression = bitAddressMatch[1].toUpperCase();
-    }
-
-    if (mode === "unknown" && expanded.startsWith("#")) {
-      mode = "immediate";
-      baseExpression = expanded.slice(1).trim();
-    } else if (mode === "unknown" && /^\$[\da-f]{6}\s*,\s*x$/i.test(expanded)) {
-      mode = "absoluteLongIndexedX";
-      baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-    } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*x$/i.test(expanded)) {
-      mode = "absoluteIndexedX";
-      baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-    } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*y$/i.test(expanded)) {
-      mode = "absoluteIndexedY";
-      baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
-    } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*x\s*\)$/i.test(normalizedExpanded)) {
-      mode = "indexedIndirectX";
-      baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*x\s*\)$/i, "").trim();
-    } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
-      mode = "directPageIndirect";
-      baseExpression = expanded.slice(1, -1).trim();
-    } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
-      mode = "stackRelativeIndexedIndirectY";
-      baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*s\s*\)\s*,\s*y$/i, "").trim();
-    } else if (mode === "unknown" && /,\s*s$/i.test(lowered)) {
-      mode = "stackRelative";
-      baseExpression = expanded.replace(/\s*,\s*s$/i, "").trim();
-    } else if (mode === "unknown" && /^\[\s*(.+?)\s*]\s*,\s*y$/i.test(normalizedExpanded)) {
-      mode = "indirectLongIndexedY";
-      baseExpression = normalizedExpanded.replace(/^\[\s*/, "").replace(/\s*]\s*,\s*y$/i, "").trim();
-    } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
-      mode = "indirectLong";
-      baseExpression = expanded.slice(1, -1).trim();
-    } else if (mode === "unknown" && /^\(\s*(.+?)\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
-      mode = "indirectIndexedY";
-      baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*\)\s*,\s*y$/i, "").trim();
-    } else if (mode === "unknown" && /,\s*y$/i.test(lowered)) {
-      mode = "absoluteIndexedY";
-      baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
-    } else if (mode === "unknown" && /,\s*x$/i.test(lowered)) {
-      baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-      // Preserve resolved operand width for symbolic expressions like
-      // `_04984F_9879-$02,X`, which expand to 24-bit addresses without a
-      // fixed six-digit hex width (for example `$49877,X`).
-      if (length >= 3) {
-        mode = "absoluteLongIndexedX";
-      } else if (length === 2) {
-        mode = "absoluteIndexedX";
-      } else {
-        mode = "directPageIndexedX";
-      }
-    } else if (mode === "unknown" && /^\$[\da-f]{6}$/i.test(expanded)) {
-      mode = "absoluteLong";
-      baseExpression = expanded;
-    } else if (mode === "unknown" && /^\$[\da-f]{4}$/i.test(expanded)) {
-      mode = "absolute";
-      baseExpression = expanded;
-    }
-    return {
-      mode,
-      baseExpression,
-      registerName,
-      explicitDirectPage,
-      explicitDirectPageIndexedX,
-      raw,
-      expanded,
-      length,
-      indexRegister,
-      immediate: expanded.startsWith("#"),
-      indirect: expanded.startsWith("(") || expanded.startsWith("["),
-    };
+    return classifyGenericOperand({ raw, expanded, length });
   }
 }

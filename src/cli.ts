@@ -21,12 +21,12 @@ class CLI {
     for (let i = 0; i < rawArgs.length; i++) {
       const arg = rawArgs[i];
       if (arg.startsWith("--checksum-mode=")) {
-        const value = arg.split("=")[1] as "asar" | "simple" | undefined;
+        const value = arg.split("=")[1];
         if (value === "asar" || value === "simple") {
           checksumMode = value;
           continue;
         }
-        console.error(`Error: Invalid checksum mode '${value}'. Use 'asar' or 'simple'.`);
+        console.error(`Error: Invalid checksum mode '${String(value)}'. Use 'asar' or 'simple'.`);
         process.exit(1);
       }
       if (arg === "--checksum-mode") {
@@ -76,19 +76,19 @@ class CLI {
       const assemblyCode = fs.readFileSync(inputFile, "utf8");
       console.log(`Compiling: ${inputFile} → ${outputFile}`);
 
-      // Execute 3-pass assembly process
+      // Build once, execute as staged pipeline.
       const inputDir = path.dirname(inputFile);
       this.assembler.setIncludePaths(["./", inputDir]);
       this.assembler.setCurrentFile(inputFile);
-      this.assembleFile(assemblyCode, 0); // First pass: determine label locations
-      this.assembleFile(assemblyCode, 1); // Second pass: determine exact positions
-      this.assembleFile(assemblyCode, 2); // Third pass: final assembly
+      const program = this.assembler.buildProgramModel(assemblyCode, inputFile, 0);
+      this.assembler.assembleProgram(program);
 
       // Write output binary
       this.writeBinary(outputFile);
       console.log(`Success: Output written to '${outputFile}'.`);
     } catch (error) {
-      console.error(`Compilation failed: ${error?.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Compilation failed: ${message}`);
       process.exit(1);
     }
   }
@@ -100,15 +100,18 @@ class CLI {
    */
   assembleFile(source: string, pass: number): void {
     console.log(`cli assembleFile ${pass} started`);
-    this.assembler.setPass(pass);
-    const lines = source.split("\n");
-    let lineNumber = 0;
-    for (const line of lines) {
-      this.assembler.setCurrentLine(lineNumber);
-      this.assembler.assembleblock(line.trim());
-      lineNumber++;
+    const program = this.assembler.buildProgramModel(source, this.assembler.currentFile, 0);
+    switch (pass) {
+      case 0:
+        this.assembler.runStage("collectDefinitions", program);
+        break;
+      case 1:
+        this.assembler.runStage("resolveLayout", program);
+        break;
+      default:
+        this.assembler.runStage("emitProgram", program);
+        break;
     }
-    this.assembler.finishPass();
     console.log(`cli assembleFile ${pass} completed`);
   }
 

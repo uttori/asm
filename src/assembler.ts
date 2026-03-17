@@ -5,7 +5,7 @@ import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { AssemblerServices, CursorAddressFacade } from "./assembler-internals.js";
-import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, LoweredInstruction, Spc700Context, SuperFXContext } from "./architecture-types.js";
+import type { ArchitectureContext, ExpressionHost, LoweredInstruction, Spc700Context, SuperFXContext } from "./architecture-types.js";
 import { shouldEndifCloseInnermostWhile } from "./compatibility/asar-compatibility-profile.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
@@ -30,6 +30,7 @@ import { createNormalizedCommand, type NormalizedCommand } from "./ir/normalized
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
+import { createArchitectureRegistry, type ArchitectureDefinition, type ArchitectureRegistry } from "./architecture-registry.js";
 import { createDirectiveRegistry, type DirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
 import { CommandPipelineService, type CommandPipelineHost } from "./services/command-pipeline-service.js";
@@ -171,6 +172,65 @@ export type MacroDefinition = {
 export type LoopBlock = LoopNode;
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
+export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
+export type ProgramModel = {
+  sourceFile: string;
+  startLine: number;
+  nodes: RuntimeNode[];
+};
+export type StageExecutionMode = "layout" | "emit";
+export type StageExecutionCapabilities = {
+  instructionMode: StageExecutionMode;
+  canEmitBytes: boolean;
+  canFinalize: boolean;
+  enforceResolvedLabels: boolean;
+  isDefinitionCollectionStage: boolean;
+};
+export type StageCursorState = {
+  snespos: number;
+  realsnespos: number;
+  startpos: number;
+  realstartpos: number;
+  bytes: number;
+};
+export type StageSymbolState = {
+  labelTable: Map<string, LabelEntry>;
+  forwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
+  backwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
+  currentParentLabel: string;
+  currentParentIsGlobal: boolean;
+  currentGlobalParentLabel: string;
+  labelParents: Map<string, string | null>;
+};
+export type StageControlState = {
+  condStack: { type: "if" | "while"; cond: boolean; start?: number; expr?: string; branchTaken?: boolean; conditionStr?: string }[];
+  namespaceStack: string[];
+  currentNamespace: string;
+  namespaceNestingEnabled: boolean;
+  namespaceNestingPath: string[];
+  loopStack: LoopBlock[];
+  currentLoop: LoopBlock | null;
+  collectingLoop: boolean;
+  loopNestingLevel: number;
+  inMacroExpansion: boolean;
+  macroLabelInstance: number;
+};
+export type StageWriteState = {
+  inSpcblock: boolean;
+  spcblockData: SpcblockData | null;
+  spcInlineCompatMode: boolean;
+  activeFreespaceStartPc: number | null;
+  activeFreespaceContentStartPc: number | null;
+};
+export type StageExecutionState = {
+  stage: AssemblyStageName;
+  pass: 0 | 1 | 2;
+  capabilities: StageExecutionCapabilities;
+  cursor: StageCursorState;
+  symbols: StageSymbolState;
+  control: StageControlState;
+  writeState: StageWriteState;
+};
 
 type LoweredDirective = {
   kind: "directive";
@@ -379,8 +439,11 @@ export class Assembler implements AssemblySession {
   public requireStaticLabelLookup: boolean = false;
   readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
   readonly directiveRegistry: DirectiveRegistry;
+  readonly architectureRegistry: ArchitectureRegistry;
   readonly cursorAddress: CursorAddressFacade;
   public readonly services: AssemblerServices;
+  public readonly stageExecutionStates: Map<AssemblyStageName, StageExecutionState> = new Map();
+  private activeStageExecutionState: StageExecutionState | null = null;
 
   get commandPipelineService(): CommandPipelineService {
     return this.services.commandPipelineService;
@@ -418,10 +481,6 @@ export class Assembler implements AssemblySession {
 
   get currentAddress(): number {
     return this.getCurrentTargetAddress();
-  }
-
-  get directPageOptimizationEnabled(): boolean {
-    return this.optimizeDirectPage;
   }
 
   recordCurrentAddress(): void {
@@ -787,11 +846,26 @@ export class Assembler implements AssemblySession {
   createSymbolScopeHost(): SymbolScopeHost {
     return Object.create(null, {
       pass: { get: () => this.pass, enumerable: true },
-      snespos: { get: () => this.snespos, enumerable: true },
+      mode: { get: () => this.getActiveStageCapabilities().instructionMode, enumerable: true },
+      enforceResolvedLabels: { get: () => this.getActiveStageCapabilities().enforceResolvedLabels, enumerable: true },
+      isDefinitionCollectionStage: { get: () => this.getActiveStageCapabilities().isDefinitionCollectionStage, enumerable: true },
+      snespos: {
+        get: () => this.snespos,
+        set: (value: number) => {
+          this.snespos = value;
+          if (this.activeStageExecutionState) {
+            this.activeStageExecutionState.cursor.snespos = value;
+          }
+        },
+        enumerable: true,
+      },
       currentNamespace: {
         get: () => this.currentNamespace,
         set: (value: string) => {
           this.currentNamespace = value;
+          if (this.activeStageExecutionState) {
+            this.activeStageExecutionState.control.currentNamespace = value;
+          }
         },
         enumerable: true,
       },
@@ -806,6 +880,9 @@ export class Assembler implements AssemblySession {
         get: () => this.currentParentLabel,
         set: (value: string) => {
           this.currentParentLabel = value;
+          if (this.activeStageExecutionState) {
+            this.activeStageExecutionState.symbols.currentParentLabel = value;
+          }
         },
         enumerable: true,
       },
@@ -813,6 +890,9 @@ export class Assembler implements AssemblySession {
         get: () => this.currentParentIsGlobal,
         set: (value: boolean) => {
           this.currentParentIsGlobal = value;
+          if (this.activeStageExecutionState) {
+            this.activeStageExecutionState.symbols.currentParentIsGlobal = value;
+          }
         },
         enumerable: true,
       },
@@ -820,6 +900,9 @@ export class Assembler implements AssemblySession {
         get: () => this.currentGlobalParentLabel,
         set: (value: string) => {
           this.currentGlobalParentLabel = value;
+          if (this.activeStageExecutionState) {
+            this.activeStageExecutionState.symbols.currentGlobalParentLabel = value;
+          }
         },
         enumerable: true,
       },
@@ -836,6 +919,9 @@ export class Assembler implements AssemblySession {
         get: () => this.snespos,
         set: (value: number) => {
           this.snespos = value;
+          if (this.activeStageExecutionState) {
+            this.activeStageExecutionState.cursor.snespos = value;
+          }
         },
         enumerable: true,
       },
@@ -843,9 +929,16 @@ export class Assembler implements AssemblySession {
         get: () => this.realsnespos,
         set: (value: number) => {
           this.realsnespos = value;
+          if (this.activeStageExecutionState) {
+            this.activeStageExecutionState.cursor.realsnespos = value;
+          }
         },
         enumerable: true,
       },
+      arch: { get: () => this.resolveActiveArchitecture().name, enumerable: true },
+      mode: { get: () => this.getActiveStageCapabilities().instructionMode, enumerable: true },
+      canEmitBytes: { get: () => this.getActiveStageCapabilities().canEmitBytes, enumerable: true },
+      canFinalize: { get: () => this.getActiveStageCapabilities().canFinalize, enumerable: true },
       mapper: { get: () => this.mapper, enumerable: true },
       sa1banks: { get: () => this.sa1banks, enumerable: true },
       romdata: { get: () => this.romdata, enumerable: true },
@@ -931,6 +1024,11 @@ export class Assembler implements AssemblySession {
     this.arch65816 = new Arch65816(this.create65816Context());
     this.archSPC700 = new ArchSPC700(this.createSPC700Context());
     this.archSuperFX = new ArchSuperFX(this.createSuperFXContext());
+    this.architectureRegistry = createArchitectureRegistry(
+      this.arch65816,
+      this.archSPC700,
+      this.archSuperFX,
+    );
     this.mathCore = new MathCore();
     this.mathCore.host = this.expressionHost;
     this.directiveRegistry = createDirectiveRegistry(this, this.operandResolver);
@@ -1093,15 +1191,11 @@ export class Assembler implements AssemblySession {
       emitLong: (value: number) => this.emitLong(value),
       findNextLabel: (reference: string, fromAddress: number) => this.findNextLabel(reference, fromAddress),
       findPreviousLabel: (reference: string, fromAddress: number) => this.findPreviousLabel(reference, fromAddress),
-      findNextRelativeLabel: (reference: string, fromAddress: number) => this.findNextRelativeLabel(reference, fromAddress),
-      findPreviousRelativeLabel: (reference: string, fromAddress: number) => this.findPreviousRelativeLabel(reference, fromAddress),
     };
     return Object.defineProperties(context, {
       pass: { get: () => this.pass },
       snespos: { get: () => this.getCurrentTargetAddress() },
-      currentAddress: { get: () => this.getCurrentTargetAddress() },
       optimizeDirectPage: { get: () => this.optimizeDirectPage },
-      directPageOptimizationEnabled: { get: () => this.optimizeDirectPage },
     }) as unknown as ArchitectureContext;
   }
 
@@ -1196,67 +1290,99 @@ export class Assembler implements AssemblySession {
     }
   }
 
+  private getActiveStageCapabilities(): StageExecutionCapabilities {
+    if (this.activeStageExecutionState) {
+      return this.activeStageExecutionState.capabilities;
+    }
+    return {
+      instructionMode: this.pass === 0 ? "layout" : "emit",
+      canEmitBytes: this.pass >= 2,
+      canFinalize: true,
+      enforceResolvedLabels: this.pass >= 2,
+      isDefinitionCollectionStage: this.pass === 0,
+    };
+  }
+
+  private getInstructionExecutionMode(): StageExecutionMode {
+    if (this.activeStageExecutionState) {
+      return this.activeStageExecutionState.capabilities.instructionMode;
+    }
+    return this.pass === 0 ? "layout" : "emit";
+  }
+
+  private layoutInstruction(input: string[] | LoweredInstruction): boolean {
+    const words = Array.isArray(input) ? input : input.words;
+    if (words.length === 0) {
+      return true;
+    }
+    const architecture = this.resolveActiveArchitecture();
+    if (!architecture.definition) {
+      return true;
+    }
+    const size = Array.isArray(input)
+      ? architecture.definition.encoder.estimateSize(words)
+      : (architecture.definition.encoder.estimateInstruction?.(input) ?? architecture.definition.encoder.estimateSize(words));
+    this.step(size);
+    return true;
+  }
+
+  private emitInstruction(input: string[] | LoweredInstruction): boolean {
+    const words = Array.isArray(input) ? input : input.words;
+    if (words.length === 0) {
+      return true;
+    }
+    const architecture = this.resolveActiveArchitecture();
+    if (!architecture.definition) {
+      return true;
+    }
+    const encoded = Array.isArray(input)
+      ? architecture.definition.encoder.encode(words)
+      : (architecture.definition.encoder.encodeInstruction?.(input) ?? architecture.definition.encoder.encode(words));
+    if (!encoded) {
+      if (architecture.name === "superfx") {
+        return false;
+      }
+      throw new Error(`Unknown instruction: ${words[0]}`);
+    }
+    return true;
+  }
+
   /**
    * Picks the appropriate instruction handler based on architecture.
    * @param {string[] | LoweredInstruction} input The instruction to pick.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   asblock_pick(input: string[] | LoweredInstruction): boolean {
-    const words = Array.isArray(input) ? input : input.words;
-    debug("asblock_pick", words);
+    debug("asblock_pick", Array.isArray(input) ? input : input.words);
     debug("asblock_pick arch", this.arch);
-    if (words.length === 0) {
-      return true;
+    if (this.getInstructionExecutionMode() === "layout") {
+      return this.layoutInstruction(input);
     }
-
-    const encoder = this.getActiveArchitectureEncoder();
-    if (this.pass === 0) {
-      if (!encoder) {
-        return true;
-      }
-      const size = Array.isArray(input)
-        ? encoder.estimateSize(words)
-        : (encoder.estimateInstruction?.(input) ?? encoder.estimateSize(words));
-      this.step(size);
-      return true;
-    }
-
-    if (!encoder) {
-      return true;
-    }
-
-    const encoded = Array.isArray(input)
-      ? encoder.encode(words)
-      : (encoder.encodeInstruction?.(input) ?? encoder.encode(words));
-    if (!encoded) {
-      if (this.arch === "superfx") {
-        return false;
-      }
-      throw new Error(`Unknown instruction: ${words[0]}`);
-    }
-
-    return true;
+    return this.emitInstruction(input);
   }
 
-  getActiveArchitectureEncoder(): ArchitectureEncoder | undefined {
+  resolveActiveArchitecture(): { name: string; definition?: ArchitectureDefinition } {
     if (this.inSpcblock || this.arch === "spc700") {
-      return this.archSPC700;
+      return {
+        name: "spc700",
+        definition: this.architectureRegistry.getDefinition("spc700"),
+      };
     }
-    if (this.arch === "superfx") {
-      return this.archSuperFX;
-    }
-    if (this.arch === "65816") {
-      return this.arch65816;
-    }
-    return undefined;
+    const normalized = this.arch.toLowerCase();
+    const canonical = this.architectureRegistry.getCanonicalName(normalized);
+    const name = canonical ?? normalized;
+    return {
+      name,
+      definition: this.architectureRegistry.getDefinition(name),
+    };
   }
 
-  findNextRelativeLabel(reference: string, fromAddress: number): number {
-    return this.findNextLabel(reference, fromAddress);
-  }
-
-  findPreviousRelativeLabel(reference: string, fromAddress: number): number {
-    return this.findPreviousLabel(reference, fromAddress);
+  classifyOperandForActiveArchitecture(operand: string) {
+    const architecture = this.resolveActiveArchitecture();
+    if (!architecture.definition) {
+      return this.operandResolver.lowerOperand(operand);
+    }
+    return architecture.definition.classifyOperand(this.operandResolver, operand);
   }
 
   /**
@@ -1800,22 +1926,12 @@ export class Assembler implements AssemblySession {
       throw new Error("ARCH command requires an architecture parameter.")
     }
     const archParam = words[1].toLowerCase();
-    if (archParam === "65816") {
-      this.arch = "65816";
-      this.spcInlineCompatMode = false;
-      // (Reinitialize or update arch65816 if needed)
-    } else if (archParam === "spc700" || archParam === "spc700-raw") {
-      this.arch = "spc700";
-      this.spcInlineCompatMode = false;
-    } else if (archParam === "spc700-inline") {
-      this.arch = "spc700";
-      this.spcInlineCompatMode = true;
-    } else if (archParam === "superfx") {
-      this.arch = "superfx";
-      this.spcInlineCompatMode = false;
-    } else {
+    const canonical = this.architectureRegistry.getCanonicalName(archParam);
+    if (!canonical) {
       throw new Error("Unsupported architecture: " + archParam);
     }
+    this.arch = canonical;
+    this.spcInlineCompatMode = archParam === "spc700-inline";
   }
 
   /**
@@ -3063,6 +3179,9 @@ export class Assembler implements AssemblySession {
   setPass(pass: number): void {
     debug("🏁 setPass", pass);
     this.pass = pass;
+    if (this.activeStageExecutionState) {
+      this.activeStageExecutionState.pass = pass as 0 | 1 | 2;
+    }
     switch (pass) {
       case 1:
         // Rebuild relative-label tables from pass 1 sizing only.
@@ -3123,6 +3242,249 @@ export class Assembler implements AssemblySession {
   setCurrentLine(line: number): void {
     // debug('setCurrentLine', line);
     this.currentLine = line;
+  }
+
+  private getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "pass" | "capabilities"> {
+    if (stage === "collectDefinitions") {
+      return {
+        stage,
+        pass: 0,
+        capabilities: {
+          instructionMode: "layout",
+          canEmitBytes: false,
+          canFinalize: false,
+          enforceResolvedLabels: false,
+          isDefinitionCollectionStage: true,
+        },
+      };
+    }
+    if (stage === "resolveLayout") {
+      return {
+        stage,
+        pass: 1,
+        capabilities: {
+          instructionMode: "emit",
+          canEmitBytes: false,
+          canFinalize: false,
+          enforceResolvedLabels: false,
+          isDefinitionCollectionStage: false,
+        },
+      };
+    }
+    return {
+      stage,
+      pass: 2,
+      capabilities: {
+        instructionMode: "emit",
+        canEmitBytes: true,
+        canFinalize: true,
+        enforceResolvedLabels: true,
+        isDefinitionCollectionStage: false,
+      },
+    };
+  }
+
+  private cloneRelativeLabels(source: { [depth: number]: { addr: number; macroInstance?: number }[] }): { [depth: number]: { addr: number; macroInstance?: number }[] } {
+    const clone: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
+    for (const [depth, entries] of Object.entries(source)) {
+      clone[Number(depth)] = entries.map((entry) => ({ ...entry }));
+    }
+    return clone;
+  }
+
+  private createStageExecutionState(stage: AssemblyStageName): StageExecutionState {
+    const descriptor = this.getStageDescriptor(stage);
+    const previousStage = stage === "resolveLayout" ? "collectDefinitions" : stage === "emitProgram" ? "resolveLayout" : undefined;
+    const seed = previousStage ? this.stageExecutionStates.get(previousStage) : undefined;
+    const cursorSeed = seed?.cursor ?? {
+      snespos: this.snespos,
+      realsnespos: this.realsnespos,
+      startpos: this.startpos,
+      realstartpos: this.realstartpos,
+      bytes: this.bytes,
+    };
+    const symbolSeed = seed?.symbols ?? {
+      labelTable: this.labelTable,
+      forwardLabels: this.forwardLabels,
+      backwardLabels: this.backwardLabels,
+      currentParentLabel: this.currentParentLabel,
+      currentParentIsGlobal: this.currentParentIsGlobal,
+      currentGlobalParentLabel: this.currentGlobalParentLabel,
+      labelParents: this.labelParents,
+    };
+    const controlSeed = seed?.control ?? {
+      condStack: this.condStack,
+      namespaceStack: this.namespaceStack,
+      currentNamespace: this.currentNamespace,
+      namespaceNestingEnabled: this.namespaceNestingEnabled,
+      namespaceNestingPath: this.namespaceNestingPath,
+      loopStack: this.loopStack,
+      currentLoop: this.currentLoop,
+      collectingLoop: this.collectingLoop,
+      loopNestingLevel: this.loopNestingLevel,
+      inMacroExpansion: this.inMacroExpansion,
+      macroLabelInstance: this.macroLabelInstance,
+    };
+    const writeSeed = seed?.writeState ?? {
+      inSpcblock: this.inSpcblock,
+      spcblockData: this.spcblockData,
+      spcInlineCompatMode: this.spcInlineCompatMode,
+      activeFreespaceStartPc: this.activeFreespaceStartPc,
+      activeFreespaceContentStartPc: this.activeFreespaceContentStartPc,
+    };
+
+    return {
+      ...descriptor,
+      cursor: { ...cursorSeed },
+      symbols: {
+        labelTable: new Map(Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }])),
+        forwardLabels: this.cloneRelativeLabels(symbolSeed.forwardLabels),
+        backwardLabels: this.cloneRelativeLabels(symbolSeed.backwardLabels),
+        currentParentLabel: symbolSeed.currentParentLabel,
+        currentParentIsGlobal: symbolSeed.currentParentIsGlobal,
+        currentGlobalParentLabel: symbolSeed.currentGlobalParentLabel,
+        labelParents: new Map(symbolSeed.labelParents),
+      },
+      control: {
+        condStack: controlSeed.condStack.map((entry) => ({ ...entry })),
+        namespaceStack: [...controlSeed.namespaceStack],
+        currentNamespace: controlSeed.currentNamespace,
+        namespaceNestingEnabled: controlSeed.namespaceNestingEnabled,
+        namespaceNestingPath: [...controlSeed.namespaceNestingPath],
+        loopStack: [...controlSeed.loopStack],
+        currentLoop: controlSeed.currentLoop,
+        collectingLoop: controlSeed.collectingLoop,
+        loopNestingLevel: controlSeed.loopNestingLevel,
+        inMacroExpansion: controlSeed.inMacroExpansion,
+        macroLabelInstance: controlSeed.macroLabelInstance,
+      },
+      writeState: {
+        inSpcblock: writeSeed.inSpcblock,
+        spcblockData: writeSeed.spcblockData ? { ...writeSeed.spcblockData } : null,
+        spcInlineCompatMode: writeSeed.spcInlineCompatMode,
+        activeFreespaceStartPc: writeSeed.activeFreespaceStartPc,
+        activeFreespaceContentStartPc: writeSeed.activeFreespaceContentStartPc,
+      },
+    };
+  }
+
+  private applyStageExecutionState(stageState: StageExecutionState): void {
+    this.pass = stageState.pass;
+    this.snespos = stageState.cursor.snespos;
+    this.realsnespos = stageState.cursor.realsnespos;
+    this.startpos = stageState.cursor.startpos;
+    this.realstartpos = stageState.cursor.realstartpos;
+    this.bytes = stageState.cursor.bytes;
+    this.labelTable = stageState.symbols.labelTable;
+    this.forwardLabels = stageState.symbols.forwardLabels;
+    this.backwardLabels = stageState.symbols.backwardLabels;
+    this.currentParentLabel = stageState.symbols.currentParentLabel;
+    this.currentParentIsGlobal = stageState.symbols.currentParentIsGlobal;
+    this.currentGlobalParentLabel = stageState.symbols.currentGlobalParentLabel;
+    this.labelParents = stageState.symbols.labelParents;
+    this.condStack = stageState.control.condStack;
+    this.namespaceStack = stageState.control.namespaceStack;
+    this.currentNamespace = stageState.control.currentNamespace;
+    this.namespaceNestingEnabled = stageState.control.namespaceNestingEnabled;
+    this.namespaceNestingPath = stageState.control.namespaceNestingPath;
+    this.loopStack = stageState.control.loopStack;
+    this.currentLoop = stageState.control.currentLoop;
+    this.collectingLoop = stageState.control.collectingLoop;
+    this.loopNestingLevel = stageState.control.loopNestingLevel;
+    this.inMacroExpansion = stageState.control.inMacroExpansion;
+    this.macroLabelInstance = stageState.control.macroLabelInstance;
+    this.inSpcblock = stageState.writeState.inSpcblock;
+    this.spcblockData = stageState.writeState.spcblockData;
+    this.spcInlineCompatMode = stageState.writeState.spcInlineCompatMode;
+    this.activeFreespaceStartPc = stageState.writeState.activeFreespaceStartPc;
+    this.activeFreespaceContentStartPc = stageState.writeState.activeFreespaceContentStartPc;
+  }
+
+  private captureStageExecutionState(stageState: StageExecutionState): void {
+    stageState.cursor = {
+      snespos: this.snespos,
+      realsnespos: this.realsnespos,
+      startpos: this.startpos,
+      realstartpos: this.realstartpos,
+      bytes: this.bytes,
+    };
+    stageState.symbols = {
+      labelTable: this.labelTable,
+      forwardLabels: this.forwardLabels,
+      backwardLabels: this.backwardLabels,
+      currentParentLabel: this.currentParentLabel,
+      currentParentIsGlobal: this.currentParentIsGlobal,
+      currentGlobalParentLabel: this.currentGlobalParentLabel,
+      labelParents: this.labelParents,
+    };
+    stageState.control = {
+      condStack: this.condStack,
+      namespaceStack: this.namespaceStack,
+      currentNamespace: this.currentNamespace,
+      namespaceNestingEnabled: this.namespaceNestingEnabled,
+      namespaceNestingPath: this.namespaceNestingPath,
+      loopStack: this.loopStack,
+      currentLoop: this.currentLoop,
+      collectingLoop: this.collectingLoop,
+      loopNestingLevel: this.loopNestingLevel,
+      inMacroExpansion: this.inMacroExpansion,
+      macroLabelInstance: this.macroLabelInstance,
+    };
+    stageState.writeState = {
+      inSpcblock: this.inSpcblock,
+      spcblockData: this.spcblockData,
+      spcInlineCompatMode: this.spcInlineCompatMode,
+      activeFreespaceStartPc: this.activeFreespaceStartPc,
+      activeFreespaceContentStartPc: this.activeFreespaceContentStartPc,
+    };
+  }
+
+  private getOrCreateStageExecutionState(stage: AssemblyStageName): StageExecutionState {
+    const existing = this.stageExecutionStates.get(stage);
+    if (existing) {
+      return existing;
+    }
+    const created = this.createStageExecutionState(stage);
+    this.stageExecutionStates.set(stage, created);
+    return created;
+  }
+
+  buildProgramModel(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
+    const commands = this.splitInlineCommands(this.preprocessBlockCommands(source));
+    const nodes = this.getOrBuildPassProgram(commands, sourceFile, startLine);
+    return {
+      sourceFile,
+      startLine,
+      nodes,
+    };
+  }
+
+  runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState {
+    if (stage === "collectDefinitions") {
+      this.stageExecutionStates.clear();
+      this.activeStageExecutionState = null;
+    }
+    const stageState = this.getOrCreateStageExecutionState(stage);
+    this.activeStageExecutionState = stageState;
+    this.applyStageExecutionState(stageState);
+    this.setCurrentFile(program.sourceFile);
+    this.setPass(stageState.pass);
+    this.executeNodeStream(program.nodes);
+    this.finishPass();
+    this.captureStageExecutionState(stageState);
+    return stageState;
+  }
+
+  assembleProgram(program: ProgramModel): void {
+    this.runStage("collectDefinitions", program);
+    this.runStage("resolveLayout", program);
+    this.runStage("emitProgram", program);
+  }
+
+  assembleSource(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
+    const program = this.buildProgramModel(source, sourceFile, startLine);
+    this.assembleProgram(program);
+    return program;
   }
 
   /**
@@ -3874,8 +4236,8 @@ export class Assembler implements AssemblySession {
     const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
     const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
     const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
-    const loweredOperands = operands.map((operand) => this.operandResolver.lowerOperand(operand));
-    const loweredOperand = this.operandResolver.lowerOperand(operandText);
+    const loweredOperands = operands.map((operand) => this.classifyOperandForActiveArchitecture(operand));
+    const loweredOperand = this.classifyOperandForActiveArchitecture(operandText);
 
     return {
       kind: "instruction",

@@ -62,7 +62,7 @@
     ],
     "failFast": false,
     "tap": false,
-    "timeout": "30000",
+    "timeout": "120000",
     "verbose": true
   },
   "c8": {

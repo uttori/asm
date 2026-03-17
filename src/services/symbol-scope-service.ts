@@ -19,6 +19,9 @@ type StructDefinition = {
 
 export interface SymbolScopeHost {
   pass: number;
+  mode: "layout" | "emit";
+  enforceResolvedLabels: boolean;
+  isDefinitionCollectionStage: boolean;
   snespos: number;
   currentNamespace: string;
   namespaceNestingEnabled: boolean;
@@ -143,7 +146,7 @@ export class SymbolScopeService {
     const snesAddress = this.host.snespos;
     const isMacroLocal = label.startsWith("?");
 
-    if (this.host.pass === 2) {
+    if (this.host.enforceResolvedLabels) {
       if (isPositive) {
         if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
           throw new Error(`Error: Undefined forward label '${label}'.`);
@@ -185,7 +188,7 @@ export class SymbolScopeService {
     const currentAddress = currentAddressOverride ?? this.host.snespos;
     const isMacroLocal = label.startsWith("?");
 
-    if (this.host.pass < 2) {
+    if (!this.host.enforceResolvedLabels) {
       return 0;
     }
 
@@ -224,7 +227,7 @@ export class SymbolScopeService {
     const currentAddress = currentAddressOverride ?? this.host.snespos;
     const isMacroLocal = label.startsWith("?");
 
-    if (this.host.pass === 0) {
+    if (this.host.isDefinitionCollectionStage) {
       return 0;
     }
 
@@ -346,7 +349,7 @@ export class SymbolScopeService {
 
     const addr = value !== undefined ? value : this.host.snespos;
 
-    if (this.host.pass === 0) {
+    if (this.host.isDefinitionCollectionStage) {
       if (modifiesHierarchy && !label.startsWith(".")) {
         this.host.currentParentLabel = fullLabel;
         this.host.currentParentIsGlobal = isGlobal;
@@ -373,7 +376,7 @@ export class SymbolScopeService {
       return;
     }
 
-    if (this.host.pass === 2) {
+    if (this.host.enforceResolvedLabels) {
       const existingEntry = this.host.labelTable.get(fullLabel);
       if (existingEntry) {
         if (existingEntry.isStatic !== isStatic) {
@@ -640,14 +643,14 @@ export class SymbolScopeService {
           return entry.value;
         }
 
-        if (this.host.pass === 0) {
+        if (this.host.isDefinitionCollectionStage) {
           return 0;
         }
       }
     }
 
     if (!this.host.labelTable.has(label)) {
-      if (this.host.pass === 0) {
+      if (this.host.isDefinitionCollectionStage) {
         return 0;
       }
       throw new Error(`Error: Label '${label}' not found.`);

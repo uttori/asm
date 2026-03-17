@@ -67,9 +67,7 @@ export interface ExpressionHost {
 export interface ArchitectureContext {
   readonly pass: number;
   readonly snespos: number;
-  readonly currentAddress: number;
   readonly optimizeDirectPage: boolean;
-  readonly directPageOptimizationEnabled: boolean;
   readonly operandResolver: OperandResolutionContext;
   write1(value: number): void;
   write2(value: number): void;
@@ -79,8 +77,6 @@ export interface ArchitectureContext {
   emitLong(value: number): void;
   findNextLabel(reference: string, fromAddress: number): number;
   findPreviousLabel(reference: string, fromAddress: number): number;
-  findNextRelativeLabel(reference: string, fromAddress: number): number;
-  findPreviousRelativeLabel(reference: string, fromAddress: number): number;
 }
 
 export interface Spc700Context {

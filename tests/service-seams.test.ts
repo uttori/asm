@@ -546,3 +546,87 @@ test("typed parser keeps nested condition-loop structures executable", (t) => {
   assembler.executeNodeStream(nodes);
   t.deepEqual(executed, ["db $01"]);
 });
+
+test("stage runner builds program once and executes all stages", (t) => {
+  const assembler = new Assembler();
+  const parseSpy = stub(assembler, "parseCommandStreamToNodes").callThrough();
+  const stagedAssembler = assembler as Assembler & {
+    buildProgramModel(source: string, sourceFile?: string, startLine?: number): {
+      sourceFile: string;
+      startLine: number;
+      nodes: unknown[];
+    };
+    assembleProgram(program: {
+      sourceFile: string;
+      startLine: number;
+      nodes: unknown[];
+    }): void;
+  };
+
+  const program = stagedAssembler.buildProgramModel("org $808000\ndb $01", "test.asm", 0);
+  stagedAssembler.assembleProgram(program);
+
+  // Cached pass program should be reused across stage executions.
+  t.true(parseSpy.calledOnce);
+  t.is(assembler.romdata[0], 0x01);
+});
+
+test("stage execution state is recreated per collect stage run", (t) => {
+  const assembler = new Assembler();
+  const program = assembler.buildProgramModel("db $01", "test.asm", 0);
+
+  assembler.setWritePosition(0x808000);
+  const firstCollect = assembler.runStage("collectDefinitions", program) as { cursor: { snespos: number } };
+  t.is(firstCollect.cursor.snespos, 0x808001);
+
+  assembler.setWritePosition(0x80A000);
+  const secondCollect = assembler.runStage("collectDefinitions", program) as { cursor: { snespos: number } };
+  t.not(firstCollect, secondCollect);
+  t.is(secondCollect.cursor.snespos, 0x80A001);
+});
+
+test("stage states keep symbols/control/write state isolated by stage", (t) => {
+  const assembler = new Assembler();
+  const program = assembler.buildProgramModel("Label:\ndb $01", "test.asm", 0);
+  const collect = assembler.runStage("collectDefinitions", program) as {
+    symbols: { labelTable: Map<string, unknown> };
+    control: object;
+    writeState: object;
+  };
+  const layout = assembler.runStage("resolveLayout", program) as {
+    symbols: { labelTable: Map<string, unknown> };
+    control: object;
+    writeState: object;
+  };
+
+  t.not(collect.symbols.labelTable, layout.symbols.labelTable);
+  t.not(collect.control, layout.control);
+  t.not(collect.writeState, layout.writeState);
+});
+
+test("instruction dispatch follows active stage capabilities", (t) => {
+  const assembler = new Assembler();
+  const internalAssembler = assembler as unknown as Record<string, (...args: unknown[]) => unknown>;
+  const layoutSpy = stub(internalAssembler, "layoutInstruction").returns(true);
+  const emitSpy = stub(internalAssembler, "emitInstruction").returns(true);
+  const program = assembler.buildProgramModel("lda #$01", "test.asm", 0);
+
+  assembler.runStage("collectDefinitions", program);
+  t.true(layoutSpy.called);
+
+  layoutSpy.resetHistory();
+  assembler.runStage("resolveLayout", program);
+  t.true(emitSpy.called);
+});
+
+test("architecture registry resolves aliases through arch directive", (t) => {
+  const assembler = new Assembler();
+
+  assembler.handleArch(["arch", "spc700-inline"]);
+  t.is(assembler.arch, "spc700");
+  t.true(assembler.spcInlineCompatMode);
+
+  assembler.handleArch(["arch", "superfx"]);
+  t.is(assembler.arch, "superfx");
+  t.false(assembler.spcInlineCompatMode);
+});
