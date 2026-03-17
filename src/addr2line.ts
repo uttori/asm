@@ -1,6 +1,10 @@
 import * as fs from "fs";
 import { CRC32 } from "./crc32.js";
 
+let debug = (..._) => {};
+/* c8 ignore next */
+try { const { default: d } = await import("debug"); debug = d("Addr2Line"); } catch {}
+
 /**
  * Reads a file from disk.
  * Returns the file content as a Buffer if successful; otherwise returns null.
@@ -12,7 +16,7 @@ function readFileContent(filename: string): Buffer | null {
     // console.log(`addr2line readFileContent: ${filename}`);
     return fs.readFileSync(filename);
   } catch (err) {
-    console.error(`Error reading file ${filename}:`, err);
+    debug(`Error reading file ${filename}:`, err);
     // Could not read file – return null so that fileCrc remains 0.
     return null;
   }

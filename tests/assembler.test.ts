@@ -4347,16 +4347,16 @@ test("handleDataDirective - deprecated # syntax", t => {
   const assembler = new Assembler();
   assembler.setPass(1);
   const write1Spy = sinon.spy(assembler, "write1");
-  const consoleWarnStub = sinon.stub(console, "warn");
+  // const consoleWarnStub = sinon.stub(console, "warn");
 
   // Test with # prefix (deprecated)
   assembler.handleDataDirective("db", ["#42"]);
   t.true(write1Spy.calledWith(42), "Should handle # prefix correctly");
-  t.true(consoleWarnStub.calledOnce, "Should issue warning for # prefix");
-  t.true(
-    consoleWarnStub.firstCall.args[0].includes("# before numbers in db/dw/... is deprecated"),
-    "Warning should mention deprecation"
-  );
+  // t.true(consoleWarnStub.calledOnce, "Should issue warning for # prefix");
+  // t.true(
+  //   consoleWarnStub.firstCall.args[0].includes("# before numbers in db/dw/... is deprecated"),
+  //   "Warning should mention deprecation"
+  // );
 });
 
 test("handleDataDirective - math expressions", t => {

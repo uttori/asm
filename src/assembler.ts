@@ -2329,7 +2329,7 @@ export class Assembler implements AssemblySession {
         debug("handleDataDirective numeric values", value);
         // Handle numeric values
         if (value.startsWith("#")) {
-          console.warn("Warning: # before numbers in db/dw/... is deprecated. Remove the #.");
+          debug("Warning: # before numbers in db/dw/... is deprecated. Remove the #.");
           value = value.substring(1);
         }
 

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -22,10 +23,34 @@ const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(TEST_FILE_DIR, "..");
 const FIXTURES_DIR = path.resolve(PROJECT_ROOT, "src/tests");
 const EXPECTED_DIR = path.resolve(PROJECT_ROOT, "src/tests_tmp_app");
-const TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/dummy_rom.sfc");
+const SOURCE_ROM_PATH = path.resolve(PROJECT_ROOT, "src/dummy_rom.sfc");
+
+/** Unique per-test temp dir for target ROM; set by test.before, cleaned by test.after.always */
+let tempDir: string;
+let TARGET_ROM_PATH: string;
+
+test.before(() => {
+  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-js-integration-"));
+  TARGET_ROM_PATH = path.join(tempDir, "dummy_rom.sfc");
+  if (fs.existsSync(SOURCE_ROM_PATH)) {
+    fs.copyFileSync(SOURCE_ROM_PATH, TARGET_ROM_PATH);
+  }
+});
+
+test.after.always(() => {
+  if (tempDir && fs.existsSync(tempDir)) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
 const SLIDESHOW_SRC_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/SLIDE.SRC");
 const SLIDESHOW_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/SLIDES-GOOD-NEW.sfc");
 const SLIDESHOW_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/test.sfc");
+
+const CHOU_SRC_PATH = path.resolve(PROJECT_ROOT, "src/Super-Ghouls-n-Ghosts-Disassembly-main/CHOU.ASM");
+const CHOU_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "src/Super-Ghouls-n-Ghosts-Disassembly-main/CHOU.SFC");
+const CHOU_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/Super-Ghouls-n-Ghosts-Disassembly-main/test.sfc");
+
 const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
 const hashBuffer = (buffer: Buffer): string => createHash("sha256").update(buffer).digest("hex");
@@ -328,7 +353,7 @@ test("integration tree-pass driver executes typed loop/conditional blocks", (t) 
   t.is(hashBuffer(legacy), hashBuffer(tree));
 });
 
-test("integration slideshow regression keeps CLI-style include flow byte-identical", (t) => {
+test("integration SLIDESHOW regression keeps CLI-style include flow byte-identical", (t) => {
   const source = fs.readFileSync(SLIDESHOW_SRC_PATH, "utf8");
   const expected = fs.readFileSync(SLIDESHOW_EXPECTED_PATH);
   const targetRom = fs.existsSync(SLIDESHOW_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(SLIDESHOW_TARGET_ROM_PATH)) : undefined;
@@ -352,7 +377,29 @@ test("integration slideshow regression keeps CLI-style include flow byte-identic
   t.is(hashBuffer(output), hashBuffer(expected));
 });
 
+test("integration CHOU regression keeps CLI-style include flow byte-identical", (t) => {
+  const source = fs.readFileSync(CHOU_SRC_PATH, "utf8");
+  const expected = fs.readFileSync(CHOU_EXPECTED_PATH);
+  const targetRom = fs.existsSync(CHOU_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(CHOU_TARGET_ROM_PATH)) : undefined;
+  const assembler = new Assembler(targetRom);
+  assembler.setChecksumMode("simple");
+  const inputDir = path.dirname(CHOU_SRC_PATH);
+  assembler.setIncludePaths(["./", inputDir]);
+  assembler.setCurrentFile(CHOU_SRC_PATH);
 
+  for (const pass of [0, 1, 2]) {
+    assembler.setPass(pass);
+    const lines = source.split("\n");
+    for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.assembleblock(lines[lineNumber].trim());
+    }
+    assembler.finishPass();
+  }
+
+  const output = Buffer.from(assembler.getBinaryOutput());
+  t.is(hashBuffer(output), hashBuffer(expected));
+});
 
 for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {
   test.serial(`integration fixture parity - ${fixtureName}`, t => {

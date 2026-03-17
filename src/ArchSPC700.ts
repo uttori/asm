@@ -2155,7 +2155,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
       case "l":
         return 3;
       case "d":
-        console.warn("Warning: .d opcode suffix is deprecated.");
+        debug("Warning: .d opcode suffix is deprecated.");
         return 4;
       default:
         throw new Error("Error: Invalid opcode length.");

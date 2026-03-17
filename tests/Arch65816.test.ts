@@ -16,14 +16,14 @@ const createArch65816 = () => {
 
 test("Arch65816.getlenfromchar resolves supported suffixes", t => {
   const { arch } = createArch65816();
-  const warnStub = sinon.stub(console, "warn");
-  t.teardown(() => warnStub.restore());
+  // const warnStub = sinon.stub(console, "warn");
+  // t.teardown(() => warnStub.restore());
 
   t.is(arch.getlenfromchar("b"), 1, "Should resolve byte suffixes");
   t.is(arch.getlenfromchar("W"), 2, "Should resolve word suffixes case-insensitively");
   t.is(arch.getlenfromchar("l"), 3, "Should resolve long suffixes");
   t.is(arch.getlenfromchar("d"), 4, "Should resolve deprecated double-word suffixes");
-  t.true(warnStub.calledOnceWithExactly("Warning: .d opcode suffix is deprecated."));
+  // t.true(warnStub.calledOnceWithExactly("Warning: .d opcode suffix is deprecated."));
 });
 
 test("Arch65816.getlenfromchar throws for invalid suffixes", t => {
@@ -454,17 +454,17 @@ test("Arch65816.handleBlockMove throws when operand count is invalid", t => {
 
 test("Arch65816.handleGenericOpcode encodes PEA with a 16-bit operand", t => {
   const { assembler, arch } = createArch65816();
-  const warnStub = sinon.stub(console, "warn");
+  // const warnStub = sinon.stub(console, "warn");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
-    warnStub.restore();
+    // warnStub.restore();
     write1Stub.restore();
     write2Stub.restore();
   });
 
   t.true(arch.handleGenericOpcode("PEA", 0x1234, 2, false, false));
-  t.true(warnStub.calledOnceWithExactly("arch65816 handleGenericOpcode: PEA assuming 8-bit mode."));
+  // t.true(warnStub.calledOnceWithExactly("arch65816 handleGenericOpcode: PEA assuming 8-bit mode."));
   t.true(write1Stub.calledOnceWithExactly(0xF4));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });

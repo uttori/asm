@@ -1652,7 +1652,7 @@ export class Arch65816 implements ArchitectureEncoder {
             throw new Error("Error: invalid_number");
           }
           if (!explicitlen && !hexconstant) {
-            console.warn(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
+            debug(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
           }
           this.assembler.write1(opcodeByte);
           // These opcodes have fixed operand widths in 65816 encoding.
@@ -1788,7 +1788,7 @@ export class Arch65816 implements ArchitectureEncoder {
       case "l":
         return 3;
       case "d":
-        console.warn("Warning: .d opcode suffix is deprecated.");
+        debug("Warning: .d opcode suffix is deprecated.");
         return 4;
       default:
         throw new Error("Error: Invalid opcode length.");

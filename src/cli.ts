@@ -1,3 +1,4 @@
+/* eslint-disable n/no-process-exit */
 import * as fs from "fs";
 import { Assembler } from "./assembler.js";
 import path from "path";
@@ -87,15 +88,15 @@ class CLI {
       this.writeBinary(outputFile);
       console.log(`Success: Output written to '${outputFile}'.`);
     } catch (error) {
-      console.error(`Compilation failed: ${error.message}`);
+      console.error(`Compilation failed: ${error?.message}`);
       process.exit(1);
     }
   }
 
   /**
    * Processes and assembles an assembly source code string.
-   * @param source
-   * @param pass
+   * @param {string} source - The source code to assemble.
+   * @param {number} pass - The pass number to assemble.
    */
   assembleFile(source: string, pass: number): void {
     console.log(`cli assembleFile ${pass} started`);
@@ -113,7 +114,7 @@ class CLI {
 
   /**
    * Writes the assembled binary data to a file.
-   * @param outputFile
+   * @param {string} outputFile - The path to the output file.
    */
   writeBinary(outputFile: string): void {
     console.log("cli writeBinary", this.assembler.getBinaryOutput());

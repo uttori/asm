@@ -721,7 +721,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
       // Accept normalized forms like #$0 in addition to #0.
       const regnum = this.assembler.operandResolver.getnum(str.slice(1));
       if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
-        console.error("Invalid register number", str, regnum);
+        debug("Invalid register number", str, regnum);
         return null;
       }
       return regnum;
