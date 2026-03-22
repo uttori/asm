@@ -16,8 +16,10 @@ type StructDefinition = {
     extensionSize?: number;
 };
 export interface SymbolScopeHost {
-    pass: number;
-    snespos: number;
+    mode: "layout" | "emit";
+    enforceResolvedLabels: boolean;
+    isDefinitionCollectionStage: boolean;
+    currentTargetAddress: number;
     currentNamespace: string;
     namespaceNestingEnabled: boolean;
     namespaceNestingPath: string[];
@@ -38,11 +40,18 @@ export interface SymbolScopeHost {
     };
     currentParentLabel: string;
     currentParentIsGlobal: boolean;
+    currentGlobalParentLabel: string;
+    labelParents: Map<string, string | null>;
     structs: Map<string, StructDefinition>;
 }
 export declare class SymbolScopeService {
     readonly host: SymbolScopeHost;
     constructor(host: SymbolScopeHost);
+    isMissingLabelError(error: unknown): boolean;
+    findNearestHierarchyAncestor(label: string): string | null;
+    getHierarchyChain(label: string): string[];
+    getAncestorPrefixes(label: string): string[];
+    getScopedParentLabel(dotCount: number): string;
     /**
      * Checks if a label is in scope.
      * @param {string} identifier The label to check.
@@ -100,10 +109,11 @@ export declare class SymbolScopeService {
      */
     getLabelValueDirect(label: string, requireStatic: boolean): number;
     /**
-     * Gets the size of an object.
-     * @param {string} identifier The identifier of the object.
-     * @param {boolean} baseOnly Whether to only get the base size.
-     * @returns {number} The size of the object.
+     * Gets the size of a struct or extension.
+     * @param {string} identifier The identifier of the struct or extension.
+     * @param {boolean} [baseOnly] If true, returns only the base size without extensions.
+     * @returns {number} The size of the struct or extension.
+     * @throws {Error} If the struct or extension doesn't exist.
      */
     getObjectSize(identifier: string, baseOnly?: boolean): number;
     /**

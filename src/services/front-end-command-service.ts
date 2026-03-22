@@ -8,7 +8,7 @@ export type FrontEndCommandHost = {
   currentParentIsGlobal: boolean;
   currentGlobalParentLabel: string;
   parseFunctionDefinition(defLine: string): void;
-  processNestedCommand(command: string): void;
+  processCommand(command: string): void;
   handleRelativeLabel(label: string): number;
   handleLabelDefinition(labelName: string): void;
   setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
@@ -118,7 +118,7 @@ export class FrontEndCommandService {
     }
 
     if (payload.length > 1) {
-      this.host.processNestedCommand(payload.slice(1).join(" "));
+      this.host.processCommand(payload.slice(1).join(" "));
     }
 
     command.labelName = cleanName;

@@ -2,13 +2,15 @@ import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { AssemblerServices, CursorAddressFacade } from "./assembler-internals.js";
-import type { ArchitectureContext, ArchitectureEncoder, ExpressionHost, LoweredInstruction, Spc700Context, SuperFXContext } from "./architecture-types.js";
+import type { ArchitectureContext, ExpressionHost, LoweredInstruction, Spc700Context, SuperFXContext } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addr2line.js";
+import type { AssemblerTraceCommandEvent, AssemblerTraceListener } from "./debug-tracing.js";
 import type { ConditionalBranchNode, ExecutableNode, IncludeNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";
 import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expression-node.js";
 import { type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
+import { type ArchitectureDefinition, type ArchitectureRegistry } from "./architecture-registry.js";
 import { type DirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
 import { CommandPipelineService, type CommandPipelineHost } from "./services/command-pipeline-service.js";
@@ -35,6 +37,83 @@ export type MacroDefinition = {
 export type LoopBlock = LoopNode;
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
+export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
+export type ProgramModel = {
+    sourceFile: string;
+    startLine: number;
+    nodes: RuntimeNode[];
+};
+export type StageExecutionMode = "layout" | "emit";
+export type StageExecutionCapabilities = {
+    instructionMode: StageExecutionMode;
+    canEmitBytes: boolean;
+    canFinalize: boolean;
+    enforceResolvedLabels: boolean;
+    isDefinitionCollectionStage: boolean;
+};
+export type StageCursorState = {
+    currentTargetAddress: number;
+    currentTargetBaseAddress: number;
+    currentTargetStartAddress: number;
+    currentTargetBaseStartAddress: number;
+    bytes: number;
+};
+export type StageSymbolState = {
+    labelTable: Map<string, LabelEntry>;
+    forwardLabels: {
+        [depth: number]: {
+            addr: number;
+            macroInstance?: number;
+        }[];
+    };
+    backwardLabels: {
+        [depth: number]: {
+            addr: number;
+            macroInstance?: number;
+        }[];
+    };
+    currentParentLabel: string;
+    currentParentIsGlobal: boolean;
+    currentGlobalParentLabel: string;
+    labelParents: Map<string, string | null>;
+};
+export type StageControlState = {
+    condStack: {
+        type: "if" | "while";
+        cond: boolean;
+        start?: number;
+        expr?: string;
+        branchTaken?: boolean;
+        conditionStr?: string;
+    }[];
+    namespaceStack: string[];
+    currentNamespace: string;
+    namespaceNestingEnabled: boolean;
+    namespaceNestingPath: string[];
+    loopStack: LoopBlock[];
+    currentLoop: LoopBlock | null;
+    collectingLoop: boolean;
+    loopNestingLevel: number;
+    inMacroExpansion: boolean;
+    macroLabelInstance: number;
+};
+export type StageWriteState = {
+    inSpcblock: boolean;
+    spcblockData: SpcblockData | null;
+    spcInlineCompatMode: boolean;
+    activeFreespaceStartPc: number | null;
+    activeFreespaceContentStartPc: number | null;
+};
+export type StageExecutionState = {
+    stage: AssemblyStageName;
+    pass: 0 | 1 | 2;
+    capabilities: StageExecutionCapabilities;
+    cursor: StageCursorState;
+    symbols: StageSymbolState;
+    control: StageControlState;
+    writeState: StageWriteState;
+    loweredCommandCache: WeakMap<NormalizedCommand, LoweredCommand>;
+};
 type LoweredDirective = {
     kind: "directive";
     keyword: string;
@@ -42,6 +121,7 @@ type LoweredDirective = {
     source: NormalizedCommand["source"];
 };
 type LoweredCommand = LoweredDirective | LoweredInstruction;
+type TraceCommandContext = Pick<AssemblerTraceCommandEvent, "file" | "line" | "raw" | "normalized">;
 export type WhileTracker = {
     iswhile: boolean;
     startline: number;
@@ -81,10 +161,10 @@ export interface StructDefinition {
     extensionSize?: number;
 }
 export type PushPcStackEntry = {
-    snespos: number;
-    startpos: number;
-    realsnespos: number;
-    realstartpos: number;
+    currentTargetAddress: number;
+    currentTargetStartAddress: number;
+    currentTargetBaseAddress: number;
+    currentTargetBaseStartAddress: number;
 };
 type SpcblockType = "nspc" | "custom";
 type SpcblockData = {
@@ -101,10 +181,14 @@ export interface IncludedFileInfo {
     guarded: boolean;
 }
 export declare class Assembler implements AssemblySession {
-    snespos: number;
-    realsnespos: number;
-    startpos: number;
-    realstartpos: number;
+    /** The current target address. `snespos` */
+    currentTargetAddress: number;
+    /** The current target base address. `realsnespos` */
+    currentTargetBaseAddress: number;
+    /** The current target start address. `startpos` */
+    currentTargetStartAddress: number;
+    /** The current target base start address. `realstartpos` */
+    currentTargetBaseStartAddress: number;
     bytes: number;
     pushBaseStack: number[];
     /** Possible values: lorom, hirom, exlorom, exhirom, sa1rom, sfxrom, bigsa1rom, norom */
@@ -122,7 +206,7 @@ export declare class Assembler implements AssemblySession {
     sa1banks: number[];
     /** Placeholder for ROM */
     romdata: number[] | Uint8Array;
-    default_freespacebyte: number;
+    defaultFreespaceByte: number;
     activeFreespaceStartPc: number | null;
     activeFreespaceContentStartPc: number | null;
     pass: number;
@@ -154,6 +238,10 @@ export declare class Assembler implements AssemblySession {
     addressToLineMapping: AddressToLineMapping;
     currentFile: string;
     currentLine: number;
+    /** Optional sink for structured tracing used by tests and ad-hoc debug scripts. */
+    traceListener: AssemblerTraceListener | null;
+    /** Active command contexts so nested byte writes inherit the right source line. */
+    traceCommandStack: TraceCommandContext[];
     defines: Map<string, string>;
     characterMappings: Map<string, number>;
     currentTable: string | null;
@@ -188,7 +276,7 @@ export declare class Assembler implements AssemblySession {
     savedPCStack: number[];
     /** Initialize fill pattern */
     fillbyte: number[];
-    targetRom: number[] | Uint8Array;
+    targetRom: Uint8Array;
     static crcTable: number[] | null;
     includedFiles: Map<string, IncludedFileInfo>;
     includeStack: string[];
@@ -202,14 +290,19 @@ export declare class Assembler implements AssemblySession {
     inMacroExpansion: boolean;
     currentParentLabel: string;
     currentParentIsGlobal: boolean;
+    currentGlobalParentLabel: string;
+    labelParents: Map<string, string | null>;
     inSpcblock: boolean;
     spcblockData: SpcblockData | null;
     spcInlineCompatMode: boolean;
     requireStaticLabelLookup: boolean;
     readonly passProgramCache: Map<string, RuntimeNode[]>;
     readonly directiveRegistry: DirectiveRegistry;
+    readonly architectureRegistry: ArchitectureRegistry;
     readonly cursorAddress: CursorAddressFacade;
     readonly services: AssemblerServices;
+    readonly stageExecutionStates: Map<AssemblyStageName, StageExecutionState>;
+    activeStageExecutionState: StageExecutionState | null;
     get commandPipelineService(): CommandPipelineService;
     get defineEngine(): DefineEngine;
     get frontEndCommandService(): FrontEndCommandService;
@@ -219,11 +312,15 @@ export declare class Assembler implements AssemblySession {
     get romWriter(): RomWriterService;
     get structEngine(): StructEngine;
     get currentAddress(): number;
-    get directPageOptimizationEnabled(): boolean;
     recordCurrentAddress(): void;
     setWritePosition(address: number): void;
     syncWriteStarts(): void;
     incrementBytesWritten(num: number): void;
+    /**
+     * Installs or clears the structured trace listener.
+     * @param {AssemblerTraceListener | null} listener The listener to receive trace events.
+     */
+    setTraceListener(listener: AssemblerTraceListener | null): void;
     processNestedCommand(command: string): void;
     loadTestRomData(): void;
     createCursorAddressFacade(): CursorAddressFacade;
@@ -244,12 +341,6 @@ export declare class Assembler implements AssemblySession {
     setChecksumMode(mode: "asar" | "simple"): void;
     readLittleEndian(bytes: Uint8Array, pos: number, width: number): number | undefined;
     resolveReadablePath(filename: string): string | undefined;
-    hasLabelInScope(identifier: string): boolean;
-    getCurrentTargetAddress(): number;
-    getCurrentTargetBaseAddress(): number;
-    evaluateMath(input: string): number;
-    convertTargetAddressToRomOffset(address: number): number;
-    convertRomOffsetToTargetAddress(offset: number): number;
     resolveExpressionHostLabel(identifier: string): number | string;
     getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
     lookupDefineValue(varName: string): string | undefined;
@@ -278,15 +369,20 @@ export declare class Assembler implements AssemblySession {
      * @param {number} length The length of the section to fill.
      */
     fillRomData(start: number, value: number, length: number): void;
+    getActiveStageCapabilities(): StageExecutionCapabilities;
+    layoutInstruction(input: string[] | LoweredInstruction): boolean;
+    emitInstruction(input: string[] | LoweredInstruction): boolean;
     /**
      * Picks the appropriate instruction handler based on architecture.
      * @param {string[] | LoweredInstruction} input The instruction to pick.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     asblock_pick(input: string[] | LoweredInstruction): boolean;
-    getActiveArchitectureEncoder(): ArchitectureEncoder | undefined;
-    findNextRelativeLabel(reference: string, fromAddress: number): number;
-    findPreviousRelativeLabel(reference: string, fromAddress: number): number;
+    resolveActiveArchitecture(): {
+        name: string;
+        definition?: ArchitectureDefinition;
+    };
+    classifyOperandForActiveArchitecture(operand: string): import("./architecture-types.js").LoweredOperand;
     /**
      * Writes 1, 2, 3, or 4 bytes to ROM.
      * @param {number} num - The byte to write.
@@ -299,11 +395,6 @@ export declare class Assembler implements AssemblySession {
     emitLong(num: number): void;
     write4(num: number): void;
     /**
-     * Validates `check bankcross` constraints for a multi-byte write.
-     * @param {number} length The number of bytes that will be written.
-     */
-    assertBankCrossAllowed(length: number): void;
-    /**
      * Reads 1, 2, or 3 bytes from ROM.
      * @param {number} insnespos - The SNES address to read from.
      * @returns {number} The byte read from ROM.
@@ -313,43 +404,14 @@ export declare class Assembler implements AssemblySession {
     read3(insnespos: number): number;
     assembleblock(block: string): void;
     preprocessBlockCommands(block: string): string[];
-    splitInlineCommands(commands: string[]): string[];
-    removeInlineComment(line: string): string;
     /**
      * Processes a single command from `assembleblock`.
      * @param {string} command - The command to process.
      */
     processCommand(command: string): void;
     processNormalizedCommand(state: NormalizedCommand, rewriteRaw?: boolean): void;
+    lowerNodeWithStageCache(command: NormalizedCommand): LoweredCommand;
     dispatchLoweredNode(lowered: LoweredCommand): void;
-    handlePushBase(): void;
-    /**
-     * Saves the current character mapping table.
-     */
-    handlePushTable(): void;
-    /**
-     * Restores the previously saved character mapping table.
-     */
-    handlePullTable(): void;
-    /**
-     * Minimal FREECODE/FREESPACE support used by active tests.
-     * Allocates a block at/after current ROM end, emits a placeholder RATS tag, then positions assembly after it.
-     * @param {string} type - Directive keyword.
-     * @param {string[]} _params - Directive parameters.
-     */
-    handleFreespace(type: string, _params: string[]): void;
-    /**
-     * Sets default freespace fill byte.
-     * @param {string[]} params - FREESPACEBYTE arguments.
-     */
-    handleFreespaceByte(params: string[]): void;
-    /**
-     * Minimal PROT support used by active tests.
-     * Emits PROT table with 24-bit addresses and STOP marker.
-     * @param {string[]} words - Label list arguments.
-     */
-    handleProt(words: string[]): void;
-    handlePullBase(): void;
     handleSpcblock(words: string[]): void;
     handleEndSpcblock(words: string[]): void;
     handleStartpos(params: string[]): void;
@@ -366,132 +428,6 @@ export declare class Assembler implements AssemblySession {
      * @param {string} defLine - The function definition line.
      */
     parseFunctionDefinition(defLine: string): void;
-    /**
-     * Expands and calls a macro invocation.
-     * The invocation is expected to be in the form:
-     *   macroName(arg1, arg2, ...)
-     * @param {string} invocation The macro invocation to expand and call.
-     */
-    callMacro(invocation: string): void;
-    /**
-     * Expands a macro line by substituting fixed parameters (<param>) and variadic parameters (<...[expr]>),
-     * then resolves any remaining defines.
-     * @param {string} line The macro line to expand.
-     * @param {Map<string, string>} fixedArgs A map of fixed parameters to their values.
-     * @param {string[]} variadicArgs An array of variadic arguments.
-     * @param {number} variadicCount The number of variadic arguments.
-     * @returns {string} The expanded macro line.
-     */
-    expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string;
-    /**
-     * Handles define commands.
-     * Example:
-     * @example
-     * !identifier = value // Basic assignment
-     * !identifier += value // Append to existing value
-     * !identifier := value // Resolve defines in the value
-     * !identifier #= value // Evaluate as math expression
-     * !identifier ?= value // Only assign if not already defined
-     * @param {string} command The define command to handle.
-     */
-    handleDefineCommand(command: string): void;
-    /**
-     * Resolves variadic placeholders in already-expanded macro lines.
-     * This is needed for loop bodies where <...[expr]> must be re-evaluated each iteration.
-     * @param {string} command The command line to resolve.
-     * @returns {string} `command` with variadic placeholders resolved.
-     */
-    resolveVariadicPlaceholders(command: string): string;
-    /**
-     * Handles undef commands.
-     * Example:
-     * @example
-     * undef "identifier"
-     * undef identifier
-     * @param {string[]} params The undef parameters.
-     */
-    handleUndef(params: string[]): void;
-    /**
-     * Processes nested defines in a string, properly handling the !{...} syntax
-     * by immediately resolving the content inside braces.
-     * @param {string} content The content with nested defines to process
-     * @returns {string} The resolved identifier
-     */
-    processNestedDefines(content: string): string;
-    /**
-     * Helper method to resolve one level of defines in a string.
-     * @param {string} content The content to process
-     * @returns {string} The processed content with one level of defines resolved
-     */
-    resolveOneLevelOfDefines(content: string): string;
-    /**
-     * Helper method to resolve regular !defines (non-braced)
-     * @param {string} content The content to process
-     * @returns {string} The processed content with regular defines resolved
-     */
-    resolveRegularDefines(content: string): string;
-    /**
-     * Resolves !define references inside db string literals, honoring escaped exclamation marks.
-     * @param {string} content The unquoted string literal content.
-     * @returns {string} The string with defines expanded.
-     */
-    resolveDefinesInStringLiteral(content: string): string;
-    /**
-     * Processes a define value string, resolving any !{...} expressions it contains.
-     * @param {string} value The value string potentially containing braced defines
-     * @returns {string} The processed value with all braced defines resolved
-     */
-    processValueWithBracedDefines(value: string): string;
-    /**
-     * Handles `+` and `-` relative labels correctly using SNES memory position.
-     * @param {string} label The label to handle.
-     * @returns {number} The address of the label.
-     */
-    handleRelativeLabel(label: string): number;
-    /**
-     * Finds the next occurrence of a `+` label based on SNES memory position.
-     * @param {string} label The label to find.
-     * @param currentAddressOverride
-     * @returns {number} The address of the next label.
-     */
-    findNextLabel(label: string, currentAddressOverride?: number): number;
-    /**
-     * Finds the previous occurrence of a `-` label based on SNES memory position.
-     * @param {string} label The label to find.
-     * @param currentAddressOverride
-     * @returns {number} The address of the previous label.
-     */
-    findPreviousLabel(label: string, currentAddressOverride?: number): number;
-    /**
-     * Handles setting a label in the assembler.
-     * @param {string} label The label to set.
-     * @param {number} value The value to set the label to.
-     * @param {boolean} isStatic Whether the label is static.
-     * @param {boolean} isMacroLabel Whether this is a macro label.
-     * @param {boolean} isGlobal Whether this is a global label.
-     * @param {boolean} modifiesHierarchy Whether this label affects the sublabel hierarchy.
-     */
-    setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
-    /**
-     * Resolves a compound struct member id (e.g. TestStruct.count, TestStruct[0].count, TestStruct.NewStruct.new).
-     * @param compoundId e.g. "TestStruct.count", "TestStruct[0].count", "TestStruct.NewStruct.new"
-     * @returns {number} The offset or address (base + index*size + memberOffset for indexed).
-     */
-    resolveStructMember(compoundId: string): number;
-    /**
-     * Retrieves the address of a stored label.
-     * @param {string} label The label to retrieve the value of.
-     * @param {boolean} requireStatic Whether the label must be static.
-     * @returns {number} The value of the label.
-     */
-    getLabelValue(label: string, requireStatic: boolean): number;
-    /**
-     * Direct label lookup without namespace resolution.
-     * @param {string} label The fully qualified label to look up.
-     * @param {boolean} requireStatic Whether the label must be static.
-     * @returns {number} The label's value.
-     */
-    getLabelValueDirect(label: string, requireStatic: boolean): number;
     /**
      * Handles `for` loops.
      * @param {string[]} condition - The condition for the loop.
@@ -572,32 +508,11 @@ export declare class Assembler implements AssemblySession {
      */
     handlePullPC(): void;
     /**
-     * Handles `struct` definitions.
-     * @param {string[]} words The parameters for the struct directive.
-     */
-    handleStruct(words: string[]): void;
-    /**
-     * Handles the end of a struct definition.
-     * @param {string[]} words The parameters for the endstruct directive.
-     */
-    handleEndStruct(words: string[]): void;
-    /**
-     * Resolves a struct label reference to its base address.
-     * @param {string} labelRef The label reference to resolve.
-     * @returns {number} The resolved base address.
-     */
-    resolveStructLabel(labelRef: string): number;
-    /**
      * Evaluates a range expression and returns the result.
      * @param {string} expr The expression to evaluate.
      * @returns {number} The result of the expression.
      */
     evaluateRangeExpression(expr: string | ExpressionNode): number;
-    /**
-     * Handles the `incbin` directive.
-     * @param {string[]} words The words from the `incbin` directive.
-     */
-    handleIncbin(words: string[]): void;
     /**
      * Sets the paths to search for included files.
      * @param {string[]} paths The paths to search for included files.
@@ -609,12 +524,93 @@ export declare class Assembler implements AssemblySession {
      * @returns {boolean} True if the expression is true, false otherwise.
      */
     evaluateExpression(expression: string | ExpressionNode): boolean;
+    /**
+     * Parses string input into an expression node and resolves nested references/defines.
+     * @param {string | ExpressionNode} expression The expression source or parsed node.
+     * @returns {ExpressionNode} The resolved expression tree.
+     */
     resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode;
+    /**
+     * Recursively resolves define references and nested reference-expression nodes.
+     * @param {ExpressionNode} expression The expression node to resolve.
+     * @returns {ExpressionNode} The resolved expression node.
+     */
     resolveExpressionNode(expression: ExpressionNode): ExpressionNode;
+    /**
+     * Resolves reference-style expressions such as identifiers, define references,
+     * member access, and indexed access into either simpler reference nodes or
+     * raw/math expressions when defines collapse them further.
+     * @param {ReferenceExpressionNode} expression The reference expression to resolve.
+     * @returns {ExpressionNode} The resolved expression tree.
+     */
     resolveReferenceExpressionNode(expression: ReferenceExpressionNode): ExpressionNode;
+    /**
+     * Resolves a reference expression all the way to a numeric value.
+     * @param {ReferenceExpressionNode} expression The reference expression to evaluate.
+     * @param {boolean} [requireStatic] Whether labels must be static.
+     * @returns {number} The numeric value of the reference.
+     */
     evaluateReferenceExpressionNode(expression: ReferenceExpressionNode, requireStatic?: boolean): number;
+    /**
+     * Resolves a reference expression to either a numeric value or a normalized
+     * label/struct lookup target, depending on how far the expression collapses.
+     * @param {ReferenceExpressionNode} expression The reference expression to resolve.
+     * @param {boolean} [requireStatic] Whether labels must be static.
+     * @returns {number | string} The resolved numeric value.
+     */
     resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic?: boolean): number | string;
-    normalizeReferenceExpressionNode(expression: ReferenceExpressionNode): string;
+    /**
+     * Resolves an already-normalized reference string as either a struct member/base
+     * or a plain label lookup.
+     * @param {string} normalizedReference The normalized reference text.
+     * @param {boolean} [requireStatic] Whether labels must be static.
+     * @returns {number} The resolved numeric address/value.
+     */
+    resolveNormalizedReferenceLabelValue(normalizedReference: string, requireStatic?: boolean): number;
+    /**
+     * Renders an index expression for a normalized reference string.
+     * @param {ExpressionNode} indexExpression The index expression to render.
+     * @returns {string} The rendered numeric or source-like index text.
+     */
+    resolveReferenceIndexText(indexExpression: ExpressionNode): string;
+    /**
+     * Renders a reference expression after resolving any nested index expressions.
+     * @param {ReferenceExpressionNode} expression The reference expression to render.
+     * @returns {string} The normalized reference text.
+     */
+    renderResolvedReferenceExpression(expression: ReferenceExpressionNode): string;
+    /**
+     * Re-runs `resolvedefines()` across a rendered reference expression and reparses
+     * it only when define expansion materially changes the text.
+     * @param {ReferenceExpressionNode} expression The reference expression to expand.
+     * @returns {ExpressionNode | undefined} The reparsed expression, if expansion changed it.
+     */
+    tryResolveExpandedReferenceExpression(expression: ReferenceExpressionNode): ExpressionNode | undefined;
+    /**
+     * Resolves standalone relative-label tokens used in define contexts.
+     * @param {string} input The token to resolve.
+     * @returns {string | undefined} The resolved address string, if applicable.
+     */
+    tryResolveRelativeLabelToken(input: string): string | undefined;
+    /**
+     * Resolves direct `!name` define references that are not assignments.
+     * @param {string} input The token to resolve.
+     * @returns {string | undefined} The resolved define value, if applicable.
+     */
+    tryResolveDirectDefineReference(input: string): string | undefined;
+    /**
+     * Resolves macro-label references such as `?label` or `#+?label`.
+     * @param {string} input The token to resolve.
+     * @returns {string | undefined} The resolved macro-label value, if applicable.
+     */
+    tryResolveMacroLabelReference(input: string): string | undefined;
+    /**
+     * Resolves bare label-like tokens before the generic character-by-character
+     * define scanner runs.
+     * @param {string} input The token to resolve.
+     * @returns {string | undefined} The resolved label value, if applicable.
+     */
+    tryResolveBareLabelReference(input: string): string | undefined;
     /**
      * Resolves all define replacements in a given string.
      * @param {string} input The string to resolve defines in.
@@ -640,6 +636,26 @@ export declare class Assembler implements AssemblySession {
      * @param {number} line - The line number to set.
      */
     setCurrentLine(line: number): void;
+    getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "pass" | "capabilities">;
+    cloneRelativeLabels(source: {
+        [depth: number]: {
+            addr: number;
+            macroInstance?: number;
+        }[];
+    }): {
+        [depth: number]: {
+            addr: number;
+            macroInstance?: number;
+        }[];
+    };
+    createStageExecutionState(stage: AssemblyStageName): StageExecutionState;
+    applyStageExecutionState(stageState: StageExecutionState): void;
+    captureStageExecutionState(stageState: StageExecutionState): void;
+    getOrCreateStageExecutionState(stage: AssemblyStageName): StageExecutionState;
+    buildProgramModel(source: string, sourceFile?: string, startLine?: number): ProgramModel;
+    runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState;
+    assembleProgram(program: ProgramModel): void;
+    assembleSource(source: string, sourceFile?: string, startLine?: number): ProgramModel;
     /**
      * Writes a block of data to ROM.
      * @param {number} start The starting address of the block to write.
@@ -653,14 +669,6 @@ export declare class Assembler implements AssemblySession {
      * @param {number} fsByte The byte value to fill the ROM with.
      */
     expandRom(newSize: number, fsByte: number): void;
-    /**
-     * Checks if a given ROM region is empty.
-     * @param {number} start - The starting address of the region to check.
-     * @param {number} size - The size of the region to check.
-     * @param {number} fsByte - The byte value to check for.
-     * @returns {boolean} True if the region is empty, false otherwise.
-     */
-    isBlockEmpty(start: number, size: number, fsByte: number): boolean;
     /**
      * Gets the size of a struct or extension.
      * @param {string} identifier The identifier of the struct or extension.
@@ -723,37 +731,6 @@ export declare class Assembler implements AssemblySession {
      */
     processStringWithMapping(input: string): number[];
     /**
-     * Splits a command into words, preserving quoted strings.
-     * @param {string} command - The command to split.
-     * @returns {string[]} - The command split into words.
-     */
-    splitCommandIntoWords(command: string): string[];
-    /**
-     * Converts a SNES address to a PC offset.
-     * Returns -1 if the address is invalid.
-     * @param {number} addr - The SNES address to convert.
-     * @returns {number} The PC offset.
-     */
-    snestopc: (addr: number) => number;
-    /**
-     * Converts a PC offset to a SNES address.
-     * Returns -1 if the address is invalid.
-     * @param {number} addr - The PC offset to convert.
-     * @returns {number} The SNES address.
-     */
-    pctosnes: (addr: number) => number;
-    /**
-     * Ensures the SNES position is valid, and resets it if it's not.
-     */
-    verifysnespos(): void;
-    /**
-     * Adjusts memory addresses based on the ROM type.
-     * @param {number} inaddr The address to adjust.
-     * @param {number} step The number of bytes to step.
-     * @returns {number} The adjusted address.
-     */
-    fixsnespos(inaddr: number, step?: number): number;
-    /**
      * Begins the collection of loop commands.
      * @param {string} type The type of loop to begin ("for" or "while").
      * @param {string} command The command to begin the loop with.
@@ -779,19 +756,6 @@ export declare class Assembler implements AssemblySession {
      * @param {LoopBlock} whileBlock The while loop block to execute.
      */
     executeWhileLoop(whileBlock: LoopBlock): void;
-    getDefineVariableFromNode(node: ExecutableNode): string | null;
-    /**
-     * Checks if a line is a define statement.
-     * @param {string} line The line to check.
-     * @returns {boolean} True if the line is a define statement, false otherwise.
-     */
-    isDefineStatement(line: string): boolean;
-    /**
-     * Extracts the variable name from a define statement.
-     * @param {string} line The line to extract the variable name from.
-     * @returns {string | undefined} The variable name or null if the line is not a define statement.
-     */
-    getDefineVariable(line: string): string | null;
     createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
     lowerNode(command: NormalizedCommand): LoweredCommand;
     executeNode(node: ExecutableNode): void;
@@ -801,22 +765,6 @@ export declare class Assembler implements AssemblySession {
     getOrBuildPassProgram(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
     getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined;
     createIncludeNode(file: string, source: string): IncludeNode;
-    /**
-     * Process a line from a macro expansion.
-     * @param {string} line The line to process from a macro.
-     */
-    processMacroLine(line: string): void;
-    /**
-     * Splits a string by commas while respecting function calls and parentheses.
-     * @param {string} input - The input string to split.
-     * @returns {string[]} Array of split values.
-     */
-    splitRespectingFunctions(input: string): string[];
-    /**
-     * Handles a label definition, whether it has a colon or not.
-     * @param {string} labelName The label name (without colon).
-     */
-    handleLabelDefinition(labelName: string): void;
 }
 export {};
 //# sourceMappingURL=assembler.d.ts.map

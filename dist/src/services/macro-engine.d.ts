@@ -13,7 +13,7 @@ export type MacroConditionalEntry = {
 export interface MacroEngineHost {
     pass: number;
     currentFile: string;
-    snespos: number;
+    currentTargetAddress: number;
     collectingLoop: boolean;
     condStack: MacroConditionalEntry[];
     defines: Map<string, string>;

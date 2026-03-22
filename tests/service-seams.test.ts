@@ -3,6 +3,7 @@ import { test } from "./ava-helper.js";
 
 import { Assembler } from "../src/assembler.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";
+import { handleArch } from "../src/directives/layout.js";
 
 const commandNode = (command: string) => createNormalizedCommand(
   command,
@@ -15,7 +16,7 @@ const commandNode = (command: string) => createNormalizedCommand(
 test("macro engine expands fixed and variadic parameters", (t) => {
   const assembler = new Assembler();
 
-  const expanded = assembler.expandMacroLine(
+  const expanded = assembler.macroEngine.expandMacroLine(
     "db <value>, <...[1]>, sizeof(...)",
     new Map([["value", "$10"]]),
     ["$20", "$30"],
@@ -161,31 +162,31 @@ test("command pipeline handles character mappings through normalized dispatch", 
 test("symbol scope resolves stored local relative labels", (t) => {
   const assembler = new Assembler();
   assembler.pass = 0;
-  assembler.snespos = 0x1234;
+  assembler.currentTargetAddress = 0x1234;
 
-  assembler.handleRelativeLabel("+");
+  assembler.symbolScope.handleRelativeLabel("+");
 
   assembler.pass = 2;
-  t.is(assembler.findNextLabel("+", 0x1200), 0x1234);
+  t.is(assembler.symbolScope.findNextLabel("+", 0x1200), 0x1234);
 });
 
 test("symbol scope resolves nested sublabels through current parent", (t) => {
   const assembler = new Assembler();
 
-  assembler.handleLabelDefinition("Main");
-  assembler.handleLabelDefinition(".Child");
+  assembler.symbolScope.handleLabelDefinition("Main");
+  assembler.symbolScope.handleLabelDefinition(".Child");
 
-  t.is(assembler.getLabelValue(".Child", false), assembler.snespos);
-  t.is(assembler.getLabelValue("Main_Child", false), assembler.snespos);
+  t.is(assembler.symbolScope.getLabelValue(".Child", false), assembler.currentTargetAddress);
+  t.is(assembler.symbolScope.getLabelValue("Main_Child", false), assembler.currentTargetAddress);
 });
 
 test("symbol scope preserves nested hierarchy during pass zero label collection", (t) => {
   const assembler = new Assembler();
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("arthur_sprites");
-  assembler.handleLabelDefinition(".underwear");
-  assembler.handleLabelDefinition("..idle");
+  assembler.symbolScope.handleLabelDefinition("arthur_sprites");
+  assembler.symbolScope.handleLabelDefinition(".underwear");
+  assembler.symbolScope.handleLabelDefinition("..idle");
 
   t.true(assembler.labelTable.has("arthur_sprites_underwear_idle"));
   t.is(assembler.currentParentLabel, "arthur_sprites_underwear_idle");
@@ -195,10 +196,10 @@ test("symbol scope keeps sibling single-dot labels under the enclosing global la
   const assembler = new Assembler();
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("_018049");
-  assembler.handleLabelDefinition(".804D");
-  assembler.handleLabelDefinition(".8051");
-  assembler.handleLabelDefinition(".8053");
+  assembler.symbolScope.handleLabelDefinition("_018049");
+  assembler.symbolScope.handleLabelDefinition(".804D");
+  assembler.symbolScope.handleLabelDefinition(".8051");
+  assembler.symbolScope.handleLabelDefinition(".8053");
 
   t.true(assembler.labelTable.has("_018049_804D"));
   t.true(assembler.labelTable.has("_018049_8051"));
@@ -211,10 +212,10 @@ test("symbol scope preserves underscore-containing global parents for single-dot
   const assembler = new Assembler();
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("stage1_earthquake");
-  assembler.handleLabelDefinition("stage1_earthquake_tiles");
-  assembler.handleLabelDefinition(".1");
-  assembler.handleLabelDefinition(".2");
+  assembler.symbolScope.handleLabelDefinition("stage1_earthquake");
+  assembler.symbolScope.handleLabelDefinition("stage1_earthquake_tiles");
+  assembler.symbolScope.handleLabelDefinition(".1");
+  assembler.symbolScope.handleLabelDefinition(".2");
 
   t.true(assembler.labelTable.has("stage1_earthquake_tiles_1"));
   t.true(assembler.labelTable.has("stage1_earthquake_tiles_2"));
@@ -226,10 +227,10 @@ test("symbol scope keeps sibling double-dot labels under the enclosing local lab
   const assembler = new Assembler();
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("random_values");
-  assembler.handleLabelDefinition(".idx");
-  assembler.handleLabelDefinition("..beginner");
-  assembler.handleLabelDefinition("..normal");
+  assembler.symbolScope.handleLabelDefinition("random_values");
+  assembler.symbolScope.handleLabelDefinition(".idx");
+  assembler.symbolScope.handleLabelDefinition("..beginner");
+  assembler.symbolScope.handleLabelDefinition("..normal");
 
   t.true(assembler.labelTable.has("random_values_idx_beginner"));
   t.true(assembler.labelTable.has("random_values_idx_normal"));
@@ -240,14 +241,14 @@ test("symbol scope keeps underscore-containing single-dot labels as double-dot p
   const assembler = new Assembler();
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("spc_0E00");
-  assembler.handleLabelDefinition(".stage1");
-  assembler.handleLabelDefinition("..ch8");
-  assembler.snespos += 1;
-  assembler.handleLabelDefinition(".stage1_boss");
-  assembler.handleLabelDefinition("..ch8");
-  assembler.snespos += 1;
-  assembler.handleLabelDefinition("..ch7");
+  assembler.symbolScope.handleLabelDefinition("spc_0E00");
+  assembler.symbolScope.handleLabelDefinition(".stage1");
+  assembler.symbolScope.handleLabelDefinition("..ch8");
+  assembler.currentTargetAddress += 1;
+  assembler.symbolScope.handleLabelDefinition(".stage1_boss");
+  assembler.symbolScope.handleLabelDefinition("..ch8");
+  assembler.currentTargetAddress += 1;
+  assembler.symbolScope.handleLabelDefinition("..ch7");
 
   t.true(assembler.labelTable.has("spc_0E00_stage1_ch8"));
   t.true(assembler.labelTable.has("spc_0E00_stage1_boss_ch8"));
@@ -261,27 +262,27 @@ test("symbol scope prefers exact single-dot locals before shortened underscore f
   const assembler = new Assembler();
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("_00ED00");
-  assembler.handleLabelDefinition(".arthur_underwear");
-  assembler.handleLabelDefinition("..knockback");
-  assembler.snespos += 1;
-  assembler.handleLabelDefinition(".arthur_steel");
-  assembler.handleLabelDefinition("..knockback");
-  assembler.snespos += 1;
-  assembler.handleLabelDefinition(".arthur_upgraded_armor");
-  assembler.handleLabelDefinition(".gold");
+  assembler.symbolScope.handleLabelDefinition("_00ED00");
+  assembler.symbolScope.handleLabelDefinition(".arthur_underwear");
+  assembler.symbolScope.handleLabelDefinition("..knockback");
+  assembler.currentTargetAddress += 1;
+  assembler.symbolScope.handleLabelDefinition(".arthur_steel");
+  assembler.symbolScope.handleLabelDefinition("..knockback");
+  assembler.currentTargetAddress += 1;
+  assembler.symbolScope.handleLabelDefinition(".arthur_upgraded_armor");
+  assembler.symbolScope.handleLabelDefinition(".gold");
 
-  t.is(assembler.getLabelValue(".arthur_underwear_knockback", false), 0);
+  t.is(assembler.symbolScope.getLabelValue(".arthur_underwear_knockback", false), 0);
 });
 
 test("symbol scope returns single-dot labels to the top-level parent after nested locals", (t) => {
   const assembler = new Assembler();
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("_00ED00");
-  assembler.handleLabelDefinition(".arthur_underwear");
-  assembler.handleLabelDefinition("..knockback");
-  assembler.handleLabelDefinition(".arthur_steel");
+  assembler.symbolScope.handleLabelDefinition("_00ED00");
+  assembler.symbolScope.handleLabelDefinition(".arthur_underwear");
+  assembler.symbolScope.handleLabelDefinition("..knockback");
+  assembler.symbolScope.handleLabelDefinition(".arthur_steel");
 
   t.true(assembler.labelTable.has("_00ED00_arthur_underwear"));
   t.true(assembler.labelTable.has("_00ED00_arthur_underwear_knockback"));
@@ -293,10 +294,10 @@ test("symbol scope keeps double-dot labels under the active global root when sho
   const assembler = new Assembler();
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("arthur");
-  assembler.handleLabelDefinition("arthur_sprites");
-  assembler.handleLabelDefinition(".underwear");
-  assembler.handleLabelDefinition("..idle");
+  assembler.symbolScope.handleLabelDefinition("arthur");
+  assembler.symbolScope.handleLabelDefinition("arthur_sprites");
+  assembler.symbolScope.handleLabelDefinition(".underwear");
+  assembler.symbolScope.handleLabelDefinition("..idle");
 
   t.true(assembler.labelTable.has("arthur_sprites_underwear_idle"));
   t.false(assembler.labelTable.has("arthur_sprites_idle"));
@@ -307,27 +308,27 @@ test("symbol scope resolves namespaced local sibling labels without collapsing d
   assembler.currentNamespace = "knife";
   assembler.pass = 0;
 
-  assembler.handleLabelDefinition("_E449");
-  assembler.handleLabelDefinition(".E44C");
-  assembler.handleLabelDefinition(".E4CA");
+  assembler.symbolScope.handleLabelDefinition("_E449");
+  assembler.symbolScope.handleLabelDefinition(".E44C");
+  assembler.symbolScope.handleLabelDefinition(".E4CA");
 
   assembler.pass = 1;
   assembler.currentNamespace = "knife";
   assembler.currentParentLabel = "knife__E449_E44C";
 
   t.true(assembler.labelTable.has("knife__E449_E4CA"));
-  t.is(assembler.getLabelValue(".E4CA", false), assembler.labelTable.get("knife__E449_E4CA")?.value);
+  t.is(assembler.symbolScope.getLabelValue(".E4CA", false), assembler.labelTable.get("knife__E449_E4CA")?.value);
 });
 
 test("symbol scope falls back to global labels when a namespace-local symbol is absent", (t) => {
   const assembler = new Assembler();
   assembler.pass = 1;
 
-  assembler.setLabel("difficulty", 0x27C, true);
+  assembler.symbolScope.setLabel("difficulty", 0x27C, true);
   assembler.currentNamespace = "zombie";
 
   t.false(assembler.labelTable.has("zombie_difficulty"));
-  t.is(assembler.getLabelValue("difficulty", false), 0x27C);
+  t.is(assembler.symbolScope.getLabelValue("difficulty", false), 0x27C);
 });
 
 test("symbol scope resolves local labels under underscore-prefixed parents", (t) => {
@@ -342,7 +343,7 @@ test("symbol scope resolves local labels under underscore-prefixed parents", (t)
     modifiesHierarchy: true,
   });
 
-  t.is(assembler.getLabelValue(".83EB", false), 0x83EB);
+  t.is(assembler.symbolScope.getLabelValue(".83EB", false), 0x83EB);
 });
 
 test("symbol scope resolves compressed nested local label references", (t) => {
@@ -357,7 +358,7 @@ test("symbol scope resolves compressed nested local label references", (t) => {
     modifiesHierarchy: true,
   });
 
-  t.is(assembler.getLabelValue(".idx_beginner", false), 0x1234);
+  t.is(assembler.symbolScope.getLabelValue(".idx_beginner", false), 0x1234);
 });
 
 test("symbol scope resolves double-dot local label references", (t) => {
@@ -372,7 +373,7 @@ test("symbol scope resolves double-dot local label references", (t) => {
     modifiesHierarchy: true,
   });
 
-  t.is(assembler.getLabelValue("..idle", false), 0xED39);
+  t.is(assembler.symbolScope.getLabelValue("..idle", false), 0xED39);
 });
 
 test("pre-dispatch pipeline skips non-conditional commands in false blocks", (t) => {
@@ -405,8 +406,8 @@ test("front-end service handles named and static labels through normalized dispa
   assembler.processNormalizedCommand(commandNode("Main:"), false);
   assembler.processNormalizedCommand(commandNode("Const = $10"), false);
 
-  t.is(assembler.getLabelValue("Main", false), assembler.snespos);
-  t.is(assembler.getLabelValue("Const", true), 0x10);
+  t.is(assembler.symbolScope.getLabelValue("Main", false), assembler.currentTargetAddress);
+  t.is(assembler.symbolScope.getLabelValue("Const", true), 0x10);
 });
 
 test("struct engine records struct members through normalized dispatch", (t) => {
@@ -427,16 +428,16 @@ test("rom writer converts lorom pc offsets to snes and back", (t) => {
   const assembler = new Assembler();
   assembler.mapper = "lorom";
 
-  const snesAddress = assembler.pctosnes(0);
+  const snesAddress = assembler.romWriter.pctosnes(0);
 
   t.is(snesAddress, 0x808000);
-  t.is(assembler.snestopc(snesAddress), 0);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(snesAddress), 0);
 });
 
 test("rom writer enforces bank crossing checks before multi-byte writes", (t) => {
   const assembler = new Assembler();
   assembler.bankCrossCheckMode = "full";
-  assembler.realsnespos = 0x00FFFF;
+  assembler.currentTargetBaseAddress = 0x00FFFF;
 
   const error = t.throws(() => {
     assembler.write2(0x1234);
@@ -564,10 +565,19 @@ test("stage runner builds program once and executes all stages", (t) => {
   };
 
   const program = stagedAssembler.buildProgramModel("org $808000\ndb $01", "test.asm", 0);
+  const [firstNode, secondNode] = program.nodes as Array<{ keyword?: string; words?: string[] }>;
+  t.is(firstNode?.keyword, "org");
+  t.deepEqual(firstNode?.words, ["org", "$808000"]);
+  t.is(secondNode?.keyword, "db");
+  t.deepEqual(secondNode?.words, ["db", "$01"]);
   stagedAssembler.assembleProgram(program);
 
   // Cached pass program should be reused across stage executions.
   t.true(parseSpy.calledOnce);
+  const emitStage = assembler.stageExecutionStates.get("emitProgram");
+  t.truthy(emitStage);
+  t.is(emitStage?.pass, 2);
+  t.is(emitStage?.cursor.currentTargetAddress, 0x808001);
   t.is(assembler.romdata[0], 0x01);
 });
 
@@ -576,13 +586,13 @@ test("stage execution state is recreated per collect stage run", (t) => {
   const program = assembler.buildProgramModel("db $01", "test.asm", 0);
 
   assembler.setWritePosition(0x808000);
-  const firstCollect = assembler.runStage("collectDefinitions", program) as { cursor: { snespos: number } };
-  t.is(firstCollect.cursor.snespos, 0x808001);
+  const firstCollect = assembler.runStage("collectDefinitions", program) as { cursor: { currentTargetAddress: number } };
+  t.is(firstCollect.cursor.currentTargetAddress, 0x808001);
 
   assembler.setWritePosition(0x80A000);
-  const secondCollect = assembler.runStage("collectDefinitions", program) as { cursor: { snespos: number } };
+  const secondCollect = assembler.runStage("collectDefinitions", program) as { cursor: { currentTargetAddress: number } };
   t.not(firstCollect, secondCollect);
-  t.is(secondCollect.cursor.snespos, 0x80A001);
+  t.is(secondCollect.cursor.currentTargetAddress, 0x80A001);
 });
 
 test("stage states keep symbols/control/write state isolated by stage", (t) => {
@@ -622,11 +632,17 @@ test("instruction dispatch follows active stage capabilities", (t) => {
 test("architecture registry resolves aliases through arch directive", (t) => {
   const assembler = new Assembler();
 
-  assembler.handleArch(["arch", "spc700-inline"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "spc700-inline"]);
   t.is(assembler.arch, "spc700");
   t.true(assembler.spcInlineCompatMode);
 
-  assembler.handleArch(["arch", "superfx"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "superfx"]);
   t.is(assembler.arch, "superfx");
   t.false(assembler.spcInlineCompatMode);
 });

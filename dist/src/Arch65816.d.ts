@@ -1,10 +1,12 @@
 import type { ArchitectureContext, ArchitectureEncoder, LoweredInstruction } from "./architecture-types.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 export declare class Arch65816 implements ArchitectureEncoder {
     assembler: ArchitectureContext;
     constructor(assembler: ArchitectureContext);
     encode(words: string[]): boolean;
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
+    lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction;
     estimateSize(words: string[]): number;
     estimateResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): number;
     /**
@@ -62,10 +64,11 @@ export declare class Arch65816 implements ArchitectureEncoder {
     /**
      * Handles the JMP (Jump), JSR (Jump to Subroutine), and JSL (Jump to Subroutine Long) instructions.
      * @param {string} opcode - The opcode to handle.
-     * @param {string} operand - The operand to handle.
+     * @param {string} operand - The resolved operand to handle.
+     * @param {string} rawOperand - The original source operand before expansion.
      * @returns {boolean} True if the opcode and operand were handled successfully, false otherwise.
      */
-    handleJump(opcode: string, operand: string): boolean;
+    handleJump(opcode: string, operand: string, rawOperand?: string): boolean;
     /**
      * Handles the PER (Push Effective Relative Address) instruction.
      * @param {string} operand The operand to handle.

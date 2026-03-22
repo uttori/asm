@@ -1,4 +1,5 @@
 import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, Spc700Context } from "./architecture-types.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 /**
  * Additional instructions share similar addressing forms but have unique opcodes,
  * e.g. "(X),(Y)" or "$dp,#$imm", etc. However, some instructions (like "CMP X,#imm")
@@ -10,6 +11,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
     encode(words: string[]): boolean;
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
+    lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction;
     estimateSize(words: string[]): number;
     estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     asblock_spc700(words: string[]): boolean;

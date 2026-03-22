@@ -1,1 +1,1 @@
-{"version":3,"file":"layout.d.ts","sourceRoot":"","sources":["../../../src/directives/layout.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,eAAe,CAAC;AASvD,eAAO,MAAM,wBAAwB,GAAI,UAAU,iBAAiB,KAAG,IAgKtE,CAAC"}
+{"version":3,"file":"layout.d.ts","sourceRoot":"","sources":["../../../src/directives/layout.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,eAAe,CAAC;AAiCvD,eAAO,MAAM,wBAAwB,GAAI,UAAU,iBAAiB,KAAG,IA8JtE,CAAC"}

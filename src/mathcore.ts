@@ -22,15 +22,6 @@ try {
 } catch {}
 
 /**
- * Renders an expression node back into source-like text.
- * @param {ExpressionNode} expression The expression node to stringify.
- * @returns {string} The rendered expression text.
- */
-function expressionNodeToString(expression: ExpressionNode): string {
-  return renderExpressionNode(expression);
-}
-
-/**
  * Escapes a string for safe use inside a regular expression pattern.
  * @param {string} value The raw string value.
  * @returns {string} The escaped regular-expression fragment.
@@ -159,7 +150,7 @@ export class MathCore {
         return this.evaluateBinaryExpressionNode(binaryExpression.operator, binaryExpression.left, binaryExpression.right);
       }
       case "range":
-        throw new Error(`Range expression is not directly numeric: ${expressionNodeToString(expression)}`);
+        throw new Error(`Range expression is not directly numeric: ${renderExpressionNode(expression)}`);
       case "raw":
       default:
         return this.evaluateStringExpression(expression.value);
@@ -180,7 +171,7 @@ export class MathCore {
           return rawArgument.value.replace(/^["']|["']$/g, "");
         }
         default:
-          return expressionNodeToString(argument);
+          return renderExpressionNode(argument);
       }
     }
 
@@ -190,7 +181,7 @@ export class MathCore {
         return stringArgument.value;
       }
       case "range":
-        return expressionNodeToString(argument);
+        return renderExpressionNode(argument);
       case "raw":
         return this.evaluateStringExpression(argument.value);
       default:

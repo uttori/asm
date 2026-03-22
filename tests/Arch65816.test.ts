@@ -44,7 +44,7 @@ test("Arch65816.estimateSize uses architecture-aware sizing", t => {
   t.is(arch.estimateSize(["ASL", "#3"]), 3, "Accumulator repeat pseudo-ops reserve one byte per repeat");
   t.is(arch.estimateSize(["INC"]), 1, "Bare accumulator INC should reserve one byte");
   t.is(arch.estimateSize(["DEC"]), 1, "Bare accumulator DEC should reserve one byte");
-  assembler.snespos = 0x048AFD;
+  assembler.currentTargetAddress = 0x048AFD;
   t.is(arch.estimateSize(["SBC", "_048AD3,X"]), 3, "Same-bank indexed labels should reserve absolute,X bytes");
 });
 
@@ -203,7 +203,7 @@ test("Arch65816.handleBranchInstructions returns false for unsupported opcodes",
 test("Arch65816.handleBranchInstructions writes short-branch placeholders during pass 0", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 0;
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$8005").returns(0x8005);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -223,7 +223,7 @@ test("Arch65816.handleBranchInstructions writes short-branch placeholders during
 test("Arch65816.handleBranchInstructions writes BRL placeholders during pass 1", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 1;
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$8100").returns(0x8100);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -243,8 +243,8 @@ test("Arch65816.handleBranchInstructions writes BRL placeholders during pass 1",
 test("Arch65816.handleBranchInstructions resolves forward + labels using the branch reference address", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
-  assembler.snespos = 0x8000;
-  const findNextLabelStub = sinon.stub(assembler, "findNextLabel");
+  assembler.currentTargetAddress = 0x8000;
+  const findNextLabelStub = sinon.stub(assembler.symbolScope, "findNextLabel");
   findNextLabelStub.withArgs("++", 0x8002).returns(0x8007);
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -266,8 +266,8 @@ test("Arch65816.handleBranchInstructions resolves forward + labels using the bra
 test("Arch65816.handleBranchInstructions resolves backward - labels for negative offsets", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
-  assembler.snespos = 0x8000;
-  const findPreviousLabelStub = sinon.stub(assembler, "findPreviousLabel");
+  assembler.currentTargetAddress = 0x8000;
+  const findPreviousLabelStub = sinon.stub(assembler.symbolScope, "findPreviousLabel");
   findPreviousLabelStub.withArgs("--", 0x8002).returns(0x7FFD);
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Stub = sinon.stub(assembler, "write1");
@@ -289,7 +289,7 @@ test("Arch65816.handleBranchInstructions resolves backward - labels for negative
 test("Arch65816.handleBranchInstructions uses numeric operands for BRL", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$8013").returns(0x8013);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -329,7 +329,7 @@ test("Arch65816.handleBranchInstructions throws when the relative target is NaN"
 test("Arch65816.handleBranchInstructions throws when short branches are out of range", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$8082").returns(0x8082);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -350,7 +350,7 @@ test("Arch65816.handleBranchInstructions throws when short branches are out of r
 test("Arch65816.handleBranchInstructions throws when BRL targets are out of range", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 2;
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$10003").returns(0x10003);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -608,7 +608,7 @@ test("Arch65816.handleJump upgrades long JSR operands and preserves JML mode", t
 test("Arch65816.handleJump keeps banked same-bank JSR operands short", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 1;
-  assembler.snespos = 0x02FFFE;
+  assembler.currentTargetAddress = 0x02FFFE;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("_02FDB3_FDB7").returns(0x02FDB6);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -630,7 +630,7 @@ test("Arch65816.handleJump keeps banked same-bank JSR operands short", t => {
 test("Arch65816.handleJump keeps bank-hinted same-bank JSR operands short during early-pass drift", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 1;
-  assembler.snespos = 0x0295E8;
+  assembler.currentTargetAddress = 0x0295E8;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("_02FF22").returns(0x030022);
   const write1Stub = sinon.stub(assembler, "write1");
@@ -652,7 +652,7 @@ test("Arch65816.handleJump keeps bank-hinted same-bank JSR operands short during
 test("Arch65816.encodeResolvedInstruction keeps raw bank hints for same-bank JSR sizing", t => {
   const { assembler, arch } = createArch65816();
   assembler.pass = 1;
-  assembler.snespos = 0x0295E8;
+  assembler.currentTargetAddress = 0x0295E8;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("_02FF22").returns(0x030022);
   getnumStub.withArgs("$30022").returns(0x030022);

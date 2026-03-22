@@ -1,4 +1,5 @@
 import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, SuperFXContext } from "./architecture-types.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 
 let debug = (..._: unknown[]) => {};
 try {
@@ -38,6 +39,28 @@ export class ArchSuperFX implements ArchitectureEncoder {
       instruction.loweredOperand,
       loweredOperands,
     );
+  }
+
+  lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction {
+    const parsedOperands = command.parsed.opcodeOperands;
+    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
+    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
+    const operands = parsedOperands?.operands ?? (operandText ? operandText.split(",").map((operand) => operand.trim()) : []);
+    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
+
+    return {
+      kind: "instruction",
+      mnemonic,
+      operandText,
+      operands,
+      loweredOperands,
+      loweredOperand,
+      words: command.words,
+      sourceFile: command.source.file,
+      sourceLine: command.source.line,
+      sourceRaw: command.source.raw,
+    };
   }
 
   estimateSize(words: string[]): number {
@@ -260,7 +283,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
         this.assembler.write1(val & 0xff);
       } else {
         // relative
-        const pc = this.assembler.snespos & 0xffffff;
+        const pc = this.assembler.currentTargetAddress & 0xffffff;
         const offset = (val - (pc + 2)) & 0xff;
         this.assembler.write1(branchOpcode);
         this.assembler.write1(offset);

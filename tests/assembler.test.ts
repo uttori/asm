@@ -6,6 +6,10 @@ import { Assembler, LoopBlock } from "../src/assembler.js";
 import { createTraceCollector } from "../src/debug-tracing.js";
 import { parseExpressionNode } from "../src/ir/expression-node.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";
+import { getDefineVariable, splitCommandIntoWords, splitInlineCommands } from "../src/services/command-text-service.js";
+import { handleArch } from "../src/directives/layout.js";
+import { DirectiveContext } from "../src/directives/types.js";
+import { handleIncbin } from "../src/directives/include-source.js";
 
 const makeCommand = (command: string) => createNormalizedCommand(
   command,
@@ -62,7 +66,7 @@ test("getnum - handles labels", t => {
   const assembler = new Assembler();
 
   // Mock the getLabelValue method
-  const getLabelValueStub = sinon.stub(assembler, "getLabelValue");
+  const getLabelValueStub = sinon.stub(assembler.symbolScope, "getLabelValue");
   getLabelValueStub.withArgs("label1", false).returns(0x1000);
   getLabelValueStub.withArgs("another_label", false).returns(0x2000);
 
@@ -87,11 +91,11 @@ test("getnum - handles math expressions", t => {
 test("resolvedefines - preserves local label arithmetic expressions", t => {
   const assembler = new Assembler();
 
-  assembler.setLabel("zombie_spawner_data", 0xDA6E, false, false, true);
-  assembler.setLabel("zombie_spawner_data_zone", 0xDA8A);
-  assembler.setLabel("zombie_spawner_data_zone_difficulty_offset", 0xDA8A);
-  assembler.setLabel("zombie_spawner_data_zone_max", 0xDA8E);
-  assembler.setLabel("zombie_spawner_data_zone_n", 0xDA98);
+  assembler.symbolScope.setLabel("zombie_spawner_data", 0xDA6E, false, false, true);
+  assembler.symbolScope.setLabel("zombie_spawner_data_zone", 0xDA8A);
+  assembler.symbolScope.setLabel("zombie_spawner_data_zone_difficulty_offset", 0xDA8A);
+  assembler.symbolScope.setLabel("zombie_spawner_data_zone_max", 0xDA8E);
+  assembler.symbolScope.setLabel("zombie_spawner_data_zone_n", 0xDA98);
 
   assembler.currentParentLabel = "zombie_spawner_data_zone_difficulty_offset";
   assembler.currentGlobalParentLabel = "zombie_spawner_data";
@@ -147,11 +151,11 @@ test("getnum - keeps parent stride for extended struct array members", t => {
   assembler.assembleblock(".len: skip 0");
   assembler.assembleblock("endstruct");
 
-  assembler.setLabel("obj_start", 0x043C, false, false, true);
+  assembler.symbolScope.setLabel("obj_start", 0x043C, false, false, true);
   assembler.defines.set("obj_objects", "obj_start+obj[19]");
 
   t.is(
-    assembler.resolveStructLabel("obj[19].ext.index"),
+    assembler.structEngine.resolveStructLabel("obj[19].ext.index"),
     0x0513,
     "Extended array members should use the parent object stride",
   );
@@ -207,18 +211,16 @@ test("setPass - resets guarded status for included files", t => {
 });
 
 test("splitInlineCommands splits relative-label command fragments after inline separators", t => {
-  const assembler = new Assembler();
-
   t.deepEqual(
-    assembler.splitInlineCommands(["jmp (+,X) : +: dw .mode1, .mode2, .mode3"]),
+    splitInlineCommands(["jmp (+,X) : +: dw .mode1, .mode2, .mode3"]),
     ["jmp (+,X)", "+:", "dw .mode1, .mode2, .mode3"],
   );
   t.deepEqual(
-    assembler.splitInlineCommands(["bra + : ++: db $01"]),
+    splitInlineCommands(["bra + : ++: db $01"]),
     ["bra +", "++:", "db $01"],
   );
   t.deepEqual(
-    assembler.splitInlineCommands(["set_hp: lda #$01"]),
+    splitInlineCommands(["set_hp: lda #$01"]),
     ["set_hp: lda #$01"],
   );
 });
@@ -626,85 +628,6 @@ test("expandRom - throws error when fsByte is not a number", t => {
   t.is(error.message, "expandRom requires a number for newSize and fsByte");
 });
 
-test("isBlockEmpty - empty block returns true", t => {
-  const assembler = new Assembler();
-
-  // Create a ROM with all bytes set to 0xFF
-  assembler.romdata = new Uint8Array(100).fill(0xFF);
-
-  // Check if a block is empty (filled with 0xFF)
-  const result = assembler.isBlockEmpty(10, 20, 0xFF);
-
-  t.true(result);
-});
-
-test("isBlockEmpty - non-empty block returns false", t => {
-  const assembler = new Assembler();
-
-  // Create a ROM with all bytes set to 0xFF
-  assembler.romdata = new Uint8Array(100).fill(0xFF);
-
-  // Set one byte to a different value
-  assembler.romdata[15] = 0x00;
-
-  // Check if a block containing the modified byte is empty
-  const result = assembler.isBlockEmpty(10, 20, 0xFF);
-
-  t.false(result);
-});
-
-test("isBlockEmpty - block at start of ROM", t => {
-  const assembler = new Assembler();
-
-  // Create a ROM with all bytes set to 0xAA
-  assembler.romdata = new Uint8Array(100).fill(0xAA);
-
-  // Check if a block at the start of the ROM is empty
-  const result = assembler.isBlockEmpty(0, 10, 0xAA);
-
-  t.true(result);
-});
-
-test("isBlockEmpty - block at end of ROM", t => {
-  const assembler = new Assembler();
-
-  // Create a ROM with all bytes set to 0x00
-  assembler.romdata = new Uint8Array(100).fill(0x00);
-
-  // Check if a block at the end of the ROM is empty
-  const result = assembler.isBlockEmpty(90, 10, 0x00);
-
-  t.true(result);
-});
-
-test("isBlockEmpty - zero-length block", t => {
-  const assembler = new Assembler();
-
-  // Create a ROM with random data
-  assembler.romdata = new Uint8Array(100);
-  for (let i = 0; i < 100; i++) {
-    assembler.romdata[i] = i % 256;
-  }
-
-  // Check a zero-length block (should always be true)
-  const result = assembler.isBlockEmpty(50, 0, 0xFF);
-
-  t.true(result);
-});
-
-test("isBlockEmpty - different fill byte values", t => {
-  const assembler = new Assembler();
-
-  // Create a ROM with all bytes set to 0x00
-  assembler.romdata = new Uint8Array(100).fill(0x00);
-
-  // Check with correct fill byte
-  t.true(assembler.isBlockEmpty(10, 20, 0x00));
-
-  // Check with incorrect fill byte
-  t.false(assembler.isBlockEmpty(10, 20, 0xFF));
-});
-
 test("expandOperand - handles resolvedefines errors", t => {
   const assembler = new Assembler();
 
@@ -856,7 +779,7 @@ test("expandOperand - handles label references", t => {
 
   // Test 2: Label found
   // Set up the label in the label table
-  assembler.setLabel("found_label", 0x1234, false);
+  assembler.symbolScope.setLabel("found_label", 0x1234, false);
 
   const { expanded: expanded2, length: length2 } = assembler.operandResolver.expandOperand("found_label");
   t.is(expanded2, "4660");
@@ -1829,124 +1752,112 @@ test("processStringWithMapping - unicode characters", t => {
 });
 
 test("splitCommandIntoWords - basic splitting", t => {
-  const assembler = new Assembler();
-
   // Basic whitespace splitting
   t.deepEqual(
-    assembler.splitCommandIntoWords("word1 word2 word3"),
+    splitCommandIntoWords("word1 word2 word3"),
     ["word1", "word2", "word3"]
   );
 
   // Extra whitespace should be ignored
   t.deepEqual(
-    assembler.splitCommandIntoWords("  word1   word2  word3  "),
+    splitCommandIntoWords("  word1   word2  word3  "),
     ["word1", "word2", "word3"]
   );
 
   // Empty string should return empty array
   t.deepEqual(
-    assembler.splitCommandIntoWords(""),
+    splitCommandIntoWords(""),
     []
   );
 
   // String with only whitespace should return empty array
   t.deepEqual(
-    assembler.splitCommandIntoWords("   "),
+    splitCommandIntoWords("   "),
     []
   );
 });
 
 test("splitCommandIntoWords - quoted strings", t => {
-  const assembler = new Assembler();
-
   // Double quotes
   t.deepEqual(
-    assembler.splitCommandIntoWords('word1 "quoted string" word3'),
+    splitCommandIntoWords('word1 "quoted string" word3'),
     ["word1", '"quoted string"', "word3"]
   );
 
   // Single quotes
   t.deepEqual(
-    assembler.splitCommandIntoWords("word1 'quoted string' word3"),
+    splitCommandIntoWords("word1 'quoted string' word3"),
     ["word1", "'quoted string'", "word3"]
   );
 
   // Quotes at the beginning
   t.deepEqual(
-    assembler.splitCommandIntoWords('"quoted string" word2'),
+    splitCommandIntoWords('"quoted string" word2'),
     ['"quoted string"', "word2"]
   );
 
   // Quotes at the end
   t.deepEqual(
-    assembler.splitCommandIntoWords('word1 "quoted string"'),
+    splitCommandIntoWords('word1 "quoted string"'),
     ["word1", '"quoted string"']
   );
 
   // Only a quoted string
   t.deepEqual(
-    assembler.splitCommandIntoWords('"quoted string"'),
+    splitCommandIntoWords('"quoted string"'),
     ['"quoted string"']
   );
 });
 
 test("splitCommandIntoWords - nested quotes", t => {
-  const assembler = new Assembler();
-
   // Different quote types inside quotes
   t.deepEqual(
-    assembler.splitCommandIntoWords('word1 "string with \'nested\' quotes" word3'),
+    splitCommandIntoWords('word1 "string with \'nested\' quotes" word3'),
     ["word1", '"string with \'nested\' quotes"', "word3"]
   );
 
   t.deepEqual(
-    assembler.splitCommandIntoWords("word1 'string with \"nested\" quotes' word3"),
+    splitCommandIntoWords("word1 'string with \"nested\" quotes' word3"),
     ["word1", "'string with \"nested\" quotes'", "word3"]
   );
 });
 
 test("splitCommandIntoWords - escaped quotes", t => {
-  const assembler = new Assembler();
-
   // Escaped quotes should be treated as regular characters
   t.deepEqual(
-    assembler.splitCommandIntoWords('word1 "string with \\" escaped quote" word3'),
+    splitCommandIntoWords('word1 "string with \\" escaped quote" word3'),
     ["word1", '"string with \\" escaped quote"', "word3"]
   );
 
   t.deepEqual(
-    assembler.splitCommandIntoWords("word1 'string with \\' escaped quote' word3"),
+    splitCommandIntoWords("word1 'string with \\' escaped quote' word3"),
     ["word1", "'string with \\' escaped quote'", "word3"]
   );
 });
 
 test("splitCommandIntoWords - whitespace in quotes", t => {
-  const assembler = new Assembler();
-
   // Whitespace inside quotes should be preserved
   t.deepEqual(
-    assembler.splitCommandIntoWords('word1 "  quoted  string  with  spaces  " word3'),
+    splitCommandIntoWords('word1 "  quoted  string  with  spaces  " word3'),
     ["word1", '"  quoted  string  with  spaces  "', "word3"]
   );
 
   // Multiple spaces between words outside quotes should be treated as a single delimiter
   t.deepEqual(
-    assembler.splitCommandIntoWords('word1    "quoted string"    word3'),
+    splitCommandIntoWords('word1    "quoted string"    word3'),
     ["word1", '"quoted string"', "word3"]
   );
 });
 
 test("splitCommandIntoWords - unclosed quotes", t => {
-  const assembler = new Assembler();
-
   // Unclosed quotes should still capture the rest of the string
   t.deepEqual(
-    assembler.splitCommandIntoWords('word1 "unclosed quote'),
+    splitCommandIntoWords('word1 "unclosed quote'),
     ["word1", '"unclosed quote']
   );
 
   t.deepEqual(
-    assembler.splitCommandIntoWords("word1 'unclosed quote"),
+    splitCommandIntoWords("word1 'unclosed quote"),
     ["word1", "'unclosed quote"]
   );
 });
@@ -1956,27 +1867,27 @@ test("snestopc - lorom mapping", t => {
   assembler.mapper = "lorom";
 
   // Valid addresses
-  t.is(assembler.snestopc(0x400000), 0x200000);
-  t.is(assembler.snestopc(0x808000), 0x000000);
-  t.is(assembler.snestopc(0x818000), 0x008000);
-  t.is(assembler.snestopc(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x200000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x808000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x818000), 0x008000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x3FFFFF);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.snestopc(0x7E0000), -1);
-  t.is(assembler.snestopc(0x7F0000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7E0000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7F0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.snestopc(0x000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
 
   // SRAM (low parts of banks 70-7D)
-  t.is(assembler.snestopc(0x700000), -1);
-  t.is(assembler.snestopc(0x706000), -1);
-  t.is(assembler.snestopc(0x707FFF), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x700000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x706000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x707FFF), -1);
 
   // Out of range
-  t.is(assembler.snestopc(-1), -1);
-  t.is(assembler.snestopc(0x1000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
 });
 
 test("snestopc - hirom mapping", t => {
@@ -1984,21 +1895,21 @@ test("snestopc - hirom mapping", t => {
   assembler.mapper = "hirom";
 
   // Valid addresses
-  t.is(assembler.snestopc(0x400000), 0x000000);
-  t.is(assembler.snestopc(0xC00000), 0x000000);
-  t.is(assembler.snestopc(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xC00000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x3FFFFF);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.snestopc(0x7E0000), -1);
-  t.is(assembler.snestopc(0x7F0000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7E0000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7F0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.snestopc(0x000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
 
   // Out of range
-  t.is(assembler.snestopc(-1), -1);
-  t.is(assembler.snestopc(0x1000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
 });
 
 test("snestopc - exlorom mapping", t => {
@@ -2006,26 +1917,26 @@ test("snestopc - exlorom mapping", t => {
   assembler.mapper = "exlorom";
 
   // Valid addresses in first 4MB
-  t.is(assembler.snestopc(0x808000), 0x000000);
-  t.is(assembler.snestopc(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x808000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x3FFFFF);
 
   // Valid addresses in second 4MB
-  t.is(assembler.snestopc(0x008000), 0x400000);
-  t.is(assembler.snestopc(0x00FFFF), 0x407FFF);
-  t.is(assembler.snestopc(0x400000), 0x600000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x008000), 0x400000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF), 0x407FFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x600000);
 
   // Invalid addresses
   // SRAM
-  t.is(assembler.snestopc(0x700000), -1);
-  t.is(assembler.snestopc(0x7FFFFF), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x700000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7FFFFF), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.snestopc(0x000000), -1);
-  t.is(assembler.snestopc(0x7FFFFF), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7FFFFF), -1);
 
   // Out of range
-  t.is(assembler.snestopc(-1), -1);
-  t.is(assembler.snestopc(0x1000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
 });
 
 test("snestopc - exhirom mapping", t => {
@@ -2033,22 +1944,22 @@ test("snestopc - exhirom mapping", t => {
   assembler.mapper = "exhirom";
 
   // Valid addresses
-  t.is(assembler.snestopc(0x400000), 0x400000);
-  t.is(assembler.snestopc(0xC00000), 0x000000);
-  t.is(assembler.snestopc(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x400000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xC00000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x3FFFFF);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.snestopc(0x7E0000), -1);
-  t.is(assembler.snestopc(0x7F0000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7E0000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7F0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.snestopc(0x000000), -1);
-  t.is(assembler.snestopc(0x7FFFFF), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7FFFFF), -1);
 
   // Out of range
-  t.is(assembler.snestopc(-1), -1);
-  t.is(assembler.snestopc(0x1000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
 });
 
 test("snestopc - sfxrom mapping", t => {
@@ -2056,27 +1967,27 @@ test("snestopc - sfxrom mapping", t => {
   assembler.mapper = "sfxrom";
 
   // Valid addresses
-  t.is(assembler.snestopc(0x008000), 0x000000);
-  t.is(assembler.snestopc(0x00FFFF), 0x007FFF);
-  t.is(assembler.snestopc(0x400000), 0x000000);
-  t.is(assembler.snestopc(0x5FFFFF), 0x1FFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x008000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF), 0x007FFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x5FFFFF), 0x1FFFFF);
 
   // Invalid addresses
   // $600000-$7FFFFF
-  t.is(assembler.snestopc(0x600000), -1);
-  t.is(assembler.snestopc(0x7FFFFF), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x600000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7FFFFF), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.snestopc(0x000000), -1);
-  t.is(assembler.snestopc(0x400000), 0x000000); // This is valid in sfxrom
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x000000); // This is valid in sfxrom
 
   // $800000-$FFFFFF
-  t.is(assembler.snestopc(0x800000), -1);
-  t.is(assembler.snestopc(0xFFFFFF), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x800000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), -1);
 
   // Out of range
-  t.is(assembler.snestopc(-1), -1);
-  t.is(assembler.snestopc(0x1000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
 });
 
 test("snestopc - sa1rom mapping", t => {
@@ -2087,21 +1998,21 @@ test("snestopc - sa1rom mapping", t => {
   assembler.sa1banks = [0, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000];
 
   // Valid addresses - LoROM-mapped area
-  t.is(assembler.snestopc(0x008000), 0x000000);
-  t.is(assembler.snestopc(0x00FFFF), 0x007FFF);
-  t.is(assembler.snestopc(0x208000), 0x100000);
-  t.is(assembler.snestopc(0x20FFFF), 0x107FFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x008000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF), 0x007FFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x208000), 0x100000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x20FFFF), 0x107FFF);
 
   // Valid addresses - HiROM-mapped area
-  t.is(assembler.snestopc(0xC00000), 0x000000);
-  t.is(assembler.snestopc(0xCFFFFF), 0x0FFFFF);
-  t.is(assembler.snestopc(0xD00000), 0x100000);
-  t.is(assembler.snestopc(0xDFFFFF), 0x1FFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xC00000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xCFFFFF), 0x0FFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xD00000), 0x100000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xDFFFFF), 0x1FFFFF);
 
   // Invalid addresses
-  t.is(assembler.snestopc(0x000000), -1); // Hardware registers
-  t.is(assembler.snestopc(-1), -1); // Out of range
-  t.is(assembler.snestopc(0x1000000), -1); // Out of range
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1); // Hardware registers
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1); // Out of range
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1); // Out of range
 });
 
 test("snestopc - bigsa1rom mapping", t => {
@@ -2109,23 +2020,23 @@ test("snestopc - bigsa1rom mapping", t => {
   assembler.mapper = "bigsa1rom";
 
   // Valid addresses - HiROM-mapped area
-  t.is(assembler.snestopc(0xC00000), 0x400000);
-  t.is(assembler.snestopc(0xFFFFFF), 0x7FFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xC00000), 0x400000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x7FFFFF);
 
   // Valid addresses - LoROM-mapped area (first 8MB)
-  t.is(assembler.snestopc(0x008000), 0x000000);
-  t.is(assembler.snestopc(0x00FFFF), 0x007FFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x008000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF), 0x007FFF);
 
   // Valid addresses - LoROM-mapped area (second 8MB)
-  t.is(assembler.snestopc(0x808000), 0x200000);
-  t.is(assembler.snestopc(0x80FFFF), 0x207FFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x808000), 0x200000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x80FFFF), 0x207FFF);
 
   // Invalid addresses
-  t.is(assembler.snestopc(0x000000), -1); // No ROM at $000000-$007FFF
-  t.is(assembler.snestopc(0x800000), -1); // No ROM at $800000-$807FFF
-  t.is(assembler.snestopc(0x400000), -1); // Invalid mapping
-  t.is(assembler.snestopc(-1), -1); // Out of range
-  t.is(assembler.snestopc(0x1000000), -1); // Out of range
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1); // No ROM at $000000-$007FFF
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x800000), -1); // No ROM at $800000-$807FFF
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), -1); // Invalid mapping
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1); // Out of range
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1); // Out of range
 });
 
 test("snestopc - norom mapping", t => {
@@ -2133,13 +2044,13 @@ test("snestopc - norom mapping", t => {
   assembler.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged
-  t.is(assembler.snestopc(0x000000), 0x000000);
-  t.is(assembler.snestopc(0x123456), 0x123456);
-  t.is(assembler.snestopc(0xFFFFFF), 0xFFFFFF);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), 0x000000);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x123456), 0x123456);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0xFFFFFF);
 
   // Out of range
-  t.is(assembler.snestopc(-1), -1);
-  t.is(assembler.snestopc(0x1000000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
 });
 
 test("snestopc - no mapper set", t => {
@@ -2147,14 +2058,14 @@ test("snestopc - no mapper set", t => {
   assembler.mapper = undefined;
 
   // Invalid addresses
-  t.is(assembler.snestopc(0x808000), -1);
-  t.is(assembler.snestopc(0x818000), -1);
-  t.is(assembler.snestopc(0xFFFFFF), -1);
-  t.is(assembler.snestopc(0x000000), -1); // Hardware registers
-  t.is(assembler.snestopc(0x7E0000), -1); // WRAM
-  t.is(assembler.snestopc(0x700000), -1); // SRAM
-  t.is(assembler.snestopc(-1), -1); // Out of range
-  t.is(assembler.snestopc(0x1000000), -1); // Out of range
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x808000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x818000), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), -1);
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1); // Hardware registers
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7E0000), -1); // WRAM
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x700000), -1); // SRAM
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1); // Out of range
+  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1); // Out of range
 });
 
 test("pctosnes - lorom mapping", t => {
@@ -2162,13 +2073,13 @@ test("pctosnes - lorom mapping", t => {
   assembler.mapper = "lorom";
 
   // Valid addresses
-  t.is(assembler.pctosnes(0x000000), 0x808000);
-  t.is(assembler.pctosnes(0x007FFF), 0x80FFFF);
-  t.is(assembler.pctosnes(0x008000), 0x818000);
-  t.is(assembler.pctosnes(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.romWriter.pctosnes(0x000000), 0x808000);
+  t.is(assembler.romWriter.pctosnes(0x007FFF), 0x80FFFF);
+  t.is(assembler.romWriter.pctosnes(0x008000), 0x818000);
+  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xFFFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.pctosnes(0x400000), -1);
+  t.is(assembler.romWriter.pctosnes(0x400000), -1);
 });
 
 test("pctosnes - hirom mapping", t => {
@@ -2176,11 +2087,11 @@ test("pctosnes - hirom mapping", t => {
   assembler.mapper = "hirom";
 
   // Valid addresses
-  t.is(assembler.pctosnes(0x000000), 0xC00000);
-  t.is(assembler.pctosnes(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.romWriter.pctosnes(0x000000), 0xC00000);
+  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xFFFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.pctosnes(0x400000), -1);
+  t.is(assembler.romWriter.pctosnes(0x400000), -1);
 });
 
 test("pctosnes - exlorom mapping", t => {
@@ -2188,17 +2099,17 @@ test("pctosnes - exlorom mapping", t => {
   assembler.mapper = "exlorom";
 
   // Valid addresses in first 4MB
-  t.is(assembler.pctosnes(0x000000), 0x808000);
-  t.is(assembler.pctosnes(0x007FFF), 0x80FFFF);
-  t.is(assembler.pctosnes(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.romWriter.pctosnes(0x000000), 0x808000);
+  t.is(assembler.romWriter.pctosnes(0x007FFF), 0x80FFFF);
+  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xFFFFFF);
 
   // Valid addresses in second 4MB
-  t.is(assembler.pctosnes(0x400000), 0x008000);
-  t.is(assembler.pctosnes(0x407FFF), 0x00FFFF);
-  t.is(assembler.pctosnes(0x7FFFFF), 0x7FFFFF);
+  t.is(assembler.romWriter.pctosnes(0x400000), 0x008000);
+  t.is(assembler.romWriter.pctosnes(0x407FFF), 0x00FFFF);
+  t.is(assembler.romWriter.pctosnes(0x7FFFFF), 0x7FFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.pctosnes(0x800000), -1);
+  t.is(assembler.romWriter.pctosnes(0x800000), -1);
 });
 
 test("pctosnes - exhirom mapping", t => {
@@ -2206,15 +2117,15 @@ test("pctosnes - exhirom mapping", t => {
   assembler.mapper = "exhirom";
 
   // Valid addresses in first 4MB
-  t.is(assembler.pctosnes(0x000000), 0xC00000);
-  t.is(assembler.pctosnes(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.romWriter.pctosnes(0x000000), 0xC00000);
+  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xFFFFFF);
 
   // Valid addresses in second 4MB
-  t.is(assembler.pctosnes(0x400000), 0x400000);
-  t.is(assembler.pctosnes(0x7FFFFF), 0x7FFFFF);
+  t.is(assembler.romWriter.pctosnes(0x400000), 0x400000);
+  t.is(assembler.romWriter.pctosnes(0x7FFFFF), 0x7FFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.pctosnes(0x800000), -1);
+  t.is(assembler.romWriter.pctosnes(0x800000), -1);
 });
 
 test("pctosnes - sa1rom mapping", t => {
@@ -2225,17 +2136,17 @@ test("pctosnes - sa1rom mapping", t => {
   assembler.sa1banks = [0x000000, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000];
 
   // Test each bank mapping
-  t.is(assembler.pctosnes(0x000000), 0x008000);
-  t.is(assembler.pctosnes(0x100000), 0x208000);
-  t.is(assembler.pctosnes(0x200000), 0x408000);
-  t.is(assembler.pctosnes(0x300000), 0x608000);
-  t.is(assembler.pctosnes(0x400000), 0x808000);
-  t.is(assembler.pctosnes(0x500000), 0xA08000);
-  t.is(assembler.pctosnes(0x600000), 0xC08000);
-  t.is(assembler.pctosnes(0x700000), 0xE08000);
+  t.is(assembler.romWriter.pctosnes(0x000000), 0x008000);
+  t.is(assembler.romWriter.pctosnes(0x100000), 0x208000);
+  t.is(assembler.romWriter.pctosnes(0x200000), 0x408000);
+  t.is(assembler.romWriter.pctosnes(0x300000), 0x608000);
+  t.is(assembler.romWriter.pctosnes(0x400000), 0x808000);
+  t.is(assembler.romWriter.pctosnes(0x500000), 0xA08000);
+  t.is(assembler.romWriter.pctosnes(0x600000), 0xC08000);
+  t.is(assembler.romWriter.pctosnes(0x700000), 0xE08000);
 
   // Invalid address (not matching any bank)
-  t.is(assembler.pctosnes(0x800000), -1);
+  t.is(assembler.romWriter.pctosnes(0x800000), -1);
 });
 
 test("pctosnes - bigsa1rom mapping", t => {
@@ -2244,22 +2155,22 @@ test("pctosnes - bigsa1rom mapping", t => {
 
   // Valid addresses in different regions
   // First 2MB region (000000-1FFFFF)
-  t.is(assembler.pctosnes(0x000000), 0x008000);
-  t.is(assembler.pctosnes(0x007FFF), 0x00FFFF);
-  t.is(assembler.pctosnes(0x1FFFFF), 0x3FFFFF);
+  t.is(assembler.romWriter.pctosnes(0x000000), 0x008000);
+  t.is(assembler.romWriter.pctosnes(0x007FFF), 0x00FFFF);
+  t.is(assembler.romWriter.pctosnes(0x1FFFFF), 0x3FFFFF);
 
   // Second 2MB region (200000-3FFFFF)
-  t.is(assembler.pctosnes(0x200000), 0x808000);
-  t.is(assembler.pctosnes(0x207FFF), 0x80FFFF);
-  t.is(assembler.pctosnes(0x3FFFFF), 0xBFFFFF);
+  t.is(assembler.romWriter.pctosnes(0x200000), 0x808000);
+  t.is(assembler.romWriter.pctosnes(0x207FFF), 0x80FFFF);
+  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xBFFFFF);
 
   // Third 4MB region (400000-7FFFFF)
-  t.is(assembler.pctosnes(0x400000), 0xC00000);
-  t.is(assembler.pctosnes(0x500000), 0xD00000);
-  t.is(assembler.pctosnes(0x7FFFFF), 0xFFFFFF);
+  t.is(assembler.romWriter.pctosnes(0x400000), 0xC00000);
+  t.is(assembler.romWriter.pctosnes(0x500000), 0xD00000);
+  t.is(assembler.romWriter.pctosnes(0x7FFFFF), 0xFFFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.pctosnes(0x800000), -1);
+  t.is(assembler.romWriter.pctosnes(0x800000), -1);
 });
 
 test("pctosnes - sfxrom mapping", t => {
@@ -2267,12 +2178,12 @@ test("pctosnes - sfxrom mapping", t => {
   assembler.mapper = "sfxrom";
 
   // Valid addresses
-  t.is(assembler.pctosnes(0x000000), 0x008000);
-  t.is(assembler.pctosnes(0x007FFF), 0x00FFFF);
-  t.is(assembler.pctosnes(0x1FFFFF), 0x3FFFFF);
+  t.is(assembler.romWriter.pctosnes(0x000000), 0x008000);
+  t.is(assembler.romWriter.pctosnes(0x007FFF), 0x00FFFF);
+  t.is(assembler.romWriter.pctosnes(0x1FFFFF), 0x3FFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.pctosnes(0x200000), -1);
+  t.is(assembler.romWriter.pctosnes(0x200000), -1);
 });
 
 test("pctosnes - norom mapping", t => {
@@ -2280,16 +2191,16 @@ test("pctosnes - norom mapping", t => {
   assembler.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged
-  t.is(assembler.pctosnes(0x000000), 0x000000);
-  t.is(assembler.pctosnes(0x123456), 0x123456);
-  t.is(assembler.pctosnes(0xFFFFFF), 0xFFFFFF);
+  t.is(assembler.romWriter.pctosnes(0x000000), 0x000000);
+  t.is(assembler.romWriter.pctosnes(0x123456), 0x123456);
+  t.is(assembler.romWriter.pctosnes(0xFFFFFF), 0xFFFFFF);
 });
 
 test("pctosnes - negative input", t => {
   const assembler = new Assembler();
 
   // Negative input should always return -1
-  t.is(assembler.pctosnes(-1), -1);
+  t.is(assembler.romWriter.pctosnes(-1), -1);
 });
 
 test("pctosnes - no mapper set", t => {
@@ -2298,78 +2209,78 @@ test("pctosnes - no mapper set", t => {
   assembler.mapper = undefined;
 
   // When no mapper is set, pctosnes should return -1 for any address
-  t.is(assembler.pctosnes(0x000000), -1);
-  t.is(assembler.pctosnes(0x123456), -1);
-  t.is(assembler.pctosnes(0xFFFFFF), -1);
+  t.is(assembler.romWriter.pctosnes(0x000000), -1);
+  t.is(assembler.romWriter.pctosnes(0x123456), -1);
+  t.is(assembler.romWriter.pctosnes(0xFFFFFF), -1);
 
   // Test with a few more addresses to be thorough
-  t.is(assembler.pctosnes(0x008000), -1);
-  t.is(assembler.pctosnes(0x400000), -1);
+  t.is(assembler.romWriter.pctosnes(0x008000), -1);
+  t.is(assembler.romWriter.pctosnes(0x400000), -1);
 });
 
 test("verifysnespos - valid positions", t => {
   const assembler = new Assembler();
 
   // Set valid SNES positions
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
 
   // Verify positions should not change valid positions
-  assembler.verifysnespos();
-  t.is(assembler.snespos, 0x008000);
-  t.is(assembler.realsnespos, 0x008000);
+  assembler.romWriter.verifysnespos();
+  t.is(assembler.currentTargetAddress, 0x008000);
+  t.is(assembler.currentTargetBaseAddress, 0x008000);
 
   // Test with different valid positions
-  assembler.snespos = 0x018000;
-  assembler.realsnespos = 0x018000;
-  assembler.verifysnespos();
-  t.is(assembler.snespos, 0x018000);
-  t.is(assembler.realsnespos, 0x018000);
+  assembler.currentTargetAddress = 0x018000;
+  assembler.currentTargetBaseAddress = 0x018000;
+  assembler.romWriter.verifysnespos();
+  t.is(assembler.currentTargetAddress, 0x018000);
+  t.is(assembler.currentTargetBaseAddress, 0x018000);
 });
 
-test("verifysnespos - negative snespos", t => {
+test("verifysnespos - negative currentTargetAddress", t => {
   const assembler = new Assembler();
 
-  // Set negative snespos
-  assembler.snespos = -1;
-  assembler.realsnespos = 0x008000;
+  // Set negative currentTargetAddress
+  assembler.currentTargetAddress = -1;
+  assembler.currentTargetBaseAddress = 0x008000;
 
   // Verify should reset both positions
-  assembler.verifysnespos();
-  t.is(assembler.snespos, 0x008000);
-  t.is(assembler.realsnespos, 0x008000);
-  t.is(assembler.startpos, 0x008000);
-  t.is(assembler.realstartpos, 0x008000);
+  assembler.romWriter.verifysnespos();
+  t.is(assembler.currentTargetAddress, 0x008000);
+  t.is(assembler.currentTargetBaseAddress, 0x008000);
+  t.is(assembler.currentTargetStartAddress, 0x008000);
+  t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
-test("verifysnespos - negative realsnespos", t => {
+test("verifysnespos - negative currentTargetBaseAddress", t => {
   const assembler = new Assembler();
 
-  // Set negative realsnespos
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = -1;
+  // Set negative currentTargetBaseAddress
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = -1;
 
   // Verify should reset both positions
-  assembler.verifysnespos();
-  t.is(assembler.snespos, 0x008000);
-  t.is(assembler.realsnespos, 0x008000);
-  t.is(assembler.startpos, 0x008000);
-  t.is(assembler.realstartpos, 0x008000);
+  assembler.romWriter.verifysnespos();
+  t.is(assembler.currentTargetAddress, 0x008000);
+  t.is(assembler.currentTargetBaseAddress, 0x008000);
+  t.is(assembler.currentTargetStartAddress, 0x008000);
+  t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
 test("verifysnespos - both positions negative", t => {
   const assembler = new Assembler();
 
   // Set both positions negative
-  assembler.snespos = -1;
-  assembler.realsnespos = -1;
+  assembler.currentTargetAddress = -1;
+  assembler.currentTargetBaseAddress = -1;
 
   // Verify should reset both positions
-  assembler.verifysnespos();
-  t.is(assembler.snespos, 0x008000);
-  t.is(assembler.realsnespos, 0x008000);
-  t.is(assembler.startpos, 0x008000);
-  t.is(assembler.realstartpos, 0x008000);
+  assembler.romWriter.verifysnespos();
+  t.is(assembler.currentTargetAddress, 0x008000);
+  t.is(assembler.currentTargetBaseAddress, 0x008000);
+  t.is(assembler.currentTargetStartAddress, 0x008000);
+  t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
 test("fixsnespos - no bank crossing", t => {
@@ -2380,17 +2291,17 @@ test("fixsnespos - no bank crossing", t => {
 
   // Test with lorom mapper
   assembler.mapper = "lorom";
-  t.is(assembler.fixsnespos(0x008000, 0x100), 0x008100);
-  t.is(assembler.fixsnespos(0x00FF00, 0x10), 0x00FF10);
+  t.is(assembler.romWriter.fixsnespos(0x008000, 0x100), 0x008100);
+  t.is(assembler.romWriter.fixsnespos(0x00FF00, 0x10), 0x00FF10);
 
   // Test with hirom mapper
   assembler.mapper = "hirom";
-  t.is(assembler.fixsnespos(0x408000, 0x100), 0x408100);
-  t.is(assembler.fixsnespos(0xC08000, 0x100), 0xC08100);
+  t.is(assembler.romWriter.fixsnespos(0x408000, 0x100), 0x408100);
+  t.is(assembler.romWriter.fixsnespos(0xC08000, 0x100), 0xC08100);
 
   // Test with norom mapper
   assembler.mapper = "norom";
-  t.is(assembler.fixsnespos(0x123456, 0x100), 0x123556);
+  t.is(assembler.romWriter.fixsnespos(0x123456, 0x100), 0x123556);
 });
 
 test("fixsnespos - lorom bank crossing", t => {
@@ -2398,12 +2309,12 @@ test("fixsnespos - lorom bank crossing", t => {
   assembler.mapper = "lorom";
 
   // When crossing a bank boundary in lorom, we should wrap to 0x8000 in the new bank
-  t.is(assembler.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.fixsnespos(0x01FFFF, 1), 0x028000);
-  t.is(assembler.fixsnespos(0x7FFFFF, 1), 0x808000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
+  t.is(assembler.romWriter.fixsnespos(0x01FFFF, 1), 0x028000);
+  t.is(assembler.romWriter.fixsnespos(0x7FFFFF, 1), 0x808000);
 
   // Test with larger steps that cross banks
-  t.is(assembler.fixsnespos(0x00FF00, 0x200), 0x018100);
+  t.is(assembler.romWriter.fixsnespos(0x00FF00, 0x200), 0x018100);
 });
 
 test("fixsnespos - hirom bank crossing", t => {
@@ -2411,12 +2322,12 @@ test("fixsnespos - hirom bank crossing", t => {
   assembler.mapper = "hirom";
 
   // For addresses below 0x400000, wrap to 0x8000 in the new bank
-  t.is(assembler.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.fixsnespos(0x3FFFFF, 1), 0x408000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
+  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x408000);
 
   // For addresses at or above 0x400000, just return the new address
-  t.is(assembler.fixsnespos(0x40FFFF, 1), 0x410000);
-  t.is(assembler.fixsnespos(0xC0FFFF, 1), 0xC10000);
+  t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
+  t.is(assembler.romWriter.fixsnespos(0xC0FFFF, 1), 0xC10000);
 });
 
 test("fixsnespos - exlorom and bigsa1rom bank crossing", t => {
@@ -2424,11 +2335,11 @@ test("fixsnespos - exlorom and bigsa1rom bank crossing", t => {
 
   // Test exlorom
   assembler.mapper = "exlorom";
-  t.is(assembler.fixsnespos(0x80FFFF, 1), 0x818000);
+  t.is(assembler.romWriter.fixsnespos(0x80FFFF, 1), 0x818000);
 
   // Test bigsa1rom
   assembler.mapper = "bigsa1rom";
-  t.is(assembler.fixsnespos(0x00FFFF, 1), 0x018000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
 });
 
 test("fixsnespos - exhirom bank crossing", t => {
@@ -2436,12 +2347,12 @@ test("fixsnespos - exhirom bank crossing", t => {
   assembler.mapper = "exhirom";
 
   // For addresses below 0x400000, wrap to 0x8000 in the new bank
-  t.is(assembler.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.fixsnespos(0x3FFFFF, 1), 0x408000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
+  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x408000);
 
   // For addresses at or above 0x400000, just return the new address
-  t.is(assembler.fixsnespos(0x40FFFF, 1), 0x410000);
-  t.is(assembler.fixsnespos(0xC0FFFF, 1), 0xC10000);
+  t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
+  t.is(assembler.romWriter.fixsnespos(0xC0FFFF, 1), 0xC10000);
 });
 
 test("fixsnespos - sfxrom bank crossing", t => {
@@ -2449,11 +2360,11 @@ test("fixsnespos - sfxrom bank crossing", t => {
   assembler.mapper = "sfxrom";
 
   // For addresses below 0x400000, wrap to 0x8000 in the new bank
-  t.is(assembler.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.fixsnespos(0x3FFFFF, 1), 0x408000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
+  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x408000);
 
   // For addresses at or above 0x400000, just return the new address
-  t.is(assembler.fixsnespos(0x40FFFF, 1), 0x410000);
+  t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
 });
 
 test("fixsnespos - sa1rom bank crossing", t => {
@@ -2461,11 +2372,11 @@ test("fixsnespos - sa1rom bank crossing", t => {
   assembler.mapper = "sa1rom";
 
   // For addresses below 0x400000, wrap to 0x8000 in the new bank
-  t.is(assembler.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.fixsnespos(0x3FFFFF, 1), 0x408000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
+  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x408000);
 
   // For addresses at or above 0x400000, just return the new address
-  t.is(assembler.fixsnespos(0x40FFFF, 1), 0x410000);
+  t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
 });
 
 test("fixsnespos - norom bank crossing", t => {
@@ -2473,8 +2384,8 @@ test("fixsnespos - norom bank crossing", t => {
   assembler.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged, even when crossing banks
-  t.is(assembler.fixsnespos(0x00FFFF, 1), 0x010000);
-  t.is(assembler.fixsnespos(0xFFFFFF, 1), 0x1000000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
+  t.is(assembler.romWriter.fixsnespos(0xFFFFFF, 1), 0x1000000);
 });
 
 test("fixsnespos - unknown mapper", t => {
@@ -2483,7 +2394,7 @@ test("fixsnespos - unknown mapper", t => {
 
   // Should throw an error for unknown mapper types
   t.throws(() => {
-    assembler.fixsnespos(0x00FFFF, 1);
+    assembler.romWriter.fixsnespos(0x00FFFF, 1);
   }, { message: "Unknown mapper type: unknownmapper" });
 });
 
@@ -2492,8 +2403,8 @@ test("fixsnespos - default step parameter", t => {
   assembler.mapper = "lorom";
 
   // When step is not provided, it should default to 0
-  t.is(assembler.fixsnespos(0x008000), 0x008000);
-  t.is(assembler.fixsnespos(0x00FFFF), 0x00FFFF);
+  t.is(assembler.romWriter.fixsnespos(0x008000), 0x008000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF), 0x00FFFF);
 });
 
 test("resolvedefines - basic define replacement", t => {
@@ -2859,37 +2770,55 @@ test("handleIncbin", t => {
   const writtenBytes: number[] = [];
   assembler.write1 = (byte) => {
     writtenBytes.push(byte);
-    assembler.snespos++;
-    assembler.realsnespos++;
+    assembler.currentTargetAddress++;
+    assembler.currentTargetBaseAddress++;
   };
 
   // Test basic incbin
-  assembler.handleIncbin(["incbin", "testfile.bin"]);
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["incbin", "testfile.bin"]);
   t.deepEqual(writtenBytes, Array.from(mockData), "Basic incbin should write all bytes");
 
   // Test with range using ".." syntax
   writtenBytes.length = 0;
-  assembler.handleIncbin(["incbin", "testfile.bin:2..5"]);
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["incbin", "testfile.bin:2..5"]);
   t.deepEqual(writtenBytes, [0x03, 0x04, 0x05], "Range with .. syntax should work");
 
   // Preserve spaced math expressions that have already been tokenized.
   writtenBytes.length = 0;
-  assembler.handleIncbin(["incbin", "testfile.bin:(000", "*", "2)..(003", "*", "2)"]);
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["incbin", "testfile.bin:(000", "*", "2)..(003", "*", "2)"]);
   t.deepEqual(writtenBytes, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06], "Range math with spaces should work");
 
   // 0 should be treated as EOF
   writtenBytes.length = 0;
-  assembler.handleIncbin(["incbin", "testfile.bin:2..0"]);
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["incbin", "testfile.bin:2..0"]);
   t.deepEqual(writtenBytes, [0x03, 0x04, 0x05, 0x06, 0x07, 0x08], "Range with .. syntax should work");
 
   // Test with range using "-" syntax (deprecated)
   writtenBytes.length = 0;
-  assembler.handleIncbin(["incbin", "testfile.bin:1-4"]);
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["incbin", "testfile.bin:1-4"]);
   t.deepEqual(writtenBytes, [0x02, 0x03, 0x04], "Range with - syntax should work");
 
   // Test with quoted filename
   writtenBytes.length = 0;
-  assembler.handleIncbin(["incbin", '"testfile.bin"']);
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver
+  }, ["incbin", '"testfile.bin"']);
   t.deepEqual(writtenBytes, Array.from(mockData), "Quoted filename should work");
 
   // Test with arrow syntax and numeric address
@@ -2899,29 +2828,40 @@ test("handleIncbin", t => {
   assembler.operandResolver.getnum = (val) => parseInt((typeof val === "string" ? val : "").replace("$", ""), 16); // Mock
   assembler.addAddressToLine = () => {}; // Mock
 
-  assembler.handleIncbin(["incbin", "testfile.bin", "->", "$1000"]);
-  t.is(assembler.snespos, 0x1000 + mockData.length, "Arrow syntax with numeric address should set position");
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["incbin", "testfile.bin", "->", "$1000"]);
+  t.is(assembler.currentTargetAddress, 0x1000 + mockData.length, "Arrow syntax with numeric address should set position");
 
   // Test with arrow syntax and label (pass 0)
   writtenBytes.length = 0;
   assembler.pass = 0;
-  assembler.setLabel = (label, _addr) => {
+  const setLabelStub = sinon.stub(assembler.symbolScope, "setLabel").callsFake((label, _addr) => {
     t.is(label, "TestLabel", "Label should be set correctly");
-  };
+  });
 
-  assembler.handleIncbin(["incbin", "testfile.bin", "->", "TestLabel"]);
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver
+  }, ["incbin", "testfile.bin", "->", "TestLabel"]);
   t.is(writtenBytes.length, 8, "Bytes should be written on pass 0");
 
   // Test with arrow syntax and label (pass 1)
   writtenBytes.length = 0;
   assembler.pass = 1;
-  assembler.getLabelValue = (label) => {
+  const getLabelValueStub = sinon.stub(assembler.symbolScope, "getLabelValue").callsFake((label) => {
     t.is(label, "TestLabel", "Label should be looked up correctly");
     return 0x2000;
-  };
+  });
 
-  assembler.handleIncbin(["incbin", "testfile.bin", "->", "TestLabel"]);
-  t.is(assembler.snespos, 0x2000 + mockData.length, "Arrow syntax with label should set position");
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["incbin", "testfile.bin", "->", "TestLabel"]);
+  t.is(assembler.currentTargetAddress, 0x2000 + mockData.length, "Arrow syntax with label should set position");
+  setLabelStub.restore();
+  getLabelValueStub.restore();
 
 })
 
@@ -2941,38 +2881,56 @@ test("handleIncbin - error handling", t => {
   const writtenBytes: number[] = [];
   assembler.write1 = (byte) => {
     writtenBytes.push(byte);
-    assembler.snespos++;
-    assembler.realsnespos++;
+    assembler.currentTargetAddress++;
+    assembler.currentTargetBaseAddress++;
   };
 
   // Test with invalid range specification
   t.throws(() => {
-    assembler.handleIncbin(["incbin", "testfile.bin:invalid"]);
+    handleIncbin({
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    }, ["incbin", "testfile.bin:invalid"]);
   }, { message: /Invalid range specification/ }, "Invalid range should throw error");
 
   // Test with missing file
   t.throws(() => {
-    assembler.handleIncbin(["incbin", "nonexistent.bin"]);
+    handleIncbin({
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    }, ["incbin", "nonexistent.bin"]);
   }, { message: /Failed to read file/ }, "Missing file should throw error");
 
   // Test with arrow syntax but missing target
   t.throws(() => {
-    assembler.handleIncbin(["incbin", "testfile.bin", "->"]);
+    handleIncbin({
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    }, ["incbin", "testfile.bin", "->"]);
   }, { message: /requires a target location/ }, "Missing target should throw error");
 
   // Test with missing parts
   t.throws(() => {
-    assembler.handleIncbin(["incbin", "testfile.bin:5.."]);
+    handleIncbin({
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    }, ["incbin", "testfile.bin:5.."]);
   }, { message: /Invalid range specification/ }, "Invalid range should throw error");
 
   // Test with range start > end
   t.throws(() => {
-    assembler.handleIncbin(["incbin", "testfile.bin:5..2"]);
+    handleIncbin({
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    }, ["incbin", "testfile.bin:5..2"]);
   }, { message: /Start offset 5 out of bounds for file/ }, "Invalid range should throw error");
 
   // Test with out of bounds range
   t.throws(() => {
-    assembler.handleIncbin(["incbin", "testfile.bin:0..100"]);
+    handleIncbin({
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    }, ["incbin", "testfile.bin:0..100"]);
   }, { message: /End offset 100 out of bounds for file/ }, "Out of bounds range should throw error");
 });
 
@@ -3062,97 +3020,97 @@ test("resolveStructLabel", (t) => {
 
   // Test 1: Basic struct reference
   t.is(
-    assembler.resolveStructLabel("BasicStruct"),
+    assembler.structEngine.resolveStructLabel("BasicStruct"),
     0x1000,
     "Should return base address for direct struct reference"
   );
 
   // Test 2: Basic struct member reference
   t.is(
-    assembler.resolveStructLabel("BasicStruct.x"),
+    assembler.structEngine.resolveStructLabel("BasicStruct.x"),
     0x1000,
     "Should resolve basic struct member"
   );
   t.is(
-    assembler.resolveStructLabel("BasicStruct.y"),
+    assembler.structEngine.resolveStructLabel("BasicStruct.y"),
     0x1002,
     "Should resolve basic struct member with offset"
   );
 
   // Test 3: Array indexing
   t.is(
-    assembler.resolveStructLabel("ArrayStruct[0]"),
+    assembler.structEngine.resolveStructLabel("ArrayStruct[0]"),
     0x2000,
     "Should resolve array struct with index 0"
   );
   t.is(
-    assembler.resolveStructLabel("ArrayStruct[1]"),
+    assembler.structEngine.resolveStructLabel("ArrayStruct[1]"),
     0x200A,
     "Should resolve array struct with index 1"
   );
   t.is(
-    assembler.resolveStructLabel("ArrayStruct[2]"),
+    assembler.structEngine.resolveStructLabel("ArrayStruct[2]"),
     0x2014,
     "Should resolve array struct member with index"
   );
   t.is(
-    assembler.resolveStructLabel("ArrayStruct[2].value"),
+    assembler.structEngine.resolveStructLabel("ArrayStruct[2].value"),
     0x2016,
     "Should resolve array struct member with index"
   );
   t.is(
-    assembler.resolveStructLabel("ArrayStruct[-1]"),
+    assembler.structEngine.resolveStructLabel("ArrayStruct[-1]"),
     0x1FF6,
     "Should resolve array struct bases with negative indices"
   );
   t.is(
-    assembler.resolveStructLabel("ArrayStruct[-1].value"),
+    assembler.structEngine.resolveStructLabel("ArrayStruct[-1].value"),
     0x1FF8,
     "Should resolve array struct members with negative indices"
   );
 
   // Test 4: Extension struct
   t.is(
-    assembler.resolveStructLabel("ExtensionStruct"),
+    assembler.structEngine.resolveStructLabel("ExtensionStruct"),
     0x3000,
     "Should return base address for extension struct"
   );
   t.is(
-    assembler.resolveStructLabel("ExtensionStruct.extra"),
+    assembler.structEngine.resolveStructLabel("ExtensionStruct.extra"),
     0x300C,
     "Should resolve extension struct member with parent size offset"
   );
 
   // Test 5: Array indexing with extension struct
   t.is(
-    assembler.resolveStructLabel("ExtensionStruct[1].data"),
+    assembler.structEngine.resolveStructLabel("ExtensionStruct[1].data"),
     0x3018, // Updated from 0x301C to 0x3018 to match calculation: 0x3000 + 12 + (1 * 8) + 4
     "Should resolve extension struct array member with correct offset"
   );
 
   // Test 6: Nested member access
   t.is(
-    assembler.resolveStructLabel("ParentStruct.ExtensionStruct.data"),
+    assembler.structEngine.resolveStructLabel("ParentStruct.ExtensionStruct.data"),
     0x3010,
     "Should resolve nested struct member reference"
   );
   t.is(
-    assembler.resolveStructLabel("ParentStruct[1].ExtensionStruct.data"),
+    assembler.structEngine.resolveStructLabel("ParentStruct[1].ExtensionStruct.data"),
     0x3024,
     "Should resolve extension members through a parent array element"
   );
 
   // Test 7: Error cases
   t.throws(() => {
-    assembler.resolveStructLabel("NonExistentStruct");
+    assembler.structEngine.resolveStructLabel("NonExistentStruct");
   }, { message: /Struct not defined in reference/ }, "Should throw for non-existent struct");
 
   t.throws(() => {
-    assembler.resolveStructLabel("BasicStruct.nonexistent");
+    assembler.structEngine.resolveStructLabel("BasicStruct.nonexistent");
   }, { message: /Member 'nonexistent' not defined in struct/ }, "Should throw for non-existent member");
 
   t.throws(() => {
-    assembler.resolveStructLabel("ExtensionStruct.nonexistent");
+    assembler.structEngine.resolveStructLabel("ExtensionStruct.nonexistent");
   }, { message: /Member 'nonexistent' not defined in struct/ }, "Should throw for non-existent extension member");
 
   // Test 8: Complex array indexing with extra member
@@ -3171,7 +3129,7 @@ test("resolveStructLabel", (t) => {
   assembler.structs.set("ComplexStruct", complexStruct);
 
   t.is(
-    assembler.resolveStructLabel("ComplexStruct[3].subitem_x"),
+    assembler.structEngine.resolveStructLabel("ComplexStruct[3].subitem_x"),
     0x4040, // Updated from 0x4064 to 0x4040 to match size 20 math: 0x4000 + (3 * 20) + 4
     "Should resolve complex nested member with array index"
   );
@@ -3190,7 +3148,7 @@ test("resolveStructLabel", (t) => {
   assembler.structs.set("OrphanExtension", orphanExtension);
 
   t.throws(() => {
-    assembler.resolveStructLabel("OrphanExtension.data");
+    assembler.structEngine.resolveStructLabel("OrphanExtension.data");
   }, { message: /Parent struct 'MissingParent' not defined for extension/ }, "Should throw when parent struct is missing");
 });
 
@@ -3208,7 +3166,7 @@ test("resolveStructMember supports negative indices", (t) => {
     ]),
   });
 
-  t.is(assembler.resolveStructMember("Task[-1].state"), -14);
+  t.is(assembler.symbolScope.resolveStructMember("Task[-1].state"), -14);
 });
 
 test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
@@ -3256,7 +3214,7 @@ test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
 
   // Test accessing the parent struct directly
   t.is(
-    assembler.resolveStructLabel("ParentStruct"),
+    assembler.structEngine.resolveStructLabel("ParentStruct"),
     0x6000,
     "Should return the base address of the parent struct"
   );
@@ -3264,35 +3222,35 @@ test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
   // Test array indexing with parent struct (should account for alignment and largest extension)
   // Effective size = 12 (aligned parent size) + 12 (largest extension) = 24
   t.is(
-    assembler.resolveStructLabel("ParentStruct[2]"),
+    assembler.structEngine.resolveStructLabel("ParentStruct[2]"),
     0x6000 + (2 * 24),
     "Should account for alignment and largest extension when calculating array index"
   );
 
   // Test accessing the extension directly
   t.is(
-    assembler.resolveStructLabel("ParentStruct.LargeExt"),
+    assembler.structEngine.resolveStructLabel("ParentStruct.LargeExt"),
     0x600A,
     "Should return the base address of the extension"
   );
 
   // Test array indexing with extension
   t.is(
-    assembler.resolveStructLabel("ParentStruct.LargeExt[3]"),
+    assembler.structEngine.resolveStructLabel("ParentStruct.LargeExt[3]"),
     0x600A + (3 * 12),
     "Should calculate the correct array index for extension"
   );
 
   // Test accessing a member of the extension
   t.is(
-    assembler.resolveStructLabel("ParentStruct.LargeExt.evenMore"),
+    assembler.structEngine.resolveStructLabel("ParentStruct.LargeExt.evenMore"),
     0x6000 + 12 + 8, // Updated to use correct calculation: parent base (0x6000) + parent aligned size (12) + member offset (8)
     "Should return the correct address for extension member"
   );
 
   // Test array indexing with extension member
   t.is(
-    assembler.resolveStructLabel("ParentStruct.LargeExt[2].evenMore"),
+    assembler.structEngine.resolveStructLabel("ParentStruct.LargeExt[2].evenMore"),
     0x6000 + 12 + (2 * 12) + 8, // Parent base + aligned parent size + (index * extension size) + member offset
     "Should calculate the correct array index for extension member"
   );
@@ -3315,10 +3273,10 @@ test("handleEndStruct - basic struct definition", t => {
 
   // Save the current PC
   assembler.savedPCStack.push(0x8000);
-  assembler.snespos = 0x7000;
+  assembler.currentTargetAddress = 0x7000;
 
   // Call handleEndStruct
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify the struct was added to the structs map
   t.true(assembler.structs.has("BasicStruct"), "Struct should be added to structs map");
@@ -3329,7 +3287,7 @@ test("handleEndStruct - basic struct definition", t => {
   t.is(struct.base, 0x7000, "Base address should be preserved");
 
   // Verify PC was restored
-  t.is(assembler.snespos, 0x8000, "PC should be restored from savedPCStack");
+  t.is(assembler.currentTargetAddress, 0x8000, "PC should be restored from savedPCStack");
 
   // Verify currentStruct was cleared
   t.is(assembler.currentStruct, null, "currentStruct should be cleared");
@@ -3352,10 +3310,10 @@ test("handleEndStruct - with alignment", t => {
 
   // Save the current PC
   assembler.savedPCStack.push(0x8000);
-  assembler.snespos = 0x7000;
+  assembler.currentTargetAddress = 0x7000;
 
   // Call handleEndStruct with alignment
-  assembler.handleEndStruct(["endstruct", "align", "4"]);
+  assembler.structEngine.handleEndStruct(["endstruct", "align", "4"]);
 
   // Verify the struct was added to the structs map
   t.true(assembler.structs.has("AlignedStruct"), "Struct should be added to structs map");
@@ -3366,7 +3324,7 @@ test("handleEndStruct - with alignment", t => {
   t.is(struct.align, 4, "Alignment should be set");
 
   // Verify PC was restored
-  t.is(assembler.snespos, 0x8000, "PC should be restored from savedPCStack");
+  t.is(assembler.currentTargetAddress, 0x8000, "PC should be restored from savedPCStack");
 });
 
 test("handleEndStruct - extension struct", t => {
@@ -3400,10 +3358,10 @@ test("handleEndStruct - extension struct", t => {
 
   // Save the current PC
   assembler.savedPCStack.push(0x8000);
-  assembler.snespos = 0x7000;
+  assembler.currentTargetAddress = 0x7000;
 
   // Call handleEndStruct
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify the extension struct was added to the structs map
   t.true(assembler.structs.has("ParentStruct.ExtensionStruct"), "Extension struct should be added with combined name");
@@ -3418,7 +3376,7 @@ test("handleEndStruct - extension struct", t => {
   t.is(updatedParent.extensionSize, 12, "Parent should track the size of its largest extension");
 
   // Verify PC was restored
-  t.is(assembler.snespos, 0x8000, "PC should be restored from savedPCStack");
+  t.is(assembler.currentTargetAddress, 0x8000, "PC should be restored from savedPCStack");
 });
 
 test("handleEndStruct - extension struct with larger existing extension", t => {
@@ -3453,10 +3411,10 @@ test("handleEndStruct - extension struct with larger existing extension", t => {
 
   // Save the current PC
   assembler.savedPCStack.push(0x8000);
-  assembler.snespos = 0x7000;
+  assembler.currentTargetAddress = 0x7000;
 
   // Call handleEndStruct
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify extension struct properties
   const extStruct = assembler.structs.get("ParentStruct.SmallerExtension");
@@ -3498,10 +3456,10 @@ test("handleEndStruct - extension struct with alignment", t => {
 
   // Save the current PC
   assembler.savedPCStack.push(0x8000);
-  assembler.snespos = 0x7000;
+  assembler.currentTargetAddress = 0x7000;
 
   // Call handleEndStruct with alignment
-  assembler.handleEndStruct(["endstruct", "align", "8"]);
+  assembler.structEngine.handleEndStruct(["endstruct", "align", "8"]);
 
   // Verify extension struct properties
   const extStruct = assembler.structs.get("ParentStruct.AlignedExtension");
@@ -3518,7 +3476,7 @@ test("handleEndStruct - error cases", t => {
 
   // Test: endstruct without being in a struct
   t.throws(() => {
-    assembler.handleEndStruct(["endstruct"]);
+    assembler.structEngine.handleEndStruct(["endstruct"]);
   }, { message: "endstruct encountered but not inside a struct definition." });
 
   // Set up a struct context for remaining tests
@@ -3532,17 +3490,17 @@ test("handleEndStruct - error cases", t => {
 
   // Test: endstruct align without parameter
   t.throws(() => {
-    assembler.handleEndStruct(["endstruct", "align"]);
+    assembler.structEngine.handleEndStruct(["endstruct", "align"]);
   }, { message: "endstruct align requires a single alignment parameter." });
 
   // Test: endstruct align with too many parameters
   t.throws(() => {
-    assembler.handleEndStruct(["endstruct", "align", "4", "extra"]);
+    assembler.structEngine.handleEndStruct(["endstruct", "align", "4", "extra"]);
   }, { message: "endstruct align requires a single alignment parameter." });
 
   // Test: endstruct align with invalid alignment
   t.throws(() => {
-    assembler.handleEndStruct(["endstruct", "align", "0"]);
+    assembler.structEngine.handleEndStruct(["endstruct", "align", "0"]);
   }, { message: "Alignment must be at least 1." });
 
   // Clean up
@@ -3575,7 +3533,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
       ["firstMember", 0]
     ])
   };
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify parent was updated
   let updatedParent = assembler.structs.get("BaseStruct");
@@ -3592,7 +3550,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
       ["secondMember", 0]
     ])
   };
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify parent was updated with larger extension
   updatedParent = assembler.structs.get("BaseStruct");
@@ -3609,7 +3567,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
       ["thirdMember", 0]
     ])
   };
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify parent still has largest extension size
   updatedParent = assembler.structs.get("BaseStruct");
@@ -3620,10 +3578,10 @@ test("handleStruct - basic struct definition", t => {
   const assembler = new Assembler();
 
   // Set initial PC
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
 
   // Call handleStruct with a basic struct definition
-  assembler.handleStruct(["struct", "TestStruct", "$7000"]);
+  assembler.structEngine.handleStruct(["struct", "TestStruct", "$7000"]);
 
   // Verify currentStruct was created correctly
   t.not(assembler.currentStruct, null, "currentStruct should be created");
@@ -3636,10 +3594,10 @@ test("handleStruct - basic struct definition", t => {
   // Verify PC was saved and changed
   t.is(assembler.savedPCStack.length, 1, "PC should be saved to stack");
   t.is(assembler.savedPCStack[0], 0x8000, "Original PC should be saved");
-  t.is(assembler.snespos, 0x7000, "PC should be set to struct base address");
-  t.is(assembler.startpos, 0x7000, "startpos should be set to struct base address");
-  t.is(assembler.realsnespos, 0x7000, "realsnespos should be set to struct base address");
-  t.is(assembler.realstartpos, 0x7000, "realstartpos should be set to struct base address");
+  t.is(assembler.currentTargetAddress, 0x7000, "PC should be set to struct base address");
+  t.is(assembler.currentTargetStartAddress, 0x7000, "currentTargetStartAddress should be set to struct base address");
+  t.is(assembler.currentTargetBaseAddress, 0x7000, "currentTargetBaseAddress should be set to struct base address");
+  t.is(assembler.currentTargetBaseStartAddress, 0x7000, "currentTargetBaseStartAddress should be set to struct base address");
 
   // Clean up
   assembler.currentStruct = null;
@@ -3662,10 +3620,10 @@ test("handleStruct - extension struct", t => {
   assembler.structs.set("ParentStruct", parentStruct);
 
   // Set initial PC
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
 
   // Call handleStruct with an extension struct
-  assembler.handleStruct(["struct", "ChildStruct", "extends", "ParentStruct"]);
+  assembler.structEngine.handleStruct(["struct", "ChildStruct", "extends", "ParentStruct"]);
 
   // Verify currentStruct was created correctly
   t.not(assembler.currentStruct, null, "currentStruct should be created");
@@ -3678,7 +3636,7 @@ test("handleStruct - extension struct", t => {
   // Verify PC was saved and changed
   t.is(assembler.savedPCStack.length, 1, "PC should be saved to stack");
   t.is(assembler.savedPCStack[0], 0x8000, "Original PC should be saved");
-  t.is(assembler.snespos, 0x6000, "PC should be set to parent's base address");
+  t.is(assembler.currentTargetAddress, 0x6000, "PC should be set to parent's base address");
 
   // Clean up
   assembler.currentStruct = null;
@@ -3689,26 +3647,26 @@ test("handleStruct - error cases", t => {
 
   // struct Name (no base) is valid per Asar; only single-word "struct" is insufficient
   t.throws(() => {
-    assembler.handleStruct(["struct"]);
+    assembler.structEngine.handleStruct(["struct"]);
   }, { message: /Struct definition requires at least two parameters/ }, "Should throw for insufficient parameters");
 
   // Test with invalid SNES address
   t.throws(() => {
-    assembler.handleStruct(["struct", "TestStruct", "-1"]);
+    assembler.structEngine.handleStruct(["struct", "TestStruct", "-1"]);
   }, { message: /Invalid SNES address for struct/ }, "Should throw for negative address");
 
   t.throws(() => {
-    assembler.handleStruct(["struct", "TestStruct", "$1000000"]);
+    assembler.structEngine.handleStruct(["struct", "TestStruct", "$1000000"]);
   }, { message: /Invalid SNES address for struct/ }, "Should throw for address > 0xFFFFFF");
 
   // Test with non-existent parent struct
   t.throws(() => {
-    assembler.handleStruct(["struct", "ChildStruct", "extends", "NonExistentParent"]);
+    assembler.structEngine.handleStruct(["struct", "ChildStruct", "extends", "NonExistentParent"]);
   }, { message: /Parent struct 'NonExistentParent' not defined/ }, "Should throw for non-existent parent");
 
   // Test with missing parent name
   t.throws(() => {
-    assembler.handleStruct(["struct", "ChildStruct", "extends"]);
+    assembler.structEngine.handleStruct(["struct", "ChildStruct", "extends"]);
   }, { message: /Struct extension must specify a parent struct/ }, "Should throw for missing parent name");
 });
 
@@ -3716,10 +3674,10 @@ test("handleStruct and handleEndStruct - complete workflow", t => {
   const assembler = new Assembler();
 
   // Set initial PC
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
 
   // 1. Define a basic struct
-  assembler.handleStruct(["struct", "BasicStruct", "$7000"]);
+  assembler.structEngine.handleStruct(["struct", "BasicStruct", "$7000"]);
 
   // Simulate adding members by manually updating the offset and labels
   assembler.currentStruct.offset = 12;
@@ -3728,17 +3686,17 @@ test("handleStruct and handleEndStruct - complete workflow", t => {
   assembler.currentStruct.labels.set("footer", 8);
 
   // End the struct definition
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify struct was added to structs map
   t.true(assembler.structs.has("BasicStruct"), "BasicStruct should be added to structs map");
   const basicStruct = assembler.structs.get("BasicStruct");
   t.is(basicStruct.size, 12, "Size should be set to final offset");
   t.is(basicStruct.base, 0x7000, "Base address should be preserved");
-  t.is(assembler.snespos, 0x8000, "PC should be restored");
+  t.is(assembler.currentTargetAddress, 0x8000, "PC should be restored");
 
   // 2. Define an extension struct
-  assembler.handleStruct(["struct", "ExtStruct", "extends", "BasicStruct"]);
+  assembler.structEngine.handleStruct(["struct", "ExtStruct", "extends", "BasicStruct"]);
 
   // Simulate adding members
   assembler.currentStruct.offset = 8;
@@ -3746,7 +3704,7 @@ test("handleStruct and handleEndStruct - complete workflow", t => {
   assembler.currentStruct.labels.set("moreData", 4);
 
   // End the extension struct
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify extension struct was added
   t.true(assembler.structs.has("BasicStruct.ExtStruct"), "Combined name should also be added");
@@ -3760,7 +3718,7 @@ test("handleStruct and handleEndStruct - complete workflow", t => {
   t.is(updatedBasicStruct.extensionSize, 8, "Parent should track extension size");
 
   // 3. Define a struct with alignment
-  assembler.handleStruct(["struct", "AlignedStruct", "$8000"]);
+  assembler.structEngine.handleStruct(["struct", "AlignedStruct", "$8000"]);
 
   // Simulate adding members
   assembler.currentStruct.offset = 10;
@@ -3768,7 +3726,7 @@ test("handleStruct and handleEndStruct - complete workflow", t => {
   assembler.currentStruct.labels.set("field2", 6);
 
   // End the struct with alignment
-  assembler.handleEndStruct(["endstruct", "align", "4"]);
+  assembler.structEngine.handleEndStruct(["endstruct", "align", "4"]);
 
   // Verify aligned struct
   const alignedStruct = assembler.structs.get("AlignedStruct");
@@ -3780,19 +3738,19 @@ test("handleStruct and handleEndStruct - with multiple extensions", t => {
   const assembler = new Assembler();
 
   // Define base struct
-  assembler.snespos = 0x8000;
-  assembler.handleStruct(["struct", "BaseStruct", "$7000"]);
+  assembler.currentTargetAddress = 0x8000;
+  assembler.structEngine.handleStruct(["struct", "BaseStruct", "$7000"]);
   assembler.currentStruct.offset = 16;
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify base struct
   t.true(assembler.structs.has("BaseStruct"), "Base struct should be added");
   t.is(assembler.structs.get("BaseStruct").size, 16, "Base size should be correct");
 
   // Add first extension
-  assembler.handleStruct(["struct", "Ext1", "extends", "BaseStruct"]);
+  assembler.structEngine.handleStruct(["struct", "Ext1", "extends", "BaseStruct"]);
   assembler.currentStruct.offset = 8;
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify first extension and parent update
   t.true(assembler.structs.has("BaseStruct.Ext1"), "First extension should be added");
@@ -3800,9 +3758,9 @@ test("handleStruct and handleEndStruct - with multiple extensions", t => {
   t.is(assembler.structs.get("BaseStruct").extensionSize, 8, "Parent should track extension size");
 
   // Add second, larger extension
-  assembler.handleStruct(["struct", "Ext2", "extends", "BaseStruct"]);
+  assembler.structEngine.handleStruct(["struct", "Ext2", "extends", "BaseStruct"]);
   assembler.currentStruct.offset = 12;
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify second extension and parent update
   t.true(assembler.structs.has("BaseStruct.Ext2"), "Second extension should be added");
@@ -3810,9 +3768,9 @@ test("handleStruct and handleEndStruct - with multiple extensions", t => {
   t.is(assembler.structs.get("BaseStruct").extensionSize, 12, "Parent should update to larger extension");
 
   // Add third, smaller extension
-  assembler.handleStruct(["struct", "Ext3", "extends", "BaseStruct"]);
+  assembler.structEngine.handleStruct(["struct", "Ext3", "extends", "BaseStruct"]);
   assembler.currentStruct.offset = 4;
-  assembler.handleEndStruct(["endstruct"]);
+  assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify third extension and parent unchanged
   t.true(assembler.structs.has("BaseStruct.Ext3"), "Third extension should be added");
@@ -3824,64 +3782,64 @@ test("handlePushPC and handlePullPC - basic functionality", t => {
   const assembler = new Assembler();
 
   // Set initial positions
-  assembler.snespos = 0x8000;
-  assembler.startpos = 0x8000;
-  assembler.realsnespos = 0x8000;
-  assembler.realstartpos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
+  assembler.currentTargetStartAddress = 0x8000;
+  assembler.currentTargetBaseAddress = 0x8000;
+  assembler.currentTargetBaseStartAddress = 0x8000;
 
   // Push PC
   assembler.handlePushPC();
 
   // Change positions
-  assembler.snespos = 0x9000;
-  assembler.startpos = 0x9000;
-  assembler.realsnespos = 0x9000;
-  assembler.realstartpos = 0x9000;
+  assembler.currentTargetAddress = 0x9000;
+  assembler.currentTargetStartAddress = 0x9000;
+  assembler.currentTargetBaseAddress = 0x9000;
+  assembler.currentTargetBaseStartAddress = 0x9000;
 
   // Pull PC should restore original positions
   assembler.handlePullPC();
 
   // Verify positions were restored
-  t.is(assembler.snespos, 0x8000, "snespos should be restored");
-  t.is(assembler.startpos, 0x8000, "startpos should be restored");
-  t.is(assembler.realsnespos, 0x8000, "realsnespos should be restored");
-  t.is(assembler.realstartpos, 0x8000, "realstartpos should be restored");
+  t.is(assembler.currentTargetAddress, 0x8000, "currentTargetAddress should be restored");
+  t.is(assembler.currentTargetStartAddress, 0x8000, "currentTargetStartAddress should be restored");
+  t.is(assembler.currentTargetBaseAddress, 0x8000, "currentTargetBaseAddress should be restored");
+  t.is(assembler.currentTargetBaseStartAddress, 0x8000, "currentTargetBaseStartAddress should be restored");
 });
 
 test("handlePushPC - multiple pushes", t => {
   const assembler = new Assembler();
 
   // Set initial positions
-  assembler.snespos = 0x1000;
-  assembler.startpos = 0x1000;
-  assembler.realsnespos = 0x1000;
-  assembler.realstartpos = 0x1000;
+  assembler.currentTargetAddress = 0x1000;
+  assembler.currentTargetStartAddress = 0x1000;
+  assembler.currentTargetBaseAddress = 0x1000;
+  assembler.currentTargetBaseStartAddress = 0x1000;
 
   // First push
   assembler.handlePushPC();
 
   // Change positions
-  assembler.snespos = 0x2000;
-  assembler.startpos = 0x2000;
-  assembler.realsnespos = 0x2000;
-  assembler.realstartpos = 0x2000;
+  assembler.currentTargetAddress = 0x2000;
+  assembler.currentTargetStartAddress = 0x2000;
+  assembler.currentTargetBaseAddress = 0x2000;
+  assembler.currentTargetBaseStartAddress = 0x2000;
 
   // Second push
   assembler.handlePushPC();
 
   // Change positions again
-  assembler.snespos = 0x3000;
-  assembler.startpos = 0x3000;
-  assembler.realsnespos = 0x3000;
-  assembler.realstartpos = 0x3000;
+  assembler.currentTargetAddress = 0x3000;
+  assembler.currentTargetStartAddress = 0x3000;
+  assembler.currentTargetBaseAddress = 0x3000;
+  assembler.currentTargetBaseStartAddress = 0x3000;
 
   // First pull should restore to second position
   assembler.handlePullPC();
-  t.is(assembler.snespos, 0x2000, "snespos should be restored to second position");
+  t.is(assembler.currentTargetAddress, 0x2000, "currentTargetAddress should be restored to second position");
 
   // Second pull should restore to first position
   assembler.handlePullPC();
-  t.is(assembler.snespos, 0x1000, "snespos should be restored to first position");
+  t.is(assembler.currentTargetAddress, 0x1000, "currentTargetAddress should be restored to first position");
 });
 
 test("handlePushPC - stack overflow", t => {
@@ -3915,47 +3873,47 @@ test("handlePushPC and handlePullPC - nested operations", t => {
   const assembler = new Assembler();
 
   // Set initial positions
-  assembler.snespos = 0x1000;
-  assembler.startpos = 0x1000;
-  assembler.realsnespos = 0x1000;
-  assembler.realstartpos = 0x1000;
+  assembler.currentTargetAddress = 0x1000;
+  assembler.currentTargetStartAddress = 0x1000;
+  assembler.currentTargetBaseAddress = 0x1000;
+  assembler.currentTargetBaseStartAddress = 0x1000;
 
   // First push
   assembler.handlePushPC();
 
   // Change positions
-  assembler.snespos = 0x2000;
-  assembler.startpos = 0x2000;
-  assembler.realsnespos = 0x2000;
-  assembler.realstartpos = 0x2000;
+  assembler.currentTargetAddress = 0x2000;
+  assembler.currentTargetStartAddress = 0x2000;
+  assembler.currentTargetBaseAddress = 0x2000;
+  assembler.currentTargetBaseStartAddress = 0x2000;
 
   // Second push
   assembler.handlePushPC();
 
   // Change positions again
-  assembler.snespos = 0x3000;
-  assembler.startpos = 0x3000;
-  assembler.realsnespos = 0x3000;
-  assembler.realstartpos = 0x3000;
+  assembler.currentTargetAddress = 0x3000;
+  assembler.currentTargetStartAddress = 0x3000;
+  assembler.currentTargetBaseAddress = 0x3000;
+  assembler.currentTargetBaseStartAddress = 0x3000;
 
   // Third push
   assembler.handlePushPC();
 
   // Change positions one more time
-  assembler.snespos = 0x4000;
-  assembler.startpos = 0x4000;
-  assembler.realsnespos = 0x4000;
-  assembler.realstartpos = 0x4000;
+  assembler.currentTargetAddress = 0x4000;
+  assembler.currentTargetStartAddress = 0x4000;
+  assembler.currentTargetBaseAddress = 0x4000;
+  assembler.currentTargetBaseStartAddress = 0x4000;
 
   // Pull in reverse order
   assembler.handlePullPC();
-  t.is(assembler.snespos, 0x3000, "First pull should restore to third position");
+  t.is(assembler.currentTargetAddress, 0x3000, "First pull should restore to third position");
 
   assembler.handlePullPC();
-  t.is(assembler.snespos, 0x2000, "Second pull should restore to second position");
+  t.is(assembler.currentTargetAddress, 0x2000, "Second pull should restore to second position");
 
   assembler.handlePullPC();
-  t.is(assembler.snespos, 0x1000, "Third pull should restore to first position");
+  t.is(assembler.currentTargetAddress, 0x1000, "Third pull should restore to first position");
 
   // Verify pushpcnum is back to 0
   t.is(assembler.pushpcnum, 0, "pushpcnum should be 0 after all pulls");
@@ -3965,28 +3923,28 @@ test("handlePushPC and handlePullPC - with different position values", t => {
   const assembler = new Assembler();
 
   // Set initial positions with different values for each property
-  assembler.snespos = 0x1000;
-  assembler.startpos = 0x1100;
-  assembler.realsnespos = 0x1200;
-  assembler.realstartpos = 0x1300;
+  assembler.currentTargetAddress = 0x1000;
+  assembler.currentTargetStartAddress = 0x1100;
+  assembler.currentTargetBaseAddress = 0x1200;
+  assembler.currentTargetBaseStartAddress = 0x1300;
 
   // Push PC
   assembler.handlePushPC();
 
   // Change all positions
-  assembler.snespos = 0x2000;
-  assembler.startpos = 0x2100;
-  assembler.realsnespos = 0x2200;
-  assembler.realstartpos = 0x2300;
+  assembler.currentTargetAddress = 0x2000;
+  assembler.currentTargetStartAddress = 0x2100;
+  assembler.currentTargetBaseAddress = 0x2200;
+  assembler.currentTargetBaseStartAddress = 0x2300;
 
   // Pull PC should restore all original positions
   assembler.handlePullPC();
 
   // Verify each position was restored correctly
-  t.is(assembler.snespos, 0x1000, "snespos should be restored to original value");
-  t.is(assembler.startpos, 0x1100, "startpos should be restored to original value");
-  t.is(assembler.realsnespos, 0x1200, "realsnespos should be restored to original value");
-  t.is(assembler.realstartpos, 0x1300, "realstartpos should be restored to original value");
+  t.is(assembler.currentTargetAddress, 0x1000, "currentTargetAddress should be restored to original value");
+  t.is(assembler.currentTargetStartAddress, 0x1100, "currentTargetStartAddress should be restored to original value");
+  t.is(assembler.currentTargetBaseAddress, 0x1200, "currentTargetBaseAddress should be restored to original value");
+  t.is(assembler.currentTargetBaseStartAddress, 0x1300, "currentTargetBaseStartAddress should be restored to original value");
 });
 
 test("handlePushPC and handlePullPC - pushpcnum tracking", t => {
@@ -4384,7 +4342,7 @@ test("handleDataDirective - struct references", t => {
   const assembler = new Assembler();
   assembler.setPass(1);
   const write1Spy = sinon.spy(assembler, "write1");
-  const resolveStructLabelStub = sinon.stub(assembler, "resolveStructLabel");
+  const resolveStructLabelStub = sinon.stub(assembler.structEngine, "resolveStructLabel");
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
 
   // Setup struct resolution stub
@@ -4408,7 +4366,7 @@ test("handleDataDirective - label references", t => {
   const assembler = new Assembler();
   assembler.setPass(1);
   const write1Spy = sinon.spy(assembler, "write1");
-  const getLabelValueStub = sinon.stub(assembler, "getLabelValue");
+  const getLabelValueStub = sinon.stub(assembler.symbolScope, "getLabelValue");
 
   // Setup label resolution stubs used by getnum + static fallback path.
   getLabelValueStub.withArgs("LABEL1", false).returns(50);
@@ -4516,10 +4474,10 @@ test("handleOrg - sets SNES memory location with hex value", t => {
 
   assembler.handleOrg(["$8000"]);
 
-  t.is(assembler.snespos, 0x8000, "snespos should be set to the hex value");
-  t.is(assembler.realsnespos, 0x8000, "realsnespos should be set to the hex value");
-  t.is(assembler.startpos, 0x8000, "startpos should be set to the hex value");
-  t.is(assembler.realstartpos, 0x8000, "realstartpos should be set to the hex value");
+  t.is(assembler.currentTargetAddress, 0x8000, "currentTargetAddress should be set to the hex value");
+  t.is(assembler.currentTargetBaseAddress, 0x8000, "currentTargetBaseAddress should be set to the hex value");
+  t.is(assembler.currentTargetStartAddress, 0x8000, "currentTargetStartAddress should be set to the hex value");
+  t.is(assembler.currentTargetBaseStartAddress, 0x8000, "currentTargetBaseStartAddress should be set to the hex value");
 });
 
 test("handleOrg - sets SNES memory location with decimal value", t => {
@@ -4527,10 +4485,10 @@ test("handleOrg - sets SNES memory location with decimal value", t => {
 
   assembler.handleOrg(["32768"]);
 
-  t.is(assembler.snespos, 32768, "snespos should be set to the decimal value");
-  t.is(assembler.realsnespos, 32768, "realsnespos should be set to the decimal value");
-  t.is(assembler.startpos, 32768, "startpos should be set to the decimal value");
-  t.is(assembler.realstartpos, 32768, "realstartpos should be set to the decimal value");
+  t.is(assembler.currentTargetAddress, 32768, "currentTargetAddress should be set to the decimal value");
+  t.is(assembler.currentTargetBaseAddress, 32768, "currentTargetBaseAddress should be set to the decimal value");
+  t.is(assembler.currentTargetStartAddress, 32768, "currentTargetStartAddress should be set to the decimal value");
+  t.is(assembler.currentTargetBaseStartAddress, 32768, "currentTargetBaseStartAddress should be set to the decimal value");
 });
 
 test("handleOrg - throws error with no parameters", t => {
@@ -4598,8 +4556,8 @@ test("handleOrg - handles address at 24-bit boundary", t => {
 
   assembler.handleOrg(["$FFFFFF"]);
 
-  t.is(assembler.snespos, 0xFFFFFF, "snespos should be set to the maximum 24-bit value");
-  t.is(assembler.realsnespos, 0xFFFFFF, "realsnespos should be set to the maximum 24-bit value");
+  t.is(assembler.currentTargetAddress, 0xFFFFFF, "currentTargetAddress should be set to the maximum 24-bit value");
+  t.is(assembler.currentTargetBaseAddress, 0xFFFFFF, "currentTargetBaseAddress should be set to the maximum 24-bit value");
 });
 
 test("handleOrg - handles address with whitespace", t => {
@@ -4607,7 +4565,7 @@ test("handleOrg - handles address with whitespace", t => {
 
   assembler.handleOrg([" $A000 "]);
 
-  t.is(assembler.snespos, 0xA000, "snespos should be set correctly with trimmed value");
+  t.is(assembler.currentTargetAddress, 0xA000, "currentTargetAddress should be set correctly with trimmed value");
 });
 
 test("handleIf - basic condition evaluation", t => {
@@ -4875,55 +4833,30 @@ test("conditional directives - complex nested scenario", t => {
   t.is(assembler.condStack.length, 0, "Stack should be empty at the end");
 });
 
-test("isDefineStatement - correctly identifies define statements", t => {
-  const assembler = new Assembler();
-
-  // Valid define statements
-  t.true(assembler.isDefineStatement("!var = 123"), "Basic define statement");
-  t.true(assembler.isDefineStatement("!VAR = 123"), "Uppercase variable name");
-  t.true(assembler.isDefineStatement("!var=123"), "No spaces around equals");
-  t.true(assembler.isDefineStatement("  !var = 123  "), "With leading/trailing whitespace");
-  t.true(assembler.isDefineStatement("!var = $FF"), "With hex value");
-  t.true(assembler.isDefineStatement("!var = \"string\""), "With string value");
-  t.true(assembler.isDefineStatement("!var = !other + 5"), "With expression");
-
-  // Invalid define statements
-  t.false(assembler.isDefineStatement("var = 123"), "Missing ! prefix");
-  t.false(assembler.isDefineStatement("! var = 123"), "Space after !");
-  t.false(assembler.isDefineStatement("!var"), "No equals sign");
-  t.false(assembler.isDefineStatement("!var : 123"), "Wrong assignment operator");
-  t.false(assembler.isDefineStatement(";!var = 123"), "Comment line");
-  t.false(assembler.isDefineStatement(""), "Empty string");
-  t.false(assembler.isDefineStatement("  "), "Whitespace only");
-  t.false(assembler.isDefineStatement("lda #$10"), "Instruction line");
-});
-
 test("getDefineVariable - extracts variable name from define statements", t => {
-  const assembler = new Assembler();
-
   // Valid variable extractions
-  t.is(assembler.getDefineVariable("!var = 123"), "var", "Basic variable name");
-  t.is(assembler.getDefineVariable("!VAR = 123"), "VAR", "Uppercase variable name");
-  t.is(assembler.getDefineVariable("!v1 = 123"), "v1", "Variable with numbers");
-  t.is(assembler.getDefineVariable("!var_name = 123"), "var_name", "Variable with underscore");
-  t.is(assembler.getDefineVariable("!var=123"), "var", "No spaces around equals");
-  t.is(assembler.getDefineVariable("  !var = 123  "), "var", "With leading/trailing whitespace");
-  t.is(assembler.getDefineVariable("!a = 123"), "a", "Single character variable");
+  t.is(getDefineVariable("!var = 123"), "var", "Basic variable name");
+  t.is(getDefineVariable("!VAR = 123"), "VAR", "Uppercase variable name");
+  t.is(getDefineVariable("!v1 = 123"), "v1", "Variable with numbers");
+  t.is(getDefineVariable("!var_name = 123"), "var_name", "Variable with underscore");
+  t.is(getDefineVariable("!var=123"), "var", "No spaces around equals");
+  t.is(getDefineVariable("  !var = 123  "), "var", "With leading/trailing whitespace");
+  t.is(getDefineVariable("!a = 123"), "a", "Single character variable");
 
   // Edge cases and invalid inputs
-  t.is(assembler.getDefineVariable("var = 123"), undefined, "Missing ! prefix");
-  t.is(assembler.getDefineVariable("! var = 123"), undefined, "Space after !");
-  t.is(assembler.getDefineVariable("!var"), undefined, "No equals sign");
-  t.is(assembler.getDefineVariable("!var : 123"), undefined, "Wrong assignment operator");
-  t.is(assembler.getDefineVariable(";!var = 123"), undefined, "Comment line");
-  t.is(assembler.getDefineVariable(""), undefined, "Empty string");
-  t.is(assembler.getDefineVariable("  "), undefined, "Whitespace only");
-  t.is(assembler.getDefineVariable("!123var = 456"), undefined, "Variable starting with number");
-  t.is(assembler.getDefineVariable("!var-name = 123"), undefined, "Variable with invalid character");
-  t.is(assembler.getDefineVariable("lda #$10"), undefined, "Instruction line");
+  t.is(getDefineVariable("var = 123"), undefined, "Missing ! prefix");
+  t.is(getDefineVariable("! var = 123"), undefined, "Space after !");
+  t.is(getDefineVariable("!var"), undefined, "No equals sign");
+  t.is(getDefineVariable("!var : 123"), undefined, "Wrong assignment operator");
+  t.is(getDefineVariable(";!var = 123"), undefined, "Comment line");
+  t.is(getDefineVariable(""), undefined, "Empty string");
+  t.is(getDefineVariable("  "), undefined, "Whitespace only");
+  t.is(getDefineVariable("!123var = 456"), undefined, "Variable starting with number");
+  t.is(getDefineVariable("!var-name = 123"), undefined, "Variable with invalid character");
+  t.is(getDefineVariable("lda #$10"), undefined, "Instruction line");
 });
 
-test("getDefineVariable and isDefineStatement - integration", t => {
+test("getDefineVariable - integration", t => {
   const assembler = new Assembler();
 
   // Test cases that should work with both methods
@@ -4935,8 +4868,7 @@ test("getDefineVariable and isDefineStatement - integration", t => {
   ];
 
   for (const testCase of validCases) {
-    t.true(assembler.isDefineStatement(testCase), `Should identify as define: ${testCase}`);
-    t.not(assembler.getDefineVariable(testCase), undefined, `Should extract variable from: ${testCase}`);
+    t.not(getDefineVariable(testCase), undefined, `Should extract variable from: ${testCase}`);
   }
 
   // Test cases that should fail with both methods
@@ -4948,8 +4880,7 @@ test("getDefineVariable and isDefineStatement - integration", t => {
   ];
 
   for (const testCase of invalidCases) {
-    t.false(assembler.isDefineStatement(testCase), `Should not identify as define: ${testCase}`);
-    t.is(assembler.getDefineVariable(testCase), undefined, `Should not extract variable from: ${testCase}`);
+    t.is(getDefineVariable(testCase), undefined, `Should not extract variable from: ${testCase}`);
   }
 });
 
@@ -6051,51 +5982,51 @@ test("getLabelValue - retrieves label values correctly", t => {
 
   // Set up some test labels
   assembler.currentNamespace = "";
-  assembler.setLabel("globalLabel", 0x1234);
-  assembler.setLabel("staticLabel", 0x5678, true);
+  assembler.symbolScope.setLabel("globalLabel", 0x1234);
+  assembler.symbolScope.setLabel("staticLabel", 0x5678, true);
 
   assembler.currentNamespace = "testNS";
-  assembler.setLabel("namespaceLabel", 0xABCD);
-  assembler.setLabel("staticNamespaceLabel", 0xEF01, true);
+  assembler.symbolScope.setLabel("namespaceLabel", 0xABCD);
+  assembler.symbolScope.setLabel("staticNamespaceLabel", 0xEF01, true);
 
   // Reset namespace for testing
   assembler.currentNamespace = "";
 
   // Test retrieving global labels
-  t.is(assembler.getLabelValue("globalLabel", false), 0x1234,
+  t.is(assembler.symbolScope.getLabelValue("globalLabel", false), 0x1234,
     "Should retrieve global label value correctly");
-  t.is(assembler.getLabelValue("staticLabel", false), 0x5678,
+  t.is(assembler.symbolScope.getLabelValue("staticLabel", false), 0x5678,
     "Should retrieve static global label value correctly");
 
   // Test retrieving namespaced labels
   assembler.currentNamespace = "testNS";
-  t.is(assembler.getLabelValue("namespaceLabel", false), 0xABCD,
+  t.is(assembler.symbolScope.getLabelValue("namespaceLabel", false), 0xABCD,
     "Should retrieve namespaced label value correctly");
-  t.is(assembler.getLabelValue("staticNamespaceLabel", false), 0xEF01,
+  t.is(assembler.symbolScope.getLabelValue("staticNamespaceLabel", false), 0xEF01,
     "Should retrieve static namespaced label value correctly");
 
   // Test requiring static labels
   assembler.currentNamespace = "";
-  t.is(assembler.getLabelValue("staticLabel", true), 0x5678,
+  t.is(assembler.symbolScope.getLabelValue("staticLabel", true), 0x5678,
     "Should retrieve static label when required");
   assembler.currentNamespace = "testNS";
-  t.is(assembler.getLabelValue("staticNamespaceLabel", true), 0xEF01,
+  t.is(assembler.symbolScope.getLabelValue("staticNamespaceLabel", true), 0xEF01,
     "Should retrieve static namespaced label when required");
 
   // Test error case for non-static label used in conditional
   const error = t.throws(() => {
-    assembler.getLabelValue("namespaceLabel", true);
+    assembler.symbolScope.getLabelValue("namespaceLabel", true);
   }, { instanceOf: Error });
   t.is(error.message, "Error: Non-static label 'testNS_namespaceLabel' used in conditional.",
     "Should throw error when non-static label is used in conditional");
 
   // Test undefined label behavior
   assembler.currentNamespace = "";
-  t.is(assembler.getLabelValue("undefinedLabel", false), 0,
+  t.is(assembler.symbolScope.getLabelValue("undefinedLabel", false), 0,
     "Should return 0 for undefined label");
 
   // Test with full label name including namespace (assembler uses underscore for namespace prefix)
-  t.is(assembler.getLabelValue("testNS_namespaceLabel", false), 0xABCD,
+  t.is(assembler.symbolScope.getLabelValue("testNS_namespaceLabel", false), 0xABCD,
     "Should retrieve label with explicit namespace");
 });
 
@@ -6107,22 +6038,22 @@ test("setLabel - handles label creation and redefinition across passes", t => {
 
   // Basic label setting
   assembler.currentNamespace = "";
-  assembler.setLabel("testLabel", 0x1000);
+  assembler.symbolScope.setLabel("testLabel", 0x1000);
   t.is(assembler.labelTable.get("testLabel").value, 0x1000, "Should set label value in pass 0");
   t.is(assembler.labelTable.get("testLabel").isStatic, false, "Should set isStatic flag correctly");
 
   // Static label setting
-  assembler.setLabel("staticTestLabel", 0x2000, true);
+  assembler.symbolScope.setLabel("staticTestLabel", 0x2000, true);
   t.is(assembler.labelTable.get("staticTestLabel").value, 0x2000, "Should set static label value in pass 0");
   t.is(assembler.labelTable.get("staticTestLabel").isStatic, true, "Should set isStatic flag to true for static labels");
 
   // Namespaced label (assembler uses underscore for namespace prefix, not colon)
   assembler.currentNamespace = "testNS";
-  assembler.setLabel("nsLabel", 0x3000);
+  assembler.symbolScope.setLabel("nsLabel", 0x3000);
   t.is(assembler.labelTable.get("testNS_nsLabel").value, 0x3000, "Should set namespaced label correctly");
 
   // Label redefinition in pass 0 (should just log warning, not throw)
-  assembler.setLabel("nsLabel", 0x3500);
+  assembler.symbolScope.setLabel("nsLabel", 0x3500);
   t.is(assembler.labelTable.get("testNS_nsLabel").value, 0x3500, "Should update label value when redefined in pass 0");
 
   // Test pass 1 behavior
@@ -6130,11 +6061,11 @@ test("setLabel - handles label creation and redefinition across passes", t => {
 
   // Update existing label
   assembler.currentNamespace = "";
-  assembler.setLabel("testLabel", 0x1500);
+  assembler.symbolScope.setLabel("testLabel", 0x1500);
   t.is(assembler.labelTable.get("testLabel").value, 0x1500, "Should update label value in pass 1");
 
   // Create new label in pass 1
-  assembler.setLabel("pass1Label", 0x4000);
+  assembler.symbolScope.setLabel("pass1Label", 0x4000);
   t.is(assembler.labelTable.get("pass1Label").value, 0x4000, "Should create new label in pass 1");
 
   // Test pass 2 behavior
@@ -6142,33 +6073,32 @@ test("setLabel - handles label creation and redefinition across passes", t => {
 
   // In pass 2, changing an existing label's value throws (assembler detects inconsistency)
   t.throws(() => {
-    assembler.setLabel("testLabel", 0x1600);
+    assembler.symbolScope.setLabel("testLabel", 0x1600);
   }, { message: /Label "testLabel" changed/ }, "Should throw when label value changes in pass 2");
   t.is(assembler.labelTable.get("testLabel").value, 0x1500, "Label value unchanged after throw");
 
   // In pass 2, setting a label that didn't exist in pass 0/1 is allowed (no throw)
-  assembler.setLabel("pass2NewLabel", 0x5000);
+  assembler.symbolScope.setLabel("pass2NewLabel", 0x5000);
   t.is(assembler.labelTable.get("pass2NewLabel").value, 0x5000, "Can set new label in pass 2");
 
   // Test error case: static label mismatch
   assembler.currentNamespace = "testNS";
   const error2 = t.throws(() => {
-    assembler.setLabel("nsLabel", 0x3600, true);
+    assembler.symbolScope.setLabel("nsLabel", 0x3600, true);
   }, { instanceOf: Error });
   t.is(error2.message, "Label 'testNS_nsLabel' is not static and cannot be used in conditionals.", "Should throw error when static flag doesn't match original definition");
 
-  // Test error case: invalid pass
+  // Stage-backed symbol scope no longer validates arbitrary pass values.
   assembler.pass = 3;
-  const error3 = t.throws(() => {
-    assembler.setLabel("testLabel", 0x1700);
-  }, { instanceOf: Error });
-  t.is(error3.message, "Label 'testNS_testLabel' used in pass 3.", "Should throw error when used in invalid pass");
+  t.notThrows(() => {
+    assembler.symbolScope.setLabel("testLabel", 0x1700);
+  }, "Should allow direct symbol writes regardless of pass value");
 
   // Test default value (current SNES position)
   assembler.pass = 0;
-  assembler.snespos = 0x8000;
+  assembler.currentTargetAddress = 0x8000;
   assembler.currentNamespace = "";
-  assembler.setLabel("positionLabel");
+  assembler.symbolScope.setLabel("positionLabel");
   t.is(assembler.labelTable.get("positionLabel").value, 0x8000, "Should use current SNES position when value not provided");
 });
 
@@ -6181,24 +6111,24 @@ test("findNextLabel and findPreviousLabel", (t) => {
 
   // Test findNextLabel in pass 0
   assembler.pass = 0;
-  assembler.snespos = 0x1000;
-  t.is(assembler.findNextLabel("+"), 0, "Should return 0 in pass 0");
+  assembler.currentTargetAddress = 0x1000;
+  t.is(assembler.symbolScope.findNextLabel("+"), 0, "Should return 0 in pass 0");
 
   // Test findPreviousLabel in pass 0
-  t.is(assembler.findPreviousLabel("-"), 0, "Should return 0 in pass 0");
+  t.is(assembler.symbolScope.findPreviousLabel("-"), 0, "Should return 0 in pass 0");
 
   // Setup for pass 2 tests
   assembler.pass = 2;
 
   // Test findNextLabel with no labels defined
   const error1 = t.throws(() => {
-    assembler.findNextLabel("+");
+    assembler.symbolScope.findNextLabel("+");
   }, { instanceOf: Error });
   t.is(error1.message, "Error: No + label '+' found after 1000.", "Should throw when no forward labels exist");
 
   // Test findPreviousLabel with no labels defined
   const error2 = t.throws(() => {
-    assembler.findPreviousLabel("-");
+    assembler.symbolScope.findPreviousLabel("-");
   }, { instanceOf: Error });
   t.is(error2.message, "Error: No - label '-' found before 1000.", "Should throw when no backward labels exist");
 
@@ -6218,16 +6148,16 @@ test("findNextLabel and findPreviousLabel", (t) => {
     }
   ];
   // Test findNextLabel with no labels after current position
-  assembler.snespos = 0x2100;
+  assembler.currentTargetAddress = 0x2100;
   const error3 = t.throws(() => {
-    assembler.findNextLabel("+");
+    assembler.symbolScope.findNextLabel("+");
   }, { instanceOf: Error });
   t.is(error3.message, "Error: No + label '+' found after 2100.", "Should throw when no forward labels exist after current position");
 
   // Test findNextLabel with labels after current position
-  assembler.snespos = 0x1100;
-  t.is(assembler.findNextLabel("+"), 0x1200, "Should find the closest forward label after current position");
-  t.is(assembler.findNextLabel("+", 0x1200), 0x1200, "Should allow inline + labels at the branch reference address");
+  assembler.currentTargetAddress = 0x1100;
+  t.is(assembler.symbolScope.findNextLabel("+"), 0x1200, "Should find the closest forward label after current position");
+  t.is(assembler.symbolScope.findNextLabel("+", 0x1200), 0x1200, "Should allow inline + labels at the branch reference address");
 
   // Setup some backward labels
   assembler.backwardLabels[1] = [
@@ -6246,15 +6176,15 @@ test("findNextLabel and findPreviousLabel", (t) => {
   ];
 
   // Test findPreviousLabel with no labels before current position
-  assembler.snespos = 0x400;
+  assembler.currentTargetAddress = 0x400;
   const error4 = t.throws(() => {
-    assembler.findPreviousLabel("-");
+    assembler.symbolScope.findPreviousLabel("-");
   }, { instanceOf: Error });
   t.is(error4.message, "Error: No - label '-' found before 400.", "Should throw when no backward labels exist before current position");
 
   // Test findPreviousLabel with labels before current position
-  assembler.snespos = 0x1100;
-  t.is(assembler.findPreviousLabel("-"), 0x1050, "Should find the closest backward label before current position");
+  assembler.currentTargetAddress = 0x1100;
+  t.is(assembler.symbolScope.findPreviousLabel("-"), 0x1050, "Should find the closest backward label before current position");
 
   // Test with different depths (number of + or - characters)
   assembler.forwardLabels[2] = [
@@ -6274,9 +6204,9 @@ test("findNextLabel and findPreviousLabel", (t) => {
     }
   ];
 
-  assembler.snespos = 0x1000;
-  t.is(assembler.findNextLabel("++"), 0x1300, "Should find the correct forward label with depth 2");
-  t.is(assembler.findPreviousLabel("--"), 0x900, "Should find the correct backward label with depth 2");
+  assembler.currentTargetAddress = 0x1000;
+  t.is(assembler.symbolScope.findNextLabel("++"), 0x1300, "Should find the correct forward label with depth 2");
+  t.is(assembler.symbolScope.findPreviousLabel("--"), 0x900, "Should find the correct backward label with depth 2");
 });
 
 test("handleRelativeLabel", (t) => {
@@ -6288,10 +6218,10 @@ test("handleRelativeLabel", (t) => {
 
   // Test pass 0 behavior - should track labels but not resolve
   assembler.pass = 0;
-  assembler.snespos = 0x1000;
+  assembler.currentTargetAddress = 0x1000;
 
   // Test forward label tracking in pass 0
-  assembler.handleRelativeLabel("+");
+  assembler.symbolScope.handleRelativeLabel("+");
   t.deepEqual(assembler.forwardLabels[1], [
     {
       addr: 0x1000,
@@ -6299,8 +6229,8 @@ test("handleRelativeLabel", (t) => {
   ], "Should track forward label in pass 0");
 
   // Test backward label tracking in pass 0
-  assembler.snespos = 0x1200;
-  assembler.handleRelativeLabel("-");
+  assembler.currentTargetAddress = 0x1200;
+  assembler.symbolScope.handleRelativeLabel("-");
   t.deepEqual(assembler.backwardLabels[1], [
     {
       addr: 0x1200,
@@ -6308,16 +6238,16 @@ test("handleRelativeLabel", (t) => {
   ], "Should track backward label in pass 0");
 
   // Test multiple depths
-  assembler.snespos = 0x1400;
-  assembler.handleRelativeLabel("++");
+  assembler.currentTargetAddress = 0x1400;
+  assembler.symbolScope.handleRelativeLabel("++");
   t.deepEqual(assembler.forwardLabels[2], [
     {
       addr: 0x1400,
     }
   ], "Should track forward label with correct depth");
 
-  assembler.snespos = 0x1600;
-  assembler.handleRelativeLabel("--");
+  assembler.currentTargetAddress = 0x1600;
+  assembler.symbolScope.handleRelativeLabel("--");
   t.deepEqual(assembler.backwardLabels[2], [
     {
       addr: 0x1600,
@@ -6366,14 +6296,14 @@ test("handleRelativeLabel", (t) => {
   };
 
   // Test forward label resolution
-  assembler.snespos = 0x1800;
-  t.is(assembler.handleRelativeLabel("+"), 0x1800, "Should resolve to next forward label");
-  t.is(assembler.handleRelativeLabel("++"), 0x1800, "Should resolve to next forward label with depth 2");
+  assembler.currentTargetAddress = 0x1800;
+  t.is(assembler.symbolScope.handleRelativeLabel("+"), 0x1800, "Should resolve to next forward label");
+  t.is(assembler.symbolScope.handleRelativeLabel("++"), 0x1800, "Should resolve to next forward label with depth 2");
 
   // Test backward label resolution
-  assembler.snespos = 0x1600;
-  t.is(assembler.handleRelativeLabel("-"), 0x1600, "Should resolve to previous backward label");
-  t.is(assembler.handleRelativeLabel("--"), 0x1600, "Should resolve to previous backward label with depth 2");
+  assembler.currentTargetAddress = 0x1600;
+  t.is(assembler.symbolScope.handleRelativeLabel("-"), 0x1600, "Should resolve to previous backward label");
+  t.is(assembler.symbolScope.handleRelativeLabel("--"), 0x1600, "Should resolve to previous backward label with depth 2");
 
   // Test error cases
   assembler.forwardLabels = {};
@@ -6381,13 +6311,13 @@ test("handleRelativeLabel", (t) => {
 
   // No forward labels defined
   const error1 = t.throws(() => {
-    assembler.handleRelativeLabel("+");
+    assembler.symbolScope.handleRelativeLabel("+");
   }, { instanceOf: Error });
   t.is(error1.message, "Error: Undefined forward label '+'.", "Should throw when no forward labels defined");
 
   // No backward labels defined
   const error2 = t.throws(() => {
-    assembler.handleRelativeLabel("-");
+    assembler.symbolScope.handleRelativeLabel("-");
   }, { instanceOf: Error });
   t.is(error2.message, "Error: Undefined backward label '-'.", "Should throw when no backward labels defined");
 
@@ -6396,78 +6326,82 @@ test("handleRelativeLabel", (t) => {
   assembler.backwardLabels[1] = [];
 
   const error3 = t.throws(() => {
-    assembler.handleRelativeLabel("+");
+    assembler.symbolScope.handleRelativeLabel("+");
   }, { instanceOf: Error });
   t.is(error3.message, "Error: Undefined forward label '+'.", "Should throw when forward labels array is empty");
 
   const error4 = t.throws(() => {
-    assembler.handleRelativeLabel("-");
+    assembler.symbolScope.handleRelativeLabel("-");
   }, { instanceOf: Error });
   t.is(error4.message, "Error: Undefined backward label '-'.", "Should throw when backward labels array is empty");
 });
 
-test("handleDefineCommand - basic define operations", t => {
+test("defineEngine.handleDefineCommand - basic define operations", t => {
   const assembler = new Assembler();
 
   // Test basic assignment (=)
-  assembler.handleDefineCommand("!test = 42");
+  assembler.defineEngine.handleDefineCommand("!test = 42");
   t.is(assembler.defines.get("test"), "42", "Basic assignment should store the value");
 
   // Test quoted string assignment
-  assembler.handleDefineCommand('!string = "hello world"');
+  assembler.defineEngine.handleDefineCommand('!string = "hello world"');
   t.is(assembler.defines.get("string"), "hello world", "String assignment should remove quotes");
 
   // Test immediate evaluation (:=)
   assembler.defines.set("base", "10");
-  assembler.handleDefineCommand("!derived := !base + 5");
+  assembler.defineEngine.handleDefineCommand("!derived := !base + 5");
   t.is(assembler.defines.get("derived"), "$F", "Immediate evaluation should resolve defines in the value (10 + 5)");
 
   // Test math evaluation (#=)
-  assembler.handleDefineCommand("!math #= 5 + 7");
+  assembler.defineEngine.handleDefineCommand("!math #= 5 + 7");
   t.is(assembler.defines.get("math"), "12", "Math evaluation should calculate the expression");
 
   // Test math with defines
   assembler.defines.set("a", "5");
   assembler.defines.set("b", "3");
-  assembler.handleDefineCommand("!sum #= !a + !b");
+  assembler.defineEngine.handleDefineCommand("!sum #= !a + !b");
   t.is(assembler.defines.get("sum"), "8", "Math evaluation should work with defines");
 
   // Test conditional assignment (?=)
   assembler.defines.set("existing", "original");
-  assembler.handleDefineCommand("!existing ?= new value");
+  assembler.defineEngine.handleDefineCommand("!existing ?= new value");
   t.is(assembler.defines.get("existing"), "original", "Conditional assignment shouldn't change existing values");
 
-  assembler.handleDefineCommand("!new ?= first value");
+  assembler.defineEngine.handleDefineCommand("!new ?= first value");
   t.is(assembler.defines.get("new"), "first value", "Conditional assignment should set new values");
 
   // Test append (+=)
   assembler.defines.set("list", "item1");
-  assembler.handleDefineCommand("!list += ,item2");
+  assembler.defineEngine.handleDefineCommand("!list += ,item2");
   t.is(assembler.defines.get("list"), "item1,item2", "Append should add to existing value");
 
   // Test complex expressions
-  assembler.handleDefineCommand("!complex #= (10 * 2) / 4");
+  assembler.defineEngine.handleDefineCommand("!complex #= (10 * 2) / 4");
   t.is(assembler.defines.get("complex"), "5", "Complex math expressions should be evaluated correctly");
 
-  assembler.handleDefineCommand("!task_offset = $004E+task");
+  assembler.defineEngine.handleDefineCommand("!task_offset = $004E+task");
   t.is(assembler.defines.get("task_offset"), "$004E+task", "Symbolic math defines should retain struct references for later member access");
 });
 
 test("handleUndef - removes defines from processCommand", t => {
   const assembler = new Assembler();
 
-  assembler.handleDefineCommand('!testdefine = "poop"');
+  assembler.defineEngine.handleDefineCommand('!testdefine = "poop"');
   t.true(assembler.defines.has("testdefine"), "Define should exist before undef");
 
+  assembler.defineEngine.handleDefineCommand('undef "testdefine"');
+  t.false(assembler.defines.has("testdefine"), "Direct handleDefineCommand undef should remove define");
+
+  assembler.defineEngine.handleDefineCommand('!testdefine = "poop"');
   assembler.processCommand('undef "testdefine"');
   t.false(assembler.defines.has("testdefine"), "Quoted undef should remove define");
 
-  assembler.handleDefineCommand('!testdefine = "poop"');
+  assembler.defineEngine.handleDefineCommand('!testdefine = "poop"');
   assembler.processCommand("undef testdefine");
   t.false(assembler.defines.has("testdefine"), "Unquoted undef should remove define");
 
   const error = t.throws(() => {
-    assembler.handleUndef([]);
+    assembler.defineEngine.handleDefineCommand("undef");
   }, { instanceOf: Error });
   t.is(error.message, "undef requires exactly one identifier parameter");
 });
@@ -6480,23 +6414,23 @@ test("expressionHost - defined and string expansion behavior", t => {
   t.is(assembler.expressionHost.isDefined("testdefine"), 1, "defined() should detect preprocessor defines");
   t.is(assembler.expressionHost.isDefined("missing_define"), 0, "defined() should return 0 for missing defines");
 
-  t.is(assembler.resolveDefinesInStringLiteral("!a"), "x", "Unescaped string define should expand");
-  t.is(assembler.resolveDefinesInStringLiteral("\\!a"), "!a", "Escaped bang should stay literal");
-  t.is(assembler.resolveDefinesInStringLiteral("\\\\!a"), "\\x", "Double slash should keep slash and expand define");
+  t.is(assembler.defineEngine.resolveDefinesInStringLiteral("!a"), "x", "Unescaped string define should expand");
+  t.is(assembler.defineEngine.resolveDefinesInStringLiteral("\\!a"), "!a", "Escaped bang should stay literal");
+  t.is(assembler.defineEngine.resolveDefinesInStringLiteral("\\\\!a"), "\\x", "Double slash should keep slash and expand define");
 });
 
-test("handleDefineCommand - error cases", t => {
+test("defineEngine.handleDefineCommand - error cases", t => {
   const assembler = new Assembler();
 
   // Test invalid syntax
   const error = t.throws(() => {
-    assembler.handleDefineCommand("!invalid syntax");
+    assembler.defineEngine.handleDefineCommand("!invalid syntax");
   }, { instanceOf: Error });
   t.is(error.message, "Invalid define syntax: !invalid syntax", "Should throw on invalid syntax");
 
   // Test math evaluation errors
   const mathError = t.throws(() => {
-    assembler.handleDefineCommand("!bad #= not a math expression");
+    assembler.defineEngine.handleDefineCommand("!bad #= not a math expression");
   }, { instanceOf: Error });
   t.is(mathError.message, "Mismatched parentheses.", "Should throw on invalid math expression");
 });
@@ -6508,24 +6442,24 @@ test("handleDefineCommand - edge cases", t => {
   // Test nested defines with := operator
   // assembler.defines.set("inner", "value");
   // assembler.defines.set("wrapper", "!inner");
-  // assembler.handleDefineCommand("!resolved := !wrapper");
+  // assembler.defineEngine.handleDefineCommand("!resolved := !wrapper");
   // t.is(assembler.defines.get("resolved"), "value", "Nested defines should be resolved with :=");
 
   // Test math with hex values
-  assembler.handleDefineCommand("!hex #= $10 + $20");
+  assembler.defineEngine.handleDefineCommand("!hex #= $10 + $20");
   t.is(assembler.defines.get("hex"), "48", "Math should handle hex values");
 
   // TODO: Validate this
   // Test != operator in math expressions
-  // assembler.handleDefineCommand("!comparison #= 5 != 3 ? 1 : 0");
+  // assembler.defineEngine.handleDefineCommand("!comparison #= 5 != 3 ? 1 : 0");
   // t.is(assembler.defines.get("comparison"), "1", "Should handle != operator in math expressions");
 
   // Test empty string assignment
-  assembler.handleDefineCommand('!empty = ""');
+  assembler.defineEngine.handleDefineCommand('!empty = ""');
   t.is(assembler.defines.get("empty"), "", "Should handle empty string assignment");
 
   // Test multiple operators in math
-  assembler.handleDefineCommand("!complex #= 2 + 3 * 4");
+  assembler.defineEngine.handleDefineCommand("!complex #= 2 + 3 * 4");
   t.is(assembler.defines.get("complex"), "14", "Should respect operator precedence in math");
 });
 
@@ -6600,28 +6534,46 @@ test("handleArch - valid architectures", t => {
   const assembler = new Assembler();
 
   // Test 65816 architecture
-  assembler.handleArch(["arch", "65816"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "65816"]);
   t.is(assembler.arch, "65816", "Should set architecture to 65816");
 
   // Test spc700 architecture
-  assembler.handleArch(["arch", "spc700"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "spc700"]);
   t.is(assembler.arch, "spc700", "Should set architecture to spc700");
   t.false(assembler.spcInlineCompatMode, "spc700 should not enable inline compatibility mode");
 
   // Test spc700-inline architecture
-  assembler.handleArch(["arch", "spc700-inline"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "spc700-inline"]);
   t.is(assembler.arch, "spc700", "spc700-inline should compile with spc700 arch backend");
   t.true(assembler.spcInlineCompatMode, "spc700-inline should enable inline compatibility mode");
 
   // Test superfx architecture
-  assembler.handleArch(["arch", "superfx"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "superfx"]);
   t.is(assembler.arch, "superfx", "Should set architecture to superfx");
   t.false(assembler.spcInlineCompatMode, "superfx should disable inline compatibility mode");
 
   // Test case insensitivity
-  assembler.handleArch(["arch", "65816"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "65816"]);
   t.is(assembler.arch, "65816", "Should handle lowercase architecture name");
-  assembler.handleArch(["arch", "SPC700"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "SPC700"]);
   t.is(assembler.arch, "spc700", "Should handle uppercase architecture name");
 });
 
@@ -6630,14 +6582,20 @@ test("handleArch - error cases", t => {
 
   // Test missing architecture parameter
   const missingParamError = t.throws(() => {
-    assembler.handleArch(["arch"]);
+    handleArch({
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    }, ["arch"]);
   }, { instanceOf: Error });
   t.is(missingParamError?.message, "ARCH command requires an architecture parameter.",
     "Should throw when architecture parameter is missing");
 
   // Test unsupported architecture
   const unsupportedArchError = t.throws(() => {
-    assembler.handleArch(["arch", "z80"]);
+    handleArch({
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    }, ["arch", "z80"]);
   }, { instanceOf: Error });
   t.is(unsupportedArchError?.message, "Unsupported architecture: z80",
     "Should throw on unsupported architecture");
@@ -6647,22 +6605,37 @@ test("handleArch - architecture switching", t => {
   const assembler = new Assembler();
 
   // Test switching between architectures
-  assembler.handleArch(["arch", "65816"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "65816"]);
   t.is(assembler.arch, "65816", "Should start with 65816 architecture");
 
-  assembler.handleArch(["arch", "spc700"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "spc700"]);
   t.is(assembler.arch, "spc700", "Should switch to spc700 architecture");
   t.false(assembler.spcInlineCompatMode, "spc700 should not use inline compatibility mode");
 
-  assembler.handleArch(["arch", "spc700-inline"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "spc700-inline"]);
   t.is(assembler.arch, "spc700", "spc700-inline should still use spc700 backend");
   t.true(assembler.spcInlineCompatMode, "spc700-inline should enable inline compatibility mode");
 
-  assembler.handleArch(["arch", "superfx"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "superfx"]);
   t.is(assembler.arch, "superfx", "Should switch to superfx architecture");
   t.false(assembler.spcInlineCompatMode, "switching away should clear inline compatibility mode");
 
-  assembler.handleArch(["arch", "65816"]);
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "65816"]);
   t.is(assembler.arch, "65816", "Should switch back to 65816 architecture");
   t.false(assembler.spcInlineCompatMode, "65816 should keep inline compatibility mode disabled");
 });
@@ -6736,20 +6709,20 @@ test("step - basic functionality", t => {
   const assembler = new Assembler();
 
   // Set initial positions
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
-  assembler.startpos = 0x008000;
-  assembler.realstartpos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
+  assembler.currentTargetStartAddress = 0x008000;
+  assembler.currentTargetBaseStartAddress = 0x008000;
   assembler.bytes = 0;
 
   // Step forward by 10 bytes
   assembler.step(10);
 
   // Check that all positions are updated correctly
-  t.is(assembler.snespos, 0x00800A, "snespos should be incremented by step amount");
-  t.is(assembler.realsnespos, 0x00800A, "realsnespos should be incremented by step amount");
-  t.is(assembler.startpos, 0x00800A, "startpos should match new snespos");
-  t.is(assembler.realstartpos, 0x00800A, "realstartpos should match new realsnespos");
+  t.is(assembler.currentTargetAddress, 0x00800A, "currentTargetAddress should be incremented by step amount");
+  t.is(assembler.currentTargetBaseAddress, 0x00800A, "currentTargetBaseAddress should be incremented by step amount");
+  t.is(assembler.currentTargetStartAddress, 0x00800A, "currentTargetStartAddress should match new currentTargetAddress");
+  t.is(assembler.currentTargetBaseStartAddress, 0x00800A, "currentTargetBaseStartAddress should match currentTargetBaseAddress");
   t.is(assembler.bytes, 10, "bytes counter should be incremented by step amount");
 });
 
@@ -6758,48 +6731,48 @@ test("step - bank crossing with different mappers", t => {
 
   // Test lorom mapper bank crossing
   assembler.mapper = "lorom";
-  assembler.snespos = 0x00FFFC;
-  assembler.realsnespos = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00FFFC;
+  assembler.currentTargetBaseAddress = 0x00FFFC;
 
   // Step across bank boundary
   assembler.step(8);
 
   // In lorom, crossing bank boundary should wrap to 0x8000 in next bank
-  t.is(assembler.snespos, 0x018004, "lorom should wrap to 0x8000 in next bank");
-  t.is(assembler.realsnespos, 0x018004, "realsnespos should follow same wrapping rules");
+  t.is(assembler.currentTargetAddress, 0x018004, "lorom should wrap to 0x8000 in next bank");
+  t.is(assembler.currentTargetBaseAddress, 0x018004, "currentTargetBaseAddress should follow same wrapping rules");
 
   // Test hirom mapper bank crossing
   assembler.mapper = "hirom";
-  assembler.snespos = 0x00FFFC;
-  assembler.realsnespos = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00FFFC;
+  assembler.currentTargetBaseAddress = 0x00FFFC;
 
   // Step across bank boundary
   assembler.step(8);
 
   // In hirom for addresses below 0x400000, should wrap to 0x8000 in next bank
-  t.is(assembler.snespos, 0x018004, "hirom should wrap to 0x8000 in next bank for addresses below 0x400000");
+  t.is(assembler.currentTargetAddress, 0x018004, "hirom should wrap to 0x8000 in next bank for addresses below 0x400000");
 
   // Test hirom mapper bank crossing above 0x400000
   assembler.mapper = "hirom";
-  assembler.snespos = 0x40FFFC;
-  assembler.realsnespos = 0x40FFFC;
+  assembler.currentTargetAddress = 0x40FFFC;
+  assembler.currentTargetBaseAddress = 0x40FFFC;
 
   // Step across bank boundary
   assembler.step(8);
 
   // In hirom for addresses above 0x400000, should just increment
-  t.is(assembler.snespos, 0x410004, "hirom should not wrap for addresses above 0x400000");
+  t.is(assembler.currentTargetAddress, 0x410004, "hirom should not wrap for addresses above 0x400000");
 
   // Test norom mapper (no wrapping)
   assembler.mapper = "norom";
-  assembler.snespos = 0x00FFFC;
-  assembler.realsnespos = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00FFFC;
+  assembler.currentTargetBaseAddress = 0x00FFFC;
 
   // Step across bank boundary
   assembler.step(8);
 
   // In norom, addresses should just increment without wrapping
-  t.is(assembler.snespos, 0x010004, "norom should not wrap addresses");
+  t.is(assembler.currentTargetAddress, 0x010004, "norom should not wrap addresses");
 });
 
 test("step - large steps across multiple banks", t => {
@@ -6807,15 +6780,15 @@ test("step - large steps across multiple banks", t => {
   assembler.mapper = "lorom";
 
   // Start at beginning of a bank
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
 
   // Step forward by more than one bank (0x8000 bytes)
   assembler.step(0x10000);
 
   // Should end up at 0x8000 in bank 2 (0x028000)
-  t.is(assembler.snespos & 0xFFFFFF, 0x010000, "Should handle steps larger than one bank");
-  t.is(assembler.realsnespos & 0xFFFFFF, 0x010000, "realsnespos should follow same rules for large steps");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x010000, "Should handle steps larger than one bank");
+  t.is(assembler.currentTargetBaseAddress & 0xFFFFFF, 0x010000, "currentTargetBaseAddress should follow same rules for large steps");
 });
 
 test("step - exlorom and bigsa1rom bank crossing", t => {
@@ -6823,25 +6796,25 @@ test("step - exlorom and bigsa1rom bank crossing", t => {
 
   // Test exlorom
   assembler.mapper = "exlorom";
-  assembler.snespos = 0x80FFFC;
-  assembler.realsnespos = 0x80FFFC;
+  assembler.currentTargetAddress = 0x80FFFC;
+  assembler.currentTargetBaseAddress = 0x80FFFC;
 
   // Step across bank boundary
   assembler.step(8);
 
   // Should wrap to 0x8000 in next bank
-  t.is(assembler.snespos & 0xFFFFFF, 0x818004, "exlorom should wrap to 0x8000 in next bank");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x818004, "exlorom should wrap to 0x8000 in next bank");
 
   // Test bigsa1rom
   assembler.mapper = "bigsa1rom";
-  assembler.snespos = 0x00FFFC;
-  assembler.realsnespos = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00FFFC;
+  assembler.currentTargetBaseAddress = 0x00FFFC;
 
   // Step across bank boundary
   assembler.step(8);
 
   // Should wrap to 0x8000 in next bank
-  t.is(assembler.snespos & 0xFFFFFF, 0x018004, "bigsa1rom should wrap to 0x8000 in next bank");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x018004, "bigsa1rom should wrap to 0x8000 in next bank");
 });
 
 test("step - exhirom, sfxrom, and sa1rom bank crossing", t => {
@@ -6849,48 +6822,48 @@ test("step - exhirom, sfxrom, and sa1rom bank crossing", t => {
 
   // Test exhirom below 0x400000
   assembler.mapper = "exhirom";
-  assembler.snespos = 0x00FFFC;
-  assembler.realsnespos = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00FFFC;
+  assembler.currentTargetBaseAddress = 0x00FFFC;
 
   // Step across bank boundary
   assembler.step(8);
 
   // Should wrap to 0x8000 in next bank
-  t.is(assembler.snespos & 0xFFFFFF, 0x018004, "exhirom should wrap to 0x8000 in next bank below 0x400000");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x018004, "exhirom should wrap to 0x8000 in next bank below 0x400000");
 
   // Test exhirom above 0x400000
-  assembler.snespos = 0x40FFFC;
-  assembler.realsnespos = 0x40FFFC;
+  assembler.currentTargetAddress = 0x40FFFC;
+  assembler.currentTargetBaseAddress = 0x40FFFC;
 
   // Step across bank boundary
   assembler.step(8);
 
   // Should not wrap above 0x400000
-  t.is(assembler.snespos & 0xFFFFFF, 0x410004, "exhirom should not wrap above 0x400000");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x410004, "exhirom should not wrap above 0x400000");
 
   // Test sfxrom and sa1rom (they behave the same way)
   for (const mapper of ["sfxrom", "sa1rom"]) {
     assembler.mapper = mapper;
 
     // Test below 0x400000
-    assembler.snespos = 0x00FFFC;
-    assembler.realsnespos = 0x00FFFC;
+    assembler.currentTargetAddress = 0x00FFFC;
+    assembler.currentTargetBaseAddress = 0x00FFFC;
 
     // Step across bank boundary
     assembler.step(8);
 
     // Should wrap to 0x8000 in next bank
-    t.is(assembler.snespos & 0xFFFFFF, 0x018004, `${mapper} should wrap to 0x8000 in next bank below 0x400000`);
+    t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x018004, `${mapper} should wrap to 0x8000 in next bank below 0x400000`);
 
     // Test above 0x400000
-    assembler.snespos = 0x40FFFC;
-    assembler.realsnespos = 0x40FFFC;
+    assembler.currentTargetAddress = 0x40FFFC;
+    assembler.currentTargetBaseAddress = 0x40FFFC;
 
     // Step across bank boundary
     assembler.step(8);
 
     // Should not wrap above 0x400000
-    t.is(assembler.snespos & 0xFFFFFF, 0x410004, `${mapper} should not wrap above 0x400000`);
+    t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x410004, `${mapper} should not wrap above 0x400000`);
   }
 });
 
@@ -6898,20 +6871,20 @@ test("step - zero step", t => {
   const assembler = new Assembler();
 
   // Set initial positions
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
-  assembler.startpos = 0x008000;
-  assembler.realstartpos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
+  assembler.currentTargetStartAddress = 0x008000;
+  assembler.currentTargetBaseStartAddress = 0x008000;
   assembler.bytes = 0;
 
   // Step by 0 bytes
   assembler.step(0);
 
   // Positions should remain the same
-  t.is(assembler.snespos, 0x008000, "snespos should not change with zero step");
-  t.is(assembler.realsnespos, 0x008000, "realsnespos should not change with zero step");
-  t.is(assembler.startpos, 0x008000, "startpos should not change with zero step");
-  t.is(assembler.realstartpos, 0x008000, "realstartpos should not change with zero step");
+  t.is(assembler.currentTargetAddress, 0x008000, "currentTargetAddress should not change with zero step");
+  t.is(assembler.currentTargetBaseAddress, 0x008000, "currentTargetBaseAddress should not change with zero step");
+  t.is(assembler.currentTargetStartAddress, 0x008000, "currentTargetStartAddress should not change with zero step");
+  t.is(assembler.currentTargetBaseStartAddress, 0x008000, "currentTargetBaseStartAddress should not change with zero step");
   t.is(assembler.bytes, 0, "bytes counter should not change with zero step");
 });
 
@@ -6919,8 +6892,8 @@ test("step - negative step", t => {
   const assembler = new Assembler();
 
   // Set initial positions
-  assembler.snespos = 0x008100;
-  assembler.realsnespos = 0x008100;
+  assembler.currentTargetAddress = 0x008100;
+  assembler.currentTargetBaseAddress = 0x008100;
 
   // Step with negative value should throw an error
   const error = t.throws(() => {
@@ -6966,12 +6939,12 @@ test("expressionHost - resolveLabel", t => {
 test("expressionHost - snestopc and pctosnes", t => {
   const assembler = new Assembler();
 
-  // Mock the snestopc and pctosnes methods
-  const originalSnestopc = assembler.snestopc;
-  const originalPctosnes = assembler.pctosnes;
+  // Mock the address conversion methods.
+  const originalConvertTargetAddressToRomOffset = assembler.romWriter.convertTargetAddressToRomOffset.bind(assembler.romWriter);
+  const originalPctosnes = assembler.romWriter.pctosnes.bind(assembler.romWriter);
 
-  assembler.snestopc = (addr: number) => addr + 0x1000;
-  assembler.pctosnes = (addr: number) => addr - 0x1000;
+  assembler.romWriter.convertTargetAddressToRomOffset = (addr: number) => addr + 0x1000;
+  assembler.romWriter.pctosnes = (addr: number) => addr - 0x1000;
 
   // Test snestopc
   t.is(assembler.expressionHost.convertSnesToPc(0x8000), 0x9000, "Should convert SNES to PC address");
@@ -6979,23 +6952,23 @@ test("expressionHost - snestopc and pctosnes", t => {
   // Test pctosnes
   t.is(assembler.expressionHost.convertPcToSnes(0x9000), 0x8000, "Should convert PC to SNES address");
 
-  // Restore original methods
-  assembler.snestopc = originalSnestopc;
-  assembler.pctosnes = originalPctosnes;
+  // Restore original methods.
+  assembler.romWriter.convertTargetAddressToRomOffset = originalConvertTargetAddressToRomOffset;
+  assembler.romWriter.pctosnes = originalPctosnes;
 });
 
 test("expressionHost - pc and realbase", t => {
   const assembler = new Assembler();
 
   // Set positions
-  assembler.snespos = 0x8000;
-  assembler.realsnespos = 0x9000;
+  assembler.currentTargetAddress = 0x8000;
+  assembler.currentTargetBaseAddress = 0x9000;
 
   // Test pc
-  t.is(assembler.expressionHost.getCurrentAddress(), 0x8000, "Should return current snespos");
+  t.is(assembler.expressionHost.getCurrentAddress(), 0x8000, "Should return current currentTargetAddress");
 
   // Test realbase
-  t.is(assembler.expressionHost.getCurrentBaseAddress(), 0x9000, "Should return current realsnespos");
+  t.is(assembler.expressionHost.getCurrentBaseAddress(), 0x9000, "Should return currentTargetBaseAddress");
 });
 
 test("expressionHost - defined", t => {
@@ -7125,24 +7098,24 @@ test("write1_65816 - basic functionality", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
   assembler.pass = 2;
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
-  assembler.startpos = 0x008000;
-  assembler.realstartpos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
+  assembler.currentTargetStartAddress = 0x008000;
+  assembler.currentTargetBaseStartAddress = 0x008000;
 
   // Write a byte and check if it was written correctly
   assembler.write1_65816(0x42);
   t.is(assembler.romdata[0], 0x42, "Should write the byte to the correct position");
-  t.is(assembler.snespos, 0x008001, "Should increment snespos");
-  t.is(assembler.realsnespos, 0x008001, "Should increment realsnespos");
+  t.is(assembler.currentTargetAddress, 0x008001, "Should increment currentTargetAddress");
+  t.is(assembler.currentTargetBaseAddress, 0x008001, "Should increment currentTargetBaseAddress");
 });
 
 test("write1_65816 - NaN handling", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
   assembler.pass = 2;
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
 
   // Test with NaN input
   const error = t.throws(() => {
@@ -7157,36 +7130,36 @@ test("write1_65816 - bank wrapping", t => {
   assembler.pass = 2;
 
   // Position at the end of a bank
-  assembler.snespos = 0x00FFFF;
-  assembler.realsnespos = 0x00FFFF;
-  assembler.startpos = 0x00FFFF;
-  assembler.realstartpos = 0x00FFFF;
+  assembler.currentTargetAddress = 0x00FFFF;
+  assembler.currentTargetBaseAddress = 0x00FFFF;
+  assembler.currentTargetStartAddress = 0x00FFFF;
+  assembler.currentTargetBaseStartAddress = 0x00FFFF;
 
   // Write a byte, which should wrap to the next address
   assembler.write1_65816(0x42);
 
   // Check if the byte was written correctly
-  const pcpos = assembler.snestopc(0x00FFFF);
+  const pcpos = assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF);
   t.is(assembler.romdata[pcpos], 0x42, "Should write the byte to the correct position");
 
   // TODO: Verify this is correct, may be 0x010000
   // Check if positions were updated correctly with bank wrapping
-  t.is(assembler.snespos, 0x18000, "Should increment snespos with bank wrapping");
-  t.is(assembler.realsnespos, 0x18000, "Should increment realsnespos with bank wrapping");
+  t.is(assembler.currentTargetAddress, 0x18000, "Should increment currentTargetAddress with bank wrapping");
+  t.is(assembler.currentTargetBaseAddress, 0x18000, "Should increment currentTargetBaseAddress with bank wrapping");
 });
 
 test("write1_65816 - ROM expansion", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x10).fill(0);
   assembler.pass = 2;
-  assembler.default_freespacebyte = 0xFF;
+  assembler.defaultFreespaceByte = 0xFF;
 
   // Position beyond current ROM size
   const initialPos = 0x008020;
-  assembler.snespos = initialPos;
-  assembler.realsnespos = initialPos;
-  assembler.startpos = initialPos;
-  assembler.realstartpos = initialPos;
+  assembler.currentTargetAddress = initialPos;
+  assembler.currentTargetBaseAddress = initialPos;
+  assembler.currentTargetStartAddress = initialPos;
+  assembler.currentTargetBaseStartAddress = initialPos;
 
   // Write a byte, which should expand the ROM
   assembler.write1_65816(0x42);
@@ -7195,12 +7168,12 @@ test("write1_65816 - ROM expansion", t => {
   t.true(assembler.romdata.length > 0x10, "ROM should be expanded");
 
   // Check if the byte was written correctly
-  const pcpos = assembler.snestopc(initialPos);
+  const pcpos = assembler.romWriter.convertTargetAddressToRomOffset(initialPos);
   t.is(assembler.romdata[pcpos], 0x42, "Should write the byte to the correct position");
 
-  // Check if the gap was filled with default_freespacebyte
+  // Check if the gap was filled with defaultFreespaceByte
   // for (let i = 0x10; i < pcpos; i++) {
-  //   t.is(assembler.romdata[i], 0xFF, "Gap should be filled with default_freespacebyte");
+  //   t.is(assembler.romdata[i], 0xFF, "Gap should be filled with defaultFreespaceByte");
   // }
 
   // Check if romlen was updated
@@ -7211,10 +7184,10 @@ test("write1_65816 - pass 1 behavior", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
   assembler.pass = 1; // Set to pass 1
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
-  assembler.startpos = 0x008000;
-  assembler.realstartpos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
+  assembler.currentTargetStartAddress = 0x008000;
+  assembler.currentTargetBaseStartAddress = 0x008000;
 
   // Write a byte in pass 1 (should not actually write)
   assembler.write1_65816(0x42);
@@ -7223,16 +7196,16 @@ test("write1_65816 - pass 1 behavior", t => {
   t.is(assembler.romdata[0], 0, "Should not write the byte in pass 1");
 
   // But positions should still be updated
-  t.is(assembler.snespos, 0x008001, "Should still increment snespos in pass 1");
-  t.is(assembler.realsnespos, 0x008001, "Should still increment realsnespos in pass 1");
+  t.is(assembler.currentTargetAddress, 0x008001, "Should still increment currentTargetAddress in pass 1");
+  t.is(assembler.currentTargetBaseAddress, 0x008001, "Should still increment currentTargetBaseAddress in pass 1");
 });
 
 test("write1_65816 - byte masking", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
   assembler.pass = 2;
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
 
   // Write a value larger than a byte
   assembler.write1_65816(0x1234);
@@ -7245,8 +7218,8 @@ test("write1_65816 - step behavior", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
   assembler.pass = 2;
-  assembler.snespos = 0x008000;
-  assembler.realsnespos = 0x008000;
+  assembler.currentTargetAddress = 0x008000;
+  assembler.currentTargetBaseAddress = 0x008000;
   assembler.bytes = 0;
 
   // Write a byte
@@ -7559,7 +7532,7 @@ test("asblock_pick - pass 0 uses active encoder estimateSize", t => {
   assembler.archSPC700.estimateSize = () => 5;
 
   t.true(assembler.asblock_pick(["mov", "a", "#$42"]), "Should succeed during pass 0");
-  t.is(assembler.snespos, 5, "Should step by the encoder-provided estimated size");
+  t.is(assembler.currentTargetAddress, 5, "Should step by the encoder-provided estimated size");
 
   assembler.archSPC700.estimateSize = originalMethod;
 });

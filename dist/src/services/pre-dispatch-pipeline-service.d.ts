@@ -22,8 +22,6 @@ export type PreDispatchPipelineHost = {
     handleWhile(args: string[]): void;
     handleEndFor(): void;
     handleEndWhile(): void;
-    removeInlineComment(line: string): string;
-    splitCommandIntoWords(command: string): string[];
     resolveVariadicPlaceholders(command: string): string;
     resolvedefines(input: string): string;
     loadTestRomData(): void;

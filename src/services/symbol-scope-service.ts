@@ -18,11 +18,10 @@ type StructDefinition = {
 };
 
 export interface SymbolScopeHost {
-  pass: number;
   mode: "layout" | "emit";
   enforceResolvedLabels: boolean;
   isDefinitionCollectionStage: boolean;
-  snespos: number;
+  currentTargetAddress: number;
   currentNamespace: string;
   namespaceNestingEnabled: boolean;
   namespaceNestingPath: string[];
@@ -41,11 +40,11 @@ export interface SymbolScopeHost {
 export class SymbolScopeService {
   constructor(readonly host: SymbolScopeHost) {}
 
-  private isMissingLabelError(error: unknown): boolean {
+  isMissingLabelError(error: unknown): boolean {
     return error instanceof Error && error.message.startsWith("Error: Label '");
   }
 
-  private findNearestHierarchyAncestor(label: string): string | null {
+  findNearestHierarchyAncestor(label: string): string | null {
     for (let i = label.length - 1; i >= 0; i--) {
       if (label[i] !== "_") {
         continue;
@@ -63,7 +62,7 @@ export class SymbolScopeService {
     return null;
   }
 
-  private getHierarchyChain(label: string): string[] {
+  getHierarchyChain(label: string): string[] {
     const rootLabel = this.host.currentGlobalParentLabel;
     const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
     const chain = [label];
@@ -86,7 +85,7 @@ export class SymbolScopeService {
     return chain;
   }
 
-  private getAncestorPrefixes(label: string): string[] {
+  getAncestorPrefixes(label: string): string[] {
     const prefixes: string[] = [];
     for (let i = label.length - 1; i >= 0; i--) {
       if (label[i] !== "_") {
@@ -100,7 +99,7 @@ export class SymbolScopeService {
     return prefixes;
   }
 
-  private getScopedParentLabel(dotCount: number): string {
+  getScopedParentLabel(dotCount: number): string {
     const current = this.host.currentParentLabel;
     if (dotCount === 1) {
       if (this.host.currentGlobalParentLabel) {
@@ -143,7 +142,7 @@ export class SymbolScopeService {
   handleRelativeLabel(label: string): number {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-    const snesAddress = this.host.snespos;
+    const snesAddress = this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
 
     if (this.host.enforceResolvedLabels) {
@@ -185,7 +184,7 @@ export class SymbolScopeService {
   findNextLabel(label: string, currentAddressOverride?: number): number {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-    const currentAddress = currentAddressOverride ?? this.host.snespos;
+    const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
 
     if (!this.host.enforceResolvedLabels) {
@@ -224,7 +223,7 @@ export class SymbolScopeService {
   findPreviousLabel(label: string, currentAddressOverride?: number): number {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-    const currentAddress = currentAddressOverride ?? this.host.snespos;
+    const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
 
     if (this.host.isDefinitionCollectionStage) {
@@ -290,7 +289,7 @@ export class SymbolScopeService {
           if (recentMainLabel) {
             const subLabelWithoutDot = labelName.substring(1);
             const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
-            const subAddr = value !== undefined ? value : this.host.snespos;
+            const subAddr = value !== undefined ? value : this.host.currentTargetAddress;
             this.host.labelTable.set(parentChildLabel, {
               value: subAddr,
               isStatic,
@@ -315,7 +314,7 @@ export class SymbolScopeService {
           if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0 && modifiesHierarchy) {
             const leafNamespace = this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
             const leafLabel = `${leafNamespace}_${label}`;
-            const addr = value !== undefined ? value : this.host.snespos;
+            const addr = value !== undefined ? value : this.host.currentTargetAddress;
 
             this.host.labelTable.set(leafLabel, {
               value: addr,
@@ -347,7 +346,7 @@ export class SymbolScopeService {
       }
     }
 
-    const addr = value !== undefined ? value : this.host.snespos;
+    const addr = value !== undefined ? value : this.host.currentTargetAddress;
 
     if (this.host.isDefinitionCollectionStage) {
       if (modifiesHierarchy && !label.startsWith(".")) {
@@ -387,10 +386,6 @@ export class SymbolScopeService {
           throw new Error(`Label "${fullLabel}" changed from $${existingEntry.value.toString(16)} to $${addr.toString(16)}`);
         }
       }
-    }
-
-    if (this.host.pass === 3) {
-      throw new Error(`Label '${fullLabel}' used in pass 3.`);
     }
 
     if (modifiesHierarchy && !label.startsWith(".")) {
@@ -665,10 +660,11 @@ export class SymbolScopeService {
   }
 
   /**
-   * Gets the size of an object.
-   * @param {string} identifier The identifier of the object.
-   * @param {boolean} baseOnly Whether to only get the base size.
-   * @returns {number} The size of the object.
+   * Gets the size of a struct or extension.
+   * @param {string} identifier The identifier of the struct or extension.
+   * @param {boolean} [baseOnly] If true, returns only the base size without extensions.
+   * @returns {number} The size of the struct or extension.
+   * @throws {Error} If the struct or extension doesn't exist.
    */
   getObjectSize(identifier: string, baseOnly = false): number {
     let workingIdentifier = identifier;

@@ -1,10 +1,12 @@
 import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, SuperFXContext } from "./architecture-types.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 export declare class ArchSuperFX implements ArchitectureEncoder {
     assembler: SuperFXContext;
     constructor(assembler: SuperFXContext);
     encode(words: string[]): boolean;
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
+    lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction;
     estimateSize(words: string[]): number;
     estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     /**

@@ -1,5 +1,6 @@
 import { createPendingCommand, setCommandKind, setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
 import type { ExpressionNode } from "../ir/expression-node.js";
+import { removeInlineComment, splitCommandIntoWords } from "./command-text-service.js";
 
 export type ConditionalEntry = {
   cond: boolean;
@@ -24,8 +25,6 @@ export type PreDispatchPipelineHost = {
   handleWhile(args: string[]): void;
   handleEndFor(): void;
   handleEndWhile(): void;
-  removeInlineComment(line: string): string;
-  splitCommandIntoWords(command: string): string[];
   resolveVariadicPlaceholders(command: string): string;
   resolvedefines(input: string): string;
   loadTestRomData(): void;
@@ -51,7 +50,7 @@ export class PreDispatchPipelineService {
 
     if (this.host.collectingLoop && !command.match(/^\s*(for|while|endfor|endwhile)/i)) {
       const normalized = this.normalizeCommand(command);
-      const words = this.host.splitCommandIntoWords(normalized);
+      const words = splitCommandIntoWords(normalized);
       this.host.currentLoop?.commands.push(
         createPendingCommand(command, this.host.currentFile, this.host.currentLine, normalized, words),
       );
@@ -60,13 +59,13 @@ export class PreDispatchPipelineService {
 
     if (!this.host.inMacroDefinition) {
       if (command.match(/^\s*for\s+/i)) {
-        const loopWords = this.host.splitCommandIntoWords(this.host.removeInlineComment(command));
+        const loopWords = splitCommandIntoWords(removeInlineComment(command));
         this.host.handleFor(loopWords.slice(1));
         return true;
       }
 
       if (command.match(/^\s*while\s+/i)) {
-        const loopWords = this.host.splitCommandIntoWords(this.host.removeInlineComment(command));
+        const loopWords = splitCommandIntoWords(removeInlineComment(command));
         this.host.handleWhile(loopWords.slice(1));
         return true;
       }
@@ -96,7 +95,7 @@ export class PreDispatchPipelineService {
    * @returns {string} The normalized command.
    */
   normalizeCommand(command: string): string {
-    let normalized = this.host.removeInlineComment(command);
+    let normalized = removeInlineComment(command);
 
     if (this.host.inMacroExpansion && this.host.pass !== 0 && (normalized.includes("...") || normalized.includes("…"))) {
       const currentCond = this.host.condStack.length === 0 ? true : this.host.condStack.every((entry) => entry.cond);

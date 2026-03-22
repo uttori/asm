@@ -1,11 +1,15 @@
+import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 export interface RomWriterHost {
-    snespos: number;
-    realsnespos: number;
+    currentTargetAddress: number;
+    currentTargetBaseAddress: number;
+    arch: string;
+    mode: "layout" | "emit";
+    canEmitBytes: boolean;
+    canFinalize: boolean;
     mapper: string;
     sa1banks: number[];
     romdata: number[] | Uint8Array;
-    default_freespacebyte: number;
-    pass: number;
+    defaultFreespaceByte: number;
     bankCrossCheckMode: "off" | "full" | "half";
     spcInlineCompatMode: boolean;
     inSpcblock: boolean;
@@ -19,6 +23,8 @@ export interface RomWriterHost {
     setWritePosition(address: number): void;
     syncWriteStarts(): void;
     incrementBytesWritten(num: number): void;
+    /** Optional structured trace hook invoked once per emitted byte. */
+    traceWrite?(event: Omit<AssemblerTraceWriteEvent, "type">): void;
 }
 export declare class RomWriterService {
     readonly host: RomWriterHost;
@@ -29,12 +35,12 @@ export declare class RomWriterService {
      */
     step(num: number): void;
     /**
-     * Writes a 16-bit value to the ROM.
+     * Writes a single byte at the current position using 65816/ROM addressing.
      * @param {number} num The value to write.
      */
     write1_65816(num: number): void;
     /**
-     * Writes a 8-bit value to the ROM.
+     * Writes a single byte to the ROM.
      * @param {number} num The value to write.
      */
     write1(num: number): void;
@@ -67,6 +73,7 @@ export declare class RomWriterService {
      * @param {number} addr The SNES address to convert.
      * @returns {number} The PC offset.
      */
+    convertTargetAddressToRomOffset(addr: number): number;
     snestopc(addr: number): number;
     /**
      * Converts a PC offset to a SNES address.

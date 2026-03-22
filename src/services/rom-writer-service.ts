@@ -1,8 +1,8 @@
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 
 export interface RomWriterHost {
-  snespos: number;
-  realsnespos: number;
+  currentTargetAddress: number;
+  currentTargetBaseAddress: number;
   arch: string;
   mode: "layout" | "emit";
   canEmitBytes: boolean;
@@ -10,8 +10,7 @@ export interface RomWriterHost {
   mapper: string;
   sa1banks: number[];
   romdata: number[] | Uint8Array;
-  default_freespacebyte: number;
-  pass: number;
+  defaultFreespaceByte: number;
   bankCrossCheckMode: "off" | "full" | "half";
   spcInlineCompatMode: boolean;
   inSpcblock: boolean;
@@ -43,8 +42,8 @@ export class RomWriterService {
     if (num < 0) {
       throw new Error("step num is negative");
     }
-    this.host.snespos = (this.host.snespos & 0xff000000) | this.fixsnespos(this.host.snespos & 0xffffff, num);
-    this.host.realsnespos = (this.host.realsnespos & 0xff000000) | this.fixsnespos(this.host.realsnespos & 0xffffff, num);
+    this.host.currentTargetAddress = (this.host.currentTargetAddress & 0xff000000) | this.fixsnespos(this.host.currentTargetAddress & 0xffffff, num);
+    this.host.currentTargetBaseAddress = (this.host.currentTargetBaseAddress & 0xff000000) | this.fixsnespos(this.host.currentTargetBaseAddress & 0xffffff, num);
     this.host.syncWriteStarts();
     this.host.incrementBytesWritten(num);
   }
@@ -60,15 +59,15 @@ export class RomWriterService {
 
     this.verifysnespos();
 
-    const wrappedPos = this.fixsnespos(this.host.realsnespos & 0xFFFFFF);
-    const bankByte = this.host.realsnespos & 0xFF000000;
+    const wrappedPos = this.fixsnespos(this.host.currentTargetBaseAddress & 0xFFFFFF);
+    const bankByte = this.host.currentTargetBaseAddress & 0xFF000000;
     const newPos = bankByte | wrappedPos;
-    const pcpos = this.snestopc(newPos & 0xFFFFFF);
+    const pcpos = this.convertTargetAddressToRomOffset(newPos & 0xFFFFFF);
 
     // Emit tracing before the position advances so listeners see the exact byte
     // address that will be written for this pass.
     this.host.traceWrite?.({
-      pass: this.host.pass,
+      pass: this.host.mode === "layout" ? 0 : 2,
       arch: this.host.inSpcblock ? "spc700" : this.host.arch,
       file: "",
       line: 0,
@@ -81,7 +80,7 @@ export class RomWriterService {
 
     if (this.host.canEmitBytes) {
       if (pcpos >= this.host.romdata.length && pcpos - this.host.romdata.length > 0) {
-        this.host.fillRomData(this.host.romdata.length, this.host.default_freespacebyte, pcpos - this.host.romdata.length);
+        this.host.fillRomData(this.host.romdata.length, this.host.defaultFreespaceByte, pcpos - this.host.romdata.length);
       }
 
       this.host.romdata[pcpos] = num & 0xFF;
@@ -140,7 +139,7 @@ export class RomWriterService {
       return;
     }
 
-    const start = this.host.realsnespos & 0xFFFFFF;
+    const start = this.host.currentTargetBaseAddress & 0xFFFFFF;
     const end = (start + length - 1) & 0xFFFFFF;
     const mask = this.host.bankCrossCheckMode === "half" ? 0x7FFF8000 : 0x7FFF0000;
 
@@ -161,7 +160,7 @@ export class RomWriterService {
       throw new Error("Missing endspcblock before end of pass.");
     }
     if (this.host.canFinalize && this.host.activeFreespaceStartPc !== null && this.host.activeFreespaceContentStartPc !== null) {
-      const contentEndPc = this.snestopc(this.host.realsnespos & 0xFFFFFF) - 1;
+      const contentEndPc = this.convertTargetAddressToRomOffset(this.host.currentTargetBaseAddress & 0xFFFFFF) - 1;
       if (contentEndPc >= this.host.activeFreespaceContentStartPc) {
         const contentLen = (contentEndPc - this.host.activeFreespaceContentStartPc) + 1;
         const ratsLenMinusOne = Math.max(0, contentLen - 1) & 0xFFFF;
@@ -183,7 +182,7 @@ export class RomWriterService {
    * @param {number} addr The SNES address to convert.
    * @returns {number} The PC offset.
    */
-  snestopc(addr: number): number {
+  convertTargetAddressToRomOffset(addr: number): number {
     if (addr < 0 || addr > 0xFFFFFF) return -1;
 
     if (this.host.mapper === "lorom") {
@@ -252,6 +251,10 @@ export class RomWriterService {
     }
 
     return -1;
+  }
+
+  snestopc(addr: number): number {
+    return this.convertTargetAddressToRomOffset(addr);
   }
 
   /**
@@ -329,7 +332,7 @@ export class RomWriterService {
    * Verifies the SNES position.
    */
   verifysnespos(): void {
-    if (this.host.snespos < 0 || this.host.realsnespos < 0) {
+    if (this.host.currentTargetAddress < 0 || this.host.currentTargetBaseAddress < 0) {
       this.host.setWritePosition(0x008000);
     }
   }
@@ -357,7 +360,7 @@ export class RomWriterService {
           return newAddr;
         case "exlorom":
         case "bigsa1rom":
-          return this.pctosnes(this.snestopc(inaddr) + step);
+          return this.pctosnes(this.convertTargetAddressToRomOffset(inaddr) + step);
         case "norom":
           return newAddr;
         default:

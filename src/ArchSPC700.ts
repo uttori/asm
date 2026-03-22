@@ -1,4 +1,5 @@
 import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, Spc700Context } from "./architecture-types.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 
 let debug = (..._: unknown[]) => {};
 try {
@@ -327,6 +328,28 @@ export class ArchSPC700 implements ArchitectureEncoder {
       instruction.loweredOperand,
       loweredOperands,
     );
+  }
+
+  lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction {
+    const parsedOperands = command.parsed.opcodeOperands;
+    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
+    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
+    const operands = parsedOperands?.operands ?? (operandText ? this.splitTopLevelComma(operandText) : []);
+    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
+
+    return {
+      kind: "instruction",
+      mnemonic,
+      operandText,
+      operands,
+      loweredOperands,
+      loweredOperand,
+      words: command.words,
+      sourceFile: command.source.file,
+      sourceLine: command.source.line,
+      sourceRaw: command.source.raw,
+    };
   }
 
   estimateSize(words: string[]): number {
@@ -1130,7 +1153,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // - Result must fit in signed byte (-128 to +127)
     // Relative +/- labels are anchored to the address immediately after the
     // branch instruction, matching the 65816 path and the original assembler.
-    const branchReferenceAddress = this.assembler.snespos + 1;
+    const branchReferenceAddress = this.assembler.currentTargetAddress + 1;
     let targetAddr: number;
     if (/^\++$/.test(operand)) {
       targetAddr = this.assembler.findNextLabel(operand, branchReferenceAddress);
@@ -1140,7 +1163,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
       targetAddr = this.assembler.operandResolver.getnum(operand);
     }
     debug("handleBranch targetAddr", targetAddr)
-    const currentAddr = this.assembler.snespos;
+    const currentAddr = this.assembler.currentTargetAddress;
     debug("handleBranch currentAddr", currentAddr)
     // +1 because the branch instruction is 1 byte and we already wrote the opcode
     const offset = targetAddr - (currentAddr + 1);
@@ -1150,7 +1173,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // if (offset < -128 || offset > 127) {
     //   throw new Error(`Branch offset ${offset} out of range (-128 to +127)`);
     // }
-    if (this.assembler.pass === 0) {
+    if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(0xff);
     } else {
       // Convert to unsigned byte representation of signed value
@@ -1199,7 +1222,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // Handle label resolution based on the pass
     debug("handleTwoOperandsBitBranch right", right);
 
-    if (this.assembler.pass === 0) {
+    if (!this.assembler.enforceResolvedLabels) {
       // First pass: use placeholder 0xFF for labels
       this.assembler.write1(0xff);
     } else {
@@ -1207,7 +1230,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
       let offset = 0xff;
 
       const target = this.assembler.operandResolver.getnum(right);
-      const pc = this.assembler.snespos;
+      const pc = this.assembler.currentTargetAddress;
       // The offset is relative to the position after this 3-byte instruction
       const relativeOffset = target - (pc + 1);
 
@@ -1238,7 +1261,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     // Calculate relative offset for the branch target
     let offset: number;
     const target = this.assembler.operandResolver.getnum(right);
-    offset = target - (this.assembler.snespos + 3);
+    offset = target - (this.assembler.currentTargetAddress + 3);
     debug("handleDbnzCbne offset", offset)
     if (offset < -128 || offset > 127) {
       throw new Error(`Branch target out of range (${offset})`);

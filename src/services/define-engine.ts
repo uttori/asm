@@ -4,14 +4,14 @@ export type DefineHost = {
   defines: Map<string, string>;
   resolvedefines(input: string): string;
   evaluateMath(input: string): number;
-  processNestedCommand(command: string): void;
+  processCommand(command: string): void;
 };
 
 export class DefineEngine {
   constructor(readonly host: DefineHost) {}
 
-  private isPureMathExpression(value: string): boolean {
-    return /^\s*(?:\$[0-9A-Fa-f]+|%[01]+|\d+|[()+\-*/&|^<>]|\s)+$/.test(value);
+  isPureMathExpression(value: string): boolean {
+    return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|\-]|\s)+$/.test(value);
   }
 
   /**
@@ -21,7 +21,14 @@ export class DefineEngine {
    */
   handleCommand(commandNode: NormalizedCommand): boolean {
     const command = commandNode.command;
-    if (!command.trim().startsWith("!")) {
+    const trimmedCommand = command.trim();
+    if (commandNode.keyword.toLowerCase() === "undef") {
+      this.handleDefineCommand(trimmedCommand);
+      setCommandKind(commandNode, "defineCommand");
+      return true;
+    }
+
+    if (!trimmedCommand.startsWith("!")) {
       return false;
     }
 
@@ -31,10 +38,9 @@ export class DefineEngine {
       return true;
     }
 
-    const trimmedCommand = command.trim();
     if (trimmedCommand.startsWith("!{")) {
       const processedCommand = this.processValueWithBracedDefines(trimmedCommand);
-      this.host.processNestedCommand(processedCommand);
+      this.host.processCommand(processedCommand);
       setCommandKind(commandNode, "defineCommand");
       return true;
     }
@@ -44,7 +50,7 @@ export class DefineEngine {
       throw new Error(`Error: Define '${defineName}' not found.`);
     }
 
-    this.host.processNestedCommand(this.host.defines.get(defineName) ?? "");
+    this.host.processCommand(this.host.defines.get(defineName) ?? "");
     setCommandKind(commandNode, "defineCommand");
     return true;
   }
@@ -52,8 +58,22 @@ export class DefineEngine {
   /**
    * Handles a define command.
    * @param {string} command The command to handle.
+   * @example
+   * !identifier = value // Basic assignment
+   * !identifier += value // Append to existing value
+   * !identifier := value // Resolve defines in the value
+   * !identifier #= value // Evaluate as math expression
+   * !identifier ?= value // Only assign if not already defined
+   * undef identifier // Remove a define
+   * undef "identifier" // Remove a define
    */
   handleDefineCommand(command: string): void {
+    const trimmedCommand = command.trim();
+    if (trimmedCommand.toLowerCase().startsWith("undef")) {
+      this.applyUndefOperation(trimmedCommand);
+      return;
+    }
+
     const line = command.substring(1).trim();
 
     if (line.startsWith("{")) {
@@ -357,5 +377,26 @@ export class DefineEngine {
     }
 
     this.host.defines.set(identifier, value);
+  }
+
+  /**
+   * Applies an `undef` operation.
+   * @param {string} command The normalized undef command.
+   */
+  applyUndefOperation(command: string): void {
+    const match = command.match(/^undef\s+(.+)$/i);
+    if (!match) {
+      throw new Error("undef requires exactly one identifier parameter");
+    }
+
+    const raw = match[1].trim();
+    const unquoted = raw.startsWith("\"") && raw.endsWith("\"") ? raw.slice(1, -1) : raw;
+    const identifier = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
+
+    if (!identifier) {
+      throw new Error("undef requires a non-empty identifier");
+    }
+
+    this.host.defines.delete(identifier);
   }
 }

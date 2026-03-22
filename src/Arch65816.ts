@@ -1,4 +1,5 @@
 import type { ArchitectureContext, ArchitectureEncoder, LoweredInstruction } from "./architecture-types.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 
 let debug = (..._) => {};
 /* c8 ignore next */
@@ -31,6 +32,28 @@ export class Arch65816 implements ArchitectureEncoder {
       instruction.loweredOperand.expanded,
       instruction.loweredOperand.length,
     );
+  }
+
+  lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction {
+    const parsedOperands = command.parsed.opcodeOperands;
+    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
+    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
+    const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
+    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
+
+    return {
+      kind: "instruction",
+      mnemonic,
+      operandText,
+      operands,
+      loweredOperands,
+      loweredOperand,
+      words: command.words,
+      sourceFile: command.source.file,
+      sourceLine: command.source.line,
+      sourceRaw: command.source.raw,
+    };
   }
 
   estimateSize(words: string[]): number {
@@ -1195,7 +1218,7 @@ export class Arch65816 implements ArchitectureEncoder {
       }
 
       if (resolvedAddress > 0xFFFF) {
-        const currentBank = (this.assembler.snespos >>> 16) & 0xFF;
+        const currentBank = (this.assembler.currentTargetAddress >>> 16) & 0xFF;
         const targetBank = (resolvedAddress >>> 16) & 0xFF;
 
         // The disassembly stores banked SNES labels even for in-bank subroutine
@@ -1300,7 +1323,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     const offset = this.assembler.operandResolver.getnum(operand);
-    const address = offset; // (this.assembler.snespos + offset) & 0xFFFF; // 16-bit wraparound
+    const address = offset; // (this.assembler.currentTargetAddress + offset) & 0xFFFF; // 16-bit wraparound
 
     this.assembler.write1(0x62); // Opcode for PER
     this.assembler.write2(address);
@@ -1687,7 +1710,7 @@ export class Arch65816 implements ArchitectureEncoder {
     // Handle +/- labels
     let targetAddress: number;
     const instructionSize = (opcode === "BRL") ? 3 : 2;
-    const branchReferenceAddress = this.assembler.snespos + instructionSize;
+    const branchReferenceAddress = this.assembler.currentTargetAddress + instructionSize;
     if (/^\++$/.test(operand)) {
       targetAddress = this.assembler.findNextLabel(operand, branchReferenceAddress);
     } else if (/^-+$/.test(operand)) {
@@ -1696,15 +1719,14 @@ export class Arch65816 implements ArchitectureEncoder {
       targetAddress = this.assembler.operandResolver.getnum(operand);
     }
 
-    const currentAddress = this.assembler.snespos + instructionSize; // Offset by instruction size
+    const currentAddress = this.assembler.currentTargetAddress + instructionSize; // Offset by instruction size
     const relativeAddress = targetAddress - currentAddress;
 
     debug("handleBranchInstructions targetAddress:", targetAddress, "/", targetAddress.toString(16));
     debug("handleBranchInstructions currentAddress:", currentAddress, "/", currentAddress.toString(16));
     debug("handleBranchInstructions relativeAddress:", relativeAddress, "/", relativeAddress.toString(16));
 
-    // **Pass 0: Do not try to resolve labels, just reserve space**
-    if (this.assembler.pass === 0 || this.assembler.pass === 1) {
+    if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(branchOpcodes[opcode]);
       if (opcode === "BRL") {
         this.assembler.write2(0); // Placeholder

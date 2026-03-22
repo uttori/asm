@@ -45,6 +45,10 @@ export declare class MathCore {
     resolveNumericIdentifierArgument(identifier: string): number | string;
     evaluateReferenceExpressionNode(expression: ReferenceExpressionNode): number;
     renderReference(expression: ReferenceExpressionNode): string;
+    resolveLeadingLocalLabelReference(input: string): {
+        label: string;
+        length: number;
+    } | undefined;
     isStringArgument(functionName: string, argumentIndex: number): boolean;
     parseLiteralNode(value: string): number;
     /**

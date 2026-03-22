@@ -2,7 +2,7 @@ import type { DirectiveRegistry } from "./registry.js";
 
 export const registerFlowControlDirectives = (registry: DirectiveRegistry): void => {
   registry.register(["+", "-"], ({ session }, _words, raw) => {
-    session.handleRelativeLabel(raw);
+    session.symbolScope.handleRelativeLabel(raw);
   });
 
   registry.register("if", ({ session }, words) => {

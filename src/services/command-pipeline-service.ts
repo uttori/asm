@@ -4,9 +4,9 @@ import {
   setCommandWords,
   type NormalizedCommand,
 } from "../ir/normalized-command.js";
+import { splitCommandIntoWords } from "./command-text-service.js";
 
 export type CommandPipelineHost = {
-  splitCommandIntoWords(command: string): string[];
   currentFile: string;
   currentLine: number;
   handleCharacterMapping(command: NormalizedCommand): void;
@@ -65,7 +65,7 @@ export class CommandPipelineService {
 
   create(command: string): NormalizedCommand | null {
     const normalizedCommand = this.preDispatchHandlers.normalizeCommand(command);
-    const words = this.host.splitCommandIntoWords(normalizedCommand);
+    const words = splitCommandIntoWords(normalizedCommand);
     if (words.length === 0) {
       return null;
     }

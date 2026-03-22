@@ -5,6 +5,7 @@ export type FrontEndCommandHost = {
     functionDefinitionLines: string[];
     currentParentLabel: string;
     currentParentIsGlobal: boolean;
+    currentGlobalParentLabel: string;
     parseFunctionDefinition(defLine: string): void;
     processNestedCommand(command: string): void;
     handleRelativeLabel(label: string): number;

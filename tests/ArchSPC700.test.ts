@@ -254,13 +254,13 @@ test("ArchSPC700.handleMemoryInstruction keeps symbolic indexed Y operands absol
 test("ArchSPC700.handleBranch resolves multi-depth forward relative labels", t => {
   const { assembler, arch } = createArchSPC700();
   assembler.setPass(2);
-  assembler.snespos = 0x1200;
+  assembler.currentTargetAddress = 0x1200;
   const findNextLabelStub = sinon.stub((arch as any).assembler, "findNextLabel").returns(0x1208);
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Values: number[] = [];
   const write1Stub = sinon.stub(assembler, "write1").callsFake((value: number) => {
     write1Values.push(value);
-    assembler.snespos += 1;
+    assembler.currentTargetAddress += 1;
   });
   t.teardown(() => {
     findNextLabelStub.restore();

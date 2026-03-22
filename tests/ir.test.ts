@@ -11,10 +11,11 @@ import {
   type ReferenceExpressionNode,
 } from "../src/ir/expression-node.js";
 import { createNormalizedCommand, createPendingCommand } from "../src/ir/normalized-command.js";
+import { handleIncbin } from "../src/directives/include-source.js";
 
 type AssemblerReferenceTestAccess = {
   resolveReferenceExpressionNode: (expression: ReferenceExpressionNode) => ExpressionNode;
-  normalizeReferenceExpressionNode: (expression: ReferenceExpressionNode) => string;
+  renderResolvedReferenceExpression: (expression: ReferenceExpressionNode) => string;
   evaluateReferenceExpressionNode: (expression: ReferenceExpressionNode) => number;
 };
 
@@ -331,7 +332,7 @@ test("define references and member/index nodes resolve structurally", (t) => {
   assembler.defines.set("NAME_1", "41");
   assembler.defines.set("IDX", "1");
 
-  const structStub = stub(assembler, "resolveStructLabel");
+  const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("Player[1].hp").returns(1);
 
   t.true(assembler.evaluateExpression(parseExpressionNode("!VALUE + 1 == 42")));
@@ -397,10 +398,10 @@ test("assembler reference seam resolves defines and normalizes label paths", (t)
     return;
   }
 
-  const normalized = access.normalizeReferenceExpressionNode(resolved);
+  const normalized = access.renderResolvedReferenceExpression(resolved);
   t.is(normalized, "Player[2].hp");
 
-  const structStub = stub(assembler, "resolveStructLabel");
+  const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("Player[2].hp").returns(99);
   t.is(access.evaluateReferenceExpressionNode(reference), 99);
 });
@@ -416,7 +417,7 @@ test("expression host label resolution delegates to canonical reference seam", (
   };
   assembler.structs.set("MyStruct", structDefinition);
 
-  const structStub = stub(assembler, "resolveStructLabel");
+  const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("MyStruct").returns(0);
   structStub.withArgs("Player[2].hp").returns(33);
 
@@ -426,7 +427,7 @@ test("expression host label resolution delegates to canonical reference seam", (
 
 test("mathcore legacy string parsing routes compound references through the reference subtree", (t) => {
   const assembler = new Assembler();
-  const structStub = stub(assembler, "resolveStructLabel");
+  const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("Player[2].hp").returns(2);
 
   t.true(assembler.evaluateExpression("Player[1 + 1].hp == 2"));
@@ -442,7 +443,7 @@ test("incbin range evaluation adopts expression nodes for bounds", (t) => {
     writtenBytes.push(value);
   });
 
-  assembler.handleIncbin(["incbin", "\"test.bin\":$1..$3"]);
+  handleIncbin({ session: assembler }, ["incbin", "\"test.bin\":$1..$3"]);
 
   t.deepEqual(writtenBytes, [0x20, 0x30]);
 });

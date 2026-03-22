@@ -1,4 +1,5 @@
 import type { ExpressionNode } from "./ir/expression-node.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 export type MathValue = number | string;
 export interface ExpandedOperand {
     expanded: string;
@@ -38,11 +39,10 @@ export interface ExpressionHost {
     readRom(position: number, size: number, defaultValue?: number): number;
 }
 export interface ArchitectureContext {
-    readonly pass: number;
-    readonly snespos: number;
-    readonly currentAddress: number;
+    readonly mode: "layout" | "emit";
+    readonly enforceResolvedLabels: boolean;
+    readonly currentTargetAddress: number;
     readonly optimizeDirectPage: boolean;
-    readonly directPageOptimizationEnabled: boolean;
     readonly operandResolver: OperandResolutionContext;
     write1(value: number): void;
     write2(value: number): void;
@@ -52,18 +52,19 @@ export interface ArchitectureContext {
     emitLong(value: number): void;
     findNextLabel(reference: string, fromAddress: number): number;
     findPreviousLabel(reference: string, fromAddress: number): number;
-    findNextRelativeLabel(reference: string, fromAddress: number): number;
-    findPreviousRelativeLabel(reference: string, fromAddress: number): number;
 }
 export interface Spc700Context {
-    readonly pass: number;
-    readonly snespos: number;
+    readonly mode: "layout" | "emit";
+    readonly enforceResolvedLabels: boolean;
+    readonly currentTargetAddress: number;
     readonly operandResolver: OperandResolutionContext;
     write1(value: number): void;
     write2(value: number): void;
+    findNextLabel(reference: string, fromAddress: number): number;
+    findPreviousLabel(reference: string, fromAddress: number): number;
 }
 export interface SuperFXContext {
-    readonly snespos: number;
+    readonly currentTargetAddress: number;
     readonly operandResolver: OperandResolutionContext;
     write1(value: number): void;
     write2(value: number): void;
@@ -85,5 +86,6 @@ export interface ArchitectureEncoder {
     encode(words: string[]): boolean;
     estimateInstruction?(instruction: LoweredInstruction): number;
     encodeInstruction?(instruction: LoweredInstruction): boolean;
+    lowerInstructionFromCommand?(command: NormalizedCommand): LoweredInstruction;
 }
 //# sourceMappingURL=architecture-types.d.ts.map

@@ -6,12 +6,22 @@ export type OperandResolverDependencies = {
     resolveLabel(input: string, requireStatic: boolean): number;
     hasLabel(input: string): boolean;
     evaluateMath(input: string | ExpressionNode): number;
-    getPass(): number;
+    shouldDeferExpressionEvaluation(): boolean;
+    getCurrentAddress(): number;
     requireStaticLabelLookup(): boolean;
 };
 export declare class OperandResolver {
     readonly deps: OperandResolverDependencies;
     constructor(deps: OperandResolverDependencies);
+    normalizeNumericBaseMember(operand: string): string;
+    splitMathOperandSuffix(operand: string): {
+        expression: string;
+        suffix: string;
+    };
+    isNumericToken(token: string): boolean;
+    isSameBankAddress(expanded: string): boolean;
+    resolveArithmeticToken(token: string): number;
+    tryResolveSimpleArithmetic(operand: string): number | null;
     determineValueLength(value: string | number, forceTwoBytes?: boolean): number;
     isMathExpression(expression: string): boolean;
     tryResolveLabelInOperand(operand: string): string;

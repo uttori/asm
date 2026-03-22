@@ -57,18 +57,18 @@ export const registerFillPadDirectives = (registry: DirectiveRegistry): void => 
     let gap: number;
 
     if (words.length === 1) {
-      const currentBank = session.snespos & 0xFF0000;
-      const bankOffset = session.snespos & 0xFFFF;
+      const currentBank = session.currentTargetAddress & 0xFF0000;
+      const bankOffset = session.currentTargetAddress & 0xFFFF;
       const nextBank = bankOffset === 0xFFFF ? currentBank + 0x10000 : currentBank + 0x10000 - bankOffset;
       gap = nextBank;
     } else if (words.length === 2) {
       const targetSNES = operandResolver.getnum(words[1]);
-      const targetPC = session.snestopc(targetSNES);
+      const targetPC = session.romWriter.convertTargetAddressToRomOffset(targetSNES);
       if (targetPC < 0) {
         throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
       }
 
-      const currentPC = session.snestopc(session.snespos);
+      const currentPC = session.romWriter.convertTargetAddressToRomOffset(session.currentTargetAddress);
       if (targetPC <= currentPC) {
         return;
       }

@@ -1,11 +1,72 @@
 import type { DirectiveRegistry } from "./registry.js";
 import { shouldRedirectOrgToSpcblock } from "../compatibility/asar-compatibility-profile.js";
+import { AssemblySession, DirectiveContext } from "./types.js";
 
 const assertMapperAvailable = (inSpcblock: boolean): void => {
   if (inSpcblock) {
     throw new Error("Mapper directives are unavailable inside spcblock.");
   }
 };
+
+/**
+ * Pushes the current target address onto the push base stack.
+ * @param {DirectiveContext} ctx The directive context.
+ * @param {AssemblySession} ctx.session The assembly session.
+ */
+const handlePushBase = ({ session }: DirectiveContext) => {
+  // debug("handlePushBase")
+  session.pushBaseStack.push(session.currentTargetAddress);
+}
+
+/**
+ * Pulls the current target address from the push base stack.
+ * @param {DirectiveContext} ctx The directive context.
+ * @param {AssemblySession} ctx.session The assembly session.
+ */
+const handlePullBase = ({ session }: DirectiveContext) => {
+  // debug("handlePullBase")
+  if (session.pushBaseStack.length === 0) {
+    throw new Error("No base value to pull.");
+  }
+  session.currentTargetAddress = session.pushBaseStack.pop();
+}
+
+/**
+ * Handles the ARCH command.
+ * @param {DirectiveContext} ctx The directive context.
+ * @param {AssemblySession} ctx.session The assembly session.
+ * @param {string[]} words - The words from the ARCH command.
+ * @throws {Error} If the ARCH command requires an architecture parameter.
+ */
+export const handleArch = ({ session }: DirectiveContext, words: string[]): void => {
+  // debug("handleArch", words)
+  if (session.inSpcblock) {
+    throw new Error("ARCH is unavailable inside spcblock.");
+  }
+
+  if (!words[1]) {
+    throw new Error("ARCH command requires an architecture parameter.")
+  }
+  const archParam = words[1].toLowerCase();
+  const canonical = session.architectureRegistry.getCanonicalName(archParam);
+  if (!canonical) {
+    throw new Error("Unsupported architecture: " + archParam);
+  }
+  session.arch = canonical;
+  session.spcInlineCompatMode = archParam === "spc700-inline";
+}
+
+export const handleStartpos = ({ session }: DirectiveContext, words: string[]): void => {
+  const params = words.slice(1);
+
+  if (!session.inSpcblock || !session.spcblockData) {
+    throw new Error("startpos used without an active spcblock.");
+  }
+  if (params.length !== 1) {
+    throw new Error("startpos requires exactly one parameter.");
+  }
+  session.spcblockData.executeAddress = session.operandResolver.getnum(session.resolvedefines(params[0])) & 0xFFFF;
+}
 
 export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
   registry.register("base", ({ session, operandResolver }, words) => {
@@ -15,8 +76,10 @@ export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
 
     const param = words[1].toLowerCase();
     if (param === "off") {
-      session.snespos = session.realsnespos;
-      session.startpos = session.realstartpos;
+      const baseAddress = Number(session.currentTargetBaseAddress);
+      const baseStartAddress = Number(session.currentTargetBaseStartAddress);
+      session.currentTargetAddress = baseAddress;
+      session.currentTargetStartAddress = baseStartAddress;
       return;
     }
 
@@ -25,8 +88,8 @@ export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
       throw new Error(`Invalid base address: ${param}. Must be within 24 bits.`);
     }
 
-    session.snespos = value;
-    session.startpos = value;
+    session.currentTargetAddress = value;
+    session.currentTargetStartAddress = value;
   });
 
   registry.register("fastrom", () => {
@@ -107,13 +170,9 @@ export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
     session.handleOrg(words.slice(1));
   });
 
-  registry.register("pushbase", ({ session }) => {
-    session.handlePushBase();
-  });
+  registry.register("pushbase", handlePushBase);
 
-  registry.register("pullbase", ({ session }) => {
-    session.handlePullBase();
-  });
+  registry.register("pullbase", handlePullBase);
 
   registry.register("pushpc", ({ session }) => {
     session.handlePushPC();
@@ -123,17 +182,9 @@ export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
     session.handlePullPC();
   });
 
-  registry.register("arch", ({ session }, words) => {
-    if (session.inSpcblock) {
-      throw new Error("ARCH is unavailable inside spcblock.");
-    }
+  registry.register("arch", handleArch);
 
-    session.handleArch(words);
-  });
-
-  registry.register("startpos", ({ session }, words) => {
-    session.handleStartpos(words.slice(1));
-  });
+  registry.register("startpos", handleStartpos);
 
   registry.register("check", ({ session }, words) => {
     if (words.length >= 2 && words[1].toLowerCase() === "title") {

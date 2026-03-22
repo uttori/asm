@@ -16,7 +16,7 @@ export type MacroConditionalEntry = {
 export interface MacroEngineHost {
   pass: number;
   currentFile: string;
-  snespos: number;
+  currentTargetAddress: number;
   collectingLoop: boolean;
   condStack: MacroConditionalEntry[];
   defines: Map<string, string>;
@@ -33,7 +33,7 @@ export interface MacroEngineHost {
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   resolvedefines(input: string): string;
-  processNestedCommand(command: string): void;
+  processCommand(command: string): void;
   setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
   handleRelativeLabel(label: string): number;
   getLabelValue(label: string, requireStatic: boolean): number;
@@ -149,7 +149,7 @@ export class MacroEngine {
             if (
               key.startsWith(macroLabelPrefix) &&
               (key === `${macroLabelPrefix}+` || key.endsWith("_+") || key === `:pos_${currentMacroInstance}_1`) &&
-              info.value > this.host.snespos
+              info.value > this.host.currentTargetAddress
             ) {
               if (nextAddr === null || info.value < nextAddr) {
                 nextAddr = info.value;
@@ -175,7 +175,7 @@ export class MacroEngine {
             if (
               key.startsWith(macroLabelPrefix) &&
               (key === `${macroLabelPrefix}-` || key.endsWith("_-") || key === `:neg_${currentMacroInstance}_1`) &&
-              info.value < this.host.snespos
+              info.value < this.host.currentTargetAddress
             ) {
               if (prevAddr === null || info.value > prevAddr) {
                 prevAddr = info.value;
@@ -527,7 +527,7 @@ export class MacroEngine {
         const remainder = line.trim().substring(3).trim();
         this.host.handleRelativeLabel(labelChar);
         if (remainder) {
-          this.host.processNestedCommand(remainder);
+          this.host.processCommand(remainder);
         }
         return;
       }
@@ -538,7 +538,7 @@ export class MacroEngine {
         const remainder = line.substring(match[0].length).trim();
         this.host.setLabel(labelName, undefined, false, true);
         if (remainder) {
-          this.host.processNestedCommand(remainder);
+          this.host.processCommand(remainder);
         }
         return;
       }
@@ -555,6 +555,6 @@ export class MacroEngine {
       }
     }
 
-    this.host.processNestedCommand(line);
+    this.host.processCommand(line);
   }
 }

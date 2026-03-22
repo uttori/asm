@@ -9,7 +9,7 @@ export type OperandResolverDependencies = {
   resolveLabel(input: string, requireStatic: boolean): number;
   hasLabel(input: string): boolean;
   evaluateMath(input: string | ExpressionNode): number;
-  getPass(): number;
+  shouldDeferExpressionEvaluation(): boolean;
   getCurrentAddress(): number;
   requireStaticLabelLookup(): boolean;
 };
@@ -21,19 +21,10 @@ try {
   debug = d("OperandResolver");
 } catch {}
 
-/**
- *
- * @param {ExpressionNode} expression The expression to convert to a string.
- * @returns {string} The string representation of the expression.
- */
-function expressionNodeToString(expression: ExpressionNode): string {
-  return renderExpressionNode(expression);
-}
-
 export class OperandResolver {
   constructor(readonly deps: OperandResolverDependencies) {}
 
-  private normalizeNumericBaseMember(operand: string): string {
+  normalizeNumericBaseMember(operand: string): string {
     const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
     if (!match) {
       return operand;
@@ -43,7 +34,7 @@ export class OperandResolver {
     return `${immediatePrefix}${literal}${indexSuffix}`;
   }
 
-  private splitMathOperandSuffix(operand: string): { expression: string; suffix: string } {
+  splitMathOperandSuffix(operand: string): { expression: string; suffix: string } {
     const trimmed = operand.trim();
     const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
     if (!indexedMatch || trimmed.startsWith("(") || trimmed.startsWith("[")) {
@@ -56,12 +47,12 @@ export class OperandResolver {
     };
   }
 
-  private isNumericToken(token: string): boolean {
+  isNumericToken(token: string): boolean {
     return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
   }
 
-  private isSameBankAddress(expanded: string): boolean {
-    const match = expanded.trim().match(/^\$([\dA-Fa-f]{5,6})(?:\s*,\s*[xy])?$/i);
+  isSameBankAddress(expanded: string): boolean {
+    const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
     if (!match) {
       return false;
     }
@@ -72,7 +63,7 @@ export class OperandResolver {
     return currentBank === targetBank;
   }
 
-  private resolveArithmeticToken(token: string): number {
+  resolveArithmeticToken(token: string): number {
     if (this.isNumericToken(token)) {
       return this.getnum(token);
     }
@@ -92,7 +83,7 @@ export class OperandResolver {
     return this.deps.resolveLabel(token, false);
   }
 
-  private tryResolveSimpleArithmetic(operand: string): number | null {
+  tryResolveSimpleArithmetic(operand: string): number | null {
     const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
     const match = operand.match(new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`));
     if (!match) {
@@ -223,7 +214,7 @@ export class OperandResolver {
         if (labelValue !== 0 || this.deps.hasLabel(operand)) {
           return "$" + labelValue.toString(16).toUpperCase();
         }
-      } catch (error) {
+      } catch (error: unknown) {
         debug("label resolution failed for direct", operand, error);
       }
     }
@@ -261,8 +252,8 @@ export class OperandResolver {
       try {
         return this.deps.evaluateMath(operand);
       } catch (error) {
-        if (this.deps.getPass() < 2) {
-          debug("function expression deferred until final pass", { operand, error });
+        if (this.deps.shouldDeferExpressionEvaluation()) {
+          debug("function expression deferred until final pass", { operand, error: String(error) });
           return 0;
         }
         throw error;
@@ -304,9 +295,10 @@ export class OperandResolver {
 
     try {
       return this.deps.evaluateMath(operand);
-    } catch (error) {
-      if (this.deps.getPass() < 2) {
-        debug("expression deferred until final pass", { operand, error });
+    } catch (error: unknown) {
+      if (this.deps.shouldDeferExpressionEvaluation()) {
+        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        debug("expression deferred until final pass", { operand, error: errorMessage });
         return 0;
       }
       throw error;
@@ -316,20 +308,21 @@ export class OperandResolver {
   getnumFromNode(operand: ExpressionNode): number {
     if (isReferenceExpressionNode(operand)) {
       if (operand.type === "defineReference") {
-        return this.getnum(this.deps.resolveDefines(expressionNodeToString(operand)));
+        return this.getnum(this.deps.resolveDefines(renderExpressionNode(operand)));
       }
       return this.resolveReferenceValue(this.renderReference(operand));
     }
 
     switch (operand.type) {
       case "range":
-        throw new Error(`Range expression is not a numeric operand: ${expressionNodeToString(operand)}`);
+        throw new Error(`Range expression is not a numeric operand: ${renderExpressionNode(operand)}`);
       default:
         try {
           return this.deps.evaluateMath(operand);
-        } catch (error) {
-          if (this.deps.getPass() < 2) {
-            debug("expression node deferred until final pass", { operand, error });
+        } catch (error: unknown) {
+          if (this.deps.shouldDeferExpressionEvaluation()) {
+            const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+            debug("expression node deferred until final pass", { operand, error: errorMessage });
             return 0;
           }
           throw error;

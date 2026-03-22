@@ -1,6 +1,5 @@
 import { type NormalizedCommand } from "../ir/normalized-command.js";
 export type CommandPipelineHost = {
-    splitCommandIntoWords(command: string): string[];
     currentFile: string;
     currentLine: number;
     handleCharacterMapping(command: NormalizedCommand): void;

@@ -13,7 +13,7 @@ const createResolver = (overrides: Partial<ConstructorParameters<typeof OperandR
   },
   hasLabel: () => false,
   evaluateMath: () => 0,
-  getPass: () => 2,
+  shouldDeferExpressionEvaluation: () => false,
   getCurrentAddress: () => 0,
   requireStaticLabelLookup: () => false,
   ...overrides,

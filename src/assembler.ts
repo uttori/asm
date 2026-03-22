@@ -9,7 +9,7 @@ import type { ArchitectureContext, ExpressionHost, LoweredInstruction, Spc700Con
 import { shouldEndifCloseInnermostWhile } from "./compatibility/asar-compatibility-profile.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
-import type { AssemblerTraceCommandEvent, AssemblerTraceEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
+import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import type {
   ConditionalBranch,
   ConditionalBranchNode,
@@ -41,119 +41,20 @@ import { PreDispatchPipelineService, type PreDispatchPipelineHost } from "./serv
 import { RomWriterService, type RomWriterHost } from "./services/rom-writer-service.js";
 import { StructEngine, type StructHost } from "./services/struct-engine.js";
 import { SymbolScopeService, type SymbolScopeHost } from "./services/symbol-scope-service.js";
+import {
+  getDefineVariable,
+  isBareLabelReference,
+  preprocessBlockCommands,
+  splitCommandIntoWords,
+  splitInlineCommands,
+  splitRespectingFunctions,
+} from "./services/command-text-service.js";
 
 let debug = (..._) => {};
 /* c8 ignore next */
 // if (process.env.UTTORI_DATA_DEBUG || true) {
 try { const { default: d } = await import("debug"); debug = d("Assembler"); } catch {}
 // }
-
-/**
- * Converts a parsed expression node back into source-like text for diagnostics and fallbacks.
- * @param {ExpressionNode} expression The expression node to stringify.
- * @returns {string} The rendered expression text.
- */
-function expressionNodeToString(expression: ExpressionNode): string {
-  return renderExpressionNode(expression);
-}
-
-/**
- * Checks whether a character can start a label identifier segment.
- * @param {string} char The single character to test.
- * @returns {boolean} `true` when the character can start an identifier.
- */
-function isLabelIdentifierStart(char: string): boolean {
-  const code = char.charCodeAt(0);
-  return char === "_" || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
-}
-
-/**
- * Checks whether a character can appear after the first character of a label identifier segment.
- * @param {string} char The single character to test.
- * @returns {boolean} `true` when the character can continue an identifier.
- */
-function isLabelIdentifierPart(char: string): boolean {
-  const code = char.charCodeAt(0);
-  return char === "_" || (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
-}
-
-/**
- * Checks whether a token is a plain label/struct reference rather than an
- * arithmetic expression. This intentionally accepts dotted names and one
- * optional numeric index segment, but rejects operators such as `-` or `+`.
- * Purely numeric tokens are also treated as lookup candidates to preserve
- * legacy label-resolution behavior for values like `1`.
- * @param {string} input The token to classify.
- * @returns {boolean} `true` when the token is a bare label-style reference.
- */
-function isBareLabelReference(input: string): boolean {
-  if (!input) {
-    return false;
-  }
-
-  let numericOnly = true;
-  for (const char of input) {
-    if (char < "0" || char > "9") {
-      numericOnly = false;
-      break;
-    }
-  }
-  if (numericOnly) {
-    return true;
-  }
-
-  let index = 0;
-  while (input[index] === ".") {
-    index += 1;
-  }
-
-  if (index >= input.length || !isLabelIdentifierStart(input[index])) {
-    return false;
-  }
-
-  const consumeIdentifier = (): boolean => {
-    if (index >= input.length || !isLabelIdentifierStart(input[index])) {
-      return false;
-    }
-    index += 1;
-    while (index < input.length && isLabelIdentifierPart(input[index])) {
-      index += 1;
-    }
-    return true;
-  };
-
-  if (!consumeIdentifier()) {
-    return false;
-  }
-
-  while (index < input.length && input[index] === ".") {
-    index += 1;
-    if (!consumeIdentifier()) {
-      return false;
-    }
-  }
-
-  if (index < input.length && input[index] === "[") {
-    index += 1;
-    const digitStart = index;
-    while (index < input.length && input[index] >= "0" && input[index] <= "9") {
-      index += 1;
-    }
-    if (digitStart === index || input[index] !== "]") {
-      return false;
-    }
-    index += 1;
-
-    while (index < input.length && input[index] === ".") {
-      index += 1;
-      if (!consumeIdentifier()) {
-        return false;
-      }
-    }
-  }
-
-  return index === input.length;
-}
 
 /** Represents a macro definition. */
 export type MacroDefinition = {
@@ -187,10 +88,10 @@ export type StageExecutionCapabilities = {
   isDefinitionCollectionStage: boolean;
 };
 export type StageCursorState = {
-  snespos: number;
-  realsnespos: number;
-  startpos: number;
-  realstartpos: number;
+  currentTargetAddress: number;
+  currentTargetBaseAddress: number;
+  currentTargetStartAddress: number;
+  currentTargetBaseStartAddress: number;
   bytes: number;
 };
 export type StageSymbolState = {
@@ -230,6 +131,7 @@ export type StageExecutionState = {
   symbols: StageSymbolState;
   control: StageControlState;
   writeState: StageWriteState;
+  loweredCommandCache: WeakMap<NormalizedCommand, LoweredCommand>;
 };
 
 type LoweredDirective = {
@@ -287,15 +189,15 @@ export interface StructDefinition {
 }
 
 export type PushPcStackEntry = {
-  snespos: number;
-  startpos: number;
-  realsnespos: number;
-  realstartpos: number;
+  currentTargetAddress: number;
+  currentTargetStartAddress: number;
+  currentTargetBaseAddress: number;
+  currentTargetBaseStartAddress: number;
 }
 
-type SpcblockType = "nspc" | "custom";
+export type SpcblockType = "nspc" | "custom";
 
-type SpcblockData = {
+export type SpcblockData = {
   destination: number;
   type: SpcblockType;
   sizeAddress: number;
@@ -311,10 +213,14 @@ export interface IncludedFileInfo {
 }
 
 export class Assembler implements AssemblySession {
-  public snespos: number = 0;
-  public realsnespos: number = 0;
-  public startpos: number = 0;
-  public realstartpos: number = 0;
+  /** The current target address. `snespos` */
+  public currentTargetAddress: number = 0;
+  /** The current target base address. `realsnespos` */
+  public currentTargetBaseAddress: number = 0;
+  /** The current target start address. `startpos` */
+  public currentTargetStartAddress: number = 0;
+  /** The current target base start address. `realstartpos` */
+  public currentTargetBaseStartAddress: number = 0;
   public bytes: number = 0;
 
   public pushBaseStack: number[] = [];
@@ -334,7 +240,7 @@ export class Assembler implements AssemblySession {
   public sa1banks: number[] = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
   /** Placeholder for ROM */
   public romdata: number[] | Uint8Array = [];
-  public default_freespacebyte: number = 0x00;
+  public defaultFreespaceByte: number = 0x00;
   public activeFreespaceStartPc: number | null = null;
   public activeFreespaceContentStartPc: number | null = null;
 
@@ -408,7 +314,7 @@ export class Assembler implements AssemblySession {
   /** Initialize fill pattern */
   public fillbyte: number[] = [0,0,0,0, 0,0,0,0, 0,0,0,0];
 
-  public targetRom: number[] | Uint8Array;
+  public targetRom: Uint8Array;
 
   // Add a static property to hold our CRC table.
   public static crcTable: number[] | null = null;
@@ -443,7 +349,7 @@ export class Assembler implements AssemblySession {
   readonly cursorAddress: CursorAddressFacade;
   public readonly services: AssemblerServices;
   public readonly stageExecutionStates: Map<AssemblyStageName, StageExecutionState> = new Map();
-  private activeStageExecutionState: StageExecutionState | null = null;
+  activeStageExecutionState: StageExecutionState | null = null;
 
   get commandPipelineService(): CommandPipelineService {
     return this.services.commandPipelineService;
@@ -480,23 +386,29 @@ export class Assembler implements AssemblySession {
   // Core assembler wrapper helpers
 
   get currentAddress(): number {
-    return this.getCurrentTargetAddress();
+    return this.currentTargetAddress;
   }
 
   recordCurrentAddress(): void {
-    this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+    this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
   }
 
   setWritePosition(address: number): void {
-    this.snespos = address;
-    this.realsnespos = address;
-    this.startpos = address;
-    this.realstartpos = address;
+    this.currentTargetAddress = address;
+    this.currentTargetBaseAddress = address;
+    this.currentTargetStartAddress = address;
+    this.currentTargetBaseStartAddress = address;
+    if (this.activeStageExecutionState) {
+      this.activeStageExecutionState.cursor.currentTargetAddress = address;
+      this.activeStageExecutionState.cursor.currentTargetBaseAddress = address;
+      this.activeStageExecutionState.cursor.currentTargetStartAddress = address;
+      this.activeStageExecutionState.cursor.currentTargetBaseStartAddress = address;
+    }
   }
 
   syncWriteStarts(): void {
-    this.startpos = this.snespos;
-    this.realstartpos = this.realsnespos;
+    this.currentTargetStartAddress = this.currentTargetAddress;
+    this.currentTargetBaseStartAddress = this.currentTargetBaseAddress;
   }
 
   incrementBytesWritten(num: number): void {
@@ -509,18 +421,6 @@ export class Assembler implements AssemblySession {
    */
   setTraceListener(listener: AssemblerTraceListener | null): void {
     this.traceListener = listener;
-  }
-
-  /**
-   * Emits a structured trace event if tracing is enabled.
-   * @param {AssemblerTraceEvent} event The event to emit.
-   */
-  emitTraceEvent(event: AssemblerTraceEvent): void {
-    this.traceListener?.(event);
-  }
-
-  processNestedCommand(command: string): void {
-    this.processCommand(command);
   }
 
   loadTestRomData(): void {
@@ -551,8 +451,8 @@ export class Assembler implements AssemblySession {
     const defineHost: DefineHost = {
       defines: this.defines,
       resolvedefines: (input: string) => this.resolvedefines(input),
-      evaluateMath: (input: string) => this.evaluateMath(input),
-      processNestedCommand: (command: string) => this.processNestedCommand(command),
+      evaluateMath: (input: string) => this.mathCore.math(input),
+      processCommand: (command: string) => this.processCommand(command),
     };
 
     return defineHost;
@@ -597,9 +497,9 @@ export class Assembler implements AssemblySession {
       },
       labelParents: { get: () => this.labelParents, enumerable: true },
       parseFunctionDefinition: { value: (defLine: string) => this.parseFunctionDefinition(defLine), enumerable: true },
-      processNestedCommand: { value: (command: string) => this.processNestedCommand(command), enumerable: true },
-      handleRelativeLabel: { value: (label: string) => this.handleRelativeLabel(label), enumerable: true },
-      handleLabelDefinition: { value: (labelName: string) => this.handleLabelDefinition(labelName), enumerable: true },
+      processCommand: { value: (command: string) => this.processCommand(command), enumerable: true },
+      handleRelativeLabel: { value: (label: string) => this.symbolScope.handleRelativeLabel(label), enumerable: true },
+      handleLabelDefinition: { value: (labelName: string) => this.symbolScope.handleLabelDefinition(labelName), enumerable: true },
       setLabel: {
         value: (
           label: string,
@@ -608,13 +508,13 @@ export class Assembler implements AssemblySession {
           isMacroLabel?: boolean,
           isGlobal?: boolean,
           modifiesHierarchy?: boolean,
-        ) => this.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy),
+        ) => this.symbolScope.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy),
         enumerable: true,
       },
       resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
-      evaluateMath: { value: (input: string) => this.evaluateMath(input), enumerable: true },
+      evaluateMath: { value: (input: string) => this.mathCore.math(input), enumerable: true },
       getLabelValue: {
-        value: (label: string, requireStatic: boolean) => this.getLabelValue(label, requireStatic),
+        value: (label: string, requireStatic: boolean) => this.symbolScope.getLabelValue(label, requireStatic),
         enumerable: true,
       },
       recordCurrentAddress: { value: () => this.cursorAddress.recordCurrentAddress(), enumerable: true },
@@ -637,9 +537,8 @@ export class Assembler implements AssemblySession {
       handleWhile: { value: (args: string[]) => this.handleWhile(args), enumerable: true },
       handleEndFor: { value: () => this.handleEndFor(), enumerable: true },
       handleEndWhile: { value: () => this.handleEndWhile(), enumerable: true },
-      removeInlineComment: { value: (line: string) => this.removeInlineComment(line), enumerable: true },
-      splitCommandIntoWords: { value: (command: string) => this.splitCommandIntoWords(command), enumerable: true },
-      resolveVariadicPlaceholders: { value: (command: string) => this.resolveVariadicPlaceholders(command), enumerable: true },
+      splitCommandIntoWords: { value: (command: string) => splitCommandIntoWords(command), enumerable: true },
+      resolveVariadicPlaceholders: { value: (command: string) => this.macroEngine.resolveVariadicPlaceholders(command), enumerable: true },
       resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
       loadTestRomData: { value: () => this.loadTestRomData(), enumerable: true },
       currentFile: { get: () => this.currentFile, enumerable: true },
@@ -651,7 +550,7 @@ export class Assembler implements AssemblySession {
     return Object.create(null, {
       currentFile: { get: () => this.currentFile, enumerable: true },
       currentLine: { get: () => this.currentLine, enumerable: true },
-      splitCommandIntoWords: { value: (command: string) => this.splitCommandIntoWords(command), enumerable: true },
+      splitCommandIntoWords: { value: (command: string) => splitCommandIntoWords(command), enumerable: true },
       handleCharacterMapping: { value: (command: NormalizedCommand) => this.handleCharacterMapping(command), enumerable: true },
       recordCurrentAddress: { value: () => this.cursorAddress.recordCurrentAddress(), enumerable: true },
     }) as CommandPipelineHost;
@@ -697,7 +596,7 @@ export class Assembler implements AssemblySession {
         enumerable: true,
       },
       getLabelValue: {
-        value: (label: string, requireStatic: boolean) => this.getLabelValue(label, requireStatic),
+        value: (label: string, requireStatic: boolean) => this.symbolScope.getLabelValue(label, requireStatic),
         enumerable: true,
       },
       evaluateRangeExpression: {
@@ -706,7 +605,7 @@ export class Assembler implements AssemblySession {
       },
       enterStructDefinition: {
         value: (base: number) => {
-          this.savedPCStack.push(this.snespos);
+          this.savedPCStack.push(this.currentTargetAddress);
           this.cursorAddress.setWritePosition(base);
         },
         enumerable: true,
@@ -734,7 +633,7 @@ export class Assembler implements AssemblySession {
     return Object.create(null, {
       pass: { get: () => this.pass, enumerable: true },
       currentFile: { get: () => this.currentFile, enumerable: true },
-      snespos: { get: () => this.snespos, enumerable: true },
+      currentTargetAddress: { get: () => this.currentTargetAddress, enumerable: true },
       collectingLoop: { get: () => this.collectingLoop, enumerable: true },
       condStack: { get: () => this.condStack, enumerable: true },
       defines: { get: () => this.defines, enumerable: true },
@@ -819,10 +718,10 @@ export class Assembler implements AssemblySession {
       },
       labelParents: { get: () => this.labelParents, enumerable: true },
       currentLine: { get: () => this.currentLine, enumerable: true },
-      splitCommandIntoWords: { value: (command: string) => this.splitCommandIntoWords(command), enumerable: true },
+      splitCommandIntoWords: { value: (command: string) => splitCommandIntoWords(command), enumerable: true },
       normalizeCommand: { value: (command: string) => this.preDispatchPipelineService.normalizeCommand(command), enumerable: true },
       resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
-      processNestedCommand: { value: (command: string) => this.processNestedCommand(command), enumerable: true },
+      processCommand: { value: (command: string) => this.processCommand(command), enumerable: true },
       processNestedNormalizedCommand: { value: (command: NormalizedCommand) => this.processNormalizedCommand(command), enumerable: true },
       setLabel: {
         value: (
@@ -832,35 +731,34 @@ export class Assembler implements AssemblySession {
           isMacroLabel?: boolean,
           isGlobal?: boolean,
           modifiesHierarchy?: boolean,
-        ) => this.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy),
+        ) => this.symbolScope.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy),
         enumerable: true,
       },
-      handleRelativeLabel: { value: (label: string) => this.handleRelativeLabel(label), enumerable: true },
-      getLabelValue: { value: (label: string, requireStatic: boolean) => this.getLabelValue(label, requireStatic), enumerable: true },
-      findNextLabel: { value: (label: string, currentAddressOverride?: number) => this.findNextLabel(label, currentAddressOverride), enumerable: true },
-      findPreviousLabel: { value: (label: string, currentAddressOverride?: number) => this.findPreviousLabel(label, currentAddressOverride), enumerable: true },
-      evaluateMath: { value: (input: string) => this.evaluateMath(input), enumerable: true },
+      handleRelativeLabel: { value: (label: string) => this.symbolScope.handleRelativeLabel(label), enumerable: true },
+      getLabelValue: { value: (label: string, requireStatic: boolean) => this.symbolScope.getLabelValue(label, requireStatic), enumerable: true },
+      findNextLabel: { value: (label: string, currentAddressOverride?: number) => this.symbolScope.findNextLabel(label, currentAddressOverride), enumerable: true },
+      findPreviousLabel: { value: (label: string, currentAddressOverride?: number) => this.symbolScope.findPreviousLabel(label, currentAddressOverride), enumerable: true },
+      evaluateMath: { value: (input: string) => this.mathCore.math(input), enumerable: true },
     }) as MacroEngineHost;
   }
 
   createSymbolScopeHost(): SymbolScopeHost {
     return Object.create(null, {
-      pass: { get: () => this.pass, enumerable: true },
       mode: { get: () => this.getActiveStageCapabilities().instructionMode, enumerable: true },
       enforceResolvedLabels: { get: () => this.getActiveStageCapabilities().enforceResolvedLabels, enumerable: true },
       isDefinitionCollectionStage: { get: () => this.getActiveStageCapabilities().isDefinitionCollectionStage, enumerable: true },
-      snespos: {
-        get: () => this.snespos,
+      currentTargetAddress: {
+        get: () => this.currentTargetAddress,
         set: (value: number) => {
-          this.snespos = value;
+          this.currentTargetAddress = value;
           if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.cursor.snespos = value;
+            this.activeStageExecutionState.cursor.currentTargetAddress = value;
           }
         },
         enumerable: true,
       },
       currentNamespace: {
-        get: () => this.currentNamespace,
+        get: () => this.activeStageExecutionState?.control.currentNamespace ?? this.currentNamespace,
         set: (value: string) => {
           this.currentNamespace = value;
           if (this.activeStageExecutionState) {
@@ -869,15 +767,15 @@ export class Assembler implements AssemblySession {
         },
         enumerable: true,
       },
-      namespaceNestingEnabled: { get: () => this.namespaceNestingEnabled, enumerable: true },
-      namespaceNestingPath: { get: () => this.namespaceNestingPath, enumerable: true },
-      inMacroExpansion: { get: () => this.inMacroExpansion, enumerable: true },
-      macroLabelInstance: { get: () => this.macroLabelInstance, enumerable: true },
-      labelTable: { get: () => this.labelTable, enumerable: true },
-      forwardLabels: { get: () => this.forwardLabels, enumerable: true },
-      backwardLabels: { get: () => this.backwardLabels, enumerable: true },
+      namespaceNestingEnabled: { get: () => this.activeStageExecutionState?.control.namespaceNestingEnabled ?? this.namespaceNestingEnabled, enumerable: true },
+      namespaceNestingPath: { get: () => this.activeStageExecutionState?.control.namespaceNestingPath ?? this.namespaceNestingPath, enumerable: true },
+      inMacroExpansion: { get: () => this.activeStageExecutionState?.control.inMacroExpansion ?? this.inMacroExpansion, enumerable: true },
+      macroLabelInstance: { get: () => this.activeStageExecutionState?.control.macroLabelInstance ?? this.macroLabelInstance, enumerable: true },
+      labelTable: { get: () => this.activeStageExecutionState?.symbols.labelTable ?? this.labelTable, enumerable: true },
+      forwardLabels: { get: () => this.activeStageExecutionState?.symbols.forwardLabels ?? this.forwardLabels, enumerable: true },
+      backwardLabels: { get: () => this.activeStageExecutionState?.symbols.backwardLabels ?? this.backwardLabels, enumerable: true },
       currentParentLabel: {
-        get: () => this.currentParentLabel,
+        get: () => this.activeStageExecutionState?.symbols.currentParentLabel ?? this.currentParentLabel,
         set: (value: string) => {
           this.currentParentLabel = value;
           if (this.activeStageExecutionState) {
@@ -887,7 +785,7 @@ export class Assembler implements AssemblySession {
         enumerable: true,
       },
       currentParentIsGlobal: {
-        get: () => this.currentParentIsGlobal,
+        get: () => this.activeStageExecutionState?.symbols.currentParentIsGlobal ?? this.currentParentIsGlobal,
         set: (value: boolean) => {
           this.currentParentIsGlobal = value;
           if (this.activeStageExecutionState) {
@@ -897,7 +795,7 @@ export class Assembler implements AssemblySession {
         enumerable: true,
       },
       currentGlobalParentLabel: {
-        get: () => this.currentGlobalParentLabel,
+        get: () => this.activeStageExecutionState?.symbols.currentGlobalParentLabel ?? this.currentGlobalParentLabel,
         set: (value: string) => {
           this.currentGlobalParentLabel = value;
           if (this.activeStageExecutionState) {
@@ -906,7 +804,7 @@ export class Assembler implements AssemblySession {
         },
         enumerable: true,
       },
-      labelParents: { get: () => this.labelParents, enumerable: true },
+      labelParents: { get: () => this.activeStageExecutionState?.symbols.labelParents ?? this.labelParents, enumerable: true },
       structs: { get: () => this.structs, enumerable: true },
     }) as SymbolScopeHost;
   }
@@ -915,22 +813,22 @@ export class Assembler implements AssemblySession {
 
   createRomWriterHost(): RomWriterHost {
     return Object.create(null, {
-      snespos: {
-        get: () => this.snespos,
+      currentTargetAddress: {
+        get: () => this.activeStageExecutionState?.cursor.currentTargetAddress ?? this.currentTargetAddress,
         set: (value: number) => {
-          this.snespos = value;
+          this.currentTargetAddress = value;
           if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.cursor.snespos = value;
+            this.activeStageExecutionState.cursor.currentTargetAddress = value;
           }
         },
         enumerable: true,
       },
-      realsnespos: {
-        get: () => this.realsnespos,
+      currentTargetBaseAddress: {
+        get: () => this.activeStageExecutionState?.cursor.currentTargetBaseAddress ?? this.currentTargetBaseAddress,
         set: (value: number) => {
-          this.realsnespos = value;
+          this.currentTargetBaseAddress = value;
           if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.cursor.realsnespos = value;
+            this.activeStageExecutionState.cursor.currentTargetBaseAddress = value;
           }
         },
         enumerable: true,
@@ -942,13 +840,12 @@ export class Assembler implements AssemblySession {
       mapper: { get: () => this.mapper, enumerable: true },
       sa1banks: { get: () => this.sa1banks, enumerable: true },
       romdata: { get: () => this.romdata, enumerable: true },
-      default_freespacebyte: { get: () => this.default_freespacebyte, enumerable: true },
-      pass: { get: () => this.pass, enumerable: true },
+      defaultFreespaceByte: { get: () => this.defaultFreespaceByte, enumerable: true },
       bankCrossCheckMode: { get: () => this.bankCrossCheckMode, enumerable: true },
-      spcInlineCompatMode: { get: () => this.spcInlineCompatMode, enumerable: true },
-      inSpcblock: { get: () => this.inSpcblock, enumerable: true },
-      activeFreespaceStartPc: { get: () => this.activeFreespaceStartPc, enumerable: true },
-      activeFreespaceContentStartPc: { get: () => this.activeFreespaceContentStartPc, enumerable: true },
+      spcInlineCompatMode: { get: () => this.activeStageExecutionState?.writeState.spcInlineCompatMode ?? this.spcInlineCompatMode, enumerable: true },
+      inSpcblock: { get: () => this.activeStageExecutionState?.writeState.inSpcblock ?? this.inSpcblock, enumerable: true },
+      activeFreespaceStartPc: { get: () => this.activeStageExecutionState?.writeState.activeFreespaceStartPc ?? this.activeFreespaceStartPc, enumerable: true },
+      activeFreespaceContentStartPc: { get: () => this.activeStageExecutionState?.writeState.activeFreespaceContentStartPc ?? this.activeFreespaceContentStartPc, enumerable: true },
       checksumFixEnabled: { get: () => this.checksumFixEnabled, enumerable: true },
       fillRomData: { value: (start: number, value: number, length: number) => this.fillRomData(start, value, length), enumerable: true },
       writeDataBytes: { value: (start: number, value: number, length?: number) => this.writeDataBytes(start, value, length), enumerable: true },
@@ -962,7 +859,7 @@ export class Assembler implements AssemblySession {
           // Byte writes happen below the command dispatcher, so recover the
           // most specific source context from the active command stack.
           const source = this.traceCommandStack[this.traceCommandStack.length - 1];
-          this.emitTraceEvent({
+          this.traceListener?.({
             type: "write",
             ...event,
             file: source?.file ?? this.currentFile,
@@ -1008,17 +905,17 @@ export class Assembler implements AssemblySession {
   }
 
   constructor(targetRom?: number[] | Uint8Array) {
-    this.targetRom = targetRom ?? [];
+    this.targetRom = targetRom ? Uint8Array.from(targetRom) : new Uint8Array();
     this.cursorAddress = this.createCursorAddressFacade();
     this.services = this.createServices();
     this.operandResolver = new OperandResolver({
       resolveDefines: (input) => this.resolvedefines(input),
-      resolveStructLabel: (input) => this.resolveStructLabel(input),
-      resolveLabel: (input, requireStatic) => this.getLabelValue(input, requireStatic),
-      hasLabel: (input) => this.hasLabelInScope(input),
+      resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
+      resolveLabel: (input, requireStatic) => this.symbolScope.getLabelValue(input, requireStatic),
+      hasLabel: (input) => this.symbolScope.hasLabelInScope(input),
       evaluateMath: (input) => this.mathCore.math(input),
-      getPass: () => this.pass,
-      getCurrentAddress: () => this.snespos,
+      shouldDeferExpressionEvaluation: () => !this.getActiveStageCapabilities().enforceResolvedLabels,
+      getCurrentAddress: () => this.currentTargetAddress,
       requireStaticLabelLookup: () => this.requireStaticLabelLookup,
     });
     this.arch65816 = new Arch65816(this.create65816Context());
@@ -1064,36 +961,12 @@ export class Assembler implements AssemblySession {
     return candidates.find((candidate) => fs.existsSync(candidate));
   }
 
-  hasLabelInScope(identifier: string): boolean {
-    return this.symbolScope.hasLabelInScope(identifier);
-  }
-
-  getCurrentTargetAddress(): number {
-    return this.snespos;
-  }
-
-  getCurrentTargetBaseAddress(): number {
-    return this.realsnespos;
-  }
-
-  evaluateMath(input: string): number {
-    return this.mathCore.math(input);
-  }
-
-  convertTargetAddressToRomOffset(address: number): number {
-    return this.snestopc(address);
-  }
-
-  convertRomOffsetToTargetAddress(offset: number): number {
-    return this.pctosnes(offset);
-  }
-
   resolveExpressionHostLabel(identifier: string): number | string {
     const parsed = parseExpressionNode(identifier.trim());
     if (isReferenceExpressionNode(parsed)) {
       return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
     }
-    return this.getLabelValue(identifier, this.requireStaticLabelLookup);
+    return this.symbolScope.getLabelValue(identifier, this.requireStaticLabelLookup);
   }
 
   getExpressionObjectSize(identifier: string, baseOnly = false): number {
@@ -1137,7 +1010,7 @@ export class Assembler implements AssemblySession {
     if (!this.readFunctionsEnabled && defaultValue === undefined) {
       throw new Error(`Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`);
     }
-    const pcPos = this.convertTargetAddressToRomOffset(pos);
+    const pcPos = this.romWriter.convertTargetAddressToRomOffset(pos);
     const source = (this.targetRom && this.targetRom.length > 0) ? this.targetRom : this.romdata;
     const romBytes = Uint8Array.from(source);
     const value = pcPos < 0 ? undefined : this.readLittleEndian(romBytes, pcPos, size);
@@ -1189,12 +1062,13 @@ export class Assembler implements AssemblySession {
       emitByte: (value: number) => this.emitByte(value),
       emitWord: (value: number) => this.emitWord(value),
       emitLong: (value: number) => this.emitLong(value),
-      findNextLabel: (reference: string, fromAddress: number) => this.findNextLabel(reference, fromAddress),
-      findPreviousLabel: (reference: string, fromAddress: number) => this.findPreviousLabel(reference, fromAddress),
+      findNextLabel: (reference: string, fromAddress: number) => this.symbolScope.findNextLabel(reference, fromAddress),
+      findPreviousLabel: (reference: string, fromAddress: number) => this.symbolScope.findPreviousLabel(reference, fromAddress),
     };
     return Object.defineProperties(context, {
-      pass: { get: () => this.pass },
-      snespos: { get: () => this.getCurrentTargetAddress() },
+      mode: { get: () => this.getActiveStageCapabilities().instructionMode },
+      enforceResolvedLabels: { get: () => this.getActiveStageCapabilities().enforceResolvedLabels },
+      currentTargetAddress: { get: () => this.currentTargetAddress },
       optimizeDirectPage: { get: () => this.optimizeDirectPage },
     }) as unknown as ArchitectureContext;
   }
@@ -1204,12 +1078,13 @@ export class Assembler implements AssemblySession {
       operandResolver: this.operandResolver,
       write1: (value: number) => this.write1(value),
       write2: (value: number) => this.write2(value),
-      findNextLabel: (reference: string, fromAddress: number) => this.findNextLabel(reference, fromAddress),
-      findPreviousLabel: (reference: string, fromAddress: number) => this.findPreviousLabel(reference, fromAddress),
+      findNextLabel: (reference: string, fromAddress: number) => this.symbolScope.findNextLabel(reference, fromAddress),
+      findPreviousLabel: (reference: string, fromAddress: number) => this.symbolScope.findPreviousLabel(reference, fromAddress),
     };
     return Object.defineProperties(context, {
-      pass: { get: () => this.pass },
-      snespos: { get: () => this.getCurrentTargetAddress() },
+      mode: { get: () => this.getActiveStageCapabilities().instructionMode },
+      enforceResolvedLabels: { get: () => this.getActiveStageCapabilities().enforceResolvedLabels },
+      currentTargetAddress: { get: () => this.currentTargetAddress },
     }) as unknown as Spc700Context;
   }
 
@@ -1220,20 +1095,20 @@ export class Assembler implements AssemblySession {
       write2: (value: number) => this.write2(value),
     };
     return Object.defineProperties(context, {
-      snespos: { get: () => this.getCurrentTargetAddress() },
+      currentTargetAddress: { get: () => this.currentTargetAddress },
     }) as unknown as SuperFXContext;
   }
 
   readonly expressionHost: ExpressionHost = {
     resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
-    convertSnesToPc: (address) => this.convertTargetAddressToRomOffset(address),
-    convertPcToSnes: (offset) => this.convertRomOffsetToTargetAddress(offset),
-    getCurrentAddress: () => this.getCurrentTargetAddress(),
-    getCurrentBaseAddress: () => this.getCurrentTargetBaseAddress(),
+    convertSnesToPc: (address) => this.romWriter.convertTargetAddressToRomOffset(address),
+    convertPcToSnes: (offset) => this.romWriter.pctosnes(offset),
+    getCurrentAddress: () => this.currentTargetAddress,
+    getCurrentBaseAddress: () => this.currentTargetBaseAddress,
     isDefined: (identifier) => {
       if (this.defines.has(identifier)) return 1;
       if (this.structs.has(identifier)) return 1;
-      return this.hasLabelInScope(identifier) ? 1 : 0;
+      return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
     },
     getObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
     getFileSize: (filename) => {
@@ -1290,7 +1165,7 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  private getActiveStageCapabilities(): StageExecutionCapabilities {
+  getActiveStageCapabilities(): StageExecutionCapabilities {
     if (this.activeStageExecutionState) {
       return this.activeStageExecutionState.capabilities;
     }
@@ -1303,14 +1178,7 @@ export class Assembler implements AssemblySession {
     };
   }
 
-  private getInstructionExecutionMode(): StageExecutionMode {
-    if (this.activeStageExecutionState) {
-      return this.activeStageExecutionState.capabilities.instructionMode;
-    }
-    return this.pass === 0 ? "layout" : "emit";
-  }
-
-  private layoutInstruction(input: string[] | LoweredInstruction): boolean {
+  layoutInstruction(input: string[] | LoweredInstruction): boolean {
     const words = Array.isArray(input) ? input : input.words;
     if (words.length === 0) {
       return true;
@@ -1326,7 +1194,7 @@ export class Assembler implements AssemblySession {
     return true;
   }
 
-  private emitInstruction(input: string[] | LoweredInstruction): boolean {
+  emitInstruction(input: string[] | LoweredInstruction): boolean {
     const words = Array.isArray(input) ? input : input.words;
     if (words.length === 0) {
       return true;
@@ -1355,7 +1223,11 @@ export class Assembler implements AssemblySession {
   asblock_pick(input: string[] | LoweredInstruction): boolean {
     debug("asblock_pick", Array.isArray(input) ? input : input.words);
     debug("asblock_pick arch", this.arch);
-    if (this.getInstructionExecutionMode() === "layout") {
+    let instructionExecutionMode = this.pass === 0 ? "layout" : "emit"
+    if (this.activeStageExecutionState) {
+      instructionExecutionMode = this.activeStageExecutionState.capabilities.instructionMode;
+    }
+    if (instructionExecutionMode === "layout") {
       return this.layoutInstruction(input);
     }
     return this.emitInstruction(input);
@@ -1418,20 +1290,12 @@ export class Assembler implements AssemblySession {
   }
 
   /**
-   * Validates `check bankcross` constraints for a multi-byte write.
-   * @param {number} length The number of bytes that will be written.
-   */
-  assertBankCrossAllowed(length: number): void {
-    this.romWriter.assertBankCrossAllowed(length);
-  }
-
-  /**
    * Reads 1, 2, or 3 bytes from ROM.
    * @param {number} insnespos - The SNES address to read from.
    * @returns {number} The byte read from ROM.
    */
   read1(insnespos: number): number {
-    const addr = this.snestopc(insnespos);
+    const addr = this.romWriter.convertTargetAddressToRomOffset(insnespos);
     if (addr < 0 || addr + 1 > this.romdata.length) {
       return -1;
     }
@@ -1439,7 +1303,7 @@ export class Assembler implements AssemblySession {
   }
 
   read2(insnespos: number): number {
-    const addr = this.snestopc(insnespos);
+    const addr = this.romWriter.convertTargetAddressToRomOffset(insnespos);
     if (addr < 0 || addr + 2 > this.romdata.length) {
       return -1;
     }
@@ -1447,7 +1311,7 @@ export class Assembler implements AssemblySession {
   }
 
   read3(insnespos: number): number {
-    const addr = this.snestopc(insnespos);
+    const addr = this.romWriter.convertTargetAddressToRomOffset(insnespos);
     if (addr < 0 || addr + 3 > this.romdata.length) {
       return -1;
     }
@@ -1469,7 +1333,7 @@ export class Assembler implements AssemblySession {
       return;
     }
 
-    const splitCommands = this.splitInlineCommands(processedCommands);
+    const splitCommands = splitInlineCommands(processedCommands);
     if (block.includes("\n")) {
       const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
       this.executeNodeStream(nodes);
@@ -1482,68 +1346,9 @@ export class Assembler implements AssemblySession {
   }
 
   preprocessBlockCommands(block: string): string[] {
-    const lines = block.split("\n");
-    const processedLines: string[] = [];
-
-    for (let line of lines) {
-      line = line.trim();
-      if (!line) continue;
-
-      // Preserve the special test directive comment so processCommand can handle it.
-      if (line.startsWith(";`+")) {
-        processedLines.push(line);
-        continue;
-      }
-
-      // Strip any inline comments and trim the line
-      line = this.removeInlineComment(line).trim();
-      if (!line) continue;
-
-      if (line.endsWith("\\")) {
-        debug("processMultiLineOperators line ends with \\", line);
-        this.commandBuffer += line.slice(0, -1); // Remove `\` and concatenate
-      } else if (line.endsWith(",")) {
-        debug("processMultiLineOperators line ends with ,", line);
-        this.commandBuffer += line; // Keep `,` in concatenation
-      } else {
-        processedLines.push(this.commandBuffer + line);
-        this.commandBuffer = "";
-      }
-    }
-
-    return processedLines;
-  }
-
-  splitInlineCommands(commands: string[]): string[] {
-    const output: string[] = [];
-    for (const command of commands) {
-      const split = command.split(/\s:\s/).map((entry) => entry.trim()).filter(Boolean);
-      if (split.length === 0) {
-        continue;
-      }
-      for (const entry of split) {
-        const relativeLabelMatch = entry.match(/^([+-]+:)\s+(.+)$/);
-        if (relativeLabelMatch) {
-          output.push(relativeLabelMatch[1].trim(), relativeLabelMatch[2].trim());
-          continue;
-        }
-        output.push(entry);
-      }
-    }
-    return output;
-  }
-
-  removeInlineComment(line: string): string {
-    let inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        inQuote = !inQuote;
-      } else if (!inQuote && ch === ";") {
-        return line.substring(0, i).trim();
-      }
-    }
-    return line.trim();
+    const processed = preprocessBlockCommands(block, this.commandBuffer);
+    this.commandBuffer = processed.commandBuffer;
+    return processed.commands;
   }
 
   /**
@@ -1551,8 +1356,10 @@ export class Assembler implements AssemblySession {
    * @param {string} command - The command to process.
    */
   processCommand(command: string): void {
-    if (command.trim() === "") return;
-    debug("processCommand", { command }, this.snespos, "/", this.snespos.toString(16), `pass ${this.pass}`);
+    debug("processCommand", { command }, this.currentTargetAddress, "/", this.currentTargetAddress.toString(16), `pass ${this.pass}`);
+    if (command.trim() === "") {
+      return;
+    }
 
     command = this.commandPipelineService.rewriteRawCommand(command);
 
@@ -1594,7 +1401,7 @@ export class Assembler implements AssemblySession {
     if (rewriteRaw) {
       const rewrittenRaw = this.commandPipelineService.rewriteRawCommand(workingState.source.raw);
       const rewrittenNormalized = this.preDispatchPipelineService.normalizeCommand(rewrittenRaw);
-      const rewrittenWords = this.splitCommandIntoWords(rewrittenNormalized);
+      const rewrittenWords = splitCommandIntoWords(rewrittenNormalized);
       if (rewrittenRaw !== workingState.source.raw || rewrittenNormalized !== workingState.command) {
         workingState = createNormalizedCommand(
           rewrittenRaw,
@@ -1616,7 +1423,7 @@ export class Assembler implements AssemblySession {
     }
 
     // Capture the starting PC (before processing this command)
-    const startPC = this.realsnespos & 0xFFFFFF;
+    const startPC = this.currentTargetBaseAddress & 0xFFFFFF;
 
     if (!this.commandPipelineService.prepareForDispatch(workingState)) {
       return;
@@ -1629,43 +1436,57 @@ export class Assembler implements AssemblySession {
       normalized: workingState.command,
     };
 
-    this.emitTraceEvent({
+    this.traceListener?.({
       type: "command-start",
       pass: this.pass,
       arch: this.arch,
       ...traceContext,
       snesAddress: startPC,
-      pcAddress: this.snestopc(startPC),
+      pcAddress: this.romWriter.convertTargetAddressToRomOffset(startPC),
     });
 
     // Nested directives can emit additional writes while this command is still
     // active, so keep the current source context on a stack until dispatch ends.
     this.traceCommandStack.push(traceContext);
     try {
-      const lowered = this.lowerNode(workingState);
+      const lowered = this.lowerNodeWithStageCache(workingState);
       this.dispatchLoweredNode(lowered);
     } finally {
       this.traceCommandStack.pop();
     }
 
     // Determine how many bytes were written in this command.
-    const commandSize = (this.realsnespos & 0xFFFFFF) - startPC;
+    const commandSize = (this.currentTargetBaseAddress & 0xFFFFFF) - startPC;
     debug("processCommand bytes written", commandSize)
 
-    const endPC = this.realsnespos & 0xFFFFFF;
-    this.emitTraceEvent({
+    const endPC = this.currentTargetBaseAddress & 0xFFFFFF;
+    this.traceListener?.({
       type: "command-end",
       pass: this.pass,
       arch: this.arch,
       ...traceContext,
       snesAddress: startPC,
-      pcAddress: this.snestopc(startPC),
+      pcAddress: this.romWriter.convertTargetAddressToRomOffset(startPC),
       endSnesAddress: endPC,
-      endPcAddress: this.snestopc(endPC),
+      endPcAddress: this.romWriter.convertTargetAddressToRomOffset(endPC),
       bytesWritten: commandSize,
     });
 
-    this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+    this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
+  }
+
+  lowerNodeWithStageCache(command: NormalizedCommand): LoweredCommand {
+    const activeStage = this.activeStageExecutionState;
+    if (!activeStage) {
+      return this.lowerNode(command);
+    }
+    const cached = activeStage.loweredCommandCache.get(command);
+    if (cached) {
+      return cached;
+    }
+    const lowered = this.lowerNode(command);
+    activeStage.loweredCommandCache.set(command, lowered);
+    return lowered;
   }
 
   dispatchLoweredNode(lowered: LoweredCommand): void {
@@ -1685,132 +1506,6 @@ export class Assembler implements AssemblySession {
     if (!wasOpcode) {
       debug("💥 assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
     }
-  }
-
-  handlePushBase(): void {
-    debug("handlePushBase")
-    this.pushBaseStack.push(this.snespos);
-  }
-
-  /**
-   * Saves the current character mapping table.
-   */
-  handlePushTable(): void {
-    debug("handlePushTable");
-    this.tableStack.push(new Map(this.characterMappings));
-  }
-
-  /**
-   * Restores the previously saved character mapping table.
-   */
-  handlePullTable(): void {
-    debug("handlePullTable");
-    if (this.tableStack.length === 0) {
-      throw new Error("pulltable without pushtable");
-    }
-    this.characterMappings = this.tableStack.pop()!;
-  }
-
-  /**
-   * Minimal FREECODE/FREESPACE support used by active tests.
-   * Allocates a block at/after current ROM end, emits a placeholder RATS tag, then positions assembly after it.
-   * @param {string} type - Directive keyword.
-   * @param {string[]} _params - Directive parameters.
-   */
-  handleFreespace(type: string, _params: string[]): void {
-    debug("handleFreespace", { type, _params });
-    if (this.mapper === "norom") {
-      throw new Error("No freespace available in norom.");
-    }
-
-    const sourceLen = (this.targetRom && this.targetRom.length > 0) ? this.targetRom.length : this.romdata.length;
-    const startPc = Math.max(0x80000, sourceLen);
-
-    // Expand to at least 1MB for the 512KB -> 1MB bank crossing behavior expected by tests.
-    if (this.romdata.length < 0x100000) {
-      this.expandRom(0x100000, this.default_freespacebyte);
-    }
-    const startSnes = this.pctosnes(startPc);
-    if (startSnes < 0) {
-      throw new Error("Unable to map freespace start to SNES address.");
-    }
-
-    this.snespos = startSnes;
-    this.realsnespos = startSnes;
-    this.startpos = startSnes;
-    this.realstartpos = startSnes;
-
-    this.activeFreespaceStartPc = startPc;
-
-    // RATS tag: STAR + (size-1) + ~(size-1), patched in finishPass when final size is known.
-    this.write1(0x53); // S
-    this.write1(0x54); // T
-    this.write1(0x41); // A
-    this.write1(0x52); // R
-    this.write1(0x00);
-    this.write1(0x00);
-    this.write1(0xFF);
-    this.write1(0xFF);
-
-    this.activeFreespaceContentStartPc = startPc + 8;
-  }
-
-  /**
-   * Sets default freespace fill byte.
-   * @param {string[]} params - FREESPACEBYTE arguments.
-   */
-  handleFreespaceByte(params: string[]): void {
-    if (params.length !== 1) {
-      throw new Error("FREESPACEBYTE requires exactly one parameter.");
-    }
-    this.default_freespacebyte = this.operandResolver.getnum(this.resolvedefines(params[0])) & 0xFF;
-  }
-
-  /**
-   * Minimal PROT support used by active tests.
-   * Emits PROT table with 24-bit addresses and STOP marker.
-   * @param {string[]} words - Label list arguments.
-   */
-  handleProt(words: string[]): void {
-    if (words.length === 0) {
-      throw new Error("PROT command requires at least one label parameter.");
-    }
-
-    const labels = words.join(" ").split(",").map((label) => label.trim()).filter(Boolean);
-    if (labels.length === 0) {
-      throw new Error("PROT command requires at least one valid label.");
-    }
-
-    this.write1(0x50); // P
-    this.write1(0x52); // R
-    this.write1(0x4F); // O
-    this.write1(0x54); // T
-    this.write1((labels.length * 3) & 0xFF);
-
-    for (const label of labels) {
-      let address = 0;
-      try {
-        address = this.getLabelValue(label, false) & 0xFFFFFF;
-      } catch (_error: unknown) {
-        // Forward references are resolved in later passes; keep placeholder in early passes.
-        address = 0;
-      }
-      this.write3(address);
-    }
-
-    this.write1(0x53); // S
-    this.write1(0x54); // T
-    this.write1(0x4F); // O
-    this.write1(0x50); // P
-    this.write1(0x00);
-  }
-
-  handlePullBase(): void {
-    debug("handlePullBase")
-    if (this.pushBaseStack.length === 0) {
-      throw new Error("No base value to pull.");
-    }
-    this.snespos = this.pushBaseStack.pop();
   }
 
   handleSpcblock(words: string[]): void {
@@ -1851,11 +1546,11 @@ export class Assembler implements AssemblySession {
       throw new Error("Custom spcblock mode is not implemented.");
     }
 
-    const sizeAddress = this.realsnespos;
+    const sizeAddress = this.currentTargetBaseAddress;
     this.write2(0x0000);
     this.write2(destination);
-    this.snespos = destination;
-    this.startpos = destination;
+    this.currentTargetAddress = destination;
+    this.currentTargetStartAddress = destination;
     this.spcblockData = {
       destination,
       type,
@@ -1878,11 +1573,11 @@ export class Assembler implements AssemblySession {
     }
 
     if (this.pass === 2) {
-      const sizePc = this.snestopc(this.spcblockData.sizeAddress & 0xFFFFFF);
+      const sizePc = this.romWriter.convertTargetAddressToRomOffset(this.spcblockData.sizeAddress & 0xFFFFFF);
       if (sizePc < 0) {
         throw new Error("spcblock size address does not map to ROM.");
       }
-      const blockSize = (this.snespos - this.spcblockData.destination) & 0xFFFF;
+      const blockSize = (this.currentTargetAddress - this.spcblockData.destination) & 0xFFFF;
       this.writeDataBytes(sizePc, blockSize & 0xFF, 1);
       this.writeDataBytes(sizePc + 1, (blockSize >> 8) & 0xFF, 1);
     }
@@ -1905,35 +1600,6 @@ export class Assembler implements AssemblySession {
     this.inSpcblock = false;
   }
 
-  handleStartpos(params: string[]): void {
-    if (!this.inSpcblock || !this.spcblockData) {
-      throw new Error("startpos used without an active spcblock.");
-    }
-    if (params.length !== 1) {
-      throw new Error("startpos requires exactly one parameter.");
-    }
-    this.spcblockData.executeAddress = this.operandResolver.getnum(this.resolvedefines(params[0])) & 0xFFFF;
-  }
-
-  /**
-   * Handles the ARCH command.
-   * @param {string[]} words - The words from the ARCH command.
-   * @throws {Error} If the ARCH command requires an architecture parameter.
-   */
-  handleArch(words: string[]): void {
-    debug("handleArch", words)
-    if (!words[1]) {
-      throw new Error("ARCH command requires an architecture parameter.")
-    }
-    const archParam = words[1].toLowerCase();
-    const canonical = this.architectureRegistry.getCanonicalName(archParam);
-    if (!canonical) {
-      throw new Error("Unsupported architecture: " + archParam);
-    }
-    this.arch = canonical;
-    this.spcInlineCompatMode = archParam === "spc700-inline";
-  }
-
   /**
    * Parses a function definition of the form:
    *   function name(param1, param2...) = expression
@@ -1946,195 +1612,6 @@ export class Assembler implements AssemblySession {
     this.mathCore.str = defLine;
     // Call the parseFunctionDefinition method without arguments
     this.mathCore.parseFunctionDefinition();
-  }
-
-  /**
-   * Expands and calls a macro invocation.
-   * The invocation is expected to be in the form:
-   *   macroName(arg1, arg2, ...)
-   * @param {string} invocation The macro invocation to expand and call.
-   */
-  callMacro(invocation: string): void {
-    this.macroEngine.callMacro(invocation);
-  }
-
-  /**
-   * Expands a macro line by substituting fixed parameters (<param>) and variadic parameters (<...[expr]>),
-   * then resolves any remaining defines.
-   * @param {string} line The macro line to expand.
-   * @param {Map<string, string>} fixedArgs A map of fixed parameters to their values.
-   * @param {string[]} variadicArgs An array of variadic arguments.
-   * @param {number} variadicCount The number of variadic arguments.
-   * @returns {string} The expanded macro line.
-   */
-  expandMacroLine(line: string, fixedArgs: Map<string, string>, variadicArgs: string[], variadicCount: number): string {
-    return this.macroEngine.expandMacroLine(line, fixedArgs, variadicArgs, variadicCount);
-  }
-
-  /**
-   * Handles define commands.
-   * Example:
-   * @example
-   * !identifier = value // Basic assignment
-   * !identifier += value // Append to existing value
-   * !identifier := value // Resolve defines in the value
-   * !identifier #= value // Evaluate as math expression
-   * !identifier ?= value // Only assign if not already defined
-   * @param {string} command The define command to handle.
-   */
-  handleDefineCommand(command: string): void {
-    this.defineEngine.handleDefineCommand(command);
-  }
-
-  /**
-   * Resolves variadic placeholders in already-expanded macro lines.
-   * This is needed for loop bodies where <...[expr]> must be re-evaluated each iteration.
-   * @param {string} command The command line to resolve.
-   * @returns {string} `command` with variadic placeholders resolved.
-   */
-  resolveVariadicPlaceholders(command: string): string {
-    return this.macroEngine.resolveVariadicPlaceholders(command);
-  }
-
-  /**
-   * Handles undef commands.
-   * Example:
-   * @example
-   * undef "identifier"
-   * undef identifier
-   * @param {string[]} params The undef parameters.
-   */
-  handleUndef(params: string[]): void {
-    debug("handleUndef", params);
-    if (params.length < 1) {
-      throw new Error("undef requires exactly one identifier parameter");
-    }
-
-    const raw = params[0].trim();
-    const unquoted = raw.startsWith("\"") && raw.endsWith("\"") ? raw.slice(1, -1) : raw;
-    const identifier = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
-
-    if (!identifier) {
-      throw new Error("undef requires a non-empty identifier");
-    }
-    this.defines.delete(identifier);
-  }
-
-  /**
-   * Processes nested defines in a string, properly handling the !{...} syntax
-   * by immediately resolving the content inside braces.
-   * @param {string} content The content with nested defines to process
-   * @returns {string} The resolved identifier
-   */
-  processNestedDefines(content: string): string {
-    return this.defineEngine.processNestedDefines(content);
-  }
-
-  /**
-   * Helper method to resolve one level of defines in a string.
-   * @param {string} content The content to process
-   * @returns {string} The processed content with one level of defines resolved
-   */
-  resolveOneLevelOfDefines(content: string): string {
-    return this.defineEngine.resolveOneLevelOfDefines(content);
-  }
-
-  /**
-   * Helper method to resolve regular !defines (non-braced)
-   * @param {string} content The content to process
-   * @returns {string} The processed content with regular defines resolved
-   */
-  resolveRegularDefines(content: string): string {
-    return this.defineEngine.resolveRegularDefines(content);
-  }
-
-  /**
-   * Resolves !define references inside db string literals, honoring escaped exclamation marks.
-   * @param {string} content The unquoted string literal content.
-   * @returns {string} The string with defines expanded.
-   */
-  resolveDefinesInStringLiteral(content: string): string {
-    return this.defineEngine.resolveDefinesInStringLiteral(content);
-  }
-
-  /**
-   * Processes a define value string, resolving any !{...} expressions it contains.
-   * @param {string} value The value string potentially containing braced defines
-   * @returns {string} The processed value with all braced defines resolved
-   */
-  processValueWithBracedDefines(value: string): string {
-    return this.defineEngine.processValueWithBracedDefines(value);
-  }
-
-  /**
-   * Handles `+` and `-` relative labels correctly using SNES memory position.
-   * @param {string} label The label to handle.
-   * @returns {number} The address of the label.
-   */
-  handleRelativeLabel(label: string): number {
-    return this.symbolScope.handleRelativeLabel(label);
-  }
-
-  /**
-   * Finds the next occurrence of a `+` label based on SNES memory position.
-   * @param {string} label The label to find.
-   * @param {number} [currentAddressOverride] Optional SNES address to resolve against instead of the current cursor.
-   * @returns {number} The address of the next label.
-   */
-  findNextLabel(label: string, currentAddressOverride?: number): number {
-    return this.symbolScope.findNextLabel(label, currentAddressOverride);
-  }
-
-  /**
-   * Finds the previous occurrence of a `-` label based on SNES memory position.
-   * @param {string} label The label to find.
-   * @param {number} [currentAddressOverride] Optional SNES address to resolve against instead of the current cursor.
-   * @returns {number} The address of the previous label.
-   */
-  findPreviousLabel(label: string, currentAddressOverride?: number): number {
-    return this.symbolScope.findPreviousLabel(label, currentAddressOverride);
-  }
-
-  /**
-   * Handles setting a label in the assembler.
-   * @param {string} label The label to set.
-   * @param {number} value The value to set the label to.
-   * @param {boolean} isStatic Whether the label is static.
-   * @param {boolean} isMacroLabel Whether this is a macro label.
-   * @param {boolean} isGlobal Whether this is a global label.
-   * @param {boolean} modifiesHierarchy Whether this label affects the sublabel hierarchy.
-   */
-  setLabel(label: string, value?: number, isStatic: boolean = false, isMacroLabel: boolean = false, isGlobal: boolean = false, modifiesHierarchy: boolean = true): void {
-    this.symbolScope.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy);
-  }
-
-  /**
-   * Resolves a compound struct member id (e.g. TestStruct.count, TestStruct[0].count, TestStruct.NewStruct.new).
-   * @param {string} compoundId e.g. "TestStruct.count", "TestStruct[0].count", "TestStruct.NewStruct.new"
-   * @returns {number} The offset or address (base + index*size + memberOffset for indexed).
-   */
-  resolveStructMember(compoundId: string): number {
-    return this.symbolScope.resolveStructMember(compoundId);
-  }
-
-  /**
-   * Retrieves the address of a stored label.
-   * @param {string} label The label to retrieve the value of.
-   * @param {boolean} requireStatic Whether the label must be static.
-   * @returns {number} The value of the label.
-   */
-  getLabelValue(label: string, requireStatic: boolean): number {
-    return this.symbolScope.getLabelValue(label, requireStatic);
-  }
-
-  /**
-   * Direct label lookup without namespace resolution.
-   * @param {string} label The fully qualified label to look up.
-   * @param {boolean} requireStatic Whether the label must be static.
-   * @returns {number} The label's value.
-   */
-  getLabelValueDirect(label: string, requireStatic: boolean): number {
-    return this.symbolScope.getLabelValueDirect(label, requireStatic);
   }
 
   /**
@@ -2336,10 +1813,7 @@ export class Assembler implements AssemblySession {
       throw new Error(`Invalid ORG address: ${params[0]}`);
     }
 
-    this.snespos = addr;
-    this.realsnespos = addr;
-    this.startpos = addr;
-    this.realstartpos = addr;
+    this.setWritePosition(addr);
   }
 
   /**
@@ -2376,7 +1850,7 @@ export class Assembler implements AssemblySession {
 
     if (this.pass === 0) {
       debug("handleDataDirective pass 0, estimating");
-      const pendingValues = [...this.splitRespectingFunctions(params.join(" "))];
+      const pendingValues = [...splitRespectingFunctions(params.join(" "))];
       let estimatedItems = 0;
       while (pendingValues.length > 0) {
         let value = (pendingValues.shift() ?? "").trim();
@@ -2387,7 +1861,7 @@ export class Assembler implements AssemblySession {
         if (value.startsWith('"') || value.startsWith("'")) {
           const unquoted = value.slice(1, -1);
           try {
-            estimatedItems += this.resolveDefinesInStringLiteral(unquoted).length;
+            estimatedItems += this.defineEngine.resolveDefinesInStringLiteral(unquoted).length;
           } catch {
             estimatedItems += unquoted.length;
           }
@@ -2409,7 +1883,7 @@ export class Assembler implements AssemblySession {
           // Pass 0 only needs byte counts, so unresolved symbols still consume one item.
         }
 
-        const expandedValues = this.splitRespectingFunctions(resolved);
+        const expandedValues = splitRespectingFunctions(resolved);
         if (expandedValues.length > 1) {
           pendingValues.unshift(...expandedValues);
           continue;
@@ -2419,12 +1893,12 @@ export class Assembler implements AssemblySession {
       }
 
       this.step(estimatedItems * len);
-      this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+      this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
       return;
     }
 
     // Split by comma while respecting function calls
-    const values = this.splitRespectingFunctions(params.join(" "));
+    const values = splitRespectingFunctions(params.join(" "));
 
     const pendingValues = [...values];
     while (pendingValues.length > 0) {
@@ -2433,7 +1907,7 @@ export class Assembler implements AssemblySession {
         debug("handleDataDirective string literals", value);
         // Handle string literals
         const unquoted = value.slice(1, -1);
-        const expandedString = this.resolveDefinesInStringLiteral(unquoted);
+        const expandedString = this.defineEngine.resolveDefinesInStringLiteral(unquoted);
         debug("handleDataDirective string literal unquoted", unquoted);
         debug("handleDataDirective string literal expanded", expandedString);
         // Use character mapping for each character
@@ -2461,7 +1935,7 @@ export class Assembler implements AssemblySession {
 
         // A define used as a db/dw parameter may expand to multiple comma-separated values.
         // Re-queue each expanded token so it is processed like native directive arguments.
-        const expandedValues = this.splitRespectingFunctions(resolved);
+        const expandedValues = splitRespectingFunctions(resolved);
         if (expandedValues.length > 1) {
           pendingValues.unshift(...expandedValues);
           continue;
@@ -2470,7 +1944,7 @@ export class Assembler implements AssemblySession {
         // Check if this is a struct reference (e.g., "sprite.x_pos")
         let num: number;
         try {
-          const structValue = this.resolveStructLabel(resolved);
+          const structValue = this.structEngine.resolveStructLabel(resolved);
           debug("handleDataDirective struct reference", { resolved, structValue });
           if (typeof structValue === "number" && !Number.isNaN(structValue)) {
             num = structValue;
@@ -2485,7 +1959,7 @@ export class Assembler implements AssemblySession {
         }
         if (Number.isNaN(num)) {
           // As a fallback, try to look up a label (this assumes it's a static label).
-          num = this.getLabelValue(resolved, true);
+          num = this.symbolScope.getLabelValue(resolved, true);
         }
         debug("handleDataDirective numeric num", num);
 
@@ -2497,7 +1971,7 @@ export class Assembler implements AssemblySession {
       }
     }
 
-    this.addAddressToLine(this.realsnespos & 0xFFFFFF);
+    this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
   }
 
   /**
@@ -2643,10 +2117,10 @@ export class Assembler implements AssemblySession {
     }
 
     this.pushpcStack.push({
-        snespos: this.snespos,
-        startpos: this.startpos,
-        realsnespos: this.realsnespos,
-        realstartpos: this.realstartpos,
+        currentTargetAddress: this.currentTargetAddress,
+        currentTargetStartAddress: this.currentTargetStartAddress,
+        currentTargetBaseAddress: this.currentTargetBaseAddress,
+        currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
     });
 
     this.pushpcnum++;
@@ -2662,37 +2136,12 @@ export class Assembler implements AssemblySession {
     }
 
     const state = this.pushpcStack.pop();
-    this.snespos = state.snespos;
-    this.startpos = state.startpos;
-    this.realsnespos = state.realsnespos;
-    this.realstartpos = state.realstartpos;
+    this.currentTargetAddress = state.currentTargetAddress;
+    this.currentTargetStartAddress = state.currentTargetStartAddress;
+    this.currentTargetBaseAddress = state.currentTargetBaseAddress;
+    this.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
 
     this.pushpcnum--;
-  }
-
-  /**
-   * Handles `struct` definitions.
-   * @param {string[]} words The parameters for the struct directive.
-   */
-  handleStruct(words: string[]): void {
-    this.structEngine.handleStruct(words);
-  }
-
-  /**
-   * Handles the end of a struct definition.
-   * @param {string[]} words The parameters for the endstruct directive.
-   */
-  handleEndStruct(words: string[]): void {
-    this.structEngine.handleEndStruct(words);
-  }
-
-  /**
-   * Resolves a struct label reference to its base address.
-   * @param {string} labelRef The label reference to resolve.
-   * @returns {number} The resolved base address.
-   */
-  resolveStructLabel(labelRef: string): number {
-    return this.structEngine.resolveStructLabel(labelRef);
   }
 
   /**
@@ -2718,15 +2167,7 @@ export class Assembler implements AssemblySession {
     } catch (error) {}
     // If that fails, assume it's a static label.
     // (Pass 'true' to require that the label be static.)
-    return this.getLabelValue(expressionNodeToString(resolvedExpr), true);
-  }
-
-  /**
-   * Handles the `incbin` directive.
-   * @param {string[]} words The words from the `incbin` directive.
-   */
-  handleIncbin(words: string[]): void {
-    this.structEngine.handleIncbin(words);
+    return this.symbolScope.getLabelValue(renderExpressionNode(resolvedExpr), true);
   }
 
   /**
@@ -2755,8 +2196,8 @@ export class Assembler implements AssemblySession {
         ? this.evaluateReferenceExpressionNode(resolvedExpr)
         : this.mathCore.math(resolvedExpr);
     } catch (e) {
-      const originalExpr = typeof expression === "string" ? expression : expressionNodeToString(expression);
-      const resolvedText = resolvedExpr ? expressionNodeToString(resolvedExpr) : "<unresolved>";
+      const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
+      const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
       throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e}`);
     }
     // In our assembler, a condition is true if the result is nonzero.
@@ -2845,7 +2286,7 @@ export class Assembler implements AssemblySession {
           if (expandedReference) {
             return expandedReference;
           }
-          return { type: "raw", value: `${expressionNodeToString(object)}.${expression.property.name}` };
+          return { type: "raw", value: `${renderExpressionNode(object)}.${expression.property.name}` };
         }
         return {
           ...expression,
@@ -2860,7 +2301,7 @@ export class Assembler implements AssemblySession {
           if (expandedReference) {
             return expandedReference;
           }
-          return { type: "raw", value: `${expressionNodeToString(object)}[${expressionNodeToString(index)}]` };
+          return { type: "raw", value: `${renderExpressionNode(object)}[${renderExpressionNode(index)}]` };
         }
         return {
           ...expression,
@@ -2900,7 +2341,7 @@ export class Assembler implements AssemblySession {
       return this.mathCore.math(resolved);
     }
 
-    return this.resolveNormalizedReferenceLabelValue(this.normalizeReferenceExpressionNode(resolved), requireStatic);
+    return this.resolveNormalizedReferenceLabelValue(this.renderResolvedReferenceExpression(resolved), requireStatic);
   }
 
   /**
@@ -2915,15 +2356,15 @@ export class Assembler implements AssemblySession {
     // label. Try the struct path first, then fall back to standard label lookup.
     if (normalizedReference.includes(".") || normalizedReference.includes("[")) {
       try {
-        return this.resolveStructLabel(normalizedReference);
+        return this.structEngine.resolveStructLabel(normalizedReference);
       } catch {
         // Fall back to normal label lookup.
       }
     }
     if (this.structs.has(normalizedReference)) {
-      return this.resolveStructLabel(normalizedReference);
+      return this.structEngine.resolveStructLabel(normalizedReference);
     }
-    return this.getLabelValue(normalizedReference, requireStatic);
+    return this.symbolScope.getLabelValue(normalizedReference, requireStatic);
   }
 
   /**
@@ -2936,7 +2377,7 @@ export class Assembler implements AssemblySession {
     try {
       return this.mathCore.math(resolvedIndex).toString();
     } catch {
-      return expressionNodeToString(resolvedIndex);
+      return renderExpressionNode(resolvedIndex);
     }
   }
 
@@ -2967,16 +2408,6 @@ export class Assembler implements AssemblySession {
   }
 
   /**
-   * Normalizes a reference expression to the string form used by downstream
-   * struct and label resolution helpers.
-   * @param {ReferenceExpressionNode} expression The reference expression to normalize.
-   * @returns {string} The normalized reference string.
-   */
-  normalizeReferenceExpressionNode(expression: ReferenceExpressionNode): string {
-    return this.renderResolvedReferenceExpression(expression);
-  }
-
-  /**
    * Resolves standalone relative-label tokens used in define contexts.
    * @param {string} input The token to resolve.
    * @returns {string | undefined} The resolved address string, if applicable.
@@ -2990,13 +2421,13 @@ export class Assembler implements AssemblySession {
     try {
       switch (input) {
         case "+":
-          return `$${this.findNextLabel("+").toString(16)}`;
+          return `$${this.symbolScope.findNextLabel("+").toString(16)}`;
         case "-":
-          return `$${this.findPreviousLabel("-").toString(16)}`;
+          return `$${this.symbolScope.findPreviousLabel("-").toString(16)}`;
         case "?+":
-          return `$${this.findNextLabel("?+").toString(16)}`;
+          return `$${this.symbolScope.findNextLabel("?+").toString(16)}`;
         case "?-":
-          return `$${this.findPreviousLabel("?-").toString(16)}`;
+          return `$${this.symbolScope.findPreviousLabel("?-").toString(16)}`;
         default:
           return undefined;
       }
@@ -3039,7 +2470,7 @@ export class Assembler implements AssemblySession {
     const prefix = prefixMatch[1];
     const labelName = prefixMatch[2];
     debug("resolvedefines macro label found with prefix", { prefix, labelName });
-    return this.getLabelValue(labelName, false).toString();
+    return this.symbolScope.getLabelValue(labelName, false).toString();
   }
 
   /**
@@ -3057,7 +2488,7 @@ export class Assembler implements AssemblySession {
     // can evaluate both sides instead of collapsing to the first local label.
     debug("resolvedefines checking if input is a label reference", input);
     try {
-      const labelValue = this.getLabelValue(input, false);
+      const labelValue = this.symbolScope.getLabelValue(input, false);
       debug("resolvedefines labelValue", labelValue);
       return labelValue.toString();
     } catch (error) {
@@ -3244,7 +2675,7 @@ export class Assembler implements AssemblySession {
     this.currentLine = line;
   }
 
-  private getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "pass" | "capabilities"> {
+  getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "pass" | "capabilities"> {
     if (stage === "collectDefinitions") {
       return {
         stage,
@@ -3284,7 +2715,7 @@ export class Assembler implements AssemblySession {
     };
   }
 
-  private cloneRelativeLabels(source: { [depth: number]: { addr: number; macroInstance?: number }[] }): { [depth: number]: { addr: number; macroInstance?: number }[] } {
+  cloneRelativeLabels(source: { [depth: number]: { addr: number; macroInstance?: number }[] }): { [depth: number]: { addr: number; macroInstance?: number }[] } {
     const clone: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
     for (const [depth, entries] of Object.entries(source)) {
       clone[Number(depth)] = entries.map((entry) => ({ ...entry }));
@@ -3292,15 +2723,15 @@ export class Assembler implements AssemblySession {
     return clone;
   }
 
-  private createStageExecutionState(stage: AssemblyStageName): StageExecutionState {
+  createStageExecutionState(stage: AssemblyStageName): StageExecutionState {
     const descriptor = this.getStageDescriptor(stage);
     const previousStage = stage === "resolveLayout" ? "collectDefinitions" : stage === "emitProgram" ? "resolveLayout" : undefined;
     const seed = previousStage ? this.stageExecutionStates.get(previousStage) : undefined;
     const cursorSeed = seed?.cursor ?? {
-      snespos: this.snespos,
-      realsnespos: this.realsnespos,
-      startpos: this.startpos,
-      realstartpos: this.realstartpos,
+      currentTargetAddress: this.currentTargetAddress,
+      currentTargetBaseAddress: this.currentTargetBaseAddress,
+      currentTargetStartAddress: this.currentTargetStartAddress,
+      currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
       bytes: this.bytes,
     };
     const symbolSeed = seed?.symbols ?? {
@@ -3365,15 +2796,16 @@ export class Assembler implements AssemblySession {
         activeFreespaceStartPc: writeSeed.activeFreespaceStartPc,
         activeFreespaceContentStartPc: writeSeed.activeFreespaceContentStartPc,
       },
+      loweredCommandCache: new WeakMap<NormalizedCommand, LoweredCommand>(),
     };
   }
 
-  private applyStageExecutionState(stageState: StageExecutionState): void {
+  applyStageExecutionState(stageState: StageExecutionState): void {
     this.pass = stageState.pass;
-    this.snespos = stageState.cursor.snespos;
-    this.realsnespos = stageState.cursor.realsnespos;
-    this.startpos = stageState.cursor.startpos;
-    this.realstartpos = stageState.cursor.realstartpos;
+    this.currentTargetAddress = stageState.cursor.currentTargetAddress;
+    this.currentTargetBaseAddress = stageState.cursor.currentTargetBaseAddress;
+    this.currentTargetStartAddress = stageState.cursor.currentTargetStartAddress;
+    this.currentTargetBaseStartAddress = stageState.cursor.currentTargetBaseStartAddress;
     this.bytes = stageState.cursor.bytes;
     this.labelTable = stageState.symbols.labelTable;
     this.forwardLabels = stageState.symbols.forwardLabels;
@@ -3400,12 +2832,12 @@ export class Assembler implements AssemblySession {
     this.activeFreespaceContentStartPc = stageState.writeState.activeFreespaceContentStartPc;
   }
 
-  private captureStageExecutionState(stageState: StageExecutionState): void {
+  captureStageExecutionState(stageState: StageExecutionState): void {
     stageState.cursor = {
-      snespos: this.snespos,
-      realsnespos: this.realsnespos,
-      startpos: this.startpos,
-      realstartpos: this.realstartpos,
+      currentTargetAddress: this.currentTargetAddress,
+      currentTargetBaseAddress: this.currentTargetBaseAddress,
+      currentTargetStartAddress: this.currentTargetStartAddress,
+      currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
       bytes: this.bytes,
     };
     stageState.symbols = {
@@ -3439,7 +2871,7 @@ export class Assembler implements AssemblySession {
     };
   }
 
-  private getOrCreateStageExecutionState(stage: AssemblyStageName): StageExecutionState {
+  getOrCreateStageExecutionState(stage: AssemblyStageName): StageExecutionState {
     const existing = this.stageExecutionStates.get(stage);
     if (existing) {
       return existing;
@@ -3450,7 +2882,7 @@ export class Assembler implements AssemblySession {
   }
 
   buildProgramModel(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
-    const commands = this.splitInlineCommands(this.preprocessBlockCommands(source));
+    const commands = splitInlineCommands(this.preprocessBlockCommands(source));
     const nodes = this.getOrBuildPassProgram(commands, sourceFile, startLine);
     return {
       sourceFile,
@@ -3523,24 +2955,6 @@ export class Assembler implements AssemblySession {
     } else {
       debug("expandRom newSize <= this.romdata.length, no expansion needed");
     }
-  }
-
-  /**
-   * Checks if a given ROM region is empty.
-   * @param {number} start - The starting address of the region to check.
-   * @param {number} size - The size of the region to check.
-   * @param {number} fsByte - The byte value to check for.
-   * @returns {boolean} True if the region is empty, false otherwise.
-   */
-  isBlockEmpty(start: number, size: number, fsByte: number): boolean {
-    debug("isBlockEmpty", { start, size, fsByte });
-    for (let i = 0; i < size; i++) {
-      if (this.romdata[start + i] !== fsByte) {
-        debug("isBlockEmpty false:", this.romdata[start + i], "!==", fsByte);
-        return false;
-      }
-    }
-    return true;
   }
 
   /**
@@ -3859,92 +3273,6 @@ export class Assembler implements AssemblySession {
   }
 
   /**
-   * Splits a command into words, preserving quoted strings.
-   * @param {string} command - The command to split.
-   * @returns {string[]} - The command split into words.
-   */
-  splitCommandIntoWords(command: string): string[] {
-    const words: string[] = [];
-    let currentWord = "";
-    let inQuotes = false;
-    let quoteChar = "";
-
-    for (let i = 0; i < command.trim().length; i++) {
-      const char = command.trim()[i];
-
-      // Handle quotes
-      if ((char === '"' || char === "'") && (i === 0 || command.trim()[i-1] !== "\\")) {
-        if (!inQuotes) {
-          // Starting a quoted section
-          inQuotes = true;
-          quoteChar = char;
-          currentWord += char;
-        } else if (char === quoteChar) {
-          // Ending a quoted section
-          inQuotes = false;
-          currentWord += char;
-        } else {
-          // Different quote character inside quotes
-          currentWord += char;
-        }
-      } else if (/\s/.test(char) && !inQuotes) {
-        // Whitespace outside quotes - end current word
-        if (currentWord) {
-          words.push(currentWord);
-          currentWord = "";
-        }
-      } else {
-        // Regular character
-        currentWord += char;
-      }
-    }
-
-    // Add the last word if there is one
-    if (currentWord) {
-      words.push(currentWord);
-    }
-
-    return words;
-  }
-
-  /**
-   * Converts a SNES address to a PC offset.
-   * Returns -1 if the address is invalid.
-   * @param {number} addr - The SNES address to convert.
-   * @returns {number} The PC offset.
-   */
-  snestopc = (addr: number): number => {
-    return this.romWriter.snestopc(addr);
-  }
-
-  /**
-   * Converts a PC offset to a SNES address.
-   * Returns -1 if the address is invalid.
-   * @param {number} addr - The PC offset to convert.
-   * @returns {number} The SNES address.
-   */
-  pctosnes = (addr: number): number => {
-    return this.romWriter.pctosnes(addr);
-  }
-
-  /**
-   * Ensures the SNES position is valid, and resets it if it's not.
-   */
-  verifysnespos(): void {
-    this.romWriter.verifysnespos();
-  }
-
-  /**
-   * Adjusts memory addresses based on the ROM type.
-   * @param {number} inaddr The address to adjust.
-   * @param {number} step The number of bytes to step.
-   * @returns {number} The adjusted address.
-   */
-  fixsnespos(inaddr: number, step: number = 0): number {
-    return this.romWriter.fixsnespos(inaddr, step);
-  }
-
-  /**
    * Begins the collection of loop commands.
    * @param {string} type The type of loop to begin ("for" or "while").
    * @param {string} command The command to begin the loop with.
@@ -3988,8 +3316,8 @@ export class Assembler implements AssemblySession {
 
         // Pre-parse start and end (optional, can be done during execution)
         try {
-          const startExpr = expressionNodeToString(newLoop.startExpression);
-          const endExpr = expressionNodeToString(newLoop.endExpression);
+          const startExpr = renderExpressionNode(newLoop.startExpression);
+          const endExpr = renderExpressionNode(newLoop.endExpression);
           debug("beginLoopCollection for loop start", startExpr);
           debug("beginLoopCollection for loop end", endExpr);
 
@@ -4090,8 +3418,8 @@ export class Assembler implements AssemblySession {
     const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
     const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
     if (startExpression && endExpression) {
-      const startExpr = expressionNodeToString(startExpression);
-      const endExpr = expressionNodeToString(endExpression);
+      const startExpr = renderExpressionNode(startExpression);
+      const endExpr = renderExpressionNode(endExpression);
       const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
       const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
       start = this.operandResolver.getnum(startDefinesResolved);
@@ -4151,7 +3479,10 @@ export class Assembler implements AssemblySession {
     while (this.evaluateExpression(conditionNode) && iteration < MAX_ITERATIONS) {
       // Process each command in the loop body
       for (const cmd of whileBlock.commands) {
-        const defineTarget = this.getDefineVariableFromNode(cmd);
+        let defineTarget: string | null = null;
+        if ("source" in cmd && cmd.kind === "defineCommand") {
+          defineTarget = getDefineVariable(cmd.command);
+        }
         if (defineTarget && !loopVars.has(defineTarget)) {
           loopVars.add(defineTarget);
           originalValues.set(defineTarget, this.defines.get(defineTarget));
@@ -4178,38 +3509,9 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  getDefineVariableFromNode(node: ExecutableNode): string | null {
-    if ("source" in node && node.kind === "defineCommand") {
-      return this.getDefineVariable(node.command);
-    }
-    return null;
-  }
-
-  /**
-   * Checks if a line is a define statement.
-   * @param {string} line The line to check.
-   * @returns {boolean} True if the line is a define statement, false otherwise.
-   */
-  isDefineStatement(line: string): boolean {
-    const trimmed = line.trim();
-    return trimmed.startsWith("!") &&
-           !trimmed.startsWith("! ") &&
-           trimmed.includes("=");
-  }
-
-  /**
-   * Extracts the variable name from a define statement.
-   * @param {string} line The line to extract the variable name from.
-   * @returns {string | undefined} The variable name or null if the line is not a define statement.
-   */
-  getDefineVariable(line: string): string | null {
-    const match = line.trim().match(/^!([A-Z_a-z]\w*)\s*=/);
-    return match ? match[1] : undefined;
-  }
-
   createLoopCommandNode(command: string, sourceFile = this.currentFile, sourceLine = this.currentLine): NormalizedCommand {
     const normalized = this.preDispatchPipelineService.normalizeCommand(command);
-    const words = this.splitCommandIntoWords(normalized);
+    const words = splitCommandIntoWords(normalized);
     return createNormalizedCommand(command, normalized, words, sourceFile, sourceLine);
   }
 
@@ -4230,6 +3532,12 @@ export class Assembler implements AssemblySession {
         words: directiveWords,
         source: command.source,
       };
+    }
+
+    const architecture = this.resolveActiveArchitecture();
+    const isaLoweredInstruction = architecture.definition?.encoder.lowerInstructionFromCommand?.(command);
+    if (isaLoweredInstruction) {
+      return isaLoweredInstruction;
     }
 
     const parsedOperands = command.parsed.opcodeOperands;
@@ -4494,77 +3802,13 @@ export class Assembler implements AssemblySession {
   }
 
   createIncludeNode(file: string, source: string): IncludeNode {
-    const commands = this.splitInlineCommands(this.preprocessBlockCommands(source));
+    const commands = splitInlineCommands(this.preprocessBlockCommands(source));
     const nodes = this.getOrBuildPassProgram(commands, file, 0);
     return {
       type: "include",
       file,
       commands: nodes,
     };
-  }
-
-  /**
-   * Process a line from a macro expansion.
-   * @param {string} line The line to process from a macro.
-   */
-  processMacroLine(line: string): void {
-    this.macroEngine.processMacroLine(line);
-  }
-
-  /**
-   * Splits a string by commas while respecting function calls and parentheses.
-   * @param {string} input - The input string to split.
-   * @returns {string[]} Array of split values.
-   */
-  splitRespectingFunctions(input: string): string[] {
-    const result: string[] = [];
-    let current = "";
-    let parenDepth = 0;
-    let inQuotes = false;
-    let quoteChar = "";
-
-    for (let i = 0; i < input.length; i++) {
-      const char = input[i];
-
-      // Handle quotes
-      if ((char === '"' || char === "'") && (i === 0 || input[i-1] !== "\\")) {
-        if (!inQuotes) {
-          inQuotes = true;
-          quoteChar = char;
-        } else if (char === quoteChar) {
-          inQuotes = false;
-        }
-      }
-
-      // Only process special characters if we're not in quotes
-      if (!inQuotes) {
-        if (char === "(") {
-          parenDepth++;
-        } else if (char === ")") {
-          parenDepth--;
-        } else if (char === "," && parenDepth === 0) {
-          result.push(current.trim());
-          current = "";
-          continue;
-        }
-      }
-
-      current += char;
-    }
-
-    if (current) {
-      result.push(current.trim());
-    }
-
-    return result;
-  }
-
-  /**
-   * Handles a label definition, whether it has a colon or not.
-   * @param {string} labelName The label name (without colon).
-   */
-  handleLabelDefinition(labelName: string): void {
-    this.symbolScope.handleLabelDefinition(labelName);
   }
 }
 

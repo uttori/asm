@@ -1,6 +1,5 @@
 import type { StructDefinition } from "../assembler.js";
 import type { ExpressionNode } from "../ir/expression-node.js";
-import { parseExpressionNode } from "../ir/expression-node.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 
 export type StructHost = {
@@ -12,7 +11,6 @@ export type StructHost = {
   recordCurrentAddress(): void;
   handlePushPC(): void;
   handlePullPC(): void;
-  getLabelValue(label: string, requireStatic: boolean): number;
   evaluateRangeExpression(expression: string | ExpressionNode): number;
   enterStructDefinition(base: number): void;
   restoreStructDefinition(): void;
@@ -264,112 +262,5 @@ export class StructEngine {
     }
 
     throw new Error(`Struct not defined in reference: ${labelRef}`);
-  }
-
-  /**
-   * Handles an incbin command.
-   * @param {string[]} words The words of the command.
-   */
-  handleIncbin(words: string[]): void {
-    let targetLocationSpecified = false;
-    let targetLocation: string | null = null;
-    const arrowIndex = words.indexOf("->");
-    const sourceWords = arrowIndex === -1 ? words.slice(1) : words.slice(1, arrowIndex);
-    if (arrowIndex !== -1) {
-      targetLocationSpecified = true;
-      if (arrowIndex + 1 >= words.length) {
-        throw new Error("incbin '->' syntax requires a target location.");
-      }
-      targetLocation = words[arrowIndex + 1];
-      words = words.slice(0, arrowIndex);
-    }
-
-    // Normalized commands split on whitespace, so range expressions like
-    // `(000 * 32)..(014 * 32)` arrive as multiple tokens. Rejoin the source
-    // operand before extracting the optional `:start..end` suffix.
-    const filenameWithRange = sourceWords.join(" ");
-    let filename: string;
-    let rangeStr: string | null = null;
-    const colonIndex = filenameWithRange.indexOf(":");
-    if (colonIndex !== -1) {
-      filename = filenameWithRange.substring(0, colonIndex);
-      rangeStr = filenameWithRange.substring(colonIndex + 1);
-    } else {
-      filename = filenameWithRange;
-    }
-    filename = filename.replace(/^"(.*)"$/, "$1");
-
-    const fileData = this.host.readFile(filename) as Uint8Array;
-    if (!fileData) {
-      throw new Error(`Failed to read file: ${filename}`);
-    }
-
-    let startOffset = 0;
-    let endOffset = fileData.length;
-    if (rangeStr) {
-      if (rangeStr.indexOf("..") !== -1) {
-        const parts = rangeStr.split("..");
-        if (parts[0] === "" || parts[1] === "") {
-          throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        const rangeNode = parseExpressionNode(rangeStr);
-        if (rangeNode.type !== "range") {
-          throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        startOffset = this.host.evaluateRangeExpression(rangeNode.start);
-        endOffset = this.host.evaluateRangeExpression(rangeNode.end);
-        if (endOffset === 0) {
-          endOffset = fileData.length;
-        }
-      } else if (rangeStr.indexOf("-") !== -1) {
-        if (rangeStr.includes("(") || rangeStr.includes(")")) {
-          throw new Error("Emismatched_parentheses: Mismatched parentheses.");
-        }
-        const parts = rangeStr.split("-");
-        if (parts[0] === "" || parts[1] === "") {
-          throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        startOffset = this.host.evaluateRangeExpression(parts[0]);
-        endOffset = this.host.evaluateRangeExpression(parts[1]);
-        if (endOffset === 0) {
-          endOffset = fileData.length;
-        }
-      } else {
-        throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-    }
-
-    if (startOffset > endOffset || startOffset < 0 || startOffset > fileData.length) {
-      throw new Error(`Start offset ${startOffset} out of bounds for file ${filename}`);
-    }
-    if (endOffset < startOffset || endOffset > fileData.length) {
-      throw new Error(`End offset ${endOffset} out of bounds for file ${filename}`);
-    }
-
-    const incbinData = fileData.slice(startOffset, endOffset);
-
-    if (targetLocationSpecified) {
-      this.host.handlePushPC();
-
-      let targetAddress: number;
-      if (/^\$?[\dA-Fa-f]+$/.test(targetLocation ?? "")) {
-        targetAddress = this.host.operandResolver.getnum(targetLocation ?? "");
-      } else {
-        targetAddress = this.host.getLabelValue(targetLocation ?? "", false);
-      }
-      this.host.setWritePosition(targetAddress);
-
-      for (const byte of incbinData) {
-        this.host.write1(byte);
-      }
-
-      this.host.handlePullPC();
-    } else {
-      for (const byte of incbinData) {
-        this.host.write1(byte);
-      }
-    }
-
-    this.host.recordCurrentAddress();
   }
 }

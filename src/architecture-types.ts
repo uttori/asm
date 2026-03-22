@@ -1,4 +1,5 @@
 import type { ExpressionNode } from "./ir/expression-node.js";
+import type { NormalizedCommand } from "./ir/normalized-command.js";
 
 export type MathValue = number | string;
 
@@ -65,8 +66,9 @@ export interface ExpressionHost {
 }
 
 export interface ArchitectureContext {
-  readonly pass: number;
-  readonly snespos: number;
+  readonly mode: "layout" | "emit";
+  readonly enforceResolvedLabels: boolean;
+  readonly currentTargetAddress: number;
   readonly optimizeDirectPage: boolean;
   readonly operandResolver: OperandResolutionContext;
   write1(value: number): void;
@@ -80,8 +82,9 @@ export interface ArchitectureContext {
 }
 
 export interface Spc700Context {
-  readonly pass: number;
-  readonly snespos: number;
+  readonly mode: "layout" | "emit";
+  readonly enforceResolvedLabels: boolean;
+  readonly currentTargetAddress: number;
   readonly operandResolver: OperandResolutionContext;
   write1(value: number): void;
   write2(value: number): void;
@@ -90,7 +93,7 @@ export interface Spc700Context {
 }
 
 export interface SuperFXContext {
-  readonly snespos: number;
+  readonly currentTargetAddress: number;
   readonly operandResolver: OperandResolutionContext;
   write1(value: number): void;
   write2(value: number): void;
@@ -114,4 +117,5 @@ export interface ArchitectureEncoder {
   encode(words: string[]): boolean;
   estimateInstruction?(instruction: LoweredInstruction): number;
   encodeInstruction?(instruction: LoweredInstruction): boolean;
+  lowerInstructionFromCommand?(command: NormalizedCommand): LoweredInstruction;
 }

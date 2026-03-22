@@ -8,6 +8,7 @@ export type DefineHost = {
 export declare class DefineEngine {
     readonly host: DefineHost;
     constructor(host: DefineHost);
+    isPureMathExpression(value: string): boolean;
     /**
      * Handles a define command.
      * @param {NormalizedCommand} commandNode The command node to handle.
@@ -17,6 +18,12 @@ export declare class DefineEngine {
     /**
      * Handles a define command.
      * @param {string} command The command to handle.
+     * @example
+     * !identifier = value // Basic assignment
+     * !identifier += value // Append to existing value
+     * !identifier := value // Resolve defines in the value
+     * !identifier #= value // Evaluate as math expression
+     * !identifier ?= value // Only assign if not already defined
      */
     handleDefineCommand(command: string): void;
     /**
@@ -56,5 +63,14 @@ export declare class DefineEngine {
      * @param {string} initialValue The initial value to apply the operation to.
      */
     applyDefineOperation(identifier: string, operator: string, initialValue: string): void;
+    /**
+     * Handles undef commands.
+     * Example:
+     * @example
+     * undef "identifier"
+     * undef identifier
+     * @param {string[]} words The words of the undef command.
+     */
+    handleUndef(words: string[]): void;
 }
 //# sourceMappingURL=define-engine.d.ts.map
