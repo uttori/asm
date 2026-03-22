@@ -1,10 +1,12 @@
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { MathCore } from "../mathcore.js";
 
 export type DefineHost = {
   defines: Map<string, string>;
   resolvedefines(input: string): string;
-  evaluateMath(input: string): number;
+  mathCore: MathCore;
   processCommand(command: string): void;
+  recordSymbolDefinition(kind: "define", name: string, options?: { value?: number | string }): void;
 };
 
 export class DefineEngine {
@@ -342,7 +344,7 @@ export class DefineEngine {
 
     if (operator === "#=") {
       value = this.host.resolvedefines(value);
-      const result = this.host.evaluateMath(value);
+      const result = this.host.mathCore.math(value);
       if (Number.isNaN(result)) {
         throw new Error(`Math evaluation failed in define "#=" for expression: ${value}`);
       }
@@ -368,7 +370,7 @@ export class DefineEngine {
         // Keep symbolic expressions such as `$004E+task` intact so member/index
         // suffixes can bind to the surviving struct token later (`!task_offset.stack_id`).
         if (this.isPureMathExpression(resolvedValue)) {
-          const result = this.host.evaluateMath(resolvedValue);
+          const result = this.host.mathCore.math(resolvedValue);
           if (!Number.isNaN(result)) {
             value = `$${result.toString(16).toUpperCase()}`;
           }
@@ -377,6 +379,7 @@ export class DefineEngine {
     }
 
     this.host.defines.set(identifier, value);
+    this.host.recordSymbolDefinition("define", identifier, { value });
   }
 
   /**

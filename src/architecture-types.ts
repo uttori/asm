@@ -56,47 +56,13 @@ export interface ExpressionHost {
   getCurrentAddress(): number;
   getCurrentBaseAddress(): number;
   isDefined(identifier: string): number;
-  getObjectSize(identifier: string, baseOnly?: boolean): number;
+  getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
   getFileSize(filename: string): number;
   getFileStatus(filename: string): number;
   canReadFile(filename: string, position: number, size: number): number;
   readFile(filename: string, position: number, size: number, defaultValue?: number): number;
   canReadRom(position: number, size: number): number;
   readRom(position: number, size: number, defaultValue?: number): number;
-}
-
-export interface ArchitectureContext {
-  readonly mode: "layout" | "emit";
-  readonly enforceResolvedLabels: boolean;
-  readonly currentTargetAddress: number;
-  readonly optimizeDirectPage: boolean;
-  readonly operandResolver: OperandResolutionContext;
-  write1(value: number): void;
-  write2(value: number): void;
-  write3(value: number): void;
-  emitByte(value: number): void;
-  emitWord(value: number): void;
-  emitLong(value: number): void;
-  findNextLabel(reference: string, fromAddress: number): number;
-  findPreviousLabel(reference: string, fromAddress: number): number;
-}
-
-export interface Spc700Context {
-  readonly mode: "layout" | "emit";
-  readonly enforceResolvedLabels: boolean;
-  readonly currentTargetAddress: number;
-  readonly operandResolver: OperandResolutionContext;
-  write1(value: number): void;
-  write2(value: number): void;
-  findNextLabel(reference: string, fromAddress: number): number;
-  findPreviousLabel(reference: string, fromAddress: number): number;
-}
-
-export interface SuperFXContext {
-  readonly currentTargetAddress: number;
-  readonly operandResolver: OperandResolutionContext;
-  write1(value: number): void;
-  write2(value: number): void;
 }
 
 export interface LoweredInstruction {

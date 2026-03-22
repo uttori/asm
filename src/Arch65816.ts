@@ -1,4 +1,5 @@
-import type { ArchitectureContext, ArchitectureEncoder, LoweredInstruction } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction } from "./architecture-types.js";
+import type { Assembler } from "./assembler.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
 
 let debug = (..._) => {};
@@ -6,9 +7,9 @@ let debug = (..._) => {};
 try { const { default: d } = await import("debug"); debug = d("Arch65816"); } catch {}
 
 export class Arch65816 implements ArchitectureEncoder {
-  assembler: ArchitectureContext;
+  assembler: Assembler;
 
-  constructor(assembler: ArchitectureContext) {
+  constructor(assembler: Assembler) {
     this.assembler = assembler;
   }
 
@@ -1712,9 +1713,9 @@ export class Arch65816 implements ArchitectureEncoder {
     const instructionSize = (opcode === "BRL") ? 3 : 2;
     const branchReferenceAddress = this.assembler.currentTargetAddress + instructionSize;
     if (/^\++$/.test(operand)) {
-      targetAddress = this.assembler.findNextLabel(operand, branchReferenceAddress);
+      targetAddress = this.assembler.symbolScope.findNextLabel(operand, branchReferenceAddress);
     } else if (/^-+$/.test(operand)) {
-      targetAddress = this.assembler.findPreviousLabel(operand, branchReferenceAddress);
+      targetAddress = this.assembler.symbolScope.findPreviousLabel(operand, branchReferenceAddress);
     } else {
       targetAddress = this.assembler.operandResolver.getnum(operand);
     }

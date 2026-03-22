@@ -19,6 +19,10 @@ type AssemblerReferenceTestAccess = {
   evaluateReferenceExpressionNode: (expression: ReferenceExpressionNode) => number;
 };
 
+const stripExpressionSpans = (node: ExpressionNode): ExpressionNode => JSON.parse(JSON.stringify(node, (key, value) => (
+  key === "span" ? undefined : value
+)));
+
 test("normalized command captures provenance and classification", (t) => {
   const command = createNormalizedCommand(
     "Main: db $01",
@@ -31,6 +35,7 @@ test("normalized command captures provenance and classification", (t) => {
   t.is(command.source.file, "test.asm");
   t.is(command.source.line, 12);
   t.is(command.source.raw, "Main: db $01");
+  t.deepEqual(command.source.tokenSpans.map((span) => [span.start, span.end]), [[0, 5], [6, 8], [9, 12]]);
   t.is(command.labelName, "Main");
   t.is(command.kind, "labelDefinition");
 });
@@ -123,13 +128,13 @@ test("expression nodes parse range and call syntax", (t) => {
   const rangeNode = parseExpressionNode("0..$20");
   const callNode = parseExpressionNode("incbin($10, $20)");
 
-  t.deepEqual(rangeNode, {
+  t.deepEqual(stripExpressionSpans(rangeNode), {
     type: "range",
     start: { type: "literal", value: "0" },
     end: { type: "literal", value: "$20" },
   });
 
-  t.deepEqual(callNode, {
+  t.deepEqual(stripExpressionSpans(callNode), {
     type: "call",
     callee: { type: "identifier", name: "incbin" },
     arguments: [
@@ -144,7 +149,7 @@ test("expression nodes parse binary precedence and unary operators", (t) => {
   const unaryNode = parseExpressionNode("<:$123456");
   const defineNode = parseExpressionNode("!VALUE + Player[1].hp");
 
-  t.deepEqual(binaryNode, {
+  t.deepEqual(stripExpressionSpans(binaryNode), {
     type: "binary",
     operator: "+",
     left: { type: "literal", value: "1" },
@@ -156,13 +161,13 @@ test("expression nodes parse binary precedence and unary operators", (t) => {
     },
   });
 
-  t.deepEqual(unaryNode, {
+  t.deepEqual(stripExpressionSpans(unaryNode), {
     type: "unary",
     operator: "<:",
     argument: { type: "literal", value: "$123456" },
   });
 
-  t.deepEqual(defineNode, {
+  t.deepEqual(stripExpressionSpans(defineNode), {
     type: "binary",
     operator: "+",
     left: { type: "defineReference", name: "VALUE", braced: false },
@@ -178,32 +183,43 @@ test("expression nodes parse binary precedence and unary operators", (t) => {
   });
 });
 
-test("loop collection creates a structural condition node", (t) => {
+test("typed for nodes preserve parsed range semantics", (t) => {
   const assembler = new Assembler();
-  assembler.beginLoopCollection("for", "for i = 0..2");
+  const [loop] = assembler.parseCommandStreamToNodes([
+    "for i = 0..2",
+    "endfor",
+  ]);
 
-  t.deepEqual(assembler.currentLoop?.rangeNode, {
+  if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "for") {
+    t.fail();
+    return;
+  }
+
+  t.deepEqual(stripExpressionSpans(loop.rangeNode as ExpressionNode), {
     type: "range",
     start: { type: "literal", value: "0" },
     end: { type: "literal", value: "2" },
   });
-  t.is(assembler.currentLoop?.variable, "i");
-  t.deepEqual(assembler.currentLoop?.startExpression, { type: "literal", value: "0" });
-  t.deepEqual(assembler.currentLoop?.endExpression, { type: "literal", value: "2" });
+  t.is(loop.variable, "i");
+  t.deepEqual(stripExpressionSpans(loop.startExpression as ExpressionNode), { type: "literal", value: "0" });
+  t.deepEqual(stripExpressionSpans(loop.endExpression as ExpressionNode), { type: "literal", value: "2" });
 });
 
-test("loop collection stores normalized command nodes in loop bodies", (t) => {
+test("typed while nodes retain normalized loop body commands", (t) => {
   const assembler = new Assembler();
-  assembler.currentFile = "loop.asm";
-  assembler.currentLine = 0;
-  assembler.setPass(1);
+  const [loop] = assembler.parseCommandStreamToNodes([
+    "while !COUNT < 2",
+    "Label = 1 ; comment",
+    "endwhile",
+  ], "loop.asm", 0);
 
-  assembler.beginLoopCollection("while", "while !COUNT < 2");
-  assembler.currentLine = 1;
-  assembler.processCommand("Label = 1 ; comment");
+  if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "while") {
+    t.fail();
+    return;
+  }
 
-  t.is(assembler.currentLoop?.commands.length, 1);
-  const bodyCommand = assembler.currentLoop?.commands[0];
+  t.is(loop.commands.length, 1);
+  const bodyCommand = loop.commands[0];
   if (!bodyCommand || typeof bodyCommand === "string" || "type" in bodyCommand) {
     t.fail();
     return;
@@ -225,16 +241,17 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
   stub(assembler, "processNormalizedCommand").callsFake((command) => {
     executed.push({ command: command.command, value: assembler.defines.get("i") });
   });
-  assembler.beginLoopCollection("for", "for i = 0..3");
-  assembler.currentLoop?.commands.push(createPendingCommand("db !i", "loop.asm", 1, "db !i", ["db", "!i"]));
-  const loop = assembler.currentLoop;
-  if (!loop) {
+  const [loop] = assembler.parseCommandStreamToNodes([
+    "for i = 0..3",
+    "db !i",
+    "endfor",
+  ], "loop.asm", 0);
+
+  if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "for") {
     t.fail();
     return;
   }
 
-  assembler.currentLoop = null;
-  assembler.collectingLoop = false;
   assembler.executeLoopBlock(loop);
 
   t.deepEqual(executed, [
@@ -443,7 +460,31 @@ test("incbin range evaluation adopts expression nodes for bounds", (t) => {
     writtenBytes.push(value);
   });
 
-  handleIncbin({ session: assembler }, ["incbin", "\"test.bin\":$1..$3"]);
+  handleIncbin({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["incbin", "\"test.bin\":$1..$3"]);
 
   t.deepEqual(writtenBytes, [0x20, 0x30]);
+});
+
+test("analyzeSource collects diagnostics and symbols for tooling callers", (t) => {
+  const assembler = new Assembler();
+  const result = assembler.analyzeSource([
+    "Main:",
+    "!answer = 42",
+    "macro emit()",
+    "endmacro",
+    "struct Player 0",
+    ".hp: skip 1",
+    "endstruct",
+    "!MISSING",
+  ].join("\n"), "analysis.asm", 0);
+
+  t.true(result.diagnostics.length > 0);
+  t.true(result.symbols.some((entry) => entry.kind === "label" && entry.name.includes("Main")));
+  t.true(result.symbols.some((entry) => entry.kind === "define" && entry.name === "answer"));
+  t.true(result.symbols.some((entry) => entry.kind === "macro" && entry.name === "emit"));
+  t.true(result.symbols.some((entry) => entry.kind === "struct" && entry.name === "Player"));
+  t.true(result.symbols.some((entry) => entry.kind === "structMember" && entry.name === "hp"));
 });

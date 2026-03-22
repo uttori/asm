@@ -7,7 +7,7 @@ import { Assembler } from "../src/assembler.js";
 
 const createArchSPC700 = () => {
   const assembler = new Assembler();
-  const arch = new ArchSPC700(assembler.createSPC700Context());
+  const arch = new ArchSPC700(assembler);
   return { assembler, arch };
 };
 
@@ -255,7 +255,7 @@ test("ArchSPC700.handleBranch resolves multi-depth forward relative labels", t =
   const { assembler, arch } = createArchSPC700();
   assembler.setPass(2);
   assembler.currentTargetAddress = 0x1200;
-  const findNextLabelStub = sinon.stub((arch as any).assembler, "findNextLabel").returns(0x1208);
+  const findNextLabelStub = sinon.stub(assembler.symbolScope, "findNextLabel").returns(0x1208);
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   const write1Values: number[] = [];
   const write1Stub = sinon.stub(assembler, "write1").callsFake((value: number) => {

@@ -1,4 +1,5 @@
-import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, Spc700Context } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
+import type { Assembler } from "./assembler.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
 
 let debug = (..._: unknown[]) => {};
@@ -300,9 +301,9 @@ const bit1Opcodes: Record<"OR1" | "AND1" | "EOR1", number> = {
  */
 
 export class ArchSPC700 implements ArchitectureEncoder {
-  assembler: Spc700Context;
+  assembler: Assembler;
 
-  constructor(assembler: Spc700Context) {
+  constructor(assembler: Assembler) {
     this.assembler = assembler;
   }
 
@@ -1156,9 +1157,9 @@ export class ArchSPC700 implements ArchitectureEncoder {
     const branchReferenceAddress = this.assembler.currentTargetAddress + 1;
     let targetAddr: number;
     if (/^\++$/.test(operand)) {
-      targetAddr = this.assembler.findNextLabel(operand, branchReferenceAddress);
+      targetAddr = this.assembler.symbolScope.findNextLabel(operand, branchReferenceAddress);
     } else if (/^-+$/.test(operand)) {
-      targetAddr = this.assembler.findPreviousLabel(operand, branchReferenceAddress);
+      targetAddr = this.assembler.symbolScope.findPreviousLabel(operand, branchReferenceAddress);
     } else {
       targetAddr = this.assembler.operandResolver.getnum(operand);
     }

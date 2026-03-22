@@ -7,7 +7,7 @@ import { Assembler } from "../src/assembler.js";
 
 const createArchSuperFX = () => {
   const assembler = new Assembler();
-  const arch = new ArchSuperFX(assembler.createSuperFXContext());
+  const arch = new ArchSuperFX(assembler);
   return { assembler, arch };
 };
 

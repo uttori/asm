@@ -1,20 +1,13 @@
 import type { StructDefinition } from "../assembler.js";
-import type { ExpressionNode } from "../ir/expression-node.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 
 export type StructHost = {
   currentStruct: StructDefinition | null;
   structs: Map<string, StructDefinition>;
   operandResolver: { getnum(input: string): number };
-  write1(value: number): void;
-  readFile(filename: string): Uint8Array | string;
-  recordCurrentAddress(): void;
-  handlePushPC(): void;
-  handlePullPC(): void;
-  evaluateRangeExpression(expression: string | ExpressionNode): number;
   enterStructDefinition(base: number): void;
   restoreStructDefinition(): void;
-  setWritePosition(address: number): void;
+  recordSymbolDefinition(kind: "struct" | "structMember", name: string, options?: { value?: number | string; containerName?: string }): void;
 };
 
 export class StructEngine {
@@ -37,6 +30,10 @@ export class StructEngine {
       const hasColon = keyword.endsWith(":");
       const labelName = keyword.replace(/:$/, "").substring(1);
       this.host.currentStruct.labels.set(labelName, this.host.currentStruct.offset);
+      this.host.recordSymbolDefinition("structMember", labelName, {
+        value: this.host.currentStruct.offset,
+        containerName: this.host.currentStruct.name,
+      });
 
       if (words[1]?.toLowerCase() === "skip") {
         if (words.length !== 3) {
@@ -101,6 +98,7 @@ export class StructEngine {
       labels: new Map(),
       parent,
     };
+    this.host.recordSymbolDefinition("struct", structName, { value: base });
   }
 
   /**

@@ -1,5 +1,8 @@
 import type { MacroDefinition } from "../assembler.js";
+import type { MathCore } from "../mathcore.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { SymbolScopeService } from "./symbol-scope-service.js";
+import { removeInlineComment } from "./command-text-service.js";
 
 export type MacroLabelEntry = {
   value: number;
@@ -9,16 +12,16 @@ export type MacroLabelEntry = {
   modifiesHierarchy?: boolean;
 };
 
-export type MacroConditionalEntry = {
-  cond: boolean;
+export type MacroExpansionControlEntry = {
+  type: "if" | "while" | "for";
+  active: boolean;
+  branchTaken?: boolean;
 };
 
 export interface MacroEngineHost {
   pass: number;
   currentFile: string;
   currentTargetAddress: number;
-  collectingLoop: boolean;
-  condStack: MacroConditionalEntry[];
   defines: Map<string, string>;
   labelTable: Map<string, MacroLabelEntry>;
   inMacroDefinition: boolean;
@@ -27,23 +30,134 @@ export interface MacroEngineHost {
   currentMacroBody: NormalizedCommand[];
   currentVariadicCount: number | undefined;
   currentVariadicArgs: string[];
+  mathCore: MathCore;
   macros: Map<string, MacroDefinition>;
   macroLabelInstance: number;
   inMacroExpansion: boolean;
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
+  symbolScope: SymbolScopeService;
+  evaluateExpression(input: string): boolean;
   resolvedefines(input: string): string;
   processCommand(command: string): void;
-  setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
-  handleRelativeLabel(label: string): number;
-  getLabelValue(label: string, requireStatic: boolean): number;
-  findNextLabel(label: string, currentAddressOverride?: number): number;
-  findPreviousLabel(label: string, currentAddressOverride?: number): number;
-  evaluateMath(input: string): number;
+  recordSymbolDefinition(kind: "macro", name: string, options?: { value?: number | string }): void;
 }
 
 export class MacroEngine {
+  macroExpansionControlStack: MacroExpansionControlEntry[] = [];
+
   constructor(readonly host: MacroEngineHost) {}
+
+  /**
+   * Checks whether the current macro expansion line is in an active branch.
+   * @returns {boolean} `true` when the current expansion path is active.
+   */
+  isMacroExpansionActive(): boolean {
+    return this.macroExpansionControlStack.every((entry) => entry.active);
+  }
+
+  /**
+   * Checks whether the current macro expansion line is inside a deferred loop body.
+   * @returns {boolean} `true` when loop-body commands should defer placeholder resolution.
+   */
+  isMacroExpansionLoopActive(): boolean {
+    return this.macroExpansionControlStack.some((entry) => entry.active && (entry.type === "for" || entry.type === "while"));
+  }
+
+  /**
+   * Evaluates a macro control-flow condition using the assembler expression engine.
+   * @param {string} expression The expression text to evaluate.
+   * @returns {boolean} The boolean result.
+   */
+  evaluateMacroControlExpression(expression: string): boolean {
+    const trimmed = removeInlineComment(expression).trim();
+    if (!trimmed) {
+      return false;
+    }
+    return this.host.evaluateExpression(trimmed);
+  }
+
+  /**
+   * Updates macro expansion control state after dispatching a control-flow line.
+   * @param {string} line The fully expanded line text.
+   */
+  updateMacroExpansionControlState(line: string): void {
+    const trimmed = removeInlineComment(line).trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const [keyword, ...rest] = trimmed.split(/\s+/);
+    const normalizedKeyword = keyword.toLowerCase();
+    const current = this.macroExpansionControlStack[this.macroExpansionControlStack.length - 1];
+    const parentActive = this.isMacroExpansionActive();
+    const enclosingActive = this.macroExpansionControlStack.slice(0, -1).every((entry) => entry.active);
+    const expression = rest.join(" ").trim();
+
+    switch (normalizedKeyword) {
+      case "if": {
+        const active = parentActive && this.evaluateMacroControlExpression(expression);
+        this.macroExpansionControlStack.push({
+          type: "if",
+          active,
+          branchTaken: active,
+        });
+        return;
+      }
+      case "elseif": {
+        if (!current || current.type !== "if") {
+          return;
+        }
+        if (!enclosingActive || current.branchTaken) {
+          current.active = false;
+          return;
+        }
+        const active = this.evaluateMacroControlExpression(expression);
+        current.active = active;
+        if (active) {
+          current.branchTaken = true;
+        }
+        return;
+      }
+      case "else": {
+        if (!current || current.type !== "if") {
+          return;
+        }
+        current.active = enclosingActive && !current.branchTaken;
+        current.branchTaken = true;
+        return;
+      }
+      case "while": {
+        const active = parentActive && this.evaluateMacroControlExpression(expression);
+        this.macroExpansionControlStack.push({ type: "while", active });
+        return;
+      }
+      case "for": {
+        this.macroExpansionControlStack.push({ type: "for", active: parentActive });
+        return;
+      }
+      case "endif": {
+        if (current && (current.type === "if" || current.type === "while")) {
+          this.macroExpansionControlStack.pop();
+        }
+        return;
+      }
+      case "endwhile": {
+        if (current?.type === "while") {
+          this.macroExpansionControlStack.pop();
+        }
+        return;
+      }
+      case "endfor": {
+        if (current?.type === "for") {
+          this.macroExpansionControlStack.pop();
+        }
+        return;
+      }
+      default:
+        return;
+    }
+  }
 
   /**
    * Handles a macro definition command.
@@ -79,6 +193,7 @@ export class MacroEngine {
           }
 
           this.host.macros.set(macroDef.name, macroDef);
+          this.host.recordSymbolDefinition("macro", macroDef.name);
         }
 
         this.host.inMacroDefinition = false;
@@ -158,7 +273,7 @@ export class MacroEngine {
           }
 
           if (nextAddr === null) {
-            nextAddr = this.host.findNextLabel("?+");
+            nextAddr = this.host.symbolScope.findNextLabel("?+");
           }
 
           modifiedCommand = modifiedCommand.replace(/\?\+/g, `$${nextAddr.toString(16)}`);
@@ -184,7 +299,7 @@ export class MacroEngine {
           }
 
           if (prevAddr === null) {
-            prevAddr = this.host.findPreviousLabel("?-");
+            prevAddr = this.host.symbolScope.findPreviousLabel("?-");
           }
 
           modifiedCommand = modifiedCommand.replace(/\?-/g, `$${prevAddr.toString(16)}`);
@@ -199,7 +314,7 @@ export class MacroEngine {
         }
 
         try {
-          const labelValue = this.host.getLabelValue(labelRef, false);
+          const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
           return `$${labelValue.toString(16)}`;
         } catch (error) {
           if (this.host.pass === 0) {
@@ -215,7 +330,7 @@ export class MacroEngine {
         }
 
         try {
-          const labelValue = this.host.getLabelValue(labelRef, false);
+          const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
           return `$${labelValue.toString(16)}`;
         } catch (error) {
           if (this.host.pass === 0) {
@@ -242,8 +357,10 @@ export class MacroEngine {
     const previousMacroName = this.host.currentMacroName;
     const previousParentLabel = this.host.currentParentLabel;
     const previousParentIsGlobal = this.host.currentParentIsGlobal;
+    const previousMacroExpansionControlStack = this.macroExpansionControlStack.map((entry) => ({ ...entry }));
 
     this.host.inMacroExpansion = true;
+    this.macroExpansionControlStack = [];
 
     try {
       const invocationRegex = /^(\w+)\((.*)\)$/;
@@ -358,6 +475,7 @@ export class MacroEngine {
       this.host.currentVariadicCount = previousVariadicCount;
       this.host.currentVariadicArgs = previousVariadicArgs;
       this.host.inMacroExpansion = previousMacroExpansionState;
+      this.macroExpansionControlStack = previousMacroExpansionControlStack;
     }
   }
 
@@ -403,7 +521,7 @@ export class MacroEngine {
           return match;
         });
         expandedValue = expandedValue.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
-          if (this.host.collectingLoop) {
+          if (this.isMacroExpansionLoopActive()) {
             return match;
           }
 
@@ -415,7 +533,7 @@ export class MacroEngine {
           });
 
           const resolvedExpr = this.host.resolvedefines(processedExpr);
-          let index = this.host.evaluateMath(resolvedExpr);
+          let index = this.host.mathCore.math(resolvedExpr);
           if (Number.isNaN(index)) {
             throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
           }
@@ -446,13 +564,13 @@ export class MacroEngine {
       return match;
     });
 
-    const currentCond = this.host.condStack.length === 0 ? true : this.host.condStack.every((entry) => entry.cond);
+    const currentCond = this.isMacroExpansionActive();
     if (!currentCond) {
       return expanded;
     }
 
     expanded = expanded.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match: string, expr: string) => {
-      if (this.host.collectingLoop) {
+      if (this.isMacroExpansionLoopActive()) {
         return match;
       }
 
@@ -464,7 +582,7 @@ export class MacroEngine {
       });
 
       const resolvedExpr = this.host.resolvedefines(processedExpr);
-      let index = this.host.evaluateMath(resolvedExpr);
+      let index = this.host.mathCore.math(resolvedExpr);
       if (Number.isNaN(index)) {
         throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
       }
@@ -500,7 +618,7 @@ export class MacroEngine {
       });
 
       const resolvedExpr = this.host.resolvedefines(processedExpr);
-      let index = this.host.evaluateMath(resolvedExpr);
+      let index = this.host.mathCore.math(resolvedExpr);
       if (Number.isNaN(index)) {
         throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
       }
@@ -525,9 +643,10 @@ export class MacroEngine {
       if (line.trim().startsWith("?+:") || line.trim().startsWith("?-:")) {
         const labelChar = line.trim();
         const remainder = line.trim().substring(3).trim();
-        this.host.handleRelativeLabel(labelChar);
+        this.host.symbolScope.handleRelativeLabel(labelChar);
         if (remainder) {
           this.host.processCommand(remainder);
+          this.updateMacroExpansionControlState(remainder);
         }
         return;
       }
@@ -536,9 +655,10 @@ export class MacroEngine {
       if (match) {
         const labelName = match[1];
         const remainder = line.substring(match[0].length).trim();
-        this.host.setLabel(labelName, undefined, false, true);
+        this.host.symbolScope.setLabel(labelName, undefined, false, true);
         if (remainder) {
           this.host.processCommand(remainder);
+          this.updateMacroExpansionControlState(remainder);
         }
         return;
       }
@@ -549,12 +669,13 @@ export class MacroEngine {
       if (match) {
         const labelName = match[1];
         const expression = match[2].trim();
-        const value = this.host.evaluateMath(expression);
-        this.host.setLabel(labelName, value, true, true);
+        const value = this.host.mathCore.math(expression);
+        this.host.symbolScope.setLabel(labelName, value, true, true);
         return;
       }
     }
 
     this.host.processCommand(line);
+    this.updateMacroExpansionControlState(line);
   }
 }

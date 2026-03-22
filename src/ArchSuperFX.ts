@@ -1,4 +1,5 @@
-import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand, SuperFXContext } from "./architecture-types.js";
+import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
+import type { Assembler } from "./assembler.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
 
 let debug = (..._: unknown[]) => {};
@@ -11,9 +12,9 @@ const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
   Object.prototype.hasOwnProperty.call(obj, key);
 
 export class ArchSuperFX implements ArchitectureEncoder {
-  assembler: SuperFXContext;
+  assembler: Assembler;
 
-  constructor(assembler: SuperFXContext) {
+  constructor(assembler: Assembler) {
     this.assembler = assembler;
   }
 

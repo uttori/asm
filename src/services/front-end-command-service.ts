@@ -1,5 +1,8 @@
-import { renderExpressionNode, type ExpressionNode } from "../ir/expression-node.js";
+import { renderExpressionNode } from "../ir/expression-node.js";
 import { setCommandKind, setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { SourceSpan } from "../source-location.js";
+import type { MathCore } from "../mathcore.js";
+import type { SymbolScopeService } from "./symbol-scope-service.js";
 
 export type FrontEndCommandHost = {
   inFunctionDefinition: boolean;
@@ -7,15 +10,13 @@ export type FrontEndCommandHost = {
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   currentGlobalParentLabel: string;
+  mathCore: MathCore;
+  symbolScope: SymbolScopeService;
   parseFunctionDefinition(defLine: string): void;
   processCommand(command: string): void;
-  handleRelativeLabel(label: string): number;
-  handleLabelDefinition(labelName: string): void;
-  setLabel(label: string, value?: number, isStatic?: boolean, isMacroLabel?: boolean, isGlobal?: boolean, modifiesHierarchy?: boolean): void;
   resolvedefines(input: string): string;
-  evaluateMath(input: string | ExpressionNode): number;
-  getLabelValue(label: string, requireStatic: boolean): number;
   recordCurrentAddress(): void;
+  recordSymbolDefinition(kind: "label" | "function", name: string, options?: { span?: SourceSpan; value?: number | string; containerName?: string }): void;
 };
 
 export class FrontEndCommandService {
@@ -79,8 +80,11 @@ export class FrontEndCommandService {
     }
 
     const relativeLabel = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-    this.host.handleRelativeLabel(relativeLabel);
+    this.host.symbolScope.handleRelativeLabel(relativeLabel);
     this.host.recordCurrentAddress();
+    this.host.recordSymbolDefinition("label", relativeLabel, {
+      span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+    });
     command.labelName = relativeLabel;
     setCommandKind(command, "labelDefinition");
     return true;
@@ -109,7 +113,7 @@ export class FrontEndCommandService {
     const hasColon = labelName.endsWith(":");
     const cleanName = hasColon ? labelName.slice(0, -1) : labelName;
 
-    this.host.setLabel(cleanName, undefined, false, false, true, !modifiesHierarchy);
+    this.host.symbolScope.setLabel(cleanName, undefined, false, false, true, !modifiesHierarchy);
 
     if (!modifiesHierarchy) {
       this.host.currentParentLabel = cleanName;
@@ -121,6 +125,9 @@ export class FrontEndCommandService {
       this.host.processCommand(payload.slice(1).join(" "));
     }
 
+    this.host.recordSymbolDefinition("label", cleanName, {
+      span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+    });
     command.labelName = cleanName;
     setCommandKind(command, "labelDefinition");
     return true;
@@ -135,13 +142,18 @@ export class FrontEndCommandService {
     const remainingWords = [...command.words];
     let keyword = remainingWords[0] ?? command.keyword;
     let consumed = false;
+    let consumedCount = 0;
 
     // Preserve current behavior exactly: once the first token qualifies as a label,
     // keep consuming tokens until the command is exhausted.
     while (remainingWords.length > 0 && (keyword.endsWith(":") || keyword.startsWith("."))) {
       const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-      this.host.handleLabelDefinition(labelName);
+      this.host.symbolScope.handleLabelDefinition(labelName);
+      this.host.recordSymbolDefinition("label", labelName, {
+        span: command.source.tokenSpans[consumedCount] ?? command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+      });
       remainingWords.shift();
+      consumedCount++;
       keyword = remainingWords[0] ?? "";
       consumed = true;
     }
@@ -168,14 +180,18 @@ export class FrontEndCommandService {
     const labelName = assignment?.target ?? keyword;
     const expr = assignment ? renderExpressionNode(assignment.expression) : words[2];
     const resolvedExpr = this.host.resolvedefines(expr);
-    let value = this.host.evaluateMath(assignment?.expression ?? resolvedExpr);
+    let value = this.host.mathCore.math(assignment?.expression ?? resolvedExpr);
 
     if (Number.isNaN(value)) {
-      value = this.host.getLabelValue(resolvedExpr, true);
+      value = this.host.symbolScope.getLabelValue(resolvedExpr, true);
     }
 
-    this.host.setLabel(labelName, value, true);
+    this.host.symbolScope.setLabel(labelName, value, true);
     this.host.recordCurrentAddress();
+    this.host.recordSymbolDefinition("label", labelName, {
+      span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+      value,
+    });
     command.assignmentTarget = labelName;
     setCommandKind(command, "staticAssignment");
     return true;

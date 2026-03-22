@@ -1,4 +1,5 @@
 import { parseExpressionNode, type ExpressionNode, type RangeExpressionNode } from "./expression-node.js";
+import { createLineSpan, deriveTokenSpans, type SourceSpan } from "../source-location.js";
 
 export type CommandKind =
   | "unknown"
@@ -17,6 +18,9 @@ export type CommandProvenance = {
   line: number;
   raw: string;
   normalized: string;
+  span: SourceSpan;
+  normalizedSpan: SourceSpan;
+  tokenSpans: SourceSpan[];
 };
 
 export type NormalizedCommand = {
@@ -29,6 +33,33 @@ export type NormalizedCommand = {
   assignmentTarget?: string;
   parsed: CommandSemantics;
 };
+
+/**
+ * Creates immutable provenance metadata for a normalized command.
+ * @param {string} raw The original source line.
+ * @param {string} normalized The normalized line after pre-dispatch cleanup.
+ * @param {string[]} words The tokenized command words.
+ * @param {string} file The current source file.
+ * @param {number} line The current source line number.
+ * @returns {CommandProvenance} The command provenance.
+ */
+export function createCommandProvenance(
+  raw: string,
+  normalized: string,
+  words: string[],
+  file: string,
+  line: number,
+): CommandProvenance {
+  return {
+    file,
+    line,
+    raw,
+    normalized,
+    span: createLineSpan(raw, line),
+    normalizedSpan: createLineSpan(normalized, line),
+    tokenSpans: deriveTokenSpans(normalized, words, line),
+  };
+}
 
 export type ParsedCondition = {
   expression: ExpressionNode;
@@ -116,12 +147,7 @@ export function createNormalizedCommand(
   const keyword = words[0] ?? "";
   return {
     kind: classifyCommand(command, words),
-    source: {
-      file,
-      line,
-      raw,
-      normalized,
-    },
+    source: createCommandProvenance(raw, normalized, words, file, line),
     command,
     words,
     keyword,
@@ -150,12 +176,7 @@ export function createPendingCommand(
   const command = (normalized ?? raw).trim();
   return {
     kind: classifyCommand(command, words),
-    source: {
-      file,
-      line,
-      raw,
-      normalized: normalized ?? raw,
-    },
+    source: createCommandProvenance(raw, normalized ?? raw, words, file, line),
     command,
     words,
     keyword: words[0] ?? "",
@@ -177,6 +198,8 @@ export function setCommandWords(command: NormalizedCommand, words: string[], nor
   command.keyword = words[0] ?? "";
   command.command = (normalized ?? words.join(" ")).trim();
   command.source.normalized = normalized ?? command.command;
+  command.source.normalizedSpan = createLineSpan(command.source.normalized, command.source.line);
+  command.source.tokenSpans = deriveTokenSpans(command.source.normalized, words, command.source.line);
   command.labelName = deriveLabelName(command.keyword);
   command.assignmentTarget = deriveAssignmentTarget(words);
   command.parsed = deriveCommandSemantics(command.command, words);

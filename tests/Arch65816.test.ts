@@ -10,7 +10,7 @@ import { Assembler } from "../src/assembler.js";
 
 const createArch65816 = () => {
   const assembler = new Assembler();
-  const arch = new Arch65816(assembler.create65816Context());
+  const arch = new Arch65816(assembler);
   return { assembler, arch };
 };
 

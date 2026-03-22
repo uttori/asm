@@ -56,14 +56,6 @@ export interface AssemblySession {
   assemblefile(filename: string, isMacro: boolean): void;
   expandRom(size: number, fillbyte: number): void;
   handleInclude(kind: string, filename: string, once: boolean): void;
-  handleIf(args: string[]): void;
-  handleElseIf(args: string[]): void;
-  handleElse(): void;
-  handleEndIf(): void;
-  handleWhile(args: string[]): void;
-  handleEndWhile(): void;
-  handleFor(args: string[]): void;
-  handleEndFor(): void;
   handleNamespace(args: string[]): void;
   handlePushNamespace(): void;
   handlePullNamespace(): void;

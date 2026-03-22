@@ -831,7 +831,7 @@ test("expandOperand - handles math expressions that throw errors", t => {
   t.true(mathStub.calledWith("(1 + 2) * 3"));
 });
 
-test("getObjectSize - returns size for non-extended struct", t => {
+test("getExpressionObjectSize - returns size for non-extended struct", t => {
   const assembler = new Assembler();
   const structName = "TestStruct";
 
@@ -850,14 +850,14 @@ test("getObjectSize - returns size for non-extended struct", t => {
   assembler.structs = new Map();
   assembler.structs.set(structName, mockStruct);
 
-  // Test getObjectSize
-  const size = assembler.getObjectSize(structName);
+  // Test getExpressionObjectSize
+  const size = assembler.getExpressionObjectSize(structName);
 
   // For non-extended structs, should return base size + extension size
   t.is(size, 15);
 });
 
-test("getObjectSize - returns size for extended struct", t => {
+test("getExpressionObjectSize - returns size for extended struct", t => {
   const assembler = new Assembler();
   const parentStructName = "ParentStruct";
   const childStructName = "ChildStruct";
@@ -887,14 +887,14 @@ test("getObjectSize - returns size for extended struct", t => {
   assembler.structs.set(parentStructName, parentStruct);
   assembler.structs.set(childStructName, childStruct);
 
-  // Test getObjectSize on the child struct
-  const size = assembler.getObjectSize(childStructName);
+  // Test getExpressionObjectSize on the child struct
+  const size = assembler.getExpressionObjectSize(childStructName);
 
   // For extended structs, should return just its own size
   t.is(size, 5);
 });
 
-test("getObjectSize - handles quoted struct names", t => {
+test("getExpressionObjectSize - handles quoted struct names", t => {
   const assembler = new Assembler();
   const structName = "TestStruct";
 
@@ -913,8 +913,8 @@ test("getObjectSize - handles quoted struct names", t => {
   assembler.structs = new Map();
   assembler.structs.set(structName, mockStruct);
 
-  // Test getObjectSize with quoted name
-  const size = assembler.getObjectSize(`"${structName}"`);
+  // Test getExpressionObjectSize with quoted name
+  const size = assembler.getExpressionObjectSize(`"${structName}"`);
 
   // Should handle the quoted name correctly
   t.is(size, 15);
@@ -985,7 +985,7 @@ test("resolveReferenceLabelValue - preserves struct members after define expansi
   t.is(assembler.mathCore.math(assembler.resolveExpressionInput(expression)), 0x52);
 });
 
-test("getObjectSize - throws error for non-existent struct", t => {
+test("getExpressionObjectSize - throws error for non-existent struct", t => {
   const assembler = new Assembler();
   const nonExistentStruct = "NonExistentStruct";
 
@@ -994,13 +994,13 @@ test("getObjectSize - throws error for non-existent struct", t => {
 
   // Test that calling getObjectSize with a non-existent struct throws an error
   const error = t.throws(() => {
-    assembler.getObjectSize(nonExistentStruct);
+    assembler.getExpressionObjectSize(nonExistentStruct);
   }, { instanceOf: Error });
 
   t.is(error.message, `Struct '${nonExistentStruct}' doesn't exist.`);
 });
 
-test("getObjectSize - baseOnly parameter returns only base size", t => {
+test("getExpressionObjectSize - baseOnly parameter returns only base size", t => {
   const assembler = new Assembler();
   const structName = "TestStruct";
 
@@ -1019,18 +1019,18 @@ test("getObjectSize - baseOnly parameter returns only base size", t => {
   assembler.structs = new Map();
   assembler.structs.set(structName, mockStruct);
 
-  // Test getObjectSize with baseOnly = true
-  const baseSize = assembler.getObjectSize(structName, true);
+  // Test getExpressionObjectSize with baseOnly = true
+  const baseSize = assembler.getExpressionObjectSize(structName, true);
   // Should return only the base size (10) without the extension size
   t.is(baseSize, 10);
 
-  // Test getObjectSize with baseOnly = false (default)
-  const totalSize = assembler.getObjectSize(structName, false);
+  // Test getExpressionObjectSize with baseOnly = false (default)
+  const totalSize = assembler.getExpressionObjectSize(structName, false);
   // Should return the total size (base + extension = 15)
   t.is(totalSize, 15);
 
-  // Test getObjectSize without specifying baseOnly (should default to false)
-  const defaultSize = assembler.getObjectSize(structName);
+  // Test getExpressionObjectSize without specifying baseOnly (should default to false)
+  const defaultSize = assembler.getExpressionObjectSize(structName);
   // Should return the total size (base + extension = 15)
   t.is(defaultSize, 15);
 });
@@ -4568,269 +4568,63 @@ test("handleOrg - handles address with whitespace", t => {
   t.is(assembler.currentTargetAddress, 0xA000, "currentTargetAddress should be set correctly with trimmed value");
 });
 
-test("handleIf - basic condition evaluation", t => {
+test("typed conditional nodes execute the first matching branch", t => {
   const assembler = new Assembler();
-  const evalExpressionStub = sinon.stub(assembler, "evaluateExpression");
+  assembler.setPass(2);
+  assembler.defines.set("state", "1");
+  const executed: string[] = [];
+  sinon.stub(assembler, "processNormalizedCommand").callsFake((command) => {
+    executed.push(command.command);
+  });
 
-  // Test with true condition
-  evalExpressionStub.onFirstCall().returns(true);
-  assembler.handleIf(["1", "==", "1"]);
-  t.is(assembler.condStack.length, 1, "Should add entry to condition stack");
-  t.is(assembler.condStack[0].type, "if", "Should have correct type");
-  t.true(assembler.condStack[0].cond, "Condition should be true");
-  t.true(assembler.condStack[0].branchTaken, "Branch should be marked as taken");
-  t.true(assembler.moreonlinecond, "Global flag should be true");
+  const [node] = assembler.parseCommandStreamToNodes([
+    "if !state == 0",
+    "db $00",
+    "elseif !state == 1",
+    "db $01",
+    "else",
+    "db $02",
+    "endif",
+  ], "conditional.asm", 0);
 
-  // Test with false condition
-  evalExpressionStub.onSecondCall().returns(false);
-  assembler.condStack = []; // Reset stack
-  assembler.handleIf(["1", "==", "2"]);
-  t.is(assembler.condStack.length, 1, "Should add entry to condition stack");
-  t.false(assembler.condStack[0].cond, "Condition should be false");
-  t.false(assembler.condStack[0].branchTaken, "Branch should not be marked as taken");
-  t.false(assembler.moreonlinecond, "Global flag should be false");
+  if (!node || typeof node === "string" || !("type" in node) || node.type !== "if") {
+    t.fail();
+    return;
+  }
 
-  evalExpressionStub.restore();
+  assembler.executeNode(node);
+  t.deepEqual(executed, ["db $01"]);
 });
 
-test("handleIf - nested conditions", t => {
+test("typed conditional nodes support nested branch execution", t => {
   const assembler = new Assembler();
-  const evalExpressionStub = sinon.stub(assembler, "evaluateExpression");
-
-  // Set up nested conditions
-  evalExpressionStub.onFirstCall().returns(true);
-  evalExpressionStub.onSecondCall().returns(true);
-  evalExpressionStub.onThirdCall().returns(false);
-
-  // First level - true
-  assembler.handleIf(["outer", "==", "true"]);
-  t.true(assembler.moreonlinecond, "Outer condition is true");
-
-  // Second level - true
-  assembler.handleIf(["middle", "==", "true"]);
-  t.true(assembler.moreonlinecond, "Middle condition is true");
-
-  // Third level - false
-  assembler.handleIf(["inner", "==", "true"]);
-  t.false(assembler.moreonlinecond, "Inner condition is false, so code should not execute");
-
-  t.is(assembler.condStack.length, 3, "Should have three entries in stack");
-
-  // End inner if
-  assembler.handleEndIf();
-  t.true(assembler.moreonlinecond, "After ending inner if, flag should be true again");
-
-  // End middle if
-  assembler.handleEndIf();
-  t.true(assembler.moreonlinecond, "After ending middle if, flag should still be true");
-
-  // End outer if
-  assembler.handleEndIf();
-  t.true(assembler.moreonlinecond, "After ending all ifs, flag should be true");
-
-  t.is(assembler.condStack.length, 0, "Stack should be empty at the end");
-
-  evalExpressionStub.restore();
-});
-
-test("handleElseIf - basic functionality", t => {
-  const assembler = new Assembler();
-  const evalExpressionStub = sinon.stub(assembler, "evaluateExpression");
-
-  // Set up initial if condition (false)
-  evalExpressionStub.onFirstCall().returns(false);
-  assembler.handleIf(["initial", "==", "false"]);
-
-  // First elseif - true
-  evalExpressionStub.onSecondCall().returns(true);
-  assembler.handleElseIf(["first", "==", "true"]);
-
-  t.true(assembler.condStack[0].cond, "Condition should be true after true elseif");
-  t.true(assembler.condStack[0].branchTaken, "Branch should be marked as taken");
-  t.true(assembler.moreonlinecond, "Global flag should be true");
-
-  // Second elseif - should be skipped since branch already taken
-  evalExpressionStub.onThirdCall().returns(true);
-  assembler.handleElseIf(["second", "==", "true"]);
-
-  t.false(assembler.condStack[0].cond, "Condition should be false for subsequent elseif");
-  t.true(assembler.condStack[0].branchTaken, "Branch should still be marked as taken");
-  t.false(assembler.moreonlinecond, "Global flag should be false");
-
-  evalExpressionStub.restore();
-});
-
-test("handleElseIf - throws on misplaced elseif", t => {
-  const assembler = new Assembler();
-
-  // Test with empty stack
-  const emptyStackError = t.throws(() => {
-    assembler.handleElseIf(["condition"]);
-  }, { instanceOf: Error });
-
-  t.is(emptyStackError.message, "Misplaced elseif", "Should throw with empty stack");
-
-  // Test with wrong condition type
-  assembler.condStack.push({ type: "while", cond: true } as unknown as typeof assembler.condStack[number]);
-
-  const wrongTypeError = t.throws(() => {
-    assembler.handleElseIf(["condition"]);
-  }, { instanceOf: Error });
-
-  t.is(wrongTypeError.message, "Misplaced elseif", "Should throw with wrong condition type");
-});
-
-test("handleElse - basic functionality", t => {
-  const assembler = new Assembler();
-  const evalExpressionStub = sinon.stub(assembler, "evaluateExpression");
-
-  // Test with if condition false, else should be taken
-  evalExpressionStub.returns(false);
-  assembler.handleIf(["condition", "==", "false"]);
-  assembler.handleElse();
-
-  t.true(assembler.condStack[0].cond, "Else condition should be true when if was false");
-  t.true(assembler.condStack[0].branchTaken, "Branch should be marked as taken");
-  t.true(assembler.moreonlinecond, "Global flag should be true");
-
-  // Test with if condition true, else should be skipped
-  assembler.condStack = []; // Reset stack
-  evalExpressionStub.returns(true);
-  assembler.handleIf(["condition", "==", "true"]);
-  assembler.handleElse();
-
-  t.false(assembler.condStack[0].cond, "Else condition should be false when if was true");
-  t.true(assembler.condStack[0].branchTaken, "Branch should still be marked as taken");
-  t.false(assembler.moreonlinecond, "Global flag should be false");
-
-  evalExpressionStub.restore();
-});
-
-test("handleElse - throws on misplaced else", t => {
-  const assembler = new Assembler();
-
-  // Test with empty stack
-  const emptyStackError = t.throws(() => {
-    assembler.handleElse();
-  }, { instanceOf: Error });
-
-  t.is(emptyStackError.message, "Misplaced else", "Should throw with empty stack");
-
-  // Test with wrong condition type
-  assembler.condStack.push({ type: "while", cond: true } as unknown as typeof assembler.condStack[number]);
-
-  const wrongTypeError = t.throws(() => {
-    assembler.handleElse();
-  }, { instanceOf: Error });
-
-  t.is(wrongTypeError.message, "Misplaced else", "Should throw with wrong condition type");
-});
-
-test("handleEndIf - basic functionality", t => {
-  const assembler = new Assembler();
-  const evalExpressionStub = sinon.stub(assembler, "evaluateExpression");
-
-  // Set up nested conditions
-  evalExpressionStub.onFirstCall().returns(true);
-  evalExpressionStub.onSecondCall().returns(false);
-
-  // Outer if - true
-  assembler.handleIf(["outer", "==", "true"]);
-  // Inner if - false
-  assembler.handleIf(["inner", "==", "true"]);
-
-  t.is(assembler.condStack.length, 2, "Should have two entries in stack");
-  t.false(assembler.moreonlinecond, "Global flag should be false with any false condition");
-
-  // End inner if
-  assembler.handleEndIf();
-
-  t.is(assembler.condStack.length, 1, "Should remove one entry from stack");
-  t.true(assembler.moreonlinecond, "Global flag should be true when remaining condition is true");
-
-  // End outer if
-  assembler.handleEndIf();
-
-  t.is(assembler.condStack.length, 0, "Stack should be empty");
-  t.true(assembler.moreonlinecond, "Global flag should be true with empty stack");
-
-  evalExpressionStub.restore();
-});
-
-test("handleEndIf - throws on misplaced endif", t => {
-  const assembler = new Assembler();
-
-  // Test with empty stack
-  const emptyStackError = t.throws(() => {
-    assembler.handleEndIf();
-  }, { instanceOf: Error });
-
-  t.is(emptyStackError.message, "Misplaced endif", "Should throw with empty stack");
-
-  // Test with wrong condition type (endif closes if/while only; "for" is invalid for endif)
-  assembler.condStack.push({ type: "for", cond: true } as unknown as { type: "if" | "while"; cond: boolean; branchTaken?: boolean; conditionStr?: string });
-
-  const wrongTypeError = t.throws(() => {
-    assembler.handleEndIf();
-  }, { instanceOf: Error });
-
-  t.is(wrongTypeError.message, "Misplaced endif", "Should throw with wrong condition type");
-});
-
-test("conditional directives - complex nested scenario", t => {
-  const assembler = new Assembler();
-  assembler.pass = 1;
-
+  assembler.setPass(2);
   assembler.defines.set("outer", "1");
-  assembler.defines.set("inner1", "0");
-  assembler.defines.set("inner2", "1");
-  assembler.defines.set("inner3", "0");
+  assembler.defines.set("inner", "0");
+  const executed: string[] = [];
+  sinon.stub(assembler, "processNormalizedCommand").callsFake((command) => {
+    executed.push(command.command);
+  });
 
-  // Outer if - true
-  assembler.handleIf(["!outer", "==", "1"]);
-  t.is(assembler.condStack.length, 1, "Should push first condition");
-  t.is(assembler.condStack[0].type, "if");
-  t.true(assembler.condStack[0].cond);
-  t.true(assembler.condStack[0].branchTaken);
-  t.true(assembler.moreonlinecond, "Outer condition is true");
+  const [node] = assembler.parseCommandStreamToNodes([
+    "if !outer == 1",
+    "  if !inner == 1",
+    "    db $11",
+    "  else",
+    "    db $22",
+    "  endif",
+    "else",
+    "  db $33",
+    "endif",
+  ], "nested-conditional.asm", 0);
 
-  // Inner if - false
-  assembler.handleIf(["!inner1", "==", "1"]);
-  t.is(assembler.condStack.length, 2, "Should push nested condition");
-  t.true(assembler.condStack[0].cond, "Outer condition remains true");
-  t.false(assembler.condStack[1].cond, "Inner condition is false");
-  t.false(assembler.condStack[1].branchTaken, "Inner branch should not be marked as taken");
-  t.false(assembler.moreonlinecond, "Inner condition is false");
+  if (!node || typeof node === "string" || !("type" in node) || node.type !== "if") {
+    t.fail();
+    return;
+  }
 
-  // Inner elseif - true
-  assembler.handleElseIf(["!inner2", "==", "1"]);
-  t.is(assembler.condStack.length, 2, "Stack depth should remain stable on elseif");
-  t.true(assembler.condStack[1].cond, "Elseif condition should become active");
-  t.true(assembler.condStack[1].branchTaken, "Elseif should mark branch taken");
-  t.true(assembler.moreonlinecond, "Inner elseif condition is true");
-
-  // Another inner if - false
-  assembler.handleIf(["!inner3", "==", "1"]);
-  t.is(assembler.condStack.length, 3, "Third nested condition should be pushed");
-  t.true(assembler.condStack[0].cond, "Outer condition remains active");
-  t.true(assembler.condStack[1].cond, "Elseif branch remains active");
-  t.false(assembler.condStack[2].cond, "Innermost condition should be false");
-  t.false(assembler.condStack[2].branchTaken, "Innermost branch should not be taken");
-  t.false(assembler.moreonlinecond, "Nested inner condition is false");
-
-  // End innermost if
-  assembler.handleEndIf();
-  t.true(assembler.moreonlinecond, "After ending innermost if, flag should be true");
-
-  // End middle if
-  assembler.handleEndIf();
-  t.true(assembler.moreonlinecond, "After ending middle if, flag should be true");
-
-  // End outer if
-  assembler.handleEndIf();
-  t.true(assembler.moreonlinecond, "After ending all ifs, flag should be true");
-
-  t.is(assembler.condStack.length, 0, "Stack should be empty at the end");
+  assembler.executeNode(node);
+  t.deepEqual(executed, ["db $22"]);
 });
 
 test("getDefineVariable - extracts variable name from define statements", t => {
@@ -5738,154 +5532,64 @@ test("beginLoopCollection - inline for loop with no iterations", t => {
   processCommandSpy.restore();
 });
 
-test("handleWhile - skips in pass 0", t => {
+test("typed parser builds while nodes with preserved conditions", t => {
   const assembler = new Assembler();
-  assembler.pass = 0;
 
-  const beginLoopCollectionSpy = sinon.spy(assembler, "beginLoopCollection");
+  const [node] = assembler.parseCommandStreamToNodes([
+    "while !defined(DEBUG) && VERSION > 1.0",
+    "db $01",
+    "endwhile",
+  ], "while.asm", 0);
 
-  assembler.handleWhile(["1", "==", "1"]);
+  if (!node || typeof node === "string" || !("type" in node) || node.type !== "while") {
+    t.fail();
+    return;
+  }
 
-  t.false(beginLoopCollectionSpy.called, "beginLoopCollection should not be called in pass 0");
-
-  // Cleanup
-  beginLoopCollectionSpy.restore();
+  t.is(node.header?.command, "while !defined(DEBUG) && VERSION > 1.0");
+  t.is(node.commands.length, 1);
 });
 
-test("handleWhile - calls beginLoopCollection with correct parameters", t => {
+test("typed parser builds for nodes with preserved range expressions", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
 
-  const beginLoopCollectionSpy = sinon.spy(assembler, "beginLoopCollection");
+  const [node] = assembler.parseCommandStreamToNodes([
+    "for j = !start .. !end + 5",
+    "db !j",
+    "endfor",
+  ], "for.asm", 0);
 
-  assembler.handleWhile(["1", "==", "1"]);
+  if (!node || typeof node === "string" || !("type" in node) || node.type !== "for") {
+    t.fail();
+    return;
+  }
 
-  t.true(beginLoopCollectionSpy.calledOnce, "beginLoopCollection should be called once");
-  t.true(beginLoopCollectionSpy.calledWith("while", "while 1 == 1"),
-    "beginLoopCollection should be called with correct parameters");
-
-  // Cleanup
-  beginLoopCollectionSpy.restore();
+  t.is(node.header?.command, "for j = !start .. !end + 5");
+  t.is(node.variable, "j");
+  t.is(node.commands.length, 1);
 });
 
-test("handleWhile - handles complex conditions", t => {
+test("typed parser closes top-level loop nodes at end markers", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
 
-  const beginLoopCollectionSpy = sinon.spy(assembler, "beginLoopCollection");
+  const nodes = assembler.parseCommandStreamToNodes([
+    "for i = 0..2",
+    "while !i < 2",
+    "db !i",
+    "endwhile",
+    "endfor",
+  ], "nested-loops.asm", 0);
 
-  assembler.handleWhile(["!defined(DEBUG)", "&&", "VERSION", ">", "1.0"]);
+  t.is(nodes.length, 1);
+  const [loop] = nodes;
+  if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "for") {
+    t.fail();
+    return;
+  }
 
-  t.true(beginLoopCollectionSpy.calledWith("while", "while !defined(DEBUG) && VERSION > 1.0"),
-    "Should correctly join complex conditions");
-
-  // Cleanup
-  beginLoopCollectionSpy.restore();
-});
-
-test("handleEndWhile - skips in pass 0", t => {
-  const assembler = new Assembler();
-  assembler.pass = 0;
-
-  const endLoopCollectionSpy = sinon.spy(assembler, "endLoopCollection");
-
-  assembler.handleEndWhile();
-
-  t.false(endLoopCollectionSpy.called, "endLoopCollection should not be called in pass 0");
-
-  // Cleanup
-  endLoopCollectionSpy.restore();
-});
-
-test("handleEndWhile - calls endLoopCollection with correct parameter", t => {
-  const assembler = new Assembler();
-  assembler.pass = 1;
-
-  const endLoopCollectionSpy = sinon.spy(assembler, "endLoopCollection");
-
-  assembler.handleEndWhile();
-
-  t.true(endLoopCollectionSpy.calledOnce, "endLoopCollection should be called once");
-  t.true(endLoopCollectionSpy.calledWith("while"),
-    "endLoopCollection should be called with 'while' parameter");
-
-  // Cleanup
-  endLoopCollectionSpy.restore();
-});
-
-test("handleFor - skips in pass 0", t => {
-  const assembler = new Assembler();
-  assembler.pass = 0;
-
-  const beginLoopCollectionSpy = sinon.spy(assembler, "beginLoopCollection");
-
-  assembler.handleFor(["i", "=", "0", "..", "10"]);
-
-  t.false(beginLoopCollectionSpy.called, "beginLoopCollection should not be called in pass 0");
-
-  // Cleanup
-  beginLoopCollectionSpy.restore();
-});
-
-test("handleFor - calls beginLoopCollection with correct parameters", t => {
-  const assembler = new Assembler();
-  assembler.pass = 1;
-
-  const beginLoopCollectionSpy = sinon.spy(assembler, "beginLoopCollection");
-
-  assembler.handleFor(["i", "=", "0", "..", "10"]);
-
-  t.true(beginLoopCollectionSpy.calledOnce, "beginLoopCollection should be called once");
-  t.true(beginLoopCollectionSpy.calledWith("for", "for i = 0 .. 10"),
-    "beginLoopCollection should be called with correct parameters");
-
-  // Cleanup
-  beginLoopCollectionSpy.restore();
-});
-
-test("handleFor - handles complex range expressions", t => {
-  const assembler = new Assembler();
-  assembler.pass = 1;
-
-  const beginLoopCollectionSpy = sinon.spy(assembler, "beginLoopCollection");
-
-  assembler.handleFor(["j", "=", "!start", "..", "!end", "+", "5"]);
-
-  t.true(beginLoopCollectionSpy.calledWith("for", "for j = !start .. !end + 5"),
-    "Should correctly join complex range expressions");
-
-  // Cleanup
-  beginLoopCollectionSpy.restore();
-});
-
-test("handleEndFor - skips in pass 0", t => {
-  const assembler = new Assembler();
-  assembler.pass = 0;
-
-  const endLoopCollectionSpy = sinon.spy(assembler, "endLoopCollection");
-
-  assembler.handleEndFor();
-
-  t.false(endLoopCollectionSpy.called, "endLoopCollection should not be called in pass 0");
-
-  // Cleanup
-  endLoopCollectionSpy.restore();
-});
-
-test("handleEndFor - calls endLoopCollection with correct parameter", t => {
-  const assembler = new Assembler();
-  assembler.pass = 1;
-
-  const endLoopCollectionSpy = sinon.spy(assembler, "endLoopCollection");
-
-  assembler.handleEndFor();
-
-  t.true(endLoopCollectionSpy.calledOnce, "endLoopCollection should be called once");
-  t.true(endLoopCollectionSpy.calledWith("for"),
-    "endLoopCollection should be called with 'for' parameter");
-
-  // Cleanup
-  endLoopCollectionSpy.restore();
+  t.is(loop.commands.length, 1);
+  const nested = loop.commands[0];
+  t.true(typeof nested !== "string" && "type" in nested && nested.type === "while");
 });
 
 test("addAddressToLine - adds mapping in all passes", t => {
@@ -7002,10 +6706,10 @@ test("expressionHost - defined", t => {
 test("expressionHost - sizeof, objectsize, datasize", t => {
   const assembler = new Assembler();
 
-  // Mock getObjectSize method
-  const originalGetObjectSize = assembler.getObjectSize;
+  // Mock getExpressionObjectSize method
+  const originalGetObjectSize = assembler.getExpressionObjectSize;
 
-  assembler.getObjectSize = (name: string, includeParent = false) => {
+  assembler.getExpressionObjectSize = (name: string, includeParent = false) => {
     if (name === "test_object") {
       return includeParent ? 0x200 : 0x100;
     }
@@ -7013,22 +6717,22 @@ test("expressionHost - sizeof, objectsize, datasize", t => {
   };
 
   // Test sizeof (with includeParent=true)
-  t.is(assembler.expressionHost.getObjectSize("test_object", true), 0x200, "sizeof should include parent size");
+  t.is(assembler.expressionHost.getExpressionObjectSize("test_object", true), 0x200, "sizeof should include parent size");
 
   // Test objectsize (with default includeParent=false)
-  t.is(assembler.expressionHost.getObjectSize("test_object", false), 0x100, "objectsize should not include parent size");
+  t.is(assembler.expressionHost.getExpressionObjectSize("test_object", false), 0x100, "objectsize should not include parent size");
 
   // Test datasize (same as objectsize)
-  t.is(assembler.expressionHost.getObjectSize("test_object", false), 0x100, "datasize should be same as objectsize");
+  t.is(assembler.expressionHost.getExpressionObjectSize("test_object", false), 0x100, "datasize should be same as objectsize");
 
   // Test with non-existent object
   const error = t.throws(() => {
-    assembler.expressionHost.getObjectSize("nonexistent_object", true);
+    assembler.expressionHost.getExpressionObjectSize("nonexistent_object", true);
   });
   t.truthy(error, "Should throw error for non-existent object");
 
   // Restore original method
-  assembler.getObjectSize = originalGetObjectSize;
+  assembler.getExpressionObjectSize = originalGetObjectSize;
 });
 
 test("expressionHost - filesize", t => {

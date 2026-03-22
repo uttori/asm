@@ -9,7 +9,7 @@ const createExpressionHost = (overrides: Partial<ExpressionHost> = {}): Expressi
   getCurrentAddress: () => 0,
   getCurrentBaseAddress: () => 0,
   isDefined: () => 0,
-  getObjectSize: () => 0,
+  getExpressionObjectSize: () => 0,
   getFileSize: () => 0,
   getFileStatus: () => 1,
   canReadFile: () => 0,
@@ -775,7 +775,7 @@ test("getnum - struct functions with bitwise operators", t => {
   const mathCore = new MathCore();
 
   mathCore.host = createExpressionHost({
-    getObjectSize: (value, baseOnly = false) => {
+    getExpressionObjectSize: (value, baseOnly = false) => {
       if (baseOnly && value === "MyStruct") {
         return 24;
       }
@@ -1499,7 +1499,7 @@ test("callBuiltInFunction - host functions with exactly 1 argument", t => {
     getFileSize: (value) => value === "test.bin" ? 1024 : 0,
     getFileStatus: (value) => value === "test.bin" ? 1 : 0,
     isDefined: (value) => value === "LABEL" ? 1 : 0,
-    getObjectSize: (value, baseOnly = false) => {
+    getExpressionObjectSize: (value, baseOnly = false) => {
       if (baseOnly && value === "STRUCT") return 16;
       if (!baseOnly && value === "OBJECT") return 32;
       if (!baseOnly && value === "DATA") return 64;
@@ -1832,7 +1832,7 @@ test("callBuiltInFunction - typed host routes address and file helpers", t => {
     getCurrentAddress: () => 0x808000,
     getCurrentBaseAddress: () => 0x008000,
     isDefined: (identifier) => identifier === "LABEL" ? 1 : 0,
-    getObjectSize: () => 4,
+    getExpressionObjectSize: () => 4,
     getFileSize: () => 16,
     getFileStatus: () => 0,
     canReadFile: () => 1,
@@ -2028,7 +2028,7 @@ test("host requirement & labelResolver", (t) => {
   }, { message: "ExpressionHost not set." });
 
   mathCore.host = createExpressionHost({
-    getObjectSize: (value, baseOnly = false) => {
+    getExpressionObjectSize: (value, baseOnly = false) => {
       if (baseOnly && value === "myStruct") {
         return 42;
       }

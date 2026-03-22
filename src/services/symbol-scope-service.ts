@@ -35,6 +35,7 @@ export interface SymbolScopeHost {
   currentGlobalParentLabel: string;
   labelParents: Map<string, string | null>;
   structs: Map<string, StructDefinition>;
+  recordSymbolDefinition(kind: "label", name: string, options?: { value?: number | string }): void;
 }
 
 export class SymbolScopeService {
@@ -361,6 +362,7 @@ export class SymbolScopeService {
         macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
         modifiesHierarchy,
       });
+      this.host.recordSymbolDefinition("label", fullLabel, { value: addr });
 
       if (directScopeLabel) {
         this.host.labelTable.set(directScopeLabel, {
@@ -400,6 +402,7 @@ export class SymbolScopeService {
       macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
       modifiesHierarchy,
     });
+    this.host.recordSymbolDefinition("label", fullLabel, { value: addr });
 
     if (directScopeLabel) {
       this.host.labelTable.set(directScopeLabel, {

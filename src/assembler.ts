@@ -4,14 +4,21 @@ import path from "node:path"
 import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
-import type { AssemblerServices, CursorAddressFacade } from "./assembler-internals.js";
-import type { ArchitectureContext, ExpressionHost, LoweredInstruction, Spc700Context, SuperFXContext } from "./architecture-types.js";
+import type { CursorAddressFacade } from "./assembler-internals.js";
+import type { ExpressionHost, LoweredInstruction } from "./architecture-types.js";
 import { shouldEndifCloseInnermostWhile } from "./compatibility/asar-compatibility-profile.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
+import {
+  type AssemblyAnalysisResult,
+  type AssemblyDiagnostic,
+  type AssemblySourceLocation,
+  type AssemblySymbolDefinition,
+  type AssemblySymbolKind,
+  diagnosticFromError,
+} from "./diagnostics.js";
 import type {
-  ConditionalBranch,
   ConditionalBranchNode,
   ExecutableNode,
   IncludeNode,
@@ -26,29 +33,30 @@ import {
   type ExpressionNode,
   type ReferenceExpressionNode,
 } from "./ir/expression-node.js";
-import { createNormalizedCommand, type NormalizedCommand } from "./ir/normalized-command.js";
+import { createNormalizedCommand, setCommandKind, setCommandWords, type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { createArchitectureRegistry, type ArchitectureDefinition, type ArchitectureRegistry } from "./architecture-registry.js";
 import { createDirectiveRegistry, type DirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
-import { CommandPipelineService, type CommandPipelineHost } from "./services/command-pipeline-service.js";
-import { DefineEngine, type DefineHost } from "./services/define-engine.js";
-import { FrontEndCommandService, type FrontEndCommandHost } from "./services/front-end-command-service.js";
-import { MacroEngine, type MacroEngineHost } from "./services/macro-engine.js";
-import { PreDispatchPipelineService, type PreDispatchPipelineHost } from "./services/pre-dispatch-pipeline-service.js";
-import { RomWriterService, type RomWriterHost } from "./services/rom-writer-service.js";
-import { StructEngine, type StructHost } from "./services/struct-engine.js";
-import { SymbolScopeService, type SymbolScopeHost } from "./services/symbol-scope-service.js";
+import { DefineEngine } from "./services/define-engine.js";
+import { FrontEndCommandService } from "./services/front-end-command-service.js";
+import { MacroEngine } from "./services/macro-engine.js";
+import { ProgramModelBuilder, type IncrementalProgramParseState } from "./services/program-model-builder.js";
+import { RomWriterService } from "./services/rom-writer-service.js";
+import { StructEngine } from "./services/struct-engine.js";
+import { SymbolScopeService } from "./services/symbol-scope-service.js";
 import {
   getDefineVariable,
   isBareLabelReference,
+  removeInlineComment,
   preprocessBlockCommands,
   splitCommandIntoWords,
   splitInlineCommands,
   splitRespectingFunctions,
 } from "./services/command-text-service.js";
+import type { SourceSpan } from "./source-location.js";
 
 let debug = (..._) => {};
 /* c8 ignore next */
@@ -104,7 +112,6 @@ export type StageSymbolState = {
   labelParents: Map<string, string | null>;
 };
 export type StageControlState = {
-  condStack: { type: "if" | "while"; cond: boolean; start?: number; expr?: string; branchTaken?: boolean; conditionStr?: string }[];
   namespaceStack: string[];
   currentNamespace: string;
   namespaceNestingEnabled: boolean;
@@ -132,6 +139,16 @@ export type StageExecutionState = {
   control: StageControlState;
   writeState: StageWriteState;
   loweredCommandCache: WeakMap<NormalizedCommand, LoweredCommand>;
+};
+
+type CommandPreprocessResult = "continue" | "handled";
+type AssemblerServiceBag = {
+  defineEngine: DefineEngine;
+  frontEndCommandService: FrontEndCommandService;
+  macroEngine: MacroEngine;
+  romWriter: RomWriterService;
+  structEngine: StructEngine;
+  symbolScope: SymbolScopeService;
 };
 
 type LoweredDirective = {
@@ -245,10 +262,7 @@ export class Assembler implements AssemblySession {
   public activeFreespaceContentStartPc: number | null = null;
 
   public pass: number = 0;
-  public numif: number = 0;
-  public numtrue: number = 0;
   public whileStatus: WhileTracker[] = [];
-  public condStack: { type: "if" | "while"; cond: boolean; start?: number; expr?: string; branchTaken?: boolean; conditionStr?: string }[] = [];
 
   public namespaceStack: string[] = [];
   public currentNamespace: string = "";
@@ -268,7 +282,6 @@ export class Assembler implements AssemblySession {
   public mathCore: MathCore;
   public operandResolver: OperandResolver;
 
-  public moreonlinecond: boolean = true;
   public addressToLineMapping: AddressToLineMapping = new AddressToLineMapping();
   public currentFile: string = "";
   public currentLine: number = 0;
@@ -347,13 +360,13 @@ export class Assembler implements AssemblySession {
   readonly directiveRegistry: DirectiveRegistry;
   readonly architectureRegistry: ArchitectureRegistry;
   readonly cursorAddress: CursorAddressFacade;
-  public readonly services: AssemblerServices;
+  readonly programModelBuilder: ProgramModelBuilder;
+  readonly incrementalProgramParseState: IncrementalProgramParseState;
+  public readonly services: AssemblerServiceBag;
   public readonly stageExecutionStates: Map<AssemblyStageName, StageExecutionState> = new Map();
+  public readonly diagnostics: AssemblyDiagnostic[] = [];
+  public readonly symbolDefinitions: AssemblySymbolDefinition[] = [];
   activeStageExecutionState: StageExecutionState | null = null;
-
-  get commandPipelineService(): CommandPipelineService {
-    return this.services.commandPipelineService;
-  }
 
   get defineEngine(): DefineEngine {
     return this.services.defineEngine;
@@ -365,10 +378,6 @@ export class Assembler implements AssemblySession {
 
   get macroEngine(): MacroEngine {
     return this.services.macroEngine;
-  }
-
-  get preDispatchPipelineService(): PreDispatchPipelineService {
-    return this.services.preDispatchPipelineService;
   }
 
   get symbolScope(): SymbolScopeService {
@@ -406,6 +415,21 @@ export class Assembler implements AssemblySession {
     }
   }
 
+  enterStructDefinition(base: number): void {
+    this.savedPCStack.push(this.currentTargetAddress);
+    this.cursorAddress.setWritePosition(base);
+  }
+
+  restoreStructDefinition(): void {
+    if (this.savedPCStack.length === 0) {
+      return;
+    }
+    const previousPosition = this.savedPCStack.pop();
+    if (previousPosition !== undefined) {
+      this.cursorAddress.setWritePosition(previousPosition);
+    }
+  }
+
   syncWriteStarts(): void {
     this.currentTargetStartAddress = this.currentTargetAddress;
     this.currentTargetBaseStartAddress = this.currentTargetBaseAddress;
@@ -415,12 +439,164 @@ export class Assembler implements AssemblySession {
     this.bytes += num;
   }
 
+  get mode(): "layout" | "emit" {
+    return this.getActiveStageCapabilities().instructionMode;
+  }
+
+  get canEmitBytes(): boolean {
+    return this.getActiveStageCapabilities().canEmitBytes;
+  }
+
+  get canFinalize(): boolean {
+    return this.getActiveStageCapabilities().canFinalize;
+  }
+
+  get enforceResolvedLabels(): boolean {
+    return this.getActiveStageCapabilities().enforceResolvedLabels;
+  }
+
+  get isDefinitionCollectionStage(): boolean {
+    return this.getActiveStageCapabilities().isDefinitionCollectionStage;
+  }
+
+  traceWrite(event: Omit<AssemblerTraceWriteEvent, "type">): void {
+    // Byte writes happen below the command dispatcher, so recover the
+    // most specific source context from the active command stack.
+    const source = this.traceCommandStack[this.traceCommandStack.length - 1];
+    this.traceListener?.({
+      type: "write",
+      ...event,
+      file: source?.file ?? this.currentFile,
+      line: source?.line ?? this.currentLine,
+      raw: source?.raw ?? "",
+      normalized: source?.normalized ?? "",
+    });
+  }
+
   /**
    * Installs or clears the structured trace listener.
    * @param {AssemblerTraceListener | null} listener The listener to receive trace events.
    */
   setTraceListener(listener: AssemblerTraceListener | null): void {
     this.traceListener = listener;
+  }
+
+  /**
+   * Clears accumulated diagnostics and symbol definitions.
+   */
+  clearAnalysisArtifacts(): void {
+    this.diagnostics.length = 0;
+    this.symbolDefinitions.length = 0;
+  }
+
+  /**
+   * Returns the current source location.
+   * @param {SourceSpan} [span] Optional source span override.
+   * @returns {AssemblySourceLocation} The current source location.
+   */
+  getCurrentSourceLocation(span?: SourceSpan): AssemblySourceLocation {
+    return {
+      file: this.currentFile,
+      line: this.currentLine,
+      span,
+    };
+  }
+
+  /**
+   * Records a structured diagnostic.
+   * @param {AssemblyDiagnostic} diagnostic The diagnostic to record.
+   */
+  reportDiagnostic(diagnostic: AssemblyDiagnostic): void {
+    this.diagnostics.push(diagnostic);
+  }
+
+  /**
+   * Converts and records an unknown error.
+   * @param {unknown} error The error to normalize.
+   * @param {SourceSpan} [span] Optional source span override.
+   * @param {string} [stage] Optional stage name.
+   * @returns {AssemblyDiagnostic} The recorded diagnostic.
+   */
+  reportErrorDiagnostic(error: unknown, span?: SourceSpan, stage?: AssemblyStageName): AssemblyDiagnostic {
+    const diagnostic = diagnosticFromError(error, this.getCurrentSourceLocation(span), stage);
+    this.reportDiagnostic(diagnostic);
+    return diagnostic;
+  }
+
+  /**
+   * Records a symbol definition if it has not already been recorded.
+   * @param {AssemblySymbolKind} kind The symbol kind.
+   * @param {string} name The symbol name.
+   * @param {{ file?: string; line?: number; span?: SourceSpan; value?: number | string; containerName?: string }} [options] Optional symbol metadata.
+   * @param {string} [options.file] Optional source file override.
+   * @param {number} [options.line] Optional source line override.
+   * @param {SourceSpan} [options.span] Optional precise source span.
+   * @param {number | string} [options.value] Optional resolved symbol value.
+   * @param {string} [options.containerName] Optional owning container name.
+   */
+  recordSymbolDefinition(
+    kind: AssemblySymbolKind,
+    name: string,
+    options: { file?: string; line?: number; span?: SourceSpan; value?: number | string; containerName?: string } = {},
+  ): void {
+    const file = options.file ?? this.currentFile;
+    const line = options.line ?? this.currentLine;
+    const duplicate = this.symbolDefinitions.some((entry) => (
+      entry.kind === kind &&
+      entry.name === name &&
+      entry.location.file === file &&
+      entry.location.line === line &&
+      entry.containerName === options.containerName
+    ));
+    if (duplicate) {
+      return;
+    }
+
+    this.symbolDefinitions.push({
+      name,
+      kind,
+      location: {
+        file,
+        line,
+        span: options.span,
+      },
+      value: options.value,
+      containerName: options.containerName,
+    });
+  }
+
+  /**
+   * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
+   * @param {ProgramModel} program The program model to analyze.
+   * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
+   */
+  analyzeProgram(program: ProgramModel): AssemblyAnalysisResult {
+    this.clearAnalysisArtifacts();
+    try {
+      this.assembleProgram(program);
+    } catch (error) {
+      this.reportErrorDiagnostic(error, undefined, this.activeStageExecutionState?.stage);
+    }
+
+    return {
+      diagnostics: [...this.diagnostics],
+      symbols: [...this.symbolDefinitions],
+    };
+  }
+
+  /**
+   * Builds and analyzes raw source without throwing on the first error.
+   * @param {string} source The source to analyze.
+   * @param {string} [sourceFile] Optional source file override.
+   * @param {number} [startLine] Optional starting line number.
+   * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
+   */
+  analyzeSource(source: string, sourceFile = this.currentFile, startLine = 0): AssemblyAnalysisResult & { program: ProgramModel } {
+    const program = this.buildProgramModel(source, sourceFile, startLine);
+    return {
+      program,
+      ...this.analyzeProgram(program),
+    };
   }
 
   loadTestRomData(): void {
@@ -445,459 +621,20 @@ export class Assembler implements AssemblySession {
     };
   }
 
-  // Pre-dispatch and front-end adapters
-
-  createDefineHost(): DefineHost {
-    const defineHost: DefineHost = {
-      defines: this.defines,
-      resolvedefines: (input: string) => this.resolvedefines(input),
-      evaluateMath: (input: string) => this.mathCore.math(input),
-      processCommand: (command: string) => this.processCommand(command),
-    };
-
-    return defineHost;
-  }
-
-  createFrontEndCommandHost(): FrontEndCommandHost {
-    return Object.create(null, {
-      inFunctionDefinition: {
-        get: () => this.inFunctionDefinition,
-        set: (value: boolean) => {
-          this.inFunctionDefinition = value;
-        },
-        enumerable: true,
-      },
-      functionDefinitionLines: {
-        get: () => this.functionDefinitionLines,
-        set: (value: string[]) => {
-          this.functionDefinitionLines = value;
-        },
-        enumerable: true,
-      },
-      currentParentLabel: {
-        get: () => this.currentParentLabel,
-        set: (value: string) => {
-          this.currentParentLabel = value;
-        },
-        enumerable: true,
-      },
-      currentParentIsGlobal: {
-        get: () => this.currentParentIsGlobal,
-        set: (value: boolean) => {
-          this.currentParentIsGlobal = value;
-        },
-        enumerable: true,
-      },
-      currentGlobalParentLabel: {
-        get: () => this.currentGlobalParentLabel,
-        set: (value: string) => {
-          this.currentGlobalParentLabel = value;
-        },
-        enumerable: true,
-      },
-      labelParents: { get: () => this.labelParents, enumerable: true },
-      parseFunctionDefinition: { value: (defLine: string) => this.parseFunctionDefinition(defLine), enumerable: true },
-      processCommand: { value: (command: string) => this.processCommand(command), enumerable: true },
-      handleRelativeLabel: { value: (label: string) => this.symbolScope.handleRelativeLabel(label), enumerable: true },
-      handleLabelDefinition: { value: (labelName: string) => this.symbolScope.handleLabelDefinition(labelName), enumerable: true },
-      setLabel: {
-        value: (
-          label: string,
-          value?: number,
-          isStatic?: boolean,
-          isMacroLabel?: boolean,
-          isGlobal?: boolean,
-          modifiesHierarchy?: boolean,
-        ) => this.symbolScope.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy),
-        enumerable: true,
-      },
-      resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
-      evaluateMath: { value: (input: string) => this.mathCore.math(input), enumerable: true },
-      getLabelValue: {
-        value: (label: string, requireStatic: boolean) => this.symbolScope.getLabelValue(label, requireStatic),
-        enumerable: true,
-      },
-      recordCurrentAddress: { value: () => this.cursorAddress.recordCurrentAddress(), enumerable: true },
-    }) as FrontEndCommandHost;
-  }
-
-  createPreDispatchPipelineHost(): PreDispatchPipelineHost {
-    return Object.create(null, {
-      collectingLoop: { get: () => this.collectingLoop, enumerable: true },
-      currentLoop: { get: () => this.currentLoop, enumerable: true },
-      inMacroDefinition: { get: () => this.inMacroDefinition, enumerable: true },
-      inMacroExpansion: { get: () => this.inMacroExpansion, enumerable: true },
-      pass: { get: () => this.pass, enumerable: true },
-      condStack: { get: () => this.condStack, enumerable: true },
-      moreonlinecond: { get: () => this.moreonlinecond, enumerable: true },
-      numtrue: { get: () => this.numtrue, enumerable: true },
-      numif: { get: () => this.numif, enumerable: true },
-      handleEndIf: { value: () => this.handleEndIf(), enumerable: true },
-      handleFor: { value: (args: string[]) => this.handleFor(args), enumerable: true },
-      handleWhile: { value: (args: string[]) => this.handleWhile(args), enumerable: true },
-      handleEndFor: { value: () => this.handleEndFor(), enumerable: true },
-      handleEndWhile: { value: () => this.handleEndWhile(), enumerable: true },
-      splitCommandIntoWords: { value: (command: string) => splitCommandIntoWords(command), enumerable: true },
-      resolveVariadicPlaceholders: { value: (command: string) => this.macroEngine.resolveVariadicPlaceholders(command), enumerable: true },
-      resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
-      loadTestRomData: { value: () => this.loadTestRomData(), enumerable: true },
-      currentFile: { get: () => this.currentFile, enumerable: true },
-      currentLine: { get: () => this.currentLine, enumerable: true },
-    }) as PreDispatchPipelineHost;
-  }
-
-  createCommandPipelineHost(): CommandPipelineHost {
-    return Object.create(null, {
-      currentFile: { get: () => this.currentFile, enumerable: true },
-      currentLine: { get: () => this.currentLine, enumerable: true },
-      splitCommandIntoWords: { value: (command: string) => splitCommandIntoWords(command), enumerable: true },
-      handleCharacterMapping: { value: (command: NormalizedCommand) => this.handleCharacterMapping(command), enumerable: true },
-      recordCurrentAddress: { value: () => this.cursorAddress.recordCurrentAddress(), enumerable: true },
-    }) as CommandPipelineHost;
-  }
-
-  // Symbol, macro, and struct adapters
-
-  createStructHost(): StructHost {
-    return Object.create(null, {
-      currentStruct: {
-        get: () => this.currentStruct,
-        set: (value: StructDefinition | null) => {
-          this.currentStruct = value;
-        },
-        enumerable: true,
-      },
-      structs: {
-        get: () => this.structs,
-        enumerable: true,
-      },
-      operandResolver: {
-        get: () => this.operandResolver,
-        enumerable: true,
-      },
-      write1: {
-        value: (value: number) => this.write1(value),
-        enumerable: true,
-      },
-      readFile: {
-        value: (filename: string) => this.readFile(filename),
-        enumerable: true,
-      },
-      recordCurrentAddress: {
-        value: () => this.cursorAddress.recordCurrentAddress(),
-        enumerable: true,
-      },
-      handlePushPC: {
-        value: () => this.handlePushPC(),
-        enumerable: true,
-      },
-      handlePullPC: {
-        value: () => this.handlePullPC(),
-        enumerable: true,
-      },
-      getLabelValue: {
-        value: (label: string, requireStatic: boolean) => this.symbolScope.getLabelValue(label, requireStatic),
-        enumerable: true,
-      },
-      evaluateRangeExpression: {
-        value: (expression: string | ExpressionNode) => this.evaluateRangeExpression(expression),
-        enumerable: true,
-      },
-      enterStructDefinition: {
-        value: (base: number) => {
-          this.savedPCStack.push(this.currentTargetAddress);
-          this.cursorAddress.setWritePosition(base);
-        },
-        enumerable: true,
-      },
-      restoreStructDefinition: {
-        value: () => {
-          if (this.savedPCStack.length === 0) {
-            return;
-          }
-          const previousPosition = this.savedPCStack.pop();
-          if (previousPosition !== undefined) {
-            this.cursorAddress.setWritePosition(previousPosition);
-          }
-        },
-        enumerable: true,
-      },
-      setWritePosition: {
-        value: (address: number) => this.cursorAddress.setWritePosition(address),
-        enumerable: true,
-      },
-    }) as StructHost;
-  }
-
-  createMacroEngineHost(): MacroEngineHost {
-    return Object.create(null, {
-      pass: { get: () => this.pass, enumerable: true },
-      currentFile: { get: () => this.currentFile, enumerable: true },
-      currentTargetAddress: { get: () => this.currentTargetAddress, enumerable: true },
-      collectingLoop: { get: () => this.collectingLoop, enumerable: true },
-      condStack: { get: () => this.condStack, enumerable: true },
-      defines: { get: () => this.defines, enumerable: true },
-      labelTable: { get: () => this.labelTable, enumerable: true },
-      inMacroDefinition: {
-        get: () => this.inMacroDefinition,
-        set: (value: boolean) => {
-          this.inMacroDefinition = value;
-        },
-        enumerable: true,
-      },
-      currentMacroName: {
-        get: () => this.currentMacroName,
-        set: (value: string) => {
-          this.currentMacroName = value;
-        },
-        enumerable: true,
-      },
-      currentMacroParams: {
-        get: () => this.currentMacroParams,
-        set: (value: string[]) => {
-          this.currentMacroParams = value;
-        },
-        enumerable: true,
-      },
-      currentMacroBody: {
-        get: () => this.currentMacroBody,
-        set: (value: NormalizedCommand[]) => {
-          this.currentMacroBody = value;
-        },
-        enumerable: true,
-      },
-      currentVariadicCount: {
-        get: () => this.currentVariadicCount,
-        set: (value: number | undefined) => {
-          this.currentVariadicCount = value;
-        },
-        enumerable: true,
-      },
-      currentVariadicArgs: {
-        get: () => this.currentVariadicArgs,
-        set: (value: string[]) => {
-          this.currentVariadicArgs = value;
-        },
-        enumerable: true,
-      },
-      macros: { get: () => this.macros, enumerable: true },
-      macroLabelInstance: {
-        get: () => this.macroLabelInstance,
-        set: (value: number) => {
-          this.macroLabelInstance = value;
-        },
-        enumerable: true,
-      },
-      inMacroExpansion: {
-        get: () => this.inMacroExpansion,
-        set: (value: boolean) => {
-          this.inMacroExpansion = value;
-        },
-        enumerable: true,
-      },
-      currentParentLabel: {
-        get: () => this.currentParentLabel,
-        set: (value: string) => {
-          this.currentParentLabel = value;
-        },
-        enumerable: true,
-      },
-      currentParentIsGlobal: {
-        get: () => this.currentParentIsGlobal,
-        set: (value: boolean) => {
-          this.currentParentIsGlobal = value;
-        },
-        enumerable: true,
-      },
-      currentGlobalParentLabel: {
-        get: () => this.currentGlobalParentLabel,
-        set: (value: string) => {
-          this.currentGlobalParentLabel = value;
-        },
-        enumerable: true,
-      },
-      labelParents: { get: () => this.labelParents, enumerable: true },
-      currentLine: { get: () => this.currentLine, enumerable: true },
-      splitCommandIntoWords: { value: (command: string) => splitCommandIntoWords(command), enumerable: true },
-      normalizeCommand: { value: (command: string) => this.preDispatchPipelineService.normalizeCommand(command), enumerable: true },
-      resolvedefines: { value: (input: string) => this.resolvedefines(input), enumerable: true },
-      processCommand: { value: (command: string) => this.processCommand(command), enumerable: true },
-      processNestedNormalizedCommand: { value: (command: NormalizedCommand) => this.processNormalizedCommand(command), enumerable: true },
-      setLabel: {
-        value: (
-          label: string,
-          value?: number,
-          isStatic?: boolean,
-          isMacroLabel?: boolean,
-          isGlobal?: boolean,
-          modifiesHierarchy?: boolean,
-        ) => this.symbolScope.setLabel(label, value, isStatic, isMacroLabel, isGlobal, modifiesHierarchy),
-        enumerable: true,
-      },
-      handleRelativeLabel: { value: (label: string) => this.symbolScope.handleRelativeLabel(label), enumerable: true },
-      getLabelValue: { value: (label: string, requireStatic: boolean) => this.symbolScope.getLabelValue(label, requireStatic), enumerable: true },
-      findNextLabel: { value: (label: string, currentAddressOverride?: number) => this.symbolScope.findNextLabel(label, currentAddressOverride), enumerable: true },
-      findPreviousLabel: { value: (label: string, currentAddressOverride?: number) => this.symbolScope.findPreviousLabel(label, currentAddressOverride), enumerable: true },
-      evaluateMath: { value: (input: string) => this.mathCore.math(input), enumerable: true },
-    }) as MacroEngineHost;
-  }
-
-  createSymbolScopeHost(): SymbolScopeHost {
-    return Object.create(null, {
-      mode: { get: () => this.getActiveStageCapabilities().instructionMode, enumerable: true },
-      enforceResolvedLabels: { get: () => this.getActiveStageCapabilities().enforceResolvedLabels, enumerable: true },
-      isDefinitionCollectionStage: { get: () => this.getActiveStageCapabilities().isDefinitionCollectionStage, enumerable: true },
-      currentTargetAddress: {
-        get: () => this.currentTargetAddress,
-        set: (value: number) => {
-          this.currentTargetAddress = value;
-          if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.cursor.currentTargetAddress = value;
-          }
-        },
-        enumerable: true,
-      },
-      currentNamespace: {
-        get: () => this.activeStageExecutionState?.control.currentNamespace ?? this.currentNamespace,
-        set: (value: string) => {
-          this.currentNamespace = value;
-          if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.control.currentNamespace = value;
-          }
-        },
-        enumerable: true,
-      },
-      namespaceNestingEnabled: { get: () => this.activeStageExecutionState?.control.namespaceNestingEnabled ?? this.namespaceNestingEnabled, enumerable: true },
-      namespaceNestingPath: { get: () => this.activeStageExecutionState?.control.namespaceNestingPath ?? this.namespaceNestingPath, enumerable: true },
-      inMacroExpansion: { get: () => this.activeStageExecutionState?.control.inMacroExpansion ?? this.inMacroExpansion, enumerable: true },
-      macroLabelInstance: { get: () => this.activeStageExecutionState?.control.macroLabelInstance ?? this.macroLabelInstance, enumerable: true },
-      labelTable: { get: () => this.activeStageExecutionState?.symbols.labelTable ?? this.labelTable, enumerable: true },
-      forwardLabels: { get: () => this.activeStageExecutionState?.symbols.forwardLabels ?? this.forwardLabels, enumerable: true },
-      backwardLabels: { get: () => this.activeStageExecutionState?.symbols.backwardLabels ?? this.backwardLabels, enumerable: true },
-      currentParentLabel: {
-        get: () => this.activeStageExecutionState?.symbols.currentParentLabel ?? this.currentParentLabel,
-        set: (value: string) => {
-          this.currentParentLabel = value;
-          if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.symbols.currentParentLabel = value;
-          }
-        },
-        enumerable: true,
-      },
-      currentParentIsGlobal: {
-        get: () => this.activeStageExecutionState?.symbols.currentParentIsGlobal ?? this.currentParentIsGlobal,
-        set: (value: boolean) => {
-          this.currentParentIsGlobal = value;
-          if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.symbols.currentParentIsGlobal = value;
-          }
-        },
-        enumerable: true,
-      },
-      currentGlobalParentLabel: {
-        get: () => this.activeStageExecutionState?.symbols.currentGlobalParentLabel ?? this.currentGlobalParentLabel,
-        set: (value: string) => {
-          this.currentGlobalParentLabel = value;
-          if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.symbols.currentGlobalParentLabel = value;
-          }
-        },
-        enumerable: true,
-      },
-      labelParents: { get: () => this.activeStageExecutionState?.symbols.labelParents ?? this.labelParents, enumerable: true },
-      structs: { get: () => this.structs, enumerable: true },
-    }) as SymbolScopeHost;
-  }
-
-  // Address-space and ROM adapters
-
-  createRomWriterHost(): RomWriterHost {
-    return Object.create(null, {
-      currentTargetAddress: {
-        get: () => this.activeStageExecutionState?.cursor.currentTargetAddress ?? this.currentTargetAddress,
-        set: (value: number) => {
-          this.currentTargetAddress = value;
-          if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.cursor.currentTargetAddress = value;
-          }
-        },
-        enumerable: true,
-      },
-      currentTargetBaseAddress: {
-        get: () => this.activeStageExecutionState?.cursor.currentTargetBaseAddress ?? this.currentTargetBaseAddress,
-        set: (value: number) => {
-          this.currentTargetBaseAddress = value;
-          if (this.activeStageExecutionState) {
-            this.activeStageExecutionState.cursor.currentTargetBaseAddress = value;
-          }
-        },
-        enumerable: true,
-      },
-      arch: { get: () => this.resolveActiveArchitecture().name, enumerable: true },
-      mode: { get: () => this.getActiveStageCapabilities().instructionMode, enumerable: true },
-      canEmitBytes: { get: () => this.getActiveStageCapabilities().canEmitBytes, enumerable: true },
-      canFinalize: { get: () => this.getActiveStageCapabilities().canFinalize, enumerable: true },
-      mapper: { get: () => this.mapper, enumerable: true },
-      sa1banks: { get: () => this.sa1banks, enumerable: true },
-      romdata: { get: () => this.romdata, enumerable: true },
-      defaultFreespaceByte: { get: () => this.defaultFreespaceByte, enumerable: true },
-      bankCrossCheckMode: { get: () => this.bankCrossCheckMode, enumerable: true },
-      spcInlineCompatMode: { get: () => this.activeStageExecutionState?.writeState.spcInlineCompatMode ?? this.spcInlineCompatMode, enumerable: true },
-      inSpcblock: { get: () => this.activeStageExecutionState?.writeState.inSpcblock ?? this.inSpcblock, enumerable: true },
-      activeFreespaceStartPc: { get: () => this.activeStageExecutionState?.writeState.activeFreespaceStartPc ?? this.activeFreespaceStartPc, enumerable: true },
-      activeFreespaceContentStartPc: { get: () => this.activeStageExecutionState?.writeState.activeFreespaceContentStartPc ?? this.activeFreespaceContentStartPc, enumerable: true },
-      checksumFixEnabled: { get: () => this.checksumFixEnabled, enumerable: true },
-      fillRomData: { value: (start: number, value: number, length: number) => this.fillRomData(start, value, length), enumerable: true },
-      writeDataBytes: { value: (start: number, value: number, length?: number) => this.writeDataBytes(start, value, length), enumerable: true },
-      updateHeaderAndCRC32: { value: () => this.updateHeaderAndCRC32(), enumerable: true },
-      handleEndSpcblock: { value: (words: string[]) => this.handleEndSpcblock(words), enumerable: true },
-      setWritePosition: { value: (address: number) => this.cursorAddress.setWritePosition(address), enumerable: true },
-      syncWriteStarts: { value: () => this.cursorAddress.syncWriteStarts(), enumerable: true },
-      incrementBytesWritten: { value: (num: number) => this.cursorAddress.incrementBytesWritten(num), enumerable: true },
-      traceWrite: {
-        value: (event: Omit<AssemblerTraceWriteEvent, "type">) => {
-          // Byte writes happen below the command dispatcher, so recover the
-          // most specific source context from the active command stack.
-          const source = this.traceCommandStack[this.traceCommandStack.length - 1];
-          this.traceListener?.({
-            type: "write",
-            ...event,
-            file: source?.file ?? this.currentFile,
-            line: source?.line ?? this.currentLine,
-            raw: source?.raw ?? "",
-            normalized: source?.normalized ?? "",
-          });
-        },
-        enumerable: true,
-      },
-    }) as RomWriterHost;
-  }
-
   // Service assembly
 
-  createServices(): AssemblerServices {
-    const defineEngine = new DefineEngine(this.createDefineHost());
-    const frontEndCommandService = new FrontEndCommandService(this.createFrontEndCommandHost());
-    const symbolScope = new SymbolScopeService(this.createSymbolScopeHost());
-    const romWriter = new RomWriterService(this.createRomWriterHost());
-    const macroEngine = new MacroEngine(this.createMacroEngineHost());
-    const preDispatchPipelineService = new PreDispatchPipelineService(this.createPreDispatchPipelineHost());
-    const structEngine = new StructEngine(this.createStructHost());
-    const commandPipelineService = new CommandPipelineService(
-      this.createCommandPipelineHost(),
-      frontEndCommandService,
-      macroEngine,
-      defineEngine,
-      structEngine,
-      preDispatchPipelineService,
-    );
+  createServices(): AssemblerServiceBag {
+    const defineEngine = new DefineEngine(this);
+    const frontEndCommandService = new FrontEndCommandService(this);
+    const symbolScope = new SymbolScopeService(this);
+    const romWriter = new RomWriterService(this);
+    const macroEngine = new MacroEngine(this);
+    const structEngine = new StructEngine(this);
 
     return {
-      commandPipelineService,
       defineEngine,
       frontEndCommandService,
       macroEngine,
-      preDispatchPipelineService,
       romWriter,
       structEngine,
       symbolScope,
@@ -907,6 +644,10 @@ export class Assembler implements AssemblySession {
   constructor(targetRom?: number[] | Uint8Array) {
     this.targetRom = targetRom ? Uint8Array.from(targetRom) : new Uint8Array();
     this.cursorAddress = this.createCursorAddressFacade();
+    this.programModelBuilder = new ProgramModelBuilder(this);
+    this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
+    this.mathCore = new MathCore();
+    this.mathCore.host = this.expressionHost;
     this.services = this.createServices();
     this.operandResolver = new OperandResolver({
       resolveDefines: (input) => this.resolvedefines(input),
@@ -918,16 +659,14 @@ export class Assembler implements AssemblySession {
       getCurrentAddress: () => this.currentTargetAddress,
       requireStaticLabelLookup: () => this.requireStaticLabelLookup,
     });
-    this.arch65816 = new Arch65816(this.create65816Context());
-    this.archSPC700 = new ArchSPC700(this.createSPC700Context());
-    this.archSuperFX = new ArchSuperFX(this.createSuperFXContext());
+    this.arch65816 = new Arch65816(this);
+    this.archSPC700 = new ArchSPC700(this);
+    this.archSuperFX = new ArchSuperFX(this);
     this.architectureRegistry = createArchitectureRegistry(
       this.arch65816,
       this.archSPC700,
       this.archSuperFX,
     );
-    this.mathCore = new MathCore();
-    this.mathCore.host = this.expressionHost;
     this.directiveRegistry = createDirectiveRegistry(this, this.operandResolver);
   }
 
@@ -948,6 +687,25 @@ export class Assembler implements AssemblySession {
       out |= (bytes[pos + i] ?? 0) << (8 * i);
     }
     return out >>> 0;
+  }
+
+  canReadByteRange(sourceLength: number, position: number, size: number): number {
+    const pos = Math.trunc(position);
+    const num = Math.trunc(size);
+    return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength) ? 1 : 0;
+  }
+
+  readByteRange(source: Uint8Array, position: number, size: number, defaultValue: number | undefined, errorMessage: string): number {
+    const pos = Math.trunc(position);
+    const num = Math.trunc(size);
+    const value = this.readLittleEndian(source, pos, num);
+    if (value === undefined) {
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+      throw new Error(errorMessage);
+    }
+    return value;
   }
 
   resolveReadablePath(filename: string): string | undefined {
@@ -979,7 +737,7 @@ export class Assembler implements AssemblySession {
       }
       return 0;
     }
-    return this.getObjectSize(identifier, baseOnly);
+    return this.symbolScope.getObjectSize(identifier, baseOnly)
   }
 
   lookupDefineValue(varName: string): string | undefined {
@@ -999,10 +757,8 @@ export class Assembler implements AssemblySession {
   }
 
   canReadTargetRom(position: number, size: number): number {
-    const pos = Math.trunc(position);
-    const num = Math.trunc(size);
     const sourceLength = (this.targetRom && this.targetRom.length > 0) ? this.targetRom.length : this.romdata.length;
-    return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength) ? 1 : 0;
+    return this.canReadByteRange(sourceLength, position, size);
   }
 
   readTargetRom(position: number, size: number, defaultValue?: number): number {
@@ -1012,25 +768,23 @@ export class Assembler implements AssemblySession {
     }
     const pcPos = this.romWriter.convertTargetAddressToRomOffset(pos);
     const source = (this.targetRom && this.targetRom.length > 0) ? this.targetRom : this.romdata;
-    const romBytes = Uint8Array.from(source);
-    const value = pcPos < 0 ? undefined : this.readLittleEndian(romBytes, pcPos, size);
-    if (value === undefined) {
+    if (pcPos < 0) {
       if (defaultValue !== undefined) {
         return defaultValue;
       }
-      throw new Error(`read${size} out of bounds at ${pos}`);
+      throw new Error(`read${Math.trunc(size)} out of bounds at ${pos}`);
     }
-    return value;
+    const romBytes = Uint8Array.from(source);
+    return this.readByteRange(romBytes, pcPos, size, defaultValue, `read${Math.trunc(size)} out of bounds at ${pos}`);
   }
 
   canReadExpressionFile(filename: string, position: number, size: number): number {
-    const pos = Math.trunc(position);
     const resolvedPath = this.resolveReadablePath(filename);
     if (!resolvedPath) {
       return 0;
     }
     const fileSize = fs.statSync(resolvedPath).size;
-    return (Number.isInteger(pos) && pos >= 0 && pos + size <= fileSize) ? 1 : 0;
+    return this.canReadByteRange(fileSize, position, size);
   }
 
   readExpressionFile(filename: string, position: number, size: number, defaultValue?: number): number {
@@ -1043,60 +797,7 @@ export class Assembler implements AssemblySession {
       throw new Error(`Could not read file: ${filename}`);
     }
     const fileBytes = fs.readFileSync(resolvedPath);
-    const value = this.readLittleEndian(fileBytes, pos, size);
-    if (value === undefined) {
-      if (defaultValue !== undefined) {
-        return defaultValue;
-      }
-      throw new Error(`readfile${size} out of bounds at ${pos}`);
-    }
-    return value;
-  }
-
-  create65816Context(): ArchitectureContext {
-    const context = {
-      operandResolver: this.operandResolver,
-      write1: (value: number) => this.write1(value),
-      write2: (value: number) => this.write2(value),
-      write3: (value: number) => this.write3(value),
-      emitByte: (value: number) => this.emitByte(value),
-      emitWord: (value: number) => this.emitWord(value),
-      emitLong: (value: number) => this.emitLong(value),
-      findNextLabel: (reference: string, fromAddress: number) => this.symbolScope.findNextLabel(reference, fromAddress),
-      findPreviousLabel: (reference: string, fromAddress: number) => this.symbolScope.findPreviousLabel(reference, fromAddress),
-    };
-    return Object.defineProperties(context, {
-      mode: { get: () => this.getActiveStageCapabilities().instructionMode },
-      enforceResolvedLabels: { get: () => this.getActiveStageCapabilities().enforceResolvedLabels },
-      currentTargetAddress: { get: () => this.currentTargetAddress },
-      optimizeDirectPage: { get: () => this.optimizeDirectPage },
-    }) as unknown as ArchitectureContext;
-  }
-
-  createSPC700Context(): Spc700Context {
-    const context = {
-      operandResolver: this.operandResolver,
-      write1: (value: number) => this.write1(value),
-      write2: (value: number) => this.write2(value),
-      findNextLabel: (reference: string, fromAddress: number) => this.symbolScope.findNextLabel(reference, fromAddress),
-      findPreviousLabel: (reference: string, fromAddress: number) => this.symbolScope.findPreviousLabel(reference, fromAddress),
-    };
-    return Object.defineProperties(context, {
-      mode: { get: () => this.getActiveStageCapabilities().instructionMode },
-      enforceResolvedLabels: { get: () => this.getActiveStageCapabilities().enforceResolvedLabels },
-      currentTargetAddress: { get: () => this.currentTargetAddress },
-    }) as unknown as Spc700Context;
-  }
-
-  createSuperFXContext(): SuperFXContext {
-    const context = {
-      operandResolver: this.operandResolver,
-      write1: (value: number) => this.write1(value),
-      write2: (value: number) => this.write2(value),
-    };
-    return Object.defineProperties(context, {
-      currentTargetAddress: { get: () => this.currentTargetAddress },
-    }) as unknown as SuperFXContext;
+    return this.readByteRange(fileBytes, pos, size, defaultValue, `readfile${Math.trunc(size)} out of bounds at ${pos}`);
   }
 
   readonly expressionHost: ExpressionHost = {
@@ -1110,7 +811,7 @@ export class Assembler implements AssemblySession {
       if (this.structs.has(identifier)) return 1;
       return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
     },
-    getObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
+    getExpressionObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
     getFileSize: (filename) => {
       const resolvedPath = this.resolveReadablePath(filename);
       if (!resolvedPath) {
@@ -1334,14 +1035,20 @@ export class Assembler implements AssemblySession {
     }
 
     const splitCommands = splitInlineCommands(processedCommands);
-    if (block.includes("\n")) {
+    if (block.includes("\n") && this.incrementalProgramParseState.roots.length === 0) {
       const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
       this.executeNodeStream(nodes);
       return;
     }
 
     for (const command of splitCommands) {
-      this.processCommand(command.trim());
+      const nodes = this.programModelBuilder.consumeIncrementalCommand(
+        this.incrementalProgramParseState,
+        command.trim(),
+        this.currentFile,
+        this.currentLine,
+      );
+      this.executeNodeStream(nodes as RuntimeNode[]);
     }
   }
 
@@ -1349,6 +1056,82 @@ export class Assembler implements AssemblySession {
     const processed = preprocessBlockCommands(block, this.commandBuffer);
     this.commandBuffer = processed.commandBuffer;
     return processed.commands;
+  }
+
+  rewriteRawCommand(command: string): string {
+    return this.macroEngine.rewriteMacroLabelReferences(command);
+  }
+
+  createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty: boolean = false): NormalizedCommand | null {
+    let normalizedCommand = removeInlineComment(command);
+
+    if (this.inMacroExpansion && this.pass !== 0 && (normalizedCommand.includes("...") || normalizedCommand.includes("…"))) {
+      normalizedCommand = this.macroEngine.resolveVariadicPlaceholders(normalizedCommand);
+    }
+
+    const words = splitCommandIntoWords(normalizedCommand);
+    if (!allowEmpty && words.length === 0) {
+      return null;
+    }
+    return createNormalizedCommand(command, normalizedCommand, words, sourceFile, sourceLine);
+  }
+
+  preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
+    if (state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
+      setCommandKind(state, "characterMapping");
+      this.handleCharacterMapping(state);
+      return "handled";
+    }
+
+    if (this.frontEndCommandService.startFunctionDefinition(state)) {
+      return "handled";
+    }
+
+    if (this.macroEngine.handleDefinitionCommand(state)) {
+      return "handled";
+    }
+
+    if (this.defineEngine.handleCommand(state)) {
+      if (state.command.includes("=")) {
+        this.cursorAddress.recordCurrentAddress();
+      }
+      return "handled";
+    }
+
+    if (this.structEngine.handleStructMode(state)) {
+      return "handled";
+    }
+
+    if (this.frontEndCommandService.handleRelativeLabelDefinition(state)) {
+      return "handled";
+    }
+
+    if (this.frontEndCommandService.handleGlobalLabel(state)) {
+      return "handled";
+    }
+
+    if (this.frontEndCommandService.consumeNamedLabelDefinitions(state)) {
+      return "handled";
+    }
+
+    // This pass must happen after label consumption to preserve macro invoke behavior.
+    if (this.macroEngine.handleDefinitionCommand(state)) {
+      return "handled";
+    }
+
+    if (this.frontEndCommandService.handleStaticLabelAssignment(state)) {
+      return "handled";
+    }
+
+    return "continue";
+  }
+
+  prepareNormalizedCommandForDispatch(state: NormalizedCommand): boolean {
+    if (state.kind === "unknown") {
+      setCommandWords(state, state.words, state.command);
+      setCommandKind(state, "opcodeCandidate");
+    }
+    return true;
   }
 
   /**
@@ -1361,18 +1144,17 @@ export class Assembler implements AssemblySession {
       return;
     }
 
-    command = this.commandPipelineService.rewriteRawCommand(command);
+    command = this.rewriteRawCommand(command);
 
-    if (this.commandPipelineService.interceptRawCommand(command)) {
+    if (this.frontEndCommandService.continueFunctionDefinition(command)) {
       return;
     }
 
-    const state = this.commandPipelineService.create(command);
-    if (!state) {
-      return;
-    }
-
-    this.processNormalizedCommand(state, false);
+    // Route single-command entrypoints through the same typed incremental parser
+    // used by line-by-line `assembleblock()` so macro-expanded control flow and
+    // raw direct calls share one structural execution model.
+    this.assembleblock(command);
+    this.flushCompletedIncrementalNodes();
   }
 
   processNormalizedCommand(state: NormalizedCommand, rewriteRaw: boolean = true): void {
@@ -1399,25 +1181,22 @@ export class Assembler implements AssemblySession {
     }
 
     if (rewriteRaw) {
-      const rewrittenRaw = this.commandPipelineService.rewriteRawCommand(workingState.source.raw);
-      const rewrittenNormalized = this.preDispatchPipelineService.normalizeCommand(rewrittenRaw);
-      const rewrittenWords = splitCommandIntoWords(rewrittenNormalized);
-      if (rewrittenRaw !== workingState.source.raw || rewrittenNormalized !== workingState.command) {
-        workingState = createNormalizedCommand(
-          rewrittenRaw,
-          rewrittenNormalized,
-          rewrittenWords,
-          workingState.source.file,
-          workingState.source.line,
-        );
+      const rewrittenRaw = this.rewriteRawCommand(workingState.source.raw);
+      const rewrittenState = this.createNormalizedCommandFromRaw(
+        rewrittenRaw,
+        workingState.source.file,
+        workingState.source.line,
+        true,
+      );
+      if (!rewrittenState) {
+        return;
+      }
+      if (rewrittenRaw !== workingState.source.raw || rewrittenState.command !== workingState.command) {
+        workingState = rewrittenState;
       }
     }
 
-    const preprocessResult = this.commandPipelineService.preprocess(workingState);
-    if (preprocessResult === "skipped_for_condition") {
-      debug(`processCommand ❎ Skipping command "${workingState.command}" because condition is false.`);
-      return;
-    }
+    const preprocessResult = this.preprocessNormalizedCommand(workingState);
     if (preprocessResult === "handled") {
       return;
     }
@@ -1425,7 +1204,7 @@ export class Assembler implements AssemblySession {
     // Capture the starting PC (before processing this command)
     const startPC = this.currentTargetBaseAddress & 0xFFFFFF;
 
-    if (!this.commandPipelineService.prepareForDispatch(workingState)) {
+    if (!this.prepareNormalizedCommandForDispatch(workingState)) {
       return;
     }
 
@@ -1612,27 +1391,10 @@ export class Assembler implements AssemblySession {
     this.mathCore.str = defLine;
     // Call the parseFunctionDefinition method without arguments
     this.mathCore.parseFunctionDefinition();
-  }
-
-  /**
-   * Handles `for` loops.
-   * @param {string[]} condition - The condition for the loop.
-   */
-  handleFor(condition: string[]): void {
-    if (this.pass === 0) return; // Skip in pass 0
-
-    // Build the original for statement to pass to the new method
-    const forStatement = `for ${condition.join(" ")}`;
-    this.beginLoopCollection("for", forStatement);
-  }
-
-  /**
-   * Handles the end of a `for` loop.
-   */
-  handleEndFor(): void {
-    if (this.pass === 0) return; // Skip in pass 0
-
-    this.endLoopCollection("for");
+    const functionName = defLine.match(/^function\s+([_a-z]\w*)\s*\(/i)?.[1];
+    if (functionName) {
+      this.recordSymbolDefinition("function", functionName);
+    }
   }
 
   /**
@@ -1643,151 +1405,6 @@ export class Assembler implements AssemblySession {
     // if (this.pass === 2) {
     this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
     // }
-  }
-
-  /**
-   * Handles `if` statements.
-   * @param {string[]} condition The condition for the if statement.
-   */
-  handleIf(condition: string[]): void {
-    debug("handleIf", condition)
-    const conditionStr = condition.join(" ");
-    this.requireStaticLabelLookup = true;
-    let conditionResult: boolean;
-    try {
-      conditionResult = this.evaluateExpression(conditionStr);
-    } finally {
-      this.requireStaticLabelLookup = false;
-    }
-    // Push an "if" entry with an additional flag to indicate if this branch was taken
-    this.condStack.push({
-      type: "if",
-      cond: conditionResult,
-      branchTaken: conditionResult, // Track if this or any subsequent branch was taken
-      conditionStr,
-    });
-    debug("handleIf added to condStack", this.condStack);
-    // Update the global flag (all conditions must be true to run commands).
-    this.moreonlinecond = this.condStack.every(entry => entry.cond);
-  }
-
-  /**
-   * Handles `elseif` statements.
-   * @param {string[]} condition The condition for the elseif statement.
-   */
-  handleElseIf(condition: string[]): void {
-    debug("handleElseIf", condition)
-    // Ensure we are inside an if block.
-    if (this.condStack.length === 0 || this.condStack[this.condStack.length - 1].type !== "if") {
-      debug("handleElseIf misplaced elseif", this.condStack);
-      throw new Error("Misplaced elseif");
-    }
-
-    // Get the current conditional context
-    const current = this.condStack[this.condStack.length - 1];
-
-    // If any previous branch in this if-block was already taken,
-    // or if the current condition is false, set cond to false
-    if (current.branchTaken) {
-      debug("handleElseIf previous branch taken, skipping", current);
-      // A previous branch was already taken, so this elseif should be skipped
-      current.cond = false;
-    } else {
-      debug("handleElseIf no previous branch taken, evaluating condition", current);
-      // No branch taken yet, evaluate this condition
-      const conditionStr = condition.join(" ");
-      this.requireStaticLabelLookup = true;
-      let conditionResult: boolean;
-      try {
-        conditionResult = this.evaluateExpression(conditionStr);
-      } finally {
-        this.requireStaticLabelLookup = false;
-      }
-      current.cond = conditionResult;
-      current.conditionStr = conditionStr;
-      // current.type = "elseif";
-
-      // If this condition is true, mark that a branch has been taken
-      if (conditionResult) {
-        current.branchTaken = true;
-      }
-    }
-
-    this.moreonlinecond = this.condStack.every(entry => entry.cond);
-  }
-
-  /**
-   * Handles `else` statements.
-   */
-  handleElse(): void {
-    debug("handleElse")
-    if (this.condStack.length === 0 || this.condStack[this.condStack.length - 1].type !== "if") {
-      throw new Error("Misplaced else");
-    }
-
-    // Get the current conditional context
-    const current = this.condStack[this.condStack.length - 1];
-
-    // Only enter the else block if no previous branch was taken
-    if (current.branchTaken) {
-      current.cond = false;
-    } else {
-      current.cond = true;
-      current.branchTaken = true;
-    }
-
-    this.moreonlinecond = this.condStack.every(entry => entry.cond);
-  }
-
-  /**
-   * Handles the end of an `if` statement (or `while`, since asar uses endif for both).
-   */
-  handleEndIf(): void {
-    debug("handleEndIf")
-    if (this.condStack.length === 0) {
-      throw new Error("Misplaced endif");
-    }
-    const top = this.condStack[this.condStack.length - 1];
-    if (top.type !== "if" && top.type !== "while") {
-      throw new Error("Misplaced endif");
-    }
-    this.condStack.pop();
-    if (top.type === "while" && top.cond) {
-      this.endLoopCollection("while");
-    }
-    this.moreonlinecond = this.condStack.every(entry => entry.cond);
-  }
-
-  /**
-   * Handles `while` loops.
-   * @param {string[]} condition - The condition for the loop.
-   */
-  handleWhile(condition: string[]): void {
-    // Determine whether this while is in an active branch.
-    // If the parent condition is false, we still push a stack frame so `endif` balances,
-    // but we do not collect/execute the loop body.
-    const parentCond = this.condStack.length === 0 ? true : this.condStack.every(entry => entry.cond);
-
-    // Push while onto condStack so endif can pop it (asar uses endif for both if and while).
-    this.condStack.push({
-      type: "while",
-      cond: parentCond,
-    });
-
-    if (this.pass === 0 || !parentCond) return; // Skip collection when inactive or on pass 0
-
-    // Build the original while statement to pass to the new method
-    const whileStatement = `while ${condition.join(" ")}`;
-    this.beginLoopCollection("while", whileStatement);
-  }
-
-  /**
-   * Handles the end of a `while` loop.
-   */
-  handleEndWhile(): void {
-    if (this.pass === 0) return; // Skip in pass 0
-
-    this.endLoopCollection("while");
   }
 
   /**
@@ -2638,9 +2255,8 @@ export class Assembler implements AssemblySession {
     // Reset the in loop flag
     this.collectingLoop = false;
     this.currentLoop = null;
+    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
 
-    // Reset the condition stack
-    this.condStack = [];
     this.inSpcblock = false;
     this.spcblockData = null;
     this.spcInlineCompatMode = false;
@@ -2664,6 +2280,7 @@ export class Assembler implements AssemblySession {
     debug("setCurrentFile", filename);
     this.currentFile = filename;
     this.currentLine = 0;
+    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
   }
 
   /**
@@ -2744,7 +2361,6 @@ export class Assembler implements AssemblySession {
       labelParents: this.labelParents,
     };
     const controlSeed = seed?.control ?? {
-      condStack: this.condStack,
       namespaceStack: this.namespaceStack,
       currentNamespace: this.currentNamespace,
       namespaceNestingEnabled: this.namespaceNestingEnabled,
@@ -2777,7 +2393,6 @@ export class Assembler implements AssemblySession {
         labelParents: new Map(symbolSeed.labelParents),
       },
       control: {
-        condStack: controlSeed.condStack.map((entry) => ({ ...entry })),
         namespaceStack: [...controlSeed.namespaceStack],
         currentNamespace: controlSeed.currentNamespace,
         namespaceNestingEnabled: controlSeed.namespaceNestingEnabled,
@@ -2814,7 +2429,6 @@ export class Assembler implements AssemblySession {
     this.currentParentIsGlobal = stageState.symbols.currentParentIsGlobal;
     this.currentGlobalParentLabel = stageState.symbols.currentGlobalParentLabel;
     this.labelParents = stageState.symbols.labelParents;
-    this.condStack = stageState.control.condStack;
     this.namespaceStack = stageState.control.namespaceStack;
     this.currentNamespace = stageState.control.currentNamespace;
     this.namespaceNestingEnabled = stageState.control.namespaceNestingEnabled;
@@ -2850,7 +2464,6 @@ export class Assembler implements AssemblySession {
       labelParents: this.labelParents,
     };
     stageState.control = {
-      condStack: this.condStack,
       namespaceStack: this.namespaceStack,
       currentNamespace: this.currentNamespace,
       namespaceNestingEnabled: this.namespaceNestingEnabled,
@@ -2882,12 +2495,11 @@ export class Assembler implements AssemblySession {
   }
 
   buildProgramModel(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
-    const commands = splitInlineCommands(this.preprocessBlockCommands(source));
-    const nodes = this.getOrBuildPassProgram(commands, sourceFile, startLine);
+    const program = this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
     return {
-      sourceFile,
-      startLine,
-      nodes,
+      sourceFile: program.sourceFile,
+      startLine: program.startLine,
+      nodes: program.nodes,
     };
   }
 
@@ -2955,17 +2567,6 @@ export class Assembler implements AssemblySession {
     } else {
       debug("expandRom newSize <= this.romdata.length, no expansion needed");
     }
-  }
-
-  /**
-   * Gets the size of a struct or extension.
-   * @param {string} identifier The identifier of the struct or extension.
-   * @param {boolean} [baseOnly] If true, returns only the base size without extensions.
-   * @returns {number} The size of the struct or extension.
-   * @throws {Error} If the struct or extension doesn't exist.
-   */
-  getObjectSize(identifier: string, baseOnly: boolean = false): number {
-    return this.symbolScope.getObjectSize(identifier, baseOnly);
   }
 
   /**
@@ -3510,9 +3111,17 @@ export class Assembler implements AssemblySession {
   }
 
   createLoopCommandNode(command: string, sourceFile = this.currentFile, sourceLine = this.currentLine): NormalizedCommand {
-    const normalized = this.preDispatchPipelineService.normalizeCommand(command);
+    const normalized = removeInlineComment(command);
     const words = splitCommandIntoWords(normalized);
     return createNormalizedCommand(command, normalized, words, sourceFile, sourceLine);
+  }
+
+  shouldEndifCloseInnermostWhile(
+    loopType?: "for" | "while",
+    loopStartLine?: number,
+    ifStartLine?: number,
+  ): boolean {
+    return shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine);
   }
 
   lowerNode(command: NormalizedCommand): LoweredCommand {
@@ -3584,6 +3193,18 @@ export class Assembler implements AssemblySession {
     }
   }
 
+  /**
+   * Drains and executes any completed nodes still buffered in the incremental parser.
+   * This protects re-entrant command sources, such as macro expansion, from leaving
+   * finished typed roots stranded until the next top-level line arrives.
+   */
+  flushCompletedIncrementalNodes(): void {
+    const ready = this.programModelBuilder.drainCompletedRoots(this.incrementalProgramParseState);
+    if (ready.length > 0) {
+      this.executeNodeStream(ready as RuntimeNode[]);
+    }
+  }
+
   executeConditionalNode(node: RuntimeConditionalNode): void {
     for (const branch of node.branches) {
       if (branch.kind === "else") {
@@ -3614,175 +3235,11 @@ export class Assembler implements AssemblySession {
   }
 
   parseCommandStreamToNodes(commands: string[], sourceFile = this.currentFile, startLine = this.currentLine): RuntimeNode[] {
-    const roots: RuntimeNode[] = [];
-    const loopStack: LoopNode[] = [];
-    const ifStack: RuntimeConditionalNode[] = [];
-    const branchStack: ConditionalBranch[] = [];
-    let inMacroDefinition = false;
-
-    const pushToCurrent = (node: RuntimeNode): void => {
-      const currentBranch = branchStack[branchStack.length - 1];
-      const currentLoop = loopStack[loopStack.length - 1];
-      if (currentBranch && currentLoop) {
-        // Route to the most recently opened container so loop bodies nested in
-        // conditionals (and vice-versa) keep their intended structure.
-        if (currentLoop.startLine >= currentBranch.startLine) {
-          currentLoop.commands.push(node);
-        } else {
-          currentBranch.commands.push(node);
-        }
-        return;
-      }
-      if (currentBranch) {
-        currentBranch.commands.push(node);
-        return;
-      }
-      if (currentLoop) {
-        currentLoop.commands.push(node);
-        return;
-      }
-      roots.push(node);
-    };
-
-    for (let index = 0; index < commands.length; index++) {
-      const rawCommand = commands[index];
-      const command = this.createLoopCommandNode(rawCommand, sourceFile, startLine + index);
-      const keyword = command.keyword.toLowerCase();
-
-      if (keyword === "macro") {
-        // Macro bodies are consumed later by macro-definition handling. Keep the
-        // raw command stream intact here so body semantics are deferred until
-        // expansion time, matching legacy line-by-line behavior.
-        inMacroDefinition = true;
-        pushToCurrent(command);
-        continue;
-      }
-
-      if (inMacroDefinition) {
-        pushToCurrent(command);
-        if (keyword === "endmacro") {
-          inMacroDefinition = false;
-        }
-        continue;
-      }
-
-      if (keyword === "for" || keyword === "while") {
-        const loopNode: LoopNode = {
-          type: keyword,
-          header: command,
-          conditionNode: keyword === "while" ? command.parsed.condition?.expression : command.parsed.forLoop?.range,
-          variable: command.parsed.forLoop?.variable,
-          rangeNode: command.parsed.forLoop?.range,
-          startExpression: command.parsed.forLoop?.start,
-          endExpression: command.parsed.forLoop?.end,
-          commands: [],
-          startLine: command.source.line,
-        };
-        pushToCurrent(loopNode);
-        loopStack.push(loopNode);
-        continue;
-      }
-
-      if (keyword === "endfor" || keyword === "endwhile") {
-        const loopNode = loopStack.pop();
-        if (loopNode) {
-          loopNode.endLine = command.source.line;
-        }
-        continue;
-      }
-
-      if (keyword === "if") {
-        const branch: ConditionalBranch = {
-          kind: "if",
-          header: command,
-          conditionNode: command.parsed.condition?.expression,
-          commands: [],
-          startLine: command.source.line,
-        };
-        const conditionalNode: RuntimeConditionalNode = {
-          type: "if",
-          header: command,
-          branches: [branch],
-          startLine: command.source.line,
-        };
-        pushToCurrent(conditionalNode);
-        ifStack.push(conditionalNode);
-        branchStack.push(branch);
-        continue;
-      }
-
-      if (keyword === "elseif" || keyword === "else") {
-        const currentIf = ifStack[ifStack.length - 1];
-        if (!currentIf) {
-          pushToCurrent(command);
-          continue;
-        }
-        if (branchStack.length > 0) {
-          const closedBranch = branchStack.pop();
-          if (closedBranch) {
-            closedBranch.endLine = command.source.line;
-          }
-        }
-        const branch: ConditionalBranch = {
-          kind: keyword,
-          header: command,
-          conditionNode: keyword === "elseif" ? command.parsed.condition?.expression : undefined,
-          commands: [],
-          startLine: command.source.line,
-        };
-        currentIf.branches.push(branch);
-        branchStack.push(branch);
-        continue;
-      }
-
-      if (keyword === "endif") {
-        const currentIf = ifStack[ifStack.length - 1];
-        const currentLoop = loopStack[loopStack.length - 1];
-        const whileIsInnermost = shouldEndifCloseInnermostWhile(
-          currentLoop?.type,
-          currentLoop?.startLine,
-          currentIf?.startLine,
-        );
-
-        // Asar-compatible quirk: `endif` can terminate either an `if` chain or a
-        // `while` block. Resolve ambiguity by closing the most recently opened
-        // structural block so tree parsing mirrors line-by-line behavior.
-        if (whileIsInnermost) {
-          const loopNode = loopStack.pop();
-          if (loopNode) {
-            loopNode.endLine = command.source.line;
-          }
-          continue;
-        }
-
-        if (branchStack.length > 0) {
-          const closedBranch = branchStack.pop();
-          if (closedBranch) {
-            closedBranch.endLine = command.source.line;
-          }
-        }
-        if (currentIf) {
-          ifStack.pop();
-          currentIf.endLine = command.source.line;
-        }
-        continue;
-      }
-
-      pushToCurrent(command);
-    }
-
-    return roots;
+    return this.programModelBuilder.parseCommandStreamToNodes(commands, sourceFile, startLine) as RuntimeNode[];
   }
 
   getOrBuildPassProgram(commands: string[], sourceFile = this.currentFile, startLine = this.currentLine): RuntimeNode[] {
-    const cacheKey = `${sourceFile}::${startLine}::${commands.join("\n")}`;
-    const cached = this.passProgramCache.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
-    const nodes = this.parseCommandStreamToNodes(commands, sourceFile, startLine);
-    this.passProgramCache.set(cacheKey, nodes);
-    return nodes;
+    return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine) as RuntimeNode[];
   }
 
   getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined {
@@ -3802,13 +3259,7 @@ export class Assembler implements AssemblySession {
   }
 
   createIncludeNode(file: string, source: string): IncludeNode {
-    const commands = splitInlineCommands(this.preprocessBlockCommands(source));
-    const nodes = this.getOrBuildPassProgram(commands, file, 0);
-    return {
-      type: "include",
-      file,
-      commands: nodes,
-    };
+    return this.programModelBuilder.createIncludeNode(file, source);
   }
 }
 

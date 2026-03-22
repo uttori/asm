@@ -1,4 +1,5 @@
 import type { ExpressionHost } from "./architecture-types.js";
+import { AssemblyError } from "./diagnostics.js";
 import type {
   BinaryExpressionNode,
   ExpressionNode,
@@ -111,9 +112,9 @@ export class MathCore {
 
     if (this.str.length > 0) {
       if (this.str.startsWith(",")) {
-        throw new Error(`Invalid input: ${this.str}`);
+        throw new AssemblyError("MATH_INVALID_INPUT", `Invalid input: ${this.str}`);
       } else {
-        throw new Error("Mismatched parentheses.");
+        throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
       }
     }
 
@@ -135,7 +136,7 @@ export class MathCore {
       case "literal":
         return this.parseLiteralNode(expression.value);
       case "string":
-        throw new Error(`String expression is not directly numeric: ${expression.value}`);
+        throw new AssemblyError("MATH_STRING_NOT_NUMERIC", `String expression is not directly numeric: ${expression.value}`);
       case "call":
         return this.callFunction(
           expression.callee.name,
@@ -150,7 +151,7 @@ export class MathCore {
         return this.evaluateBinaryExpressionNode(binaryExpression.operator, binaryExpression.left, binaryExpression.right);
       }
       case "range":
-        throw new Error(`Range expression is not directly numeric: ${renderExpressionNode(expression)}`);
+        throw new AssemblyError("MATH_RANGE_NOT_NUMERIC", `Range expression is not directly numeric: ${renderExpressionNode(expression)}`);
       case "raw":
       default:
         return this.evaluateStringExpression(expression.value);
@@ -216,7 +217,7 @@ export class MathCore {
   ): number {
     const operation = this.operators[operator];
     if (!operation) {
-      throw new Error(`Unsupported binary operator '${operator}'`);
+      throw new AssemblyError("MATH_UNSUPPORTED_BINARY_OPERATOR", `Unsupported binary operator '${operator}'`);
     }
     return operation.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
   }
@@ -637,7 +638,7 @@ export class MathCore {
    * @param {string} message The message to throw.
    */
   throwMathError = (message: string): number => {
-    throw new Error(message);
+    throw new AssemblyError("MATH_EVALUATION_ERROR", message);
   }
 
   /**
@@ -925,7 +926,7 @@ export class MathCore {
         if (name === "defined") {
           return this.getHost().isDefined(value);
         }
-        return this.getHost().getObjectSize(value, name === "sizeof");
+        return this.getHost().getExpressionObjectSize(value, name === "sizeof");
       }
       // --- File Can-Read functions ---
       case "canreadfile1":

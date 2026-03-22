@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { stub } from "sinon";
 import { test } from "./ava-helper.js";
 
@@ -52,6 +54,19 @@ test("macro engine handles labeled invocations after label consumption", (t) => 
   t.is(assembler.defines.get("macro_value"), "7");
 });
 
+test("normalized dispatch rewrite path preserves labeled macro invocation order", (t) => {
+  const assembler = new Assembler();
+  stub(assembler, "addAddressToLine");
+
+  assembler.processNormalizedCommand(commandNode("macro set_define()"), false);
+  assembler.processNormalizedCommand(commandNode("!macro_value = 11"), false);
+  assembler.processNormalizedCommand(commandNode("endmacro"), false);
+  assembler.processNormalizedCommand(commandNode("Entry: %set_define()"), true);
+
+  t.is(assembler.currentParentLabel, "Entry");
+  t.is(assembler.defines.get("macro_value"), "11");
+});
+
 test("define engine resolves standalone define commands through normalized dispatch", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
@@ -86,49 +101,14 @@ test("front-end service handles global labels before directive dispatch", (t) =>
   t.is(assembler.arch, "spc700");
 });
 
-test("pre-dispatch pipeline collects loop body commands", (t) => {
+test("processCommand routes raw loop directives into the typed incremental parser", (t) => {
   const assembler = new Assembler();
-  assembler.collectingLoop = true;
-  assembler.currentLoop = {
-    type: "for",
-    commands: [],
-    startLine: 1,
-  };
-
-  assembler.processCommand("db $01");
-
-  t.is(assembler.currentLoop.commands.length, 1);
-  const [command] = assembler.currentLoop.commands;
-  t.true(typeof command !== "string" && "source" in command);
-  if (typeof command !== "string" && "source" in command) {
-    t.is(command.source.raw, "db $01");
-    t.is(command.kind, "unknown");
-  }
-});
-
-test("pre-dispatch pipeline maps while endif to handleEndIf", (t) => {
-  const assembler = new Assembler();
-  const endIf = stub(assembler, "handleEndIf");
-  assembler.collectingLoop = true;
-  assembler.currentLoop = {
-    type: "while",
-    commands: [],
-    startLine: 1,
-  };
-
-  assembler.processCommand("endif");
-
-  t.true(endIf.calledOnce);
-});
-
-test("pre-dispatch pipeline intercepts raw loop directives", (t) => {
-  const assembler = new Assembler();
-  const handleFor = stub(assembler, "handleFor");
 
   assembler.processCommand("for i = 0..2");
 
-  t.true(handleFor.calledOnce);
-  t.deepEqual(handleFor.firstCall.args[0], ["i", "=", "0..2"]);
+  t.is(assembler.incrementalProgramParseState.loopStack.length, 1);
+  t.is(assembler.incrementalProgramParseState.roots.length, 1);
+  t.deepEqual(assembler.incrementalProgramParseState.roots[0], assembler.incrementalProgramParseState.loopStack[0]);
 });
 
 test("pre-dispatch pipeline loads test rom directive", (t) => {
@@ -151,12 +131,51 @@ test("normalized dispatch also loads test rom directive", (t) => {
   t.deepEqual(Array.from(assembler.romdata.slice(0, 4)), [1, 2, 3, 4]);
 });
 
-test("command pipeline handles character mappings through normalized dispatch", (t) => {
+test("normalized command preprocessing handles character mappings", (t) => {
   const assembler = new Assembler();
 
   assembler.processNormalizedCommand(commandNode('"A" = $42'), false);
 
   t.is(assembler.characterMappings.get("A"), 0x42);
+});
+
+test("struct engine restores write position after struct definition lifecycle", (t) => {
+  const assembler = new Assembler();
+  const originalAddress = 0x808123;
+  assembler.cursorAddress.setWritePosition(originalAddress);
+
+  assembler.structEngine.handleStruct(["struct", "Player", "$808000"]);
+  t.truthy(assembler.currentStruct);
+  t.is(assembler.currentTargetAddress, 0x808000);
+  assembler.currentStruct.offset = 4;
+  assembler.structEngine.handleEndStruct(["endstruct"]);
+
+  t.is(assembler.currentStruct, null);
+  t.is(assembler.currentTargetAddress, originalAddress);
+  t.true(assembler.structs.has("Player"));
+});
+
+test("expression host readRom and readFile preserve defaults and bounds behavior", (t) => {
+  const assembler = new Assembler(new Uint8Array([0x11, 0x22, 0x33]));
+  assembler.readFunctionsEnabled = true;
+  const romStart = assembler.romWriter.pctosnes(0);
+
+  t.is(assembler.expressionHost.readRom(romStart, 2), 0x2211);
+  t.is(assembler.expressionHost.readRom(assembler.romWriter.pctosnes(2), 2, 0x77), 0x77);
+  t.throws(() => assembler.expressionHost.readRom(assembler.romWriter.pctosnes(2), 2), { message: /out of bounds/i });
+
+  const fixturePath = path.join(process.cwd(), "tests", "read-expression.bin");
+  try {
+    fs.writeFileSync(fixturePath, Buffer.from([0xAA, 0xBB, 0xCC]));
+    t.is(assembler.expressionHost.canReadFile(fixturePath, 1, 2), 1);
+    t.is(assembler.expressionHost.readFile(fixturePath, 0, 2), 0xBBAA);
+    t.is(assembler.expressionHost.readFile(fixturePath, 5, 1, 0x44), 0x44);
+    t.throws(() => assembler.expressionHost.readFile(fixturePath, 5, 1), { message: /out of bounds/i });
+  } finally {
+    if (fs.existsSync(fixturePath)) {
+      fs.unlinkSync(fixturePath);
+    }
+  }
 });
 
 test("symbol scope resolves stored local relative labels", (t) => {
@@ -376,27 +395,82 @@ test("symbol scope resolves double-dot local label references", (t) => {
   t.is(assembler.symbolScope.getLabelValue("..idle", false), 0xED39);
 });
 
-test("pre-dispatch pipeline skips non-conditional commands in false blocks", (t) => {
+test("typed conditional nodes skip inactive branches during execution", (t) => {
   const assembler = new Assembler();
-  assembler.condStack.push({ type: "if", cond: false });
-  stub(assembler, "addAddressToLine");
+  const executed: string[] = [];
+  stub(assembler, "processNormalizedCommand").callsFake((command) => {
+    executed.push(command.command);
+  });
 
-  assembler.processCommand("!skipped = 1");
+  const [node] = assembler.parseCommandStreamToNodes([
+    "if 0",
+    "db $10",
+    "else",
+    "db $20",
+    "endif",
+  ], "typed-conditional.asm", 0);
 
-  t.false(assembler.defines.has("skipped"));
+  if (!node || typeof node === "string" || !("type" in node) || node.type !== "if") {
+    t.fail();
+    return;
+  }
+
+  assembler.executeNode(node);
+  t.deepEqual(executed, ["db $20"]);
 });
 
-test("pre-dispatch pipeline re-resolves elseif before dispatch", (t) => {
+test("macro-expanded control flow executes through typed nodes", (t) => {
   const assembler = new Assembler();
-  const handleElseIf = stub(assembler, "handleElseIf");
-  stub(assembler, "addAddressToLine");
-  assembler.defines.set("cond_value", "1");
-  assembler.numtrue = 0;
-  assembler.numif = 1;
+  const source = [
+    "macro emit(flag)",
+    "if <flag>",
+    "  for i = 0..2",
+    "    db !i + 1",
+    "  endfor",
+    "else",
+    "  db $FF",
+    "endif",
+    "endmacro",
+    "%emit(1)",
+  ].join("\n");
 
-  assembler.processCommand("elseif !cond_value");
+  for (const pass of [0, 1, 2]) {
+    assembler.setPass(pass);
+    assembler.setWritePosition(0x808000);
+    for (const [lineNumber, line] of source.split("\n").entries()) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.assembleblock(line);
+    }
+    assembler.finishPass();
+  }
 
-  t.true(handleElseIf.calledOnceWithExactly(["1"]));
+  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0x01, 0x02]);
+});
+
+test("macro-expanded variadic loop bodies defer placeholder resolution until execution", (t) => {
+  const assembler = new Assembler();
+  const source = [
+    "macro emit(...)",
+    "  !a = 0",
+    "  while !a < sizeof(...)",
+    "    db <...[!a]>",
+    "    !a #= !a+1",
+    "  endwhile",
+    "endmacro",
+    "%emit(1, 2, 3)",
+  ].join("\n");
+
+  for (const pass of [0, 1, 2]) {
+    assembler.setPass(pass);
+    assembler.setWritePosition(0x808000);
+    for (const [lineNumber, line] of source.split("\n").entries()) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.assembleblock(line);
+    }
+    assembler.finishPass();
+  }
+
+  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0x01, 0x02, 0x03]);
 });
 
 test("front-end service handles named and static labels through normalized dispatch", (t) => {
@@ -550,7 +624,7 @@ test("typed parser keeps nested condition-loop structures executable", (t) => {
 
 test("stage runner builds program once and executes all stages", (t) => {
   const assembler = new Assembler();
-  const parseSpy = stub(assembler, "parseCommandStreamToNodes").callThrough();
+  const parseSpy = stub(assembler.programModelBuilder, "parseCommandStreamToNodes").callThrough();
   const stagedAssembler = assembler as Assembler & {
     buildProgramModel(source: string, sourceFile?: string, startLine?: number): {
       sourceFile: string;
@@ -579,6 +653,45 @@ test("stage runner builds program once and executes all stages", (t) => {
   t.is(emitStage?.pass, 2);
   t.is(emitStage?.cursor.currentTargetAddress, 0x808001);
   t.is(assembler.romdata[0], 0x01);
+});
+
+test("line-by-line assembleblock uses typed control-flow parsing", (t) => {
+  const source = [
+    "if 1",
+    "  db $01",
+    "else",
+    "  db $02",
+    "endif",
+    "for i = 0..2",
+    "  db !i",
+    "endfor",
+  ].join("\n");
+
+  const assembleByLine = (): number[] => {
+    const assembler = new Assembler();
+    for (const pass of [0, 1, 2]) {
+      assembler.setPass(pass);
+      for (const [lineNumber, line] of source.split("\n").entries()) {
+        assembler.setCurrentLine(lineNumber);
+        assembler.assembleblock(line);
+      }
+      assembler.finishPass();
+    }
+    return Array.from(assembler.getBinaryOutput());
+  };
+
+  const assembleByTree = (): number[] => {
+    const assembler = new Assembler();
+    for (const pass of [0, 1, 2]) {
+      assembler.setPass(pass);
+      assembler.setCurrentLine(0);
+      assembler.assembleblock(source);
+      assembler.finishPass();
+    }
+    return Array.from(assembler.getBinaryOutput());
+  };
+
+  t.deepEqual(assembleByLine(), assembleByTree());
 });
 
 test("stage execution state is recreated per collect stage run", (t) => {

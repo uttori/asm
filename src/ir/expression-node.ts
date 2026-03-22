@@ -1,3 +1,9 @@
+import { createSourceSpan, type SourceSpan } from "../source-location.js";
+
+type ExpressionNodeBase = {
+  span?: SourceSpan;
+};
+
 export type ExpressionNode =
   | IdentifierExpressionNode
   | LiteralExpressionNode
@@ -11,23 +17,23 @@ export type ExpressionNode =
   | RangeExpressionNode
   | RawExpressionNode;
 
-export type IdentifierExpressionNode = {
+export type IdentifierExpressionNode = ExpressionNodeBase & {
   type: "identifier";
   name: string;
 };
 
-export type LiteralExpressionNode = {
+export type LiteralExpressionNode = ExpressionNodeBase & {
   type: "literal";
   value: string;
 };
 
-export type StringExpressionNode = {
+export type StringExpressionNode = ExpressionNodeBase & {
   type: "string";
   value: string;
   quote: "\"" | "'";
 };
 
-export type DefineReferenceExpressionNode = {
+export type DefineReferenceExpressionNode = ExpressionNodeBase & {
   type: "defineReference";
   name?: string;
   content?: string;
@@ -40,19 +46,19 @@ export type ReferenceExpressionNode =
   | MemberExpressionNode
   | IndexExpressionNode;
 
-export type MemberExpressionNode = {
+export type MemberExpressionNode = ExpressionNodeBase & {
   type: "member";
   object: ReferenceExpressionNode;
   property: IdentifierExpressionNode;
 };
 
-export type IndexExpressionNode = {
+export type IndexExpressionNode = ExpressionNodeBase & {
   type: "index";
   object: ReferenceExpressionNode;
   index: ExpressionNode;
 };
 
-export type CallExpressionNode = {
+export type CallExpressionNode = ExpressionNodeBase & {
   type: "call";
   callee: IdentifierExpressionNode;
   arguments: ExpressionNode[];
@@ -60,7 +66,7 @@ export type CallExpressionNode = {
 
 export type UnaryOperator = "<:" | "~" | "-" | "+";
 
-export type UnaryExpressionNode = {
+export type UnaryExpressionNode = ExpressionNodeBase & {
   type: "unary";
   operator: UnaryOperator;
   argument: ExpressionNode;
@@ -87,23 +93,36 @@ export type BinaryOperator =
   | "&&"
   | "||";
 
-export type BinaryExpressionNode = {
+export type BinaryExpressionNode = ExpressionNodeBase & {
   type: "binary";
   operator: BinaryOperator;
   left: ExpressionNode;
   right: ExpressionNode;
 };
 
-export type RangeExpressionNode = {
+export type RangeExpressionNode = ExpressionNodeBase & {
   type: "range";
   start: ExpressionNode;
   end: ExpressionNode;
 };
 
-export type RawExpressionNode = {
+export type RawExpressionNode = ExpressionNodeBase & {
   type: "raw";
   value: string;
 };
+
+/**
+ * Ensures the root expression node keeps at least a coarse span.
+ * @param {ExpressionNode} node The parsed expression node.
+ * @param {string} text The source text that produced the node.
+ * @returns {ExpressionNode} The same node with a root span.
+ */
+function attachRootSpan(node: ExpressionNode, text: string): ExpressionNode {
+  if (!node.span) {
+    node.span = createSourceSpan(0, text.length);
+  }
+  return node;
+}
 
 /**
  * Parses a minimal expression node used by the early IR/tree stages.
@@ -113,16 +132,16 @@ export type RawExpressionNode = {
 export function parseExpressionNode(input: string): ExpressionNode {
   const trimmed = input.trim();
   if (!trimmed) {
-    return { type: "raw", value: "" };
+    return { type: "raw", value: "", span: createSourceSpan(0, 0) };
   }
 
   const rangeIndex = findTopLevelRange(trimmed);
   if (rangeIndex !== -1) {
-    return {
+    return attachRootSpan({
       type: "range",
       start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
       end: parseExpressionNode(trimmed.slice(rangeIndex + 2)),
-    };
+    }, trimmed);
   }
 
   try {
@@ -130,11 +149,11 @@ export function parseExpressionNode(input: string): ExpressionNode {
     const parser = new ExpressionParser(tokens);
     const expression = parser.parseExpression();
     if (!parser.isAtEnd()) {
-      return { type: "raw", value: trimmed };
+      return { type: "raw", value: trimmed, span: createSourceSpan(0, trimmed.length) };
     }
-    return expression;
+    return attachRootSpan(expression, trimmed);
   } catch {
-    return { type: "raw", value: trimmed };
+    return { type: "raw", value: trimmed, span: createSourceSpan(0, trimmed.length) };
   }
 }
 
