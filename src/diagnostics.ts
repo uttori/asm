@@ -1,4 +1,4 @@
-import type { SourceSpan } from "./source-location.js";
+import { sourceSpanToRange, type SourceRange, type SourceSpan } from "./source-location.js";
 
 export type AssemblyDiagnosticSeverity = "error" | "warning" | "info";
 
@@ -14,6 +14,7 @@ export type AssemblySourceLocation = {
   file: string;
   line: number;
   span?: SourceSpan;
+  range?: SourceRange;
 };
 
 export type AssemblyDiagnostic = {
@@ -32,9 +33,26 @@ export type AssemblySymbolDefinition = {
   containerName?: string;
 };
 
+export type AssemblySymbolReferenceKind =
+  | "label"
+  | "define"
+  | "macro"
+  | "function"
+  | "include"
+  | "instruction"
+  | "unknown";
+
+export type AssemblySymbolReference = {
+  name: string;
+  kind: AssemblySymbolReferenceKind;
+  location: AssemblySourceLocation;
+  containerName?: string;
+};
+
 export type AssemblyAnalysisResult = {
   diagnostics: AssemblyDiagnostic[];
   symbols: AssemblySymbolDefinition[];
+  references: AssemblySymbolReference[];
 };
 
 /**
@@ -67,6 +85,22 @@ export class AssemblyError extends Error {
     this.location = options.location;
     this.stage = options.stage;
   }
+}
+
+/**
+ * Creates a normalized source location object for diagnostics and tooling.
+ * @param {string} file Source file path.
+ * @param {number} line Zero-based source line.
+ * @param {SourceSpan} [span] Optional precise source span.
+ * @returns {AssemblySourceLocation} The normalized source location.
+ */
+export function createAssemblySourceLocation(file: string, line: number, span?: SourceSpan): AssemblySourceLocation {
+  return {
+    file,
+    line,
+    span,
+    range: span ? sourceSpanToRange(span, line) : undefined,
+  };
 }
 
 /**

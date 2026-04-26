@@ -1,4 +1,3 @@
-import fs from "fs";
 import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
@@ -8,7 +7,6 @@ import { parseExpressionNode } from "../src/ir/expression-node.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";
 import { getDefineVariable, splitCommandIntoWords, splitInlineCommands } from "../src/services/command-text-service.js";
 import { handleArch } from "../src/directives/layout.js";
-import { DirectiveContext } from "../src/directives/types.js";
 import { handleIncbin } from "../src/directives/include-source.js";
 
 const makeCommand = (command: string) => createNormalizedCommand(
@@ -100,7 +98,7 @@ test("resolvedefines - preserves local label arithmetic expressions", t => {
   assembler.currentParentLabel = "zombie_spawner_data_zone_difficulty_offset";
   assembler.currentGlobalParentLabel = "zombie_spawner_data";
   assembler.currentParentIsGlobal = false;
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
 
   t.is(
     assembler.resolvedefines(".zone_n-.zone_max"),
@@ -178,22 +176,25 @@ test("getnum - throws error for undefined defines", t => {
   }, { message: "Define 'UNDEFINED_DEFINE' not found." }, "Should throw for undefined defines");
 });
 
-test("setPass - updates the current pass of assembly", t => {
+test("activateStage updates the current stage of assembly", t => {
   const assembler = new Assembler();
 
-  // Default pass should be 1
-  t.is(assembler.pass, 0, "Default pass should be 0");
+  t.true(assembler.isDefinitionCollectionStage, "Default stage should collect definitions");
+  t.is(assembler.mode, "layout", "Default stage should use layout mode");
+  t.false(assembler.canEmitBytes, "Default stage should not emit bytes");
 
-  // Set to pass 2
-  assembler.setPass(2);
-  t.is(assembler.pass, 2, "Pass should be updated to 2");
+  assembler.activateStage("emitProgram");
+  t.false(assembler.isDefinitionCollectionStage, "Emit stage should not collect definitions");
+  t.is(assembler.mode, "emit", "Emit stage should use emit mode");
+  t.true(assembler.canEmitBytes, "Emit stage should allow byte emission");
 
-  // Set to pass 1
-  assembler.setPass(1);
-  t.is(assembler.pass, 1, "Pass should be updated to 1");
+  assembler.activateStage("resolveLayout");
+  t.false(assembler.isDefinitionCollectionStage, "Layout stage should not collect definitions");
+  t.is(assembler.mode, "emit", "Layout stage should use emit sizing mode");
+  t.false(assembler.canEmitBytes, "Layout stage should not emit bytes");
 });
 
-test("setPass - resets guarded status for included files", t => {
+test("activateStage resets guarded status for included files", t => {
   const assembler = new Assembler();
 
   // Add a guarded file to the included files map
@@ -203,8 +204,7 @@ test("setPass - resets guarded status for included files", t => {
   // Verify it's marked as guarded
   t.true(assembler.includedFiles.get(testFile).guarded);
 
-  // Change to a new pass
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
 
   // Verify guard has been reset
   t.false(assembler.includedFiles.get(testFile).guarded);
@@ -227,7 +227,7 @@ test("splitInlineCommands splits relative-label command fragments after inline s
 
 test("trace listener captures command and write events", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.romdata = new Uint8Array(0x100000);
   assembler.currentFile = new URL(import.meta.url).pathname;
   assembler.currentLine = 1;
@@ -269,7 +269,7 @@ test("trace collector filters to matching address ranges", t => {
 
   collector.listener({
     type: "write",
-    pass: 2,
+    stage: "emitProgram",
     arch: "spc700",
     file: "trace.asm",
     line: 12,
@@ -281,7 +281,7 @@ test("trace collector filters to matching address ranges", t => {
   });
   collector.listener({
     type: "write",
-    pass: 2,
+    stage: "emitProgram",
     arch: "spc700",
     file: "trace.asm",
     line: 13,
@@ -298,12 +298,13 @@ test("trace collector filters to matching address ranges", t => {
 
 test("finishPass - updates header and CRC32", t => {
   const assembler = new Assembler();
-
-  // Mock the updateHeaderAndCRC32 method
   const updateHeaderSpy = sinon.spy(assembler, "updateHeaderAndCRC32");
+  t.teardown(() => updateHeaderSpy.restore());
+
+  assembler.activateStage("emitProgram");
 
   assembler.finishPass();
-  t.is(updateHeaderSpy.callCount, 1, "updateHeaderAndCRC32 should be called when targetRom is true");
+  t.is(updateHeaderSpy.callCount, 1, "updateHeaderAndCRC32 should be called during the finalize stage");
 });
 
 test("addAddressToLine - adds mapping", t => {
@@ -316,13 +317,11 @@ test("addAddressToLine - adds mapping", t => {
   assembler.setCurrentFile("test.asm");
   assembler.setCurrentLine(10);
 
-  // On pass 1, mapping should not be added
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
   assembler.addAddressToLine(0x8000);
   t.is(includeMappingSpy.callCount, 1, "Mapping should not be added on pass 1");
 
-  // On pass 2, mapping should be added
-  assembler.setPass(2);
+  assembler.activateStage("emitProgram");
   assembler.addAddressToLine(0x8000);
   t.is(includeMappingSpy.callCount, 2, "Mapping should be added on pass 2");
   t.deepEqual(
@@ -770,7 +769,7 @@ test("expandOperand - evaluates math expressions", t => {
 
 test("expandOperand - handles label references", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   // Test 1: Label not found
   const { expanded: expanded1, length: length1 } = assembler.operandResolver.expandOperand("some_label");
@@ -1176,15 +1175,16 @@ test("readFile - successful read", t => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
 
-  const readFileStub = sinon.stub(fs, "readFileSync");
-  const buffer = Buffer.from([0x01, 0x02, 0x03, 0x04]);
-  readFileStub.returns(buffer);
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/test.bin");
+  const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0x01, 0x02, 0x03, 0x04]));
 
   const result = assembler.readFile("test.bin");
 
   t.deepEqual(result, new Uint8Array([0x01, 0x02, 0x03, 0x04]));
+  t.true(resolvePathStub.calledOnce);
   t.true(readFileStub.calledOnce);
 
+  resolvePathStub.restore();
   readFileStub.restore();
 });
 
@@ -1192,14 +1192,15 @@ test("readFile - relative path resolution", t => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
 
-  const readFileStub = sinon.stub(fs, "readFileSync");
-  readFileStub.returns(Buffer.from([0xFF]));
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/data.bin");
+  const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0xFF]));
 
   assembler.readFile("data.bin");
 
-  // Should resolve relative to current file's directory
+  t.true(resolvePathStub.calledWith("data.bin", sinon.match.has("currentFile", "/test/path/current.asm")));
   t.true(readFileStub.calledWith("/test/path/data.bin"));
 
+  resolvePathStub.restore();
   readFileStub.restore();
 });
 
@@ -1210,23 +1211,23 @@ test("readFile - fallback to cwd when no current file", t => {
   const cwdStub = sinon.stub(process, "cwd");
   cwdStub.returns("/fallback/dir");
 
-  const readFileStub = sinon.stub(fs, "readFileSync");
-  readFileStub.returns(Buffer.from([0xAA]));
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").callsFake((filename) => `/fallback/dir/${filename}`);
+  const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0xAA]));
 
   assembler.readFile("data.bin");
 
-  // Should resolve relative to cwd
+  t.true(resolvePathStub.calledWith("data.bin", sinon.match.has("currentFile", "")));
   t.true(readFileStub.calledWith("/fallback/dir/data.bin"));
 
   cwdStub.restore();
+  resolvePathStub.restore();
   readFileStub.restore();
 });
 
 test("readFile - throws error on file not found", t => {
   const assembler = new Assembler();
 
-  const readFileStub = sinon.stub(fs, "readFileSync");
-  readFileStub.throws(new Error("ENOENT: no such file or directory"));
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(undefined);
 
   const error = t.throws(() => {
     assembler.readFile("nonexistent.bin");
@@ -1234,7 +1235,7 @@ test("readFile - throws error on file not found", t => {
 
   t.is(error.message, "Error reading file: nonexistent.bin");
 
-  readFileStub.restore();
+  resolvePathStub.restore();
 });
 
 test("readFile - handles binary data correctly", t => {
@@ -1246,8 +1247,8 @@ test("readFile - handles binary data correctly", t => {
     0xDE, 0xAD, 0xBE, 0xEF // Common magic bytes
   ]);
 
-  const readFileStub = sinon.stub(fs, "readFileSync");
-  readFileStub.returns(testBuffer);
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/binary.dat");
+  const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array(testBuffer));
 
   const result = assembler.readFile("binary.dat");
 
@@ -1257,6 +1258,7 @@ test("readFile - handles binary data correctly", t => {
     t.is(result[i], testBuffer[i]);
   }
 
+  resolvePathStub.restore();
   readFileStub.restore();
 });
 
@@ -1265,101 +1267,87 @@ test("readFile - handles text data with encoding", t => {
 
   // Create a string with sample text content
   const testString = "This is a test file with text content.";
-  const readFileStub = sinon.stub(fs, "readFileSync");
-  readFileStub.returns(testString);
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/text.txt");
+  const readFileStub = sinon.stub(assembler.fileProvider, "readTextFile").returns(testString);
 
   const result = assembler.readFile("text.txt", "utf8");
 
   // Verify the result is a string and matches the expected content
   t.is(result, testString);
   t.is(typeof result, "string");
-  t.true(readFileStub.calledWith(sinon.match.string, "utf8"));
+  t.true(readFileStub.calledWith("/test/path/text.txt", "utf8"));
 
+  resolvePathStub.restore();
   readFileStub.restore();
 });
 
 test("resolveIncludePath - absolute path", t => {
   const assembler = new Assembler();
-  const existsSyncStub = sinon.stub(fs, "existsSync");
-
-  // Mock absolute path exists
   const absolutePath = process.platform === "win32" ? "C:\\test\\file.asm" : "/test/file.asm";
-  existsSyncStub.withArgs(absolutePath).returns(true);
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(absolutePath);
 
   const result = assembler.resolveIncludePath(absolutePath);
 
   t.is(result, absolutePath);
-  t.true(existsSyncStub.calledWith(absolutePath));
+  t.true(resolvePathStub.calledWith(absolutePath, sinon.match.object));
 
-  existsSyncStub.restore();
+  resolvePathStub.restore();
 });
 
 test("resolveIncludePath - relative to current file", t => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
-  const existsSyncStub = sinon.stub(fs, "existsSync");
-
-  // Mock relative path exists
   const relativePath = "file.asm";
   const expectedPath = "/test/path/file.asm";
-  existsSyncStub.withArgs(expectedPath).returns(true);
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(expectedPath);
 
   const result = assembler.resolveIncludePath(relativePath);
 
   t.is(result, expectedPath);
-  t.true(existsSyncStub.calledWith(expectedPath));
+  t.true(resolvePathStub.calledWith(relativePath, sinon.match.has("currentFile", "/test/path/current.asm")));
 
-  existsSyncStub.restore();
+  resolvePathStub.restore();
 });
 
 test("resolveIncludePath - from include paths", t => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
   assembler.includePaths = ["./", "/other/include/path"];
-  const existsSyncStub = sinon.stub(fs, "existsSync");
-
-  // Mock first attempt fails, second succeeds
   const filename = "file.asm";
-  const firstAttempt = "/test/path/file.asm";
   const secondAttempt = "/other/include/path/file.asm";
-
-  existsSyncStub.withArgs(firstAttempt).returns(false);
-  existsSyncStub.withArgs(secondAttempt).returns(true);
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(secondAttempt);
 
   const result = assembler.resolveIncludePath(filename);
 
   t.is(result, secondAttempt);
-  t.true(existsSyncStub.calledWith(firstAttempt));
-  t.true(existsSyncStub.calledWith(secondAttempt));
+  t.true(resolvePathStub.calledWith(filename, sinon.match.has("includePaths", assembler.includePaths)));
 
-  existsSyncStub.restore();
+  resolvePathStub.restore();
 });
 
 test("resolveIncludePath - strips quotes", t => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
-  const existsSyncStub = sinon.stub(fs, "existsSync");
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/file.asm");
 
-  // Test with different quote types
   const doubleQuoted = '"file.asm"';
   const singleQuoted = "'file.asm'";
   const backtickQuoted = "`file.asm`";
   const expectedPath = "/test/path/file.asm";
 
-  existsSyncStub.withArgs(expectedPath).returns(true);
-
   t.is(assembler.resolveIncludePath(doubleQuoted), expectedPath);
   t.is(assembler.resolveIncludePath(singleQuoted), expectedPath);
   t.is(assembler.resolveIncludePath(backtickQuoted), expectedPath);
 
-  existsSyncStub.restore();
+  t.true(resolvePathStub.calledThrice);
+  resolvePathStub.restore();
 });
 
 test("resolveIncludePath - throws error when file not found", t => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
   assembler.includePaths = ["./", "/other/include/path"];
-  const existsSyncStub = sinon.stub(fs, "existsSync").returns(false);
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(undefined);
 
   const filename = "nonexistent.asm";
 
@@ -1369,7 +1357,7 @@ test("resolveIncludePath - throws error when file not found", t => {
 
   t.is(error.message, `Could not find file: ${filename}`);
 
-  existsSyncStub.restore();
+  resolvePathStub.restore();
 });
 
 test("handleInclude - includeonce adds current file to guarded set", t => {
@@ -1427,32 +1415,23 @@ test("handleInclude - adds file to included files set", t => {
 
 test("handleInclude - handles undefined filename", t => {
   const assembler = new Assembler();
-
-  // Stub assemblefile to verify behavior with undefined filename
-  const assemblefileStub = sinon.stub(assembler, "assemblefile");
-
-  assembler.handleInclude("include", undefined, false);
-
-  t.true(assembler.includedFiles.has(undefined));
-  t.true(assembler.includedFiles.get(undefined).included);
-  t.false(assembler.includedFiles.get(undefined).guarded);
-  t.true(assemblefileStub.calledWith(undefined, true));
-
-  // Cleanup
-  assemblefileStub.restore();
+  const error = t.throws(() => {
+    assembler.handleInclude("include", undefined, false);
+  });
+  t.is(error.message, "Missing include target for include");
 });
 
 test("assemblefile - basic file assembly", t => {
   const assembler = new Assembler();
-  const fsReadFileStub = sinon.stub(fs, "readFileSync");
   const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+  const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
 
   // Setup test file content
   const testFilePath = "/test/path/file.asm";
   const testContent = "LDA #$01\nSTA $2100";
 
   resolvePathStub.returns(testFilePath);
-  fsReadFileStub.returns(testContent);
+  readTextFileStub.returns(testContent);
 
   // Stub normalized dispatch to verify each line is executed
   const processCommandStub = sinon.stub(assembler, "processNormalizedCommand");
@@ -1464,7 +1443,7 @@ test("assemblefile - basic file assembly", t => {
   t.true(processCommandStub.calledWithMatch(sinon.match.has("command", "STA $2100")));
 
   // Cleanup
-  fsReadFileStub.restore();
+  readTextFileStub.restore();
   resolvePathStub.restore();
   processCommandStub.restore();
 });
@@ -1472,7 +1451,7 @@ test("assemblefile - basic file assembly", t => {
 test("assemblefile - respects include guards", t => {
   const assembler = new Assembler();
   const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
-  const fsReadFileStub = sinon.stub(fs, "readFileSync");
+  const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
 
   const testFilePath = "/test/path/guarded.asm";
   resolvePathStub.returns(testFilePath);
@@ -1486,12 +1465,12 @@ test("assemblefile - respects include guards", t => {
   assembler.assemblefile("guarded.asm", true);
 
   t.false(processCommandStub.called);
-  t.false(fsReadFileStub.called);
+  t.false(readTextFileStub.called);
 
   // Cleanup
   resolvePathStub.restore();
   processCommandStub.restore();
-  fsReadFileStub.restore();
+  readTextFileStub.restore();
 });
 
 test("assemblefile - throws on recursion limit", t => {
@@ -1533,10 +1512,10 @@ test("assemblefile - throws on recursive include cycle before recursion limit", 
 
 test("assemblefile - maintains include stack", t => {
   const assembler = new Assembler();
-  const fsReadFileStub = sinon.stub(fs, "readFileSync");
+  const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
   const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
   t.teardown(() => {
-    fsReadFileStub.restore();
+    readTextFileStub.restore();
     resolvePathStub.restore();
   });
 
@@ -1546,7 +1525,7 @@ test("assemblefile - maintains include stack", t => {
 
   resolvePathStub.returns(includedFile);
 
-  fsReadFileStub.returns(""); // Empty file for simplicity
+  readTextFileStub.returns(""); // Empty file for simplicity
 
   // Set current file
   assembler.currentFile = mainFile;
@@ -1562,9 +1541,9 @@ test("assemblefile - maintains include stack", t => {
 test("assemblefile - handles file read errors", t => {
   const assembler = new Assembler();
   const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
-  const fsReadFileStub = sinon.stub(fs, "readFileSync");
+  const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
   t.teardown(() => {
-    fsReadFileStub.restore();
+    readTextFileStub.restore();
     resolvePathStub.restore();
   });
 
@@ -1572,7 +1551,7 @@ test("assemblefile - handles file read errors", t => {
   resolvePathStub.returns(testFilePath);
 
   // Simulate file read error
-  fsReadFileStub.throws(new Error("File read error"));
+  readTextFileStub.throws(new Error("File read error"));
 
   // Set current file and include stack
   const originalFile = "/test/path/original.asm";
@@ -1591,7 +1570,7 @@ test("assemblefile - handles file read errors", t => {
 
 test("handleCharacterMapping - basic mapping", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   // Test basic character mapping
   assembler.handleCharacterMapping(['"A"', "=", "0x42"]);
@@ -1600,7 +1579,7 @@ test("handleCharacterMapping - basic mapping", t => {
 
 test("handleCharacterMapping - single quotes", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   // Test with single quotes
   assembler.handleCharacterMapping(["'B'", "=", "0x43"]);
@@ -1609,7 +1588,7 @@ test("handleCharacterMapping - single quotes", t => {
 
 test("handleCharacterMapping - numeric value", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   // Test with decimal number
   assembler.handleCharacterMapping(['"C"', "=", "65"]);
@@ -1618,7 +1597,7 @@ test("handleCharacterMapping - numeric value", t => {
 
 test("handleCharacterMapping - hex value", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   // Test with hex number
   assembler.handleCharacterMapping(['"D"', "=", "$FF"]);
@@ -1627,7 +1606,7 @@ test("handleCharacterMapping - hex value", t => {
 
 test("handleCharacterMapping - overwrite existing mapping", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   // Set initial mapping
   assembler.handleCharacterMapping(['"E"', "=", "0x50"]);
@@ -2420,7 +2399,7 @@ test("resolvedefines - basic define replacement", t => {
 
 test("resolvedefines - not equal operator", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
   assembler.defines.set("TEST", "42");
   assembler.defines.set("MIN", "10");
   assembler.defines.set("MAX", "100");
@@ -2459,7 +2438,7 @@ test("resolvedefines - double backslash handling", t => {
 
 test("resolvedefines - curly brace syntax", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
   assembler.defines.set("TEST", "42");
   assembler.defines.set("FOO_BAR", "baz");
 
@@ -2556,7 +2535,7 @@ test("resolvedefines - undefined defines", t => {
 
 test("resolvedefines - complex expressions", t => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
   assembler.defines.set("X", "10");
   assembler.defines.set("Y", "20");
 
@@ -2755,7 +2734,7 @@ test("setIncludePaths", t => {
 
 test("handleIncbin", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
 
   // Mock the readFile method
   const mockData = new Uint8Array([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
@@ -2836,7 +2815,7 @@ test("handleIncbin", t => {
 
   // Test with arrow syntax and label (pass 0)
   writtenBytes.length = 0;
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
   const setLabelStub = sinon.stub(assembler.symbolScope, "setLabel").callsFake((label, _addr) => {
     t.is(label, "TestLabel", "Label should be set correctly");
   });
@@ -2849,7 +2828,7 @@ test("handleIncbin", t => {
 
   // Test with arrow syntax and label (pass 1)
   writtenBytes.length = 0;
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
   const getLabelValueStub = sinon.stub(assembler.symbolScope, "getLabelValue").callsFake((label) => {
     t.is(label, "TestLabel", "Label should be looked up correctly");
     return 0x2000;
@@ -4188,7 +4167,7 @@ test("writeDataByLength - handles edge values", t => {
 
 test("handleDataDirective - basic numeric values", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
   const write2Spy = sinon.spy(assembler, "write2");
 
@@ -4213,7 +4192,7 @@ test("handleDataDirective - basic numeric values", t => {
 
 test("handleDataDirective - different directives", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
   const write2Spy = sinon.spy(assembler, "write2");
   const write3Spy = sinon.spy(assembler, "write3");
@@ -4250,7 +4229,7 @@ test("handleDataDirective - different directives", t => {
 
 test("handleDataDirective - pass 0 estimates byte size", t => {
   const assembler = new Assembler();
-  assembler.setPass(0);
+  assembler.activateStage("collectDefinitions");
   assembler.defines.set("bytes", "1,2,3");
   const stepSpy = sinon.spy(assembler, "step");
 
@@ -4268,7 +4247,7 @@ test("handleDataDirective - pass 0 estimates byte size", t => {
 
 test("handleDataDirective - string values", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
 
   // Test with quoted string
@@ -4303,7 +4282,7 @@ test("handleDataDirective - string values", t => {
 
 test("handleDataDirective - deprecated # syntax", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
   // const consoleWarnStub = sinon.stub(console, "warn");
 
@@ -4319,7 +4298,7 @@ test("handleDataDirective - deprecated # syntax", t => {
 
 test("handleDataDirective - math expressions", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
   const mathStub = sinon.stub(assembler.mathCore, "math");
 
@@ -4340,7 +4319,7 @@ test("handleDataDirective - math expressions", t => {
 
 test("handleDataDirective - struct references", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
   const resolveStructLabelStub = sinon.stub(assembler.structEngine, "resolveStructLabel");
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
@@ -4364,7 +4343,7 @@ test("handleDataDirective - struct references", t => {
 
 test("handleDataDirective - label references", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
   const getLabelValueStub = sinon.stub(assembler.symbolScope, "getLabelValue");
 
@@ -4393,7 +4372,7 @@ test("handleDataDirective - label references", t => {
 
 test("handleDataDirective - throws on unsupported directive type", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
 
   // Test with invalid directive type
   const error = t.throws(() => {
@@ -4412,7 +4391,7 @@ test("handleDataDirective - throws on unsupported directive type", t => {
 
 test("handleDataDirective - skips writing in pass 0", t => {
   const assembler = new Assembler();
-  assembler.setPass(0);
+  assembler.activateStage("collectDefinitions");
 
   // Spy on write methods to verify they're not called
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4438,7 +4417,7 @@ test("handleDataDirective - skips writing in pass 0", t => {
 
 test("handleDataDirective - throws on empty or invalid params", t => {
   const assembler = new Assembler();
-  assembler.setPass(1);
+  assembler.activateStage("resolveLayout");
 
   // Test with empty params array
   const error1 = t.throws(() => {
@@ -4570,7 +4549,7 @@ test("handleOrg - handles address with whitespace", t => {
 
 test("typed conditional nodes execute the first matching branch", t => {
   const assembler = new Assembler();
-  assembler.setPass(2);
+  assembler.activateStage("emitProgram");
   assembler.defines.set("state", "1");
   const executed: string[] = [];
   sinon.stub(assembler, "processNormalizedCommand").callsFake((command) => {
@@ -4598,7 +4577,7 @@ test("typed conditional nodes execute the first matching branch", t => {
 
 test("typed conditional nodes support nested branch execution", t => {
   const assembler = new Assembler();
-  assembler.setPass(2);
+  assembler.activateStage("emitProgram");
   assembler.defines.set("outer", "1");
   assembler.defines.set("inner", "0");
   const executed: string[] = [];
@@ -5599,19 +5578,19 @@ test("addAddressToLine - adds mapping in all passes", t => {
   const includeMappingSpy = sinon.spy(assembler.addressToLineMapping, "includeMapping");
 
   // Test in pass 0
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
   assembler.currentFile = "test.asm";
   assembler.currentLine = 10;
   assembler.addAddressToLine(0x8000);
   t.true(includeMappingSpy.called, "Should add mapping in pass 0");
 
   // Test in pass 1
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
   assembler.addAddressToLine(0x8000);
   t.true(includeMappingSpy.called, "Should add mapping in pass 1");
 
   // Test in pass 2
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.addAddressToLine(0x8000);
   t.true(includeMappingSpy.called, "Should add mapping in pass 2");
   t.true(includeMappingSpy.calledWith("test.asm", 11, 0x8000),
@@ -5623,7 +5602,7 @@ test("addAddressToLine - adds mapping in all passes", t => {
 
 test("addAddressToLine - handles different address values", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.currentFile = "test.asm";
   assembler.currentLine = 5;
 
@@ -5652,7 +5631,7 @@ test("addAddressToLine - handles different address values", t => {
 
 test("addAddressToLine - uses correct line number", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
 
   const includeMappingSpy = sinon.spy(assembler.addressToLineMapping, "includeMapping");
 
@@ -5738,7 +5717,7 @@ test("setLabel - handles label creation and redefinition across passes", t => {
   const assembler = new Assembler();
 
   // Test pass 0 behavior
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   // Basic label setting
   assembler.currentNamespace = "";
@@ -5761,7 +5740,7 @@ test("setLabel - handles label creation and redefinition across passes", t => {
   t.is(assembler.labelTable.get("testNS_nsLabel").value, 0x3500, "Should update label value when redefined in pass 0");
 
   // Test pass 1 behavior
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   // Update existing label
   assembler.currentNamespace = "";
@@ -5773,7 +5752,7 @@ test("setLabel - handles label creation and redefinition across passes", t => {
   t.is(assembler.labelTable.get("pass1Label").value, 0x4000, "Should create new label in pass 1");
 
   // Test pass 2 behavior
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
 
   // In pass 2, changing an existing label's value throws (assembler detects inconsistency)
   t.throws(() => {
@@ -5792,14 +5771,13 @@ test("setLabel - handles label creation and redefinition across passes", t => {
   }, { instanceOf: Error });
   t.is(error2.message, "Label 'testNS_nsLabel' is not static and cannot be used in conditionals.", "Should throw error when static flag doesn't match original definition");
 
-  // Stage-backed symbol scope no longer validates arbitrary pass values.
-  assembler.pass = 3;
+  // Symbol writes remain allowed in the active emit stage.
   t.notThrows(() => {
     assembler.symbolScope.setLabel("testLabel", 0x1700);
-  }, "Should allow direct symbol writes regardless of pass value");
+  }, "Should allow direct symbol writes during the emit stage");
 
   // Test default value (current SNES position)
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
   assembler.currentTargetAddress = 0x8000;
   assembler.currentNamespace = "";
   assembler.symbolScope.setLabel("positionLabel");
@@ -5814,7 +5792,7 @@ test("findNextLabel and findPreviousLabel", (t) => {
   assembler.backwardLabels = {};
 
   // Test findNextLabel in pass 0
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
   assembler.currentTargetAddress = 0x1000;
   t.is(assembler.symbolScope.findNextLabel("+"), 0, "Should return 0 in pass 0");
 
@@ -5822,7 +5800,7 @@ test("findNextLabel and findPreviousLabel", (t) => {
   t.is(assembler.symbolScope.findPreviousLabel("-"), 0, "Should return 0 in pass 0");
 
   // Setup for pass 2 tests
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
 
   // Test findNextLabel with no labels defined
   const error1 = t.throws(() => {
@@ -5921,7 +5899,7 @@ test("handleRelativeLabel", (t) => {
   assembler.backwardLabels = {};
 
   // Test pass 0 behavior - should track labels but not resolve
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
   assembler.currentTargetAddress = 0x1000;
 
   // Test forward label tracking in pass 0
@@ -5959,7 +5937,7 @@ test("handleRelativeLabel", (t) => {
   ], "Should track backward label with correct depth");
 
   // Test pass 2 behavior - should resolve labels
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
 
   // Setup for resolution tests
   assembler.forwardLabels = {
@@ -6363,8 +6341,8 @@ test("processCommand - spcblock emits expected nspc stream", t => {
     "lda #$BB",
   ];
 
-  for (let pass = 0; pass <= 2; pass++) {
-    assembler.setPass(pass);
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
     for (const [lineNumber, line] of lines.entries()) {
       assembler.setCurrentLine(lineNumber);
       assembler.processCommand(line);
@@ -6392,8 +6370,8 @@ test("processCommand - spc700-inline auto-wraps in implicit spcblock", t => {
     "lab:",
   ];
 
-  for (let pass = 0; pass <= 2; pass++) {
-    assembler.setPass(pass);
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
     for (const [lineNumber, line] of lines.entries()) {
       assembler.setCurrentLine(lineNumber);
       assembler.processCommand(line);
@@ -6738,20 +6716,19 @@ test("expressionHost - sizeof, objectsize, datasize", t => {
 test("expressionHost - filesize", t => {
   const assembler = new Assembler();
   const expectedPath = `${process.cwd()}/existing_file.txt`;
-
-  const existsStub = sinon.stub(fs, "existsSync").callsFake((filePath: fs.PathLike) => {
-    return filePath === expectedPath;
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").callsFake((filename) => {
+    return filename === "existing_file.txt" ? expectedPath : undefined;
   });
-  const statStub = sinon.stub(fs, "statSync").callsFake((filePath: fs.PathLike) => {
+  const statStub = sinon.stub(assembler.fileProvider, "stat").callsFake((filePath: string) => {
     if (filePath === expectedPath) {
-      return { size: 1024 } as fs.Stats;
+      return { exists: true, readable: true, size: 1024 };
     }
-    throw new Error(`ENOENT: no such file or directory, stat '${String(filePath)}'`);
+    return { exists: false, readable: false };
   });
 
   // Test filesize with existing file
   t.is(assembler.expressionHost.getFileSize("existing_file.txt"), 1024, "Should return correct file size");
-  t.true(existsStub.called, "Should check file existence before stat");
+  t.true(resolvePathStub.called, "Should resolve file existence before stat");
   t.true(statStub.calledOnce, "Should stat resolved file path");
 
   // Test filesize with non-existent file
@@ -6759,10 +6736,10 @@ test("expressionHost - filesize", t => {
     assembler.expressionHost.getFileSize("nonexistent_file.txt");
   });
   t.truthy(error, "Should throw error for non-existent file");
-  t.true(existsStub.callCount > 1, "Should check candidate paths for missing files");
+  t.true(resolvePathStub.callCount > 1, "Should check candidate paths for missing files");
   t.is(statStub.callCount, 1, "Should not stat missing files");
 
-  existsStub.restore();
+  resolvePathStub.restore();
   statStub.restore();
 });
 
@@ -6770,15 +6747,23 @@ test("expressionHost - getfilestatus", t => {
   const assembler = new Assembler();
   const readablePath = `${process.cwd()}/readable_file.txt`;
   const unreadablePath = `${process.cwd()}/unreadable_file.txt`;
-
-  const existsStub = sinon.stub(fs, "existsSync").callsFake((filePath: fs.PathLike) => {
-    return filePath === readablePath || filePath === unreadablePath;
-  });
-  const accessStub = sinon.stub(fs, "accessSync").callsFake((filePath: fs.PathLike) => {
-    if (filePath === readablePath) {
-      return;
+  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").callsFake((filename) => {
+    if (filename === "readable_file.txt") {
+      return readablePath;
     }
-    throw new Error("EACCES: permission denied");
+    if (filename === "unreadable_file.txt") {
+      return unreadablePath;
+    }
+    return undefined;
+  });
+  const statStub = sinon.stub(assembler.fileProvider, "stat").callsFake((filePath: string) => {
+    if (filePath === readablePath) {
+      return { exists: true, readable: true, size: 1 };
+    }
+    if (filePath === unreadablePath) {
+      return { exists: true, readable: false };
+    }
+    return { exists: false, readable: false };
   });
 
   // Test getfilestatus with readable file
@@ -6790,18 +6775,18 @@ test("expressionHost - getfilestatus", t => {
   // Test getfilestatus with non-existent file
   t.is(assembler.expressionHost.getFileStatus("nonexistent_file.txt"), 1, "Should return 1 for non-existent file");
 
-  t.true(existsStub.callCount >= 3, "Should check file existence for each query");
-  t.is(accessStub.callCount, 2, "Should only check access for existing files");
+  t.true(resolvePathStub.callCount >= 3, "Should check file existence for each query");
+  t.is(statStub.callCount, 2, "Should only stat existing files");
 
-  existsStub.restore();
-  accessStub.restore();
+  resolvePathStub.restore();
+  statStub.restore();
 });
 
 
 test("write1_65816 - basic functionality", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
   assembler.currentTargetStartAddress = 0x008000;
@@ -6817,7 +6802,7 @@ test("write1_65816 - basic functionality", t => {
 test("write1_65816 - NaN handling", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
 
@@ -6831,7 +6816,7 @@ test("write1_65816 - NaN handling", t => {
 test("write1_65816 - bank wrapping", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x10000).fill(0);
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
 
   // Position at the end of a bank
   assembler.currentTargetAddress = 0x00FFFF;
@@ -6855,7 +6840,7 @@ test("write1_65816 - bank wrapping", t => {
 test("write1_65816 - ROM expansion", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x10).fill(0);
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.defaultFreespaceByte = 0xFF;
 
   // Position beyond current ROM size
@@ -6887,7 +6872,7 @@ test("write1_65816 - ROM expansion", t => {
 test("write1_65816 - pass 1 behavior", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
-  assembler.pass = 1; // Set to pass 1
+  assembler.activateStage("resolveLayout");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
   assembler.currentTargetStartAddress = 0x008000;
@@ -6907,7 +6892,7 @@ test("write1_65816 - pass 1 behavior", t => {
 test("write1_65816 - byte masking", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
 
@@ -6921,7 +6906,7 @@ test("write1_65816 - byte masking", t => {
 test("write1_65816 - step behavior", t => {
   const assembler = new Assembler();
   assembler.romdata = new Array(0x1000).fill(0);
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
   assembler.bytes = 0;
@@ -7052,7 +7037,7 @@ test("asblock_pick - empty words array", t => {
 
 test("asblock_pick - pass 0 handling", t => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   // In pass 0, should always return true to allow forward references
   t.true(assembler.asblock_pick(["unknown_instruction"]), "Should return true in pass 0 regardless of instruction");
@@ -7060,7 +7045,7 @@ test("asblock_pick - pass 0 handling", t => {
 
 test("asblock_pick - lowered instruction path uses architecture adapters", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "65816";
   let calledWithWords: string[] | undefined;
   const original = assembler.arch65816.encodeInstruction;
@@ -7101,7 +7086,7 @@ test("asblock_pick - lowered instruction path uses architecture adapters", t => 
 
 test("asblock_pick - spc700 architecture", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "spc700";
 
   const originalMethod = assembler.archSPC700.encode;
@@ -7119,7 +7104,7 @@ test("asblock_pick - spc700 architecture", t => {
 
 test("asblock_pick - spc700 architecture error handling", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "spc700";
 
   const originalMethod = assembler.archSPC700.encode;
@@ -7136,7 +7121,7 @@ test("asblock_pick - spc700 architecture error handling", t => {
 
 test("asblock_pick - superfx architecture", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "superfx";
 
   const originalMethod = assembler.archSuperFX.encode;
@@ -7154,7 +7139,7 @@ test("asblock_pick - superfx architecture", t => {
 
 test("asblock_pick - superfx architecture failure", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "superfx";
 
   const originalMethod = assembler.archSuperFX.encode;
@@ -7167,7 +7152,7 @@ test("asblock_pick - superfx architecture failure", t => {
 
 test("asblock_pick - superfx architecture error handling", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "superfx";
 
   const originalMethod = assembler.archSuperFX.encode;
@@ -7186,7 +7171,7 @@ test("asblock_pick - superfx architecture error handling", t => {
 
 test("asblock_pick - 65816 architecture", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "65816";
 
   const originalMethod = assembler.arch65816.encode;
@@ -7204,7 +7189,7 @@ test("asblock_pick - 65816 architecture", t => {
 
 test("asblock_pick - 65816 architecture failure", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "65816";
 
   const originalMethod = assembler.arch65816.encode;
@@ -7221,7 +7206,7 @@ test("asblock_pick - 65816 architecture failure", t => {
 
 test("asblock_pick - default architecture", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "unknown_arch"; // Set to an unrecognized architecture
 
   // Should default to returning true for unrecognized architectures
@@ -7230,7 +7215,7 @@ test("asblock_pick - default architecture", t => {
 
 test("asblock_pick - pass 0 uses active encoder estimateSize", t => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
   assembler.arch = "spc700";
   const originalMethod = assembler.archSPC700.estimateSize;
   assembler.archSPC700.estimateSize = () => 5;
@@ -7243,7 +7228,7 @@ test("asblock_pick - pass 0 uses active encoder estimateSize", t => {
 
 test("asblock_pick - inSpcblock uses spc700 encoder", t => {
   const assembler = new Assembler();
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   assembler.arch = "65816";
   assembler.inSpcblock = true;
   const originalMethod = assembler.archSPC700.encode;

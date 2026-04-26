@@ -235,7 +235,7 @@ test("typed while nodes retain normalized loop body commands", (t) => {
 
 test("typed loop nodes execute through normalized dispatch", (t) => {
   const assembler = new Assembler();
-  assembler.setPass(2);
+  assembler.activateStage("emitProgram");
   assembler.currentFile = "/Users/matthew/uttori/snes-asm-js/tests/ir.test.ts";
   const executed: Array<{ command: string; value: string | undefined }> = [];
   stub(assembler, "processNormalizedCommand").callsFake((command) => {

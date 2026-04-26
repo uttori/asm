@@ -7,6 +7,7 @@ import type { AssemblerServices } from "../assembler-internals.js";
 import { ArchitectureRegistry } from "../architecture-registry.js";
 import { SpcblockData } from "../assembler.js";
 import { ExpressionNode } from "../ir/expression-node.js";
+import type { AssemblyFileProvider } from "../file-provider.js";
 
 export interface AssemblySession {
   recordCurrentAddress(): void;
@@ -15,6 +16,7 @@ export interface AssemblySession {
   readFile(filename: string): Uint8Array | string;
   architectureRegistry: ArchitectureRegistry;
   arch: string;
+  fileProvider: AssemblyFileProvider;
   services: AssemblerServices;
   defines: Map<string, string>;
   namespaceStack: string[];

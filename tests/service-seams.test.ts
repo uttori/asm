@@ -4,6 +4,7 @@ import { stub } from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Assembler } from "../src/assembler.js";
+import { createMemoryAssemblyFileProvider } from "../src/file-provider.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";
 import { handleArch } from "../src/directives/layout.js";
 
@@ -180,12 +181,12 @@ test("expression host readRom and readFile preserve defaults and bounds behavior
 
 test("symbol scope resolves stored local relative labels", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
   assembler.currentTargetAddress = 0x1234;
 
   assembler.symbolScope.handleRelativeLabel("+");
 
-  assembler.pass = 2;
+  assembler.activateStage("emitProgram");
   t.is(assembler.symbolScope.findNextLabel("+", 0x1200), 0x1234);
 });
 
@@ -201,7 +202,7 @@ test("symbol scope resolves nested sublabels through current parent", (t) => {
 
 test("symbol scope preserves nested hierarchy during pass zero label collection", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("arthur_sprites");
   assembler.symbolScope.handleLabelDefinition(".underwear");
@@ -213,7 +214,7 @@ test("symbol scope preserves nested hierarchy during pass zero label collection"
 
 test("symbol scope keeps sibling single-dot labels under the enclosing global label", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("_018049");
   assembler.symbolScope.handleLabelDefinition(".804D");
@@ -229,7 +230,7 @@ test("symbol scope keeps sibling single-dot labels under the enclosing global la
 
 test("symbol scope preserves underscore-containing global parents for single-dot labels", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("stage1_earthquake");
   assembler.symbolScope.handleLabelDefinition("stage1_earthquake_tiles");
@@ -244,7 +245,7 @@ test("symbol scope preserves underscore-containing global parents for single-dot
 
 test("symbol scope keeps sibling double-dot labels under the enclosing local label", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("random_values");
   assembler.symbolScope.handleLabelDefinition(".idx");
@@ -258,7 +259,7 @@ test("symbol scope keeps sibling double-dot labels under the enclosing local lab
 
 test("symbol scope keeps underscore-containing single-dot labels as double-dot parents", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("spc_0E00");
   assembler.symbolScope.handleLabelDefinition(".stage1");
@@ -279,7 +280,7 @@ test("symbol scope keeps underscore-containing single-dot labels as double-dot p
 
 test("symbol scope prefers exact single-dot locals before shortened underscore fallbacks", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("_00ED00");
   assembler.symbolScope.handleLabelDefinition(".arthur_underwear");
@@ -296,7 +297,7 @@ test("symbol scope prefers exact single-dot locals before shortened underscore f
 
 test("symbol scope returns single-dot labels to the top-level parent after nested locals", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("_00ED00");
   assembler.symbolScope.handleLabelDefinition(".arthur_underwear");
@@ -311,7 +312,7 @@ test("symbol scope returns single-dot labels to the top-level parent after neste
 
 test("symbol scope keeps double-dot labels under the active global root when shorter prefixes exist", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("arthur");
   assembler.symbolScope.handleLabelDefinition("arthur_sprites");
@@ -325,13 +326,13 @@ test("symbol scope keeps double-dot labels under the active global root when sho
 test("symbol scope resolves namespaced local sibling labels without collapsing doubled separators", (t) => {
   const assembler = new Assembler();
   assembler.currentNamespace = "knife";
-  assembler.pass = 0;
+  assembler.activateStage("collectDefinitions");
 
   assembler.symbolScope.handleLabelDefinition("_E449");
   assembler.symbolScope.handleLabelDefinition(".E44C");
   assembler.symbolScope.handleLabelDefinition(".E4CA");
 
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
   assembler.currentNamespace = "knife";
   assembler.currentParentLabel = "knife__E449_E44C";
 
@@ -341,7 +342,7 @@ test("symbol scope resolves namespaced local sibling labels without collapsing d
 
 test("symbol scope falls back to global labels when a namespace-local symbol is absent", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   assembler.symbolScope.setLabel("difficulty", 0x27C, true);
   assembler.currentNamespace = "zombie";
@@ -352,7 +353,7 @@ test("symbol scope falls back to global labels when a namespace-local symbol is 
 
 test("symbol scope resolves local labels under underscore-prefixed parents", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   assembler.currentParentLabel = "_0083C2_83C3_83DE";
   assembler.labelTable.set("_0083C2_83EB", {
@@ -367,7 +368,7 @@ test("symbol scope resolves local labels under underscore-prefixed parents", (t)
 
 test("symbol scope resolves compressed nested local label references", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   assembler.currentParentLabel = "random_values_difficulty_offset";
   assembler.labelTable.set("random_values_difficulty_offset_idx_beginner", {
@@ -382,7 +383,7 @@ test("symbol scope resolves compressed nested local label references", (t) => {
 
 test("symbol scope resolves double-dot local label references", (t) => {
   const assembler = new Assembler();
-  assembler.pass = 1;
+  assembler.activateStage("resolveLayout");
 
   assembler.currentParentLabel = "_00ED00_arthur_underwear";
   assembler.labelTable.set("_00ED00_arthur_underwear_idle", {
@@ -434,8 +435,8 @@ test("macro-expanded control flow executes through typed nodes", (t) => {
     "%emit(1)",
   ].join("\n");
 
-  for (const pass of [0, 1, 2]) {
-    assembler.setPass(pass);
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
     assembler.setWritePosition(0x808000);
     for (const [lineNumber, line] of source.split("\n").entries()) {
       assembler.setCurrentLine(lineNumber);
@@ -460,8 +461,8 @@ test("macro-expanded variadic loop bodies defer placeholder resolution until exe
     "%emit(1, 2, 3)",
   ].join("\n");
 
-  for (const pass of [0, 1, 2]) {
-    assembler.setPass(pass);
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
     assembler.setWritePosition(0x808000);
     for (const [lineNumber, line] of source.split("\n").entries()) {
       assembler.setCurrentLine(lineNumber);
@@ -581,7 +582,7 @@ test("node execution seam does not re-normalize cached command nodes", (t) => {
 test("macro/include lifting exposes typed macro and include nodes", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
-  assembler.setPass(0);
+  assembler.activateStage("collectDefinitions");
   assembler.processCommand("macro emit(v)");
   assembler.processCommand("db <v>");
   assembler.processCommand("endmacro");
@@ -650,7 +651,7 @@ test("stage runner builds program once and executes all stages", (t) => {
   t.true(parseSpy.calledOnce);
   const emitStage = assembler.stageExecutionStates.get("emitProgram");
   t.truthy(emitStage);
-  t.is(emitStage?.pass, 2);
+  t.is(emitStage?.stage, "emitProgram");
   t.is(emitStage?.cursor.currentTargetAddress, 0x808001);
   t.is(assembler.romdata[0], 0x01);
 });
@@ -669,8 +670,8 @@ test("line-by-line assembleblock uses typed control-flow parsing", (t) => {
 
   const assembleByLine = (): number[] => {
     const assembler = new Assembler();
-    for (const pass of [0, 1, 2]) {
-      assembler.setPass(pass);
+    for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+      assembler.activateStage(stage);
       for (const [lineNumber, line] of source.split("\n").entries()) {
         assembler.setCurrentLine(lineNumber);
         assembler.assembleblock(line);
@@ -682,8 +683,8 @@ test("line-by-line assembleblock uses typed control-flow parsing", (t) => {
 
   const assembleByTree = (): number[] => {
     const assembler = new Assembler();
-    for (const pass of [0, 1, 2]) {
-      assembler.setPass(pass);
+    for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+      assembler.activateStage(stage);
       assembler.setCurrentLine(0);
       assembler.assembleblock(source);
       assembler.finishPass();
@@ -758,4 +759,80 @@ test("architecture registry resolves aliases through arch directive", (t) => {
   }, ["arch", "superfx"]);
   t.is(assembler.arch, "superfx");
   t.false(assembler.spcInlineCompatMode);
+});
+
+test("activateStage keeps stage capabilities authoritative", (t) => {
+  const assembler = new Assembler();
+
+  assembler.activateStage("collectDefinitions");
+  t.true(assembler.isDefinitionCollectionStage);
+  t.false(assembler.canEmitBytes);
+  t.is(assembler.mode, "layout");
+
+  assembler.activateStage("resolveLayout");
+  t.false(assembler.isDefinitionCollectionStage);
+  t.false(assembler.canEmitBytes);
+  t.is(assembler.mode, "emit");
+
+  assembler.activateStage("emitProgram");
+  t.true(assembler.canEmitBytes);
+  t.true(assembler.canFinalize);
+  t.true(assembler.enforceResolvedLabels);
+});
+
+test("runStage materializes a durable lowered program tree", (t) => {
+  const assembler = new Assembler();
+  const program = assembler.buildProgramModel([
+    "db $01",
+    "if 1",
+    "db $02",
+    "endif",
+  ].join("\n"), "lowered.asm");
+
+  const stageState = assembler.runStage("resolveLayout", program);
+
+  t.truthy(stageState.loweredProgram);
+  t.is(stageState.loweredProgram?.nodes[0]?.kind, "command");
+  t.is(stageState.loweredProgram?.nodes[1]?.kind, "conditional");
+});
+
+test("analyzeSource accumulates multiple diagnostics and references", (t) => {
+  const assembler = new Assembler();
+  const result = assembler.analyzeSource([
+    "db MissingOne",
+    "db MissingTwo",
+  ].join("\n"), "analysis.asm");
+
+  t.true(result.diagnostics.length >= 2);
+  t.true(result.references.some((entry) => entry.name === "MissingOne"));
+  t.true(result.references.some((entry) => entry.name === "MissingTwo"));
+});
+
+test("file provider can serve includes from virtual documents", (t) => {
+  const fileProvider = createMemoryAssemblyFileProvider(new Map<string, string>([
+    ["mem:/main.asm", 'include "shared.asm"'],
+    ["mem:/shared.asm", "db $01"],
+  ]));
+  const assembler = new Assembler(undefined, { fileProvider });
+  assembler.setCurrentFile("mem:/main.asm");
+
+  assembler.handleInclude("include", "shared.asm", false);
+
+  t.is(assembler.currentTargetAddress, 1);
+  t.true(assembler.includedFiles.has("mem:/shared.asm"));
+});
+
+test("analyzeWorkspace isolates documents into separate analysis sessions", (t) => {
+  const assembler = new Assembler();
+  const results = assembler.analyzeWorkspace([
+    { source: "SharedLabel:\n  db $01", sourceFile: "a.asm" },
+    { source: "db SharedLabel", sourceFile: "b.asm" },
+  ]);
+
+  t.is(results.length, 2);
+  t.true(results[0].symbols.some((entry) => entry.kind === "label" && entry.name === "SharedLabel"));
+  t.false(results[0].diagnostics.some((entry) => entry.message.includes("not found")));
+  t.true(results[1].diagnostics.length >= 1);
+  t.true(results[1].diagnostics.some((entry) => entry.message.includes("SharedLabel")));
+  t.true(results[1].references.some((entry) => entry.name === "SharedLabel"));
 });

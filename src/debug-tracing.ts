@@ -1,9 +1,11 @@
+import { AssemblyStageName } from "./assembler.js";
+
 /**
- * Per-byte write emitted by the ROM writer after the final SNES/PC address has been resolved for the current pass.
+ * Per-byte write emitted by the ROM writer after the final SNES/PC address has been resolved for the current stage.
  */
 export type AssemblerTraceWriteEvent = {
   type: "write";
-  pass: number;
+  stage: AssemblyStageName;
   arch: string;
   file: string;
   line: number;
@@ -21,7 +23,7 @@ export type AssemblerTraceWriteEvent = {
  */
 export type AssemblerTraceCommandEvent = {
   type: "command-start" | "command-end";
-  pass: number;
+  stage: AssemblyStageName;
   arch: string;
   file: string;
   line: number;
@@ -46,8 +48,8 @@ export type TraceCollectorOptions = {
   fileIncludes?: string[];
   /** Restrict to a subset of event kinds. */
   eventTypes?: AssemblerTraceEvent["type"][];
-  /** Restrict to a specific assembler pass. */
-  pass?: number;
+  /** Restrict to a specific assembler stage. */
+  stage?: AssemblyStageName;
   /** Restrict to a specific architecture label (for example `65816` or `spc700`). */
   arch?: string;
 };
@@ -85,7 +87,7 @@ function matchesCollectorOptions(event: AssemblerTraceEvent, options: TraceColle
   if (!eventTouchesRange(event, options.startAddress, options.endAddress)) {
     return false;
   }
-  if (options.pass !== undefined && event.pass !== options.pass) {
+  if (options.stage !== undefined && event.stage !== options.stage) {
     return false;
   }
   if (options.arch !== undefined && event.arch !== options.arch) {
@@ -140,7 +142,7 @@ export function createTraceCollector(options: TraceCollectorOptions = {}): {
 export function formatTraceEvent(event: AssemblerTraceEvent): string {
   if (event.type === "write") {
     return [
-      `pass=${event.pass}`,
+      `stage=${event.stage}`,
       `arch=${event.arch}`,
       `addr=$${toHex(event.snesAddress, 6)}`,
       `pc=$${toHex(event.pcAddress >>> 0, 6)}`,
@@ -154,7 +156,7 @@ export function formatTraceEvent(event: AssemblerTraceEvent): string {
     ? ` end=$${toHex((event.endSnesAddress ?? event.snesAddress) & 0xFFFFFF, 6)} bytes=${event.bytesWritten ?? 0}`
     : "";
   return [
-    `pass=${event.pass}`,
+    `stage=${event.stage}`,
     `arch=${event.arch}`,
     event.type,
     `addr=$${toHex(event.snesAddress & 0xFFFFFF, 6)}`,

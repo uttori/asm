@@ -1,6 +1,4 @@
 /* eslint-disable jsdoc/no-undefined-types */
-import fs from "node:fs"
-import path from "node:path"
 import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
@@ -16,6 +14,9 @@ import {
   type AssemblySourceLocation,
   type AssemblySymbolDefinition,
   type AssemblySymbolKind,
+  type AssemblySymbolReference,
+  type AssemblySymbolReferenceKind,
+  createAssemblySourceLocation,
   diagnosticFromError,
 } from "./diagnostics.js";
 import type {
@@ -33,14 +34,23 @@ import {
   type ExpressionNode,
   type ReferenceExpressionNode,
 } from "./ir/expression-node.js";
-import { createNormalizedCommand, setCommandKind, setCommandWords, type NormalizedCommand } from "./ir/normalized-command.js";
+import { cloneNormalizedCommand, setCommandKind, setCommandWords, type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { createArchitectureRegistry, type ArchitectureDefinition, type ArchitectureRegistry } from "./architecture-registry.js";
-import { createDirectiveRegistry, type DirectiveRegistry } from "./directives/registry.js";
+import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
 import { DefineEngine } from "./services/define-engine.js";
+import { AssemblyFrontEndService, type AssemblyFrontEndHost } from "./services/assembly-front-end-service.js";
+import {
+  CommandLoweringService,
+  type LoweredCommand,
+  type LoweredConditionalNode,
+  type LoweredExecutableNode,
+  type LoweredLoopNode,
+  type LoweredProgram,
+} from "./services/command-lowering-service.js";
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
 import { MacroEngine } from "./services/macro-engine.js";
 import { ProgramModelBuilder, type IncrementalProgramParseState } from "./services/program-model-builder.js";
@@ -50,13 +60,11 @@ import { SymbolScopeService } from "./services/symbol-scope-service.js";
 import {
   getDefineVariable,
   isBareLabelReference,
-  removeInlineComment,
-  preprocessBlockCommands,
-  splitCommandIntoWords,
   splitInlineCommands,
   splitRespectingFunctions,
 } from "./services/command-text-service.js";
 import type { SourceSpan } from "./source-location.js";
+import { createNodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
 
 let debug = (..._) => {};
 /* c8 ignore next */
@@ -132,33 +140,26 @@ export type StageWriteState = {
 };
 export type StageExecutionState = {
   stage: AssemblyStageName;
-  pass: 0 | 1 | 2;
   capabilities: StageExecutionCapabilities;
   cursor: StageCursorState;
   symbols: StageSymbolState;
   control: StageControlState;
   writeState: StageWriteState;
-  loweredCommandCache: WeakMap<NormalizedCommand, LoweredCommand>;
+  loweredProgram: LoweredProgram | null;
 };
 
 type CommandPreprocessResult = "continue" | "handled";
 type AssemblerServiceBag = {
   defineEngine: DefineEngine;
+  fileProvider?: AssemblyFileProvider;
+  frontEnd?: AssemblyFrontEndService;
   frontEndCommandService: FrontEndCommandService;
+  lowering?: CommandLoweringService;
   macroEngine: MacroEngine;
   romWriter: RomWriterService;
   structEngine: StructEngine;
   symbolScope: SymbolScopeService;
 };
-
-type LoweredDirective = {
-  kind: "directive";
-  keyword: string;
-  words: string[];
-  source: NormalizedCommand["source"];
-};
-
-type LoweredCommand = LoweredDirective | LoweredInstruction;
 // Source context stack used to associate low-level byte writes with the
 // currently executing normalized command, even when directives recurse.
 type TraceCommandContext = Pick<AssemblerTraceCommandEvent, "file" | "line" | "raw" | "normalized">;
@@ -261,7 +262,6 @@ export class Assembler implements AssemblySession {
   public activeFreespaceStartPc: number | null = null;
   public activeFreespaceContentStartPc: number | null = null;
 
-  public pass: number = 0;
   public whileStatus: WhileTracker[] = [];
 
   public namespaceStack: string[] = [];
@@ -336,8 +336,6 @@ export class Assembler implements AssemblySession {
   public includeStack: string[] = [];
   public includePaths: string[] = ["./"];
 
-  public commandBuffer: string = "";  // Class-wide buffer for command concatenation
-
   // Replace the existing loop tracking with a more structured approach
   public loopStack: LoopBlock[] = []; // Stack of active loop blocks being built
   public currentLoop: LoopBlock | null = null; // Reference to the loop block currently being constructed
@@ -357,16 +355,21 @@ export class Assembler implements AssemblySession {
   public spcInlineCompatMode: boolean = false;
   public requireStaticLabelLookup: boolean = false;
   readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
-  readonly directiveRegistry: DirectiveRegistry;
-  readonly architectureRegistry: ArchitectureRegistry;
+  directiveRegistry: DirectiveRegistry;
+  architectureRegistry: ArchitectureRegistry;
   readonly cursorAddress: CursorAddressFacade;
+  readonly fileProvider: AssemblyFileProvider;
+  readonly frontEndService: AssemblyFrontEndService;
   readonly programModelBuilder: ProgramModelBuilder;
+  readonly commandLoweringService: CommandLoweringService;
   readonly incrementalProgramParseState: IncrementalProgramParseState;
   public readonly services: AssemblerServiceBag;
   public readonly stageExecutionStates: Map<AssemblyStageName, StageExecutionState> = new Map();
   public readonly diagnostics: AssemblyDiagnostic[] = [];
   public readonly symbolDefinitions: AssemblySymbolDefinition[] = [];
+  public readonly symbolReferences: AssemblySymbolReference[] = [];
   activeStageExecutionState: StageExecutionState | null = null;
+  analysisErrorRecoveryEnabled = false;
 
   get defineEngine(): DefineEngine {
     return this.services.defineEngine;
@@ -487,6 +490,7 @@ export class Assembler implements AssemblySession {
   clearAnalysisArtifacts(): void {
     this.diagnostics.length = 0;
     this.symbolDefinitions.length = 0;
+    this.symbolReferences.length = 0;
   }
 
   /**
@@ -495,11 +499,7 @@ export class Assembler implements AssemblySession {
    * @returns {AssemblySourceLocation} The current source location.
    */
   getCurrentSourceLocation(span?: SourceSpan): AssemblySourceLocation {
-    return {
-      file: this.currentFile,
-      line: this.currentLine,
-      span,
-    };
+    return createAssemblySourceLocation(this.currentFile, this.currentLine, span);
   }
 
   /**
@@ -555,14 +555,144 @@ export class Assembler implements AssemblySession {
     this.symbolDefinitions.push({
       name,
       kind,
-      location: {
-        file,
-        line,
-        span: options.span,
-      },
+      location: createAssemblySourceLocation(file, line, options.span),
       value: options.value,
       containerName: options.containerName,
     });
+  }
+
+  /**
+   * Records a symbol reference if it has not already been recorded.
+   * @param {AssemblySymbolReferenceKind} kind The reference kind.
+   * @param {string} name The reference name.
+   * @param {{ file?: string; line?: number; span?: SourceSpan; containerName?: string }} [options] Optional reference metadata.
+   * @param {string} [options.file] Optional source file override.
+   * @param {number} [options.line] Optional source line override.
+   * @param {SourceSpan} [options.span] Optional precise source span.
+   * @param {string} [options.containerName] Optional owning container name.
+   */
+  recordSymbolReference(
+    kind: AssemblySymbolReferenceKind,
+    name: string,
+    options: { file?: string; line?: number; span?: SourceSpan; containerName?: string } = {},
+  ): void {
+    const file = options.file ?? this.currentFile;
+    const line = options.line ?? this.currentLine;
+    const duplicate = this.symbolReferences.some((entry) => (
+      entry.kind === kind &&
+      entry.name === name &&
+      entry.location.file === file &&
+      entry.location.line === line &&
+      entry.containerName === options.containerName
+    ));
+    if (duplicate) {
+      return;
+    }
+
+    this.symbolReferences.push({
+      name,
+      kind,
+      location: createAssemblySourceLocation(file, line, options.span),
+      containerName: options.containerName,
+    });
+  }
+
+  collectExpressionReferences(expression: ExpressionNode | undefined, fallbackSpan?: SourceSpan): void {
+    if (!expression) {
+      return;
+    }
+
+    switch (expression.type) {
+      case "defineReference":
+        if (expression.name || expression.content) {
+          this.recordSymbolReference("define", expression.braced ? (expression.content ?? "") : (expression.name ?? ""), {
+            span: expression.span ?? fallbackSpan,
+          });
+        }
+        return;
+      case "identifier":
+        this.recordSymbolReference("label", expression.name, {
+          span: expression.span ?? fallbackSpan,
+        });
+        return;
+      case "member":
+      case "index":
+        this.recordSymbolReference("label", renderReferenceExpressionNode(expression), {
+          span: expression.span ?? fallbackSpan,
+        });
+        if (expression.type === "index") {
+          this.collectExpressionReferences(expression.index, fallbackSpan);
+        }
+        return;
+      case "call":
+        this.recordSymbolReference("function", expression.callee.name, {
+          span: expression.callee.span ?? expression.span ?? fallbackSpan,
+        });
+        for (const argument of expression.arguments) {
+          this.collectExpressionReferences(argument, fallbackSpan);
+        }
+        return;
+      case "unary":
+        this.collectExpressionReferences(expression.argument, fallbackSpan);
+        return;
+      case "binary":
+        this.collectExpressionReferences(expression.left, fallbackSpan);
+        this.collectExpressionReferences(expression.right, fallbackSpan);
+        return;
+      case "range":
+        this.collectExpressionReferences(expression.start, fallbackSpan);
+        this.collectExpressionReferences(expression.end, fallbackSpan);
+        return;
+      default:
+        return;
+    }
+  }
+
+  collectCommandReferences(command: NormalizedCommand): void {
+    const fallbackSpan = command.source.normalizedSpan;
+    const parsed = command.parsed;
+
+    this.collectExpressionReferences(parsed.assignment?.expression, fallbackSpan);
+    this.collectExpressionReferences(parsed.condition?.expression, fallbackSpan);
+    this.collectExpressionReferences(parsed.forLoop?.range, fallbackSpan);
+    this.collectExpressionReferences(parsed.forLoop?.start, fallbackSpan);
+    this.collectExpressionReferences(parsed.forLoop?.end, fallbackSpan);
+    this.collectExpressionReferences(parsed.incbinRange?.range, fallbackSpan);
+    this.collectExpressionReferences(parsed.incbinRange?.start, fallbackSpan);
+    this.collectExpressionReferences(parsed.incbinRange?.end, fallbackSpan);
+
+    if (parsed.macroInvocation?.name) {
+      this.recordSymbolReference("macro", parsed.macroInvocation.name, {
+        span: command.source.tokenSpans[0] ?? fallbackSpan,
+      });
+      for (const arg of parsed.macroInvocation.args) {
+        this.collectExpressionReferences(parseExpressionNode(arg), fallbackSpan);
+      }
+    }
+
+    if (parsed.includeTarget?.target) {
+      this.recordSymbolReference("include", parsed.includeTarget.target.replace(/^["'`](.*)["'`]$/, "$1"), {
+        span: command.source.tokenSpans[1] ?? fallbackSpan,
+      });
+    }
+
+    if (parsed.opcodeOperands?.mnemonic) {
+      this.recordSymbolReference("instruction", parsed.opcodeOperands.mnemonic, {
+        span: command.source.tokenSpans[0] ?? fallbackSpan,
+      });
+    }
+
+    for (const operand of parsed.dataDirective?.operands ?? []) {
+      this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
+    }
+
+    for (const operand of parsed.opcodeOperands?.operands ?? []) {
+      this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
+    }
+
+    for (const arg of parsed.directiveArgs?.args ?? []) {
+      this.collectExpressionReferences(parseExpressionNode(arg), fallbackSpan);
+    }
   }
 
   /**
@@ -570,18 +700,71 @@ export class Assembler implements AssemblySession {
    * @param {ProgramModel} program The program model to analyze.
    * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
    */
-  analyzeProgram(program: ProgramModel): AssemblyAnalysisResult {
+  collectProgramAnalysis(program: ProgramModel): AssemblyAnalysisResult {
     this.clearAnalysisArtifacts();
+    this.analysisErrorRecoveryEnabled = true;
     try {
       this.assembleProgram(program);
     } catch (error) {
       this.reportErrorDiagnostic(error, undefined, this.activeStageExecutionState?.stage);
+    } finally {
+      this.analysisErrorRecoveryEnabled = false;
     }
 
     return {
       diagnostics: [...this.diagnostics],
       symbols: [...this.symbolDefinitions],
+      references: [...this.symbolReferences],
     };
+  }
+
+  /**
+   * Creates an isolated assembler session suitable for editor-style analysis.
+   * This keeps batch assembly state and tooling state from leaking into each
+   * other while still sharing the same file provider and directive registry.
+   * @returns {Assembler} A configured analysis session.
+   */
+  private createToolingSession(): Assembler {
+    const session = new Assembler(this.targetRom, { fileProvider: this.fileProvider });
+    session.directiveRegistry = this.cloneDirectiveRegistryForSession(session);
+    session.architectureRegistry = this.architectureRegistry;
+    session.includePaths = [...this.includePaths];
+    session.mapper = this.mapper;
+    session.checksumFixEnabled = this.checksumFixEnabled;
+    session.checksumMode = this.checksumMode;
+    session.bankCrossCheckMode = this.bankCrossCheckMode;
+    session.readFunctionsEnabled = this.readFunctionsEnabled;
+    session.optimizeDirectPage = this.optimizeDirectPage;
+    session.defaultFreespaceByte = this.defaultFreespaceByte;
+    session.padbyte = [...this.padbyte];
+    session.fillbyte = [...this.fillbyte];
+    session.padUnit = this.padUnit;
+    session.arch = this.arch;
+    session.sa1banks = [...this.sa1banks];
+    return session;
+  }
+
+  /**
+   * Rebinds directive handlers to a fresh session while preserving any custom
+   * registrations present on the current registry.
+   * @param {Assembler} session The session that should receive directive calls.
+   * @returns {DirectiveRegistry} A registry bound to the provided session.
+   */
+  private cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry {
+    const registry = new DirectiveRegistry({
+      session,
+      operandResolver: session.operandResolver,
+    });
+
+    for (const [keyword, handler] of this.directiveRegistry.handlers.entries()) {
+      registry.handlers.set(keyword, handler);
+    }
+
+    return registry;
+  }
+
+  analyzeProgram(program: ProgramModel): AssemblyAnalysisResult {
+    return this.createToolingSession().collectProgramAnalysis(program);
   }
 
   /**
@@ -592,11 +775,31 @@ export class Assembler implements AssemblySession {
    * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
    */
   analyzeSource(source: string, sourceFile = this.currentFile, startLine = 0): AssemblyAnalysisResult & { program: ProgramModel } {
-    const program = this.buildProgramModel(source, sourceFile, startLine);
+    const session = this.createToolingSession();
+    const program = session.buildProgramModel(source, sourceFile, startLine);
     return {
       program,
-      ...this.analyzeProgram(program),
+      ...session.collectProgramAnalysis(program),
     };
+  }
+
+  analyzeDocument(source: string, sourceFile = this.currentFile, startLine = 0): AssemblyAnalysisResult & { program: ProgramModel } {
+    return this.analyzeSource(source, sourceFile, startLine);
+  }
+
+  analyzeWorkspace(documents: Array<{ source: string; sourceFile: string; startLine?: number }>): Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> {
+    const results: Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> = [];
+    for (const document of documents) {
+      const session = this.createToolingSession();
+      const program = session.buildProgramModel(document.source, document.sourceFile, document.startLine ?? 0);
+      const result = session.collectProgramAnalysis(program);
+      results.push({
+        sourceFile: document.sourceFile,
+        program,
+        ...result,
+      });
+    }
+    return results;
   }
 
   loadTestRomData(): void {
@@ -633,6 +836,7 @@ export class Assembler implements AssemblySession {
 
     return {
       defineEngine,
+      fileProvider: this.fileProvider,
       frontEndCommandService,
       macroEngine,
       romWriter,
@@ -641,14 +845,31 @@ export class Assembler implements AssemblySession {
     };
   }
 
-  constructor(targetRom?: number[] | Uint8Array) {
+  constructor(targetRom?: number[] | Uint8Array, options: { fileProvider?: AssemblyFileProvider } = {}) {
     this.targetRom = targetRom ? Uint8Array.from(targetRom) : new Uint8Array();
+    this.fileProvider = options.fileProvider ?? createNodeAssemblyFileProvider();
     this.cursorAddress = this.createCursorAddressFacade();
-    this.programModelBuilder = new ProgramModelBuilder(this);
-    this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
     this.mathCore = new MathCore();
     this.mathCore.host = this.expressionHost;
     this.services = this.createServices();
+    const frontEndHost = {
+      passProgramCache: this.passProgramCache,
+      resolveVariadicPlaceholders: (command: string) => this.macroEngine.resolveVariadicPlaceholders(command),
+      shouldEndifCloseInnermostWhile: (
+        loopType?: "for" | "while",
+        loopStartLine?: number,
+        ifStartLine?: number,
+      ) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+    } as AssemblyFrontEndHost;
+    Object.defineProperties(frontEndHost, {
+      currentFile: { get: (): string => this.currentFile },
+      currentLine: { get: (): number => this.currentLine },
+      inMacroExpansion: { get: (): boolean => this.inMacroExpansion },
+      isDefinitionCollectionStage: { get: (): boolean => this.isDefinitionCollectionStage },
+    });
+    this.frontEndService = new AssemblyFrontEndService(frontEndHost);
+    this.programModelBuilder = this.frontEndService.programModelBuilder;
+    this.incrementalProgramParseState = this.frontEndService.createIncrementalParseState();
     this.operandResolver = new OperandResolver({
       resolveDefines: (input) => this.resolvedefines(input),
       resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
@@ -668,6 +889,10 @@ export class Assembler implements AssemblySession {
       this.archSuperFX,
     );
     this.directiveRegistry = createDirectiveRegistry(this, this.operandResolver);
+    this.commandLoweringService = new CommandLoweringService(this);
+    this.services.frontEnd = this.frontEndService;
+    this.services.lowering = this.commandLoweringService;
+    this.activateStage("collectDefinitions");
   }
 
   /**
@@ -709,14 +934,11 @@ export class Assembler implements AssemblySession {
   }
 
   resolveReadablePath(filename: string): string | undefined {
-    if (path.isAbsolute(filename)) {
-      return fs.existsSync(filename) ? filename : undefined;
-    }
-    const candidates = [
-      path.resolve(path.dirname(this.currentFile || "."), filename),
-      path.resolve(process.cwd(), filename),
-    ];
-    return candidates.find((candidate) => fs.existsSync(candidate));
+    return this.fileProvider.resolvePath(filename, {
+      currentFile: this.currentFile,
+      includePaths: this.includePaths,
+      macroSourceFile: this.currentMacroSourceFile,
+    });
   }
 
   resolveExpressionHostLabel(identifier: string): number | string {
@@ -756,6 +978,13 @@ export class Assembler implements AssemblySession {
     return undefined;
   }
 
+  get currentMacroSourceFile(): string | undefined {
+    if (!this.inMacroExpansion || !this.currentMacroName) {
+      return undefined;
+    }
+    return this.macros.get(this.currentMacroName)?.sourceFile;
+  }
+
   canReadTargetRom(position: number, size: number): number {
     const sourceLength = (this.targetRom && this.targetRom.length > 0) ? this.targetRom.length : this.romdata.length;
     return this.canReadByteRange(sourceLength, position, size);
@@ -783,7 +1012,10 @@ export class Assembler implements AssemblySession {
     if (!resolvedPath) {
       return 0;
     }
-    const fileSize = fs.statSync(resolvedPath).size;
+    const fileSize = this.fileProvider.stat(resolvedPath).size;
+    if (fileSize === undefined) {
+      return 0;
+    }
     return this.canReadByteRange(fileSize, position, size);
   }
 
@@ -796,7 +1028,7 @@ export class Assembler implements AssemblySession {
       }
       throw new Error(`Could not read file: ${filename}`);
     }
-    const fileBytes = fs.readFileSync(resolvedPath);
+    const fileBytes = this.fileProvider.readFile(resolvedPath);
     return this.readByteRange(fileBytes, pos, size, defaultValue, `readfile${Math.trunc(size)} out of bounds at ${pos}`);
   }
 
@@ -817,19 +1049,18 @@ export class Assembler implements AssemblySession {
       if (!resolvedPath) {
         throw new Error(`Could not get filesize for '${filename}'`);
       }
-      return fs.statSync(resolvedPath).size;
+      const stat = this.fileProvider.stat(resolvedPath);
+      if (stat.size === undefined) {
+        throw new Error(`Could not get filesize for '${filename}'`);
+      }
+      return stat.size;
     },
     getFileStatus: (filename) => {
       const resolvedPath = this.resolveReadablePath(filename);
       if (!resolvedPath) {
         return 1;
       }
-      try {
-        fs.accessSync(resolvedPath, fs.constants.R_OK);
-        return 0;
-      } catch {
-        return 2;
-      }
+      return this.fileProvider.stat(resolvedPath).readable ? 0 : 2;
     },
     canReadFile: (filename, position, size) => this.canReadExpressionFile(filename, position, size),
     readFile: (filename, position, size, defaultValue) => this.readExpressionFile(filename, position, size, defaultValue),
@@ -866,17 +1097,68 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  getActiveStageCapabilities(): StageExecutionCapabilities {
-    if (this.activeStageExecutionState) {
-      return this.activeStageExecutionState.capabilities;
-    }
+  createEphemeralStageExecutionState(stage: AssemblyStageName): StageExecutionState {
+    const descriptor = this.getStageDescriptor(stage);
     return {
-      instructionMode: this.pass === 0 ? "layout" : "emit",
-      canEmitBytes: this.pass >= 2,
-      canFinalize: true,
-      enforceResolvedLabels: this.pass >= 2,
-      isDefinitionCollectionStage: this.pass === 0,
+      ...descriptor,
+      cursor: {
+        currentTargetAddress: this.currentTargetAddress,
+        currentTargetBaseAddress: this.currentTargetBaseAddress,
+        currentTargetStartAddress: this.currentTargetStartAddress,
+        currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
+        bytes: this.bytes,
+      },
+      symbols: {
+        labelTable: this.labelTable,
+        forwardLabels: this.forwardLabels,
+        backwardLabels: this.backwardLabels,
+        currentParentLabel: this.currentParentLabel,
+        currentParentIsGlobal: this.currentParentIsGlobal,
+        currentGlobalParentLabel: this.currentGlobalParentLabel,
+        labelParents: this.labelParents,
+      },
+      control: {
+        namespaceStack: this.namespaceStack,
+        currentNamespace: this.currentNamespace,
+        namespaceNestingEnabled: this.namespaceNestingEnabled,
+        namespaceNestingPath: this.namespaceNestingPath,
+        loopStack: this.loopStack,
+        currentLoop: this.currentLoop,
+        collectingLoop: this.collectingLoop,
+        loopNestingLevel: this.loopNestingLevel,
+        inMacroExpansion: this.inMacroExpansion,
+        macroLabelInstance: this.macroLabelInstance,
+      },
+      writeState: {
+        inSpcblock: this.inSpcblock,
+        spcblockData: this.spcblockData,
+        spcInlineCompatMode: this.spcInlineCompatMode,
+        activeFreespaceStartPc: this.activeFreespaceStartPc,
+        activeFreespaceContentStartPc: this.activeFreespaceContentStartPc,
+      },
+      loweredProgram: null,
     };
+  }
+
+  syncActiveStageExecutionState(stage: AssemblyStageName): void {
+    const descriptor = this.getStageDescriptor(stage);
+    if (!this.activeStageExecutionState) {
+      this.activeStageExecutionState = this.createEphemeralStageExecutionState(stage);
+      return;
+    }
+    this.activeStageExecutionState.stage = descriptor.stage;
+    this.activeStageExecutionState.capabilities = descriptor.capabilities;
+  }
+
+  getActiveStageCapabilities(): StageExecutionCapabilities {
+    if (!this.activeStageExecutionState) {
+      this.activeStageExecutionState = this.createEphemeralStageExecutionState("collectDefinitions");
+    }
+    return this.activeStageExecutionState.capabilities;
+  }
+
+  get traceStage(): AssemblyStageName {
+    return this.activeStageExecutionState?.stage ?? "collectDefinitions";
   }
 
   layoutInstruction(input: string[] | LoweredInstruction): boolean {
@@ -924,10 +1206,7 @@ export class Assembler implements AssemblySession {
   asblock_pick(input: string[] | LoweredInstruction): boolean {
     debug("asblock_pick", Array.isArray(input) ? input : input.words);
     debug("asblock_pick arch", this.arch);
-    let instructionExecutionMode = this.pass === 0 ? "layout" : "emit"
-    if (this.activeStageExecutionState) {
-      instructionExecutionMode = this.activeStageExecutionState.capabilities.instructionMode;
-    }
+    const instructionExecutionMode = this.getActiveStageCapabilities().instructionMode;
     if (instructionExecutionMode === "layout") {
       return this.layoutInstruction(input);
     }
@@ -1042,20 +1321,18 @@ export class Assembler implements AssemblySession {
     }
 
     for (const command of splitCommands) {
-      const nodes = this.programModelBuilder.consumeIncrementalCommand(
+      const nodes = this.frontEndService.consumeIncrementalCommand(
         this.incrementalProgramParseState,
         command.trim(),
         this.currentFile,
         this.currentLine,
       );
-      this.executeNodeStream(nodes as RuntimeNode[]);
+      this.executeNodeStream(nodes);
     }
   }
 
   preprocessBlockCommands(block: string): string[] {
-    const processed = preprocessBlockCommands(block, this.commandBuffer);
-    this.commandBuffer = processed.commandBuffer;
-    return processed.commands;
+    return this.frontEndService.preprocessBlockCommands(block);
   }
 
   rewriteRawCommand(command: string): string {
@@ -1063,17 +1340,7 @@ export class Assembler implements AssemblySession {
   }
 
   createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty: boolean = false): NormalizedCommand | null {
-    let normalizedCommand = removeInlineComment(command);
-
-    if (this.inMacroExpansion && this.pass !== 0 && (normalizedCommand.includes("...") || normalizedCommand.includes("…"))) {
-      normalizedCommand = this.macroEngine.resolveVariadicPlaceholders(normalizedCommand);
-    }
-
-    const words = splitCommandIntoWords(normalizedCommand);
-    if (!allowEmpty && words.length === 0) {
-      return null;
-    }
-    return createNormalizedCommand(command, normalizedCommand, words, sourceFile, sourceLine);
+    return this.frontEndService.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty);
   }
 
   preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
@@ -1139,7 +1406,7 @@ export class Assembler implements AssemblySession {
    * @param {string} command - The command to process.
    */
   processCommand(command: string): void {
-    debug("processCommand", { command }, this.currentTargetAddress, "/", this.currentTargetAddress.toString(16), `pass ${this.pass}`);
+    debug("processCommand", { command }, this.currentTargetAddress, "/", this.currentTargetAddress.toString(16), `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`);
     if (command.trim() === "") {
       return;
     }
@@ -1161,13 +1428,7 @@ export class Assembler implements AssemblySession {
     // Treat incoming commands as immutable execution inputs. Downstream pipeline
     // stages still mutate `kind/words`, so run them against a per-dispatch clone
     // instead of mutating cached pass-program nodes.
-    let workingState = createNormalizedCommand(
-      state.source.raw,
-      state.source.normalized,
-      [...state.words],
-      state.source.file,
-      state.source.line,
-    );
+    let workingState = cloneNormalizedCommand(state);
 
     // Preserve legacy fixture bootstrap behavior in tree/normalized execution:
     // `;`+ means "seed assembler ROM with target ROM bytes" before reads/writes.
@@ -1208,6 +1469,8 @@ export class Assembler implements AssemblySession {
       return;
     }
 
+    this.collectCommandReferences(workingState);
+
     const traceContext: TraceCommandContext = {
       file: workingState.source.file,
       line: workingState.source.line,
@@ -1217,7 +1480,7 @@ export class Assembler implements AssemblySession {
 
     this.traceListener?.({
       type: "command-start",
-      pass: this.pass,
+      stage: this.traceStage,
       arch: this.arch,
       ...traceContext,
       snesAddress: startPC,
@@ -1228,7 +1491,7 @@ export class Assembler implements AssemblySession {
     // active, so keep the current source context on a stack until dispatch ends.
     this.traceCommandStack.push(traceContext);
     try {
-      const lowered = this.lowerNodeWithStageCache(workingState);
+      const lowered = this.lowerNode(workingState);
       this.dispatchLoweredNode(lowered);
     } finally {
       this.traceCommandStack.pop();
@@ -1241,7 +1504,7 @@ export class Assembler implements AssemblySession {
     const endPC = this.currentTargetBaseAddress & 0xFFFFFF;
     this.traceListener?.({
       type: "command-end",
-      pass: this.pass,
+      stage: this.traceStage,
       arch: this.arch,
       ...traceContext,
       snesAddress: startPC,
@@ -1254,18 +1517,11 @@ export class Assembler implements AssemblySession {
     this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
   }
 
-  lowerNodeWithStageCache(command: NormalizedCommand): LoweredCommand {
-    const activeStage = this.activeStageExecutionState;
-    if (!activeStage) {
-      return this.lowerNode(command);
+  getOrCreateLoweredProgram(stageState: StageExecutionState, program: ProgramModel): LoweredProgram {
+    if (!stageState.loweredProgram) {
+      stageState.loweredProgram = this.commandLoweringService.lowerProgram(program);
     }
-    const cached = activeStage.loweredCommandCache.get(command);
-    if (cached) {
-      return cached;
-    }
-    const lowered = this.lowerNode(command);
-    activeStage.loweredCommandCache.set(command, lowered);
-    return lowered;
+    return stageState.loweredProgram;
   }
 
   dispatchLoweredNode(lowered: LoweredCommand): void {
@@ -1351,7 +1607,7 @@ export class Assembler implements AssemblySession {
       throw new Error("Custom spcblock mode is not implemented.");
     }
 
-    if (this.pass === 2) {
+    if (this.canFinalize) {
       const sizePc = this.romWriter.convertTargetAddressToRomOffset(this.spcblockData.sizeAddress & 0xFFFFFF);
       if (sizePc < 0) {
         throw new Error("spcblock size address does not map to ROM.");
@@ -1402,9 +1658,7 @@ export class Assembler implements AssemblySession {
    * @param {number} address The SNES address to add to the mapping.
    */
   addAddressToLine(address: number): void {
-    // if (this.pass === 2) {
     this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
-    // }
   }
 
   /**
@@ -1465,7 +1719,7 @@ export class Assembler implements AssemblySession {
       throw new Error(`Invalid data directive: ${type}`);
     }
 
-    if (this.pass === 0) {
+    if (this.isDefinitionCollectionStage) {
       debug("handleDataDirective pass 0, estimating");
       const pendingValues = [...splitRespectingFunctions(params.join(" "))];
       let estimatedItems = 0;
@@ -2049,11 +2303,11 @@ export class Assembler implements AssemblySession {
           return undefined;
       }
     } catch (error) {
-      if (this.pass < 2) {
-        debug(`resolvedefines pass ${this.pass} < 2, returning placeholder`);
+      if (!this.enforceResolvedLabels) {
+        debug("resolvedefines stage does not enforce labels, returning placeholder");
         return "$0000";
       }
-      debug(`resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} on pass ${this.pass}`);
+      debug(`resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`);
       throw error;
     }
   }
@@ -2220,24 +2474,13 @@ export class Assembler implements AssemblySession {
     return result;
   }
 
-  /**
-   * Sets the current pass of assembly.
-   * @param {number} pass - The pass number to set.
-   */
-  setPass(pass: number): void {
-    debug("🏁 setPass", pass);
-    this.pass = pass;
-    if (this.activeStageExecutionState) {
-      this.activeStageExecutionState.pass = pass as 0 | 1 | 2;
-    }
-    switch (pass) {
-      case 1:
-        // Rebuild relative-label tables from pass 1 sizing only.
-        this.forwardLabels = {};
-        this.backwardLabels = {};
-        break;
-      default:
-        break;
+  activateStage(stage: AssemblyStageName): void {
+    debug("🏁 activateStage", stage);
+    this.syncActiveStageExecutionState(stage);
+    if (stage === "resolveLayout") {
+      // Rebuild relative-label tables from layout sizing only.
+      this.forwardLabels = {};
+      this.backwardLabels = {};
     }
     // Reset the macro macroLabelInstance
     this.macroLabelInstance = null;
@@ -2255,7 +2498,7 @@ export class Assembler implements AssemblySession {
     // Reset the in loop flag
     this.collectingLoop = false;
     this.currentLoop = null;
-    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
+    this.frontEndService.resetIncrementalParseState(this.incrementalProgramParseState);
 
     this.inSpcblock = false;
     this.spcblockData = null;
@@ -2267,7 +2510,7 @@ export class Assembler implements AssemblySession {
    */
   finishPass(): void {
     this.romWriter.finishPass();
-    if (this.pass === 2) {
+    if (this.getActiveStageCapabilities().canFinalize) {
       this.passProgramCache.clear();
     }
   }
@@ -2292,11 +2535,10 @@ export class Assembler implements AssemblySession {
     this.currentLine = line;
   }
 
-  getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "pass" | "capabilities"> {
+  getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "capabilities"> {
     if (stage === "collectDefinitions") {
       return {
         stage,
-        pass: 0,
         capabilities: {
           instructionMode: "layout",
           canEmitBytes: false,
@@ -2309,7 +2551,6 @@ export class Assembler implements AssemblySession {
     if (stage === "resolveLayout") {
       return {
         stage,
-        pass: 1,
         capabilities: {
           instructionMode: "emit",
           canEmitBytes: false,
@@ -2321,7 +2562,6 @@ export class Assembler implements AssemblySession {
     }
     return {
       stage,
-      pass: 2,
       capabilities: {
         instructionMode: "emit",
         canEmitBytes: true,
@@ -2411,12 +2651,11 @@ export class Assembler implements AssemblySession {
         activeFreespaceStartPc: writeSeed.activeFreespaceStartPc,
         activeFreespaceContentStartPc: writeSeed.activeFreespaceContentStartPc,
       },
-      loweredCommandCache: new WeakMap<NormalizedCommand, LoweredCommand>(),
+      loweredProgram: null,
     };
   }
 
   applyStageExecutionState(stageState: StageExecutionState): void {
-    this.pass = stageState.pass;
     this.currentTargetAddress = stageState.cursor.currentTargetAddress;
     this.currentTargetBaseAddress = stageState.cursor.currentTargetBaseAddress;
     this.currentTargetStartAddress = stageState.cursor.currentTargetStartAddress;
@@ -2495,7 +2734,7 @@ export class Assembler implements AssemblySession {
   }
 
   buildProgramModel(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
-    const program = this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
+    const program = this.frontEndService.buildProgramModel(source, sourceFile, startLine);
     return {
       sourceFile: program.sourceFile,
       startLine: program.startLine,
@@ -2512,8 +2751,9 @@ export class Assembler implements AssemblySession {
     this.activeStageExecutionState = stageState;
     this.applyStageExecutionState(stageState);
     this.setCurrentFile(program.sourceFile);
-    this.setPass(stageState.pass);
-    this.executeNodeStream(program.nodes);
+    this.activateStage(stage);
+    const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
+    this.executeLoweredNodeStream(loweredProgram.nodes);
     this.finishPass();
     this.captureStageExecutionState(stageState);
     return stageState;
@@ -2668,37 +2908,20 @@ export class Assembler implements AssemblySession {
   readFile(filePath: string, encoding?: BufferEncoding): Uint8Array | string {
     debug("readFile", filePath, encoding)
     try {
-      // Get the directory to resolve from
-      let resolveDir: string;
-
-      // Check if we're in a macro expansion and should use the macro's source directory
-      if (this.inMacroExpansion && this.currentMacroName) {
-        const macroDef = this.macros.get(this.currentMacroName);
-
-        // If the macro has a source file, use its directory, otherwise fall back to current
-        if (macroDef?.sourceFile) {
-          resolveDir = path.dirname(macroDef.sourceFile);
-          debug("readFile using macro source directory:", resolveDir);
-        } else {
-          resolveDir = this.currentFile ? path.dirname(this.currentFile) : process.cwd();
-        }
-      } else {
-        // Normal file operations - use current file directory
-        resolveDir = this.currentFile ? path.dirname(this.currentFile) : process.cwd();
+      const fullPath = this.fileProvider.resolvePath(filePath, {
+        currentFile: this.currentFile,
+        includePaths: this.includePaths,
+        macroSourceFile: this.currentMacroSourceFile,
+      });
+      if (!fullPath) {
+        throw new Error(`Error reading file: ${filePath}`);
       }
-
-      // Resolve the full path relative to the resolve directory
-      const fullPath = path.resolve(resolveDir, filePath);
       debug("readFile:", fullPath);
 
       if (encoding) {
-        // Return as string if encoding is provided
-        return fs.readFileSync(fullPath, encoding);
-      } else {
-        // Return as Uint8Array if no encoding
-        const buffer = fs.readFileSync(fullPath);
-        return new Uint8Array(buffer);
+        return this.fileProvider.readTextFile(fullPath, encoding);
       }
+      return this.fileProvider.readFile(fullPath);
     } catch (error: unknown) {
       debug("Error reading file:", error);
       throw new Error(`Error reading file: ${filePath}`);
@@ -2716,38 +2939,15 @@ export class Assembler implements AssemblySession {
     if (filename == null || filename === undefined) {
       throw new Error("Invalid or missing filename");
     }
-    // Strip quotes if present
-    if ((filename && filename.startsWith('"') && filename.endsWith('"')) ||
-        (filename.startsWith("'") && filename.endsWith("'")) ||
-        (filename.startsWith("`") && filename.endsWith("`"))) {
-      filename = filename.slice(1, -1);
+    const resolved = this.fileProvider.resolvePath(filename, {
+      currentFile: this.currentFile,
+      includePaths: this.includePaths,
+      macroSourceFile: this.currentMacroSourceFile,
+    });
+    if (!resolved) {
+      throw new Error(`Could not find file: ${filename}`);
     }
-
-    // If absolute path, try directly
-    if (path.isAbsolute(filename)) {
-      debug("resolveIncludePath absolute", filename);
-      if (fs.existsSync(filename)) {
-        return filename;
-      }
-    }
-
-    // Try relative to current file
-    const currentDir = path.dirname(this.currentFile);
-    let tryPath = path.resolve(currentDir, filename);
-    debug("resolveIncludePath tryPath", tryPath);
-    if (fs.existsSync(tryPath)) {
-      return tryPath;
-    }
-
-    // Try include paths
-    for (const includePath of this.includePaths) {
-      tryPath = path.resolve(includePath, filename);
-      if (fs.existsSync(tryPath)) {
-        return tryPath;
-      }
-    }
-
-    throw new Error(`Could not find file: ${filename}`);
+    return resolved;
   }
 
   /**
@@ -2761,9 +2961,7 @@ export class Assembler implements AssemblySession {
     debug("handleInclude", command, filename, once);
 
     if (filename == null || filename === undefined) {
-      this.includedFiles.set(undefined as unknown as string, { included: true, guarded: false });
-      this.assemblefile(undefined as unknown as string, true);
-      return;
+      throw new Error(`Missing include target for ${command}`);
     }
 
     // Mark file as included
@@ -2820,8 +3018,7 @@ export class Assembler implements AssemblySession {
     // semantics match top-level tree execution. Surface failures to callers so
     // broken includes cannot silently zero-fill large ROM regions.
     try {
-      // TODO: Use readFile instead of fs.readFileSync
-      const content = fs.readFileSync(resolvedPath, "utf8");
+      const content = this.fileProvider.readTextFile(resolvedPath, "utf8");
       this.currentFile = resolvedPath;
 
       // Mark this file as included
@@ -3005,6 +3202,15 @@ export class Assembler implements AssemblySession {
     }
   }
 
+  executeLoweredLoop(loopBlock: LoweredLoopNode): void {
+    debug("executeLoweredLoop", loopBlock);
+    if (loopBlock.loopType === "for") {
+      this.executeLoweredForLoop(loopBlock);
+    } else if (loopBlock.loopType === "while") {
+      this.executeLoweredWhileLoop(loopBlock);
+    }
+  }
+
   /**
    * Executes a for loop block.
    * @param {LoopBlock} forBlock The for loop block to execute.
@@ -3043,13 +3249,50 @@ export class Assembler implements AssemblySession {
         this.defines.set(variable, i.toString());
 
         // Process each command in the loop body
-        for (const cmd of forBlock.commands) {
-          this.executeNode(cmd);
-        }
+        this.executeNodeStream(forBlock.commands as RuntimeNode[]);
       }
     }
 
     // Restore the original variable value or delete if it didn't exist
+    if (originalValue !== undefined) {
+      this.defines.set(variable, originalValue);
+    } else {
+      this.defines.delete(variable);
+    }
+  }
+
+  executeLoweredForLoop(forBlock: LoweredLoopNode): void {
+    debug("executeLoweredForLoop", forBlock);
+    const parsedForLoop = forBlock.header?.parsed.forLoop;
+    const variable = forBlock.variable ?? parsedForLoop?.variable;
+    let start: number | undefined = forBlock.start;
+    let end: number | undefined = forBlock.end;
+
+    const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
+    const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
+    if (startExpression && endExpression) {
+      const startExpr = renderExpressionNode(startExpression);
+      const endExpr = renderExpressionNode(endExpression);
+      const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
+      const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
+      start = this.operandResolver.getnum(startDefinesResolved);
+      end = this.operandResolver.getnum(endDefinesResolved);
+    }
+
+    if (!variable || start === undefined || end === undefined) {
+      debug("executeLoweredForLoop missing loop semantics:", forBlock);
+      return;
+    }
+
+    const originalValue = this.defines.get(variable);
+
+    if (start < end) {
+      for (let i = start; i < end; i++) {
+        this.defines.set(variable, i.toString());
+        this.executeLoweredNodeStream(forBlock.commands);
+      }
+    }
+
     if (originalValue !== undefined) {
       this.defines.set(variable, originalValue);
     } else {
@@ -3088,7 +3331,7 @@ export class Assembler implements AssemblySession {
           loopVars.add(defineTarget);
           originalValues.set(defineTarget, this.defines.get(defineTarget));
         }
-        this.executeNode(cmd);
+        this.executeNodeWithRecovery(cmd);
       }
 
       iteration++;
@@ -3110,10 +3353,52 @@ export class Assembler implements AssemblySession {
     }
   }
 
+  executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void {
+    debug("executeLoweredWhileLoop", whileBlock);
+    const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
+    if (!conditionNode) {
+      debug("executeLoweredWhileLoop missing condition expression", whileBlock);
+      return;
+    }
+
+    let iteration = 0;
+    const MAX_ITERATIONS = 10000;
+    const loopVars = new Set<string>();
+    const originalValues = new Map<string, string | undefined>();
+
+    while (this.evaluateExpression(conditionNode) && iteration < MAX_ITERATIONS) {
+      for (const cmd of whileBlock.commands) {
+        let defineTarget: string | null = null;
+        if (cmd.kind === "command" && cmd.command.kind === "defineCommand") {
+          defineTarget = getDefineVariable(cmd.command.command);
+        }
+        if (defineTarget && !loopVars.has(defineTarget)) {
+          loopVars.add(defineTarget);
+          originalValues.set(defineTarget, this.defines.get(defineTarget));
+        }
+        this.executeLoweredNodeWithRecovery(cmd);
+      }
+
+      iteration++;
+    }
+
+    if (iteration >= MAX_ITERATIONS) {
+      debug("executeLoweredWhileLoop while loop exceeded maximum iteration limit. Possible infinite loop detected.");
+    }
+
+    for (const [varName, value] of originalValues.entries()) {
+      if (value !== undefined) {
+        debug(`executeLoweredWhileLoop setting ${varName} to ${value}`);
+        this.defines.set(varName, value);
+      } else {
+        debug(`executeLoweredWhileLoop delete entry for ${varName}`);
+        this.defines.delete(varName);
+      }
+    }
+  }
+
   createLoopCommandNode(command: string, sourceFile = this.currentFile, sourceLine = this.currentLine): NormalizedCommand {
-    const normalized = removeInlineComment(command);
-    const words = splitCommandIntoWords(normalized);
-    return createNormalizedCommand(command, normalized, words, sourceFile, sourceLine);
+    return this.frontEndService.createLoopCommandNode(command, sourceFile, sourceLine);
   }
 
   shouldEndifCloseInnermostWhile(
@@ -3125,49 +3410,40 @@ export class Assembler implements AssemblySession {
   }
 
   lowerNode(command: NormalizedCommand): LoweredCommand {
-    const keyword = command.keyword.toLowerCase();
+    return this.commandLoweringService.lowerCommand(command);
+  }
 
-    if (this.directiveRegistry.has(keyword)) {
-      let directiveWords = command.words;
-      if (command.parsed.includeTarget) {
-        directiveWords = [command.parsed.includeTarget.directive, command.parsed.includeTarget.target];
-      } else if (keyword === "incbin" && command.parsed.directiveArgs?.args?.length) {
-        directiveWords = [keyword, ...command.parsed.directiveArgs.args];
-      }
+  getExecutableNodeSpan(node: ExecutableNode): SourceSpan | undefined {
+    if ("source" in node) {
+      return node.source.normalizedSpan;
+    }
+    return node.header?.source.normalizedSpan;
+  }
 
-      return {
-        kind: "directive",
-        keyword,
-        words: directiveWords,
-        source: command.source,
-      };
+  getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined {
+    if (node.kind === "command") {
+      return node.command.source.normalizedSpan;
+    }
+    if (node.kind === "directive") {
+      return node.source.normalizedSpan;
+    }
+    if (node.kind === "loop" || node.kind === "conditional") {
+      return node.header?.source.normalizedSpan;
+    }
+    return undefined;
+  }
+
+  executeNodeWithRecovery(node: ExecutableNode): void {
+    if (!this.analysisErrorRecoveryEnabled) {
+      this.executeNode(node);
+      return;
     }
 
-    const architecture = this.resolveActiveArchitecture();
-    const isaLoweredInstruction = architecture.definition?.encoder.lowerInstructionFromCommand?.(command);
-    if (isaLoweredInstruction) {
-      return isaLoweredInstruction;
+    try {
+      this.executeNode(node);
+    } catch (error) {
+      this.reportErrorDiagnostic(error, this.getExecutableNodeSpan(node), this.activeStageExecutionState?.stage);
     }
-
-    const parsedOperands = command.parsed.opcodeOperands;
-    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
-    const loweredOperands = operands.map((operand) => this.classifyOperandForActiveArchitecture(operand));
-    const loweredOperand = this.classifyOperandForActiveArchitecture(operandText);
-
-    return {
-      kind: "instruction",
-      mnemonic,
-      operandText,
-      operands,
-      loweredOperands,
-      loweredOperand,
-      words: command.words,
-      sourceFile: command.source.file,
-      sourceLine: command.source.line,
-      sourceRaw: command.source.raw,
-    };
   }
 
   executeNode(node: ExecutableNode): void {
@@ -3189,7 +3465,45 @@ export class Assembler implements AssemblySession {
 
   executeNodeStream(nodes: RuntimeNode[]): void {
     for (const node of nodes) {
-      this.executeNode(node);
+      this.executeNodeWithRecovery(node);
+    }
+  }
+
+  executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void {
+    if (!this.analysisErrorRecoveryEnabled) {
+      this.executeLoweredNode(node);
+      return;
+    }
+
+    try {
+      this.executeLoweredNode(node);
+    } catch (error) {
+      this.reportErrorDiagnostic(error, this.getLoweredNodeSpan(node), this.activeStageExecutionState?.stage);
+    }
+  }
+
+  executeLoweredNode(node: LoweredExecutableNode): void {
+    if (node.kind === "command") {
+      this.processNormalizedCommand(node.command);
+      return;
+    }
+
+    if (node.kind === "loop") {
+      this.executeLoweredLoop(node);
+      return;
+    }
+
+    if (node.kind === "conditional") {
+      this.executeLoweredConditionalNode(node);
+      return;
+    }
+
+    this.dispatchLoweredNode(node);
+  }
+
+  executeLoweredNodeStream(nodes: LoweredExecutableNode[]): void {
+    for (const node of nodes) {
+      this.executeLoweredNodeWithRecovery(node);
     }
   }
 
@@ -3199,18 +3513,16 @@ export class Assembler implements AssemblySession {
    * finished typed roots stranded until the next top-level line arrives.
    */
   flushCompletedIncrementalNodes(): void {
-    const ready = this.programModelBuilder.drainCompletedRoots(this.incrementalProgramParseState);
+    const ready = this.frontEndService.drainCompletedRoots(this.incrementalProgramParseState);
     if (ready.length > 0) {
-      this.executeNodeStream(ready as RuntimeNode[]);
+      this.executeNodeStream(ready);
     }
   }
 
   executeConditionalNode(node: RuntimeConditionalNode): void {
     for (const branch of node.branches) {
       if (branch.kind === "else") {
-        for (const child of branch.commands) {
-          this.executeNode(child);
-        }
+        this.executeNodeStream(branch.commands as RuntimeNode[]);
         return;
       }
       if (!branch.conditionNode) {
@@ -3226,20 +3538,41 @@ export class Assembler implements AssemblySession {
         this.requireStaticLabelLookup = false;
       }
       if (branchConditionMatched) {
-        for (const child of branch.commands) {
-          this.executeNode(child);
-        }
+        this.executeNodeStream(branch.commands as RuntimeNode[]);
+        return;
+      }
+    }
+  }
+
+  executeLoweredConditionalNode(node: LoweredConditionalNode): void {
+    for (const branch of node.branches) {
+      if (branch.kind === "else") {
+        this.executeLoweredNodeStream(branch.commands);
+        return;
+      }
+      if (!branch.conditionNode) {
+        continue;
+      }
+      let branchConditionMatched = false;
+      this.requireStaticLabelLookup = true;
+      try {
+        branchConditionMatched = this.evaluateExpression(branch.conditionNode);
+      } finally {
+        this.requireStaticLabelLookup = false;
+      }
+      if (branchConditionMatched) {
+        this.executeLoweredNodeStream(branch.commands);
         return;
       }
     }
   }
 
   parseCommandStreamToNodes(commands: string[], sourceFile = this.currentFile, startLine = this.currentLine): RuntimeNode[] {
-    return this.programModelBuilder.parseCommandStreamToNodes(commands, sourceFile, startLine) as RuntimeNode[];
+    return this.frontEndService.parseCommandStreamToNodes(commands, sourceFile, startLine);
   }
 
   getOrBuildPassProgram(commands: string[], sourceFile = this.currentFile, startLine = this.currentLine): RuntimeNode[] {
-    return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine) as RuntimeNode[];
+    return this.frontEndService.getOrBuildPassProgram(commands, sourceFile, startLine);
   }
 
   getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined {
@@ -3259,7 +3592,7 @@ export class Assembler implements AssemblySession {
   }
 
   createIncludeNode(file: string, source: string): IncludeNode {
-    return this.programModelBuilder.createIncludeNode(file, source);
+    return this.frontEndService.createIncludeNode(file, source);
   }
 }
 

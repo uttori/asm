@@ -14,6 +14,16 @@ export type SourceSpan = {
   columnEnd?: number;
 };
 
+export type SourcePosition = {
+  line: number;
+  character: number;
+};
+
+export type SourceRange = {
+  start: SourcePosition;
+  end: SourcePosition;
+};
+
 /**
  * Creates a source span.
  * @param {number} start The inclusive starting offset.
@@ -92,4 +102,27 @@ export function deriveTokenSpans(text: string, tokens: string[], line?: number):
   }
 
   return spans;
+}
+
+/**
+ * Converts a span into an explicit line/character range for editor tooling.
+ * The current assembler spans are line-local and use zero-based columns.
+ * @param {SourceSpan} span The span to convert.
+ * @param {number} [fallbackLine] Optional line when the span omits one.
+ * @returns {SourceRange} The normalized source range.
+ */
+export function sourceSpanToRange(span: SourceSpan, fallbackLine = span.line ?? 0): SourceRange {
+  const line = span.line ?? fallbackLine;
+  const startCharacter = span.columnStart ?? span.start;
+  const endCharacter = span.columnEnd ?? span.end;
+  return {
+    start: {
+      line,
+      character: startCharacter,
+    },
+    end: {
+      line,
+      character: endCharacter,
+    },
+  };
 }

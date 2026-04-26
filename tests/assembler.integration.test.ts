@@ -23,6 +23,7 @@ const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(TEST_FILE_DIR, "..");
 const FIXTURES_DIR = path.resolve(PROJECT_ROOT, "src/tests");
 const EXPECTED_DIR = path.resolve(PROJECT_ROOT, "src/tests_tmp_app");
+const ASSEMBLY_STAGES = ["collectDefinitions", "resolveLayout", "emitProgram"] as const;
 const SOURCE_ROM_PATH = path.resolve(PROJECT_ROOT, "src/dummy_rom.sfc");
 
 /** Unique per-test temp dir for target ROM; set by test.before, cleaned by test.after.always */
@@ -124,8 +125,8 @@ const assembleSource = (source: string, sourcePath: string, targetRom?: Uint8Arr
   assembler.setIncludePaths(["./", inputDir]);
   assembler.setCurrentFile(sourcePath);
 
-  for (const pass of [0, 1, 2]) {
-    assembler.setPass(pass);
+  for (const stage of ASSEMBLY_STAGES) {
+    assembler.activateStage(stage);
     if (useTreeExecution) {
       assembler.setCurrentLine(0);
       assembler.assembleblock(source);
@@ -363,8 +364,8 @@ test("integration SLIDESHOW regression keeps CLI-style include flow byte-identic
   assembler.setIncludePaths(["./", inputDir]);
   assembler.setCurrentFile(SLIDESHOW_SRC_PATH);
 
-  for (const pass of [0, 1, 2]) {
-    assembler.setPass(pass);
+  for (const stage of ASSEMBLY_STAGES) {
+    assembler.activateStage(stage);
     const lines = source.split("\n");
     for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
       assembler.setCurrentLine(lineNumber);
@@ -387,8 +388,8 @@ test("integration CHOU regression keeps CLI-style include flow byte-identical", 
   assembler.setIncludePaths(["./", inputDir]);
   assembler.setCurrentFile(CHOU_SRC_PATH);
 
-  for (const pass of [0, 1, 2]) {
-    assembler.setPass(pass);
+  for (const stage of ASSEMBLY_STAGES) {
+    assembler.activateStage(stage);
     const lines = source.split("\n");
     for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
       assembler.setCurrentLine(lineNumber);

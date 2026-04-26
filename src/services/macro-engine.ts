@@ -19,7 +19,6 @@ export type MacroExpansionControlEntry = {
 };
 
 export interface MacroEngineHost {
-  pass: number;
   currentFile: string;
   currentTargetAddress: number;
   defines: Map<string, string>;
@@ -36,6 +35,7 @@ export interface MacroEngineHost {
   inMacroExpansion: boolean;
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
+  isDefinitionCollectionStage: boolean;
   symbolScope: SymbolScopeService;
   evaluateExpression(input: string): boolean;
   resolvedefines(input: string): string;
@@ -169,7 +169,7 @@ export class MacroEngine {
     const { keyword, words } = commandNode;
     if (this.host.inMacroDefinition) {
       if (command.trim().toLowerCase() === "endmacro") {
-        if (this.host.pass === 0) {
+        if (this.host.isDefinitionCollectionStage) {
           let variadic = false;
           if (
             this.host.currentMacroParams.length > 0 &&
@@ -204,7 +204,7 @@ export class MacroEngine {
         return true;
       }
 
-      if (this.host.pass === 0) {
+      if (this.host.isDefinitionCollectionStage) {
         this.host.currentMacroBody.push(commandNode);
       }
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
@@ -317,7 +317,7 @@ export class MacroEngine {
           const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
           return `$${labelValue.toString(16)}`;
         } catch (error) {
-          if (this.host.pass === 0) {
+          if (this.host.isDefinitionCollectionStage) {
             return "$0000";
           }
           throw error;
@@ -333,7 +333,7 @@ export class MacroEngine {
           const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
           return `$${labelValue.toString(16)}`;
         } catch (error) {
-          if (this.host.pass === 0) {
+          if (this.host.isDefinitionCollectionStage) {
             return "$0000";
           }
           throw error;
@@ -639,6 +639,22 @@ export class MacroEngine {
    * @param {string} line The line to process.
    */
   processMacroLine(line: string): void {
+    const trimmed = removeInlineComment(line).trim();
+    const keyword = trimmed.split(/\s+/, 1)[0]?.toLowerCase();
+    const isControlDirective =
+      keyword === "if" ||
+      keyword === "elseif" ||
+      keyword === "else" ||
+      keyword === "endif" ||
+      keyword === "while" ||
+      keyword === "endwhile" ||
+      keyword === "for" ||
+      keyword === "endfor";
+
+    if (!this.isMacroExpansionActive() && !isControlDirective) {
+      return;
+    }
+
     if (/^\s*[#?][\w+.\-]+:/.test(line)) {
       if (line.trim().startsWith("?+:") || line.trim().startsWith("?-:")) {
         const labelChar = line.trim();

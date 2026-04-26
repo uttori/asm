@@ -187,6 +187,22 @@ export function createPendingCommand(
 }
 
 /**
+ * Creates an isolated execution copy so runtime preprocessing can mutate command
+ * state without changing cached front-end program nodes.
+ * @param {NormalizedCommand} command The command to clone.
+ * @returns {NormalizedCommand} The detached execution command.
+ */
+export function cloneNormalizedCommand(command: NormalizedCommand): NormalizedCommand {
+  return createNormalizedCommand(
+    command.source.raw,
+    command.source.normalized,
+    [...command.words],
+    command.source.file,
+    command.source.line,
+  );
+}
+
+/**
  * Replaces a command node's tokenized words and derived fields.
  * @param {NormalizedCommand} command The command node to update.
  * @param {string[]} words The updated token list.

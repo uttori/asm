@@ -1,6 +1,8 @@
+import type { AssemblyStageName } from "../assembler.js";
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 
 export interface RomWriterHost {
+  traceStage: AssemblyStageName;
   currentTargetAddress: number;
   currentTargetBaseAddress: number;
   arch: string;
@@ -65,9 +67,9 @@ export class RomWriterService {
     const pcpos = this.convertTargetAddressToRomOffset(newPos & 0xFFFFFF);
 
     // Emit tracing before the position advances so listeners see the exact byte
-    // address that will be written for this pass.
+    // address that will be written for this stage.
     this.host.traceWrite?.({
-      pass: this.host.mode === "layout" ? 0 : 2,
+      stage: this.host.traceStage,
       arch: this.host.inSpcblock ? "spc700" : this.host.arch,
       file: "",
       line: 0,

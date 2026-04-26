@@ -1,6 +1,12 @@
 export * from "./assembler.js";
+export * from "./assembler-internals.js";
 export * from "./diagnostics.js";
 export * from "./source-location.js";
+export * from "./file-provider.js";
 export * from "./ir/assembly-tree.js";
 export * from "./ir/expression-node.js";
 export * from "./ir/normalized-command.js";
+export * from "./services/assembly-front-end-service.js";
+export * from "./services/command-lowering-service.js";
+export { ProgramModelBuilder } from "./services/program-model-builder.js";
+export type { IncrementalProgramParseState, IncludeProgramNode } from "./services/program-model-builder.js";
