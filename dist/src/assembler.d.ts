@@ -15,6 +15,7 @@ import { type ArchitectureDefinition, type ArchitectureRegistry } from "./archit
 import { DirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
 import { DefineEngine } from "./services/define-engine.js";
+import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
 import { CommandLoweringService, type LoweredCommand, type LoweredConditionalNode, type LoweredExecutableNode, type LoweredLoopNode, type LoweredProgram } from "./services/command-lowering-service.js";
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
@@ -112,6 +113,7 @@ export type StageExecutionState = {
 type CommandPreprocessResult = "continue" | "handled";
 type AssemblerServiceBag = {
     defineEngine: DefineEngine;
+    directiveRuntime: DirectiveRuntimeService;
     fileProvider?: AssemblyFileProvider;
     frontEnd?: AssemblyFrontEndService;
     frontEndCommandService: FrontEndCommandService;
@@ -300,6 +302,7 @@ export declare class Assembler implements AssemblySession {
     activeStageExecutionState: StageExecutionState | null;
     analysisErrorRecoveryEnabled: boolean;
     get defineEngine(): DefineEngine;
+    get directiveRuntime(): DirectiveRuntimeService;
     get frontEndCommandService(): FrontEndCommandService;
     get macroEngine(): MacroEngine;
     get symbolScope(): SymbolScopeService;
@@ -794,6 +797,12 @@ export declare class Assembler implements AssemblySession {
      * @param {LoopBlock} loopBlock The loop block to execute.
      */
     executeLoopBlock(loopBlock: LoopBlock): void;
+    resolveForLoopBounds(forBlock: LoopBlock | LoweredLoopNode): {
+        variable?: string;
+        start?: number;
+        end?: number;
+    };
+    executeForLoopIterations(forBlock: LoopBlock | LoweredLoopNode, executeBody: () => void): void;
     executeLoweredLoop(loopBlock: LoweredLoopNode): void;
     /**
      * Executes a for loop block.
@@ -806,6 +815,7 @@ export declare class Assembler implements AssemblySession {
      * @param {LoopBlock} whileBlock The while loop block to execute.
      */
     executeWhileLoop(whileBlock: LoopBlock): void;
+    executeWhileLoopCommands<TCommand>(whileBlock: LoopBlock | LoweredLoopNode, commands: TCommand[], getDefineTarget: (command: TCommand) => string | null, executeCommand: (command: TCommand) => void): void;
     executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void;
     createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
@@ -824,6 +834,11 @@ export declare class Assembler implements AssemblySession {
      * finished typed roots stranded until the next top-level line arrives.
      */
     flushCompletedIncrementalNodes(): void;
+    executeConditionalBranches<TCommand>(branches: Array<{
+        kind: "if" | "elseif" | "else";
+        conditionNode?: ExpressionNode;
+        commands: TCommand[];
+    }>, executeCommands: (commands: TCommand[]) => void): void;
     executeConditionalNode(node: RuntimeConditionalNode): void;
     executeLoweredConditionalNode(node: LoweredConditionalNode): void;
     parseCommandStreamToNodes(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];

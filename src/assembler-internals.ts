@@ -1,4 +1,5 @@
 import type { DefineEngine } from "./services/define-engine.js";
+import type { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
 import type { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
 import type { CommandLoweringService } from "./services/command-lowering-service.js";
 import type { FrontEndCommandService } from "./services/front-end-command-service.js";
@@ -17,6 +18,7 @@ export type CursorAddressFacade = {
 
 export type AssemblerServices = {
   defineEngine: DefineEngine;
+  directiveRuntime: DirectiveRuntimeService;
   fileProvider?: AssemblyFileProvider;
   frontEnd?: AssemblyFrontEndService;
   frontEndCommandService: FrontEndCommandService;

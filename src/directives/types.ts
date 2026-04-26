@@ -5,29 +5,54 @@ import type { StructEngine } from "../services/struct-engine.js";
 import type { SymbolScopeService } from "../services/symbol-scope-service.js";
 import type { AssemblerServices } from "../assembler-internals.js";
 import { ArchitectureRegistry } from "../architecture-registry.js";
-import { SpcblockData } from "../assembler.js";
+import type { SpcblockData } from "../assembler.js";
 import { ExpressionNode } from "../ir/expression-node.js";
 import type { AssemblyFileProvider } from "../file-provider.js";
 
-export interface AssemblySession {
+export interface DirectiveAddressCapability {
   recordCurrentAddress(): void;
   setWritePosition(address: number): void;
+  currentTargetAddress: number;
+  currentTargetBaseAddress: number;
+  currentTargetStartAddress: number;
+  currentTargetBaseStartAddress: number;
+  pushBaseStack: number[];
+}
+
+export interface DirectiveExpressionCapability {
   evaluateRangeExpression(expression: string | ExpressionNode): number;
-  readFile(filename: string): Uint8Array | string;
-  architectureRegistry: ArchitectureRegistry;
-  arch: string;
-  fileProvider: AssemblyFileProvider;
-  services: AssemblerServices;
-  defines: Map<string, string>;
+  resolvedefines(input: string): string;
+  operandResolver: OperandResolver;
+  structEngine: StructEngine;
+  symbolScope: SymbolScopeService;
+}
+
+export interface DirectiveNamespaceCapability {
   namespaceStack: string[];
   namespaceNestingPath: string[];
   namespaceNestingEnabled: boolean;
   currentNamespace: string;
+  handleNamespace(args: string[]): void;
+  handlePushNamespace(): void;
+  handlePullNamespace(): void;
+}
+
+export interface DirectiveIncludeCapability {
+  readFile(filename: string): Uint8Array | string;
+  fileProvider: AssemblyFileProvider;
+  currentFile: string;
+  includedFiles: Map<string, { included: boolean; guarded: boolean }>;
+  assemblefile(filename: string, isMacro: boolean): void;
+  handleInclude(kind: string, filename: string, once: boolean): void;
+}
+
+export interface DirectiveTableCapability {
   tableStack: Map<string, number>[];
   characterMappings: Map<string, number>;
   currentTable: string | null;
-  currentFile: string;
-  includedFiles: Map<string, { included: boolean; guarded: boolean }>;
+}
+
+export interface DirectiveRomCapability {
   targetRom: Uint8Array;
   romdata: number[] | Uint8Array;
   defaultFreespaceByte: number;
@@ -43,34 +68,50 @@ export interface AssemblySession {
   mapper: string;
   checksumFixEnabled: boolean;
   sa1banks: number[];
-  inSpcblock: boolean;
-  spcInlineCompatMode: boolean;
-  spcblockData: SpcblockData | null;
-  readFunctionsEnabled: boolean;
-  bankCrossCheckMode: "off" | "full" | "half";
-  optimizeDirectPage: boolean;
-  operandResolver: OperandResolver;
   romWriter: RomWriterService;
-  structEngine: StructEngine;
-  symbolScope: SymbolScopeService;
   pushBaseStack: number[];
-  resolvedefines(input: string): string;
-  assemblefile(filename: string, isMacro: boolean): void;
   expandRom(size: number, fillbyte: number): void;
-  handleInclude(kind: string, filename: string, once: boolean): void;
-  handleNamespace(args: string[]): void;
-  handlePushNamespace(): void;
-  handlePullNamespace(): void;
-  handlePushPC(): void;
-  handlePullPC(): void;
   handleOrg(args: string[]): void;
   handleDataDirective(keyword: string, args: string[]): void;
-  handleSpcblock(words: string[]): void;
-  handleEndSpcblock(words: string[]): void;
   write1(value: number): void;
   write2(value: number): void;
   write3(value: number): void;
   write4(value: number): void;
+}
+
+export interface DirectiveSpcCapability {
+  inSpcblock: boolean;
+  spcInlineCompatMode: boolean;
+  spcblockData: SpcblockData | null;
+  handleSpcblock(words: string[]): void;
+  handleEndSpcblock(words: string[]): void;
+}
+
+export interface DirectiveArchitectureCapability {
+  architectureRegistry: ArchitectureRegistry;
+  arch: string;
+}
+
+export interface DirectiveAssemblerCapability {
+  services: AssemblerServices;
+  defines: Map<string, string>;
+  readFunctionsEnabled: boolean;
+  bankCrossCheckMode: "off" | "full" | "half";
+  optimizeDirectPage: boolean;
+  handlePushPC(): void;
+  handlePullPC(): void;
+}
+
+export interface AssemblySession
+  extends DirectiveAddressCapability,
+    DirectiveExpressionCapability,
+    DirectiveNamespaceCapability,
+    DirectiveIncludeCapability,
+    DirectiveTableCapability,
+    DirectiveRomCapability,
+    DirectiveSpcCapability,
+    DirectiveArchitectureCapability,
+    DirectiveAssemblerCapability {
 }
 
 export interface DirectiveContext {

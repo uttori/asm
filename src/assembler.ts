@@ -42,6 +42,7 @@ import { createArchitectureRegistry, type ArchitectureDefinition, type Architect
 import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
 import type { AssemblySession } from "./directives/types.js";
 import { DefineEngine } from "./services/define-engine.js";
+import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
 import { AssemblyFrontEndService, type AssemblyFrontEndHost } from "./services/assembly-front-end-service.js";
 import {
   CommandLoweringService,
@@ -61,7 +62,6 @@ import {
   getDefineVariable,
   isBareLabelReference,
   splitInlineCommands,
-  splitRespectingFunctions,
 } from "./services/command-text-service.js";
 import type { SourceSpan } from "./source-location.js";
 import { createNodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
@@ -151,6 +151,7 @@ export type StageExecutionState = {
 type CommandPreprocessResult = "continue" | "handled";
 type AssemblerServiceBag = {
   defineEngine: DefineEngine;
+  directiveRuntime: DirectiveRuntimeService;
   fileProvider?: AssemblyFileProvider;
   frontEnd?: AssemblyFrontEndService;
   frontEndCommandService: FrontEndCommandService;
@@ -373,6 +374,10 @@ export class Assembler implements AssemblySession {
 
   get defineEngine(): DefineEngine {
     return this.services.defineEngine;
+  }
+
+  get directiveRuntime(): DirectiveRuntimeService {
+    return this.services.directiveRuntime;
   }
 
   get frontEndCommandService(): FrontEndCommandService {
@@ -828,6 +833,7 @@ export class Assembler implements AssemblySession {
 
   createServices(): AssemblerServiceBag {
     const defineEngine = new DefineEngine(this);
+    const directiveRuntime = new DirectiveRuntimeService(this);
     const frontEndCommandService = new FrontEndCommandService(this);
     const symbolScope = new SymbolScopeService(this);
     const romWriter = new RomWriterService(this);
@@ -836,6 +842,7 @@ export class Assembler implements AssemblySession {
 
     return {
       defineEngine,
+      directiveRuntime,
       fileProvider: this.fileProvider,
       frontEndCommandService,
       macroEngine,
@@ -1526,10 +1533,12 @@ export class Assembler implements AssemblySession {
 
   dispatchLoweredNode(lowered: LoweredCommand): void {
     if (lowered.kind === "directive") {
+      const loweredCommand = (lowered as LoweredCommand & { command?: NormalizedCommand }).command;
       const handledDirective = this.directiveRegistry.dispatch(
         lowered.keyword,
         lowered.words,
         lowered.source.raw,
+        loweredCommand,
       );
       if (!handledDirective && lowered.keyword) {
         debug("💥 assembler dispatchLoweredNode unknown directive", lowered.keyword);
@@ -1544,95 +1553,11 @@ export class Assembler implements AssemblySession {
   }
 
   handleSpcblock(words: string[]): void {
-    if (words.length < 2) {
-      throw new Error("spcblock requires at least a destination address.");
-    }
-    if (words.length > 4) {
-      throw new Error("spcblock has too many arguments.");
-    }
-    if (this.inSpcblock) {
-      throw new Error("Nested spcblock directives are not supported.");
-    }
-
-    const destination = this.operandResolver.getnum(this.resolvedefines(words[1]));
-    if ((destination & ~0xFFFF) !== 0) {
-      throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
-    }
-
-    let type: SpcblockType = "nspc";
-    if (words.length === 3) {
-      const kind = words[2].toLowerCase();
-      if (kind === "nspc") {
-        type = "nspc";
-      } else if (kind === "custom") {
-        throw new Error("Custom spcblock mode requires a macro and is not implemented.");
-      } else {
-        throw new Error(`Unknown spcblock type: ${words[2]}`);
-      }
-    } else if (words.length === 4) {
-      const kind = words[2].toLowerCase();
-      if (kind !== "custom") {
-        throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
-      }
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-
-    if (type !== "nspc") {
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-
-    const sizeAddress = this.currentTargetBaseAddress;
-    this.write2(0x0000);
-    this.write2(destination);
-    this.currentTargetAddress = destination;
-    this.currentTargetStartAddress = destination;
-    this.spcblockData = {
-      destination,
-      type,
-      sizeAddress,
-      executeAddress: null,
-      namespaceBackup: this.currentNamespace,
-    };
-
-    this.currentNamespace = `:SPCBLOCK:_${this.currentNamespace}`;
-    this.inSpcblock = true;
+    this.directiveRuntime.handleSpcblock(words);
   }
 
   handleEndSpcblock(words: string[]): void {
-    if (!this.inSpcblock || !this.spcblockData) {
-      throw new Error("endspcblock used without an active spcblock.");
-    }
-
-    if (this.spcblockData.type !== "nspc") {
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-
-    if (this.canFinalize) {
-      const sizePc = this.romWriter.convertTargetAddressToRomOffset(this.spcblockData.sizeAddress & 0xFFFFFF);
-      if (sizePc < 0) {
-        throw new Error("spcblock size address does not map to ROM.");
-      }
-      const blockSize = (this.currentTargetAddress - this.spcblockData.destination) & 0xFFFF;
-      this.writeDataBytes(sizePc, blockSize & 0xFF, 1);
-      this.writeDataBytes(sizePc + 1, (blockSize >> 8) & 0xFF, 1);
-    }
-
-    if (words.length === 3) {
-      if (words[1].toLowerCase() !== "execute") {
-        throw new Error(`Invalid endspcblock argument: ${words[1]}`);
-      }
-      this.write2(0x0000);
-      this.write2(this.operandResolver.getnum(this.resolvedefines(words[2])) & 0xFFFF);
-    } else if (words.length !== 1) {
-      throw new Error("Unknown endspcblock format.");
-    } else if (this.spcblockData.executeAddress !== null) {
-      this.write2(0x0000);
-      this.write2(this.spcblockData.executeAddress & 0xFFFF);
-    }
-
-    this.currentNamespace = this.spcblockData.namespaceBackup;
-    this.spcblockData = null;
-    this.inSpcblock = false;
+    this.directiveRuntime.handleEndSpcblock(words);
   }
 
   /**
@@ -1666,25 +1591,7 @@ export class Assembler implements AssemblySession {
    * @param {string[]} params - The parameters for the org directive.
    */
   handleOrg(params: string[]): void {
-    debug("handleOrg", params);
-    if (params.length !== 1) {
-      throw new Error("ORG requires a single address parameter.");
-    }
-
-    const addressStr = params[0].trim();
-    let addr = 0;
-    // Support both `$` (hex) and standard decimal
-    if (addressStr.startsWith("$")) {
-        addr = parseInt(addressStr.substring(1), 16);
-    } else {
-        addr = parseInt(addressStr, 10);
-    }
-    debug("handleOrg addr", addr , addr.toString(16));
-    if (isNaN(addr) || addr < 0 || addr > 0xFFFFFF) {
-      throw new Error(`Invalid ORG address: ${params[0]}`);
-    }
-
-    this.setWritePosition(addr);
+    this.directiveRuntime.handleOrg(params);
   }
 
   /**
@@ -1693,156 +1600,7 @@ export class Assembler implements AssemblySession {
    * @param {string[]} params - The parameters for the data directive.
    */
   handleDataDirective(type: string, params: string[]): void {
-    debug("handleDataDirective", type, params);
-    if (!Array.isArray(params) || params.length === 0) {
-      throw new Error(`${type.toUpperCase()} directive requires at least one parameter.`);
-    }
-
-    // Support for SNASM-style data directives.
-    if (type.toLowerCase() === "dc.b") {
-      type = "db";
-    } else if (type.toLowerCase() === "dc.w") {
-      type = "dw";
-    } else if (type.toLowerCase() === "dc.l") {
-      type = "dl";
-    }
-
-    const lengthMap: { [key: string]: number } = {
-      "db": 1,
-      "dw": 2,
-      "dl": 3,
-      "dd": 4,
-    };
-
-    const len = lengthMap[type.toLowerCase()];
-    if (!len) {
-      throw new Error(`Invalid data directive: ${type}`);
-    }
-
-    if (this.isDefinitionCollectionStage) {
-      debug("handleDataDirective pass 0, estimating");
-      const pendingValues = [...splitRespectingFunctions(params.join(" "))];
-      let estimatedItems = 0;
-      while (pendingValues.length > 0) {
-        let value = (pendingValues.shift() ?? "").trim();
-        if (!value) {
-          continue;
-        }
-
-        if (value.startsWith('"') || value.startsWith("'")) {
-          const unquoted = value.slice(1, -1);
-          try {
-            estimatedItems += this.defineEngine.resolveDefinesInStringLiteral(unquoted).length;
-          } catch {
-            estimatedItems += unquoted.length;
-          }
-          continue;
-        }
-
-        if (value.startsWith("#")) {
-          value = value.substring(1);
-        }
-
-        let resolved = value;
-        let previousResolved = "";
-        try {
-          while (resolved !== previousResolved) {
-            previousResolved = resolved;
-            resolved = this.resolvedefines(resolved);
-          }
-        } catch {
-          // Pass 0 only needs byte counts, so unresolved symbols still consume one item.
-        }
-
-        const expandedValues = splitRespectingFunctions(resolved);
-        if (expandedValues.length > 1) {
-          pendingValues.unshift(...expandedValues);
-          continue;
-        }
-
-        estimatedItems += 1;
-      }
-
-      this.step(estimatedItems * len);
-      this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
-      return;
-    }
-
-    // Split by comma while respecting function calls
-    const values = splitRespectingFunctions(params.join(" "));
-
-    const pendingValues = [...values];
-    while (pendingValues.length > 0) {
-      let value = (pendingValues.shift() ?? "").trim();
-      if (value.startsWith('"') || value.startsWith("'")) {
-        debug("handleDataDirective string literals", value);
-        // Handle string literals
-        const unquoted = value.slice(1, -1);
-        const expandedString = this.defineEngine.resolveDefinesInStringLiteral(unquoted);
-        debug("handleDataDirective string literal unquoted", unquoted);
-        debug("handleDataDirective string literal expanded", expandedString);
-        // Use character mapping for each character
-        const mappedChars = this.processStringWithMapping(expandedString);
-        for (const charValue of mappedChars) {
-          this.writeDataByLength(len, charValue);
-        }
-      } else {
-        debug("handleDataDirective numeric values", value);
-        // Handle numeric values
-        if (value.startsWith("#")) {
-          debug("Warning: # before numbers in db/dw/... is deprecated. Remove the #.");
-          value = value.substring(1);
-        }
-
-        // First resolve any defines in the expression so that tokens like "FillCount" are replaced.
-        // Recursively resolve defines until no more changes occur
-        let resolved = value;
-        let previousResolved = "";
-        while (resolved !== previousResolved) {
-          previousResolved = resolved;
-          resolved = this.resolvedefines(resolved);
-        }
-        debug("handleDataDirective recursively resolved defines", resolved);
-
-        // A define used as a db/dw parameter may expand to multiple comma-separated values.
-        // Re-queue each expanded token so it is processed like native directive arguments.
-        const expandedValues = splitRespectingFunctions(resolved);
-        if (expandedValues.length > 1) {
-          pendingValues.unshift(...expandedValues);
-          continue;
-        }
-
-        // Check if this is a struct reference (e.g., "sprite.x_pos")
-        let num: number;
-        try {
-          const structValue = this.structEngine.resolveStructLabel(resolved);
-          debug("handleDataDirective struct reference", { resolved, structValue });
-          if (typeof structValue === "number" && !Number.isNaN(structValue)) {
-            num = structValue;
-            debug("handleDataDirective using struct value", num);
-            this.writeDataByLength(len, num);
-            continue;
-          }
-        } catch (error) {
-          debug("handleDataDirective struct resolution failed, trying math evaluation", resolved);
-          // If struct resolution fails, evaluate using the standard numeric resolver.
-          num = this.operandResolver.getnum(resolved);
-        }
-        if (Number.isNaN(num)) {
-          // As a fallback, try to look up a label (this assumes it's a static label).
-          num = this.symbolScope.getLabelValue(resolved, true);
-        }
-        debug("handleDataDirective numeric num", num);
-
-        if (Number.isNaN(num)) {
-          debug("handleDataDirective unable to determine value:", num)
-          throw new Error("Unable to determine value:")
-        }
-        this.writeDataByLength(len, num);
-      }
-    }
-
-    this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
+    this.directiveRuntime.handleDataDirective(type, params);
   }
 
   /**
@@ -1851,168 +1609,42 @@ export class Assembler implements AssemblySession {
    * @param {number} value The value to write.
    */
   writeDataByLength(len: number, value: number): void {
-    debug("writeDataByLength", { len, value });
-    // TODO Why is len a string here sometimes?
-    if (typeof len !== "number") {
-      len = Number.parseInt(len, 10);
-      if (Number.isNaN(len)) {
-        throw new Error("writeDataByLength: len is NaN");
-      }
-    }
-    debug("writeDataByLength", { len: len.toString(16), value: value.toString(16) });
-    switch (len) {
-      case 1:
-        this.write1(value);
-        break;
-      case 2:
-        this.write2(value);
-        break;
-      case 3:
-        this.write3(value);
-        break;
-      case 4:
-        this.write4(value);
-        break;
-      default:
-        throw new Error(`Unsupported data length ${len}`);
-    }
+    this.directiveRuntime.writeDataByLength(len, value);
   }
 
   /**
    * Pushes the current namespace.
    */
   handlePushNamespace(): void {
-    debug("handlePushNamespace")
-    this.namespaceStack.push(this.currentNamespace);
-    if (this.namespaceNestingEnabled) {
-      // Also save the nesting path
-      this.namespaceStack.push(JSON.stringify(this.namespaceNestingPath));
-    }
+    this.directiveRuntime.handlePushNamespace();
   }
 
   /**
    * Restores the previous namespace.
    */
   handlePullNamespace(): void {
-    debug("handlePullNamespace");
-    if (this.namespaceStack.length === 0) {
-      throw new Error("pullns without pushns");
-    }
-    if (this.namespaceNestingEnabled) {
-      // Restore the nesting path first
-      const pathJson = this.namespaceStack.pop();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      this.namespaceNestingPath = JSON.parse(pathJson);
-    }
-    this.currentNamespace = this.namespaceStack.pop();
+    this.directiveRuntime.handlePullNamespace();
   }
   /**
    * Handles `namespace` definitions.
    * @param {string[]} params - The parameters for the namespace directive.
    */
   handleNamespace(params: string[]): void {
-    debug("handleNamespace", params);
-
-    // Handle namespace nesting directive
-    if (params.length >= 2 && params[0].toLowerCase() === "nested") {
-      const action = params[1].toLowerCase();
-      if (action === "on") {
-        this.namespaceNestingEnabled = true;
-        return;
-      } else if (action === "off") {
-        this.namespaceNestingEnabled = false;
-        this.namespaceNestingPath = [];
-        this.currentNamespace = "";
-        return;
-      }
-    }
-
-    if (params.length === 0) {
-      debug("handleNamespace empty, resetting namespace");
-      if (this.namespaceNestingEnabled) {
-        this.namespaceNestingPath = [];
-      }
-      this.currentNamespace = "";
-      return;
-    }
-
-    if (params.length === 1 && params[0].toLowerCase() === "off") {
-      debug("handleNamespace disable", this.currentNamespace);
-      if (this.namespaceNestingEnabled) {
-        // Pop the last namespace from the path
-        this.namespaceNestingPath.pop();
-        // Reconstruct the current namespace from the remaining path
-        this.currentNamespace = this.namespaceNestingPath.join("_");
-      } else {
-        this.currentNamespace = "";
-      }
-      return;
-    } else if (params.length === 1) {
-      debug("handleNamespace enable", params[0]);
-      if (this.namespaceNestingEnabled) {
-        this.namespaceNestingPath.push(params[0]);
-        this.currentNamespace = this.namespaceNestingPath.join("_");
-      } else {
-        this.currentNamespace = params[0];
-      }
-      return;
-    }
-
-    const action = params[1].toLowerCase();
-    if (action === "off") {
-      debug("handleNamespace disable action", params[0]);
-      if (this.namespaceNestingEnabled) {
-        this.namespaceNestingPath.pop();
-        this.currentNamespace = this.namespaceNestingPath.join("_");
-      } else {
-        this.currentNamespace = "";
-      }
-    } else {
-      debug("handleNamespace enable action", params[0]);
-      if (this.namespaceNestingEnabled) {
-        this.namespaceNestingPath.push(params[0]);
-        this.currentNamespace = this.namespaceNestingPath.join("_");
-      } else {
-        this.currentNamespace = params[0];
-      }
-    }
+    this.directiveRuntime.handleNamespace(params);
   }
 
   /**
    * Pushes the current PC onto the pushpcStack.
    */
   handlePushPC(): void {
-    debug("handlePushPC")
-    if (this.pushpcnum >= 256) {
-      throw new Error("PushPC stack overflow.");
-    }
-
-    this.pushpcStack.push({
-        currentTargetAddress: this.currentTargetAddress,
-        currentTargetStartAddress: this.currentTargetStartAddress,
-        currentTargetBaseAddress: this.currentTargetBaseAddress,
-        currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
-    });
-
-    this.pushpcnum++;
+    this.directiveRuntime.handlePushPC();
   }
 
   /**
    * Restores the previous PC.
    */
   handlePullPC(): void {
-    debug("handlePullPC");
-    if (this.pushpcnum === 0) {
-      throw new Error("PullPC without PushPC.");
-    }
-
-    const state = this.pushpcStack.pop();
-    this.currentTargetAddress = state.currentTargetAddress;
-    this.currentTargetStartAddress = state.currentTargetStartAddress;
-    this.currentTargetBaseAddress = state.currentTargetBaseAddress;
-    this.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
-
-    this.pushpcnum--;
+    this.directiveRuntime.handlePullPC();
   }
 
   /**
@@ -3202,6 +2834,55 @@ export class Assembler implements AssemblySession {
     }
   }
 
+  resolveForLoopBounds(forBlock: LoopBlock | LoweredLoopNode): { variable?: string; start?: number; end?: number } {
+    const parsedForLoop = forBlock.header?.parsed.forLoop;
+    const variable = forBlock.variable ?? parsedForLoop?.variable;
+    let start: number | undefined = forBlock.start;
+    let end: number | undefined = forBlock.end;
+
+    const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
+    const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
+    if (startExpression && endExpression) {
+      const startExpr = renderExpressionNode(startExpression);
+      const endExpr = renderExpressionNode(endExpression);
+      const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
+      const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
+      start = this.operandResolver.getnum(startDefinesResolved);
+      end = this.operandResolver.getnum(endDefinesResolved);
+    }
+
+    return { variable, start, end };
+  }
+
+  executeForLoopIterations(forBlock: LoopBlock | LoweredLoopNode, executeBody: () => void): void {
+    const { variable, start, end } = this.resolveForLoopBounds(forBlock);
+
+    if (!variable || start === undefined || end === undefined) {
+      debug("executeForLoopIterations missing loop semantics:", forBlock);
+      return;
+    }
+
+    // Save the original variable value before we modify it
+    const originalValue = this.defines.get(variable);
+
+    // Only process the loop if start < end
+    if (start < end) {
+      // Loop through the range and process commands for each iteration
+      for (let i = start; i < end; i++) {
+        // Set our loop counter directly in defines map
+        this.defines.set(variable, i.toString());
+        executeBody();
+      }
+    }
+
+    // Restore the original variable value or delete if it didn't exist
+    if (originalValue !== undefined) {
+      this.defines.set(variable, originalValue);
+    } else {
+      this.defines.delete(variable);
+    }
+  }
+
   executeLoweredLoop(loopBlock: LoweredLoopNode): void {
     debug("executeLoweredLoop", loopBlock);
     if (loopBlock.loopType === "for") {
@@ -3217,87 +2898,12 @@ export class Assembler implements AssemblySession {
    */
   executeForLoop(forBlock: LoopBlock): void {
     debug("executeForLoop", forBlock);
-    const parsedForLoop = forBlock.header?.parsed.forLoop;
-    const variable = forBlock.variable ?? parsedForLoop?.variable;
-    let start: number | undefined = forBlock.start;
-    let end: number | undefined = forBlock.end;
-
-    const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
-    const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
-    if (startExpression && endExpression) {
-      const startExpr = renderExpressionNode(startExpression);
-      const endExpr = renderExpressionNode(endExpression);
-      const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
-      const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
-      start = this.operandResolver.getnum(startDefinesResolved);
-      end = this.operandResolver.getnum(endDefinesResolved);
-    }
-
-    if (!variable || start === undefined || end === undefined) {
-      debug("executeForLoop missing loop semantics:", forBlock);
-      return;
-    }
-
-    // Save the original variable value before we modify it
-    const originalValue = this.defines.get(variable);
-
-    // Only process the loop if start < end
-    if (start < end) {
-      // Loop through the range and process commands for each iteration
-      for (let i = start; i < end; i++) {
-        // Set our loop counter directly in defines map
-        this.defines.set(variable, i.toString());
-
-        // Process each command in the loop body
-        this.executeNodeStream(forBlock.commands as RuntimeNode[]);
-      }
-    }
-
-    // Restore the original variable value or delete if it didn't exist
-    if (originalValue !== undefined) {
-      this.defines.set(variable, originalValue);
-    } else {
-      this.defines.delete(variable);
-    }
+    this.executeForLoopIterations(forBlock, () => this.executeNodeStream(forBlock.commands as RuntimeNode[]));
   }
 
   executeLoweredForLoop(forBlock: LoweredLoopNode): void {
     debug("executeLoweredForLoop", forBlock);
-    const parsedForLoop = forBlock.header?.parsed.forLoop;
-    const variable = forBlock.variable ?? parsedForLoop?.variable;
-    let start: number | undefined = forBlock.start;
-    let end: number | undefined = forBlock.end;
-
-    const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
-    const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
-    if (startExpression && endExpression) {
-      const startExpr = renderExpressionNode(startExpression);
-      const endExpr = renderExpressionNode(endExpression);
-      const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
-      const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
-      start = this.operandResolver.getnum(startDefinesResolved);
-      end = this.operandResolver.getnum(endDefinesResolved);
-    }
-
-    if (!variable || start === undefined || end === undefined) {
-      debug("executeLoweredForLoop missing loop semantics:", forBlock);
-      return;
-    }
-
-    const originalValue = this.defines.get(variable);
-
-    if (start < end) {
-      for (let i = start; i < end; i++) {
-        this.defines.set(variable, i.toString());
-        this.executeLoweredNodeStream(forBlock.commands);
-      }
-    }
-
-    if (originalValue !== undefined) {
-      this.defines.set(variable, originalValue);
-    } else {
-      this.defines.delete(variable);
-    }
+    this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
   }
 
   /**
@@ -3306,58 +2912,23 @@ export class Assembler implements AssemblySession {
    */
   executeWhileLoop(whileBlock: LoopBlock): void {
     debug("executeWhileLoop", whileBlock);
-    const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
-    if (!conditionNode) {
-      debug("executeWhileLoop missing condition expression", whileBlock);
-      return;
-    }
-
-    let iteration = 0;
-    const MAX_ITERATIONS = 10000; // Safety limit to prevent infinite loops
-
-    // Track variables modified in the loop body
-    const loopVars = new Set<string>();
-    const originalValues = new Map<string, string | undefined>();
-
-    // Continue looping as long as the condition evaluates to true
-    while (this.evaluateExpression(conditionNode) && iteration < MAX_ITERATIONS) {
-      // Process each command in the loop body
-      for (const cmd of whileBlock.commands) {
-        let defineTarget: string | null = null;
-        if ("source" in cmd && cmd.kind === "defineCommand") {
-          defineTarget = getDefineVariable(cmd.command);
-        }
-        if (defineTarget && !loopVars.has(defineTarget)) {
-          loopVars.add(defineTarget);
-          originalValues.set(defineTarget, this.defines.get(defineTarget));
-        }
-        this.executeNodeWithRecovery(cmd);
-      }
-
-      iteration++;
-    }
-
-    if (iteration >= MAX_ITERATIONS) {
-      debug("executeWhileLoop while loop exceeded maximum iteration limit. Possible infinite loop detected.");
-    }
-
-    // Restore original variable values
-    for (const [varName, value] of originalValues.entries()) {
-      if (value !== undefined) {
-        debug(`executeWhileLoop setting ${varName} to ${value}`);
-        this.defines.set(varName, value);
-      } else {
-        debug(`executeWhileLoop delete entry for ${varName}`);
-        this.defines.delete(varName);
-      }
-    }
+    this.executeWhileLoopCommands(
+      whileBlock,
+      whileBlock.commands,
+      (cmd) => "source" in cmd && cmd.kind === "defineCommand" ? getDefineVariable(cmd.command) : null,
+      (cmd) => this.executeNodeWithRecovery(cmd),
+    );
   }
 
-  executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void {
-    debug("executeLoweredWhileLoop", whileBlock);
+  executeWhileLoopCommands<TCommand>(
+    whileBlock: LoopBlock | LoweredLoopNode,
+    commands: TCommand[],
+    getDefineTarget: (command: TCommand) => string | null,
+    executeCommand: (command: TCommand) => void,
+  ): void {
     const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
     if (!conditionNode) {
-      debug("executeLoweredWhileLoop missing condition expression", whileBlock);
+      debug("executeWhileLoopCommands missing condition expression", whileBlock);
       return;
     }
 
@@ -3366,35 +2937,44 @@ export class Assembler implements AssemblySession {
     const loopVars = new Set<string>();
     const originalValues = new Map<string, string | undefined>();
 
+    // Continue looping as long as the condition evaluates to true
     while (this.evaluateExpression(conditionNode) && iteration < MAX_ITERATIONS) {
-      for (const cmd of whileBlock.commands) {
-        let defineTarget: string | null = null;
-        if (cmd.kind === "command" && cmd.command.kind === "defineCommand") {
-          defineTarget = getDefineVariable(cmd.command.command);
-        }
+      for (const cmd of commands) {
+        const defineTarget = getDefineTarget(cmd);
         if (defineTarget && !loopVars.has(defineTarget)) {
           loopVars.add(defineTarget);
           originalValues.set(defineTarget, this.defines.get(defineTarget));
         }
-        this.executeLoweredNodeWithRecovery(cmd);
+        executeCommand(cmd);
       }
 
       iteration++;
     }
 
     if (iteration >= MAX_ITERATIONS) {
-      debug("executeLoweredWhileLoop while loop exceeded maximum iteration limit. Possible infinite loop detected.");
+      debug("executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected.");
     }
 
+    // Restore original variable values
     for (const [varName, value] of originalValues.entries()) {
       if (value !== undefined) {
-        debug(`executeLoweredWhileLoop setting ${varName} to ${value}`);
+        debug(`executeWhileLoopCommands setting ${varName} to ${value}`);
         this.defines.set(varName, value);
       } else {
-        debug(`executeLoweredWhileLoop delete entry for ${varName}`);
+        debug(`executeWhileLoopCommands delete entry for ${varName}`);
         this.defines.delete(varName);
       }
     }
+  }
+
+  executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void {
+    debug("executeLoweredWhileLoop", whileBlock);
+    this.executeWhileLoopCommands(
+      whileBlock,
+      whileBlock.commands,
+      (cmd) => cmd.kind === "command" && cmd.command.kind === "defineCommand" ? getDefineVariable(cmd.command.command) : null,
+      (cmd) => this.executeLoweredNodeWithRecovery(cmd),
+    );
   }
 
   createLoopCommandNode(command: string, sourceFile = this.currentFile, sourceLine = this.currentLine): NormalizedCommand {
@@ -3488,6 +3068,13 @@ export class Assembler implements AssemblySession {
       return;
     }
 
+    if (node.kind === "directive") {
+      const loweredCommand = (node as LoweredExecutableNode & { command?: NormalizedCommand }).command;
+      if (loweredCommand) {
+        this.collectCommandReferences(loweredCommand);
+      }
+    }
+
     if (node.kind === "loop") {
       this.executeLoweredLoop(node);
       return;
@@ -3519,10 +3106,13 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  executeConditionalNode(node: RuntimeConditionalNode): void {
-    for (const branch of node.branches) {
+  executeConditionalBranches<TCommand>(
+    branches: Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[] }>,
+    executeCommands: (commands: TCommand[]) => void,
+  ): void {
+    for (const branch of branches) {
       if (branch.kind === "else") {
-        this.executeNodeStream(branch.commands as RuntimeNode[]);
+        executeCommands(branch.commands);
         return;
       }
       if (!branch.conditionNode) {
@@ -3538,33 +3128,24 @@ export class Assembler implements AssemblySession {
         this.requireStaticLabelLookup = false;
       }
       if (branchConditionMatched) {
-        this.executeNodeStream(branch.commands as RuntimeNode[]);
+        executeCommands(branch.commands);
         return;
       }
     }
   }
 
+  executeConditionalNode(node: RuntimeConditionalNode): void {
+    this.executeConditionalBranches(
+      node.branches,
+      (commands) => this.executeNodeStream(commands as RuntimeNode[]),
+    );
+  }
+
   executeLoweredConditionalNode(node: LoweredConditionalNode): void {
-    for (const branch of node.branches) {
-      if (branch.kind === "else") {
-        this.executeLoweredNodeStream(branch.commands);
-        return;
-      }
-      if (!branch.conditionNode) {
-        continue;
-      }
-      let branchConditionMatched = false;
-      this.requireStaticLabelLookup = true;
-      try {
-        branchConditionMatched = this.evaluateExpression(branch.conditionNode);
-      } finally {
-        this.requireStaticLabelLookup = false;
-      }
-      if (branchConditionMatched) {
-        this.executeLoweredNodeStream(branch.commands);
-        return;
-      }
-    }
+    this.executeConditionalBranches(
+      node.branches,
+      (commands) => this.executeLoweredNodeStream(commands),
+    );
   }
 
   parseCommandStreamToNodes(commands: string[], sourceFile = this.currentFile, startLine = this.currentLine): RuntimeNode[] {

@@ -96,3 +96,51 @@ test("lowered directive dispatch preserves data directive behavior", t => {
   t.true(dataSpy.calledOnce);
   t.truthy(dataSpy.firstCall.args[1]?.length);
 });
+
+test("command lowering lowers safe non-data directives directly", t => {
+  const assembler = new Assembler();
+  const normalized = createNormalizedCommand(
+    "org $808000",
+    "org $808000",
+    ["org", "$808000"],
+    "test.asm",
+    1
+  );
+
+  const lowered = assembler.commandLoweringService.lowerExecutableNode(normalized);
+
+  t.is(lowered.kind, "directive");
+  if (lowered.kind !== "directive") {
+    t.fail();
+    return;
+  }
+  t.is(lowered.keyword, "org");
+  t.deepEqual(lowered.words, ["org", "$808000"]);
+});
+
+test("command lowering preserves preprocessing-sensitive commands", t => {
+  const assembler = new Assembler();
+  const defineCommand = createNormalizedCommand("!value = $01", "!value = $01", ["!value", "=", "$01"], "test.asm", 1);
+  const labelCommand = createNormalizedCommand("Label:", "Label:", ["Label:"], "test.asm", 2);
+  const macroPlaceholderCommand = createNormalizedCommand("db $04, <value>", "db $04, <value>", ["db", "$04,", "<value>"], "test.asm", 3);
+
+  const loweredDefine = assembler.commandLoweringService.lowerExecutableNode(defineCommand);
+  const loweredLabel = assembler.commandLoweringService.lowerExecutableNode(labelCommand);
+  const loweredMacroPlaceholder = assembler.commandLoweringService.lowerExecutableNode(macroPlaceholderCommand);
+
+  t.is(loweredDefine.kind, "command");
+  t.is(loweredLabel.kind, "command");
+  t.is(loweredMacroPlaceholder.kind, "command");
+});
+
+test("lowered safe directives dispatch without normalized passthrough", t => {
+  const assembler = new Assembler();
+  const processSpy = sinon.spy(assembler, "processNormalizedCommand");
+  const normalized = commandNode("check bankcross half");
+  const lowered = assembler.commandLoweringService.lowerExecutableNode(normalized);
+
+  assembler.executeLoweredNode(lowered);
+
+  t.false(processSpy.called);
+  t.is(assembler.bankCrossCheckMode, "half");
+});

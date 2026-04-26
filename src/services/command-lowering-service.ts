@@ -10,6 +10,7 @@ export type LoweredDirective = {
   keyword: string;
   words: string[];
   source: NormalizedCommand["source"];
+  command?: NormalizedCommand;
 };
 
 export type LoweredCommand = LoweredDirective | LoweredInstruction;
@@ -50,6 +51,45 @@ export type LoweredProgram = {
   nodes: LoweredExecutableNode[];
 };
 
+// Data directives are intentionally absent for now: macro-heavy sources can
+// depend on placeholder rewriting and byte-for-byte ASAR compatibility.
+const DIRECTLY_LOWERABLE_DIRECTIVES = new Set([
+  "arch",
+  "base",
+  "check",
+  "exhirom",
+  "exlorom",
+  "fastrom",
+  "fill",
+  "fillbyte",
+  "filldword",
+  "filllong",
+  "fillword",
+  "fullsa1rom",
+  "hirom",
+  "lorom",
+  "namespace",
+  "norom",
+  "optimize",
+  "org",
+  "pad",
+  "padbyte",
+  "paddword",
+  "padlong",
+  "padword",
+  "pullbase",
+  "pullns",
+  "pullpc",
+  "pulltable",
+  "pushbase",
+  "pushns",
+  "pushpc",
+  "pushtable",
+  "sa1rom",
+  "sfxrom",
+  "startpos",
+]);
+
 export type CommandLoweringHost = {
   directiveRegistry: DirectiveRegistry;
   resolveActiveArchitecture(): { name: string; definition?: ArchitectureDefinition };
@@ -84,6 +124,7 @@ export class CommandLoweringService {
         keyword,
         words: directiveWords,
         source: command.source,
+        command,
       };
     }
 
@@ -193,6 +234,19 @@ export class CommandLoweringService {
    * @returns {boolean} True when the command should stay in passthrough form.
    */
   shouldPreserveCommand(command: NormalizedCommand): boolean {
+    const keyword = command.keyword.toLowerCase();
+    if (/<[^>]+>/.test(command.command)) {
+      // Macro bodies use ASAR-style `<param>` placeholders that are resolved
+      // during normalized dispatch. Lowering them early would send placeholders
+      // like `<value>` straight into numeric evaluation.
+      return true;
+    }
+    // Only bypass normalized preprocessing for directives whose ordering and
+    // side effects are already represented by parsed command metadata. Defines,
+    // labels, macros, structs, and control-flow headers still use passthrough.
+    if (this.host.directiveRegistry.has(keyword) && DIRECTLY_LOWERABLE_DIRECTIVES.has(keyword)) {
+      return false;
+    }
     return command.kind !== "opcodeCandidate";
   }
 }

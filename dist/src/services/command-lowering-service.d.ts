@@ -9,6 +9,7 @@ export type LoweredDirective = {
     keyword: string;
     words: string[];
     source: NormalizedCommand["source"];
+    command?: NormalizedCommand;
 };
 export type LoweredCommand = LoweredDirective | LoweredInstruction;
 export type LoweredPassthroughCommand = {
