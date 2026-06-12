@@ -1,14 +1,18 @@
 import type { DirectiveRegistry } from "./registry.js";
 import { ASAR_COMPAT_NO_OP_DIRECTIVES } from "../compatibility/asar-compatibility-profile.js";
-import { AssemblySession, DirectiveContext } from "./types.js";
+import type { DirectiveTableCapability } from "./types.js";
+
+type TableDirectiveContext = {
+  session: DirectiveTableCapability;
+};
 
 /**
  * Restores the previously saved character mapping table.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {TableDirectiveContext} ctx The directive context.
+ * @param {DirectiveTableCapability} ctx.session The table-capable assembly session.
  * @throws {Error} If `pulltable` is called without `pushtable`.
  */
-const handlePullTable = ({ session }: DirectiveContext) => {
+const handlePullTable = ({ session }: TableDirectiveContext) => {
   // debug("handlePullTable");
   if (session.tableStack.length === 0) {
     throw new Error("pulltable without pushtable");
@@ -18,10 +22,10 @@ const handlePullTable = ({ session }: DirectiveContext) => {
 
 /**
  * Saves the current character mapping table.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {TableDirectiveContext} ctx The directive context.
+ * @param {DirectiveTableCapability} ctx.session The table-capable assembly session.
  */
-const handlePushTable = ({ session }: DirectiveContext) => {
+const handlePushTable = ({ session }: TableDirectiveContext) => {
   // debug("handlePushTable");
   session.tableStack.push(new Map(session.characterMappings));
 };

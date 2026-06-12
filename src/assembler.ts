@@ -3013,17 +3013,35 @@ export class Assembler implements AssemblySession {
     return undefined;
   }
 
-  executeNodeWithRecovery(node: ExecutableNode): void {
+  /**
+   * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
+   * @param {TNode} node The node to execute.
+   * @param {(node: TNode) => SourceSpan | undefined} getSpan Resolves the node span for diagnostics.
+   * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
+   */
+  executeWithAnalysisRecovery<TNode>(
+    node: TNode,
+    getSpan: (node: TNode) => SourceSpan | undefined,
+    executeNode: (node: TNode) => void,
+  ): void {
     if (!this.analysisErrorRecoveryEnabled) {
-      this.executeNode(node);
+      executeNode(node);
       return;
     }
 
     try {
-      this.executeNode(node);
+      executeNode(node);
     } catch (error) {
-      this.reportErrorDiagnostic(error, this.getExecutableNodeSpan(node), this.activeStageExecutionState?.stage);
+      this.reportErrorDiagnostic(error, getSpan(node), this.activeStageExecutionState?.stage);
     }
+  }
+
+  executeNodeWithRecovery(node: ExecutableNode): void {
+    this.executeWithAnalysisRecovery(
+      node,
+      (currentNode) => this.getExecutableNodeSpan(currentNode),
+      (currentNode) => this.executeNode(currentNode),
+    );
   }
 
   executeNode(node: ExecutableNode): void {
@@ -3043,23 +3061,27 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  executeNodeStream(nodes: RuntimeNode[]): void {
+  /**
+   * Executes a stream of already-shaped nodes with the supplied recovery-aware dispatcher.
+   * @param {TNode[]} nodes The nodes to execute.
+   * @param {(node: TNode) => void} executeNode Executes one node.
+   */
+  executeNodeStreamWithRecovery<TNode>(nodes: TNode[], executeNode: (node: TNode) => void): void {
     for (const node of nodes) {
-      this.executeNodeWithRecovery(node);
+      executeNode(node);
     }
   }
 
-  executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void {
-    if (!this.analysisErrorRecoveryEnabled) {
-      this.executeLoweredNode(node);
-      return;
-    }
+  executeNodeStream(nodes: RuntimeNode[]): void {
+    this.executeNodeStreamWithRecovery(nodes, (node) => this.executeNodeWithRecovery(node));
+  }
 
-    try {
-      this.executeLoweredNode(node);
-    } catch (error) {
-      this.reportErrorDiagnostic(error, this.getLoweredNodeSpan(node), this.activeStageExecutionState?.stage);
-    }
+  executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void {
+    this.executeWithAnalysisRecovery(
+      node,
+      (currentNode) => this.getLoweredNodeSpan(currentNode),
+      (currentNode) => this.executeLoweredNode(currentNode),
+    );
   }
 
   executeLoweredNode(node: LoweredExecutableNode): void {
@@ -3089,9 +3111,7 @@ export class Assembler implements AssemblySession {
   }
 
   executeLoweredNodeStream(nodes: LoweredExecutableNode[]): void {
-    for (const node of nodes) {
-      this.executeLoweredNodeWithRecovery(node);
-    }
+    this.executeNodeStreamWithRecovery(nodes, (node) => this.executeLoweredNodeWithRecovery(node));
   }
 
   /**

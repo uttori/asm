@@ -119,4 +119,9 @@ export interface DirectiveContext {
   operandResolver: OperandResolver;
 }
 
-export type DirectiveHandler = (ctx: DirectiveContext, words: string[], raw: string, command?: NormalizedCommand) => void;
+export type DirectiveHandler = (
+  ctx: DirectiveContext,
+  words: string[],
+  raw: string,
+  command?: NormalizedCommand,
+) => void;

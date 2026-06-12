@@ -822,8 +822,21 @@ export declare class Assembler implements AssemblySession {
     lowerNode(command: NormalizedCommand): LoweredCommand;
     getExecutableNodeSpan(node: ExecutableNode): SourceSpan | undefined;
     getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined;
+    /**
+     * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
+     * @param {TNode} node The node to execute.
+     * @param {(node: TNode) => SourceSpan | undefined} getSpan Resolves the node span for diagnostics.
+     * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
+     */
+    executeWithAnalysisRecovery<TNode>(node: TNode, getSpan: (node: TNode) => SourceSpan | undefined, executeNode: (node: TNode) => void): void;
     executeNodeWithRecovery(node: ExecutableNode): void;
     executeNode(node: ExecutableNode): void;
+    /**
+     * Executes a stream of already-shaped nodes with the supplied recovery-aware dispatcher.
+     * @param {TNode[]} nodes The nodes to execute.
+     * @param {(node: TNode) => void} executeNode Executes one node.
+     */
+    executeNodeStreamWithRecovery<TNode>(nodes: TNode[], executeNode: (node: TNode) => void): void;
     executeNodeStream(nodes: RuntimeNode[]): void;
     executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void;
     executeLoweredNode(node: LoweredExecutableNode): void;
