@@ -31,10 +31,10 @@ independent production implementations.
 
 ### 1. Close Production Parity
 
-Status: **one known failure**.
+Status: **complete**.
 
-- Fix staged execution of `fixtures/asar/tests/labels_static_pass.asm`.
-- Remove `labels_static_pass` from `STAGED_GOLDEN_KNOWN_FAILURES` when it passes.
+- [x] Fix staged execution of `fixtures/asar/tests/labels_static_pass.asm`.
+- [x] Remove `labels_static_pass` from `STAGED_GOLDEN_KNOWN_FAILURES` when it passes.
 - Keep the all-fixture staged-vs-golden gate ratcheting: an unexpected pass must
   require deleting its known-failure entry.
 
@@ -171,8 +171,8 @@ Exit criteria:
 
 Status: **not started; reporting is complete**.
 
-The verified baseline is 93.22% statements, 89.02% branches, and 93.32%
-functions over 721 passing tests.
+The verified baseline is 93.22% statements, 88.98% branches, and 93.32%
+functions over 722 passing tests.
 
 - Enable thresholds for stable small modules first.
 - Restore `strictNullChecks` and narrow legacy nullable state instead of
@@ -216,7 +216,7 @@ These are speculative opportunities, not committed optimizations.
 - [x] `src/` contains production source only.
 - [x] Package declarations and publish contents exclude fixtures/harnesses.
 - [x] Namespace duplicate implementations are consolidated.
-- [ ] Staged production parity has no known failures.
+- [x] Staged production parity has no known failures.
 - [ ] Focused lowering tests cover loops, conditionals, include, and incbin.
 - [ ] Passthrough commands are minimized and justified.
 - [ ] Tree and lowered executors are consolidated.

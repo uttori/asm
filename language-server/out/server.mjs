@@ -17717,6 +17717,9 @@ var CommandLoweringService = class {
     if (/<[^>]+>/.test(command.command)) {
       return true;
     }
+    if (command.kind !== "unknown" && command.kind !== "opcodeCandidate") {
+      return true;
+    }
     if (this.host.directiveRegistry.has(keyword) && DIRECTLY_LOWERABLE_DIRECTIVES.has(keyword)) {
       return false;
     }

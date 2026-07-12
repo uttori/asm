@@ -54,6 +54,8 @@ The refactor is not finished:
 - LSP server, VS Code client, build command, and watch command.
 - Namespace behavior consolidated in `src/directives/namespace.ts`; duplicate
   runtime and assembler trampolines were removed.
+- Staged production parity across every top-level Asar fixture, including
+  static labels whose names case-insensitively match directive keywords.
 - `ProgramModel` has one canonical type definition.
 - `src/` contains production TypeScript only.
 
@@ -61,9 +63,6 @@ The refactor is not finished:
 
 - Canonical lowered dispatch: normal production assembly uses it, but
   `LoweredPassthroughCommand` remains broad.
-- Production parity: all staged fixture outputs match except
-  `labels_static_pass`, which currently fails with `Unrecognized fill
-  directive.` The test has a ratcheting known-failure entry.
 - IR durability: cached nodes exist, but preprocessing-sensitive paths can
   clone and rebuild normalized commands from raw text.
 - Directive extraction: several modules own behavior, while data, org/layout,

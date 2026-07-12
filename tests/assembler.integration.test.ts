@@ -247,11 +247,7 @@ const compareFixture = (fixtureName: string, mode: "legacy" | "tree" | "staged" 
 const ALL_TOP_LEVEL_FIXTURES = discoverTopLevelFixtures();
 const TREE_GOLDEN_KNOWN_FAILURES = new Set<string>([]);
 const TREE_LEGACY_KNOWN_FAILURES = new Set<string>([]);
-const STAGED_GOLDEN_KNOWN_FAILURES = new Set<string>([
-  // The staged path currently rejects this fixture's `fill` form while the
-  // tree and line drivers remain byte-identical to the Asar golden.
-  "labels_static_pass",
-]);
+const STAGED_GOLDEN_KNOWN_FAILURES = new Set<string>([]);
 
 test("integration parity helper treats selected equivalent errors as parity", (t) => {
   for (const fixtureName of [
@@ -369,6 +365,12 @@ test.serial("integration staged production path matches all top-level golden fix
     }
   }
   t.deepEqual(failures, []);
+});
+
+test.serial("integration staged production path handles static-label directive operands", (t) => {
+  const output = assembleFixtureStaged("labels_static_pass");
+  const expected = fs.readFileSync(path.resolve(EXPECTED_DIR, "labels_static_pass.asm.sfc"));
+  t.deepEqual(output, expected);
 });
 
 test.serial("integration tree and legacy outputs remain byte-identical for all top-level fixtures", (t) => {

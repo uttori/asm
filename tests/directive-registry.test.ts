@@ -167,14 +167,17 @@ test("command lowering preserves preprocessing-sensitive commands", t => {
   const defineCommand = createNormalizedCommand("!value = $01", "!value = $01", ["!value", "=", "$01"], "test.asm", 1);
   const labelCommand = createNormalizedCommand("Label:", "Label:", ["Label:"], "test.asm", 2);
   const macroPlaceholderCommand = createNormalizedCommand("db $04, <value>", "db $04, <value>", ["db", "$04,", "<value>"], "test.asm", 3);
+  const directiveNamedStaticLabel = createNormalizedCommand("FillByte = $EE", "FillByte = $EE", ["FillByte", "=", "$EE"], "test.asm", 4);
 
   const loweredDefine = assembler.commandLoweringService.lowerExecutableNode(defineCommand);
   const loweredLabel = assembler.commandLoweringService.lowerExecutableNode(labelCommand);
   const loweredMacroPlaceholder = assembler.commandLoweringService.lowerExecutableNode(macroPlaceholderCommand);
+  const loweredDirectiveNamedStaticLabel = assembler.commandLoweringService.lowerExecutableNode(directiveNamedStaticLabel);
 
   t.is(loweredDefine.kind, "command");
   t.is(loweredLabel.kind, "command");
   t.is(loweredMacroPlaceholder.kind, "command");
+  t.is(loweredDirectiveNamedStaticLabel.kind, "command");
 });
 
 test("lowered safe directives dispatch without normalized passthrough", t => {

@@ -241,6 +241,12 @@ export class CommandLoweringService {
       // like `<value>` straight into numeric evaluation.
       return true;
     }
+    if (command.kind !== "unknown" && command.kind !== "opcodeCandidate") {
+      // Semantic front-end forms take precedence over case-insensitive directive
+      // names. For example, `FillByte = $EE` is a static assignment, not the
+      // `fillbyte` directive.
+      return true;
+    }
     // Only bypass normalized preprocessing for directives whose ordering and
     // side effects are already represented by parsed command metadata. Defines,
     // labels, macros, structs, and control-flow headers still use passthrough.
