@@ -252,7 +252,7 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
     return;
   }
 
-  assembler.executeLoopBlock(loop);
+  assembler.executeNodeStream([loop]);
 
   t.deepEqual(executed, [
     { command: "db !i", value: "0" },

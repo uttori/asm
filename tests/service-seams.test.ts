@@ -416,7 +416,7 @@ test("typed conditional nodes skip inactive branches during execution", (t) => {
     return;
   }
 
-  assembler.executeNode(node);
+  assembler.executeNodeStream([node]);
   t.deepEqual(executed, ["db $20"]);
 });
 
@@ -575,7 +575,7 @@ test("node execution seam does not re-normalize cached command nodes", (t) => {
 
   const createLoopNodeStub = stub(assembler, "createLoopCommandNode");
   stub(assembler, "processNormalizedCommand").callsFake(() => {});
-  assembler.executeNode(commandNode);
+  assembler.executeNodeStream([commandNode]);
   t.false(createLoopNodeStub.called);
 });
 
@@ -796,6 +796,27 @@ test("runStage materializes a durable lowered program tree", (t) => {
   t.is(stageState.loweredProgram?.nodes[1]?.kind, "conditional");
 });
 
+test("lowered nested loop and conditional executors select the expected work", t => {
+  const assembler = new Assembler();
+  const nested = assembler.buildProgramModel([
+    "if 1",
+    "for i = 0..2",
+    "freespacebyte !i",
+    "endfor",
+    "else",
+    "freespacebyte $99",
+    "endif",
+    "!i = 0",
+    "while !i < 2",
+    "!i #= !i+1",
+    "endwhile",
+  ].join("\n"), "lowered-nested-control.asm");
+  assembler.executeLoweredNodeStream(assembler.commandLoweringService.lowerProgram(nested).nodes);
+
+  t.is(assembler.defaultFreespaceByte, 1);
+  t.is(assembler.defines.get("i"), "2");
+});
+
 test("lowered loop and conditional executors select the expected work", t => {
   const assembler = new Assembler();
   const loops = assembler.buildProgramModel([
@@ -876,6 +897,29 @@ test("file provider can serve includes from virtual documents", (t) => {
 
   t.is(assembler.currentTargetAddress, 1);
   t.true(assembler.includedFiles.has("mem:/shared.asm"));
+});
+
+test("lowered include executes nested conditional control flow", (t) => {
+  const fileProvider = createMemoryAssemblyFileProvider(new Map<string, string>([
+    ["mem:/main.asm", 'include "child.asm"'],
+    ["mem:/child.asm", [
+      "if 1",
+      "for i = 0..2",
+      "db !i",
+      "endfor",
+      "else",
+      "db $ff",
+      "endif",
+    ].join("\n")],
+  ]));
+  const assembler = new Assembler(undefined, { fileProvider });
+  assembler.activateStage("emitProgram");
+  assembler.setWritePosition(0x808000);
+  assembler.setCurrentFile("mem:/main.asm");
+
+  assembler.handleInclude("include", "child.asm", false);
+
+  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0x00, 0x01]);
 });
 
 test("analyzeWorkspace isolates documents into separate analysis sessions", (t) => {

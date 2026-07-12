@@ -91,7 +91,6 @@ export type MacroDefinition = {
   sourceFile?: string;
 };
 
-export type LoopBlock = LoopNode;
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
@@ -125,10 +124,6 @@ export type StageControlState = {
   currentNamespace: string;
   namespaceNestingEnabled: boolean;
   namespaceNestingPath: string[];
-  loopStack: LoopBlock[];
-  currentLoop: LoopBlock | null;
-  collectingLoop: boolean;
-  loopNestingLevel: number;
   inMacroExpansion: boolean;
   macroLabelInstance: number;
 };
@@ -338,12 +333,6 @@ export class Assembler implements AssemblySession {
   public includeStack: string[] = [];
   public includePaths: string[] = ["./"];
 
-  // Replace the existing loop tracking with a more structured approach
-  public loopStack: LoopBlock[] = []; // Stack of active loop blocks being built
-  public currentLoop: LoopBlock | null = null; // Reference to the loop block currently being constructed
-  public collectingLoop: boolean = false; // Flag to indicate we're collecting loop commands
-  public loopNestingLevel: number = 0; // Current nesting level for loops
-
   public macroLabelInstance: number = 0; // Tracks the current macro instance
   public inMacroExpansion: boolean = false; // Flag to track if we're inside a macro expansion
 
@@ -373,6 +362,7 @@ export class Assembler implements AssemblySession {
   public readonly includeEdges: AssemblyIncludeEdge[] = [];
   activeStageExecutionState: StageExecutionState | null = null;
   analysisErrorRecoveryEnabled = false;
+  runtimePassthroughRewriteEnabled = false;
 
   get defineEngine(): DefineEngine {
     return this.services.defineEngine;
@@ -1152,10 +1142,6 @@ export class Assembler implements AssemblySession {
         currentNamespace: this.currentNamespace,
         namespaceNestingEnabled: this.namespaceNestingEnabled,
         namespaceNestingPath: this.namespaceNestingPath,
-        loopStack: this.loopStack,
-        currentLoop: this.currentLoop,
-        collectingLoop: this.collectingLoop,
-        loopNestingLevel: this.loopNestingLevel,
         inMacroExpansion: this.inMacroExpansion,
         macroLabelInstance: this.macroLabelInstance,
       },
@@ -2143,9 +2129,6 @@ export class Assembler implements AssemblySession {
     // Reset the in macro flag
     this.inMacroExpansion = false;
 
-    // Reset the in loop flag
-    this.collectingLoop = false;
-    this.currentLoop = null;
     this.frontEndService.resetIncrementalParseState(this.incrementalProgramParseState);
 
     this.inSpcblock = false;
@@ -2253,10 +2236,6 @@ export class Assembler implements AssemblySession {
       currentNamespace: this.currentNamespace,
       namespaceNestingEnabled: this.namespaceNestingEnabled,
       namespaceNestingPath: this.namespaceNestingPath,
-      loopStack: this.loopStack,
-      currentLoop: this.currentLoop,
-      collectingLoop: this.collectingLoop,
-      loopNestingLevel: this.loopNestingLevel,
       inMacroExpansion: this.inMacroExpansion,
       macroLabelInstance: this.macroLabelInstance,
     };
@@ -2285,10 +2264,6 @@ export class Assembler implements AssemblySession {
         currentNamespace: controlSeed.currentNamespace,
         namespaceNestingEnabled: controlSeed.namespaceNestingEnabled,
         namespaceNestingPath: [...controlSeed.namespaceNestingPath],
-        loopStack: [...controlSeed.loopStack],
-        currentLoop: controlSeed.currentLoop,
-        collectingLoop: controlSeed.collectingLoop,
-        loopNestingLevel: controlSeed.loopNestingLevel,
         inMacroExpansion: controlSeed.inMacroExpansion,
         macroLabelInstance: controlSeed.macroLabelInstance,
       },
@@ -2320,10 +2295,6 @@ export class Assembler implements AssemblySession {
     this.currentNamespace = stageState.control.currentNamespace;
     this.namespaceNestingEnabled = stageState.control.namespaceNestingEnabled;
     this.namespaceNestingPath = stageState.control.namespaceNestingPath;
-    this.loopStack = stageState.control.loopStack;
-    this.currentLoop = stageState.control.currentLoop;
-    this.collectingLoop = stageState.control.collectingLoop;
-    this.loopNestingLevel = stageState.control.loopNestingLevel;
     this.inMacroExpansion = stageState.control.inMacroExpansion;
     this.macroLabelInstance = stageState.control.macroLabelInstance;
     this.inSpcblock = stageState.writeState.inSpcblock;
@@ -2355,10 +2326,6 @@ export class Assembler implements AssemblySession {
       currentNamespace: this.currentNamespace,
       namespaceNestingEnabled: this.namespaceNestingEnabled,
       namespaceNestingPath: this.namespaceNestingPath,
-      loopStack: this.loopStack,
-      currentLoop: this.currentLoop,
-      collectingLoop: this.collectingLoop,
-      loopNestingLevel: this.loopNestingLevel,
       inMacroExpansion: this.inMacroExpansion,
       macroLabelInstance: this.macroLabelInstance,
     };
@@ -2682,9 +2649,7 @@ export class Assembler implements AssemblySession {
       }
 
       const includeNode = this.createIncludeNode(resolvedPath, content);
-      for (const node of includeNode.commands) {
-        this.executeNode(node);
-      }
+      this.lowerAndExecuteRuntimeNodes(includeNode.commands);
     } catch (error) {
       debug("assemblefile error 💥", error);
       const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
@@ -2722,138 +2687,27 @@ export class Assembler implements AssemblySession {
   }
 
   /**
-   * Begins the collection of loop commands.
-   * @param {string} type The type of loop to begin ("for" or "while").
-   * @param {string} command The command to begin the loop with.
+   * Lowers completed runtime nodes and executes them through the production executor.
+   * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
    */
-  beginLoopCollection(type: "for" | "while", command: string): void {
-    debug("beginLoopCollection", type, command);
-    // Normalize inline loops through the typed node parser/executor path.
-    if (type === "for" && command.includes(":")) {
-      const inlineCommands = command.split(":").map((entry) => entry.trim()).filter(Boolean);
-      const inlineNodes = this.parseCommandStreamToNodes(inlineCommands, this.currentFile, this.currentLine);
-      if (this.collectingLoop && this.currentLoop) {
-        for (const node of inlineNodes) {
-          this.currentLoop.commands.push(node);
-        }
-      } else {
-        this.executeNodeStream(inlineNodes);
+  lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void {
+    const previousRewrite = this.runtimePassthroughRewriteEnabled;
+    this.runtimePassthroughRewriteEnabled = true;
+    try {
+      const loweredNodes = nodes.map((node) => this.commandLoweringService.lowerExecutableNode(node));
+      for (const node of loweredNodes) {
+        this.executeWithAnalysisRecovery(
+          node,
+          (currentNode) => this.getLoweredNodeSpan(currentNode),
+          (currentNode) => this.executeLoweredNode(currentNode),
+        );
       }
-      return;
-    }
-
-    // Regular non-inline loop
-    const header = this.createLoopCommandNode(command);
-    // Create a new loop block
-    const newLoop: LoopBlock = {
-      type,
-      header,
-      conditionNode: type === "while" ? header.parsed.condition?.expression : header.parsed.forLoop?.range,
-      rangeNode: header.parsed.forLoop?.range,
-      startExpression: header.parsed.forLoop?.start,
-      endExpression: header.parsed.forLoop?.end,
-      variable: header.parsed.forLoop?.variable,
-      commands: [],
-      startLine: this.currentLine
-    };
-
-    // Extract variable name for for loops
-    if (type === "for") {
-      debug("beginLoopCollection for loop", command);
-      if (newLoop.startExpression && newLoop.endExpression) {
-        debug("beginLoopCollection for loop parsed", newLoop);
-
-        // Pre-parse start and end (optional, can be done during execution)
-        try {
-          const startExpr = renderExpressionNode(newLoop.startExpression);
-          const endExpr = renderExpressionNode(newLoop.endExpression);
-          debug("beginLoopCollection for loop start", startExpr);
-          debug("beginLoopCollection for loop end", endExpr);
-
-          // Check if expressions are simple numeric values
-          if (/^-?\d+$/.test(startExpr)) {
-            newLoop.start = Number.parseInt(startExpr, 10);
-          } else {
-            newLoop.start = this.operandResolver.getnum(this.resolvedefines(startExpr));
-          }
-
-          if (/^-?\d+$/.test(endExpr)) {
-            newLoop.end = Number.parseInt(endExpr, 10);
-          } else {
-            newLoop.end = this.operandResolver.getnum(this.resolvedefines(endExpr));
-          }
-        } catch (e) {
-          /* c8 ignore next 3 */
-          // We'll parse these again during execution, so errors here are non-fatal
-          debug("Could not pre-parse for loop range:", e);
-        }
-      }
-    }
-
-    // If we're already collecting a loop, nest this one inside the current one
-    if (this.collectingLoop && this.currentLoop) {
-      this.currentLoop.commands.push(newLoop);
-      this.loopStack.push(this.currentLoop);
-    }
-
-    this.currentLoop = newLoop;
-    this.collectingLoop = true;
-    this.loopNestingLevel++;
-  }
-
-  /**
-   * Ends the collection of loop commands and executes the loop.
-   * @param {string} type The type of loop to end ("for" or "while").
-   */
-  endLoopCollection(type: "for" | "while"): void {
-    if (!this.collectingLoop || !this.currentLoop) {
-      debug(`endLoopCollection unexpected end${type} without matching ${type}`);
-      return;
-    }
-
-    if (this.currentLoop.type !== type) {
-      debug(`endLoopCollection mismatched loop types: expected end${this.currentLoop.type}, got end${type}`);
-      return;
-    }
-
-    // Set the end line for this loop block
-    this.currentLoop.endLine = this.currentLine;
-
-    // If we have a parent loop in the stack, pop back to it
-    if (this.loopStack.length > 0) {
-      // Save a reference to the finished loop before switching to parent
-      // No need to store it since we'll reference it from the parent's commands
-      this.currentLoop = this.loopStack.pop() || null;
-
-      // We don't execute the nested loop right away - it will be executed
-      // when its parent loop is executed
-    } else {
-      // No parent loop - execute this complete loop
-      const loopToExecute = this.currentLoop;
-      this.currentLoop = null;
-      this.collectingLoop = false;
-
-      // Execute the complete top-level loop
-      this.executeLoopBlock(loopToExecute);
-    }
-
-    this.loopNestingLevel--;
-  }
-
-  /**
-   * Executes a complete loop block with all its nested commands.
-   * @param {LoopBlock} loopBlock The loop block to execute.
-   */
-  executeLoopBlock(loopBlock: LoopBlock): void {
-    debug("executeLoopBlock", loopBlock);
-    if (loopBlock.type === "for") {
-      this.executeForLoop(loopBlock);
-    } else if (loopBlock.type === "while") {
-      this.executeWhileLoop(loopBlock);
+    } finally {
+      this.runtimePassthroughRewriteEnabled = previousRewrite;
     }
   }
 
-  resolveForLoopBounds(forBlock: LoopBlock | LoweredLoopNode): { variable?: string; start?: number; end?: number } {
+  resolveForLoopBounds(forBlock: LoweredLoopNode): { variable?: string; start?: number; end?: number } {
     const parsedForLoop = forBlock.header?.parsed.forLoop;
     const variable = forBlock.variable ?? parsedForLoop?.variable;
     let start: number | undefined = forBlock.start;
@@ -2873,7 +2727,7 @@ export class Assembler implements AssemblySession {
     return { variable, start, end };
   }
 
-  executeForLoopIterations(forBlock: LoopBlock | LoweredLoopNode, executeBody: () => void): void {
+  executeForLoopIterations(forBlock: LoweredLoopNode, executeBody: () => void): void {
     const { variable, start, end } = this.resolveForLoopBounds(forBlock);
 
     if (!variable || start === undefined || end === undefined) {
@@ -2911,36 +2765,13 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  /**
-   * Executes a for loop block.
-   * @param {LoopBlock} forBlock The for loop block to execute.
-   */
-  executeForLoop(forBlock: LoopBlock): void {
-    debug("executeForLoop", forBlock);
-    this.executeForLoopIterations(forBlock, () => this.executeNodeStream(forBlock.commands));
-  }
-
   executeLoweredForLoop(forBlock: LoweredLoopNode): void {
     debug("executeLoweredForLoop", forBlock);
     this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
   }
 
-  /**
-   * Executes a while loop block.
-   * @param {LoopBlock} whileBlock The while loop block to execute.
-   */
-  executeWhileLoop(whileBlock: LoopBlock): void {
-    debug("executeWhileLoop", whileBlock);
-    this.executeWhileLoopCommands(
-      whileBlock,
-      whileBlock.commands,
-      (cmd) => "source" in cmd && cmd.kind === "defineCommand" ? getDefineVariable(cmd.command) : null,
-      (cmd) => this.executeNodeWithRecovery(cmd),
-    );
-  }
-
   executeWhileLoopCommands<TCommand>(
-    whileBlock: LoopBlock | LoweredLoopNode,
+    whileBlock: LoweredLoopNode,
     commands: TCommand[],
     getDefineTarget: (command: TCommand) => string | null,
     executeCommand: (command: TCommand) => void,
@@ -3012,13 +2843,6 @@ export class Assembler implements AssemblySession {
     return this.commandLoweringService.lowerCommand(command);
   }
 
-  getExecutableNodeSpan(node: ExecutableNode): SourceSpan | undefined {
-    if ("source" in node) {
-      return node.source.normalizedSpan;
-    }
-    return node.header?.source.normalizedSpan;
-  }
-
   getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined {
     if (node.kind === "command") {
       return node.command.source.normalizedSpan;
@@ -3055,44 +2879,8 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  executeNodeWithRecovery(node: ExecutableNode): void {
-    this.executeWithAnalysisRecovery(
-      node,
-      (currentNode) => this.getExecutableNodeSpan(currentNode),
-      (currentNode) => this.executeNode(currentNode),
-    );
-  }
-
-  executeNode(node: ExecutableNode): void {
-    if ("source" in node) {
-      this.processNormalizedCommand(node);
-      return;
-    }
-
-    if (node.type === "for" || node.type === "while") {
-      this.executeLoopBlock(node);
-      return;
-    }
-
-    if (node.type === "if") {
-      this.executeConditionalNode(node);
-      return;
-    }
-  }
-
-  /**
-   * Executes a stream of already-shaped nodes with the supplied recovery-aware dispatcher.
-   * @param {TNode[]} nodes The nodes to execute.
-   * @param {(node: TNode) => void} executeNode Executes one node.
-   */
-  executeNodeStreamWithRecovery<TNode>(nodes: TNode[], executeNode: (node: TNode) => void): void {
-    for (const node of nodes) {
-      executeNode(node);
-    }
-  }
-
   executeNodeStream(nodes: RuntimeNode[]): void {
-    this.executeNodeStreamWithRecovery(nodes, (node) => this.executeNodeWithRecovery(node));
+    this.lowerAndExecuteRuntimeNodes(nodes);
   }
 
   executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void {
@@ -3105,7 +2893,7 @@ export class Assembler implements AssemblySession {
 
   executeLoweredNode(node: LoweredExecutableNode): void {
     if (node.kind === "command") {
-      this.processNormalizedCommand(node.command, false);
+      this.processNormalizedCommand(node.command, this.runtimePassthroughRewriteEnabled);
       return;
     }
 
@@ -3129,7 +2917,9 @@ export class Assembler implements AssemblySession {
   }
 
   executeLoweredNodeStream(nodes: LoweredExecutableNode[]): void {
-    this.executeNodeStreamWithRecovery(nodes, (node) => this.executeLoweredNodeWithRecovery(node));
+    for (const node of nodes) {
+      this.executeLoweredNodeWithRecovery(node);
+    }
   }
 
   /**
@@ -3170,13 +2960,6 @@ export class Assembler implements AssemblySession {
         return;
       }
     }
-  }
-
-  executeConditionalNode(node: RuntimeConditionalNode): void {
-    this.executeConditionalBranches(
-      node.branches,
-      (commands) => this.executeNodeStream(commands as RuntimeNode[]),
-    );
   }
 
   executeLoweredConditionalNode(node: LoweredConditionalNode): void {

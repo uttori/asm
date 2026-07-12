@@ -15,7 +15,8 @@ The refactor is not finished:
 
 - staged/lowered execution is the production path, with stable directives and
   instructions dispatched directly;
-- tree and lowered loop/conditional executors still coexist;
+- tree and line drivers remain parity oracles that lower completed runtime nodes
+  through the same production executor;
 - directive handlers still receive the broad `AssemblySession`;
 - architecture encoders still depend on broad assembler state;
 - compatibility rules are only partly isolated;
@@ -28,8 +29,8 @@ The refactor is not finished:
 
 - `npm run lint`: passes with six existing unsafe-regex warnings.
 - `npm run make-types`: passes and emits production declarations under `dist/`.
-- `npm run test:serial`: 734 tests pass.
-- Coverage: 93.24% statements, 88.95% branches, 93.33% functions.
+- `npm run test:serial`: 705 tests pass.
+- Coverage: 93.16% statements, 88.75% branches, 93.23% functions.
 - `npm run lsp:typecheck` and `npm run vscode:typecheck`: pass.
 - `npm run lsp:build` and `npm run vscode:build`: pass.
 - `npm run pack:check`: passes; fixtures, harnesses, and generated ROMs are not
@@ -65,6 +66,9 @@ The refactor is not finished:
   data forms.
 - Cached lowered passthrough execution no longer reparses unchanged raw source;
   dynamic macro-label and variadic rewrites retain normalization.
+- Runtime oracle execution lowers completed nodes before dispatch, including
+  includes, macro re-entry, loops, and conditionals.
+- Staged-vs-tree byte parity is gated across every top-level fixture.
 
 ### Partial
 
@@ -78,7 +82,6 @@ The refactor is not finished:
 
 ### Not Complete
 
-- One executor for commands, loops, and conditionals.
 - Family-specific directive capability contexts.
 - Stable-module coverage thresholds.
 - Strict null checking across production source.
@@ -100,5 +103,5 @@ The refactor is not finished:
 ## Decision
 
 Do not start another broad extraction rewrite. Continue the test-gated order in
-`ASSEMBLER_LONG_TERM_GOALS.md`; the next transition is consolidating tree and
-lowered executors while retaining the complete fixture parity gates.
+`ASSEMBLER_LONG_TERM_GOALS.md`; the next transition is narrowing directive
+capabilities while retaining the complete fixture parity gates.

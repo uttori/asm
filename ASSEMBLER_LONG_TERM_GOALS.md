@@ -87,15 +87,15 @@ Exit criteria:
 
 ### 4. Collapse Duplicate Executors
 
-Status: **not started**.
+Status: **complete**.
 
-- Make tree execution lower completed nodes before dispatch.
-- Route includes through the same lowered stream as top-level programs.
-- Unify loop and conditional dispatch around existing shared iteration/branch
+- [x] Make tree execution lower completed nodes before dispatch.
+- [x] Route includes through the same lowered stream as top-level programs.
+- [x] Unify loop and conditional dispatch around existing shared iteration/branch
   helpers.
-- Delete tree-specific loop and conditional entry points after parity proves
+- [x] Delete tree-specific loop and conditional entry points after parity proves
   equivalence.
-- Keep one line-oriented driver only while it provides useful oracle coverage.
+- [x] Keep one line-oriented driver only while it provides useful oracle coverage.
 
 Exit criteria:
 
@@ -178,8 +178,8 @@ Exit criteria:
 
 Status: **not started; reporting is complete**.
 
-The verified baseline is 93.24% statements, 88.95% branches, and 93.33%
-functions over 734 passing tests.
+The verified baseline is 93.16% statements, 88.75% branches, and 93.23%
+functions over 705 passing tests.
 
 - Enable thresholds for stable small modules first.
 - Restore `strictNullChecks` and narrow legacy nullable state instead of
@@ -226,7 +226,7 @@ These are speculative opportunities, not committed optimizations.
 - [x] Staged production parity has no known failures.
 - [x] Focused lowering tests cover loops, conditionals, include, and incbin.
 - [x] Passthrough commands are minimized and justified.
-- [ ] Tree and lowered executors are consolidated.
+- [x] Tree and lowered executors are consolidated.
 - [ ] Directive handlers use focused capabilities.
 - [ ] Remaining directive effects are extracted.
 - [ ] Architecture encoders use narrow contexts.

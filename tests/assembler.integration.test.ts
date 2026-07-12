@@ -91,6 +91,56 @@ const equivalentFixtureErrors = (fixtureName: string, legacyError?: string, tree
   return legacyError === treeError;
 };
 
+const STAGED_TREE_ERROR_EQUIVALENCE_FIXTURES = TREE_LEGACY_ERROR_EQUIVALENCE_FIXTURES;
+
+const equivalentStagedTreeErrors = (fixtureName: string, stagedError?: string, treeError?: string): boolean => {
+  if (!stagedError || !treeError || !STAGED_TREE_ERROR_EQUIVALENCE_FIXTURES.has(fixtureName)) {
+    return false;
+  }
+
+  return stagedError === treeError;
+};
+
+interface StagedTreeComparison {
+  fixture: string;
+  stagedHash?: string;
+  treeHash?: string;
+  stagedError?: string;
+  treeError?: string;
+  overallPassed: boolean;
+}
+
+const compareStagedVsTree = (fixtureName: string): StagedTreeComparison => {
+  let stagedHash: string | undefined;
+  let treeHash: string | undefined;
+  let stagedError: string | undefined;
+  let treeError: string | undefined;
+
+  try {
+    stagedHash = hashBuffer(assembleFixtureStaged(fixtureName));
+  } catch (error) {
+    stagedError = error instanceof Error ? error.message : String(error);
+  }
+
+  try {
+    treeHash = hashBuffer(assembleFixtureTree(fixtureName));
+  } catch (error) {
+    treeError = error instanceof Error ? error.message : String(error);
+  }
+
+  const outputsMatch = Boolean(stagedHash && treeHash && stagedHash === treeHash);
+  const equivalentErrors = equivalentStagedTreeErrors(fixtureName, stagedError, treeError);
+
+  return {
+    fixture: fixtureName,
+    stagedHash,
+    treeHash,
+    stagedError,
+    treeError,
+    overallPassed: outputsMatch || equivalentErrors,
+  };
+};
+
 const getFileStats = (filePath: string): { size: number; checksum: string } => {
   if (!fs.existsSync(filePath)) {
     return {
@@ -284,6 +334,25 @@ test("integration parity gates keep loop and conditional fixtures green", (t) =>
   t.true(conditionalResult.overallPassed, conditionalResult.failedChecks.join(", "));
 });
 
+test("integration parity gates keep staged and tree drivers byte-identical on key fixtures", (t) => {
+  const fixtures = [
+    "elseif",
+    "forloop",
+    "includehierarchy",
+    "includeonce",
+    "incsrcloop",
+    "functest1",
+    "v160features",
+  ];
+  for (const fixtureName of fixtures) {
+    const result = compareStagedVsTree(fixtureName);
+    t.true(
+      result.overallPassed,
+      `${fixtureName}: staged=${result.stagedHash ?? result.stagedError} tree=${result.treeHash ?? result.treeError}`
+    );
+  }
+});
+
 test("integration parity gates keep legacy and tree drivers byte-identical on key fixtures", (t) => {
   const fixtures = [
     "elseif",
@@ -371,6 +440,16 @@ test.serial("integration staged production path handles static-label directive o
   const output = assembleFixtureStaged("labels_static_pass");
   const expected = fs.readFileSync(path.resolve(EXPECTED_DIR, "labels_static_pass.asm.sfc"));
   t.deepEqual(output, expected);
+});
+
+test.serial("integration staged and tree outputs remain byte-identical for all top-level fixtures", (t) => {
+  for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {
+    const result = compareStagedVsTree(fixtureName);
+    t.true(
+      result.overallPassed,
+      `${fixtureName}: staged=${result.stagedHash ?? result.stagedError} tree=${result.treeHash ?? result.treeError}`
+    );
+  }
 });
 
 test.serial("integration tree and legacy outputs remain byte-identical for all top-level fixtures", (t) => {

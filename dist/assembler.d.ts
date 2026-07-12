@@ -39,7 +39,6 @@ export type MacroDefinition = {
     /** The file where this macro was defined. */
     sourceFile?: string;
 };
-export type LoopBlock = LoopNode;
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
@@ -83,10 +82,6 @@ export type StageControlState = {
     currentNamespace: string;
     namespaceNestingEnabled: boolean;
     namespaceNestingPath: string[];
-    loopStack: LoopBlock[];
-    currentLoop: LoopBlock | null;
-    collectingLoop: boolean;
-    loopNestingLevel: number;
     inMacroExpansion: boolean;
     macroLabelInstance: number;
 };
@@ -267,10 +262,6 @@ export declare class Assembler implements AssemblySession {
     includedFiles: Map<string, IncludedFileInfo>;
     includeStack: string[];
     includePaths: string[];
-    loopStack: LoopBlock[];
-    currentLoop: LoopBlock | null;
-    collectingLoop: boolean;
-    loopNestingLevel: number;
     macroLabelInstance: number;
     inMacroExpansion: boolean;
     currentParentLabel: string;
@@ -773,45 +764,29 @@ export declare class Assembler implements AssemblySession {
      */
     processStringWithMapping(input: string): number[];
     /**
-     * Begins the collection of loop commands.
-     * @param {string} type The type of loop to begin ("for" or "while").
-     * @param {string} command The command to begin the loop with.
+     * Executes a freshly lowered runtime node, preserving macro rewrite semantics for
+     * preprocessing-sensitive passthrough commands.
+     * @param {LoweredExecutableNode} node The lowered runtime node to execute.
      */
-    beginLoopCollection(type: "for" | "while", command: string): void;
+    executeLoweredRuntimeNode(node: LoweredExecutableNode): void;
     /**
-     * Ends the collection of loop commands and executes the loop.
-     * @param {string} type The type of loop to end ("for" or "while").
+     * Lowers completed runtime nodes and executes them through the production executor.
+     * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
      */
-    endLoopCollection(type: "for" | "while"): void;
-    /**
-     * Executes a complete loop block with all its nested commands.
-     * @param {LoopBlock} loopBlock The loop block to execute.
-     */
-    executeLoopBlock(loopBlock: LoopBlock): void;
-    resolveForLoopBounds(forBlock: LoopBlock | LoweredLoopNode): {
+    lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
+    resolveForLoopBounds(forBlock: LoweredLoopNode): {
         variable?: string;
         start?: number;
         end?: number;
     };
-    executeForLoopIterations(forBlock: LoopBlock | LoweredLoopNode, executeBody: () => void): void;
+    executeForLoopIterations(forBlock: LoweredLoopNode, executeBody: () => void): void;
     executeLoweredLoop(loopBlock: LoweredLoopNode): void;
-    /**
-     * Executes a for loop block.
-     * @param {LoopBlock} forBlock The for loop block to execute.
-     */
-    executeForLoop(forBlock: LoopBlock): void;
     executeLoweredForLoop(forBlock: LoweredLoopNode): void;
-    /**
-     * Executes a while loop block.
-     * @param {LoopBlock} whileBlock The while loop block to execute.
-     */
-    executeWhileLoop(whileBlock: LoopBlock): void;
-    executeWhileLoopCommands<TCommand>(whileBlock: LoopBlock | LoweredLoopNode, commands: TCommand[], getDefineTarget: (command: TCommand) => string | null, executeCommand: (command: TCommand) => void): void;
+    executeWhileLoopCommands<TCommand>(whileBlock: LoweredLoopNode, commands: TCommand[], getDefineTarget: (command: TCommand) => string | null, executeCommand: (command: TCommand) => void): void;
     executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void;
     createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
     lowerNode(command: NormalizedCommand): LoweredCommand;
-    getExecutableNodeSpan(node: ExecutableNode): SourceSpan | undefined;
     getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined;
     /**
      * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
@@ -820,14 +795,6 @@ export declare class Assembler implements AssemblySession {
      * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
      */
     executeWithAnalysisRecovery<TNode>(node: TNode, getSpan: (node: TNode) => SourceSpan | undefined, executeNode: (node: TNode) => void): void;
-    executeNodeWithRecovery(node: ExecutableNode): void;
-    executeNode(node: ExecutableNode): void;
-    /**
-     * Executes a stream of already-shaped nodes with the supplied recovery-aware dispatcher.
-     * @param {TNode[]} nodes The nodes to execute.
-     * @param {(node: TNode) => void} executeNode Executes one node.
-     */
-    executeNodeStreamWithRecovery<TNode>(nodes: TNode[], executeNode: (node: TNode) => void): void;
     executeNodeStream(nodes: RuntimeNode[]): void;
     executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void;
     executeLoweredNode(node: LoweredExecutableNode): void;
@@ -843,7 +810,6 @@ export declare class Assembler implements AssemblySession {
         conditionNode?: ExpressionNode;
         commands: TCommand[];
     }>, executeCommands: (commands: TCommand[]) => void): void;
-    executeConditionalNode(node: RuntimeConditionalNode): void;
     executeLoweredConditionalNode(node: LoweredConditionalNode): void;
     parseCommandStreamToNodes(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
     getOrBuildPassProgram(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
