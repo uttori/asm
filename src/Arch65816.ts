@@ -1221,9 +1221,9 @@ export class Arch65816 implements ArchitectureEncoder {
     const longMode = (currentOpcode: string): keyof typeof jumpOpcodes => {
       if (currentOpcode === "JMP") return "JML";
       if (currentOpcode === "JSR") return "JSL";
-      return currentOpcode as keyof typeof jumpOpcodes;
+      return currentOpcode;
     };
-    const shortMode = (currentOpcode: string): keyof typeof jumpOpcodes => currentOpcode as keyof typeof jumpOpcodes;
+    const shortMode = (currentOpcode: string): keyof typeof jumpOpcodes => currentOpcode;
     const absolutePointer = (value: number): number => value & 0xFFFF;
     const selectDirectJumpMode = (currentOpcode: string, resolvedAddress: number): { mode: keyof typeof jumpOpcodes; address: number } => {
       if (currentOpcode === "JML" || currentOpcode === "JSL") {
@@ -1376,7 +1376,6 @@ export class Arch65816 implements ArchitectureEncoder {
 
     let address = 0;
     let mode: keyof StoreModeMap; // Determines which mode we're using
-    // void mode;
     const isIndexed = (storeOpcode === "STX" && loweredOperand.indexRegister === "y" && !loweredOperand.indirect)
       || (storeOpcode === "STY" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect)
       || (storeOpcode === "STZ" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect);
@@ -1448,6 +1447,7 @@ export class Arch65816 implements ArchitectureEncoder {
       address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].absolute);
       this.assembler.write2(address);
+      debug("handleStoreOperations mode", mode);
       return true;
     }
     // Direct Page Mode: STX $00, STY $00, STZ $00
@@ -1456,6 +1456,7 @@ export class Arch65816 implements ArchitectureEncoder {
       address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].direct);
       this.assembler.write1(address);
+      debug("handleStoreOperations mode", mode);
       return true;
     } else if (isIndexed) {
       // Default indexed: use the indexed variant from the lookup table.
@@ -1470,6 +1471,7 @@ export class Arch65816 implements ArchitectureEncoder {
           this.assembler.write1(storeOpcodes[storeOpcode].directY);
           this.assembler.write1(address);
         }
+        debug("handleStoreOperations mode", mode);
         return true;
       } else if (storeOpcode === "STY") {
         address = this.assembler.operandResolver.getnum(operand);
@@ -1482,6 +1484,7 @@ export class Arch65816 implements ArchitectureEncoder {
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
           this.assembler.write1(address);
         }
+        debug("handleStoreOperations mode", mode);
         return true;
       } else if (storeOpcode === "STZ") {
         address = this.assembler.operandResolver.getnum(operand);
@@ -1494,6 +1497,7 @@ export class Arch65816 implements ArchitectureEncoder {
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
           this.assembler.write1(address);
         }
+        debug("handleStoreOperations mode", mode);
         return true;
       }
     }

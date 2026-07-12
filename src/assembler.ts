@@ -2924,7 +2924,7 @@ export class Assembler implements AssemblySession {
    */
   executeForLoop(forBlock: LoopBlock): void {
     debug("executeForLoop", forBlock);
-    this.executeForLoopIterations(forBlock, () => this.executeNodeStream(forBlock.commands as RuntimeNode[]));
+    this.executeForLoopIterations(forBlock, () => this.executeNodeStream(forBlock.commands));
   }
 
   executeLoweredForLoop(forBlock: LoweredLoopNode): void {
