@@ -1471,18 +1471,25 @@ export class Assembler implements AssemblySession {
       return;
     }
 
+    if (this.frontEndCommandService.continueFunctionDefinition(workingState.command)) {
+      return;
+    }
+
     if (rewriteRaw) {
       const rewrittenRaw = this.rewriteRawCommand(workingState.source.raw);
-      const rewrittenState = this.createNormalizedCommandFromRaw(
-        rewrittenRaw,
-        workingState.source.file,
-        workingState.source.line,
-        true,
-      );
-      if (!rewrittenState) {
-        return;
-      }
-      if (rewrittenRaw !== workingState.source.raw || rewrittenState.command !== workingState.command) {
+      const requiresVariadicResolution = this.inMacroExpansion
+        && !this.isDefinitionCollectionStage
+        && (rewrittenRaw.includes("...") || rewrittenRaw.includes("…"));
+      if (rewrittenRaw !== workingState.source.raw || requiresVariadicResolution) {
+        const rewrittenState = this.createNormalizedCommandFromRaw(
+          rewrittenRaw,
+          workingState.source.file,
+          workingState.source.line,
+          true,
+        );
+        if (!rewrittenState) {
+          return;
+        }
         workingState = rewrittenState;
       }
     }
@@ -1569,7 +1576,14 @@ export class Assembler implements AssemblySession {
       return;
     }
 
-    const wasOpcode = this.asblock_pick(lowered);
+    let instruction = lowered;
+    if (lowered.command) {
+      const refreshed = this.commandLoweringService.lowerCommand(lowered.command);
+      if (refreshed.kind === "instruction") {
+        instruction = refreshed;
+      }
+    }
+    const wasOpcode = this.asblock_pick(instruction);
     if (!wasOpcode) {
       debug("💥 assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
     }
@@ -3091,14 +3105,13 @@ export class Assembler implements AssemblySession {
 
   executeLoweredNode(node: LoweredExecutableNode): void {
     if (node.kind === "command") {
-      this.processNormalizedCommand(node.command);
+      this.processNormalizedCommand(node.command, false);
       return;
     }
 
-    if (node.kind === "directive") {
-      const loweredCommand = (node as LoweredExecutableNode & { command?: NormalizedCommand }).command;
-      if (loweredCommand) {
-        this.collectCommandReferences(loweredCommand);
+    if (node.kind === "directive" || node.kind === "instruction") {
+      if (node.command) {
+        this.collectCommandReferences(node.command);
       }
     }
 

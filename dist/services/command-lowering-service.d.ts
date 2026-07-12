@@ -16,7 +16,9 @@ export type LoweredPassthroughCommand = {
     kind: "command";
     command: NormalizedCommand;
     source: NormalizedCommand["source"];
+    passthroughReason: PassthroughReason;
 };
+export type PassthroughReason = "characterMapping" | "commentOrEmpty" | "dataDirective" | "defineCommand" | "functionDefinition" | "labelDefinition" | "macroDefinitionOrInvoke" | "macroPlaceholder" | "registeredPreprocessDirective" | "staticAssignment" | "structCommand" | "unknown";
 export type LoweredLoopNode = Omit<LoopNode, "type" | "header" | "commands"> & {
     kind: "loop";
     loopType: LoopNode["type"];
@@ -80,5 +82,11 @@ export declare class CommandLoweringService {
      * @returns {boolean} True when the command should stay in passthrough form.
      */
     shouldPreserveCommand(command: NormalizedCommand): boolean;
+    /**
+     * Names the ordered preprocessing requirement that prevents direct lowering.
+     * @param {NormalizedCommand} command The command to inspect.
+     * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
+     */
+    getPassthroughReason(command: NormalizedCommand): PassthroughReason | undefined;
 }
 //# sourceMappingURL=command-lowering-service.d.ts.map

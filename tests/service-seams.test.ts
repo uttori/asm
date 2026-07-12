@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { stub } from "sinon";
+import { spy, stub } from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Assembler } from "../src/assembler.js";
@@ -794,6 +794,62 @@ test("runStage materializes a durable lowered program tree", (t) => {
   t.truthy(stageState.loweredProgram);
   t.is(stageState.loweredProgram?.nodes[0]?.kind, "command");
   t.is(stageState.loweredProgram?.nodes[1]?.kind, "conditional");
+});
+
+test("lowered loop and conditional executors select the expected work", t => {
+  const assembler = new Assembler();
+  const loops = assembler.buildProgramModel([
+    "for i = 0..2",
+    "freespacebyte !i",
+    "endfor",
+    "!i = 0",
+    "while !i < 2",
+    "!i #= !i+1",
+    "endwhile",
+  ].join("\n"), "lowered-loops.asm");
+  const loweredLoops = assembler.commandLoweringService.lowerProgram(loops);
+
+  assembler.executeLoweredNodeStream(loweredLoops.nodes);
+
+  t.is(assembler.defaultFreespaceByte, 1);
+  t.is(assembler.defines.get("i"), "2");
+
+  const conditional = assembler.buildProgramModel([
+    "if 0",
+    "freespacebyte $11",
+    "elseif 1",
+    "freespacebyte $22",
+    "else",
+    "freespacebyte $33",
+    "endif",
+  ].join("\n"), "lowered-conditional.asm");
+  assembler.executeLoweredNodeStream(assembler.commandLoweringService.lowerProgram(conditional).nodes);
+
+  t.is(assembler.defaultFreespaceByte, 0x22);
+});
+
+test("lowered instructions refresh against architecture changes at dispatch", t => {
+  const assembler = new Assembler();
+  const spcEncoder = assembler.architectureRegistry.getDefinition("spc700")?.encoder;
+  const mainEncoder = assembler.architectureRegistry.getDefinition("65816")?.encoder;
+  if (!spcEncoder?.lowerInstructionFromCommand || !mainEncoder?.lowerInstructionFromCommand) {
+    t.fail("registered encoders must support command lowering");
+    return;
+  }
+  const spcLowerSpy = spy(spcEncoder, "lowerInstructionFromCommand");
+  const mainLowerSpy = spy(mainEncoder, "lowerInstructionFromCommand");
+  const program = assembler.buildProgramModel([
+    "arch spc700",
+    "nop",
+    "arch 65816",
+    "nop",
+  ].join("\n"), "arch-switch.asm");
+
+  const lowered = assembler.commandLoweringService.lowerProgram(program);
+  assembler.executeLoweredNodeStream(lowered.nodes);
+
+  t.is(spcLowerSpy.callCount, 1);
+  t.is(mainLowerSpy.callCount, 3);
 });
 
 test("analyzeSource accumulates multiple diagnostics and references", (t) => {

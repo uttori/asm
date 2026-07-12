@@ -1,6 +1,6 @@
 import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
 import { splitInlineCommands } from "./command-text-service.js";
-import type { NormalizedCommand } from "../ir/normalized-command.js";
+import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 
 export type ProgramModel = {
   sourceFile: string;
@@ -20,6 +20,7 @@ export type IncrementalProgramParseState = {
   ifStack: ConditionalBranchNode[];
   branchStack: ConditionalBranch[];
   inMacroDefinition: boolean;
+  inFunctionDefinition: boolean;
 };
 
 export type ProgramModelBuilderHost = {
@@ -48,6 +49,7 @@ export class ProgramModelBuilder {
       ifStack: [],
       branchStack: [],
       inMacroDefinition: false,
+      inFunctionDefinition: false,
     };
   }
 
@@ -61,6 +63,7 @@ export class ProgramModelBuilder {
     state.ifStack.length = 0;
     state.branchStack.length = 0;
     state.inMacroDefinition = false;
+    state.inFunctionDefinition = false;
   }
 
   /**
@@ -186,10 +189,28 @@ export class ProgramModelBuilder {
     }
 
     if (state.inMacroDefinition) {
+      // Macro bodies are stored as source commands and interpreted when the
+      // macro expands; even instruction-looking lines require preprocessing.
+      setCommandKind(command, "macroDefinitionOrInvoke");
       this.pushToCurrent(state, command);
       if (keyword === "endmacro") {
         state.inMacroDefinition = false;
       }
+      return;
+    }
+
+    if (state.inFunctionDefinition) {
+      setCommandKind(command, "functionDefinition");
+      this.pushToCurrent(state, command);
+      state.inFunctionDefinition = command.command.trimEnd().endsWith("\\");
+      return;
+    }
+
+    const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
+    if (functionSource.toLowerCase().startsWith("function")) {
+      setCommandKind(command, "functionDefinition");
+      this.pushToCurrent(state, command);
+      state.inFunctionDefinition = functionSource.trimEnd().endsWith("\\");
       return;
     }
 

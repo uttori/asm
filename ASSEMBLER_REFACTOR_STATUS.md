@@ -13,8 +13,8 @@ API, analysis pipeline, LSP, and editor integration are real and tested.
 
 The refactor is not finished:
 
-- staged/lowered execution is the production path, but one Asar fixture still
-  differs from its golden and many commands still use passthrough dispatch;
+- staged/lowered execution is the production path, with stable directives and
+  instructions dispatched directly;
 - tree and lowered loop/conditional executors still coexist;
 - directive handlers still receive the broad `AssemblySession`;
 - architecture encoders still depend on broad assembler state;
@@ -28,8 +28,8 @@ The refactor is not finished:
 
 - `npm run lint`: passes with six existing unsafe-regex warnings.
 - `npm run make-types`: passes and emits production declarations under `dist/`.
-- `npm run test:serial`: 721 tests pass.
-- Coverage: 93.22% statements, 89.02% branches, 93.32% functions.
+- `npm run test:serial`: 734 tests pass.
+- Coverage: 93.24% statements, 88.95% branches, 93.33% functions.
 - `npm run lsp:typecheck` and `npm run vscode:typecheck`: pass.
 - `npm run lsp:build` and `npm run vscode:build`: pass.
 - `npm run pack:check`: passes; fixtures, harnesses, and generated ROMs are not
@@ -58,13 +58,16 @@ The refactor is not finished:
   static labels whose names case-insensitively match directive keywords.
 - `ProgramModel` has one canonical type definition.
 - `src/` contains production TypeScript only.
+- Focused lowered-tree coverage for loops, conditionals, include, and incbin.
+- Direct lowered dispatch for stable include/source, memory/freespace, SPC,
+  compatibility, and instruction families.
+- Typed passthrough reasons limited to preprocessing-sensitive front-end and
+  data forms.
+- Cached lowered passthrough execution no longer reparses unchanged raw source;
+  dynamic macro-label and variadic rewrites retain normalization.
 
 ### Partial
 
-- Canonical lowered dispatch: normal production assembly uses it, but
-  `LoweredPassthroughCommand` remains broad.
-- IR durability: cached nodes exist, but preprocessing-sensitive paths can
-  clone and rebuild normalized commands from raw text.
 - Directive extraction: several modules own behavior, while data, org/layout,
   SPC, include, and pushpc paths still delegate to broad services/session
   methods.
@@ -77,8 +80,6 @@ The refactor is not finished:
 
 - One executor for commands, loops, and conditionals.
 - Family-specific directive capability contexts.
-- Rare, explicitly justified passthrough commands.
-- No steady-state raw-source reparse.
 - Stable-module coverage thresholds.
 - Strict null checking across production source.
 - Repeatable performance benchmarks.
@@ -98,6 +99,6 @@ The refactor is not finished:
 
 ## Decision
 
-Do not start another broad extraction rewrite. Complete the remaining work in
-the test-gated order in `ASSEMBLER_LONG_TERM_GOALS.md`, beginning with the
-single staged parity failure and focused lowering tests.
+Do not start another broad extraction rewrite. Continue the test-gated order in
+`ASSEMBLER_LONG_TERM_GOALS.md`; the next transition is consolidating tree and
+lowered executors while retaining the complete fixture parity gates.

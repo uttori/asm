@@ -9446,6 +9446,7 @@ var Arch65816 = class {
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
     return {
       kind: "instruction",
+      command,
       mnemonic,
       operandText,
       operands,
@@ -11258,6 +11259,7 @@ var ArchSPC700 = class {
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
     return {
       kind: "instruction",
+      command,
       mnemonic,
       operandText,
       operands,
@@ -12706,6 +12708,7 @@ var ArchSuperFX = class {
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
     return {
       kind: "instruction",
+      command,
       mnemonic,
       operandText,
       operands,
@@ -14154,13 +14157,15 @@ function createNormalizedCommand(raw, normalized, words, file, line) {
   };
 }
 function cloneNormalizedCommand(command) {
-  return createNormalizedCommand(
+  const cloned = createNormalizedCommand(
     command.source.raw,
     command.source.normalized,
     [...command.words],
     command.source.file,
     command.source.line
   );
+  cloned.kind = command.kind;
+  return cloned;
 }
 function setCommandWords(command, words, normalized) {
   command.words = words;
@@ -14191,11 +14196,20 @@ function classifyCommand(command, words) {
   if (trimmed.startsWith("!")) {
     return "defineCommand";
   }
-  if (keyword === "macro" || keyword.startsWith("%")) {
+  if (keyword === "macro" || keyword === "endmacro" || keyword.startsWith("%")) {
     return "macroDefinitionOrInvoke";
   }
-  if (keyword === "struct" || keyword === "endstruct") {
+  if (keyword === "undef") {
+    return "defineCommand";
+  }
+  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip") {
     return "structCommand";
+  }
+  if (keyword === "function") {
+    return "functionDefinition";
+  }
+  if (keyword === "global") {
+    return "labelDefinition";
   }
   if (words.length === 3 && words[1] === "=") {
     return "staticAssignment";
@@ -14203,7 +14217,7 @@ function classifyCommand(command, words) {
   if (deriveLabelName(words[0] ?? "")) {
     return "labelDefinition";
   }
-  return "unknown";
+  return keyword ? "opcodeCandidate" : "unknown";
 }
 function deriveLabelName(keyword) {
   if (!keyword) {
@@ -14250,7 +14264,8 @@ function deriveCommandSemantics(command, words) {
     };
   }
   if (keyword === "incbin" && words.length >= 2) {
-    const rangeCandidate = extractIncbinRange(words[1]);
+    const incbinSource = command.slice((words[0] ?? "").length).split(/\s+->\s+/u, 1)[0].trim();
+    const rangeCandidate = extractIncbinRange(incbinSource);
     if (rangeCandidate) {
       const parsedRange = parseExpressionNode(rangeCandidate);
       if (parsedRange.type === "range") {
@@ -17238,7 +17253,8 @@ var ProgramModelBuilder = class {
       loopStack: [],
       ifStack: [],
       branchStack: [],
-      inMacroDefinition: false
+      inMacroDefinition: false,
+      inFunctionDefinition: false
     };
   }
   /**
@@ -17251,6 +17267,7 @@ var ProgramModelBuilder = class {
     state.ifStack.length = 0;
     state.branchStack.length = 0;
     state.inMacroDefinition = false;
+    state.inFunctionDefinition = false;
   }
   /**
    * Builds a program model from raw source text.
@@ -17355,10 +17372,24 @@ var ProgramModelBuilder = class {
       return;
     }
     if (state.inMacroDefinition) {
+      setCommandKind(command, "macroDefinitionOrInvoke");
       this.pushToCurrent(state, command);
       if (keyword === "endmacro") {
         state.inMacroDefinition = false;
       }
+      return;
+    }
+    if (state.inFunctionDefinition) {
+      setCommandKind(command, "functionDefinition");
+      this.pushToCurrent(state, command);
+      state.inFunctionDefinition = command.command.trimEnd().endsWith("\\");
+      return;
+    }
+    const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
+    if (functionSource.toLowerCase().startsWith("function")) {
+      setCommandKind(command, "functionDefinition");
+      this.pushToCurrent(state, command);
+      state.inFunctionDefinition = functionSource.trimEnd().endsWith("\\");
       return;
     }
     if (keyword === "for" || keyword === "while") {
@@ -17555,8 +17586,13 @@ var AssemblyFrontEndService = class {
 // src/services/command-lowering-service.ts
 var DIRECTLY_LOWERABLE_DIRECTIVES = /* @__PURE__ */ new Set([
   "arch",
+  "asar",
+  "autoclean",
+  "autoclear",
   "base",
   "check",
+  "dpbase",
+  "endspcblock",
   "exhirom",
   "exlorom",
   "fastrom",
@@ -17565,8 +17601,17 @@ var DIRECTLY_LOWERABLE_DIRECTIVES = /* @__PURE__ */ new Set([
   "filldword",
   "filllong",
   "fillword",
+  "freecode",
+  "freedata",
+  "freespace",
+  "freespacebyte",
   "fullsa1rom",
   "hirom",
+  "include",
+  "includefrom",
+  "includeonce",
+  "incbin",
+  "incsrc",
   "lorom",
   "namespace",
   "norom",
@@ -17581,13 +17626,20 @@ var DIRECTLY_LOWERABLE_DIRECTIVES = /* @__PURE__ */ new Set([
   "pullns",
   "pullpc",
   "pulltable",
+  "prot",
   "pushbase",
   "pushns",
   "pushpc",
   "pushtable",
   "sa1rom",
   "sfxrom",
-  "startpos"
+  "spcblock",
+  "startpos",
+  "table",
+  "warnings",
+  "print",
+  "{",
+  "}"
 ]);
 var CommandLoweringService = class {
   constructor(host) {
@@ -17604,8 +17656,6 @@ var CommandLoweringService = class {
       let directiveWords = command.words;
       if (command.parsed.includeTarget) {
         directiveWords = [command.parsed.includeTarget.directive, command.parsed.includeTarget.target];
-      } else if (keyword === "incbin" && command.parsed.directiveArgs?.args?.length) {
-        directiveWords = [keyword, ...command.parsed.directiveArgs.args];
       }
       return {
         kind: "directive",
@@ -17628,6 +17678,7 @@ var CommandLoweringService = class {
     const loweredOperand = this.host.classifyOperandForActiveArchitecture(operandText);
     return {
       kind: "instruction",
+      command,
       mnemonic,
       operandText,
       operands,
@@ -17653,7 +17704,8 @@ var CommandLoweringService = class {
         return {
           kind: "command",
           command: detached,
-          source: detached.source
+          source: detached.source,
+          passthroughReason: this.getPassthroughReason(detached) ?? "unknown"
         };
       }
       return this.lowerCommand(detached);
@@ -17713,17 +17765,31 @@ var CommandLoweringService = class {
    * @returns {boolean} True when the command should stay in passthrough form.
    */
   shouldPreserveCommand(command) {
+    return this.getPassthroughReason(command) !== void 0;
+  }
+  /**
+   * Names the ordered preprocessing requirement that prevents direct lowering.
+   * @param {NormalizedCommand} command The command to inspect.
+   * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
+   */
+  getPassthroughReason(command) {
     const keyword = command.keyword.toLowerCase();
     if (/<[^>]+>/.test(command.command)) {
-      return true;
+      return "macroPlaceholder";
     }
-    if (command.kind !== "unknown" && command.kind !== "opcodeCandidate") {
-      return true;
+    if (command.kind !== "unknown" && command.kind !== "opcodeCandidate" && command.kind !== "directive") {
+      return command.kind;
     }
-    if (this.host.directiveRegistry.has(keyword) && DIRECTLY_LOWERABLE_DIRECTIVES.has(keyword)) {
-      return false;
+    if (this.host.directiveRegistry.has(keyword)) {
+      if (DIRECTLY_LOWERABLE_DIRECTIVES.has(keyword)) {
+        return void 0;
+      }
+      if (command.parsed.dataDirective) {
+        return "dataDirective";
+      }
+      return "registeredPreprocessDirective";
     }
-    return command.kind !== "opcodeCandidate";
+    return command.kind === "opcodeCandidate" ? void 0 : "unknown";
   }
 };
 
@@ -20704,18 +20770,22 @@ var Assembler = class _Assembler {
     if (workingState.command.trim() === "") {
       return;
     }
+    if (this.frontEndCommandService.continueFunctionDefinition(workingState.command)) {
+      return;
+    }
     if (rewriteRaw) {
       const rewrittenRaw = this.rewriteRawCommand(workingState.source.raw);
-      const rewrittenState = this.createNormalizedCommandFromRaw(
-        rewrittenRaw,
-        workingState.source.file,
-        workingState.source.line,
-        true
-      );
-      if (!rewrittenState) {
-        return;
-      }
-      if (rewrittenRaw !== workingState.source.raw || rewrittenState.command !== workingState.command) {
+      const requiresVariadicResolution = this.inMacroExpansion && !this.isDefinitionCollectionStage && (rewrittenRaw.includes("...") || rewrittenRaw.includes("\u2026"));
+      if (rewrittenRaw !== workingState.source.raw || requiresVariadicResolution) {
+        const rewrittenState = this.createNormalizedCommandFromRaw(
+          rewrittenRaw,
+          workingState.source.file,
+          workingState.source.line,
+          true
+        );
+        if (!rewrittenState) {
+          return;
+        }
         workingState = rewrittenState;
       }
     }
@@ -20785,7 +20855,14 @@ var Assembler = class _Assembler {
       }
       return;
     }
-    const wasOpcode = this.asblock_pick(lowered);
+    let instruction2 = lowered;
+    if (lowered.command) {
+      const refreshed = this.commandLoweringService.lowerCommand(lowered.command);
+      if (refreshed.kind === "instruction") {
+        instruction2 = refreshed;
+      }
+    }
+    const wasOpcode = this.asblock_pick(instruction2);
     if (!wasOpcode) {
       debug7("\u{1F4A5} assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
     }
@@ -22070,13 +22147,12 @@ var Assembler = class _Assembler {
   }
   executeLoweredNode(node) {
     if (node.kind === "command") {
-      this.processNormalizedCommand(node.command);
+      this.processNormalizedCommand(node.command, false);
       return;
     }
-    if (node.kind === "directive") {
-      const loweredCommand = node.command;
-      if (loweredCommand) {
-        this.collectCommandReferences(loweredCommand);
+    if (node.kind === "directive" || node.kind === "instruction") {
+      if (node.command) {
+        this.collectCommandReferences(node.command);
       }
     }
     if (node.kind === "loop") {

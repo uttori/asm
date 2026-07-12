@@ -5,6 +5,7 @@ export type CommandKind =
   | "unknown"
   | "directive"
   | "opcodeCandidate"
+  | "functionDefinition"
   | "labelDefinition"
   | "staticAssignment"
   | "characterMapping"
@@ -193,13 +194,15 @@ export function createPendingCommand(
  * @returns {NormalizedCommand} The detached execution command.
  */
 export function cloneNormalizedCommand(command: NormalizedCommand): NormalizedCommand {
-  return createNormalizedCommand(
+  const cloned = createNormalizedCommand(
     command.source.raw,
     command.source.normalized,
     [...command.words],
     command.source.file,
     command.source.line,
   );
+  cloned.kind = command.kind;
+  return cloned;
 }
 
 /**
@@ -252,11 +255,20 @@ function classifyCommand(command: string, words: string[]): CommandKind {
   if (trimmed.startsWith("!")) {
     return "defineCommand";
   }
-  if (keyword === "macro" || keyword.startsWith("%")) {
+  if (keyword === "macro" || keyword === "endmacro" || keyword.startsWith("%")) {
     return "macroDefinitionOrInvoke";
   }
-  if (keyword === "struct" || keyword === "endstruct") {
+  if (keyword === "undef") {
+    return "defineCommand";
+  }
+  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip") {
     return "structCommand";
+  }
+  if (keyword === "function") {
+    return "functionDefinition";
+  }
+  if (keyword === "global") {
+    return "labelDefinition";
   }
   if (words.length === 3 && words[1] === "=") {
     return "staticAssignment";
@@ -264,7 +276,7 @@ function classifyCommand(command: string, words: string[]): CommandKind {
   if (deriveLabelName(words[0] ?? "")) {
     return "labelDefinition";
   }
-  return "unknown";
+  return keyword ? "opcodeCandidate" : "unknown";
 }
 
 /**
@@ -334,7 +346,11 @@ function deriveCommandSemantics(command: string, words: string[]): CommandSemant
   }
 
   if (keyword === "incbin" && words.length >= 2) {
-    const rangeCandidate = extractIncbinRange(words[1]);
+    const incbinSource = command
+      .slice((words[0] ?? "").length)
+      .split(/\s+->\s+/u, 1)[0]
+      .trim();
+    const rangeCandidate = extractIncbinRange(incbinSource);
     if (rangeCandidate) {
       const parsedRange = parseExpressionNode(rangeCandidate);
       if (parsedRange.type === "range") {

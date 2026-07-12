@@ -54,6 +54,7 @@ export class Arch65816 implements ArchitectureEncoder {
 
     return {
       kind: "instruction",
+      command,
       mnemonic,
       operandText,
       operands,

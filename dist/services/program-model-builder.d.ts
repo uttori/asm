@@ -1,5 +1,5 @@
 import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
-import type { NormalizedCommand } from "../ir/normalized-command.js";
+import { type NormalizedCommand } from "../ir/normalized-command.js";
 export type ProgramModel = {
     sourceFile: string;
     startLine: number;
@@ -16,6 +16,7 @@ export type IncrementalProgramParseState = {
     ifStack: ConditionalBranchNode[];
     branchStack: ConditionalBranch[];
     inMacroDefinition: boolean;
+    inFunctionDefinition: boolean;
 };
 export type ProgramModelBuilderHost = {
     currentFile: string;

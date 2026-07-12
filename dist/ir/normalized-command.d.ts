@@ -1,6 +1,6 @@
 import { type ExpressionNode, type RangeExpressionNode } from "./expression-node.js";
 import { type SourceSpan } from "../source-location.js";
-export type CommandKind = "unknown" | "directive" | "opcodeCandidate" | "labelDefinition" | "staticAssignment" | "characterMapping" | "macroDefinitionOrInvoke" | "defineCommand" | "structCommand" | "commentOrEmpty";
+export type CommandKind = "unknown" | "directive" | "opcodeCandidate" | "functionDefinition" | "labelDefinition" | "staticAssignment" | "characterMapping" | "macroDefinitionOrInvoke" | "defineCommand" | "structCommand" | "commentOrEmpty";
 export type CommandProvenance = {
     file: string;
     line: number;

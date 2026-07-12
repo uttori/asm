@@ -191,3 +191,78 @@ test("lowered safe directives dispatch without normalized passthrough", t => {
   t.false(processSpy.called);
   t.is(assembler.bankCrossCheckMode, "half");
 });
+
+test("direct lowered families and instructions never redispatch normalized commands", t => {
+  const assembler = new Assembler();
+  assembler.setCurrentFile("test.asm");
+  assembler.includedFiles.set("test.asm", { included: true, guarded: false });
+  stub(assembler, "handleSpcblock");
+  const processSpy = spy(assembler, "processNormalizedCommand");
+  const cases = [
+    "check bankcross half",
+    "fillbyte $AA",
+    "namespace Music",
+    "pushtable",
+    "includeonce",
+    "freespacebyte $FF",
+    "spcblock $0000",
+    "print ignored",
+    "nop",
+  ];
+
+  for (const command of cases) {
+    const lowered = assembler.commandLoweringService.lowerExecutableNode(commandNode(command));
+    t.not(lowered.kind, "command", command);
+    assembler.executeLoweredNode(lowered);
+    t.false(processSpy.called, command);
+  }
+});
+
+test("front-end command kinds distinguish instructions from preprocess forms", t => {
+  t.is(commandNode("lda #$01").kind, "opcodeCandidate");
+  t.is(commandNode("function add(a, b) = a + b").kind, "functionDefinition");
+  t.is(commandNode("global Main: lda #$01").kind, "labelDefinition");
+  t.is(commandNode("Entry: lda #$01").kind, "labelDefinition");
+});
+
+test("cached lowered passthrough skips raw rewriting but keeps preprocessing", t => {
+  const assembler = new Assembler();
+  const lowered = assembler.commandLoweringService.lowerExecutableNode(commandNode("!value = 7"));
+  t.is(lowered.kind, "command");
+  if (lowered.kind !== "command") {
+    return;
+  }
+  const processSpy = spy(assembler, "processNormalizedCommand");
+
+  assembler.executeLoweredNode(lowered);
+
+  t.true(processSpy.calledOnceWithExactly(lowered.command, false));
+  t.is(assembler.defines.get("value"), "7");
+});
+
+test("normalized dispatch only reparses raw source when rewriting changes it", t => {
+  const unchangedAssembler = new Assembler();
+  const unchangedParseSpy = spy(unchangedAssembler, "createNormalizedCommandFromRaw");
+  unchangedAssembler.processNormalizedCommand(commandNode("!value = 1"), true);
+  t.false(unchangedParseSpy.called);
+
+  const changedAssembler = new Assembler();
+  stub(changedAssembler, "rewriteRawCommand").returns("!value = 2");
+  const changedParseSpy = spy(changedAssembler, "createNormalizedCommandFromRaw");
+  changedAssembler.processNormalizedCommand(commandNode("!value = 1"), true);
+  t.true(changedParseSpy.calledOnce);
+  t.is(changedAssembler.defines.get("value"), "2");
+});
+
+test("normalized dispatch reparses context-sensitive variadic macro commands", t => {
+  const assembler = new Assembler();
+  assembler.activateStage("resolveLayout");
+  assembler.inMacroExpansion = true;
+  stub(assembler.macroEngine, "resolveVariadicPlaceholders").returns("db $01");
+  stub(assembler, "handleDataDirective");
+  const parseSpy = spy(assembler, "createNormalizedCommandFromRaw");
+
+  assembler.processNormalizedCommand(commandNode("db <...[0]>"), true);
+
+  t.true(parseSpy.calledOnce);
+});

@@ -45,14 +45,14 @@ Exit criteria:
 
 ### 2. Finish Focused Lowering Coverage
 
-Status: **partial**.
+Status: **complete**.
 
-- Add explicit lowered-tree tests for `for`, `while`, `if`, `elseif`, and
+- [x] Add explicit lowered-tree tests for `for`, `while`, `if`, `elseif`, and
   `else`.
-- Add include/incbin metadata and lowering-boundary tests.
-- Add per-family dispatch tests proving direct lowered directives do not call
+- [x] Add include/incbin metadata and lowering-boundary tests.
+- [x] Add per-family dispatch tests proving direct lowered directives do not call
   `processNormalizedCommand()`.
-- Document why every retained passthrough category requires preprocessing.
+- [x] Document why every retained passthrough category requires preprocessing.
 
 Exit criteria:
 
@@ -61,16 +61,23 @@ Exit criteria:
 
 ### 3. Reduce Passthrough Dispatch
 
-Status: **partial**.
+Status: **complete**.
 
-- Lower include/incbin first; their parsed metadata is already durable.
-- Evaluate memory/freespace directives next.
-- Keep define, label, macro, function, and preprocessing-sensitive forms as
+- [x] Lower include/incbin first; their parsed metadata is already durable.
+- [x] Evaluate memory/freespace directives next.
+- [x] Keep define, label, macro, function, and preprocessing-sensitive forms as
   passthrough until their semantics exist in the front-end model.
-- Treat data directives as high risk because a define or macro placeholder can
+- [x] Treat data directives as high risk because a define or macro placeholder can
   represent an entire data list.
-- Stop rebuilding cached normalized commands from raw source once all required
+- [x] Stop rebuilding cached normalized commands from raw source once all required
   rewrite semantics are represented explicitly.
+
+Retained passthrough nodes carry a typed reason. They are limited to ordered
+front-end state (`define`, label, macro body/invocation, function, struct,
+static assignment, and character mapping), macro placeholders, and data
+directives whose operands can be replaced as a complete list. Cached execution
+uses their durable normalized snapshots; raw normalization is reserved for
+macro-label rewrites and context-sensitive variadic expansion.
 
 Exit criteria:
 
@@ -171,8 +178,8 @@ Exit criteria:
 
 Status: **not started; reporting is complete**.
 
-The verified baseline is 93.22% statements, 88.98% branches, and 93.32%
-functions over 722 passing tests.
+The verified baseline is 93.24% statements, 88.95% branches, and 93.33%
+functions over 734 passing tests.
 
 - Enable thresholds for stable small modules first.
 - Restore `strictNullChecks` and narrow legacy nullable state instead of
@@ -217,8 +224,8 @@ These are speculative opportunities, not committed optimizations.
 - [x] Package declarations and publish contents exclude fixtures/harnesses.
 - [x] Namespace duplicate implementations are consolidated.
 - [x] Staged production parity has no known failures.
-- [ ] Focused lowering tests cover loops, conditionals, include, and incbin.
-- [ ] Passthrough commands are minimized and justified.
+- [x] Focused lowering tests cover loops, conditionals, include, and incbin.
+- [x] Passthrough commands are minimized and justified.
 - [ ] Tree and lowered executors are consolidated.
 - [ ] Directive handlers use focused capabilities.
 - [ ] Remaining directive effects are extracted.

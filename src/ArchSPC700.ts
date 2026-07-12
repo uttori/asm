@@ -349,6 +349,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
 
     return {
       kind: "instruction",
+      command,
       mnemonic,
       operandText,
       operands,

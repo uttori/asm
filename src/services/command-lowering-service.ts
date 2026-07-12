@@ -19,7 +19,22 @@ export type LoweredPassthroughCommand = {
   kind: "command";
   command: NormalizedCommand;
   source: NormalizedCommand["source"];
+  passthroughReason: PassthroughReason;
 };
+
+export type PassthroughReason =
+  | "characterMapping"
+  | "commentOrEmpty"
+  | "dataDirective"
+  | "defineCommand"
+  | "functionDefinition"
+  | "labelDefinition"
+  | "macroDefinitionOrInvoke"
+  | "macroPlaceholder"
+  | "registeredPreprocessDirective"
+  | "staticAssignment"
+  | "structCommand"
+  | "unknown";
 
 export type LoweredLoopNode = Omit<LoopNode, "type" | "header" | "commands"> & {
   kind: "loop";
@@ -51,12 +66,18 @@ export type LoweredProgram = {
   nodes: LoweredExecutableNode[];
 };
 
-// Data directives are intentionally absent for now: macro-heavy sources can
-// depend on placeholder rewriting and byte-for-byte ASAR compatibility.
+// Every registered directive that can execute from durable words/metadata is
+// listed here. Data and structural directives intentionally remain absent:
+// they depend on ordered define/macro/label/struct preprocessing.
 const DIRECTLY_LOWERABLE_DIRECTIVES = new Set([
   "arch",
+  "asar",
+  "autoclean",
+  "autoclear",
   "base",
   "check",
+  "dpbase",
+  "endspcblock",
   "exhirom",
   "exlorom",
   "fastrom",
@@ -65,8 +86,17 @@ const DIRECTLY_LOWERABLE_DIRECTIVES = new Set([
   "filldword",
   "filllong",
   "fillword",
+  "freecode",
+  "freedata",
+  "freespace",
+  "freespacebyte",
   "fullsa1rom",
   "hirom",
+  "include",
+  "includefrom",
+  "includeonce",
+  "incbin",
+  "incsrc",
   "lorom",
   "namespace",
   "norom",
@@ -81,13 +111,20 @@ const DIRECTLY_LOWERABLE_DIRECTIVES = new Set([
   "pullns",
   "pullpc",
   "pulltable",
+  "prot",
   "pushbase",
   "pushns",
   "pushpc",
   "pushtable",
   "sa1rom",
   "sfxrom",
+  "spcblock",
   "startpos",
+  "table",
+  "warnings",
+  "print",
+  "{",
+  "}",
 ]);
 
 export type CommandLoweringHost = {
@@ -115,8 +152,6 @@ export class CommandLoweringService {
       let directiveWords = command.words;
       if (command.parsed.includeTarget) {
         directiveWords = [command.parsed.includeTarget.directive, command.parsed.includeTarget.target];
-      } else if (keyword === "incbin" && command.parsed.directiveArgs?.args?.length) {
-        directiveWords = [keyword, ...command.parsed.directiveArgs.args];
       }
 
       return {
@@ -143,6 +178,7 @@ export class CommandLoweringService {
 
     return {
       kind: "instruction",
+      command,
       mnemonic,
       operandText,
       operands,
@@ -170,6 +206,7 @@ export class CommandLoweringService {
           kind: "command",
           command: detached,
           source: detached.source,
+          passthroughReason: this.getPassthroughReason(detached) ?? "unknown",
         };
       }
       return this.lowerCommand(detached);
@@ -234,25 +271,36 @@ export class CommandLoweringService {
    * @returns {boolean} True when the command should stay in passthrough form.
    */
   shouldPreserveCommand(command: NormalizedCommand): boolean {
+    return this.getPassthroughReason(command) !== undefined;
+  }
+
+  /**
+   * Names the ordered preprocessing requirement that prevents direct lowering.
+   * @param {NormalizedCommand} command The command to inspect.
+   * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
+   */
+  getPassthroughReason(command: NormalizedCommand): PassthroughReason | undefined {
     const keyword = command.keyword.toLowerCase();
     if (/<[^>]+>/.test(command.command)) {
       // Macro bodies use ASAR-style `<param>` placeholders that are resolved
       // during normalized dispatch. Lowering them early would send placeholders
       // like `<value>` straight into numeric evaluation.
-      return true;
+      return "macroPlaceholder";
     }
-    if (command.kind !== "unknown" && command.kind !== "opcodeCandidate") {
-      // Semantic front-end forms take precedence over case-insensitive directive
-      // names. For example, `FillByte = $EE` is a static assignment, not the
-      // `fillbyte` directive.
-      return true;
+    if (command.kind !== "unknown" && command.kind !== "opcodeCandidate" && command.kind !== "directive") {
+      // Semantic front-end forms require the ordered preprocess chain. This also
+      // keeps forms such as `FillByte = $EE` from colliding with directives.
+      return command.kind;
     }
-    // Only bypass normalized preprocessing for directives whose ordering and
-    // side effects are already represented by parsed command metadata. Defines,
-    // labels, macros, structs, and control-flow headers still use passthrough.
-    if (this.host.directiveRegistry.has(keyword) && DIRECTLY_LOWERABLE_DIRECTIVES.has(keyword)) {
-      return false;
+    if (this.host.directiveRegistry.has(keyword)) {
+      if (DIRECTLY_LOWERABLE_DIRECTIVES.has(keyword)) {
+        return undefined;
+      }
+      if (command.parsed.dataDirective) {
+        return "dataDirective";
+      }
+      return "registeredPreprocessDirective";
     }
-    return command.kind !== "opcodeCandidate";
+    return command.kind === "opcodeCandidate" ? undefined : "unknown";
   }
 }

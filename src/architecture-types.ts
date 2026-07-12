@@ -67,6 +67,7 @@ export interface ExpressionHost {
 
 export interface LoweredInstruction {
   kind: "instruction";
+  command?: NormalizedCommand;
   mnemonic: string;
   operandText: string;
   operands: string[];
