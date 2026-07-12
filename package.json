@@ -25,7 +25,6 @@
     "eslint-plugin-optimize-regex": "^1.2.1",
     "eslint-plugin-security": "^4.0.1",
     "eslint-plugin-xss": "^0.1.12",
-    "jsdoc-to-markdown": "^9.1.3",
     "oxlint": "^1.73.0",
     "oxlint-tsgolint": "^0.24.0",
     "sinon": "^22.0.0",
@@ -37,16 +36,22 @@
     "yargs": "^18.0.0"
   },
   "files": [
-    "dist/*",
-    "src/*"
+    "dist",
+    "src"
   ],
   "workspaces": [
     "language-server",
     "editors/vscode"
   ],
-  "module": "src/index.js",
+  "module": "src/index.ts",
   "type": "module",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts"
+    }
+  },
   "sideEffects": false,
   "ava": {
     "files": [
@@ -75,15 +80,21 @@
     "exclude": []
   },
   "scripts": {
-    "docs": "jsdoc2md --private --example-lang js --template README.hbs src/index.js > README.md; cp README.md docs/README.md",
     "lint": "oxlint ./src",
-    "make-types": "tsc --module nodenext --project ./tsconfig.json",
+    "make-types": "rm -rf dist && tsc --module nodenext --project ./tsconfig.json",
+    "cli": "tsx src/cli.ts",
+    "fixture:asar": "tsx scripts/run-asar-fixtures.ts",
+    "fixture:chou": "tsx scripts/run-chou.ts",
+    "fixture:slideshow": "tsx scripts/run-slideshow.ts",
+    "fixture:slideshow:legacy": "tsx scripts/run-slideshow-legacy.ts",
     "test": "NODE_ENV=test ava",
     "test:coverage": "NODE_ENV=test c8 ava",
     "test:serial": "NODE_ENV=test c8 ava --serial --concurrency=1",
     "test:debug": "NODE_ENV=test DEBUG=Uttori* c8 ava --serial --concurrency=1",
     "test:watch": "NODE_ENV=test DEBUG=Assembler,MathCore ava --watch",
     "validate": "npm ls",
+    "verify": "npm run lint && npm run make-types && npm test && npm run lsp:typecheck && npm run vscode:typecheck",
+    "pack:check": "npm pack --dry-run",
     "lsp:typecheck": "tsc -p language-server/tsconfig.json --noEmit",
     "lsp:build": "node language-server/esbuild.mjs",
     "vscode:typecheck": "tsc -p editors/vscode/tsconfig.json --noEmit",

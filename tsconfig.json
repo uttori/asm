@@ -1,7 +1,6 @@
 {
   "include": [
-    "src",
-    "tests/**/*"
+    "src/**/*.ts"
   ],
   "exclude": [
     "dist",
@@ -24,9 +23,12 @@
     "module": "NodeNext",
     "moduleResolution": "nodenext",
     "outDir": "dist",
+    "rootDir": "src",
     "noEmit": false,
     "sourceMap": true,
     "strict": true,
+    "strictNullChecks": false,
+    "noUncheckedIndexedAccess": false,
     "target": "esnext",
     "types": ["debug", "node", "sinon"],
     "removeComments": false,

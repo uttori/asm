@@ -21,10 +21,10 @@ interface FixtureComparison {
 
 const TEST_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(TEST_FILE_DIR, "..");
-const FIXTURES_DIR = path.resolve(PROJECT_ROOT, "src/tests");
-const EXPECTED_DIR = path.resolve(PROJECT_ROOT, "src/tests_tmp_app");
+const FIXTURES_DIR = path.resolve(PROJECT_ROOT, "fixtures/asar/tests");
+const EXPECTED_DIR = path.resolve(PROJECT_ROOT, "fixtures/asar/expected");
 const ASSEMBLY_STAGES = ["collectDefinitions", "resolveLayout", "emitProgram"] as const;
-const SOURCE_ROM_PATH = path.resolve(PROJECT_ROOT, "src/dummy_rom.sfc");
+const SOURCE_ROM_PATH = path.resolve(PROJECT_ROOT, "fixtures/asar/dummy_rom.sfc");
 
 /** Unique per-test temp dir for target ROM; set by test.before, cleaned by test.after.always */
 let tempDir: string;
@@ -44,13 +44,13 @@ test.after.always(() => {
   }
 });
 
-const SLIDESHOW_SRC_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/SLIDE.SRC");
-const SLIDESHOW_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/SLIDES-GOOD-NEW.sfc");
-const SLIDESHOW_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/snes-slideshow-test-new/test.sfc");
+const SLIDESHOW_SRC_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/snes-slideshow/SLIDE.SRC");
+const SLIDESHOW_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/snes-slideshow/SLIDES-GOOD-NEW.sfc");
+const SLIDESHOW_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/snes-slideshow/test.sfc");
 
-const CHOU_SRC_PATH = path.resolve(PROJECT_ROOT, "src/Super-Ghouls-n-Ghosts-Disassembly-main/CHOU.ASM");
-const CHOU_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "src/Super-Ghouls-n-Ghosts-Disassembly-main/CHOU.SFC");
-const CHOU_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "src/Super-Ghouls-n-Ghosts-Disassembly-main/test.sfc");
+const CHOU_SRC_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/Chou.asm");
+const CHOU_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/chou.sfc");
+const CHOU_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/test.sfc");
 
 const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
@@ -119,6 +119,13 @@ const assembleFixtureTree = (fixtureName: string): Buffer => {
   return assembleSource(source, sourcePath, targetRom, true);
 };
 
+const assembleFixtureStaged = (fixtureName: string): Buffer => {
+  const sourcePath = path.resolve(FIXTURES_DIR, `${fixtureName}.asm`);
+  const source = fs.readFileSync(sourcePath, "utf8");
+  const targetRom = fs.existsSync(TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(TARGET_ROM_PATH)) : undefined;
+  return assembleSourceStaged(source, sourcePath, targetRom);
+};
+
 const assembleSource = (source: string, sourcePath: string, targetRom?: Uint8Array, useTreeExecution = false): Buffer => {
   const assembler = new Assembler(targetRom);
   const inputDir = path.dirname(sourcePath);
@@ -140,6 +147,23 @@ const assembleSource = (source: string, sourcePath: string, targetRom?: Uint8Arr
     assembler.finishPass();
   }
 
+  return Buffer.from(assembler.getBinaryOutput());
+};
+
+const assembleSourceStaged = (
+  source: string,
+  sourcePath: string,
+  targetRom?: Uint8Array,
+  checksumMode?: "asar" | "simple",
+): Buffer => {
+  const assembler = new Assembler(targetRom);
+  assembler.setIncludePaths(["./", path.dirname(sourcePath)]);
+  assembler.setCurrentFile(sourcePath);
+  if (checksumMode) {
+    assembler.setChecksumMode(checksumMode);
+  }
+  const program = assembler.buildProgramModel(source, sourcePath, 0);
+  assembler.assembleProgram(program);
   return Buffer.from(assembler.getBinaryOutput());
 };
 
@@ -180,7 +204,7 @@ const discoverTopLevelFixtures = (): string[] => fs
   .sort((a, b) => a.localeCompare(b))
   .map((fileName) => path.basename(fileName, ".asm"));
 
-const compareFixture = (fixtureName: string, mode: "legacy" | "tree" = "legacy"): FixtureComparison => {
+const compareFixture = (fixtureName: string, mode: "legacy" | "tree" | "staged" = "legacy"): FixtureComparison => {
   const expectedPath = path.resolve(EXPECTED_DIR, `${fixtureName}.asm.sfc`);
   const expectedStats = getFileStats(expectedPath);
   let runError: string | undefined;
@@ -190,7 +214,11 @@ const compareFixture = (fixtureName: string, mode: "legacy" | "tree" = "legacy")
   };
 
   try {
-    const output = mode === "tree" ? assembleFixtureTree(fixtureName) : assembleFixtureLegacy(fixtureName);
+    const output = mode === "tree"
+      ? assembleFixtureTree(fixtureName)
+      : mode === "staged"
+        ? assembleFixtureStaged(fixtureName)
+        : assembleFixtureLegacy(fixtureName);
     outputStats = {
       size: output.length,
       checksum: hashBuffer(output)
@@ -219,6 +247,11 @@ const compareFixture = (fixtureName: string, mode: "legacy" | "tree" = "legacy")
 const ALL_TOP_LEVEL_FIXTURES = discoverTopLevelFixtures();
 const TREE_GOLDEN_KNOWN_FAILURES = new Set<string>([]);
 const TREE_LEGACY_KNOWN_FAILURES = new Set<string>([]);
+const STAGED_GOLDEN_KNOWN_FAILURES = new Set<string>([
+  // The staged path currently rejects this fixture's `fill` form while the
+  // tree and line drivers remain byte-identical to the Asar golden.
+  "labels_static_pass",
+]);
 
 test("integration parity helper treats selected equivalent errors as parity", (t) => {
   for (const fixtureName of [
@@ -243,7 +276,7 @@ test("integration parity helper treats selected equivalent errors as parity", (t
   }
 });
 
-test("integration fixtures - includes all top-level .asm tests from src/test.ts", t => {
+test("integration fixtures include all top-level Asar tests", t => {
   t.true(ALL_TOP_LEVEL_FIXTURES.length > 0, "At least one fixture should be discovered");
 });
 
@@ -319,6 +352,25 @@ test.serial("integration tree-first golden gate covers all top-level fixtures", 
   }
 });
 
+test.serial("integration staged production path matches all top-level golden fixtures", (t) => {
+  const failures: string[] = [];
+  for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {
+    const result = compareFixture(fixtureName, "staged");
+    if (STAGED_GOLDEN_KNOWN_FAILURES.has(fixtureName)) {
+      if (result.overallPassed) {
+        failures.push(`${fixtureName}: unexpectedly passed; remove it from STAGED_GOLDEN_KNOWN_FAILURES`);
+      }
+      continue;
+    }
+    if (!result.overallPassed) {
+      failures.push(
+        `${fixtureName}: ${result.failedChecks.join(", ")}${result.runError ? ` (${result.runError})` : ""}`
+      );
+    }
+  }
+  t.deepEqual(failures, []);
+});
+
 test.serial("integration tree and legacy outputs remain byte-identical for all top-level fixtures", (t) => {
   for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {
     const result = compareTreeVsLegacy(fixtureName);
@@ -358,36 +410,18 @@ test("integration SLIDESHOW regression keeps CLI-style include flow byte-identic
   const source = fs.readFileSync(SLIDESHOW_SRC_PATH, "utf8");
   const expected = fs.readFileSync(SLIDESHOW_EXPECTED_PATH);
   const targetRom = fs.existsSync(SLIDESHOW_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(SLIDESHOW_TARGET_ROM_PATH)) : undefined;
-  const assembler = new Assembler(targetRom);
-  assembler.setChecksumMode("simple");
-  const inputDir = path.dirname(SLIDESHOW_SRC_PATH);
-  assembler.setIncludePaths(["./", inputDir]);
-  assembler.setCurrentFile(SLIDESHOW_SRC_PATH);
-
-  for (const stage of ASSEMBLY_STAGES) {
-    assembler.activateStage(stage);
-    const lines = source.split("\n");
-    for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
-      assembler.setCurrentLine(lineNumber);
-      assembler.assembleblock(lines[lineNumber].trim());
-    }
-    assembler.finishPass();
-  }
-
-  const output = Buffer.from(assembler.getBinaryOutput());
+  const output = assembleSourceStaged(source, SLIDESHOW_SRC_PATH, targetRom, "simple");
   t.is(hashBuffer(output), hashBuffer(expected));
 });
 
-test("integration CHOU regression keeps CLI-style include flow byte-identical", (t) => {
+test("integration CHOU regression keeps legacy include flow byte-identical", (t) => {
   const source = fs.readFileSync(CHOU_SRC_PATH, "utf8");
   const expected = fs.readFileSync(CHOU_EXPECTED_PATH);
   const targetRom = fs.existsSync(CHOU_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(CHOU_TARGET_ROM_PATH)) : undefined;
   const assembler = new Assembler(targetRom);
   assembler.setChecksumMode("simple");
-  const inputDir = path.dirname(CHOU_SRC_PATH);
-  assembler.setIncludePaths(["./", inputDir]);
+  assembler.setIncludePaths(["./", path.dirname(CHOU_SRC_PATH)]);
   assembler.setCurrentFile(CHOU_SRC_PATH);
-
   for (const stage of ASSEMBLY_STAGES) {
     assembler.activateStage(stage);
     const lines = source.split("\n");
@@ -397,8 +431,14 @@ test("integration CHOU regression keeps CLI-style include flow byte-identical", 
     }
     assembler.finishPass();
   }
+  t.is(hashBuffer(Buffer.from(assembler.getBinaryOutput())), hashBuffer(expected));
+});
 
-  const output = Buffer.from(assembler.getBinaryOutput());
+test("integration CHOU staged production path preserves include resolution", (t) => {
+  const source = fs.readFileSync(CHOU_SRC_PATH, "utf8");
+  const expected = fs.readFileSync(CHOU_EXPECTED_PATH);
+  const targetRom = fs.existsSync(CHOU_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(CHOU_TARGET_ROM_PATH)) : undefined;
+  const output = assembleSourceStaged(source, CHOU_SRC_PATH, targetRom, "simple");
   t.is(hashBuffer(output), hashBuffer(expected));
 });
 

@@ -32,9 +32,6 @@ export interface DirectiveNamespaceCapability {
   namespaceNestingPath: string[];
   namespaceNestingEnabled: boolean;
   currentNamespace: string;
-  handleNamespace(args: string[]): void;
-  handlePushNamespace(): void;
-  handlePullNamespace(): void;
 }
 
 export interface DirectiveIncludeCapability {

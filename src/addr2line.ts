@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { CRC32 } from "./crc32.js";
 
-let debug = (..._) => {};
+let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
 try { const { default: d } = await import("debug"); debug = d("Addr2Line"); } catch {}
 

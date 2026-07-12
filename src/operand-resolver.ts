@@ -253,7 +253,7 @@ export class OperandResolver {
         return this.deps.evaluateMath(operand);
       } catch (error) {
         if (this.deps.shouldDeferExpressionEvaluation()) {
-          debug("function expression deferred until final pass", { operand, error: String(error) });
+          debug("function expression deferred until final pass", { operand, error });
           return 0;
         }
         throw error;

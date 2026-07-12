@@ -55,7 +55,11 @@ import {
 } from "./services/command-lowering-service.js";
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
 import { MacroEngine } from "./services/macro-engine.js";
-import { ProgramModelBuilder, type IncrementalProgramParseState } from "./services/program-model-builder.js";
+import {
+  ProgramModelBuilder,
+  type IncrementalProgramParseState,
+  type ProgramModel,
+} from "./services/program-model-builder.js";
 import { RomWriterService } from "./services/rom-writer-service.js";
 import { StructEngine } from "./services/struct-engine.js";
 import { SymbolScopeService } from "./services/symbol-scope-service.js";
@@ -67,7 +71,7 @@ import {
 import type { SourceSpan } from "./source-location.js";
 import { createNodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
 
-let debug = (..._) => {};
+let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
 // if (process.env.UTTORI_DATA_DEBUG || true) {
 try { const { default: d } = await import("debug"); debug = d("Assembler"); } catch {}
@@ -91,11 +95,7 @@ export type LoopBlock = LoopNode;
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
-export type ProgramModel = {
-  sourceFile: string;
-  startLine: number;
-  nodes: RuntimeNode[];
-};
+export type { ProgramModel } from "./services/program-model-builder.js";
 export type StageExecutionMode = "layout" | "emit";
 export type StageExecutionCapabilities = {
   instructionMode: StageExecutionMode;
@@ -1636,27 +1636,6 @@ export class Assembler implements AssemblySession {
   }
 
   /**
-   * Pushes the current namespace.
-   */
-  handlePushNamespace(): void {
-    this.directiveRuntime.handlePushNamespace();
-  }
-
-  /**
-   * Restores the previous namespace.
-   */
-  handlePullNamespace(): void {
-    this.directiveRuntime.handlePullNamespace();
-  }
-  /**
-   * Handles `namespace` definitions.
-   * @param {string[]} params - The parameters for the namespace directive.
-   */
-  handleNamespace(params: string[]): void {
-    this.directiveRuntime.handleNamespace(params);
-  }
-
-  /**
    * Pushes the current PC onto the pushpcStack.
    */
   handlePushPC(): void {
@@ -2694,7 +2673,7 @@ export class Assembler implements AssemblySession {
       }
     } catch (error) {
       debug("assemblefile error 💥", error);
-      const message = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
       throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
     } finally {
       // Restore state

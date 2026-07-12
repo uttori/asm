@@ -1,90 +1,104 @@
-# Assembler Refactor Status (Re-baseline)
+# Assembler Refactor Status
 
-This document re-baselines `ASSEMBLER_REFACTOR_OPTIONS.md` against the current
-state of the codebase.
+Verified on 2026-07-12 against the implementation, package configuration, and
+the complete serial coverage suite. This is the current-state audit;
+`ASSEMBLER_REFACTOR_OPTIONS.md` is historical context and
+`ASSEMBLER_LONG_TERM_GOALS.md` is the active roadmap.
 
-## Status Summary
+## Executive Summary
 
-The project is past the original extraction plan. It is now in "finish
-transition" mode:
+The extraction phase is complete and the project is in a narrower
+finish-transition phase. The IR, directive registry, services, staged assembly
+API, analysis pipeline, LSP, and editor integration are real and tested.
 
-- AST/IR foundations are implemented.
-- Directive registry extraction is implemented.
-- Front-end program modeling and command lowering are implemented.
-- Stage-owned execution state exists through `buildProgramModel()`,
-  `runStage()`, `assembleProgram()`, and `assembleSource()`.
-- Tree/golden and tree/legacy fixture gates exist and are active with no known
-  failure lists.
-- Remaining work is largely passthrough removal, executor consolidation,
-  compatibility isolation, interface narrowing, and optimization cleanup.
+The refactor is not finished:
 
-## Mapping: Original Plan -> Current State
+- staged/lowered execution is the production path, but one Asar fixture still
+  differs from its golden and many commands still use passthrough dispatch;
+- tree and lowered loop/conditional executors still coexist;
+- directive handlers still receive the broad `AssemblySession`;
+- architecture encoders still depend on broad assembler state;
+- compatibility rules are only partly isolated;
+- coverage is measured per file but not enforced by thresholds;
+- TypeScript 7 declarations currently require `strictNullChecks: false` because
+  legacy nullable state has not been fully narrowed;
+- performance work has no benchmark baseline.
 
-### Completed / materially complete
+## Verified Results
 
-- Directive registry extraction
-  - `src/directives/registry.ts`
-  - `src/directives/*.ts`
-- Service extraction around assembler coordination
-  - `src/services/*`
-  - `src/assembler.ts` service host/facade creation
-- Typed expression and command infrastructure
-  - `src/ir/expression-node.ts`
-  - `src/ir/normalized-command.ts`
-  - `src/ir/assembly-tree.ts`
-- Front-end model and lowering pipeline
-  - `src/services/assembly-front-end-service.ts`
-  - `src/services/program-model-builder.ts`
-  - `src/services/command-lowering-service.ts`
-- Stage-owned execution API
-  - `Assembler.buildProgramModel()`
-  - `Assembler.runStage()`
-  - `Assembler.assembleProgram()`
-  - `Assembler.assembleSource()`
-- Tree-first parity and fixture-wide gates
-  - `tests/assembler.integration.test.ts`
-  - `tests/ir.test.ts`
-  - `tests/service-seams.test.ts`
+- `npm run lint`: passes with six existing unsafe-regex warnings.
+- `npm run make-types`: passes and emits production declarations under `dist/`.
+- `npm run test:serial`: 721 tests pass.
+- Coverage: 93.22% statements, 89.02% branches, 93.32% functions.
+- `npm run lsp:typecheck` and `npm run vscode:typecheck`: pass.
+- `npm run lsp:build` and `npm run vscode:build`: pass.
+- `npm run pack:check`: passes; fixtures, harnesses, and generated ROMs are not
+  published.
+- `git diff --check`: passes.
 
-### Partial / transitional
+## Goal Status
 
-- Canonical execution model
-  - Lowered execution exists, but non-opcode commands can still be preserved as
-    passthrough command snapshots and routed through normalized command dispatch.
-- IR durability
-  - Cached nodes are cloned before dispatch, but macro rewrite paths can still
-    rebuild normalized commands from raw source.
-- Executor consolidation
-  - Tree and lowered loop / conditional execution still have parallel
-    implementations.
-- Compatibility policy
-  - A compatibility profile exists, but compatibility-specific behavior still
-    surfaces in core execution and directive handlers.
+### Complete
 
-### Cleaned up / no longer applicable
+- Directive registry and grouped directive modules.
+- Front-end normalization, durable program models, and lowering infrastructure.
+- Extracted define, macro, struct, symbol, ROM writer, and file-provider
+  services.
+- Stage-owned APIs: `buildProgramModel()`, `runStage()`, `assembleProgram()`,
+  and `assembleSource()`.
+- Tree-vs-golden and tree-vs-line fixture parity with no known failures.
+- A production staged-vs-golden gate over every top-level Asar fixture.
+- Real-world staged assembly coverage for the slideshow and CHOU projects.
+- Analysis-only diagnostics, symbols, references, source spans, and include
+  graphs.
+- LSP server, VS Code client, build command, and watch command.
+- Namespace behavior consolidated in `src/directives/namespace.ts`; duplicate
+  runtime and assembler trampolines were removed.
+- `ProgramModel` has one canonical type definition.
+- `src/` contains production TypeScript only.
 
-- Parser-era `src-parser` references are no longer present in code.
-- `scripts/check-parity.ts` is no longer present.
-- `tsconfig.json` no longer excludes `src-parser`.
+### Partial
 
-## Current Architecture Target
+- Canonical lowered dispatch: normal production assembly uses it, but
+  `LoweredPassthroughCommand` remains broad.
+- Production parity: all staged fixture outputs match except
+  `labels_static_pass`, which currently fails with `Unrecognized fill
+  directive.` The test has a ratcheting known-failure entry.
+- IR durability: cached nodes exist, but preprocessing-sensitive paths can
+  clone and rebuild normalized commands from raw text.
+- Directive extraction: several modules own behavior, while data, org/layout,
+  SPC, include, and pushpc paths still delegate to broad services/session
+  methods.
+- Architecture separation: a shared registry and encoder contract exist, but
+  encoders still hold broad assembler dependencies.
+- Compatibility isolation: an ASAR profile exists, but policy remains in core
+  execution and handlers.
 
-The near-term target is to stabilize one canonical execution pipeline:
+### Not Complete
 
-1. Parse source commands into pass-program nodes.
-2. Lower commands into typed directive/instruction units.
-3. Dispatch lowered units through directive registry and architecture encoders.
-4. Use normalized command dispatch only for command kinds that truly need
-   front-end preprocessing.
-5. Keep compatibility semantics explicit in one internal boundary.
+- One executor for commands, loops, and conditionals.
+- Family-specific directive capability contexts.
+- Rare, explicitly justified passthrough commands.
+- No steady-state raw-source reparse.
+- Stable-module coverage thresholds.
+- Strict null checking across production source.
+- Repeatable performance benchmarks.
 
-## Exit Criteria For Transition Phase
+## Cleanup Completed
 
-- One production execution path, with line-oriented legacy-style driving kept
-  only as a compatibility oracle.
-- Minimal passthrough commands in lowered programs.
-- No cached-node reparse from raw source during steady-state execution.
-- ASAR compatibility isolated behind an internal profile / capability boundary.
-- Directive handlers depend on smaller internal capabilities instead of a broad
-  mutable session interface.
-- Integration parity remains green throughout cleanup and optimization work.
+- Moved Asar sources/goldens/base ROMs to `fixtures/asar/`.
+- Moved slideshow and CHOU projects to `fixtures/integration/`.
+- Moved manual runners to `scripts/` and exposed them through npm scripts.
+- Removed duplicate fixture ROM outputs, historical logs, the duplicate CHOU
+  archive, screenshots, `.DS_Store` files, and obsolete shell harnesses.
+- Removed unreferenced `src/libmisc.ts`.
+- Preserved `formatTraceEvent`, `addr2line`, intentional ASAR no-ops,
+  deprecated syntax support, and parity execution bridges.
+- Fixed declaration layout, package metadata, npm package contents, TypeScript
+  7 workspace configs, and stale docs tooling.
+
+## Decision
+
+Do not start another broad extraction rewrite. Complete the remaining work in
+the test-gated order in `ASSEMBLER_LONG_TERM_GOALS.md`, beginning with the
+single staged parity failure and focused lowering tests.

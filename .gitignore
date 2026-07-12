@@ -64,3 +64,9 @@ typings/
 # Parity check output
 parity-result.txt
 parity-error.txt
+
+# Generated fixture outputs (committed goldens live under expected paths)
+fixtures/asar/tests/**/*.sfc
+fixtures/integration/**/SLIDE.sfc
+fixtures/integration/chou/chou-debug*.sfc
+fixtures/integration/chou/chou-seeded.sfc

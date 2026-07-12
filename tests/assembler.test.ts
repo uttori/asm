@@ -3947,135 +3947,62 @@ test("handlePushPC and handlePullPC - pushpcnum tracking", t => {
   t.is(assembler.pushpcnum, 0, "pushpcnum should be 0 after second pull");
 });
 
-test("handleNamespace - basic functionality", t => {
+test("namespace directive handles assignment, case, and reset", t => {
   const assembler = new Assembler();
-
-  // Initial namespace should be empty
   t.is(assembler.currentNamespace, "", "Initial namespace should be empty");
 
-  // Set namespace
-  assembler.handleNamespace(["TestNamespace"]);
+  assembler.processCommand("namespace TestNamespace");
   t.is(assembler.currentNamespace, "TestNamespace", "Namespace should be set correctly");
 
-  // Turn namespace off with 'off' parameter
-  assembler.handleNamespace(["off"]);
+  assembler.processCommand("namespace OFF");
   t.is(assembler.currentNamespace, "", "Namespace should be empty after 'off' command");
 
-  // Set namespace again
-  assembler.handleNamespace(["AnotherNamespace"]);
-  t.is(assembler.currentNamespace, "AnotherNamespace", "Namespace should be set correctly after being turned off");
-
-  // Empty params should clear namespace
-  assembler.handleNamespace([]);
-  t.is(assembler.currentNamespace, "", "Namespace should be empty with empty params");
-});
-
-test("handleNamespace - case sensitivity", t => {
-  const assembler = new Assembler();
-
-  // Test with mixed case namespace
-  assembler.handleNamespace(["MixedCaseNamespace"]);
+  assembler.processCommand("namespace MixedCaseNamespace");
   t.is(assembler.currentNamespace, "MixedCaseNamespace", "Namespace should preserve case");
 
-  // Test with lowercase 'off' command
-  assembler.handleNamespace(["off"]);
-  t.is(assembler.currentNamespace, "", "Lowercase 'off' should clear namespace");
-
-  // Test with uppercase 'OFF' command
-  assembler.handleNamespace(["TestNamespace"]);
-  assembler.handleNamespace(["OFF"]);
-  t.is(assembler.currentNamespace, "", "Uppercase 'OFF' should clear namespace (case insensitive)");
+  assembler.processCommand("namespace");
+  t.is(assembler.currentNamespace, "", "Namespace should be empty with no name");
 });
 
-test("handlePushNamespace and handlePullNamespace - basic functionality", t => {
+test("pushns and pullns directives restore multiple namespace levels", t => {
   const assembler = new Assembler();
-
-  // Set initial namespace
-  assembler.handleNamespace(["InitialNamespace"]);
-  t.is(assembler.currentNamespace, "InitialNamespace", "Initial namespace should be set");
-
-  // Push namespace
-  assembler.handlePushNamespace();
-
-  // Change namespace
-  assembler.handleNamespace(["NewNamespace"]);
-  t.is(assembler.currentNamespace, "NewNamespace", "Namespace should be changed after push");
-
-  // Pull namespace should restore original
-  assembler.handlePullNamespace();
-  t.is(assembler.currentNamespace, "InitialNamespace", "Original namespace should be restored after pull");
-});
-
-test("handlePushNamespace and handlePullNamespace - multiple levels", t => {
-  const assembler = new Assembler();
-
-  // Set and push multiple namespaces
-  assembler.handleNamespace(["Level1"]);
-  assembler.handlePushNamespace();
-
-  assembler.handleNamespace(["Level2"]);
-  assembler.handlePushNamespace();
-
-  assembler.handleNamespace(["Level3"]);
+  assembler.processCommand("namespace Level1");
+  assembler.processCommand("pushns");
+  assembler.processCommand("namespace Level2");
+  assembler.processCommand("pushns");
+  assembler.processCommand("namespace Level3");
   t.is(assembler.currentNamespace, "Level3", "Current namespace should be Level3");
 
-  // Pull namespaces in reverse order
-  assembler.handlePullNamespace();
+  assembler.processCommand("pullns");
   t.is(assembler.currentNamespace, "Level2", "Namespace should be restored to Level2");
-
-  assembler.handlePullNamespace();
+  assembler.processCommand("pullns");
   t.is(assembler.currentNamespace, "Level1", "Namespace should be restored to Level1");
 });
 
-test("handlePushNamespace and handlePullNamespace - empty namespace", t => {
+test("pushns and pullns directives restore an empty namespace", t => {
   const assembler = new Assembler();
-
-  // Push empty namespace
-  assembler.handlePushNamespace();
-
-  // Set namespace
-  assembler.handleNamespace(["TestNamespace"]);
-  t.is(assembler.currentNamespace, "TestNamespace", "Namespace should be set");
-
-  // Pull should restore empty namespace
-  assembler.handlePullNamespace();
+  assembler.processCommand("pushns");
+  assembler.processCommand("namespace AnotherNamespace");
+  t.is(assembler.currentNamespace, "AnotherNamespace", "Namespace should be set correctly after being turned off");
+  assembler.processCommand("pullns");
   t.is(assembler.currentNamespace, "", "Empty namespace should be restored");
 });
 
-test("handlePullNamespace - error on empty stack", t => {
+test("pullns directive errors on an empty stack", t => {
   const assembler = new Assembler();
-
-  // Attempt to pull without pushing should throw error
   const error = t.throws(() => {
-    assembler.handlePullNamespace();
+    assembler.processCommand("pullns");
   }, { instanceOf: Error });
-
   t.is(error.message, "pullns without pushns", "Should throw correct error message");
 });
 
-test("handleNamespace, handlePushNamespace, handlePullNamespace - integration", t => {
+test("pullns directive sanitizes malformed nested namespace state", t => {
   const assembler = new Assembler();
-
-  // Test complex sequence of operations
-  assembler.handleNamespace(["MainNamespace"]);
-  assembler.handlePushNamespace();
-
-  assembler.handleNamespace(["SubNamespace"]);
-  t.is(assembler.currentNamespace, "SubNamespace", "Subnamespace should be active");
-
-  assembler.handleNamespace(["off"]);
-  t.is(assembler.currentNamespace, "", "Namespace should be cleared with 'off'");
-
-  assembler.handlePullNamespace();
-  t.is(assembler.currentNamespace, "MainNamespace", "Main namespace should be restored");
-
-  // Push again with non-empty namespace
-  assembler.handlePushNamespace();
-  assembler.handleNamespace([]);
-  t.is(assembler.currentNamespace, "", "Namespace should be cleared with empty params");
-
-  assembler.handlePullNamespace();
-  t.is(assembler.currentNamespace, "MainNamespace", "Main namespace should be restored again");
+  assembler.namespaceNestingEnabled = true;
+  assembler.namespaceStack.push("Root", "{\"not\":\"a path\"}");
+  assembler.processCommand("pullns");
+  t.deepEqual(assembler.namespaceNestingPath, []);
+  t.is(assembler.currentNamespace, "Root");
 });
 
 test("writeDataByLength - writes data of different lengths", t => {

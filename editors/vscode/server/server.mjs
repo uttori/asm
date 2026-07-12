@@ -9399,7 +9399,7 @@ function getCatalogForArchitecture(architecture) {
 }
 
 // src/Arch65816.ts
-var debug = (..._) => {
+var debug = (..._args) => {
 };
 try {
   const { default: d } = await import("debug");
@@ -10109,6 +10109,9 @@ var Arch65816 = class {
     }
     debug("handleLogicAndCompareOperations mode", mode, operand);
     const opcodeByte = opcodes[logicOpcode][mode];
+    if (!opcodeByte) {
+      throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
+    }
     this.assembler.write1(opcodeByte);
     if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode === "directIndirectLong") {
       this.assembler.write1(address);
@@ -10625,7 +10628,6 @@ var Arch65816 = class {
     };
     let address = 0;
     let mode;
-    void mode;
     const isIndexed = storeOpcode === "STX" && loweredOperand.indexRegister === "y" && !loweredOperand.indirect || storeOpcode === "STY" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect || storeOpcode === "STZ" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
     if (isIndexed) {
       operand = rawOperand.slice(0, -2).trim();
@@ -10681,12 +10683,14 @@ var Arch65816 = class {
       address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].absolute);
       this.assembler.write2(address);
+      debug("handleStoreOperations mode", mode);
       return true;
     } else if (!isIndexed && /^\$[\dA-Fa-f]{2}$/.test(operand)) {
       mode = "direct";
       address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].direct);
       this.assembler.write1(address);
+      debug("handleStoreOperations mode", mode);
       return true;
     } else if (isIndexed) {
       if (storeOpcode === "STX") {
@@ -10700,6 +10704,7 @@ var Arch65816 = class {
           this.assembler.write1(storeOpcodes[storeOpcode].directY);
           this.assembler.write1(address);
         }
+        debug("handleStoreOperations mode", mode);
         return true;
       } else if (storeOpcode === "STY") {
         address = this.assembler.operandResolver.getnum(operand);
@@ -10712,6 +10717,7 @@ var Arch65816 = class {
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
           this.assembler.write1(address);
         }
+        debug("handleStoreOperations mode", mode);
         return true;
       } else if (storeOpcode === "STZ") {
         address = this.assembler.operandResolver.getnum(operand);
@@ -10724,6 +10730,7 @@ var Arch65816 = class {
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
           this.assembler.write1(address);
         }
+        debug("handleStoreOperations mode", mode);
         return true;
       }
     }
@@ -11015,7 +11022,7 @@ try {
   debug2 = d("ArchSPC700");
 } catch {
 }
-var hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+var hasOwn = (obj, key) => Object.hasOwn(obj, key);
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -12656,7 +12663,7 @@ try {
   debug3 = d("ArchSuperFX");
 } catch {
 }
-var hasOwn2 = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+var hasOwn2 = (obj, key) => Object.hasOwn(obj, key);
 var ArchSuperFX = class {
   assembler;
   constructor(assembler) {
@@ -13377,7 +13384,7 @@ var CRC32 = class _CRC32 {
 };
 
 // src/addr2line.ts
-var debug4 = (..._) => {
+var debug4 = (..._args) => {
 };
 try {
   const { default: d } = await import("debug");
@@ -15573,7 +15580,7 @@ var OperandResolver = class {
         return this.deps.evaluateMath(operand);
       } catch (error) {
         if (this.deps.shouldDeferExpressionEvaluation()) {
-          debug6("function expression deferred until final pass", { operand, error: String(error) });
+          debug6("function expression deferred until final pass", { operand, error });
           return 0;
         }
         throw error;
@@ -16267,9 +16274,10 @@ var handlePullNamespace = ({ session }) => {
   }
   if (session.namespaceNestingEnabled) {
     const pathJson = session.namespaceStack.pop();
-    session.namespaceNestingPath = JSON.parse(pathJson);
+    const parsedPath = JSON.parse(pathJson ?? "[]");
+    session.namespaceNestingPath = Array.isArray(parsedPath) && parsedPath.every((entry) => typeof entry === "string") ? parsedPath : [];
   }
-  session.currentNamespace = session.namespaceStack.pop();
+  session.currentNamespace = session.namespaceStack.pop() ?? "";
 };
 var handleNamespace = ({ session }, words) => {
   if (session.inSpcblock) {
@@ -17183,85 +17191,6 @@ var DirectiveRuntimeService = class {
     this.host.addAddressToLine(this.host.currentTargetBaseAddress & 16777215);
   }
   /**
-   * Pushes the current namespace.
-   */
-  handlePushNamespace() {
-    this.host.namespaceStack.push(this.host.currentNamespace);
-    if (this.host.namespaceNestingEnabled) {
-      this.host.namespaceStack.push(JSON.stringify(this.host.namespaceNestingPath));
-    }
-  }
-  /**
-   * Restores the previous namespace.
-   */
-  handlePullNamespace() {
-    if (this.host.namespaceStack.length === 0) {
-      throw new Error("pullns without pushns");
-    }
-    if (this.host.namespaceNestingEnabled) {
-      const pathJson = this.host.namespaceStack.pop();
-      const parsedPath = JSON.parse(pathJson ?? "[]");
-      this.host.namespaceNestingPath = Array.isArray(parsedPath) && parsedPath.every((entry) => typeof entry === "string") ? parsedPath : [];
-    }
-    this.host.currentNamespace = this.host.namespaceStack.pop() ?? "";
-  }
-  /**
-   * Handles namespace state changes.
-   * @param {string[]} params The namespace parameters.
-   */
-  handleNamespace(params) {
-    if (params.length >= 2 && params[0].toLowerCase() === "nested") {
-      const action2 = params[1].toLowerCase();
-      if (action2 === "on") {
-        this.host.namespaceNestingEnabled = true;
-        return;
-      } else if (action2 === "off") {
-        this.host.namespaceNestingEnabled = false;
-        this.host.namespaceNestingPath = [];
-        this.host.currentNamespace = "";
-        return;
-      }
-    }
-    if (params.length === 0) {
-      if (this.host.namespaceNestingEnabled) {
-        this.host.namespaceNestingPath = [];
-      }
-      this.host.currentNamespace = "";
-      return;
-    }
-    if (params.length === 1 && params[0].toLowerCase() === "off") {
-      if (this.host.namespaceNestingEnabled) {
-        this.host.namespaceNestingPath.pop();
-        this.host.currentNamespace = this.host.namespaceNestingPath.join("_");
-      } else {
-        this.host.currentNamespace = "";
-      }
-      return;
-    } else if (params.length === 1) {
-      if (this.host.namespaceNestingEnabled) {
-        this.host.namespaceNestingPath.push(params[0]);
-        this.host.currentNamespace = this.host.namespaceNestingPath.join("_");
-      } else {
-        this.host.currentNamespace = params[0];
-      }
-      return;
-    }
-    const action = params[1].toLowerCase();
-    if (action === "off") {
-      if (this.host.namespaceNestingEnabled) {
-        this.host.namespaceNestingPath.pop();
-        this.host.currentNamespace = this.host.namespaceNestingPath.join("_");
-      } else {
-        this.host.currentNamespace = "";
-      }
-    } else if (this.host.namespaceNestingEnabled) {
-      this.host.namespaceNestingPath.push(params[0]);
-      this.host.currentNamespace = this.host.namespaceNestingPath.join("_");
-    } else {
-      this.host.currentNamespace = params[0];
-    }
-  }
-  /**
    * Pushes the current PC state.
    */
   handlePushPC() {
@@ -17284,10 +17213,12 @@ var DirectiveRuntimeService = class {
       throw new Error("PullPC without PushPC.");
     }
     const state = this.host.pushpcStack.pop();
-    this.host.currentTargetAddress = state.currentTargetAddress;
-    this.host.currentTargetStartAddress = state.currentTargetStartAddress;
-    this.host.currentTargetBaseAddress = state.currentTargetBaseAddress;
-    this.host.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
+    if (state) {
+      this.host.currentTargetAddress = state.currentTargetAddress;
+      this.host.currentTargetStartAddress = state.currentTargetStartAddress;
+      this.host.currentTargetBaseAddress = state.currentTargetBaseAddress;
+      this.host.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
+    }
     this.host.pushpcnum--;
   }
 };
@@ -19707,7 +19638,7 @@ function stripWrappingQuotes(filename) {
 }
 
 // src/assembler.ts
-var debug7 = (..._) => {
+var debug7 = (..._args) => {
 };
 try {
   const { default: d } = await import("debug");
@@ -20908,25 +20839,6 @@ var Assembler = class _Assembler {
     this.directiveRuntime.writeDataByLength(len, value);
   }
   /**
-   * Pushes the current namespace.
-   */
-  handlePushNamespace() {
-    this.directiveRuntime.handlePushNamespace();
-  }
-  /**
-   * Restores the previous namespace.
-   */
-  handlePullNamespace() {
-    this.directiveRuntime.handlePullNamespace();
-  }
-  /**
-   * Handles `namespace` definitions.
-   * @param {string[]} params - The parameters for the namespace directive.
-   */
-  handleNamespace(params) {
-    this.directiveRuntime.handleNamespace(params);
-  }
-  /**
    * Pushes the current PC onto the pushpcStack.
    */
   handlePushPC() {
@@ -20981,7 +20893,7 @@ var Assembler = class _Assembler {
     } catch (e) {
       const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
       const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
-      throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e}`);
+      throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`);
     }
     debug7("evaluateExpression result", result, "=>", result !== 0);
     return result !== 0;
@@ -21827,7 +21739,7 @@ var Assembler = class _Assembler {
       }
     } catch (error) {
       debug7("assemblefile error \u{1F4A5}", error);
-      const message = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
       throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
     } finally {
       this.currentFile = this.includeStack.pop() || "";

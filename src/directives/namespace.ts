@@ -13,7 +13,7 @@ const handlePushNamespace = ({ session }: DirectiveContext) => {
     // Also save the nesting path
     session.namespaceStack.push(JSON.stringify(session.namespaceNestingPath));
   }
-}
+};
 
 /**
  * Restores the previous namespace.
@@ -28,11 +28,13 @@ const handlePullNamespace = ({ session }: DirectiveContext) => {
   if (session.namespaceNestingEnabled) {
     // Restore the nesting path first
     const pathJson = session.namespaceStack.pop();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    session.namespaceNestingPath = JSON.parse(pathJson);
+    const parsedPath: unknown = JSON.parse(pathJson ?? "[]");
+    session.namespaceNestingPath = Array.isArray(parsedPath) && parsedPath.every((entry) => typeof entry === "string")
+      ? parsedPath
+      : [];
   }
-  session.currentNamespace = session.namespaceStack.pop();
-}
+  session.currentNamespace = session.namespaceStack.pop() ?? "";
+};
 
 /**
  * Handles `namespace` definitions.
@@ -115,7 +117,7 @@ const handleNamespace = ({ session }: DirectiveContext, words: string[]) => {
       session.currentNamespace = params[0];
     }
   }
-}
+};
 
 export const registerNamespaceDirectives = (registry: DirectiveRegistry): void => {
   registry.register("namespace", handleNamespace);

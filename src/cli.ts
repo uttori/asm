@@ -87,7 +87,7 @@ class CLI {
       this.writeBinary(outputFile);
       console.log(`Success: Output written to '${outputFile}'.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
       console.error(`Compilation failed: ${message}`);
       process.exit(1);
     }

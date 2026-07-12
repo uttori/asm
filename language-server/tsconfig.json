@@ -11,8 +11,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"],
-    "outDir": "out"
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }
