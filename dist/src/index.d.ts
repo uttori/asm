@@ -10,4 +10,5 @@ export * from "./services/assembly-front-end-service.js";
 export * from "./services/command-lowering-service.js";
 export { ProgramModelBuilder } from "./services/program-model-builder.js";
 export type { IncrementalProgramParseState, IncludeProgramNode } from "./services/program-model-builder.js";
+export * from "./lsp/index.js";
 //# sourceMappingURL=index.d.ts.map

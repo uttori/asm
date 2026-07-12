@@ -487,10 +487,12 @@ export class DirectiveRuntimeService {
     const state = this.host.pushpcStack.pop();
     // Restore exactly the state captured by `pushpc`; directives such as
     // `incbin -> label` depend on this to resume emission at the original site.
-    this.host.currentTargetAddress = state.currentTargetAddress;
-    this.host.currentTargetStartAddress = state.currentTargetStartAddress;
-    this.host.currentTargetBaseAddress = state.currentTargetBaseAddress;
-    this.host.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
+    if (state) {
+      this.host.currentTargetAddress = state.currentTargetAddress;
+      this.host.currentTargetStartAddress = state.currentTargetStartAddress;
+      this.host.currentTargetBaseAddress = state.currentTargetBaseAddress;
+      this.host.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
+    }
 
     this.host.pushpcnum--;
   }

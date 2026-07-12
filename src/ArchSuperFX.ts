@@ -1,6 +1,7 @@
-import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
+import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
 import type { Assembler } from "./assembler.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
+import { superFxCatalog } from "./lsp/instruction-catalog.js";
 
 let debug = (..._: unknown[]) => {};
 try {
@@ -8,14 +9,21 @@ try {
   debug = d("ArchSuperFX");
 } catch {}
 
-const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
-  Object.prototype.hasOwnProperty.call(obj, key);
+const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T => Object.hasOwn(obj, key);
 
 export class ArchSuperFX implements ArchitectureEncoder {
   assembler: Assembler;
 
   constructor(assembler: Assembler) {
     this.assembler = assembler;
+  }
+
+  /**
+   * Returns the static Super FX instruction catalog for editor tooling.
+   * @returns {InstructionDescriptor[]} The instruction descriptors.
+   */
+  getInstructionCatalog(): InstructionDescriptor[] {
+    return superFxCatalog;
   }
 
   encode(words: string[]): boolean {

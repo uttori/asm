@@ -74,7 +74,7 @@ test("ArchSuperFX.handleTwoOperandOpcode consumes lowered register/immediate met
     write1Stub.restore();
   });
 
-  const handled = (arch as any).handleTwoOperandOpcode(
+  const handled = arch.handleTwoOperandOpcode(
     "IBT",
     "LEFT_ALIAS",
     "RIGHT_ALIAS",

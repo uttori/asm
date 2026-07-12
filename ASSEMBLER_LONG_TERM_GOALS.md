@@ -331,9 +331,99 @@ Exit criteria:
 - [ ] Directive handlers use focused capabilities instead of a broad session.
 - [ ] Remaining directive effects are extracted from `Assembler`.
 - [ ] Architecture definitions own instruction-specific behavior.
-- [ ] Analysis-only entrypoints produce diagnostics, symbols, references, and
-      include data.
+- [x] Analysis-only entrypoints produce diagnostics, symbols, references, and
+      include data. (`analyzeSource`/`analyzeWorkspace` now return `includeEdges`;
+      see `src/lsp/` for the workspace index, position lookups, and catalogs.)
 - [ ] Coverage thresholds are introduced for stable extracted modules.
+
+## Language Server (delivered)
+
+A Language Server Protocol implementation now lives alongside the core:
+
+- `src/lsp/` exposes editor-facing adapters built on the analysis pipeline:
+  `WorkspaceIndex` (root-anchored project analysis + include graph), an
+  `OverlayFileProvider` for unsaved buffers, `position-lookup` helpers, and a
+  static instruction/directive catalog. `ArchitectureEncoder.getInstructionCatalog()`
+  surfaces per-architecture instruction metadata.
+- `language-server/` is a stdio LSP server (`vscode-languageserver`) wiring those
+  adapters to diagnostics, document/workspace symbols, definition, references,
+  hover, completion, signature help, semantic tokens, rename, and code actions.
+- `editors/vscode/` is the packaged VS Code client (language config, TextMate
+  grammar, settings, esbuild bundle).
+
+Build with `npm run lsp:build` and `npm run vscode:build`; package the extension
+with `npm run vscode:package`. The multi-file `SLIDE.SRC` slideshow is the
+end-to-end acceptance case (cross-file navigation and rename).
+
+---
+
+A full, packaged LSP shipping in three layers, validated end-to-end against the multi-file `SLIDE.SRC` slideshow.
+
+**Core analysis adapters (`src/lsp/`, dependency-free, in the published package)**
+- `workspace-index.ts` — `WorkspaceIndex`: root-anchored project analysis that descends includes, buckets diagnostics/symbols/references per file, and exposes the include graph plus open-buffer overlays.
+- `overlay-file-provider.ts` — layers unsaved editor buffers over disk so analysis runs on in-editor content.
+- `position-lookup.ts` — range containment + cross-file definition/reference resolution.
+- `instruction-catalog.ts` / `directive-catalog.ts` / `catalog.ts` — curated 65816/SPC700/SuperFX instruction sets and ~70 directive/keyword descriptors for hover, completion, and signature help.
+
+**Core changes**
+- Added `AssemblyIncludeEdge` + `includeEdges` to `diagnostics.ts` and `collectProgramAnalysis`; `recordIncludeEdge` capture in `assembler.ts` `assemblefile`.
+- Added `getInstructionCatalog()` to `ArchitectureEncoder` and implemented it on all three encoders. Exported the LSP surface from `index.ts`.
+
+**Language server (`language-server/`)** — stdio `vscode-languageserver` wiring all features: diagnostics, document/workspace symbols, go-to-definition, find-references, hover, completion, signature help, semantic tokens, rename, and code actions, with debounced re-analysis and configurable entry points/include paths/architecture. A key fix: navigation and rename recompute precise raw ranges from line text rather than trusting normalized (whitespace-stripped) spans.
+
+**VS Code extension (`editors/vscode/`)** — client launching the bundled server over stdio, language config, TextMate grammar, settings schema, esbuild bundling, and `vsce` packaging.
+
+**Verification**
+- `npm test`: 721 core tests pass (no regressions); 7 new LSP tests in `tests/lsp.test.ts`.
+- Core/server/client all type-check; new `src/lsp/` files lint clean.
+- VSIX packages (264 KB, server embedded).
+- End-to-end stdio smoke on `SLIDE.SRC`: 11 capabilities, 43 document symbols, cross-file go-to-definition into `frames.src` at the correct `readyNextFrame:` range, 2 references, and rename touching 2 files.
+
+Build/run: `npm run lsp:build`, `npm run vscode:build`, package with `npm run vscode:package`, or press F5 in the `editors/vscode` folder.
+
+Two notes on autonomous decisions: instruction hover prose is a curated table (accurate mnemonics/modes, expandable over time) rather than a risky refactor of the scattered encoder opcode tables; and code actions are a working scaffold (surfaces diagnostics) ready for concrete quick-fixes like include-path repair. The plan file was left untouched.
+
+---
+
+Lint config loads fine (only the same 3 pre-existing errors in `test.ts`/`snes-slideshow.ts`, none mine). Done.
+
+## build/compile Command
+
+It was simple because the extension already bundles the assembler core inside the language server. I exposed compilation through the LSP rather than a second bundle (the core uses top-level await, which can't go in the extension's CJS bundle, but the ESM server bundle already has it).
+
+**What I added**
+- Server (`language-server/src/server.ts`): a `buildRom()` that constructs an `Assembler` over an `OverlayFileProvider` (so unsaved buffers build), runs `buildProgramModel` + `assembleProgram`, and writes `getBinaryOutput()` to disk. Wired via `executeCommandProvider: { commands: ["snesAsm.build"] }` and an `onExecuteCommand` handler that returns `{ ok, outputPath, bytes }` or `{ ok, message }`.
+- Client (`editors/vscode/src/extension.ts`): a `snesAsm.build` command that sends `ExecuteCommandRequest` to the server and shows a success/error toast.
+- Manifest (`editors/vscode/package.json`): the **SNES Assembly: Build ROM** command, command-palette + editor-title-run menu entries (when `editorLangId == snes-asm`), and `snesAsm.buildOutput` / `snesAsm.targetRom` settings.
+- README updated; eslint flat-config now globally ignores the `language-server/` and `editors/` workspaces (they have their own tsconfigs).
+
+**Verified**
+- Server + client type-check, bundles rebuilt, server re-embedded in the extension.
+- End-to-end smoke: `workspace/executeCommand` `snesAsm.build` on `SLIDE.SRC` produced a 155,868-byte `.sfc` and returned `{ ok: true }`.
+
+Usage: with a `.asm`/`.src` file open, run **SNES Assembly: Build ROM** (palette or the run icon). Output defaults to the source's `.sfc` sibling, overridable via `snesAsm.buildOutput`; set `snesAsm.targetRom` to patch into a base ROM.
+
+One design note (flag): build currently reports the first hard error via the toast since it uses the throwing `assembleProgram` path; if you'd rather have inline build diagnostics, I can route build failures through the same analysis-diagnostic channel as a follow-up.
+
+Done — watch mode added. Typecheck passes and the bundle is rebuilt (with the server re-embedded).
+
+## watch Command
+
+**Command:** `snesAsm.toggleWatch` — "SNES Assembly: Toggle Build on Save (Watch)". Toggle it from the palette or by clicking the new status bar item.
+
+**Behavior** (`editors/vscode/src/extension.ts`):
+- On enable, it resolves a **watch entry**: first `snesAsm.entryPoints` value (resolved against the workspace root) if set, else the active file. This matters for multi-file projects — editing `frames.src` rebuilds `SLIDE.SRC`, not the include itself.
+- Subscribes to `workspace.onDidSaveTextDocument`; any saved `.asm/.src/.s/.inc` (or `snes-asm` lang) file triggers a **250ms-debounced** rebuild of the entry via the same `ExecuteCommandRequest` → `snesAsm.build` LSP path.
+- Success in watch mode shows a transient `setStatusBarMessage` (4s) instead of a toast to avoid spam; failures still surface as error toasts.
+- Status bar item (`$(eye) SNES Watch: On` / `$(eye-closed) … Off`) reflects state and toggles on click. Cleaned up in `deactivate`.
+
+**Manifest:** registered the command + palette entry (gated on `editorLangId == snes-asm`), and set `activationEvents: ["onLanguage:snes-asm"]` so the server/client actually start when you open a source file (previously empty — only command invocation would activate it). README updated.
+
+Two design notes (flagging):
+- It rebuilds **on save**, not on every keystroke. Building the unsaved buffer on each change is possible (the build path already uses the overlay provider) but writing a ROM per keystroke is wasteful; save is the sane trigger. Easy to switch to `onDidChangeTextDocument` if you want it.
+- Watch uses the throwing build path, so a broken save reports the first hard error via toast — same caveat as the manual build. Routing build failures through the diagnostics channel remains the better follow-up if you want inline errors instead.
+
+---
 
 ## Near-Term Slice Order
 

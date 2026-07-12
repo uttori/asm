@@ -1,0 +1,24 @@
+{
+  "name": "snes-asm-language-server",
+  "version": "1.0.0",
+  "description": "Language Server Protocol implementation for SNES assembly (snes-asm-js).",
+  "author": "Matthew Callis <matthew.callis@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "main": "out/server.mjs",
+  "bin": {
+    "snes-asm-language-server": "out/server.mjs"
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

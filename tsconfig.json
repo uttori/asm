@@ -10,9 +10,9 @@
   "compilerOptions": {
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
     "checkJs": true,
     "declaration": true,
-    "downlevelIteration": true,
     "emitDeclarationOnly": true,
     "extendedDiagnostics": true,
     "forceConsistentCasingInFileNames": true,
@@ -26,8 +26,9 @@
     "outDir": "dist",
     "noEmit": false,
     "sourceMap": true,
-    "strict": false,
+    "strict": true,
     "target": "esnext",
+    "types": ["debug", "node", "sinon"],
     "removeComments": false,
     "skipLibCheck": true,
     "declarationMap": true

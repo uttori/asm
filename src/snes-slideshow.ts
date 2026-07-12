@@ -88,7 +88,6 @@ function runTest(baseName: string): TestResult {
  *
  */
 function main() {
-  const args = process.argv.slice(2);
   const asmFiles: string[] = ["SLIDE.SRC"];
 
   const results: TestResult[] = [];

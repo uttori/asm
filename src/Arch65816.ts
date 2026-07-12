@@ -1,8 +1,9 @@
-import type { ArchitectureEncoder, LoweredInstruction } from "./architecture-types.js";
+import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction } from "./architecture-types.js";
 import type { Assembler } from "./assembler.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
+import { cpu65816Catalog } from "./lsp/instruction-catalog.js";
 
-let debug = (..._) => {};
+let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
 try { const { default: d } = await import("debug"); debug = d("Arch65816"); } catch {}
 
@@ -11,6 +12,14 @@ export class Arch65816 implements ArchitectureEncoder {
 
   constructor(assembler: Assembler) {
     this.assembler = assembler;
+  }
+
+  /**
+   * Returns the static 65816 instruction catalog for editor tooling.
+   * @returns {InstructionDescriptor[]} The instruction descriptors.
+   */
+  getInstructionCatalog(): InstructionDescriptor[] {
+    return cpu65816Catalog;
   }
 
   encode(words: string[]): boolean {
@@ -772,6 +781,9 @@ export class Arch65816 implements ArchitectureEncoder {
     // **Write opcode & address**
     debug("handleLogicAndCompareOperations mode", mode, operand);
     const opcodeByte = opcodes[logicOpcode][mode];
+    if (!opcodeByte) {
+      throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
+    }
     // Keep legacy behavior for unsupported routed modes (e.g. CPX/CPY fallback tests).
     this.assembler.write1(opcodeByte);
     if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode ===  "directIndirectLong") {
@@ -1364,7 +1376,7 @@ export class Arch65816 implements ArchitectureEncoder {
 
     let address = 0;
     let mode: keyof StoreModeMap; // Determines which mode we're using
-    void mode;
+    // void mode;
     const isIndexed = (storeOpcode === "STX" && loweredOperand.indexRegister === "y" && !loweredOperand.indirect)
       || (storeOpcode === "STY" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect)
       || (storeOpcode === "STZ" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect);

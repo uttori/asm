@@ -1,6 +1,7 @@
-import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
+import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
 import type { Assembler } from "./assembler.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
+import { spc700Catalog } from "./lsp/instruction-catalog.js";
 
 let debug = (..._: unknown[]) => {};
 try {
@@ -8,8 +9,7 @@ try {
   debug = d("ArchSPC700");
 } catch {}
 
-const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
-  Object.prototype.hasOwnProperty.call(obj, key);
+const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T => Object.hasOwn(obj, key);
 
 /**
  * Infers the encoded address width from the source spelling of an operand.
@@ -305,6 +305,14 @@ export class ArchSPC700 implements ArchitectureEncoder {
 
   constructor(assembler: Assembler) {
     this.assembler = assembler;
+  }
+
+  /**
+   * Returns the static SPC700 instruction catalog for editor tooling.
+   * @returns {InstructionDescriptor[]} The instruction descriptors.
+   */
+  getInstructionCatalog(): InstructionDescriptor[] {
+    return spc700Catalog;
   }
 
   encode(words: string[]): boolean {

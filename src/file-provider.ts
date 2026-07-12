@@ -206,9 +206,10 @@ function stripWrappingQuotes(filename: string): string {
 }
 
 /**
- *
- * @param baseDirectory
- * @param filename
+ * Resolves a provider path.
+ * @param {string} baseDirectory The base directory to resolve the path from.
+ * @param {string} filename The filename to resolve.
+ * @returns {string} The resolved path.
  */
 function resolveProviderPath(baseDirectory: string, filename: string): string {
   if (path.isAbsolute(filename) || hasProviderScheme(filename)) {
@@ -226,8 +227,9 @@ function resolveProviderPath(baseDirectory: string, filename: string): string {
 }
 
 /**
- *
- * @param filePath
+ * Gets the directory for a provider path.
+ * @param {string} filePath The path to get the directory for.
+ * @returns {string} The directory for the provider path.
  */
 function getDirectoryForProviderPath(filePath: string): string {
   const schemeMatch = filePath.match(/^([A-Za-z][\d+.A-Za-z-]*:)(\/.*)?$/);
@@ -239,8 +241,9 @@ function getDirectoryForProviderPath(filePath: string): string {
 }
 
 /**
- *
- * @param value
+ * Checks if a value has a provider scheme.
+ * @param {string} value The value to check.
+ * @returns {boolean} True if the value has a provider scheme, false otherwise.
  */
 function hasProviderScheme(value: string): boolean {
   return /^[A-Za-z][\d+.A-Za-z-]*:/.test(value);

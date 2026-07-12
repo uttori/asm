@@ -28,10 +28,24 @@ export type AssemblySymbolReference = {
     location: AssemblySourceLocation;
     containerName?: string;
 };
+/**
+ * A directed edge in the include graph describing one file pulling in another.
+ */
+export type AssemblyIncludeEdge = {
+    /** The file that issued the include directive. */
+    fromFile: string;
+    /** The resolved path of the included file. */
+    toFile: string;
+    /** Optional span of the include target token in the parent file. */
+    span?: SourceSpan;
+    /** Optional source range of the include target token in the parent file. */
+    range?: SourceRange;
+};
 export type AssemblyAnalysisResult = {
     diagnostics: AssemblyDiagnostic[];
     symbols: AssemblySymbolDefinition[];
     references: AssemblySymbolReference[];
+    includeEdges: AssemblyIncludeEdge[];
 };
 /**
  * Error type that preserves assembler analysis metadata.

@@ -11,6 +11,7 @@ import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTrace
 import {
   type AssemblyAnalysisResult,
   type AssemblyDiagnostic,
+  type AssemblyIncludeEdge,
   type AssemblySourceLocation,
   type AssemblySymbolDefinition,
   type AssemblySymbolKind,
@@ -369,6 +370,7 @@ export class Assembler implements AssemblySession {
   public readonly diagnostics: AssemblyDiagnostic[] = [];
   public readonly symbolDefinitions: AssemblySymbolDefinition[] = [];
   public readonly symbolReferences: AssemblySymbolReference[] = [];
+  public readonly includeEdges: AssemblyIncludeEdge[] = [];
   activeStageExecutionState: StageExecutionState | null = null;
   analysisErrorRecoveryEnabled = false;
 
@@ -496,6 +498,26 @@ export class Assembler implements AssemblySession {
     this.diagnostics.length = 0;
     this.symbolDefinitions.length = 0;
     this.symbolReferences.length = 0;
+    this.includeEdges.length = 0;
+  }
+
+  /**
+   * Records a directed include-graph edge if it has not already been recorded.
+   * Includes execute once per pass, so edges are de-duplicated by file pair.
+   * @param {string} fromFile The file issuing the include directive.
+   * @param {string} toFile The resolved path of the included file.
+   */
+  recordIncludeEdge(fromFile: string, toFile: string): void {
+    if (!fromFile || !toFile) {
+      return;
+    }
+    const duplicate = this.includeEdges.some((edge) => (
+      edge.fromFile === fromFile && edge.toFile === toFile
+    ));
+    if (duplicate) {
+      return;
+    }
+    this.includeEdges.push({ fromFile, toFile });
   }
 
   /**
@@ -720,6 +742,7 @@ export class Assembler implements AssemblySession {
       diagnostics: [...this.diagnostics],
       symbols: [...this.symbolDefinitions],
       references: [...this.symbolReferences],
+      includeEdges: [...this.includeEdges],
     };
   }
 
@@ -1698,10 +1721,10 @@ export class Assembler implements AssemblySession {
       result = isReferenceExpressionNode(resolvedExpr)
         ? this.evaluateReferenceExpressionNode(resolvedExpr)
         : this.mathCore.math(resolvedExpr);
-    } catch (e) {
+    } catch (e: unknown) {
       const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
       const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
-      throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e}`);
+      throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`);
     }
     // In our assembler, a condition is true if the result is nonzero.
     debug("evaluateExpression result", result, "=>", result !== 0)
@@ -2645,6 +2668,9 @@ export class Assembler implements AssemblySession {
     // Save current state
     const previousFile = this.currentFile;
     this.includeStack.push(previousFile);
+
+    // Capture the parent -> child include relationship for tooling/LSP use.
+    this.recordIncludeEdge(previousFile, resolvedPath);
 
     // Includes now execute through the typed pass-program path so include
     // semantics match top-level tree execution. Surface failures to callers so

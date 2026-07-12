@@ -1,6 +1,6 @@
 import type { DirectiveRegistry } from "./registry.js";
 import { shouldRedirectOrgToSpcblock } from "../compatibility/asar-compatibility-profile.js";
-import { AssemblySession, DirectiveContext } from "./types.js";
+import { DirectiveContext } from "./types.js";
 
 const assertMapperAvailable = (inSpcblock: boolean): void => {
   if (inSpcblock) {

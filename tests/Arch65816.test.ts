@@ -128,7 +128,7 @@ test("Arch65816.handleMemoryBitInstructions encodes direct TSB", t => {
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleMemoryBitInstructions("TSB", "$12"));
+  t.true(arch.handleMemoryBitInstructions("TSB", "$12"));
   t.true(getnumStub.calledOnceWithExactly("$12"));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x04, 0x12]);
   t.true(write2Stub.notCalled);
@@ -146,7 +146,7 @@ test("Arch65816.handleMemoryBitInstructions encodes absolute TRB", t => {
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleMemoryBitInstructions("TRB", "$1234"));
+  t.true(arch.handleMemoryBitInstructions("TRB", "$1234"));
   t.true(getnumStub.calledOnceWithExactly("$1234"));
   t.true(write1Stub.calledOnceWithExactly(0x1C));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
@@ -163,7 +163,7 @@ test("Arch65816.handleMemoryBitInstructions returns false for unsupported opcode
     write2Stub.restore();
   });
 
-  t.false((arch as any).handleMemoryBitInstructions("BIT", "$12"));
+  t.false(arch.handleMemoryBitInstructions("BIT", "$12"));
   t.true(getnumStub.notCalled);
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
@@ -178,7 +178,7 @@ test("Arch65816.handleArithmeticOperations accepts implied accumulator form", t 
     getnumStub.restore();
   });
 
-  t.true((arch as any).handleArithmeticOperations("DEC", "", 0, false));
+  t.true(arch.handleArithmeticOperations("DEC", "", 0, false));
   t.true(write1Stub.calledOnceWithExactly(0x3A));
   t.true(getnumStub.notCalled);
 });
@@ -380,7 +380,7 @@ test("Arch65816.handlePER encodes a resolved operand", t => {
     write2Stub.restore();
   });
 
-  t.true((arch as any).handlePER("target_label"));
+  t.true(arch.handlePER("target_label"));
   t.true(getnumStub.calledOnceWithExactly("target_label"));
   t.true(write1Stub.calledOnceWithExactly(0x62));
   t.true(write2Stub.calledOnceWithExactly(0x3456));
@@ -398,7 +398,7 @@ test("Arch65816.handlePER throws when no operand is provided", t => {
   });
 
   t.throws(() => {
-    (arch as any).handlePER("");
+    arch.handlePER("");
   }, { message: "Error: PER requires an operand." });
   t.true(getnumStub.notCalled);
   t.true(write1Stub.notCalled);
@@ -829,7 +829,7 @@ test("Arch65816.handleStoreOperations returns false for unsupported opcodes", t 
     write2Stub.restore();
   });
 
-  t.false((arch as any).handleStoreOperations("STA", "$12", 1, false));
+  t.false(arch.handleStoreOperations("STA", "$12", 1, false));
   t.true(getnumStub.notCalled);
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
@@ -847,7 +847,7 @@ test("Arch65816.handleStoreOperations encodes explicit indexed STZ word operands
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleStoreOperations("STZ", "$1234,x", 2, true));
+  t.true(arch.handleStoreOperations("STZ", "$1234,x", 2, true));
   t.true(write1Stub.calledOnceWithExactly(0x9E));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
@@ -865,8 +865,8 @@ test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY fallb
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleStoreOperations("STX", "$12,y", 1, true));
-  t.true((arch as any).handleStoreOperations("STY", "$34,x", 1, true));
+  t.true(arch.handleStoreOperations("STX", "$12,y", 1, true));
+  t.true(arch.handleStoreOperations("STY", "$34,x", 1, true));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x86, 0x12, 0x84, 0x34]);
   t.true(write2Stub.notCalled);
 });
@@ -884,8 +884,8 @@ test("Arch65816.handleStoreOperations encodes forced non-indexed STY and STZ", t
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleStoreOperations("STY", "$1234", 2, true));
-  t.true((arch as any).handleStoreOperations("STZ", "$12", 1, true));
+  t.true(arch.handleStoreOperations("STY", "$1234", 2, true));
+  t.true(arch.handleStoreOperations("STZ", "$12", 1, true));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x8C, 0x64, 0x12]);
   t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234]);
 });
@@ -903,8 +903,8 @@ test("Arch65816.handleStoreOperations encodes direct and indexed store modes", t
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleStoreOperations("STX", "$12", 1, false));
-  t.true((arch as any).handleStoreOperations("STY", "$34,x", 1, false));
+  t.true(arch.handleStoreOperations("STX", "$12", 1, false));
+  t.true(arch.handleStoreOperations("STY", "$34,x", 1, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x86, 0x12, 0x94, 0x34]);
   t.true(write2Stub.notCalled);
 });
@@ -921,7 +921,7 @@ test("Arch65816.handleStoreOperations encodes absolute indexed STZ", t => {
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleStoreOperations("STZ", "$1234,x", 2, false));
+  t.true(arch.handleStoreOperations("STZ", "$1234,x", 2, false));
   t.true(write1Stub.calledOnceWithExactly(0x9E));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
@@ -939,8 +939,8 @@ test("Arch65816.handleStoreOperations encodes absolute indexed STX and STY", t =
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleStoreOperations("STX", "$1234,y", 2, false));
-  t.true((arch as any).handleStoreOperations("STY", "$5678,x", 2, false));
+  t.true(arch.handleStoreOperations("STX", "$1234,y", 2, false));
+  t.true(arch.handleStoreOperations("STY", "$5678,x", 2, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x8E, 0x8C]);
   t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
 });
@@ -958,8 +958,8 @@ test("Arch65816.handleStoreOperations encodes non-indexed absolute and directY S
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleStoreOperations("STY", "$9ABC", 2, false));
-  t.true((arch as any).handleStoreOperations("STX", "$12,y", 1, false));
+  t.true(arch.handleStoreOperations("STY", "$9ABC", 2, false));
+  t.true(arch.handleStoreOperations("STX", "$12,y", 1, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x8C, 0x96, 0x12]);
   t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x9ABC]);
 });
@@ -976,7 +976,7 @@ test("Arch65816.handleStoreOperations encodes indexed direct-page STZ fallback",
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleStoreOperations("STZ", "$12,x", 1, false));
+  t.true(arch.handleStoreOperations("STZ", "$12,x", 1, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x74, 0x12]);
   t.true(write2Stub.notCalled);
 });
@@ -994,11 +994,11 @@ test("Arch65816.handleStoreOperations throws on unsupported forced lengths and i
   });
 
   t.throws(() => {
-    (arch as any).handleStoreOperations("STX", "$12", 3, true);
+    arch.handleStoreOperations("STX", "$12", 3, true);
   }, { message: "Forced length 3 not supported for STX" });
 
   t.throws(() => {
-    (arch as any).handleStoreOperations("STZ", "not-an-address", 1, false);
+    arch.handleStoreOperations("STZ", "not-an-address", 1, false);
   }, { message: "Error: Invalid operand format for STZ: not-an-address" });
 });
 
@@ -1129,8 +1129,8 @@ test("Arch65816.handleLoadRegister handles immediate and indexed modes", t => {
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLoadRegister("LDX", "#$12", 1, false));
-  t.true((arch as any).handleLoadRegister("LDY", "$1234,x", 2, false));
+  t.true(arch.handleLoadRegister("LDX", "#$12", 1, false));
+  t.true(arch.handleLoadRegister("LDY", "$1234,x", 2, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xA2, 0x12, 0xBC]);
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
@@ -1147,7 +1147,7 @@ test("Arch65816.handleLoadRegister handles LDY immediate word operands", t => {
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLoadRegister("LDY", "#$1234", 2, false));
+  t.true(arch.handleLoadRegister("LDY", "#$1234", 2, false));
   t.true(write1Stub.calledOnceWithExactly(0xA0));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
@@ -1165,8 +1165,8 @@ test("Arch65816.handleLoadRegister handles LDY fallback direct and absolute form
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLoadRegister("LDY", "$1234", 2, false));
-  t.true((arch as any).handleLoadRegister("LDY", "$12,x", 1, false));
+  t.true(arch.handleLoadRegister("LDY", "$1234", 2, false));
+  t.true(arch.handleLoadRegister("LDY", "$12,x", 1, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xAC, 0xB4, 0x12]);
   t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234]);
 });
@@ -1183,16 +1183,16 @@ test("Arch65816.handleLoadRegister supports forced addressing and errors", t => 
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLoadRegister("LDX", "$12,y", 1, true));
+  t.true(arch.handleLoadRegister("LDX", "$12,y", 1, true));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xB6, 0x12]);
   t.true(write2Stub.notCalled);
 
   t.throws(() => {
-    (arch as any).handleLoadRegister("LDX", "", 1, false);
+    arch.handleLoadRegister("LDX", "", 1, false);
   }, { message: "Error: LDX requires an operand." });
 
   t.throws(() => {
-    (arch as any).handleLoadRegister("LDY", "$12", 3, true);
+    arch.handleLoadRegister("LDY", "$12", 3, true);
   }, { message: "Forced length 3 not supported for LDY" });
 });
 
@@ -1209,8 +1209,8 @@ test("Arch65816.handleLoadRegister covers forced LDX and forced indexed LDY word
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLoadRegister("LDX", "$1234", 2, true));
-  t.true((arch as any).handleLoadRegister("LDY", "$5678,x", 2, true));
+  t.true(arch.handleLoadRegister("LDX", "$1234", 2, true));
+  t.true(arch.handleLoadRegister("LDY", "$5678,x", 2, true));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xAE, 0xBC]);
   t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
 });
@@ -1229,9 +1229,9 @@ test("Arch65816.handleLoadRegister covers LDX fallback direct, absolute, and ind
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLoadRegister("LDX", "$12", 1, false));
-  t.true((arch as any).handleLoadRegister("LDX", "$1234", 2, false));
-  t.true((arch as any).handleLoadRegister("LDX", "$5678,y", 2, false));
+  t.true(arch.handleLoadRegister("LDX", "$12", 1, false));
+  t.true(arch.handleLoadRegister("LDX", "$1234", 2, false));
+  t.true(arch.handleLoadRegister("LDX", "$5678,y", 2, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xA6, 0x12, 0xAE, 0xBE]);
   t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x5678]);
 });
@@ -1249,8 +1249,8 @@ test("Arch65816.handleLoadRegister covers LDX indexed direct-page and LDY direct
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLoadRegister("LDX", "$34,y", 1, false));
-  t.true((arch as any).handleLoadRegister("LDY", "$56", 1, false));
+  t.true(arch.handleLoadRegister("LDX", "$34,y", 1, false));
+  t.true(arch.handleLoadRegister("LDY", "$56", 1, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xB6, 0x34, 0xA4, 0x56]);
   t.true(write2Stub.notCalled);
 });
@@ -1400,9 +1400,9 @@ test("Arch65816.handleLogicAndCompareOperations handles immediate and routed mod
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "#$12", 1, false));
-  t.true((arch as any).handleLogicAndCompareOperations("CMP", "#$0000", 2, false));
-  t.true((arch as any).handleLogicAndCompareOperations("AND", "[$34]", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "#$12", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("CMP", "#$0000", 2, false));
+  t.true(arch.handleLogicAndCompareOperations("AND", "[$34]", 1, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x09, 0x12, 0xC9, 0x27, 0x34]);
   t.true(write2Stub.calledOnceWithExactly(0x0000));
   t.true(write3Stub.notCalled);
@@ -1434,7 +1434,7 @@ test("Arch65816.handleLogicAndCompareOperations consumes lowered addressing meta
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "TARGET,x", 2, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "TARGET,x", 2, false));
   t.true(lowerOperandStub.calledOnceWithExactly("TARGET,x"));
   t.true(write1Stub.calledOnceWithExactly(0x1D));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
@@ -1466,7 +1466,7 @@ test("Arch65816.handleLogicAndCompareOperations preserves forced indexed Y bases
     write2Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "TARGET,y", 2, true));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "TARGET,y", 2, true));
   t.true(lowerOperandStub.calledOnceWithExactly("TARGET,y"));
   t.true(getnumStub.calledOnceWithExactly("TARGET"));
   t.true(write1Stub.calledOnceWithExactly(0x19));
@@ -1680,15 +1680,15 @@ test("Arch65816.handleLogicAndCompareOperations supports forced sizes and invali
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("CMP", "$123456,x", 3, true));
+  t.true(arch.handleLogicAndCompareOperations("CMP", "$123456,x", 3, true));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xDF]);
   t.true(write3Stub.calledOnceWithExactly(0x123456));
   t.true(write2Stub.notCalled);
 
-  t.false((arch as any).handleLogicAndCompareOperations("ADC", "$12", 1, false));
+  t.false(arch.handleLogicAndCompareOperations("ADC", "$12", 1, false));
 
   t.throws(() => {
-    (arch as any).handleLogicAndCompareOperations("ORA", "bad", 1, false);
+    arch.handleLogicAndCompareOperations("ORA", "bad", 1, false);
   }, { message: "Error: Invalid operand format for ORA: bad" });
 });
 
@@ -1708,18 +1708,18 @@ test("Arch65816.handleLogicAndCompareOperations covers successful explicit-size 
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$12,x", 1, true));
-  t.true((arch as any).handleLogicAndCompareOperations("CMP", "$1234,x", 2, true));
-  t.true((arch as any).handleLogicAndCompareOperations("EOR", "$12", 1, true));
-  t.true((arch as any).handleLogicAndCompareOperations("AND", "$1234", 2, true));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$123456", 3, true));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$12,x", 1, true));
+  t.true(arch.handleLogicAndCompareOperations("CMP", "$1234,x", 2, true));
+  t.true(arch.handleLogicAndCompareOperations("EOR", "$12", 1, true));
+  t.true(arch.handleLogicAndCompareOperations("AND", "$1234", 2, true));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$123456", 3, true));
 
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x15, 0x12, 0xDD, 0x45, 0x12, 0x2D, 0x0F]);
   t.deepEqual(write2Stub.getCalls().map((call) => call.args[0]), [0x1234, 0x1234]);
   t.deepEqual(write3Stub.getCalls().map((call) => call.args[0]), [0x123456]);
 });
 
-test("Arch65816.handleLogicAndCompareOperations reaches indirect-long fallback branches", t => {
+test("Arch65816.handleLogicAndCompareOperations rejects unsupported indirect-long modes for CPX/CPY", t => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$34").returns(0x34);
@@ -1734,11 +1734,15 @@ test("Arch65816.handleLogicAndCompareOperations reaches indirect-long fallback b
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("CPX", "[$34]", 1, false));
-  t.true((arch as any).handleLogicAndCompareOperations("CPY", "[$56],y", 1, false));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [undefined, undefined]);
+  t.throws(() => {
+    arch.handleLogicAndCompareOperations("CPX", "[$34]", 1, false);
+  }, { message: "Error: Invalid operand format for CPX: [$34] => undefined" });
+  t.throws(() => {
+    arch.handleLogicAndCompareOperations("CPY", "[$56],y", 1, false);
+  }, { message: "Error: Invalid operand format for CPY: [$56],y => undefined" });
+  t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
-  t.deepEqual(write3Stub.getCalls().map((call) => call.args[0]), [0x34, 0x56]);
+  t.true(write3Stub.notCalled);
 });
 
 test("Arch65816.handleLogicAndCompareOperations writes 16-bit immediate operands", t => {
@@ -1755,7 +1759,7 @@ test("Arch65816.handleLogicAndCompareOperations writes 16-bit immediate operands
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("CPY", "#$1234", 2, false));
+  t.true(arch.handleLogicAndCompareOperations("CPY", "#$1234", 2, false));
   t.true(write1Stub.calledOnceWithExactly(0xC0));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
@@ -1775,7 +1779,7 @@ test("Arch65816.handleLogicAndCompareOperations writes 16-bit ORA immediates", t
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "#$5678", 2, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "#$5678", 2, false));
   t.true(write1Stub.calledOnceWithExactly(0x09));
   t.true(write2Stub.calledOnceWithExactly(0x5678));
   t.true(write3Stub.notCalled);
@@ -1795,7 +1799,7 @@ test("Arch65816.handleLogicAndCompareOperations writes direct-page operands thro
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("EOR", "$34", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("EOR", "$34", 1, false));
   t.true(getnumStub.calledOnceWithExactly("$34"));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x45, 0x34]);
   t.true(write2Stub.notCalled);
@@ -1821,13 +1825,13 @@ test("Arch65816.handleLogicAndCompareOperations covers remaining indexed and ind
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$1234,y", 2, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$12,x", 1, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "($34,x)", 1, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "($56),y", 1, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "($78)", 1, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "[$12],y", 1, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$5678", 2, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$1234,y", 2, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$12,x", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "($34,x)", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "($56),y", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "($78)", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "[$12],y", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$5678", 2, false));
 
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [
     0x19,
@@ -1861,7 +1865,7 @@ test("Arch65816.handleLogicAndCompareOperations covers non-forced absolute-X mod
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$1234,x", 2, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$1234,x", 2, false));
   t.true(write1Stub.calledOnceWithExactly(0x1D));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
   t.true(write3Stub.notCalled);
@@ -1883,10 +1887,10 @@ test("Arch65816.handleLogicAndCompareOperations covers long and stack-relative m
     write3Stub.restore();
   });
 
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$123456", 3, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$123456,x", 3, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "$34,s", 1, false));
-  t.true((arch as any).handleLogicAndCompareOperations("ORA", "($56,s),y", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$123456", 3, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$123456,x", 3, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "$34,s", 1, false));
+  t.true(arch.handleLogicAndCompareOperations("ORA", "($56,s),y", 1, false));
 
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x0F, 0x1F, 0x03, 0x34, 0x13, 0x56]);
   t.true(write2Stub.notCalled);
@@ -2163,7 +2167,7 @@ test("Arch65816.asblock_65816 routes no-operand opcodes before other helpers", t
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("#3").returns({ expanded: "#3", length: 1 });
   const noOperandStub = sinon.stub(arch, "handleNoOperandOperations").returns(true);
-  const loadRegisterStub = sinon.stub(arch as any, "handleLoadRegister").returns(true);
+  const loadRegisterStub = sinon.stub(arch, "handleLoadRegister").returns(true);
   t.teardown(() => {
     expandOperandStub.restore();
     noOperandStub.restore();
@@ -2222,8 +2226,8 @@ test("Arch65816.asblock_65816 routes bit-test opcodes without falling through to
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
-  const bitTestStub = sinon.stub(arch as any, "handleBitTestOperations").returns(true);
-  const memoryBitStub = sinon.stub(arch as any, "handleMemoryBitInstructions").returns(true);
+  const bitTestStub = sinon.stub(arch, "handleBitTestOperations").returns(true);
+  const memoryBitStub = sinon.stub(arch, "handleMemoryBitInstructions").returns(true);
   t.teardown(() => {
     expandOperandStub.restore();
     bitTestStub.restore();
@@ -2241,7 +2245,7 @@ test("Arch65816.asblock_65816 routes memory and load-register opcodes using expa
   expandOperandStub.withArgs("#!VALUE").returns({ expanded: "#$34", length: 1 });
   expandOperandStub.withArgs("$1234,y").returns({ expanded: "$1234,y", length: 2 });
   const memoryStub = sinon.stub(arch, "handleMemoryOperations").returns(true);
-  const loadRegisterStub = sinon.stub(arch as any, "handleLoadRegister").returns(true);
+  const loadRegisterStub = sinon.stub(arch, "handleLoadRegister").returns(true);
   t.teardown(() => {
     expandOperandStub.restore();
     memoryStub.restore();

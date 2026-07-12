@@ -78,10 +78,42 @@ export interface LoweredInstruction {
   sourceRaw: string;
 }
 
+/**
+ * One addressing-mode form of an instruction, used for hover, completion, and
+ * signature help in editor tooling.
+ */
+export interface InstructionAddressingMode {
+  /** The addressing-mode name, e.g. "immediate", "absolute", "absoluteIndexedX". */
+  mode: string;
+  /** Example operand syntax, e.g. "#const", "addr", "addr,x". */
+  syntax: string;
+  /** The leading opcode byte when statically known. */
+  opcode?: number;
+  /** The total instruction size in bytes when statically known. */
+  size?: number;
+}
+
+/**
+ * A static description of one instruction mnemonic for a given architecture.
+ */
+export interface InstructionDescriptor {
+  /** The uppercase mnemonic, e.g. "LDA". */
+  mnemonic: string;
+  /** A short human-readable summary suitable for hover documentation. */
+  summary?: string;
+  /** The addressing-mode forms supported by the mnemonic. */
+  modes: InstructionAddressingMode[];
+}
+
 export interface ArchitectureEncoder {
   estimateSize(words: string[]): number;
   encode(words: string[]): boolean;
   estimateInstruction?(instruction: LoweredInstruction): number;
   encodeInstruction?(instruction: LoweredInstruction): boolean;
   lowerInstructionFromCommand?(command: NormalizedCommand): LoweredInstruction;
+  /**
+   * Returns the static instruction catalog for editor tooling, when available.
+   * @returns {InstructionDescriptor[]} The instruction descriptors.
+   */
+  getInstructionCatalog?(): InstructionDescriptor[];
 }

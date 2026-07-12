@@ -202,12 +202,12 @@ test("activateStage resets guarded status for included files", t => {
   assembler.includedFiles.set(testFile, { included: true, guarded: true });
 
   // Verify it's marked as guarded
-  t.true(assembler.includedFiles.get(testFile).guarded);
+  t.true(assembler.includedFiles.get(testFile)?.guarded);
 
   assembler.activateStage("resolveLayout");
 
   // Verify guard has been reset
-  t.false(assembler.includedFiles.get(testFile).guarded);
+  t.false(assembler.includedFiles.get(testFile)?.guarded);
 });
 
 test("splitInlineCommands splits relative-label command fragments after inline separators", t => {
@@ -4113,7 +4113,7 @@ test("writeDataByLength - handles string length parameter", t => {
   const write1Spy = sinon.spy(assembler, "write1");
 
   // Test with string length parameter (which the code comments indicate happens sometimes)
-  assembler.writeDataByLength("1" as any, 0xAB);
+  assembler.writeDataByLength("1" as unknown as number, 0xAB);
   t.true(write1Spy.calledOnceWith(0xAB), "Should handle string length parameter");
 });
 
@@ -4133,7 +4133,7 @@ test("writeDataByLength - throws on NaN length", t => {
 
   // Test with NaN length
   const error = t.throws(() => {
-    assembler.writeDataByLength("invalid" as any, 0xAB);
+    assembler.writeDataByLength("invalid" as unknown as number, 0xAB);
   }, { instanceOf: Error });
 
   t.is(error.message, "writeDataByLength: len is NaN", "Should throw with correct error message");
@@ -4428,21 +4428,21 @@ test("handleDataDirective - throws on empty or invalid params", t => {
 
   // Test with undefined params
   const error2 = t.throws(() => {
-    assembler.handleDataDirective("dw", undefined as any);
+    assembler.handleDataDirective("dw", undefined as unknown as string[]);
   }, { instanceOf: Error });
 
   t.is(error2.message, "DW directive requires at least one parameter.", "Should throw when params is undefined");
 
   // Test with null params
   const error3 = t.throws(() => {
-    assembler.handleDataDirective("dl", null as any);
+    assembler.handleDataDirective("dl", null as unknown as string[]);
   }, { instanceOf: Error });
 
   t.is(error3.message, "DL directive requires at least one parameter.", "Should throw when params is null");
 
   // Test with non-array params
   const error4 = t.throws(() => {
-    assembler.handleDataDirective("dd", "not an array" as any);
+    assembler.handleDataDirective("dd", "not an array" as unknown as string[]);
   }, { instanceOf: Error });
 
   t.is(error4.message, "DD directive requires at least one parameter.", "Should throw when params is not an array");

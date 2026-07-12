@@ -1,0 +1,115 @@
+{
+  "name": "snes-asm-vscode",
+  "displayName": "SNES Assembly (snes-asm-js)",
+  "description": "Language support for SNES assembly powered by the snes-asm-js language server.",
+  "version": "1.0.0",
+  "publisher": "matthewcallis",
+  "author": "Matthew Callis <matthew.callis@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MatthewCallis/snes-asm-js.git",
+    "directory": "editors/vscode"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages"],
+  "main": "out/extension.js",
+  "activationEvents": ["onLanguage:snes-asm"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "snesAsm.build",
+        "title": "Build ROM",
+        "category": "SNES Assembly"
+      },
+      {
+        "command": "snesAsm.toggleWatch",
+        "title": "Toggle Build on Save (Watch)",
+        "category": "SNES Assembly"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "snesAsm.build",
+          "when": "editorLangId == snes-asm"
+        },
+        {
+          "command": "snesAsm.toggleWatch",
+          "when": "editorLangId == snes-asm"
+        }
+      ],
+      "editor/title/run": [
+        {
+          "command": "snesAsm.build",
+          "when": "editorLangId == snes-asm",
+          "group": "navigation"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "snes-asm",
+        "aliases": ["SNES Assembly", "snes-asm"],
+        "extensions": [".asm", ".src", ".SRC", ".s", ".inc"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "snes-asm",
+        "scopeName": "source.snes-asm",
+        "path": "./syntaxes/snes-asm.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "SNES Assembly",
+      "properties": {
+        "snesAsm.entryPoints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Project entry-point files (relative to the workspace root) analysed as include roots. When empty, each open file is treated as its own root."
+        },
+        "snesAsm.includePaths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["./"],
+          "description": "Additional include search paths handed to the assembler."
+        },
+        "snesAsm.architecture": {
+          "type": "string",
+          "enum": ["65816", "spc700", "superfx"],
+          "default": "65816",
+          "description": "Default CPU architecture used for hover, completion, and signature help."
+        },
+        "snesAsm.buildOutput": {
+          "type": "string",
+          "default": "",
+          "description": "Output path for the assembled ROM. When empty, the source file's '.sfc' sibling is used."
+        },
+        "snesAsm.targetRom": {
+          "type": "string",
+          "default": "",
+          "description": "Optional base ROM file to patch into when building."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.25.0"
+  }
+}

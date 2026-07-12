@@ -1,6 +1,6 @@
 import { parseExpressionNode } from "../ir/expression-node.js";
 import type { DirectiveRegistry } from "./registry.js";
-import { type AssemblySession, DirectiveContext } from "./types.js";
+import { DirectiveContext } from "./types.js";
 
 /**
  * Handles an incbin command.

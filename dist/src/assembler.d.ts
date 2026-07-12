@@ -5,7 +5,7 @@ import type { CursorAddressFacade } from "./assembler-internals.js";
 import type { ExpressionHost, LoweredInstruction } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addr2line.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
-import { type AssemblyAnalysisResult, type AssemblyDiagnostic, type AssemblySourceLocation, type AssemblySymbolDefinition, type AssemblySymbolKind, type AssemblySymbolReference, type AssemblySymbolReferenceKind } from "./diagnostics.js";
+import { type AssemblyAnalysisResult, type AssemblyDiagnostic, type AssemblyIncludeEdge, type AssemblySourceLocation, type AssemblySymbolDefinition, type AssemblySymbolKind, type AssemblySymbolReference, type AssemblySymbolReferenceKind } from "./diagnostics.js";
 import type { ConditionalBranchNode, ExecutableNode, IncludeNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";
 import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expression-node.js";
 import { type NormalizedCommand } from "./ir/normalized-command.js";
@@ -299,6 +299,7 @@ export declare class Assembler implements AssemblySession {
     readonly diagnostics: AssemblyDiagnostic[];
     readonly symbolDefinitions: AssemblySymbolDefinition[];
     readonly symbolReferences: AssemblySymbolReference[];
+    readonly includeEdges: AssemblyIncludeEdge[];
     activeStageExecutionState: StageExecutionState | null;
     analysisErrorRecoveryEnabled: boolean;
     get defineEngine(): DefineEngine;
@@ -330,6 +331,13 @@ export declare class Assembler implements AssemblySession {
      * Clears accumulated diagnostics and symbol definitions.
      */
     clearAnalysisArtifacts(): void;
+    /**
+     * Records a directed include-graph edge if it has not already been recorded.
+     * Includes execute once per pass, so edges are de-duplicated by file pair.
+     * @param {string} fromFile The file issuing the include directive.
+     * @param {string} toFile The resolved path of the included file.
+     */
+    recordIncludeEdge(fromFile: string, toFile: string): void;
     /**
      * Returns the current source location.
      * @param {SourceSpan} [span] Optional source span override.

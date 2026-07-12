@@ -1,5 +1,5 @@
 import type { DirectiveRegistry } from "./registry.js";
-import { AssemblySession, DirectiveContext } from "./types.js";
+import { DirectiveContext } from "./types.js";
 
 /**
  * Pushes the current namespace.

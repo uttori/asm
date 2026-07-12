@@ -1,4 +1,4 @@
-import type { ArchitectureEncoder, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
+import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
 import type { Assembler } from "./assembler.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
 /**
@@ -9,6 +9,11 @@ import type { NormalizedCommand } from "./ir/normalized-command.js";
 export declare class ArchSPC700 implements ArchitectureEncoder {
     assembler: Assembler;
     constructor(assembler: Assembler);
+    /**
+     * Returns the static SPC700 instruction catalog for editor tooling.
+     * @returns {InstructionDescriptor[]} The instruction descriptors.
+     */
+    getInstructionCatalog(): InstructionDescriptor[];
     encode(words: string[]): boolean;
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
