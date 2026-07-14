@@ -8,6 +8,7 @@ import { ArchitectureRegistry } from "../architecture-registry.js";
 import type { SpcblockData } from "../assembler.js";
 import { ExpressionNode } from "../ir/expression-node.js";
 import type { AssemblyFileProvider } from "../file-provider.js";
+import type { DirectiveRuntimeService } from "../services/directive-runtime-service.js";
 export interface DirectiveAddressCapability {
     recordCurrentAddress(): void;
     setWritePosition(address: number): void;
@@ -65,8 +66,6 @@ export interface DirectiveRomCapability {
     romWriter: RomWriterService;
     pushBaseStack: number[];
     expandRom(size: number, fillbyte: number): void;
-    handleOrg(args: string[]): void;
-    handleDataDirective(keyword: string, args: string[]): void;
     write1(value: number): void;
     write2(value: number): void;
     write3(value: number): void;
@@ -76,8 +75,6 @@ export interface DirectiveSpcCapability {
     inSpcblock: boolean;
     spcInlineCompatMode: boolean;
     spcblockData: SpcblockData | null;
-    handleSpcblock(words: string[]): void;
-    handleEndSpcblock(words: string[]): void;
 }
 export interface DirectiveArchitectureCapability {
     architectureRegistry: ArchitectureRegistry;
@@ -89,14 +86,31 @@ export interface DirectiveAssemblerCapability {
     readFunctionsEnabled: boolean;
     bankCrossCheckMode: "off" | "full" | "half";
     optimizeDirectPage: boolean;
-    handlePushPC(): void;
-    handlePullPC(): void;
 }
-export interface AssemblySession extends DirectiveAddressCapability, DirectiveExpressionCapability, DirectiveNamespaceCapability, DirectiveIncludeCapability, DirectiveTableCapability, DirectiveRomCapability, DirectiveSpcCapability, DirectiveArchitectureCapability, DirectiveAssemblerCapability {
+export interface SessionDirectiveContext<Session> {
+    session: Session;
 }
-export interface DirectiveContext {
-    session: AssemblySession;
+export interface OperandDirectiveContext<Session> extends SessionDirectiveContext<Session> {
     operandResolver: OperandResolver;
 }
-export type DirectiveHandler = (ctx: DirectiveContext, words: string[], raw: string, command?: NormalizedCommand) => void;
+export interface RuntimeDirectiveContext {
+    runtime: DirectiveRuntimeService;
+}
+export type NarrowDirectiveHandler<Context> = (ctx: Context, words: string[], raw: string, command?: NormalizedCommand) => void;
+export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability>;
+export type NamespaceDirectiveContext = SessionDirectiveContext<DirectiveNamespaceCapability & Pick<DirectiveSpcCapability, "inSpcblock">>;
+export type FillPadDirectiveContext = OperandDirectiveContext<Pick<DirectiveRomCapability, "fillbyte" | "padbyte" | "padUnit" | "currentTargetAddress" | "romWriter" | "write1"> & Pick<DirectiveExpressionCapability, "resolvedefines">>;
+export type FlowControlDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "symbolScope">>;
+export type MapperDirectiveContext = SessionDirectiveContext<Pick<DirectiveRomCapability, "mapper" | "checksumFixEnabled" | "sa1banks"> & Pick<DirectiveSpcCapability, "inSpcblock">>;
+export type BaseLayoutDirectiveContext = OperandDirectiveContext<Pick<DirectiveAddressCapability, "currentTargetAddress" | "currentTargetBaseAddress" | "currentTargetStartAddress" | "currentTargetBaseStartAddress">>;
+export type AddressStackDirectiveContext = SessionDirectiveContext<Pick<DirectiveAddressCapability, "currentTargetAddress" | "pushBaseStack">>;
+export type DataDirectiveContext = RuntimeDirectiveContext;
+export type SpcDirectiveContext = RuntimeDirectiveContext;
+export type OrgDirectiveContext = SessionDirectiveContext<Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">> & RuntimeDirectiveContext;
+export type StartposDirectiveContext = OperandDirectiveContext<Pick<DirectiveSpcCapability, "inSpcblock" | "spcblockData"> & Pick<DirectiveExpressionCapability, "resolvedefines">>;
+export type ArchitectureDirectiveContext = SessionDirectiveContext<DirectiveArchitectureCapability & Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">>;
+export type AssemblerPolicyDirectiveContext = SessionDirectiveContext<Pick<DirectiveAssemblerCapability, "readFunctionsEnabled" | "bankCrossCheckMode" | "optimizeDirectPage">>;
+export type IncludeDirectiveContext = OperandDirectiveContext<DirectiveIncludeCapability & Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope"> & Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition"> & Pick<DirectiveRomCapability, "write1">> & RuntimeDirectiveContext;
+export type MemoryDirectiveContext = OperandDirectiveContext<Pick<DirectiveRomCapability, "targetRom" | "romdata" | "defaultFreespaceByte" | "activeFreespaceStartPc" | "activeFreespaceContentStartPc" | "currentTargetAddress" | "currentTargetBaseAddress" | "currentTargetStartAddress" | "currentTargetBaseStartAddress" | "mapper" | "romWriter" | "expandRom" | "write1" | "write3"> & Pick<DirectiveExpressionCapability, "resolvedefines" | "symbolScope"> & Pick<DirectiveSpcCapability, "inSpcblock">>;
+export type StructDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "structEngine">>;
 //# sourceMappingURL=types.d.ts.map

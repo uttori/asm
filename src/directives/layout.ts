@@ -1,29 +1,30 @@
-import type { DirectiveRegistry } from "./registry.js";
-import { shouldRedirectOrgToSpcblock } from "../compatibility/asar-compatibility-profile.js";
-import { DirectiveContext } from "./types.js";
-
-const assertMapperAvailable = (inSpcblock: boolean): void => {
-  if (inSpcblock) {
-    throw new Error("Mapper directives are unavailable inside spcblock.");
-  }
-};
+import type { DirectiveRegistry, DirectiveRegistryContexts } from "./registry.js";
+import {
+  applyMapperSelection,
+  assertMapperAvailable,
+  shouldEnableSpcInlineCompat,
+  shouldRedirectOrgToSpcblock,
+} from "../compatibility/asar-compatibility-profile.js";
+import type {
+  AddressStackDirectiveContext,
+  ArchitectureDirectiveContext,
+  StartposDirectiveContext,
+} from "./types.js";
 
 /**
  * Pushes the current target address onto the push base stack.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {AddressStackDirectiveContext} ctx The directive context.
  */
-const handlePushBase = ({ session }: DirectiveContext) => {
+export const handlePushBase = ({ session }: AddressStackDirectiveContext): void => {
   // debug("handlePushBase")
   session.pushBaseStack.push(session.currentTargetAddress);
 }
 
 /**
  * Pulls the current target address from the push base stack.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {AddressStackDirectiveContext} ctx The directive context.
  */
-const handlePullBase = ({ session }: DirectiveContext) => {
+export const handlePullBase = ({ session }: AddressStackDirectiveContext): void => {
   // debug("handlePullBase")
   if (session.pushBaseStack.length === 0) {
     throw new Error("No base value to pull.");
@@ -33,12 +34,11 @@ const handlePullBase = ({ session }: DirectiveContext) => {
 
 /**
  * Handles the ARCH command.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {ArchitectureDirectiveContext} ctx The directive context.
  * @param {string[]} words - The words from the ARCH command.
  * @throws {Error} If the ARCH command requires an architecture parameter.
  */
-export const handleArch = ({ session }: DirectiveContext, words: string[]): void => {
+export const handleArch = ({ session }: ArchitectureDirectiveContext, words: string[]): void => {
   // debug("handleArch", words)
   if (session.inSpcblock) {
     throw new Error("ARCH is unavailable inside spcblock.");
@@ -53,10 +53,13 @@ export const handleArch = ({ session }: DirectiveContext, words: string[]): void
     throw new Error("Unsupported architecture: " + archParam);
   }
   session.arch = canonical;
-  session.spcInlineCompatMode = archParam === "spc700-inline";
+  session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
 }
 
-export const handleStartpos = ({ session }: DirectiveContext, words: string[]): void => {
+export const handleStartpos = (
+  { session, operandResolver }: StartposDirectiveContext,
+  words: string[],
+): void => {
   const params = words.slice(1);
 
   if (!session.inSpcblock || !session.spcblockData) {
@@ -65,11 +68,14 @@ export const handleStartpos = ({ session }: DirectiveContext, words: string[]): 
   if (params.length !== 1) {
     throw new Error("startpos requires exactly one parameter.");
   }
-  session.spcblockData.executeAddress = session.operandResolver.getnum(session.resolvedefines(params[0])) & 0xFFFF;
+  session.spcblockData.executeAddress = operandResolver.getnum(session.resolvedefines(params[0])) & 0xFFFF;
 }
 
-export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
-  registry.register("base", ({ session, operandResolver }, words) => {
+export const registerLayoutDirectives = (
+  registry: DirectiveRegistry,
+  context: DirectiveRegistryContexts["layout"],
+): void => {
+  registry.register("base", context.base, ({ session, operandResolver }, words) => {
     if (words.length !== 2) {
       throw new Error("BASE directive requires exactly one parameter.");
     }
@@ -92,47 +98,42 @@ export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
     session.currentTargetStartAddress = value;
   });
 
-  registry.register("fastrom", () => {
-    // Compatibility no-op kept for fixture parity.
-  });
-
-  registry.register("lorom", ({ session }) => {
+  registry.register("lorom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "lorom";
+    applyMapperSelection(session, "lorom");
   });
 
-  registry.register("hirom", ({ session }) => {
+  registry.register("hirom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "hirom";
+    applyMapperSelection(session, "hirom");
   });
 
-  registry.register("exlorom", ({ session }) => {
+  registry.register("exlorom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "exlorom";
+    applyMapperSelection(session, "exlorom");
   });
 
-  registry.register("exhirom", ({ session }) => {
+  registry.register("exhirom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "exhirom";
+    applyMapperSelection(session, "exhirom");
   });
 
-  registry.register("sfxrom", ({ session }) => {
+  registry.register("sfxrom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "sfxrom";
+    applyMapperSelection(session, "sfxrom");
   });
 
-  registry.register("norom", ({ session }) => {
+  registry.register("norom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "norom";
-    session.checksumFixEnabled = false;
+    applyMapperSelection(session, "norom");
   });
 
-  registry.register("fullsa1rom", ({ session }) => {
+  registry.register("fullsa1rom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "bigsa1rom";
+    applyMapperSelection(session, "bigsa1rom");
   });
 
-  registry.register("sa1rom", ({ session }, words) => {
+  registry.register("sa1rom", context.mapper, ({ session }, words) => {
     assertMapperAvailable(session.inSpcblock);
 
     if (words.length > 1) {
@@ -154,39 +155,39 @@ export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
       session.sa1banks[5] = 3 << 20;
     }
 
-    session.mapper = "sa1rom";
+    applyMapperSelection(session, "sa1rom");
   });
 
-  registry.register("org", ({ session }, words) => {
+  registry.register("org", context.org, ({ session, runtime }, words) => {
     if (session.inSpcblock) {
       throw new Error("ORG is unavailable inside spcblock.");
     }
 
     if (shouldRedirectOrgToSpcblock(session.spcInlineCompatMode)) {
-      session.handleSpcblock(["spcblock", ...words.slice(1)]);
+      runtime.handleSpcblock(["spcblock", ...words.slice(1)]);
       return;
     }
 
-    session.handleOrg(words.slice(1));
+    runtime.handleOrg(words.slice(1));
   });
 
-  registry.register("pushbase", handlePushBase);
+  registry.register("pushbase", context.addressStack, handlePushBase);
 
-  registry.register("pullbase", handlePullBase);
+  registry.register("pullbase", context.addressStack, handlePullBase);
 
-  registry.register("pushpc", ({ session }) => {
-    session.handlePushPC();
+  registry.register("pushpc", context.runtime, ({ runtime }) => {
+    runtime.handlePushPC();
   });
 
-  registry.register("pullpc", ({ session }) => {
-    session.handlePullPC();
+  registry.register("pullpc", context.runtime, ({ runtime }) => {
+    runtime.handlePullPC();
   });
 
-  registry.register("arch", handleArch);
+  registry.register("arch", context.architecture, handleArch);
 
-  registry.register("startpos", handleStartpos);
+  registry.register("startpos", context.startpos, handleStartpos);
 
-  registry.register("check", ({ session }, words) => {
+  registry.register("check", context.policy, ({ session }, words) => {
     if (words.length >= 2 && words[1].toLowerCase() === "title") {
       session.readFunctionsEnabled = true;
       return;
@@ -208,7 +209,7 @@ export const registerLayoutDirectives = (registry: DirectiveRegistry): void => {
     }
   });
 
-  registry.register("optimize", ({ session }, words) => {
+  registry.register("optimize", context.policy, ({ session }, words) => {
     if (words.length >= 3 && words[1].toLowerCase() === "dp") {
       const mode = words[2].toLowerCase();
       if (mode === "none") {

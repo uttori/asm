@@ -4,7 +4,11 @@ import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
 import type { ExpressionHost, LoweredInstruction } from "./architecture-types.js";
-import { shouldEndifCloseInnermostWhile } from "./compatibility/asar-compatibility-profile.js";
+import {
+  calculateHeaderChecksum,
+  getChecksumHeaderOffset,
+  shouldEndifCloseInnermostWhile,
+} from "./compatibility/asar-compatibility-profile.js";
 
 import { AddressToLineMapping } from "./addr2line.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
@@ -41,7 +45,6 @@ import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { createArchitectureRegistry, type ArchitectureDefinition, type ArchitectureRegistry } from "./architecture-registry.js";
 import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
-import type { AssemblySession } from "./directives/types.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
 import { AssemblyFrontEndService, type AssemblyFrontEndHost } from "./services/assembly-front-end-service.js";
@@ -227,7 +230,7 @@ export interface IncludedFileInfo {
   guarded: boolean;
 }
 
-export class Assembler implements AssemblySession {
+export class Assembler {
   /** The current target address. `snespos` */
   public currentTargetAddress: number = 0;
   /** The current target base address. `realsnespos` */
@@ -763,22 +766,34 @@ export class Assembler implements AssemblySession {
   }
 
   /**
-   * Rebinds directive handlers to a fresh session while preserving any custom
-   * registrations present on the current registry.
+   * Creates directive handlers bound to a fresh session's family capabilities.
    * @param {Assembler} session The session that should receive directive calls.
    * @returns {DirectiveRegistry} A registry bound to the provided session.
    */
   private cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry {
-    const registry = new DirectiveRegistry({
-      session,
-      operandResolver: session.operandResolver,
+    const operandResolver = session.operandResolver;
+    const runtime = session.directiveRuntime;
+    return createDirectiveRegistry({
+      data: { runtime },
+      fillPad: { session, operandResolver },
+      flowControl: { session },
+      includeSource: { session, operandResolver, runtime },
+      layout: {
+        addressStack: { session },
+        architecture: { session },
+        base: { session, operandResolver },
+        mapper: { session },
+        org: { session, runtime },
+        policy: { session },
+        runtime: { runtime },
+        startpos: { session, operandResolver },
+      },
+      memory: { session, operandResolver },
+      namespace: { session },
+      spc: { runtime },
+      struct: { session },
+      table: { session },
     });
-
-    for (const [keyword, handler] of this.directiveRegistry.handlers.entries()) {
-      registry.handlers.set(keyword, handler);
-    }
-
-    return registry;
   }
 
   analyzeProgram(program: ProgramModel): AssemblyAnalysisResult {
@@ -908,7 +923,7 @@ export class Assembler implements AssemblySession {
       this.archSPC700,
       this.archSuperFX,
     );
-    this.directiveRegistry = createDirectiveRegistry(this, this.operandResolver);
+    this.directiveRegistry = this.cloneDirectiveRegistryForSession(this);
     this.commandLoweringService = new CommandLoweringService(this);
     this.services.frontEnd = this.frontEndService;
     this.services.lowering = this.commandLoweringService;
@@ -1575,14 +1590,6 @@ export class Assembler implements AssemblySession {
     }
   }
 
-  handleSpcblock(words: string[]): void {
-    this.directiveRuntime.handleSpcblock(words);
-  }
-
-  handleEndSpcblock(words: string[]): void {
-    this.directiveRuntime.handleEndSpcblock(words);
-  }
-
   /**
    * Parses a function definition of the form:
    *   function name(param1, param2...) = expression
@@ -1610,43 +1617,12 @@ export class Assembler implements AssemblySession {
   }
 
   /**
-   * Handles `org` directive to set SNES memory location.
-   * @param {string[]} params - The parameters for the org directive.
-   */
-  handleOrg(params: string[]): void {
-    this.directiveRuntime.handleOrg(params);
-  }
-
-  /**
-   * Handles `db`, `dw`, `dl`, `dd` directives for defining data.
-   * @param {string} type - The type of data directive.
-   * @param {string[]} params - The parameters for the data directive.
-   */
-  handleDataDirective(type: string, params: string[]): void {
-    this.directiveRuntime.handleDataDirective(type, params);
-  }
-
-  /**
    * Writes data of the specified length.
    * @param {number} len The length of the data to write.
    * @param {number} value The value to write.
    */
   writeDataByLength(len: number, value: number): void {
     this.directiveRuntime.writeDataByLength(len, value);
-  }
-
-  /**
-   * Pushes the current PC onto the pushpcStack.
-   */
-  handlePushPC(): void {
-    this.directiveRuntime.handlePushPC();
-  }
-
-  /**
-   * Restores the previous PC.
-   */
-  handlePullPC(): void {
-    this.directiveRuntime.handlePullPC();
   }
 
   /**
@@ -2430,16 +2406,7 @@ export class Assembler implements AssemblySession {
    */
   updateHeaderAndCRC32(): void {
     debug("updateHeaderAndCRC32");
-    let headerOffset: number;
-    // TODO: Validate header offset for other mappers.
-    if (this.mapper === "lorom" || this.mapper === "sa1rom" || this.mapper === "bigsa1rom") {
-      headerOffset = 0x7FC0;
-    } else if (this.mapper === "hirom" || this.mapper === "exhirom") {
-      headerOffset = 0xFFC0;
-    } else {
-      // For other mappers default to 0xFFC0 (same as HiROM)
-      headerOffset = 0xFFC0;
-    }
+    const headerOffset = getChecksumHeaderOffset(this.mapper);
     debug("updateHeaderAndCRC32 headerOffset", headerOffset)
 
     if (this.romdata.length < headerOffset + 0x20) {
@@ -2454,43 +2421,7 @@ export class Assembler implements AssemblySession {
     this.romdata[headerOffset + 0x1E] = 0x00;
     this.romdata[headerOffset + 0x1F] = 0x00;
 
-    // Calculate the 16-bit checksum.
-    // - "simple": plain 16-bit sum over ROM bytes
-    // - "asar": Asar-compatible handling for non power-of-two ROM sizes
-    //   by repeating tail contribution to emulate mirrored mapping.
-    const romLength = this.romdata.length;
-    let checksum = 0;
-
-    if (this.checksumMode === "simple") {
-      for (let i = 0; i < romLength; i++) {
-        checksum += this.romdata[i] & 0xFF;
-      }
-    } else {
-      const isPowerOfTwo = romLength > 0 && (romLength & (romLength - 1)) === 0;
-      if (isPowerOfTwo) {
-        for (let i = 0; i < romLength; i++) {
-          checksum += this.romdata[i] & 0xFF;
-        }
-      } else {
-        let bitround = 1;
-        while (bitround < romLength) {
-          bitround <<= 1;
-        }
-        const firstPart = bitround >> 1;
-        const secondPart = romLength - firstPart;
-        const repeatCount = Math.floor(firstPart / secondPart);
-
-        let secondPartSum = 0;
-        for (let i = 0; i < firstPart; i++) {
-          checksum += this.romdata[i] & 0xFF;
-        }
-        for (let i = firstPart; i < romLength; i++) {
-          secondPartSum += this.romdata[i] & 0xFF;
-        }
-        checksum += secondPartSum * repeatCount;
-      }
-    }
-    checksum &= 0xFFFF;
+    const checksum = calculateHeaderChecksum(this.romdata, this.checksumMode);
     const complement = (~checksum) & 0xFFFF;
 
     // In a SNES header the checksum complement is typically stored at offset 0x1C

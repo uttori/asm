@@ -1,14 +1,14 @@
 import type { DirectiveRegistry } from "./registry.js";
-import { DirectiveContext } from "./types.js";
+import { isFreespaceAvailable } from "../compatibility/asar-compatibility-profile.js";
+import type { MemoryDirectiveContext } from "./types.js";
 
 /**
  * Minimal FREECODE/FREESPACE support used by active tests.
  * Allocates a block at/after current ROM end, emits a placeholder RATS tag, then positions assembly after it.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {MemoryDirectiveContext} ctx The directive context.
  * @param {string[]} words Directive keyword.
  */
-const handleFreespace = ({ session }: DirectiveContext, words: string[]) => {
+export const handleFreespace = ({ session }: MemoryDirectiveContext, words: string[]): void => {
   if (session.inSpcblock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
   }
@@ -17,7 +17,7 @@ const handleFreespace = ({ session }: DirectiveContext, words: string[]) => {
   // const _params = words.slice(1);
   // debug("handleFreespace", { type, _params });
 
-  if (session.mapper === "norom") {
+  if (!isFreespaceAvailable(session.mapper)) {
     throw new Error("No freespace available in norom.");
   }
 
@@ -56,27 +56,28 @@ const handleFreespace = ({ session }: DirectiveContext, words: string[]) => {
 
 /**
  * Sets default freespace fill byte.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {MemoryDirectiveContext} ctx The directive context.
  * @param {string[]} words FREESPACEBYTE arguments.
  */
-const handleFreespaceByte = ({ session }: DirectiveContext, words: string[]) => {
+export const handleFreespaceByte = (
+  { session, operandResolver }: MemoryDirectiveContext,
+  words: string[],
+): void => {
   const params = words.slice(1);
   if (params.length !== 1) {
     throw new Error("FREESPACEBYTE requires exactly one parameter.");
   }
   const value = session.resolvedefines(params[0]);
-  session.defaultFreespaceByte = session.operandResolver.getnum(value) & 0xFF;
+  session.defaultFreespaceByte = operandResolver.getnum(value) & 0xFF;
 }
 
 /**
  * Minimal PROT support used by active tests.
  * Emits PROT table with 24-bit addresses and STOP marker.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {MemoryDirectiveContext} ctx The directive context.
  * @param {string[]} words Label list arguments.
  */
-const handleProt = ({ session }: DirectiveContext, words: string[]) => {
+export const handleProt = ({ session }: MemoryDirectiveContext, words: string[]): void => {
   const labelList = words.slice(1);
   if (labelList.length === 0) {
     throw new Error("PROT command requires at least one label parameter.");
@@ -111,10 +112,13 @@ const handleProt = ({ session }: DirectiveContext, words: string[]) => {
   session.write1(0x00);
 }
 
-export const registerMemoryDirectives = (registry: DirectiveRegistry): void => {
-  registry.register(["freecode", "freespace", "freedata"], handleFreespace);
+export const registerMemoryDirectives = (
+  registry: DirectiveRegistry,
+  context: MemoryDirectiveContext,
+): void => {
+  registry.register(["freecode", "freespace", "freedata"], context, handleFreespace);
 
-  registry.register("freespacebyte", handleFreespaceByte);
+  registry.register("freespacebyte", context, handleFreespaceByte);
 
-  registry.register("prot", handleProt);
+  registry.register("prot", context, handleProt);
 };

@@ -26,7 +26,7 @@ test("directive registry dispatches fill aliases", t => {
 
 test("directive registry reuses shared data handler for aliases", t => {
   const assembler = new Assembler();
-  const dataSpy = spy(assembler, "handleDataDirective");
+  const dataSpy = spy(assembler.directiveRuntime, "handleDataDirective");
   stub(assembler, "addAddressToLine");
 
   const handled = assembler.directiveRegistry.dispatch("dc.w", ["dc.w", "$1234"], "dc.w $1234");
@@ -84,7 +84,7 @@ test("normalized dispatch preserves check bankcross behavior", t => {
 
 test("lowered directive dispatch preserves data directive behavior", t => {
   const assembler = new Assembler();
-  const dataSpy = spy(assembler, "handleDataDirective");
+  const dataSpy = spy(assembler.directiveRuntime, "handleDataDirective");
   stub(assembler, "addAddressToLine");
 
   const normalized = createNormalizedCommand(
@@ -196,7 +196,7 @@ test("direct lowered families and instructions never redispatch normalized comma
   const assembler = new Assembler();
   assembler.setCurrentFile("test.asm");
   assembler.includedFiles.set("test.asm", { included: true, guarded: false });
-  stub(assembler, "handleSpcblock");
+  stub(assembler.directiveRuntime, "handleSpcblock");
   const processSpy = spy(assembler, "processNormalizedCommand");
   const cases = [
     "check bankcross half",
@@ -259,7 +259,7 @@ test("normalized dispatch reparses context-sensitive variadic macro commands", t
   assembler.activateStage("resolveLayout");
   assembler.inMacroExpansion = true;
   stub(assembler.macroEngine, "resolveVariadicPlaceholders").returns("db $01");
-  stub(assembler, "handleDataDirective");
+  stub(assembler.directiveRuntime, "handleDataDirective");
   const parseSpy = spy(assembler, "createNormalizedCommandFromRaw");
 
   assembler.processNormalizedCommand(commandNode("db <...[0]>"), true);

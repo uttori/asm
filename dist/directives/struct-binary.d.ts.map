@@ -1,1 +1,1 @@
-{"version":3,"file":"struct-binary.d.ts","sourceRoot":"","sources":["../../src/directives/struct-binary.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,eAAe,CAAC;AAEvD,eAAO,MAAM,8BAA8B,aAAc,iBAAiB,KAAG,IAQ5E,CAAC"}
+{"version":3,"file":"struct-binary.d.ts","sourceRoot":"","sources":["../../src/directives/struct-binary.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,iBAAiB,EAAE,MAAM,eAAe,CAAC;AACvD,OAAO,KAAK,EAAE,sBAAsB,EAAE,MAAM,YAAY,CAAC;AAEzD,eAAO,MAAM,8BAA8B,aAC/B,iBAAiB,WAClB,sBAAsB,KAC9B,IAQF,CAAC"}

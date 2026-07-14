@@ -1,5 +1,6 @@
 import type { AssemblyStageName } from "../assembler.js";
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
+import type { DirectiveRuntimeService } from "./directive-runtime-service.js";
 export interface RomWriterHost {
     traceStage: AssemblyStageName;
     currentTargetAddress: number;
@@ -21,7 +22,7 @@ export interface RomWriterHost {
     fillRomData(start: number, value: number, length: number): void;
     writeDataBytes(start: number, value: number, length?: number): void;
     updateHeaderAndCRC32(): void;
-    handleEndSpcblock(words: string[]): void;
+    directiveRuntime: Pick<DirectiveRuntimeService, "handleEndSpcblock">;
     setWritePosition(address: number): void;
     syncWriteStarts(): void;
     incrementBytesWritten(num: number): void;

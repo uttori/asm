@@ -17,9 +17,10 @@ The refactor is not finished:
   instructions dispatched directly;
 - tree and line drivers remain parity oracles that lower completed runtime nodes
   through the same production executor;
-- directive handlers still receive the broad `AssemblySession`;
+- directive handlers use focused family contexts and runtime capabilities;
 - architecture encoders still depend on broad assembler state;
-- compatibility rules are only partly isolated;
+- compatibility predicates, checksum behavior, and intentional no-ops are
+  centralized in the ASAR profile;
 - coverage is measured per file but not enforced by thresholds;
 - TypeScript 7 declarations currently require `strictNullChecks: false` because
   legacy nullable state has not been fully narrowed;
@@ -29,8 +30,8 @@ The refactor is not finished:
 
 - `npm run lint`: passes with six existing unsafe-regex warnings.
 - `npm run make-types`: passes and emits production declarations under `dist/`.
-- `npm run test:serial`: 705 tests pass.
-- Coverage: 93.16% statements, 88.75% branches, 93.23% functions.
+- `npm run test:serial`: 722 tests pass.
+- Coverage: 93.27% statements, 88.95% branches, 93.16% functions.
 - `npm run lsp:typecheck` and `npm run vscode:typecheck`: pass.
 - `npm run lsp:build` and `npm run vscode:build`: pass.
 - `npm run pack:check`: passes; fixtures, harnesses, and generated ROMs are not
@@ -69,20 +70,21 @@ The refactor is not finished:
 - Runtime oracle execution lowers completed nodes before dispatch, including
   includes, macro re-entry, loops, and conditionals.
 - Staged-vs-tree byte parity is gated across every top-level fixture.
+- Directive handlers use family-specific capability contexts and direct tests.
+- Data, SPC, org, and PC-stack handlers call `DirectiveRuntimeService`
+  directly; the forwarding methods were removed from `Assembler`.
+- Mapper, checksum, freespace, inline-SPC, and intentional no-op compatibility
+  policy is centralized in the ASAR compatibility profile.
 
 ### Partial
 
-- Directive extraction: several modules own behavior, while data, org/layout,
-  SPC, include, and pushpc paths still delegate to broad services/session
-  methods.
+- Directive extraction: include/source pipeline behavior still resides on the
+  assembler, though its handlers now use a narrow capability context.
 - Architecture separation: a shared registry and encoder contract exist, but
   encoders still hold broad assembler dependencies.
-- Compatibility isolation: an ASAR profile exists, but policy remains in core
-  execution and handlers.
 
 ### Not Complete
 
-- Family-specific directive capability contexts.
 - Stable-module coverage thresholds.
 - Strict null checking across production source.
 - Repeatable performance benchmarks.
@@ -103,5 +105,6 @@ The refactor is not finished:
 ## Decision
 
 Do not start another broad extraction rewrite. Continue the test-gated order in
-`ASSEMBLER_LONG_TERM_GOALS.md`; the next transition is narrowing directive
-capabilities while retaining the complete fixture parity gates.
+`ASSEMBLER_LONG_TERM_GOALS.md`; the next transitions are finishing include
+effect extraction and narrowing architecture encoder contexts while retaining
+the complete fixture parity gates.

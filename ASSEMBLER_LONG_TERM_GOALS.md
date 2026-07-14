@@ -104,16 +104,14 @@ Exit criteria:
 
 ### 5. Narrow Directive Capabilities
 
-Status: **partial**.
+Status: **complete**.
 
-- Replace `DirectiveContext.session: AssemblySession` with family-specific
-  contexts.
-- Start with low-coupling families such as fill/pad, layout toggles, namespace,
-  and compatibility no-ops.
-- Make include, emission, symbol, expression, compatibility, and diagnostic
+- [x] Replace broad handler contexts with family-specific contexts.
+- [x] Narrow fill/pad, layout toggles, namespace, compatibility no-ops, table,
+  flow-control, include/source, memory, data, and SPC handlers.
+- [x] Make include, emission, symbol, expression, compatibility, and runtime
   dependencies explicit.
-- Remove `Assembler implements AssemblySession` when no handler requires the
-  combined surface.
+- [x] Remove `Assembler implements AssemblySession`.
 
 Exit criteria:
 
@@ -125,14 +123,14 @@ Exit criteria:
 
 Status: **partial**.
 
-Namespace is complete. Remaining priorities:
+Namespace, data, layout, memory/freespace, SPC blocks, table state, and
+flow-control labels are complete. Remaining priority:
 
-- data: `db`, `dw`, `dl`, `dd`, and `dc.*`;
-- layout: `org`, base stacks, start position, pushpc, and pullpc;
 - include/source: `incsrc`, `include`, `includeonce`, and `incbin`;
-- memory/freespace;
-- SPC blocks;
-- table state and flow-control labels.
+
+Include/source handlers now use narrow capabilities and `incbin` uses the
+directive runtime for PC stacks. Moving the remaining include pipeline behavior
+out of `Assembler` is still pending.
 
 For each family: add direct tests, narrow capabilities, move behavior, then run
 the full parity suite.
@@ -161,13 +159,13 @@ Exit criteria:
 
 ### 8. Isolate Compatibility Policy
 
-Status: **partial**.
+Status: **complete**.
 
-- Move checksum and remaining ASAR-specific predicates behind
-  `src/compatibility/asar-compatibility-profile.ts` or focused policy objects.
-- Keep intentional no-op directives and deprecated syntax covered.
-- Distinguish unsupported warning behavior from intentionally compatible
-  no-ops.
+- [x] Move checksum calculation, mapper/checksum behavior, freespace
+  availability, SPC mapper guards, and remaining ASAR-specific predicates
+  behind `src/compatibility/asar-compatibility-profile.ts`.
+- [x] Keep intentional no-op directives and deprecated syntax covered.
+- [x] Keep unsupported forms distinct from intentionally compatible no-ops.
 
 Exit criteria:
 
@@ -178,8 +176,8 @@ Exit criteria:
 
 Status: **not started; reporting is complete**.
 
-The verified baseline is 93.16% statements, 88.75% branches, and 93.23%
-functions over 705 passing tests.
+The verified baseline is 93.27% statements, 88.95% branches, and 93.16%
+functions over 722 passing tests.
 
 - Enable thresholds for stable small modules first.
 - Restore `strictNullChecks` and narrow legacy nullable state instead of
@@ -227,10 +225,10 @@ These are speculative opportunities, not committed optimizations.
 - [x] Focused lowering tests cover loops, conditionals, include, and incbin.
 - [x] Passthrough commands are minimized and justified.
 - [x] Tree and lowered executors are consolidated.
-- [ ] Directive handlers use focused capabilities.
+- [x] Directive handlers use focused capabilities.
 - [ ] Remaining directive effects are extracted.
 - [ ] Architecture encoders use narrow contexts.
-- [ ] Compatibility policy is centralized.
+- [x] Compatibility policy is centralized.
 - [ ] Production declarations pass with `strictNullChecks`.
 - [ ] Stable-module coverage thresholds are enforced.
 - [ ] Benchmarks identify worthwhile optimizations.

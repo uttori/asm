@@ -1,4 +1,3 @@
-import type { OperandResolver } from "../operand-resolver.js";
 import type { NormalizedCommand } from "../ir/normalized-command.js";
 import { registerDataDirectives } from "./data.js";
 import { registerFillPadDirectives } from "./fill-pad.js";
@@ -10,17 +9,65 @@ import { registerMiscDirectives } from "./misc.js";
 import { registerNamespaceDirectives } from "./namespace.js";
 import { registerSpcDirectives } from "./spc.js";
 import { registerStructBinaryDirectives } from "./struct-binary.js";
-import type { AssemblySession, DirectiveContext, DirectiveHandler } from "./types.js";
+import type {
+  AddressStackDirectiveContext,
+  ArchitectureDirectiveContext,
+  AssemblerPolicyDirectiveContext,
+  BaseLayoutDirectiveContext,
+  DataDirectiveContext,
+  FillPadDirectiveContext,
+  FlowControlDirectiveContext,
+  IncludeDirectiveContext,
+  MapperDirectiveContext,
+  MemoryDirectiveContext,
+  NarrowDirectiveHandler,
+  NamespaceDirectiveContext,
+  OrgDirectiveContext,
+  SpcDirectiveContext,
+  StartposDirectiveContext,
+  StructDirectiveContext,
+  TableDirectiveContext,
+} from "./types.js";
+
+type BoundDirectiveHandler = (
+  words: string[],
+  raw: string,
+  command?: NormalizedCommand,
+) => void;
+
+export interface DirectiveRegistryContexts {
+  data: DataDirectiveContext;
+  fillPad: FillPadDirectiveContext;
+  flowControl: FlowControlDirectiveContext;
+  includeSource: IncludeDirectiveContext;
+  layout: {
+    addressStack: AddressStackDirectiveContext;
+    architecture: ArchitectureDirectiveContext;
+    base: BaseLayoutDirectiveContext;
+    mapper: MapperDirectiveContext;
+    org: OrgDirectiveContext;
+    policy: AssemblerPolicyDirectiveContext;
+    runtime: SpcDirectiveContext;
+    startpos: StartposDirectiveContext;
+  };
+  memory: MemoryDirectiveContext;
+  namespace: NamespaceDirectiveContext;
+  spc: SpcDirectiveContext;
+  struct: StructDirectiveContext;
+  table: TableDirectiveContext;
+}
 
 export class DirectiveRegistry {
-  readonly handlers = new Map<string, DirectiveHandler>();
+  readonly handlers = new Map<string, BoundDirectiveHandler>();
 
-  constructor(public readonly ctx: DirectiveContext) {}
-
-  register(keyword: string | string[], handler: DirectiveHandler): void {
+  register<Context>(
+    keyword: string | string[],
+    context: Context,
+    handler: NarrowDirectiveHandler<Context>,
+  ): void {
     const keywords = Array.isArray(keyword) ? keyword : [keyword];
     for (const entry of keywords) {
-      this.handlers.set(entry, handler);
+      this.handlers.set(entry, (words, raw, command) => handler(context, words, raw, command));
     }
   }
 
@@ -34,7 +81,7 @@ export class DirectiveRegistry {
       return false;
     }
 
-    handler(this.ctx, words, raw, command);
+    handler(words, raw, command);
     return true;
   }
 
@@ -43,22 +90,19 @@ export class DirectiveRegistry {
   }
 }
 
-export const createDirectiveRegistry = (
-  session: AssemblySession,
-  operandResolver: OperandResolver,
-): DirectiveRegistry => {
-  const registry = new DirectiveRegistry({ session, operandResolver });
+export const createDirectiveRegistry = (contexts: DirectiveRegistryContexts): DirectiveRegistry => {
+  const registry = new DirectiveRegistry();
 
-  registerIncludeSourceDirectives(registry);
-  registerFillPadDirectives(registry);
-  registerFlowControlDirectives(registry);
-  registerNamespaceDirectives(registry);
-  registerLayoutDirectives(registry);
-  registerDataDirectives(registry);
-  registerSpcDirectives(registry);
-  registerStructBinaryDirectives(registry);
-  registerMiscDirectives(registry);
-  registerMemoryDirectives(registry);
+  registerIncludeSourceDirectives(registry, contexts.includeSource);
+  registerFillPadDirectives(registry, contexts.fillPad);
+  registerFlowControlDirectives(registry, contexts.flowControl);
+  registerNamespaceDirectives(registry, contexts.namespace);
+  registerLayoutDirectives(registry, contexts.layout);
+  registerDataDirectives(registry, contexts.data);
+  registerSpcDirectives(registry, contexts.spc);
+  registerStructBinaryDirectives(registry, contexts.struct);
+  registerMiscDirectives(registry, contexts.table);
+  registerMemoryDirectives(registry, contexts.memory);
 
   return registry;
 };

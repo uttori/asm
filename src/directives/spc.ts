@@ -1,17 +1,13 @@
 import type { DirectiveRegistry } from "./registry.js";
-import type { DirectiveSpcCapability } from "./types.js";
-
-type SpcDirectiveContext = {
-  session: DirectiveSpcCapability;
-};
+import type { SpcDirectiveContext } from "./types.js";
 
 /**
  * Starts an SPC block using only SPC-related session capabilities.
  * @param {SpcDirectiveContext} ctx The SPC-capable directive context.
  * @param {string[]} words The directive words.
  */
-const handleSpcblock = ({ session }: SpcDirectiveContext, words: string[]): void => {
-  session.handleSpcblock(words);
+export const handleSpcblock = ({ runtime }: SpcDirectiveContext, words: string[]): void => {
+  runtime.handleSpcblock(words);
 };
 
 /**
@@ -19,12 +15,15 @@ const handleSpcblock = ({ session }: SpcDirectiveContext, words: string[]): void
  * @param {SpcDirectiveContext} ctx The SPC-capable directive context.
  * @param {string[]} words The directive words.
  */
-const handleEndSpcblock = ({ session }: SpcDirectiveContext, words: string[]): void => {
-  session.handleEndSpcblock(words);
+export const handleEndSpcblock = ({ runtime }: SpcDirectiveContext, words: string[]): void => {
+  runtime.handleEndSpcblock(words);
 };
 
-export const registerSpcDirectives = (registry: DirectiveRegistry): void => {
-  registry.register("spcblock", handleSpcblock);
+export const registerSpcDirectives = (
+  registry: DirectiveRegistry,
+  context: SpcDirectiveContext,
+): void => {
+  registry.register("spcblock", context, handleSpcblock);
 
-  registry.register("endspcblock", handleEndSpcblock);
+  registry.register("endspcblock", context, handleEndSpcblock);
 };

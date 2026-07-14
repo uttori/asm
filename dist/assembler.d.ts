@@ -13,7 +13,6 @@ import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { type ArchitectureDefinition, type ArchitectureRegistry } from "./architecture-registry.js";
 import { DirectiveRegistry } from "./directives/registry.js";
-import type { AssemblySession } from "./directives/types.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
@@ -173,7 +172,7 @@ export interface IncludedFileInfo {
     /** Whether the file has been guarded with includeonce */
     guarded: boolean;
 }
-export declare class Assembler implements AssemblySession {
+export declare class Assembler {
     /** The current target address. `snespos` */
     currentTargetAddress: number;
     /** The current target base address. `realsnespos` */
@@ -289,6 +288,7 @@ export declare class Assembler implements AssemblySession {
     readonly includeEdges: AssemblyIncludeEdge[];
     activeStageExecutionState: StageExecutionState | null;
     analysisErrorRecoveryEnabled: boolean;
+    runtimePassthroughRewriteEnabled: boolean;
     get defineEngine(): DefineEngine;
     get directiveRuntime(): DirectiveRuntimeService;
     get frontEndCommandService(): FrontEndCommandService;
@@ -394,8 +394,7 @@ export declare class Assembler implements AssemblySession {
      */
     private createToolingSession;
     /**
-     * Rebinds directive handlers to a fresh session while preserving any custom
-     * registrations present on the current registry.
+     * Creates directive handlers bound to a fresh session's family capabilities.
      * @param {Assembler} session The session that should receive directive calls.
      * @returns {DirectiveRegistry} A registry bound to the provided session.
      */
@@ -513,8 +512,6 @@ export declare class Assembler implements AssemblySession {
     processNormalizedCommand(state: NormalizedCommand, rewriteRaw?: boolean): void;
     getOrCreateLoweredProgram(stageState: StageExecutionState, program: ProgramModel): LoweredProgram;
     dispatchLoweredNode(lowered: LoweredCommand): void;
-    handleSpcblock(words: string[]): void;
-    handleEndSpcblock(words: string[]): void;
     /**
      * Parses a function definition of the form:
      *   function name(param1, param2...) = expression
@@ -528,30 +525,11 @@ export declare class Assembler implements AssemblySession {
      */
     addAddressToLine(address: number): void;
     /**
-     * Handles `org` directive to set SNES memory location.
-     * @param {string[]} params - The parameters for the org directive.
-     */
-    handleOrg(params: string[]): void;
-    /**
-     * Handles `db`, `dw`, `dl`, `dd` directives for defining data.
-     * @param {string} type - The type of data directive.
-     * @param {string[]} params - The parameters for the data directive.
-     */
-    handleDataDirective(type: string, params: string[]): void;
-    /**
      * Writes data of the specified length.
      * @param {number} len The length of the data to write.
      * @param {number} value The value to write.
      */
     writeDataByLength(len: number, value: number): void;
-    /**
-     * Pushes the current PC onto the pushpcStack.
-     */
-    handlePushPC(): void;
-    /**
-     * Restores the previous PC.
-     */
-    handlePullPC(): void;
     /**
      * Evaluates a range expression and returns the result.
      * @param {string} expr The expression to evaluate.
@@ -763,12 +741,6 @@ export declare class Assembler implements AssemblySession {
      * @returns {number[]} An array of numbers representing the mapped characters.
      */
     processStringWithMapping(input: string): number[];
-    /**
-     * Executes a freshly lowered runtime node, preserving macro rewrite semantics for
-     * preprocessing-sensitive passthrough commands.
-     * @param {LoweredExecutableNode} node The lowered runtime node to execute.
-     */
-    executeLoweredRuntimeNode(node: LoweredExecutableNode): void;
     /**
      * Lowers completed runtime nodes and executes them through the production executor.
      * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.

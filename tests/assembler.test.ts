@@ -2802,14 +2802,15 @@ test("handleIncbin", t => {
 
   // Test with arrow syntax and numeric address
   writtenBytes.length = 0;
-  assembler.handlePushPC = () => {}; // Mock
-  assembler.handlePullPC = () => {}; // Mock
+  assembler.directiveRuntime.handlePushPC = () => {}; // Mock
+  assembler.directiveRuntime.handlePullPC = () => {}; // Mock
   assembler.operandResolver.getnum = (val) => parseInt((typeof val === "string" ? val : "").replace("$", ""), 16); // Mock
   assembler.addAddressToLine = () => {}; // Mock
 
   handleIncbin({
     session: assembler,
     operandResolver: assembler.operandResolver,
+    runtime: assembler.directiveRuntime,
   }, ["incbin", "testfile.bin", "->", "$1000"]);
   t.is(assembler.currentTargetAddress, 0x1000 + mockData.length, "Arrow syntax with numeric address should set position");
 
@@ -2822,7 +2823,8 @@ test("handleIncbin", t => {
 
   handleIncbin({
     session: assembler,
-    operandResolver: assembler.operandResolver
+    operandResolver: assembler.operandResolver,
+    runtime: assembler.directiveRuntime,
   }, ["incbin", "testfile.bin", "->", "TestLabel"]);
   t.is(writtenBytes.length, 8, "Bytes should be written on pass 0");
 
@@ -2837,6 +2839,7 @@ test("handleIncbin", t => {
   handleIncbin({
     session: assembler,
     operandResolver: assembler.operandResolver,
+    runtime: assembler.directiveRuntime,
   }, ["incbin", "testfile.bin", "->", "TestLabel"]);
   t.is(assembler.currentTargetAddress, 0x2000 + mockData.length, "Arrow syntax with label should set position");
   setLabelStub.restore();
@@ -3767,7 +3770,7 @@ test("handlePushPC and handlePullPC - basic functionality", t => {
   assembler.currentTargetBaseStartAddress = 0x8000;
 
   // Push PC
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
 
   // Change positions
   assembler.currentTargetAddress = 0x9000;
@@ -3776,7 +3779,7 @@ test("handlePushPC and handlePullPC - basic functionality", t => {
   assembler.currentTargetBaseStartAddress = 0x9000;
 
   // Pull PC should restore original positions
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
 
   // Verify positions were restored
   t.is(assembler.currentTargetAddress, 0x8000, "currentTargetAddress should be restored");
@@ -3795,7 +3798,7 @@ test("handlePushPC - multiple pushes", t => {
   assembler.currentTargetBaseStartAddress = 0x1000;
 
   // First push
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
 
   // Change positions
   assembler.currentTargetAddress = 0x2000;
@@ -3804,7 +3807,7 @@ test("handlePushPC - multiple pushes", t => {
   assembler.currentTargetBaseStartAddress = 0x2000;
 
   // Second push
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
 
   // Change positions again
   assembler.currentTargetAddress = 0x3000;
@@ -3813,11 +3816,11 @@ test("handlePushPC - multiple pushes", t => {
   assembler.currentTargetBaseStartAddress = 0x3000;
 
   // First pull should restore to second position
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
   t.is(assembler.currentTargetAddress, 0x2000, "currentTargetAddress should be restored to second position");
 
   // Second pull should restore to first position
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
   t.is(assembler.currentTargetAddress, 0x1000, "currentTargetAddress should be restored to first position");
 });
 
@@ -3826,12 +3829,12 @@ test("handlePushPC - stack overflow", t => {
 
   // Fill the stack to the limit (256 pushes)
   for (let i = 0; i < 256; i++) {
-    assembler.handlePushPC();
+    assembler.directiveRuntime.handlePushPC();
   }
 
   // Next push should throw an error
   const error = t.throws(() => {
-    assembler.handlePushPC();
+    assembler.directiveRuntime.handlePushPC();
   }, { instanceOf: Error });
 
   t.is(error.message, "PushPC stack overflow.");
@@ -3842,7 +3845,7 @@ test("handlePullPC - without matching push", t => {
 
   // Pull without push should throw an error
   const error = t.throws(() => {
-    assembler.handlePullPC();
+    assembler.directiveRuntime.handlePullPC();
   }, { instanceOf: Error });
 
   t.is(error.message, "PullPC without PushPC.");
@@ -3858,7 +3861,7 @@ test("handlePushPC and handlePullPC - nested operations", t => {
   assembler.currentTargetBaseStartAddress = 0x1000;
 
   // First push
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
 
   // Change positions
   assembler.currentTargetAddress = 0x2000;
@@ -3867,7 +3870,7 @@ test("handlePushPC and handlePullPC - nested operations", t => {
   assembler.currentTargetBaseStartAddress = 0x2000;
 
   // Second push
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
 
   // Change positions again
   assembler.currentTargetAddress = 0x3000;
@@ -3876,7 +3879,7 @@ test("handlePushPC and handlePullPC - nested operations", t => {
   assembler.currentTargetBaseStartAddress = 0x3000;
 
   // Third push
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
 
   // Change positions one more time
   assembler.currentTargetAddress = 0x4000;
@@ -3885,13 +3888,13 @@ test("handlePushPC and handlePullPC - nested operations", t => {
   assembler.currentTargetBaseStartAddress = 0x4000;
 
   // Pull in reverse order
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
   t.is(assembler.currentTargetAddress, 0x3000, "First pull should restore to third position");
 
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
   t.is(assembler.currentTargetAddress, 0x2000, "Second pull should restore to second position");
 
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
   t.is(assembler.currentTargetAddress, 0x1000, "Third pull should restore to first position");
 
   // Verify pushpcnum is back to 0
@@ -3908,7 +3911,7 @@ test("handlePushPC and handlePullPC - with different position values", t => {
   assembler.currentTargetBaseStartAddress = 0x1300;
 
   // Push PC
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
 
   // Change all positions
   assembler.currentTargetAddress = 0x2000;
@@ -3917,7 +3920,7 @@ test("handlePushPC and handlePullPC - with different position values", t => {
   assembler.currentTargetBaseStartAddress = 0x2300;
 
   // Pull PC should restore all original positions
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
 
   // Verify each position was restored correctly
   t.is(assembler.currentTargetAddress, 0x1000, "currentTargetAddress should be restored to original value");
@@ -3933,17 +3936,17 @@ test("handlePushPC and handlePullPC - pushpcnum tracking", t => {
   t.is(assembler.pushpcnum, 0, "Initial pushpcnum should be 0");
 
   // Push PC and check counter
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
   t.is(assembler.pushpcnum, 1, "pushpcnum should be 1 after first push");
 
-  assembler.handlePushPC();
+  assembler.directiveRuntime.handlePushPC();
   t.is(assembler.pushpcnum, 2, "pushpcnum should be 2 after second push");
 
   // Pull PC and check counter
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
   t.is(assembler.pushpcnum, 1, "pushpcnum should be 1 after first pull");
 
-  assembler.handlePullPC();
+  assembler.directiveRuntime.handlePullPC();
   t.is(assembler.pushpcnum, 0, "pushpcnum should be 0 after second pull");
 });
 
@@ -4099,16 +4102,16 @@ test("handleDataDirective - basic numeric values", t => {
   const write2Spy = sinon.spy(assembler, "write2");
 
   // Test db with single value
-  assembler.handleDataDirective("db", ["42"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["42"]);
   t.true(write1Spy.calledWith(42), "Should write 1-byte value correctly");
 
   // Test dw with single value
-  assembler.handleDataDirective("dw", ["1234"]);
+  assembler.directiveRuntime.handleDataDirective("dw", ["1234"]);
   t.true(write2Spy.calledWith(1234), "Should write 2-byte value correctly");
 
   // Test multiple values
   write1Spy.resetHistory();
-  assembler.handleDataDirective("db", ["10,20,30"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["10,20,30"]);
   t.true(write1Spy.calledThrice, "Should handle multiple values");
   t.deepEqual(
     write1Spy.args.map(args => args[0]),
@@ -4126,31 +4129,31 @@ test("handleDataDirective - different directives", t => {
   const write4Spy = sinon.spy(assembler, "write4");
 
   // Test db/dc.b (1 byte)
-  assembler.handleDataDirective("db", ["42"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["42"]);
   t.true(write1Spy.calledWith(42), "db should write 1 byte");
 
   write1Spy.resetHistory();
-  assembler.handleDataDirective("dc.b", ["42"]);
+  assembler.directiveRuntime.handleDataDirective("dc.b", ["42"]);
   t.true(write1Spy.calledWith(42), "dc.b should write 1 byte");
 
   // Test dw/dc.w (2 bytes)
-  assembler.handleDataDirective("dw", ["1234"]);
+  assembler.directiveRuntime.handleDataDirective("dw", ["1234"]);
   t.true(write2Spy.calledWith(1234), "dw should write 2 bytes");
 
   write2Spy.resetHistory();
-  assembler.handleDataDirective("dc.w", ["1234"]);
+  assembler.directiveRuntime.handleDataDirective("dc.w", ["1234"]);
   t.true(write2Spy.calledWith(1234), "dc.w should write 2 bytes");
 
   // Test dl/dc.l (3 bytes)
-  assembler.handleDataDirective("dl", ["123456"]);
+  assembler.directiveRuntime.handleDataDirective("dl", ["123456"]);
   t.true(write3Spy.calledWith(123456), "dl should write 3 bytes");
 
   write3Spy.resetHistory();
-  assembler.handleDataDirective("dc.l", ["123456"]);
+  assembler.directiveRuntime.handleDataDirective("dc.l", ["123456"]);
   t.true(write3Spy.calledWith(123456), "dc.l should write 3 bytes");
 
   // Test dd (4 bytes)
-  assembler.handleDataDirective("dd", ["12345678"]);
+  assembler.directiveRuntime.handleDataDirective("dd", ["12345678"]);
   t.true(write4Spy.calledWith(12345678), "dd should write 4 bytes");
 });
 
@@ -4160,8 +4163,8 @@ test("handleDataDirective - pass 0 estimates byte size", t => {
   assembler.defines.set("bytes", "1,2,3");
   const stepSpy = sinon.spy(assembler, "step");
 
-  assembler.handleDataDirective("db", ['"Hi"']);
-  assembler.handleDataDirective("dw", ["!bytes"]);
+  assembler.directiveRuntime.handleDataDirective("db", ['"Hi"']);
+  assembler.directiveRuntime.handleDataDirective("dw", ["!bytes"]);
 
   t.deepEqual(
     stepSpy.getCalls().map((call) => call.args[0]),
@@ -4178,7 +4181,7 @@ test("handleDataDirective - string values", t => {
   const write1Spy = sinon.spy(assembler, "write1");
 
   // Test with quoted string
-  assembler.handleDataDirective("db", ['"Hello"']);
+  assembler.directiveRuntime.handleDataDirective("db", ['"Hello"']);
   t.is(write1Spy.callCount, 5, "Should write each character of the string");
   t.deepEqual(
     write1Spy.args.map(args => args[0]),
@@ -4188,7 +4191,7 @@ test("handleDataDirective - string values", t => {
 
   // Test with single quotes
   write1Spy.resetHistory();
-  assembler.handleDataDirective("db", ["'World'"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["'World'"]);
   t.is(write1Spy.callCount, 5, "Should handle single-quoted strings");
   t.deepEqual(
     write1Spy.args.map(args => args[0]),
@@ -4198,7 +4201,7 @@ test("handleDataDirective - string values", t => {
 
   // Test with mixed string and numeric values
   write1Spy.resetHistory();
-  assembler.handleDataDirective("db", ['"Hi",44,\'Bye\'']);
+  assembler.directiveRuntime.handleDataDirective("db", ['"Hi",44,\'Bye\'']);
   // t.is(write1Spy.callCount, 6, "Should handle mixed string and numeric values");
   t.deepEqual(
     write1Spy.args.map(args => args[0]),
@@ -4214,7 +4217,7 @@ test("handleDataDirective - deprecated # syntax", t => {
   // const consoleWarnStub = sinon.stub(console, "warn");
 
   // Test with # prefix (deprecated)
-  assembler.handleDataDirective("db", ["#42"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["#42"]);
   t.true(write1Spy.calledWith(42), "Should handle # prefix correctly");
   // t.true(consoleWarnStub.calledOnce, "Should issue warning for # prefix");
   // t.true(
@@ -4234,12 +4237,12 @@ test("handleDataDirective - math expressions", t => {
   mathStub.withArgs("20*2").returns(40);
 
   // Test with math expressions
-  assembler.handleDataDirective("db", ["10+5"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["10+5"]);
   t.true(mathStub.calledWith("10+5"), "Should evaluate math expressions");
   t.true(write1Spy.calledWith(15), "Should write result of math expression");
 
   write1Spy.resetHistory();
-  assembler.handleDataDirective("db", ["20*2"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["20*2"]);
   t.true(mathStub.calledWith("20*2"), "Should evaluate complex expressions");
   t.true(write1Spy.calledWith(40), "Should write result of complex expression");
 });
@@ -4256,14 +4259,14 @@ test("handleDataDirective - struct references", t => {
   resolveStructLabelStub.withArgs("unknown.field").throws(new Error("Unknown struct"));
 
   // Test with valid struct reference
-  assembler.handleDataDirective("db", ["sprite.x_pos"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["sprite.x_pos"]);
   t.true(resolveStructLabelStub.calledWith("sprite.x_pos"), "Should attempt to resolve struct references");
   t.true(write1Spy.calledWith(42), "Should write resolved struct value");
 
   // Test fallback to numeric resolver when struct resolution fails
   getnumStub.withArgs("unknown.field").returns(100);
   write1Spy.resetHistory();
-  assembler.handleDataDirective("db", ["unknown.field"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["unknown.field"]);
   t.true(getnumStub.calledWith("unknown.field"), "Should fall back to numeric resolution when struct resolution fails");
   t.true(write1Spy.calledWith(100), "Should write result from numeric fallback");
 });
@@ -4279,7 +4282,7 @@ test("handleDataDirective - label references", t => {
   getLabelValueStub.withArgs("LABEL1", true).returns(50);
 
   // Test with label reference
-  assembler.handleDataDirective("db", ["LABEL1"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["LABEL1"]);
   t.true(getLabelValueStub.calledWith("LABEL1", false), "Should attempt to resolve label through numeric resolver");
   t.true(write1Spy.calledWith(50), "Should write resolved label value");
 
@@ -4287,7 +4290,7 @@ test("handleDataDirective - label references", t => {
   getLabelValueStub.withArgs("UNKNOWN_LABEL", false).throws(new Error("Label 'UNKNOWN_LABEL' not found."));
 
   const error = t.throws(() => {
-    assembler.handleDataDirective("db", ["UNKNOWN_LABEL"]);
+    assembler.directiveRuntime.handleDataDirective("db", ["UNKNOWN_LABEL"]);
   }, { instanceOf: Error });
 
   t.true(
@@ -4303,14 +4306,14 @@ test("handleDataDirective - throws on unsupported directive type", t => {
 
   // Test with invalid directive type
   const error = t.throws(() => {
-    assembler.handleDataDirective("dx", ["42"]);
+    assembler.directiveRuntime.handleDataDirective("dx", ["42"]);
   }, { instanceOf: Error });
 
   t.is(error.message, "Invalid data directive: dx", "Should throw with correct error message for unsupported directive");
 
   // Test with completely invalid directive
   const error2 = t.throws(() => {
-    assembler.handleDataDirective("invalid_directive", ["42"]);
+    assembler.directiveRuntime.handleDataDirective("invalid_directive", ["42"]);
   }, { instanceOf: Error });
 
   t.is(error2.message, "Invalid data directive: invalid_directive", "Should throw with correct error message for invalid directive");
@@ -4327,10 +4330,10 @@ test("handleDataDirective - skips writing in pass 0", t => {
   const write4Spy = sinon.spy(assembler, "write4");
 
   // Test with different directive types
-  assembler.handleDataDirective("db", ["42"]);
-  assembler.handleDataDirective("dw", ["1234"]);
-  assembler.handleDataDirective("dl", ["123456"]);
-  assembler.handleDataDirective("dd", ["12345678"]);
+  assembler.directiveRuntime.handleDataDirective("db", ["42"]);
+  assembler.directiveRuntime.handleDataDirective("dw", ["1234"]);
+  assembler.directiveRuntime.handleDataDirective("dl", ["123456"]);
+  assembler.directiveRuntime.handleDataDirective("dd", ["12345678"]);
 
   // Verify no write methods were called
   t.false(write1Spy.called, "write1 should not be called in pass 0");
@@ -4348,28 +4351,28 @@ test("handleDataDirective - throws on empty or invalid params", t => {
 
   // Test with empty params array
   const error1 = t.throws(() => {
-    assembler.handleDataDirective("db", []);
+    assembler.directiveRuntime.handleDataDirective("db", []);
   }, { instanceOf: Error });
 
   t.is(error1.message, "DB directive requires at least one parameter.", "Should throw when params array is empty");
 
   // Test with undefined params
   const error2 = t.throws(() => {
-    assembler.handleDataDirective("dw", undefined as unknown as string[]);
+    assembler.directiveRuntime.handleDataDirective("dw", undefined as unknown as string[]);
   }, { instanceOf: Error });
 
   t.is(error2.message, "DW directive requires at least one parameter.", "Should throw when params is undefined");
 
   // Test with null params
   const error3 = t.throws(() => {
-    assembler.handleDataDirective("dl", null as unknown as string[]);
+    assembler.directiveRuntime.handleDataDirective("dl", null as unknown as string[]);
   }, { instanceOf: Error });
 
   t.is(error3.message, "DL directive requires at least one parameter.", "Should throw when params is null");
 
   // Test with non-array params
   const error4 = t.throws(() => {
-    assembler.handleDataDirective("dd", "not an array" as unknown as string[]);
+    assembler.directiveRuntime.handleDataDirective("dd", "not an array" as unknown as string[]);
   }, { instanceOf: Error });
 
   t.is(error4.message, "DD directive requires at least one parameter.", "Should throw when params is not an array");
@@ -4378,7 +4381,7 @@ test("handleDataDirective - throws on empty or invalid params", t => {
 test("handleOrg - sets SNES memory location with hex value", t => {
   const assembler = new Assembler();
 
-  assembler.handleOrg(["$8000"]);
+  assembler.directiveRuntime.handleOrg(["$8000"]);
 
   t.is(assembler.currentTargetAddress, 0x8000, "currentTargetAddress should be set to the hex value");
   t.is(assembler.currentTargetBaseAddress, 0x8000, "currentTargetBaseAddress should be set to the hex value");
@@ -4389,7 +4392,7 @@ test("handleOrg - sets SNES memory location with hex value", t => {
 test("handleOrg - sets SNES memory location with decimal value", t => {
   const assembler = new Assembler();
 
-  assembler.handleOrg(["32768"]);
+  assembler.directiveRuntime.handleOrg(["32768"]);
 
   t.is(assembler.currentTargetAddress, 32768, "currentTargetAddress should be set to the decimal value");
   t.is(assembler.currentTargetBaseAddress, 32768, "currentTargetBaseAddress should be set to the decimal value");
@@ -4401,7 +4404,7 @@ test("handleOrg - throws error with no parameters", t => {
   const assembler = new Assembler();
 
   const error = t.throws(() => {
-    assembler.handleOrg([]);
+    assembler.directiveRuntime.handleOrg([]);
   }, { instanceOf: Error });
 
   t.is(error.message, "ORG requires a single address parameter.", "Should throw with correct error message");
@@ -4411,7 +4414,7 @@ test("handleOrg - throws error with multiple parameters", t => {
   const assembler = new Assembler();
 
   const error = t.throws(() => {
-    assembler.handleOrg(["$8000", "$9000"]);
+    assembler.directiveRuntime.handleOrg(["$8000", "$9000"]);
   }, { instanceOf: Error });
 
   t.is(error.message, "ORG requires a single address parameter.", "Should throw with correct error message");
@@ -4421,7 +4424,7 @@ test("handleOrg - throws error with invalid hex value", t => {
   const assembler = new Assembler();
 
   const error = t.throws(() => {
-    assembler.handleOrg(["$INVALID"]);
+    assembler.directiveRuntime.handleOrg(["$INVALID"]);
   }, { instanceOf: Error });
 
   t.is(error.message, "Invalid ORG address: $INVALID", "Should throw with correct error message");
@@ -4431,7 +4434,7 @@ test("handleOrg - throws error with invalid decimal value", t => {
   const assembler = new Assembler();
 
   const error = t.throws(() => {
-    assembler.handleOrg(["INVALID"]);
+    assembler.directiveRuntime.handleOrg(["INVALID"]);
   }, { instanceOf: Error });
 
   t.is(error.message, "Invalid ORG address: INVALID", "Should throw with correct error message");
@@ -4441,7 +4444,7 @@ test("handleOrg - throws error with negative value", t => {
   const assembler = new Assembler();
 
   const error = t.throws(() => {
-    assembler.handleOrg(["-1"]);
+    assembler.directiveRuntime.handleOrg(["-1"]);
   }, { instanceOf: Error });
 
   t.is(error.message, "Invalid ORG address: -1", "Should throw with correct error message");
@@ -4451,7 +4454,7 @@ test("handleOrg - throws error with value exceeding 24-bit address space", t => 
   const assembler = new Assembler();
 
   const error = t.throws(() => {
-    assembler.handleOrg(["$1000000"]);
+    assembler.directiveRuntime.handleOrg(["$1000000"]);
   }, { instanceOf: Error });
 
   t.is(error.message, "Invalid ORG address: $1000000", "Should throw with correct error message");
@@ -4460,7 +4463,7 @@ test("handleOrg - throws error with value exceeding 24-bit address space", t => 
 test("handleOrg - handles address at 24-bit boundary", t => {
   const assembler = new Assembler();
 
-  assembler.handleOrg(["$FFFFFF"]);
+  assembler.directiveRuntime.handleOrg(["$FFFFFF"]);
 
   t.is(assembler.currentTargetAddress, 0xFFFFFF, "currentTargetAddress should be set to the maximum 24-bit value");
   t.is(assembler.currentTargetBaseAddress, 0xFFFFFF, "currentTargetBaseAddress should be set to the maximum 24-bit value");
@@ -4469,7 +4472,7 @@ test("handleOrg - handles address at 24-bit boundary", t => {
 test("handleOrg - handles address with whitespace", t => {
   const assembler = new Assembler();
 
-  assembler.handleOrg([" $A000 "]);
+  assembler.directiveRuntime.handleOrg([" $A000 "]);
 
   t.is(assembler.currentTargetAddress, 0xA000, "currentTargetAddress should be set correctly with trimmed value");
 });

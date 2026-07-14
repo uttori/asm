@@ -1,5 +1,7 @@
 import type { AssemblyStageName } from "../assembler.js";
+import { shouldAutoCloseSpcblock } from "../compatibility/asar-compatibility-profile.js";
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
+import type { DirectiveRuntimeService } from "./directive-runtime-service.js";
 
 export interface RomWriterHost {
   traceStage: AssemblyStageName;
@@ -22,7 +24,7 @@ export interface RomWriterHost {
   fillRomData(start: number, value: number, length: number): void;
   writeDataBytes(start: number, value: number, length?: number): void;
   updateHeaderAndCRC32(): void;
-  handleEndSpcblock(words: string[]): void;
+  directiveRuntime: Pick<DirectiveRuntimeService, "handleEndSpcblock">;
   setWritePosition(address: number): void;
   syncWriteStarts(): void;
   incrementBytesWritten(num: number): void;
@@ -155,8 +157,8 @@ export class RomWriterService {
    * Finishes the pass.
    */
   finishPass(): void {
-    if (this.host.spcInlineCompatMode && this.host.inSpcblock) {
-      this.host.handleEndSpcblock(["endspcblock", "execute", "0"]);
+    if (shouldAutoCloseSpcblock(this.host.spcInlineCompatMode, this.host.inSpcblock)) {
+      this.host.directiveRuntime.handleEndSpcblock(["endspcblock", "execute", "0"]);
     }
     if (this.host.inSpcblock) {
       throw new Error("Missing endspcblock before end of pass.");

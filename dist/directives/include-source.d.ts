@@ -1,11 +1,10 @@
 import type { DirectiveRegistry } from "./registry.js";
-import { DirectiveContext } from "./types.js";
+import type { IncludeDirectiveContext } from "./types.js";
 /**
  * Handles an incbin command.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {IncludeDirectiveContext} ctx The directive context.
  * @param {string[]} words Directive keyword.
  */
-export declare const handleIncbin: ({ session }: DirectiveContext, words: string[]) => void;
-export declare const registerIncludeSourceDirectives: (registry: DirectiveRegistry) => void;
+export declare const handleIncbin: ({ session, operandResolver, runtime }: IncludeDirectiveContext, words: string[]) => void;
+export declare const registerIncludeSourceDirectives: (registry: DirectiveRegistry, context: IncludeDirectiveContext) => void;
 //# sourceMappingURL=include-source.d.ts.map

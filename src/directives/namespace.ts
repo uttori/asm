@@ -1,12 +1,11 @@
 import type { DirectiveRegistry } from "./registry.js";
-import { DirectiveContext } from "./types.js";
+import type { NamespaceDirectiveContext } from "./types.js";
 
 /**
  * Pushes the current namespace.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {NamespaceDirectiveContext} ctx The directive context.
  */
-const handlePushNamespace = ({ session }: DirectiveContext) => {
+export const handlePushNamespace = ({ session }: NamespaceDirectiveContext): void => {
   // debug("handlePushNamespace")
   session.namespaceStack.push(session.currentNamespace);
   if (session.namespaceNestingEnabled) {
@@ -17,10 +16,9 @@ const handlePushNamespace = ({ session }: DirectiveContext) => {
 
 /**
  * Restores the previous namespace.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {NamespaceDirectiveContext} ctx The directive context.
  */
-const handlePullNamespace = ({ session }: DirectiveContext) => {
+export const handlePullNamespace = ({ session }: NamespaceDirectiveContext): void => {
   // debug("handlePullNamespace");
   if (session.namespaceStack.length === 0) {
     throw new Error("pullns without pushns");
@@ -42,11 +40,10 @@ const handlePullNamespace = ({ session }: DirectiveContext) => {
  * @example
  * namespace "identifier"
  * namespace identifier
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {NamespaceDirectiveContext} ctx The directive context.
  * @param {string[]} words The words of the namespace command.
  */
-const handleNamespace = ({ session }: DirectiveContext, words: string[]) => {
+export const handleNamespace = ({ session }: NamespaceDirectiveContext, words: string[]): void => {
   if (session.inSpcblock) {
     throw new Error("NAMESPACE is unavailable inside spcblock.");
   }
@@ -119,10 +116,13 @@ const handleNamespace = ({ session }: DirectiveContext, words: string[]) => {
   }
 };
 
-export const registerNamespaceDirectives = (registry: DirectiveRegistry): void => {
-  registry.register("namespace", handleNamespace);
+export const registerNamespaceDirectives = (
+  registry: DirectiveRegistry,
+  context: NamespaceDirectiveContext,
+): void => {
+  registry.register("namespace", context, handleNamespace);
 
-  registry.register("pushns", handlePushNamespace);
+  registry.register("pushns", context, handlePushNamespace);
 
-  registry.register("pullns", handlePullNamespace);
+  registry.register("pullns", context, handlePullNamespace);
 };

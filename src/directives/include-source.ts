@@ -1,14 +1,16 @@
 import { parseExpressionNode } from "../ir/expression-node.js";
 import type { DirectiveRegistry } from "./registry.js";
-import { DirectiveContext } from "./types.js";
+import type { IncludeDirectiveContext } from "./types.js";
 
 /**
  * Handles an incbin command.
- * @param {DirectiveContext} ctx The directive context.
- * @param {AssemblySession} ctx.session The assembly session.
+ * @param {IncludeDirectiveContext} ctx The directive context.
  * @param {string[]} words Directive keyword.
  */
-export const handleIncbin = ({ session }: DirectiveContext, words: string[]): void => {
+export const handleIncbin = (
+  { session, operandResolver, runtime }: IncludeDirectiveContext,
+  words: string[],
+): void => {
   let targetLocationSpecified = false;
   let targetLocation: string | null = null;
   const arrowIndex = words.indexOf("->");
@@ -87,11 +89,11 @@ export const handleIncbin = ({ session }: DirectiveContext, words: string[]): vo
   const incbinData = fileData.slice(startOffset, endOffset);
 
   if (targetLocationSpecified) {
-    session.handlePushPC();
+    runtime.handlePushPC();
 
     let targetAddress: number;
     if (/^\$?[\dA-Fa-f]+$/.test(targetLocation ?? "")) {
-      targetAddress = session.operandResolver.getnum(targetLocation ?? "");
+      targetAddress = operandResolver.getnum(targetLocation ?? "");
     } else {
       targetAddress = session.symbolScope.getLabelValue(targetLocation ?? "", false);
     }
@@ -101,7 +103,7 @@ export const handleIncbin = ({ session }: DirectiveContext, words: string[]): vo
       session.write1(byte);
     }
 
-    session.handlePullPC();
+    runtime.handlePullPC();
   } else {
     for (const byte of incbinData) {
       session.write1(byte);
@@ -111,8 +113,11 @@ export const handleIncbin = ({ session }: DirectiveContext, words: string[]): vo
   session.recordCurrentAddress();
 }
 
-export const registerIncludeSourceDirectives = (registry: DirectiveRegistry): void => {
-  registry.register("incsrc", ({ session }, words, _raw, command) => {
+export const registerIncludeSourceDirectives = (
+  registry: DirectiveRegistry,
+  context: IncludeDirectiveContext,
+): void => {
+  registry.register("incsrc", context, ({ session }, words, _raw, command) => {
     const target = command?.parsed.includeTarget?.target ?? words[1];
     if (!target) {
       throw new Error("incsrc requires exactly one filename parameter");
@@ -121,7 +126,7 @@ export const registerIncludeSourceDirectives = (registry: DirectiveRegistry): vo
     session.assemblefile(target, false);
   });
 
-  registry.register("include", ({ session }, words, _raw, command) => {
+  registry.register("include", context, ({ session }, words, _raw, command) => {
     const target = command?.parsed.includeTarget?.target ?? words[1];
     if (!target) {
       throw new Error("include requires exactly one filename parameter");
@@ -129,11 +134,11 @@ export const registerIncludeSourceDirectives = (registry: DirectiveRegistry): vo
     session.handleInclude("include", target, false);
   });
 
-  registry.register("includeonce", ({ session }) => {
+  registry.register("includeonce", context, ({ session }) => {
     const fileInfo = session.includedFiles.get(session.currentFile) || { included: true, guarded: false };
     fileInfo.guarded = true;
     session.includedFiles.set(session.currentFile, fileInfo);
   });
 
-  registry.register("incbin", handleIncbin);
+  registry.register("incbin", context, handleIncbin);
 };
