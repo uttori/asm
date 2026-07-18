@@ -1,6 +1,7 @@
 import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
 import { splitInlineCommands } from "./command-text-service.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+import { incrementInternalCounter, recordInternalCounterPeak } from "../internal-instrumentation.js";
 
 export type ProgramModel = {
   sourceFile: string;
@@ -108,11 +109,14 @@ export class ProgramModelBuilder {
     const cacheKey = `${sourceFile}::${startLine}::${commands.join("\n")}`;
     const cached = this.host.passProgramCache.get(cacheKey);
     if (cached) {
+      incrementInternalCounter("passProgramCacheHits");
       return cached;
     }
 
+    incrementInternalCounter("passProgramCacheMisses");
     const nodes = this.parseCommandStreamToNodes(commands, sourceFile, startLine);
     this.host.passProgramCache.set(cacheKey, nodes);
+    recordInternalCounterPeak("passProgramCachePeakSize", this.host.passProgramCache.size);
     return nodes;
   }
 

@@ -176,9 +176,9 @@ export const splitRespectingFunctions = (input: string): string[] => {
 /**
  * Extracts the variable name from a define statement.
  * @param {string} line The line to extract the variable name from.
- * @returns {string | undefined} The variable name or null if the line is not a define statement.
+ * @returns {string | undefined} The variable name or `undefined` if the line is not a define statement.
  */
-export const getDefineVariable = (line: string): string | null => {
+export const getDefineVariable = (line: string): string | undefined => {
   const match = line.trim().match(/^!([A-Z_a-z]\w*)\s*=/);
   return match ? match[1] : undefined;
 };

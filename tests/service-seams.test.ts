@@ -134,10 +134,22 @@ test("normalized dispatch also loads test rom directive", (t) => {
 
 test("normalized command preprocessing handles character mappings", (t) => {
   const assembler = new Assembler();
+  const handleCharacterMapping = spy(assembler.directiveRuntime, "handleCharacterMapping");
 
   assembler.processNormalizedCommand(commandNode('"A" = $42'), false);
 
+  t.true(handleCharacterMapping.calledOnceWithExactly(['"A"', "=", "$42"]));
   t.is(assembler.characterMappings.get("A"), 0x42);
+});
+
+test("directive effects stay behind the runtime service host contract", (t) => {
+  const assembler = new Assembler();
+  assembler.characterMappings.set("A", 0x10);
+
+  t.deepEqual(assembler.directiveRuntime.processStringWithMapping("AB"), [0x10, 0x42]);
+  t.false("handleCharacterMapping" in assembler);
+  t.false("processStringWithMapping" in assembler);
+  t.false("writeDataByLength" in assembler);
 });
 
 test("struct engine restores write position after struct definition lifecycle", (t) => {

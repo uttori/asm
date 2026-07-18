@@ -43,7 +43,7 @@ export declare function createLineSpan(text: string, line?: number): SourceSpan;
  * @param {number} [line] Optional line override.
  * @returns {SourceSpan} The shifted span.
  */
-export declare function shiftSourceSpan(span: SourceSpan, offset: number, line?: number): SourceSpan;
+export declare function shiftSourceSpan(span: SourceSpan, offset: number, line?: number | undefined): SourceSpan;
 /**
  * Derives token spans by scanning a normalized line from left to right.
  * @param {string} text The source text to scan.

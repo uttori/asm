@@ -1569,72 +1569,72 @@ test("assemblefile - handles file read errors", t => {
   t.is(assembler.currentFile, originalFile);
 });
 
-test("handleCharacterMapping - basic mapping", t => {
+test("directive runtime handleCharacterMapping - basic mapping", t => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Test basic character mapping
-  assembler.handleCharacterMapping(['"A"', "=", "0x42"]);
+  assembler.directiveRuntime.handleCharacterMapping(['"A"', "=", "0x42"]);
   t.is(assembler.characterMappings.get("A"), 0x42);
 });
 
-test("handleCharacterMapping - single quotes", t => {
+test("directive runtime handleCharacterMapping - single quotes", t => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Test with single quotes
-  assembler.handleCharacterMapping(["'B'", "=", "0x43"]);
+  assembler.directiveRuntime.handleCharacterMapping(["'B'", "=", "0x43"]);
   t.is(assembler.characterMappings.get("B"), 0x43);
 });
 
-test("handleCharacterMapping - numeric value", t => {
+test("directive runtime handleCharacterMapping - numeric value", t => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Test with decimal number
-  assembler.handleCharacterMapping(['"C"', "=", "65"]);
+  assembler.directiveRuntime.handleCharacterMapping(['"C"', "=", "65"]);
   t.is(assembler.characterMappings.get("C"), 65);
 });
 
-test("handleCharacterMapping - hex value", t => {
+test("directive runtime handleCharacterMapping - hex value", t => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Test with hex number
-  assembler.handleCharacterMapping(['"D"', "=", "$FF"]);
+  assembler.directiveRuntime.handleCharacterMapping(['"D"', "=", "$FF"]);
   t.is(assembler.characterMappings.get("D"), 0xFF);
 });
 
-test("handleCharacterMapping - overwrite existing mapping", t => {
+test("directive runtime handleCharacterMapping - overwrite existing mapping", t => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Set initial mapping
-  assembler.handleCharacterMapping(['"E"', "=", "0x50"]);
+  assembler.directiveRuntime.handleCharacterMapping(['"E"', "=", "0x50"]);
   t.is(assembler.characterMappings.get("E"), 0x50);
 
   // Overwrite with new value
-  assembler.handleCharacterMapping(['"E"', "=", "0x51"]);
+  assembler.directiveRuntime.handleCharacterMapping(['"E"', "=", "0x51"]);
   t.is(assembler.characterMappings.get("E"), 0x51);
 });
 
-test("handleCharacterMapping - throws error with incorrect format", t => {
+test("directive runtime handleCharacterMapping - throws error with incorrect format", t => {
   const assembler = new Assembler();
 
   // Test with too few arguments
   const error1 = t.throws(() => {
-    assembler.handleCharacterMapping(['"F"', "="]);
+    assembler.directiveRuntime.handleCharacterMapping(['"F"', "="]);
   }, {instanceOf: Error});
   t.is(error1.message, "Character mapping requires format: 'char' = value");
 
   // Test with too many arguments
   const error2 = t.throws(() => {
-    assembler.handleCharacterMapping(['"G"', "=", "0x60", "extra"]);
+    assembler.directiveRuntime.handleCharacterMapping(['"G"', "=", "0x60", "extra"]);
   }, {instanceOf: Error});
   t.is(error2.message, "Character mapping requires format: 'char' = value");
 });
 
-test("processStringWithMapping - basic character mapping", t => {
+test("directive runtime processStringWithMapping - basic character mapping", t => {
   const assembler = new Assembler();
 
   // Set up some character mappings
@@ -1644,12 +1644,12 @@ test("processStringWithMapping - basic character mapping", t => {
 
   // Test basic mapping
   t.deepEqual(
-    assembler.processStringWithMapping("ABC"),
+    assembler.directiveRuntime.processStringWithMapping("ABC"),
     [0x41, 0x42, 0x43]
   );
 });
 
-test("processStringWithMapping - unmapped characters use charCode", t => {
+test("directive runtime processStringWithMapping - unmapped characters use charCode", t => {
   const assembler = new Assembler();
 
   // Set up some character mappings
@@ -1657,22 +1657,22 @@ test("processStringWithMapping - unmapped characters use charCode", t => {
 
   // Test with unmapped characters (should use charCodeAt)
   t.deepEqual(
-    assembler.processStringWithMapping("AXY"),
+    assembler.directiveRuntime.processStringWithMapping("AXY"),
     [0x41, "X".charCodeAt(0), "Y".charCodeAt(0)]
   );
 });
 
-test("processStringWithMapping - empty string", t => {
+test("directive runtime processStringWithMapping - empty string", t => {
   const assembler = new Assembler();
 
   // Test with empty string
   t.deepEqual(
-    assembler.processStringWithMapping(""),
+    assembler.directiveRuntime.processStringWithMapping(""),
     []
   );
 });
 
-test("processStringWithMapping - custom mappings", t => {
+test("directive runtime processStringWithMapping - custom mappings", t => {
   const assembler = new Assembler();
 
   // Set up custom mappings that differ from ASCII
@@ -1682,12 +1682,12 @@ test("processStringWithMapping - custom mappings", t => {
 
   // Test custom mappings
   t.deepEqual(
-    assembler.processStringWithMapping("ABC"),
+    assembler.directiveRuntime.processStringWithMapping("ABC"),
     [0x10, 0x20, 0x30]
   );
 });
 
-test("processStringWithMapping - mixed mapped and unmapped", t => {
+test("directive runtime processStringWithMapping - mixed mapped and unmapped", t => {
   const assembler = new Assembler();
 
   // Set up some character mappings
@@ -1696,12 +1696,12 @@ test("processStringWithMapping - mixed mapped and unmapped", t => {
 
   // Test with mixed mapped and unmapped characters
   t.deepEqual(
-    assembler.processStringWithMapping("ABCD"),
+    assembler.directiveRuntime.processStringWithMapping("ABCD"),
     [0x10, "B".charCodeAt(0), 0x30, "D".charCodeAt(0)]
   );
 });
 
-test("processStringWithMapping - special characters", t => {
+test("directive runtime processStringWithMapping - special characters", t => {
   const assembler = new Assembler();
 
   // Set up mappings for special characters
@@ -1711,12 +1711,12 @@ test("processStringWithMapping - special characters", t => {
 
   // Test with special characters
   t.deepEqual(
-    assembler.processStringWithMapping("Hello! ?"),
+    assembler.directiveRuntime.processStringWithMapping("Hello! ?"),
     ["H".charCodeAt(0), "e".charCodeAt(0), "l".charCodeAt(0), "l".charCodeAt(0), "o".charCodeAt(0), 0xFE, 0xFF, 0xFD]
   );
 });
 
-test("processStringWithMapping - unicode characters", t => {
+test("directive runtime processStringWithMapping - unicode characters", t => {
   const assembler = new Assembler();
 
   // Set up mappings for some unicode characters
@@ -1725,7 +1725,7 @@ test("processStringWithMapping - unicode characters", t => {
 
   // Test with unicode characters
   t.deepEqual(
-    assembler.processStringWithMapping("café niño"),
+    assembler.directiveRuntime.processStringWithMapping("café niño"),
     ["c".charCodeAt(0), "a".charCodeAt(0), "f".charCodeAt(0), 0xE9, " ".charCodeAt(0),
      "n".charCodeAt(0), "i".charCodeAt(0), 0xF1, "o".charCodeAt(0)]
   );
@@ -4009,7 +4009,7 @@ test("pullns directive sanitizes malformed nested namespace state", t => {
   t.is(assembler.currentNamespace, "Root");
 });
 
-test("writeDataByLength - writes data of different lengths", t => {
+test("directive runtime writeDataByLength - writes data of different lengths", t => {
   const assembler = new Assembler();
 
   // Spy on the write methods
@@ -4019,58 +4019,58 @@ test("writeDataByLength - writes data of different lengths", t => {
   const write4Spy = sinon.spy(assembler, "write4");
 
   // Test 1-byte write
-  assembler.writeDataByLength(1, 0xAB);
+  assembler.directiveRuntime.writeDataByLength(1, 0xAB);
   t.true(write1Spy.calledOnceWith(0xAB), "Should call write1 with correct value");
 
   // Reset spies
   write1Spy.resetHistory();
 
   // Test 2-byte write
-  assembler.writeDataByLength(2, 0xABCD);
+  assembler.directiveRuntime.writeDataByLength(2, 0xABCD);
   t.true(write2Spy.calledOnceWith(0xABCD), "Should call write2 with correct value");
 
   // Test 3-byte write
-  assembler.writeDataByLength(3, 0xABCDEF);
+  assembler.directiveRuntime.writeDataByLength(3, 0xABCDEF);
   t.true(write3Spy.calledOnceWith(0xABCDEF), "Should call write3 with correct value");
 
   // Test 4-byte write
-  assembler.writeDataByLength(4, 0xABCDEF12);
+  assembler.directiveRuntime.writeDataByLength(4, 0xABCDEF12);
   t.true(write4Spy.calledOnceWith(0xABCDEF12), "Should call write4 with correct value");
 });
 
-test("writeDataByLength - handles string length parameter", t => {
+test("directive runtime writeDataByLength - handles string length parameter", t => {
   const assembler = new Assembler();
 
   const write1Spy = sinon.spy(assembler, "write1");
 
   // Test with string length parameter (which the code comments indicate happens sometimes)
-  assembler.writeDataByLength("1" as unknown as number, 0xAB);
+  assembler.directiveRuntime.writeDataByLength("1" as unknown as number, 0xAB);
   t.true(write1Spy.calledOnceWith(0xAB), "Should handle string length parameter");
 });
 
-test("writeDataByLength - throws on invalid length", t => {
+test("directive runtime writeDataByLength - throws on invalid length", t => {
   const assembler = new Assembler();
 
   // Test with invalid length
   const error = t.throws(() => {
-    assembler.writeDataByLength(5, 0xAB);
+    assembler.directiveRuntime.writeDataByLength(5, 0xAB);
   }, { instanceOf: Error });
 
   t.is(error.message, "Unsupported data length 5", "Should throw with correct error message");
 });
 
-test("writeDataByLength - throws on NaN length", t => {
+test("directive runtime writeDataByLength - throws on NaN length", t => {
   const assembler = new Assembler();
 
   // Test with NaN length
   const error = t.throws(() => {
-    assembler.writeDataByLength("invalid" as unknown as number, 0xAB);
+    assembler.directiveRuntime.writeDataByLength("invalid" as unknown as number, 0xAB);
   }, { instanceOf: Error });
 
   t.is(error.message, "writeDataByLength: len is NaN", "Should throw with correct error message");
 });
 
-test("writeDataByLength - handles edge values", t => {
+test("directive runtime writeDataByLength - handles edge values", t => {
   const assembler = new Assembler();
 
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4079,20 +4079,20 @@ test("writeDataByLength - handles edge values", t => {
   const write4Spy = sinon.spy(assembler, "write4");
 
   // Test with minimum values
-  assembler.writeDataByLength(1, 0);
+  assembler.directiveRuntime.writeDataByLength(1, 0);
   t.true(write1Spy.calledWith(0), "Should handle minimum value for 1-byte");
 
   // Test with maximum values
-  assembler.writeDataByLength(1, 0xFF);
+  assembler.directiveRuntime.writeDataByLength(1, 0xFF);
   t.true(write1Spy.calledWith(0xFF), "Should handle maximum value for 1-byte");
 
-  assembler.writeDataByLength(2, 0xFFFF);
+  assembler.directiveRuntime.writeDataByLength(2, 0xFFFF);
   t.true(write2Spy.calledWith(0xFFFF), "Should handle maximum value for 2-byte");
 
-  assembler.writeDataByLength(3, 0xFFFFFF);
+  assembler.directiveRuntime.writeDataByLength(3, 0xFFFFFF);
   t.true(write3Spy.calledWith(0xFFFFFF), "Should handle maximum value for 3-byte");
 
-  assembler.writeDataByLength(4, 0xFFFFFFFF);
+  assembler.directiveRuntime.writeDataByLength(4, 0xFFFFFFFF);
   t.true(write4Spy.calledWith(0xFFFFFFFF), "Should handle maximum value for 4-byte");
 });
 

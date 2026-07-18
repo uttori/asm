@@ -1,6 +1,0 @@
-# Building
-
-```
-g++ -o main MAIN.CPP FILESAVE.CPP FILENAME.CPP ANIMATOR.CPP PCXFILE.CPP COMPRESS.CPP
-./main 
-```

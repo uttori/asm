@@ -56,9 +56,10 @@ export declare class MathCore {
      * This replaces the C++ `eval` function.
      * @param {number} depth The current depth of nested expressions.
      * @param {string} [stopChar] The character to stop the evaluation at.
-     * @returns {number} The result of the evaluated expression.
+     * @returns {number | undefined} The result of the evaluated expression, or
+     * `undefined` when an inline function definition consumes the expression.
      */
-    evalMath(depth?: number, stopChar?: string): number;
+    evalMath(depth?: number, stopChar?: string): number | undefined;
     /**
      * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
      * @param {object} operators The operators to check.

@@ -39,9 +39,9 @@ export declare const splitRespectingFunctions: (input: string) => string[];
 /**
  * Extracts the variable name from a define statement.
  * @param {string} line The line to extract the variable name from.
- * @returns {string | undefined} The variable name or null if the line is not a define statement.
+ * @returns {string | undefined} The variable name or `undefined` if the line is not a define statement.
  */
-export declare const getDefineVariable: (line: string) => string | null;
+export declare const getDefineVariable: (line: string) => string | undefined;
 /**
  * Checks whether a character can start a label identifier segment.
  * @param {string} char The single character to test.

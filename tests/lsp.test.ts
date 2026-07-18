@@ -19,7 +19,7 @@ import {
 } from "../src/lsp/position-lookup.js";
 import type { AssemblySymbolDefinition, AssemblySymbolReference } from "../src/diagnostics.js";
 
-const slideRoot = path.resolve(process.cwd(), "fixtures/integration/snes-slideshow-legacy/SLIDE.SRC");
+const slideRoot = path.resolve(process.cwd(), "fixtures/integration/snes-slideshow/SLIDE.SRC");
 
 test("analyzeSource records include-graph edges and attributes included symbols", (t) => {
   const fileProvider = createMemoryAssemblyFileProvider({

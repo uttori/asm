@@ -14,6 +14,7 @@ export interface DirectiveRuntimeHost {
     activeFreespaceContentStartPc: number | null;
     activeFreespaceStartPc: number | null;
     canFinalize: boolean;
+    characterMappings: Map<string, number>;
     currentNamespace: string;
     currentTargetAddress: number;
     currentTargetBaseAddress: number;
@@ -33,7 +34,6 @@ export interface DirectiveRuntimeHost {
     structEngine: StructEngine;
     symbolScope: SymbolScopeService;
     addAddressToLine(address: number): void;
-    processStringWithMapping(input: string): number[];
     resolvedefines(input: string): string;
     setWritePosition(address: number): void;
     step(count: number): void;
@@ -46,6 +46,19 @@ export interface DirectiveRuntimeHost {
 export declare class DirectiveRuntimeService {
     readonly host: DirectiveRuntimeHost;
     constructor(host: DirectiveRuntimeHost);
+    /**
+     * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
+     * @param {string[]} words The character mapping command words.
+     * @throws {Error} If the format is incorrect.
+     */
+    handleCharacterMapping(words: string[]): void;
+    /**
+     * Processes a string and maps characters to their corresponding values in `characterMappings`.
+     * If a character is not found in `characterMappings`, its charCode is used instead.
+     * @param {string} input The string to process.
+     * @returns {number[]} An array of numbers representing the mapped characters.
+     */
+    processStringWithMapping(input: string): number[];
     /**
      * Handles the `spcblock` directive.
      * @param {string[]} words The directive words.

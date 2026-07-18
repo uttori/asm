@@ -10624,6 +10624,7 @@ var Arch65816 = class {
       return false;
     }
     const storeOpcode = opcode;
+    const storeModeMap = storeOpcodes[storeOpcode];
     const getForcedOpcode = (map, fallback) => {
       const forced = map[len];
       return forced ?? fallback;
@@ -10670,13 +10671,13 @@ var Arch65816 = class {
       }
       return true;
     }
-    if (loweredOperand.mode === "directPageIndexedX" && storeOpcodes[storeOpcode].directX && /^\$[\da-f]{2}$/i.test(operand)) {
+    if (loweredOperand.mode === "directPageIndexedX" && storeModeMap.directX && /^\$[\da-f]{2}$/i.test(operand)) {
       mode = "directX";
       address = this.assembler.operandResolver.getnum(operand);
-    } else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect && storeOpcodes[storeOpcode].directY) {
+    } else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect && storeModeMap.directY) {
       mode = "directY";
       address = this.assembler.operandResolver.getnum(operand);
-    } else if (loweredOperand.mode === "absoluteIndexedX" && storeOpcodes[storeOpcode].absoluteX) {
+    } else if (loweredOperand.mode === "absoluteIndexedX" && storeModeMap.absoluteX) {
       mode = "absoluteX";
       address = this.assembler.operandResolver.getnum(operand);
     }
@@ -14138,6 +14139,40 @@ function isBinaryOperator(value) {
   return value in binaryPrecedence;
 }
 
+// src/internal-instrumentation.ts
+import { performance } from "node:perf_hooks";
+var activeInstrumentation;
+function sampleMemory(metrics) {
+  const memory = process.memoryUsage();
+  metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
+  metrics.peakHeapUsedBytes = Math.max(metrics.peakHeapUsedBytes, memory.heapUsed);
+}
+function incrementInternalCounter(name, amount = 1) {
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.counters[name] += amount;
+  }
+}
+function recordInternalCounterPeak(name, value) {
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.counters[name] = Math.max(metrics.counters[name], value);
+  }
+}
+function measureInternalPhase(name, callback) {
+  const metrics = activeInstrumentation;
+  if (!metrics) {
+    return callback();
+  }
+  const start = performance.now();
+  try {
+    return callback();
+  } finally {
+    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + performance.now() - start;
+    sampleMemory(metrics);
+  }
+}
+
 // src/ir/normalized-command.ts
 function createCommandProvenance(raw, normalized, words, file, line) {
   return {
@@ -14165,6 +14200,7 @@ function createNormalizedCommand(raw, normalized, words, file, line) {
   };
 }
 function cloneNormalizedCommand(command) {
+  incrementInternalCounter("normalizedCommandClones");
   const cloned = createNormalizedCommand(
     command.source.raw,
     command.source.normalized,
@@ -14476,6 +14512,9 @@ var MathCore = class {
     debug5("math", expression);
     this.str = expression.trim();
     const rval = this.evalMath(0);
+    if (rval === void 0) {
+      throw new AssemblyError("MATH_INVALID_INPUT", "Invalid input: empty expression.");
+    }
     if (this.str.length > 0) {
       if (this.str.startsWith(",")) {
         throw new AssemblyError("MATH_INVALID_INPUT", `Invalid input: ${this.str}`);
@@ -14637,7 +14676,8 @@ var MathCore = class {
    * This replaces the C++ `eval` function.
    * @param {number} depth The current depth of nested expressions.
    * @param {string} [stopChar] The character to stop the evaluation at.
-   * @returns {number} The result of the evaluated expression.
+   * @returns {number | undefined} The result of the evaluated expression, or
+   * `undefined` when an inline function definition consumes the expression.
    */
   evalMath(depth = 0, stopChar) {
     debug5("evalMath", { depth, stopChar }, this.str);
@@ -14647,6 +14687,9 @@ var MathCore = class {
       left = this.evalMath(depth, stopChar);
     } else if (this.str.length > 0) {
       left = this.getnum();
+    }
+    if (left === void 0) {
+      return void 0;
     }
     if (Number.isNaN(left)) {
       throw new Error(`Invalid number: ${left}`);
@@ -14666,6 +14709,9 @@ var MathCore = class {
       if (!op) break;
       this.str = this.str.substring(op.length).trim();
       const right = this.evalMath(this.operators[op].priority + 1, stopChar);
+      if (right === void 0) {
+        throw new Error(`Missing right operand for operator '${op}'.`);
+      }
       debug5("evalMath right =", { right, op, left });
       left = this.operators[op].operation(left, right);
     }
@@ -14802,6 +14848,9 @@ var MathCore = class {
               args.push(strVal);
             } else {
               const val = this.evalMath(0, ")");
+              if (val === void 0) {
+                throw new Error(`Missing function argument for '${fnName}'.`);
+              }
               args.push(val);
             }
             this.str = this.str.trim();
@@ -14832,7 +14881,11 @@ var MathCore = class {
     let value;
     if (this.str.startsWith("(")) {
       this.str = this.str.substring(1).trim();
-      value = this.evalMath(0, ")");
+      const nestedValue = this.evalMath(0, ")");
+      if (nestedValue === void 0) {
+        throw new Error("Empty parenthesized expression.");
+      }
+      value = nestedValue;
       debug5("getnum this.str", this.str);
       if (!this.str.startsWith(")")) {
         throw new Error("Mismatched parentheses.");
@@ -16071,7 +16124,11 @@ var handlePullBase = ({ session }) => {
   if (session.pushBaseStack.length === 0) {
     throw new Error("No base value to pull.");
   }
-  session.currentTargetAddress = session.pushBaseStack.pop();
+  const baseAddress = session.pushBaseStack.pop();
+  if (baseAddress === void 0) {
+    throw new Error("No base value to pull.");
+  }
+  session.currentTargetAddress = baseAddress;
 };
 var handleArch = ({ session }, words) => {
   if (session.inSpcblock) {
@@ -16988,6 +17045,28 @@ var DirectiveRuntimeService = class {
     this.host = host;
   }
   /**
+   * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
+   * @param {string[]} words The character mapping command words.
+   * @throws {Error} If the format is incorrect.
+   */
+  handleCharacterMapping(words) {
+    if (words.length !== 3) {
+      throw new Error("Character mapping requires format: 'char' = value");
+    }
+    const char = words[0].replace(/["']/g, "");
+    const value = this.host.operandResolver.getnum(words[2]);
+    this.host.characterMappings.set(char, value);
+  }
+  /**
+   * Processes a string and maps characters to their corresponding values in `characterMappings`.
+   * If a character is not found in `characterMappings`, its charCode is used instead.
+   * @param {string} input The string to process.
+   * @returns {number[]} An array of numbers representing the mapped characters.
+   */
+  processStringWithMapping(input) {
+    return Array.from(input).map((char) => this.host.characterMappings.get(char) ?? char.charCodeAt(0));
+  }
+  /**
    * Handles the `spcblock` directive.
    * @param {string[]} words The directive words.
    */
@@ -17127,7 +17206,7 @@ var DirectiveRuntimeService = class {
       if (value.startsWith('"') || value.startsWith("'")) {
         const unquoted = value.slice(1, -1);
         const expandedString = this.host.defineEngine.resolveDefinesInStringLiteral(unquoted);
-        const mappedChars = this.host.processStringWithMapping(expandedString);
+        const mappedChars = this.processStringWithMapping(expandedString);
         for (const charValue of mappedChars) {
           this.writeDataByLength(len, charValue);
         }
@@ -17340,10 +17419,13 @@ var ProgramModelBuilder = class {
     const cacheKey = `${sourceFile}::${startLine}::${commands.join("\n")}`;
     const cached = this.host.passProgramCache.get(cacheKey);
     if (cached) {
+      incrementInternalCounter("passProgramCacheHits");
       return cached;
     }
+    incrementInternalCounter("passProgramCacheMisses");
     const nodes = this.parseCommandStreamToNodes(commands, sourceFile, startLine);
     this.host.passProgramCache.set(cacheKey, nodes);
+    recordInternalCounterPeak("passProgramCachePeakSize", this.host.passProgramCache.size);
     return nodes;
   }
   /**
@@ -18066,6 +18148,7 @@ var IncludeSourceService = class {
     this.host.includeStack.push(previousFile);
     this.host.recordIncludeEdge(previousFile, resolvedPath);
     try {
+      incrementInternalCounter("includeReads");
       const content = this.host.fileProvider.readTextFile(resolvedPath, "utf8");
       this.host.currentFile = resolvedPath;
       const includedFile = this.host.includedFiles.get(resolvedPath);
@@ -18353,6 +18436,7 @@ var MacroEngine = class {
    * @param {string} invocation The invocation to call.
    */
   callMacro(invocation) {
+    incrementInternalCounter("macroExpansions");
     this.host.macroLabelInstance++;
     const previousMacroExpansionState = this.host.inMacroExpansion;
     const previousVariadicCount = this.host.currentVariadicCount;
@@ -18953,7 +19037,8 @@ var StructEngine = class {
    * @returns {boolean} `true` if the command was handled, `false` otherwise.
    */
   handleStructMode(command) {
-    if (!this.host.currentStruct) {
+    const currentStruct = this.host.currentStruct;
+    if (!currentStruct) {
       return false;
     }
     const { words } = command;
@@ -18961,17 +19046,17 @@ var StructEngine = class {
     if (keyword.startsWith(".")) {
       const hasColon = keyword.endsWith(":");
       const labelName = keyword.replace(/:$/, "").substring(1);
-      this.host.currentStruct.labels.set(labelName, this.host.currentStruct.offset);
+      currentStruct.labels.set(labelName, currentStruct.offset);
       this.host.recordSymbolDefinition("structMember", labelName, {
-        value: this.host.currentStruct.offset,
-        containerName: this.host.currentStruct.name
+        value: currentStruct.offset,
+        containerName: currentStruct.name
       });
       if (words[1]?.toLowerCase() === "skip") {
         if (words.length !== 3) {
           throw new Error(`skip directive in struct requires exactly one parameter: ${words.length}`);
         }
         const skipAmount = this.host.operandResolver.getnum(words[2]);
-        this.host.currentStruct.offset += skipAmount;
+        currentStruct.offset += skipAmount;
       }
       void hasColon;
       setCommandKind(command, "structCommand");
@@ -19003,10 +19088,11 @@ var StructEngine = class {
         throw new Error("Struct extension must specify a parent struct.");
       }
       parent = words[3];
-      if (!this.host.structs.has(parent)) {
+      const parentStruct = this.host.structs.get(parent);
+      if (!parentStruct) {
         throw new Error(`Parent struct '${parent}' not defined.`);
       }
-      base = this.host.structs.get(parent).base;
+      base = parentStruct.base;
     } else {
       base = this.host.operandResolver.getnum(words[2]);
       if (base < 0 || base > 16777215) {
@@ -19029,7 +19115,8 @@ var StructEngine = class {
    * @param {string[]} words The words of the command.
    */
   handleEndStruct(words) {
-    if (!this.host.currentStruct) {
+    const currentStruct = this.host.currentStruct;
+    if (!currentStruct) {
       throw new Error("endstruct encountered but not inside a struct definition.");
     }
     let align;
@@ -19042,23 +19129,26 @@ var StructEngine = class {
         throw new Error("Alignment must be at least 1.");
       }
     }
-    let finalSize = this.host.currentStruct.offset;
+    let finalSize = currentStruct.offset;
     if (align !== void 0) {
       finalSize = Math.ceil(finalSize / align) * align;
-      this.host.currentStruct.align = align;
+      currentStruct.align = align;
     }
-    this.host.currentStruct.size = finalSize;
-    if (this.host.currentStruct.parent) {
-      const parentName = this.host.currentStruct.parent;
+    currentStruct.size = finalSize;
+    if (currentStruct.parent) {
+      const parentName = currentStruct.parent;
       const parentStruct = this.host.structs.get(parentName);
-      const extSize = this.host.currentStruct.size;
+      if (!parentStruct) {
+        throw new Error(`Parent struct '${parentName}' not defined.`);
+      }
+      const extSize = currentStruct.size;
       if (!parentStruct.extensionSize || extSize > parentStruct.extensionSize) {
         parentStruct.extensionSize = extSize;
       }
-      this.host.structs.set(`${parentName}.${this.host.currentStruct.name}`, this.host.currentStruct);
-      this.host.structs.set(this.host.currentStruct.name, this.host.currentStruct);
+      this.host.structs.set(`${parentName}.${currentStruct.name}`, currentStruct);
+      this.host.structs.set(currentStruct.name, currentStruct);
     } else {
-      this.host.structs.set(this.host.currentStruct.name, this.host.currentStruct);
+      this.host.structs.set(currentStruct.name, currentStruct);
     }
     this.host.restoreStructDefinition();
     this.host.currentStruct = null;
@@ -19072,15 +19162,17 @@ var StructEngine = class {
     const refParts = labelRef.split(".");
     if (refParts.length === 2 && !labelRef.includes("[")) {
       const parentName = refParts[0];
-      if (this.host.structs.has(parentName)) {
-        const parentDef = this.host.structs.get(parentName);
-        if (this.host.structs.has(labelRef) && this.host.structs.get(labelRef).parent === parentName) {
+      const parentDef = this.host.structs.get(parentName);
+      if (parentDef) {
+        const extensionDef = this.host.structs.get(labelRef);
+        if (extensionDef?.parent === parentName) {
           return parentDef.base + parentDef.size;
         }
       }
     }
-    if (this.host.structs.has(labelRef)) {
-      return this.host.structs.get(labelRef).base;
+    const directStruct = this.host.structs.get(labelRef);
+    if (directStruct) {
+      return directStruct.base;
     }
     let arrayIndex = 0;
     let candidate = labelRef;
@@ -19101,6 +19193,9 @@ var StructEngine = class {
         continue;
       }
       const def = this.host.structs.get(potential);
+      if (!def) {
+        continue;
+      }
       const memberPart = parts.slice(i).join(".");
       const memberName = memberPart + (extraMember ? (memberPart ? "." : "") + extraMember : "");
       const baseStructSize = def.size;
@@ -19136,6 +19231,9 @@ var StructEngine = class {
         throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
       }
       const offset = def.labels.get(topLevelMember);
+      if (offset === void 0) {
+        throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
+      }
       let finalAddress;
       if (def.parent) {
         const parentDef = this.host.structs.get(def.parent);
@@ -19487,6 +19585,9 @@ var SymbolScopeService = class {
     let rest = compoundId.substring(firstId.length).trim();
     let base = 0;
     let currentStruct = this.host.structs.get(firstId);
+    if (!currentStruct) {
+      throw new Error(`Struct not found: ${compoundId}`);
+    }
     while (rest.length > 0) {
       if (rest.startsWith(".")) {
         rest = rest.substring(1).trim();
@@ -19572,38 +19673,38 @@ var SymbolScopeService = class {
       if (labelName.includes("_")) {
         const [parentPart, subPart] = labelName.split("_", 2);
         const childLabel = `:macro_${this.host.macroLabelInstance}_.${subPart}`;
-        if (this.host.labelTable.has(childLabel)) {
-          const entry = this.host.labelTable.get(childLabel);
-          if (requireStatic && !entry.isStatic) {
+        const childEntry = this.host.labelTable.get(childLabel);
+        if (childEntry) {
+          if (requireStatic && !childEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return entry.value;
+          return childEntry.value;
         }
         const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${parentPart}_${subPart}`;
-        if (this.host.labelTable.has(parentChildLabel)) {
-          const entry = this.host.labelTable.get(parentChildLabel);
-          if (requireStatic && !entry.isStatic) {
+        const parentChildEntry = this.host.labelTable.get(parentChildLabel);
+        if (parentChildEntry) {
+          if (requireStatic && !parentChildEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return entry.value;
+          return parentChildEntry.value;
         }
       }
       const macroLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
-      if (this.host.labelTable.has(macroLabel)) {
-        const entry = this.host.labelTable.get(macroLabel);
-        if (requireStatic && !entry.isStatic) {
+      const macroEntry = this.host.labelTable.get(macroLabel);
+      if (macroEntry) {
+        if (requireStatic && !macroEntry.isStatic) {
           throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
         }
-        return entry.value;
+        return macroEntry.value;
       }
       if (labelName.startsWith(".")) {
         const macroLabelNoDot = `:macro_${this.host.macroLabelInstance}_${labelName}`;
-        if (this.host.labelTable.has(macroLabelNoDot)) {
-          const entry = this.host.labelTable.get(macroLabelNoDot);
-          if (requireStatic && !entry.isStatic) {
+        const macroNoDotEntry = this.host.labelTable.get(macroLabelNoDot);
+        if (macroNoDotEntry) {
+          if (requireStatic && !macroNoDotEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return entry.value;
+          return macroNoDotEntry.value;
         }
       }
     }
@@ -19649,19 +19750,19 @@ var SymbolScopeService = class {
         const parentLabel = parts[0];
         const localLabel = `.${parts[1]}`;
         const combinedLabel = `${parentLabel}_${localLabel.replace(/^\./, "")}`;
-        if (this.host.labelTable.has(combinedLabel)) {
-          const entry2 = this.host.labelTable.get(combinedLabel);
-          if (requireStatic && !entry2.isStatic) {
+        const combinedEntry = this.host.labelTable.get(combinedLabel);
+        if (combinedEntry) {
+          if (requireStatic && !combinedEntry.isStatic) {
             throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
           }
-          return entry2.value;
+          return combinedEntry.value;
         }
-        if (this.host.labelTable.has(localLabel)) {
-          const entry2 = this.host.labelTable.get(localLabel);
-          if (requireStatic && !entry2.isStatic) {
+        const localEntry = this.host.labelTable.get(localLabel);
+        if (localEntry) {
+          if (requireStatic && !localEntry.isStatic) {
             throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
           }
-          return entry2.value;
+          return localEntry.value;
         }
         if (this.host.isDefinitionCollectionStage) {
           return 0;
@@ -19675,6 +19776,9 @@ var SymbolScopeService = class {
       throw new Error(`Error: Label '${label}' not found.`);
     }
     const entry = this.host.labelTable.get(label);
+    if (!entry) {
+      throw new Error(`Error: Label '${label}' not found.`);
+    }
     if (requireStatic && !entry.isStatic) {
       throw new Error(`Error: Non-static label '${label}' used in conditional.`);
     }
@@ -19692,12 +19796,12 @@ var SymbolScopeService = class {
     if (workingIdentifier.startsWith('"') && workingIdentifier.endsWith('"')) {
       workingIdentifier = workingIdentifier.substring(1, workingIdentifier.length - 1);
     }
-    if (this.host.structs.has(workingIdentifier)) {
-      const def2 = this.host.structs.get(workingIdentifier);
+    const directDef = this.host.structs.get(workingIdentifier);
+    if (directDef) {
       if (baseOnly) {
-        return def2.size;
+        return directDef.size;
       }
-      return !def2.parent ? def2.size + (def2.extensionSize || 0) : def2.size;
+      return !directDef.parent ? directDef.size + (directDef.extensionSize || 0) : directDef.size;
     }
     if (workingIdentifier.includes(".")) {
       const parts = workingIdentifier.split(".").filter(Boolean);
@@ -19719,6 +19823,9 @@ var SymbolScopeService = class {
       throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
     }
     const def = this.host.structs.get(workingIdentifier);
+    if (!def) {
+      throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+    }
     if (baseOnly) {
       return def.size;
     }
@@ -20543,7 +20650,7 @@ var Assembler = class _Assembler {
     }
     for (let i = this.whileStatus.length - 1; i >= 0; i--) {
       const loop = this.whileStatus[i];
-      if (loop.is_for && loop.for_variable === varName) {
+      if (loop.is_for && loop.for_variable === varName && loop.for_cur !== void 0) {
         return loop.for_cur.toString();
       }
     }
@@ -20872,7 +20979,8 @@ var Assembler = class _Assembler {
   preprocessNormalizedCommand(state) {
     if (state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
       setCommandKind(state, "characterMapping");
-      this.handleCharacterMapping(state);
+      debug7("handleCharacterMapping", state.words);
+      this.directiveRuntime.handleCharacterMapping(state.words);
       return "handled";
     }
     if (this.frontEndCommandService.startFunctionDefinition(state)) {
@@ -20946,6 +21054,7 @@ var Assembler = class _Assembler {
       const rewrittenRaw = this.rewriteRawCommand(workingState.source.raw);
       const requiresVariadicResolution = this.inMacroExpansion && !this.isDefinitionCollectionStage && (rewrittenRaw.includes("...") || rewrittenRaw.includes("\u2026"));
       if (rewrittenRaw !== workingState.source.raw || requiresVariadicResolution) {
+        incrementInternalCounter("actualReparses");
         const rewrittenState = this.createNormalizedCommandFromRaw(
           rewrittenRaw,
           workingState.source.file,
@@ -21057,14 +21166,6 @@ var Assembler = class _Assembler {
    */
   addAddressToLine(address) {
     this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
-  }
-  /**
-   * Writes data of the specified length.
-   * @param {number} len The length of the data to write.
-   * @param {number} value The value to write.
-   */
-  writeDataByLength(len, value) {
-    this.directiveRuntime.writeDataByLength(len, value);
   }
   /**
    * Evaluates a range expression and returns the result.
@@ -21474,7 +21575,7 @@ var Assembler = class _Assembler {
       this.forwardLabels = {};
       this.backwardLabels = {};
     }
-    this.macroLabelInstance = null;
+    this.macroLabelInstance = 0;
     this.includeSource.resetGuards();
     this.inMacroExpansion = false;
     this.frontEndService.resetIncrementalParseState(this.incrementalProgramParseState);
@@ -21684,28 +21785,32 @@ var Assembler = class _Assembler {
     return created;
   }
   buildProgramModel(source, sourceFile = this.currentFile, startLine = 0) {
-    const program = this.frontEndService.buildProgramModel(source, sourceFile, startLine);
-    return {
-      sourceFile: program.sourceFile,
-      startLine: program.startLine,
-      nodes: program.nodes
-    };
+    return measureInternalPhase("buildProgramModel", () => {
+      const program = this.frontEndService.buildProgramModel(source, sourceFile, startLine);
+      return {
+        sourceFile: program.sourceFile,
+        startLine: program.startLine,
+        nodes: program.nodes
+      };
+    });
   }
   runStage(stage, program) {
-    if (stage === "collectDefinitions") {
-      this.stageExecutionStates.clear();
-      this.activeStageExecutionState = null;
-    }
-    const stageState = this.getOrCreateStageExecutionState(stage);
-    this.activeStageExecutionState = stageState;
-    this.applyStageExecutionState(stageState);
-    this.setCurrentFile(program.sourceFile);
-    this.activateStage(stage);
-    const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
-    this.executeLoweredNodeStream(loweredProgram.nodes);
-    this.finishPass();
-    this.captureStageExecutionState(stageState);
-    return stageState;
+    return measureInternalPhase(stage, () => {
+      if (stage === "collectDefinitions") {
+        this.stageExecutionStates.clear();
+        this.activeStageExecutionState = null;
+      }
+      const stageState = this.getOrCreateStageExecutionState(stage);
+      this.activeStageExecutionState = stageState;
+      this.applyStageExecutionState(stageState);
+      this.setCurrentFile(program.sourceFile);
+      this.activateStage(stage);
+      const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
+      this.executeLoweredNodeStream(loweredProgram.nodes);
+      this.finishPass();
+      this.captureStageExecutionState(stageState);
+      return stageState;
+    });
   }
   assembleProgram(program) {
     this.runStage("collectDefinitions", program);
@@ -21785,30 +21890,6 @@ var Assembler = class _Assembler {
   getBinaryOutput = () => {
     return new Uint8Array(this.romdata.slice(0, this.romdata.length));
   };
-  /**
-   * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
-   * @param {NormalizedCommand | string[]} command The normalized command node or legacy words tuple.
-   * @throws {Error} If the format is incorrect.
-   */
-  handleCharacterMapping(command) {
-    const words = Array.isArray(command) ? command : command.words;
-    debug7("handleCharacterMapping", words);
-    if (words.length !== 3) {
-      throw new Error("Character mapping requires format: 'char' = value");
-    }
-    const char = words[0].replace(/["']/g, "");
-    const value = this.operandResolver.getnum(words[2]);
-    this.characterMappings.set(char, value);
-  }
-  /**
-   * Processes a string and maps characters to their corresponding values in `characterMappings`.
-   * If a character is not found in `characterMappings`, its charCode is used instead.
-   * @param {string} input The string to process.
-   * @returns {number[]} An array of numbers representing the mapped characters.
-   */
-  processStringWithMapping(input) {
-    return Array.from(input).map((char) => this.characterMappings.get(char) ?? char.charCodeAt(0));
-  }
   /**
    * Lowers completed runtime nodes and executes them through the production executor.
    * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
@@ -21916,7 +21997,7 @@ var Assembler = class _Assembler {
     this.executeWhileLoopCommands(
       whileBlock,
       whileBlock.commands,
-      (cmd) => cmd.kind === "command" && cmd.command.kind === "defineCommand" ? getDefineVariable(cmd.command.command) : null,
+      (cmd) => cmd.kind === "command" && cmd.command.kind === "defineCommand" ? getDefineVariable(cmd.command.command) ?? null : null,
       (cmd) => this.executeLoweredNodeWithRecovery(cmd)
     );
   }
@@ -21970,6 +22051,7 @@ var Assembler = class _Assembler {
   }
   executeLoweredNode(node) {
     if (node.kind === "command") {
+      incrementInternalCounter("passthroughDispatches");
       this.processNormalizedCommand(node.command, this.runtimePassthroughRewriteEnabled);
       return;
     }

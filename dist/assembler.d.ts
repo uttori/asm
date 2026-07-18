@@ -521,12 +521,6 @@ export declare class Assembler {
      */
     addAddressToLine(address: number): void;
     /**
-     * Writes data of the specified length.
-     * @param {number} len The length of the data to write.
-     * @param {number} value The value to write.
-     */
-    writeDataByLength(len: number, value: number): void;
-    /**
      * Evaluates a range expression and returns the result.
      * @param {string} expr The expression to evaluate.
      * @returns {number} The result of the expression.
@@ -694,19 +688,6 @@ export declare class Assembler {
      * @returns {Uint8Array} The compiled binary output.
      */
     getBinaryOutput: () => Uint8Array;
-    /**
-     * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
-     * @param {NormalizedCommand | string[]} command The normalized command node or legacy words tuple.
-     * @throws {Error} If the format is incorrect.
-     */
-    handleCharacterMapping(command: NormalizedCommand | string[]): void;
-    /**
-     * Processes a string and maps characters to their corresponding values in `characterMappings`.
-     * If a character is not found in `characterMappings`, its charCode is used instead.
-     * @param {string} input The string to process.
-     * @returns {number[]} An array of numbers representing the mapped characters.
-     */
-    processStringWithMapping(input: string): number[];
     /**
      * Lowers completed runtime nodes and executes them through the production executor.
      * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.

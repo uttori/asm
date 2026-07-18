@@ -427,6 +427,9 @@ export class SymbolScopeService {
     let rest = compoundId.substring(firstId.length).trim();
     let base = 0;
     let currentStruct = this.host.structs.get(firstId);
+    if (!currentStruct) {
+      throw new Error(`Struct not found: ${compoundId}`);
+    }
 
     while (rest.length > 0) {
       if (rest.startsWith(".")) {
@@ -535,41 +538,41 @@ export class SymbolScopeService {
       if (labelName.includes("_")) {
         const [parentPart, subPart] = labelName.split("_", 2);
         const childLabel = `:macro_${this.host.macroLabelInstance}_.${subPart}`;
-        if (this.host.labelTable.has(childLabel)) {
-          const entry = this.host.labelTable.get(childLabel);
-          if (requireStatic && !entry.isStatic) {
+        const childEntry = this.host.labelTable.get(childLabel);
+        if (childEntry) {
+          if (requireStatic && !childEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return entry.value;
+          return childEntry.value;
         }
 
         const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${parentPart}_${subPart}`;
-        if (this.host.labelTable.has(parentChildLabel)) {
-          const entry = this.host.labelTable.get(parentChildLabel);
-          if (requireStatic && !entry.isStatic) {
+        const parentChildEntry = this.host.labelTable.get(parentChildLabel);
+        if (parentChildEntry) {
+          if (requireStatic && !parentChildEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return entry.value;
+          return parentChildEntry.value;
         }
       }
 
       const macroLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
-      if (this.host.labelTable.has(macroLabel)) {
-        const entry = this.host.labelTable.get(macroLabel);
-        if (requireStatic && !entry.isStatic) {
+      const macroEntry = this.host.labelTable.get(macroLabel);
+      if (macroEntry) {
+        if (requireStatic && !macroEntry.isStatic) {
           throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
         }
-        return entry.value;
+        return macroEntry.value;
       }
 
       if (labelName.startsWith(".")) {
         const macroLabelNoDot = `:macro_${this.host.macroLabelInstance}_${labelName}`;
-        if (this.host.labelTable.has(macroLabelNoDot)) {
-          const entry = this.host.labelTable.get(macroLabelNoDot);
-          if (requireStatic && !entry.isStatic) {
+        const macroNoDotEntry = this.host.labelTable.get(macroLabelNoDot);
+        if (macroNoDotEntry) {
+          if (requireStatic && !macroNoDotEntry.isStatic) {
             throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
           }
-          return entry.value;
+          return macroNoDotEntry.value;
         }
       }
     }
@@ -625,20 +628,20 @@ export class SymbolScopeService {
         const localLabel = `.${parts[1]}`;
         const combinedLabel = `${parentLabel}_${localLabel.replace(/^\./, "")}`;
 
-        if (this.host.labelTable.has(combinedLabel)) {
-          const entry = this.host.labelTable.get(combinedLabel);
-          if (requireStatic && !entry.isStatic) {
+        const combinedEntry = this.host.labelTable.get(combinedLabel);
+        if (combinedEntry) {
+          if (requireStatic && !combinedEntry.isStatic) {
             throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
           }
-          return entry.value;
+          return combinedEntry.value;
         }
 
-        if (this.host.labelTable.has(localLabel)) {
-          const entry = this.host.labelTable.get(localLabel);
-          if (requireStatic && !entry.isStatic) {
+        const localEntry = this.host.labelTable.get(localLabel);
+        if (localEntry) {
+          if (requireStatic && !localEntry.isStatic) {
             throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
           }
-          return entry.value;
+          return localEntry.value;
         }
 
         if (this.host.isDefinitionCollectionStage) {
@@ -655,6 +658,9 @@ export class SymbolScopeService {
     }
 
     const entry = this.host.labelTable.get(label);
+    if (!entry) {
+      throw new Error(`Error: Label '${label}' not found.`);
+    }
     if (requireStatic && !entry.isStatic) {
       throw new Error(`Error: Non-static label '${label}' used in conditional.`);
     }
@@ -675,12 +681,12 @@ export class SymbolScopeService {
       workingIdentifier = workingIdentifier.substring(1, workingIdentifier.length - 1);
     }
 
-    if (this.host.structs.has(workingIdentifier)) {
-      const def = this.host.structs.get(workingIdentifier);
+    const directDef = this.host.structs.get(workingIdentifier);
+    if (directDef) {
       if (baseOnly) {
-        return def.size;
+        return directDef.size;
       }
-      return !def.parent ? def.size + (def.extensionSize || 0) : def.size;
+      return !directDef.parent ? directDef.size + (directDef.extensionSize || 0) : directDef.size;
     }
 
     if (workingIdentifier.includes(".")) {
@@ -705,6 +711,9 @@ export class SymbolScopeService {
     }
 
     const def = this.host.structs.get(workingIdentifier);
+    if (!def) {
+      throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+    }
     if (baseOnly) {
       return def.size;
     }

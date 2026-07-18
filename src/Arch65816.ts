@@ -1342,16 +1342,17 @@ export class Arch65816 implements ArchitectureEncoder {
     type StoreOpcode = "STX" | "STY" | "STZ";
     type StoreModeMap = { direct: number; directX?: number; directY?: number; absolute: number; absoluteX?: number };
     type ForcedLengthMap = Partial<Record<1 | 2, number>>;
-    const storeOpcodes: Record<StoreOpcode, StoreModeMap> = {
+    const storeOpcodes = {
       STX: { direct: 0x86, absolute: 0x8E, directY: 0x96 }, // STX Direct Page, Absolute, Indexed Y
       STY: { direct: 0x84, absolute: 0x8C, directX: 0x94 }, // STY Direct Page, Absolute, Indexed X
       STZ: { direct: 0x64, directX: 0x74, absolute: 0x9C, absoluteX: 0x9E }, // STZ DP, DP Indexed X, Absolute, Absolute Indexed X
-    };
+    } satisfies Record<StoreOpcode, StoreModeMap>;
 
     if (!(opcode in storeOpcodes)) {
       return false; // Not a store instruction
     }
     const storeOpcode = opcode as StoreOpcode;
+    const storeModeMap: StoreModeMap = storeOpcodes[storeOpcode];
     const getForcedOpcode = (map: ForcedLengthMap, fallback: number): number => {
       const forced = map[len as 1 | 2];
       return forced ?? fallback;
@@ -1409,17 +1410,17 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     // DP Indexed, X Mode: STZ $00,x
-    if (loweredOperand.mode === "directPageIndexedX" && storeOpcodes[storeOpcode].directX && /^\$[\da-f]{2}$/i.test(operand)) {
+    if (loweredOperand.mode === "directPageIndexedX" && storeModeMap.directX && /^\$[\da-f]{2}$/i.test(operand)) {
       mode = "directX";
       address = this.assembler.operandResolver.getnum(operand); // Extract DP address
     }
     // DP Indexed, Y Mode: STX $00,y
-    else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect && storeOpcodes[storeOpcode].directY) {
+    else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect && storeModeMap.directY) {
       mode = "directY";
       address = this.assembler.operandResolver.getnum(operand); // Extract absolute address
     }
     // Absolute Indexed, X Mode: STX $0000,X, STY $0000,X, STZ $0000,X
-    else if (loweredOperand.mode === "absoluteIndexedX" && storeOpcodes[storeOpcode].absoluteX) {
+    else if (loweredOperand.mode === "absoluteIndexedX" && storeModeMap.absoluteX) {
       mode = "absoluteX";
       address = this.assembler.operandResolver.getnum(operand); // Extract absolute address
     }

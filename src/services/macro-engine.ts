@@ -3,6 +3,7 @@ import type { MathCore } from "../mathcore.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
 import { removeInlineComment } from "./command-text-service.js";
+import { incrementInternalCounter } from "../internal-instrumentation.js";
 
 export type MacroLabelEntry = {
   value: number;
@@ -349,6 +350,7 @@ export class MacroEngine {
    * @param {string} invocation The invocation to call.
    */
   callMacro(invocation: string): void {
+    incrementInternalCounter("macroExpansions");
     this.host.macroLabelInstance++;
 
     const previousMacroExpansionState = this.host.inMacroExpansion;

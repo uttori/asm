@@ -10,6 +10,13 @@ class CLI {
     this.assembler = null;
   }
 
+  private getAssembler(): Assembler {
+    if (!this.assembler) {
+      throw new Error("Assembler has not been initialized.");
+    }
+    return this.assembler;
+  }
+
   /**
    * Main function to process input arguments and compile assembly files.
    */
@@ -69,8 +76,9 @@ class CLI {
     }
 
     try {
-      this.assembler = new Assembler(targetRom);
-      this.assembler.setChecksumMode(checksumMode);
+      const assembler = new Assembler(targetRom);
+      this.assembler = assembler;
+      assembler.setChecksumMode(checksumMode);
       console.log(`Checksum mode: ${checksumMode}`);
 
       const assemblyCode = fs.readFileSync(inputFile, "utf8");
@@ -78,10 +86,10 @@ class CLI {
 
       // Build once, execute as staged pipeline.
       const inputDir = path.dirname(inputFile);
-      this.assembler.setIncludePaths(["./", inputDir]);
-      this.assembler.setCurrentFile(inputFile);
-      const program = this.assembler.buildProgramModel(assemblyCode, inputFile, 0);
-      this.assembler.assembleProgram(program);
+      assembler.setIncludePaths(["./", inputDir]);
+      assembler.setCurrentFile(inputFile);
+      const program = assembler.buildProgramModel(assemblyCode, inputFile, 0);
+      assembler.assembleProgram(program);
 
       // Write output binary
       this.writeBinary(outputFile);
@@ -100,16 +108,17 @@ class CLI {
    */
   assembleFile(source: string, pass: number): void {
     console.log(`cli assembleFile ${pass} started`);
-    const program = this.assembler.buildProgramModel(source, this.assembler.currentFile, 0);
+    const assembler = this.getAssembler();
+    const program = assembler.buildProgramModel(source, assembler.currentFile, 0);
     switch (pass) {
       case 0:
-        this.assembler.runStage("collectDefinitions", program);
+        assembler.runStage("collectDefinitions", program);
         break;
       case 1:
-        this.assembler.runStage("resolveLayout", program);
+        assembler.runStage("resolveLayout", program);
         break;
       default:
-        this.assembler.runStage("emitProgram", program);
+        assembler.runStage("emitProgram", program);
         break;
     }
     console.log(`cli assembleFile ${pass} completed`);
@@ -120,8 +129,9 @@ class CLI {
    * @param {string} outputFile - The path to the output file.
    */
   writeBinary(outputFile: string): void {
-    console.log("cli writeBinary", this.assembler.getBinaryOutput());
-    fs.writeFileSync(outputFile, Buffer.from(this.assembler.getBinaryOutput()));
+    const assembler = this.getAssembler();
+    console.log("cli writeBinary", assembler.getBinaryOutput());
+    fs.writeFileSync(outputFile, Buffer.from(assembler.getBinaryOutput()));
   }
 }
 

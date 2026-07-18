@@ -19,7 +19,8 @@ export class StructEngine {
    * @returns {boolean} `true` if the command was handled, `false` otherwise.
    */
   handleStructMode(command: NormalizedCommand): boolean {
-    if (!this.host.currentStruct) {
+    const currentStruct = this.host.currentStruct;
+    if (!currentStruct) {
       return false;
     }
 
@@ -29,10 +30,10 @@ export class StructEngine {
     if (keyword.startsWith(".")) {
       const hasColon = keyword.endsWith(":");
       const labelName = keyword.replace(/:$/, "").substring(1);
-      this.host.currentStruct.labels.set(labelName, this.host.currentStruct.offset);
+      currentStruct.labels.set(labelName, currentStruct.offset);
       this.host.recordSymbolDefinition("structMember", labelName, {
-        value: this.host.currentStruct.offset,
-        containerName: this.host.currentStruct.name,
+        value: currentStruct.offset,
+        containerName: currentStruct.name,
       });
 
       if (words[1]?.toLowerCase() === "skip") {
@@ -40,7 +41,7 @@ export class StructEngine {
           throw new Error(`skip directive in struct requires exactly one parameter: ${words.length}`);
         }
         const skipAmount = this.host.operandResolver.getnum(words[2]);
-        this.host.currentStruct.offset += skipAmount;
+        currentStruct.offset += skipAmount;
       }
 
       void hasColon;
@@ -78,10 +79,11 @@ export class StructEngine {
         throw new Error("Struct extension must specify a parent struct.");
       }
       parent = words[3];
-      if (!this.host.structs.has(parent)) {
+      const parentStruct = this.host.structs.get(parent);
+      if (!parentStruct) {
         throw new Error(`Parent struct '${parent}' not defined.`);
       }
-      base = this.host.structs.get(parent).base;
+      base = parentStruct.base;
     } else {
       base = this.host.operandResolver.getnum(words[2]);
       if (base < 0 || base > 0xFFFFFF) {
@@ -106,7 +108,8 @@ export class StructEngine {
    * @param {string[]} words The words of the command.
    */
   handleEndStruct(words: string[]): void {
-    if (!this.host.currentStruct) {
+    const currentStruct = this.host.currentStruct;
+    if (!currentStruct) {
       throw new Error("endstruct encountered but not inside a struct definition.");
     }
 
@@ -121,24 +124,27 @@ export class StructEngine {
       }
     }
 
-    let finalSize = this.host.currentStruct.offset;
+    let finalSize = currentStruct.offset;
     if (align !== undefined) {
       finalSize = Math.ceil(finalSize / align) * align;
-      this.host.currentStruct.align = align;
+      currentStruct.align = align;
     }
-    this.host.currentStruct.size = finalSize;
+    currentStruct.size = finalSize;
 
-    if (this.host.currentStruct.parent) {
-      const parentName = this.host.currentStruct.parent;
+    if (currentStruct.parent) {
+      const parentName = currentStruct.parent;
       const parentStruct = this.host.structs.get(parentName);
-      const extSize = this.host.currentStruct.size;
+      if (!parentStruct) {
+        throw new Error(`Parent struct '${parentName}' not defined.`);
+      }
+      const extSize = currentStruct.size;
       if (!parentStruct.extensionSize || extSize > parentStruct.extensionSize) {
         parentStruct.extensionSize = extSize;
       }
-      this.host.structs.set(`${parentName}.${this.host.currentStruct.name}`, this.host.currentStruct);
-      this.host.structs.set(this.host.currentStruct.name, this.host.currentStruct);
+      this.host.structs.set(`${parentName}.${currentStruct.name}`, currentStruct);
+      this.host.structs.set(currentStruct.name, currentStruct);
     } else {
-      this.host.structs.set(this.host.currentStruct.name, this.host.currentStruct);
+      this.host.structs.set(currentStruct.name, currentStruct);
     }
 
     this.host.restoreStructDefinition();
@@ -155,16 +161,18 @@ export class StructEngine {
     const refParts = labelRef.split(".");
     if (refParts.length === 2 && !labelRef.includes("[")) {
       const parentName = refParts[0];
-      if (this.host.structs.has(parentName)) {
-        const parentDef = this.host.structs.get(parentName);
-        if (this.host.structs.has(labelRef) && this.host.structs.get(labelRef).parent === parentName) {
+      const parentDef = this.host.structs.get(parentName);
+      if (parentDef) {
+        const extensionDef = this.host.structs.get(labelRef);
+        if (extensionDef?.parent === parentName) {
           return parentDef.base + parentDef.size;
         }
       }
     }
 
-    if (this.host.structs.has(labelRef)) {
-      return this.host.structs.get(labelRef).base;
+    const directStruct = this.host.structs.get(labelRef);
+    if (directStruct) {
+      return directStruct.base;
     }
 
     let arrayIndex = 0;
@@ -188,6 +196,9 @@ export class StructEngine {
       }
 
       const def = this.host.structs.get(potential);
+      if (!def) {
+        continue;
+      }
       const memberPart = parts.slice(i).join(".");
       const memberName = memberPart + (extraMember ? (memberPart ? "." : "") + extraMember : "");
 
@@ -234,6 +245,9 @@ export class StructEngine {
       }
 
       const offset = def.labels.get(topLevelMember);
+      if (offset === undefined) {
+        throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
+      }
       let finalAddress: number;
 
       if (def.parent) {

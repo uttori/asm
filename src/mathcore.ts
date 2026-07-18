@@ -109,6 +109,9 @@ export class MathCore {
     this.str = expression.trim();
 
     const rval = this.evalMath(0);
+    if (rval === undefined) {
+      throw new AssemblyError("MATH_INVALID_INPUT", "Invalid input: empty expression.");
+    }
 
     if (this.str.length > 0) {
       if (this.str.startsWith(",")) {
@@ -292,12 +295,13 @@ export class MathCore {
    * This replaces the C++ `eval` function.
    * @param {number} depth The current depth of nested expressions.
    * @param {string} [stopChar] The character to stop the evaluation at.
-   * @returns {number} The result of the evaluated expression.
+   * @returns {number | undefined} The result of the evaluated expression, or
+   * `undefined` when an inline function definition consumes the expression.
    */
-  evalMath(depth: number = 0, stopChar?: string): number {
+  evalMath(depth: number = 0, stopChar?: string): number | undefined {
     debug("evalMath", { depth, stopChar }, this.str);
 
-    let left: number;
+    let left: number | undefined;
 
     // If there's a function definition inline, parse and skip it.
     if (this.str.startsWith("function")) {
@@ -305,6 +309,10 @@ export class MathCore {
       left = this.evalMath(depth, stopChar);
     } else if (this.str.length > 0) {
       left = this.getnum();
+    }
+
+    if (left === undefined) {
+      return undefined;
     }
 
     if (Number.isNaN(left)) {
@@ -346,6 +354,9 @@ export class MathCore {
 
       // Evaluate the right side at a higher depth
       const right = this.evalMath(this.operators[op].priority + 1, stopChar);
+      if (right === undefined) {
+        throw new Error(`Missing right operand for operator '${op}'.`);
+      }
       debug("evalMath right =", { right, op, left });
 
       // Apply the operation
@@ -533,6 +544,9 @@ export class MathCore {
             } else {
               // parse numeric expression
               const val = this.evalMath(0, ")");
+              if (val === undefined) {
+                throw new Error(`Missing function argument for '${fnName}'.`);
+              }
               args.push(val);
             }
 
@@ -574,7 +588,11 @@ export class MathCore {
     if (this.str.startsWith("(")) {
       this.str = this.str.substring(1).trim();
       // Use evalMath(0, ")") to parse until the matching ')'
-      value = this.evalMath(0, ")");
+      const nestedValue = this.evalMath(0, ")");
+      if (nestedValue === undefined) {
+        throw new Error("Empty parenthesized expression.");
+      }
+      value = nestedValue;
       debug("getnum this.str", this.str);
       if (!this.str.startsWith(")")) {
         throw new Error("Mismatched parentheses.");

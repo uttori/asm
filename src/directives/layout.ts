@@ -29,7 +29,11 @@ export const handlePullBase = ({ session }: AddressStackDirectiveContext): void 
   if (session.pushBaseStack.length === 0) {
     throw new Error("No base value to pull.");
   }
-  session.currentTargetAddress = session.pushBaseStack.pop();
+  const baseAddress = session.pushBaseStack.pop();
+  if (baseAddress === undefined) {
+    throw new Error("No base value to pull.");
+  }
+  session.currentTargetAddress = baseAddress;
 }
 
 /**

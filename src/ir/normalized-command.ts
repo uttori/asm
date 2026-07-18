@@ -1,5 +1,6 @@
 import { parseExpressionNode, type ExpressionNode, type RangeExpressionNode } from "./expression-node.js";
 import { createLineSpan, deriveTokenSpans, type SourceSpan } from "../source-location.js";
+import { incrementInternalCounter } from "../internal-instrumentation.js";
 
 export type CommandKind =
   | "unknown"
@@ -194,6 +195,7 @@ export function createPendingCommand(
  * @returns {NormalizedCommand} The detached execution command.
  */
 export function cloneNormalizedCommand(command: NormalizedCommand): NormalizedCommand {
+  incrementInternalCounter("normalizedCommandClones");
   const cloned = createNormalizedCommand(
     command.source.raw,
     command.source.normalized,

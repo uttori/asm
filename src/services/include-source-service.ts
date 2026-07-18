@@ -1,6 +1,7 @@
 import type { AssemblyFileProvider } from "../file-provider.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
 import type { AssemblyFrontEndService } from "./assembly-front-end-service.js";
+import { incrementInternalCounter } from "../internal-instrumentation.js";
 
 export interface IncludedFileInfo {
   /** Whether the file has been included. */
@@ -117,6 +118,7 @@ export class IncludeSourceService {
     this.host.recordIncludeEdge(previousFile, resolvedPath);
 
     try {
+      incrementInternalCounter("includeReads");
       const content = this.host.fileProvider.readTextFile(resolvedPath, "utf8");
       this.host.currentFile = resolvedPath;
 

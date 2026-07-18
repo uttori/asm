@@ -1,0 +1,22 @@
+{
+  "chou": {
+    "bytes": 1048576,
+    "sha256": "514cfb608ef9107739795623973f18ff3aea48eb6c7509e63f957edd10e52378"
+  },
+  "slideshow": {
+    "bytes": 284838,
+    "sha256": "c7ea4199d910ac74ba6bcd8f5abc4f7d284c47105d78de50c36fed6322bfc3ee"
+  },
+  "macro-variadic": {
+    "bytes": 29,
+    "sha256": "80f7453995137cd980dac46f9c0378d1338d3c1d8aa163fee6ca505234d1db19"
+  },
+  "include-once": {
+    "bytes": 7,
+    "sha256": "32bbe378a25091502b2baf9f7258c19444e7a43ee4593b08030acd790bd66e6a"
+  },
+  "instruction-encoding": {
+    "bytes": 614,
+    "sha256": "1f76d7bd6d06ab30c090daa6a5f3555c4bdcc8c8084871880b4caa403326b730"
+  }
+}

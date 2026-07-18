@@ -18,7 +18,7 @@ interface TestResult {
 }
 
 // Directories and file paths
-const testsDir = path.join(process.cwd(), "./fixtures/integration/snes-slideshow-legacy");
+const testsDir = path.join(process.cwd(), "./fixtures/integration/snes-slideshow");
 const targetRom = path.join(testsDir, "test.sfc");
 
 // Helper: Get file stats (size and checksum). If the file doesn't exist,

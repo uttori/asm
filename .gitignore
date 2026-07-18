@@ -59,7 +59,7 @@ typings/
 # dotenv environment variables file
 .env
 
-.tsimp/*
+.tsimp/
 
 # Parity check output
 parity-result.txt
@@ -70,3 +70,4 @@ fixtures/asar/tests/**/*.sfc
 fixtures/integration/**/SLIDE.sfc
 fixtures/integration/chou/chou-debug*.sfc
 fixtures/integration/chou/chou-seeded.sfc
+Local Only/

@@ -27,7 +27,7 @@
     "noEmit": false,
     "sourceMap": true,
     "strict": true,
-    "strictNullChecks": false,
+    "strictNullChecks": true,
     "noUncheckedIndexedAccess": false,
     "target": "esnext",
     "types": ["debug", "node", "sinon"],

@@ -10,7 +10,7 @@ import {
   shouldEndifCloseInnermostWhile,
 } from "./compatibility/asar-compatibility-profile.js";
 
-import { AddressToLineMapping } from "./addr2line.js";
+import { AddressToLineMapping } from "./addressToLine.ts";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import {
   type AssemblyAnalysisResult,
@@ -73,6 +73,7 @@ import {
 } from "./services/command-text-service.js";
 import type { SourceSpan } from "./source-location.js";
 import { createNodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
+import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
 
 let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
@@ -1024,7 +1025,7 @@ export class Assembler {
 
     for (let i = this.whileStatus.length - 1; i >= 0; i--) {
       const loop = this.whileStatus[i];
-      if (loop.is_for && loop.for_variable === varName) {
+      if (loop.is_for && loop.for_variable === varName && loop.for_cur !== undefined) {
         return loop.for_cur.toString();
       }
     }
@@ -1396,7 +1397,8 @@ export class Assembler {
   preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
     if (state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
       setCommandKind(state, "characterMapping");
-      this.handleCharacterMapping(state);
+      debug("handleCharacterMapping", state.words);
+      this.directiveRuntime.handleCharacterMapping(state.words);
       return "handled";
     }
 
@@ -1501,6 +1503,7 @@ export class Assembler {
         && !this.isDefinitionCollectionStage
         && (rewrittenRaw.includes("...") || rewrittenRaw.includes("…"));
       if (rewrittenRaw !== workingState.source.raw || requiresVariadicResolution) {
+        incrementInternalCounter("actualReparses");
         const rewrittenState = this.createNormalizedCommandFromRaw(
           rewrittenRaw,
           workingState.source.file,
@@ -1633,15 +1636,6 @@ export class Assembler {
    */
   addAddressToLine(address: number): void {
     this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
-  }
-
-  /**
-   * Writes data of the specified length.
-   * @param {number} len The length of the data to write.
-   * @param {number} value The value to write.
-   */
-  writeDataByLength(len: number, value: number): void {
-    this.directiveRuntime.writeDataByLength(len, value);
   }
 
   /**
@@ -2112,7 +2106,7 @@ export class Assembler {
       this.backwardLabels = {};
     }
     // Reset the macro macroLabelInstance
-    this.macroLabelInstance = null;
+    this.macroLabelInstance = 0;
 
     // Include guards are pass-local so includeonce files run once in each pass.
     this.includeSource.resetGuards();
@@ -2340,29 +2334,33 @@ export class Assembler {
   }
 
   buildProgramModel(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
-    const program = this.frontEndService.buildProgramModel(source, sourceFile, startLine);
-    return {
-      sourceFile: program.sourceFile,
-      startLine: program.startLine,
-      nodes: program.nodes,
-    };
+    return measureInternalPhase("buildProgramModel", () => {
+      const program = this.frontEndService.buildProgramModel(source, sourceFile, startLine);
+      return {
+        sourceFile: program.sourceFile,
+        startLine: program.startLine,
+        nodes: program.nodes,
+      };
+    });
   }
 
   runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState {
-    if (stage === "collectDefinitions") {
-      this.stageExecutionStates.clear();
-      this.activeStageExecutionState = null;
-    }
-    const stageState = this.getOrCreateStageExecutionState(stage);
-    this.activeStageExecutionState = stageState;
-    this.applyStageExecutionState(stageState);
-    this.setCurrentFile(program.sourceFile);
-    this.activateStage(stage);
-    const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
-    this.executeLoweredNodeStream(loweredProgram.nodes);
-    this.finishPass();
-    this.captureStageExecutionState(stageState);
-    return stageState;
+    return measureInternalPhase(stage, () => {
+      if (stage === "collectDefinitions") {
+        this.stageExecutionStates.clear();
+        this.activeStageExecutionState = null;
+      }
+      const stageState = this.getOrCreateStageExecutionState(stage);
+      this.activeStageExecutionState = stageState;
+      this.applyStageExecutionState(stageState);
+      this.setCurrentFile(program.sourceFile);
+      this.activateStage(stage);
+      const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
+      this.executeLoweredNodeStream(loweredProgram.nodes);
+      this.finishPass();
+      this.captureStageExecutionState(stageState);
+      return stageState;
+    });
   }
 
   assembleProgram(program: ProgramModel): void {
@@ -2457,32 +2455,6 @@ export class Assembler {
    */
   getBinaryOutput = (): Uint8Array => {
     return new Uint8Array(this.romdata.slice(0, this.romdata.length));
-  }
-
-  /**
-   * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
-   * @param {NormalizedCommand | string[]} command The normalized command node or legacy words tuple.
-   * @throws {Error} If the format is incorrect.
-   */
-  handleCharacterMapping(command: NormalizedCommand | string[]): void {
-    const words = Array.isArray(command) ? command : command.words;
-    debug("handleCharacterMapping", words);
-    if (words.length !== 3) {
-      throw new Error("Character mapping requires format: 'char' = value");
-    }
-    const char = words[0].replace(/["']/g, "");
-    const value = this.operandResolver.getnum(words[2]);
-    this.characterMappings.set(char, value);
-  }
-
-  /**
-   * Processes a string and maps characters to their corresponding values in `characterMappings`.
-   * If a character is not found in `characterMappings`, its charCode is used instead.
-   * @param {string} input The string to process.
-   * @returns {number[]} An array of numbers representing the mapped characters.
-   */
-  processStringWithMapping(input: string): number[] {
-    return Array.from(input).map(char => this.characterMappings.get(char) ?? char.charCodeAt(0));
   }
 
   /**
@@ -2621,7 +2593,7 @@ export class Assembler {
     this.executeWhileLoopCommands(
       whileBlock,
       whileBlock.commands,
-      (cmd) => cmd.kind === "command" && cmd.command.kind === "defineCommand" ? getDefineVariable(cmd.command.command) : null,
+      (cmd) => cmd.kind === "command" && cmd.command.kind === "defineCommand" ? getDefineVariable(cmd.command.command) ?? null : null,
       (cmd) => this.executeLoweredNodeWithRecovery(cmd),
     );
   }
@@ -2692,6 +2664,7 @@ export class Assembler {
 
   executeLoweredNode(node: LoweredExecutableNode): void {
     if (node.kind === "command") {
+      incrementInternalCounter("passthroughDispatches");
       this.processNormalizedCommand(node.command, this.runtimePassthroughRewriteEnabled);
       return;
     }
