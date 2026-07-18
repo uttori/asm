@@ -4,6 +4,8 @@ export type ArchitectureDefinition = {
     name: string;
     encoder: ArchitectureEncoder;
     classifyOperand: (resolver: OperandResolver, operand: string) => LoweredOperand;
+    splitOperands: (operandText: string) => string[];
+    unknownInstructionBehavior: "throw" | "returnFalse";
 };
 export declare class ArchitectureRegistry {
     readonly definitions: Map<string, ArchitectureDefinition>;

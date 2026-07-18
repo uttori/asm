@@ -7,8 +7,8 @@ import type { AssemblerServices } from "../assembler-internals.js";
 import { ArchitectureRegistry } from "../architecture-registry.js";
 import type { SpcblockData } from "../assembler.js";
 import { ExpressionNode } from "../ir/expression-node.js";
-import type { AssemblyFileProvider } from "../file-provider.js";
 import type { DirectiveRuntimeService } from "../services/directive-runtime-service.js";
+import type { IncludeSourceService } from "../services/include-source-service.js";
 export interface DirectiveAddressCapability {
     recordCurrentAddress(): void;
     setWritePosition(address: number): void;
@@ -30,17 +30,6 @@ export interface DirectiveNamespaceCapability {
     namespaceNestingPath: string[];
     namespaceNestingEnabled: boolean;
     currentNamespace: string;
-}
-export interface DirectiveIncludeCapability {
-    readFile(filename: string): Uint8Array | string;
-    fileProvider: AssemblyFileProvider;
-    currentFile: string;
-    includedFiles: Map<string, {
-        included: boolean;
-        guarded: boolean;
-    }>;
-    assemblefile(filename: string, isMacro: boolean): void;
-    handleInclude(kind: string, filename: string, once: boolean): void;
 }
 export interface DirectiveTableCapability {
     tableStack: Map<string, number>[];
@@ -110,7 +99,9 @@ export type OrgDirectiveContext = SessionDirectiveContext<Pick<DirectiveSpcCapab
 export type StartposDirectiveContext = OperandDirectiveContext<Pick<DirectiveSpcCapability, "inSpcblock" | "spcblockData"> & Pick<DirectiveExpressionCapability, "resolvedefines">>;
 export type ArchitectureDirectiveContext = SessionDirectiveContext<DirectiveArchitectureCapability & Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">>;
 export type AssemblerPolicyDirectiveContext = SessionDirectiveContext<Pick<DirectiveAssemblerCapability, "readFunctionsEnabled" | "bankCrossCheckMode" | "optimizeDirectPage">>;
-export type IncludeDirectiveContext = OperandDirectiveContext<DirectiveIncludeCapability & Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope"> & Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition"> & Pick<DirectiveRomCapability, "write1">> & RuntimeDirectiveContext;
+export type IncludeDirectiveContext = OperandDirectiveContext<Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope"> & Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition"> & Pick<DirectiveRomCapability, "write1">> & RuntimeDirectiveContext & {
+    includeSource: Pick<IncludeSourceService, "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile">;
+};
 export type MemoryDirectiveContext = OperandDirectiveContext<Pick<DirectiveRomCapability, "targetRom" | "romdata" | "defaultFreespaceByte" | "activeFreespaceStartPc" | "activeFreespaceContentStartPc" | "currentTargetAddress" | "currentTargetBaseAddress" | "currentTargetStartAddress" | "currentTargetBaseStartAddress" | "mapper" | "romWriter" | "expandRom" | "write1" | "write3"> & Pick<DirectiveExpressionCapability, "resolvedefines" | "symbolScope"> & Pick<DirectiveSpcCapability, "inSpcblock">>;
 export type StructDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "structEngine">>;
 //# sourceMappingURL=types.d.ts.map

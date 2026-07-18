@@ -6,11 +6,11 @@ import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Arch65816 } from "../src/Arch65816.js";
-import { Assembler } from "../src/assembler.js";
+import { createEncoderTestHost } from "./architecture/test-stubs.js";
 
 const createArch65816 = () => {
-  const assembler = new Assembler();
-  const arch = new Arch65816(assembler);
+  const assembler = createEncoderTestHost();
+  const arch = new Arch65816(assembler.context);
   return { assembler, arch };
 };
 

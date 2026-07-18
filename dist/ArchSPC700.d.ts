@@ -1,14 +1,12 @@
-import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
-import type { Assembler } from "./assembler.js";
-import type { NormalizedCommand } from "./ir/normalized-command.js";
+import { type ArchitectureEncoder, type ArchitectureEncoderContext, type EncoderRuntime, type InstructionDescriptor, type LoweredInstruction, type LoweredOperand } from "./architecture-types.js";
 /**
  * Additional instructions share similar addressing forms but have unique opcodes,
  * e.g. "(X),(Y)" or "$dp,#$imm", etc. However, some instructions (like "CMP X,#imm")
  * differ in syntax. We'll handle that in code directly.
  */
 export declare class ArchSPC700 implements ArchitectureEncoder {
-    assembler: Assembler;
-    constructor(assembler: Assembler);
+    assembler: EncoderRuntime;
+    constructor(context: ArchitectureEncoderContext);
     /**
      * Returns the static SPC700 instruction catalog for editor tooling.
      * @returns {InstructionDescriptor[]} The instruction descriptors.
@@ -17,7 +15,6 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
     encode(words: string[]): boolean;
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
-    lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction;
     estimateSize(words: string[]): number;
     estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     asblock_spc700(words: string[]): boolean;

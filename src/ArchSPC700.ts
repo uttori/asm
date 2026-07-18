@@ -1,6 +1,12 @@
-import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
-import type { Assembler } from "./assembler.js";
-import type { NormalizedCommand } from "./ir/normalized-command.js";
+import {
+  createEncoderRuntime,
+  type ArchitectureEncoder,
+  type ArchitectureEncoderContext,
+  type EncoderRuntime,
+  type InstructionDescriptor,
+  type LoweredInstruction,
+  type LoweredOperand,
+} from "./architecture-types.js";
 import { spc700Catalog } from "./lsp/instruction-catalog.js";
 
 let debug = (..._: unknown[]) => {};
@@ -301,10 +307,10 @@ const bit1Opcodes: Record<"OR1" | "AND1" | "EOR1", number> = {
  */
 
 export class ArchSPC700 implements ArchitectureEncoder {
-  assembler: Assembler;
+  assembler: EncoderRuntime;
 
-  constructor(assembler: Assembler) {
-    this.assembler = assembler;
+  constructor(context: ArchitectureEncoderContext) {
+    this.assembler = createEncoderRuntime(context);
   }
 
   /**
@@ -337,29 +343,6 @@ export class ArchSPC700 implements ArchitectureEncoder {
       instruction.loweredOperand,
       loweredOperands,
     );
-  }
-
-  lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction {
-    const parsedOperands = command.parsed.opcodeOperands;
-    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? this.splitTopLevelComma(operandText) : []);
-    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
-
-    return {
-      kind: "instruction",
-      command,
-      mnemonic,
-      operandText,
-      operands,
-      loweredOperands,
-      loweredOperand,
-      words: command.words,
-      sourceFile: command.source.file,
-      sourceLine: command.source.line,
-      sourceRaw: command.source.raw,
-    };
   }
 
   estimateSize(words: string[]): number {
@@ -1274,7 +1257,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     offset = target - (this.assembler.currentTargetAddress + 3);
     debug("handleDbnzCbne offset", offset)
     if (offset < -128 || offset > 127) {
-      throw new Error(`Branch target out of range (${offset})`);
+      throw this.assembler.diagnostics.error(`Branch target out of range (${offset})`);
     }
     offset &= 0xff;
 

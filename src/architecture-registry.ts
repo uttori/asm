@@ -10,6 +10,35 @@ export type ArchitectureDefinition = {
   name: string;
   encoder: ArchitectureEncoder;
   classifyOperand: (resolver: OperandResolver, operand: string) => LoweredOperand;
+  splitOperands: (operandText: string) => string[];
+  unknownInstructionBehavior: "throw" | "returnFalse";
+};
+
+const splitSingleOperand = (operandText: string): string[] => operandText ? [operandText] : [];
+const splitCommaOperands = (operandText: string): string[] => operandText
+  ? operandText.split(",").map((operand) => operand.trim())
+  : [];
+const splitTopLevelCommaOperands = (operandText: string): string[] => {
+  const operands: string[] = [];
+  let level = 0;
+  let current = "";
+  for (const character of operandText) {
+    if (character === "(") {
+      level++;
+    } else if (character === ")") {
+      level--;
+    }
+    if (character === "," && level === 0) {
+      operands.push(current.trim());
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  if (current.trim()) {
+    operands.push(current.trim());
+  }
+  return operands;
 };
 
 export class ArchitectureRegistry {
@@ -48,6 +77,8 @@ export const createArchitectureRegistry = (
       name: "65816",
       encoder: encoder65816,
       classifyOperand: classify65816Operand,
+      splitOperands: splitSingleOperand,
+      unknownInstructionBehavior: "throw",
     },
     ["65816"],
   );
@@ -56,6 +87,8 @@ export const createArchitectureRegistry = (
       name: "spc700",
       encoder: encoderSpc700,
       classifyOperand: classifySpc700Operand,
+      splitOperands: splitTopLevelCommaOperands,
+      unknownInstructionBehavior: "throw",
     },
     ["spc700", "spc700-raw", "spc700-inline"],
   );
@@ -64,6 +97,8 @@ export const createArchitectureRegistry = (
       name: "superfx",
       encoder: encoderSuperFx,
       classifyOperand: classifySuperFxOperand,
+      splitOperands: splitCommaOperands,
+      unknownInstructionBehavior: "returnFalse",
     },
     ["superfx"],
   );

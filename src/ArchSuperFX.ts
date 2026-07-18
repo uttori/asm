@@ -1,6 +1,12 @@
-import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
-import type { Assembler } from "./assembler.js";
-import type { NormalizedCommand } from "./ir/normalized-command.js";
+import {
+  createEncoderRuntime,
+  type ArchitectureEncoder,
+  type ArchitectureEncoderContext,
+  type EncoderRuntime,
+  type InstructionDescriptor,
+  type LoweredInstruction,
+  type LoweredOperand,
+} from "./architecture-types.js";
 import { superFxCatalog } from "./lsp/instruction-catalog.js";
 
 let debug = (..._: unknown[]) => {};
@@ -12,10 +18,10 @@ try {
 const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T => Object.hasOwn(obj, key);
 
 export class ArchSuperFX implements ArchitectureEncoder {
-  assembler: Assembler;
+  assembler: EncoderRuntime;
 
-  constructor(assembler: Assembler) {
-    this.assembler = assembler;
+  constructor(context: ArchitectureEncoderContext) {
+    this.assembler = createEncoderRuntime(context);
   }
 
   /**
@@ -48,29 +54,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
       instruction.loweredOperand,
       loweredOperands,
     );
-  }
-
-  lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction {
-    const parsedOperands = command.parsed.opcodeOperands;
-    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? operandText.split(",").map((operand) => operand.trim()) : []);
-    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
-
-    return {
-      kind: "instruction",
-      command,
-      mnemonic,
-      operandText,
-      operands,
-      loweredOperands,
-      loweredOperand,
-      words: command.words,
-      sourceFile: command.source.file,
-      sourceLine: command.source.line,
-      sourceRaw: command.source.raw,
-    };
   }
 
   estimateSize(words: string[]): number {
@@ -791,7 +774,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
    */
   rangeCheck(min: number, mid: number, max: number) {
     if (mid < min || mid > max) {
-      throw new Error(`Register out of valid range ${min}-${max}: ${mid}`);
+      throw this.assembler.diagnostics.error(`Register out of valid range ${min}-${max}: ${mid}`);
     }
   }
 
@@ -804,7 +787,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
   checkShortAddr(num: number): boolean {
     debug("checkShortAddr", num);
     if (num % 2 !== 0 || num < 0 || num > 0x1FE) {
-      throw new Error(
+      throw this.assembler.diagnostics.error(
         `Invalid short address ${num}. Must be even and in range 0..0x1FE`
       );
     }

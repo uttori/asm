@@ -9117,6 +9117,28 @@ function getWellformedEdit(textEdit) {
 import fs3 from "node:fs";
 import path5 from "node:path";
 
+// src/architecture-types.ts
+var createEncoderRuntime = (context) => ({
+  operandResolver: context.operands,
+  write1: (value) => context.emission.write1(value),
+  write2: (value) => context.emission.write2(value),
+  write3: (value) => context.emission.write3(value),
+  get currentTargetAddress() {
+    return context.sizing.getCurrentAddress();
+  },
+  get optimizeDirectPage() {
+    return context.sizing.optimizeDirectPage();
+  },
+  get enforceResolvedLabels() {
+    return context.branches.enforceResolvedLabels();
+  },
+  symbolScope: {
+    findNextLabel: (label, referenceAddress) => context.branches.findNextLabel(label, referenceAddress),
+    findPreviousLabel: (label, referenceAddress) => context.branches.findPreviousLabel(label, referenceAddress)
+  },
+  diagnostics: context.diagnostics
+});
+
 // src/lsp/instruction-catalog.ts
 function implied(mnemonic, summary, opcode) {
   return { mnemonic, summary, modes: [{ mode: "implied", syntax: "", opcode, size: 1 }] };
@@ -9408,8 +9430,8 @@ try {
 }
 var Arch65816 = class {
   assembler;
-  constructor(assembler) {
-    this.assembler = assembler;
+  constructor(context) {
+    this.assembler = createEncoderRuntime(context);
   }
   /**
    * Returns the static 65816 instruction catalog for editor tooling.
@@ -9436,27 +9458,6 @@ var Arch65816 = class {
       instruction2.loweredOperand.expanded,
       instruction2.loweredOperand.length
     );
-  }
-  lowerInstructionFromCommand(command) {
-    const parsedOperands = command.parsed.opcodeOperands;
-    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
-    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
-    return {
-      kind: "instruction",
-      command,
-      mnemonic,
-      operandText,
-      operands,
-      loweredOperands,
-      loweredOperand,
-      words: command.words,
-      sourceFile: command.source.file,
-      sourceLine: command.source.line,
-      sourceRaw: command.source.raw
-    };
   }
   estimateSize(words) {
     if (words.length === 0) {
@@ -10943,19 +10944,19 @@ var Arch65816 = class {
       return true;
     }
     if (Number.isNaN(relativeAddress)) {
-      throw new Error("Error: relativeAddress is NaN.");
+      throw this.assembler.diagnostics.error("Error: relativeAddress is NaN.");
     }
     debug("handleBranchInstructions relativeAddress", relativeAddress, "/", relativeAddress.toString(16));
     if (opcode === "BRL") {
       if (relativeAddress < -32768 || relativeAddress > 32767) {
-        throw new Error(`Error: BRL target out of range (${relativeAddress}).`);
+        throw this.assembler.diagnostics.error(`Error: BRL target out of range (${relativeAddress}).`);
       }
       this.assembler.write1(branchOpcodes2[opcode]);
       this.assembler.write2(relativeAddress);
       return true;
     } else {
       if (relativeAddress < -128 || relativeAddress > 127) {
-        throw new Error(`Error: Branch target out of range (${relativeAddress}).`);
+        throw this.assembler.diagnostics.error(`Error: Branch target out of range (${relativeAddress}).`);
       }
       let signedByte = (relativeAddress & 255) >>> 0;
       if (relativeAddress < 0) {
@@ -11219,8 +11220,8 @@ var bit1Opcodes = {
 };
 var ArchSPC700 = class {
   assembler;
-  constructor(assembler) {
-    this.assembler = assembler;
+  constructor(context) {
+    this.assembler = createEncoderRuntime(context);
   }
   /**
    * Returns the static SPC700 instruction catalog for editor tooling.
@@ -11249,27 +11250,6 @@ var ArchSPC700 = class {
       instruction2.loweredOperand,
       loweredOperands
     );
-  }
-  lowerInstructionFromCommand(command) {
-    const parsedOperands = command.parsed.opcodeOperands;
-    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? this.splitTopLevelComma(operandText) : []);
-    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
-    return {
-      kind: "instruction",
-      command,
-      mnemonic,
-      operandText,
-      operands,
-      loweredOperands,
-      loweredOperand,
-      words: command.words,
-      sourceFile: command.source.file,
-      sourceLine: command.source.line,
-      sourceRaw: command.source.raw
-    };
   }
   estimateSize(words) {
     if (words.length === 0) {
@@ -11939,7 +11919,7 @@ var ArchSPC700 = class {
     offset = target - (this.assembler.currentTargetAddress + 3);
     debug2("handleDbnzCbne offset", offset);
     if (offset < -128 || offset > 127) {
-      throw new Error(`Branch target out of range (${offset})`);
+      throw this.assembler.diagnostics.error(`Branch target out of range (${offset})`);
     }
     offset &= 255;
     if (opcode.toUpperCase() === "DBNZ") {
@@ -12668,8 +12648,8 @@ try {
 var hasOwn2 = (obj, key) => Object.hasOwn(obj, key);
 var ArchSuperFX = class {
   assembler;
-  constructor(assembler) {
-    this.assembler = assembler;
+  constructor(context) {
+    this.assembler = createEncoderRuntime(context);
   }
   /**
    * Returns the static Super FX instruction catalog for editor tooling.
@@ -12698,27 +12678,6 @@ var ArchSuperFX = class {
       instruction2.loweredOperand,
       loweredOperands
     );
-  }
-  lowerInstructionFromCommand(command) {
-    const parsedOperands = command.parsed.opcodeOperands;
-    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? operandText.split(",").map((operand) => operand.trim()) : []);
-    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
-    return {
-      kind: "instruction",
-      command,
-      mnemonic,
-      operandText,
-      operands,
-      loweredOperands,
-      loweredOperand,
-      words: command.words,
-      sourceFile: command.source.file,
-      sourceLine: command.source.line,
-      sourceRaw: command.source.raw
-    };
   }
   estimateSize(words) {
     if (words.length === 0) {
@@ -13304,7 +13263,7 @@ var ArchSuperFX = class {
    */
   rangeCheck(min, mid, max) {
     if (mid < min || mid > max) {
-      throw new Error(`Register out of valid range ${min}-${max}: ${mid}`);
+      throw this.assembler.diagnostics.error(`Register out of valid range ${min}-${max}: ${mid}`);
     }
   }
   /**
@@ -13316,7 +13275,7 @@ var ArchSuperFX = class {
   checkShortAddr(num) {
     debug3("checkShortAddr", num);
     if (num % 2 !== 0 || num < 0 || num > 510) {
-      throw new Error(
+      throw this.assembler.diagnostics.error(
         `Invalid short address ${num}. Must be even and in range 0..0x1FE`
       );
     }
@@ -13339,6 +13298,7 @@ var ArchSuperFX = class {
 
 // src/compatibility/asar-compatibility-profile.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES = [
+  "fastrom",
   "dpbase",
   "warnings",
   "print",
@@ -13350,7 +13310,55 @@ var ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "{",
   "}"
 ];
+var assertMapperAvailable = (inSpcblock) => {
+  if (inSpcblock) {
+    throw new Error("Mapper directives are unavailable inside spcblock.");
+  }
+};
+var applyMapperSelection = (state, mapper) => {
+  state.mapper = mapper;
+  if (mapper === "norom") {
+    state.checksumFixEnabled = false;
+  }
+};
+var isFreespaceAvailable = (mapper) => mapper !== "norom";
+var getChecksumHeaderOffset = (mapper) => {
+  if (mapper === "lorom" || mapper === "sa1rom" || mapper === "bigsa1rom") {
+    return 32704;
+  }
+  return 65472;
+};
+var calculateHeaderChecksum = (romdata, mode) => {
+  const romLength = romdata.length;
+  if (romLength === 0) {
+    return 0;
+  }
+  let checksum = 0;
+  if (mode === "simple" || (romLength & romLength - 1) === 0) {
+    for (let i = 0; i < romLength; i++) {
+      checksum += romdata[i] & 255;
+    }
+    return checksum & 65535;
+  }
+  let bitround = 1;
+  while (bitround < romLength) {
+    bitround <<= 1;
+  }
+  const firstPart = bitround >> 1;
+  const secondPart = romLength - firstPart;
+  const repeatCount = Math.floor(firstPart / secondPart);
+  let secondPartSum = 0;
+  for (let i = 0; i < firstPart; i++) {
+    checksum += romdata[i] & 255;
+  }
+  for (let i = firstPart; i < romLength; i++) {
+    secondPartSum += romdata[i] & 255;
+  }
+  return checksum + secondPartSum * repeatCount & 65535;
+};
 var shouldRedirectOrgToSpcblock = (spcInlineCompatMode) => spcInlineCompatMode;
+var shouldEnableSpcInlineCompat = (architecture) => architecture === "spc700-inline";
+var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
 var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
 
 // src/addr2line.ts
@@ -15771,6 +15779,30 @@ var OperandResolver = class {
 };
 
 // src/architecture-registry.ts
+var splitSingleOperand = (operandText) => operandText ? [operandText] : [];
+var splitCommaOperands = (operandText) => operandText ? operandText.split(",").map((operand) => operand.trim()) : [];
+var splitTopLevelCommaOperands = (operandText) => {
+  const operands = [];
+  let level = 0;
+  let current = "";
+  for (const character of operandText) {
+    if (character === "(") {
+      level++;
+    } else if (character === ")") {
+      level--;
+    }
+    if (character === "," && level === 0) {
+      operands.push(current.trim());
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  if (current.trim()) {
+    operands.push(current.trim());
+  }
+  return operands;
+};
 var ArchitectureRegistry = class {
   definitions = /* @__PURE__ */ new Map();
   aliases = /* @__PURE__ */ new Map();
@@ -15798,7 +15830,9 @@ var createArchitectureRegistry = (encoder65816, encoderSpc700, encoderSuperFx) =
     {
       name: "65816",
       encoder: encoder65816,
-      classifyOperand: classify65816Operand
+      classifyOperand: classify65816Operand,
+      splitOperands: splitSingleOperand,
+      unknownInstructionBehavior: "throw"
     },
     ["65816"]
   );
@@ -15806,7 +15840,9 @@ var createArchitectureRegistry = (encoder65816, encoderSpc700, encoderSuperFx) =
     {
       name: "spc700",
       encoder: encoderSpc700,
-      classifyOperand: classifySpc700Operand
+      classifyOperand: classifySpc700Operand,
+      splitOperands: splitTopLevelCommaOperands,
+      unknownInstructionBehavior: "throw"
     },
     ["spc700", "spc700-raw", "spc700-inline"]
   );
@@ -15814,7 +15850,9 @@ var createArchitectureRegistry = (encoder65816, encoderSpc700, encoderSuperFx) =
     {
       name: "superfx",
       encoder: encoderSuperFx,
-      classifyOperand: classifySuperFxOperand
+      classifyOperand: classifySuperFxOperand,
+      splitOperands: splitCommaOperands,
+      unknownInstructionBehavior: "returnFalse"
     },
     ["superfx"]
   );
@@ -15822,11 +15860,11 @@ var createArchitectureRegistry = (encoder65816, encoderSpc700, encoderSuperFx) =
 };
 
 // src/directives/data.ts
-var handleDataDirective = ({ session }, words) => {
-  session.handleDataDirective(words[0], words.slice(1));
+var handleDataDirective = ({ runtime }, words) => {
+  runtime.handleDataDirective(words[0], words.slice(1));
 };
-var registerDataDirectives = (registry) => {
-  registry.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], handleDataDirective);
+var registerDataDirectives = (registry, context) => {
+  registry.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
 };
 
 // src/directives/fill-pad.ts
@@ -15837,79 +15875,85 @@ var getDirectiveWidth = (keyword, prefix) => {
   if (keyword === "paddword" || keyword === "filldword") return 4;
   throw new Error(`Unrecognized ${prefix} directive.`);
 };
-var registerFillPadDirectives = (registry) => {
-  registry.register(["fillbyte", "fillword", "filllong", "filldword"], ({ session, operandResolver }, words) => {
-    const keyword = words[0];
-    const len = getDirectiveWidth(keyword, "fill");
-    if (words.length !== 2) {
-      throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
+var handleFillPattern = ({ session, operandResolver }, words) => {
+  const keyword = words[0];
+  const len = getDirectiveWidth(keyword, "fill");
+  if (words.length !== 2) {
+    throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
+  }
+  const value = operandResolver.getnum(session.resolvedefines(words[1]));
+  for (let i = 0; i < 12; i += len) {
+    let current = value;
+    for (let j = 0; j < len; j++) {
+      session.fillbyte[i + j] = current & 255;
+      current >>>= 8;
     }
-    const value = operandResolver.getnum(session.resolvedefines(words[1]));
-    for (let i = 0; i < 12; i += len) {
-      let current = value;
-      for (let j = 0; j < len; j++) {
-        session.fillbyte[i + j] = current & 255;
-        current >>>= 8;
-      }
+  }
+};
+var handleFill = ({ session, operandResolver }, words) => {
+  if (words.length !== 2) {
+    throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
+  }
+  const count = operandResolver.getnum(session.resolvedefines(words[1]));
+  for (let i = 0; i < count; i++) {
+    session.write1(session.fillbyte[i % 12]);
+  }
+};
+var handlePadPattern = ({ session, operandResolver }, words) => {
+  const keyword = words[0];
+  const len = getDirectiveWidth(keyword, "pad");
+  if (words.length !== 2) {
+    throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
+  }
+  const value = operandResolver.getnum(session.resolvedefines(words[1]));
+  session.padUnit = len;
+  for (let i = 0; i < len; i++) {
+    session.padbyte[i] = value >> 8 * i & 255;
+  }
+};
+var handlePad = ({ session, operandResolver }, words) => {
+  let gap;
+  if (words.length === 1) {
+    const currentBank = session.currentTargetAddress & 16711680;
+    const bankOffset = session.currentTargetAddress & 65535;
+    const nextBank = bankOffset === 65535 ? currentBank + 65536 : currentBank + 65536 - bankOffset;
+    gap = nextBank;
+  } else if (words.length === 2) {
+    const targetSNES = operandResolver.getnum(words[1]);
+    const targetPC = session.romWriter.convertTargetAddressToRomOffset(targetSNES);
+    if (targetPC < 0) {
+      throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
     }
-  });
-  registry.register("fill", ({ session, operandResolver }, words) => {
-    if (words.length !== 2) {
-      throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
+    const currentPC = session.romWriter.convertTargetAddressToRomOffset(session.currentTargetAddress);
+    if (targetPC <= currentPC) {
+      return;
     }
-    const count = operandResolver.getnum(session.resolvedefines(words[1]));
-    for (let i = 0; i < count; i++) {
-      session.write1(session.fillbyte[i % 12]);
-    }
-  });
-  registry.register(["padbyte", "padword", "padlong", "paddword"], ({ session, operandResolver }, words) => {
-    const keyword = words[0];
-    const len = getDirectiveWidth(keyword, "pad");
-    if (words.length !== 2) {
-      throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
-    }
-    const value = operandResolver.getnum(session.resolvedefines(words[1]));
-    session.padUnit = len;
-    for (let i = 0; i < len; i++) {
-      session.padbyte[i] = value >> 8 * i & 255;
-    }
-  });
-  registry.register("pad", ({ session, operandResolver }, words) => {
-    let gap;
-    if (words.length === 1) {
-      const currentBank = session.currentTargetAddress & 16711680;
-      const bankOffset = session.currentTargetAddress & 65535;
-      const nextBank = bankOffset === 65535 ? currentBank + 65536 : currentBank + 65536 - bankOffset;
-      gap = nextBank;
-    } else if (words.length === 2) {
-      const targetSNES = operandResolver.getnum(words[1]);
-      const targetPC = session.romWriter.convertTargetAddressToRomOffset(targetSNES);
-      if (targetPC < 0) {
-        throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
-      }
-      const currentPC = session.romWriter.convertTargetAddressToRomOffset(session.currentTargetAddress);
-      if (targetPC <= currentPC) {
-        return;
-      }
-      gap = targetPC - currentPC;
-    } else {
-      throw new Error("PAD directive accepts zero or one parameter.");
-    }
-    for (let i = 0; i < gap; i++) {
-      session.write1(session.padbyte[i % session.padUnit]);
-    }
-  });
+    gap = targetPC - currentPC;
+  } else {
+    throw new Error("PAD directive accepts zero or one parameter.");
+  }
+  for (let i = 0; i < gap; i++) {
+    session.write1(session.padbyte[i % session.padUnit]);
+  }
+};
+var registerFillPadDirectives = (registry, context) => {
+  registry.register(["fillbyte", "fillword", "filllong", "filldword"], context, handleFillPattern);
+  registry.register("fill", context, handleFill);
+  registry.register(["padbyte", "padword", "padlong", "paddword"], context, handlePadPattern);
+  registry.register("pad", context, handlePad);
 };
 
 // src/directives/flow-control.ts
-var registerFlowControlDirectives = (registry) => {
-  registry.register(["+", "-"], ({ session }, _words, raw) => {
-    session.symbolScope.handleRelativeLabel(raw);
-  });
+var handleRelativeLabel = ({ session }, _words, raw) => {
+  session.symbolScope.handleRelativeLabel(raw);
+};
+var registerFlowControlDirectives = (registry, context) => {
+  registry.register(["+", "-"], context, handleRelativeLabel);
 };
 
 // src/directives/include-source.ts
-var handleIncbin = ({ session }, words) => {
+var handleIncbin = ({ session, includeSource, operandResolver, runtime }, words) => {
+  includeSource ??= session.includeSource;
   let targetLocationSpecified = false;
   let targetLocation = null;
   const arrowIndex = words.indexOf("->");
@@ -15933,7 +15977,7 @@ var handleIncbin = ({ session }, words) => {
     filename = filenameWithRange;
   }
   filename = filename.replace(/^"(.*)"$/, "$1");
-  const fileData = session.readFile(filename);
+  const fileData = includeSource.readFile(filename);
   if (!fileData) {
     throw new Error(`Failed to read file: ${filename}`);
   }
@@ -15979,10 +16023,10 @@ var handleIncbin = ({ session }, words) => {
   }
   const incbinData = fileData.slice(startOffset, endOffset);
   if (targetLocationSpecified) {
-    session.handlePushPC();
+    runtime.handlePushPC();
     let targetAddress;
     if (/^\$?[\dA-Fa-f]+$/.test(targetLocation ?? "")) {
-      targetAddress = session.operandResolver.getnum(targetLocation ?? "");
+      targetAddress = operandResolver.getnum(targetLocation ?? "");
     } else {
       targetAddress = session.symbolScope.getLabelValue(targetLocation ?? "", false);
     }
@@ -15990,7 +16034,7 @@ var handleIncbin = ({ session }, words) => {
     for (const byte of incbinData) {
       session.write1(byte);
     }
-    session.handlePullPC();
+    runtime.handlePullPC();
   } else {
     for (const byte of incbinData) {
       session.write1(byte);
@@ -15998,35 +16042,28 @@ var handleIncbin = ({ session }, words) => {
   }
   session.recordCurrentAddress();
 };
-var registerIncludeSourceDirectives = (registry) => {
-  registry.register("incsrc", ({ session }, words, _raw, command) => {
+var registerIncludeSourceDirectives = (registry, context) => {
+  registry.register("incsrc", context, ({ includeSource }, words, _raw, command) => {
     const target = command?.parsed.includeTarget?.target ?? words[1];
     if (!target) {
       throw new Error("incsrc requires exactly one filename parameter");
     }
-    session.assemblefile(target, false);
+    includeSource.assembleFile(target);
   });
-  registry.register("include", ({ session }, words, _raw, command) => {
+  registry.register("include", context, ({ includeSource }, words, _raw, command) => {
     const target = command?.parsed.includeTarget?.target ?? words[1];
     if (!target) {
       throw new Error("include requires exactly one filename parameter");
     }
-    session.handleInclude("include", target, false);
+    includeSource.includeFile(target);
   });
-  registry.register("includeonce", ({ session }) => {
-    const fileInfo = session.includedFiles.get(session.currentFile) || { included: true, guarded: false };
-    fileInfo.guarded = true;
-    session.includedFiles.set(session.currentFile, fileInfo);
+  registry.register("includeonce", context, ({ includeSource }) => {
+    includeSource.guardCurrentFile();
   });
-  registry.register("incbin", handleIncbin);
+  registry.register("incbin", context, handleIncbin);
 };
 
 // src/directives/layout.ts
-var assertMapperAvailable = (inSpcblock) => {
-  if (inSpcblock) {
-    throw new Error("Mapper directives are unavailable inside spcblock.");
-  }
-};
 var handlePushBase = ({ session }) => {
   session.pushBaseStack.push(session.currentTargetAddress);
 };
@@ -16049,9 +16086,9 @@ var handleArch = ({ session }, words) => {
     throw new Error("Unsupported architecture: " + archParam);
   }
   session.arch = canonical;
-  session.spcInlineCompatMode = archParam === "spc700-inline";
+  session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
 };
-var handleStartpos = ({ session }, words) => {
+var handleStartpos = ({ session, operandResolver }, words) => {
   const params = words.slice(1);
   if (!session.inSpcblock || !session.spcblockData) {
     throw new Error("startpos used without an active spcblock.");
@@ -16059,10 +16096,10 @@ var handleStartpos = ({ session }, words) => {
   if (params.length !== 1) {
     throw new Error("startpos requires exactly one parameter.");
   }
-  session.spcblockData.executeAddress = session.operandResolver.getnum(session.resolvedefines(params[0])) & 65535;
+  session.spcblockData.executeAddress = operandResolver.getnum(session.resolvedefines(params[0])) & 65535;
 };
-var registerLayoutDirectives = (registry) => {
-  registry.register("base", ({ session, operandResolver }, words) => {
+var registerLayoutDirectives = (registry, context) => {
+  registry.register("base", context.base, ({ session, operandResolver }, words) => {
     if (words.length !== 2) {
       throw new Error("BASE directive requires exactly one parameter.");
     }
@@ -16081,38 +16118,35 @@ var registerLayoutDirectives = (registry) => {
     session.currentTargetAddress = value;
     session.currentTargetStartAddress = value;
   });
-  registry.register("fastrom", () => {
-  });
-  registry.register("lorom", ({ session }) => {
+  registry.register("lorom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "lorom";
+    applyMapperSelection(session, "lorom");
   });
-  registry.register("hirom", ({ session }) => {
+  registry.register("hirom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "hirom";
+    applyMapperSelection(session, "hirom");
   });
-  registry.register("exlorom", ({ session }) => {
+  registry.register("exlorom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "exlorom";
+    applyMapperSelection(session, "exlorom");
   });
-  registry.register("exhirom", ({ session }) => {
+  registry.register("exhirom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "exhirom";
+    applyMapperSelection(session, "exhirom");
   });
-  registry.register("sfxrom", ({ session }) => {
+  registry.register("sfxrom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "sfxrom";
+    applyMapperSelection(session, "sfxrom");
   });
-  registry.register("norom", ({ session }) => {
+  registry.register("norom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "norom";
-    session.checksumFixEnabled = false;
+    applyMapperSelection(session, "norom");
   });
-  registry.register("fullsa1rom", ({ session }) => {
+  registry.register("fullsa1rom", context.mapper, ({ session }) => {
     assertMapperAvailable(session.inSpcblock);
-    session.mapper = "bigsa1rom";
+    applyMapperSelection(session, "bigsa1rom");
   });
-  registry.register("sa1rom", ({ session }, words) => {
+  registry.register("sa1rom", context.mapper, ({ session }, words) => {
     assertMapperAvailable(session.inSpcblock);
     if (words.length > 1) {
       const parts = words[1].split(",");
@@ -16131,29 +16165,29 @@ var registerLayoutDirectives = (registry) => {
       session.sa1banks[4] = 2 << 20;
       session.sa1banks[5] = 3 << 20;
     }
-    session.mapper = "sa1rom";
+    applyMapperSelection(session, "sa1rom");
   });
-  registry.register("org", ({ session }, words) => {
+  registry.register("org", context.org, ({ session, runtime }, words) => {
     if (session.inSpcblock) {
       throw new Error("ORG is unavailable inside spcblock.");
     }
     if (shouldRedirectOrgToSpcblock(session.spcInlineCompatMode)) {
-      session.handleSpcblock(["spcblock", ...words.slice(1)]);
+      runtime.handleSpcblock(["spcblock", ...words.slice(1)]);
       return;
     }
-    session.handleOrg(words.slice(1));
+    runtime.handleOrg(words.slice(1));
   });
-  registry.register("pushbase", handlePushBase);
-  registry.register("pullbase", handlePullBase);
-  registry.register("pushpc", ({ session }) => {
-    session.handlePushPC();
+  registry.register("pushbase", context.addressStack, handlePushBase);
+  registry.register("pullbase", context.addressStack, handlePullBase);
+  registry.register("pushpc", context.runtime, ({ runtime }) => {
+    runtime.handlePushPC();
   });
-  registry.register("pullpc", ({ session }) => {
-    session.handlePullPC();
+  registry.register("pullpc", context.runtime, ({ runtime }) => {
+    runtime.handlePullPC();
   });
-  registry.register("arch", handleArch);
-  registry.register("startpos", handleStartpos);
-  registry.register("check", ({ session }, words) => {
+  registry.register("arch", context.architecture, handleArch);
+  registry.register("startpos", context.startpos, handleStartpos);
+  registry.register("check", context.policy, ({ session }, words) => {
     if (words.length >= 2 && words[1].toLowerCase() === "title") {
       session.readFunctionsEnabled = true;
       return;
@@ -16172,7 +16206,7 @@ var registerLayoutDirectives = (registry) => {
       throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
     }
   });
-  registry.register("optimize", ({ session }, words) => {
+  registry.register("optimize", context.policy, ({ session }, words) => {
     if (words.length >= 3 && words[1].toLowerCase() === "dp") {
       const mode = words[2].toLowerCase();
       if (mode === "none") {
@@ -16189,7 +16223,7 @@ var handleFreespace = ({ session }, words) => {
   if (session.inSpcblock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
   }
-  if (session.mapper === "norom") {
+  if (!isFreespaceAvailable(session.mapper)) {
     throw new Error("No freespace available in norom.");
   }
   const sourceLen = session.targetRom && session.targetRom.length > 0 ? session.targetRom.length : session.romdata.length;
@@ -16216,13 +16250,13 @@ var handleFreespace = ({ session }, words) => {
   session.write1(255);
   session.activeFreespaceContentStartPc = startPc + 8;
 };
-var handleFreespaceByte = ({ session }, words) => {
+var handleFreespaceByte = ({ session, operandResolver }, words) => {
   const params = words.slice(1);
   if (params.length !== 1) {
     throw new Error("FREESPACEBYTE requires exactly one parameter.");
   }
   const value = session.resolvedefines(params[0]);
-  session.defaultFreespaceByte = session.operandResolver.getnum(value) & 255;
+  session.defaultFreespaceByte = operandResolver.getnum(value) & 255;
 };
 var handleProt = ({ session }, words) => {
   const labelList = words.slice(1);
@@ -16253,10 +16287,10 @@ var handleProt = ({ session }, words) => {
   session.write1(80);
   session.write1(0);
 };
-var registerMemoryDirectives = (registry) => {
-  registry.register(["freecode", "freespace", "freedata"], handleFreespace);
-  registry.register("freespacebyte", handleFreespaceByte);
-  registry.register("prot", handleProt);
+var registerMemoryDirectives = (registry, context) => {
+  registry.register(["freecode", "freespace", "freedata"], context, handleFreespace);
+  registry.register("freespacebyte", context, handleFreespaceByte);
+  registry.register("prot", context, handleProt);
 };
 
 // src/directives/misc.ts
@@ -16269,10 +16303,10 @@ var handlePullTable = ({ session }) => {
 var handlePushTable = ({ session }) => {
   session.tableStack.push(new Map(session.characterMappings));
 };
-var registerMiscDirectives = (registry) => {
-  registry.register("pulltable", handlePullTable);
-  registry.register("pushtable", handlePushTable);
-  registry.register([...ASAR_COMPAT_NO_OP_DIRECTIVES], () => {
+var registerMiscDirectives = (registry, context) => {
+  registry.register("pulltable", context, handlePullTable);
+  registry.register("pushtable", context, handlePushTable);
+  registry.register([...ASAR_COMPAT_NO_OP_DIRECTIVES], context, () => {
   });
 };
 
@@ -16352,44 +16386,41 @@ var handleNamespace = ({ session }, words) => {
     }
   }
 };
-var registerNamespaceDirectives = (registry) => {
-  registry.register("namespace", handleNamespace);
-  registry.register("pushns", handlePushNamespace);
-  registry.register("pullns", handlePullNamespace);
+var registerNamespaceDirectives = (registry, context) => {
+  registry.register("namespace", context, handleNamespace);
+  registry.register("pushns", context, handlePushNamespace);
+  registry.register("pullns", context, handlePullNamespace);
 };
 
 // src/directives/spc.ts
-var handleSpcblock = ({ session }, words) => {
-  session.handleSpcblock(words);
+var handleSpcblock = ({ runtime }, words) => {
+  runtime.handleSpcblock(words);
 };
-var handleEndSpcblock = ({ session }, words) => {
-  session.handleEndSpcblock(words);
+var handleEndSpcblock = ({ runtime }, words) => {
+  runtime.handleEndSpcblock(words);
 };
-var registerSpcDirectives = (registry) => {
-  registry.register("spcblock", handleSpcblock);
-  registry.register("endspcblock", handleEndSpcblock);
+var registerSpcDirectives = (registry, context) => {
+  registry.register("spcblock", context, handleSpcblock);
+  registry.register("endspcblock", context, handleEndSpcblock);
 };
 
 // src/directives/struct-binary.ts
-var registerStructBinaryDirectives = (registry) => {
-  registry.register("struct", ({ session }, words) => {
+var registerStructBinaryDirectives = (registry, context) => {
+  registry.register("struct", context, ({ session }, words) => {
     session.structEngine.handleStruct(words);
   });
-  registry.register("endstruct", ({ session }, words) => {
+  registry.register("endstruct", context, ({ session }, words) => {
     session.structEngine.handleEndStruct(words);
   });
 };
 
 // src/directives/registry.ts
 var DirectiveRegistry = class {
-  constructor(ctx) {
-    this.ctx = ctx;
-  }
   handlers = /* @__PURE__ */ new Map();
-  register(keyword, handler) {
+  register(keyword, context, handler) {
     const keywords = Array.isArray(keyword) ? keyword : [keyword];
     for (const entry of keywords) {
-      this.handlers.set(entry, handler);
+      this.handlers.set(entry, (words, raw, command) => handler(context, words, raw, command));
     }
   }
   has(keyword) {
@@ -16400,25 +16431,25 @@ var DirectiveRegistry = class {
     if (!handler) {
       return false;
     }
-    handler(this.ctx, words, raw, command);
+    handler(words, raw, command);
     return true;
   }
   dispatchCommand(command) {
     return this.dispatch(command.keyword, command.words, command.command, command);
   }
 };
-var createDirectiveRegistry = (session, operandResolver) => {
-  const registry = new DirectiveRegistry({ session, operandResolver });
-  registerIncludeSourceDirectives(registry);
-  registerFillPadDirectives(registry);
-  registerFlowControlDirectives(registry);
-  registerNamespaceDirectives(registry);
-  registerLayoutDirectives(registry);
-  registerDataDirectives(registry);
-  registerSpcDirectives(registry);
-  registerStructBinaryDirectives(registry);
-  registerMiscDirectives(registry);
-  registerMemoryDirectives(registry);
+var createDirectiveRegistry = (contexts) => {
+  const registry = new DirectiveRegistry();
+  registerIncludeSourceDirectives(registry, contexts.includeSource);
+  registerFillPadDirectives(registry, contexts.fillPad);
+  registerFlowControlDirectives(registry, contexts.flowControl);
+  registerNamespaceDirectives(registry, contexts.namespace);
+  registerLayoutDirectives(registry, contexts.layout);
+  registerDataDirectives(registry, contexts.data);
+  registerSpcDirectives(registry, contexts.spc);
+  registerStructBinaryDirectives(registry, contexts.struct);
+  registerMiscDirectives(registry, contexts.table);
+  registerMemoryDirectives(registry, contexts.memory);
   return registry;
 };
 
@@ -17666,14 +17697,10 @@ var CommandLoweringService = class {
       };
     }
     const architecture = this.host.resolveActiveArchitecture();
-    const isaLoweredInstruction = architecture.definition?.encoder.lowerInstructionFromCommand?.(command);
-    if (isaLoweredInstruction) {
-      return isaLoweredInstruction;
-    }
     const parsedOperands = command.parsed.opcodeOperands;
     const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
     const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
+    const operands = parsedOperands?.operands ?? architecture.definition?.splitOperands(operandText) ?? (operandText ? [operandText] : []);
     const loweredOperands = operands.map((operand) => this.host.classifyOperandForActiveArchitecture(operand));
     const loweredOperand = this.host.classifyOperandForActiveArchitecture(operandText);
     return {
@@ -17948,6 +17975,121 @@ var FrontEndCommandService = class {
     command.assignmentTarget = labelName;
     setCommandKind(command, "staticAssignment");
     return true;
+  }
+};
+
+// src/services/include-source-service.ts
+var IncludeSourceService = class {
+  constructor(host) {
+    this.host = host;
+  }
+  /**
+   * Reads a source-relative binary or text file.
+   * @param {string} filePath The path to read.
+   * @param {BufferEncoding} [encoding] Optional text encoding.
+   * @returns {Uint8Array | string} The file contents.
+   */
+  readFile(filePath, encoding) {
+    try {
+      const fullPath = this.host.fileProvider.resolvePath(filePath, this.resolutionOptions);
+      if (!fullPath) {
+        throw new Error(`Error reading file: ${filePath}`);
+      }
+      if (encoding) {
+        return this.host.fileProvider.readTextFile(fullPath, encoding);
+      }
+      return this.host.fileProvider.readFile(fullPath);
+    } catch {
+      throw new Error(`Error reading file: ${filePath}`);
+    }
+  }
+  /**
+   * Resolves a source include target.
+   * @param {string} filename The target filename.
+   * @returns {string} The resolved provider path.
+   */
+  resolveIncludePath(filename) {
+    if (filename == null) {
+      throw new Error("Invalid or missing filename");
+    }
+    const resolved = this.host.fileProvider.resolvePath(filename, this.resolutionOptions);
+    if (!resolved) {
+      throw new Error(`Could not find file: ${filename}`);
+    }
+    return resolved;
+  }
+  /**
+   * Marks and assembles an `include` target.
+   * @param {string} filename The target filename.
+   */
+  includeFile(filename) {
+    const resolvedPath = this.resolveIncludePath(filename);
+    if (!this.host.includedFiles.has(resolvedPath)) {
+      this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
+    }
+    this.assembleFile(filename);
+  }
+  /**
+   * Guards the active source file against later includes in this pass.
+   */
+  guardCurrentFile() {
+    const fileInfo = this.host.includedFiles.get(this.host.currentFile) ?? { included: true, guarded: false };
+    fileInfo.guarded = true;
+    this.host.includedFiles.set(this.host.currentFile, fileInfo);
+  }
+  /**
+   * Clears pass-local include guards.
+   */
+  resetGuards() {
+    for (const [filePath, fileInfo] of this.host.includedFiles.entries()) {
+      fileInfo.guarded = false;
+      this.host.includedFiles.set(filePath, fileInfo);
+    }
+  }
+  /**
+   * Resolves, parses, lowers, and executes one source file.
+   * @param {string} filename The target filename.
+   */
+  assembleFile(filename) {
+    const resolvedPath = this.resolveIncludePath(filename);
+    const fileInfo = this.host.includedFiles.get(resolvedPath);
+    if (fileInfo?.guarded) {
+      return;
+    }
+    if (this.host.includeStack.length >= 512) {
+      throw new Error("Recursion limit exceeded (512 levels)");
+    }
+    if (resolvedPath === this.host.currentFile || this.host.includeStack.includes(resolvedPath)) {
+      throw new Error(`Recursive include detected for '${resolvedPath}'`);
+    }
+    const previousFile = this.host.currentFile;
+    this.host.includeStack.push(previousFile);
+    this.host.recordIncludeEdge(previousFile, resolvedPath);
+    try {
+      const content = this.host.fileProvider.readTextFile(resolvedPath, "utf8");
+      this.host.currentFile = resolvedPath;
+      const includedFile = this.host.includedFiles.get(resolvedPath);
+      if (includedFile) {
+        includedFile.included = true;
+        this.host.includedFiles.set(resolvedPath, includedFile);
+      } else {
+        this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
+      }
+      const includeNode = this.host.frontEndService.createIncludeNode(resolvedPath, content);
+      this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
+      throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
+    } finally {
+      this.host.currentFile = this.host.includeStack.pop() ?? "";
+    }
+  }
+  get resolutionOptions() {
+    return {
+      currentFile: this.host.currentFile,
+      includePaths: this.host.includePaths,
+      macroSourceFile: this.host.currentMacroSourceFile
+    };
   }
 };
 
@@ -18607,8 +18749,8 @@ var RomWriterService = class {
    * Finishes the pass.
    */
   finishPass() {
-    if (this.host.spcInlineCompatMode && this.host.inSpcblock) {
-      this.host.handleEndSpcblock(["endspcblock", "execute", "0"]);
+    if (shouldAutoCloseSpcblock(this.host.spcInlineCompatMode, this.host.inSpcblock)) {
+      this.host.directiveRuntime.handleEndSpcblock(["endspcblock", "execute", "0"]);
     }
     if (this.host.inSpcblock) {
       throw new Error("Missing endspcblock before end of pass.");
@@ -19830,6 +19972,7 @@ var Assembler = class _Assembler {
   includeEdges = [];
   activeStageExecutionState = null;
   analysisErrorRecoveryEnabled = false;
+  runtimePassthroughRewriteEnabled = false;
   get defineEngine() {
     return this.services.defineEngine;
   }
@@ -19838,6 +19981,9 @@ var Assembler = class _Assembler {
   }
   get frontEndCommandService() {
     return this.services.frontEndCommandService;
+  }
+  get includeSource() {
+    return this.services.includeSource;
   }
   get macroEngine() {
     return this.services.macroEngine;
@@ -20161,20 +20307,34 @@ var Assembler = class _Assembler {
     return session;
   }
   /**
-   * Rebinds directive handlers to a fresh session while preserving any custom
-   * registrations present on the current registry.
+   * Creates directive handlers bound to a fresh session's family capabilities.
    * @param {Assembler} session The session that should receive directive calls.
    * @returns {DirectiveRegistry} A registry bound to the provided session.
    */
   cloneDirectiveRegistryForSession(session) {
-    const registry = new DirectiveRegistry({
-      session,
-      operandResolver: session.operandResolver
+    const operandResolver = session.operandResolver;
+    const runtime = session.directiveRuntime;
+    return createDirectiveRegistry({
+      data: { runtime },
+      fillPad: { session, operandResolver },
+      flowControl: { session },
+      includeSource: { session, includeSource: session.includeSource, operandResolver, runtime },
+      layout: {
+        addressStack: { session },
+        architecture: { session },
+        base: { session, operandResolver },
+        mapper: { session },
+        org: { session, runtime },
+        policy: { session },
+        runtime: { runtime },
+        startpos: { session, operandResolver }
+      },
+      memory: { session, operandResolver },
+      namespace: { session },
+      spc: { runtime },
+      struct: { session },
+      table: { session }
     });
-    for (const [keyword, handler] of this.directiveRegistry.handlers.entries()) {
-      registry.handlers.set(keyword, handler);
-    }
-    return registry;
   }
   analyzeProgram(program) {
     return this.createToolingSession().collectProgramAnalysis(program);
@@ -20234,6 +20394,7 @@ var Assembler = class _Assembler {
     const defineEngine = new DefineEngine(this);
     const directiveRuntime = new DirectiveRuntimeService(this);
     const frontEndCommandService = new FrontEndCommandService(this);
+    const includeSource = new IncludeSourceService(this);
     const symbolScope = new SymbolScopeService(this);
     const romWriter = new RomWriterService(this);
     const macroEngine = new MacroEngine(this);
@@ -20243,6 +20404,7 @@ var Assembler = class _Assembler {
       directiveRuntime,
       fileProvider: this.fileProvider,
       frontEndCommandService,
+      includeSource,
       macroEngine,
       romWriter,
       structEngine,
@@ -20280,15 +20442,35 @@ var Assembler = class _Assembler {
       getCurrentAddress: () => this.currentTargetAddress,
       requireStaticLabelLookup: () => this.requireStaticLabelLookup
     });
-    this.arch65816 = new Arch65816(this);
-    this.archSPC700 = new ArchSPC700(this);
-    this.archSuperFX = new ArchSuperFX(this);
+    const encoderContext = {
+      operands: this.operandResolver,
+      emission: {
+        write1: (value) => this.write1(value),
+        write2: (value) => this.write2(value),
+        write3: (value) => this.write3(value)
+      },
+      sizing: {
+        getCurrentAddress: () => this.currentTargetAddress,
+        optimizeDirectPage: () => this.optimizeDirectPage
+      },
+      branches: {
+        enforceResolvedLabels: () => this.enforceResolvedLabels,
+        findNextLabel: (label, referenceAddress) => this.symbolScope.findNextLabel(label, referenceAddress),
+        findPreviousLabel: (label, referenceAddress) => this.symbolScope.findPreviousLabel(label, referenceAddress)
+      },
+      diagnostics: {
+        error: (message) => new Error(message)
+      }
+    };
+    this.arch65816 = new Arch65816(encoderContext);
+    this.archSPC700 = new ArchSPC700(encoderContext);
+    this.archSuperFX = new ArchSuperFX(encoderContext);
     this.architectureRegistry = createArchitectureRegistry(
       this.arch65816,
       this.archSPC700,
       this.archSuperFX
     );
-    this.directiveRegistry = createDirectiveRegistry(this, this.operandResolver);
+    this.directiveRegistry = this.cloneDirectiveRegistryForSession(this);
     this.commandLoweringService = new CommandLoweringService(this);
     this.services.frontEnd = this.frontEndService;
     this.services.lowering = this.commandLoweringService;
@@ -20557,7 +20739,7 @@ var Assembler = class _Assembler {
     }
     const encoded = Array.isArray(input) ? architecture.definition.encoder.encode(words) : architecture.definition.encoder.encodeInstruction?.(input) ?? architecture.definition.encoder.encode(words);
     if (!encoded) {
-      if (architecture.name === "superfx") {
+      if (architecture.definition.unknownInstructionBehavior === "returnFalse") {
         return false;
       }
       throw new Error(`Unknown instruction: ${words[0]}`);
@@ -20854,12 +21036,6 @@ var Assembler = class _Assembler {
       debug7("\u{1F4A5} assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
     }
   }
-  handleSpcblock(words) {
-    this.directiveRuntime.handleSpcblock(words);
-  }
-  handleEndSpcblock(words) {
-    this.directiveRuntime.handleEndSpcblock(words);
-  }
   /**
    * Parses a function definition of the form:
    *   function name(param1, param2...) = expression
@@ -20883,39 +21059,12 @@ var Assembler = class _Assembler {
     this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
   }
   /**
-   * Handles `org` directive to set SNES memory location.
-   * @param {string[]} params - The parameters for the org directive.
-   */
-  handleOrg(params) {
-    this.directiveRuntime.handleOrg(params);
-  }
-  /**
-   * Handles `db`, `dw`, `dl`, `dd` directives for defining data.
-   * @param {string} type - The type of data directive.
-   * @param {string[]} params - The parameters for the data directive.
-   */
-  handleDataDirective(type, params) {
-    this.directiveRuntime.handleDataDirective(type, params);
-  }
-  /**
    * Writes data of the specified length.
    * @param {number} len The length of the data to write.
    * @param {number} value The value to write.
    */
   writeDataByLength(len, value) {
     this.directiveRuntime.writeDataByLength(len, value);
-  }
-  /**
-   * Pushes the current PC onto the pushpcStack.
-   */
-  handlePushPC() {
-    this.directiveRuntime.handlePushPC();
-  }
-  /**
-   * Restores the previous PC.
-   */
-  handlePullPC() {
-    this.directiveRuntime.handlePullPC();
   }
   /**
    * Evaluates a range expression and returns the result.
@@ -21326,10 +21475,7 @@ var Assembler = class _Assembler {
       this.backwardLabels = {};
     }
     this.macroLabelInstance = null;
-    for (const [filePath, fileInfo] of this.includedFiles.entries()) {
-      fileInfo.guarded = false;
-      this.includedFiles.set(filePath, fileInfo);
-    }
+    this.includeSource.resetGuards();
     this.inMacroExpansion = false;
     this.frontEndService.resetIncrementalParseState(this.incrementalProgramParseState);
     this.inSpcblock = false;
@@ -21613,14 +21759,7 @@ var Assembler = class _Assembler {
    */
   updateHeaderAndCRC32() {
     debug7("updateHeaderAndCRC32");
-    let headerOffset;
-    if (this.mapper === "lorom" || this.mapper === "sa1rom" || this.mapper === "bigsa1rom") {
-      headerOffset = 32704;
-    } else if (this.mapper === "hirom" || this.mapper === "exhirom") {
-      headerOffset = 65472;
-    } else {
-      headerOffset = 65472;
-    }
+    const headerOffset = getChecksumHeaderOffset(this.mapper);
     debug7("updateHeaderAndCRC32 headerOffset", headerOffset);
     if (this.romdata.length < headerOffset + 32) {
       debug7("ROM too small for header update.");
@@ -21630,37 +21769,7 @@ var Assembler = class _Assembler {
     this.romdata[headerOffset + 29] = 255;
     this.romdata[headerOffset + 30] = 0;
     this.romdata[headerOffset + 31] = 0;
-    const romLength = this.romdata.length;
-    let checksum = 0;
-    if (this.checksumMode === "simple") {
-      for (let i = 0; i < romLength; i++) {
-        checksum += this.romdata[i] & 255;
-      }
-    } else {
-      const isPowerOfTwo = romLength > 0 && (romLength & romLength - 1) === 0;
-      if (isPowerOfTwo) {
-        for (let i = 0; i < romLength; i++) {
-          checksum += this.romdata[i] & 255;
-        }
-      } else {
-        let bitround = 1;
-        while (bitround < romLength) {
-          bitround <<= 1;
-        }
-        const firstPart = bitround >> 1;
-        const secondPart = romLength - firstPart;
-        const repeatCount = Math.floor(firstPart / secondPart);
-        let secondPartSum = 0;
-        for (let i = 0; i < firstPart; i++) {
-          checksum += this.romdata[i] & 255;
-        }
-        for (let i = firstPart; i < romLength; i++) {
-          secondPartSum += this.romdata[i] & 255;
-        }
-        checksum += secondPartSum * repeatCount;
-      }
-    }
-    checksum &= 65535;
+    const checksum = calculateHeaderChecksum(this.romdata, this.checksumMode);
     const complement = ~checksum & 65535;
     this.romdata[headerOffset + 28] = complement & 255;
     this.romdata[headerOffset + 29] = complement >> 8 & 255;
@@ -21675,122 +21784,6 @@ var Assembler = class _Assembler {
    */
   getBinaryOutput = () => {
     return new Uint8Array(this.romdata.slice(0, this.romdata.length));
-  };
-  /**
-   * Reads a file and returns its contents as a Uint8Array or string.
-   * @param {string} filePath The path to the file to read.
-   * @param {BufferEncoding} [encoding] Optional encoding. If provided, returns a string.
-   * @returns {Uint8Array | string} The contents of the file as a Uint8Array or string.
-   * @throws {Error} If the file is not found or cannot be read.
-   */
-  readFile(filePath, encoding) {
-    debug7("readFile", filePath, encoding);
-    try {
-      const fullPath = this.fileProvider.resolvePath(filePath, {
-        currentFile: this.currentFile,
-        includePaths: this.includePaths,
-        macroSourceFile: this.currentMacroSourceFile
-      });
-      if (!fullPath) {
-        throw new Error(`Error reading file: ${filePath}`);
-      }
-      debug7("readFile:", fullPath);
-      if (encoding) {
-        return this.fileProvider.readTextFile(fullPath, encoding);
-      }
-      return this.fileProvider.readFile(fullPath);
-    } catch (error) {
-      debug7("Error reading file:", error);
-      throw new Error(`Error reading file: ${filePath}`);
-    }
-  }
-  /**
-   * Resolves the path of an included file.
-   * @param {string} filename The filename to resolve.
-   * @returns {string} The resolved path.
-   * @throws {Error} If the file is not found.
-   */
-  resolveIncludePath = (filename) => {
-    debug7("resolveIncludePath", filename);
-    if (filename == null || filename === void 0) {
-      throw new Error("Invalid or missing filename");
-    }
-    const resolved = this.fileProvider.resolvePath(filename, {
-      currentFile: this.currentFile,
-      includePaths: this.includePaths,
-      macroSourceFile: this.currentMacroSourceFile
-    });
-    if (!resolved) {
-      throw new Error(`Could not find file: ${filename}`);
-    }
-    return resolved;
-  };
-  /**
-   * Handles the include command, adding the current file to the guarded set if once is true.
-   * @param {string} command The command to handle.
-   * @param {string} filename The filename to include.
-   * @param {boolean} once Whether the file should be included once.
-   * @throws {Error} If the file is included again while command ===.
-   */
-  handleInclude = (command, filename, once = false) => {
-    debug7("handleInclude", command, filename, once);
-    if (filename == null || filename === void 0) {
-      throw new Error(`Missing include target for ${command}`);
-    }
-    const resolvedPath = this.resolveIncludePath(filename);
-    if (!this.includedFiles.has(resolvedPath)) {
-      this.includedFiles.set(resolvedPath, { included: true, guarded: false });
-    }
-    this.assemblefile(filename, true);
-    if (once) {
-      debug7("handleInclude once", this.currentFile);
-      const fileInfo = this.includedFiles.get(this.currentFile) || { included: true, guarded: false };
-      fileInfo.guarded = true;
-      this.includedFiles.set(this.currentFile, fileInfo);
-    }
-  };
-  /**
-   * Assembles a file, handling include guards and recursion limits.
-   * @param {string} filename The filename to assemble.
-   * @param {boolean} isInclude Whether the file is being included.
-   * @throws {Error} If the recursion limit is exceeded or the file is included again.
-   */
-  assemblefile = (filename, isInclude) => {
-    debug7("assemblefile", filename, isInclude);
-    const resolvedPath = this.resolveIncludePath(filename);
-    const fileInfo = this.includedFiles.get(resolvedPath);
-    if (fileInfo?.guarded) {
-      debug7("assemblefile include guard hit, skipping");
-      return;
-    }
-    if (this.includeStack.length >= 512) {
-      throw new Error("Recursion limit exceeded (512 levels)");
-    }
-    if (resolvedPath === this.currentFile || this.includeStack.includes(resolvedPath)) {
-      throw new Error(`Recursive include detected for '${resolvedPath}'`);
-    }
-    const previousFile = this.currentFile;
-    this.includeStack.push(previousFile);
-    this.recordIncludeEdge(previousFile, resolvedPath);
-    try {
-      const content = this.fileProvider.readTextFile(resolvedPath, "utf8");
-      this.currentFile = resolvedPath;
-      if (!this.includedFiles.has(resolvedPath)) {
-        this.includedFiles.set(resolvedPath, { included: true, guarded: false });
-      } else {
-        const info = this.includedFiles.get(resolvedPath);
-        info.included = true;
-        this.includedFiles.set(resolvedPath, info);
-      }
-      const includeNode = this.createIncludeNode(resolvedPath, content);
-      this.lowerAndExecuteRuntimeNodes(includeNode.commands);
-    } catch (error) {
-      debug7("assemblefile error \u{1F4A5}", error);
-      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
-      throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
-    } finally {
-      this.currentFile = this.includeStack.pop() || "";
-    }
   };
   /**
    * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
@@ -21817,29 +21810,23 @@ var Assembler = class _Assembler {
     return Array.from(input).map((char) => this.characterMappings.get(char) ?? char.charCodeAt(0));
   }
   /**
-   * Executes a freshly lowered runtime node, preserving macro rewrite semantics for
-   * preprocessing-sensitive passthrough commands.
-   * @param {LoweredExecutableNode} node The lowered runtime node to execute.
-   */
-  executeLoweredRuntimeNode(node) {
-    if (node.kind === "command") {
-      this.processNormalizedCommand(node.command, true);
-      return;
-    }
-    this.executeLoweredNode(node);
-  }
-  /**
    * Lowers completed runtime nodes and executes them through the production executor.
    * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
    */
   lowerAndExecuteRuntimeNodes(nodes) {
-    const loweredNodes = nodes.map((node) => this.commandLoweringService.lowerExecutableNode(node));
-    for (const node of loweredNodes) {
-      this.executeWithAnalysisRecovery(
-        node,
-        (currentNode) => this.getLoweredNodeSpan(currentNode),
-        (currentNode) => this.executeLoweredRuntimeNode(currentNode)
-      );
+    const previousRewrite = this.runtimePassthroughRewriteEnabled;
+    this.runtimePassthroughRewriteEnabled = true;
+    try {
+      const loweredNodes = nodes.map((node) => this.commandLoweringService.lowerExecutableNode(node));
+      for (const node of loweredNodes) {
+        this.executeWithAnalysisRecovery(
+          node,
+          (currentNode) => this.getLoweredNodeSpan(currentNode),
+          (currentNode) => this.executeLoweredNode(currentNode)
+        );
+      }
+    } finally {
+      this.runtimePassthroughRewriteEnabled = previousRewrite;
     }
   }
   resolveForLoopBounds(forBlock) {
@@ -21983,7 +21970,7 @@ var Assembler = class _Assembler {
   }
   executeLoweredNode(node) {
     if (node.kind === "command") {
-      this.processNormalizedCommand(node.command, false);
+      this.processNormalizedCommand(node.command, this.runtimePassthroughRewriteEnabled);
       return;
     }
     if (node.kind === "directive" || node.kind === "instruction") {
@@ -22065,9 +22052,6 @@ var Assembler = class _Assembler {
       body,
       sourceFile: macro.sourceFile
     };
-  }
-  createIncludeNode(file, source) {
-    return this.frontEndService.createIncludeNode(file, source);
   }
 };
 

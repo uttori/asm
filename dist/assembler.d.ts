@@ -6,7 +6,7 @@ import type { ExpressionHost, LoweredInstruction } from "./architecture-types.js
 import { AddressToLineMapping } from "./addr2line.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import { type AssemblyAnalysisResult, type AssemblyDiagnostic, type AssemblyIncludeEdge, type AssemblySourceLocation, type AssemblySymbolDefinition, type AssemblySymbolKind, type AssemblySymbolReference, type AssemblySymbolReferenceKind } from "./diagnostics.js";
-import type { ConditionalBranchNode, ExecutableNode, IncludeNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";
+import type { ConditionalBranchNode, ExecutableNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";
 import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expression-node.js";
 import { type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
@@ -18,6 +18,7 @@ import { DirectiveRuntimeService } from "./services/directive-runtime-service.js
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
 import { CommandLoweringService, type LoweredCommand, type LoweredConditionalNode, type LoweredExecutableNode, type LoweredLoopNode, type LoweredProgram } from "./services/command-lowering-service.js";
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
+import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
 import { MacroEngine } from "./services/macro-engine.js";
 import { ProgramModelBuilder, type IncrementalProgramParseState, type ProgramModel } from "./services/program-model-builder.js";
 import { RomWriterService } from "./services/rom-writer-service.js";
@@ -41,7 +42,6 @@ export type MacroDefinition = {
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
-export type { ProgramModel } from "./services/program-model-builder.js";
 export type StageExecutionMode = "layout" | "emit";
 export type StageExecutionCapabilities = {
     instructionMode: StageExecutionMode;
@@ -107,6 +107,7 @@ type AssemblerServiceBag = {
     fileProvider?: AssemblyFileProvider;
     frontEnd?: AssemblyFrontEndService;
     frontEndCommandService: FrontEndCommandService;
+    includeSource: IncludeSourceService;
     lowering?: CommandLoweringService;
     macroEngine: MacroEngine;
     romWriter: RomWriterService;
@@ -166,12 +167,6 @@ export type SpcblockData = {
     executeAddress: number | null;
     namespaceBackup: string;
 };
-export interface IncludedFileInfo {
-    /** Whether the file has been included */
-    included: boolean;
-    /** Whether the file has been guarded with includeonce */
-    guarded: boolean;
-}
 export declare class Assembler {
     /** The current target address. `snespos` */
     currentTargetAddress: number;
@@ -292,6 +287,7 @@ export declare class Assembler {
     get defineEngine(): DefineEngine;
     get directiveRuntime(): DirectiveRuntimeService;
     get frontEndCommandService(): FrontEndCommandService;
+    get includeSource(): IncludeSourceService;
     get macroEngine(): MacroEngine;
     get symbolScope(): SymbolScopeService;
     get romWriter(): RomWriterService;
@@ -699,36 +695,6 @@ export declare class Assembler {
      */
     getBinaryOutput: () => Uint8Array;
     /**
-     * Reads a file and returns its contents as a Uint8Array or string.
-     * @param {string} filePath The path to the file to read.
-     * @param {BufferEncoding} [encoding] Optional encoding. If provided, returns a string.
-     * @returns {Uint8Array | string} The contents of the file as a Uint8Array or string.
-     * @throws {Error} If the file is not found or cannot be read.
-     */
-    readFile(filePath: string, encoding?: BufferEncoding): Uint8Array | string;
-    /**
-     * Resolves the path of an included file.
-     * @param {string} filename The filename to resolve.
-     * @returns {string} The resolved path.
-     * @throws {Error} If the file is not found.
-     */
-    resolveIncludePath: (filename: string) => string;
-    /**
-     * Handles the include command, adding the current file to the guarded set if once is true.
-     * @param {string} command The command to handle.
-     * @param {string} filename The filename to include.
-     * @param {boolean} once Whether the file should be included once.
-     * @throws {Error} If the file is included again while command ===.
-     */
-    handleInclude: (command: string, filename?: string, once?: boolean) => void;
-    /**
-     * Assembles a file, handling include guards and recursion limits.
-     * @param {string} filename The filename to assemble.
-     * @param {boolean} isInclude Whether the file is being included.
-     * @throws {Error} If the recursion limit is exceeded or the file is included again.
-     */
-    assemblefile: (filename: string, isInclude: boolean) => void;
-    /**
      * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
      * @param {NormalizedCommand | string[]} command The normalized command node or legacy words tuple.
      * @throws {Error} If the format is incorrect.
@@ -786,6 +752,6 @@ export declare class Assembler {
     parseCommandStreamToNodes(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
     getOrBuildPassProgram(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
     getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined;
-    createIncludeNode(file: string, source: string): IncludeNode;
 }
+export {};
 //# sourceMappingURL=assembler.d.ts.map

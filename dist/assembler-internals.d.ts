@@ -4,6 +4,7 @@ import type { AssemblyFrontEndService } from "./services/assembly-front-end-serv
 import type { CommandLoweringService } from "./services/command-lowering-service.js";
 import type { FrontEndCommandService } from "./services/front-end-command-service.js";
 import type { AssemblyFileProvider } from "./file-provider.js";
+import type { IncludeSourceService } from "./services/include-source-service.js";
 import type { MacroEngine } from "./services/macro-engine.js";
 import type { RomWriterService } from "./services/rom-writer-service.js";
 import type { StructEngine } from "./services/struct-engine.js";
@@ -20,6 +21,7 @@ export type AssemblerServices = {
     fileProvider?: AssemblyFileProvider;
     frontEnd?: AssemblyFrontEndService;
     frontEndCommandService: FrontEndCommandService;
+    includeSource: IncludeSourceService;
     lowering?: CommandLoweringService;
     macroEngine: MacroEngine;
     romWriter: RomWriterService;

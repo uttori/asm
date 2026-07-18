@@ -3,11 +3,11 @@ import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
 import { ArchSPC700 } from "../src/ArchSPC700.js";
-import { Assembler } from "../src/assembler.js";
+import { createEncoderTestHost } from "./architecture/test-stubs.js";
 
 const createArchSPC700 = () => {
-  const assembler = new Assembler();
-  const arch = new ArchSPC700(assembler);
+  const assembler = createEncoderTestHost();
+  const arch = new ArchSPC700(assembler.context);
   return { assembler, arch };
 };
 
@@ -288,5 +288,30 @@ test("ArchSPC700.handleTwoOperands supports parenthesized direct-page OR pairs",
 
   t.true(handled);
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x09, 0xCD, 0xCE]);
+});
+
+test("ArchSPC700 emits unresolved branch placeholders through narrow contexts", t => {
+  const { assembler, arch } = createArchSPC700();
+  assembler.currentTargetAddress = 0x1200;
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("target").returns(0x1208);
+  t.teardown(() => getnumStub.restore());
+
+  t.true(arch.handleBranch("BRA", "target"));
+  t.true(arch.handleTwoOperandsBitBranch("BBS0", "$12", "target"));
+
+  t.deepEqual(assembler.emitted, [0x2F, 0xFF, 0x03, 0x12, 0xFF]);
+});
+
+test("ArchSPC700 validates resolved DBNZ branch ranges without a host", t => {
+  const { assembler, arch } = createArchSPC700();
+  assembler.currentTargetAddress = 0x1200;
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("target").returns(0x1300);
+  t.teardown(() => getnumStub.restore());
+
+  t.throws(() => arch.handleDbnzCbne("DBNZ", "Y", "target"), {
+    message: "Branch target out of range (253)",
+  });
 });
 

@@ -121,19 +121,13 @@ Exit criteria:
 
 ### 6. Extract Remaining Directive Effects
 
-Status: **partial**.
+Status: **complete**.
 
 Namespace, data, layout, memory/freespace, SPC blocks, table state, and
-flow-control labels are complete. Remaining priority:
-
-- include/source: `incsrc`, `include`, `includeonce`, and `incbin`;
-
-Include/source handlers now use narrow capabilities and `incbin` uses the
-directive runtime for PC stacks. Moving the remaining include pipeline behavior
-out of `Assembler` is still pending.
-
-For each family: add direct tests, narrow capabilities, move behavior, then run
-the full parity suite.
+flow-control labels are complete. Include/source resolution, guard, recursion,
+graph, parse/execute, and binary-read behavior now lives in
+`IncludeSourceService`; handlers use narrow capabilities and `incbin` uses the
+directive runtime for PC stacks.
 
 Exit criteria:
 
@@ -142,12 +136,13 @@ Exit criteria:
 
 ### 7. Decouple Architecture Encoders
 
-Status: **partial**.
+Status: **complete**.
 
-- Replace broad assembler references with operand-resolution, sizing, emission,
-  and diagnostic contexts.
-- Test 65816, SPC700, and SuperFX encoding without a full assembler host.
-- Move architecture-specific decisions out of generic execution code.
+- 65816, SPC700, and SuperFX use operand-resolution, sizing, emission, branch,
+  and diagnostic contexts rather than broad assembler references.
+- Encoder tests use host-free contexts.
+- Operand splitting and unsupported-instruction policy live in architecture
+  definitions rather than generic execution code.
 - Reconsider a plugin API only after the internal contract survives this
   decoupling.
 

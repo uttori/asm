@@ -45,7 +45,7 @@ test("directive registry returns false for unknown directives", t => {
 test("directive registry dispatches struct and incbin directives", t => {
   const assembler = new Assembler();
   const structSpy = stub(assembler.structEngine, "handleStruct");
-  const readFileSpy = stub(assembler, "readFile").returns(new Uint8Array([0x01, 0x02]));
+  const readFileSpy = stub(assembler.includeSource, "readFile").returns(new Uint8Array([0x01, 0x02]));
   stub(assembler, "write1");
   stub(assembler, "recordCurrentAddress");
 

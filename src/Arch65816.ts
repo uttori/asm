@@ -1,6 +1,11 @@
-import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction } from "./architecture-types.js";
-import type { Assembler } from "./assembler.js";
-import type { NormalizedCommand } from "./ir/normalized-command.js";
+import {
+  createEncoderRuntime,
+  type ArchitectureEncoder,
+  type ArchitectureEncoderContext,
+  type EncoderRuntime,
+  type InstructionDescriptor,
+  type LoweredInstruction,
+} from "./architecture-types.js";
 import { cpu65816Catalog } from "./lsp/instruction-catalog.js";
 
 let debug = (..._args: unknown[]): void => {};
@@ -8,10 +13,10 @@ let debug = (..._args: unknown[]): void => {};
 try { const { default: d } = await import("debug"); debug = d("Arch65816"); } catch {}
 
 export class Arch65816 implements ArchitectureEncoder {
-  assembler: Assembler;
+  assembler: EncoderRuntime;
 
-  constructor(assembler: Assembler) {
-    this.assembler = assembler;
+  constructor(context: ArchitectureEncoderContext) {
+    this.assembler = createEncoderRuntime(context);
   }
 
   /**
@@ -42,29 +47,6 @@ export class Arch65816 implements ArchitectureEncoder {
       instruction.loweredOperand.expanded,
       instruction.loweredOperand.length,
     );
-  }
-
-  lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction {
-    const parsedOperands = command.parsed.opcodeOperands;
-    const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-    const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
-    const loweredOperands = operands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
-
-    return {
-      kind: "instruction",
-      command,
-      mnemonic,
-      operandText,
-      operands,
-      loweredOperands,
-      loweredOperand,
-      words: command.words,
-      sourceFile: command.source.file,
-      sourceLine: command.source.line,
-      sourceRaw: command.source.raw,
-    };
   }
 
   estimateSize(words: string[]): number {
@@ -1755,20 +1737,20 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     if (Number.isNaN(relativeAddress)) {
-      throw new Error("Error: relativeAddress is NaN.");
+      throw this.assembler.diagnostics.error("Error: relativeAddress is NaN.");
     }
 
     debug("handleBranchInstructions relativeAddress", relativeAddress, "/", relativeAddress.toString(16));
     if (opcode === "BRL") {
       if (relativeAddress < -32768 || relativeAddress > 32767) {
-        throw new Error(`Error: BRL target out of range (${relativeAddress}).`);
+        throw this.assembler.diagnostics.error(`Error: BRL target out of range (${relativeAddress}).`);
       }
       this.assembler.write1(branchOpcodes[opcode]);
       this.assembler.write2(relativeAddress);
       return true;
     } else {
       if (relativeAddress < -128 || relativeAddress > 127) {
-        throw new Error(`Error: Branch target out of range (${relativeAddress}).`);
+        throw this.assembler.diagnostics.error(`Error: Branch target out of range (${relativeAddress}).`);
       }
       // **Ensure signed byte is written correctly**
       let signedByte = (relativeAddress & 0xFF) >>> 0;

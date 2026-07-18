@@ -3,7 +3,7 @@ import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js"
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
-import type { ExpressionHost, LoweredInstruction } from "./architecture-types.js";
+import type { ArchitectureEncoderContext, ExpressionHost, LoweredInstruction } from "./architecture-types.js";
 import {
   calculateHeaderChecksum,
   getChecksumHeaderOffset,
@@ -27,7 +27,6 @@ import {
 import type {
   ConditionalBranchNode,
   ExecutableNode,
-  IncludeNode,
   LoopNode,
   MacroDefinitionNode,
 } from "./ir/assembly-tree.js";
@@ -57,6 +56,7 @@ import {
   type LoweredProgram,
 } from "./services/command-lowering-service.js";
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
+import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
 import { MacroEngine } from "./services/macro-engine.js";
 import {
   ProgramModelBuilder,
@@ -97,7 +97,6 @@ export type MacroDefinition = {
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
-export type { ProgramModel } from "./services/program-model-builder.js";
 export type StageExecutionMode = "layout" | "emit";
 export type StageExecutionCapabilities = {
   instructionMode: StageExecutionMode;
@@ -154,6 +153,7 @@ type AssemblerServiceBag = {
   fileProvider?: AssemblyFileProvider;
   frontEnd?: AssemblyFrontEndService;
   frontEndCommandService: FrontEndCommandService;
+  includeSource: IncludeSourceService;
   lowering?: CommandLoweringService;
   macroEngine: MacroEngine;
   romWriter: RomWriterService;
@@ -222,13 +222,6 @@ export type SpcblockData = {
   executeAddress: number | null;
   namespaceBackup: string;
 };
-
-export interface IncludedFileInfo {
-  /** Whether the file has been included */
-  included: boolean;
-  /** Whether the file has been guarded with includeonce */
-  guarded: boolean;
-}
 
 export class Assembler {
   /** The current target address. `snespos` */
@@ -377,6 +370,10 @@ export class Assembler {
 
   get frontEndCommandService(): FrontEndCommandService {
     return this.services.frontEndCommandService;
+  }
+
+  get includeSource(): IncludeSourceService {
+    return this.services.includeSource;
   }
 
   get macroEngine(): MacroEngine {
@@ -777,7 +774,7 @@ export class Assembler {
       data: { runtime },
       fillPad: { session, operandResolver },
       flowControl: { session },
-      includeSource: { session, operandResolver, runtime },
+      includeSource: { session, includeSource: session.includeSource, operandResolver, runtime },
       layout: {
         addressStack: { session },
         architecture: { session },
@@ -863,6 +860,7 @@ export class Assembler {
     const defineEngine = new DefineEngine(this);
     const directiveRuntime = new DirectiveRuntimeService(this);
     const frontEndCommandService = new FrontEndCommandService(this);
+    const includeSource = new IncludeSourceService(this);
     const symbolScope = new SymbolScopeService(this);
     const romWriter = new RomWriterService(this);
     const macroEngine = new MacroEngine(this);
@@ -873,6 +871,7 @@ export class Assembler {
       directiveRuntime,
       fileProvider: this.fileProvider,
       frontEndCommandService,
+      includeSource,
       macroEngine,
       romWriter,
       structEngine,
@@ -915,9 +914,29 @@ export class Assembler {
       getCurrentAddress: () => this.currentTargetAddress,
       requireStaticLabelLookup: () => this.requireStaticLabelLookup,
     });
-    this.arch65816 = new Arch65816(this);
-    this.archSPC700 = new ArchSPC700(this);
-    this.archSuperFX = new ArchSuperFX(this);
+    const encoderContext: ArchitectureEncoderContext = {
+      operands: this.operandResolver,
+      emission: {
+        write1: (value) => this.write1(value),
+        write2: (value) => this.write2(value),
+        write3: (value) => this.write3(value),
+      },
+      sizing: {
+        getCurrentAddress: () => this.currentTargetAddress,
+        optimizeDirectPage: () => this.optimizeDirectPage,
+      },
+      branches: {
+        enforceResolvedLabels: () => this.enforceResolvedLabels,
+        findNextLabel: (label, referenceAddress) => this.symbolScope.findNextLabel(label, referenceAddress),
+        findPreviousLabel: (label, referenceAddress) => this.symbolScope.findPreviousLabel(label, referenceAddress),
+      },
+      diagnostics: {
+        error: (message) => new Error(message),
+      },
+    };
+    this.arch65816 = new Arch65816(encoderContext);
+    this.archSPC700 = new ArchSPC700(encoderContext);
+    this.archSuperFX = new ArchSuperFX(encoderContext);
     this.architectureRegistry = createArchitectureRegistry(
       this.arch65816,
       this.archSPC700,
@@ -1221,7 +1240,7 @@ export class Assembler {
       ? architecture.definition.encoder.encode(words)
       : (architecture.definition.encoder.encodeInstruction?.(input) ?? architecture.definition.encoder.encode(words));
     if (!encoded) {
-      if (architecture.name === "superfx") {
+      if (architecture.definition.unknownInstructionBehavior === "returnFalse") {
         return false;
       }
       throw new Error(`Unknown instruction: ${words[0]}`);
@@ -2095,12 +2114,8 @@ export class Assembler {
     // Reset the macro macroLabelInstance
     this.macroLabelInstance = null;
 
-    // Reset guarded status for all files when starting a new pass
-    // This ensures files with includeonce are processed in each pass
-    for (const [filePath, fileInfo] of this.includedFiles.entries()) {
-      fileInfo.guarded = false;
-      this.includedFiles.set(filePath, fileInfo);
-    }
+    // Include guards are pass-local so includeonce files run once in each pass.
+    this.includeSource.resetGuards();
 
     // Reset the in macro flag
     this.inMacroExpansion = false;
@@ -2445,153 +2460,6 @@ export class Assembler {
   }
 
   /**
-   * Reads a file and returns its contents as a Uint8Array or string.
-   * @param {string} filePath The path to the file to read.
-   * @param {BufferEncoding} [encoding] Optional encoding. If provided, returns a string.
-   * @returns {Uint8Array | string} The contents of the file as a Uint8Array or string.
-   * @throws {Error} If the file is not found or cannot be read.
-   */
-  readFile(filePath: string, encoding?: BufferEncoding): Uint8Array | string {
-    debug("readFile", filePath, encoding)
-    try {
-      const fullPath = this.fileProvider.resolvePath(filePath, {
-        currentFile: this.currentFile,
-        includePaths: this.includePaths,
-        macroSourceFile: this.currentMacroSourceFile,
-      });
-      if (!fullPath) {
-        throw new Error(`Error reading file: ${filePath}`);
-      }
-      debug("readFile:", fullPath);
-
-      if (encoding) {
-        return this.fileProvider.readTextFile(fullPath, encoding);
-      }
-      return this.fileProvider.readFile(fullPath);
-    } catch (error: unknown) {
-      debug("Error reading file:", error);
-      throw new Error(`Error reading file: ${filePath}`);
-    }
-  }
-
-  /**
-   * Resolves the path of an included file.
-   * @param {string} filename The filename to resolve.
-   * @returns {string} The resolved path.
-   * @throws {Error} If the file is not found.
-   */
-  resolveIncludePath = (filename: string): string => {
-    debug("resolveIncludePath", filename);
-    if (filename == null || filename === undefined) {
-      throw new Error("Invalid or missing filename");
-    }
-    const resolved = this.fileProvider.resolvePath(filename, {
-      currentFile: this.currentFile,
-      includePaths: this.includePaths,
-      macroSourceFile: this.currentMacroSourceFile,
-    });
-    if (!resolved) {
-      throw new Error(`Could not find file: ${filename}`);
-    }
-    return resolved;
-  }
-
-  /**
-   * Handles the include command, adding the current file to the guarded set if once is true.
-   * @param {string} command The command to handle.
-   * @param {string} filename The filename to include.
-   * @param {boolean} once Whether the file should be included once.
-   * @throws {Error} If the file is included again while command ===.
-   */
-  handleInclude = (command: string, filename?: string, once = false): void => {
-    debug("handleInclude", command, filename, once);
-
-    if (filename == null || filename === undefined) {
-      throw new Error(`Missing include target for ${command}`);
-    }
-
-    // Mark file as included
-    const resolvedPath = this.resolveIncludePath(filename);
-    if (!this.includedFiles.has(resolvedPath)) {
-      this.includedFiles.set(resolvedPath, { included: true, guarded: false });
-    }
-
-    this.assemblefile(filename, true);
-
-    // Add current file to guarded set if once is true
-    if (once) {
-      debug("handleInclude once", this.currentFile);
-      const fileInfo = this.includedFiles.get(this.currentFile) || { included: true, guarded: false };
-      fileInfo.guarded = true;
-      this.includedFiles.set(this.currentFile, fileInfo);
-    }
-  }
-
-  /**
-   * Assembles a file, handling include guards and recursion limits.
-   * @param {string} filename The filename to assemble.
-   * @param {boolean} isInclude Whether the file is being included.
-   * @throws {Error} If the recursion limit is exceeded or the file is included again.
-   */
-  assemblefile = (filename: string, isInclude: boolean): void => {
-    debug("assemblefile", filename, isInclude);
-
-    const resolvedPath = this.resolveIncludePath(filename);
-
-    // Check for include guards
-    const fileInfo = this.includedFiles.get(resolvedPath);
-    if (fileInfo?.guarded) {
-      debug("assemblefile include guard hit, skipping");
-      return;
-    }
-
-    // Check for recursion limit
-    if (this.includeStack.length >= 512) {
-      throw new Error("Recursion limit exceeded (512 levels)");
-    }
-
-    // Fail immediately on include cycles so callers get one stable error
-    // instead of hundreds of nested "Failed to assemble include" wrappers.
-    if (resolvedPath === this.currentFile || this.includeStack.includes(resolvedPath)) {
-      throw new Error(`Recursive include detected for '${resolvedPath}'`);
-    }
-
-    // Save current state
-    const previousFile = this.currentFile;
-    this.includeStack.push(previousFile);
-
-    // Capture the parent -> child include relationship for tooling/LSP use.
-    this.recordIncludeEdge(previousFile, resolvedPath);
-
-    // Includes now execute through the typed pass-program path so include
-    // semantics match top-level tree execution. Surface failures to callers so
-    // broken includes cannot silently zero-fill large ROM regions.
-    try {
-      const content = this.fileProvider.readTextFile(resolvedPath, "utf8");
-      this.currentFile = resolvedPath;
-
-      // Mark this file as included
-      if (!this.includedFiles.has(resolvedPath)) {
-        this.includedFiles.set(resolvedPath, { included: true, guarded: false });
-      } else {
-        const info = this.includedFiles.get(resolvedPath);
-        info.included = true;
-        this.includedFiles.set(resolvedPath, info);
-      }
-
-      const includeNode = this.createIncludeNode(resolvedPath, content);
-      this.lowerAndExecuteRuntimeNodes(includeNode.commands);
-    } catch (error) {
-      debug("assemblefile error 💥", error);
-      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
-      throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
-    } finally {
-      // Restore state
-      this.currentFile = this.includeStack.pop() || "";
-    }
-  }
-
-  /**
    * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
    * @param {NormalizedCommand | string[]} command The normalized command node or legacy words tuple.
    * @throws {Error} If the format is incorrect.
@@ -2924,8 +2792,5 @@ export class Assembler {
     };
   }
 
-  createIncludeNode(file: string, source: string): IncludeNode {
-    return this.frontEndService.createIncludeNode(file, source);
-  }
 }
 

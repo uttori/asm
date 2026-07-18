@@ -23,6 +23,45 @@ export interface OperandResolutionContext {
     lowerOperand(operand: string): LoweredOperand;
     getnum(expression: string | ExpressionNode): number;
 }
+export interface EncoderEmissionContext {
+    write1(value: number): void;
+    write2(value: number): void;
+    write3(value: number): void;
+}
+export interface EncoderSizingContext {
+    getCurrentAddress(): number;
+    optimizeDirectPage(): boolean;
+}
+export interface EncoderBranchContext {
+    enforceResolvedLabels(): boolean;
+    findNextLabel(label: string, referenceAddress: number): number;
+    findPreviousLabel(label: string, referenceAddress: number): number;
+}
+export interface EncoderDiagnosticContext {
+    error(message: string): Error;
+}
+export interface ArchitectureEncoderContext {
+    operands: OperandResolutionContext;
+    emission: EncoderEmissionContext;
+    sizing: EncoderSizingContext;
+    branches: EncoderBranchContext;
+    diagnostics: EncoderDiagnosticContext;
+}
+export interface EncoderRuntime {
+    operandResolver: OperandResolutionContext;
+    write1(value: number): void;
+    write2(value: number): void;
+    write3(value: number): void;
+    readonly currentTargetAddress: number;
+    readonly optimizeDirectPage: boolean;
+    readonly enforceResolvedLabels: boolean;
+    symbolScope: {
+        findNextLabel(label: string, referenceAddress: number): number;
+        findPreviousLabel(label: string, referenceAddress: number): number;
+    };
+    diagnostics: EncoderDiagnosticContext;
+}
+export declare const createEncoderRuntime: (context: ArchitectureEncoderContext) => EncoderRuntime;
 export interface ExpressionHost {
     resolveLabel(identifier: string): MathValue;
     convertSnesToPc(address: number): number;
@@ -81,7 +120,6 @@ export interface ArchitectureEncoder {
     encode(words: string[]): boolean;
     estimateInstruction?(instruction: LoweredInstruction): number;
     encodeInstruction?(instruction: LoweredInstruction): boolean;
-    lowerInstructionFromCommand?(command: NormalizedCommand): LoweredInstruction;
     /**
      * Returns the static instruction catalog for editor tooling, when available.
      * @returns {InstructionDescriptor[]} The instruction descriptors.

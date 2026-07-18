@@ -1178,7 +1178,7 @@ test("readFile - successful read", t => {
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/test.bin");
   const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0x01, 0x02, 0x03, 0x04]));
 
-  const result = assembler.readFile("test.bin");
+  const result = assembler.includeSource.readFile("test.bin");
 
   t.deepEqual(result, new Uint8Array([0x01, 0x02, 0x03, 0x04]));
   t.true(resolvePathStub.calledOnce);
@@ -1195,7 +1195,7 @@ test("readFile - relative path resolution", t => {
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/data.bin");
   const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0xFF]));
 
-  assembler.readFile("data.bin");
+  assembler.includeSource.readFile("data.bin");
 
   t.true(resolvePathStub.calledWith("data.bin", sinon.match.has("currentFile", "/test/path/current.asm")));
   t.true(readFileStub.calledWith("/test/path/data.bin"));
@@ -1214,7 +1214,7 @@ test("readFile - fallback to cwd when no current file", t => {
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").callsFake((filename) => `/fallback/dir/${filename}`);
   const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0xAA]));
 
-  assembler.readFile("data.bin");
+  assembler.includeSource.readFile("data.bin");
 
   t.true(resolvePathStub.calledWith("data.bin", sinon.match.has("currentFile", "")));
   t.true(readFileStub.calledWith("/fallback/dir/data.bin"));
@@ -1230,7 +1230,7 @@ test("readFile - throws error on file not found", t => {
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(undefined);
 
   const error = t.throws(() => {
-    assembler.readFile("nonexistent.bin");
+    assembler.includeSource.readFile("nonexistent.bin");
   });
 
   t.is(error.message, "Error reading file: nonexistent.bin");
@@ -1250,7 +1250,7 @@ test("readFile - handles binary data correctly", t => {
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/binary.dat");
   const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array(testBuffer));
 
-  const result = assembler.readFile("binary.dat");
+  const result = assembler.includeSource.readFile("binary.dat");
 
   // Verify the Uint8Array has the same content as the buffer
   t.is(result.length, testBuffer.length);
@@ -1270,7 +1270,7 @@ test("readFile - handles text data with encoding", t => {
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/text.txt");
   const readFileStub = sinon.stub(assembler.fileProvider, "readTextFile").returns(testString);
 
-  const result = assembler.readFile("text.txt", "utf8");
+  const result = assembler.includeSource.readFile("text.txt", "utf8");
 
   // Verify the result is a string and matches the expected content
   t.is(result, testString);
@@ -1286,7 +1286,7 @@ test("resolveIncludePath - absolute path", t => {
   const absolutePath = process.platform === "win32" ? "C:\\test\\file.asm" : "/test/file.asm";
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(absolutePath);
 
-  const result = assembler.resolveIncludePath(absolutePath);
+  const result = assembler.includeSource.resolveIncludePath(absolutePath);
 
   t.is(result, absolutePath);
   t.true(resolvePathStub.calledWith(absolutePath, sinon.match.object));
@@ -1301,7 +1301,7 @@ test("resolveIncludePath - relative to current file", t => {
   const expectedPath = "/test/path/file.asm";
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(expectedPath);
 
-  const result = assembler.resolveIncludePath(relativePath);
+  const result = assembler.includeSource.resolveIncludePath(relativePath);
 
   t.is(result, expectedPath);
   t.true(resolvePathStub.calledWith(relativePath, sinon.match.has("currentFile", "/test/path/current.asm")));
@@ -1317,7 +1317,7 @@ test("resolveIncludePath - from include paths", t => {
   const secondAttempt = "/other/include/path/file.asm";
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(secondAttempt);
 
-  const result = assembler.resolveIncludePath(filename);
+  const result = assembler.includeSource.resolveIncludePath(filename);
 
   t.is(result, secondAttempt);
   t.true(resolvePathStub.calledWith(filename, sinon.match.has("includePaths", assembler.includePaths)));
@@ -1335,9 +1335,9 @@ test("resolveIncludePath - strips quotes", t => {
   const backtickQuoted = "`file.asm`";
   const expectedPath = "/test/path/file.asm";
 
-  t.is(assembler.resolveIncludePath(doubleQuoted), expectedPath);
-  t.is(assembler.resolveIncludePath(singleQuoted), expectedPath);
-  t.is(assembler.resolveIncludePath(backtickQuoted), expectedPath);
+  t.is(assembler.includeSource.resolveIncludePath(doubleQuoted), expectedPath);
+  t.is(assembler.includeSource.resolveIncludePath(singleQuoted), expectedPath);
+  t.is(assembler.includeSource.resolveIncludePath(backtickQuoted), expectedPath);
 
   t.true(resolvePathStub.calledThrice);
   resolvePathStub.restore();
@@ -1352,7 +1352,7 @@ test("resolveIncludePath - throws error when file not found", t => {
   const filename = "nonexistent.asm";
 
   const error = t.throws(() => {
-    assembler.resolveIncludePath(filename);
+    assembler.includeSource.resolveIncludePath(filename);
   }, { instanceOf: Error });
 
   t.is(error.message, `Could not find file: ${filename}`);
@@ -1364,10 +1364,11 @@ test("handleInclude - includeonce adds current file to guarded set", t => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
 
-  const resolveIncludePathStub = sinon.stub(assembler, "resolveIncludePath").returns("/test/path/file.asm");
-  const assemblefileStub = sinon.stub(assembler, "assemblefile");
+  const resolveIncludePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath").returns("/test/path/file.asm");
+  const assemblefileStub = sinon.stub(assembler.includeSource, "assembleFile");
 
-  assembler.handleInclude("include", "file.asm", true);
+  assembler.includeSource.includeFile("file.asm");
+  assembler.includeSource.guardCurrentFile();
 
   t.true(assembler.includedFiles.get("/test/path/current.asm")?.guarded);
   t.true(assemblefileStub.called);
@@ -1380,16 +1381,16 @@ test("handleInclude - includeonce adds current file to guarded set", t => {
 test("handleInclude - regular include calls assemblefile", t => {
   const assembler = new Assembler();
 
-  const resolveIncludePathStub = sinon.stub(assembler, "resolveIncludePath").returns("/resolved/file.asm");
-  const assemblefileStub = sinon.stub(assembler, "assemblefile");
+  const resolveIncludePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath").returns("/resolved/file.asm");
+  const assemblefileStub = sinon.stub(assembler.includeSource, "assembleFile");
 
-  assembler.handleInclude("include", "file.asm", false);
+  assembler.includeSource.includeFile("file.asm");
 
   t.true(assembler.includedFiles.has("/resolved/file.asm"));
   t.true(assembler.includedFiles.get("/resolved/file.asm").included);
   t.false(assembler.includedFiles.get("/resolved/file.asm").guarded);
   t.true(assemblefileStub.calledOnce);
-  t.true(assemblefileStub.calledWith("file.asm", true));
+  t.true(assemblefileStub.calledWith("file.asm"));
 
   // Cleanup
   resolveIncludePathStub.restore();
@@ -1399,10 +1400,10 @@ test("handleInclude - regular include calls assemblefile", t => {
 test("handleInclude - adds file to included files set", t => {
   const assembler = new Assembler();
 
-  const resolveIncludePathStub = sinon.stub(assembler, "resolveIncludePath").returns("/resolved/newfile.asm");
-  const assemblefileStub = sinon.stub(assembler, "assemblefile");
+  const resolveIncludePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath").returns("/resolved/newfile.asm");
+  const assemblefileStub = sinon.stub(assembler.includeSource, "assembleFile");
 
-  assembler.handleInclude("include", "newfile.asm", false);
+  assembler.includeSource.includeFile("newfile.asm");
 
   t.true(assembler.includedFiles.has("/resolved/newfile.asm"));
   t.true(assembler.includedFiles.get("/resolved/newfile.asm").included);
@@ -1416,14 +1417,14 @@ test("handleInclude - adds file to included files set", t => {
 test("handleInclude - handles undefined filename", t => {
   const assembler = new Assembler();
   const error = t.throws(() => {
-    assembler.handleInclude("include", undefined, false);
+    assembler.includeSource.includeFile(undefined as unknown as string);
   });
-  t.is(error.message, "Missing include target for include");
+  t.is(error.message, "Invalid or missing filename");
 });
 
 test("assemblefile - basic file assembly", t => {
   const assembler = new Assembler();
-  const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+  const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
   const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
 
   // Setup test file content
@@ -1436,7 +1437,7 @@ test("assemblefile - basic file assembly", t => {
   // Stub lowered dispatch to verify each included line is executed.
   const dispatchLoweredNodeStub = sinon.stub(assembler, "dispatchLoweredNode");
 
-  assembler.assemblefile("file.asm", true);
+  assembler.includeSource.assembleFile("file.asm");
 
   t.is(dispatchLoweredNodeStub.callCount, 2);
   const mnemonics = dispatchLoweredNodeStub.getCalls().map((call) => call.args[0]?.mnemonic?.toLowerCase());
@@ -1450,7 +1451,7 @@ test("assemblefile - basic file assembly", t => {
 
 test("assemblefile - respects include guards", t => {
   const assembler = new Assembler();
-  const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+  const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
   const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
 
   const testFilePath = "/test/path/guarded.asm";
@@ -1462,7 +1463,7 @@ test("assemblefile - respects include guards", t => {
   // Verify file is not processed
   const processCommandStub = sinon.stub(assembler, "processNormalizedCommand");
 
-  assembler.assemblefile("guarded.asm", true);
+  assembler.includeSource.assembleFile("guarded.asm");
 
   t.false(processCommandStub.called);
   t.false(readTextFileStub.called);
@@ -1475,7 +1476,7 @@ test("assemblefile - respects include guards", t => {
 
 test("assemblefile - throws on recursion limit", t => {
   const assembler = new Assembler();
-  const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+  const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
 
   // Set up recursion limit scenario
   for (let i = 0; i < 512; i++) {
@@ -1484,7 +1485,7 @@ test("assemblefile - throws on recursion limit", t => {
 
   // Verify error is thrown
   const error = t.throws(() => {
-    assembler.assemblefile("too_deep.asm", true);
+    assembler.includeSource.assembleFile("too_deep.asm");
   });
 
   t.is(error.message, "Recursion limit exceeded (512 levels)");
@@ -1495,14 +1496,14 @@ test("assemblefile - throws on recursion limit", t => {
 
 test("assemblefile - throws on recursive include cycle before recursion limit", t => {
   const assembler = new Assembler();
-  const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+  const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
 
   assembler.currentFile = "/test/path/loop1.asm";
   assembler.includeStack.push("/test/path/root.asm");
   resolvePathStub.returns("/test/path/loop1.asm");
 
   const error = t.throws(() => {
-    assembler.assemblefile("loop1.asm", true);
+    assembler.includeSource.assembleFile("loop1.asm");
   });
 
   t.is(error.message, "Recursive include detected for '/test/path/loop1.asm'");
@@ -1513,7 +1514,7 @@ test("assemblefile - throws on recursive include cycle before recursion limit", 
 test("assemblefile - maintains include stack", t => {
   const assembler = new Assembler();
   const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
-  const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+  const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
   t.teardown(() => {
     readTextFileStub.restore();
     resolvePathStub.restore();
@@ -1531,7 +1532,7 @@ test("assemblefile - maintains include stack", t => {
   assembler.currentFile = mainFile;
 
   // Process included file
-  assembler.assemblefile("included.asm", true);
+  assembler.includeSource.assembleFile("included.asm");
 
   // Verify stack was maintained
   t.is(assembler.currentFile, mainFile);
@@ -1540,7 +1541,7 @@ test("assemblefile - maintains include stack", t => {
 
 test("assemblefile - handles file read errors", t => {
   const assembler = new Assembler();
-  const resolvePathStub = sinon.stub(assembler, "resolveIncludePath");
+  const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
   const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
   t.teardown(() => {
     readTextFileStub.restore();
@@ -1560,7 +1561,7 @@ test("assemblefile - handles file read errors", t => {
   // Include failures should bubble up so callers cannot silently keep going
   // after dropping an entire include tree.
   const error = t.throws(() => {
-    assembler.assemblefile("error.asm", true);
+    assembler.includeSource.assembleFile("error.asm");
   });
   t.regex(error.message, /Failed to assemble include '\/test\/path\/error\.asm': File read error/);
 
@@ -2738,7 +2739,7 @@ test("handleIncbin", t => {
 
   // Mock the readFile method
   const mockData = new Uint8Array([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
-  assembler.readFile = (filename) => {
+  assembler.includeSource.readFile = (filename) => {
     if (filename === "testfile.bin") {
       return mockData;
     }
@@ -2852,7 +2853,7 @@ test("handleIncbin - error handling", t => {
 
   // Mock the readFile method
   const mockData = new Uint8Array([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
-  assembler.readFile = (filename) => {
+  assembler.includeSource.readFile = (filename) => {
     if (filename === "testfile.bin") {
       return mockData;
     }

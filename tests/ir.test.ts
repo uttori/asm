@@ -272,7 +272,7 @@ test("tree pass programs are cached per source block key", (t) => {
 
 test("include nodes and parsed programs keep typed executable leaves", (t) => {
   const assembler = new Assembler();
-  const includeNode = assembler.createIncludeNode("include.asm", "db $01\ndb $02");
+  const includeNode = assembler.frontEndService.createIncludeNode("include.asm", "db $01\ndb $02");
   const rootNodes = assembler.getOrBuildPassProgram(["db $01", "db $02"], "root.asm", 0);
 
   t.true(includeNode.commands.every((node) => typeof node !== "string"));
@@ -455,13 +455,14 @@ test("incbin range evaluation adopts expression nodes for bounds", (t) => {
   const assembler = new Assembler();
   const writtenBytes: number[] = [];
   stub(assembler, "addAddressToLine");
-  stub(assembler, "readFile").returns(new Uint8Array([0x10, 0x20, 0x30, 0x40]));
+  stub(assembler.includeSource, "readFile").returns(new Uint8Array([0x10, 0x20, 0x30, 0x40]));
   stub(assembler, "write1").callsFake((value: number) => {
     writtenBytes.push(value);
   });
 
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
   }, ["incbin", "\"test.bin\":$1..$3"]);
 

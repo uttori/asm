@@ -596,7 +596,7 @@ test("macro/include lifting exposes typed macro and include nodes", (t) => {
     t.true(typeof command !== "string" && "source" in command);
   }
 
-  const includeNode = assembler.createIncludeNode("inline.asm", "if 1\ndb $01\nendif");
+  const includeNode = assembler.frontEndService.createIncludeNode("inline.asm", "if 1\ndb $01\nendif");
   t.is(includeNode.type, "include");
   t.is(includeNode.commands.length, 1);
   const includeChild = includeNode.commands[0];
@@ -851,14 +851,14 @@ test("lowered loop and conditional executors select the expected work", t => {
 
 test("lowered instructions refresh against architecture changes at dispatch", t => {
   const assembler = new Assembler();
-  const spcEncoder = assembler.architectureRegistry.getDefinition("spc700")?.encoder;
-  const mainEncoder = assembler.architectureRegistry.getDefinition("65816")?.encoder;
-  if (!spcEncoder?.lowerInstructionFromCommand || !mainEncoder?.lowerInstructionFromCommand) {
-    t.fail("registered encoders must support command lowering");
+  const spcDefinition = assembler.architectureRegistry.getDefinition("spc700");
+  const mainDefinition = assembler.architectureRegistry.getDefinition("65816");
+  if (!spcDefinition || !mainDefinition) {
+    t.fail("registered architectures must support operand classification");
     return;
   }
-  const spcLowerSpy = spy(spcEncoder, "lowerInstructionFromCommand");
-  const mainLowerSpy = spy(mainEncoder, "lowerInstructionFromCommand");
+  const spcLowerSpy = spy(spcDefinition, "classifyOperand");
+  const mainLowerSpy = spy(mainDefinition, "classifyOperand");
   const program = assembler.buildProgramModel([
     "arch spc700",
     "nop",
@@ -893,7 +893,7 @@ test("file provider can serve includes from virtual documents", (t) => {
   const assembler = new Assembler(undefined, { fileProvider });
   assembler.setCurrentFile("mem:/main.asm");
 
-  assembler.handleInclude("include", "shared.asm", false);
+  assembler.includeSource.includeFile("shared.asm");
 
   t.is(assembler.currentTargetAddress, 1);
   t.true(assembler.includedFiles.has("mem:/shared.asm"));
@@ -917,7 +917,7 @@ test("lowered include executes nested conditional control flow", (t) => {
   assembler.setWritePosition(0x808000);
   assembler.setCurrentFile("mem:/main.asm");
 
-  assembler.handleInclude("include", "child.asm", false);
+  assembler.includeSource.includeFile("child.asm");
 
   t.deepEqual(Array.from(assembler.getBinaryOutput()), [0x00, 0x01]);
 });

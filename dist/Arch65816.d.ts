@@ -1,9 +1,7 @@
-import type { ArchitectureEncoder, InstructionDescriptor, LoweredInstruction } from "./architecture-types.js";
-import type { Assembler } from "./assembler.js";
-import type { NormalizedCommand } from "./ir/normalized-command.js";
+import { type ArchitectureEncoder, type ArchitectureEncoderContext, type EncoderRuntime, type InstructionDescriptor, type LoweredInstruction } from "./architecture-types.js";
 export declare class Arch65816 implements ArchitectureEncoder {
-    assembler: Assembler;
-    constructor(assembler: Assembler);
+    assembler: EncoderRuntime;
+    constructor(context: ArchitectureEncoderContext);
     /**
      * Returns the static 65816 instruction catalog for editor tooling.
      * @returns {InstructionDescriptor[]} The instruction descriptors.
@@ -12,7 +10,6 @@ export declare class Arch65816 implements ArchitectureEncoder {
     encode(words: string[]): boolean;
     estimateInstruction(instruction: LoweredInstruction): number;
     encodeInstruction(instruction: LoweredInstruction): boolean;
-    lowerInstructionFromCommand(command: NormalizedCommand): LoweredInstruction;
     estimateSize(words: string[]): number;
     estimateResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): number;
     /**

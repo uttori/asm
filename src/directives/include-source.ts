@@ -8,9 +8,12 @@ import type { IncludeDirectiveContext } from "./types.js";
  * @param {string[]} words Directive keyword.
  */
 export const handleIncbin = (
-  { session, operandResolver, runtime }: IncludeDirectiveContext,
+  { session, includeSource, operandResolver, runtime }: IncludeDirectiveContext,
   words: string[],
 ): void => {
+  // Keep direct handler callers source-compatible while registry wiring uses
+  // the explicit focused service capability.
+  includeSource ??= (session as unknown as { includeSource: IncludeDirectiveContext["includeSource"] }).includeSource;
   let targetLocationSpecified = false;
   let targetLocation: string | null = null;
   const arrowIndex = words.indexOf("->");
@@ -39,7 +42,7 @@ export const handleIncbin = (
   }
   filename = filename.replace(/^"(.*)"$/, "$1");
 
-  const fileData = session.readFile(filename) as Uint8Array;
+  const fileData = includeSource.readFile(filename) as Uint8Array;
   if (!fileData) {
     throw new Error(`Failed to read file: ${filename}`);
   }
@@ -117,27 +120,25 @@ export const registerIncludeSourceDirectives = (
   registry: DirectiveRegistry,
   context: IncludeDirectiveContext,
 ): void => {
-  registry.register("incsrc", context, ({ session }, words, _raw, command) => {
+  registry.register("incsrc", context, ({ includeSource }, words, _raw, command) => {
     const target = command?.parsed.includeTarget?.target ?? words[1];
     if (!target) {
       throw new Error("incsrc requires exactly one filename parameter");
     }
 
-    session.assemblefile(target, false);
+    includeSource.assembleFile(target);
   });
 
-  registry.register("include", context, ({ session }, words, _raw, command) => {
+  registry.register("include", context, ({ includeSource }, words, _raw, command) => {
     const target = command?.parsed.includeTarget?.target ?? words[1];
     if (!target) {
       throw new Error("include requires exactly one filename parameter");
     }
-    session.handleInclude("include", target, false);
+    includeSource.includeFile(target);
   });
 
-  registry.register("includeonce", context, ({ session }) => {
-    const fileInfo = session.includedFiles.get(session.currentFile) || { included: true, guarded: false };
-    fileInfo.guarded = true;
-    session.includedFiles.set(session.currentFile, fileInfo);
+  registry.register("includeonce", context, ({ includeSource }) => {
+    includeSource.guardCurrentFile();
   });
 
   registry.register("incbin", context, handleIncbin);

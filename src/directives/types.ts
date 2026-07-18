@@ -7,8 +7,8 @@ import type { AssemblerServices } from "../assembler-internals.js";
 import { ArchitectureRegistry } from "../architecture-registry.js";
 import type { SpcblockData } from "../assembler.js";
 import { ExpressionNode } from "../ir/expression-node.js";
-import type { AssemblyFileProvider } from "../file-provider.js";
 import type { DirectiveRuntimeService } from "../services/directive-runtime-service.js";
+import type { IncludeSourceService } from "../services/include-source-service.js";
 
 export interface DirectiveAddressCapability {
   recordCurrentAddress(): void;
@@ -33,15 +33,6 @@ export interface DirectiveNamespaceCapability {
   namespaceNestingPath: string[];
   namespaceNestingEnabled: boolean;
   currentNamespace: string;
-}
-
-export interface DirectiveIncludeCapability {
-  readFile(filename: string): Uint8Array | string;
-  fileProvider: AssemblyFileProvider;
-  currentFile: string;
-  includedFiles: Map<string, { included: boolean; guarded: boolean }>;
-  assemblefile(filename: string, isMacro: boolean): void;
-  handleInclude(kind: string, filename: string, once: boolean): void;
 }
 
 export interface DirectiveTableCapability {
@@ -165,11 +156,15 @@ export type AssemblerPolicyDirectiveContext = SessionDirectiveContext<
 >;
 
 export type IncludeDirectiveContext = OperandDirectiveContext<
-  DirectiveIncludeCapability
-  & Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope">
+  Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope">
   & Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition">
   & Pick<DirectiveRomCapability, "write1">
-> & RuntimeDirectiveContext;
+> & RuntimeDirectiveContext & {
+  includeSource: Pick<
+    IncludeSourceService,
+    "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile"
+  >;
+};
 
 export type MemoryDirectiveContext = OperandDirectiveContext<
   Pick<

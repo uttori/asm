@@ -164,15 +164,12 @@ export class CommandLoweringService {
     }
 
     const architecture = this.host.resolveActiveArchitecture();
-    const isaLoweredInstruction = architecture.definition?.encoder.lowerInstructionFromCommand?.(command);
-    if (isaLoweredInstruction) {
-      return isaLoweredInstruction;
-    }
-
     const parsedOperands = command.parsed.opcodeOperands;
     const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
     const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands ?? (operandText ? [operandText] : []);
+    const operands = parsedOperands?.operands
+      ?? architecture.definition?.splitOperands(operandText)
+      ?? (operandText ? [operandText] : []);
     const loweredOperands = operands.map((operand) => this.host.classifyOperandForActiveArchitecture(operand));
     const loweredOperand = this.host.classifyOperandForActiveArchitecture(operandText);
 
