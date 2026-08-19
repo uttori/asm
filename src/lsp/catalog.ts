@@ -1,5 +1,8 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
-import { getCatalogForArchitecture } from "./instruction-catalog.js";
+import {
+  getCatalogForArchitecture,
+  type InstructionCatalogProvider,
+} from "./instruction-catalog.js";
 import { directiveCatalog, findDirective, type DirectiveDescriptor } from "./directive-catalog.js";
 
 /**
@@ -19,24 +22,32 @@ export type CatalogEntry = {
 /**
  * Returns the instruction catalog for an architecture.
  * @param {string} architecture The architecture name.
+ * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
  * @returns {InstructionDescriptor[]} The instruction descriptors.
  */
-export function getInstructionCatalog(architecture: string): InstructionDescriptor[] {
-  return getCatalogForArchitecture(architecture);
+export function getInstructionCatalog(
+  architecture: string,
+  provider?: InstructionCatalogProvider,
+): InstructionDescriptor[] {
+  return getCatalogForArchitecture(architecture, provider);
 }
 
 /**
  * Looks up an instruction descriptor by mnemonic (case-insensitive).
  * @param {string} mnemonic The mnemonic to find.
  * @param {string} architecture The active architecture name.
+ * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
  * @returns {InstructionDescriptor | undefined} The descriptor, if known.
  */
 export function findInstruction(
   mnemonic: string,
   architecture: string,
+  provider?: InstructionCatalogProvider,
 ): InstructionDescriptor | undefined {
   const upper = mnemonic.toUpperCase();
-  return getCatalogForArchitecture(architecture).find((entry) => entry.mnemonic === upper);
+  return getCatalogForArchitecture(architecture, provider).find(
+    (entry) => entry.mnemonic === upper,
+  );
 }
 
 /**
@@ -94,12 +105,16 @@ export function renderDirectiveDocs(descriptor: DirectiveDescriptor): string {
 /**
  * Builds the combined completion entries for an architecture.
  * @param {string} architecture The active architecture name.
+ * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
  * @returns {CatalogEntry[]} The completion entries.
  */
-export function buildCompletionEntries(architecture: string): CatalogEntry[] {
+export function buildCompletionEntries(
+  architecture: string,
+  provider?: InstructionCatalogProvider,
+): CatalogEntry[] {
   const entries: CatalogEntry[] = [];
 
-  for (const instruction of getCatalogForArchitecture(architecture)) {
+  for (const instruction of getCatalogForArchitecture(architecture, provider)) {
     entries.push({
       label: instruction.mnemonic,
       kind: "instruction",

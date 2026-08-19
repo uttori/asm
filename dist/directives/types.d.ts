@@ -9,7 +9,9 @@ import type { SpcblockData } from "../assembler.js";
 import { ExpressionNode } from "../ir/expression-node.js";
 import type { DirectiveRuntimeService } from "../services/directive-runtime-service.js";
 import type { IncludeSourceService } from "../services/include-source-service.js";
+import type { TargetProfile } from "../target-profile.js";
 export interface DirectiveAddressCapability {
+    targetProfile: TargetProfile;
     recordCurrentAddress(): void;
     setWritePosition(address: number): void;
     currentTargetAddress: number;
@@ -68,6 +70,7 @@ export interface DirectiveSpcCapability {
 export interface DirectiveArchitectureCapability {
     architectureRegistry: ArchitectureRegistry;
     arch: string;
+    targetProfile: TargetProfile;
 }
 export interface DirectiveAssemblerCapability {
     services: AssemblerServices;
@@ -91,7 +94,7 @@ export type NamespaceDirectiveContext = SessionDirectiveContext<DirectiveNamespa
 export type FillPadDirectiveContext = OperandDirectiveContext<Pick<DirectiveRomCapability, "fillbyte" | "padbyte" | "padUnit" | "currentTargetAddress" | "romWriter" | "write1"> & Pick<DirectiveExpressionCapability, "resolvedefines">>;
 export type FlowControlDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "symbolScope">>;
 export type MapperDirectiveContext = SessionDirectiveContext<Pick<DirectiveRomCapability, "mapper" | "checksumFixEnabled" | "sa1banks"> & Pick<DirectiveSpcCapability, "inSpcblock">>;
-export type BaseLayoutDirectiveContext = OperandDirectiveContext<Pick<DirectiveAddressCapability, "currentTargetAddress" | "currentTargetBaseAddress" | "currentTargetStartAddress" | "currentTargetBaseStartAddress">>;
+export type BaseLayoutDirectiveContext = OperandDirectiveContext<Pick<DirectiveAddressCapability, "currentTargetAddress" | "currentTargetBaseAddress" | "currentTargetStartAddress" | "currentTargetBaseStartAddress" | "targetProfile">>;
 export type AddressStackDirectiveContext = SessionDirectiveContext<Pick<DirectiveAddressCapability, "currentTargetAddress" | "pushBaseStack">>;
 export type DataDirectiveContext = RuntimeDirectiveContext;
 export type SpcDirectiveContext = RuntimeDirectiveContext;

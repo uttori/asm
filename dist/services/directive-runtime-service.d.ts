@@ -4,6 +4,7 @@ import type { DefineEngine } from "./define-engine.js";
 import type { RomWriterService } from "./rom-writer-service.js";
 import type { StructEngine } from "./struct-engine.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
+import type { TargetProfile } from "../target-profile.js";
 export type PushPcRuntimeEntry = {
     currentTargetAddress: number;
     currentTargetStartAddress: number;
@@ -33,6 +34,7 @@ export interface DirectiveRuntimeHost {
     spcblockData: SpcblockData | null;
     structEngine: StructEngine;
     symbolScope: SymbolScopeService;
+    targetProfile: TargetProfile;
     addAddressToLine(address: number): void;
     resolvedefines(input: string): string;
     setWritePosition(address: number): void;

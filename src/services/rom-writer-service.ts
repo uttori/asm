@@ -2,6 +2,7 @@ import type { AssemblyStageName } from "../assembler.js";
 import { shouldAutoCloseSpcblock } from "../compatibility/asar-compatibility-profile.js";
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 import type { DirectiveRuntimeService } from "./directive-runtime-service.js";
+import type { TargetProfile } from "../target-profile.js";
 
 export interface RomWriterHost {
   traceStage: AssemblyStageName;
@@ -21,6 +22,7 @@ export interface RomWriterHost {
   activeFreespaceStartPc: number | null;
   activeFreespaceContentStartPc: number | null;
   checksumFixEnabled: boolean;
+  targetProfile: TargetProfile;
   fillRomData(start: number, value: number, length: number): void;
   writeDataBytes(start: number, value: number, length?: number): void;
   updateHeaderAndCRC32(): void;
@@ -46,12 +48,16 @@ export class RomWriterService {
     if (num < 0) {
       throw new Error("step num is negative");
     }
-    this.host.currentTargetAddress =
-      (this.host.currentTargetAddress & 0xff000000) |
-      this.fixsnespos(this.host.currentTargetAddress & 0xffffff, num);
-    this.host.currentTargetBaseAddress =
-      (this.host.currentTargetBaseAddress & 0xff000000) |
-      this.fixsnespos(this.host.currentTargetBaseAddress & 0xffffff, num);
+    this.host.currentTargetAddress = this.host.targetProfile.addressSpace.advance(
+      this.host.currentTargetAddress,
+      num,
+      this.host,
+    );
+    this.host.currentTargetBaseAddress = this.host.targetProfile.addressSpace.advance(
+      this.host.currentTargetBaseAddress,
+      num,
+      this.host,
+    );
     this.host.syncWriteStarts();
     this.host.incrementBytesWritten(num);
   }
@@ -67,10 +73,19 @@ export class RomWriterService {
 
     this.verifysnespos();
 
-    const wrappedPos = this.fixsnespos(this.host.currentTargetBaseAddress & 0xffffff);
-    const bankByte = this.host.currentTargetBaseAddress & 0xff000000;
-    const newPos = bankByte | wrappedPos;
-    const pcpos = this.convertTargetAddressToRomOffset(newPos & 0xffffff);
+    const newPos = this.host.targetProfile.addressSpace.normalizeForWrite(
+      this.host.currentTargetBaseAddress,
+      this.host,
+    );
+    const addressWidth = this.host.targetProfile.addressSpace.addressWidth;
+    const logicalMask = addressWidth < 32 ? 2 ** addressWidth - 1 : 0xffffffff;
+    const logicalAddress = newPos & logicalMask;
+    const pcpos = this.convertTargetAddressToRomOffset(logicalAddress);
+    if (pcpos < 0 && this.host.targetProfile.addressSpace.unmappedWriteBehavior === "throw") {
+      throw new Error(
+        `Address $${newPos.toString(16).toUpperCase()} does not map to ${this.host.targetProfile.addressSpace.name} output.`,
+      );
+    }
 
     // Emit tracing before the position advances so listeners see the exact byte
     // address that will be written for this stage.
@@ -81,7 +96,7 @@ export class RomWriterService {
       line: 0,
       raw: "",
       normalized: "",
-      snesAddress: newPos & 0xffffff,
+      snesAddress: logicalAddress,
       pcAddress: pcpos,
       value: num & 0xff,
     });
@@ -132,6 +147,34 @@ export class RomWriterService {
     this.write1((num >> 8) & 0xff);
     this.write1((num >> 16) & 0xff);
     this.write1((num >> 24) & 0xff);
+  }
+
+  /**
+   * Writes an arbitrary-width value for architecture extensions.
+   * @param {number} num Value to write.
+   * @param {number} width Width in bytes.
+   * @param {"little" | "big"} endianness Byte order.
+   */
+  writeValue(num: number, width: number, endianness: "little" | "big" = "little"): void {
+    if (!Number.isInteger(width) || width < 1) {
+      throw new Error(`Invalid write width: ${width}`);
+    }
+    this.assertBankCrossAllowed(width);
+    for (let index = 0; index < width; index++) {
+      const shift = endianness === "little" ? index : width - index - 1;
+      this.write1((num >> (shift * 8)) & 0xff);
+    }
+  }
+
+  /**
+   * Writes a sequence of already encoded bytes.
+   * @param {readonly number[]} values Bytes to write.
+   */
+  writeBytes(values: readonly number[]): void {
+    this.assertBankCrossAllowed(values.length);
+    for (const value of values) {
+      this.write1(value);
+    }
   }
 
   /**
@@ -187,8 +230,13 @@ export class RomWriterService {
         this.host.writeDataBytes(this.host.activeFreespaceStartPc + 7, (ratsComp >> 8) & 0xff, 1);
       }
     }
-    if (this.host.canFinalize && this.host.checksumFixEnabled) {
-      this.host.updateHeaderAndCRC32();
+    if (this.host.canFinalize) {
+      this.host.targetProfile.outputFormat.finalize({
+        canFinalize: true,
+        checksumFixEnabled: this.host.checksumFixEnabled,
+        bytes: this.host.romdata,
+        updateChecksum: () => this.host.updateHeaderAndCRC32(),
+      });
     }
   }
 
@@ -198,87 +246,7 @@ export class RomWriterService {
    * @returns {number} The PC offset.
    */
   convertTargetAddressToRomOffset(addr: number): number {
-    if (addr < 0 || addr > 0xffffff) return -1;
-
-    if (this.host.mapper === "lorom") {
-      if (
-        (addr & 0xfe0000) === 0x7e0000 ||
-        (addr & 0x408000) === 0x000000 ||
-        (addr & 0x708000) === 0x700000
-      ) {
-        return -1;
-      }
-      return ((addr & 0x7f0000) >> 1) | (addr & 0x7fff);
-    }
-
-    if (this.host.mapper === "hirom") {
-      if ((addr & 0xfe0000) === 0x7e0000 || (addr & 0x408000) === 0x000000) {
-        return -1;
-      }
-      return addr & 0x3fffff;
-    }
-
-    if (this.host.mapper === "exlorom") {
-      if ((addr & 0xf00000) === 0x700000 || (addr & 0x408000) === 0x000000) {
-        return -1;
-      }
-      if (addr & 0x800000) {
-        return ((addr & 0x7f0000) >> 1) | (addr & 0x7fff);
-      }
-      return (((addr & 0x7f0000) >> 1) | (addr & 0x7fff)) + 0x400000;
-    }
-
-    if (this.host.mapper === "exhirom") {
-      if ((addr & 0xfe0000) === 0x7e0000 || (addr & 0x408000) === 0x000000) {
-        return -1;
-      }
-      return (addr & 0x800000) === 0 ? (addr & 0x3fffff) | 0x400000 : addr & 0x3fffff;
-    }
-
-    if (this.host.mapper === "sfxrom") {
-      if (
-        (addr & 0x600000) === 0x600000 ||
-        (addr & 0x408000) === 0x000000 ||
-        (addr & 0x800000) === 0x800000
-      ) {
-        return -1;
-      }
-      return addr & 0x400000 ? addr & 0x3fffff : ((addr & 0x7f0000) >> 1) | (addr & 0x7fff);
-    }
-
-    if (this.host.mapper === "sa1rom") {
-      if ((addr & 0x408000) === 0x008000) {
-        return (
-          this.host.sa1banks[(addr & 0xe00000) >> 21] | ((addr & 0x1f0000) >> 1) | (addr & 0x007fff)
-        );
-      }
-      if ((addr & 0xc00000) === 0xc00000) {
-        return (
-          this.host.sa1banks[((addr & 0x100000) >> 20) | ((addr & 0x200000) >> 19)] |
-          (addr & 0x0fffff)
-        );
-      }
-      return -1;
-    }
-
-    if (this.host.mapper === "bigsa1rom") {
-      if ((addr & 0xc00000) === 0xc00000) {
-        return (addr & 0x3fffff) | 0x400000;
-      }
-      if ((addr & 0xc00000) === 0x000000 || (addr & 0xc00000) === 0x800000) {
-        if ((addr & 0x008000) === 0) {
-          return -1;
-        }
-        return ((addr & 0x800000) >> 2) | ((addr & 0x3f0000) >> 1) | (addr & 0x7fff);
-      }
-      return -1;
-    }
-
-    if (this.host.mapper === "norom") {
-      return addr;
-    }
-
-    return -1;
+    return this.host.targetProfile.addressSpace.toOutputOffset(addr, this.host);
   }
 
   /**
@@ -287,69 +255,7 @@ export class RomWriterService {
    * @returns {number} The SNES address.
    */
   pctosnes(addr: number): number {
-    if (addr < 0) return -1;
-
-    if (this.host.mapper === "lorom") {
-      if (addr >= 0x400000) return -1;
-      addr = ((addr << 1) & 0x7f0000) | (addr & 0x7fff) | 0x8000;
-      return addr | 0x800000;
-    }
-
-    if (this.host.mapper === "hirom") {
-      if (addr >= 0x400000) return -1;
-      return addr | 0xc00000;
-    }
-
-    if (this.host.mapper === "exlorom") {
-      if (addr >= 0x800000) return -1;
-      if (addr & 0x400000) {
-        addr -= 0x400000;
-        addr = ((addr << 1) & 0x7f0000) | (addr & 0x7fff) | 0x8000;
-        return addr;
-      }
-      addr = ((addr << 1) & 0x7f0000) | (addr & 0x7fff) | 0x8000;
-      return addr | 0x800000;
-    }
-
-    if (this.host.mapper === "exhirom") {
-      if (addr >= 0x800000) return -1;
-      return addr & 0x400000 ? addr : addr | 0xc00000;
-    }
-
-    if (this.host.mapper === "sa1rom") {
-      if (addr >= 0x800000) return -1;
-      for (let i = 0; i < 8; i++) {
-        if (this.host.sa1banks[i] === (addr & 0x700000)) {
-          return 0x008000 | (i << 21) | ((addr & 0x0f8000) << 1) | (addr & 0x7fff);
-        }
-      }
-      return -1;
-    }
-
-    if (this.host.mapper === "bigsa1rom") {
-      if (addr >= 0x800000) return -1;
-      if ((addr & 0x400000) === 0x400000) {
-        return addr | 0xc00000;
-      }
-      if ((addr & 0x600000) === 0x000000) {
-        return ((addr << 1) & 0x3f0000) | 0x8000 | (addr & 0x7fff);
-      }
-      if ((addr & 0x600000) === 0x200000) {
-        return 0x800000 | ((addr << 1) & 0x3f0000) | 0x8000 | (addr & 0x7fff);
-      }
-      return -1;
-    }
-
-    if (this.host.mapper === "sfxrom") {
-      if (addr >= 0x200000) return -1;
-      return ((addr << 1) & 0x7f0000) | (addr & 0x7fff) | 0x8000;
-    }
-
-    if (this.host.mapper === "norom") {
-      return addr;
-    }
-
-    return -1;
+    return this.host.targetProfile.addressSpace.fromOutputOffset(addr, this.host);
   }
 
   /**
@@ -357,7 +263,7 @@ export class RomWriterService {
    */
   verifysnespos(): void {
     if (this.host.currentTargetAddress < 0 || this.host.currentTargetBaseAddress < 0) {
-      this.host.setWritePosition(0x008000);
+      this.host.setWritePosition(this.host.targetProfile.addressSpace.defaultOrigin);
     }
   }
 
@@ -368,30 +274,6 @@ export class RomWriterService {
    * @returns {number} The fixed address.
    */
   fixsnespos(inaddr: number, step = 0): number {
-    const newAddr = inaddr + step;
-
-    if ((inaddr & 0xff0000) !== (newAddr & 0xff0000)) {
-      switch (this.host.mapper) {
-        case "lorom":
-          return (newAddr & 0xff0000) | ((newAddr & 0xffff) + 0x8000);
-        case "hirom":
-        case "exhirom":
-        case "sfxrom":
-        case "sa1rom":
-          if ((inaddr & 0x400000) === 0) {
-            return (newAddr & 0xff0000) | ((newAddr & 0xffff) + 0x8000);
-          }
-          return newAddr;
-        case "exlorom":
-        case "bigsa1rom":
-          return this.pctosnes(this.convertTargetAddressToRomOffset(inaddr) + step);
-        case "norom":
-          return newAddr;
-        default:
-          throw new Error(`Unknown mapper type: ${this.host.mapper}`);
-      }
-    }
-
-    return newAddr;
+    return this.host.targetProfile.addressSpace.advance(inaddr, step, this.host);
   }
 }

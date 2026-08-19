@@ -1,13 +1,13 @@
 import type { ExpressionHost } from "./architecture-types.js";
 import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
 export declare class MathCore {
-    private readonly pureStringExpressionCache;
-    private readonly roundedPureStringExpressionCache;
-    private readonly pureStringClassification;
-    private instrumentedExpressionStrings;
-    private instrumentedPureExpressionStrings;
-    private instrumentedExpressionNodes;
-    private instrumentedPureExpressionNodes;
+    readonly pureStringExpressionCache: Map<string, number>;
+    readonly roundedPureStringExpressionCache: Map<string, number>;
+    readonly pureStringClassification: Map<string, boolean>;
+    instrumentedExpressionStrings: Set<string>;
+    instrumentedPureExpressionStrings: Set<string>;
+    instrumentedExpressionNodes: WeakSet<object>;
+    instrumentedPureExpressionNodes: WeakSet<object>;
     host?: ExpressionHost;
     math_round: boolean;
     userFunctions: Map<string, {
@@ -47,24 +47,24 @@ export declare class MathCore {
      * @param {string | ExpressionNode} expression The expression to evaluate.
      * @returns {number} The expression result.
      */
-    private evaluateMathInput;
+    evaluateMathInput(expression: string | ExpressionNode): number;
     /**
      * Reuses successful results only for strings proven to contain literal operators.
      * @param {string} expression The legacy expression source.
      * @returns {number} The expression result.
      */
-    private evaluateCachedStringExpression;
+    evaluateCachedStringExpression(expression: string): number;
     /**
      * Records the shape and reuse of a top-level expression evaluation.
      * @param {string | ExpressionNode} expression The evaluated expression.
      */
-    private recordExpressionEvaluation;
+    recordExpressionEvaluation(expression: string | ExpressionNode): void;
     /**
      * Determines whether an expression depends only on literal operators.
      * @param {ExpressionNode} expression The expression to classify.
      * @returns {boolean} Whether the result is independent of assembler state.
      */
-    private isPureExpressionNode;
+    isPureExpressionNode(expression: ExpressionNode): boolean;
     /**
      * Evaluates a string expression using the legacy parser.
      * @param {string} expression The expression to evaluate.

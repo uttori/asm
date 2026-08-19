@@ -20,5 +20,16 @@ export declare const superFxCatalog: InstructionDescriptor[];
  * @param {string} architecture The architecture name (e.g. "65816", "spc700", "superfx").
  * @returns {InstructionDescriptor[]} The matching catalog, or the 65816 catalog as a default.
  */
-export declare function getCatalogForArchitecture(architecture: string): InstructionDescriptor[];
+export interface InstructionCatalogProvider {
+    getInstructionCatalog(architecture: string): readonly InstructionDescriptor[];
+}
+/** Mutable catalog registry for applications that install architecture extensions. */
+export declare class InstructionCatalogRegistry implements InstructionCatalogProvider {
+    readonly catalogs: Map<string, readonly InstructionDescriptor[]>;
+    readonly aliases: Map<string, string>;
+    register(architecture: string, catalog: readonly InstructionDescriptor[], aliases?: readonly string[]): void;
+    getInstructionCatalog(architecture: string): readonly InstructionDescriptor[];
+}
+export declare const builtInInstructionCatalogs: InstructionCatalogRegistry;
+export declare function getCatalogForArchitecture(architecture: string, provider?: InstructionCatalogProvider): InstructionDescriptor[];
 //# sourceMappingURL=instruction-catalog.d.ts.map

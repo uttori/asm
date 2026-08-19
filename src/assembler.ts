@@ -1,4 +1,5 @@
 import { Arch65816 } from "./Arch65816.js";
+import { Arch6502 } from "./Arch6502.js";
 import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
@@ -58,6 +59,7 @@ import { OperandResolver } from "./operand-resolver.js";
 import {
   createArchitectureRegistry,
   type ArchitectureDefinition,
+  type ArchitectureExtension,
   type ArchitectureRegistry,
 } from "./architecture-registry.js";
 import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
@@ -93,6 +95,11 @@ import {
 import type { SourceSpan } from "./source-location.js";
 import { createNodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
 import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
+import {
+  snesTargetProfile,
+  type TargetExpressionFeature,
+  type TargetProfile,
+} from "./target-profile.js";
 
 let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
@@ -246,6 +253,17 @@ export type SpcblockData = {
   namespaceBackup: string;
 };
 
+export type AssemblerOptions = {
+  /** The file provider to use for the assembler. */
+  fileProvider?: AssemblyFileProvider;
+  /** Whether to collect source metadata. */
+  collectSourceMetadata?: boolean;
+  /** The target profile to use for the assembler. */
+  targetProfile?: TargetProfile;
+  /** The architecture extensions to use for the assembler. */
+  architectureExtensions?: readonly ArchitectureExtension[];
+};
+
 export class Assembler {
   /** The current target address. `snespos` */
   public currentTargetAddress: number = 0;
@@ -317,6 +335,7 @@ export class Assembler {
   public functionDefinitionLines: string[] = [];
 
   public arch65816: Arch65816;
+  public arch6502: Arch6502;
   public archSPC700: ArchSPC700;
   public archSuperFX: ArchSuperFX;
 
@@ -367,6 +386,8 @@ export class Assembler {
   readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
   directiveRegistry: DirectiveRegistry;
   architectureRegistry: ArchitectureRegistry;
+  public readonly targetProfile: TargetProfile;
+  public readonly architectureExtensions: readonly ArchitectureExtension[];
   readonly cursorAddress: CursorAddressFacade;
   readonly fileProvider: AssemblyFileProvider;
   readonly frontEndService: AssemblyFrontEndService;
@@ -829,9 +850,12 @@ export class Assembler {
    * @returns {Assembler} A configured analysis session.
    */
   createToolingSession(): Assembler {
-    const session = new Assembler(this.targetRom, { fileProvider: this.fileProvider });
+    const session = new Assembler(this.targetRom, {
+      fileProvider: this.fileProvider,
+      targetProfile: this.targetProfile,
+      architectureExtensions: this.architectureExtensions,
+    });
     session.directiveRegistry = this.cloneDirectiveRegistryForSession(session);
-    session.architectureRegistry = this.architectureRegistry;
     session.includePaths = [...this.includePaths];
     session.mapper = this.mapper;
     session.checksumFixEnabled = this.checksumFixEnabled;
@@ -856,27 +880,30 @@ export class Assembler {
   cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry {
     const operandResolver = session.operandResolver;
     const runtime = session.directiveRuntime;
-    return createDirectiveRegistry({
-      data: { runtime },
-      fillPad: { session, operandResolver },
-      flowControl: { session },
-      includeSource: { session, includeSource: session.includeSource, operandResolver, runtime },
-      layout: {
-        addressStack: { session },
-        architecture: { session },
-        base: { session, operandResolver },
-        mapper: { session },
-        org: { session, runtime },
-        policy: { session },
-        runtime: { runtime },
-        startpos: { session, operandResolver },
+    return createDirectiveRegistry(
+      {
+        data: { runtime },
+        fillPad: { session, operandResolver },
+        flowControl: { session },
+        includeSource: { session, includeSource: session.includeSource, operandResolver, runtime },
+        layout: {
+          addressStack: { session },
+          architecture: { session },
+          base: { session, operandResolver },
+          mapper: { session },
+          org: { session, runtime },
+          policy: { session },
+          runtime: { runtime },
+          startpos: { session, operandResolver },
+        },
+        memory: { session, operandResolver },
+        namespace: { session },
+        spc: { runtime },
+        struct: { session },
+        table: { session },
       },
-      memory: { session, operandResolver },
-      namespace: { session },
-      spc: { runtime },
-      struct: { session },
-      table: { session },
-    });
+      session.targetProfile.directiveFeatures,
+    );
   }
 
   /**
@@ -949,8 +976,6 @@ export class Assembler {
     }
   }
 
-  // Shared adapter infrastructure
-
   /**
    * Creates cursor address facade.
    * @returns {CursorAddressFacade} The result.
@@ -963,8 +988,6 @@ export class Assembler {
       incrementBytesWritten: (num: number) => this.incrementBytesWritten(num),
     };
   }
-
-  // Service assembly
 
   /**
    * Creates services.
@@ -993,10 +1016,12 @@ export class Assembler {
     };
   }
 
-  constructor(
-    targetRom?: number[] | Uint8Array,
-    options: { fileProvider?: AssemblyFileProvider; collectSourceMetadata?: boolean } = {},
-  ) {
+  constructor(targetRom?: number[] | Uint8Array, options: AssemblerOptions = {}) {
+    this.targetProfile = options.targetProfile ?? snesTargetProfile;
+    this.architectureExtensions = [...(options.architectureExtensions ?? [])];
+    this.arch = this.targetProfile.defaultArchitecture;
+    this.mapper = this.targetProfile.defaultMapper;
+    this.checksumFixEnabled = this.targetProfile.checksumFixEnabled;
     this.targetRom = targetRom ? Uint8Array.from(targetRom) : new Uint8Array();
     this.fileProvider = options.fileProvider ?? createNodeAssemblyFileProvider();
     this.collectSourceMetadata = options.collectSourceMetadata ?? true;
@@ -1042,6 +1067,10 @@ export class Assembler {
         write1: (value) => this.write1(value),
         write2: (value) => this.write2(value),
         write3: (value) => this.write3(value),
+        writeByte: (value) => this.write1(value),
+        writeBytes: (values) => this.romWriter.writeBytes(values),
+        writeValue: (value, width, endianness) =>
+          this.romWriter.writeValue(value, width, endianness),
       },
       sizing: {
         getCurrentAddress: () => this.currentTargetAddress,
@@ -1059,13 +1088,18 @@ export class Assembler {
       },
     };
     this.arch65816 = new Arch65816(encoderContext);
+    this.arch6502 = new Arch6502(encoderContext);
     this.archSPC700 = new ArchSPC700(encoderContext);
     this.archSuperFX = new ArchSuperFX(encoderContext);
     this.architectureRegistry = createArchitectureRegistry(
       this.arch65816,
       this.archSPC700,
       this.archSuperFX,
+      this.arch6502,
     );
+    for (const extension of this.architectureExtensions) {
+      this.architectureRegistry.registerExtension(extension, encoderContext);
+    }
     this.directiveRegistry = this.cloneDirectiveRegistryForSession(this);
     this.commandLoweringService = new CommandLoweringService(this);
     this.services.frontEnd = this.frontEndService;
@@ -1314,10 +1348,27 @@ export class Assembler {
     );
   }
 
+  /**
+   * Rejects target-specific expression functions outside their target profile.
+   * @param {TargetExpressionFeature} feature Required target feature.
+   * @param {string} functionName User-facing expression function name.
+   */
+  assertTargetExpressionFeature(feature: TargetExpressionFeature, functionName: string): void {
+    if (!this.targetProfile.expressionFeatures.has(feature)) {
+      throw new Error(`${functionName} is unavailable for target ${this.targetProfile.name}.`);
+    }
+  }
+
   readonly expressionHost: ExpressionHost = {
     resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
-    convertSnesToPc: (address) => this.romWriter.convertTargetAddressToRomOffset(address),
-    convertPcToSnes: (offset) => this.romWriter.pctosnes(offset),
+    convertSnesToPc: (address) => {
+      this.assertTargetExpressionFeature("snes-address-conversion", "snestopc");
+      return this.romWriter.convertTargetAddressToRomOffset(address);
+    },
+    convertPcToSnes: (offset) => {
+      this.assertTargetExpressionFeature("snes-address-conversion", "pctosnes");
+      return this.romWriter.pctosnes(offset);
+    },
     getCurrentAddress: () => this.currentTargetAddress,
     getCurrentBaseAddress: () => this.currentTargetBaseAddress,
     isDefined: (identifier) => {
@@ -1348,8 +1399,14 @@ export class Assembler {
     canReadFile: (filename, position, size) => this.canReadExpressionFile(filename, position, size),
     readFile: (filename, position, size, defaultValue) =>
       this.readExpressionFile(filename, position, size, defaultValue),
-    canReadRom: (position, size) => this.canReadTargetRom(position, size),
-    readRom: (position, size, defaultValue) => this.readTargetRom(position, size, defaultValue),
+    canReadRom: (position, size) => {
+      this.assertTargetExpressionFeature("rom-reads", "canread");
+      return this.canReadTargetRom(position, size);
+    },
+    readRom: (position, size, defaultValue) => {
+      this.assertTargetExpressionFeature("rom-reads", "read");
+      return this.readTargetRom(position, size, defaultValue);
+    },
   };
 
   /**
@@ -2909,7 +2966,7 @@ export class Assembler {
    * @returns {Uint8Array} The compiled binary output.
    */
   getBinaryOutput = (): Uint8Array => {
-    return new Uint8Array(this.romdata.slice(0, this.romdata.length));
+    return this.targetProfile.outputFormat.getBinaryOutput(this.romdata);
   };
 
   /**

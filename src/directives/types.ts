@@ -9,8 +9,10 @@ import type { SpcblockData } from "../assembler.js";
 import { ExpressionNode } from "../ir/expression-node.js";
 import type { DirectiveRuntimeService } from "../services/directive-runtime-service.js";
 import type { IncludeSourceService } from "../services/include-source-service.js";
+import type { TargetProfile } from "../target-profile.js";
 
 export interface DirectiveAddressCapability {
+  targetProfile: TargetProfile;
   recordCurrentAddress(): void;
   setWritePosition(address: number): void;
   currentTargetAddress: number;
@@ -75,6 +77,7 @@ export interface DirectiveSpcCapability {
 export interface DirectiveArchitectureCapability {
   architectureRegistry: ArchitectureRegistry;
   arch: string;
+  targetProfile: TargetProfile;
 }
 
 export interface DirectiveAssemblerCapability {
@@ -134,6 +137,7 @@ export type BaseLayoutDirectiveContext = OperandDirectiveContext<
     | "currentTargetBaseAddress"
     | "currentTargetStartAddress"
     | "currentTargetBaseStartAddress"
+    | "targetProfile"
   >
 >;
 

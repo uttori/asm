@@ -49,6 +49,6 @@ export declare class OverlayFileProvider implements AssemblyFileProvider {
      * @param {AssemblyFileResolutionOptions} options Resolution context.
      * @returns {string[]} The candidate absolute paths to probe in the overlay.
      */
-    private candidatePaths;
+    candidatePaths(normalized: string, options: AssemblyFileResolutionOptions): string[];
 }
 //# sourceMappingURL=overlay-file-provider.d.ts.map

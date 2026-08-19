@@ -1,4 +1,4 @@
-import type { AssemblyDiagnostic, AssemblyIncludeEdge, AssemblySymbolDefinition, AssemblySymbolReference } from "../diagnostics.js";
+import type { AssemblyAnalysisResult, AssemblyDiagnostic, AssemblyIncludeEdge, AssemblySymbolDefinition, AssemblySymbolReference } from "../diagnostics.js";
 /**
  * The per-file slice of analysis artifacts produced for a single source file.
  */
@@ -23,6 +23,7 @@ export type WorkspaceIndexOptions = {
     /** Target architecture name (e.g. "65816", "spc700", "superfx"). */
     architecture?: string;
 };
+type RootAnalysis = Pick<AssemblyAnalysisResult, "diagnostics" | "symbols" | "references" | "includeEdges">;
 /**
  * Indexes one or more SNES assembly projects for editor tooling.
  *
@@ -34,24 +35,24 @@ export type WorkspaceIndexOptions = {
  */
 export declare class WorkspaceIndex {
     /** Open editor buffers keyed by absolute path. */
-    private readonly overlay;
+    readonly overlay: Map<string, string>;
     /** Per-file analysis buckets keyed by absolute path. */
-    private readonly fileAnalysis;
+    readonly fileAnalysis: Map<string, FileAnalysis>;
     /** Merged include-graph edges across all analysed roots. */
-    private includeEdges;
+    includeEdges: AssemblyIncludeEdge[];
     /** All symbol definitions across the workspace (for cross-file resolution). */
-    private allSymbols;
+    allSymbols: AssemblySymbolDefinition[];
     /** All symbol references across the workspace (for find-references). */
-    private allReferences;
+    allReferences: AssemblySymbolReference[];
     /** Cached complete analysis artifacts for each configured root. */
-    private readonly rootAnalyses;
+    readonly rootAnalyses: Map<string, RootAnalysis>;
     /** Files whose content changed since the last analysis. */
-    private readonly dirtyFiles;
+    readonly dirtyFiles: Set<string>;
     /** Whether configuration changes require every root to be rebuilt. */
-    private fullReindexRequired;
-    private entryPoints;
-    private includePaths;
-    private architecture;
+    fullReindexRequired: boolean;
+    entryPoints: string[];
+    includePaths: string[];
+    architecture: string;
     /**
      * Creates a workspace index.
      * @param {WorkspaceIndexOptions} [options] Initial index configuration.
@@ -155,18 +156,18 @@ export declare class WorkspaceIndex {
      * @param {string} file The changed source file.
      * @returns {boolean} Whether the root must be re-analysed.
      */
-    private rootDependsOnFile;
+    rootDependsOnFile(root: string, file: string): boolean;
     /**
      * Analyses one root using the current overlay snapshot.
      * @param {string} root The root source file.
      * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
      */
-    private analyzeRoot;
+    analyzeRoot(root: string): RootAnalysis | undefined;
     /**
      * Rebuilds workspace-wide buckets from cached per-root artifacts.
      * @param {string[]} roots The active roots in deterministic order.
      */
-    private rebuildMergedIndex;
+    rebuildMergedIndex(roots: string[]): void;
     /**
      * Buckets flat analysis artifacts into their owning files.
      * @param {string} root The root file that produced these artifacts.
@@ -174,29 +175,30 @@ export declare class WorkspaceIndex {
      * @param {AssemblySymbolDefinition[]} symbols The symbols to bucket.
      * @param {AssemblySymbolReference[]} references The references to bucket.
      */
-    private ingestArtifacts;
+    ingestArtifacts(root: string, diagnostics: AssemblyDiagnostic[], symbols: AssemblySymbolDefinition[], references: AssemblySymbolReference[]): void;
     /**
      * Returns (creating if needed) the analysis bucket for a file.
      * @param {string} file The absolute path of the file.
      * @returns {FileAnalysis} The mutable analysis bucket.
      */
-    private bucketFor;
+    bucketFor(file: string): FileAnalysis;
     /**
      * Determines the set of root files to analyse.
      * @returns {string[]} The absolute root paths.
      */
-    private resolveRoots;
+    resolveRoots(): string[];
     /**
      * Reads a root file from disk when it is not open in the editor.
      * @param {string} root The absolute root path.
      * @returns {string | undefined} The file text, or undefined when unreadable.
      */
-    private readDiskRoot;
+    readDiskRoot(root: string): string | undefined;
     /**
      * Derives the include search paths for a root, always including its directory.
      * @param {string} root The absolute root path.
      * @returns {string[]} The include paths to hand to the assembler.
      */
-    private deriveIncludePaths;
+    deriveIncludePaths(root: string): string[];
 }
+export {};
 //# sourceMappingURL=workspace-index.d.ts.map

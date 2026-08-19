@@ -1,6 +1,7 @@
 import type { AssemblyStageName } from "../assembler.js";
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 import type { DirectiveRuntimeService } from "./directive-runtime-service.js";
+import type { TargetProfile } from "../target-profile.js";
 export interface RomWriterHost {
     traceStage: AssemblyStageName;
     currentTargetAddress: number;
@@ -19,6 +20,7 @@ export interface RomWriterHost {
     activeFreespaceStartPc: number | null;
     activeFreespaceContentStartPc: number | null;
     checksumFixEnabled: boolean;
+    targetProfile: TargetProfile;
     fillRomData(start: number, value: number, length: number): void;
     writeDataBytes(start: number, value: number, length?: number): void;
     updateHeaderAndCRC32(): void;
@@ -57,6 +59,18 @@ export declare class RomWriterService {
      * @param {number} num The value to write.
      */
     write4(num: number): void;
+    /**
+     * Writes an arbitrary-width value for architecture extensions.
+     * @param {number} num Value to write.
+     * @param {number} width Width in bytes.
+     * @param {"little" | "big"} endianness Byte order.
+     */
+    writeValue(num: number, width: number, endianness?: "little" | "big"): void;
+    /**
+     * Writes a sequence of already encoded bytes.
+     * @param {readonly number[]} values Bytes to write.
+     */
+    writeBytes(values: readonly number[]): void;
     /**
      * Asserts that bank cross is allowed.
      * @param {number} length The length of the value to write.

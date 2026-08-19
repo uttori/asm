@@ -28,6 +28,14 @@ import type {
   StructDirectiveContext,
   TableDirectiveContext,
 } from "./types.js";
+import type { TargetDirectiveFeature } from "../target-profile.js";
+
+export const ALL_TARGET_DIRECTIVE_FEATURES: ReadonlySet<TargetDirectiveFeature> = new Set([
+  "snes-mappers",
+  "snes-memory",
+  "snes-policy",
+  "spc-blocks",
+]);
 
 type BoundDirectiveHandler = (
   words: readonly string[],
@@ -110,19 +118,26 @@ export class DirectiveRegistry {
   }
 }
 
-export const createDirectiveRegistry = (contexts: DirectiveRegistryContexts): DirectiveRegistry => {
+export const createDirectiveRegistry = (
+  contexts: DirectiveRegistryContexts,
+  features: ReadonlySet<TargetDirectiveFeature> = ALL_TARGET_DIRECTIVE_FEATURES,
+): DirectiveRegistry => {
   const registry = new DirectiveRegistry();
 
   registerIncludeSourceDirectives(registry, contexts.includeSource);
   registerFillPadDirectives(registry, contexts.fillPad);
   registerFlowControlDirectives(registry, contexts.flowControl);
   registerNamespaceDirectives(registry, contexts.namespace);
-  registerLayoutDirectives(registry, contexts.layout);
+  registerLayoutDirectives(registry, contexts.layout, features);
   registerDataDirectives(registry, contexts.data);
-  registerSpcDirectives(registry, contexts.spc);
+  if (features.has("spc-blocks")) {
+    registerSpcDirectives(registry, contexts.spc);
+  }
   registerStructBinaryDirectives(registry, contexts.struct);
   registerMiscDirectives(registry, contexts.table);
-  registerMemoryDirectives(registry, contexts.memory);
+  if (features.has("snes-memory")) {
+    registerMemoryDirectives(registry, contexts.memory);
+  }
 
   return registry;
 };

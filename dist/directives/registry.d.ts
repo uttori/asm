@@ -1,5 +1,7 @@
 import type { NormalizedCommand } from "../ir/normalized-command.js";
 import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, AssemblerPolicyDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, MapperDirectiveContext, MemoryDirectiveContext, NarrowDirectiveHandler, NamespaceDirectiveContext, OrgDirectiveContext, SpcDirectiveContext, StartposDirectiveContext, StructDirectiveContext, TableDirectiveContext } from "./types.js";
+import type { TargetDirectiveFeature } from "../target-profile.js";
+export declare const ALL_TARGET_DIRECTIVE_FEATURES: ReadonlySet<TargetDirectiveFeature>;
 type BoundDirectiveHandler = (words: readonly string[], raw: string, command?: NormalizedCommand) => void;
 export interface DirectiveRegistryContexts {
     data: DataDirectiveContext;
@@ -47,6 +49,6 @@ export declare class DirectiveRegistry {
      */
     dispatch(keyword: string, words: readonly string[], raw: string, command?: NormalizedCommand): boolean;
 }
-export declare const createDirectiveRegistry: (contexts: DirectiveRegistryContexts) => DirectiveRegistry;
+export declare const createDirectiveRegistry: (contexts: DirectiveRegistryContexts, features?: ReadonlySet<TargetDirectiveFeature>) => DirectiveRegistry;
 export {};
 //# sourceMappingURL=registry.d.ts.map

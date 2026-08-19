@@ -90,6 +90,14 @@ export const createEncoderTestHost = (): EncoderTestHost => {
       write1: (value) => host.write1(value),
       write2: (value) => host.write2(value),
       write3: (value) => host.write3(value),
+      writeByte: (value) => host.write1(value),
+      writeBytes: (values) => values.forEach((value) => host.write1(value)),
+      writeValue: (value, width, endianness = "little") => {
+        for (let index = 0; index < width; index++) {
+          const shift = endianness === "little" ? index : width - index - 1;
+          host.write1(value >> (shift * 8));
+        }
+      },
     },
     sizing: {
       getCurrentAddress: () => host.currentTargetAddress,

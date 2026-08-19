@@ -1,7 +1,13 @@
-import type { ArchitectureEncoder, LoweredOperand } from "./architecture-types.js";
+import type {
+  ArchitectureEncoder,
+  ArchitectureEncoderContext,
+  InstructionDescriptor,
+  LoweredOperand,
+} from "./architecture-types.js";
 import type { OperandResolver } from "./operand-resolver.js";
 import {
   classify65816Operand,
+  classify6502Operand,
   classifySpc700Operand,
   classifySuperFxOperand,
 } from "./operand-classifiers.js";
@@ -12,6 +18,12 @@ export type ArchitectureDefinition = {
   classifyOperand: (resolver: OperandResolver, operand: string) => LoweredOperand;
   splitOperands: (operandText: string) => string[];
   unknownInstructionBehavior: "throw" | "returnFalse";
+};
+
+/** Factory-based architecture extension bound to each assembler session. */
+export type ArchitectureExtension = Omit<ArchitectureDefinition, "encoder"> & {
+  aliases?: readonly string[];
+  createEncoder(context: ArchitectureEncoderContext): ArchitectureEncoder;
 };
 
 const splitSingleOperand = (operandText: string): string[] => (operandText ? [operandText] : []);
@@ -50,10 +62,11 @@ export class ArchitectureRegistry {
    * @param {string[]} [aliases] The aliases.
    */
   register(definition: ArchitectureDefinition, aliases: string[] = []): void {
-    this.definitions.set(definition.name, definition);
-    this.aliases.set(definition.name, definition.name);
+    const canonical = definition.name.toLowerCase();
+    this.definitions.set(canonical, { ...definition, name: canonical });
+    this.aliases.set(canonical, canonical);
     for (const alias of aliases) {
-      this.aliases.set(alias, definition.name);
+      this.aliases.set(alias.toLowerCase(), canonical);
     }
   }
 
@@ -78,12 +91,40 @@ export class ArchitectureRegistry {
     }
     return this.definitions.get(canonical);
   }
+
+  /**
+   * Returns editor metadata from the same registered encoder used for builds.
+   * @param {string} name Architecture name or alias.
+   * @returns {InstructionDescriptor[]} Registered instruction descriptors.
+   */
+  getInstructionCatalog(name: string): InstructionDescriptor[] {
+    return this.getDefinition(name)?.encoder.getInstructionCatalog?.() ?? [];
+  }
+
+  /**
+   * Binds an extension factory to this assembler session.
+   * @param {ArchitectureExtension} extension Architecture extension.
+   * @param {ArchitectureEncoderContext} context Session-bound encoder context.
+   */
+  registerExtension(extension: ArchitectureExtension, context: ArchitectureEncoderContext): void {
+    this.register(
+      {
+        name: extension.name,
+        encoder: extension.createEncoder(context),
+        classifyOperand: extension.classifyOperand,
+        splitOperands: extension.splitOperands,
+        unknownInstructionBehavior: extension.unknownInstructionBehavior,
+      },
+      [...(extension.aliases ?? [])],
+    );
+  }
 }
 
 export const createArchitectureRegistry = (
   encoder65816: ArchitectureEncoder,
   encoderSpc700: ArchitectureEncoder,
   encoderSuperFx: ArchitectureEncoder,
+  encoder6502?: ArchitectureEncoder,
 ): ArchitectureRegistry => {
   const registry = new ArchitectureRegistry();
   registry.register(
@@ -116,5 +157,17 @@ export const createArchitectureRegistry = (
     },
     ["superfx"],
   );
+  if (encoder6502) {
+    registry.register(
+      {
+        name: "6502",
+        encoder: encoder6502,
+        classifyOperand: classify6502Operand,
+        splitOperands: splitSingleOperand,
+        unknownInstructionBehavior: "throw",
+      },
+      ["6502", "mos6502"],
+    );
+  }
   return registry;
 };

@@ -82,6 +82,68 @@ assembler.assembleSource(source, sourceFile);
 fs.writeFileSync("build/game.sfc", assembler.getBinaryOutput());
 ```
 
+### Target and architecture composition
+
+SNES remains the default target, but assembler construction now composes an
+architecture, address space, output format, directive families, and expression
+capabilities through a `TargetProfile`. Named built-ins are available through
+`builtInTargetProfiles`, and applications can supply their own profile directly:
+
+```ts
+import {
+  Assembler,
+  rawBinaryOutputFormat,
+  type ArchitectureExtension,
+  type TargetProfile,
+} from "snes-asm-js";
+
+const architecture: ArchitectureExtension = {
+  name: "example-cpu",
+  aliases: ["example"],
+  classifyOperand: (resolver, operand) => resolver.lowerOperand(operand),
+  splitOperands: (text) => (text ? [text] : []),
+  unknownInstructionBehavior: "throw",
+  createEncoder: (context) => ({
+    estimateSize: () => 1,
+    encode: () => {
+      context.emission.writeByte(0x00);
+      return true;
+    },
+  }),
+};
+
+const target: TargetProfile = {
+  name: "example-target",
+  defaultArchitecture: "example-cpu",
+  architectures: new Set(["example-cpu"]),
+  defaultMapper: "flat",
+  checksumFixEnabled: false,
+  addressSpace: {
+    name: "flat-example",
+    addressWidth: 16,
+    defaultOrigin: 0,
+    unmappedWriteBehavior: "throw",
+    normalizeForWrite: (address) => address,
+    advance: (address, amount) => address + amount,
+    toOutputOffset: (address) => address,
+    fromOutputOffset: (offset) => offset,
+  },
+  outputFormat: rawBinaryOutputFormat,
+  directiveFeatures: new Set(),
+  expressionFeatures: new Set(),
+};
+
+const assembler = new Assembler(undefined, {
+  targetProfile: target,
+  architectureExtensions: [architecture],
+});
+```
+
+`mos6502StubTargetProfile` and its `Arch6502` backend intentionally throw a
+clear “not implemented” error. They exercise the composition boundary without
+claiming 6502 instruction support. These constructor contracts are not yet a
+full plugin API: discovery, lifecycle, versioning, and isolation remain deferred.
+
 `collectSourceMetadata: false` is intended for ROM-only builds and skips symbol, reference, include-graph, and address-to-line artifacts. Leave it enabled (the default) when reading those artifacts directly. The `analyze*` APIs always use their own metadata-enabled analysis session.
 
 For callers that need control over individual phases:

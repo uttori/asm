@@ -6,7 +6,8 @@ export interface ExpandedOperand {
     length: number;
 }
 export interface LoweredOperand {
-    mode?: "unknown" | "immediate" | "register" | "registerIndirect" | "registerIndirectAutoIncrement" | "directPageIndexedXIndirect" | "directPageIndirectIndexedY" | "directPageBit" | "absoluteBit" | "absolute" | "absoluteLong" | "absoluteIndexedX" | "absoluteIndexedY" | "absoluteLongIndexedX" | "indexedIndirectX" | "directPageIndirect" | "directPageIndexedX" | "stackRelative" | "stackRelativeIndexedIndirectY" | "indirectLong" | "indirectLongIndexedY" | "indirectIndexedY";
+    /** Architecture-owned addressing-mode identifier. */
+    mode?: string;
     baseExpression?: string;
     registerName?: string;
     explicitDirectPage?: boolean;
@@ -14,9 +15,11 @@ export interface LoweredOperand {
     raw: string;
     expanded: string;
     length: number;
-    indexRegister?: "x" | "y" | "s";
+    indexRegister?: string;
     immediate: boolean;
     indirect: boolean;
+    /** Architecture-specific lowering metadata for extension encoders. */
+    metadata?: Readonly<Record<string, unknown>>;
 }
 export interface OperandResolutionContext {
     expandOperand(operand: string): ExpandedOperand;
@@ -27,6 +30,9 @@ export interface EncoderEmissionContext {
     write1(value: number): void;
     write2(value: number): void;
     write3(value: number): void;
+    writeByte(value: number): void;
+    writeBytes(values: readonly number[]): void;
+    writeValue(value: number, width: number, endianness?: "little" | "big"): void;
 }
 export interface EncoderSizingContext {
     getCurrentAddress(): number;
@@ -52,6 +58,9 @@ export interface EncoderRuntime {
     write1(value: number): void;
     write2(value: number): void;
     write3(value: number): void;
+    writeByte(value: number): void;
+    writeBytes(values: readonly number[]): void;
+    writeValue(value: number, width: number, endianness?: "little" | "big"): void;
     readonly currentTargetAddress: number;
     readonly optimizeDirectPage: boolean;
     readonly enforceResolvedLabels: boolean;

@@ -1,4 +1,5 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
+import { type InstructionCatalogProvider } from "./instruction-catalog.js";
 import { type DirectiveDescriptor } from "./directive-catalog.js";
 /**
  * A unified completion-friendly view over instructions and directives.
@@ -16,16 +17,18 @@ export type CatalogEntry = {
 /**
  * Returns the instruction catalog for an architecture.
  * @param {string} architecture The architecture name.
+ * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
  * @returns {InstructionDescriptor[]} The instruction descriptors.
  */
-export declare function getInstructionCatalog(architecture: string): InstructionDescriptor[];
+export declare function getInstructionCatalog(architecture: string, provider?: InstructionCatalogProvider): InstructionDescriptor[];
 /**
  * Looks up an instruction descriptor by mnemonic (case-insensitive).
  * @param {string} mnemonic The mnemonic to find.
  * @param {string} architecture The active architecture name.
+ * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
  * @returns {InstructionDescriptor | undefined} The descriptor, if known.
  */
-export declare function findInstruction(mnemonic: string, architecture: string): InstructionDescriptor | undefined;
+export declare function findInstruction(mnemonic: string, architecture: string, provider?: InstructionCatalogProvider): InstructionDescriptor | undefined;
 /**
  * Re-exports the directive lookup so providers depend on a single module.
  * @param {string} keyword The directive keyword.
@@ -47,7 +50,8 @@ export declare function renderDirectiveDocs(descriptor: DirectiveDescriptor): st
 /**
  * Builds the combined completion entries for an architecture.
  * @param {string} architecture The active architecture name.
+ * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
  * @returns {CatalogEntry[]} The completion entries.
  */
-export declare function buildCompletionEntries(architecture: string): CatalogEntry[];
+export declare function buildCompletionEntries(architecture: string, provider?: InstructionCatalogProvider): CatalogEntry[];
 //# sourceMappingURL=catalog.d.ts.map

@@ -5,6 +5,7 @@ import type { RomWriterService } from "./rom-writer-service.js";
 import type { StructEngine } from "./struct-engine.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
 import { splitRespectingFunctions } from "./command-text-service.js";
+import type { TargetProfile } from "../target-profile.js";
 
 export type PushPcRuntimeEntry = {
   currentTargetAddress: number;
@@ -36,6 +37,7 @@ export interface DirectiveRuntimeHost {
   spcblockData: SpcblockData | null;
   structEngine: StructEngine;
   symbolScope: SymbolScopeService;
+  targetProfile: TargetProfile;
   addAddressToLine(address: number): void;
   resolvedefines(input: string): string;
   setWritePosition(address: number): void;
@@ -204,7 +206,8 @@ export class DirectiveRuntimeService {
     const addr = addressStr.startsWith("$")
       ? parseInt(addressStr.substring(1), 16)
       : parseInt(addressStr, 10);
-    if (Number.isNaN(addr) || addr < 0 || addr > 0xffffff) {
+    const maxAddress = 2 ** this.host.targetProfile.addressSpace.addressWidth - 1;
+    if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
       throw new Error(`Invalid ORG address: ${params[0]}`);
     }
 

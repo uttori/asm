@@ -1,4 +1,5 @@
 import { Arch65816 } from "./Arch65816.js";
+import { Arch6502 } from "./Arch6502.js";
 import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
@@ -11,7 +12,7 @@ import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expressi
 import { type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
-import { type ArchitectureDefinition, type ArchitectureRegistry } from "./architecture-registry.js";
+import { type ArchitectureDefinition, type ArchitectureExtension, type ArchitectureRegistry } from "./architecture-registry.js";
 import { DirectiveRegistry } from "./directives/registry.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
@@ -26,6 +27,7 @@ import { StructEngine } from "./services/struct-engine.js";
 import { SymbolScopeService } from "./services/symbol-scope-service.js";
 import type { SourceSpan } from "./source-location.js";
 import { type AssemblyFileProvider } from "./file-provider.js";
+import { type TargetExpressionFeature, type TargetProfile } from "./target-profile.js";
 /** Represents a macro definition. */
 export type MacroDefinition = {
     /** The name of the macro. */
@@ -167,6 +169,12 @@ export type SpcblockData = {
     executeAddress: number | null;
     namespaceBackup: string;
 };
+export type AssemblerOptions = {
+    fileProvider?: AssemblyFileProvider;
+    collectSourceMetadata?: boolean;
+    targetProfile?: TargetProfile;
+    architectureExtensions?: readonly ArchitectureExtension[];
+};
 export declare class Assembler {
     /** The current target address. `snespos` */
     currentTargetAddress: number;
@@ -224,6 +232,7 @@ export declare class Assembler {
     inFunctionDefinition: boolean;
     functionDefinitionLines: string[];
     arch65816: Arch65816;
+    arch6502: Arch6502;
     archSPC700: ArchSPC700;
     archSuperFX: ArchSuperFX;
     arch: string;
@@ -269,6 +278,8 @@ export declare class Assembler {
     readonly passProgramCache: Map<string, RuntimeNode[]>;
     directiveRegistry: DirectiveRegistry;
     architectureRegistry: ArchitectureRegistry;
+    readonly targetProfile: TargetProfile;
+    readonly architectureExtensions: readonly ArchitectureExtension[];
     readonly cursorAddress: CursorAddressFacade;
     readonly fileProvider: AssemblyFileProvider;
     readonly frontEndService: AssemblyFrontEndService;
@@ -418,13 +429,13 @@ export declare class Assembler {
      * other while still sharing the same file provider and directive registry.
      * @returns {Assembler} A configured analysis session.
      */
-    private createToolingSession;
+    createToolingSession(): Assembler;
     /**
      * Creates directive handlers bound to a fresh session's family capabilities.
      * @param {Assembler} session The session that should receive directive calls.
      * @returns {DirectiveRegistry} A registry bound to the provided session.
      */
-    private cloneDirectiveRegistryForSession;
+    cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry;
     /**
      * Analyzes program.
      * @param {ProgramModel} program The program.
@@ -468,10 +479,7 @@ export declare class Assembler {
      * @returns {AssemblerServiceBag} The result.
      */
     createServices(): AssemblerServiceBag;
-    constructor(targetRom?: number[] | Uint8Array, options?: {
-        fileProvider?: AssemblyFileProvider;
-        collectSourceMetadata?: boolean;
-    });
+    constructor(targetRom?: number[] | Uint8Array, options?: AssemblerOptions);
     /**
      * Sets ROM header checksum calculation mode.
      * @param {"asar" | "simple"} mode The checksum mode to use.
@@ -561,6 +569,12 @@ export declare class Assembler {
      * @returns {number} The result.
      */
     readExpressionFile(filename: string, position: number, size: number, defaultValue?: number): number;
+    /**
+     * Rejects target-specific expression functions outside their target profile.
+     * @param {TargetExpressionFeature} feature Required target feature.
+     * @param {string} functionName User-facing expression function name.
+     */
+    assertTargetExpressionFeature(feature: TargetExpressionFeature, functionName: string): void;
     readonly expressionHost: ExpressionHost;
     /**
      * Advances memory position while handling bank crossing.
