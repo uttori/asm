@@ -22,9 +22,31 @@ export interface AssemblyFileProvider {
  * Default Node.js-backed file provider used by the assembler runtime.
  */
 export declare class NodeAssemblyFileProvider implements AssemblyFileProvider {
+    /**
+     * Resolves path.
+     * @param {string} filename The filename.
+     * @param {AssemblyFileResolutionOptions} [options] The options.
+     * @returns {string | undefined} The result.
+     */
     resolvePath(filename: string, options?: AssemblyFileResolutionOptions): string | undefined;
+    /**
+     * Reads metadata for the value.
+     * @param {string} filePath The file path.
+     * @returns {AssemblyFileStat} The result.
+     */
     stat(filePath: string): AssemblyFileStat;
+    /**
+     * Reads file.
+     * @param {string} filePath The file path.
+     * @returns {Uint8Array} The result.
+     */
     readFile(filePath: string): Uint8Array;
+    /**
+     * Reads text file.
+     * @param {string} filePath The file path.
+     * @param {BufferEncoding} [encoding] The encoding.
+     * @returns {string} The result.
+     */
     readTextFile(filePath: string, encoding?: BufferEncoding): string;
 }
 export type MemoryAssemblyFileProviderOptions = {
@@ -37,9 +59,31 @@ export declare class MemoryAssemblyFileProvider implements AssemblyFileProvider 
     readonly options: MemoryAssemblyFileProviderOptions;
     readonly files: Map<string, string | Uint8Array>;
     constructor(files?: Map<string, string | Uint8Array> | Record<string, string | Uint8Array>, options?: MemoryAssemblyFileProviderOptions);
+    /**
+     * Resolves path.
+     * @param {string} filename The filename.
+     * @param {AssemblyFileResolutionOptions} [options] The options.
+     * @returns {string | undefined} The result.
+     */
     resolvePath(filename: string, options?: AssemblyFileResolutionOptions): string | undefined;
+    /**
+     * Reads metadata for the value.
+     * @param {string} filePath The file path.
+     * @returns {AssemblyFileStat} The result.
+     */
     stat(filePath: string): AssemblyFileStat;
+    /**
+     * Reads file.
+     * @param {string} filePath The file path.
+     * @returns {Uint8Array} The result.
+     */
     readFile(filePath: string): Uint8Array;
+    /**
+     * Reads text file.
+     * @param {string} filePath The file path.
+     * @param {BufferEncoding} [encoding] The encoding.
+     * @returns {string} The result.
+     */
     readTextFile(filePath: string, encoding?: BufferEncoding): string;
 }
 /**

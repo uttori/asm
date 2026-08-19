@@ -12,12 +12,49 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * @returns {InstructionDescriptor[]} The instruction descriptors.
      */
     getInstructionCatalog(): InstructionDescriptor[];
-    encode(words: string[]): boolean;
+    /**
+     * Estimates instruction.
+     * @param {LoweredInstruction} instruction The instruction.
+     * @returns {number} The result.
+     */
     estimateInstruction(instruction: LoweredInstruction): number;
+    /**
+     * Encodes instruction.
+     * @param {LoweredInstruction} instruction The instruction.
+     * @returns {boolean} The result.
+     */
     encodeInstruction(instruction: LoweredInstruction): boolean;
+    /**
+     * Estimates size.
+     * @param {string[]} words The words.
+     * @returns {number} The result.
+     */
     estimateSize(words: string[]): number;
+    /**
+     * Estimates resolved instruction.
+     * @param {string} mnemonic The mnemonic.
+     * @param {string} operandText The operand text.
+     * @param {LoweredOperand} [loweredOperand] The lowered operand.
+     * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
+     * @returns {number} The result.
+     */
     estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
-    asblock_spc700(words: string[]): boolean;
+    /**
+     * Processes an SPC700 assembly instruction.
+     * @param {string[]} words The tokenized instruction.
+     * @returns {boolean} True if the instruction was handled, false otherwise.
+     */
+    encode(words: string[]): boolean;
+    /** Legacy API alias for {@link encode}. */
+    readonly asblock_spc700: (words: string[]) => boolean;
+    /**
+     * Encodes resolved instruction.
+     * @param {string} mnemonic The mnemonic.
+     * @param {string[]} operands The operands.
+     * @param {LoweredOperand} [loweredOperand] The lowered operand.
+     * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
+     * @returns {boolean} The result.
+     */
     encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
      * Splits by commas at top-level, ignoring any parentheses grouping.
@@ -107,6 +144,11 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
         mode: "indirectX" | "indirectDpX" | "imm" | "absX" | "dpX" | "absY" | "indirectDpY" | "abs" | "dp";
         val: number;
     };
+    /**
+     * Checks whether dp or abs.
+     * @param {string} operand The operand.
+     * @returns {boolean} The result.
+     */
     isDpOrAbs(operand: string): boolean;
     /**
      * SHIFT, INC, DEC instructions. e.g. "ASL A" => 0x1C, "ASL $12+X" => 0x1B 12, etc.

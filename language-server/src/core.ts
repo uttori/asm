@@ -24,36 +24,3 @@ export {
   resolveDefinition,
   findReferences,
 } from "../../src/lsp/index.js";
-
-export type {
-  WorkspaceIndexOptions,
-  FileAnalysis,
-  CatalogEntry,
-  DirectiveDescriptor,
-} from "../../src/lsp/index.js";
-
-/**
- * Internal diagnostics and symbols adapted to LSP `Diagnostic`,
- * `DocumentSymbol`, `SymbolInformation`, and `Location` values by providers.
- * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#diagnostic
- * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#document-symbols-request-leftwards_arrow_with_hook
- * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#location
- */
-export type {
-  AssemblyDiagnostic,
-  AssemblyDiagnosticSeverity,
-  AssemblyIncludeEdge,
-  AssemblySymbolDefinition,
-  AssemblySymbolKind,
-  AssemblySymbolReference,
-  AssemblySymbolReferenceKind,
-} from "../../src/diagnostics.js";
-
-/**
- * Internal source geometry adapted to LSP `Position` and `Range` values.
- * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#position
- * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#range
- */
-export type { SourcePosition, SourceRange } from "../../src/source-location.js";
-
-export type { InstructionDescriptor } from "../../src/architecture-types.js";

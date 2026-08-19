@@ -2,7 +2,7 @@ import { Arch65816 } from "./Arch65816.js";
 import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
-import type { ExpressionHost, LoweredInstruction } from "./architecture-types.js";
+import type { ExpressionHost, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addressToLine.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import { type AssemblyAnalysisResult, type AssemblyDiagnostic, type AssemblyIncludeEdge, type AssemblySourceLocation, type AssemblySymbolDefinition, type AssemblySymbolKind, type AssemblySymbolReference, type AssemblySymbolReferenceKind } from "./diagnostics.js";
@@ -16,7 +16,7 @@ import { DirectiveRegistry } from "./directives/registry.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
-import { CommandLoweringService, type LoweredCommand, type LoweredConditionalNode, type LoweredExecutableNode, type LoweredLoopNode, type LoweredProgram } from "./services/command-lowering-service.js";
+import { CommandLoweringService, type LoweredCommand, type LoweredExecutableNode, type LoweredLoopNode, type LoweredProgram } from "./services/command-lowering-service.js";
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
 import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
 import { MacroEngine } from "./services/macro-engine.js";
@@ -150,8 +150,8 @@ export interface StructDefinition {
     align?: number;
     /** If this struct extends a parent. */
     parent?: string;
-    /** For parent structs, the maximum extension size. */
-    extensionSize?: number;
+    /** Cached maximum child extension size, or zero when there are no extensions. */
+    extensionSize: number;
 }
 export type PushPcStackEntry = {
     currentTargetAddress: number;
@@ -281,6 +281,7 @@ export declare class Assembler {
     readonly symbolDefinitions: AssemblySymbolDefinition[];
     readonly symbolReferences: AssemblySymbolReference[];
     readonly includeEdges: AssemblyIncludeEdge[];
+    readonly collectSourceMetadata: boolean;
     activeStageExecutionState: StageExecutionState | null;
     analysisErrorRecoveryEnabled: boolean;
     runtimePassthroughRewriteEnabled: boolean;
@@ -293,17 +294,42 @@ export declare class Assembler {
     get romWriter(): RomWriterService;
     get structEngine(): StructEngine;
     get currentAddress(): number;
+    /**
+     * Records current address.
+     */
     recordCurrentAddress(): void;
+    /**
+     * Sets write position.
+     * @param {number} address The address.
+     */
     setWritePosition(address: number): void;
+    /**
+     * Enters struct definition.
+     * @param {number} base The base.
+     */
     enterStructDefinition(base: number): void;
+    /**
+     * Restores struct definition.
+     */
     restoreStructDefinition(): void;
+    /**
+     * Synchronizes write starts.
+     */
     syncWriteStarts(): void;
+    /**
+     * Increments bytes written.
+     * @param {number} num The num.
+     */
     incrementBytesWritten(num: number): void;
     get mode(): "layout" | "emit";
     get canEmitBytes(): boolean;
     get canFinalize(): boolean;
     get enforceResolvedLabels(): boolean;
     get isDefinitionCollectionStage(): boolean;
+    /**
+     * Traces write.
+     * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
+     */
     traceWrite(event: Omit<AssemblerTraceWriteEvent, "type">): void;
     /**
      * Installs or clears the structured trace listener.
@@ -327,11 +353,6 @@ export declare class Assembler {
      * @returns {AssemblySourceLocation} The current source location.
      */
     getCurrentSourceLocation(span?: SourceSpan): AssemblySourceLocation;
-    /**
-     * Records a structured diagnostic.
-     * @param {AssemblyDiagnostic} diagnostic The diagnostic to record.
-     */
-    reportDiagnostic(diagnostic: AssemblyDiagnostic): void;
     /**
      * Converts and records an unknown error.
      * @param {unknown} error The error to normalize.
@@ -374,7 +395,16 @@ export declare class Assembler {
         span?: SourceSpan;
         containerName?: string;
     }): void;
+    /**
+     * Collects expression references.
+     * @param {ExpressionNode | undefined} expression The expression.
+     * @param {SourceSpan} [fallbackSpan] The fallback span.
+     */
     collectExpressionReferences(expression: ExpressionNode | undefined, fallbackSpan?: SourceSpan): void;
+    /**
+     * Collects command references.
+     * @param {NormalizedCommand} command The command.
+     */
     collectCommandReferences(command: NormalizedCommand): void;
     /**
      * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
@@ -395,6 +425,11 @@ export declare class Assembler {
      * @returns {DirectiveRegistry} A registry bound to the provided session.
      */
     private cloneDirectiveRegistryForSession;
+    /**
+     * Analyzes program.
+     * @param {ProgramModel} program The program.
+     * @returns {AssemblyAnalysisResult} The result.
+     */
     analyzeProgram(program: ProgramModel): AssemblyAnalysisResult;
     /**
      * Builds and analyzes raw source without throwing on the first error.
@@ -406,9 +441,11 @@ export declare class Assembler {
     analyzeSource(source: string, sourceFile?: string, startLine?: number): AssemblyAnalysisResult & {
         program: ProgramModel;
     };
-    analyzeDocument(source: string, sourceFile?: string, startLine?: number): AssemblyAnalysisResult & {
-        program: ProgramModel;
-    };
+    /**
+     * Analyzes workspace.
+     * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
+     * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
+     */
     analyzeWorkspace(documents: Array<{
         source: string;
         sourceFile: string;
@@ -417,28 +454,112 @@ export declare class Assembler {
         program: ProgramModel;
         sourceFile: string;
     }>;
+    /**
+     * Loads test rom data.
+     */
     loadTestRomData(): void;
+    /**
+     * Creates cursor address facade.
+     * @returns {CursorAddressFacade} The result.
+     */
     createCursorAddressFacade(): CursorAddressFacade;
+    /**
+     * Creates services.
+     * @returns {AssemblerServiceBag} The result.
+     */
     createServices(): AssemblerServiceBag;
     constructor(targetRom?: number[] | Uint8Array, options?: {
         fileProvider?: AssemblyFileProvider;
+        collectSourceMetadata?: boolean;
     });
     /**
      * Sets ROM header checksum calculation mode.
      * @param {"asar" | "simple"} mode The checksum mode to use.
      */
     setChecksumMode(mode: "asar" | "simple"): void;
+    /**
+     * Reads little endian.
+     * @param {Uint8Array} bytes The bytes.
+     * @param {number} pos The pos.
+     * @param {number} width The width.
+     * @returns {number | undefined} The result.
+     */
     readLittleEndian(bytes: Uint8Array, pos: number, width: number): number | undefined;
+    /**
+     * Checks whether it can read byte range.
+     * @param {number} sourceLength The source length.
+     * @param {number} position The position.
+     * @param {number} size The size.
+     * @returns {number} The result.
+     */
     canReadByteRange(sourceLength: number, position: number, size: number): number;
+    /**
+     * Reads byte range.
+     * @param {Uint8Array} source The source.
+     * @param {number} position The position.
+     * @param {number} size The size.
+     * @param {number | undefined} defaultValue The default value.
+     * @param {string} errorMessage The error message.
+     * @returns {number} The result.
+     */
     readByteRange(source: Uint8Array, position: number, size: number, defaultValue: number | undefined, errorMessage: string): number;
+    /**
+     * Resolves readable path.
+     * @param {string} filename The filename.
+     * @returns {string | undefined} The result.
+     */
     resolveReadablePath(filename: string): string | undefined;
+    /**
+     * Resolves expression host label.
+     * @param {string} identifier The identifier.
+     * @returns {number | string} The result.
+     */
     resolveExpressionHostLabel(identifier: string): number | string;
+    /**
+     * Gets expression object size.
+     * @param {string} identifier The identifier.
+     * @param {boolean} [baseOnly] Whether to return only the base object size.
+     * @returns {number} The result.
+     */
     getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
+    /**
+     * Looks up define value.
+     * @param {string} varName The var name.
+     * @returns {string | undefined} The result.
+     */
     lookupDefineValue(varName: string): string | undefined;
     get currentMacroSourceFile(): string | undefined;
+    /**
+     * Checks whether it can read target rom.
+     * @param {number} position The position.
+     * @param {number} size The size.
+     * @returns {number} The result.
+     */
     canReadTargetRom(position: number, size: number): number;
+    /**
+     * Reads target rom.
+     * @param {number} position The position.
+     * @param {number} size The size.
+     * @param {number} [defaultValue] The default value.
+     * @returns {number} The result.
+     */
     readTargetRom(position: number, size: number, defaultValue?: number): number;
+    /**
+     * Checks whether it can read expression file.
+     * @param {string} filename The filename.
+     * @param {number} position The position.
+     * @param {number} size The size.
+     * @returns {number} The result.
+     */
     canReadExpressionFile(filename: string, position: number, size: number): number;
+    /**
+     * Reads expression file.
+     * @param {string} filename The filename.
+     * @param {number} position The position.
+     * @param {number} size The size.
+     * @param {number} [defaultValue] The default value.
+     * @returns {number} The result.
+     */
     readExpressionFile(filename: string, position: number, size: number, defaultValue?: number): number;
     readonly expressionHost: ExpressionHost;
     /**
@@ -458,11 +579,34 @@ export declare class Assembler {
      * @param {number} length The length of the section to fill.
      */
     fillRomData(start: number, value: number, length: number): void;
+    /**
+     * Creates ephemeral stage execution state.
+     * @param {AssemblyStageName} stage The stage.
+     * @returns {StageExecutionState} The result.
+     */
     createEphemeralStageExecutionState(stage: AssemblyStageName): StageExecutionState;
+    /**
+     * Synchronizes active stage execution state.
+     * @param {AssemblyStageName} stage The stage.
+     */
     syncActiveStageExecutionState(stage: AssemblyStageName): void;
+    /**
+     * Gets active stage capabilities.
+     * @returns {StageExecutionCapabilities} The result.
+     */
     getActiveStageCapabilities(): StageExecutionCapabilities;
     get traceStage(): AssemblyStageName;
+    /**
+     * Lays out instruction.
+     * @param {string[] | LoweredInstruction} input The input.
+     * @returns {boolean} The result.
+     */
     layoutInstruction(input: string[] | LoweredInstruction): boolean;
+    /**
+     * Emits instruction.
+     * @param {string[] | LoweredInstruction} input The input.
+     * @returns {boolean} The result.
+     */
     emitInstruction(input: string[] | LoweredInstruction): boolean;
     /**
      * Picks the appropriate instruction handler based on architecture.
@@ -470,21 +614,39 @@ export declare class Assembler {
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     asblock_pick(input: string[] | LoweredInstruction): boolean;
+    /**
+     * Resolves active architecture.
+     * @returns {{ name: string; definition?: ArchitectureDefinition }} The result.
+     */
     resolveActiveArchitecture(): {
         name: string;
         definition?: ArchitectureDefinition;
     };
-    classifyOperandForActiveArchitecture(operand: string): import("./architecture-types.js").LoweredOperand;
+    /**
+     * Classifies operand for active architecture.
+     * @param {string} operand The operand.
+     * @returns {LoweredOperand} The classified operand.
+     */
+    classifyOperandForActiveArchitecture(operand: string): LoweredOperand;
     /**
      * Writes 1, 2, 3, or 4 bytes to ROM.
      * @param {number} num - The byte to write.
      */
     write1(num: number): void;
-    emitByte(num: number): void;
+    /**
+     * Writes 2.
+     * @param {number} num The num.
+     */
     write2(num: number): void;
-    emitWord(num: number): void;
+    /**
+     * Writes 3.
+     * @param {number} num The num.
+     */
     write3(num: number): void;
-    emitLong(num: number): void;
+    /**
+     * Writes 4.
+     * @param {number} num The num.
+     */
     write4(num: number): void;
     /**
      * Reads 1, 2, or 3 bytes from ROM.
@@ -492,21 +654,72 @@ export declare class Assembler {
      * @returns {number} The byte read from ROM.
      */
     read1(insnespos: number): number;
+    /**
+     * Reads 2.
+     * @param {number} insnespos The insnespos.
+     * @returns {number} The result.
+     */
     read2(insnespos: number): number;
+    /**
+     * Reads 3.
+     * @param {number} insnespos The insnespos.
+     * @returns {number} The result.
+     */
     read3(insnespos: number): number;
+    /**
+     * Handles assembleblock.
+     * @param {string} block The block.
+     */
     assembleblock(block: string): void;
-    preprocessBlockCommands(block: string): string[];
+    /**
+     * Rewrites raw command.
+     * @param {string} command The command.
+     * @returns {string} The result.
+     */
     rewriteRawCommand(command: string): string;
+    /**
+     * Creates normalized command from raw.
+     * @param {string} command The command.
+     * @param {string} sourceFile The source file.
+     * @param {number} sourceLine The source line.
+     * @param {boolean} [allowEmpty] The allow empty.
+     * @returns {NormalizedCommand | null} The result.
+     */
     createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty?: boolean): NormalizedCommand | null;
+    /**
+     * Preprocesses normalized command.
+     * @param {NormalizedCommand} state The state.
+     * @returns {CommandPreprocessResult} The result.
+     */
     preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult;
+    /**
+     * Prepares normalized command for dispatch.
+     * @param {NormalizedCommand} state The state.
+     * @returns {boolean} The result.
+     */
     prepareNormalizedCommandForDispatch(state: NormalizedCommand): boolean;
     /**
      * Processes a single command from `assembleblock`.
      * @param {string} command - The command to process.
      */
     processCommand(command: string): void;
+    /**
+     * Processes normalized command.
+     * @param {NormalizedCommand} state The state.
+     * @param {boolean} [rewriteRaw] The rewrite raw.
+     */
     processNormalizedCommand(state: NormalizedCommand, rewriteRaw?: boolean): void;
+    /**
+     * Gets or create lowered program.
+     * @param {StageExecutionState} stageState The stage state.
+     * @param {ProgramModel} program The program.
+     * @returns {LoweredProgram} The result.
+     */
     getOrCreateLoweredProgram(stageState: StageExecutionState, program: ProgramModel): LoweredProgram;
+    /**
+     * Dispatches lowered node.
+     * @param {LoweredCommand} lowered The lowered.
+     */
     dispatchLoweredNode(lowered: LoweredCommand): void;
     /**
      * Parses a function definition of the form:
@@ -630,6 +843,10 @@ export declare class Assembler {
      * @returns {string} The string with defines resolved.
      */
     resolvedefines(input: string): string;
+    /**
+     * Handles activate stage.
+     * @param {AssemblyStageName} stage The stage.
+     */
     activateStage(stage: AssemblyStageName): void;
     /**
      * Completes the current pass, performing any necessary cleanup.
@@ -645,7 +862,17 @@ export declare class Assembler {
      * @param {number} line - The line number to set.
      */
     setCurrentLine(line: number): void;
+    /**
+     * Gets stage descriptor.
+     * @param {AssemblyStageName} stage The stage.
+     * @returns {Pick<StageExecutionState, "stage" | "capabilities">} The result.
+     */
     getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "capabilities">;
+    /**
+     * Clones relative labels.
+     * @param {{ [depth: number]: { addr: number; macroInstance?: number }[] }} source The source.
+     * @returns {{ [depth: number]: { addr: number; macroInstance?: number }[]; }} The result.
+     */
     cloneRelativeLabels(source: {
         [depth: number]: {
             addr: number;
@@ -657,13 +884,55 @@ export declare class Assembler {
             macroInstance?: number;
         }[];
     };
+    /**
+     * Creates stage execution state.
+     * @param {AssemblyStageName} stage The stage.
+     * @returns {StageExecutionState} The result.
+     */
     createStageExecutionState(stage: AssemblyStageName): StageExecutionState;
+    /**
+     * Applies stage execution state.
+     * @param {StageExecutionState} stageState The stage state.
+     */
     applyStageExecutionState(stageState: StageExecutionState): void;
+    /**
+     * Captures stage execution state.
+     * @param {StageExecutionState} stageState The stage state.
+     */
     captureStageExecutionState(stageState: StageExecutionState): void;
+    /**
+     * Gets or create stage execution state.
+     * @param {AssemblyStageName} stage The stage.
+     * @returns {StageExecutionState} The result.
+     */
     getOrCreateStageExecutionState(stage: AssemblyStageName): StageExecutionState;
+    /**
+     * Builds program model.
+     * @param {string} source The source.
+     * @param {string} [sourceFile] The source file.
+     * @param {number} [startLine] The start line.
+     * @returns {ProgramModel} The result.
+     */
     buildProgramModel(source: string, sourceFile?: string, startLine?: number): ProgramModel;
+    /**
+     * Runs stage.
+     * @param {AssemblyStageName} stage The stage.
+     * @param {ProgramModel} program The program.
+     * @returns {StageExecutionState} The result.
+     */
     runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState;
+    /**
+     * Handles assemble program.
+     * @param {ProgramModel} program The program.
+     */
     assembleProgram(program: ProgramModel): void;
+    /**
+     * Handles assemble source.
+     * @param {string} source The source.
+     * @param {string} [sourceFile] The source file.
+     * @param {number} [startLine] The start line.
+     * @returns {ProgramModel} The result.
+     */
     assembleSource(source: string, sourceFile?: string, startLine?: number): ProgramModel;
     /**
      * Writes a block of data to ROM.
@@ -693,19 +962,50 @@ export declare class Assembler {
      * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
      */
     lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
+    /**
+     * Resolves for loop bounds.
+     * @param {LoweredLoopNode} forBlock The for block.
+     * @returns {{ variable?: string; start?: number; end?: number; }} The result.
+     */
     resolveForLoopBounds(forBlock: LoweredLoopNode): {
         variable?: string;
         start?: number;
         end?: number;
     };
+    /**
+     * Executes for loop iterations.
+     * @param {LoweredLoopNode} forBlock The for block.
+     * @param {() => void} executeBody The execute body.
+     */
     executeForLoopIterations(forBlock: LoweredLoopNode, executeBody: () => void): void;
+    /**
+     * Executes lowered loop.
+     * @param {LoweredLoopNode} loopBlock The loop block.
+     */
     executeLoweredLoop(loopBlock: LoweredLoopNode): void;
+    /**
+     * Executes lowered for loop.
+     * @param {LoweredLoopNode} forBlock The for block.
+     */
     executeLoweredForLoop(forBlock: LoweredLoopNode): void;
+    /**
+     * Executes while loop commands.
+     * @param {LoweredLoopNode} whileBlock The while block.
+     * @param {TCommand[]} commands The commands.
+     * @param {(command: TCommand) => string | null} getDefineTarget The get define target.
+     * @param {(command: TCommand) => void} executeCommand The execute command.
+     */
     executeWhileLoopCommands<TCommand>(whileBlock: LoweredLoopNode, commands: TCommand[], getDefineTarget: (command: TCommand) => string | null, executeCommand: (command: TCommand) => void): void;
+    /**
+     * Executes lowered while loop.
+     * @param {LoweredLoopNode} whileBlock The while block.
+     */
     executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void;
-    createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
-    shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
-    lowerNode(command: NormalizedCommand): LoweredCommand;
+    /**
+     * Gets lowered node span.
+     * @param {LoweredExecutableNode} node The node.
+     * @returns {SourceSpan | undefined} The result.
+     */
     getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined;
     /**
      * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
@@ -714,9 +1014,20 @@ export declare class Assembler {
      * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
      */
     executeWithAnalysisRecovery<TNode>(node: TNode, getSpan: (node: TNode) => SourceSpan | undefined, executeNode: (node: TNode) => void): void;
-    executeNodeStream(nodes: RuntimeNode[]): void;
+    /**
+     * Executes lowered node with recovery.
+     * @param {LoweredExecutableNode} node The node.
+     */
     executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void;
+    /**
+     * Executes lowered node.
+     * @param {LoweredExecutableNode} node The node.
+     */
     executeLoweredNode(node: LoweredExecutableNode): void;
+    /**
+     * Executes lowered node stream.
+     * @param {LoweredExecutableNode[]} nodes The nodes.
+     */
     executeLoweredNodeStream(nodes: LoweredExecutableNode[]): void;
     /**
      * Drains and executes any completed nodes still buffered in the incremental parser.
@@ -724,14 +1035,37 @@ export declare class Assembler {
      * finished typed roots stranded until the next top-level line arrives.
      */
     flushCompletedIncrementalNodes(): void;
+    /**
+     * Executes conditional branches.
+     * @param {Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[]; }>} branches The branches.
+     * @param {(commands: TCommand[]) => void} executeCommands The execute commands.
+     */
     executeConditionalBranches<TCommand>(branches: Array<{
         kind: "if" | "elseif" | "else";
         conditionNode?: ExpressionNode;
         commands: TCommand[];
     }>, executeCommands: (commands: TCommand[]) => void): void;
-    executeLoweredConditionalNode(node: LoweredConditionalNode): void;
+    /**
+     * Parses command stream to nodes.
+     * @param {string[]} commands The commands.
+     * @param {string} [sourceFile] The source file.
+     * @param {number} [startLine] The start line.
+     * @returns {RuntimeNode[]} The result.
+     */
     parseCommandStreamToNodes(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
+    /**
+     * Gets or build pass program.
+     * @param {string[]} commands The commands.
+     * @param {string} [sourceFile] The source file.
+     * @param {number} [startLine] The start line.
+     * @returns {RuntimeNode[]} The result.
+     */
     getOrBuildPassProgram(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
+    /**
+     * Gets macro definition node.
+     * @param {string} name The name.
+     * @returns {MacroDefinitionNode | undefined} The result.
+     */
     getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined;
 }
 export {};

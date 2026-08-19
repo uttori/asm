@@ -104,10 +104,11 @@ export const splitCommandIntoWords = (command: string): string[] => {
   let currentWord = "";
   let inQuotes = false;
   let quoteChar = "";
+  const trimmedCommand = command.trim();
 
-  for (let i = 0; i < command.trim().length; i++) {
-    const char = command.trim()[i];
-    if ((char === '"' || char === "'") && (i === 0 || command.trim()[i - 1] !== "\\")) {
+  for (let i = 0; i < trimmedCommand.length; i++) {
+    const char = trimmedCommand[i];
+    if ((char === '"' || char === "'") && (i === 0 || trimmedCommand[i - 1] !== "\\")) {
       if (!inQuotes) {
         inQuotes = true;
         quoteChar = char;

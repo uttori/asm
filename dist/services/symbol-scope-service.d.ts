@@ -1,19 +1,10 @@
+import type { StructDefinition } from "../assembler.js";
 type LabelEntry = {
     value: number;
     isStatic: boolean;
     isMacroLabel?: boolean;
     macroInstance?: number;
     modifiesHierarchy?: boolean;
-};
-type StructDefinition = {
-    name: string;
-    base: number;
-    offset: number;
-    size: number;
-    labels: Map<string, number>;
-    align?: number;
-    parent?: string;
-    extensionSize?: number;
 };
 export interface SymbolScopeHost {
     mode: "layout" | "emit";
@@ -50,10 +41,29 @@ export interface SymbolScopeHost {
 export declare class SymbolScopeService {
     readonly host: SymbolScopeHost;
     constructor(host: SymbolScopeHost);
-    isMissingLabelError(error: unknown): boolean;
+    /**
+     * Finds nearest hierarchy ancestor.
+     * @param {string} label The label.
+     * @returns {string | null} The result.
+     */
     findNearestHierarchyAncestor(label: string): string | null;
+    /**
+     * Gets hierarchy chain.
+     * @param {string} label The label.
+     * @returns {string[]} The result.
+     */
     getHierarchyChain(label: string): string[];
+    /**
+     * Gets ancestor prefixes.
+     * @param {string} label The label.
+     * @returns {string[]} The result.
+     */
     getAncestorPrefixes(label: string): string[];
+    /**
+     * Gets scoped parent label.
+     * @param {number} dotCount The dot count.
+     * @returns {string} The result.
+     */
     getScopedParentLabel(dotCount: number): string;
     /**
      * Checks if a label is in scope.
@@ -105,12 +115,26 @@ export declare class SymbolScopeService {
      */
     getLabelValue(label: string, requireStatic: boolean): number;
     /**
+     * Tries to get a scoped label value without allocating an Error for a miss.
+     * @param {string} label The label to get the value of.
+     * @param {boolean} requireStatic Whether the label must be static.
+     * @returns {number | undefined} The value, or undefined when not found.
+     */
+    tryGetLabelValue(label: string, requireStatic: boolean): number | undefined;
+    /**
      * Gets the value of a label directly.
      * @param {string} label The label to get the value of.
      * @param {boolean} requireStatic Whether the label must be static.
      * @returns {number} The value of the label.
      */
     getLabelValueDirect(label: string, requireStatic: boolean): number;
+    /**
+     * Tries a direct label lookup without allocating an Error for ordinary misses.
+     * @param {string} label The label to get the value of.
+     * @param {boolean} requireStatic Whether the label must be static.
+     * @returns {number | undefined} The value, or undefined when not found.
+     */
+    tryGetLabelValueDirect(label: string, requireStatic: boolean): number | undefined;
     /**
      * Gets the size of a struct or extension.
      * @param {string} identifier The identifier of the struct or extension.

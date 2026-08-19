@@ -177,7 +177,7 @@ const assembleFixtureStaged = (fixtureName: string): Buffer => {
 };
 
 const assembleSource = (source: string, sourcePath: string, targetRom?: Uint8Array, useTreeExecution = false): Buffer => {
-  const assembler = new Assembler(targetRom);
+  const assembler = new Assembler(targetRom, { collectSourceMetadata: false });
   const inputDir = path.dirname(sourcePath);
   assembler.setIncludePaths(["./", inputDir]);
   assembler.setCurrentFile(sourcePath);
@@ -206,7 +206,7 @@ const assembleSourceStaged = (
   targetRom?: Uint8Array,
   checksumMode?: "asar" | "simple",
 ): Buffer => {
-  const assembler = new Assembler(targetRom);
+  const assembler = new Assembler(targetRom, { collectSourceMetadata: false });
   assembler.setIncludePaths(["./", path.dirname(sourcePath)]);
   assembler.setCurrentFile(sourcePath);
   if (checksumMode) {
@@ -500,7 +500,7 @@ test.serial("integration CHOU regression keeps legacy include flow byte-identica
   const source = fs.readFileSync(CHOU_SRC_PATH, "utf8");
   const expected = fs.readFileSync(CHOU_EXPECTED_PATH);
   const targetRom = fs.existsSync(CHOU_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(CHOU_TARGET_ROM_PATH)) : undefined;
-  const assembler = new Assembler(targetRom);
+  const assembler = new Assembler(targetRom, { collectSourceMetadata: false });
   assembler.setChecksumMode("simple");
   assembler.setIncludePaths(["./", path.dirname(CHOU_SRC_PATH)]);
   assembler.setCurrentFile(CHOU_SRC_PATH);

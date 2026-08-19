@@ -42,7 +42,10 @@ export const handlePullBase = ({ session }: AddressStackDirectiveContext): void 
  * @param {string[]} words - The words from the ARCH command.
  * @throws {Error} If the ARCH command requires an architecture parameter.
  */
-export const handleArch = ({ session }: ArchitectureDirectiveContext, words: string[]): void => {
+export const handleArch = (
+  { session }: ArchitectureDirectiveContext,
+  words: readonly string[],
+): void => {
   // debug("handleArch", words)
   if (session.inSpcblock) {
     throw new Error("ARCH is unavailable inside spcblock.");
@@ -62,7 +65,7 @@ export const handleArch = ({ session }: ArchitectureDirectiveContext, words: str
 
 export const handleStartpos = (
   { session, operandResolver }: StartposDirectiveContext,
-  words: string[],
+  words: readonly string[],
 ): void => {
   const params = words.slice(1);
 

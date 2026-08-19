@@ -3,7 +3,7 @@ import type { FlowControlDirectiveContext } from "./types.js";
 
 export const handleRelativeLabel = (
   { session }: FlowControlDirectiveContext,
-  _words: string[],
+  _words: readonly string[],
   raw: string,
 ): void => {
   session.symbolScope.handleRelativeLabel(raw);

@@ -99,7 +99,7 @@ export interface RuntimeDirectiveContext {
 
 export type NarrowDirectiveHandler<Context> = (
   ctx: Context,
-  words: string[],
+  words: readonly string[],
   raw: string,
   command?: NormalizedCommand,
 ) => void;

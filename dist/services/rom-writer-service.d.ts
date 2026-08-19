@@ -41,11 +41,6 @@ export declare class RomWriterService {
      * Writes a single byte at the current position using 65816/ROM addressing.
      * @param {number} num The value to write.
      */
-    write1_65816(num: number): void;
-    /**
-     * Writes a single byte to the ROM.
-     * @param {number} num The value to write.
-     */
     write1(num: number): void;
     /**
      * Writes a 16-bit value to the ROM.
@@ -77,7 +72,6 @@ export declare class RomWriterService {
      * @returns {number} The PC offset.
      */
     convertTargetAddressToRomOffset(addr: number): number;
-    snestopc(addr: number): number;
     /**
      * Converts a PC offset to a SNES address.
      * @param {number} addr The PC offset to convert.

@@ -3,9 +3,10 @@ import type { DirectiveRuntimeService } from "../../src/services/directive-runti
 
 export const createOperandResolver = (getCurrentAddress = (): number => 0): OperandResolver => new OperandResolver({
   resolveDefines: (input) => input,
+  isStructReference: () => false,
   resolveStructLabel: () => 0,
+  tryResolveLabel: () => 0,
   resolveLabel: () => 0,
-  hasLabel: () => false,
   evaluateMath: (input) => {
     const text = typeof input === "string" ? input : "0";
     if (/^\$[\da-f]+$/i.test(text)) {

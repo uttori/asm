@@ -17,6 +17,20 @@ const makeCommand = (command: string) => createNormalizedCommand(
   1
 );
 
+test("binary-build mode skips source metadata collection", (t) => {
+  const assembler = new Assembler(undefined, { collectSourceMetadata: false });
+
+  assembler.recordSymbolDefinition("label", "Start");
+  assembler.recordSymbolReference("instruction", "lda");
+  assembler.recordIncludeEdge("main.asm", "include.asm");
+  assembler.addAddressToLine(0x808000);
+
+  t.deepEqual(assembler.symbolDefinitions, []);
+  t.deepEqual(assembler.symbolReferences, []);
+  t.deepEqual(assembler.includeEdges, []);
+  t.deepEqual(assembler.addressToLineMapping.addrToLineInfo, []);
+});
+
 test("getnum - handles numeric literals", t => {
   const assembler = new Assembler();
 
@@ -63,8 +77,8 @@ test("getnum - resolves defines", t => {
 test("getnum - handles labels", t => {
   const assembler = new Assembler();
 
-  // Mock the getLabelValue method
-  const getLabelValueStub = sinon.stub(assembler.symbolScope, "getLabelValue");
+  // Mock the non-throwing lookup used by define expansion.
+  const getLabelValueStub = sinon.stub(assembler.symbolScope, "tryGetLabelValue");
   getLabelValueStub.withArgs("label1", false).returns(0x1000);
   getLabelValueStub.withArgs("another_label", false).returns(0x2000);
 
@@ -841,7 +855,7 @@ test("getExpressionObjectSize - returns size for non-extended struct", t => {
     offset: 0,
     size: 10,
     labels: new Map(),
-    parent: null,
+    parent: undefined,
     extensionSize: 5
   };
 
@@ -868,7 +882,7 @@ test("getExpressionObjectSize - returns size for extended struct", t => {
     offset: 0,
     size: 10,
     labels: new Map(),
-    parent: null,
+    parent: undefined,
     extensionSize: 5
   };
 
@@ -878,7 +892,8 @@ test("getExpressionObjectSize - returns size for extended struct", t => {
     offset: 0,
     size: 5,
     labels: new Map(),
-    parent: parentStructName
+    parent: parentStructName,
+    extensionSize: 0
   };
 
   // Set up the structs in the assembler
@@ -904,7 +919,7 @@ test("getExpressionObjectSize - handles quoted struct names", t => {
     offset: 0,
     size: 10,
     labels: new Map(),
-    parent: null,
+    parent: undefined,
     extensionSize: 5
   };
 
@@ -929,6 +944,7 @@ test("resolveReferenceLabelValue - resolves indexed struct base references", t =
     labels: new Map([
       ["base", 0],
     ]),
+    extensionSize: 0,
   });
 
   const expression = parseExpressionNode("obj[1]");
@@ -950,6 +966,7 @@ test("resolveReferenceLabelValue - resolves bare struct base references", t => {
     labels: new Map([
       ["base", 0],
     ]),
+    extensionSize: 0,
   });
 
   const expression = parseExpressionNode("obj");
@@ -973,6 +990,7 @@ test("resolveReferenceLabelValue - preserves struct members after define expansi
       ["base", 0],
       ["stack_id", 4],
     ]),
+    extensionSize: 0,
   });
 
   const expression = parseExpressionNode("!task_offset.stack_id+0");
@@ -1010,7 +1028,7 @@ test("getExpressionObjectSize - baseOnly parameter returns only base size", t =>
     offset: 0,
     size: 10,
     labels: new Map(),
-    parent: null,
+    parent: undefined,
     extensionSize: 5
   };
 
@@ -2693,6 +2711,7 @@ test("evaluateExpression - sizeof and objectsize", t => {
       ["field2", 1],
       ["field3", 3],
     ]),
+    extensionSize: 0,
   });
   assembler.structs.set("MyObject", {
     size: 24,
@@ -2704,6 +2723,7 @@ test("evaluateExpression - sizeof and objectsize", t => {
       ["field2", 1],
       ["field3", 3],
     ]),
+    extensionSize: 0,
   });
 
   // These expressions should be passed through to mathCore without define resolution
@@ -2949,6 +2969,7 @@ test("resolveStructLabel", (t) => {
     base: 0x1000,
     size: 8,
     offset: 8,
+    extensionSize: 0,
     labels: new Map([
       ["x", 0],
       ["y", 2],
@@ -2964,6 +2985,7 @@ test("resolveStructLabel", (t) => {
     base: 0x2000,
     size: 10,
     offset: 10,
+    extensionSize: 0,
     labels: new Map([
       ["index", 0],
       ["value", 2],
@@ -2978,6 +3000,7 @@ test("resolveStructLabel", (t) => {
     base: 0x3000,
     size: 12,
     offset: 12,
+    extensionSize: 8,
     labels: new Map([
       ["id", 0],
       ["name", 2],
@@ -2993,6 +3016,7 @@ test("resolveStructLabel", (t) => {
     base: 0x3000,
     size: 8,
     offset: 8,
+    extensionSize: 0,
     labels: new Map([
       ["extra", 0],
       ["data", 4]
@@ -3102,6 +3126,7 @@ test("resolveStructLabel", (t) => {
     base: 0x4000,
     size: 20,
     offset: 20,
+    extensionSize: 0,
     labels: new Map([
       ["header", 0],
       ["subitem_x", 4],
@@ -3124,6 +3149,7 @@ test("resolveStructLabel", (t) => {
     base: 0x5000,
     size: 4,
     offset: 4,
+    extensionSize: 0,
     labels: new Map([
       ["data", 0]
     ])
@@ -3133,6 +3159,23 @@ test("resolveStructLabel", (t) => {
   t.throws(() => {
     assembler.structEngine.resolveStructLabel("OrphanExtension.data");
   }, { message: /Parent struct 'MissingParent' not defined for extension/ }, "Should throw when parent struct is missing");
+});
+
+test("hasStructReference distinguishes pure references from struct arithmetic", t => {
+  const assembler = new Assembler();
+  assembler.structs.set("obj", {
+    name: "obj",
+    base: 0,
+    offset: 4,
+    size: 4,
+    labels: new Map([["state", 0]]),
+    extensionSize: 0,
+  });
+
+  t.true(assembler.structEngine.hasStructReference("obj.state"));
+  t.true(assembler.structEngine.hasStructReference("obj[2].state"));
+  t.false(assembler.structEngine.hasStructReference("obj.state+2"));
+  t.false(assembler.structEngine.hasStructReference("other.state"));
 });
 
 test("resolveStructMember supports negative indices", (t) => {
@@ -3147,6 +3190,7 @@ test("resolveStructMember supports negative indices", (t) => {
       ["base", 0],
       ["state", 2],
     ]),
+    extensionSize: 0,
   });
 
   t.is(assembler.symbolScope.resolveStructMember("Task[-1].state"), -14);
@@ -3162,6 +3206,7 @@ test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
     size: 10,
     offset: 10,
     align: 4, // Add alignment to test that branch too
+    extensionSize: 12,
     labels: new Map([
       ["header", 0],
       ["data", 4]
@@ -3176,6 +3221,7 @@ test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
     base: 0x600A, // Base + size of parent
     size: 6,
     offset: 6,
+    extensionSize: 0,
     labels: new Map([
       ["extra", 0]
     ])
@@ -3188,6 +3234,7 @@ test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
     base: 0x600A, // Base + size of parent
     size: 12,
     offset: 12,
+    extensionSize: 0,
     labels: new Map([
       ["moreData", 0],
       ["evenMore", 8]
@@ -3248,6 +3295,7 @@ test("handleEndStruct - basic struct definition", t => {
     base: 0x7000,
     offset: 16, // Simulating a struct with 16 bytes of members
     size: 0,    // Will be set by handleEndStruct
+    extensionSize: 0,
     labels: new Map([
       ["member1", 0],
       ["member2", 8]
@@ -3285,6 +3333,7 @@ test("handleEndStruct - with alignment", t => {
     base: 0x7000,
     offset: 10, // 10 bytes of members
     size: 0,    // Will be set by handleEndStruct
+    extensionSize: 0,
     labels: new Map([
       ["member1", 0],
       ["member2", 6]
@@ -3319,6 +3368,7 @@ test("handleEndStruct - extension struct", t => {
     base: 0x7000,
     offset: 20,
     size: 20,
+    extensionSize: 0,
     labels: new Map([
       ["parentMember1", 0],
       ["parentMember2", 10]
@@ -3333,6 +3383,7 @@ test("handleEndStruct - extension struct", t => {
     offset: 12,   // 12 bytes of members in the extension
     size: 0,      // Will be set by handleEndStruct
     parent: "ParentStruct",
+    extensionSize: 0,
     labels: new Map([
       ["extMember1", 0],
       ["extMember2", 8]
@@ -3386,6 +3437,7 @@ test("handleEndStruct - extension struct with larger existing extension", t => {
     offset: 8, // Smaller than existing extension
     size: 0,
     parent: "ParentStruct",
+    extensionSize: 0,
     labels: new Map([
       ["extMember1", 0],
       ["extMember2", 4]
@@ -3417,6 +3469,7 @@ test("handleEndStruct - extension struct with alignment", t => {
     base: 0x7000,
     offset: 20,
     size: 20,
+    extensionSize: 0,
     labels: new Map([
       ["parentMember1", 0],
       ["parentMember2", 10]
@@ -3431,6 +3484,7 @@ test("handleEndStruct - extension struct with alignment", t => {
     offset: 10, // 10 bytes of members
     size: 0,
     parent: "ParentStruct",
+    extensionSize: 0,
     labels: new Map([
       ["extMember1", 0],
       ["extMember2", 6]
@@ -3468,6 +3522,7 @@ test("handleEndStruct - error cases", t => {
     base: 0x7000,
     offset: 10,
     size: 0,
+    extensionSize: 0,
     labels: new Map()
   };
 
@@ -3499,6 +3554,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
     base: 0x7000,
     offset: 16,
     size: 16,
+    extensionSize: 0,
     labels: new Map([
       ["baseMember", 0]
     ])
@@ -3512,6 +3568,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
     offset: 8,
     size: 0,
     parent: "BaseStruct",
+    extensionSize: 0,
     labels: new Map([
       ["firstMember", 0]
     ])
@@ -3529,6 +3586,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
     offset: 12,
     size: 0,
     parent: "BaseStruct",
+    extensionSize: 0,
     labels: new Map([
       ["secondMember", 0]
     ])
@@ -3546,6 +3604,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
     offset: 4,
     size: 0,
     parent: "BaseStruct",
+    extensionSize: 0,
     labels: new Map([
       ["thirdMember", 0]
     ])
@@ -3595,6 +3654,7 @@ test("handleStruct - extension struct", t => {
     base: 0x6000,
     offset: 16,
     size: 16,
+    extensionSize: 0,
     labels: new Map([
       ["header", 0],
       ["data", 8]
@@ -4252,19 +4312,21 @@ test("handleDataDirective - struct references", t => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
+  sinon.stub(assembler.structEngine, "hasStructReference").callsFake(
+    reference => reference === "sprite.x_pos",
+  );
   const resolveStructLabelStub = sinon.stub(assembler.structEngine, "resolveStructLabel");
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
 
   // Setup struct resolution stub
   resolveStructLabelStub.withArgs("sprite.x_pos").returns(42);
-  resolveStructLabelStub.withArgs("unknown.field").throws(new Error("Unknown struct"));
 
   // Test with valid struct reference
   assembler.directiveRuntime.handleDataDirective("db", ["sprite.x_pos"]);
   t.true(resolveStructLabelStub.calledWith("sprite.x_pos"), "Should attempt to resolve struct references");
   t.true(write1Spy.calledWith(42), "Should write resolved struct value");
 
-  // Test fallback to numeric resolver when struct resolution fails
+  // Test fallback to numeric resolver when the reference is not a struct
   getnumStub.withArgs("unknown.field").returns(100);
   write1Spy.resetHistory();
   assembler.directiveRuntime.handleDataDirective("db", ["unknown.field"]);
@@ -4502,7 +4564,7 @@ test("typed conditional nodes execute the first matching branch", t => {
     return;
   }
 
-  assembler.executeNodeStream([node]);
+  assembler.lowerAndExecuteRuntimeNodes([node]);
   t.deepEqual(executed, ["db $01"]);
 });
 
@@ -4533,7 +4595,7 @@ test("typed conditional nodes support nested branch execution", t => {
     return;
   }
 
-  assembler.executeNodeStream([node]);
+  assembler.lowerAndExecuteRuntimeNodes([node]);
   t.deepEqual(executed, ["db $22"]);
 });
 
@@ -5689,6 +5751,7 @@ test("expressionHost - resolveLabel", t => {
     offset: 0x100,
     size: 0x100,
     labels: new Map(),
+    extensionSize: 0,
   });
 
   // Bare struct identifiers now resolve to their declared base address so later
@@ -5747,6 +5810,7 @@ test("expressionHost - defined", t => {
     offset: 0x100,
     size: 0x100,
     labels: new Map(),
+    extensionSize: 0,
   });
 
   // Test defined with existing label

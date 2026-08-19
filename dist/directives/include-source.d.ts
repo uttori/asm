@@ -5,6 +5,6 @@ import type { IncludeDirectiveContext } from "./types.js";
  * @param {IncludeDirectiveContext} ctx The directive context.
  * @param {string[]} words Directive keyword.
  */
-export declare const handleIncbin: ({ session, includeSource, operandResolver, runtime }: IncludeDirectiveContext, words: string[]) => void;
+export declare const handleIncbin: ({ session, includeSource, operandResolver, runtime }: IncludeDirectiveContext, words: readonly string[]) => void;
 export declare const registerIncludeSourceDirectives: (registry: DirectiveRegistry, context: IncludeDirectiveContext) => void;
 //# sourceMappingURL=include-source.d.ts.map

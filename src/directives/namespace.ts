@@ -44,7 +44,10 @@ export const handlePullNamespace = ({ session }: NamespaceDirectiveContext): voi
  * @param {NamespaceDirectiveContext} ctx The directive context.
  * @param {string[]} words The words of the namespace command.
  */
-export const handleNamespace = ({ session }: NamespaceDirectiveContext, words: string[]): void => {
+export const handleNamespace = (
+  { session }: NamespaceDirectiveContext,
+  words: readonly string[],
+): void => {
   if (session.inSpcblock) {
     throw new Error("NAMESPACE is unavailable inside spcblock.");
   }

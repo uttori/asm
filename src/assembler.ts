@@ -6,6 +6,7 @@ import type {
   ArchitectureEncoderContext,
   ExpressionHost,
   LoweredInstruction,
+  LoweredOperand,
 } from "./architecture-types.js";
 import {
   calculateHeaderChecksum,
@@ -69,7 +70,6 @@ import {
 import {
   CommandLoweringService,
   type LoweredCommand,
-  type LoweredConditionalNode,
   type LoweredExecutableNode,
   type LoweredLoopNode,
   type LoweredProgram,
@@ -225,8 +225,8 @@ export interface StructDefinition {
   align?: number;
   /** If this struct extends a parent. */
   parent?: string;
-  /** For parent structs, the maximum extension size. */
-  extensionSize?: number;
+  /** Cached maximum child extension size, or zero when there are no extensions. */
+  extensionSize: number;
 }
 
 export type PushPcStackEntry = {
@@ -379,6 +379,7 @@ export class Assembler {
   public readonly symbolDefinitions: AssemblySymbolDefinition[] = [];
   public readonly symbolReferences: AssemblySymbolReference[] = [];
   public readonly includeEdges: AssemblyIncludeEdge[] = [];
+  public readonly collectSourceMetadata: boolean;
   activeStageExecutionState: StageExecutionState | null = null;
   analysisErrorRecoveryEnabled = false;
   runtimePassthroughRewriteEnabled = false;
@@ -421,10 +422,17 @@ export class Assembler {
     return this.currentTargetAddress;
   }
 
+  /**
+   * Records current address.
+   */
   recordCurrentAddress(): void {
     this.addAddressToLine(this.currentTargetBaseAddress & 0xffffff);
   }
 
+  /**
+   * Sets write position.
+   * @param {number} address The address.
+   */
   setWritePosition(address: number): void {
     this.currentTargetAddress = address;
     this.currentTargetBaseAddress = address;
@@ -438,11 +446,18 @@ export class Assembler {
     }
   }
 
+  /**
+   * Enters struct definition.
+   * @param {number} base The base.
+   */
   enterStructDefinition(base: number): void {
     this.savedPCStack.push(this.currentTargetAddress);
     this.cursorAddress.setWritePosition(base);
   }
 
+  /**
+   * Restores struct definition.
+   */
   restoreStructDefinition(): void {
     if (this.savedPCStack.length === 0) {
       return;
@@ -453,11 +468,18 @@ export class Assembler {
     }
   }
 
+  /**
+   * Synchronizes write starts.
+   */
   syncWriteStarts(): void {
     this.currentTargetStartAddress = this.currentTargetAddress;
     this.currentTargetBaseStartAddress = this.currentTargetBaseAddress;
   }
 
+  /**
+   * Increments bytes written.
+   * @param {number} num The num.
+   */
   incrementBytesWritten(num: number): void {
     this.bytes += num;
   }
@@ -482,6 +504,10 @@ export class Assembler {
     return this.getActiveStageCapabilities().isDefinitionCollectionStage;
   }
 
+  /**
+   * Traces write.
+   * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
+   */
   traceWrite(event: Omit<AssemblerTraceWriteEvent, "type">): void {
     // Byte writes happen below the command dispatcher, so recover the
     // most specific source context from the active command stack.
@@ -521,6 +547,9 @@ export class Assembler {
    * @param {string} toFile The resolved path of the included file.
    */
   recordIncludeEdge(fromFile: string, toFile: string): void {
+    if (!this.collectSourceMetadata) {
+      return;
+    }
     if (!fromFile || !toFile) {
       return;
     }
@@ -543,14 +572,6 @@ export class Assembler {
   }
 
   /**
-   * Records a structured diagnostic.
-   * @param {AssemblyDiagnostic} diagnostic The diagnostic to record.
-   */
-  reportDiagnostic(diagnostic: AssemblyDiagnostic): void {
-    this.diagnostics.push(diagnostic);
-  }
-
-  /**
    * Converts and records an unknown error.
    * @param {unknown} error The error to normalize.
    * @param {SourceSpan} [span] Optional source span override.
@@ -563,7 +584,7 @@ export class Assembler {
     stage?: AssemblyStageName,
   ): AssemblyDiagnostic {
     const diagnostic = diagnosticFromError(error, this.getCurrentSourceLocation(span), stage);
-    this.reportDiagnostic(diagnostic);
+    this.diagnostics.push(diagnostic);
     return diagnostic;
   }
 
@@ -589,6 +610,9 @@ export class Assembler {
       containerName?: string;
     } = {},
   ): void {
+    if (!this.collectSourceMetadata) {
+      return;
+    }
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
     const duplicate = this.symbolDefinitions.some(
@@ -627,6 +651,9 @@ export class Assembler {
     name: string,
     options: { file?: string; line?: number; span?: SourceSpan; containerName?: string } = {},
   ): void {
+    if (!this.collectSourceMetadata) {
+      return;
+    }
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
     const duplicate = this.symbolReferences.some(
@@ -649,6 +676,11 @@ export class Assembler {
     });
   }
 
+  /**
+   * Collects expression references.
+   * @param {ExpressionNode | undefined} expression The expression.
+   * @param {SourceSpan} [fallbackSpan] The fallback span.
+   */
   collectExpressionReferences(
     expression: ExpressionNode | undefined,
     fallbackSpan?: SourceSpan,
@@ -707,7 +739,15 @@ export class Assembler {
     }
   }
 
+  /**
+   * Collects command references.
+   * @param {NormalizedCommand} command The command.
+   */
   collectCommandReferences(command: NormalizedCommand): void {
+    incrementInternalCounter("referenceCollections");
+    if (!this.collectSourceMetadata) {
+      return;
+    }
     const fallbackSpan = command.source.normalizedSpan;
     const parsed = command.parsed;
 
@@ -839,6 +879,11 @@ export class Assembler {
     });
   }
 
+  /**
+   * Analyzes program.
+   * @param {ProgramModel} program The program.
+   * @returns {AssemblyAnalysisResult} The result.
+   */
   analyzeProgram(program: ProgramModel): AssemblyAnalysisResult {
     return this.createToolingSession().collectProgramAnalysis(program);
   }
@@ -863,14 +908,11 @@ export class Assembler {
     };
   }
 
-  analyzeDocument(
-    source: string,
-    sourceFile = this.currentFile,
-    startLine = 0,
-  ): AssemblyAnalysisResult & { program: ProgramModel } {
-    return this.analyzeSource(source, sourceFile, startLine);
-  }
-
+  /**
+   * Analyzes workspace.
+   * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
+   * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
+   */
   analyzeWorkspace(
     documents: Array<{ source: string; sourceFile: string; startLine?: number }>,
   ): Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> {
@@ -893,6 +935,9 @@ export class Assembler {
     return results;
   }
 
+  /**
+   * Loads test rom data.
+   */
   loadTestRomData(): void {
     const testRomSize = 512 * 1024;
     if (!this.targetRom || this.targetRom.length === 0) {
@@ -906,6 +951,10 @@ export class Assembler {
 
   // Shared adapter infrastructure
 
+  /**
+   * Creates cursor address facade.
+   * @returns {CursorAddressFacade} The result.
+   */
   createCursorAddressFacade(): CursorAddressFacade {
     return {
       recordCurrentAddress: () => this.recordCurrentAddress(),
@@ -917,6 +966,10 @@ export class Assembler {
 
   // Service assembly
 
+  /**
+   * Creates services.
+   * @returns {AssemblerServiceBag} The result.
+   */
   createServices(): AssemblerServiceBag {
     const defineEngine = new DefineEngine(this);
     const directiveRuntime = new DirectiveRuntimeService(this);
@@ -942,10 +995,11 @@ export class Assembler {
 
   constructor(
     targetRom?: number[] | Uint8Array,
-    options: { fileProvider?: AssemblyFileProvider } = {},
+    options: { fileProvider?: AssemblyFileProvider; collectSourceMetadata?: boolean } = {},
   ) {
     this.targetRom = targetRom ? Uint8Array.from(targetRom) : new Uint8Array();
     this.fileProvider = options.fileProvider ?? createNodeAssemblyFileProvider();
+    this.collectSourceMetadata = options.collectSourceMetadata ?? true;
     this.cursorAddress = this.createCursorAddressFacade();
     this.mathCore = new MathCore();
     this.mathCore.host = this.expressionHost;
@@ -958,7 +1012,7 @@ export class Assembler {
         loopType?: "for" | "while",
         loopStartLine?: number,
         ifStartLine?: number,
-      ) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+      ) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
     } as AssemblyFrontEndHost;
     Object.defineProperties(frontEndHost, {
       currentFile: { get: (): string => this.currentFile },
@@ -968,12 +1022,14 @@ export class Assembler {
     });
     this.frontEndService = new AssemblyFrontEndService(frontEndHost);
     this.programModelBuilder = this.frontEndService.programModelBuilder;
-    this.incrementalProgramParseState = this.frontEndService.createIncrementalParseState();
+    this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
     this.operandResolver = new OperandResolver({
       resolveDefines: (input) => this.resolvedefines(input),
+      isStructReference: (input) => this.structEngine.hasStructReference(input),
       resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
+      tryResolveLabel: (input, requireStatic) =>
+        this.symbolScope.tryGetLabelValue(input, requireStatic),
       resolveLabel: (input, requireStatic) => this.symbolScope.getLabelValue(input, requireStatic),
-      hasLabel: (input) => this.symbolScope.hasLabelInScope(input),
       evaluateMath: (input) => this.mathCore.math(input),
       shouldDeferExpressionEvaluation: () =>
         !this.getActiveStageCapabilities().enforceResolvedLabels,
@@ -1025,6 +1081,13 @@ export class Assembler {
     this.checksumMode = mode;
   }
 
+  /**
+   * Reads little endian.
+   * @param {Uint8Array} bytes The bytes.
+   * @param {number} pos The pos.
+   * @param {number} width The width.
+   * @returns {number | undefined} The result.
+   */
   readLittleEndian(bytes: Uint8Array, pos: number, width: number): number | undefined {
     if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes.length) {
       return undefined;
@@ -1036,6 +1099,13 @@ export class Assembler {
     return out >>> 0;
   }
 
+  /**
+   * Checks whether it can read byte range.
+   * @param {number} sourceLength The source length.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @returns {number} The result.
+   */
   canReadByteRange(sourceLength: number, position: number, size: number): number {
     const pos = Math.trunc(position);
     const num = Math.trunc(size);
@@ -1048,6 +1118,15 @@ export class Assembler {
       : 0;
   }
 
+  /**
+   * Reads byte range.
+   * @param {Uint8Array} source The source.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @param {number | undefined} defaultValue The default value.
+   * @param {string} errorMessage The error message.
+   * @returns {number} The result.
+   */
   readByteRange(
     source: Uint8Array,
     position: number,
@@ -1067,6 +1146,11 @@ export class Assembler {
     return value;
   }
 
+  /**
+   * Resolves readable path.
+   * @param {string} filename The filename.
+   * @returns {string | undefined} The result.
+   */
   resolveReadablePath(filename: string): string | undefined {
     return this.fileProvider.resolvePath(filename, {
       currentFile: this.currentFile,
@@ -1075,6 +1159,11 @@ export class Assembler {
     });
   }
 
+  /**
+   * Resolves expression host label.
+   * @param {string} identifier The identifier.
+   * @returns {number | string} The result.
+   */
   resolveExpressionHostLabel(identifier: string): number | string {
     const parsed = parseExpressionNode(identifier.trim());
     if (isReferenceExpressionNode(parsed)) {
@@ -1083,6 +1172,12 @@ export class Assembler {
     return this.symbolScope.getLabelValue(identifier, this.requireStaticLabelLookup);
   }
 
+  /**
+   * Gets expression object size.
+   * @param {string} identifier The identifier.
+   * @param {boolean} [baseOnly] Whether to return only the base object size.
+   * @returns {number} The result.
+   */
   getExpressionObjectSize(identifier: string, baseOnly = false): number {
     if (baseOnly && (identifier === "..." || identifier === "…")) {
       if (this.inMacroExpansion && this.currentVariadicCount !== undefined) {
@@ -1096,6 +1191,11 @@ export class Assembler {
     return this.symbolScope.getObjectSize(identifier, baseOnly);
   }
 
+  /**
+   * Looks up define value.
+   * @param {string} varName The var name.
+   * @returns {string | undefined} The result.
+   */
   lookupDefineValue(varName: string): string | undefined {
     const defineValue = this.defines.get(varName);
     if (defineValue !== undefined) {
@@ -1119,12 +1219,25 @@ export class Assembler {
     return this.macros.get(this.currentMacroName)?.sourceFile;
   }
 
+  /**
+   * Checks whether it can read target rom.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @returns {number} The result.
+   */
   canReadTargetRom(position: number, size: number): number {
     const sourceLength =
       this.targetRom && this.targetRom.length > 0 ? this.targetRom.length : this.romdata.length;
     return this.canReadByteRange(sourceLength, position, size);
   }
 
+  /**
+   * Reads target rom.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @param {number} [defaultValue] The default value.
+   * @returns {number} The result.
+   */
   readTargetRom(position: number, size: number, defaultValue?: number): number {
     const pos = Math.trunc(position);
     if (!this.readFunctionsEnabled && defaultValue === undefined) {
@@ -1150,6 +1263,13 @@ export class Assembler {
     );
   }
 
+  /**
+   * Checks whether it can read expression file.
+   * @param {string} filename The filename.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @returns {number} The result.
+   */
   canReadExpressionFile(filename: string, position: number, size: number): number {
     const resolvedPath = this.resolveReadablePath(filename);
     if (!resolvedPath) {
@@ -1162,6 +1282,14 @@ export class Assembler {
     return this.canReadByteRange(fileSize, position, size);
   }
 
+  /**
+   * Reads expression file.
+   * @param {string} filename The filename.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @param {number} [defaultValue] The default value.
+   * @returns {number} The result.
+   */
   readExpressionFile(
     filename: string,
     position: number,
@@ -1237,7 +1365,7 @@ export class Assembler {
    * @param {number} num - The byte to write.
    */
   write1_65816(num: number): void {
-    this.romWriter.write1_65816(num);
+    this.romWriter.write1(num);
   }
 
   /**
@@ -1253,6 +1381,11 @@ export class Assembler {
     }
   }
 
+  /**
+   * Creates ephemeral stage execution state.
+   * @param {AssemblyStageName} stage The stage.
+   * @returns {StageExecutionState} The result.
+   */
   createEphemeralStageExecutionState(stage: AssemblyStageName): StageExecutionState {
     const descriptor = this.getStageDescriptor(stage);
     return {
@@ -1292,6 +1425,10 @@ export class Assembler {
     };
   }
 
+  /**
+   * Synchronizes active stage execution state.
+   * @param {AssemblyStageName} stage The stage.
+   */
   syncActiveStageExecutionState(stage: AssemblyStageName): void {
     const descriptor = this.getStageDescriptor(stage);
     if (!this.activeStageExecutionState) {
@@ -1302,6 +1439,10 @@ export class Assembler {
     this.activeStageExecutionState.capabilities = descriptor.capabilities;
   }
 
+  /**
+   * Gets active stage capabilities.
+   * @returns {StageExecutionCapabilities} The result.
+   */
   getActiveStageCapabilities(): StageExecutionCapabilities {
     if (!this.activeStageExecutionState) {
       this.activeStageExecutionState =
@@ -1314,6 +1455,11 @@ export class Assembler {
     return this.activeStageExecutionState?.stage ?? "collectDefinitions";
   }
 
+  /**
+   * Lays out instruction.
+   * @param {string[] | LoweredInstruction} input The input.
+   * @returns {boolean} The result.
+   */
   layoutInstruction(input: string[] | LoweredInstruction): boolean {
     const words = Array.isArray(input) ? input : input.words;
     if (words.length === 0) {
@@ -1331,6 +1477,11 @@ export class Assembler {
     return true;
   }
 
+  /**
+   * Emits instruction.
+   * @param {string[] | LoweredInstruction} input The input.
+   * @returns {boolean} The result.
+   */
   emitInstruction(input: string[] | LoweredInstruction): boolean {
     const words = Array.isArray(input) ? input : input.words;
     if (words.length === 0) {
@@ -1368,6 +1519,10 @@ export class Assembler {
     return this.emitInstruction(input);
   }
 
+  /**
+   * Resolves active architecture.
+   * @returns {{ name: string; definition?: ArchitectureDefinition }} The result.
+   */
   resolveActiveArchitecture(): { name: string; definition?: ArchitectureDefinition } {
     if (this.inSpcblock || this.arch === "spc700") {
       return {
@@ -1384,7 +1539,12 @@ export class Assembler {
     };
   }
 
-  classifyOperandForActiveArchitecture(operand: string) {
+  /**
+   * Classifies operand for active architecture.
+   * @param {string} operand The operand.
+   * @returns {LoweredOperand} The classified operand.
+   */
+  classifyOperandForActiveArchitecture(operand: string): LoweredOperand {
     const architecture = this.resolveActiveArchitecture();
     if (!architecture.definition) {
       return this.operandResolver.lowerOperand(operand);
@@ -1400,26 +1560,26 @@ export class Assembler {
     this.romWriter.write1(num);
   }
 
-  emitByte(num: number): void {
-    this.write1(num);
-  }
-
+  /**
+   * Writes 2.
+   * @param {number} num The num.
+   */
   write2(num: number): void {
     this.romWriter.write2(num);
   }
 
-  emitWord(num: number): void {
-    this.write2(num);
-  }
-
+  /**
+   * Writes 3.
+   * @param {number} num The num.
+   */
   write3(num: number): void {
     this.romWriter.write3(num);
   }
 
-  emitLong(num: number): void {
-    this.write3(num);
-  }
-
+  /**
+   * Writes 4.
+   * @param {number} num The num.
+   */
   write4(num: number): void {
     this.romWriter.write4(num);
   }
@@ -1437,6 +1597,11 @@ export class Assembler {
     return this.romdata[addr];
   }
 
+  /**
+   * Reads 2.
+   * @param {number} insnespos The insnespos.
+   * @returns {number} The result.
+   */
   read2(insnespos: number): number {
     const addr = this.romWriter.convertTargetAddressToRomOffset(insnespos);
     if (addr < 0 || addr + 2 > this.romdata.length) {
@@ -1445,6 +1610,11 @@ export class Assembler {
     return this.romdata[addr] | (this.romdata[addr + 1] << 8);
   }
 
+  /**
+   * Reads 3.
+   * @param {number} insnespos The insnespos.
+   * @returns {number} The result.
+   */
   read3(insnespos: number): number {
     const addr = this.romWriter.convertTargetAddressToRomOffset(insnespos);
     if (addr < 0 || addr + 3 > this.romdata.length) {
@@ -1453,13 +1623,17 @@ export class Assembler {
     return this.romdata[addr] | (this.romdata[addr + 1] << 8) | (this.romdata[addr + 2] << 16);
   }
 
+  /**
+   * Handles assembleblock.
+   * @param {string} block The block.
+   */
   assembleblock(block: string): void {
     // debug('assembleblock', block);
     if (!block.trim()) {
       return;
     }
 
-    const processedCommands = this.preprocessBlockCommands(block);
+    const processedCommands = this.frontEndService.preprocessBlockCommands(block);
     block = processedCommands.join("\n");
 
     const words = block.trim().split(/\s+/);
@@ -1471,29 +1645,38 @@ export class Assembler {
     const splitCommands = splitInlineCommands(processedCommands);
     if (block.includes("\n") && this.incrementalProgramParseState.roots.length === 0) {
       const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
-      this.executeNodeStream(nodes);
+      this.lowerAndExecuteRuntimeNodes(nodes);
       return;
     }
 
     for (const command of splitCommands) {
-      const nodes = this.frontEndService.consumeIncrementalCommand(
+      const nodes = this.programModelBuilder.consumeIncrementalCommand(
         this.incrementalProgramParseState,
         command.trim(),
         this.currentFile,
         this.currentLine,
       );
-      this.executeNodeStream(nodes);
+      this.lowerAndExecuteRuntimeNodes(nodes);
     }
   }
 
-  preprocessBlockCommands(block: string): string[] {
-    return this.frontEndService.preprocessBlockCommands(block);
-  }
-
+  /**
+   * Rewrites raw command.
+   * @param {string} command The command.
+   * @returns {string} The result.
+   */
   rewriteRawCommand(command: string): string {
     return this.macroEngine.rewriteMacroLabelReferences(command);
   }
 
+  /**
+   * Creates normalized command from raw.
+   * @param {string} command The command.
+   * @param {string} sourceFile The source file.
+   * @param {number} sourceLine The source line.
+   * @param {boolean} [allowEmpty] The allow empty.
+   * @returns {NormalizedCommand | null} The result.
+   */
   createNormalizedCommandFromRaw(
     command: string,
     sourceFile: string,
@@ -1508,6 +1691,11 @@ export class Assembler {
     );
   }
 
+  /**
+   * Preprocesses normalized command.
+   * @param {NormalizedCommand} state The state.
+   * @returns {CommandPreprocessResult} The result.
+   */
   preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
     if (
       state.words.length === 3 &&
@@ -1563,6 +1751,11 @@ export class Assembler {
     return "continue";
   }
 
+  /**
+   * Prepares normalized command for dispatch.
+   * @param {NormalizedCommand} state The state.
+   * @returns {boolean} The result.
+   */
   prepareNormalizedCommandForDispatch(state: NormalizedCommand): boolean {
     if (state.kind === "unknown") {
       setCommandWords(state, state.words, state.command);
@@ -1601,6 +1794,11 @@ export class Assembler {
     this.flushCompletedIncrementalNodes();
   }
 
+  /**
+   * Processes normalized command.
+   * @param {NormalizedCommand} state The state.
+   * @param {boolean} [rewriteRaw] The rewrite raw.
+   */
   processNormalizedCommand(state: NormalizedCommand, rewriteRaw: boolean = true): void {
     // Treat incoming commands as immutable execution inputs. Downstream pipeline
     // stages still mutate `kind/words`, so run them against a per-dispatch clone
@@ -1679,7 +1877,7 @@ export class Assembler {
     // active, so keep the current source context on a stack until dispatch ends.
     this.traceCommandStack.push(traceContext);
     try {
-      const lowered = this.lowerNode(workingState);
+      const lowered = this.commandLoweringService.lowerCommand(workingState);
       this.dispatchLoweredNode(lowered);
     } finally {
       this.traceCommandStack.pop();
@@ -1705,16 +1903,28 @@ export class Assembler {
     this.addAddressToLine(this.currentTargetBaseAddress & 0xffffff);
   }
 
+  /**
+   * Gets or create lowered program.
+   * @param {StageExecutionState} stageState The stage state.
+   * @param {ProgramModel} program The program.
+   * @returns {LoweredProgram} The result.
+   */
   getOrCreateLoweredProgram(
     stageState: StageExecutionState,
     program: ProgramModel,
   ): LoweredProgram {
     if (!stageState.loweredProgram) {
-      stageState.loweredProgram = this.commandLoweringService.lowerProgram(program);
+      stageState.loweredProgram = measureInternalPhase("lowerProgram", () =>
+        this.commandLoweringService.lowerProgram(program),
+      );
     }
     return stageState.loweredProgram;
   }
 
+  /**
+   * Dispatches lowered node.
+   * @param {LoweredCommand} lowered The lowered.
+   */
   dispatchLoweredNode(lowered: LoweredCommand): void {
     if (lowered.kind === "directive") {
       const loweredCommand = (lowered as LoweredCommand & { command?: NormalizedCommand }).command;
@@ -1766,6 +1976,10 @@ export class Assembler {
    * @param {number} address The SNES address to add to the mapping.
    */
   addAddressToLine(address: number): void {
+    incrementInternalCounter("addressMappings");
+    if (!this.collectSourceMetadata) {
+      return;
+    }
     this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
   }
 
@@ -1998,14 +2212,7 @@ export class Assembler {
   resolveNormalizedReferenceLabelValue(normalizedReference: string, requireStatic = false): number {
     // Dotted and indexed references may name either a struct member or a plain
     // label. Try the struct path first, then fall back to standard label lookup.
-    if (normalizedReference.includes(".") || normalizedReference.includes("[")) {
-      try {
-        return this.structEngine.resolveStructLabel(normalizedReference);
-      } catch {
-        // Fall back to normal label lookup.
-      }
-    }
-    if (this.structs.has(normalizedReference)) {
+    if (this.structEngine.hasStructReference(normalizedReference)) {
       return this.structEngine.resolveStructLabel(normalizedReference);
     }
     return this.symbolScope.getLabelValue(normalizedReference, requireStatic);
@@ -2140,14 +2347,18 @@ export class Assembler {
     // Expressions like `.zone_n-.zone_max` must stay intact so later arithmetic
     // can evaluate both sides instead of collapsing to the first local label.
     debug("resolvedefines checking if input is a label reference", input);
-    try {
-      const labelValue = this.symbolScope.getLabelValue(input, false);
-      debug("resolvedefines labelValue", labelValue);
-      return labelValue.toString();
-    } catch (error) {
-      debug("resolvedefines not a label, continuing", error);
+    const labelValue = this.symbolScope.tryGetLabelValue(input, false);
+    if (labelValue === undefined) {
+      // Preserve legacy definition-pass behavior: unresolved bare candidates,
+      // including numeric-only tokens, temporarily collapse to zero.
+      if (this.isDefinitionCollectionStage) {
+        return "0";
+      }
+      debug("resolvedefines not a label, continuing");
       return undefined;
     }
+    debug("resolvedefines labelValue", labelValue);
+    return labelValue.toString();
   }
 
   /**
@@ -2256,6 +2467,10 @@ export class Assembler {
     return result;
   }
 
+  /**
+   * Handles activate stage.
+   * @param {AssemblyStageName} stage The stage.
+   */
   activateStage(stage: AssemblyStageName): void {
     debug("🏁 activateStage", stage);
     this.syncActiveStageExecutionState(stage);
@@ -2273,7 +2488,7 @@ export class Assembler {
     // Reset the in macro flag
     this.inMacroExpansion = false;
 
-    this.frontEndService.resetIncrementalParseState(this.incrementalProgramParseState);
+    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
 
     this.inSpcblock = false;
     this.spcblockData = null;
@@ -2310,6 +2525,11 @@ export class Assembler {
     this.currentLine = line;
   }
 
+  /**
+   * Gets stage descriptor.
+   * @param {AssemblyStageName} stage The stage.
+   * @returns {Pick<StageExecutionState, "stage" | "capabilities">} The result.
+   */
   getStageDescriptor(
     stage: AssemblyStageName,
   ): Pick<StageExecutionState, "stage" | "capabilities"> {
@@ -2349,6 +2569,11 @@ export class Assembler {
     };
   }
 
+  /**
+   * Clones relative labels.
+   * @param {{ [depth: number]: { addr: number; macroInstance?: number }[] }} source The source.
+   * @returns {{ [depth: number]: { addr: number; macroInstance?: number }[]; }} The result.
+   */
   cloneRelativeLabels(source: { [depth: number]: { addr: number; macroInstance?: number }[] }): {
     [depth: number]: { addr: number; macroInstance?: number }[];
   } {
@@ -2359,14 +2584,19 @@ export class Assembler {
     return clone;
   }
 
+  /**
+   * Creates stage execution state.
+   * @param {AssemblyStageName} stage The stage.
+   * @returns {StageExecutionState} The result.
+   */
   createStageExecutionState(stage: AssemblyStageName): StageExecutionState {
     const descriptor = this.getStageDescriptor(stage);
-    const previousStage =
-      stage === "resolveLayout"
-        ? "collectDefinitions"
-        : stage === "emitProgram"
-          ? "resolveLayout"
-          : undefined;
+    let previousStage: AssemblyStageName | undefined;
+    if (stage === "resolveLayout") {
+      previousStage = "collectDefinitions";
+    } else if (stage === "emitProgram") {
+      previousStage = "resolveLayout";
+    }
     const seed = previousStage ? this.stageExecutionStates.get(previousStage) : undefined;
     const cursorSeed = seed?.cursor ?? {
       currentTargetAddress: this.currentTargetAddress,
@@ -2433,6 +2663,10 @@ export class Assembler {
     };
   }
 
+  /**
+   * Applies stage execution state.
+   * @param {StageExecutionState} stageState The stage state.
+   */
   applyStageExecutionState(stageState: StageExecutionState): void {
     this.currentTargetAddress = stageState.cursor.currentTargetAddress;
     this.currentTargetBaseAddress = stageState.cursor.currentTargetBaseAddress;
@@ -2459,6 +2693,10 @@ export class Assembler {
     this.activeFreespaceContentStartPc = stageState.writeState.activeFreespaceContentStartPc;
   }
 
+  /**
+   * Captures stage execution state.
+   * @param {StageExecutionState} stageState The stage state.
+   */
   captureStageExecutionState(stageState: StageExecutionState): void {
     stageState.cursor = {
       currentTargetAddress: this.currentTargetAddress,
@@ -2493,6 +2731,11 @@ export class Assembler {
     };
   }
 
+  /**
+   * Gets or create stage execution state.
+   * @param {AssemblyStageName} stage The stage.
+   * @returns {StageExecutionState} The result.
+   */
   getOrCreateStageExecutionState(stage: AssemblyStageName): StageExecutionState {
     const existing = this.stageExecutionStates.get(stage);
     if (existing) {
@@ -2503,9 +2746,16 @@ export class Assembler {
     return created;
   }
 
+  /**
+   * Builds program model.
+   * @param {string} source The source.
+   * @param {string} [sourceFile] The source file.
+   * @param {number} [startLine] The start line.
+   * @returns {ProgramModel} The result.
+   */
   buildProgramModel(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
     return measureInternalPhase("buildProgramModel", () => {
-      const program = this.frontEndService.buildProgramModel(source, sourceFile, startLine);
+      const program = this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
       return {
         sourceFile: program.sourceFile,
         startLine: program.startLine,
@@ -2514,6 +2764,12 @@ export class Assembler {
     });
   }
 
+  /**
+   * Runs stage.
+   * @param {AssemblyStageName} stage The stage.
+   * @param {ProgramModel} program The program.
+   * @returns {StageExecutionState} The result.
+   */
   runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState {
     return measureInternalPhase(stage, () => {
       if (stage === "collectDefinitions") {
@@ -2526,19 +2782,32 @@ export class Assembler {
       this.setCurrentFile(program.sourceFile);
       this.activateStage(stage);
       const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
-      this.executeLoweredNodeStream(loweredProgram.nodes);
-      this.finishPass();
+      measureInternalPhase("executeProgram", () =>
+        this.executeLoweredNodeStream(loweredProgram.nodes),
+      );
+      measureInternalPhase("finishPass", () => this.finishPass());
       this.captureStageExecutionState(stageState);
       return stageState;
     });
   }
 
+  /**
+   * Handles assemble program.
+   * @param {ProgramModel} program The program.
+   */
   assembleProgram(program: ProgramModel): void {
     this.runStage("collectDefinitions", program);
     this.runStage("resolveLayout", program);
     this.runStage("emitProgram", program);
   }
 
+  /**
+   * Handles assemble source.
+   * @param {string} source The source.
+   * @param {string} [sourceFile] The source file.
+   * @param {number} [startLine] The start line.
+   * @returns {ProgramModel} The result.
+   */
   assembleSource(source: string, sourceFile = this.currentFile, startLine = 0): ProgramModel {
     const program = this.buildProgramModel(source, sourceFile, startLine);
     this.assembleProgram(program);
@@ -2662,6 +2931,11 @@ export class Assembler {
     }
   }
 
+  /**
+   * Resolves for loop bounds.
+   * @param {LoweredLoopNode} forBlock The for block.
+   * @returns {{ variable?: string; start?: number; end?: number; }} The result.
+   */
   resolveForLoopBounds(forBlock: LoweredLoopNode): {
     variable?: string;
     start?: number;
@@ -2688,6 +2962,11 @@ export class Assembler {
     return { variable, start, end };
   }
 
+  /**
+   * Executes for loop iterations.
+   * @param {LoweredLoopNode} forBlock The for block.
+   * @param {() => void} executeBody The execute body.
+   */
   executeForLoopIterations(forBlock: LoweredLoopNode, executeBody: () => void): void {
     const { variable, start, end } = this.resolveForLoopBounds(forBlock);
 
@@ -2717,6 +2996,10 @@ export class Assembler {
     }
   }
 
+  /**
+   * Executes lowered loop.
+   * @param {LoweredLoopNode} loopBlock The loop block.
+   */
   executeLoweredLoop(loopBlock: LoweredLoopNode): void {
     debug("executeLoweredLoop", loopBlock);
     if (loopBlock.loopType === "for") {
@@ -2726,11 +3009,22 @@ export class Assembler {
     }
   }
 
+  /**
+   * Executes lowered for loop.
+   * @param {LoweredLoopNode} forBlock The for block.
+   */
   executeLoweredForLoop(forBlock: LoweredLoopNode): void {
     debug("executeLoweredForLoop", forBlock);
     this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
   }
 
+  /**
+   * Executes while loop commands.
+   * @param {LoweredLoopNode} whileBlock The while block.
+   * @param {TCommand[]} commands The commands.
+   * @param {(command: TCommand) => string | null} getDefineTarget The get define target.
+   * @param {(command: TCommand) => void} executeCommand The execute command.
+   */
   executeWhileLoopCommands<TCommand>(
     whileBlock: LoweredLoopNode,
     commands: TCommand[],
@@ -2781,6 +3075,10 @@ export class Assembler {
     }
   }
 
+  /**
+   * Executes lowered while loop.
+   * @param {LoweredLoopNode} whileBlock The while block.
+   */
   executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void {
     debug("executeLoweredWhileLoop", whileBlock);
     this.executeWhileLoopCommands(
@@ -2794,26 +3092,11 @@ export class Assembler {
     );
   }
 
-  createLoopCommandNode(
-    command: string,
-    sourceFile = this.currentFile,
-    sourceLine = this.currentLine,
-  ): NormalizedCommand {
-    return this.frontEndService.createLoopCommandNode(command, sourceFile, sourceLine);
-  }
-
-  shouldEndifCloseInnermostWhile(
-    loopType?: "for" | "while",
-    loopStartLine?: number,
-    ifStartLine?: number,
-  ): boolean {
-    return shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine);
-  }
-
-  lowerNode(command: NormalizedCommand): LoweredCommand {
-    return this.commandLoweringService.lowerCommand(command);
-  }
-
+  /**
+   * Gets lowered node span.
+   * @param {LoweredExecutableNode} node The node.
+   * @returns {SourceSpan | undefined} The result.
+   */
   getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined {
     if (node.kind === "command") {
       return node.command.source.normalizedSpan;
@@ -2850,10 +3133,10 @@ export class Assembler {
     }
   }
 
-  executeNodeStream(nodes: RuntimeNode[]): void {
-    this.lowerAndExecuteRuntimeNodes(nodes);
-  }
-
+  /**
+   * Executes lowered node with recovery.
+   * @param {LoweredExecutableNode} node The node.
+   */
   executeLoweredNodeWithRecovery(node: LoweredExecutableNode): void {
     this.executeWithAnalysisRecovery(
       node,
@@ -2862,6 +3145,10 @@ export class Assembler {
     );
   }
 
+  /**
+   * Executes lowered node.
+   * @param {LoweredExecutableNode} node The node.
+   */
   executeLoweredNode(node: LoweredExecutableNode): void {
     const sourceCommand =
       node.kind === "loop" || node.kind === "conditional" ? node.header : node.command;
@@ -2888,13 +3175,19 @@ export class Assembler {
     }
 
     if (node.kind === "conditional") {
-      this.executeLoweredConditionalNode(node);
+      this.executeConditionalBranches(node.branches, (commands) =>
+        this.executeLoweredNodeStream(commands),
+      );
       return;
     }
 
     this.dispatchLoweredNode(node);
   }
 
+  /**
+   * Executes lowered node stream.
+   * @param {LoweredExecutableNode[]} nodes The nodes.
+   */
   executeLoweredNodeStream(nodes: LoweredExecutableNode[]): void {
     for (const node of nodes) {
       this.executeLoweredNodeWithRecovery(node);
@@ -2907,12 +3200,17 @@ export class Assembler {
    * finished typed roots stranded until the next top-level line arrives.
    */
   flushCompletedIncrementalNodes(): void {
-    const ready = this.frontEndService.drainCompletedRoots(this.incrementalProgramParseState);
+    const ready = this.programModelBuilder.drainCompletedRoots(this.incrementalProgramParseState);
     if (ready.length > 0) {
-      this.executeNodeStream(ready);
+      this.lowerAndExecuteRuntimeNodes(ready);
     }
   }
 
+  /**
+   * Executes conditional branches.
+   * @param {Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[]; }>} branches The branches.
+   * @param {(commands: TCommand[]) => void} executeCommands The execute commands.
+   */
   executeConditionalBranches<TCommand>(
     branches: Array<{
       kind: "if" | "elseif" | "else";
@@ -2945,28 +3243,41 @@ export class Assembler {
     }
   }
 
-  executeLoweredConditionalNode(node: LoweredConditionalNode): void {
-    this.executeConditionalBranches(node.branches, (commands) =>
-      this.executeLoweredNodeStream(commands),
-    );
-  }
-
+  /**
+   * Parses command stream to nodes.
+   * @param {string[]} commands The commands.
+   * @param {string} [sourceFile] The source file.
+   * @param {number} [startLine] The start line.
+   * @returns {RuntimeNode[]} The result.
+   */
   parseCommandStreamToNodes(
     commands: string[],
     sourceFile = this.currentFile,
     startLine = this.currentLine,
   ): RuntimeNode[] {
-    return this.frontEndService.parseCommandStreamToNodes(commands, sourceFile, startLine);
+    return this.programModelBuilder.parseCommandStreamToNodes(commands, sourceFile, startLine);
   }
 
+  /**
+   * Gets or build pass program.
+   * @param {string[]} commands The commands.
+   * @param {string} [sourceFile] The source file.
+   * @param {number} [startLine] The start line.
+   * @returns {RuntimeNode[]} The result.
+   */
   getOrBuildPassProgram(
     commands: string[],
     sourceFile = this.currentFile,
     startLine = this.currentLine,
   ): RuntimeNode[] {
-    return this.frontEndService.getOrBuildPassProgram(commands, sourceFile, startLine);
+    return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine);
   }
 
+  /**
+   * Gets macro definition node.
+   * @param {string} name The name.
+   * @returns {MacroDefinitionNode | undefined} The result.
+   */
   getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined {
     const macro = this.macros.get(name);
     if (!macro) {

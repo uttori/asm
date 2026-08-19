@@ -33,10 +33,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
     return superFxCatalog;
   }
 
-  encode(words: string[]): boolean {
-    return this.asblock_superfx(words);
-  }
-
+  /**
+   * Estimates instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {number} The result.
+   */
   estimateInstruction(instruction: LoweredInstruction): number {
     const loweredOperands = instruction.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
@@ -47,6 +48,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
     );
   }
 
+  /**
+   * Encodes instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {boolean} The result.
+   */
   encodeInstruction(instruction: LoweredInstruction): boolean {
     const loweredOperands = instruction.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
@@ -57,6 +63,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
     );
   }
 
+  /**
+   * Estimates size.
+   * @param {string[]} words The words.
+   * @returns {number} The result.
+   */
   estimateSize(words: string[]): number {
     if (words.length === 0) {
       return 0;
@@ -64,6 +75,14 @@ export class ArchSuperFX implements ArchitectureEncoder {
     return this.estimateResolvedInstruction(words[0], words.slice(1).join(" "));
   }
 
+  /**
+   * Estimates resolved instruction.
+   * @param {string} mnemonic The mnemonic.
+   * @param {string} operandText The operand text.
+   * @param {LoweredOperand} [loweredOperand] The lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
+   * @returns {number} The result.
+   */
   estimateResolvedInstruction(
     mnemonic: string,
     operandText: string,
@@ -96,7 +115,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @param {string[]} words The tokenized instruction.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
-  public asblock_superfx(words: string[]): boolean {
+  public encode(words: string[]): boolean {
     debug("asblock_superfx", words);
     if (words.length === 0) {
       return false;
@@ -112,6 +131,17 @@ export class ArchSuperFX implements ArchitectureEncoder {
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
 
+  /** Legacy API alias for {@link encode}. */
+  readonly asblock_superfx = this.encode.bind(this);
+
+  /**
+   * Encodes resolved instruction.
+   * @param {string} mnemonic The mnemonic.
+   * @param {string[]} operands The operands.
+   * @param {LoweredOperand} [loweredOperand] The lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
+   * @returns {boolean} The result.
+   */
   encodeResolvedInstruction(
     mnemonic: string,
     operands: string[],
@@ -718,6 +748,13 @@ export class ArchSuperFX implements ArchitectureEncoder {
     return false;
   }
 
+  /**
+   * Resolves register.
+   * @param {string} str The str.
+   * @param {LoweredOperand | undefined} lowered The lowered.
+   * @param {"r" | "parr" | "hash"} type The type.
+   * @returns {number | null} The result.
+   */
   resolveRegister(
     str: string,
     lowered: LoweredOperand | undefined,

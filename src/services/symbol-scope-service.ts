@@ -1,20 +1,11 @@
+import type { StructDefinition } from "../assembler.js";
+
 type LabelEntry = {
   value: number;
   isStatic: boolean;
   isMacroLabel?: boolean;
   macroInstance?: number;
   modifiesHierarchy?: boolean;
-};
-
-type StructDefinition = {
-  name: string;
-  base: number;
-  offset: number;
-  size: number;
-  labels: Map<string, number>;
-  align?: number;
-  parent?: string;
-  extensionSize?: number;
 };
 
 export interface SymbolScopeHost {
@@ -41,10 +32,11 @@ export interface SymbolScopeHost {
 export class SymbolScopeService {
   constructor(readonly host: SymbolScopeHost) {}
 
-  isMissingLabelError(error: unknown): boolean {
-    return error instanceof Error && error.message.startsWith("Error: Label '");
-  }
-
+  /**
+   * Finds nearest hierarchy ancestor.
+   * @param {string} label The label.
+   * @returns {string | null} The result.
+   */
   findNearestHierarchyAncestor(label: string): string | null {
     for (let i = label.length - 1; i >= 0; i--) {
       if (label[i] !== "_") {
@@ -63,6 +55,11 @@ export class SymbolScopeService {
     return null;
   }
 
+  /**
+   * Gets hierarchy chain.
+   * @param {string} label The label.
+   * @returns {string[]} The result.
+   */
   getHierarchyChain(label: string): string[] {
     const rootLabel = this.host.currentGlobalParentLabel;
     const rootApplies =
@@ -88,6 +85,11 @@ export class SymbolScopeService {
     return chain;
   }
 
+  /**
+   * Gets ancestor prefixes.
+   * @param {string} label The label.
+   * @returns {string[]} The result.
+   */
   getAncestorPrefixes(label: string): string[] {
     const prefixes: string[] = [];
     for (let i = label.length - 1; i >= 0; i--) {
@@ -102,6 +104,11 @@ export class SymbolScopeService {
     return prefixes;
   }
 
+  /**
+   * Gets scoped parent label.
+   * @param {number} dotCount The dot count.
+   * @returns {string} The result.
+   */
   getScopedParentLabel(dotCount: number): string {
     const current = this.host.currentParentLabel;
     if (dotCount === 1) {
@@ -509,6 +516,23 @@ export class SymbolScopeService {
    * @returns {number} The value of the label.
    */
   getLabelValue(label: string, requireStatic: boolean): number {
+    const value = this.tryGetLabelValue(label, requireStatic);
+    if (value !== undefined) {
+      return value;
+    }
+    if (this.host.isDefinitionCollectionStage) {
+      return 0;
+    }
+    throw new Error(`Error: Label '${label}' not found.`);
+  }
+
+  /**
+   * Tries to get a scoped label value without allocating an Error for a miss.
+   * @param {string} label The label to get the value of.
+   * @param {boolean} requireStatic Whether the label must be static.
+   * @returns {number | undefined} The value, or undefined when not found.
+   */
+  tryGetLabelValue(label: string, requireStatic: boolean): number | undefined {
     if (label.startsWith(".") && this.host.currentParentLabel) {
       let dotCount = 0;
       while (label[dotCount] === ".") {
@@ -561,9 +585,10 @@ export class SymbolScopeService {
       }
 
       for (const candidate of candidates) {
-        try {
-          return this.getLabelValueDirect(candidate, requireStatic);
-        } catch {}
+        const value = this.tryGetLabelValueDirect(candidate, requireStatic);
+        if (value !== undefined) {
+          return value;
+        }
       }
     }
 
@@ -614,7 +639,7 @@ export class SymbolScopeService {
     }
 
     if (label.includes(":") || label.includes("_")) {
-      return this.getLabelValueDirect(label, requireStatic);
+      return this.tryGetLabelValueDirect(label, requireStatic);
     }
 
     if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0) {
@@ -623,31 +648,27 @@ export class SymbolScopeService {
         const namespacePrefix = namespacePath.join("_");
         const fullLabel = namespacePrefix ? `${namespacePrefix}_${label}` : label;
 
-        try {
-          return this.getLabelValueDirect(fullLabel, requireStatic);
-        } catch (error) {
-          if (!this.isMissingLabelError(error)) {
-            throw error;
-          }
-          continue;
+        const value = this.tryGetLabelValueDirect(fullLabel, requireStatic);
+        if (value !== undefined) {
+          return value;
         }
       }
     }
 
     if (this.host.currentNamespace) {
-      try {
-        return this.getLabelValueDirect(`${this.host.currentNamespace}_${label}`, requireStatic);
-      } catch (error) {
-        if (!this.isMissingLabelError(error)) {
-          throw error;
-        }
-        // Object namespaces frequently reference shared globals such as
-        // `difficulty`. If the namespaced symbol is absent, fall back to the
-        // unqualified global label before reporting an error.
+      const value = this.tryGetLabelValueDirect(
+        `${this.host.currentNamespace}_${label}`,
+        requireStatic,
+      );
+      if (value !== undefined) {
+        return value;
       }
+      // Object namespaces frequently reference shared globals such as
+      // `difficulty`. If the namespaced symbol is absent, fall back to the
+      // unqualified global label before reporting an error.
     }
 
-    return this.getLabelValueDirect(label, requireStatic);
+    return this.tryGetLabelValueDirect(label, requireStatic);
   }
 
   /**
@@ -657,6 +678,23 @@ export class SymbolScopeService {
    * @returns {number} The value of the label.
    */
   getLabelValueDirect(label: string, requireStatic: boolean): number {
+    const value = this.tryGetLabelValueDirect(label, requireStatic);
+    if (value !== undefined) {
+      return value;
+    }
+    if (this.host.isDefinitionCollectionStage) {
+      return 0;
+    }
+    throw new Error(`Error: Label '${label}' not found.`);
+  }
+
+  /**
+   * Tries a direct label lookup without allocating an Error for ordinary misses.
+   * @param {string} label The label to get the value of.
+   * @param {boolean} requireStatic Whether the label must be static.
+   * @returns {number | undefined} The value, or undefined when not found.
+   */
+  tryGetLabelValueDirect(label: string, requireStatic: boolean): number | undefined {
     if (label.includes("_") && !label.includes(":")) {
       const parts = label.split("_");
       if (parts.length === 2) {
@@ -679,23 +717,12 @@ export class SymbolScopeService {
           }
           return localEntry.value;
         }
-
-        if (this.host.isDefinitionCollectionStage) {
-          return 0;
-        }
       }
-    }
-
-    if (!this.host.labelTable.has(label)) {
-      if (this.host.isDefinitionCollectionStage) {
-        return 0;
-      }
-      throw new Error(`Error: Label '${label}' not found.`);
     }
 
     const entry = this.host.labelTable.get(label);
     if (!entry) {
-      throw new Error(`Error: Label '${label}' not found.`);
+      return undefined;
     }
     if (requireStatic && !entry.isStatic) {
       throw new Error(`Error: Non-static label '${label}' used in conditional.`);
@@ -722,7 +749,7 @@ export class SymbolScopeService {
       if (baseOnly) {
         return directDef.size;
       }
-      return !directDef.parent ? directDef.size + (directDef.extensionSize || 0) : directDef.size;
+      return !directDef.parent ? directDef.size + directDef.extensionSize : directDef.size;
     }
 
     if (workingIdentifier.includes(".")) {
@@ -754,7 +781,7 @@ export class SymbolScopeService {
       return def.size;
     }
 
-    return !def.parent ? def.size + (def.extensionSize || 0) : def.size;
+    return !def.parent ? def.size + def.extensionSize : def.size;
   }
 
   /**

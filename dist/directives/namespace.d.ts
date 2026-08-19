@@ -19,6 +19,6 @@ export declare const handlePullNamespace: ({ session }: NamespaceDirectiveContex
  * @param {NamespaceDirectiveContext} ctx The directive context.
  * @param {string[]} words The words of the namespace command.
  */
-export declare const handleNamespace: ({ session }: NamespaceDirectiveContext, words: string[]) => void;
+export declare const handleNamespace: ({ session }: NamespaceDirectiveContext, words: readonly string[]) => void;
 export declare const registerNamespaceDirectives: (registry: DirectiveRegistry, context: NamespaceDirectiveContext) => void;
 //# sourceMappingURL=namespace.d.ts.map

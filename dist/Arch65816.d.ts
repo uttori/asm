@@ -7,17 +7,49 @@ export declare class Arch65816 implements ArchitectureEncoder {
      * @returns {InstructionDescriptor[]} The instruction descriptors.
      */
     getInstructionCatalog(): InstructionDescriptor[];
-    encode(words: string[]): boolean;
+    /**
+     * Estimates instruction.
+     * @param {LoweredInstruction} instruction The instruction.
+     * @returns {number} The result.
+     */
     estimateInstruction(instruction: LoweredInstruction): number;
+    /**
+     * Encodes instruction.
+     * @param {LoweredInstruction} instruction The instruction.
+     * @returns {boolean} The result.
+     */
     encodeInstruction(instruction: LoweredInstruction): boolean;
+    /**
+     * Estimates size.
+     * @param {string[]} words The words.
+     * @returns {number} The result.
+     */
     estimateSize(words: string[]): number;
+    /**
+     * Estimates resolved instruction.
+     * @param {string} mnemonic The mnemonic.
+     * @param {string} rawOperand The raw operand.
+     * @param {string} operand The operand.
+     * @param {number} operandLength The operand length.
+     * @returns {number} The result.
+     */
     estimateResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): number;
     /**
      * Processes a 65816 assembly instruction.
      * @param {string[]} words The tokenized instruction.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
-    asblock_65816(words: string[]): boolean;
+    encode(words: string[]): boolean;
+    /** Legacy API alias for {@link encode}. */
+    readonly asblock_65816: (words: string[]) => boolean;
+    /**
+     * Encodes resolved instruction.
+     * @param {string} mnemonic The mnemonic.
+     * @param {string} rawOperand The raw operand.
+     * @param {string} operand The operand.
+     * @param {number} operandLength The operand length.
+     * @returns {boolean} The result.
+     */
     encodeResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): boolean;
     /**
      * Handles ORA, SBC, STA, LDA, EOR, CMP, AND, ADC with all valid addressing modes.

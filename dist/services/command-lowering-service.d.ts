@@ -2,12 +2,12 @@ import type { LoweredInstruction } from "../architecture-types.js";
 import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
 import type { DirectiveRegistry } from "../directives/registry.js";
 import type { ArchitectureDefinition } from "../architecture-registry.js";
-import { type NormalizedCommand } from "../ir/normalized-command.js";
+import type { NormalizedCommand } from "../ir/normalized-command.js";
 import type { ProgramModel } from "./program-model-builder.js";
 export type LoweredDirective = {
     kind: "directive";
     keyword: string;
-    words: string[];
+    words: readonly string[];
     source: NormalizedCommand["source"];
     command?: NormalizedCommand;
 };
@@ -63,8 +63,9 @@ export declare class CommandLoweringService {
     lowerCommand(command: NormalizedCommand): LoweredCommand;
     /**
      * Lowers an executable tree node into a durable execution-layer node.
-     * Commands that still need legacy preprocessing are preserved as detached
-     * command snapshots so the cached program tree never gets mutated at runtime.
+     * Commands retain their immutable front-end snapshots. Legacy preprocessing
+     * creates its mutable execution copy at dispatch time, avoiding a redundant
+     * clone for every stage-owned lowered node.
      * @param {ExecutableNode} node The node to lower.
      * @returns {LoweredExecutableNode} The lowered node.
      */
@@ -77,7 +78,8 @@ export declare class CommandLoweringService {
     lowerProgram(program: ProgramModel): LoweredProgram;
     /**
      * Commands that still require legacy preprocess / control handlers must remain
-     * as detached command snapshots rather than direct lowered directives.
+     * as command snapshots rather than direct lowered directives. Dispatch clones
+     * these snapshots before running the mutable legacy preprocessing pipeline.
      * @param {NormalizedCommand} command The command to inspect.
      * @returns {boolean} True when the command should stay in passthrough form.
      */

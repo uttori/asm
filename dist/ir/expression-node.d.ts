@@ -14,7 +14,7 @@ export type LiteralExpressionNode = ExpressionNodeBase & {
 export type StringExpressionNode = ExpressionNodeBase & {
     type: "string";
     value: string;
-    quote: "\"" | "'";
+    quote: '"' | "'";
 };
 export type DefineReferenceExpressionNode = ExpressionNodeBase & {
     type: "defineReference";

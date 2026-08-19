@@ -26,12 +26,18 @@ export declare class StructEngine {
      * Handles a struct command.
      * @param {string[]} words The words of the command.
      */
-    handleStruct(words: string[]): void;
+    handleStruct(words: readonly string[]): void;
     /**
      * Handles an endstruct command.
      * @param {string[]} words The words of the command.
      */
-    handleEndStruct(words: string[]): void;
+    handleEndStruct(words: readonly string[]): void;
+    /**
+     * Checks whether a reference starts with a known struct name.
+     * @param {string} labelRef The reference to inspect.
+     * @returns {boolean} Whether the reference belongs to a known struct.
+     */
+    hasStructReference(labelRef: string): boolean;
     /**
      * Resolves a struct label.
      * @param {string} labelRef The label to resolve.

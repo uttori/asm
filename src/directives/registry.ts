@@ -29,7 +29,11 @@ import type {
   TableDirectiveContext,
 } from "./types.js";
 
-type BoundDirectiveHandler = (words: string[], raw: string, command?: NormalizedCommand) => void;
+type BoundDirectiveHandler = (
+  words: readonly string[],
+  raw: string,
+  command?: NormalizedCommand,
+) => void;
 
 export interface DirectiveRegistryContexts {
   data: DataDirectiveContext;
@@ -56,6 +60,12 @@ export interface DirectiveRegistryContexts {
 export class DirectiveRegistry {
   readonly handlers = new Map<string, BoundDirectiveHandler>();
 
+  /**
+   * Registers the value.
+   * @param {string | string[]} keyword The keyword.
+   * @param {Context} context The context.
+   * @param {NarrowDirectiveHandler<Context>} handler The handler.
+   */
   register<Context>(
     keyword: string | string[],
     context: Context,
@@ -67,11 +77,29 @@ export class DirectiveRegistry {
     }
   }
 
+  /**
+   * Checks whether it has the value.
+   * @param {string} keyword The keyword.
+   * @returns {boolean} The result.
+   */
   has(keyword: string): boolean {
     return this.handlers.has(keyword);
   }
 
-  dispatch(keyword: string, words: string[], raw: string, command?: NormalizedCommand): boolean {
+  /**
+   * Dispatches the value.
+   * @param {string} keyword The keyword.
+   * @param {readonly string[]} words The words.
+   * @param {string} raw The raw.
+   * @param {NormalizedCommand} [command] The command.
+   * @returns {boolean} The result.
+   */
+  dispatch(
+    keyword: string,
+    words: readonly string[],
+    raw: string,
+    command?: NormalizedCommand,
+  ): boolean {
     const handler = this.handlers.get(keyword);
     if (!handler) {
       return false;
@@ -79,10 +107,6 @@ export class DirectiveRegistry {
 
     handler(words, raw, command);
     return true;
-  }
-
-  dispatchCommand(command: NormalizedCommand): boolean {
-    return this.dispatch(command.keyword, command.words, command.command, command);
   }
 }
 

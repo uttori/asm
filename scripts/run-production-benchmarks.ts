@@ -1,10 +1,15 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { spawnSync, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
+import { fileURLToPath } from "node:url";
 import { Assembler } from "../src/assembler.js";
-import { runWithInternalInstrumentation } from "../src/internal-instrumentation.js";
+import {
+  runWithInternalInstrumentation,
+  type InternalInstrumentationSnapshot,
+} from "../src/internal-instrumentation.js";
 import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
 
 type Fixture = {
@@ -25,6 +30,15 @@ type BenchmarkOptions = {
   repetitions: number;
   jsonPath?: string;
   updateGoldens: boolean;
+  fixtureIds: string[];
+  isolate: boolean;
+  instrumentation: boolean;
+  maxMedianMs?: number;
+};
+
+type FixtureRun = {
+  sample: BenchmarkSample;
+  actual: Golden;
 };
 
 const root = process.cwd();
@@ -66,6 +80,7 @@ const fixtures: Fixture[] = [
     checksumMode: "simple",
   },
 ];
+const fixtureById = new Map(fixtures.map((fixture) => [fixture.id, fixture]));
 
 function sha256(data: Uint8Array): string {
   return createHash("sha256").update(data).digest("hex");
@@ -85,6 +100,9 @@ function parseOptions(args: string[]): BenchmarkOptions {
     warmups: fast ? 0 : 1,
     repetitions: fast ? 1 : 5,
     updateGoldens: args.includes("--update-goldens"),
+    fixtureIds: [],
+    isolate: args.includes("--isolate"),
+    instrumentation: !args.includes("--no-instrumentation"),
   };
   for (let index = 0; index < args.length; index++) {
     const argument = args[index];
@@ -97,39 +115,128 @@ function parseOptions(args: string[]): BenchmarkOptions {
       if (!options.jsonPath) {
         throw new Error("--json requires an output path.");
       }
+    } else if (argument === "--fixture") {
+      const fixtureIds = args[++index]?.split(",").filter(Boolean);
+      if (!fixtureIds?.length) {
+        throw new Error("--fixture requires a fixture id or comma-separated fixture ids.");
+      }
+      options.fixtureIds.push(...fixtureIds);
+    } else if (argument === "--max-median-ms") {
+      options.maxMedianMs = parseNonNegativeInteger(args[++index], argument);
     }
   }
   if (options.repetitions === 0) {
     throw new Error("--repetitions must be at least one.");
   }
+  for (const fixtureId of options.fixtureIds) {
+    if (!fixtureById.has(fixtureId)) {
+      throw new Error(
+        `Unknown fixture '${fixtureId}'. Available fixtures: ${fixtures.map((fixture) => fixture.id).join(", ")}.`,
+      );
+    }
+  }
   return options;
 }
 
-function runFixture(fixture: Fixture): { sample: BenchmarkSample; output: Uint8Array } {
+function emptyMetrics(): InternalInstrumentationSnapshot {
+  return {
+    counters: {
+      passProgramCacheHits: 0,
+      passProgramCacheMisses: 0,
+      passProgramCachePeakSize: 0,
+      normalizedCommandClones: 0,
+      actualReparses: 0,
+      includeReads: 0,
+      includeBytesRead: 0,
+      macroExpansions: 0,
+      macroLinesProcessed: 0,
+      passthroughDispatches: 0,
+      loweredProgramBuilds: 0,
+      runtimeNodesLowered: 0,
+      referenceCollections: 0,
+      addressMappings: 0,
+    },
+    phasesMs: {},
+    peakRssBytes: 0,
+    peakHeapUsedBytes: 0,
+  };
+}
+
+function assembleFixture(fixture: Fixture): Uint8Array {
   const sourcePath = path.join(root, fixture.source);
   const targetPath = path.join(root, fixture.target);
   const source = fs.readFileSync(sourcePath, "utf8");
   const target = new Uint8Array(fs.readFileSync(targetPath));
+  const assembler = new Assembler(target, { collectSourceMetadata: false });
+  assembler.setChecksumMode(fixture.checksumMode);
+  assembler.setIncludePaths(["./", path.dirname(sourcePath)]);
+  assembler.setCurrentFile(sourcePath);
+  const program = assembler.buildProgramModel(source, sourcePath, 0);
+  assembler.assembleProgram(program);
+  return assembler.getBinaryOutput();
+}
+
+function runFixture(fixture: Fixture, instrumentation: boolean): FixtureRun {
   const started = performance.now();
-  const instrumented = runWithInternalInstrumentation(() => {
-    const assembler = new Assembler(target);
-    assembler.setChecksumMode(fixture.checksumMode);
-    assembler.setIncludePaths(["./", path.dirname(sourcePath)]);
-    assembler.setCurrentFile(sourcePath);
-    const program = assembler.buildProgramModel(source, sourcePath, 0);
-    assembler.assembleProgram(program);
-    return assembler.getBinaryOutput();
-  });
+  const instrumented = instrumentation
+    ? runWithInternalInstrumentation(() => assembleFixture(fixture))
+    : { value: assembleFixture(fixture), metrics: emptyMetrics() };
+  const elapsed = performance.now() - started;
+  if (!instrumentation) {
+    const memory = process.memoryUsage();
+    instrumented.metrics.peakRssBytes = memory.rss;
+    instrumented.metrics.peakHeapUsedBytes = memory.heapUsed;
+  }
   return {
-    output: instrumented.value,
+    actual: {
+      bytes: instrumented.value.length,
+      sha256: sha256(instrumented.value),
+    },
     sample: {
-      wallMs: performance.now() - started,
+      wallMs: elapsed,
       peakRssBytes: instrumented.metrics.peakRssBytes,
       peakHeapUsedBytes: instrumented.metrics.peakHeapUsedBytes,
       phasesMs: instrumented.metrics.phasesMs,
       counters: instrumented.metrics.counters,
     },
   };
+}
+
+function runFixtureIsolated(fixture: Fixture, instrumentation: boolean): FixtureRun {
+  const scriptPath = fileURLToPath(import.meta.url);
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      scriptPath,
+      "--internal-worker",
+      fixture.id,
+      `--instrumentation=${instrumentation ? "true" : "false"}`,
+    ],
+    {
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: 10 * 1024 * 1024,
+    },
+  );
+  if (child.error) {
+    throw child.error;
+  }
+  if (child.status !== 0) {
+    throw new Error(
+      `Isolated benchmark for ${fixture.id} failed with status ${String(child.status)}: ${child.stderr.trim()}`,
+    );
+  }
+  return JSON.parse(child.stdout) as FixtureRun;
+}
+
+function gitRevision(): string {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  } catch {
+    return "unknown";
+  }
 }
 
 function readGoldens(): Record<string, Golden> {
@@ -143,55 +250,92 @@ function formatMilliseconds(value: number): string {
 function main(): void {
   const options = parseOptions(process.argv.slice(2));
   const goldens = readGoldens();
+  const selectedFixtures =
+    options.fixtureIds.length > 0
+      ? options.fixtureIds.map((fixtureId) => fixtureById.get(fixtureId) as Fixture)
+      : fixtures;
   const updatedGoldens: Record<string, Golden> = {};
   const benchmarkResults = [];
   let validationFailed = false;
 
-  for (const fixture of fixtures) {
+  for (const fixture of selectedFixtures) {
     for (let warmup = 0; warmup < options.warmups; warmup++) {
-      runFixture(fixture);
+      console.error(
+        `[${fixture.id}] warmup ${warmup + 1}/${options.warmups} (${options.isolate ? "isolated" : "in-process"})...`,
+      );
+      const started = performance.now();
+      if (options.isolate) {
+        runFixtureIsolated(fixture, options.instrumentation);
+      } else {
+        runFixture(fixture, options.instrumentation);
+      }
+      console.error(
+        `[${fixture.id}] warmup completed in ${formatMilliseconds(performance.now() - started)}.`,
+      );
     }
     const samples: BenchmarkSample[] = [];
     let actual: Golden | undefined;
     for (let repetition = 0; repetition < options.repetitions; repetition++) {
-      const run = runFixture(fixture);
+      console.error(
+        `[${fixture.id}] measured ${repetition + 1}/${options.repetitions} (${options.isolate ? "isolated" : "in-process"})...`,
+      );
+      const run = options.isolate
+        ? runFixtureIsolated(fixture, options.instrumentation)
+        : runFixture(fixture, options.instrumentation);
       samples.push(run.sample);
-      actual = { bytes: run.output.length, sha256: sha256(run.output) };
+      actual = run.actual;
+      console.error(
+        `[${fixture.id}] measured ${repetition + 1}/${options.repetitions} completed in ${formatMilliseconds(run.sample.wallMs)}.`,
+      );
     }
     if (!actual) {
       throw new Error(`No measured output produced for ${fixture.id}.`);
     }
     updatedGoldens[fixture.id] = actual;
     const expected = goldens[fixture.id];
-    const valid = options.updateGoldens || (
-      expected !== undefined &&
-      expected.bytes === actual.bytes &&
-      expected.sha256 === actual.sha256
-    );
+    const valid =
+      options.updateGoldens ||
+      (expected !== undefined &&
+        expected.bytes === actual.bytes &&
+        expected.sha256 === actual.sha256);
     validationFailed ||= !valid;
+    const aggregate = aggregateSamples(samples);
+    const performanceValid =
+      options.maxMedianMs === undefined || aggregate.wallMs.median <= options.maxMedianMs;
+    validationFailed ||= !performanceValid;
     benchmarkResults.push({
       id: fixture.id,
       category: fixture.category,
       source: fixture.source,
       validation: { valid, expected: expected ?? null, actual },
-      aggregate: aggregateSamples(samples),
+      performance: {
+        valid: performanceValid,
+        maxMedianMs: options.maxMedianMs ?? null,
+      },
+      aggregate,
       samples,
     });
   }
 
   if (options.updateGoldens) {
-    fs.writeFileSync(goldenPath, `${JSON.stringify(updatedGoldens, null, 2)}\n`);
+    fs.writeFileSync(goldenPath, `${JSON.stringify({ ...goldens, ...updatedGoldens }, null, 2)}\n`);
   }
 
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     configuration: {
       warmups: options.warmups,
       repetitions: options.repetitions,
-      instrumentation: true,
+      instrumentation: options.instrumentation,
+      memorySampling: options.instrumentation ? "phase-boundary" : "end-of-run",
+      processMode: options.isolate ? "isolated" : "in-process",
+      fixtureIds: selectedFixtures.map((fixture) => fixture.id),
+      maxMedianMs: options.maxMedianMs ?? null,
     },
     environment: {
+      gitRevision: gitRevision(),
       node: process.version,
+      execArgv: process.execArgv,
       platform: process.platform,
       arch: process.arch,
       osRelease: os.release(),
@@ -202,11 +346,14 @@ function main(): void {
     benchmarks: benchmarkResults,
   };
 
-  console.log(`Production benchmarks: ${options.warmups} warmup(s), ${options.repetitions} measured repetition(s)`);
+  console.log(
+    `Production benchmarks: ${options.warmups} warmup(s), ${options.repetitions} measured repetition(s)`,
+  );
+  const rssLabel = options.instrumentation ? "peak RSS" : "end RSS";
   for (const result of benchmarkResults) {
-    const status = result.validation.valid ? "PASS" : "FAIL";
+    const status = !result.validation.valid ? "FAIL" : result.performance.valid ? "PASS" : "SLOW";
     console.log(
-      `${result.id.padEnd(22)} ${status}  median ${formatMilliseconds(result.aggregate.wallMs.median).padStart(11)}  p95 ${formatMilliseconds(result.aggregate.wallMs.p95).padStart(11)}  peak RSS ${(result.aggregate.peakRssBytes / 1048576).toFixed(1)} MiB  heap ${(result.aggregate.peakHeapUsedBytes / 1048576).toFixed(1)} MiB`,
+      `${result.id.padEnd(22)} ${status}  median ${formatMilliseconds(result.aggregate.wallMs.median).padStart(11)}  MAD ${formatMilliseconds(result.aggregate.wallMs.medianAbsoluteDeviation).padStart(11)}  range ${formatMilliseconds(result.aggregate.wallMs.min)}–${formatMilliseconds(result.aggregate.wallMs.max)}  ${rssLabel} ${(result.aggregate.peakRssBytes / 1048576).toFixed(1)} MiB  heap ${(result.aggregate.peakHeapUsedBytes / 1048576).toFixed(1)} MiB`,
     );
   }
 
@@ -222,4 +369,21 @@ function main(): void {
   }
 }
 
-main();
+function runInternalWorker(args: string[]): boolean {
+  const workerIndex = args.indexOf("--internal-worker");
+  if (workerIndex < 0) {
+    return false;
+  }
+  const fixtureId = args[workerIndex + 1];
+  const fixture = fixtureId ? fixtureById.get(fixtureId) : undefined;
+  if (!fixture) {
+    throw new Error(`Unknown internal worker fixture '${String(fixtureId)}'.`);
+  }
+  const instrumentation = args.includes("--instrumentation=true");
+  process.stdout.write(JSON.stringify(runFixture(fixture, instrumentation)));
+  return true;
+}
+
+if (!runInternalWorker(process.argv.slice(2))) {
+  main();
+}

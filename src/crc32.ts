@@ -2,10 +2,13 @@
  * A utility class for computing CRC32 checksums.
  */
 export class CRC32 {
-  // Precomputed CRC32 table.
+  /** Precomputed CRC32 table. */
   static table: Uint32Array = CRC32.makeCRCTable();
 
-  // Builds the lookup table used for CRC32 computation.
+  /**
+   * Builds the lookup table used for CRC32 computation.
+   * @returns {Uint32Array} The result.
+   */
   static makeCRCTable(): Uint32Array {
     const table = new Uint32Array(256);
     for (let i = 0; i < 256; i++) {

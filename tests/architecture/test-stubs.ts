@@ -67,11 +67,18 @@ export const createEncoderTestHost = (): EncoderTestHost => {
   };
   const operandResolver = new OperandResolver({
     resolveDefines: (input) => input,
+    isStructReference: () => false,
     resolveStructLabel: () => {
       throw new Error("Not a test struct label");
     },
+    tryResolveLabel: (input) => {
+      try {
+        return parseNumber(input);
+      } catch {
+        return undefined;
+      }
+    },
     resolveLabel: (input) => parseNumber(input),
-    hasLabel: () => false,
     evaluateMath: (input) => parseNumber(typeof input === "string" ? input : renderExpressionNode(input)),
     shouldDeferExpressionEvaluation: () => !host.enforceResolvedLabels,
     getCurrentAddress: () => host.currentTargetAddress,

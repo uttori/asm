@@ -5,13 +5,14 @@ import { OperandResolver } from "../src/operand-resolver.js";
 
 const createResolver = (overrides: Partial<ConstructorParameters<typeof OperandResolver>[0]> = {}) => new OperandResolver({
   resolveDefines: input => input,
+  isStructReference: () => false,
   resolveStructLabel: () => {
     throw new Error("Struct not found");
   },
+  tryResolveLabel: () => undefined,
   resolveLabel: () => {
     throw new Error("Label not found");
   },
-  hasLabel: () => false,
   evaluateMath: () => 0,
   shouldDeferExpressionEvaluation: () => false,
   getCurrentAddress: () => 0,
@@ -100,7 +101,7 @@ test("isMathExpression - ignores plain operands", t => {
 
 test("tryResolveLabelInOperand - resolves immediate operands", t => {
   const resolver = createResolver({
-    resolveLabel: () => 0x1234,
+    tryResolveLabel: () => 0x1234,
   });
 
   t.is(resolver.tryResolveLabelInOperand("#test_label"), "#$1234");
@@ -110,7 +111,7 @@ test("tryResolveLabelInOperand - resolves immediate operands", t => {
 
 test("tryResolveLabelInOperand - resolves indirect operands", t => {
   const resolver = createResolver({
-    resolveLabel: () => 0x1234,
+    tryResolveLabel: () => 0x1234,
   });
 
   t.is(resolver.tryResolveLabelInOperand("[test_label]"), "[$1234]");
@@ -120,7 +121,7 @@ test("tryResolveLabelInOperand - resolves indirect operands", t => {
 
 test("tryResolveLabelInOperand - resolves indexed operands", t => {
   const resolver = createResolver({
-    resolveLabel: () => 0x1234,
+    tryResolveLabel: () => 0x1234,
   });
 
   t.is(resolver.tryResolveLabelInOperand("test_label,x"), "$1234,x");
@@ -129,7 +130,7 @@ test("tryResolveLabelInOperand - resolves indexed operands", t => {
 
 test("tryResolveLabelInOperand - resolves direct operands", t => {
   const resolver = createResolver({
-    resolveLabel: () => 0x1234,
+    tryResolveLabel: () => 0x1234,
   });
 
   t.is(resolver.tryResolveLabelInOperand("test_label"), "$1234");
@@ -146,19 +147,18 @@ test("tryResolveLabelInOperand - preserves unresolved operands", t => {
 
 test("tryResolveLabelInOperand - treats zero as resolved when label exists", t => {
   const resolver = createResolver({
-    resolveLabel: () => 0,
-    hasLabel: input => input === "zero_label",
+    tryResolveLabel: input => input === "zero_label" ? 0 : undefined,
   });
 
   t.is(resolver.tryResolveLabelInOperand("zero_label"), "$0");
 });
 
-test("tryResolveLabelInOperand - forwards direct lookups to resolveLabel", t => {
-  const resolveLabel = sinon.stub().returns(0x1234);
-  const resolver = createResolver({ resolveLabel });
+test("tryResolveLabelInOperand - forwards direct lookups to non-throwing label resolution", t => {
+  const tryResolveLabel = sinon.stub().returns(0x1234);
+  const resolver = createResolver({ tryResolveLabel });
 
   t.is(resolver.tryResolveLabelInOperand("test_label"), "$1234");
-  t.true(resolveLabel.calledWithExactly("test_label", false));
+  t.true(tryResolveLabel.calledWithExactly("test_label", false));
 });
 
 test("getnum - falls back to math for compound struct expressions", t => {
@@ -168,7 +168,7 @@ test("getnum - falls back to math for compound struct expressions", t => {
   const resolver = createResolver({ resolveStructLabel, resolveLabel, evaluateMath });
 
   t.is(resolver.getnum("obj_start+obj[19].base"), 0x0911);
-  t.true(resolveStructLabel.calledOnceWithExactly("obj_start+obj[19].base"));
+  t.true(resolveStructLabel.notCalled);
   t.true(resolveLabel.notCalled);
   t.true(evaluateMath.calledOnceWithExactly("obj_start+obj[19].base"));
 });
@@ -176,7 +176,11 @@ test("getnum - falls back to math for compound struct expressions", t => {
 test("getnum - resolves bare struct base labels before plain labels", t => {
   const resolveStructLabel = sinon.stub().withArgs("options").returns(0x1FD9);
   const resolveLabel = sinon.stub().throws(new Error("Label not found"));
-  const resolver = createResolver({ resolveStructLabel, resolveLabel });
+  const resolver = createResolver({
+    isStructReference: input => input === "options",
+    resolveStructLabel,
+    resolveLabel,
+  });
 
   t.is(resolver.getnum("options"), 0x1FD9);
   t.true(resolveStructLabel.calledOnceWithExactly("options"));
@@ -300,9 +304,9 @@ test("lowerOperand - keeps resolved 24-bit indexed X operands long", t => {
 });
 
 test("lowerOperand - shortens same-bank resolved indexed X operands", t => {
-  const resolveLabel = sinon.stub().withArgs("_048AD3", false).returns(0x048AD3);
+  const tryResolveLabel = sinon.stub().withArgs("_048AD3", false).returns(0x048AD3);
   const resolver = createResolver({
-    resolveLabel,
+    tryResolveLabel,
     getCurrentAddress: () => 0x048AFD,
   });
 

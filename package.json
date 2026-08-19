@@ -96,6 +96,8 @@
     "lint:fix": "oxlint ./src ./language-server/src ./editors/vscode/src --fix",
     "benchmark": "tsx scripts/run-production-benchmarks.ts",
     "benchmark:smoke": "tsx scripts/run-production-benchmarks.ts --fast",
+    "benchmark:chou": "tsx scripts/run-production-benchmarks.ts --fast --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
+    "benchmark:chou:stable": "tsx scripts/run-production-benchmarks.ts --warmups 0 --repetitions 3 --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
     "benchmark:typecheck": "tsc -p scripts/tsconfig.json --noEmit",
     "test": "NODE_ENV=test ava",
     "test:coverage": "NODE_ENV=test c8 ava",

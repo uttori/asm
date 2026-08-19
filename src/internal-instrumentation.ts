@@ -8,8 +8,14 @@ export type InternalInstrumentationSnapshot = {
     normalizedCommandClones: number;
     actualReparses: number;
     includeReads: number;
+    includeBytesRead: number;
     macroExpansions: number;
+    macroLinesProcessed: number;
     passthroughDispatches: number;
+    loweredProgramBuilds: number;
+    runtimeNodesLowered: number;
+    referenceCollections: number;
+    addressMappings: number;
   };
   phasesMs: Record<string, number>;
   peakRssBytes: number;
@@ -49,8 +55,14 @@ export function runWithInternalInstrumentation<T>(callback: () => T): {
       normalizedCommandClones: 0,
       actualReparses: 0,
       includeReads: 0,
+      includeBytesRead: 0,
       macroExpansions: 0,
+      macroLinesProcessed: 0,
       passthroughDispatches: 0,
+      loweredProgramBuilds: 0,
+      runtimeNodesLowered: 0,
+      referenceCollections: 0,
+      addressMappings: 0,
     },
     phasesMs: {},
     peakRssBytes: 0,

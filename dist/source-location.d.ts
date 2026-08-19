@@ -51,7 +51,7 @@ export declare function shiftSourceSpan(span: SourceSpan, offset: number, line?:
  * @param {number} [line] Optional 0-based line number.
  * @returns {SourceSpan[]} The token spans in token order.
  */
-export declare function deriveTokenSpans(text: string, tokens: string[], line?: number): SourceSpan[];
+export declare function deriveTokenSpans(text: string, tokens: readonly string[], line?: number): SourceSpan[];
 /**
  * Converts a span into an explicit line/character range for editor tooling.
  * The current assembler spans are line-local and use zero-based columns.

@@ -1,6 +1,6 @@
 import type { AssemblyFileProvider } from "../file-provider.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
-import type { AssemblyFrontEndService } from "./assembly-front-end-service.js";
+import type { ProgramModelBuilder } from "./program-model-builder.js";
 export interface IncludedFileInfo {
     /** Whether the file has been included. */
     included: boolean;
@@ -14,7 +14,7 @@ export interface IncludeSourceHost {
     includeStack: string[];
     includedFiles: Map<string, IncludedFileInfo>;
     fileProvider: AssemblyFileProvider;
-    readonly frontEndService: AssemblyFrontEndService;
+    readonly programModelBuilder: ProgramModelBuilder;
     lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
     recordIncludeEdge(fromFile: string, toFile: string): void;
 }

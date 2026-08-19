@@ -75,7 +75,11 @@ export function shiftSourceSpan(span: SourceSpan, offset: number, line = span.li
  * @param {number} [line] Optional 0-based line number.
  * @returns {SourceSpan[]} The token spans in token order.
  */
-export function deriveTokenSpans(text: string, tokens: string[], line?: number): SourceSpan[] {
+export function deriveTokenSpans(
+  text: string,
+  tokens: readonly string[],
+  line?: number,
+): SourceSpan[] {
   if (tokens.length === 0) {
     return [];
   }

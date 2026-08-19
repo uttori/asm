@@ -7,17 +7,49 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      * @returns {InstructionDescriptor[]} The instruction descriptors.
      */
     getInstructionCatalog(): InstructionDescriptor[];
-    encode(words: string[]): boolean;
+    /**
+     * Estimates instruction.
+     * @param {LoweredInstruction} instruction The instruction.
+     * @returns {number} The result.
+     */
     estimateInstruction(instruction: LoweredInstruction): number;
+    /**
+     * Encodes instruction.
+     * @param {LoweredInstruction} instruction The instruction.
+     * @returns {boolean} The result.
+     */
     encodeInstruction(instruction: LoweredInstruction): boolean;
+    /**
+     * Estimates size.
+     * @param {string[]} words The words.
+     * @returns {number} The result.
+     */
     estimateSize(words: string[]): number;
+    /**
+     * Estimates resolved instruction.
+     * @param {string} mnemonic The mnemonic.
+     * @param {string} operandText The operand text.
+     * @param {LoweredOperand} [loweredOperand] The lowered operand.
+     * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
+     * @returns {number} The result.
+     */
     estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     /**
      * Processes a SuperFX assembly instruction.
      * @param {string[]} words The tokenized instruction.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
-    asblock_superfx(words: string[]): boolean;
+    encode(words: string[]): boolean;
+    /** Legacy API alias for {@link encode}. */
+    readonly asblock_superfx: (words: string[]) => boolean;
+    /**
+     * Encodes resolved instruction.
+     * @param {string} mnemonic The mnemonic.
+     * @param {string[]} operands The operands.
+     * @param {LoweredOperand} [loweredOperand] The lowered operand.
+     * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
+     * @returns {boolean} The result.
+     */
     encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
      * Handles single-word (no-operand) opcodes for SuperFX.
@@ -53,6 +85,13 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     handleTwoOperandOpcode(opcode: string, leftOp: string, rightOp: string, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
+    /**
+     * Resolves register.
+     * @param {string} str The str.
+     * @param {LoweredOperand | undefined} lowered The lowered.
+     * @param {"r" | "parr" | "hash"} type The type.
+     * @returns {number | null} The result.
+     */
     resolveRegister(str: string, lowered: LoweredOperand | undefined, type: "r" | "parr" | "hash"): number | null;
     /**
      * Attempts to parse a register from a string, e.g. "r0", "(r3)", "#3".

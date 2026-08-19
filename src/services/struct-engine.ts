@@ -69,7 +69,7 @@ export class StructEngine {
    * Handles a struct command.
    * @param {string[]} words The words of the command.
    */
-  handleStruct(words: string[]): void {
+  handleStruct(words: readonly string[]): void {
     if (words.length < 2) {
       throw new Error("Struct definition requires at least two parameters.");
     }
@@ -105,6 +105,7 @@ export class StructEngine {
       size: 0,
       labels: new Map(),
       parent,
+      extensionSize: 0,
     };
     this.host.recordSymbolDefinition("struct", structName, { value: base });
   }
@@ -113,7 +114,7 @@ export class StructEngine {
    * Handles an endstruct command.
    * @param {string[]} words The words of the command.
    */
-  handleEndStruct(words: string[]): void {
+  handleEndStruct(words: readonly string[]): void {
     const currentStruct = this.host.currentStruct;
     if (!currentStruct) {
       throw new Error("endstruct encountered but not inside a struct definition.");
@@ -144,7 +145,7 @@ export class StructEngine {
         throw new Error(`Parent struct '${parentName}' not defined.`);
       }
       const extSize = currentStruct.size;
-      if (!parentStruct.extensionSize || extSize > parentStruct.extensionSize) {
+      if (extSize > parentStruct.extensionSize) {
         parentStruct.extensionSize = extSize;
       }
       this.host.structs.set(`${parentName}.${currentStruct.name}`, currentStruct);
@@ -156,6 +157,31 @@ export class StructEngine {
     this.host.restoreStructDefinition();
 
     this.host.currentStruct = null;
+  }
+
+  /**
+   * Checks whether a reference starts with a known struct name.
+   * @param {string} labelRef The reference to inspect.
+   * @returns {boolean} Whether the reference belongs to a known struct.
+   */
+  hasStructReference(labelRef: string): boolean {
+    // oxlint-disable-next-line security/detect-unsafe-regex -- Anchored segments use non-overlapping separators.
+    if (!/^[A-Z_a-z]\w*(?:\[-?\d+])?(?:\.[A-Z_a-z]\w*(?:\[-?\d+])?)*$/.test(labelRef)) {
+      return false;
+    }
+    if (this.host.structs.has(labelRef)) {
+      return true;
+    }
+    const dotIndex = labelRef.indexOf(".");
+    const bracketIndex = labelRef.indexOf("[");
+    let rootEnd = Math.min(dotIndex, bracketIndex);
+    if (dotIndex === -1) {
+      rootEnd = bracketIndex;
+    } else if (bracketIndex === -1) {
+      rootEnd = dotIndex;
+    }
+    const root = rootEnd === -1 ? labelRef : labelRef.slice(0, rootEnd);
+    return root.length > 0 && this.host.structs.has(root);
   }
 
   /**
@@ -217,12 +243,7 @@ export class StructEngine {
       // Arrays of a parent struct must reserve enough room for whichever child
       // extension is largest, otherwise `parent[n].ext.member` resolves into
       // the wrong element once an extension increases the total record size.
-      let maxExtensionSize = 0;
-      for (const [, structDef] of this.host.structs.entries()) {
-        if (structDef.parent === potential && structDef.size > maxExtensionSize) {
-          maxExtensionSize = structDef.size;
-        }
-      }
+      const maxExtensionSize = def.extensionSize;
       if (maxExtensionSize > 0) {
         effectiveSize += maxExtensionSize;
       }

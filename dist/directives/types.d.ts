@@ -85,7 +85,7 @@ export interface OperandDirectiveContext<Session> extends SessionDirectiveContex
 export interface RuntimeDirectiveContext {
     runtime: DirectiveRuntimeService;
 }
-export type NarrowDirectiveHandler<Context> = (ctx: Context, words: string[], raw: string, command?: NormalizedCommand) => void;
+export type NarrowDirectiveHandler<Context> = (ctx: Context, words: readonly string[], raw: string, command?: NormalizedCommand) => void;
 export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability>;
 export type NamespaceDirectiveContext = SessionDirectiveContext<DirectiveNamespaceCapability & Pick<DirectiveSpcCapability, "inSpcblock">>;
 export type FillPadDirectiveContext = OperandDirectiveContext<Pick<DirectiveRomCapability, "fillbyte" | "padbyte" | "padUnit" | "currentTargetAddress" | "romWriter" | "write1"> & Pick<DirectiveExpressionCapability, "resolvedefines">>;

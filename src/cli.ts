@@ -9,6 +9,10 @@ class CLI {
     this.assembler = null;
   }
 
+  /**
+   * Gets assembler.
+   * @returns {Assembler} The result.
+   */
   private getAssembler(): Assembler {
     if (!this.assembler) {
       throw new Error("Assembler has not been initialized.");
@@ -77,7 +81,7 @@ class CLI {
     }
 
     try {
-      const assembler = new Assembler(targetRom);
+      const assembler = new Assembler(targetRom, { collectSourceMetadata: false });
       this.assembler = assembler;
       assembler.setChecksumMode(checksumMode);
       console.log(`Checksum mode: ${checksumMode}`);

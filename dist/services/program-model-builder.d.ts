@@ -83,9 +83,31 @@ export declare class ProgramModelBuilder {
      * @returns {ExecutableNode[]} The executable nodes.
      */
     parseCommandStreamToNodes(commands: string[], sourceFile?: string, startLine?: number): ExecutableNode[];
+    /**
+     * Pushes to current.
+     * @param {IncrementalProgramParseState} state The state.
+     * @param {ExecutableNode} node The node.
+     */
     pushToCurrent(state: IncrementalProgramParseState, node: ExecutableNode): void;
+    /**
+     * Consumes command into state.
+     * @param {IncrementalProgramParseState} state The state.
+     * @param {string} rawCommand The raw command.
+     * @param {string} sourceFile The source file.
+     * @param {number} sourceLine The source line.
+     */
     consumeCommandIntoState(state: IncrementalProgramParseState, rawCommand: string, sourceFile: string, sourceLine: number): void;
+    /**
+     * Checks whether node complete.
+     * @param {ExecutableNode} node The node.
+     * @returns {boolean} The result.
+     */
     isNodeComplete(node: ExecutableNode): boolean;
+    /**
+     * Drains completed roots.
+     * @param {IncrementalProgramParseState} state The state.
+     * @returns {ExecutableNode[]} The result.
+     */
     drainCompletedRoots(state: IncrementalProgramParseState): ExecutableNode[];
 }
 //# sourceMappingURL=program-model-builder.d.ts.map

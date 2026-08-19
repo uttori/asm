@@ -11,7 +11,7 @@ const getDirectiveWidth = (keyword: string, prefix: "fill" | "pad"): number => {
 
 export const handleFillPattern = (
   { session, operandResolver }: FillPadDirectiveContext,
-  words: string[],
+  words: readonly string[],
 ): void => {
   const keyword = words[0];
   const len = getDirectiveWidth(keyword, "fill");
@@ -32,7 +32,7 @@ export const handleFillPattern = (
 
 export const handleFill = (
   { session, operandResolver }: FillPadDirectiveContext,
-  words: string[],
+  words: readonly string[],
 ): void => {
   if (words.length !== 2) {
     throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
@@ -46,7 +46,7 @@ export const handleFill = (
 
 export const handlePadPattern = (
   { session, operandResolver }: FillPadDirectiveContext,
-  words: string[],
+  words: readonly string[],
 ): void => {
   const keyword = words[0];
   const len = getDirectiveWidth(keyword, "pad");
@@ -64,7 +64,7 @@ export const handlePadPattern = (
 
 export const handlePad = (
   { session, operandResolver }: FillPadDirectiveContext,
-  words: string[],
+  words: readonly string[],
 ): void => {
   let gap: number;
 

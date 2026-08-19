@@ -350,10 +350,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
     return spc700Catalog;
   }
 
-  encode(words: string[]): boolean {
-    return this.asblock_spc700(words);
-  }
-
+  /**
+   * Estimates instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {number} The result.
+   */
   estimateInstruction(instruction: LoweredInstruction): number {
     const loweredOperands = instruction.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
@@ -364,6 +365,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
     );
   }
 
+  /**
+   * Encodes instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {boolean} The result.
+   */
   encodeInstruction(instruction: LoweredInstruction): boolean {
     const loweredOperands = instruction.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
@@ -374,6 +380,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
     );
   }
 
+  /**
+   * Estimates size.
+   * @param {string[]} words The words.
+   * @returns {number} The result.
+   */
   estimateSize(words: string[]): number {
     if (words.length === 0) {
       return 0;
@@ -382,6 +393,14 @@ export class ArchSPC700 implements ArchitectureEncoder {
     return this.estimateResolvedInstruction(words[0], words.slice(1).join(" "));
   }
 
+  /**
+   * Estimates resolved instruction.
+   * @param {string} mnemonic The mnemonic.
+   * @param {string} operandText The operand text.
+   * @param {LoweredOperand} [loweredOperand] The lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
+   * @returns {number} The result.
+   */
   estimateResolvedInstruction(
     mnemonic: string,
     operandText: string,
@@ -409,7 +428,12 @@ export class ArchSPC700 implements ArchitectureEncoder {
     return size;
   }
 
-  asblock_spc700(words: string[]): boolean {
+  /**
+   * Processes an SPC700 assembly instruction.
+   * @param {string[]} words The tokenized instruction.
+   * @returns {boolean} True if the instruction was handled, false otherwise.
+   */
+  encode(words: string[]): boolean {
     debug("asblock_spc700", words);
     if (words.length === 0) {
       return false;
@@ -424,6 +448,17 @@ export class ArchSPC700 implements ArchitectureEncoder {
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
 
+  /** Legacy API alias for {@link encode}. */
+  readonly asblock_spc700 = this.encode.bind(this);
+
+  /**
+   * Encodes resolved instruction.
+   * @param {string} mnemonic The mnemonic.
+   * @param {string[]} operands The operands.
+   * @param {LoweredOperand} [loweredOperand] The lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
+   * @returns {boolean} The result.
+   */
   encodeResolvedInstruction(
     mnemonic: string,
     operands: string[],
@@ -1078,6 +1113,11 @@ export class ArchSPC700 implements ArchitectureEncoder {
       : { mode: "abs", val: fallbackValue };
   }
 
+  /**
+   * Checks whether dp or abs.
+   * @param {string} operand The operand.
+   * @returns {boolean} The result.
+   */
   isDpOrAbs(operand: string): boolean {
     debug("isDpOrAbs", operand);
     const cleaned = operand.replace(/\$/g, "");
@@ -1584,11 +1624,12 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const upOp = operand.toUpperCase();
       const leftOperandIsX = leftLowered ? isRegisterX("", leftLowered) : upOp.startsWith("X,");
       const leftOperandIsY = leftLowered ? isRegisterY("", leftLowered) : upOp.startsWith("Y,");
-      const tail = rightLowered
-        ? rightLowered.expanded.toUpperCase()
-        : leftOperandIsX || leftOperandIsY
-          ? upOp.slice(2).trim()
-          : "";
+      let tail = "";
+      if (rightLowered) {
+        tail = rightLowered.expanded.toUpperCase();
+      } else if (leftOperandIsX || leftOperandIsY) {
+        tail = upOp.slice(2).trim();
+      }
       if (leftOperandIsX) {
         if (rightLowered?.immediate ?? tail.startsWith("#")) {
           // => 0xC8
@@ -1813,13 +1854,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const val = parseInt(match[1], 16);
       const mode = memoryMoves[key];
       const inferredLength = getAddressSize(`$${match[1]}`);
-      const opcode = explicitlen
-        ? forcedLen === 1
-          ? mode.byte
-          : mode.word
-        : inferredLength === 1
-          ? mode.byte
-          : mode.word;
+      const selectedLength = explicitlen ? forcedLen : inferredLength;
+      const opcode = selectedLength === 1 ? mode.byte : mode.word;
 
       this.assembler.write1(opcode);
       if (opcode === mode.word) {

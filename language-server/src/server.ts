@@ -161,7 +161,10 @@ function buildRom(file: string, outputPath: string, targetRomPath?: string): Bui
     }
 
     const source = provider.readTextFile(file);
-    const assembler = new Assembler(targetRom, { fileProvider: provider });
+    const assembler = new Assembler(targetRom, {
+      fileProvider: provider,
+      collectSourceMetadata: false,
+    });
     assembler.setIncludePaths([path.dirname(file), ...settings.includePaths]);
     assembler.setCurrentFile(file);
     assembler.arch = settings.architecture;
@@ -202,16 +205,14 @@ connection.onExecuteCommand((params) => {
     return { ok: false, message: "No file provided to build." } satisfies BuildResult;
   }
   const file = uriOrPath.startsWith("file:") ? uriToPath(uriOrPath) : uriOrPath;
-  const outputPath = args[1]
-    ? args[1].startsWith("file:")
-      ? uriToPath(args[1])
-      : args[1]
-    : defaultOutputPath(file);
-  const targetRomPath = args[2]
-    ? args[2].startsWith("file:")
-      ? uriToPath(args[2])
-      : args[2]
-    : undefined;
+  let outputPath = defaultOutputPath(file);
+  if (args[1]) {
+    outputPath = args[1].startsWith("file:") ? uriToPath(args[1]) : args[1];
+  }
+  let targetRomPath: string | undefined;
+  if (args[2]) {
+    targetRomPath = args[2].startsWith("file:") ? uriToPath(args[2]) : args[2];
+  }
   return buildRom(file, outputPath, targetRomPath);
 });
 

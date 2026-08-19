@@ -6,8 +6,14 @@ export type InternalInstrumentationSnapshot = {
         normalizedCommandClones: number;
         actualReparses: number;
         includeReads: number;
+        includeBytesRead: number;
         macroExpansions: number;
+        macroLinesProcessed: number;
         passthroughDispatches: number;
+        loweredProgramBuilds: number;
+        runtimeNodesLowered: number;
+        referenceCollections: number;
+        addressMappings: number;
     };
     phasesMs: Record<string, number>;
     peakRssBytes: number;

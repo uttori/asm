@@ -86,7 +86,7 @@ const baseRom = fs.existsSync("game.sfc")
   ? new Uint8Array(fs.readFileSync("game.sfc"))
   : undefined;
 
-const assembler = new Assembler(baseRom);
+const assembler = new Assembler(baseRom, { collectSourceMetadata: false });
 assembler.setCurrentFile(sourceFile);
 assembler.setIncludePaths([path.dirname(sourceFile)]);
 assembler.setChecksumMode("asar");
@@ -94,6 +94,11 @@ assembler.assembleSource(source, sourceFile);
 
 fs.writeFileSync("build/game.sfc", assembler.getBinaryOutput());
 ```
+
+`collectSourceMetadata: false` is intended for ROM-only builds and skips symbol,
+reference, include-graph, and address-to-line artifacts. Leave it enabled (the
+default) when reading those artifacts directly. The `analyze*` APIs always use
+their own metadata-enabled analysis session.
 
 For callers that need control over individual phases:
 
@@ -240,6 +245,8 @@ Common commands:
 | `npm run fixture:slideshow` | Run the slideshow integration fixture |
 | `npm run fixture:chou` | Run the Chou Makaimura integration fixture |
 | `npm run benchmark:smoke` | Run correctness-checked smoke benchmarks |
+| `npm run benchmark:chou` | Run one isolated, parity-checked Chou performance gate |
+| `npm run benchmark:chou:stable` | Run three isolated Chou samples and enforce the performance budget |
 | `npm run verify` | Run the primary lint, type, coverage, LSP, and extension checks |
 | `npm run pack:check` | Inspect the npm package without publishing it |
 

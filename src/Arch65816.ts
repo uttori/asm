@@ -30,10 +30,11 @@ export class Arch65816 implements ArchitectureEncoder {
     return cpu65816Catalog;
   }
 
-  encode(words: string[]): boolean {
-    return this.asblock_65816(words);
-  }
-
+  /**
+   * Estimates instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {number} The result.
+   */
   estimateInstruction(instruction: LoweredInstruction): number {
     return this.estimateResolvedInstruction(
       instruction.mnemonic,
@@ -43,6 +44,11 @@ export class Arch65816 implements ArchitectureEncoder {
     );
   }
 
+  /**
+   * Encodes instruction.
+   * @param {LoweredInstruction} instruction The instruction.
+   * @returns {boolean} The result.
+   */
   encodeInstruction(instruction: LoweredInstruction): boolean {
     return this.encodeResolvedInstruction(
       instruction.mnemonic,
@@ -52,6 +58,11 @@ export class Arch65816 implements ArchitectureEncoder {
     );
   }
 
+  /**
+   * Estimates size.
+   * @param {string[]} words The words.
+   * @returns {number} The result.
+   */
   estimateSize(words: string[]): number {
     if (words.length === 0) {
       return 0;
@@ -67,6 +78,14 @@ export class Arch65816 implements ArchitectureEncoder {
     );
   }
 
+  /**
+   * Estimates resolved instruction.
+   * @param {string} mnemonic The mnemonic.
+   * @param {string} rawOperand The raw operand.
+   * @param {string} operand The operand.
+   * @param {number} operandLength The operand length.
+   * @returns {number} The result.
+   */
   estimateResolvedInstruction(
     mnemonic: string,
     rawOperand: string,
@@ -196,7 +215,7 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {string[]} words The tokenized instruction.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
-  asblock_65816(words: string[]): boolean {
+  encode(words: string[]): boolean {
     debug("asblock_65816", words);
     if (words.length === 0) {
       return false;
@@ -212,6 +231,17 @@ export class Arch65816 implements ArchitectureEncoder {
     );
   }
 
+  /** Legacy API alias for {@link encode}. */
+  readonly asblock_65816 = this.encode.bind(this);
+
+  /**
+   * Encodes resolved instruction.
+   * @param {string} mnemonic The mnemonic.
+   * @param {string} rawOperand The raw operand.
+   * @param {string} operand The operand.
+   * @param {number} operandLength The operand length.
+   * @returns {boolean} The result.
+   */
   encodeResolvedInstruction(
     mnemonic: string,
     rawOperand: string,
@@ -883,13 +913,14 @@ export class Arch65816 implements ArchitectureEncoder {
     if (explicitlen) {
       // Forced-size operands still need indexed base extraction so `.w foo,Y`
       // resolves `foo` numerically instead of handing `foo,Y` to the math parser.
-      const forcedIndexedMode = !loweredOperand.indirect
-        ? loweredOperand.indexRegister === "x"
-          ? "x"
-          : loweredOperand.mode === "absoluteIndexedY"
-            ? "y"
-            : undefined
-        : undefined;
+      let forcedIndexedMode: "x" | "y" | undefined;
+      if (!loweredOperand.indirect) {
+        if (loweredOperand.indexRegister === "x") {
+          forcedIndexedMode = "x";
+        } else if (loweredOperand.mode === "absoluteIndexedY") {
+          forcedIndexedMode = "y";
+        }
+      }
       const explicitOperand = forcedIndexedMode ? baseOperand : resolvedOperand;
       if (forcedIndexedMode === "x") {
         // For indexed X addressing:

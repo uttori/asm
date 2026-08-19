@@ -51,7 +51,7 @@ export declare class DirectiveRuntimeService {
      * @param {string[]} words The character mapping command words.
      * @throws {Error} If the format is incorrect.
      */
-    handleCharacterMapping(words: string[]): void;
+    handleCharacterMapping(words: readonly string[]): void;
     /**
      * Processes a string and maps characters to their corresponding values in `characterMappings`.
      * If a character is not found in `characterMappings`, its charCode is used instead.
@@ -63,12 +63,12 @@ export declare class DirectiveRuntimeService {
      * Handles the `spcblock` directive.
      * @param {string[]} words The directive words.
      */
-    handleSpcblock(words: string[]): void;
+    handleSpcblock(words: readonly string[]): void;
     /**
      * Handles the `endspcblock` directive.
      * @param {string[]} words The directive words.
      */
-    handleEndSpcblock(words: string[]): void;
+    handleEndSpcblock(words: readonly string[]): void;
     /**
      * Handles `org`.
      * @param {string[]} params The directive parameters.
@@ -86,6 +86,11 @@ export declare class DirectiveRuntimeService {
      * @param {number} value The value to write.
      */
     writeDataByLength(len: number, value: number): void;
+    /**
+     * Estimates data directive size.
+     * @param {number} len The len.
+     * @param {string[]} params The params.
+     */
     estimateDataDirectiveSize(len: number, params: string[]): void;
     /**
      * Pushes the current PC state.

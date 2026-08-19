@@ -6,7 +6,10 @@ import type { DataDirectiveContext } from "./types.js";
  * @param {DataDirectiveContext} ctx The ROM-capable directive context.
  * @param {string[]} words The directive words.
  */
-export const handleDataDirective = ({ runtime }: DataDirectiveContext, words: string[]): void => {
+export const handleDataDirective = (
+  { runtime }: DataDirectiveContext,
+  words: readonly string[],
+): void => {
   runtime.handleDataDirective(words[0], words.slice(1));
 };
 

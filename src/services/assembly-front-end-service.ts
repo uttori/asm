@@ -4,11 +4,7 @@ import {
   splitCommandIntoWords,
 } from "./command-text-service.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
-import {
-  ProgramModelBuilder,
-  type IncrementalProgramParseState,
-  type ProgramModel,
-} from "./program-model-builder.js";
+import { ProgramModelBuilder } from "./program-model-builder.js";
 import { createNormalizedCommand, type NormalizedCommand } from "../ir/normalized-command.js";
 
 export type AssemblyFrontEndHost = {
@@ -109,62 +105,5 @@ export class AssemblyFrontEndService {
       this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true) ??
       createNormalizedCommand(command, "", [], sourceFile, sourceLine)
     );
-  }
-
-  createIncrementalParseState(): IncrementalProgramParseState {
-    return this.programModelBuilder.createIncrementalParseState();
-  }
-
-  resetIncrementalParseState(state: IncrementalProgramParseState): void {
-    this.programModelBuilder.resetIncrementalParseState(state);
-  }
-
-  buildProgramModel(
-    source: string,
-    sourceFile = this.host.currentFile,
-    startLine = 0,
-  ): ProgramModel {
-    return this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
-  }
-
-  getOrBuildPassProgram(
-    commands: string[],
-    sourceFile = this.host.currentFile,
-    startLine = this.host.currentLine,
-  ): ExecutableNode[] {
-    return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine);
-  }
-
-  createIncludeNode(
-    file: string,
-    source: string,
-  ): import("./program-model-builder.js").IncludeProgramNode {
-    return this.programModelBuilder.createIncludeNode(file, source);
-  }
-
-  consumeIncrementalCommand(
-    state: IncrementalProgramParseState,
-    rawCommand: string,
-    sourceFile = this.host.currentFile,
-    sourceLine = this.host.currentLine,
-  ): ExecutableNode[] {
-    return this.programModelBuilder.consumeIncrementalCommand(
-      state,
-      rawCommand,
-      sourceFile,
-      sourceLine,
-    );
-  }
-
-  drainCompletedRoots(state: IncrementalProgramParseState): ExecutableNode[] {
-    return this.programModelBuilder.drainCompletedRoots(state);
-  }
-
-  parseCommandStreamToNodes(
-    commands: string[],
-    sourceFile = this.host.currentFile,
-    startLine = this.host.currentLine,
-  ): ExecutableNode[] {
-    return this.programModelBuilder.parseCommandStreamToNodes(commands, sourceFile, startLine);
   }
 }

@@ -60,7 +60,7 @@ export class RomWriterService {
    * Writes a single byte at the current position using 65816/ROM addressing.
    * @param {number} num The value to write.
    */
-  write1_65816(num: number): void {
+  write1(num: number): void {
     if (Number.isNaN(num)) {
       throw new Error("write1_65816 num is NaN");
     }
@@ -99,14 +99,6 @@ export class RomWriterService {
     }
 
     this.step(1);
-  }
-
-  /**
-   * Writes a single byte to the ROM.
-   * @param {number} num The value to write.
-   */
-  write1(num: number): void {
-    this.write1_65816(num);
   }
 
   /**
@@ -287,10 +279,6 @@ export class RomWriterService {
     }
 
     return -1;
-  }
-
-  snestopc(addr: number): number {
-    return this.convertTargetAddressToRomOffset(addr);
   }
 
   /**

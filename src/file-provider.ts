@@ -28,6 +28,12 @@ export interface AssemblyFileProvider {
  * Default Node.js-backed file provider used by the assembler runtime.
  */
 export class NodeAssemblyFileProvider implements AssemblyFileProvider {
+  /**
+   * Resolves path.
+   * @param {string} filename The filename.
+   * @param {AssemblyFileResolutionOptions} [options] The options.
+   * @returns {string | undefined} The result.
+   */
   resolvePath(filename: string, options: AssemblyFileResolutionOptions = {}): string | undefined {
     if (!filename) {
       return undefined;
@@ -59,6 +65,11 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
     return undefined;
   }
 
+  /**
+   * Reads metadata for the value.
+   * @param {string} filePath The file path.
+   * @returns {AssemblyFileStat} The result.
+   */
   stat(filePath: string): AssemblyFileStat {
     if (!fs.existsSync(filePath)) {
       return {
@@ -82,10 +93,21 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
     }
   }
 
+  /**
+   * Reads file.
+   * @param {string} filePath The file path.
+   * @returns {Uint8Array} The result.
+   */
   readFile(filePath: string): Uint8Array {
     return new Uint8Array(fs.readFileSync(filePath));
   }
 
+  /**
+   * Reads text file.
+   * @param {string} filePath The file path.
+   * @param {BufferEncoding} [encoding] The encoding.
+   * @returns {string} The result.
+   */
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
     return fs.readFileSync(filePath, encoding);
   }
@@ -108,6 +130,12 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     this.files = files instanceof Map ? new Map(files) : new Map(Object.entries(files));
   }
 
+  /**
+   * Resolves path.
+   * @param {string} filename The filename.
+   * @param {AssemblyFileResolutionOptions} [options] The options.
+   * @returns {string | undefined} The result.
+   */
   resolvePath(filename: string, options: AssemblyFileResolutionOptions = {}): string | undefined {
     if (!filename) {
       return undefined;
@@ -135,6 +163,11 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     return undefined;
   }
 
+  /**
+   * Reads metadata for the value.
+   * @param {string} filePath The file path.
+   * @returns {AssemblyFileStat} The result.
+   */
   stat(filePath: string): AssemblyFileStat {
     const entry = this.files.get(filePath);
     if (entry === undefined) {
@@ -151,6 +184,11 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     };
   }
 
+  /**
+   * Reads file.
+   * @param {string} filePath The file path.
+   * @returns {Uint8Array} The result.
+   */
   readFile(filePath: string): Uint8Array {
     const entry = this.files.get(filePath);
     if (entry === undefined) {
@@ -161,6 +199,12 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
       : new Uint8Array(entry);
   }
 
+  /**
+   * Reads text file.
+   * @param {string} filePath The file path.
+   * @param {BufferEncoding} [encoding] The encoding.
+   * @returns {string} The result.
+   */
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
     const entry = this.files.get(filePath);
     if (entry === undefined) {

@@ -183,6 +183,11 @@ export class ProgramModelBuilder {
     return state.roots;
   }
 
+  /**
+   * Pushes to current.
+   * @param {IncrementalProgramParseState} state The state.
+   * @param {ExecutableNode} node The node.
+   */
   pushToCurrent(state: IncrementalProgramParseState, node: ExecutableNode): void {
     const currentBranch = state.branchStack[state.branchStack.length - 1];
     const currentLoop = state.loopStack[state.loopStack.length - 1];
@@ -205,6 +210,13 @@ export class ProgramModelBuilder {
     state.roots.push(node);
   }
 
+  /**
+   * Consumes command into state.
+   * @param {IncrementalProgramParseState} state The state.
+   * @param {string} rawCommand The raw command.
+   * @param {string} sourceFile The source file.
+   * @param {number} sourceLine The source line.
+   */
   consumeCommandIntoState(
     state: IncrementalProgramParseState,
     rawCommand: string,
@@ -351,6 +363,11 @@ export class ProgramModelBuilder {
     this.pushToCurrent(state, command);
   }
 
+  /**
+   * Checks whether node complete.
+   * @param {ExecutableNode} node The node.
+   * @returns {boolean} The result.
+   */
   isNodeComplete(node: ExecutableNode): boolean {
     if ("source" in node) {
       return true;
@@ -358,6 +375,11 @@ export class ProgramModelBuilder {
     return node.endLine !== undefined;
   }
 
+  /**
+   * Drains completed roots.
+   * @param {IncrementalProgramParseState} state The state.
+   * @returns {ExecutableNode[]} The result.
+   */
   drainCompletedRoots(state: IncrementalProgramParseState): ExecutableNode[] {
     let completedCount = 0;
     while (

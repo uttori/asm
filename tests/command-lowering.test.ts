@@ -112,6 +112,23 @@ test("lowered passthrough nodes name their preprocessing requirement", t => {
   }
 });
 
+test("lowered passthrough shares immutable input and dispatch mutates only its execution copy", t => {
+  const assembler = new Assembler();
+  const program = assembler.buildProgramModel("Entry:", "immutable.asm");
+  const sourceCommand = program.nodes[0];
+  const lowered = assembler.commandLoweringService.lowerProgram(program).nodes[0];
+
+  t.is(lowered?.kind, "command");
+  if (lowered?.kind !== "command" || !sourceCommand || !("source" in sourceCommand)) {
+    return;
+  }
+
+  t.is(lowered.command, sourceCommand);
+  assembler.executeLoweredNode(lowered);
+  t.deepEqual(sourceCommand.words, ["Entry:"]);
+  t.is(sourceCommand.command, "Entry:");
+});
+
 test("instruction-looking macro body lines remain preprocessing passthrough", t => {
   const assembler = new Assembler();
   const program = assembler.buildProgramModel([

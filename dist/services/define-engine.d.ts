@@ -12,6 +12,11 @@ export type DefineHost = {
 export declare class DefineEngine {
     readonly host: DefineHost;
     constructor(host: DefineHost);
+    /**
+     * Checks whether pure math expression.
+     * @param {string} value The value.
+     * @returns {boolean} The result.
+     */
     isPureMathExpression(value: string): boolean;
     /**
      * Handles a define command.

@@ -38,8 +38,14 @@ test("benchmark aggregation reports nearest-rank percentiles and memory peaks", 
       normalizedCommandClones: clones,
       actualReparses: 2,
       includeReads: 4,
+      includeBytesRead: 40,
       macroExpansions: 5,
+      macroLinesProcessed: 50,
       passthroughDispatches: 6,
+      loweredProgramBuilds: 7,
+      runtimeNodesLowered: 8,
+      referenceCollections: 9,
+      addressMappings: 10,
     },
   });
   const samples = [
@@ -55,6 +61,25 @@ test("benchmark aggregation reports nearest-rank percentiles and memory peaks", 
   t.is(aggregate.wallMs.p95, 40);
   t.is(aggregate.peakRssBytes, 400);
   t.is(aggregate.peakHeapUsedBytes, 80);
-  t.deepEqual(aggregate.phasesMs.emitProgram, { median: 10, p95: 20 });
-  t.deepEqual(aggregate.counters.normalizedCommandClones, { median: 2, p95: 4 });
+  t.deepEqual(aggregate.wallMs, {
+    min: 10,
+    median: 20,
+    p95: 40,
+    max: 40,
+    medianAbsoluteDeviation: 10,
+  });
+  t.deepEqual(aggregate.phasesMs.emitProgram, {
+    min: 5,
+    median: 10,
+    p95: 20,
+    max: 20,
+    medianAbsoluteDeviation: 5,
+  });
+  t.deepEqual(aggregate.counters.normalizedCommandClones, {
+    min: 1,
+    median: 2,
+    p95: 4,
+    max: 4,
+    medianAbsoluteDeviation: 1,
+  });
 });

@@ -428,7 +428,7 @@ test("typed conditional nodes skip inactive branches during execution", (t) => {
     return;
   }
 
-  assembler.executeNodeStream([node]);
+  assembler.lowerAndExecuteRuntimeNodes([node]);
   t.deepEqual(executed, ["db $20"]);
 });
 
@@ -566,7 +566,7 @@ test("node execution seam dispatches typed command and conditional nodes", (t) =
     processed.push(command.command);
   });
 
-  assembler.executeNodeStream(assembler.parseCommandStreamToNodes([
+  assembler.lowerAndExecuteRuntimeNodes(assembler.parseCommandStreamToNodes([
     "if 1",
     "db $01",
     "else",
@@ -585,9 +585,9 @@ test("node execution seam does not re-normalize cached command nodes", (t) => {
     return;
   }
 
-  const createLoopNodeStub = stub(assembler, "createLoopCommandNode");
+  const createLoopNodeStub = stub(assembler.frontEndService, "createLoopCommandNode");
   stub(assembler, "processNormalizedCommand").callsFake(() => {});
-  assembler.executeNodeStream([commandNode]);
+  assembler.lowerAndExecuteRuntimeNodes([commandNode]);
   t.false(createLoopNodeStub.called);
 });
 
@@ -608,7 +608,7 @@ test("macro/include lifting exposes typed macro and include nodes", (t) => {
     t.true(typeof command !== "string" && "source" in command);
   }
 
-  const includeNode = assembler.frontEndService.createIncludeNode("inline.asm", "if 1\ndb $01\nendif");
+  const includeNode = assembler.programModelBuilder.createIncludeNode("inline.asm", "if 1\ndb $01\nendif");
   t.is(includeNode.type, "include");
   t.is(includeNode.commands.length, 1);
   const includeChild = includeNode.commands[0];
@@ -631,7 +631,7 @@ test("typed parser keeps nested condition-loop structures executable", (t) => {
     "db $ff",
     "endif",
   ]);
-  assembler.executeNodeStream(nodes);
+  assembler.lowerAndExecuteRuntimeNodes(nodes);
   t.deepEqual(executed, ["db $01"]);
 });
 

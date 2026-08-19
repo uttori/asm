@@ -235,11 +235,13 @@ export class MacroEngine {
 
     if (keyword.startsWith("%")) {
       const parsedInvocation = commandNode.parsed.macroInvocation;
-      const invocation = parsedInvocation
-        ? parsedInvocation.args.length > 0
-          ? `${parsedInvocation.name}(${parsedInvocation.args.join(", ")})`
-          : parsedInvocation.name
-        : words.join(" ").substring(1);
+      let invocation = words.join(" ").substring(1);
+      if (parsedInvocation) {
+        invocation = parsedInvocation.name;
+        if (parsedInvocation.args.length > 0) {
+          invocation = `${parsedInvocation.name}(${parsedInvocation.args.join(", ")})`;
+        }
+      }
       this.callMacro(invocation);
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
@@ -680,6 +682,7 @@ export class MacroEngine {
    * @param {string} line The line to process.
    */
   processMacroLine(line: string): void {
+    incrementInternalCounter("macroLinesProcessed");
     const trimmed = removeInlineComment(line).trim();
     const keyword = trimmed.split(/\s+/, 1)[0]?.toLowerCase();
     const isControlDirective =

@@ -85,7 +85,7 @@ export interface LoweredInstruction {
     operands: string[];
     loweredOperands: LoweredOperand[];
     loweredOperand: LoweredOperand;
-    words: string[];
+    words: readonly string[];
     sourceFile: string;
     sourceLine: number;
     sourceRaw: string;
@@ -116,8 +116,8 @@ export interface InstructionDescriptor {
     modes: InstructionAddressingMode[];
 }
 export interface ArchitectureEncoder {
-    estimateSize(words: string[]): number;
-    encode(words: string[]): boolean;
+    estimateSize(words: readonly string[]): number;
+    encode(words: readonly string[]): boolean;
     estimateInstruction?(instruction: LoweredInstruction): number;
     encodeInstruction?(instruction: LoweredInstruction): boolean;
     /**

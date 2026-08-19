@@ -9,7 +9,7 @@ import type { IncludeDirectiveContext } from "./types.js";
  */
 export const handleIncbin = (
   { session, includeSource, operandResolver, runtime }: IncludeDirectiveContext,
-  words: string[],
+  words: readonly string[],
 ): void => {
   // Keep direct handler callers source-compatible while registry wiring uses
   // the explicit focused service capability.

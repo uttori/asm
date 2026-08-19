@@ -16,7 +16,7 @@ export declare const handlePullBase: ({ session }: AddressStackDirectiveContext)
  * @param {string[]} words - The words from the ARCH command.
  * @throws {Error} If the ARCH command requires an architecture parameter.
  */
-export declare const handleArch: ({ session }: ArchitectureDirectiveContext, words: string[]) => void;
-export declare const handleStartpos: ({ session, operandResolver }: StartposDirectiveContext, words: string[]) => void;
+export declare const handleArch: ({ session }: ArchitectureDirectiveContext, words: readonly string[]) => void;
+export declare const handleStartpos: ({ session, operandResolver }: StartposDirectiveContext, words: readonly string[]) => void;
 export declare const registerLayoutDirectives: (registry: DirectiveRegistry, context: DirectiveRegistryContexts["layout"]) => void;
 //# sourceMappingURL=layout.d.ts.map

@@ -44,6 +44,11 @@ export class ArchitectureRegistry {
   readonly definitions = new Map<string, ArchitectureDefinition>();
   readonly aliases = new Map<string, string>();
 
+  /**
+   * Registers the value.
+   * @param {ArchitectureDefinition} definition The definition.
+   * @param {string[]} [aliases] The aliases.
+   */
   register(definition: ArchitectureDefinition, aliases: string[] = []): void {
     this.definitions.set(definition.name, definition);
     this.aliases.set(definition.name, definition.name);
@@ -52,10 +57,20 @@ export class ArchitectureRegistry {
     }
   }
 
+  /**
+   * Gets canonical name.
+   * @param {string} name The name.
+   * @returns {string | undefined} The result.
+   */
   getCanonicalName(name: string): string | undefined {
     return this.aliases.get(name.toLowerCase());
   }
 
+  /**
+   * Gets definition.
+   * @param {string} name The name.
+   * @returns {ArchitectureDefinition | undefined} The result.
+   */
   getDefinition(name: string): ArchitectureDefinition | undefined {
     const canonical = this.getCanonicalName(name);
     if (!canonical) {

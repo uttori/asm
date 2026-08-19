@@ -1,7 +1,7 @@
 import type { AssemblyFileProvider } from "../file-provider.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
-import type { AssemblyFrontEndService } from "./assembly-front-end-service.js";
-import { incrementInternalCounter } from "../internal-instrumentation.js";
+import type { ProgramModelBuilder } from "./program-model-builder.js";
+import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
 
 export interface IncludedFileInfo {
   /** Whether the file has been included. */
@@ -17,7 +17,7 @@ export interface IncludeSourceHost {
   includeStack: string[];
   includedFiles: Map<string, IncludedFileInfo>;
   fileProvider: AssemblyFileProvider;
-  readonly frontEndService: AssemblyFrontEndService;
+  readonly programModelBuilder: ProgramModelBuilder;
   lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
   recordIncludeEdge(fromFile: string, toFile: string): void;
 }
@@ -122,7 +122,10 @@ export class IncludeSourceService {
 
     try {
       incrementInternalCounter("includeReads");
-      const content = this.host.fileProvider.readTextFile(resolvedPath, "utf8");
+      const content = measureInternalPhase("includeRead", () =>
+        this.host.fileProvider.readTextFile(resolvedPath, "utf8"),
+      );
+      incrementInternalCounter("includeBytesRead", content.length);
       this.host.currentFile = resolvedPath;
 
       const includedFile = this.host.includedFiles.get(resolvedPath);
@@ -133,8 +136,10 @@ export class IncludeSourceService {
         this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
       }
 
-      const includeNode = this.host.frontEndService.createIncludeNode(resolvedPath, content);
-      this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
+      measureInternalPhase("includeParseLowerExecute", () => {
+        const includeNode = this.host.programModelBuilder.createIncludeNode(resolvedPath, content);
+        this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : (JSON.stringify(error) ?? "Unknown error");

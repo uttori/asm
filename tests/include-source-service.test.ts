@@ -21,13 +21,13 @@ const createHost = (
     fileProvider: createMemoryAssemblyFileProvider(files),
     edges: [] as Array<[string, string]>,
     executedFiles: [] as string[],
-    frontEndService: {
+    programModelBuilder: {
       createIncludeNode: (file: string, _source: string) => ({
         type: "include" as const,
         file,
         commands: [],
       }),
-    } as IncludeSourceHost["frontEndService"],
+    } as IncludeSourceHost["programModelBuilder"],
     lowerAndExecuteRuntimeNodes: () => {
       host.executedFiles.push(host.currentFile);
     },

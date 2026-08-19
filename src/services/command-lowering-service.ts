@@ -7,13 +7,14 @@ import type {
 } from "../ir/assembly-tree.js";
 import type { DirectiveRegistry } from "../directives/registry.js";
 import type { ArchitectureDefinition } from "../architecture-registry.js";
-import { cloneNormalizedCommand, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { NormalizedCommand } from "../ir/normalized-command.js";
 import type { ProgramModel } from "./program-model-builder.js";
+import { incrementInternalCounter } from "../internal-instrumentation.js";
 
 export type LoweredDirective = {
   kind: "directive";
   keyword: string;
-  words: string[];
+  words: readonly string[];
   source: NormalizedCommand["source"];
   command?: NormalizedCommand;
 };
@@ -203,30 +204,31 @@ export class CommandLoweringService {
 
   /**
    * Lowers an executable tree node into a durable execution-layer node.
-   * Commands that still need legacy preprocessing are preserved as detached
-   * command snapshots so the cached program tree never gets mutated at runtime.
+   * Commands retain their immutable front-end snapshots. Legacy preprocessing
+   * creates its mutable execution copy at dispatch time, avoiding a redundant
+   * clone for every stage-owned lowered node.
    * @param {ExecutableNode} node The node to lower.
    * @returns {LoweredExecutableNode} The lowered node.
    */
   lowerExecutableNode(node: ExecutableNode): LoweredExecutableNode {
+    incrementInternalCounter("runtimeNodesLowered");
     if ("source" in node) {
-      const detached = cloneNormalizedCommand(node);
-      if (this.shouldPreserveCommand(detached)) {
+      if (this.shouldPreserveCommand(node)) {
         return {
           kind: "command",
-          command: detached,
-          source: detached.source,
-          passthroughReason: this.getPassthroughReason(detached) ?? "unknown",
+          command: node,
+          source: node.source,
+          passthroughReason: this.getPassthroughReason(node) ?? "unknown",
         };
       }
-      return this.lowerCommand(detached);
+      return this.lowerCommand(node);
     }
 
     if (node.type === "for" || node.type === "while") {
       return {
         kind: "loop",
         loopType: node.type,
-        header: node.header ? cloneNormalizedCommand(node.header) : undefined,
+        header: node.header,
         conditionNode: node.conditionNode,
         rangeNode: node.rangeNode,
         variable: node.variable,
@@ -247,10 +249,10 @@ export class CommandLoweringService {
     const conditionalNode: ConditionalBranchNode = node;
     return {
       kind: "conditional",
-      header: conditionalNode.header ? cloneNormalizedCommand(conditionalNode.header) : undefined,
+      header: conditionalNode.header,
       branches: conditionalNode.branches.map((branch): LoweredConditionalBranch => ({
         kind: branch.kind,
-        header: branch.header ? cloneNormalizedCommand(branch.header) : undefined,
+        header: branch.header,
         conditionNode: branch.conditionNode,
         commands: branch.commands.map((command) => this.lowerExecutableNode(command)),
         startLine: branch.startLine,
@@ -267,6 +269,7 @@ export class CommandLoweringService {
    * @returns {LoweredProgram} The lowered program.
    */
   lowerProgram(program: ProgramModel): LoweredProgram {
+    incrementInternalCounter("loweredProgramBuilds");
     return {
       sourceFile: program.sourceFile,
       startLine: program.startLine,
@@ -276,7 +279,8 @@ export class CommandLoweringService {
 
   /**
    * Commands that still require legacy preprocess / control handlers must remain
-   * as detached command snapshots rather than direct lowered directives.
+   * as command snapshots rather than direct lowered directives. Dispatch clones
+   * these snapshots before running the mutable legacy preprocessing pipeline.
    * @param {NormalizedCommand} command The command to inspect.
    * @returns {boolean} True when the command should stay in passthrough form.
    */

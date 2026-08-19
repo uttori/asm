@@ -10,7 +10,12 @@ import {
   type ExpressionNode,
   type ReferenceExpressionNode,
 } from "../src/ir/expression-node.js";
-import { createNormalizedCommand, createPendingCommand } from "../src/ir/normalized-command.js";
+import {
+  cloneNormalizedCommand,
+  createNormalizedCommand,
+  createPendingCommand,
+  setCommandWords,
+} from "../src/ir/normalized-command.js";
 import { handleIncbin } from "../src/directives/include-source.js";
 
 type AssemblerReferenceTestAccess = {
@@ -38,6 +43,25 @@ test("normalized command captures provenance and classification", (t) => {
   t.deepEqual(command.source.tokenSpans.map((span) => [span.start, span.end]), [[0, 5], [6, 8], [9, 12]]);
   t.is(command.labelName, "Main");
   t.is(command.kind, "labelDefinition");
+});
+
+test("normalized command clones share readonly snapshots and copy on write", (t) => {
+  const command = createNormalizedCommand("lda #$10", "lda #$10", ["lda", "#$10"], "test.asm", 12);
+  const clone = cloneNormalizedCommand(command);
+
+  t.not(clone, command);
+  t.is(clone.source, command.source);
+  t.is(clone.words, command.words);
+  t.is(clone.parsed, command.parsed);
+
+  setCommandWords(clone, ["lda", "#$20"], "lda #$20");
+  t.not(clone.source, command.source);
+  t.not(clone.words, command.words);
+  t.is(command.command, "lda #$10");
+  t.deepEqual(command.words, ["lda", "#$10"]);
+  t.is(command.source.normalized, "lda #$10");
+  t.is(command.parsed.opcodeOperands?.operandText, "#$10");
+  t.is(clone.parsed.opcodeOperands?.operandText, "#$20");
 });
 
 test("pending command preserves raw loop body input", (t) => {
@@ -252,7 +276,7 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
     return;
   }
 
-  assembler.executeNodeStream([loop]);
+  assembler.lowerAndExecuteRuntimeNodes([loop]);
 
   t.deepEqual(executed, [
     { command: "db !i", value: "0" },
@@ -272,7 +296,7 @@ test("tree pass programs are cached per source block key", (t) => {
 
 test("include nodes and parsed programs keep typed executable leaves", (t) => {
   const assembler = new Assembler();
-  const includeNode = assembler.frontEndService.createIncludeNode("include.asm", "db $01\ndb $02");
+  const includeNode = assembler.programModelBuilder.createIncludeNode("include.asm", "db $01\ndb $02");
   const rootNodes = assembler.getOrBuildPassProgram(["db $01", "db $02"], "root.asm", 0);
 
   t.true(includeNode.commands.every((node) => typeof node !== "string"));
@@ -349,6 +373,7 @@ test("define references and member/index nodes resolve structurally", (t) => {
   assembler.defines.set("NAME_1", "41");
   assembler.defines.set("IDX", "1");
 
+  stub(assembler.structEngine, "hasStructReference").returns(true);
   const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("Player[1].hp").returns(1);
 
@@ -418,6 +443,7 @@ test("assembler reference seam resolves defines and normalizes label paths", (t)
   const normalized = access.renderResolvedReferenceExpression(resolved);
   t.is(normalized, "Player[2].hp");
 
+  stub(assembler.structEngine, "hasStructReference").returns(true);
   const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("Player[2].hp").returns(99);
   t.is(access.evaluateReferenceExpressionNode(reference), 99);
@@ -431,9 +457,13 @@ test("expression host label resolution delegates to canonical reference seam", (
     offset: 0,
     size: 16,
     labels: new Map(),
+    extensionSize: 0,
   };
   assembler.structs.set("MyStruct", structDefinition);
 
+  stub(assembler.structEngine, "hasStructReference").callsFake(
+    reference => reference === "MyStruct" || reference.startsWith("Player"),
+  );
   const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("MyStruct").returns(0);
   structStub.withArgs("Player[2].hp").returns(33);
@@ -444,6 +474,7 @@ test("expression host label resolution delegates to canonical reference seam", (
 
 test("mathcore legacy string parsing routes compound references through the reference subtree", (t) => {
   const assembler = new Assembler();
+  stub(assembler.structEngine, "hasStructReference").returns(true);
   const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("Player[2].hp").returns(2);
 

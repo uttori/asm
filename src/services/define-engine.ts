@@ -12,6 +12,11 @@ export type DefineHost = {
 export class DefineEngine {
   constructor(readonly host: DefineHost) {}
 
+  /**
+   * Checks whether pure math expression.
+   * @param {string} value The value.
+   * @returns {boolean} The result.
+   */
   isPureMathExpression(value: string): boolean {
     // oxlint-disable-next-line security/detect-unsafe-regex -- Anchors bound the complete token grammar.
     return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|\-]|\s)+$/.test(value);

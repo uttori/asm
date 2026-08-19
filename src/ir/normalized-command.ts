@@ -20,20 +20,20 @@ export type CommandKind =
   | "commentOrEmpty";
 
 export type CommandProvenance = {
-  file: string;
-  line: number;
-  raw: string;
-  normalized: string;
-  span: SourceSpan;
-  normalizedSpan: SourceSpan;
-  tokenSpans: SourceSpan[];
+  readonly file: string;
+  readonly line: number;
+  readonly raw: string;
+  readonly normalized: string;
+  readonly span: SourceSpan;
+  readonly normalizedSpan: SourceSpan;
+  readonly tokenSpans: readonly SourceSpan[];
 };
 
 export type NormalizedCommand = {
   kind: CommandKind;
   source: CommandProvenance;
   command: string;
-  words: string[];
+  words: readonly string[];
   keyword: string;
   labelName?: string;
   assignmentTarget?: string;
@@ -200,15 +200,7 @@ export function createPendingCommand(
  */
 export function cloneNormalizedCommand(command: NormalizedCommand): NormalizedCommand {
   incrementInternalCounter("normalizedCommandClones");
-  const cloned = createNormalizedCommand(
-    command.source.raw,
-    command.source.normalized,
-    [...command.words],
-    command.source.file,
-    command.source.line,
-  );
-  cloned.kind = command.kind;
-  return cloned;
+  return { ...command };
 }
 
 /**
@@ -220,19 +212,19 @@ export function cloneNormalizedCommand(command: NormalizedCommand): NormalizedCo
  */
 export function setCommandWords(
   command: NormalizedCommand,
-  words: string[],
+  words: readonly string[],
   normalized?: string,
 ): NormalizedCommand {
   command.words = words;
   command.keyword = words[0] ?? "";
   command.command = (normalized ?? words.join(" ")).trim();
-  command.source.normalized = normalized ?? command.command;
-  command.source.normalizedSpan = createLineSpan(command.source.normalized, command.source.line);
-  command.source.tokenSpans = deriveTokenSpans(
-    command.source.normalized,
-    words,
-    command.source.line,
-  );
+  const normalizedSource = normalized ?? command.command;
+  command.source = {
+    ...command.source,
+    normalized: normalizedSource,
+    normalizedSpan: createLineSpan(normalizedSource, command.source.line),
+    tokenSpans: deriveTokenSpans(normalizedSource, words, command.source.line),
+  };
   command.labelName = deriveLabelName(command.keyword);
   command.assignmentTarget = deriveAssignmentTarget(words);
   command.parsed = deriveCommandSemantics(command.command, words);
@@ -257,7 +249,7 @@ export function setCommandKind(command: NormalizedCommand, kind: CommandKind): N
  * @param {string[]} words The tokenized command words.
  * @returns {CommandKind} The inferred command kind.
  */
-function classifyCommand(command: string, words: string[]): CommandKind {
+function classifyCommand(command: string, words: readonly string[]): CommandKind {
   const trimmed = command.trim();
   const keyword = (words[0] ?? "").toLowerCase();
   if (!trimmed || trimmed.startsWith(";")) {
@@ -320,7 +312,7 @@ function deriveLabelName(keyword: string): string | undefined {
  * @param {string[]} words The tokenized command words.
  * @returns {string | undefined} The assignment target when present.
  */
-function deriveAssignmentTarget(words: string[]): string | undefined {
+function deriveAssignmentTarget(words: readonly string[]): string | undefined {
   if (words.length === 3 && words[1] === "=") {
     return words[0];
   }
@@ -333,7 +325,7 @@ function deriveAssignmentTarget(words: string[]): string | undefined {
  * @param {string[]} words The tokenized command words.
  * @returns {CommandSemantics} Parsed semantic payloads keyed by construct type.
  */
-function deriveCommandSemantics(command: string, words: string[]): CommandSemantics {
+function deriveCommandSemantics(command: string, words: readonly string[]): CommandSemantics {
   const keyword = (words[0] ?? "").toLowerCase();
   const semantics: CommandSemantics = {};
 
@@ -420,15 +412,16 @@ function deriveCommandSemantics(command: string, words: string[]): CommandSemant
 
   if (keyword && !keyword.startsWith("%") && !keyword.startsWith("!")) {
     const payload = command.slice((words[0] ?? "").length).trim();
+    const args = semantics.dataDirective?.operands ?? (payload ? splitCommaArguments(payload) : []);
     semantics.directiveArgs = {
       name: keyword,
-      args: payload ? splitCommaArguments(payload) : [],
+      args,
     };
     if (!deriveLabelName(words[0] ?? "") && payload) {
       semantics.opcodeOperands = {
         mnemonic: words[0] ?? "",
         operandText: payload,
-        operands: splitCommaArguments(payload),
+        operands: args,
       };
     }
   }

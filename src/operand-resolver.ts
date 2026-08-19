@@ -1,5 +1,5 @@
 import type { ExpandedOperand, LoweredOperand } from "./architecture-types.js";
-import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
+import type { ExpressionNode } from "./ir/expression-node.js";
 import {
   isReferenceExpressionNode,
   renderExpressionNode,
@@ -9,9 +9,10 @@ import { classifyGenericOperand } from "./operand-classifiers.js";
 
 export type OperandResolverDependencies = {
   resolveDefines(input: string): string;
+  isStructReference(input: string): boolean;
   resolveStructLabel(input: string): number;
+  tryResolveLabel(input: string, requireStatic: boolean): number | undefined;
   resolveLabel(input: string, requireStatic: boolean): number;
-  hasLabel(input: string): boolean;
   evaluateMath(input: string | ExpressionNode): number;
   shouldDeferExpressionEvaluation(): boolean;
   getCurrentAddress(): number;
@@ -28,6 +29,11 @@ try {
 export class OperandResolver {
   constructor(readonly deps: OperandResolverDependencies) {}
 
+  /**
+   * Normalizes numeric base member.
+   * @param {string} operand The operand.
+   * @returns {string} The result.
+   */
   normalizeNumericBaseMember(operand: string): string {
     // oxlint-disable-next-line security/detect-unsafe-regex -- Anchored alternatives have distinct prefixes.
     const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
@@ -39,6 +45,11 @@ export class OperandResolver {
     return `${immediatePrefix}${literal}${indexSuffix}`;
   }
 
+  /**
+   * Splits math operand suffix.
+   * @param {string} operand The operand.
+   * @returns {{ expression: string; suffix: string }} The result.
+   */
   splitMathOperandSuffix(operand: string): { expression: string; suffix: string } {
     const trimmed = operand.trim();
     const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
@@ -52,10 +63,20 @@ export class OperandResolver {
     };
   }
 
+  /**
+   * Checks whether numeric token.
+   * @param {string} token The token.
+   * @returns {boolean} The result.
+   */
   isNumericToken(token: string): boolean {
     return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
   }
 
+  /**
+   * Checks whether same bank address.
+   * @param {string} expanded The expanded.
+   * @returns {boolean} The result.
+   */
   isSameBankAddress(expanded: string): boolean {
     // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
     const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
@@ -69,26 +90,28 @@ export class OperandResolver {
     return currentBank === targetBank;
   }
 
+  /**
+   * Resolves arithmetic token.
+   * @param {string} token The token.
+   * @returns {number} The result.
+   */
   resolveArithmeticToken(token: string): number {
     if (this.isNumericToken(token)) {
       return this.getnum(token);
     }
 
-    if (token.includes(".")) {
-      try {
-        const structValue = this.deps.resolveStructLabel(token);
-        if (typeof structValue === "number" && !Number.isNaN(structValue)) {
-          return structValue;
-        }
-      } catch {
-        // Fall through to normal label resolution.
-      }
-      return this.deps.resolveLabel(token, false);
+    if (token.includes(".") && this.deps.isStructReference(token)) {
+      return this.deps.resolveStructLabel(token);
     }
 
     return this.deps.resolveLabel(token, false);
   }
 
+  /**
+   * Attempts to resolve simple arithmetic.
+   * @param {string} operand The operand.
+   * @returns {number | null} The result.
+   */
   tryResolveSimpleArithmetic(operand: string): number | null {
     const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
     const match = operand.match(
@@ -119,6 +142,12 @@ export class OperandResolver {
     }
   }
 
+  /**
+   * Determines value length.
+   * @param {string | number} value The value.
+   * @param {boolean} [forceTwoBytes] The force two bytes.
+   * @returns {number} The result.
+   */
   determineValueLength(value: string | number, forceTwoBytes?: boolean): number {
     debug("determineValueLength", value, forceTwoBytes);
     if (typeof value !== "string" && typeof value !== "number") {
@@ -134,12 +163,14 @@ export class OperandResolver {
       return 2;
     }
 
-    const hexString =
-      typeof value === "number"
-        ? value.toString(16).toUpperCase()
-        : value.startsWith("$")
-          ? value.substring(1)
-          : value;
+    let hexString: string;
+    if (typeof value === "number") {
+      hexString = value.toString(16).toUpperCase();
+    } else if (value.startsWith("$")) {
+      hexString = value.substring(1);
+    } else {
+      hexString = value;
+    }
 
     if (hexString.length <= 2) {
       return 1;
@@ -150,6 +181,11 @@ export class OperandResolver {
     return 3;
   }
 
+  /**
+   * Checks whether math expression.
+   * @param {string} expression The expression.
+   * @returns {boolean} The result.
+   */
   isMathExpression(expression: string): boolean {
     if (!expression || typeof expression !== "string") {
       return false;
@@ -170,19 +206,20 @@ export class OperandResolver {
     );
   }
 
+  /**
+   * Attempts to resolve label in operand.
+   * @param {string} operand The operand.
+   * @returns {string} The result.
+   */
   tryResolveLabelInOperand(operand: string): string {
     debug("tryResolveLabelInOperand", operand);
 
     if (operand.startsWith("#")) {
       const inner = operand.substring(1).trim();
       if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
-        try {
-          const labelValue = this.deps.resolveLabel(inner, false);
-          if (labelValue !== 0 || this.deps.hasLabel(inner)) {
-            return "#$" + labelValue.toString(16).toUpperCase();
-          }
-        } catch (error) {
-          debug("label resolution failed for immediate", inner, error);
+        const labelValue = this.deps.tryResolveLabel(inner, false);
+        if (labelValue !== undefined) {
+          return "#$" + labelValue.toString(16).toUpperCase();
         }
       }
       return operand;
@@ -191,13 +228,9 @@ export class OperandResolver {
     if (operand.startsWith("[") && operand.endsWith("]")) {
       const inner = operand.substring(1, operand.length - 1).trim();
       if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
-        try {
-          const labelValue = this.deps.resolveLabel(inner, false);
-          if (labelValue !== 0 || this.deps.hasLabel(inner)) {
-            return "[$" + labelValue.toString(16).toUpperCase() + "]";
-          }
-        } catch (error) {
-          debug("label resolution failed for indirect", inner, error);
+        const labelValue = this.deps.tryResolveLabel(inner, false);
+        if (labelValue !== undefined) {
+          return "[$" + labelValue.toString(16).toUpperCase() + "]";
         }
       }
       return operand;
@@ -209,32 +242,29 @@ export class OperandResolver {
       const indexPart = operand.substring(lastCommaIndex).trim();
 
       if (!basePart.match(/^[\d$%(]/)) {
-        try {
-          const labelValue = this.deps.resolveLabel(basePart, false);
-          if (labelValue !== 0 || this.deps.hasLabel(basePart)) {
-            return "$" + labelValue.toString(16).toUpperCase() + indexPart;
-          }
-        } catch (error) {
-          debug("label resolution failed for indexed", basePart, error);
+        const labelValue = this.deps.tryResolveLabel(basePart, false);
+        if (labelValue !== undefined) {
+          return "$" + labelValue.toString(16).toUpperCase() + indexPart;
         }
       }
       return operand;
     }
 
     if (!operand.match(/^[\d#$%([]/) && !operand.includes(",")) {
-      try {
-        const labelValue = this.deps.resolveLabel(operand, false);
-        if (labelValue !== 0 || this.deps.hasLabel(operand)) {
-          return "$" + labelValue.toString(16).toUpperCase();
-        }
-      } catch (error: unknown) {
-        debug("label resolution failed for direct", operand, error);
+      const labelValue = this.deps.tryResolveLabel(operand, false);
+      if (labelValue !== undefined) {
+        return "$" + labelValue.toString(16).toUpperCase();
       }
     }
 
     return operand;
   }
 
+  /**
+   * Gets num.
+   * @param {string | ExpressionNode} operand The operand.
+   * @returns {number} The result.
+   */
   getnum(operand: string | ExpressionNode): number {
     debug("getnum", operand);
     if (typeof operand !== "string") {
@@ -280,26 +310,19 @@ export class OperandResolver {
 
     if (!operand.match(/^[\d$%]/)) {
       if (operand.indexOf(".") !== -1 || operand.indexOf("[") !== -1) {
-        try {
+        if (this.deps.isStructReference(operand)) {
           return this.deps.resolveStructLabel(operand);
-        } catch {
-          // Compound struct references also appear inside arithmetic
-          // expressions such as `obj_start+obj[19].base`. Let those fall
-          // through to math evaluation instead of treating the whole string as
-          // a single unresolved label token.
-          if (!this.isMathExpression(operand)) {
-            return this.deps.resolveLabel(operand, false);
-          }
+        }
+        // Compound struct references also appear inside arithmetic
+        // expressions such as `obj_start+obj[19].base`. Let those fall
+        // through to math evaluation instead of treating the whole string as
+        // a single unresolved label token.
+        if (!this.isMathExpression(operand)) {
+          return this.deps.resolveLabel(operand, false);
         }
       }
-      if (/^\w+$/.test(operand)) {
-        try {
-          return this.deps.resolveStructLabel(operand);
-        } catch {
-          // Bare struct identifiers such as `options` are valid base addresses
-          // in indexed operands like `lda.w options,X`. Fall back to regular
-          // label lookup when the token is not a struct name.
-        }
+      if (/^\w+$/.test(operand) && this.deps.isStructReference(operand)) {
+        return this.deps.resolveStructLabel(operand);
       }
       if (/^\w+$/.test(operand)) {
         return this.deps.resolveLabel(operand, false);
@@ -318,12 +341,20 @@ export class OperandResolver {
     }
   }
 
+  /**
+   * Gets num from node.
+   * @param {ExpressionNode} operand The operand.
+   * @returns {number} The result.
+   */
   getnumFromNode(operand: ExpressionNode): number {
     if (isReferenceExpressionNode(operand)) {
       if (operand.type === "defineReference") {
         return this.getnum(this.deps.resolveDefines(renderExpressionNode(operand)));
       }
-      return this.resolveReferenceValue(this.renderReference(operand));
+      const reference = renderReferenceExpressionNode(operand, {
+        renderIndex: (node) => this.getnum(node).toString(),
+      });
+      return this.resolveReferenceValue(reference);
     }
 
     switch (operand.type) {
@@ -345,14 +376,18 @@ export class OperandResolver {
     }
   }
 
+  /**
+   * Resolves reference value.
+   * @param {string} reference The reference.
+   * @returns {number} The result.
+   */
   resolveReferenceValue(reference: string): number {
     if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
-      try {
+      if (this.deps.isStructReference(reference)) {
         return this.deps.resolveStructLabel(reference);
-      } catch {
-        if (!this.isMathExpression(reference)) {
-          return this.deps.resolveLabel(reference, false);
-        }
+      }
+      if (!this.isMathExpression(reference)) {
+        return this.deps.resolveLabel(reference, false);
       }
     }
     if (/^\w+$/.test(reference)) {
@@ -361,12 +396,11 @@ export class OperandResolver {
     return this.getnum(reference);
   }
 
-  renderReference(expression: ReferenceExpressionNode): string {
-    return renderReferenceExpressionNode(expression, {
-      renderIndex: (node) => this.getnum(node).toString(),
-    });
-  }
-
+  /**
+   * Expands operand.
+   * @param {string} operand The operand.
+   * @returns {ExpandedOperand} The result.
+   */
   expandOperand(operand: string): ExpandedOperand {
     debug("expandOperand", operand);
     if (!operand) {
@@ -387,10 +421,8 @@ export class OperandResolver {
       debug("expandOperand not a define", error);
     }
 
-    try {
+    if (this.deps.isStructReference(expanded)) {
       expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
-    } catch (error) {
-      debug("expandOperand not a struct label", error);
     }
 
     expanded = this.normalizeNumericBaseMember(expanded);
@@ -467,6 +499,11 @@ export class OperandResolver {
     return { expanded, length: expectedLength };
   }
 
+  /**
+   * Lowers operand.
+   * @param {string} operand The operand.
+   * @returns {LoweredOperand} The result.
+   */
   lowerOperand(operand: string): LoweredOperand {
     const raw = operand.trim();
     const { expanded, length } = this.expandOperand(raw);

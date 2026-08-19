@@ -8,14 +8,13 @@ import type { MemoryDirectiveContext } from "./types.js";
  * @param {MemoryDirectiveContext} ctx The directive context.
  * @param {string[]} words Directive keyword.
  */
-export const handleFreespace = ({ session }: MemoryDirectiveContext, words: string[]): void => {
+export const handleFreespace = (
+  { session }: MemoryDirectiveContext,
+  words: readonly string[],
+): void => {
   if (session.inSpcblock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
   }
-
-  // const _type = words[0];
-  // const _params = words.slice(1);
-  // debug("handleFreespace", { type, _params });
 
   if (!isFreespaceAvailable(session.mapper)) {
     throw new Error("No freespace available in norom.");
@@ -63,7 +62,7 @@ export const handleFreespace = ({ session }: MemoryDirectiveContext, words: stri
  */
 export const handleFreespaceByte = (
   { session, operandResolver }: MemoryDirectiveContext,
-  words: string[],
+  words: readonly string[],
 ): void => {
   const params = words.slice(1);
   if (params.length !== 1) {
@@ -79,7 +78,7 @@ export const handleFreespaceByte = (
  * @param {MemoryDirectiveContext} ctx The directive context.
  * @param {string[]} words Label list arguments.
  */
-export const handleProt = ({ session }: MemoryDirectiveContext, words: string[]): void => {
+export const handleProt = ({ session }: MemoryDirectiveContext, words: readonly string[]): void => {
   const labelList = words.slice(1);
   if (labelList.length === 0) {
     throw new Error("PROT command requires at least one label parameter.");

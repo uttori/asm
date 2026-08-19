@@ -24,7 +24,6 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver";
 import {
-  WorkspaceIndex,
   findInstruction,
   findDirective,
   buildCompletionEntries,
@@ -35,13 +34,16 @@ import {
   symbolAt,
   resolveDefinition,
   findReferences,
-  type AssemblyDiagnostic,
-  type AssemblyDiagnosticSeverity,
-  type AssemblySymbolDefinition,
-  type AssemblySymbolKind,
-  type AssemblySymbolReference,
-  type SourceRange,
 } from "./core.js";
+import type { WorkspaceIndex } from "../../src/lsp/workspace-index.js";
+import type {
+  AssemblyDiagnostic,
+  AssemblyDiagnosticSeverity,
+  AssemblySymbolDefinition,
+  AssemblySymbolKind,
+  AssemblySymbolReference,
+} from "../../src/diagnostics.js";
+import type { SourceRange } from "../../src/source-location.js";
 
 /**
  * The LSP 3.18 semantic-token legend advertised to clients. All entries use

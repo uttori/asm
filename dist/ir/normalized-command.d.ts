@@ -2,19 +2,19 @@ import { type ExpressionNode, type RangeExpressionNode } from "./expression-node
 import { type SourceSpan } from "../source-location.js";
 export type CommandKind = "unknown" | "directive" | "opcodeCandidate" | "functionDefinition" | "labelDefinition" | "staticAssignment" | "characterMapping" | "macroDefinitionOrInvoke" | "defineCommand" | "structCommand" | "commentOrEmpty";
 export type CommandProvenance = {
-    file: string;
-    line: number;
-    raw: string;
-    normalized: string;
-    span: SourceSpan;
-    normalizedSpan: SourceSpan;
-    tokenSpans: SourceSpan[];
+    readonly file: string;
+    readonly line: number;
+    readonly raw: string;
+    readonly normalized: string;
+    readonly span: SourceSpan;
+    readonly normalizedSpan: SourceSpan;
+    readonly tokenSpans: readonly SourceSpan[];
 };
 export type NormalizedCommand = {
     kind: CommandKind;
     source: CommandProvenance;
     command: string;
-    words: string[];
+    words: readonly string[];
     keyword: string;
     labelName?: string;
     assignmentTarget?: string;
@@ -119,7 +119,7 @@ export declare function cloneNormalizedCommand(command: NormalizedCommand): Norm
  * @param {string} [normalized] Optional normalized command text.
  * @returns {NormalizedCommand} The same command node for chaining.
  */
-export declare function setCommandWords(command: NormalizedCommand, words: string[], normalized?: string): NormalizedCommand;
+export declare function setCommandWords(command: NormalizedCommand, words: readonly string[], normalized?: string): NormalizedCommand;
 /**
  * Reclassifies a normalized command without changing any other fields.
  * @param {NormalizedCommand} command The command node to update.

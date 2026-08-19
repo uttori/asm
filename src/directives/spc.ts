@@ -6,7 +6,10 @@ import type { SpcDirectiveContext } from "./types.js";
  * @param {SpcDirectiveContext} ctx The SPC-capable directive context.
  * @param {string[]} words The directive words.
  */
-export const handleSpcblock = ({ runtime }: SpcDirectiveContext, words: string[]): void => {
+export const handleSpcblock = (
+  { runtime }: SpcDirectiveContext,
+  words: readonly string[],
+): void => {
   runtime.handleSpcblock(words);
 };
 
@@ -15,7 +18,10 @@ export const handleSpcblock = ({ runtime }: SpcDirectiveContext, words: string[]
  * @param {SpcDirectiveContext} ctx The SPC-capable directive context.
  * @param {string[]} words The directive words.
  */
-export const handleEndSpcblock = ({ runtime }: SpcDirectiveContext, words: string[]): void => {
+export const handleEndSpcblock = (
+  { runtime }: SpcDirectiveContext,
+  words: readonly string[],
+): void => {
   runtime.handleEndSpcblock(words);
 };
 

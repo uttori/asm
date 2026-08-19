@@ -55,7 +55,7 @@ export class DirectiveRuntimeService {
    * @param {string[]} words The character mapping command words.
    * @throws {Error} If the format is incorrect.
    */
-  handleCharacterMapping(words: string[]): void {
+  handleCharacterMapping(words: readonly string[]): void {
     if (words.length !== 3) {
       throw new Error("Character mapping requires format: 'char' = value");
     }
@@ -80,7 +80,7 @@ export class DirectiveRuntimeService {
    * Handles the `spcblock` directive.
    * @param {string[]} words The directive words.
    */
-  handleSpcblock(words: string[]): void {
+  handleSpcblock(words: readonly string[]): void {
     if (words.length < 2) {
       throw new Error("spcblock requires at least a destination address.");
     }
@@ -145,7 +145,7 @@ export class DirectiveRuntimeService {
    * Handles the `endspcblock` directive.
    * @param {string[]} words The directive words.
    */
-  handleEndSpcblock(words: string[]): void {
+  handleEndSpcblock(words: readonly string[]): void {
     if (!this.host.inSpcblock || !this.host.spcblockData) {
       throw new Error("endspcblock used without an active spcblock.");
     }
@@ -284,16 +284,16 @@ export class DirectiveRuntimeService {
       }
 
       let num: number;
-      try {
-        // Struct member references look like labels but need struct-specific
-        // indexing and extension rules before falling back to numeric parsing.
+      // Struct member references look like labels but need struct-specific
+      // indexing and extension rules before falling back to numeric parsing.
+      if (this.host.structEngine.hasStructReference(resolved)) {
         const structValue = this.host.structEngine.resolveStructLabel(resolved);
         if (typeof structValue === "number" && !Number.isNaN(structValue)) {
           this.writeDataByLength(len, structValue);
           continue;
         }
         num = structValue;
-      } catch {
+      } else {
         num = this.host.operandResolver.getnum(resolved);
       }
       if (Number.isNaN(num)) {
@@ -339,6 +339,11 @@ export class DirectiveRuntimeService {
     }
   }
 
+  /**
+   * Estimates data directive size.
+   * @param {number} len The len.
+   * @param {string[]} params The params.
+   */
   estimateDataDirectiveSize(len: number, params: string[]): void {
     const pendingValues = [...splitRespectingFunctions(params.join(" "))];
     let estimatedItems = 0;
