@@ -10,7 +10,10 @@ import { cpu65816Catalog } from "./lsp/instruction-catalog.js";
 
 let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
-try { const { default: d } = await import("debug"); debug = d("Arch65816"); } catch {}
+try {
+  const { default: d } = await import("debug");
+  debug = d("Arch65816");
+} catch {}
 
 export class Arch65816 implements ArchitectureEncoder {
   assembler: EncoderRuntime;
@@ -56,19 +59,80 @@ export class Arch65816 implements ArchitectureEncoder {
     const mnemonic = words[0] ?? "";
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    return this.estimateResolvedInstruction(mnemonic, rawOperand, loweredOperand.expanded, loweredOperand.length);
+    return this.estimateResolvedInstruction(
+      mnemonic,
+      rawOperand,
+      loweredOperand.expanded,
+      loweredOperand.length,
+    );
   }
 
-  estimateResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): number {
+  estimateResolvedInstruction(
+    mnemonic: string,
+    rawOperand: string,
+    operand: string,
+    operandLength: number,
+  ): number {
     let opcode = mnemonic.toUpperCase();
     const noOperandOpcodes = new Set([
-      "CLC", "CLD", "CLI", "CLV", "DEX", "DEY", "INX", "INY", "NOP", "PHA", "PHB", "PHD", "PHK",
-      "PHP", "PHX", "PHY", "PLA", "PLB", "PLD", "PLP", "PLX", "PLY", "RTI", "RTL", "RTS", "SEC",
-      "SED", "SEI", "STP", "TAX", "TAY", "TCD", "TCS", "TDC", "TSC", "TSX", "TXA", "TXS", "TXY",
-      "TYA", "TYX", "WAI", "XBA", "XCE",
+      "CLC",
+      "CLD",
+      "CLI",
+      "CLV",
+      "DEX",
+      "DEY",
+      "INX",
+      "INY",
+      "NOP",
+      "PHA",
+      "PHB",
+      "PHD",
+      "PHK",
+      "PHP",
+      "PHX",
+      "PHY",
+      "PLA",
+      "PLB",
+      "PLD",
+      "PLP",
+      "PLX",
+      "PLY",
+      "RTI",
+      "RTL",
+      "RTS",
+      "SEC",
+      "SED",
+      "SEI",
+      "STP",
+      "TAX",
+      "TAY",
+      "TCD",
+      "TCS",
+      "TDC",
+      "TSC",
+      "TSX",
+      "TXA",
+      "TXS",
+      "TXY",
+      "TYA",
+      "TYX",
+      "WAI",
+      "XBA",
+      "XCE",
     ]);
     const accumulatorRepeatOpcodes = new Set(["ASL", "LSR", "ROL", "ROR", "INC", "DEC"]);
-    const branchOpcodes = new Set(["BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ", "BRA", "BRL"]);
+    const branchOpcodes = new Set([
+      "BPL",
+      "BMI",
+      "BVC",
+      "BVS",
+      "BCC",
+      "BCS",
+      "BNE",
+      "BEQ",
+      "BRA",
+      "BRL",
+    ]);
 
     if (noOperandOpcodes.has(opcode)) {
       if (rawOperand.startsWith("#")) {
@@ -140,10 +204,20 @@ export class Arch65816 implements ArchitectureEncoder {
     const mnemonic = words[0] ?? "";
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    return this.encodeResolvedInstruction(mnemonic, rawOperand, loweredOperand.expanded, loweredOperand.length);
+    return this.encodeResolvedInstruction(
+      mnemonic,
+      rawOperand,
+      loweredOperand.expanded,
+      loweredOperand.length,
+    );
   }
 
-  encodeResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): boolean {
+  encodeResolvedInstruction(
+    mnemonic: string,
+    rawOperand: string,
+    operand: string,
+    operandLength: number,
+  ): boolean {
     let opcode = mnemonic.toUpperCase();
     debug("asblock_65816 operand expanded", operand, "expected length:", operandLength);
 
@@ -192,7 +266,6 @@ export class Arch65816 implements ArchitectureEncoder {
       return this.handleBitTestOperations(opcode, operand, len, explicitlen);
     }
 
-
     if (opcode === "MVP" || opcode === "MVN") {
       return this.handleBlockMove(opcode, operand);
     }
@@ -229,7 +302,13 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {string} rawOperand The raw source operand before expansion.
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
-  handleMemoryOperations(opcode: string, operand: string, len: number, explicitlen: boolean, rawOperand = operand): boolean {
+  handleMemoryOperations(
+    opcode: string,
+    operand: string,
+    len: number,
+    explicitlen: boolean,
+    rawOperand = operand,
+  ): boolean {
     debug("handleMemoryOperations", { opcode, operand, len, explicitlen });
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
@@ -244,7 +323,9 @@ export class Arch65816 implements ArchitectureEncoder {
     if (loweredOperand.immediate) {
       debug("handleMemoryOperations Immediate Mode (#$XX)", opcode, resolvedOperand);
       const immediateOpcodes: { [key: string]: number } = {
-          ADC: 0x69, LDA: 0xA9, SBC: 0xE9, // STA does not support immediate mode
+        ADC: 0x69,
+        LDA: 0xa9,
+        SBC: 0xe9, // STA does not support immediate mode
       };
       if (opcode in immediateOpcodes) {
         this.assembler.write1(immediateOpcodes[opcode]);
@@ -264,10 +345,10 @@ export class Arch65816 implements ArchitectureEncoder {
     if (explicitlen) {
       if (loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
         const forcedIndexed: { [key: string]: { [L: number]: number } } = {
-          ADC: { 1: 0x75, 2: 0x7D, 3: 0x7F },
-          STA: { 1: 0x95, 2: 0x9D, 3: 0x9F },
-          LDA: { 1: 0xB5, 2: 0xBD, 3: 0xBF },
-          SBC: { 1: 0xF5, 2: 0xFD, 3: 0xFF }
+          ADC: { 1: 0x75, 2: 0x7d, 3: 0x7f },
+          STA: { 1: 0x95, 2: 0x9d, 3: 0x9f },
+          LDA: { 1: 0xb5, 2: 0xbd, 3: 0xbf },
+          SBC: { 1: 0xf5, 2: 0xfd, 3: 0xff },
         };
         if (!(opcode in forcedIndexed)) {
           throw new Error(`Error: Opcode ${opcode} not supported in forced indexed mode.`);
@@ -285,8 +366,8 @@ export class Arch65816 implements ArchitectureEncoder {
         const forcedIndexedY: { [key: string]: { [L: number]: number } } = {
           ADC: { 2: 0x79 },
           STA: { 2: 0x99 },
-          LDA: { 2: 0xB9 },
-          SBC: { 2: 0xF9 }
+          LDA: { 2: 0xb9 },
+          SBC: { 2: 0xf9 },
         };
         if (!(opcode in forcedIndexedY) || !(len in forcedIndexedY[opcode])) {
           throw new Error(`Error: Opcode ${opcode} not supported in forced indexed-Y mode.`);
@@ -297,10 +378,10 @@ export class Arch65816 implements ArchitectureEncoder {
       } else {
         // Non-indexed forced addressing:
         const forcedNonIndexed: { [key: string]: { [L: number]: number } } = {
-          ADC: { 1: 0x65, 2: 0x6D, 3: 0x6F },
-          STA: { 1: 0x85, 2: 0x8D, 3: 0x8F },
-          LDA: { 1: 0xA5, 2: 0xAD, 3: 0xAF },
-          SBC: { 1: 0xE5, 2: 0xED, 3: 0xEF }
+          ADC: { 1: 0x65, 2: 0x6d, 3: 0x6f },
+          STA: { 1: 0x85, 2: 0x8d, 3: 0x8f },
+          LDA: { 1: 0xa5, 2: 0xad, 3: 0xaf },
+          SBC: { 1: 0xe5, 2: 0xed, 3: 0xef },
         };
         if (!(opcode in forcedNonIndexed)) {
           throw new Error(`Error: Opcode ${opcode} not supported in forced non-indexed mode.`);
@@ -321,12 +402,18 @@ export class Arch65816 implements ArchitectureEncoder {
     if (loweredOperand.mode === "absoluteIndexedX") {
       debug("handleMemoryOperations Absolute Indexed,X", opcode, resolvedOperand);
       const absoluteIndexedXOpcodes: { [key: string]: number } = {
-        ADC: 0x7D, STA: 0x9D, LDA: 0xBD, SBC: 0xFD,
+        ADC: 0x7d,
+        STA: 0x9d,
+        LDA: 0xbd,
+        SBC: 0xfd,
       };
       if (opcode in absoluteIndexedXOpcodes) {
         debug("handleMemoryOperations =", absoluteIndexedXOpcodes[opcode].toString(16));
         this.assembler.write1(absoluteIndexedXOpcodes[opcode]);
-        debug("handleMemoryOperations =", this.assembler.operandResolver.getnum(baseOperand).toString(16));
+        debug(
+          "handleMemoryOperations =",
+          this.assembler.operandResolver.getnum(baseOperand).toString(16),
+        );
         // Extract absolute address
         this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
         return true;
@@ -337,7 +424,10 @@ export class Arch65816 implements ArchitectureEncoder {
     if (loweredOperand.mode === "absoluteLongIndexedX") {
       debug("handleMemoryOperations Absolute Long Indexed,X", opcode, resolvedOperand);
       const absoluteLongIndexedXOpcodes: { [key: string]: number } = {
-        ADC: 0x7F, STA: 0x9F, LDA: 0xBF, SBC: 0xFF,
+        ADC: 0x7f,
+        STA: 0x9f,
+        LDA: 0xbf,
+        SBC: 0xff,
       };
       if (opcode in absoluteLongIndexedXOpcodes) {
         this.assembler.write1(absoluteLongIndexedXOpcodes[opcode]);
@@ -350,7 +440,10 @@ export class Arch65816 implements ArchitectureEncoder {
     if (loweredOperand.mode === "indexedIndirectX") {
       debug("handleMemoryOperations Indexed Indirect (X)", opcode, resolvedOperand);
       const indexedIndirectOpcodes: { [key: string]: number } = {
-        ADC: 0x61, STA: 0x81, LDA: 0xA1, SBC: 0xE1,
+        ADC: 0x61,
+        STA: 0x81,
+        LDA: 0xa1,
+        SBC: 0xe1,
       };
       if (opcode in indexedIndirectOpcodes) {
         this.assembler.write1(indexedIndirectOpcodes[opcode]);
@@ -363,21 +456,31 @@ export class Arch65816 implements ArchitectureEncoder {
     if (loweredOperand.mode === "directPageIndirect") {
       debug("handleMemoryOperations Direct Page Indirect", opcode, resolvedOperand);
       const indirectDPIndirect: { [key: string]: number } = {
-          ADC: 0x72, STA: 0x92, LDA: 0xB2, SBC: 0xF2
+        ADC: 0x72,
+        STA: 0x92,
+        LDA: 0xb2,
+        SBC: 0xf2,
       };
       if (opcode in indirectDPIndirect) {
-          this.assembler.write1(indirectDPIndirect[opcode]);
-          this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
-          return true;
+        this.assembler.write1(indirectDPIndirect[opcode]);
+        this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
+        return true;
       }
     }
 
     // DP Indexed, X
-    if ((this.assembler.optimizeDirectPage || isExplicitDirectPageIndexedX) && loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
+    if (
+      (this.assembler.optimizeDirectPage || isExplicitDirectPageIndexedX) &&
+      loweredOperand.indexRegister === "x" &&
+      !loweredOperand.indirect
+    ) {
       debug("handleMemoryOperations DP Indexed,X", opcode, resolvedOperand);
 
       const dpIndexedXOpcodes: { [key: string]: number } = {
-        ADC: 0x75, STA: 0x95, LDA: 0xB5, SBC: 0xF5,
+        ADC: 0x75,
+        STA: 0x95,
+        LDA: 0xb5,
+        SBC: 0xf5,
       };
 
       if (opcode in dpIndexedXOpcodes) {
@@ -394,103 +497,131 @@ export class Arch65816 implements ArchitectureEncoder {
     // Indexed Indirect (sr,S)
     if (loweredOperand.mode === "stackRelative") {
       debug("handleMemoryOperations Indexed Indirect (sr,S)", opcode, resolvedOperand);
-        const stackRelativeOpcodes: { [key: string]: number } = {
-          ADC: 0x63, STA: 0x83, LDA: 0xA3, SBC: 0xE3,
-        };
-        if (opcode in stackRelativeOpcodes) {
-          this.assembler.write1(stackRelativeOpcodes[opcode]);
-          this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
-          return true;
-        }
+      const stackRelativeOpcodes: { [key: string]: number } = {
+        ADC: 0x63,
+        STA: 0x83,
+        LDA: 0xa3,
+        SBC: 0xe3,
+      };
+      if (opcode in stackRelativeOpcodes) {
+        this.assembler.write1(stackRelativeOpcodes[opcode]);
+        this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
+        return true;
+      }
     }
 
     // Stack Relative Indexed Indirect (sr,S),Y
     if (loweredOperand.mode === "stackRelativeIndexedIndirectY") {
-      debug("handleMemoryOperations Stack Relative Indexed Indirect (sr,S),Y", opcode, resolvedOperand);
-        const stackIndexedOpcodes: { [key: string]: number } = {
-          ADC: 0x73, STA: 0x93, LDA: 0xB3, SBC: 0xF3,
-        };
-        if (opcode in stackIndexedOpcodes) {
-            this.assembler.write1(stackIndexedOpcodes[opcode]);
-            this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
-            return true;
-        }
+      debug(
+        "handleMemoryOperations Stack Relative Indexed Indirect (sr,S),Y",
+        opcode,
+        resolvedOperand,
+      );
+      const stackIndexedOpcodes: { [key: string]: number } = {
+        ADC: 0x73,
+        STA: 0x93,
+        LDA: 0xb3,
+        SBC: 0xf3,
+      };
+      if (opcode in stackIndexedOpcodes) {
+        this.assembler.write1(stackIndexedOpcodes[opcode]);
+        this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
+        return true;
+      }
     }
 
     // Indirect Long (`[$00]`)
     if (loweredOperand.mode === "indirectLong") {
       const indirectLongOpcodes: { [key: string]: number } = {
-        ADC: 0x67, STA: 0x87, LDA: 0xA7, SBC: 0xE7,
+        ADC: 0x67,
+        STA: 0x87,
+        LDA: 0xa7,
+        SBC: 0xe7,
       };
       if (opcode in indirectLongOpcodes) {
-          this.assembler.write1(indirectLongOpcodes[opcode]);
-          this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand)); // Remove `[$00]`
-          return true;
+        this.assembler.write1(indirectLongOpcodes[opcode]);
+        this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand)); // Remove `[$00]`
+        return true;
       }
     }
 
     // Indirect Long Indexed (`[$00],Y`)
     if (loweredOperand.mode === "indirectLongIndexedY") {
-        const indirectLongIndexedOpcodes: { [key: string]: number } = {
-            ADC: 0x77, STA: 0x97, LDA: 0xB7, SBC: 0xF7,
-        };
-        if (opcode in indirectLongIndexedOpcodes) {
-            this.assembler.write1(indirectLongIndexedOpcodes[opcode]);
-            this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand)); // Remove `[$00],Y`
-            return true;
-        }
+      const indirectLongIndexedOpcodes: { [key: string]: number } = {
+        ADC: 0x77,
+        STA: 0x97,
+        LDA: 0xb7,
+        SBC: 0xf7,
+      };
+      if (opcode in indirectLongIndexedOpcodes) {
+        this.assembler.write1(indirectLongIndexedOpcodes[opcode]);
+        this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand)); // Remove `[$00],Y`
+        return true;
+      }
     }
 
     // Indirect Indexed (Y)
     if (loweredOperand.mode === "indirectIndexedY") {
       debug("handleMemoryOperations Indirect Indexed (Y)", opcode, resolvedOperand);
-        const indirectIndexedOpcodes: { [key: string]: number } = {
-            ADC: 0x71, STA: 0x91, LDA: 0xB1, SBC: 0xF1,
-        };
-        if (opcode in indirectIndexedOpcodes) {
-            this.assembler.write1(indirectIndexedOpcodes[opcode]);
-            this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
-            return true;
-        }
+      const indirectIndexedOpcodes: { [key: string]: number } = {
+        ADC: 0x71,
+        STA: 0x91,
+        LDA: 0xb1,
+        SBC: 0xf1,
+      };
+      if (opcode in indirectIndexedOpcodes) {
+        this.assembler.write1(indirectIndexedOpcodes[opcode]);
+        this.assembler.write1(this.assembler.operandResolver.getnum(baseOperand));
+        return true;
+      }
     }
 
     // Absolute Indexed (X)
     if (loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
       debug("handleMemoryOperations Absolute Indexed (X)", opcode, resolvedOperand);
-        const absoluteXOpcodes: { [key: string]: number } = {
-            ADC: 0x7D, STA: 0x9D, LDA: 0xBD, SBC: 0xFD,
-        };
-        if (opcode in absoluteXOpcodes) {
-            this.assembler.write1(absoluteXOpcodes[opcode]);
-            this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
-            return true;
-        }
+      const absoluteXOpcodes: { [key: string]: number } = {
+        ADC: 0x7d,
+        STA: 0x9d,
+        LDA: 0xbd,
+        SBC: 0xfd,
+      };
+      if (opcode in absoluteXOpcodes) {
+        this.assembler.write1(absoluteXOpcodes[opcode]);
+        this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
+        return true;
+      }
     }
 
     // Absolute Indexed (Y)
     if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect) {
       debug("handleMemoryOperations Absolute Indexed (Y)", opcode, resolvedOperand);
-        const absoluteYOpcodes: { [key: string]: number } = {
-            ADC: 0x79, STA: 0x99, LDA: 0xB9, SBC: 0xF9,
-        };
-        if (opcode in absoluteYOpcodes) {
-            this.assembler.write1(absoluteYOpcodes[opcode]);
-            this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
-            return true;
-        }
+      const absoluteYOpcodes: { [key: string]: number } = {
+        ADC: 0x79,
+        STA: 0x99,
+        LDA: 0xb9,
+        SBC: 0xf9,
+      };
+      if (opcode in absoluteYOpcodes) {
+        this.assembler.write1(absoluteYOpcodes[opcode]);
+        this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
+        return true;
+      }
     }
 
     // Absolute Long ($000000)
     if (loweredOperand.mode === "absoluteLong") {
       debug("handleMemoryOperations Absolute Long ($000000)", opcode, resolvedOperand);
       const longOpcodes: { [key: string]: number } = {
-        ADC: 0x6F, STA: 0x8F, LDA: 0xAF, SBC: 0xEF,
+        ADC: 0x6f,
+        STA: 0x8f,
+        LDA: 0xaf,
+        SBC: 0xef,
       };
 
       if (opcode in longOpcodes) {
-          this.assembler.write1(longOpcodes[opcode]);
-          this.assembler.write3(this.assembler.operandResolver.getnum(resolvedOperand));
-          return true;
+        this.assembler.write1(longOpcodes[opcode]);
+        this.assembler.write3(this.assembler.operandResolver.getnum(resolvedOperand));
+        return true;
       }
     }
 
@@ -498,7 +629,10 @@ export class Arch65816 implements ArchitectureEncoder {
     if (loweredOperand.mode === "absolute") {
       debug("handleMemoryOperations Absolute", opcode, resolvedOperand);
       const absoluteOpcodes: { [key: string]: number } = {
-        ADC: 0x6D, STA: 0x8D, LDA: 0xAD, SBC: 0xED,
+        ADC: 0x6d,
+        STA: 0x8d,
+        LDA: 0xad,
+        SBC: 0xed,
       };
       if (opcode in absoluteOpcodes) {
         this.assembler.write1(absoluteOpcodes[opcode]);
@@ -511,7 +645,10 @@ export class Arch65816 implements ArchitectureEncoder {
     if (this.assembler.optimizeDirectPage || isExplicitDirectPage) {
       debug("handleMemoryOperations Direct Page", opcode, operand);
       const directPageOpcodes: { [key: string]: number } = {
-        ADC: 0x65, STA: 0x85, LDA: 0xA5, SBC: 0xE5,
+        ADC: 0x65,
+        STA: 0x85,
+        LDA: 0xa5,
+        SBC: 0xe5,
       };
       if (opcode in directPageOpcodes) {
         this.assembler.write1(directPageOpcodes[opcode]);
@@ -519,9 +656,16 @@ export class Arch65816 implements ArchitectureEncoder {
         return true;
       }
     } else {
-      debug("handleMemoryOperations Direct Page optimization disabled; using absolute", opcode, operand);
+      debug(
+        "handleMemoryOperations Direct Page optimization disabled; using absolute",
+        opcode,
+        operand,
+      );
       const absoluteOpcodes: { [key: string]: number } = {
-        ADC: 0x6D, STA: 0x8D, LDA: 0xAD, SBC: 0xED,
+        ADC: 0x6d,
+        STA: 0x8d,
+        LDA: 0xad,
+        SBC: 0xed,
       };
       if (opcode in absoluteOpcodes) {
         this.assembler.write1(absoluteOpcodes[opcode]);
@@ -541,13 +685,32 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {boolean} explicitlen Whether the operand length is explicit.
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
-  handleLogicAndCompareOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
+  handleLogicAndCompareOperations(
+    opcode: string,
+    operand: string,
+    len: number,
+    explicitlen: boolean,
+  ): boolean {
     debug("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
     type LogicOpcode = "ORA" | "AND" | "EOR" | "CMP" | "CPX" | "CPY";
-    type LogicMode = "immediate" | "direct" | "directX" | "absolute" | "absoluteX" | "absoluteY"
-      | "indirectX" | "indirectY" | "indirect" | "indirectLong" | "indirectLongY"
-      | "stackRelative" | "stackRelativeIndirectY" | "absoluteLong" | "absoluteLongX"
-      | "directIndirectLong" | "directIndirectLongY";
+    type LogicMode =
+      | "immediate"
+      | "direct"
+      | "directX"
+      | "absolute"
+      | "absoluteX"
+      | "absoluteY"
+      | "indirectX"
+      | "indirectY"
+      | "indirect"
+      | "indirectLong"
+      | "indirectLongY"
+      | "stackRelative"
+      | "stackRelativeIndirectY"
+      | "absoluteLong"
+      | "absoluteLongX"
+      | "directIndirectLong"
+      | "directIndirectLongY";
     type LogicModeMap = {
       immediate: number;
       direct: number;
@@ -569,20 +732,126 @@ export class Arch65816 implements ArchitectureEncoder {
     };
 
     const opcodes: Record<LogicOpcode, LogicModeMap> = {
-      ORA: { immediate: 0x09, direct: 0x05, directX: 0x15, absolute: 0x0D, absoluteX: 0x1D, absoluteY: 0x19, indirectX: 0x01, indirectY: 0x11, indirect: 0x12, indirectLong: 0x0F, indirectLongY: 0x1F, stackRelative: 0x03, stackRelativeIndirectY: 0x13, absoluteLong: 0x0F, absoluteLongX: 0x1F, directIndirectLong: 0x07, directIndirectLongY: 0x17 },
-      AND: { immediate: 0x29, direct: 0x25, directX: 0x35, absolute: 0x2D, absoluteX: 0x3D, absoluteY: 0x39, indirectX: 0x21, indirectY: 0x31, indirect: 0x32, indirectLong: 0x2F, indirectLongY: 0x3F, stackRelative: 0x23, stackRelativeIndirectY: 0x33, absoluteLong: 0x2F, absoluteLongX: 0x3F, directIndirectLong: 0x27, directIndirectLongY: 0x37 },
-      EOR: { immediate: 0x49, direct: 0x45, directX: 0x55, absolute: 0x4D, absoluteX: 0x5D, absoluteY: 0x59, indirectX: 0x41, indirectY: 0x51, indirect: 0x52, indirectLong: 0x4F, indirectLongY: 0x5F, stackRelative: 0x43, stackRelativeIndirectY: 0x53, absoluteLong: 0x4F, absoluteLongX: 0x5F, directIndirectLong: 0x47, directIndirectLongY: 0x57 },
-      CMP: { immediate: 0xC9, direct: 0xC5, directX: 0xD5, absolute: 0xCD, absoluteX: 0xDD, absoluteY: 0xD9, indirectX: 0xC1, indirectY: 0xD1, indirect: 0xD2, indirectLong: 0xCF, indirectLongY: 0xDF, stackRelative: 0xC3, stackRelativeIndirectY: 0xD3, absoluteLong: 0xCF, absoluteLongX: 0xDF, directIndirectLong: 0xC7, directIndirectLongY: 0xD7 },
-      CPX: { immediate: 0xE0, direct: 0xE4, absolute: 0xEC },
-      CPY: { immediate: 0xC0, direct: 0xC4, absolute: 0xCC },
+      ORA: {
+        immediate: 0x09,
+        direct: 0x05,
+        directX: 0x15,
+        absolute: 0x0d,
+        absoluteX: 0x1d,
+        absoluteY: 0x19,
+        indirectX: 0x01,
+        indirectY: 0x11,
+        indirect: 0x12,
+        indirectLong: 0x0f,
+        indirectLongY: 0x1f,
+        stackRelative: 0x03,
+        stackRelativeIndirectY: 0x13,
+        absoluteLong: 0x0f,
+        absoluteLongX: 0x1f,
+        directIndirectLong: 0x07,
+        directIndirectLongY: 0x17,
+      },
+      AND: {
+        immediate: 0x29,
+        direct: 0x25,
+        directX: 0x35,
+        absolute: 0x2d,
+        absoluteX: 0x3d,
+        absoluteY: 0x39,
+        indirectX: 0x21,
+        indirectY: 0x31,
+        indirect: 0x32,
+        indirectLong: 0x2f,
+        indirectLongY: 0x3f,
+        stackRelative: 0x23,
+        stackRelativeIndirectY: 0x33,
+        absoluteLong: 0x2f,
+        absoluteLongX: 0x3f,
+        directIndirectLong: 0x27,
+        directIndirectLongY: 0x37,
+      },
+      EOR: {
+        immediate: 0x49,
+        direct: 0x45,
+        directX: 0x55,
+        absolute: 0x4d,
+        absoluteX: 0x5d,
+        absoluteY: 0x59,
+        indirectX: 0x41,
+        indirectY: 0x51,
+        indirect: 0x52,
+        indirectLong: 0x4f,
+        indirectLongY: 0x5f,
+        stackRelative: 0x43,
+        stackRelativeIndirectY: 0x53,
+        absoluteLong: 0x4f,
+        absoluteLongX: 0x5f,
+        directIndirectLong: 0x47,
+        directIndirectLongY: 0x57,
+      },
+      CMP: {
+        immediate: 0xc9,
+        direct: 0xc5,
+        directX: 0xd5,
+        absolute: 0xcd,
+        absoluteX: 0xdd,
+        absoluteY: 0xd9,
+        indirectX: 0xc1,
+        indirectY: 0xd1,
+        indirect: 0xd2,
+        indirectLong: 0xcf,
+        indirectLongY: 0xdf,
+        stackRelative: 0xc3,
+        stackRelativeIndirectY: 0xd3,
+        absoluteLong: 0xcf,
+        absoluteLongX: 0xdf,
+        directIndirectLong: 0xc7,
+        directIndirectLongY: 0xd7,
+      },
+      CPX: { immediate: 0xe0, direct: 0xe4, absolute: 0xec },
+      CPY: { immediate: 0xc0, direct: 0xc4, absolute: 0xcc },
     };
-    const dpMap: Record<LogicOpcode, number> = { AND: 0x25, ORA: 0x05, EOR: 0x45, CMP: 0xC5, CPX: 0xE4, CPY: 0xC4 };
-    const absMap: Record<LogicOpcode, number> = { AND: 0x2D, ORA: 0x0D, EOR: 0x4D, CMP: 0xCD, CPX: 0xEC, CPY: 0xCC };
+    const dpMap: Record<LogicOpcode, number> = {
+      AND: 0x25,
+      ORA: 0x05,
+      EOR: 0x45,
+      CMP: 0xc5,
+      CPX: 0xe4,
+      CPY: 0xc4,
+    };
+    const absMap: Record<LogicOpcode, number> = {
+      AND: 0x2d,
+      ORA: 0x0d,
+      EOR: 0x4d,
+      CMP: 0xcd,
+      CPX: 0xec,
+      CPY: 0xcc,
+    };
     // For "long" (i.e. 3-byte) addressing we assume a variant that is 2 higher than the absolute opcode:
-    const absLongMap: Partial<Record<LogicOpcode, number>> = { AND: 0x2F, ORA: 0x0F, EOR: 0x4F, CMP: 0xCF };
-    const dpXMap: Partial<Record<LogicOpcode, number>> = { AND: 0x35, ORA: 0x15, EOR: 0x55, CMP: 0xD5 };
-    const absXMap: Partial<Record<LogicOpcode, number>> = { AND: 0x3D, ORA: 0x1D, EOR: 0x5D, CMP: 0xDD };
-    const absYMap: Partial<Record<LogicOpcode, number>> = { AND: 0x39, ORA: 0x19, EOR: 0x59, CMP: 0xD9 };
+    const absLongMap: Partial<Record<LogicOpcode, number>> = {
+      AND: 0x2f,
+      ORA: 0x0f,
+      EOR: 0x4f,
+      CMP: 0xcf,
+    };
+    const dpXMap: Partial<Record<LogicOpcode, number>> = {
+      AND: 0x35,
+      ORA: 0x15,
+      EOR: 0x55,
+      CMP: 0xd5,
+    };
+    const absXMap: Partial<Record<LogicOpcode, number>> = {
+      AND: 0x3d,
+      ORA: 0x1d,
+      EOR: 0x5d,
+      CMP: 0xdd,
+    };
+    const absYMap: Partial<Record<LogicOpcode, number>> = {
+      AND: 0x39,
+      ORA: 0x19,
+      EOR: 0x59,
+      CMP: 0xd9,
+    };
     if (!(opcode in opcodes)) {
       return false; // Not a logic or compare instruction
     }
@@ -693,8 +962,10 @@ export class Arch65816 implements ArchitectureEncoder {
     else if (loweredOperand.mode === "absoluteLong") {
       mode = "absoluteLong";
       this.assembler.operandResolver.getnum(resolvedOperand);
-    }
-    else if (loweredOperand.mode === "absoluteLongIndexedX" && opcodes[logicOpcode].absoluteLongX) {
+    } else if (
+      loweredOperand.mode === "absoluteLongIndexedX" &&
+      opcodes[logicOpcode].absoluteLongX
+    ) {
       mode = "absoluteLongX";
       address = this.assembler.operandResolver.getnum(baseOperand);
     }
@@ -704,7 +975,10 @@ export class Arch65816 implements ArchitectureEncoder {
       address = this.assembler.operandResolver.getnum(baseOperand); // Extract stack relative address
     }
     // **Stack Relative Indexed Indirect Mode (e.g., ORA ($00,s),Y)**
-    else if (loweredOperand.mode === "stackRelativeIndexedIndirectY" && opcodes[logicOpcode].stackRelativeIndirectY) {
+    else if (
+      loweredOperand.mode === "stackRelativeIndexedIndirectY" &&
+      opcodes[logicOpcode].stackRelativeIndirectY
+    ) {
       mode = "stackRelativeIndirectY";
       address = this.assembler.operandResolver.getnum(baseOperand); // Extract indirect address
     }
@@ -739,7 +1013,10 @@ export class Arch65816 implements ArchitectureEncoder {
       address = this.assembler.operandResolver.getnum(baseOperand);
     }
     // **Direct Page Indirect Long Indexed, Y (ORA [$00],Y)**
-    else if (loweredOperand.mode === "indirectLongIndexedY" && opcodes[logicOpcode].directIndirectLongY) {
+    else if (
+      loweredOperand.mode === "indirectLongIndexedY" &&
+      opcodes[logicOpcode].directIndirectLongY
+    ) {
       mode = "directIndirectLongY";
       address = this.assembler.operandResolver.getnum(baseOperand);
     }
@@ -769,7 +1046,15 @@ export class Arch65816 implements ArchitectureEncoder {
     }
     // Keep legacy behavior for unsupported routed modes (e.g. CPX/CPY fallback tests).
     this.assembler.write1(opcodeByte);
-    if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode ===  "directIndirectLong") {
+    if (
+      (opcode === "AND" ||
+        opcode === "ORA" ||
+        opcode === "EOR" ||
+        opcode === "CPY" ||
+        opcode === "CPX" ||
+        opcode === "CMP") &&
+      mode === "directIndirectLong"
+    ) {
       this.assembler.write1(address);
     } else if (["absolute", "absoluteX", "absoluteY", "directIndirectLong"].includes(mode)) {
       this.assembler.write2(address);
@@ -790,55 +1075,59 @@ export class Arch65816 implements ArchitectureEncoder {
    */
   handleNoOperandOperations(opcode: string, operand: string): boolean {
     const stackOpcodes: { [key: string]: number } = {
-        CLC: 0x18,
-        CLD: 0xD8,
-        CLI: 0x58,
-        CLV: 0xB8,
-        DEX: 0xCA,
-        DEY: 0x88,
-        INX: 0xE8,
-        INY: 0xC8,
-        NOP: 0xEA,
-        PHA: 0x48,
-        PHB: 0x8B,
-        PHD: 0x0B,
-        PHK: 0x4B,
-        PHP: 0x08,
-        PHX: 0xDA,
-        PHY: 0x5A,
-        PLA: 0x68,
-        PLB: 0xAB,
-        PLD: 0x2B,
-        PLP: 0x28,
-        PLX: 0xFA,
-        PLY: 0x7A,
-        RTI: 0x40,
-        RTL: 0x6B,
-        RTS: 0x60,
-        SEC: 0x38,
-        SED: 0xF8,
-        SEI: 0x78,
-        STP: 0xDB,
-        TAX: 0xAA,
-        TAY: 0xA8,
-        TCD: 0x5B,
-        TCS: 0x1B,
-        TDC: 0x7B,
-        TSC: 0x3B,
-        TSX: 0xBA,
-        TXA: 0x8A,
-        TXS: 0x9A,
-        TXY: 0x9B,
-        TYA: 0x98,
-        TYX: 0xBB,
-        WAI: 0xCB,
-        XBA: 0xEB,
-        XCE: 0xFB,
+      CLC: 0x18,
+      CLD: 0xd8,
+      CLI: 0x58,
+      CLV: 0xb8,
+      DEX: 0xca,
+      DEY: 0x88,
+      INX: 0xe8,
+      INY: 0xc8,
+      NOP: 0xea,
+      PHA: 0x48,
+      PHB: 0x8b,
+      PHD: 0x0b,
+      PHK: 0x4b,
+      PHP: 0x08,
+      PHX: 0xda,
+      PHY: 0x5a,
+      PLA: 0x68,
+      PLB: 0xab,
+      PLD: 0x2b,
+      PLP: 0x28,
+      PLX: 0xfa,
+      PLY: 0x7a,
+      RTI: 0x40,
+      RTL: 0x6b,
+      RTS: 0x60,
+      SEC: 0x38,
+      SED: 0xf8,
+      SEI: 0x78,
+      STP: 0xdb,
+      TAX: 0xaa,
+      TAY: 0xa8,
+      TCD: 0x5b,
+      TCS: 0x1b,
+      TDC: 0x7b,
+      TSC: 0x3b,
+      TSX: 0xba,
+      TXA: 0x8a,
+      TXS: 0x9a,
+      TXY: 0x9b,
+      TYA: 0x98,
+      TYX: 0xbb,
+      WAI: 0xcb,
+      XBA: 0xeb,
+      XCE: 0xfb,
     };
     if (!(opcode in stackOpcodes)) {
       return false;
     }
-    debug("handleNoOperandOperations", { opcode, operand, value: stackOpcodes[opcode].toString(16) });
+    debug("handleNoOperandOperations", {
+      opcode,
+      operand,
+      value: stackOpcodes[opcode].toString(16),
+    });
 
     // By default, the opcode is written once.
     let count = 1;
@@ -877,14 +1166,23 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {boolean} explicitlen Whether the operand length is explicit.
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
-  handleArithmeticOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
+  handleArithmeticOperations(
+    opcode: string,
+    operand: string,
+    len: number,
+    explicitlen: boolean,
+  ): boolean {
     debug("handleArithmeticOperations", opcode, operand);
     // 65816 accepts accumulator unary forms either as an explicit `A`
     // operand (`DEC A`) or as an implied accumulator instruction (`DEC`).
     const operandText = operand?.trim() || "A";
     const accumulatorOpcodes: { [key: string]: number } = {
-      ASL: 0x0A, LSR: 0x4A, ROL: 0x2A, ROR: 0x6A,
-      INC: 0x1A, DEC: 0x3A,
+      ASL: 0x0a,
+      LSR: 0x4a,
+      ROL: 0x2a,
+      ROR: 0x6a,
+      INC: 0x1a,
+      DEC: 0x3a,
     };
 
     // Pseudo forms such as `asl #3` mean "repeat the accumulator shift 3 times"
@@ -926,17 +1224,17 @@ export class Arch65816 implements ArchitectureEncoder {
       if (isIndexed) {
         // Forced indexed opcodes for arithmetic instructions.
         const forcedIndexed: { [op: string]: { [L: number]: number } } = {
-          ASL: { 1: 0x16, 2: 0x1E },
-          LSR: { 1: 0x56, 2: 0x5E },
-          ROL: { 1: 0x36, 2: 0x3E },
-          ROR: { 1: 0x76, 2: 0x7E },
-          INC: { 1: 0xF6, 2: 0xFE },
-          DEC: { 1: 0xD6, 2: 0xDE },
+          ASL: { 1: 0x16, 2: 0x1e },
+          LSR: { 1: 0x56, 2: 0x5e },
+          ROL: { 1: 0x36, 2: 0x3e },
+          ROR: { 1: 0x76, 2: 0x7e },
+          INC: { 1: 0xf6, 2: 0xfe },
+          DEC: { 1: 0xd6, 2: 0xde },
         };
         if (!(opcode in forcedIndexed)) {
           throw new Error(`Opcode ${opcode} not supported in forced indexed mode.`);
         }
-          this.assembler.write1(forcedIndexed[opcode][len]);
+        this.assembler.write1(forcedIndexed[opcode][len]);
         if (len === 1) {
           this.assembler.write1(this.assembler.operandResolver.getnum(normalizedOperand));
         } else if (len === 2) {
@@ -948,12 +1246,12 @@ export class Arch65816 implements ArchitectureEncoder {
       } else {
         // Forced non-indexed opcodes for arithmetic instructions.
         const forcedNonIndexed: { [op: string]: { [L: number]: number } } = {
-          ASL: { 1: 0x06, 2: 0x0E },
-          LSR: { 1: 0x46, 2: 0x4E },
-          ROL: { 1: 0x26, 2: 0x2E },
-          ROR: { 1: 0x66, 2: 0x6E },
-          INC: { 1: 0xE6, 2: 0xEE },
-          DEC: { 1: 0xC6, 2: 0xCE },
+          ASL: { 1: 0x06, 2: 0x0e },
+          LSR: { 1: 0x46, 2: 0x4e },
+          ROL: { 1: 0x26, 2: 0x2e },
+          ROR: { 1: 0x66, 2: 0x6e },
+          INC: { 1: 0xe6, 2: 0xee },
+          DEC: { 1: 0xc6, 2: 0xce },
         };
         if (!(opcode in forcedNonIndexed)) {
           throw new Error(`Opcode ${opcode} not supported in forced non-indexed mode.`);
@@ -975,8 +1273,12 @@ export class Arch65816 implements ArchitectureEncoder {
       debug("handleArithmeticOperations DP Indexed,X", opcode, rawOperand);
 
       const dpIndexedXOpcodes: { [key: string]: number } = {
-        ASL: 0x16, ROL: 0x36, LSR: 0x56, ROR: 0x76,
-        INC: 0xF6, DEC: 0xD6,
+        ASL: 0x16,
+        ROL: 0x36,
+        LSR: 0x56,
+        ROR: 0x76,
+        INC: 0xf6,
+        DEC: 0xd6,
       };
 
       if (opcode in dpIndexedXOpcodes) {
@@ -988,34 +1290,46 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // Absolute,X Mode
     if (loweredOperand.mode === "absoluteIndexedX") {
-        const absoluteXOpcodes: { [key: string]: number } = {
-          ASL: 0x1E, LSR: 0x5E, ROL: 0x3E, ROR: 0x7E,
-          INC: 0xFE, DEC: 0xDE,
-        };
-        if (opcode in absoluteXOpcodes) {
-          this.assembler.write1(absoluteXOpcodes[opcode]);
-          this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
-          return true;
-        }
+      const absoluteXOpcodes: { [key: string]: number } = {
+        ASL: 0x1e,
+        LSR: 0x5e,
+        ROL: 0x3e,
+        ROR: 0x7e,
+        INC: 0xfe,
+        DEC: 0xde,
+      };
+      if (opcode in absoluteXOpcodes) {
+        this.assembler.write1(absoluteXOpcodes[opcode]);
+        this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
+        return true;
+      }
     }
 
     // Absolute Mode
     if (loweredOperand.mode === "absolute") {
-        const absoluteOpcodes: { [key: string]: number } = {
-          ASL: 0x0E, LSR: 0x4E, ROL: 0x2E, ROR: 0x6E,
-          INC: 0xEE, DEC: 0xCE,
-        };
-        if (opcode in absoluteOpcodes) {
-          this.assembler.write1(absoluteOpcodes[opcode]);
-          this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
-          return true;
-        }
+      const absoluteOpcodes: { [key: string]: number } = {
+        ASL: 0x0e,
+        LSR: 0x4e,
+        ROL: 0x2e,
+        ROR: 0x6e,
+        INC: 0xee,
+        DEC: 0xce,
+      };
+      if (opcode in absoluteOpcodes) {
+        this.assembler.write1(absoluteOpcodes[opcode]);
+        this.assembler.write2(this.assembler.operandResolver.getnum(normalizedOperand));
+        return true;
+      }
     }
 
     // Direct Page Mode
     const directPageOpcodes: { [key: string]: number } = {
-      ASL: 0x06, LSR: 0x46, ROL: 0x26, ROR: 0x66,
-      INC: 0xE6, DEC: 0xC6,
+      ASL: 0x06,
+      LSR: 0x46,
+      ROL: 0x26,
+      ROR: 0x66,
+      INC: 0xe6,
+      DEC: 0xc6,
     };
     if (opcode in directPageOpcodes) {
       this.assembler.write1(directPageOpcodes[opcode]);
@@ -1049,9 +1363,9 @@ export class Arch65816 implements ArchitectureEncoder {
     // Immediate mode (e.g. ldx #$00)
     if (operand.startsWith("#")) {
       if (isLDX) {
-        opcodeByte = 0xA2; // Immediate LDX
+        opcodeByte = 0xa2; // Immediate LDX
       } else if (isLDY) {
-        opcodeByte = 0xA0; // Immediate LDY
+        opcodeByte = 0xa0; // Immediate LDY
       }
       address = this.assembler.operandResolver.getnum(operand.slice(1));
       this.assembler.write1(opcodeByte);
@@ -1064,36 +1378,38 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     // Check for indexed addressing:
-    const isIndexed = (isLDX && loweredOperand.indexRegister === "y" && !loweredOperand.indirect)
-      || (isLDY && loweredOperand.indexRegister === "x" && !loweredOperand.indirect);
+    const isIndexed =
+      (isLDX && loweredOperand.indexRegister === "y" && !loweredOperand.indirect) ||
+      (isLDY && loweredOperand.indexRegister === "x" && !loweredOperand.indirect);
     if (isIndexed) {
       operand = operand.slice(0, -2).trim();
     }
     const isDirectPageLiteral = /^\$[\da-f]{1,2}$/i.test(operand);
     const isAbsoluteLiteral = /^\$[\da-f]{4}$/i.test(operand);
-    const inferredAbsoluteWidth = !isDirectPageLiteral && (loweredOperand.length === 2 || len === 2);
+    const inferredAbsoluteWidth =
+      !isDirectPageLiteral && (loweredOperand.length === 2 || len === 2);
 
     // If an explicit length is provided, use forced maps:
     if (explicitlen) {
       if (isLDX) {
         if (!isIndexed) {
           // Forced non-indexed LDX: .b → A6; .w → AE.
-          const forcedLDX: { [L: number]: number } = { 1: 0xA6, 2: 0xAE };
-          opcodeByte = forcedLDX[len] ?? 0xAE;
+          const forcedLDX: { [L: number]: number } = { 1: 0xa6, 2: 0xae };
+          opcodeByte = forcedLDX[len] ?? 0xae;
         } else {
           // For LDX with ,Y: .b → B6; .w → BE.
-          const forcedLDXY: { [L: number]: number } = { 1: 0xB6, 2: 0xBE };
-          opcodeByte = forcedLDXY[len] ?? 0xBE;
+          const forcedLDXY: { [L: number]: number } = { 1: 0xb6, 2: 0xbe };
+          opcodeByte = forcedLDXY[len] ?? 0xbe;
         }
       } else if (isLDY) {
         if (!isIndexed) {
           // Forced non-indexed LDY: .b → A4; .w → AC.
-          const forcedLDY: { [L: number]: number } = { 1: 0xA4, 2: 0xAC };
-          opcodeByte = forcedLDY[len] ?? 0xAC;
+          const forcedLDY: { [L: number]: number } = { 1: 0xa4, 2: 0xac };
+          opcodeByte = forcedLDY[len] ?? 0xac;
         } else {
           // For LDY with ,X: .b → B4; .w → BC.
-          const forcedLDYX: { [L: number]: number } = { 1: 0xB4, 2: 0xBC };
-          opcodeByte = forcedLDYX[len] ?? 0xBC;
+          const forcedLDYX: { [L: number]: number } = { 1: 0xb4, 2: 0xbc };
+          opcodeByte = forcedLDYX[len] ?? 0xbc;
         }
       }
       address = this.assembler.operandResolver.getnum(operand);
@@ -1114,23 +1430,33 @@ export class Arch65816 implements ArchitectureEncoder {
     if (isLDX) {
       if (!isIndexed) {
         address = this.assembler.operandResolver.getnum(operand);
-        if ((loweredOperand.mode === "absolute" && !isDirectPageLiteral) || isAbsoluteLiteral || inferredAbsoluteWidth || address > 0xFF) {
-          opcodeByte = 0xAE; // Absolute LDX
+        if (
+          (loweredOperand.mode === "absolute" && !isDirectPageLiteral) ||
+          isAbsoluteLiteral ||
+          inferredAbsoluteWidth ||
+          address > 0xff
+        ) {
+          opcodeByte = 0xae; // Absolute LDX
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
-          opcodeByte = 0xA6; // Direct page LDX
+          opcodeByte = 0xa6; // Direct page LDX
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
       } else {
         address = this.assembler.operandResolver.getnum(operand);
-        if ((loweredOperand.mode === "absoluteIndexedY" && !isDirectPageLiteral) || isAbsoluteLiteral || inferredAbsoluteWidth || address > 0xFF) {
-          opcodeByte = 0xBE; // Absolute Indexed Y LDX
+        if (
+          (loweredOperand.mode === "absoluteIndexedY" && !isDirectPageLiteral) ||
+          isAbsoluteLiteral ||
+          inferredAbsoluteWidth ||
+          address > 0xff
+        ) {
+          opcodeByte = 0xbe; // Absolute Indexed Y LDX
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
-          opcodeByte = 0xB6; // Direct page Indexed Y LDX
+          opcodeByte = 0xb6; // Direct page Indexed Y LDX
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
@@ -1138,23 +1464,33 @@ export class Arch65816 implements ArchitectureEncoder {
     } else if (isLDY) {
       if (!isIndexed) {
         address = this.assembler.operandResolver.getnum(operand);
-        if ((loweredOperand.mode === "absolute" && !isDirectPageLiteral) || isAbsoluteLiteral || inferredAbsoluteWidth || address > 0xFF) {
-          opcodeByte = 0xAC; // Absolute LDY
+        if (
+          (loweredOperand.mode === "absolute" && !isDirectPageLiteral) ||
+          isAbsoluteLiteral ||
+          inferredAbsoluteWidth ||
+          address > 0xff
+        ) {
+          opcodeByte = 0xac; // Absolute LDY
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
-          opcodeByte = 0xA4; // Direct page LDY
+          opcodeByte = 0xa4; // Direct page LDY
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
       } else {
         address = this.assembler.operandResolver.getnum(operand);
-        if ((loweredOperand.mode === "absoluteIndexedX" && !isDirectPageLiteral) || isAbsoluteLiteral || inferredAbsoluteWidth || address > 0xFF) {
-          opcodeByte = 0xBC; // Absolute Indexed X LDY
+        if (
+          (loweredOperand.mode === "absoluteIndexedX" && !isDirectPageLiteral) ||
+          isAbsoluteLiteral ||
+          inferredAbsoluteWidth ||
+          address > 0xff
+        ) {
+          opcodeByte = 0xbc; // Absolute Indexed X LDY
           this.assembler.write1(opcodeByte);
           this.assembler.write2(address);
         } else {
-          opcodeByte = 0xB4; // Direct page Indexed X LDY
+          opcodeByte = 0xb4; // Direct page Indexed X LDY
           this.assembler.write1(opcodeByte);
           this.assembler.write1(address);
         }
@@ -1177,25 +1513,26 @@ export class Arch65816 implements ArchitectureEncoder {
     const symbolicOperand = rawOperand.trim();
 
     const jumpOpcodes: { [key: string]: number } = {
-        JMP: 0x4C,     // JMP Absolute
-        JSR: 0x20,     // JSR Absolute
-        JML: 0x5C,     // JMP Absolute Long
-        JSL: 0x22,     // JSL Absolute Long
+      JMP: 0x4c, // JMP Absolute
+      JSR: 0x20, // JSR Absolute
+      JML: 0x5c, // JMP Absolute Long
+      JSL: 0x22, // JSL Absolute Long
     };
 
     const jumpIndirectOpcodes: { [key: string]: number } = {
-        JMP_INDIRECT: 0x6C,          // JMP (Absolute Indirect)
-        JMP_INDIRECT_LONG: 0xDC,     // JMP [Absolute Indirect Long]
-        JMP_INDEXED_INDIRECT: 0x7C,  // JMP (Absolute Indexed Indirect,X)
-        JSR_INDEXED_INDIRECT: 0xFC,  // JSR (Absolute Indexed Indirect,X)
+      JMP_INDIRECT: 0x6c, // JMP (Absolute Indirect)
+      JMP_INDIRECT_LONG: 0xdc, // JMP [Absolute Indirect Long]
+      JMP_INDEXED_INDIRECT: 0x7c, // JMP (Absolute Indexed Indirect,X)
+      JSR_INDEXED_INDIRECT: 0xfc, // JSR (Absolute Indexed Indirect,X)
     };
 
     let address = 0;
     let mode: keyof typeof jumpOpcodes;
     const hintedBank = (() => {
-      const simpleBankedLabel = symbolicOperand.startsWith("_")
-        && symbolicOperand.length >= 7
-        && /^[\da-f]{6}$/i.test(symbolicOperand.slice(1, 7));
+      const simpleBankedLabel =
+        symbolicOperand.startsWith("_") &&
+        symbolicOperand.length >= 7 &&
+        /^[\da-f]{6}$/i.test(symbolicOperand.slice(1, 7));
       if (!simpleBankedLabel) {
         return null;
       }
@@ -1207,15 +1544,18 @@ export class Arch65816 implements ArchitectureEncoder {
       return currentOpcode;
     };
     const shortMode = (currentOpcode: string): keyof typeof jumpOpcodes => currentOpcode;
-    const absolutePointer = (value: number): number => value & 0xFFFF;
-    const selectDirectJumpMode = (currentOpcode: string, resolvedAddress: number): { mode: keyof typeof jumpOpcodes; address: number } => {
+    const absolutePointer = (value: number): number => value & 0xffff;
+    const selectDirectJumpMode = (
+      currentOpcode: string,
+      resolvedAddress: number,
+    ): { mode: keyof typeof jumpOpcodes; address: number } => {
       if (currentOpcode === "JML" || currentOpcode === "JSL") {
         return { mode: currentOpcode, address: resolvedAddress };
       }
 
-      if (resolvedAddress > 0xFFFF) {
-        const currentBank = (this.assembler.currentTargetAddress >>> 16) & 0xFF;
-        const targetBank = (resolvedAddress >>> 16) & 0xFF;
+      if (resolvedAddress > 0xffff) {
+        const currentBank = (this.assembler.currentTargetAddress >>> 16) & 0xff;
+        const targetBank = (resolvedAddress >>> 16) & 0xff;
 
         // The disassembly stores banked SNES labels even for in-bank subroutine
         // calls. Preserve JSR/JMP when the destination remains in the current
@@ -1241,19 +1581,25 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // **Plain numeric / hex literal mode**
     if (/^\d+$/.test(operand)) {
-        ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(operand)));
-        debug("handleJump mode", mode)
+      ({ mode, address } = selectDirectJumpMode(
+        opcode,
+        this.assembler.operandResolver.getnum(operand),
+      ));
+      debug("handleJump mode", mode);
     }
     // **Plain hex literal mode**
     else if (/^\$[\dA-Fa-f]{1,6}$/.test(operand)) {
-        ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(operand)));
-        debug("handleJump mode", mode)
+      ({ mode, address } = selectDirectJumpMode(
+        opcode,
+        this.assembler.operandResolver.getnum(operand),
+      ));
+      debug("handleJump mode", mode);
     }
     // **Absolute Indirect Long Mode: JMP [$0000]**
     else if (loweredOperand.mode === "indirectLong") {
-        mode = "JMP_INDIRECT_LONG";
-        debug("handleJump mode", mode)
-        address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand)); // Extract 16-bit indirect long pointer
+      mode = "JMP_INDIRECT_LONG";
+      debug("handleJump mode", mode);
+      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand)); // Extract 16-bit indirect long pointer
     }
     // **Absolute indexed/indirect jump modes accept expressions, not just raw
     // hex literals, as long as they resolve to a 16-bit absolute pointer.**
@@ -1262,29 +1608,31 @@ export class Arch65816 implements ArchitectureEncoder {
       // encodes the absolute pointer within the current program bank.
       address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JSR_INDEXED_INDIRECT";
-      debug("handleJump mode", mode)
+      debug("handleJump mode", mode);
     }
     // **Absolute Indexed Indirect Mode: JMP ($0000,X)**
     else if (loweredOperand.mode === "indexedIndirectX") {
       address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JMP_INDEXED_INDIRECT";
-      debug("handleJump mode", mode)
+      debug("handleJump mode", mode);
     }
     // **Absolute Indirect Mode: JMP ($0000)**
     else if (loweredOperand.mode === "directPageIndirect") {
       address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JMP_INDIRECT";
-      debug("handleJump mode", mode)
-    }
-    else {
+      debug("handleJump mode", mode);
+    } else {
       try {
         // Long/short jump operands are often labels such as `_018049_8053`
         // rather than raw numeric literals. Resolve those through the common
         // operand pipeline before rejecting the instruction shape outright.
-        ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(baseOperand)));
-        debug("handleJump mode", mode)
+        ({ mode, address } = selectDirectJumpMode(
+          opcode,
+          this.assembler.operandResolver.getnum(baseOperand),
+        ));
+        debug("handleJump mode", mode);
       } catch {
-        debug("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`)
+        debug("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`);
         throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
       }
     }
@@ -1315,7 +1663,7 @@ export class Arch65816 implements ArchitectureEncoder {
   handlePER(operand: string): boolean {
     debug("handlePER", operand);
     if (!operand) {
-        throw new Error("Error: PER requires an operand.");
+      throw new Error("Error: PER requires an operand.");
     }
 
     const offset = this.assembler.operandResolver.getnum(operand);
@@ -1335,17 +1683,28 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {boolean} explicitlen Whether the operand length is explicit.
    * @returns {boolean} True if the instruction was handled, false otherwise
    */
-  handleStoreOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
+  handleStoreOperations(
+    opcode: string,
+    operand: string,
+    len: number,
+    explicitlen: boolean,
+  ): boolean {
     debug("handleStoreOperations", { opcode, operand, len, explicitlen });
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
     const rawOperand = operand;
     type StoreOpcode = "STX" | "STY" | "STZ";
-    type StoreModeMap = { direct: number; directX?: number; directY?: number; absolute: number; absoluteX?: number };
+    type StoreModeMap = {
+      direct: number;
+      directX?: number;
+      directY?: number;
+      absolute: number;
+      absoluteX?: number;
+    };
     type ForcedLengthMap = Partial<Record<1 | 2, number>>;
     const storeOpcodes = {
-      STX: { direct: 0x86, absolute: 0x8E, directY: 0x96 }, // STX Direct Page, Absolute, Indexed Y
-      STY: { direct: 0x84, absolute: 0x8C, directX: 0x94 }, // STY Direct Page, Absolute, Indexed X
-      STZ: { direct: 0x64, directX: 0x74, absolute: 0x9C, absoluteX: 0x9E }, // STZ DP, DP Indexed X, Absolute, Absolute Indexed X
+      STX: { direct: 0x86, absolute: 0x8e, directY: 0x96 }, // STX Direct Page, Absolute, Indexed Y
+      STY: { direct: 0x84, absolute: 0x8c, directX: 0x94 }, // STY Direct Page, Absolute, Indexed X
+      STZ: { direct: 0x64, directX: 0x74, absolute: 0x9c, absoluteX: 0x9e }, // STZ DP, DP Indexed X, Absolute, Absolute Indexed X
     } satisfies Record<StoreOpcode, StoreModeMap>;
 
     if (!(opcode in storeOpcodes)) {
@@ -1360,9 +1719,10 @@ export class Arch65816 implements ArchitectureEncoder {
 
     let address = 0;
     let mode: keyof StoreModeMap; // Determines which mode we're using
-    const isIndexed = (storeOpcode === "STX" && loweredOperand.indexRegister === "y" && !loweredOperand.indirect)
-      || (storeOpcode === "STY" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect)
-      || (storeOpcode === "STZ" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect);
+    const isIndexed =
+      (storeOpcode === "STX" && loweredOperand.indexRegister === "y" && !loweredOperand.indirect) ||
+      (storeOpcode === "STY" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect) ||
+      (storeOpcode === "STZ" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect);
     if (isIndexed) {
       operand = rawOperand.slice(0, -2).trim();
     }
@@ -1372,30 +1732,30 @@ export class Arch65816 implements ArchitectureEncoder {
       if (isIndexed) {
         // For STZ with index, use forced indexed mapping.
         if (storeOpcode === "STZ") {
-          const forcedSTZIndexed: ForcedLengthMap = { 1: 0x74, 2: 0x9E };
-          this.assembler.write1(getForcedOpcode(forcedSTZIndexed, 0x9E));
+          const forcedSTZIndexed: ForcedLengthMap = { 1: 0x74, 2: 0x9e };
+          this.assembler.write1(getForcedOpcode(forcedSTZIndexed, 0x9e));
         } else {
           // For STX/STY, index mode is less common.
           // (You could add forced mappings if needed; here we fall back to non-indexed.)
           if (storeOpcode === "STX") {
-            const forcedSTX: ForcedLengthMap = { 1: 0x86, 2: 0x8E };
-            this.assembler.write1(getForcedOpcode(forcedSTX, 0x8E));
+            const forcedSTX: ForcedLengthMap = { 1: 0x86, 2: 0x8e };
+            this.assembler.write1(getForcedOpcode(forcedSTX, 0x8e));
           } else if (storeOpcode === "STY") {
-            const forcedSTY: ForcedLengthMap = { 1: 0x84, 2: 0x8C };
-            this.assembler.write1(getForcedOpcode(forcedSTY, 0x8C));
+            const forcedSTY: ForcedLengthMap = { 1: 0x84, 2: 0x8c };
+            this.assembler.write1(getForcedOpcode(forcedSTY, 0x8c));
           }
         }
       } else {
         // Non-indexed forced mode.
         if (storeOpcode === "STX") {
-          const forcedSTX: ForcedLengthMap = { 1: 0x86, 2: 0x8E };
-          this.assembler.write1(getForcedOpcode(forcedSTX, 0x8E));
+          const forcedSTX: ForcedLengthMap = { 1: 0x86, 2: 0x8e };
+          this.assembler.write1(getForcedOpcode(forcedSTX, 0x8e));
         } else if (storeOpcode === "STY") {
-          const forcedSTY: ForcedLengthMap = { 1: 0x84, 2: 0x8C };
-          this.assembler.write1(getForcedOpcode(forcedSTY, 0x8C));
+          const forcedSTY: ForcedLengthMap = { 1: 0x84, 2: 0x8c };
+          this.assembler.write1(getForcedOpcode(forcedSTY, 0x8c));
         } else if (storeOpcode === "STZ") {
-          const forcedSTZ: ForcedLengthMap = { 1: 0x64, 2: 0x9C };
-          this.assembler.write1(getForcedOpcode(forcedSTZ, 0x9C));
+          const forcedSTZ: ForcedLengthMap = { 1: 0x64, 2: 0x9c };
+          this.assembler.write1(getForcedOpcode(forcedSTZ, 0x9c));
         }
       }
       address = this.assembler.operandResolver.getnum(operand);
@@ -1410,12 +1770,20 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     // DP Indexed, X Mode: STZ $00,x
-    if (loweredOperand.mode === "directPageIndexedX" && storeModeMap.directX && /^\$[\da-f]{2}$/i.test(operand)) {
+    if (
+      loweredOperand.mode === "directPageIndexedX" &&
+      storeModeMap.directX &&
+      /^\$[\da-f]{2}$/i.test(operand)
+    ) {
       mode = "directX";
       address = this.assembler.operandResolver.getnum(operand); // Extract DP address
     }
     // DP Indexed, Y Mode: STX $00,y
-    else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect && storeModeMap.directY) {
+    else if (
+      loweredOperand.indexRegister === "y" &&
+      !loweredOperand.indirect &&
+      storeModeMap.directY
+    ) {
       mode = "directY";
       address = this.assembler.operandResolver.getnum(operand); // Extract absolute address
     }
@@ -1497,7 +1865,7 @@ export class Arch65816 implements ArchitectureEncoder {
    */
   handleBlockMove(opcode: string, operand: string): boolean {
     debug("handleBlockMove", opcode, operand);
-    const params = operand.split(",").map(p => p.trim());
+    const params = operand.split(",").map((p) => p.trim());
     if (params.length !== 2) {
       throw new Error(`Error: ${opcode} requires two parameters (source, destination).`);
     }
@@ -1520,9 +1888,14 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {boolean} explicitlen Whether the operand length is explicit.
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
-  handleBitTestOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
+  handleBitTestOperations(
+    opcode: string,
+    operand: string,
+    len: number,
+    explicitlen: boolean,
+  ): boolean {
     debug("handleBitTestOperations", { opcode, operand });
-    opcode = opcode.toUpperCase()
+    opcode = opcode.toUpperCase();
     type BitOpcode = "BIT" | "TSB" | "TRB";
     type BitModeMap = {
       immediate?: number;
@@ -1538,27 +1911,30 @@ export class Arch65816 implements ArchitectureEncoder {
     };
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
     const rawOperand = operand;
-    const normalizedOperand = (loweredOperand.indexRegister === "x" && !loweredOperand.indirect) ? rawOperand.slice(0, -2).trim() : rawOperand;
+    const normalizedOperand =
+      loweredOperand.indexRegister === "x" && !loweredOperand.indirect
+        ? rawOperand.slice(0, -2).trim()
+        : rawOperand;
 
     // Define forced maps for BIT, TSB, and TRB.
     const forcedMaps: Record<BitOpcode, ForcedBitMap> = {
       BIT: {
         immediate: 0x89,
-        direct: { 1: 0x24, 2: 0x2C },
-        directX: { 1: 0x34, 2: 0x3C },
+        direct: { 1: 0x24, 2: 0x2c },
+        directX: { 1: 0x34, 2: 0x3c },
       },
       TSB: {
-        direct: { 1: 0x04, 2: 0x0C }
+        direct: { 1: 0x04, 2: 0x0c },
       },
       TRB: {
-        direct: { 1: 0x14, 2: 0x1C }
-      }
+        direct: { 1: 0x14, 2: 0x1c },
+      },
     };
     // Default opcode map (used when no explicit length is provided)
     const opcodes: Record<BitOpcode, BitModeMap> = {
-      BIT: { immediate: 0x89, direct: 0x24, directX: 0x34, absolute: 0x2C, absoluteX: 0x3C },
-      TSB: { direct: 0x04, absolute: 0x0C },
-      TRB: { direct: 0x14, absolute: 0x1C },
+      BIT: { immediate: 0x89, direct: 0x24, directX: 0x34, absolute: 0x2c, absoluteX: 0x3c },
+      TSB: { direct: 0x04, absolute: 0x0c },
+      TRB: { direct: 0x14, absolute: 0x1c },
     };
 
     if (!(opcode in opcodes)) {
@@ -1574,7 +1950,11 @@ export class Arch65816 implements ArchitectureEncoder {
     let outLength = 0; // Number of operand bytes to output
     // Immediate mode (only BIT supports immediate)
     if (operand.startsWith("#")) {
-      debug("handleBitTestOperations immediate", { opcode, operand, value: forcedMaps[bitOpcode].immediate?.toString(16) });
+      debug("handleBitTestOperations immediate", {
+        opcode,
+        operand,
+        value: forcedMaps[bitOpcode].immediate?.toString(16),
+      });
       address = this.assembler.operandResolver.getnum(operand.slice(1));
       if (explicitlen) {
         const immediate = forcedMaps[bitOpcode].immediate;
@@ -1582,7 +1962,7 @@ export class Arch65816 implements ArchitectureEncoder {
           throw new Error(`Opcode ${opcode} does not support immediate mode.`);
         }
         this.assembler.write1(immediate);
-        outLength = (len === 1) ? 1 : 2;
+        outLength = len === 1 ? 1 : 2;
       } else {
         const immediate = opcodes[bitOpcode].immediate;
         if (immediate === undefined) {
@@ -1592,8 +1972,7 @@ export class Arch65816 implements ArchitectureEncoder {
         // Match Asar behavior: #$0000 emits a 16-bit immediate operand.
         outLength = operand.length === 6 ? 2 : 1;
       }
-    }
-    else {
+    } else {
       // Determine whether this is indexed addressing without mutating operand.
       const isIndexed = loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
       address = this.assembler.operandResolver.getnum(normalizedOperand);
@@ -1603,16 +1982,31 @@ export class Arch65816 implements ArchitectureEncoder {
           if (!forcedMaps[bitOpcode].directX) {
             throw new Error(`Opcode ${opcode} does not support indexed addressing in forced mode.`);
           }
-          this.assembler.write1(getForcedBitOpcode(forcedMaps[bitOpcode].directX, forcedMaps[bitOpcode].directX[2] ?? forcedMaps[bitOpcode].directX[1] ?? 0));
-          outLength = (len === 1) ? 1 : 2;
+          this.assembler.write1(
+            getForcedBitOpcode(
+              forcedMaps[bitOpcode].directX,
+              forcedMaps[bitOpcode].directX[2] ?? forcedMaps[bitOpcode].directX[1] ?? 0,
+            ),
+          );
+          outLength = len === 1 ? 1 : 2;
         } else {
           // Forced non-indexed mode.
-          this.assembler.write1(getForcedBitOpcode(forcedMaps[bitOpcode].direct, forcedMaps[bitOpcode].direct[2] ?? forcedMaps[bitOpcode].direct[1] ?? 0));
-          outLength = (len === 1) ? 1 : 2;
+          this.assembler.write1(
+            getForcedBitOpcode(
+              forcedMaps[bitOpcode].direct,
+              forcedMaps[bitOpcode].direct[2] ?? forcedMaps[bitOpcode].direct[1] ?? 0,
+            ),
+          );
+          outLength = len === 1 ? 1 : 2;
         }
       } else {
         // Default mode: use operand format to choose addressing.
-        if (isIndexed && loweredOperand.mode === "directPageIndexedX" && /^\$[\da-f]{1,2}$/i.test(normalizedOperand) && opcodes[bitOpcode].directX) {
+        if (
+          isIndexed &&
+          loweredOperand.mode === "directPageIndexedX" &&
+          /^\$[\da-f]{1,2}$/i.test(normalizedOperand) &&
+          opcodes[bitOpcode].directX
+        ) {
           this.assembler.write1(opcodes[bitOpcode].directX);
           outLength = 1;
         } else if (/^\$[\da-f]{1,2}$/i.test(normalizedOperand)) {
@@ -1651,43 +2045,43 @@ export class Arch65816 implements ArchitectureEncoder {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleGenericOpcode(
-      opcode: string,
-      num: number,
-      len: number,
-      explicitlen: boolean,
-      hexconstant: boolean,
+    opcode: string,
+    num: number,
+    len: number,
+    explicitlen: boolean,
+    hexconstant: boolean,
   ): boolean {
     debug("handleGenericOpcode", { opcode, num, len, explicitlen, hexconstant });
-      type GenericOpcode = "BRK" | "COP" | "PEA" | "PEI" | "REP" | "SEP" | "WDM";
-      const opcodeMap: Record<GenericOpcode, number> = {
-        BRK: 0x00,
-        COP: 0x02,
-        PEA: 0xF4,
-        PEI: 0xD4,
-        REP: 0xC2,
-        SEP: 0xE2,
-        WDM: 0x42,
-      };
+    type GenericOpcode = "BRK" | "COP" | "PEA" | "PEI" | "REP" | "SEP" | "WDM";
+    const opcodeMap: Record<GenericOpcode, number> = {
+      BRK: 0x00,
+      COP: 0x02,
+      PEA: 0xf4,
+      PEI: 0xd4,
+      REP: 0xc2,
+      SEP: 0xe2,
+      WDM: 0x42,
+    };
 
-      if (opcode in opcodeMap) {
-          const genericOpcode = opcode as GenericOpcode;
-          const opcodeByte = opcodeMap[genericOpcode];
-          if ((opcode === "REP" || opcode === "SEP") && (len !== 1 || num < 0 || num > 0xFF)) {
-            throw new Error("Error: invalid_number");
-          }
-          if (!explicitlen && !hexconstant) {
-            debug(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
-          }
-          this.assembler.write1(opcodeByte);
-          // These opcodes have fixed operand widths in 65816 encoding.
-          if (opcode === "PEA") {
-            this.assembler.write2(num);
-          } else {
-            this.assembler.write1(num);
-          }
-          return true;
+    if (opcode in opcodeMap) {
+      const genericOpcode = opcode as GenericOpcode;
+      const opcodeByte = opcodeMap[genericOpcode];
+      if ((opcode === "REP" || opcode === "SEP") && (len !== 1 || num < 0 || num > 0xff)) {
+        throw new Error("Error: invalid_number");
       }
-      return false;
+      if (!explicitlen && !hexconstant) {
+        debug(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
+      }
+      this.assembler.write1(opcodeByte);
+      // These opcodes have fixed operand widths in 65816 encoding.
+      if (opcode === "PEA") {
+        this.assembler.write2(num);
+      } else {
+        this.assembler.write1(num);
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -1699,9 +2093,16 @@ export class Arch65816 implements ArchitectureEncoder {
   handleBranchInstructions(opcode: string, operand: string): boolean {
     debug("handleBranchInstructions", opcode, operand);
     const branchOpcodes: { [key: string]: number } = {
-      BPL: 0x10, BMI: 0x30, BVC: 0x50, BVS: 0x70,
-      BCC: 0x90, BCS: 0xB0, BNE: 0xD0, BEQ: 0xF0,
-      BRA: 0x80, BRL: 0x82,
+      BPL: 0x10,
+      BMI: 0x30,
+      BVC: 0x50,
+      BVS: 0x70,
+      BCC: 0x90,
+      BCS: 0xb0,
+      BNE: 0xd0,
+      BEQ: 0xf0,
+      BRA: 0x80,
+      BRL: 0x82,
     };
 
     if (!(opcode in branchOpcodes)) {
@@ -1710,7 +2111,7 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // Handle +/- labels
     let targetAddress: number;
-    const instructionSize = (opcode === "BRL") ? 3 : 2;
+    const instructionSize = opcode === "BRL" ? 3 : 2;
     const branchReferenceAddress = this.assembler.currentTargetAddress + instructionSize;
     if (/^\++$/.test(operand)) {
       targetAddress = this.assembler.symbolScope.findNextLabel(operand, branchReferenceAddress);
@@ -1723,9 +2124,24 @@ export class Arch65816 implements ArchitectureEncoder {
     const currentAddress = this.assembler.currentTargetAddress + instructionSize; // Offset by instruction size
     const relativeAddress = targetAddress - currentAddress;
 
-    debug("handleBranchInstructions targetAddress:", targetAddress, "/", targetAddress.toString(16));
-    debug("handleBranchInstructions currentAddress:", currentAddress, "/", currentAddress.toString(16));
-    debug("handleBranchInstructions relativeAddress:", relativeAddress, "/", relativeAddress.toString(16));
+    debug(
+      "handleBranchInstructions targetAddress:",
+      targetAddress,
+      "/",
+      targetAddress.toString(16),
+    );
+    debug(
+      "handleBranchInstructions currentAddress:",
+      currentAddress,
+      "/",
+      currentAddress.toString(16),
+    );
+    debug(
+      "handleBranchInstructions relativeAddress:",
+      relativeAddress,
+      "/",
+      relativeAddress.toString(16),
+    );
 
     if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(branchOpcodes[opcode]);
@@ -1741,20 +2157,29 @@ export class Arch65816 implements ArchitectureEncoder {
       throw this.assembler.diagnostics.error("Error: relativeAddress is NaN.");
     }
 
-    debug("handleBranchInstructions relativeAddress", relativeAddress, "/", relativeAddress.toString(16));
+    debug(
+      "handleBranchInstructions relativeAddress",
+      relativeAddress,
+      "/",
+      relativeAddress.toString(16),
+    );
     if (opcode === "BRL") {
       if (relativeAddress < -32768 || relativeAddress > 32767) {
-        throw this.assembler.diagnostics.error(`Error: BRL target out of range (${relativeAddress}).`);
+        throw this.assembler.diagnostics.error(
+          `Error: BRL target out of range (${relativeAddress}).`,
+        );
       }
       this.assembler.write1(branchOpcodes[opcode]);
       this.assembler.write2(relativeAddress);
       return true;
     } else {
       if (relativeAddress < -128 || relativeAddress > 127) {
-        throw this.assembler.diagnostics.error(`Error: Branch target out of range (${relativeAddress}).`);
+        throw this.assembler.diagnostics.error(
+          `Error: Branch target out of range (${relativeAddress}).`,
+        );
       }
       // **Ensure signed byte is written correctly**
-      let signedByte = (relativeAddress & 0xFF) >>> 0;
+      let signedByte = (relativeAddress & 0xff) >>> 0;
       if (relativeAddress < 0) {
         signedByte |= 0x100; // Ensure two's complement behavior
       }
@@ -1774,23 +2199,26 @@ export class Arch65816 implements ArchitectureEncoder {
     debug("handleMemoryBitInstructions", opcode, operand);
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
     const memoryBitOpcodes: { [key: string]: { direct: number; absolute: number } } = {
-        TSB: { direct: 0x04, absolute: 0x0C },
-        TRB: { direct: 0x14, absolute: 0x1C },
+      TSB: { direct: 0x04, absolute: 0x0c },
+      TRB: { direct: 0x14, absolute: 0x1c },
     };
 
     if (opcode in memoryBitOpcodes) {
-        const address = this.assembler.operandResolver.getnum(operand);
-        const opcodeByte = loweredOperand.mode === "absolute" || operand.length === 5 ? memoryBitOpcodes[opcode].absolute : memoryBitOpcodes[opcode].direct;
+      const address = this.assembler.operandResolver.getnum(operand);
+      const opcodeByte =
+        loweredOperand.mode === "absolute" || operand.length === 5
+          ? memoryBitOpcodes[opcode].absolute
+          : memoryBitOpcodes[opcode].direct;
 
-        this.assembler.write1(opcodeByte);
+      this.assembler.write1(opcodeByte);
 
-        if (opcodeByte === memoryBitOpcodes[opcode].absolute) {
-            this.assembler.write2(address);
-        } else {
-            this.assembler.write1(address);
-        }
+      if (opcodeByte === memoryBitOpcodes[opcode].absolute) {
+        this.assembler.write2(address);
+      } else {
+        this.assembler.write1(address);
+      }
 
-        return true;
+      return true;
     }
 
     return false;
@@ -1802,7 +2230,7 @@ export class Arch65816 implements ArchitectureEncoder {
    * @returns {number} The operand length.
    */
   getlenfromchar(c: string): number {
-    debug("getlenfromchar", c)
+    debug("getlenfromchar", c);
     switch (c.toLowerCase()) {
       case "b":
         return 1;

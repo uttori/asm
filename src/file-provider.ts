@@ -156,7 +156,9 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     if (entry === undefined) {
       throw new Error(`Virtual file not found: ${filePath}`);
     }
-    return typeof entry === "string" ? new Uint8Array(Buffer.from(entry, "utf8")) : new Uint8Array(entry);
+    return typeof entry === "string"
+      ? new Uint8Array(Buffer.from(entry, "utf8"))
+      : new Uint8Array(entry);
   }
 
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
@@ -196,7 +198,7 @@ export function createMemoryAssemblyFileProvider(
  */
 function stripWrappingQuotes(filename: string): string {
   if (
-    (filename.startsWith("\"") && filename.endsWith("\"")) ||
+    (filename.startsWith('"') && filename.endsWith('"')) ||
     (filename.startsWith("'") && filename.endsWith("'")) ||
     (filename.startsWith("`") && filename.endsWith("`"))
   ) {
@@ -216,6 +218,7 @@ function resolveProviderPath(baseDirectory: string, filename: string): string {
     return filename;
   }
 
+  // oxlint-disable-next-line security/detect-unsafe-regex -- The colon and slash delimit repetitions.
   const schemeMatch = baseDirectory.match(/^([A-Za-z][\d+.A-Za-z-]*:)(\/.*)?$/);
   if (schemeMatch) {
     const [, scheme, schemePath = "/"] = schemeMatch;
@@ -232,6 +235,7 @@ function resolveProviderPath(baseDirectory: string, filename: string): string {
  * @returns {string} The directory for the provider path.
  */
 function getDirectoryForProviderPath(filePath: string): string {
+  // oxlint-disable-next-line security/detect-unsafe-regex -- The colon and slash delimit repetitions.
   const schemeMatch = filePath.match(/^([A-Za-z][\d+.A-Za-z-]*:)(\/.*)?$/);
   if (schemeMatch) {
     const [, scheme, schemePath = "/"] = schemeMatch;

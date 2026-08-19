@@ -10219,7 +10219,9 @@ var cpu65816Catalog = [
   branch("BNE", "Branch if not equal (zero clear).", 208),
   branch("BPL", "Branch if plus (negative clear).", 16),
   branch("BRA", "Branch always.", 128),
-  instruction("BRK", "Software break / interrupt.", [{ mode: "stack", syntax: "", opcode: 0, size: 2 }]),
+  instruction("BRK", "Software break / interrupt.", [
+    { mode: "stack", syntax: "", opcode: 0, size: 2 }
+  ]),
   branch("BRL", "Branch always long (16-bit relative).", 130, 3),
   branch("BVC", "Branch if overflow clear.", 80),
   branch("BVS", "Branch if overflow set.", 112),
@@ -10228,7 +10230,9 @@ var cpu65816Catalog = [
   implied("CLI", "Clear interrupt-disable flag.", 88),
   implied("CLV", "Clear overflow flag.", 184),
   instruction("CMP", "Compare with the accumulator.", aluModes),
-  instruction("COP", "Coprocessor enable interrupt.", [{ mode: "stack", syntax: "#const", opcode: 2, size: 2 }]),
+  instruction("COP", "Coprocessor enable interrupt.", [
+    { mode: "stack", syntax: "#const", opcode: 2, size: 2 }
+  ]),
   instruction("CPX", "Compare with the X register.", [
     { mode: "immediate", syntax: "#const" },
     { mode: "direct", syntax: "dp" },
@@ -10255,7 +10259,9 @@ var cpu65816Catalog = [
     { mode: "absoluteIndirect", syntax: "(addr)", opcode: 108, size: 3 },
     { mode: "absoluteIndexedXIndirect", syntax: "(addr,x)", opcode: 124, size: 3 }
   ]),
-  instruction("JSL", "Jump to subroutine long.", [{ mode: "absoluteLong", syntax: "long", opcode: 34, size: 4 }]),
+  instruction("JSL", "Jump to subroutine long.", [
+    { mode: "absoluteLong", syntax: "long", opcode: 34, size: 4 }
+  ]),
   instruction("JSR", "Jump to subroutine.", [
     { mode: "absolute", syntax: "addr", opcode: 32, size: 3 },
     { mode: "absoluteIndexedXIndirect", syntax: "(addr,x)", opcode: 252, size: 3 }
@@ -10276,13 +10282,23 @@ var cpu65816Catalog = [
     { mode: "absoluteIndexedX", syntax: "addr,x" }
   ]),
   instruction("LSR", "Logical shift right.", shiftModes),
-  instruction("MVN", "Block move next (ascending).", [{ mode: "blockMove", syntax: "destBank,srcBank", opcode: 84, size: 3 }]),
-  instruction("MVP", "Block move previous (descending).", [{ mode: "blockMove", syntax: "destBank,srcBank", opcode: 68, size: 3 }]),
+  instruction("MVN", "Block move next (ascending).", [
+    { mode: "blockMove", syntax: "destBank,srcBank", opcode: 84, size: 3 }
+  ]),
+  instruction("MVP", "Block move previous (descending).", [
+    { mode: "blockMove", syntax: "destBank,srcBank", opcode: 68, size: 3 }
+  ]),
   implied("NOP", "No operation.", 234),
   instruction("ORA", "Bitwise OR with the accumulator.", aluModes),
-  instruction("PEA", "Push effective absolute address.", [{ mode: "stack", syntax: "addr", opcode: 244, size: 3 }]),
-  instruction("PEI", "Push effective indirect address.", [{ mode: "stack", syntax: "(dp)", opcode: 212, size: 2 }]),
-  instruction("PER", "Push effective PC-relative address.", [{ mode: "stack", syntax: "label", opcode: 98, size: 3 }]),
+  instruction("PEA", "Push effective absolute address.", [
+    { mode: "stack", syntax: "addr", opcode: 244, size: 3 }
+  ]),
+  instruction("PEI", "Push effective indirect address.", [
+    { mode: "stack", syntax: "(dp)", opcode: 212, size: 2 }
+  ]),
+  instruction("PER", "Push effective PC-relative address.", [
+    { mode: "stack", syntax: "label", opcode: 98, size: 3 }
+  ]),
   implied("PHA", "Push the accumulator.", 72),
   implied("PHB", "Push the data bank register.", 139),
   implied("PHD", "Push the direct page register.", 11),
@@ -10296,7 +10312,9 @@ var cpu65816Catalog = [
   implied("PLP", "Pull the processor status register.", 40),
   implied("PLX", "Pull the X register.", 250),
   implied("PLY", "Pull the Y register.", 122),
-  instruction("REP", "Reset status bits.", [{ mode: "immediate", syntax: "#const", opcode: 194, size: 2 }]),
+  instruction("REP", "Reset status bits.", [
+    { mode: "immediate", syntax: "#const", opcode: 194, size: 2 }
+  ]),
   instruction("ROL", "Rotate left through carry.", shiftModes),
   instruction("ROR", "Rotate right through carry.", shiftModes),
   implied("RTI", "Return from interrupt.", 64),
@@ -10306,8 +10324,14 @@ var cpu65816Catalog = [
   implied("SEC", "Set carry flag.", 56),
   implied("SED", "Set decimal flag.", 248),
   implied("SEI", "Set interrupt-disable flag.", 120),
-  instruction("SEP", "Set status bits.", [{ mode: "immediate", syntax: "#const", opcode: 226, size: 2 }]),
-  instruction("STA", "Store the accumulator.", aluModes.filter((mode) => mode.mode !== "immediate")),
+  instruction("SEP", "Set status bits.", [
+    { mode: "immediate", syntax: "#const", opcode: 226, size: 2 }
+  ]),
+  instruction(
+    "STA",
+    "Store the accumulator.",
+    aluModes.filter((mode) => mode.mode !== "immediate")
+  ),
   implied("STP", "Stop the processor.", 219),
   instruction("STX", "Store the X register.", [
     { mode: "direct", syntax: "dp" },
@@ -10338,7 +10362,9 @@ var cpu65816Catalog = [
   implied("TYA", "Transfer Y to accumulator.", 152),
   implied("TYX", "Transfer Y to X.", 187),
   implied("WAI", "Wait for interrupt.", 203),
-  instruction("WDM", "Reserved (William D. Mensch) opcode.", [{ mode: "immediate", syntax: "#const", opcode: 66, size: 2 }]),
+  instruction("WDM", "Reserved (William D. Mensch) opcode.", [
+    { mode: "immediate", syntax: "#const", opcode: 66, size: 2 }
+  ]),
   implied("XBA", "Exchange the bytes of the accumulator.", 235),
   implied("XCE", "Exchange carry and emulation flags.", 251)
 ];
@@ -10381,12 +10407,30 @@ var spc700Catalog = [
     { mode: "registerImmediate", syntax: "A,#const" },
     { mode: "registerDirect", syntax: "A,dp" }
   ]),
-  instruction("INC", "Increment.", [{ mode: "register", syntax: "A" }, { mode: "direct", syntax: "dp" }]),
-  instruction("DEC", "Decrement.", [{ mode: "register", syntax: "A" }, { mode: "direct", syntax: "dp" }]),
-  instruction("ASL", "Arithmetic shift left.", [{ mode: "register", syntax: "A" }, { mode: "direct", syntax: "dp" }]),
-  instruction("LSR", "Logical shift right.", [{ mode: "register", syntax: "A" }, { mode: "direct", syntax: "dp" }]),
-  instruction("ROL", "Rotate left.", [{ mode: "register", syntax: "A" }, { mode: "direct", syntax: "dp" }]),
-  instruction("ROR", "Rotate right.", [{ mode: "register", syntax: "A" }, { mode: "direct", syntax: "dp" }]),
+  instruction("INC", "Increment.", [
+    { mode: "register", syntax: "A" },
+    { mode: "direct", syntax: "dp" }
+  ]),
+  instruction("DEC", "Decrement.", [
+    { mode: "register", syntax: "A" },
+    { mode: "direct", syntax: "dp" }
+  ]),
+  instruction("ASL", "Arithmetic shift left.", [
+    { mode: "register", syntax: "A" },
+    { mode: "direct", syntax: "dp" }
+  ]),
+  instruction("LSR", "Logical shift right.", [
+    { mode: "register", syntax: "A" },
+    { mode: "direct", syntax: "dp" }
+  ]),
+  instruction("ROL", "Rotate left.", [
+    { mode: "register", syntax: "A" },
+    { mode: "direct", syntax: "dp" }
+  ]),
+  instruction("ROR", "Rotate right.", [
+    { mode: "register", syntax: "A" },
+    { mode: "direct", syntax: "dp" }
+  ]),
   branch("BRA", "Branch always.", 47),
   branch("BEQ", "Branch if equal.", 240),
   branch("BNE", "Branch if not equal.", 208),
@@ -10396,10 +10440,19 @@ var spc700Catalog = [
   branch("BVC", "Branch if overflow clear.", 80),
   branch("BMI", "Branch if minus.", 48),
   branch("BPL", "Branch if plus.", 16),
-  instruction("CBNE", "Compare and branch if not equal.", [{ mode: "directRelative", syntax: "dp,label" }]),
-  instruction("DBNZ", "Decrement and branch if not zero.", [{ mode: "directRelative", syntax: "dp,label" }]),
-  instruction("JMP", "Jump.", [{ mode: "absolute", syntax: "!addr" }, { mode: "absoluteIndexedXIndirect", syntax: "[!addr+X]" }]),
-  instruction("CALL", "Call subroutine.", [{ mode: "absolute", syntax: "!addr", opcode: 63, size: 3 }]),
+  instruction("CBNE", "Compare and branch if not equal.", [
+    { mode: "directRelative", syntax: "dp,label" }
+  ]),
+  instruction("DBNZ", "Decrement and branch if not zero.", [
+    { mode: "directRelative", syntax: "dp,label" }
+  ]),
+  instruction("JMP", "Jump.", [
+    { mode: "absolute", syntax: "!addr" },
+    { mode: "absoluteIndexedXIndirect", syntax: "[!addr+X]" }
+  ]),
+  instruction("CALL", "Call subroutine.", [
+    { mode: "absolute", syntax: "!addr", opcode: 63, size: 3 }
+  ]),
   implied("RET", "Return from subroutine.", 111),
   implied("RETI", "Return from interrupt.", 127),
   implied("NOP", "No operation.", 0),
@@ -10427,7 +10480,9 @@ var superFxCatalog = [
   instruction("FROM", "Set the source register.", [{ mode: "register", syntax: "Rn" }]),
   instruction("WITH", "Set source and destination register.", [{ mode: "register", syntax: "Rn" }]),
   instruction("ADD", "Add to the accumulator register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("SUB", "Subtract from the accumulator register.", [{ mode: "register", syntax: "Rn" }]),
+  instruction("SUB", "Subtract from the accumulator register.", [
+    { mode: "register", syntax: "Rn" }
+  ]),
   instruction("AND", "Bitwise AND.", [{ mode: "register", syntax: "Rn" }]),
   instruction("OR", "Bitwise OR.", [{ mode: "register", syntax: "Rn" }]),
   instruction("MULT", "Signed multiply.", [{ mode: "register", syntax: "Rn" }]),
@@ -10494,7 +10549,12 @@ var Arch65816 = class {
     const mnemonic = words[0] ?? "";
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    return this.estimateResolvedInstruction(mnemonic, rawOperand, loweredOperand.expanded, loweredOperand.length);
+    return this.estimateResolvedInstruction(
+      mnemonic,
+      rawOperand,
+      loweredOperand.expanded,
+      loweredOperand.length
+    );
   }
   estimateResolvedInstruction(mnemonic, rawOperand, operand, operandLength) {
     let opcode = mnemonic.toUpperCase();
@@ -10545,7 +10605,18 @@ var Arch65816 = class {
       "XCE"
     ]);
     const accumulatorRepeatOpcodes = /* @__PURE__ */ new Set(["ASL", "LSR", "ROL", "ROR", "INC", "DEC"]);
-    const branchOpcodes2 = /* @__PURE__ */ new Set(["BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ", "BRA", "BRL"]);
+    const branchOpcodes2 = /* @__PURE__ */ new Set([
+      "BPL",
+      "BMI",
+      "BVC",
+      "BVS",
+      "BCC",
+      "BCS",
+      "BNE",
+      "BEQ",
+      "BRA",
+      "BRL"
+    ]);
     if (noOperandOpcodes.has(opcode)) {
       if (rawOperand.startsWith("#")) {
         try {
@@ -10609,7 +10680,12 @@ var Arch65816 = class {
     const mnemonic = words[0] ?? "";
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    return this.encodeResolvedInstruction(mnemonic, rawOperand, loweredOperand.expanded, loweredOperand.length);
+    return this.encodeResolvedInstruction(
+      mnemonic,
+      rawOperand,
+      loweredOperand.expanded,
+      loweredOperand.length
+    );
   }
   encodeResolvedInstruction(mnemonic, rawOperand, operand, operandLength) {
     let opcode = mnemonic.toUpperCase();
@@ -10767,7 +10843,10 @@ var Arch65816 = class {
       if (opcode in absoluteIndexedXOpcodes) {
         debug("handleMemoryOperations =", absoluteIndexedXOpcodes[opcode].toString(16));
         this.assembler.write1(absoluteIndexedXOpcodes[opcode]);
-        debug("handleMemoryOperations =", this.assembler.operandResolver.getnum(baseOperand).toString(16));
+        debug(
+          "handleMemoryOperations =",
+          this.assembler.operandResolver.getnum(baseOperand).toString(16)
+        );
         this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
         return true;
       }
@@ -10847,7 +10926,11 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "stackRelativeIndexedIndirectY") {
-      debug("handleMemoryOperations Stack Relative Indexed Indirect (sr,S),Y", opcode, resolvedOperand);
+      debug(
+        "handleMemoryOperations Stack Relative Indexed Indirect (sr,S),Y",
+        opcode,
+        resolvedOperand
+      );
       const stackIndexedOpcodes = {
         ADC: 115,
         STA: 147,
@@ -10970,7 +11053,11 @@ var Arch65816 = class {
         return true;
       }
     } else {
-      debug("handleMemoryOperations Direct Page optimization disabled; using absolute", opcode, operand);
+      debug(
+        "handleMemoryOperations Direct Page optimization disabled; using absolute",
+        opcode,
+        operand
+      );
       const absoluteOpcodes = {
         ADC: 109,
         STA: 141,
@@ -10996,19 +11083,125 @@ var Arch65816 = class {
   handleLogicAndCompareOperations(opcode, operand, len, explicitlen) {
     debug("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
     const opcodes = {
-      ORA: { immediate: 9, direct: 5, directX: 21, absolute: 13, absoluteX: 29, absoluteY: 25, indirectX: 1, indirectY: 17, indirect: 18, indirectLong: 15, indirectLongY: 31, stackRelative: 3, stackRelativeIndirectY: 19, absoluteLong: 15, absoluteLongX: 31, directIndirectLong: 7, directIndirectLongY: 23 },
-      AND: { immediate: 41, direct: 37, directX: 53, absolute: 45, absoluteX: 61, absoluteY: 57, indirectX: 33, indirectY: 49, indirect: 50, indirectLong: 47, indirectLongY: 63, stackRelative: 35, stackRelativeIndirectY: 51, absoluteLong: 47, absoluteLongX: 63, directIndirectLong: 39, directIndirectLongY: 55 },
-      EOR: { immediate: 73, direct: 69, directX: 85, absolute: 77, absoluteX: 93, absoluteY: 89, indirectX: 65, indirectY: 81, indirect: 82, indirectLong: 79, indirectLongY: 95, stackRelative: 67, stackRelativeIndirectY: 83, absoluteLong: 79, absoluteLongX: 95, directIndirectLong: 71, directIndirectLongY: 87 },
-      CMP: { immediate: 201, direct: 197, directX: 213, absolute: 205, absoluteX: 221, absoluteY: 217, indirectX: 193, indirectY: 209, indirect: 210, indirectLong: 207, indirectLongY: 223, stackRelative: 195, stackRelativeIndirectY: 211, absoluteLong: 207, absoluteLongX: 223, directIndirectLong: 199, directIndirectLongY: 215 },
+      ORA: {
+        immediate: 9,
+        direct: 5,
+        directX: 21,
+        absolute: 13,
+        absoluteX: 29,
+        absoluteY: 25,
+        indirectX: 1,
+        indirectY: 17,
+        indirect: 18,
+        indirectLong: 15,
+        indirectLongY: 31,
+        stackRelative: 3,
+        stackRelativeIndirectY: 19,
+        absoluteLong: 15,
+        absoluteLongX: 31,
+        directIndirectLong: 7,
+        directIndirectLongY: 23
+      },
+      AND: {
+        immediate: 41,
+        direct: 37,
+        directX: 53,
+        absolute: 45,
+        absoluteX: 61,
+        absoluteY: 57,
+        indirectX: 33,
+        indirectY: 49,
+        indirect: 50,
+        indirectLong: 47,
+        indirectLongY: 63,
+        stackRelative: 35,
+        stackRelativeIndirectY: 51,
+        absoluteLong: 47,
+        absoluteLongX: 63,
+        directIndirectLong: 39,
+        directIndirectLongY: 55
+      },
+      EOR: {
+        immediate: 73,
+        direct: 69,
+        directX: 85,
+        absolute: 77,
+        absoluteX: 93,
+        absoluteY: 89,
+        indirectX: 65,
+        indirectY: 81,
+        indirect: 82,
+        indirectLong: 79,
+        indirectLongY: 95,
+        stackRelative: 67,
+        stackRelativeIndirectY: 83,
+        absoluteLong: 79,
+        absoluteLongX: 95,
+        directIndirectLong: 71,
+        directIndirectLongY: 87
+      },
+      CMP: {
+        immediate: 201,
+        direct: 197,
+        directX: 213,
+        absolute: 205,
+        absoluteX: 221,
+        absoluteY: 217,
+        indirectX: 193,
+        indirectY: 209,
+        indirect: 210,
+        indirectLong: 207,
+        indirectLongY: 223,
+        stackRelative: 195,
+        stackRelativeIndirectY: 211,
+        absoluteLong: 207,
+        absoluteLongX: 223,
+        directIndirectLong: 199,
+        directIndirectLongY: 215
+      },
       CPX: { immediate: 224, direct: 228, absolute: 236 },
       CPY: { immediate: 192, direct: 196, absolute: 204 }
     };
-    const dpMap = { AND: 37, ORA: 5, EOR: 69, CMP: 197, CPX: 228, CPY: 196 };
-    const absMap = { AND: 45, ORA: 13, EOR: 77, CMP: 205, CPX: 236, CPY: 204 };
-    const absLongMap = { AND: 47, ORA: 15, EOR: 79, CMP: 207 };
-    const dpXMap = { AND: 53, ORA: 21, EOR: 85, CMP: 213 };
-    const absXMap = { AND: 61, ORA: 29, EOR: 93, CMP: 221 };
-    const absYMap = { AND: 57, ORA: 25, EOR: 89, CMP: 217 };
+    const dpMap = {
+      AND: 37,
+      ORA: 5,
+      EOR: 69,
+      CMP: 197,
+      CPX: 228,
+      CPY: 196
+    };
+    const absMap = {
+      AND: 45,
+      ORA: 13,
+      EOR: 77,
+      CMP: 205,
+      CPX: 236,
+      CPY: 204
+    };
+    const absLongMap = {
+      AND: 47,
+      ORA: 15,
+      EOR: 79,
+      CMP: 207
+    };
+    const dpXMap = {
+      AND: 53,
+      ORA: 21,
+      EOR: 85,
+      CMP: 213
+    };
+    const absXMap = {
+      AND: 61,
+      ORA: 29,
+      EOR: 93,
+      CMP: 221
+    };
+    const absYMap = {
+      AND: 57,
+      ORA: 25,
+      EOR: 89,
+      CMP: 217
+    };
     if (!(opcode in opcodes)) {
       return false;
     }
@@ -11210,7 +11403,11 @@ var Arch65816 = class {
     if (!(opcode in stackOpcodes)) {
       return false;
     }
-    debug("handleNoOperandOperations", { opcode, operand, value: stackOpcodes[opcode].toString(16) });
+    debug("handleNoOperandOperations", {
+      opcode,
+      operand,
+      value: stackOpcodes[opcode].toString(16)
+    });
     let count = 1;
     if (operand && operand.startsWith("#")) {
       let repStr = operand.substring(1);
@@ -11568,10 +11765,16 @@ var Arch65816 = class {
       return { mode: shortMode(currentOpcode), address: resolvedAddress };
     };
     if (/^\d+$/.test(operand)) {
-      ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(operand)));
+      ({ mode, address } = selectDirectJumpMode(
+        opcode,
+        this.assembler.operandResolver.getnum(operand)
+      ));
       debug("handleJump mode", mode);
     } else if (/^\$[\dA-Fa-f]{1,6}$/.test(operand)) {
-      ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(operand)));
+      ({ mode, address } = selectDirectJumpMode(
+        opcode,
+        this.assembler.operandResolver.getnum(operand)
+      ));
       debug("handleJump mode", mode);
     } else if (loweredOperand.mode === "indirectLong") {
       mode = "JMP_INDIRECT_LONG";
@@ -11591,7 +11794,10 @@ var Arch65816 = class {
       debug("handleJump mode", mode);
     } else {
       try {
-        ({ mode, address } = selectDirectJumpMode(opcode, this.assembler.operandResolver.getnum(baseOperand)));
+        ({ mode, address } = selectDirectJumpMode(
+          opcode,
+          this.assembler.operandResolver.getnum(baseOperand)
+        ));
         debug("handleJump mode", mode);
       } catch {
         debug("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`);
@@ -11829,7 +12035,11 @@ var Arch65816 = class {
     let address = 0;
     let outLength = 0;
     if (operand.startsWith("#")) {
-      debug("handleBitTestOperations immediate", { opcode, operand, value: forcedMaps[bitOpcode].immediate?.toString(16) });
+      debug("handleBitTestOperations immediate", {
+        opcode,
+        operand,
+        value: forcedMaps[bitOpcode].immediate?.toString(16)
+      });
       address = this.assembler.operandResolver.getnum(operand.slice(1));
       if (explicitlen) {
         const immediate = forcedMaps[bitOpcode].immediate;
@@ -11854,10 +12064,20 @@ var Arch65816 = class {
           if (!forcedMaps[bitOpcode].directX) {
             throw new Error(`Opcode ${opcode} does not support indexed addressing in forced mode.`);
           }
-          this.assembler.write1(getForcedBitOpcode(forcedMaps[bitOpcode].directX, forcedMaps[bitOpcode].directX[2] ?? forcedMaps[bitOpcode].directX[1] ?? 0));
+          this.assembler.write1(
+            getForcedBitOpcode(
+              forcedMaps[bitOpcode].directX,
+              forcedMaps[bitOpcode].directX[2] ?? forcedMaps[bitOpcode].directX[1] ?? 0
+            )
+          );
           outLength = len === 1 ? 1 : 2;
         } else {
-          this.assembler.write1(getForcedBitOpcode(forcedMaps[bitOpcode].direct, forcedMaps[bitOpcode].direct[2] ?? forcedMaps[bitOpcode].direct[1] ?? 0));
+          this.assembler.write1(
+            getForcedBitOpcode(
+              forcedMaps[bitOpcode].direct,
+              forcedMaps[bitOpcode].direct[2] ?? forcedMaps[bitOpcode].direct[1] ?? 0
+            )
+          );
           outLength = len === 1 ? 1 : 2;
         }
       } else {
@@ -11960,9 +12180,24 @@ var Arch65816 = class {
     }
     const currentAddress = this.assembler.currentTargetAddress + instructionSize;
     const relativeAddress = targetAddress - currentAddress;
-    debug("handleBranchInstructions targetAddress:", targetAddress, "/", targetAddress.toString(16));
-    debug("handleBranchInstructions currentAddress:", currentAddress, "/", currentAddress.toString(16));
-    debug("handleBranchInstructions relativeAddress:", relativeAddress, "/", relativeAddress.toString(16));
+    debug(
+      "handleBranchInstructions targetAddress:",
+      targetAddress,
+      "/",
+      targetAddress.toString(16)
+    );
+    debug(
+      "handleBranchInstructions currentAddress:",
+      currentAddress,
+      "/",
+      currentAddress.toString(16)
+    );
+    debug(
+      "handleBranchInstructions relativeAddress:",
+      relativeAddress,
+      "/",
+      relativeAddress.toString(16)
+    );
     if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(branchOpcodes2[opcode]);
       if (opcode === "BRL") {
@@ -11975,17 +12210,26 @@ var Arch65816 = class {
     if (Number.isNaN(relativeAddress)) {
       throw this.assembler.diagnostics.error("Error: relativeAddress is NaN.");
     }
-    debug("handleBranchInstructions relativeAddress", relativeAddress, "/", relativeAddress.toString(16));
+    debug(
+      "handleBranchInstructions relativeAddress",
+      relativeAddress,
+      "/",
+      relativeAddress.toString(16)
+    );
     if (opcode === "BRL") {
       if (relativeAddress < -32768 || relativeAddress > 32767) {
-        throw this.assembler.diagnostics.error(`Error: BRL target out of range (${relativeAddress}).`);
+        throw this.assembler.diagnostics.error(
+          `Error: BRL target out of range (${relativeAddress}).`
+        );
       }
       this.assembler.write1(branchOpcodes2[opcode]);
       this.assembler.write2(relativeAddress);
       return true;
     } else {
       if (relativeAddress < -128 || relativeAddress > 127) {
-        throw this.assembler.diagnostics.error(`Error: Branch target out of range (${relativeAddress}).`);
+        throw this.assembler.diagnostics.error(
+          `Error: Branch target out of range (${relativeAddress}).`
+        );
       }
       let signedByte = (relativeAddress & 255) >>> 0;
       if (relativeAddress < 0) {
@@ -12312,7 +12556,9 @@ var ArchSPC700 = class {
     const rawOperand = words.slice(1).join(" ").trim();
     const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    const loweredOperands = parsedOperands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
+    const loweredOperands = parsedOperands.map(
+      (operand) => this.assembler.operandResolver.lowerOperand(operand)
+    );
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
   encodeResolvedInstruction(mnemonic, operands, loweredOperand, loweredOperands = []) {
@@ -12335,9 +12581,23 @@ var ArchSPC700 = class {
     const firstLowered = loweredOperands[0];
     const secondLowered = loweredOperands[1];
     if (normalizedOperands.length === 1) {
-      return this.handleOneOperand(opcode, normalizedOperands[0], forcedLen, explicitlen, firstLowered);
+      return this.handleOneOperand(
+        opcode,
+        normalizedOperands[0],
+        forcedLen,
+        explicitlen,
+        firstLowered
+      );
     } else if (normalizedOperands.length === 2) {
-      return this.handleTwoOperands(opcode, normalizedOperands[0], normalizedOperands[1], forcedLen, explicitlen, firstLowered, secondLowered);
+      return this.handleTwoOperands(
+        opcode,
+        normalizedOperands[0],
+        normalizedOperands[1],
+        forcedLen,
+        explicitlen,
+        firstLowered,
+        secondLowered
+      );
     }
     return false;
   }
@@ -12469,10 +12729,25 @@ var ArchSPC700 = class {
         return true;
       }
     }
-    if (this.handleCmpXyOrMovXy(opcode, [left, right].join(","), forcedLen, explicitlen, leftLowered, rightLowered)) {
+    if (this.handleCmpXyOrMovXy(
+      opcode,
+      [left, right].join(","),
+      forcedLen,
+      explicitlen,
+      leftLowered,
+      rightLowered
+    )) {
       return true;
     }
-    if (this.handleMemoryInstruction(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered)) {
+    if (this.handleMemoryInstruction(
+      opcode,
+      left,
+      right,
+      forcedLen,
+      explicitlen,
+      leftLowered,
+      rightLowered
+    )) {
       return true;
     }
     if (this.handleTsetTclr(opcode, left, right, rightLowered)) {
@@ -12682,7 +12957,10 @@ var ArchSPC700 = class {
       return { mode: "indirectDpX", val: resolveValue(loweredOperand.baseExpression) & 255 };
     }
     if (loweredOperand?.immediate) {
-      return { mode: "imm", val: resolveValue(loweredOperand.baseExpression ?? loweredOperand.expanded) & 255 };
+      return {
+        mode: "imm",
+        val: resolveValue(loweredOperand.baseExpression ?? loweredOperand.expanded) & 255
+      };
     }
     if (loweredOperand?.mode === "directPageIndirectIndexedY" && loweredOperand.baseExpression) {
       return { mode: "indirectDpY", val: resolveValue(loweredOperand.baseExpression) & 255 };
@@ -12787,13 +13065,21 @@ var ArchSPC700 = class {
       }
     }
     if (isAccumulator(operand)) {
-      debug2("handleShiftIncDec operand is A", { opcode, operand, write: table[upper].a.toString(16) });
+      debug2("handleShiftIncDec operand is A", {
+        opcode,
+        operand,
+        write: table[upper].a.toString(16)
+      });
       this.assembler.write1(table[upper].a);
       return true;
     }
     const plusX = operand.toUpperCase().endsWith("+X");
     if (plusX) {
-      debug2("handleShiftIncDec operand ends with +X", { opcode, operand, write: table[upper].dpX.toString(16) });
+      debug2("handleShiftIncDec operand ends with +X", {
+        opcode,
+        operand,
+        write: table[upper].dpX.toString(16)
+      });
       const baseStr = operand.replace(/\+x$/i, "").trim();
       debug2("handleShiftIncDec baseStr", baseStr);
       const val2 = parseInt(baseStr.replace(/\$/g, ""), 16) & 65535;
@@ -12810,11 +13096,23 @@ var ArchSPC700 = class {
         return true;
       }
       if (val2 <= 255) {
-        debug2("handleShiftIncDec val <= 0xff", { opcode, operand, forcedLen, explicitlen, write: table[upper].dpX.toString(16) });
+        debug2("handleShiftIncDec val <= 0xff", {
+          opcode,
+          operand,
+          forcedLen,
+          explicitlen,
+          write: table[upper].dpX.toString(16)
+        });
         this.assembler.write1(table[upper].dpX);
         this.assembler.write1(val2 & 255);
       } else {
-        debug2("handleShiftIncDec val > 0xff", { opcode, operand, forcedLen, explicitlen, write: table[upper].abs.toString(16) });
+        debug2("handleShiftIncDec val > 0xff", {
+          opcode,
+          operand,
+          forcedLen,
+          explicitlen,
+          write: table[upper].abs.toString(16)
+        });
         this.assembler.write1(table[upper].abs);
         this.assembler.write2(val2);
       }
@@ -13745,7 +14043,9 @@ var ArchSuperFX = class {
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
     const parsedOperands = rawOperand ? rawOperand.split(",").map((operand) => operand.trim()) : [];
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    const loweredOperands = parsedOperands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
+    const loweredOperands = parsedOperands.map(
+      (operand) => this.assembler.operandResolver.lowerOperand(operand)
+    );
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
   encodeResolvedInstruction(mnemonic, operands, loweredOperand, loweredOperands = []) {
@@ -14210,7 +14510,9 @@ var ArchSuperFX = class {
         return regnum === -1 ? null : regnum;
       }
       if (type === "hash" && lowered.immediate) {
-        const regnum = this.assembler.operandResolver.getnum(lowered.baseExpression ?? lowered.expanded.slice(1));
+        const regnum = this.assembler.operandResolver.getnum(
+          lowered.baseExpression ?? lowered.expanded.slice(1)
+        );
         if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
           return null;
         }
@@ -14617,11 +14919,14 @@ function parseExpressionNode(input) {
   }
   const rangeIndex = findTopLevelRange(trimmed);
   if (rangeIndex !== -1) {
-    return attachRootSpan({
-      type: "range",
-      start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
-      end: parseExpressionNode(trimmed.slice(rangeIndex + 2))
-    }, trimmed);
+    return attachRootSpan(
+      {
+        type: "range",
+        start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
+        end: parseExpressionNode(trimmed.slice(rangeIndex + 2))
+      },
+      trimmed
+    );
   }
   try {
     const tokens = tokenizeExpression(trimmed);
@@ -15246,7 +15551,11 @@ function setCommandWords(command, words, normalized) {
   command.command = (normalized ?? words.join(" ")).trim();
   command.source.normalized = normalized ?? command.command;
   command.source.normalizedSpan = createLineSpan(command.source.normalized, command.source.line);
-  command.source.tokenSpans = deriveTokenSpans(command.source.normalized, words, command.source.line);
+  command.source.tokenSpans = deriveTokenSpans(
+    command.source.normalized,
+    words,
+    command.source.line
+  );
   command.labelName = deriveLabelName(command.keyword);
   command.assignmentTarget = deriveAssignmentTarget(words);
   command.parsed = deriveCommandSemantics(command.command, words);
@@ -15491,8 +15800,14 @@ var MathCore = class {
   operators = {
     "**": { priority: 6, operation: (a, b) => Math.pow(a, b) },
     "*": { priority: 5, operation: (a, b) => a * b },
-    "/": { priority: 5, operation: (a, b) => b !== 0 ? a / b : this.throwMathError("Division by zero") },
-    "%": { priority: 5, operation: (a, b) => b !== 0 ? a % b : this.throwMathError("Modulo by zero") },
+    "/": {
+      priority: 5,
+      operation: (a, b) => b !== 0 ? a / b : this.throwMathError("Division by zero")
+    },
+    "%": {
+      priority: 5,
+      operation: (a, b) => b !== 0 ? a % b : this.throwMathError("Modulo by zero")
+    },
     "+": { priority: 4, operation: (a, b) => a + b },
     "-": { priority: 4, operation: (a, b) => a - b },
     "<<": { priority: 3, operation: (a, b) => a << b },
@@ -15567,11 +15882,16 @@ var MathCore = class {
       case "literal":
         return this.parseLiteralNode(expression.value);
       case "string":
-        throw new AssemblyError("MATH_STRING_NOT_NUMERIC", `String expression is not directly numeric: ${expression.value}`);
+        throw new AssemblyError(
+          "MATH_STRING_NOT_NUMERIC",
+          `String expression is not directly numeric: ${expression.value}`
+        );
       case "call":
         return this.callFunction(
           expression.callee.name,
-          expression.arguments.map((argument, index2) => this.evaluateCallArgument(expression.callee.name, index2, argument))
+          expression.arguments.map(
+            (argument, index2) => this.evaluateCallArgument(expression.callee.name, index2, argument)
+          )
         );
       case "unary": {
         const unaryExpression = expression;
@@ -15579,10 +15899,17 @@ var MathCore = class {
       }
       case "binary": {
         const binaryExpression = expression;
-        return this.evaluateBinaryExpressionNode(binaryExpression.operator, binaryExpression.left, binaryExpression.right);
+        return this.evaluateBinaryExpressionNode(
+          binaryExpression.operator,
+          binaryExpression.left,
+          binaryExpression.right
+        );
       }
       case "range":
-        throw new AssemblyError("MATH_RANGE_NOT_NUMERIC", `Range expression is not directly numeric: ${renderExpressionNode(expression)}`);
+        throw new AssemblyError(
+          "MATH_RANGE_NOT_NUMERIC",
+          `Range expression is not directly numeric: ${renderExpressionNode(expression)}`
+        );
       case "raw":
       default:
         return this.evaluateStringExpression(expression.value);
@@ -15638,9 +15965,15 @@ var MathCore = class {
   evaluateBinaryExpressionNode(operator, left, right) {
     const operation = this.operators[operator];
     if (!operation) {
-      throw new AssemblyError("MATH_UNSUPPORTED_BINARY_OPERATOR", `Unsupported binary operator '${operator}'`);
+      throw new AssemblyError(
+        "MATH_UNSUPPORTED_BINARY_OPERATOR",
+        `Unsupported binary operator '${operator}'`
+      );
     }
-    return operation.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
+    return operation.operation(
+      this.evaluateExpressionNode(left),
+      this.evaluateExpressionNode(right)
+    );
   }
   resolveNumericIdentifierArgument(identifier) {
     try {
@@ -15674,7 +16007,9 @@ var MathCore = class {
     return { label: match[1], length: match[1].length };
   }
   isStringArgument(functionName, argumentIndex) {
-    if (["defined", "sizeof", "objectsize", "datasize", "filesize", "getfilestatus"].includes(functionName)) {
+    if (["defined", "sizeof", "objectsize", "datasize", "filesize", "getfilestatus"].includes(
+      functionName
+    )) {
       return argumentIndex === 0;
     }
     if (["stringsequal", "stringsequalnocase"].includes(functionName)) {
@@ -16018,9 +16353,7 @@ var MathCore = class {
       throw new Error(`User function '${name}' not found.`);
     }
     if (args.length < func.args.length) {
-      throw new Error(
-        `Function '${name}' expects at least ${func.args.length} argument(s).`
-      );
+      throw new Error(`Function '${name}' expects at least ${func.args.length} argument(s).`);
     }
     let content = func.content;
     for (let i = 0; i < func.args.length; i++) {
@@ -16155,7 +16488,8 @@ var MathCore = class {
         return this.numArg(name, args[0]) > this.numArg(name, args[1]) ? 1 : 0;
       }
       case "greaterequal": {
-        if (args.length !== 2) throw new Error("greaterequal() expects exactly 2 numeric arguments.");
+        if (args.length !== 2)
+          throw new Error("greaterequal() expects exactly 2 numeric arguments.");
         return this.numArg(name, args[0]) >= this.numArg(name, args[1]) ? 1 : 0;
       }
       // --- Logical Bitwise Operations ---
@@ -16190,13 +16524,15 @@ var MathCore = class {
       }
       // --- String Comparisons ---
       case "stringsequal": {
-        if (args.length !== 2) throw new Error("stringsequal() expects exactly 2 string arguments.");
+        if (args.length !== 2)
+          throw new Error("stringsequal() expects exactly 2 string arguments.");
         const str1 = this.strArg(name, args[0]);
         const str2 = this.strArg(name, args[1]);
         return str1 === str2 ? 1 : 0;
       }
       case "stringsequalnocase": {
-        if (args.length !== 2) throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
+        if (args.length !== 2)
+          throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
         const str1 = this.strArg(name, args[0]);
         const str2 = this.strArg(name, args[1]);
         return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
@@ -16238,7 +16574,8 @@ var MathCore = class {
         return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
       }
       case "canreadfile": {
-        if (args.length !== 3) throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
+        if (args.length !== 3)
+          throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
         const filename = this.strArg(name, args[0]);
         const pos = this.numArg(name, args[1]);
         const num = this.numArg(name, args[2]);
@@ -16255,7 +16592,8 @@ var MathCore = class {
         return this.getHost().canReadRom(pos, size);
       }
       case "canread": {
-        if (args.length !== 2) throw new Error("canread expects exactly 2 numeric arguments (pos, num).");
+        if (args.length !== 2)
+          throw new Error("canread expects exactly 2 numeric arguments (pos, num).");
         const pos = this.numArg(name, args[0]);
         const num = this.numArg(name, args[1]);
         return this.getHost().canReadRom(pos, num);
@@ -16281,7 +16619,8 @@ var MathCore = class {
       case "readfile2":
       case "readfile3":
       case "readfile4": {
-        if (args.length < 2 || args.length > 3) throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
+        if (args.length < 2 || args.length > 3)
+          throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
         const filename = this.strArg(name, args[0]);
         const pos = this.numArg(name, args[1]);
         const size = parseInt(name.slice(-1), 10);
@@ -16311,7 +16650,9 @@ var MathCore = class {
    */
   numArg = (funcName, arg) => {
     if (typeof arg === "string") {
-      throw new Error(`Function '${funcName}' expected a numeric argument but got a string: ${arg}`);
+      throw new Error(
+        `Function '${funcName}' expected a numeric argument but got a string: ${arg}`
+      );
     }
     return arg;
   };
@@ -16376,7 +16717,9 @@ function classifyGenericOperand(input) {
   let registerName;
   const registerOperandMatch = normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
   const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
-  const registerIndirectAutoIncrementMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/);
+  const registerIndirectAutoIncrementMatch = normalizedUpper.match(
+    /^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/
+  );
   const directPageIndexedXIndirectMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\+\s*x\s*\)$/i);
   const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*y$/i);
   const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
@@ -16547,7 +16890,9 @@ var OperandResolver = class {
   }
   tryResolveSimpleArithmetic(operand) {
     const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
-    const match = operand.match(new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`));
+    const match = operand.match(
+      new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`)
+    );
     if (!match) {
       return null;
     }
@@ -16736,7 +17081,9 @@ var OperandResolver = class {
     }
     switch (operand.type) {
       case "range":
-        throw new Error(`Range expression is not a numeric operand: ${renderExpressionNode(operand)}`);
+        throw new Error(
+          `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`
+        );
       default:
         try {
           return this.deps.evaluateMath(operand);
@@ -17007,7 +17354,9 @@ var handlePad = ({ session, operandResolver }, words) => {
     if (targetPC < 0) {
       throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
     }
-    const currentPC = session.romWriter.convertTargetAddressToRomOffset(session.currentTargetAddress);
+    const currentPC = session.romWriter.convertTargetAddressToRomOffset(
+      session.currentTargetAddress
+    );
     if (targetPC <= currentPC) {
       return;
     }
@@ -18096,7 +18445,9 @@ var DirectiveRuntimeService = class {
    * @returns {number[]} An array of numbers representing the mapped characters.
    */
   processStringWithMapping(input) {
-    return Array.from(input).map((char) => this.host.characterMappings.get(char) ?? char.charCodeAt(0));
+    return Array.from(input).map(
+      (char) => this.host.characterMappings.get(char) ?? char.charCodeAt(0)
+    );
   }
   /**
    * Handles the `spcblock` directive.
@@ -18163,7 +18514,9 @@ var DirectiveRuntimeService = class {
       throw new Error("Custom spcblock mode is not implemented.");
     }
     if (this.host.canFinalize) {
-      const sizePc = this.host.romWriter.convertTargetAddressToRomOffset(this.host.spcblockData.sizeAddress & 16777215);
+      const sizePc = this.host.romWriter.convertTargetAddressToRomOffset(
+        this.host.spcblockData.sizeAddress & 16777215
+      );
       if (sizePc < 0) {
         throw new Error("spcblock size address does not map to ROM.");
       }
@@ -18176,7 +18529,9 @@ var DirectiveRuntimeService = class {
         throw new Error(`Invalid endspcblock argument: ${words[1]}`);
       }
       this.host.write2(0);
-      this.host.write2(this.host.operandResolver.getnum(this.host.resolvedefines(words[2])) & 65535);
+      this.host.write2(
+        this.host.operandResolver.getnum(this.host.resolvedefines(words[2])) & 65535
+      );
     } else if (words.length !== 1) {
       throw new Error("Unknown endspcblock format.");
     } else if (this.host.spcblockData.executeAddress !== null) {
@@ -18720,7 +19075,12 @@ var AssemblyFrontEndService = class {
     return this.programModelBuilder.createIncludeNode(file, source);
   }
   consumeIncrementalCommand(state, rawCommand, sourceFile = this.host.currentFile, sourceLine = this.host.currentLine) {
-    return this.programModelBuilder.consumeIncrementalCommand(state, rawCommand, sourceFile, sourceLine);
+    return this.programModelBuilder.consumeIncrementalCommand(
+      state,
+      rawCommand,
+      sourceFile,
+      sourceLine
+    );
   }
   drainCompletedRoots(state) {
     return this.programModelBuilder.drainCompletedRoots(state);
@@ -18803,7 +19163,10 @@ var CommandLoweringService = class {
     if (this.host.directiveRegistry.has(keyword)) {
       let directiveWords = command.words;
       if (command.parsed.includeTarget) {
-        directiveWords = [command.parsed.includeTarget.directive, command.parsed.includeTarget.target];
+        directiveWords = [
+          command.parsed.includeTarget.directive,
+          command.parsed.includeTarget.target
+        ];
       }
       return {
         kind: "directive",
@@ -18818,7 +19181,9 @@ var CommandLoweringService = class {
     const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
     const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
     const operands = parsedOperands?.operands ?? architecture.definition?.splitOperands(operandText) ?? (operandText ? [operandText] : []);
-    const loweredOperands = operands.map((operand) => this.host.classifyOperandForActiveArchitecture(operand));
+    const loweredOperands = operands.map(
+      (operand) => this.host.classifyOperandForActiveArchitecture(operand)
+    );
     const loweredOperand = this.host.classifyOperandForActiveArchitecture(operandText);
     return {
       kind: "instruction",
@@ -19152,7 +19517,10 @@ var IncludeSourceService = class {
    * Guards the active source file against later includes in this pass.
    */
   guardCurrentFile() {
-    const fileInfo = this.host.includedFiles.get(this.host.currentFile) ?? { included: true, guarded: false };
+    const fileInfo = this.host.includedFiles.get(this.host.currentFile) ?? {
+      included: true,
+      guarded: false
+    };
     fileInfo.guarded = true;
     this.host.includedFiles.set(this.host.currentFile, fileInfo);
   }
@@ -19232,7 +19600,9 @@ var MacroEngine = class {
    * @returns {boolean} `true` when loop-body commands should defer placeholder resolution.
    */
   isMacroExpansionLoopActive() {
-    return this.macroExpansionControlStack.some((entry) => entry.active && (entry.type === "for" || entry.type === "while"));
+    return this.macroExpansionControlStack.some(
+      (entry) => entry.active && (entry.type === "for" || entry.type === "while")
+    );
   }
   /**
    * Evaluates a macro control-flow condition using the assembler expression engine.
@@ -19438,34 +19808,40 @@ var MacroEngine = class {
       }
     }
     if (modifiedCommand.includes("?")) {
-      modifiedCommand = modifiedCommand.replace(/(?<!\w)(\?[\w+.\-]+_[\w+.\-]+)(?!:)/g, (match, labelRef) => {
-        if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
-          return match;
-        }
-        try {
-          const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
-          return `$${labelValue.toString(16)}`;
-        } catch (error) {
-          if (this.host.isDefinitionCollectionStage) {
-            return "$0000";
+      modifiedCommand = modifiedCommand.replace(
+        /(?<!\w)(\?[\w+.\-]+_[\w+.\-]+)(?!:)/g,
+        (match, labelRef) => {
+          if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
+            return match;
           }
-          throw error;
-        }
-      });
-      modifiedCommand = modifiedCommand.replace(/(?<!\w)(\?[\w+.\-]+)(?!:)/g, (match, labelRef) => {
-        if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
-          return match;
-        }
-        try {
-          const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
-          return `$${labelValue.toString(16)}`;
-        } catch (error) {
-          if (this.host.isDefinitionCollectionStage) {
-            return "$0000";
+          try {
+            const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
+            return `$${labelValue.toString(16)}`;
+          } catch (error) {
+            if (this.host.isDefinitionCollectionStage) {
+              return "$0000";
+            }
+            throw error;
           }
-          throw error;
         }
-      });
+      );
+      modifiedCommand = modifiedCommand.replace(
+        /(?<!\w)(\?[\w+.\-]+)(?!:)/g,
+        (match, labelRef) => {
+          if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
+            return match;
+          }
+          try {
+            const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
+            return `$${labelValue.toString(16)}`;
+          } catch (error) {
+            if (this.host.isDefinitionCollectionStage) {
+              return "$0000";
+            }
+            throw error;
+          }
+        }
+      );
     }
     return modifiedCommand;
   }
@@ -19482,7 +19858,9 @@ var MacroEngine = class {
     const previousMacroName = this.host.currentMacroName;
     const previousParentLabel = this.host.currentParentLabel;
     const previousParentIsGlobal = this.host.currentParentIsGlobal;
-    const previousMacroExpansionControlStack = this.macroExpansionControlStack.map((entry) => ({ ...entry }));
+    const previousMacroExpansionControlStack = this.macroExpansionControlStack.map((entry) => ({
+      ...entry
+    }));
     this.host.inMacroExpansion = true;
     this.macroExpansionControlStack = [];
     try {
@@ -19569,7 +19947,12 @@ var MacroEngine = class {
       this.host.currentVariadicCount = variadicCount;
       this.host.currentVariadicArgs = variadicArgs;
       for (const lineNode of macro.body) {
-        const expandedLine = this.expandMacroLine(lineNode.command, fixedArgs, variadicArgs, variadicCount);
+        const expandedLine = this.expandMacroLine(
+          lineNode.command,
+          fixedArgs,
+          variadicArgs,
+          variadicCount
+        );
         this.processMacroLine(expandedLine);
       }
     } finally {
@@ -19619,27 +20002,32 @@ var MacroEngine = class {
           }
           return match;
         });
-        expandedValue = expandedValue.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match, expr) => {
-          if (this.isMacroExpansionLoopActive()) {
-            return match;
-          }
-          const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
-            if (this.host.defines.has(defName)) {
-              return this.host.defines.get(defName) ?? defMatch;
+        expandedValue = expandedValue.replace(
+          /<(?:\.{3}|…)\[([^\]]+)]>/g,
+          (match, expr) => {
+            if (this.isMacroExpansionLoopActive()) {
+              return match;
             }
-            return defMatch;
-          });
-          const resolvedExpr = this.host.resolvedefines(processedExpr);
-          let index2 = this.host.mathCore.math(resolvedExpr);
-          if (Number.isNaN(index2)) {
-            throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
+            const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
+              if (this.host.defines.has(defName)) {
+                return this.host.defines.get(defName) ?? defMatch;
+              }
+              return defMatch;
+            });
+            const resolvedExpr = this.host.resolvedefines(processedExpr);
+            let index2 = this.host.mathCore.math(resolvedExpr);
+            if (Number.isNaN(index2)) {
+              throw new Error(
+                `Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`
+              );
+            }
+            index2 = Math.floor(index2);
+            if (index2 < 0 || index2 >= variadicCount) {
+              throw new Error(`Variadic index ${index2} out of range (0..${variadicCount - 1}).`);
+            }
+            return variadicArgs[index2];
           }
-          index2 = Math.floor(index2);
-          if (index2 < 0 || index2 >= variadicCount) {
-            throw new Error(`Variadic index ${index2} out of range (0..${variadicCount - 1}).`);
-          }
-          return variadicArgs[index2];
-        });
+        );
         expandedValue = expandedValue.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
         return `!${varName} ${operator} ${expandedValue}`;
       }
@@ -19809,7 +20197,11 @@ var RomWriterService = class {
     });
     if (this.host.canEmitBytes) {
       if (pcpos >= this.host.romdata.length && pcpos - this.host.romdata.length > 0) {
-        this.host.fillRomData(this.host.romdata.length, this.host.defaultFreespaceByte, pcpos - this.host.romdata.length);
+        this.host.fillRomData(
+          this.host.romdata.length,
+          this.host.defaultFreespaceByte,
+          pcpos - this.host.romdata.length
+        );
       }
       this.host.romdata[pcpos] = num & 255;
     }
@@ -19865,7 +20257,9 @@ var RomWriterService = class {
     const mask = this.host.bankCrossCheckMode === "half" ? 2147450880 : 2147418112;
     if (((start ^ end) & mask) !== 0) {
       const errorAddr = start + length & 16777215;
-      throw new Error(`Ebank_border_crossed: A bank border was crossed, SNES address $${errorAddr.toString(16).toUpperCase().padStart(6, "0")}.`);
+      throw new Error(
+        `Ebank_border_crossed: A bank border was crossed, SNES address $${errorAddr.toString(16).toUpperCase().padStart(6, "0")}.`
+      );
     }
   }
   /**
@@ -19885,7 +20279,11 @@ var RomWriterService = class {
         const ratsLenMinusOne = Math.max(0, contentLen - 1) & 65535;
         const ratsComp = ~ratsLenMinusOne & 65535;
         this.host.writeDataBytes(this.host.activeFreespaceStartPc + 4, ratsLenMinusOne & 255, 1);
-        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 5, ratsLenMinusOne >> 8 & 255, 1);
+        this.host.writeDataBytes(
+          this.host.activeFreespaceStartPc + 5,
+          ratsLenMinusOne >> 8 & 255,
+          1
+        );
         this.host.writeDataBytes(this.host.activeFreespaceStartPc + 6, ratsComp & 255, 1);
         this.host.writeDataBytes(this.host.activeFreespaceStartPc + 7, ratsComp >> 8 & 255, 1);
       }
@@ -20093,7 +20491,9 @@ var StructEngine = class {
       });
       if (words[1]?.toLowerCase() === "skip") {
         if (words.length !== 3) {
-          throw new Error(`skip directive in struct requires exactly one parameter: ${words.length}`);
+          throw new Error(
+            `skip directive in struct requires exactly one parameter: ${words.length}`
+          );
         }
         const skipAmount = this.host.operandResolver.getnum(words[2]);
         currentStruct.offset += skipAmount;
@@ -20278,7 +20678,9 @@ var StructEngine = class {
       if (def.parent) {
         const parentDef = this.host.structs.get(def.parent);
         if (!parentDef) {
-          throw new Error(`Parent struct '${def.parent}' not defined for extension '${potential}'.`);
+          throw new Error(
+            `Parent struct '${def.parent}' not defined for extension '${potential}'.`
+          );
         }
         let parentSize = parentDef.size;
         if (parentDef.align) {
@@ -20405,14 +20807,20 @@ var SymbolScopeService = class {
     if (isPositive) {
       if (!this.host.forwardLabels[depth]) this.host.forwardLabels[depth] = [];
       if (isMacroLocal && this.host.inMacroExpansion) {
-        this.host.forwardLabels[depth].push({ addr: snesAddress, macroInstance: this.host.macroLabelInstance });
+        this.host.forwardLabels[depth].push({
+          addr: snesAddress,
+          macroInstance: this.host.macroLabelInstance
+        });
       } else {
         this.host.forwardLabels[depth].push({ addr: snesAddress });
       }
     } else {
       if (!this.host.backwardLabels[depth]) this.host.backwardLabels[depth] = [];
       if (isMacroLocal && this.host.inMacroExpansion) {
-        this.host.backwardLabels[depth].push({ addr: snesAddress, macroInstance: this.host.macroLabelInstance });
+        this.host.backwardLabels[depth].push({
+          addr: snesAddress,
+          macroInstance: this.host.macroLabelInstance
+        });
       } else {
         this.host.backwardLabels[depth].push({ addr: snesAddress });
       }
@@ -20589,7 +20997,9 @@ var SymbolScopeService = class {
           throw new Error(`Label '${fullLabel}' is not static and cannot be used in conditionals.`);
         }
         if (!isStatic && existingEntry.value !== addr && !isMacroLabel) {
-          throw new Error(`Label "${fullLabel}" changed from $${existingEntry.value.toString(16)} to $${addr.toString(16)}`);
+          throw new Error(
+            `Label "${fullLabel}" changed from $${existingEntry.value.toString(16)} to $${addr.toString(16)}`
+          );
         }
       }
     }
@@ -20622,7 +21032,8 @@ var SymbolScopeService = class {
    */
   resolveStructMember(compoundId) {
     const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
-    if (!firstId || !this.host.structs.has(firstId)) throw new Error(`Struct not found: ${compoundId}`);
+    if (!firstId || !this.host.structs.has(firstId))
+      throw new Error(`Struct not found: ${compoundId}`);
     let rest = compoundId.substring(firstId.length).trim();
     let base = 0;
     let currentStruct = this.host.structs.get(firstId);
@@ -21236,7 +21647,9 @@ var Assembler = class _Assembler {
     if (!fromFile || !toFile) {
       return;
     }
-    const duplicate = this.includeEdges.some((edge) => edge.fromFile === fromFile && edge.toFile === toFile);
+    const duplicate = this.includeEdges.some(
+      (edge) => edge.fromFile === fromFile && edge.toFile === toFile
+    );
     if (duplicate) {
       return;
     }
@@ -21283,7 +21696,9 @@ var Assembler = class _Assembler {
   recordSymbolDefinition(kind, name, options = {}) {
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolDefinitions.some((entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName);
+    const duplicate = this.symbolDefinitions.some(
+      (entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName
+    );
     if (duplicate) {
       return;
     }
@@ -21308,7 +21723,9 @@ var Assembler = class _Assembler {
   recordSymbolReference(kind, name, options = {}) {
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolReferences.some((entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName);
+    const duplicate = this.symbolReferences.some(
+      (entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName
+    );
     if (duplicate) {
       return;
     }
@@ -21326,9 +21743,13 @@ var Assembler = class _Assembler {
     switch (expression.type) {
       case "defineReference":
         if (expression.name || expression.content) {
-          this.recordSymbolReference("define", expression.braced ? expression.content ?? "" : expression.name ?? "", {
-            span: expression.span ?? fallbackSpan
-          });
+          this.recordSymbolReference(
+            "define",
+            expression.braced ? expression.content ?? "" : expression.name ?? "",
+            {
+              span: expression.span ?? fallbackSpan
+            }
+          );
         }
         return;
       case "identifier":
@@ -21388,9 +21809,13 @@ var Assembler = class _Assembler {
       }
     }
     if (parsed.includeTarget?.target) {
-      this.recordSymbolReference("include", parsed.includeTarget.target.replace(/^["'`](.*)["'`]$/, "$1"), {
-        span: command.source.tokenSpans[1] ?? fallbackSpan
-      });
+      this.recordSymbolReference(
+        "include",
+        parsed.includeTarget.target.replace(/^["'`](.*)["'`]$/, "$1"),
+        {
+          span: command.source.tokenSpans[1] ?? fallbackSpan
+        }
+      );
     }
     if (parsed.opcodeOperands?.mnemonic) {
       this.recordSymbolReference("instruction", parsed.opcodeOperands.mnemonic, {
@@ -21509,7 +21934,11 @@ var Assembler = class _Assembler {
     const results = [];
     for (const document of documents2) {
       const session = this.createToolingSession();
-      const program = session.buildProgramModel(document.source, document.sourceFile, document.startLine ?? 0);
+      const program = session.buildProgramModel(
+        document.source,
+        document.sourceFile,
+        document.startLine ?? 0
+      );
       const result = session.collectProgramAnalysis(program);
       results.push({
         sourceFile: document.sourceFile,
@@ -21710,7 +22139,9 @@ var Assembler = class _Assembler {
   readTargetRom(position, size, defaultValue) {
     const pos = Math.trunc(position);
     if (!this.readFunctionsEnabled && defaultValue === void 0) {
-      throw new Error(`Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`);
+      throw new Error(
+        `Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`
+      );
     }
     const pcPos = this.romWriter.convertTargetAddressToRomOffset(pos);
     const source = this.targetRom && this.targetRom.length > 0 ? this.targetRom : this.romdata;
@@ -21721,7 +22152,13 @@ var Assembler = class _Assembler {
       throw new Error(`read${Math.trunc(size)} out of bounds at ${pos}`);
     }
     const romBytes = Uint8Array.from(source);
-    return this.readByteRange(romBytes, pcPos, size, defaultValue, `read${Math.trunc(size)} out of bounds at ${pos}`);
+    return this.readByteRange(
+      romBytes,
+      pcPos,
+      size,
+      defaultValue,
+      `read${Math.trunc(size)} out of bounds at ${pos}`
+    );
   }
   canReadExpressionFile(filename, position, size) {
     const resolvedPath = this.resolveReadablePath(filename);
@@ -21744,7 +22181,13 @@ var Assembler = class _Assembler {
       throw new Error(`Could not read file: ${filename}`);
     }
     const fileBytes = this.fileProvider.readFile(resolvedPath);
-    return this.readByteRange(fileBytes, pos, size, defaultValue, `readfile${Math.trunc(size)} out of bounds at ${pos}`);
+    return this.readByteRange(
+      fileBytes,
+      pos,
+      size,
+      defaultValue,
+      `readfile${Math.trunc(size)} out of bounds at ${pos}`
+    );
   }
   expressionHost = {
     resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
@@ -22015,7 +22458,12 @@ var Assembler = class _Assembler {
     return this.macroEngine.rewriteMacroLabelReferences(command);
   }
   createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
-    return this.frontEndService.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty);
+    return this.frontEndService.createNormalizedCommandFromRaw(
+      command,
+      sourceFile,
+      sourceLine,
+      allowEmpty
+    );
   }
   preprocessNormalizedCommand(state) {
     if (state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
@@ -22068,7 +22516,14 @@ var Assembler = class _Assembler {
    * @param {string} command - The command to process.
    */
   processCommand(command) {
-    debug7("processCommand", { command }, this.currentTargetAddress, "/", this.currentTargetAddress.toString(16), `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`);
+    debug7(
+      "processCommand",
+      { command },
+      this.currentTargetAddress,
+      "/",
+      this.currentTargetAddress.toString(16),
+      `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`
+    );
     if (command.trim() === "") {
       return;
     }
@@ -22253,7 +22708,9 @@ var Assembler = class _Assembler {
     } catch (e) {
       const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
       const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
-      throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`);
+      throw new Error(
+        `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`
+      );
     }
     debug7("evaluateExpression result", result, "=>", result !== 0);
     return result !== 0;
@@ -22334,7 +22791,10 @@ var Assembler = class _Assembler {
           if (expandedReference) {
             return expandedReference;
           }
-          return { type: "raw", value: `${renderExpressionNode(object)}.${expression.property.name}` };
+          return {
+            type: "raw",
+            value: `${renderExpressionNode(object)}.${expression.property.name}`
+          };
         }
         return {
           ...expression,
@@ -22349,7 +22809,10 @@ var Assembler = class _Assembler {
           if (expandedReference) {
             return expandedReference;
           }
-          return { type: "raw", value: `${renderExpressionNode(object)}[${renderExpressionNode(index2)}]` };
+          return {
+            type: "raw",
+            value: `${renderExpressionNode(object)}[${renderExpressionNode(index2)}]`
+          };
         }
         return {
           ...expression,
@@ -22386,7 +22849,10 @@ var Assembler = class _Assembler {
     if (!isReferenceExpressionNode(resolved)) {
       return this.mathCore.math(resolved);
     }
-    return this.resolveNormalizedReferenceLabelValue(this.renderResolvedReferenceExpression(resolved), requireStatic);
+    return this.resolveNormalizedReferenceLabelValue(
+      this.renderResolvedReferenceExpression(resolved),
+      requireStatic
+    );
   }
   /**
    * Resolves an already-normalized reference string as either a struct member/base
@@ -22472,7 +22938,9 @@ var Assembler = class _Assembler {
         debug7("resolvedefines stage does not enforce labels, returning placeholder");
         return "$0000";
       }
-      debug7(`resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`);
+      debug7(
+        `resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`
+      );
       throw error;
     }
   }
@@ -22734,7 +23202,9 @@ var Assembler = class _Assembler {
       ...descriptor,
       cursor: { ...cursorSeed },
       symbols: {
-        labelTable: new Map(Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }])),
+        labelTable: new Map(
+          Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }])
+        ),
         forwardLabels: this.cloneRelativeLabels(symbolSeed.forwardLabels),
         backwardLabels: this.cloneRelativeLabels(symbolSeed.backwardLabels),
         currentParentLabel: symbolSeed.currentParentLabel,
@@ -22879,11 +23349,21 @@ var Assembler = class _Assembler {
     if (value > 255) {
       debug7("writeDataBytes \u{1F4A5} value must be less than 0xFF", value);
     }
-    debug7("writeDataBytes before this.romdata.length", this.romdata.length, "/", this.romdata.length.toString(16));
+    debug7(
+      "writeDataBytes before this.romdata.length",
+      this.romdata.length,
+      "/",
+      this.romdata.length.toString(16)
+    );
     for (let i = 0; i < length; i++) {
       this.romdata[start + i] = value & 255;
     }
-    debug7("writeDataBytes after this.romdata.length", this.romdata.length, "/", this.romdata.length.toString(16));
+    debug7(
+      "writeDataBytes after this.romdata.length",
+      this.romdata.length,
+      "/",
+      this.romdata.length.toString(16)
+    );
   }
   /**
    * Expands ROM size and fills it with a specified byte.
@@ -22924,7 +23404,9 @@ var Assembler = class _Assembler {
     this.romdata[headerOffset + 30] = checksum & 255;
     this.romdata[headerOffset + 31] = checksum >> 8 & 255;
     const crc32 = CRC32.compute(this.romdata);
-    debug7(`Header updated: Checksum = 0x${checksum.toString(16).toUpperCase()}, Complement = 0x${complement.toString(16).toUpperCase()}, CRC32 = 0x${crc32.toString(16).toUpperCase()}`);
+    debug7(
+      `Header updated: Checksum = 0x${checksum.toString(16).toUpperCase()}, Complement = 0x${complement.toString(16).toUpperCase()}, CRC32 = 0x${crc32.toString(16).toUpperCase()}`
+    );
   }
   /**
    * Returns the compiled binary output.
@@ -22941,7 +23423,9 @@ var Assembler = class _Assembler {
     const previousRewrite = this.runtimePassthroughRewriteEnabled;
     this.runtimePassthroughRewriteEnabled = true;
     try {
-      const loweredNodes = nodes.map((node) => this.commandLoweringService.lowerExecutableNode(node));
+      const loweredNodes = nodes.map(
+        (node) => this.commandLoweringService.lowerExecutableNode(node)
+      );
       for (const node of loweredNodes) {
         this.executeWithAnalysisRecovery(
           node,
@@ -23023,7 +23507,9 @@ var Assembler = class _Assembler {
       iteration++;
     }
     if (iteration >= MAX_ITERATIONS) {
-      debug7("executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected.");
+      debug7(
+        "executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected."
+      );
     }
     for (const [varName, value] of originalValues.entries()) {
       if (value !== void 0) {
@@ -23606,7 +24092,9 @@ function resolveDefinition(reference, allSymbols) {
   return candidates;
 }
 function findReferences(name, allReferences, containerName) {
-  return allReferences.filter((reference) => reference.name === name && (containerName === void 0 || reference.containerName === containerName));
+  return allReferences.filter(
+    (reference) => reference.name === name && (containerName === void 0 || reference.containerName === containerName)
+  );
 }
 function kindMatches(referenceKind, symbolKind) {
   switch (referenceKind) {
@@ -23650,78 +24138,388 @@ function rangeWidth(range) {
 
 // src/lsp/directive-catalog.ts
 var directiveCatalog = [
-  { keyword: "db", summary: "Emit one or more bytes.", syntax: "db value[, value...]", group: "data" },
-  { keyword: "dw", summary: "Emit one or more 16-bit words.", syntax: "dw value[, value...]", group: "data" },
-  { keyword: "dl", summary: "Emit one or more 24-bit long values.", syntax: "dl value[, value...]", group: "data" },
-  { keyword: "dd", summary: "Emit one or more 32-bit double words.", syntax: "dd value[, value...]", group: "data" },
-  { keyword: "dc.b", summary: "Emit bytes (asar-compatible data constant).", syntax: "dc.b value[, value...]", group: "data" },
-  { keyword: "dc.w", summary: "Emit words (asar-compatible data constant).", syntax: "dc.w value[, value...]", group: "data" },
-  { keyword: "dc.l", summary: "Emit long values (asar-compatible data constant).", syntax: "dc.l value[, value...]", group: "data" },
-  { keyword: "fillbyte", summary: "Set the byte used by fill.", syntax: "fillbyte value", group: "memory" },
-  { keyword: "fillword", summary: "Set the word used by fill.", syntax: "fillword value", group: "memory" },
-  { keyword: "filllong", summary: "Set the long value used by fill.", syntax: "filllong value", group: "memory" },
-  { keyword: "filldword", summary: "Set the double word used by fill.", syntax: "filldword value", group: "memory" },
-  { keyword: "fill", summary: "Fill a number of bytes with the fill value.", syntax: "fill count", group: "memory" },
-  { keyword: "padbyte", summary: "Set the byte used by pad.", syntax: "padbyte value", group: "memory" },
-  { keyword: "padword", summary: "Set the word used by pad.", syntax: "padword value", group: "memory" },
-  { keyword: "padlong", summary: "Set the long value used by pad.", syntax: "padlong value", group: "memory" },
-  { keyword: "paddword", summary: "Set the double word used by pad.", syntax: "paddword value", group: "memory" },
-  { keyword: "pad", summary: "Pad up to an address with the pad value.", syntax: "pad address", group: "memory" },
-  { keyword: "incsrc", summary: "Assemble another source file inline.", syntax: 'incsrc "file.asm"', group: "include" },
-  { keyword: "include", summary: "Include and assemble another source file.", syntax: 'include "file.asm"', group: "include" },
-  { keyword: "includeonce", summary: "Guard the current file against being included more than once.", syntax: "includeonce", group: "include" },
-  { keyword: "incbin", summary: "Embed the raw bytes of a binary file.", syntax: 'incbin "file.bin"[,start,length]', group: "include" },
-  { keyword: "base", summary: "Set the logical base address for emitted code.", syntax: "base $address", group: "layout" },
-  { keyword: "org", summary: "Set the current output/origin address.", syntax: "org $address", group: "layout" },
-  { keyword: "pushbase", summary: "Push the current base address.", syntax: "pushbase", group: "layout" },
-  { keyword: "pullbase", summary: "Restore the most recently pushed base address.", syntax: "pullbase", group: "layout" },
-  { keyword: "pushpc", summary: "Push the current program counter.", syntax: "pushpc", group: "layout" },
-  { keyword: "pullpc", summary: "Restore the most recently pushed program counter.", syntax: "pullpc", group: "layout" },
-  { keyword: "startpos", summary: "Set the SPC start position.", syntax: "startpos", group: "layout" },
-  { keyword: "check", summary: "Assert an assembler condition (asar-compatible).", syntax: "check ...", group: "layout" },
-  { keyword: "optimize", summary: "Control optimization behavior (asar-compatible).", syntax: "optimize ...", group: "layout" },
-  { keyword: "arch", summary: "Select the active CPU architecture.", syntax: "arch 65816|spc700|superfx", group: "layout" },
+  {
+    keyword: "db",
+    summary: "Emit one or more bytes.",
+    syntax: "db value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dw",
+    summary: "Emit one or more 16-bit words.",
+    syntax: "dw value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dl",
+    summary: "Emit one or more 24-bit long values.",
+    syntax: "dl value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dd",
+    summary: "Emit one or more 32-bit double words.",
+    syntax: "dd value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dc.b",
+    summary: "Emit bytes (asar-compatible data constant).",
+    syntax: "dc.b value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dc.w",
+    summary: "Emit words (asar-compatible data constant).",
+    syntax: "dc.w value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dc.l",
+    summary: "Emit long values (asar-compatible data constant).",
+    syntax: "dc.l value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "fillbyte",
+    summary: "Set the byte used by fill.",
+    syntax: "fillbyte value",
+    group: "memory"
+  },
+  {
+    keyword: "fillword",
+    summary: "Set the word used by fill.",
+    syntax: "fillword value",
+    group: "memory"
+  },
+  {
+    keyword: "filllong",
+    summary: "Set the long value used by fill.",
+    syntax: "filllong value",
+    group: "memory"
+  },
+  {
+    keyword: "filldword",
+    summary: "Set the double word used by fill.",
+    syntax: "filldword value",
+    group: "memory"
+  },
+  {
+    keyword: "fill",
+    summary: "Fill a number of bytes with the fill value.",
+    syntax: "fill count",
+    group: "memory"
+  },
+  {
+    keyword: "padbyte",
+    summary: "Set the byte used by pad.",
+    syntax: "padbyte value",
+    group: "memory"
+  },
+  {
+    keyword: "padword",
+    summary: "Set the word used by pad.",
+    syntax: "padword value",
+    group: "memory"
+  },
+  {
+    keyword: "padlong",
+    summary: "Set the long value used by pad.",
+    syntax: "padlong value",
+    group: "memory"
+  },
+  {
+    keyword: "paddword",
+    summary: "Set the double word used by pad.",
+    syntax: "paddword value",
+    group: "memory"
+  },
+  {
+    keyword: "pad",
+    summary: "Pad up to an address with the pad value.",
+    syntax: "pad address",
+    group: "memory"
+  },
+  {
+    keyword: "incsrc",
+    summary: "Assemble another source file inline.",
+    syntax: 'incsrc "file.asm"',
+    group: "include"
+  },
+  {
+    keyword: "include",
+    summary: "Include and assemble another source file.",
+    syntax: 'include "file.asm"',
+    group: "include"
+  },
+  {
+    keyword: "includeonce",
+    summary: "Guard the current file against being included more than once.",
+    syntax: "includeonce",
+    group: "include"
+  },
+  {
+    keyword: "incbin",
+    summary: "Embed the raw bytes of a binary file.",
+    syntax: 'incbin "file.bin"[,start,length]',
+    group: "include"
+  },
+  {
+    keyword: "base",
+    summary: "Set the logical base address for emitted code.",
+    syntax: "base $address",
+    group: "layout"
+  },
+  {
+    keyword: "org",
+    summary: "Set the current output/origin address.",
+    syntax: "org $address",
+    group: "layout"
+  },
+  {
+    keyword: "pushbase",
+    summary: "Push the current base address.",
+    syntax: "pushbase",
+    group: "layout"
+  },
+  {
+    keyword: "pullbase",
+    summary: "Restore the most recently pushed base address.",
+    syntax: "pullbase",
+    group: "layout"
+  },
+  {
+    keyword: "pushpc",
+    summary: "Push the current program counter.",
+    syntax: "pushpc",
+    group: "layout"
+  },
+  {
+    keyword: "pullpc",
+    summary: "Restore the most recently pushed program counter.",
+    syntax: "pullpc",
+    group: "layout"
+  },
+  {
+    keyword: "startpos",
+    summary: "Set the SPC start position.",
+    syntax: "startpos",
+    group: "layout"
+  },
+  {
+    keyword: "check",
+    summary: "Assert an assembler condition (asar-compatible).",
+    syntax: "check ...",
+    group: "layout"
+  },
+  {
+    keyword: "optimize",
+    summary: "Control optimization behavior (asar-compatible).",
+    syntax: "optimize ...",
+    group: "layout"
+  },
+  {
+    keyword: "arch",
+    summary: "Select the active CPU architecture.",
+    syntax: "arch 65816|spc700|superfx",
+    group: "layout"
+  },
   { keyword: "lorom", summary: "Use the LoROM memory mapper.", syntax: "lorom", group: "layout" },
   { keyword: "hirom", summary: "Use the HiROM memory mapper.", syntax: "hirom", group: "layout" },
-  { keyword: "exlorom", summary: "Use the ExLoROM memory mapper.", syntax: "exlorom", group: "layout" },
-  { keyword: "exhirom", summary: "Use the ExHiROM memory mapper.", syntax: "exhirom", group: "layout" },
+  {
+    keyword: "exlorom",
+    summary: "Use the ExLoROM memory mapper.",
+    syntax: "exlorom",
+    group: "layout"
+  },
+  {
+    keyword: "exhirom",
+    summary: "Use the ExHiROM memory mapper.",
+    syntax: "exhirom",
+    group: "layout"
+  },
   { keyword: "fastrom", summary: "Enable FastROM timing.", syntax: "fastrom", group: "layout" },
-  { keyword: "sfxrom", summary: "Use the Super FX memory mapper.", syntax: "sfxrom", group: "layout" },
+  {
+    keyword: "sfxrom",
+    summary: "Use the Super FX memory mapper.",
+    syntax: "sfxrom",
+    group: "layout"
+  },
   { keyword: "norom", summary: "Disable the memory mapper.", syntax: "norom", group: "layout" },
   { keyword: "sa1rom", summary: "Use the SA-1 memory mapper.", syntax: "sa1rom", group: "layout" },
-  { keyword: "fullsa1rom", summary: "Use the full SA-1 memory mapper.", syntax: "fullsa1rom", group: "layout" },
-  { keyword: "namespace", summary: "Set the active label namespace.", syntax: "namespace name", group: "namespace" },
-  { keyword: "pushns", summary: "Push the current namespace.", syntax: "pushns", group: "namespace" },
-  { keyword: "pullns", summary: "Restore the most recently pushed namespace.", syntax: "pullns", group: "namespace" },
-  { keyword: "freecode", summary: "Allocate a free code block.", syntax: "freecode", group: "memory" },
-  { keyword: "freedata", summary: "Allocate a free data block.", syntax: "freedata", group: "memory" },
-  { keyword: "freespace", summary: "Allocate a free space block.", syntax: "freespace", group: "memory" },
-  { keyword: "freespacebyte", summary: "Set the fill byte used for freespace.", syntax: "freespacebyte value", group: "memory" },
-  { keyword: "prot", summary: "Protect a region from cleanup.", syntax: "prot ...", group: "memory" },
-  { keyword: "pushtable", summary: "Push the current character mapping table.", syntax: "pushtable", group: "table" },
-  { keyword: "pulltable", summary: "Restore the most recently pushed character table.", syntax: "pulltable", group: "table" },
-  { keyword: "spcblock", summary: "Begin an SPC700 code block.", syntax: "spcblock ...", group: "spc" },
-  { keyword: "endspcblock", summary: "End an SPC700 code block.", syntax: "endspcblock", group: "spc" },
-  { keyword: "struct", summary: "Begin a structure definition.", syntax: "struct name", group: "struct" },
-  { keyword: "endstruct", summary: "End a structure definition.", syntax: "endstruct", group: "struct" },
-  { keyword: "if", summary: "Begin a conditional block.", syntax: "if expression", group: "control" },
-  { keyword: "elseif", summary: "Alternate conditional branch.", syntax: "elseif expression", group: "control" },
+  {
+    keyword: "fullsa1rom",
+    summary: "Use the full SA-1 memory mapper.",
+    syntax: "fullsa1rom",
+    group: "layout"
+  },
+  {
+    keyword: "namespace",
+    summary: "Set the active label namespace.",
+    syntax: "namespace name",
+    group: "namespace"
+  },
+  {
+    keyword: "pushns",
+    summary: "Push the current namespace.",
+    syntax: "pushns",
+    group: "namespace"
+  },
+  {
+    keyword: "pullns",
+    summary: "Restore the most recently pushed namespace.",
+    syntax: "pullns",
+    group: "namespace"
+  },
+  {
+    keyword: "freecode",
+    summary: "Allocate a free code block.",
+    syntax: "freecode",
+    group: "memory"
+  },
+  {
+    keyword: "freedata",
+    summary: "Allocate a free data block.",
+    syntax: "freedata",
+    group: "memory"
+  },
+  {
+    keyword: "freespace",
+    summary: "Allocate a free space block.",
+    syntax: "freespace",
+    group: "memory"
+  },
+  {
+    keyword: "freespacebyte",
+    summary: "Set the fill byte used for freespace.",
+    syntax: "freespacebyte value",
+    group: "memory"
+  },
+  {
+    keyword: "prot",
+    summary: "Protect a region from cleanup.",
+    syntax: "prot ...",
+    group: "memory"
+  },
+  {
+    keyword: "pushtable",
+    summary: "Push the current character mapping table.",
+    syntax: "pushtable",
+    group: "table"
+  },
+  {
+    keyword: "pulltable",
+    summary: "Restore the most recently pushed character table.",
+    syntax: "pulltable",
+    group: "table"
+  },
+  {
+    keyword: "spcblock",
+    summary: "Begin an SPC700 code block.",
+    syntax: "spcblock ...",
+    group: "spc"
+  },
+  {
+    keyword: "endspcblock",
+    summary: "End an SPC700 code block.",
+    syntax: "endspcblock",
+    group: "spc"
+  },
+  {
+    keyword: "struct",
+    summary: "Begin a structure definition.",
+    syntax: "struct name",
+    group: "struct"
+  },
+  {
+    keyword: "endstruct",
+    summary: "End a structure definition.",
+    syntax: "endstruct",
+    group: "struct"
+  },
+  {
+    keyword: "if",
+    summary: "Begin a conditional block.",
+    syntax: "if expression",
+    group: "control"
+  },
+  {
+    keyword: "elseif",
+    summary: "Alternate conditional branch.",
+    syntax: "elseif expression",
+    group: "control"
+  },
   { keyword: "else", summary: "Fallback conditional branch.", syntax: "else", group: "control" },
   { keyword: "endif", summary: "End a conditional block.", syntax: "endif", group: "control" },
-  { keyword: "while", summary: "Begin a while loop.", syntax: "while expression", group: "control" },
+  {
+    keyword: "while",
+    summary: "Begin a while loop.",
+    syntax: "while expression",
+    group: "control"
+  },
   { keyword: "endwhile", summary: "End a while loop.", syntax: "endwhile", group: "control" },
-  { keyword: "for", summary: "Begin a counted loop.", syntax: "for var = start..end", group: "control" },
+  {
+    keyword: "for",
+    summary: "Begin a counted loop.",
+    syntax: "for var = start..end",
+    group: "control"
+  },
   { keyword: "endfor", summary: "End a counted loop.", syntax: "endfor", group: "control" },
-  { keyword: "macro", summary: "Begin a macro definition.", syntax: "macro name(args)", group: "macro" },
+  {
+    keyword: "macro",
+    summary: "Begin a macro definition.",
+    syntax: "macro name(args)",
+    group: "macro"
+  },
   { keyword: "endmacro", summary: "End a macro definition.", syntax: "endmacro", group: "macro" },
-  { keyword: "dpbase", summary: "Set the direct page base (asar-compatible).", syntax: "dpbase $address", group: "compat" },
-  { keyword: "warnings", summary: "Control warnings (asar-compatible).", syntax: "warnings ...", group: "compat" },
-  { keyword: "print", summary: "Print a message at assemble time.", syntax: 'print "text"', group: "compat" },
-  { keyword: "autoclean", summary: "Auto-clean a previous freespace (asar-compatible).", syntax: "autoclean ...", group: "compat" },
-  { keyword: "autoclear", summary: "Auto-clear a previous freespace (asar-compatible).", syntax: "autoclear ...", group: "compat" },
-  { keyword: "table", summary: "Load a character mapping table (asar-compatible).", syntax: 'table "file"', group: "compat" },
-  { keyword: "includefrom", summary: "Assert the file was included (asar-compatible).", syntax: 'includefrom "file"', group: "compat" },
-  { keyword: "asar", summary: "Assert a minimum asar version (compat no-op).", syntax: "asar version", group: "compat" }
+  {
+    keyword: "dpbase",
+    summary: "Set the direct page base (asar-compatible).",
+    syntax: "dpbase $address",
+    group: "compat"
+  },
+  {
+    keyword: "warnings",
+    summary: "Control warnings (asar-compatible).",
+    syntax: "warnings ...",
+    group: "compat"
+  },
+  {
+    keyword: "print",
+    summary: "Print a message at assemble time.",
+    syntax: 'print "text"',
+    group: "compat"
+  },
+  {
+    keyword: "autoclean",
+    summary: "Auto-clean a previous freespace (asar-compatible).",
+    syntax: "autoclean ...",
+    group: "compat"
+  },
+  {
+    keyword: "autoclear",
+    summary: "Auto-clear a previous freespace (asar-compatible).",
+    syntax: "autoclear ...",
+    group: "compat"
+  },
+  {
+    keyword: "table",
+    summary: "Load a character mapping table (asar-compatible).",
+    syntax: 'table "file"',
+    group: "compat"
+  },
+  {
+    keyword: "includefrom",
+    summary: "Assert the file was included (asar-compatible).",
+    syntax: 'includefrom "file"',
+    group: "compat"
+  },
+  {
+    keyword: "asar",
+    summary: "Assert a minimum asar version (compat no-op).",
+    syntax: "asar version",
+    group: "compat"
+  }
 ];
 var directiveByKeyword = new Map(
   directiveCatalog.map((descriptor) => [descriptor.keyword.toLowerCase(), descriptor])
@@ -23804,7 +24602,7 @@ var tokenTypeIndex = new Map(
   semanticTokensLegend.tokenTypes.map((type, index2) => [type, index2])
 );
 var definitionTokenModifier = 1 << semanticTokensLegend.tokenModifiers.indexOf(import_vscode_languageserver.SemanticTokenModifiers.definition);
-var IDENTIFIER_CHAR = /[A-Za-z0-9_.!]/;
+var IDENTIFIER_CHAR = /[\w!.]/;
 function pathToUri(filePath) {
   return pathToFileURL(filePath).toString();
 }
@@ -23896,7 +24694,7 @@ function wordAt(text, position) {
   if (line === void 0) {
     return void 0;
   }
-  const wordPattern = /[A-Za-z0-9_.!]+/g;
+  const wordPattern = /[\w!.]+/g;
   let match;
   while ((match = wordPattern.exec(line)) !== null) {
     const start = match.index;
@@ -23920,7 +24718,9 @@ function cursorReference(index2, file, position, word) {
   if (!word) {
     return void 0;
   }
-  return references.find((reference) => reference.name === word && locationRange(reference.location)?.start.line === position.line) ?? references.find((reference) => reference.name === word);
+  return references.find(
+    (reference) => reference.name === word && locationRange(reference.location)?.start.line === position.line
+  ) ?? references.find((reference) => reference.name === word);
 }
 function cursorSymbol(index2, file, position, word) {
   const symbols = index2.getSymbols(file);
@@ -23931,7 +24731,9 @@ function cursorSymbol(index2, file, position, word) {
   if (!word) {
     return void 0;
   }
-  return symbols.find((symbol) => symbol.name === word && locationRange(symbol.location)?.start.line === position.line) ?? symbols.find((symbol) => symbol.name === word);
+  return symbols.find(
+    (symbol) => symbol.name === word && locationRange(symbol.location)?.start.line === position.line
+  ) ?? symbols.find((symbol) => symbol.name === word);
 }
 function diagnosticsFor(index2, file) {
   return index2.getDiagnostics(file).map((diagnostic) => {
@@ -23991,10 +24793,9 @@ function referencesFor(index2, file, position, includeDeclaration) {
   }
   const locations = [];
   for (const reference of findReferences(name, index2.getAllReferences())) {
-    locations.push(import_vscode_languageserver.Location.create(
-      pathToUri(reference.location.file),
-      referenceRange(index2, reference)
-    ));
+    locations.push(
+      import_vscode_languageserver.Location.create(pathToUri(reference.location.file), referenceRange(index2, reference))
+    );
   }
   if (includeDeclaration) {
     for (const symbol of index2.getAllSymbols().filter((entry) => entry.name === name)) {
@@ -24064,10 +24865,12 @@ function signatureHelpFor(lineText, architecture) {
   }
   const instruction2 = findInstruction(leading, architecture);
   if (instruction2) {
-    const signatures = instruction2.modes.map((mode) => import_vscode_languageserver.SignatureInformation.create(
-      `${instruction2.mnemonic} ${mode.syntax}`.trim(),
-      `${mode.mode}${instruction2.summary ? ` \u2014 ${instruction2.summary}` : ""}`
-    ));
+    const signatures = instruction2.modes.map(
+      (mode) => import_vscode_languageserver.SignatureInformation.create(
+        `${instruction2.mnemonic} ${mode.syntax}`.trim(),
+        `${mode.mode}${instruction2.summary ? ` \u2014 ${instruction2.summary}` : ""}`
+      )
+    );
     return { signatures, activeSignature: 0 };
   }
   const directive = findDirective(leading);
@@ -24211,7 +25014,9 @@ function resolveIncludeTarget(index2, file, target) {
   const normalizedTarget = target.replace(/\\/g, "/");
   const base = path4.basename(normalizedTarget);
   const edges = index2.getIncludeEdges().filter((edge) => edge.fromFile === file);
-  const match = edges.find((edge) => edge.toFile === normalizedTarget || path4.basename(edge.toFile) === base);
+  const match = edges.find(
+    (edge) => edge.toFile === normalizedTarget || path4.basename(edge.toFile) === base
+  );
   return match?.toFile;
 }
 function identifierNameAt(index2, file, position) {
@@ -24322,7 +25127,10 @@ function scheduleReindex() {
 function publishAllDiagnostics() {
   for (const document of documents.all()) {
     const file = uriToPath(document.uri);
-    connection.sendDiagnostics({ uri: document.uri, diagnostics: diagnosticsFor(index, file) });
+    void connection.sendDiagnostics({
+      uri: document.uri,
+      diagnostics: diagnosticsFor(index, file)
+    });
   }
 }
 connection.onInitialize((params) => {
@@ -24415,7 +25223,10 @@ function applyInitializationOptions(params) {
   }
   settings = {
     entryPoints: resolveConfiguredPaths(options.entryPoints ?? [], workspaceRoots),
-    includePaths: resolveConfiguredPaths(options.includePaths ?? defaultSettings.includePaths, workspaceRoots),
+    includePaths: resolveConfiguredPaths(
+      options.includePaths ?? defaultSettings.includePaths,
+      workspaceRoots
+    ),
     architecture: options.architecture ?? defaultSettings.architecture
   };
   index.configure(settings);
@@ -24462,7 +25273,7 @@ connection.onDidChangeWatchedFiles(() => {
 });
 documents.onDidOpen((event) => {
   index.openDocument(uriToPath(event.document.uri), event.document.getText());
-  connection.sendDiagnostics({
+  void connection.sendDiagnostics({
     uri: event.document.uri,
     diagnostics: diagnosticsFor(index, uriToPath(event.document.uri))
   });
@@ -24473,7 +25284,7 @@ documents.onDidChangeContent((event) => {
 });
 documents.onDidClose((event) => {
   index.closeDocument(uriToPath(event.document.uri));
-  connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
+  void connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 connection.onCompletion(() => completionsFor(index, settings.architecture));
 connection.onHover((params) => {
@@ -24481,29 +25292,43 @@ connection.onHover((params) => {
   if (!document) {
     return null;
   }
-  return hoverFor(index, uriToPath(params.textDocument.uri), params.position, document.getText(), settings.architecture);
+  return hoverFor(
+    index,
+    uriToPath(params.textDocument.uri),
+    params.position,
+    document.getText(),
+    settings.architecture
+  );
 });
-connection.onDefinition((params) => definitionFor(index, uriToPath(params.textDocument.uri), params.position));
-connection.onReferences((params) => referencesFor(
-  index,
-  uriToPath(params.textDocument.uri),
-  params.position,
-  params.context.includeDeclaration
-));
-connection.onDocumentSymbol((params) => documentSymbolsFor(index, uriToPath(params.textDocument.uri)));
+connection.onDefinition(
+  (params) => definitionFor(index, uriToPath(params.textDocument.uri), params.position)
+);
+connection.onReferences(
+  (params) => referencesFor(
+    index,
+    uriToPath(params.textDocument.uri),
+    params.position,
+    params.context.includeDeclaration
+  )
+);
+connection.onDocumentSymbol(
+  (params) => documentSymbolsFor(index, uriToPath(params.textDocument.uri))
+);
 connection.onWorkspaceSymbol((params) => {
   const query = params.query.toLowerCase();
   const results = [];
   for (const file of index.getAnalyzedFiles()) {
     for (const symbol of documentSymbolsFor(index, file)) {
       if (!query || symbol.name.toLowerCase().includes(query)) {
-        results.push(import_node.SymbolInformation.create(
-          symbol.name,
-          symbol.kind,
-          symbol.selectionRange,
-          pathToUri(file),
-          symbol.detail
-        ));
+        results.push(
+          import_node.SymbolInformation.create(
+            symbol.name,
+            symbol.kind,
+            symbol.selectionRange,
+            pathToUri(file),
+            symbol.detail
+          )
+        );
       }
     }
   }
@@ -24518,13 +25343,14 @@ connection.onSignatureHelp((params) => {
   const lineText = document.getText({ start: lineStart, end: params.position });
   return signatureHelpFor(lineText, settings.architecture);
 });
-connection.onPrepareRename((params) => prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position));
-connection.onRenameRequest((params) => renameEditsFor(
-  index,
-  uriToPath(params.textDocument.uri),
-  params.position,
-  params.newName
-));
-connection.languages.semanticTokens.on((params) => semanticTokensFor(index, uriToPath(params.textDocument.uri)));
+connection.onPrepareRename(
+  (params) => prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position)
+);
+connection.onRenameRequest(
+  (params) => renameEditsFor(index, uriToPath(params.textDocument.uri), params.position, params.newName)
+);
+connection.languages.semanticTokens.on(
+  (params) => semanticTokensFor(index, uriToPath(params.textDocument.uri))
+);
 documents.listen(connection);
 connection.listen();

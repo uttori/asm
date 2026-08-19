@@ -31,7 +31,10 @@ export function getInstructionCatalog(architecture: string): InstructionDescript
  * @param {string} architecture The active architecture name.
  * @returns {InstructionDescriptor | undefined} The descriptor, if known.
  */
-export function findInstruction(mnemonic: string, architecture: string): InstructionDescriptor | undefined {
+export function findInstruction(
+  mnemonic: string,
+  architecture: string,
+): InstructionDescriptor | undefined {
   const upper = mnemonic.toUpperCase();
   return getCatalogForArchitecture(architecture).find((entry) => entry.mnemonic === upper);
 }
@@ -59,9 +62,14 @@ export function renderInstructionDocs(descriptor: InstructionDescriptor): string
   if (descriptor.modes.length > 0) {
     lines.push("", "Addressing modes:");
     for (const mode of descriptor.modes) {
-      const opcode = mode.opcode === undefined ? "" : ` \`$${mode.opcode.toString(16).padStart(2, "0").toUpperCase()}\``;
+      const opcode =
+        mode.opcode === undefined
+          ? ""
+          : ` \`$${mode.opcode.toString(16).padStart(2, "0").toUpperCase()}\``;
       const size = mode.size === undefined ? "" : ` (${mode.size} bytes)`;
-      const example = mode.syntax ? ` \`${descriptor.mnemonic} ${mode.syntax}\`` : ` \`${descriptor.mnemonic}\``;
+      const example = mode.syntax
+        ? ` \`${descriptor.mnemonic} ${mode.syntax}\``
+        : ` \`${descriptor.mnemonic}\``;
       lines.push(`- ${mode.mode}:${example}${opcode}${size}`);
     }
   }

@@ -92,8 +92,12 @@
     "WritableStreamDefaultWriter": "readonly"
   },
   "ignorePatterns": [
-    "language-server/**",
-    "editors/**"
+    "dist/**",
+    "max/**",
+    "src/generated/**",
+    "language-server/out/**",
+    "editors/vscode/out/**",
+    "editors/vscode/server/**"
   ],
   "rules": {
     "jsdoc/check-access": "warn",

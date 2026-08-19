@@ -1,4 +1,8 @@
-import { parseExpressionNode, type ExpressionNode, type RangeExpressionNode } from "./expression-node.js";
+import {
+  parseExpressionNode,
+  type ExpressionNode,
+  type RangeExpressionNode,
+} from "./expression-node.js";
 import { createLineSpan, deriveTokenSpans, type SourceSpan } from "../source-location.js";
 import { incrementInternalCounter } from "../internal-instrumentation.js";
 
@@ -214,13 +218,21 @@ export function cloneNormalizedCommand(command: NormalizedCommand): NormalizedCo
  * @param {string} [normalized] Optional normalized command text.
  * @returns {NormalizedCommand} The same command node for chaining.
  */
-export function setCommandWords(command: NormalizedCommand, words: string[], normalized?: string): NormalizedCommand {
+export function setCommandWords(
+  command: NormalizedCommand,
+  words: string[],
+  normalized?: string,
+): NormalizedCommand {
   command.words = words;
   command.keyword = words[0] ?? "";
   command.command = (normalized ?? words.join(" ")).trim();
   command.source.normalized = normalized ?? command.command;
   command.source.normalizedSpan = createLineSpan(command.source.normalized, command.source.line);
-  command.source.tokenSpans = deriveTokenSpans(command.source.normalized, words, command.source.line);
+  command.source.tokenSpans = deriveTokenSpans(
+    command.source.normalized,
+    words,
+    command.source.line,
+  );
   command.labelName = deriveLabelName(command.keyword);
   command.assignmentTarget = deriveAssignmentTarget(words);
   command.parsed = deriveCommandSemantics(command.command, words);
@@ -251,7 +263,11 @@ function classifyCommand(command: string, words: string[]): CommandKind {
   if (!trimmed || trimmed.startsWith(";")) {
     return "commentOrEmpty";
   }
-  if (words.length === 3 && words[1] === "=" && (words[0]?.startsWith("'") || words[0]?.startsWith("\""))) {
+  if (
+    words.length === 3 &&
+    words[1] === "=" &&
+    (words[0]?.startsWith("'") || words[0]?.startsWith('"'))
+  ) {
     return "characterMapping";
   }
   if (trimmed.startsWith("!")) {
@@ -340,7 +356,11 @@ function deriveCommandSemantics(command: string, words: string[]): CommandSemant
     }
   }
 
-  if (words.length === 3 && words[1] === "=" && !(words[0]?.startsWith("'") || words[0]?.startsWith("\""))) {
+  if (
+    words.length === 3 &&
+    words[1] === "=" &&
+    !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))
+  ) {
     semantics.assignment = {
       target: words[0],
       expression: parseExpressionNode(words[2]),
@@ -462,7 +482,7 @@ function splitCommaArguments(input: string): string[] {
   let quoteChar = "";
   for (let i = 0; i < input.length; i++) {
     const char = input[i];
-    if ((char === "\"" || char === "'") && input[i - 1] !== "\\") {
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
       if (!inQuote) {
         inQuote = true;
         quoteChar = char;

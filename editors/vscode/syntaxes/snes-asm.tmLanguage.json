@@ -15,9 +15,7 @@
   ],
   "repository": {
     "comments": {
-      "patterns": [
-        { "name": "comment.line.semicolon.snes-asm", "match": ";.*$" }
-      ]
+      "patterns": [{ "name": "comment.line.semicolon.snes-asm", "match": ";.*$" }]
     },
     "strings": {
       "patterns": [
@@ -66,14 +64,15 @@
     },
     "labels": {
       "patterns": [
-        { "name": "entity.name.function.label.snes-asm", "match": "^\\s*[A-Za-z_.][A-Za-z0-9_.]*:" },
+        {
+          "name": "entity.name.function.label.snes-asm",
+          "match": "^\\s*[A-Za-z_.][A-Za-z0-9_.]*:"
+        },
         { "name": "entity.name.function.label.local.snes-asm", "match": "^\\s*[-+]+" }
       ]
     },
     "defines": {
-      "patterns": [
-        { "name": "variable.other.define.snes-asm", "match": "!\\w+" }
-      ]
+      "patterns": [{ "name": "variable.other.define.snes-asm", "match": "!\\w+" }]
     }
   }
 }

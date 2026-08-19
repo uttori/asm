@@ -1,4 +1,3 @@
-/* eslint-disable n/no-process-exit */
 import * as fs from "fs";
 import { Assembler } from "./assembler.js";
 import path from "path";
@@ -50,7 +49,9 @@ class CLI {
     }
 
     if (args.length < 2) {
-      console.error("Usage: node cli.js <input.asm> <output.bin> [target.sfc] [--checksum-mode=asar|simple]");
+      console.error(
+        "Usage: node cli.js <input.asm> <output.bin> [target.sfc] [--checksum-mode=asar|simple]",
+      );
       process.exit(1);
     }
 
@@ -95,7 +96,8 @@ class CLI {
       this.writeBinary(outputFile);
       console.log(`Success: Output written to '${outputFile}'.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
+      const message =
+        error instanceof Error ? error.message : (JSON.stringify(error) ?? "Unknown error");
       console.error(`Compilation failed: ${message}`);
       process.exit(1);
     }

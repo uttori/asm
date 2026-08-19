@@ -65,12 +65,14 @@ export class SymbolScopeService {
 
   getHierarchyChain(label: string): string[] {
     const rootLabel = this.host.currentGlobalParentLabel;
-    const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
+    const rootApplies =
+      Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
     const chain = [label];
     let cursor = label;
     while (true) {
       const explicitParent = this.host.labelParents.get(cursor);
-      const parent = explicitParent === undefined ? this.findNearestHierarchyAncestor(cursor) : explicitParent;
+      const parent =
+        explicitParent === undefined ? this.findNearestHierarchyAncestor(cursor) : explicitParent;
       if (!parent) {
         break;
       }
@@ -131,8 +133,12 @@ export class SymbolScopeService {
    * @returns {boolean} `true` if the label is in scope, `false` otherwise.
    */
   hasLabelInScope(identifier: string): boolean {
-    return this.host.labelTable.has(identifier) ||
-      (this.host.currentNamespace ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`) : false);
+    return (
+      this.host.labelTable.has(identifier) ||
+      (this.host.currentNamespace
+        ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`)
+        : false)
+    );
   }
 
   /**
@@ -160,14 +166,20 @@ export class SymbolScopeService {
     if (isPositive) {
       if (!this.host.forwardLabels[depth]) this.host.forwardLabels[depth] = [];
       if (isMacroLocal && this.host.inMacroExpansion) {
-        this.host.forwardLabels[depth].push({ addr: snesAddress, macroInstance: this.host.macroLabelInstance });
+        this.host.forwardLabels[depth].push({
+          addr: snesAddress,
+          macroInstance: this.host.macroLabelInstance,
+        });
       } else {
         this.host.forwardLabels[depth].push({ addr: snesAddress });
       }
     } else {
       if (!this.host.backwardLabels[depth]) this.host.backwardLabels[depth] = [];
       if (isMacroLocal && this.host.inMacroExpansion) {
-        this.host.backwardLabels[depth].push({ addr: snesAddress, macroInstance: this.host.macroLabelInstance });
+        this.host.backwardLabels[depth].push({
+          addr: snesAddress,
+          macroInstance: this.host.macroLabelInstance,
+        });
       } else {
         this.host.backwardLabels[depth].push({ addr: snesAddress });
       }
@@ -199,7 +211,9 @@ export class SymbolScopeService {
     const possibleTargets = this.host.forwardLabels[depth]
       .filter((entry) => {
         if (isMacroLocal && this.host.inMacroExpansion) {
-          return entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance;
+          return (
+            entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance
+          );
         }
         // Inline constructs such as `bcs + : +:` define the target label at the
         // branch reference address itself (right after the branch instruction),
@@ -238,7 +252,9 @@ export class SymbolScopeService {
     const possibleTargets = this.host.backwardLabels[depth]
       .filter((entry) => {
         if (isMacroLocal && this.host.inMacroExpansion) {
-          return entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance;
+          return (
+            entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance
+          );
         }
         return entry.addr < currentAddress && !entry.macroInstance;
       })
@@ -260,7 +276,14 @@ export class SymbolScopeService {
    * @param {boolean} isGlobal Whether the label is global.
    * @param {boolean} modifiesHierarchy Whether the label modifies the hierarchy.
    */
-  setLabel(label: string, value?: number, isStatic = false, isMacroLabel = false, isGlobal = false, modifiesHierarchy = true): void {
+  setLabel(
+    label: string,
+    value?: number,
+    isStatic = false,
+    isMacroLabel = false,
+    isGlobal = false,
+    modifiesHierarchy = true,
+  ): void {
     let fullLabel = label;
     let directScopeLabel: string | null = null;
 
@@ -303,17 +326,27 @@ export class SymbolScopeService {
           fullLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
         }
       } else {
-        fullLabel = this.host.currentNamespace && !isGlobal ? `${this.host.currentNamespace}_${labelName}` : labelName;
+        fullLabel =
+          this.host.currentNamespace && !isGlobal
+            ? `${this.host.currentNamespace}_${labelName}`
+            : labelName;
       }
     } else if (!label.includes(":")) {
-      const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
+      const namespacePrefix = this.host.namespaceNestingEnabled
+        ? this.host.namespaceNestingPath.join("_")
+        : this.host.currentNamespace;
 
       if (this.host.currentNamespace && !isGlobal) {
         if (!label.startsWith(`${namespacePrefix}_`)) {
           fullLabel = `${namespacePrefix}_${label}`;
 
-          if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0 && modifiesHierarchy) {
-            const leafNamespace = this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
+          if (
+            this.host.namespaceNestingEnabled &&
+            this.host.namespaceNestingPath.length > 0 &&
+            modifiesHierarchy
+          ) {
+            const leafNamespace =
+              this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
             const leafLabel = `${leafNamespace}_${label}`;
             const addr = value !== undefined ? value : this.host.currentTargetAddress;
 
@@ -385,7 +418,9 @@ export class SymbolScopeService {
         }
 
         if (!isStatic && existingEntry.value !== addr && !isMacroLabel) {
-          throw new Error(`Label "${fullLabel}" changed from $${existingEntry.value.toString(16)} to $${addr.toString(16)}`);
+          throw new Error(
+            `Label "${fullLabel}" changed from $${existingEntry.value.toString(16)} to $${addr.toString(16)}`,
+          );
         }
       }
     }
@@ -422,7 +457,8 @@ export class SymbolScopeService {
    */
   resolveStructMember(compoundId: string): number {
     const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
-    if (!firstId || !this.host.structs.has(firstId)) throw new Error(`Struct not found: ${compoundId}`);
+    if (!firstId || !this.host.structs.has(firstId))
+      throw new Error(`Struct not found: ${compoundId}`);
 
     let rest = compoundId.substring(firstId.length).trim();
     let base = 0;
@@ -753,7 +789,9 @@ export class SymbolScopeService {
       }
 
       if (this.host.currentNamespace) {
-        const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
+        const namespacePrefix = this.host.namespaceNestingEnabled
+          ? this.host.namespaceNestingPath.join("_")
+          : this.host.currentNamespace;
         if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
           const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
           this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
@@ -782,7 +820,9 @@ export class SymbolScopeService {
     }
 
     if (this.host.currentNamespace) {
-      const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
+      const namespacePrefix = this.host.namespaceNestingEnabled
+        ? this.host.namespaceNestingPath.join("_")
+        : this.host.currentNamespace;
       if (!labelName.startsWith(`${namespacePrefix}_`)) {
         const namespacedLabel = `${namespacePrefix}_${labelName}`;
         this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);

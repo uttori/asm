@@ -4,7 +4,11 @@ import {
   splitCommandIntoWords,
 } from "./command-text-service.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
-import { ProgramModelBuilder, type IncrementalProgramParseState, type ProgramModel } from "./program-model-builder.js";
+import {
+  ProgramModelBuilder,
+  type IncrementalProgramParseState,
+  type ProgramModel,
+} from "./program-model-builder.js";
 import { createNormalizedCommand, type NormalizedCommand } from "../ir/normalized-command.js";
 
 export type AssemblyFrontEndHost = {
@@ -36,10 +40,13 @@ export class AssemblyFrontEndService {
       currentLine: this.host.currentLine,
       passProgramCache: this.host.passProgramCache,
       preprocessBlockCommands: (source: string) => this.preprocessBlockCommands(source),
-      createLoopCommandNode: (command: string, sourceFile?: string, sourceLine?: number) => this.createLoopCommandNode(command, sourceFile, sourceLine),
-      shouldEndifCloseInnermostWhile: (loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number) => (
-        this.host.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
-      ),
+      createLoopCommandNode: (command: string, sourceFile?: string, sourceLine?: number) =>
+        this.createLoopCommandNode(command, sourceFile, sourceLine),
+      shouldEndifCloseInnermostWhile: (
+        loopType?: "for" | "while",
+        loopStartLine?: number,
+        ifStartLine?: number,
+      ) => this.host.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
     });
   }
 
@@ -70,7 +77,11 @@ export class AssemblyFrontEndService {
   ): NormalizedCommand | null {
     let normalizedCommand = removeInlineComment(command);
 
-    if (this.host.inMacroExpansion && !this.host.isDefinitionCollectionStage && (normalizedCommand.includes("...") || normalizedCommand.includes("…"))) {
+    if (
+      this.host.inMacroExpansion &&
+      !this.host.isDefinitionCollectionStage &&
+      (normalizedCommand.includes("...") || normalizedCommand.includes("…"))
+    ) {
       normalizedCommand = this.host.resolveVariadicPlaceholders(normalizedCommand);
     }
 
@@ -94,8 +105,10 @@ export class AssemblyFrontEndService {
     sourceFile = this.host.currentFile,
     sourceLine = this.host.currentLine,
   ): NormalizedCommand {
-    return this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true)
-      ?? createNormalizedCommand(command, "", [], sourceFile, sourceLine);
+    return (
+      this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true) ??
+      createNormalizedCommand(command, "", [], sourceFile, sourceLine)
+    );
   }
 
   createIncrementalParseState(): IncrementalProgramParseState {
@@ -106,7 +119,11 @@ export class AssemblyFrontEndService {
     this.programModelBuilder.resetIncrementalParseState(state);
   }
 
-  buildProgramModel(source: string, sourceFile = this.host.currentFile, startLine = 0): ProgramModel {
+  buildProgramModel(
+    source: string,
+    sourceFile = this.host.currentFile,
+    startLine = 0,
+  ): ProgramModel {
     return this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
   }
 
@@ -118,7 +135,10 @@ export class AssemblyFrontEndService {
     return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine);
   }
 
-  createIncludeNode(file: string, source: string): import("./program-model-builder.js").IncludeProgramNode {
+  createIncludeNode(
+    file: string,
+    source: string,
+  ): import("./program-model-builder.js").IncludeProgramNode {
     return this.programModelBuilder.createIncludeNode(file, source);
   }
 
@@ -128,7 +148,12 @@ export class AssemblyFrontEndService {
     sourceFile = this.host.currentFile,
     sourceLine = this.host.currentLine,
   ): ExecutableNode[] {
-    return this.programModelBuilder.consumeIncrementalCommand(state, rawCommand, sourceFile, sourceLine);
+    return this.programModelBuilder.consumeIncrementalCommand(
+      state,
+      rawCommand,
+      sourceFile,
+      sourceLine,
+    );
   }
 
   drainCompletedRoots(state: IncrementalProgramParseState): ExecutableNode[] {

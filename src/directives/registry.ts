@@ -29,11 +29,7 @@ import type {
   TableDirectiveContext,
 } from "./types.js";
 
-type BoundDirectiveHandler = (
-  words: string[],
-  raw: string,
-  command?: NormalizedCommand,
-) => void;
+type BoundDirectiveHandler = (words: string[], raw: string, command?: NormalizedCommand) => void;
 
 export interface DirectiveRegistryContexts {
   data: DataDirectiveContext;

@@ -81,7 +81,10 @@ export class IncludeSourceService {
    * Guards the active source file against later includes in this pass.
    */
   guardCurrentFile(): void {
-    const fileInfo = this.host.includedFiles.get(this.host.currentFile) ?? { included: true, guarded: false };
+    const fileInfo = this.host.includedFiles.get(this.host.currentFile) ?? {
+      included: true,
+      guarded: false,
+    };
     fileInfo.guarded = true;
     this.host.includedFiles.set(this.host.currentFile, fileInfo);
   }
@@ -133,7 +136,8 @@ export class IncludeSourceService {
       const includeNode = this.host.frontEndService.createIncludeNode(resolvedPath, content);
       this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
     } catch (error) {
-      const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
+      const message =
+        error instanceof Error ? error.message : (JSON.stringify(error) ?? "Unknown error");
       throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
     } finally {
       this.host.currentFile = this.host.includeStack.pop() ?? "";

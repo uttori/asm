@@ -1,6 +1,10 @@
 import type { ExpandedOperand, LoweredOperand } from "./architecture-types.js";
 import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
-import { isReferenceExpressionNode, renderExpressionNode, renderReferenceExpressionNode } from "./ir/expression-node.js";
+import {
+  isReferenceExpressionNode,
+  renderExpressionNode,
+  renderReferenceExpressionNode,
+} from "./ir/expression-node.js";
 import { classifyGenericOperand } from "./operand-classifiers.js";
 
 export type OperandResolverDependencies = {
@@ -25,6 +29,7 @@ export class OperandResolver {
   constructor(readonly deps: OperandResolverDependencies) {}
 
   normalizeNumericBaseMember(operand: string): string {
+    // oxlint-disable-next-line security/detect-unsafe-regex -- Anchored alternatives have distinct prefixes.
     const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
     if (!match) {
       return operand;
@@ -52,14 +57,15 @@ export class OperandResolver {
   }
 
   isSameBankAddress(expanded: string): boolean {
+    // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
     const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
     if (!match) {
       return false;
     }
 
     const value = parseInt(match[1], 16);
-    const currentBank = (this.deps.getCurrentAddress() >>> 16) & 0xFF;
-    const targetBank = (value >>> 16) & 0xFF;
+    const currentBank = (this.deps.getCurrentAddress() >>> 16) & 0xff;
+    const targetBank = (value >>> 16) & 0xff;
     return currentBank === targetBank;
   }
 
@@ -85,7 +91,9 @@ export class OperandResolver {
 
   tryResolveSimpleArithmetic(operand: string): number | null {
     const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
-    const match = operand.match(new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`));
+    const match = operand.match(
+      new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`),
+    );
     if (!match) {
       return null;
     }
@@ -126,9 +134,12 @@ export class OperandResolver {
       return 2;
     }
 
-    const hexString = typeof value === "number"
-      ? value.toString(16).toUpperCase()
-      : (value.startsWith("$") ? value.substring(1) : value);
+    const hexString =
+      typeof value === "number"
+        ? value.toString(16).toUpperCase()
+        : value.startsWith("$")
+          ? value.substring(1)
+          : value;
 
     if (hexString.length <= 2) {
       return 1;
@@ -146,7 +157,8 @@ export class OperandResolver {
     if (/^[A-Z_a-z]\w*\s*\(/.test(expression.trim())) {
       return true;
     }
-    return expression.includes("+") ||
+    return (
+      expression.includes("+") ||
       expression.includes("-") ||
       expression.includes("*") ||
       expression.includes("/") ||
@@ -154,7 +166,8 @@ export class OperandResolver {
       expression.includes("|") ||
       expression.includes("^") ||
       expression.includes("<<") ||
-      expression.includes(">>");
+      expression.includes(">>")
+    );
   }
 
   tryResolveLabelInOperand(operand: string): string {
@@ -315,7 +328,9 @@ export class OperandResolver {
 
     switch (operand.type) {
       case "range":
-        throw new Error(`Range expression is not a numeric operand: ${renderExpressionNode(operand)}`);
+        throw new Error(
+          `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`,
+        );
       default:
         try {
           return this.deps.evaluateMath(operand);

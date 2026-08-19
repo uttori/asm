@@ -46,8 +46,12 @@ export class RomWriterService {
     if (num < 0) {
       throw new Error("step num is negative");
     }
-    this.host.currentTargetAddress = (this.host.currentTargetAddress & 0xff000000) | this.fixsnespos(this.host.currentTargetAddress & 0xffffff, num);
-    this.host.currentTargetBaseAddress = (this.host.currentTargetBaseAddress & 0xff000000) | this.fixsnespos(this.host.currentTargetBaseAddress & 0xffffff, num);
+    this.host.currentTargetAddress =
+      (this.host.currentTargetAddress & 0xff000000) |
+      this.fixsnespos(this.host.currentTargetAddress & 0xffffff, num);
+    this.host.currentTargetBaseAddress =
+      (this.host.currentTargetBaseAddress & 0xff000000) |
+      this.fixsnespos(this.host.currentTargetBaseAddress & 0xffffff, num);
     this.host.syncWriteStarts();
     this.host.incrementBytesWritten(num);
   }
@@ -63,10 +67,10 @@ export class RomWriterService {
 
     this.verifysnespos();
 
-    const wrappedPos = this.fixsnespos(this.host.currentTargetBaseAddress & 0xFFFFFF);
-    const bankByte = this.host.currentTargetBaseAddress & 0xFF000000;
+    const wrappedPos = this.fixsnespos(this.host.currentTargetBaseAddress & 0xffffff);
+    const bankByte = this.host.currentTargetBaseAddress & 0xff000000;
     const newPos = bankByte | wrappedPos;
-    const pcpos = this.convertTargetAddressToRomOffset(newPos & 0xFFFFFF);
+    const pcpos = this.convertTargetAddressToRomOffset(newPos & 0xffffff);
 
     // Emit tracing before the position advances so listeners see the exact byte
     // address that will be written for this stage.
@@ -77,17 +81,21 @@ export class RomWriterService {
       line: 0,
       raw: "",
       normalized: "",
-      snesAddress: newPos & 0xFFFFFF,
+      snesAddress: newPos & 0xffffff,
       pcAddress: pcpos,
-      value: num & 0xFF,
+      value: num & 0xff,
     });
 
     if (this.host.canEmitBytes) {
       if (pcpos >= this.host.romdata.length && pcpos - this.host.romdata.length > 0) {
-        this.host.fillRomData(this.host.romdata.length, this.host.defaultFreespaceByte, pcpos - this.host.romdata.length);
+        this.host.fillRomData(
+          this.host.romdata.length,
+          this.host.defaultFreespaceByte,
+          pcpos - this.host.romdata.length,
+        );
       }
 
-      this.host.romdata[pcpos] = num & 0xFF;
+      this.host.romdata[pcpos] = num & 0xff;
     }
 
     this.step(1);
@@ -107,8 +115,8 @@ export class RomWriterService {
    */
   write2(num: number): void {
     this.assertBankCrossAllowed(2);
-    this.write1(num & 0xFF);
-    this.write1((num >> 8) & 0xFF);
+    this.write1(num & 0xff);
+    this.write1((num >> 8) & 0xff);
   }
 
   /**
@@ -117,9 +125,9 @@ export class RomWriterService {
    */
   write3(num: number): void {
     this.assertBankCrossAllowed(3);
-    this.write1(num & 0xFF);
-    this.write1((num >> 8) & 0xFF);
-    this.write1((num >> 16) & 0xFF);
+    this.write1(num & 0xff);
+    this.write1((num >> 8) & 0xff);
+    this.write1((num >> 16) & 0xff);
   }
 
   /**
@@ -128,10 +136,10 @@ export class RomWriterService {
    */
   write4(num: number): void {
     this.assertBankCrossAllowed(4);
-    this.write1(num & 0xFF);
-    this.write1((num >> 8) & 0xFF);
-    this.write1((num >> 16) & 0xFF);
-    this.write1((num >> 24) & 0xFF);
+    this.write1(num & 0xff);
+    this.write1((num >> 8) & 0xff);
+    this.write1((num >> 16) & 0xff);
+    this.write1((num >> 24) & 0xff);
   }
 
   /**
@@ -143,13 +151,15 @@ export class RomWriterService {
       return;
     }
 
-    const start = this.host.currentTargetBaseAddress & 0xFFFFFF;
-    const end = (start + length - 1) & 0xFFFFFF;
-    const mask = this.host.bankCrossCheckMode === "half" ? 0x7FFF8000 : 0x7FFF0000;
+    const start = this.host.currentTargetBaseAddress & 0xffffff;
+    const end = (start + length - 1) & 0xffffff;
+    const mask = this.host.bankCrossCheckMode === "half" ? 0x7fff8000 : 0x7fff0000;
 
     if (((start ^ end) & mask) !== 0) {
-      const errorAddr = (start + length) & 0xFFFFFF;
-      throw new Error(`Ebank_border_crossed: A bank border was crossed, SNES address $${errorAddr.toString(16).toUpperCase().padStart(6, "0")}.`);
+      const errorAddr = (start + length) & 0xffffff;
+      throw new Error(
+        `Ebank_border_crossed: A bank border was crossed, SNES address $${errorAddr.toString(16).toUpperCase().padStart(6, "0")}.`,
+      );
     }
   }
 
@@ -163,17 +173,26 @@ export class RomWriterService {
     if (this.host.inSpcblock) {
       throw new Error("Missing endspcblock before end of pass.");
     }
-    if (this.host.canFinalize && this.host.activeFreespaceStartPc !== null && this.host.activeFreespaceContentStartPc !== null) {
-      const contentEndPc = this.convertTargetAddressToRomOffset(this.host.currentTargetBaseAddress & 0xFFFFFF) - 1;
+    if (
+      this.host.canFinalize &&
+      this.host.activeFreespaceStartPc !== null &&
+      this.host.activeFreespaceContentStartPc !== null
+    ) {
+      const contentEndPc =
+        this.convertTargetAddressToRomOffset(this.host.currentTargetBaseAddress & 0xffffff) - 1;
       if (contentEndPc >= this.host.activeFreespaceContentStartPc) {
-        const contentLen = (contentEndPc - this.host.activeFreespaceContentStartPc) + 1;
-        const ratsLenMinusOne = Math.max(0, contentLen - 1) & 0xFFFF;
-        const ratsComp = (~ratsLenMinusOne) & 0xFFFF;
+        const contentLen = contentEndPc - this.host.activeFreespaceContentStartPc + 1;
+        const ratsLenMinusOne = Math.max(0, contentLen - 1) & 0xffff;
+        const ratsComp = ~ratsLenMinusOne & 0xffff;
 
-        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 4, ratsLenMinusOne & 0xFF, 1);
-        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 5, (ratsLenMinusOne >> 8) & 0xFF, 1);
-        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 6, ratsComp & 0xFF, 1);
-        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 7, (ratsComp >> 8) & 0xFF, 1);
+        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 4, ratsLenMinusOne & 0xff, 1);
+        this.host.writeDataBytes(
+          this.host.activeFreespaceStartPc + 5,
+          (ratsLenMinusOne >> 8) & 0xff,
+          1,
+        );
+        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 6, ratsComp & 0xff, 1);
+        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 7, (ratsComp >> 8) & 0xff, 1);
       }
     }
     if (this.host.canFinalize && this.host.checksumFixEnabled) {
@@ -187,65 +206,78 @@ export class RomWriterService {
    * @returns {number} The PC offset.
    */
   convertTargetAddressToRomOffset(addr: number): number {
-    if (addr < 0 || addr > 0xFFFFFF) return -1;
+    if (addr < 0 || addr > 0xffffff) return -1;
 
     if (this.host.mapper === "lorom") {
-      if ((addr & 0xFE0000) === 0x7E0000 || (addr & 0x408000) === 0x000000 || (addr & 0x708000) === 0x700000) {
+      if (
+        (addr & 0xfe0000) === 0x7e0000 ||
+        (addr & 0x408000) === 0x000000 ||
+        (addr & 0x708000) === 0x700000
+      ) {
         return -1;
       }
-      return ((addr & 0x7F0000) >> 1) | (addr & 0x7FFF);
+      return ((addr & 0x7f0000) >> 1) | (addr & 0x7fff);
     }
 
     if (this.host.mapper === "hirom") {
-      if ((addr & 0xFE0000) === 0x7E0000 || (addr & 0x408000) === 0x000000) {
+      if ((addr & 0xfe0000) === 0x7e0000 || (addr & 0x408000) === 0x000000) {
         return -1;
       }
-      return addr & 0x3FFFFF;
+      return addr & 0x3fffff;
     }
 
     if (this.host.mapper === "exlorom") {
-      if ((addr & 0xF00000) === 0x700000 || (addr & 0x408000) === 0x000000) {
+      if ((addr & 0xf00000) === 0x700000 || (addr & 0x408000) === 0x000000) {
         return -1;
       }
       if (addr & 0x800000) {
-        return ((addr & 0x7F0000) >> 1) | (addr & 0x7FFF);
+        return ((addr & 0x7f0000) >> 1) | (addr & 0x7fff);
       }
-      return (((addr & 0x7F0000) >> 1) | (addr & 0x7FFF)) + 0x400000;
+      return (((addr & 0x7f0000) >> 1) | (addr & 0x7fff)) + 0x400000;
     }
 
     if (this.host.mapper === "exhirom") {
-      if ((addr & 0xFE0000) === 0x7E0000 || (addr & 0x408000) === 0x000000) {
+      if ((addr & 0xfe0000) === 0x7e0000 || (addr & 0x408000) === 0x000000) {
         return -1;
       }
-      return (addr & 0x800000) === 0 ? (addr & 0x3FFFFF) | 0x400000 : addr & 0x3FFFFF;
+      return (addr & 0x800000) === 0 ? (addr & 0x3fffff) | 0x400000 : addr & 0x3fffff;
     }
 
     if (this.host.mapper === "sfxrom") {
-      if ((addr & 0x600000) === 0x600000 || (addr & 0x408000) === 0x000000 || (addr & 0x800000) === 0x800000) {
+      if (
+        (addr & 0x600000) === 0x600000 ||
+        (addr & 0x408000) === 0x000000 ||
+        (addr & 0x800000) === 0x800000
+      ) {
         return -1;
       }
-      return addr & 0x400000 ? addr & 0x3FFFFF : ((addr & 0x7F0000) >> 1) | (addr & 0x7FFF);
+      return addr & 0x400000 ? addr & 0x3fffff : ((addr & 0x7f0000) >> 1) | (addr & 0x7fff);
     }
 
     if (this.host.mapper === "sa1rom") {
       if ((addr & 0x408000) === 0x008000) {
-        return this.host.sa1banks[(addr & 0xE00000) >> 21] | ((addr & 0x1F0000) >> 1) | (addr & 0x007FFF);
+        return (
+          this.host.sa1banks[(addr & 0xe00000) >> 21] | ((addr & 0x1f0000) >> 1) | (addr & 0x007fff)
+        );
       }
-      if ((addr & 0xC00000) === 0xC00000) {
-        return this.host.sa1banks[((addr & 0x100000) >> 20) | ((addr & 0x200000) >> 19)] | (addr & 0x0FFFFF);
+      if ((addr & 0xc00000) === 0xc00000) {
+        return (
+          this.host.sa1banks[((addr & 0x100000) >> 20) | ((addr & 0x200000) >> 19)] |
+          (addr & 0x0fffff)
+        );
       }
       return -1;
     }
 
     if (this.host.mapper === "bigsa1rom") {
-      if ((addr & 0xC00000) === 0xC00000) {
-        return (addr & 0x3FFFFF) | 0x400000;
+      if ((addr & 0xc00000) === 0xc00000) {
+        return (addr & 0x3fffff) | 0x400000;
       }
-      if ((addr & 0xC00000) === 0x000000 || (addr & 0xC00000) === 0x800000) {
+      if ((addr & 0xc00000) === 0x000000 || (addr & 0xc00000) === 0x800000) {
         if ((addr & 0x008000) === 0) {
           return -1;
         }
-        return ((addr & 0x800000) >> 2) | ((addr & 0x3F0000) >> 1) | (addr & 0x7FFF);
+        return ((addr & 0x800000) >> 2) | ((addr & 0x3f0000) >> 1) | (addr & 0x7fff);
       }
       return -1;
     }
@@ -271,36 +303,36 @@ export class RomWriterService {
 
     if (this.host.mapper === "lorom") {
       if (addr >= 0x400000) return -1;
-      addr = (((addr << 1) & 0x7F0000) | (addr & 0x7FFF)) | 0x8000;
+      addr = ((addr << 1) & 0x7f0000) | (addr & 0x7fff) | 0x8000;
       return addr | 0x800000;
     }
 
     if (this.host.mapper === "hirom") {
       if (addr >= 0x400000) return -1;
-      return addr | 0xC00000;
+      return addr | 0xc00000;
     }
 
     if (this.host.mapper === "exlorom") {
       if (addr >= 0x800000) return -1;
       if (addr & 0x400000) {
         addr -= 0x400000;
-        addr = (((addr << 1) & 0x7F0000) | (addr & 0x7FFF)) | 0x8000;
+        addr = ((addr << 1) & 0x7f0000) | (addr & 0x7fff) | 0x8000;
         return addr;
       }
-      addr = (((addr << 1) & 0x7F0000) | (addr & 0x7FFF)) | 0x8000;
+      addr = ((addr << 1) & 0x7f0000) | (addr & 0x7fff) | 0x8000;
       return addr | 0x800000;
     }
 
     if (this.host.mapper === "exhirom") {
       if (addr >= 0x800000) return -1;
-      return addr & 0x400000 ? addr : addr | 0xC00000;
+      return addr & 0x400000 ? addr : addr | 0xc00000;
     }
 
     if (this.host.mapper === "sa1rom") {
       if (addr >= 0x800000) return -1;
       for (let i = 0; i < 8; i++) {
         if (this.host.sa1banks[i] === (addr & 0x700000)) {
-          return 0x008000 | (i << 21) | ((addr & 0x0F8000) << 1) | (addr & 0x7FFF);
+          return 0x008000 | (i << 21) | ((addr & 0x0f8000) << 1) | (addr & 0x7fff);
         }
       }
       return -1;
@@ -309,20 +341,20 @@ export class RomWriterService {
     if (this.host.mapper === "bigsa1rom") {
       if (addr >= 0x800000) return -1;
       if ((addr & 0x400000) === 0x400000) {
-        return addr | 0xC00000;
+        return addr | 0xc00000;
       }
       if ((addr & 0x600000) === 0x000000) {
-        return ((addr << 1) & 0x3F0000) | 0x8000 | (addr & 0x7FFF);
+        return ((addr << 1) & 0x3f0000) | 0x8000 | (addr & 0x7fff);
       }
       if ((addr & 0x600000) === 0x200000) {
-        return 0x800000 | ((addr << 1) & 0x3F0000) | 0x8000 | (addr & 0x7FFF);
+        return 0x800000 | ((addr << 1) & 0x3f0000) | 0x8000 | (addr & 0x7fff);
       }
       return -1;
     }
 
     if (this.host.mapper === "sfxrom") {
       if (addr >= 0x200000) return -1;
-      return (((addr << 1) & 0x7F0000) | (addr & 0x7FFF)) | 0x8000;
+      return ((addr << 1) & 0x7f0000) | (addr & 0x7fff) | 0x8000;
     }
 
     if (this.host.mapper === "norom") {
@@ -350,16 +382,16 @@ export class RomWriterService {
   fixsnespos(inaddr: number, step = 0): number {
     const newAddr = inaddr + step;
 
-    if ((inaddr & 0xFF0000) !== (newAddr & 0xFF0000)) {
+    if ((inaddr & 0xff0000) !== (newAddr & 0xff0000)) {
       switch (this.host.mapper) {
         case "lorom":
-          return (newAddr & 0xFF0000) | ((newAddr & 0xFFFF) + 0x8000);
+          return (newAddr & 0xff0000) | ((newAddr & 0xffff) + 0x8000);
         case "hirom":
         case "exhirom":
         case "sfxrom":
         case "sa1rom":
           if ((inaddr & 0x400000) === 0) {
-            return (newAddr & 0xFF0000) | ((newAddr & 0xFFFF) + 0x8000);
+            return (newAddr & 0xff0000) | ((newAddr & 0xffff) + 0x8000);
           }
           return newAddr;
         case "exlorom":

@@ -111,8 +111,11 @@ export type NamespaceDirectiveContext = SessionDirectiveContext<
 >;
 
 export type FillPadDirectiveContext = OperandDirectiveContext<
-  Pick<DirectiveRomCapability, "fillbyte" | "padbyte" | "padUnit" | "currentTargetAddress" | "romWriter" | "write1">
-  & Pick<DirectiveExpressionCapability, "resolvedefines">
+  Pick<
+    DirectiveRomCapability,
+    "fillbyte" | "padbyte" | "padUnit" | "currentTargetAddress" | "romWriter" | "write1"
+  > &
+    Pick<DirectiveExpressionCapability, "resolvedefines">
 >;
 
 export type FlowControlDirectiveContext = SessionDirectiveContext<
@@ -120,14 +123,17 @@ export type FlowControlDirectiveContext = SessionDirectiveContext<
 >;
 
 export type MapperDirectiveContext = SessionDirectiveContext<
-  Pick<DirectiveRomCapability, "mapper" | "checksumFixEnabled" | "sa1banks">
-  & Pick<DirectiveSpcCapability, "inSpcblock">
+  Pick<DirectiveRomCapability, "mapper" | "checksumFixEnabled" | "sa1banks"> &
+    Pick<DirectiveSpcCapability, "inSpcblock">
 >;
 
 export type BaseLayoutDirectiveContext = OperandDirectiveContext<
   Pick<
     DirectiveAddressCapability,
-    "currentTargetAddress" | "currentTargetBaseAddress" | "currentTargetStartAddress" | "currentTargetBaseStartAddress"
+    | "currentTargetAddress"
+    | "currentTargetBaseAddress"
+    | "currentTargetStartAddress"
+    | "currentTargetBaseStartAddress"
   >
 >;
 
@@ -140,31 +146,37 @@ export type SpcDirectiveContext = RuntimeDirectiveContext;
 
 export type OrgDirectiveContext = SessionDirectiveContext<
   Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">
-> & RuntimeDirectiveContext;
+> &
+  RuntimeDirectiveContext;
 
 export type StartposDirectiveContext = OperandDirectiveContext<
-  Pick<DirectiveSpcCapability, "inSpcblock" | "spcblockData">
-  & Pick<DirectiveExpressionCapability, "resolvedefines">
+  Pick<DirectiveSpcCapability, "inSpcblock" | "spcblockData"> &
+    Pick<DirectiveExpressionCapability, "resolvedefines">
 >;
 
 export type ArchitectureDirectiveContext = SessionDirectiveContext<
-  DirectiveArchitectureCapability & Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">
+  DirectiveArchitectureCapability &
+    Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">
 >;
 
 export type AssemblerPolicyDirectiveContext = SessionDirectiveContext<
-  Pick<DirectiveAssemblerCapability, "readFunctionsEnabled" | "bankCrossCheckMode" | "optimizeDirectPage">
+  Pick<
+    DirectiveAssemblerCapability,
+    "readFunctionsEnabled" | "bankCrossCheckMode" | "optimizeDirectPage"
+  >
 >;
 
 export type IncludeDirectiveContext = OperandDirectiveContext<
-  Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope">
-  & Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition">
-  & Pick<DirectiveRomCapability, "write1">
-> & RuntimeDirectiveContext & {
-  includeSource: Pick<
-    IncludeSourceService,
-    "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile"
-  >;
-};
+  Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope"> &
+    Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition"> &
+    Pick<DirectiveRomCapability, "write1">
+> &
+  RuntimeDirectiveContext & {
+    includeSource: Pick<
+      IncludeSourceService,
+      "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile"
+    >;
+  };
 
 export type MemoryDirectiveContext = OperandDirectiveContext<
   Pick<
@@ -183,9 +195,9 @@ export type MemoryDirectiveContext = OperandDirectiveContext<
     | "expandRom"
     | "write1"
     | "write3"
-  >
-  & Pick<DirectiveExpressionCapability, "resolvedefines" | "symbolScope">
-  & Pick<DirectiveSpcCapability, "inSpcblock">
+  > &
+    Pick<DirectiveExpressionCapability, "resolvedefines" | "symbolScope"> &
+    Pick<DirectiveSpcCapability, "inSpcblock">
 >;
 
 export type StructDirectiveContext = SessionDirectiveContext<

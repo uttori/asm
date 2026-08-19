@@ -1,7 +1,15 @@
-import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
+import type {
+  ConditionalBranch,
+  ConditionalBranchNode,
+  ExecutableNode,
+  LoopNode,
+} from "../ir/assembly-tree.js";
 import { splitInlineCommands } from "./command-text-service.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
-import { incrementInternalCounter, recordInternalCounterPeak } from "../internal-instrumentation.js";
+import {
+  incrementInternalCounter,
+  recordInternalCounterPeak,
+} from "../internal-instrumentation.js";
 
 export type ProgramModel = {
   sourceFile: string;
@@ -29,8 +37,16 @@ export type ProgramModelBuilderHost = {
   currentLine: number;
   passProgramCache: Map<string, ExecutableNode[]>;
   preprocessBlockCommands(source: string): string[];
-  createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
-  shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
+  createLoopCommandNode(
+    command: string,
+    sourceFile?: string,
+    sourceLine?: number,
+  ): NormalizedCommand;
+  shouldEndifCloseInnermostWhile(
+    loopType?: "for" | "while",
+    loopStartLine?: number,
+    ifStartLine?: number,
+  ): boolean;
 };
 
 /**
@@ -74,7 +90,11 @@ export class ProgramModelBuilder {
    * @param {number} [startLine] Optional starting line number.
    * @returns {ProgramModel} The parsed program model.
    */
-  buildProgramModel(source: string, sourceFile = this.host.currentFile, startLine = 0): ProgramModel {
+  buildProgramModel(
+    source: string,
+    sourceFile = this.host.currentFile,
+    startLine = 0,
+  ): ProgramModel {
     const commands = splitInlineCommands(this.host.preprocessBlockCommands(source));
     return {
       sourceFile,
@@ -105,7 +125,11 @@ export class ProgramModelBuilder {
    * @param {number} [startLine] Optional starting line number.
    * @returns {ExecutableNode[]} The cached or parsed nodes.
    */
-  getOrBuildPassProgram(commands: string[], sourceFile = this.host.currentFile, startLine = this.host.currentLine): ExecutableNode[] {
+  getOrBuildPassProgram(
+    commands: string[],
+    sourceFile = this.host.currentFile,
+    startLine = this.host.currentLine,
+  ): ExecutableNode[] {
     const cacheKey = `${sourceFile}::${startLine}::${commands.join("\n")}`;
     const cached = this.host.passProgramCache.get(cacheKey);
     if (cached) {
@@ -146,7 +170,11 @@ export class ProgramModelBuilder {
    * @param {number} [startLine] Optional starting line number.
    * @returns {ExecutableNode[]} The executable nodes.
    */
-  parseCommandStreamToNodes(commands: string[], sourceFile = this.host.currentFile, startLine = this.host.currentLine): ExecutableNode[] {
+  parseCommandStreamToNodes(
+    commands: string[],
+    sourceFile = this.host.currentFile,
+    startLine = this.host.currentLine,
+  ): ExecutableNode[] {
     const state = this.createIncrementalParseState();
     for (let index = 0; index < commands.length; index++) {
       this.consumeCommandIntoState(state, commands[index], sourceFile, startLine + index);
@@ -222,7 +250,10 @@ export class ProgramModelBuilder {
       const loopNode: LoopNode = {
         type: keyword,
         header: command,
-        conditionNode: keyword === "while" ? command.parsed.condition?.expression : command.parsed.forLoop?.range,
+        conditionNode:
+          keyword === "while"
+            ? command.parsed.condition?.expression
+            : command.parsed.forLoop?.range,
         variable: command.parsed.forLoop?.variable,
         rangeNode: command.parsed.forLoop?.range,
         startExpression: command.parsed.forLoop?.start,
@@ -329,7 +360,10 @@ export class ProgramModelBuilder {
 
   drainCompletedRoots(state: IncrementalProgramParseState): ExecutableNode[] {
     let completedCount = 0;
-    while (completedCount < state.roots.length && this.isNodeComplete(state.roots[completedCount])) {
+    while (
+      completedCount < state.roots.length &&
+      this.isNodeComplete(state.roots[completedCount])
+    ) {
       completedCount++;
     }
     const ready = state.roots.slice(0, completedCount);

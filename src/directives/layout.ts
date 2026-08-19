@@ -18,7 +18,7 @@ import type {
 export const handlePushBase = ({ session }: AddressStackDirectiveContext): void => {
   // debug("handlePushBase")
   session.pushBaseStack.push(session.currentTargetAddress);
-}
+};
 
 /**
  * Pulls the current target address from the push base stack.
@@ -34,7 +34,7 @@ export const handlePullBase = ({ session }: AddressStackDirectiveContext): void 
     throw new Error("No base value to pull.");
   }
   session.currentTargetAddress = baseAddress;
-}
+};
 
 /**
  * Handles the ARCH command.
@@ -49,7 +49,7 @@ export const handleArch = ({ session }: ArchitectureDirectiveContext, words: str
   }
 
   if (!words[1]) {
-    throw new Error("ARCH command requires an architecture parameter.")
+    throw new Error("ARCH command requires an architecture parameter.");
   }
   const archParam = words[1].toLowerCase();
   const canonical = session.architectureRegistry.getCanonicalName(archParam);
@@ -58,7 +58,7 @@ export const handleArch = ({ session }: ArchitectureDirectiveContext, words: str
   }
   session.arch = canonical;
   session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
-}
+};
 
 export const handleStartpos = (
   { session, operandResolver }: StartposDirectiveContext,
@@ -72,8 +72,9 @@ export const handleStartpos = (
   if (params.length !== 1) {
     throw new Error("startpos requires exactly one parameter.");
   }
-  session.spcblockData.executeAddress = operandResolver.getnum(session.resolvedefines(params[0])) & 0xFFFF;
-}
+  session.spcblockData.executeAddress =
+    operandResolver.getnum(session.resolvedefines(params[0])) & 0xffff;
+};
 
 export const registerLayoutDirectives = (
   registry: DirectiveRegistry,
@@ -94,7 +95,7 @@ export const registerLayoutDirectives = (
     }
 
     const value = operandResolver.getnum(param);
-    if (value > 0xFFFFFF) {
+    if (value > 0xffffff) {
       throw new Error(`Invalid base address: ${param}. Must be within 24 bits.`);
     }
 

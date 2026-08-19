@@ -21,7 +21,10 @@ export const handleFreespace = ({ session }: MemoryDirectiveContext, words: stri
     throw new Error("No freespace available in norom.");
   }
 
-  const sourceLen = (session.targetRom && session.targetRom.length > 0) ? session.targetRom.length : session.romdata.length;
+  const sourceLen =
+    session.targetRom && session.targetRom.length > 0
+      ? session.targetRom.length
+      : session.romdata.length;
   const startPc = Math.max(0x80000, sourceLen);
 
   // Expand to at least 1MB for the 512KB -> 1MB bank crossing behavior expected by tests.
@@ -47,12 +50,11 @@ export const handleFreespace = ({ session }: MemoryDirectiveContext, words: stri
   session.write1(0x52); // R
   session.write1(0x00);
   session.write1(0x00);
-  session.write1(0xFF);
-  session.write1(0xFF);
+  session.write1(0xff);
+  session.write1(0xff);
 
   session.activeFreespaceContentStartPc = startPc + 8;
-}
-
+};
 
 /**
  * Sets default freespace fill byte.
@@ -68,8 +70,8 @@ export const handleFreespaceByte = (
     throw new Error("FREESPACEBYTE requires exactly one parameter.");
   }
   const value = session.resolvedefines(params[0]);
-  session.defaultFreespaceByte = operandResolver.getnum(value) & 0xFF;
-}
+  session.defaultFreespaceByte = operandResolver.getnum(value) & 0xff;
+};
 
 /**
  * Minimal PROT support used by active tests.
@@ -83,21 +85,25 @@ export const handleProt = ({ session }: MemoryDirectiveContext, words: string[])
     throw new Error("PROT command requires at least one label parameter.");
   }
 
-  const labels = labelList.join(" ").split(",").map((label) => label.trim()).filter(Boolean);
+  const labels = labelList
+    .join(" ")
+    .split(",")
+    .map((label) => label.trim())
+    .filter(Boolean);
   if (labels.length === 0) {
     throw new Error("PROT command requires at least one valid label.");
   }
 
   session.write1(0x50); // P
   session.write1(0x52); // R
-  session.write1(0x4F); // O
+  session.write1(0x4f); // O
   session.write1(0x54); // T
-  session.write1((labels.length * 3) & 0xFF);
+  session.write1((labels.length * 3) & 0xff);
 
   for (const label of labels) {
     let address = 0;
     try {
-      address = session.symbolScope.getLabelValue(label, false) & 0xFFFFFF;
+      address = session.symbolScope.getLabelValue(label, false) & 0xffffff;
     } catch (_error: unknown) {
       // Forward references are resolved in later passes; keep placeholder in early passes.
       address = 0;
@@ -107,10 +113,10 @@ export const handleProt = ({ session }: MemoryDirectiveContext, words: string[])
 
   session.write1(0x53); // S
   session.write1(0x54); // T
-  session.write1(0x4F); // O
+  session.write1(0x4f); // O
   session.write1(0x50); // P
   session.write1(0x00);
-}
+};
 
 export const registerMemoryDirectives = (
   registry: DirectiveRegistry,

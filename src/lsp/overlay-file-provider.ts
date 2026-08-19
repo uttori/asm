@@ -24,7 +24,10 @@ export class OverlayFileProvider implements AssemblyFileProvider {
    * @param {Map<string, string>} [overlay] Initial overlay contents keyed by absolute path.
    * @param {AssemblyFileProvider} [base] Backing provider for disk reads.
    */
-  constructor(overlay: Map<string, string> = new Map(), base: AssemblyFileProvider = new NodeAssemblyFileProvider()) {
+  constructor(
+    overlay: Map<string, string> = new Map(),
+    base: AssemblyFileProvider = new NodeAssemblyFileProvider(),
+  ) {
     this.overlay = overlay;
     this.base = base;
   }
@@ -135,7 +138,7 @@ export class OverlayFileProvider implements AssemblyFileProvider {
  */
 function stripWrappingQuotes(filename: string): string {
   if (
-    (filename.startsWith("\"") && filename.endsWith("\"")) ||
+    (filename.startsWith('"') && filename.endsWith('"')) ||
     (filename.startsWith("'") && filename.endsWith("'")) ||
     (filename.startsWith("`") && filename.endsWith("`"))
   ) {

@@ -1,23 +1,38 @@
 {
   "name": "snes-asm-vscode",
   "displayName": "SNES Assembly (snes-asm-js)",
-  "description": "Language support for SNES assembly powered by the snes-asm-js language server.",
   "version": "1.0.0",
-  "publisher": "matthewcallis",
-  "author": "Matthew Callis <matthew.callis@gmail.com>",
-  "license": "MIT",
   "private": true,
+  "description": "Language support for SNES assembly powered by the snes-asm-js language server.",
+  "categories": [
+    "Programming Languages"
+  ],
+  "license": "MIT",
+  "author": "Matthew Callis <matthew.callis@gmail.com>",
   "repository": {
     "type": "git",
     "url": "https://github.com/MatthewCallis/snes-asm-js.git",
     "directory": "editors/vscode"
   },
-  "engines": {
-    "vscode": "^1.91.0"
-  },
-  "categories": ["Programming Languages"],
+  "publisher": "matthewcallis",
   "main": "out/extension.js",
-  "activationEvents": ["onLanguage:snes-asm"],
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "fmt": "oxfmt --config ../../.oxfmtrc.json src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes/snes-asm.tmLanguage.json",
+    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes/snes-asm.tmLanguage.json",
+    "lint": "oxlint --config ../../.oxlintrc.json src",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json src --fix",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.91.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.28.2"
+  },
   "contributes": {
     "commands": [
       {
@@ -53,8 +68,17 @@
     "languages": [
       {
         "id": "snes-asm",
-        "aliases": ["SNES Assembly", "snes-asm"],
-        "extensions": [".asm", ".src", ".SRC", ".s", ".inc"],
+        "aliases": [
+          "SNES Assembly",
+          "snes-asm"
+        ],
+        "extensions": [
+          ".asm",
+          ".src",
+          ".SRC",
+          ".s",
+          ".inc"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -70,19 +94,29 @@
       "properties": {
         "snesAsm.entryPoints": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "description": "Project entry-point files (relative to the workspace root) analysed as include roots. When empty, each open file is treated as its own root."
         },
         "snesAsm.includePaths": {
           "type": "array",
-          "items": { "type": "string" },
-          "default": ["./"],
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "./"
+          ],
           "description": "Additional include search paths handed to the assembler."
         },
         "snesAsm.architecture": {
           "type": "string",
-          "enum": ["65816", "spc700", "superfx"],
+          "enum": [
+            "65816",
+            "spc700",
+            "superfx"
+          ],
           "default": "65816",
           "description": "Default CPU architecture used for hover, completion, and signature help."
         },
@@ -99,17 +133,8 @@
       }
     }
   },
-  "scripts": {
-    "build": "node esbuild.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "package": "vsce package --no-dependencies"
-  },
-  "dependencies": {
-    "vscode-languageclient": "^10.1.0"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.91.0",
-    "@vscode/vsce": "^3.2.0",
-    "esbuild": "^0.28.2"
+  "activationEvents": [],
+  "engines": {
+    "vscode": "^1.91.0"
   }
 }

@@ -13,7 +13,7 @@ export const removeInlineComment = (line: string): string => {
   let inQuote = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === "\"") {
+    if (ch === '"') {
       inQuote = !inQuote;
     } else if (!inQuote && ch === ";") {
       return line.substring(0, i).trim();
@@ -29,7 +29,10 @@ export const removeInlineComment = (line: string): string => {
  * @param {string} [commandBuffer] Existing continuation buffer.
  * @returns {PreprocessBlockCommandsResult} Parsed commands and next buffer value.
  */
-export const preprocessBlockCommands = (block: string, commandBuffer = ""): PreprocessBlockCommandsResult => {
+export const preprocessBlockCommands = (
+  block: string,
+  commandBuffer = "",
+): PreprocessBlockCommandsResult => {
   const lines = block.split("\n");
   const processedLines: string[] = [];
   let nextCommandBuffer = commandBuffer;
@@ -72,7 +75,10 @@ export const preprocessBlockCommands = (block: string, commandBuffer = ""): Prep
 export const splitInlineCommands = (commands: string[]): string[] => {
   const output: string[] = [];
   for (const command of commands) {
-    const split = command.split(/\s:\s/).map((entry) => entry.trim()).filter(Boolean);
+    const split = command
+      .split(/\s:\s/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
     if (split.length === 0) {
       continue;
     }
@@ -101,7 +107,7 @@ export const splitCommandIntoWords = (command: string): string[] => {
 
   for (let i = 0; i < command.trim().length; i++) {
     const char = command.trim()[i];
-    if ((char === "\"" || char === "'") && (i === 0 || command.trim()[i - 1] !== "\\")) {
+    if ((char === '"' || char === "'") && (i === 0 || command.trim()[i - 1] !== "\\")) {
       if (!inQuotes) {
         inQuotes = true;
         quoteChar = char;
@@ -144,7 +150,7 @@ export const splitRespectingFunctions = (input: string): string[] => {
 
   for (let i = 0; i < input.length; i++) {
     const char = input[i];
-    if ((char === "\"" || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
+    if ((char === '"' || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
       if (!inQuotes) {
         inQuotes = true;
         quoteChar = char;
@@ -183,7 +189,6 @@ export const getDefineVariable = (line: string): string | undefined => {
   return match ? match[1] : undefined;
 };
 
-
 /**
  * Checks whether a character can start a label identifier segment.
  * @param {string} char The single character to test.
@@ -201,7 +206,12 @@ export function isLabelIdentifierStart(char: string): boolean {
  */
 export function isLabelIdentifierPart(char: string): boolean {
   const code = char.charCodeAt(0);
-  return char === "_" || (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+  return (
+    char === "_" ||
+    (code >= 48 && code <= 57) ||
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122)
+  );
 }
 
 /**

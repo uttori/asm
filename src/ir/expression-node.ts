@@ -30,7 +30,7 @@ export type LiteralExpressionNode = ExpressionNodeBase & {
 export type StringExpressionNode = ExpressionNodeBase & {
   type: "string";
   value: string;
-  quote: "\"" | "'";
+  quote: '"' | "'";
 };
 
 export type DefineReferenceExpressionNode = ExpressionNodeBase & {
@@ -137,11 +137,14 @@ export function parseExpressionNode(input: string): ExpressionNode {
 
   const rangeIndex = findTopLevelRange(trimmed);
   if (rangeIndex !== -1) {
-    return attachRootSpan({
-      type: "range",
-      start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
-      end: parseExpressionNode(trimmed.slice(rangeIndex + 2)),
-    }, trimmed);
+    return attachRootSpan(
+      {
+        type: "range",
+        start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
+        end: parseExpressionNode(trimmed.slice(rangeIndex + 2)),
+      },
+      trimmed,
+    );
   }
 
   try {
@@ -227,7 +230,9 @@ export function renderReferenceExpressionNode(
     case "member":
       return `${renderReferenceExpressionNode(node.object, options)}.${node.property.name}`;
     case "index": {
-      const index = options.renderIndex ? options.renderIndex(node.index) : renderExpressionNode(node.index);
+      const index = options.renderIndex
+        ? options.renderIndex(node.index)
+        : renderExpressionNode(node.index);
       return `${renderReferenceExpressionNode(node.object, options)}[${index}]`;
     }
     default:
@@ -240,7 +245,9 @@ export function renderReferenceExpressionNode(
  * @param {string} input The source text to scan.
  * @returns {{ node: ReferenceExpressionNode; length: number } | undefined} The parsed node and consumed length.
  */
-export function parseLeadingReferenceExpression(input: string): { node: ReferenceExpressionNode; length: number } | undefined {
+export function parseLeadingReferenceExpression(
+  input: string,
+): { node: ReferenceExpressionNode; length: number } | undefined {
   const prefixLength = scanReferenceExpressionPrefix(input);
   if (prefixLength === 0) {
     return undefined;
@@ -274,8 +281,8 @@ function findTopLevelRange(input: string): number {
   let quote = "";
   for (let i = 0; i < input.length - 1; i++) {
     const char = input[i];
-    if ((char === "\"" || char === "'") && input[i - 1] !== "\\") {
-      quote = quote === char ? "" : (quote || char);
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
       continue;
     }
     if (quote) {
@@ -377,8 +384,8 @@ function findMatchingBracket(input: string, start: number): number {
   let quote = "";
   for (let index = start; index < input.length; index++) {
     const char = input[index];
-    if ((char === "\"" || char === "'") && input[index - 1] !== "\\") {
-      quote = quote === char ? "" : (quote || char);
+    if ((char === '"' || char === "'") && input[index - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
       continue;
     }
     if (quote) {
@@ -428,7 +435,7 @@ function skipWhitespace(input: string, index: number): number {
 type Token =
   | { type: "identifier"; value: string }
   | { type: "literal"; value: string }
-  | { type: "string"; value: string; quote: "\"" | "'" }
+  | { type: "string"; value: string; quote: '"' | "'" }
   | { type: "defineReference"; name?: string; content?: string; braced: boolean }
   | { type: "operator"; value: UnaryOperator | BinaryOperator }
   | { type: "lparen" }
@@ -528,15 +535,16 @@ function tokenizeExpression(input: string): Token[] {
       index++;
       continue;
     }
-    if (char === "\"" || char === "'") {
+    if (char === '"' || char === "'") {
       const { value, nextIndex, quote } = readQuotedString(input, index);
       tokens.push({ type: "string", value, quote });
       index = nextIndex;
       continue;
     }
 
-    const operator = (input.startsWith("<:", index) ? "<:" : undefined)
-      ?? binaryOperators.find((candidate) => input.startsWith(candidate, index));
+    const operator =
+      (input.startsWith("<:", index) ? "<:" : undefined) ??
+      binaryOperators.find((candidate) => input.startsWith(candidate, index));
     if (operator) {
       tokens.push({ type: "operator", value: operator });
       index += operator.length;
@@ -568,6 +576,7 @@ function tokenizeExpression(input: string): Token[] {
       continue;
     }
     if (/\d/.test(char)) {
+      // oxlint-disable-next-line security/detect-unsafe-regex -- The match is anchored at the lexer cursor.
       const match = input.slice(index).match(/^(?:0x[\da-f]+|-?\d+(?:\.\d+)?)/i);
       if (!match) {
         throw new Error("Invalid numeric literal");
@@ -595,8 +604,11 @@ function tokenizeExpression(input: string): Token[] {
  * @param {number} start The starting offset.
  * @returns {{ value: string; nextIndex: number; quote: "\"" | "'" }} The quoted string value and next index.
  */
-function readQuotedString(input: string, start: number): { value: string; nextIndex: number; quote: "\"" | "'" } {
-  const quote = input[start] as "\"" | "'";
+function readQuotedString(
+  input: string,
+  start: number,
+): { value: string; nextIndex: number; quote: '"' | "'" } {
+  const quote = input[start] as '"' | "'";
   let value = "";
   let index = start + 1;
   while (index < input.length) {
@@ -631,7 +643,10 @@ function readIdentifier(input: string, start: number): { value: string; nextInde
  * @param {number} start The starting offset.
  * @returns {{ token: Extract<Token, { type: "defineReference" }>; nextIndex: number }} The define reference token and next index.
  */
-function readDefineReference(input: string, start: number): { token: Extract<Token, { type: "defineReference" }>; nextIndex: number } {
+function readDefineReference(
+  input: string,
+  start: number,
+): { token: Extract<Token, { type: "defineReference" }>; nextIndex: number } {
   if (input[start + 1] === "{") {
     let index = start + 2;
     let braces = 1;

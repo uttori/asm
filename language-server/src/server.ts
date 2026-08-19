@@ -85,7 +85,10 @@ function scheduleReindex(): void {
 function publishAllDiagnostics(): void {
   for (const document of documents.all()) {
     const file = uriToPath(document.uri);
-    connection.sendDiagnostics({ uri: document.uri, diagnostics: diagnosticsFor(index, file) });
+    void connection.sendDiagnostics({
+      uri: document.uri,
+      diagnostics: diagnosticsFor(index, file),
+    });
   }
 }
 
@@ -199,8 +202,16 @@ connection.onExecuteCommand((params) => {
     return { ok: false, message: "No file provided to build." } satisfies BuildResult;
   }
   const file = uriOrPath.startsWith("file:") ? uriToPath(uriOrPath) : uriOrPath;
-  const outputPath = args[1] ? (args[1].startsWith("file:") ? uriToPath(args[1]) : args[1]) : defaultOutputPath(file);
-  const targetRomPath = args[2] ? (args[2].startsWith("file:") ? uriToPath(args[2]) : args[2]) : undefined;
+  const outputPath = args[1]
+    ? args[1].startsWith("file:")
+      ? uriToPath(args[1])
+      : args[1]
+    : defaultOutputPath(file);
+  const targetRomPath = args[2]
+    ? args[2].startsWith("file:")
+      ? uriToPath(args[2])
+      : args[2]
+    : undefined;
   return buildRom(file, outputPath, targetRomPath);
 });
 
@@ -225,14 +236,16 @@ connection.onInitialized(() => {
  */
 function applyInitializationOptions(params: InitializeParams): void {
   const options = (params.initializationOptions ?? {}) as Partial<ServerSettings>;
-  workspaceRoots = (params.workspaceFolders ?? [])
-    .map((folder) => uriToPath(folder.uri));
+  workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
   if (workspaceRoots.length === 0 && params.rootUri) {
     workspaceRoots = [uriToPath(params.rootUri)];
   }
   settings = {
     entryPoints: resolveConfiguredPaths(options.entryPoints ?? [], workspaceRoots),
-    includePaths: resolveConfiguredPaths(options.includePaths ?? defaultSettings.includePaths, workspaceRoots),
+    includePaths: resolveConfiguredPaths(
+      options.includePaths ?? defaultSettings.includePaths,
+      workspaceRoots,
+    ),
     architecture: options.architecture ?? defaultSettings.architecture,
   };
   index.configure(settings);
@@ -267,7 +280,7 @@ function resolveConfiguredPaths(values: string[], roots: string[]): string[] {
  */
 async function refreshConfiguration(): Promise<void> {
   try {
-    const config = await connection.workspace.getConfiguration("snesAsm");
+    const config: unknown = await connection.workspace.getConfiguration("snesAsm");
     applyConfiguration(config);
   } catch {
     // Configuration is optional; ignore failures and keep current settings.
@@ -326,7 +339,7 @@ connection.onDidChangeWatchedFiles(() => {
  */
 documents.onDidOpen((event) => {
   index.openDocument(uriToPath(event.document.uri), event.document.getText());
-  connection.sendDiagnostics({
+  void connection.sendDiagnostics({
     uri: event.document.uri,
     diagnostics: diagnosticsFor(index, uriToPath(event.document.uri)),
   });
@@ -347,7 +360,7 @@ documents.onDidChangeContent((event) => {
  */
 documents.onDidClose((event) => {
   index.closeDocument(uriToPath(event.document.uri));
-  connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
+  void connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook */
@@ -359,22 +372,34 @@ connection.onHover((params) => {
   if (!document) {
     return null;
   }
-  return hoverFor(index, uriToPath(params.textDocument.uri), params.position, document.getText(), settings.architecture);
+  return hoverFor(
+    index,
+    uriToPath(params.textDocument.uri),
+    params.position,
+    document.getText(),
+    settings.architecture,
+  );
 });
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#go-to-definition-request-leftwards_arrow_with_hook */
-connection.onDefinition((params) => definitionFor(index, uriToPath(params.textDocument.uri), params.position));
+connection.onDefinition((params) =>
+  definitionFor(index, uriToPath(params.textDocument.uri), params.position),
+);
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#find-references-request-leftwards_arrow_with_hook */
-connection.onReferences((params) => referencesFor(
-  index,
-  uriToPath(params.textDocument.uri),
-  params.position,
-  params.context.includeDeclaration,
-));
+connection.onReferences((params) =>
+  referencesFor(
+    index,
+    uriToPath(params.textDocument.uri),
+    params.position,
+    params.context.includeDeclaration,
+  ),
+);
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#document-symbols-request-leftwards_arrow_with_hook */
-connection.onDocumentSymbol((params) => documentSymbolsFor(index, uriToPath(params.textDocument.uri)));
+connection.onDocumentSymbol((params) =>
+  documentSymbolsFor(index, uriToPath(params.textDocument.uri)),
+);
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#workspace-symbols-request-leftwards_arrow_with_hook */
 connection.onWorkspaceSymbol((params): SymbolInformation[] => {
@@ -383,13 +408,15 @@ connection.onWorkspaceSymbol((params): SymbolInformation[] => {
   for (const file of index.getAnalyzedFiles()) {
     for (const symbol of documentSymbolsFor(index, file)) {
       if (!query || symbol.name.toLowerCase().includes(query)) {
-        results.push(SymbolInformation.create(
-          symbol.name,
-          symbol.kind,
-          symbol.selectionRange,
-          pathToUri(file),
-          symbol.detail,
-        ));
+        results.push(
+          SymbolInformation.create(
+            symbol.name,
+            symbol.kind,
+            symbol.selectionRange,
+            pathToUri(file),
+            symbol.detail,
+          ),
+        );
       }
     }
   }
@@ -408,18 +435,19 @@ connection.onSignatureHelp((params) => {
 });
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#prepare-rename-request-leftwards_arrow_with_hook */
-connection.onPrepareRename((params) => prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position));
+connection.onPrepareRename((params) =>
+  prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position),
+);
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#rename-request-leftwards_arrow_with_hook */
-connection.onRenameRequest((params) => renameEditsFor(
-  index,
-  uriToPath(params.textDocument.uri),
-  params.position,
-  params.newName,
-));
+connection.onRenameRequest((params) =>
+  renameEditsFor(index, uriToPath(params.textDocument.uri), params.position, params.newName),
+);
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook */
-connection.languages.semanticTokens.on((params) => semanticTokensFor(index, uriToPath(params.textDocument.uri)));
+connection.languages.semanticTokens.on((params) =>
+  semanticTokensFor(index, uriToPath(params.textDocument.uri)),
+);
 
 /**
  * Connects the text-document manager to the negotiated synchronization stream.

@@ -13,6 +13,7 @@ export class DefineEngine {
   constructor(readonly host: DefineHost) {}
 
   isPureMathExpression(value: string): boolean {
+    // oxlint-disable-next-line security/detect-unsafe-regex -- Anchors bound the complete token grammar.
     return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|\-]|\s)+$/.test(value);
   }
 
@@ -179,11 +180,19 @@ export class DefineEngine {
     const braceContent = content.substring(lastOpenBracePos + 2, closingBracePos);
     if (braceContent.includes("!{")) {
       const resolvedInnerContent = this.resolveOneLevelOfDefines(braceContent);
-      return content.substring(0, lastOpenBracePos + 2) + resolvedInnerContent + content.substring(closingBracePos);
+      return (
+        content.substring(0, lastOpenBracePos + 2) +
+        resolvedInnerContent +
+        content.substring(closingBracePos)
+      );
     }
 
-    const replacement = this.host.defines.has(braceContent) ? this.host.defines.get(braceContent) ?? braceContent : braceContent;
-    return content.substring(0, lastOpenBracePos) + replacement + content.substring(closingBracePos + 1);
+    const replacement = this.host.defines.has(braceContent)
+      ? (this.host.defines.get(braceContent) ?? braceContent)
+      : braceContent;
+    return (
+      content.substring(0, lastOpenBracePos) + replacement + content.substring(closingBracePos + 1)
+    );
   }
 
   /**
@@ -197,7 +206,11 @@ export class DefineEngine {
     let foundDefine = false;
 
     while (index < content.length) {
-      if (content.substring(index).startsWith("!") && index + 1 < content.length && /\w/.test(content[index + 1])) {
+      if (
+        content.substring(index).startsWith("!") &&
+        index + 1 < content.length &&
+        /\w/.test(content[index + 1])
+      ) {
         index++;
         let defineName = "";
 
@@ -361,9 +374,16 @@ export class DefineEngine {
 
     if (
       operator !== "#=" &&
-      (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") ||
-        value.includes("&") || value.includes("|") || value.includes("^") ||
-        value.includes("<<") || value.includes(">>") || value.includes("("))
+      (value.includes("+") ||
+        value.includes("-") ||
+        value.includes("*") ||
+        value.includes("/") ||
+        value.includes("&") ||
+        value.includes("|") ||
+        value.includes("^") ||
+        value.includes("<<") ||
+        value.includes(">>") ||
+        value.includes("("))
     ) {
       try {
         const resolvedValue = this.host.resolvedefines(value);
@@ -393,7 +413,7 @@ export class DefineEngine {
     }
 
     const raw = match[1].trim();
-    const unquoted = raw.startsWith("\"") && raw.endsWith("\"") ? raw.slice(1, -1) : raw;
+    const unquoted = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
     const identifier = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
 
     if (!identifier) {

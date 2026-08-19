@@ -71,7 +71,9 @@ export class DirectiveRuntimeService {
    * @returns {number[]} An array of numbers representing the mapped characters.
    */
   processStringWithMapping(input: string): number[] {
-    return Array.from(input).map(char => this.host.characterMappings.get(char) ?? char.charCodeAt(0));
+    return Array.from(input).map(
+      (char) => this.host.characterMappings.get(char) ?? char.charCodeAt(0),
+    );
   }
 
   /**
@@ -90,7 +92,7 @@ export class DirectiveRuntimeService {
     }
 
     const destination = this.host.operandResolver.getnum(this.host.resolvedefines(words[1]));
-    if ((destination & ~0xFFFF) !== 0) {
+    if ((destination & ~0xffff) !== 0) {
       throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
     }
 
@@ -155,13 +157,16 @@ export class DirectiveRuntimeService {
     if (this.host.canFinalize) {
       // The final pass knows the emitted SPC payload size, so patch the
       // placeholder written by `spcblock`.
-      const sizePc = this.host.romWriter.convertTargetAddressToRomOffset(this.host.spcblockData.sizeAddress & 0xFFFFFF);
+      const sizePc = this.host.romWriter.convertTargetAddressToRomOffset(
+        this.host.spcblockData.sizeAddress & 0xffffff,
+      );
       if (sizePc < 0) {
         throw new Error("spcblock size address does not map to ROM.");
       }
-      const blockSize = (this.host.currentTargetAddress - this.host.spcblockData.destination) & 0xFFFF;
-      this.host.writeDataBytes(sizePc, blockSize & 0xFF, 1);
-      this.host.writeDataBytes(sizePc + 1, (blockSize >> 8) & 0xFF, 1);
+      const blockSize =
+        (this.host.currentTargetAddress - this.host.spcblockData.destination) & 0xffff;
+      this.host.writeDataBytes(sizePc, blockSize & 0xff, 1);
+      this.host.writeDataBytes(sizePc + 1, (blockSize >> 8) & 0xff, 1);
     }
 
     if (words.length === 3) {
@@ -171,12 +176,14 @@ export class DirectiveRuntimeService {
         throw new Error(`Invalid endspcblock argument: ${words[1]}`);
       }
       this.host.write2(0x0000);
-      this.host.write2(this.host.operandResolver.getnum(this.host.resolvedefines(words[2])) & 0xFFFF);
+      this.host.write2(
+        this.host.operandResolver.getnum(this.host.resolvedefines(words[2])) & 0xffff,
+      );
     } else if (words.length !== 1) {
       throw new Error("Unknown endspcblock format.");
     } else if (this.host.spcblockData.executeAddress !== null) {
       this.host.write2(0x0000);
-      this.host.write2(this.host.spcblockData.executeAddress & 0xFFFF);
+      this.host.write2(this.host.spcblockData.executeAddress & 0xffff);
     }
 
     this.host.currentNamespace = this.host.spcblockData.namespaceBackup;
@@ -197,7 +204,7 @@ export class DirectiveRuntimeService {
     const addr = addressStr.startsWith("$")
       ? parseInt(addressStr.substring(1), 16)
       : parseInt(addressStr, 10);
-    if (Number.isNaN(addr) || addr < 0 || addr > 0xFFFFFF) {
+    if (Number.isNaN(addr) || addr < 0 || addr > 0xffffff) {
       throw new Error(`Invalid ORG address: ${params[0]}`);
     }
 
@@ -245,7 +252,7 @@ export class DirectiveRuntimeService {
     const pendingValues = splitRespectingFunctions(params.join(" "));
     while (pendingValues.length > 0) {
       let value = (pendingValues.shift() ?? "").trim();
-      if (value.startsWith("\"") || value.startsWith("'")) {
+      if (value.startsWith('"') || value.startsWith("'")) {
         // String literals go through define expansion first, then through the
         // active character mapping table one character at a time.
         const unquoted = value.slice(1, -1);
@@ -299,7 +306,7 @@ export class DirectiveRuntimeService {
       this.writeDataByLength(len, num);
     }
 
-    this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xFFFFFF);
+    this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xffffff);
   }
 
   /**
@@ -341,7 +348,7 @@ export class DirectiveRuntimeService {
         continue;
       }
 
-      if (value.startsWith("\"") || value.startsWith("'")) {
+      if (value.startsWith('"') || value.startsWith("'")) {
         const unquoted = value.slice(1, -1);
         try {
           // Pass 0 needs byte counts, not final values. If defines in a string
@@ -381,7 +388,7 @@ export class DirectiveRuntimeService {
     }
 
     this.host.step(estimatedItems * len);
-    this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xFFFFFF);
+    this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xffffff);
   }
 
   /**

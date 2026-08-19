@@ -27,9 +27,10 @@ export const handlePullNamespace = ({ session }: NamespaceDirectiveContext): voi
     // Restore the nesting path first
     const pathJson = session.namespaceStack.pop();
     const parsedPath: unknown = JSON.parse(pathJson ?? "[]");
-    session.namespaceNestingPath = Array.isArray(parsedPath) && parsedPath.every((entry) => typeof entry === "string")
-      ? parsedPath
-      : [];
+    session.namespaceNestingPath =
+      Array.isArray(parsedPath) && parsedPath.every((entry) => typeof entry === "string")
+        ? parsedPath
+        : [];
   }
   session.currentNamespace = session.namespaceStack.pop() ?? "";
 };
@@ -51,7 +52,7 @@ export const handleNamespace = ({ session }: NamespaceDirectiveContext, words: s
   const params = words.slice(1);
   // debug("handleNamespace", params);
 
-// Handle namespace nesting directive
+  // Handle namespace nesting directive
   if (params.length >= 2 && params[0].toLowerCase() === "nested") {
     const action = params[1].toLowerCase();
     if (action === "on") {

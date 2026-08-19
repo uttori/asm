@@ -1,9 +1,12 @@
-/* eslint-disable jsdoc/no-undefined-types */
 import { Arch65816 } from "./Arch65816.js";
-import { ArchSPC700 } from "./ArchSPC700.js"
+import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
-import type { ArchitectureEncoderContext, ExpressionHost, LoweredInstruction } from "./architecture-types.js";
+import type {
+  ArchitectureEncoderContext,
+  ExpressionHost,
+  LoweredInstruction,
+} from "./architecture-types.js";
 import {
   calculateHeaderChecksum,
   getChecksumHeaderOffset,
@@ -11,7 +14,11 @@ import {
 } from "./compatibility/asar-compatibility-profile.js";
 
 import { AddressToLineMapping } from "./addressToLine.js";
-import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
+import type {
+  AssemblerTraceCommandEvent,
+  AssemblerTraceListener,
+  AssemblerTraceWriteEvent,
+} from "./debug-tracing.js";
 import {
   type AssemblyAnalysisResult,
   type AssemblyDiagnostic,
@@ -38,15 +45,27 @@ import {
   type ExpressionNode,
   type ReferenceExpressionNode,
 } from "./ir/expression-node.js";
-import { cloneNormalizedCommand, setCommandKind, setCommandWords, type NormalizedCommand } from "./ir/normalized-command.js";
+import {
+  cloneNormalizedCommand,
+  setCommandKind,
+  setCommandWords,
+  type NormalizedCommand,
+} from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
-import { createArchitectureRegistry, type ArchitectureDefinition, type ArchitectureRegistry } from "./architecture-registry.js";
+import {
+  createArchitectureRegistry,
+  type ArchitectureDefinition,
+  type ArchitectureRegistry,
+} from "./architecture-registry.js";
 import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
-import { AssemblyFrontEndService, type AssemblyFrontEndHost } from "./services/assembly-front-end-service.js";
+import {
+  AssemblyFrontEndService,
+  type AssemblyFrontEndHost,
+} from "./services/assembly-front-end-service.js";
 import {
   CommandLoweringService,
   type LoweredCommand,
@@ -78,7 +97,10 @@ import { incrementInternalCounter, measureInternalPhase } from "./internal-instr
 let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
 // if (process.env.UTTORI_DATA_DEBUG || true) {
-try { const { default: d } = await import("debug"); debug = d("Assembler"); } catch {}
+try {
+  const { default: d } = await import("debug");
+  debug = d("Assembler");
+} catch {}
 // }
 
 /** Represents a macro definition. */
@@ -212,7 +234,7 @@ export type PushPcStackEntry = {
   currentTargetStartAddress: number;
   currentTargetBaseAddress: number;
   currentTargetBaseStartAddress: number;
-}
+};
 
 export type SpcblockType = "nspc" | "custom";
 
@@ -312,14 +334,14 @@ export class Assembler {
   public backwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
 
   public padUnit: number = 1;
-  public padbyte: number[] = []
+  public padbyte: number[] = [];
 
   public structs: Map<string, StructDefinition> = new Map();
   public currentStruct: StructDefinition | null = null;
   public savedPCStack: number[] = [];
 
   /** Initialize fill pattern */
-  public fillbyte: number[] = [0,0,0,0, 0,0,0,0, 0,0,0,0];
+  public fillbyte: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   public targetRom: Uint8Array;
 
@@ -333,10 +355,10 @@ export class Assembler {
   public macroLabelInstance: number = 0; // Tracks the current macro instance
   public inMacroExpansion: boolean = false; // Flag to track if we're inside a macro expansion
 
-  public currentParentLabel: string = "";  // Track the most recent parent label
-  public currentParentIsGlobal: boolean = false;  // Track if the parent label is global
-  public currentGlobalParentLabel: string = "";  // Track the active top-level parent for single-dot labels
-  public labelParents: Map<string, string | null> = new Map();  // Track explicit label ancestry without relying on underscores
+  public currentParentLabel: string = ""; // Track the most recent parent label
+  public currentParentIsGlobal: boolean = false; // Track if the parent label is global
+  public currentGlobalParentLabel: string = ""; // Track the active top-level parent for single-dot labels
+  public labelParents: Map<string, string | null> = new Map(); // Track explicit label ancestry without relying on underscores
 
   public inSpcblock: boolean = false;
   public spcblockData: SpcblockData | null = null;
@@ -400,7 +422,7 @@ export class Assembler {
   }
 
   recordCurrentAddress(): void {
-    this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
+    this.addAddressToLine(this.currentTargetBaseAddress & 0xffffff);
   }
 
   setWritePosition(address: number): void {
@@ -502,9 +524,9 @@ export class Assembler {
     if (!fromFile || !toFile) {
       return;
     }
-    const duplicate = this.includeEdges.some((edge) => (
-      edge.fromFile === fromFile && edge.toFile === toFile
-    ));
+    const duplicate = this.includeEdges.some(
+      (edge) => edge.fromFile === fromFile && edge.toFile === toFile,
+    );
     if (duplicate) {
       return;
     }
@@ -535,7 +557,11 @@ export class Assembler {
    * @param {string} [stage] Optional stage name.
    * @returns {AssemblyDiagnostic} The recorded diagnostic.
    */
-  reportErrorDiagnostic(error: unknown, span?: SourceSpan, stage?: AssemblyStageName): AssemblyDiagnostic {
+  reportErrorDiagnostic(
+    error: unknown,
+    span?: SourceSpan,
+    stage?: AssemblyStageName,
+  ): AssemblyDiagnostic {
     const diagnostic = diagnosticFromError(error, this.getCurrentSourceLocation(span), stage);
     this.reportDiagnostic(diagnostic);
     return diagnostic;
@@ -555,17 +581,24 @@ export class Assembler {
   recordSymbolDefinition(
     kind: AssemblySymbolKind,
     name: string,
-    options: { file?: string; line?: number; span?: SourceSpan; value?: number | string; containerName?: string } = {},
+    options: {
+      file?: string;
+      line?: number;
+      span?: SourceSpan;
+      value?: number | string;
+      containerName?: string;
+    } = {},
   ): void {
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolDefinitions.some((entry) => (
-      entry.kind === kind &&
-      entry.name === name &&
-      entry.location.file === file &&
-      entry.location.line === line &&
-      entry.containerName === options.containerName
-    ));
+    const duplicate = this.symbolDefinitions.some(
+      (entry) =>
+        entry.kind === kind &&
+        entry.name === name &&
+        entry.location.file === file &&
+        entry.location.line === line &&
+        entry.containerName === options.containerName,
+    );
     if (duplicate) {
       return;
     }
@@ -596,13 +629,14 @@ export class Assembler {
   ): void {
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolReferences.some((entry) => (
-      entry.kind === kind &&
-      entry.name === name &&
-      entry.location.file === file &&
-      entry.location.line === line &&
-      entry.containerName === options.containerName
-    ));
+    const duplicate = this.symbolReferences.some(
+      (entry) =>
+        entry.kind === kind &&
+        entry.name === name &&
+        entry.location.file === file &&
+        entry.location.line === line &&
+        entry.containerName === options.containerName,
+    );
     if (duplicate) {
       return;
     }
@@ -615,7 +649,10 @@ export class Assembler {
     });
   }
 
-  collectExpressionReferences(expression: ExpressionNode | undefined, fallbackSpan?: SourceSpan): void {
+  collectExpressionReferences(
+    expression: ExpressionNode | undefined,
+    fallbackSpan?: SourceSpan,
+  ): void {
     if (!expression) {
       return;
     }
@@ -623,9 +660,13 @@ export class Assembler {
     switch (expression.type) {
       case "defineReference":
         if (expression.name || expression.content) {
-          this.recordSymbolReference("define", expression.braced ? (expression.content ?? "") : (expression.name ?? ""), {
-            span: expression.span ?? fallbackSpan,
-          });
+          this.recordSymbolReference(
+            "define",
+            expression.braced ? (expression.content ?? "") : (expression.name ?? ""),
+            {
+              span: expression.span ?? fallbackSpan,
+            },
+          );
         }
         return;
       case "identifier":
@@ -689,9 +730,13 @@ export class Assembler {
     }
 
     if (parsed.includeTarget?.target) {
-      this.recordSymbolReference("include", parsed.includeTarget.target.replace(/^["'`](.*)["'`]$/, "$1"), {
-        span: command.source.tokenSpans[1] ?? fallbackSpan,
-      });
+      this.recordSymbolReference(
+        "include",
+        parsed.includeTarget.target.replace(/^["'`](.*)["'`]$/, "$1"),
+        {
+          span: command.source.tokenSpans[1] ?? fallbackSpan,
+        },
+      );
     }
 
     if (parsed.opcodeOperands?.mnemonic) {
@@ -805,7 +850,11 @@ export class Assembler {
    * @param {number} [startLine] Optional starting line number.
    * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
    */
-  analyzeSource(source: string, sourceFile = this.currentFile, startLine = 0): AssemblyAnalysisResult & { program: ProgramModel } {
+  analyzeSource(
+    source: string,
+    sourceFile = this.currentFile,
+    startLine = 0,
+  ): AssemblyAnalysisResult & { program: ProgramModel } {
     const session = this.createToolingSession();
     const program = session.buildProgramModel(source, sourceFile, startLine);
     return {
@@ -814,15 +863,26 @@ export class Assembler {
     };
   }
 
-  analyzeDocument(source: string, sourceFile = this.currentFile, startLine = 0): AssemblyAnalysisResult & { program: ProgramModel } {
+  analyzeDocument(
+    source: string,
+    sourceFile = this.currentFile,
+    startLine = 0,
+  ): AssemblyAnalysisResult & { program: ProgramModel } {
     return this.analyzeSource(source, sourceFile, startLine);
   }
 
-  analyzeWorkspace(documents: Array<{ source: string; sourceFile: string; startLine?: number }>): Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> {
-    const results: Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> = [];
+  analyzeWorkspace(
+    documents: Array<{ source: string; sourceFile: string; startLine?: number }>,
+  ): Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> {
+    const results: Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> =
+      [];
     for (const document of documents) {
       const session = this.createToolingSession();
-      const program = session.buildProgramModel(document.source, document.sourceFile, document.startLine ?? 0);
+      const program = session.buildProgramModel(
+        document.source,
+        document.sourceFile,
+        document.startLine ?? 0,
+      );
       const result = session.collectProgramAnalysis(program);
       results.push({
         sourceFile: document.sourceFile,
@@ -880,7 +940,10 @@ export class Assembler {
     };
   }
 
-  constructor(targetRom?: number[] | Uint8Array, options: { fileProvider?: AssemblyFileProvider } = {}) {
+  constructor(
+    targetRom?: number[] | Uint8Array,
+    options: { fileProvider?: AssemblyFileProvider } = {},
+  ) {
     this.targetRom = targetRom ? Uint8Array.from(targetRom) : new Uint8Array();
     this.fileProvider = options.fileProvider ?? createNodeAssemblyFileProvider();
     this.cursorAddress = this.createCursorAddressFacade();
@@ -889,7 +952,8 @@ export class Assembler {
     this.services = this.createServices();
     const frontEndHost = {
       passProgramCache: this.passProgramCache,
-      resolveVariadicPlaceholders: (command: string) => this.macroEngine.resolveVariadicPlaceholders(command),
+      resolveVariadicPlaceholders: (command: string) =>
+        this.macroEngine.resolveVariadicPlaceholders(command),
       shouldEndifCloseInnermostWhile: (
         loopType?: "for" | "while",
         loopStartLine?: number,
@@ -911,7 +975,8 @@ export class Assembler {
       resolveLabel: (input, requireStatic) => this.symbolScope.getLabelValue(input, requireStatic),
       hasLabel: (input) => this.symbolScope.hasLabelInScope(input),
       evaluateMath: (input) => this.mathCore.math(input),
-      shouldDeferExpressionEvaluation: () => !this.getActiveStageCapabilities().enforceResolvedLabels,
+      shouldDeferExpressionEvaluation: () =>
+        !this.getActiveStageCapabilities().enforceResolvedLabels,
       getCurrentAddress: () => this.currentTargetAddress,
       requireStaticLabelLookup: () => this.requireStaticLabelLookup,
     });
@@ -928,8 +993,10 @@ export class Assembler {
       },
       branches: {
         enforceResolvedLabels: () => this.enforceResolvedLabels,
-        findNextLabel: (label, referenceAddress) => this.symbolScope.findNextLabel(label, referenceAddress),
-        findPreviousLabel: (label, referenceAddress) => this.symbolScope.findPreviousLabel(label, referenceAddress),
+        findNextLabel: (label, referenceAddress) =>
+          this.symbolScope.findNextLabel(label, referenceAddress),
+        findPreviousLabel: (label, referenceAddress) =>
+          this.symbolScope.findPreviousLabel(label, referenceAddress),
       },
       diagnostics: {
         error: (message) => new Error(message),
@@ -972,10 +1039,22 @@ export class Assembler {
   canReadByteRange(sourceLength: number, position: number, size: number): number {
     const pos = Math.trunc(position);
     const num = Math.trunc(size);
-    return (Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength) ? 1 : 0;
+    return Number.isInteger(pos) &&
+      Number.isInteger(num) &&
+      pos >= 0 &&
+      num >= 0 &&
+      pos + num <= sourceLength
+      ? 1
+      : 0;
   }
 
-  readByteRange(source: Uint8Array, position: number, size: number, defaultValue: number | undefined, errorMessage: string): number {
+  readByteRange(
+    source: Uint8Array,
+    position: number,
+    size: number,
+    defaultValue: number | undefined,
+    errorMessage: string,
+  ): number {
     const pos = Math.trunc(position);
     const num = Math.trunc(size);
     const value = this.readLittleEndian(source, pos, num);
@@ -1014,7 +1093,7 @@ export class Assembler {
       }
       return 0;
     }
-    return this.symbolScope.getObjectSize(identifier, baseOnly)
+    return this.symbolScope.getObjectSize(identifier, baseOnly);
   }
 
   lookupDefineValue(varName: string): string | undefined {
@@ -1041,17 +1120,20 @@ export class Assembler {
   }
 
   canReadTargetRom(position: number, size: number): number {
-    const sourceLength = (this.targetRom && this.targetRom.length > 0) ? this.targetRom.length : this.romdata.length;
+    const sourceLength =
+      this.targetRom && this.targetRom.length > 0 ? this.targetRom.length : this.romdata.length;
     return this.canReadByteRange(sourceLength, position, size);
   }
 
   readTargetRom(position: number, size: number, defaultValue?: number): number {
     const pos = Math.trunc(position);
     if (!this.readFunctionsEnabled && defaultValue === undefined) {
-      throw new Error(`Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`);
+      throw new Error(
+        `Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`,
+      );
     }
     const pcPos = this.romWriter.convertTargetAddressToRomOffset(pos);
-    const source = (this.targetRom && this.targetRom.length > 0) ? this.targetRom : this.romdata;
+    const source = this.targetRom && this.targetRom.length > 0 ? this.targetRom : this.romdata;
     if (pcPos < 0) {
       if (defaultValue !== undefined) {
         return defaultValue;
@@ -1059,7 +1141,13 @@ export class Assembler {
       throw new Error(`read${Math.trunc(size)} out of bounds at ${pos}`);
     }
     const romBytes = Uint8Array.from(source);
-    return this.readByteRange(romBytes, pcPos, size, defaultValue, `read${Math.trunc(size)} out of bounds at ${pos}`);
+    return this.readByteRange(
+      romBytes,
+      pcPos,
+      size,
+      defaultValue,
+      `read${Math.trunc(size)} out of bounds at ${pos}`,
+    );
   }
 
   canReadExpressionFile(filename: string, position: number, size: number): number {
@@ -1074,7 +1162,12 @@ export class Assembler {
     return this.canReadByteRange(fileSize, position, size);
   }
 
-  readExpressionFile(filename: string, position: number, size: number, defaultValue?: number): number {
+  readExpressionFile(
+    filename: string,
+    position: number,
+    size: number,
+    defaultValue?: number,
+  ): number {
     const pos = Math.trunc(position);
     const resolvedPath = this.resolveReadablePath(filename);
     if (!resolvedPath) {
@@ -1084,7 +1177,13 @@ export class Assembler {
       throw new Error(`Could not read file: ${filename}`);
     }
     const fileBytes = this.fileProvider.readFile(resolvedPath);
-    return this.readByteRange(fileBytes, pos, size, defaultValue, `readfile${Math.trunc(size)} out of bounds at ${pos}`);
+    return this.readByteRange(
+      fileBytes,
+      pos,
+      size,
+      defaultValue,
+      `readfile${Math.trunc(size)} out of bounds at ${pos}`,
+    );
   }
 
   readonly expressionHost: ExpressionHost = {
@@ -1098,7 +1197,8 @@ export class Assembler {
       if (this.structs.has(identifier)) return 1;
       return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
     },
-    getExpressionObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
+    getExpressionObjectSize: (identifier, baseOnly) =>
+      this.getExpressionObjectSize(identifier, baseOnly),
     getFileSize: (filename) => {
       const resolvedPath = this.resolveReadablePath(filename);
       if (!resolvedPath) {
@@ -1118,7 +1218,8 @@ export class Assembler {
       return this.fileProvider.stat(resolvedPath).readable ? 0 : 2;
     },
     canReadFile: (filename, position, size) => this.canReadExpressionFile(filename, position, size),
-    readFile: (filename, position, size, defaultValue) => this.readExpressionFile(filename, position, size, defaultValue),
+    readFile: (filename, position, size, defaultValue) =>
+      this.readExpressionFile(filename, position, size, defaultValue),
     canReadRom: (position, size) => this.canReadTargetRom(position, size),
     readRom: (position, size, defaultValue) => this.readTargetRom(position, size, defaultValue),
   };
@@ -1148,7 +1249,7 @@ export class Assembler {
   fillRomData(start: number, value: number, length: number): void {
     debug("fillRomData", start, value, length);
     for (let i = 0; i < length; i++) {
-      this.romdata[start + i] = value & 0xFF;
+      this.romdata[start + i] = value & 0xff;
     }
   }
 
@@ -1203,7 +1304,8 @@ export class Assembler {
 
   getActiveStageCapabilities(): StageExecutionCapabilities {
     if (!this.activeStageExecutionState) {
-      this.activeStageExecutionState = this.createEphemeralStageExecutionState("collectDefinitions");
+      this.activeStageExecutionState =
+        this.createEphemeralStageExecutionState("collectDefinitions");
     }
     return this.activeStageExecutionState.capabilities;
   }
@@ -1223,7 +1325,8 @@ export class Assembler {
     }
     const size = Array.isArray(input)
       ? architecture.definition.encoder.estimateSize(words)
-      : (architecture.definition.encoder.estimateInstruction?.(input) ?? architecture.definition.encoder.estimateSize(words));
+      : (architecture.definition.encoder.estimateInstruction?.(input) ??
+        architecture.definition.encoder.estimateSize(words));
     this.step(size);
     return true;
   }
@@ -1239,7 +1342,8 @@ export class Assembler {
     }
     const encoded = Array.isArray(input)
       ? architecture.definition.encoder.encode(words)
-      : (architecture.definition.encoder.encodeInstruction?.(input) ?? architecture.definition.encoder.encode(words));
+      : (architecture.definition.encoder.encodeInstruction?.(input) ??
+        architecture.definition.encoder.encode(words));
     if (!encoded) {
       if (architecture.definition.unknownInstructionBehavior === "returnFalse") {
         return false;
@@ -1390,12 +1494,26 @@ export class Assembler {
     return this.macroEngine.rewriteMacroLabelReferences(command);
   }
 
-  createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty: boolean = false): NormalizedCommand | null {
-    return this.frontEndService.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty);
+  createNormalizedCommandFromRaw(
+    command: string,
+    sourceFile: string,
+    sourceLine: number,
+    allowEmpty: boolean = false,
+  ): NormalizedCommand | null {
+    return this.frontEndService.createNormalizedCommandFromRaw(
+      command,
+      sourceFile,
+      sourceLine,
+      allowEmpty,
+    );
   }
 
   preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
-    if (state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
+    if (
+      state.words.length === 3 &&
+      state.words[1] === "=" &&
+      (state.words[0].startsWith("'") || state.words[0].startsWith('"'))
+    ) {
       setCommandKind(state, "characterMapping");
       debug("handleCharacterMapping", state.words);
       this.directiveRuntime.handleCharacterMapping(state.words);
@@ -1458,7 +1576,14 @@ export class Assembler {
    * @param {string} command - The command to process.
    */
   processCommand(command: string): void {
-    debug("processCommand", { command }, this.currentTargetAddress, "/", this.currentTargetAddress.toString(16), `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`);
+    debug(
+      "processCommand",
+      { command },
+      this.currentTargetAddress,
+      "/",
+      this.currentTargetAddress.toString(16),
+      `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`,
+    );
     if (command.trim() === "") {
       return;
     }
@@ -1501,9 +1626,10 @@ export class Assembler {
 
     if (rewriteRaw) {
       const rewrittenRaw = this.rewriteRawCommand(workingState.source.raw);
-      const requiresVariadicResolution = this.inMacroExpansion
-        && !this.isDefinitionCollectionStage
-        && (rewrittenRaw.includes("...") || rewrittenRaw.includes("…"));
+      const requiresVariadicResolution =
+        this.inMacroExpansion &&
+        !this.isDefinitionCollectionStage &&
+        (rewrittenRaw.includes("...") || rewrittenRaw.includes("…"));
       if (rewrittenRaw !== workingState.source.raw || requiresVariadicResolution) {
         incrementInternalCounter("actualReparses");
         const rewrittenState = this.createNormalizedCommandFromRaw(
@@ -1525,7 +1651,7 @@ export class Assembler {
     }
 
     // Capture the starting PC (before processing this command)
-    const startPC = this.currentTargetBaseAddress & 0xFFFFFF;
+    const startPC = this.currentTargetBaseAddress & 0xffffff;
 
     if (!this.prepareNormalizedCommandForDispatch(workingState)) {
       return;
@@ -1560,10 +1686,10 @@ export class Assembler {
     }
 
     // Determine how many bytes were written in this command.
-    const commandSize = (this.currentTargetBaseAddress & 0xFFFFFF) - startPC;
-    debug("processCommand bytes written", commandSize)
+    const commandSize = (this.currentTargetBaseAddress & 0xffffff) - startPC;
+    debug("processCommand bytes written", commandSize);
 
-    const endPC = this.currentTargetBaseAddress & 0xFFFFFF;
+    const endPC = this.currentTargetBaseAddress & 0xffffff;
     this.traceListener?.({
       type: "command-end",
       stage: this.traceStage,
@@ -1576,10 +1702,13 @@ export class Assembler {
       bytesWritten: commandSize,
     });
 
-    this.addAddressToLine(this.currentTargetBaseAddress & 0xFFFFFF);
+    this.addAddressToLine(this.currentTargetBaseAddress & 0xffffff);
   }
 
-  getOrCreateLoweredProgram(stageState: StageExecutionState, program: ProgramModel): LoweredProgram {
+  getOrCreateLoweredProgram(
+    stageState: StageExecutionState,
+    program: ProgramModel,
+  ): LoweredProgram {
     if (!stageState.loweredProgram) {
       stageState.loweredProgram = this.commandLoweringService.lowerProgram(program);
     }
@@ -1621,7 +1750,7 @@ export class Assembler {
    * @param {string} defLine - The function definition line.
    */
   parseFunctionDefinition(defLine: string): void {
-    debug("parseFunctionDefinition", defLine)
+    debug("parseFunctionDefinition", defLine);
     // Set the string to parse in mathCore
     this.mathCore.str = defLine;
     // Call the parseFunctionDefinition method without arguments
@@ -1646,7 +1775,7 @@ export class Assembler {
    * @returns {number} The result of the expression.
    */
   evaluateRangeExpression(expr: string | ExpressionNode): number {
-    debug("assemlber evaluateRangeExpression", expr)
+    debug("assemlber evaluateRangeExpression", expr);
     const resolvedExpr = this.resolveExpressionInput(expr);
     if (isReferenceExpressionNode(resolvedExpr)) {
       return this.evaluateReferenceExpressionNode(resolvedExpr, true);
@@ -1680,24 +1809,27 @@ export class Assembler {
    * @returns {boolean} True if the expression is true, false otherwise.
    */
   evaluateExpression(expression: string | ExpressionNode): boolean {
-    debug("evaluateExpression", expression)
+    debug("evaluateExpression", expression);
     let resolvedExpr: ExpressionNode | undefined;
     let result: number;
     try {
       // Resolve inside the guarded block so failures from define/label/static checks
       // are reported with the same contextual wrapper as math failures.
       resolvedExpr = this.resolveExpressionInput(expression);
-      debug("evaluateExpression resolvedExpr", resolvedExpr)
+      debug("evaluateExpression resolvedExpr", resolvedExpr);
       result = isReferenceExpressionNode(resolvedExpr)
         ? this.evaluateReferenceExpressionNode(resolvedExpr)
         : this.mathCore.math(resolvedExpr);
     } catch (e: unknown) {
-      const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
+      const originalExpr =
+        typeof expression === "string" ? expression : renderExpressionNode(expression);
       const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
-      throw new Error(`Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`);
+      throw new Error(
+        `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`,
+      );
     }
     // In our assembler, a condition is true if the result is nonzero.
-    debug("evaluateExpression result", result, "=>", result !== 0)
+    debug("evaluateExpression result", result, "=>", result !== 0);
     return result !== 0;
   }
 
@@ -1707,7 +1839,8 @@ export class Assembler {
    * @returns {ExpressionNode} The resolved expression tree.
    */
   resolveExpressionInput(expression: string | ExpressionNode): ExpressionNode {
-    const parsed = typeof expression === "string" ? parseExpressionNode(expression.trim()) : expression;
+    const parsed =
+      typeof expression === "string" ? parseExpressionNode(expression.trim()) : expression;
     return this.resolveExpressionNode(parsed);
   }
 
@@ -1782,7 +1915,10 @@ export class Assembler {
           if (expandedReference) {
             return expandedReference;
           }
-          return { type: "raw", value: `${renderExpressionNode(object)}.${expression.property.name}` };
+          return {
+            type: "raw",
+            value: `${renderExpressionNode(object)}.${expression.property.name}`,
+          };
         }
         return {
           ...expression,
@@ -1797,7 +1933,10 @@ export class Assembler {
           if (expandedReference) {
             return expandedReference;
           }
-          return { type: "raw", value: `${renderExpressionNode(object)}[${renderExpressionNode(index)}]` };
+          return {
+            type: "raw",
+            value: `${renderExpressionNode(object)}[${renderExpressionNode(index)}]`,
+          };
         }
         return {
           ...expression,
@@ -1816,7 +1955,10 @@ export class Assembler {
    * @param {boolean} [requireStatic] Whether labels must be static.
    * @returns {number} The numeric value of the reference.
    */
-  evaluateReferenceExpressionNode(expression: ReferenceExpressionNode, requireStatic = false): number {
+  evaluateReferenceExpressionNode(
+    expression: ReferenceExpressionNode,
+    requireStatic = false,
+  ): number {
     const resolved = this.resolveReferenceLabelValue(expression, requireStatic);
     if (typeof resolved === "number") {
       return resolved;
@@ -1831,13 +1973,19 @@ export class Assembler {
    * @param {boolean} [requireStatic] Whether labels must be static.
    * @returns {number | string} The resolved numeric value.
    */
-  resolveReferenceLabelValue(expression: ReferenceExpressionNode, requireStatic = false): number | string {
+  resolveReferenceLabelValue(
+    expression: ReferenceExpressionNode,
+    requireStatic = false,
+  ): number | string {
     const resolved = this.resolveReferenceExpressionNode(expression);
     if (!isReferenceExpressionNode(resolved)) {
       return this.mathCore.math(resolved);
     }
 
-    return this.resolveNormalizedReferenceLabelValue(this.renderResolvedReferenceExpression(resolved), requireStatic);
+    return this.resolveNormalizedReferenceLabelValue(
+      this.renderResolvedReferenceExpression(resolved),
+      requireStatic,
+    );
   }
 
   /**
@@ -1894,7 +2042,9 @@ export class Assembler {
    * @param {ReferenceExpressionNode} expression The reference expression to expand.
    * @returns {ExpressionNode | undefined} The reparsed expression, if expansion changed it.
    */
-  tryResolveExpandedReferenceExpression(expression: ReferenceExpressionNode): ExpressionNode | undefined {
+  tryResolveExpandedReferenceExpression(
+    expression: ReferenceExpressionNode,
+  ): ExpressionNode | undefined {
     const renderedReference = this.renderResolvedReferenceExpression(expression);
     const expandedReference = this.resolvedefines(renderedReference);
     if (expandedReference === renderedReference) {
@@ -1932,7 +2082,9 @@ export class Assembler {
         debug("resolvedefines stage does not enforce labels, returning placeholder");
         return "$0000";
       }
-      debug(`resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`);
+      debug(
+        `resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`,
+      );
       throw error;
     }
   }
@@ -1943,7 +2095,12 @@ export class Assembler {
    * @returns {string | undefined} The resolved define value, if applicable.
    */
   tryResolveDirectDefineReference(input: string): string | undefined {
-    if (!input.startsWith("!") || input.includes(" ") || input.includes("=") || input.includes("{")) {
+    if (
+      !input.startsWith("!") ||
+      input.includes(" ") ||
+      input.includes("=") ||
+      input.includes("{")
+    ) {
       return undefined;
     }
 
@@ -2019,7 +2176,7 @@ export class Assembler {
       debug("resolvedefines != operator found in", input);
       // Process each part of the expression separately
       const parts = input.split("!=");
-      const resolvedParts = parts.map(part => this.resolvedefines(part.trim()));
+      const resolvedParts = parts.map((part) => this.resolvedefines(part.trim()));
       return resolvedParts.join("!=");
     }
 
@@ -2153,7 +2310,9 @@ export class Assembler {
     this.currentLine = line;
   }
 
-  getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "capabilities"> {
+  getStageDescriptor(
+    stage: AssemblyStageName,
+  ): Pick<StageExecutionState, "stage" | "capabilities"> {
     if (stage === "collectDefinitions") {
       return {
         stage,
@@ -2190,7 +2349,9 @@ export class Assembler {
     };
   }
 
-  cloneRelativeLabels(source: { [depth: number]: { addr: number; macroInstance?: number }[] }): { [depth: number]: { addr: number; macroInstance?: number }[] } {
+  cloneRelativeLabels(source: { [depth: number]: { addr: number; macroInstance?: number }[] }): {
+    [depth: number]: { addr: number; macroInstance?: number }[];
+  } {
     const clone: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
     for (const [depth, entries] of Object.entries(source)) {
       clone[Number(depth)] = entries.map((entry) => ({ ...entry }));
@@ -2200,7 +2361,12 @@ export class Assembler {
 
   createStageExecutionState(stage: AssemblyStageName): StageExecutionState {
     const descriptor = this.getStageDescriptor(stage);
-    const previousStage = stage === "resolveLayout" ? "collectDefinitions" : stage === "emitProgram" ? "resolveLayout" : undefined;
+    const previousStage =
+      stage === "resolveLayout"
+        ? "collectDefinitions"
+        : stage === "emitProgram"
+          ? "resolveLayout"
+          : undefined;
     const seed = previousStage ? this.stageExecutionStates.get(previousStage) : undefined;
     const cursorSeed = seed?.cursor ?? {
       currentTargetAddress: this.currentTargetAddress,
@@ -2238,7 +2404,9 @@ export class Assembler {
       ...descriptor,
       cursor: { ...cursorSeed },
       symbols: {
-        labelTable: new Map(Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }])),
+        labelTable: new Map(
+          Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }]),
+        ),
         forwardLabels: this.cloneRelativeLabels(symbolSeed.forwardLabels),
         backwardLabels: this.cloneRelativeLabels(symbolSeed.backwardLabels),
         currentParentLabel: symbolSeed.currentParentLabel,
@@ -2388,14 +2556,24 @@ export class Assembler {
     if (typeof start !== "number" || typeof value !== "number" || typeof length !== "number") {
       throw new Error("writeDataBytes requires a number for start, value, and length");
     }
-    if (value > 0xFF) {
+    if (value > 0xff) {
       debug("writeDataBytes 💥 value must be less than 0xFF", value);
     }
-    debug("writeDataBytes before this.romdata.length", this.romdata.length, "/", this.romdata.length.toString(16));
+    debug(
+      "writeDataBytes before this.romdata.length",
+      this.romdata.length,
+      "/",
+      this.romdata.length.toString(16),
+    );
     for (let i = 0; i < length; i++) {
-      this.romdata[start + i] = value & 0xFF;
+      this.romdata[start + i] = value & 0xff;
     }
-    debug("writeDataBytes after this.romdata.length", this.romdata.length, "/", this.romdata.length.toString(16));
+    debug(
+      "writeDataBytes after this.romdata.length",
+      this.romdata.length,
+      "/",
+      this.romdata.length.toString(16),
+    );
   }
 
   /**
@@ -2422,7 +2600,7 @@ export class Assembler {
   updateHeaderAndCRC32(): void {
     debug("updateHeaderAndCRC32");
     const headerOffset = getChecksumHeaderOffset(this.mapper);
-    debug("updateHeaderAndCRC32 headerOffset", headerOffset)
+    debug("updateHeaderAndCRC32 headerOffset", headerOffset);
 
     if (this.romdata.length < headerOffset + 0x20) {
       debug("ROM too small for header update.");
@@ -2430,25 +2608,27 @@ export class Assembler {
     }
 
     // Set complement to 0xFFFF
-    this.romdata[headerOffset + 0x1C] = 0xFF;
-    this.romdata[headerOffset + 0x1D] = 0xFF;
+    this.romdata[headerOffset + 0x1c] = 0xff;
+    this.romdata[headerOffset + 0x1d] = 0xff;
     // Set checksum to 0x0000
-    this.romdata[headerOffset + 0x1E] = 0x00;
-    this.romdata[headerOffset + 0x1F] = 0x00;
+    this.romdata[headerOffset + 0x1e] = 0x00;
+    this.romdata[headerOffset + 0x1f] = 0x00;
 
     const checksum = calculateHeaderChecksum(this.romdata, this.checksumMode);
-    const complement = (~checksum) & 0xFFFF;
+    const complement = ~checksum & 0xffff;
 
     // In a SNES header the checksum complement is typically stored at offset 0x1C
     // and the checksum at offset 0x1E (relative to the header base).
-    this.romdata[headerOffset + 0x1C] = complement & 0xFF;
-    this.romdata[headerOffset + 0x1D] = (complement >> 8) & 0xFF;
-    this.romdata[headerOffset + 0x1E] = checksum & 0xFF;
-    this.romdata[headerOffset + 0x1F] = (checksum >> 8) & 0xFF;
+    this.romdata[headerOffset + 0x1c] = complement & 0xff;
+    this.romdata[headerOffset + 0x1d] = (complement >> 8) & 0xff;
+    this.romdata[headerOffset + 0x1e] = checksum & 0xff;
+    this.romdata[headerOffset + 0x1f] = (checksum >> 8) & 0xff;
 
     // Now compute the CRC32 of the entire ROM.
     const crc32 = CRC32.compute(this.romdata);
-    debug(`Header updated: Checksum = 0x${checksum.toString(16).toUpperCase()}, Complement = 0x${complement.toString(16).toUpperCase()}, CRC32 = 0x${crc32.toString(16).toUpperCase()}`);
+    debug(
+      `Header updated: Checksum = 0x${checksum.toString(16).toUpperCase()}, Complement = 0x${complement.toString(16).toUpperCase()}, CRC32 = 0x${crc32.toString(16).toUpperCase()}`,
+    );
   }
 
   /**
@@ -2457,7 +2637,7 @@ export class Assembler {
    */
   getBinaryOutput = (): Uint8Array => {
     return new Uint8Array(this.romdata.slice(0, this.romdata.length));
-  }
+  };
 
   /**
    * Lowers completed runtime nodes and executes them through the production executor.
@@ -2467,7 +2647,9 @@ export class Assembler {
     const previousRewrite = this.runtimePassthroughRewriteEnabled;
     this.runtimePassthroughRewriteEnabled = true;
     try {
-      const loweredNodes = nodes.map((node) => this.commandLoweringService.lowerExecutableNode(node));
+      const loweredNodes = nodes.map((node) =>
+        this.commandLoweringService.lowerExecutableNode(node),
+      );
       for (const node of loweredNodes) {
         this.executeWithAnalysisRecovery(
           node,
@@ -2480,7 +2662,11 @@ export class Assembler {
     }
   }
 
-  resolveForLoopBounds(forBlock: LoweredLoopNode): { variable?: string; start?: number; end?: number } {
+  resolveForLoopBounds(forBlock: LoweredLoopNode): {
+    variable?: string;
+    start?: number;
+    end?: number;
+  } {
     const parsedForLoop = forBlock.header?.parsed.forLoop;
     const variable = forBlock.variable ?? parsedForLoop?.variable;
     let start: number | undefined = forBlock.start;
@@ -2491,7 +2677,9 @@ export class Assembler {
     if (startExpression && endExpression) {
       const startExpr = renderExpressionNode(startExpression);
       const endExpr = renderExpressionNode(endExpression);
-      const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
+      const startDefinesResolved = /^-?\d+$/.test(startExpr)
+        ? startExpr
+        : this.resolvedefines(startExpr);
       const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
       start = this.operandResolver.getnum(startDefinesResolved);
       end = this.operandResolver.getnum(endDefinesResolved);
@@ -2549,7 +2737,8 @@ export class Assembler {
     getDefineTarget: (command: TCommand) => string | null,
     executeCommand: (command: TCommand) => void,
   ): void {
-    const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
+    const conditionNode =
+      whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
     if (!conditionNode) {
       debug("executeWhileLoopCommands missing condition expression", whileBlock);
       return;
@@ -2575,7 +2764,9 @@ export class Assembler {
     }
 
     if (iteration >= MAX_ITERATIONS) {
-      debug("executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected.");
+      debug(
+        "executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected.",
+      );
     }
 
     // Restore original variable values
@@ -2595,12 +2786,19 @@ export class Assembler {
     this.executeWhileLoopCommands(
       whileBlock,
       whileBlock.commands,
-      (cmd) => cmd.kind === "command" && cmd.command.kind === "defineCommand" ? getDefineVariable(cmd.command.command) ?? null : null,
+      (cmd) =>
+        cmd.kind === "command" && cmd.command.kind === "defineCommand"
+          ? (getDefineVariable(cmd.command.command) ?? null)
+          : null,
       (cmd) => this.executeLoweredNodeWithRecovery(cmd),
     );
   }
 
-  createLoopCommandNode(command: string, sourceFile = this.currentFile, sourceLine = this.currentLine): NormalizedCommand {
+  createLoopCommandNode(
+    command: string,
+    sourceFile = this.currentFile,
+    sourceLine = this.currentLine,
+  ): NormalizedCommand {
     return this.frontEndService.createLoopCommandNode(command, sourceFile, sourceLine);
   }
 
@@ -2665,9 +2863,8 @@ export class Assembler {
   }
 
   executeLoweredNode(node: LoweredExecutableNode): void {
-    const sourceCommand = node.kind === "loop" || node.kind === "conditional"
-      ? node.header
-      : node.command;
+    const sourceCommand =
+      node.kind === "loop" || node.kind === "conditional" ? node.header : node.command;
     if (sourceCommand) {
       this.currentFile = sourceCommand.source.file;
       this.currentLine = sourceCommand.source.line;
@@ -2717,7 +2914,11 @@ export class Assembler {
   }
 
   executeConditionalBranches<TCommand>(
-    branches: Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[] }>,
+    branches: Array<{
+      kind: "if" | "elseif" | "else";
+      conditionNode?: ExpressionNode;
+      commands: TCommand[];
+    }>,
     executeCommands: (commands: TCommand[]) => void,
   ): void {
     for (const branch of branches) {
@@ -2745,17 +2946,24 @@ export class Assembler {
   }
 
   executeLoweredConditionalNode(node: LoweredConditionalNode): void {
-    this.executeConditionalBranches(
-      node.branches,
-      (commands) => this.executeLoweredNodeStream(commands),
+    this.executeConditionalBranches(node.branches, (commands) =>
+      this.executeLoweredNodeStream(commands),
     );
   }
 
-  parseCommandStreamToNodes(commands: string[], sourceFile = this.currentFile, startLine = this.currentLine): RuntimeNode[] {
+  parseCommandStreamToNodes(
+    commands: string[],
+    sourceFile = this.currentFile,
+    startLine = this.currentLine,
+  ): RuntimeNode[] {
     return this.frontEndService.parseCommandStreamToNodes(commands, sourceFile, startLine);
   }
 
-  getOrBuildPassProgram(commands: string[], sourceFile = this.currentFile, startLine = this.currentLine): RuntimeNode[] {
+  getOrBuildPassProgram(
+    commands: string[],
+    sourceFile = this.currentFile,
+    startLine = this.currentLine,
+  ): RuntimeNode[] {
     return this.frontEndService.getOrBuildPassProgram(commands, sourceFile, startLine);
   }
 
@@ -2774,5 +2982,4 @@ export class Assembler {
       sourceFile: macro.sourceFile,
     };
   }
-
 }

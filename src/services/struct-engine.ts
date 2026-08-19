@@ -7,7 +7,11 @@ export type StructHost = {
   operandResolver: { getnum(input: string): number };
   enterStructDefinition(base: number): void;
   restoreStructDefinition(): void;
-  recordSymbolDefinition(kind: "struct" | "structMember", name: string, options?: { value?: number | string; containerName?: string }): void;
+  recordSymbolDefinition(
+    kind: "struct" | "structMember",
+    name: string,
+    options?: { value?: number | string; containerName?: string },
+  ): void;
 };
 
 export class StructEngine {
@@ -38,7 +42,9 @@ export class StructEngine {
 
       if (words[1]?.toLowerCase() === "skip") {
         if (words.length !== 3) {
-          throw new Error(`skip directive in struct requires exactly one parameter: ${words.length}`);
+          throw new Error(
+            `skip directive in struct requires exactly one parameter: ${words.length}`,
+          );
         }
         const skipAmount = this.host.operandResolver.getnum(words[2]);
         currentStruct.offset += skipAmount;
@@ -86,7 +92,7 @@ export class StructEngine {
       base = parentStruct.base;
     } else {
       base = this.host.operandResolver.getnum(words[2]);
-      if (base < 0 || base > 0xFFFFFF) {
+      if (base < 0 || base > 0xffffff) {
         throw new Error(`Invalid SNES address for struct: ${words[2]}`);
       }
     }
@@ -223,7 +229,7 @@ export class StructEngine {
 
       if (memberName.trim() === "") {
         if (arrayIndex !== 0) {
-          return def.base + (arrayIndex * effectiveSize);
+          return def.base + arrayIndex * effectiveSize;
         }
         return def.base;
       }
@@ -239,7 +245,7 @@ export class StructEngine {
           // extension size alone and drop the parent object stride.
           const childReference = `${topLevelMember}${childMemberName ? `.${childMemberName}` : ""}`;
           const childOffset = this.resolveStructLabel(childReference) - childStruct.base;
-          return def.base + (arrayIndex * effectiveSize) + childOffset;
+          return def.base + arrayIndex * effectiveSize + childOffset;
         }
         throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
       }
@@ -253,7 +259,9 @@ export class StructEngine {
       if (def.parent) {
         const parentDef = this.host.structs.get(def.parent);
         if (!parentDef) {
-          throw new Error(`Parent struct '${def.parent}' not defined for extension '${potential}'.`);
+          throw new Error(
+            `Parent struct '${def.parent}' not defined for extension '${potential}'.`,
+          );
         }
 
         let parentSize = parentDef.size;
@@ -264,10 +272,10 @@ export class StructEngine {
         if (arrayIndex === 0) {
           finalAddress = parentDef.base + parentSize + offset;
         } else {
-          finalAddress = parentDef.base + parentSize + (arrayIndex * def.size) + offset;
+          finalAddress = parentDef.base + parentSize + arrayIndex * def.size + offset;
         }
       } else {
-        finalAddress = def.base + (arrayIndex * effectiveSize) + offset;
+        finalAddress = def.base + arrayIndex * effectiveSize + offset;
       }
 
       return finalAddress;

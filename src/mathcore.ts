@@ -48,29 +48,36 @@ export class MathCore {
     ["log10", Math.log10],
     ["log2", Math.log2],
     ["ceil", Math.ceil],
-    ["floor", Math.floor]
+    ["floor", Math.floor],
   ]);
-  operators: { [key: string]: { priority: number; operation: (a: number, b: number) => number } } = {
-    "**": { priority: 6, operation: (a, b) => Math.pow(a, b) },
-    "*":  { priority: 5, operation: (a, b) => a * b },
-    "/":  { priority: 5, operation: (a, b) => (b !== 0 ? a / b : this.throwMathError("Division by zero")) },
-    "%":  { priority: 5, operation: (a, b) => (b !== 0 ? a % b : this.throwMathError("Modulo by zero")) },
-    "+":  { priority: 4, operation: (a, b) => a + b },
-    "-":  { priority: 4, operation: (a, b) => a - b },
-    "<<": { priority: 3, operation: (a, b) => a << b },
-    ">>": { priority: 3, operation: (a, b) => a >> b },
-    "&":  { priority: 3, operation: (a, b) => a & b },
-    "|":  { priority: 3, operation: (a, b) => a | b },
-    "^":  { priority: 3, operation: (a, b) => a ^ b },
-    "<":  { priority: 2, operation: (a, b) => a < b ? 1 : 0 },
-    ">":  { priority: 2, operation: (a, b) => a > b ? 1 : 0 },
-    "<=": { priority: 2, operation: (a, b) => a <= b ? 1 : 0 },
-    ">=": { priority: 2, operation: (a, b) => a >= b ? 1 : 0 },
-    "==": { priority: 2, operation: (a, b) => a === b ? 1 : 0 },
-    "!=": { priority: 2, operation: (a, b) => a !== b ? 1 : 0 },
-    "&&": { priority: 1, operation: (a, b) => (a && b) ? 1 : 0 },
-    "||": { priority: 0, operation: (a, b) => (a || b) ? 1 : 0 },
-  }
+  operators: { [key: string]: { priority: number; operation: (a: number, b: number) => number } } =
+    {
+      "**": { priority: 6, operation: (a, b) => Math.pow(a, b) },
+      "*": { priority: 5, operation: (a, b) => a * b },
+      "/": {
+        priority: 5,
+        operation: (a, b) => (b !== 0 ? a / b : this.throwMathError("Division by zero")),
+      },
+      "%": {
+        priority: 5,
+        operation: (a, b) => (b !== 0 ? a % b : this.throwMathError("Modulo by zero")),
+      },
+      "+": { priority: 4, operation: (a, b) => a + b },
+      "-": { priority: 4, operation: (a, b) => a - b },
+      "<<": { priority: 3, operation: (a, b) => a << b },
+      ">>": { priority: 3, operation: (a, b) => a >> b },
+      "&": { priority: 3, operation: (a, b) => a & b },
+      "|": { priority: 3, operation: (a, b) => a | b },
+      "^": { priority: 3, operation: (a, b) => a ^ b },
+      "<": { priority: 2, operation: (a, b) => (a < b ? 1 : 0) },
+      ">": { priority: 2, operation: (a, b) => (a > b ? 1 : 0) },
+      "<=": { priority: 2, operation: (a, b) => (a <= b ? 1 : 0) },
+      ">=": { priority: 2, operation: (a, b) => (a >= b ? 1 : 0) },
+      "==": { priority: 2, operation: (a, b) => (a === b ? 1 : 0) },
+      "!=": { priority: 2, operation: (a, b) => (a !== b ? 1 : 0) },
+      "&&": { priority: 1, operation: (a, b) => (a && b ? 1 : 0) },
+      "||": { priority: 0, operation: (a, b) => (a || b ? 1 : 0) },
+    };
 
   str: string = "";
 
@@ -97,7 +104,7 @@ export class MathCore {
     }
 
     return this.evaluateStringExpression(expression);
-  }
+  };
 
   /**
    * Evaluates a string expression using the legacy parser.
@@ -139,11 +146,16 @@ export class MathCore {
       case "literal":
         return this.parseLiteralNode(expression.value);
       case "string":
-        throw new AssemblyError("MATH_STRING_NOT_NUMERIC", `String expression is not directly numeric: ${expression.value}`);
+        throw new AssemblyError(
+          "MATH_STRING_NOT_NUMERIC",
+          `String expression is not directly numeric: ${expression.value}`,
+        );
       case "call":
         return this.callFunction(
           expression.callee.name,
-          expression.arguments.map((argument, index) => this.evaluateCallArgument(expression.callee.name, index, argument)),
+          expression.arguments.map((argument, index) =>
+            this.evaluateCallArgument(expression.callee.name, index, argument),
+          ),
         );
       case "unary": {
         const unaryExpression: UnaryExpressionNode = expression;
@@ -151,17 +163,28 @@ export class MathCore {
       }
       case "binary": {
         const binaryExpression: BinaryExpressionNode = expression;
-        return this.evaluateBinaryExpressionNode(binaryExpression.operator, binaryExpression.left, binaryExpression.right);
+        return this.evaluateBinaryExpressionNode(
+          binaryExpression.operator,
+          binaryExpression.left,
+          binaryExpression.right,
+        );
       }
       case "range":
-        throw new AssemblyError("MATH_RANGE_NOT_NUMERIC", `Range expression is not directly numeric: ${renderExpressionNode(expression)}`);
+        throw new AssemblyError(
+          "MATH_RANGE_NOT_NUMERIC",
+          `Range expression is not directly numeric: ${renderExpressionNode(expression)}`,
+        );
       case "raw":
       default:
         return this.evaluateStringExpression(expression.value);
     }
   }
 
-  evaluateCallArgument(functionName: string, argumentIndex: number, argument: ExpressionNode): number | string {
+  evaluateCallArgument(
+    functionName: string,
+    argumentIndex: number,
+    argument: ExpressionNode,
+  ): number | string {
     if (this.isStringArgument(functionName, argumentIndex)) {
       switch (argument.type) {
         case "identifier":
@@ -220,9 +243,15 @@ export class MathCore {
   ): number {
     const operation = this.operators[operator];
     if (!operation) {
-      throw new AssemblyError("MATH_UNSUPPORTED_BINARY_OPERATOR", `Unsupported binary operator '${operator}'`);
+      throw new AssemblyError(
+        "MATH_UNSUPPORTED_BINARY_OPERATOR",
+        `Unsupported binary operator '${operator}'`,
+      );
     }
-    return operation.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
+    return operation.operation(
+      this.evaluateExpressionNode(left),
+      this.evaluateExpressionNode(right),
+    );
   }
 
   resolveNumericIdentifierArgument(identifier: string): number | string {
@@ -262,7 +291,11 @@ export class MathCore {
   }
 
   isStringArgument(functionName: string, argumentIndex: number): boolean {
-    if (["defined", "sizeof", "objectsize", "datasize", "filesize", "getfilestatus"].includes(functionName)) {
+    if (
+      ["defined", "sizeof", "objectsize", "datasize", "filesize", "getfilestatus"].includes(
+        functionName,
+      )
+    ) {
       return argumentIndex === 0;
     }
     if (["stringsequal", "stringsequalnocase"].includes(functionName)) {
@@ -382,7 +415,7 @@ export class MathCore {
    */
   peekNextOperator(
     operators: { [key: string]: { priority: number } },
-    depth: number
+    depth: number,
   ): string | null {
     // Trim the expression to avoid whitespace confusion.
     this.str = this.str.trim();
@@ -649,7 +682,7 @@ export class MathCore {
       value = value >>> 16;
     }
     return value;
-  }
+  };
 
   /**
    * Safe wrapper to handle division by zero.
@@ -657,14 +690,14 @@ export class MathCore {
    */
   throwMathError = (message: string): number => {
     throw new AssemblyError("MATH_EVALUATION_ERROR", message);
-  }
+  };
 
   /**
    * Parses a string literal from the current string with support for quotes.
    * @returns {string} The parsed string literal.
    */
   parseStringLiteral = (): string => {
-    debug("parseStringLiteral")
+    debug("parseStringLiteral");
     // We know this.str starts with a double-quote
     let i = 1; // skip leading "
     let result = "";
@@ -681,7 +714,7 @@ export class MathCore {
     // remove from this.str
     this.str = this.str.substring(i).trim();
     return result;
-  }
+  };
 
   /**
    * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
@@ -697,7 +730,7 @@ export class MathCore {
     }
     // 2) If built-in, dispatch:
     return this.callBuiltInFunction(name, args);
-  }
+  };
 
   /**
    * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
@@ -716,9 +749,7 @@ export class MathCore {
 
     // Check arguments
     if (args.length < func.args.length) {
-      throw new Error(
-        `Function '${name}' expects at least ${func.args.length} argument(s).`
-      );
+      throw new Error(`Function '${name}' expects at least ${func.args.length} argument(s).`);
     }
 
     // Get the function body
@@ -733,7 +764,8 @@ export class MathCore {
       // Use word boundaries to avoid partial matches
       // eslint-disable-next-line security/detect-non-literal-regexp
       const regex = new RegExp(`\\b${escapeRegExp(paramName)}\\b`, "g");
-      const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
+      const replacement =
+        typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
       content = content.replace(regex, replacement);
     }
 
@@ -744,7 +776,7 @@ export class MathCore {
 
     debug("callUserFunction =", result);
     return result;
-  }
+  };
 
   /**
    * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
@@ -802,13 +834,13 @@ export class MathCore {
       case "min": {
         if (args.length < 2) throw new Error("min() expects at least 2 numeric arguments.");
         // Convert all arguments to numbers
-        const numArgs = args.map(arg => this.numArg(name, arg));
+        const numArgs = args.map((arg) => this.numArg(name, arg));
         return Math.min(...numArgs);
       }
       case "max": {
         if (args.length < 2) throw new Error("max() expects at least 2 numeric arguments.");
         // Convert all arguments to numbers
-        const numArgs = args.map(arg => this.numArg(name, arg));
+        const numArgs = args.map((arg) => this.numArg(name, arg));
         return Math.max(...numArgs);
       }
       case "clamp": {
@@ -842,7 +874,7 @@ export class MathCore {
       case "bank": {
         if (args.length !== 1) throw new Error("bank() expects exactly 1 numeric argument.");
         // Return the bank of the value by shifting 16 bits to the right and masking with 0xFF
-        return (this.numArg(name, args[0]) >> 16) & 0xFF;
+        return (this.numArg(name, args[0]) >> 16) & 0xff;
       }
       case "offset": {
         if (args.length !== 2) throw new Error("offset() expects exactly 2 numeric arguments.");
@@ -870,17 +902,18 @@ export class MathCore {
         return this.numArg(name, args[0]) > this.numArg(name, args[1]) ? 1 : 0;
       }
       case "greaterequal": {
-        if (args.length !== 2) throw new Error("greaterequal() expects exactly 2 numeric arguments.");
+        if (args.length !== 2)
+          throw new Error("greaterequal() expects exactly 2 numeric arguments.");
         return this.numArg(name, args[0]) >= this.numArg(name, args[1]) ? 1 : 0;
       }
       // --- Logical Bitwise Operations ---
       case "and": {
         if (args.length !== 2) throw new Error("and() expects exactly 2 numeric arguments.");
-        return (this.numArg(name, args[0]) && this.numArg(name, args[1])) ? 1 : 0;
+        return this.numArg(name, args[0]) && this.numArg(name, args[1]) ? 1 : 0;
       }
       case "or": {
         if (args.length !== 2) throw new Error("or() expects exactly 2 numeric arguments.");
-        return (this.numArg(name, args[0]) || this.numArg(name, args[1])) ? 1 : 0;
+        return this.numArg(name, args[0]) || this.numArg(name, args[1]) ? 1 : 0;
       }
       case "nand": {
         if (args.length !== 2) throw new Error("nand() expects exactly 2 numeric arguments.");
@@ -894,7 +927,7 @@ export class MathCore {
         if (args.length !== 2) throw new Error("xor() expects exactly 2 numeric arguments.");
         const a = this.numArg(name, args[0]);
         const b = this.numArg(name, args[1]);
-        return ((a ? 1 : 0) ^ (b ? 1 : 0)) ? 1 : 0;
+        return (a ? 1 : 0) ^ (b ? 1 : 0) ? 1 : 0;
       }
       // --- Rounding ---
       case "round": {
@@ -905,13 +938,15 @@ export class MathCore {
       }
       // --- String Comparisons ---
       case "stringsequal": {
-        if (args.length !== 2) throw new Error("stringsequal() expects exactly 2 string arguments.");
+        if (args.length !== 2)
+          throw new Error("stringsequal() expects exactly 2 string arguments.");
         const str1 = this.strArg(name, args[0]);
         const str2 = this.strArg(name, args[1]);
         return str1 === str2 ? 1 : 0;
       }
       case "stringsequalnocase": {
-        if (args.length !== 2) throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
+        if (args.length !== 2)
+          throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
         const str1 = this.strArg(name, args[0]);
         const str2 = this.strArg(name, args[1]);
         return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
@@ -957,7 +992,8 @@ export class MathCore {
         return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
       }
       case "canreadfile": {
-        if (args.length !== 3) throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
+        if (args.length !== 3)
+          throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
         const filename = this.strArg(name, args[0]);
         const pos = this.numArg(name, args[1]);
         const num = this.numArg(name, args[2]);
@@ -974,7 +1010,8 @@ export class MathCore {
         return this.getHost().canReadRom(pos, size);
       }
       case "canread": {
-        if (args.length !== 2) throw new Error("canread expects exactly 2 numeric arguments (pos, num).");
+        if (args.length !== 2)
+          throw new Error("canread expects exactly 2 numeric arguments (pos, num).");
         const pos = this.numArg(name, args[0]);
         const num = this.numArg(name, args[1]);
         return this.getHost().canReadRom(pos, num);
@@ -1000,7 +1037,8 @@ export class MathCore {
       case "readfile2":
       case "readfile3":
       case "readfile4": {
-        if (args.length < 2 || args.length > 3) throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
+        if (args.length < 2 || args.length > 3)
+          throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
         const filename = this.strArg(name, args[0]);
         const pos = this.numArg(name, args[1]);
         const size = parseInt(name.slice(-1), 10);
@@ -1023,7 +1061,7 @@ export class MathCore {
         throw new Error(`Unknown built-in function '${name}'`);
       }
     }
-  }
+  };
 
   /**
    * Validates an argument as a number.
@@ -1033,20 +1071,22 @@ export class MathCore {
    */
   numArg = (funcName: string, arg: number | string): number => {
     if (typeof arg === "string") {
-      throw new Error(`Function '${funcName}' expected a numeric argument but got a string: ${arg}`);
+      throw new Error(
+        `Function '${funcName}' expected a numeric argument but got a string: ${arg}`,
+      );
     }
     return arg;
-  }
+  };
 
   strArg = (funcName: string, arg: number | string): string => {
     if (typeof arg === "number") {
       throw new Error(`Function '${funcName}' expected a string argument but got a number: ${arg}`);
     }
     return arg;
-  }
+  };
 
   parseFunctionDefinition = (): void => {
-    debug("parseFunctionDefinition", this.str)
+    debug("parseFunctionDefinition", this.str);
     // Remove line continuations (backslash-newline)
     const cleanDef = this.str.replace(/\\\s*\n/g, "");
     // Regex: function <name>([param1, param2, ...]) = <expression>
@@ -1061,7 +1101,10 @@ export class MathCore {
     const content = match[3].trim();
     // Split parameters by comma and trim spaces.
     const params = paramsStr
-      ? paramsStr.split(",").map(p => p.trim()).filter(p => p.length > 0)
+      ? paramsStr
+          .split(",")
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0)
       : [];
     // Remove the function definition from this.str
     this.str = this.str.substring(match[0].length).trim();
@@ -1069,7 +1112,7 @@ export class MathCore {
     // Store the user-defined function, overwriting any existing function of the same name
     this.userFunctions.set(name, { args: params, content });
     debug("parseFunctionDefinition =", { args: params, content });
-  }
+  };
 
   getHost(): ExpressionHost {
     if (!this.host) {

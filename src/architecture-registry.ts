@@ -14,10 +14,9 @@ export type ArchitectureDefinition = {
   unknownInstructionBehavior: "throw" | "returnFalse";
 };
 
-const splitSingleOperand = (operandText: string): string[] => operandText ? [operandText] : [];
-const splitCommaOperands = (operandText: string): string[] => operandText
-  ? operandText.split(",").map((operand) => operand.trim())
-  : [];
+const splitSingleOperand = (operandText: string): string[] => (operandText ? [operandText] : []);
+const splitCommaOperands = (operandText: string): string[] =>
+  operandText ? operandText.split(",").map((operand) => operand.trim()) : [];
 const splitTopLevelCommaOperands = (operandText: string): string[] => {
   const operands: string[] = [];
   let level = 0;

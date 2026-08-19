@@ -69,9 +69,9 @@ export type ChecksumMode = "asar" | "simple";
  */
 export const getChecksumHeaderOffset = (mapper: string): number => {
   if (mapper === "lorom" || mapper === "sa1rom" || mapper === "bigsa1rom") {
-    return 0x7FC0;
+    return 0x7fc0;
   }
-  return 0xFFC0;
+  return 0xffc0;
 };
 
 /**
@@ -93,9 +93,9 @@ export const calculateHeaderChecksum = (
 
   if (mode === "simple" || (romLength & (romLength - 1)) === 0) {
     for (let i = 0; i < romLength; i++) {
-      checksum += romdata[i] & 0xFF;
+      checksum += romdata[i] & 0xff;
     }
-    return checksum & 0xFFFF;
+    return checksum & 0xffff;
   }
 
   let bitround = 1;
@@ -108,13 +108,13 @@ export const calculateHeaderChecksum = (
   let secondPartSum = 0;
 
   for (let i = 0; i < firstPart; i++) {
-    checksum += romdata[i] & 0xFF;
+    checksum += romdata[i] & 0xff;
   }
   for (let i = firstPart; i < romLength; i++) {
-    secondPartSum += romdata[i] & 0xFF;
+    secondPartSum += romdata[i] & 0xff;
   }
 
-  return (checksum + secondPartSum * repeatCount) & 0xFFFF;
+  return (checksum + secondPartSum * repeatCount) & 0xffff;
 };
 
 /**
@@ -122,7 +122,8 @@ export const calculateHeaderChecksum = (
  * @param {boolean} spcInlineCompatMode Whether the SPC inline compatibility mode is enabled.
  * @returns {boolean} True if the `org` directive should be redirected to the `spcblock` directive.
  */
-export const shouldRedirectOrgToSpcblock = (spcInlineCompatMode: boolean): boolean => spcInlineCompatMode;
+export const shouldRedirectOrgToSpcblock = (spcInlineCompatMode: boolean): boolean =>
+  spcInlineCompatMode;
 
 /**
  * Reports whether an architecture spelling enables inline SPC compatibility.
@@ -154,5 +155,6 @@ export const shouldEndifCloseInnermostWhile = (
   currentLoopType: "for" | "while" | undefined,
   currentLoopStartLine: number | undefined,
   currentIfStartLine: number | undefined,
-): boolean => currentLoopType === "while"
-  && (currentIfStartLine === undefined || (currentLoopStartLine ?? -1) >= currentIfStartLine);
+): boolean =>
+  currentLoopType === "while" &&
+  (currentIfStartLine === undefined || (currentLoopStartLine ?? -1) >= currentIfStartLine);

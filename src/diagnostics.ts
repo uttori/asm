@@ -91,7 +91,11 @@ export class AssemblyError extends Error {
   constructor(
     code: string,
     message: string,
-    options: { severity?: AssemblyDiagnosticSeverity; location?: AssemblySourceLocation; stage?: string } = {},
+    options: {
+      severity?: AssemblyDiagnosticSeverity;
+      location?: AssemblySourceLocation;
+      stage?: string;
+    } = {},
   ) {
     super(message);
     this.name = "AssemblyError";
@@ -109,7 +113,11 @@ export class AssemblyError extends Error {
  * @param {SourceSpan} [span] Optional precise source span.
  * @returns {AssemblySourceLocation} The normalized source location.
  */
-export function createAssemblySourceLocation(file: string, line: number, span?: SourceSpan): AssemblySourceLocation {
+export function createAssemblySourceLocation(
+  file: string,
+  line: number,
+  span?: SourceSpan,
+): AssemblySourceLocation {
   return {
     file,
     line,

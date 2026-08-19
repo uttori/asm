@@ -4,7 +4,12 @@ import type {
   AssemblySymbolReference,
   AssemblySymbolReferenceKind,
 } from "../diagnostics.js";
-import { sourceSpanToRange, type SourcePosition, type SourceRange, type SourceSpan } from "../source-location.js";
+import {
+  sourceSpanToRange,
+  type SourcePosition,
+  type SourceRange,
+  type SourceSpan,
+} from "../source-location.js";
 
 /**
  * The geometry-bearing subset of an assembler source location.
@@ -120,10 +125,11 @@ export function findReferences(
   allReferences: AssemblySymbolReference[],
   containerName?: string,
 ): AssemblySymbolReference[] {
-  return allReferences.filter((reference) => (
-    reference.name === name &&
-    (containerName === undefined || reference.containerName === containerName)
-  ));
+  return allReferences.filter(
+    (reference) =>
+      reference.name === name &&
+      (containerName === undefined || reference.containerName === containerName),
+  );
 }
 
 /**
@@ -132,7 +138,10 @@ export function findReferences(
  * @param {AssemblySymbolKind} symbolKind The symbol kind.
  * @returns {boolean} True when the reference can point at the symbol.
  */
-function kindMatches(referenceKind: AssemblySymbolReferenceKind, symbolKind: AssemblySymbolKind): boolean {
+function kindMatches(
+  referenceKind: AssemblySymbolReferenceKind,
+  symbolKind: AssemblySymbolKind,
+): boolean {
   switch (referenceKind) {
     case "label":
       return symbolKind === "label" || symbolKind === "structMember" || symbolKind === "struct";

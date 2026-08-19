@@ -30,7 +30,9 @@ export function classifyGenericOperand(input: ClassificationInput): LoweredOpera
 
   const registerOperandMatch = normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
   const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
-  const registerIndirectAutoIncrementMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/);
+  const registerIndirectAutoIncrementMatch = normalizedUpper.match(
+    /^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/,
+  );
   const directPageIndexedXIndirectMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\+\s*x\s*\)$/i);
   const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*y$/i);
   const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
@@ -72,25 +74,37 @@ export function classifyGenericOperand(input: ClassificationInput): LoweredOpera
     baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
   } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*x\s*\)$/i.test(normalizedExpanded)) {
     mode = "indexedIndirectX";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*x\s*\)$/i, "").trim();
+    baseExpression = normalizedExpanded
+      .replace(/^\(\s*/, "")
+      .replace(/\s*,\s*x\s*\)$/i, "")
+      .trim();
   } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
     mode = "directPageIndirect";
     baseExpression = expanded.slice(1, -1).trim();
   } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
     mode = "stackRelativeIndexedIndirectY";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*s\s*\)\s*,\s*y$/i, "").trim();
+    baseExpression = normalizedExpanded
+      .replace(/^\(\s*/, "")
+      .replace(/\s*,\s*s\s*\)\s*,\s*y$/i, "")
+      .trim();
   } else if (mode === "unknown" && /,\s*s$/i.test(lowered)) {
     mode = "stackRelative";
     baseExpression = expanded.replace(/\s*,\s*s$/i, "").trim();
   } else if (mode === "unknown" && /^\[\s*(.+?)\s*]\s*,\s*y$/i.test(normalizedExpanded)) {
     mode = "indirectLongIndexedY";
-    baseExpression = normalizedExpanded.replace(/^\[\s*/, "").replace(/\s*]\s*,\s*y$/i, "").trim();
+    baseExpression = normalizedExpanded
+      .replace(/^\[\s*/, "")
+      .replace(/\s*]\s*,\s*y$/i, "")
+      .trim();
   } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
     mode = "indirectLong";
     baseExpression = expanded.slice(1, -1).trim();
   } else if (mode === "unknown" && /^\(\s*(.+?)\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
     mode = "indirectIndexedY";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*\)\s*,\s*y$/i, "").trim();
+    baseExpression = normalizedExpanded
+      .replace(/^\(\s*/, "")
+      .replace(/\s*\)\s*,\s*y$/i, "")
+      .trim();
   } else if (mode === "unknown" && /,\s*y$/i.test(lowered)) {
     mode = "absoluteIndexedY";
     baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();

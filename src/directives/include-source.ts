@@ -13,7 +13,9 @@ export const handleIncbin = (
 ): void => {
   // Keep direct handler callers source-compatible while registry wiring uses
   // the explicit focused service capability.
-  includeSource ??= (session as unknown as { includeSource: IncludeDirectiveContext["includeSource"] }).includeSource;
+  includeSource ??= (
+    session as unknown as { includeSource: IncludeDirectiveContext["includeSource"] }
+  ).includeSource;
   let targetLocationSpecified = false;
   let targetLocation: string | null = null;
   const arrowIndex = words.indexOf("->");
@@ -114,7 +116,7 @@ export const handleIncbin = (
   }
 
   session.recordCurrentAddress();
-}
+};
 
 export const registerIncludeSourceDirectives = (
   registry: DirectiveRegistry,

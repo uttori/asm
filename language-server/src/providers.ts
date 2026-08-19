@@ -66,10 +66,11 @@ export const semanticTokensLegend: SemanticTokensLegend = {
 const tokenTypeIndex = new Map<string, number>(
   semanticTokensLegend.tokenTypes.map((type, index) => [type, index]),
 );
-const definitionTokenModifier = 1 << semanticTokensLegend.tokenModifiers.indexOf(SemanticTokenModifiers.definition);
+const definitionTokenModifier =
+  1 << semanticTokensLegend.tokenModifiers.indexOf(SemanticTokenModifiers.definition);
 
 /** Characters that can appear inside an assembly identifier or define name. */
-const IDENTIFIER_CHAR = /[A-Za-z0-9_.!]/;
+const IDENTIFIER_CHAR = /[\w!.]/;
 
 /**
  * Converts an absolute file path to a file URI string.
@@ -174,7 +175,13 @@ function splitLines(text: string): string[] {
  * @param {Range} fallback The range to use when the token cannot be located.
  * @returns {Range} The precise raw range.
  */
-function preciseRange(index: WorkspaceIndex, file: string, line: number, name: string, fallback: Range): Range {
+function preciseRange(
+  index: WorkspaceIndex,
+  file: string,
+  line: number,
+  name: string,
+  fallback: Range,
+): Range {
   const text = index.getFileText(file);
   if (!text) {
     return fallback;
@@ -237,7 +244,7 @@ function wordAt(text: string, position: Position): string | undefined {
   if (line === undefined) {
     return undefined;
   }
-  const wordPattern = /[A-Za-z0-9_.!]+/g;
+  const wordPattern = /[\w!.]+/g;
   let match: RegExpExecArray | null;
   while ((match = wordPattern.exec(line)) !== null) {
     const start = match.index;
@@ -286,8 +293,10 @@ function cursorReference(
     return undefined;
   }
   return (
-    references.find((reference) => reference.name === word && locationRange(reference.location)?.start.line === position.line)
-    ?? references.find((reference) => reference.name === word)
+    references.find(
+      (reference) =>
+        reference.name === word && locationRange(reference.location)?.start.line === position.line,
+    ) ?? references.find((reference) => reference.name === word)
   );
 }
 
@@ -315,8 +324,10 @@ function cursorSymbol(
     return undefined;
   }
   return (
-    symbols.find((symbol) => symbol.name === word && locationRange(symbol.location)?.start.line === position.line)
-    ?? symbols.find((symbol) => symbol.name === word)
+    symbols.find(
+      (symbol) =>
+        symbol.name === word && locationRange(symbol.location)?.start.line === position.line,
+    ) ?? symbols.find((symbol) => symbol.name === word)
   );
 }
 
@@ -421,10 +432,9 @@ export function referencesFor(
 
   const locations: Location[] = [];
   for (const reference of findReferences(name, index.getAllReferences())) {
-    locations.push(Location.create(
-      pathToUri(reference.location.file),
-      referenceRange(index, reference),
-    ));
+    locations.push(
+      Location.create(pathToUri(reference.location.file), referenceRange(index, reference)),
+    );
   }
 
   if (includeDeclaration) {
@@ -533,10 +543,12 @@ export function signatureHelpFor(lineText: string, architecture: string): Signat
 
   const instruction = findInstruction(leading, architecture);
   if (instruction) {
-    const signatures = instruction.modes.map((mode) => SignatureInformation.create(
-      `${instruction.mnemonic} ${mode.syntax}`.trim(),
-      `${mode.mode}${instruction.summary ? ` — ${instruction.summary}` : ""}`,
-    ));
+    const signatures = instruction.modes.map((mode) =>
+      SignatureInformation.create(
+        `${instruction.mnemonic} ${mode.syntax}`.trim(),
+        `${mode.mode}${instruction.summary ? ` — ${instruction.summary}` : ""}`,
+      ),
+    );
     return { signatures, activeSignature: 0 };
   }
 
@@ -558,7 +570,11 @@ export function signatureHelpFor(lineText: string, architecture: string): Signat
  * @returns {Range | null} The identifier range, or null when rename is unavailable.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#prepare-rename-request-leftwards_arrow_with_hook
  */
-export function prepareRenameFor(index: WorkspaceIndex, file: string, position: Position): Range | null {
+export function prepareRenameFor(
+  index: WorkspaceIndex,
+  file: string,
+  position: Position,
+): Range | null {
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference && isRenameableReference(reference)) {
@@ -599,10 +615,14 @@ export function renameEditsFor(
     editsByUri.set(uri, edits);
   };
 
-  for (const symbol of index.getAllSymbols().filter((entry) => symbolMatchesRenameTarget(entry, target))) {
+  for (const symbol of index
+    .getAllSymbols()
+    .filter((entry) => symbolMatchesRenameTarget(entry, target))) {
     pushEdit(pathToUri(symbol.location.file), definitionRange(index, symbol));
   }
-  for (const reference of index.getAllReferences().filter((entry) => referenceMatchesRenameTarget(entry, target))) {
+  for (const reference of index
+    .getAllReferences()
+    .filter((entry) => referenceMatchesRenameTarget(entry, target))) {
     pushEdit(pathToUri(reference.location.file), referenceRange(index, reference));
   }
 
@@ -620,8 +640,16 @@ type RenameTarget = {
 /**
  * Resolves a renameable definition or reference at the cursor. Instruction,
  * include, and unknown tokens are deliberately excluded.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {string} file The absolute file path.
+ * @param {Position} position The cursor position.
+ * @returns {RenameTarget | undefined} The selected rename target, if any.
  */
-function renameTargetAt(index: WorkspaceIndex, file: string, position: Position): RenameTarget | undefined {
+function renameTargetAt(
+  index: WorkspaceIndex,
+  file: string,
+  position: Position,
+): RenameTarget | undefined {
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference) {
@@ -635,35 +663,64 @@ function renameTargetAt(index: WorkspaceIndex, file: string, position: Position)
   return symbol ? { symbol } : undefined;
 }
 
-/** Returns whether an analysis reference represents a user-defined symbol. */
+/**
+ * Returns whether an analysis reference represents a user-defined symbol.
+ * @param {AssemblySymbolReference} reference The reference to classify.
+ * @returns {boolean} Whether the reference can be renamed.
+ */
 function isRenameableReference(reference: AssemblySymbolReference): boolean {
-  return reference.kind !== "include" && reference.kind !== "instruction" && reference.kind !== "unknown";
+  return (
+    reference.kind !== "include" && reference.kind !== "instruction" && reference.kind !== "unknown"
+  );
 }
 
-/** Returns whether a definition belongs to the selected rename target. */
-function symbolMatchesRenameTarget(symbol: AssemblySymbolDefinition, target: RenameTarget): boolean {
+/**
+ * Returns whether a definition belongs to the selected rename target.
+ * @param {AssemblySymbolDefinition} symbol The definition to compare.
+ * @param {RenameTarget} target The selected rename target.
+ * @returns {boolean} Whether the definition belongs to the target.
+ */
+function symbolMatchesRenameTarget(
+  symbol: AssemblySymbolDefinition,
+  target: RenameTarget,
+): boolean {
   if (target.symbol) {
-    return symbol.name === target.symbol.name
-      && symbol.kind === target.symbol.kind
-      && symbol.containerName === target.symbol.containerName;
+    return (
+      symbol.name === target.symbol.name &&
+      symbol.kind === target.symbol.kind &&
+      symbol.containerName === target.symbol.containerName
+    );
   }
   return target.reference ? resolveDefinition(target.reference, [symbol]).length === 1 : false;
 }
 
-/** Returns whether a reference belongs to the selected rename target. */
-function referenceMatchesRenameTarget(reference: AssemblySymbolReference, target: RenameTarget): boolean {
+/**
+ * Returns whether a reference belongs to the selected rename target.
+ * @param {AssemblySymbolReference} reference The reference to compare.
+ * @param {RenameTarget} target The selected rename target.
+ * @returns {boolean} Whether the reference belongs to the target.
+ */
+function referenceMatchesRenameTarget(
+  reference: AssemblySymbolReference,
+  target: RenameTarget,
+): boolean {
   if (!isRenameableReference(reference)) {
     return false;
   }
   if (target.reference) {
-    return reference.name === target.reference.name
-      && reference.kind === target.reference.kind
-      && reference.containerName === target.reference.containerName;
+    return (
+      reference.name === target.reference.name &&
+      reference.kind === target.reference.kind &&
+      reference.containerName === target.reference.containerName
+    );
   }
   if (!target.symbol || reference.name !== target.symbol.name) {
     return false;
   }
-  if (target.symbol.containerName !== undefined && reference.containerName !== target.symbol.containerName) {
+  if (
+    target.symbol.containerName !== undefined &&
+    reference.containerName !== target.symbol.containerName
+  ) {
     return false;
   }
   switch (target.symbol.kind) {
@@ -710,7 +767,7 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
     push(referenceRange(index, reference), referenceTokenType(reference.kind));
   }
 
-  tokens.sort((a, b) => (a.line - b.line) || (a.char - b.char));
+  tokens.sort((a, b) => a.line - b.line || a.char - b.char);
 
   const builder = new SemanticTokensBuilder();
   let previous: RawToken | undefined;
@@ -746,7 +803,9 @@ function definitionRange(index: WorkspaceIndex, symbol: AssemblySymbolDefinition
  */
 function referenceRange(index: WorkspaceIndex, reference: AssemblySymbolReference): Range {
   const fallbackRange = locationRange(reference.location);
-  const fallback = fallbackRange ? toRange(fallbackRange) : lineFallbackRange(reference.location.line);
+  const fallback = fallbackRange
+    ? toRange(fallbackRange)
+    : lineFallbackRange(reference.location.line);
   const line = fallbackRange?.start.line ?? reference.location.line;
   return preciseRange(index, reference.location.file, line, reference.name, fallback);
 }
@@ -769,11 +828,17 @@ function definitionToLocation(index: WorkspaceIndex, symbol: AssemblySymbolDefin
  * @param {string} target The include target token.
  * @returns {string | undefined} The resolved included file path.
  */
-function resolveIncludeTarget(index: WorkspaceIndex, file: string, target: string): string | undefined {
+function resolveIncludeTarget(
+  index: WorkspaceIndex,
+  file: string,
+  target: string,
+): string | undefined {
   const normalizedTarget = target.replace(/\\/g, "/");
   const base = path.basename(normalizedTarget);
   const edges = index.getIncludeEdges().filter((edge) => edge.fromFile === file);
-  const match = edges.find((edge) => edge.toFile === normalizedTarget || path.basename(edge.toFile) === base);
+  const match = edges.find(
+    (edge) => edge.toFile === normalizedTarget || path.basename(edge.toFile) === base,
+  );
   return match?.toFile;
 }
 
@@ -785,7 +850,11 @@ function resolveIncludeTarget(index: WorkspaceIndex, file: string, target: strin
  * @param {Position} position The cursor position.
  * @returns {string | undefined} The identifier name.
  */
-function identifierNameAt(index: WorkspaceIndex, file: string, position: Position): string | undefined {
+function identifierNameAt(
+  index: WorkspaceIndex,
+  file: string,
+  position: Position,
+): string | undefined {
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference) {
@@ -809,7 +878,10 @@ function renderSymbolDocs(symbol: AssemblySymbolDefinition): string {
     lines.push("", `In \`${symbol.containerName}\``);
   }
   if (symbol.value !== undefined) {
-    const value = typeof symbol.value === "number" ? `$${symbol.value.toString(16).toUpperCase()}` : symbol.value;
+    const value =
+      typeof symbol.value === "number"
+        ? `$${symbol.value.toString(16).toUpperCase()}`
+        : symbol.value;
     lines.push("", `Value: \`${value}\``);
   }
   lines.push("", `Defined in \`${path.basename(symbol.location.file)}\``);

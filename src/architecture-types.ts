@@ -9,7 +9,8 @@ export interface ExpandedOperand {
 }
 
 export interface LoweredOperand {
-  mode?: "unknown"
+  mode?:
+    | "unknown"
     | "immediate"
     | "register"
     | "registerIndirect"
@@ -108,8 +109,10 @@ export const createEncoderRuntime = (context: ArchitectureEncoderContext): Encod
     return context.branches.enforceResolvedLabels();
   },
   symbolScope: {
-    findNextLabel: (label, referenceAddress) => context.branches.findNextLabel(label, referenceAddress),
-    findPreviousLabel: (label, referenceAddress) => context.branches.findPreviousLabel(label, referenceAddress),
+    findNextLabel: (label, referenceAddress) =>
+      context.branches.findNextLabel(label, referenceAddress),
+    findPreviousLabel: (label, referenceAddress) =>
+      context.branches.findPreviousLabel(label, referenceAddress),
   },
   diagnostics: context.diagnostics,
 });

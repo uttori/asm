@@ -24,7 +24,7 @@ export const handleFillPattern = (
   for (let i = 0; i < 12; i += len) {
     let current = value;
     for (let j = 0; j < len; j++) {
-      session.fillbyte[i + j] = current & 0xFF;
+      session.fillbyte[i + j] = current & 0xff;
       current >>>= 8;
     }
   }
@@ -58,7 +58,7 @@ export const handlePadPattern = (
   const value = operandResolver.getnum(session.resolvedefines(words[1]));
   session.padUnit = len;
   for (let i = 0; i < len; i++) {
-    session.padbyte[i] = (value >> (8 * i)) & 0xFF;
+    session.padbyte[i] = (value >> (8 * i)) & 0xff;
   }
 };
 
@@ -69,9 +69,10 @@ export const handlePad = (
   let gap: number;
 
   if (words.length === 1) {
-    const currentBank = session.currentTargetAddress & 0xFF0000;
-    const bankOffset = session.currentTargetAddress & 0xFFFF;
-    const nextBank = bankOffset === 0xFFFF ? currentBank + 0x10000 : currentBank + 0x10000 - bankOffset;
+    const currentBank = session.currentTargetAddress & 0xff0000;
+    const bankOffset = session.currentTargetAddress & 0xffff;
+    const nextBank =
+      bankOffset === 0xffff ? currentBank + 0x10000 : currentBank + 0x10000 - bankOffset;
     gap = nextBank;
   } else if (words.length === 2) {
     const targetSNES = operandResolver.getnum(words[1]);
@@ -80,7 +81,9 @@ export const handlePad = (
       throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
     }
 
-    const currentPC = session.romWriter.convertTargetAddressToRomOffset(session.currentTargetAddress);
+    const currentPC = session.romWriter.convertTargetAddressToRomOffset(
+      session.currentTargetAddress,
+    );
     if (targetPC <= currentPC) {
       return;
     }

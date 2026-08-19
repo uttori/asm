@@ -1,5 +1,10 @@
 import type { LoweredInstruction } from "../architecture-types.js";
-import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
+import type {
+  ConditionalBranch,
+  ConditionalBranchNode,
+  ExecutableNode,
+  LoopNode,
+} from "../ir/assembly-tree.js";
 import type { DirectiveRegistry } from "../directives/registry.js";
 import type { ArchitectureDefinition } from "../architecture-registry.js";
 import { cloneNormalizedCommand, type NormalizedCommand } from "../ir/normalized-command.js";
@@ -130,7 +135,9 @@ const DIRECTLY_LOWERABLE_DIRECTIVES = new Set([
 export type CommandLoweringHost = {
   directiveRegistry: DirectiveRegistry;
   resolveActiveArchitecture(): { name: string; definition?: ArchitectureDefinition };
-  classifyOperandForActiveArchitecture(operand: string): import("../architecture-types.js").LoweredOperand;
+  classifyOperandForActiveArchitecture(
+    operand: string,
+  ): import("../architecture-types.js").LoweredOperand;
 };
 
 /**
@@ -151,7 +158,10 @@ export class CommandLoweringService {
     if (this.host.directiveRegistry.has(keyword)) {
       let directiveWords = command.words;
       if (command.parsed.includeTarget) {
-        directiveWords = [command.parsed.includeTarget.directive, command.parsed.includeTarget.target];
+        directiveWords = [
+          command.parsed.includeTarget.directive,
+          command.parsed.includeTarget.target,
+        ];
       }
 
       return {
@@ -167,10 +177,13 @@ export class CommandLoweringService {
     const parsedOperands = command.parsed.opcodeOperands;
     const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
     const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-    const operands = parsedOperands?.operands
-      ?? architecture.definition?.splitOperands(operandText)
-      ?? (operandText ? [operandText] : []);
-    const loweredOperands = operands.map((operand) => this.host.classifyOperandForActiveArchitecture(operand));
+    const operands =
+      parsedOperands?.operands ??
+      architecture.definition?.splitOperands(operandText) ??
+      (operandText ? [operandText] : []);
+    const loweredOperands = operands.map((operand) =>
+      this.host.classifyOperandForActiveArchitecture(operand),
+    );
     const loweredOperand = this.host.classifyOperandForActiveArchitecture(operandText);
 
     return {
@@ -284,7 +297,11 @@ export class CommandLoweringService {
       // like `<value>` straight into numeric evaluation.
       return "macroPlaceholder";
     }
-    if (command.kind !== "unknown" && command.kind !== "opcodeCandidate" && command.kind !== "directive") {
+    if (
+      command.kind !== "unknown" &&
+      command.kind !== "opcodeCandidate" &&
+      command.kind !== "directive"
+    ) {
       // Semantic front-end forms require the ordered preprocess chain. This also
       // keeps forms such as `FillByte = $EE` from colliding with directives.
       return command.kind;

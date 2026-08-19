@@ -22894,11 +22894,15 @@ function toggleWatch() {
     watchEntryUri = resolveWatchEntry();
     if (!watchEntryUri) {
       watchEnabled = false;
-      void import_vscode.window.showErrorMessage("SNES Assembly: open a source file (or set snesAsm.entryPoints) before watching.");
+      void import_vscode.window.showErrorMessage(
+        "SNES Assembly: open a source file (or set snesAsm.entryPoints) before watching."
+      );
       return;
     }
     saveListener = import_vscode.workspace.onDidSaveTextDocument(onDocumentSaved);
-    void import_vscode.window.showInformationMessage(`SNES Assembly: watching ${path.basename(import_vscode.Uri.parse(watchEntryUri).fsPath)} \u2014 rebuilding on save.`);
+    void import_vscode.window.showInformationMessage(
+      `SNES Assembly: watching ${path.basename(import_vscode.Uri.parse(watchEntryUri).fsPath)} \u2014 rebuilding on save.`
+    );
   } else {
     saveListener?.dispose();
     saveListener = void 0;
@@ -22960,10 +22964,14 @@ async function runBuild(documentUri, transient = false) {
         void import_vscode.window.showInformationMessage(message);
       }
     } else {
-      void import_vscode.window.showErrorMessage(`SNES Assembly: build failed \u2014 ${result?.message ?? "unknown error"}.`);
+      void import_vscode.window.showErrorMessage(
+        `SNES Assembly: build failed \u2014 ${result?.message ?? "unknown error"}.`
+      );
     }
   } catch (error) {
-    void import_vscode.window.showErrorMessage(`SNES Assembly: build failed \u2014 ${error instanceof Error ? error.message : String(error)}.`);
+    void import_vscode.window.showErrorMessage(
+      `SNES Assembly: build failed \u2014 ${error instanceof Error ? error.message : String(error)}.`
+    );
   }
 }
 function resolveConfiguredPath(configuredPath, document) {

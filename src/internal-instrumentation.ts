@@ -34,9 +34,10 @@ function sampleMemory(metrics: ActiveInstrumentation): void {
  * @param {() => T} callback The instrumented work.
  * @returns {{ value: T; metrics: InternalInstrumentationSnapshot }} The callback result and metrics.
  */
-export function runWithInternalInstrumentation<T>(
-  callback: () => T,
-): { value: T; metrics: InternalInstrumentationSnapshot } {
+export function runWithInternalInstrumentation<T>(callback: () => T): {
+  value: T;
+  metrics: InternalInstrumentationSnapshot;
+} {
   if (activeInstrumentation) {
     throw new Error("Internal instrumentation runs cannot be nested.");
   }

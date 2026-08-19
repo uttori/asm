@@ -54,9 +54,6 @@ export type {
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#position
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#range
  */
-export type {
-  SourcePosition,
-  SourceRange,
-} from "../../src/source-location.js";
+export type { SourcePosition, SourceRange } from "../../src/source-location.js";
 
 export type { InstructionDescriptor } from "../../src/architecture-types.js";

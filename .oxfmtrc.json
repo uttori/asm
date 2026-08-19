@@ -1,6 +1,13 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["max/**", "src/generated/**"],
+  "ignorePatterns": [
+    "dist/**",
+    "max/**",
+    "src/generated/**",
+    "language-server/out/**",
+    "editors/vscode/out/**",
+    "editors/vscode/server/**"
+  ],
   "printWidth": 100,
   "tabWidth": 2,
   "useTabs": false,

@@ -15,7 +15,8 @@ try {
   debug = d("ArchSuperFX");
 } catch {}
 
-const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T => Object.hasOwn(obj, key);
+const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
+  Object.hasOwn(obj, key);
 
 export class ArchSuperFX implements ArchitectureEncoder {
   assembler: EncoderRuntime;
@@ -76,7 +77,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
     if (expandedOperand) {
       if (expandedOperand.startsWith("#")) {
         size = 2;
-      } else if (expandedOperand.includes("$") || loweredOperands.length > 1 || expandedOperand.includes(",")) {
+      } else if (
+        expandedOperand.includes("$") ||
+        loweredOperands.length > 1 ||
+        expandedOperand.includes(",")
+      ) {
         size = 3;
       }
     }
@@ -101,7 +106,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
     const parsedOperands = rawOperand ? rawOperand.split(",").map((operand) => operand.trim()) : [];
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    const loweredOperands = parsedOperands.map((operand) => this.assembler.operandResolver.lowerOperand(operand));
+    const loweredOperands = parsedOperands.map((operand) =>
+      this.assembler.operandResolver.lowerOperand(operand),
+    );
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
 
@@ -124,7 +131,10 @@ export class ArchSuperFX implements ArchitectureEncoder {
       return true;
     }
 
-    if (operands.length === 1 && this.handleTwoWordOpcode(opcode, operand, operandLength, firstLowered)) {
+    if (
+      operands.length === 1 &&
+      this.handleTwoWordOpcode(opcode, operand, operandLength, firstLowered)
+    ) {
       return true;
     }
 
@@ -154,33 +164,53 @@ export class ArchSuperFX implements ArchitectureEncoder {
 
     // Simple single-byte instructions
     type SingleOpcode =
-      | "STOP" | "NOP" | "CACHE" | "LSR" | "ROL" | "LOOP" | "ALT1" | "ALT2" | "ALT3"
-      | "PLOT" | "SWAP" | "COLOR" | "NOT" | "MERGE" | "SBK" | "SEX" | "ASR" | "ROR"
-      | "LOB" | "FMULT" | "HIB" | "GETC" | "GETB";
+      | "STOP"
+      | "NOP"
+      | "CACHE"
+      | "LSR"
+      | "ROL"
+      | "LOOP"
+      | "ALT1"
+      | "ALT2"
+      | "ALT3"
+      | "PLOT"
+      | "SWAP"
+      | "COLOR"
+      | "NOT"
+      | "MERGE"
+      | "SBK"
+      | "SEX"
+      | "ASR"
+      | "ROR"
+      | "LOB"
+      | "FMULT"
+      | "HIB"
+      | "GETC"
+      | "GETB";
     const singleOpcodes: Record<SingleOpcode, number> = {
       STOP: 0x00,
       NOP: 0x01,
       CACHE: 0x02,
       LSR: 0x03,
       ROL: 0x04,
-      LOOP: 0x3C,
-      ALT1: 0x3D,
-      ALT2: 0x3E,
-      ALT3: 0x3F,
-      PLOT: 0x4C,
-      SWAP: 0x4D,
-      COLOR: 0x4E,
-      NOT: 0x4F,
+      LOOP: 0x3c,
+      ALT1: 0x3d,
+      ALT2: 0x3e,
+      ALT3: 0x3f,
+      PLOT: 0x4c,
+      SWAP: 0x4d,
+      COLOR: 0x4e,
+      NOT: 0x4f,
       MERGE: 0x70,
       SBK: 0x90,
       SEX: 0x95,
       ASR: 0x96,
       ROR: 0x97,
-      LOB: 0x9E,
-      FMULT: 0x9F,
-      HIB: 0xC0,
-      GETC: 0xDF,
-      GETB: 0xEF,
+      LOB: 0x9e,
+      FMULT: 0x9f,
+      HIB: 0xc0,
+      GETC: 0xdf,
+      GETB: 0xef,
     };
 
     // Some instructions require a prefix like 0x3D, 0x3E, or 0x3F
@@ -193,17 +223,17 @@ export class ArchSuperFX implements ArchitectureEncoder {
     };
 
     const extendedOpcodes: TwoByteCommand[] = [
-      { mnemonic: "RPIX", prefix: 0x3D, opcode: 0x4C },
-      { mnemonic: "CMODE", prefix: 0x3D, opcode: 0x4E },
-      { mnemonic: "DIV2", prefix: 0x3D, opcode: 0x96 },
-      { mnemonic: "LMULT", prefix: 0x3D, opcode: 0x9F },
-      { mnemonic: "GETBH", prefix: 0x3D, opcode: 0xEF },
+      { mnemonic: "RPIX", prefix: 0x3d, opcode: 0x4c },
+      { mnemonic: "CMODE", prefix: 0x3d, opcode: 0x4e },
+      { mnemonic: "DIV2", prefix: 0x3d, opcode: 0x96 },
+      { mnemonic: "LMULT", prefix: 0x3d, opcode: 0x9f },
+      { mnemonic: "GETBH", prefix: 0x3d, opcode: 0xef },
 
-      { mnemonic: "RAMB", prefix: 0x3E, opcode: 0xDF },
-      { mnemonic: "GETBL", prefix: 0x3E, opcode: 0xEF },
+      { mnemonic: "RAMB", prefix: 0x3e, opcode: 0xdf },
+      { mnemonic: "GETBL", prefix: 0x3e, opcode: 0xef },
 
-      { mnemonic: "ROMB", prefix: 0x3F, opcode: 0xDF },
-      { mnemonic: "GETBS", prefix: 0x3F, opcode: 0xEF },
+      { mnemonic: "ROMB", prefix: 0x3f, opcode: 0xdf },
+      { mnemonic: "GETBS", prefix: 0x3f, opcode: 0xef },
     ];
 
     // Check simple single-byte opcodes
@@ -232,7 +262,12 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
-  handleTwoWordOpcode(opcode: string, operand: string, operandLength: number, loweredOperand?: LoweredOperand): boolean {
+  handleTwoWordOpcode(
+    opcode: string,
+    operand: string,
+    operandLength: number,
+    loweredOperand?: LoweredOperand,
+  ): boolean {
     debug("handleTwoWordOpcode", opcode, operand);
     return this.handleOneOperandOpcode(opcode, operand, operandLength, loweredOperand);
   }
@@ -245,23 +280,39 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
-  handleOneOperandOpcode(opcode: string, operand: string, operandLength: number, loweredOperand?: LoweredOperand): boolean {
+  handleOneOperandOpcode(
+    opcode: string,
+    operand: string,
+    operandLength: number,
+    loweredOperand?: LoweredOperand,
+  ): boolean {
     debug("handleOneOperandOpcode", opcode, operand, operandLength);
 
     // Mapping for short branches (8-bit offset)
-    type ShortBranchOpcode = "BRA" | "BGE" | "BLT" | "BNE" | "BEQ" | "BPL" | "BMI" | "BCC" | "BCS" | "BVC" | "BVS";
+    type ShortBranchOpcode =
+      | "BRA"
+      | "BGE"
+      | "BLT"
+      | "BNE"
+      | "BEQ"
+      | "BPL"
+      | "BMI"
+      | "BCC"
+      | "BCS"
+      | "BVC"
+      | "BVS";
     const shortBranchMap: Record<ShortBranchOpcode, number> = {
       BRA: 0x05,
       BGE: 0x06,
       BLT: 0x07,
       BNE: 0x08,
       BEQ: 0x09,
-      BPL: 0x0A,
-      BMI: 0x0B,
-      BCC: 0x0C,
-      BCS: 0x0D,
-      BVC: 0x0E,
-      BVS: 0x0F,
+      BPL: 0x0a,
+      BMI: 0x0b,
+      BCC: 0x0c,
+      BCS: 0x0d,
+      BVC: 0x0e,
+      BVS: 0x0f,
     };
 
     if (hasOwn(shortBranchMap, opcode)) {
@@ -320,54 +371,54 @@ export class ArchSuperFX implements ArchitectureEncoder {
           this.assembler.write1(0x90 + regR);
           return true;
         case "FROM":
-          this.assembler.write1(0xB0 + regR);
+          this.assembler.write1(0xb0 + regR);
           return true;
         case "OR":
           this.rangeCheck(1, regR, 15);
-          this.assembler.write1(0xC0 + regR);
+          this.assembler.write1(0xc0 + regR);
           return true;
         case "INC":
           this.rangeCheck(0, regR, 14);
-          this.assembler.write1(0xD0 + regR);
+          this.assembler.write1(0xd0 + regR);
           return true;
         case "DEC":
           this.rangeCheck(0, regR, 14);
-          this.assembler.write1(0xE0 + regR);
+          this.assembler.write1(0xe0 + regR);
           return true;
 
         // ALT1 variants (0x3D prefix)
         case "ADC":
           // 0x3D, then 0x50 + reg
-          this.assembler.write1(0x3D);
+          this.assembler.write1(0x3d);
           this.assembler.write1(0x50 + regR);
           return true;
         case "SBC":
-          this.assembler.write1(0x3D);
+          this.assembler.write1(0x3d);
           this.assembler.write1(0x60 + regR);
           return true;
         case "BIC":
           this.rangeCheck(1, regR, 15);
-          this.assembler.write1(0x3D);
+          this.assembler.write1(0x3d);
           this.assembler.write1(0x70 + regR);
           return true;
         case "UMULT":
-          this.assembler.write1(0x3D);
+          this.assembler.write1(0x3d);
           this.assembler.write1(0x80 + regR);
           return true;
         case "LJMP":
           this.rangeCheck(8, regR, 13);
-          this.assembler.write1(0x3D);
+          this.assembler.write1(0x3d);
           this.assembler.write1(0x90 + regR);
           return true;
         case "XOR":
           this.rangeCheck(1, regR, 15);
-          this.assembler.write1(0x3D);
-          this.assembler.write1(0xC0 + regR);
+          this.assembler.write1(0x3d);
+          this.assembler.write1(0xc0 + regR);
           return true;
 
         case "CMP":
           // prefix 0x3F, then 0x60 + reg
-          this.assembler.write1(0x3F);
+          this.assembler.write1(0x3f);
           this.assembler.write1(0x60 + regR);
           return true;
       }
@@ -385,46 +436,46 @@ export class ArchSuperFX implements ArchitectureEncoder {
       // ALT2 prefix (0x3E) logic, e.g. ADD #n => 0x3E  0x50 + n
       switch (opcode) {
         case "ADD":
-          this.assembler.write1(0x3E);
+          this.assembler.write1(0x3e);
           this.assembler.write1(0x50 + regHash);
           return true;
         case "SUB":
-          this.assembler.write1(0x3E);
+          this.assembler.write1(0x3e);
           this.assembler.write1(0x60 + regHash);
           return true;
         case "AND":
           this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(0x3E);
+          this.assembler.write1(0x3e);
           this.assembler.write1(0x70 + regHash);
           return true;
         case "MULT":
-          this.assembler.write1(0x3E);
+          this.assembler.write1(0x3e);
           this.assembler.write1(0x80 + regHash);
           return true;
         case "OR":
           this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(0x3E);
-          this.assembler.write1(0xC0 + regHash);
+          this.assembler.write1(0x3e);
+          this.assembler.write1(0xc0 + regHash);
           return true;
 
         // ALT3 prefix
         case "ADC":
-          this.assembler.write1(0x3F);
+          this.assembler.write1(0x3f);
           this.assembler.write1(0x50 + regHash);
           return true;
         case "BIC":
           this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(0x3F);
+          this.assembler.write1(0x3f);
           this.assembler.write1(0x70 + regHash);
           return true;
         case "UMULT":
-          this.assembler.write1(0x3F);
+          this.assembler.write1(0x3f);
           this.assembler.write1(0x80 + regHash);
           return true;
         case "XOR":
           this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(0x3F);
-          this.assembler.write1(0xC0 + regHash);
+          this.assembler.write1(0x3f);
+          this.assembler.write1(0xc0 + regHash);
           return true;
       }
     }
@@ -442,12 +493,12 @@ export class ArchSuperFX implements ArchitectureEncoder {
           return true;
         case "STB":
           this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(0x3D);
+          this.assembler.write1(0x3d);
           this.assembler.write1(0x30 + regParr);
           return true;
         case "LDB":
           this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(0x3D);
+          this.assembler.write1(0x3d);
           this.assembler.write1(0x40 + regParr);
           return true;
       }
@@ -492,7 +543,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
         case "MOVES":
           // write1(0x20+reg1); write1(0xB0+reg2)
           this.assembler.write1(0x20 + reg1r);
-          this.assembler.write1(0xB0 + reg2r);
+          this.assembler.write1(0xb0 + reg2r);
           return true;
       }
     }
@@ -504,12 +555,12 @@ export class ArchSuperFX implements ArchitectureEncoder {
       switch (opcode) {
         case "IBT":
           // => 0xA0+reg1, then immVal
-          this.assembler.write1(0xA0 + reg1r);
+          this.assembler.write1(0xa0 + reg1r);
           this.assembler.write1(immVal & 0xff);
           return true;
         case "IWT":
           // => 0xF0+reg1, then immVal (lo, hi)
-          this.assembler.write1(0xF0 + reg1r);
+          this.assembler.write1(0xf0 + reg1r);
           this.assembler.write1(immVal & 0xff);
           this.assembler.write1((immVal >> 8) & 0xff);
           return true;
@@ -517,11 +568,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
           // If immediate < 0x80 or >= 0xFF80 => 8-bit
           if (immVal < 0x80 || immVal >= 0xff80) {
             // prefix 0xA0+reg1
-            this.assembler.write1(0xA0 + reg1r);
+            this.assembler.write1(0xa0 + reg1r);
             this.assembler.write1(immVal & 0xff);
           } else {
             // prefix 0xF0+reg1, 16-bit
-            this.assembler.write1(0xF0 + reg1r);
+            this.assembler.write1(0xf0 + reg1r);
             this.assembler.write1(immVal & 0xff);
             this.assembler.write1((immVal >> 8) & 0xff);
           }
@@ -536,14 +587,14 @@ export class ArchSuperFX implements ArchitectureEncoder {
           // ...
           if (reg1parr === 0) {
             // e.g. MOVEB (r0), rX => 0x3D  0x30 + reg2?
-            this.assembler.write1(0x3D);
+            this.assembler.write1(0x3d);
             this.assembler.write1(0x30 + reg2r);
             return true;
           } else {
             // MOVEB (rN), rM => 0xB0+ reg1 then 0x3D  then 0x30+ reg2
             // Simplified version of code
-            this.assembler.write1(0xB0 + reg1parr);
-            this.assembler.write1(0x3D);
+            this.assembler.write1(0xb0 + reg1parr);
+            this.assembler.write1(0x3d);
             this.assembler.write1(0x30 + reg2r);
             return true;
           }
@@ -552,7 +603,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
           if (reg1parr === 0) {
             this.assembler.write1(0x30 + reg2r);
           } else {
-            this.assembler.write1(0xB0 + reg1parr);
+            this.assembler.write1(0xb0 + reg1parr);
             this.assembler.write1(0x30 + reg2r);
           }
           return true;
@@ -564,12 +615,12 @@ export class ArchSuperFX implements ArchitectureEncoder {
       switch (opcode) {
         case "MOVEB":
           if (reg2parr === 0) {
-            this.assembler.write1(0x3D);
+            this.assembler.write1(0x3d);
             this.assembler.write1(0x40 + reg1r);
             return true;
           } else {
             this.assembler.write1(0x10 + reg1r);
-            this.assembler.write1(0x3D);
+            this.assembler.write1(0x3d);
             this.assembler.write1(0x40 + reg2parr);
             return true;
           }
@@ -592,15 +643,15 @@ export class ArchSuperFX implements ArchitectureEncoder {
       switch (opcode) {
         case "LM":
           // => 0x3D, 0xF0 + reg1, then lo, hi
-          this.assembler.write1(0x3D);
-          this.assembler.write1(0xF0 + reg1r);
+          this.assembler.write1(0x3d);
+          this.assembler.write1(0xf0 + reg1r);
           this.assembler.write2(addrVal);
           return true;
         case "LMS":
           // short addressing check
           if (this.checkShortAddr(addrVal)) {
-            this.assembler.write1(0x3D);
-            this.assembler.write1(0xA0 + reg1r);
+            this.assembler.write1(0x3d);
+            this.assembler.write1(0xa0 + reg1r);
             this.assembler.write1(addrVal >> 1);
             return true;
           }
@@ -608,19 +659,19 @@ export class ArchSuperFX implements ArchitectureEncoder {
         case "MOVE":
           if (addrVal & 1 || addrVal >= 0x200) {
             // 0x3D, 0xF0+reg, lo, hi
-            this.assembler.write1(0x3D);
-            this.assembler.write1(0xF0 + reg1r);
+            this.assembler.write1(0x3d);
+            this.assembler.write1(0xf0 + reg1r);
             this.assembler.write2(addrVal);
           } else {
             // 0x3D, 0xA0+reg, lo
-            this.assembler.write1(0x3D);
-            this.assembler.write1(0xA0 + reg1r);
+            this.assembler.write1(0x3d);
+            this.assembler.write1(0xa0 + reg1r);
             this.assembler.write1(addrVal & 0xff);
           }
           return true;
         case "LEA":
           // => 0xF0+ reg, lo, hi
-          this.assembler.write1(0xF0 + reg1r);
+          this.assembler.write1(0xf0 + reg1r);
           this.assembler.write1(addrVal & 0xff);
           this.assembler.write1((addrVal >> 8) & 0xff);
           return true;
@@ -629,52 +680,70 @@ export class ArchSuperFX implements ArchitectureEncoder {
 
     // (imm), Rn
     const leftIsRegisterIndirect = leftLowered?.mode === "registerIndirect";
-    if (reg2r !== null && !leftIsRegisterIndirect && (leftLowered?.indirect ?? (leftOp.startsWith("(") && leftOp.endsWith(")")))) {
+    if (
+      reg2r !== null &&
+      !leftIsRegisterIndirect &&
+      (leftLowered?.indirect ?? (leftOp.startsWith("(") && leftOp.endsWith(")")))
+    ) {
       const addressExpression = leftLowered?.baseExpression ?? leftOp;
       const addrVal = this.assembler.operandResolver.getnum(addressExpression);
-        switch (opcode) {
-          case "SM":
-            this.assembler.write1(0x3E);
-            this.assembler.write1(0xF0 + reg2r);
+      switch (opcode) {
+        case "SM":
+          this.assembler.write1(0x3e);
+          this.assembler.write1(0xf0 + reg2r);
+          this.assembler.write2(addrVal);
+          return true;
+        case "SMS":
+          if (this.checkShortAddr(addrVal)) {
+            this.assembler.write1(0x3e);
+            this.assembler.write1(0xa0 + reg2r);
+            this.assembler.write1(addrVal >> 1);
+            return true;
+          }
+          return true;
+        case "MOVE":
+          if (addrVal & 1 || addrVal >= 0x200) {
+            this.assembler.write1(0x3e);
+            this.assembler.write1(0xf0 + reg2r);
             this.assembler.write2(addrVal);
-            return true;
-          case "SMS":
-            if (this.checkShortAddr(addrVal)) {
-              this.assembler.write1(0x3E);
-              this.assembler.write1(0xA0 + reg2r);
-              this.assembler.write1(addrVal >> 1);
-              return true;
-            }
-            return true;
-          case "MOVE":
-            if (addrVal & 1 || addrVal >= 0x200) {
-              this.assembler.write1(0x3E);
-              this.assembler.write1(0xF0 + reg2r);
-              this.assembler.write2(addrVal);
-            } else {
-              this.assembler.write1(0x3E);
-              this.assembler.write1(0xA0 + reg2r);
-              this.assembler.write1(addrVal & 0xff);
-            }
-            return true;
+          } else {
+            this.assembler.write1(0x3e);
+            this.assembler.write1(0xa0 + reg2r);
+            this.assembler.write1(addrVal & 0xff);
+          }
+          return true;
       }
     }
 
     return false;
   }
 
-  resolveRegister(str: string, lowered: LoweredOperand | undefined, type: "r" | "parr" | "hash"): number | null {
+  resolveRegister(
+    str: string,
+    lowered: LoweredOperand | undefined,
+    type: "r" | "parr" | "hash",
+  ): number | null {
     if (lowered) {
-      if (type === "r" && lowered.mode === "register" && lowered.registerName?.toLowerCase().startsWith("r")) {
+      if (
+        type === "r" &&
+        lowered.mode === "register" &&
+        lowered.registerName?.toLowerCase().startsWith("r")
+      ) {
         const regnum = this.parseRegisterNumber(lowered.registerName.slice(1));
         return regnum === -1 ? null : regnum;
       }
-      if (type === "parr" && lowered.mode === "registerIndirect" && lowered.registerName?.toLowerCase().startsWith("r")) {
+      if (
+        type === "parr" &&
+        lowered.mode === "registerIndirect" &&
+        lowered.registerName?.toLowerCase().startsWith("r")
+      ) {
         const regnum = this.parseRegisterNumber(lowered.registerName.slice(1));
         return regnum === -1 ? null : regnum;
       }
       if (type === "hash" && lowered.immediate) {
-        const regnum = this.assembler.operandResolver.getnum(lowered.baseExpression ?? lowered.expanded.slice(1));
+        const regnum = this.assembler.operandResolver.getnum(
+          lowered.baseExpression ?? lowered.expanded.slice(1),
+        );
         if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
           return null;
         }
@@ -786,9 +855,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
    */
   checkShortAddr(num: number): boolean {
     debug("checkShortAddr", num);
-    if (num % 2 !== 0 || num < 0 || num > 0x1FE) {
+    if (num % 2 !== 0 || num < 0 || num > 0x1fe) {
       throw this.assembler.diagnostics.error(
-        `Invalid short address ${num}. Must be even and in range 0..0x1FE`
+        `Invalid short address ${num}. Must be even and in range 0..0x1FE`,
       );
     }
     return true;

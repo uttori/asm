@@ -1,5 +1,9 @@
 import { renderExpressionNode } from "../ir/expression-node.js";
-import { setCommandKind, setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
+import {
+  setCommandKind,
+  setCommandWords,
+  type NormalizedCommand,
+} from "../ir/normalized-command.js";
 import type { SourceSpan } from "../source-location.js";
 import type { MathCore } from "../mathcore.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
@@ -16,7 +20,11 @@ export type FrontEndCommandHost = {
   processCommand(command: string): void;
   resolvedefines(input: string): string;
   recordCurrentAddress(): void;
-  recordSymbolDefinition(kind: "label" | "function", name: string, options?: { span?: SourceSpan; value?: number | string; containerName?: string }): void;
+  recordSymbolDefinition(
+    kind: "label" | "function",
+    name: string,
+    options?: { span?: SourceSpan; value?: number | string; containerName?: string },
+  ): void;
 };
 
 export class FrontEndCommandService {
@@ -150,7 +158,10 @@ export class FrontEndCommandService {
       const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
       this.host.symbolScope.handleLabelDefinition(labelName);
       this.host.recordSymbolDefinition("label", labelName, {
-        span: command.source.tokenSpans[consumedCount] ?? command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+        span:
+          command.source.tokenSpans[consumedCount] ??
+          command.source.tokenSpans[0] ??
+          command.source.normalizedSpan,
       });
       remainingWords.shift();
       consumedCount++;
