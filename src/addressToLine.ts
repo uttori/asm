@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { CRC32 } from "./crc32.ts";
+import { CRC32 } from "./crc32.js";
 
 let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */

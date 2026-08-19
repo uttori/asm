@@ -17,7 +17,7 @@
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/debug": "^4.1.13",
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.2.0",
     "@types/sinon": "^22.0.0",
     "ava": "^8.0.1",
     "c8": "^12.0.0",
@@ -25,10 +25,10 @@
     "eslint-plugin-optimize-regex": "^1.2.1",
     "eslint-plugin-security": "^4.0.1",
     "eslint-plugin-xss": "^0.1.12",
-    "oxlint": "^1.74.0",
-    "oxlint-tsgolint": "^0.25.0",
-    "sinon": "^22.0.0",
-    "tsx": "^4.23.1",
+    "oxlint": "^1.79.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "sinon": "^22.1.0",
+    "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   },
   "overrides": {
@@ -84,13 +84,16 @@
     ]
   },
   "scripts": {
-    "lint": "oxlint ./src",
     "make-types": "rm -rf dist && tsc --module nodenext --project ./tsconfig.json",
     "cli": "tsx src/cli.ts",
     "fixture:asar": "tsx scripts/run-asar-fixtures.ts",
     "fixture:chou": "tsx scripts/run-chou.ts",
     "fixture:slideshow": "tsx scripts/run-slideshow.ts",
     "fixture:slideshow:legacy": "tsx scripts/run-slideshow-legacy.ts",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint ./src",
+    "lint:fix": "oxlint ./src --fix",
     "benchmark": "tsx scripts/run-production-benchmarks.ts",
     "benchmark:smoke": "tsx scripts/run-production-benchmarks.ts --fast",
     "benchmark:typecheck": "tsc -p scripts/tsconfig.json --noEmit",
@@ -104,7 +107,7 @@
     "coverage:stable": "c8 report --check-coverage --per-file --statements 95 --branches 90 --functions 95 --include=src/directives/memory.ts --include=src/directives/namespace.ts --include=src/services/macro-engine.ts --include=src/lsp/position-lookup.ts --include=src/lsp/workspace-index.ts",
     "coverage:verify": "npm run test:serial && npm run coverage:check && npm run coverage:stable",
     "validate": "npm ls",
-    "verify": "npm run lint && npm run make-types && npm run coverage:verify && npm run lsp:typecheck && npm run vscode:typecheck",
+    "verify": "npm run fmt && npm run lint && npm run make-types && npm run coverage:verify && npm run lsp:typecheck && npm run vscode:typecheck",
     "pack:check": "npm pack --dry-run",
     "lsp:typecheck": "tsc -p language-server/tsconfig.json --noEmit",
     "lsp:build": "node language-server/esbuild.mjs",
@@ -114,6 +117,12 @@
   },
   "allowScripts": {
     "esbuild@0.25.12": true,
-    "esbuild@0.28.1": true
+    "esbuild@0.28.2": true,
+    "@vscode/vsce-sign@2.0.9": true,
+    "fsevents@2.3.3": true,
+    "keytar@7.9.0": true
+  },
+  "dependencies": {
+    "oxfmt": "^0.64.0"
   }
 }

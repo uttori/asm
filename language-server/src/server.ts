@@ -1,14 +1,18 @@
+/**
+ * SNES assembly language-server transport and LSP 3.18 request routing.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#language-server-protocol
+ */
 import {
-  CodeAction,
-  CodeActionKind,
   createConnection,
   DidChangeConfigurationNotification,
+  PositionEncodingKind,
   ProposedFeatures,
+  SymbolInformation,
   TextDocumentSyncKind,
   TextDocuments,
   type InitializeParams,
   type InitializeResult,
-} from "vscode-languageserver/node.js";
+} from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import fs from "node:fs";
 import path from "node:path";
@@ -32,7 +36,12 @@ import {
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 
-/** Settings consumed by the server, mirrored from the client configuration. */
+/**
+ * Settings consumed by the server, mirrored from LSP `initializationOptions`
+ * and `workspace/configuration`.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#initialize-request-leftwards_arrow_with_hook
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#configuration-request-arrow_right_hook
+ */
 type ServerSettings = {
   entryPoints: string[];
   includePaths: string[];
@@ -47,6 +56,8 @@ const defaultSettings: ServerSettings = {
 
 let settings: ServerSettings = { ...defaultSettings };
 let hasConfigurationCapability = false;
+let hasDidChangeConfigurationDynamicRegistration = false;
+let workspaceRoots: string[] = [];
 const index = new WorkspaceIndex(settings);
 
 /** Pending debounce timer for re-analysis. */
@@ -54,6 +65,7 @@ let reindexTimer: NodeJS.Timeout | undefined;
 
 /**
  * Schedules a debounced workspace re-index and diagnostic refresh.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didchangewatchedfiles-notification-arrow_right
  */
 function scheduleReindex(): void {
   if (reindexTimer) {
@@ -68,6 +80,7 @@ function scheduleReindex(): void {
 
 /**
  * Publishes diagnostics for every open document.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#publishdiagnostics-notification-arrow_left
  */
 function publishAllDiagnostics(): void {
   for (const document of documents.all()) {
@@ -76,13 +89,24 @@ function publishAllDiagnostics(): void {
   }
 }
 
+/**
+ * Negotiates the server's LSP 3.18 capabilities with the client.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#initialize-request-leftwards_arrow_with_hook
+ */
 connection.onInitialize((params: InitializeParams): InitializeResult => {
   hasConfigurationCapability = Boolean(params.capabilities.workspace?.configuration);
+  hasDidChangeConfigurationDynamicRegistration = Boolean(
+    params.capabilities.workspace?.didChangeConfiguration?.dynamicRegistration,
+  );
   applyInitializationOptions(params);
 
   return {
     capabilities: {
-      textDocumentSync: TextDocumentSyncKind.Incremental,
+      positionEncoding: PositionEncodingKind.UTF16,
+      textDocumentSync: {
+        openClose: true,
+        change: TextDocumentSyncKind.Incremental,
+      },
       completionProvider: { triggerCharacters: [".", "!", "$"] },
       hoverProvider: true,
       definitionProvider: true,
@@ -91,7 +115,6 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       workspaceSymbolProvider: true,
       renameProvider: { prepareProvider: true },
       signatureHelpProvider: { triggerCharacters: [" ", ","] },
-      codeActionProvider: { codeActionKinds: [CodeActionKind.QuickFix] },
       executeCommandProvider: { commands: ["snesAsm.build"] },
       semanticTokensProvider: {
         legend: semanticTokensLegend,
@@ -101,7 +124,10 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   };
 });
 
-/** The result of an assemble/build request. */
+/**
+ * The extension-specific result of the `snesAsm.build` execute-command request.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#execute-a-command-leftwards_arrow_with_hook
+ */
 type BuildResult = {
   ok: boolean;
   outputPath?: string;
@@ -116,6 +142,7 @@ type BuildResult = {
  * @param {string} outputPath The absolute path to write the assembled binary to.
  * @param {string} [targetRomPath] Optional base ROM to patch into.
  * @returns {BuildResult} The build outcome.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#execute-a-command-leftwards_arrow_with_hook
  */
 function buildRom(file: string, outputPath: string, targetRomPath?: string): BuildResult {
   try {
@@ -158,6 +185,10 @@ function defaultOutputPath(file: string): string {
   return path.join(parsed.dir, `${parsed.name}.sfc`);
 }
 
+/**
+ * Handles the extension-specific `snesAsm.build` workspace command.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#execute-a-command-leftwards_arrow_with_hook
+ */
 connection.onExecuteCommand((params) => {
   if (params.command !== "snesAsm.build") {
     return undefined;
@@ -173,9 +204,16 @@ connection.onExecuteCommand((params) => {
   return buildRom(file, outputPath, targetRomPath);
 });
 
+/**
+ * Completes dynamic registration after initialization.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#initialized-notification-arrow_right
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#register-capability-arrow_right_hook
+ */
 connection.onInitialized(() => {
-  if (hasConfigurationCapability) {
+  if (hasDidChangeConfigurationDynamicRegistration) {
     connection.client.register(DidChangeConfigurationNotification.type, undefined).catch(() => {});
+  }
+  if (hasConfigurationCapability) {
     void refreshConfiguration();
   }
 });
@@ -183,14 +221,18 @@ connection.onInitialized(() => {
 /**
  * Applies entry points and include paths handed in `initializationOptions`.
  * @param {InitializeParams} params The initialize parameters.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#initialize-request-leftwards_arrow_with_hook
  */
 function applyInitializationOptions(params: InitializeParams): void {
   const options = (params.initializationOptions ?? {}) as Partial<ServerSettings>;
-  const roots = (params.workspaceFolders ?? [])
+  workspaceRoots = (params.workspaceFolders ?? [])
     .map((folder) => uriToPath(folder.uri));
+  if (workspaceRoots.length === 0 && params.rootUri) {
+    workspaceRoots = [uriToPath(params.rootUri)];
+  }
   settings = {
-    entryPoints: (options.entryPoints ?? []).map((entry) => resolveAgainst(roots, entry)),
-    includePaths: options.includePaths ?? defaultSettings.includePaths,
+    entryPoints: resolveConfiguredPaths(options.entryPoints ?? [], workspaceRoots),
+    includePaths: resolveConfiguredPaths(options.includePaths ?? defaultSettings.includePaths, workspaceRoots),
     architecture: options.architecture ?? defaultSettings.architecture,
   };
   index.configure(settings);
@@ -204,36 +246,84 @@ function applyInitializationOptions(params: InitializeParams): void {
  */
 function resolveAgainst(roots: string[], entry: string): string {
   if (roots.length === 0) {
-    return entry;
+    return path.resolve(entry);
   }
-  return entry.startsWith("/") ? entry : `${roots[0]}/${entry}`;
+  return path.isAbsolute(entry) ? path.normalize(entry) : path.resolve(roots[0], entry);
+}
+
+/**
+ * Resolves configuration path values against the first workspace folder.
+ * @param {string[]} values The configured paths.
+ * @param {string[]} roots The active workspace roots.
+ * @returns {string[]} Absolute normalized paths.
+ */
+function resolveConfiguredPaths(values: string[], roots: string[]): string[] {
+  return values.map((value) => resolveAgainst(roots, value));
 }
 
 /**
  * Pulls configuration from the client and re-indexes when it changes.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#configuration-request-arrow_right_hook
  */
 async function refreshConfiguration(): Promise<void> {
   try {
     const config = await connection.workspace.getConfiguration("snesAsm");
-    if (config && typeof config === "object") {
-      const next = config as Partial<ServerSettings>;
-      settings = {
-        entryPoints: next.entryPoints ?? settings.entryPoints,
-        includePaths: next.includePaths ?? settings.includePaths,
-        architecture: next.architecture ?? settings.architecture,
-      };
-      index.configure(settings);
-      publishAllDiagnostics();
-    }
+    applyConfiguration(config);
   } catch {
     // Configuration is optional; ignore failures and keep current settings.
   }
 }
 
-connection.onDidChangeConfiguration(() => {
-  void refreshConfiguration();
+/**
+ * Applies an LSP configuration payload without assuming pull-configuration
+ * support. This is also used for the settings embedded in change notifications.
+ * @param {unknown} config The client-provided `snesAsm` configuration object.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#configuration-request-arrow_right_hook
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didchangeconfiguration-notification-arrow_right
+ */
+function applyConfiguration(config: unknown): void {
+  if (!config || typeof config !== "object") {
+    return;
+  }
+  const next = config as Partial<ServerSettings>;
+  settings = {
+    entryPoints: next.entryPoints
+      ? resolveConfiguredPaths(next.entryPoints, workspaceRoots)
+      : settings.entryPoints,
+    includePaths: next.includePaths
+      ? resolveConfiguredPaths(next.includePaths, workspaceRoots)
+      : settings.includePaths,
+    architecture: next.architecture ?? settings.architecture,
+  };
+  index.configure(settings);
+  publishAllDiagnostics();
+}
+
+/**
+ * Refreshes settings after `workspace/didChangeConfiguration`.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didchangeconfiguration-notification-arrow_right
+ */
+connection.onDidChangeConfiguration((params) => {
+  if (hasConfigurationCapability) {
+    void refreshConfiguration();
+    return;
+  }
+  const changedSettings = params.settings as { snesAsm?: unknown } | undefined;
+  applyConfiguration(changedSettings?.snesAsm ?? changedSettings);
 });
 
+/**
+ * Re-indexes disk-backed source changes reported by the editor file watcher.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didchangewatchedfiles-notification-arrow_right
+ */
+connection.onDidChangeWatchedFiles(() => {
+  scheduleReindex();
+});
+
+/**
+ * Adds an opened text document to the overlay used by analysis and builds.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didopentextdocument-notification-arrow_right
+ */
 documents.onDidOpen((event) => {
   index.openDocument(uriToPath(event.document.uri), event.document.getText());
   connection.sendDiagnostics({
@@ -242,18 +332,28 @@ documents.onDidOpen((event) => {
   });
 });
 
+/**
+ * Applies incremental text-document changes to the analysis overlay.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didchangetextdocument-notification-arrow_right
+ */
 documents.onDidChangeContent((event) => {
   index.updateDocument(uriToPath(event.document.uri), event.document.getText());
   scheduleReindex();
 });
 
+/**
+ * Removes a closed document from the overlay and clears its diagnostics.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didclosetextdocument-notification-arrow_right
+ */
 documents.onDidClose((event) => {
   index.closeDocument(uriToPath(event.document.uri));
   connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook */
 connection.onCompletion(() => completionsFor(index, settings.architecture));
 
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#hover-request-leftwards_arrow_with_hook */
 connection.onHover((params) => {
   const document = documents.get(params.textDocument.uri);
   if (!document) {
@@ -262,8 +362,10 @@ connection.onHover((params) => {
   return hoverFor(index, uriToPath(params.textDocument.uri), params.position, document.getText(), settings.architecture);
 });
 
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#go-to-definition-request-leftwards_arrow_with_hook */
 connection.onDefinition((params) => definitionFor(index, uriToPath(params.textDocument.uri), params.position));
 
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#find-references-request-leftwards_arrow_with_hook */
 connection.onReferences((params) => referencesFor(
   index,
   uriToPath(params.textDocument.uri),
@@ -271,26 +373,30 @@ connection.onReferences((params) => referencesFor(
   params.context.includeDeclaration,
 ));
 
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#document-symbols-request-leftwards_arrow_with_hook */
 connection.onDocumentSymbol((params) => documentSymbolsFor(index, uriToPath(params.textDocument.uri)));
 
-connection.onWorkspaceSymbol((params) => {
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#workspace-symbols-request-leftwards_arrow_with_hook */
+connection.onWorkspaceSymbol((params): SymbolInformation[] => {
   const query = params.query.toLowerCase();
-  const results = [];
+  const results: SymbolInformation[] = [];
   for (const file of index.getAnalyzedFiles()) {
     for (const symbol of documentSymbolsFor(index, file)) {
       if (!query || symbol.name.toLowerCase().includes(query)) {
-        results.push({
-          name: symbol.name,
-          kind: symbol.kind,
-          location: { uri: pathToUri(file), range: symbol.selectionRange },
-          containerName: symbol.detail,
-        });
+        results.push(SymbolInformation.create(
+          symbol.name,
+          symbol.kind,
+          symbol.selectionRange,
+          pathToUri(file),
+          symbol.detail,
+        ));
       }
     }
   }
   return results;
 });
 
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#signature-help-request-leftwards_arrow_with_hook */
 connection.onSignatureHelp((params) => {
   const document = documents.get(params.textDocument.uri);
   if (!document) {
@@ -301,8 +407,10 @@ connection.onSignatureHelp((params) => {
   return signatureHelpFor(lineText, settings.architecture);
 });
 
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#prepare-rename-request-leftwards_arrow_with_hook */
 connection.onPrepareRename((params) => prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position));
 
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#rename-request-leftwards_arrow_with_hook */
 connection.onRenameRequest((params) => renameEditsFor(
   index,
   uriToPath(params.textDocument.uri),
@@ -310,24 +418,17 @@ connection.onRenameRequest((params) => renameEditsFor(
   params.newName,
 ));
 
-connection.onCodeAction((params): CodeAction[] => {
-  const file = uriToPath(params.textDocument.uri);
-  const actions: CodeAction[] = [];
-  for (const diagnostic of params.context.diagnostics) {
-    if (diagnostic.code === "ASSEMBLY_ERROR" || typeof diagnostic.code === "string") {
-      // Placeholder quick-fix scaffold: surface the diagnostic so future
-      // refactors can attach concrete edits (e.g. fix include paths).
-      actions.push(CodeAction.create(
-        `Review: ${diagnostic.message}`,
-        CodeActionKind.QuickFix,
-      ));
-    }
-  }
-  void file;
-  return actions;
-});
-
+/** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook */
 connection.languages.semanticTokens.on((params) => semanticTokensFor(index, uriToPath(params.textDocument.uri)));
 
+/**
+ * Connects the text-document manager to the negotiated synchronization stream.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#text-document-synchronization
+ */
 documents.listen(connection);
+
+/**
+ * Starts processing LSP messages over the selected JSON-RPC transport.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#base-protocol
+ */
 connection.listen();

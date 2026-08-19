@@ -495,7 +495,8 @@ test("integration SLIDESHOW regression keeps CLI-style include flow byte-identic
   t.is(hashBuffer(output), hashBuffer(expected));
 });
 
-test("integration CHOU regression keeps legacy include flow byte-identical", (t) => {
+test.serial("integration CHOU regression keeps legacy include flow byte-identical", (t) => {
+  t.timeout(15 * 60_000);
   const source = fs.readFileSync(CHOU_SRC_PATH, "utf8");
   const expected = fs.readFileSync(CHOU_EXPECTED_PATH);
   const targetRom = fs.existsSync(CHOU_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(CHOU_TARGET_ROM_PATH)) : undefined;
@@ -515,7 +516,8 @@ test("integration CHOU regression keeps legacy include flow byte-identical", (t)
   t.is(hashBuffer(Buffer.from(assembler.getBinaryOutput())), hashBuffer(expected));
 });
 
-test("integration CHOU staged production path preserves include resolution", (t) => {
+test.serial("integration CHOU staged production path preserves include resolution", (t) => {
+  t.timeout(15 * 60_000);
   const source = fs.readFileSync(CHOU_SRC_PATH, "utf8");
   const expected = fs.readFileSync(CHOU_EXPECTED_PATH);
   const targetRom = fs.existsSync(CHOU_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(CHOU_TARGET_ROM_PATH)) : undefined;

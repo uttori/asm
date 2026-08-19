@@ -47,15 +47,17 @@ function getFileStats(filePath: string): { size: number; checksum: string } {
  */
 function runTest(baseName: string): TestResult {
   const asmFile = path.join(testsDir, `${baseName}.asm`);
-  const outputFile = path.join(testsDir, `${baseName}.sfc`);
+  const outputFile = path.join(testsDir, `${baseName.toLowerCase()}.sfc`);
+  const temporaryOutputFile = path.join(testsDir, `.${baseName.toLowerCase()}.tmp.sfc`);
   const expectedFile = path.join(testsDir, "Chou Makaimura (Japan).sfc");
 
-  // Remove stale output so failures cannot be masked by old binaries.
-  if (fs.existsSync(outputFile)) {
-    fs.rmSync(outputFile);
+  // Build separately so a failed or interrupted run cannot delete the last
+  // known-good fixture used by the integration tests.
+  if (fs.existsSync(temporaryOutputFile)) {
+    fs.rmSync(temporaryOutputFile);
   }
 
-  const command = `npm run cli -- ${asmFile} ${outputFile} ${targetRom} --checksum-mode=${checksumMode}`;
+  const command = `npm run cli -- ${asmFile} ${temporaryOutputFile} ${targetRom} --checksum-mode=${checksumMode}`;
   console.log(`\nRunning: ${command}`);
 
   let runError: string | undefined = undefined;
@@ -66,12 +68,17 @@ function runTest(baseName: string): TestResult {
     console.error(`Error running command for ${baseName}:`, runError);
   }
 
-  const outputStats = getFileStats(outputFile);
+  const outputStats = getFileStats(temporaryOutputFile);
   const expectedStats = getFileStats(expectedFile);
 
   const fileSizeMismatch = outputStats.size !== expectedStats.size;
   const checksumMismatch = outputStats.checksum !== expectedStats.checksum;
   const overallPassed = !fileSizeMismatch && !checksumMismatch;
+
+  if (overallPassed) {
+    fs.copyFileSync(temporaryOutputFile, outputFile);
+    fs.rmSync(temporaryOutputFile);
+  }
 
   return {
     test: baseName,

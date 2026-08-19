@@ -5,12 +5,15 @@ import {
   CompletionItemKind,
   Diagnostic,
   DiagnosticSeverity,
+  type DocumentUri,
   DocumentSymbol,
   Hover,
   Location,
   MarkupKind,
   Position,
   Range,
+  SemanticTokenModifiers,
+  SemanticTokenTypes,
   SemanticTokens,
   SemanticTokensBuilder,
   SemanticTokensLegend,
@@ -40,15 +43,30 @@ import {
   type SourceRange,
 } from "./core.js";
 
-/** The semantic token legend advertised to the client. */
+/**
+ * The LSP 3.18 semantic-token legend advertised to clients. All entries use
+ * protocol-standard token types and modifiers, including the 3.18 `label` type.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook
+ */
 export const semanticTokensLegend: SemanticTokensLegend = {
-  tokenTypes: ["keyword", "function", "variable", "property", "macro", "namespace", "number", "string"],
-  tokenModifiers: ["declaration"],
+  tokenTypes: [
+    SemanticTokenTypes.keyword,
+    SemanticTokenTypes.function,
+    SemanticTokenTypes.variable,
+    SemanticTokenTypes.property,
+    SemanticTokenTypes.macro,
+    SemanticTokenTypes.namespace,
+    SemanticTokenTypes.number,
+    SemanticTokenTypes.string,
+    SemanticTokenTypes.label,
+  ],
+  tokenModifiers: [SemanticTokenModifiers.definition],
 };
 
 const tokenTypeIndex = new Map<string, number>(
   semanticTokensLegend.tokenTypes.map((type, index) => [type, index]),
 );
+const definitionTokenModifier = 1 << semanticTokensLegend.tokenModifiers.indexOf(SemanticTokenModifiers.definition);
 
 /** Characters that can appear inside an assembly identifier or define name. */
 const IDENTIFIER_CHAR = /[A-Za-z0-9_.!]/;
@@ -56,18 +74,20 @@ const IDENTIFIER_CHAR = /[A-Za-z0-9_.!]/;
 /**
  * Converts an absolute file path to a file URI string.
  * @param {string} filePath The absolute path.
- * @returns {string} The file URI.
+ * @returns {DocumentUri} The file URI.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#uri
  */
-export function pathToUri(filePath: string): string {
+export function pathToUri(filePath: string): DocumentUri {
   return pathToFileURL(filePath).toString();
 }
 
 /**
  * Converts a file URI string to an absolute file path.
- * @param {string} uri The file URI.
+ * @param {DocumentUri} uri The file URI.
  * @returns {string} The absolute path.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#uri
  */
-export function uriToPath(uri: string): string {
+export function uriToPath(uri: DocumentUri): string {
   return fileURLToPath(uri);
 }
 
@@ -75,6 +95,7 @@ export function uriToPath(uri: string): string {
  * Converts a core source range to an LSP range.
  * @param {SourceRange} range The core range.
  * @returns {Range} The LSP range.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#range
  */
 function toRange(range: SourceRange): Range {
   return Range.create(range.start.line, range.start.character, range.end.line, range.end.character);
@@ -84,6 +105,7 @@ function toRange(range: SourceRange): Range {
  * Maps an assembler diagnostic severity to an LSP severity.
  * @param {AssemblyDiagnosticSeverity} severity The assembler severity.
  * @returns {DiagnosticSeverity} The LSP severity.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#diagnostic
  */
 function toDiagnosticSeverity(severity: AssemblyDiagnosticSeverity): DiagnosticSeverity {
   switch (severity) {
@@ -101,6 +123,7 @@ function toDiagnosticSeverity(severity: AssemblyDiagnosticSeverity): DiagnosticS
  * Maps an assembler symbol kind to an LSP symbol kind.
  * @param {AssemblySymbolKind} kind The assembler symbol kind.
  * @returns {SymbolKind} The LSP symbol kind.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#document-symbols-request-leftwards_arrow_with_hook
  */
 function toSymbolKind(kind: AssemblySymbolKind): SymbolKind {
   switch (kind) {
@@ -124,6 +147,7 @@ function toSymbolKind(kind: AssemblySymbolKind): SymbolKind {
  * Returns a fallback range for an artifact lacking precise geometry.
  * @param {number} line The zero-based line number.
  * @returns {Range} A single-character range at the line start.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#range
  */
 function lineFallbackRange(line: number): Range {
   const safeLine = Number.isFinite(line) && line >= 0 ? line : 0;
@@ -206,6 +230,7 @@ function findTokenColumn(lineText: string, name: string): number {
  * @param {string} text The document text.
  * @param {Position} position The cursor position.
  * @returns {string | undefined} The word, or undefined when none is present.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#position
  */
 function wordAt(text: string, position: Position): string | undefined {
   const line = splitLines(text)[position.line];
@@ -300,6 +325,8 @@ function cursorSymbol(
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @returns {Diagnostic[]} The LSP diagnostics.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#diagnostic
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#publishdiagnostics-notification-arrow_left
  */
 export function diagnosticsFor(index: WorkspaceIndex, file: string): Diagnostic[] {
   return index.getDiagnostics(file).map((diagnostic: AssemblyDiagnostic) => {
@@ -319,6 +346,7 @@ export function diagnosticsFor(index: WorkspaceIndex, file: string): Diagnostic[
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @returns {DocumentSymbol[]} The document symbols.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#document-symbols-request-leftwards_arrow_with_hook
  */
 export function documentSymbolsFor(index: WorkspaceIndex, file: string): DocumentSymbol[] {
   return index.getSymbols(file).map((symbol: AssemblySymbolDefinition) => {
@@ -339,6 +367,7 @@ export function documentSymbolsFor(index: WorkspaceIndex, file: string): Documen
  * @param {string} file The absolute file path.
  * @param {Position} position The cursor position.
  * @returns {Location[]} The definition locations.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#go-to-definition-request-leftwards_arrow_with_hook
  */
 export function definitionFor(index: WorkspaceIndex, file: string, position: Position): Location[] {
   const word = cursorWord(index, file, position);
@@ -377,6 +406,7 @@ export function definitionFor(index: WorkspaceIndex, file: string, position: Pos
  * @param {Position} position The cursor position.
  * @param {boolean} includeDeclaration Whether to include the declaration.
  * @returns {Location[]} The reference locations.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#find-references-request-leftwards_arrow_with_hook
  */
 export function referencesFor(
   index: WorkspaceIndex,
@@ -413,6 +443,7 @@ export function referencesFor(
  * @param {string} text The full document text.
  * @param {string} architecture The active architecture name.
  * @returns {Hover | null} The hover, or null when nothing is documented.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#hover-request-leftwards_arrow_with_hook
  */
 export function hoverFor(
   index: WorkspaceIndex,
@@ -461,11 +492,12 @@ export function hoverFor(
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} architecture The active architecture name.
  * @returns {CompletionItem[]} The completion items.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook
  */
 export function completionsFor(index: WorkspaceIndex, architecture: string): CompletionItem[] {
   const items: CompletionItem[] = buildCompletionEntries(architecture).map((entry) => ({
     label: entry.label,
-    kind: entry.kind === "instruction" ? CompletionItemKind.Keyword : CompletionItemKind.Function,
+    kind: CompletionItemKind.Keyword,
     detail: entry.detail,
     documentation: { kind: MarkupKind.Markdown, value: entry.documentation },
   }));
@@ -491,6 +523,7 @@ export function completionsFor(index: WorkspaceIndex, architecture: string): Com
  * @param {string} lineText The current line text up to the cursor.
  * @param {string} architecture The active architecture name.
  * @returns {SignatureHelp | null} The signature help, or null.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#signature-help-request-leftwards_arrow_with_hook
  */
 export function signatureHelpFor(lineText: string, architecture: string): SignatureHelp | null {
   const leading = lineText.trim().split(/\s+/)[0];
@@ -504,7 +537,7 @@ export function signatureHelpFor(lineText: string, architecture: string): Signat
       `${instruction.mnemonic} ${mode.syntax}`.trim(),
       `${mode.mode}${instruction.summary ? ` — ${instruction.summary}` : ""}`,
     ));
-    return { signatures, activeSignature: 0, activeParameter: 0 };
+    return { signatures, activeSignature: 0 };
   }
 
   const directive = findDirective(leading);
@@ -512,7 +545,6 @@ export function signatureHelpFor(lineText: string, architecture: string): Signat
     return {
       signatures: [SignatureInformation.create(directive.syntax, directive.summary)],
       activeSignature: 0,
-      activeParameter: 0,
     };
   }
   return null;
@@ -524,11 +556,12 @@ export function signatureHelpFor(lineText: string, architecture: string): Signat
  * @param {string} file The absolute file path.
  * @param {Position} position The cursor position.
  * @returns {Range | null} The identifier range, or null when rename is unavailable.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#prepare-rename-request-leftwards_arrow_with_hook
  */
 export function prepareRenameFor(index: WorkspaceIndex, file: string, position: Position): Range | null {
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
-  if (reference) {
+  if (reference && isRenameableReference(reference)) {
     return referenceRange(index, reference);
   }
   const symbol = cursorSymbol(index, file, position, word);
@@ -545,6 +578,8 @@ export function prepareRenameFor(index: WorkspaceIndex, file: string, position: 
  * @param {Position} position The cursor position.
  * @param {string} newName The replacement name.
  * @returns {WorkspaceEdit | null} The workspace edit, or null when nothing to rename.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#rename-request-leftwards_arrow_with_hook
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#workspaceedit
  */
 export function renameEditsFor(
   index: WorkspaceIndex,
@@ -552,8 +587,8 @@ export function renameEditsFor(
   position: Position,
   newName: string,
 ): WorkspaceEdit | null {
-  const name = identifierNameAt(index, file, position);
-  if (!name) {
+  const target = renameTargetAt(index, file, position);
+  if (!target) {
     return null;
   }
 
@@ -564,10 +599,10 @@ export function renameEditsFor(
     editsByUri.set(uri, edits);
   };
 
-  for (const symbol of index.getAllSymbols().filter((entry) => entry.name === name)) {
+  for (const symbol of index.getAllSymbols().filter((entry) => symbolMatchesRenameTarget(entry, target))) {
     pushEdit(pathToUri(symbol.location.file), definitionRange(index, symbol));
   }
-  for (const reference of findReferences(name, index.getAllReferences())) {
+  for (const reference of index.getAllReferences().filter((entry) => referenceMatchesRenameTarget(entry, target))) {
     pushEdit(pathToUri(reference.location.file), referenceRange(index, reference));
   }
 
@@ -577,17 +612,87 @@ export function renameEditsFor(
   return { changes: Object.fromEntries(editsByUri) };
 }
 
+type RenameTarget = {
+  symbol?: AssemblySymbolDefinition;
+  reference?: AssemblySymbolReference;
+};
+
+/**
+ * Resolves a renameable definition or reference at the cursor. Instruction,
+ * include, and unknown tokens are deliberately excluded.
+ */
+function renameTargetAt(index: WorkspaceIndex, file: string, position: Position): RenameTarget | undefined {
+  const word = cursorWord(index, file, position);
+  const reference = cursorReference(index, file, position, word);
+  if (reference) {
+    if (!isRenameableReference(reference)) {
+      return undefined;
+    }
+    const definitions = resolveDefinition(reference, index.getAllSymbols());
+    return definitions.length === 1 ? { symbol: definitions[0] } : { reference };
+  }
+  const symbol = cursorSymbol(index, file, position, word);
+  return symbol ? { symbol } : undefined;
+}
+
+/** Returns whether an analysis reference represents a user-defined symbol. */
+function isRenameableReference(reference: AssemblySymbolReference): boolean {
+  return reference.kind !== "include" && reference.kind !== "instruction" && reference.kind !== "unknown";
+}
+
+/** Returns whether a definition belongs to the selected rename target. */
+function symbolMatchesRenameTarget(symbol: AssemblySymbolDefinition, target: RenameTarget): boolean {
+  if (target.symbol) {
+    return symbol.name === target.symbol.name
+      && symbol.kind === target.symbol.kind
+      && symbol.containerName === target.symbol.containerName;
+  }
+  return target.reference ? resolveDefinition(target.reference, [symbol]).length === 1 : false;
+}
+
+/** Returns whether a reference belongs to the selected rename target. */
+function referenceMatchesRenameTarget(reference: AssemblySymbolReference, target: RenameTarget): boolean {
+  if (!isRenameableReference(reference)) {
+    return false;
+  }
+  if (target.reference) {
+    return reference.name === target.reference.name
+      && reference.kind === target.reference.kind
+      && reference.containerName === target.reference.containerName;
+  }
+  if (!target.symbol || reference.name !== target.symbol.name) {
+    return false;
+  }
+  if (target.symbol.containerName !== undefined && reference.containerName !== target.symbol.containerName) {
+    return false;
+  }
+  switch (target.symbol.kind) {
+    case "define":
+      return reference.kind === "define";
+    case "macro":
+      return reference.kind === "macro";
+    case "function":
+      return reference.kind === "function";
+    case "label":
+    case "struct":
+    case "structMember":
+    default:
+      return reference.kind === "label";
+  }
+}
+
 /**
  * Builds semantic tokens for a file from its symbols and references.
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @returns {SemanticTokens} The semantic tokens.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook
  */
 export function semanticTokensFor(index: WorkspaceIndex, file: string): SemanticTokens {
-  type RawToken = { line: number; char: number; length: number; type: number };
+  type RawToken = { line: number; char: number; length: number; type: number; modifiers: number };
   const tokens: RawToken[] = [];
 
-  const push = (range: Range, type: number): void => {
+  const push = (range: Range, type: number, modifiers = 0): void => {
     if (range.start.line !== range.end.line) {
       return;
     }
@@ -595,11 +700,11 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
     if (length === 0) {
       return;
     }
-    tokens.push({ line: range.start.line, char: range.start.character, length, type });
+    tokens.push({ line: range.start.line, char: range.start.character, length, type, modifiers });
   };
 
   for (const symbol of index.getSymbols(file)) {
-    push(definitionRange(index, symbol), symbolTokenType(symbol.kind));
+    push(definitionRange(index, symbol), symbolTokenType(symbol.kind), definitionTokenModifier);
   }
   for (const reference of index.getReferences(file)) {
     push(referenceRange(index, reference), referenceTokenType(reference.kind));
@@ -614,7 +719,7 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
     if (previous && previous.line === token.line && previous.char === token.char) {
       continue;
     }
-    builder.push(token.line, token.char, token.length, token.type, 0);
+    builder.push(token.line, token.char, token.length, token.type, token.modifiers);
     previous = token;
   }
   return builder.build();
@@ -651,6 +756,7 @@ function referenceRange(index: WorkspaceIndex, reference: AssemblySymbolReferenc
  * @param {WorkspaceIndex} index The workspace index.
  * @param {AssemblySymbolDefinition} symbol The symbol definition.
  * @returns {Location} The LSP location.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#location
  */
 function definitionToLocation(index: WorkspaceIndex, symbol: AssemblySymbolDefinition): Location {
   return Location.create(pathToUri(symbol.location.file), definitionRange(index, symbol));
@@ -714,6 +820,8 @@ function renderSymbolDocs(symbol: AssemblySymbolDefinition): string {
  * Wraps Markdown text in an LSP hover.
  * @param {string} value The Markdown content.
  * @returns {Hover} The hover.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#hover-request-leftwards_arrow_with_hook
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#markupcontent
  */
 function markdownHover(value: string): Hover {
   return { contents: { kind: MarkupKind.Markdown, value } };
@@ -723,6 +831,7 @@ function markdownHover(value: string): Hover {
  * Maps a symbol kind to a completion item kind.
  * @param {AssemblySymbolKind} kind The symbol kind.
  * @returns {CompletionItemKind} The completion item kind.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook
  */
 function symbolCompletionKind(kind: AssemblySymbolKind): CompletionItemKind {
   switch (kind) {
@@ -745,20 +854,24 @@ function symbolCompletionKind(kind: AssemblySymbolKind): CompletionItemKind {
  * Maps a symbol kind to a semantic token type index.
  * @param {AssemblySymbolKind} kind The symbol kind.
  * @returns {number} The token type index.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook
  */
 function symbolTokenType(kind: AssemblySymbolKind): number {
   switch (kind) {
     case "define":
-      return tokenTypeIndex.get("property") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.property) ?? 0;
     case "macro":
+      return tokenTypeIndex.get(SemanticTokenTypes.macro) ?? 0;
     case "function":
-      return tokenTypeIndex.get("macro") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.function) ?? 0;
     case "struct":
-      return tokenTypeIndex.get("namespace") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.namespace) ?? 0;
     case "label":
+      return tokenTypeIndex.get(SemanticTokenTypes.label) ?? 0;
     case "structMember":
+      return tokenTypeIndex.get(SemanticTokenTypes.property) ?? 0;
     default:
-      return tokenTypeIndex.get("variable") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.variable) ?? 0;
   }
 }
 
@@ -766,22 +879,24 @@ function symbolTokenType(kind: AssemblySymbolKind): number {
  * Maps a reference kind to a semantic token type index.
  * @param {AssemblySymbolReference["kind"]} kind The reference kind.
  * @returns {number} The token type index.
+ * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook
  */
 function referenceTokenType(kind: AssemblySymbolReference["kind"]): number {
   switch (kind) {
     case "instruction":
-      return tokenTypeIndex.get("function") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.keyword) ?? 0;
     case "define":
-      return tokenTypeIndex.get("property") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.property) ?? 0;
     case "macro":
-      return tokenTypeIndex.get("macro") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.macro) ?? 0;
     case "function":
-      return tokenTypeIndex.get("function") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.function) ?? 0;
     case "include":
-      return tokenTypeIndex.get("string") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.string) ?? 0;
     case "label":
+      return tokenTypeIndex.get(SemanticTokenTypes.label) ?? 0;
     case "unknown":
     default:
-      return tokenTypeIndex.get("variable") ?? 0;
+      return tokenTypeIndex.get(SemanticTokenTypes.variable) ?? 0;
   }
 }

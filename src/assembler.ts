@@ -10,7 +10,7 @@ import {
   shouldEndifCloseInnermostWhile,
 } from "./compatibility/asar-compatibility-profile.js";
 
-import { AddressToLineMapping } from "./addressToLine.ts";
+import { AddressToLineMapping } from "./addressToLine.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import {
   type AssemblyAnalysisResult,
@@ -1481,6 +1481,8 @@ export class Assembler {
     // stages still mutate `kind/words`, so run them against a per-dispatch clone
     // instead of mutating cached pass-program nodes.
     let workingState = cloneNormalizedCommand(state);
+    this.currentFile = workingState.source.file;
+    this.currentLine = workingState.source.line;
 
     // Preserve legacy fixture bootstrap behavior in tree/normalized execution:
     // `;`+ means "seed assembler ROM with target ROM bytes" before reads/writes.
@@ -2663,6 +2665,14 @@ export class Assembler {
   }
 
   executeLoweredNode(node: LoweredExecutableNode): void {
+    const sourceCommand = node.kind === "loop" || node.kind === "conditional"
+      ? node.header
+      : node.command;
+    if (sourceCommand) {
+      this.currentFile = sourceCommand.source.file;
+      this.currentLine = sourceCommand.source.line;
+    }
+
     if (node.kind === "command") {
       incrementInternalCounter("passthroughDispatches");
       this.processNormalizedCommand(node.command, this.runtimePassthroughRewriteEnabled);
@@ -2766,4 +2776,3 @@ export class Assembler {
   }
 
 }
-

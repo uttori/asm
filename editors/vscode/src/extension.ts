@@ -138,8 +138,9 @@ function toggleWatch(): void {
  * @returns {string | undefined} The entry document URI string.
  */
 function resolveWatchEntry(): string | undefined {
-  const entryPoints = workspace.getConfiguration("snesAsm").get<string[]>("entryPoints", []);
-  const folder = workspace.workspaceFolders?.[0];
+  const activeUri = window.activeTextEditor?.document.uri;
+  const entryPoints = workspace.getConfiguration("snesAsm", activeUri).get<string[]>("entryPoints", []);
+  const folder = activeUri ? workspace.getWorkspaceFolder(activeUri) : workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
     return path.isAbsolute(first) ? Uri.file(first).toString() : Uri.joinPath(folder.uri, first).toString();
@@ -187,9 +188,10 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
     return;
   }
 
-  const config = workspace.getConfiguration("snesAsm");
-  const output = config.get<string>("buildOutput", "") || undefined;
-  const targetRom = config.get<string>("targetRom", "") || undefined;
+  const document = Uri.parse(documentUri);
+  const config = workspace.getConfiguration("snesAsm", document);
+  const output = resolveConfiguredPath(config.get<string>("buildOutput", ""), document);
+  const targetRom = resolveConfiguredPath(config.get<string>("targetRom", ""), document);
 
   try {
     const result = await client.sendRequest(ExecuteCommandRequest.type, {
@@ -210,6 +212,24 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
   } catch (error) {
     void window.showErrorMessage(`SNES Assembly: build failed — ${error instanceof Error ? error.message : String(error)}.`);
   }
+}
+
+/**
+ * Resolves a path setting relative to the document's workspace folder. If the
+ * document is outside a workspace, its containing directory is used.
+ * @param {string} configuredPath The setting value.
+ * @param {Uri} document The source document URI.
+ * @returns {string | undefined} An absolute path, or undefined when unset.
+ */
+function resolveConfiguredPath(configuredPath: string, document: Uri): string | undefined {
+  if (!configuredPath) {
+    return undefined;
+  }
+  if (path.isAbsolute(configuredPath)) {
+    return path.normalize(configuredPath);
+  }
+  const folder = workspace.getWorkspaceFolder(document);
+  return path.resolve(folder?.uri.fsPath ?? path.dirname(document.fsPath), configuredPath);
 }
 
 /**

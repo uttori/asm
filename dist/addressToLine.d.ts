@@ -43,4 +43,4 @@ export declare class AddressToLineMapping {
     getFileIndex(filename: string): number;
 }
 export {};
-//# sourceMappingURL=addr2line.d.ts.map
+//# sourceMappingURL=addressToLine.d.ts.map

@@ -2,13 +2,15 @@
 
 Language support for SNES assembly powered by the [snes-asm-js](https://github.com/MatthewCallis/snes-asm-js) language server.
 
+Requires VS Code 1.91 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
+
 ## Features
 
 - Diagnostics from the assembler analysis pipeline (recovers from local errors).
 - Document and workspace symbols.
 - Go-to-definition and find-references across `incsrc`/`include` boundaries.
 - Hover and completion for 65816 / SPC700 / Super FX instructions and directives.
-- Signature help, semantic tokens, and rename (cross-file).
+- Signature help, semantic tokens, and cross-file rename for user-defined symbols.
 
 ## Commands
 
@@ -24,10 +26,10 @@ Language support for SNES assembly powered by the [snes-asm-js](https://github.c
 ## Settings
 
 - `snesAsm.entryPoints` — project entry-point files analysed as include roots.
-- `snesAsm.includePaths` — extra include search paths.
+- `snesAsm.includePaths` — extra include search paths (relative to the workspace).
 - `snesAsm.architecture` — default CPU architecture (`65816`, `spc700`, `superfx`).
-- `snesAsm.buildOutput` — output path for the built ROM (defaults to the source's `.sfc` sibling).
-- `snesAsm.targetRom` — optional base ROM to patch into when building.
+- `snesAsm.buildOutput` — workspace-relative or absolute output path for the built ROM (defaults to the source's `.sfc` sibling).
+- `snesAsm.targetRom` — optional workspace-relative or absolute base ROM to patch into when building.
 
 ## Building
 
@@ -39,4 +41,6 @@ npm run lsp:build
 npm run vscode:build
 ```
 
-Then press F5 in VS Code (or run `npm run vscode:package` to produce a `.vsix`).
+For debugging, open `editors/vscode` as the VS Code workspace and press F5. The
+included launch task builds both the language server and extension. Run
+`npm run vscode:package` from the repository root to produce a `.vsix`.

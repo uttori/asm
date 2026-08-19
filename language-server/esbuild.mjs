@@ -1,12 +1,14 @@
 import { build } from "esbuild";
+import { chmodSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const outfile = path.join(here, "out/server.mjs");
 
 await build({
   entryPoints: [path.join(here, "src/server.ts")],
-  outfile: path.join(here, "out/server.mjs"),
+  outfile,
   bundle: true,
   platform: "node",
   format: "esm",
@@ -18,6 +20,7 @@ await build({
   // require/__dirname.
   banner: {
     js: [
+      "#!/usr/bin/env node",
       "import { createRequire as __createRequire } from 'node:module';",
       "import { fileURLToPath as __fileURLToPath } from 'node:url';",
       "import { dirname as __dirname_fn } from 'node:path';",
@@ -28,3 +31,5 @@ await build({
   },
   logLevel: "info",
 });
+
+chmodSync(outfile, 0o755);

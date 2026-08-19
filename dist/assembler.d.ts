@@ -3,7 +3,7 @@ import { ArchSPC700 } from "./ArchSPC700.js";
 import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
 import type { ExpressionHost, LoweredInstruction } from "./architecture-types.js";
-import { AddressToLineMapping } from "./addr2line.js";
+import { AddressToLineMapping } from "./addressToLine.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import { type AssemblyAnalysisResult, type AssemblyDiagnostic, type AssemblyIncludeEdge, type AssemblySourceLocation, type AssemblySymbolDefinition, type AssemblySymbolKind, type AssemblySymbolReference, type AssemblySymbolReferenceKind } from "./diagnostics.js";
 import type { ConditionalBranchNode, ExecutableNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";

@@ -13,7 +13,7 @@
     "directory": "editors/vscode"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.91.0"
   },
   "categories": ["Programming Languages"],
   "main": "out/extension.js",
@@ -105,11 +105,11 @@
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^10.1.0"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.91.0",
     "@vscode/vsce": "^3.2.0",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.28.2"
   }
 }
