@@ -330,7 +330,10 @@ connection.onDidChangeConfiguration((params) => {
  * Re-indexes disk-backed source changes reported by the editor file watcher.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didchangewatchedfiles-notification-arrow_right
  */
-connection.onDidChangeWatchedFiles(() => {
+connection.onDidChangeWatchedFiles((params) => {
+  for (const change of params.changes) {
+    index.invalidateFile(uriToPath(change.uri));
+  }
   scheduleReindex();
 });
 

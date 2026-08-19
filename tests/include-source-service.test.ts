@@ -11,6 +11,7 @@ const createHost = (
 ): IncludeSourceHost & {
   edges: Array<[string, string]>;
   executedFiles: string[];
+  parsedSources: string[];
 } => {
   const host = {
     currentFile,
@@ -21,12 +22,16 @@ const createHost = (
     fileProvider: createMemoryAssemblyFileProvider(files),
     edges: [] as Array<[string, string]>,
     executedFiles: [] as string[],
+    parsedSources: [] as string[],
     programModelBuilder: {
-      createIncludeNode: (file: string, _source: string) => ({
-        type: "include" as const,
-        file,
-        commands: [],
-      }),
+      createIncludeNode: (file: string, source: string) => {
+        host.parsedSources.push(source);
+        return {
+          type: "include" as const,
+          file,
+          commands: [],
+        };
+      },
     } as IncludeSourceHost["programModelBuilder"],
     lowerAndExecuteRuntimeNodes: () => {
       host.executedFiles.push(host.currentFile);
@@ -65,6 +70,29 @@ test("include source service marks, executes, records, and restores includes", t
   t.deepEqual(host.includedFiles.get("mem:/child.asm"), { included: true, guarded: false });
   t.is(host.currentFile, "mem:/main.asm");
   t.deepEqual(host.includeStack, []);
+});
+
+test("include source service memoizes text within one assembly snapshot", t => {
+  const host = createHost({
+    "mem:/main.asm": "",
+    "mem:/child.asm": "db $01",
+  });
+  const service = new IncludeSourceService(host);
+
+  service.beginAssemblySnapshot();
+  service.assembleFile("child.asm");
+  service.assembleFile("child.asm");
+
+  t.deepEqual(host.parsedSources, ["db $01", "db $01"]);
+
+  host.fileProvider = createMemoryAssemblyFileProvider({
+    "mem:/main.asm": "",
+    "mem:/child.asm": "db $02",
+  });
+  service.beginAssemblySnapshot();
+  service.assembleFile("child.asm");
+
+  t.deepEqual(host.parsedSources, ["db $01", "db $01", "db $02"]);
 });
 
 test("include source service enforces and resets include guards", t => {

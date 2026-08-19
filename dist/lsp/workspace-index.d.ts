@@ -43,6 +43,12 @@ export declare class WorkspaceIndex {
     private allSymbols;
     /** All symbol references across the workspace (for find-references). */
     private allReferences;
+    /** Cached complete analysis artifacts for each configured root. */
+    private readonly rootAnalyses;
+    /** Files whose content changed since the last analysis. */
+    private readonly dirtyFiles;
+    /** Whether configuration changes require every root to be rebuilt. */
+    private fullReindexRequired;
     private entryPoints;
     private includePaths;
     private architecture;
@@ -63,7 +69,8 @@ export declare class WorkspaceIndex {
      */
     openDocument(file: string, content: string): void;
     /**
-     * Updates the content of an already-open document and re-analyses.
+     * Updates the content of an already-open document without re-analysing.
+     * Callers can debounce multiple edits before invoking {@link reindex}.
      * @param {string} file The absolute path of the document.
      * @param {string} content The new document text.
      */
@@ -73,6 +80,11 @@ export declare class WorkspaceIndex {
      * @param {string} file The absolute path of the document.
      */
     closeDocument(file: string): void;
+    /**
+     * Marks a disk-backed file as changed for the next debounced reindex.
+     * @param {string} file The changed absolute path.
+     */
+    invalidateFile(file: string): void;
     /**
      * Returns the current text for a file, preferring the open buffer.
      * @param {string} file The absolute path of the file.
@@ -137,6 +149,24 @@ export declare class WorkspaceIndex {
      * entry points are configured.
      */
     reindex(): void;
+    /**
+     * Determines whether a cached root analysis contains a changed file.
+     * @param {string} root The root source file.
+     * @param {string} file The changed source file.
+     * @returns {boolean} Whether the root must be re-analysed.
+     */
+    private rootDependsOnFile;
+    /**
+     * Analyses one root using the current overlay snapshot.
+     * @param {string} root The root source file.
+     * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
+     */
+    private analyzeRoot;
+    /**
+     * Rebuilds workspace-wide buckets from cached per-root artifacts.
+     * @param {string[]} roots The active roots in deterministic order.
+     */
+    private rebuildMergedIndex;
     /**
      * Buckets flat analysis artifacts into their owning files.
      * @param {string} root The root file that produced these artifacts.

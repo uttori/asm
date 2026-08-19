@@ -4,9 +4,6 @@
   "jsPlugins": [
     "eslint-plugin-optimize-regex"
   ],
-  "categories": {
-    "correctness": "off"
-  },
   "options": {
     "typeAware": true
   },
@@ -89,15 +86,13 @@
   },
   "ignorePatterns": [
     "dist/**",
-    "max/**",
     "src/generated/**",
     "language-server/out/**",
     "editors/vscode/out/**",
     "editors/vscode/server/**",
     "**/node_modules",
     "**/__MACOSX/**",
-    "**/._*",
-    "max/**/*"
+    "**/._*"
   ],
   "rules": {
     "no-nested-ternary": "error",

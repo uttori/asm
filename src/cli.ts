@@ -13,7 +13,7 @@ class CLI {
    * Gets assembler.
    * @returns {Assembler} The result.
    */
-  private getAssembler(): Assembler {
+  getAssembler(): Assembler {
     if (!this.assembler) {
       throw new Error("Assembler has not been initialized.");
     }

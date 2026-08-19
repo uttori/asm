@@ -90,6 +90,29 @@ test("math - basic arithmetic", t => {
   t.is(mathCore.math("2 ** 3"), 8);
 });
 
+test("math - caches only pure string expressions within an assembly snapshot", t => {
+  const mathCore = new MathCore();
+  let evaluations = 0;
+  const evaluateStringExpression = mathCore.evaluateStringExpression.bind(mathCore);
+  mathCore.evaluateStringExpression = (expression: string): number => {
+    evaluations++;
+    return evaluateStringExpression(expression);
+  };
+
+  t.is(mathCore.math("5 + 3"), 8);
+  t.is(mathCore.math("5 + 3"), 8);
+  t.is(evaluations, 1);
+
+  mathCore.host = createExpressionHost({ resolveLabel: () => 5 });
+  t.is(mathCore.math("DynamicLabel"), 5);
+  t.is(mathCore.math("DynamicLabel"), 5);
+  t.is(evaluations, 3);
+
+  mathCore.beginAssemblySnapshot();
+  t.is(mathCore.math("5 + 3"), 8);
+  t.is(evaluations, 4);
+});
+
 test("math - order of operations", t => {
   const mathCore = new MathCore();
 

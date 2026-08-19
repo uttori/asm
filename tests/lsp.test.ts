@@ -134,6 +134,8 @@ test("workspace index serves open buffers and updates on change", (t) => {
   t.true(index.getSymbols(file).some((symbol) => symbol.name === "start"));
 
   index.updateDocument(file, "org $8000\nbegin:\n  nop\n");
+  t.true(index.getSymbols(file).some((symbol) => symbol.name === "start"));
+  index.reindex();
   t.true(index.getSymbols(file).some((symbol) => symbol.name === "begin"));
   t.false(index.getSymbols(file).some((symbol) => symbol.name === "start"));
 

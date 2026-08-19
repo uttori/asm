@@ -35,6 +35,11 @@ export type WorkspaceIndexOptions = {
   architecture?: string;
 };
 
+type RootAnalysis = Pick<
+  AssemblyAnalysisResult,
+  "diagnostics" | "symbols" | "references" | "includeEdges"
+>;
+
 /**
  * Indexes one or more SNES assembly projects for editor tooling.
  *
@@ -46,23 +51,32 @@ export type WorkspaceIndexOptions = {
  */
 export class WorkspaceIndex {
   /** Open editor buffers keyed by absolute path. */
-  private readonly overlay = new Map<string, string>();
+  readonly overlay = new Map<string, string>();
 
   /** Per-file analysis buckets keyed by absolute path. */
-  private readonly fileAnalysis = new Map<string, FileAnalysis>();
+  readonly fileAnalysis = new Map<string, FileAnalysis>();
 
   /** Merged include-graph edges across all analysed roots. */
-  private includeEdges: AssemblyIncludeEdge[] = [];
+  includeEdges: AssemblyIncludeEdge[] = [];
 
   /** All symbol definitions across the workspace (for cross-file resolution). */
-  private allSymbols: AssemblySymbolDefinition[] = [];
+  allSymbols: AssemblySymbolDefinition[] = [];
 
   /** All symbol references across the workspace (for find-references). */
-  private allReferences: AssemblySymbolReference[] = [];
+  allReferences: AssemblySymbolReference[] = [];
 
-  private entryPoints: string[];
-  private includePaths: string[];
-  private architecture: string;
+  /** Cached complete analysis artifacts for each configured root. */
+  readonly rootAnalyses = new Map<string, RootAnalysis>();
+
+  /** Files whose content changed since the last analysis. */
+  readonly dirtyFiles = new Set<string>();
+
+  /** Whether configuration changes require every root to be rebuilt. */
+  fullReindexRequired = true;
+
+  entryPoints: string[];
+  includePaths: string[];
+  architecture: string;
 
   /**
    * Creates a workspace index.
@@ -88,6 +102,7 @@ export class WorkspaceIndex {
     if (options.architecture) {
       this.architecture = options.architecture;
     }
+    this.fullReindexRequired = true;
     this.reindex();
   }
 
@@ -97,17 +112,22 @@ export class WorkspaceIndex {
    * @param {string} content The current document text.
    */
   openDocument(file: string, content: string): void {
-    this.overlay.set(path.resolve(file), content);
+    const resolved = path.resolve(file);
+    this.overlay.set(resolved, content);
+    this.dirtyFiles.add(resolved);
     this.reindex();
   }
 
   /**
-   * Updates the content of an already-open document and re-analyses.
+   * Updates the content of an already-open document without re-analysing.
+   * Callers can debounce multiple edits before invoking {@link reindex}.
    * @param {string} file The absolute path of the document.
    * @param {string} content The new document text.
    */
   updateDocument(file: string, content: string): void {
-    this.openDocument(file, content);
+    const resolved = path.resolve(file);
+    this.overlay.set(resolved, content);
+    this.dirtyFiles.add(resolved);
   }
 
   /**
@@ -115,8 +135,18 @@ export class WorkspaceIndex {
    * @param {string} file The absolute path of the document.
    */
   closeDocument(file: string): void {
-    this.overlay.delete(path.resolve(file));
+    const resolved = path.resolve(file);
+    this.overlay.delete(resolved);
+    this.dirtyFiles.add(resolved);
     this.reindex();
+  }
+
+  /**
+   * Marks a disk-backed file as changed for the next debounced reindex.
+   * @param {string} file The changed absolute path.
+   */
+  invalidateFile(file: string): void {
+    this.dirtyFiles.add(path.resolve(file));
   }
 
   /**
@@ -227,36 +257,107 @@ export class WorkspaceIndex {
    * entry points are configured.
    */
   reindex(): void {
+    const roots = this.resolveRoots();
+    const activeRoots = new Set(roots);
+    for (const cachedRoot of this.rootAnalyses.keys()) {
+      if (!activeRoots.has(cachedRoot)) {
+        this.rootAnalyses.delete(cachedRoot);
+      }
+    }
+
+    const analyzeAll = this.fullReindexRequired || this.dirtyFiles.size === 0;
+    const dirtyFiles = [...this.dirtyFiles];
+    const hasUnknownDependency = dirtyFiles.some(
+      (file) => !roots.some((root) => this.rootDependsOnFile(root, file)),
+    );
+    const rootsToAnalyze =
+      analyzeAll || hasUnknownDependency
+        ? roots
+        : roots.filter(
+            (root) =>
+              !this.rootAnalyses.has(root) ||
+              dirtyFiles.some((file) => this.rootDependsOnFile(root, file)),
+          );
+
+    for (const root of rootsToAnalyze) {
+      const result = this.analyzeRoot(root);
+      if (result) {
+        this.rootAnalyses.set(root, result);
+      } else {
+        this.rootAnalyses.delete(root);
+      }
+    }
+
+    this.dirtyFiles.clear();
+    this.fullReindexRequired = false;
+    this.rebuildMergedIndex(roots);
+  }
+
+  /**
+   * Determines whether a cached root analysis contains a changed file.
+   * @param {string} root The root source file.
+   * @param {string} file The changed source file.
+   * @returns {boolean} Whether the root must be re-analysed.
+   */
+  rootDependsOnFile(root: string, file: string): boolean {
+    if (root === file) {
+      return true;
+    }
+    const analysis = this.rootAnalyses.get(root);
+    if (!analysis) {
+      return true;
+    }
+    return analysis.includeEdges.some((edge) => edge.fromFile === file || edge.toFile === file);
+  }
+
+  /**
+   * Analyses one root using the current overlay snapshot.
+   * @param {string} root The root source file.
+   * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
+   */
+  analyzeRoot(root: string): RootAnalysis | undefined {
+    const content = this.overlay.get(root) ?? this.readDiskRoot(root);
+    if (content === undefined) {
+      return undefined;
+    }
+
+    const provider = new OverlayFileProvider(this.overlay);
+    const assembler = new Assembler(undefined, { fileProvider: provider });
+    assembler.includePaths = this.deriveIncludePaths(root);
+    assembler.arch = this.architecture;
+
+    try {
+      const result = assembler.analyzeSource(content, root, 0);
+      return {
+        diagnostics: result.diagnostics,
+        symbols: result.symbols,
+        references: result.references,
+        includeEdges: result.includeEdges,
+      };
+    } catch {
+      // analyzeSource recovers internally; guard against unexpected throws so
+      // one broken root never blanks out the whole workspace index.
+      return undefined;
+    }
+  }
+
+  /**
+   * Rebuilds workspace-wide buckets from cached per-root artifacts.
+   * @param {string[]} roots The active roots in deterministic order.
+   */
+  rebuildMergedIndex(roots: string[]): void {
     this.fileAnalysis.clear();
     this.includeEdges = [];
     this.allSymbols = [];
     this.allReferences = [];
-
-    const roots = this.resolveRoots();
     const seenEdges = new Set<string>();
 
     for (const root of roots) {
-      const content = this.overlay.get(root) ?? this.readDiskRoot(root);
-      if (content === undefined) {
+      const result = this.rootAnalyses.get(root);
+      if (!result) {
         continue;
       }
-
-      const provider = new OverlayFileProvider(this.overlay);
-      const assembler = new Assembler(undefined, { fileProvider: provider });
-      assembler.includePaths = this.deriveIncludePaths(root);
-      assembler.arch = this.architecture;
-
-      let result: AssemblyAnalysisResult;
-      try {
-        result = assembler.analyzeSource(content, root, 0);
-      } catch {
-        // analyzeSource recovers internally; guard against unexpected throws so
-        // one broken root never blanks out the whole workspace index.
-        continue;
-      }
-
       this.ingestArtifacts(root, result.diagnostics, result.symbols, result.references);
-
       for (const edge of result.includeEdges) {
         const key = `${edge.fromFile}\u0000${edge.toFile}`;
         if (seenEdges.has(key)) {
@@ -275,7 +376,7 @@ export class WorkspaceIndex {
    * @param {AssemblySymbolDefinition[]} symbols The symbols to bucket.
    * @param {AssemblySymbolReference[]} references The references to bucket.
    */
-  private ingestArtifacts(
+  ingestArtifacts(
     root: string,
     diagnostics: AssemblyDiagnostic[],
     symbols: AssemblySymbolDefinition[],
@@ -299,7 +400,7 @@ export class WorkspaceIndex {
    * @param {string} file The absolute path of the file.
    * @returns {FileAnalysis} The mutable analysis bucket.
    */
-  private bucketFor(file: string): FileAnalysis {
+  bucketFor(file: string): FileAnalysis {
     const resolved = path.resolve(file);
     let bucket = this.fileAnalysis.get(resolved);
     if (!bucket) {
@@ -313,7 +414,7 @@ export class WorkspaceIndex {
    * Determines the set of root files to analyse.
    * @returns {string[]} The absolute root paths.
    */
-  private resolveRoots(): string[] {
+  resolveRoots(): string[] {
     if (this.entryPoints.length > 0) {
       return [...new Set(this.entryPoints)];
     }
@@ -325,7 +426,7 @@ export class WorkspaceIndex {
    * @param {string} root The absolute root path.
    * @returns {string | undefined} The file text, or undefined when unreadable.
    */
-  private readDiskRoot(root: string): string | undefined {
+  readDiskRoot(root: string): string | undefined {
     try {
       const provider = new OverlayFileProvider(this.overlay);
       const stat = provider.stat(root);
@@ -343,7 +444,7 @@ export class WorkspaceIndex {
    * @param {string} root The absolute root path.
    * @returns {string[]} The include paths to hand to the assembler.
    */
-  private deriveIncludePaths(root: string): string[] {
+  deriveIncludePaths(root: string): string[] {
     const directory = path.dirname(root);
     return [...new Set([directory, ...this.includePaths])];
   }

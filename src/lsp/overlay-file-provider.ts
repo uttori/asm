@@ -117,7 +117,7 @@ export class OverlayFileProvider implements AssemblyFileProvider {
    * @param {AssemblyFileResolutionOptions} options Resolution context.
    * @returns {string[]} The candidate absolute paths to probe in the overlay.
    */
-  private candidatePaths(normalized: string, options: AssemblyFileResolutionOptions): string[] {
+  candidatePaths(normalized: string, options: AssemblyFileResolutionOptions): string[] {
     if (path.isAbsolute(normalized)) {
       return [normalized];
     }

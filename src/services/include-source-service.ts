@@ -26,7 +26,25 @@ export interface IncludeSourceHost {
  * Owns source and binary include resolution and source execution orchestration.
  */
 export class IncludeSourceService {
+  readonly resolvedPathCache = new Map<string, string>();
+  readonly textCache = new Map<string, string>();
+
   constructor(readonly host: IncludeSourceHost) {}
+
+  /**
+   * Starts a new assembly file snapshot and drops content retained by an older build.
+   */
+  beginAssemblySnapshot(): void {
+    this.resolvedPathCache.clear();
+    this.textCache.clear();
+  }
+
+  /**
+   * Releases source text retained for the completed assembly.
+   */
+  endAssemblySnapshot(): void {
+    this.beginAssemblySnapshot();
+  }
 
   /**
    * Reads a source-relative binary or text file.
@@ -36,12 +54,12 @@ export class IncludeSourceService {
    */
   readFile(filePath: string, encoding?: BufferEncoding): Uint8Array | string {
     try {
-      const fullPath = this.host.fileProvider.resolvePath(filePath, this.resolutionOptions);
+      const fullPath = this.resolvePath(filePath);
       if (!fullPath) {
         throw new Error(`Error reading file: ${filePath}`);
       }
       if (encoding) {
-        return this.host.fileProvider.readTextFile(fullPath, encoding);
+        return this.readTextFile(fullPath, encoding);
       }
       return this.host.fileProvider.readFile(fullPath);
     } catch {
@@ -58,7 +76,7 @@ export class IncludeSourceService {
     if (filename == null) {
       throw new Error("Invalid or missing filename");
     }
-    const resolved = this.host.fileProvider.resolvePath(filename, this.resolutionOptions);
+    const resolved = this.resolvePath(filename);
     if (!resolved) {
       throw new Error(`Could not find file: ${filename}`);
     }
@@ -121,11 +139,7 @@ export class IncludeSourceService {
     this.host.recordIncludeEdge(previousFile, resolvedPath);
 
     try {
-      incrementInternalCounter("includeReads");
-      const content = measureInternalPhase("includeRead", () =>
-        this.host.fileProvider.readTextFile(resolvedPath, "utf8"),
-      );
-      incrementInternalCounter("includeBytesRead", content.length);
+      const content = this.readTextFile(resolvedPath, "utf8");
       this.host.currentFile = resolvedPath;
 
       const includedFile = this.host.includedFiles.get(resolvedPath);
@@ -149,7 +163,7 @@ export class IncludeSourceService {
     }
   }
 
-  private get resolutionOptions(): {
+  get resolutionOptions(): {
     currentFile: string;
     includePaths: string[];
     macroSourceFile: string | undefined;
@@ -159,5 +173,52 @@ export class IncludeSourceService {
       includePaths: this.host.includePaths,
       macroSourceFile: this.host.currentMacroSourceFile,
     };
+  }
+
+  /**
+   * Resolves a path once for the active source and include-path context.
+   * @param {string} filePath The source-relative path to resolve.
+   * @returns {string | undefined} The resolved provider path.
+   */
+  resolvePath(filePath: string): string | undefined {
+    const options = this.resolutionOptions;
+    const key = [
+      options.currentFile,
+      options.macroSourceFile ?? "",
+      options.includePaths.join("\u0000"),
+      filePath,
+    ].join("\u0001");
+    const cached = this.resolvedPathCache.get(key);
+    if (cached !== undefined) {
+      incrementInternalCounter("includeResolutionCacheHits");
+      return cached;
+    }
+    const resolved = this.host.fileProvider.resolvePath(filePath, options);
+    if (resolved !== undefined) {
+      this.resolvedPathCache.set(key, resolved);
+    }
+    return resolved;
+  }
+
+  /**
+   * Reads source text once per assembly snapshot.
+   * @param {string} resolvedPath The resolved provider path.
+   * @param {BufferEncoding} encoding The requested text encoding.
+   * @returns {string} The cached or newly read text.
+   */
+  readTextFile(resolvedPath: string, encoding: BufferEncoding): string {
+    const key = `${encoding}\u0000${resolvedPath}`;
+    const cached = this.textCache.get(key);
+    if (cached !== undefined) {
+      incrementInternalCounter("includeTextCacheHits");
+      return cached;
+    }
+    incrementInternalCounter("includeReads");
+    const content = measureInternalPhase("includeRead", () =>
+      this.host.fileProvider.readTextFile(resolvedPath, encoding),
+    );
+    incrementInternalCounter("includeBytesRead", content.length);
+    this.textCache.set(key, content);
+    return content;
   }
 }

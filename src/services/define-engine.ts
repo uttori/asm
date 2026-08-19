@@ -19,7 +19,7 @@ export class DefineEngine {
    */
   isPureMathExpression(value: string): boolean {
     // oxlint-disable-next-line security/detect-unsafe-regex -- Anchors bound the complete token grammar.
-    return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|\-]|\s)+$/.test(value);
+    return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|-]|\s)+$/.test(value);
   }
 
   /**

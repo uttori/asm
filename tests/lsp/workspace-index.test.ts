@@ -63,6 +63,58 @@ test("workspace index exposes empty and populated artifact collections", t => {
   t.is(index.getFileAnalysis(file)?.file, file);
 });
 
+test("workspace index batches document updates until reindex", t => {
+  const file = path.resolve("/virtual/batched.asm");
+  const index = new WorkspaceIndex();
+  index.openDocument(file, "org $8000\nBefore:\n");
+
+  index.updateDocument(file, "org $8000\nAfter:\n");
+
+  t.is(index.getText(file), "org $8000\nAfter:\n");
+  t.true(index.getSymbols(file).some(entry => entry.name === "Before"));
+  t.false(index.getSymbols(file).some(entry => entry.name === "After"));
+
+  index.reindex();
+
+  t.false(index.getSymbols(file).some(entry => entry.name === "Before"));
+  t.true(index.getSymbols(file).some(entry => entry.name === "After"));
+});
+
+test("workspace index re-analyses only roots affected by an edited include", t => {
+  const rootA = path.resolve("/virtual/root-a.asm");
+  const rootB = path.resolve("/virtual/root-b.asm");
+  const shared = path.resolve("/virtual/shared.asm");
+  const index = new WorkspaceIndex({ entryPoints: [rootA, rootB] });
+  index.openDocument(shared, "SharedBefore:\n");
+  index.openDocument(rootA, 'incsrc "shared.asm"\nRootA:\n');
+  index.openDocument(rootB, "RootB:\n");
+
+  const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
+  index.updateDocument(shared, "SharedAfter:\n");
+  index.reindex();
+
+  t.true(analyzeSource.calledOnce);
+  t.true(index.getSymbols(shared).some(entry => entry.name === "SharedAfter"));
+  t.false(index.getSymbols(shared).some(entry => entry.name === "SharedBefore"));
+  t.true(index.getSymbols(rootB).some(entry => entry.name === "RootB"));
+  analyzeSource.restore();
+});
+
+test("workspace index conservatively re-analyses roots for unknown new dependencies", t => {
+  const rootA = path.resolve("/virtual/unknown-a.asm");
+  const rootB = path.resolve("/virtual/unknown-b.asm");
+  const index = new WorkspaceIndex({ entryPoints: [rootA, rootB] });
+  index.openDocument(rootA, "RootA:\n");
+  index.openDocument(rootB, "RootB:\n");
+
+  const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
+  index.invalidateFile(path.resolve("/virtual/new-include.asm"));
+  index.reindex();
+
+  t.is(analyzeSource.callCount, 2);
+  analyzeSource.restore();
+});
+
 test("workspace index skips unreadable roots and unexpected analysis failures", t => {
   const missing = path.resolve("/virtual/missing.asm");
   const broken = path.resolve("/virtual/broken.asm");

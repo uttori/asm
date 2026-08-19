@@ -1,6 +1,13 @@
 import type { ExpressionHost } from "./architecture-types.js";
 import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
 export declare class MathCore {
+    private readonly pureStringExpressionCache;
+    private readonly roundedPureStringExpressionCache;
+    private readonly pureStringClassification;
+    private instrumentedExpressionStrings;
+    private instrumentedPureExpressionStrings;
+    private instrumentedExpressionNodes;
+    private instrumentedPureExpressionNodes;
     host?: ExpressionHost;
     math_round: boolean;
     userFunctions: Map<string, {
@@ -21,12 +28,43 @@ export declare class MathCore {
      */
     reset(): void;
     /**
+     * Starts a new expression-cache snapshot for an assembly.
+     */
+    beginAssemblySnapshot(): void;
+    /**
+     * Releases expression values retained for a completed assembly.
+     */
+    endAssemblySnapshot(): void;
+    /**
      * Evaluates an expression.
      * This is a direct conversion of `math` in `asar_math.cpp`.
      * @param {string} expression The expression to evaluate.
      * @returns {number} The result of the expression.
      */
     math: (expression: string | ExpressionNode) => number;
+    /**
+     * Evaluates a string or typed expression without instrumentation dispatch.
+     * @param {string | ExpressionNode} expression The expression to evaluate.
+     * @returns {number} The expression result.
+     */
+    private evaluateMathInput;
+    /**
+     * Reuses successful results only for strings proven to contain literal operators.
+     * @param {string} expression The legacy expression source.
+     * @returns {number} The expression result.
+     */
+    private evaluateCachedStringExpression;
+    /**
+     * Records the shape and reuse of a top-level expression evaluation.
+     * @param {string | ExpressionNode} expression The evaluated expression.
+     */
+    private recordExpressionEvaluation;
+    /**
+     * Determines whether an expression depends only on literal operators.
+     * @param {ExpressionNode} expression The expression to classify.
+     * @returns {boolean} Whether the result is independent of assembler state.
+     */
+    private isPureExpressionNode;
     /**
      * Evaluates a string expression using the legacy parser.
      * @param {string} expression The expression to evaluate.

@@ -9,6 +9,19 @@ export type InternalInstrumentationSnapshot = {
     actualReparses: number;
     includeReads: number;
     includeBytesRead: number;
+    includeTextCacheHits: number;
+    includeResolutionCacheHits: number;
+    expressionEvaluations: number;
+    expressionStringEvaluations: number;
+    expressionUniqueStringEvaluations: number;
+    expressionNodeEvaluations: number;
+    expressionUniqueNodeEvaluations: number;
+    pureExpressionEvaluations: number;
+    pureExpressionUniqueNodes: number;
+    pureStringExpressionEvaluations: number;
+    pureStringExpressionUniqueValues: number;
+    pureStringExpressionCacheHits: number;
+    pureStringExpressionCacheMisses: number;
     macroExpansions: number;
     macroLinesProcessed: number;
     passthroughDispatches: number;
@@ -56,6 +69,19 @@ export function runWithInternalInstrumentation<T>(callback: () => T): {
       actualReparses: 0,
       includeReads: 0,
       includeBytesRead: 0,
+      includeTextCacheHits: 0,
+      includeResolutionCacheHits: 0,
+      expressionEvaluations: 0,
+      expressionStringEvaluations: 0,
+      expressionUniqueStringEvaluations: 0,
+      expressionNodeEvaluations: 0,
+      expressionUniqueNodeEvaluations: 0,
+      pureExpressionEvaluations: 0,
+      pureExpressionUniqueNodes: 0,
+      pureStringExpressionEvaluations: 0,
+      pureStringExpressionUniqueValues: 0,
+      pureStringExpressionCacheHits: 0,
+      pureStringExpressionCacheMisses: 0,
       macroExpansions: 0,
       macroLinesProcessed: 0,
       passthroughDispatches: 0,
@@ -89,6 +115,14 @@ export function incrementInternalCounter(name: CounterName, amount = 1): void {
   if (metrics) {
     metrics.counters[name] += amount;
   }
+}
+
+/**
+ * Reports whether run-scoped internal instrumentation is active.
+ * @returns {boolean} Whether instrumentation is collecting metrics.
+ */
+export function isInternalInstrumentationActive(): boolean {
+  return activeInstrumentation !== undefined;
 }
 
 /**

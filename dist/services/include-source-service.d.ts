@@ -23,7 +23,17 @@ export interface IncludeSourceHost {
  */
 export declare class IncludeSourceService {
     readonly host: IncludeSourceHost;
+    private readonly resolvedPathCache;
+    private readonly textCache;
     constructor(host: IncludeSourceHost);
+    /**
+     * Starts a new assembly file snapshot and drops content retained by an older build.
+     */
+    beginAssemblySnapshot(): void;
+    /**
+     * Releases source text retained for the completed assembly.
+     */
+    endAssemblySnapshot(): void;
     /**
      * Reads a source-relative binary or text file.
      * @param {string} filePath The path to read.
@@ -56,5 +66,18 @@ export declare class IncludeSourceService {
      */
     assembleFile(filename: string): void;
     private get resolutionOptions();
+    /**
+     * Resolves a path once for the active source and include-path context.
+     * @param {string} filePath The source-relative path to resolve.
+     * @returns {string | undefined} The resolved provider path.
+     */
+    private resolvePath;
+    /**
+     * Reads source text once per assembly snapshot.
+     * @param {string} resolvedPath The resolved provider path.
+     * @param {BufferEncoding} encoding The requested text encoding.
+     * @returns {string} The cached or newly read text.
+     */
+    private readTextFile;
 }
 //# sourceMappingURL=include-source-service.d.ts.map

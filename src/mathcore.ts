@@ -10,10 +10,16 @@ import type {
 } from "./ir/expression-node.js";
 import {
   isReferenceExpressionNode,
+  parseExpressionNode,
   parseLeadingReferenceExpression,
   renderExpressionNode,
   renderReferenceExpressionNode,
 } from "./ir/expression-node.js";
+import {
+  incrementInternalCounter,
+  isInternalInstrumentationActive,
+  measureInternalPhase,
+} from "./internal-instrumentation.js";
 
 let debug = (..._: unknown[]) => {};
 /* c8 ignore next 4 */
@@ -32,6 +38,14 @@ function escapeRegExp(value: string): string {
 }
 
 export class MathCore {
+  readonly pureStringExpressionCache = new Map<string, number>();
+  readonly roundedPureStringExpressionCache = new Map<string, number>();
+  readonly pureStringClassification = new Map<string, boolean>();
+  instrumentedExpressionStrings = new Set<string>();
+  instrumentedPureExpressionStrings = new Set<string>();
+  instrumentedExpressionNodes = new WeakSet<object>();
+  instrumentedPureExpressionNodes = new WeakSet<object>();
+
   host?: ExpressionHost;
   math_round: boolean = false;
 
@@ -90,6 +104,27 @@ export class MathCore {
     debug("reset");
     this.math_round = false;
     this.userFunctions.clear();
+    this.beginAssemblySnapshot();
+  }
+
+  /**
+   * Starts a new expression-cache snapshot for an assembly.
+   */
+  beginAssemblySnapshot(): void {
+    this.pureStringExpressionCache.clear();
+    this.roundedPureStringExpressionCache.clear();
+    this.pureStringClassification.clear();
+    this.instrumentedExpressionStrings = new Set<string>();
+    this.instrumentedPureExpressionStrings = new Set<string>();
+    this.instrumentedExpressionNodes = new WeakSet<object>();
+    this.instrumentedPureExpressionNodes = new WeakSet<object>();
+  }
+
+  /**
+   * Releases expression values retained for a completed assembly.
+   */
+  endAssemblySnapshot(): void {
+    this.beginAssemblySnapshot();
   }
 
   /**
@@ -99,12 +134,113 @@ export class MathCore {
    * @returns {number} The result of the expression.
    */
   math = (expression: string | ExpressionNode): number => {
+    if (isInternalInstrumentationActive()) {
+      return measureInternalPhase("expressionEvaluation", () => {
+        this.recordExpressionEvaluation(expression);
+        return this.evaluateMathInput(expression);
+      });
+    }
+    return this.evaluateMathInput(expression);
+  };
+
+  /**
+   * Evaluates a string or typed expression without instrumentation dispatch.
+   * @param {string | ExpressionNode} expression The expression to evaluate.
+   * @returns {number} The expression result.
+   */
+  evaluateMathInput(expression: string | ExpressionNode): number {
     if (typeof expression !== "string") {
       return this.evaluateExpressionNode(expression);
     }
+    return this.evaluateCachedStringExpression(expression);
+  }
 
-    return this.evaluateStringExpression(expression);
-  };
+  /**
+   * Reuses successful results only for strings proven to contain literal operators.
+   * @param {string} expression The legacy expression source.
+   * @returns {number} The expression result.
+   */
+  evaluateCachedStringExpression(expression: string): number {
+    let isPure = this.pureStringClassification.get(expression);
+    if (isPure === undefined) {
+      isPure = this.isPureExpressionNode(parseExpressionNode(expression));
+      this.pureStringClassification.set(expression, isPure);
+    }
+    if (!isPure) {
+      return this.evaluateStringExpression(expression);
+    }
+
+    const cache = this.math_round
+      ? this.roundedPureStringExpressionCache
+      : this.pureStringExpressionCache;
+    const cached = cache.get(expression);
+    if (cached !== undefined) {
+      incrementInternalCounter("pureStringExpressionCacheHits");
+      return cached;
+    }
+
+    incrementInternalCounter("pureStringExpressionCacheMisses");
+    const result = this.evaluateStringExpression(expression);
+    cache.set(expression, result);
+    return result;
+  }
+
+  /**
+   * Records the shape and reuse of a top-level expression evaluation.
+   * @param {string | ExpressionNode} expression The evaluated expression.
+   */
+  recordExpressionEvaluation(expression: string | ExpressionNode): void {
+    incrementInternalCounter("expressionEvaluations");
+    if (typeof expression === "string") {
+      incrementInternalCounter("expressionStringEvaluations");
+      if (!this.instrumentedExpressionStrings.has(expression)) {
+        this.instrumentedExpressionStrings.add(expression);
+        incrementInternalCounter("expressionUniqueStringEvaluations");
+        if (this.isPureExpressionNode(parseExpressionNode(expression))) {
+          this.instrumentedPureExpressionStrings.add(expression);
+          incrementInternalCounter("pureStringExpressionUniqueValues");
+        }
+      }
+      if (this.instrumentedPureExpressionStrings.has(expression)) {
+        incrementInternalCounter("pureStringExpressionEvaluations");
+      }
+      return;
+    }
+
+    incrementInternalCounter("expressionNodeEvaluations");
+    if (!this.instrumentedExpressionNodes.has(expression)) {
+      this.instrumentedExpressionNodes.add(expression);
+      incrementInternalCounter("expressionUniqueNodeEvaluations");
+    }
+    if (!this.isPureExpressionNode(expression)) {
+      return;
+    }
+    incrementInternalCounter("pureExpressionEvaluations");
+    if (!this.instrumentedPureExpressionNodes.has(expression)) {
+      this.instrumentedPureExpressionNodes.add(expression);
+      incrementInternalCounter("pureExpressionUniqueNodes");
+    }
+  }
+
+  /**
+   * Determines whether an expression depends only on literal operators.
+   * @param {ExpressionNode} expression The expression to classify.
+   * @returns {boolean} Whether the result is independent of assembler state.
+   */
+  isPureExpressionNode(expression: ExpressionNode): boolean {
+    switch (expression.type) {
+      case "literal":
+        return true;
+      case "unary":
+        return this.isPureExpressionNode(expression.argument);
+      case "binary":
+        return (
+          this.isPureExpressionNode(expression.left) && this.isPureExpressionNode(expression.right)
+        );
+      default:
+        return false;
+    }
+  }
 
   /**
    * Evaluates a string expression using the legacy parser.

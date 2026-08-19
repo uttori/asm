@@ -828,7 +828,7 @@ export class Assembler {
    * other while still sharing the same file provider and directive registry.
    * @returns {Assembler} A configured analysis session.
    */
-  private createToolingSession(): Assembler {
+  createToolingSession(): Assembler {
     const session = new Assembler(this.targetRom, { fileProvider: this.fileProvider });
     session.directiveRegistry = this.cloneDirectiveRegistryForSession(session);
     session.architectureRegistry = this.architectureRegistry;
@@ -853,7 +853,7 @@ export class Assembler {
    * @param {Assembler} session The session that should receive directive calls.
    * @returns {DirectiveRegistry} A registry bound to the provided session.
    */
-  private cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry {
+  cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry {
     const operandResolver = session.operandResolver;
     const runtime = session.directiveRuntime;
     return createDirectiveRegistry({
@@ -2501,6 +2501,8 @@ export class Assembler {
   finishPass(): void {
     this.romWriter.finishPass();
     if (this.getActiveStageCapabilities().canFinalize) {
+      this.includeSource.endAssemblySnapshot();
+      this.mathCore.endAssemblySnapshot();
       this.passProgramCache.clear();
     }
   }
@@ -2773,6 +2775,8 @@ export class Assembler {
   runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState {
     return measureInternalPhase(stage, () => {
       if (stage === "collectDefinitions") {
+        this.includeSource.beginAssemblySnapshot();
+        this.mathCore.beginAssemblySnapshot();
         this.stageExecutionStates.clear();
         this.activeStageExecutionState = null;
       }

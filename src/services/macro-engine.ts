@@ -322,7 +322,7 @@ export class MacroEngine {
 
     if (modifiedCommand.includes("?")) {
       modifiedCommand = modifiedCommand.replace(
-        /(?<!\w)(\?[\w+.\-]+_[\w+.\-]+)(?!:)/g,
+        /(?<!\w)(\?[\w+.-]+_[\w+.-]+)(?!:)/g,
         (match: string, labelRef: string) => {
           if (
             modifiedCommand.trim().startsWith(match) &&
@@ -344,7 +344,7 @@ export class MacroEngine {
       );
 
       modifiedCommand = modifiedCommand.replace(
-        /(?<!\w)(\?[\w+.\-]+)(?!:)/g,
+        /(?<!\w)(\?[\w+.-]+)(?!:)/g,
         (match: string, labelRef: string) => {
           if (
             modifiedCommand.trim().startsWith(match) &&
@@ -594,7 +594,7 @@ export class MacroEngine {
       }
     }
 
-    if (line.match(/^\s*[#?][\w+.\-]+:/) || line.match(/^\s*[#?][\w+.\-]+\s*=/)) {
+    if (line.match(/^\s*[#?][\w+.-]+:/) || line.match(/^\s*[#?][\w+.-]+\s*=/)) {
       return line;
     }
 
@@ -699,7 +699,7 @@ export class MacroEngine {
       return;
     }
 
-    if (/^\s*[#?][\w+.\-]+:/.test(line)) {
+    if (/^\s*[#?][\w+.-]+:/.test(line)) {
       if (line.trim().startsWith("?+:") || line.trim().startsWith("?-:")) {
         const labelChar = line.trim();
         const remainder = line.trim().substring(3).trim();
@@ -711,7 +711,7 @@ export class MacroEngine {
         return;
       }
 
-      const match = line.match(/^\s*([#?][\w+.\-]+):/);
+      const match = line.match(/^\s*([#?][\w+.-]+):/);
       if (match) {
         const labelName = match[1];
         const remainder = line.substring(match[0].length).trim();
@@ -724,8 +724,8 @@ export class MacroEngine {
       }
     }
 
-    if (/^\s*\?[\w+.\-]+ *=/.test(line)) {
-      const match = line.match(/^\s*(\?[\w+.\-]+) *=\s*(.*)/);
+    if (/^\s*\?[\w+.-]+ *=/.test(line)) {
+      const match = line.match(/^\s*(\?[\w+.-]+) *=\s*(.*)/);
       if (match) {
         const labelName = match[1];
         const expression = match[2].trim();

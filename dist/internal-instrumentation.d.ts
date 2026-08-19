@@ -7,6 +7,19 @@ export type InternalInstrumentationSnapshot = {
         actualReparses: number;
         includeReads: number;
         includeBytesRead: number;
+        includeTextCacheHits: number;
+        includeResolutionCacheHits: number;
+        expressionEvaluations: number;
+        expressionStringEvaluations: number;
+        expressionUniqueStringEvaluations: number;
+        expressionNodeEvaluations: number;
+        expressionUniqueNodeEvaluations: number;
+        pureExpressionEvaluations: number;
+        pureExpressionUniqueNodes: number;
+        pureStringExpressionEvaluations: number;
+        pureStringExpressionUniqueValues: number;
+        pureStringExpressionCacheHits: number;
+        pureStringExpressionCacheMisses: number;
         macroExpansions: number;
         macroLinesProcessed: number;
         passthroughDispatches: number;
@@ -36,6 +49,11 @@ export declare function runWithInternalInstrumentation<T>(callback: () => T): {
  * @param {number} [amount] The increment amount.
  */
 export declare function incrementInternalCounter(name: CounterName, amount?: number): void;
+/**
+ * Reports whether run-scoped internal instrumentation is active.
+ * @returns {boolean} Whether instrumentation is collecting metrics.
+ */
+export declare function isInternalInstrumentationActive(): boolean;
 /**
  * Records the largest observed value for an internal counter.
  * @param {CounterName} name The counter to update.
