@@ -15,6 +15,7 @@ export interface LoweredOperand {
     raw: string;
     expanded: string;
     length: number;
+    /** The index register for indexed addressing modes. */
     indexRegister?: string;
     immediate: boolean;
     indirect: boolean;

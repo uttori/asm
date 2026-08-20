@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { Assembler } from "../src/assembler.js";
+import { snesAssemblerHost } from "../src/plugin/legacy-adapter.js";
 import {
   runWithInternalInstrumentation,
   type InternalInstrumentationSnapshot,
@@ -180,13 +181,21 @@ function assembleFixture(fixture: Fixture): Uint8Array {
   const targetPath = path.join(root, fixture.target);
   const source = fs.readFileSync(sourcePath, "utf8");
   const target = new Uint8Array(fs.readFileSync(targetPath));
-  const assembler = new Assembler(target, { collectSourceMetadata: false });
-  assembler.setChecksumMode(fixture.checksumMode);
-  assembler.setIncludePaths(["./", path.dirname(sourcePath)]);
-  assembler.setCurrentFile(sourcePath);
-  const program = assembler.buildProgramModel(source, sourcePath, 0);
-  assembler.assembleProgram(program);
-  return assembler.getBinaryOutput();
+  const assembler = new Assembler({
+    ...snesAssemblerHost,
+    baseImage: target,
+    collectSourceMetadata: false,
+  });
+  try {
+    assembler.setChecksumMode(fixture.checksumMode);
+    assembler.setIncludePaths(["./", path.dirname(sourcePath)]);
+    assembler.setCurrentFile(sourcePath);
+    const program = assembler.buildProgramModel(source, sourcePath, 0);
+    assembler.assembleProgram(program);
+    return assembler.getBinaryOutput();
+  } finally {
+    assembler.dispose();
+  }
 }
 
 function runFixture(fixture: Fixture, instrumentation: boolean): FixtureRun {

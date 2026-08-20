@@ -7,6 +7,7 @@
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#language-server-protocol
  */
 export { Assembler } from "../../src/assembler.js";
+export { snesAssemblerHost } from "../../src/plugin/legacy-adapter.js";
 export {
   WorkspaceIndex,
   OverlayFileProvider,

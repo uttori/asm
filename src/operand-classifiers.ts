@@ -1,5 +1,4 @@
-import type { LoweredOperand } from "./architecture-types.js";
-import type { OperandResolver } from "./operand-resolver.js";
+import type { LoweredOperand, OperandResolutionContext } from "./architecture-types.js";
 import { parseOperandSyntax } from "./operand-syntax.js";
 
 type ClassificationInput = {
@@ -146,7 +145,10 @@ export function classifyGenericOperand(input: ClassificationInput): LoweredOpera
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.
  */
-export function classify65816Operand(resolver: OperandResolver, operand: string): LoweredOperand {
+export function classify65816Operand(
+  resolver: OperandResolutionContext,
+  operand: string,
+): LoweredOperand {
   const raw = operand.trim();
   const { expanded, length } = resolver.expandOperand(raw);
   return classifyGenericOperand({ raw, expanded, length });
@@ -160,7 +162,10 @@ export function classify65816Operand(resolver: OperandResolver, operand: string)
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.
  */
-export function classify6502Operand(resolver: OperandResolver, operand: string): LoweredOperand {
+export function classify6502Operand(
+  resolver: OperandResolutionContext,
+  operand: string,
+): LoweredOperand {
   const raw = operand.trim();
   const { expanded, length } = resolver.expandOperand(raw);
   return classifyGenericOperand({ raw, expanded, length });
@@ -172,7 +177,10 @@ export function classify6502Operand(resolver: OperandResolver, operand: string):
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.
  */
-export function classifySpc700Operand(resolver: OperandResolver, operand: string): LoweredOperand {
+export function classifySpc700Operand(
+  resolver: OperandResolutionContext,
+  operand: string,
+): LoweredOperand {
   const raw = operand.trim();
   const { expanded, length } = resolver.expandOperand(raw);
   return classifyGenericOperand({ raw, expanded, length });
@@ -184,7 +192,10 @@ export function classifySpc700Operand(resolver: OperandResolver, operand: string
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.
  */
-export function classifySuperFxOperand(resolver: OperandResolver, operand: string): LoweredOperand {
+export function classifySuperFxOperand(
+  resolver: OperandResolutionContext,
+  operand: string,
+): LoweredOperand {
   const raw = operand.trim();
   const { expanded, length } = resolver.expandOperand(raw);
   return classifyGenericOperand({ raw, expanded, length });

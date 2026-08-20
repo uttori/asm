@@ -1,6 +1,6 @@
-# SNES Assembly (snes-asm-js)
+# Uttori Assembly
 
-Language support for SNES assembly powered by the [snes-asm-js](https://github.com/MatthewCallis/snes-asm-js) language server.
+Assembly language support powered by [uttori-asm](https://github.com/MatthewCallis/uttori-asm), currently bundled with the first-party SNES target.
 
 Requires VS Code 1.91 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
 

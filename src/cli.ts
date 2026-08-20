@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { Assembler } from "./assembler.js";
+import { snesAssemblerHost } from "./plugin/legacy-adapter.js";
 import path from "path";
 
 class CLI {
@@ -80,8 +81,13 @@ class CLI {
       console.log(`Loaded target ROM: ${targetRom.length} bytes.`);
     }
 
+    let assembler: Assembler | undefined;
     try {
-      const assembler = new Assembler(targetRom, { collectSourceMetadata: false });
+      assembler = new Assembler({
+        ...snesAssemblerHost,
+        baseImage: targetRom,
+        collectSourceMetadata: false,
+      });
       this.assembler = assembler;
       assembler.setChecksumMode(checksumMode);
       console.log(`Checksum mode: ${checksumMode}`);
@@ -104,6 +110,9 @@ class CLI {
         error instanceof Error ? error.message : (JSON.stringify(error) ?? "Unknown error");
       console.error(`Compilation failed: ${message}`);
       process.exit(1);
+    } finally {
+      assembler?.dispose();
+      this.assembler = null;
     }
   }
 

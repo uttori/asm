@@ -16,7 +16,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import fs from "node:fs";
 import path from "node:path";
-import { Assembler, OverlayFileProvider, WorkspaceIndex } from "./core.js";
+import { Assembler, OverlayFileProvider, snesAssemblerHost, WorkspaceIndex } from "./core.js";
 import {
   completionsFor,
   definitionFor,
@@ -58,7 +58,7 @@ let settings: ServerSettings = { ...defaultSettings };
 let hasConfigurationCapability = false;
 let hasDidChangeConfigurationDynamicRegistration = false;
 let workspaceRoots: string[] = [];
-const index = new WorkspaceIndex(settings);
+const index = new WorkspaceIndex({ ...snesAssemblerHost, ...settings });
 
 /** Pending debounce timer for re-analysis. */
 let reindexTimer: NodeJS.Timeout | undefined;
@@ -161,21 +161,27 @@ function buildRom(file: string, outputPath: string, targetRomPath?: string): Bui
     }
 
     const source = provider.readTextFile(file);
-    const assembler = new Assembler(targetRom, {
+    const assembler = new Assembler({
+      ...snesAssemblerHost,
+      architecture: settings.architecture,
+      baseImage: targetRom,
       fileProvider: provider,
       collectSourceMetadata: false,
     });
-    assembler.setIncludePaths([path.dirname(file), ...settings.includePaths]);
-    assembler.setCurrentFile(file);
-    assembler.arch = settings.architecture;
+    try {
+      assembler.setIncludePaths([path.dirname(file), ...settings.includePaths]);
+      assembler.setCurrentFile(file);
 
-    const program = assembler.buildProgramModel(source, file, 0);
-    assembler.assembleProgram(program);
+      const program = assembler.buildProgramModel(source, file, 0);
+      assembler.assembleProgram(program);
 
-    const output = assembler.getBinaryOutput();
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, Buffer.from(output));
-    return { ok: true, outputPath, bytes: output.length };
+      const output = assembler.getBinaryOutput();
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      fs.writeFileSync(outputPath, Buffer.from(output));
+      return { ok: true, outputPath, bytes: output.length };
+    } finally {
+      assembler.dispose();
+    }
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
   }

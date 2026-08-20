@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { test } from "./ava-helper.js";
 
-import { Assembler } from "../src/assembler.js";
+import { Assembler } from "./test-assembler.js";
 
 interface FixtureComparison {
   fixture: string;

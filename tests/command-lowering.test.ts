@@ -1,6 +1,6 @@
 import { test } from "./ava-helper.js";
 
-import { Assembler } from "../src/assembler.js";
+import { Assembler } from "./test-assembler.js";
 
 test("command lowering preserves loop structure and typed children", t => {
   const assembler = new Assembler();

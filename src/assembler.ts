@@ -1,9 +1,6 @@
-import { Arch65816 } from "./Arch65816.js";
-import { Arch6502 } from "./Arch6502.js";
-import { ArchSPC700 } from "./ArchSPC700.js";
-import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
 import type {
+  ArchitectureEncoder,
   ArchitectureEncoderContext,
   ExpressionHost,
   LoweredInstruction,
@@ -56,12 +53,7 @@ import {
 import { MathCore } from "./mathcore.js";
 import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
-import {
-  createArchitectureRegistry,
-  type ArchitectureDefinition,
-  type ArchitectureExtension,
-  type ArchitectureRegistry,
-} from "./architecture-registry.js";
+import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
 import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
@@ -95,11 +87,19 @@ import {
 import type { SourceSpan } from "./source-location.js";
 import { createNodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
 import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
+import { type TargetExpressionFeature, type TargetProfile } from "./target-profile.js";
 import {
-  snesTargetProfile,
-  type TargetExpressionFeature,
-  type TargetProfile,
-} from "./target-profile.js";
+  type AssemblerEnvironment,
+  type LifecycleContribution,
+  type OwnedContribution,
+  type SessionLifecycle,
+  type TargetAddressSpace as PluginTargetAddressSpace,
+  type TargetOutputFormat as PluginTargetOutputFormat,
+  PluginError,
+  PluginSessionStateStore,
+  type PluginStateSnapshot,
+} from "./plugin/index.js";
+import { getLegacyTargetProfile } from "./plugin/legacy-adapter.js";
 
 let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
@@ -173,6 +173,7 @@ export type StageExecutionState = {
   symbols: StageSymbolState;
   control: StageControlState;
   writeState: StageWriteState;
+  pluginState: PluginStateSnapshot;
   loweredProgram: LoweredProgram | null;
 };
 
@@ -254,14 +255,25 @@ export type SpcblockData = {
 };
 
 export type AssemblerOptions = {
+  /** Frozen plugin environment shared by build and tooling sessions. */
+  environment: AssemblerEnvironment;
+  /** Target contribution ID or alias. */
+  target: string;
+  /** Optional architecture contribution ID or source alias. */
+  architecture?: string;
+  /** Optional target-specific configuration. */
+  targetOptions?: unknown;
+  /** Optional base image to seed output. */
+  baseImage?: number[] | Uint8Array;
   /** The file provider to use for the assembler. */
   fileProvider?: AssemblyFileProvider;
   /** Whether to collect source metadata. */
   collectSourceMetadata?: boolean;
-  /** The target profile to use for the assembler. */
-  targetProfile?: TargetProfile;
-  /** The architecture extensions to use for the assembler. */
-  architectureExtensions?: readonly ArchitectureExtension[];
+};
+
+type ActiveLifecycle = {
+  record: OwnedContribution<LifecycleContribution>;
+  instance: SessionLifecycle;
 };
 
 export class Assembler {
@@ -334,13 +346,7 @@ export class Assembler {
   public inFunctionDefinition: boolean = false;
   public functionDefinitionLines: string[] = [];
 
-  public arch65816: Arch65816;
-  public arch6502: Arch6502;
-  public archSPC700: ArchSPC700;
-  public archSuperFX: ArchSuperFX;
-
-  // Add a new property for architecture in the class:
-  public arch: string = "65816";
+  public arch: string = "";
 
   public pushpcStack: PushPcStackEntry[] = [];
   public pushpcnum: number = 0;
@@ -386,8 +392,14 @@ export class Assembler {
   readonly passProgramCache: Map<string, RuntimeNode[]> = new Map();
   directiveRegistry: DirectiveRegistry;
   architectureRegistry: ArchitectureRegistry;
+  public readonly environment: AssemblerEnvironment;
+  public readonly targetId: string;
+  public readonly targetOptions: Readonly<Record<string, unknown>>;
+  public readonly pluginState: PluginSessionStateStore;
+  public readonly pluginAddressSpace: PluginTargetAddressSpace;
+  public readonly pluginOutputFormat: PluginTargetOutputFormat;
+  readonly activeLifecycles: readonly ActiveLifecycle[];
   public readonly targetProfile: TargetProfile;
-  public readonly architectureExtensions: readonly ArchitectureExtension[];
   readonly cursorAddress: CursorAddressFacade;
   readonly fileProvider: AssemblyFileProvider;
   readonly frontEndService: AssemblyFrontEndService;
@@ -404,6 +416,7 @@ export class Assembler {
   activeStageExecutionState: StageExecutionState | null = null;
   analysisErrorRecoveryEnabled = false;
   runtimePassthroughRewriteEnabled = false;
+  sessionDisposed = false;
 
   get defineEngine(): DefineEngine {
     return this.services.defineEngine;
@@ -850,12 +863,14 @@ export class Assembler {
    * @returns {Assembler} A configured analysis session.
    */
   createToolingSession(): Assembler {
-    const session = new Assembler(this.targetRom, {
+    const session = new Assembler({
+      environment: this.environment,
+      target: this.targetId,
+      architecture: this.arch,
+      targetOptions: this.targetOptions,
+      baseImage: this.targetRom,
       fileProvider: this.fileProvider,
-      targetProfile: this.targetProfile,
-      architectureExtensions: this.architectureExtensions,
     });
-    session.directiveRegistry = this.cloneDirectiveRegistryForSession(session);
     session.includePaths = [...this.includePaths];
     session.mapper = this.mapper;
     session.checksumFixEnabled = this.checksumFixEnabled;
@@ -880,7 +895,7 @@ export class Assembler {
   cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry {
     const operandResolver = session.operandResolver;
     const runtime = session.directiveRuntime;
-    return createDirectiveRegistry(
+    const registry = createDirectiveRegistry(
       {
         data: { runtime },
         fillPad: { session, operandResolver },
@@ -904,6 +919,49 @@ export class Assembler {
       },
       session.targetProfile.directiveFeatures,
     );
+    const target = session.environment.getTarget(session.targetId);
+    for (const setId of target?.directiveSets ?? []) {
+      const set = session.environment.getDirectiveSet(setId);
+      if (!set) continue;
+      const pluginId = session.environment.getContributionOwner(setId);
+      for (const directive of set.directives) {
+        let handler;
+        try {
+          handler = directive.createHandler({
+            targetId: session.targetId,
+            state: session.pluginState,
+          });
+        } catch (cause) {
+          throw new PluginError(`Directive factory '${directive.id}' failed.`, {
+            code: "PLUGIN_ACTIVATION_FAILED",
+            pluginId,
+            contributionId: directive.id,
+            targetId: session.targetId,
+            cause,
+          });
+        }
+        registry.register([...directive.keywords], undefined, (_context, words, raw) => {
+          try {
+            handler({ state: session.pluginState }, words, raw);
+          } catch (cause) {
+            throw new PluginError(`Directive '${directive.id}' failed.`, {
+              code: "PLUGIN_HOOK_FAILED",
+              pluginId,
+              contributionId: directive.id,
+              targetId: session.targetId,
+              cause,
+            });
+          }
+        });
+      }
+    }
+    for (const [keyword, handler] of registry.handlers) {
+      registry.handlers.set(keyword, (words, raw, command) => {
+        if (session.runBeforeDirective(keyword, words, raw) === "handled") return;
+        handler(words, raw, command);
+      });
+    }
+    return registry;
   }
 
   /**
@@ -912,7 +970,12 @@ export class Assembler {
    * @returns {AssemblyAnalysisResult} The result.
    */
   analyzeProgram(program: ProgramModel): AssemblyAnalysisResult {
-    return this.createToolingSession().collectProgramAnalysis(program);
+    const session = this.createToolingSession();
+    try {
+      return session.collectProgramAnalysis(program);
+    } finally {
+      session.dispose();
+    }
   }
 
   /**
@@ -928,11 +991,15 @@ export class Assembler {
     startLine = 0,
   ): AssemblyAnalysisResult & { program: ProgramModel } {
     const session = this.createToolingSession();
-    const program = session.buildProgramModel(source, sourceFile, startLine);
-    return {
-      program,
-      ...session.collectProgramAnalysis(program),
-    };
+    try {
+      const program = session.buildProgramModel(source, sourceFile, startLine);
+      return {
+        program,
+        ...session.collectProgramAnalysis(program),
+      };
+    } finally {
+      session.dispose();
+    }
   }
 
   /**
@@ -947,17 +1014,21 @@ export class Assembler {
       [];
     for (const document of documents) {
       const session = this.createToolingSession();
-      const program = session.buildProgramModel(
-        document.source,
-        document.sourceFile,
-        document.startLine ?? 0,
-      );
-      const result = session.collectProgramAnalysis(program);
-      results.push({
-        sourceFile: document.sourceFile,
-        program,
-        ...result,
-      });
+      try {
+        const program = session.buildProgramModel(
+          document.source,
+          document.sourceFile,
+          document.startLine ?? 0,
+        );
+        const result = session.collectProgramAnalysis(program);
+        results.push({
+          sourceFile: document.sourceFile,
+          program,
+          ...result,
+        });
+      } finally {
+        session.dispose();
+      }
     }
     return results;
   }
@@ -1016,13 +1087,129 @@ export class Assembler {
     };
   }
 
-  constructor(targetRom?: number[] | Uint8Array, options: AssemblerOptions = {}) {
-    this.targetProfile = options.targetProfile ?? snesTargetProfile;
-    this.architectureExtensions = [...(options.architectureExtensions ?? [])];
-    this.arch = this.targetProfile.defaultArchitecture;
+  constructor(options: AssemblerOptions) {
+    if (!options?.environment) {
+      throw new PluginError("Assembler construction requires a frozen plugin environment.", {
+        code: "PLUGIN_CONFIGURATION_INVALID",
+      });
+    }
+    this.environment = options.environment;
+    const targetId = this.environment.resolveTargetId(options.target);
+    const target = targetId ? this.environment.getTarget(targetId) : undefined;
+    if (!targetId || !target) {
+      throw new PluginError(`Assembler target '${options.target}' is not available.`, {
+        code: "PLUGIN_TARGET_INVALID",
+        targetId: options.target,
+      });
+    }
+    this.targetId = targetId;
+    const configuredTargetOptions = options.targetOptions;
+    if (!target.createOptions && configuredTargetOptions !== undefined) {
+      const emptyObject =
+        typeof configuredTargetOptions === "object" &&
+        configuredTargetOptions !== null &&
+        !Array.isArray(configuredTargetOptions) &&
+        Object.keys(configuredTargetOptions).length === 0;
+      if (!emptyObject) {
+        throw new PluginError(`Target '${targetId}' does not accept options.`, {
+          code: "PLUGIN_CONFIGURATION_INVALID",
+          pluginId: this.environment.getContributionOwner(targetId),
+          contributionId: targetId,
+          targetId,
+        });
+      }
+    }
+    const normalizedTargetOptions = target.createOptions?.(configuredTargetOptions) ?? {};
+    this.targetOptions = Object.freeze({ ...normalizedTargetOptions });
+    this.pluginState = new PluginSessionStateStore(this.environment.sessionStates, {
+      targetId,
+      targetOptions: this.targetOptions,
+    });
+    const targetFactoryContext = {
+      targetId,
+      options: this.targetOptions,
+      state: this.pluginState,
+    };
+    const addressContribution = this.environment.getAddressSpace(target.addressSpace);
+    const outputContribution = this.environment.getOutputFormat(target.outputFormat);
+    if (!addressContribution || !outputContribution) {
+      throw new PluginError(`Target '${targetId}' has unresolved output factories.`, {
+        code: "PLUGIN_TARGET_INVALID",
+        targetId,
+      });
+    }
+    try {
+      this.pluginAddressSpace = addressContribution.create(targetFactoryContext);
+    } catch (cause) {
+      throw new PluginError(`Address-space factory '${target.addressSpace}' failed.`, {
+        code: "PLUGIN_ACTIVATION_FAILED",
+        pluginId: this.environment.getContributionOwner(target.addressSpace),
+        contributionId: target.addressSpace,
+        targetId,
+        cause,
+      });
+    }
+    try {
+      this.pluginOutputFormat = outputContribution.create(targetFactoryContext);
+    } catch (cause) {
+      throw new PluginError(`Output-format factory '${target.outputFormat}' failed.`, {
+        code: "PLUGIN_ACTIVATION_FAILED",
+        pluginId: this.environment.getContributionOwner(target.outputFormat),
+        contributionId: target.outputFormat,
+        targetId,
+        cause,
+      });
+    }
+    const legacyProfile = getLegacyTargetProfile(this.environment, targetId);
+    this.targetProfile = legacyProfile ?? {
+      name: targetId,
+      defaultArchitecture: target.defaultArchitecture,
+      architectures: new Set(target.architectures),
+      defaultMapper: "flat",
+      checksumFixEnabled: false,
+      addressSpace: {
+        name: target.addressSpace,
+        addressWidth: this.pluginAddressSpace.addressWidth,
+        defaultOrigin: this.pluginAddressSpace.defaultOrigin,
+        unmappedWriteBehavior: "throw",
+        normalizeForWrite: (address) => this.pluginAddressSpace.normalizeForWrite(address),
+        advance: (address, amount) => this.pluginAddressSpace.advance(address, amount),
+        toOutputOffset: (address) => this.pluginAddressSpace.toOutputOffset(address),
+        fromOutputOffset: (offset) => this.pluginAddressSpace.fromOutputOffset(offset),
+      },
+      outputFormat: {
+        name: target.outputFormat,
+        defaultExtension: target.defaultOutputExtension,
+        finalize: ({ bytes }) =>
+          this.pluginOutputFormat.finalize({
+            state: this.pluginState,
+            outputBytes: bytes,
+          }),
+        getBinaryOutput: (bytes) =>
+          this.pluginOutputFormat.getOutput({
+            state: this.pluginState,
+            outputBytes: bytes,
+          }),
+      },
+      directiveFeatures: new Set(),
+      expressionFeatures: new Set(),
+    };
+    const requestedArchitecture = options.architecture ?? target.defaultArchitecture;
+    const architectureId = this.environment.resolveArchitectureId(targetId, requestedArchitecture);
+    if (!architectureId) {
+      throw new PluginError(
+        `Architecture '${requestedArchitecture}' is unavailable for target '${targetId}'.`,
+        {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId,
+          contributionId: requestedArchitecture,
+        },
+      );
+    }
+    this.arch = architectureId;
     this.mapper = this.targetProfile.defaultMapper;
     this.checksumFixEnabled = this.targetProfile.checksumFixEnabled;
-    this.targetRom = targetRom ? Uint8Array.from(targetRom) : new Uint8Array();
+    this.targetRom = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
     this.fileProvider = options.fileProvider ?? createNodeAssemblyFileProvider();
     this.collectSourceMetadata = options.collectSourceMetadata ?? true;
     this.cursorAddress = this.createCursorAddressFacade();
@@ -1087,24 +1274,165 @@ export class Assembler {
         error: (message) => new Error(message),
       },
     };
-    this.arch65816 = new Arch65816(encoderContext);
-    this.arch6502 = new Arch6502(encoderContext);
-    this.archSPC700 = new ArchSPC700(encoderContext);
-    this.archSuperFX = new ArchSuperFX(encoderContext);
-    this.architectureRegistry = createArchitectureRegistry(
-      this.arch65816,
-      this.archSPC700,
-      this.archSuperFX,
-      this.arch6502,
-    );
-    for (const extension of this.architectureExtensions) {
-      this.architectureRegistry.registerExtension(extension, encoderContext);
+    this.architectureRegistry = new ArchitectureRegistry();
+    for (const contributionId of target.architectures) {
+      const contribution = this.environment.getArchitecture(contributionId);
+      if (!contribution) {
+        throw new PluginError(`Architecture contribution '${contributionId}' is unavailable.`, {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId,
+          contributionId,
+        });
+      }
+      let encoder: ArchitectureEncoder;
+      try {
+        encoder = contribution.createEncoder(encoderContext);
+      } catch (cause) {
+        throw new PluginError(`Architecture factory '${contributionId}' failed.`, {
+          code: "PLUGIN_ACTIVATION_FAILED",
+          pluginId: this.environment.getContributionOwner(contributionId),
+          contributionId,
+          targetId,
+          cause,
+        });
+      }
+      this.architectureRegistry.register(
+        {
+          name: contribution.id,
+          encoder,
+          instructions:
+            contribution.instructions.length > 0 ? contribution.instructions : undefined,
+          classifyOperand: (resolver, operand) =>
+            contribution.classifyOperand({ operands: resolver }, operand),
+          splitOperands: contribution.splitOperands,
+          unknownInstructionBehavior: contribution.unknownInstructionBehavior,
+        },
+        [...(contribution.aliases ?? [])],
+      );
     }
     this.directiveRegistry = this.cloneDirectiveRegistryForSession(this);
     this.commandLoweringService = new CommandLoweringService(this);
     this.services.frontEnd = this.frontEndService;
     this.services.lowering = this.commandLoweringService;
+    this.activeLifecycles = this.environment.getTargetLifecycles(targetId).map((record) => {
+      try {
+        return { record, instance: record.value.create(targetFactoryContext) };
+      } catch (cause) {
+        throw new PluginError(`Lifecycle factory '${record.contributionId}' failed.`, {
+          code: "PLUGIN_ACTIVATION_FAILED",
+          pluginId: record.pluginId,
+          contributionId: record.contributionId,
+          targetId,
+          cause,
+        });
+      }
+    });
+    this.runLifecycleHook("onSessionCreated", (lifecycle) =>
+      lifecycle.onSessionCreated?.({ state: this.pluginState }),
+    );
+    this.selectArchitecture(this.arch, this.arch);
     this.activateStage("collectDefinitions");
+  }
+
+  runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void {
+    for (const { record, instance } of this.activeLifecycles) {
+      try {
+        invoke(instance);
+      } catch (cause) {
+        throw new PluginError(`Lifecycle hook '${hookName}' failed.`, {
+          code: "PLUGIN_HOOK_FAILED",
+          pluginId: record.pluginId,
+          contributionId: record.contributionId,
+          targetId: this.targetId,
+          cause,
+        });
+      }
+    }
+  }
+
+  runBeforeDirective(
+    keyword: string,
+    words: readonly string[],
+    raw: string,
+  ): "continue" | "handled" {
+    let result: "continue" | "handled" = "continue";
+    this.runLifecycleHook("beforeDirective", (lifecycle) => {
+      if (
+        result === "continue" &&
+        lifecycle.beforeDirective?.({
+          state: this.pluginState,
+          keyword,
+          words,
+          raw,
+        }) === "handled"
+      ) {
+        result = "handled";
+      }
+    });
+    return result;
+  }
+
+  selectArchitecture(architecture: string, sourceAlias = architecture): void {
+    const resolved = this.environment.resolveArchitectureId(this.targetId, architecture);
+    if (!resolved) {
+      throw new PluginError(
+        `Architecture ${architecture} is unavailable for target ${this.targetProfile.name}.`,
+        {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId: this.targetId,
+          contributionId: architecture,
+        },
+      );
+    }
+    const previousArchitecture = this.arch || undefined;
+    this.arch = resolved;
+    this.runLifecycleHook("onArchitectureSelected", (lifecycle) =>
+      lifecycle.onArchitectureSelected?.({
+        state: this.pluginState,
+        previousArchitecture,
+        architecture: resolved,
+        sourceAlias,
+      }),
+    );
+  }
+
+  beforeWrite(logicalAddress: number, width: number): void {
+    this.pluginAddressSpace.validateWrite?.(logicalAddress, width);
+    this.runLifecycleHook("beforeWrite", (lifecycle) =>
+      lifecycle.beforeWrite?.({ state: this.pluginState, logicalAddress, width }),
+    );
+  }
+
+  dispose(): void {
+    if (this.sessionDisposed) return;
+    this.sessionDisposed = true;
+    const errors: unknown[] = [];
+    for (const { record, instance } of [...this.activeLifecycles].reverse()) {
+      try {
+        instance.onSessionDispose?.({ state: this.pluginState });
+      } catch (cause) {
+        errors.push(
+          new PluginError("Lifecycle hook 'onSessionDispose' failed.", {
+            code: "PLUGIN_HOOK_FAILED",
+            pluginId: record.pluginId,
+            contributionId: record.contributionId,
+            targetId: this.targetId,
+            cause,
+          }),
+        );
+      }
+    }
+    try {
+      this.pluginState.dispose();
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(
+        errors,
+        "One or more assembler session resources failed to dispose.",
+      );
+    }
   }
 
   /**
@@ -1478,6 +1806,7 @@ export class Assembler {
         activeFreespaceStartPc: this.activeFreespaceStartPc,
         activeFreespaceContentStartPc: this.activeFreespaceContentStartPc,
       },
+      pluginState: this.pluginState.cloneSnapshot(),
       loweredProgram: null,
     };
   }
@@ -2550,13 +2879,26 @@ export class Assembler {
     this.inSpcblock = false;
     this.spcblockData = null;
     this.spcInlineCompatMode = false;
+    this.pluginState.resetForStage(stage);
+    this.runLifecycleHook("onStageStart", (lifecycle) =>
+      lifecycle.onStageStart?.({ state: this.pluginState, stage }),
+    );
   }
 
   /**
    * Completes the current pass, performing any necessary cleanup.
    */
   finishPass(): void {
+    const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
+    if (this.getActiveStageCapabilities().canFinalize) {
+      this.runLifecycleHook("beforeOutputFinalize", (lifecycle) =>
+        lifecycle.beforeOutputFinalize?.({ state: this.pluginState, outputBytes: this.romdata }),
+      );
+    }
     this.romWriter.finishPass();
+    this.runLifecycleHook("onStageEnd", (lifecycle) =>
+      lifecycle.onStageEnd?.({ state: this.pluginState, stage }),
+    );
     if (this.getActiveStageCapabilities().canFinalize) {
       this.includeSource.endAssemblySnapshot();
       this.mathCore.endAssemblySnapshot();
@@ -2718,6 +3060,7 @@ export class Assembler {
         activeFreespaceStartPc: writeSeed.activeFreespaceStartPc,
         activeFreespaceContentStartPc: writeSeed.activeFreespaceContentStartPc,
       },
+      pluginState: this.pluginState.cloneSnapshot(seed?.pluginState),
       loweredProgram: null,
     };
   }
@@ -2727,6 +3070,7 @@ export class Assembler {
    * @param {StageExecutionState} stageState The stage state.
    */
   applyStageExecutionState(stageState: StageExecutionState): void {
+    this.pluginState.restore(this.pluginState.cloneSnapshot(stageState.pluginState));
     this.currentTargetAddress = stageState.cursor.currentTargetAddress;
     this.currentTargetBaseAddress = stageState.cursor.currentTargetBaseAddress;
     this.currentTargetStartAddress = stageState.cursor.currentTargetStartAddress;
@@ -2757,6 +3101,7 @@ export class Assembler {
    * @param {StageExecutionState} stageState The stage state.
    */
   captureStageExecutionState(stageState: StageExecutionState): void {
+    stageState.pluginState = this.pluginState.cloneSnapshot();
     stageState.cursor = {
       currentTargetAddress: this.currentTargetAddress,
       currentTargetBaseAddress: this.currentTargetBaseAddress,

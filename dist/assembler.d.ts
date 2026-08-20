@@ -1,7 +1,3 @@
-import { Arch65816 } from "./Arch65816.js";
-import { Arch6502 } from "./Arch6502.js";
-import { ArchSPC700 } from "./ArchSPC700.js";
-import { ArchSuperFX } from "./ArchSuperFX.js";
 import type { CursorAddressFacade } from "./assembler-internals.js";
 import type { ExpressionHost, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addressToLine.js";
@@ -12,7 +8,7 @@ import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expressi
 import { type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
-import { type ArchitectureDefinition, type ArchitectureExtension, type ArchitectureRegistry } from "./architecture-registry.js";
+import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
 import { DirectiveRegistry } from "./directives/registry.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
@@ -28,6 +24,7 @@ import { SymbolScopeService } from "./services/symbol-scope-service.js";
 import type { SourceSpan } from "./source-location.js";
 import { type AssemblyFileProvider } from "./file-provider.js";
 import { type TargetExpressionFeature, type TargetProfile } from "./target-profile.js";
+import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
 /** Represents a macro definition. */
 export type MacroDefinition = {
     /** The name of the macro. */
@@ -100,6 +97,7 @@ export type StageExecutionState = {
     symbols: StageSymbolState;
     control: StageControlState;
     writeState: StageWriteState;
+    pluginState: PluginStateSnapshot;
     loweredProgram: LoweredProgram | null;
 };
 type CommandPreprocessResult = "continue" | "handled";
@@ -170,10 +168,24 @@ export type SpcblockData = {
     namespaceBackup: string;
 };
 export type AssemblerOptions = {
+    /** Frozen plugin environment shared by build and tooling sessions. */
+    environment: AssemblerEnvironment;
+    /** Target contribution ID or alias. */
+    target: string;
+    /** Optional architecture contribution ID or source alias. */
+    architecture?: string;
+    /** Optional target-specific configuration. */
+    targetOptions?: unknown;
+    /** Optional base image to seed output. */
+    baseImage?: number[] | Uint8Array;
+    /** The file provider to use for the assembler. */
     fileProvider?: AssemblyFileProvider;
+    /** Whether to collect source metadata. */
     collectSourceMetadata?: boolean;
-    targetProfile?: TargetProfile;
-    architectureExtensions?: readonly ArchitectureExtension[];
+};
+type ActiveLifecycle = {
+    record: OwnedContribution<LifecycleContribution>;
+    instance: SessionLifecycle;
 };
 export declare class Assembler {
     /** The current target address. `snespos` */
@@ -231,10 +243,6 @@ export declare class Assembler {
     tableStack: Map<string, number>[];
     inFunctionDefinition: boolean;
     functionDefinitionLines: string[];
-    arch65816: Arch65816;
-    arch6502: Arch6502;
-    archSPC700: ArchSPC700;
-    archSuperFX: ArchSuperFX;
     arch: string;
     pushpcStack: PushPcStackEntry[];
     pushpcnum: number;
@@ -278,8 +286,14 @@ export declare class Assembler {
     readonly passProgramCache: Map<string, RuntimeNode[]>;
     directiveRegistry: DirectiveRegistry;
     architectureRegistry: ArchitectureRegistry;
+    readonly environment: AssemblerEnvironment;
+    readonly targetId: string;
+    readonly targetOptions: Readonly<Record<string, unknown>>;
+    readonly pluginState: PluginSessionStateStore;
+    readonly pluginAddressSpace: PluginTargetAddressSpace;
+    readonly pluginOutputFormat: PluginTargetOutputFormat;
+    readonly activeLifecycles: readonly ActiveLifecycle[];
     readonly targetProfile: TargetProfile;
-    readonly architectureExtensions: readonly ArchitectureExtension[];
     readonly cursorAddress: CursorAddressFacade;
     readonly fileProvider: AssemblyFileProvider;
     readonly frontEndService: AssemblyFrontEndService;
@@ -296,6 +310,7 @@ export declare class Assembler {
     activeStageExecutionState: StageExecutionState | null;
     analysisErrorRecoveryEnabled: boolean;
     runtimePassthroughRewriteEnabled: boolean;
+    sessionDisposed: boolean;
     get defineEngine(): DefineEngine;
     get directiveRuntime(): DirectiveRuntimeService;
     get frontEndCommandService(): FrontEndCommandService;
@@ -479,7 +494,12 @@ export declare class Assembler {
      * @returns {AssemblerServiceBag} The result.
      */
     createServices(): AssemblerServiceBag;
-    constructor(targetRom?: number[] | Uint8Array, options?: AssemblerOptions);
+    constructor(options: AssemblerOptions);
+    runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void;
+    runBeforeDirective(keyword: string, words: readonly string[], raw: string): "continue" | "handled";
+    selectArchitecture(architecture: string, sourceAlias?: string): void;
+    beforeWrite(logicalAddress: number, width: number): void;
+    dispose(): void;
     /**
      * Sets ROM header checksum calculation mode.
      * @param {"asar" | "simple"} mode The checksum mode to use.

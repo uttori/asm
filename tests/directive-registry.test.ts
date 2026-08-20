@@ -1,7 +1,7 @@
 import { restore, spy, stub } from "sinon";
 import { test } from "./ava-helper.js";
 
-import { Assembler } from "../src/assembler.js";
+import { Assembler } from "./test-assembler.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";
 
 test.afterEach(() => {

@@ -65,14 +65,27 @@ export const handleArch = (
   const archParam = words[1].toLowerCase();
   const canonical = session.architectureRegistry.getCanonicalName(archParam);
   if (!canonical) {
+    if (session.selectArchitecture) {
+      session.selectArchitecture(archParam, archParam);
+      session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+      return;
+    }
     throw new Error("Unsupported architecture: " + archParam);
   }
-  if (session.targetProfile && !session.targetProfile.architectures.has(canonical)) {
+  if (
+    !session.selectArchitecture &&
+    session.targetProfile &&
+    !session.targetProfile.architectures.has(canonical)
+  ) {
     throw new Error(
       `Architecture ${canonical} is unavailable for target ${session.targetProfile.name}.`,
     );
   }
-  session.arch = canonical;
+  if (session.selectArchitecture) {
+    session.selectArchitecture(canonical, archParam);
+  } else {
+    session.arch = canonical;
+  }
   session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
 };
 

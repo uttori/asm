@@ -30,6 +30,7 @@ export interface RomWriterHost {
   setWritePosition(address: number): void;
   syncWriteStarts(): void;
   incrementBytesWritten(num: number): void;
+  beforeWrite?(logicalAddress: number, width: number): void;
   /** Optional structured trace hook invoked once per emitted byte. */
   traceWrite?(event: Omit<AssemblerTraceWriteEvent, "type">): void;
 }
@@ -80,6 +81,7 @@ export class RomWriterService {
     const addressWidth = this.host.targetProfile.addressSpace.addressWidth;
     const logicalMask = addressWidth < 32 ? 2 ** addressWidth - 1 : 0xffffffff;
     const logicalAddress = newPos & logicalMask;
+    this.host.beforeWrite?.(logicalAddress, 1);
     const pcpos = this.convertTargetAddressToRomOffset(logicalAddress);
     if (pcpos < 0 && this.host.targetProfile.addressSpace.unmappedWriteBehavior === "throw") {
       throw new Error(

@@ -1,6 +1,6 @@
 # Plugin System Implementation Plan
 
-Status: ready for implementation  
+Status: in progress — Phase 0, Phase 1, and Phase 2 complete
 Scope: replace constructor-time extension injection with a complete, trusted, in-process plugin system and move every SNES-specific production behavior into a first-party SNES plugin  
 Compatibility policy: public API compatibility is not required; behavioral regressions covered by the test and fixture suites are not permitted
 
@@ -68,13 +68,14 @@ fixtures/
   snes/                       # existing Asar and production SNES fixtures
 ```
 
-Use these workspace package names internally:
+Use these workspace package names internally. `uttori-asm` is the umbrella
+project; target names such as SNES belong to their plugin packages:
 
-- `@snes-asm/core`
-- `@snes-asm/plugin-loader-node`
-- `@snes-asm/cli`
-- `@snes-asm/plugin-snes`
-- `@snes-asm/plugin-6502-stub`
+- `@uttori/asm-core`
+- `@uttori/asm-plugin-loader-node`
+- `@uttori/asm-cli`
+- `@uttori/asm-plugin-snes`
+- `@uttori/asm-plugin-6502-stub`
 
 The root `package.json` becomes the private workspace/test orchestrator. Publishing or preserving the current root package shape is not required for this migration.
 
@@ -110,9 +111,9 @@ An `Assembler` receives a frozen `AssemblerEnvironment` and a target ID. It neve
 
 ### 3.4 No implicit SNES default in core
 
-`@snes-asm/core` must not import the SNES plugin and must not contain a default target. Constructing an assembler requires an environment and target selection. A missing target produces a clear configuration error.
+`@uttori/asm-core` must not import the SNES plugin and must not contain a default target. Constructing an assembler requires an environment and target selection. A missing target produces a clear configuration error.
 
-The CLI and language-server distributions may bundle `@snes-asm/plugin-snes` and select it as their product-level default when no project configuration exists. That default belongs to the host, not core.
+The CLI and language-server distributions may bundle `@uttori/asm-plugin-snes` and select it as their product-level default when no project configuration exists. That default belongs to the host, not core.
 
 ### 3.5 Immutable environment, session-bound implementations
 
@@ -480,7 +481,7 @@ Delete core's static 65816/SPC700/Super FX catalogs and static all-target direct
 
 ## 5. Node loader and project configuration
 
-Implement Node-specific behavior in `@snes-asm/plugin-loader-node`.
+Implement Node-specific behavior in `@uttori/asm-plugin-loader-node`.
 
 ### 5.1 Configuration file
 
@@ -488,10 +489,10 @@ Use `asm.config.json` at the workspace/project root:
 
 ```json
 {
-  "$schema": "./node_modules/@snes-asm/plugin-loader-node/asm-config.schema.json",
+  "$schema": "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
   "plugins": [
     {
-      "module": "@snes-asm/plugin-snes",
+      "module": "@uttori/asm-plugin-snes",
       "options": {
         "checksumMode": "asar"
       }
@@ -709,6 +710,11 @@ Acceptance:
 - Parallel build/tooling sessions share descriptors but no mutable handlers or state.
 - Existing SNES tests pass through the temporary SNES environment adapter.
 
+Completion note (2026-08-19): the strict environment/target constructor, session-bound
+factories and lifecycle hooks, plugin state snapshots, tooling-session isolation, explicit
+host wiring, and temporary SNES adapter are implemented. `npm run verify` passes with 797
+tests; all 60 Asar fixtures and the Slideshow and Chou checksum gates pass.
+
 ### Phase 3 — Convert directives, expressions, and lowering to contributions
 
 Tasks:
@@ -752,17 +758,17 @@ Acceptance:
 Tasks:
 
 1. Create workspace packages and move files according to the extraction inventory.
-2. Implement `@snes-asm/plugin-snes` as a default-exported plugin module.
+2. Implement `@uttori/asm-plugin-snes` as a default-exported plugin module.
 3. Register SNES state, architectures, address space, output format, directives, expressions, lifecycle hooks, target, and tooling metadata during activation.
 4. Move mapper/checksum/SPC/freespace/Asar compatibility tests beside the SNES plugin.
 5. Move architecture tests and catalogs beside the SNES plugin.
-6. Move the current 6502 stub, flat-16 target, and its tests to `@snes-asm/plugin-6502-stub`.
+6. Move the current 6502 stub, flat-16 target, and its tests to `@uttori/asm-plugin-6502-stub`.
 7. Delete the temporary adapter and all built-in registries from core.
-8. Add package export maps so plugins consume only documented `@snes-asm/core` plugin API and context types.
+8. Add package export maps so plugins consume only documented `@uttori/asm-core` plugin API and context types.
 
 Acceptance:
 
-- `@snes-asm/core` has no dependency on either plugin.
+- `@uttori/asm-core` has no dependency on either plugin.
 - Core tests pass with only the tiny fixture plugin installed.
 - SNES plugin tests pass when the plugin is explicitly activated.
 - 6502 stub still fails encoding with a clear “not implemented” diagnostic.
@@ -772,7 +778,7 @@ Acceptance:
 
 Tasks:
 
-1. Implement `@snes-asm/plugin-loader-node` and JSON schema.
+1. Implement `@uttori/asm-plugin-loader-node` and JSON schema.
 2. Add module/path/package resolution, bundled-plugin lookup, option validation, caching, and disposal.
 3. Add configuration precedence: CLI/editor overrides > `asm.config.json` > host defaults.
 4. Convert the CLI to the generic options and environment flow.

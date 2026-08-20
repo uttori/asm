@@ -14,4 +14,6 @@ export * from "./services/command-lowering-service.js";
 export { ProgramModelBuilder } from "./services/program-model-builder.js";
 export type { IncrementalProgramParseState, IncludeProgramNode, ProgramModel, } from "./services/program-model-builder.js";
 export * from "./lsp/index.js";
+export * as pluginApi from "./plugin/index.js";
+export { AssemblerEnvironment, definePlugin, PluginError, PluginManager, PLUGIN_API_VERSION, } from "./plugin/index.js";
 //# sourceMappingURL=index.d.ts.map

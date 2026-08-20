@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
-import { Assembler } from "../src/assembler.js";
+import { Assembler } from "./test-assembler.js";
 import { createTraceCollector } from "../src/debug-tracing.js";
 import { parseExpressionNode } from "../src/ir/expression-node.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";

@@ -1,7 +1,8 @@
 import { stub } from "sinon";
 import { test } from "./ava-helper.js";
 
-import { Assembler, type StructDefinition } from "../src/assembler.js";
+import type { StructDefinition } from "../src/assembler.js";
+import { Assembler } from "./test-assembler.js";
 import {
   isReferenceExpressionNode,
   parseLeadingReferenceExpression,

@@ -1,6 +1,6 @@
-# snes-asm-js
+# uttori-asm
 
-An Asar-compatible SNES assembler written in TypeScript, with built-in 65816, SPC700, and Super FX support.
+A pluggable assembler toolkit written in TypeScript. The current first-party target is an Asar-compatible SNES assembler with 65816, SPC700, and Super FX support.
 
 The repository also includes a Language Server Protocol implementation and a VS Code extension powered by the same parser and analysis pipeline as the assembler.
 
@@ -29,8 +29,8 @@ The assembler can create a binary from source or apply assembly to an existing R
 Clone the repository and install all workspace dependencies:
 
 ```sh
-git clone https://github.com/MatthewCallis/snes-asm-js.git
-cd snes-asm-js
+git clone https://github.com/MatthewCallis/uttori-asm.git
+cd uttori-asm
 npm install
 ```
 
@@ -65,7 +65,8 @@ npm run cli -- main.asm main.sfc --checksum-mode=simple
 ```ts
 import fs from "node:fs";
 import path from "node:path";
-import { Assembler } from "snes-asm-js";
+import { Assembler } from "uttori-asm";
+import { snesAssemblerHost } from "uttori-asm/plugin";
 
 const sourceFile = path.resolve("src/main.asm");
 const source = fs.readFileSync(sourceFile, "utf8");
@@ -73,76 +74,34 @@ const baseRom = fs.existsSync("game.sfc")
   ? new Uint8Array(fs.readFileSync("game.sfc"))
   : undefined;
 
-const assembler = new Assembler(baseRom, { collectSourceMetadata: false });
-assembler.setCurrentFile(sourceFile);
-assembler.setIncludePaths([path.dirname(sourceFile)]);
-assembler.setChecksumMode("asar");
-assembler.assembleSource(source, sourceFile);
-
-fs.writeFileSync("build/game.sfc", assembler.getBinaryOutput());
-```
-
-### Target and architecture composition
-
-SNES remains the default target, but assembler construction now composes an
-architecture, address space, output format, directive families, and expression
-capabilities through a `TargetProfile`. Named built-ins are available through
-`builtInTargetProfiles`, and applications can supply their own profile directly:
-
-```ts
-import {
-  Assembler,
-  rawBinaryOutputFormat,
-  type ArchitectureExtension,
-  type TargetProfile,
-} from "snes-asm-js";
-
-const architecture: ArchitectureExtension = {
-  name: "example-cpu",
-  aliases: ["example"],
-  classifyOperand: (resolver, operand) => resolver.lowerOperand(operand),
-  splitOperands: (text) => (text ? [text] : []),
-  unknownInstructionBehavior: "throw",
-  createEncoder: (context) => ({
-    estimateSize: () => 1,
-    encode: () => {
-      context.emission.writeByte(0x00);
-      return true;
-    },
-  }),
-};
-
-const target: TargetProfile = {
-  name: "example-target",
-  defaultArchitecture: "example-cpu",
-  architectures: new Set(["example-cpu"]),
-  defaultMapper: "flat",
-  checksumFixEnabled: false,
-  addressSpace: {
-    name: "flat-example",
-    addressWidth: 16,
-    defaultOrigin: 0,
-    unmappedWriteBehavior: "throw",
-    normalizeForWrite: (address) => address,
-    advance: (address, amount) => address + amount,
-    toOutputOffset: (address) => address,
-    fromOutputOffset: (offset) => offset,
-  },
-  outputFormat: rawBinaryOutputFormat,
-  directiveFeatures: new Set(),
-  expressionFeatures: new Set(),
-};
-
-const assembler = new Assembler(undefined, {
-  targetProfile: target,
-  architectureExtensions: [architecture],
+const assembler = new Assembler({
+  ...snesAssemblerHost,
+  baseImage: baseRom,
+  collectSourceMetadata: false,
 });
+try {
+  assembler.setCurrentFile(sourceFile);
+  assembler.setIncludePaths([path.dirname(sourceFile)]);
+  assembler.setChecksumMode("asar");
+  assembler.assembleSource(source, sourceFile);
+  fs.writeFileSync("build/game.sfc", assembler.getBinaryOutput());
+} finally {
+  assembler.dispose();
+}
 ```
 
-`mos6502StubTargetProfile` and its `Arch6502` backend intentionally throw a
-clear “not implemented” error. They exercise the composition boundary without
-claiming 6502 instruction support. These constructor contracts are not yet a
-full plugin API: discovery, lifecycle, versioning, and isolation remain deferred.
+### Plugin environments
+
+Assembler construction is explicit: every session receives a frozen
+`AssemblerEnvironment` and a target ID. Hosts activate configured plugins with
+`PluginManager`, freeze the resulting environment, and reuse it for build and
+analysis sessions. Encoders, directive handlers, lifecycle hooks, and mutable
+plugin state are still created separately for every session.
+
+The exported `snesAssemblerHost` is a temporary first-party bridge used while
+the SNES implementation is moved into `@uttori/asm-plugin-snes`. Core itself has
+no implicit target. Version 1 plugins are trusted in-process code and should
+only be loaded from packages or paths the user explicitly configured.
 
 `collectSourceMetadata: false` is intended for ROM-only builds and skips symbol, reference, include-graph, and address-to-line artifacts. Leave it enabled (the default) when reading those artifacts directly. The `analyze*` APIs always use their own metadata-enabled analysis session.
 

@@ -3,6 +3,7 @@ import type { OperandResolver } from "./operand-resolver.js";
 export type ArchitectureDefinition = {
     name: string;
     encoder: ArchitectureEncoder;
+    instructions?: readonly InstructionDescriptor[];
     classifyOperand: (resolver: OperandResolver, operand: string) => LoweredOperand;
     splitOperands: (operandText: string) => string[];
     unknownInstructionBehavior: "throw" | "returnFalse";

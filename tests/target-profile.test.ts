@@ -1,6 +1,6 @@
 import { test } from "./ava-helper.js";
 
-import { Assembler } from "../src/assembler.js";
+import { Assembler } from "./test-assembler.js";
 import type { ArchitectureExtension } from "../src/architecture-registry.js";
 import type { ArchitectureEncoderContext } from "../src/architecture-types.js";
 import {

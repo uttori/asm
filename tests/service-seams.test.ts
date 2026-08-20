@@ -3,7 +3,7 @@ import path from "node:path";
 import { spy, stub } from "sinon";
 import { test } from "./ava-helper.js";
 
-import { Assembler } from "../src/assembler.js";
+import { Assembler } from "./test-assembler.js";
 import { createMemoryAssemblyFileProvider } from "../src/file-provider.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";
 import { handleArch } from "../src/directives/layout.js";

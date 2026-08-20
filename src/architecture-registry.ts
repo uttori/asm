@@ -15,6 +15,7 @@ import {
 export type ArchitectureDefinition = {
   name: string;
   encoder: ArchitectureEncoder;
+  instructions?: readonly InstructionDescriptor[];
   classifyOperand: (resolver: OperandResolver, operand: string) => LoweredOperand;
   splitOperands: (operandText: string) => string[];
   unknownInstructionBehavior: "throw" | "returnFalse";
@@ -98,7 +99,8 @@ export class ArchitectureRegistry {
    * @returns {InstructionDescriptor[]} Registered instruction descriptors.
    */
   getInstructionCatalog(name: string): InstructionDescriptor[] {
-    return this.getDefinition(name)?.encoder.getInstructionCatalog?.() ?? [];
+    const definition = this.getDefinition(name);
+    return [...(definition?.instructions ?? definition?.encoder.getInstructionCatalog?.() ?? [])];
   }
 
   /**

@@ -71,6 +71,7 @@ export interface DirectiveArchitectureCapability {
     architectureRegistry: ArchitectureRegistry;
     arch: string;
     targetProfile: TargetProfile;
+    selectArchitecture?(architecture: string, sourceAlias?: string): void;
 }
 export interface DirectiveAssemblerCapability {
     services: AssemblerServices;

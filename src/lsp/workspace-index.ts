@@ -1,5 +1,6 @@
 import path from "node:path";
 import { Assembler } from "../assembler.js";
+import type { AssemblerEnvironment } from "../plugin/environment.js";
 import type {
   AssemblyAnalysisResult,
   AssemblyDiagnostic,
@@ -27,6 +28,10 @@ export type FileAnalysis = {
  * Configuration for a workspace index.
  */
 export type WorkspaceIndexOptions = {
+  /** Frozen plugin environment used by every analysis session. */
+  environment: AssemblerEnvironment;
+  /** Target contribution ID or alias. */
+  target: string;
   /** Explicit project entry points (absolute paths). When empty, open documents are treated as roots. */
   entryPoints?: string[];
   /** Additional include search paths handed to the assembler. */
@@ -34,6 +39,8 @@ export type WorkspaceIndexOptions = {
   /** Target architecture name (e.g. "65816", "spc700", "superfx"). */
   architecture?: string;
 };
+
+export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environment" | "target">;
 
 type RootAnalysis = Pick<
   AssemblyAnalysisResult,
@@ -77,22 +84,27 @@ export class WorkspaceIndex {
   entryPoints: string[];
   includePaths: string[];
   architecture: string;
+  readonly environment: AssemblerEnvironment;
+  readonly target: string;
 
   /**
    * Creates a workspace index.
    * @param {WorkspaceIndexOptions} [options] Initial index configuration.
    */
-  constructor(options: WorkspaceIndexOptions = {}) {
+  constructor(options: WorkspaceIndexOptions) {
+    this.environment = options.environment;
+    this.target = options.target;
     this.entryPoints = (options.entryPoints ?? []).map((entry) => path.resolve(entry));
     this.includePaths = options.includePaths ?? ["./"];
-    this.architecture = options.architecture ?? "65816";
+    this.architecture =
+      options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
   }
 
   /**
    * Updates index configuration and re-analyses the workspace.
    * @param {WorkspaceIndexOptions} options The configuration to apply.
    */
-  configure(options: WorkspaceIndexOptions): void {
+  configure(options: WorkspaceIndexConfiguration): void {
     if (options.entryPoints) {
       this.entryPoints = options.entryPoints.map((entry) => path.resolve(entry));
     }
@@ -322,9 +334,13 @@ export class WorkspaceIndex {
     }
 
     const provider = new OverlayFileProvider(this.overlay);
-    const assembler = new Assembler(undefined, { fileProvider: provider });
+    const assembler = new Assembler({
+      environment: this.environment,
+      target: this.target,
+      architecture: this.architecture,
+      fileProvider: provider,
+    });
     assembler.includePaths = this.deriveIncludePaths(root);
-    assembler.arch = this.architecture;
 
     try {
       const result = assembler.analyzeSource(content, root, 0);
@@ -338,6 +354,8 @@ export class WorkspaceIndex {
       // analyzeSource recovers internally; guard against unexpected throws so
       // one broken root never blanks out the whole workspace index.
       return undefined;
+    } finally {
+      assembler.dispose();
     }
   }
 

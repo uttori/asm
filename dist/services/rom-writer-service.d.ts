@@ -28,6 +28,7 @@ export interface RomWriterHost {
     setWritePosition(address: number): void;
     syncWriteStarts(): void;
     incrementBytesWritten(num: number): void;
+    beforeWrite?(logicalAddress: number, width: number): void;
     /** Optional structured trace hook invoked once per emitted byte. */
     traceWrite?(event: Omit<AssemblerTraceWriteEvent, "type">): void;
 }
