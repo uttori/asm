@@ -146,16 +146,20 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
       return normalized;
     }
 
+    if (path.isAbsolute(normalized)) {
+      return undefined;
+    }
+
     const baseDirectories = [
-      options.macroSourceFile ? getDirectoryForProviderPath(options.macroSourceFile) : undefined,
-      options.currentFile ? getDirectoryForProviderPath(options.currentFile) : undefined,
+      options.macroSourceFile ? path.dirname(options.macroSourceFile) : undefined,
+      options.currentFile ? path.dirname(options.currentFile) : undefined,
       ...(options.includePaths ?? []),
       this.options.workingDirectory,
     ].filter((entry): entry is string => Boolean(entry));
 
     for (const baseDirectory of baseDirectories) {
-      const candidate = resolveProviderPath(baseDirectory, normalized);
-      if (candidate && this.files.has(candidate)) {
+      const candidate = path.resolve(baseDirectory, normalized);
+      if (this.files.has(candidate)) {
         return candidate;
       }
     }
@@ -215,32 +219,11 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
 }
 
 /**
- * Creates the default filesystem-backed provider.
- * @returns {AssemblyFileProvider} The Node.js provider instance.
- */
-export function createNodeAssemblyFileProvider(): AssemblyFileProvider {
-  return new NodeAssemblyFileProvider();
-}
-
-/**
- * Creates a memory-backed provider for virtual / unsaved editor documents.
- * @param {Map<string, string | Uint8Array> | Record<string, string | Uint8Array>} files The virtual file contents.
- * @param {MemoryAssemblyFileProviderOptions} [options] Resolution options for relative paths.
- * @returns {AssemblyFileProvider} The memory-backed provider instance.
- */
-export function createMemoryAssemblyFileProvider(
-  files: Map<string, string | Uint8Array> | Record<string, string | Uint8Array>,
-  options: MemoryAssemblyFileProviderOptions = {},
-): AssemblyFileProvider {
-  return new MemoryAssemblyFileProvider(files, options);
-}
-
-/**
  * Removes matching wrapping quotes from a user-supplied file path token.
  * @param {string} filename The raw path token.
  * @returns {string} The unwrapped path.
  */
-function stripWrappingQuotes(filename: string): string {
+export function stripWrappingQuotes(filename: string): string {
   if (
     (filename.startsWith('"') && filename.endsWith('"')) ||
     (filename.startsWith("'") && filename.endsWith("'")) ||
@@ -249,50 +232,4 @@ function stripWrappingQuotes(filename: string): string {
     return filename.slice(1, -1);
   }
   return filename;
-}
-
-/**
- * Resolves a provider path.
- * @param {string} baseDirectory The base directory to resolve the path from.
- * @param {string} filename The filename to resolve.
- * @returns {string} The resolved path.
- */
-function resolveProviderPath(baseDirectory: string, filename: string): string {
-  if (path.isAbsolute(filename) || hasProviderScheme(filename)) {
-    return filename;
-  }
-
-  // oxlint-disable-next-line security/detect-unsafe-regex -- The colon and slash delimit repetitions.
-  const schemeMatch = baseDirectory.match(/^([A-Za-z][\d+.A-Za-z-]*:)(\/.*)?$/);
-  if (schemeMatch) {
-    const [, scheme, schemePath = "/"] = schemeMatch;
-    const resolvedPath = path.posix.resolve(schemePath, filename);
-    return `${scheme}${resolvedPath}`;
-  }
-
-  return path.resolve(baseDirectory, filename);
-}
-
-/**
- * Gets the directory for a provider path.
- * @param {string} filePath The path to get the directory for.
- * @returns {string} The directory for the provider path.
- */
-function getDirectoryForProviderPath(filePath: string): string {
-  // oxlint-disable-next-line security/detect-unsafe-regex -- The colon and slash delimit repetitions.
-  const schemeMatch = filePath.match(/^([A-Za-z][\d+.A-Za-z-]*:)(\/.*)?$/);
-  if (schemeMatch) {
-    const [, scheme, schemePath = "/"] = schemeMatch;
-    return `${scheme}${path.posix.dirname(schemePath)}`;
-  }
-  return path.dirname(filePath);
-}
-
-/**
- * Checks if a value has a provider scheme.
- * @param {string} value The value to check.
- * @returns {boolean} True if the value has a provider scheme, false otherwise.
- */
-function hasProviderScheme(value: string): boolean {
-  return /^[A-Za-z][\d+.A-Za-z-]*:/.test(value);
 }

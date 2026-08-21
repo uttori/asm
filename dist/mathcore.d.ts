@@ -23,7 +23,35 @@ export declare class MathCore {
     math_round: boolean;
     readonly userFunctions: Map<string, UserFunction>;
     readonly operators: OperatorTable;
-    str: string;
+    /** Full expression currently being scanned. */
+    scanSource: string;
+    /** Byte offset into `scanSource`; `str` is the slice from here to the end. */
+    scanIndex: number;
+    /**
+     * Remaining unconsumed expression text.
+     * @returns {string} The unconsumed source from the scan cursor.
+     */
+    get str(): string;
+    /**
+     * Replaces the expression being scanned.
+     * @param {string} value The new expression source.
+     */
+    set str(value: string);
+    /**
+     * Advances the scan cursor past ASCII / trim whitespace.
+     */
+    skipWhitespace(): void;
+    /**
+     * Returns whether the remaining source starts with a literal.
+     * @param {string} text The literal to match.
+     * @returns {boolean} Whether the literal is present at the cursor.
+     */
+    remainingStartsWith(text: string): boolean;
+    /**
+     * Consumes a fixed number of characters from the scan cursor.
+     * @param {number} count The number of characters to consume.
+     */
+    advance(count: number): void;
     /**
      * Initialize the math core.
      */
@@ -168,10 +196,23 @@ export declare class MathCore {
      */
     getnum: () => number;
     /**
+     * Scans a function-call name if the next token is `name(`.
+     * Leaves the cursor on `(`.
+     * @returns {string | undefined} The function name, if a call starts here.
+     */
+    scanFunctionCallName(): string | undefined;
+    /**
      * Parses a string literal from the current string with support for quotes.
      * @returns {string} The parsed string literal.
      */
     parseStringLiteral: () => string;
+    /**
+     * Parses an unquoted string function argument up to a top-level comma or closing parenthesis.
+     * Depth tracks nested `()` / `[]` so `Foo[1].bar` and `data/64kb.bin` stay one argument.
+     * @param {string} functionName The function being called.
+     * @returns {string} The raw argument text.
+     */
+    parseUnquotedStringArgument(functionName: string): string;
     /**
      * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
      * @param {string} name The name of the function to call.

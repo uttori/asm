@@ -87,15 +87,9 @@ export declare class MemoryAssemblyFileProvider implements AssemblyFileProvider 
     readTextFile(filePath: string, encoding?: BufferEncoding): string;
 }
 /**
- * Creates the default filesystem-backed provider.
- * @returns {AssemblyFileProvider} The Node.js provider instance.
+ * Removes matching wrapping quotes from a user-supplied file path token.
+ * @param {string} filename The raw path token.
+ * @returns {string} The unwrapped path.
  */
-export declare function createNodeAssemblyFileProvider(): AssemblyFileProvider;
-/**
- * Creates a memory-backed provider for virtual / unsaved editor documents.
- * @param {Map<string, string | Uint8Array> | Record<string, string | Uint8Array>} files The virtual file contents.
- * @param {MemoryAssemblyFileProviderOptions} [options] Resolution options for relative paths.
- * @returns {AssemblyFileProvider} The memory-backed provider instance.
- */
-export declare function createMemoryAssemblyFileProvider(files: Map<string, string | Uint8Array> | Record<string, string | Uint8Array>, options?: MemoryAssemblyFileProviderOptions): AssemblyFileProvider;
+export declare function stripWrappingQuotes(filename: string): string;
 //# sourceMappingURL=file-provider.d.ts.map

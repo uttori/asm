@@ -1,6 +1,7 @@
 import path from "node:path";
 import {
   NodeAssemblyFileProvider,
+  stripWrappingQuotes,
   type AssemblyFileProvider,
   type AssemblyFileResolutionOptions,
   type AssemblyFileStat,
@@ -129,20 +130,4 @@ export class OverlayFileProvider implements AssemblyFileProvider {
     ].filter((entry): entry is string => Boolean(entry));
     return baseDirectories.map((directory) => path.resolve(directory, normalized));
   }
-}
-
-/**
- * Removes matching wrapping quotes from a user-supplied file path token.
- * @param {string} filename The raw path token.
- * @returns {string} The unwrapped path.
- */
-function stripWrappingQuotes(filename: string): string {
-  if (
-    (filename.startsWith('"') && filename.endsWith('"')) ||
-    (filename.startsWith("'") && filename.endsWith("'")) ||
-    (filename.startsWith("`") && filename.endsWith("`"))
-  ) {
-    return filename.slice(1, -1);
-  }
-  return filename;
 }

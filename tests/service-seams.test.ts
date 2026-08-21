@@ -4,7 +4,7 @@ import { spy, stub } from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Assembler } from "./test-assembler.js";
-import { createMemoryAssemblyFileProvider } from "../src/file-provider.js";
+import { MemoryAssemblyFileProvider } from "../src/file-provider.js";
 import { createNormalizedCommand } from "../src/ir/normalized-command.js";
 import { handleArch } from "../src/directives/layout.js";
 
@@ -898,23 +898,23 @@ test("analyzeSource accumulates multiple diagnostics and references", (t) => {
 });
 
 test("file provider can serve includes from virtual documents", (t) => {
-  const fileProvider = createMemoryAssemblyFileProvider(new Map<string, string>([
-    ["mem:/main.asm", 'include "shared.asm"'],
-    ["mem:/shared.asm", "db $01"],
+  const fileProvider = new MemoryAssemblyFileProvider(new Map<string, string>([
+    ["/proj/main.asm", 'include "shared.asm"'],
+    ["/proj/shared.asm", "db $01"],
   ]));
   const assembler = new Assembler(undefined, { fileProvider });
-  assembler.setCurrentFile("mem:/main.asm");
+  assembler.setCurrentFile("/proj/main.asm");
 
   assembler.includeSource.includeFile("shared.asm");
 
   t.is(assembler.currentTargetAddress, 1);
-  t.true(assembler.includedFiles.has("mem:/shared.asm"));
+  t.true(assembler.includedFiles.has("/proj/shared.asm"));
 });
 
 test("lowered include executes nested conditional control flow", (t) => {
-  const fileProvider = createMemoryAssemblyFileProvider(new Map<string, string>([
-    ["mem:/main.asm", 'include "child.asm"'],
-    ["mem:/child.asm", [
+  const fileProvider = new MemoryAssemblyFileProvider(new Map<string, string>([
+    ["/proj/main.asm", 'include "child.asm"'],
+    ["/proj/child.asm", [
       "if 1",
       "for i = 0..2",
       "db !i",
@@ -927,7 +927,7 @@ test("lowered include executes nested conditional control flow", (t) => {
   const assembler = new Assembler(undefined, { fileProvider });
   assembler.activateStage("emitProgram");
   assembler.setWritePosition(0x808000);
-  assembler.setCurrentFile("mem:/main.asm");
+  assembler.setCurrentFile("/proj/main.asm");
 
   assembler.includeSource.includeFile("child.asm");
 

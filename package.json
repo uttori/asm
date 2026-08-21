@@ -31,6 +31,7 @@
     }
   },
   "scripts": {
+    "build": "npm run make-types && npm run lsp:build && npm run vscode:build",
     "make-types": "rm -rf dist && tsc --module nodenext --project ./tsconfig.json",
     "cli": "tsx src/cli.ts",
     "fixture:asar": "tsx scripts/run-asar-fixtures.ts",

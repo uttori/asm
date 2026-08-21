@@ -2,10 +2,7 @@ import path from "node:path";
 import { test } from "./ava-helper.js";
 
 import { Assembler, snesWorkspaceIndexOptions } from "./test-assembler.js";
-import {
-  createMemoryAssemblyFileProvider,
-  MemoryAssemblyFileProvider,
-} from "../src/file-provider.js";
+import { MemoryAssemblyFileProvider } from "../src/file-provider.js";
 import { OverlayFileProvider } from "../src/lsp/overlay-file-provider.js";
 import { WorkspaceIndex } from "../src/lsp/workspace-index.js";
 import { findInstruction, findDirectiveEntry, buildCompletionEntries } from "../src/lsp/catalog.js";
@@ -21,7 +18,7 @@ import type { AssemblySymbolDefinition, AssemblySymbolReference } from "../src/d
 const slideRoot = path.resolve(process.cwd(), "fixtures/integration/snes-slideshow/SLIDE.SRC");
 
 test("analyzeSource records include-graph edges and attributes included symbols", (t) => {
-  const fileProvider = createMemoryAssemblyFileProvider({
+  const fileProvider = new MemoryAssemblyFileProvider({
     "/proj/a.asm": 'org $8000\nincsrc "b.asm"\naLabel:\n  nop\n',
     "/proj/b.asm": "bLabel:\n  nop\n",
   });

@@ -85,7 +85,7 @@ import {
   splitInlineCommands,
 } from "./services/command-text-service.js";
 import type { SourceSpan } from "./source-location.js";
-import { createNodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
+import { NodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
 import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
 import { type TargetExpressionFeature, type TargetProfile } from "./target-profile.js";
 import {
@@ -1210,7 +1210,7 @@ export class Assembler {
     this.mapper = this.targetProfile.defaultMapper;
     this.checksumFixEnabled = this.targetProfile.checksumFixEnabled;
     this.targetRom = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
-    this.fileProvider = options.fileProvider ?? createNodeAssemblyFileProvider();
+    this.fileProvider = options.fileProvider ?? new NodeAssemblyFileProvider();
     this.collectSourceMetadata = options.collectSourceMetadata ?? true;
     this.cursorAddress = this.createCursorAddressFacade();
     this.mathCore = new MathCore();
