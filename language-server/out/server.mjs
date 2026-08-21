@@ -13275,111 +13275,139 @@ var registerFlowControlDirectives = (registry, context) => {
 };
 
 // src/directives/include-source.ts
-var handleIncbin = ({ session, includeSource, operandResolver, runtime }, words) => {
-  includeSource ??= session.includeSource;
-  let targetLocationSpecified = false;
-  let targetLocation = null;
+var NUMERIC_INCBIN_TARGET = /^\$[\da-f]+$|^-?\d+$/i;
+var resolveIncludeTarget = (words, command, directive) => {
+  const target = command?.parsed.includeTarget?.target ?? words[1];
+  if (!target) {
+    throw new Error(`${directive} requires exactly one filename parameter`);
+  }
+  return target;
+};
+var splitIncbinArrow = (words) => {
   const arrowIndex = words.indexOf("->");
-  const sourceWords = arrowIndex === -1 ? words.slice(1) : words.slice(1, arrowIndex);
-  if (arrowIndex !== -1) {
-    targetLocationSpecified = true;
-    if (arrowIndex + 1 >= words.length) {
-      throw new Error("incbin '->' syntax requires a target location.");
+  if (arrowIndex === -1) {
+    return { sourceWords: words.slice(1), targetLocation: void 0 };
+  }
+  if (arrowIndex + 1 >= words.length) {
+    throw new Error("incbin '->' syntax requires a target location.");
+  }
+  return {
+    sourceWords: words.slice(1, arrowIndex),
+    targetLocation: words[arrowIndex + 1]
+  };
+};
+var parseIncbinFilenameAndRange = (filenameWithRange) => {
+  const quote = filenameWithRange[0];
+  if (quote === '"' || quote === "'" || quote === "`") {
+    const endQuote = filenameWithRange.indexOf(quote, 1);
+    if (endQuote !== -1) {
+      const filename = filenameWithRange.slice(1, endQuote);
+      const rest = filenameWithRange.slice(endQuote + 1);
+      if (rest.startsWith(":")) {
+        return { filename, rangeStr: rest.slice(1) };
+      }
+      return { filename, rangeStr: void 0 };
     }
-    targetLocation = words[arrowIndex + 1];
-    words = words.slice(0, arrowIndex);
   }
-  const filenameWithRange = sourceWords.join(" ");
-  let filename;
-  let rangeStr = null;
   const colonIndex = filenameWithRange.indexOf(":");
-  if (colonIndex !== -1) {
-    filename = filenameWithRange.substring(0, colonIndex);
-    rangeStr = filenameWithRange.substring(colonIndex + 1);
-  } else {
-    filename = filenameWithRange;
+  if (colonIndex === -1) {
+    return { filename: filenameWithRange, rangeStr: void 0 };
   }
-  filename = filename.replace(/^"(.*)"$/, "$1");
+  return {
+    filename: filenameWithRange.slice(0, colonIndex),
+    rangeStr: filenameWithRange.slice(colonIndex + 1)
+  };
+};
+var applyEofEnd = (startOffset, endOffset, fileLength) => {
+  if (endOffset === 0) {
+    return { startOffset, endOffset: fileLength };
+  }
+  return { startOffset, endOffset };
+};
+var evaluateIncbinRange = (rangeStr, evaluate, fileLength) => {
+  if (rangeStr.includes("..")) {
+    const parts = rangeStr.split("..");
+    if (parts.length !== 2 || parts[0] === "" || parts[1] === "") {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    const rangeNode = parseExpressionNode(rangeStr);
+    if (rangeNode.type !== "range") {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    return applyEofEnd(evaluate(rangeNode.start), evaluate(rangeNode.end), fileLength);
+  }
+  if (rangeStr.includes("-")) {
+    if (rangeStr.includes("(") || rangeStr.includes(")")) {
+      throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+    }
+    const parts = rangeStr.split("-");
+    if (parts.length !== 2 || parts[0].trim() === "" || parts[1].trim() === "") {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    return applyEofEnd(evaluate(parts[0].trim()), evaluate(parts[1].trim()), fileLength);
+  }
+  throw new Error(`Invalid range specification: ${rangeStr}`);
+};
+var assertIncbinBounds = (startOffset, endOffset, fileLength, filename) => {
+  if (startOffset < 0 || startOffset > endOffset || startOffset > fileLength) {
+    throw new Error(`Start offset ${startOffset} out of bounds for file ${filename}`);
+  }
+  if (endOffset > fileLength) {
+    throw new Error(`End offset ${endOffset} out of bounds for file ${filename}`);
+  }
+};
+var handleIncbin = ({ session, includeSource, operandResolver, runtime }, words, _raw = "", command) => {
+  const { sourceWords, targetLocation } = splitIncbinArrow(words);
+  const { filename, rangeStr } = parseIncbinFilenameAndRange(sourceWords.join(" "));
   const fileData = includeSource.readFile(filename);
-  if (!fileData) {
+  if (!(fileData instanceof Uint8Array)) {
     throw new Error(`Failed to read file: ${filename}`);
   }
   let startOffset = 0;
   let endOffset = fileData.length;
-  if (rangeStr) {
-    if (rangeStr.indexOf("..") !== -1) {
-      const parts = rangeStr.split("..");
-      if (parts[0] === "" || parts[1] === "") {
-        throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-      const rangeNode = parseExpressionNode(rangeStr);
-      if (rangeNode.type !== "range") {
-        throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-      startOffset = session.evaluateRangeExpression(rangeNode.start);
-      endOffset = session.evaluateRangeExpression(rangeNode.end);
-      if (endOffset === 0) {
-        endOffset = fileData.length;
-      }
-    } else if (rangeStr.indexOf("-") !== -1) {
-      if (rangeStr.includes("(") || rangeStr.includes(")")) {
-        throw new Error("Emismatched_parentheses: Mismatched parentheses.");
-      }
-      const parts = rangeStr.split("-");
-      if (parts[0] === "" || parts[1] === "") {
-        throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-      startOffset = session.evaluateRangeExpression(parts[0]);
-      endOffset = session.evaluateRangeExpression(parts[1]);
-      if (endOffset === 0) {
-        endOffset = fileData.length;
-      }
-    } else {
-      throw new Error(`Invalid range specification: ${rangeStr}`);
-    }
+  const parsedRange = command?.parsed.incbinRange;
+  if (parsedRange) {
+    ({ startOffset, endOffset } = applyEofEnd(
+      session.evaluateRangeExpression(parsedRange.start),
+      session.evaluateRangeExpression(parsedRange.end),
+      fileData.length
+    ));
+  } else if (rangeStr) {
+    ({ startOffset, endOffset } = evaluateIncbinRange(
+      rangeStr,
+      (expression) => session.evaluateRangeExpression(expression),
+      fileData.length
+    ));
   }
-  if (startOffset > endOffset || startOffset < 0 || startOffset > fileData.length) {
-    throw new Error(`Start offset ${startOffset} out of bounds for file ${filename}`);
-  }
-  if (endOffset < startOffset || endOffset > fileData.length) {
-    throw new Error(`End offset ${endOffset} out of bounds for file ${filename}`);
-  }
-  const incbinData = fileData.slice(startOffset, endOffset);
-  if (targetLocationSpecified) {
+  assertIncbinBounds(startOffset, endOffset, fileData.length, filename);
+  const incbinData = fileData.subarray(startOffset, endOffset);
+  if (targetLocation !== void 0) {
     runtime.handlePushPC();
     let targetAddress;
-    if (/^\$?[\dA-Fa-f]+$/.test(targetLocation ?? "")) {
-      targetAddress = operandResolver.getnum(targetLocation ?? "");
+    if (NUMERIC_INCBIN_TARGET.test(targetLocation)) {
+      targetAddress = operandResolver.getnum(targetLocation);
     } else {
-      targetAddress = session.symbolScope.getLabelValue(targetLocation ?? "", false);
+      targetAddress = session.symbolScope.getLabelValue(targetLocation, false);
     }
     session.setWritePosition(targetAddress);
-    for (const byte of incbinData) {
-      session.write1(byte);
-    }
+  }
+  for (let i = 0; i < incbinData.length; i++) {
+    session.write1(incbinData[i]);
+  }
+  if (targetLocation !== void 0) {
     runtime.handlePullPC();
-  } else {
-    for (const byte of incbinData) {
-      session.write1(byte);
-    }
   }
   session.recordCurrentAddress();
 };
+var handleIncsrc = ({ includeSource }, words, _raw = "", command) => {
+  includeSource.assembleFile(resolveIncludeTarget(words, command, "incsrc"));
+};
+var handleInclude = ({ includeSource }, words, _raw = "", command) => {
+  includeSource.includeFile(resolveIncludeTarget(words, command, "include"));
+};
 var registerIncludeSourceDirectives = (registry, context) => {
-  registry.register("incsrc", context, ({ includeSource }, words, _raw, command) => {
-    const target = command?.parsed.includeTarget?.target ?? words[1];
-    if (!target) {
-      throw new Error("incsrc requires exactly one filename parameter");
-    }
-    includeSource.assembleFile(target);
-  });
-  registry.register("include", context, ({ includeSource }, words, _raw, command) => {
-    const target = command?.parsed.includeTarget?.target ?? words[1];
-    if (!target) {
-      throw new Error("include requires exactly one filename parameter");
-    }
-    includeSource.includeFile(target);
-  });
+  registry.register("incsrc", context, handleIncsrc);
+  registry.register("include", context, handleInclude);
   registry.register("includeonce", context, ({ includeSource }) => {
     includeSource.guardCurrentFile();
   });
@@ -27022,7 +27050,7 @@ function definitionFor(index2, file, position) {
   const reference = cursorReference(index2, file, position, word);
   if (reference) {
     if (reference.kind === "include") {
-      const target = resolveIncludeTarget(index2, file, reference.name);
+      const target = resolveIncludeTarget2(index2, file, reference.name);
       if (target) {
         return [import_vscode_languageserver.Location.create(pathToUri(target), import_vscode_languageserver.Range.create(0, 0, 0, 0))];
       }
@@ -27268,7 +27296,7 @@ function referenceRange(index2, reference) {
 function definitionToLocation(index2, symbol) {
   return import_vscode_languageserver.Location.create(pathToUri(symbol.location.file), definitionRange(index2, symbol));
 }
-function resolveIncludeTarget(index2, file, target) {
+function resolveIncludeTarget2(index2, file, target) {
   const normalizedTarget = target.replace(/\\/g, "/");
   const base = path4.basename(normalizedTarget);
   const edges = index2.getIncludeEdges().filter((edge) => edge.fromFile === file);

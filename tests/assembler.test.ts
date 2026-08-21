@@ -2777,6 +2777,7 @@ test("handleIncbin", t => {
   // Test basic incbin
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
   }, ["incbin", "testfile.bin"]);
   t.deepEqual(writtenBytes, Array.from(mockData), "Basic incbin should write all bytes");
@@ -2785,6 +2786,7 @@ test("handleIncbin", t => {
   writtenBytes.length = 0;
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
   }, ["incbin", "testfile.bin:2..5"]);
   t.deepEqual(writtenBytes, [0x03, 0x04, 0x05], "Range with .. syntax should work");
@@ -2793,6 +2795,7 @@ test("handleIncbin", t => {
   writtenBytes.length = 0;
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
   }, ["incbin", "testfile.bin:(000", "*", "2)..(003", "*", "2)"]);
   t.deepEqual(writtenBytes, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06], "Range math with spaces should work");
@@ -2801,6 +2804,7 @@ test("handleIncbin", t => {
   writtenBytes.length = 0;
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
   }, ["incbin", "testfile.bin:2..0"]);
   t.deepEqual(writtenBytes, [0x03, 0x04, 0x05, 0x06, 0x07, 0x08], "Range with .. syntax should work");
@@ -2809,6 +2813,7 @@ test("handleIncbin", t => {
   writtenBytes.length = 0;
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
   }, ["incbin", "testfile.bin:1-4"]);
   t.deepEqual(writtenBytes, [0x02, 0x03, 0x04], "Range with - syntax should work");
@@ -2817,6 +2822,7 @@ test("handleIncbin", t => {
   writtenBytes.length = 0;
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver
   }, ["incbin", '"testfile.bin"']);
   t.deepEqual(writtenBytes, Array.from(mockData), "Quoted filename should work");
@@ -2830,6 +2836,7 @@ test("handleIncbin", t => {
 
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
     runtime: assembler.directiveRuntime,
   }, ["incbin", "testfile.bin", "->", "$1000"]);
@@ -2844,6 +2851,7 @@ test("handleIncbin", t => {
 
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
     runtime: assembler.directiveRuntime,
   }, ["incbin", "testfile.bin", "->", "TestLabel"]);
@@ -2859,6 +2867,7 @@ test("handleIncbin", t => {
 
   handleIncbin({
     session: assembler,
+    includeSource: assembler.includeSource,
     operandResolver: assembler.operandResolver,
     runtime: assembler.directiveRuntime,
   }, ["incbin", "testfile.bin", "->", "TestLabel"]);
@@ -2892,6 +2901,7 @@ test("handleIncbin - error handling", t => {
   t.throws(() => {
     handleIncbin({
       session: assembler,
+      includeSource: assembler.includeSource,
       operandResolver: assembler.operandResolver,
     }, ["incbin", "testfile.bin:invalid"]);
   }, { message: /Invalid range specification/ }, "Invalid range should throw error");
@@ -2900,6 +2910,7 @@ test("handleIncbin - error handling", t => {
   t.throws(() => {
     handleIncbin({
       session: assembler,
+      includeSource: assembler.includeSource,
       operandResolver: assembler.operandResolver,
     }, ["incbin", "nonexistent.bin"]);
   }, { message: /Failed to read file/ }, "Missing file should throw error");
@@ -2908,6 +2919,7 @@ test("handleIncbin - error handling", t => {
   t.throws(() => {
     handleIncbin({
       session: assembler,
+      includeSource: assembler.includeSource,
       operandResolver: assembler.operandResolver,
     }, ["incbin", "testfile.bin", "->"]);
   }, { message: /requires a target location/ }, "Missing target should throw error");
@@ -2916,6 +2928,7 @@ test("handleIncbin - error handling", t => {
   t.throws(() => {
     handleIncbin({
       session: assembler,
+      includeSource: assembler.includeSource,
       operandResolver: assembler.operandResolver,
     }, ["incbin", "testfile.bin:5.."]);
   }, { message: /Invalid range specification/ }, "Invalid range should throw error");
@@ -2924,6 +2937,7 @@ test("handleIncbin - error handling", t => {
   t.throws(() => {
     handleIncbin({
       session: assembler,
+      includeSource: assembler.includeSource,
       operandResolver: assembler.operandResolver,
     }, ["incbin", "testfile.bin:5..2"]);
   }, { message: /Start offset 5 out of bounds for file/ }, "Invalid range should throw error");
@@ -2932,6 +2946,7 @@ test("handleIncbin - error handling", t => {
   t.throws(() => {
     handleIncbin({
       session: assembler,
+      includeSource: assembler.includeSource,
       operandResolver: assembler.operandResolver,
     }, ["incbin", "testfile.bin:0..100"]);
   }, { message: /End offset 100 out of bounds for file/ }, "Out of bounds range should throw error");
