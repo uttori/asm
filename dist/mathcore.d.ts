@@ -1,28 +1,29 @@
 import type { ExpressionHost } from "./architecture-types.js";
-import type { ExpressionNode, ReferenceExpressionNode } from "./ir/expression-node.js";
+import type { BinaryOperator, ExpressionNode, ReferenceExpressionNode, UnaryOperator } from "./ir/expression-node.js";
+type UserFunction = {
+    readonly args: readonly string[];
+    readonly content: string;
+};
+type BinaryOperatorSpec = {
+    readonly priority: number;
+    readonly operation: (left: number, right: number) => number;
+};
+type OperatorTable = {
+    readonly [K in BinaryOperator]: BinaryOperatorSpec;
+};
 export declare class MathCore {
     readonly pureStringExpressionCache: Map<string, number>;
     readonly roundedPureStringExpressionCache: Map<string, number>;
     readonly pureStringClassification: Map<string, boolean>;
-    instrumentedExpressionStrings: Set<string>;
-    instrumentedPureExpressionStrings: Set<string>;
+    readonly instrumentedExpressionStrings: Set<string>;
+    readonly instrumentedPureExpressionStrings: Set<string>;
     instrumentedExpressionNodes: WeakSet<object>;
     instrumentedPureExpressionNodes: WeakSet<object>;
     host?: ExpressionHost;
     math_round: boolean;
-    userFunctions: Map<string, {
-        args: string[];
-        content: string;
-    }>;
-    builtInFunctions: Map<string, (arg: number) => number>;
-    operators: {
-        [key: string]: {
-            priority: number;
-            operation: (a: number, b: number) => number;
-        };
-    };
+    readonly userFunctions: Map<string, UserFunction>;
+    readonly operators: OperatorTable;
     str: string;
-    constructor();
     /**
      * Initialize the math core.
      */
@@ -35,6 +36,10 @@ export declare class MathCore {
      * Releases expression values retained for a completed assembly.
      */
     endAssemblySnapshot(): void;
+    /**
+     * Clears expression caches retained for the current assembly.
+     */
+    clearExpressionCaches(): void;
     /**
      * Evaluates an expression.
      * This is a direct conversion of `math` in `asar_math.cpp`.
@@ -87,19 +92,19 @@ export declare class MathCore {
     evaluateCallArgument(functionName: string, argumentIndex: number, argument: ExpressionNode): number | string;
     /**
      * Evaluates unary expression node.
-     * @param {"<:" | "~" | "-" | "+"} operator The operator.
+     * @param {UnaryOperator} operator The operator.
      * @param {ExpressionNode} argument The argument.
      * @returns {number} The result.
      */
-    evaluateUnaryExpressionNode(operator: "<:" | "~" | "-" | "+", argument: ExpressionNode): number;
+    evaluateUnaryExpressionNode(operator: UnaryOperator, argument: ExpressionNode): number;
     /**
      * Evaluates binary expression node.
-     * @param {keyof MathCore["operators"]} operator The operator.
+     * @param {BinaryOperator} operator The operator.
      * @param {ExpressionNode} left The left.
      * @param {ExpressionNode} right The right.
      * @returns {number} The result.
      */
-    evaluateBinaryExpressionNode(operator: keyof MathCore["operators"], left: ExpressionNode, right: ExpressionNode): number;
+    evaluateBinaryExpressionNode(operator: BinaryOperator, left: ExpressionNode, right: ExpressionNode): number;
     /**
      * Resolves numeric identifier argument.
      * @param {string} identifier The identifier.
@@ -145,15 +150,11 @@ export declare class MathCore {
     evalMath(depth?: number, stopChar?: string): number | undefined;
     /**
      * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
-     * @param {object} operators The operators to check.
+     * @param {OperatorTable} operators The operators to check.
      * @param {number} depth The current depth of nested expressions.
-     * @returns {string | null} The matching operator or null if no match.
+     * @returns {BinaryOperator | null} The matching operator or null if no match.
      */
-    peekNextOperator(operators: {
-        [key: string]: {
-            priority: number;
-        };
-    }, depth: number): string | null;
+    peekNextOperator(operators: OperatorTable, depth: number): BinaryOperator | null;
     /**
      * Parses numbers from a string while consuming valid characters.
      * @param {RegExp} regex The regular expression to test against the string.
@@ -166,11 +167,6 @@ export declare class MathCore {
      * @returns {number} The number from the string.
      */
     getnum: () => number;
-    /**
-     * Safe wrapper to handle division by zero.
-     * @param {string} message The message to throw.
-     */
-    throwMathError: (message: string) => number;
     /**
      * Parses a string literal from the current string with support for quotes.
      * @returns {string} The parsed string literal.
@@ -204,7 +200,16 @@ export declare class MathCore {
      * @returns {number} The validated number.
      */
     numArg: (funcName: string, arg: number | string) => number;
+    /**
+     * Validates an argument as a string.
+     * @param {string} funcName The name of the function.
+     * @param {number | string} arg The argument to validate.
+     * @returns {string} The validated string.
+     */
     strArg: (funcName: string, arg: number | string) => string;
+    /**
+     * Parses a function definition.
+     */
     parseFunctionDefinition: () => void;
     /**
      * Gets host.
@@ -212,4 +217,5 @@ export declare class MathCore {
      */
     getHost(): ExpressionHost;
 }
+export {};
 //# sourceMappingURL=mathcore.d.ts.map

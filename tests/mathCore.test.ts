@@ -1,5 +1,6 @@
 import { test } from "./ava-helper.js";
 import type { ExpressionHost } from "../src/architecture-types.js";
+import { runWithInternalInstrumentation } from "../src/internal-instrumentation.js";
 import { MathCore } from "../src/mathcore.js";
 
 const createExpressionHost = (overrides: Partial<ExpressionHost> = {}): ExpressionHost => ({
@@ -41,16 +42,13 @@ test("reset - resets math core state", t => {
 test("reset - doesn't affect built-in functions", t => {
   const mathCore = new MathCore();
 
-  // Check that built-in functions exist before reset
-  t.true(mathCore.builtInFunctions.has("sqrt"));
-  t.true(mathCore.builtInFunctions.has("sin"));
+  t.is(mathCore.math("sqrt(16)"), 4);
+  t.is(mathCore.math("sin(0)"), 0);
 
-  // Call reset
   mathCore.reset();
 
-  // Verify built-in functions still exist after reset
-  t.true(mathCore.builtInFunctions.has("sqrt"));
-  t.true(mathCore.builtInFunctions.has("sin"));
+  t.is(mathCore.math("sqrt(16)"), 4);
+  t.is(mathCore.math("sin(0)"), 0);
 });
 
 test("reset - doesn't affect operators", t => {
@@ -111,6 +109,36 @@ test("math - caches only pure string expressions within an assembly snapshot", t
   mathCore.beginAssemblySnapshot();
   t.is(mathCore.math("5 + 3"), 8);
   t.is(evaluations, 4);
+
+  mathCore.endAssemblySnapshot();
+  t.is(mathCore.math("5 + 3"), 8);
+  t.is(evaluations, 5);
+});
+
+test("math - records instrumentation when a run is active", t => {
+  const mathCore = new MathCore();
+  mathCore.host = createExpressionHost({ resolveLabel: () => 7 });
+  const node = {
+    type: "binary" as const,
+    operator: "+" as const,
+    left: { type: "literal" as const, value: "1" },
+    right: { type: "literal" as const, value: "2" },
+  };
+  const impure = { type: "identifier" as const, name: "LABEL" };
+
+  const { metrics } = runWithInternalInstrumentation(() => {
+    t.is(mathCore.math("5 + 3"), 8);
+    t.is(mathCore.math("5 + 3"), 8);
+    t.is(mathCore.math(node), 3);
+    t.is(mathCore.math(node), 3);
+    t.is(mathCore.math(impure), 7);
+  });
+
+  t.true(metrics.counters.expressionEvaluations >= 5);
+  t.true(metrics.counters.expressionStringEvaluations >= 2);
+  t.true(metrics.counters.expressionNodeEvaluations >= 3);
+  t.true(metrics.counters.pureExpressionEvaluations >= 2);
+  t.true(metrics.counters.pureStringExpressionEvaluations >= 2);
 });
 
 test("math - order of operations", t => {
@@ -233,6 +261,9 @@ test("math - number formats", t => {
 
   // Decimal
   t.is(mathCore.math("10.5 + 20.5"), 31);
+
+  // VT / FF / NBSP / BOM are whitespace, same as String#trim
+  t.is(mathCore.math("1\u000b+\u000c2\u00a0+\ufeff3"), 6);
 });
 
 test("math - resolves local labels in arithmetic", t => {
@@ -255,6 +286,10 @@ test("math - offset handles local label arguments", t => {
   });
 
   t.is(mathCore.math("offset(.base, .target)"), 0x19);
+
+  t.throws(() => {
+    mathCore.math("offset(.base)");
+  }, { message: "offset() expects exactly 2 numeric arguments." });
 });
 
 test("math - operator precedence", t => {
@@ -267,6 +302,16 @@ test("math - operator precedence", t => {
   // Expected: 1 || (0 && (1 | (2 ^ (3 & (4 == (4 > (3 << (1 + (2 * (3 ** 2))))))))))
   // 3**2 = 9, 2*9 = 18, 1+18 = 19, 3<<19 = 3*2^19 (large), 4>large = 0, 4==0 = 0, 3&0 = 0, 2^0 = 2, 1|2 = 3, 0&&3 = 0, 1||0 = 1
   t.is(result, 1);
+});
+
+test("math - two-character operators respect precedence", t => {
+  const mathCore = new MathCore();
+
+  t.is(mathCore.math("1 + 0 && 0"), 0);
+  t.is(mathCore.math("1 + 1 && 0"), 0);
+  t.is(mathCore.math("2 * 3 == 6"), 1);
+  t.is(mathCore.math("1 + 2 << 3"), 24);
+  t.is(mathCore.math("2 ** 3 ** 2"), 64);
 });
 
 test("math - rounding", t => {
@@ -351,6 +396,14 @@ test("math - error handling", t => {
     mathCore.math("10, 20");
   }, { message: "Invalid input: , 20" });
 
+  t.throws(() => {
+    mathCore.math("");
+  }, { message: "Invalid input: empty expression." });
+
+  t.throws(() => {
+    mathCore.math("   ");
+  }, { message: "Invalid input: empty expression." });
+
   // Test NaN result
   t.throws(() => {
     mathCore.math("0 / 0");
@@ -399,6 +452,11 @@ test("evalMath - NaN handling", t => {
   t.throws(() => {
     mathCore.str = "$";
     mathCore.evalMath();
+  }, { message: "Invalid number: NaN" });
+
+  // Operator results can be NaN even when both operands parsed (Math.pow of a negative root).
+  t.throws(() => {
+    mathCore.math("(-1) ** 0.5");
   }, { message: "Invalid number: NaN" });
 });
 
@@ -550,11 +608,22 @@ test("peekNextOperator - respects depth parameter", t => {
   t.is(mathCore.peekNextOperator(mathCore.operators, 5), "*");
   t.is(mathCore.peekNextOperator(mathCore.operators, 6), null);
 
-  // ** has priority 4, so it should match when depth <= 4
+  // ** has priority 6, so it should match when depth <= 6
   mathCore.str = "** 15";
   t.is(mathCore.peekNextOperator(mathCore.operators, 0), "**");
   t.is(mathCore.peekNextOperator(mathCore.operators, 4), "**");
   t.is(mathCore.peekNextOperator(mathCore.operators, 6), "**");
+  t.is(mathCore.peekNextOperator(mathCore.operators, 7), null);
+
+  // Two-character operators must not fall through to a one-character prefix.
+  mathCore.str = "&& 1";
+  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "&&");
+  t.is(mathCore.peekNextOperator(mathCore.operators, 1), "&&");
+  t.is(mathCore.peekNextOperator(mathCore.operators, 2), null);
+
+  mathCore.str = "== 1";
+  t.is(mathCore.peekNextOperator(mathCore.operators, 2), "==");
+  t.is(mathCore.peekNextOperator(mathCore.operators, 3), null);
 });
 
 test("peekNextOperator - handles whitespace correctly", t => {
@@ -675,6 +744,11 @@ test("getnum - basic numeric parsing", t => {
   mathCore.str = "123";
   t.is(mathCore.getnum(), 123);
   t.is(mathCore.str, "");
+
+  mathCore.str = "";
+  t.throws(() => {
+    mathCore.getnum();
+  }, { message: /Invalid number|Unknown identifier/ });
 
   // Test decimal with decimal point
   mathCore.str = "123.45";
@@ -851,11 +925,11 @@ test("getnum - struct functions with bitwise operators", t => {
   // Test error cases
   t.throws(() => {
     mathCore.math("sizeof(MyStruct");
-  }, { message: "Missing closing ')' in sizeof call." });
+  }, { message: "Expected ',' or ')' in function call arguments: " });
 
   t.throws(() => {
     mathCore.math("sizeof(\"MyStruct");
-  }, { message: "Missing closing double quote in sizeof call." });
+  }, { message: "Unterminated string literal in function call." });
 });
 
 test("getnum - function calls", t => {
@@ -880,6 +954,44 @@ test("getnum - function calls", t => {
   mathCore.str = "stringsequal(\"hello\", \"hello\")";
   t.is(mathCore.getnum(), 1);
   t.is(mathCore.str, "");
+
+  mathCore.host = createExpressionHost({
+    isDefined: (name) => (name === "some_symbol" ? 1 : 0),
+    getFileSize: (filename) => (filename === "data/64kb.bin" ? 65536 : 0),
+  });
+
+  // Unquoted identifiers and paths stay strings instead of going through getnum
+  t.is(mathCore.math("defined(some_symbol)"), 1);
+  t.is(mathCore.math("stringsequal(hello, hello)"), 1);
+  t.is(mathCore.math("stringsequal(hello, world)"), 0);
+  t.is(mathCore.math("filesize(data/64kb.bin)"), 65536);
+
+  mathCore.host = createExpressionHost({
+    getExpressionObjectSize: (value) => {
+      if (value === "Foo[1]") return 8;
+      if (value === "Bar(2)") return 16;
+      return 0;
+    },
+    isDefined: () => 0,
+  });
+
+  // Nested [] / () stay inside one unquoted string argument
+  t.is(mathCore.math("sizeof(Foo[1])"), 8);
+  t.is(mathCore.math("objectsize(Bar(2))"), 16);
+
+  // A leading extra comma leaves parseUnquotedStringArgument with an empty token
+  t.throws(() => {
+    mathCore.math("defined(,,)");
+  }, { message: "Missing function argument for 'defined'." });
+
+  // Inline function definitions consume a call argument / parenthesized expr
+  t.throws(() => {
+    mathCore.math("sqrt(function foo() = 1)");
+  }, { message: "Missing function argument for 'sqrt'." });
+
+  t.throws(() => {
+    mathCore.math("(function foo() = 1)");
+  }, { message: "Empty parenthesized expression." });
 
   // Test function with expression arguments
   mathCore.str = "max(5+5, 8*2)";
@@ -909,7 +1021,6 @@ test("getnum - identifier resolution", t => {
   mathCore.host = createExpressionHost({
     resolveLabel: (value) => {
       if (value === "LABEL1") return 100;
-      if (value === "STRUCT_NAME") return "MyStruct";
       return 0;
     },
   });
@@ -919,10 +1030,28 @@ test("getnum - identifier resolution", t => {
   t.is(mathCore.getnum(), 100);
   t.is(mathCore.str, "");
 
-  // Test struct name resolution (returns string)
+  mathCore.host = createExpressionHost({
+    resolveLabel: (value) => {
+      if (value === "STRUCT_NAME") return "MyStruct";
+      return 0;
+    },
+  });
+
   mathCore.str = "STRUCT_NAME";
-  t.is(mathCore.getnum(), "MyStruct" as unknown as number);
-  t.is(mathCore.str, "");
+  t.throws(() => {
+    mathCore.getnum();
+  }, { message: "Reference 'STRUCT_NAME' did not resolve to a numeric value." });
+
+  mathCore.host = createExpressionHost({
+    resolveLabel: (value) => {
+      if (value === ".local") return "not-numeric";
+      return 0;
+    },
+  });
+  mathCore.str = ".local";
+  t.throws(() => {
+    mathCore.getnum();
+  }, { message: "Reference '.local' did not resolve to a numeric value." });
 
   // Test invalid number
   mathCore.str = "@invalid";
@@ -954,10 +1083,11 @@ test("getnum - compound identifier resolution", t => {
   t.is(mathCore.getnum(), 654);
   t.is(mathCore.str, "+ 5");
 
-  // String passthrough path when delegate returns a struct-like identifier
+  // Non-numeric compound identifiers are rejected in numeric position
   mathCore.str = "Config.Section";
-  t.is(mathCore.getnum(), "ConfigSection" as unknown as number);
-  t.is(mathCore.str, "");
+  t.throws(() => {
+    mathCore.getnum();
+  }, { message: "Reference 'Config.Section' did not resolve to a numeric value." });
 
   // Gracefully handles trailing "." (member regex miss => break loop)
   mathCore.str = "TrailingDot.";
@@ -2115,4 +2245,153 @@ test("user-defined function with bitshifting", (t) => {
   // Test with complex expressions
   mathCore.str = "makeAddress(highByte(0xABCDEF) & 0x7F, 0x1234 | 0x8000)";
   t.is(mathCore.evalMath(0), 0x2B9234);
+});
+
+test("evalMath - missing right operand", t => {
+  const mathCore = new MathCore();
+
+  t.throws(() => {
+    mathCore.str = "5 +";
+    mathCore.evalMath();
+  }, { message: "Missing right operand for operator '+'." });
+
+  t.throws(() => {
+    mathCore.math("5 + function foo() = 1");
+  }, { message: "Missing right operand for operator '+'." });
+});
+
+test("math - typed expression nodes", t => {
+  const mathCore = new MathCore();
+  mathCore.host = createExpressionHost({
+    resolveLabel: (label) => {
+      if (label === "LABEL") return 16;
+      if (label === "STRUCT") return "MyStruct";
+      throw new Error(`Unknown label: ${label}`);
+    },
+    isDefined: (name) => (name === "FLAG" ? 1 : 0),
+  });
+
+  t.is(mathCore.math({ type: "literal", value: "42" }), 42);
+  t.is(mathCore.math({ type: "literal", value: "$10" }), 16);
+  t.is(mathCore.math({ type: "literal", value: "0x10" }), 16);
+  t.is(mathCore.math({ type: "literal", value: "%1010" }), 10);
+  t.throws(() => {
+    mathCore.math({ type: "literal", value: "nope" });
+  }, { message: "Unsupported literal expression: nope" });
+
+  t.is(mathCore.math({
+    type: "unary",
+    operator: "-",
+    argument: { type: "literal", value: "3" },
+  }), -3);
+  t.is(mathCore.math({
+    type: "unary",
+    operator: "+",
+    argument: { type: "literal", value: "3" },
+  }), 3);
+  t.is(mathCore.math({
+    type: "unary",
+    operator: "~",
+    argument: { type: "literal", value: "0" },
+  }), ~0);
+  t.is(mathCore.math({
+    type: "unary",
+    operator: "<:",
+    argument: { type: "literal", value: "65536" },
+  }), 1);
+  t.is(mathCore.math({
+    type: "binary",
+    operator: "+",
+    left: { type: "literal", value: "1" },
+    right: { type: "literal", value: "2" },
+  }), 3);
+
+  t.is(mathCore.math({ type: "identifier", name: "LABEL" }), 16);
+  t.throws(() => {
+    mathCore.math({ type: "defineReference", braced: true, content: "x" });
+  }, { message: "Unresolved define reference: !{x}" });
+  t.throws(() => {
+    mathCore.math({ type: "identifier", name: "STRUCT" });
+  }, { message: "Reference 'STRUCT' did not resolve to a numeric value." });
+
+  t.is(mathCore.math({
+    type: "call",
+    callee: { type: "identifier", name: "sqrt" },
+    arguments: [{ type: "identifier", name: "LABEL" }],
+  }), 4);
+  t.is(mathCore.math({
+    type: "call",
+    callee: { type: "identifier", name: "defined" },
+    arguments: [{ type: "identifier", name: "FLAG" }],
+  }), 1);
+  t.is(mathCore.math({
+    type: "call",
+    callee: { type: "identifier", name: "defined" },
+    arguments: [{ type: "string", value: "FLAG", quote: '"' }],
+  }), 1);
+  t.is(mathCore.math({
+    type: "call",
+    callee: { type: "identifier", name: "defined" },
+    arguments: [{ type: "raw", value: '"FLAG"' }],
+  }), 1);
+  t.is(mathCore.math({
+    type: "call",
+    callee: { type: "identifier", name: "defined" },
+    arguments: [{
+      type: "binary",
+      operator: "+",
+      left: { type: "identifier", name: "FLAG" },
+      right: { type: "literal", value: "0" },
+    }],
+  }), 0);
+  t.is(mathCore.math({
+    type: "call",
+    callee: { type: "identifier", name: "sqrt" },
+    arguments: [{ type: "raw", value: "16" }],
+  }), 4);
+  t.is(mathCore.math({
+    type: "call",
+    callee: { type: "identifier", name: "sqrt" },
+    arguments: [{ type: "literal", value: "16" }],
+  }), 4);
+  t.throws(() => {
+    mathCore.math({
+      type: "call",
+      callee: { type: "identifier", name: "sqrt" },
+      arguments: [{ type: "string", value: "16", quote: '"' }],
+    });
+  }, { message: /expected a numeric argument/ });
+  t.throws(() => {
+    mathCore.math({
+      type: "call",
+      callee: { type: "identifier", name: "sqrt" },
+      arguments: [{
+        type: "range",
+        start: { type: "literal", value: "1" },
+        end: { type: "literal", value: "2" },
+      }],
+    });
+  }, { message: /expected a numeric argument/ });
+  t.throws(() => {
+    mathCore.math({
+      type: "call",
+      callee: { type: "identifier", name: "sqrt" },
+      arguments: [{ type: "defineReference", braced: true, content: "x" }],
+    });
+  }, { message: /expected a numeric argument/ });
+
+  t.throws(() => {
+    mathCore.math({ type: "string", value: "hi", quote: '"' });
+  }, { message: "String expression is not directly numeric: hi" });
+  t.throws(() => {
+    mathCore.math({
+      type: "range",
+      start: { type: "literal", value: "1" },
+      end: { type: "literal", value: "2" },
+    });
+  }, { message: /Range expression is not directly numeric/ });
+  t.is(mathCore.math({ type: "raw", value: "1+2" }), 3);
+
+  t.is(mathCore.resolveNumericIdentifierArgument("MISSING"), "MISSING");
+  t.is(mathCore.resolveNumericIdentifierArgument("STRUCT"), "STRUCT");
 });

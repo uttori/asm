@@ -1,12 +1,10 @@
 import type { ExpressionHost } from "./architecture-types.js";
 import { AssemblyError } from "./diagnostics.js";
 import type {
-  BinaryExpressionNode,
+  BinaryOperator,
   ExpressionNode,
-  RawExpressionNode,
   ReferenceExpressionNode,
-  StringExpressionNode,
-  UnaryExpressionNode,
+  UnaryOperator,
 } from "./ir/expression-node.js";
 import {
   isReferenceExpressionNode,
@@ -28,6 +26,18 @@ try {
   debug = d("MathCore");
 } catch {}
 
+type UserFunction = {
+  readonly args: readonly string[];
+  readonly content: string;
+};
+
+type BinaryOperatorSpec = {
+  readonly priority: number;
+  readonly operation: (left: number, right: number) => number;
+};
+
+type OperatorTable = { readonly [K in BinaryOperator]: BinaryOperatorSpec };
+
 /**
  * Escapes a string for safe use inside a regular expression pattern.
  * @param {string} value The raw string value.
@@ -37,65 +47,192 @@ function escapeRegExp(value: string): string {
   return value.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
 }
 
+/**
+ * Throws a math evaluation error.
+ * @param {string} message The message to throw.
+ * @returns {never} Never returns.
+ */
+function throwMathError(message: string): never {
+  throw new AssemblyError("MATH_EVALUATION_ERROR", message);
+}
+
+/**
+ * Looks up a binary operator spec without falling through to a prefix token.
+ * @param {OperatorTable} operators The operator table.
+ * @param {string} token The candidate operator token.
+ * @returns {BinaryOperatorSpec | undefined} The matching spec, if any.
+ */
+function getOperator(operators: OperatorTable, token: string): BinaryOperatorSpec | undefined {
+  // `Object.hasOwn` avoids treating a two-char prefix as present when it isn't a key.
+  if (!Object.hasOwn(operators, token)) {
+    return undefined;
+  }
+  return operators[token as BinaryOperator];
+}
+
+const OPERATORS: OperatorTable = {
+  // Higher priority binds tighter. Same-level ops are left-associative via priority+1.
+  "**": { priority: 6, operation: (left, right) => Math.pow(left, right) },
+  "*": { priority: 5, operation: (left, right) => left * right },
+  "/": {
+    priority: 5,
+    operation: (left, right) => (right !== 0 ? left / right : throwMathError("Division by zero")),
+  },
+  "%": {
+    priority: 5,
+    operation: (left, right) => (right !== 0 ? left % right : throwMathError("Modulo by zero")),
+  },
+  "+": { priority: 4, operation: (left, right) => left + right },
+  "-": { priority: 4, operation: (left, right) => left - right },
+  "<<": { priority: 3, operation: (left, right) => left << right },
+  ">>": { priority: 3, operation: (left, right) => left >> right },
+  "&": { priority: 3, operation: (left, right) => left & right },
+  "|": { priority: 3, operation: (left, right) => left | right },
+  "^": { priority: 3, operation: (left, right) => left ^ right },
+  "<": { priority: 2, operation: (left, right) => (left < right ? 1 : 0) },
+  ">": { priority: 2, operation: (left, right) => (left > right ? 1 : 0) },
+  "<=": { priority: 2, operation: (left, right) => (left <= right ? 1 : 0) },
+  ">=": { priority: 2, operation: (left, right) => (left >= right ? 1 : 0) },
+  "==": { priority: 2, operation: (left, right) => (left === right ? 1 : 0) },
+  "!=": { priority: 2, operation: (left, right) => (left !== right ? 1 : 0) },
+  "&&": { priority: 1, operation: (left, right) => (left && right ? 1 : 0) },
+  "||": { priority: 0, operation: (left, right) => (left || right ? 1 : 0) },
+};
+
+const BUILTIN_NUMERIC_UNARY: Readonly<Record<string, (value: number) => number>> = {
+  sqrt: Math.sqrt,
+  sin: Math.sin,
+  cos: Math.cos,
+  tan: Math.tan,
+  asin: Math.asin,
+  acos: Math.acos,
+  atan: Math.atan,
+  log: Math.log,
+  log10: Math.log10,
+  log2: Math.log2,
+  ceil: Math.ceil,
+  floor: Math.floor,
+};
+
+const NUMERIC_UNARY_ALIASES: Readonly<Record<string, string>> = {
+  arcsin: "asin",
+  arccos: "acos",
+  arctan: "atan",
+};
+
+const STRING_FIRST_ARG_FUNCTIONS = new Set([
+  "defined",
+  "sizeof",
+  "objectsize",
+  "datasize",
+  "filesize",
+  "getfilestatus",
+]);
+
+const STRING_TWO_ARG_FUNCTIONS = new Set(["stringsequal", "stringsequalnocase"]);
+
+const FILE_STRING_FUNCTION = /^(?:canreadfile|readfile)\d?$/;
+
+/**
+ * Returns whether a character code is whitespace matching String#trim.
+ * @param {number} code The character code.
+ * @returns {boolean} Whether the character is trim whitespace.
+ */
+function isScanWhitespace(code: number): boolean {
+  // Space, tab, LF, CR — the common ASCII trim set.
+  if (code === 32 || code === 9 || code === 10 || code === 13) {
+    return true;
+  }
+  // VT, FF, NBSP, BOM — also stripped by String#trim.
+  if (code === 11 || code === 12 || code === 0xa0 || code === 0xfeff) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Returns whether a character code matches `\w`.
+ * @param {number} code The character code.
+ * @returns {boolean} Whether the character is a word character.
+ */
+function isWordChar(code: number): boolean {
+  if (code >= 48 && code <= 57) {
+    return true;
+  }
+  if (code >= 65 && code <= 90) {
+    return true;
+  }
+  if (code >= 97 && code <= 122) {
+    return true;
+  }
+  return code === 95;
+}
+
 export class MathCore {
   readonly pureStringExpressionCache = new Map<string, number>();
   readonly roundedPureStringExpressionCache = new Map<string, number>();
   readonly pureStringClassification = new Map<string, boolean>();
-  instrumentedExpressionStrings = new Set<string>();
-  instrumentedPureExpressionStrings = new Set<string>();
+  readonly instrumentedExpressionStrings = new Set<string>();
+  readonly instrumentedPureExpressionStrings = new Set<string>();
   instrumentedExpressionNodes = new WeakSet<object>();
   instrumentedPureExpressionNodes = new WeakSet<object>();
 
   host?: ExpressionHost;
-  math_round: boolean = false;
+  math_round = false;
 
-  userFunctions: Map<string, { args: string[]; content: string }> = new Map();
-  builtInFunctions: Map<string, (arg: number) => number> = new Map([
-    ["sqrt", Math.sqrt],
-    ["sin", Math.sin],
-    ["cos", Math.cos],
-    ["tan", Math.tan],
-    ["asin", Math.asin],
-    ["acos", Math.acos],
-    ["atan", Math.atan],
-    ["log", Math.log],
-    ["log10", Math.log10],
-    ["log2", Math.log2],
-    ["ceil", Math.ceil],
-    ["floor", Math.floor],
-  ]);
-  operators: { [key: string]: { priority: number; operation: (a: number, b: number) => number } } =
-    {
-      "**": { priority: 6, operation: (a, b) => Math.pow(a, b) },
-      "*": { priority: 5, operation: (a, b) => a * b },
-      "/": {
-        priority: 5,
-        operation: (a, b) => (b !== 0 ? a / b : this.throwMathError("Division by zero")),
-      },
-      "%": {
-        priority: 5,
-        operation: (a, b) => (b !== 0 ? a % b : this.throwMathError("Modulo by zero")),
-      },
-      "+": { priority: 4, operation: (a, b) => a + b },
-      "-": { priority: 4, operation: (a, b) => a - b },
-      "<<": { priority: 3, operation: (a, b) => a << b },
-      ">>": { priority: 3, operation: (a, b) => a >> b },
-      "&": { priority: 3, operation: (a, b) => a & b },
-      "|": { priority: 3, operation: (a, b) => a | b },
-      "^": { priority: 3, operation: (a, b) => a ^ b },
-      "<": { priority: 2, operation: (a, b) => (a < b ? 1 : 0) },
-      ">": { priority: 2, operation: (a, b) => (a > b ? 1 : 0) },
-      "<=": { priority: 2, operation: (a, b) => (a <= b ? 1 : 0) },
-      ">=": { priority: 2, operation: (a, b) => (a >= b ? 1 : 0) },
-      "==": { priority: 2, operation: (a, b) => (a === b ? 1 : 0) },
-      "!=": { priority: 2, operation: (a, b) => (a !== b ? 1 : 0) },
-      "&&": { priority: 1, operation: (a, b) => (a && b ? 1 : 0) },
-      "||": { priority: 0, operation: (a, b) => (a || b ? 1 : 0) },
-    };
+  readonly userFunctions = new Map<string, UserFunction>();
+  readonly operators = OPERATORS;
 
-  str: string = "";
+  /** Full expression currently being scanned. */
+  scanSource = "";
+  /** Byte offset into `scanSource`; `str` is the slice from here to the end. */
+  scanIndex = 0;
 
-  constructor() {}
+  /**
+   * Remaining unconsumed expression text.
+   * @returns {string} The unconsumed source from the scan cursor.
+   */
+  get str(): string {
+    return this.scanSource.slice(this.scanIndex);
+  }
+
+  /**
+   * Replaces the expression being scanned.
+   * @param {string} value The new expression source.
+   */
+  set str(value: string) {
+    this.scanSource = value;
+    this.scanIndex = 0;
+  }
+
+  /**
+   * Advances the scan cursor past ASCII / trim whitespace.
+   */
+  skipWhitespace(): void {
+    const source = this.scanSource;
+    let index = this.scanIndex;
+    while (index < source.length && isScanWhitespace(source.charCodeAt(index))) {
+      index++;
+    }
+    this.scanIndex = index;
+  }
+
+  /**
+   * Returns whether the remaining source starts with a literal.
+   * @param {string} text The literal to match.
+   * @returns {boolean} Whether the literal is present at the cursor.
+   */
+  remainingStartsWith(text: string): boolean {
+    return this.scanSource.startsWith(text, this.scanIndex);
+  }
+
+  /**
+   * Consumes a fixed number of characters from the scan cursor.
+   * @param {number} count The number of characters to consume.
+   */
+  advance(count: number): void {
+    this.scanIndex += count;
+  }
 
   /**
    * Initialize the math core.
@@ -104,27 +241,35 @@ export class MathCore {
     debug("reset");
     this.math_round = false;
     this.userFunctions.clear();
-    this.beginAssemblySnapshot();
+    this.clearExpressionCaches();
   }
 
   /**
    * Starts a new expression-cache snapshot for an assembly.
    */
   beginAssemblySnapshot(): void {
-    this.pureStringExpressionCache.clear();
-    this.roundedPureStringExpressionCache.clear();
-    this.pureStringClassification.clear();
-    this.instrumentedExpressionStrings = new Set<string>();
-    this.instrumentedPureExpressionStrings = new Set<string>();
-    this.instrumentedExpressionNodes = new WeakSet<object>();
-    this.instrumentedPureExpressionNodes = new WeakSet<object>();
+    this.clearExpressionCaches();
   }
 
   /**
    * Releases expression values retained for a completed assembly.
    */
   endAssemblySnapshot(): void {
-    this.beginAssemblySnapshot();
+    this.clearExpressionCaches();
+  }
+
+  /**
+   * Clears expression caches retained for the current assembly.
+   */
+  clearExpressionCaches(): void {
+    this.pureStringExpressionCache.clear();
+    this.roundedPureStringExpressionCache.clear();
+    this.pureStringClassification.clear();
+    this.instrumentedExpressionStrings.clear();
+    this.instrumentedPureExpressionStrings.clear();
+    // WeakSet has no clear(); drop the previous generation by replacing the set.
+    this.instrumentedExpressionNodes = new WeakSet<object>();
+    this.instrumentedPureExpressionNodes = new WeakSet<object>();
   }
 
   /**
@@ -170,6 +315,7 @@ export class MathCore {
       return this.evaluateStringExpression(expression);
     }
 
+    // Truncation changes results, so rounded and unrounded evals keep separate caches.
     const cache = this.math_round
       ? this.roundedPureStringExpressionCache
       : this.pureStringExpressionCache;
@@ -256,12 +402,14 @@ export class MathCore {
       throw new AssemblyError("MATH_INVALID_INPUT", "Invalid input: empty expression.");
     }
 
-    if (this.str.length > 0) {
-      if (this.str.startsWith(",")) {
+    this.skipWhitespace();
+    if (this.scanIndex < this.scanSource.length) {
+      if (this.remainingStartsWith(",")) {
         throw new AssemblyError("MATH_INVALID_INPUT", `Invalid input: ${this.str}`);
-      } else {
-        throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
       }
+      // Leftover tokens that are not a comma are treated as mismatched parentheses,
+      // matching the original Asar leftover check.
+      throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
     }
 
     debug(`math: ${expression} = ${rval}`);
@@ -293,18 +441,14 @@ export class MathCore {
             this.evaluateCallArgument(expression.callee.name, index, argument),
           ),
         );
-      case "unary": {
-        const unaryExpression: UnaryExpressionNode = expression;
-        return this.evaluateUnaryExpressionNode(unaryExpression.operator, unaryExpression.argument);
-      }
-      case "binary": {
-        const binaryExpression: BinaryExpressionNode = expression;
+      case "unary":
+        return this.evaluateUnaryExpressionNode(expression.operator, expression.argument);
+      case "binary":
         return this.evaluateBinaryExpressionNode(
-          binaryExpression.operator,
-          binaryExpression.left,
-          binaryExpression.right,
+          expression.operator,
+          expression.left,
+          expression.right,
         );
-      }
       case "range":
         throw new AssemblyError(
           "MATH_RANGE_NOT_NUMERIC",
@@ -329,27 +473,22 @@ export class MathCore {
     argument: ExpressionNode,
   ): number | string {
     if (this.isStringArgument(functionName, argumentIndex)) {
+      // String slots (defined, sizeof, filesize, …) keep the source text, not a label value.
       switch (argument.type) {
         case "identifier":
           return argument.name;
-        case "string": {
-          const stringArgument: StringExpressionNode = argument;
-          return stringArgument.value;
-        }
-        case "raw": {
-          const rawArgument: RawExpressionNode = argument;
-          return rawArgument.value.replace(/^["']|["']$/g, "");
-        }
+        case "string":
+          return argument.value;
+        case "raw":
+          return argument.value.replace(/^["']|["']$/g, "");
         default:
           return renderExpressionNode(argument);
       }
     }
 
     switch (argument.type) {
-      case "string": {
-        const stringArgument: StringExpressionNode = argument;
-        return stringArgument.value;
-      }
+      case "string":
+        return argument.value;
       case "range":
         return renderExpressionNode(argument);
       case "raw":
@@ -370,11 +509,11 @@ export class MathCore {
 
   /**
    * Evaluates unary expression node.
-   * @param {"<:" | "~" | "-" | "+"} operator The operator.
+   * @param {UnaryOperator} operator The operator.
    * @param {ExpressionNode} argument The argument.
    * @returns {number} The result.
    */
-  evaluateUnaryExpressionNode(operator: "<:" | "~" | "-" | "+", argument: ExpressionNode): number {
+  evaluateUnaryExpressionNode(operator: UnaryOperator, argument: ExpressionNode): number {
     const value = this.evaluateExpressionNode(argument);
     switch (operator) {
       case "<:":
@@ -391,27 +530,18 @@ export class MathCore {
 
   /**
    * Evaluates binary expression node.
-   * @param {keyof MathCore["operators"]} operator The operator.
+   * @param {BinaryOperator} operator The operator.
    * @param {ExpressionNode} left The left.
    * @param {ExpressionNode} right The right.
    * @returns {number} The result.
    */
   evaluateBinaryExpressionNode(
-    operator: keyof MathCore["operators"],
+    operator: BinaryOperator,
     left: ExpressionNode,
     right: ExpressionNode,
   ): number {
-    const operation = this.operators[operator];
-    if (!operation) {
-      throw new AssemblyError(
-        "MATH_UNSUPPORTED_BINARY_OPERATOR",
-        `Unsupported binary operator '${operator}'`,
-      );
-    }
-    return operation.operation(
-      this.evaluateExpressionNode(left),
-      this.evaluateExpressionNode(right),
-    );
+    const spec = this.operators[operator];
+    return spec.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
   }
 
   /**
@@ -468,17 +598,13 @@ export class MathCore {
    * @returns {boolean} The result.
    */
   isStringArgument(functionName: string, argumentIndex: number): boolean {
-    if (
-      ["defined", "sizeof", "objectsize", "datasize", "filesize", "getfilestatus"].includes(
-        functionName,
-      )
-    ) {
+    if (STRING_FIRST_ARG_FUNCTIONS.has(functionName)) {
       return argumentIndex === 0;
     }
-    if (["stringsequal", "stringsequalnocase"].includes(functionName)) {
+    if (STRING_TWO_ARG_FUNCTIONS.has(functionName)) {
       return argumentIndex < 2;
     }
-    if (/^(?:canreadfile|readfile)\d?$/.test(functionName)) {
+    if (FILE_STRING_FUNCTION.test(functionName)) {
       return argumentIndex === 0;
     }
     return false;
@@ -514,15 +640,15 @@ export class MathCore {
    * `undefined` when an inline function definition consumes the expression.
    */
   evalMath(depth: number = 0, stopChar?: string): number | undefined {
-    debug("evalMath", { depth, stopChar }, this.str);
+    debug("evalMath", { depth, stopChar, scanIndex: this.scanIndex });
 
     let left: number | undefined;
 
     // If there's a function definition inline, parse and skip it.
-    if (this.str.startsWith("function")) {
+    if (this.remainingStartsWith("function")) {
       this.parseFunctionDefinition();
       left = this.evalMath(depth, stopChar);
-    } else if (this.str.length > 0) {
+    } else if (this.scanIndex < this.scanSource.length) {
       left = this.getnum();
     }
 
@@ -535,37 +661,35 @@ export class MathCore {
     }
     debug("evalMath after getnum", left);
 
-    // Ensure we've trimmed the string after getnum returns
-    this.str = this.str.trim();
+    // Skip whitespace after getnum instead of reallocating a trimmed remainder.
+    this.skipWhitespace();
 
     // After getnum, we might still have leftover operators to process.
-    // Keep processing them until we're done or hit the stopChar
-    while (this.str.trim().length > 0) {
-      this.str = this.str.trim();
+    // Keep processing them until we're done or hit the stopChar.
+    while (this.scanIndex < this.scanSource.length) {
+      this.skipWhitespace();
 
       // Break if we hit our stopping character (for a nested call)
-      if (stopChar && this.str.startsWith(stopChar)) {
+      if (stopChar && this.remainingStartsWith(stopChar)) {
         break;
       }
 
       // Break if we hit a closing bracket or comma outside of their context
-      if ([",", ")", "]"].includes(this.str[0])) {
+      const nextChar = this.scanSource[this.scanIndex];
+      if (nextChar === "," || nextChar === ")" || nextChar === "]") {
         break;
       }
 
-      // if (this.math_round) {
-      //   left = Math.trunc(left);
-      // }
-
-      // Peek for the next operator
+      // Peek for the next operator allowed at this precedence depth
       const op = this.peekNextOperator(this.operators, depth);
       debug("evalMath peekNextOperator =", op);
 
       // No valid operator at this level => done with this level
       if (!op) break;
 
-      // Consume the operator from the string
-      this.str = this.str.substring(op.length).trim();
+      // Consume the operator from the source
+      this.advance(op.length);
+      this.skipWhitespace();
 
       // Evaluate the right side at a higher depth
       const right = this.evalMath(this.operators[op].priority + 1, stopChar);
@@ -591,40 +715,46 @@ export class MathCore {
 
   /**
    * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
-   * @param {object} operators The operators to check.
+   * @param {OperatorTable} operators The operators to check.
    * @param {number} depth The current depth of nested expressions.
-   * @returns {string | null} The matching operator or null if no match.
+   * @returns {BinaryOperator | null} The matching operator or null if no match.
    */
-  peekNextOperator(
-    operators: { [key: string]: { priority: number } },
-    depth: number,
-  ): string | null {
-    // Trim the expression to avoid whitespace confusion.
-    this.str = this.str.trim();
-    if (this.str.length === 0) {
-      debug("peekNextOperator = null", this.str);
+  peekNextOperator(operators: OperatorTable, depth: number): BinaryOperator | null {
+    // Skip whitespace so operator matching is not confused by padding.
+    this.skipWhitespace();
+    if (this.scanIndex >= this.scanSource.length) {
+      debug("peekNextOperator = null");
       return null;
     }
 
-    // Try matching the next two characters first.
-    if (this.str.length >= 2) {
-      const twoChars = this.str.slice(0, 2);
-      // NOTE: `&& operators[twoChars].priority >= depth` was removed as it would fail to match `&&`
-      if (operators[twoChars]) {
-        debug("peekNextOperator twoChars", twoChars);
-        return twoChars;
+    // Try matching the next two characters first. If they form a known operator
+    // (`&&`, `||`, `==`, `**`, …), do not fall through to a one-character prefix
+    // (`&` vs `&&`). When the two-character operator exists but is too weak for
+    // this depth, return null rather than consuming `&` / `|` / `=`.
+    const remaining = this.scanSource.length - this.scanIndex;
+    if (remaining >= 2) {
+      const twoChars = this.scanSource.slice(this.scanIndex, this.scanIndex + 2);
+      const twoOp = getOperator(operators, twoChars);
+      if (twoOp) {
+        if (twoOp.priority >= depth) {
+          debug("peekNextOperator twoChars", twoChars);
+          return twoChars as BinaryOperator;
+        }
+        debug("peekNextOperator = null");
+        return null;
       }
     }
 
-    // Otherwise, check a single character operator.
-    const oneChar = this.str[0];
-    if (operators[oneChar] && operators[oneChar].priority >= depth) {
+    // Otherwise, check a single-character operator against the current depth.
+    const oneChar = this.scanSource[this.scanIndex];
+    const oneOp = getOperator(operators, oneChar);
+    if (oneOp && oneOp.priority >= depth) {
       debug("peekNextOperator oneChar", oneChar);
-      return oneChar;
+      return oneChar as BinaryOperator;
     }
 
     // No operator matched
-    debug("peekNextOperator = null", this.str);
+    debug("peekNextOperator = null");
     return null;
   }
 
@@ -635,12 +765,14 @@ export class MathCore {
    */
   consumeWhile(regex: RegExp): string {
     debug("consumeWhile", regex);
-    let i = 0;
-    while (i < this.str.length && regex.test(this.str[i])) {
-      i++;
+    const source = this.scanSource;
+    const start = this.scanIndex;
+    let index = start;
+    while (index < source.length && regex.test(source[index])) {
+      index++;
     }
-    const result = this.str.substring(0, i);
-    this.str = this.str.substring(i);
+    const result = source.slice(start, index);
+    this.scanIndex = index;
     return result;
   }
 
@@ -650,8 +782,8 @@ export class MathCore {
    * @returns {number} The number from the string.
    */
   getnum = (): number => {
-    debug("getnum:", this.str);
-    this.str = this.str.trim();
+    debug("getnum:", this.scanIndex);
+    this.skipWhitespace();
 
     // Process prefix operators FIRST - before any function call processing
     let applyBitshift = false;
@@ -659,105 +791,57 @@ export class MathCore {
 
     // Check for prefix operators in a loop
     while (true) {
-      if (this.str.startsWith("<:")) {
-        this.str = this.str.substring(2).trim();
+      if (this.remainingStartsWith("<:")) {
+        this.advance(2);
+        this.skipWhitespace();
         applyBitshift = true;
-      } else if (this.str.startsWith("~")) {
-        this.str = this.str.substring(1).trim();
+      } else if (this.remainingStartsWith("~")) {
+        this.advance(1);
+        this.skipWhitespace();
         return ~this.getnum(); // Immediately compute bitwise NOT
-      } else if (this.str.startsWith("-")) {
-        this.str = this.str.substring(1).trim();
+      } else if (this.remainingStartsWith("-")) {
+        this.advance(1);
+        this.skipWhitespace();
         sign *= -1;
-      } else if (this.str.startsWith("+")) {
-        this.str = this.str.substring(1).trim();
+      } else if (this.remainingStartsWith("+")) {
+        this.advance(1);
+        this.skipWhitespace();
         // '+' is a no-op
       } else {
         break;
       }
     }
 
-    // If the expression starts with a function that takes a struct, parse its parameter as a string.
-    const structFns = ["sizeof", "objectsize"];
-    for (const fn of structFns) {
-      const prefix = fn + "(";
-      if (this.str.startsWith(prefix)) {
-        // Remove the function name and opening parenthesis
-        this.str = this.str.substring(prefix.length).trim();
-        let param = "";
-
-        // Parse the parameter (string or identifier)
-        if (this.str.startsWith('"')) {
-          this.str = this.str.substring(1).trim();
-          const endQuoteIndex = this.str.indexOf('"');
-          if (endQuoteIndex === -1) {
-            throw new Error(`Missing closing double quote in ${fn} call.`);
-          }
-          param = this.str.substring(0, endQuoteIndex);
-          this.str = this.str.substring(endQuoteIndex + 1).trim();
-        } else {
-          param = this.consumeWhile(/[\w.]/);
-        }
-
-        // Verify and remove the closing parenthesis
-        if (!this.str.startsWith(")")) {
-          throw new Error(`Missing closing ')' in ${fn} call.`);
-        }
-
-        // IMPORTANT: Save remaining content after the closing parenthesis
-        const remainingAfterCall = this.str.substring(1).trim();
-
-        // Call the function and get result
-        const result = this.callFunction(fn, [param]);
-
-        // Restore remaining content
-        this.str = remainingAfterCall;
-        debug("getnum leftover after struct fn:", this.str);
-
-        // Apply sign and bitshift
-        let value = sign * result;
-        if (applyBitshift) {
-          value = value >>> 16;
-        }
-        return value;
-      }
-    }
-
     // If the next token is a function call: e.g. myFunc(1234)
-    const funcCallMatch = this.str.match(/^(\w+)\s*\(/);
-    if (funcCallMatch) {
-      debug("getnum function:", funcCallMatch);
-      // Extract the function name
-      const fnName = funcCallMatch[1];
-      debug("getnum fnName =", fnName);
-
-      // Remove the matched portion from this.str (e.g. "myFunc(")
-      this.str = this.str.substring(funcCallMatch[0].length - 1).trim();
-      debug("getnum this.str =", this.str);
-
-      // Now parse arguments inside parentheses
+    const fnName = this.scanFunctionCallName();
+    if (fnName !== undefined) {
+      debug("getnum function:", fnName);
       const args: (number | string)[] = [];
-      // First character is '('
-      if (this.str[0] === "(") {
-        this.str = this.str.substring(1).trim(); // remove '('
-        // parse arguments until ')'
-        if (!this.str.startsWith(")")) {
+      // scanFunctionCallName leaves the cursor on '('
+      if (this.scanSource[this.scanIndex] === "(") {
+        this.advance(1); // remove '('
+        this.skipWhitespace();
+        // Parse arguments until ')'
+        if (!this.remainingStartsWith(")")) {
           while (true) {
-            this.str = this.str.trim();
+            this.skipWhitespace();
             // Consume leading comma so next argument is parsed without it (e.g. after string literal)
-            if (this.str.startsWith(",")) {
-              this.str = this.str.substring(1).trim();
+            if (this.remainingStartsWith(",")) {
+              this.advance(1);
+              this.skipWhitespace();
             }
-            debug("getnum this.str while 1 =", this.str);
-            if (this.str.startsWith(")")) {
+            debug("getnum while 1", this.scanIndex);
+            if (this.remainingStartsWith(")")) {
               break;
             }
-            // Check if next argument starts with double quote => string argument
-            if (this.str.startsWith('"')) {
-              // parse string literal
-              const strVal = this.parseStringLiteral();
-              args.push(strVal);
+            // Quoted string argument
+            if (this.remainingStartsWith('"')) {
+              args.push(this.parseStringLiteral());
+            } else if (this.isStringArgument(fnName, args.length)) {
+              // Unquoted identifier / path for defined(), sizeof(), filesize(), etc.
+              args.push(this.parseUnquotedStringArgument(fnName));
             } else {
-              // parse numeric expression
+              // Parse numeric expression
               const val = this.evalMath(0, ")");
               if (val === undefined) {
                 throw new Error(`Missing function argument for '${fnName}'.`);
@@ -765,29 +849,34 @@ export class MathCore {
               args.push(val);
             }
 
-            this.str = this.str.trim();
-            debug("getnum this.str while 2 =", this.str);
-            if (this.str.startsWith(")")) {
+            this.skipWhitespace();
+            debug("getnum while 2", this.scanIndex);
+            if (this.remainingStartsWith(")")) {
               break;
             }
-            if (this.str.startsWith(",")) {
-              this.str = this.str.substring(1).trim();
+            if (this.remainingStartsWith(",")) {
+              this.advance(1);
+              this.skipWhitespace();
               continue;
-            } else {
-              throw new Error(`Expected ',' or ')' in function call arguments: ${this.str}`);
             }
+            throw new Error(`Expected ',' or ')' in function call arguments: ${this.str}`);
           }
         }
-        // After the closing parenthesis we may have more content
-        const remainingAfterCall = this.str.substring(1).trim();
+
+        // User functions re-enter math() and overwrite the scan cursor, so snapshot
+        // the outer source and the index just past this call's closing ')'.
+        const outerSource = this.scanSource;
+        const afterCall = this.scanIndex + 1;
 
         // Now calculate the function result
         const result = this.callFunction(fnName, args);
         debug("getnum result =", result);
 
-        // Set this.str to everything AFTER the function call
-        this.str = remainingAfterCall;
-        debug("getnum leftover string =", this.str);
+        // Restore everything AFTER the function call
+        this.scanSource = outerSource;
+        this.scanIndex = afterCall;
+        this.skipWhitespace();
+        debug("getnum leftover index =", this.scanIndex);
 
         // Apply sign and bitshift
         let value = sign * result;
@@ -800,63 +889,66 @@ export class MathCore {
 
     // Now parse a raw number literal, a parenthesized expression, or an identifier (label).
     let value: number;
-    if (this.str.startsWith("(")) {
-      this.str = this.str.substring(1).trim();
+    if (this.remainingStartsWith("(")) {
+      this.advance(1);
+      this.skipWhitespace();
       // Use evalMath(0, ")") to parse until the matching ')'
       const nestedValue = this.evalMath(0, ")");
       if (nestedValue === undefined) {
         throw new Error("Empty parenthesized expression.");
       }
       value = nestedValue;
-      debug("getnum this.str", this.str);
-      if (!this.str.startsWith(")")) {
+      debug("getnum after paren", this.scanIndex);
+      if (!this.remainingStartsWith(")")) {
         throw new Error("Mismatched parentheses.");
       }
       // Remove the closing parenthesis
-      this.str = this.str.substring(1).trim();
-    } else if (this.str.startsWith("$")) {
-      this.str = this.str.substring(1);
+      this.advance(1);
+      this.skipWhitespace();
+    } else if (this.remainingStartsWith("$")) {
+      this.advance(1);
       value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
-    } else if (this.str.startsWith("0x")) {
-      this.str = this.str.substring(2);
+    } else if (this.remainingStartsWith("0x")) {
+      this.advance(2);
       value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
-    } else if (this.str.startsWith("%")) {
-      this.str = this.str.substring(1);
+    } else if (this.remainingStartsWith("%")) {
+      this.advance(1);
       value = parseInt(this.consumeWhile(/[01]/), 2);
-    } else if (/\d/.test(this.str[0])) {
+    } else if (/\d/.test(this.scanSource[this.scanIndex] ?? "")) {
       value = parseFloat(this.consumeWhile(/[\d.]/));
     } else {
       // Fallback: try to resolve identifiers (e.g. label resolver).
-      const reference = parseLeadingReferenceExpression(this.str);
+      const remaining = this.str;
+      const reference = parseLeadingReferenceExpression(remaining);
       if (reference) {
-        this.str = this.str.substring(reference.length).trim();
+        this.advance(reference.length);
+        this.skipWhitespace();
         const renderedReference = renderReferenceExpressionNode(reference.node, {
           renderIndex: (node) => this.evaluateExpressionNode(node).toString(),
         });
         const resolved = this.getHost().resolveLabel(renderedReference);
-        if (typeof resolved === "number") {
+        if (typeof resolved !== "number") {
+          throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
+        }
+        value = resolved;
+      } else {
+        const localReference = this.resolveLeadingLocalLabelReference(remaining);
+        if (localReference) {
+          this.advance(localReference.length);
+          this.skipWhitespace();
+          const resolved = this.getHost().resolveLabel(localReference.label);
+          if (typeof resolved !== "number") {
+            throw new Error(
+              `Reference '${localReference.label}' did not resolve to a numeric value.`,
+            );
+          }
           value = resolved;
         } else {
-          // If resolved is a string (e.g. a struct name) then return it as is
-          // so built-in functions like sizeof get the correct string.
-          return resolved as unknown as number;
-        }
-      } else {
-        const localReference = this.resolveLeadingLocalLabelReference(this.str);
-        if (localReference) {
-          this.str = this.str.substring(localReference.length).trim();
-          const resolved = this.getHost().resolveLabel(localReference.label);
-          if (typeof resolved === "number") {
-            value = resolved;
-          } else {
-            return resolved as unknown as number;
-          }
-        } else {
-          const rootMatch = this.str.match(/^([A-Z_a-z]\w*)/);
-          if (rootMatch && this.str.substring(rootMatch[1].length).trimStart().startsWith("[")) {
+          const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
+          if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
             throw new Error("Mismatched brackets in struct index");
           }
-          throw new Error(`Invalid number: ${this.str}`);
+          throw new Error(`Invalid number: ${remaining}`);
         }
       }
     }
@@ -870,12 +962,33 @@ export class MathCore {
   };
 
   /**
-   * Safe wrapper to handle division by zero.
-   * @param {string} message The message to throw.
+   * Scans a function-call name if the next token is `name(`.
+   * Leaves the cursor on `(`.
+   * @returns {string | undefined} The function name, if a call starts here.
    */
-  throwMathError = (message: string): number => {
-    throw new AssemblyError("MATH_EVALUATION_ERROR", message);
-  };
+  scanFunctionCallName(): string | undefined {
+    const source = this.scanSource;
+    let index = this.scanIndex;
+    if (index >= source.length || !isWordChar(source.charCodeAt(index))) {
+      return undefined;
+    }
+    // Consume `\w+`
+    index++;
+    while (index < source.length && isWordChar(source.charCodeAt(index))) {
+      index++;
+    }
+    const name = source.slice(this.scanIndex, index);
+    // Allow whitespace between the name and '(' (`sqrt (16)`)
+    while (index < source.length && isScanWhitespace(source.charCodeAt(index))) {
+      index++;
+    }
+    if (source[index] !== "(") {
+      return undefined;
+    }
+    // Leave the cursor on '(' so getnum can share the argument parser.
+    this.scanIndex = index;
+    return name;
+  }
 
   /**
    * Parses a string literal from the current string with support for quotes.
@@ -883,23 +996,55 @@ export class MathCore {
    */
   parseStringLiteral = (): string => {
     debug("parseStringLiteral");
-    // We know this.str starts with a double-quote
-    let i = 1; // skip leading "
-    let result = "";
-    while (i < this.str.length && this.str[i] !== '"') {
-      // simple approach: no escape sequences
-      result += this.str[i];
-      i++;
+    // We know the cursor is on a double-quote; no escape sequences.
+    const source = this.scanSource;
+    const start = this.scanIndex + 1; // skip leading "
+    let index = start;
+    while (index < source.length && source[index] !== '"') {
+      index++;
     }
-    if (i >= this.str.length) {
+    if (index >= source.length) {
       throw new Error("Unterminated string literal in function call.");
     }
-    // skip the closing quote
-    i++;
-    // remove from this.str
-    this.str = this.str.substring(i).trim();
+    const result = source.slice(start, index);
+    this.scanIndex = index + 1; // skip the closing quote
+    this.skipWhitespace();
     return result;
   };
+
+  /**
+   * Parses an unquoted string function argument up to a top-level comma or closing parenthesis.
+   * Depth tracks nested `()` / `[]` so `Foo[1].bar` and `data/64kb.bin` stay one argument.
+   * @param {string} functionName The function being called.
+   * @returns {string} The raw argument text.
+   */
+  parseUnquotedStringArgument(functionName: string): string {
+    this.skipWhitespace();
+    const source = this.scanSource;
+    const start = this.scanIndex;
+    let depth = 0;
+    let index = start;
+    while (index < source.length) {
+      const character = source[index];
+      if (character === "(" || character === "[") {
+        depth++;
+      } else if (character === ")" || character === "]") {
+        if (depth === 0) {
+          break;
+        }
+        depth--;
+      } else if (character === "," && depth === 0) {
+        break;
+      }
+      index++;
+    }
+    const argument = source.slice(start, index).trim();
+    this.scanIndex = index;
+    if (!argument) {
+      throw new Error(`Missing function argument for '${functionName}'.`);
+    }
+    return argument;
+  }
 
   /**
    * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
@@ -989,27 +1134,13 @@ export class MathCore {
       case "log2":
       case "ceil":
       case "floor": {
-        if (args.length !== 1) throw new Error(`${name} expects exactly 1 numeric argument.`);
-        // Check for aliases and map them to their standard functions
-        if (name === "arcsin") name = "asin";
-        if (name === "arccos") name = "acos";
-        if (name === "arctan") name = "atan";
+        if (args.length !== 1) {
+          throw new Error(`${name} expects exactly 1 numeric argument.`);
+        }
+        const builtinName = NUMERIC_UNARY_ALIASES[name] ?? name;
+        const mathFunction = BUILTIN_NUMERIC_UNARY[builtinName];
         const val = this.numArg(name, args[0]);
-        const mapping: { [key: string]: (x: number) => number } = {
-          sqrt: Math.sqrt,
-          sin: Math.sin,
-          cos: Math.cos,
-          tan: Math.tan,
-          asin: Math.asin,
-          acos: Math.acos,
-          atan: Math.atan,
-          log: Math.log,
-          log10: Math.log10,
-          log2: Math.log2,
-          ceil: Math.ceil,
-          floor: Math.floor,
-        };
-        const result = mapping[name](val);
+        const result = mathFunction(val);
         if (Number.isNaN(result)) {
           throw new Error(`${name} returned NaN for argument ${val}`);
         }
@@ -1263,6 +1394,12 @@ export class MathCore {
     return arg;
   };
 
+  /**
+   * Validates an argument as a string.
+   * @param {string} funcName The name of the function.
+   * @param {number | string} arg The argument to validate.
+   * @returns {string} The validated string.
+   */
   strArg = (funcName: string, arg: number | string): string => {
     if (typeof arg === "number") {
       throw new Error(`Function '${funcName}' expected a string argument but got a number: ${arg}`);
@@ -1270,6 +1407,9 @@ export class MathCore {
     return arg;
   };
 
+  /**
+   * Parses a function definition.
+   */
   parseFunctionDefinition = (): void => {
     debug("parseFunctionDefinition", this.str);
     // Remove line continuations (backslash-newline)
