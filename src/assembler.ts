@@ -295,6 +295,11 @@ export class Assembler {
   public checksumFixEnabled: boolean = true;
   /** Header checksum algorithm mode: "asar" (default) or "simple". */
   public checksumMode: "asar" | "simple" = "asar";
+  /**
+   * Super FX auto-MOVE short RAM form. Hardware (default) writes `addr >> 1`.
+   * Asar writes `addr & 0xff`; enable to match existing Asar patches.
+   */
+  public asarSuperFxMoveShortAddress: boolean = false;
   /** Bank crossing policy controlled by `check bankcross ...`. */
   public bankCrossCheckMode: "off" | "full" | "half" = "off";
   /** Read* functions are enabled when patch-style title check is active. */
@@ -875,6 +880,7 @@ export class Assembler {
     session.mapper = this.mapper;
     session.checksumFixEnabled = this.checksumFixEnabled;
     session.checksumMode = this.checksumMode;
+    session.asarSuperFxMoveShortAddress = this.asarSuperFxMoveShortAddress;
     session.bankCrossCheckMode = this.bankCrossCheckMode;
     session.readFunctionsEnabled = this.readFunctionsEnabled;
     session.optimizeDirectPage = this.optimizeDirectPage;
@@ -1273,6 +1279,9 @@ export class Assembler {
       diagnostics: {
         error: (message) => new Error(message),
       },
+      compatibility: {
+        asarSuperFxMoveShortAddress: () => this.asarSuperFxMoveShortAddress,
+      },
     };
     this.architectureRegistry = new ArchitectureRegistry();
     for (const contributionId of target.architectures) {
@@ -1441,6 +1450,14 @@ export class Assembler {
    */
   setChecksumMode(mode: "asar" | "simple"): void {
     this.checksumMode = mode;
+  }
+
+  /**
+   * Selects Super FX auto-MOVE short-address encoding.
+   * @param {boolean} enabled True to match Asar (`addr & 0xff`); false for hardware (`addr >> 1`).
+   */
+  setAsarSuperFxMoveShortAddress(enabled: boolean): void {
+    this.asarSuperFxMoveShortAddress = enabled;
   }
 
   /**
@@ -2879,6 +2896,9 @@ export class Assembler {
     this.inSpcblock = false;
     this.spcblockData = null;
     this.spcInlineCompatMode = false;
+    for (const definition of this.architectureRegistry.definitions.values()) {
+      definition.encoder.beginPass?.();
+    }
     this.pluginState.resetForStage(stage);
     this.runLifecycleHook("onStageStart", (lifecycle) =>
       lifecycle.onStageStart?.({ state: this.pluginState, stage }),

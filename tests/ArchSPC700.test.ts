@@ -31,6 +31,44 @@ test("ArchSPC700.estimateInstruction uses lowered operands", t => {
   t.is(size, 3);
 });
 
+test("ArchSPC700.estimateSize matches encoded widths for common forms", t => {
+  const { arch } = createArchSPC700();
+  t.is(arch.estimateSize(["CLRP"]), 1);
+  t.is(arch.estimateSize(["MOV", "X,#$cf"]), 2);
+  t.is(arch.estimateSize(["MOV", "SP,X"]), 1);
+  t.is(arch.estimateSize(["MOV", "X,A"]), 1);
+  t.is(arch.estimateSize(["BNE", "CODE_0407"]), 2);
+  t.is(arch.estimateSize(["CALL", "CODE_0a96-MAPPING_OFFSET_2"]), 3);
+  t.is(arch.estimateSize(["JMP", "CODE_0444-MAPPING_OFFSET_2"]), 3);
+  t.is(arch.estimateSize(["MOV", "$0030+Y,A"]), 3);
+  t.is(arch.estimateSize(["MOV", "$30+Y,A"]), 2);
+  t.is(arch.estimateSize(["INC", "X"]), 1);
+  t.is(arch.estimateSize(["SET5", "$48"]), 2);
+  t.is(arch.estimateSize(["DBNZ", "Y,CODE_0446"]), 2);
+  t.is(arch.estimateSize(["DBNZ", "$0c,CODE_070b"]), 3);
+  t.is(arch.estimateSize(["CBNE", "$08+x,CODE_0502"]), 3);
+  t.is(arch.estimateSize(["BBS7", "$4c,CODE_0462"]), 3);
+  t.is(arch.estimateSize(["MOV", "A,#$00"]), 2);
+  t.is(arch.estimateSize(["CMP", "X,#$e0"]), 2);
+});
+
+test("ArchSPC700.handleBitSetClear honors dp.bit operands", t => {
+  const { assembler, arch } = createArchSPC700();
+  const write1Stub = sinon.stub(assembler, "write1");
+  t.teardown(() => {
+    write1Stub.restore();
+  });
+
+  t.true(arch.handleBitSetClear("SET1", "$13.7"));
+  t.true(arch.handleBitSetClear("SET1", "$13"));
+  t.true(arch.handleBitSetClear("SET5", "$48"));
+  t.true(arch.handleBitSetClear("CLR1", "$13.7"));
+
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [
+    0xe2, 0x13, 0x22, 0x13, 0xa2, 0x48, 0xf2, 0x13,
+  ]);
+});
+
 test("ArchSPC700.encodeInstruction routes one-operand lowered nodes", t => {
   const { assembler, arch } = createArchSPC700();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
@@ -181,6 +219,19 @@ test("ArchSPC700.handleTwoOperands supports symbolic indexed mov sources", t => 
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xF5, 0x01, 0x0E]);
 });
 
+test("ArchSPC700.handleMovInstruction keeps zero-padded abs+Y absolute", t => {
+  const { assembler, arch } = createArchSPC700();
+  const write1Stub = sinon.stub(assembler, "write1");
+  t.teardown(() => {
+    write1Stub.restore();
+  });
+
+  t.true(arch.handleMovInstruction("$0030+Y", "A", null, false));
+  t.true(arch.handleMovInstruction("$30+Y", "A", null, false));
+
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xd6, 0x30, 0x00, 0xd6, 0x30]);
+});
+
 test("ArchSPC700.handleMovInstruction keeps zero-padded SPC registers absolute", t => {
   const { assembler, arch } = createArchSPC700();
   const write1Stub = sinon.stub(assembler, "write1");
@@ -305,13 +356,29 @@ test("ArchSPC700 emits unresolved branch placeholders through narrow contexts", 
 
 test("ArchSPC700 validates resolved DBNZ branch ranges without a host", t => {
   const { assembler, arch } = createArchSPC700();
+  assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x1200;
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("target").returns(0x1300);
   t.teardown(() => getnumStub.restore());
 
   t.throws(() => arch.handleDbnzCbne("DBNZ", "Y", "target"), {
-    message: "Branch target out of range (253)",
+    message: "Branch target out of range (254)",
   });
+});
+
+test("ArchSPC700 skips DBNZ range checks before emit", t => {
+  const { assembler, arch } = createArchSPC700();
+  assembler.currentTargetAddress = 0x1200;
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("target").returns(0x1300);
+  const write1Stub = sinon.stub(assembler, "write1");
+  t.teardown(() => {
+    getnumStub.restore();
+    write1Stub.restore();
+  });
+
+  t.true(arch.handleDbnzCbne("DBNZ", "Y", "target"));
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xfe, 0xfe]);
 });
 

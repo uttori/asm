@@ -9,6 +9,7 @@ export type EncoderTestHost = {
   currentTargetAddress: number;
   optimizeDirectPage: boolean;
   enforceResolvedLabels: boolean;
+  asarSuperFxMoveShortAddress: boolean;
   symbolScope: {
     findNextLabel(label: string, referenceAddress: number): number;
     findPreviousLabel(label: string, referenceAddress: number): number;
@@ -40,6 +41,7 @@ export const createEncoderTestHost = (): EncoderTestHost => {
     currentTargetAddress: 0,
     optimizeDirectPage: true,
     enforceResolvedLabels: false,
+    asarSuperFxMoveShortAddress: false,
     symbolScope: {
       findNextLabel: (_label: string, _referenceAddress: number): number => {
         throw new Error("Unresolved next test label");
@@ -110,6 +112,9 @@ export const createEncoderTestHost = (): EncoderTestHost => {
     },
     diagnostics: {
       error: (message) => new Error(message),
+    },
+    compatibility: {
+      asarSuperFxMoveShortAddress: () => host.asarSuperFxMoveShortAddress,
     },
   };
   return Object.assign(host, { context, operandResolver });

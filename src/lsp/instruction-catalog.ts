@@ -5,10 +5,16 @@ import type { InstructionAddressingMode, InstructionDescriptor } from "../archit
  * @param {string} mnemonic The mnemonic.
  * @param {string} summary The hover summary.
  * @param {number} [opcode] The opcode byte when known.
+ * @param {number} [size] Encoded size in bytes.
  * @returns {InstructionDescriptor} The descriptor.
  */
-function implied(mnemonic: string, summary: string, opcode?: number): InstructionDescriptor {
-  return { mnemonic, summary, modes: [{ mode: "implied", syntax: "", opcode, size: 1 }] };
+function implied(
+  mnemonic: string,
+  summary: string,
+  opcode?: number,
+  size = 1,
+): InstructionDescriptor {
+  return { mnemonic, summary, modes: [{ mode: "implied", syntax: "", opcode, size }] };
 }
 
 /**
@@ -348,31 +354,124 @@ export const spc700Catalog: InstructionDescriptor[] = [
 ];
 
 /**
- * The Super FX (GSU) instruction catalog. Coverage focuses on the mnemonics the
+ * The Super FX (GSU) instruction catalog. Coverage matches the mnemonics the
  * assembler accepts so editors can complete and document them.
  */
+const superFxRegister = { mode: "register", syntax: "Rn", size: 1 };
+const superFxRegisterAlt = { mode: "register", syntax: "Rn", size: 2 };
+const superFxImmediateAlt = { mode: "immediate", syntax: "#n", size: 2 };
+const superFxIndirect = { mode: "registerIndirect", syntax: "(Rn)", size: 1 };
+const superFxIndirectAlt = { mode: "registerIndirect", syntax: "(Rn)", size: 2 };
+
 export const superFxCatalog: InstructionDescriptor[] = [
   implied("STOP", "Stop the GSU.", 0x00),
   implied("NOP", "No operation.", 0x01),
   implied("CACHE", "Set the cache base register.", 0x02),
-  instruction("LSR", "Logical shift right.", [{ mode: "implied", syntax: "" }]),
-  instruction("ROL", "Rotate left.", [{ mode: "implied", syntax: "" }]),
-  instruction("ROR", "Rotate right.", [{ mode: "implied", syntax: "" }]),
-  instruction("BRA", "Branch always.", [{ mode: "relative", syntax: "label" }]),
-  instruction("BEQ", "Branch if equal.", [{ mode: "relative", syntax: "label" }]),
-  instruction("BNE", "Branch if not equal.", [{ mode: "relative", syntax: "label" }]),
-  instruction("TO", "Set the destination register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("FROM", "Set the source register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("WITH", "Set source and destination register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("ADD", "Add to the accumulator register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("SUB", "Subtract from the accumulator register.", [
-    { mode: "register", syntax: "Rn" },
+  implied("LSR", "Logical shift right.", 0x03),
+  implied("ROL", "Rotate left.", 0x04),
+  implied("LOOP", "Decrement R13 and branch if non-zero.", 0x3c),
+  implied("ALT1", "Set ALT1 prefix.", 0x3d),
+  implied("ALT2", "Set ALT2 prefix.", 0x3e),
+  implied("ALT3", "Set ALT1 and ALT2 prefixes.", 0x3f),
+  implied("PLOT", "Plot a pixel.", 0x4c),
+  implied("SWAP", "Swap high and low bytes of SReg.", 0x4d),
+  implied("COLOR", "Set the plot color from SReg.", 0x4e),
+  implied("NOT", "Bitwise NOT of SReg.", 0x4f),
+  implied("MERGE", "Merge high bytes of R7 and R8.", 0x70),
+  implied("SBK", "Store SReg back to the last RAM address.", 0x90),
+  implied("SEX", "Sign-extend the low byte of SReg.", 0x95),
+  implied("ASR", "Arithmetic shift right of SReg.", 0x96),
+  implied("ROR", "Rotate SReg right through carry.", 0x97),
+  implied("LOB", "Keep the low byte of SReg.", 0x9e),
+  implied("FMULT", "Fractional signed multiply.", 0x9f),
+  implied("HIB", "Keep the high byte of SReg.", 0xc0),
+  implied("GETC", "Get byte from ROM into the plot color.", 0xdf),
+  implied("GETB", "Get byte from ROM into SReg.", 0xef),
+  implied("RPIX", "Read pixel.", 0x3d, 2),
+  implied("CMODE", "Set plot color mode.", 0x3d, 2),
+  implied("DIV2", "Arithmetic shift right and clear the least bit.", 0x3d, 2),
+  implied("LMULT", "Signed 16×16 multiply.", 0x3d, 2),
+  implied("GETBH", "Get ROM byte into the high byte of SReg.", 0x3d, 2),
+  implied("RAMB", "Set the RAM bank from SReg.", 0x3e, 2),
+  implied("GETBL", "Get ROM byte into the low byte of SReg.", 0x3e, 2),
+  implied("ROMB", "Set the ROM bank from SReg.", 0x3f, 2),
+  implied("GETBS", "Get ROM byte sign-extended into SReg.", 0x3f, 2),
+  branch("BRA", "Branch always.", 0x05),
+  branch("BGE", "Branch if greater or equal.", 0x06),
+  branch("BLT", "Branch if less than.", 0x07),
+  branch("BNE", "Branch if not equal.", 0x08),
+  branch("BEQ", "Branch if equal.", 0x09),
+  branch("BPL", "Branch if plus.", 0x0a),
+  branch("BMI", "Branch if minus.", 0x0b),
+  branch("BCC", "Branch if carry clear.", 0x0c),
+  branch("BCS", "Branch if carry set.", 0x0d),
+  branch("BVC", "Branch if overflow clear.", 0x0e),
+  branch("BVS", "Branch if overflow set.", 0x0f),
+  instruction("TO", "Set the destination register.", [{ ...superFxRegister, opcode: 0x10 }]),
+  instruction("WITH", "Set source and destination register.", [
+    { ...superFxRegister, opcode: 0x20 },
   ]),
-  instruction("AND", "Bitwise AND.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("OR", "Bitwise OR.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("MULT", "Signed multiply.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("RPIX", "Read pixel.", [{ mode: "implied", syntax: "" }]),
-  instruction("DIV2", "Divide by two.", [{ mode: "implied", syntax: "" }]),
+  instruction("FROM", "Set the source register.", [{ ...superFxRegister, opcode: 0xb0 }]),
+  instruction("ADD", "Add to SReg.", [superFxRegister, superFxImmediateAlt]),
+  instruction("ADC", "Add to SReg with carry.", [superFxRegisterAlt, superFxImmediateAlt]),
+  instruction("SUB", "Subtract from SReg.", [superFxRegister, superFxImmediateAlt]),
+  instruction("SBC", "Subtract from SReg with borrow.", [superFxRegisterAlt]),
+  instruction("CMP", "Compare SReg with Rn.", [superFxRegisterAlt]),
+  instruction("AND", "Bitwise AND with SReg.", [superFxRegister, superFxImmediateAlt]),
+  instruction("BIC", "Bit clear SReg.", [superFxRegisterAlt, superFxImmediateAlt]),
+  instruction("OR", "Bitwise OR with SReg.", [superFxRegister, superFxImmediateAlt]),
+  instruction("XOR", "Bitwise exclusive-OR with SReg.", [superFxRegisterAlt, superFxImmediateAlt]),
+  instruction("MULT", "Signed 8-bit multiply.", [superFxRegister, superFxImmediateAlt]),
+  instruction("UMULT", "Unsigned 8-bit multiply.", [superFxRegisterAlt, superFxImmediateAlt]),
+  instruction("JMP", "Jump to address in Rn (R8-R13).", [superFxRegister]),
+  instruction("LJMP", "Long jump via Rn (R8-R13).", [superFxRegisterAlt]),
+  instruction("INC", "Increment Rn (R0-R14).", [superFxRegister]),
+  instruction("DEC", "Decrement Rn (R0-R14).", [superFxRegister]),
+  instruction("LINK", "Set R11 to PBR:PC+n.", [
+    { mode: "immediate", syntax: "#n", opcode: 0x90, size: 1 },
+  ]),
+  instruction("STW", "Store word at (Rn).", [superFxIndirect]),
+  instruction("LDW", "Load word from (Rn).", [superFxIndirect]),
+  instruction("STB", "Store byte at (Rn).", [superFxIndirectAlt]),
+  instruction("LDB", "Load byte from (Rn).", [superFxIndirectAlt]),
+  instruction("IBT", "Load Rn with a signed byte.", [
+    { mode: "registerImmediate", syntax: "Rn,#imm", opcode: 0xa0, size: 2 },
+  ]),
+  instruction("IWT", "Load Rn with a word.", [
+    { mode: "registerImmediate", syntax: "Rn,#imm", opcode: 0xf0, size: 3 },
+  ]),
+  instruction("LM", "Load Rn from RAM.", [
+    { mode: "registerIndirectAbsolute", syntax: "Rn,(addr)", size: 4 },
+  ]),
+  instruction("LMS", "Load Rn from short RAM.", [
+    { mode: "registerIndirectShort", syntax: "Rn,(xx)", size: 3 },
+  ]),
+  instruction("SM", "Store Rn to RAM.", [
+    { mode: "indirectAbsoluteRegister", syntax: "(addr),Rn", size: 4 },
+  ]),
+  instruction("SMS", "Store Rn to short RAM.", [
+    { mode: "indirectShortRegister", syntax: "(xx),Rn", size: 3 },
+  ]),
+  instruction("LEA", "Load Rn with the effective address.", [
+    { mode: "registerAbsolute", syntax: "Rn,addr", opcode: 0xf0, size: 3 },
+  ]),
+  instruction("MOVE", "Move register, immediate, or RAM data.", [
+    { mode: "registerRegister", syntax: "Rn,Rm", size: 2 },
+    { mode: "registerImmediate", syntax: "Rn,#imm" },
+    { mode: "registerIndirectAbsolute", syntax: "Rn,(addr)" },
+    { mode: "indirectAbsoluteRegister", syntax: "(addr),Rn" },
+  ]),
+  instruction("MOVES", "Move Rm to Rn and update flags.", [
+    { mode: "registerRegister", syntax: "Rn,Rm", size: 2 },
+  ]),
+  instruction("MOVEB", "Move a byte through (Rn).", [
+    { mode: "indirectRegister", syntax: "(Rn),Rm" },
+    { mode: "registerIndirect", syntax: "Rn,(Rm)" },
+  ]),
+  instruction("MOVEW", "Move a word through (Rn).", [
+    { mode: "indirectRegister", syntax: "(Rn),Rm" },
+    { mode: "registerIndirect", syntax: "Rn,(Rm)" },
+  ]),
 ];
 
 /**

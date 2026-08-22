@@ -202,6 +202,21 @@ test("symbol scope resolves stored local relative labels", (t) => {
   t.is(assembler.symbolScope.findNextLabel("+", 0x1200), 0x1234);
 });
 
+test("symbol scope does not treat a suffix of the current sublabel as that sublabel", (t) => {
+  const assembler = new Assembler();
+  assembler.activateStage("resolveLayout");
+
+  assembler.currentTargetAddress = 0x01c0d9;
+  assembler.symbolScope.handleLabelDefinition("gm0f_run_level");
+  assembler.currentTargetAddress = 0x01c137;
+  assembler.symbolScope.handleLabelDefinition(".check_start_select");
+  assembler.currentTargetAddress = 0x01c14b;
+  assembler.symbolScope.handleLabelDefinition(".start_select");
+
+  assembler.currentParentLabel = "gm0f_run_level_check_start_select";
+  t.is(assembler.symbolScope.getLabelValue(".start_select", false), 0x01c14b);
+});
+
 test("symbol scope resolves nested sublabels through current parent", (t) => {
   const assembler = new Assembler();
 
@@ -349,7 +364,7 @@ test("symbol scope resolves namespaced local sibling labels without collapsing d
   assembler.currentParentLabel = "knife__E449_E44C";
 
   t.true(assembler.labelTable.has("knife__E449_E4CA"));
-  t.is(assembler.symbolScope.getLabelValue(".E4CA", false), assembler.labelTable.get("knife__E449_E4CA")?.value);
+  t.is(assembler.symbolScope.getLabelValue(".E4CA", false), assembler.labelTable.get("knife__E449_E4CA")?.value ?? 0);
 });
 
 test("symbol scope falls back to global labels when a namespace-local symbol is absent", (t) => {

@@ -70,4 +70,5 @@ fixtures/asar/tests/**/*.sfc
 fixtures/integration/**/SLIDE.sfc
 fixtures/integration/chou/chou-debug*.sfc
 fixtures/integration/chou/chou-seeded.sfc
+fixtures/integration/yoshisisland-disassembly/*.sfc
 Local Only/

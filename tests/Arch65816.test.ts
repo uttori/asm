@@ -44,8 +44,53 @@ test("Arch65816.estimateSize uses architecture-aware sizing", t => {
   t.is(arch.estimateSize(["ASL", "#3"]), 3, "Accumulator repeat pseudo-ops reserve one byte per repeat");
   t.is(arch.estimateSize(["INC"]), 1, "Bare accumulator INC should reserve one byte");
   t.is(arch.estimateSize(["DEC"]), 1, "Bare accumulator DEC should reserve one byte");
+  t.is(arch.estimateSize(["ASL", "A"]), 1, "ASL A is implied accumulator");
+  t.is(arch.estimateSize(["LDA", "[$00],y"]), 2, "Indirect long indexed is two bytes");
+  t.is(arch.estimateSize(["JML", "[$0000]"]), 3, "JML [$abs] is three bytes");
   assembler.currentTargetAddress = 0x048AFD;
   t.is(arch.estimateSize(["SBC", "_048AD3,X"]), 3, "Same-bank indexed labels should reserve absolute,X bytes");
+  assembler.currentTargetAddress = 0x01b487;
+  const tryResolveLabel = sinon.stub(assembler.operandResolver.deps, "tryResolveLabel");
+  tryResolveLabel.withArgs("raphael_mode7_matrix_a_d", false).returns(0x00e954);
+  t.teardown(() => tryResolveLabel.restore());
+  t.is(arch.estimateSize(["LDA", "raphael_mode7_matrix_a_d,x"]), 4, "Cross-bank bank-0 table labels should reserve long,X bytes");
+});
+
+test("Arch65816.encode uses abs,x for same-bank CMP table labels", t => {
+  const { assembler, arch } = createArch65816();
+  assembler.currentTargetAddress = 0x04fa46;
+  const tryResolveLabel = sinon.stub(assembler.operandResolver.deps, "tryResolveLabel");
+  tryResolveLabel.withArgs("level_with_ski_ids", false).returns(0x04fa31);
+  t.teardown(() => tryResolveLabel.restore());
+
+  t.true(arch.encode(["CMP", "level_with_ski_ids,x"]));
+  t.deepEqual(assembler.emitted, [0xdd, 0x31, 0xfa]);
+});
+
+test("Arch65816.estimateSize uses M/X flags for immediates after SEP/REP", t => {
+  const { arch } = createArch65816();
+  t.is(arch.estimateSize(["LDA", "#$00"]), 2);
+  t.is(arch.estimateSize(["REP", "#$20"]), 2);
+  t.is(arch.estimateSize(["LDA", "#$00"]), 2, "Hex immediates keep their spelling width");
+  t.is(arch.estimateSize(["LDA", "#(NMI&$FFFF)"]), 3, "Math immediates follow 16-bit A after REP #$20");
+});
+
+test("Arch65816.handleMemoryOperations encodes define-expanded DP indexed X", t => {
+  const { assembler, arch } = createArch65816();
+  assembler.optimizeDirectPage = false;
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.returns(0x78);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleMemoryOperations("LDA", "$78,x", 1, false, "$78,x"));
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xB5, 0x78]);
+  t.true(write2Stub.notCalled);
 });
 
 test("Arch65816.estimateInstruction consumes lowered operand metadata", t => {
@@ -342,8 +387,27 @@ test("Arch65816.handleBranchInstructions throws when short branches are out of r
 
   t.throws(() => {
     arch.handleBranchInstructions("BCC", "$8082");
-  }, { message: "Error: Branch target out of range (128)." });
+  }, { message: "Error: Branch target out of range (128) for BCC $8082 at $8000." });
   t.true(write1Stub.notCalled);
+  t.true(write2Stub.notCalled);
+});
+
+test("Arch65816.handleBranchInstructions treats 2-digit hex as a raw relative offset", t => {
+  const { assembler, arch } = createArch65816();
+  assembler.activateStage("emitProgram");
+  assembler.currentTargetAddress = 0x3cafe;
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("$08").returns(0x08);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleBranchInstructions("BNE", "$08"));
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0xD0, 0x08]);
   t.true(write2Stub.notCalled);
 });
 
@@ -907,6 +971,23 @@ test("Arch65816.handleStoreOperations encodes direct and indexed store modes", t
   t.true(arch.handleStoreOperations("STY", "$34,x", 1, false));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x86, 0x12, 0x94, 0x34]);
   t.true(write2Stub.notCalled);
+});
+
+test("Arch65816.handleStoreOperations encodes 3-digit hex as absolute STZ", t => {
+  const { assembler, arch } = createArch65816();
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("$CF7").returns(0xcf7);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(arch.handleStoreOperations("STZ", "$CF7", 2, false));
+  t.true(write1Stub.calledOnceWithExactly(0x9c));
+  t.true(write2Stub.calledOnceWithExactly(0xcf7));
 });
 
 test("Arch65816.handleStoreOperations encodes absolute indexed STZ", t => {
@@ -1894,7 +1975,7 @@ test("Arch65816.handleLogicAndCompareOperations covers long and stack-relative m
 
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x0F, 0x1F, 0x03, 0x34, 0x13, 0x56]);
   t.true(write2Stub.notCalled);
-  t.deepEqual(write3Stub.getCalls().map((call) => call.args[0]), [0, 0x123456]);
+  t.deepEqual(write3Stub.getCalls().map((call) => call.args[0]), [0x123456, 0x123456]);
 });
 
 test("Arch65816.handleMemoryOperations handles immediate and forced addressing", t => {

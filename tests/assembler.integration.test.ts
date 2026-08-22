@@ -52,6 +52,14 @@ const CHOU_SRC_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/Chou
 const CHOU_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/chou.sfc");
 const CHOU_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/test.sfc");
 
+const YOSHI_DIR = path.resolve(PROJECT_ROOT, "fixtures/integration/yoshisisland-disassembly");
+const YOSHI_SRC_PATH = path.resolve(YOSHI_DIR, "disassembly/assemble.asm");
+const YOSHI_EXPECTED_SHA256 = fs
+  .readFileSync(path.resolve(YOSHI_DIR, "yi.sha256sum"), "utf8")
+  .trim()
+  .split(/\s+/)[0]
+  .toLowerCase();
+
 const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
 const hashBuffer = (buffer: Buffer): string => createHash("sha256").update(buffer).digest("hex");
@@ -334,6 +342,14 @@ test("integration parity gates keep loop and conditional fixtures green", (t) =>
   t.true(conditionalResult.overallPassed, conditionalResult.failedChecks.join(", "));
 });
 
+test("integration SuperFX architecture fixture matches Asar golden", (t) => {
+  const result = compareFixture("arch-superfx", "staged");
+  t.true(
+    result.overallPassed,
+    `${result.failedChecks.join(", ")}${result.runError ? ` (${result.runError})` : ""}`,
+  );
+});
+
 test("integration parity gates keep staged and tree drivers byte-identical on key fixtures", (t) => {
   const fixtures = [
     "elseif",
@@ -343,6 +359,7 @@ test("integration parity gates keep staged and tree drivers byte-identical on ke
     "incsrcloop",
     "functest1",
     "v160features",
+    "arch-superfx",
   ];
   for (const fixtureName of fixtures) {
     const result = compareStagedVsTree(fixtureName);
@@ -360,6 +377,7 @@ test("integration parity gates keep legacy and tree drivers byte-identical on ke
     "includeonce",
     "functest1",
     "v160features",
+    "arch-superfx",
   ];
   for (const fixtureName of fixtures) {
     const legacy = assembleFixtureLegacy(fixtureName);
@@ -375,6 +393,7 @@ test("integration temporary legacy parity subset remains aligned with tree outpu
     "incsrcloop",
     "functest1",
     "v160features",
+    "arch-superfx",
   ];
   for (const fixtureName of fixtures) {
     const result = compareTreeVsLegacy(fixtureName);
@@ -393,6 +412,7 @@ test("integration tree-first golden gate for key fixtures", (t) => {
     "incsrcloop",
     "functest1",
     "v160features",
+    "arch-superfx",
   ];
   for (const fixtureName of fixtures) {
     const result = compareFixture(fixtureName, "tree");
@@ -523,6 +543,32 @@ test.serial("integration CHOU staged production path preserves include resolutio
   const targetRom = fs.existsSync(CHOU_TARGET_ROM_PATH) ? new Uint8Array(fs.readFileSync(CHOU_TARGET_ROM_PATH)) : undefined;
   const output = assembleSourceStaged(source, CHOU_SRC_PATH, targetRom, "simple");
   t.is(hashBuffer(output), hashBuffer(expected));
+});
+
+test.serial("integration YOSHI regression keeps legacy include flow byte-identical", (t) => {
+  t.timeout(30 * 60_000);
+  const source = fs.readFileSync(YOSHI_SRC_PATH, "utf8");
+  const assembler = new Assembler(undefined, { collectSourceMetadata: false });
+  assembler.setChecksumMode("asar");
+  assembler.setIncludePaths(["./", path.dirname(YOSHI_SRC_PATH)]);
+  assembler.setCurrentFile(YOSHI_SRC_PATH);
+  for (const stage of ASSEMBLY_STAGES) {
+    assembler.activateStage(stage);
+    const lines = source.split("\n");
+    for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.assembleblock(lines[lineNumber].trim());
+    }
+    assembler.finishPass();
+  }
+  t.is(hashBuffer(Buffer.from(assembler.getBinaryOutput())), YOSHI_EXPECTED_SHA256);
+});
+
+test.serial("integration YOSHI staged production path preserves include resolution", (t) => {
+  t.timeout(30 * 60_000);
+  const source = fs.readFileSync(YOSHI_SRC_PATH, "utf8");
+  const output = assembleSourceStaged(source, YOSHI_SRC_PATH, undefined, "asar");
+  t.is(hashBuffer(output), YOSHI_EXPECTED_SHA256);
 });
 
 for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {

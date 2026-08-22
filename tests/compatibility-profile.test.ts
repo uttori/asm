@@ -2,6 +2,7 @@ import { test } from "./ava-helper.js";
 import {
   applyMapperSelection,
   calculateHeaderChecksum,
+  encodeSuperFxMoveShortAddress,
   getChecksumHeaderOffset,
   shouldAutoCloseSpcblock,
   shouldEnableSpcInlineCompat,
@@ -24,4 +25,12 @@ test("ASAR checksum mode mirrors a non-power-of-two tail", t => {
   const rom = new Uint8Array([1, 2, 3, 4, 5, 6]);
   t.is(calculateHeaderChecksum(rom, "simple"), 21);
   t.is(calculateHeaderChecksum(rom, "asar"), 32);
+});
+
+test("Super FX auto-MOVE short address is hardware-correct unless Asar mode is selected", t => {
+  t.is(encodeSuperFxMoveShortAddress(0x40), 0x20);
+  t.is(encodeSuperFxMoveShortAddress(0x40, "hardware"), 0x20);
+  t.is(encodeSuperFxMoveShortAddress(0x40, "asar"), 0x40);
+  t.is(encodeSuperFxMoveShortAddress(0x00), 0x00);
+  t.is(encodeSuperFxMoveShortAddress(0x00, "asar"), 0x00);
 });

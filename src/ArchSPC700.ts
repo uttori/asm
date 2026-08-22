@@ -38,6 +38,69 @@ function getAddressSize(operand: string): number {
   return 2;
 }
 
+const IMPLIED_SPC_OPCODES: Record<string, true> = {
+  NOP: true,
+  BRK: true,
+  RET: true,
+  RETI: true,
+  CLRP: true,
+  SETP: true,
+  CLRC: true,
+  SETC: true,
+  EI: true,
+  DI: true,
+  CLRV: true,
+  NOTC: true,
+  SLEEP: true,
+  STOP: true,
+  XCN: true,
+};
+
+const SHIFT_INC_DEC_OPCODES: Record<string, true> = {
+  ASL: true,
+  LSR: true,
+  ROL: true,
+  ROR: true,
+  INC: true,
+  DEC: true,
+};
+
+const MOV_ONE_BYTE_PAIRS = new Set([
+  "X,A",
+  "A,X",
+  "X,SP",
+  "SP,X",
+  "A,Y",
+  "Y,A",
+  "(X+),A",
+  "A,(X+)",
+  "(X),A",
+  "A,(X)",
+]);
+
+/**
+ * Opcode plus a dp (1) or abs (2) operand.
+ * @param {string} operand Address operand spelling.
+ * @returns {number} Encoded size in bytes.
+ */
+function spcOpcodePlusAddressSize(operand: string): number {
+  if (getAddressSize(operand) === 1) {
+    return 2;
+  }
+  return 3;
+}
+
+/**
+ * True when both MOV operands are a 1-byte register/(X) form.
+ * @param {string} left Left operand.
+ * @param {string} right Right operand.
+ * @returns {boolean} True for 1-byte MOV pairs.
+ */
+function isMovRegisterPair(left: string, right: string): boolean {
+  const combined = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
+  return MOV_ONE_BYTE_PAIRS.has(combined);
+}
+
 /**
  * Checks if the operand is something like "A", "(X)", etc.
  * @param {string} op the operand
@@ -389,8 +452,13 @@ export class ArchSPC700 implements ArchitectureEncoder {
     if (words.length === 0) {
       return 0;
     }
-
-    return this.estimateResolvedInstruction(words[0], words.slice(1).join(" "));
+    const rawOperand = words.slice(1).join(" ").trim();
+    const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperands = parsedOperands.map((operand) =>
+      this.assembler.operandResolver.lowerOperand(operand),
+    );
+    return this.estimateResolvedInstruction(words[0], rawOperand, loweredOperand, loweredOperands);
   }
 
   /**
@@ -407,25 +475,184 @@ export class ArchSPC700 implements ArchitectureEncoder {
     loweredOperand?: LoweredOperand,
     loweredOperands: LoweredOperand[] = [],
   ): number {
-    let size = 1;
-    const opcode = mnemonic.toUpperCase();
-    const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const expandedOperand = firstLowered?.expanded ?? operandText;
-    if (expandedOperand) {
-      if (expandedOperand.startsWith("#")) {
-        size = 2;
-      } else if (
-        expandedOperand.includes("$") ||
-        loweredOperands.length > 1 ||
-        expandedOperand.includes(",")
-      ) {
-        size = 3;
+    let opcode = mnemonic.toUpperCase().trim();
+    const dotIndex = opcode.indexOf(".");
+    if (dotIndex !== -1) {
+      opcode = opcode.substring(0, dotIndex);
+    }
+
+    let operands: string[] = [];
+    if (loweredOperands.length > 0) {
+      operands = loweredOperands.map((operand) => operand.expanded);
+    } else if (operandText) {
+      operands = this.splitTopLevelComma(operandText);
+    }
+    operands = operands.filter((value) => value !== "");
+    const left = operands[0] ?? "";
+    const right = operands[1] ?? "";
+    const leftLowered = loweredOperands[0] ?? loweredOperand;
+    const rightLowered = loweredOperands[1];
+
+    if (operands.length === 0 && hasOwn(IMPLIED_SPC_OPCODES, opcode)) {
+      return 1;
+    }
+    if (opcode === "TCALL" || opcode === "PUSH" || opcode === "POP") {
+      return 1;
+    }
+    if ((opcode === "DAA" || opcode === "DAS") && left.toUpperCase() === "A") {
+      return 1;
+    }
+    if (opcode === "MUL" || opcode === "DIV") {
+      return 1;
+    }
+    if (hasOwn(branchOpcodes, opcode)) {
+      return 2;
+    }
+    if (hasOwn(bitSetClearOpcodes, opcode)) {
+      return 2;
+    }
+    if (hasOwn(bitBranchOpcodes, opcode)) {
+      return 3;
+    }
+    if (opcode === "CALL" || opcode === "JMP") {
+      return 3;
+    }
+    if (opcode === "PCALL") {
+      return 2;
+    }
+    if (opcode === "DBNZ") {
+      if (isRegisterY(left, leftLowered)) {
+        return 2;
       }
+      return 3;
     }
-    if (["JSL", "JML"].includes(opcode)) {
-      size = 4;
+    if (opcode === "CBNE") {
+      return 3;
     }
-    return size;
+    if (opcode === "TSET" || opcode === "TCLR") {
+      return 3;
+    }
+    if (opcode === "NOT1" || opcode === "MOV1" || hasOwn(bit1Opcodes, opcode)) {
+      return 3;
+    }
+    if (hasOwn(singleWordOps, opcode)) {
+      return 2;
+    }
+    if (hasOwn(wordOpsWithYaLeft, opcode) || hasOwn(wordOpsWithYaRight, opcode)) {
+      return 2;
+    }
+    if (hasOwn(SHIFT_INC_DEC_OPCODES, opcode)) {
+      const dest = left.toUpperCase();
+      if (dest === "A" || dest === "X" || dest === "Y") {
+        return 1;
+      }
+      const plusX = dest.endsWith("+X");
+      const base = plusX ? left.replace(/\+x$/i, "").trim() : left;
+      return spcOpcodePlusAddressSize(base);
+    }
+    if (opcode === "MOV") {
+      return this.estimateMovSize(left, right, leftLowered, rightLowered);
+    }
+    if (hasOwn(memOpTables, opcode)) {
+      return this.estimateMemoryOpSize(left, right, leftLowered, rightLowered);
+    }
+    return 1;
+  }
+
+  /**
+   * Encoded size for MOV. Must match {@link handleMovInstruction} / XY immediate forms.
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {number} Encoded size in bytes.
+   */
+  estimateMovSize(
+    left: string,
+    right: string,
+    leftLowered?: LoweredOperand,
+    rightLowered?: LoweredOperand,
+  ): number {
+    if (isMovRegisterPair(left, right)) {
+      return 1;
+    }
+    const rightImmediate = rightLowered?.immediate ?? right.trim().startsWith("#");
+    if (isRegisterX(left, leftLowered) && rightImmediate) {
+      return 2;
+    }
+    if (isRegisterY(left, leftLowered) && rightImmediate) {
+      return 2;
+    }
+    if (isAccumulator(left, leftLowered) && rightImmediate) {
+      return 2;
+    }
+    if (this.isDpOrAbs(left) && rightImmediate) {
+      return 3;
+    }
+    if (this.isDpOrAbs(left) && this.isDpOrAbs(right)) {
+      return 3;
+    }
+    if (/^\(\$[\da-f]+\)$/i.test(left) && /^\(\$[\da-f]+\)$/i.test(right)) {
+      return 3;
+    }
+    if (/\(\s*\$/.test(left) || /\(\s*\$/.test(right)) {
+      return 2;
+    }
+    const addressOperand = /\$/.test(left) ? left : right;
+    if (/\$/.test(addressOperand)) {
+      const plusIndex = addressOperand.search(/\+[xy]$/i);
+      let base = addressOperand;
+      if (plusIndex >= 0) {
+        base = addressOperand.slice(0, plusIndex);
+      }
+      return spcOpcodePlusAddressSize(base);
+    }
+    return 2;
+  }
+
+  /**
+   * Encoded size for ADC/AND/EOR/OR/SBC/CMP. Must match {@link handleMemoryInstruction}.
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {number} Encoded size in bytes.
+   */
+  estimateMemoryOpSize(
+    left: string,
+    right: string,
+    leftLowered?: LoweredOperand,
+    rightLowered?: LoweredOperand,
+  ): number {
+    if (isRegisterX(left, leftLowered) || isRegisterY(left, leftLowered)) {
+      if (rightLowered?.immediate ?? right.trim().startsWith("#")) {
+        return 2;
+      }
+      return spcOpcodePlusAddressSize(right);
+    }
+    if (isParenX(left, leftLowered) && isParenY(right, rightLowered)) {
+      return 1;
+    }
+    if (this.isDpOrAbs(left) && (rightLowered?.immediate ?? right.trim().startsWith("#"))) {
+      return 3;
+    }
+    if (this.isDpOrAbs(left) && this.isDpOrAbs(right)) {
+      return 3;
+    }
+    if (/^\(\$[\da-f]+\)$/i.test(left) && /^\(\$[\da-f]+\)$/i.test(right)) {
+      return 3;
+    }
+    if (isAccumulator(left, leftLowered)) {
+      const mode = this.classifySpc700Addressing(right, rightLowered).mode;
+      if (mode === "indirectX") {
+        return 1;
+      }
+      if (mode === "abs" || mode === "absX" || mode === "absY") {
+        return 3;
+      }
+      return 2;
+    }
+    return 2;
   }
 
   /**
@@ -979,17 +1206,19 @@ export class ArchSPC700 implements ArchitectureEncoder {
   }
 
   /**
-   * Writes dp or abs address (1 or 2 bytes) depending on getAddressSize
-   * @param {number} value - the value to write
+   * Writes a dp (1 byte) or abs (2 byte) address.
+   * Width follows the source spelling via `length`, not whether the value fits in 8 bits.
+   * `$0030` is absolute even though 0x30 is a direct-page number.
+   * @param {number} value Address to write.
+   * @param {number} length 1 for direct page, 2 for absolute.
    */
-  writeDpOrAbs(value: number) {
-    debug("writeDpOrAbs", value);
-    if (value <= 0xff) {
-      this.assembler.write1(value & 0xff);
-    } else {
-      this.assembler.write1(value & 0xff);
-      this.assembler.write1((value >> 8) & 0xff);
+  writeDpOrAbs(value: number, length: number) {
+    debug("writeDpOrAbs", { value, length });
+    this.assembler.write1(value & 0xff);
+    if (length <= 1) {
+      return;
     }
+    this.assembler.write1((value >> 8) & 0xff);
   }
 
   /**
@@ -1281,6 +1510,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
    * We'll handle that in handleTwoOperands.
    *
    * For "SETn $12 => 0x02 12" or "CLRn $12 => 0x12 12," that's one operand + the bit # is in the opcode name.
+   * Asar also accepts `SET1 $13.7` / `CLR1 $13.7`, where the bit comes from the operand.
    * @param {string} opcode - the opcode
    * @param {string} operand - the operand
    * @returns {boolean} true if the instruction was handled, false otherwise
@@ -1291,9 +1521,23 @@ export class ArchSPC700 implements ArchitectureEncoder {
     if (!hasOwn(bitSetClearOpcodes, normalizedOpcode)) {
       return false;
     }
-    const val = parseInt(operand.replace(/\$/g, ""), 16) & 0xff;
-    this.assembler.write1(bitSetClearOpcodes[normalizedOpcode]);
-    this.assembler.write1(val);
+    const trimmed = operand.trim();
+    const dotted = trimmed.match(/^\$([\da-f]+)\.([0-7])$/i);
+    let opcodeByte = bitSetClearOpcodes[normalizedOpcode];
+    let dp: number;
+    if (dotted) {
+      dp = parseInt(dotted[1], 16) & 0xff;
+      const bit = parseInt(dotted[2], 10);
+      let lowNibble = 0x12;
+      if (normalizedOpcode.startsWith("SET")) {
+        lowNibble = 0x02;
+      }
+      opcodeByte = (bit << 5) | lowNibble;
+    } else {
+      dp = parseInt(trimmed.replace(/\$/g, ""), 16) & 0xff;
+    }
+    this.assembler.write1(opcodeByte);
+    this.assembler.write1(dp);
     return true;
   }
 
@@ -1429,52 +1673,48 @@ export class ArchSPC700 implements ArchitectureEncoder {
   ): boolean {
     debug("handleDbnzCbne", { opcode, left, right });
 
-    // Calculate relative offset for the branch target
-    let offset: number;
+    const isYForm = opcode.toUpperCase() === "DBNZ" && isRegisterY(left, leftLowered);
+    let instructionSize = 3;
+    if (isYForm) {
+      instructionSize = 2;
+    }
+
     const target = this.assembler.operandResolver.getnum(right);
-    offset = target - (this.assembler.currentTargetAddress + 3);
+    const offset = target - (this.assembler.currentTargetAddress + instructionSize);
     debug("handleDbnzCbne offset", offset);
-    if (offset < -128 || offset > 127) {
+    if (this.assembler.enforceResolvedLabels && (offset < -128 || offset > 127)) {
       throw this.assembler.diagnostics.error(`Branch target out of range (${offset})`);
     }
-    offset &= 0xff;
+    const storedOffset = offset & 0xff;
 
     if (opcode.toUpperCase() === "DBNZ") {
-      if (isRegisterY(left, leftLowered)) {
-        // DBNZ Y, label => 0xFE offset
+      if (isYForm) {
         this.assembler.write1(0xfe);
-        // +1 because the branch instruction is 1 byte and we already wrote the opcode
-        this.assembler.write1(offset + 1);
-        return true;
-      } else {
-        // DBNZ $dp, label => 0x6E dp offset
-        const val = parseInt(left.replace(/\$/g, ""), 16) & 0xff;
-        this.assembler.write1(0x6e);
-        this.assembler.write1(val);
-        this.assembler.write1(offset);
+        this.assembler.write1(storedOffset);
         return true;
       }
+      const val = parseInt(left.replace(/\$/g, ""), 16) & 0xff;
+      this.assembler.write1(0x6e);
+      this.assembler.write1(val);
+      this.assembler.write1(storedOffset);
+      return true;
     }
 
-    // CBNE => if left= $dp+X => 0xDE dp offset, else $dp => 0x2E dp offset
     if (opcode.toUpperCase() === "CBNE") {
       const upper = left.toUpperCase();
       if (leftLowered?.mode === "directPageIndexedX" || upper.endsWith("+X")) {
-        // e.g. "CBNE $12+X,label => DE 12 offset"
         const base = upper.replace(/\+X$/, "").trim();
         const val = parseInt(base.replace(/\$/g, ""), 16) & 0xff;
         this.assembler.write1(0xde);
         this.assembler.write1(val);
-        this.assembler.write1(offset);
-        return true;
-      } else {
-        // e.g. "CBNE $12,label => 2E 12 offset"
-        const val = parseInt(upper.replace(/\$/g, ""), 16) & 0xff;
-        this.assembler.write1(0x2e);
-        this.assembler.write1(val);
-        this.assembler.write1(offset);
+        this.assembler.write1(storedOffset);
         return true;
       }
+      const val = parseInt(upper.replace(/\$/g, ""), 16) & 0xff;
+      this.assembler.write1(0x2e);
+      this.assembler.write1(val);
+      this.assembler.write1(storedOffset);
+      return true;
     }
 
     return false;
@@ -2025,8 +2265,12 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const rightRegister = right.trim().toUpperCase();
       const modes = leftIndexedOpcodes[rightRegister]?.[leftIndexed.index];
       if (modes) {
-        this.assembler.write1(leftIndexed.length === 1 ? modes.dp : modes.abs);
-        this.writeDpOrAbs(leftIndexed.value);
+        let opcode = modes.abs;
+        if (leftIndexed.length === 1) {
+          opcode = modes.dp;
+        }
+        this.assembler.write1(opcode);
+        this.writeDpOrAbs(leftIndexed.value, leftIndexed.length);
         return true;
       }
     }
@@ -2044,8 +2288,12 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const leftRegister = left.trim().toUpperCase();
       const modes = rightIndexedOpcodes[leftRegister]?.[rightIndexed.index];
       if (modes) {
-        this.assembler.write1(rightIndexed.length === 1 ? modes.dp : modes.abs);
-        this.writeDpOrAbs(rightIndexed.value);
+        let opcode = modes.abs;
+        if (rightIndexed.length === 1) {
+          opcode = modes.dp;
+        }
+        this.assembler.write1(opcode);
+        this.writeDpOrAbs(rightIndexed.value, rightIndexed.length);
         return true;
       }
     }
@@ -2082,9 +2330,13 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const m = combined.match(p.regex);
       if (m) {
         const val = parseInt(m[1], 16) & 0xffff;
-        const op = getAddressSize("$" + m[1]) === 1 ? p.opcodeDp : p.opcodeAbs;
+        const length = getAddressSize("$" + m[1]);
+        let op = p.opcodeAbs;
+        if (length === 1) {
+          op = p.opcodeDp;
+        }
         this.assembler.write1(op);
-        this.writeDpOrAbs(val);
+        this.writeDpOrAbs(val, length);
         return true;
       }
     }
@@ -2120,9 +2372,13 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const m = combined.match(p.regex);
       if (m) {
         const val = parseInt(m[1], 16) & 0xffff;
-        const op = getAddressSize("$" + m[1]) === 1 ? p.opcodeDp : p.opcodeAbs;
+        const length = getAddressSize("$" + m[1]);
+        let op = p.opcodeAbs;
+        if (length === 1) {
+          op = p.opcodeDp;
+        }
         this.assembler.write1(op);
-        this.writeDpOrAbs(val);
+        this.writeDpOrAbs(val, length);
         return true;
       }
     }
@@ -2167,9 +2423,13 @@ export class ArchSPC700 implements ArchitectureEncoder {
       const m = combined.match(p.regex);
       if (m) {
         const val = parseInt(m[1], 16) & 0xffff;
-        const op = getAddressSize("$" + m[1]) === 1 ? p.opcodeDp : p.opcodeAbs;
+        const length = getAddressSize("$" + m[1]);
+        let op = p.opcodeAbs;
+        if (length === 1) {
+          op = p.opcodeDp;
+        }
         this.assembler.write1(op);
-        this.writeDpOrAbs(val);
+        this.writeDpOrAbs(val, length);
         return true;
       }
     }

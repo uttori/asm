@@ -63,6 +63,29 @@ export const isFreespaceAvailable = (mapper: string): boolean => mapper !== "nor
 export type ChecksumMode = "asar" | "simple";
 
 /**
+ * Super FX `MOVE Rn, (xx)` / `MOVE (xx), Rn` short-form address encoding.
+ * Hardware LMS/SMS store a word index (`addr >> 1`). Asar writes the raw byte
+ * (`addr & 0xff`). `$00` is identical either way; `$40` is `$20` vs `$40`.
+ */
+export type SuperFxMoveShortAddressMode = "hardware" | "asar";
+
+/**
+ * Encodes the LMS/SMS operand byte for Super FX auto-MOVE short addressing.
+ * @param {number} addrVal RAM byte address, already known to be even and `< $200`.
+ * @param {SuperFxMoveShortAddressMode} [mode] Encoding policy. Defaults to hardware.
+ * @returns {number} The byte stored after `A0+Rn`.
+ */
+export const encodeSuperFxMoveShortAddress = (
+  addrVal: number,
+  mode: SuperFxMoveShortAddressMode = "hardware",
+): number => {
+  if (mode === "asar") {
+    return addrVal & 0xff;
+  }
+  return (addrVal >> 1) & 0xff;
+};
+
+/**
  * Resolves the SNES header offset used by the compatibility checksum writer.
  * @param {string} mapper Canonical mapper name.
  * @returns {number} ROM offset of the header.

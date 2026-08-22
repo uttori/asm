@@ -229,6 +229,12 @@ export function isBareLabelReference(input: string): boolean {
     return false;
   }
 
+  // CPU register names are operands, not labels. Collapsing `A` to `0` during
+  // collectDefinitions made `ASL A` look like a 3-byte memory shift.
+  if (/^(a|x|y|ya|sp|s|c|r\d{1,2})$/i.test(input)) {
+    return false;
+  }
+
   let numericOnly = true;
   for (const char of input) {
     if (char < "0" || char > "9") {

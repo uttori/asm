@@ -91,6 +91,54 @@ export class OperandResolver {
   }
 
   /**
+   * True when the source wrote a label (or label math) indexed by X, not a hex
+   * or define spelling. Bank 0 labels stringify to 4 hex digits, so numeric
+   * magnitude cannot distinguish abs,x from long,x.
+   * @param {string} operand The raw source operand.
+   * @returns {boolean} True if the operand is a `label,x` form.
+   */
+  isIndexedXLabelOperand(operand: string): boolean {
+    const raw = operand.trim();
+    if (!/,\s*x$/i.test(raw)) {
+      return false;
+    }
+    const base = raw.replace(/,\s*x$/i, "").trim();
+    if (!base) {
+      return false;
+    }
+    if (/^[\d!#$%(]/.test(base) || base.startsWith("[")) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Sizes `label,x` by SNES bank: same bank is abs,x (2), any other bank —
+   * including `$00xxxx` — is long,x (3).
+   * @param {string} operand The raw source operand.
+   * @param {string} expanded The resolved operand text.
+   * @param {number} expectedLength The length selected from numeric spelling.
+   * @returns {number} Operand width in bytes (2 for abs,x, 3 for long,x).
+   */
+  applyIndexedXLabelBankWidth(operand: string, expanded: string, expectedLength: number): number {
+    if (!this.isIndexedXLabelOperand(operand)) {
+      return expectedLength;
+    }
+    // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
+    const match = expanded.trim().match(/^\$([\da-f]+)\s*,\s*x$/i);
+    if (!match) {
+      return expectedLength;
+    }
+    const value = parseInt(match[1], 16);
+    const currentBank = (this.deps.getCurrentAddress() >>> 16) & 0xff;
+    const targetBank = (value >>> 16) & 0xff;
+    if (currentBank === targetBank) {
+      return 2;
+    }
+    return 3;
+  }
+
+  /**
    * Resolves arithmetic token.
    * @param {string} token The token.
    * @returns {number} The result.
@@ -491,10 +539,12 @@ export class OperandResolver {
 
     // Labels like `_048AD3,X` often resolve to a 24-bit numeric address, but
     // still target data in the current bank. Preserve the shorter absolute form
-    // unless the source explicitly forced a long operand.
-    if (expectedLength === 3 && this.isSameBankAddress(expanded)) {
+    // unless the source explicitly wrote a 5–6 digit hex literal (`$007972`).
+    const explicitLongHex = /^\$[\da-f]{5,6}(?:\s*,\s*[xy])?$/i.test(operand.trim());
+    if (expectedLength === 3 && !explicitLongHex && this.isSameBankAddress(expanded)) {
       expectedLength = 2;
     }
+    expectedLength = this.applyIndexedXLabelBankWidth(operand, expanded, expectedLength);
 
     return { expanded, length: expectedLength };
   }

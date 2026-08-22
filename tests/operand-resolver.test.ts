@@ -303,6 +303,21 @@ test("lowerOperand - keeps resolved 24-bit indexed X operands long", t => {
   t.is(lowered.indexRegister, "x");
 });
 
+test("lowerOperand - shortens same-bank 24-bit indexed X labels", t => {
+  const tryResolveLabel = sinon.stub().withArgs("save_file_ptr", false).returns(0x108012);
+  const resolver = createResolver({
+    tryResolveLabel,
+    getCurrentAddress: () => 0x10801a,
+  });
+
+  const lowered = resolver.lowerOperand("save_file_ptr,x");
+
+  t.is(lowered.expanded, "$108012,x");
+  t.is(lowered.length, 2);
+  t.is(lowered.mode, "absoluteIndexedX");
+  t.is(lowered.indexRegister, "x");
+});
+
 test("lowerOperand - shortens same-bank resolved indexed X operands", t => {
   const tryResolveLabel = sinon.stub().withArgs("_048AD3", false).returns(0x048AD3);
   const resolver = createResolver({
@@ -317,6 +332,91 @@ test("lowerOperand - shortens same-bank resolved indexed X operands", t => {
   t.is(lowered.mode, "absoluteIndexedX");
   t.is(lowered.baseExpression, "$48AD3");
   t.is(lowered.indexRegister, "x");
+});
+
+test("lowerOperand - keeps bank-0 indexed X labels long from another bank", t => {
+  const tryResolveLabel = sinon.stub().withArgs("raphael_mode7_matrix_a_d", false).returns(0x00e954);
+  const resolver = createResolver({
+    tryResolveLabel,
+    getCurrentAddress: () => 0x01b487,
+  });
+
+  const lowered = resolver.lowerOperand("raphael_mode7_matrix_a_d,x");
+
+  t.is(lowered.expanded, "$E954,x");
+  t.is(lowered.length, 3);
+  t.is(lowered.mode, "absoluteLongIndexedX");
+  t.is(lowered.indexRegister, "x");
+});
+
+test("lowerOperand - keeps bank-0 indexed X labels absolute in bank 0", t => {
+  const tryResolveLabel = sinon.stub().withArgs("raphael_mode7_matrix_a_d", false).returns(0x00e954);
+  const resolver = createResolver({
+    tryResolveLabel,
+    getCurrentAddress: () => 0x008000,
+  });
+
+  const lowered = resolver.lowerOperand("raphael_mode7_matrix_a_d,x");
+
+  t.is(lowered.expanded, "$E954,x");
+  t.is(lowered.length, 2);
+  t.is(lowered.mode, "absoluteIndexedX");
+  t.is(lowered.indexRegister, "x");
+});
+
+test("lowerOperand - keeps 4-digit hex indexed X absolute even from another bank", t => {
+  const resolver = createResolver({
+    getCurrentAddress: () => 0x01b487,
+  });
+
+  const lowered = resolver.lowerOperand("$E954,x");
+
+  t.is(lowered.length, 2);
+  t.is(lowered.mode, "absoluteIndexedX");
+});
+
+test("lowerOperand - dp-range labels are not explicit direct page", t => {
+  const tryResolveLabel = sinon.stub().withArgs("sprite_yspeed", false).returns(0x07);
+  const resolver = createResolver({ tryResolveLabel });
+
+  const lowered = resolver.lowerOperand("sprite_yspeed");
+
+  t.is(lowered.expanded, "$7");
+  t.false(lowered.explicitDirectPage);
+});
+
+test("lowerOperand - two-digit hex is explicit direct page", t => {
+  const resolver = createResolver();
+  const lowered = resolver.lowerOperand("$07");
+
+  t.is(lowered.expanded, "$07");
+  t.true(lowered.explicitDirectPage);
+});
+
+test("lowerOperand - define-expanded two-digit hex is explicit direct page", t => {
+  const resolver = createResolver({
+    resolveDefines: (input) => input.replaceAll("!s_spr_wildcard_5_lo_dp", "$76"),
+  });
+
+  const dp = resolver.lowerOperand("!s_spr_wildcard_5_lo_dp");
+  t.is(dp.expanded, "$76");
+  t.true(dp.explicitDirectPage);
+
+  const indexed = resolver.lowerOperand("!s_spr_wildcard_5_lo_dp,x");
+  t.is(indexed.expanded, "$76,x");
+  t.true(indexed.explicitDirectPageIndexedX);
+});
+
+test("lowerOperand - keeps explicit 6-digit hex long even in the current bank", t => {
+  const resolver = createResolver({
+    getCurrentAddress: () => 0x00E12A,
+  });
+
+  const lowered = resolver.lowerOperand("$007972");
+
+  t.is(lowered.expanded, "$007972");
+  t.is(lowered.length, 3);
+  t.is(lowered.mode, "absoluteLong");
 });
 
 test("lowerOperand - collapses immediate bitmask expressions to operand width", t => {

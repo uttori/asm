@@ -157,7 +157,8 @@ The language is intentionally close to Asar. See [`fixtures/asar/tests`](fixture
 
 This project targets practical Asar compatibility, but it is not yet a complete
 drop-in replacement for every Asar feature. The main fixture suite and the
-slideshow and Chou Makaimura integration projects are used as byte-parity gates.
+slideshow, Chou Makaimura, and Yoshi's Island (Super FX) integration projects
+are used as byte-parity gates.
 Known unsupported or deferred syntax is retained under
 [`fixtures/asar/tests/Unsupported`](fixtures/asar/tests/Unsupported) so the
 boundary remains visible.
@@ -165,7 +166,9 @@ boundary remains visible.
 Compatibility-specific policy is centralized in
 [`src/compatibility/asar-compatibility-profile.ts`](src/compatibility/asar-compatibility-profile.ts),
 including checksum selection, mapper behavior, freespace availability, inline
-SPC behavior, and intentional no-op directives.
+SPC behavior, intentional no-op directives, and Super FX auto-MOVE short-address
+encoding (hardware word-index by default; Asar's raw-byte form via
+`setAsarSuperFxMoveShortAddress(true)`).
 
 ## Language Server
 
@@ -261,12 +264,6 @@ The production assembler uses one lowered execution pipeline for commands,
 loops, conditionals, and includes. Directive effects and architecture encoders
 are separated behind focused capability contracts, and the assembler and editor
 features consume the same analysis artifacts.
-
-The next optimization work should be measurement-led. Candidate areas include
-expression caching, include memoization, cheaper pass-program cache keys, and
-incremental language-server re-analysis. A public directive/architecture plugin
-API is intentionally deferred until lifecycle, isolation, collision, versioning,
-and analysis contracts are explicit.
 
 ## License
 

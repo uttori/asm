@@ -542,13 +542,23 @@ export class SymbolScopeService {
       const candidates = new Set<string>();
       const nestedLocalParts = localName.split("_").filter(Boolean);
       const hierarchyChain = this.getHierarchyChain(this.host.currentParentLabel);
-
-      if (dotCount === 1 && this.host.currentParentLabel.endsWith(`_${localName}`)) {
-        candidates.add(this.host.currentParentLabel);
+      let currentLocalName: string | undefined;
+      if (hierarchyChain.length >= 2) {
+        const parentPrefix = `${hierarchyChain[hierarchyChain.length - 2]}_`;
+        if (this.host.currentParentLabel.startsWith(parentPrefix)) {
+          currentLocalName = this.host.currentParentLabel.slice(parentPrefix.length);
+        }
       }
 
+      const addCandidate = (candidate: string): void => {
+        if (candidate === this.host.currentParentLabel && currentLocalName !== localName) {
+          return;
+        }
+        candidates.add(candidate);
+      };
+
       const addExactLocalCandidate = (parentPrefix: string): void => {
-        candidates.add(`${parentPrefix}_${localName}`);
+        addCandidate(`${parentPrefix}_${localName}`);
       };
 
       const addShortenedLocalCandidates = (parentPrefix: string): void => {
@@ -557,7 +567,7 @@ export class SymbolScopeService {
         // both a legal label character and our hierarchy separator, also try
         // progressively shorter local tails against ancestor prefixes.
         for (let i = 1; i < nestedLocalParts.length; i++) {
-          candidates.add(`${parentPrefix}_${nestedLocalParts.slice(i).join("_")}`);
+          addCandidate(`${parentPrefix}_${nestedLocalParts.slice(i).join("_")}`);
         }
       };
 

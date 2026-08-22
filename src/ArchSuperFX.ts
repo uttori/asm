@@ -7,6 +7,10 @@ import {
   type LoweredInstruction,
   type LoweredOperand,
 } from "./architecture-types.js";
+import {
+  encodeSuperFxMoveShortAddress,
+  type SuperFxMoveShortAddressMode,
+} from "./compatibility/asar-compatibility-profile.js";
 import { superFxCatalog } from "./lsp/instruction-catalog.js";
 
 let debug = (..._: unknown[]) => {};
@@ -17,6 +21,191 @@ try {
 
 const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
   Object.hasOwn(obj, key);
+
+const ALT1 = 0x3d;
+const ALT2 = 0x3e;
+const ALT3 = 0x3f;
+
+/**
+ * Super FX (GSU) encoding notes
+ *
+ * Most ALU ops overlay the same 50-CF group. ALT prefixes pick the variant:
+ *   none  Rn     ADD/SUB/AND/MULT/OR
+ *   3D    ALT1   ADC/SBC/BIC/UMULT/XOR, plus STB/LDB, RPIX, CMODE, DIV2, LMULT
+ *   3E    ALT2   ADD/SUB/AND/MULT/OR #n, SM/SMS, RAMB
+ *   3F    ALT3   ADC/BIC/UMULT/XOR #n, CMP Rn, ROMB
+ *
+ * AND R0 / OR R0 are MERGE / HIB, so AND/OR/BIC/XOR require R1-R15.
+ * LDB/STB/LDW/STW occupy 30-3B / 40-4B, so pointer registers are R0-R11.
+ */
+type ImpliedOpcode =
+  | "STOP"
+  | "NOP"
+  | "CACHE"
+  | "LSR"
+  | "ROL"
+  | "LOOP"
+  | "ALT1"
+  | "ALT2"
+  | "ALT3"
+  | "PLOT"
+  | "SWAP"
+  | "COLOR"
+  | "NOT"
+  | "MERGE"
+  | "SBK"
+  | "SEX"
+  | "ASR"
+  | "ROR"
+  | "LOB"
+  | "FMULT"
+  | "HIB"
+  | "GETC"
+  | "GETB";
+
+const IMPLIED_OPCODES: Record<ImpliedOpcode, number> = {
+  STOP: 0x00,
+  NOP: 0x01,
+  CACHE: 0x02,
+  LSR: 0x03,
+  ROL: 0x04,
+  LOOP: 0x3c,
+  ALT1: ALT1,
+  ALT2: ALT2,
+  ALT3: ALT3,
+  PLOT: 0x4c,
+  SWAP: 0x4d,
+  COLOR: 0x4e,
+  NOT: 0x4f,
+  MERGE: 0x70,
+  SBK: 0x90,
+  SEX: 0x95,
+  ASR: 0x96,
+  ROR: 0x97,
+  LOB: 0x9e,
+  FMULT: 0x9f,
+  HIB: 0xc0,
+  GETC: 0xdf,
+  GETB: 0xef,
+};
+
+const PREFIXED_OPCODES: Record<string, { prefix: number; opcode: number }> = {
+  RPIX: { prefix: ALT1, opcode: 0x4c },
+  CMODE: { prefix: ALT1, opcode: 0x4e },
+  DIV2: { prefix: ALT1, opcode: 0x96 },
+  LMULT: { prefix: ALT1, opcode: 0x9f },
+  GETBH: { prefix: ALT1, opcode: 0xef },
+  RAMB: { prefix: ALT2, opcode: 0xdf },
+  GETBL: { prefix: ALT2, opcode: 0xef },
+  ROMB: { prefix: ALT3, opcode: 0xdf },
+  GETBS: { prefix: ALT3, opcode: 0xef },
+};
+
+type ShortBranchOpcode =
+  | "BRA"
+  | "BGE"
+  | "BLT"
+  | "BNE"
+  | "BEQ"
+  | "BPL"
+  | "BMI"
+  | "BCC"
+  | "BCS"
+  | "BVC"
+  | "BVS";
+
+const SHORT_BRANCH_OPCODES: Record<ShortBranchOpcode, number> = {
+  BRA: 0x05,
+  BGE: 0x06,
+  BLT: 0x07,
+  BNE: 0x08,
+  BEQ: 0x09,
+  BPL: 0x0a,
+  BMI: 0x0b,
+  BCC: 0x0c,
+  BCS: 0x0d,
+  BVC: 0x0e,
+  BVS: 0x0f,
+};
+
+type RegisterOpEncoding = {
+  prefix?: number;
+  base: number;
+  min?: number;
+  max?: number;
+};
+
+const REGISTER_OPS: Record<string, RegisterOpEncoding> = {
+  TO: { base: 0x10 },
+  WITH: { base: 0x20 },
+  ADD: { base: 0x50 },
+  SUB: { base: 0x60 },
+  AND: { base: 0x70, min: 1, max: 15 },
+  MULT: { base: 0x80 },
+  JMP: { base: 0x90, min: 8, max: 13 },
+  FROM: { base: 0xb0 },
+  OR: { base: 0xc0, min: 1, max: 15 },
+  INC: { base: 0xd0, min: 0, max: 14 },
+  DEC: { base: 0xe0, min: 0, max: 14 },
+  ADC: { prefix: ALT1, base: 0x50 },
+  SBC: { prefix: ALT1, base: 0x60 },
+  BIC: { prefix: ALT1, base: 0x70, min: 1, max: 15 },
+  UMULT: { prefix: ALT1, base: 0x80 },
+  LJMP: { prefix: ALT1, base: 0x90, min: 8, max: 13 },
+  XOR: { prefix: ALT1, base: 0xc0, min: 1, max: 15 },
+  CMP: { prefix: ALT3, base: 0x60 },
+};
+
+const IMMEDIATE_OPS: Record<string, RegisterOpEncoding> = {
+  LINK: { base: 0x90, min: 1, max: 4 },
+  ADD: { prefix: ALT2, base: 0x50 },
+  SUB: { prefix: ALT2, base: 0x60 },
+  AND: { prefix: ALT2, base: 0x70, min: 1, max: 15 },
+  MULT: { prefix: ALT2, base: 0x80 },
+  OR: { prefix: ALT2, base: 0xc0, min: 1, max: 15 },
+  ADC: { prefix: ALT3, base: 0x50 },
+  BIC: { prefix: ALT3, base: 0x70, min: 1, max: 15 },
+  UMULT: { prefix: ALT3, base: 0x80 },
+  XOR: { prefix: ALT3, base: 0xc0, min: 1, max: 15 },
+};
+
+const INDIRECT_OPS: Record<string, RegisterOpEncoding> = {
+  STW: { base: 0x30, min: 0, max: 11 },
+  LDW: { base: 0x40, min: 0, max: 11 },
+  STB: { prefix: ALT1, base: 0x30, min: 0, max: 11 },
+  LDB: { prefix: ALT1, base: 0x40, min: 0, max: 11 },
+};
+
+/**
+ * Returns 1 for a bare opcode byte, 2 when an ALT prefix is present.
+ * @param {RegisterOpEncoding} encoding The encoding table entry.
+ * @returns {number} Encoded size in bytes.
+ */
+const encodedOpSize = (encoding: RegisterOpEncoding): number => {
+  if (encoding.prefix === undefined) {
+    return 1;
+  }
+  return 2;
+};
+
+/**
+ * True when a 16-bit immediate fits in a signed byte, so MOVE can use IBT.
+ * `$FF` does not qualify; `$FF80`–`$FFFF` do.
+ * @param {number} value The immediate value.
+ * @returns {boolean} True if IBT can encode the value.
+ */
+const fitsSignedByte = (value: number): boolean => {
+  const imm = value & 0xffff;
+  return imm < 0x80 || imm >= 0xff80;
+};
+
+/**
+ * LMS/SMS short form: even RAM byte address in `$000`–`$1FE`.
+ * Auto-MOVE uses this opcode too; the stored byte is {@link encodeSuperFxMoveShortAddress}.
+ * @param {number} addrVal The RAM byte address.
+ * @returns {boolean} True if the address fits the short form.
+ */
+const isShortRamAddress = (addrVal: number): boolean => (addrVal & 1) === 0 && addrVal < 0x200;
 
 export class ArchSuperFX implements ArchitectureEncoder {
   assembler: EncoderRuntime;
@@ -34,24 +223,24 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Estimates instruction.
+   * Estimates instruction size from a lowered instruction.
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes.
    */
   estimateInstruction(instruction: LoweredInstruction): number {
     const loweredOperands = instruction.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
       instruction.mnemonic,
-      instruction.operandText,
+      instruction.operands,
       instruction.loweredOperand,
       loweredOperands,
     );
   }
 
   /**
-   * Encodes instruction.
+   * Encodes a lowered instruction.
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {boolean} The result.
+   * @returns {boolean} True if the instruction was encoded.
    */
   encodeInstruction(instruction: LoweredInstruction): boolean {
     const loweredOperands = instruction.loweredOperands ?? [];
@@ -64,50 +253,163 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Estimates size.
+   * Estimates size from tokenized words.
    * @param {string[]} words The words.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes.
    */
   estimateSize(words: string[]): number {
     if (words.length === 0) {
       return 0;
     }
-    return this.estimateResolvedInstruction(words[0], words.slice(1).join(" "));
+    const { opcode, operands, rawOperand } = this.parseInstructionWords(words);
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperands = operands.map((operand) =>
+      this.assembler.operandResolver.lowerOperand(operand),
+    );
+    return this.estimateResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
 
   /**
-   * Estimates resolved instruction.
+   * Estimates encoded size. Must match {@link encodeResolvedInstruction} byte counts
+   * so layout `step()` stays in sync with emit.
    * @param {string} mnemonic The mnemonic.
-   * @param {string} operandText The operand text.
-   * @param {LoweredOperand} [loweredOperand] The lowered operand.
-   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-   * @returns {number} The result.
+   * @param {string[]} operands The operands.
+   * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+   * @returns {number} Encoded size in bytes.
    */
   estimateResolvedInstruction(
     mnemonic: string,
-    operandText: string,
+    operands: string[],
     loweredOperand?: LoweredOperand,
     loweredOperands: LoweredOperand[] = [],
   ): number {
     const opcode = mnemonic.toUpperCase();
-    let size = 1;
+    if (hasOwn(IMPLIED_OPCODES, opcode)) {
+      return 1;
+    }
+    if (hasOwn(PREFIXED_OPCODES, opcode)) {
+      return 2;
+    }
+
     const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const expandedOperand = firstLowered?.expanded ?? operandText;
-    if (expandedOperand) {
-      if (expandedOperand.startsWith("#")) {
-        size = 2;
-      } else if (
-        expandedOperand.includes("$") ||
-        loweredOperands.length > 1 ||
-        expandedOperand.includes(",")
-      ) {
-        size = 3;
+    const secondLowered = loweredOperands[1];
+    const leftOp = firstLowered?.expanded ?? operands[0] ?? "";
+    const rightOp = secondLowered?.expanded ?? operands[1] ?? "";
+
+    if (operands.length <= 1 && hasOwn(SHORT_BRANCH_OPCODES, opcode)) {
+      return 2;
+    }
+
+    if (operands.length <= 1) {
+      const regR = this.resolveRegister(leftOp, firstLowered, "r");
+      if (regR !== null && hasOwn(REGISTER_OPS, opcode)) {
+        return encodedOpSize(REGISTER_OPS[opcode]);
+      }
+      const regHash = this.resolveRegister(leftOp, firstLowered, "hash");
+      if (regHash !== null && hasOwn(IMMEDIATE_OPS, opcode)) {
+        return encodedOpSize(IMMEDIATE_OPS[opcode]);
+      }
+      const regParr = this.resolveRegister(leftOp, firstLowered, "parr");
+      if (regParr !== null && hasOwn(INDIRECT_OPS, opcode)) {
+        return encodedOpSize(INDIRECT_OPS[opcode]);
+      }
+      return 1;
+    }
+
+    if (operands.length !== 2) {
+      return 1;
+    }
+
+    const reg1r = this.resolveRegister(leftOp, firstLowered, "r");
+    const reg1parr = this.resolveRegister(leftOp, firstLowered, "parr");
+    const reg2r = this.resolveRegister(rightOp, secondLowered, "r");
+    const reg2parr = this.resolveRegister(rightOp, secondLowered, "parr");
+
+    if (reg1r !== null && reg2r !== null) {
+      if (opcode === "MOVE" || opcode === "MOVES") {
+        return 2;
       }
     }
-    if (["JSL", "JML"].includes(opcode)) {
-      size = 4;
+
+    if (reg1r !== null && (secondLowered?.immediate ?? rightOp.startsWith("#"))) {
+      if (opcode === "IBT") {
+        return 2;
+      }
+      if (opcode === "IWT") {
+        return 3;
+      }
+      if (opcode === "MOVE") {
+        const immediateExpression = secondLowered?.baseExpression ?? rightOp.slice(1);
+        const immVal = this.tryGetNumber(immediateExpression);
+        if (immVal !== undefined && fitsSignedByte(immVal)) {
+          return 2;
+        }
+        return 3;
+      }
     }
-    return size;
+
+    if (reg1parr !== null && reg2r !== null) {
+      if (opcode === "MOVEB") {
+        return reg1parr === 0 ? 2 : 3;
+      }
+      if (opcode === "MOVEW") {
+        return reg1parr === 0 ? 1 : 2;
+      }
+    }
+
+    if (reg1r !== null && reg2parr !== null) {
+      if (opcode === "MOVEB") {
+        return reg1r === 0 ? 2 : 3;
+      }
+      if (opcode === "MOVEW") {
+        return reg1r === 0 ? 1 : 2;
+      }
+    }
+
+    if (reg1r !== null) {
+      if (opcode === "LM") {
+        return 4;
+      }
+      if (opcode === "LMS") {
+        return 3;
+      }
+      if (opcode === "LEA") {
+        return 3;
+      }
+      if (opcode === "MOVE") {
+        const addressExpression = secondLowered?.baseExpression ?? rightOp;
+        const addrVal = this.tryGetNumber(addressExpression);
+        if (addrVal !== undefined && isShortRamAddress(addrVal)) {
+          return 3;
+        }
+        return 4;
+      }
+    }
+
+    const leftIsRegisterIndirect = firstLowered?.mode === "registerIndirect";
+    if (
+      reg2r !== null &&
+      !leftIsRegisterIndirect &&
+      (firstLowered?.indirect ?? (leftOp.startsWith("(") && leftOp.endsWith(")")))
+    ) {
+      if (opcode === "SM") {
+        return 4;
+      }
+      if (opcode === "SMS") {
+        return 3;
+      }
+      if (opcode === "MOVE") {
+        const addressExpression = firstLowered?.baseExpression ?? leftOp;
+        const addrVal = this.tryGetNumber(addressExpression);
+        if (addrVal !== undefined && isShortRamAddress(addrVal)) {
+          return 3;
+        }
+        return 4;
+      }
+    }
+
+    return 1;
   }
 
   /**
@@ -121,26 +423,24 @@ export class ArchSuperFX implements ArchitectureEncoder {
       return false;
     }
 
-    const opcode = words[0];
-    const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
-    const parsedOperands = rawOperand ? rawOperand.split(",").map((operand) => operand.trim()) : [];
+    const { opcode, operands, rawOperand } = this.parseInstructionWords(words);
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    const loweredOperands = parsedOperands.map((operand) =>
+    const loweredOperands = operands.map((operand) =>
       this.assembler.operandResolver.lowerOperand(operand),
     );
-    return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
+    return this.encodeResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
 
   /** Legacy API alias for {@link encode}. */
   readonly asblock_superfx = this.encode.bind(this);
 
   /**
-   * Encodes resolved instruction.
+   * Encodes a resolved instruction.
    * @param {string} mnemonic The mnemonic.
    * @param {string[]} operands The operands.
-   * @param {LoweredOperand} [loweredOperand] The lowered operand.
-   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-   * @returns {boolean} The result.
+   * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+   * @returns {boolean} True if the instruction was encoded.
    */
   encodeResolvedInstruction(
     mnemonic: string,
@@ -156,22 +456,18 @@ export class ArchSuperFX implements ArchitectureEncoder {
     debug("asblock_superfx opcode", opcode);
     debug("asblock_superfx operand", operand);
 
-    // Handle single-word opcodes (e.g., NOP, STOP, etc.)
-    if (this.handleSingleWordOpcode(opcode)) {
-      return true;
-    }
-
-    if (
-      operands.length === 1 &&
-      this.handleTwoWordOpcode(opcode, operand, operandLength, firstLowered)
-    ) {
-      return true;
+    if (hasOwn(IMPLIED_OPCODES, opcode) || hasOwn(PREFIXED_OPCODES, opcode)) {
+      if (operands.length !== 0) {
+        throw this.assembler.diagnostics.error(`${opcode} does not take operands`);
+      }
+      return this.handleSingleWordOpcode(opcode);
     }
 
     if (operands.length === 1) {
-      // Single argument instructions
       return this.handleOneOperandOpcode(opcode, operand, operandLength, firstLowered);
-    } else if (operands.length === 2) {
+    }
+
+    if (operands.length === 2) {
       return this.handleTwoOperandOpcode(
         opcode,
         firstLowered?.expanded ?? operands[0],
@@ -185,121 +481,26 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Handles single-word (no-operand) opcodes for SuperFX.
+   * Handles implied SuperFX opcodes with no operands.
    * @param {string} opcode - the opcode
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleSingleWordOpcode(opcode: string): boolean {
     debug("handleSingleWordOpcode", opcode);
 
-    // Simple single-byte instructions
-    type SingleOpcode =
-      | "STOP"
-      | "NOP"
-      | "CACHE"
-      | "LSR"
-      | "ROL"
-      | "LOOP"
-      | "ALT1"
-      | "ALT2"
-      | "ALT3"
-      | "PLOT"
-      | "SWAP"
-      | "COLOR"
-      | "NOT"
-      | "MERGE"
-      | "SBK"
-      | "SEX"
-      | "ASR"
-      | "ROR"
-      | "LOB"
-      | "FMULT"
-      | "HIB"
-      | "GETC"
-      | "GETB";
-    const singleOpcodes: Record<SingleOpcode, number> = {
-      STOP: 0x00,
-      NOP: 0x01,
-      CACHE: 0x02,
-      LSR: 0x03,
-      ROL: 0x04,
-      LOOP: 0x3c,
-      ALT1: 0x3d,
-      ALT2: 0x3e,
-      ALT3: 0x3f,
-      PLOT: 0x4c,
-      SWAP: 0x4d,
-      COLOR: 0x4e,
-      NOT: 0x4f,
-      MERGE: 0x70,
-      SBK: 0x90,
-      SEX: 0x95,
-      ASR: 0x96,
-      ROR: 0x97,
-      LOB: 0x9e,
-      FMULT: 0x9f,
-      HIB: 0xc0,
-      GETC: 0xdf,
-      GETB: 0xef,
-    };
-
-    // Some instructions require a prefix like 0x3D, 0x3E, or 0x3F
-    // (e.g., "RPIX" => 0x3D + 0x4C).
-    // We'll handle those separately:
-    type TwoByteCommand = {
-      mnemonic: string;
-      prefix: number;
-      opcode: number;
-    };
-
-    const extendedOpcodes: TwoByteCommand[] = [
-      { mnemonic: "RPIX", prefix: 0x3d, opcode: 0x4c },
-      { mnemonic: "CMODE", prefix: 0x3d, opcode: 0x4e },
-      { mnemonic: "DIV2", prefix: 0x3d, opcode: 0x96 },
-      { mnemonic: "LMULT", prefix: 0x3d, opcode: 0x9f },
-      { mnemonic: "GETBH", prefix: 0x3d, opcode: 0xef },
-
-      { mnemonic: "RAMB", prefix: 0x3e, opcode: 0xdf },
-      { mnemonic: "GETBL", prefix: 0x3e, opcode: 0xef },
-
-      { mnemonic: "ROMB", prefix: 0x3f, opcode: 0xdf },
-      { mnemonic: "GETBS", prefix: 0x3f, opcode: 0xef },
-    ];
-
-    // Check simple single-byte opcodes
-    if (hasOwn(singleOpcodes, opcode)) {
-      this.assembler.write1(singleOpcodes[opcode]);
+    if (hasOwn(IMPLIED_OPCODES, opcode)) {
+      this.assembler.write1(IMPLIED_OPCODES[opcode]);
       return true;
     }
 
-    // Check two-byte extended opcodes
-    for (const cmd of extendedOpcodes) {
-      if (opcode === cmd.mnemonic) {
-        this.assembler.write1(cmd.prefix);
-        this.assembler.write1(cmd.opcode);
-        return true;
-      }
+    if (hasOwn(PREFIXED_OPCODES, opcode)) {
+      const command = PREFIXED_OPCODES[opcode];
+      this.assembler.write1(command.prefix);
+      this.assembler.write1(command.opcode);
+      return true;
     }
 
     return false;
-  }
-
-  /**
-   * Handles two-word opcodes (one opcode + one operand).
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {number} operandLength - the lowered operand length
-   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-   * @returns {boolean} True if the instruction was handled, false otherwise.
-   */
-  handleTwoWordOpcode(
-    opcode: string,
-    operand: string,
-    operandLength: number,
-    loweredOperand?: LoweredOperand,
-  ): boolean {
-    debug("handleTwoWordOpcode", opcode, operand);
-    return this.handleOneOperandOpcode(opcode, operand, operandLength, loweredOperand);
   }
 
   /**
@@ -318,220 +519,45 @@ export class ArchSuperFX implements ArchitectureEncoder {
   ): boolean {
     debug("handleOneOperandOpcode", opcode, operand, operandLength);
 
-    // Mapping for short branches (8-bit offset)
-    type ShortBranchOpcode =
-      | "BRA"
-      | "BGE"
-      | "BLT"
-      | "BNE"
-      | "BEQ"
-      | "BPL"
-      | "BMI"
-      | "BCC"
-      | "BCS"
-      | "BVC"
-      | "BVS";
-    const shortBranchMap: Record<ShortBranchOpcode, number> = {
-      BRA: 0x05,
-      BGE: 0x06,
-      BLT: 0x07,
-      BNE: 0x08,
-      BEQ: 0x09,
-      BPL: 0x0a,
-      BMI: 0x0b,
-      BCC: 0x0c,
-      BCS: 0x0d,
-      BVC: 0x0e,
-      BVS: 0x0f,
-    };
-
-    if (hasOwn(shortBranchMap, opcode)) {
-      const branchOpcode = shortBranchMap[opcode];
-      // We interpret the operand as an address for branching
-      // If the user wants an 8-bit offset, we allow direct or label
+    if (hasOwn(SHORT_BRANCH_OPCODES, opcode)) {
+      const branchOpcode = SHORT_BRANCH_OPCODES[opcode];
+      const sourceSpelling = (loweredOperand?.raw ?? operand).trim();
       const val = this.assembler.operandResolver.getnum(operand);
-      // Use operandLength determined by expandOperand
-      if (operandLength === 1) {
-        // direct offset
+      // Asar getlen==1: only an explicit `$XX` spelling is a raw 8-bit offset.
+      // Labels that expand to `$80` stay PC-relative: target - (pc + 2).
+      if (this.isRawBranchOffset(sourceSpelling)) {
         this.assembler.write1(branchOpcode);
         this.assembler.write1(val & 0xff);
-      } else {
-        // relative
-        const pc = this.assembler.currentTargetAddress & 0xffffff;
-        const offset = (val - (pc + 2)) & 0xff;
-        this.assembler.write1(branchOpcode);
-        this.assembler.write1(offset);
+        return true;
       }
+
+      const pc = this.assembler.currentTargetAddress & 0xffffff;
+      const offset = val - (pc + 2);
+      if (this.assembler.enforceResolvedLabels && (offset < -128 || offset > 127)) {
+        throw this.assembler.diagnostics.error(`Branch target out of range (${offset})`);
+      }
+      this.assembler.write1(branchOpcode);
+      this.assembler.write1(offset & 0xff);
       return true;
     }
 
-    // Attempt to parse the operand as register
     const regR = this.resolveRegister(operand, loweredOperand, "r");
     const regHash = this.resolveRegister(operand, loweredOperand, "hash");
     const regParr = this.resolveRegister(operand, loweredOperand, "parr");
 
-    // Potential second-level variants for ALT instructions
-    // Example: "ADC Rn" => write1(0x3D), write1(0x50 + n)
-
-    // "TO Rn", "WITH Rn", etc.
-    if (regR !== null) {
-      // handle instructions that take a single Rn
-      switch (opcode) {
-        case "TO":
-          this.assembler.write1(0x10 + regR);
-          return true;
-        case "WITH":
-          this.assembler.write1(0x20 + regR);
-          return true;
-        case "ADD":
-          this.assembler.write1(0x50 + regR);
-          return true;
-        case "SUB":
-          this.assembler.write1(0x60 + regR);
-          return true;
-        case "AND":
-          this.rangeCheck(1, regR, 15);
-          this.assembler.write1(0x70 + regR);
-          return true;
-        case "MULT":
-          this.assembler.write1(0x80 + regR);
-          return true;
-        case "JMP":
-          this.rangeCheck(8, regR, 13);
-          this.assembler.write1(0x90 + regR);
-          return true;
-        case "FROM":
-          this.assembler.write1(0xb0 + regR);
-          return true;
-        case "OR":
-          this.rangeCheck(1, regR, 15);
-          this.assembler.write1(0xc0 + regR);
-          return true;
-        case "INC":
-          this.rangeCheck(0, regR, 14);
-          this.assembler.write1(0xd0 + regR);
-          return true;
-        case "DEC":
-          this.rangeCheck(0, regR, 14);
-          this.assembler.write1(0xe0 + regR);
-          return true;
-
-        // ALT1 variants (0x3D prefix)
-        case "ADC":
-          // 0x3D, then 0x50 + reg
-          this.assembler.write1(0x3d);
-          this.assembler.write1(0x50 + regR);
-          return true;
-        case "SBC":
-          this.assembler.write1(0x3d);
-          this.assembler.write1(0x60 + regR);
-          return true;
-        case "BIC":
-          this.rangeCheck(1, regR, 15);
-          this.assembler.write1(0x3d);
-          this.assembler.write1(0x70 + regR);
-          return true;
-        case "UMULT":
-          this.assembler.write1(0x3d);
-          this.assembler.write1(0x80 + regR);
-          return true;
-        case "LJMP":
-          this.rangeCheck(8, regR, 13);
-          this.assembler.write1(0x3d);
-          this.assembler.write1(0x90 + regR);
-          return true;
-        case "XOR":
-          this.rangeCheck(1, regR, 15);
-          this.assembler.write1(0x3d);
-          this.assembler.write1(0xc0 + regR);
-          return true;
-
-        case "CMP":
-          // prefix 0x3F, then 0x60 + reg
-          this.assembler.write1(0x3f);
-          this.assembler.write1(0x60 + regR);
-          return true;
-      }
+    if (regR !== null && hasOwn(REGISTER_OPS, opcode)) {
+      this.writeRegisterOp(REGISTER_OPS[opcode], regR);
+      return true;
     }
 
-    if (regHash !== null) {
-      // e.g. LINK #n
-      if (opcode === "LINK") {
-        // range(1, reg, 4)
-        this.rangeCheck(1, regHash, 4);
-        this.assembler.write1(0x90 + regHash);
-        return true;
-      }
-
-      // ALT2 prefix (0x3E) logic, e.g. ADD #n => 0x3E  0x50 + n
-      switch (opcode) {
-        case "ADD":
-          this.assembler.write1(0x3e);
-          this.assembler.write1(0x50 + regHash);
-          return true;
-        case "SUB":
-          this.assembler.write1(0x3e);
-          this.assembler.write1(0x60 + regHash);
-          return true;
-        case "AND":
-          this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(0x3e);
-          this.assembler.write1(0x70 + regHash);
-          return true;
-        case "MULT":
-          this.assembler.write1(0x3e);
-          this.assembler.write1(0x80 + regHash);
-          return true;
-        case "OR":
-          this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(0x3e);
-          this.assembler.write1(0xc0 + regHash);
-          return true;
-
-        // ALT3 prefix
-        case "ADC":
-          this.assembler.write1(0x3f);
-          this.assembler.write1(0x50 + regHash);
-          return true;
-        case "BIC":
-          this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(0x3f);
-          this.assembler.write1(0x70 + regHash);
-          return true;
-        case "UMULT":
-          this.assembler.write1(0x3f);
-          this.assembler.write1(0x80 + regHash);
-          return true;
-        case "XOR":
-          this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(0x3f);
-          this.assembler.write1(0xc0 + regHash);
-          return true;
-      }
+    if (regHash !== null && hasOwn(IMMEDIATE_OPS, opcode)) {
+      this.writeRegisterOp(IMMEDIATE_OPS[opcode], regHash);
+      return true;
     }
 
-    if (regParr !== null) {
-      // e.g. STW (Rn), LDW (Rn)
-      switch (opcode) {
-        case "STW":
-          this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(0x30 + regParr);
-          return true;
-        case "LDW":
-          this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(0x40 + regParr);
-          return true;
-        case "STB":
-          this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(0x3d);
-          this.assembler.write1(0x30 + regParr);
-          return true;
-        case "LDB":
-          this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(0x3d);
-          this.assembler.write1(0x40 + regParr);
-          return true;
-      }
+    if (regParr !== null && hasOwn(INDIRECT_OPS, opcode)) {
+      this.writeRegisterOp(INDIRECT_OPS[opcode], regParr);
+      return true;
     }
 
     return false;
@@ -555,53 +581,45 @@ export class ArchSuperFX implements ArchitectureEncoder {
   ): boolean {
     debug("handleTwoOperandOpcode", { opcode, leftOp, rightOp });
 
-    // e.g. "MOVE Rn, Rm", "MOVES Rn, Rm", etc.
     const reg1r = this.resolveRegister(leftOp, leftLowered, "r");
     const reg1parr = this.resolveRegister(leftOp, leftLowered, "parr");
     const reg2r = this.resolveRegister(rightOp, rightLowered, "r");
     const reg2parr = this.resolveRegister(rightOp, rightLowered, "parr");
     debug("handleTwoOperandOpcode", { reg1r, reg1parr, reg2r, reg2parr });
 
-    // Rn, Rm combos
     if (reg1r !== null && reg2r !== null) {
       switch (opcode) {
         case "MOVE":
-          // write1(0x20+reg2); write1(0x10+reg1)
+          // WITH src / TO dest. B and D default back to R0 after the pair.
           this.assembler.write1(0x20 + reg2r);
           this.assembler.write1(0x10 + reg1r);
           return true;
         case "MOVES":
-          // write1(0x20+reg1); write1(0xB0+reg2)
+          // WITH dest / FROM src (also copies flags into SReg).
           this.assembler.write1(0x20 + reg1r);
           this.assembler.write1(0xb0 + reg2r);
           return true;
       }
     }
 
-    // Rn, #imm combos
     if (reg1r !== null && (rightLowered?.immediate ?? rightOp.startsWith("#"))) {
       const immediateExpression = rightLowered?.baseExpression ?? rightOp.slice(1);
       const immVal = this.assembler.operandResolver.getnum(immediateExpression) & 0xffff;
       switch (opcode) {
         case "IBT":
-          // => 0xA0+reg1, then immVal
           this.assembler.write1(0xa0 + reg1r);
           this.assembler.write1(immVal & 0xff);
           return true;
         case "IWT":
-          // => 0xF0+reg1, then immVal (lo, hi)
           this.assembler.write1(0xf0 + reg1r);
           this.assembler.write1(immVal & 0xff);
           this.assembler.write1((immVal >> 8) & 0xff);
           return true;
         case "MOVE":
-          // If immediate < 0x80 or >= 0xFF80 => 8-bit
-          if (immVal < 0x80 || immVal >= 0xff80) {
-            // prefix 0xA0+reg1
+          if (fitsSignedByte(immVal)) {
             this.assembler.write1(0xa0 + reg1r);
             this.assembler.write1(immVal & 0xff);
           } else {
-            // prefix 0xF0+reg1, 16-bit
             this.assembler.write1(0xf0 + reg1r);
             this.assembler.write1(immVal & 0xff);
             this.assembler.write1((immVal >> 8) & 0xff);
@@ -610,26 +628,26 @@ export class ArchSuperFX implements ArchitectureEncoder {
       }
     }
 
-    // (Rn), Rm combos
+    // MOVEB/MOVEW expand to FROM/TO + LDB/STB/LDW/STW. B/D default to R0, so the
+    // R0 cases drop the prefix. Asar store syntax `MOVEB (Rn), Rm` is
+    // FROM Rn / STB (Rm): parenthesized reg is the byte source, the other is
+    // the pointer. Load `MOVEB Rn, (Rm)` is TO Rn / LDB (Rm).
+    // The 30+x / 40+x slot is R0-R11, same as LDB/STB/LDW/STW.
     if (reg1parr !== null && reg2r !== null) {
       switch (opcode) {
         case "MOVEB":
-          // ...
+          this.rangeCheck(0, reg2r, 11);
           if (reg1parr === 0) {
-            // e.g. MOVEB (r0), rX => 0x3D  0x30 + reg2?
-            this.assembler.write1(0x3d);
+            this.assembler.write1(ALT1);
             this.assembler.write1(0x30 + reg2r);
-            return true;
           } else {
-            // MOVEB (rN), rM => 0xB0+ reg1 then 0x3D  then 0x30+ reg2
-            // Simplified version of code
             this.assembler.write1(0xb0 + reg1parr);
-            this.assembler.write1(0x3d);
+            this.assembler.write1(ALT1);
             this.assembler.write1(0x30 + reg2r);
-            return true;
           }
+          return true;
         case "MOVEW":
-          // ...
+          this.rangeCheck(0, reg2r, 11);
           if (reg1parr === 0) {
             this.assembler.write1(0x30 + reg2r);
           } else {
@@ -640,67 +658,59 @@ export class ArchSuperFX implements ArchitectureEncoder {
       }
     }
 
-    // Rn, (Rm) combos
     if (reg1r !== null && reg2parr !== null) {
       switch (opcode) {
         case "MOVEB":
-          if (reg2parr === 0) {
-            this.assembler.write1(0x3d);
-            this.assembler.write1(0x40 + reg1r);
-            return true;
+          this.rangeCheck(0, reg2parr, 11);
+          if (reg1r === 0) {
+            this.assembler.write1(ALT1);
+            this.assembler.write1(0x40 + reg2parr);
           } else {
             this.assembler.write1(0x10 + reg1r);
-            this.assembler.write1(0x3d);
+            this.assembler.write1(ALT1);
             this.assembler.write1(0x40 + reg2parr);
-            return true;
           }
+          return true;
         case "MOVEW":
-          if (reg2parr === 0) {
-            this.assembler.write1(0x40 + reg1r);
-            return true;
+          this.rangeCheck(0, reg2parr, 11);
+          if (reg1r === 0) {
+            this.assembler.write1(0x40 + reg2parr);
           } else {
             this.assembler.write1(0x10 + reg1r);
             this.assembler.write1(0x40 + reg2parr);
-            return true;
           }
+          return true;
       }
     }
 
-    // Rn, (imm)
-    // e.g. "MOVE R0, (0x1234)" or "SMS (0x40), R3"
     if (reg1r !== null) {
-      const addrVal = this.assembler.operandResolver.getnum(rightOp);
+      const addressExpression = rightLowered?.baseExpression ?? rightOp;
+      const addrVal = this.assembler.operandResolver.getnum(addressExpression);
       switch (opcode) {
         case "LM":
-          // => 0x3D, 0xF0 + reg1, then lo, hi
-          this.assembler.write1(0x3d);
+          this.assembler.write1(ALT1);
           this.assembler.write1(0xf0 + reg1r);
           this.assembler.write2(addrVal);
           return true;
         case "LMS":
-          // short addressing check
-          if (this.checkShortAddr(addrVal)) {
-            this.assembler.write1(0x3d);
-            this.assembler.write1(0xa0 + reg1r);
-            this.assembler.write1(addrVal >> 1);
-            return true;
-          }
-          return true; // might not do anything else if fail
+          this.checkShortAddr(addrVal);
+          this.assembler.write1(ALT1);
+          this.assembler.write1(0xa0 + reg1r);
+          this.assembler.write1(addrVal >> 1);
+          return true;
         case "MOVE":
-          if (addrVal & 1 || addrVal >= 0x200) {
-            // 0x3D, 0xF0+reg, lo, hi
-            this.assembler.write1(0x3d);
+          // Auto LMS vs LM. Short-form byte is hardware `addr>>1` unless Asar compat is on.
+          if (isShortRamAddress(addrVal)) {
+            this.assembler.write1(ALT1);
+            this.assembler.write1(0xa0 + reg1r);
+            this.assembler.write1(this.moveShortAddressByte(addrVal));
+          } else {
+            this.assembler.write1(ALT1);
             this.assembler.write1(0xf0 + reg1r);
             this.assembler.write2(addrVal);
-          } else {
-            // 0x3D, 0xA0+reg, lo
-            this.assembler.write1(0x3d);
-            this.assembler.write1(0xa0 + reg1r);
-            this.assembler.write1(addrVal & 0xff);
           }
           return true;
         case "LEA":
-          // => 0xF0+ reg, lo, hi
           this.assembler.write1(0xf0 + reg1r);
           this.assembler.write1(addrVal & 0xff);
           this.assembler.write1((addrVal >> 8) & 0xff);
@@ -708,7 +718,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
       }
     }
 
-    // (imm), Rn
     const leftIsRegisterIndirect = leftLowered?.mode === "registerIndirect";
     if (
       reg2r !== null &&
@@ -719,27 +728,25 @@ export class ArchSuperFX implements ArchitectureEncoder {
       const addrVal = this.assembler.operandResolver.getnum(addressExpression);
       switch (opcode) {
         case "SM":
-          this.assembler.write1(0x3e);
+          this.assembler.write1(ALT2);
           this.assembler.write1(0xf0 + reg2r);
           this.assembler.write2(addrVal);
           return true;
         case "SMS":
-          if (this.checkShortAddr(addrVal)) {
-            this.assembler.write1(0x3e);
-            this.assembler.write1(0xa0 + reg2r);
-            this.assembler.write1(addrVal >> 1);
-            return true;
-          }
+          this.checkShortAddr(addrVal);
+          this.assembler.write1(ALT2);
+          this.assembler.write1(0xa0 + reg2r);
+          this.assembler.write1(addrVal >> 1);
           return true;
         case "MOVE":
-          if (addrVal & 1 || addrVal >= 0x200) {
-            this.assembler.write1(0x3e);
+          if (isShortRamAddress(addrVal)) {
+            this.assembler.write1(ALT2);
+            this.assembler.write1(0xa0 + reg2r);
+            this.assembler.write1(this.moveShortAddressByte(addrVal));
+          } else {
+            this.assembler.write1(ALT2);
             this.assembler.write1(0xf0 + reg2r);
             this.assembler.write2(addrVal);
-          } else {
-            this.assembler.write1(0x3e);
-            this.assembler.write1(0xa0 + reg2r);
-            this.assembler.write1(addrVal & 0xff);
           }
           return true;
       }
@@ -749,11 +756,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Resolves register.
-   * @param {string} str The str.
-   * @param {LoweredOperand | undefined} lowered The lowered.
-   * @param {"r" | "parr" | "hash"} type The type.
-   * @returns {number | null} The result.
+   * Resolves a SuperFX register operand.
+   * @param {string} str The operand text.
+   * @param {LoweredOperand | undefined} lowered The lowered operand.
+   * @param {"r" | "parr" | "hash"} type Direct (`rN`), indirect (`(rN)`), or `#n`.
+   * @returns {number | null} Register number 0-15, or null if it doesn't match.
    */
   resolveRegister(
     str: string,
@@ -797,27 +804,20 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @returns {number | null} The register number or null if it doesn't match.
    */
   getRegister(str: string, type: "r" | "parr" | "hash"): number | null {
-    // reg_parr => (rN)
-    // reg_r => rN
-    // reg_hash => #N
-    // Return null if parse fails
     if (type === "parr") {
-      // Must start with '('
       if (!str.startsWith("(")) {
         return null;
       }
-      str = str.slice(1); // skip '('
+      str = str.slice(1);
       if (!/^r\d{1,2}\)/i.test(str)) {
         return null;
       }
-      // skip 'r'
       if (str[0].toLowerCase() !== "r") {
         return null;
       }
       str = str.slice(1);
 
-      // parse digit
-      const regnum = this.parseRegisterNumber(str.replace(/\)$/, "")); // remove trailing ')'
+      const regnum = this.parseRegisterNumber(str.replace(/\)$/, ""));
       if (regnum === -1) {
         return null;
       }
@@ -825,7 +825,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
     }
 
     if (type === "r") {
-      // Must start with 'r'
       if (!str.toLowerCase().startsWith("r")) {
         return null;
       }
@@ -840,7 +839,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
       if (!str.startsWith("#")) {
         return null;
       }
-      // Accept normalized forms like #$0 in addition to #0.
       const regnum = this.assembler.operandResolver.getnum(str.slice(1));
       if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
         debug("Invalid register number", str, regnum);
@@ -858,8 +856,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @returns {number} The register number.
    */
   parseRegisterNumber(str: string): number {
-    // e.g. '10' => r10
-    // valid registers are 0..15, but we also need to check for weird digits
     const match = str.match(/^\d{1,2}$/);
     if (!match) {
       return -1;
@@ -885,10 +881,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * For "LMS" or "SMS" short addressing forms, we need to ensure the address is
-   * even and in range [0x000..0x1FE].
+   * For LMS/SMS short addressing, the address must be even and in `[0x000..0x1FE]`.
    * @param {number} num - the address
-   * @returns {boolean} True if the address is valid, false otherwise.
+   * @returns {boolean} True if the address is valid.
    */
   checkShortAddr(num: number): boolean {
     debug("checkShortAddr", num);
@@ -901,19 +896,85 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Returns an approximate operand length (1 or 2) by checking the operand format.
-   * This is a simple approximation for short vs. relative addressing.
+   * True when the source spelling is an explicit 2-digit hex branch offset (`$XX`).
+   * Expanded label values that happen to fit in a byte must not use this path.
+   * @param {string} operand The raw or expanded operand.
+   * @returns {boolean} True if the operand is a raw 8-bit offset spelling.
+   */
+  isRawBranchOffset(operand: string): boolean {
+    return /^\$[\dA-Fa-f]{2}$/.test(operand.trim());
+  }
+
+  /**
+   * Returns 1 for a 2-digit hex operand (`$XX`), otherwise 2.
    * @param {string} operand the operand
    * @returns {number} The operand length.
    */
   getOperandLength(operand: string): number {
-    // This is a simplified logic: if it looks hex with 2 digits, assume 1; else 2
-    // If there's a label, or more digits, we guess 2.
-    // You can refine as needed.
-    const simpleHex2 = /^\$[\dA-Fa-f]{2}$/;
-    if (simpleHex2.test(operand)) {
+    if (this.isRawBranchOffset(operand)) {
       return 1;
     }
     return 2;
+  }
+
+  /**
+   * Splits tokenized words into opcode plus comma-separated operands.
+   * @param {string[]} words The tokenized instruction.
+   * @returns {{ opcode: string; operands: string[]; rawOperand: string }} Parsed parts.
+   */
+  parseInstructionWords(words: string[]): {
+    opcode: string;
+    operands: string[];
+    rawOperand: string;
+  } {
+    const opcode = words[0];
+    const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
+    const operands = rawOperand ? rawOperand.split(",").map((operand) => operand.trim()) : [];
+    return { opcode, operands, rawOperand };
+  }
+
+  /**
+   * Writes a register-encoded ALU/load op, with optional ALT prefix and range check.
+   * @param {RegisterOpEncoding} encoding The encoding table entry.
+   * @param {number} register The register number.
+   */
+  writeRegisterOp(encoding: RegisterOpEncoding, register: number) {
+    if (encoding.min !== undefined && encoding.max !== undefined) {
+      this.rangeCheck(encoding.min, register, encoding.max);
+    }
+    if (encoding.prefix !== undefined) {
+      this.assembler.write1(encoding.prefix);
+    }
+    this.assembler.write1(encoding.base + register);
+  }
+
+  /**
+   * Encodes the LMS/SMS operand byte for auto-MOVE short addressing.
+   * @param {number} addrVal Even RAM byte address below `$200`.
+   * @returns {number} Hardware word index, or Asar's raw byte when compat is enabled.
+   */
+  moveShortAddressByte(addrVal: number): number {
+    let mode: SuperFxMoveShortAddressMode = "hardware";
+    if (this.assembler.asarSuperFxMoveShortAddress) {
+      mode = "asar";
+    }
+    return encodeSuperFxMoveShortAddress(addrVal, mode);
+  }
+
+  /**
+   * Resolves a numeric operand for sizing without failing layout on forward refs.
+   * @param {string} expression The expression.
+   * @returns {number | undefined} The value, or undefined if it cannot be resolved yet.
+   */
+  tryGetNumber(expression: string): number | undefined {
+    try {
+      const value = this.assembler.operandResolver.getnum(expression);
+      if (Number.isNaN(value)) {
+        return undefined;
+      }
+      return value;
+    } catch {
+      return undefined;
+    }
   }
 }

@@ -17,9 +17,106 @@ try {
 
 export class Arch65816 implements ArchitectureEncoder {
   assembler: EncoderRuntime;
+  /** Native 16-bit accumulator (REP #$20). Reset at the start of each assembly stage. */
+  m16: boolean;
+  /** Native 16-bit index registers (REP #$10). Reset at the start of each assembly stage. */
+  x16: boolean;
 
   constructor(context: ArchitectureEncoderContext) {
     this.assembler = createEncoderRuntime(context);
+    this.m16 = false;
+    this.x16 = false;
+  }
+
+  /**
+   * Resets M/X size flags at the start of each assembly stage.
+   * @returns {void}
+   */
+  beginPass(): void {
+    this.m16 = false;
+    this.x16 = false;
+  }
+
+  /**
+   * Applies SEP/REP to the assembler-facing M/X size flags.
+   * @param {string} opcode The opcode.
+   * @param {string} rawOperand The raw operand.
+   * @returns {void}
+   */
+  applySepRep(opcode: string, rawOperand: string): void {
+    if (opcode !== "SEP" && opcode !== "REP") {
+      return;
+    }
+    let value = 0;
+    try {
+      value = this.assembler.operandResolver.getnum(rawOperand);
+    } catch {
+      return;
+    }
+    if (opcode === "SEP") {
+      if (value & 0x20) {
+        this.m16 = false;
+      }
+      if (value & 0x10) {
+        this.x16 = false;
+      }
+      return;
+    }
+    if (value & 0x20) {
+      this.m16 = true;
+    }
+    if (value & 0x10) {
+      this.x16 = true;
+    }
+  }
+
+  /**
+   * Immediate operand width in bytes from M/X flags, hex spelling, and .b/.w.
+   * Plain hex/define immediates keep their expanded width so Chou `lda #$20`
+   * and `lda #!flag` stay 8-bit. Math expressions such as `#(NMI&$FFFF)`
+   * follow the M/X flags.
+   * @param {string} opcode The opcode.
+   * @param {number} operandLength Expanded operand width.
+   * @param {boolean} explicitlen Whether a .b/.w/.l suffix forced the width.
+   * @param {string} [rawOperand] The raw source operand.
+   * @returns {number} 1 or 2.
+   */
+  immediateBytes(
+    opcode: string,
+    operandLength: number,
+    explicitlen: boolean,
+    rawOperand = "",
+  ): number {
+    if (explicitlen) {
+      if (operandLength <= 1) {
+        return 1;
+      }
+      return 2;
+    }
+    let inner = rawOperand.trim();
+    if (inner.startsWith("#")) {
+      inner = inner.slice(1).trim();
+    }
+    const isMathExpression = /[&()*+/<>^|\-]/.test(inner);
+    const isBareIdentifier = /^[A-Za-z_]\w*$/.test(inner);
+    if (!isMathExpression && !isBareIdentifier) {
+      if (operandLength <= 1) {
+        return 1;
+      }
+      return 2;
+    }
+    let flagWidth = 1;
+    if (opcode === "LDX" || opcode === "LDY" || opcode === "CPX" || opcode === "CPY") {
+      if (this.x16) {
+        flagWidth = 2;
+      }
+    } else if (this.m16) {
+      flagWidth = 2;
+    }
+    if (operandLength > flagWidth) {
+      return 2;
+    }
+    return flagWidth;
   }
 
   /**
@@ -153,6 +250,16 @@ export class Arch65816 implements ArchitectureEncoder {
       "BRL",
     ]);
 
+    let explicitlen = false;
+    if (opcode.includes(".")) {
+      const len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
+      opcode = opcode.substring(0, opcode.indexOf("."));
+      explicitlen = true;
+      operandLength = len;
+    }
+
+    this.applySepRep(opcode, rawOperand);
+
     if (noOperandOpcodes.has(opcode)) {
       if (rawOperand.startsWith("#")) {
         try {
@@ -164,34 +271,30 @@ export class Arch65816 implements ArchitectureEncoder {
       return 1;
     }
 
-    if (opcode.includes(".")) {
-      const len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
-      opcode = opcode.substring(0, opcode.indexOf("."));
-      return 1 + len;
-    }
-
-    if (accumulatorRepeatOpcodes.has(opcode) && !rawOperand.trim()) {
-      return 1;
-    }
-
     if (accumulatorRepeatOpcodes.has(opcode) && rawOperand.startsWith("#")) {
       return this.assembler.operandResolver.getnum(rawOperand.substring(1));
     }
 
+    const lowered = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const registerName = (lowered.registerName ?? "").toUpperCase();
+    if (
+      accumulatorRepeatOpcodes.has(opcode) &&
+      (!rawOperand.trim() || registerName === "A" || /^a$/i.test(rawOperand.trim()))
+    ) {
+      return 1;
+    }
+
     if (branchOpcodes.has(opcode)) {
-      return opcode === "BRL" ? 3 : 2;
+      if (opcode === "BRL") {
+        return 3;
+      }
+      return 2;
     }
 
     if (opcode === "MVP" || opcode === "MVN") {
       return 3;
     }
     if (opcode === "PER") {
-      return 3;
-    }
-    if (opcode === "JSL" || opcode === "JML") {
-      return 4;
-    }
-    if (opcode === "JMP" || opcode === "JSR") {
       return 3;
     }
     if (opcode === "PEA") {
@@ -201,10 +304,43 @@ export class Arch65816 implements ArchitectureEncoder {
       return 2;
     }
 
-    if (operand.startsWith("#")) {
+    if (lowered.mode === "indirectLong" || lowered.mode === "indirectLongIndexedY") {
+      if (opcode === "JMP" || opcode === "JML" || opcode === "JSL" || opcode === "JSR") {
+        return 3;
+      }
+      return 2;
+    }
+
+    if (opcode === "JSL" || opcode === "JML") {
+      return 4;
+    }
+    if (opcode === "JMP" || opcode === "JSR") {
+      return 3;
+    }
+
+    if (explicitlen) {
       return 1 + operandLength;
     }
-    if (/^\$[\da-f]{6}(,x)?$/i.test(operand)) {
+
+    if (lowered.immediate || rawOperand.startsWith("#") || operand.startsWith("#")) {
+      return 1 + this.immediateBytes(opcode, operandLength, false, rawOperand);
+    }
+
+    if (
+      lowered.mode === "stackRelative" ||
+      lowered.mode === "stackRelativeIndexedIndirectY" ||
+      lowered.mode === "indexedIndirectX" ||
+      lowered.mode === "directPageIndirect" ||
+      lowered.mode === "indirectIndexedY" ||
+      lowered.mode === "directPageIndexedXIndirect"
+    ) {
+      return 2;
+    }
+
+    if (lowered.mode === "absoluteLong" || lowered.mode === "absoluteLongIndexedX") {
+      return 4;
+    }
+    if (/^\$[\da-f]{6}(,x)?$/i.test(operand) || /^\$[\da-f]{6}(,x)?$/i.test(rawOperand)) {
       return 4;
     }
     return 1 + operandLength;
@@ -264,11 +400,17 @@ export class Arch65816 implements ArchitectureEncoder {
       len = operandLength;
     }
 
+    this.applySepRep(opcode, rawOperand);
+
     debug("asblock_65816 opcode", opcode);
     debug("asblock_65816 operand", operand);
 
     if (["ASL", "LSR", "ROL", "ROR", "INC", "DEC"].includes(opcode)) {
-      return this.handleArithmeticOperations(opcode, operand, len, explicitlen);
+      let arithmeticOperand = operand;
+      if (/^a$/i.test(rawOperand.trim())) {
+        arithmeticOperand = rawOperand;
+      }
+      return this.handleArithmeticOperations(opcode, arithmeticOperand, len, explicitlen);
     }
 
     if (["SBC", "STA", "LDA", "ADC"].includes(opcode)) {
@@ -276,7 +418,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     if (["AND", "EOR", "ORA", "CMP", "CPX", "CPY"].includes(opcode)) {
-      return this.handleLogicAndCompareOperations(opcode, operand, len, explicitlen);
+      return this.handleLogicAndCompareOperations(opcode, operand, len, explicitlen, rawOperand);
     }
 
     // Single Byte Operations
@@ -359,12 +501,12 @@ export class Arch65816 implements ArchitectureEncoder {
       };
       if (opcode in immediateOpcodes) {
         this.assembler.write1(immediateOpcodes[opcode]);
-        // Force operand length based on explicit setting:
-        if (len === 1) {
-          this.assembler.write1(this.assembler.operandResolver.getnum(resolvedOperand));
+        const width = this.immediateBytes(opcode, len, explicitlen, rawOperand);
+        const value = this.assembler.operandResolver.getnum(resolvedOperand);
+        if (width === 1) {
+          this.assembler.write1(value);
         } else {
-          // Default immediate mode uses 2 bytes (even if operand value is small)
-          this.assembler.write2(this.assembler.operandResolver.getnum(resolvedOperand));
+          this.assembler.write2(value);
         }
         return true;
       }
@@ -713,6 +855,7 @@ export class Arch65816 implements ArchitectureEncoder {
    * @param {string} operand The operand to handle.
    * @param {number} len The length of the operand.
    * @param {boolean} explicitlen Whether the operand length is explicit.
+   * @param {string} [rawOperand] The raw source operand before expansion.
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleLogicAndCompareOperations(
@@ -720,6 +863,7 @@ export class Arch65816 implements ArchitectureEncoder {
     operand: string,
     len: number,
     explicitlen: boolean,
+    rawOperand = operand,
   ): boolean {
     debug("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
     type LogicOpcode = "ORA" | "AND" | "EOR" | "CMP" | "CPX" | "CPY";
@@ -886,7 +1030,7 @@ export class Arch65816 implements ArchitectureEncoder {
       return false; // Not a logic or compare instruction
     }
     const logicOpcode = opcode as LogicOpcode;
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
 
@@ -900,10 +1044,10 @@ export class Arch65816 implements ArchitectureEncoder {
       // Remove `#`
       address = this.assembler.operandResolver.getnum(baseOperand);
       this.assembler.write1(opcodes[logicOpcode].immediate);
-      if (len === 1) {
+      const width = this.immediateBytes(opcode, len, explicitlen, operand);
+      if (width === 1) {
         this.assembler.write1(address);
       } else {
-        // default immediate mode uses 2 bytes
         this.assembler.write2(address);
       }
       return true;
@@ -992,7 +1136,7 @@ export class Arch65816 implements ArchitectureEncoder {
     // **Absolute Long**
     else if (loweredOperand.mode === "absoluteLong") {
       mode = "absoluteLong";
-      this.assembler.operandResolver.getnum(resolvedOperand);
+      address = this.assembler.operandResolver.getnum(resolvedOperand);
     } else if (
       loweredOperand.mode === "absoluteLongIndexedX" &&
       opcodes[logicOpcode].absoluteLongX
@@ -1400,7 +1544,8 @@ export class Arch65816 implements ArchitectureEncoder {
       }
       address = this.assembler.operandResolver.getnum(operand.slice(1));
       this.assembler.write1(opcodeByte);
-      if (len === 1) {
+      const width = this.immediateBytes(opcode, len, explicitlen, operand);
+      if (width === 1) {
         this.assembler.write1(address);
       } else {
         this.assembler.write2(address);
@@ -1824,8 +1969,8 @@ export class Arch65816 implements ArchitectureEncoder {
       address = this.assembler.operandResolver.getnum(operand); // Extract absolute address
     }
 
-    // Absolute Mode: STX $0000, STY $0000, STZ $0000
-    if (!isIndexed && /^\$[\dA-Fa-f]{4}$/.test(operand)) {
+    // Absolute Mode: STX $0000, STY $0000, STZ $0000 (`$CF7` is 16-bit, not DP)
+    if (!isIndexed && (loweredOperand.mode === "absolute" || /^\$[\dA-Fa-f]{3,4}$/.test(operand))) {
       mode = "absolute";
       address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].absolute);
@@ -1845,7 +1990,7 @@ export class Arch65816 implements ArchitectureEncoder {
       // Default indexed: use the indexed variant from the lookup table.
       if (storeOpcode === "STX") {
         address = this.assembler.operandResolver.getnum(operand);
-        if (/^\$[\da-f]{4}$/i.test(operand)) {
+        if (/^\$[\da-f]{3,4}$/i.test(operand)) {
           mode = "absolute";
           this.assembler.write1(storeOpcodes[storeOpcode].absolute);
           this.assembler.write2(address);
@@ -1858,7 +2003,7 @@ export class Arch65816 implements ArchitectureEncoder {
         return true;
       } else if (storeOpcode === "STY") {
         address = this.assembler.operandResolver.getnum(operand);
-        if (/^\$[\da-f]{4}$/i.test(operand)) {
+        if (/^\$[\da-f]{3,4}$/i.test(operand)) {
           mode = "absolute";
           this.assembler.write1(storeOpcodes[storeOpcode].absolute);
           this.assembler.write2(address);
@@ -1871,7 +2016,7 @@ export class Arch65816 implements ArchitectureEncoder {
         return true;
       } else if (storeOpcode === "STZ") {
         address = this.assembler.operandResolver.getnum(operand);
-        if (/^\$[\da-f]{4}$/i.test(operand) && storeOpcodes[storeOpcode].absoluteX) {
+        if (/^\$[\da-f]{3,4}$/i.test(operand) && storeOpcodes[storeOpcode].absoluteX) {
           mode = "absoluteX";
           this.assembler.write1(storeOpcodes[storeOpcode].absoluteX);
           this.assembler.write2(address);
@@ -2142,18 +2287,28 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // Handle +/- labels
     let targetAddress: number;
+    let relativeAddress: number;
     const instructionSize = opcode === "BRL" ? 3 : 2;
     const branchReferenceAddress = this.assembler.currentTargetAddress + instructionSize;
-    if (/^\++$/.test(operand)) {
+    const rawShortOffset = opcode !== "BRL" && /^\$[\da-f]{1,2}$/i.test(operand.trim());
+    if (rawShortOffset) {
+      relativeAddress = this.assembler.operandResolver.getnum(operand);
+      if (relativeAddress > 127) {
+        relativeAddress -= 256;
+      }
+      targetAddress = branchReferenceAddress + relativeAddress;
+    } else if (/^\++$/.test(operand)) {
       targetAddress = this.assembler.symbolScope.findNextLabel(operand, branchReferenceAddress);
+      relativeAddress = targetAddress - branchReferenceAddress;
     } else if (/^-+$/.test(operand)) {
       targetAddress = this.assembler.symbolScope.findPreviousLabel(operand, branchReferenceAddress);
+      relativeAddress = targetAddress - branchReferenceAddress;
     } else {
       targetAddress = this.assembler.operandResolver.getnum(operand);
+      relativeAddress = targetAddress - branchReferenceAddress;
     }
 
-    const currentAddress = this.assembler.currentTargetAddress + instructionSize; // Offset by instruction size
-    const relativeAddress = targetAddress - currentAddress;
+    const currentAddress = branchReferenceAddress;
 
     debug(
       "handleBranchInstructions targetAddress:",
@@ -2206,7 +2361,7 @@ export class Arch65816 implements ArchitectureEncoder {
     } else {
       if (relativeAddress < -128 || relativeAddress > 127) {
         throw this.assembler.diagnostics.error(
-          `Error: Branch target out of range (${relativeAddress}).`,
+          `Error: Branch target out of range (${relativeAddress}) for ${opcode} ${operand} at $${this.assembler.currentTargetAddress.toString(16)}.`,
         );
       }
       // **Ensure signed byte is written correctly**
