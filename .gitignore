@@ -71,4 +71,6 @@ fixtures/integration/**/SLIDE.sfc
 fixtures/integration/chou/chou-debug*.sfc
 fixtures/integration/chou/chou-seeded.sfc
 fixtures/integration/yoshisisland-disassembly/*.sfc
+fixtures/integration/Super-Mario-RPG-Disassembly/**/*.sfc
+fixtures/integration/Super-Mario-RPG-Disassembly/**/*.bin
 Local Only/

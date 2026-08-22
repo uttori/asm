@@ -906,7 +906,13 @@ export class Assembler {
         data: { runtime },
         fillPad: { session, operandResolver },
         flowControl: { session },
-        includeSource: { session, includeSource: session.includeSource, operandResolver, runtime },
+        includeSource: {
+          session,
+          includeSource: session.includeSource,
+          operandResolver,
+          runtime,
+          defineEngine: session.defineEngine,
+        },
         layout: {
           addressStack: { session },
           architecture: { session },

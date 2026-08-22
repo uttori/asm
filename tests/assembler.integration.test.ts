@@ -54,11 +54,14 @@ const CHOU_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/ch
 
 const YOSHI_DIR = path.resolve(PROJECT_ROOT, "fixtures/integration/yoshisisland-disassembly");
 const YOSHI_SRC_PATH = path.resolve(YOSHI_DIR, "disassembly/assemble.asm");
-const YOSHI_EXPECTED_SHA256 = fs
-  .readFileSync(path.resolve(YOSHI_DIR, "yi.sha256sum"), "utf8")
-  .trim()
-  .split(/\s+/)[0]
-  .toLowerCase();
+const YOSHI_EXPECTED_SHA256 = "9b4957466798bbdb5b43a450bbb60b2591ae81d95b891430f62d53ca62e8bc7b";
+
+const SMRPG_DIR = path.resolve(PROJECT_ROOT, "fixtures/integration/Super-Mario-RPG-Disassembly");
+const SMRPG_GLOBAL_DIR = path.resolve(SMRPG_DIR, "Global");
+const SMRPG_GAME_DIR = path.resolve(SMRPG_DIR, "SMRPG");
+const SMRPG_SRC_PATH = path.resolve(SMRPG_GLOBAL_DIR, "AssembleFile.asm");
+const SMRPG_ENGINE_BIN_PATH = path.resolve(SMRPG_GAME_DIR, "SPC700/Engine.bin");
+const SMRPG_EXPECTED_SHA256 = "740646f3535bfb365ca44e70d46ab433467b142bd84010393070bd0b141af853";
 
 const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
@@ -223,6 +226,55 @@ const assembleSourceStaged = (
   const program = assembler.buildProgramModel(source, sourcePath, 0);
   assembler.assembleProgram(program);
   return Buffer.from(assembler.getBinaryOutput());
+};
+
+/** Mirrors Assemble_SMRPG.bat for ROMID=SMRPG_U: FileType 0 → 4 (Engine.bin) → 1 → 2. */
+const assembleSmrpgU = (useLegacy: boolean): Buffer => {
+  const source = fs.readFileSync(SMRPG_SRC_PATH, "utf8");
+  const includePaths = ["./", SMRPG_GLOBAL_DIR, SMRPG_GAME_DIR];
+  const runPass = (
+    fileType: number,
+    extraDefines: Record<string, string> | undefined,
+    baseRom: Uint8Array | undefined,
+  ): Buffer => {
+    const assembler = new Assembler(baseRom, { collectSourceMetadata: false });
+    assembler.setChecksumMode("asar");
+    assembler.setIncludePaths(includePaths);
+    assembler.setCurrentFile(SMRPG_SRC_PATH);
+    assembler.defines.set("GameID", "SMRPG");
+    assembler.defines.set("ROMID", "SMRPG_U");
+    assembler.defines.set("FileType", String(fileType));
+    if (extraDefines) {
+      for (const [name, value] of Object.entries(extraDefines)) {
+        assembler.defines.set(name, value);
+      }
+    }
+    if (useLegacy) {
+      for (const stage of ASSEMBLY_STAGES) {
+        assembler.activateStage(stage);
+        const lines = source.split("\n");
+        for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+          assembler.setCurrentLine(lineNumber);
+          assembler.assembleblock(lines[lineNumber].trim());
+        }
+        assembler.finishPass();
+      }
+    } else {
+      const program = assembler.buildProgramModel(source, SMRPG_SRC_PATH, 0);
+      assembler.assembleProgram(program);
+    }
+    return Buffer.from(assembler.getBinaryOutput());
+  };
+
+  const initialized = runPass(0, undefined, undefined);
+  const engine = runPass(4, { PathToFile: "SPC700/Engine.asm" }, undefined);
+  fs.writeFileSync(SMRPG_ENGINE_BIN_PATH, engine);
+  try {
+    const assembled = runPass(1, undefined, initialized);
+    return runPass(2, undefined, assembled);
+  } finally {
+    fs.rmSync(SMRPG_ENGINE_BIN_PATH, { force: true });
+  }
 };
 
 const compareTreeVsLegacy = (fixtureName: string): TreeLegacyComparison => {
@@ -569,6 +621,16 @@ test.serial("integration YOSHI staged production path preserves include resoluti
   const source = fs.readFileSync(YOSHI_SRC_PATH, "utf8");
   const output = assembleSourceStaged(source, YOSHI_SRC_PATH, undefined, "asar");
   t.is(hashBuffer(output), YOSHI_EXPECTED_SHA256);
+});
+
+test.serial("integration SMRPG_U regression keeps legacy include flow byte-identical", (t) => {
+  t.timeout(30 * 60_000);
+  t.is(hashBuffer(assembleSmrpgU(true)), SMRPG_EXPECTED_SHA256);
+});
+
+test.serial("integration SMRPG_U staged production path preserves include resolution", (t) => {
+  t.timeout(30 * 60_000);
+  t.is(hashBuffer(assembleSmrpgU(false)), SMRPG_EXPECTED_SHA256);
 });
 
 for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {

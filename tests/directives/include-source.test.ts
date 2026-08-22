@@ -62,8 +62,13 @@ const createContext = (overrides: IncludeSessionOverrides = {}) => {
     write1: (value: number) => written.push(value),
   };
   const includeCalls: string[] = [];
+  const identityDefine = (content: string) => content;
   const ctx = {
     session,
+    defineEngine: {
+      resolveDefinesInStringLiteral: identityDefine,
+      resolveRegularDefines: identityDefine,
+    },
     includeSource: {
       assembleFile: (filename: string) => includeCalls.push(`incsrc:${filename}`),
       includeFile: (filename: string) => includeCalls.push(`include:${filename}`),
@@ -256,6 +261,35 @@ test("incsrc and include prefer IR targets and reject missing filenames", (t) =>
     "include requires exactly one filename parameter",
   );
   t.deepEqual(includeCalls, ["incsrc:raw.asm", "include:guarded.asm", 'incsrc:"shared file.asm"']);
+});
+
+test("incsrc and include expand defines in quoted and unquoted paths", (t) => {
+  const { ctx, includeCalls } = createContext();
+  ctx.defineEngine = {
+    resolveDefinesInStringLiteral: (content) => content.replaceAll("!ROMID", "SMRPG_U"),
+    resolveRegularDefines: (content) => content.replaceAll("!GameID", "SMRPG"),
+  };
+
+  handleIncsrc(ctx, ["incsrc", '"../SMRPG/RomMap/ROM_Map_!ROMID.asm"']);
+  handleInclude(ctx, ["include", "!GameID/boot.asm"]);
+  t.deepEqual(includeCalls, [
+    'incsrc:"../SMRPG/RomMap/ROM_Map_SMRPG_U.asm"',
+    "include:SMRPG/boot.asm",
+  ]);
+});
+
+test("incbin expands defines in the filename", (t) => {
+  const { ctx, written } = createContext({
+    files: {
+      "engine.bin": new Uint8Array([0x11, 0x22]),
+    },
+  });
+  ctx.defineEngine = {
+    resolveDefinesInStringLiteral: (content) => content.replaceAll("!PathToFile", "engine.bin"),
+    resolveRegularDefines: (content) => content,
+  };
+  handleIncbin(ctx, ["incbin", '"!PathToFile"']);
+  t.deepEqual(written, [0x11, 0x22]);
 });
 
 test("include source registration exposes all handlers", (t) => {

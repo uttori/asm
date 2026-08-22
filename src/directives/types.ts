@@ -171,12 +171,18 @@ export type AssemblerPolicyDirectiveContext = SessionDirectiveContext<
   >
 >;
 
+export type IncludeDefineEngine = {
+  resolveDefinesInStringLiteral(content: string): string;
+  resolveRegularDefines(content: string): string;
+};
+
 export type IncludeDirectiveContext = OperandDirectiveContext<
   Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope"> &
     Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition"> &
     Pick<DirectiveRomCapability, "write1">
 > &
   RuntimeDirectiveContext & {
+    defineEngine: IncludeDefineEngine;
     includeSource: Pick<
       IncludeSourceService,
       "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile"

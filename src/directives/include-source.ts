@@ -1,7 +1,7 @@
 import { parseExpressionNode, type ExpressionNode } from "../ir/expression-node.js";
 import type { NormalizedCommand } from "../ir/normalized-command.js";
 import type { DirectiveRegistry } from "./registry.js";
-import type { IncludeDirectiveContext } from "./types.js";
+import type { IncludeDefineEngine, IncludeDirectiveContext } from "./types.js";
 
 /** Hex (`$808000`) or decimal `incbin ->` seek targets. Labels take the other path. */
 const NUMERIC_INCBIN_TARGET = /^\$[\da-f]+$|^-?\d+$/i;
@@ -9,10 +9,30 @@ const NUMERIC_INCBIN_TARGET = /^\$[\da-f]+$|^-?\d+$/i;
 type RangeEvaluator = (expression: string | ExpressionNode) => number;
 
 /**
+ * Expands `!defines` in an include/incbin path. Quoted paths use string-literal
+ * rules (`\!` stays literal); unquoted paths use regular define replacement.
+ * @param {string} target Raw filename token, possibly quoted.
+ * @param {IncludeDefineEngine} defineEngine Define expander.
+ * @returns {string} The path with defines resolved. Quotes are preserved when present.
+ */
+const expandIncludeFilename = (target: string, defineEngine: IncludeDefineEngine): string => {
+  if (target.length >= 2) {
+    const quote = target[0];
+    const isQuoted =
+      (quote === '"' || quote === "'" || quote === "`") && target.endsWith(quote);
+    if (isQuoted) {
+      return `${quote}${defineEngine.resolveDefinesInStringLiteral(target.slice(1, -1))}${quote}`;
+    }
+  }
+  return defineEngine.resolveRegularDefines(target);
+};
+
+/**
  * Resolves the `incsrc` / `include` filename from IR metadata, falling back to words.
  * @param {string[]} words Directive tokens.
  * @param {NormalizedCommand} [command] The normalized command, when the registry supplied one.
  * @param {"incsrc" | "include"} directive The keyword, used in the arity error.
+ * @param {IncludeDefineEngine} defineEngine Define expander for path tokens.
  * @returns {string} The include target.
  * @throws {Error} If no filename is present.
  */
@@ -20,12 +40,13 @@ const resolveIncludeTarget = (
   words: readonly string[],
   command: NormalizedCommand | undefined,
   directive: "incsrc" | "include",
+  defineEngine: IncludeDefineEngine,
 ): string => {
   const target = command?.parsed.includeTarget?.target ?? words[1];
   if (!target) {
     throw new Error(`${directive} requires exactly one filename parameter`);
   }
-  return target;
+  return expandIncludeFilename(target, defineEngine);
 };
 
 /**
@@ -176,13 +197,21 @@ const assertIncbinBounds = (
  * @throws {Error} On missing file, bad range, missing `->` target, or unreadable contents.
  */
 export const handleIncbin = (
-  { session, includeSource, operandResolver, runtime }: IncludeDirectiveContext,
+  { session, includeSource, operandResolver, runtime, defineEngine }: IncludeDirectiveContext,
   words: readonly string[],
   _raw = "",
   command?: NormalizedCommand,
 ): void => {
   const { sourceWords, targetLocation } = splitIncbinArrow(words);
-  const { filename, rangeStr } = parseIncbinFilenameAndRange(sourceWords.join(" "));
+  const filenameWithRange = sourceWords.join(" ");
+  const { filename: rawFilename, rangeStr } = parseIncbinFilenameAndRange(filenameWithRange);
+  const quote = filenameWithRange[0];
+  let filename = rawFilename;
+  if (quote === '"' || quote === "'" || quote === "`") {
+    filename = defineEngine.resolveDefinesInStringLiteral(rawFilename);
+  } else {
+    filename = defineEngine.resolveRegularDefines(rawFilename);
+  }
 
   const fileData = includeSource.readFile(filename);
   if (!(fileData instanceof Uint8Array)) {
@@ -240,12 +269,12 @@ export const handleIncbin = (
  * @throws {Error} If the filename is missing.
  */
 export const handleIncsrc = (
-  { includeSource }: IncludeDirectiveContext,
+  { includeSource, defineEngine }: IncludeDirectiveContext,
   words: readonly string[],
   _raw = "",
   command?: NormalizedCommand,
 ): void => {
-  includeSource.assembleFile(resolveIncludeTarget(words, command, "incsrc"));
+  includeSource.assembleFile(resolveIncludeTarget(words, command, "incsrc", defineEngine));
 };
 
 /**
@@ -257,12 +286,12 @@ export const handleIncsrc = (
  * @throws {Error} If the filename is missing.
  */
 export const handleInclude = (
-  { includeSource }: IncludeDirectiveContext,
+  { includeSource, defineEngine }: IncludeDirectiveContext,
   words: readonly string[],
   _raw = "",
   command?: NormalizedCommand,
 ): void => {
-  includeSource.includeFile(resolveIncludeTarget(words, command, "include"));
+  includeSource.includeFile(resolveIncludeTarget(words, command, "include", defineEngine));
 };
 
 /**
