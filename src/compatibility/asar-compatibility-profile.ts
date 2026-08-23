@@ -19,6 +19,7 @@ export const ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "table",
   "includefrom",
   "asar",
+  "reset",
   "{",
   "}",
 ] as const;

@@ -128,6 +128,7 @@ const DIRECTLY_LOWERABLE_DIRECTIVES = new Set([
   "table",
   "warnings",
   "print",
+  "reset",
   "{",
   "}",
 ]);
@@ -143,11 +144,32 @@ export type CommandLoweringHost = {
 };
 
 /**
+ * Maps Asar `@directive` file-header spellings to the registered directive name.
+ * @param {string} keyword The raw command keyword.
+ * @param {{ has: (keyword: string) => boolean }} registry Directive registry.
+ * @returns {string} The canonical lowercase directive keyword.
+ */
+const canonicalDirectiveKeyword = (
+  keyword: string,
+  registry: { has: (keyword: string) => boolean },
+): string => {
+  const normalized = keyword.toLowerCase();
+  if (normalized.startsWith("@") && registry.has(normalized.slice(1))) {
+    return normalized.slice(1);
+  }
+  return normalized;
+};
+
+/**
  * Lowers stable front-end commands into directive or instruction work units used
  * by later layout and emission stages.
  */
 export class CommandLoweringService {
-  constructor(readonly host: CommandLoweringHost) {}
+  host: CommandLoweringHost;
+
+  constructor(host: CommandLoweringHost) {
+    this.host = host;
+  }
 
   /**
    * Lowers a normalized command into the execution-layer representation.
@@ -155,7 +177,7 @@ export class CommandLoweringService {
    * @returns {LoweredCommand} The lowered execution work unit.
    */
   lowerCommand(command: NormalizedCommand): LoweredCommand {
-    const keyword = command.keyword.toLowerCase();
+    const keyword = canonicalDirectiveKeyword(command.keyword, this.host.directiveRegistry);
 
     if (this.host.directiveRegistry.has(keyword)) {
       let directiveWords = command.words;
@@ -295,7 +317,7 @@ export class CommandLoweringService {
    * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
    */
   getPassthroughReason(command: NormalizedCommand): PassthroughReason | undefined {
-    const keyword = command.keyword.toLowerCase();
+    const keyword = canonicalDirectiveKeyword(command.keyword, this.host.directiveRegistry);
     if (/<[^>]+>/.test(command.command)) {
       // Macro bodies use ASAR-style `<param>` placeholders that are resolved
       // during normalized dispatch. Lowering them early would send placeholders

@@ -203,9 +203,22 @@ export class DirectiveRuntimeService {
     }
 
     const addressStr = params[0].trim();
-    const addr = addressStr.startsWith("$")
-      ? parseInt(addressStr.substring(1), 16)
-      : parseInt(addressStr, 10);
+    let addr: number;
+    if (/^\$[\da-f]+$/i.test(addressStr)) {
+      addr = parseInt(addressStr.substring(1), 16);
+    } else if (/^-?\d+$/.test(addressStr)) {
+      addr = parseInt(addressStr, 10);
+    } else {
+      try {
+        // Asar accepts `org !Size-$01` and bitwise header-location math.
+        // Evaluate through math so leftover junk still errors instead of
+        // silently becoming 0 during definition collection.
+        addr = this.host.operandResolver.deps.evaluateMath(this.host.resolvedefines(addressStr));
+      } catch {
+        throw new Error(`Invalid ORG address: ${params[0]}`);
+      }
+    }
+
     const maxAddress = 2 ** this.host.targetProfile.addressSpace.addressWidth - 1;
     if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
       throw new Error(`Invalid ORG address: ${params[0]}`);

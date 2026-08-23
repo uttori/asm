@@ -91,7 +91,7 @@ export class DirectiveRegistry {
    * @returns {boolean} The result.
    */
   has(keyword: string): boolean {
-    return this.handlers.has(keyword);
+    return this.lookup(keyword) !== undefined;
   }
 
   /**
@@ -108,13 +108,29 @@ export class DirectiveRegistry {
     raw: string,
     command?: NormalizedCommand,
   ): boolean {
-    const handler = this.handlers.get(keyword);
+    const handler = this.lookup(keyword);
     if (!handler) {
       return false;
     }
 
     handler(words, raw, command);
     return true;
+  }
+
+  /**
+   * Resolves a directive handler, including Asar's `@directive` file-header form.
+   * @param {string} keyword The directive keyword.
+   * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
+   */
+  lookup(keyword: string): BoundDirectiveHandler | undefined {
+    const direct = this.handlers.get(keyword);
+    if (direct) {
+      return direct;
+    }
+    if (keyword.startsWith("@")) {
+      return this.handlers.get(keyword.slice(1));
+    }
+    return undefined;
   }
 }
 

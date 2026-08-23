@@ -129,6 +129,39 @@ test("lowered passthrough shares immutable input and dispatch mutates only its e
   t.is(sourceCommand.command, "Entry:");
 });
 
+test("Asar @-prefixed directives map to the unprefixed handlers", t => {
+  const assembler = new Assembler();
+  t.true(assembler.directiveRegistry.has("@asar"));
+  t.true(assembler.directiveRegistry.has("@includeonce"));
+
+  const program = assembler.buildProgramModel(
+    "@asar 1.71\n@includeonce\ndb $01",
+    "pragma.asm",
+  );
+  const lowered = assembler.commandLoweringService.lowerProgram(program);
+
+  t.is(lowered.nodes[0]?.kind, "directive");
+  if (lowered.nodes[0]?.kind === "directive") {
+    t.is(lowered.nodes[0].keyword, "asar");
+  }
+  t.is(lowered.nodes[1]?.kind, "directive");
+  if (lowered.nodes[1]?.kind === "directive") {
+    t.is(lowered.nodes[1].keyword, "includeonce");
+  }
+
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
+    assembler.setWritePosition(0x808000);
+    assembler.assembleblock("@asar 1.71");
+    assembler.assembleblock("@includeonce");
+    assembler.assembleblock("reset bytes");
+    assembler.assembleblock("db $01");
+    assembler.finishPass();
+  }
+
+  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0x01]);
+});
+
 test("instruction-looking macro body lines remain preprocessing passthrough", t => {
   const assembler = new Assembler();
   const program = assembler.buildProgramModel([

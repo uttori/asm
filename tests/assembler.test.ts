@@ -4510,6 +4510,7 @@ test("handleOrg - throws error with invalid hex value", t => {
 
 test("handleOrg - throws error with invalid decimal value", t => {
   const assembler = new Assembler();
+  assembler.activateStage("emitProgram");
 
   const error = t.throws(() => {
     assembler.directiveRuntime.handleOrg(["INVALID"]);
@@ -4553,6 +4554,41 @@ test("handleOrg - handles address with whitespace", t => {
   assembler.directiveRuntime.handleOrg([" $A000 "]);
 
   t.is(assembler.currentTargetAddress, 0xA000, "currentTargetAddress should be set correctly with trimmed value");
+});
+
+test("handleOrg - evaluates define math expressions", t => {
+  const assembler = new Assembler();
+  assembler.defines.set("MaxROMSize", "$008000");
+
+  assembler.directiveRuntime.handleOrg(["!MaxROMSize-$01"]);
+
+  t.is(assembler.currentTargetAddress, 0x7FFF);
+  t.is(assembler.currentTargetBaseAddress, 0x7FFF);
+});
+
+test("handleOrg - evaluates bitwise header-location expressions", t => {
+  const assembler = new Assembler();
+  assembler.defines.set("SNESHeaderLoc", "$00FFB0");
+  assembler.defines.set("FastROMAddressOffset", "$000000");
+  assembler.defines.set("HiROMAddressOffset", "$000000");
+
+  assembler.directiveRuntime.handleOrg([
+    "(((!SNESHeaderLoc&$FF0000)+$10000)|!FastROMAddressOffset)^!HiROMAddressOffset",
+  ]);
+
+  t.is(assembler.currentTargetAddress, 0x10000);
+});
+
+test("base preserves define casing and still accepts BASE OFF", t => {
+  const assembler = new Assembler();
+  assembler.defines.set("Define_SMRPG_SPC700_EngineStartAddress", "0200");
+  assembler.assembleblock("base $!Define_SMRPG_SPC700_EngineStartAddress");
+  t.is(assembler.currentTargetAddress, 0x200);
+
+  assembler.currentTargetBaseAddress = 0x8000;
+  assembler.currentTargetBaseStartAddress = 0x8000;
+  assembler.assembleblock("BASE OFF");
+  t.is(assembler.currentTargetAddress, 0x8000);
 });
 
 test("typed conditional nodes execute the first matching branch", t => {

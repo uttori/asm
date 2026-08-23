@@ -115,8 +115,8 @@ export const registerLayoutDirectives = (
       throw new Error("BASE directive requires exactly one parameter.");
     }
 
-    const param = words[1].toLowerCase();
-    if (param === "off") {
+    const param = words[1].trim();
+    if (param.toLowerCase() === "off") {
       const baseAddress = Number(session.currentTargetBaseAddress);
       const baseStartAddress = Number(session.currentTargetBaseStartAddress);
       session.currentTargetAddress = baseAddress;
