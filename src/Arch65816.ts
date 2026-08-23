@@ -97,8 +97,8 @@ export class Arch65816 implements ArchitectureEncoder {
     if (inner.startsWith("#")) {
       inner = inner.slice(1).trim();
     }
-    const isMathExpression = /[&()*+/<>^|\-]/.test(inner);
-    const isBareIdentifier = /^[A-Za-z_]\w*$/.test(inner);
+    const isMathExpression = /[&()*+/<>^|-]/.test(inner);
+    const isBareIdentifier = /^[A-Z_a-z]\w*$/.test(inner);
     if (!isMathExpression && !isBareIdentifier) {
       if (operandLength <= 1) {
         return 1;

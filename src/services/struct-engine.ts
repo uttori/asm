@@ -1,5 +1,22 @@
-import type { StructDefinition } from "../assembler.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+
+export interface StructDefinition {
+  name: string;
+  /** The SNES start address for the struct. */
+  base: number;
+  /** Running offset as member commands are processed. */
+  offset: number;
+  /** Final size (after alignment, etc.) */
+  size: number;
+  /** Mapping from member name (without the leading dot) to its offset. */
+  labels: Map<string, number>;
+  /** Optional alignment (if specified in endstruct). */
+  align?: number;
+  /** If this struct extends a parent. */
+  parent?: string;
+  /** Cached maximum child extension size, or zero when there are no extensions. */
+  extensionSize: number;
+}
 
 export type StructHost = {
   currentStruct: StructDefinition | null;

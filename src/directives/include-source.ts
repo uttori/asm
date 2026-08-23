@@ -23,8 +23,7 @@ type RangeEvaluator = (expression: string | ExpressionNode) => number;
 const expandIncludeFilename = (target: string, defineEngine: IncludeDefineEngine): string => {
   if (target.length >= 2) {
     const quote = target[0];
-    const isQuoted =
-      (quote === '"' || quote === "'" || quote === "`") && target.endsWith(quote);
+    const isQuoted = (quote === '"' || quote === "'" || quote === "`") && target.endsWith(quote);
     if (isQuoted) {
       return `${quote}${defineEngine.resolveDefinesInStringLiteral(target.slice(1, -1))}${quote}`;
     }

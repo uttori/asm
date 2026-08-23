@@ -55,8 +55,12 @@ import { CRC32 } from "./crc32.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
 import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
+import type { SpcblockData } from "./directives/types.js";
 import { DefineEngine } from "./services/define-engine.js";
-import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
+import {
+  DirectiveRuntimeService,
+  type PushPcStackEntry,
+} from "./services/directive-runtime-service.js";
 import {
   AssemblyFrontEndService,
   type AssemblyFrontEndHost,
@@ -70,15 +74,15 @@ import {
 } from "./services/command-lowering-service.js";
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
 import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
-import { MacroEngine } from "./services/macro-engine.js";
+import { MacroEngine, type MacroDefinition } from "./services/macro-engine.js";
 import {
   ProgramModelBuilder,
   type IncrementalProgramParseState,
   type ProgramModel,
 } from "./services/program-model-builder.js";
 import { RomWriterService } from "./services/rom-writer-service.js";
-import { StructEngine } from "./services/struct-engine.js";
-import { SymbolScopeService } from "./services/symbol-scope-service.js";
+import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
+import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
 import {
   getDefineVariable,
   isBareLabelReference,
@@ -100,6 +104,7 @@ import {
   type PluginStateSnapshot,
 } from "./plugin/index.js";
 import { getLegacyTargetProfile } from "./plugin/legacy-adapter.js";
+import type { AssemblyStageName } from "./plugin/contracts.js";
 
 let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
@@ -110,23 +115,8 @@ try {
 } catch {}
 // }
 
-/** Represents a macro definition. */
-export type MacroDefinition = {
-  /** The name of the macro. */
-  name: string;
-  /** Fixed parameter names. */
-  params: string[];
-  /** Whether the macro has a variable number of parameters. */
-  variadic: boolean;
-  /** Typed commands captured inside the macro body. */
-  body: NormalizedCommand[];
-  /** The file where this macro was defined. */
-  sourceFile?: string;
-};
-
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
-export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
 export type StageExecutionMode = "layout" | "emit";
 export type StageExecutionCapabilities = {
   instructionMode: StageExecutionMode;
@@ -206,52 +196,6 @@ export type WhileTracker = {
   for_start?: number;
   for_end?: number;
   for_cur?: number;
-};
-
-export type LabelEntry = {
-  value: number;
-  isStatic: boolean;
-  isMacroLabel?: boolean;
-  /** Tracks which macro instance this label belongs to */
-  macroInstance?: number;
-  /** Whether this label affects the sublabel hierarchy */
-  modifiesHierarchy?: boolean;
-};
-
-// Represents a structure definition.
-export interface StructDefinition {
-  name: string;
-  /** The SNES start address for the struct. */
-  base: number;
-  /** Running offset as member commands are processed. */
-  offset: number;
-  /** Final size (after alignment, etc.) */
-  size: number;
-  /** Mapping from member name (without the leading dot) to its offset. */
-  labels: Map<string, number>;
-  /** Optional alignment (if specified in endstruct). */
-  align?: number;
-  /** If this struct extends a parent. */
-  parent?: string;
-  /** Cached maximum child extension size, or zero when there are no extensions. */
-  extensionSize: number;
-}
-
-export type PushPcStackEntry = {
-  currentTargetAddress: number;
-  currentTargetStartAddress: number;
-  currentTargetBaseAddress: number;
-  currentTargetBaseStartAddress: number;
-};
-
-export type SpcblockType = "nspc" | "custom";
-
-export type SpcblockData = {
-  destination: number;
-  type: SpcblockType;
-  sizeAddress: number;
-  executeAddress: number | null;
-  namespaceBackup: string;
 };
 
 export type AssemblerOptions = {

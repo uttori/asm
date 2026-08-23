@@ -1,16 +1,21 @@
-import type { MacroDefinition } from "../assembler.js";
 import type { MathCore } from "../mathcore.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
-import type { SymbolScopeService } from "./symbol-scope-service.js";
+import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
 import { removeInlineComment } from "./command-text-service.js";
 import { incrementInternalCounter } from "../internal-instrumentation.js";
 
-export type MacroLabelEntry = {
-  value: number;
-  isStatic: boolean;
-  isMacroLabel?: boolean;
-  macroInstance?: number;
-  modifiesHierarchy?: boolean;
+/** Represents a macro definition. */
+export type MacroDefinition = {
+  /** The name of the macro. */
+  name: string;
+  /** Fixed parameter names. */
+  params: string[];
+  /** Whether the macro has a variable number of parameters. */
+  variadic: boolean;
+  /** Typed commands captured inside the macro body. */
+  body: NormalizedCommand[];
+  /** The file where this macro was defined. */
+  sourceFile?: string;
 };
 
 export type MacroExpansionControlEntry = {
@@ -23,7 +28,7 @@ export interface MacroEngineHost {
   currentFile: string;
   currentTargetAddress: number;
   defines: Map<string, string>;
-  labelTable: Map<string, MacroLabelEntry>;
+  labelTable: Map<string, LabelEntry>;
   inMacroDefinition: boolean;
   currentMacroName: string;
   currentMacroParams: string[];

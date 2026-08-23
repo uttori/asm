@@ -1,10 +1,12 @@
-import type { StructDefinition } from "../assembler.js";
+import type { StructDefinition } from "./struct-engine.js";
 
-type LabelEntry = {
+export type LabelEntry = {
   value: number;
   isStatic: boolean;
   isMacroLabel?: boolean;
+  /** Tracks which macro instance this label belongs to */
   macroInstance?: number;
+  /** Whether this label affects the sublabel hierarchy */
   modifiesHierarchy?: boolean;
 };
 

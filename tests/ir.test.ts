@@ -1,7 +1,7 @@
 import { stub } from "sinon";
 import { test } from "./ava-helper.js";
 
-import type { StructDefinition } from "../src/assembler.js";
+import type { StructDefinition } from "../src/services/struct-engine.js";
 import { Assembler } from "./test-assembler.js";
 import {
   isReferenceExpressionNode,
@@ -25,9 +25,8 @@ type AssemblerReferenceTestAccess = {
   evaluateReferenceExpressionNode: (expression: ReferenceExpressionNode) => number;
 };
 
-const stripExpressionSpans = (node: ExpressionNode): ExpressionNode => JSON.parse(JSON.stringify(node, (key, value) => (
-  key === "span" ? undefined : value
-)));
+const stripExpressionSpans = (node: ExpressionNode): ExpressionNode =>
+  JSON.parse(JSON.stringify(node, (key, value) => (key === "span" ? undefined : value)));
 
 test("normalized command captures provenance and classification", (t) => {
   const command = createNormalizedCommand(
@@ -41,7 +40,14 @@ test("normalized command captures provenance and classification", (t) => {
   t.is(command.source.file, "test.asm");
   t.is(command.source.line, 12);
   t.is(command.source.raw, "Main: db $01");
-  t.deepEqual(command.source.tokenSpans.map((span) => [span.start, span.end]), [[0, 5], [6, 8], [9, 12]]);
+  t.deepEqual(
+    command.source.tokenSpans.map((span) => [span.start, span.end]),
+    [
+      [0, 5],
+      [6, 8],
+      [9, 12],
+    ],
+  );
   t.is(command.labelName, "Main");
   t.is(command.kind, "labelDefinition");
 });
@@ -75,10 +81,34 @@ test("pending command preserves raw loop body input", (t) => {
 });
 
 test("normalized command derives semantic payloads for conditions, ranges, assignments, and incbin", (t) => {
-  const whileCommand = createNormalizedCommand("while !COUNT < 2", "while !COUNT < 2", ["while", "!COUNT", "<", "2"], "test.asm", 3);
-  const forCommand = createNormalizedCommand("for i = 0..2", "for i = 0..2", ["for", "i", "=", "0..2"], "test.asm", 4);
-  const assignmentCommand = createNormalizedCommand("Label = bank($123456)", "Label = bank($123456)", ["Label", "=", "bank($123456)"], "test.asm", 5);
-  const incbinCommand = createNormalizedCommand("incbin \"test.bin\":$1..$3", "incbin \"test.bin\":$1..$3", ["incbin", "\"test.bin\":$1..$3"], "test.asm", 6);
+  const whileCommand = createNormalizedCommand(
+    "while !COUNT < 2",
+    "while !COUNT < 2",
+    ["while", "!COUNT", "<", "2"],
+    "test.asm",
+    3,
+  );
+  const forCommand = createNormalizedCommand(
+    "for i = 0..2",
+    "for i = 0..2",
+    ["for", "i", "=", "0..2"],
+    "test.asm",
+    4,
+  );
+  const assignmentCommand = createNormalizedCommand(
+    "Label = bank($123456)",
+    "Label = bank($123456)",
+    ["Label", "=", "bank($123456)"],
+    "test.asm",
+    5,
+  );
+  const incbinCommand = createNormalizedCommand(
+    'incbin "test.bin":$1..$3',
+    'incbin "test.bin":$1..$3',
+    ["incbin", '"test.bin":$1..$3'],
+    "test.asm",
+    6,
+  );
 
   t.deepEqual(whileCommand.parsed.condition?.expression, parseExpressionNode("!COUNT < 2"));
   t.deepEqual(forCommand.parsed.forLoop, {
@@ -99,12 +129,42 @@ test("normalized command derives semantic payloads for conditions, ranges, assig
 });
 
 test("normalized command derives macro include data and label split semantics", (t) => {
-  const macroInvoke = createNormalizedCommand("%emit($10, bank($123456))", "%emit($10, bank($123456))", ["%emit($10,", "bank($123456))"], "test.asm", 7);
-  const include = createNormalizedCommand('include "macros.asm"', 'include "macros.asm"', ["include", "\"macros.asm\""], "test.asm", 8);
-  const data = createNormalizedCommand("db $01, bank($123456), \"TEXT\"", "db $01, bank($123456), \"TEXT\"", ["db", "$01,", "bank($123456),", "\"TEXT\""], "test.asm", 9);
-  const labeled = createNormalizedCommand("Main: db $01", "Main: db $01", ["Main:", "db", "$01"], "test.asm", 10);
+  const macroInvoke = createNormalizedCommand(
+    "%emit($10, bank($123456))",
+    "%emit($10, bank($123456))",
+    ["%emit($10,", "bank($123456))"],
+    "test.asm",
+    7,
+  );
+  const include = createNormalizedCommand(
+    'include "macros.asm"',
+    'include "macros.asm"',
+    ["include", '"macros.asm"'],
+    "test.asm",
+    8,
+  );
+  const data = createNormalizedCommand(
+    'db $01, bank($123456), "TEXT"',
+    'db $01, bank($123456), "TEXT"',
+    ["db", "$01,", "bank($123456),", '"TEXT"'],
+    "test.asm",
+    9,
+  );
+  const labeled = createNormalizedCommand(
+    "Main: db $01",
+    "Main: db $01",
+    ["Main:", "db", "$01"],
+    "test.asm",
+    10,
+  );
   const opcode = createNormalizedCommand("lda #$10", "lda #$10", ["lda", "#$10"], "test.asm", 11);
-  const directive = createNormalizedCommand("org $808000", "org $808000", ["org", "$808000"], "test.asm", 12);
+  const directive = createNormalizedCommand(
+    "org $808000",
+    "org $808000",
+    ["org", "$808000"],
+    "test.asm",
+    12,
+  );
 
   t.deepEqual(macroInvoke.parsed.macroInvocation, {
     name: "emit",
@@ -112,11 +172,11 @@ test("normalized command derives macro include data and label split semantics", 
   });
   t.deepEqual(include.parsed.includeTarget, {
     directive: "include",
-    target: "\"macros.asm\"",
+    target: '"macros.asm"',
   });
   t.deepEqual(data.parsed.dataDirective, {
     directive: "db",
-    operands: ["$01", "bank($123456)", "\"TEXT\""],
+    operands: ["$01", "bank($123456)", '"TEXT"'],
   });
   t.deepEqual(labeled.parsed.labelSplit, {
     label: "Main",
@@ -134,13 +194,11 @@ test("normalized command derives macro include data and label split semantics", 
 });
 
 test("pending command can capture normalized loop-body semantics", (t) => {
-  const command = createPendingCommand(
-    "Label = 1 ; keep comment",
-    "loop.asm",
-    9,
-    "Label = 1",
-    ["Label", "=", "1"],
-  );
+  const command = createPendingCommand("Label = 1 ; keep comment", "loop.asm", 9, "Label = 1", [
+    "Label",
+    "=",
+    "1",
+  ]);
 
   t.is(command.command, "Label = 1");
   t.deepEqual(command.parsed.assignment, {
@@ -225,10 +283,7 @@ test("expression nodes parse binary precedence and unary operators", (t) => {
 
 test("typed for nodes preserve parsed range semantics", (t) => {
   const assembler = new Assembler();
-  const [loop] = assembler.parseCommandStreamToNodes([
-    "for i = 0..2",
-    "endfor",
-  ]);
+  const [loop] = assembler.parseCommandStreamToNodes(["for i = 0..2", "endfor"]);
 
   if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "for") {
     t.fail();
@@ -241,17 +296,23 @@ test("typed for nodes preserve parsed range semantics", (t) => {
     end: { type: "literal", value: "2" },
   });
   t.is(loop.variable, "i");
-  t.deepEqual(stripExpressionSpans(loop.startExpression as ExpressionNode), { type: "literal", value: "0" });
-  t.deepEqual(stripExpressionSpans(loop.endExpression as ExpressionNode), { type: "literal", value: "2" });
+  t.deepEqual(stripExpressionSpans(loop.startExpression as ExpressionNode), {
+    type: "literal",
+    value: "0",
+  });
+  t.deepEqual(stripExpressionSpans(loop.endExpression as ExpressionNode), {
+    type: "literal",
+    value: "2",
+  });
 });
 
 test("typed while nodes retain normalized loop body commands", (t) => {
   const assembler = new Assembler();
-  const [loop] = assembler.parseCommandStreamToNodes([
-    "while !COUNT < 2",
-    "Label = 1 ; comment",
-    "endwhile",
-  ], "loop.asm", 0);
+  const [loop] = assembler.parseCommandStreamToNodes(
+    ["while !COUNT < 2", "Label = 1 ; comment", "endwhile"],
+    "loop.asm",
+    0,
+  );
 
   if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "while") {
     t.fail();
@@ -281,11 +342,11 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
   stub(assembler, "processNormalizedCommand").callsFake((command) => {
     executed.push({ command: command.command, value: assembler.defines.get("i") });
   });
-  const [loop] = assembler.parseCommandStreamToNodes([
-    "for i = 0..3",
-    "db !i",
-    "endfor",
-  ], "loop.asm", 0);
+  const [loop] = assembler.parseCommandStreamToNodes(
+    ["for i = 0..3", "db !i", "endfor"],
+    "loop.asm",
+    0,
+  );
 
   if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "for") {
     t.fail();
@@ -312,7 +373,10 @@ test("tree pass programs are cached per source block key", (t) => {
 
 test("include nodes and parsed programs keep typed executable leaves", (t) => {
   const assembler = new Assembler();
-  const includeNode = assembler.programModelBuilder.createIncludeNode("include.asm", "db $01\ndb $02");
+  const includeNode = assembler.programModelBuilder.createIncludeNode(
+    "include.asm",
+    "db $01\ndb $02",
+  );
   const rootNodes = assembler.getOrBuildPassProgram(["db $01", "db $02"], "root.asm", 0);
 
   t.true(includeNode.commands.every((node) => typeof node !== "string"));
@@ -380,7 +444,7 @@ test("evaluateExpression wraps node resolution errors with contextual message", 
     assembler.evaluateExpression(missingDefineExpression);
   });
   t.truthy(error);
-  t.true(error.message.startsWith("Error evaluating expression \"!MISSING_DEFINE\""));
+  t.true(error.message.startsWith('Error evaluating expression "!MISSING_DEFINE"'));
 });
 
 test("define references and member/index nodes resolve structurally", (t) => {
@@ -479,7 +543,7 @@ test("expression host label resolution delegates to canonical reference seam", (
   assembler.structs.set("MyStruct", structDefinition);
 
   stub(assembler.structEngine, "hasStructReference").callsFake(
-    reference => reference === "MyStruct" || reference.startsWith("Player"),
+    (reference) => reference === "MyStruct" || reference.startsWith("Player"),
   );
   const structStub = stub(assembler.structEngine, "resolveStructLabel");
   structStub.withArgs("MyStruct").returns(0);
@@ -508,27 +572,34 @@ test("incbin range evaluation adopts expression nodes for bounds", (t) => {
     writtenBytes.push(value);
   });
 
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-  }, ["incbin", "\"test.bin\":$1..$3"]);
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+    },
+    ["incbin", '"test.bin":$1..$3'],
+  );
 
   t.deepEqual(writtenBytes, [0x20, 0x30]);
 });
 
 test("analyzeSource collects diagnostics and symbols for tooling callers", (t) => {
   const assembler = new Assembler();
-  const result = assembler.analyzeSource([
-    "Main:",
-    "!answer = 42",
-    "macro emit()",
-    "endmacro",
-    "struct Player 0",
-    ".hp: skip 1",
-    "endstruct",
-    "!MISSING",
-  ].join("\n"), "analysis.asm", 0);
+  const result = assembler.analyzeSource(
+    [
+      "Main:",
+      "!answer = 42",
+      "macro emit()",
+      "endmacro",
+      "struct Player 0",
+      ".hp: skip 1",
+      "endstruct",
+      "!MISSING",
+    ].join("\n"),
+    "analysis.asm",
+    0,
+  );
 
   t.true(result.diagnostics.length > 0);
   t.true(result.symbols.some((entry) => entry.kind === "label" && entry.name.includes("Main")));

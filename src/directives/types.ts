@@ -1,15 +1,32 @@
+import type { ArchitectureRegistry } from "../architecture-registry.js";
 import type { OperandResolver } from "../operand-resolver.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
 import type { NormalizedCommand } from "../ir/normalized-command.js";
+import type { IncludeSourceService } from "../services/include-source-service.js";
 import type { RomWriterService } from "../services/rom-writer-service.js";
 import type { StructEngine } from "../services/struct-engine.js";
 import type { SymbolScopeService } from "../services/symbol-scope-service.js";
-import type { AssemblerServices } from "../assembler-internals.js";
-import { ArchitectureRegistry } from "../architecture-registry.js";
-import type { SpcblockData } from "../assembler.js";
-import { ExpressionNode } from "../ir/expression-node.js";
-import type { DirectiveRuntimeService } from "../services/directive-runtime-service.js";
-import type { IncludeSourceService } from "../services/include-source-service.js";
 import type { TargetProfile } from "../target-profile.js";
+
+export type SpcblockType = "nspc" | "custom";
+
+export type SpcblockData = {
+  destination: number;
+  type: SpcblockType;
+  sizeAddress: number;
+  executeAddress: number | null;
+  namespaceBackup: string;
+};
+
+/** Methods directive handlers actually call on the runtime service. */
+export interface DirectiveRuntime {
+  handleDataDirective(type: string, params: string[]): void;
+  handleEndSpcblock(words: readonly string[]): void;
+  handleOrg(params: string[]): void;
+  handlePullPC(): void;
+  handlePushPC(): void;
+  handleSpcblock(words: readonly string[]): void;
+}
 
 export interface DirectiveAddressCapability {
   targetProfile: TargetProfile;
@@ -82,7 +99,6 @@ export interface DirectiveArchitectureCapability {
 }
 
 export interface DirectiveAssemblerCapability {
-  services: AssemblerServices;
   defines: Map<string, string>;
   readFunctionsEnabled: boolean;
   bankCrossCheckMode: "off" | "full" | "half";
@@ -98,7 +114,7 @@ export interface OperandDirectiveContext<Session> extends SessionDirectiveContex
 }
 
 export interface RuntimeDirectiveContext {
-  runtime: DirectiveRuntimeService;
+  runtime: DirectiveRuntime;
 }
 
 export type NarrowDirectiveHandler<Context> = (

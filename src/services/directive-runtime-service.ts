@@ -1,5 +1,5 @@
 import type { OperandResolver } from "../operand-resolver.js";
-import type { SpcblockData, SpcblockType } from "../assembler.js";
+import type { SpcblockData, SpcblockType } from "../directives/types.js";
 import type { DefineEngine } from "./define-engine.js";
 import type { RomWriterService } from "./rom-writer-service.js";
 import type { StructEngine } from "./struct-engine.js";
@@ -7,7 +7,7 @@ import type { SymbolScopeService } from "./symbol-scope-service.js";
 import { splitRespectingFunctions } from "./command-text-service.js";
 import type { TargetProfile } from "../target-profile.js";
 
-export type PushPcRuntimeEntry = {
+export type PushPcStackEntry = {
   currentTargetAddress: number;
   currentTargetStartAddress: number;
   currentTargetBaseAddress: number;
@@ -31,7 +31,7 @@ export interface DirectiveRuntimeHost {
   namespaceNestingPath: string[];
   namespaceStack: string[];
   operandResolver: OperandResolver;
-  pushpcStack: PushPcRuntimeEntry[];
+  pushpcStack: PushPcStackEntry[];
   pushpcnum: number;
   romWriter: RomWriterService;
   spcblockData: SpcblockData | null;
