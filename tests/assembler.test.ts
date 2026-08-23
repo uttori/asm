@@ -4665,6 +4665,27 @@ test("macro if !TEMP1 = !TRUE is treated as equality", (t) => {
   t.false(assembler.macroEngine.evaluateMacroControlExpression("!TEMP1 = !TRUE"));
 });
 
+test("macro if body assigns !TEMP1 before a later if !TEMP1 == !TRUE", (t) => {
+  const assembler = new Assembler();
+  assembler.defines.set("TRUE", "1");
+  assembler.defines.set("FALSE", "0");
+
+  assembler.processCommand("macro probe()");
+  assembler.processCommand("if 1");
+  assembler.processCommand("!TEMP1 = !FALSE");
+  assembler.processCommand("if !TEMP1 == !TRUE");
+  assembler.processCommand("!SAW_TRUE = 1");
+  assembler.processCommand("else");
+  assembler.processCommand("!SAW_TRUE = 0");
+  assembler.processCommand("endif");
+  assembler.processCommand("endif");
+  assembler.processCommand("endmacro");
+  assembler.processCommand("%probe()");
+
+  t.is(assembler.defines.get("TEMP1"), "!FALSE");
+  t.is(assembler.defines.get("SAW_TRUE"), "0");
+});
+
 test("typed conditional nodes support nested branch execution", t => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");

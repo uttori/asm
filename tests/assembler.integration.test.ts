@@ -63,6 +63,13 @@ const SMRPG_SRC_PATH = path.resolve(SMRPG_GLOBAL_DIR, "AssembleFile.asm");
 const SMRPG_ENGINE_BIN_PATH = path.resolve(SMRPG_GAME_DIR, "SPC700/Engine.bin");
 const SMRPG_EXPECTED_SHA256 = "740646f3535bfb365ca44e70d46ab433467b142bd84010393070bd0b141af853";
 
+const TMNT_DIR = path.resolve(PROJECT_ROOT, "fixtures/integration/TMNT-IV---Turtles-In-Time-SNES-Disassembly");
+const TMNT_GLOBAL_DIR = path.resolve(TMNT_DIR, "Global");
+const TMNT_GAME_DIR = path.resolve(TMNT_DIR, "Teenage_Mutant_Ninja_Turtles_IV");
+const TMNT_SRC_PATH = path.resolve(TMNT_GLOBAL_DIR, "AssembleFile.asm");
+const TMNT_SPC_BIN_PATH = path.resolve(TMNT_GAME_DIR, "SPC700/SPC700DataBlocks_TMNTIV.bin");
+const TMNT_EXPECTED_SHA256 = "5b82cdd6f2da56f43680d6a5021faebe2e06036d30602c1a7917aa414cf8b5f4";
+
 const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
 const hashBuffer = (buffer: Buffer): string => createHash("sha256").update(buffer).digest("hex");
@@ -279,6 +286,59 @@ const assembleSmrpgU = (useLegacy: boolean): Buffer => {
     return runPass(2, undefined, assembled);
   } finally {
     fs.rmSync(SMRPG_ENGINE_BIN_PATH, { force: true });
+  }
+};
+
+/** Mirrors Assemble_TMNTIV.bat for ROMID=TMNTIV_U (TMNTIV_USA): FileType 0 → 4 → 1 → 2. */
+const assembleTmntivUsa = (useLegacy: boolean): Buffer => {
+  const source = fs.readFileSync(TMNT_SRC_PATH, "utf8");
+  const includePaths = ["./", TMNT_GLOBAL_DIR, TMNT_GAME_DIR];
+  const runPass = (
+    fileType: number,
+    extraDefines: Record<string, string> | undefined,
+    baseRom: Uint8Array | undefined,
+  ): Buffer => {
+    const assembler = new Assembler(baseRom, { collectSourceMetadata: false });
+    if (baseRom && baseRom.length > 0) {
+      assembler.romdata = Array.from(baseRom);
+    }
+    assembler.setChecksumMode("asar");
+    assembler.setIncludePaths(includePaths);
+    assembler.setCurrentFile(TMNT_SRC_PATH);
+    assembler.defines.set("GameID", "TMNTIV");
+    assembler.defines.set("ROMID", "TMNTIV_U");
+    assembler.defines.set("MainFolder", "Teenage_Mutant_Ninja_Turtles_IV");
+    assembler.defines.set("FileType", String(fileType));
+    if (extraDefines) {
+      for (const [name, value] of Object.entries(extraDefines)) {
+        assembler.defines.set(name, value);
+      }
+    }
+    if (useLegacy) {
+      for (const stage of ASSEMBLY_STAGES) {
+        assembler.activateStage(stage);
+        const lines = source.split("\n");
+        for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+          assembler.setCurrentLine(lineNumber);
+          assembler.assembleblock(lines[lineNumber].trim());
+        }
+        assembler.finishPass();
+      }
+    } else {
+      const program = assembler.buildProgramModel(source, TMNT_SRC_PATH, 0);
+      assembler.assembleProgram(program);
+    }
+    return Buffer.from(assembler.getBinaryOutput());
+  };
+
+  const initialized = runPass(0, undefined, undefined);
+  const engine = runPass(4, undefined, undefined);
+  fs.writeFileSync(TMNT_SPC_BIN_PATH, engine);
+  try {
+    const assembled = runPass(1, undefined, initialized);
+    return runPass(2, undefined, assembled);
+  } finally {
+    fs.rmSync(TMNT_SPC_BIN_PATH, { force: true });
   }
 };
 
@@ -636,6 +696,16 @@ test.serial("integration SMRPG_U regression keeps legacy include flow byte-ident
 test.serial("integration SMRPG_U staged production path preserves include resolution", (t) => {
   t.timeout(30 * 60_000);
   t.is(hashBuffer(assembleSmrpgU(false)), SMRPG_EXPECTED_SHA256);
+});
+
+test.serial("integration TMNTIV_USA regression keeps legacy include flow byte-identical", (t) => {
+  t.timeout(30 * 60_000);
+  t.is(hashBuffer(assembleTmntivUsa(true)), TMNT_EXPECTED_SHA256);
+});
+
+test.serial("integration TMNTIV_USA staged production path preserves include resolution", (t) => {
+  t.timeout(30 * 60_000);
+  t.is(hashBuffer(assembleTmntivUsa(false)), TMNT_EXPECTED_SHA256);
 });
 
 for (const fixtureName of ALL_TOP_LEVEL_FIXTURES) {

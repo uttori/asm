@@ -41,6 +41,7 @@ export interface MacroEngineHost {
     evaluateExpression(input: string): boolean;
     resolvedefines(input: string): string;
     processCommand(command: string): void;
+    applyDefineAssignment(command: string): boolean;
     recordSymbolDefinition(kind: "macro", name: string, options?: {
         value?: number | string;
     }): void;

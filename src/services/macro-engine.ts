@@ -46,6 +46,7 @@ export interface MacroEngineHost {
   evaluateExpression(input: string): boolean;
   resolvedefines(input: string): string;
   processCommand(command: string): void;
+  applyDefineAssignment(command: string): boolean;
   recordSymbolDefinition(kind: "macro", name: string, options?: { value?: number | string }): void;
 }
 
@@ -776,7 +777,17 @@ export class MacroEngine {
       }
     }
 
-    this.host.processCommand(line);
+    // Define assignments inside a macro `if` must take effect before the next
+    // expanded `if !TEMP1 == !TRUE`. processCommand would buffer them in the
+    // incremental if-tree until endif. Do not eager-apply inside while/for —
+    // v140features uses `while`…`endif` in macros and those `#=` updates must
+    // stay in the loop body.
+    const isDefineAssignment = /^!\w+\s*(?:#=|\+=|:=|\?=|=(?!=))/.test(trimmed);
+    if (isDefineAssignment && !this.isMacroExpansionLoopActive()) {
+      this.host.applyDefineAssignment(line);
+    } else {
+      this.host.processCommand(line);
+    }
     this.updateMacroExpansionControlState(line);
   }
 }

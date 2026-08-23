@@ -73,5 +73,8 @@ fixtures/integration/chou/chou-seeded.sfc
 fixtures/integration/yoshisisland-disassembly/*.sfc
 fixtures/integration/Super-Mario-RPG-Disassembly/**/*.sfc
 fixtures/integration/Super-Mario-RPG-Disassembly/**/*.bin
+fixtures/integration/TMNT-IV---Turtles-In-Time-SNES-Disassembly/**/*.sfc
+fixtures/integration/TMNT-IV---Turtles-In-Time-SNES-Disassembly/**/*.bin
+fixtures/integration/TMNT-IV---Turtles-In-Time-SNES-Disassembly/**/*.brr
 Local Only/
 graphify-out/

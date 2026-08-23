@@ -41,6 +41,7 @@
     "fixture:slideshow": "tsx scripts/run-slideshow.ts",
     "fixture:slideshow:legacy": "tsx scripts/run-slideshow-legacy.ts",
     "fixture:smrpg:extract": "tsx scripts/extract-smrpg-assets.ts",
+    "fixture:tmnt:extract": "tsx scripts/extract-tmnt-assets.ts",
     "fmt": "oxfmt ./src ./language-server/src ./language-server/esbuild.mjs ./language-server/package.json ./language-server/tsconfig.json ./editors/vscode/src ./editors/vscode/esbuild.mjs ./editors/vscode/package.json ./editors/vscode/tsconfig.json ./editors/vscode/language-configuration.json ./editors/vscode/syntaxes/snes-asm.tmLanguage.json",
     "fmt:check": "oxfmt --check ./src ./language-server/src ./language-server/esbuild.mjs ./language-server/package.json ./language-server/tsconfig.json ./editors/vscode/src ./editors/vscode/esbuild.mjs ./editors/vscode/package.json ./editors/vscode/tsconfig.json ./editors/vscode/language-configuration.json ./editors/vscode/syntaxes/snes-asm.tmLanguage.json",
     "lint": "oxlint ./src ./language-server/src ./editors/vscode/src",

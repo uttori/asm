@@ -679,6 +679,12 @@ export declare class Assembler {
      */
     createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty?: boolean): NormalizedCommand | null;
     /**
+     * Applies a `!name =` assignment without routing it through the incremental if-tree.
+     * @param {string} command The define assignment command.
+     * @returns {boolean} `true` when the define engine handled the command.
+     */
+    applyDefineAssignment(command: string): boolean;
+    /**
      * Preprocesses normalized command.
      * @param {NormalizedCommand} state The state.
      * @returns {CommandPreprocessResult} The result.

@@ -297,6 +297,20 @@ test("processMacroLine handles inactive lines, labels, and assignments", t => {
 
   engine.processMacroLine("?constant = 4");
   t.true(setLabel.calledWith("?constant", 4, true, true));
+
+  const applyDefine = stub(assembler, "applyDefineAssignment").returns(true);
+  processCommand.resetHistory();
+  engine.macroExpansionControlStack = [];
+  engine.processMacroLine("!TEMP1 = !FALSE");
+  t.true(applyDefine.calledOnceWith("!TEMP1 = !FALSE"));
+  t.false(processCommand.calledWith("!TEMP1 = !FALSE"));
+
+  applyDefine.resetHistory();
+  processCommand.resetHistory();
+  engine.macroExpansionControlStack = [{ type: "while", active: true }];
+  engine.processMacroLine("!loopdyloop #= !loopdyloop-1");
+  t.false(applyDefine.called);
+  t.true(processCommand.calledWith("!loopdyloop #= !loopdyloop-1"));
 });
 
 test("callMacro parses quoted arguments and restores expansion state", t => {

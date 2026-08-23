@@ -2049,6 +2049,24 @@ export class Assembler {
   }
 
   /**
+   * Applies a `!name =` assignment without routing it through the incremental if-tree.
+   * @param {string} command The define assignment command.
+   * @returns {boolean} `true` when the define engine handled the command.
+   */
+  applyDefineAssignment(command: string): boolean {
+    const commandNode = this.createNormalizedCommandFromRaw(
+      command,
+      this.currentFile,
+      this.currentLine,
+      true,
+    );
+    if (!commandNode) {
+      return false;
+    }
+    return this.defineEngine.handleCommand(commandNode);
+  }
+
+  /**
    * Preprocesses normalized command.
    * @param {NormalizedCommand} state The state.
    * @returns {CommandPreprocessResult} The result.

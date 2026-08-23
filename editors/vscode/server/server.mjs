@@ -16692,7 +16692,12 @@ var MacroEngine = class {
         return;
       }
     }
-    this.host.processCommand(line);
+    const isDefineAssignment = /^!\w+\s*(?:#=|\+=|:=|\?=|=(?!=))/.test(trimmed);
+    if (isDefineAssignment && !this.isMacroExpansionLoopActive()) {
+      this.host.applyDefineAssignment(line);
+    } else {
+      this.host.processCommand(line);
+    }
     this.updateMacroExpansionControlState(line);
   }
 };
@@ -25704,6 +25709,23 @@ var Assembler = class _Assembler {
       sourceLine,
       allowEmpty
     );
+  }
+  /**
+   * Applies a `!name =` assignment without routing it through the incremental if-tree.
+   * @param {string} command The define assignment command.
+   * @returns {boolean} `true` when the define engine handled the command.
+   */
+  applyDefineAssignment(command) {
+    const commandNode = this.createNormalizedCommandFromRaw(
+      command,
+      this.currentFile,
+      this.currentLine,
+      true
+    );
+    if (!commandNode) {
+      return false;
+    }
+    return this.defineEngine.handleCommand(commandNode);
   }
   /**
    * Preprocesses normalized command.
