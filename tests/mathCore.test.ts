@@ -849,6 +849,18 @@ test("getnum - bitwise NOT operator", t => {
   mathCore.str = "~(10 + 5)";
   t.is(mathCore.getnum(), ~15);
   t.is(mathCore.str, "");
+
+  mathCore.str = "!$00";
+  t.is(mathCore.getnum(), ~0);
+  t.is(mathCore.str, "");
+
+  mathCore.str = "!10";
+  t.is(mathCore.getnum(), ~10);
+  t.is(mathCore.str, "");
+
+  mathCore.str = "!(10 + 5)";
+  t.is(mathCore.getnum(), ~15);
+  t.is(mathCore.str, "");
 });
 
 test("getnum - parentheses", t => {

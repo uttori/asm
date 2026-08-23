@@ -2802,6 +2802,11 @@ export class Assembler {
           debug("resolvedefines !define defineName", defineName);
         }
 
+        if (defineName === "") {
+          result += "!";
+          continue;
+        }
+
         // Look up the variable using our helper function
         const value = this.lookupDefineValue(defineName);
 

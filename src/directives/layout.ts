@@ -4,6 +4,7 @@ import {
   assertMapperAvailable,
   shouldEnableSpcInlineCompat,
   shouldRedirectOrgToSpcblock,
+  shouldUseNoromAddressing,
 } from "../compatibility/asar-compatibility-profile.js";
 import type {
   AddressStackDirectiveContext,
@@ -68,6 +69,9 @@ export const handleArch = (
     if (session.selectArchitecture) {
       session.selectArchitecture(archParam, archParam);
       session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+      if (shouldUseNoromAddressing(archParam)) {
+        applyMapperSelection(session, "norom");
+      }
       return;
     }
     throw new Error("Unsupported architecture: " + archParam);
@@ -87,6 +91,9 @@ export const handleArch = (
     session.arch = canonical;
   }
   session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+  if (shouldUseNoromAddressing(archParam)) {
+    applyMapperSelection(session, "norom");
+  }
 };
 
 export const handleStartpos = (

@@ -10214,6 +10214,7 @@ var calculateHeaderChecksum = (romdata, mode) => {
 };
 var shouldRedirectOrgToSpcblock = (spcInlineCompatMode) => spcInlineCompatMode;
 var shouldEnableSpcInlineCompat = (architecture) => architecture === "spc700-inline";
+var shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
 var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
 var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
 
@@ -11968,6 +11969,21 @@ var MathCore = class {
         this.advance(1);
         this.skipWhitespace();
         return ~this.getnum();
+      } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
+        const after = this.scanSource[this.scanIndex + 1];
+        let isDefineLike = after === "{";
+        if (after !== void 0) {
+          const code = after.charCodeAt(0);
+          if (code >= 65 && code <= 90 || code >= 97 && code <= 122 || code === 95) {
+            isDefineLike = true;
+          }
+        }
+        if (!isDefineLike) {
+          this.advance(1);
+          this.skipWhitespace();
+          return ~this.getnum();
+        }
+        break;
       } else if (this.remainingStartsWith("-")) {
         this.advance(1);
         this.skipWhitespace();
@@ -13431,6 +13447,102 @@ var applyEofEnd = (startOffset, endOffset, fileLength) => {
   }
   return { startOffset, endOffset };
 };
+var findTopLevelHyphen = (input) => {
+  let depth = 0;
+  let quote = "";
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+      if (quote === char) {
+        quote = "";
+      } else if (quote === "") {
+        quote = char;
+      }
+      continue;
+    }
+    if (quote !== "") {
+      continue;
+    }
+    if (char === "(") {
+      depth += 1;
+      continue;
+    }
+    if (char === ")") {
+      depth -= 1;
+      continue;
+    }
+    if (depth === 0 && char === "-") {
+      return i;
+    }
+  }
+  return -1;
+};
+var assertIncbinMathParensBalanced = (text) => {
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === "(") {
+      depth += 1;
+      continue;
+    }
+    if (char === ")") {
+      depth -= 1;
+      if (depth < 0) {
+        throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+      }
+    }
+  }
+  if (depth !== 0) {
+    throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+  }
+};
+var parseIncbinUnprefixedHex = (text) => {
+  const match = text.match(/^([0-9A-Fa-f]*)/);
+  const digits = match?.[1] ?? "";
+  let value = 0;
+  if (digits !== "") {
+    value = Number.parseInt(digits, 16);
+  }
+  return { value, rest: text.slice(digits.length) };
+};
+var parseDeprecatedHyphenIncbinRange = (rangeStr) => {
+  let rest = rangeStr;
+  let start;
+  if (rest.startsWith("(")) {
+    const hyphen = findTopLevelHyphen(rest);
+    if (hyphen < 1 || rest[hyphen - 1] !== ")") {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    const inner = rest.slice(1, hyphen - 1);
+    assertIncbinMathParensBalanced(inner);
+    start = inner;
+    rest = rest.slice(hyphen);
+  } else {
+    const parsed = parseIncbinUnprefixedHex(rest);
+    start = parsed.value;
+    rest = parsed.rest;
+  }
+  if (!rest.startsWith("-")) {
+    throw new Error(`Invalid range specification: ${rangeStr}`);
+  }
+  rest = rest.slice(1);
+  let end;
+  if (rest.startsWith("(")) {
+    if (!rest.endsWith(")")) {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    const inner = rest.slice(1, -1);
+    assertIncbinMathParensBalanced(inner);
+    end = inner;
+  } else {
+    const parsed = parseIncbinUnprefixedHex(rest);
+    if (parsed.rest !== "") {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    end = parsed.value;
+  }
+  return { start, end };
+};
 var evaluateIncbinRange = (rangeStr, evaluate, fileLength) => {
   if (rangeStr.includes("..")) {
     const parts = rangeStr.split("..");
@@ -13444,23 +13556,34 @@ var evaluateIncbinRange = (rangeStr, evaluate, fileLength) => {
     return applyEofEnd(evaluate(rangeNode.start), evaluate(rangeNode.end), fileLength);
   }
   if (rangeStr.includes("-")) {
-    if (rangeStr.includes("(") || rangeStr.includes(")")) {
-      throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+    const bounds = parseDeprecatedHyphenIncbinRange(rangeStr);
+    let startOffset;
+    if (typeof bounds.start === "number") {
+      startOffset = bounds.start;
+    } else {
+      startOffset = evaluate(bounds.start);
     }
-    const parts = rangeStr.split("-");
-    if (parts.length !== 2 || parts[0].trim() === "" || parts[1].trim() === "") {
-      throw new Error(`Invalid range specification: ${rangeStr}`);
+    let endOffset;
+    if (typeof bounds.end === "number") {
+      endOffset = bounds.end;
+    } else {
+      endOffset = evaluate(bounds.end);
     }
-    return applyEofEnd(evaluate(parts[0].trim()), evaluate(parts[1].trim()), fileLength);
+    return applyEofEnd(startOffset, endOffset, fileLength);
   }
   throw new Error(`Invalid range specification: ${rangeStr}`);
 };
-var assertIncbinBounds = (startOffset, endOffset, fileLength, filename) => {
+var assertIncbinBounds = (startOffset, endOffset, fileLength, filename, rangeStr) => {
+  const rangeHint = rangeStr ? `, range ${rangeStr}` : "";
   if (startOffset < 0 || startOffset > endOffset || startOffset > fileLength) {
-    throw new Error(`Start offset ${startOffset} out of bounds for file ${filename}`);
+    throw new Error(
+      `Start offset ${startOffset} out of bounds for file ${filename} (length ${fileLength}${rangeHint})`
+    );
   }
   if (endOffset > fileLength) {
-    throw new Error(`End offset ${endOffset} out of bounds for file ${filename}`);
+    throw new Error(
+      `End offset ${endOffset} out of bounds for file ${filename} (length ${fileLength}${rangeHint})`
+    );
   }
 };
 var handleIncbin = ({ session, includeSource, operandResolver, runtime, defineEngine }, words, _raw = "", command) => {
@@ -13495,7 +13618,7 @@ var handleIncbin = ({ session, includeSource, operandResolver, runtime, defineEn
       fileData.length
     ));
   }
-  assertIncbinBounds(startOffset, endOffset, fileData.length, filename);
+  assertIncbinBounds(startOffset, endOffset, fileData.length, filename, rangeStr);
   const incbinData = fileData.subarray(startOffset, endOffset);
   if (targetLocation !== void 0) {
     runtime.handlePushPC();
@@ -13567,6 +13690,9 @@ var handleArch = ({ session }, words) => {
     if (session.selectArchitecture) {
       session.selectArchitecture(archParam, archParam);
       session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+      if (shouldUseNoromAddressing(archParam)) {
+        applyMapperSelection(session, "norom");
+      }
       return;
     }
     throw new Error("Unsupported architecture: " + archParam);
@@ -13582,6 +13708,9 @@ var handleArch = ({ session }, words) => {
     session.arch = canonical2;
   }
   session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+  if (shouldUseNoromAddressing(archParam)) {
+    applyMapperSelection(session, "norom");
+  }
 };
 var handleStartpos = ({ session, operandResolver }, words) => {
   const params = words.slice(1);
@@ -14378,10 +14507,44 @@ var preprocessBlockCommands = (block, commandBuffer = "") => {
     commandBuffer: nextCommandBuffer
   };
 };
+var splitOnInlineStatementSeparator = (command) => {
+  const parts = [];
+  let current = "";
+  let quote = "";
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+    if ((char === '"' || char === "'") && command[i - 1] !== "\\") {
+      if (quote === char) {
+        quote = "";
+      } else if (quote === "") {
+        quote = char;
+      }
+      current += char;
+      continue;
+    }
+    const next = command[i + 1];
+    const after = command[i + 2];
+    if (quote === "" && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
+      const trimmed2 = current.trim();
+      if (trimmed2 !== "") {
+        parts.push(trimmed2);
+      }
+      current = "";
+      i += 2;
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed !== "") {
+    parts.push(trimmed);
+  }
+  return parts;
+};
 var splitInlineCommands = (commands) => {
   const output = [];
   for (const command of commands) {
-    const split = command.split(/\s:\s/).map((entry) => entry.trim()).filter(Boolean);
+    const split = splitOnInlineStatementSeparator(command);
     if (split.length === 0) {
       continue;
     }
@@ -18750,11 +18913,11 @@ var Arch65816 = class {
       "BRL"
     ]);
     let explicitlen = false;
-    if (opcode.includes(".")) {
-      const len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
-      opcode = opcode.substring(0, opcode.indexOf("."));
+    const sizedOpcode = this.readMnemonicLength(opcode);
+    opcode = sizedOpcode.name;
+    if (sizedOpcode.explicitLength !== void 0) {
       explicitlen = true;
-      operandLength = len;
+      operandLength = sizedOpcode.explicitLength;
     }
     this.applySepRep(opcode, rawOperand);
     if (noOperandOpcodes.has(opcode)) {
@@ -18857,10 +19020,11 @@ var Arch65816 = class {
     debug4("asblock_65816 operand expanded", operand, "expected length:", operandLength);
     let len = 0;
     let explicitlen = false;
-    if (opcode.includes(".")) {
-      len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
+    const sizedOpcode = this.readMnemonicLength(opcode);
+    opcode = sizedOpcode.name;
+    if (sizedOpcode.explicitLength !== void 0) {
       explicitlen = true;
-      opcode = opcode.substring(0, opcode.indexOf("."));
+      len = sizedOpcode.explicitLength;
     } else {
       len = operandLength;
     }
@@ -20459,12 +20623,34 @@ var Arch65816 = class {
     return false;
   }
   /**
+   * Strips an explicit `.b/.w/.l/.d` suffix from a mnemonic.
+   * @param {string} opcode Uppercased mnemonic, possibly with a length suffix.
+   * @returns {{ name: string; explicitLength: number | undefined }} Bare mnemonic and length when present.
+   */
+  readMnemonicLength(opcode) {
+    const dot = opcode.indexOf(".");
+    if (dot === -1) {
+      return { name: opcode, explicitLength: void 0 };
+    }
+    const suffix = opcode[dot + 1];
+    if (suffix === void 0) {
+      throw new Error(`Error: Invalid opcode length in '${opcode}'.`);
+    }
+    return {
+      name: opcode.slice(0, dot),
+      explicitLength: this.getlenfromchar(suffix)
+    };
+  }
+  /**
    * Resolves the operand length from opcode suffix.
    * @param {string} c The opcode suffix to resolve the length of.
    * @returns {number} The operand length.
    */
   getlenfromchar(c) {
     debug4("getlenfromchar", c);
+    if (!c) {
+      throw new Error("Error: Invalid opcode length.");
+    }
     switch (c.toLowerCase()) {
       case "b":
         return 1;
@@ -25951,6 +26137,10 @@ var Assembler = class _Assembler {
             defineName += input[index2++];
           }
           debug7("resolvedefines !define defineName", defineName);
+        }
+        if (defineName === "") {
+          result += "!";
+          continue;
         }
         const value = this.lookupDefineValue(defineName);
         if (value === void 0) {

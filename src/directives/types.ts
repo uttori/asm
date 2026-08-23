@@ -177,7 +177,8 @@ export type StartposDirectiveContext = OperandDirectiveContext<
 
 export type ArchitectureDirectiveContext = SessionDirectiveContext<
   DirectiveArchitectureCapability &
-    Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">
+    Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode"> &
+    Pick<DirectiveRomCapability, "mapper" | "checksumFixEnabled">
 >;
 
 export type AssemblerPolicyDirectiveContext = SessionDirectiveContext<

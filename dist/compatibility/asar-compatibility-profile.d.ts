@@ -74,6 +74,13 @@ export declare const shouldRedirectOrgToSpcblock: (spcInlineCompatMode: boolean)
  */
 export declare const shouldEnableSpcInlineCompat: (architecture: string) => boolean;
 /**
+ * Asar `arch spc700-raw` assembles a standalone SPC payload with 1:1 file addressing.
+ * Without this, `org $000000` stays on lorom/hirom and writes land in unmapped space.
+ * @param {string} architecture Requested architecture spelling.
+ * @returns {boolean} True for the raw SPC output alias.
+ */
+export declare const shouldUseNoromAddressing: (architecture: string) => boolean;
+/**
  * Reports whether pass finalization should close an implicit SPC block.
  * @param {boolean} spcInlineCompatMode Whether inline SPC compatibility is enabled.
  * @param {boolean} inSpcblock Whether an SPC block is active.

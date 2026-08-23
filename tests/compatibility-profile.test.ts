@@ -6,6 +6,7 @@ import {
   getChecksumHeaderOffset,
   shouldAutoCloseSpcblock,
   shouldEnableSpcInlineCompat,
+  shouldUseNoromAddressing,
 } from "../src/compatibility/asar-compatibility-profile.js";
 
 test("compatibility profile owns mapper checksum policy", t => {
@@ -17,6 +18,10 @@ test("compatibility profile owns mapper checksum policy", t => {
   t.is(getChecksumHeaderOffset("hirom"), 0xFFC0);
   t.true(shouldEnableSpcInlineCompat("spc700-inline"));
   t.false(shouldEnableSpcInlineCompat("spc700"));
+  t.false(shouldEnableSpcInlineCompat("spc700-raw"));
+  t.true(shouldUseNoromAddressing("spc700-raw"));
+  t.false(shouldUseNoromAddressing("spc700"));
+  t.false(shouldUseNoromAddressing("spc700-inline"));
   t.true(shouldAutoCloseSpcblock(true, true));
   t.false(shouldAutoCloseSpcblock(true, false));
 });

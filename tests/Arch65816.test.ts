@@ -32,6 +32,16 @@ test("Arch65816.getlenfromchar throws for invalid suffixes", t => {
   t.throws(() => {
     arch.getlenfromchar("x");
   }, { message: "Error: Invalid opcode length." });
+  t.throws(() => {
+    arch.getlenfromchar("");
+  }, { message: "Error: Invalid opcode length." });
+});
+
+test("Arch65816.estimateSize rejects a trailing opcode dot", t => {
+  const { arch } = createArch65816();
+  t.throws(() => {
+    arch.estimateSize(["LDA."]);
+  }, { message: "Error: Invalid opcode length in 'LDA.'." });
 });
 
 test("Arch65816.estimateSize uses architecture-aware sizing", t => {

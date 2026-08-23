@@ -114,7 +114,7 @@ export type DataDirectiveContext = RuntimeDirectiveContext;
 export type SpcDirectiveContext = RuntimeDirectiveContext;
 export type OrgDirectiveContext = SessionDirectiveContext<Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">> & RuntimeDirectiveContext;
 export type StartposDirectiveContext = OperandDirectiveContext<Pick<DirectiveSpcCapability, "inSpcblock" | "spcblockData"> & Pick<DirectiveExpressionCapability, "resolvedefines">>;
-export type ArchitectureDirectiveContext = SessionDirectiveContext<DirectiveArchitectureCapability & Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">>;
+export type ArchitectureDirectiveContext = SessionDirectiveContext<DirectiveArchitectureCapability & Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode"> & Pick<DirectiveRomCapability, "mapper" | "checksumFixEnabled">>;
 export type AssemblerPolicyDirectiveContext = SessionDirectiveContext<Pick<DirectiveAssemblerCapability, "readFunctionsEnabled" | "bankCrossCheckMode" | "optimizeDirectPage">>;
 export type IncludeDefineEngine = {
     resolveDefinesInStringLiteral(content: string): string;

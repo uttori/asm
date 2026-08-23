@@ -800,6 +800,21 @@ export class MathCore {
         this.advance(1);
         this.skipWhitespace();
         return ~this.getnum(); // Immediately compute bitwise NOT
+      } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
+        const after = this.scanSource[this.scanIndex + 1];
+        let isDefineLike = after === "{";
+        if (after !== undefined) {
+          const code = after.charCodeAt(0);
+          if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95) {
+            isDefineLike = true;
+          }
+        }
+        if (!isDefineLike) {
+          this.advance(1);
+          this.skipWhitespace();
+          return ~this.getnum();
+        }
+        break;
       } else if (this.remainingStartsWith("-")) {
         this.advance(1);
         this.skipWhitespace();

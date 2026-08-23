@@ -237,6 +237,10 @@ test("splitInlineCommands splits relative-label command fragments after inline s
     splitInlineCommands(["set_hp: lda #$01"]),
     ["set_hp: lda #$01"],
   );
+  t.deepEqual(
+    splitInlineCommands(['db $08,$1C,$00," : 1. What will",$0F," do?)",$02']),
+    ['db $08,$1C,$00," : 1. What will",$0F," do?)",$02'],
+  );
 });
 
 test("trace listener captures command and write events", t => {
@@ -2414,6 +2418,8 @@ test("resolvedefines - basic define replacement", t => {
   t.is(assembler.resolvedefines("Value: !TEST"), "Value: 42");
   t.is(assembler.resolvedefines("!FOO!TEST"), "bar42");
   t.is(assembler.resolvedefines("Multiple !FOO and !TEST"), "Multiple bar and 42");
+  t.is(assembler.resolvedefines("!$00"), "!$00");
+  t.is(assembler.resolvedefines("!(1+2)"), "!(1+2)");
 });
 
 test("resolvedefines - not equal operator", t => {
@@ -5450,6 +5456,14 @@ test("handleArch - valid architectures", t => {
   t.is(assembler.arch, "spc700", "spc700-inline should compile with spc700 arch backend");
   t.true(assembler.spcInlineCompatMode, "spc700-inline should enable inline compatibility mode");
 
+  handleArch({
+    session: assembler,
+    operandResolver: assembler.operandResolver,
+  }, ["arch", "spc700-raw"]);
+  t.is(assembler.arch, "spc700", "spc700-raw should compile with spc700 arch backend");
+  t.is(assembler.mapper, "norom", "spc700-raw should switch to norom addressing");
+  t.false(assembler.spcInlineCompatMode, "spc700-raw should not enable inline compatibility mode");
+
   // Test superfx architecture
   handleArch({
     session: assembler,
@@ -5597,6 +5611,25 @@ test("processCommand - spc700-inline auto-wraps in implicit spcblock", t => {
     [0x03, 0x00, 0x00, 0x50, 0x5F, 0x03, 0x50, 0x00, 0x00, 0x00, 0x00],
     "spc700-inline output should match legacy inline stream format"
   );
+});
+
+test("processCommand - spc700-raw writes org $000000 into a norom payload", t => {
+  const assembler = new Assembler(undefined, { collectSourceMetadata: false });
+  assembler.setCurrentFile("engine.asm");
+
+  const lines = ["org $000000", "arch spc700-raw", "MOV A, #$00"];
+
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
+    for (const [lineNumber, line] of lines.entries()) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.processCommand(line);
+    }
+    assembler.finishPass();
+  }
+
+  t.is(assembler.mapper, "norom");
+  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0xe8, 0x00]);
 });
 
 test("step - basic functionality", t => {

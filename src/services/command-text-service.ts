@@ -68,6 +68,46 @@ export const preprocessBlockCommands = (
 };
 
 /**
+ * Splits a command on Asar's ` : ` statement separator, ignoring separators inside quotes.
+ * @param {string} command A single command line.
+ * @returns {string[]} Statement fragments.
+ */
+const splitOnInlineStatementSeparator = (command: string): string[] => {
+  const parts: string[] = [];
+  let current = "";
+  let quote = "";
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+    if ((char === '"' || char === "'") && command[i - 1] !== "\\") {
+      if (quote === char) {
+        quote = "";
+      } else if (quote === "") {
+        quote = char;
+      }
+      current += char;
+      continue;
+    }
+    const next = command[i + 1];
+    const after = command[i + 2];
+    if (quote === "" && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
+      const trimmed = current.trim();
+      if (trimmed !== "") {
+        parts.push(trimmed);
+      }
+      current = "";
+      i += 2;
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed !== "") {
+    parts.push(trimmed);
+  }
+  return parts;
+};
+
+/**
  * Splits inline `:` command chains into individual commands.
  * @param {string[]} commands Command lines to split.
  * @returns {string[]} Flattened command list.
@@ -75,10 +115,7 @@ export const preprocessBlockCommands = (
 export const splitInlineCommands = (commands: string[]): string[] => {
   const output: string[] = [];
   for (const command of commands) {
-    const split = command
-      .split(/\s:\s/)
-      .map((entry) => entry.trim())
-      .filter(Boolean);
+    const split = splitOnInlineStatementSeparator(command);
     if (split.length === 0) {
       continue;
     }

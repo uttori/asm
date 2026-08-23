@@ -126,12 +126,138 @@ const applyEofEnd = (
 };
 
 /**
+ * Finds the first `-` at parenthesis/quote depth 0 (asar `strqpchr`).
+ * @param {string} input Range text.
+ * @returns {number} Index of the hyphen, or `-1`.
+ */
+const findTopLevelHyphen = (input: string): number => {
+  let depth = 0;
+  let quote = "";
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+      if (quote === char) {
+        quote = "";
+      } else if (quote === "") {
+        quote = char;
+      }
+      continue;
+    }
+    if (quote !== "") {
+      continue;
+    }
+    if (char === "(") {
+      depth += 1;
+      continue;
+    }
+    if (char === ")") {
+      depth -= 1;
+      continue;
+    }
+    if (depth === 0 && char === "-") {
+      return i;
+    }
+  }
+  return -1;
+};
+
+/**
+ * Asar `getnum64` rejects leftover/unbalanced parens as `Emismatched_parentheses`.
+ * @param {string} text Math text after stripping one wrapping `(...)`.
+ * @throws {Error} If parentheses are unbalanced.
+ */
+const assertIncbinMathParensBalanced = (text: string): void => {
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === "(") {
+      depth += 1;
+      continue;
+    }
+    if (char === ")") {
+      depth -= 1;
+      if (depth < 0) {
+        throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+      }
+    }
+  }
+  if (depth !== 0) {
+    throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+  }
+};
+
+/**
+ * Parses unprefixed hex the way asar `strtoul(..., 16)` does.
+ * @param {string} text Remaining range text.
+ * @returns {{ value: number; rest: string }} Consumed value and leftover.
+ */
+const parseIncbinUnprefixedHex = (text: string): { value: number; rest: string } => {
+  const match = text.match(/^([0-9A-Fa-f]*)/);
+  const digits = match?.[1] ?? "";
+  let value = 0;
+  if (digits !== "") {
+    value = Number.parseInt(digits, 16);
+  }
+  return { value, rest: text.slice(digits.length) };
+};
+
+/**
+ * Deprecated `start-end` split matching asar: `(math)-($hex)`, `0-(math)`, `(math)-` (EOF).
+ * @param {string} rangeStr Range text after the filename colon.
+ * @returns {{ start: string | number; end: string | number }} Hex literals or math text to evaluate.
+ * @throws {Error} If the hyphen form is structurally invalid.
+ */
+const parseDeprecatedHyphenIncbinRange = (
+  rangeStr: string,
+): { start: string | number; end: string | number } => {
+  let rest = rangeStr;
+  let start: string | number;
+  if (rest.startsWith("(")) {
+    const hyphen = findTopLevelHyphen(rest);
+    if (hyphen < 1 || rest[hyphen - 1] !== ")") {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    const inner = rest.slice(1, hyphen - 1);
+    assertIncbinMathParensBalanced(inner);
+    start = inner;
+    rest = rest.slice(hyphen);
+  } else {
+    const parsed = parseIncbinUnprefixedHex(rest);
+    start = parsed.value;
+    rest = parsed.rest;
+  }
+
+  if (!rest.startsWith("-")) {
+    throw new Error(`Invalid range specification: ${rangeStr}`);
+  }
+  rest = rest.slice(1);
+
+  let end: string | number;
+  if (rest.startsWith("(")) {
+    if (!rest.endsWith(")")) {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    const inner = rest.slice(1, -1);
+    assertIncbinMathParensBalanced(inner);
+    end = inner;
+  } else {
+    const parsed = parseIncbinUnprefixedHex(rest);
+    if (parsed.rest !== "") {
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    }
+    end = parsed.value;
+  }
+
+  return { start, end };
+};
+
+/**
  * Parses `start..end` (preferred) or deprecated `start-end` hyphen ranges.
  * @param {string} rangeStr Range text after the filename colon.
  * @param {RangeEvaluator} evaluate Bound evaluator for start/end expressions.
  * @param {number} fileLength Source length, used when the end bound is `0`.
  * @returns {{ startOffset: number; endOffset: number }} Inclusive start and exclusive end.
- * @throws {Error} If the range is malformed. Hyphen ranges with parentheses keep asar's `Emismatched_parentheses` id.
+ * @throws {Error} If the range is malformed. Unbalanced hyphen math keeps asar's `Emismatched_parentheses` id.
  */
 const evaluateIncbinRange = (
   rangeStr: string,
@@ -151,14 +277,20 @@ const evaluateIncbinRange = (
   }
 
   if (rangeStr.includes("-")) {
-    if (rangeStr.includes("(") || rangeStr.includes(")")) {
-      throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+    const bounds = parseDeprecatedHyphenIncbinRange(rangeStr);
+    let startOffset: number;
+    if (typeof bounds.start === "number") {
+      startOffset = bounds.start;
+    } else {
+      startOffset = evaluate(bounds.start);
     }
-    const parts = rangeStr.split("-");
-    if (parts.length !== 2 || parts[0].trim() === "" || parts[1].trim() === "") {
-      throw new Error(`Invalid range specification: ${rangeStr}`);
+    let endOffset: number;
+    if (typeof bounds.end === "number") {
+      endOffset = bounds.end;
+    } else {
+      endOffset = evaluate(bounds.end);
     }
-    return applyEofEnd(evaluate(parts[0].trim()), evaluate(parts[1].trim()), fileLength);
+    return applyEofEnd(startOffset, endOffset, fileLength);
   }
 
   throw new Error(`Invalid range specification: ${rangeStr}`);
@@ -177,12 +309,18 @@ const assertIncbinBounds = (
   endOffset: number,
   fileLength: number,
   filename: string,
+  rangeStr?: string,
 ): void => {
+  const rangeHint = rangeStr ? `, range ${rangeStr}` : "";
   if (startOffset < 0 || startOffset > endOffset || startOffset > fileLength) {
-    throw new Error(`Start offset ${startOffset} out of bounds for file ${filename}`);
+    throw new Error(
+      `Start offset ${startOffset} out of bounds for file ${filename} (length ${fileLength}${rangeHint})`,
+    );
   }
   if (endOffset > fileLength) {
-    throw new Error(`End offset ${endOffset} out of bounds for file ${filename}`);
+    throw new Error(
+      `End offset ${endOffset} out of bounds for file ${filename} (length ${fileLength}${rangeHint})`,
+    );
   }
 };
 
@@ -240,7 +378,7 @@ export const handleIncbin = (
     ));
   }
 
-  assertIncbinBounds(startOffset, endOffset, fileData.length, filename);
+  assertIncbinBounds(startOffset, endOffset, fileData.length, filename, rangeStr);
   const incbinData = fileData.subarray(startOffset, endOffset);
 
   if (targetLocation !== undefined) {

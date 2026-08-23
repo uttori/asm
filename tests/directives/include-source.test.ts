@@ -8,30 +8,40 @@ import {
 import type { IncludeDirectiveContext } from "../../src/directives/types.js";
 import { DirectiveRegistry } from "../../src/directives/registry.js";
 import { createNormalizedCommand } from "../../src/ir/normalized-command.js";
-import type { ExpressionNode } from "../../src/ir/expression-node.js";
+import { parseExpressionNode, type ExpressionNode } from "../../src/ir/expression-node.js";
 import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 
-const evalRange = (expr: string | ExpressionNode): number => {
+const evalRange = (expr: string | ExpressionNode, labels: Record<string, number> = {}): number => {
   if (typeof expr === "string") {
     const text = expr.trim();
+    if (text in labels) return labels[text];
     if (/^\$[\da-f]+$/i.test(text)) return parseInt(text.slice(1), 16);
     if (/^-?\d+$/.test(text)) return Number(text);
     const times = text.match(/^(\d+)\s*\*\s*(\d+)$/);
     if (times) return Number(times[1]) * Number(times[2]);
-    return Number(text);
+    return evalRange(parseExpressionNode(text), labels);
   }
-  if (expr.type === "literal") return evalRange(expr.value);
+  if (expr.type === "identifier") {
+    if (expr.name in labels) return labels[expr.name];
+    return 0;
+  }
+  if (expr.type === "literal") return evalRange(expr.value, labels);
+  if (expr.type === "raw") {
+    if (expr.value in labels) return labels[expr.value];
+    return 0;
+  }
   if (expr.type === "unary") {
-    const value = evalRange(expr.argument);
+    const value = evalRange(expr.argument, labels);
     if (expr.operator === "-") return -value;
     return value;
   }
   if (expr.type === "binary") {
-    const left = evalRange(expr.left);
-    const right = evalRange(expr.right);
+    const left = evalRange(expr.left, labels);
+    const right = evalRange(expr.right, labels);
     if (expr.operator === "*") return left * right;
     if (expr.operator === "+") return left + right;
     if (expr.operator === "-") return left - right;
+    if (expr.operator === "&") return left & right;
     return 0;
   }
   return 0;
@@ -50,7 +60,7 @@ const createContext = (overrides: IncludeSessionOverrides = {}) => {
   };
   const labels = overrides.labels ?? {};
   const session = {
-    evaluateRangeExpression: evalRange,
+    evaluateRangeExpression: (expr) => evalRange(expr, labels),
     symbolScope: {
       getLabelValue: (label: string) => {
         if (label in labels) return labels[label];
@@ -148,6 +158,39 @@ test("incbin slices deprecated hyphen ranges and treats end 0 as EOF", (t) => {
   written.length = 0;
   handleIncbin(ctx, ["incbin", "data.bin:2-0"]);
   t.deepEqual(written, [0x30, 0x40, 0x50, 0x60, 0x70, 0x80]);
+
+  written.length = 0;
+  handleIncbin(ctx, ["incbin", "data.bin:4-"]);
+  t.deepEqual(written, [0x50, 0x60, 0x70, 0x80]);
+});
+
+test("incbin hyphen ranges accept asar parenthesized math", (t) => {
+  const { ctx, written } = createContext();
+  handleIncbin(ctx, ["incbin", "data.bin:(0+1)-(1+3)"]);
+  t.deepEqual(written, [0x20, 0x30, 0x40]);
+
+  written.length = 0;
+  handleIncbin(ctx, ["incbin", "data.bin:0-((1+3))"]);
+  t.deepEqual(written, [0x10, 0x20, 0x30, 0x40]);
+
+  written.length = 0;
+  handleIncbin(ctx, ["incbin", "data.bin:(1+3)-"]);
+  t.deepEqual(written, [0x50, 0x60, 0x70, 0x80]);
+});
+
+test("incbin hyphen ranges evaluate SMRPG bank-wrap math against a label", (t) => {
+  const file = Uint8Array.from({ length: 3865 }, (_, index) => index & 0xff);
+  const { ctx, written } = createContext({
+    files: { "SPC700/DATA_C4FC3B.bin": file },
+    labels: { DATA_C4FC3B: 0xc4fc3b },
+  });
+  handleIncbin(ctx, [
+    "incbin",
+    '"SPC700/DATA_C4FC3B.bin":0-(($010000-DATA_C4FC3B)&$00FFFF)',
+  ]);
+  t.is(written.length, 0x3c5);
+  t.is(written[0], 0);
+  t.is(written[written.length - 1], (0x3c5 - 1) & 0xff);
 });
 
 test("incbin seeks to a numeric -> target then restores PC", (t) => {
@@ -210,11 +253,7 @@ test("incbin rejects malformed and parenthesized hyphen ranges", (t) => {
     "Invalid range specification: 2..5..7",
   );
   t.is(
-    t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:4-"])).message,
-    "Invalid range specification: 4-",
-  );
-  t.is(
-    t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:(2+2)-4"])).message,
+    t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:(2+2)+(1+3)-($8000)"])).message,
     "Emismatched_parentheses: Mismatched parentheses.",
   );
 });
@@ -223,19 +262,19 @@ test("incbin rejects inverted and out-of-range slices", (t) => {
   const { ctx } = createContext();
   t.is(
     t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:5..2"])).message,
-    "Start offset 5 out of bounds for file data.bin",
+    "Start offset 5 out of bounds for file data.bin (length 8, range 5..2)",
   );
   t.is(
     t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:-1..2"])).message,
-    "Start offset -1 out of bounds for file data.bin",
+    "Start offset -1 out of bounds for file data.bin (length 8, range -1..2)",
   );
   t.is(
     t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:9..9"])).message,
-    "Start offset 9 out of bounds for file data.bin",
+    "Start offset 9 out of bounds for file data.bin (length 8, range 9..9)",
   );
   t.is(
     t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:0..100"])).message,
-    "End offset 100 out of bounds for file data.bin",
+    "End offset 100 out of bounds for file data.bin (length 8, range 0..100)",
   );
 });
 

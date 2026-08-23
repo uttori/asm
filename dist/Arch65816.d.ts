@@ -189,6 +189,15 @@ export declare class Arch65816 implements ArchitectureEncoder {
      */
     handleMemoryBitInstructions(opcode: string, operand: string): boolean;
     /**
+     * Strips an explicit `.b/.w/.l/.d` suffix from a mnemonic.
+     * @param {string} opcode Uppercased mnemonic, possibly with a length suffix.
+     * @returns {{ name: string; explicitLength: number | undefined }} Bare mnemonic and length when present.
+     */
+    readMnemonicLength(opcode: string): {
+        name: string;
+        explicitLength: number | undefined;
+    };
+    /**
      * Resolves the operand length from opcode suffix.
      * @param {string} c The opcode suffix to resolve the length of.
      * @returns {number} The operand length.

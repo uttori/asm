@@ -251,11 +251,11 @@ export class Arch65816 implements ArchitectureEncoder {
     ]);
 
     let explicitlen = false;
-    if (opcode.includes(".")) {
-      const len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
-      opcode = opcode.substring(0, opcode.indexOf("."));
+    const sizedOpcode = this.readMnemonicLength(opcode);
+    opcode = sizedOpcode.name;
+    if (sizedOpcode.explicitLength !== undefined) {
       explicitlen = true;
-      operandLength = len;
+      operandLength = sizedOpcode.explicitLength;
     }
 
     this.applySepRep(opcode, rawOperand);
@@ -390,13 +390,12 @@ export class Arch65816 implements ArchitectureEncoder {
     // Handle special cases where length is on the opcode
     let len = 0;
     let explicitlen = false;
-    // For opcodes with explicit length (e.g., LDA.B), use the specified length.
-    if (opcode.includes(".")) {
-      len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
+    const sizedOpcode = this.readMnemonicLength(opcode);
+    opcode = sizedOpcode.name;
+    if (sizedOpcode.explicitLength !== undefined) {
       explicitlen = true;
-      opcode = opcode.substring(0, opcode.indexOf("."));
+      len = sizedOpcode.explicitLength;
     } else {
-      // Otherwise, use the length determined from expandOperand
       len = operandLength;
     }
 
@@ -2411,12 +2410,35 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
+   * Strips an explicit `.b/.w/.l/.d` suffix from a mnemonic.
+   * @param {string} opcode Uppercased mnemonic, possibly with a length suffix.
+   * @returns {{ name: string; explicitLength: number | undefined }} Bare mnemonic and length when present.
+   */
+  readMnemonicLength(opcode: string): { name: string; explicitLength: number | undefined } {
+    const dot = opcode.indexOf(".");
+    if (dot === -1) {
+      return { name: opcode, explicitLength: undefined };
+    }
+    const suffix = opcode[dot + 1];
+    if (suffix === undefined) {
+      throw new Error(`Error: Invalid opcode length in '${opcode}'.`);
+    }
+    return {
+      name: opcode.slice(0, dot),
+      explicitLength: this.getlenfromchar(suffix),
+    };
+  }
+
+  /**
    * Resolves the operand length from opcode suffix.
    * @param {string} c The opcode suffix to resolve the length of.
    * @returns {number} The operand length.
    */
   getlenfromchar(c: string): number {
     debug("getlenfromchar", c);
+    if (!c) {
+      throw new Error("Error: Invalid opcode length.");
+    }
     switch (c.toLowerCase()) {
       case "b":
         return 1;
