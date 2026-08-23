@@ -926,7 +926,7 @@ test("Arch65816.handleStoreOperations encodes explicit indexed STZ word operands
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
 
-test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY fallback opcodes", t => {
+test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY opcodes", t => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
   getnumStub.withArgs("$12").returns(0x12);
@@ -941,7 +941,7 @@ test("Arch65816.handleStoreOperations encodes explicit indexed STX and STY fallb
 
   t.true(arch.handleStoreOperations("STX", "$12,y", 1, true));
   t.true(arch.handleStoreOperations("STY", "$34,x", 1, true));
-  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x86, 0x12, 0x84, 0x34]);
+  t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x96, 0x12, 0x94, 0x34]);
   t.true(write2Stub.notCalled);
 });
 
@@ -2165,6 +2165,57 @@ test("Arch65816.handleMemoryOperations covers stack-relative and indirect-long m
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x73, 0x12, 0xA7, 0x34, 0xF7, 0x56]);
   t.true(write2Stub.notCalled);
   t.true(write3Stub.notCalled);
+});
+
+test("Arch65816.encode keeps .b on DP-indirect instead of treating it as a label", t => {
+  const { assembler, arch } = createArch65816();
+
+  t.true(arch.encode(["LDA.b", "[$20],y"]));
+  t.deepEqual(assembler.emitted, [0xb7, 0x20]);
+
+  assembler.emitted.length = 0;
+  t.true(arch.encode(["LDA.b", "[$20]"]));
+  t.deepEqual(assembler.emitted, [0xa7, 0x20]);
+
+  assembler.emitted.length = 0;
+  t.true(arch.encode(["STA.b", "($E8),y"]));
+  t.deepEqual(assembler.emitted, [0x91, 0xe8]);
+
+  assembler.emitted.length = 0;
+  t.true(arch.encode(["LDA.b", "($60)"]));
+  t.deepEqual(assembler.emitted, [0xb2, 0x60]);
+
+  assembler.emitted.length = 0;
+  t.true(arch.encode(["CMP.b", "[$EA]"]));
+  t.deepEqual(assembler.emitted, [0xc7, 0xea]);
+
+  assembler.emitted.length = 0;
+  t.true(arch.encode(["ADC.b", "$01,S"]));
+  t.deepEqual(assembler.emitted, [0x63, 0x01]);
+
+  assembler.emitted.length = 0;
+  t.true(arch.encode(["STY.b", "$48,x"]));
+  t.deepEqual(assembler.emitted, [0x94, 0x48]);
+});
+
+test("Arch65816.encode treats parenthesized bank math ,x as long indexed X", t => {
+  const { assembler, arch } = createArch65816();
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.callsFake((input: string) => {
+    const text = String(input);
+    if (text.includes("$7F0000") && !/,\s*x$/i.test(text)) {
+      return 0x7f0003;
+    }
+    throw new Error(`unexpected getnum ${text}`);
+  });
+  t.teardown(() => getnumStub.restore());
+
+  t.true(arch.encode(["LDA.l", "($7F0000&$FF0000)+$03,x"]));
+  t.deepEqual(assembler.emitted, [0xbf, 0x03, 0x00, 0x7f]);
+
+  assembler.emitted.length = 0;
+  t.true(arch.encode(["CMP.l", "($7F0000&$FF0000)+$03,x"]));
+  t.deepEqual(assembler.emitted, [0xdf, 0x03, 0x00, 0x7f]);
 });
 
 test("Arch65816.handleMemoryOperations consumes lowered addressing metadata", t => {

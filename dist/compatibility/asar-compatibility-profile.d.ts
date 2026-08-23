@@ -8,7 +8,7 @@
  * Unsupported directives are deliberately excluded so they continue through
  * normal unknown-directive diagnostics instead of being silently accepted.
  */
-export declare const ASAR_COMPAT_NO_OP_DIRECTIVES: readonly ["fastrom", "dpbase", "warnings", "print", "warn", "autoclean", "autoclear", "table", "includefrom", "asar", "reset", "{", "}"];
+export declare const ASAR_COMPAT_NO_OP_DIRECTIVES: readonly ["fastrom", "dpbase", "warnings", "print", "warn", "autoclean", "autoclear", "includefrom", "asar", "reset", "{", "}"];
 /**
  * Mapper state affected by ASAR-compatible mapper selection.
  */

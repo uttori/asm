@@ -302,6 +302,18 @@ export const directiveCatalog: DirectiveDescriptor[] = [
   },
 
   {
+    keyword: "table",
+    summary: "Load an asar character mapping table file (`char=hex` per line).",
+    syntax: 'table "file"[,ltr|rtl]',
+    group: "table",
+  },
+  {
+    keyword: "cleartable",
+    summary: "Reset character mappings to identity (Unicode/ASCII code points).",
+    syntax: "cleartable",
+    group: "table",
+  },
+  {
     keyword: "pushtable",
     summary: "Push the current character mapping table.",
     syntax: "pushtable",
@@ -429,12 +441,6 @@ export const directiveCatalog: DirectiveDescriptor[] = [
     keyword: "autoclear",
     summary: "Auto-clear a previous freespace (asar-compatible).",
     syntax: "autoclear ...",
-    group: "compat",
-  },
-  {
-    keyword: "table",
-    summary: "Load a character mapping table (asar-compatible).",
-    syntax: 'table "file"',
     group: "compat",
   },
   {

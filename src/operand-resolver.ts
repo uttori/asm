@@ -53,7 +53,9 @@ export class OperandResolver {
   splitMathOperandSuffix(operand: string): { expression: string; suffix: string } {
     const trimmed = operand.trim();
     const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
-    if (!indexedMatch || trimmed.startsWith("(") || trimmed.startsWith("[")) {
+    // `(dp,x)` / `[dp]` end in `)`, so they do not match. `(bank&$FF0000)+$03,x`
+    // does, and must drop `,x` before math eval or the leftover comma errors.
+    if (!indexedMatch) {
       return { expression: trimmed, suffix: "" };
     }
 

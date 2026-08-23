@@ -125,7 +125,11 @@ export type NarrowDirectiveHandler<Context> = (
   command?: NormalizedCommand,
 ) => void;
 
-export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability>;
+export type TableDirectiveContext = SessionDirectiveContext<
+  DirectiveTableCapability & {
+    includeSource: Pick<IncludeSourceService, "readFile">;
+  }
+>;
 
 export type DiagnosticDirectiveContext = SessionDirectiveContext<
   Pick<DirectiveExpressionCapability, "evaluateExpression" | "resolvedefines"> &

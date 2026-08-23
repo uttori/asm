@@ -5,6 +5,7 @@ import {
   type EncoderRuntime,
   type InstructionDescriptor,
   type LoweredInstruction,
+  type LoweredOperand,
 } from "./architecture-types.js";
 import { cpu65816Catalog } from "./lsp/instruction-catalog.js";
 
@@ -14,6 +15,42 @@ try {
   const { default: d } = await import("debug");
   debug = d("Arch65816");
 } catch {}
+
+/**
+ * Modes whose operand width is fixed by the addressing form, not `.b/.w/.l`.
+ * Forced-size encoding would pass `$01,S` / `[$20],y` to `getnum` as a label.
+ * `.w ($bank&$FF0000)` is grouping, not DP-indirect, so it still uses the
+ * forced-size path.
+ * @param {string | undefined} mode Classified addressing mode.
+ * @param {number} explicitLength `.b`=1, `.w`=2, `.l`=3.
+ * @returns {boolean} True when forced-size must not override the mode.
+ */
+const keepsFixedWidthAddressingMode = (
+  mode: string | undefined,
+  explicitLength: number,
+): boolean => {
+  if (
+    mode === "indirectLong" ||
+    mode === "indirectLongIndexedY" ||
+    mode === "indirectIndexedY" ||
+    mode === "indexedIndirectX" ||
+    mode === "stackRelative" ||
+    mode === "stackRelativeIndexedIndirectY"
+  ) {
+    return true;
+  }
+  if (mode === "directPageIndirect" && explicitLength === 1) {
+    return true;
+  }
+  return false;
+};
+
+/**
+ * True for `,x` / `,y` memory indexing. Grouping `(bank&$FF0000)+$03,x` starts
+ * with `(` so `syntax.indirect` is a false positive; classified mode decides.
+ */
+const isIndexedMemory = (operand: LoweredOperand, register: "x" | "y"): boolean =>
+  operand.indexRegister === register && !keepsFixedWidthAddressingMode(operand.mode, 1);
 
 export class Arch65816 implements ArchitectureEncoder {
   assembler: EncoderRuntime;
@@ -512,9 +549,10 @@ export class Arch65816 implements ArchitectureEncoder {
       throw new Error(`Error: ${opcode} does not support immediate mode.`);
     }
 
-    // If an explicit length is specified, override the normal guess.
-    if (explicitlen) {
-      if (loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
+    // If an explicit length is specified, override the normal guess —
+    // except for DP-indirect forms whose operand width is always 1.
+    if (explicitlen && !keepsFixedWidthAddressingMode(loweredOperand.mode, len)) {
+      if (isIndexedMemory(loweredOperand, "x")) {
         const forcedIndexed: { [key: string]: { [L: number]: number } } = {
           ADC: { 1: 0x75, 2: 0x7d, 3: 0x7f },
           STA: { 1: 0x95, 2: 0x9d, 3: 0x9f },
@@ -533,7 +571,7 @@ export class Arch65816 implements ArchitectureEncoder {
           this.assembler.write3(this.assembler.operandResolver.getnum(baseOperand));
         }
         return true;
-      } else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect) {
+      } else if (isIndexedMemory(loweredOperand, "y")) {
         const forcedIndexedY: { [key: string]: { [L: number]: number } } = {
           ADC: { 2: 0x79 },
           STA: { 2: 0x99 },
@@ -748,7 +786,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     // Absolute Indexed (X)
-    if (loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
+    if (isIndexedMemory(loweredOperand, "x")) {
       debug("handleMemoryOperations Absolute Indexed (X)", opcode, resolvedOperand);
       const absoluteXOpcodes: { [key: string]: number } = {
         ADC: 0x7d,
@@ -764,7 +802,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     // Absolute Indexed (Y)
-    if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect) {
+    if (isIndexedMemory(loweredOperand, "y")) {
       debug("handleMemoryOperations Absolute Indexed (Y)", opcode, resolvedOperand);
       const absoluteYOpcodes: { [key: string]: number } = {
         ADC: 0x79,
@@ -1052,17 +1090,16 @@ export class Arch65816 implements ArchitectureEncoder {
       return true;
     }
 
-    // If an explicit length was given, use it to choose the number of operand bytes.
-    if (explicitlen) {
+    // Forced size chooses DP/abs/long, except modes whose operand width is
+    // fixed (DP-indirect, stack-relative). Same trap as LDA.b [$20],y.
+    if (explicitlen && !keepsFixedWidthAddressingMode(loweredOperand.mode, len)) {
       // Forced-size operands still need indexed base extraction so `.w foo,Y`
       // resolves `foo` numerically instead of handing `foo,Y` to the math parser.
       let forcedIndexedMode: "x" | "y" | undefined;
-      if (!loweredOperand.indirect) {
-        if (loweredOperand.indexRegister === "x") {
-          forcedIndexedMode = "x";
-        } else if (loweredOperand.mode === "absoluteIndexedY") {
-          forcedIndexedMode = "y";
-        }
+      if (isIndexedMemory(loweredOperand, "x")) {
+        forcedIndexedMode = "x";
+      } else if (loweredOperand.mode === "absoluteIndexedY") {
+        forcedIndexedMode = "y";
       }
       const explicitOperand = forcedIndexedMode ? baseOperand : resolvedOperand;
       if (forcedIndexedMode === "x") {
@@ -1390,7 +1427,7 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // Track indexed addressing without mutating the raw operand.
     const rawOperand = operandText;
-    const isIndexed = loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
+    const isIndexed = isIndexedMemory(loweredOperand, "x");
     const normalizedOperand = isIndexed ? rawOperand.slice(0, -2).trim() : rawOperand;
 
     // If an explicit length was given, choose the forced opcode variant.
@@ -1554,8 +1591,8 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // Check for indexed addressing:
     const isIndexed =
-      (isLDX && loweredOperand.indexRegister === "y" && !loweredOperand.indirect) ||
-      (isLDY && loweredOperand.indexRegister === "x" && !loweredOperand.indirect);
+      (isLDX && isIndexedMemory(loweredOperand, "y")) ||
+      (isLDY && isIndexedMemory(loweredOperand, "x"));
     if (isIndexed) {
       operand = operand.slice(0, -2).trim();
     }
@@ -1895,9 +1932,9 @@ export class Arch65816 implements ArchitectureEncoder {
     let address = 0;
     let mode: keyof StoreModeMap; // Determines which mode we're using
     const isIndexed =
-      (storeOpcode === "STX" && loweredOperand.indexRegister === "y" && !loweredOperand.indirect) ||
-      (storeOpcode === "STY" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect) ||
-      (storeOpcode === "STZ" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect);
+      (storeOpcode === "STX" && isIndexedMemory(loweredOperand, "y")) ||
+      (storeOpcode === "STY" && isIndexedMemory(loweredOperand, "x")) ||
+      (storeOpcode === "STZ" && isIndexedMemory(loweredOperand, "x"));
     if (isIndexed) {
       operand = rawOperand.slice(0, -2).trim();
     }
@@ -1909,16 +1946,14 @@ export class Arch65816 implements ArchitectureEncoder {
         if (storeOpcode === "STZ") {
           const forcedSTZIndexed: ForcedLengthMap = { 1: 0x74, 2: 0x9e };
           this.assembler.write1(getForcedOpcode(forcedSTZIndexed, 0x9e));
-        } else {
-          // For STX/STY, index mode is less common.
-          // (You could add forced mappings if needed; here we fall back to non-indexed.)
-          if (storeOpcode === "STX") {
-            const forcedSTX: ForcedLengthMap = { 1: 0x86, 2: 0x8e };
-            this.assembler.write1(getForcedOpcode(forcedSTX, 0x8e));
-          } else if (storeOpcode === "STY") {
-            const forcedSTY: ForcedLengthMap = { 1: 0x84, 2: 0x8c };
-            this.assembler.write1(getForcedOpcode(forcedSTY, 0x8c));
-          }
+        } else if (storeOpcode === "STX") {
+          // STX dp,y ($96). There is no STX abs,y.
+          const forcedSTXIndexed: ForcedLengthMap = { 1: 0x96 };
+          this.assembler.write1(getForcedOpcode(forcedSTXIndexed, 0x96));
+        } else if (storeOpcode === "STY") {
+          // STY dp,x ($94). There is no STY abs,x.
+          const forcedSTYIndexed: ForcedLengthMap = { 1: 0x94 };
+          this.assembler.write1(getForcedOpcode(forcedSTYIndexed, 0x94));
         }
       } else {
         // Non-indexed forced mode.
@@ -2086,10 +2121,9 @@ export class Arch65816 implements ArchitectureEncoder {
     };
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
     const rawOperand = operand;
-    const normalizedOperand =
-      loweredOperand.indexRegister === "x" && !loweredOperand.indirect
-        ? rawOperand.slice(0, -2).trim()
-        : rawOperand;
+    const normalizedOperand = isIndexedMemory(loweredOperand, "x")
+      ? rawOperand.slice(0, -2).trim()
+      : rawOperand;
 
     // Define forced maps for BIT, TSB, and TRB.
     const forcedMaps: Record<BitOpcode, ForcedBitMap> = {
@@ -2149,7 +2183,7 @@ export class Arch65816 implements ArchitectureEncoder {
       }
     } else {
       // Determine whether this is indexed addressing without mutating operand.
-      const isIndexed = loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
+      const isIndexed = isIndexedMemory(loweredOperand, "x");
       address = this.assembler.operandResolver.getnum(normalizedOperand);
       if (explicitlen) {
         if (isIndexed) {

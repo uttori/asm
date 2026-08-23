@@ -1823,6 +1823,9 @@ export class Assembler {
     if (!architecture.definition) {
       return true;
     }
+    // Unknown mnemonics still consume `estimateSize` (typically opcode + the
+    // default 16-bit operand). An unregistered asar command such as
+    // `cleartable` therefore inflates PC by 3 during layout instead of 0.
     const size = Array.isArray(input)
       ? architecture.definition.encoder.estimateSize(words)
       : (architecture.definition.encoder.estimateInstruction?.(input) ??

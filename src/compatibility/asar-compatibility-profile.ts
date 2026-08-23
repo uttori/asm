@@ -17,7 +17,6 @@ export const ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "warn",
   "autoclean",
   "autoclear",
-  "table",
   "includefrom",
   "asar",
   "reset",

@@ -10154,7 +10154,6 @@ var ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "warn",
   "autoclean",
   "autoclear",
-  "table",
   "includefrom",
   "asar",
   "reset",
@@ -12773,7 +12772,7 @@ var OperandResolver = class {
   splitMathOperandSuffix(operand) {
     const trimmed = operand.trim();
     const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
-    if (!indexedMatch || trimmed.startsWith("(") || trimmed.startsWith("[")) {
+    if (!indexedMatch) {
       return { expression: trimmed, suffix: "" };
     }
     return {
@@ -14228,6 +14227,73 @@ var handleError = (_ctx, _words, raw) => {
   throw new Error(`error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`);
 };
 var hex6 = (value) => (value >>> 0).toString(16).toUpperCase().padStart(6, "0");
+var invalidTableLine = (lineNumber) => new Error(`Invalid table file: line ${lineNumber}`);
+var parseAsarTableLine = (line, rtl, lineNumber) => {
+  if (line.length === 0) {
+    return void 0;
+  }
+  if (line.length < 4 || (line.length & 1) !== 0 || line.length > 10) {
+    throw invalidTableLine(lineNumber);
+  }
+  if (rtl) {
+    if (line[1] === "x" || line[1] === "X") {
+      throw invalidTableLine(lineNumber);
+    }
+    const eq = line.indexOf("=");
+    if (eq < 1 || eq !== line.length - 2) {
+      throw invalidTableLine(lineNumber);
+    }
+    const hex2 = line.slice(0, eq);
+    if (!/^[0-9a-fA-F]+$/.test(hex2)) {
+      throw invalidTableLine(lineNumber);
+    }
+    return { char: line[eq + 1], value: Number.parseInt(hex2, 16) };
+  }
+  if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
+    throw invalidTableLine(lineNumber);
+  }
+  const hex = line.slice(2);
+  if (!/^[0-9a-fA-F]+$/.test(hex)) {
+    throw invalidTableLine(lineNumber);
+  }
+  return { char: line[0], value: Number.parseInt(hex, 16) };
+};
+var handleClearTable = ({ session }) => {
+  session.characterMappings.clear();
+  session.currentTable = null;
+};
+var handleTable = ({ session }, _words, raw) => {
+  let payload = stripLeadingKeyword(raw, "table");
+  let rtl = false;
+  if (/,\s*rtl\s*$/i.test(payload)) {
+    rtl = true;
+    payload = payload.replace(/,\s*rtl\s*$/i, "").trim();
+  } else if (/,\s*ltr\s*$/i.test(payload)) {
+    payload = payload.replace(/,\s*ltr\s*$/i, "").trim();
+  }
+  const filename = unwrapQuoted(payload);
+  if (filename === "") {
+    throw new Error("table requires a filename");
+  }
+  const contents = session.includeSource.readFile(filename, "utf8");
+  if (typeof contents !== "string") {
+    throw new Error(`Error reading file: ${filename}`);
+  }
+  session.characterMappings.clear();
+  session.currentTable = filename;
+  const lines = contents.split("\n");
+  for (let index2 = 0; index2 < lines.length; index2++) {
+    let line = lines[index2];
+    if (line.endsWith("\r")) {
+      line = line.slice(0, -1);
+    }
+    const parsed = parseAsarTableLine(line, rtl, index2 + 1);
+    if (!parsed) {
+      continue;
+    }
+    session.characterMappings.set(parsed.char, parsed.value);
+  }
+};
 var handleWarnpc = ({ session }, _words, raw) => {
   const payload = stripLeadingKeyword(raw, "warnpc");
   if (payload === "") {
@@ -14243,6 +14309,8 @@ var handleWarnpc = ({ session }, _words, raw) => {
 var registerMiscDirectives = (registry, context) => {
   registry.register("pulltable", context.table, handlePullTable);
   registry.register("pushtable", context.table, handlePushTable);
+  registry.register("cleartable", context.table, handleClearTable);
+  registry.register("table", context.table, handleTable);
   registry.register([...ASAR_COMPAT_NO_OP_DIRECTIVES], context.table, () => {
   });
   registry.register("assert", context.diagnostic, handleAssert);
@@ -15466,6 +15534,7 @@ var DIRECTLY_LOWERABLE_DIRECTIVES = /* @__PURE__ */ new Set([
   "autoclear",
   "base",
   "check",
+  "cleartable",
   "dpbase",
   "endspcblock",
   "error",
@@ -18776,6 +18845,16 @@ try {
   debug4 = d("Arch65816");
 } catch {
 }
+var keepsFixedWidthAddressingMode = (mode, explicitLength) => {
+  if (mode === "indirectLong" || mode === "indirectLongIndexedY" || mode === "indirectIndexedY" || mode === "indexedIndirectX" || mode === "stackRelative" || mode === "stackRelativeIndexedIndirectY") {
+    return true;
+  }
+  if (mode === "directPageIndirect" && explicitLength === 1) {
+    return true;
+  }
+  return false;
+};
+var isIndexedMemory = (operand, register) => operand.indexRegister === register && !keepsFixedWidthAddressingMode(operand.mode, 1);
 var Arch65816 = class {
   assembler;
   /** Native 16-bit accumulator (REP #$20). Reset at the start of each assembly stage. */
@@ -19193,8 +19272,8 @@ var Arch65816 = class {
       }
       throw new Error(`Error: ${opcode} does not support immediate mode.`);
     }
-    if (explicitlen) {
-      if (loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
+    if (explicitlen && !keepsFixedWidthAddressingMode(loweredOperand.mode, len)) {
+      if (isIndexedMemory(loweredOperand, "x")) {
         const forcedIndexed = {
           ADC: { 1: 117, 2: 125, 3: 127 },
           STA: { 1: 149, 2: 157, 3: 159 },
@@ -19213,7 +19292,7 @@ var Arch65816 = class {
           this.assembler.write3(this.assembler.operandResolver.getnum(baseOperand));
         }
         return true;
-      } else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect) {
+      } else if (isIndexedMemory(loweredOperand, "y")) {
         const forcedIndexedY = {
           ADC: { 2: 121 },
           STA: { 2: 153 },
@@ -19398,7 +19477,7 @@ var Arch65816 = class {
         return true;
       }
     }
-    if (loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
+    if (isIndexedMemory(loweredOperand, "x")) {
       debug4("handleMemoryOperations Absolute Indexed (X)", opcode, resolvedOperand);
       const absoluteXOpcodes = {
         ADC: 125,
@@ -19412,7 +19491,7 @@ var Arch65816 = class {
         return true;
       }
     }
-    if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect) {
+    if (isIndexedMemory(loweredOperand, "y")) {
       debug4("handleMemoryOperations Absolute Indexed (Y)", opcode, resolvedOperand);
       const absoluteYOpcodes = {
         ADC: 121,
@@ -19640,14 +19719,12 @@ var Arch65816 = class {
       }
       return true;
     }
-    if (explicitlen) {
+    if (explicitlen && !keepsFixedWidthAddressingMode(loweredOperand.mode, len)) {
       let forcedIndexedMode;
-      if (!loweredOperand.indirect) {
-        if (loweredOperand.indexRegister === "x") {
-          forcedIndexedMode = "x";
-        } else if (loweredOperand.mode === "absoluteIndexedY") {
-          forcedIndexedMode = "y";
-        }
+      if (isIndexedMemory(loweredOperand, "x")) {
+        forcedIndexedMode = "x";
+      } else if (loweredOperand.mode === "absoluteIndexedY") {
+        forcedIndexedMode = "y";
       }
       const explicitOperand = forcedIndexedMode ? baseOperand : resolvedOperand;
       if (forcedIndexedMode === "x") {
@@ -19895,7 +19972,7 @@ var Arch65816 = class {
     }
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
     const rawOperand = operandText;
-    const isIndexed = loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
+    const isIndexed = isIndexedMemory(loweredOperand, "x");
     const normalizedOperand = isIndexed ? rawOperand.slice(0, -2).trim() : rawOperand;
     if (explicitlen) {
       if (isIndexed) {
@@ -20037,7 +20114,7 @@ var Arch65816 = class {
       }
       return true;
     }
-    const isIndexed = isLDX && loweredOperand.indexRegister === "y" && !loweredOperand.indirect || isLDY && loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
+    const isIndexed = isLDX && isIndexedMemory(loweredOperand, "y") || isLDY && isIndexedMemory(loweredOperand, "x");
     if (isIndexed) {
       operand = operand.slice(0, -2).trim();
     }
@@ -20290,7 +20367,7 @@ var Arch65816 = class {
     };
     let address = 0;
     let mode;
-    const isIndexed = storeOpcode === "STX" && loweredOperand.indexRegister === "y" && !loweredOperand.indirect || storeOpcode === "STY" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect || storeOpcode === "STZ" && loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
+    const isIndexed = storeOpcode === "STX" && isIndexedMemory(loweredOperand, "y") || storeOpcode === "STY" && isIndexedMemory(loweredOperand, "x") || storeOpcode === "STZ" && isIndexedMemory(loweredOperand, "x");
     if (isIndexed) {
       operand = rawOperand.slice(0, -2).trim();
     }
@@ -20299,14 +20376,12 @@ var Arch65816 = class {
         if (storeOpcode === "STZ") {
           const forcedSTZIndexed = { 1: 116, 2: 158 };
           this.assembler.write1(getForcedOpcode(forcedSTZIndexed, 158));
-        } else {
-          if (storeOpcode === "STX") {
-            const forcedSTX = { 1: 134, 2: 142 };
-            this.assembler.write1(getForcedOpcode(forcedSTX, 142));
-          } else if (storeOpcode === "STY") {
-            const forcedSTY = { 1: 132, 2: 140 };
-            this.assembler.write1(getForcedOpcode(forcedSTY, 140));
-          }
+        } else if (storeOpcode === "STX") {
+          const forcedSTXIndexed = { 1: 150 };
+          this.assembler.write1(getForcedOpcode(forcedSTXIndexed, 150));
+        } else if (storeOpcode === "STY") {
+          const forcedSTYIndexed = { 1: 148 };
+          this.assembler.write1(getForcedOpcode(forcedSTYIndexed, 148));
         }
       } else {
         if (storeOpcode === "STX") {
@@ -20430,7 +20505,7 @@ var Arch65816 = class {
     opcode = opcode.toUpperCase();
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
     const rawOperand = operand;
-    const normalizedOperand = loweredOperand.indexRegister === "x" && !loweredOperand.indirect ? rawOperand.slice(0, -2).trim() : rawOperand;
+    const normalizedOperand = isIndexedMemory(loweredOperand, "x") ? rawOperand.slice(0, -2).trim() : rawOperand;
     const forcedMaps = {
       BIT: {
         immediate: 137,
@@ -20482,7 +20557,7 @@ var Arch65816 = class {
         outLength = operand.length === 6 ? 2 : 1;
       }
     } else {
-      const isIndexed = loweredOperand.indexRegister === "x" && !loweredOperand.indirect;
+      const isIndexed = isIndexedMemory(loweredOperand, "x");
       address = this.assembler.operandResolver.getnum(normalizedOperand);
       if (explicitlen) {
         if (isIndexed) {
@@ -21757,7 +21832,11 @@ var ArchSPC700 = class {
    */
   isDpOrAbs(operand) {
     debug5("isDpOrAbs", operand);
-    const cleaned = operand.replace(/\$/g, "");
+    const trimmed = operand.trim();
+    if (/^(A|X|Y|YA|SP)$/i.test(trimmed)) {
+      return false;
+    }
+    const cleaned = trimmed.replace(/\$/g, "");
     if (!/^[\dA-Fa-f]+$/.test(cleaned)) {
       return false;
     }
@@ -22334,6 +22413,42 @@ var ArchSPC700 = class {
         this.assembler.write2(val);
       } else {
         this.assembler.write1(val & 255);
+      }
+      return true;
+    }
+    const leftUp = left.trim().toUpperCase();
+    const rightUp = right.trim().toUpperCase();
+    const movAbsByDest = {
+      A: { byte: 196, word: 197 },
+      X: { byte: 216, word: 201 },
+      Y: { byte: 203, word: 204 }
+    };
+    const movAbsBySrc = {
+      A: { byte: 228, word: 229 },
+      X: { byte: 248, word: 233 },
+      Y: { byte: 235, word: 236 }
+    };
+    if (hasOwn(movAbsByDest, rightUp) && !hasOwn(movAbsByDest, leftUp) && !left.includes("(") && !left.includes("+")) {
+      const val = this.assembler.operandResolver.getnum(left);
+      const length = /^\$[\da-f]{1,2}$/i.test(left.trim()) ? 1 : 2;
+      const mode = movAbsByDest[rightUp];
+      this.assembler.write1(length === 1 ? mode.byte : mode.word);
+      if (length === 1) {
+        this.assembler.write1(val & 255);
+      } else {
+        this.assembler.write2(val & 65535);
+      }
+      return true;
+    }
+    if (hasOwn(movAbsBySrc, leftUp) && !right.trim().startsWith("#") && !hasOwn(movAbsBySrc, rightUp) && !right.includes("(") && !right.includes("+")) {
+      const val = this.assembler.operandResolver.getnum(right);
+      const length = /^\$[\da-f]{1,2}$/i.test(right.trim()) ? 1 : 2;
+      const mode = movAbsBySrc[leftUp];
+      this.assembler.write1(length === 1 ? mode.byte : mode.word);
+      if (length === 1) {
+        this.assembler.write1(val & 255);
+      } else {
+        this.assembler.write2(val & 65535);
       }
       return true;
     }
@@ -27792,6 +27907,18 @@ var directiveCatalog = [
     group: "memory"
   },
   {
+    keyword: "table",
+    summary: "Load an asar character mapping table file (`char=hex` per line).",
+    syntax: 'table "file"[,ltr|rtl]',
+    group: "table"
+  },
+  {
+    keyword: "cleartable",
+    summary: "Reset character mappings to identity (Unicode/ASCII code points).",
+    syntax: "cleartable",
+    group: "table"
+  },
+  {
     keyword: "pushtable",
     summary: "Push the current character mapping table.",
     syntax: "pushtable",
@@ -27914,12 +28041,6 @@ var directiveCatalog = [
     keyword: "autoclear",
     summary: "Auto-clear a previous freespace (asar-compatible).",
     syntax: "autoclear ...",
-    group: "compat"
-  },
-  {
-    keyword: "table",
-    summary: "Load a character mapping table (asar-compatible).",
-    syntax: 'table "file"',
     group: "compat"
   },
   {

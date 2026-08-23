@@ -443,6 +443,34 @@ test("expandOperand - evaluates only the indexed base expression", t => {
   t.true(evaluateMath.calledOnceWithExactly("stack_offsets+0"));
 });
 
+test("splitMathOperandSuffix - strips ,x after grouping bank math", t => {
+  const resolver = createResolver();
+
+  t.deepEqual(resolver.splitMathOperandSuffix("($7F0000&$FF0000)+$03,x"), {
+    expression: "($7F0000&$FF0000)+$03",
+    suffix: ",x",
+  });
+  t.deepEqual(resolver.splitMathOperandSuffix("($60,x)"), {
+    expression: "($60,x)",
+    suffix: "",
+  });
+  t.deepEqual(resolver.splitMathOperandSuffix("[$20],y"), {
+    expression: "[$20]",
+    suffix: ",y",
+  });
+});
+
+test("expandOperand - evaluates grouping bank math before ,x", t => {
+  const evaluateMath = sinon.stub().withArgs("($7F0000&$FF0000)+$03").returns(0x7F0003);
+  const resolver = createResolver({ evaluateMath });
+
+  const expanded = resolver.expandOperand("($7F0000&$FF0000)+$03,x");
+
+  t.is(expanded.expanded, "$7F0003,x");
+  t.is(expanded.length, 3);
+  t.true(evaluateMath.calledOnceWithExactly("($7F0000&$FF0000)+$03"));
+});
+
 test("expandOperand - normalizes immediate numeric base members", t => {
   const resolver = createResolver({
     resolveDefines: (input) => input.replace("!OBJ_BASE", "$90F"),

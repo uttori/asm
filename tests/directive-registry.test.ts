@@ -152,6 +152,8 @@ test("command lowering covers currently safe direct directive families", t => {
     { command: "assert 1", keyword: "assert" },
     { command: "error", keyword: "error" },
     { command: "warnpc $8001", keyword: "warnpc" },
+    { command: "cleartable", keyword: "cleartable" },
+    { command: 'table "font.txt"', keyword: "table" },
   ];
 
   for (const { command, keyword } of cases) {

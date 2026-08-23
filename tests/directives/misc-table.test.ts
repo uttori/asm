@@ -7,6 +7,9 @@ const createContext = () => ({
     tableStack: [] as Map<string, number>[],
     characterMappings: new Map([["A", 1]]),
     currentTable: null,
+    includeSource: {
+      readFile: () => "",
+    },
   },
   operandResolver: createOperandResolver(),
   runtime: runtimeStub,

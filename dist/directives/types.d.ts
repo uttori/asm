@@ -104,7 +104,9 @@ export interface RuntimeDirectiveContext {
     runtime: DirectiveRuntime;
 }
 export type NarrowDirectiveHandler<Context> = (ctx: Context, words: readonly string[], raw: string, command?: NormalizedCommand) => void;
-export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability>;
+export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability & {
+    includeSource: Pick<IncludeSourceService, "readFile">;
+}>;
 export type DiagnosticDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "evaluateExpression" | "resolvedefines"> & Pick<DirectiveAddressCapability, "currentTargetAddress"> & {
     operandResolver: Pick<OperandResolver, "getnum">;
 }>;

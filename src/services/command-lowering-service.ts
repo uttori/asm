@@ -82,6 +82,7 @@ const DIRECTLY_LOWERABLE_DIRECTIVES = new Set([
   "autoclear",
   "base",
   "check",
+  "cleartable",
   "dpbase",
   "endspcblock",
   "error",

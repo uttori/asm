@@ -1423,7 +1423,13 @@ export class ArchSPC700 implements ArchitectureEncoder {
    */
   isDpOrAbs(operand: string): boolean {
     debug("isDpOrAbs", operand);
-    const cleaned = operand.replace(/\$/g, "");
+    const trimmed = operand.trim();
+    // A/X/Y are registers. Treating them as hex makes `MOV label, A` encode as
+    // MOV dp,dp (FA) with src $0A.
+    if (/^(A|X|Y|YA|SP)$/i.test(trimmed)) {
+      return false;
+    }
+    const cleaned = trimmed.replace(/\$/g, "");
     if (!/^[\dA-Fa-f]+$/.test(cleaned)) {
       return false;
     }
@@ -2189,6 +2195,51 @@ export class ArchSPC700 implements ArchitectureEncoder {
         this.assembler.write2(val);
       } else {
         this.assembler.write1(val & 0xff);
+      }
+      return true;
+    }
+
+    const leftUp = left.trim().toUpperCase();
+    const rightUp = right.trim().toUpperCase();
+    const movAbsByDest: Record<string, { byte: number; word: number }> = {
+      A: { byte: 0xc4, word: 0xc5 },
+      X: { byte: 0xd8, word: 0xc9 },
+      Y: { byte: 0xcb, word: 0xcc },
+    };
+    const movAbsBySrc: Record<string, { byte: number; word: number }> = {
+      A: { byte: 0xe4, word: 0xe5 },
+      X: { byte: 0xf8, word: 0xe9 },
+      Y: { byte: 0xeb, word: 0xec },
+    };
+    // `MOV CODE_159F, A` is abs store (C5), not MOV dp,dp. Labels have no `$`
+    // so the hex memoryMoves table above never matches.
+    if (hasOwn(movAbsByDest, rightUp) && !hasOwn(movAbsByDest, leftUp) && !left.includes("(") && !left.includes("+")) {
+      const val = this.assembler.operandResolver.getnum(left);
+      const length = /^\$[\da-f]{1,2}$/i.test(left.trim()) ? 1 : 2;
+      const mode = movAbsByDest[rightUp];
+      this.assembler.write1(length === 1 ? mode.byte : mode.word);
+      if (length === 1) {
+        this.assembler.write1(val & 0xff);
+      } else {
+        this.assembler.write2(val & 0xffff);
+      }
+      return true;
+    }
+    if (
+      hasOwn(movAbsBySrc, leftUp) &&
+      !right.trim().startsWith("#") &&
+      !hasOwn(movAbsBySrc, rightUp) &&
+      !right.includes("(") &&
+      !right.includes("+")
+    ) {
+      const val = this.assembler.operandResolver.getnum(right);
+      const length = /^\$[\da-f]{1,2}$/i.test(right.trim()) ? 1 : 2;
+      const mode = movAbsBySrc[leftUp];
+      this.assembler.write1(length === 1 ? mode.byte : mode.word);
+      if (length === 1) {
+        this.assembler.write1(val & 0xff);
+      } else {
+        this.assembler.write2(val & 0xffff);
       }
       return true;
     }

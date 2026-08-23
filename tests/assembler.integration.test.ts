@@ -238,6 +238,11 @@ const assembleSmrpgU = (useLegacy: boolean): Buffer => {
     baseRom: Uint8Array | undefined,
   ): Buffer => {
     const assembler = new Assembler(baseRom, { collectSourceMetadata: false });
+    // FileType 2 FinalizeROM writes almost nothing. Constructor keeps baseImage
+    // for reads only (spcblock tests pass a zero-filled buffer as targetRom).
+    if (baseRom && baseRom.length > 0) {
+      assembler.romdata = Array.from(baseRom);
+    }
     assembler.setChecksumMode("asar");
     assembler.setIncludePaths(includePaths);
     assembler.setCurrentFile(SMRPG_SRC_PATH);

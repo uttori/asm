@@ -37,6 +37,23 @@ export declare const handleAssert: ({ session }: DiagnosticDirectiveContext, _wo
  */
 export declare const handleError: (_ctx: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
 /**
+ * Asar `cleartable`. Restores identity mapping (each code point encodes as itself).
+ * An empty Map plus `processStringWithMapping`'s charCode fallback matches that.
+ * @param {TableDirectiveContext} ctx The table-capable session.
+ */
+export declare const handleClearTable: ({ session }: TableDirectiveContext) => void;
+/**
+ * Deprecated asar `table "file"[,ltr|rtl]`. Loads `char=hex` lines into the
+ * mapping table. Unlike asar we leave unmapped characters as identity instead
+ * of filling a garbage sentinel — SMRPG dialogue only uses listed glyphs, and
+ * remaining bank data is raw `db $xx` after `cleartable`.
+ * @param {TableDirectiveContext} ctx Session with `includeSource.readFile`.
+ * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {string} raw Full command text.
+ * @throws {Error} If the filename is missing or a table line is invalid.
+ */
+export declare const handleTable: ({ session }: TableDirectiveContext, _words: readonly string[], raw: string) => void;
+/**
  * Deprecated asar `warnpc addr`, equivalent to `assert pc() <= addr`.
  * Fails only when the SNES PC is strictly past the bound.
  * @param {DiagnosticDirectiveContext} ctx Session with PC and numeric evaluation.

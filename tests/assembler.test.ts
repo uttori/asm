@@ -1656,6 +1656,14 @@ test("directive runtime handleCharacterMapping - throws error with incorrect for
   t.is(error2.message, "Character mapping requires format: 'char' = value");
 });
 
+test("cleartable is a 0-byte directive, not a 3-byte unknown opcode", t => {
+  const assembler = new Assembler();
+  assembler.assembleblock("org $8000");
+  assembler.assembleblock("db $AA");
+  assembler.assembleblock("cleartable");
+  t.is(assembler.currentTargetAddress, 0x8001);
+});
+
 test("directive runtime processStringWithMapping - basic character mapping", t => {
   const assembler = new Assembler();
 
@@ -5641,6 +5649,47 @@ test("processCommand - spc700-raw writes org $000000 into a norom payload", t =>
 
   t.is(assembler.mapper, "norom");
   t.deepEqual(Array.from(assembler.getBinaryOutput()), [0xe8, 0x00]);
+});
+
+test("processCommand - SPC700 MOV label, A encodes as abs store", t => {
+  const assembler = new Assembler(undefined, { collectSourceMetadata: false });
+  const lines = [
+    "norom",
+    "arch spc700-raw",
+    "org $000000",
+    "base $0200",
+    "MOV CODE_159F, A",
+    "MOV $20, #$00",
+    "CODE_159F:",
+    "SET0 $20",
+  ];
+
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
+    for (const [lineNumber, line] of lines.entries()) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.processCommand(line);
+    }
+    assembler.finishPass();
+  }
+
+  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0xc5, 0x06, 0x02, 0x8f, 0x00, 0x20, 0x02, 0x20]);
+});
+
+test("processCommand - LDA.l grouping bank math ,x encodes as long indexed X", t => {
+  const assembler = new Assembler(undefined, { collectSourceMetadata: false });
+  const lines = ["lorom", "org $808000", "LDA.l ($7F0000&$FF0000)+$03,x"];
+
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
+    for (const [lineNumber, line] of lines.entries()) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.processCommand(line);
+    }
+    assembler.finishPass();
+  }
+
+  t.deepEqual(Array.from(assembler.getBinaryOutput()).slice(0, 4), [0xbf, 0x03, 0x00, 0x7f]);
 });
 
 test("step - basic functionality", t => {

@@ -1,11 +1,13 @@
 import { test } from "../ava-helper.js";
 import {
   handleAssert,
+  handleClearTable,
   handleError,
+  handleTable,
   handleWarnpc,
   registerMiscDirectives,
 } from "../../src/directives/misc.js";
-import type { DiagnosticDirectiveContext } from "../../src/directives/types.js";
+import type { DiagnosticDirectiveContext, TableDirectiveContext } from "../../src/directives/types.js";
 import type { ExpressionNode } from "../../src/ir/expression-node.js";
 import { DirectiveRegistry } from "../../src/directives/registry.js";
 
@@ -113,6 +115,95 @@ test("warnpc fails when PC is past the bound", t => {
   });
 });
 
+test("table loads asar char=hex lines without stripping a leading space", t => {
+  const mappings = new Map<string, number>();
+  const ctx: TableDirectiveContext = {
+    session: {
+      tableStack: [],
+      characterMappings: mappings,
+      currentTable: null,
+      includeSource: {
+        readFile: () => " =20\n!=21\nA=41\n~=3A\n",
+      },
+    },
+  };
+
+  handleTable(ctx, ["table", '"font.txt"'], 'table "font.txt"');
+
+  t.is(mappings.get(" "), 0x20);
+  t.is(mappings.get("!"), 0x21);
+  t.is(mappings.get("A"), 0x41);
+  t.is(mappings.get("~"), 0x3a);
+  t.is(ctx.session.currentTable, "font.txt");
+});
+
+test("table rtl reads hex=char lines", t => {
+  const mappings = new Map<string, number>();
+  const ctx: TableDirectiveContext = {
+    session: {
+      tableStack: [],
+      characterMappings: mappings,
+      currentTable: null,
+      includeSource: {
+        readFile: () => "41=A\n20= \n",
+      },
+    },
+  };
+
+  handleTable(ctx, ["table", '"font.txt"', "rtl"], 'table "font.txt",rtl');
+
+  t.is(mappings.get("A"), 0x41);
+  t.is(mappings.get(" "), 0x20);
+});
+
+test("table replaces prior mappings and rejects invalid lines", t => {
+  const mappings = new Map<string, number>([["Z", 0x5a]]);
+  const ctx: TableDirectiveContext = {
+    session: {
+      tableStack: [],
+      characterMappings: mappings,
+      currentTable: "old",
+      includeSource: {
+        readFile: (filename) => {
+          if (filename === "bad.txt") {
+            return "A=4\n";
+          }
+          return "B=42\n";
+        },
+      },
+    },
+  };
+
+  handleTable(ctx, ["table", '"ok.txt"'], 'table "ok.txt"');
+  t.false(mappings.has("Z"));
+  t.is(mappings.get("B"), 0x42);
+
+  t.throws(() => handleTable(ctx, ["table"], "table"), {
+    message: "table requires a filename",
+  });
+  t.throws(() => handleTable(ctx, ["table", '"bad.txt"'], 'table "bad.txt"'), {
+    message: "Invalid table file: line 1",
+  });
+});
+
+test("cleartable restores identity mappings", t => {
+  const mappings = new Map<string, number>([["A", 0x10], ["~", 0x3a]]);
+  const ctx: TableDirectiveContext = {
+    session: {
+      tableStack: [],
+      characterMappings: mappings,
+      currentTable: "font.txt",
+      includeSource: {
+        readFile: () => "",
+      },
+    },
+  };
+
+  handleClearTable(ctx);
+  t.is(mappings.size, 0);
+  t.is(ctx.session.currentTable, null);
+});
+
 test("misc registry dispatches assert, error, warn, and warnpc", t => {
   const registry = new DirectiveRegistry();
   let evaluated = "";
@@ -122,6 +213,9 @@ test("misc registry dispatches assert, error, warn, and warnpc", t => {
         tableStack: [],
         characterMappings: new Map(),
         currentTable: null,
+        includeSource: {
+          readFile: () => "",
+        },
       },
     },
     diagnostic: {
