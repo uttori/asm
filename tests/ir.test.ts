@@ -169,6 +169,21 @@ test("expression nodes parse range and call syntax", (t) => {
   });
 });
 
+test("expression nodes parse Asar = as equality without eating ==", (t) => {
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("1 = 2")), {
+    type: "binary",
+    operator: "=",
+    left: { type: "literal", value: "1" },
+    right: { type: "literal", value: "2" },
+  });
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("1 == 2")), {
+    type: "binary",
+    operator: "==",
+    left: { type: "literal", value: "1" },
+    right: { type: "literal", value: "2" },
+  });
+});
+
 test("expression nodes parse binary precedence and unary operators", (t) => {
   const binaryNode = parseExpressionNode("1 + 2 * 3");
   const unaryNode = parseExpressionNode("<:$123456");
@@ -379,6 +394,7 @@ test("define references and member/index nodes resolve structurally", (t) => {
   structStub.withArgs("Player[1].hp").returns(1);
 
   t.true(assembler.evaluateExpression(parseExpressionNode("!VALUE + 1 == 42")));
+  t.true(assembler.evaluateExpression(parseExpressionNode("!VALUE + 1 = 42")));
   t.true(assembler.evaluateExpression(parseExpressionNode("!{NAME_!IDX} == 41")));
   t.is(assembler.operandResolver.getnum(parseExpressionNode("Player[!IDX].hp")), 1);
 });

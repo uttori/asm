@@ -89,6 +89,7 @@ export type BinaryOperator =
   | "<="
   | ">="
   | "=="
+  | "="
   | "!="
   | "&&"
   | "||";
@@ -449,6 +450,7 @@ const binaryPrecedence: Record<BinaryOperator, number> = {
   "||": 0,
   "&&": 1,
   "==": 2,
+  "=": 2,
   "!=": 2,
   "<": 2,
   ">": 2,
@@ -475,6 +477,7 @@ const binaryOperators = [
   "<=",
   ">=",
   "==",
+  "=",
   "!=",
   "&&",
   "||",

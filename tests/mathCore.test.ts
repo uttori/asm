@@ -181,8 +181,10 @@ test("math - comparison operations", t => {
 
   // Equal
   t.is(mathCore.math("5 == 5"), 1);
+  t.is(mathCore.math("5 = 5"), 1);
 
   t.is(mathCore.math("5 == 6"), 0);
+  t.is(mathCore.math("5 = 6"), 0);
 
   // Not equal
   t.is(mathCore.math("5 != 6"), 1);
@@ -545,6 +547,9 @@ test("peekNextOperator - matches two-character operators", t => {
   mathCore.str = "== 30";
   t.is(mathCore.peekNextOperator(mathCore.operators, 0), "==");
 
+  mathCore.str = "= 30";
+  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "=");
+
   mathCore.str = "!= 40";
   t.is(mathCore.peekNextOperator(mathCore.operators, 0), "!=");
 
@@ -588,6 +593,9 @@ test("peekNextOperator - matches single-character operators", t => {
 
   mathCore.str = "^ 50";
   t.is(mathCore.peekNextOperator(mathCore.operators, 0), "^");
+
+  mathCore.str = "= 30";
+  t.is(mathCore.peekNextOperator(mathCore.operators, 0), "=");
 });
 
 test("peekNextOperator - respects depth parameter", t => {

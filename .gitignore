@@ -74,3 +74,4 @@ fixtures/integration/yoshisisland-disassembly/*.sfc
 fixtures/integration/Super-Mario-RPG-Disassembly/**/*.sfc
 fixtures/integration/Super-Mario-RPG-Disassembly/**/*.bin
 Local Only/
+graphify-out/

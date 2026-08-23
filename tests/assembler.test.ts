@@ -4583,6 +4583,27 @@ test("typed conditional nodes execute the first matching branch", t => {
   t.deepEqual(executed, ["db $01"]);
 });
 
+test("Asar if treats = as equality for defines", (t) => {
+  const assembler = new Assembler();
+  assembler.defines.set("TRUE", "1");
+  assembler.defines.set("FALSE", "0");
+  assembler.defines.set("TEMP1", "1");
+  t.true(assembler.evaluateExpression("!TEMP1 = !TRUE"));
+  t.false(assembler.evaluateExpression("!TEMP1 = !FALSE"));
+  assembler.defines.set("TEMP1", "0");
+  t.false(assembler.evaluateExpression("!TEMP1 = !TRUE"));
+  t.true(assembler.evaluateExpression("!TEMP1 = !FALSE"));
+});
+
+test("macro if !TEMP1 = !TRUE is treated as equality", (t) => {
+  const assembler = new Assembler();
+  assembler.defines.set("TRUE", "1");
+  assembler.defines.set("TEMP1", "1");
+  t.true(assembler.macroEngine.evaluateMacroControlExpression("!TEMP1 = !TRUE"));
+  assembler.defines.set("TEMP1", "0");
+  t.false(assembler.macroEngine.evaluateMacroControlExpression("!TEMP1 = !TRUE"));
+});
+
 test("typed conditional nodes support nested branch execution", t => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");

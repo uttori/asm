@@ -94,6 +94,7 @@ const OPERATORS: OperatorTable = {
   "<=": { priority: 2, operation: (left, right) => (left <= right ? 1 : 0) },
   ">=": { priority: 2, operation: (left, right) => (left >= right ? 1 : 0) },
   "==": { priority: 2, operation: (left, right) => (left === right ? 1 : 0) },
+  "=": { priority: 2, operation: (left, right) => (left === right ? 1 : 0) },
   "!=": { priority: 2, operation: (left, right) => (left !== right ? 1 : 0) },
   "&&": { priority: 1, operation: (left, right) => (left && right ? 1 : 0) },
   "||": { priority: 0, operation: (left, right) => (left || right ? 1 : 0) },

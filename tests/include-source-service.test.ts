@@ -1,13 +1,18 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test } from "./ava-helper.js";
 import { MemoryAssemblyFileProvider } from "../src/file-provider.js";
 import {
   IncludeSourceService,
   type IncludeSourceHost,
 } from "../src/services/include-source-service.js";
+import { Assembler } from "./test-assembler.js";
 
 const createHost = (
   files: Record<string, string | Uint8Array>,
   currentFile = "/proj/main.asm",
+  currentMacroSourceFile?: string,
 ): IncludeSourceHost & {
   edges: Array<[string, string]>;
   executedFiles: string[];
@@ -15,7 +20,7 @@ const createHost = (
 } => {
   const host = {
     currentFile,
-    currentMacroSourceFile: undefined,
+    currentMacroSourceFile,
     includePaths: ["/proj"],
     includeStack: [],
     includedFiles: new Map(),
@@ -42,6 +47,20 @@ const createHost = (
   };
   return host;
 };
+
+test("include source service resolves incsrc relative to the defining macro file", t => {
+  const host = createHost(
+    {
+      "/proj/main.asm": "",
+      "/proj/snes.asm": "db $01",
+    },
+    "/proj/main.asm",
+    "/proj/game/rommap.asm",
+  );
+  const service = new IncludeSourceService(host);
+
+  t.is(service.resolveIncludePath("../snes.asm"), "/proj/snes.asm");
+});
 
 test("include source service reads binary and text files relative to source", t => {
   const host = createHost({
@@ -144,4 +163,54 @@ test("include source service restores source state after read failures", t => {
   });
   t.is(host.currentFile, "/proj/main.asm");
   t.deepEqual(host.includeStack, []);
+});
+
+test("incsrc inside a nested macro is relative to the defining file", t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-macro-incsrc-"));
+  try {
+    fs.mkdirSync(path.join(root, "Global"), { recursive: true });
+    fs.mkdirSync(path.join(root, "SMRPG", "RomMap"), { recursive: true });
+    const mainPath = path.join(root, "AssembleFile.asm");
+    fs.writeFileSync(
+      mainPath,
+      ['incsrc "Global/Global_Macros.asm"', "%InitializeROM()", ""].join("\n"),
+    );
+    fs.writeFileSync(
+      path.join(root, "Global", "Global_Macros.asm"),
+      [
+        "macro InitializeROM()",
+        '  incsrc "../SMRPG/RomMap/ROM_Map.asm"',
+        "  %LoadFiles()",
+        "endmacro",
+        "",
+      ].join("\n"),
+    );
+    fs.writeFileSync(
+      path.join(root, "SMRPG", "RomMap", "ROM_Map.asm"),
+      ["macro LoadFiles()", "  incsrc ../SNES_Macros.asm", "endmacro", ""].join("\n"),
+    );
+    fs.writeFileSync(path.join(root, "SMRPG", "SNES_Macros.asm"), "db $42\n");
+
+    const assembler = new Assembler();
+    assembler.setIncludePaths(["./", path.join(root, "Global"), path.join(root, "SMRPG")]);
+    assembler.setCurrentFile(mainPath);
+    const source = fs.readFileSync(mainPath, "utf8");
+    for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+      assembler.activateStage(stage);
+      assembler.setWritePosition(0x808000);
+      for (const [lineNumber, line] of source.split("\n").entries()) {
+        assembler.setCurrentLine(lineNumber);
+        assembler.assembleblock(line.trim());
+      }
+      assembler.finishPass();
+    }
+
+    t.is(
+      assembler.macros.get("LoadFiles")?.sourceFile,
+      path.join(root, "SMRPG", "RomMap", "ROM_Map.asm"),
+    );
+    t.deepEqual(Array.from(assembler.getBinaryOutput()), [0x42]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

@@ -1,0 +1,16 @@
+# Only index assembler, VS Code extension, and language-server source.
+# gitignore last-match-wins: deny the repo, then re-include the three trees.
+/*
+!/src/
+!/src/**
+!/editors/
+!/editors/**
+!/language-server/
+!/language-server/**
+
+# Built / bundled artifacts and IDE scaffolding inside those trees
+editors/vscode/out/
+editors/vscode/server/
+editors/vscode/.vscode/
+editors/vscode/*.vsix
+language-server/out/

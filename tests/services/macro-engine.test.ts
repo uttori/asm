@@ -73,6 +73,59 @@ test("macro definition parsing validates headers and variadic duplicates", t => 
   t.throws(() => engine.handleDefinitionCommand(commandNode("endmacro")));
 });
 
+test("macro definitions capture the defining file from the header command", t => {
+  const assembler = new Assembler();
+  const engine = assembler.macroEngine;
+  assembler.currentFile = "/assemble.asm";
+
+  t.true(engine.handleDefinitionCommand(createNormalizedCommand(
+    "macro LoadFiles()",
+    "macro LoadFiles()",
+    ["macro", "LoadFiles()"],
+    "/game/rommap.asm",
+    1,
+  )));
+  t.true(engine.handleDefinitionCommand(createNormalizedCommand(
+    "incsrc ../SNES_Macros.asm",
+    "incsrc ../SNES_Macros.asm",
+    ["incsrc", "../SNES_Macros.asm"],
+    "/game/rommap.asm",
+    2,
+  )));
+  t.true(engine.handleDefinitionCommand(createNormalizedCommand(
+    "endmacro",
+    "endmacro",
+    ["endmacro"],
+    "/game/rommap.asm",
+    3,
+  )));
+
+  t.is(assembler.macros.get("LoadFiles")?.sourceFile, "/game/rommap.asm");
+});
+
+test("callMacro resolves body commands against the defining file", t => {
+  const assembler = new Assembler();
+  const engine = assembler.macroEngine;
+  assembler.currentFile = "/caller.asm";
+  const seenFiles: string[] = [];
+  const processCommand = stub(assembler, "processCommand").callsFake(() => {
+    seenFiles.push(assembler.currentFile);
+  });
+  assembler.macros.set("LoadFiles", {
+    name: "LoadFiles",
+    params: [],
+    variadic: false,
+    body: [commandNode("incsrc ../SNES_Macros.asm")],
+    sourceFile: "/game/rommap.asm",
+  });
+
+  engine.callMacro("LoadFiles()");
+
+  t.deepEqual(seenFiles, ["/game/rommap.asm"]);
+  t.is(assembler.currentFile, "/caller.asm");
+  t.true(processCommand.calledOnce);
+});
+
 test("macro definitions skip collection outside definition stage", t => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
@@ -169,6 +222,35 @@ test("macro define-line expansion resolves legacy and variadic forms", t => {
   );
   t.is(engine.expandMacroLine("db <!missing>", new Map(), [], 0), "db <!missing>");
   t.throws(() => engine.expandMacroLine("!value = <...[bad]>", new Map(), [], 0));
+});
+
+test("macro !<param> keeps the define name instead of resolving the value", t => {
+  const assembler = new Assembler();
+  const engine = assembler.macroEngine;
+  assembler.defines.set("TEMP2", "0");
+  assembler.defines.set("TRUE", "1");
+  assembler.defines.set("TEMP", "");
+  assembler.activateStage("collectDefinitions");
+
+  const params = new Map([
+    ["StartOfList", "TEMP2"],
+    ["StringVar", "TEMP"],
+    ["NewString", "Joypad"],
+  ]);
+  t.is(
+    engine.expandMacroLine("if !<StartOfList> != !TRUE", params, [], 0),
+    "if !TEMP2 != !TRUE",
+  );
+  t.is(engine.expandMacroLine("!<StartOfList> = !FALSE", params, [], 0), "!TEMP2 = !FALSE");
+  t.is(
+    engine.expandMacroLine('!<StringVar> += "<NewString>"', params, [], 0),
+    '!TEMP += "Joypad"',
+  );
+  t.is(
+    engine.expandMacroLine("if !<StartOfList> != !TRUE", new Map([["StartOfList", "!TEMP2"]]), [], 0),
+    "if !TEMP2 != !TRUE",
+  );
+  t.true(assembler.evaluateExpression("!TEMP2 != !TRUE"));
 });
 
 test("variadic placeholder resolution handles defines, errors, and no-op input", t => {

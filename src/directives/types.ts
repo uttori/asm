@@ -182,7 +182,7 @@ export type IncludeDirectiveContext = OperandDirectiveContext<
     Pick<DirectiveRomCapability, "write1">
 > &
   RuntimeDirectiveContext & {
-    defineEngine: IncludeDefineEngine;
+    defineEngine?: IncludeDefineEngine;
     includeSource: Pick<
       IncludeSourceService,
       "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile"

@@ -3,6 +3,11 @@ import type { NormalizedCommand } from "../ir/normalized-command.js";
 import type { DirectiveRegistry } from "./registry.js";
 import type { IncludeDefineEngine, IncludeDirectiveContext } from "./types.js";
 
+const IDENTITY_INCLUDE_DEFINES: IncludeDefineEngine = {
+  resolveDefinesInStringLiteral: (content) => content,
+  resolveRegularDefines: (content) => content,
+};
+
 /** Hex (`$808000`) or decimal `incbin ->` seek targets. Labels take the other path. */
 const NUMERIC_INCBIN_TARGET = /^\$[\da-f]+$|^-?\d+$/i;
 
@@ -205,12 +210,13 @@ export const handleIncbin = (
   const { sourceWords, targetLocation } = splitIncbinArrow(words);
   const filenameWithRange = sourceWords.join(" ");
   const { filename: rawFilename, rangeStr } = parseIncbinFilenameAndRange(filenameWithRange);
+  const expander = defineEngine ?? IDENTITY_INCLUDE_DEFINES;
   const quote = filenameWithRange[0];
   let filename = rawFilename;
   if (quote === '"' || quote === "'" || quote === "`") {
-    filename = defineEngine.resolveDefinesInStringLiteral(rawFilename);
+    filename = expander.resolveDefinesInStringLiteral(rawFilename);
   } else {
-    filename = defineEngine.resolveRegularDefines(rawFilename);
+    filename = expander.resolveRegularDefines(rawFilename);
   }
 
   const fileData = includeSource.readFile(filename);
@@ -274,7 +280,9 @@ export const handleIncsrc = (
   _raw = "",
   command?: NormalizedCommand,
 ): void => {
-  includeSource.assembleFile(resolveIncludeTarget(words, command, "incsrc", defineEngine));
+  includeSource.assembleFile(
+    resolveIncludeTarget(words, command, "incsrc", defineEngine ?? IDENTITY_INCLUDE_DEFINES),
+  );
 };
 
 /**
@@ -291,7 +299,9 @@ export const handleInclude = (
   _raw = "",
   command?: NormalizedCommand,
 ): void => {
-  includeSource.includeFile(resolveIncludeTarget(words, command, "include", defineEngine));
+  includeSource.includeFile(
+    resolveIncludeTarget(words, command, "include", defineEngine ?? IDENTITY_INCLUDE_DEFINES),
+  );
 };
 
 /**

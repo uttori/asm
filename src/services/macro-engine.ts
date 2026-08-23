@@ -45,9 +45,13 @@ export interface MacroEngineHost {
 }
 
 export class MacroEngine {
+  host: MacroEngineHost;
   macroExpansionControlStack: MacroExpansionControlEntry[] = [];
+  pendingMacroSourceFile = "";
 
-  constructor(readonly host: MacroEngineHost) {}
+  constructor(host: MacroEngineHost) {
+    this.host = host;
+  }
 
   /**
    * Checks whether the current macro expansion line is in an active branch.
@@ -190,7 +194,10 @@ export class MacroEngine {
             params: this.host.currentMacroParams,
             variadic,
             body: this.host.currentMacroBody,
-            sourceFile: this.host.currentFile,
+            sourceFile:
+              this.pendingMacroSourceFile ||
+              this.host.currentMacroBody[0]?.source.file ||
+              this.host.currentFile,
           };
 
           if (this.host.macros.has(macroDef.name)) {
@@ -205,6 +212,7 @@ export class MacroEngine {
         this.host.currentMacroName = "";
         this.host.currentMacroParams = [];
         this.host.currentMacroBody = [];
+        this.pendingMacroSourceFile = "";
         setCommandKind(commandNode, "macroDefinitionOrInvoke");
         return true;
       }
@@ -229,6 +237,7 @@ export class MacroEngine {
         : [];
       this.host.inMacroDefinition = true;
       this.host.currentMacroBody = [];
+      this.pendingMacroSourceFile = commandNode.source.file || this.host.currentFile;
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }
@@ -383,6 +392,7 @@ export class MacroEngine {
     const previousMacroName = this.host.currentMacroName;
     const previousParentLabel = this.host.currentParentLabel;
     const previousParentIsGlobal = this.host.currentParentIsGlobal;
+    const previousFile = this.host.currentFile;
     const previousMacroExpansionControlStack = this.macroExpansionControlStack.map((entry) => ({
       ...entry,
     }));
@@ -402,6 +412,9 @@ export class MacroEngine {
         }
 
         this.host.currentMacroName = macroName;
+        if (macro.sourceFile) {
+          this.host.currentFile = macro.sourceFile;
+        }
         if (macro.params.length > 0) {
           const fixedArgs = new Map<string, string>();
           for (const param of macro.params) {
@@ -432,6 +445,9 @@ export class MacroEngine {
       }
 
       this.host.currentMacroName = macroName;
+      if (macro.sourceFile) {
+        this.host.currentFile = macro.sourceFile;
+      }
 
       const argValues: string[] = [];
       let currentArg = "";
@@ -508,6 +524,7 @@ export class MacroEngine {
       this.host.currentVariadicCount = previousVariadicCount;
       this.host.currentVariadicArgs = previousVariadicArgs;
       this.host.inMacroExpansion = previousMacroExpansionState;
+      this.host.currentFile = previousFile;
       this.macroExpansionControlStack = previousMacroExpansionControlStack;
     }
   }
@@ -526,6 +543,25 @@ export class MacroEngine {
     variadicArgs: string[],
     variadicCount: number,
   ): string {
+    line = line.replace(/!<(\w+)>/g, (match, paramName: string) => {
+      if (!fixedArgs.has(paramName)) {
+        return match;
+      }
+      let name = (fixedArgs.get(paramName) ?? "").trim();
+      if (name.startsWith("!")) {
+        name = name.slice(1);
+      }
+      return `!${name}`;
+    });
+
+    const substituteParamValue = (raw: string): string => {
+      const value = raw.trim();
+      if (!value.includes("!")) {
+        return value;
+      }
+      return this.host.resolvedefines(value);
+    };
+
     const resolveDeprecatedBangAngle = (match: string, name: string): string => {
       if (fixedArgs.has(name)) {
         const fixedValue = fixedArgs.get(name);
@@ -554,7 +590,7 @@ export class MacroEngine {
         expandedValue = expandedValue.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
         expandedValue = expandedValue.replace(/<(\w+)>/g, (match: string, paramName: string) => {
           if (fixedArgs.has(paramName)) {
-            return this.host.resolvedefines(fixedArgs.get(paramName) ?? "");
+            return substituteParamValue(fixedArgs.get(paramName) ?? "");
           }
           return match;
         });
@@ -602,7 +638,7 @@ export class MacroEngine {
     expanded = expanded.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
     expanded = expanded.replace(/<(\w+)>/g, (match: string, paramName: string) => {
       if (fixedArgs.has(paramName)) {
-        return this.host.resolvedefines(fixedArgs.get(paramName) ?? "");
+        return substituteParamValue(fixedArgs.get(paramName) ?? "");
       }
       return match;
     });
