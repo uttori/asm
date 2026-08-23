@@ -1,13 +1,18 @@
-import type { MacroDefinition } from "../assembler.js";
 import type { MathCore } from "../mathcore.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
-import type { SymbolScopeService } from "./symbol-scope-service.js";
-export type MacroLabelEntry = {
-    value: number;
-    isStatic: boolean;
-    isMacroLabel?: boolean;
-    macroInstance?: number;
-    modifiesHierarchy?: boolean;
+import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
+/** Represents a macro definition. */
+export type MacroDefinition = {
+    /** The name of the macro. */
+    name: string;
+    /** Fixed parameter names. */
+    params: string[];
+    /** Whether the macro has a variable number of parameters. */
+    variadic: boolean;
+    /** Typed commands captured inside the macro body. */
+    body: NormalizedCommand[];
+    /** The file where this macro was defined. */
+    sourceFile?: string;
 };
 export type MacroExpansionControlEntry = {
     type: "if" | "while" | "for";
@@ -18,7 +23,7 @@ export interface MacroEngineHost {
     currentFile: string;
     currentTargetAddress: number;
     defines: Map<string, string>;
-    labelTable: Map<string, MacroLabelEntry>;
+    labelTable: Map<string, LabelEntry>;
     inMacroDefinition: boolean;
     currentMacroName: string;
     currentMacroParams: string[];
@@ -41,8 +46,9 @@ export interface MacroEngineHost {
     }): void;
 }
 export declare class MacroEngine {
-    readonly host: MacroEngineHost;
+    host: MacroEngineHost;
     macroExpansionControlStack: MacroExpansionControlEntry[];
+    pendingMacroSourceFile: string;
     constructor(host: MacroEngineHost);
     /**
      * Checks whether the current macro expansion line is in an active branch.

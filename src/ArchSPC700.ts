@@ -333,41 +333,41 @@ const bitSetClearOpcodes: Record<BitSetClearOpcode, number> = {
   CLR7: 0xf2,
 };
 
-type BitBranchOpcode =
-  | "BBC0"
-  | "BBC1"
-  | "BBC2"
-  | "BBC3"
-  | "BBC4"
-  | "BBC5"
-  | "BBC6"
-  | "BBC7"
-  | "BBS0"
-  | "BBS1"
-  | "BBS2"
-  | "BBS3"
-  | "BBS4"
-  | "BBS5"
-  | "BBS6"
-  | "BBS7";
-const bitBranchOpcodes: Record<BitBranchOpcode, number> = {
-  BBC0: 0x13,
-  BBC1: 0x33,
-  BBC2: 0x53,
-  BBC3: 0x73,
-  BBC4: 0x93,
-  BBC5: 0xb3,
-  BBC6: 0xd3,
-  BBC7: 0xf3,
-  BBS0: 0x03,
-  BBS1: 0x23,
-  BBS2: 0x43,
-  BBS3: 0x63,
-  BBS4: 0x83,
-  BBS5: 0xa3,
-  BBS6: 0xc3,
-  BBS7: 0xe3,
+type BitBranchFamily = "BBS" | "BBC";
+
+type BitBranchOpcode = {
+  family: BitBranchFamily;
+  mnemonicBit?: number;
 };
+
+/**
+ * Parses numbered (`BBS3`) and wiki-native (`BBS $dp.n`) bit-branch mnemonics.
+ * @param {string} opcode Instruction mnemonic.
+ * @returns {BitBranchOpcode | undefined} Family and optional mnemonic bit.
+ */
+function parseBitBranchOpcode(opcode: string): BitBranchOpcode | undefined {
+  const match = opcode.toUpperCase().match(/^(BBS|BBC)([0-7])?$/);
+  if (!match) {
+    return undefined;
+  }
+  if (match[2] === undefined) {
+    return { family: match[1] as BitBranchFamily };
+  }
+  return { family: match[1] as BitBranchFamily, mnemonicBit: Number(match[2]) };
+}
+
+/**
+ * Opcode byte for BBS/BBC: bit in bits 7–5, low nibble 3 / 13.
+ * @param {BitBranchFamily} family BBS or BBC.
+ * @param {number} bit Bit 0–7.
+ * @returns {number} Opcode byte.
+ */
+function bitBranchOpcodeByte(family: BitBranchFamily, bit: number): number {
+  if (family === "BBS") {
+    return (bit << 5) | 0x03;
+  }
+  return (bit << 5) | 0x13;
+}
 
 type WordOpWithYaLeft = "CMPW" | "ADDW" | "SUBW" | "MOVW";
 const wordOpsWithYaLeft: Record<WordOpWithYaLeft, number> = {
@@ -386,11 +386,76 @@ const singleWordOps: Record<"DECW" | "INCW", number> = {
   INCW: 0x3a,
 };
 
-const bit1Opcodes: Record<"OR1" | "AND1" | "EOR1", number> = {
-  OR1: 0x0a,
-  AND1: 0x4a,
-  EOR1: 0x8a,
+type NumberedBitFamily = "NOT" | "OR" | "AND" | "EOR" | "MOV";
+
+type NumberedBitOpcode = {
+  family: NumberedBitFamily;
+  mnemonicBit: number;
 };
+
+const NUMBERED_BIT_OPCODE = /^(NOT|OR|AND|EOR|MOV)([0-7])$/;
+
+/**
+ * Parses TASM/Asar numbered mem.bit mnemonics (`NOT2`, `OR1`, `MOV5`, …).
+ * Native hardware names are the `*1` forms; the digit is the default bit.
+ * @param {string} opcode Instruction mnemonic.
+ * @returns {NumberedBitOpcode | undefined} Family and mnemonic bit, if any.
+ */
+function parseNumberedBitOpcode(opcode: string): NumberedBitOpcode | undefined {
+  const match = opcode.toUpperCase().match(NUMBERED_BIT_OPCODE);
+  if (!match) {
+    return undefined;
+  }
+  return {
+    family: match[1] as NumberedBitFamily,
+    mnemonicBit: Number(match[2]),
+  };
+}
+
+type SpcMemBitOperand = {
+  addressText: string;
+  bit?: number;
+  invert: boolean;
+};
+
+/**
+ * Parses a mem.bit operand: `$addr`, `$addr.n`, `!$addr`, `/addr.n`.
+ * @param {string} raw Operand text.
+ * @returns {SpcMemBitOperand | undefined} Address text, optional bit, invert flag.
+ */
+function parseSpcMemBitOperand(raw: string): SpcMemBitOperand | undefined {
+  let rest = raw.trim();
+  if (rest === "") {
+    return undefined;
+  }
+  let invert = false;
+  if (rest.startsWith("!") || rest.startsWith("/")) {
+    invert = true;
+    rest = rest.slice(1).trim();
+  }
+  const dotted = rest.match(/^(.*)\.([0-7])$/);
+  if (dotted) {
+    return {
+      addressText: dotted[1].trim(),
+      bit: Number(dotted[2]),
+      invert,
+    };
+  }
+  return { addressText: rest, invert };
+}
+
+/**
+ * Parses a standalone bit number (`0`–`7`, optional `#`).
+ * @param {string} raw Operand text.
+ * @returns {number | undefined} Bit 0–7, or undefined if not a bit literal.
+ */
+function parseSpcBitNumber(raw: string): number | undefined {
+  const trimmed = raw.trim().replace(/^#/, "");
+  if (!/^[0-7]$/.test(trimmed)) {
+    return undefined;
+  }
+  return Number(trimmed);
+}
 
 /**
  * Additional instructions share similar addressing forms but have unique opcodes,
@@ -511,7 +576,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     if (hasOwn(bitSetClearOpcodes, opcode)) {
       return 2;
     }
-    if (hasOwn(bitBranchOpcodes, opcode)) {
+    if (parseBitBranchOpcode(opcode)) {
       return 3;
     }
     if (opcode === "CALL" || opcode === "JMP") {
@@ -532,7 +597,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     if (opcode === "TSET" || opcode === "TCLR") {
       return 3;
     }
-    if (opcode === "NOT1" || opcode === "MOV1" || hasOwn(bit1Opcodes, opcode)) {
+    if (parseNumberedBitOpcode(opcode)) {
       return 3;
     }
     if (hasOwn(singleWordOps, opcode)) {
@@ -728,7 +793,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
         explicitlen,
         firstLowered,
       );
-    } else if (normalizedOperands.length === 2) {
+    }
+    if (normalizedOperands.length === 2) {
       return this.handleTwoOperands(
         opcode,
         normalizedOperands[0],
@@ -737,6 +803,14 @@ export class ArchSPC700 implements ArchitectureEncoder {
         explicitlen,
         firstLowered,
         secondLowered,
+      );
+    }
+    if (normalizedOperands.length === 3 && parseNumberedBitOpcode(opcode)) {
+      return this.handleBitManipulation(
+        opcode,
+        normalizedOperands[0],
+        normalizedOperands[1],
+        normalizedOperands[2],
       );
     }
 
@@ -921,8 +995,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
   ): boolean {
     debug("handleTwoOperands", { opcode, left, right, forcedLen, explicitlen });
 
-    // check BBSn / BBCn
-    if (hasOwn(bitBranchOpcodes, opcode)) {
+    // check BBSn / BBCn / wiki-native BBS $dp.n
+    if (parseBitBranchOpcode(opcode)) {
       if (this.handleTwoOperandsBitBranch(opcode, left, right)) {
         return true;
       }
@@ -979,7 +1053,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return this.handleMovInstruction(left, right, forcedLen, explicitlen);
     }
 
-    // 5) MOV1/NOT1/OR1/AND1/EOR1 with c, $addr or c, !$addr etc.
+    // 5) MOV1/NOT1/OR1/AND1/EOR1 and numbered TASM forms (NOT2, MOV2, …)
     if (this.handleBitManipulation(opcode, left, right)) {
       return true;
     }
@@ -1595,7 +1669,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
   }
 
   /**
-   * BBSn / BBCn => 2 operands: e.g. "BBC0 $12,Mylabel => 13 12 FF"
+   * BBSn / BBCn / wiki-native `BBS $dp.n`: e.g. "BBC0 $12,Mylabel => 13 12 FF",
+   * "BBS $12.3,L => 63 12 FF". Bit comes from `$dp.n` if present, else the mnemonic digit.
    * That logic is in handleTwoOperands because we have two comma-split sections.
    * @param {string} opcode - the opcode
    * @param {string} left - the left operand
@@ -1604,14 +1679,27 @@ export class ArchSPC700 implements ArchitectureEncoder {
    */
   handleTwoOperandsBitBranch(opcode: string, left: string, right: string): boolean {
     debug("handleTwoOperandsBitBranch", { opcode, left, right });
-    const bitOpcode = opcode.toUpperCase();
-    if (!hasOwn(bitBranchOpcodes, bitOpcode)) {
+    const parsed = parseBitBranchOpcode(opcode);
+    if (!parsed) {
       debug("handleTwoOperandsBitBranch no match", { opcode, left, right });
       return false;
     }
 
-    // Parse the direct page value from the first operand
-    const dpVal = parseInt(left.replace(/\$/g, ""), 16) & 0xff;
+    const trimmed = left.trim();
+    const dotted = trimmed.match(/^\$([\da-f]+)\.([0-7])$/i);
+    let dpVal: number;
+    let bit = parsed.mnemonicBit;
+    if (dotted) {
+      dpVal = Number.parseInt(dotted[1], 16) & 0xff;
+      bit = Number(dotted[2]);
+    } else {
+      dpVal = Number.parseInt(trimmed.replace(/\$/g, ""), 16) & 0xff;
+    }
+    if (bit === undefined) {
+      return false;
+    }
+
+    const opcodeByte = bitBranchOpcodeByte(parsed.family, bit);
 
     // For the second operand (label/address), we need to:
     // 1. Get the target address
@@ -1622,9 +1710,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
     //    - 1 byte relative offset
     // 3. The offset must fit in a signed byte (-128 to +127)
 
-    // Write the opcode and direct page value
-    debug("handleTwoOperandsBitBranch =", bitBranchOpcodes[bitOpcode].toString(16));
-    this.assembler.write1(bitBranchOpcodes[bitOpcode]);
+    debug("handleTwoOperandsBitBranch =", opcodeByte.toString(16));
+    this.assembler.write1(opcodeByte);
     debug("handleTwoOperandsBitBranch =", dpVal.toString(16));
     this.assembler.write1(dpVal);
 
@@ -2438,111 +2525,124 @@ export class ArchSPC700 implements ArchitectureEncoder {
   }
 
   /**
-   * handle e.g. "OR1 C,$1234" => 0x0A 34 12, "OR1 C,!$1234" => 0x2A 34 12,
-   * "AND1 C,$1234" => 0x4A 34 12, "AND1 C,!$1234 => 0x6A 34 12, "EOR1 C,$1234 => 0x8A 34 12,
-   * "MOV1 $1234,C => 0xCA 34 32" or "MOV1 C,$1234 => 0xAA 34 32"
-   * "NOT1 $1234 => 0xEA 34 32"
-   * @param {string} opcode - the opcode
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
+   * Encodes mem.bit carry ops. Bit is taken from `$addr.n` if present, else the
+   * mnemonic digit (`NOT2` → bit 2). High byte is `(addr >> 8) | (bit << 5)`.
+   *
+   *   NOT1 $1234 / NOT2 C,$0027 / NOT1 $12.3 / NOT1 $addr,3
+   *   MOV1 C,$addr / MOV2 $addr,C
+   *   OR1 C,$addr / OR1 C,!$addr / AND1 C,/addr
+   * @param {string} opcode Mnemonic, including numbered TASM forms.
+   * @param {string} left Left operand.
+   * @param {string} right Right operand, or empty for one-operand NOT/MOV.
+   * @param {string} [explicitBitText] Optional third operand bit (`AND1 C,$addr,2`).
    * @returns {boolean} true if the combo was handled, false otherwise
    */
-  handleBitManipulation(opcode: string, left: string, right: string): boolean {
-    debug("handleBitManipulation", { opcode, left, right });
-    // We'll unify the pattern:
-    //   OR1 C,$1234 => 0x0A 34 12
-    //   OR1 C,!$1234 => 0x2A 34 12  (the difference is 0x20 in the opcode if there's a '!'?)
-    // "OR1 C,$1234" => write1(0x0A?), then lo, hi
-    // "OR1 C,!$1234 => 0x2A => base+0x20
-    // We parse if left= "C" or right= "C" ?
-
-    const up = opcode.toUpperCase();
-    if (up === "NOT1") {
-      this.assembler.write1(0xea);
-
-      const val = Number.parseInt(left.replace(/\$/g, ""), 16) & 0xffff;
-      debug("handleBitManipulation val", val);
-      const hibyte = ((val >> 8) & 0xff) | 0x20; // Set bit 5 in high byte
-      const lobyte = val & 0xff;
-      debug("handleBitManipulation lobyte", lobyte.toString(16));
-      debug("handleBitManipulation hibyte", hibyte.toString(16));
-
-      this.assembler.write1(lobyte);
-      this.assembler.write1(hibyte);
-      return true;
+  handleBitManipulation(
+    opcode: string,
+    left: string,
+    right: string,
+    explicitBitText = "",
+  ): boolean {
+    debug("handleBitManipulation", { opcode, left, right, explicitBitText });
+    const parsed = parseNumberedBitOpcode(opcode);
+    if (!parsed) {
+      return false;
     }
 
-    if (up === "MOV1") {
-      // e.g. "MOV1 C,$1234 => 0xAA 34 32", "MOV1 $1234,C => 0xCA 34 32"
-      // The test says "MOV1 C,$1234 => AA 34 32" => so if left="C", right="$1234", => 0xAA
-      // If left="$1234", right="C" => 0xCA
-      // Then we do the weird reversed bytes.
-      const leftUp = left.trim().toUpperCase();
-      const rightUp = right.trim().toUpperCase();
-      let val: number;
+    const leftUp = left.trim().toUpperCase();
+    const rightUp = right.trim().toUpperCase();
+    let memRaw = "";
+    let movToCarry = true;
+    let bitFromOperand: number | undefined;
+
+    if (explicitBitText !== "") {
+      const parsedBit = parseSpcBitNumber(explicitBitText);
+      if (parsedBit === undefined) {
+        return false;
+      }
+      bitFromOperand = parsedBit;
+    }
+
+    if (parsed.family === "MOV") {
       if (leftUp === "C") {
-        // => 0xAA
-        this.assembler.write1(0xaa);
-        val = parseInt(right.replace(/\$/g, ""), 16) & 0xffff;
+        memRaw = right;
+        movToCarry = true;
       } else if (rightUp === "C") {
-        // => 0xCA
-        this.assembler.write1(0xca);
-        val = parseInt(left.replace(/\$/g, ""), 16) & 0xffff;
+        memRaw = left;
+        movToCarry = false;
+      } else if (right === "") {
+        memRaw = left;
+        movToCarry = true;
       } else {
         return false;
       }
-      const hi = ((val >> 8) & 0xff) | 0x20; // Set bit 5 in high byte;
-      const lo = val & 0xff;
-      this.assembler.write1(lo);
-      this.assembler.write1(hi);
-      return true;
-    }
-
-    if (!hasOwn(bit1Opcodes, up)) {
-      return false;
-    }
-    // e.g. "OR1 C,$1234" => base=0x0A, if left= "C", right= "$1234" => write(0x0A)
-    // if we see "OR1 C,!$1234 => 0x2A => base+0x20
-    const leftUp = left.trim().toUpperCase();
-    const rightUp = right.trim().toUpperCase();
-    let baseOpcode = bit1Opcodes[up];
-    let val: number;
-    let hasExclamation = false;
-
-    // The doc says "OR1 C,$addr" or "OR1 C,!$addr" => +0x20 if "!"
-    // We interpret whichever operand is the address. The other must be "C".
-    if (leftUp === "C") {
-      // then right is $addr or !$addr
-      if (rightUp.startsWith("!$")) {
-        hasExclamation = true;
-        val = parseInt(rightUp.replace(/[^\da-f]/gi, ""), 16);
+    } else if (parsed.family === "NOT") {
+      if (right === "") {
+        memRaw = left;
+      } else if (leftUp === "C") {
+        memRaw = right;
+      } else if (rightUp === "C") {
+        memRaw = left;
       } else {
-        val = parseInt(rightUp.replace(/\$/g, ""), 16);
+        const bitNumber = parseSpcBitNumber(right);
+        if (bitNumber === undefined) {
+          return false;
+        }
+        memRaw = left;
+        bitFromOperand = bitNumber;
       }
+    } else if (leftUp === "C") {
+      memRaw = right;
     } else if (rightUp === "C") {
-      // Then left is $addr or !$addr => for setting the other direction? Actually the doc doesn't mention "OR1 $addr,C"? Possibly invalid.
-      // The test only has "OR1 C,$1234" or "OR1 C,!$1234". We'll handle the possibility anyway:
-      if (leftUp.startsWith("!$")) {
-        hasExclamation = true;
-        val = parseInt(leftUp.replace(/[^\da-f]/gi, ""), 16);
-      } else {
-        val = parseInt(leftUp.replace(/\$/g, ""), 16);
-      }
-      // In many official references, "OR1 $addr,C" doesn't exist, but let's do the same approach for completeness.
+      memRaw = left;
     } else {
       return false;
     }
 
-    // "!" sets the bit invert
-    if (hasExclamation) {
-      baseOpcode += 0x20;
+    const mem = parseSpcMemBitOperand(memRaw);
+    if (!mem) {
+      return false;
     }
 
-    this.assembler.write1(baseOpcode & 0xff);
-    const hi = ((val >> 8) & 0xff) | 0x20; // Set bit 5 in high byte;
-    const lo = val & 0xff;
-    this.assembler.write1(lo);
-    this.assembler.write1(hi);
+    let bit = parsed.mnemonicBit;
+    if (mem.bit !== undefined) {
+      bit = mem.bit;
+    }
+    if (bitFromOperand !== undefined) {
+      bit = bitFromOperand;
+    }
+
+    let opcodeByte = 0xea;
+    if (parsed.family === "OR") {
+      opcodeByte = 0x0a;
+      if (mem.invert) {
+        opcodeByte = 0x2a;
+      }
+    } else if (parsed.family === "AND") {
+      opcodeByte = 0x4a;
+      if (mem.invert) {
+        opcodeByte = 0x6a;
+      }
+    } else if (parsed.family === "EOR") {
+      opcodeByte = 0x8a;
+    } else if (parsed.family === "MOV") {
+      opcodeByte = 0xaa;
+      if (!movToCarry) {
+        opcodeByte = 0xca;
+      }
+    }
+
+    const hex = mem.addressText.match(/^\$([\da-f]+)$/i);
+    let addr: number;
+    if (hex) {
+      addr = Number.parseInt(hex[1], 16) & 0xffff;
+    } else {
+      addr = this.assembler.operandResolver.getnum(mem.addressText) & 0xffff;
+    }
+
+    this.assembler.write1(opcodeByte);
+    this.assembler.write1(addr & 0xff);
+    this.assembler.write1(((addr >> 8) & 0xff) | ((bit & 7) << 5));
     return true;
   }
 
@@ -2579,12 +2679,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return true;
     }
 
-    // e.g. "NOT1 $1234 => 0xEA hi lo"? We handled that in handleBitManipulation if it had no second operand. The test does show "NOT1 $1234 => EA 34 32".
-    // If we get here, possibly we can forward to handleBitManipulation for "NOT1"?
-    // We'll do that:
-    if (upOpcode === "NOT1") {
-      // might do "NOT1 $1234 => 0xEA 34 32"
-      return this.handleBitManipulation("NOT1", operand, "");
+    if (parseNumberedBitOpcode(upOpcode)) {
+      return this.handleBitManipulation(upOpcode, operand, "");
     }
 
     // e.g. "DECW $12 => 1A 12", "INCW $12 => 3A 12", "CMPW YA,$12 => ???" => 2 operands though

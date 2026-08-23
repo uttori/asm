@@ -1,4 +1,4 @@
-import { AssemblyStageName } from "./assembler.js";
+import type { AssemblyStageName } from "./plugin/contracts.js";
 /**
  * Per-byte write emitted by the ROM writer after the final SNES/PC address has been resolved for the current stage.
  */

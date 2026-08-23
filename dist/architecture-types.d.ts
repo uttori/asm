@@ -39,6 +39,10 @@ export interface EncoderSizingContext {
     getCurrentAddress(): number;
     optimizeDirectPage(): boolean;
 }
+export interface EncoderCompatibilityContext {
+    /** When true, Super FX auto-MOVE short RAM form matches Asar (`addr & 0xff`). */
+    asarSuperFxMoveShortAddress(): boolean;
+}
 export interface EncoderBranchContext {
     enforceResolvedLabels(): boolean;
     findNextLabel(label: string, referenceAddress: number): number;
@@ -53,6 +57,7 @@ export interface ArchitectureEncoderContext {
     sizing: EncoderSizingContext;
     branches: EncoderBranchContext;
     diagnostics: EncoderDiagnosticContext;
+    compatibility?: EncoderCompatibilityContext;
 }
 export interface EncoderRuntime {
     operandResolver: OperandResolutionContext;
@@ -65,6 +70,7 @@ export interface EncoderRuntime {
     readonly currentTargetAddress: number;
     readonly optimizeDirectPage: boolean;
     readonly enforceResolvedLabels: boolean;
+    readonly asarSuperFxMoveShortAddress: boolean;
     symbolScope: {
         findNextLabel(label: string, referenceAddress: number): number;
         findPreviousLabel(label: string, referenceAddress: number): number;
@@ -130,6 +136,8 @@ export interface ArchitectureEncoder {
     encode(words: readonly string[]): boolean;
     estimateInstruction?(instruction: LoweredInstruction): number;
     encodeInstruction?(instruction: LoweredInstruction): boolean;
+    /** Resets pass-local encoder state (M/X flags, etc.) at the start of each assembly stage. */
+    beginPass?(): void;
     /**
      * Returns the static instruction catalog for editor tooling, when available.
      * @returns {InstructionDescriptor[]} The instruction descriptors.

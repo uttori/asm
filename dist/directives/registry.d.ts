@@ -48,6 +48,12 @@ export declare class DirectiveRegistry {
      * @returns {boolean} The result.
      */
     dispatch(keyword: string, words: readonly string[], raw: string, command?: NormalizedCommand): boolean;
+    /**
+     * Resolves a directive handler, including Asar's `@directive` file-header form.
+     * @param {string} keyword The directive keyword.
+     * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
+     */
+    lookup(keyword: string): BoundDirectiveHandler | undefined;
 }
 export declare const createDirectiveRegistry: (contexts: DirectiveRegistryContexts, features?: ReadonlySet<TargetDirectiveFeature>) => DirectiveRegistry;
 export {};

@@ -8,7 +8,7 @@
  * Unsupported directives are deliberately excluded so they continue through
  * normal unknown-directive diagnostics instead of being silently accepted.
  */
-export declare const ASAR_COMPAT_NO_OP_DIRECTIVES: readonly ["fastrom", "dpbase", "warnings", "print", "autoclean", "autoclear", "table", "includefrom", "asar", "{", "}"];
+export declare const ASAR_COMPAT_NO_OP_DIRECTIVES: readonly ["fastrom", "dpbase", "warnings", "print", "autoclean", "autoclear", "table", "includefrom", "asar", "reset", "{", "}"];
 /**
  * Mapper state affected by ASAR-compatible mapper selection.
  */
@@ -34,6 +34,19 @@ export declare const applyMapperSelection: (state: MapperCompatibilityState, map
  */
 export declare const isFreespaceAvailable: (mapper: string) => boolean;
 export type ChecksumMode = "asar" | "simple";
+/**
+ * Super FX `MOVE Rn, (xx)` / `MOVE (xx), Rn` short-form address encoding.
+ * Hardware LMS/SMS store a word index (`addr >> 1`). Asar writes the raw byte
+ * (`addr & 0xff`). `$00` is identical either way; `$40` is `$20` vs `$40`.
+ */
+export type SuperFxMoveShortAddressMode = "hardware" | "asar";
+/**
+ * Encodes the LMS/SMS operand byte for Super FX auto-MOVE short addressing.
+ * @param {number} addrVal RAM byte address, already known to be even and `< $200`.
+ * @param {SuperFxMoveShortAddressMode} [mode] Encoding policy. Defaults to hardware.
+ * @returns {number} The byte stored after `A0+Rn`.
+ */
+export declare const encodeSuperFxMoveShortAddress: (addrVal: number, mode?: SuperFxMoveShortAddressMode) => number;
 /**
  * Resolves the SNES header offset used by the compatibility checksum writer.
  * @param {string} mapper Canonical mapper name.

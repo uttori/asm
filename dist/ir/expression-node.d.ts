@@ -44,7 +44,7 @@ export type UnaryExpressionNode = ExpressionNodeBase & {
     operator: UnaryOperator;
     argument: ExpressionNode;
 };
-export type BinaryOperator = "**" | "*" | "/" | "%" | "+" | "-" | "<<" | ">>" | "&" | "|" | "^" | "<" | ">" | "<=" | ">=" | "==" | "!=" | "&&" | "||";
+export type BinaryOperator = "**" | "*" | "/" | "%" | "+" | "-" | "<<" | ">>" | "&" | "|" | "^" | "<" | ">" | "<=" | ">=" | "==" | "=" | "!=" | "&&" | "||";
 export type BinaryExpressionNode = ExpressionNodeBase & {
     type: "binary";
     operator: BinaryOperator;

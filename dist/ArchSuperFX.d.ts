@@ -1,4 +1,10 @@
 import { type ArchitectureEncoder, type ArchitectureEncoderContext, type EncoderRuntime, type InstructionDescriptor, type LoweredInstruction, type LoweredOperand } from "./architecture-types.js";
+type RegisterOpEncoding = {
+    prefix?: number;
+    base: number;
+    min?: number;
+    max?: number;
+};
 export declare class ArchSuperFX implements ArchitectureEncoder {
     assembler: EncoderRuntime;
     constructor(context: ArchitectureEncoderContext);
@@ -8,32 +14,33 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      */
     getInstructionCatalog(): InstructionDescriptor[];
     /**
-     * Estimates instruction.
+     * Estimates instruction size from a lowered instruction.
      * @param {LoweredInstruction} instruction The instruction.
-     * @returns {number} The result.
+     * @returns {number} Encoded size in bytes.
      */
     estimateInstruction(instruction: LoweredInstruction): number;
     /**
-     * Encodes instruction.
+     * Encodes a lowered instruction.
      * @param {LoweredInstruction} instruction The instruction.
-     * @returns {boolean} The result.
+     * @returns {boolean} True if the instruction was encoded.
      */
     encodeInstruction(instruction: LoweredInstruction): boolean;
     /**
-     * Estimates size.
+     * Estimates size from tokenized words.
      * @param {string[]} words The words.
-     * @returns {number} The result.
+     * @returns {number} Encoded size in bytes.
      */
     estimateSize(words: string[]): number;
     /**
-     * Estimates resolved instruction.
+     * Estimates encoded size. Must match {@link encodeResolvedInstruction} byte counts
+     * so layout `step()` stays in sync with emit.
      * @param {string} mnemonic The mnemonic.
-     * @param {string} operandText The operand text.
-     * @param {LoweredOperand} [loweredOperand] The lowered operand.
-     * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-     * @returns {number} The result.
+     * @param {string[]} operands The operands.
+     * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+     * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+     * @returns {number} Encoded size in bytes.
      */
-    estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
+    estimateResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     /**
      * Processes a SuperFX assembly instruction.
      * @param {string[]} words The tokenized instruction.
@@ -43,29 +50,20 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
     /** Legacy API alias for {@link encode}. */
     readonly asblock_superfx: (words: string[]) => boolean;
     /**
-     * Encodes resolved instruction.
+     * Encodes a resolved instruction.
      * @param {string} mnemonic The mnemonic.
      * @param {string[]} operands The operands.
-     * @param {LoweredOperand} [loweredOperand] The lowered operand.
-     * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-     * @returns {boolean} The result.
+     * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+     * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+     * @returns {boolean} True if the instruction was encoded.
      */
     encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
-     * Handles single-word (no-operand) opcodes for SuperFX.
+     * Handles implied SuperFX opcodes with no operands.
      * @param {string} opcode - the opcode
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     handleSingleWordOpcode(opcode: string): boolean;
-    /**
-     * Handles two-word opcodes (one opcode + one operand).
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @param {number} operandLength - the lowered operand length
-     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-     * @returns {boolean} True if the instruction was handled, false otherwise.
-     */
-    handleTwoWordOpcode(opcode: string, operand: string, operandLength: number, loweredOperand?: LoweredOperand): boolean;
     /**
      * Handles instructions with a single operand (e.g., "TO R1", "BRA label").
      * @param {string} opcode - the opcode
@@ -86,11 +84,11 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      */
     handleTwoOperandOpcode(opcode: string, leftOp: string, rightOp: string, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
-     * Resolves register.
-     * @param {string} str The str.
-     * @param {LoweredOperand | undefined} lowered The lowered.
-     * @param {"r" | "parr" | "hash"} type The type.
-     * @returns {number | null} The result.
+     * Resolves a SuperFX register operand.
+     * @param {string} str The operand text.
+     * @param {LoweredOperand | undefined} lowered The lowered operand.
+     * @param {"r" | "parr" | "hash"} type Direct (`rN`), indirect (`(rN)`), or `#n`.
+     * @returns {number | null} Register number 0-15, or null if it doesn't match.
      */
     resolveRegister(str: string, lowered: LoweredOperand | undefined, type: "r" | "parr" | "hash"): number | null;
     /**
@@ -115,18 +113,52 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      */
     rangeCheck(min: number, mid: number, max: number): void;
     /**
-     * For "LMS" or "SMS" short addressing forms, we need to ensure the address is
-     * even and in range [0x000..0x1FE].
+     * For LMS/SMS short addressing, the address must be even and in `[0x000..0x1FE]`.
      * @param {number} num - the address
-     * @returns {boolean} True if the address is valid, false otherwise.
+     * @returns {boolean} True if the address is valid.
      */
     checkShortAddr(num: number): boolean;
     /**
-     * Returns an approximate operand length (1 or 2) by checking the operand format.
-     * This is a simple approximation for short vs. relative addressing.
+     * True when the source spelling is an explicit 2-digit hex branch offset (`$XX`).
+     * Expanded label values that happen to fit in a byte must not use this path.
+     * @param {string} operand The raw or expanded operand.
+     * @returns {boolean} True if the operand is a raw 8-bit offset spelling.
+     */
+    isRawBranchOffset(operand: string): boolean;
+    /**
+     * Returns 1 for a 2-digit hex operand (`$XX`), otherwise 2.
      * @param {string} operand the operand
      * @returns {number} The operand length.
      */
     getOperandLength(operand: string): number;
+    /**
+     * Splits tokenized words into opcode plus comma-separated operands.
+     * @param {string[]} words The tokenized instruction.
+     * @returns {{ opcode: string; operands: string[]; rawOperand: string }} Parsed parts.
+     */
+    parseInstructionWords(words: string[]): {
+        opcode: string;
+        operands: string[];
+        rawOperand: string;
+    };
+    /**
+     * Writes a register-encoded ALU/load op, with optional ALT prefix and range check.
+     * @param {RegisterOpEncoding} encoding The encoding table entry.
+     * @param {number} register The register number.
+     */
+    writeRegisterOp(encoding: RegisterOpEncoding, register: number): void;
+    /**
+     * Encodes the LMS/SMS operand byte for auto-MOVE short addressing.
+     * @param {number} addrVal Even RAM byte address below `$200`.
+     * @returns {number} Hardware word index, or Asar's raw byte when compat is enabled.
+     */
+    moveShortAddressByte(addrVal: number): number;
+    /**
+     * Resolves a numeric operand for sizing without failing layout on forward refs.
+     * @param {string} expression The expression.
+     * @returns {number | undefined} The value, or undefined if it cannot be resolved yet.
+     */
+    tryGetNumber(expression: string): number | undefined;
 }
+export {};
 //# sourceMappingURL=ArchSuperFX.d.ts.map

@@ -1,7 +1,35 @@
 import { type ArchitectureEncoder, type ArchitectureEncoderContext, type EncoderRuntime, type InstructionDescriptor, type LoweredInstruction } from "./architecture-types.js";
 export declare class Arch65816 implements ArchitectureEncoder {
     assembler: EncoderRuntime;
+    /** Native 16-bit accumulator (REP #$20). Reset at the start of each assembly stage. */
+    m16: boolean;
+    /** Native 16-bit index registers (REP #$10). Reset at the start of each assembly stage. */
+    x16: boolean;
     constructor(context: ArchitectureEncoderContext);
+    /**
+     * Resets M/X size flags at the start of each assembly stage.
+     * @returns {void}
+     */
+    beginPass(): void;
+    /**
+     * Applies SEP/REP to the assembler-facing M/X size flags.
+     * @param {string} opcode The opcode.
+     * @param {string} rawOperand The raw operand.
+     * @returns {void}
+     */
+    applySepRep(opcode: string, rawOperand: string): void;
+    /**
+     * Immediate operand width in bytes from M/X flags, hex spelling, and .b/.w.
+     * Plain hex/define immediates keep their expanded width so Chou `lda #$20`
+     * and `lda #!flag` stay 8-bit. Math expressions such as `#(NMI&$FFFF)`
+     * follow the M/X flags.
+     * @param {string} opcode The opcode.
+     * @param {number} operandLength Expanded operand width.
+     * @param {boolean} explicitlen Whether a .b/.w/.l suffix forced the width.
+     * @param {string} [rawOperand] The raw source operand.
+     * @returns {number} 1 or 2.
+     */
+    immediateBytes(opcode: string, operandLength: number, explicitlen: boolean, rawOperand?: string): number;
     /**
      * Returns the static 65816 instruction catalog for editor tooling.
      * @returns {InstructionDescriptor[]} The instruction descriptors.
@@ -67,9 +95,10 @@ export declare class Arch65816 implements ArchitectureEncoder {
      * @param {string} operand The operand to handle.
      * @param {number} len The length of the operand.
      * @param {boolean} explicitlen Whether the operand length is explicit.
+     * @param {string} [rawOperand] The raw source operand before expansion.
      * @returns {boolean} True if the opcode was handled, false otherwise.
      */
-    handleLogicAndCompareOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean;
+    handleLogicAndCompareOperations(opcode: string, operand: string, len: number, explicitlen: boolean, rawOperand?: string): boolean;
     /**
      * Handles operators that do not take operands.
      * @param {string} opcode The opcode to handle.

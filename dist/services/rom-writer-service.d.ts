@@ -1,4 +1,4 @@
-import type { AssemblyStageName } from "../assembler.js";
+import type { AssemblyStageName } from "../plugin/contracts.js";
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 import type { DirectiveRuntimeService } from "./directive-runtime-service.js";
 import type { TargetProfile } from "../target-profile.js";

@@ -10,37 +10,25 @@ import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
 import { DirectiveRegistry } from "./directives/registry.js";
+import type { SpcblockData } from "./directives/types.js";
 import { DefineEngine } from "./services/define-engine.js";
-import { DirectiveRuntimeService } from "./services/directive-runtime-service.js";
+import { DirectiveRuntimeService, type PushPcStackEntry } from "./services/directive-runtime-service.js";
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
 import { CommandLoweringService, type LoweredCommand, type LoweredExecutableNode, type LoweredLoopNode, type LoweredProgram } from "./services/command-lowering-service.js";
 import { FrontEndCommandService } from "./services/front-end-command-service.js";
 import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
-import { MacroEngine } from "./services/macro-engine.js";
+import { MacroEngine, type MacroDefinition } from "./services/macro-engine.js";
 import { ProgramModelBuilder, type IncrementalProgramParseState, type ProgramModel } from "./services/program-model-builder.js";
 import { RomWriterService } from "./services/rom-writer-service.js";
-import { StructEngine } from "./services/struct-engine.js";
-import { SymbolScopeService } from "./services/symbol-scope-service.js";
+import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
+import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
 import type { SourceSpan } from "./source-location.js";
 import { type AssemblyFileProvider } from "./file-provider.js";
 import { type TargetExpressionFeature, type TargetProfile } from "./target-profile.js";
 import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
-/** Represents a macro definition. */
-export type MacroDefinition = {
-    /** The name of the macro. */
-    name: string;
-    /** Fixed parameter names. */
-    params: string[];
-    /** Whether the macro has a variable number of parameters. */
-    variadic: boolean;
-    /** Typed commands captured inside the macro body. */
-    body: NormalizedCommand[];
-    /** The file where this macro was defined. */
-    sourceFile?: string;
-};
+import type { AssemblyStageName } from "./plugin/contracts.js";
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
-export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
 export type StageExecutionMode = "layout" | "emit";
 export type StageExecutionCapabilities = {
     instructionMode: StageExecutionMode;
@@ -127,46 +115,6 @@ export type WhileTracker = {
     for_end?: number;
     for_cur?: number;
 };
-export type LabelEntry = {
-    value: number;
-    isStatic: boolean;
-    isMacroLabel?: boolean;
-    /** Tracks which macro instance this label belongs to */
-    macroInstance?: number;
-    /** Whether this label affects the sublabel hierarchy */
-    modifiesHierarchy?: boolean;
-};
-export interface StructDefinition {
-    name: string;
-    /** The SNES start address for the struct. */
-    base: number;
-    /** Running offset as member commands are processed. */
-    offset: number;
-    /** Final size (after alignment, etc.) */
-    size: number;
-    /** Mapping from member name (without the leading dot) to its offset. */
-    labels: Map<string, number>;
-    /** Optional alignment (if specified in endstruct). */
-    align?: number;
-    /** If this struct extends a parent. */
-    parent?: string;
-    /** Cached maximum child extension size, or zero when there are no extensions. */
-    extensionSize: number;
-}
-export type PushPcStackEntry = {
-    currentTargetAddress: number;
-    currentTargetStartAddress: number;
-    currentTargetBaseAddress: number;
-    currentTargetBaseStartAddress: number;
-};
-export type SpcblockType = "nspc" | "custom";
-export type SpcblockData = {
-    destination: number;
-    type: SpcblockType;
-    sizeAddress: number;
-    executeAddress: number | null;
-    namespaceBackup: string;
-};
 export type AssemblerOptions = {
     /** Frozen plugin environment shared by build and tooling sessions. */
     environment: AssemblerEnvironment;
@@ -204,6 +152,11 @@ export declare class Assembler {
     checksumFixEnabled: boolean;
     /** Header checksum algorithm mode: "asar" (default) or "simple". */
     checksumMode: "asar" | "simple";
+    /**
+     * Super FX auto-MOVE short RAM form. Hardware (default) writes `addr >> 1`.
+     * Asar writes `addr & 0xff`; enable to match existing Asar patches.
+     */
+    asarSuperFxMoveShortAddress: boolean;
     /** Bank crossing policy controlled by `check bankcross ...`. */
     bankCrossCheckMode: "off" | "full" | "half";
     /** Read* functions are enabled when patch-style title check is active. */
@@ -505,6 +458,11 @@ export declare class Assembler {
      * @param {"asar" | "simple"} mode The checksum mode to use.
      */
     setChecksumMode(mode: "asar" | "simple"): void;
+    /**
+     * Selects Super FX auto-MOVE short-address encoding.
+     * @param {boolean} enabled True to match Asar (`addr & 0xff`); false for hardware (`addr >> 1`).
+     */
+    setAsarSuperFxMoveShortAddress(enabled: boolean): void;
     /**
      * Reads little endian.
      * @param {Uint8Array} bytes The bytes.

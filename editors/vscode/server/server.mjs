@@ -10156,6 +10156,7 @@ var ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "table",
   "includefrom",
   "asar",
+  "reset",
   "{",
   "}"
 ];
@@ -10171,6 +10172,12 @@ var applyMapperSelection = (state, mapper) => {
   }
 };
 var isFreespaceAvailable = (mapper) => mapper !== "norom";
+var encodeSuperFxMoveShortAddress = (addrVal, mode = "hardware") => {
+  if (mode === "asar") {
+    return addrVal & 255;
+  }
+  return addrVal >> 1 & 255;
+};
 var getChecksumHeaderOffset = (mapper) => {
   if (mapper === "lorom" || mapper === "sa1rom" || mapper === "bigsa1rom") {
     return 32704;
@@ -10655,6 +10662,7 @@ var binaryPrecedence = {
   "||": 0,
   "&&": 1,
   "==": 2,
+  "=": 2,
   "!=": 2,
   "<": 2,
   ">": 2,
@@ -10680,6 +10688,7 @@ var binaryOperators = [
   "<=",
   ">=",
   "==",
+  "=",
   "!=",
   "&&",
   "||",
@@ -11372,6 +11381,7 @@ var OPERATORS = {
   "<=": { priority: 2, operation: (left, right) => left <= right ? 1 : 0 },
   ">=": { priority: 2, operation: (left, right) => left >= right ? 1 : 0 },
   "==": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
+  "=": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
   "!=": { priority: 2, operation: (left, right) => left !== right ? 1 : 0 },
   "&&": { priority: 1, operation: (left, right) => left && right ? 1 : 0 },
   "||": { priority: 0, operation: (left, right) => left || right ? 1 : 0 }
@@ -12548,18 +12558,45 @@ function parseOperandSyntax(operand) {
 }
 
 // src/operand-classifiers.ts
+function sourceUsesNumericSpelling(raw) {
+  const base = raw.trim().replace(/\s*,\s*[sxy]$/i, "");
+  if (!base) {
+    return false;
+  }
+  if (base.startsWith("#") || base.startsWith("$")) {
+    return true;
+  }
+  if (/^[\d!%]/.test(base)) {
+    return true;
+  }
+  return false;
+}
+function isExplicitDirectPageSpelling(raw, expanded, indexedX) {
+  let hexPattern = /^\$[\da-f]{1,2}$/i;
+  if (indexedX) {
+    hexPattern = /^\$[\da-f]{1,2}\s*,\s*x$/i;
+  }
+  if (hexPattern.test(raw.trim())) {
+    return true;
+  }
+  if (!hexPattern.test(expanded.trim())) {
+    return false;
+  }
+  return sourceUsesNumericSpelling(raw);
+}
 function classifyGenericOperand(input) {
   const { raw, expanded, length } = input;
   const syntax = parseOperandSyntax(raw);
   const lowered = expanded.toLowerCase();
   const normalizedExpanded = expanded.trim();
   const normalizedUpper = normalizedExpanded.toUpperCase();
-  const explicitDirectPage = /^\$[\da-f]{1,2}$/i.test(raw);
-  const explicitDirectPageIndexedX = /^\$[\da-f]{1,2},x$/i.test(raw);
+  const explicitDirectPage = isExplicitDirectPageSpelling(raw, normalizedExpanded, false);
+  const explicitDirectPageIndexedX = isExplicitDirectPageSpelling(raw, normalizedExpanded, true);
   let mode = "unknown";
   let baseExpression = expanded;
   let registerName;
-  const registerOperandMatch = normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
+  const rawUpper = raw.trim().toUpperCase();
+  const registerOperandMatch = rawUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/) ?? normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
   const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
   const registerIndirectAutoIncrementMatch = normalizedUpper.match(
     /^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/
@@ -12593,10 +12630,18 @@ function classifyGenericOperand(input) {
     mode = "immediate";
     baseExpression = expanded.slice(1).trim();
   } else if (mode === "unknown" && /^\$[\da-f]{6}\s*,\s*x$/i.test(expanded)) {
-    mode = "absoluteLongIndexedX";
+    if (length >= 3) {
+      mode = "absoluteLongIndexedX";
+    } else {
+      mode = "absoluteIndexedX";
+    }
     baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
   } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*x$/i.test(expanded)) {
-    mode = "absoluteIndexedX";
+    if (length >= 3) {
+      mode = "absoluteLongIndexedX";
+    } else {
+      mode = "absoluteIndexedX";
+    }
     baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
   } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*y$/i.test(expanded)) {
     mode = "absoluteIndexedY";
@@ -12634,11 +12679,12 @@ function classifyGenericOperand(input) {
     } else {
       mode = "directPageIndexedX";
     }
-  } else if (mode === "unknown" && /^\$[\da-f]{6}$/i.test(expanded)) {
-    mode = "absoluteLong";
-    baseExpression = expanded;
-  } else if (mode === "unknown" && /^\$[\da-f]{4}$/i.test(expanded)) {
-    mode = "absolute";
+  } else if (mode === "unknown" && /^\$[\da-f]+$/i.test(expanded)) {
+    if (length >= 3) {
+      mode = "absoluteLong";
+    } else if (length === 2) {
+      mode = "absolute";
+    }
     baseExpression = expanded;
   }
   return {
@@ -12740,6 +12786,51 @@ var OperandResolver = class {
     const currentBank = this.deps.getCurrentAddress() >>> 16 & 255;
     const targetBank = value >>> 16 & 255;
     return currentBank === targetBank;
+  }
+  /**
+   * True when the source wrote a label (or label math) indexed by X, not a hex
+   * or define spelling. Bank 0 labels stringify to 4 hex digits, so numeric
+   * magnitude cannot distinguish abs,x from long,x.
+   * @param {string} operand The raw source operand.
+   * @returns {boolean} True if the operand is a `label,x` form.
+   */
+  isIndexedXLabelOperand(operand) {
+    const raw = operand.trim();
+    if (!/,\s*x$/i.test(raw)) {
+      return false;
+    }
+    const base = raw.replace(/,\s*x$/i, "").trim();
+    if (!base) {
+      return false;
+    }
+    if (/^[\d!#$%(]/.test(base) || base.startsWith("[")) {
+      return false;
+    }
+    return true;
+  }
+  /**
+   * Sizes `label,x` by SNES bank: same bank is abs,x (2), any other bank —
+   * including `$00xxxx` — is long,x (3).
+   * @param {string} operand The raw source operand.
+   * @param {string} expanded The resolved operand text.
+   * @param {number} expectedLength The length selected from numeric spelling.
+   * @returns {number} Operand width in bytes (2 for abs,x, 3 for long,x).
+   */
+  applyIndexedXLabelBankWidth(operand, expanded, expectedLength) {
+    if (!this.isIndexedXLabelOperand(operand)) {
+      return expectedLength;
+    }
+    const match = expanded.trim().match(/^\$([\da-f]+)\s*,\s*x$/i);
+    if (!match) {
+      return expectedLength;
+    }
+    const value = parseInt(match[1], 16);
+    const currentBank = this.deps.getCurrentAddress() >>> 16 & 255;
+    const targetBank = value >>> 16 & 255;
+    if (currentBank === targetBank) {
+      return 2;
+    }
+    return 3;
   }
   /**
    * Resolves arithmetic token.
@@ -13086,9 +13177,11 @@ var OperandResolver = class {
     if (forceTwoBytes) {
       expectedLength = 2;
     }
-    if (expectedLength === 3 && this.isSameBankAddress(expanded)) {
+    const explicitLongHex = /^\$[\da-f]{5,6}(?:\s*,\s*[xy])?$/i.test(operand.trim());
+    if (expectedLength === 3 && !explicitLongHex && this.isSameBankAddress(expanded)) {
       expectedLength = 2;
     }
+    expectedLength = this.applyIndexedXLabelBankWidth(operand, expanded, expectedLength);
     return { expanded, length: expectedLength };
   }
   /**
@@ -13275,13 +13368,27 @@ var registerFlowControlDirectives = (registry, context) => {
 };
 
 // src/directives/include-source.ts
+var IDENTITY_INCLUDE_DEFINES = {
+  resolveDefinesInStringLiteral: (content) => content,
+  resolveRegularDefines: (content) => content
+};
 var NUMERIC_INCBIN_TARGET = /^\$[\da-f]+$|^-?\d+$/i;
-var resolveIncludeTarget = (words, command, directive) => {
+var expandIncludeFilename = (target, defineEngine) => {
+  if (target.length >= 2) {
+    const quote = target[0];
+    const isQuoted = (quote === '"' || quote === "'" || quote === "`") && target.endsWith(quote);
+    if (isQuoted) {
+      return `${quote}${defineEngine.resolveDefinesInStringLiteral(target.slice(1, -1))}${quote}`;
+    }
+  }
+  return defineEngine.resolveRegularDefines(target);
+};
+var resolveIncludeTarget = (words, command, directive, defineEngine) => {
   const target = command?.parsed.includeTarget?.target ?? words[1];
   if (!target) {
     throw new Error(`${directive} requires exactly one filename parameter`);
   }
-  return target;
+  return expandIncludeFilename(target, defineEngine);
 };
 var splitIncbinArrow = (words) => {
   const arrowIndex = words.indexOf("->");
@@ -13356,9 +13463,18 @@ var assertIncbinBounds = (startOffset, endOffset, fileLength, filename) => {
     throw new Error(`End offset ${endOffset} out of bounds for file ${filename}`);
   }
 };
-var handleIncbin = ({ session, includeSource, operandResolver, runtime }, words, _raw = "", command) => {
+var handleIncbin = ({ session, includeSource, operandResolver, runtime, defineEngine }, words, _raw = "", command) => {
   const { sourceWords, targetLocation } = splitIncbinArrow(words);
-  const { filename, rangeStr } = parseIncbinFilenameAndRange(sourceWords.join(" "));
+  const filenameWithRange = sourceWords.join(" ");
+  const { filename: rawFilename, rangeStr } = parseIncbinFilenameAndRange(filenameWithRange);
+  const expander = defineEngine ?? IDENTITY_INCLUDE_DEFINES;
+  const quote = filenameWithRange[0];
+  let filename = rawFilename;
+  if (quote === '"' || quote === "'" || quote === "`") {
+    filename = expander.resolveDefinesInStringLiteral(rawFilename);
+  } else {
+    filename = expander.resolveRegularDefines(rawFilename);
+  }
   const fileData = includeSource.readFile(filename);
   if (!(fileData instanceof Uint8Array)) {
     throw new Error(`Failed to read file: ${filename}`);
@@ -13399,11 +13515,15 @@ var handleIncbin = ({ session, includeSource, operandResolver, runtime }, words,
   }
   session.recordCurrentAddress();
 };
-var handleIncsrc = ({ includeSource }, words, _raw = "", command) => {
-  includeSource.assembleFile(resolveIncludeTarget(words, command, "incsrc"));
+var handleIncsrc = ({ includeSource, defineEngine }, words, _raw = "", command) => {
+  includeSource.assembleFile(
+    resolveIncludeTarget(words, command, "incsrc", defineEngine ?? IDENTITY_INCLUDE_DEFINES)
+  );
 };
-var handleInclude = ({ includeSource }, words, _raw = "", command) => {
-  includeSource.includeFile(resolveIncludeTarget(words, command, "include"));
+var handleInclude = ({ includeSource, defineEngine }, words, _raw = "", command) => {
+  includeSource.includeFile(
+    resolveIncludeTarget(words, command, "include", defineEngine ?? IDENTITY_INCLUDE_DEFINES)
+  );
 };
 var registerIncludeSourceDirectives = (registry, context) => {
   registry.register("incsrc", context, handleIncsrc);
@@ -13478,8 +13598,8 @@ var registerLayoutDirectives = (registry, context, features = DEFAULT_LAYOUT_FEA
     if (words.length !== 2) {
       throw new Error("BASE directive requires exactly one parameter.");
     }
-    const param = words[1].toLowerCase();
-    if (param === "off") {
+    const param = words[1].trim();
+    if (param.toLowerCase() === "off") {
       const baseAddress = Number(session.currentTargetBaseAddress);
       const baseStartAddress = Number(session.currentTargetBaseStartAddress);
       session.currentTargetAddress = baseAddress;
@@ -13826,7 +13946,7 @@ var DirectiveRegistry = class {
    * @returns {boolean} The result.
    */
   has(keyword) {
-    return this.handlers.has(keyword);
+    return this.lookup(keyword) !== void 0;
   }
   /**
    * Dispatches the value.
@@ -13837,12 +13957,27 @@ var DirectiveRegistry = class {
    * @returns {boolean} The result.
    */
   dispatch(keyword, words, raw, command) {
-    const handler = this.handlers.get(keyword);
+    const handler = this.lookup(keyword);
     if (!handler) {
       return false;
     }
     handler(words, raw, command);
     return true;
+  }
+  /**
+   * Resolves a directive handler, including Asar's `@directive` file-header form.
+   * @param {string} keyword The directive keyword.
+   * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
+   */
+  lookup(keyword) {
+    const direct = this.handlers.get(keyword);
+    if (direct) {
+      return direct;
+    }
+    if (keyword.startsWith("@")) {
+      return this.handlers.get(keyword.slice(1));
+    }
+    return void 0;
   }
 };
 var createDirectiveRegistry = (contexts, features = ALL_TARGET_DIRECTIVE_FEATURES) => {
@@ -14344,6 +14479,9 @@ function isBareLabelReference(input) {
   if (!input) {
     return false;
   }
+  if (/^(a|x|y|ya|sp|s|c|r\d{1,2})$/i.test(input)) {
+    return false;
+  }
   let numericOnly = true;
   for (const char of input) {
     if (char < "0" || char > "9") {
@@ -14532,7 +14670,18 @@ var DirectiveRuntimeService = class {
       throw new Error("ORG requires a single address parameter.");
     }
     const addressStr = params[0].trim();
-    const addr = addressStr.startsWith("$") ? parseInt(addressStr.substring(1), 16) : parseInt(addressStr, 10);
+    let addr;
+    if (/^\$[\da-f]+$/i.test(addressStr)) {
+      addr = parseInt(addressStr.substring(1), 16);
+    } else if (/^-?\d+$/.test(addressStr)) {
+      addr = parseInt(addressStr, 10);
+    } else {
+      try {
+        addr = this.host.operandResolver.deps.evaluateMath(this.host.resolvedefines(addressStr));
+      } catch {
+        throw new Error(`Invalid ORG address: ${params[0]}`);
+      }
+    }
     const maxAddress = 2 ** this.host.targetProfile.addressSpace.addressWidth - 1;
     if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
       throw new Error(`Invalid ORG address: ${params[0]}`);
@@ -15125,21 +15274,29 @@ var DIRECTLY_LOWERABLE_DIRECTIVES = /* @__PURE__ */ new Set([
   "table",
   "warnings",
   "print",
+  "reset",
   "{",
   "}"
 ]);
+var canonicalDirectiveKeyword = (keyword, registry) => {
+  const normalized = keyword.toLowerCase();
+  if (normalized.startsWith("@") && registry.has(normalized.slice(1))) {
+    return normalized.slice(1);
+  }
+  return normalized;
+};
 var CommandLoweringService = class {
+  host;
   constructor(host) {
     this.host = host;
   }
-  host;
   /**
    * Lowers a normalized command into the execution-layer representation.
    * @param {NormalizedCommand} command The normalized command node.
    * @returns {LoweredCommand} The lowered execution work unit.
    */
   lowerCommand(command) {
-    const keyword = command.keyword.toLowerCase();
+    const keyword = canonicalDirectiveKeyword(command.keyword, this.host.directiveRegistry);
     if (this.host.directiveRegistry.has(keyword)) {
       let directiveWords = command.words;
       if (command.parsed.includeTarget) {
@@ -15265,7 +15422,7 @@ var CommandLoweringService = class {
    * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
    */
   getPassthroughReason(command) {
-    const keyword = command.keyword.toLowerCase();
+    const keyword = canonicalDirectiveKeyword(command.keyword, this.host.directiveRegistry);
     if (/<[^>]+>/.test(command.command)) {
       return "macroPlaceholder";
     }
@@ -15628,11 +15785,12 @@ var IncludeSourceService = class {
 
 // src/services/macro-engine.ts
 var MacroEngine = class {
+  host;
+  macroExpansionControlStack = [];
+  pendingMacroSourceFile = "";
   constructor(host) {
     this.host = host;
   }
-  host;
-  macroExpansionControlStack = [];
   /**
    * Checks whether the current macro expansion line is in an active branch.
    * @returns {boolean} `true` when the current expansion path is active.
@@ -15761,7 +15919,7 @@ var MacroEngine = class {
             params: this.host.currentMacroParams,
             variadic,
             body: this.host.currentMacroBody,
-            sourceFile: this.host.currentFile
+            sourceFile: this.pendingMacroSourceFile || this.host.currentMacroBody[0]?.source.file || this.host.currentFile
           };
           if (this.host.macros.has(macroDef.name)) {
             throw new Error(`Macro '${macroDef.name}' is already defined.`);
@@ -15773,6 +15931,7 @@ var MacroEngine = class {
         this.host.currentMacroName = "";
         this.host.currentMacroParams = [];
         this.host.currentMacroBody = [];
+        this.pendingMacroSourceFile = "";
         setCommandKind(commandNode, "macroDefinitionOrInvoke");
         return true;
       }
@@ -15792,6 +15951,7 @@ var MacroEngine = class {
       this.host.currentMacroParams = paramsStr ? paramsStr.split(",").map((entry) => entry.trim()) : [];
       this.host.inMacroDefinition = true;
       this.host.currentMacroBody = [];
+      this.pendingMacroSourceFile = commandNode.source.file || this.host.currentFile;
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }
@@ -15909,6 +16069,7 @@ var MacroEngine = class {
     const previousMacroName = this.host.currentMacroName;
     const previousParentLabel = this.host.currentParentLabel;
     const previousParentIsGlobal = this.host.currentParentIsGlobal;
+    const previousFile = this.host.currentFile;
     const previousMacroExpansionControlStack = this.macroExpansionControlStack.map((entry) => ({
       ...entry
     }));
@@ -15924,6 +16085,9 @@ var MacroEngine = class {
           throw new Error(`Error: Macro '${macroName2}' not defined.`);
         }
         this.host.currentMacroName = macroName2;
+        if (macro2.sourceFile) {
+          this.host.currentFile = macro2.sourceFile;
+        }
         if (macro2.params.length > 0) {
           const fixedArgs2 = /* @__PURE__ */ new Map();
           for (const param of macro2.params) {
@@ -15949,6 +16113,9 @@ var MacroEngine = class {
         throw new Error(`Error: Macro '${macroName}' not defined.`);
       }
       this.host.currentMacroName = macroName;
+      if (macro.sourceFile) {
+        this.host.currentFile = macro.sourceFile;
+      }
       const argValues = [];
       let currentArg = "";
       let inQuotes = false;
@@ -16013,6 +16180,7 @@ var MacroEngine = class {
       this.host.currentVariadicCount = previousVariadicCount;
       this.host.currentVariadicArgs = previousVariadicArgs;
       this.host.inMacroExpansion = previousMacroExpansionState;
+      this.host.currentFile = previousFile;
       this.macroExpansionControlStack = previousMacroExpansionControlStack;
     }
   }
@@ -16025,6 +16193,23 @@ var MacroEngine = class {
    * @returns {string} The expanded line.
    */
   expandMacroLine(line, fixedArgs, variadicArgs, variadicCount) {
+    line = line.replace(/!<(\w+)>/g, (match, paramName) => {
+      if (!fixedArgs.has(paramName)) {
+        return match;
+      }
+      let name = (fixedArgs.get(paramName) ?? "").trim();
+      if (name.startsWith("!")) {
+        name = name.slice(1);
+      }
+      return `!${name}`;
+    });
+    const substituteParamValue = (raw) => {
+      const value = raw.trim();
+      if (!value.includes("!")) {
+        return value;
+      }
+      return this.host.resolvedefines(value);
+    };
     const resolveDeprecatedBangAngle = (match, name) => {
       if (fixedArgs.has(name)) {
         const fixedValue = fixedArgs.get(name);
@@ -16049,7 +16234,7 @@ var MacroEngine = class {
         expandedValue = expandedValue.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
         expandedValue = expandedValue.replace(/<(\w+)>/g, (match, paramName) => {
           if (fixedArgs.has(paramName)) {
-            return this.host.resolvedefines(fixedArgs.get(paramName) ?? "");
+            return substituteParamValue(fixedArgs.get(paramName) ?? "");
           }
           return match;
         });
@@ -16090,7 +16275,7 @@ var MacroEngine = class {
     expanded = expanded.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
     expanded = expanded.replace(/<(\w+)>/g, (match, paramName) => {
       if (fixedArgs.has(paramName)) {
-        return this.host.resolvedefines(fixedArgs.get(paramName) ?? "");
+        return substituteParamValue(fixedArgs.get(paramName) ?? "");
       }
       return match;
     });
@@ -17097,15 +17282,25 @@ var SymbolScopeService = class {
       const candidates = /* @__PURE__ */ new Set();
       const nestedLocalParts = localName.split("_").filter(Boolean);
       const hierarchyChain = this.getHierarchyChain(this.host.currentParentLabel);
-      if (dotCount === 1 && this.host.currentParentLabel.endsWith(`_${localName}`)) {
-        candidates.add(this.host.currentParentLabel);
+      let currentLocalName;
+      if (hierarchyChain.length >= 2) {
+        const parentPrefix = `${hierarchyChain[hierarchyChain.length - 2]}_`;
+        if (this.host.currentParentLabel.startsWith(parentPrefix)) {
+          currentLocalName = this.host.currentParentLabel.slice(parentPrefix.length);
+        }
       }
+      const addCandidate = (candidate) => {
+        if (candidate === this.host.currentParentLabel && currentLocalName !== localName) {
+          return;
+        }
+        candidates.add(candidate);
+      };
       const addExactLocalCandidate = (parentPrefix) => {
-        candidates.add(`${parentPrefix}_${localName}`);
+        addCandidate(`${parentPrefix}_${localName}`);
       };
       const addShortenedLocalCandidates = (parentPrefix) => {
         for (let i = 1; i < nestedLocalParts.length; i++) {
-          candidates.add(`${parentPrefix}_${nestedLocalParts.slice(i).join("_")}`);
+          addCandidate(`${parentPrefix}_${nestedLocalParts.slice(i).join("_")}`);
         }
       };
       addExactLocalCandidate(this.host.currentParentLabel);
@@ -17882,6 +18077,9 @@ var createEncoderRuntime = (context) => ({
   get enforceResolvedLabels() {
     return context.branches.enforceResolvedLabels();
   },
+  get asarSuperFxMoveShortAddress() {
+    return context.compatibility?.asarSuperFxMoveShortAddress() ?? false;
+  },
   symbolScope: {
     findNextLabel: (label, referenceAddress) => context.branches.findNextLabel(label, referenceAddress),
     findPreviousLabel: (label, referenceAddress) => context.branches.findPreviousLabel(label, referenceAddress)
@@ -17890,8 +18088,8 @@ var createEncoderRuntime = (context) => ({
 });
 
 // src/lsp/instruction-catalog.ts
-function implied(mnemonic, summary, opcode) {
-  return { mnemonic, summary, modes: [{ mode: "implied", syntax: "", opcode, size: 1 }] };
+function implied(mnemonic, summary, opcode, size = 1) {
+  return { mnemonic, summary, modes: [{ mode: "implied", syntax: "", opcode, size }] };
 }
 function branch(mnemonic, summary, opcode, size = 2) {
   return { mnemonic, summary, modes: [{ mode: "relative", syntax: "label", opcode, size }] };
@@ -18188,28 +18386,120 @@ var spc700Catalog = [
   instruction("PUSH", "Push a register to the stack.", [{ mode: "register", syntax: "A" }]),
   instruction("POP", "Pop a register from the stack.", [{ mode: "register", syntax: "A" }])
 ];
+var superFxRegister = { mode: "register", syntax: "Rn", size: 1 };
+var superFxRegisterAlt = { mode: "register", syntax: "Rn", size: 2 };
+var superFxImmediateAlt = { mode: "immediate", syntax: "#n", size: 2 };
+var superFxIndirect = { mode: "registerIndirect", syntax: "(Rn)", size: 1 };
+var superFxIndirectAlt = { mode: "registerIndirect", syntax: "(Rn)", size: 2 };
 var superFxCatalog = [
   implied("STOP", "Stop the GSU.", 0),
   implied("NOP", "No operation.", 1),
   implied("CACHE", "Set the cache base register.", 2),
-  instruction("LSR", "Logical shift right.", [{ mode: "implied", syntax: "" }]),
-  instruction("ROL", "Rotate left.", [{ mode: "implied", syntax: "" }]),
-  instruction("ROR", "Rotate right.", [{ mode: "implied", syntax: "" }]),
-  instruction("BRA", "Branch always.", [{ mode: "relative", syntax: "label" }]),
-  instruction("BEQ", "Branch if equal.", [{ mode: "relative", syntax: "label" }]),
-  instruction("BNE", "Branch if not equal.", [{ mode: "relative", syntax: "label" }]),
-  instruction("TO", "Set the destination register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("FROM", "Set the source register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("WITH", "Set source and destination register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("ADD", "Add to the accumulator register.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("SUB", "Subtract from the accumulator register.", [
-    { mode: "register", syntax: "Rn" }
+  implied("LSR", "Logical shift right.", 3),
+  implied("ROL", "Rotate left.", 4),
+  implied("LOOP", "Decrement R13 and branch if non-zero.", 60),
+  implied("ALT1", "Set ALT1 prefix.", 61),
+  implied("ALT2", "Set ALT2 prefix.", 62),
+  implied("ALT3", "Set ALT1 and ALT2 prefixes.", 63),
+  implied("PLOT", "Plot a pixel.", 76),
+  implied("SWAP", "Swap high and low bytes of SReg.", 77),
+  implied("COLOR", "Set the plot color from SReg.", 78),
+  implied("NOT", "Bitwise NOT of SReg.", 79),
+  implied("MERGE", "Merge high bytes of R7 and R8.", 112),
+  implied("SBK", "Store SReg back to the last RAM address.", 144),
+  implied("SEX", "Sign-extend the low byte of SReg.", 149),
+  implied("ASR", "Arithmetic shift right of SReg.", 150),
+  implied("ROR", "Rotate SReg right through carry.", 151),
+  implied("LOB", "Keep the low byte of SReg.", 158),
+  implied("FMULT", "Fractional signed multiply.", 159),
+  implied("HIB", "Keep the high byte of SReg.", 192),
+  implied("GETC", "Get byte from ROM into the plot color.", 223),
+  implied("GETB", "Get byte from ROM into SReg.", 239),
+  implied("RPIX", "Read pixel.", 61, 2),
+  implied("CMODE", "Set plot color mode.", 61, 2),
+  implied("DIV2", "Arithmetic shift right and clear the least bit.", 61, 2),
+  implied("LMULT", "Signed 16\xD716 multiply.", 61, 2),
+  implied("GETBH", "Get ROM byte into the high byte of SReg.", 61, 2),
+  implied("RAMB", "Set the RAM bank from SReg.", 62, 2),
+  implied("GETBL", "Get ROM byte into the low byte of SReg.", 62, 2),
+  implied("ROMB", "Set the ROM bank from SReg.", 63, 2),
+  implied("GETBS", "Get ROM byte sign-extended into SReg.", 63, 2),
+  branch("BRA", "Branch always.", 5),
+  branch("BGE", "Branch if greater or equal.", 6),
+  branch("BLT", "Branch if less than.", 7),
+  branch("BNE", "Branch if not equal.", 8),
+  branch("BEQ", "Branch if equal.", 9),
+  branch("BPL", "Branch if plus.", 10),
+  branch("BMI", "Branch if minus.", 11),
+  branch("BCC", "Branch if carry clear.", 12),
+  branch("BCS", "Branch if carry set.", 13),
+  branch("BVC", "Branch if overflow clear.", 14),
+  branch("BVS", "Branch if overflow set.", 15),
+  instruction("TO", "Set the destination register.", [{ ...superFxRegister, opcode: 16 }]),
+  instruction("WITH", "Set source and destination register.", [
+    { ...superFxRegister, opcode: 32 }
   ]),
-  instruction("AND", "Bitwise AND.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("OR", "Bitwise OR.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("MULT", "Signed multiply.", [{ mode: "register", syntax: "Rn" }]),
-  instruction("RPIX", "Read pixel.", [{ mode: "implied", syntax: "" }]),
-  instruction("DIV2", "Divide by two.", [{ mode: "implied", syntax: "" }])
+  instruction("FROM", "Set the source register.", [{ ...superFxRegister, opcode: 176 }]),
+  instruction("ADD", "Add to SReg.", [superFxRegister, superFxImmediateAlt]),
+  instruction("ADC", "Add to SReg with carry.", [superFxRegisterAlt, superFxImmediateAlt]),
+  instruction("SUB", "Subtract from SReg.", [superFxRegister, superFxImmediateAlt]),
+  instruction("SBC", "Subtract from SReg with borrow.", [superFxRegisterAlt]),
+  instruction("CMP", "Compare SReg with Rn.", [superFxRegisterAlt]),
+  instruction("AND", "Bitwise AND with SReg.", [superFxRegister, superFxImmediateAlt]),
+  instruction("BIC", "Bit clear SReg.", [superFxRegisterAlt, superFxImmediateAlt]),
+  instruction("OR", "Bitwise OR with SReg.", [superFxRegister, superFxImmediateAlt]),
+  instruction("XOR", "Bitwise exclusive-OR with SReg.", [superFxRegisterAlt, superFxImmediateAlt]),
+  instruction("MULT", "Signed 8-bit multiply.", [superFxRegister, superFxImmediateAlt]),
+  instruction("UMULT", "Unsigned 8-bit multiply.", [superFxRegisterAlt, superFxImmediateAlt]),
+  instruction("JMP", "Jump to address in Rn (R8-R13).", [superFxRegister]),
+  instruction("LJMP", "Long jump via Rn (R8-R13).", [superFxRegisterAlt]),
+  instruction("INC", "Increment Rn (R0-R14).", [superFxRegister]),
+  instruction("DEC", "Decrement Rn (R0-R14).", [superFxRegister]),
+  instruction("LINK", "Set R11 to PBR:PC+n.", [
+    { mode: "immediate", syntax: "#n", opcode: 144, size: 1 }
+  ]),
+  instruction("STW", "Store word at (Rn).", [superFxIndirect]),
+  instruction("LDW", "Load word from (Rn).", [superFxIndirect]),
+  instruction("STB", "Store byte at (Rn).", [superFxIndirectAlt]),
+  instruction("LDB", "Load byte from (Rn).", [superFxIndirectAlt]),
+  instruction("IBT", "Load Rn with a signed byte.", [
+    { mode: "registerImmediate", syntax: "Rn,#imm", opcode: 160, size: 2 }
+  ]),
+  instruction("IWT", "Load Rn with a word.", [
+    { mode: "registerImmediate", syntax: "Rn,#imm", opcode: 240, size: 3 }
+  ]),
+  instruction("LM", "Load Rn from RAM.", [
+    { mode: "registerIndirectAbsolute", syntax: "Rn,(addr)", size: 4 }
+  ]),
+  instruction("LMS", "Load Rn from short RAM.", [
+    { mode: "registerIndirectShort", syntax: "Rn,(xx)", size: 3 }
+  ]),
+  instruction("SM", "Store Rn to RAM.", [
+    { mode: "indirectAbsoluteRegister", syntax: "(addr),Rn", size: 4 }
+  ]),
+  instruction("SMS", "Store Rn to short RAM.", [
+    { mode: "indirectShortRegister", syntax: "(xx),Rn", size: 3 }
+  ]),
+  instruction("LEA", "Load Rn with the effective address.", [
+    { mode: "registerAbsolute", syntax: "Rn,addr", opcode: 240, size: 3 }
+  ]),
+  instruction("MOVE", "Move register, immediate, or RAM data.", [
+    { mode: "registerRegister", syntax: "Rn,Rm", size: 2 },
+    { mode: "registerImmediate", syntax: "Rn,#imm" },
+    { mode: "registerIndirectAbsolute", syntax: "Rn,(addr)" },
+    { mode: "indirectAbsoluteRegister", syntax: "(addr),Rn" }
+  ]),
+  instruction("MOVES", "Move Rm to Rn and update flags.", [
+    { mode: "registerRegister", syntax: "Rn,Rm", size: 2 }
+  ]),
+  instruction("MOVEB", "Move a byte through (Rn).", [
+    { mode: "indirectRegister", syntax: "(Rn),Rm" },
+    { mode: "registerIndirect", syntax: "Rn,(Rm)" }
+  ]),
+  instruction("MOVEW", "Move a word through (Rn).", [
+    { mode: "indirectRegister", syntax: "(Rn),Rm" },
+    { mode: "registerIndirect", syntax: "Rn,(Rm)" }
+  ])
 ];
 var InstructionCatalogRegistry = class {
   catalogs = /* @__PURE__ */ new Map();
@@ -18246,8 +18536,97 @@ try {
 }
 var Arch65816 = class {
   assembler;
+  /** Native 16-bit accumulator (REP #$20). Reset at the start of each assembly stage. */
+  m16;
+  /** Native 16-bit index registers (REP #$10). Reset at the start of each assembly stage. */
+  x16;
   constructor(context) {
     this.assembler = createEncoderRuntime(context);
+    this.m16 = false;
+    this.x16 = false;
+  }
+  /**
+   * Resets M/X size flags at the start of each assembly stage.
+   * @returns {void}
+   */
+  beginPass() {
+    this.m16 = false;
+    this.x16 = false;
+  }
+  /**
+   * Applies SEP/REP to the assembler-facing M/X size flags.
+   * @param {string} opcode The opcode.
+   * @param {string} rawOperand The raw operand.
+   * @returns {void}
+   */
+  applySepRep(opcode, rawOperand) {
+    if (opcode !== "SEP" && opcode !== "REP") {
+      return;
+    }
+    let value = 0;
+    try {
+      value = this.assembler.operandResolver.getnum(rawOperand);
+    } catch {
+      return;
+    }
+    if (opcode === "SEP") {
+      if (value & 32) {
+        this.m16 = false;
+      }
+      if (value & 16) {
+        this.x16 = false;
+      }
+      return;
+    }
+    if (value & 32) {
+      this.m16 = true;
+    }
+    if (value & 16) {
+      this.x16 = true;
+    }
+  }
+  /**
+   * Immediate operand width in bytes from M/X flags, hex spelling, and .b/.w.
+   * Plain hex/define immediates keep their expanded width so Chou `lda #$20`
+   * and `lda #!flag` stay 8-bit. Math expressions such as `#(NMI&$FFFF)`
+   * follow the M/X flags.
+   * @param {string} opcode The opcode.
+   * @param {number} operandLength Expanded operand width.
+   * @param {boolean} explicitlen Whether a .b/.w/.l suffix forced the width.
+   * @param {string} [rawOperand] The raw source operand.
+   * @returns {number} 1 or 2.
+   */
+  immediateBytes(opcode, operandLength, explicitlen, rawOperand = "") {
+    if (explicitlen) {
+      if (operandLength <= 1) {
+        return 1;
+      }
+      return 2;
+    }
+    let inner = rawOperand.trim();
+    if (inner.startsWith("#")) {
+      inner = inner.slice(1).trim();
+    }
+    const isMathExpression = /[&()*+/<>^|-]/.test(inner);
+    const isBareIdentifier = /^[A-Z_a-z]\w*$/.test(inner);
+    if (!isMathExpression && !isBareIdentifier) {
+      if (operandLength <= 1) {
+        return 1;
+      }
+      return 2;
+    }
+    let flagWidth = 1;
+    if (opcode === "LDX" || opcode === "LDY" || opcode === "CPX" || opcode === "CPY") {
+      if (this.x16) {
+        flagWidth = 2;
+      }
+    } else if (this.m16) {
+      flagWidth = 2;
+    }
+    if (operandLength > flagWidth) {
+      return 2;
+    }
+    return flagWidth;
   }
   /**
    * Returns the static 65816 instruction catalog for editor tooling.
@@ -18370,6 +18749,14 @@ var Arch65816 = class {
       "BRA",
       "BRL"
     ]);
+    let explicitlen = false;
+    if (opcode.includes(".")) {
+      const len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
+      opcode = opcode.substring(0, opcode.indexOf("."));
+      explicitlen = true;
+      operandLength = len;
+    }
+    this.applySepRep(opcode, rawOperand);
     if (noOperandOpcodes.has(opcode)) {
       if (rawOperand.startsWith("#")) {
         try {
@@ -18380,30 +18767,24 @@ var Arch65816 = class {
       }
       return 1;
     }
-    if (opcode.includes(".")) {
-      const len = this.getlenfromchar(opcode[opcode.indexOf(".") + 1]);
-      opcode = opcode.substring(0, opcode.indexOf("."));
-      return 1 + len;
-    }
-    if (accumulatorRepeatOpcodes.has(opcode) && !rawOperand.trim()) {
-      return 1;
-    }
     if (accumulatorRepeatOpcodes.has(opcode) && rawOperand.startsWith("#")) {
       return this.assembler.operandResolver.getnum(rawOperand.substring(1));
     }
+    const lowered = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const registerName = (lowered.registerName ?? "").toUpperCase();
+    if (accumulatorRepeatOpcodes.has(opcode) && (!rawOperand.trim() || registerName === "A" || /^a$/i.test(rawOperand.trim()))) {
+      return 1;
+    }
     if (branchOpcodes2.has(opcode)) {
-      return opcode === "BRL" ? 3 : 2;
+      if (opcode === "BRL") {
+        return 3;
+      }
+      return 2;
     }
     if (opcode === "MVP" || opcode === "MVN") {
       return 3;
     }
     if (opcode === "PER") {
-      return 3;
-    }
-    if (opcode === "JSL" || opcode === "JML") {
-      return 4;
-    }
-    if (opcode === "JMP" || opcode === "JSR") {
       return 3;
     }
     if (opcode === "PEA") {
@@ -18412,10 +18793,31 @@ var Arch65816 = class {
     if (["BRK", "COP", "PEI", "REP", "SEP", "WDM"].includes(opcode)) {
       return 2;
     }
-    if (operand.startsWith("#")) {
+    if (lowered.mode === "indirectLong" || lowered.mode === "indirectLongIndexedY") {
+      if (opcode === "JMP" || opcode === "JML" || opcode === "JSL" || opcode === "JSR") {
+        return 3;
+      }
+      return 2;
+    }
+    if (opcode === "JSL" || opcode === "JML") {
+      return 4;
+    }
+    if (opcode === "JMP" || opcode === "JSR") {
+      return 3;
+    }
+    if (explicitlen) {
       return 1 + operandLength;
     }
-    if (/^\$[\da-f]{6}(,x)?$/i.test(operand)) {
+    if (lowered.immediate || rawOperand.startsWith("#") || operand.startsWith("#")) {
+      return 1 + this.immediateBytes(opcode, operandLength, false, rawOperand);
+    }
+    if (lowered.mode === "stackRelative" || lowered.mode === "stackRelativeIndexedIndirectY" || lowered.mode === "indexedIndirectX" || lowered.mode === "directPageIndirect" || lowered.mode === "indirectIndexedY" || lowered.mode === "directPageIndexedXIndirect") {
+      return 2;
+    }
+    if (lowered.mode === "absoluteLong" || lowered.mode === "absoluteLongIndexedX") {
+      return 4;
+    }
+    if (/^\$[\da-f]{6}(,x)?$/i.test(operand) || /^\$[\da-f]{6}(,x)?$/i.test(rawOperand)) {
       return 4;
     }
     return 1 + operandLength;
@@ -18462,16 +18864,21 @@ var Arch65816 = class {
     } else {
       len = operandLength;
     }
+    this.applySepRep(opcode, rawOperand);
     debug4("asblock_65816 opcode", opcode);
     debug4("asblock_65816 operand", operand);
     if (["ASL", "LSR", "ROL", "ROR", "INC", "DEC"].includes(opcode)) {
-      return this.handleArithmeticOperations(opcode, operand, len, explicitlen);
+      let arithmeticOperand = operand;
+      if (/^a$/i.test(rawOperand.trim())) {
+        arithmeticOperand = rawOperand;
+      }
+      return this.handleArithmeticOperations(opcode, arithmeticOperand, len, explicitlen);
     }
     if (["SBC", "STA", "LDA", "ADC"].includes(opcode)) {
       return this.handleMemoryOperations(opcode, operand, len, explicitlen, rawOperand);
     }
     if (["AND", "EOR", "ORA", "CMP", "CPX", "CPY"].includes(opcode)) {
-      return this.handleLogicAndCompareOperations(opcode, operand, len, explicitlen);
+      return this.handleLogicAndCompareOperations(opcode, operand, len, explicitlen, rawOperand);
     }
     if (this.handleNoOperandOperations(opcode, operand)) {
       return true;
@@ -18532,10 +18939,12 @@ var Arch65816 = class {
       };
       if (opcode in immediateOpcodes) {
         this.assembler.write1(immediateOpcodes[opcode]);
-        if (len === 1) {
-          this.assembler.write1(this.assembler.operandResolver.getnum(resolvedOperand));
+        const width = this.immediateBytes(opcode, len, explicitlen, rawOperand);
+        const value = this.assembler.operandResolver.getnum(resolvedOperand);
+        if (width === 1) {
+          this.assembler.write1(value);
         } else {
-          this.assembler.write2(this.assembler.operandResolver.getnum(resolvedOperand));
+          this.assembler.write2(value);
         }
         return true;
       }
@@ -18841,9 +19250,10 @@ var Arch65816 = class {
    * @param {string} operand The operand to handle.
    * @param {number} len The length of the operand.
    * @param {boolean} explicitlen Whether the operand length is explicit.
+   * @param {string} [rawOperand] The raw source operand before expansion.
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
-  handleLogicAndCompareOperations(opcode, operand, len, explicitlen) {
+  handleLogicAndCompareOperations(opcode, operand, len, explicitlen, rawOperand = operand) {
     debug4("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
     const opcodes = {
       ORA: {
@@ -18969,7 +19379,7 @@ var Arch65816 = class {
       return false;
     }
     const logicOpcode = opcode;
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
     let address = 0;
@@ -18979,7 +19389,8 @@ var Arch65816 = class {
       mode = "immediate";
       address = this.assembler.operandResolver.getnum(baseOperand);
       this.assembler.write1(opcodes[logicOpcode].immediate);
-      if (len === 1) {
+      const width = this.immediateBytes(opcode, len, explicitlen, operand);
+      if (width === 1) {
         this.assembler.write1(address);
       } else {
         this.assembler.write2(address);
@@ -19057,7 +19468,7 @@ var Arch65816 = class {
       address = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "absoluteLong") {
       mode = "absoluteLong";
-      this.assembler.operandResolver.getnum(resolvedOperand);
+      address = this.assembler.operandResolver.getnum(resolvedOperand);
     } else if (loweredOperand.mode === "absoluteLongIndexedX" && opcodes[logicOpcode].absoluteLongX) {
       mode = "absoluteLongX";
       address = this.assembler.operandResolver.getnum(baseOperand);
@@ -19375,7 +19786,8 @@ var Arch65816 = class {
       }
       address = this.assembler.operandResolver.getnum(operand.slice(1));
       this.assembler.write1(opcodeByte);
-      if (len === 1) {
+      const width = this.immediateBytes(opcode, len, explicitlen, operand);
+      if (width === 1) {
         this.assembler.write1(address);
       } else {
         this.assembler.write2(address);
@@ -19685,7 +20097,7 @@ var Arch65816 = class {
       mode = "absoluteX";
       address = this.assembler.operandResolver.getnum(operand);
     }
-    if (!isIndexed && /^\$[\dA-Fa-f]{4}$/.test(operand)) {
+    if (!isIndexed && (loweredOperand.mode === "absolute" || /^\$[\dA-Fa-f]{3,4}$/.test(operand))) {
       mode = "absolute";
       address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].absolute);
@@ -19702,7 +20114,7 @@ var Arch65816 = class {
     } else if (isIndexed) {
       if (storeOpcode === "STX") {
         address = this.assembler.operandResolver.getnum(operand);
-        if (/^\$[\da-f]{4}$/i.test(operand)) {
+        if (/^\$[\da-f]{3,4}$/i.test(operand)) {
           mode = "absolute";
           this.assembler.write1(storeOpcodes[storeOpcode].absolute);
           this.assembler.write2(address);
@@ -19715,7 +20127,7 @@ var Arch65816 = class {
         return true;
       } else if (storeOpcode === "STY") {
         address = this.assembler.operandResolver.getnum(operand);
-        if (/^\$[\da-f]{4}$/i.test(operand)) {
+        if (/^\$[\da-f]{3,4}$/i.test(operand)) {
           mode = "absolute";
           this.assembler.write1(storeOpcodes[storeOpcode].absolute);
           this.assembler.write2(address);
@@ -19728,7 +20140,7 @@ var Arch65816 = class {
         return true;
       } else if (storeOpcode === "STZ") {
         address = this.assembler.operandResolver.getnum(operand);
-        if (/^\$[\da-f]{4}$/i.test(operand) && storeOpcodes[storeOpcode].absoluteX) {
+        if (/^\$[\da-f]{3,4}$/i.test(operand) && storeOpcodes[storeOpcode].absoluteX) {
           mode = "absoluteX";
           this.assembler.write1(storeOpcodes[storeOpcode].absoluteX);
           this.assembler.write2(address);
@@ -19939,17 +20351,27 @@ var Arch65816 = class {
       return false;
     }
     let targetAddress;
+    let relativeAddress;
     const instructionSize = opcode === "BRL" ? 3 : 2;
     const branchReferenceAddress = this.assembler.currentTargetAddress + instructionSize;
-    if (/^\++$/.test(operand)) {
+    const rawShortOffset = opcode !== "BRL" && /^\$[\da-f]{1,2}$/i.test(operand.trim());
+    if (rawShortOffset) {
+      relativeAddress = this.assembler.operandResolver.getnum(operand);
+      if (relativeAddress > 127) {
+        relativeAddress -= 256;
+      }
+      targetAddress = branchReferenceAddress + relativeAddress;
+    } else if (/^\++$/.test(operand)) {
       targetAddress = this.assembler.symbolScope.findNextLabel(operand, branchReferenceAddress);
+      relativeAddress = targetAddress - branchReferenceAddress;
     } else if (/^-+$/.test(operand)) {
       targetAddress = this.assembler.symbolScope.findPreviousLabel(operand, branchReferenceAddress);
+      relativeAddress = targetAddress - branchReferenceAddress;
     } else {
       targetAddress = this.assembler.operandResolver.getnum(operand);
+      relativeAddress = targetAddress - branchReferenceAddress;
     }
-    const currentAddress = this.assembler.currentTargetAddress + instructionSize;
-    const relativeAddress = targetAddress - currentAddress;
+    const currentAddress = branchReferenceAddress;
     debug4(
       "handleBranchInstructions targetAddress:",
       targetAddress,
@@ -19998,7 +20420,7 @@ var Arch65816 = class {
     } else {
       if (relativeAddress < -128 || relativeAddress > 127) {
         throw this.assembler.diagnostics.error(
-          `Error: Branch target out of range (${relativeAddress}).`
+          `Error: Branch target out of range (${relativeAddress}) for ${opcode} ${operand} at $${this.assembler.currentTargetAddress.toString(16)}.`
         );
       }
       let signedByte = (relativeAddress & 255) >>> 0;
@@ -20078,6 +20500,53 @@ function getAddressSize(operand) {
     return 1;
   }
   return 2;
+}
+var IMPLIED_SPC_OPCODES = {
+  NOP: true,
+  BRK: true,
+  RET: true,
+  RETI: true,
+  CLRP: true,
+  SETP: true,
+  CLRC: true,
+  SETC: true,
+  EI: true,
+  DI: true,
+  CLRV: true,
+  NOTC: true,
+  SLEEP: true,
+  STOP: true,
+  XCN: true
+};
+var SHIFT_INC_DEC_OPCODES = {
+  ASL: true,
+  LSR: true,
+  ROL: true,
+  ROR: true,
+  INC: true,
+  DEC: true
+};
+var MOV_ONE_BYTE_PAIRS = /* @__PURE__ */ new Set([
+  "X,A",
+  "A,X",
+  "X,SP",
+  "SP,X",
+  "A,Y",
+  "Y,A",
+  "(X+),A",
+  "A,(X+)",
+  "(X),A",
+  "A,(X)"
+]);
+function spcOpcodePlusAddressSize(operand) {
+  if (getAddressSize(operand) === 1) {
+    return 2;
+  }
+  return 3;
+}
+function isMovRegisterPair(left, right) {
+  const combined = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
+  return MOV_ONE_BYTE_PAIRS.has(combined);
 }
 function isAccumulator(op, lowered) {
   if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "A") {
@@ -20225,24 +20694,22 @@ var bitSetClearOpcodes = {
   CLR6: 210,
   CLR7: 242
 };
-var bitBranchOpcodes = {
-  BBC0: 19,
-  BBC1: 51,
-  BBC2: 83,
-  BBC3: 115,
-  BBC4: 147,
-  BBC5: 179,
-  BBC6: 211,
-  BBC7: 243,
-  BBS0: 3,
-  BBS1: 35,
-  BBS2: 67,
-  BBS3: 99,
-  BBS4: 131,
-  BBS5: 163,
-  BBS6: 195,
-  BBS7: 227
-};
+function parseBitBranchOpcode(opcode) {
+  const match = opcode.toUpperCase().match(/^(BBS|BBC)([0-7])?$/);
+  if (!match) {
+    return void 0;
+  }
+  if (match[2] === void 0) {
+    return { family: match[1] };
+  }
+  return { family: match[1], mnemonicBit: Number(match[2]) };
+}
+function bitBranchOpcodeByte(family, bit) {
+  if (family === "BBS") {
+    return bit << 5 | 3;
+  }
+  return bit << 5 | 19;
+}
 var wordOpsWithYaLeft = {
   CMPW: 90,
   ADDW: 122,
@@ -20256,11 +20723,44 @@ var singleWordOps = {
   DECW: 26,
   INCW: 58
 };
-var bit1Opcodes = {
-  OR1: 10,
-  AND1: 74,
-  EOR1: 138
-};
+var NUMBERED_BIT_OPCODE = /^(NOT|OR|AND|EOR|MOV)([0-7])$/;
+function parseNumberedBitOpcode(opcode) {
+  const match = opcode.toUpperCase().match(NUMBERED_BIT_OPCODE);
+  if (!match) {
+    return void 0;
+  }
+  return {
+    family: match[1],
+    mnemonicBit: Number(match[2])
+  };
+}
+function parseSpcMemBitOperand(raw) {
+  let rest = raw.trim();
+  if (rest === "") {
+    return void 0;
+  }
+  let invert = false;
+  if (rest.startsWith("!") || rest.startsWith("/")) {
+    invert = true;
+    rest = rest.slice(1).trim();
+  }
+  const dotted = rest.match(/^(.*)\.([0-7])$/);
+  if (dotted) {
+    return {
+      addressText: dotted[1].trim(),
+      bit: Number(dotted[2]),
+      invert
+    };
+  }
+  return { addressText: rest, invert };
+}
+function parseSpcBitNumber(raw) {
+  const trimmed = raw.trim().replace(/^#/, "");
+  if (!/^[0-7]$/.test(trimmed)) {
+    return void 0;
+  }
+  return Number(trimmed);
+}
 var ArchSPC700 = class {
   assembler;
   constructor(context) {
@@ -20310,7 +20810,13 @@ var ArchSPC700 = class {
     if (words.length === 0) {
       return 0;
     }
-    return this.estimateResolvedInstruction(words[0], words.slice(1).join(" "));
+    const rawOperand = words.slice(1).join(" ").trim();
+    const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperands = parsedOperands.map(
+      (operand) => this.assembler.operandResolver.lowerOperand(operand)
+    );
+    return this.estimateResolvedInstruction(words[0], rawOperand, loweredOperand, loweredOperands);
   }
   /**
    * Estimates resolved instruction.
@@ -20321,21 +20827,170 @@ var ArchSPC700 = class {
    * @returns {number} The result.
    */
   estimateResolvedInstruction(mnemonic, operandText, loweredOperand, loweredOperands = []) {
-    let size = 1;
-    const opcode = mnemonic.toUpperCase();
-    const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const expandedOperand = firstLowered?.expanded ?? operandText;
-    if (expandedOperand) {
-      if (expandedOperand.startsWith("#")) {
-        size = 2;
-      } else if (expandedOperand.includes("$") || loweredOperands.length > 1 || expandedOperand.includes(",")) {
-        size = 3;
+    let opcode = mnemonic.toUpperCase().trim();
+    const dotIndex = opcode.indexOf(".");
+    if (dotIndex !== -1) {
+      opcode = opcode.substring(0, dotIndex);
+    }
+    let operands = [];
+    if (loweredOperands.length > 0) {
+      operands = loweredOperands.map((operand) => operand.expanded);
+    } else if (operandText) {
+      operands = this.splitTopLevelComma(operandText);
+    }
+    operands = operands.filter((value) => value !== "");
+    const left = operands[0] ?? "";
+    const right = operands[1] ?? "";
+    const leftLowered = loweredOperands[0] ?? loweredOperand;
+    const rightLowered = loweredOperands[1];
+    if (operands.length === 0 && hasOwn(IMPLIED_SPC_OPCODES, opcode)) {
+      return 1;
+    }
+    if (opcode === "TCALL" || opcode === "PUSH" || opcode === "POP") {
+      return 1;
+    }
+    if ((opcode === "DAA" || opcode === "DAS") && left.toUpperCase() === "A") {
+      return 1;
+    }
+    if (opcode === "MUL" || opcode === "DIV") {
+      return 1;
+    }
+    if (hasOwn(branchOpcodes, opcode)) {
+      return 2;
+    }
+    if (hasOwn(bitSetClearOpcodes, opcode)) {
+      return 2;
+    }
+    if (parseBitBranchOpcode(opcode)) {
+      return 3;
+    }
+    if (opcode === "CALL" || opcode === "JMP") {
+      return 3;
+    }
+    if (opcode === "PCALL") {
+      return 2;
+    }
+    if (opcode === "DBNZ") {
+      if (isRegisterY(left, leftLowered)) {
+        return 2;
       }
+      return 3;
     }
-    if (["JSL", "JML"].includes(opcode)) {
-      size = 4;
+    if (opcode === "CBNE") {
+      return 3;
     }
-    return size;
+    if (opcode === "TSET" || opcode === "TCLR") {
+      return 3;
+    }
+    if (parseNumberedBitOpcode(opcode)) {
+      return 3;
+    }
+    if (hasOwn(singleWordOps, opcode)) {
+      return 2;
+    }
+    if (hasOwn(wordOpsWithYaLeft, opcode) || hasOwn(wordOpsWithYaRight, opcode)) {
+      return 2;
+    }
+    if (hasOwn(SHIFT_INC_DEC_OPCODES, opcode)) {
+      const dest = left.toUpperCase();
+      if (dest === "A" || dest === "X" || dest === "Y") {
+        return 1;
+      }
+      const plusX = dest.endsWith("+X");
+      const base = plusX ? left.replace(/\+x$/i, "").trim() : left;
+      return spcOpcodePlusAddressSize(base);
+    }
+    if (opcode === "MOV") {
+      return this.estimateMovSize(left, right, leftLowered, rightLowered);
+    }
+    if (hasOwn(memOpTables, opcode)) {
+      return this.estimateMemoryOpSize(left, right, leftLowered, rightLowered);
+    }
+    return 1;
+  }
+  /**
+   * Encoded size for MOV. Must match {@link handleMovInstruction} / XY immediate forms.
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {number} Encoded size in bytes.
+   */
+  estimateMovSize(left, right, leftLowered, rightLowered) {
+    if (isMovRegisterPair(left, right)) {
+      return 1;
+    }
+    const rightImmediate = rightLowered?.immediate ?? right.trim().startsWith("#");
+    if (isRegisterX(left, leftLowered) && rightImmediate) {
+      return 2;
+    }
+    if (isRegisterY(left, leftLowered) && rightImmediate) {
+      return 2;
+    }
+    if (isAccumulator(left, leftLowered) && rightImmediate) {
+      return 2;
+    }
+    if (this.isDpOrAbs(left) && rightImmediate) {
+      return 3;
+    }
+    if (this.isDpOrAbs(left) && this.isDpOrAbs(right)) {
+      return 3;
+    }
+    if (/^\(\$[\da-f]+\)$/i.test(left) && /^\(\$[\da-f]+\)$/i.test(right)) {
+      return 3;
+    }
+    if (/\(\s*\$/.test(left) || /\(\s*\$/.test(right)) {
+      return 2;
+    }
+    const addressOperand = /\$/.test(left) ? left : right;
+    if (/\$/.test(addressOperand)) {
+      const plusIndex = addressOperand.search(/\+[xy]$/i);
+      let base = addressOperand;
+      if (plusIndex >= 0) {
+        base = addressOperand.slice(0, plusIndex);
+      }
+      return spcOpcodePlusAddressSize(base);
+    }
+    return 2;
+  }
+  /**
+   * Encoded size for ADC/AND/EOR/OR/SBC/CMP. Must match {@link handleMemoryInstruction}.
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {number} Encoded size in bytes.
+   */
+  estimateMemoryOpSize(left, right, leftLowered, rightLowered) {
+    if (isRegisterX(left, leftLowered) || isRegisterY(left, leftLowered)) {
+      if (rightLowered?.immediate ?? right.trim().startsWith("#")) {
+        return 2;
+      }
+      return spcOpcodePlusAddressSize(right);
+    }
+    if (isParenX(left, leftLowered) && isParenY(right, rightLowered)) {
+      return 1;
+    }
+    if (this.isDpOrAbs(left) && (rightLowered?.immediate ?? right.trim().startsWith("#"))) {
+      return 3;
+    }
+    if (this.isDpOrAbs(left) && this.isDpOrAbs(right)) {
+      return 3;
+    }
+    if (/^\(\$[\da-f]+\)$/i.test(left) && /^\(\$[\da-f]+\)$/i.test(right)) {
+      return 3;
+    }
+    if (isAccumulator(left, leftLowered)) {
+      const mode = this.classifySpc700Addressing(right, rightLowered).mode;
+      if (mode === "indirectX") {
+        return 1;
+      }
+      if (mode === "abs" || mode === "absX" || mode === "absY") {
+        return 3;
+      }
+      return 2;
+    }
+    return 2;
   }
   /**
    * Processes an SPC700 assembly instruction.
@@ -20393,7 +21048,8 @@ var ArchSPC700 = class {
         explicitlen,
         firstLowered
       );
-    } else if (normalizedOperands.length === 2) {
+    }
+    if (normalizedOperands.length === 2) {
       return this.handleTwoOperands(
         opcode,
         normalizedOperands[0],
@@ -20402,6 +21058,14 @@ var ArchSPC700 = class {
         explicitlen,
         firstLowered,
         secondLowered
+      );
+    }
+    if (normalizedOperands.length === 3 && parseNumberedBitOpcode(opcode)) {
+      return this.handleBitManipulation(
+        opcode,
+        normalizedOperands[0],
+        normalizedOperands[1],
+        normalizedOperands[2]
       );
     }
     return false;
@@ -20524,7 +21188,7 @@ var ArchSPC700 = class {
    */
   handleTwoOperands(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered) {
     debug5("handleTwoOperands", { opcode, left, right, forcedLen, explicitlen });
-    if (hasOwn(bitBranchOpcodes, opcode)) {
+    if (parseBitBranchOpcode(opcode)) {
       if (this.handleTwoOperandsBitBranch(opcode, left, right)) {
         return true;
       }
@@ -20727,17 +21391,19 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * Writes dp or abs address (1 or 2 bytes) depending on getAddressSize
-   * @param {number} value - the value to write
+   * Writes a dp (1 byte) or abs (2 byte) address.
+   * Width follows the source spelling via `length`, not whether the value fits in 8 bits.
+   * `$0030` is absolute even though 0x30 is a direct-page number.
+   * @param {number} value Address to write.
+   * @param {number} length 1 for direct page, 2 for absolute.
    */
-  writeDpOrAbs(value) {
-    debug5("writeDpOrAbs", value);
-    if (value <= 255) {
-      this.assembler.write1(value & 255);
-    } else {
-      this.assembler.write1(value & 255);
-      this.assembler.write1(value >> 8 & 255);
+  writeDpOrAbs(value, length) {
+    debug5("writeDpOrAbs", { value, length });
+    this.assembler.write1(value & 255);
+    if (length <= 1) {
+      return;
     }
+    this.assembler.write1(value >> 8 & 255);
   }
   /**
    * Classify operand for "A,(X)" style memory instructions,
@@ -20953,6 +21619,7 @@ var ArchSPC700 = class {
    * We'll handle that in handleTwoOperands.
    *
    * For "SETn $12 => 0x02 12" or "CLRn $12 => 0x12 12," that's one operand + the bit # is in the opcode name.
+   * Asar also accepts `SET1 $13.7` / `CLR1 $13.7`, where the bit comes from the operand.
    * @param {string} opcode - the opcode
    * @param {string} operand - the operand
    * @returns {boolean} true if the instruction was handled, false otherwise
@@ -20963,9 +21630,23 @@ var ArchSPC700 = class {
     if (!hasOwn(bitSetClearOpcodes, normalizedOpcode)) {
       return false;
     }
-    const val = parseInt(operand.replace(/\$/g, ""), 16) & 255;
-    this.assembler.write1(bitSetClearOpcodes[normalizedOpcode]);
-    this.assembler.write1(val);
+    const trimmed = operand.trim();
+    const dotted = trimmed.match(/^\$([\da-f]+)\.([0-7])$/i);
+    let opcodeByte = bitSetClearOpcodes[normalizedOpcode];
+    let dp;
+    if (dotted) {
+      dp = parseInt(dotted[1], 16) & 255;
+      const bit = parseInt(dotted[2], 10);
+      let lowNibble = 18;
+      if (normalizedOpcode.startsWith("SET")) {
+        lowNibble = 2;
+      }
+      opcodeByte = bit << 5 | lowNibble;
+    } else {
+      dp = parseInt(trimmed.replace(/\$/g, ""), 16) & 255;
+    }
+    this.assembler.write1(opcodeByte);
+    this.assembler.write1(dp);
     return true;
   }
   /**
@@ -21005,7 +21686,8 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * BBSn / BBCn => 2 operands: e.g. "BBC0 $12,Mylabel => 13 12 FF"
+   * BBSn / BBCn / wiki-native `BBS $dp.n`: e.g. "BBC0 $12,Mylabel => 13 12 FF",
+   * "BBS $12.3,L => 63 12 FF". Bit comes from `$dp.n` if present, else the mnemonic digit.
    * That logic is in handleTwoOperands because we have two comma-split sections.
    * @param {string} opcode - the opcode
    * @param {string} left - the left operand
@@ -21014,14 +21696,27 @@ var ArchSPC700 = class {
    */
   handleTwoOperandsBitBranch(opcode, left, right) {
     debug5("handleTwoOperandsBitBranch", { opcode, left, right });
-    const bitOpcode = opcode.toUpperCase();
-    if (!hasOwn(bitBranchOpcodes, bitOpcode)) {
+    const parsed = parseBitBranchOpcode(opcode);
+    if (!parsed) {
       debug5("handleTwoOperandsBitBranch no match", { opcode, left, right });
       return false;
     }
-    const dpVal = parseInt(left.replace(/\$/g, ""), 16) & 255;
-    debug5("handleTwoOperandsBitBranch =", bitBranchOpcodes[bitOpcode].toString(16));
-    this.assembler.write1(bitBranchOpcodes[bitOpcode]);
+    const trimmed = left.trim();
+    const dotted = trimmed.match(/^\$([\da-f]+)\.([0-7])$/i);
+    let dpVal;
+    let bit = parsed.mnemonicBit;
+    if (dotted) {
+      dpVal = Number.parseInt(dotted[1], 16) & 255;
+      bit = Number(dotted[2]);
+    } else {
+      dpVal = Number.parseInt(trimmed.replace(/\$/g, ""), 16) & 255;
+    }
+    if (bit === void 0) {
+      return false;
+    }
+    const opcodeByte = bitBranchOpcodeByte(parsed.family, bit);
+    debug5("handleTwoOperandsBitBranch =", opcodeByte.toString(16));
+    this.assembler.write1(opcodeByte);
     debug5("handleTwoOperandsBitBranch =", dpVal.toString(16));
     this.assembler.write1(dpVal);
     debug5("handleTwoOperandsBitBranch right", right);
@@ -21051,43 +21746,45 @@ var ArchSPC700 = class {
    */
   handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
     debug5("handleDbnzCbne", { opcode, left, right });
-    let offset;
+    const isYForm = opcode.toUpperCase() === "DBNZ" && isRegisterY(left, leftLowered);
+    let instructionSize = 3;
+    if (isYForm) {
+      instructionSize = 2;
+    }
     const target = this.assembler.operandResolver.getnum(right);
-    offset = target - (this.assembler.currentTargetAddress + 3);
+    const offset = target - (this.assembler.currentTargetAddress + instructionSize);
     debug5("handleDbnzCbne offset", offset);
-    if (offset < -128 || offset > 127) {
+    if (this.assembler.enforceResolvedLabels && (offset < -128 || offset > 127)) {
       throw this.assembler.diagnostics.error(`Branch target out of range (${offset})`);
     }
-    offset &= 255;
+    const storedOffset = offset & 255;
     if (opcode.toUpperCase() === "DBNZ") {
-      if (isRegisterY(left, leftLowered)) {
+      if (isYForm) {
         this.assembler.write1(254);
-        this.assembler.write1(offset + 1);
-        return true;
-      } else {
-        const val = parseInt(left.replace(/\$/g, ""), 16) & 255;
-        this.assembler.write1(110);
-        this.assembler.write1(val);
-        this.assembler.write1(offset);
+        this.assembler.write1(storedOffset);
         return true;
       }
+      const val = parseInt(left.replace(/\$/g, ""), 16) & 255;
+      this.assembler.write1(110);
+      this.assembler.write1(val);
+      this.assembler.write1(storedOffset);
+      return true;
     }
     if (opcode.toUpperCase() === "CBNE") {
       const upper = left.toUpperCase();
       if (leftLowered?.mode === "directPageIndexedX" || upper.endsWith("+X")) {
         const base = upper.replace(/\+X$/, "").trim();
-        const val = parseInt(base.replace(/\$/g, ""), 16) & 255;
+        const val2 = parseInt(base.replace(/\$/g, ""), 16) & 255;
         this.assembler.write1(222);
-        this.assembler.write1(val);
-        this.assembler.write1(offset);
-        return true;
-      } else {
-        const val = parseInt(upper.replace(/\$/g, ""), 16) & 255;
-        this.assembler.write1(46);
-        this.assembler.write1(val);
-        this.assembler.write1(offset);
+        this.assembler.write1(val2);
+        this.assembler.write1(storedOffset);
         return true;
       }
+      const val = parseInt(upper.replace(/\$/g, ""), 16) & 255;
+      this.assembler.write1(46);
+      this.assembler.write1(val);
+      this.assembler.write1(storedOffset);
+      return true;
     }
     return false;
   }
@@ -21489,8 +22186,12 @@ var ArchSPC700 = class {
       const rightRegister = right.trim().toUpperCase();
       const modes = leftIndexedOpcodes[rightRegister]?.[leftIndexed.index];
       if (modes) {
-        this.assembler.write1(leftIndexed.length === 1 ? modes.dp : modes.abs);
-        this.writeDpOrAbs(leftIndexed.value);
+        let opcode = modes.abs;
+        if (leftIndexed.length === 1) {
+          opcode = modes.dp;
+        }
+        this.assembler.write1(opcode);
+        this.writeDpOrAbs(leftIndexed.value, leftIndexed.length);
         return true;
       }
     }
@@ -21504,8 +22205,12 @@ var ArchSPC700 = class {
       const leftRegister = left.trim().toUpperCase();
       const modes = rightIndexedOpcodes[leftRegister]?.[rightIndexed.index];
       if (modes) {
-        this.assembler.write1(rightIndexed.length === 1 ? modes.dp : modes.abs);
-        this.writeDpOrAbs(rightIndexed.value);
+        let opcode = modes.abs;
+        if (rightIndexed.length === 1) {
+          opcode = modes.dp;
+        }
+        this.assembler.write1(opcode);
+        this.writeDpOrAbs(rightIndexed.value, rightIndexed.length);
         return true;
       }
     }
@@ -21540,9 +22245,13 @@ var ArchSPC700 = class {
       const m = combined.match(p.regex);
       if (m) {
         const val = parseInt(m[1], 16) & 65535;
-        const op = getAddressSize("$" + m[1]) === 1 ? p.opcodeDp : p.opcodeAbs;
+        const length = getAddressSize("$" + m[1]);
+        let op = p.opcodeAbs;
+        if (length === 1) {
+          op = p.opcodeDp;
+        }
         this.assembler.write1(op);
-        this.writeDpOrAbs(val);
+        this.writeDpOrAbs(val, length);
         return true;
       }
     }
@@ -21575,9 +22284,13 @@ var ArchSPC700 = class {
       const m = combined.match(p.regex);
       if (m) {
         const val = parseInt(m[1], 16) & 65535;
-        const op = getAddressSize("$" + m[1]) === 1 ? p.opcodeDp : p.opcodeAbs;
+        const length = getAddressSize("$" + m[1]);
+        let op = p.opcodeAbs;
+        if (length === 1) {
+          op = p.opcodeDp;
+        }
         this.assembler.write1(op);
-        this.writeDpOrAbs(val);
+        this.writeDpOrAbs(val, length);
         return true;
       }
     }
@@ -21618,91 +22331,124 @@ var ArchSPC700 = class {
       const m = combined.match(p.regex);
       if (m) {
         const val = parseInt(m[1], 16) & 65535;
-        const op = getAddressSize("$" + m[1]) === 1 ? p.opcodeDp : p.opcodeAbs;
+        const length = getAddressSize("$" + m[1]);
+        let op = p.opcodeAbs;
+        if (length === 1) {
+          op = p.opcodeDp;
+        }
         this.assembler.write1(op);
-        this.writeDpOrAbs(val);
+        this.writeDpOrAbs(val, length);
         return true;
       }
     }
     return false;
   }
   /**
-   * handle e.g. "OR1 C,$1234" => 0x0A 34 12, "OR1 C,!$1234" => 0x2A 34 12,
-   * "AND1 C,$1234" => 0x4A 34 12, "AND1 C,!$1234 => 0x6A 34 12, "EOR1 C,$1234 => 0x8A 34 12,
-   * "MOV1 $1234,C => 0xCA 34 32" or "MOV1 C,$1234 => 0xAA 34 32"
-   * "NOT1 $1234 => 0xEA 34 32"
-   * @param {string} opcode - the opcode
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
+   * Encodes mem.bit carry ops. Bit is taken from `$addr.n` if present, else the
+   * mnemonic digit (`NOT2` → bit 2). High byte is `(addr >> 8) | (bit << 5)`.
+   *
+   *   NOT1 $1234 / NOT2 C,$0027 / NOT1 $12.3 / NOT1 $addr,3
+   *   MOV1 C,$addr / MOV2 $addr,C
+   *   OR1 C,$addr / OR1 C,!$addr / AND1 C,/addr
+   * @param {string} opcode Mnemonic, including numbered TASM forms.
+   * @param {string} left Left operand.
+   * @param {string} right Right operand, or empty for one-operand NOT/MOV.
+   * @param {string} [explicitBitText] Optional third operand bit (`AND1 C,$addr,2`).
    * @returns {boolean} true if the combo was handled, false otherwise
    */
-  handleBitManipulation(opcode, left, right) {
-    debug5("handleBitManipulation", { opcode, left, right });
-    const up = opcode.toUpperCase();
-    if (up === "NOT1") {
-      this.assembler.write1(234);
-      const val2 = Number.parseInt(left.replace(/\$/g, ""), 16) & 65535;
-      debug5("handleBitManipulation val", val2);
-      const hibyte = val2 >> 8 & 255 | 32;
-      const lobyte = val2 & 255;
-      debug5("handleBitManipulation lobyte", lobyte.toString(16));
-      debug5("handleBitManipulation hibyte", hibyte.toString(16));
-      this.assembler.write1(lobyte);
-      this.assembler.write1(hibyte);
-      return true;
-    }
-    if (up === "MOV1") {
-      const leftUp2 = left.trim().toUpperCase();
-      const rightUp2 = right.trim().toUpperCase();
-      let val2;
-      if (leftUp2 === "C") {
-        this.assembler.write1(170);
-        val2 = parseInt(right.replace(/\$/g, ""), 16) & 65535;
-      } else if (rightUp2 === "C") {
-        this.assembler.write1(202);
-        val2 = parseInt(left.replace(/\$/g, ""), 16) & 65535;
-      } else {
-        return false;
-      }
-      const hi2 = val2 >> 8 & 255 | 32;
-      const lo2 = val2 & 255;
-      this.assembler.write1(lo2);
-      this.assembler.write1(hi2);
-      return true;
-    }
-    if (!hasOwn(bit1Opcodes, up)) {
+  handleBitManipulation(opcode, left, right, explicitBitText = "") {
+    debug5("handleBitManipulation", { opcode, left, right, explicitBitText });
+    const parsed = parseNumberedBitOpcode(opcode);
+    if (!parsed) {
       return false;
     }
     const leftUp = left.trim().toUpperCase();
     const rightUp = right.trim().toUpperCase();
-    let baseOpcode = bit1Opcodes[up];
-    let val;
-    let hasExclamation = false;
-    if (leftUp === "C") {
-      if (rightUp.startsWith("!$")) {
-        hasExclamation = true;
-        val = parseInt(rightUp.replace(/[^\da-f]/gi, ""), 16);
-      } else {
-        val = parseInt(rightUp.replace(/\$/g, ""), 16);
+    let memRaw = "";
+    let movToCarry = true;
+    let bitFromOperand;
+    if (explicitBitText !== "") {
+      const parsedBit = parseSpcBitNumber(explicitBitText);
+      if (parsedBit === void 0) {
+        return false;
       }
+      bitFromOperand = parsedBit;
+    }
+    if (parsed.family === "MOV") {
+      if (leftUp === "C") {
+        memRaw = right;
+        movToCarry = true;
+      } else if (rightUp === "C") {
+        memRaw = left;
+        movToCarry = false;
+      } else if (right === "") {
+        memRaw = left;
+        movToCarry = true;
+      } else {
+        return false;
+      }
+    } else if (parsed.family === "NOT") {
+      if (right === "") {
+        memRaw = left;
+      } else if (leftUp === "C") {
+        memRaw = right;
+      } else if (rightUp === "C") {
+        memRaw = left;
+      } else {
+        const bitNumber = parseSpcBitNumber(right);
+        if (bitNumber === void 0) {
+          return false;
+        }
+        memRaw = left;
+        bitFromOperand = bitNumber;
+      }
+    } else if (leftUp === "C") {
+      memRaw = right;
     } else if (rightUp === "C") {
-      if (leftUp.startsWith("!$")) {
-        hasExclamation = true;
-        val = parseInt(leftUp.replace(/[^\da-f]/gi, ""), 16);
-      } else {
-        val = parseInt(leftUp.replace(/\$/g, ""), 16);
-      }
+      memRaw = left;
     } else {
       return false;
     }
-    if (hasExclamation) {
-      baseOpcode += 32;
+    const mem = parseSpcMemBitOperand(memRaw);
+    if (!mem) {
+      return false;
     }
-    this.assembler.write1(baseOpcode & 255);
-    const hi = val >> 8 & 255 | 32;
-    const lo = val & 255;
-    this.assembler.write1(lo);
-    this.assembler.write1(hi);
+    let bit = parsed.mnemonicBit;
+    if (mem.bit !== void 0) {
+      bit = mem.bit;
+    }
+    if (bitFromOperand !== void 0) {
+      bit = bitFromOperand;
+    }
+    let opcodeByte = 234;
+    if (parsed.family === "OR") {
+      opcodeByte = 10;
+      if (mem.invert) {
+        opcodeByte = 42;
+      }
+    } else if (parsed.family === "AND") {
+      opcodeByte = 74;
+      if (mem.invert) {
+        opcodeByte = 106;
+      }
+    } else if (parsed.family === "EOR") {
+      opcodeByte = 138;
+    } else if (parsed.family === "MOV") {
+      opcodeByte = 170;
+      if (!movToCarry) {
+        opcodeByte = 202;
+      }
+    }
+    const hex = mem.addressText.match(/^\$([\da-f]+)$/i);
+    let addr;
+    if (hex) {
+      addr = Number.parseInt(hex[1], 16) & 65535;
+    } else {
+      addr = this.assembler.operandResolver.getnum(mem.addressText) & 65535;
+    }
+    this.assembler.write1(opcodeByte);
+    this.assembler.write1(addr & 255);
+    this.assembler.write1(addr >> 8 & 255 | (bit & 7) << 5);
     return true;
   }
   /**
@@ -21731,8 +22477,8 @@ var ArchSPC700 = class {
       this.assembler.write1(158);
       return true;
     }
-    if (upOpcode === "NOT1") {
-      return this.handleBitManipulation("NOT1", operand, "");
+    if (parseNumberedBitOpcode(upOpcode)) {
+      return this.handleBitManipulation(upOpcode, operand, "");
     }
     if (this.handleWordOps(upOpcode, operand)) {
       return true;
@@ -21789,6 +22535,107 @@ try {
 } catch {
 }
 var hasOwn2 = (obj, key) => Object.hasOwn(obj, key);
+var ALT1 = 61;
+var ALT2 = 62;
+var ALT3 = 63;
+var IMPLIED_OPCODES = {
+  STOP: 0,
+  NOP: 1,
+  CACHE: 2,
+  LSR: 3,
+  ROL: 4,
+  LOOP: 60,
+  ALT1,
+  ALT2,
+  ALT3,
+  PLOT: 76,
+  SWAP: 77,
+  COLOR: 78,
+  NOT: 79,
+  MERGE: 112,
+  SBK: 144,
+  SEX: 149,
+  ASR: 150,
+  ROR: 151,
+  LOB: 158,
+  FMULT: 159,
+  HIB: 192,
+  GETC: 223,
+  GETB: 239
+};
+var PREFIXED_OPCODES = {
+  RPIX: { prefix: ALT1, opcode: 76 },
+  CMODE: { prefix: ALT1, opcode: 78 },
+  DIV2: { prefix: ALT1, opcode: 150 },
+  LMULT: { prefix: ALT1, opcode: 159 },
+  GETBH: { prefix: ALT1, opcode: 239 },
+  RAMB: { prefix: ALT2, opcode: 223 },
+  GETBL: { prefix: ALT2, opcode: 239 },
+  ROMB: { prefix: ALT3, opcode: 223 },
+  GETBS: { prefix: ALT3, opcode: 239 }
+};
+var SHORT_BRANCH_OPCODES = {
+  BRA: 5,
+  BGE: 6,
+  BLT: 7,
+  BNE: 8,
+  BEQ: 9,
+  BPL: 10,
+  BMI: 11,
+  BCC: 12,
+  BCS: 13,
+  BVC: 14,
+  BVS: 15
+};
+var REGISTER_OPS = {
+  TO: { base: 16 },
+  WITH: { base: 32 },
+  ADD: { base: 80 },
+  SUB: { base: 96 },
+  AND: { base: 112, min: 1, max: 15 },
+  MULT: { base: 128 },
+  JMP: { base: 144, min: 8, max: 13 },
+  FROM: { base: 176 },
+  OR: { base: 192, min: 1, max: 15 },
+  INC: { base: 208, min: 0, max: 14 },
+  DEC: { base: 224, min: 0, max: 14 },
+  ADC: { prefix: ALT1, base: 80 },
+  SBC: { prefix: ALT1, base: 96 },
+  BIC: { prefix: ALT1, base: 112, min: 1, max: 15 },
+  UMULT: { prefix: ALT1, base: 128 },
+  LJMP: { prefix: ALT1, base: 144, min: 8, max: 13 },
+  XOR: { prefix: ALT1, base: 192, min: 1, max: 15 },
+  CMP: { prefix: ALT3, base: 96 }
+};
+var IMMEDIATE_OPS = {
+  LINK: { base: 144, min: 1, max: 4 },
+  ADD: { prefix: ALT2, base: 80 },
+  SUB: { prefix: ALT2, base: 96 },
+  AND: { prefix: ALT2, base: 112, min: 1, max: 15 },
+  MULT: { prefix: ALT2, base: 128 },
+  OR: { prefix: ALT2, base: 192, min: 1, max: 15 },
+  ADC: { prefix: ALT3, base: 80 },
+  BIC: { prefix: ALT3, base: 112, min: 1, max: 15 },
+  UMULT: { prefix: ALT3, base: 128 },
+  XOR: { prefix: ALT3, base: 192, min: 1, max: 15 }
+};
+var INDIRECT_OPS = {
+  STW: { base: 48, min: 0, max: 11 },
+  LDW: { base: 64, min: 0, max: 11 },
+  STB: { prefix: ALT1, base: 48, min: 0, max: 11 },
+  LDB: { prefix: ALT1, base: 64, min: 0, max: 11 }
+};
+var encodedOpSize = (encoding) => {
+  if (encoding.prefix === void 0) {
+    return 1;
+  }
+  return 2;
+};
+var fitsSignedByte = (value) => {
+  const imm = value & 65535;
+  return imm < 128 || imm >= 65408;
+};
+var isShortRamAddress = (addrVal) => (addrVal & 1) === 0 && addrVal < 512;
 var ArchSuperFX = class {
   assembler;
   constructor(context) {
@@ -21802,23 +22649,23 @@ var ArchSuperFX = class {
     return superFxCatalog;
   }
   /**
-   * Estimates instruction.
+   * Estimates instruction size from a lowered instruction.
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes.
    */
   estimateInstruction(instruction2) {
     const loweredOperands = instruction2.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
       instruction2.mnemonic,
-      instruction2.operandText,
+      instruction2.operands,
       instruction2.loweredOperand,
       loweredOperands
     );
   }
   /**
-   * Encodes instruction.
+   * Encodes a lowered instruction.
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {boolean} The result.
+   * @returns {boolean} True if the instruction was encoded.
    */
   encodeInstruction(instruction2) {
     const loweredOperands = instruction2.loweredOperands ?? [];
@@ -21830,40 +22677,141 @@ var ArchSuperFX = class {
     );
   }
   /**
-   * Estimates size.
+   * Estimates size from tokenized words.
    * @param {string[]} words The words.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes.
    */
   estimateSize(words) {
     if (words.length === 0) {
       return 0;
     }
-    return this.estimateResolvedInstruction(words[0], words.slice(1).join(" "));
+    const { opcode, operands, rawOperand } = this.parseInstructionWords(words);
+    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperands = operands.map(
+      (operand) => this.assembler.operandResolver.lowerOperand(operand)
+    );
+    return this.estimateResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
   /**
-   * Estimates resolved instruction.
+   * Estimates encoded size. Must match {@link encodeResolvedInstruction} byte counts
+   * so layout `step()` stays in sync with emit.
    * @param {string} mnemonic The mnemonic.
-   * @param {string} operandText The operand text.
-   * @param {LoweredOperand} [loweredOperand] The lowered operand.
-   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-   * @returns {number} The result.
+   * @param {string[]} operands The operands.
+   * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+   * @returns {number} Encoded size in bytes.
    */
-  estimateResolvedInstruction(mnemonic, operandText, loweredOperand, loweredOperands = []) {
+  estimateResolvedInstruction(mnemonic, operands, loweredOperand, loweredOperands = []) {
     const opcode = mnemonic.toUpperCase();
-    let size = 1;
+    if (hasOwn2(IMPLIED_OPCODES, opcode)) {
+      return 1;
+    }
+    if (hasOwn2(PREFIXED_OPCODES, opcode)) {
+      return 2;
+    }
     const firstLowered = loweredOperands[0] ?? loweredOperand;
-    const expandedOperand = firstLowered?.expanded ?? operandText;
-    if (expandedOperand) {
-      if (expandedOperand.startsWith("#")) {
-        size = 2;
-      } else if (expandedOperand.includes("$") || loweredOperands.length > 1 || expandedOperand.includes(",")) {
-        size = 3;
+    const secondLowered = loweredOperands[1];
+    const leftOp = firstLowered?.expanded ?? operands[0] ?? "";
+    const rightOp = secondLowered?.expanded ?? operands[1] ?? "";
+    if (operands.length <= 1 && hasOwn2(SHORT_BRANCH_OPCODES, opcode)) {
+      return 2;
+    }
+    if (operands.length <= 1) {
+      const regR = this.resolveRegister(leftOp, firstLowered, "r");
+      if (regR !== null && hasOwn2(REGISTER_OPS, opcode)) {
+        return encodedOpSize(REGISTER_OPS[opcode]);
+      }
+      const regHash = this.resolveRegister(leftOp, firstLowered, "hash");
+      if (regHash !== null && hasOwn2(IMMEDIATE_OPS, opcode)) {
+        return encodedOpSize(IMMEDIATE_OPS[opcode]);
+      }
+      const regParr = this.resolveRegister(leftOp, firstLowered, "parr");
+      if (regParr !== null && hasOwn2(INDIRECT_OPS, opcode)) {
+        return encodedOpSize(INDIRECT_OPS[opcode]);
+      }
+      return 1;
+    }
+    if (operands.length !== 2) {
+      return 1;
+    }
+    const reg1r = this.resolveRegister(leftOp, firstLowered, "r");
+    const reg1parr = this.resolveRegister(leftOp, firstLowered, "parr");
+    const reg2r = this.resolveRegister(rightOp, secondLowered, "r");
+    const reg2parr = this.resolveRegister(rightOp, secondLowered, "parr");
+    if (reg1r !== null && reg2r !== null) {
+      if (opcode === "MOVE" || opcode === "MOVES") {
+        return 2;
       }
     }
-    if (["JSL", "JML"].includes(opcode)) {
-      size = 4;
+    if (reg1r !== null && (secondLowered?.immediate ?? rightOp.startsWith("#"))) {
+      if (opcode === "IBT") {
+        return 2;
+      }
+      if (opcode === "IWT") {
+        return 3;
+      }
+      if (opcode === "MOVE") {
+        const immediateExpression = secondLowered?.baseExpression ?? rightOp.slice(1);
+        const immVal = this.tryGetNumber(immediateExpression);
+        if (immVal !== void 0 && fitsSignedByte(immVal)) {
+          return 2;
+        }
+        return 3;
+      }
     }
-    return size;
+    if (reg1parr !== null && reg2r !== null) {
+      if (opcode === "MOVEB") {
+        return reg1parr === 0 ? 2 : 3;
+      }
+      if (opcode === "MOVEW") {
+        return reg1parr === 0 ? 1 : 2;
+      }
+    }
+    if (reg1r !== null && reg2parr !== null) {
+      if (opcode === "MOVEB") {
+        return reg1r === 0 ? 2 : 3;
+      }
+      if (opcode === "MOVEW") {
+        return reg1r === 0 ? 1 : 2;
+      }
+    }
+    if (reg1r !== null) {
+      if (opcode === "LM") {
+        return 4;
+      }
+      if (opcode === "LMS") {
+        return 3;
+      }
+      if (opcode === "LEA") {
+        return 3;
+      }
+      if (opcode === "MOVE") {
+        const addressExpression = secondLowered?.baseExpression ?? rightOp;
+        const addrVal = this.tryGetNumber(addressExpression);
+        if (addrVal !== void 0 && isShortRamAddress(addrVal)) {
+          return 3;
+        }
+        return 4;
+      }
+    }
+    const leftIsRegisterIndirect = firstLowered?.mode === "registerIndirect";
+    if (reg2r !== null && !leftIsRegisterIndirect && (firstLowered?.indirect ?? (leftOp.startsWith("(") && leftOp.endsWith(")")))) {
+      if (opcode === "SM") {
+        return 4;
+      }
+      if (opcode === "SMS") {
+        return 3;
+      }
+      if (opcode === "MOVE") {
+        const addressExpression = firstLowered?.baseExpression ?? leftOp;
+        const addrVal = this.tryGetNumber(addressExpression);
+        if (addrVal !== void 0 && isShortRamAddress(addrVal)) {
+          return 3;
+        }
+        return 4;
+      }
+    }
+    return 1;
   }
   /**
    * Processes a SuperFX assembly instruction.
@@ -21875,24 +22823,22 @@ var ArchSuperFX = class {
     if (words.length === 0) {
       return false;
     }
-    const opcode = words[0];
-    const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
-    const parsedOperands = rawOperand ? rawOperand.split(",").map((operand) => operand.trim()) : [];
+    const { opcode, operands, rawOperand } = this.parseInstructionWords(words);
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
-    const loweredOperands = parsedOperands.map(
+    const loweredOperands = operands.map(
       (operand) => this.assembler.operandResolver.lowerOperand(operand)
     );
-    return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
+    return this.encodeResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
   /** Legacy API alias for {@link encode}. */
   asblock_superfx = this.encode.bind(this);
   /**
-   * Encodes resolved instruction.
+   * Encodes a resolved instruction.
    * @param {string} mnemonic The mnemonic.
    * @param {string[]} operands The operands.
-   * @param {LoweredOperand} [loweredOperand] The lowered operand.
-   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-   * @returns {boolean} The result.
+   * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+   * @returns {boolean} True if the instruction was encoded.
    */
   encodeResolvedInstruction(mnemonic, operands, loweredOperand, loweredOperands = []) {
     const opcode = mnemonic.toUpperCase();
@@ -21902,15 +22848,16 @@ var ArchSuperFX = class {
     const operandLength = firstLowered?.length ?? this.getOperandLength(operand);
     debug6("asblock_superfx opcode", opcode);
     debug6("asblock_superfx operand", operand);
-    if (this.handleSingleWordOpcode(opcode)) {
-      return true;
-    }
-    if (operands.length === 1 && this.handleTwoWordOpcode(opcode, operand, operandLength, firstLowered)) {
-      return true;
+    if (hasOwn2(IMPLIED_OPCODES, opcode) || hasOwn2(PREFIXED_OPCODES, opcode)) {
+      if (operands.length !== 0) {
+        throw this.assembler.diagnostics.error(`${opcode} does not take operands`);
+      }
+      return this.handleSingleWordOpcode(opcode);
     }
     if (operands.length === 1) {
       return this.handleOneOperandOpcode(opcode, operand, operandLength, firstLowered);
-    } else if (operands.length === 2) {
+    }
+    if (operands.length === 2) {
       return this.handleTwoOperandOpcode(
         opcode,
         firstLowered?.expanded ?? operands[0],
@@ -21922,72 +22869,23 @@ var ArchSuperFX = class {
     return false;
   }
   /**
-   * Handles single-word (no-operand) opcodes for SuperFX.
+   * Handles implied SuperFX opcodes with no operands.
    * @param {string} opcode - the opcode
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleSingleWordOpcode(opcode) {
     debug6("handleSingleWordOpcode", opcode);
-    const singleOpcodes = {
-      STOP: 0,
-      NOP: 1,
-      CACHE: 2,
-      LSR: 3,
-      ROL: 4,
-      LOOP: 60,
-      ALT1: 61,
-      ALT2: 62,
-      ALT3: 63,
-      PLOT: 76,
-      SWAP: 77,
-      COLOR: 78,
-      NOT: 79,
-      MERGE: 112,
-      SBK: 144,
-      SEX: 149,
-      ASR: 150,
-      ROR: 151,
-      LOB: 158,
-      FMULT: 159,
-      HIB: 192,
-      GETC: 223,
-      GETB: 239
-    };
-    const extendedOpcodes = [
-      { mnemonic: "RPIX", prefix: 61, opcode: 76 },
-      { mnemonic: "CMODE", prefix: 61, opcode: 78 },
-      { mnemonic: "DIV2", prefix: 61, opcode: 150 },
-      { mnemonic: "LMULT", prefix: 61, opcode: 159 },
-      { mnemonic: "GETBH", prefix: 61, opcode: 239 },
-      { mnemonic: "RAMB", prefix: 62, opcode: 223 },
-      { mnemonic: "GETBL", prefix: 62, opcode: 239 },
-      { mnemonic: "ROMB", prefix: 63, opcode: 223 },
-      { mnemonic: "GETBS", prefix: 63, opcode: 239 }
-    ];
-    if (hasOwn2(singleOpcodes, opcode)) {
-      this.assembler.write1(singleOpcodes[opcode]);
+    if (hasOwn2(IMPLIED_OPCODES, opcode)) {
+      this.assembler.write1(IMPLIED_OPCODES[opcode]);
       return true;
     }
-    for (const cmd of extendedOpcodes) {
-      if (opcode === cmd.mnemonic) {
-        this.assembler.write1(cmd.prefix);
-        this.assembler.write1(cmd.opcode);
-        return true;
-      }
+    if (hasOwn2(PREFIXED_OPCODES, opcode)) {
+      const command = PREFIXED_OPCODES[opcode];
+      this.assembler.write1(command.prefix);
+      this.assembler.write1(command.opcode);
+      return true;
     }
     return false;
-  }
-  /**
-   * Handles two-word opcodes (one opcode + one operand).
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {number} operandLength - the lowered operand length
-   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-   * @returns {boolean} True if the instruction was handled, false otherwise.
-   */
-  handleTwoWordOpcode(opcode, operand, operandLength, loweredOperand) {
-    debug6("handleTwoWordOpcode", opcode, operand);
-    return this.handleOneOperandOpcode(opcode, operand, operandLength, loweredOperand);
   }
   /**
    * Handles instructions with a single operand (e.g., "TO R1", "BRA label").
@@ -21999,181 +22897,38 @@ var ArchSuperFX = class {
    */
   handleOneOperandOpcode(opcode, operand, operandLength, loweredOperand) {
     debug6("handleOneOperandOpcode", opcode, operand, operandLength);
-    const shortBranchMap = {
-      BRA: 5,
-      BGE: 6,
-      BLT: 7,
-      BNE: 8,
-      BEQ: 9,
-      BPL: 10,
-      BMI: 11,
-      BCC: 12,
-      BCS: 13,
-      BVC: 14,
-      BVS: 15
-    };
-    if (hasOwn2(shortBranchMap, opcode)) {
-      const branchOpcode = shortBranchMap[opcode];
+    if (hasOwn2(SHORT_BRANCH_OPCODES, opcode)) {
+      const branchOpcode = SHORT_BRANCH_OPCODES[opcode];
+      const sourceSpelling = (loweredOperand?.raw ?? operand).trim();
       const val = this.assembler.operandResolver.getnum(operand);
-      if (operandLength === 1) {
+      if (this.isRawBranchOffset(sourceSpelling)) {
         this.assembler.write1(branchOpcode);
         this.assembler.write1(val & 255);
-      } else {
-        const pc = this.assembler.currentTargetAddress & 16777215;
-        const offset = val - (pc + 2) & 255;
-        this.assembler.write1(branchOpcode);
-        this.assembler.write1(offset);
+        return true;
       }
+      const pc = this.assembler.currentTargetAddress & 16777215;
+      const offset = val - (pc + 2);
+      if (this.assembler.enforceResolvedLabels && (offset < -128 || offset > 127)) {
+        throw this.assembler.diagnostics.error(`Branch target out of range (${offset})`);
+      }
+      this.assembler.write1(branchOpcode);
+      this.assembler.write1(offset & 255);
       return true;
     }
     const regR = this.resolveRegister(operand, loweredOperand, "r");
     const regHash = this.resolveRegister(operand, loweredOperand, "hash");
     const regParr = this.resolveRegister(operand, loweredOperand, "parr");
-    if (regR !== null) {
-      switch (opcode) {
-        case "TO":
-          this.assembler.write1(16 + regR);
-          return true;
-        case "WITH":
-          this.assembler.write1(32 + regR);
-          return true;
-        case "ADD":
-          this.assembler.write1(80 + regR);
-          return true;
-        case "SUB":
-          this.assembler.write1(96 + regR);
-          return true;
-        case "AND":
-          this.rangeCheck(1, regR, 15);
-          this.assembler.write1(112 + regR);
-          return true;
-        case "MULT":
-          this.assembler.write1(128 + regR);
-          return true;
-        case "JMP":
-          this.rangeCheck(8, regR, 13);
-          this.assembler.write1(144 + regR);
-          return true;
-        case "FROM":
-          this.assembler.write1(176 + regR);
-          return true;
-        case "OR":
-          this.rangeCheck(1, regR, 15);
-          this.assembler.write1(192 + regR);
-          return true;
-        case "INC":
-          this.rangeCheck(0, regR, 14);
-          this.assembler.write1(208 + regR);
-          return true;
-        case "DEC":
-          this.rangeCheck(0, regR, 14);
-          this.assembler.write1(224 + regR);
-          return true;
-        // ALT1 variants (0x3D prefix)
-        case "ADC":
-          this.assembler.write1(61);
-          this.assembler.write1(80 + regR);
-          return true;
-        case "SBC":
-          this.assembler.write1(61);
-          this.assembler.write1(96 + regR);
-          return true;
-        case "BIC":
-          this.rangeCheck(1, regR, 15);
-          this.assembler.write1(61);
-          this.assembler.write1(112 + regR);
-          return true;
-        case "UMULT":
-          this.assembler.write1(61);
-          this.assembler.write1(128 + regR);
-          return true;
-        case "LJMP":
-          this.rangeCheck(8, regR, 13);
-          this.assembler.write1(61);
-          this.assembler.write1(144 + regR);
-          return true;
-        case "XOR":
-          this.rangeCheck(1, regR, 15);
-          this.assembler.write1(61);
-          this.assembler.write1(192 + regR);
-          return true;
-        case "CMP":
-          this.assembler.write1(63);
-          this.assembler.write1(96 + regR);
-          return true;
-      }
+    if (regR !== null && hasOwn2(REGISTER_OPS, opcode)) {
+      this.writeRegisterOp(REGISTER_OPS[opcode], regR);
+      return true;
     }
-    if (regHash !== null) {
-      if (opcode === "LINK") {
-        this.rangeCheck(1, regHash, 4);
-        this.assembler.write1(144 + regHash);
-        return true;
-      }
-      switch (opcode) {
-        case "ADD":
-          this.assembler.write1(62);
-          this.assembler.write1(80 + regHash);
-          return true;
-        case "SUB":
-          this.assembler.write1(62);
-          this.assembler.write1(96 + regHash);
-          return true;
-        case "AND":
-          this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(62);
-          this.assembler.write1(112 + regHash);
-          return true;
-        case "MULT":
-          this.assembler.write1(62);
-          this.assembler.write1(128 + regHash);
-          return true;
-        case "OR":
-          this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(62);
-          this.assembler.write1(192 + regHash);
-          return true;
-        // ALT3 prefix
-        case "ADC":
-          this.assembler.write1(63);
-          this.assembler.write1(80 + regHash);
-          return true;
-        case "BIC":
-          this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(63);
-          this.assembler.write1(112 + regHash);
-          return true;
-        case "UMULT":
-          this.assembler.write1(63);
-          this.assembler.write1(128 + regHash);
-          return true;
-        case "XOR":
-          this.rangeCheck(1, regHash, 15);
-          this.assembler.write1(63);
-          this.assembler.write1(192 + regHash);
-          return true;
-      }
+    if (regHash !== null && hasOwn2(IMMEDIATE_OPS, opcode)) {
+      this.writeRegisterOp(IMMEDIATE_OPS[opcode], regHash);
+      return true;
     }
-    if (regParr !== null) {
-      switch (opcode) {
-        case "STW":
-          this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(48 + regParr);
-          return true;
-        case "LDW":
-          this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(64 + regParr);
-          return true;
-        case "STB":
-          this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(61);
-          this.assembler.write1(48 + regParr);
-          return true;
-        case "LDB":
-          this.rangeCheck(0, regParr, 11);
-          this.assembler.write1(61);
-          this.assembler.write1(64 + regParr);
-          return true;
-      }
+    if (regParr !== null && hasOwn2(INDIRECT_OPS, opcode)) {
+      this.writeRegisterOp(INDIRECT_OPS[opcode], regParr);
+      return true;
     }
     return false;
   }
@@ -22219,7 +22974,7 @@ var ArchSuperFX = class {
           this.assembler.write1(immVal >> 8 & 255);
           return true;
         case "MOVE":
-          if (immVal < 128 || immVal >= 65408) {
+          if (fitsSignedByte(immVal)) {
             this.assembler.write1(160 + reg1r);
             this.assembler.write1(immVal & 255);
           } else {
@@ -22233,17 +22988,18 @@ var ArchSuperFX = class {
     if (reg1parr !== null && reg2r !== null) {
       switch (opcode) {
         case "MOVEB":
+          this.rangeCheck(0, reg2r, 11);
           if (reg1parr === 0) {
-            this.assembler.write1(61);
+            this.assembler.write1(ALT1);
             this.assembler.write1(48 + reg2r);
-            return true;
           } else {
             this.assembler.write1(176 + reg1parr);
-            this.assembler.write1(61);
+            this.assembler.write1(ALT1);
             this.assembler.write1(48 + reg2r);
-            return true;
           }
+          return true;
         case "MOVEW":
+          this.rangeCheck(0, reg2r, 11);
           if (reg1parr === 0) {
             this.assembler.write1(48 + reg2r);
           } else {
@@ -22256,53 +23012,51 @@ var ArchSuperFX = class {
     if (reg1r !== null && reg2parr !== null) {
       switch (opcode) {
         case "MOVEB":
-          if (reg2parr === 0) {
-            this.assembler.write1(61);
-            this.assembler.write1(64 + reg1r);
-            return true;
+          this.rangeCheck(0, reg2parr, 11);
+          if (reg1r === 0) {
+            this.assembler.write1(ALT1);
+            this.assembler.write1(64 + reg2parr);
           } else {
             this.assembler.write1(16 + reg1r);
-            this.assembler.write1(61);
+            this.assembler.write1(ALT1);
             this.assembler.write1(64 + reg2parr);
-            return true;
           }
+          return true;
         case "MOVEW":
-          if (reg2parr === 0) {
-            this.assembler.write1(64 + reg1r);
-            return true;
+          this.rangeCheck(0, reg2parr, 11);
+          if (reg1r === 0) {
+            this.assembler.write1(64 + reg2parr);
           } else {
             this.assembler.write1(16 + reg1r);
             this.assembler.write1(64 + reg2parr);
-            return true;
           }
+          return true;
       }
     }
     if (reg1r !== null) {
-      const addrVal = this.assembler.operandResolver.getnum(rightOp);
+      const addressExpression = rightLowered?.baseExpression ?? rightOp;
+      const addrVal = this.assembler.operandResolver.getnum(addressExpression);
       switch (opcode) {
         case "LM":
-          this.assembler.write1(61);
+          this.assembler.write1(ALT1);
           this.assembler.write1(240 + reg1r);
           this.assembler.write2(addrVal);
           return true;
         case "LMS":
-          if (this.checkShortAddr(addrVal)) {
-            this.assembler.write1(61);
-            this.assembler.write1(160 + reg1r);
-            this.assembler.write1(addrVal >> 1);
-            return true;
-          }
+          this.checkShortAddr(addrVal);
+          this.assembler.write1(ALT1);
+          this.assembler.write1(160 + reg1r);
+          this.assembler.write1(addrVal >> 1);
           return true;
-        // might not do anything else if fail
         case "MOVE":
-          if (addrVal & 1 || addrVal >= 512) {
-            this.assembler.write1(61);
+          if (isShortRamAddress(addrVal)) {
+            this.assembler.write1(ALT1);
+            this.assembler.write1(160 + reg1r);
+            this.assembler.write1(this.moveShortAddressByte(addrVal));
+          } else {
+            this.assembler.write1(ALT1);
             this.assembler.write1(240 + reg1r);
             this.assembler.write2(addrVal);
-          } else {
-            this.assembler.write1(61);
-            this.assembler.write1(160 + reg1r);
-            this.assembler.write1(addrVal & 255);
           }
           return true;
         case "LEA":
@@ -22318,27 +23072,25 @@ var ArchSuperFX = class {
       const addrVal = this.assembler.operandResolver.getnum(addressExpression);
       switch (opcode) {
         case "SM":
-          this.assembler.write1(62);
+          this.assembler.write1(ALT2);
           this.assembler.write1(240 + reg2r);
           this.assembler.write2(addrVal);
           return true;
         case "SMS":
-          if (this.checkShortAddr(addrVal)) {
-            this.assembler.write1(62);
-            this.assembler.write1(160 + reg2r);
-            this.assembler.write1(addrVal >> 1);
-            return true;
-          }
+          this.checkShortAddr(addrVal);
+          this.assembler.write1(ALT2);
+          this.assembler.write1(160 + reg2r);
+          this.assembler.write1(addrVal >> 1);
           return true;
         case "MOVE":
-          if (addrVal & 1 || addrVal >= 512) {
-            this.assembler.write1(62);
+          if (isShortRamAddress(addrVal)) {
+            this.assembler.write1(ALT2);
+            this.assembler.write1(160 + reg2r);
+            this.assembler.write1(this.moveShortAddressByte(addrVal));
+          } else {
+            this.assembler.write1(ALT2);
             this.assembler.write1(240 + reg2r);
             this.assembler.write2(addrVal);
-          } else {
-            this.assembler.write1(62);
-            this.assembler.write1(160 + reg2r);
-            this.assembler.write1(addrVal & 255);
           }
           return true;
       }
@@ -22346,11 +23098,11 @@ var ArchSuperFX = class {
     return false;
   }
   /**
-   * Resolves register.
-   * @param {string} str The str.
-   * @param {LoweredOperand | undefined} lowered The lowered.
-   * @param {"r" | "parr" | "hash"} type The type.
-   * @returns {number | null} The result.
+   * Resolves a SuperFX register operand.
+   * @param {string} str The operand text.
+   * @param {LoweredOperand | undefined} lowered The lowered operand.
+   * @param {"r" | "parr" | "hash"} type Direct (`rN`), indirect (`(rN)`), or `#n`.
+   * @returns {number | null} Register number 0-15, or null if it doesn't match.
    */
   resolveRegister(str, lowered, type) {
     if (lowered) {
@@ -22451,10 +23203,9 @@ var ArchSuperFX = class {
     }
   }
   /**
-   * For "LMS" or "SMS" short addressing forms, we need to ensure the address is
-   * even and in range [0x000..0x1FE].
+   * For LMS/SMS short addressing, the address must be even and in `[0x000..0x1FE]`.
    * @param {number} num - the address
-   * @returns {boolean} True if the address is valid, false otherwise.
+   * @returns {boolean} True if the address is valid.
    */
   checkShortAddr(num) {
     debug6("checkShortAddr", num);
@@ -22466,17 +23217,77 @@ var ArchSuperFX = class {
     return true;
   }
   /**
-   * Returns an approximate operand length (1 or 2) by checking the operand format.
-   * This is a simple approximation for short vs. relative addressing.
+   * True when the source spelling is an explicit 2-digit hex branch offset (`$XX`).
+   * Expanded label values that happen to fit in a byte must not use this path.
+   * @param {string} operand The raw or expanded operand.
+   * @returns {boolean} True if the operand is a raw 8-bit offset spelling.
+   */
+  isRawBranchOffset(operand) {
+    return /^\$[\dA-Fa-f]{2}$/.test(operand.trim());
+  }
+  /**
+   * Returns 1 for a 2-digit hex operand (`$XX`), otherwise 2.
    * @param {string} operand the operand
    * @returns {number} The operand length.
    */
   getOperandLength(operand) {
-    const simpleHex2 = /^\$[\dA-Fa-f]{2}$/;
-    if (simpleHex2.test(operand)) {
+    if (this.isRawBranchOffset(operand)) {
       return 1;
     }
     return 2;
+  }
+  /**
+   * Splits tokenized words into opcode plus comma-separated operands.
+   * @param {string[]} words The tokenized instruction.
+   * @returns {{ opcode: string; operands: string[]; rawOperand: string }} Parsed parts.
+   */
+  parseInstructionWords(words) {
+    const opcode = words[0];
+    const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
+    const operands = rawOperand ? rawOperand.split(",").map((operand) => operand.trim()) : [];
+    return { opcode, operands, rawOperand };
+  }
+  /**
+   * Writes a register-encoded ALU/load op, with optional ALT prefix and range check.
+   * @param {RegisterOpEncoding} encoding The encoding table entry.
+   * @param {number} register The register number.
+   */
+  writeRegisterOp(encoding, register) {
+    if (encoding.min !== void 0 && encoding.max !== void 0) {
+      this.rangeCheck(encoding.min, register, encoding.max);
+    }
+    if (encoding.prefix !== void 0) {
+      this.assembler.write1(encoding.prefix);
+    }
+    this.assembler.write1(encoding.base + register);
+  }
+  /**
+   * Encodes the LMS/SMS operand byte for auto-MOVE short addressing.
+   * @param {number} addrVal Even RAM byte address below `$200`.
+   * @returns {number} Hardware word index, or Asar's raw byte when compat is enabled.
+   */
+  moveShortAddressByte(addrVal) {
+    let mode = "hardware";
+    if (this.assembler.asarSuperFxMoveShortAddress) {
+      mode = "asar";
+    }
+    return encodeSuperFxMoveShortAddress(addrVal, mode);
+  }
+  /**
+   * Resolves a numeric operand for sizing without failing layout on forward refs.
+   * @param {string} expression The expression.
+   * @returns {number | undefined} The value, or undefined if it cannot be resolved yet.
+   */
+  tryGetNumber(expression) {
+    try {
+      const value = this.assembler.operandResolver.getnum(expression);
+      if (Number.isNaN(value)) {
+        return void 0;
+      }
+      return value;
+    } catch {
+      return void 0;
+    }
   }
 };
 
@@ -22923,6 +23734,11 @@ var Assembler = class _Assembler {
   checksumFixEnabled = true;
   /** Header checksum algorithm mode: "asar" (default) or "simple". */
   checksumMode = "asar";
+  /**
+   * Super FX auto-MOVE short RAM form. Hardware (default) writes `addr >> 1`.
+   * Asar writes `addr & 0xff`; enable to match existing Asar patches.
+   */
+  asarSuperFxMoveShortAddress = false;
   /** Bank crossing policy controlled by `check bankcross ...`. */
   bankCrossCheckMode = "off";
   /** Read* functions are enabled when patch-style title check is active. */
@@ -23410,6 +24226,7 @@ var Assembler = class _Assembler {
     session.mapper = this.mapper;
     session.checksumFixEnabled = this.checksumFixEnabled;
     session.checksumMode = this.checksumMode;
+    session.asarSuperFxMoveShortAddress = this.asarSuperFxMoveShortAddress;
     session.bankCrossCheckMode = this.bankCrossCheckMode;
     session.readFunctionsEnabled = this.readFunctionsEnabled;
     session.optimizeDirectPage = this.optimizeDirectPage;
@@ -23434,7 +24251,13 @@ var Assembler = class _Assembler {
         data: { runtime },
         fillPad: { session, operandResolver },
         flowControl: { session },
-        includeSource: { session, includeSource: session.includeSource, operandResolver, runtime },
+        includeSource: {
+          session,
+          includeSource: session.includeSource,
+          operandResolver,
+          runtime,
+          defineEngine: session.defineEngine
+        },
         layout: {
           addressStack: { session },
           architecture: { session },
@@ -23774,6 +24597,9 @@ var Assembler = class _Assembler {
       },
       diagnostics: {
         error: (message) => new Error(message)
+      },
+      compatibility: {
+        asarSuperFxMoveShortAddress: () => this.asarSuperFxMoveShortAddress
       }
     };
     this.architectureRegistry = new ArchitectureRegistry();
@@ -23931,6 +24757,13 @@ var Assembler = class _Assembler {
    */
   setChecksumMode(mode) {
     this.checksumMode = mode;
+  }
+  /**
+   * Selects Super FX auto-MOVE short-address encoding.
+   * @param {boolean} enabled True to match Asar (`addr & 0xff`); false for hardware (`addr >> 1`).
+   */
+  setAsarSuperFxMoveShortAddress(enabled) {
+    this.asarSuperFxMoveShortAddress = enabled;
   }
   /**
    * Reads little endian.
@@ -25151,6 +25984,9 @@ var Assembler = class _Assembler {
     this.inSpcblock = false;
     this.spcblockData = null;
     this.spcInlineCompatMode = false;
+    for (const definition of this.architectureRegistry.definitions.values()) {
+      definition.encoder.beginPass?.();
+    }
     this.pluginState.resetForStage(stage);
     this.runLifecycleHook(
       "onStageStart",

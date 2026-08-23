@@ -1,15 +1,29 @@
+import type { ArchitectureRegistry } from "../architecture-registry.js";
 import type { OperandResolver } from "../operand-resolver.js";
+import type { ExpressionNode } from "../ir/expression-node.js";
 import type { NormalizedCommand } from "../ir/normalized-command.js";
+import type { IncludeSourceService } from "../services/include-source-service.js";
 import type { RomWriterService } from "../services/rom-writer-service.js";
 import type { StructEngine } from "../services/struct-engine.js";
 import type { SymbolScopeService } from "../services/symbol-scope-service.js";
-import type { AssemblerServices } from "../assembler-internals.js";
-import { ArchitectureRegistry } from "../architecture-registry.js";
-import type { SpcblockData } from "../assembler.js";
-import { ExpressionNode } from "../ir/expression-node.js";
-import type { DirectiveRuntimeService } from "../services/directive-runtime-service.js";
-import type { IncludeSourceService } from "../services/include-source-service.js";
 import type { TargetProfile } from "../target-profile.js";
+export type SpcblockType = "nspc" | "custom";
+export type SpcblockData = {
+    destination: number;
+    type: SpcblockType;
+    sizeAddress: number;
+    executeAddress: number | null;
+    namespaceBackup: string;
+};
+/** Methods directive handlers actually call on the runtime service. */
+export interface DirectiveRuntime {
+    handleDataDirective(type: string, params: string[]): void;
+    handleEndSpcblock(words: readonly string[]): void;
+    handleOrg(params: string[]): void;
+    handlePullPC(): void;
+    handlePushPC(): void;
+    handleSpcblock(words: readonly string[]): void;
+}
 export interface DirectiveAddressCapability {
     targetProfile: TargetProfile;
     recordCurrentAddress(): void;
@@ -74,7 +88,6 @@ export interface DirectiveArchitectureCapability {
     selectArchitecture?(architecture: string, sourceAlias?: string): void;
 }
 export interface DirectiveAssemblerCapability {
-    services: AssemblerServices;
     defines: Map<string, string>;
     readFunctionsEnabled: boolean;
     bankCrossCheckMode: "off" | "full" | "half";
@@ -87,7 +100,7 @@ export interface OperandDirectiveContext<Session> extends SessionDirectiveContex
     operandResolver: OperandResolver;
 }
 export interface RuntimeDirectiveContext {
-    runtime: DirectiveRuntimeService;
+    runtime: DirectiveRuntime;
 }
 export type NarrowDirectiveHandler<Context> = (ctx: Context, words: readonly string[], raw: string, command?: NormalizedCommand) => void;
 export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability>;
@@ -103,7 +116,12 @@ export type OrgDirectiveContext = SessionDirectiveContext<Pick<DirectiveSpcCapab
 export type StartposDirectiveContext = OperandDirectiveContext<Pick<DirectiveSpcCapability, "inSpcblock" | "spcblockData"> & Pick<DirectiveExpressionCapability, "resolvedefines">>;
 export type ArchitectureDirectiveContext = SessionDirectiveContext<DirectiveArchitectureCapability & Pick<DirectiveSpcCapability, "inSpcblock" | "spcInlineCompatMode">>;
 export type AssemblerPolicyDirectiveContext = SessionDirectiveContext<Pick<DirectiveAssemblerCapability, "readFunctionsEnabled" | "bankCrossCheckMode" | "optimizeDirectPage">>;
+export type IncludeDefineEngine = {
+    resolveDefinesInStringLiteral(content: string): string;
+    resolveRegularDefines(content: string): string;
+};
 export type IncludeDirectiveContext = OperandDirectiveContext<Pick<DirectiveExpressionCapability, "evaluateRangeExpression" | "symbolScope"> & Pick<DirectiveAddressCapability, "recordCurrentAddress" | "setWritePosition"> & Pick<DirectiveRomCapability, "write1">> & RuntimeDirectiveContext & {
+    defineEngine?: IncludeDefineEngine;
     includeSource: Pick<IncludeSourceService, "assembleFile" | "guardCurrentFile" | "includeFile" | "readFile">;
 };
 export type MemoryDirectiveContext = OperandDirectiveContext<Pick<DirectiveRomCapability, "targetRom" | "romdata" | "defaultFreespaceByte" | "activeFreespaceStartPc" | "activeFreespaceContentStartPc" | "currentTargetAddress" | "currentTargetBaseAddress" | "currentTargetStartAddress" | "currentTargetBaseStartAddress" | "mapper" | "romWriter" | "expandRom" | "write1" | "write3"> & Pick<DirectiveExpressionCapability, "resolvedefines" | "symbolScope"> & Pick<DirectiveSpcCapability, "inSpcblock">>;

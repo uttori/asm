@@ -1,6 +1,5 @@
 import type { LoweredInstruction } from "../architecture-types.js";
 import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
-import type { DirectiveRegistry } from "../directives/registry.js";
 import type { ArchitectureDefinition } from "../architecture-registry.js";
 import type { NormalizedCommand } from "../ir/normalized-command.js";
 import type { ProgramModel } from "./program-model-builder.js";
@@ -41,7 +40,9 @@ export type LoweredProgram = {
     nodes: LoweredExecutableNode[];
 };
 export type CommandLoweringHost = {
-    directiveRegistry: DirectiveRegistry;
+    directiveRegistry: {
+        has(keyword: string): boolean;
+    };
     resolveActiveArchitecture(): {
         name: string;
         definition?: ArchitectureDefinition;
@@ -53,7 +54,7 @@ export type CommandLoweringHost = {
  * by later layout and emission stages.
  */
 export declare class CommandLoweringService {
-    readonly host: CommandLoweringHost;
+    host: CommandLoweringHost;
     constructor(host: CommandLoweringHost);
     /**
      * Lowers a normalized command into the execution-layer representation.

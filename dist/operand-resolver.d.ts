@@ -42,6 +42,23 @@ export declare class OperandResolver {
      */
     isSameBankAddress(expanded: string): boolean;
     /**
+     * True when the source wrote a label (or label math) indexed by X, not a hex
+     * or define spelling. Bank 0 labels stringify to 4 hex digits, so numeric
+     * magnitude cannot distinguish abs,x from long,x.
+     * @param {string} operand The raw source operand.
+     * @returns {boolean} True if the operand is a `label,x` form.
+     */
+    isIndexedXLabelOperand(operand: string): boolean;
+    /**
+     * Sizes `label,x` by SNES bank: same bank is abs,x (2), any other bank —
+     * including `$00xxxx` — is long,x (3).
+     * @param {string} operand The raw source operand.
+     * @param {string} expanded The resolved operand text.
+     * @param {number} expectedLength The length selected from numeric spelling.
+     * @returns {number} Operand width in bytes (2 for abs,x, 3 for long,x).
+     */
+    applyIndexedXLabelBankWidth(operand: string, expanded: string, expectedLength: number): number;
+    /**
      * Resolves arithmetic token.
      * @param {string} token The token.
      * @returns {number} The result.

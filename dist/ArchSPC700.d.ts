@@ -40,6 +40,24 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     /**
+     * Encoded size for MOV. Must match {@link handleMovInstruction} / XY immediate forms.
+     * @param {string} left Left operand.
+     * @param {string} right Right operand.
+     * @param {LoweredOperand} [leftLowered] Lowered left operand.
+     * @param {LoweredOperand} [rightLowered] Lowered right operand.
+     * @returns {number} Encoded size in bytes.
+     */
+    estimateMovSize(left: string, right: string, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): number;
+    /**
+     * Encoded size for ADC/AND/EOR/OR/SBC/CMP. Must match {@link handleMemoryInstruction}.
+     * @param {string} left Left operand.
+     * @param {string} right Right operand.
+     * @param {LoweredOperand} [leftLowered] Lowered left operand.
+     * @param {LoweredOperand} [rightLowered] Lowered right operand.
+     * @returns {number} Encoded size in bytes.
+     */
+    estimateMemoryOpSize(left: string, right: string, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): number;
+    /**
      * Processes an SPC700 assembly instruction.
      * @param {string[]} words The tokenized instruction.
      * @returns {boolean} True if the instruction was handled, false otherwise.
@@ -129,10 +147,13 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     handleMemoryInstruction(opcode: string, left: string, right: string, forcedLen: number | null, explicitlen: boolean, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
-     * Writes dp or abs address (1 or 2 bytes) depending on getAddressSize
-     * @param {number} value - the value to write
+     * Writes a dp (1 byte) or abs (2 byte) address.
+     * Width follows the source spelling via `length`, not whether the value fits in 8 bits.
+     * `$0030` is absolute even though 0x30 is a direct-page number.
+     * @param {number} value Address to write.
+     * @param {number} length 1 for direct page, 2 for absolute.
      */
-    writeDpOrAbs(value: number): void;
+    writeDpOrAbs(value: number, length: number): void;
     /**
      * Classify operand for "A,(X)" style memory instructions,
      * returning an address mode name that matches e.g. a_indirectX, a_dp, a_abs, etc.
@@ -164,6 +185,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * We'll handle that in handleTwoOperands.
      *
      * For "SETn $12 => 0x02 12" or "CLRn $12 => 0x12 12," that's one operand + the bit # is in the opcode name.
+     * Asar also accepts `SET1 $13.7` / `CLR1 $13.7`, where the bit comes from the operand.
      * @param {string} opcode - the opcode
      * @param {string} operand - the operand
      * @returns {boolean} true if the instruction was handled, false otherwise
@@ -177,7 +199,8 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     handleBranch(opcode: string, operand: string): boolean;
     /**
-     * BBSn / BBCn => 2 operands: e.g. "BBC0 $12,Mylabel => 13 12 FF"
+     * BBSn / BBCn / wiki-native `BBS $dp.n`: e.g. "BBC0 $12,Mylabel => 13 12 FF",
+     * "BBS $12.3,L => 63 12 FF". Bit comes from `$dp.n` if present, else the mnemonic digit.
      * That logic is in handleTwoOperands because we have two comma-split sections.
      * @param {string} opcode - the opcode
      * @param {string} left - the left operand
@@ -272,16 +295,19 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     handleMovMemoryCombo2(left: string, right: string): boolean;
     /**
-     * handle e.g. "OR1 C,$1234" => 0x0A 34 12, "OR1 C,!$1234" => 0x2A 34 12,
-     * "AND1 C,$1234" => 0x4A 34 12, "AND1 C,!$1234 => 0x6A 34 12, "EOR1 C,$1234 => 0x8A 34 12,
-     * "MOV1 $1234,C => 0xCA 34 32" or "MOV1 C,$1234 => 0xAA 34 32"
-     * "NOT1 $1234 => 0xEA 34 32"
-     * @param {string} opcode - the opcode
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
+     * Encodes mem.bit carry ops. Bit is taken from `$addr.n` if present, else the
+     * mnemonic digit (`NOT2` → bit 2). High byte is `(addr >> 8) | (bit << 5)`.
+     *
+     *   NOT1 $1234 / NOT2 C,$0027 / NOT1 $12.3 / NOT1 $addr,3
+     *   MOV1 C,$addr / MOV2 $addr,C
+     *   OR1 C,$addr / OR1 C,!$addr / AND1 C,/addr
+     * @param {string} opcode Mnemonic, including numbered TASM forms.
+     * @param {string} left Left operand.
+     * @param {string} right Right operand, or empty for one-operand NOT/MOV.
+     * @param {string} [explicitBitText] Optional third operand bit (`AND1 C,$addr,2`).
      * @returns {boolean} true if the combo was handled, false otherwise
      */
-    handleBitManipulation(opcode: string, left: string, right: string): boolean;
+    handleBitManipulation(opcode: string, left: string, right: string, explicitBitText?: string): boolean;
     /**
      * handle instructions with 1 operand that didn't match the prior sets, e.g. "DAA A => DF," "DAS A => BE," "MUL YA => CF," "DIV YA,X => 9E"
      * @param {string} opcode - the opcode

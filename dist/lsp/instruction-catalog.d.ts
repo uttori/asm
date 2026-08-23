@@ -10,10 +10,6 @@ export declare const cpu65816Catalog: InstructionDescriptor[];
  * mode lists capture the operand forms accepted by the assembler.
  */
 export declare const spc700Catalog: InstructionDescriptor[];
-/**
- * The Super FX (GSU) instruction catalog. Coverage focuses on the mnemonics the
- * assembler accepts so editors can complete and document them.
- */
 export declare const superFxCatalog: InstructionDescriptor[];
 /**
  * Returns the static instruction catalog for an architecture name.

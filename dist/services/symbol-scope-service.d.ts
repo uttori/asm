@@ -1,9 +1,11 @@
-import type { StructDefinition } from "../assembler.js";
-type LabelEntry = {
+import type { StructDefinition } from "./struct-engine.js";
+export type LabelEntry = {
     value: number;
     isStatic: boolean;
     isMacroLabel?: boolean;
+    /** Tracks which macro instance this label belongs to */
     macroInstance?: number;
+    /** Whether this label affects the sublabel hierarchy */
     modifiesHierarchy?: boolean;
 };
 export interface SymbolScopeHost {
@@ -149,5 +151,4 @@ export declare class SymbolScopeService {
      */
     handleLabelDefinition(labelName: string): void;
 }
-export {};
 //# sourceMappingURL=symbol-scope-service.d.ts.map
