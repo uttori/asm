@@ -801,6 +801,11 @@ export class MathCore {
         this.skipWhitespace();
         return ~this.getnum(); // Immediately compute bitwise NOT
       } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
+        // Asar `!` is bitwise NOT only when the next char cannot start a define
+        // (`!$00`, `!10`, `!(expr)`). `!ROMType_...` / `!{name}` stay as define
+        // prefixes so FileType-style identifiers are not `~label`. `!=` is
+        // inequality. Break after a define-like `!` so this prefix loop does
+        // not spin forever on the same character.
         const after = this.scanSource[this.scanIndex + 1];
         let isDefineLike = after === "{";
         if (after !== undefined) {

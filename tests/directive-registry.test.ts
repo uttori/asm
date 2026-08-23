@@ -24,6 +24,20 @@ test("directive registry dispatches fill aliases", t => {
   t.deepEqual(assembler.fillbyte.slice(0, 6), [0x34, 0x12, 0x34, 0x12, 0x34, 0x12]);
 });
 
+test("directive registry evaluates assert and error through the assembler session", t => {
+  const assembler = new Assembler();
+
+  t.true(assembler.directiveRegistry.dispatch("assert", ["assert", "1"], "assert 1"));
+  t.throws(
+    () => assembler.directiveRegistry.dispatch("assert", ["assert", "0"], "assert 0"),
+    { message: "Assertion failed." },
+  );
+  t.throws(
+    () => assembler.directiveRegistry.dispatch("error", ["error"], "error"),
+    { message: "error command." },
+  );
+});
+
 test("directive registry reuses shared data handler for aliases", t => {
   const assembler = new Assembler();
   const dataSpy = spy(assembler.directiveRuntime, "handleDataDirective");
@@ -135,6 +149,9 @@ test("command lowering covers currently safe direct directive families", t => {
     { command: "check bankcross half", keyword: "check" },
     { command: "optimize dp always", keyword: "optimize" },
     { command: "startpos $10", keyword: "startpos" },
+    { command: "assert 1", keyword: "assert" },
+    { command: "error", keyword: "error" },
+    { command: "warnpc $8001", keyword: "warnpc" },
   ];
 
   for (const { command, keyword } of cases) {

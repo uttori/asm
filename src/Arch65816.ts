@@ -2420,6 +2420,7 @@ export class Arch65816 implements ArchitectureEncoder {
       return { name: opcode, explicitLength: undefined };
     }
     const suffix = opcode[dot + 1];
+    // Trailing `.` with no suffix (`LDA.`) used to TypeError in `getlenfromchar`.
     if (suffix === undefined) {
       throw new Error(`Error: Invalid opcode length in '${opcode}'.`);
     }

@@ -27,6 +27,7 @@ import type {
   StartposDirectiveContext,
   StructDirectiveContext,
   TableDirectiveContext,
+  DiagnosticDirectiveContext,
 } from "./types.js";
 import type { TargetDirectiveFeature } from "../target-profile.js";
 
@@ -63,6 +64,7 @@ export interface DirectiveRegistryContexts {
   spc: SpcDirectiveContext;
   struct: StructDirectiveContext;
   table: TableDirectiveContext;
+  diagnostic: DiagnosticDirectiveContext;
 }
 
 export class DirectiveRegistry {
@@ -150,7 +152,10 @@ export const createDirectiveRegistry = (
     registerSpcDirectives(registry, contexts.spc);
   }
   registerStructBinaryDirectives(registry, contexts.struct);
-  registerMiscDirectives(registry, contexts.table);
+  registerMiscDirectives(registry, {
+    table: contexts.table,
+    diagnostic: contexts.diagnostic,
+  });
   if (features.has("snes-memory")) {
     registerMemoryDirectives(registry, contexts.memory);
   }

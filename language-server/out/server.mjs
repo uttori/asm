@@ -10151,6 +10151,7 @@ var ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "dpbase",
   "warnings",
   "print",
+  "warn",
   "autoclean",
   "autoclear",
   "table",
@@ -13927,6 +13928,240 @@ var registerMemoryDirectives = (registry, context) => {
   registry.register("prot", context, handleProt);
 };
 
+// src/services/command-text-service.ts
+var removeInlineComment = (line) => {
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuote = !inQuote;
+    } else if (!inQuote && ch === ";") {
+      return line.substring(0, i).trim();
+    }
+  }
+  return line.trim();
+};
+var preprocessBlockCommands = (block, commandBuffer = "") => {
+  const lines = block.split("\n");
+  const processedLines = [];
+  let nextCommandBuffer = commandBuffer;
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) continue;
+    if (line.startsWith(";`+")) {
+      processedLines.push(line);
+      continue;
+    }
+    line = removeInlineComment(line).trim();
+    if (!line) continue;
+    if (line.endsWith("\\")) {
+      nextCommandBuffer += line.slice(0, -1);
+    } else if (line.endsWith(",")) {
+      nextCommandBuffer += line;
+    } else {
+      processedLines.push(nextCommandBuffer + line);
+      nextCommandBuffer = "";
+    }
+  }
+  return {
+    commands: processedLines,
+    commandBuffer: nextCommandBuffer
+  };
+};
+var splitOnInlineStatementSeparator = (command) => {
+  const parts = [];
+  let current = "";
+  let quote = "";
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+    if ((char === '"' || char === "'") && command[i - 1] !== "\\") {
+      if (quote === char) {
+        quote = "";
+      } else if (quote === "") {
+        quote = char;
+      }
+      current += char;
+      continue;
+    }
+    const next = command[i + 1];
+    const after = command[i + 2];
+    if (quote === "" && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
+      const trimmed2 = current.trim();
+      if (trimmed2 !== "") {
+        parts.push(trimmed2);
+      }
+      current = "";
+      i += 2;
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed !== "") {
+    parts.push(trimmed);
+  }
+  return parts;
+};
+var splitInlineCommands = (commands) => {
+  const output = [];
+  for (const command of commands) {
+    const split = splitOnInlineStatementSeparator(command);
+    if (split.length === 0) {
+      continue;
+    }
+    for (const entry of split) {
+      const relativeLabelMatch = entry.match(/^([+-]+:)\s+(.+)$/);
+      if (relativeLabelMatch) {
+        output.push(relativeLabelMatch[1].trim(), relativeLabelMatch[2].trim());
+        continue;
+      }
+      output.push(entry);
+    }
+  }
+  return output;
+};
+var splitCommandIntoWords = (command) => {
+  const words = [];
+  let currentWord = "";
+  let inQuotes = false;
+  let quoteChar = "";
+  const trimmedCommand = command.trim();
+  for (let i = 0; i < trimmedCommand.length; i++) {
+    const char = trimmedCommand[i];
+    if ((char === '"' || char === "'") && (i === 0 || trimmedCommand[i - 1] !== "\\")) {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+        currentWord += char;
+      } else if (char === quoteChar) {
+        inQuotes = false;
+        currentWord += char;
+      } else {
+        currentWord += char;
+      }
+    } else if (/\s/.test(char) && !inQuotes) {
+      if (currentWord) {
+        words.push(currentWord);
+        currentWord = "";
+      }
+    } else {
+      currentWord += char;
+    }
+  }
+  if (currentWord) {
+    words.push(currentWord);
+  }
+  return words;
+};
+var splitRespectingFunctions = (input) => {
+  const result = [];
+  let current = "";
+  let parenDepth = 0;
+  let inQuotes = false;
+  let quoteChar = "";
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
+      if (!inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+      } else if (char === quoteChar) {
+        inQuotes = false;
+      }
+    }
+    if (!inQuotes) {
+      if (char === "(") {
+        parenDepth++;
+      } else if (char === ")") {
+        parenDepth--;
+      } else if (char === "," && parenDepth === 0) {
+        result.push(current.trim());
+        current = "";
+        continue;
+      }
+    }
+    current += char;
+  }
+  if (current) {
+    result.push(current.trim());
+  }
+  return result;
+};
+var getDefineVariable = (line) => {
+  const match = line.trim().match(/^!([A-Z_a-z]\w*)\s*=/);
+  return match ? match[1] : void 0;
+};
+function isLabelIdentifierStart(char) {
+  const code = char.charCodeAt(0);
+  return char === "_" || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+}
+function isLabelIdentifierPart(char) {
+  const code = char.charCodeAt(0);
+  return char === "_" || code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+}
+function isBareLabelReference(input) {
+  if (!input) {
+    return false;
+  }
+  if (/^(a|x|y|ya|sp|s|c|r\d{1,2})$/i.test(input)) {
+    return false;
+  }
+  let numericOnly = true;
+  for (const char of input) {
+    if (char < "0" || char > "9") {
+      numericOnly = false;
+      break;
+    }
+  }
+  if (numericOnly) {
+    return true;
+  }
+  let index2 = 0;
+  while (input[index2] === ".") {
+    index2 += 1;
+  }
+  if (index2 >= input.length || !isLabelIdentifierStart(input[index2])) {
+    return false;
+  }
+  const consumeIdentifier = () => {
+    if (index2 >= input.length || !isLabelIdentifierStart(input[index2])) {
+      return false;
+    }
+    index2 += 1;
+    while (index2 < input.length && isLabelIdentifierPart(input[index2])) {
+      index2 += 1;
+    }
+    return true;
+  };
+  if (!consumeIdentifier()) {
+    return false;
+  }
+  while (index2 < input.length && input[index2] === ".") {
+    index2 += 1;
+    if (!consumeIdentifier()) {
+      return false;
+    }
+  }
+  if (index2 < input.length && input[index2] === "[") {
+    index2 += 1;
+    const digitStart = index2;
+    while (index2 < input.length && input[index2] >= "0" && input[index2] <= "9") {
+      index2 += 1;
+    }
+    if (digitStart === index2 || input[index2] !== "]") {
+      return false;
+    }
+    index2 += 1;
+    while (index2 < input.length && input[index2] === ".") {
+      index2 += 1;
+      if (!consumeIdentifier()) {
+        return false;
+      }
+    }
+  }
+  return index2 === input.length;
+}
+
 // src/directives/misc.ts
 var handlePullTable = ({ session }) => {
   if (session.tableStack.length === 0) {
@@ -13937,11 +14172,82 @@ var handlePullTable = ({ session }) => {
 var handlePushTable = ({ session }) => {
   session.tableStack.push(new Map(session.characterMappings));
 };
+var stripLeadingKeyword = (raw, keyword) => {
+  const trimmed = raw.trim();
+  let rest = trimmed;
+  if (rest.startsWith("@")) {
+    rest = rest.slice(1);
+  }
+  if (rest.length < keyword.length) {
+    return "";
+  }
+  if (rest.slice(0, keyword.length).toLowerCase() !== keyword) {
+    return trimmed;
+  }
+  return rest.slice(keyword.length).trim();
+};
+var unwrapQuoted = (fragment) => {
+  const text = fragment.trim();
+  if (text.length < 2) {
+    return text;
+  }
+  const quote = text[0];
+  if ((quote === '"' || quote === "'") && text.endsWith(quote)) {
+    return text.slice(1, -1);
+  }
+  return text;
+};
+var formatPrintArgs = (parts) => {
+  let out = "";
+  for (const part of parts) {
+    out += unwrapQuoted(part);
+  }
+  return out;
+};
+var handleAssert = ({ session }, _words, raw) => {
+  const payload = stripLeadingKeyword(raw, "assert");
+  const parts = splitRespectingFunctions(payload);
+  const condition = parts[0] ?? "";
+  if (condition === "") {
+    throw new Error("Broken conditional: assert");
+  }
+  if (session.evaluateExpression(condition)) {
+    return;
+  }
+  const messageParts = parts.slice(1);
+  if (messageParts.length === 0) {
+    throw new Error("Assertion failed.");
+  }
+  throw new Error(`Assertion failed: ${formatPrintArgs(messageParts)}`);
+};
+var handleError = (_ctx, _words, raw) => {
+  const payload = stripLeadingKeyword(raw, "error");
+  if (payload === "") {
+    throw new Error("error command.");
+  }
+  throw new Error(`error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`);
+};
+var hex6 = (value) => (value >>> 0).toString(16).toUpperCase().padStart(6, "0");
+var handleWarnpc = ({ session }, _words, raw) => {
+  const payload = stripLeadingKeyword(raw, "warnpc");
+  if (payload === "") {
+    throw new Error("warnpc requires an address");
+  }
+  const maxpos = session.operandResolver.getnum(session.resolvedefines(payload));
+  if (session.currentTargetAddress > maxpos) {
+    throw new Error(
+      `warnpc failed: Current pc = $${hex6(session.currentTargetAddress)}, wanted <= $${hex6(maxpos)}`
+    );
+  }
+};
 var registerMiscDirectives = (registry, context) => {
-  registry.register("pulltable", context, handlePullTable);
-  registry.register("pushtable", context, handlePushTable);
-  registry.register([...ASAR_COMPAT_NO_OP_DIRECTIVES], context, () => {
+  registry.register("pulltable", context.table, handlePullTable);
+  registry.register("pushtable", context.table, handlePushTable);
+  registry.register([...ASAR_COMPAT_NO_OP_DIRECTIVES], context.table, () => {
   });
+  registry.register("assert", context.diagnostic, handleAssert);
+  registry.register("error", context.diagnostic, handleError);
+  registry.register("warnpc", context.diagnostic, handleWarnpc);
 };
 
 // src/directives/namespace.ts
@@ -14121,7 +14427,10 @@ var createDirectiveRegistry = (contexts, features = ALL_TARGET_DIRECTIVE_FEATURE
     registerSpcDirectives(registry, contexts.spc);
   }
   registerStructBinaryDirectives(registry, contexts.struct);
-  registerMiscDirectives(registry, contexts.table);
+  registerMiscDirectives(registry, {
+    table: contexts.table,
+    diagnostic: contexts.diagnostic
+  });
   if (features.has("snes-memory")) {
     registerMemoryDirectives(registry, contexts.memory);
   }
@@ -14466,240 +14775,6 @@ var DefineEngine = class {
     this.host.defines.delete(identifier);
   }
 };
-
-// src/services/command-text-service.ts
-var removeInlineComment = (line) => {
-  let inQuote = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      inQuote = !inQuote;
-    } else if (!inQuote && ch === ";") {
-      return line.substring(0, i).trim();
-    }
-  }
-  return line.trim();
-};
-var preprocessBlockCommands = (block, commandBuffer = "") => {
-  const lines = block.split("\n");
-  const processedLines = [];
-  let nextCommandBuffer = commandBuffer;
-  for (let line of lines) {
-    line = line.trim();
-    if (!line) continue;
-    if (line.startsWith(";`+")) {
-      processedLines.push(line);
-      continue;
-    }
-    line = removeInlineComment(line).trim();
-    if (!line) continue;
-    if (line.endsWith("\\")) {
-      nextCommandBuffer += line.slice(0, -1);
-    } else if (line.endsWith(",")) {
-      nextCommandBuffer += line;
-    } else {
-      processedLines.push(nextCommandBuffer + line);
-      nextCommandBuffer = "";
-    }
-  }
-  return {
-    commands: processedLines,
-    commandBuffer: nextCommandBuffer
-  };
-};
-var splitOnInlineStatementSeparator = (command) => {
-  const parts = [];
-  let current = "";
-  let quote = "";
-  for (let i = 0; i < command.length; i++) {
-    const char = command[i];
-    if ((char === '"' || char === "'") && command[i - 1] !== "\\") {
-      if (quote === char) {
-        quote = "";
-      } else if (quote === "") {
-        quote = char;
-      }
-      current += char;
-      continue;
-    }
-    const next = command[i + 1];
-    const after = command[i + 2];
-    if (quote === "" && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
-      const trimmed2 = current.trim();
-      if (trimmed2 !== "") {
-        parts.push(trimmed2);
-      }
-      current = "";
-      i += 2;
-      continue;
-    }
-    current += char;
-  }
-  const trimmed = current.trim();
-  if (trimmed !== "") {
-    parts.push(trimmed);
-  }
-  return parts;
-};
-var splitInlineCommands = (commands) => {
-  const output = [];
-  for (const command of commands) {
-    const split = splitOnInlineStatementSeparator(command);
-    if (split.length === 0) {
-      continue;
-    }
-    for (const entry of split) {
-      const relativeLabelMatch = entry.match(/^([+-]+:)\s+(.+)$/);
-      if (relativeLabelMatch) {
-        output.push(relativeLabelMatch[1].trim(), relativeLabelMatch[2].trim());
-        continue;
-      }
-      output.push(entry);
-    }
-  }
-  return output;
-};
-var splitCommandIntoWords = (command) => {
-  const words = [];
-  let currentWord = "";
-  let inQuotes = false;
-  let quoteChar = "";
-  const trimmedCommand = command.trim();
-  for (let i = 0; i < trimmedCommand.length; i++) {
-    const char = trimmedCommand[i];
-    if ((char === '"' || char === "'") && (i === 0 || trimmedCommand[i - 1] !== "\\")) {
-      if (!inQuotes) {
-        inQuotes = true;
-        quoteChar = char;
-        currentWord += char;
-      } else if (char === quoteChar) {
-        inQuotes = false;
-        currentWord += char;
-      } else {
-        currentWord += char;
-      }
-    } else if (/\s/.test(char) && !inQuotes) {
-      if (currentWord) {
-        words.push(currentWord);
-        currentWord = "";
-      }
-    } else {
-      currentWord += char;
-    }
-  }
-  if (currentWord) {
-    words.push(currentWord);
-  }
-  return words;
-};
-var splitRespectingFunctions = (input) => {
-  const result = [];
-  let current = "";
-  let parenDepth = 0;
-  let inQuotes = false;
-  let quoteChar = "";
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-    if ((char === '"' || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
-      if (!inQuotes) {
-        inQuotes = true;
-        quoteChar = char;
-      } else if (char === quoteChar) {
-        inQuotes = false;
-      }
-    }
-    if (!inQuotes) {
-      if (char === "(") {
-        parenDepth++;
-      } else if (char === ")") {
-        parenDepth--;
-      } else if (char === "," && parenDepth === 0) {
-        result.push(current.trim());
-        current = "";
-        continue;
-      }
-    }
-    current += char;
-  }
-  if (current) {
-    result.push(current.trim());
-  }
-  return result;
-};
-var getDefineVariable = (line) => {
-  const match = line.trim().match(/^!([A-Z_a-z]\w*)\s*=/);
-  return match ? match[1] : void 0;
-};
-function isLabelIdentifierStart(char) {
-  const code = char.charCodeAt(0);
-  return char === "_" || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-}
-function isLabelIdentifierPart(char) {
-  const code = char.charCodeAt(0);
-  return char === "_" || code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-}
-function isBareLabelReference(input) {
-  if (!input) {
-    return false;
-  }
-  if (/^(a|x|y|ya|sp|s|c|r\d{1,2})$/i.test(input)) {
-    return false;
-  }
-  let numericOnly = true;
-  for (const char of input) {
-    if (char < "0" || char > "9") {
-      numericOnly = false;
-      break;
-    }
-  }
-  if (numericOnly) {
-    return true;
-  }
-  let index2 = 0;
-  while (input[index2] === ".") {
-    index2 += 1;
-  }
-  if (index2 >= input.length || !isLabelIdentifierStart(input[index2])) {
-    return false;
-  }
-  const consumeIdentifier = () => {
-    if (index2 >= input.length || !isLabelIdentifierStart(input[index2])) {
-      return false;
-    }
-    index2 += 1;
-    while (index2 < input.length && isLabelIdentifierPart(input[index2])) {
-      index2 += 1;
-    }
-    return true;
-  };
-  if (!consumeIdentifier()) {
-    return false;
-  }
-  while (index2 < input.length && input[index2] === ".") {
-    index2 += 1;
-    if (!consumeIdentifier()) {
-      return false;
-    }
-  }
-  if (index2 < input.length && input[index2] === "[") {
-    index2 += 1;
-    const digitStart = index2;
-    while (index2 < input.length && input[index2] >= "0" && input[index2] <= "9") {
-      index2 += 1;
-    }
-    if (digitStart === index2 || input[index2] !== "]") {
-      return false;
-    }
-    index2 += 1;
-    while (index2 < input.length && input[index2] === ".") {
-      index2 += 1;
-      if (!consumeIdentifier()) {
-        return false;
-      }
-    }
-  }
-  return index2 === input.length;
-}
 
 // src/services/directive-runtime-service.ts
 var DirectiveRuntimeService = class {
@@ -15386,12 +15461,14 @@ var AssemblyFrontEndService = class {
 var DIRECTLY_LOWERABLE_DIRECTIVES = /* @__PURE__ */ new Set([
   "arch",
   "asar",
+  "assert",
   "autoclean",
   "autoclear",
   "base",
   "check",
   "dpbase",
   "endspcblock",
+  "error",
   "exhirom",
   "exlorom",
   "fastrom",
@@ -15436,8 +15513,10 @@ var DIRECTLY_LOWERABLE_DIRECTIVES = /* @__PURE__ */ new Set([
   "startpos",
   "table",
   "warnings",
+  "warnpc",
   "print",
   "reset",
+  "warn",
   "{",
   "}"
 ]);
@@ -16906,7 +16985,7 @@ var StructEngine = class {
    * @returns {boolean} Whether the reference belongs to a known struct.
    */
   hasStructReference(labelRef) {
-    if (!/^[A-Z_a-z]\w*(?:\[-?\d+])?(?:\.[A-Z_a-z]\w*(?:\[-?\d+])?)*$/.test(labelRef)) {
+    if (!/^[A-Z_a-z]\w*(?:\[[^\]]+])?(?:\.[A-Z_a-z]\w*(?:\[[^\]]+])?)*$/.test(labelRef)) {
       return false;
     }
     if (this.host.structs.has(labelRef)) {
@@ -16947,10 +17026,10 @@ var StructEngine = class {
     let arrayIndex = 0;
     let candidate = labelRef;
     let extraMember = "";
-    const arrayMatch = candidate.match(/^(.*?)\[(-?\d+)](.*)$/);
+    const arrayMatch = candidate.match(/^(.*?)\[([^\]]+)](.*)$/);
     if (arrayMatch) {
       candidate = arrayMatch[1];
-      arrayIndex = Number.parseInt(arrayMatch[2], 10);
+      arrayIndex = this.host.operandResolver.getnum(arrayMatch[2]);
       extraMember = arrayMatch[3];
       if (extraMember.startsWith(".")) {
         extraMember = extraMember.substring(1);
@@ -24458,7 +24537,8 @@ var Assembler = class _Assembler {
         namespace: { session },
         spc: { runtime },
         struct: { session },
-        table: { session }
+        table: { session },
+        diagnostic: { session }
       },
       session.targetProfile.directiveFeatures
     );
@@ -27798,6 +27878,30 @@ var directiveCatalog = [
     keyword: "print",
     summary: "Print a message at assemble time.",
     syntax: 'print "text"',
+    group: "compat"
+  },
+  {
+    keyword: "assert",
+    summary: "Fail the assemble if a condition is false.",
+    syntax: 'assert condition[, "message"]',
+    group: "compat"
+  },
+  {
+    keyword: "error",
+    summary: "Fail the assemble with a user-defined error.",
+    syntax: 'error ["message"]',
+    group: "compat"
+  },
+  {
+    keyword: "warn",
+    summary: "Emit a user-defined warning (asar-compatible).",
+    syntax: 'warn ["message"]',
+    group: "compat"
+  },
+  {
+    keyword: "warnpc",
+    summary: "Fail if the current PC is past an address (deprecated asar form).",
+    syntax: "warnpc $address",
     group: "compat"
   },
   {

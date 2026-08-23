@@ -92,6 +92,8 @@ export const handleArch = (
   }
   session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
   if (shouldUseNoromAddressing(archParam)) {
+    // `arch spc700-raw` is a 1:1 file image. Lorom/hirom leave `org $000000`
+    // unmapped (`(addr & 0x408000) === 0`) and silently drop the writes.
     applyMapperSelection(session, "norom");
   }
 };

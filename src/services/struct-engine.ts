@@ -182,8 +182,9 @@ export class StructEngine {
    * @returns {boolean} Whether the reference belongs to a known struct.
    */
   hasStructReference(labelRef: string): boolean {
+    // Indices may be decimal (`obj[2]`) or asar hex (`DMA[$00].Parameters`).
     // oxlint-disable-next-line security/detect-unsafe-regex -- Anchored segments use non-overlapping separators.
-    if (!/^[A-Z_a-z]\w*(?:\[-?\d+])?(?:\.[A-Z_a-z]\w*(?:\[-?\d+])?)*$/.test(labelRef)) {
+    if (!/^[A-Z_a-z]\w*(?:\[[^\]]+])?(?:\.[A-Z_a-z]\w*(?:\[[^\]]+])?)*$/.test(labelRef)) {
       return false;
     }
     if (this.host.structs.has(labelRef)) {
@@ -227,10 +228,12 @@ export class StructEngine {
     let arrayIndex = 0;
     let candidate = labelRef;
     let extraMember = "";
-    const arrayMatch = candidate.match(/^(.*?)\[(-?\d+)](.*)$/);
+    // First `[...]` is the array index. Hardware-register structs use hex
+    // (`DMA[$00].Parameters`); decimal `obj[2]` still works via getnum.
+    const arrayMatch = candidate.match(/^(.*?)\[([^\]]+)](.*)$/);
     if (arrayMatch) {
       candidate = arrayMatch[1];
-      arrayIndex = Number.parseInt(arrayMatch[2], 10);
+      arrayIndex = this.host.operandResolver.getnum(arrayMatch[2]);
       extraMember = arrayMatch[3];
       if (extraMember.startsWith(".")) {
         extraMember = extraMember.substring(1);

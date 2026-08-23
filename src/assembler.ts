@@ -872,6 +872,7 @@ export class Assembler {
         spc: { runtime },
         struct: { session },
         table: { session },
+        diagnostic: { session },
       },
       session.targetProfile.directiveFeatures,
     );
@@ -2802,6 +2803,7 @@ export class Assembler {
           debug("resolvedefines !define defineName", defineName);
         }
 
+        // `!$00` / `!(1+2)` are bitwise NOT for mathcore, not `Define ''`.
         if (defineName === "") {
           result += "!";
           continue;

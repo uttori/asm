@@ -1,5 +1,5 @@
 import type { NormalizedCommand } from "../ir/normalized-command.js";
-import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, AssemblerPolicyDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, MapperDirectiveContext, MemoryDirectiveContext, NarrowDirectiveHandler, NamespaceDirectiveContext, OrgDirectiveContext, SpcDirectiveContext, StartposDirectiveContext, StructDirectiveContext, TableDirectiveContext } from "./types.js";
+import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, AssemblerPolicyDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, MapperDirectiveContext, MemoryDirectiveContext, NarrowDirectiveHandler, NamespaceDirectiveContext, OrgDirectiveContext, SpcDirectiveContext, StartposDirectiveContext, StructDirectiveContext, TableDirectiveContext, DiagnosticDirectiveContext } from "./types.js";
 import type { TargetDirectiveFeature } from "../target-profile.js";
 export declare const ALL_TARGET_DIRECTIVE_FEATURES: ReadonlySet<TargetDirectiveFeature>;
 type BoundDirectiveHandler = (words: readonly string[], raw: string, command?: NormalizedCommand) => void;
@@ -23,6 +23,7 @@ export interface DirectiveRegistryContexts {
     spc: SpcDirectiveContext;
     struct: StructDirectiveContext;
     table: TableDirectiveContext;
+    diagnostic: DiagnosticDirectiveContext;
 }
 export declare class DirectiveRegistry {
     readonly handlers: Map<string, BoundDirectiveHandler>;

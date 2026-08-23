@@ -396,6 +396,30 @@ export const directiveCatalog: DirectiveDescriptor[] = [
     group: "compat",
   },
   {
+    keyword: "assert",
+    summary: "Fail the assemble if a condition is false.",
+    syntax: "assert condition[, \"message\"]",
+    group: "compat",
+  },
+  {
+    keyword: "error",
+    summary: "Fail the assemble with a user-defined error.",
+    syntax: "error [\"message\"]",
+    group: "compat",
+  },
+  {
+    keyword: "warn",
+    summary: "Emit a user-defined warning (asar-compatible).",
+    syntax: "warn [\"message\"]",
+    group: "compat",
+  },
+  {
+    keyword: "warnpc",
+    summary: "Fail if the current PC is past an address (deprecated asar form).",
+    syntax: "warnpc $address",
+    group: "compat",
+  },
+  {
     keyword: "autoclean",
     summary: "Auto-clean a previous freespace (asar-compatible).",
     syntax: "autoclean ...",

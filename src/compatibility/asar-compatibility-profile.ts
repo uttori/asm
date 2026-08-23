@@ -14,6 +14,7 @@ export const ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "dpbase",
   "warnings",
   "print",
+  "warn",
   "autoclean",
   "autoclear",
   "table",

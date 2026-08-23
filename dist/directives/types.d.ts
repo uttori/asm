@@ -36,6 +36,7 @@ export interface DirectiveAddressCapability {
 }
 export interface DirectiveExpressionCapability {
     evaluateRangeExpression(expression: string | ExpressionNode): number;
+    evaluateExpression(expression: string | ExpressionNode): boolean;
     resolvedefines(input: string): string;
     operandResolver: OperandResolver;
     structEngine: StructEngine;
@@ -104,6 +105,9 @@ export interface RuntimeDirectiveContext {
 }
 export type NarrowDirectiveHandler<Context> = (ctx: Context, words: readonly string[], raw: string, command?: NormalizedCommand) => void;
 export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability>;
+export type DiagnosticDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "evaluateExpression" | "resolvedefines"> & Pick<DirectiveAddressCapability, "currentTargetAddress"> & {
+    operandResolver: Pick<OperandResolver, "getnum">;
+}>;
 export type NamespaceDirectiveContext = SessionDirectiveContext<DirectiveNamespaceCapability & Pick<DirectiveSpcCapability, "inSpcblock">>;
 export type FillPadDirectiveContext = OperandDirectiveContext<Pick<DirectiveRomCapability, "fillbyte" | "padbyte" | "padUnit" | "currentTargetAddress" | "romWriter" | "write1"> & Pick<DirectiveExpressionCapability, "resolvedefines">>;
 export type FlowControlDirectiveContext = SessionDirectiveContext<Pick<DirectiveExpressionCapability, "symbolScope">>;

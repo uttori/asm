@@ -3077,6 +3077,16 @@ test("resolveStructLabel", (t) => {
     "Should resolve array struct with index 1"
   );
   t.is(
+    assembler.structEngine.resolveStructLabel("ArrayStruct[$01]"),
+    0x200A,
+    "Should resolve array struct with a hex index"
+  );
+  t.is(
+    assembler.structEngine.resolveStructLabel("ArrayStruct[$01].value"),
+    0x200C,
+    "Should resolve hex-indexed struct members"
+  );
+  t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[2]"),
     0x2014,
     "Should resolve array struct member with index"
@@ -3195,6 +3205,7 @@ test("hasStructReference distinguishes pure references from struct arithmetic", 
 
   t.true(assembler.structEngine.hasStructReference("obj.state"));
   t.true(assembler.structEngine.hasStructReference("obj[2].state"));
+  t.true(assembler.structEngine.hasStructReference("obj[$00].state"));
   t.false(assembler.structEngine.hasStructReference("obj.state+2"));
   t.false(assembler.structEngine.hasStructReference("other.state"));
 });

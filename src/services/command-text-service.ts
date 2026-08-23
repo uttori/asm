@@ -69,6 +69,8 @@ export const preprocessBlockCommands = (
 
 /**
  * Splits a command on Asar's ` : ` statement separator, ignoring separators inside quotes.
+ * `.split(/\s:\s/)` also splits inside `db "... : ..."` string operands (SMRPG
+ * dialogue), turning the tail into a fake instruction such as `1.`.
  * @param {string} command A single command line.
  * @returns {string[]} Statement fragments.
  */

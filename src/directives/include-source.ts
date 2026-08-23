@@ -203,6 +203,9 @@ const parseIncbinUnprefixedHex = (text: string): { value: number; rest: string }
 
 /**
  * Deprecated `start-end` split matching asar: `(math)-($hex)`, `0-(math)`, `(math)-` (EOF).
+ * If start begins with `(`, the hyphen is the first `-` after the matching `)`
+ * (paren/quote-aware, so inner minuses in `($010000-DATA)&$00FFFF` stay in the
+ * bound). One wrapping `(...)` is stripped from each bound; empty end is `0` (EOF).
  * @param {string} rangeStr Range text after the filename colon.
  * @returns {{ start: string | number; end: string | number }} Hex literals or math text to evaluate.
  * @throws {Error} If the hyphen form is structurally invalid.

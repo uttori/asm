@@ -41,6 +41,7 @@ export interface DirectiveAddressCapability {
 
 export interface DirectiveExpressionCapability {
   evaluateRangeExpression(expression: string | ExpressionNode): number;
+  evaluateExpression(expression: string | ExpressionNode): boolean;
   resolvedefines(input: string): string;
   operandResolver: OperandResolver;
   structEngine: StructEngine;
@@ -125,6 +126,13 @@ export type NarrowDirectiveHandler<Context> = (
 ) => void;
 
 export type TableDirectiveContext = SessionDirectiveContext<DirectiveTableCapability>;
+
+export type DiagnosticDirectiveContext = SessionDirectiveContext<
+  Pick<DirectiveExpressionCapability, "evaluateExpression" | "resolvedefines"> &
+    Pick<DirectiveAddressCapability, "currentTargetAddress"> & {
+      operandResolver: Pick<OperandResolver, "getnum">;
+    }
+>;
 
 export type NamespaceDirectiveContext = SessionDirectiveContext<
   DirectiveNamespaceCapability & Pick<DirectiveSpcCapability, "inSpcblock">
