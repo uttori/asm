@@ -1,44 +1,42 @@
 import { test } from "./ava-helper.js";
 
 import { Assembler } from "./test-assembler.js";
-import type { LoweredOperand } from "../src/architecture-types.js";
-import { createNormalizedCommand } from "../src/ir/normalized-command.js";
+import type { LoweredOperand } from "../packages/core/src/architecture-types.js";
+import { createNormalizedCommand } from "../packages/core/src/ir/normalized-command.js";
 
-const commandNode = (command: string) => createNormalizedCommand(
-  command,
-  command,
-  command.trim().split(/\s+/),
-  "plugin-seam.asm",
-  1,
-);
+const commandNode = (command: string) =>
+  createNormalizedCommand(command, command, command.trim().split(/\s+/), "plugin-seam.asm", 1);
 
 test("disposable architecture registration participates in lowering and dispatch", (t) => {
   const assembler = new Assembler();
   const classified: string[] = [];
   const encoded: string[][] = [];
 
-  assembler.architectureRegistry.register({
-    name: "contract-test",
-    classifyOperand: (_resolver, operand): LoweredOperand => {
-      classified.push(operand);
-      return {
-        raw: operand,
-        expanded: operand,
-        length: 1,
-        immediate: false,
-        indirect: false,
-      };
-    },
-    splitOperands: (operandText) => operandText.split(",").map((operand) => operand.trim()),
-    unknownInstructionBehavior: "throw",
-    encoder: {
-      estimateSize: () => 1,
-      encode: (words) => {
-        encoded.push(words);
-        return true;
+  assembler.architectureRegistry.register(
+    {
+      name: "contract-test",
+      classifyOperand: (_resolver, operand): LoweredOperand => {
+        classified.push(operand);
+        return {
+          raw: operand,
+          expanded: operand,
+          length: 1,
+          immediate: false,
+          indirect: false,
+        };
+      },
+      splitOperands: (operandText) => operandText.split(",").map((operand) => operand.trim()),
+      unknownInstructionBehavior: "throw",
+      encoder: {
+        estimateSize: () => 1,
+        encode: (words) => {
+          encoded.push(words);
+          return true;
+        },
       },
     },
-  }, ["contract-alias"]);
+    ["contract-alias"],
+  );
   assembler.arch = "contract-alias";
 
   const lowered = assembler.commandLoweringService.lowerCommand(commandNode("emit left,right"));

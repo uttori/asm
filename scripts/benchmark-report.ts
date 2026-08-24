@@ -1,4 +1,4 @@
-import type { InternalInstrumentationSnapshot } from "../src/internal-instrumentation.js";
+import type { InternalInstrumentationSnapshot } from "../packages/core/src/internal-instrumentation.js";
 
 export type BenchmarkSample = {
   wallMs: number;

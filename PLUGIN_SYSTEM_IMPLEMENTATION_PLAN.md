@@ -804,6 +804,21 @@ Acceptance:
 - 6502 stub still fails encoding with a clear “not implemented” diagnostic.
 - The core SNES identifier scan returns no matches.
 
+Completion note (2026-08-24): the repository is now a workspace with
+`@uttori/asm-core`, `@uttori/asm-plugin-snes`, and
+`@uttori/asm-plugin-6502-stub`. The SNES plugin default export registers its
+state, 65816/SPC700/Super FX encoders and catalogs, mapper/address space,
+SFC output/checksum policy, directives, expressions, and lifecycle services.
+Architecture, mapper, freespace, SPC, compatibility, and full SNES parity
+tests live beside the plugin and activate it explicitly. The 6502 stub owns
+its flat-16 target and produces an intentional “encoding is not implemented”
+diagnostic. The temporary legacy adapter, target profiles, built-in
+architecture factory, target directive implementations, and target state are
+gone from core; its prohibited SNES identifier scan is empty and it has no
+plugin dependency. CLI and language-server hosts now opt into the SNES plugin
+through an explicit environment factory, pending the generic discovery and
+configuration work in Phase 6.
+
 ### Phase 6 — Add Node discovery and project configuration
 
 Tasks:

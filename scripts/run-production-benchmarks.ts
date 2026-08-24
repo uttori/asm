@@ -5,13 +5,15 @@ import { spawnSync, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import { Assembler } from "../src/assembler.js";
-import { snesAssemblerHost } from "../src/plugin/legacy-adapter.js";
+import { Assembler } from "@uttori/asm-core";
+import { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
 import {
   runWithInternalInstrumentation,
   type InternalInstrumentationSnapshot,
-} from "../src/internal-instrumentation.js";
+} from "../packages/core/src/internal-instrumentation.js";
 import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
+
+const snesAssemblerHost = await createSnesAssemblerHost();
 
 type Fixture = {
   id: string;
@@ -183,11 +185,11 @@ function assembleFixture(fixture: Fixture): Uint8Array {
   const target = new Uint8Array(fs.readFileSync(targetPath));
   const assembler = new Assembler({
     ...snesAssemblerHost,
+    targetOptions: { checksumMode: fixture.checksumMode },
     baseImage: target,
     collectSourceMetadata: false,
   });
   try {
-    assembler.setChecksumMode(fixture.checksumMode);
     assembler.setIncludePaths(["./", path.dirname(sourcePath)]);
     assembler.setCurrentFile(sourcePath);
     const program = assembler.buildProgramModel(source, sourcePath, 0);

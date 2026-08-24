@@ -1,0 +1,35 @@
+{
+  "name": "@uttori/asm-core",
+  "version": "1.0.0",
+  "description": "Architecture-neutral assembler core and plugin API.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "module": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts"
+    },
+    "./plugin": {
+      "types": "./dist/plugin/index.d.ts",
+      "import": "./src/plugin/index.ts"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "make-types": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "semver": "^7.8.5"
+  },
+  "optionalDependencies": {
+    "debug": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

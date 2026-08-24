@@ -2,11 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "./ava-helper.js";
-import { MemoryAssemblyFileProvider } from "../src/file-provider.js";
+import { MemoryAssemblyFileProvider } from "../packages/core/src/file-provider.js";
 import {
   IncludeSourceService,
   type IncludeSourceHost,
-} from "../src/services/include-source-service.js";
+} from "../packages/core/src/services/include-source-service.js";
 import { Assembler } from "./test-assembler.js";
 
 const createHost = (
@@ -48,7 +48,7 @@ const createHost = (
   return host;
 };
 
-test("include source service resolves incsrc relative to the defining macro file", t => {
+test("include source service resolves incsrc relative to the defining macro file", (t) => {
   const host = createHost(
     {
       "/proj/main.asm": "",
@@ -62,7 +62,7 @@ test("include source service resolves incsrc relative to the defining macro file
   t.is(service.resolveIncludePath("../snes.asm"), "/proj/snes.asm");
 });
 
-test("include source service reads binary and text files relative to source", t => {
+test("include source service reads binary and text files relative to source", (t) => {
   const host = createHost({
     "/proj/main.asm": "",
     "/proj/data.bin": new Uint8Array([0x01, 0x02]),
@@ -75,7 +75,7 @@ test("include source service reads binary and text files relative to source", t 
   t.is(service.resolveIncludePath('"text.asm"'), "/proj/text.asm");
 });
 
-test("include source service marks, executes, records, and restores includes", t => {
+test("include source service marks, executes, records, and restores includes", (t) => {
   const host = createHost({
     "/proj/main.asm": "",
     "/proj/child.asm": "db $01",
@@ -91,7 +91,7 @@ test("include source service marks, executes, records, and restores includes", t
   t.deepEqual(host.includeStack, []);
 });
 
-test("include source service memoizes text within one assembly snapshot", t => {
+test("include source service memoizes text within one assembly snapshot", (t) => {
   const host = createHost({
     "/proj/main.asm": "",
     "/proj/child.asm": "db $01",
@@ -114,11 +114,14 @@ test("include source service memoizes text within one assembly snapshot", t => {
   t.deepEqual(host.parsedSources, ["db $01", "db $01", "db $02"]);
 });
 
-test("include source service enforces and resets include guards", t => {
-  const host = createHost({
-    "/proj/main.asm": "",
-    "/proj/child.asm": "db $01",
-  }, "/proj/child.asm");
+test("include source service enforces and resets include guards", (t) => {
+  const host = createHost(
+    {
+      "/proj/main.asm": "",
+      "/proj/child.asm": "db $01",
+    },
+    "/proj/child.asm",
+  );
   const service = new IncludeSourceService(host);
 
   service.guardCurrentFile();
@@ -131,7 +134,7 @@ test("include source service enforces and resets include guards", t => {
   t.deepEqual(host.executedFiles, ["/proj/child.asm"]);
 });
 
-test("include source service rejects cycles and excessive nesting", t => {
+test("include source service rejects cycles and excessive nesting", (t) => {
   const host = createHost({
     "/proj/main.asm": "",
     "/proj/child.asm": "",
@@ -148,7 +151,7 @@ test("include source service rejects cycles and excessive nesting", t => {
   });
 });
 
-test("include source service restores source state after read failures", t => {
+test("include source service restores source state after read failures", (t) => {
   const host = createHost({
     "/proj/main.asm": "",
     "/proj/child.asm": "",
@@ -165,7 +168,7 @@ test("include source service restores source state after read failures", t => {
   t.deepEqual(host.includeStack, []);
 });
 
-test("incsrc inside a nested macro is relative to the defining file", t => {
+test("incsrc inside a nested macro is relative to the defining file", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-macro-incsrc-"));
   try {
     fs.mkdirSync(path.join(root, "Global"), { recursive: true });

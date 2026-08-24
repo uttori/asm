@@ -1,7 +1,7 @@
 import { stub } from "sinon";
 import { test } from "./ava-helper.js";
 
-import type { StructDefinition } from "../src/services/struct-engine.js";
+import type { StructDefinition } from "../packages/core/src/services/struct-engine.js";
 import { Assembler } from "./test-assembler.js";
 import {
   isReferenceExpressionNode,
@@ -10,14 +10,14 @@ import {
   renderReferenceExpressionNode,
   type ExpressionNode,
   type ReferenceExpressionNode,
-} from "../src/ir/expression-node.js";
+} from "../packages/core/src/ir/expression-node.js";
 import {
   cloneNormalizedCommand,
   createNormalizedCommand,
   createPendingCommand,
   setCommandWords,
-} from "../src/ir/normalized-command.js";
-import { handleIncbin } from "../src/directives/include-source.js";
+} from "../packages/core/src/ir/normalized-command.js";
+import { handleIncbin } from "../packages/core/src/directives/include-source.js";
 
 type AssemblerReferenceTestAccess = {
   resolveReferenceExpressionNode: (expression: ReferenceExpressionNode) => ExpressionNode;

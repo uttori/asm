@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
-import { OperandResolver } from "../src/operand-resolver.js";
+import { OperandResolver } from "../packages/core/src/operand-resolver.js";
 
 const createResolver = (overrides: Partial<ConstructorParameters<typeof OperandResolver>[0]> = {}) => new OperandResolver({
   resolveDefines: input => input,

@@ -4,11 +4,11 @@ import {
   handleInclude,
   handleIncsrc,
   registerIncludeSourceDirectives,
-} from "../../src/directives/include-source.js";
-import type { IncludeDirectiveContext } from "../../src/directives/types.js";
-import { DirectiveRegistry } from "../../src/directives/registry.js";
-import { createNormalizedCommand } from "../../src/ir/normalized-command.js";
-import { parseExpressionNode, type ExpressionNode } from "../../src/ir/expression-node.js";
+} from "../../packages/core/src/directives/include-source.js";
+import type { IncludeDirectiveContext } from "../../packages/core/src/directives/types.js";
+import { DirectiveRegistry } from "../../packages/core/src/directives/registry.js";
+import { createNormalizedCommand } from "../../packages/core/src/ir/normalized-command.js";
+import { parseExpressionNode, type ExpressionNode } from "../../packages/core/src/ir/expression-node.js";
 import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 
 const evalRange = (expr: string | ExpressionNode, labels: Record<string, number> = {}): number => {

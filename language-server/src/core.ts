@@ -1,14 +1,6 @@
-/**
- * Re-exports the snes-asm-js core analysis surface used by the language server.
- * Centralizing the cross-package import keeps every server module pointing at a
- * single relative path that the bundler and type-checker both resolve. These are
- * internal analysis types, not LSP wire types; `providers.ts` adapts them to the
- * protocol structures linked below.
- * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#language-server-protocol
- */
-export { Assembler } from "../../src/assembler.js";
-export { snesAssemblerHost } from "../../src/plugin/legacy-adapter.js";
+/** Re-exports the analysis surface and explicitly activates the SNES plugin. */
 export {
+  Assembler,
   WorkspaceIndex,
   OverlayFileProvider,
   findInstruction,
@@ -25,4 +17,9 @@ export {
   symbolAt,
   resolveDefinition,
   findReferences,
-} from "../../src/lsp/index.js";
+} from "@uttori/asm-core";
+export { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
+
+import { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
+
+export const snesAssemblerHost = await createSnesAssemblerHost();

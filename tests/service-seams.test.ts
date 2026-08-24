@@ -4,9 +4,9 @@ import { spy, stub } from "sinon";
 import { test } from "./ava-helper.js";
 
 import { Assembler } from "./test-assembler.js";
-import { MemoryAssemblyFileProvider } from "../src/file-provider.js";
-import { createNormalizedCommand } from "../src/ir/normalized-command.js";
-import { handleArch } from "../src/directives/layout.js";
+import { MemoryAssemblyFileProvider } from "../packages/core/src/file-provider.js";
+import { createNormalizedCommand } from "../packages/core/src/ir/normalized-command.js";
+import { handleArch } from "../packages/core/src/directives/layout.js";
 
 const commandNode = (command: string) => createNormalizedCommand(
   command,
@@ -168,14 +168,14 @@ test("struct engine restores write position after struct definition lifecycle", 
   t.true(assembler.structs.has("Player"));
 });
 
-test("expression host readRom and readFile preserve defaults and bounds behavior", (t) => {
+test("expression host readBaseImage and readFile preserve defaults and bounds behavior", (t) => {
   const assembler = new Assembler(new Uint8Array([0x11, 0x22, 0x33]));
   assembler.targetState.readFunctionsEnabled = true;
   const romStart = assembler.outputWriter.fromOutputOffset(0);
 
-  t.is(assembler.expressionHost.readRom(romStart, 2), 0x2211);
-  t.is(assembler.expressionHost.readRom(assembler.outputWriter.fromOutputOffset(2), 2, 0x77), 0x77);
-  t.throws(() => assembler.expressionHost.readRom(assembler.outputWriter.fromOutputOffset(2), 2), { message: /out of bounds/i });
+  t.is(assembler.expressionHost.readBaseImage(romStart, 2), 0x2211);
+  t.is(assembler.expressionHost.readBaseImage(assembler.outputWriter.fromOutputOffset(2), 2, 0x77), 0x77);
+  t.throws(() => assembler.expressionHost.readBaseImage(assembler.outputWriter.fromOutputOffset(2), 2), { message: /out of bounds/i });
 
   const fixturePath = path.join(process.cwd(), "tests", "read-expression.bin");
   try {

@@ -7,7 +7,7 @@ import {
   MemoryAssemblyFileProvider,
   NodeAssemblyFileProvider,
   stripWrappingQuotes,
-} from "../src/file-provider.js";
+} from "../packages/core/src/file-provider.js";
 
 test("MemoryAssemblyFileProvider resolves quoted, relative, and absolute keys", (t) => {
   const provider = new MemoryAssemblyFileProvider(
@@ -54,7 +54,10 @@ test("MemoryAssemblyFileProvider stats and reads string and binary files", (t) =
     size: bytes.length,
   });
 
-  t.deepEqual(fromMap.readFile("/proj/main.asm"), new Uint8Array(Buffer.from("org $8000\n", "utf8")));
+  t.deepEqual(
+    fromMap.readFile("/proj/main.asm"),
+    new Uint8Array(Buffer.from("org $8000\n", "utf8")),
+  );
   t.deepEqual(fromMap.readFile("/proj/data.bin"), bytes);
   t.is(fromMap.readTextFile("/proj/main.asm"), "org $8000\n");
   t.is(fromMap.readTextFile("/proj/data.bin"), "AB");
@@ -99,13 +102,20 @@ test("NodeAssemblyFileProvider resolves, stats, and reads disk files", (t) => {
     t.is(provider.resolvePath("child.asm", { currentFile: current }), child);
     t.is(provider.resolvePath("lib.asm", { macroSourceFile: macros }), fromMacro);
     t.is(provider.resolvePath("shared.asm", { includePaths: [includeDir] }), fromInclude);
-    t.is(provider.resolvePath("nowhere.asm", { currentFile: current, includePaths: [includeDir] }), undefined);
+    t.is(
+      provider.resolvePath("nowhere.asm", { currentFile: current, includePaths: [includeDir] }),
+      undefined,
+    );
 
     t.deepEqual(provider.stat(path.join(directory, "missing.asm")), {
       exists: false,
       readable: false,
     });
-    t.like(provider.stat(current), { exists: true, readable: true, size: fs.statSync(current).size });
+    t.like(provider.stat(current), {
+      exists: true,
+      readable: true,
+      size: fs.statSync(current).size,
+    });
     t.deepEqual(provider.readFile(child), new Uint8Array(fs.readFileSync(child)));
     t.is(provider.readTextFile(current), "org $8000\n");
 

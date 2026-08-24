@@ -1,0 +1,31 @@
+{
+  "name": "@uttori/asm-plugin-snes",
+  "version": "1.0.0",
+  "description": "SNES, 65816, SPC700, Super FX, and Asar compatibility plugin for Uttori ASM.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "module": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "make-types": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@uttori/asm-core": "1.0.0"
+  },
+  "optionalDependencies": {
+    "debug": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -3,9 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { stub } from "sinon";
 import { test } from "../ava-helper.js";
-import { Assembler } from "../../src/assembler.js";
+import { Assembler } from "../../packages/core/src/assembler.js";
 import { snesWorkspaceIndexOptions } from "../test-assembler.js";
-import { WorkspaceIndex } from "../../src/lsp/workspace-index.js";
+import { WorkspaceIndex } from "../../packages/core/src/lsp/workspace-index.js";
 
 test("workspace index reads open, disk, and missing file text", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-workspace-"));

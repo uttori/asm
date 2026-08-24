@@ -1,12 +1,12 @@
 import { test } from "./ava-helper.js";
-import type { ExpressionHost } from "../src/architecture-types.js";
-import { runWithInternalInstrumentation } from "../src/internal-instrumentation.js";
-import { MathCore } from "../src/mathcore.js";
+import type { ExpressionHost } from "../packages/core/src/architecture-types.js";
+import { runWithInternalInstrumentation } from "../packages/core/src/internal-instrumentation.js";
+import { MathCore } from "../packages/core/src/mathcore.js";
 
 const createExpressionHost = (overrides: Partial<ExpressionHost> = {}): ExpressionHost => ({
   resolveLabel: () => 0,
-  convertSnesToPc: (address) => address,
-  convertPcToSnes: (offset) => offset,
+  convertLogicalToOutputOffset: (address) => address,
+  convertOutputOffsetToLogical: (offset) => offset,
   getCurrentAddress: () => 0,
   getCurrentBaseAddress: () => 0,
   isDefined: () => 0,
@@ -15,8 +15,8 @@ const createExpressionHost = (overrides: Partial<ExpressionHost> = {}): Expressi
   getFileStatus: () => 1,
   canReadFile: () => 0,
   readFile: () => 0,
-  canReadRom: () => 0,
-  readRom: () => 0,
+  canReadBaseImage: () => 0,
+  readBaseImage: () => 0,
   ...overrides,
 });
 
@@ -1769,12 +1769,12 @@ test("callBuiltInFunction - canreadfile", t => {
 test("callFunction - contributed canread functions", t => {
   const mathCore = new MathCore();
   mathCore.host = createExpressionHost({
-    canReadRom: (pos) => (pos >= 0 && pos < 0x1000) ? 1 : 0,
+    canReadBaseImage: (pos) => (pos >= 0 && pos < 0x1000) ? 1 : 0,
   });
-  const canReadRom = (args: readonly (number | string)[], size: number): number => {
+  const canReadBaseImage = (args: readonly (number | string)[], size: number): number => {
     const position = args[0];
     if (typeof position !== "number") throw new Error("position must be numeric");
-    return mathCore.host!.canReadRom(position, size);
+    return mathCore.host!.canReadBaseImage(position, size);
   };
   mathCore.registerExpressionFunction("canread", {
     minimumArguments: 2,
@@ -1782,14 +1782,14 @@ test("callFunction - contributed canread functions", t => {
     evaluate: (args) => {
       const size = args[1];
       if (typeof size !== "number") throw new Error("size must be numeric");
-      return canReadRom(args, size);
+      return canReadBaseImage(args, size);
     },
   });
   for (const size of [1, 2, 3, 4]) {
     mathCore.registerExpressionFunction(`canread${size}`, {
       minimumArguments: 1,
       maximumArguments: 1,
-      evaluate: (args) => canReadRom(args, size),
+      evaluate: (args) => canReadBaseImage(args, size),
     });
   }
 
@@ -1840,7 +1840,7 @@ test("callFunction - contributed canread functions", t => {
 test("callFunction - contributed read functions", t => {
   const mathCore = new MathCore();
   mathCore.host = createExpressionHost({
-    readRom: (pos, size, defaultValue) => {
+    readBaseImage: (pos, size, defaultValue) => {
       if (pos === 0xFFFFFF && defaultValue !== undefined) {
         return defaultValue;
       }
@@ -1857,7 +1857,7 @@ test("callFunction - contributed read functions", t => {
         if (typeof position !== "number" || typeof defaultValue === "string") {
           throw new Error("read arguments must be numeric");
         }
-        return mathCore.host!.readRom(position, size, defaultValue);
+        return mathCore.host!.readBaseImage(position, size, defaultValue);
       },
     });
   }
@@ -2002,8 +2002,8 @@ test("callBuiltInFunction - typed host routes generic file helpers", t => {
   const mathCore = new MathCore();
   mathCore.host = {
     resolveLabel: () => 0,
-    convertSnesToPc: (address) => address - 0x7F0000,
-    convertPcToSnes: (offset) => offset + 0x800000,
+    convertLogicalToOutputOffset: (address) => address - 0x7F0000,
+    convertOutputOffsetToLogical: (offset) => offset + 0x800000,
     getCurrentAddress: () => 0x808000,
     getCurrentBaseAddress: () => 0x008000,
     isDefined: (identifier) => identifier === "LABEL" ? 1 : 0,
@@ -2012,8 +2012,8 @@ test("callBuiltInFunction - typed host routes generic file helpers", t => {
     getFileStatus: () => 0,
     canReadFile: () => 1,
     readFile: (_filename, _position, _size, __value) => 0x34,
-    canReadRom: () => 1,
-    readRom: () => 0x12,
+    canReadBaseImage: () => 1,
+    readBaseImage: () => 0x12,
   };
 
   t.is(mathCore.callBuiltInFunction("defined", ["LABEL"]), 1);

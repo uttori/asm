@@ -6,7 +6,7 @@ import {
   PluginManager,
   PLUGIN_API_VERSION,
   type AssemblerPlugin,
-} from "../src/plugin/index.js";
+} from "../packages/core/src/plugin/index.js";
 import { createFixturePlugin } from "./plugin/fixture-plugin.js";
 import type { FixturePluginOptions } from "./plugin/fixture-plugin.js";
 

@@ -1,17 +1,12 @@
 import { stub } from "sinon";
 import { test } from "../ava-helper.js";
 import { Assembler } from "../test-assembler.js";
-import { createNormalizedCommand } from "../../src/ir/normalized-command.js";
+import { createNormalizedCommand } from "../../packages/core/src/ir/normalized-command.js";
 
-const commandNode = (command: string) => createNormalizedCommand(
-  command,
-  command,
-  command.trim().split(/\s+/),
-  "macro-test.asm",
-  1,
-);
+const commandNode = (command: string) =>
+  createNormalizedCommand(command, command, command.trim().split(/\s+/), "macro-test.asm", 1);
 
-test("macro control expressions ignore blank and inline-comment text", t => {
+test("macro control expressions ignore blank and inline-comment text", (t) => {
   const assembler = new Assembler();
   const evaluateExpression = stub(assembler, "evaluateExpression").returns(true);
 
@@ -20,9 +15,9 @@ test("macro control expressions ignore blank and inline-comment text", t => {
   t.true(evaluateExpression.calledOnceWithExactly("1 == 1"));
 });
 
-test("macro control state covers nested branches and loop terminators", t => {
+test("macro control state covers nested branches and loop terminators", (t) => {
   const assembler = new Assembler();
-  stub(assembler, "evaluateExpression").callsFake(expression => expression === "true");
+  stub(assembler, "evaluateExpression").callsFake((expression) => expression === "true");
   const engine = assembler.macroEngine;
 
   engine.updateMacroExpansionControlState("");
@@ -58,7 +53,7 @@ test("macro control state covers nested branches and loop terminators", t => {
   t.deepEqual(engine.macroExpansionControlStack, []);
 });
 
-test("macro definition parsing validates headers and variadic duplicates", t => {
+test("macro definition parsing validates headers and variadic duplicates", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
 
@@ -73,37 +68,43 @@ test("macro definition parsing validates headers and variadic duplicates", t => 
   t.throws(() => engine.handleDefinitionCommand(commandNode("endmacro")));
 });
 
-test("macro definitions capture the defining file from the header command", t => {
+test("macro definitions capture the defining file from the header command", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   assembler.currentFile = "/assemble.asm";
 
-  t.true(engine.handleDefinitionCommand(createNormalizedCommand(
-    "macro LoadFiles()",
-    "macro LoadFiles()",
-    ["macro", "LoadFiles()"],
-    "/game/rommap.asm",
-    1,
-  )));
-  t.true(engine.handleDefinitionCommand(createNormalizedCommand(
-    "incsrc ../SNES_Macros.asm",
-    "incsrc ../SNES_Macros.asm",
-    ["incsrc", "../SNES_Macros.asm"],
-    "/game/rommap.asm",
-    2,
-  )));
-  t.true(engine.handleDefinitionCommand(createNormalizedCommand(
-    "endmacro",
-    "endmacro",
-    ["endmacro"],
-    "/game/rommap.asm",
-    3,
-  )));
+  t.true(
+    engine.handleDefinitionCommand(
+      createNormalizedCommand(
+        "macro LoadFiles()",
+        "macro LoadFiles()",
+        ["macro", "LoadFiles()"],
+        "/game/rommap.asm",
+        1,
+      ),
+    ),
+  );
+  t.true(
+    engine.handleDefinitionCommand(
+      createNormalizedCommand(
+        "incsrc ../SNES_Macros.asm",
+        "incsrc ../SNES_Macros.asm",
+        ["incsrc", "../SNES_Macros.asm"],
+        "/game/rommap.asm",
+        2,
+      ),
+    ),
+  );
+  t.true(
+    engine.handleDefinitionCommand(
+      createNormalizedCommand("endmacro", "endmacro", ["endmacro"], "/game/rommap.asm", 3),
+    ),
+  );
 
   t.is(assembler.macros.get("LoadFiles")?.sourceFile, "/game/rommap.asm");
 });
 
-test("callMacro resolves body commands against the defining file", t => {
+test("callMacro resolves body commands against the defining file", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   assembler.currentFile = "/caller.asm";
@@ -126,7 +127,7 @@ test("callMacro resolves body commands against the defining file", t => {
   t.true(processCommand.calledOnce);
 });
 
-test("macro definitions skip collection outside definition stage", t => {
+test("macro definitions skip collection outside definition stage", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   stub(assembler, "isDefinitionCollectionStage").get(() => false);
@@ -139,14 +140,14 @@ test("macro definitions skip collection outside definition stage", t => {
   t.false(assembler.inMacroDefinition);
 });
 
-test("macro label rewriting covers local, relative, and unresolved references", t => {
+test("macro label rewriting covers local, relative, and unresolved references", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   assembler.inMacroExpansion = true;
   assembler.macroLabelInstance = 3;
   assembler.currentTargetAddress = 0x2000;
   assembler.labelTable.set(":macro_3_+", { value: 0x2100, isStatic: false });
-  assembler.labelTable.set(":macro_3_-", { value: 0x1F00, isStatic: false });
+  assembler.labelTable.set(":macro_3_-", { value: 0x1f00, isStatic: false });
 
   t.is(engine.rewriteMacroLabelReferences("lda ?+"), "lda $2100");
   t.is(engine.rewriteMacroLabelReferences("lda ?-"), "lda $1f00");
@@ -154,9 +155,7 @@ test("macro label rewriting covers local, relative, and unresolved references", 
   t.is(engine.rewriteMacroLabelReferences("?-:"), "?-:");
   t.is(engine.rewriteMacroLabelReferences("nop"), "nop");
 
-  stub(assembler.symbolScope, "getLabelValue")
-    .withArgs("?known", false)
-    .returns(0x3456);
+  stub(assembler.symbolScope, "getLabelValue").withArgs("?known", false).returns(0x3456);
   t.is(engine.rewriteMacroLabelReferences("lda ?known"), "lda $3456");
   t.is(engine.rewriteMacroLabelReferences("?known: nop"), "?known: nop");
   t.is(engine.rewriteMacroLabelReferences("?known = 1"), "?known = 1");
@@ -165,7 +164,7 @@ test("macro label rewriting covers local, relative, and unresolved references", 
   t.is(engine.rewriteMacroLabelReferences("lda ?missing"), "lda $0000");
 });
 
-test("macro relative rewriting falls back to symbol-scope searches", t => {
+test("macro relative rewriting falls back to symbol-scope searches", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   assembler.inMacroExpansion = true;
@@ -178,12 +177,12 @@ test("macro relative rewriting falls back to symbol-scope searches", t => {
   t.is(engine.rewriteMacroLabelReferences("lda ?-"), "lda $1000");
 });
 
-test("macro expansion preserves deferred placeholders and validates indexes", t => {
+test("macro expansion preserves deferred placeholders and validates indexes", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   const args = ["$10", "$20"];
-  stub(assembler, "resolvedefines").callsFake(input => input.replace("!index", "1"));
-  stub(assembler.mathCore, "math").callsFake(input => Number(input));
+  stub(assembler, "resolvedefines").callsFake((input) => input.replace("!index", "1"));
+  stub(assembler.mathCore, "math").callsFake((input) => Number(input));
 
   engine.macroExpansionControlStack = [{ type: "for", active: true }];
   t.is(
@@ -200,16 +199,19 @@ test("macro expansion preserves deferred placeholders and validates indexes", t 
   engine.macroExpansionControlStack = [];
   t.throws(() => engine.expandMacroLine("db <...[bad]>", new Map(), args, args.length));
   t.throws(() => engine.expandMacroLine("db <...[3]>", new Map(), args, args.length));
-  t.is(engine.expandMacroLine("?local: db <value>", new Map([["value", "$10"]]), [], 0), "?local: db <value>");
+  t.is(
+    engine.expandMacroLine("?local: db <value>", new Map([["value", "$10"]]), [], 0),
+    "?local: db <value>",
+  );
 });
 
-test("macro define-line expansion resolves legacy and variadic forms", t => {
+test("macro define-line expansion resolves legacy and variadic forms", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   assembler.defines.set("legacy", "$30");
   assembler.defines.set("index", "1");
-  stub(assembler, "resolvedefines").callsFake(input => input.replace("!index", "1"));
-  stub(assembler.mathCore, "math").callsFake(input => Number(input));
+  stub(assembler, "resolvedefines").callsFake((input) => input.replace("!index", "1"));
+  stub(assembler.mathCore, "math").callsFake((input) => Number(input));
 
   t.is(
     engine.expandMacroLine(
@@ -224,7 +226,7 @@ test("macro define-line expansion resolves legacy and variadic forms", t => {
   t.throws(() => engine.expandMacroLine("!value = <...[bad]>", new Map(), [], 0));
 });
 
-test("macro !<param> keeps the define name instead of resolving the value", t => {
+test("macro !<param> keeps the define name instead of resolving the value", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   assembler.defines.set("TEMP2", "0");
@@ -237,40 +239,36 @@ test("macro !<param> keeps the define name instead of resolving the value", t =>
     ["StringVar", "TEMP"],
     ["NewString", "Joypad"],
   ]);
-  t.is(
-    engine.expandMacroLine("if !<StartOfList> != !TRUE", params, [], 0),
-    "if !TEMP2 != !TRUE",
-  );
+  t.is(engine.expandMacroLine("if !<StartOfList> != !TRUE", params, [], 0), "if !TEMP2 != !TRUE");
   t.is(engine.expandMacroLine("!<StartOfList> = !FALSE", params, [], 0), "!TEMP2 = !FALSE");
+  t.is(engine.expandMacroLine('!<StringVar> += "<NewString>"', params, [], 0), '!TEMP += "Joypad"');
   t.is(
-    engine.expandMacroLine('!<StringVar> += "<NewString>"', params, [], 0),
-    '!TEMP += "Joypad"',
-  );
-  t.is(
-    engine.expandMacroLine("if !<StartOfList> != !TRUE", new Map([["StartOfList", "!TEMP2"]]), [], 0),
+    engine.expandMacroLine(
+      "if !<StartOfList> != !TRUE",
+      new Map([["StartOfList", "!TEMP2"]]),
+      [],
+      0,
+    ),
     "if !TEMP2 != !TRUE",
   );
   t.true(assembler.evaluateExpression("!TEMP2 != !TRUE"));
 });
 
-test("variadic placeholder resolution handles defines, errors, and no-op input", t => {
+test("variadic placeholder resolution handles defines, errors, and no-op input", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   assembler.currentVariadicArgs = ["$10", "$20"];
   assembler.defines.set("index", "1");
-  stub(assembler, "resolvedefines").callsFake(input => input.replace("!index", "1"));
-  stub(assembler.mathCore, "math").callsFake(input => Number(input));
+  stub(assembler, "resolvedefines").callsFake((input) => input.replace("!index", "1"));
+  stub(assembler.mathCore, "math").callsFake((input) => Number(input));
 
   t.is(engine.resolveVariadicPlaceholders("db $01"), "db $01");
-  t.is(
-    engine.resolveVariadicPlaceholders("db <...[!index]>, sizeof(...)"),
-    "db $20, 2",
-  );
+  t.is(engine.resolveVariadicPlaceholders("db <...[!index]>, sizeof(...)"), "db $20, 2");
   t.throws(() => engine.resolveVariadicPlaceholders("db <...[bad]>"));
   t.throws(() => engine.resolveVariadicPlaceholders("db <...[2]>"));
 });
 
-test("processMacroLine handles inactive lines, labels, and assignments", t => {
+test("processMacroLine handles inactive lines, labels, and assignments", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   const processCommand = stub(assembler, "processCommand");
@@ -313,7 +311,7 @@ test("processMacroLine handles inactive lines, labels, and assignments", t => {
   t.true(processCommand.calledWith("!loopdyloop #= !loopdyloop-1"));
 });
 
-test("callMacro parses quoted arguments and restores expansion state", t => {
+test("callMacro parses quoted arguments and restores expansion state", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   const processCommand = stub(assembler, "processCommand");
@@ -327,10 +325,7 @@ test("callMacro parses quoted arguments and restores expansion state", t => {
     name: "emit",
     params: ["first"],
     variadic: true,
-    body: [
-      commandNode("db <first>, <...[0]>"),
-      commandNode("db sizeof(...)"),
-    ],
+    body: [commandNode("db <first>, <...[0]>"), commandNode("db sizeof(...)")],
     sourceFile: "macro-test.asm",
   });
 
@@ -346,7 +341,7 @@ test("callMacro parses quoted arguments and restores expansion state", t => {
   t.deepEqual(engine.macroExpansionControlStack, [{ type: "if", active: true }]);
 });
 
-test("callMacro handles bare invocations and missing macros", t => {
+test("callMacro handles bare invocations and missing macros", (t) => {
   const assembler = new Assembler();
   const engine = assembler.macroEngine;
   const processCommand = stub(assembler, "processCommand");

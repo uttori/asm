@@ -1,9 +1,9 @@
 import { test } from "../ava-helper.js";
-import { handleRelativeLabel } from "../../src/directives/flow-control.js";
-import type { FlowControlDirectiveContext } from "../../src/directives/types.js";
+import { handleRelativeLabel } from "../../packages/core/src/directives/flow-control.js";
+import type { FlowControlDirectiveContext } from "../../packages/core/src/directives/types.js";
 import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 
-test("relative labels only require the symbol scope capability", t => {
+test("relative labels only require the symbol scope capability", (t) => {
   let handled = "";
   const ctx = {
     session: {

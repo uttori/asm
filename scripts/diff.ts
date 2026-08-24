@@ -2,11 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { Assembler } from "../src/assembler.ts";
-import { snesAssemblerHost } from "../src/plugin/legacy-adapter.ts";
-import { removeInlineComment, splitInlineCommands } from "../src/services/command-text-service.ts";
+import { Assembler } from "@uttori/asm-core";
+import { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
+import { removeInlineComment, splitInlineCommands } from "../packages/core/src/services/command-text-service.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const snesAssemblerHost = await createSnesAssemblerHost();
 
 type ChecksumMode = "asar" | "simple";
 type Mapper = "lorom" | "hirom";
@@ -457,6 +458,7 @@ function assembleSource(input: {
   const source = fs.readFileSync(input.sourcePath, "utf8");
   const assembler = new Assembler({
     ...snesAssemblerHost,
+    targetOptions: { checksumMode: input.checksumMode },
     collectSourceMetadata: false,
   });
   const hits: EmitHit[] = [];
@@ -494,7 +496,6 @@ function assembleSource(input: {
   }
 
   try {
-    assembler.setChecksumMode(input.checksumMode);
     assembler.setIncludePaths(["./", path.dirname(input.sourcePath)]);
     assembler.setCurrentFile(input.sourcePath);
     assembler.assembleProgram(assembler.buildProgramModel(source, input.sourcePath, 0));

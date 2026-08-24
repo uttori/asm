@@ -1,6 +1,6 @@
-import type { ArchitectureEncoderContext } from "../../src/architecture-types.js";
-import { renderExpressionNode } from "../../src/ir/expression-node.js";
-import { OperandResolver } from "../../src/operand-resolver.js";
+import type { ArchitectureEncoderContext } from "../../packages/core/src/architecture-types.js";
+import { renderExpressionNode } from "../../packages/core/src/ir/expression-node.js";
+import { OperandResolver } from "../../packages/core/src/operand-resolver.js";
 
 export type EncoderTestHost = {
   context: ArchitectureEncoderContext;
@@ -81,7 +81,8 @@ export const createEncoderTestHost = (): EncoderTestHost => {
       }
     },
     resolveLabel: (input) => parseNumber(input),
-    evaluateMath: (input) => parseNumber(typeof input === "string" ? input : renderExpressionNode(input)),
+    evaluateMath: (input) =>
+      parseNumber(typeof input === "string" ? input : renderExpressionNode(input)),
     shouldDeferExpressionEvaluation: () => !host.enforceResolvedLabels,
     getCurrentAddress: () => host.currentTargetAddress,
     requireStaticLabelLookup: () => false,
@@ -107,8 +108,10 @@ export const createEncoderTestHost = (): EncoderTestHost => {
     },
     branches: {
       enforceResolvedLabels: () => host.enforceResolvedLabels,
-      findNextLabel: (label, referenceAddress) => host.symbolScope.findNextLabel(label, referenceAddress),
-      findPreviousLabel: (label, referenceAddress) => host.symbolScope.findPreviousLabel(label, referenceAddress),
+      findNextLabel: (label, referenceAddress) =>
+        host.symbolScope.findNextLabel(label, referenceAddress),
+      findPreviousLabel: (label, referenceAddress) =>
+        host.symbolScope.findPreviousLabel(label, referenceAddress),
     },
     diagnostics: {
       error: (message) => new Error(message),

@@ -2,18 +2,18 @@ import path from "node:path";
 import { test } from "./ava-helper.js";
 
 import { Assembler, snesWorkspaceIndexOptions } from "./test-assembler.js";
-import { MemoryAssemblyFileProvider } from "../src/file-provider.js";
-import { OverlayFileProvider } from "../src/lsp/overlay-file-provider.js";
-import { WorkspaceIndex } from "../src/lsp/workspace-index.js";
-import { findInstruction, findDirectiveEntry, buildCompletionEntries } from "../src/lsp/catalog.js";
+import { MemoryAssemblyFileProvider } from "../packages/core/src/file-provider.js";
+import { OverlayFileProvider } from "../packages/core/src/lsp/overlay-file-provider.js";
+import { WorkspaceIndex } from "../packages/core/src/lsp/workspace-index.js";
+import { findInstruction, findDirectiveEntry, buildCompletionEntries } from "../packages/core/src/lsp/catalog.js";
 import {
   positionInRange,
   referenceAt,
   symbolAt,
   resolveDefinition,
   findReferences,
-} from "../src/lsp/position-lookup.js";
-import type { AssemblySymbolDefinition, AssemblySymbolReference } from "../src/diagnostics.js";
+} from "../packages/core/src/lsp/position-lookup.js";
+import type { AssemblySymbolDefinition, AssemblySymbolReference } from "../packages/core/src/diagnostics.js";
 
 const slideRoot = path.resolve(process.cwd(), "fixtures/integration/snes-slideshow/SLIDE.SRC");
 
@@ -51,7 +51,12 @@ test("overlay file provider prefers buffer content over the backing provider", (
 });
 
 test("instruction and directive catalogs expose documented entries", (t) => {
-  const lda = findInstruction("lda", "65816");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  const provider = {
+    getInstructionCatalog: (architecture: string) =>
+      index.toolingCatalog.getInstructions(architecture),
+  };
+  const lda = findInstruction("lda", "65816", provider);
   t.truthy(lda);
   t.is(lda?.mnemonic, "LDA");
   t.true(lda!.modes.some((mode) => mode.mode === "immediate"));
@@ -59,7 +64,12 @@ test("instruction and directive catalogs expose documented entries", (t) => {
   t.truthy(findDirectiveEntry("org"));
   t.truthy(findDirectiveEntry("incsrc"));
 
-  const entries = buildCompletionEntries("65816");
+  const entries = buildCompletionEntries(
+    "65816",
+    provider,
+    index.directiveCatalog,
+    index.toolingCatalog.getExpressionFunctions(),
+  );
   t.true(entries.some((entry) => entry.kind === "instruction" && entry.label === "JSR"));
   t.true(entries.some((entry) => entry.kind === "directive" && entry.label === "db"));
 });

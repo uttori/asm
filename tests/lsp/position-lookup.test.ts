@@ -1,5 +1,8 @@
 import { test } from "../ava-helper.js";
-import type { AssemblySymbolDefinition, AssemblySymbolReference } from "../../src/diagnostics.js";
+import type {
+  AssemblySymbolDefinition,
+  AssemblySymbolReference,
+} from "../../packages/core/src/diagnostics.js";
 import {
   findReferences,
   locationRange,
@@ -7,9 +10,14 @@ import {
   referenceAt,
   resolveDefinition,
   symbolAt,
-} from "../../src/lsp/position-lookup.js";
+} from "../../packages/core/src/lsp/position-lookup.js";
 
-const range = (startLine: number, startCharacter: number, endLine: number, endCharacter: number) => ({
+const range = (
+  startLine: number,
+  startCharacter: number,
+  endLine: number,
+  endCharacter: number,
+) => ({
   start: { line: startLine, character: startCharacter },
   end: { line: endLine, character: endCharacter },
 });
@@ -36,13 +44,10 @@ const reference = (
   location: { file: "/project/main.asm", line: 2, range: range(2, 1, 2, name.length + 1) },
 });
 
-test("locationRange prefers explicit ranges and derives span ranges", t => {
+test("locationRange prefers explicit ranges and derives span ranges", (t) => {
   const explicit = range(3, 2, 3, 8);
   t.is(locationRange({ line: 3, range: explicit }), explicit);
-  t.deepEqual(
-    locationRange({ line: 7, span: { start: 4, end: 9 } }),
-    range(7, 4, 7, 9),
-  );
+  t.deepEqual(locationRange({ line: 7, span: { start: 4, end: 9 } }), range(7, 4, 7, 9));
   t.deepEqual(
     locationRange({ line: 7, span: { start: 4, end: 9, line: 5, columnStart: 1, columnEnd: 6 } }),
     range(5, 1, 5, 6),
@@ -50,7 +55,7 @@ test("locationRange prefers explicit ranges and derives span ranges", t => {
   t.is(locationRange({ line: 0 }), undefined);
 });
 
-test("positionInRange covers multiline boundaries", t => {
+test("positionInRange covers multiline boundaries", (t) => {
   const multiline = range(2, 3, 4, 6);
   t.false(positionInRange({ line: 1, character: 99 }, multiline));
   t.false(positionInRange({ line: 5, character: 0 }, multiline));
@@ -61,7 +66,7 @@ test("positionInRange covers multiline boundaries", t => {
   t.true(positionInRange({ line: 4, character: 6 }, multiline));
 });
 
-test("position lookup chooses the narrowest located artifact", t => {
+test("position lookup chooses the narrowest located artifact", (t) => {
   const wide = reference("wide", "unknown");
   wide.location.range = range(1, 0, 3, 10);
   const narrow = reference("narrow", "label");
@@ -79,7 +84,7 @@ test("position lookup chooses the narrowest located artifact", t => {
   t.is(symbolAt([wideSymbol, narrowSymbol], { line: 2, character: 4 }), narrowSymbol);
 });
 
-test("resolveDefinition matches compatible kinds and container scope", t => {
+test("resolveDefinition matches compatible kinds and container scope", (t) => {
   const label = symbol("target", "label");
   const member = symbol("target", "structMember", "Player");
   const struct = symbol("target", "struct");
@@ -96,10 +101,14 @@ test("resolveDefinition matches compatible kinds and container scope", t => {
   t.deepEqual(resolveDefinition(reference("target", "include"), all), all);
   t.deepEqual(resolveDefinition(reference("target", "instruction"), all), all);
   t.deepEqual(resolveDefinition(reference("target", "unknown"), all), all);
-  t.deepEqual(resolveDefinition(reference("target", "label", "Other"), all), [label, member, struct]);
+  t.deepEqual(resolveDefinition(reference("target", "label", "Other"), all), [
+    label,
+    member,
+    struct,
+  ]);
 });
 
-test("findReferences optionally restricts container scope", t => {
+test("findReferences optionally restricts container scope", (t) => {
   const global = reference("target", "label");
   const player = reference("target", "label", "Player");
   const enemy = reference("target", "label", "Enemy");

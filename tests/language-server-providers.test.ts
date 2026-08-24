@@ -1,7 +1,7 @@
 import path from "node:path";
 import { CompletionItemKind } from "vscode-languageserver";
 import { test } from "./ava-helper.js";
-import { WorkspaceIndex } from "../src/lsp/workspace-index.js";
+import { WorkspaceIndex } from "../packages/core/src/lsp/workspace-index.js";
 import { snesWorkspaceIndexOptions } from "./test-assembler.js";
 import {
   completionsFor,
@@ -51,7 +51,7 @@ test("language-server providers expose navigation, docs, completion, and tokens"
   );
   t.true(completions.some((item) => item.label === "Target"));
 
-  const signature = signatureHelpFor("  LDA ", "65816");
+  const signature = signatureHelpFor("  LDA ", "65816", index);
   t.true((signature?.signatures.length ?? 0) > 1);
   t.is(signature?.activeParameter, undefined);
 

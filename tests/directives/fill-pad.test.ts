@@ -5,9 +5,9 @@ import {
   handlePad,
   handlePadPattern,
   registerFillPadDirectives,
-} from "../../src/directives/fill-pad.js";
-import type { FillPadDirectiveContext } from "../../src/directives/types.js";
-import { DirectiveRegistry } from "../../src/directives/registry.js";
+} from "../../packages/core/src/directives/fill-pad.js";
+import type { FillPadDirectiveContext } from "../../packages/core/src/directives/types.js";
+import { DirectiveRegistry } from "../../packages/core/src/directives/registry.js";
 import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 
 type FillPadSessionOverrides = {
@@ -179,7 +179,7 @@ test("pad rejects an unmapped target address", (t) => {
   });
   t.is(
     t.throws(() => handlePad(ctx, ["pad", "$808010"])).message,
-    "Target SNES address 808010 does not map to ROM.",
+    "Target address 808010 does not map to output.",
   );
 });
 

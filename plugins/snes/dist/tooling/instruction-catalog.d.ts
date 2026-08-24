@@ -1,0 +1,31 @@
+import type { InstructionDescriptor } from "@uttori/asm-core";
+/**
+ * The 65816 instruction catalog. Summaries are concise descriptions of effect;
+ * mode lists capture the addressing forms the assembler accepts so editors can
+ * offer hover, completion, and signature help.
+ */
+export declare const cpu65816Catalog: InstructionDescriptor[];
+/**
+ * The SPC700 (sound CPU) instruction catalog. Summaries describe effects and
+ * mode lists capture the operand forms accepted by the assembler.
+ */
+export declare const spc700Catalog: InstructionDescriptor[];
+export declare const superFxCatalog: InstructionDescriptor[];
+/**
+ * Returns the static instruction catalog for an architecture name.
+ * @param {string} architecture The architecture name (e.g. "65816", "spc700", "superfx").
+ * @returns {InstructionDescriptor[]} The matching catalog, or the 65816 catalog as a default.
+ */
+export interface InstructionCatalogProvider {
+    getInstructionCatalog(architecture: string): readonly InstructionDescriptor[];
+}
+/** Mutable catalog registry for applications that install architecture extensions. */
+export declare class InstructionCatalogRegistry implements InstructionCatalogProvider {
+    readonly catalogs: Map<string, readonly InstructionDescriptor[]>;
+    readonly aliases: Map<string, string>;
+    register(architecture: string, catalog: readonly InstructionDescriptor[], aliases?: readonly string[]): void;
+    getInstructionCatalog(architecture: string): readonly InstructionDescriptor[];
+}
+export declare const builtInInstructionCatalogs: InstructionCatalogRegistry;
+export declare function getCatalogForArchitecture(architecture: string, provider?: InstructionCatalogProvider): InstructionDescriptor[];
+//# sourceMappingURL=instruction-catalog.d.ts.map

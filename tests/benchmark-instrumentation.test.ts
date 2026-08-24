@@ -4,7 +4,7 @@ import {
   measureInternalPhase,
   recordInternalCounterPeak,
   runWithInternalInstrumentation,
-} from "../src/internal-instrumentation.js";
+} from "../packages/core/src/internal-instrumentation.js";
 import { aggregateSamples, percentile, type BenchmarkSample } from "../scripts/benchmark-report.js";
 
 test("internal instrumentation is opt-in and run-scoped", (t) => {

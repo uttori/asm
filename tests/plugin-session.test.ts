@@ -1,9 +1,9 @@
 import { test } from "./ava-helper.js";
 
-import { Assembler } from "../src/assembler.js";
-import { PluginManager, type SessionStateKey } from "../src/plugin/index.js";
-import { buildCompletionEntries } from "../src/lsp/catalog.js";
-import { WorkspaceIndex } from "../src/lsp/workspace-index.js";
+import { Assembler } from "../packages/core/src/assembler.js";
+import { PluginManager, type SessionStateKey } from "../packages/core/src/plugin/index.js";
+import { buildCompletionEntries } from "../packages/core/src/lsp/catalog.js";
+import { WorkspaceIndex } from "../packages/core/src/lsp/workspace-index.js";
 import { createFixturePlugin } from "./plugin/fixture-plugin.js";
 
 type FixtureState = { count: number; history: { values: number[] } };

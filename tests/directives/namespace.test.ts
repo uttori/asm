@@ -4,8 +4,8 @@ import {
   handlePullNamespace,
   handlePushNamespace,
   registerNamespaceDirectives,
-} from "../../src/directives/namespace.js";
-import { DirectiveRegistry } from "../../src/directives/registry.js";
+} from "../../packages/core/src/directives/namespace.js";
+import { DirectiveRegistry } from "../../packages/core/src/directives/registry.js";
 
 const createContext = () => ({
   session: {
@@ -17,7 +17,7 @@ const createContext = () => ({
   },
 });
 
-test("namespace handlers preserve nested state without an assembler", t => {
+test("namespace handlers preserve nested state without an assembler", (t) => {
   const ctx = createContext();
   handleNamespace(ctx, ["namespace", "nested", "on"]);
   handleNamespace(ctx, ["namespace", "Parent"]);
@@ -29,19 +29,20 @@ test("namespace handlers preserve nested state without an assembler", t => {
   t.deepEqual(ctx.session.namespaceNestingPath, ["Parent"]);
 });
 
-test("namespace rejects SPC block usage and sanitizes saved paths", t => {
+test("namespace remains target-neutral and sanitizes saved paths", (t) => {
   const ctx = createContext();
   ctx.session.inTargetBlock = true;
-  t.throws(() => handleNamespace(ctx, ["namespace", "Name"]));
+  handleNamespace(ctx, ["namespace", "Name"]);
+  t.is(ctx.session.currentNamespace, "Name");
 
   ctx.session.inTargetBlock = false;
   ctx.session.namespaceNestingEnabled = true;
-  ctx.session.namespaceStack.push("Root", "{\"invalid\":true}");
+  ctx.session.namespaceStack.push("Root", '{"invalid":true}');
   handlePullNamespace(ctx);
   t.deepEqual(ctx.session.namespaceNestingPath, []);
 });
 
-test("namespace push and pull preserve flat state and reject underflow", t => {
+test("namespace push and pull preserve flat state and reject underflow", (t) => {
   const ctx = createContext();
   ctx.session.currentNamespace = "Root";
 
@@ -54,7 +55,7 @@ test("namespace push and pull preserve flat state and reject underflow", t => {
   t.is(t.throws(() => handlePullNamespace(ctx)).message, "pullns without pushns");
 });
 
-test("namespace nested mode can be disabled and reset", t => {
+test("namespace nested mode can be disabled and reset", (t) => {
   const ctx = createContext();
   handleNamespace(ctx, ["namespace", "nested", "on"]);
   handleNamespace(ctx, ["namespace", "Root"]);
@@ -70,7 +71,7 @@ test("namespace nested mode can be disabled and reset", t => {
   t.is(ctx.session.currentNamespace, "");
 });
 
-test("namespace off unwinds nested names and clears flat names", t => {
+test("namespace off unwinds nested names and clears flat names", (t) => {
   const nested = createContext();
   handleNamespace(nested, ["namespace", "nested", "on"]);
   handleNamespace(nested, ["namespace", "Root"]);
@@ -85,7 +86,7 @@ test("namespace off unwinds nested names and clears flat names", t => {
   t.is(flat.session.currentNamespace, "");
 });
 
-test("namespace two-argument forms enable or disable names", t => {
+test("namespace two-argument forms enable or disable names", (t) => {
   const flat = createContext();
   handleNamespace(flat, ["namespace", "Root", "on"]);
   t.is(flat.session.currentNamespace, "Root");
@@ -101,7 +102,7 @@ test("namespace two-argument forms enable or disable names", t => {
   t.is(nested.session.currentNamespace, "Root");
 });
 
-test("namespace reset clears nested path", t => {
+test("namespace reset clears nested path", (t) => {
   const ctx = createContext();
   ctx.session.namespaceNestingEnabled = true;
   ctx.session.namespaceNestingPath = ["Root"];
@@ -113,7 +114,7 @@ test("namespace reset clears nested path", t => {
   t.is(ctx.session.currentNamespace, "");
 });
 
-test("namespace directive registration exposes all handlers", t => {
+test("namespace directive registration exposes all handlers", (t) => {
   const registry = new DirectiveRegistry();
   registerNamespaceDirectives(registry, createContext());
 

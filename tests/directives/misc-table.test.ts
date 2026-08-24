@@ -1,5 +1,5 @@
 import { test } from "../ava-helper.js";
-import { handlePullTable, handlePushTable } from "../../src/directives/misc.js";
+import { handlePullTable, handlePushTable } from "../../packages/core/src/directives/misc.js";
 import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 
 const createContext = () => ({
@@ -15,7 +15,7 @@ const createContext = () => ({
   runtime: runtimeStub,
 });
 
-test("table directives save and restore mappings without an assembler", t => {
+test("table directives save and restore mappings without an assembler", (t) => {
   const ctx = createContext();
   handlePushTable(ctx);
   ctx.session.characterMappings.set("A", 2);
@@ -24,7 +24,7 @@ test("table directives save and restore mappings without an assembler", t => {
   t.is(ctx.session.characterMappings.get("A"), 1);
 });
 
-test("pulltable rejects an empty stack", t => {
+test("pulltable rejects an empty stack", (t) => {
   const error = t.throws(() => handlePullTable(createContext()));
   t.is(error.message, "pulltable without pushtable");
 });

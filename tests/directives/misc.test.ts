@@ -5,12 +5,14 @@ import {
   handleError,
   handleTable,
   handleWarnpc,
-  registerAsarCompatibilityDirectives,
   registerMiscDirectives,
-} from "../../src/directives/misc.js";
-import type { DiagnosticDirectiveContext, TableDirectiveContext } from "../../src/directives/types.js";
-import type { ExpressionNode } from "../../src/ir/expression-node.js";
-import { DirectiveRegistry } from "../../src/directives/registry.js";
+} from "../../packages/core/src/directives/misc.js";
+import type {
+  DiagnosticDirectiveContext,
+  TableDirectiveContext,
+} from "../../packages/core/src/directives/types.js";
+import type { ExpressionNode } from "../../packages/core/src/ir/expression-node.js";
+import { DirectiveRegistry } from "../../packages/core/src/directives/registry.js";
 
 const parseStubNumber = (input: string): number => {
   const text = input.trim();
@@ -32,39 +34,31 @@ const createDiagnosticContext = (
   },
 });
 
-test("assert passes a nonzero condition and ignores the message", t => {
+test("assert passes a nonzero condition and ignores the message", (t) => {
   const seen: string[] = [];
   const ctx = createDiagnosticContext((expression) => {
     seen.push(String(expression));
     return true;
   });
 
-  handleAssert(
-    ctx,
-    ["assert", "1"],
-    'assert 1, "unused"',
-  );
+  handleAssert(ctx, ["assert", "1"], 'assert 1, "unused"');
 
   t.deepEqual(seen, ["1"]);
 });
 
-test("assert splits the message at the first top-level comma", t => {
+test("assert splits the message at the first top-level comma", (t) => {
   const seen: string[] = [];
   const ctx = createDiagnosticContext((expression) => {
     seen.push(String(expression));
     return true;
   });
 
-  handleAssert(
-    ctx,
-    ["assert"],
-    'assert 0 == select(1, 1, 0), "Oh no, commas!", bin(%01010101, 8)',
-  );
+  handleAssert(ctx, ["assert"], 'assert 0 == select(1, 1, 0), "Oh no, commas!", bin(%01010101, 8)');
 
   t.deepEqual(seen, ["0 == select(1, 1, 0)"]);
 });
 
-test("assert fails with asar's default message", t => {
+test("assert fails with asar's default message", (t) => {
   const ctx = createDiagnosticContext(() => false);
 
   t.throws(() => handleAssert(ctx, ["assert", "0"], "assert 0"), {
@@ -72,16 +66,15 @@ test("assert fails with asar's default message", t => {
   });
 });
 
-test("assert fails with a dequoted custom message", t => {
+test("assert fails with a dequoted custom message", (t) => {
   const ctx = createDiagnosticContext(() => false);
 
-  t.throws(
-    () => handleAssert(ctx, ["assert"], 'assert 0, "You must put a BANK_END"'),
-    { message: "Assertion failed: You must put a BANK_END" },
-  );
+  t.throws(() => handleAssert(ctx, ["assert"], 'assert 0, "You must put a BANK_END"'), {
+    message: "Assertion failed: You must put a BANK_END",
+  });
 });
 
-test("assert rejects a missing condition", t => {
+test("assert rejects a missing condition", (t) => {
   const ctx = createDiagnosticContext(() => true);
 
   t.throws(() => handleAssert(ctx, ["assert"], "assert"), {
@@ -89,7 +82,7 @@ test("assert rejects a missing condition", t => {
   });
 });
 
-test("error throws asar's default and quoted messages", t => {
+test("error throws asar's default and quoted messages", (t) => {
   const ctx = createDiagnosticContext(() => true);
 
   t.throws(() => handleError(ctx, ["error"], "error"), {
@@ -100,7 +93,7 @@ test("error throws asar's default and quoted messages", t => {
   });
 });
 
-test("warnpc passes when PC is at or below the bound", t => {
+test("warnpc passes when PC is at or below the bound", (t) => {
   const ctx = createDiagnosticContext(() => true, 0x8000);
 
   handleWarnpc(ctx, ["warnpc", "$8001"], "warnpc $8001");
@@ -108,7 +101,7 @@ test("warnpc passes when PC is at or below the bound", t => {
   t.pass();
 });
 
-test("warnpc fails when PC is past the bound", t => {
+test("warnpc fails when PC is past the bound", (t) => {
   const ctx = createDiagnosticContext(() => true, 0x8002);
 
   t.throws(() => handleWarnpc(ctx, ["warnpc", "$8001"], "warnpc $8001"), {
@@ -116,7 +109,7 @@ test("warnpc fails when PC is past the bound", t => {
   });
 });
 
-test("table loads asar char=hex lines without stripping a leading space", t => {
+test("table loads asar char=hex lines without stripping a leading space", (t) => {
   const mappings = new Map<string, number>();
   const ctx: TableDirectiveContext = {
     session: {
@@ -138,7 +131,7 @@ test("table loads asar char=hex lines without stripping a leading space", t => {
   t.is(ctx.session.currentTable, "font.txt");
 });
 
-test("table rtl reads hex=char lines", t => {
+test("table rtl reads hex=char lines", (t) => {
   const mappings = new Map<string, number>();
   const ctx: TableDirectiveContext = {
     session: {
@@ -157,7 +150,7 @@ test("table rtl reads hex=char lines", t => {
   t.is(mappings.get(" "), 0x20);
 });
 
-test("table replaces prior mappings and rejects invalid lines", t => {
+test("table replaces prior mappings and rejects invalid lines", (t) => {
   const mappings = new Map<string, number>([["Z", 0x5a]]);
   const ctx: TableDirectiveContext = {
     session: {
@@ -187,8 +180,11 @@ test("table replaces prior mappings and rejects invalid lines", t => {
   });
 });
 
-test("cleartable restores identity mappings", t => {
-  const mappings = new Map<string, number>([["A", 0x10], ["~", 0x3a]]);
+test("cleartable restores identity mappings", (t) => {
+  const mappings = new Map<string, number>([
+    ["A", 0x10],
+    ["~", 0x3a],
+  ]);
   const ctx: TableDirectiveContext = {
     session: {
       tableStack: [],
@@ -205,7 +201,7 @@ test("cleartable restores identity mappings", t => {
   t.is(ctx.session.currentTable, null);
 });
 
-test("misc registry dispatches assert, error, warn, and warnpc", t => {
+test("misc registry dispatches assert, error, warn, and warnpc", (t) => {
   const registry = new DirectiveRegistry();
   let evaluated = "";
   registerMiscDirectives(registry, {
@@ -231,18 +227,9 @@ test("misc registry dispatches assert, error, warn, and warnpc", t => {
       },
     },
   });
-  registerAsarCompatibilityDirectives(registry, {
-    session: {
-      tableStack: [],
-      characterMappings: new Map(),
-      currentTable: null,
-      includeSource: { readFile: () => "" },
-    },
-  });
-
   t.true(registry.dispatch("assert", ["assert", "1"], "assert 1"));
   t.is(evaluated, "1");
-  t.true(registry.dispatch("warn", ["warn"], "warn"));
+  t.false(registry.dispatch("warn", ["warn"], "warn"));
   t.true(registry.dispatch("warnpc", ["warnpc", "$8001"], "warnpc $8001"));
   t.throws(() => registry.dispatch("error", ["error"], "error"));
 });

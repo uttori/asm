@@ -1,6 +1,6 @@
 import * as fs from "fs";
-import { Assembler } from "./assembler.js";
-import { snesAssemblerHost } from "./plugin/legacy-adapter.js";
+import { Assembler } from "@uttori/asm-core";
+import { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
 import path from "path";
 
 class CLI {
@@ -24,7 +24,7 @@ class CLI {
   /**
    * Main function to process input arguments and compile assembly files.
    */
-  public run(): void {
+  public async run(): Promise<void> {
     console.log("cli run");
     const rawArgs = process.argv.slice(2);
     let checksumMode: "asar" | "simple" = "asar";
@@ -84,12 +84,12 @@ class CLI {
     let assembler: Assembler | undefined;
     try {
       assembler = new Assembler({
-        ...snesAssemblerHost,
+        ...(await createSnesAssemblerHost()),
+        targetOptions: { checksumMode },
         baseImage: targetRom,
         collectSourceMetadata: false,
       });
       this.assembler = assembler;
-      assembler.setChecksumMode(checksumMode);
       console.log(`Checksum mode: ${checksumMode}`);
 
       const assemblyCode = fs.readFileSync(inputFile, "utf8");
@@ -151,4 +151,4 @@ class CLI {
 }
 
 // Run the CLI
-new CLI().run();
+await new CLI().run();

@@ -3,7 +3,7 @@ import {
   PLUGIN_API_VERSION,
   type AssemblerPlugin,
   type PluginActivationContext,
-} from "../../src/plugin/index.js";
+} from "../../packages/core/src/plugin/index.js";
 
 export interface FixturePluginOptions {
   readonly byte: number;
