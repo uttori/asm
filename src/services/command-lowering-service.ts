@@ -71,76 +71,10 @@ export type LoweredProgram = {
   nodes: LoweredExecutableNode[];
 };
 
-// Every registered directive that can execute from durable words/metadata is
-// listed here. Data and structural directives intentionally remain absent:
-// they depend on ordered define/macro/label/struct preprocessing.
-const DIRECTLY_LOWERABLE_DIRECTIVES = new Set([
-  "arch",
-  "asar",
-  "assert",
-  "autoclean",
-  "autoclear",
-  "base",
-  "check",
-  "cleartable",
-  "dpbase",
-  "endspcblock",
-  "error",
-  "exhirom",
-  "exlorom",
-  "fastrom",
-  "fill",
-  "fillbyte",
-  "filldword",
-  "filllong",
-  "fillword",
-  "freecode",
-  "freedata",
-  "freespace",
-  "freespacebyte",
-  "fullsa1rom",
-  "hirom",
-  "include",
-  "includefrom",
-  "includeonce",
-  "incbin",
-  "incsrc",
-  "lorom",
-  "namespace",
-  "norom",
-  "optimize",
-  "org",
-  "pad",
-  "padbyte",
-  "paddword",
-  "padlong",
-  "padword",
-  "pullbase",
-  "pullns",
-  "pullpc",
-  "pulltable",
-  "prot",
-  "pushbase",
-  "pushns",
-  "pushpc",
-  "pushtable",
-  "sa1rom",
-  "sfxrom",
-  "spcblock",
-  "startpos",
-  "table",
-  "warnings",
-  "warnpc",
-  "print",
-  "reset",
-  "warn",
-  "{",
-  "}",
-]);
-
 export type CommandLoweringHost = {
   directiveRegistry: {
     has(keyword: string): boolean;
+    getPhase(keyword: string): "preprocess" | "lowered" | undefined;
   };
   resolveActiveArchitecture(): { name: string; definition?: ArchitectureDefinition };
   classifyOperandForActiveArchitecture(
@@ -339,7 +273,7 @@ export class CommandLoweringService {
       return command.kind;
     }
     if (this.host.directiveRegistry.has(keyword)) {
-      if (DIRECTLY_LOWERABLE_DIRECTIVES.has(keyword)) {
+      if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
         return undefined;
       }
       if (command.parsed.dataDirective) {

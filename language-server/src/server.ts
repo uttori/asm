@@ -441,7 +441,7 @@ connection.onSignatureHelp((params) => {
   }
   const lineStart = { line: params.position.line, character: 0 };
   const lineText = document.getText({ start: lineStart, end: params.position });
-  return signatureHelpFor(lineText, settings.architecture);
+  return signatureHelpFor(lineText, settings.architecture, index);
 });
 
 /** @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#prepare-rename-request-leftwards_arrow_with_hook */

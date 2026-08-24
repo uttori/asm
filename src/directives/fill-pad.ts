@@ -170,8 +170,16 @@ export const registerFillPadDirectives = (
   registry: DirectiveRegistry,
   context: FillPadDirectiveContext,
 ): void => {
-  registry.register(["fillbyte", "fillword", "filllong", "filldword"], context, handleFillPattern);
-  registry.register("fill", context, handleFill);
-  registry.register(["padbyte", "padword", "padlong", "paddword"], context, handlePadPattern);
-  registry.register("pad", context, handlePad);
+  registry.registerLowered(
+    ["fillbyte", "fillword", "filllong", "filldword"],
+    context,
+    handleFillPattern,
+  );
+  registry.registerLowered("fill", context, handleFill);
+  registry.registerLowered(
+    ["padbyte", "padword", "padlong", "paddword"],
+    context,
+    handlePadPattern,
+  );
+  registry.registerLowered("pad", context, handlePad);
 };

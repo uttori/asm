@@ -29,7 +29,7 @@ export const registerSpcDirectives = (
   registry: DirectiveRegistry,
   context: SpcDirectiveContext,
 ): void => {
-  registry.register("spcblock", context, handleSpcblock);
+  registry.registerLowered("spcblock", context, handleSpcblock);
 
-  registry.register("endspcblock", context, handleEndSpcblock);
+  registry.registerLowered("endspcblock", context, handleEndSpcblock);
 };

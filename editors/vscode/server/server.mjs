@@ -11448,6 +11448,7 @@ var MathCore = class {
   host;
   math_round = false;
   userFunctions = /* @__PURE__ */ new Map();
+  expressionFunctions = /* @__PURE__ */ new Map();
   operators = OPERATORS;
   /** Full expression currently being scanned. */
   scanSource = "";
@@ -11502,6 +11503,16 @@ var MathCore = class {
     this.math_round = false;
     this.userFunctions.clear();
     this.clearExpressionCaches();
+  }
+  /**
+   * Installs a target-provided expression function for this session.
+   * @param {string | readonly string[]} names The canonical name and aliases.
+   * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
+   */
+  registerExpressionFunction(names, expressionFunction) {
+    for (const name of typeof names === "string" ? [names] : names) {
+      this.expressionFunctions.set(name.toLowerCase(), expressionFunction);
+    }
   }
   /**
    * Starts a new expression-cache snapshot for an assembly.
@@ -12208,6 +12219,18 @@ var MathCore = class {
     if (this.userFunctions.has(name)) {
       return this.callUserFunction(name, args);
     }
+    const expressionFunction = this.expressionFunctions.get(name.toLowerCase());
+    if (expressionFunction) {
+      if (args.length < expressionFunction.minimumArguments || args.length > expressionFunction.maximumArguments) {
+        const expected = expressionFunction.minimumArguments === expressionFunction.maximumArguments ? `exactly ${expressionFunction.minimumArguments}` : `between ${expressionFunction.minimumArguments} and ${expressionFunction.maximumArguments}`;
+        throw new Error(`${name}() expects ${expected} argument(s).`);
+      }
+      const result = expressionFunction.evaluate(args);
+      if (typeof result !== "number") {
+        throw new Error(`${name}() returned a non-numeric value.`);
+      }
+      return result;
+    }
     return this.callBuiltInFunction(name, args);
   };
   /**
@@ -12394,13 +12417,6 @@ var MathCore = class {
         const str2 = this.strArg(name, args[1]);
         return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
       }
-      // --- SNES/PC Address Conversion ---
-      case "snestopc":
-      case "pctosnes": {
-        if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
-        const value = this.numArg(name, args[0]);
-        return name === "snestopc" ? this.getHost().convertSnesToPc(value) : this.getHost().convertPcToSnes(value);
-      }
       // --- Filesize & File Status ---
       case "filesize":
       case "getfilestatus": {
@@ -12437,39 +12453,6 @@ var MathCore = class {
         const pos = this.numArg(name, args[1]);
         const num = this.numArg(name, args[2]);
         return this.getHost().canReadFile(filename, pos, num);
-      }
-      // --- ROM Can-Read functions ---
-      case "canread1":
-      case "canread2":
-      case "canread3":
-      case "canread4": {
-        if (args.length !== 1) throw new Error(`${name} expects exactly 1 numeric argument.`);
-        const pos = this.numArg(name, args[0]);
-        const size = parseInt(name.slice(-1), 10);
-        return this.getHost().canReadRom(pos, size);
-      }
-      case "canread": {
-        if (args.length !== 2)
-          throw new Error("canread expects exactly 2 numeric arguments (pos, num).");
-        const pos = this.numArg(name, args[0]);
-        const num = this.numArg(name, args[1]);
-        return this.getHost().canReadRom(pos, num);
-      }
-      // --- ROM Reading functions ---
-      case "read1":
-      case "read2":
-      case "read3":
-      case "read4": {
-        if (args.length < 1 || args.length > 2)
-          throw new Error(`${name} expects 1 or 2 numeric arguments.`);
-        const pos = this.numArg(name, args[0]);
-        const size = parseInt(name.slice(-1), 10);
-        if (args.length === 1) {
-          return this.getHost().readRom(pos, size);
-        } else {
-          const defVal = this.numArg(name, args[1]);
-          return this.getHost().readRom(pos, size, defVal);
-        }
       }
       // --- File Reading functions ---
       case "readfile1":
@@ -13277,6 +13260,18 @@ var ArchitectureRegistry = class {
   }
 };
 
+// src/directives/directive-set-ids.ts
+var LEGACY_SNES_MAPPER_DIRECTIVE_SET = "legacy.snes-mapper-directives";
+var LEGACY_SNES_MEMORY_DIRECTIVE_SET = "legacy.snes-memory-directives";
+var LEGACY_SNES_POLICY_DIRECTIVE_SET = "legacy.snes-policy-directives";
+var LEGACY_SPC_DIRECTIVE_SET = "legacy.spc-directives";
+var ALL_LEGACY_TARGET_DIRECTIVE_SETS = /* @__PURE__ */ new Set([
+  LEGACY_SNES_MAPPER_DIRECTIVE_SET,
+  LEGACY_SNES_MEMORY_DIRECTIVE_SET,
+  LEGACY_SNES_POLICY_DIRECTIVE_SET,
+  LEGACY_SPC_DIRECTIVE_SET
+]);
+
 // src/directives/data.ts
 var handleDataDirective = ({ runtime }, words) => {
   runtime.handleDataDirective(words[0], words.slice(1));
@@ -13369,10 +13364,18 @@ var handlePad = ({ session, operandResolver }, words) => {
   }
 };
 var registerFillPadDirectives = (registry, context) => {
-  registry.register(["fillbyte", "fillword", "filllong", "filldword"], context, handleFillPattern);
-  registry.register("fill", context, handleFill);
-  registry.register(["padbyte", "padword", "padlong", "paddword"], context, handlePadPattern);
-  registry.register("pad", context, handlePad);
+  registry.registerLowered(
+    ["fillbyte", "fillword", "filllong", "filldword"],
+    context,
+    handleFillPattern
+  );
+  registry.registerLowered("fill", context, handleFill);
+  registry.registerLowered(
+    ["padbyte", "padword", "padlong", "paddword"],
+    context,
+    handlePadPattern
+  );
+  registry.registerLowered("pad", context, handlePad);
 };
 
 // src/directives/flow-control.ts
@@ -13649,21 +13652,15 @@ var handleInclude = ({ includeSource, defineEngine }, words, _raw = "", command)
   );
 };
 var registerIncludeSourceDirectives = (registry, context) => {
-  registry.register("incsrc", context, handleIncsrc);
-  registry.register("include", context, handleInclude);
-  registry.register("includeonce", context, ({ includeSource }) => {
+  registry.registerLowered("incsrc", context, handleIncsrc);
+  registry.registerLowered("include", context, handleInclude);
+  registry.registerLowered("includeonce", context, ({ includeSource }) => {
     includeSource.guardCurrentFile();
   });
-  registry.register("incbin", context, handleIncbin);
+  registry.registerLowered("incbin", context, handleIncbin);
 };
 
 // src/directives/layout.ts
-var DEFAULT_LAYOUT_FEATURES = /* @__PURE__ */ new Set([
-  "snes-mappers",
-  "snes-memory",
-  "snes-policy",
-  "spc-blocks"
-]);
 var handlePushBase = ({ session }) => {
   session.pushBaseStack.push(session.currentTargetAddress);
 };
@@ -13722,8 +13719,8 @@ var handleStartpos = ({ session, operandResolver }, words) => {
   }
   session.spcblockData.executeAddress = operandResolver.getnum(session.resolvedefines(params[0])) & 65535;
 };
-var registerLayoutDirectives = (registry, context, features = DEFAULT_LAYOUT_FEATURES) => {
-  registry.register("base", context.base, ({ session, operandResolver }, words) => {
+var registerGenericLayoutDirectives = (registry, context) => {
+  registry.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
     if (words.length !== 2) {
       throw new Error("BASE directive requires exactly one parameter.");
     }
@@ -13744,60 +13741,7 @@ var registerLayoutDirectives = (registry, context, features = DEFAULT_LAYOUT_FEA
     session.currentTargetAddress = value;
     session.currentTargetStartAddress = value;
   });
-  if (features.has("snes-mappers")) {
-    registry.register("lorom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "lorom");
-    });
-    registry.register("hirom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "hirom");
-    });
-    registry.register("exlorom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "exlorom");
-    });
-    registry.register("exhirom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "exhirom");
-    });
-    registry.register("sfxrom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "sfxrom");
-    });
-    registry.register("norom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "norom");
-    });
-    registry.register("fullsa1rom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "bigsa1rom");
-    });
-    registry.register("sa1rom", context.mapper, ({ session }, words) => {
-      assertMapperAvailable(session.inSpcblock);
-      if (words.length > 1) {
-        const parts = words[1].split(",");
-        if (parts.length !== 4) {
-          throw new Error(
-            "Invalid SA1ROM mapper specification. Expected 4 comma-separated values."
-          );
-        }
-        session.sa1banks = [];
-        session.sa1banks[0] = parseInt(parts[0], 10) << 20;
-        session.sa1banks[1] = parseInt(parts[1], 10) << 20;
-        session.sa1banks[4] = parseInt(parts[2], 10) << 20;
-        session.sa1banks[5] = parseInt(parts[3], 10) << 20;
-      } else {
-        session.sa1banks = [];
-        session.sa1banks[0] = 0 << 20;
-        session.sa1banks[1] = 1 << 20;
-        session.sa1banks[4] = 2 << 20;
-        session.sa1banks[5] = 3 << 20;
-      }
-      applyMapperSelection(session, "sa1rom");
-    });
-  }
-  registry.register("org", context.org, ({ session, runtime }, words) => {
+  registry.registerLowered("org", context.org, ({ session, runtime }, words) => {
     if (session.inSpcblock) {
       throw new Error("ORG is unavailable inside spcblock.");
     }
@@ -13807,48 +13751,94 @@ var registerLayoutDirectives = (registry, context, features = DEFAULT_LAYOUT_FEA
     }
     runtime.handleOrg(words.slice(1));
   });
-  registry.register("pushbase", context.addressStack, handlePushBase);
-  registry.register("pullbase", context.addressStack, handlePullBase);
-  registry.register("pushpc", context.runtime, ({ runtime }) => {
+  registry.registerLowered("pushbase", context.addressStack, handlePushBase);
+  registry.registerLowered("pullbase", context.addressStack, handlePullBase);
+  registry.registerLowered("pushpc", context.runtime, ({ runtime }) => {
     runtime.handlePushPC();
   });
-  registry.register("pullpc", context.runtime, ({ runtime }) => {
+  registry.registerLowered("pullpc", context.runtime, ({ runtime }) => {
     runtime.handlePullPC();
   });
-  registry.register("arch", context.architecture, handleArch);
-  if (features.has("spc-blocks")) {
-    registry.register("startpos", context.startpos, handleStartpos);
-  }
-  if (features.has("snes-policy")) {
-    registry.register("check", context.policy, ({ session }, words) => {
-      if (words.length >= 2 && words[1].toLowerCase() === "title") {
-        session.readFunctionsEnabled = true;
-        return;
+  registry.registerLowered("arch", context.architecture, handleArch);
+};
+var registerSnesMapperDirectives = (registry, context) => {
+  const registerMapper = (keyword, mapper) => registry.registerLowered(keyword, context.mapper, ({ session }) => {
+    assertMapperAvailable(session.inSpcblock);
+    applyMapperSelection(session, mapper);
+  });
+  registerMapper("lorom", "lorom");
+  registerMapper("hirom", "hirom");
+  registerMapper("exlorom", "exlorom");
+  registerMapper("exhirom", "exhirom");
+  registerMapper("sfxrom", "sfxrom");
+  registerMapper("norom", "norom");
+  registerMapper("fullsa1rom", "bigsa1rom");
+  registry.registerLowered("sa1rom", context.mapper, ({ session }, words) => {
+    assertMapperAvailable(session.inSpcblock);
+    if (words.length > 1) {
+      const parts = words[1].split(",");
+      if (parts.length !== 4) {
+        throw new Error("Invalid SA1ROM mapper specification. Expected 4 comma-separated values.");
       }
-      if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
-        throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
-      }
+      session.sa1banks = [];
+      session.sa1banks[0] = parseInt(parts[0], 10) << 20;
+      session.sa1banks[1] = parseInt(parts[1], 10) << 20;
+      session.sa1banks[4] = parseInt(parts[2], 10) << 20;
+      session.sa1banks[5] = parseInt(parts[3], 10) << 20;
+    } else {
+      session.sa1banks = [];
+      session.sa1banks[0] = 0 << 20;
+      session.sa1banks[1] = 1 << 20;
+      session.sa1banks[4] = 2 << 20;
+      session.sa1banks[5] = 3 << 20;
+    }
+    applyMapperSelection(session, "sa1rom");
+  });
+};
+var registerSpcLayoutDirectives = (registry, context) => {
+  registry.registerLowered("startpos", context.startpos, handleStartpos);
+};
+var registerSnesPolicyDirectives = (registry, context) => {
+  registry.registerLowered("check", context.policy, ({ session }, words) => {
+    if (words.length >= 2 && words[1].toLowerCase() === "title") {
+      session.readFunctionsEnabled = true;
+      return;
+    }
+    if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
+      throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
+    }
+    const mode = words[2].toLowerCase();
+    if (mode === "off") {
+      session.bankCrossCheckMode = "off";
+    } else if (mode === "half") {
+      session.bankCrossCheckMode = "half";
+    } else if (mode === "full" || mode === "on") {
+      session.bankCrossCheckMode = "full";
+    } else {
+      throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+    }
+  });
+  registry.registerLowered("optimize", context.policy, ({ session }, words) => {
+    if (words.length >= 3 && words[1].toLowerCase() === "dp") {
       const mode = words[2].toLowerCase();
-      if (mode === "off") {
-        session.bankCrossCheckMode = "off";
-      } else if (mode === "half") {
-        session.bankCrossCheckMode = "half";
-      } else if (mode === "full" || mode === "on") {
-        session.bankCrossCheckMode = "full";
-      } else {
-        throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+      if (mode === "none") {
+        session.optimizeDirectPage = false;
+      } else if (mode === "ram" || mode === "always") {
+        session.optimizeDirectPage = true;
       }
-    });
-    registry.register("optimize", context.policy, ({ session }, words) => {
-      if (words.length >= 3 && words[1].toLowerCase() === "dp") {
-        const mode = words[2].toLowerCase();
-        if (mode === "none") {
-          session.optimizeDirectPage = false;
-        } else if (mode === "ram" || mode === "always") {
-          session.optimizeDirectPage = true;
-        }
-      }
-    });
+    }
+  });
+};
+var registerLayoutDirectives = (registry, context, activeSetIds = ALL_LEGACY_TARGET_DIRECTIVE_SETS) => {
+  registerGenericLayoutDirectives(registry, context);
+  if (activeSetIds.has(LEGACY_SNES_MAPPER_DIRECTIVE_SET)) {
+    registerSnesMapperDirectives(registry, context);
+  }
+  if (activeSetIds.has(LEGACY_SPC_DIRECTIVE_SET)) {
+    registerSpcLayoutDirectives(registry, context);
+  }
+  if (activeSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)) {
+    registerSnesPolicyDirectives(registry, context);
   }
 };
 
@@ -13922,9 +13912,9 @@ var handleProt = ({ session }, words) => {
   session.write1(0);
 };
 var registerMemoryDirectives = (registry, context) => {
-  registry.register(["freecode", "freespace", "freedata"], context, handleFreespace);
-  registry.register("freespacebyte", context, handleFreespaceByte);
-  registry.register("prot", context, handleProt);
+  registry.registerLowered(["freecode", "freespace", "freedata"], context, handleFreespace);
+  registry.registerLowered("freespacebyte", context, handleFreespaceByte);
+  registry.registerLowered("prot", context, handleProt);
 };
 
 // src/services/command-text-service.ts
@@ -14307,15 +14297,17 @@ var handleWarnpc = ({ session }, _words, raw) => {
   }
 };
 var registerMiscDirectives = (registry, context) => {
-  registry.register("pulltable", context.table, handlePullTable);
-  registry.register("pushtable", context.table, handlePushTable);
-  registry.register("cleartable", context.table, handleClearTable);
-  registry.register("table", context.table, handleTable);
-  registry.register([...ASAR_COMPAT_NO_OP_DIRECTIVES], context.table, () => {
+  registry.registerLowered("pulltable", context.table, handlePullTable);
+  registry.registerLowered("pushtable", context.table, handlePushTable);
+  registry.registerLowered("cleartable", context.table, handleClearTable);
+  registry.registerLowered("table", context.table, handleTable);
+  registry.registerLowered("assert", context.diagnostic, handleAssert);
+  registry.registerLowered("error", context.diagnostic, handleError);
+  registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+};
+var registerAsarCompatibilityDirectives = (registry, context) => {
+  registry.registerLowered([...ASAR_COMPAT_NO_OP_DIRECTIVES], context, () => {
   });
-  registry.register("assert", context.diagnostic, handleAssert);
-  registry.register("error", context.diagnostic, handleError);
-  registry.register("warnpc", context.diagnostic, handleWarnpc);
 };
 
 // src/directives/namespace.ts
@@ -14395,9 +14387,9 @@ var handleNamespace = ({ session }, words) => {
   }
 };
 var registerNamespaceDirectives = (registry, context) => {
-  registry.register("namespace", context, handleNamespace);
-  registry.register("pushns", context, handlePushNamespace);
-  registry.register("pullns", context, handlePullNamespace);
+  registry.registerLowered("namespace", context, handleNamespace);
+  registry.registerLowered("pushns", context, handlePushNamespace);
+  registry.registerLowered("pullns", context, handlePullNamespace);
 };
 
 // src/directives/spc.ts
@@ -14408,8 +14400,8 @@ var handleEndSpcblock = ({ runtime }, words) => {
   runtime.handleEndSpcblock(words);
 };
 var registerSpcDirectives = (registry, context) => {
-  registry.register("spcblock", context, handleSpcblock);
-  registry.register("endspcblock", context, handleEndSpcblock);
+  registry.registerLowered("spcblock", context, handleSpcblock);
+  registry.registerLowered("endspcblock", context, handleEndSpcblock);
 };
 
 // src/directives/struct-binary.ts
@@ -14423,25 +14415,31 @@ var registerStructBinaryDirectives = (registry, context) => {
 };
 
 // src/directives/registry.ts
-var ALL_TARGET_DIRECTIVE_FEATURES = /* @__PURE__ */ new Set([
-  "snes-mappers",
-  "snes-memory",
-  "snes-policy",
-  "spc-blocks"
-]);
 var DirectiveRegistry = class {
   handlers = /* @__PURE__ */ new Map();
+  phases = /* @__PURE__ */ new Map();
   /**
    * Registers the value.
    * @param {string | string[]} keyword The keyword.
    * @param {Context} context The context.
    * @param {NarrowDirectiveHandler<Context>} handler The handler.
+   * @param {DirectiveExecutionPhase} [phase] The directive execution phase.
    */
-  register(keyword, context, handler) {
+  register(keyword, context, handler, phase = "preprocess") {
     const keywords = Array.isArray(keyword) ? keyword : [keyword];
     for (const entry of keywords) {
       this.handlers.set(entry, (words, raw, command) => handler(context, words, raw, command));
+      this.phases.set(entry, phase);
     }
+  }
+  /**
+   * Registers a directive that can execute from durable lowered command data.
+   * @param {string | string[]} keyword The directive keyword or aliases.
+   * @param {Context} context The handler context.
+   * @param {NarrowDirectiveHandler<Context>} handler The handler.
+   */
+  registerLowered(keyword, context, handler) {
+    this.register(keyword, context, handler, "lowered");
   }
   /**
    * Checks whether it has the value.
@@ -14482,16 +14480,31 @@ var DirectiveRegistry = class {
     }
     return void 0;
   }
+  /**
+   * Resolves the execution phase declared alongside a directive handler.
+   * @param {string} keyword The directive keyword.
+   * @returns {DirectiveExecutionPhase | undefined} The active directive phase.
+   */
+  getPhase(keyword) {
+    const direct = this.phases.get(keyword);
+    if (direct) {
+      return direct;
+    }
+    if (keyword.startsWith("@")) {
+      return this.phases.get(keyword.slice(1));
+    }
+    return void 0;
+  }
 };
-var createDirectiveRegistry = (contexts, features = ALL_TARGET_DIRECTIVE_FEATURES) => {
+var createDirectiveRegistry = (contexts, activeSetIds = ALL_LEGACY_TARGET_DIRECTIVE_SETS) => {
   const registry = new DirectiveRegistry();
   registerIncludeSourceDirectives(registry, contexts.includeSource);
   registerFillPadDirectives(registry, contexts.fillPad);
   registerFlowControlDirectives(registry, contexts.flowControl);
   registerNamespaceDirectives(registry, contexts.namespace);
-  registerLayoutDirectives(registry, contexts.layout, features);
+  registerLayoutDirectives(registry, contexts.layout, activeSetIds);
   registerDataDirectives(registry, contexts.data);
-  if (features.has("spc-blocks")) {
+  if (activeSetIds.has(LEGACY_SPC_DIRECTIVE_SET)) {
     registerSpcDirectives(registry, contexts.spc);
   }
   registerStructBinaryDirectives(registry, contexts.struct);
@@ -14499,7 +14512,10 @@ var createDirectiveRegistry = (contexts, features = ALL_TARGET_DIRECTIVE_FEATURE
     table: contexts.table,
     diagnostic: contexts.diagnostic
   });
-  if (features.has("snes-memory")) {
+  if (activeSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)) {
+    registerAsarCompatibilityDirectives(registry, contexts.table);
+  }
+  if (activeSetIds.has(LEGACY_SNES_MEMORY_DIRECTIVE_SET)) {
     registerMemoryDirectives(registry, contexts.memory);
   }
   return registry;
@@ -15531,69 +15547,6 @@ var AssemblyFrontEndService = class {
 };
 
 // src/services/command-lowering-service.ts
-var DIRECTLY_LOWERABLE_DIRECTIVES = /* @__PURE__ */ new Set([
-  "arch",
-  "asar",
-  "assert",
-  "autoclean",
-  "autoclear",
-  "base",
-  "check",
-  "cleartable",
-  "dpbase",
-  "endspcblock",
-  "error",
-  "exhirom",
-  "exlorom",
-  "fastrom",
-  "fill",
-  "fillbyte",
-  "filldword",
-  "filllong",
-  "fillword",
-  "freecode",
-  "freedata",
-  "freespace",
-  "freespacebyte",
-  "fullsa1rom",
-  "hirom",
-  "include",
-  "includefrom",
-  "includeonce",
-  "incbin",
-  "incsrc",
-  "lorom",
-  "namespace",
-  "norom",
-  "optimize",
-  "org",
-  "pad",
-  "padbyte",
-  "paddword",
-  "padlong",
-  "padword",
-  "pullbase",
-  "pullns",
-  "pullpc",
-  "pulltable",
-  "prot",
-  "pushbase",
-  "pushns",
-  "pushpc",
-  "pushtable",
-  "sa1rom",
-  "sfxrom",
-  "spcblock",
-  "startpos",
-  "table",
-  "warnings",
-  "warnpc",
-  "print",
-  "reset",
-  "warn",
-  "{",
-  "}"
-]);
 var canonicalDirectiveKeyword = (keyword, registry) => {
   const normalized = keyword.toLowerCase();
   if (normalized.startsWith("@") && registry.has(normalized.slice(1))) {
@@ -15746,7 +15699,7 @@ var CommandLoweringService = class {
       return command.kind;
     }
     if (this.host.directiveRegistry.has(keyword)) {
-      if (DIRECTLY_LOWERABLE_DIRECTIVES.has(keyword)) {
+      if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
         return void 0;
       }
       if (command.parsed.dataDirective) {
@@ -18016,9 +17969,10 @@ var ResolvedToolingCatalog = class {
     return this.architectures.get(id)?.value.instructions ?? [];
   }
   getDirectives() {
-    return this.target.directiveSets.flatMap(
-      (id) => this.directiveSets.get(canonical(id))?.value.directives.flatMap((item) => item.tooling) ?? []
-    );
+    return this.target.directiveSets.flatMap((id) => {
+      const set = this.directiveSets.get(canonical(id))?.value;
+      return set ? [...set.tooling ?? [], ...set.directives.flatMap((item) => item.tooling)] : [];
+    });
   }
   getExpressionFunctions() {
     return this.target.expressionSets.flatMap(
@@ -23685,6 +23639,425 @@ var ArchSuperFX = class {
   }
 };
 
+// src/lsp/directive-catalog.ts
+var directiveCatalog = [
+  {
+    keyword: "db",
+    summary: "Emit one or more bytes.",
+    syntax: "db value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dw",
+    summary: "Emit one or more 16-bit words.",
+    syntax: "dw value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dl",
+    summary: "Emit one or more 24-bit long values.",
+    syntax: "dl value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dd",
+    summary: "Emit one or more 32-bit double words.",
+    syntax: "dd value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dc.b",
+    summary: "Emit bytes (asar-compatible data constant).",
+    syntax: "dc.b value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dc.w",
+    summary: "Emit words (asar-compatible data constant).",
+    syntax: "dc.w value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "dc.l",
+    summary: "Emit long values (asar-compatible data constant).",
+    syntax: "dc.l value[, value...]",
+    group: "data"
+  },
+  {
+    keyword: "fillbyte",
+    summary: "Set the byte used by fill.",
+    syntax: "fillbyte value",
+    group: "memory"
+  },
+  {
+    keyword: "fillword",
+    summary: "Set the word used by fill.",
+    syntax: "fillword value",
+    group: "memory"
+  },
+  {
+    keyword: "filllong",
+    summary: "Set the long value used by fill.",
+    syntax: "filllong value",
+    group: "memory"
+  },
+  {
+    keyword: "filldword",
+    summary: "Set the double word used by fill.",
+    syntax: "filldword value",
+    group: "memory"
+  },
+  {
+    keyword: "fill",
+    summary: "Fill a number of bytes with the fill value.",
+    syntax: "fill count",
+    group: "memory"
+  },
+  {
+    keyword: "padbyte",
+    summary: "Set the byte used by pad.",
+    syntax: "padbyte value",
+    group: "memory"
+  },
+  {
+    keyword: "padword",
+    summary: "Set the word used by pad.",
+    syntax: "padword value",
+    group: "memory"
+  },
+  {
+    keyword: "padlong",
+    summary: "Set the long value used by pad.",
+    syntax: "padlong value",
+    group: "memory"
+  },
+  {
+    keyword: "paddword",
+    summary: "Set the double word used by pad.",
+    syntax: "paddword value",
+    group: "memory"
+  },
+  {
+    keyword: "pad",
+    summary: "Pad up to an address with the pad value.",
+    syntax: "pad address",
+    group: "memory"
+  },
+  {
+    keyword: "incsrc",
+    summary: "Assemble another source file inline.",
+    syntax: 'incsrc "file.asm"',
+    group: "include"
+  },
+  {
+    keyword: "include",
+    summary: "Include and assemble another source file.",
+    syntax: 'include "file.asm"',
+    group: "include"
+  },
+  {
+    keyword: "includeonce",
+    summary: "Guard the current file against being included more than once.",
+    syntax: "includeonce",
+    group: "include"
+  },
+  {
+    keyword: "incbin",
+    summary: "Embed the raw bytes of a binary file.",
+    syntax: 'incbin "file.bin"[,start,length]',
+    group: "include"
+  },
+  {
+    keyword: "base",
+    summary: "Set the logical base address for emitted code.",
+    syntax: "base $address",
+    group: "layout"
+  },
+  {
+    keyword: "org",
+    summary: "Set the current output/origin address.",
+    syntax: "org $address",
+    group: "layout"
+  },
+  {
+    keyword: "pushbase",
+    summary: "Push the current base address.",
+    syntax: "pushbase",
+    group: "layout"
+  },
+  {
+    keyword: "pullbase",
+    summary: "Restore the most recently pushed base address.",
+    syntax: "pullbase",
+    group: "layout"
+  },
+  {
+    keyword: "pushpc",
+    summary: "Push the current program counter.",
+    syntax: "pushpc",
+    group: "layout"
+  },
+  {
+    keyword: "pullpc",
+    summary: "Restore the most recently pushed program counter.",
+    syntax: "pullpc",
+    group: "layout"
+  },
+  {
+    keyword: "startpos",
+    summary: "Set the SPC start position.",
+    syntax: "startpos",
+    group: "layout"
+  },
+  {
+    keyword: "check",
+    summary: "Assert an assembler condition (asar-compatible).",
+    syntax: "check ...",
+    group: "layout"
+  },
+  {
+    keyword: "optimize",
+    summary: "Control optimization behavior (asar-compatible).",
+    syntax: "optimize ...",
+    group: "layout"
+  },
+  {
+    keyword: "arch",
+    summary: "Select the active CPU architecture.",
+    syntax: "arch 65816|spc700|superfx",
+    group: "layout"
+  },
+  { keyword: "lorom", summary: "Use the LoROM memory mapper.", syntax: "lorom", group: "layout" },
+  { keyword: "hirom", summary: "Use the HiROM memory mapper.", syntax: "hirom", group: "layout" },
+  {
+    keyword: "exlorom",
+    summary: "Use the ExLoROM memory mapper.",
+    syntax: "exlorom",
+    group: "layout"
+  },
+  {
+    keyword: "exhirom",
+    summary: "Use the ExHiROM memory mapper.",
+    syntax: "exhirom",
+    group: "layout"
+  },
+  { keyword: "fastrom", summary: "Enable FastROM timing.", syntax: "fastrom", group: "layout" },
+  {
+    keyword: "sfxrom",
+    summary: "Use the Super FX memory mapper.",
+    syntax: "sfxrom",
+    group: "layout"
+  },
+  { keyword: "norom", summary: "Disable the memory mapper.", syntax: "norom", group: "layout" },
+  { keyword: "sa1rom", summary: "Use the SA-1 memory mapper.", syntax: "sa1rom", group: "layout" },
+  {
+    keyword: "fullsa1rom",
+    summary: "Use the full SA-1 memory mapper.",
+    syntax: "fullsa1rom",
+    group: "layout"
+  },
+  {
+    keyword: "namespace",
+    summary: "Set the active label namespace.",
+    syntax: "namespace name",
+    group: "namespace"
+  },
+  {
+    keyword: "pushns",
+    summary: "Push the current namespace.",
+    syntax: "pushns",
+    group: "namespace"
+  },
+  {
+    keyword: "pullns",
+    summary: "Restore the most recently pushed namespace.",
+    syntax: "pullns",
+    group: "namespace"
+  },
+  {
+    keyword: "freecode",
+    summary: "Allocate a free code block.",
+    syntax: "freecode",
+    group: "memory"
+  },
+  {
+    keyword: "freedata",
+    summary: "Allocate a free data block.",
+    syntax: "freedata",
+    group: "memory"
+  },
+  {
+    keyword: "freespace",
+    summary: "Allocate a free space block.",
+    syntax: "freespace",
+    group: "memory"
+  },
+  {
+    keyword: "freespacebyte",
+    summary: "Set the fill byte used for freespace.",
+    syntax: "freespacebyte value",
+    group: "memory"
+  },
+  {
+    keyword: "prot",
+    summary: "Protect a region from cleanup.",
+    syntax: "prot ...",
+    group: "memory"
+  },
+  {
+    keyword: "table",
+    summary: "Load an asar character mapping table file (`char=hex` per line).",
+    syntax: 'table "file"[,ltr|rtl]',
+    group: "table"
+  },
+  {
+    keyword: "cleartable",
+    summary: "Reset character mappings to identity (Unicode/ASCII code points).",
+    syntax: "cleartable",
+    group: "table"
+  },
+  {
+    keyword: "pushtable",
+    summary: "Push the current character mapping table.",
+    syntax: "pushtable",
+    group: "table"
+  },
+  {
+    keyword: "pulltable",
+    summary: "Restore the most recently pushed character table.",
+    syntax: "pulltable",
+    group: "table"
+  },
+  {
+    keyword: "spcblock",
+    summary: "Begin an SPC700 code block.",
+    syntax: "spcblock ...",
+    group: "spc"
+  },
+  {
+    keyword: "endspcblock",
+    summary: "End an SPC700 code block.",
+    syntax: "endspcblock",
+    group: "spc"
+  },
+  {
+    keyword: "struct",
+    summary: "Begin a structure definition.",
+    syntax: "struct name",
+    group: "struct"
+  },
+  {
+    keyword: "endstruct",
+    summary: "End a structure definition.",
+    syntax: "endstruct",
+    group: "struct"
+  },
+  {
+    keyword: "if",
+    summary: "Begin a conditional block.",
+    syntax: "if expression",
+    group: "control"
+  },
+  {
+    keyword: "elseif",
+    summary: "Alternate conditional branch.",
+    syntax: "elseif expression",
+    group: "control"
+  },
+  { keyword: "else", summary: "Fallback conditional branch.", syntax: "else", group: "control" },
+  { keyword: "endif", summary: "End a conditional block.", syntax: "endif", group: "control" },
+  {
+    keyword: "while",
+    summary: "Begin a while loop.",
+    syntax: "while expression",
+    group: "control"
+  },
+  { keyword: "endwhile", summary: "End a while loop.", syntax: "endwhile", group: "control" },
+  {
+    keyword: "for",
+    summary: "Begin a counted loop.",
+    syntax: "for var = start..end",
+    group: "control"
+  },
+  { keyword: "endfor", summary: "End a counted loop.", syntax: "endfor", group: "control" },
+  {
+    keyword: "macro",
+    summary: "Begin a macro definition.",
+    syntax: "macro name(args)",
+    group: "macro"
+  },
+  { keyword: "endmacro", summary: "End a macro definition.", syntax: "endmacro", group: "macro" },
+  {
+    keyword: "dpbase",
+    summary: "Set the direct page base (asar-compatible).",
+    syntax: "dpbase $address",
+    group: "compat"
+  },
+  {
+    keyword: "warnings",
+    summary: "Control warnings (asar-compatible).",
+    syntax: "warnings ...",
+    group: "compat"
+  },
+  {
+    keyword: "print",
+    summary: "Print a message at assemble time.",
+    syntax: 'print "text"',
+    group: "compat"
+  },
+  {
+    keyword: "assert",
+    summary: "Fail the assemble if a condition is false.",
+    syntax: 'assert condition[, "message"]',
+    group: "compat"
+  },
+  {
+    keyword: "error",
+    summary: "Fail the assemble with a user-defined error.",
+    syntax: 'error ["message"]',
+    group: "compat"
+  },
+  {
+    keyword: "warn",
+    summary: "Emit a user-defined warning (asar-compatible).",
+    syntax: 'warn ["message"]',
+    group: "compat"
+  },
+  {
+    keyword: "warnpc",
+    summary: "Fail if the current PC is past an address (deprecated asar form).",
+    syntax: "warnpc $address",
+    group: "compat"
+  },
+  {
+    keyword: "autoclean",
+    summary: "Auto-clean a previous freespace (asar-compatible).",
+    syntax: "autoclean ...",
+    group: "compat"
+  },
+  {
+    keyword: "autoclear",
+    summary: "Auto-clear a previous freespace (asar-compatible).",
+    syntax: "autoclear ...",
+    group: "compat"
+  },
+  {
+    keyword: "includefrom",
+    summary: "Assert the file was included (asar-compatible).",
+    syntax: 'includefrom "file"',
+    group: "compat"
+  },
+  {
+    keyword: "asar",
+    summary: "Assert a minimum asar version (compat no-op).",
+    syntax: "asar version",
+    group: "compat"
+  }
+];
+var directiveByKeyword = new Map(
+  directiveCatalog.map((descriptor) => [descriptor.keyword.toLowerCase(), descriptor])
+);
+
 // src/target-profile.ts
 var TargetProfileRegistry = class {
   profiles = /* @__PURE__ */ new Map();
@@ -23904,8 +24277,13 @@ var snesTargetProfile = {
   checksumFixEnabled: true,
   addressSpace: snesRomAddressSpace,
   outputFormat: snesRomOutputFormat,
-  directiveFeatures: /* @__PURE__ */ new Set(["snes-mappers", "snes-memory", "snes-policy", "spc-blocks"]),
-  expressionFeatures: /* @__PURE__ */ new Set(["snes-address-conversion", "rom-reads"])
+  directiveSetIds: /* @__PURE__ */ new Set([
+    "legacy.snes-mapper-directives",
+    "legacy.snes-memory-directives",
+    "legacy.snes-policy-directives",
+    "legacy.spc-directives"
+  ]),
+  expressionSetIds: /* @__PURE__ */ new Set(["legacy.snes-address-functions", "legacy.rom-read-functions"])
 };
 var mos6502StubTargetProfile = {
   name: "mos6502-stub",
@@ -23915,8 +24293,8 @@ var mos6502StubTargetProfile = {
   checksumFixEnabled: false,
   addressSpace: flat16AddressSpace,
   outputFormat: rawBinaryOutputFormat,
-  directiveFeatures: /* @__PURE__ */ new Set(),
-  expressionFeatures: /* @__PURE__ */ new Set()
+  directiveSetIds: /* @__PURE__ */ new Set(),
+  expressionSetIds: /* @__PURE__ */ new Set()
 };
 var builtInTargetProfiles = new TargetProfileRegistry();
 builtInTargetProfiles.register(snesTargetProfile, ["sfc", "snes-65816"]);
@@ -24006,6 +24384,64 @@ var extensionContribution = (extension, index2) => ({
   createEncoder: (context) => extension.createEncoder(context),
   instructions: []
 });
+var numericExpressionArgument = (functionName, args, index2) => {
+  const value = args[index2];
+  if (typeof value !== "number") {
+    throw new Error(`${functionName}() argument ${index2 + 1} must be numeric.`);
+  }
+  return value;
+};
+var legacyAddressExpressionSet = {
+  id: "legacy.snes-address-functions",
+  functions: [
+    {
+      name: "snestopc",
+      signature: { parameters: ["address"] },
+      summary: "Convert a SNES address to an output offset.",
+      evaluate: ({ addresses }, args) => addresses.toOutputOffset(numericExpressionArgument("snestopc", args, 0))
+    },
+    {
+      name: "pctosnes",
+      signature: { parameters: ["offset"] },
+      summary: "Convert an output offset to a SNES address.",
+      evaluate: ({ addresses }, args) => addresses.fromOutputOffset(numericExpressionArgument("pctosnes", args, 0))
+    }
+  ]
+};
+var legacyRomReadExpressionSet = {
+  id: "legacy.rom-read-functions",
+  functions: [
+    ...[1, 2, 3, 4].map((size) => ({
+      name: `canread${size}`,
+      signature: { parameters: ["position"] },
+      summary: `Return whether ${size} byte(s) can be read from the base image.`,
+      evaluate: (context, args) => context.output.canRead(numericExpressionArgument(`canread${size}`, args, 0), size)
+    })),
+    {
+      name: "canread",
+      signature: { parameters: ["position", "size"] },
+      summary: "Return whether a range can be read from the base image.",
+      evaluate: ({ output }, args) => output.canRead(
+        numericExpressionArgument("canread", args, 0),
+        numericExpressionArgument("canread", args, 1)
+      )
+    },
+    ...[1, 2, 3, 4].map((size) => ({
+      name: `read${size}`,
+      signature: {
+        parameters: ["position", "defaultValue"],
+        minimumArguments: 1,
+        maximumArguments: 2
+      },
+      summary: `Read ${size} byte(s) from the base image.`,
+      evaluate: (context, args) => context.output.read(
+        numericExpressionArgument(`read${size}`, args, 0),
+        size,
+        args.length > 1 ? numericExpressionArgument(`read${size}`, args, 1) : void 0
+      )
+    }))
+  ]
+};
 function createLegacyAssemblerEnvironment(options = {}) {
   const profile = options.targetProfile ?? snesTargetProfile;
   const extensions = (options.architectureExtensions ?? []).map(extensionContribution);
@@ -24065,6 +24501,53 @@ function createLegacyAssemblerEnvironment(options = {}) {
       getOutput: ({ outputBytes }) => profile.outputFormat.getBinaryOutput(outputBytes)
     })
   });
+  const expressionSetsById = new Map(
+    [legacyAddressExpressionSet, legacyRomReadExpressionSet].map((set) => [set.id, set])
+  );
+  const expressionSets = [...profile.expressionSetIds].flatMap((id) => {
+    const set = expressionSetsById.get(id);
+    return set ? [set] : [];
+  });
+  const expressionSetRecords = expressionSets.map(own);
+  const knownDirectiveSetIds = /* @__PURE__ */ new Set([
+    LEGACY_SNES_MAPPER_DIRECTIVE_SET,
+    LEGACY_SNES_MEMORY_DIRECTIVE_SET,
+    LEGACY_SNES_POLICY_DIRECTIVE_SET,
+    LEGACY_SPC_DIRECTIVE_SET
+  ]);
+  const directiveSetIds = [...profile.directiveSetIds].filter((id) => knownDirectiveSetIds.has(id));
+  const directiveKeywordsBySet = /* @__PURE__ */ new Map([
+    [
+      LEGACY_SNES_MAPPER_DIRECTIVE_SET,
+      /* @__PURE__ */ new Set(["lorom", "hirom", "exlorom", "exhirom", "sfxrom", "norom", "fullsa1rom", "sa1rom"])
+    ],
+    [
+      LEGACY_SNES_MEMORY_DIRECTIVE_SET,
+      /* @__PURE__ */ new Set(["freecode", "freespace", "freedata", "freespacebyte", "prot"])
+    ],
+    [
+      LEGACY_SNES_POLICY_DIRECTIVE_SET,
+      /* @__PURE__ */ new Set(["check", "optimize", ...ASAR_COMPAT_NO_OP_DIRECTIVES])
+    ],
+    [LEGACY_SPC_DIRECTIVE_SET, /* @__PURE__ */ new Set(["spcblock", "endspcblock", "startpos"])]
+  ]);
+  const directiveSetRecords = directiveSetIds.map((id) => {
+    const keywords = directiveKeywordsBySet.get(id) ?? /* @__PURE__ */ new Set();
+    return own({
+      id,
+      directives: [],
+      tooling: directiveCatalog.filter((descriptor) => keywords.has(descriptor.keyword))
+    });
+  });
+  const lifecycleIds = profile.directiveSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET) ? ["legacy.asar-dialect-lifecycle"] : [];
+  const lifecycleRecords = lifecycleIds.map(
+    (id) => own({
+      id,
+      create: () => ({
+        shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
+      })
+    })
+  );
   const targetRecord = own({
     id: targetId,
     aliases: [profile.name],
@@ -24073,9 +24556,9 @@ function createLegacyAssemblerEnvironment(options = {}) {
     architectures: [...profile.architectures].map(resolveArchitecture),
     addressSpace: addressSpaceId,
     outputFormat: outputFormatId,
-    directiveSets: [],
-    expressionSets: [],
-    lifecycle: [],
+    directiveSets: directiveSetIds,
+    expressionSets: expressionSets.map((set) => set.id),
+    lifecycle: lifecycleIds,
     defaultOutputExtension: profile.outputFormat.defaultExtension
   });
   const contributions = {
@@ -24091,9 +24574,9 @@ function createLegacyAssemblerEnvironment(options = {}) {
     architectures: architectureRecords,
     addressSpaces: [addressSpaceRecord],
     outputFormats: [outputFormatRecord],
-    directiveSets: [],
-    expressionSets: [],
-    lifecycles: [],
+    directiveSets: directiveSetRecords,
+    expressionSets: expressionSetRecords,
+    lifecycles: lifecycleRecords,
     targets: [targetRecord]
   };
   const environment = new AssemblerEnvironment(contributions);
@@ -24676,7 +25159,7 @@ var Assembler = class _Assembler {
         table: { session },
         diagnostic: { session }
       },
-      session.targetProfile.directiveFeatures
+      new Set(session.environment.getTarget(session.targetId)?.directiveSets ?? [])
     );
     const target = session.environment.getTarget(session.targetId);
     for (const setId of target?.directiveSets ?? []) {
@@ -24699,19 +25182,24 @@ var Assembler = class _Assembler {
             cause
           });
         }
-        registry.register([...directive.keywords], void 0, (_context, words, raw) => {
-          try {
-            handler({ state: session.pluginState }, words, raw);
-          } catch (cause) {
-            throw new PluginError(`Directive '${directive.id}' failed.`, {
-              code: "PLUGIN_HOOK_FAILED",
-              pluginId,
-              contributionId: directive.id,
-              targetId: session.targetId,
-              cause
-            });
-          }
-        });
+        registry.register(
+          [...directive.keywords],
+          void 0,
+          (_context, words, raw) => {
+            try {
+              handler({ state: session.pluginState }, words, raw);
+            } catch (cause) {
+              throw new PluginError(`Directive '${directive.id}' failed.`, {
+                code: "PLUGIN_HOOK_FAILED",
+                pluginId,
+                contributionId: directive.id,
+                targetId: session.targetId,
+                cause
+              });
+            }
+          },
+          directive.phase
+        );
       }
     }
     for (const [keyword, handler] of registry.handlers) {
@@ -24928,8 +25416,8 @@ var Assembler = class _Assembler {
           outputBytes: bytes
         })
       },
-      directiveFeatures: /* @__PURE__ */ new Set(),
-      expressionFeatures: /* @__PURE__ */ new Set()
+      directiveSetIds: new Set(target.directiveSets),
+      expressionSetIds: new Set(target.expressionSets)
     };
     const requestedArchitecture = options.architecture ?? target.defaultArchitecture;
     const architectureId = this.environment.resolveArchitectureId(targetId, requestedArchitecture);
@@ -24952,11 +25440,12 @@ var Assembler = class _Assembler {
     this.cursorAddress = this.createCursorAddressFacade();
     this.mathCore = new MathCore();
     this.mathCore.host = this.expressionHost;
+    this.installExpressionFunctions(target.expressionSets);
     this.services = this.createServices();
     const frontEndHost = {
       passProgramCache: this.passProgramCache,
       resolveVariadicPlaceholders: (command) => this.macroEngine.resolveVariadicPlaceholders(command),
-      shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
+      shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
     };
     Object.defineProperties(frontEndHost, {
       currentFile: { get: () => this.currentFile },
@@ -25087,6 +25576,28 @@ var Assembler = class _Assembler {
         raw
       }) === "handled") {
         result = "handled";
+      }
+    });
+    return result;
+  }
+  /**
+   * Resolves ambiguous `endif` handling through active dialect lifecycles.
+   * @param {"for" | "while"} [loopType] The innermost loop type.
+   * @param {number} [loopStartLine] The innermost loop start line.
+   * @param {number} [ifStartLine] The innermost conditional start line.
+   * @returns {boolean} Whether `endif` should close the innermost while loop.
+   */
+  shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine) {
+    let result = false;
+    this.runLifecycleHook("shouldEndifCloseInnermostWhile", (lifecycle) => {
+      const resolution = lifecycle.shouldEndifCloseInnermostWhile?.({
+        state: this.pluginState,
+        loopType,
+        loopStartLine,
+        ifStartLine
+      });
+      if (resolution !== void 0) {
+        result = resolution;
       }
     });
     return result;
@@ -25369,25 +25880,57 @@ var Assembler = class _Assembler {
     );
   }
   /**
-   * Rejects target-specific expression functions outside their target profile.
-   * @param {TargetExpressionFeature} feature Required target feature.
-   * @param {string} functionName User-facing expression function name.
+   * Installs the active target's expression contributions into this session.
+   * @param {readonly string[]} setIds Resolved expression-set contribution IDs.
    */
-  assertTargetExpressionFeature(feature, functionName) {
-    if (!this.targetProfile.expressionFeatures.has(feature)) {
-      throw new Error(`${functionName} is unavailable for target ${this.targetProfile.name}.`);
+  installExpressionFunctions(setIds) {
+    for (const setId of setIds) {
+      const set = this.environment.getExpressionSet(setId);
+      if (!set) continue;
+      const pluginId = this.environment.getContributionOwner(setId);
+      for (const expressionFunction of set.functions) {
+        const minimumArguments = expressionFunction.signature.minimumArguments ?? expressionFunction.signature.parameters.length;
+        const maximumArguments = expressionFunction.signature.maximumArguments ?? (expressionFunction.signature.minimumArguments === void 0 ? expressionFunction.signature.parameters.length : Number.POSITIVE_INFINITY);
+        this.mathCore.registerExpressionFunction(
+          [expressionFunction.name, ...expressionFunction.aliases ?? []],
+          {
+            minimumArguments,
+            maximumArguments,
+            evaluate: (args) => {
+              try {
+                return expressionFunction.evaluate(
+                  {
+                    state: this.pluginState,
+                    addresses: {
+                      toOutputOffset: (address) => this.romWriter.convertTargetAddressToRomOffset(address),
+                      fromOutputOffset: (offset) => this.romWriter.pctosnes(offset)
+                    },
+                    output: {
+                      canRead: (position, size) => this.canReadTargetRom(position, size),
+                      read: (position, size, defaultValue) => this.readTargetRom(position, size, defaultValue)
+                    }
+                  },
+                  args
+                );
+              } catch (cause) {
+                throw new PluginError(`Expression function '${expressionFunction.name}' failed.`, {
+                  code: "PLUGIN_HOOK_FAILED",
+                  pluginId,
+                  contributionId: set.id,
+                  targetId: this.targetId,
+                  cause
+                });
+              }
+            }
+          }
+        );
+      }
     }
   }
   expressionHost = {
     resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
-    convertSnesToPc: (address) => {
-      this.assertTargetExpressionFeature("snes-address-conversion", "snestopc");
-      return this.romWriter.convertTargetAddressToRomOffset(address);
-    },
-    convertPcToSnes: (offset) => {
-      this.assertTargetExpressionFeature("snes-address-conversion", "pctosnes");
-      return this.romWriter.pctosnes(offset);
-    },
+    convertSnesToPc: (address) => this.romWriter.convertTargetAddressToRomOffset(address),
+    convertPcToSnes: (offset) => this.romWriter.pctosnes(offset),
     getCurrentAddress: () => this.currentTargetAddress,
     getCurrentBaseAddress: () => this.currentTargetBaseAddress,
     isDefined: (identifier) => {
@@ -25416,14 +25959,8 @@ var Assembler = class _Assembler {
     },
     canReadFile: (filename, position, size) => this.canReadExpressionFile(filename, position, size),
     readFile: (filename, position, size, defaultValue) => this.readExpressionFile(filename, position, size, defaultValue),
-    canReadRom: (position, size) => {
-      this.assertTargetExpressionFeature("rom-reads", "canread");
-      return this.canReadTargetRom(position, size);
-    },
-    readRom: (position, size, defaultValue) => {
-      this.assertTargetExpressionFeature("rom-reads", "read");
-      return this.readTargetRom(position, size, defaultValue);
-    }
+    canReadRom: (position, size) => this.canReadTargetRom(position, size),
+    readRom: (position, size, defaultValue) => this.readTargetRom(position, size, defaultValue)
   };
   /**
    * Advances SNES `pc()` linearly. Mapper conversion happens only when writing.
@@ -27287,6 +27824,8 @@ var WorkspaceIndex = class {
   architecture;
   environment;
   target;
+  toolingCatalog;
+  directiveCatalog;
   /**
    * Creates a workspace index.
    * @param {WorkspaceIndexOptions} [options] Initial index configuration.
@@ -27294,9 +27833,29 @@ var WorkspaceIndex = class {
   constructor(options) {
     this.environment = options.environment;
     this.target = options.target;
+    this.toolingCatalog = this.environment.getToolingCatalog(this.target);
     this.entryPoints = (options.entryPoints ?? []).map((entry) => path3.resolve(entry));
     this.includePaths = options.includePaths ?? ["./"];
     this.architecture = options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
+    const toolingSession = new Assembler({
+      environment: this.environment,
+      target: this.target,
+      architecture: this.architecture
+    });
+    try {
+      const activeKeywords = new Set(toolingSession.directiveRegistry.handlers.keys());
+      const descriptors = [
+        ...directiveCatalog.filter((descriptor) => activeKeywords.has(descriptor.keyword)),
+        ...this.toolingCatalog.getDirectives()
+      ];
+      this.directiveCatalog = [
+        ...new Map(
+          descriptors.map((descriptor) => [descriptor.keyword.toLowerCase(), descriptor])
+        ).values()
+      ];
+    } finally {
+      toolingSession.dispose();
+    }
   }
   /**
    * Updates index configuration and re-analyses the workspace.
@@ -27713,434 +28272,16 @@ function rangeWidth(range) {
   return lineSpan * 1e6 + columnSpan;
 }
 
-// src/lsp/directive-catalog.ts
-var directiveCatalog = [
-  {
-    keyword: "db",
-    summary: "Emit one or more bytes.",
-    syntax: "db value[, value...]",
-    group: "data"
-  },
-  {
-    keyword: "dw",
-    summary: "Emit one or more 16-bit words.",
-    syntax: "dw value[, value...]",
-    group: "data"
-  },
-  {
-    keyword: "dl",
-    summary: "Emit one or more 24-bit long values.",
-    syntax: "dl value[, value...]",
-    group: "data"
-  },
-  {
-    keyword: "dd",
-    summary: "Emit one or more 32-bit double words.",
-    syntax: "dd value[, value...]",
-    group: "data"
-  },
-  {
-    keyword: "dc.b",
-    summary: "Emit bytes (asar-compatible data constant).",
-    syntax: "dc.b value[, value...]",
-    group: "data"
-  },
-  {
-    keyword: "dc.w",
-    summary: "Emit words (asar-compatible data constant).",
-    syntax: "dc.w value[, value...]",
-    group: "data"
-  },
-  {
-    keyword: "dc.l",
-    summary: "Emit long values (asar-compatible data constant).",
-    syntax: "dc.l value[, value...]",
-    group: "data"
-  },
-  {
-    keyword: "fillbyte",
-    summary: "Set the byte used by fill.",
-    syntax: "fillbyte value",
-    group: "memory"
-  },
-  {
-    keyword: "fillword",
-    summary: "Set the word used by fill.",
-    syntax: "fillword value",
-    group: "memory"
-  },
-  {
-    keyword: "filllong",
-    summary: "Set the long value used by fill.",
-    syntax: "filllong value",
-    group: "memory"
-  },
-  {
-    keyword: "filldword",
-    summary: "Set the double word used by fill.",
-    syntax: "filldword value",
-    group: "memory"
-  },
-  {
-    keyword: "fill",
-    summary: "Fill a number of bytes with the fill value.",
-    syntax: "fill count",
-    group: "memory"
-  },
-  {
-    keyword: "padbyte",
-    summary: "Set the byte used by pad.",
-    syntax: "padbyte value",
-    group: "memory"
-  },
-  {
-    keyword: "padword",
-    summary: "Set the word used by pad.",
-    syntax: "padword value",
-    group: "memory"
-  },
-  {
-    keyword: "padlong",
-    summary: "Set the long value used by pad.",
-    syntax: "padlong value",
-    group: "memory"
-  },
-  {
-    keyword: "paddword",
-    summary: "Set the double word used by pad.",
-    syntax: "paddword value",
-    group: "memory"
-  },
-  {
-    keyword: "pad",
-    summary: "Pad up to an address with the pad value.",
-    syntax: "pad address",
-    group: "memory"
-  },
-  {
-    keyword: "incsrc",
-    summary: "Assemble another source file inline.",
-    syntax: 'incsrc "file.asm"',
-    group: "include"
-  },
-  {
-    keyword: "include",
-    summary: "Include and assemble another source file.",
-    syntax: 'include "file.asm"',
-    group: "include"
-  },
-  {
-    keyword: "includeonce",
-    summary: "Guard the current file against being included more than once.",
-    syntax: "includeonce",
-    group: "include"
-  },
-  {
-    keyword: "incbin",
-    summary: "Embed the raw bytes of a binary file.",
-    syntax: 'incbin "file.bin"[,start,length]',
-    group: "include"
-  },
-  {
-    keyword: "base",
-    summary: "Set the logical base address for emitted code.",
-    syntax: "base $address",
-    group: "layout"
-  },
-  {
-    keyword: "org",
-    summary: "Set the current output/origin address.",
-    syntax: "org $address",
-    group: "layout"
-  },
-  {
-    keyword: "pushbase",
-    summary: "Push the current base address.",
-    syntax: "pushbase",
-    group: "layout"
-  },
-  {
-    keyword: "pullbase",
-    summary: "Restore the most recently pushed base address.",
-    syntax: "pullbase",
-    group: "layout"
-  },
-  {
-    keyword: "pushpc",
-    summary: "Push the current program counter.",
-    syntax: "pushpc",
-    group: "layout"
-  },
-  {
-    keyword: "pullpc",
-    summary: "Restore the most recently pushed program counter.",
-    syntax: "pullpc",
-    group: "layout"
-  },
-  {
-    keyword: "startpos",
-    summary: "Set the SPC start position.",
-    syntax: "startpos",
-    group: "layout"
-  },
-  {
-    keyword: "check",
-    summary: "Assert an assembler condition (asar-compatible).",
-    syntax: "check ...",
-    group: "layout"
-  },
-  {
-    keyword: "optimize",
-    summary: "Control optimization behavior (asar-compatible).",
-    syntax: "optimize ...",
-    group: "layout"
-  },
-  {
-    keyword: "arch",
-    summary: "Select the active CPU architecture.",
-    syntax: "arch 65816|spc700|superfx",
-    group: "layout"
-  },
-  { keyword: "lorom", summary: "Use the LoROM memory mapper.", syntax: "lorom", group: "layout" },
-  { keyword: "hirom", summary: "Use the HiROM memory mapper.", syntax: "hirom", group: "layout" },
-  {
-    keyword: "exlorom",
-    summary: "Use the ExLoROM memory mapper.",
-    syntax: "exlorom",
-    group: "layout"
-  },
-  {
-    keyword: "exhirom",
-    summary: "Use the ExHiROM memory mapper.",
-    syntax: "exhirom",
-    group: "layout"
-  },
-  { keyword: "fastrom", summary: "Enable FastROM timing.", syntax: "fastrom", group: "layout" },
-  {
-    keyword: "sfxrom",
-    summary: "Use the Super FX memory mapper.",
-    syntax: "sfxrom",
-    group: "layout"
-  },
-  { keyword: "norom", summary: "Disable the memory mapper.", syntax: "norom", group: "layout" },
-  { keyword: "sa1rom", summary: "Use the SA-1 memory mapper.", syntax: "sa1rom", group: "layout" },
-  {
-    keyword: "fullsa1rom",
-    summary: "Use the full SA-1 memory mapper.",
-    syntax: "fullsa1rom",
-    group: "layout"
-  },
-  {
-    keyword: "namespace",
-    summary: "Set the active label namespace.",
-    syntax: "namespace name",
-    group: "namespace"
-  },
-  {
-    keyword: "pushns",
-    summary: "Push the current namespace.",
-    syntax: "pushns",
-    group: "namespace"
-  },
-  {
-    keyword: "pullns",
-    summary: "Restore the most recently pushed namespace.",
-    syntax: "pullns",
-    group: "namespace"
-  },
-  {
-    keyword: "freecode",
-    summary: "Allocate a free code block.",
-    syntax: "freecode",
-    group: "memory"
-  },
-  {
-    keyword: "freedata",
-    summary: "Allocate a free data block.",
-    syntax: "freedata",
-    group: "memory"
-  },
-  {
-    keyword: "freespace",
-    summary: "Allocate a free space block.",
-    syntax: "freespace",
-    group: "memory"
-  },
-  {
-    keyword: "freespacebyte",
-    summary: "Set the fill byte used for freespace.",
-    syntax: "freespacebyte value",
-    group: "memory"
-  },
-  {
-    keyword: "prot",
-    summary: "Protect a region from cleanup.",
-    syntax: "prot ...",
-    group: "memory"
-  },
-  {
-    keyword: "table",
-    summary: "Load an asar character mapping table file (`char=hex` per line).",
-    syntax: 'table "file"[,ltr|rtl]',
-    group: "table"
-  },
-  {
-    keyword: "cleartable",
-    summary: "Reset character mappings to identity (Unicode/ASCII code points).",
-    syntax: "cleartable",
-    group: "table"
-  },
-  {
-    keyword: "pushtable",
-    summary: "Push the current character mapping table.",
-    syntax: "pushtable",
-    group: "table"
-  },
-  {
-    keyword: "pulltable",
-    summary: "Restore the most recently pushed character table.",
-    syntax: "pulltable",
-    group: "table"
-  },
-  {
-    keyword: "spcblock",
-    summary: "Begin an SPC700 code block.",
-    syntax: "spcblock ...",
-    group: "spc"
-  },
-  {
-    keyword: "endspcblock",
-    summary: "End an SPC700 code block.",
-    syntax: "endspcblock",
-    group: "spc"
-  },
-  {
-    keyword: "struct",
-    summary: "Begin a structure definition.",
-    syntax: "struct name",
-    group: "struct"
-  },
-  {
-    keyword: "endstruct",
-    summary: "End a structure definition.",
-    syntax: "endstruct",
-    group: "struct"
-  },
-  {
-    keyword: "if",
-    summary: "Begin a conditional block.",
-    syntax: "if expression",
-    group: "control"
-  },
-  {
-    keyword: "elseif",
-    summary: "Alternate conditional branch.",
-    syntax: "elseif expression",
-    group: "control"
-  },
-  { keyword: "else", summary: "Fallback conditional branch.", syntax: "else", group: "control" },
-  { keyword: "endif", summary: "End a conditional block.", syntax: "endif", group: "control" },
-  {
-    keyword: "while",
-    summary: "Begin a while loop.",
-    syntax: "while expression",
-    group: "control"
-  },
-  { keyword: "endwhile", summary: "End a while loop.", syntax: "endwhile", group: "control" },
-  {
-    keyword: "for",
-    summary: "Begin a counted loop.",
-    syntax: "for var = start..end",
-    group: "control"
-  },
-  { keyword: "endfor", summary: "End a counted loop.", syntax: "endfor", group: "control" },
-  {
-    keyword: "macro",
-    summary: "Begin a macro definition.",
-    syntax: "macro name(args)",
-    group: "macro"
-  },
-  { keyword: "endmacro", summary: "End a macro definition.", syntax: "endmacro", group: "macro" },
-  {
-    keyword: "dpbase",
-    summary: "Set the direct page base (asar-compatible).",
-    syntax: "dpbase $address",
-    group: "compat"
-  },
-  {
-    keyword: "warnings",
-    summary: "Control warnings (asar-compatible).",
-    syntax: "warnings ...",
-    group: "compat"
-  },
-  {
-    keyword: "print",
-    summary: "Print a message at assemble time.",
-    syntax: 'print "text"',
-    group: "compat"
-  },
-  {
-    keyword: "assert",
-    summary: "Fail the assemble if a condition is false.",
-    syntax: 'assert condition[, "message"]',
-    group: "compat"
-  },
-  {
-    keyword: "error",
-    summary: "Fail the assemble with a user-defined error.",
-    syntax: 'error ["message"]',
-    group: "compat"
-  },
-  {
-    keyword: "warn",
-    summary: "Emit a user-defined warning (asar-compatible).",
-    syntax: 'warn ["message"]',
-    group: "compat"
-  },
-  {
-    keyword: "warnpc",
-    summary: "Fail if the current PC is past an address (deprecated asar form).",
-    syntax: "warnpc $address",
-    group: "compat"
-  },
-  {
-    keyword: "autoclean",
-    summary: "Auto-clean a previous freespace (asar-compatible).",
-    syntax: "autoclean ...",
-    group: "compat"
-  },
-  {
-    keyword: "autoclear",
-    summary: "Auto-clear a previous freespace (asar-compatible).",
-    syntax: "autoclear ...",
-    group: "compat"
-  },
-  {
-    keyword: "includefrom",
-    summary: "Assert the file was included (asar-compatible).",
-    syntax: 'includefrom "file"',
-    group: "compat"
-  },
-  {
-    keyword: "asar",
-    summary: "Assert a minimum asar version (compat no-op).",
-    syntax: "asar version",
-    group: "compat"
-  }
-];
-var directiveByKeyword = new Map(
-  directiveCatalog.map((descriptor) => [descriptor.keyword.toLowerCase(), descriptor])
-);
-function findDirective(keyword) {
-  return directiveByKeyword.get(keyword.toLowerCase());
-}
-
 // src/lsp/catalog.ts
 function findInstruction(mnemonic, architecture, provider) {
   const upper = mnemonic.toUpperCase();
   return getCatalogForArchitecture(architecture, provider).find(
     (entry) => entry.mnemonic === upper
   );
+}
+function findDirectiveInCatalog(keyword, directives = directiveCatalog) {
+  const canonical2 = keyword.toLowerCase().replace(/^@/, "");
+  return directives.find((directive) => directive.keyword.toLowerCase() === canonical2);
 }
 function renderInstructionDocs(descriptor) {
   const lines = [];
@@ -28168,7 +28309,17 @@ function renderDirectiveDocs(descriptor) {
     `\`${descriptor.syntax}\``
   ].join("\n");
 }
-function buildCompletionEntries(architecture, provider) {
+function renderExpressionFunctionDocs(descriptor) {
+  const parameters = descriptor.signature.parameters.join(", ");
+  return [
+    `**${descriptor.name}** \u2014 expression function`,
+    "",
+    descriptor.summary,
+    "",
+    `\`${descriptor.name}(${parameters})\``
+  ].join("\n");
+}
+function buildCompletionEntries(architecture, provider, directives = directiveCatalog, expressionFunctions = []) {
   const entries = [];
   for (const instruction2 of getCatalogForArchitecture(architecture, provider)) {
     entries.push({
@@ -28178,13 +28329,29 @@ function buildCompletionEntries(architecture, provider) {
       documentation: renderInstructionDocs(instruction2)
     });
   }
-  for (const directive of directiveCatalog) {
+  for (const directive of directives) {
     entries.push({
       label: directive.keyword,
       kind: "directive",
       detail: directive.summary,
       documentation: renderDirectiveDocs(directive)
     });
+  }
+  for (const expressionFunction of expressionFunctions) {
+    entries.push({
+      label: expressionFunction.name,
+      kind: "expression",
+      detail: expressionFunction.summary,
+      documentation: renderExpressionFunctionDocs(expressionFunction)
+    });
+    for (const alias of expressionFunction.aliases) {
+      entries.push({
+        label: alias,
+        kind: "expression",
+        detail: expressionFunction.summary,
+        documentation: renderExpressionFunctionDocs({ ...expressionFunction, name: alias })
+      });
+    }
   }
   return entries;
 }
@@ -28417,7 +28584,9 @@ function hoverFor(index2, file, position, text, architecture) {
   const word = wordAt(text, position);
   const reference = cursorReference(index2, file, position, word);
   if (reference?.kind === "instruction") {
-    const descriptor = findInstruction(reference.name, architecture);
+    const descriptor = findInstruction(reference.name, architecture, {
+      getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name)
+    });
     if (descriptor) {
       return markdownHover(renderInstructionDocs(descriptor));
     }
@@ -28435,20 +28604,33 @@ function hoverFor(index2, file, position, text, architecture) {
   if (!word) {
     return null;
   }
-  const instruction2 = findInstruction(word, architecture);
+  const instruction2 = findInstruction(word, architecture, {
+    getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name)
+  });
   if (instruction2) {
     return markdownHover(renderInstructionDocs(instruction2));
   }
-  const directive = findDirective(word);
+  const directive = findDirectiveInCatalog(word, index2.directiveCatalog);
   if (directive) {
     return markdownHover(renderDirectiveDocs(directive));
+  }
+  const expressionFunction = index2.toolingCatalog.getExpressionFunctions().find(
+    (descriptor) => descriptor.name.toLowerCase() === word.toLowerCase() || descriptor.aliases.some((alias) => alias.toLowerCase() === word.toLowerCase())
+  );
+  if (expressionFunction) {
+    return markdownHover(renderExpressionFunctionDocs(expressionFunction));
   }
   return null;
 }
 function completionsFor(index2, architecture) {
-  const items = buildCompletionEntries(architecture).map((entry) => ({
+  const items = buildCompletionEntries(
+    architecture,
+    { getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name) },
+    index2.directiveCatalog,
+    index2.toolingCatalog.getExpressionFunctions()
+  ).map((entry) => ({
     label: entry.label,
-    kind: import_vscode_languageserver.CompletionItemKind.Keyword,
+    kind: entry.kind === "expression" ? import_vscode_languageserver.CompletionItemKind.Function : import_vscode_languageserver.CompletionItemKind.Keyword,
     detail: entry.detail,
     documentation: { kind: import_vscode_languageserver.MarkupKind.Markdown, value: entry.documentation }
   }));
@@ -28467,12 +28649,16 @@ function completionsFor(index2, architecture) {
   }
   return items;
 }
-function signatureHelpFor(lineText, architecture) {
+function signatureHelpFor(lineText, architecture, index2) {
   const leading = lineText.trim().split(/\s+/)[0];
   if (!leading) {
     return null;
   }
-  const instruction2 = findInstruction(leading, architecture);
+  const instruction2 = findInstruction(
+    leading,
+    architecture,
+    index2 ? { getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name) } : void 0
+  );
   if (instruction2) {
     const signatures = instruction2.modes.map(
       (mode) => import_vscode_languageserver.SignatureInformation.create(
@@ -28482,7 +28668,7 @@ function signatureHelpFor(lineText, architecture) {
     );
     return { signatures, activeSignature: 0 };
   }
-  const directive = findDirective(leading);
+  const directive = findDirectiveInCatalog(leading, index2?.directiveCatalog);
   if (directive) {
     return {
       signatures: [import_vscode_languageserver.SignatureInformation.create(directive.syntax, directive.summary)],
@@ -28968,7 +29154,7 @@ connection.onSignatureHelp((params) => {
   }
   const lineStart = { line: params.position.line, character: 0 };
   const lineText = document.getText({ start: lineStart, end: params.position });
-  return signatureHelpFor(lineText, settings.architecture);
+  return signatureHelpFor(lineText, settings.architecture, index);
 });
 connection.onPrepareRename(
   (params) => prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position)

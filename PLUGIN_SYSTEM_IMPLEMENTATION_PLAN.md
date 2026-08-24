@@ -734,6 +734,18 @@ Acceptance:
 - Existing generic macros/includes/labels remain core behavior.
 - SNES behavior remains green through contributions, not feature-name conditionals.
 
+Completion note (2026-08-24): directive execution phase now lives beside each registry
+entry and the hard-coded lowering allowlist is removed. Generic and target-specific
+directive factories compose from resolved set IDs; the closed target feature unions are
+gone. Target expression sets install session-local evaluators (including aliases and
+argument contracts), and SNES address/read functions now come from the temporary SNES
+adapter rather than the MathCore built-in switch. Runtime and editor tooling share the
+active directive/expression metadata, including inactive-contribution filtering. The
+Asar `endif`/`while` ambiguity is owned by the legacy dialect lifecycle. `npm run verify`
+passes with 915 tests and global coverage at 93.54% statements, 90.06% branches, and
+96.35% functions; package dry-run, all 60 Asar fixtures, Slideshow, and Chou checksum
+gates pass.
+
 ### Phase 4 — Generalize output and remove target-specific core state
 
 Tasks:

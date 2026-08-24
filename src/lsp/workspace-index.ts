@@ -1,6 +1,7 @@
 import path from "node:path";
 import { Assembler } from "../assembler.js";
 import type { AssemblerEnvironment } from "../plugin/environment.js";
+import type { ToolingCatalog } from "../plugin/contracts.js";
 import type {
   AssemblyAnalysisResult,
   AssemblyDiagnostic,
@@ -9,6 +10,10 @@ import type {
   AssemblySymbolReference,
 } from "../diagnostics.js";
 import { OverlayFileProvider } from "./overlay-file-provider.js";
+import {
+  directiveCatalog as staticDirectiveCatalog,
+  type DirectiveDescriptor,
+} from "./directive-catalog.js";
 
 /**
  * The per-file slice of analysis artifacts produced for a single source file.
@@ -86,6 +91,8 @@ export class WorkspaceIndex {
   architecture: string;
   readonly environment: AssemblerEnvironment;
   readonly target: string;
+  readonly toolingCatalog: ToolingCatalog;
+  readonly directiveCatalog: readonly DirectiveDescriptor[];
 
   /**
    * Creates a workspace index.
@@ -94,10 +101,30 @@ export class WorkspaceIndex {
   constructor(options: WorkspaceIndexOptions) {
     this.environment = options.environment;
     this.target = options.target;
+    this.toolingCatalog = this.environment.getToolingCatalog(this.target);
     this.entryPoints = (options.entryPoints ?? []).map((entry) => path.resolve(entry));
     this.includePaths = options.includePaths ?? ["./"];
     this.architecture =
       options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
+    const toolingSession = new Assembler({
+      environment: this.environment,
+      target: this.target,
+      architecture: this.architecture,
+    });
+    try {
+      const activeKeywords = new Set(toolingSession.directiveRegistry.handlers.keys());
+      const descriptors = [
+        ...staticDirectiveCatalog.filter((descriptor) => activeKeywords.has(descriptor.keyword)),
+        ...this.toolingCatalog.getDirectives(),
+      ];
+      this.directiveCatalog = [
+        ...new Map(
+          descriptors.map((descriptor) => [descriptor.keyword.toLowerCase(), descriptor]),
+        ).values(),
+      ];
+    } finally {
+      toolingSession.dispose();
+    }
   }
 
   /**

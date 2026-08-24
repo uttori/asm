@@ -24,7 +24,7 @@ import { StructEngine, type StructDefinition } from "./services/struct-engine.js
 import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
 import type { SourceSpan } from "./source-location.js";
 import { type AssemblyFileProvider } from "./file-provider.js";
-import { type TargetExpressionFeature, type TargetProfile } from "./target-profile.js";
+import type { TargetProfile } from "./target-profile.js";
 import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
 import type { AssemblyStageName } from "./plugin/contracts.js";
 type RuntimeConditionalNode = ConditionalBranchNode;
@@ -450,6 +450,14 @@ export declare class Assembler {
     constructor(options: AssemblerOptions);
     runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void;
     runBeforeDirective(keyword: string, words: readonly string[], raw: string): "continue" | "handled";
+    /**
+     * Resolves ambiguous `endif` handling through active dialect lifecycles.
+     * @param {"for" | "while"} [loopType] The innermost loop type.
+     * @param {number} [loopStartLine] The innermost loop start line.
+     * @param {number} [ifStartLine] The innermost conditional start line.
+     * @returns {boolean} Whether `endif` should close the innermost while loop.
+     */
+    shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
     selectArchitecture(architecture: string, sourceAlias?: string): void;
     beforeWrite(logicalAddress: number, width: number): void;
     dispose(): void;
@@ -548,11 +556,10 @@ export declare class Assembler {
      */
     readExpressionFile(filename: string, position: number, size: number, defaultValue?: number): number;
     /**
-     * Rejects target-specific expression functions outside their target profile.
-     * @param {TargetExpressionFeature} feature Required target feature.
-     * @param {string} functionName User-facing expression function name.
+     * Installs the active target's expression contributions into this session.
+     * @param {readonly string[]} setIds Resolved expression-set contribution IDs.
      */
-    assertTargetExpressionFeature(feature: TargetExpressionFeature, functionName: string): void;
+    installExpressionFunctions(setIds: readonly string[]): void;
     readonly expressionHost: ExpressionHost;
     /**
      * Advances SNES `pc()` linearly. Mapper conversion happens only when writing.

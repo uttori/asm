@@ -1664,11 +1664,9 @@ test("callBuiltInFunction - round function", t => {
   }, { message: "round() expects exactly 2 numeric arguments." });
 });
 
-test("callBuiltInFunction - host functions with exactly 1 argument", t => {
+test("callBuiltInFunction - generic host functions with exactly 1 argument", t => {
   const mathCore = new MathCore();
   mathCore.host = createExpressionHost({
-    convertSnesToPc: (value) => value === 0x8000 ? 0x018000 : 0,
-    convertPcToSnes: (value) => value === 0x018000 ? 0x8000 : 0,
     getFileSize: (value) => value === "test.bin" ? 1024 : 0,
     getFileStatus: (value) => value === "test.bin" ? 1 : 0,
     isDefined: (value) => value === "LABEL" ? 1 : 0,
@@ -1679,12 +1677,6 @@ test("callBuiltInFunction - host functions with exactly 1 argument", t => {
       return 0;
     },
   });
-
-  // Test snestopc function
-  t.is(mathCore.callBuiltInFunction("snestopc", [0x8000]), 0x018000);
-
-  // Test pctosnes function
-  t.is(mathCore.callBuiltInFunction("pctosnes", [0x018000]), 0x8000);
 
   // Test filesize function
   t.is(mathCore.callBuiltInFunction("filesize", ["test.bin"]), 1024);
@@ -1705,14 +1697,6 @@ test("callBuiltInFunction - host functions with exactly 1 argument", t => {
   t.is(mathCore.callBuiltInFunction("datasize", ["DATA"]), 64);
 
   // Test error cases with wrong number of arguments
-  t.throws(() => {
-    mathCore.callBuiltInFunction("snestopc", []);
-  }, { message: "snestopc() expects exactly 1 argument." });
-
-  t.throws(() => {
-    mathCore.callBuiltInFunction("pctosnes", ["0x8000", "extra"]);
-  }, { message: "pctosnes() expects exactly 1 argument." });
-
   t.throws(() => {
     mathCore.callBuiltInFunction("filesize", []);
   }, { message: "filesize() expects exactly 1 argument." });
@@ -1782,57 +1766,78 @@ test("callBuiltInFunction - canreadfile", t => {
   }, { message: "Function 'canreadfile' expected a numeric argument but got a string: 100" });
 });
 
-test("callBuiltInFunction - canread", t => {
+test("callFunction - contributed canread functions", t => {
   const mathCore = new MathCore();
   mathCore.host = createExpressionHost({
     canReadRom: (pos) => (pos >= 0 && pos < 0x1000) ? 1 : 0,
   });
+  const canReadRom = (args: readonly (number | string)[], size: number): number => {
+    const position = args[0];
+    if (typeof position !== "number") throw new Error("position must be numeric");
+    return mathCore.host!.canReadRom(position, size);
+  };
+  mathCore.registerExpressionFunction("canread", {
+    minimumArguments: 2,
+    maximumArguments: 2,
+    evaluate: (args) => {
+      const size = args[1];
+      if (typeof size !== "number") throw new Error("size must be numeric");
+      return canReadRom(args, size);
+    },
+  });
+  for (const size of [1, 2, 3, 4]) {
+    mathCore.registerExpressionFunction(`canread${size}`, {
+      minimumArguments: 1,
+      maximumArguments: 1,
+      evaluate: (args) => canReadRom(args, size),
+    });
+  }
 
   // Test canread with valid position
-  t.is(mathCore.callBuiltInFunction("canread", [100, 10]), 1);
+  t.is(mathCore.callFunction("canread", [100, 10]), 1);
 
   // Test canread with invalid position
-  t.is(mathCore.callBuiltInFunction("canread", [0x2000, 10]), 0);
+  t.is(mathCore.callFunction("canread", [0x2000, 10]), 0);
 
   // Test canread1, canread2, canread3, canread4 with valid positions
-  t.is(mathCore.callBuiltInFunction("canread1", [100]), 1);
-  t.is(mathCore.callBuiltInFunction("canread2", [200]), 1);
-  t.is(mathCore.callBuiltInFunction("canread3", [300]), 1);
-  t.is(mathCore.callBuiltInFunction("canread4", [400]), 1);
+  t.is(mathCore.callFunction("canread1", [100]), 1);
+  t.is(mathCore.callFunction("canread2", [200]), 1);
+  t.is(mathCore.callFunction("canread3", [300]), 1);
+  t.is(mathCore.callFunction("canread4", [400]), 1);
 
   // Test canread1, canread2, canread3, canread4 with invalid positions
-  t.is(mathCore.callBuiltInFunction("canread1", [0x2000]), 0);
-  t.is(mathCore.callBuiltInFunction("canread2", [0x2000]), 0);
-  t.is(mathCore.callBuiltInFunction("canread3", [0x2000]), 0);
-  t.is(mathCore.callBuiltInFunction("canread4", [0x2000]), 0);
+  t.is(mathCore.callFunction("canread1", [0x2000]), 0);
+  t.is(mathCore.callFunction("canread2", [0x2000]), 0);
+  t.is(mathCore.callFunction("canread3", [0x2000]), 0);
+  t.is(mathCore.callFunction("canread4", [0x2000]), 0);
 
   // Test error cases with wrong number of arguments
   t.throws(() => {
-    mathCore.callBuiltInFunction("canread", [100]);
-  }, { message: "canread expects exactly 2 numeric arguments (pos, num)." });
+    mathCore.callFunction("canread", [100]);
+  }, { message: "canread() expects exactly 2 argument(s)." });
 
   t.throws(() => {
-    mathCore.callBuiltInFunction("canread", [100, 10, 20]);
-  }, { message: "canread expects exactly 2 numeric arguments (pos, num)." });
+    mathCore.callFunction("canread", [100, 10, 20]);
+  }, { message: "canread() expects exactly 2 argument(s)." });
 
   t.throws(() => {
-    mathCore.callBuiltInFunction("canread1", []);
-  }, { message: "canread1 expects exactly 1 numeric argument." });
+    mathCore.callFunction("canread1", []);
+  }, { message: "canread1() expects exactly 1 argument(s)." });
 
   t.throws(() => {
-    mathCore.callBuiltInFunction("canread2", [100, 200]);
-  }, { message: "canread2 expects exactly 1 numeric argument." });
+    mathCore.callFunction("canread2", [100, 200]);
+  }, { message: "canread2() expects exactly 1 argument(s)." });
 
   t.throws(() => {
-    mathCore.callBuiltInFunction("canread3", []);
-  }, { message: "canread3 expects exactly 1 numeric argument." });
+    mathCore.callFunction("canread3", []);
+  }, { message: "canread3() expects exactly 1 argument(s)." });
 
   t.throws(() => {
-    mathCore.callBuiltInFunction("canread4", [100, 200]);
-  }, { message: "canread4 expects exactly 1 numeric argument." });
+    mathCore.callFunction("canread4", [100, 200]);
+  }, { message: "canread4() expects exactly 1 argument(s)." });
 });
 
-test("callBuiltInFunction - read", t => {
+test("callFunction - contributed read functions", t => {
   const mathCore = new MathCore();
   mathCore.host = createExpressionHost({
     readRom: (pos, size, defaultValue) => {
@@ -1842,37 +1847,51 @@ test("callBuiltInFunction - read", t => {
       return pos + size;
     },
   });
+  for (const size of [1, 2, 3, 4]) {
+    mathCore.registerExpressionFunction(`read${size}`, {
+      minimumArguments: 1,
+      maximumArguments: 2,
+      evaluate: (args) => {
+        const position = args[0];
+        const defaultValue = args[1];
+        if (typeof position !== "number" || typeof defaultValue === "string") {
+          throw new Error("read arguments must be numeric");
+        }
+        return mathCore.host!.readRom(position, size, defaultValue);
+      },
+    });
+  }
 
   // Test read1, read2, read3, read4 with 1 argument
-  t.is(mathCore.callBuiltInFunction("read1", [10]), 11);
-  t.is(mathCore.callBuiltInFunction("read2", [20]), 22);
-  t.is(mathCore.callBuiltInFunction("read3", [30]), 33);
-  t.is(mathCore.callBuiltInFunction("read4", [40]), 44);
+  t.is(mathCore.callFunction("read1", [10]), 11);
+  t.is(mathCore.callFunction("read2", [20]), 22);
+  t.is(mathCore.callFunction("read3", [30]), 33);
+  t.is(mathCore.callFunction("read4", [40]), 44);
 
   // Test with 2 arguments (including default value)
-  t.is(mathCore.callBuiltInFunction("read1", [10, 99]), 11);
-  t.is(mathCore.callBuiltInFunction("read2", [20, 99]), 22);
-  t.is(mathCore.callBuiltInFunction("read3", [30, 99]), 33);
-  t.is(mathCore.callBuiltInFunction("read4", [40, 99]), 44);
+  t.is(mathCore.callFunction("read1", [10, 99]), 11);
+  t.is(mathCore.callFunction("read2", [20, 99]), 22);
+  t.is(mathCore.callFunction("read3", [30, 99]), 33);
+  t.is(mathCore.callFunction("read4", [40, 99]), 44);
 
-  t.is(mathCore.callBuiltInFunction("read1", [0xFFFFFF, 99]), 99);
-  t.is(mathCore.callBuiltInFunction("read2", [0xFFFFFF, 99]), 99);
-  t.is(mathCore.callBuiltInFunction("read3", [0xFFFFFF, 99]), 99);
-  t.is(mathCore.callBuiltInFunction("read4", [0xFFFFFF, 99]), 99);
+  t.is(mathCore.callFunction("read1", [0xFFFFFF, 99]), 99);
+  t.is(mathCore.callFunction("read2", [0xFFFFFF, 99]), 99);
+  t.is(mathCore.callFunction("read3", [0xFFFFFF, 99]), 99);
+  t.is(mathCore.callFunction("read4", [0xFFFFFF, 99]), 99);
 
   // Test error cases with wrong number of arguments
   t.throws(() => {
-    mathCore.callBuiltInFunction("read1", []);
-  }, { message: "read1 expects 1 or 2 numeric arguments." });
+    mathCore.callFunction("read1", []);
+  }, { message: "read1() expects between 1 and 2 argument(s)." });
 
   t.throws(() => {
-    mathCore.callBuiltInFunction("read2", [10, 20, 30]);
-  }, { message: "read2 expects 1 or 2 numeric arguments." });
+    mathCore.callFunction("read2", [10, 20, 30]);
+  }, { message: "read2() expects between 1 and 2 argument(s)." });
 
   // Test error with string argument
   t.throws(() => {
-    mathCore.callBuiltInFunction("read3", ["string"]);
-  }, { message: "Function 'read3' expected a numeric argument but got a string: string" });
+    mathCore.callFunction("read3", ["string"]);
+  }, { message: "read arguments must be numeric" });
 });
 
 test("callBuiltInFunction - readfile", t => {
@@ -1974,29 +1993,12 @@ test("callBuiltInFunction - unhandled", t => {
   }, { message: "Unknown built-in function 'unknownFunction'" });
 
   mathCore.host = createExpressionHost({
-    convertSnesToPc: () => {
-      throw new Error("Delegate not implemented for snestopc");
-    },
-    convertPcToSnes: () => {
-      throw new Error("Delegate not implemented for pctosnes");
-    },
-  });
-
-  t.throws(() => {
-    mathCore.callBuiltInFunction("snestopc", [0x8000]);
-  }, { message: "Delegate not implemented for snestopc" });
-
-  t.throws(() => {
-    mathCore.callBuiltInFunction("pctosnes", [0x018000]);
-  }, { message: "Delegate not implemented for pctosnes" });
-
-  mathCore.host = createExpressionHost({
     isDefined: () => 1,
   });
   t.is(mathCore.callBuiltInFunction("defined", ["LABEL"]), 1);
 });
 
-test("callBuiltInFunction - typed host routes address and file helpers", t => {
+test("callBuiltInFunction - typed host routes generic file helpers", t => {
   const mathCore = new MathCore();
   mathCore.host = {
     resolveLabel: () => 0,
@@ -2014,10 +2016,7 @@ test("callBuiltInFunction - typed host routes address and file helpers", t => {
     readRom: () => 0x12,
   };
 
-  t.is(mathCore.callBuiltInFunction("snestopc", [0x808000]), 0x18000);
-  t.is(mathCore.callBuiltInFunction("pctosnes", [0x008000]), 0x808000);
   t.is(mathCore.callBuiltInFunction("defined", ["LABEL"]), 1);
-  t.is(mathCore.callBuiltInFunction("read1", [0x808000]), 0x12);
   t.is(mathCore.callBuiltInFunction("readfile1", ["demo.bin", 0]), 0x34);
 });
 

@@ -154,6 +154,7 @@ export interface DirectiveContribution {
 export interface DirectiveSetContribution {
   id: string;
   directives: readonly DirectiveContribution[];
+  tooling?: readonly DirectiveDescriptor[];
 }
 
 export interface ExpressionFunctionSignature {
@@ -167,6 +168,10 @@ export interface ExpressionFunctionContext {
   readonly addresses: {
     toOutputOffset(address: number): number;
     fromOutputOffset(offset: number): number;
+  };
+  readonly output: {
+    canRead(position: number, size: number): number;
+    read(position: number, size: number, defaultValue?: number): number;
   };
 }
 
@@ -203,6 +208,12 @@ export interface ArchitectureSelectionContext extends SessionLifecycleContext {
   readonly sourceAlias: string;
 }
 
+export interface EndifResolutionContext extends SessionLifecycleContext {
+  readonly loopType?: "for" | "while";
+  readonly loopStartLine?: number;
+  readonly ifStartLine?: number;
+}
+
 export interface WriteValidationContext extends SessionLifecycleContext {
   readonly logicalAddress: number;
   readonly width: number;
@@ -213,6 +224,7 @@ export interface SessionLifecycle {
   onStageStart?(context: StageLifecycleContext): void;
   beforeDirective?(context: DirectiveMiddlewareContext): "continue" | "handled";
   onArchitectureSelected?(context: ArchitectureSelectionContext): void;
+  shouldEndifCloseInnermostWhile?(context: EndifResolutionContext): boolean | undefined;
   beforeWrite?(context: WriteValidationContext): void;
   onStageEnd?(context: StageLifecycleContext): void;
   beforeOutputFinalize?(context: OutputFinalizationContext): void;

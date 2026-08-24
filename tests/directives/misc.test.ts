@@ -5,6 +5,7 @@ import {
   handleError,
   handleTable,
   handleWarnpc,
+  registerAsarCompatibilityDirectives,
   registerMiscDirectives,
 } from "../../src/directives/misc.js";
 import type { DiagnosticDirectiveContext, TableDirectiveContext } from "../../src/directives/types.js";
@@ -228,6 +229,14 @@ test("misc registry dispatches assert, error, warn, and warnpc", t => {
         currentTargetAddress: 0x8000,
         operandResolver: { getnum: parseStubNumber },
       },
+    },
+  });
+  registerAsarCompatibilityDirectives(registry, {
+    session: {
+      tableStack: [],
+      characterMappings: new Map(),
+      currentTable: null,
+      includeSource: { readFile: () => "" },
     },
   });
 

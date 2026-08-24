@@ -1,5 +1,7 @@
 import type { AssemblerEnvironment } from "../plugin/environment.js";
+import type { ToolingCatalog } from "../plugin/contracts.js";
 import type { AssemblyAnalysisResult, AssemblyDiagnostic, AssemblyIncludeEdge, AssemblySymbolDefinition, AssemblySymbolReference } from "../diagnostics.js";
+import { type DirectiveDescriptor } from "./directive-catalog.js";
 /**
  * The per-file slice of analysis artifacts produced for a single source file.
  */
@@ -61,6 +63,8 @@ export declare class WorkspaceIndex {
     architecture: string;
     readonly environment: AssemblerEnvironment;
     readonly target: string;
+    readonly toolingCatalog: ToolingCatalog;
+    readonly directiveCatalog: readonly DirectiveDescriptor[];
     /**
      * Creates a workspace index.
      * @param {WorkspaceIndexOptions} [options] Initial index configuration.

@@ -121,9 +121,9 @@ export const registerMemoryDirectives = (
   registry: DirectiveRegistry,
   context: MemoryDirectiveContext,
 ): void => {
-  registry.register(["freecode", "freespace", "freedata"], context, handleFreespace);
+  registry.registerLowered(["freecode", "freespace", "freedata"], context, handleFreespace);
 
-  registry.register("freespacebyte", context, handleFreespaceByte);
+  registry.registerLowered("freespacebyte", context, handleFreespaceByte);
 
-  registry.register("prot", context, handleProt);
+  registry.registerLowered("prot", context, handleProt);
 };

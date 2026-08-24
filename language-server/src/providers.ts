@@ -25,10 +25,11 @@ import {
 } from "vscode-languageserver";
 import {
   findInstruction,
-  findDirective,
+  findDirectiveInCatalog,
   buildCompletionEntries,
   renderInstructionDocs,
   renderDirectiveDocs,
+  renderExpressionFunctionDocs,
   locationRange,
   referenceAt,
   symbolAt,
@@ -467,7 +468,9 @@ export function hoverFor(
   const word = wordAt(text, position);
   const reference = cursorReference(index, file, position, word);
   if (reference?.kind === "instruction") {
-    const descriptor = findInstruction(reference.name, architecture);
+    const descriptor = findInstruction(reference.name, architecture, {
+      getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name),
+    });
     if (descriptor) {
       return markdownHover(renderInstructionDocs(descriptor));
     }
@@ -488,13 +491,25 @@ export function hoverFor(
   if (!word) {
     return null;
   }
-  const instruction = findInstruction(word, architecture);
+  const instruction = findInstruction(word, architecture, {
+    getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name),
+  });
   if (instruction) {
     return markdownHover(renderInstructionDocs(instruction));
   }
-  const directive = findDirective(word);
+  const directive = findDirectiveInCatalog(word, index.directiveCatalog);
   if (directive) {
     return markdownHover(renderDirectiveDocs(directive));
+  }
+  const expressionFunction = index.toolingCatalog
+    .getExpressionFunctions()
+    .find(
+      (descriptor) =>
+        descriptor.name.toLowerCase() === word.toLowerCase() ||
+        descriptor.aliases.some((alias) => alias.toLowerCase() === word.toLowerCase()),
+    );
+  if (expressionFunction) {
+    return markdownHover(renderExpressionFunctionDocs(expressionFunction));
   }
   return null;
 }
@@ -507,9 +522,14 @@ export function hoverFor(
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook
  */
 export function completionsFor(index: WorkspaceIndex, architecture: string): CompletionItem[] {
-  const items: CompletionItem[] = buildCompletionEntries(architecture).map((entry) => ({
+  const items: CompletionItem[] = buildCompletionEntries(
+    architecture,
+    { getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name) },
+    index.directiveCatalog,
+    index.toolingCatalog.getExpressionFunctions(),
+  ).map((entry) => ({
     label: entry.label,
-    kind: CompletionItemKind.Keyword,
+    kind: entry.kind === "expression" ? CompletionItemKind.Function : CompletionItemKind.Keyword,
     detail: entry.detail,
     documentation: { kind: MarkupKind.Markdown, value: entry.documentation },
   }));
@@ -534,16 +554,27 @@ export function completionsFor(index: WorkspaceIndex, architecture: string): Com
  * Builds signature help for the instruction or directive starting the line.
  * @param {string} lineText The current line text up to the cursor.
  * @param {string} architecture The active architecture name.
+ * @param {WorkspaceIndex} [index] Active target tooling metadata.
  * @returns {SignatureHelp | null} The signature help, or null.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#signature-help-request-leftwards_arrow_with_hook
  */
-export function signatureHelpFor(lineText: string, architecture: string): SignatureHelp | null {
+export function signatureHelpFor(
+  lineText: string,
+  architecture: string,
+  index?: WorkspaceIndex,
+): SignatureHelp | null {
   const leading = lineText.trim().split(/\s+/)[0];
   if (!leading) {
     return null;
   }
 
-  const instruction = findInstruction(leading, architecture);
+  const instruction = findInstruction(
+    leading,
+    architecture,
+    index
+      ? { getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name) }
+      : undefined,
+  );
   if (instruction) {
     const signatures = instruction.modes.map((mode) =>
       SignatureInformation.create(
@@ -554,7 +585,7 @@ export function signatureHelpFor(lineText: string, architecture: string): Signat
     return { signatures, activeSignature: 0 };
   }
 
-  const directive = findDirective(leading);
+  const directive = findDirectiveInCatalog(leading, index?.directiveCatalog);
   if (directive) {
     return {
       signatures: [SignatureInformation.create(directive.syntax, directive.summary)],

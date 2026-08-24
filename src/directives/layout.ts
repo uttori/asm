@@ -11,14 +11,12 @@ import type {
   ArchitectureDirectiveContext,
   StartposDirectiveContext,
 } from "./types.js";
-import type { TargetDirectiveFeature } from "../target-profile.js";
-
-const DEFAULT_LAYOUT_FEATURES: ReadonlySet<TargetDirectiveFeature> = new Set([
-  "snes-mappers",
-  "snes-memory",
-  "snes-policy",
-  "spc-blocks",
-]);
+import {
+  ALL_LEGACY_TARGET_DIRECTIVE_SETS,
+  LEGACY_SNES_MAPPER_DIRECTIVE_SET,
+  LEGACY_SNES_POLICY_DIRECTIVE_SET,
+  LEGACY_SPC_DIRECTIVE_SET,
+} from "./directive-set-ids.js";
 
 /**
  * Pushes the current target address onto the push base stack.
@@ -114,12 +112,11 @@ export const handleStartpos = (
     operandResolver.getnum(session.resolvedefines(params[0])) & 0xffff;
 };
 
-export const registerLayoutDirectives = (
+export const registerGenericLayoutDirectives = (
   registry: DirectiveRegistry,
   context: DirectiveRegistryContexts["layout"],
-  features: ReadonlySet<TargetDirectiveFeature> = DEFAULT_LAYOUT_FEATURES,
 ): void => {
-  registry.register("base", context.base, ({ session, operandResolver }, words) => {
+  registry.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
     if (words.length !== 2) {
       throw new Error("BASE directive requires exactly one parameter.");
     }
@@ -144,71 +141,7 @@ export const registerLayoutDirectives = (
     session.currentTargetStartAddress = value;
   });
 
-  if (features.has("snes-mappers")) {
-    registry.register("lorom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "lorom");
-    });
-
-    registry.register("hirom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "hirom");
-    });
-
-    registry.register("exlorom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "exlorom");
-    });
-
-    registry.register("exhirom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "exhirom");
-    });
-
-    registry.register("sfxrom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "sfxrom");
-    });
-
-    registry.register("norom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "norom");
-    });
-
-    registry.register("fullsa1rom", context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, "bigsa1rom");
-    });
-
-    registry.register("sa1rom", context.mapper, ({ session }, words) => {
-      assertMapperAvailable(session.inSpcblock);
-
-      if (words.length > 1) {
-        const parts = words[1].split(",");
-        if (parts.length !== 4) {
-          throw new Error(
-            "Invalid SA1ROM mapper specification. Expected 4 comma-separated values.",
-          );
-        }
-
-        session.sa1banks = [];
-        session.sa1banks[0] = parseInt(parts[0], 10) << 20;
-        session.sa1banks[1] = parseInt(parts[1], 10) << 20;
-        session.sa1banks[4] = parseInt(parts[2], 10) << 20;
-        session.sa1banks[5] = parseInt(parts[3], 10) << 20;
-      } else {
-        session.sa1banks = [];
-        session.sa1banks[0] = 0 << 20;
-        session.sa1banks[1] = 1 << 20;
-        session.sa1banks[4] = 2 << 20;
-        session.sa1banks[5] = 3 << 20;
-      }
-
-      applyMapperSelection(session, "sa1rom");
-    });
-  }
-
-  registry.register("org", context.org, ({ session, runtime }, words) => {
+  registry.registerLowered("org", context.org, ({ session, runtime }, words) => {
     if (session.inSpcblock) {
       throw new Error("ORG is unavailable inside spcblock.");
     }
@@ -221,56 +154,123 @@ export const registerLayoutDirectives = (
     runtime.handleOrg(words.slice(1));
   });
 
-  registry.register("pushbase", context.addressStack, handlePushBase);
+  registry.registerLowered("pushbase", context.addressStack, handlePushBase);
 
-  registry.register("pullbase", context.addressStack, handlePullBase);
+  registry.registerLowered("pullbase", context.addressStack, handlePullBase);
 
-  registry.register("pushpc", context.runtime, ({ runtime }) => {
+  registry.registerLowered("pushpc", context.runtime, ({ runtime }) => {
     runtime.handlePushPC();
   });
 
-  registry.register("pullpc", context.runtime, ({ runtime }) => {
+  registry.registerLowered("pullpc", context.runtime, ({ runtime }) => {
     runtime.handlePullPC();
   });
 
-  registry.register("arch", context.architecture, handleArch);
+  registry.registerLowered("arch", context.architecture, handleArch);
+};
 
-  if (features.has("spc-blocks")) {
-    registry.register("startpos", context.startpos, handleStartpos);
-  }
+export const registerSnesMapperDirectives = (
+  registry: DirectiveRegistry,
+  context: DirectiveRegistryContexts["layout"],
+): void => {
+  const registerMapper = (keyword: string, mapper: string): void =>
+    registry.registerLowered(keyword, context.mapper, ({ session }) => {
+      assertMapperAvailable(session.inSpcblock);
+      applyMapperSelection(session, mapper);
+    });
 
-  if (features.has("snes-policy")) {
-    registry.register("check", context.policy, ({ session }, words) => {
-      if (words.length >= 2 && words[1].toLowerCase() === "title") {
-        session.readFunctionsEnabled = true;
-        return;
+  registerMapper("lorom", "lorom");
+  registerMapper("hirom", "hirom");
+  registerMapper("exlorom", "exlorom");
+  registerMapper("exhirom", "exhirom");
+  registerMapper("sfxrom", "sfxrom");
+  registerMapper("norom", "norom");
+  registerMapper("fullsa1rom", "bigsa1rom");
+
+  registry.registerLowered("sa1rom", context.mapper, ({ session }, words) => {
+    assertMapperAvailable(session.inSpcblock);
+
+    if (words.length > 1) {
+      const parts = words[1].split(",");
+      if (parts.length !== 4) {
+        throw new Error("Invalid SA1ROM mapper specification. Expected 4 comma-separated values.");
       }
 
-      if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
-        throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
-      }
+      session.sa1banks = [];
+      session.sa1banks[0] = parseInt(parts[0], 10) << 20;
+      session.sa1banks[1] = parseInt(parts[1], 10) << 20;
+      session.sa1banks[4] = parseInt(parts[2], 10) << 20;
+      session.sa1banks[5] = parseInt(parts[3], 10) << 20;
+    } else {
+      session.sa1banks = [];
+      session.sa1banks[0] = 0 << 20;
+      session.sa1banks[1] = 1 << 20;
+      session.sa1banks[4] = 2 << 20;
+      session.sa1banks[5] = 3 << 20;
+    }
 
+    applyMapperSelection(session, "sa1rom");
+  });
+};
+
+export const registerSpcLayoutDirectives = (
+  registry: DirectiveRegistry,
+  context: DirectiveRegistryContexts["layout"],
+): void => {
+  registry.registerLowered("startpos", context.startpos, handleStartpos);
+};
+
+export const registerSnesPolicyDirectives = (
+  registry: DirectiveRegistry,
+  context: DirectiveRegistryContexts["layout"],
+): void => {
+  registry.registerLowered("check", context.policy, ({ session }, words) => {
+    if (words.length >= 2 && words[1].toLowerCase() === "title") {
+      session.readFunctionsEnabled = true;
+      return;
+    }
+
+    if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
+      throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
+    }
+
+    const mode = words[2].toLowerCase();
+    if (mode === "off") {
+      session.bankCrossCheckMode = "off";
+    } else if (mode === "half") {
+      session.bankCrossCheckMode = "half";
+    } else if (mode === "full" || mode === "on") {
+      session.bankCrossCheckMode = "full";
+    } else {
+      throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+    }
+  });
+
+  registry.registerLowered("optimize", context.policy, ({ session }, words) => {
+    if (words.length >= 3 && words[1].toLowerCase() === "dp") {
       const mode = words[2].toLowerCase();
-      if (mode === "off") {
-        session.bankCrossCheckMode = "off";
-      } else if (mode === "half") {
-        session.bankCrossCheckMode = "half";
-      } else if (mode === "full" || mode === "on") {
-        session.bankCrossCheckMode = "full";
-      } else {
-        throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+      if (mode === "none") {
+        session.optimizeDirectPage = false;
+      } else if (mode === "ram" || mode === "always") {
+        session.optimizeDirectPage = true;
       }
-    });
+    }
+  });
+};
 
-    registry.register("optimize", context.policy, ({ session }, words) => {
-      if (words.length >= 3 && words[1].toLowerCase() === "dp") {
-        const mode = words[2].toLowerCase();
-        if (mode === "none") {
-          session.optimizeDirectPage = false;
-        } else if (mode === "ram" || mode === "always") {
-          session.optimizeDirectPage = true;
-        }
-      }
-    });
+export const registerLayoutDirectives = (
+  registry: DirectiveRegistry,
+  context: DirectiveRegistryContexts["layout"],
+  activeSetIds: ReadonlySet<string> = ALL_LEGACY_TARGET_DIRECTIVE_SETS,
+): void => {
+  registerGenericLayoutDirectives(registry, context);
+  if (activeSetIds.has(LEGACY_SNES_MAPPER_DIRECTIVE_SET)) {
+    registerSnesMapperDirectives(registry, context);
+  }
+  if (activeSetIds.has(LEGACY_SPC_DIRECTIVE_SET)) {
+    registerSpcLayoutDirectives(registry, context);
+  }
+  if (activeSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)) {
+    registerSnesPolicyDirectives(registry, context);
   }
 };

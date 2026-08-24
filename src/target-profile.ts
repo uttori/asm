@@ -37,12 +37,6 @@ export interface TargetOutputFormat {
   getBinaryOutput(bytes: number[] | Uint8Array): Uint8Array;
 }
 
-/** Optional directive families composed into a target's source dialect. */
-export type TargetDirectiveFeature = "snes-mappers" | "snes-memory" | "snes-policy" | "spc-blocks";
-
-/** Optional target-specific expression functions. */
-export type TargetExpressionFeature = "snes-address-conversion" | "rom-reads";
-
 /**
  * A complete build target. Architectures, address spaces, containers, and
  * dialect capabilities are intentionally independent so future targets can
@@ -56,8 +50,8 @@ export interface TargetProfile {
   readonly checksumFixEnabled: boolean;
   readonly addressSpace: TargetAddressSpace;
   readonly outputFormat: TargetOutputFormat;
-  readonly directiveFeatures: ReadonlySet<TargetDirectiveFeature>;
-  readonly expressionFeatures: ReadonlySet<TargetExpressionFeature>;
+  readonly directiveSetIds: ReadonlySet<string>;
+  readonly expressionSetIds: ReadonlySet<string>;
 }
 
 /** Registry used by CLIs, editors, and embedders to resolve named targets. */
@@ -315,8 +309,13 @@ export const snesTargetProfile: TargetProfile = {
   checksumFixEnabled: true,
   addressSpace: snesRomAddressSpace,
   outputFormat: snesRomOutputFormat,
-  directiveFeatures: new Set(["snes-mappers", "snes-memory", "snes-policy", "spc-blocks"]),
-  expressionFeatures: new Set(["snes-address-conversion", "rom-reads"]),
+  directiveSetIds: new Set([
+    "legacy.snes-mapper-directives",
+    "legacy.snes-memory-directives",
+    "legacy.snes-policy-directives",
+    "legacy.spc-directives",
+  ]),
+  expressionSetIds: new Set(["legacy.snes-address-functions", "legacy.rom-read-functions"]),
 };
 
 /**
@@ -331,8 +330,8 @@ export const mos6502StubTargetProfile: TargetProfile = {
   checksumFixEnabled: false,
   addressSpace: flat16AddressSpace,
   outputFormat: rawBinaryOutputFormat,
-  directiveFeatures: new Set(),
-  expressionFeatures: new Set(),
+  directiveSetIds: new Set(),
+  expressionSetIds: new Set(),
 };
 
 export const builtInTargetProfiles = new TargetProfileRegistry();

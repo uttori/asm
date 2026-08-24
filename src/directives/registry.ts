@@ -1,11 +1,17 @@
 import type { NormalizedCommand } from "../ir/normalized-command.js";
+import {
+  ALL_LEGACY_TARGET_DIRECTIVE_SETS,
+  LEGACY_SNES_MEMORY_DIRECTIVE_SET,
+  LEGACY_SNES_POLICY_DIRECTIVE_SET,
+  LEGACY_SPC_DIRECTIVE_SET,
+} from "./directive-set-ids.js";
 import { registerDataDirectives } from "./data.js";
 import { registerFillPadDirectives } from "./fill-pad.js";
 import { registerFlowControlDirectives } from "./flow-control.js";
 import { registerIncludeSourceDirectives } from "./include-source.js";
 import { registerLayoutDirectives } from "./layout.js";
 import { registerMemoryDirectives } from "./memory.js";
-import { registerMiscDirectives } from "./misc.js";
+import { registerAsarCompatibilityDirectives, registerMiscDirectives } from "./misc.js";
 import { registerNamespaceDirectives } from "./namespace.js";
 import { registerSpcDirectives } from "./spc.js";
 import { registerStructBinaryDirectives } from "./struct-binary.js";
@@ -29,20 +35,13 @@ import type {
   TableDirectiveContext,
   DiagnosticDirectiveContext,
 } from "./types.js";
-import type { TargetDirectiveFeature } from "../target-profile.js";
-
-export const ALL_TARGET_DIRECTIVE_FEATURES: ReadonlySet<TargetDirectiveFeature> = new Set([
-  "snes-mappers",
-  "snes-memory",
-  "snes-policy",
-  "spc-blocks",
-]);
-
 type BoundDirectiveHandler = (
   words: readonly string[],
   raw: string,
   command?: NormalizedCommand,
 ) => void;
+
+export type DirectiveExecutionPhase = "preprocess" | "lowered";
 
 export interface DirectiveRegistryContexts {
   data: DataDirectiveContext;
@@ -69,22 +68,40 @@ export interface DirectiveRegistryContexts {
 
 export class DirectiveRegistry {
   readonly handlers = new Map<string, BoundDirectiveHandler>();
+  readonly phases = new Map<string, DirectiveExecutionPhase>();
 
   /**
    * Registers the value.
    * @param {string | string[]} keyword The keyword.
    * @param {Context} context The context.
    * @param {NarrowDirectiveHandler<Context>} handler The handler.
+   * @param {DirectiveExecutionPhase} [phase] The directive execution phase.
    */
   register<Context>(
     keyword: string | string[],
     context: Context,
     handler: NarrowDirectiveHandler<Context>,
+    phase: DirectiveExecutionPhase = "preprocess",
   ): void {
     const keywords = Array.isArray(keyword) ? keyword : [keyword];
     for (const entry of keywords) {
       this.handlers.set(entry, (words, raw, command) => handler(context, words, raw, command));
+      this.phases.set(entry, phase);
     }
+  }
+
+  /**
+   * Registers a directive that can execute from durable lowered command data.
+   * @param {string | string[]} keyword The directive keyword or aliases.
+   * @param {Context} context The handler context.
+   * @param {NarrowDirectiveHandler<Context>} handler The handler.
+   */
+  registerLowered<Context>(
+    keyword: string | string[],
+    context: Context,
+    handler: NarrowDirectiveHandler<Context>,
+  ): void {
+    this.register(keyword, context, handler, "lowered");
   }
 
   /**
@@ -134,11 +151,27 @@ export class DirectiveRegistry {
     }
     return undefined;
   }
+
+  /**
+   * Resolves the execution phase declared alongside a directive handler.
+   * @param {string} keyword The directive keyword.
+   * @returns {DirectiveExecutionPhase | undefined} The active directive phase.
+   */
+  getPhase(keyword: string): DirectiveExecutionPhase | undefined {
+    const direct = this.phases.get(keyword);
+    if (direct) {
+      return direct;
+    }
+    if (keyword.startsWith("@")) {
+      return this.phases.get(keyword.slice(1));
+    }
+    return undefined;
+  }
 }
 
 export const createDirectiveRegistry = (
   contexts: DirectiveRegistryContexts,
-  features: ReadonlySet<TargetDirectiveFeature> = ALL_TARGET_DIRECTIVE_FEATURES,
+  activeSetIds: ReadonlySet<string> = ALL_LEGACY_TARGET_DIRECTIVE_SETS,
 ): DirectiveRegistry => {
   const registry = new DirectiveRegistry();
 
@@ -146,9 +179,9 @@ export const createDirectiveRegistry = (
   registerFillPadDirectives(registry, contexts.fillPad);
   registerFlowControlDirectives(registry, contexts.flowControl);
   registerNamespaceDirectives(registry, contexts.namespace);
-  registerLayoutDirectives(registry, contexts.layout, features);
+  registerLayoutDirectives(registry, contexts.layout, activeSetIds);
   registerDataDirectives(registry, contexts.data);
-  if (features.has("spc-blocks")) {
+  if (activeSetIds.has(LEGACY_SPC_DIRECTIVE_SET)) {
     registerSpcDirectives(registry, contexts.spc);
   }
   registerStructBinaryDirectives(registry, contexts.struct);
@@ -156,7 +189,10 @@ export const createDirectiveRegistry = (
     table: contexts.table,
     diagnostic: contexts.diagnostic,
   });
-  if (features.has("snes-memory")) {
+  if (activeSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)) {
+    registerAsarCompatibilityDirectives(registry, contexts.table);
+  }
+  if (activeSetIds.has(LEGACY_SNES_MEMORY_DIRECTIVE_SET)) {
     registerMemoryDirectives(registry, contexts.memory);
   }
 

@@ -78,11 +78,10 @@ class ResolvedToolingCatalog implements ToolingCatalog {
   }
 
   getDirectives(): readonly DirectiveDescriptor[] {
-    return this.target.directiveSets.flatMap(
-      (id) =>
-        this.directiveSets.get(canonical(id))?.value.directives.flatMap((item) => item.tooling) ??
-        [],
-    );
+    return this.target.directiveSets.flatMap((id) => {
+      const set = this.directiveSets.get(canonical(id))?.value;
+      return set ? [...(set.tooling ?? []), ...set.directives.flatMap((item) => item.tooling)] : [];
+    });
   }
 
   getExpressionFunctions(): readonly ExpressionFunctionDescriptor[] {

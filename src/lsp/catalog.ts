@@ -4,6 +4,7 @@ import {
   type InstructionCatalogProvider,
 } from "./instruction-catalog.js";
 import { directiveCatalog, findDirective, type DirectiveDescriptor } from "./directive-catalog.js";
+import type { ExpressionFunctionDescriptor } from "../plugin/contracts.js";
 
 /**
  * A unified completion-friendly view over instructions and directives.
@@ -12,7 +13,7 @@ export type CatalogEntry = {
   /** The label as typed in source. */
   label: string;
   /** Whether this entry is an instruction or a directive/keyword. */
-  kind: "instruction" | "directive";
+  kind: "instruction" | "directive" | "expression";
   /** A short summary for documentation. */
   detail: string;
   /** Markdown documentation including syntax forms. */
@@ -60,6 +61,20 @@ export function findDirectiveEntry(keyword: string): DirectiveDescriptor | undef
 }
 
 /**
+ * Finds a directive in an explicitly active descriptor catalog.
+ * @param {string} keyword The directive keyword.
+ * @param {readonly DirectiveDescriptor[]} directives Active directive descriptors.
+ * @returns {DirectiveDescriptor | undefined} The matching active directive.
+ */
+export function findDirectiveInCatalog(
+  keyword: string,
+  directives: readonly DirectiveDescriptor[] = directiveCatalog,
+): DirectiveDescriptor | undefined {
+  const canonical = keyword.toLowerCase().replace(/^@/, "");
+  return directives.find((directive) => directive.keyword.toLowerCase() === canonical);
+}
+
+/**
  * Renders an instruction descriptor as Markdown hover documentation.
  * @param {InstructionDescriptor} descriptor The instruction descriptor.
  * @returns {string} The Markdown documentation.
@@ -103,14 +118,34 @@ export function renderDirectiveDocs(descriptor: DirectiveDescriptor): string {
 }
 
 /**
+ * Renders an expression-function descriptor as Markdown hover documentation.
+ * @param {ExpressionFunctionDescriptor} descriptor The expression function descriptor.
+ * @returns {string} The Markdown documentation.
+ */
+export function renderExpressionFunctionDocs(descriptor: ExpressionFunctionDescriptor): string {
+  const parameters = descriptor.signature.parameters.join(", ");
+  return [
+    `**${descriptor.name}** — expression function`,
+    "",
+    descriptor.summary,
+    "",
+    `\`${descriptor.name}(${parameters})\``,
+  ].join("\n");
+}
+
+/**
  * Builds the combined completion entries for an architecture.
  * @param {string} architecture The active architecture name.
  * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
+ * @param {readonly DirectiveDescriptor[]} [directives] Active directive descriptors.
+ * @param {readonly ExpressionFunctionDescriptor[]} [expressionFunctions] Active expression functions.
  * @returns {CatalogEntry[]} The completion entries.
  */
 export function buildCompletionEntries(
   architecture: string,
   provider?: InstructionCatalogProvider,
+  directives: readonly DirectiveDescriptor[] = directiveCatalog,
+  expressionFunctions: readonly ExpressionFunctionDescriptor[] = [],
 ): CatalogEntry[] {
   const entries: CatalogEntry[] = [];
 
@@ -123,13 +158,30 @@ export function buildCompletionEntries(
     });
   }
 
-  for (const directive of directiveCatalog) {
+  for (const directive of directives) {
     entries.push({
       label: directive.keyword,
       kind: "directive",
       detail: directive.summary,
       documentation: renderDirectiveDocs(directive),
     });
+  }
+
+  for (const expressionFunction of expressionFunctions) {
+    entries.push({
+      label: expressionFunction.name,
+      kind: "expression",
+      detail: expressionFunction.summary,
+      documentation: renderExpressionFunctionDocs(expressionFunction),
+    });
+    for (const alias of expressionFunction.aliases) {
+      entries.push({
+        label: alias,
+        kind: "expression",
+        detail: expressionFunction.summary,
+        documentation: renderExpressionFunctionDocs({ ...expressionFunction, name: alias }),
+      });
+    }
   }
 
   return entries;

@@ -275,21 +275,26 @@ export const registerMiscDirectives = (
   registry: DirectiveRegistry,
   context: MiscDirectiveContexts,
 ): void => {
-  registry.register("pulltable", context.table, handlePullTable);
+  registry.registerLowered("pulltable", context.table, handlePullTable);
 
-  registry.register("pushtable", context.table, handlePushTable);
+  registry.registerLowered("pushtable", context.table, handlePushTable);
 
-  registry.register("cleartable", context.table, handleClearTable);
+  registry.registerLowered("cleartable", context.table, handleClearTable);
 
-  registry.register("table", context.table, handleTable);
+  registry.registerLowered("table", context.table, handleTable);
 
-  registry.register([...ASAR_COMPAT_NO_OP_DIRECTIVES], context.table, () => {
+  registry.registerLowered("assert", context.diagnostic, handleAssert);
+
+  registry.registerLowered("error", context.diagnostic, handleError);
+
+  registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+};
+
+export const registerAsarCompatibilityDirectives = (
+  registry: DirectiveRegistry,
+  context: TableDirectiveContext,
+): void => {
+  registry.registerLowered([...ASAR_COMPAT_NO_OP_DIRECTIVES], context, () => {
     // Compatibility no-ops kept to preserve current fixture behavior.
   });
-
-  registry.register("assert", context.diagnostic, handleAssert);
-
-  registry.register("error", context.diagnostic, handleError);
-
-  registry.register("warnpc", context.diagnostic, handleWarnpc);
 };

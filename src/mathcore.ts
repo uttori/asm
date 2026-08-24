@@ -1,4 +1,4 @@
-import type { ExpressionHost } from "./architecture-types.js";
+import type { ExpressionHost, MathValue } from "./architecture-types.js";
 import { AssemblyError } from "./diagnostics.js";
 import type {
   BinaryOperator,
@@ -29,6 +29,12 @@ try {
 type UserFunction = {
   readonly args: readonly string[];
   readonly content: string;
+};
+
+export type RegisteredExpressionFunction = {
+  readonly minimumArguments: number;
+  readonly maximumArguments: number;
+  readonly evaluate: (args: readonly MathValue[]) => MathValue;
 };
 
 type BinaryOperatorSpec = {
@@ -182,6 +188,7 @@ export class MathCore {
   math_round = false;
 
   readonly userFunctions = new Map<string, UserFunction>();
+  readonly expressionFunctions = new Map<string, RegisteredExpressionFunction>();
   readonly operators = OPERATORS;
 
   /** Full expression currently being scanned. */
@@ -243,6 +250,20 @@ export class MathCore {
     this.math_round = false;
     this.userFunctions.clear();
     this.clearExpressionCaches();
+  }
+
+  /**
+   * Installs a target-provided expression function for this session.
+   * @param {string | readonly string[]} names The canonical name and aliases.
+   * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
+   */
+  registerExpressionFunction(
+    names: string | readonly string[],
+    expressionFunction: RegisteredExpressionFunction,
+  ): void {
+    for (const name of typeof names === "string" ? [names] : names) {
+      this.expressionFunctions.set(name.toLowerCase(), expressionFunction);
+    }
   }
 
   /**
@@ -1079,7 +1100,26 @@ export class MathCore {
     if (this.userFunctions.has(name)) {
       return this.callUserFunction(name, args);
     }
-    // 2) If built-in, dispatch:
+    // 2) Target/plugin contributions are active only when installed for this session.
+    const expressionFunction = this.expressionFunctions.get(name.toLowerCase());
+    if (expressionFunction) {
+      if (
+        args.length < expressionFunction.minimumArguments ||
+        args.length > expressionFunction.maximumArguments
+      ) {
+        const expected =
+          expressionFunction.minimumArguments === expressionFunction.maximumArguments
+            ? `exactly ${expressionFunction.minimumArguments}`
+            : `between ${expressionFunction.minimumArguments} and ${expressionFunction.maximumArguments}`;
+        throw new Error(`${name}() expects ${expected} argument(s).`);
+      }
+      const result = expressionFunction.evaluate(args);
+      if (typeof result !== "number") {
+        throw new Error(`${name}() returned a non-numeric value.`);
+      }
+      return result;
+    }
+    // 3) Core built-ins dispatch locally.
     return this.callBuiltInFunction(name, args);
   };
 
@@ -1288,15 +1328,6 @@ export class MathCore {
         const str2 = this.strArg(name, args[1]);
         return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
       }
-      // --- SNES/PC Address Conversion ---
-      case "snestopc":
-      case "pctosnes": {
-        if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
-        const value = this.numArg(name, args[0]);
-        return name === "snestopc"
-          ? this.getHost().convertSnesToPc(value)
-          : this.getHost().convertPcToSnes(value);
-      }
       // --- Filesize & File Status ---
       case "filesize":
       case "getfilestatus": {
@@ -1335,39 +1366,6 @@ export class MathCore {
         const pos = this.numArg(name, args[1]);
         const num = this.numArg(name, args[2]);
         return this.getHost().canReadFile(filename, pos, num);
-      }
-      // --- ROM Can-Read functions ---
-      case "canread1":
-      case "canread2":
-      case "canread3":
-      case "canread4": {
-        if (args.length !== 1) throw new Error(`${name} expects exactly 1 numeric argument.`);
-        const pos = this.numArg(name, args[0]);
-        const size = parseInt(name.slice(-1), 10);
-        return this.getHost().canReadRom(pos, size);
-      }
-      case "canread": {
-        if (args.length !== 2)
-          throw new Error("canread expects exactly 2 numeric arguments (pos, num).");
-        const pos = this.numArg(name, args[0]);
-        const num = this.numArg(name, args[1]);
-        return this.getHost().canReadRom(pos, num);
-      }
-      // --- ROM Reading functions ---
-      case "read1":
-      case "read2":
-      case "read3":
-      case "read4": {
-        if (args.length < 1 || args.length > 2)
-          throw new Error(`${name} expects 1 or 2 numeric arguments.`);
-        const pos = this.numArg(name, args[0]);
-        const size = parseInt(name.slice(-1), 10);
-        if (args.length === 1) {
-          return this.getHost().readRom(pos, size);
-        } else {
-          const defVal = this.numArg(name, args[1]);
-          return this.getHost().readRom(pos, size, defVal);
-        }
       }
       // --- File Reading functions ---
       case "readfile1":

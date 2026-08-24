@@ -305,6 +305,7 @@ const evaluateIncbinRange = (
  * @param {number} endOffset Exclusive end.
  * @param {number} fileLength Source length.
  * @param {string} filename Path used in the error.
+ * @param {string} [rangeStr] Optional source range used to enrich the diagnostic.
  * @throws {Error} If either bound is outside the file.
  */
 const assertIncbinBounds = (
@@ -453,10 +454,10 @@ export const registerIncludeSourceDirectives = (
   registry: DirectiveRegistry,
   context: IncludeDirectiveContext,
 ): void => {
-  registry.register("incsrc", context, handleIncsrc);
-  registry.register("include", context, handleInclude);
-  registry.register("includeonce", context, ({ includeSource }) => {
+  registry.registerLowered("incsrc", context, handleIncsrc);
+  registry.registerLowered("include", context, handleInclude);
+  registry.registerLowered("includeonce", context, ({ includeSource }) => {
     includeSource.guardCurrentFile();
   });
-  registry.register("incbin", context, handleIncbin);
+  registry.registerLowered("incbin", context, handleIncbin);
 };

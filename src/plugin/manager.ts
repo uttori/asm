@@ -545,7 +545,12 @@ export class PluginManager implements PluginDisposable {
       }
     }
     for (const record of transaction.directiveSets) {
-      if (!isArray(record.value.directives)) this.#malformed(transaction, record);
+      if (
+        !isArray(record.value.directives) ||
+        (record.value.tooling !== undefined && !isArray(record.value.tooling))
+      ) {
+        this.#malformed(transaction, record);
+      }
       for (const directive of record.value.directives) {
         validateContributionId(directive.id, transaction.manifest.id);
         if (

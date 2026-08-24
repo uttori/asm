@@ -5,18 +5,34 @@ import { ArchSuperFX } from "../ArchSuperFX.js";
 import type { ArchitectureExtension } from "../architecture-registry.js";
 import type { OperandResolver } from "../operand-resolver.js";
 import {
+  ASAR_COMPAT_NO_OP_DIRECTIVES,
+  shouldEndifCloseInnermostWhile,
+} from "../compatibility/asar-compatibility-profile.js";
+import {
   classify6502Operand,
   classify65816Operand,
   classifySpc700Operand,
   classifySuperFxOperand,
 } from "../operand-classifiers.js";
 import { cpu65816Catalog, spc700Catalog, superFxCatalog } from "../lsp/instruction-catalog.js";
+import { directiveCatalog } from "../lsp/directive-catalog.js";
+import {
+  LEGACY_SNES_MAPPER_DIRECTIVE_SET,
+  LEGACY_SNES_MEMORY_DIRECTIVE_SET,
+  LEGACY_SNES_POLICY_DIRECTIVE_SET,
+  LEGACY_SPC_DIRECTIVE_SET,
+} from "../directives/directive-set-ids.js";
 import {
   mos6502StubTargetProfile,
   snesTargetProfile,
   type TargetProfile,
 } from "../target-profile.js";
-import { PLUGIN_API_VERSION, type ArchitectureContribution } from "./contracts.js";
+import {
+  PLUGIN_API_VERSION,
+  type ArchitectureContribution,
+  type ExpressionSetContribution,
+  type LifecycleContribution,
+} from "./contracts.js";
 import { AssemblerEnvironment, type EnvironmentContributions } from "./environment.js";
 
 export const SNES_TARGET_ID = "snes.sfc";
@@ -120,6 +136,81 @@ const extensionContribution = (
   instructions: [],
 });
 
+const numericExpressionArgument = (
+  functionName: string,
+  args: readonly (number | string)[],
+  index: number,
+): number => {
+  const value = args[index];
+  if (typeof value !== "number") {
+    throw new Error(`${functionName}() argument ${index + 1} must be numeric.`);
+  }
+  return value;
+};
+
+const legacyAddressExpressionSet: ExpressionSetContribution = {
+  id: "legacy.snes-address-functions",
+  functions: [
+    {
+      name: "snestopc",
+      signature: { parameters: ["address"] },
+      summary: "Convert a SNES address to an output offset.",
+      evaluate: ({ addresses }, args) =>
+        addresses.toOutputOffset(numericExpressionArgument("snestopc", args, 0)),
+    },
+    {
+      name: "pctosnes",
+      signature: { parameters: ["offset"] },
+      summary: "Convert an output offset to a SNES address.",
+      evaluate: ({ addresses }, args) =>
+        addresses.fromOutputOffset(numericExpressionArgument("pctosnes", args, 0)),
+    },
+  ],
+};
+
+const legacyRomReadExpressionSet: ExpressionSetContribution = {
+  id: "legacy.rom-read-functions",
+  functions: [
+    ...[1, 2, 3, 4].map((size) => ({
+      name: `canread${size}`,
+      signature: { parameters: ["position"] },
+      summary: `Return whether ${size} byte(s) can be read from the base image.`,
+      evaluate: (
+        context: Parameters<ExpressionSetContribution["functions"][number]["evaluate"]>[0],
+        args: readonly (number | string)[],
+      ) => context.output.canRead(numericExpressionArgument(`canread${size}`, args, 0), size),
+    })),
+    {
+      name: "canread",
+      signature: { parameters: ["position", "size"] },
+      summary: "Return whether a range can be read from the base image.",
+      evaluate: ({ output }, args) =>
+        output.canRead(
+          numericExpressionArgument("canread", args, 0),
+          numericExpressionArgument("canread", args, 1),
+        ),
+    },
+    ...[1, 2, 3, 4].map((size) => ({
+      name: `read${size}`,
+      signature: {
+        parameters: ["position", "defaultValue"],
+        minimumArguments: 1,
+        maximumArguments: 2,
+      },
+      summary: `Read ${size} byte(s) from the base image.`,
+      evaluate: (
+        context: Parameters<ExpressionSetContribution["functions"][number]["evaluate"]>[0],
+        args: readonly (number | string)[],
+      ) =>
+        context.output.read(
+          numericExpressionArgument(`read${size}`, args, 0),
+          size,
+          args.length > 1 ? numericExpressionArgument(`read${size}`, args, 1) : undefined,
+        ),
+    })),
+  ],
+};
+
 export interface LegacyEnvironmentOptions {
   readonly targetProfile?: TargetProfile;
   readonly architectureExtensions?: readonly ArchitectureExtension[];
@@ -202,6 +293,56 @@ export function createLegacyAssemblerEnvironment(
         profile.outputFormat.getBinaryOutput(outputBytes),
     }),
   });
+  const expressionSetsById = new Map(
+    [legacyAddressExpressionSet, legacyRomReadExpressionSet].map((set) => [set.id, set]),
+  );
+  const expressionSets = [...profile.expressionSetIds].flatMap((id) => {
+    const set = expressionSetsById.get(id);
+    return set ? [set] : [];
+  });
+  const expressionSetRecords = expressionSets.map(own);
+  const knownDirectiveSetIds = new Set([
+    LEGACY_SNES_MAPPER_DIRECTIVE_SET,
+    LEGACY_SNES_MEMORY_DIRECTIVE_SET,
+    LEGACY_SNES_POLICY_DIRECTIVE_SET,
+    LEGACY_SPC_DIRECTIVE_SET,
+  ]);
+  const directiveSetIds = [...profile.directiveSetIds].filter((id) => knownDirectiveSetIds.has(id));
+  const directiveKeywordsBySet = new Map<string, ReadonlySet<string>>([
+    [
+      LEGACY_SNES_MAPPER_DIRECTIVE_SET,
+      new Set(["lorom", "hirom", "exlorom", "exhirom", "sfxrom", "norom", "fullsa1rom", "sa1rom"]),
+    ],
+    [
+      LEGACY_SNES_MEMORY_DIRECTIVE_SET,
+      new Set(["freecode", "freespace", "freedata", "freespacebyte", "prot"]),
+    ],
+    [
+      LEGACY_SNES_POLICY_DIRECTIVE_SET,
+      new Set(["check", "optimize", ...ASAR_COMPAT_NO_OP_DIRECTIVES]),
+    ],
+    [LEGACY_SPC_DIRECTIVE_SET, new Set(["spcblock", "endspcblock", "startpos"])],
+  ]);
+  const directiveSetRecords = directiveSetIds.map((id) => {
+    const keywords = directiveKeywordsBySet.get(id) ?? new Set<string>();
+    return own({
+      id,
+      directives: [],
+      tooling: directiveCatalog.filter((descriptor) => keywords.has(descriptor.keyword)),
+    });
+  });
+  const lifecycleIds = profile.directiveSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)
+    ? ["legacy.asar-dialect-lifecycle"]
+    : [];
+  const lifecycleRecords = lifecycleIds.map((id) =>
+    own<LifecycleContribution>({
+      id,
+      create: () => ({
+        shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) =>
+          shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+      }),
+    }),
+  );
   const targetRecord = own({
     id: targetId,
     aliases: [profile.name],
@@ -210,9 +351,9 @@ export function createLegacyAssemblerEnvironment(
     architectures: [...profile.architectures].map(resolveArchitecture),
     addressSpace: addressSpaceId,
     outputFormat: outputFormatId,
-    directiveSets: [],
-    expressionSets: [],
-    lifecycle: [],
+    directiveSets: directiveSetIds,
+    expressionSets: expressionSets.map((set) => set.id),
+    lifecycle: lifecycleIds,
     defaultOutputExtension: profile.outputFormat.defaultExtension,
   });
   const contributions: EnvironmentContributions = {
@@ -228,9 +369,9 @@ export function createLegacyAssemblerEnvironment(
     architectures: architectureRecords,
     addressSpaces: [addressSpaceRecord],
     outputFormats: [outputFormatRecord],
-    directiveSets: [],
-    expressionSets: [],
-    lifecycles: [],
+    directiveSets: directiveSetRecords,
+    expressionSets: expressionSetRecords,
+    lifecycles: lifecycleRecords,
     targets: [targetRecord],
   };
   const environment = new AssemblerEnvironment(contributions);

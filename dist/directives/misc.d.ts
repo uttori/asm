@@ -63,4 +63,5 @@ export declare const handleTable: ({ session }: TableDirectiveContext, _words: r
  */
 export declare const handleWarnpc: ({ session }: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
 export declare const registerMiscDirectives: (registry: DirectiveRegistry, context: MiscDirectiveContexts) => void;
+export declare const registerAsarCompatibilityDirectives: (registry: DirectiveRegistry, context: TableDirectiveContext) => void;
 //# sourceMappingURL=misc.d.ts.map

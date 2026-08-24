@@ -21,6 +21,15 @@ test("SNES remains the default composed target", (t) => {
   t.true(assembler.directiveRegistry.has("lorom"));
   t.true(assembler.directiveRegistry.has("spcblock"));
   t.true(assembler.directiveRegistry.has("freespace"));
+  t.is(assembler.mathCore.math("snestopc($808000)"), 0);
+  t.is(assembler.mathCore.math("pctosnes(0)"), 0x808000);
+  t.true(assembler.shouldEndifCloseInnermostWhile("while", 3, 1));
+  t.true(
+    assembler.environment
+      .getToolingCatalog(assembler.targetId)
+      .getExpressionFunctions()
+      .some((expressionFunction) => expressionFunction.name === "snestopc"),
+  );
   t.is(builtInTargetProfiles.get("sfc"), snesTargetProfile);
 });
 
@@ -47,7 +56,7 @@ test("6502 target is an explicit non-functional framework stub", (t) => {
     message: /invalid org address/i,
   });
   t.throws(() => assembler.mathCore.math("snestopc($8000)"), {
-    message: /unavailable for target mos6502-stub/i,
+    message: /unknown built-in function 'snestopc'/i,
   });
 });
 

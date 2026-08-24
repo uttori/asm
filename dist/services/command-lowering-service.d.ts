@@ -42,6 +42,7 @@ export type LoweredProgram = {
 export type CommandLoweringHost = {
     directiveRegistry: {
         has(keyword: string): boolean;
+        getPhase(keyword: string): "preprocess" | "lowered" | undefined;
     };
     resolveActiveArchitecture(): {
         name: string;

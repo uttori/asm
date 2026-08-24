@@ -48,6 +48,9 @@ const keepsFixedWidthAddressingMode = (
 /**
  * True for `,x` / `,y` memory indexing. Grouping `(bank&$FF0000)+$03,x` starts
  * with `(` so `syntax.indirect` is a false positive; classified mode decides.
+ * @param {LoweredOperand} operand The lowered operand to classify.
+ * @param {"x" | "y"} register The index register to match.
+ * @returns {boolean} Whether the operand uses the requested memory index register.
  */
 const isIndexedMemory = (operand: LoweredOperand, register: "x" | "y"): boolean =>
   operand.indexRegister === register && !keepsFixedWidthAddressingMode(operand.mode, 1);

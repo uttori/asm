@@ -1,8 +1,13 @@
-import type { ExpressionHost } from "./architecture-types.js";
+import type { ExpressionHost, MathValue } from "./architecture-types.js";
 import type { BinaryOperator, ExpressionNode, ReferenceExpressionNode, UnaryOperator } from "./ir/expression-node.js";
 type UserFunction = {
     readonly args: readonly string[];
     readonly content: string;
+};
+export type RegisteredExpressionFunction = {
+    readonly minimumArguments: number;
+    readonly maximumArguments: number;
+    readonly evaluate: (args: readonly MathValue[]) => MathValue;
 };
 type BinaryOperatorSpec = {
     readonly priority: number;
@@ -22,6 +27,7 @@ export declare class MathCore {
     host?: ExpressionHost;
     math_round: boolean;
     readonly userFunctions: Map<string, UserFunction>;
+    readonly expressionFunctions: Map<string, RegisteredExpressionFunction>;
     readonly operators: OperatorTable;
     /** Full expression currently being scanned. */
     scanSource: string;
@@ -56,6 +62,12 @@ export declare class MathCore {
      * Initialize the math core.
      */
     reset(): void;
+    /**
+     * Installs a target-provided expression function for this session.
+     * @param {string | readonly string[]} names The canonical name and aliases.
+     * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
+     */
+    registerExpressionFunction(names: string | readonly string[], expressionFunction: RegisteredExpressionFunction): void;
     /**
      * Starts a new expression-cache snapshot for an assembly.
      */

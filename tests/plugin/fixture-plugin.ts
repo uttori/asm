@@ -12,7 +12,7 @@ export interface FixturePluginOptions {
 export const registerFixtureContributions = (
   context: PluginActivationContext<FixturePluginOptions>,
 ): void => {
-  context.registerSessionState({
+  const fixtureState = context.registerSessionState({
     id: "fixture.state",
     create: () => ({ count: 0 }),
     clone: (value) => ({ ...value }),
@@ -67,11 +67,13 @@ export const registerFixtureContributions = (
         id: "fixture.directive.emit",
         keywords: ["fixturebyte"],
         phase: "lowered",
-        createHandler: () => () => undefined,
+        createHandler: ({ state }) => () => {
+          state.get(fixtureState).count++;
+        },
         tooling: [
           {
             keyword: "fixturebyte",
-            summary: "Emit a fixture byte.",
+            summary: "Record a fixture directive invocation.",
             syntax: "fixturebyte",
             group: "data",
           },

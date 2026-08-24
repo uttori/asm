@@ -9,7 +9,6 @@ import type {
 import {
   calculateHeaderChecksum,
   getChecksumHeaderOffset,
-  shouldEndifCloseInnermostWhile,
 } from "./compatibility/asar-compatibility-profile.js";
 
 import { AddressToLineMapping } from "./addressToLine.js";
@@ -91,7 +90,7 @@ import {
 import type { SourceSpan } from "./source-location.js";
 import { NodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
 import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
-import { type TargetExpressionFeature, type TargetProfile } from "./target-profile.js";
+import type { TargetProfile } from "./target-profile.js";
 import {
   type AssemblerEnvironment,
   type LifecycleContribution,
@@ -874,7 +873,7 @@ export class Assembler {
         table: { session },
         diagnostic: { session },
       },
-      session.targetProfile.directiveFeatures,
+      new Set(session.environment.getTarget(session.targetId)?.directiveSets ?? []),
     );
     const target = session.environment.getTarget(session.targetId);
     for (const setId of target?.directiveSets ?? []) {
@@ -897,19 +896,24 @@ export class Assembler {
             cause,
           });
         }
-        registry.register([...directive.keywords], undefined, (_context, words, raw) => {
-          try {
-            handler({ state: session.pluginState }, words, raw);
-          } catch (cause) {
-            throw new PluginError(`Directive '${directive.id}' failed.`, {
-              code: "PLUGIN_HOOK_FAILED",
-              pluginId,
-              contributionId: directive.id,
-              targetId: session.targetId,
-              cause,
-            });
-          }
-        });
+        registry.register(
+          [...directive.keywords],
+          undefined,
+          (_context, words, raw) => {
+            try {
+              handler({ state: session.pluginState }, words, raw);
+            } catch (cause) {
+              throw new PluginError(`Directive '${directive.id}' failed.`, {
+                code: "PLUGIN_HOOK_FAILED",
+                pluginId,
+                contributionId: directive.id,
+                targetId: session.targetId,
+                cause,
+              });
+            }
+          },
+          directive.phase,
+        );
       }
     }
     for (const [keyword, handler] of registry.handlers) {
@@ -1148,8 +1152,8 @@ export class Assembler {
             outputBytes: bytes,
           }),
       },
-      directiveFeatures: new Set(),
-      expressionFeatures: new Set(),
+      directiveSetIds: new Set(target.directiveSets),
+      expressionSetIds: new Set(target.expressionSets),
     };
     const requestedArchitecture = options.architecture ?? target.defaultArchitecture;
     const architectureId = this.environment.resolveArchitectureId(targetId, requestedArchitecture);
@@ -1172,6 +1176,7 @@ export class Assembler {
     this.cursorAddress = this.createCursorAddressFacade();
     this.mathCore = new MathCore();
     this.mathCore.host = this.expressionHost;
+    this.installExpressionFunctions(target.expressionSets);
     this.services = this.createServices();
     const frontEndHost = {
       passProgramCache: this.passProgramCache,
@@ -1181,7 +1186,7 @@ export class Assembler {
         loopType?: "for" | "while",
         loopStartLine?: number,
         ifStartLine?: number,
-      ) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+      ) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
     } as AssemblyFrontEndHost;
     Object.defineProperties(frontEndHost, {
       currentFile: { get: (): string => this.currentFile },
@@ -1327,6 +1332,33 @@ export class Assembler {
         }) === "handled"
       ) {
         result = "handled";
+      }
+    });
+    return result;
+  }
+
+  /**
+   * Resolves ambiguous `endif` handling through active dialect lifecycles.
+   * @param {"for" | "while"} [loopType] The innermost loop type.
+   * @param {number} [loopStartLine] The innermost loop start line.
+   * @param {number} [ifStartLine] The innermost conditional start line.
+   * @returns {boolean} Whether `endif` should close the innermost while loop.
+   */
+  shouldEndifCloseInnermostWhile(
+    loopType?: "for" | "while",
+    loopStartLine?: number,
+    ifStartLine?: number,
+  ): boolean {
+    let result = false;
+    this.runLifecycleHook("shouldEndifCloseInnermostWhile", (lifecycle) => {
+      const resolution = lifecycle.shouldEndifCloseInnermostWhile?.({
+        state: this.pluginState,
+        loopType,
+        loopStartLine,
+        ifStartLine,
+      });
+      if (resolution !== undefined) {
+        result = resolution;
       }
     });
     return result;
@@ -1645,26 +1677,66 @@ export class Assembler {
   }
 
   /**
-   * Rejects target-specific expression functions outside their target profile.
-   * @param {TargetExpressionFeature} feature Required target feature.
-   * @param {string} functionName User-facing expression function name.
+   * Installs the active target's expression contributions into this session.
+   * @param {readonly string[]} setIds Resolved expression-set contribution IDs.
    */
-  assertTargetExpressionFeature(feature: TargetExpressionFeature, functionName: string): void {
-    if (!this.targetProfile.expressionFeatures.has(feature)) {
-      throw new Error(`${functionName} is unavailable for target ${this.targetProfile.name}.`);
+  installExpressionFunctions(setIds: readonly string[]): void {
+    for (const setId of setIds) {
+      const set = this.environment.getExpressionSet(setId);
+      if (!set) continue;
+      const pluginId = this.environment.getContributionOwner(setId);
+      for (const expressionFunction of set.functions) {
+        const minimumArguments =
+          expressionFunction.signature.minimumArguments ??
+          expressionFunction.signature.parameters.length;
+        const maximumArguments =
+          expressionFunction.signature.maximumArguments ??
+          (expressionFunction.signature.minimumArguments === undefined
+            ? expressionFunction.signature.parameters.length
+            : Number.POSITIVE_INFINITY);
+        this.mathCore.registerExpressionFunction(
+          [expressionFunction.name, ...(expressionFunction.aliases ?? [])],
+          {
+            minimumArguments,
+            maximumArguments,
+            evaluate: (args) => {
+              try {
+                return expressionFunction.evaluate(
+                  {
+                    state: this.pluginState,
+                    addresses: {
+                      toOutputOffset: (address) =>
+                        this.romWriter.convertTargetAddressToRomOffset(address),
+                      fromOutputOffset: (offset) => this.romWriter.pctosnes(offset),
+                    },
+                    output: {
+                      canRead: (position, size) => this.canReadTargetRom(position, size),
+                      read: (position, size, defaultValue) =>
+                        this.readTargetRom(position, size, defaultValue),
+                    },
+                  },
+                  args,
+                );
+              } catch (cause) {
+                throw new PluginError(`Expression function '${expressionFunction.name}' failed.`, {
+                  code: "PLUGIN_HOOK_FAILED",
+                  pluginId,
+                  contributionId: set.id,
+                  targetId: this.targetId,
+                  cause,
+                });
+              }
+            },
+          },
+        );
+      }
     }
   }
 
   readonly expressionHost: ExpressionHost = {
     resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
-    convertSnesToPc: (address) => {
-      this.assertTargetExpressionFeature("snes-address-conversion", "snestopc");
-      return this.romWriter.convertTargetAddressToRomOffset(address);
-    },
-    convertPcToSnes: (offset) => {
-      this.assertTargetExpressionFeature("snes-address-conversion", "pctosnes");
-      return this.romWriter.pctosnes(offset);
-    },
+    convertSnesToPc: (address) => this.romWriter.convertTargetAddressToRomOffset(address),
+    convertPcToSnes: (offset) => this.romWriter.pctosnes(offset),
     getCurrentAddress: () => this.currentTargetAddress,
     getCurrentBaseAddress: () => this.currentTargetBaseAddress,
     isDefined: (identifier) => {
@@ -1695,14 +1767,8 @@ export class Assembler {
     canReadFile: (filename, position, size) => this.canReadExpressionFile(filename, position, size),
     readFile: (filename, position, size, defaultValue) =>
       this.readExpressionFile(filename, position, size, defaultValue),
-    canReadRom: (position, size) => {
-      this.assertTargetExpressionFeature("rom-reads", "canread");
-      return this.canReadTargetRom(position, size);
-    },
-    readRom: (position, size, defaultValue) => {
-      this.assertTargetExpressionFeature("rom-reads", "read");
-      return this.readTargetRom(position, size, defaultValue);
-    },
+    canReadRom: (position, size) => this.canReadTargetRom(position, size),
+    readRom: (position, size, defaultValue) => this.readTargetRom(position, size, defaultValue),
   };
 
   /**

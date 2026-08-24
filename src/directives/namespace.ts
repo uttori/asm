@@ -124,9 +124,9 @@ export const registerNamespaceDirectives = (
   registry: DirectiveRegistry,
   context: NamespaceDirectiveContext,
 ): void => {
-  registry.register("namespace", context, handleNamespace);
+  registry.registerLowered("namespace", context, handleNamespace);
 
-  registry.register("pushns", context, handlePushNamespace);
+  registry.registerLowered("pushns", context, handlePushNamespace);
 
-  registry.register("pullns", context, handlePullNamespace);
+  registry.registerLowered("pullns", context, handlePullNamespace);
 };
