@@ -245,7 +245,7 @@ export class Assembler {
    */
   public asarSuperFxMoveShortAddress: boolean = false;
   /** Bank crossing policy controlled by `check bankcross ...`. */
-  public bankCrossCheckMode: "off" | "full" | "half" = "off";
+  public bankCrossCheckMode: "off" | "full" | "half" = "full";
   /** Read* functions are enabled when patch-style title check is active. */
   public readFunctionsEnabled: boolean = false;
   /** Controls direct-page shortening for 65816 when no explicit length is given. */
@@ -1706,7 +1706,7 @@ export class Assembler {
   };
 
   /**
-   * Advances memory position while handling bank crossing.
+   * Advances SNES `pc()` linearly. Mapper conversion happens only when writing.
    * @param {number} num The number of bytes to advance.
    */
   step(num: number): void {
@@ -1823,9 +1823,6 @@ export class Assembler {
     if (!architecture.definition) {
       return true;
     }
-    // Unknown mnemonics still consume `estimateSize` (typically opcode + the
-    // default 16-bit operand). An unregistered asar command such as
-    // `cleartable` therefore inflates PC by 3 during layout instead of 0.
     const size = Array.isArray(input)
       ? architecture.definition.encoder.estimateSize(words)
       : (architecture.definition.encoder.estimateInstruction?.(input) ??
@@ -1869,6 +1866,15 @@ export class Assembler {
   asblock_pick(input: string[] | LoweredInstruction): boolean {
     debug("asblock_pick", Array.isArray(input) ? input : input.words);
     debug("asblock_pick arch", this.arch);
+    const words = Array.isArray(input) ? input : input.words;
+    const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
+    if (this.tryHandleCharacterMapping(raw)) {
+      return true;
+    }
+    const keyword = words[0]?.toLowerCase() ?? "";
+    if (keyword !== "" && this.directiveRegistry.has(keyword)) {
+      return this.directiveRegistry.dispatch(keyword, words, words.join(" "));
+    }
     const instructionExecutionMode = this.getActiveStageCapabilities().instructionMode;
     if (instructionExecutionMode === "layout") {
       return this.layoutInstruction(input);
@@ -2067,11 +2073,38 @@ export class Assembler {
   }
 
   /**
+   * Asar `'X' = $nn` / `"X" = $nn` table entries, including `''' = $2A` for apostrophe.
+   * @param {string} command Raw command text.
+   * @returns {boolean} `true` when the line was a character mapping.
+   */
+  tryHandleCharacterMapping(command: string): boolean {
+    const trimmed = command.trim();
+    const singleQuoted = /^'([\s\S])'\s*=\s*(.+)$/.exec(trimmed);
+    const doubleQuoted = /^"([\s\S])"\s*=\s*(.+)$/.exec(trimmed);
+    const match = singleQuoted ?? doubleQuoted;
+    if (!match) {
+      return false;
+    }
+    const quote = singleQuoted ? "'" : '"';
+    this.directiveRuntime.handleCharacterMapping([
+      `${quote}${match[1]}${quote}`,
+      "=",
+      match[2].trim(),
+    ]);
+    return true;
+  }
+
+  /**
    * Preprocesses normalized command.
    * @param {NormalizedCommand} state The state.
    * @returns {CommandPreprocessResult} The result.
    */
   preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
+    if (this.tryHandleCharacterMapping(state.command)) {
+      setCommandKind(state, "characterMapping");
+      return "handled";
+    }
+
     if (
       state.words.length === 3 &&
       state.words[1] === "=" &&

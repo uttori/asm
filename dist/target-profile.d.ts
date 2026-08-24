@@ -2,6 +2,7 @@
 export interface AddressSpaceContext {
     mapper: string;
     sa1banks: readonly number[];
+    bankCrossCheckMode?: "off" | "full" | "half";
 }
 /**
  * Translates logical assembly addresses to output offsets and advances the

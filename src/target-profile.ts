@@ -2,6 +2,7 @@
 export interface AddressSpaceContext {
   mapper: string;
   sa1banks: readonly number[];
+  bankCrossCheckMode?: "off" | "full" | "half";
 }
 
 /**
@@ -123,20 +124,31 @@ export const snesRomAddressSpace: TargetAddressSpace = {
     const logicalAddress = address & 0xffffff;
     const newAddress = logicalAddress + amount;
     const finish = (value: number): number => prefix | value;
+    // Asar: with `check bankcross on` (the default), pc() is linear, including
+    // one-past-end $xxFFFF → $xy0000. Wrapping to $xy8000 only happens when
+    // bankcross is off (see asar's bankcross test / `print pc` after $80FFFF).
     if ((logicalAddress & 0xff0000) !== (newAddress & 0xff0000)) {
+      const wrapOnBankCross =
+        context.bankCrossCheckMode !== "full" && context.bankCrossCheckMode !== "half";
       switch (context.mapper) {
         case "lorom":
-          return finish((newAddress & 0xff0000) | ((newAddress & 0xffff) + 0x8000));
+          if (wrapOnBankCross) {
+            return finish((newAddress & 0xff0000) | ((newAddress & 0xffff) + 0x8000));
+          }
+          return finish(newAddress);
         case "hirom":
         case "exhirom":
         case "sfxrom":
         case "sa1rom":
-          if ((logicalAddress & 0x400000) === 0) {
+          if (wrapOnBankCross && (logicalAddress & 0x400000) === 0) {
             return finish((newAddress & 0xff0000) | ((newAddress & 0xffff) + 0x8000));
           }
           return finish(newAddress);
         case "exlorom":
         case "bigsa1rom": {
+          if (!wrapOnBankCross) {
+            return finish(newAddress);
+          }
           const offset = this.toOutputOffset(logicalAddress, context);
           const mapped = offset < 0 ? -1 : this.fromOutputOffset(offset + amount, context);
           return mapped < 0 ? -1 : finish(mapped);

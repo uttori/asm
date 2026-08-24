@@ -555,7 +555,7 @@ export declare class Assembler {
     assertTargetExpressionFeature(feature: TargetExpressionFeature, functionName: string): void;
     readonly expressionHost: ExpressionHost;
     /**
-     * Advances memory position while handling bank crossing.
+     * Advances SNES `pc()` linearly. Mapper conversion happens only when writing.
      * @param {number} num The number of bytes to advance.
      */
     step(num: number): void;
@@ -684,6 +684,12 @@ export declare class Assembler {
      * @returns {boolean} `true` when the define engine handled the command.
      */
     applyDefineAssignment(command: string): boolean;
+    /**
+     * Asar `'X' = $nn` / `"X" = $nn` table entries, including `''' = $2A` for apostrophe.
+     * @param {string} command Raw command text.
+     * @returns {boolean} `true` when the line was a character mapping.
+     */
+    tryHandleCharacterMapping(command: string): boolean;
     /**
      * Preprocesses normalized command.
      * @param {NormalizedCommand} state The state.

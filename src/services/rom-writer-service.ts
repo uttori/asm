@@ -103,6 +103,12 @@ export class RomWriterService {
       value: num & 0xff,
     });
 
+    // If the PC position is negative, we need to step the SNES position by 1 to get to the next bank.
+    if (pcpos < 0) {
+      this.step(1);
+      return;
+    }
+
     if (this.host.canEmitBytes) {
       if (pcpos >= this.host.romdata.length && pcpos - this.host.romdata.length > 0) {
         this.host.fillRomData(

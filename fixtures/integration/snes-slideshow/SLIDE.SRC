@@ -1,4 +1,5 @@
 org $8000
+check bankcross off
 
 !animationPointer  = $00
 !sourcePointer    := !animationPointer+$04

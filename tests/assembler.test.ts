@@ -1664,6 +1664,28 @@ test("cleartable is a 0-byte directive, not a 3-byte unknown opcode", t => {
   t.is(assembler.currentTargetAddress, 0x8001);
 });
 
+test("cleartable stays 0 bytes through layout and emit stages", t => {
+  const assembler = new Assembler();
+  const lines = ["org $8000", "db $AA", "cleartable"];
+  for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+    assembler.activateStage(stage);
+    for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+      assembler.setCurrentLine(lineNumber);
+      assembler.assembleblock(lines[lineNumber]);
+    }
+    assembler.finishPass();
+  }
+  t.is(assembler.currentTargetAddress, 0x8001);
+});
+
+test("asar apostrophe table mapping ''' = $2A is 0 bytes", t => {
+  const assembler = new Assembler();
+  assembler.assembleblock("org $8000");
+  assembler.assembleblock("''' = $2A");
+  t.is(assembler.characterMappings.get("'"), 0x2a);
+  t.is(assembler.currentTargetAddress, 0x8000);
+});
+
 test("directive runtime processStringWithMapping - basic character mapping", t => {
   const assembler = new Assembler();
 
@@ -2318,24 +2340,24 @@ test("fixsnespos - lorom bank crossing", t => {
   const assembler = new Assembler();
   assembler.mapper = "lorom";
 
-  // When crossing a bank boundary in lorom, we should wrap to 0x8000 in the new bank
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.romWriter.fixsnespos(0x01FFFF, 1), 0x028000);
-  t.is(assembler.romWriter.fixsnespos(0x7FFFFF, 1), 0x808000);
+  // Default check bankcross is on: pc() stays linear, $00FFFF + 1 is $010000.
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
+  t.is(assembler.romWriter.fixsnespos(0x01FFFF, 1), 0x020000);
+  t.is(assembler.romWriter.fixsnespos(0x7FFFFF, 1), 0x800000);
 
-  // Test with larger steps that cross banks
-  t.is(assembler.romWriter.fixsnespos(0x00FF00, 0x200), 0x018100);
+  t.is(assembler.romWriter.fixsnespos(0x00FF00, 0x200), 0x010100);
+
+  assembler.bankCrossCheckMode = "off";
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
 });
 
 test("fixsnespos - hirom bank crossing", t => {
   const assembler = new Assembler();
   assembler.mapper = "hirom";
 
-  // For addresses below 0x400000, wrap to 0x8000 in the new bank
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x408000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
+  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x400000);
 
-  // For addresses at or above 0x400000, just return the new address
   t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
   t.is(assembler.romWriter.fixsnespos(0xC0FFFF, 1), 0xC10000);
 });
@@ -2343,24 +2365,20 @@ test("fixsnespos - hirom bank crossing", t => {
 test("fixsnespos - exlorom and bigsa1rom bank crossing", t => {
   const assembler = new Assembler();
 
-  // Test exlorom
   assembler.mapper = "exlorom";
-  t.is(assembler.romWriter.fixsnespos(0x80FFFF, 1), 0x818000);
+  t.is(assembler.romWriter.fixsnespos(0x80FFFF, 1), 0x810000);
 
-  // Test bigsa1rom
   assembler.mapper = "bigsa1rom";
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
 });
 
 test("fixsnespos - exhirom bank crossing", t => {
   const assembler = new Assembler();
   assembler.mapper = "exhirom";
 
-  // For addresses below 0x400000, wrap to 0x8000 in the new bank
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x408000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
+  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x400000);
 
-  // For addresses at or above 0x400000, just return the new address
   t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
   t.is(assembler.romWriter.fixsnespos(0xC0FFFF, 1), 0xC10000);
 });
@@ -2369,11 +2387,9 @@ test("fixsnespos - sfxrom bank crossing", t => {
   const assembler = new Assembler();
   assembler.mapper = "sfxrom";
 
-  // For addresses below 0x400000, wrap to 0x8000 in the new bank
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x408000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
+  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x400000);
 
-  // For addresses at or above 0x400000, just return the new address
   t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
 });
 
@@ -2381,11 +2397,9 @@ test("fixsnespos - sa1rom bank crossing", t => {
   const assembler = new Assembler();
   assembler.mapper = "sa1rom";
 
-  // For addresses below 0x400000, wrap to 0x8000 in the new bank
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
-  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x408000);
+  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
+  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x400000);
 
-  // For addresses at or above 0x400000, just return the new address
   t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
 });
 
@@ -5745,9 +5759,9 @@ test("step - bank crossing with different mappers", t => {
   // Step across bank boundary
   assembler.step(8);
 
-  // In lorom, crossing bank boundary should wrap to 0x8000 in next bank
-  t.is(assembler.currentTargetAddress, 0x018004, "lorom should wrap to 0x8000 in next bank");
-  t.is(assembler.currentTargetBaseAddress, 0x018004, "currentTargetBaseAddress should follow same wrapping rules");
+  // Asar pc() is linear across bank bytes, including the unmapped LoROM hole.
+  t.is(assembler.currentTargetAddress, 0x010004, "lorom pc() increments linearly across $00FFFF");
+  t.is(assembler.currentTargetBaseAddress, 0x010004, "currentTargetBaseAddress should follow the same linear pc()");
 
   // Test hirom mapper bank crossing
   assembler.mapper = "hirom";
@@ -5757,8 +5771,7 @@ test("step - bank crossing with different mappers", t => {
   // Step across bank boundary
   assembler.step(8);
 
-  // In hirom for addresses below 0x400000, should wrap to 0x8000 in next bank
-  t.is(assembler.currentTargetAddress, 0x018004, "hirom should wrap to 0x8000 in next bank for addresses below 0x400000");
+  t.is(assembler.currentTargetAddress, 0x010004, "hirom pc() increments linearly across $00FFFF");
 
   // Test hirom mapper bank crossing above 0x400000
   assembler.mapper = "hirom";
@@ -5794,9 +5807,8 @@ test("step - large steps across multiple banks", t => {
   // Step forward by more than one bank (0x8000 bytes)
   assembler.step(0x10000);
 
-  // Should end up at 0x8000 in bank 2 (0x028000)
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x010000, "Should handle steps larger than one bank");
-  t.is(assembler.currentTargetBaseAddress & 0xFFFFFF, 0x010000, "currentTargetBaseAddress should follow same rules for large steps");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x018000, "Should handle steps larger than one bank");
+  t.is(assembler.currentTargetBaseAddress & 0xFFFFFF, 0x018000, "currentTargetBaseAddress should follow same rules for large steps");
 });
 
 test("step - exlorom and bigsa1rom bank crossing", t => {
@@ -5810,8 +5822,7 @@ test("step - exlorom and bigsa1rom bank crossing", t => {
   // Step across bank boundary
   assembler.step(8);
 
-  // Should wrap to 0x8000 in next bank
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x818004, "exlorom should wrap to 0x8000 in next bank");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x810004, "exlorom pc() increments linearly across $80FFFF");
 
   // Test bigsa1rom
   assembler.mapper = "bigsa1rom";
@@ -5821,8 +5832,7 @@ test("step - exlorom and bigsa1rom bank crossing", t => {
   // Step across bank boundary
   assembler.step(8);
 
-  // Should wrap to 0x8000 in next bank
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x018004, "bigsa1rom should wrap to 0x8000 in next bank");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x010004, "bigsa1rom pc() increments linearly across $00FFFF");
 });
 
 test("step - exhirom, sfxrom, and sa1rom bank crossing", t => {
@@ -5836,8 +5846,7 @@ test("step - exhirom, sfxrom, and sa1rom bank crossing", t => {
   // Step across bank boundary
   assembler.step(8);
 
-  // Should wrap to 0x8000 in next bank
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x018004, "exhirom should wrap to 0x8000 in next bank below 0x400000");
+  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x010004, "exhirom pc() increments linearly across $00FFFF");
 
   // Test exhirom above 0x400000
   assembler.currentTargetAddress = 0x40FFFC;
@@ -5860,8 +5869,7 @@ test("step - exhirom, sfxrom, and sa1rom bank crossing", t => {
     // Step across bank boundary
     assembler.step(8);
 
-    // Should wrap to 0x8000 in next bank
-    t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x018004, `${mapper} should wrap to 0x8000 in next bank below 0x400000`);
+    t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x010004, `${mapper} pc() increments linearly across $00FFFF`);
 
     // Test above 0x400000
     assembler.currentTargetAddress = 0x40FFFC;
@@ -6152,17 +6160,30 @@ test("write1_65816 - bank wrapping", t => {
   assembler.currentTargetStartAddress = 0x00FFFF;
   assembler.currentTargetBaseStartAddress = 0x00FFFF;
 
-  // Write a byte, which should wrap to the next address
   assembler.write1_65816(0x42);
 
-  // Check if the byte was written correctly
   const pcpos = assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF);
   t.is(assembler.romdata[pcpos], 0x42, "Should write the byte to the correct position");
 
-  // TODO: Verify this is correct, may be 0x010000
-  // Check if positions were updated correctly with bank wrapping
-  t.is(assembler.currentTargetAddress, 0x18000, "Should increment currentTargetAddress with bank wrapping");
-  t.is(assembler.currentTargetBaseAddress, 0x18000, "Should increment currentTargetBaseAddress with bank wrapping");
+  // Default `check bankcross on`: pc() is linear, including one-past-end $010000.
+  t.is(assembler.currentTargetAddress, 0x010000);
+  t.is(assembler.currentTargetBaseAddress, 0x010000);
+});
+
+test("write1_65816 - bank wrapping with bankcross off", t => {
+  const assembler = new Assembler();
+  assembler.romdata = new Array(0x10000).fill(0);
+  assembler.activateStage("emitProgram");
+  assembler.bankCrossCheckMode = "off";
+  assembler.currentTargetAddress = 0x00FFFF;
+  assembler.currentTargetBaseAddress = 0x00FFFF;
+  assembler.currentTargetStartAddress = 0x00FFFF;
+  assembler.currentTargetBaseStartAddress = 0x00FFFF;
+
+  assembler.write1_65816(0x42);
+
+  t.is(assembler.currentTargetAddress, 0x18000);
+  t.is(assembler.currentTargetBaseAddress, 0x18000);
 });
 
 test("write1_65816 - ROM expansion", t => {

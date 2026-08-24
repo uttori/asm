@@ -14859,7 +14859,12 @@ var DirectiveRuntimeService = class {
     if (words.length !== 3) {
       throw new Error("Character mapping requires format: 'char' = value");
     }
-    const char = words[0].replace(/["']/g, "");
+    const token = words[0];
+    const quoted = /^'([\s\S])'$/.exec(token) ?? /^"([\s\S])"$/.exec(token);
+    const char = quoted ? quoted[1] : token.replace(/["']/g, "");
+    if (char.length !== 1) {
+      throw new Error("Character mapping requires format: 'char' = value");
+    }
     const value = this.host.operandResolver.getnum(words[2]);
     this.host.characterMappings.set(char, value);
   }
@@ -16766,6 +16771,10 @@ var RomWriterService = class {
       pcAddress: pcpos,
       value: num & 255
     });
+    if (pcpos < 0) {
+      this.step(1);
+      return;
+    }
     if (this.host.canEmitBytes) {
       if (pcpos >= this.host.romdata.length && pcpos - this.host.romdata.length > 0) {
         this.host.fillRomData(
@@ -23733,19 +23742,26 @@ var snesRomAddressSpace = {
     const newAddress = logicalAddress + amount;
     const finish = (value) => prefix | value;
     if ((logicalAddress & 16711680) !== (newAddress & 16711680)) {
+      const wrapOnBankCross = context.bankCrossCheckMode !== "full" && context.bankCrossCheckMode !== "half";
       switch (context.mapper) {
         case "lorom":
-          return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
+          if (wrapOnBankCross) {
+            return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
+          }
+          return finish(newAddress);
         case "hirom":
         case "exhirom":
         case "sfxrom":
         case "sa1rom":
-          if ((logicalAddress & 4194304) === 0) {
+          if (wrapOnBankCross && (logicalAddress & 4194304) === 0) {
             return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
           }
           return finish(newAddress);
         case "exlorom":
         case "bigsa1rom": {
+          if (!wrapOnBankCross) {
+            return finish(newAddress);
+          }
           const offset = this.toOutputOffset(logicalAddress, context);
           const mapped = offset < 0 ? -1 : this.fromOutputOffset(offset + amount, context);
           return mapped < 0 ? -1 : finish(mapped);
@@ -24125,7 +24141,7 @@ var Assembler = class _Assembler {
    */
   asarSuperFxMoveShortAddress = false;
   /** Bank crossing policy controlled by `check bankcross ...`. */
-  bankCrossCheckMode = "off";
+  bankCrossCheckMode = "full";
   /** Read* functions are enabled when patch-style title check is active. */
   readFunctionsEnabled = false;
   /** Controls direct-page shortening for 65816 when no explicit length is given. */
@@ -25410,7 +25426,7 @@ var Assembler = class _Assembler {
     }
   };
   /**
-   * Advances memory position while handling bank crossing.
+   * Advances SNES `pc()` linearly. Mapper conversion happens only when writing.
    * @param {number} num The number of bytes to advance.
    */
   step(num) {
@@ -25554,6 +25570,15 @@ var Assembler = class _Assembler {
   asblock_pick(input) {
     debug7("asblock_pick", Array.isArray(input) ? input : input.words);
     debug7("asblock_pick arch", this.arch);
+    const words = Array.isArray(input) ? input : input.words;
+    const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
+    if (this.tryHandleCharacterMapping(raw)) {
+      return true;
+    }
+    const keyword = words[0]?.toLowerCase() ?? "";
+    if (keyword !== "" && this.directiveRegistry.has(keyword)) {
+      return this.directiveRegistry.dispatch(keyword, words, words.join(" "));
+    }
     const instructionExecutionMode = this.getActiveStageCapabilities().instructionMode;
     if (instructionExecutionMode === "layout") {
       return this.layoutInstruction(input);
@@ -25728,11 +25753,36 @@ var Assembler = class _Assembler {
     return this.defineEngine.handleCommand(commandNode);
   }
   /**
+   * Asar `'X' = $nn` / `"X" = $nn` table entries, including `''' = $2A` for apostrophe.
+   * @param {string} command Raw command text.
+   * @returns {boolean} `true` when the line was a character mapping.
+   */
+  tryHandleCharacterMapping(command) {
+    const trimmed = command.trim();
+    const singleQuoted = /^'([\s\S])'\s*=\s*(.+)$/.exec(trimmed);
+    const doubleQuoted = /^"([\s\S])"\s*=\s*(.+)$/.exec(trimmed);
+    const match = singleQuoted ?? doubleQuoted;
+    if (!match) {
+      return false;
+    }
+    const quote = singleQuoted ? "'" : '"';
+    this.directiveRuntime.handleCharacterMapping([
+      `${quote}${match[1]}${quote}`,
+      "=",
+      match[2].trim()
+    ]);
+    return true;
+  }
+  /**
    * Preprocesses normalized command.
    * @param {NormalizedCommand} state The state.
    * @returns {CommandPreprocessResult} The result.
    */
   preprocessNormalizedCommand(state) {
+    if (this.tryHandleCharacterMapping(state.command)) {
+      setCommandKind(state, "characterMapping");
+      return "handled";
+    }
     if (state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
       setCommandKind(state, "characterMapping");
       debug7("handleCharacterMapping", state.words);
