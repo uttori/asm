@@ -7,6 +7,8 @@
 !/editors/**
 !/language-server/
 !/language-server/**
+!/tests/
+!/tests/**
 
 # Built / bundled artifacts and IDE scaffolding inside those trees
 editors/vscode/out/

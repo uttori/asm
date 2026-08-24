@@ -410,19 +410,19 @@ export const directiveCatalog: DirectiveDescriptor[] = [
   {
     keyword: "assert",
     summary: "Fail the assemble if a condition is false.",
-    syntax: "assert condition[, \"message\"]",
+    syntax: 'assert condition[, "message"]',
     group: "compat",
   },
   {
     keyword: "error",
     summary: "Fail the assemble with a user-defined error.",
-    syntax: "error [\"message\"]",
+    syntax: 'error ["message"]',
     group: "compat",
   },
   {
     keyword: "warn",
     summary: "Emit a user-defined warning (asar-compatible).",
-    syntax: "warn [\"message\"]",
+    syntax: 'warn ["message"]',
     group: "compat",
   },
   {

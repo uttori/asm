@@ -25572,7 +25572,7 @@ var Assembler = class _Assembler {
     debug7("asblock_pick arch", this.arch);
     const words = Array.isArray(input) ? input : input.words;
     const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
-    if (this.tryHandleCharacterMapping(raw)) {
+    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(raw)) {
       return true;
     }
     const keyword = words[0]?.toLowerCase() ?? "";
@@ -25779,11 +25779,11 @@ var Assembler = class _Assembler {
    * @returns {CommandPreprocessResult} The result.
    */
   preprocessNormalizedCommand(state) {
-    if (this.tryHandleCharacterMapping(state.command)) {
+    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(state.command)) {
       setCommandKind(state, "characterMapping");
       return "handled";
     }
-    if (state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
+    if (!this.inMacroDefinition && state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
       setCommandKind(state, "characterMapping");
       debug7("handleCharacterMapping", state.words);
       this.directiveRuntime.handleCharacterMapping(state.words);

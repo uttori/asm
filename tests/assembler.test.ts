@@ -1686,6 +1686,54 @@ test("asar apostrophe table mapping ''' = $2A is 0 bytes", t => {
   t.is(assembler.currentTargetAddress, 0x8000);
 });
 
+test("character mappings inside a macro apply on invoke, not on define", t => {
+  const assembler = new Assembler();
+  assembler.romdata = new Array(0x100).fill(0);
+  assembler.assembleblock("macro LoadFont()");
+  assembler.assembleblock("cleartable");
+  assembler.assembleblock("'A' = $10");
+  assembler.assembleblock("' ' = $00");
+  assembler.assembleblock("''' = $2A");
+  assembler.assembleblock("endmacro");
+
+  t.is(assembler.characterMappings.size, 0, "defining a font macro must not leak the table");
+
+  assembler.activateStage("emitProgram");
+  assembler.assembleblock("org $8000");
+  assembler.assembleblock('db "A"');
+  t.is(assembler.romdata[0], 0x41, "db before invoke stays ASCII (header-style)");
+
+  assembler.assembleblock("%LoadFont()");
+  t.is(assembler.characterMappings.get("A"), 0x10);
+  t.is(assembler.characterMappings.get(" "), 0x00);
+  t.is(assembler.characterMappings.get("'"), 0x2a);
+
+  assembler.assembleblock('db "A A", $FF');
+  t.is(assembler.romdata[1], 0x10);
+  t.is(assembler.romdata[2], 0x00);
+  t.is(assembler.romdata[3], 0x10);
+  t.is(assembler.romdata[4], 0xff);
+});
+
+test("last defined font macro does not leave its table active", t => {
+  const assembler = new Assembler();
+  assembler.romdata = new Array(0x100).fill(0);
+  assembler.assembleblock("macro FontA()");
+  assembler.assembleblock("cleartable");
+  assembler.assembleblock("'T' = $14");
+  assembler.assembleblock("endmacro");
+  assembler.assembleblock("macro FontB()");
+  assembler.assembleblock("cleartable");
+  assembler.assembleblock("'T' = $23");
+  assembler.assembleblock("endmacro");
+  t.is(assembler.characterMappings.size, 0);
+
+  assembler.activateStage("emitProgram");
+  assembler.assembleblock("org $8000");
+  assembler.assembleblock('db "T"');
+  t.is(assembler.romdata[0], 0x54);
+});
+
 test("directive runtime processStringWithMapping - basic character mapping", t => {
   const assembler = new Assembler();
 

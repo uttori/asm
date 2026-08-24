@@ -134,8 +134,7 @@ export const handleError = (
   throw new Error(`error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`);
 };
 
-const hex6 = (value: number): string =>
-  (value >>> 0).toString(16).toUpperCase().padStart(6, "0");
+const hex6 = (value: number): string => (value >>> 0).toString(16).toUpperCase().padStart(6, "0");
 
 const invalidTableLine = (lineNumber: number): Error =>
   new Error(`Invalid table file: line ${lineNumber}`);

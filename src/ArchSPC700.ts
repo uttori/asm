@@ -2213,7 +2213,12 @@ export class ArchSPC700 implements ArchitectureEncoder {
     };
     // `MOV CODE_159F, A` is abs store (C5), not MOV dp,dp. Labels have no `$`
     // so the hex memoryMoves table above never matches.
-    if (hasOwn(movAbsByDest, rightUp) && !hasOwn(movAbsByDest, leftUp) && !left.includes("(") && !left.includes("+")) {
+    if (
+      hasOwn(movAbsByDest, rightUp) &&
+      !hasOwn(movAbsByDest, leftUp) &&
+      !left.includes("(") &&
+      !left.includes("+")
+    ) {
       const val = this.assembler.operandResolver.getnum(left);
       const length = /^\$[\da-f]{1,2}$/i.test(left.trim()) ? 1 : 2;
       const mode = movAbsByDest[rightUp];

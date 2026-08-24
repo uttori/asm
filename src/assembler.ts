@@ -1868,7 +1868,7 @@ export class Assembler {
     debug("asblock_pick arch", this.arch);
     const words = Array.isArray(input) ? input : input.words;
     const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
-    if (this.tryHandleCharacterMapping(raw)) {
+    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(raw)) {
       return true;
     }
     const keyword = words[0]?.toLowerCase() ?? "";
@@ -2100,12 +2100,16 @@ export class Assembler {
    * @returns {CommandPreprocessResult} The result.
    */
   preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
-    if (this.tryHandleCharacterMapping(state.command)) {
+    // Asar `'X' = $nn` inside a macro is body text, not a define-time side effect.
+    // Applying it here would leak the last font table into later
+    // identity `db` (SNES header) and leave invoke as `cleartable` only.
+    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(state.command)) {
       setCommandKind(state, "characterMapping");
       return "handled";
     }
 
     if (
+      !this.inMacroDefinition &&
       state.words.length === 3 &&
       state.words[1] === "=" &&
       (state.words[0].startsWith("'") || state.words[0].startsWith('"'))
