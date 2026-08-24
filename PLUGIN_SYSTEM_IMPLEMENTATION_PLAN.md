@@ -1,6 +1,6 @@
 # Plugin System Implementation Plan
 
-Status: in progress — Phase 0, Phase 1, and Phase 2 complete
+Status: in progress — Phases 0 through 4 complete
 Scope: replace constructor-time extension injection with a complete, trusted, in-process plugin system and move every SNES-specific production behavior into a first-party SNES plugin  
 Compatibility policy: public API compatibility is not required; behavioral regressions covered by the test and fixture suites are not permitted
 
@@ -764,6 +764,24 @@ Acceptance:
 - Core output writer contains no mapper names, checksum offsets, RATS bytes, bank masks, or SPC behavior.
 - Stage cloning correctly preserves the tiny plugin's nontrivial state.
 - SNES parity tests still pass using plugin hooks/state.
+
+Completion note (2026-08-24): output and base-image ownership now use the
+target-neutral `outputBytes`, `baseImage`, logical-address, and output-offset
+vocabulary. Address spaces and output formats are live session factories; the
+legacy adapter owns mapper, bank, checksum, freespace, and SPC state in a
+deep-cloned/resettable session slot. Address-space validation owns bank-cross
+and unmapped-write policy, while adapter lifecycle/output hooks own RATS and
+checksum finalization. The renamed `OutputWriterService` is limited to mapping,
+cursor movement, byte emission, validation hooks, tracing, and output-format
+finalization, with no SNES mapper names, bank masks, checksum offsets, RATS
+bytes, or SPC behavior. Generic directive runtime no longer implements SPC
+blocks; that behavior is isolated in the transitional legacy SPC runtime for
+Phase 5 extraction. A nested fixture-plugin state test verifies independent
+stage snapshots and caught/fixed stale factory references across state restore.
+The 916-test suite passes with global coverage at 93.58% statements, 90.05%
+branches, and 95.95% functions. Package dry-run, all 60 Asar fixtures,
+Slideshow, Chou, language-server, editor, and full SNES staged/tree/golden parity
+gates pass.
 
 ### Phase 5 — Physically extract the SNES and 6502-stub plugins
 

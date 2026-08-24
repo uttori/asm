@@ -12,7 +12,7 @@ import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 
 type FillPadSessionOverrides = {
   currentTargetAddress?: number;
-  convertTargetAddressToRomOffset?: (address: number) => number;
+  toOutputOffset?: (address: number) => number;
   resolvedefines?: (input: string) => string;
 };
 
@@ -23,9 +23,9 @@ const createContext = (overrides: FillPadSessionOverrides = {}) => {
     padbyte: new Array<number>(4).fill(0),
     padUnit: 1,
     currentTargetAddress: overrides.currentTargetAddress ?? 0x808000,
-    romWriter: {
-      convertTargetAddressToRomOffset:
-        overrides.convertTargetAddressToRomOffset ?? ((address: number) => address - 0x808000),
+    outputWriter: {
+      toOutputOffset:
+        overrides.toOutputOffset ?? ((address: number) => address - 0x808000),
     },
     resolvedefines: overrides.resolvedefines ?? ((input: string) => input),
     write1: (value: number) => written.push(value),
@@ -165,7 +165,7 @@ test("pad emits through an explicit target address", (t) => {
 
 test("pad to the current or an earlier mapped address is a no-op", (t) => {
   const { ctx, written } = createContext({
-    convertTargetAddressToRomOffset: (address) => address,
+    toOutputOffset: (address) => address,
   });
   handlePadPattern(ctx, ["padbyte", "$42"]);
   handlePad(ctx, ["pad", "$808000"]);
@@ -175,7 +175,7 @@ test("pad to the current or an earlier mapped address is a no-op", (t) => {
 
 test("pad rejects an unmapped target address", (t) => {
   const { ctx } = createContext({
-    convertTargetAddressToRomOffset: () => -1,
+    toOutputOffset: () => -1,
   });
   t.is(
     t.throws(() => handlePad(ctx, ["pad", "$808010"])).message,

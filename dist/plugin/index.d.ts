@@ -4,4 +4,5 @@ export * from "./environment.js";
 export * from "./manager.js";
 export * from "./session-state.js";
 export * from "./legacy-adapter.js";
+export * from "./legacy-session-state.js";
 //# sourceMappingURL=index.d.ts.map

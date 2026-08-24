@@ -90,10 +90,10 @@ test("normalized dispatch preserves check bankcross behavior", t => {
   stub(assembler, "addAddressToLine");
 
   assembler.processNormalizedCommand(commandNode("check bankcross half"), false);
-  t.is(assembler.bankCrossCheckMode, "half");
+  t.is(assembler.targetState.bankCrossMode, "half");
 
   assembler.processNormalizedCommand(commandNode("check bankcross on"), false);
-  t.is(assembler.bankCrossCheckMode, "full");
+  t.is(assembler.targetState.bankCrossMode, "full");
 });
 
 test("lowered directive dispatch preserves data directive behavior", t => {
@@ -208,14 +208,14 @@ test("lowered safe directives dispatch without normalized passthrough", t => {
   assembler.executeLoweredNode(lowered);
 
   t.false(processSpy.called);
-  t.is(assembler.bankCrossCheckMode, "half");
+  t.is(assembler.targetState.bankCrossMode, "half");
 });
 
 test("direct lowered families and instructions never redispatch normalized commands", t => {
   const assembler = new Assembler();
   assembler.setCurrentFile("test.asm");
   assembler.includedFiles.set("test.asm", { included: true, guarded: false });
-  stub(assembler.directiveRuntime, "handleSpcblock");
+  stub(assembler.spcRuntime, "handleSpcblock");
   const processSpy = spy(assembler, "processNormalizedCommand");
   const cases = [
     "check bankcross half",

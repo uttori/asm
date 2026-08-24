@@ -11,7 +11,7 @@ import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 
 test("freespacebyte only requires expression and ROM fill state", t => {
   const session = {
-    defaultFreespaceByte: 0,
+    outputFillByte: 0,
     resolvedefines: (input: string) => input,
   };
   const ctx = {
@@ -21,14 +21,14 @@ test("freespacebyte only requires expression and ROM fill state", t => {
   } as MemoryDirectiveContext;
 
   handleFreespaceByte(ctx, ["freespacebyte", "$A5"]);
-  t.is(session.defaultFreespaceByte, 0xA5);
+  t.is(session.outputFillByte, 0xA5);
 });
 
 test("freespace compatibility policy rejects norom before emission", t => {
   const ctx = {
     session: {
-      inSpcblock: false,
-      mapper: "norom",
+      inTargetBlock: false,
+      targetState: { mapper: "norom" },
     },
     operandResolver: createOperandResolver(),
     runtime: runtimeStub,
@@ -41,8 +41,8 @@ test("freespace compatibility policy rejects norom before emission", t => {
 test("freespace rejects SPC blocks and unmappable allocation starts", t => {
   const ctx = {
     session: {
-      inSpcblock: true,
-      mapper: "lorom",
+      inTargetBlock: true,
+      targetState: { mapper: "lorom" },
     },
     operandResolver: createOperandResolver(),
     runtime: runtimeStub,
@@ -53,7 +53,7 @@ test("freespace rejects SPC blocks and unmappable allocation starts", t => {
     "freecode is unavailable inside spcblock.",
   );
 
-  const unmappable = createMemoryContext({ pctosnes: () => -1 });
+  const unmappable = createMemoryContext({ fromOutputOffset: () => -1 });
   t.is(
     t.throws(() => handleFreespace(unmappable.ctx, ["freespace"])).message,
     "Unable to map freespace start to SNES address.",
@@ -67,8 +67,8 @@ test("freespace expands short ROMs and emits a placeholder RATS tag", t => {
 
   t.deepEqual(expansions, [[0x100000, 0xA5]]);
   t.deepEqual(bytes, [0x53, 0x54, 0x41, 0x52, 0x00, 0x00, 0xFF, 0xFF]);
-  t.is(session.activeFreespaceStartPc, 0x90000);
-  t.is(session.activeFreespaceContentStartPc, 0x90008);
+  t.is(session.activeAllocationStartOffset, 0x90000);
+  t.is(session.activeAllocationContentStartOffset, 0x90008);
   t.is(session.currentTargetAddress, 0x908000);
   t.is(session.currentTargetBaseAddress, 0x908000);
   t.is(session.currentTargetStartAddress, 0x908000);
@@ -77,19 +77,19 @@ test("freespace expands short ROMs and emits a placeholder RATS tag", t => {
 
 test("freespace uses ROM data length without expanding an existing large ROM", t => {
   const { ctx, session, expansions } = createMemoryContext({
-    targetRom: new Uint8Array(),
-    romdata: new Uint8Array(0x110000),
+    baseImage: new Uint8Array(),
+    outputBytes: new Uint8Array(0x110000),
   });
 
   handleFreespace(ctx, ["freespace"]);
 
   t.deepEqual(expansions, []);
-  t.is(session.activeFreespaceStartPc, 0x110000);
+  t.is(session.activeAllocationStartOffset, 0x110000);
 });
 
 test("freespacebyte validates arity and masks resolved values", t => {
   const session = {
-    defaultFreespaceByte: 0,
+    outputFillByte: 0,
     resolvedefines: (input: string) => input === "!fill" ? "$1A5" : input,
   };
   const ctx = {
@@ -101,7 +101,7 @@ test("freespacebyte validates arity and masks resolved values", t => {
   t.throws(() => handleFreespaceByte(ctx, ["freespacebyte"]));
   t.throws(() => handleFreespaceByte(ctx, ["freespacebyte", "$00", "$01"]));
   handleFreespaceByte(ctx, ["freespacebyte", "!fill"]);
-  t.is(session.defaultFreespaceByte, 0xA5);
+  t.is(session.outputFillByte, 0xA5);
 });
 
 test("prot validates labels and emits resolved and deferred addresses", t => {
@@ -146,30 +146,30 @@ test("memory directive registration exposes all aliases", t => {
 });
 
 type MemoryContextOverrides = {
-  targetRom?: Uint8Array;
-  romdata?: Uint8Array;
-  pctosnes?: (address: number) => number;
+  baseImage?: Uint8Array;
+  outputBytes?: Uint8Array;
+  fromOutputOffset?: (address: number) => number;
 };
 
 const createMemoryContext = (overrides: MemoryContextOverrides = {}) => {
   const bytes: number[] = [];
   const expansions: Array<[number, number]> = [];
   const session = {
-    inSpcblock: false,
-    mapper: "lorom",
-    targetRom: overrides.targetRom ?? new Uint8Array(0x90000),
-    romdata: overrides.romdata ?? new Uint8Array(0x80000),
-    defaultFreespaceByte: 0xA5,
-    activeFreespaceStartPc: null as number | null,
-    activeFreespaceContentStartPc: null as number | null,
+    inTargetBlock: false,
+    targetState: { mapper: "lorom" },
+    baseImage: overrides.baseImage ?? new Uint8Array(0x90000),
+    outputBytes: overrides.outputBytes ?? new Uint8Array(0x80000),
+    outputFillByte: 0xA5,
+    activeAllocationStartOffset: null as number | null,
+    activeAllocationContentStartOffset: null as number | null,
     currentTargetAddress: 0,
     currentTargetBaseAddress: 0,
     currentTargetStartAddress: 0,
     currentTargetBaseStartAddress: 0,
-    romWriter: {
-      pctosnes: overrides.pctosnes ?? ((address: number) => address + 0x878000),
+    outputWriter: {
+      fromOutputOffset: overrides.fromOutputOffset ?? ((address: number) => address + 0x878000),
     },
-    expandRom: (size: number, fill: number) => expansions.push([size, fill]),
+    expandOutput: (size: number, fill: number) => expansions.push([size, fill]),
     write1: (value: number) => bytes.push(value),
   };
   const ctx = {

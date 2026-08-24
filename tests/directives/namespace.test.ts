@@ -13,7 +13,7 @@ const createContext = () => ({
     namespaceNestingPath: [] as string[],
     namespaceNestingEnabled: false,
     currentNamespace: "",
-    inSpcblock: false,
+    inTargetBlock: false,
   },
 });
 
@@ -31,10 +31,10 @@ test("namespace handlers preserve nested state without an assembler", t => {
 
 test("namespace rejects SPC block usage and sanitizes saved paths", t => {
   const ctx = createContext();
-  ctx.session.inSpcblock = true;
+  ctx.session.inTargetBlock = true;
   t.throws(() => handleNamespace(ctx, ["namespace", "Name"]));
 
-  ctx.session.inSpcblock = false;
+  ctx.session.inTargetBlock = false;
   ctx.session.namespaceNestingEnabled = true;
   ctx.session.namespaceStack.push("Root", "{\"invalid\":true}");
   handlePullNamespace(ctx);

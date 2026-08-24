@@ -1,6 +1,6 @@
 import type { AssemblyStageName } from "./plugin/contracts.js";
 /**
- * Per-byte write emitted by the ROM writer after the final SNES/PC address has been resolved for the current stage.
+ * Per-byte write emitted after the logical address has been mapped to output.
  */
 export type AssemblerTraceWriteEvent = {
     type: "write";
@@ -10,8 +10,8 @@ export type AssemblerTraceWriteEvent = {
     line: number;
     raw: string;
     normalized: string;
-    snesAddress: number;
-    pcAddress: number;
+    logicalAddress: number;
+    outputOffset: number;
     value: number;
 };
 /**
@@ -27,16 +27,16 @@ export type AssemblerTraceCommandEvent = {
     line: number;
     raw: string;
     normalized: string;
-    snesAddress: number;
-    pcAddress: number;
-    endSnesAddress?: number;
-    endPcAddress?: number;
+    logicalAddress: number;
+    outputOffset: number;
+    endLogicalAddress?: number;
+    endOutputOffset?: number;
     bytesWritten?: number;
 };
 export type AssemblerTraceEvent = AssemblerTraceWriteEvent | AssemblerTraceCommandEvent;
 export type AssemblerTraceListener = (event: AssemblerTraceEvent) => void;
 export type TraceCollectorOptions = {
-    /** Inclusive SNES address range filter. */
+    /** Inclusive logical address range filter. */
     startAddress?: number;
     endAddress?: number;
     /** Substring match against the source file path. */

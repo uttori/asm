@@ -29,7 +29,7 @@ export const ASAR_COMPAT_NO_OP_DIRECTIVES = [
  */
 export interface MapperCompatibilityState {
   mapper: string;
-  checksumFixEnabled: boolean;
+  checksumEnabled: boolean;
 }
 
 /**
@@ -50,7 +50,7 @@ export const assertMapperAvailable = (inSpcblock: boolean): void => {
 export const applyMapperSelection = (state: MapperCompatibilityState, mapper: string): void => {
   state.mapper = mapper;
   if (mapper === "norom") {
-    state.checksumFixEnabled = false;
+    state.checksumEnabled = false;
   }
 };
 

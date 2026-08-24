@@ -246,7 +246,7 @@ test("splitInlineCommands splits relative-label command fragments after inline s
 test("trace listener captures command and write events", t => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
-  assembler.romdata = new Uint8Array(0x100000);
+  assembler.outputBytes = new Uint8Array(0x100000);
   assembler.currentFile = new URL(import.meta.url).pathname;
   assembler.currentLine = 1;
   assembler.setWritePosition(0x808000);
@@ -270,7 +270,8 @@ test("trace listener captures command and write events", t => {
   t.is(writeEvent.file, "test.asm");
   t.is(writeEvent.line, 1);
   t.is(writeEvent.raw, "db $42");
-  t.is(writeEvent.snesAddress, 0x808000);
+  t.is(writeEvent.logicalAddress, 0x808000);
+  t.is(writeEvent.outputOffset, 0);
   t.is(writeEvent.value, 0x42);
 
   const endEvent = collector.events.find((event) => event.type === "command-end");
@@ -279,7 +280,7 @@ test("trace listener captures command and write events", t => {
     return;
   }
   t.is(endEvent.bytesWritten, 1);
-  t.is(endEvent.endSnesAddress, 0x808001);
+  t.is(endEvent.endLogicalAddress, 0x808001);
 });
 
 test("trace collector filters to matching address ranges", t => {
@@ -293,8 +294,8 @@ test("trace collector filters to matching address ranges", t => {
     line: 12,
     raw: "db $10",
     normalized: "db $10",
-    snesAddress: 0x1234,
-    pcAddress: 0x5678,
+    logicalAddress: 0x1234,
+    outputOffset: 0x5678,
     value: 0x10,
   });
   collector.listener({
@@ -305,24 +306,24 @@ test("trace collector filters to matching address ranges", t => {
     line: 13,
     raw: "db $11",
     normalized: "db $11",
-    snesAddress: 0x1235,
-    pcAddress: 0x5679,
+    logicalAddress: 0x1235,
+    outputOffset: 0x5679,
     value: 0x11,
   });
 
   t.is(collector.events.length, 1);
-  t.is(collector.events[0].snesAddress, 0x1234);
+  t.is(collector.events[0].logicalAddress, 0x1234);
 });
 
-test("finishPass - updates header and CRC32", t => {
+test("finishPass delegates finalization to the active output format", t => {
   const assembler = new Assembler();
-  const updateHeaderSpy = sinon.spy(assembler, "updateHeaderAndCRC32");
-  t.teardown(() => updateHeaderSpy.restore());
+  const finalizeSpy = sinon.spy(assembler.pluginOutputFormat, "finalize");
+  t.teardown(() => finalizeSpy.restore());
 
   assembler.activateStage("emitProgram");
 
   assembler.finishPass();
-  t.is(updateHeaderSpy.callCount, 1, "updateHeaderAndCRC32 should be called during the finalize stage");
+  t.is(finalizeSpy.callCount, 1);
 });
 
 test("addAddressToLine - adds mapping", t => {
@@ -391,258 +392,258 @@ test("setCurrentLine - updates the current line number", t => {
   t.is(assembler.currentLine, lineNumber);
 });
 
-test("writeDataBytes - writes a single byte to ROM", t => {
+test("writeOutputBytes - writes a single byte to ROM", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
-  assembler.romdata = Array(10).fill(0);
+  assembler.outputBytes = Array(10).fill(0);
 
   // Write a single byte
-  assembler.writeDataBytes(5, 0xAA);
+  assembler.writeOutputBytes(5, 0xAA);
 
   // Check that only the specified position was modified
   for (let i = 0; i < 10; i++) {
     if (i === 5) {
-      t.is(assembler.romdata[i], 0xAA);
+      t.is(assembler.outputBytes[i], 0xAA);
     } else {
-      t.is(assembler.romdata[i], 0);
+      t.is(assembler.outputBytes[i], 0);
     }
   }
 });
 
-test("writeDataBytes - writes multiple bytes to ROM", t => {
+test("writeOutputBytes - writes multiple bytes to ROM", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
-  assembler.romdata = Array(20).fill(0);
+  assembler.outputBytes = Array(20).fill(0);
 
   // Write multiple bytes
-  assembler.writeDataBytes(5, 0xBB, 5);
+  assembler.writeOutputBytes(5, 0xBB, 5);
 
   // Check that only the specified range was modified
   for (let i = 0; i < 20; i++) {
     if (i >= 5 && i < 10) {
-      t.is(assembler.romdata[i], 0xBB);
+      t.is(assembler.outputBytes[i], 0xBB);
     } else {
-      t.is(assembler.romdata[i], 0);
+      t.is(assembler.outputBytes[i], 0);
     }
   }
 });
 
-test("writeDataBytes - writes to the beginning of ROM", t => {
+test("writeOutputBytes - writes to the beginning of ROM", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
-  assembler.romdata = Array(10).fill(0);
+  assembler.outputBytes = Array(10).fill(0);
 
   // Write to the beginning
-  assembler.writeDataBytes(0, 0xCC, 3);
+  assembler.writeOutputBytes(0, 0xCC, 3);
 
   // Check that only the beginning was modified
   for (let i = 0; i < 10; i++) {
     if (i < 3) {
-      t.is(assembler.romdata[i], 0xCC);
+      t.is(assembler.outputBytes[i], 0xCC);
     } else {
-      t.is(assembler.romdata[i], 0);
+      t.is(assembler.outputBytes[i], 0);
     }
   }
 });
 
-test("writeDataBytes - writes to the end of ROM", t => {
+test("writeOutputBytes - writes to the end of ROM", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
-  assembler.romdata = Array(10).fill(0);
+  assembler.outputBytes = Array(10).fill(0);
 
   // Write to the end
-  assembler.writeDataBytes(7, 0xDD, 3);
+  assembler.writeOutputBytes(7, 0xDD, 3);
 
   // Check that only the end was modified
   for (let i = 0; i < 10; i++) {
     if (i >= 7) {
-      t.is(assembler.romdata[i], 0xDD);
+      t.is(assembler.outputBytes[i], 0xDD);
     } else {
-      t.is(assembler.romdata[i], 0);
+      t.is(assembler.outputBytes[i], 0);
     }
   }
 });
 
-test("writeDataBytes - handles zero length correctly", t => {
+test("writeOutputBytes - handles zero length correctly", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
-  assembler.romdata = Array(10).fill(0);
+  assembler.outputBytes = Array(10).fill(0);
 
   // Write with length 0
-  assembler.writeDataBytes(5, 0xEE, 0);
+  assembler.writeOutputBytes(5, 0xEE, 0);
 
   // Check that nothing was modified
   for (let i = 0; i < 10; i++) {
-    t.is(assembler.romdata[i], 0);
+    t.is(assembler.outputBytes[i], 0);
   }
 });
 
-test("writeDataBytes - handles different byte values", t => {
+test("writeOutputBytes - handles different byte values", t => {
   const assembler = new Assembler();
 
   // Initialize ROM
-  assembler.romdata = Array(5).fill(0);
+  assembler.outputBytes = Array(5).fill(0);
 
   // Write different values
-  assembler.writeDataBytes(0, 0x00);
-  assembler.writeDataBytes(1, 0x7F);
-  assembler.writeDataBytes(2, 0x80);
-  assembler.writeDataBytes(3, 0xFF);
-  assembler.writeDataBytes(4, 0x100); // Should wrap to 0x00
+  assembler.writeOutputBytes(0, 0x00);
+  assembler.writeOutputBytes(1, 0x7F);
+  assembler.writeOutputBytes(2, 0x80);
+  assembler.writeOutputBytes(3, 0xFF);
+  assembler.writeOutputBytes(4, 0x100); // Should wrap to 0x00
 
   // Check values
-  t.is(assembler.romdata[0], 0x00);
-  t.is(assembler.romdata[1], 0x7F);
-  t.is(assembler.romdata[2], 0x80);
-  t.is(assembler.romdata[3], 0xFF);
-  t.is(assembler.romdata[4], 0x00); // 0x100 & 0xFF = 0x00
+  t.is(assembler.outputBytes[0], 0x00);
+  t.is(assembler.outputBytes[1], 0x7F);
+  t.is(assembler.outputBytes[2], 0x80);
+  t.is(assembler.outputBytes[3], 0xFF);
+  t.is(assembler.outputBytes[4], 0x00); // 0x100 & 0xFF = 0x00
 });
 
-test("writeDataBytes - throws error when parameters are not numbers", t => {
+test("writeOutputBytes - throws error when parameters are not numbers", t => {
   const assembler = new Assembler();
 
   // Initialize ROM
-  assembler.romdata = Array(10).fill(0);
+  assembler.outputBytes = Array(10).fill(0);
 
   // Test with non-number start parameter
   const error1 = t.throws(() => {
     // @ts-expect-error Testing invalid parameter type
-    assembler.writeDataBytes("0", 0xFF);
+    assembler.writeOutputBytes("0", 0xFF);
   }, { instanceOf: Error });
-  t.is(error1.message, "writeDataBytes requires a number for start, value, and length");
+  t.is(error1.message, "writeOutputBytes requires a number for start, value, and length");
 
   // Test with non-number value parameter
   const error2 = t.throws(() => {
     // @ts-expect-error Testing invalid parameter type
-    assembler.writeDataBytes(0, "0xFF");
+    assembler.writeOutputBytes(0, "0xFF");
   }, { instanceOf: Error });
-  t.is(error2.message, "writeDataBytes requires a number for start, value, and length");
+  t.is(error2.message, "writeOutputBytes requires a number for start, value, and length");
 
   // Test with non-number length parameter
   const error3 = t.throws(() => {
     // @ts-expect-error Testing invalid parameter type
-    assembler.writeDataBytes(0, 0xFF, "5");
+    assembler.writeOutputBytes(0, 0xFF, "5");
   }, { instanceOf: Error });
-  t.is(error3.message, "writeDataBytes requires a number for start, value, and length");
+  t.is(error3.message, "writeOutputBytes requires a number for start, value, and length");
 });
 
-test("expandRom - expands ROM size and fills with specified byte", t => {
+test("expandOutput - expands ROM size and fills with specified byte", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with some data
-  assembler.romdata = Array(50).fill(0xAA);
+  assembler.outputBytes = Array(50).fill(0xAA);
 
   // Expand ROM to 100 bytes with 0xFF fill
-  assembler.expandRom(100, 0xFF);
+  assembler.expandOutput(100, 0xFF);
 
   // Check ROM length was updated
-  t.is(assembler.romdata.length, 100);
+  t.is(assembler.outputBytes.length, 100);
 
   // Check original data is preserved
   for (let i = 0; i < 50; i++) {
-    t.is(assembler.romdata[i], 0xAA);
+    t.is(assembler.outputBytes[i], 0xAA);
   }
 
   // Check new space is filled with specified byte
   for (let i = 50; i < 100; i++) {
-    t.is(assembler.romdata[i], 0xFF);
+    t.is(assembler.outputBytes[i], 0xFF);
   }
 });
 
-test("expandRom - does nothing when new size is smaller than current size", t => {
+test("expandOutput - does nothing when new size is smaller than current size", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with some data
-  assembler.romdata = Array(100).fill(0xAA);
+  assembler.outputBytes = Array(100).fill(0xAA);
 
   // Try to "expand" ROM to a smaller size
-  assembler.expandRom(50, 0xFF);
+  assembler.expandOutput(50, 0xFF);
 
   // Check ROM length remains unchanged
-  t.is(assembler.romdata.length, 100);
+  t.is(assembler.outputBytes.length, 100);
 
   // Check data remains unchanged
   for (let i = 0; i < 100; i++) {
-    t.is(assembler.romdata[i], 0xAA);
+    t.is(assembler.outputBytes[i], 0xAA);
   }
 });
 
-test("expandRom - expands empty ROM", t => {
+test("expandOutput - expands empty ROM", t => {
   const assembler = new Assembler();
 
   // Start with empty ROM
-  assembler.romdata = [];
+  assembler.outputBytes = [];
 
   // Expand ROM to 100 bytes with 0x00 fill
-  assembler.expandRom(100, 0x00);
+  assembler.expandOutput(100, 0x00);
 
   // Check ROM length was updated
-  t.is(assembler.romdata.length, 100);
+  t.is(assembler.outputBytes.length, 100);
 
   // Check all space is filled with specified byte
   for (let i = 0; i < 100; i++) {
-    t.is(assembler.romdata[i], 0x00);
+    t.is(assembler.outputBytes[i], 0x00);
   }
 });
 
-test("expandRom - handles large expansions", t => {
+test("expandOutput - handles large expansions", t => {
   const assembler = new Assembler();
 
   // Initialize small ROM
-  assembler.romdata = Array(10).fill(0xAA);
+  assembler.outputBytes = Array(10).fill(0xAA);
 
   // Expand ROM significantly
   const newSize = 10000;
-  assembler.expandRom(newSize, 0xBB);
+  assembler.expandOutput(newSize, 0xBB);
 
   // Check ROM length was updated
-  t.is(assembler.romdata.length, newSize);
+  t.is(assembler.outputBytes.length, newSize);
 
   // Check original data is preserved
   for (let i = 0; i < 10; i++) {
-    t.is(assembler.romdata[i], 0xAA);
+    t.is(assembler.outputBytes[i], 0xAA);
   }
 
   // Check new space is filled with specified byte (check boundaries and sample)
-  t.is(assembler.romdata[10], 0xBB);
-  t.is(assembler.romdata[100], 0xBB);
-  t.is(assembler.romdata[1000], 0xBB);
-  t.is(assembler.romdata[newSize - 1], 0xBB);
+  t.is(assembler.outputBytes[10], 0xBB);
+  t.is(assembler.outputBytes[100], 0xBB);
+  t.is(assembler.outputBytes[1000], 0xBB);
+  t.is(assembler.outputBytes[newSize - 1], 0xBB);
 });
 
-test("expandRom - throws error when newSize is not a number", t => {
+test("expandOutput - throws error when newSize is not a number", t => {
   const assembler = new Assembler();
 
   // Initialize ROM
-  assembler.romdata = Array(10).fill(0xAA);
+  assembler.outputBytes = Array(10).fill(0xAA);
 
   // Test with invalid newSize
   const error = t.throws(() => {
     // @ts-expect-error: Testing invalid parameter type
-    assembler.expandRom("invalid", 0xBB);
+    assembler.expandOutput("invalid", 0xBB);
   });
 
-  t.is(error.message, "expandRom requires a number for newSize and fsByte");
+  t.is(error.message, "expandOutput requires a number for newSize and fillByte");
 });
 
-test("expandRom - throws error when fsByte is not a number", t => {
+test("expandOutput - throws error when fillByte is not a number", t => {
   const assembler = new Assembler();
 
   // Initialize ROM
-  assembler.romdata = Array(10).fill(0xAA);
+  assembler.outputBytes = Array(10).fill(0xAA);
 
-  // Test with invalid fsByte
+  // Test with invalid fillByte
   const error = t.throws(() => {
     // @ts-expect-error: Testing invalid parameter type
-    assembler.expandRom(100, "invalid");
+    assembler.expandOutput(100, "invalid");
   });
 
-  t.is(error.message, "expandRom requires a number for newSize and fsByte");
+  t.is(error.message, "expandOutput requires a number for newSize and fillByte");
 });
 
 test("expandOperand - handles resolvedefines errors", t => {
@@ -1056,87 +1057,87 @@ test("getExpressionObjectSize - baseOnly parameter returns only base size", t =>
   t.is(defaultSize, 15);
 });
 
-test("updateHeaderAndCRC32 - lorom mapper updates header at 0x7FC0", t => {
+test("finalizeOutput - lorom mapper updates header at 0x7FC0", t => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
-  assembler.romdata = new Array(0x8000).fill(0);
+  assembler.targetState.mapper = "lorom";
+  assembler.outputBytes = new Array(0x8000).fill(0);
 
-  assembler.updateHeaderAndCRC32();
+  assembler.finalizeOutput();
 
   // Verify checksum and complement were written to the correct locations
-  const checksum = (assembler.romdata[0x7FC0 + 0x1E] | (assembler.romdata[0x7FC0 + 0x1F] << 8)) & 0xFFFF;
-  const complement = (assembler.romdata[0x7FC0 + 0x1C] | (assembler.romdata[0x7FC0 + 0x1D] << 8)) & 0xFFFF;
+  const checksum = (assembler.outputBytes[0x7FC0 + 0x1E] | (assembler.outputBytes[0x7FC0 + 0x1F] << 8)) & 0xFFFF;
+  const complement = (assembler.outputBytes[0x7FC0 + 0x1C] | (assembler.outputBytes[0x7FC0 + 0x1D] << 8)) & 0xFFFF;
 
   t.is((checksum + complement) & 0xFFFF, 0xFFFF, "Checksum and complement should be complementary");
 });
 
-test("updateHeaderAndCRC32 - hirom mapper updates header at 0xFFC0", t => {
+test("finalizeOutput - hirom mapper updates header at 0xFFC0", t => {
   const assembler = new Assembler();
-  assembler.mapper = "hirom";
-  assembler.romdata = new Array(0x10000).fill(0);
+  assembler.targetState.mapper = "hirom";
+  assembler.outputBytes = new Array(0x10000).fill(0);
 
-  assembler.updateHeaderAndCRC32();
+  assembler.finalizeOutput();
 
   // Verify checksum and complement were written to the correct locations
-  const checksum = (assembler.romdata[0xFFC0 + 0x1E] | (assembler.romdata[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
-  const complement = (assembler.romdata[0xFFC0 + 0x1C] | (assembler.romdata[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
+  const checksum = (assembler.outputBytes[0xFFC0 + 0x1E] | (assembler.outputBytes[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
+  const complement = (assembler.outputBytes[0xFFC0 + 0x1C] | (assembler.outputBytes[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
 
   t.is((checksum + complement) & 0xFFFF, 0xFFFF, "Checksum and complement should be complementary");
 });
 
-test("updateHeaderAndCRC32 - exhirom mapper updates header at 0xFFC0", t => {
+test("finalizeOutput - exhirom mapper updates header at 0xFFC0", t => {
   const assembler = new Assembler();
-  assembler.mapper = "exhirom";
-  assembler.romdata = new Array(0x10000).fill(0);
+  assembler.targetState.mapper = "exhirom";
+  assembler.outputBytes = new Array(0x10000).fill(0);
 
-  assembler.updateHeaderAndCRC32();
+  assembler.finalizeOutput();
 
   // Verify checksum and complement were written to the correct locations
-  const checksum = (assembler.romdata[0xFFC0 + 0x1E] | (assembler.romdata[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
-  const complement = (assembler.romdata[0xFFC0 + 0x1C] | (assembler.romdata[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
+  const checksum = (assembler.outputBytes[0xFFC0 + 0x1E] | (assembler.outputBytes[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
+  const complement = (assembler.outputBytes[0xFFC0 + 0x1C] | (assembler.outputBytes[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
 
   t.is((checksum + complement) & 0xFFFF, 0xFFFF, "Checksum and complement should be complementary");
 });
 
-test("updateHeaderAndCRC32 - other mappers default to 0xFFC0", t => {
+test("finalizeOutput - other mappers default to 0xFFC0", t => {
   const assembler = new Assembler();
-  assembler.mapper = "other";
-  assembler.romdata = new Array(0x10000).fill(0);
+  assembler.targetState.mapper = "other";
+  assembler.outputBytes = new Array(0x10000).fill(0);
 
-  assembler.updateHeaderAndCRC32();
+  assembler.finalizeOutput();
 
   // Verify checksum and complement were written to the correct locations
-  const checksum = (assembler.romdata[0xFFC0 + 0x1E] | (assembler.romdata[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
-  const complement = (assembler.romdata[0xFFC0 + 0x1C] | (assembler.romdata[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
+  const checksum = (assembler.outputBytes[0xFFC0 + 0x1E] | (assembler.outputBytes[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
+  const complement = (assembler.outputBytes[0xFFC0 + 0x1C] | (assembler.outputBytes[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
 
   t.is((checksum + complement) & 0xFFFF, 0xFFFF, "Checksum and complement should be complementary");
 });
 
-test("updateHeaderAndCRC32 - ROM too small for header update", t => {
+test("finalizeOutput - ROM too small for header update", t => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
-  assembler.romdata = new Array(0x7FC0).fill(0); // Too small for lorom header
+  assembler.targetState.mapper = "lorom";
+  assembler.outputBytes = new Array(0x7FC0).fill(0); // Too small for lorom header
 
   // Just verify the function doesn't throw an error
   t.notThrows(() => {
-    assembler.updateHeaderAndCRC32();
+    assembler.finalizeOutput();
   });
 });
 
-test("updateHeaderAndCRC32 - checksum calculation is correct", t => {
+test("finalizeOutput - checksum calculation is correct", t => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
+  assembler.targetState.mapper = "lorom";
   // Create a small ROM with known values to verify checksum calculation
-  assembler.romdata = new Array(0x8000).fill(1); // All bytes are 1
+  assembler.outputBytes = new Array(0x8000).fill(1); // All bytes are 1
 
-  assembler.updateHeaderAndCRC32();
+  assembler.finalizeOutput();
 
   // Asar seeds header bytes as FF FF 00 00 first, then sums the full ROM.
   const expectedChecksum = 0x81FA;
   const expectedComplement = (~expectedChecksum) & 0xFFFF;
 
-  const actualChecksum = (assembler.romdata[0x7FC0 + 0x1E] | (assembler.romdata[0x7FC0 + 0x1F] << 8)) & 0xFFFF;
-  const actualComplement = (assembler.romdata[0x7FC0 + 0x1C] | (assembler.romdata[0x7FC0 + 0x1D] << 8)) & 0xFFFF;
+  const actualChecksum = (assembler.outputBytes[0x7FC0 + 0x1E] | (assembler.outputBytes[0x7FC0 + 0x1F] << 8)) & 0xFFFF;
+  const actualComplement = (assembler.outputBytes[0x7FC0 + 0x1C] | (assembler.outputBytes[0x7FC0 + 0x1D] << 8)) & 0xFFFF;
 
   t.is(actualChecksum, expectedChecksum, "Checksum should match expected value");
   t.is(actualComplement, expectedComplement, "Complement should match expected value");
@@ -1146,7 +1147,7 @@ test("getBinaryOutput - returns a Uint8Array of the ROM data", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with some test data
-  assembler.romdata = [0x01, 0x02, 0x03, 0x04, 0x05];
+  assembler.outputBytes = [0x01, 0x02, 0x03, 0x04, 0x05];
 
   const result = assembler.getBinaryOutput();
 
@@ -1158,12 +1159,12 @@ test("getBinaryOutput - returns a copy of the data, not a reference", t => {
   const assembler = new Assembler();
 
   // Initialize ROM with test data
-  assembler.romdata = [0x10, 0x20, 0x30];
+  assembler.outputBytes = [0x10, 0x20, 0x30];
 
   const result = assembler.getBinaryOutput();
 
   // Modify the original data
-  assembler.romdata[0] = 0xFF;
+  assembler.outputBytes[0] = 0xFF;
 
   // The returned array should not be affected by changes to the original
   t.is(result[0], 0x10, "Output should be a copy, not affected by changes to the original");
@@ -1173,7 +1174,7 @@ test("getBinaryOutput - handles empty ROM data", t => {
   const assembler = new Assembler();
 
   // Initialize with empty ROM
-  assembler.romdata = [];
+  assembler.outputBytes = [];
 
   const result = assembler.getBinaryOutput();
 
@@ -1185,12 +1186,12 @@ test("getBinaryOutput - slices to the correct length", t => {
   const assembler = new Assembler();
 
   // Create an array with allocated but unused space
-  assembler.romdata = new Array(10);
-  assembler.romdata.fill(0xFF, 0, 5); // Only first 5 elements have meaningful data
+  assembler.outputBytes = new Array(10);
+  assembler.outputBytes.fill(0xFF, 0, 5); // Only first 5 elements have meaningful data
 
   const result = assembler.getBinaryOutput();
 
-  t.is(result.length, assembler.romdata.length, "Output length should match the ROM data length");
+  t.is(result.length, assembler.outputBytes.length, "Output length should match the ROM data length");
 });
 
 test("readFile - successful read", t => {
@@ -1688,7 +1689,7 @@ test("asar apostrophe table mapping ''' = $2A is 0 bytes", t => {
 
 test("character mappings inside a macro apply on invoke, not on define", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x100).fill(0);
+  assembler.outputBytes = new Array(0x100).fill(0);
   assembler.assembleblock("macro LoadFont()");
   assembler.assembleblock("cleartable");
   assembler.assembleblock("'A' = $10");
@@ -1701,7 +1702,7 @@ test("character mappings inside a macro apply on invoke, not on define", t => {
   assembler.activateStage("emitProgram");
   assembler.assembleblock("org $8000");
   assembler.assembleblock('db "A"');
-  t.is(assembler.romdata[0], 0x41, "db before invoke stays ASCII (header-style)");
+  t.is(assembler.outputBytes[0], 0x41, "db before invoke stays ASCII (header-style)");
 
   assembler.assembleblock("%LoadFont()");
   t.is(assembler.characterMappings.get("A"), 0x10);
@@ -1709,15 +1710,15 @@ test("character mappings inside a macro apply on invoke, not on define", t => {
   t.is(assembler.characterMappings.get("'"), 0x2a);
 
   assembler.assembleblock('db "A A", $FF');
-  t.is(assembler.romdata[1], 0x10);
-  t.is(assembler.romdata[2], 0x00);
-  t.is(assembler.romdata[3], 0x10);
-  t.is(assembler.romdata[4], 0xff);
+  t.is(assembler.outputBytes[1], 0x10);
+  t.is(assembler.outputBytes[2], 0x00);
+  t.is(assembler.outputBytes[3], 0x10);
+  t.is(assembler.outputBytes[4], 0xff);
 });
 
 test("last defined font macro does not leave its table active", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x100).fill(0);
+  assembler.outputBytes = new Array(0x100).fill(0);
   assembler.assembleblock("macro FontA()");
   assembler.assembleblock("cleartable");
   assembler.assembleblock("'T' = $14");
@@ -1731,7 +1732,7 @@ test("last defined font macro does not leave its table active", t => {
   assembler.activateStage("emitProgram");
   assembler.assembleblock("org $8000");
   assembler.assembleblock('db "T"');
-  t.is(assembler.romdata[0], 0x54);
+  t.is(assembler.outputBytes[0], 0x54);
 });
 
 test("directive runtime processStringWithMapping - basic character mapping", t => {
@@ -1944,361 +1945,361 @@ test("splitCommandIntoWords - unclosed quotes", t => {
 
 test("snestopc - lorom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
+  assembler.targetState.mapper = "lorom";
 
   // Valid addresses
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x200000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x808000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x818000), 0x008000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x200000);
+  t.is(assembler.outputWriter.toOutputOffset(0x808000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0x818000), 0x008000);
+  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x3FFFFF);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7E0000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7F0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7E0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7F0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
 
   // SRAM (low parts of banks 70-7D)
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x700000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x706000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x707FFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x700000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x706000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x707FFF), -1);
 
   // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
 test("snestopc - hirom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "hirom";
+  assembler.targetState.mapper = "hirom";
 
   // Valid addresses
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xC00000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0xC00000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x3FFFFF);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7E0000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7F0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7E0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7F0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
 
   // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
 test("snestopc - exlorom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "exlorom";
+  assembler.targetState.mapper = "exlorom";
 
   // Valid addresses in first 4MB
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x808000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x808000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x3FFFFF);
 
   // Valid addresses in second 4MB
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x008000), 0x400000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF), 0x407FFF);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x600000);
+  t.is(assembler.outputWriter.toOutputOffset(0x008000), 0x400000);
+  t.is(assembler.outputWriter.toOutputOffset(0x00FFFF), 0x407FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x600000);
 
   // Invalid addresses
   // SRAM
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x700000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7FFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x700000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7FFFFF), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7FFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7FFFFF), -1);
 
   // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
 test("snestopc - exhirom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "exhirom";
+  assembler.targetState.mapper = "exhirom";
 
   // Valid addresses
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x400000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xC00000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x400000);
+  t.is(assembler.outputWriter.toOutputOffset(0xC00000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x3FFFFF);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7E0000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7F0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7E0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7F0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7FFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7FFFFF), -1);
 
   // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
 test("snestopc - sfxrom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "sfxrom";
+  assembler.targetState.mapper = "sfxrom";
 
   // Valid addresses
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x008000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF), 0x007FFF);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x5FFFFF), 0x1FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x008000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0x00FFFF), 0x007FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0x5FFFFF), 0x1FFFFF);
 
   // Invalid addresses
   // $600000-$7FFFFF
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x600000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7FFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x600000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7FFFFF), -1);
 
   // Hardware registers, RAM mirrors, etc.
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), 0x000000); // This is valid in sfxrom
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x000000); // This is valid in sfxrom
 
   // $800000-$FFFFFF
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x800000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x800000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), -1);
 
   // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
 test("snestopc - sa1rom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "sa1rom";
+  assembler.targetState.mapper = "sa1rom";
 
   // Setup SA-1 banks (default values)
-  assembler.sa1banks = [0, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000];
+  assembler.targetState.sa1Banks = [0, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000];
 
   // Valid addresses - LoROM-mapped area
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x008000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF), 0x007FFF);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x208000), 0x100000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x20FFFF), 0x107FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x008000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0x00FFFF), 0x007FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x208000), 0x100000);
+  t.is(assembler.outputWriter.toOutputOffset(0x20FFFF), 0x107FFF);
 
   // Valid addresses - HiROM-mapped area
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xC00000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xCFFFFF), 0x0FFFFF);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xD00000), 0x100000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xDFFFFF), 0x1FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xC00000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0xCFFFFF), 0x0FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xD00000), 0x100000);
+  t.is(assembler.outputWriter.toOutputOffset(0xDFFFFF), 0x1FFFFF);
 
   // Invalid addresses
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1); // Hardware registers
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1); // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1); // Out of range
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), -1); // Hardware registers
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1); // Out of range
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1); // Out of range
 });
 
 test("snestopc - bigsa1rom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "bigsa1rom";
+  assembler.targetState.mapper = "bigsa1rom";
 
   // Valid addresses - HiROM-mapped area
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xC00000), 0x400000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0x7FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xC00000), 0x400000);
+  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x7FFFFF);
 
   // Valid addresses - LoROM-mapped area (first 8MB)
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x008000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF), 0x007FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x008000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0x00FFFF), 0x007FFF);
 
   // Valid addresses - LoROM-mapped area (second 8MB)
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x808000), 0x200000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x80FFFF), 0x207FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x808000), 0x200000);
+  t.is(assembler.outputWriter.toOutputOffset(0x80FFFF), 0x207FFF);
 
   // Invalid addresses
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1); // No ROM at $000000-$007FFF
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x800000), -1); // No ROM at $800000-$807FFF
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x400000), -1); // Invalid mapping
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1); // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1); // Out of range
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), -1); // No ROM at $000000-$007FFF
+  t.is(assembler.outputWriter.toOutputOffset(0x800000), -1); // No ROM at $800000-$807FFF
+  t.is(assembler.outputWriter.toOutputOffset(0x400000), -1); // Invalid mapping
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1); // Out of range
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1); // Out of range
 });
 
 test("snestopc - norom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "norom";
+  assembler.targetState.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), 0x000000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x123456), 0x123456);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0x123456), 0x123456);
+  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0xFFFFFF);
 
   // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
 test("snestopc - no mapper set", t => {
   const assembler = new Assembler();
-  assembler.mapper = undefined;
+  assembler.targetState.mapper = undefined;
 
   // Invalid addresses
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x808000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x818000), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0xFFFFFF), -1);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x000000), -1); // Hardware registers
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x7E0000), -1); // WRAM
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x700000), -1); // SRAM
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(-1), -1); // Out of range
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(0x1000000), -1); // Out of range
+  t.is(assembler.outputWriter.toOutputOffset(0x808000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x818000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x000000), -1); // Hardware registers
+  t.is(assembler.outputWriter.toOutputOffset(0x7E0000), -1); // WRAM
+  t.is(assembler.outputWriter.toOutputOffset(0x700000), -1); // SRAM
+  t.is(assembler.outputWriter.toOutputOffset(-1), -1); // Out of range
+  t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1); // Out of range
 });
 
-test("pctosnes - lorom mapping", t => {
+test("fromOutputOffset - lorom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
+  assembler.targetState.mapper = "lorom";
 
   // Valid addresses
-  t.is(assembler.romWriter.pctosnes(0x000000), 0x808000);
-  t.is(assembler.romWriter.pctosnes(0x007FFF), 0x80FFFF);
-  t.is(assembler.romWriter.pctosnes(0x008000), 0x818000);
-  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x808000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x007FFF), 0x80FFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x008000), 0x818000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xFFFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.romWriter.pctosnes(0x400000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x400000), -1);
 });
 
-test("pctosnes - hirom mapping", t => {
+test("fromOutputOffset - hirom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "hirom";
+  assembler.targetState.mapper = "hirom";
 
   // Valid addresses
-  t.is(assembler.romWriter.pctosnes(0x000000), 0xC00000);
-  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0xC00000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xFFFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.romWriter.pctosnes(0x400000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x400000), -1);
 });
 
-test("pctosnes - exlorom mapping", t => {
+test("fromOutputOffset - exlorom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "exlorom";
+  assembler.targetState.mapper = "exlorom";
 
   // Valid addresses in first 4MB
-  t.is(assembler.romWriter.pctosnes(0x000000), 0x808000);
-  t.is(assembler.romWriter.pctosnes(0x007FFF), 0x80FFFF);
-  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x808000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x007FFF), 0x80FFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xFFFFFF);
 
   // Valid addresses in second 4MB
-  t.is(assembler.romWriter.pctosnes(0x400000), 0x008000);
-  t.is(assembler.romWriter.pctosnes(0x407FFF), 0x00FFFF);
-  t.is(assembler.romWriter.pctosnes(0x7FFFFF), 0x7FFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0x008000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x407FFF), 0x00FFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x7FFFFF), 0x7FFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.romWriter.pctosnes(0x800000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x800000), -1);
 });
 
-test("pctosnes - exhirom mapping", t => {
+test("fromOutputOffset - exhirom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "exhirom";
+  assembler.targetState.mapper = "exhirom";
 
   // Valid addresses in first 4MB
-  t.is(assembler.romWriter.pctosnes(0x000000), 0xC00000);
-  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0xC00000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xFFFFFF);
 
   // Valid addresses in second 4MB
-  t.is(assembler.romWriter.pctosnes(0x400000), 0x400000);
-  t.is(assembler.romWriter.pctosnes(0x7FFFFF), 0x7FFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0x400000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x7FFFFF), 0x7FFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.romWriter.pctosnes(0x800000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x800000), -1);
 });
 
-test("pctosnes - sa1rom mapping", t => {
+test("fromOutputOffset - sa1rom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "sa1rom";
+  assembler.targetState.mapper = "sa1rom";
 
   // Setup SA-1 banks
-  assembler.sa1banks = [0x000000, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000];
+  assembler.targetState.sa1Banks = [0x000000, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000];
 
   // Test each bank mapping
-  t.is(assembler.romWriter.pctosnes(0x000000), 0x008000);
-  t.is(assembler.romWriter.pctosnes(0x100000), 0x208000);
-  t.is(assembler.romWriter.pctosnes(0x200000), 0x408000);
-  t.is(assembler.romWriter.pctosnes(0x300000), 0x608000);
-  t.is(assembler.romWriter.pctosnes(0x400000), 0x808000);
-  t.is(assembler.romWriter.pctosnes(0x500000), 0xA08000);
-  t.is(assembler.romWriter.pctosnes(0x600000), 0xC08000);
-  t.is(assembler.romWriter.pctosnes(0x700000), 0xE08000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x008000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x100000), 0x208000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x200000), 0x408000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x300000), 0x608000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0x808000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x500000), 0xA08000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x600000), 0xC08000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x700000), 0xE08000);
 
   // Invalid address (not matching any bank)
-  t.is(assembler.romWriter.pctosnes(0x800000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x800000), -1);
 });
 
-test("pctosnes - bigsa1rom mapping", t => {
+test("fromOutputOffset - bigsa1rom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "bigsa1rom";
+  assembler.targetState.mapper = "bigsa1rom";
 
   // Valid addresses in different regions
   // First 2MB region (000000-1FFFFF)
-  t.is(assembler.romWriter.pctosnes(0x000000), 0x008000);
-  t.is(assembler.romWriter.pctosnes(0x007FFF), 0x00FFFF);
-  t.is(assembler.romWriter.pctosnes(0x1FFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x008000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x007FFF), 0x00FFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x1FFFFF), 0x3FFFFF);
 
   // Second 2MB region (200000-3FFFFF)
-  t.is(assembler.romWriter.pctosnes(0x200000), 0x808000);
-  t.is(assembler.romWriter.pctosnes(0x207FFF), 0x80FFFF);
-  t.is(assembler.romWriter.pctosnes(0x3FFFFF), 0xBFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x200000), 0x808000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x207FFF), 0x80FFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xBFFFFF);
 
   // Third 4MB region (400000-7FFFFF)
-  t.is(assembler.romWriter.pctosnes(0x400000), 0xC00000);
-  t.is(assembler.romWriter.pctosnes(0x500000), 0xD00000);
-  t.is(assembler.romWriter.pctosnes(0x7FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0xC00000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x500000), 0xD00000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x7FFFFF), 0xFFFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.romWriter.pctosnes(0x800000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x800000), -1);
 });
 
-test("pctosnes - sfxrom mapping", t => {
+test("fromOutputOffset - sfxrom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "sfxrom";
+  assembler.targetState.mapper = "sfxrom";
 
   // Valid addresses
-  t.is(assembler.romWriter.pctosnes(0x000000), 0x008000);
-  t.is(assembler.romWriter.pctosnes(0x007FFF), 0x00FFFF);
-  t.is(assembler.romWriter.pctosnes(0x1FFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x008000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x007FFF), 0x00FFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x1FFFFF), 0x3FFFFF);
 
   // Invalid address (too large)
-  t.is(assembler.romWriter.pctosnes(0x200000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x200000), -1);
 });
 
-test("pctosnes - norom mapping", t => {
+test("fromOutputOffset - norom mapping", t => {
   const assembler = new Assembler();
-  assembler.mapper = "norom";
+  assembler.targetState.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged
-  t.is(assembler.romWriter.pctosnes(0x000000), 0x000000);
-  t.is(assembler.romWriter.pctosnes(0x123456), 0x123456);
-  t.is(assembler.romWriter.pctosnes(0xFFFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x000000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x123456), 0x123456);
+  t.is(assembler.outputWriter.fromOutputOffset(0xFFFFFF), 0xFFFFFF);
 });
 
-test("pctosnes - negative input", t => {
+test("fromOutputOffset - negative input", t => {
   const assembler = new Assembler();
 
   // Negative input should always return -1
-  t.is(assembler.romWriter.pctosnes(-1), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(-1), -1);
 });
 
-test("pctosnes - no mapper set", t => {
+test("fromOutputOffset - no mapper set", t => {
   const assembler = new Assembler();
   // Explicitly set mapper to undefined to ensure we're testing the default behavior
-  assembler.mapper = undefined;
+  assembler.targetState.mapper = undefined;
 
-  // When no mapper is set, pctosnes should return -1 for any address
-  t.is(assembler.romWriter.pctosnes(0x000000), -1);
-  t.is(assembler.romWriter.pctosnes(0x123456), -1);
-  t.is(assembler.romWriter.pctosnes(0xFFFFFF), -1);
+  // When no mapper is set, fromOutputOffset should return -1 for any address
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x123456), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0xFFFFFF), -1);
 
   // Test with a few more addresses to be thorough
-  t.is(assembler.romWriter.pctosnes(0x008000), -1);
-  t.is(assembler.romWriter.pctosnes(0x400000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x008000), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0x400000), -1);
 });
 
-test("verifysnespos - valid positions", t => {
+test("verifyLogicalPosition - valid positions", t => {
   const assembler = new Assembler();
 
   // Set valid SNES positions
@@ -2306,19 +2307,19 @@ test("verifysnespos - valid positions", t => {
   assembler.currentTargetBaseAddress = 0x008000;
 
   // Verify positions should not change valid positions
-  assembler.romWriter.verifysnespos();
+  assembler.outputWriter.verifyLogicalPosition();
   t.is(assembler.currentTargetAddress, 0x008000);
   t.is(assembler.currentTargetBaseAddress, 0x008000);
 
   // Test with different valid positions
   assembler.currentTargetAddress = 0x018000;
   assembler.currentTargetBaseAddress = 0x018000;
-  assembler.romWriter.verifysnespos();
+  assembler.outputWriter.verifyLogicalPosition();
   t.is(assembler.currentTargetAddress, 0x018000);
   t.is(assembler.currentTargetBaseAddress, 0x018000);
 });
 
-test("verifysnespos - negative currentTargetAddress", t => {
+test("verifyLogicalPosition - negative currentTargetAddress", t => {
   const assembler = new Assembler();
 
   // Set negative currentTargetAddress
@@ -2326,14 +2327,14 @@ test("verifysnespos - negative currentTargetAddress", t => {
   assembler.currentTargetBaseAddress = 0x008000;
 
   // Verify should reset both positions
-  assembler.romWriter.verifysnespos();
+  assembler.outputWriter.verifyLogicalPosition();
   t.is(assembler.currentTargetAddress, 0x008000);
   t.is(assembler.currentTargetBaseAddress, 0x008000);
   t.is(assembler.currentTargetStartAddress, 0x008000);
   t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
-test("verifysnespos - negative currentTargetBaseAddress", t => {
+test("verifyLogicalPosition - negative currentTargetBaseAddress", t => {
   const assembler = new Assembler();
 
   // Set negative currentTargetBaseAddress
@@ -2341,14 +2342,14 @@ test("verifysnespos - negative currentTargetBaseAddress", t => {
   assembler.currentTargetBaseAddress = -1;
 
   // Verify should reset both positions
-  assembler.romWriter.verifysnespos();
+  assembler.outputWriter.verifyLogicalPosition();
   t.is(assembler.currentTargetAddress, 0x008000);
   t.is(assembler.currentTargetBaseAddress, 0x008000);
   t.is(assembler.currentTargetStartAddress, 0x008000);
   t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
-test("verifysnespos - both positions negative", t => {
+test("verifyLogicalPosition - both positions negative", t => {
   const assembler = new Assembler();
 
   // Set both positions negative
@@ -2356,127 +2357,127 @@ test("verifysnespos - both positions negative", t => {
   assembler.currentTargetBaseAddress = -1;
 
   // Verify should reset both positions
-  assembler.romWriter.verifysnespos();
+  assembler.outputWriter.verifyLogicalPosition();
   t.is(assembler.currentTargetAddress, 0x008000);
   t.is(assembler.currentTargetBaseAddress, 0x008000);
   t.is(assembler.currentTargetStartAddress, 0x008000);
   t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
-test("fixsnespos - no bank crossing", t => {
+test("advanceLogicalAddress - no bank crossing", t => {
   const assembler = new Assembler();
 
-  // When there's no bank crossing, fixsnespos should just return the new address
+  // When there's no bank crossing, advanceLogicalAddress should just return the new address
   // regardless of mapper type
 
   // Test with lorom mapper
-  assembler.mapper = "lorom";
-  t.is(assembler.romWriter.fixsnespos(0x008000, 0x100), 0x008100);
-  t.is(assembler.romWriter.fixsnespos(0x00FF00, 0x10), 0x00FF10);
+  assembler.targetState.mapper = "lorom";
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x008000, 0x100), 0x008100);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FF00, 0x10), 0x00FF10);
 
   // Test with hirom mapper
-  assembler.mapper = "hirom";
-  t.is(assembler.romWriter.fixsnespos(0x408000, 0x100), 0x408100);
-  t.is(assembler.romWriter.fixsnespos(0xC08000, 0x100), 0xC08100);
+  assembler.targetState.mapper = "hirom";
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x408000, 0x100), 0x408100);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0xC08000, 0x100), 0xC08100);
 
   // Test with norom mapper
-  assembler.mapper = "norom";
-  t.is(assembler.romWriter.fixsnespos(0x123456, 0x100), 0x123556);
+  assembler.targetState.mapper = "norom";
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x123456, 0x100), 0x123556);
 });
 
-test("fixsnespos - lorom bank crossing", t => {
+test("advanceLogicalAddress - lorom bank crossing", t => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
+  assembler.targetState.mapper = "lorom";
 
   // Default check bankcross is on: pc() stays linear, $00FFFF + 1 is $010000.
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
-  t.is(assembler.romWriter.fixsnespos(0x01FFFF, 1), 0x020000);
-  t.is(assembler.romWriter.fixsnespos(0x7FFFFF, 1), 0x800000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x01FFFF, 1), 0x020000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x7FFFFF, 1), 0x800000);
 
-  t.is(assembler.romWriter.fixsnespos(0x00FF00, 0x200), 0x010100);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FF00, 0x200), 0x010100);
 
-  assembler.bankCrossCheckMode = "off";
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x018000);
+  assembler.targetState.bankCrossMode = "off";
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x018000);
 });
 
-test("fixsnespos - hirom bank crossing", t => {
+test("advanceLogicalAddress - hirom bank crossing", t => {
   const assembler = new Assembler();
-  assembler.mapper = "hirom";
+  assembler.targetState.mapper = "hirom";
 
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
-  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x400000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x3FFFFF, 1), 0x400000);
 
-  t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
-  t.is(assembler.romWriter.fixsnespos(0xC0FFFF, 1), 0xC10000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x40FFFF, 1), 0x410000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0xC0FFFF, 1), 0xC10000);
 });
 
-test("fixsnespos - exlorom and bigsa1rom bank crossing", t => {
+test("advanceLogicalAddress - exlorom and bigsa1rom bank crossing", t => {
   const assembler = new Assembler();
 
-  assembler.mapper = "exlorom";
-  t.is(assembler.romWriter.fixsnespos(0x80FFFF, 1), 0x810000);
+  assembler.targetState.mapper = "exlorom";
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x80FFFF, 1), 0x810000);
 
-  assembler.mapper = "bigsa1rom";
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
+  assembler.targetState.mapper = "bigsa1rom";
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
 });
 
-test("fixsnespos - exhirom bank crossing", t => {
+test("advanceLogicalAddress - exhirom bank crossing", t => {
   const assembler = new Assembler();
-  assembler.mapper = "exhirom";
+  assembler.targetState.mapper = "exhirom";
 
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
-  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x400000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x3FFFFF, 1), 0x400000);
 
-  t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
-  t.is(assembler.romWriter.fixsnespos(0xC0FFFF, 1), 0xC10000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x40FFFF, 1), 0x410000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0xC0FFFF, 1), 0xC10000);
 });
 
-test("fixsnespos - sfxrom bank crossing", t => {
+test("advanceLogicalAddress - sfxrom bank crossing", t => {
   const assembler = new Assembler();
-  assembler.mapper = "sfxrom";
+  assembler.targetState.mapper = "sfxrom";
 
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
-  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x400000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x3FFFFF, 1), 0x400000);
 
-  t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x40FFFF, 1), 0x410000);
 });
 
-test("fixsnespos - sa1rom bank crossing", t => {
+test("advanceLogicalAddress - sa1rom bank crossing", t => {
   const assembler = new Assembler();
-  assembler.mapper = "sa1rom";
+  assembler.targetState.mapper = "sa1rom";
 
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
-  t.is(assembler.romWriter.fixsnespos(0x3FFFFF, 1), 0x400000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x3FFFFF, 1), 0x400000);
 
-  t.is(assembler.romWriter.fixsnespos(0x40FFFF, 1), 0x410000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x40FFFF, 1), 0x410000);
 });
 
-test("fixsnespos - norom bank crossing", t => {
+test("advanceLogicalAddress - norom bank crossing", t => {
   const assembler = new Assembler();
-  assembler.mapper = "norom";
+  assembler.targetState.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged, even when crossing banks
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF, 1), 0x010000);
-  t.is(assembler.romWriter.fixsnespos(0xFFFFFF, 1), 0x1000000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0xFFFFFF, 1), 0x1000000);
 });
 
-test("fixsnespos - unknown mapper", t => {
+test("advanceLogicalAddress - unknown mapper", t => {
   const assembler = new Assembler();
-  assembler.mapper = "unknownmapper";
+  assembler.targetState.mapper = "unknownmapper";
 
   // Should throw an error for unknown mapper types
   t.throws(() => {
-    assembler.romWriter.fixsnespos(0x00FFFF, 1);
+    assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1);
   }, { message: "Unknown mapper type: unknownmapper" });
 });
 
-test("fixsnespos - default step parameter", t => {
+test("advanceLogicalAddress - default step parameter", t => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
+  assembler.targetState.mapper = "lorom";
 
   // When step is not provided, it should default to 0
-  t.is(assembler.romWriter.fixsnespos(0x008000), 0x008000);
-  t.is(assembler.romWriter.fixsnespos(0x00FFFF), 0x00FFFF);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x008000), 0x008000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF), 0x00FFFF);
 });
 
 test("resolvedefines - basic define replacement", t => {
@@ -5548,7 +5549,7 @@ test("handleArch - valid architectures", t => {
     operandResolver: assembler.operandResolver,
   }, ["arch", "spc700"]);
   t.is(assembler.arch, "spc700", "Should set architecture to spc700");
-  t.false(assembler.spcInlineCompatMode, "spc700 should not enable inline compatibility mode");
+  t.false(assembler.targetState.spcInlineCompatibility, "spc700 should not enable inline compatibility mode");
 
   // Test spc700-inline architecture
   handleArch({
@@ -5556,15 +5557,15 @@ test("handleArch - valid architectures", t => {
     operandResolver: assembler.operandResolver,
   }, ["arch", "spc700-inline"]);
   t.is(assembler.arch, "spc700", "spc700-inline should compile with spc700 arch backend");
-  t.true(assembler.spcInlineCompatMode, "spc700-inline should enable inline compatibility mode");
+  t.true(assembler.targetState.spcInlineCompatibility, "spc700-inline should enable inline compatibility mode");
 
   handleArch({
     session: assembler,
     operandResolver: assembler.operandResolver,
   }, ["arch", "spc700-raw"]);
   t.is(assembler.arch, "spc700", "spc700-raw should compile with spc700 arch backend");
-  t.is(assembler.mapper, "norom", "spc700-raw should switch to norom addressing");
-  t.false(assembler.spcInlineCompatMode, "spc700-raw should not enable inline compatibility mode");
+  t.is(assembler.targetState.mapper, "norom", "spc700-raw should switch to norom addressing");
+  t.false(assembler.targetState.spcInlineCompatibility, "spc700-raw should not enable inline compatibility mode");
 
   // Test superfx architecture
   handleArch({
@@ -5572,7 +5573,7 @@ test("handleArch - valid architectures", t => {
     operandResolver: assembler.operandResolver,
   }, ["arch", "superfx"]);
   t.is(assembler.arch, "superfx", "Should set architecture to superfx");
-  t.false(assembler.spcInlineCompatMode, "superfx should disable inline compatibility mode");
+  t.false(assembler.targetState.spcInlineCompatibility, "superfx should disable inline compatibility mode");
 
   // Test case insensitivity
   handleArch({
@@ -5626,28 +5627,28 @@ test("handleArch - architecture switching", t => {
     operandResolver: assembler.operandResolver,
   }, ["arch", "spc700"]);
   t.is(assembler.arch, "spc700", "Should switch to spc700 architecture");
-  t.false(assembler.spcInlineCompatMode, "spc700 should not use inline compatibility mode");
+  t.false(assembler.targetState.spcInlineCompatibility, "spc700 should not use inline compatibility mode");
 
   handleArch({
     session: assembler,
     operandResolver: assembler.operandResolver,
   }, ["arch", "spc700-inline"]);
   t.is(assembler.arch, "spc700", "spc700-inline should still use spc700 backend");
-  t.true(assembler.spcInlineCompatMode, "spc700-inline should enable inline compatibility mode");
+  t.true(assembler.targetState.spcInlineCompatibility, "spc700-inline should enable inline compatibility mode");
 
   handleArch({
     session: assembler,
     operandResolver: assembler.operandResolver,
   }, ["arch", "superfx"]);
   t.is(assembler.arch, "superfx", "Should switch to superfx architecture");
-  t.false(assembler.spcInlineCompatMode, "switching away should clear inline compatibility mode");
+  t.false(assembler.targetState.spcInlineCompatibility, "switching away should clear inline compatibility mode");
 
   handleArch({
     session: assembler,
     operandResolver: assembler.operandResolver,
   }, ["arch", "65816"]);
   t.is(assembler.arch, "65816", "Should switch back to 65816 architecture");
-  t.false(assembler.spcInlineCompatMode, "65816 should keep inline compatibility mode disabled");
+  t.false(assembler.targetState.spcInlineCompatibility, "65816 should keep inline compatibility mode disabled");
 });
 
 test("processCommand - spcblock emits expected nspc stream", t => {
@@ -5730,7 +5731,7 @@ test("processCommand - spc700-raw writes org $000000 into a norom payload", t =>
     assembler.finishPass();
   }
 
-  t.is(assembler.mapper, "norom");
+  t.is(assembler.targetState.mapper, "norom");
   t.deepEqual(Array.from(assembler.getBinaryOutput()), [0xe8, 0x00]);
 });
 
@@ -5800,7 +5801,7 @@ test("step - bank crossing with different mappers", t => {
   const assembler = new Assembler();
 
   // Test lorom mapper bank crossing
-  assembler.mapper = "lorom";
+  assembler.targetState.mapper = "lorom";
   assembler.currentTargetAddress = 0x00FFFC;
   assembler.currentTargetBaseAddress = 0x00FFFC;
 
@@ -5812,7 +5813,7 @@ test("step - bank crossing with different mappers", t => {
   t.is(assembler.currentTargetBaseAddress, 0x010004, "currentTargetBaseAddress should follow the same linear pc()");
 
   // Test hirom mapper bank crossing
-  assembler.mapper = "hirom";
+  assembler.targetState.mapper = "hirom";
   assembler.currentTargetAddress = 0x00FFFC;
   assembler.currentTargetBaseAddress = 0x00FFFC;
 
@@ -5822,7 +5823,7 @@ test("step - bank crossing with different mappers", t => {
   t.is(assembler.currentTargetAddress, 0x010004, "hirom pc() increments linearly across $00FFFF");
 
   // Test hirom mapper bank crossing above 0x400000
-  assembler.mapper = "hirom";
+  assembler.targetState.mapper = "hirom";
   assembler.currentTargetAddress = 0x40FFFC;
   assembler.currentTargetBaseAddress = 0x40FFFC;
 
@@ -5833,7 +5834,7 @@ test("step - bank crossing with different mappers", t => {
   t.is(assembler.currentTargetAddress, 0x410004, "hirom should not wrap for addresses above 0x400000");
 
   // Test norom mapper (no wrapping)
-  assembler.mapper = "norom";
+  assembler.targetState.mapper = "norom";
   assembler.currentTargetAddress = 0x00FFFC;
   assembler.currentTargetBaseAddress = 0x00FFFC;
 
@@ -5846,7 +5847,7 @@ test("step - bank crossing with different mappers", t => {
 
 test("step - large steps across multiple banks", t => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
+  assembler.targetState.mapper = "lorom";
 
   // Start at beginning of a bank
   assembler.currentTargetAddress = 0x008000;
@@ -5863,7 +5864,7 @@ test("step - exlorom and bigsa1rom bank crossing", t => {
   const assembler = new Assembler();
 
   // Test exlorom
-  assembler.mapper = "exlorom";
+  assembler.targetState.mapper = "exlorom";
   assembler.currentTargetAddress = 0x80FFFC;
   assembler.currentTargetBaseAddress = 0x80FFFC;
 
@@ -5873,7 +5874,7 @@ test("step - exlorom and bigsa1rom bank crossing", t => {
   t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x810004, "exlorom pc() increments linearly across $80FFFF");
 
   // Test bigsa1rom
-  assembler.mapper = "bigsa1rom";
+  assembler.targetState.mapper = "bigsa1rom";
   assembler.currentTargetAddress = 0x00FFFC;
   assembler.currentTargetBaseAddress = 0x00FFFC;
 
@@ -5887,7 +5888,7 @@ test("step - exhirom, sfxrom, and sa1rom bank crossing", t => {
   const assembler = new Assembler();
 
   // Test exhirom below 0x400000
-  assembler.mapper = "exhirom";
+  assembler.targetState.mapper = "exhirom";
   assembler.currentTargetAddress = 0x00FFFC;
   assembler.currentTargetBaseAddress = 0x00FFFC;
 
@@ -5908,7 +5909,7 @@ test("step - exhirom, sfxrom, and sa1rom bank crossing", t => {
 
   // Test sfxrom and sa1rom (they behave the same way)
   for (const mapper of ["sfxrom", "sa1rom"]) {
-    assembler.mapper = mapper;
+    assembler.targetState.mapper = mapper;
 
     // Test below 0x400000
     assembler.currentTargetAddress = 0x00FFFC;
@@ -6001,25 +6002,25 @@ test("expressionHost - resolveLabel", t => {
   t.is(assembler.expressionHost.resolveLabel("test_struct"), 0x2000, "Should resolve bare struct names to their base address");
 });
 
-test("expressionHost - snestopc and pctosnes", t => {
+test("expressionHost - snestopc and fromOutputOffset", t => {
   const assembler = new Assembler();
 
   // Mock the address conversion methods.
-  const originalConvertTargetAddressToRomOffset = assembler.romWriter.convertTargetAddressToRomOffset.bind(assembler.romWriter);
-  const originalPctosnes = assembler.romWriter.pctosnes.bind(assembler.romWriter);
+  const originalConvertTargetAddressToRomOffset = assembler.outputWriter.toOutputOffset.bind(assembler.outputWriter);
+  const originalPctosnes = assembler.outputWriter.fromOutputOffset.bind(assembler.outputWriter);
 
-  assembler.romWriter.convertTargetAddressToRomOffset = (addr: number) => addr + 0x1000;
-  assembler.romWriter.pctosnes = (addr: number) => addr - 0x1000;
+  assembler.outputWriter.toOutputOffset = (addr: number) => addr + 0x1000;
+  assembler.outputWriter.fromOutputOffset = (addr: number) => addr - 0x1000;
 
   // Test snestopc
   t.is(assembler.expressionHost.convertSnesToPc(0x8000), 0x9000, "Should convert SNES to PC address");
 
-  // Test pctosnes
+  // Test fromOutputOffset
   t.is(assembler.expressionHost.convertPcToSnes(0x9000), 0x8000, "Should convert PC to SNES address");
 
   // Restore original methods.
-  assembler.romWriter.convertTargetAddressToRomOffset = originalConvertTargetAddressToRomOffset;
-  assembler.romWriter.pctosnes = originalPctosnes;
+  assembler.outputWriter.toOutputOffset = originalConvertTargetAddressToRomOffset;
+  assembler.outputWriter.fromOutputOffset = originalPctosnes;
 });
 
 test("expressionHost - pc and realbase", t => {
@@ -6169,7 +6170,7 @@ test("expressionHost - getfilestatus", t => {
 
 test("write1_65816 - basic functionality", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x1000).fill(0);
+  assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -6178,14 +6179,14 @@ test("write1_65816 - basic functionality", t => {
 
   // Write a byte and check if it was written correctly
   assembler.write1_65816(0x42);
-  t.is(assembler.romdata[0], 0x42, "Should write the byte to the correct position");
+  t.is(assembler.outputBytes[0], 0x42, "Should write the byte to the correct position");
   t.is(assembler.currentTargetAddress, 0x008001, "Should increment currentTargetAddress");
   t.is(assembler.currentTargetBaseAddress, 0x008001, "Should increment currentTargetBaseAddress");
 });
 
 test("write1_65816 - NaN handling", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x1000).fill(0);
+  assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -6194,12 +6195,12 @@ test("write1_65816 - NaN handling", t => {
   const error = t.throws(() => {
     assembler.write1_65816(NaN);
   });
-  t.is(error?.message, "write1_65816 num is NaN", "Should throw error for NaN input");
+  t.is(error?.message, "write1 value is NaN", "Should throw error for NaN input");
 });
 
 test("write1_65816 - bank wrapping", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x10000).fill(0);
+  assembler.outputBytes = new Array(0x10000).fill(0);
   assembler.activateStage("emitProgram");
 
   // Position at the end of a bank
@@ -6210,8 +6211,8 @@ test("write1_65816 - bank wrapping", t => {
 
   assembler.write1_65816(0x42);
 
-  const pcpos = assembler.romWriter.convertTargetAddressToRomOffset(0x00FFFF);
-  t.is(assembler.romdata[pcpos], 0x42, "Should write the byte to the correct position");
+  const pcpos = assembler.outputWriter.toOutputOffset(0x00FFFF);
+  t.is(assembler.outputBytes[pcpos], 0x42, "Should write the byte to the correct position");
 
   // Default `check bankcross on`: pc() is linear, including one-past-end $010000.
   t.is(assembler.currentTargetAddress, 0x010000);
@@ -6220,9 +6221,9 @@ test("write1_65816 - bank wrapping", t => {
 
 test("write1_65816 - bank wrapping with bankcross off", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x10000).fill(0);
+  assembler.outputBytes = new Array(0x10000).fill(0);
   assembler.activateStage("emitProgram");
-  assembler.bankCrossCheckMode = "off";
+  assembler.targetState.bankCrossMode = "off";
   assembler.currentTargetAddress = 0x00FFFF;
   assembler.currentTargetBaseAddress = 0x00FFFF;
   assembler.currentTargetStartAddress = 0x00FFFF;
@@ -6236,9 +6237,9 @@ test("write1_65816 - bank wrapping with bankcross off", t => {
 
 test("write1_65816 - ROM expansion", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x10).fill(0);
+  assembler.outputBytes = new Array(0x10).fill(0);
   assembler.activateStage("emitProgram");
-  assembler.defaultFreespaceByte = 0xFF;
+  assembler.outputFillByte = 0xFF;
 
   // Position beyond current ROM size
   const initialPos = 0x008020;
@@ -6251,24 +6252,24 @@ test("write1_65816 - ROM expansion", t => {
   assembler.write1_65816(0x42);
 
   // Check if ROM was expanded
-  t.true(assembler.romdata.length > 0x10, "ROM should be expanded");
+  t.true(assembler.outputBytes.length > 0x10, "ROM should be expanded");
 
   // Check if the byte was written correctly
-  const pcpos = assembler.romWriter.convertTargetAddressToRomOffset(initialPos);
-  t.is(assembler.romdata[pcpos], 0x42, "Should write the byte to the correct position");
+  const pcpos = assembler.outputWriter.toOutputOffset(initialPos);
+  t.is(assembler.outputBytes[pcpos], 0x42, "Should write the byte to the correct position");
 
   // Check if the gap was filled with defaultFreespaceByte
   // for (let i = 0x10; i < pcpos; i++) {
-  //   t.is(assembler.romdata[i], 0xFF, "Gap should be filled with defaultFreespaceByte");
+  //   t.is(assembler.outputBytes[i], 0xFF, "Gap should be filled with defaultFreespaceByte");
   // }
 
   // Check if romlen was updated
-  t.is(assembler.romdata.length, pcpos + 1, "romlen should be updated");
+  t.is(assembler.outputBytes.length, pcpos + 1, "romlen should be updated");
 });
 
 test("write1_65816 - pass 1 behavior", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x1000).fill(0);
+  assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("resolveLayout");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -6279,7 +6280,7 @@ test("write1_65816 - pass 1 behavior", t => {
   assembler.write1_65816(0x42);
 
   // Check that the byte was not written
-  t.is(assembler.romdata[0], 0, "Should not write the byte in pass 1");
+  t.is(assembler.outputBytes[0], 0, "Should not write the byte in pass 1");
 
   // But positions should still be updated
   t.is(assembler.currentTargetAddress, 0x008001, "Should still increment currentTargetAddress in pass 1");
@@ -6288,7 +6289,7 @@ test("write1_65816 - pass 1 behavior", t => {
 
 test("write1_65816 - byte masking", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x1000).fill(0);
+  assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -6297,12 +6298,12 @@ test("write1_65816 - byte masking", t => {
   assembler.write1_65816(0x1234);
 
   // Check that only the lower 8 bits were written
-  t.is(assembler.romdata[0], 0x34, "Should only write the lower 8 bits");
+  t.is(assembler.outputBytes[0], 0x34, "Should only write the lower 8 bits");
 });
 
 test("write1_65816 - step behavior", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(0x1000).fill(0);
+  assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("emitProgram");
   assembler.currentTargetAddress = 0x008000;
   assembler.currentTargetBaseAddress = 0x008000;
@@ -6315,114 +6316,114 @@ test("write1_65816 - step behavior", t => {
   t.is(assembler.bytes, 1, "Should increment bytes counter");
 });
 
-test("fillRomData - basic fill", t => {
+test("fillOutputBytes - basic fill", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(10).fill(0);
+  assembler.outputBytes = new Array(10).fill(0);
 
   // Fill positions 2-4 with value 0x42
-  assembler.fillRomData(2, 0x42, 3);
+  assembler.fillOutputBytes(2, 0x42, 3);
 
   // Check that only the specified range was filled
-  t.is(assembler.romdata[0], 0, "Should not modify data before start");
-  t.is(assembler.romdata[1], 0, "Should not modify data before start");
-  t.is(assembler.romdata[2], 0x42, "Should fill first position");
-  t.is(assembler.romdata[3], 0x42, "Should fill middle position");
-  t.is(assembler.romdata[4], 0x42, "Should fill last position");
-  t.is(assembler.romdata[5], 0, "Should not modify data after end");
+  t.is(assembler.outputBytes[0], 0, "Should not modify data before start");
+  t.is(assembler.outputBytes[1], 0, "Should not modify data before start");
+  t.is(assembler.outputBytes[2], 0x42, "Should fill first position");
+  t.is(assembler.outputBytes[3], 0x42, "Should fill middle position");
+  t.is(assembler.outputBytes[4], 0x42, "Should fill last position");
+  t.is(assembler.outputBytes[5], 0, "Should not modify data after end");
 });
 
-test("fillRomData - zero length", t => {
+test("fillOutputBytes - zero length", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(10).fill(0);
+  assembler.outputBytes = new Array(10).fill(0);
 
   // Fill with length 0
-  assembler.fillRomData(2, 0x42, 0);
+  assembler.fillOutputBytes(2, 0x42, 0);
 
   // Check that no data was modified
-  t.deepEqual(assembler.romdata, new Array(10).fill(0), "Should not modify any data with length 0");
+  t.deepEqual(assembler.outputBytes, new Array(10).fill(0), "Should not modify any data with length 0");
 });
 
-test("fillRomData - fill at start of ROM", t => {
+test("fillOutputBytes - fill at start of ROM", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(10).fill(0);
+  assembler.outputBytes = new Array(10).fill(0);
 
   // Fill from the beginning
-  assembler.fillRomData(0, 0x42, 3);
+  assembler.fillOutputBytes(0, 0x42, 3);
 
   // Check that only the specified range was filled
-  t.is(assembler.romdata[0], 0x42, "Should fill first byte of ROM");
-  t.is(assembler.romdata[1], 0x42, "Should fill second byte");
-  t.is(assembler.romdata[2], 0x42, "Should fill third byte");
-  t.is(assembler.romdata[3], 0, "Should not modify data after end");
+  t.is(assembler.outputBytes[0], 0x42, "Should fill first byte of ROM");
+  t.is(assembler.outputBytes[1], 0x42, "Should fill second byte");
+  t.is(assembler.outputBytes[2], 0x42, "Should fill third byte");
+  t.is(assembler.outputBytes[3], 0, "Should not modify data after end");
 });
 
-test("fillRomData - fill at end of ROM", t => {
+test("fillOutputBytes - fill at end of ROM", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(10).fill(0);
+  assembler.outputBytes = new Array(10).fill(0);
 
   // Fill at the end
-  assembler.fillRomData(7, 0x42, 3);
+  assembler.fillOutputBytes(7, 0x42, 3);
 
   // Check that only the specified range was filled
-  t.is(assembler.romdata[6], 0, "Should not modify data before start");
-  t.is(assembler.romdata[7], 0x42, "Should fill first position");
-  t.is(assembler.romdata[8], 0x42, "Should fill middle position");
-  t.is(assembler.romdata[9], 0x42, "Should fill last position");
+  t.is(assembler.outputBytes[6], 0, "Should not modify data before start");
+  t.is(assembler.outputBytes[7], 0x42, "Should fill first position");
+  t.is(assembler.outputBytes[8], 0x42, "Should fill middle position");
+  t.is(assembler.outputBytes[9], 0x42, "Should fill last position");
 });
 
-test("fillRomData - fill entire ROM", t => {
+test("fillOutputBytes - fill entire ROM", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(5).fill(0);
+  assembler.outputBytes = new Array(5).fill(0);
 
   // Fill the entire ROM
-  assembler.fillRomData(0, 0x42, 5);
+  assembler.fillOutputBytes(0, 0x42, 5);
 
   // Check that all bytes were filled
-  t.deepEqual(assembler.romdata, new Array(5).fill(0x42), "Should fill entire ROM");
+  t.deepEqual(assembler.outputBytes, new Array(5).fill(0x42), "Should fill entire ROM");
 });
 
-test("fillRomData - with different values", t => {
+test("fillOutputBytes - with different values", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(10).fill(0);
+  assembler.outputBytes = new Array(10).fill(0);
 
   // Fill with different values
-  assembler.fillRomData(2, 0xFF, 2);
-  assembler.fillRomData(5, 0xAA, 2);
+  assembler.fillOutputBytes(2, 0xFF, 2);
+  assembler.fillOutputBytes(5, 0xAA, 2);
 
   // Check that the correct values were written
-  t.is(assembler.romdata[2], 0xFF, "Should fill with first value");
-  t.is(assembler.romdata[3], 0xFF, "Should fill with first value");
-  t.is(assembler.romdata[5], 0xAA, "Should fill with second value");
-  t.is(assembler.romdata[6], 0xAA, "Should fill with second value");
+  t.is(assembler.outputBytes[2], 0xFF, "Should fill with first value");
+  t.is(assembler.outputBytes[3], 0xFF, "Should fill with first value");
+  t.is(assembler.outputBytes[5], 0xAA, "Should fill with second value");
+  t.is(assembler.outputBytes[6], 0xAA, "Should fill with second value");
 });
 
-test("fillRomData - value byte masking", t => {
+test("fillOutputBytes - value byte masking", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(5).fill(0);
+  assembler.outputBytes = new Array(5).fill(0);
 
   // Fill with a value larger than a byte
-  assembler.fillRomData(1, 0x1234, 3);
+  assembler.fillOutputBytes(1, 0x1234, 3);
 
   // Check that only the lower 8 bits were used
-  t.is(assembler.romdata[1], 0x34, "Should only use lower 8 bits of value");
-  t.is(assembler.romdata[2], 0x34, "Should only use lower 8 bits of value");
-  t.is(assembler.romdata[3], 0x34, "Should only use lower 8 bits of value");
+  t.is(assembler.outputBytes[1], 0x34, "Should only use lower 8 bits of value");
+  t.is(assembler.outputBytes[2], 0x34, "Should only use lower 8 bits of value");
+  t.is(assembler.outputBytes[3], 0x34, "Should only use lower 8 bits of value");
 });
 
-test("fillRomData - overlapping fills", t => {
+test("fillOutputBytes - overlapping fills", t => {
   const assembler = new Assembler();
-  assembler.romdata = new Array(10).fill(0);
+  assembler.outputBytes = new Array(10).fill(0);
 
   // Create overlapping fills
-  assembler.fillRomData(2, 0x42, 4);
-  assembler.fillRomData(4, 0xFF, 3);
+  assembler.fillOutputBytes(2, 0x42, 4);
+  assembler.fillOutputBytes(4, 0xFF, 3);
 
   // Check that later fills override earlier ones
-  t.is(assembler.romdata[2], 0x42, "Should keep first fill value");
-  t.is(assembler.romdata[3], 0x42, "Should keep first fill value");
-  t.is(assembler.romdata[4], 0xFF, "Should be overwritten by second fill");
-  t.is(assembler.romdata[5], 0xFF, "Should have second fill value");
-  t.is(assembler.romdata[6], 0xFF, "Should have second fill value");
+  t.is(assembler.outputBytes[2], 0x42, "Should keep first fill value");
+  t.is(assembler.outputBytes[3], 0x42, "Should keep first fill value");
+  t.is(assembler.outputBytes[4], 0xFF, "Should be overwritten by second fill");
+  t.is(assembler.outputBytes[5], 0xFF, "Should have second fill value");
+  t.is(assembler.outputBytes[6], 0xFF, "Should have second fill value");
 });
 
 test("asblock_pick - empty words array", t => {
@@ -6627,7 +6628,7 @@ test("asblock_pick - inSpcblock uses spc700 encoder", t => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "65816";
-  assembler.inSpcblock = true;
+  assembler.targetState.inSpcBlock = true;
   const originalMethod = assembler.archSPC700.encode;
   let wasCalled = false;
   assembler.archSPC700.encode = () => {

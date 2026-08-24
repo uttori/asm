@@ -48,7 +48,7 @@ export const handleNamespace = (
   { session }: NamespaceDirectiveContext,
   words: readonly string[],
 ): void => {
-  if (session.inSpcblock) {
+  if (session.inTargetBlock) {
     throw new Error("NAMESPACE is unavailable inside spcblock.");
   }
 

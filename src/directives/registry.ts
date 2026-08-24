@@ -29,6 +29,7 @@ import type {
   NarrowDirectiveHandler,
   NamespaceDirectiveContext,
   OrgDirectiveContext,
+  RuntimeDirectiveContext,
   SpcDirectiveContext,
   StartposDirectiveContext,
   StructDirectiveContext,
@@ -55,7 +56,7 @@ export interface DirectiveRegistryContexts {
     mapper: MapperDirectiveContext;
     org: OrgDirectiveContext;
     policy: AssemblerPolicyDirectiveContext;
-    runtime: SpcDirectiveContext;
+    runtime: RuntimeDirectiveContext;
     startpos: StartposDirectiveContext;
   };
   memory: MemoryDirectiveContext;

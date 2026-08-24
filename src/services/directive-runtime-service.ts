@@ -1,11 +1,8 @@
 import type { OperandResolver } from "../operand-resolver.js";
-import type { SpcblockData, SpcblockType } from "../directives/types.js";
 import type { DefineEngine } from "./define-engine.js";
-import type { RomWriterService } from "./rom-writer-service.js";
 import type { StructEngine } from "./struct-engine.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
 import { splitRespectingFunctions } from "./command-text-service.js";
-import type { TargetProfile } from "../target-profile.js";
 
 export type PushPcStackEntry = {
   currentTargetAddress: number;
@@ -15,17 +12,13 @@ export type PushPcStackEntry = {
 };
 
 export interface DirectiveRuntimeHost {
-  activeFreespaceContentStartPc: number | null;
-  activeFreespaceStartPc: number | null;
-  canFinalize: boolean;
+  addressWidth: number;
   characterMappings: Map<string, number>;
-  currentNamespace: string;
   currentTargetAddress: number;
   currentTargetBaseAddress: number;
   currentTargetBaseStartAddress: number;
   currentTargetStartAddress: number;
   defineEngine: DefineEngine;
-  inSpcblock: boolean;
   isDefinitionCollectionStage: boolean;
   namespaceNestingEnabled: boolean;
   namespaceNestingPath: string[];
@@ -33,11 +26,8 @@ export interface DirectiveRuntimeHost {
   operandResolver: OperandResolver;
   pushpcStack: PushPcStackEntry[];
   pushpcnum: number;
-  romWriter: RomWriterService;
-  spcblockData: SpcblockData | null;
   structEngine: StructEngine;
   symbolScope: SymbolScopeService;
-  targetProfile: TargetProfile;
   addAddressToLine(address: number): void;
   resolvedefines(input: string): string;
   setWritePosition(address: number): void;
@@ -46,7 +36,6 @@ export interface DirectiveRuntimeHost {
   write2(value: number): void;
   write3(value: number): void;
   write4(value: number): void;
-  writeDataBytes(start: number, value: number, length?: number): void;
 }
 
 export class DirectiveRuntimeService {
@@ -84,121 +73,6 @@ export class DirectiveRuntimeService {
   }
 
   /**
-   * Handles the `spcblock` directive.
-   * @param {string[]} words The directive words.
-   */
-  handleSpcblock(words: readonly string[]): void {
-    if (words.length < 2) {
-      throw new Error("spcblock requires at least a destination address.");
-    }
-    if (words.length > 4) {
-      throw new Error("spcblock has too many arguments.");
-    }
-    if (this.host.inSpcblock) {
-      throw new Error("Nested spcblock directives are not supported.");
-    }
-
-    const destination = this.host.operandResolver.getnum(this.host.resolvedefines(words[1]));
-    if ((destination & ~0xffff) !== 0) {
-      throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
-    }
-
-    // Only NSPC-style inline blocks are currently implemented. Keep the custom
-    // syntax checks explicit so unsupported ASAR-compatible forms fail clearly.
-    let type: SpcblockType = "nspc";
-    if (words.length === 3) {
-      const kind = words[2].toLowerCase();
-      if (kind === "nspc") {
-        type = "nspc";
-      } else if (kind === "custom") {
-        throw new Error("Custom spcblock mode requires a macro and is not implemented.");
-      } else {
-        throw new Error(`Unknown spcblock type: ${words[2]}`);
-      }
-    } else if (words.length === 4) {
-      const kind = words[2].toLowerCase();
-      if (kind !== "custom") {
-        throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
-      }
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-
-    if (type !== "nspc") {
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-
-    // NSPC blocks reserve size/destination words in ROM, then switch the
-    // logical write cursor into SPC address space until `endspcblock`.
-    const sizeAddress = this.host.currentTargetBaseAddress;
-    this.host.write2(0x0000);
-    this.host.write2(destination);
-    this.host.currentTargetAddress = destination;
-    this.host.currentTargetStartAddress = destination;
-    this.host.spcblockData = {
-      destination,
-      type,
-      sizeAddress,
-      executeAddress: null,
-      namespaceBackup: this.host.currentNamespace,
-    };
-
-    // Prefix labels inside the block so SPC symbols do not collide with the
-    // surrounding SNES namespace, then restore it in `handleEndSpcblock`.
-    this.host.currentNamespace = `:SPCBLOCK:_${this.host.currentNamespace}`;
-    this.host.inSpcblock = true;
-  }
-
-  /**
-   * Handles the `endspcblock` directive.
-   * @param {string[]} words The directive words.
-   */
-  handleEndSpcblock(words: readonly string[]): void {
-    if (!this.host.inSpcblock || !this.host.spcblockData) {
-      throw new Error("endspcblock used without an active spcblock.");
-    }
-
-    if (this.host.spcblockData.type !== "nspc") {
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-
-    if (this.host.canFinalize) {
-      // The final pass knows the emitted SPC payload size, so patch the
-      // placeholder written by `spcblock`.
-      const sizePc = this.host.romWriter.convertTargetAddressToRomOffset(
-        this.host.spcblockData.sizeAddress & 0xffffff,
-      );
-      if (sizePc < 0) {
-        throw new Error("spcblock size address does not map to ROM.");
-      }
-      const blockSize =
-        (this.host.currentTargetAddress - this.host.spcblockData.destination) & 0xffff;
-      this.host.writeDataBytes(sizePc, blockSize & 0xff, 1);
-      this.host.writeDataBytes(sizePc + 1, (blockSize >> 8) & 0xff, 1);
-    }
-
-    if (words.length === 3) {
-      // `endspcblock execute <addr>` writes an explicit transfer address after
-      // the payload. Otherwise a `startpos` value can supply it.
-      if (words[1].toLowerCase() !== "execute") {
-        throw new Error(`Invalid endspcblock argument: ${words[1]}`);
-      }
-      this.host.write2(0x0000);
-      this.host.write2(
-        this.host.operandResolver.getnum(this.host.resolvedefines(words[2])) & 0xffff,
-      );
-    } else if (words.length !== 1) {
-      throw new Error("Unknown endspcblock format.");
-    } else if (this.host.spcblockData.executeAddress !== null) {
-      this.host.write2(0x0000);
-      this.host.write2(this.host.spcblockData.executeAddress & 0xffff);
-    }
-
-    this.host.currentNamespace = this.host.spcblockData.namespaceBackup;
-    this.host.spcblockData = null;
-    this.host.inSpcblock = false;
-  }
-
-  /**
    * Handles `org`.
    * @param {string[]} params The directive parameters.
    */
@@ -224,7 +98,7 @@ export class DirectiveRuntimeService {
       }
     }
 
-    const maxAddress = 2 ** this.host.targetProfile.addressSpace.addressWidth - 1;
+    const maxAddress = 2 ** this.host.addressWidth - 1;
     if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
       throw new Error(`Invalid ORG address: ${params[0]}`);
     }

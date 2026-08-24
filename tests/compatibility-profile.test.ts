@@ -10,10 +10,10 @@ import {
 } from "../src/compatibility/asar-compatibility-profile.js";
 
 test("compatibility profile owns mapper checksum policy", t => {
-  const state = { mapper: "lorom", checksumFixEnabled: true };
+  const state = { mapper: "lorom", checksumEnabled: true };
   applyMapperSelection(state, "norom");
 
-  t.deepEqual(state, { mapper: "norom", checksumFixEnabled: false });
+  t.deepEqual(state, { mapper: "norom", checksumEnabled: false });
   t.is(getChecksumHeaderOffset("lorom"), 0x7FC0);
   t.is(getChecksumHeaderOffset("hirom"), 0xFFC0);
   t.true(shouldEnableSpcInlineCompat("spc700-inline"));

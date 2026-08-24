@@ -118,7 +118,7 @@ test("pre-dispatch pipeline loads test rom directive", (t) => {
 
   assembler.processCommand(";`+");
 
-  t.deepEqual(Array.from(assembler.romdata.slice(0, 4)), [1, 2, 3, 4]);
+  t.deepEqual(Array.from(assembler.outputBytes.slice(0, 4)), [1, 2, 3, 4]);
 });
 
 test("normalized dispatch also loads test rom directive", (t) => {
@@ -129,7 +129,7 @@ test("normalized dispatch also loads test rom directive", (t) => {
   // must retain the same bootstrap semantics as raw processCommand.
   assembler.processNormalizedCommand(commandNode(";`+"), false);
 
-  t.deepEqual(Array.from(assembler.romdata.slice(0, 4)), [1, 2, 3, 4]);
+  t.deepEqual(Array.from(assembler.outputBytes.slice(0, 4)), [1, 2, 3, 4]);
 });
 
 test("normalized command preprocessing handles character mappings", (t) => {
@@ -170,12 +170,12 @@ test("struct engine restores write position after struct definition lifecycle", 
 
 test("expression host readRom and readFile preserve defaults and bounds behavior", (t) => {
   const assembler = new Assembler(new Uint8Array([0x11, 0x22, 0x33]));
-  assembler.readFunctionsEnabled = true;
-  const romStart = assembler.romWriter.pctosnes(0);
+  assembler.targetState.readFunctionsEnabled = true;
+  const romStart = assembler.outputWriter.fromOutputOffset(0);
 
   t.is(assembler.expressionHost.readRom(romStart, 2), 0x2211);
-  t.is(assembler.expressionHost.readRom(assembler.romWriter.pctosnes(2), 2, 0x77), 0x77);
-  t.throws(() => assembler.expressionHost.readRom(assembler.romWriter.pctosnes(2), 2), { message: /out of bounds/i });
+  t.is(assembler.expressionHost.readRom(assembler.outputWriter.fromOutputOffset(2), 2, 0x77), 0x77);
+  t.throws(() => assembler.expressionHost.readRom(assembler.outputWriter.fromOutputOffset(2), 2), { message: /out of bounds/i });
 
   const fixturePath = path.join(process.cwd(), "tests", "read-expression.bin");
   try {
@@ -528,17 +528,17 @@ test("struct engine records struct members through normalized dispatch", (t) => 
 
 test("rom writer converts lorom pc offsets to snes and back", (t) => {
   const assembler = new Assembler();
-  assembler.mapper = "lorom";
+  assembler.targetState.mapper = "lorom";
 
-  const snesAddress = assembler.romWriter.pctosnes(0);
+  const snesAddress = assembler.outputWriter.fromOutputOffset(0);
 
   t.is(snesAddress, 0x808000);
-  t.is(assembler.romWriter.convertTargetAddressToRomOffset(snesAddress), 0);
+  t.is(assembler.outputWriter.toOutputOffset(snesAddress), 0);
 });
 
 test("rom writer enforces bank crossing checks before multi-byte writes", (t) => {
   const assembler = new Assembler();
-  assembler.bankCrossCheckMode = "full";
+  assembler.targetState.bankCrossMode = "full";
   assembler.currentTargetBaseAddress = 0x00FFFF;
 
   const error = t.throws(() => {
@@ -680,7 +680,7 @@ test("stage runner builds program once and executes all stages", (t) => {
   t.truthy(emitStage);
   t.is(emitStage?.stage, "emitProgram");
   t.is(emitStage?.cursor.currentTargetAddress, 0x808001);
-  t.is(assembler.romdata[0], 0x01);
+  t.is(assembler.outputBytes[0], 0x01);
 });
 
 test("line-by-line assembleblock uses typed control-flow parsing", (t) => {
@@ -736,23 +736,23 @@ test("stage execution state is recreated per collect stage run", (t) => {
   t.is(secondCollect.cursor.currentTargetAddress, 0x80A001);
 });
 
-test("stage states keep symbols/control/write state isolated by stage", (t) => {
+test("stage states keep symbols, control, and plugin state isolated by stage", (t) => {
   const assembler = new Assembler();
   const program = assembler.buildProgramModel("Label:\ndb $01", "test.asm", 0);
   const collect = assembler.runStage("collectDefinitions", program) as {
     symbols: { labelTable: Map<string, unknown> };
     control: object;
-    writeState: object;
+    pluginState: Map<string, unknown>;
   };
   const layout = assembler.runStage("resolveLayout", program) as {
     symbols: { labelTable: Map<string, unknown> };
     control: object;
-    writeState: object;
+    pluginState: Map<string, unknown>;
   };
 
   t.not(collect.symbols.labelTable, layout.symbols.labelTable);
   t.not(collect.control, layout.control);
-  t.not(collect.writeState, layout.writeState);
+  t.not(collect.pluginState, layout.pluginState);
 });
 
 test("instruction dispatch follows active stage capabilities", (t) => {
@@ -778,14 +778,14 @@ test("architecture registry resolves aliases through arch directive", (t) => {
     operandResolver: assembler.operandResolver,
   }, ["arch", "spc700-inline"]);
   t.is(assembler.arch, "spc700");
-  t.true(assembler.spcInlineCompatMode);
+  t.true(assembler.targetState.spcInlineCompatibility);
 
   handleArch({
     session: assembler,
     operandResolver: assembler.operandResolver,
   }, ["arch", "superfx"]);
   t.is(assembler.arch, "superfx");
-  t.false(assembler.spcInlineCompatMode);
+  t.false(assembler.targetState.spcInlineCompatibility);
 });
 
 test("activateStage keeps stage capabilities authoritative", (t) => {
@@ -840,7 +840,7 @@ test("lowered nested loop and conditional executors select the expected work", t
   ].join("\n"), "lowered-nested-control.asm");
   assembler.executeLoweredNodeStream(assembler.commandLoweringService.lowerProgram(nested).nodes);
 
-  t.is(assembler.defaultFreespaceByte, 1);
+  t.is(assembler.outputFillByte, 1);
   t.is(assembler.defines.get("i"), "2");
 });
 
@@ -859,7 +859,7 @@ test("lowered loop and conditional executors select the expected work", t => {
 
   assembler.executeLoweredNodeStream(loweredLoops.nodes);
 
-  t.is(assembler.defaultFreespaceByte, 1);
+  t.is(assembler.outputFillByte, 1);
   t.is(assembler.defines.get("i"), "2");
 
   const conditional = assembler.buildProgramModel([
@@ -873,7 +873,7 @@ test("lowered loop and conditional executors select the expected work", t => {
   ].join("\n"), "lowered-conditional.asm");
   assembler.executeLoweredNodeStream(assembler.commandLoweringService.lowerProgram(conditional).nodes);
 
-  t.is(assembler.defaultFreespaceByte, 0x22);
+  t.is(assembler.outputFillByte, 0x22);
 });
 
 test("lowered instructions refresh against architecture changes at dispatch", t => {

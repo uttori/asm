@@ -10145,79 +10145,6 @@ function getWellformedEdit(textEdit) {
 import fs3 from "node:fs";
 import path5 from "node:path";
 
-// src/compatibility/asar-compatibility-profile.ts
-var ASAR_COMPAT_NO_OP_DIRECTIVES = [
-  "fastrom",
-  "dpbase",
-  "warnings",
-  "print",
-  "warn",
-  "autoclean",
-  "autoclear",
-  "includefrom",
-  "asar",
-  "reset",
-  "{",
-  "}"
-];
-var assertMapperAvailable = (inSpcblock) => {
-  if (inSpcblock) {
-    throw new Error("Mapper directives are unavailable inside spcblock.");
-  }
-};
-var applyMapperSelection = (state, mapper) => {
-  state.mapper = mapper;
-  if (mapper === "norom") {
-    state.checksumFixEnabled = false;
-  }
-};
-var isFreespaceAvailable = (mapper) => mapper !== "norom";
-var encodeSuperFxMoveShortAddress = (addrVal, mode = "hardware") => {
-  if (mode === "asar") {
-    return addrVal & 255;
-  }
-  return addrVal >> 1 & 255;
-};
-var getChecksumHeaderOffset = (mapper) => {
-  if (mapper === "lorom" || mapper === "sa1rom" || mapper === "bigsa1rom") {
-    return 32704;
-  }
-  return 65472;
-};
-var calculateHeaderChecksum = (romdata, mode) => {
-  const romLength = romdata.length;
-  if (romLength === 0) {
-    return 0;
-  }
-  let checksum = 0;
-  if (mode === "simple" || (romLength & romLength - 1) === 0) {
-    for (let i = 0; i < romLength; i++) {
-      checksum += romdata[i] & 255;
-    }
-    return checksum & 65535;
-  }
-  let bitround = 1;
-  while (bitround < romLength) {
-    bitround <<= 1;
-  }
-  const firstPart = bitround >> 1;
-  const secondPart = romLength - firstPart;
-  const repeatCount = Math.floor(firstPart / secondPart);
-  let secondPartSum = 0;
-  for (let i = 0; i < firstPart; i++) {
-    checksum += romdata[i] & 255;
-  }
-  for (let i = firstPart; i < romLength; i++) {
-    secondPartSum += romdata[i] & 255;
-  }
-  return checksum + secondPartSum * repeatCount & 65535;
-};
-var shouldRedirectOrgToSpcblock = (spcInlineCompatMode) => spcInlineCompatMode;
-var shouldEnableSpcInlineCompat = (architecture) => architecture === "spc700-inline";
-var shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
-var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
-var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
-
 // src/addressToLine.ts
 import * as fs from "fs";
 
@@ -13345,13 +13272,11 @@ var handlePad = ({ session, operandResolver }, words) => {
     gap = 65536 - (session.currentTargetAddress & 65535);
   } else if (words.length === 2) {
     const targetSNES = operandResolver.getnum(session.resolvedefines(words[1]));
-    const targetPC = session.romWriter.convertTargetAddressToRomOffset(targetSNES);
+    const targetPC = session.outputWriter.toOutputOffset(targetSNES);
     if (targetPC < 0) {
       throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
     }
-    const currentPC = session.romWriter.convertTargetAddressToRomOffset(
-      session.currentTargetAddress
-    );
+    const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
     if (targetPC <= currentPC) {
       return;
     }
@@ -13660,6 +13585,79 @@ var registerIncludeSourceDirectives = (registry, context) => {
   registry.registerLowered("incbin", context, handleIncbin);
 };
 
+// src/compatibility/asar-compatibility-profile.ts
+var ASAR_COMPAT_NO_OP_DIRECTIVES = [
+  "fastrom",
+  "dpbase",
+  "warnings",
+  "print",
+  "warn",
+  "autoclean",
+  "autoclear",
+  "includefrom",
+  "asar",
+  "reset",
+  "{",
+  "}"
+];
+var assertMapperAvailable = (inSpcblock) => {
+  if (inSpcblock) {
+    throw new Error("Mapper directives are unavailable inside spcblock.");
+  }
+};
+var applyMapperSelection = (state, mapper) => {
+  state.mapper = mapper;
+  if (mapper === "norom") {
+    state.checksumEnabled = false;
+  }
+};
+var isFreespaceAvailable = (mapper) => mapper !== "norom";
+var encodeSuperFxMoveShortAddress = (addrVal, mode = "hardware") => {
+  if (mode === "asar") {
+    return addrVal & 255;
+  }
+  return addrVal >> 1 & 255;
+};
+var getChecksumHeaderOffset = (mapper) => {
+  if (mapper === "lorom" || mapper === "sa1rom" || mapper === "bigsa1rom") {
+    return 32704;
+  }
+  return 65472;
+};
+var calculateHeaderChecksum = (romdata, mode) => {
+  const romLength = romdata.length;
+  if (romLength === 0) {
+    return 0;
+  }
+  let checksum = 0;
+  if (mode === "simple" || (romLength & romLength - 1) === 0) {
+    for (let i = 0; i < romLength; i++) {
+      checksum += romdata[i] & 255;
+    }
+    return checksum & 65535;
+  }
+  let bitround = 1;
+  while (bitround < romLength) {
+    bitround <<= 1;
+  }
+  const firstPart = bitround >> 1;
+  const secondPart = romLength - firstPart;
+  const repeatCount = Math.floor(firstPart / secondPart);
+  let secondPartSum = 0;
+  for (let i = 0; i < firstPart; i++) {
+    checksum += romdata[i] & 255;
+  }
+  for (let i = firstPart; i < romLength; i++) {
+    secondPartSum += romdata[i] & 255;
+  }
+  return checksum + secondPartSum * repeatCount & 65535;
+};
+var shouldRedirectOrgToSpcblock = (spcInlineCompatMode) => spcInlineCompatMode;
+var shouldEnableSpcInlineCompat = (architecture) => architecture === "spc700-inline";
+var shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
+var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
+var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
+
 // src/directives/layout.ts
 var handlePushBase = ({ session }) => {
   session.pushBaseStack.push(session.currentTargetAddress);
@@ -13675,7 +13673,7 @@ var handlePullBase = ({ session }) => {
   session.currentTargetAddress = baseAddress;
 };
 var handleArch = ({ session }, words) => {
-  if (session.inSpcblock) {
+  if (session.inTargetBlock) {
     throw new Error("ARCH is unavailable inside spcblock.");
   }
   if (!words[1]) {
@@ -13686,17 +13684,17 @@ var handleArch = ({ session }, words) => {
   if (!canonical2) {
     if (session.selectArchitecture) {
       session.selectArchitecture(archParam, archParam);
-      session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+      session.targetBlockInlineCompatibility = shouldEnableSpcInlineCompat(archParam);
       if (shouldUseNoromAddressing(archParam)) {
-        applyMapperSelection(session, "norom");
+        applyMapperSelection(session.targetState, "norom");
       }
       return;
     }
     throw new Error("Unsupported architecture: " + archParam);
   }
-  if (!session.selectArchitecture && session.targetProfile && !session.targetProfile.architectures.has(canonical2)) {
+  if (!session.selectArchitecture && session.availableArchitectures && !session.availableArchitectures.has(canonical2)) {
     throw new Error(
-      `Architecture ${canonical2} is unavailable for target ${session.targetProfile.name}.`
+      `Architecture ${canonical2} is unavailable for target ${session.targetDisplayName ?? "active target"}.`
     );
   }
   if (session.selectArchitecture) {
@@ -13704,20 +13702,20 @@ var handleArch = ({ session }, words) => {
   } else {
     session.arch = canonical2;
   }
-  session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+  session.targetBlockInlineCompatibility = shouldEnableSpcInlineCompat(archParam);
   if (shouldUseNoromAddressing(archParam)) {
-    applyMapperSelection(session, "norom");
+    applyMapperSelection(session.targetState, "norom");
   }
 };
 var handleStartpos = ({ session, operandResolver }, words) => {
   const params = words.slice(1);
-  if (!session.inSpcblock || !session.spcblockData) {
+  if (!session.inTargetBlock || !session.targetBlockData) {
     throw new Error("startpos used without an active spcblock.");
   }
   if (params.length !== 1) {
     throw new Error("startpos requires exactly one parameter.");
   }
-  session.spcblockData.executeAddress = operandResolver.getnum(session.resolvedefines(params[0])) & 65535;
+  session.targetBlockData.executeAddress = operandResolver.getnum(session.resolvedefines(params[0])) & 65535;
 };
 var registerGenericLayoutDirectives = (registry, context) => {
   registry.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
@@ -13733,7 +13731,7 @@ var registerGenericLayoutDirectives = (registry, context) => {
       return;
     }
     const value = operandResolver.getnum(param);
-    const addressWidth = session.targetProfile?.addressSpace.addressWidth ?? 24;
+    const addressWidth = session.addressWidth;
     const maxAddress = 2 ** addressWidth - 1;
     if (value < 0 || value > maxAddress) {
       throw new Error(`Invalid base address: ${param}. Must be within ${addressWidth} bits.`);
@@ -13741,12 +13739,12 @@ var registerGenericLayoutDirectives = (registry, context) => {
     session.currentTargetAddress = value;
     session.currentTargetStartAddress = value;
   });
-  registry.registerLowered("org", context.org, ({ session, runtime }, words) => {
-    if (session.inSpcblock) {
+  registry.registerLowered("org", context.org, ({ session, runtime, spcRuntime }, words) => {
+    if (session.inTargetBlock) {
       throw new Error("ORG is unavailable inside spcblock.");
     }
-    if (shouldRedirectOrgToSpcblock(session.spcInlineCompatMode)) {
-      runtime.handleSpcblock(["spcblock", ...words.slice(1)]);
+    if (shouldRedirectOrgToSpcblock(session.targetBlockInlineCompatibility)) {
+      spcRuntime.handleSpcblock(["spcblock", ...words.slice(1)]);
       return;
     }
     runtime.handleOrg(words.slice(1));
@@ -13763,8 +13761,8 @@ var registerGenericLayoutDirectives = (registry, context) => {
 };
 var registerSnesMapperDirectives = (registry, context) => {
   const registerMapper = (keyword, mapper) => registry.registerLowered(keyword, context.mapper, ({ session }) => {
-    assertMapperAvailable(session.inSpcblock);
-    applyMapperSelection(session, mapper);
+    assertMapperAvailable(session.inTargetBlock);
+    applyMapperSelection(session.targetState, mapper);
   });
   registerMapper("lorom", "lorom");
   registerMapper("hirom", "hirom");
@@ -13774,25 +13772,25 @@ var registerSnesMapperDirectives = (registry, context) => {
   registerMapper("norom", "norom");
   registerMapper("fullsa1rom", "bigsa1rom");
   registry.registerLowered("sa1rom", context.mapper, ({ session }, words) => {
-    assertMapperAvailable(session.inSpcblock);
+    assertMapperAvailable(session.inTargetBlock);
     if (words.length > 1) {
       const parts = words[1].split(",");
       if (parts.length !== 4) {
         throw new Error("Invalid SA1ROM mapper specification. Expected 4 comma-separated values.");
       }
-      session.sa1banks = [];
-      session.sa1banks[0] = parseInt(parts[0], 10) << 20;
-      session.sa1banks[1] = parseInt(parts[1], 10) << 20;
-      session.sa1banks[4] = parseInt(parts[2], 10) << 20;
-      session.sa1banks[5] = parseInt(parts[3], 10) << 20;
+      session.targetState.sa1Banks = [];
+      session.targetState.sa1Banks[0] = parseInt(parts[0], 10) << 20;
+      session.targetState.sa1Banks[1] = parseInt(parts[1], 10) << 20;
+      session.targetState.sa1Banks[4] = parseInt(parts[2], 10) << 20;
+      session.targetState.sa1Banks[5] = parseInt(parts[3], 10) << 20;
     } else {
-      session.sa1banks = [];
-      session.sa1banks[0] = 0 << 20;
-      session.sa1banks[1] = 1 << 20;
-      session.sa1banks[4] = 2 << 20;
-      session.sa1banks[5] = 3 << 20;
+      session.targetState.sa1Banks = [];
+      session.targetState.sa1Banks[0] = 0 << 20;
+      session.targetState.sa1Banks[1] = 1 << 20;
+      session.targetState.sa1Banks[4] = 2 << 20;
+      session.targetState.sa1Banks[5] = 3 << 20;
     }
-    applyMapperSelection(session, "sa1rom");
+    applyMapperSelection(session.targetState, "sa1rom");
   });
 };
 var registerSpcLayoutDirectives = (registry, context) => {
@@ -13801,7 +13799,7 @@ var registerSpcLayoutDirectives = (registry, context) => {
 var registerSnesPolicyDirectives = (registry, context) => {
   registry.registerLowered("check", context.policy, ({ session }, words) => {
     if (words.length >= 2 && words[1].toLowerCase() === "title") {
-      session.readFunctionsEnabled = true;
+      session.targetState.readFunctionsEnabled = true;
       return;
     }
     if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
@@ -13809,11 +13807,11 @@ var registerSnesPolicyDirectives = (registry, context) => {
     }
     const mode = words[2].toLowerCase();
     if (mode === "off") {
-      session.bankCrossCheckMode = "off";
+      session.targetState.bankCrossMode = "off";
     } else if (mode === "half") {
-      session.bankCrossCheckMode = "half";
+      session.targetState.bankCrossMode = "half";
     } else if (mode === "full" || mode === "on") {
-      session.bankCrossCheckMode = "full";
+      session.targetState.bankCrossMode = "full";
     } else {
       throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
     }
@@ -13822,9 +13820,9 @@ var registerSnesPolicyDirectives = (registry, context) => {
     if (words.length >= 3 && words[1].toLowerCase() === "dp") {
       const mode = words[2].toLowerCase();
       if (mode === "none") {
-        session.optimizeDirectPage = false;
+        session.targetState.optimizeDirectPage = false;
       } else if (mode === "ram" || mode === "always") {
-        session.optimizeDirectPage = true;
+        session.targetState.optimizeDirectPage = true;
       }
     }
   });
@@ -13844,18 +13842,18 @@ var registerLayoutDirectives = (registry, context, activeSetIds = ALL_LEGACY_TAR
 
 // src/directives/memory.ts
 var handleFreespace = ({ session }, words) => {
-  if (session.inSpcblock) {
+  if (session.inTargetBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
   }
-  if (!isFreespaceAvailable(session.mapper)) {
+  if (!isFreespaceAvailable(session.targetState.mapper)) {
     throw new Error("No freespace available in norom.");
   }
-  const sourceLen = session.targetRom && session.targetRom.length > 0 ? session.targetRom.length : session.romdata.length;
+  const sourceLen = session.baseImage && session.baseImage.length > 0 ? session.baseImage.length : session.outputBytes.length;
   const startPc = Math.max(524288, sourceLen);
-  if (session.romdata.length < 1048576) {
-    session.expandRom(1048576, session.defaultFreespaceByte);
+  if (session.outputBytes.length < 1048576) {
+    session.expandOutput(1048576, session.outputFillByte);
   }
-  const startSnes = session.romWriter.pctosnes(startPc);
+  const startSnes = session.outputWriter.fromOutputOffset(startPc);
   if (startSnes < 0) {
     throw new Error("Unable to map freespace start to SNES address.");
   }
@@ -13863,7 +13861,7 @@ var handleFreespace = ({ session }, words) => {
   session.currentTargetBaseAddress = startSnes;
   session.currentTargetStartAddress = startSnes;
   session.currentTargetBaseStartAddress = startSnes;
-  session.activeFreespaceStartPc = startPc;
+  session.activeAllocationStartOffset = startPc;
   session.write1(83);
   session.write1(84);
   session.write1(65);
@@ -13872,7 +13870,7 @@ var handleFreespace = ({ session }, words) => {
   session.write1(0);
   session.write1(255);
   session.write1(255);
-  session.activeFreespaceContentStartPc = startPc + 8;
+  session.activeAllocationContentStartOffset = startPc + 8;
 };
 var handleFreespaceByte = ({ session, operandResolver }, words) => {
   const params = words.slice(1);
@@ -13880,7 +13878,7 @@ var handleFreespaceByte = ({ session, operandResolver }, words) => {
     throw new Error("FREESPACEBYTE requires exactly one parameter.");
   }
   const value = session.resolvedefines(params[0]);
-  session.defaultFreespaceByte = operandResolver.getnum(value) & 255;
+  session.outputFillByte = operandResolver.getnum(value) & 255;
 };
 var handleProt = ({ session }, words) => {
   const labelList = words.slice(1);
@@ -14329,7 +14327,7 @@ var handlePullNamespace = ({ session }) => {
   session.currentNamespace = session.namespaceStack.pop() ?? "";
 };
 var handleNamespace = ({ session }, words) => {
-  if (session.inSpcblock) {
+  if (session.inTargetBlock) {
     throw new Error("NAMESPACE is unavailable inside spcblock.");
   }
   const params = words.slice(1);
@@ -14896,99 +14894,6 @@ var DirectiveRuntimeService = class {
     );
   }
   /**
-   * Handles the `spcblock` directive.
-   * @param {string[]} words The directive words.
-   */
-  handleSpcblock(words) {
-    if (words.length < 2) {
-      throw new Error("spcblock requires at least a destination address.");
-    }
-    if (words.length > 4) {
-      throw new Error("spcblock has too many arguments.");
-    }
-    if (this.host.inSpcblock) {
-      throw new Error("Nested spcblock directives are not supported.");
-    }
-    const destination = this.host.operandResolver.getnum(this.host.resolvedefines(words[1]));
-    if ((destination & ~65535) !== 0) {
-      throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
-    }
-    let type = "nspc";
-    if (words.length === 3) {
-      const kind = words[2].toLowerCase();
-      if (kind === "nspc") {
-        type = "nspc";
-      } else if (kind === "custom") {
-        throw new Error("Custom spcblock mode requires a macro and is not implemented.");
-      } else {
-        throw new Error(`Unknown spcblock type: ${words[2]}`);
-      }
-    } else if (words.length === 4) {
-      const kind = words[2].toLowerCase();
-      if (kind !== "custom") {
-        throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
-      }
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-    if (type !== "nspc") {
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-    const sizeAddress = this.host.currentTargetBaseAddress;
-    this.host.write2(0);
-    this.host.write2(destination);
-    this.host.currentTargetAddress = destination;
-    this.host.currentTargetStartAddress = destination;
-    this.host.spcblockData = {
-      destination,
-      type,
-      sizeAddress,
-      executeAddress: null,
-      namespaceBackup: this.host.currentNamespace
-    };
-    this.host.currentNamespace = `:SPCBLOCK:_${this.host.currentNamespace}`;
-    this.host.inSpcblock = true;
-  }
-  /**
-   * Handles the `endspcblock` directive.
-   * @param {string[]} words The directive words.
-   */
-  handleEndSpcblock(words) {
-    if (!this.host.inSpcblock || !this.host.spcblockData) {
-      throw new Error("endspcblock used without an active spcblock.");
-    }
-    if (this.host.spcblockData.type !== "nspc") {
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-    if (this.host.canFinalize) {
-      const sizePc = this.host.romWriter.convertTargetAddressToRomOffset(
-        this.host.spcblockData.sizeAddress & 16777215
-      );
-      if (sizePc < 0) {
-        throw new Error("spcblock size address does not map to ROM.");
-      }
-      const blockSize = this.host.currentTargetAddress - this.host.spcblockData.destination & 65535;
-      this.host.writeDataBytes(sizePc, blockSize & 255, 1);
-      this.host.writeDataBytes(sizePc + 1, blockSize >> 8 & 255, 1);
-    }
-    if (words.length === 3) {
-      if (words[1].toLowerCase() !== "execute") {
-        throw new Error(`Invalid endspcblock argument: ${words[1]}`);
-      }
-      this.host.write2(0);
-      this.host.write2(
-        this.host.operandResolver.getnum(this.host.resolvedefines(words[2])) & 65535
-      );
-    } else if (words.length !== 1) {
-      throw new Error("Unknown endspcblock format.");
-    } else if (this.host.spcblockData.executeAddress !== null) {
-      this.host.write2(0);
-      this.host.write2(this.host.spcblockData.executeAddress & 65535);
-    }
-    this.host.currentNamespace = this.host.spcblockData.namespaceBackup;
-    this.host.spcblockData = null;
-    this.host.inSpcblock = false;
-  }
-  /**
    * Handles `org`.
    * @param {string[]} params The directive parameters.
    */
@@ -15009,7 +14914,7 @@ var DirectiveRuntimeService = class {
         throw new Error(`Invalid ORG address: ${params[0]}`);
       }
     }
-    const maxAddress = 2 ** this.host.targetProfile.addressSpace.addressWidth - 1;
+    const maxAddress = 2 ** this.host.addressWidth - 1;
     if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
       throw new Error(`Invalid ORG address: ${params[0]}`);
     }
@@ -16660,14 +16565,14 @@ var MacroEngine = class {
   }
 };
 
-// src/services/rom-writer-service.ts
-var RomWriterService = class {
+// src/services/output-writer-service.ts
+var OutputWriterService = class {
   constructor(host) {
     this.host = host;
   }
   host;
   /**
-   * Steps the SNES position.
+   * Advances the logical write position.
    * @param {number} num The number of bytes to step.
    */
   step(num) {
@@ -16677,94 +16582,86 @@ var RomWriterService = class {
     if (num < 0) {
       throw new Error("step num is negative");
     }
-    this.host.currentTargetAddress = this.host.targetProfile.addressSpace.advance(
+    this.host.currentTargetAddress = this.host.pluginAddressSpace.advance(
       this.host.currentTargetAddress,
-      num,
-      this.host
+      num
     );
-    this.host.currentTargetBaseAddress = this.host.targetProfile.addressSpace.advance(
+    this.host.currentTargetBaseAddress = this.host.pluginAddressSpace.advance(
       this.host.currentTargetBaseAddress,
-      num,
-      this.host
+      num
     );
     this.host.syncWriteStarts();
     this.host.incrementBytesWritten(num);
   }
   /**
-   * Writes a single byte at the current position using 65816/ROM addressing.
+   * Writes a single byte at the current logical position.
    * @param {number} num The value to write.
    */
   write1(num) {
     if (Number.isNaN(num)) {
-      throw new Error("write1_65816 num is NaN");
+      throw new Error("write1 value is NaN");
     }
-    this.verifysnespos();
-    const newPos = this.host.targetProfile.addressSpace.normalizeForWrite(
-      this.host.currentTargetBaseAddress,
-      this.host
+    this.verifyLogicalPosition();
+    const newPos = this.host.pluginAddressSpace.normalizeForWrite(
+      this.host.currentTargetBaseAddress
     );
-    const addressWidth = this.host.targetProfile.addressSpace.addressWidth;
+    const addressWidth = this.host.pluginAddressSpace.addressWidth;
     const logicalMask = addressWidth < 32 ? 2 ** addressWidth - 1 : 4294967295;
     const logicalAddress = newPos & logicalMask;
     this.host.beforeWrite?.(logicalAddress, 1);
-    const pcpos = this.convertTargetAddressToRomOffset(logicalAddress);
-    if (pcpos < 0 && this.host.targetProfile.addressSpace.unmappedWriteBehavior === "throw") {
-      throw new Error(
-        `Address $${newPos.toString(16).toUpperCase()} does not map to ${this.host.targetProfile.addressSpace.name} output.`
-      );
-    }
+    const outputOffset = this.toOutputOffset(logicalAddress);
     this.host.traceWrite?.({
       stage: this.host.traceStage,
-      arch: this.host.inSpcblock ? "spc700" : this.host.arch,
+      arch: this.host.arch,
       file: "",
       line: 0,
       raw: "",
       normalized: "",
-      snesAddress: logicalAddress,
-      pcAddress: pcpos,
+      logicalAddress,
+      outputOffset,
       value: num & 255
     });
-    if (pcpos < 0) {
+    if (outputOffset < 0) {
       this.step(1);
       return;
     }
     if (this.host.canEmitBytes) {
-      if (pcpos >= this.host.romdata.length && pcpos - this.host.romdata.length > 0) {
-        this.host.fillRomData(
-          this.host.romdata.length,
-          this.host.defaultFreespaceByte,
-          pcpos - this.host.romdata.length
+      if (outputOffset >= this.host.outputBytes.length && outputOffset - this.host.outputBytes.length > 0) {
+        this.host.fillOutputBytes(
+          this.host.outputBytes.length,
+          this.host.outputFillByte,
+          outputOffset - this.host.outputBytes.length
         );
       }
-      this.host.romdata[pcpos] = num & 255;
+      this.host.outputBytes[outputOffset] = num & 255;
     }
     this.step(1);
   }
   /**
-   * Writes a 16-bit value to the ROM.
+   * Writes a 16-bit value to output.
    * @param {number} num The value to write.
    */
   write2(num) {
-    this.assertBankCrossAllowed(2);
+    this.validateWrite(2);
     this.write1(num & 255);
     this.write1(num >> 8 & 255);
   }
   /**
-   * Writes a 24-bit value to the ROM.
+   * Writes a 24-bit value to output.
    * @param {number} num The value to write.
    */
   write3(num) {
-    this.assertBankCrossAllowed(3);
+    this.validateWrite(3);
     this.write1(num & 255);
     this.write1(num >> 8 & 255);
     this.write1(num >> 16 & 255);
   }
   /**
-   * Writes a 32-bit value to the ROM.
+   * Writes a 32-bit value to output.
    * @param {number} num The value to write.
    */
   write4(num) {
-    this.assertBankCrossAllowed(4);
+    this.validateWrite(4);
     this.write1(num & 255);
     this.write1(num >> 8 & 255);
     this.write1(num >> 16 & 255);
@@ -16780,7 +16677,7 @@ var RomWriterService = class {
     if (!Number.isInteger(width) || width < 1) {
       throw new Error(`Invalid write width: ${width}`);
     }
-    this.assertBankCrossAllowed(width);
+    this.validateWrite(width);
     for (let index2 = 0; index2 < width; index2++) {
       const shift = endianness === "little" ? index2 : width - index2 - 1;
       this.write1(num >> shift * 8 & 255);
@@ -16791,96 +16688,148 @@ var RomWriterService = class {
    * @param {readonly number[]} values Bytes to write.
    */
   writeBytes(values) {
-    this.assertBankCrossAllowed(values.length);
+    this.validateWrite(values.length);
     for (const value of values) {
       this.write1(value);
     }
   }
   /**
-   * Asserts that bank cross is allowed.
+   * Runs active address-space and lifecycle validation for a write.
    * @param {number} length The length of the value to write.
    */
-  assertBankCrossAllowed(length) {
-    if (this.host.bankCrossCheckMode === "off" || length <= 1) {
-      return;
-    }
-    const start = this.host.currentTargetBaseAddress & 16777215;
-    const end = start + length - 1 & 16777215;
-    const mask = this.host.bankCrossCheckMode === "half" ? 2147450880 : 2147418112;
-    if (((start ^ end) & mask) !== 0) {
-      const errorAddr = start + length & 16777215;
-      throw new Error(
-        `Ebank_border_crossed: A bank border was crossed, SNES address $${errorAddr.toString(16).toUpperCase().padStart(6, "0")}.`
-      );
-    }
+  validateWrite(length) {
+    this.host.beforeWrite?.(this.host.currentTargetBaseAddress, length);
   }
   /**
    * Finishes the pass.
    */
   finishPass() {
-    if (shouldAutoCloseSpcblock(this.host.spcInlineCompatMode, this.host.inSpcblock)) {
-      this.host.directiveRuntime.handleEndSpcblock(["endspcblock", "execute", "0"]);
-    }
-    if (this.host.inSpcblock) {
-      throw new Error("Missing endspcblock before end of pass.");
-    }
-    if (this.host.canFinalize && this.host.activeFreespaceStartPc !== null && this.host.activeFreespaceContentStartPc !== null) {
-      const contentEndPc = this.convertTargetAddressToRomOffset(this.host.currentTargetBaseAddress & 16777215) - 1;
-      if (contentEndPc >= this.host.activeFreespaceContentStartPc) {
-        const contentLen = contentEndPc - this.host.activeFreespaceContentStartPc + 1;
-        const ratsLenMinusOne = Math.max(0, contentLen - 1) & 65535;
-        const ratsComp = ~ratsLenMinusOne & 65535;
-        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 4, ratsLenMinusOne & 255, 1);
-        this.host.writeDataBytes(
-          this.host.activeFreespaceStartPc + 5,
-          ratsLenMinusOne >> 8 & 255,
-          1
-        );
-        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 6, ratsComp & 255, 1);
-        this.host.writeDataBytes(this.host.activeFreespaceStartPc + 7, ratsComp >> 8 & 255, 1);
-      }
-    }
     if (this.host.canFinalize) {
-      this.host.targetProfile.outputFormat.finalize({
-        canFinalize: true,
-        checksumFixEnabled: this.host.checksumFixEnabled,
-        bytes: this.host.romdata,
-        updateChecksum: () => this.host.updateHeaderAndCRC32()
+      this.host.pluginOutputFormat.finalize({
+        state: this.host.pluginState,
+        outputBytes: this.host.outputBytes
       });
     }
   }
   /**
-   * Converts a SNES address to a PC offset.
-   * @param {number} addr The SNES address to convert.
-   * @returns {number} The PC offset.
+   * Converts a logical address to an output offset.
+   * @param {number} addr The logical address.
+   * @returns {number} The mapped output offset.
    */
-  convertTargetAddressToRomOffset(addr) {
-    return this.host.targetProfile.addressSpace.toOutputOffset(addr, this.host);
+  toOutputOffset(addr) {
+    return this.host.pluginAddressSpace.toOutputOffset(addr);
   }
   /**
-   * Converts a PC offset to a SNES address.
-   * @param {number} addr The PC offset to convert.
-   * @returns {number} The SNES address.
+   * Converts an output offset to a logical address.
+   * @param {number} addr The output offset.
+   * @returns {number} The mapped logical address.
    */
-  pctosnes(addr) {
-    return this.host.targetProfile.addressSpace.fromOutputOffset(addr, this.host);
+  fromOutputOffset(addr) {
+    return this.host.pluginAddressSpace.fromOutputOffset(addr);
   }
   /**
-   * Verifies the SNES position.
+   * Verifies the logical position.
    */
-  verifysnespos() {
+  verifyLogicalPosition() {
     if (this.host.currentTargetAddress < 0 || this.host.currentTargetBaseAddress < 0) {
-      this.host.setWritePosition(this.host.targetProfile.addressSpace.defaultOrigin);
+      this.host.setWritePosition(this.host.pluginAddressSpace.defaultOrigin);
     }
   }
   /**
-   * Fixes the SNES position.
-   * @param {number} inaddr The address to fix.
+   * Advances and normalizes a logical position.
+   * @param {number} inaddr The logical address to advance.
    * @param {number} step The number of bytes to step.
    * @returns {number} The fixed address.
    */
-  fixsnespos(inaddr, step = 0) {
-    return this.host.targetProfile.addressSpace.advance(inaddr, step, this.host);
+  advanceLogicalAddress(inaddr, step = 0) {
+    return this.host.pluginAddressSpace.advance(inaddr, step);
+  }
+};
+
+// src/services/legacy-spc-runtime-service.ts
+var LegacySpcRuntimeService = class {
+  constructor(host) {
+    this.host = host;
+  }
+  host;
+  finishPass() {
+    if (shouldAutoCloseSpcblock(this.host.targetBlockInlineCompatibility, this.host.inTargetBlock)) {
+      this.handleEndSpcblock(["endspcblock", "execute", "0"]);
+    }
+    if (this.host.inTargetBlock) {
+      throw new Error("Missing endspcblock before end of pass.");
+    }
+  }
+  handleSpcblock(words) {
+    if (words.length < 2) throw new Error("spcblock requires at least a destination address.");
+    if (words.length > 4) throw new Error("spcblock has too many arguments.");
+    if (this.host.inTargetBlock) throw new Error("Nested spcblock directives are not supported.");
+    const destination = this.host.operandResolver.getnum(this.host.resolvedefines(words[1]));
+    if ((destination & ~65535) !== 0) {
+      throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
+    }
+    let type = "nspc";
+    if (words.length === 3) {
+      const kind = words[2].toLowerCase();
+      if (kind === "nspc") type = "nspc";
+      else if (kind === "custom") {
+        throw new Error("Custom spcblock mode requires a macro and is not implemented.");
+      } else throw new Error(`Unknown spcblock type: ${words[2]}`);
+    } else if (words.length === 4) {
+      if (words[2].toLowerCase() !== "custom") {
+        throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
+      }
+      throw new Error("Custom spcblock mode is not implemented.");
+    }
+    if (type !== "nspc") throw new Error("Custom spcblock mode is not implemented.");
+    const sizeAddress = this.host.currentTargetBaseAddress;
+    this.host.write2(0);
+    this.host.write2(destination);
+    this.host.currentTargetAddress = destination;
+    this.host.currentTargetStartAddress = destination;
+    this.host.targetBlockData = {
+      destination,
+      type,
+      sizeAddress,
+      executeAddress: null,
+      namespaceBackup: this.host.currentNamespace
+    };
+    this.host.currentNamespace = `:SPCBLOCK:_${this.host.currentNamespace}`;
+    this.host.inTargetBlock = true;
+  }
+  handleEndSpcblock(words) {
+    if (!this.host.inTargetBlock || !this.host.targetBlockData) {
+      throw new Error("endspcblock used without an active spcblock.");
+    }
+    if (this.host.targetBlockData.type !== "nspc") {
+      throw new Error("Custom spcblock mode is not implemented.");
+    }
+    if (this.host.canFinalize) {
+      const sizeOffset = this.host.outputWriter.toOutputOffset(
+        this.host.targetBlockData.sizeAddress & 16777215
+      );
+      if (sizeOffset < 0) throw new Error("spcblock size address does not map to output.");
+      const blockSize = this.host.currentTargetAddress - this.host.targetBlockData.destination & 65535;
+      this.host.writeOutputBytes(sizeOffset, blockSize & 255, 1);
+      this.host.writeOutputBytes(sizeOffset + 1, blockSize >> 8 & 255, 1);
+    }
+    if (words.length === 3) {
+      if (words[1].toLowerCase() !== "execute") {
+        throw new Error(`Invalid endspcblock argument: ${words[1]}`);
+      }
+      this.host.write2(0);
+      this.host.write2(
+        this.host.operandResolver.getnum(this.host.resolvedefines(words[2])) & 65535
+      );
+    } else if (words.length !== 1) {
+      throw new Error("Unknown endspcblock format.");
+    } else if (this.host.targetBlockData.executeAddress !== null) {
+      this.host.write2(0);
+      this.host.write2(this.host.targetBlockData.executeAddress & 65535);
+    }
+    this.host.currentNamespace = this.host.targetBlockData.namespaceBackup;
+    this.host.targetBlockData = null;
+    this.host.inTargetBlock = false;
   }
 };
 
@@ -24300,6 +24249,19 @@ var builtInTargetProfiles = new TargetProfileRegistry();
 builtInTargetProfiles.register(snesTargetProfile, ["sfc", "snes-65816"]);
 builtInTargetProfiles.register(mos6502StubTargetProfile, ["6502-stub"]);
 
+// src/plugin/legacy-session-state.ts
+var LEGACY_TARGET_SESSION_STATE_ID = "legacy.target-session-state";
+var legacyTargetSessionStateKey = {
+  id: LEGACY_TARGET_SESSION_STATE_ID
+};
+function cloneLegacyTargetSessionState(value) {
+  return {
+    ...value,
+    sa1Banks: [...value.sa1Banks],
+    spcBlock: value.spcBlock ? { ...value.spcBlock } : null
+  };
+}
+
 // src/plugin/legacy-adapter.ts
 var SNES_TARGET_ID = "snes.sfc";
 var MOS6502_STUB_TARGET_ID = "mos.6502-stub";
@@ -24471,33 +24433,101 @@ function createLegacyAssemblerEnvironment(options = {}) {
     value
   });
   const architectureRecords = architectures.map(own);
+  const sessionStateRecord = own({
+    id: LEGACY_TARGET_SESSION_STATE_ID,
+    create: () => ({
+      mapper: profile.defaultMapper,
+      sa1Banks: [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1],
+      checksumEnabled: profile.checksumFixEnabled,
+      checksumMode: "asar",
+      bankCrossMode: "full",
+      readFunctionsEnabled: false,
+      optimizeDirectPage: false,
+      asarSuperFxMoveShortAddress: false,
+      outputFillByte: 0,
+      activeFreespaceStartOffset: null,
+      activeFreespaceContentStartOffset: null,
+      activeFreespaceEndOffset: null,
+      inSpcBlock: false,
+      spcBlock: null,
+      spcInlineCompatibility: false
+    }),
+    clone: cloneLegacyTargetSessionState,
+    resetForStage: (state) => {
+      state.activeFreespaceStartOffset = null;
+      state.activeFreespaceContentStartOffset = null;
+      state.activeFreespaceEndOffset = null;
+      state.inSpcBlock = false;
+      state.spcBlock = null;
+      state.spcInlineCompatibility = false;
+    }
+  });
   const addressSpaceRecord = own({
     id: addressSpaceId,
-    create: () => ({
-      addressWidth: profile.addressSpace.addressWidth,
-      defaultOrigin: profile.addressSpace.defaultOrigin,
-      normalizeForWrite: (address) => profile.addressSpace.normalizeForWrite(address, {
-        mapper: profile.defaultMapper,
-        sa1banks: []
-      }),
-      advance: (address, amount) => profile.addressSpace.advance(address, amount, {
-        mapper: profile.defaultMapper,
-        sa1banks: []
-      }),
-      toOutputOffset: (address) => profile.addressSpace.toOutputOffset(address, {
-        mapper: profile.defaultMapper,
-        sa1banks: []
-      }),
-      fromOutputOffset: (offset) => profile.addressSpace.fromOutputOffset(offset, {
-        mapper: profile.defaultMapper,
-        sa1banks: []
-      })
-    })
+    create: ({ state }) => {
+      const addressContext = () => {
+        const targetState = state.get(legacyTargetSessionStateKey);
+        return {
+          mapper: targetState.mapper,
+          sa1banks: targetState.sa1Banks,
+          bankCrossCheckMode: targetState.bankCrossMode
+        };
+      };
+      return {
+        addressWidth: profile.addressSpace.addressWidth,
+        defaultOrigin: profile.addressSpace.defaultOrigin,
+        normalizeForWrite: (address) => profile.addressSpace.normalizeForWrite(address, addressContext()),
+        advance: (address, amount) => profile.addressSpace.advance(address, amount, addressContext()),
+        toOutputOffset: (address) => profile.addressSpace.toOutputOffset(address, addressContext()),
+        fromOutputOffset: (offset) => profile.addressSpace.fromOutputOffset(offset, addressContext()),
+        validateWrite: (address, width) => {
+          const targetState = state.get(legacyTargetSessionStateKey);
+          const normalized = profile.addressSpace.normalizeForWrite(address, addressContext());
+          if (profile.addressSpace.toOutputOffset(normalized, addressContext()) < 0 && profile.addressSpace.unmappedWriteBehavior === "throw") {
+            throw new Error(
+              `Logical address $${normalized.toString(16).toUpperCase()} does not map to output.`
+            );
+          }
+          if (targetState.bankCrossMode === "off" || width <= 1) return;
+          const addressMask = 2 ** profile.addressSpace.addressWidth - 1;
+          const start = address & addressMask;
+          const end = start + width - 1 & addressMask;
+          const bankMask = targetState.bankCrossMode === "half" ? 2147450880 : 2147418112;
+          if (((start ^ end) & bankMask) !== 0) {
+            const errorAddress = start + width & addressMask;
+            throw new Error(
+              `Ebank_border_crossed: A bank border was crossed, logical address $${errorAddress.toString(16).toUpperCase().padStart(6, "0")}.`
+            );
+          }
+        }
+      };
+    }
   });
   const outputFormatRecord = own({
     id: outputFormatId,
-    create: () => ({
-      finalize: () => void 0,
+    create: ({ state }) => ({
+      finalize: ({ outputBytes }) => {
+        const targetState = state.get(legacyTargetSessionStateKey);
+        profile.outputFormat.finalize({
+          canFinalize: true,
+          checksumFixEnabled: targetState.checksumEnabled,
+          bytes: outputBytes,
+          updateChecksum: () => {
+            const headerOffset = getChecksumHeaderOffset(targetState.mapper);
+            if (outputBytes.length < headerOffset + 32) return;
+            outputBytes[headerOffset + 28] = 255;
+            outputBytes[headerOffset + 29] = 255;
+            outputBytes[headerOffset + 30] = 0;
+            outputBytes[headerOffset + 31] = 0;
+            const checksum = calculateHeaderChecksum(outputBytes, targetState.checksumMode);
+            const complement = ~checksum & 65535;
+            outputBytes[headerOffset + 28] = complement & 255;
+            outputBytes[headerOffset + 29] = complement >> 8 & 255;
+            outputBytes[headerOffset + 30] = checksum & 255;
+            outputBytes[headerOffset + 31] = checksum >> 8 & 255;
+          }
+        });
+      },
       getOutput: ({ outputBytes }) => profile.outputFormat.getBinaryOutput(outputBytes)
     })
   });
@@ -24539,13 +24569,43 @@ function createLegacyAssemblerEnvironment(options = {}) {
       tooling: directiveCatalog.filter((descriptor) => keywords.has(descriptor.keyword))
     });
   });
-  const lifecycleIds = profile.directiveSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET) ? ["legacy.asar-dialect-lifecycle"] : [];
+  const lifecycleIds = ["legacy.target-lifecycle"];
   const lifecycleRecords = lifecycleIds.map(
     (id) => own({
       id,
-      create: () => ({
-        shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
-      })
+      create: ({ state }) => {
+        return {
+          shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => profile.directiveSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET) ? shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine) : void 0,
+          beforeWrite: ({ logicalAddress, width }) => {
+            const targetState = state.get(legacyTargetSessionStateKey);
+            if (targetState.activeFreespaceStartOffset === null) return;
+            const outputOffset = profile.addressSpace.toOutputOffset(logicalAddress, {
+              mapper: targetState.mapper,
+              sa1banks: targetState.sa1Banks
+            });
+            if (outputOffset < 0) return;
+            const endOffset = outputOffset + width - 1;
+            targetState.activeFreespaceEndOffset = Math.max(
+              targetState.activeFreespaceEndOffset ?? endOffset,
+              endOffset
+            );
+          },
+          beforeOutputFinalize: ({ outputBytes }) => {
+            const targetState = state.get(legacyTargetSessionStateKey);
+            const start = targetState.activeFreespaceStartOffset;
+            const contentStart = targetState.activeFreespaceContentStartOffset;
+            const end = targetState.activeFreespaceEndOffset;
+            if (start === null || contentStart === null || end === null || end < contentStart)
+              return;
+            const lengthMinusOne = Math.max(0, end - contentStart) & 65535;
+            const complement = ~lengthMinusOne & 65535;
+            outputBytes[start + 4] = lengthMinusOne & 255;
+            outputBytes[start + 5] = lengthMinusOne >> 8 & 255;
+            outputBytes[start + 6] = complement & 255;
+            outputBytes[start + 7] = complement >> 8 & 255;
+          }
+        };
+      }
     })
   );
   const targetRecord = own({
@@ -24570,7 +24630,7 @@ function createLegacyAssemblerEnvironment(options = {}) {
         apiVersion: PLUGIN_API_VERSION
       }
     ],
-    sessionStates: [],
+    sessionStates: [sessionStateRecord],
     architectures: architectureRecords,
     addressSpaces: [addressSpaceRecord],
     outputFormats: [outputFormatRecord],
@@ -24612,29 +24672,8 @@ var Assembler = class _Assembler {
   currentTargetBaseStartAddress = 0;
   bytes = 0;
   pushBaseStack = [];
-  /** Possible values: lorom, hirom, exlorom, exhirom, sa1rom, sfxrom, bigsa1rom, norom */
-  mapper = "lorom";
-  /** Disabled after `norom` to match Asar checksum behavior. */
-  checksumFixEnabled = true;
-  /** Header checksum algorithm mode: "asar" (default) or "simple". */
-  checksumMode = "asar";
-  /**
-   * Super FX auto-MOVE short RAM form. Hardware (default) writes `addr >> 1`.
-   * Asar writes `addr & 0xff`; enable to match existing Asar patches.
-   */
-  asarSuperFxMoveShortAddress = false;
-  /** Bank crossing policy controlled by `check bankcross ...`. */
-  bankCrossCheckMode = "full";
-  /** Read* functions are enabled when patch-style title check is active. */
-  readFunctionsEnabled = false;
-  /** Controls direct-page shortening for 65816 when no explicit length is given. */
-  optimizeDirectPage = false;
-  sa1banks = [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1];
-  /** Placeholder for ROM */
-  romdata = [];
-  defaultFreespaceByte = 0;
-  activeFreespaceStartPc = null;
-  activeFreespaceContentStartPc = null;
+  /** Mutable bytes produced by this assembly session. */
+  outputBytes = [];
   whileStatus = [];
   namespaceStack = [];
   currentNamespace = "";
@@ -24679,7 +24718,7 @@ var Assembler = class _Assembler {
   savedPCStack = [];
   /** Initialize fill pattern */
   fillbyte = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-  targetRom;
+  baseImage;
   // Add a static property to hold our CRC table.
   static crcTable = null;
   includedFiles = /* @__PURE__ */ new Map();
@@ -24697,9 +24736,6 @@ var Assembler = class _Assembler {
   // Track the active top-level parent for single-dot labels
   labelParents = /* @__PURE__ */ new Map();
   // Track explicit label ancestry without relying on underscores
-  inSpcblock = false;
-  spcblockData = null;
-  spcInlineCompatMode = false;
   requireStaticLabelLookup = false;
   passProgramCache = /* @__PURE__ */ new Map();
   directiveRegistry;
@@ -24708,6 +24744,7 @@ var Assembler = class _Assembler {
   targetId;
   targetOptions;
   pluginState;
+  hasLegacyTargetState;
   pluginAddressSpace;
   pluginOutputFormat;
   activeLifecycles;
@@ -24735,6 +24772,69 @@ var Assembler = class _Assembler {
   get directiveRuntime() {
     return this.services.directiveRuntime;
   }
+  get spcRuntime() {
+    return this.services.spcRuntime;
+  }
+  get addressWidth() {
+    return this.pluginAddressSpace.addressWidth;
+  }
+  get availableArchitectures() {
+    return new Set(this.environment.getTarget(this.targetId)?.architectures ?? []);
+  }
+  get targetDisplayName() {
+    return this.environment.getTarget(this.targetId)?.displayName ?? this.targetId;
+  }
+  get legacyTargetState() {
+    return this.hasLegacyTargetState ? this.pluginState.get(legacyTargetSessionStateKey) : void 0;
+  }
+  get targetState() {
+    return this.requireLegacyTargetState();
+  }
+  get outputFillByte() {
+    return this.legacyTargetState?.outputFillByte ?? 0;
+  }
+  set outputFillByte(value) {
+    if (this.legacyTargetState) this.legacyTargetState.outputFillByte = value;
+  }
+  get activeAllocationStartOffset() {
+    return this.legacyTargetState?.activeFreespaceStartOffset ?? null;
+  }
+  set activeAllocationStartOffset(value) {
+    this.requireLegacyTargetState().activeFreespaceStartOffset = value;
+  }
+  get activeAllocationContentStartOffset() {
+    return this.legacyTargetState?.activeFreespaceContentStartOffset ?? null;
+  }
+  set activeAllocationContentStartOffset(value) {
+    this.requireLegacyTargetState().activeFreespaceContentStartOffset = value;
+  }
+  get inTargetBlock() {
+    return this.legacyTargetState?.inSpcBlock ?? false;
+  }
+  set inTargetBlock(value) {
+    this.requireLegacyTargetState().inSpcBlock = value;
+  }
+  get targetBlockData() {
+    return this.legacyTargetState?.spcBlock ?? null;
+  }
+  set targetBlockData(value) {
+    this.requireLegacyTargetState().spcBlock = value;
+  }
+  get targetBlockInlineCompatibility() {
+    return this.legacyTargetState?.spcInlineCompatibility ?? false;
+  }
+  set targetBlockInlineCompatibility(value) {
+    this.requireLegacyTargetState().spcInlineCompatibility = value;
+  }
+  requireLegacyTargetState() {
+    if (!this.legacyTargetState) {
+      throw new PluginError(`Target '${this.targetId}' does not provide legacy target state.`, {
+        code: "PLUGIN_CONFIGURATION_INVALID",
+        targetId: this.targetId
+      });
+    }
+    return this.legacyTargetState;
+  }
   get frontEndCommandService() {
     return this.services.frontEndCommandService;
   }
@@ -24747,8 +24847,8 @@ var Assembler = class _Assembler {
   get symbolScope() {
     return this.services.symbolScope;
   }
-  get romWriter() {
-    return this.services.romWriter;
+  get outputWriter() {
+    return this.services.outputWriter;
   }
   get structEngine() {
     return this.services.structEngine;
@@ -25103,23 +25203,25 @@ var Assembler = class _Assembler {
       target: this.targetId,
       architecture: this.arch,
       targetOptions: this.targetOptions,
-      baseImage: this.targetRom,
+      baseImage: this.baseImage,
       fileProvider: this.fileProvider
     });
     session.includePaths = [...this.includePaths];
-    session.mapper = this.mapper;
-    session.checksumFixEnabled = this.checksumFixEnabled;
-    session.checksumMode = this.checksumMode;
-    session.asarSuperFxMoveShortAddress = this.asarSuperFxMoveShortAddress;
-    session.bankCrossCheckMode = this.bankCrossCheckMode;
-    session.readFunctionsEnabled = this.readFunctionsEnabled;
-    session.optimizeDirectPage = this.optimizeDirectPage;
-    session.defaultFreespaceByte = this.defaultFreespaceByte;
+    if (this.legacyTargetState && session.legacyTargetState) {
+      session.legacyTargetState.mapper = this.legacyTargetState.mapper;
+      session.legacyTargetState.checksumEnabled = this.legacyTargetState.checksumEnabled;
+      session.legacyTargetState.checksumMode = this.legacyTargetState.checksumMode;
+      session.legacyTargetState.asarSuperFxMoveShortAddress = this.legacyTargetState.asarSuperFxMoveShortAddress;
+      session.legacyTargetState.bankCrossMode = this.legacyTargetState.bankCrossMode;
+      session.legacyTargetState.readFunctionsEnabled = this.legacyTargetState.readFunctionsEnabled;
+      session.legacyTargetState.optimizeDirectPage = this.legacyTargetState.optimizeDirectPage;
+      session.legacyTargetState.outputFillByte = this.legacyTargetState.outputFillByte;
+      session.legacyTargetState.sa1Banks = [...this.legacyTargetState.sa1Banks];
+    }
     session.padbyte = [...this.padbyte];
     session.fillbyte = [...this.fillbyte];
     session.padUnit = this.padUnit;
     session.arch = this.arch;
-    session.sa1banks = [...this.sa1banks];
     return session;
   }
   /**
@@ -25147,14 +25249,14 @@ var Assembler = class _Assembler {
           architecture: { session },
           base: { session, operandResolver },
           mapper: { session },
-          org: { session, runtime },
+          org: { session, runtime, spcRuntime: session.spcRuntime },
           policy: { session },
           runtime: { runtime },
           startpos: { session, operandResolver }
         },
         memory: { session, operandResolver },
         namespace: { session },
-        spc: { runtime },
+        spc: { runtime: session.spcRuntime },
         struct: { session },
         table: { session },
         diagnostic: { session }
@@ -25274,11 +25376,11 @@ var Assembler = class _Assembler {
    */
   loadTestRomData() {
     const testRomSize = 512 * 1024;
-    if (!this.targetRom || this.targetRom.length === 0) {
+    if (!this.baseImage || this.baseImage.length === 0) {
       return;
     }
-    for (let i = 0; i < Math.min(testRomSize, this.targetRom.length); i++) {
-      this.romdata[i] = this.targetRom[i];
+    for (let i = 0; i < Math.min(testRomSize, this.baseImage.length); i++) {
+      this.outputBytes[i] = this.baseImage[i];
     }
   }
   /**
@@ -25303,7 +25405,8 @@ var Assembler = class _Assembler {
     const frontEndCommandService = new FrontEndCommandService(this);
     const includeSource = new IncludeSourceService(this);
     const symbolScope = new SymbolScopeService(this);
-    const romWriter = new RomWriterService(this);
+    const outputWriter = new OutputWriterService(this);
+    const spcRuntime = new LegacySpcRuntimeService(this);
     const macroEngine = new MacroEngine(this);
     const structEngine = new StructEngine(this);
     return {
@@ -25313,7 +25416,8 @@ var Assembler = class _Assembler {
       frontEndCommandService,
       includeSource,
       macroEngine,
-      romWriter,
+      outputWriter,
+      spcRuntime,
       structEngine,
       symbolScope
     };
@@ -25352,6 +25456,9 @@ var Assembler = class _Assembler {
       targetId,
       targetOptions: this.targetOptions
     });
+    this.hasLegacyTargetState = this.environment.sessionStates.some(
+      (record) => record.contributionId === LEGACY_TARGET_SESSION_STATE_ID
+    );
     const targetFactoryContext = {
       targetId,
       options: this.targetOptions,
@@ -25432,9 +25539,7 @@ var Assembler = class _Assembler {
       );
     }
     this.arch = architectureId;
-    this.mapper = this.targetProfile.defaultMapper;
-    this.checksumFixEnabled = this.targetProfile.checksumFixEnabled;
-    this.targetRom = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
+    this.baseImage = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
     this.fileProvider = options.fileProvider ?? new NodeAssemblyFileProvider();
     this.collectSourceMetadata = options.collectSourceMetadata ?? true;
     this.cursorAddress = this.createCursorAddressFacade();
@@ -25474,12 +25579,12 @@ var Assembler = class _Assembler {
         write2: (value) => this.write2(value),
         write3: (value) => this.write3(value),
         writeByte: (value) => this.write1(value),
-        writeBytes: (values) => this.romWriter.writeBytes(values),
-        writeValue: (value, width, endianness) => this.romWriter.writeValue(value, width, endianness)
+        writeBytes: (values) => this.outputWriter.writeBytes(values),
+        writeValue: (value, width, endianness) => this.outputWriter.writeValue(value, width, endianness)
       },
       sizing: {
         getCurrentAddress: () => this.currentTargetAddress,
-        optimizeDirectPage: () => this.optimizeDirectPage
+        optimizeDirectPage: () => this.legacyTargetState?.optimizeDirectPage ?? false
       },
       branches: {
         enforceResolvedLabels: () => this.enforceResolvedLabels,
@@ -25490,7 +25595,7 @@ var Assembler = class _Assembler {
         error: (message) => new Error(message)
       },
       compatibility: {
-        asarSuperFxMoveShortAddress: () => this.asarSuperFxMoveShortAddress
+        asarSuperFxMoveShortAddress: () => this.legacyTargetState?.asarSuperFxMoveShortAddress ?? false
       }
     };
     this.architectureRegistry = new ArchitectureRegistry();
@@ -25669,14 +25774,14 @@ var Assembler = class _Assembler {
    * @param {"asar" | "simple"} mode The checksum mode to use.
    */
   setChecksumMode(mode) {
-    this.checksumMode = mode;
+    this.requireLegacyTargetState().checksumMode = mode;
   }
   /**
    * Selects Super FX auto-MOVE short-address encoding.
    * @param {boolean} enabled True to match Asar (`addr & 0xff`); false for hardware (`addr >> 1`).
    */
   setAsarSuperFxMoveShortAddress(enabled) {
-    this.asarSuperFxMoveShortAddress = enabled;
+    this.requireLegacyTargetState().asarSuperFxMoveShortAddress = enabled;
   }
   /**
    * Reads little endian.
@@ -25801,7 +25906,7 @@ var Assembler = class _Assembler {
    * @returns {number} The result.
    */
   canReadTargetRom(position, size) {
-    const sourceLength = this.targetRom && this.targetRom.length > 0 ? this.targetRom.length : this.romdata.length;
+    const sourceLength = this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
     return this.canReadByteRange(sourceLength, position, size);
   }
   /**
@@ -25813,13 +25918,13 @@ var Assembler = class _Assembler {
    */
   readTargetRom(position, size, defaultValue) {
     const pos = Math.trunc(position);
-    if (!this.readFunctionsEnabled && defaultValue === void 0) {
+    if (!(this.legacyTargetState?.readFunctionsEnabled ?? false) && defaultValue === void 0) {
       throw new Error(
         `Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`
       );
     }
-    const pcPos = this.romWriter.convertTargetAddressToRomOffset(pos);
-    const source = this.targetRom && this.targetRom.length > 0 ? this.targetRom : this.romdata;
+    const pcPos = this.outputWriter.toOutputOffset(pos);
+    const source = this.baseImage && this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
     if (pcPos < 0) {
       if (defaultValue !== void 0) {
         return defaultValue;
@@ -25902,8 +26007,8 @@ var Assembler = class _Assembler {
                   {
                     state: this.pluginState,
                     addresses: {
-                      toOutputOffset: (address) => this.romWriter.convertTargetAddressToRomOffset(address),
-                      fromOutputOffset: (offset) => this.romWriter.pctosnes(offset)
+                      toOutputOffset: (address) => this.outputWriter.toOutputOffset(address),
+                      fromOutputOffset: (offset) => this.outputWriter.fromOutputOffset(offset)
                     },
                     output: {
                       canRead: (position, size) => this.canReadTargetRom(position, size),
@@ -25929,8 +26034,8 @@ var Assembler = class _Assembler {
   }
   expressionHost = {
     resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
-    convertSnesToPc: (address) => this.romWriter.convertTargetAddressToRomOffset(address),
-    convertPcToSnes: (offset) => this.romWriter.pctosnes(offset),
+    convertSnesToPc: (address) => this.outputWriter.toOutputOffset(address),
+    convertPcToSnes: (offset) => this.outputWriter.fromOutputOffset(offset),
     getCurrentAddress: () => this.currentTargetAddress,
     getCurrentBaseAddress: () => this.currentTargetBaseAddress,
     isDefined: (identifier) => {
@@ -25967,14 +26072,14 @@ var Assembler = class _Assembler {
    * @param {number} num The number of bytes to advance.
    */
   step(num) {
-    this.romWriter.step(num);
+    this.outputWriter.step(num);
   }
   /**
    * Writes a single byte to ROM.
    * @param {number} num - The byte to write.
    */
   write1_65816(num) {
-    this.romWriter.write1(num);
+    this.outputWriter.write1(num);
   }
   /**
    * Fills a section of ROM data with a value.
@@ -25982,10 +26087,10 @@ var Assembler = class _Assembler {
    * @param {number} value The value to fill with.
    * @param {number} length The length of the section to fill.
    */
-  fillRomData(start, value, length) {
-    debug7("fillRomData", start, value, length);
+  fillOutputBytes(start, value, length) {
+    debug7("fillOutputBytes", start, value, length);
     for (let i = 0; i < length; i++) {
-      this.romdata[start + i] = value & 255;
+      this.outputBytes[start + i] = value & 255;
     }
   }
   /**
@@ -26020,13 +26125,6 @@ var Assembler = class _Assembler {
         namespaceNestingPath: this.namespaceNestingPath,
         inMacroExpansion: this.inMacroExpansion,
         macroLabelInstance: this.macroLabelInstance
-      },
-      writeState: {
-        inSpcblock: this.inSpcblock,
-        spcblockData: this.spcblockData,
-        spcInlineCompatMode: this.spcInlineCompatMode,
-        activeFreespaceStartPc: this.activeFreespaceStartPc,
-        activeFreespaceContentStartPc: this.activeFreespaceContentStartPc
       },
       pluginState: this.pluginState.cloneSnapshot(),
       loweredProgram: null
@@ -26127,7 +26225,7 @@ var Assembler = class _Assembler {
    * @returns {{ name: string; definition?: ArchitectureDefinition }} The result.
    */
   resolveActiveArchitecture() {
-    if (this.inSpcblock || this.arch === "spc700") {
+    if (this.inTargetBlock || this.arch === "spc700") {
       return {
         name: "spc700",
         definition: this.architectureRegistry.getDefinition("spc700")
@@ -26158,28 +26256,28 @@ var Assembler = class _Assembler {
    * @param {number} num - The byte to write.
    */
   write1(num) {
-    this.romWriter.write1(num);
+    this.outputWriter.write1(num);
   }
   /**
    * Writes 2.
    * @param {number} num The num.
    */
   write2(num) {
-    this.romWriter.write2(num);
+    this.outputWriter.write2(num);
   }
   /**
    * Writes 3.
    * @param {number} num The num.
    */
   write3(num) {
-    this.romWriter.write3(num);
+    this.outputWriter.write3(num);
   }
   /**
    * Writes 4.
    * @param {number} num The num.
    */
   write4(num) {
-    this.romWriter.write4(num);
+    this.outputWriter.write4(num);
   }
   /**
    * Reads 1, 2, or 3 bytes from ROM.
@@ -26187,11 +26285,11 @@ var Assembler = class _Assembler {
    * @returns {number} The byte read from ROM.
    */
   read1(insnespos) {
-    const addr = this.romWriter.convertTargetAddressToRomOffset(insnespos);
-    if (addr < 0 || addr + 1 > this.romdata.length) {
+    const addr = this.outputWriter.toOutputOffset(insnespos);
+    if (addr < 0 || addr + 1 > this.outputBytes.length) {
       return -1;
     }
-    return this.romdata[addr];
+    return this.outputBytes[addr];
   }
   /**
    * Reads 2.
@@ -26199,11 +26297,11 @@ var Assembler = class _Assembler {
    * @returns {number} The result.
    */
   read2(insnespos) {
-    const addr = this.romWriter.convertTargetAddressToRomOffset(insnespos);
-    if (addr < 0 || addr + 2 > this.romdata.length) {
+    const addr = this.outputWriter.toOutputOffset(insnespos);
+    if (addr < 0 || addr + 2 > this.outputBytes.length) {
       return -1;
     }
-    return this.romdata[addr] | this.romdata[addr + 1] << 8;
+    return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8;
   }
   /**
    * Reads 3.
@@ -26211,11 +26309,11 @@ var Assembler = class _Assembler {
    * @returns {number} The result.
    */
   read3(insnespos) {
-    const addr = this.romWriter.convertTargetAddressToRomOffset(insnespos);
-    if (addr < 0 || addr + 3 > this.romdata.length) {
+    const addr = this.outputWriter.toOutputOffset(insnespos);
+    if (addr < 0 || addr + 3 > this.outputBytes.length) {
       return -1;
     }
-    return this.romdata[addr] | this.romdata[addr + 1] << 8 | this.romdata[addr + 2] << 16;
+    return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8 | this.outputBytes[addr + 2] << 16;
   }
   /**
    * Handles assembleblock.
@@ -26449,8 +26547,8 @@ var Assembler = class _Assembler {
       stage: this.traceStage,
       arch: this.arch,
       ...traceContext,
-      snesAddress: startPC,
-      pcAddress: this.romWriter.convertTargetAddressToRomOffset(startPC)
+      logicalAddress: startPC,
+      outputOffset: this.outputWriter.toOutputOffset(startPC)
     });
     this.traceCommandStack.push(traceContext);
     try {
@@ -26467,10 +26565,10 @@ var Assembler = class _Assembler {
       stage: this.traceStage,
       arch: this.arch,
       ...traceContext,
-      snesAddress: startPC,
-      pcAddress: this.romWriter.convertTargetAddressToRomOffset(startPC),
-      endSnesAddress: endPC,
-      endPcAddress: this.romWriter.convertTargetAddressToRomOffset(endPC),
+      logicalAddress: startPC,
+      outputOffset: this.outputWriter.toOutputOffset(startPC),
+      endLogicalAddress: endPC,
+      endOutputOffset: this.outputWriter.toOutputOffset(endPC),
       bytesWritten: commandSize
     });
     this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
@@ -26975,9 +27073,6 @@ var Assembler = class _Assembler {
     this.includeSource.resetGuards();
     this.inMacroExpansion = false;
     this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
-    this.inSpcblock = false;
-    this.spcblockData = null;
-    this.spcInlineCompatMode = false;
     for (const definition of this.architectureRegistry.definitions.values()) {
       definition.encoder.beginPass?.();
     }
@@ -26992,13 +27087,17 @@ var Assembler = class _Assembler {
    */
   finishPass() {
     const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
+    this.spcRuntime.finishPass();
     if (this.getActiveStageCapabilities().canFinalize) {
       this.runLifecycleHook(
         "beforeOutputFinalize",
-        (lifecycle) => lifecycle.beforeOutputFinalize?.({ state: this.pluginState, outputBytes: this.romdata })
+        (lifecycle) => lifecycle.beforeOutputFinalize?.({
+          state: this.pluginState,
+          outputBytes: this.outputBytes
+        })
       );
     }
-    this.romWriter.finishPass();
+    this.outputWriter.finishPass();
     this.runLifecycleHook(
       "onStageEnd",
       (lifecycle) => lifecycle.onStageEnd?.({ state: this.pluginState, stage })
@@ -27117,13 +27216,6 @@ var Assembler = class _Assembler {
       inMacroExpansion: this.inMacroExpansion,
       macroLabelInstance: this.macroLabelInstance
     };
-    const writeSeed = seed?.writeState ?? {
-      inSpcblock: this.inSpcblock,
-      spcblockData: this.spcblockData,
-      spcInlineCompatMode: this.spcInlineCompatMode,
-      activeFreespaceStartPc: this.activeFreespaceStartPc,
-      activeFreespaceContentStartPc: this.activeFreespaceContentStartPc
-    };
     return {
       ...descriptor,
       cursor: { ...cursorSeed },
@@ -27145,13 +27237,6 @@ var Assembler = class _Assembler {
         namespaceNestingPath: [...controlSeed.namespaceNestingPath],
         inMacroExpansion: controlSeed.inMacroExpansion,
         macroLabelInstance: controlSeed.macroLabelInstance
-      },
-      writeState: {
-        inSpcblock: writeSeed.inSpcblock,
-        spcblockData: writeSeed.spcblockData ? { ...writeSeed.spcblockData } : null,
-        spcInlineCompatMode: writeSeed.spcInlineCompatMode,
-        activeFreespaceStartPc: writeSeed.activeFreespaceStartPc,
-        activeFreespaceContentStartPc: writeSeed.activeFreespaceContentStartPc
       },
       pluginState: this.pluginState.cloneSnapshot(seed?.pluginState),
       loweredProgram: null
@@ -27181,11 +27266,6 @@ var Assembler = class _Assembler {
     this.namespaceNestingPath = stageState.control.namespaceNestingPath;
     this.inMacroExpansion = stageState.control.inMacroExpansion;
     this.macroLabelInstance = stageState.control.macroLabelInstance;
-    this.inSpcblock = stageState.writeState.inSpcblock;
-    this.spcblockData = stageState.writeState.spcblockData;
-    this.spcInlineCompatMode = stageState.writeState.spcInlineCompatMode;
-    this.activeFreespaceStartPc = stageState.writeState.activeFreespaceStartPc;
-    this.activeFreespaceContentStartPc = stageState.writeState.activeFreespaceContentStartPc;
   }
   /**
    * Captures stage execution state.
@@ -27216,13 +27296,6 @@ var Assembler = class _Assembler {
       namespaceNestingPath: this.namespaceNestingPath,
       inMacroExpansion: this.inMacroExpansion,
       macroLabelInstance: this.macroLabelInstance
-    };
-    stageState.writeState = {
-      inSpcblock: this.inSpcblock,
-      spcblockData: this.spcblockData,
-      spcInlineCompatMode: this.spcInlineCompatMode,
-      activeFreespaceStartPc: this.activeFreespaceStartPc,
-      activeFreespaceContentStartPc: this.activeFreespaceContentStartPc
     };
   }
   /**
@@ -27307,84 +27380,67 @@ var Assembler = class _Assembler {
     return program;
   }
   /**
-   * Writes a block of data to ROM.
+   * Writes a repeated byte into the output buffer.
    * @param {number} start The starting address of the block to write.
    * @param {number} value The byte value to write.
    * @param {number} [length] The length of the block to write.
    */
-  writeDataBytes(start, value, length = 1) {
-    debug7("writeDataBytes", { start, value, length });
+  writeOutputBytes(start, value, length = 1) {
+    debug7("writeOutputBytes", { start, value, length });
     if (typeof start !== "number" || typeof value !== "number" || typeof length !== "number") {
-      throw new Error("writeDataBytes requires a number for start, value, and length");
+      throw new Error("writeOutputBytes requires a number for start, value, and length");
     }
     if (value > 255) {
-      debug7("writeDataBytes \u{1F4A5} value must be less than 0xFF", value);
+      debug7("writeOutputBytes \u{1F4A5} value must be less than 0xFF", value);
     }
     debug7(
-      "writeDataBytes before this.romdata.length",
-      this.romdata.length,
+      "writeOutputBytes before this.outputBytes.length",
+      this.outputBytes.length,
       "/",
-      this.romdata.length.toString(16)
+      this.outputBytes.length.toString(16)
     );
     for (let i = 0; i < length; i++) {
-      this.romdata[start + i] = value & 255;
+      this.outputBytes[start + i] = value & 255;
     }
     debug7(
-      "writeDataBytes after this.romdata.length",
-      this.romdata.length,
+      "writeOutputBytes after this.outputBytes.length",
+      this.outputBytes.length,
       "/",
-      this.romdata.length.toString(16)
+      this.outputBytes.length.toString(16)
     );
   }
   /**
-   * Expands ROM size and fills it with a specified byte.
-   * @param {number} newSize The new size of the ROM.
-   * @param {number} fsByte The byte value to fill the ROM with.
+   * Expands the output buffer and fills it with a specified byte.
+   * @param {number} newSize The new output size.
+   * @param {number} fillByte The byte used for the new range.
    */
-  expandRom(newSize, fsByte) {
-    debug7("expandRom", { newSize, fsByte });
-    if (typeof newSize !== "number" || typeof fsByte !== "number") {
-      throw new Error("expandRom requires a number for newSize and fsByte");
+  expandOutput(newSize, fillByte) {
+    debug7("expandOutput", { newSize, fillByte });
+    if (typeof newSize !== "number" || typeof fillByte !== "number") {
+      throw new Error("expandOutput requires a number for newSize and fillByte");
     }
-    if (newSize > this.romdata.length) {
-      this.writeDataBytes(this.romdata.length, fsByte, newSize - this.romdata.length);
+    if (newSize > this.outputBytes.length) {
+      this.writeOutputBytes(this.outputBytes.length, fillByte, newSize - this.outputBytes.length);
     } else {
-      debug7("expandRom newSize <= this.romdata.length, no expansion needed");
+      debug7("expandOutput newSize <= this.outputBytes.length, no expansion needed");
     }
   }
-  /**
-   * Updates the header checksum (16-bit) and CRC32.
-   * For LoROM, the header is at 0x7FC0; for HiROM (and exhirom) at 0xFFC0.
-   */
-  updateHeaderAndCRC32() {
-    debug7("updateHeaderAndCRC32");
-    const headerOffset = getChecksumHeaderOffset(this.mapper);
-    debug7("updateHeaderAndCRC32 headerOffset", headerOffset);
-    if (this.romdata.length < headerOffset + 32) {
-      debug7("ROM too small for header update.");
-      return;
-    }
-    this.romdata[headerOffset + 28] = 255;
-    this.romdata[headerOffset + 29] = 255;
-    this.romdata[headerOffset + 30] = 0;
-    this.romdata[headerOffset + 31] = 0;
-    const checksum = calculateHeaderChecksum(this.romdata, this.checksumMode);
-    const complement = ~checksum & 65535;
-    this.romdata[headerOffset + 28] = complement & 255;
-    this.romdata[headerOffset + 29] = complement >> 8 & 255;
-    this.romdata[headerOffset + 30] = checksum & 255;
-    this.romdata[headerOffset + 31] = checksum >> 8 & 255;
-    const crc32 = CRC32.compute(this.romdata);
-    debug7(
-      `Header updated: Checksum = 0x${checksum.toString(16).toUpperCase()}, Complement = 0x${complement.toString(16).toUpperCase()}, CRC32 = 0x${crc32.toString(16).toUpperCase()}`
-    );
+  /** Runs the active output-format finalizer. */
+  finalizeOutput() {
+    this.pluginOutputFormat.finalize({
+      state: this.pluginState,
+      outputBytes: this.outputBytes
+    });
   }
   /**
    * Returns the compiled binary output.
    * @returns {Uint8Array} The compiled binary output.
    */
   getBinaryOutput = () => {
-    return this.targetProfile.outputFormat.getBinaryOutput(this.romdata);
+    return this.pluginOutputFormat.getOutput({
+      state: this.pluginState,
+      outputBytes: this.outputBytes
+    });
   };
   /**
    * Lowers completed runtime nodes and executes them through the production executor.

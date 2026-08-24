@@ -6,7 +6,8 @@ import type { FrontEndCommandService } from "./services/front-end-command-servic
 import type { AssemblyFileProvider } from "./file-provider.js";
 import type { IncludeSourceService } from "./services/include-source-service.js";
 import type { MacroEngine } from "./services/macro-engine.js";
-import type { RomWriterService } from "./services/rom-writer-service.js";
+import type { OutputWriterService } from "./services/output-writer-service.js";
+import type { LegacySpcRuntimeService } from "./services/legacy-spc-runtime-service.js";
 import type { StructEngine } from "./services/struct-engine.js";
 import type { SymbolScopeService } from "./services/symbol-scope-service.js";
 export type CursorAddressFacade = {
@@ -24,7 +25,8 @@ export type AssemblerServices = {
     includeSource: IncludeSourceService;
     lowering?: CommandLoweringService;
     macroEngine: MacroEngine;
-    romWriter: RomWriterService;
+    outputWriter: OutputWriterService;
+    spcRuntime: LegacySpcRuntimeService;
     structEngine: StructEngine;
     symbolScope: SymbolScopeService;
 };

@@ -54,7 +54,7 @@ export const handleArch = (
   words: readonly string[],
 ): void => {
   // debug("handleArch", words)
-  if (session.inSpcblock) {
+  if (session.inTargetBlock) {
     throw new Error("ARCH is unavailable inside spcblock.");
   }
 
@@ -66,9 +66,9 @@ export const handleArch = (
   if (!canonical) {
     if (session.selectArchitecture) {
       session.selectArchitecture(archParam, archParam);
-      session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+      session.targetBlockInlineCompatibility = shouldEnableSpcInlineCompat(archParam);
       if (shouldUseNoromAddressing(archParam)) {
-        applyMapperSelection(session, "norom");
+        applyMapperSelection(session.targetState, "norom");
       }
       return;
     }
@@ -76,11 +76,11 @@ export const handleArch = (
   }
   if (
     !session.selectArchitecture &&
-    session.targetProfile &&
-    !session.targetProfile.architectures.has(canonical)
+    session.availableArchitectures &&
+    !session.availableArchitectures.has(canonical)
   ) {
     throw new Error(
-      `Architecture ${canonical} is unavailable for target ${session.targetProfile.name}.`,
+      `Architecture ${canonical} is unavailable for target ${session.targetDisplayName ?? "active target"}.`,
     );
   }
   if (session.selectArchitecture) {
@@ -88,11 +88,11 @@ export const handleArch = (
   } else {
     session.arch = canonical;
   }
-  session.spcInlineCompatMode = shouldEnableSpcInlineCompat(archParam);
+  session.targetBlockInlineCompatibility = shouldEnableSpcInlineCompat(archParam);
   if (shouldUseNoromAddressing(archParam)) {
     // `arch spc700-raw` is a 1:1 file image. Lorom/hirom leave `org $000000`
     // unmapped (`(addr & 0x408000) === 0`) and silently drop the writes.
-    applyMapperSelection(session, "norom");
+    applyMapperSelection(session.targetState, "norom");
   }
 };
 
@@ -102,13 +102,13 @@ export const handleStartpos = (
 ): void => {
   const params = words.slice(1);
 
-  if (!session.inSpcblock || !session.spcblockData) {
+  if (!session.inTargetBlock || !session.targetBlockData) {
     throw new Error("startpos used without an active spcblock.");
   }
   if (params.length !== 1) {
     throw new Error("startpos requires exactly one parameter.");
   }
-  session.spcblockData.executeAddress =
+  session.targetBlockData.executeAddress =
     operandResolver.getnum(session.resolvedefines(params[0])) & 0xffff;
 };
 
@@ -131,7 +131,7 @@ export const registerGenericLayoutDirectives = (
     }
 
     const value = operandResolver.getnum(param);
-    const addressWidth = session.targetProfile?.addressSpace.addressWidth ?? 24;
+    const addressWidth = session.addressWidth;
     const maxAddress = 2 ** addressWidth - 1;
     if (value < 0 || value > maxAddress) {
       throw new Error(`Invalid base address: ${param}. Must be within ${addressWidth} bits.`);
@@ -141,13 +141,13 @@ export const registerGenericLayoutDirectives = (
     session.currentTargetStartAddress = value;
   });
 
-  registry.registerLowered("org", context.org, ({ session, runtime }, words) => {
-    if (session.inSpcblock) {
+  registry.registerLowered("org", context.org, ({ session, runtime, spcRuntime }, words) => {
+    if (session.inTargetBlock) {
       throw new Error("ORG is unavailable inside spcblock.");
     }
 
-    if (shouldRedirectOrgToSpcblock(session.spcInlineCompatMode)) {
-      runtime.handleSpcblock(["spcblock", ...words.slice(1)]);
+    if (shouldRedirectOrgToSpcblock(session.targetBlockInlineCompatibility)) {
+      spcRuntime.handleSpcblock(["spcblock", ...words.slice(1)]);
       return;
     }
 
@@ -175,8 +175,8 @@ export const registerSnesMapperDirectives = (
 ): void => {
   const registerMapper = (keyword: string, mapper: string): void =>
     registry.registerLowered(keyword, context.mapper, ({ session }) => {
-      assertMapperAvailable(session.inSpcblock);
-      applyMapperSelection(session, mapper);
+      assertMapperAvailable(session.inTargetBlock);
+      applyMapperSelection(session.targetState, mapper);
     });
 
   registerMapper("lorom", "lorom");
@@ -188,7 +188,7 @@ export const registerSnesMapperDirectives = (
   registerMapper("fullsa1rom", "bigsa1rom");
 
   registry.registerLowered("sa1rom", context.mapper, ({ session }, words) => {
-    assertMapperAvailable(session.inSpcblock);
+    assertMapperAvailable(session.inTargetBlock);
 
     if (words.length > 1) {
       const parts = words[1].split(",");
@@ -196,20 +196,20 @@ export const registerSnesMapperDirectives = (
         throw new Error("Invalid SA1ROM mapper specification. Expected 4 comma-separated values.");
       }
 
-      session.sa1banks = [];
-      session.sa1banks[0] = parseInt(parts[0], 10) << 20;
-      session.sa1banks[1] = parseInt(parts[1], 10) << 20;
-      session.sa1banks[4] = parseInt(parts[2], 10) << 20;
-      session.sa1banks[5] = parseInt(parts[3], 10) << 20;
+      session.targetState.sa1Banks = [];
+      session.targetState.sa1Banks[0] = parseInt(parts[0], 10) << 20;
+      session.targetState.sa1Banks[1] = parseInt(parts[1], 10) << 20;
+      session.targetState.sa1Banks[4] = parseInt(parts[2], 10) << 20;
+      session.targetState.sa1Banks[5] = parseInt(parts[3], 10) << 20;
     } else {
-      session.sa1banks = [];
-      session.sa1banks[0] = 0 << 20;
-      session.sa1banks[1] = 1 << 20;
-      session.sa1banks[4] = 2 << 20;
-      session.sa1banks[5] = 3 << 20;
+      session.targetState.sa1Banks = [];
+      session.targetState.sa1Banks[0] = 0 << 20;
+      session.targetState.sa1Banks[1] = 1 << 20;
+      session.targetState.sa1Banks[4] = 2 << 20;
+      session.targetState.sa1Banks[5] = 3 << 20;
     }
 
-    applyMapperSelection(session, "sa1rom");
+    applyMapperSelection(session.targetState, "sa1rom");
   });
 };
 
@@ -226,7 +226,7 @@ export const registerSnesPolicyDirectives = (
 ): void => {
   registry.registerLowered("check", context.policy, ({ session }, words) => {
     if (words.length >= 2 && words[1].toLowerCase() === "title") {
-      session.readFunctionsEnabled = true;
+      session.targetState.readFunctionsEnabled = true;
       return;
     }
 
@@ -236,11 +236,11 @@ export const registerSnesPolicyDirectives = (
 
     const mode = words[2].toLowerCase();
     if (mode === "off") {
-      session.bankCrossCheckMode = "off";
+      session.targetState.bankCrossMode = "off";
     } else if (mode === "half") {
-      session.bankCrossCheckMode = "half";
+      session.targetState.bankCrossMode = "half";
     } else if (mode === "full" || mode === "on") {
-      session.bankCrossCheckMode = "full";
+      session.targetState.bankCrossMode = "full";
     } else {
       throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
     }
@@ -250,9 +250,9 @@ export const registerSnesPolicyDirectives = (
     if (words.length >= 3 && words[1].toLowerCase() === "dp") {
       const mode = words[2].toLowerCase();
       if (mode === "none") {
-        session.optimizeDirectPage = false;
+        session.targetState.optimizeDirectPage = false;
       } else if (mode === "ram" || mode === "always") {
-        session.optimizeDirectPage = true;
+        session.targetState.optimizeDirectPage = true;
       }
     }
   });

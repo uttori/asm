@@ -139,14 +139,12 @@ export const handlePad = (
     gap = 0x10000 - (session.currentTargetAddress & 0xffff);
   } else if (words.length === 2) {
     const targetSNES = operandResolver.getnum(session.resolvedefines(words[1]));
-    const targetPC = session.romWriter.convertTargetAddressToRomOffset(targetSNES);
+    const targetPC = session.outputWriter.toOutputOffset(targetSNES);
     if (targetPC < 0) {
       throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
     }
 
-    const currentPC = session.romWriter.convertTargetAddressToRomOffset(
-      session.currentTargetAddress,
-    );
+    const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
     if (targetPC <= currentPC) {
       return;
     }

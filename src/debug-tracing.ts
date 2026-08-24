@@ -1,7 +1,7 @@
 import type { AssemblyStageName } from "./plugin/contracts.js";
 
 /**
- * Per-byte write emitted by the ROM writer after the final SNES/PC address has been resolved for the current stage.
+ * Per-byte write emitted after the logical address has been mapped to output.
  */
 export type AssemblerTraceWriteEvent = {
   type: "write";
@@ -11,8 +11,8 @@ export type AssemblerTraceWriteEvent = {
   line: number;
   raw: string;
   normalized: string;
-  snesAddress: number;
-  pcAddress: number;
+  logicalAddress: number;
+  outputOffset: number;
   value: number;
 };
 
@@ -29,10 +29,10 @@ export type AssemblerTraceCommandEvent = {
   line: number;
   raw: string;
   normalized: string;
-  snesAddress: number;
-  pcAddress: number;
-  endSnesAddress?: number;
-  endPcAddress?: number;
+  logicalAddress: number;
+  outputOffset: number;
+  endLogicalAddress?: number;
+  endOutputOffset?: number;
   bytesWritten?: number;
 };
 
@@ -41,7 +41,7 @@ export type AssemblerTraceEvent = AssemblerTraceWriteEvent | AssemblerTraceComma
 export type AssemblerTraceListener = (event: AssemblerTraceEvent) => void;
 
 export type TraceCollectorOptions = {
-  /** Inclusive SNES address range filter. */
+  /** Inclusive logical address range filter. */
   startAddress?: number;
   endAddress?: number;
   /** Substring match against the source file path. */
@@ -58,7 +58,7 @@ const toHex = (value: number, width: number): string =>
   value.toString(16).toUpperCase().padStart(width, "0");
 
 /**
- * Returns `true` when an event overlaps the requested inclusive SNES address range.
+ * Returns `true` when an event overlaps the requested inclusive logical address range.
  * Command-end events use their full start/end span so range filters can catch
  * commands that write through the target window instead of only landing exactly on it.
  * @param {AssemblerTraceEvent} event The trace event to test.
@@ -77,11 +77,11 @@ function eventTouchesRange(
 
   const rangeStart = startAddress ?? Number.MIN_SAFE_INTEGER;
   const rangeEnd = endAddress ?? Number.MAX_SAFE_INTEGER;
-  const eventStart = event.snesAddress;
+  const eventStart = event.logicalAddress;
   const eventEnd =
-    event.type === "command-end" && event.endSnesAddress !== undefined
-      ? event.endSnesAddress
-      : event.snesAddress;
+    event.type === "command-end" && event.endLogicalAddress !== undefined
+      ? event.endLogicalAddress
+      : event.logicalAddress;
   return eventStart <= rangeEnd && eventEnd >= rangeStart;
 }
 
@@ -159,8 +159,8 @@ export function formatTraceEvent(event: AssemblerTraceEvent): string {
     return [
       `stage=${event.stage}`,
       `arch=${event.arch}`,
-      `addr=$${toHex(event.snesAddress, 6)}`,
-      `pc=$${toHex(event.pcAddress >>> 0, 6)}`,
+      `addr=$${toHex(event.logicalAddress, 6)}`,
+      `offset=$${toHex(event.outputOffset >>> 0, 6)}`,
       `value=$${toHex(event.value & 0xff, 2)}`,
       `${event.file}:${event.line}`,
       event.raw,
@@ -169,13 +169,13 @@ export function formatTraceEvent(event: AssemblerTraceEvent): string {
 
   const suffix =
     event.type === "command-end"
-      ? ` end=$${toHex((event.endSnesAddress ?? event.snesAddress) & 0xffffff, 6)} bytes=${event.bytesWritten ?? 0}`
+      ? ` end=$${toHex((event.endLogicalAddress ?? event.logicalAddress) & 0xffffff, 6)} bytes=${event.bytesWritten ?? 0}`
       : "";
   return [
     `stage=${event.stage}`,
     `arch=${event.arch}`,
     event.type,
-    `addr=$${toHex(event.snesAddress & 0xffffff, 6)}`,
+    `addr=$${toHex(event.logicalAddress & 0xffffff, 6)}`,
     `${event.file}:${event.line}`,
     event.raw + suffix,
   ].join(" ");

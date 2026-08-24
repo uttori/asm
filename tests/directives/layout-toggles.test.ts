@@ -10,10 +10,15 @@ import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 
 test("mapper directives apply compatibility policy without an assembler", t => {
   const session = {
-    mapper: "lorom",
-    checksumFixEnabled: true,
-    sa1banks: [] as number[],
-    inSpcblock: false,
+    targetState: {
+      mapper: "lorom",
+      checksumEnabled: true,
+      sa1Banks: [] as number[],
+      readFunctionsEnabled: false,
+      bankCrossMode: "full" as const,
+      optimizeDirectPage: false,
+    },
+    inTargetBlock: false,
   };
   const operandResolver = createOperandResolver();
   const registry = new DirectiveRegistry();
@@ -22,17 +27,17 @@ test("mapper directives apply compatibility policy without an assembler", t => {
     architecture: { session },
     base: { session, operandResolver },
     mapper: { session },
-    org: { session, runtime: runtimeStub },
+    org: { session, runtime: runtimeStub, spcRuntime: runtimeStub as never },
     policy: { session },
     runtime: { runtime: runtimeStub },
     startpos: { session, operandResolver },
   });
 
   registry.dispatch("norom", ["norom"], "norom");
-  t.is(session.mapper, "norom");
-  t.false(session.checksumFixEnabled);
+  t.is(session.targetState.mapper, "norom");
+  t.false(session.targetState.checksumEnabled);
 
-  session.inSpcblock = true;
+  session.inTargetBlock = true;
   t.throws(() => registry.dispatch("hirom", ["hirom"], "hirom"));
 });
 

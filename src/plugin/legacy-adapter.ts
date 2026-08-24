@@ -6,6 +6,8 @@ import type { ArchitectureExtension } from "../architecture-registry.js";
 import type { OperandResolver } from "../operand-resolver.js";
 import {
   ASAR_COMPAT_NO_OP_DIRECTIVES,
+  calculateHeaderChecksum,
+  getChecksumHeaderOffset,
   shouldEndifCloseInnermostWhile,
 } from "../compatibility/asar-compatibility-profile.js";
 import {
@@ -32,8 +34,15 @@ import {
   type ArchitectureContribution,
   type ExpressionSetContribution,
   type LifecycleContribution,
+  type TargetFactoryContext,
 } from "./contracts.js";
 import { AssemblerEnvironment, type EnvironmentContributions } from "./environment.js";
+import {
+  cloneLegacyTargetSessionState,
+  LEGACY_TARGET_SESSION_STATE_ID,
+  legacyTargetSessionStateKey,
+  type LegacyTargetSessionState,
+} from "./legacy-session-state.js";
 
 export const SNES_TARGET_ID = "snes.sfc";
 export const MOS6502_STUB_TARGET_ID = "mos.6502-stub";
@@ -258,37 +267,108 @@ export function createLegacyAssemblerEnvironment(
     value,
   });
   const architectureRecords = architectures.map(own);
+  const sessionStateRecord = own({
+    id: LEGACY_TARGET_SESSION_STATE_ID,
+    create: (): LegacyTargetSessionState => ({
+      mapper: profile.defaultMapper,
+      sa1Banks: [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1],
+      checksumEnabled: profile.checksumFixEnabled,
+      checksumMode: "asar",
+      bankCrossMode: "full",
+      readFunctionsEnabled: false,
+      optimizeDirectPage: false,
+      asarSuperFxMoveShortAddress: false,
+      outputFillByte: 0,
+      activeFreespaceStartOffset: null,
+      activeFreespaceContentStartOffset: null,
+      activeFreespaceEndOffset: null,
+      inSpcBlock: false,
+      spcBlock: null,
+      spcInlineCompatibility: false,
+    }),
+    clone: cloneLegacyTargetSessionState,
+    resetForStage: (state: LegacyTargetSessionState) => {
+      state.activeFreespaceStartOffset = null;
+      state.activeFreespaceContentStartOffset = null;
+      state.activeFreespaceEndOffset = null;
+      state.inSpcBlock = false;
+      state.spcBlock = null;
+      state.spcInlineCompatibility = false;
+    },
+  });
   const addressSpaceRecord = own({
     id: addressSpaceId,
-    create: () => ({
-      addressWidth: profile.addressSpace.addressWidth,
-      defaultOrigin: profile.addressSpace.defaultOrigin,
-      normalizeForWrite: (address: number) =>
-        profile.addressSpace.normalizeForWrite(address, {
-          mapper: profile.defaultMapper,
-          sa1banks: [],
-        }),
-      advance: (address: number, amount: number) =>
-        profile.addressSpace.advance(address, amount, {
-          mapper: profile.defaultMapper,
-          sa1banks: [],
-        }),
-      toOutputOffset: (address: number) =>
-        profile.addressSpace.toOutputOffset(address, {
-          mapper: profile.defaultMapper,
-          sa1banks: [],
-        }),
-      fromOutputOffset: (offset: number) =>
-        profile.addressSpace.fromOutputOffset(offset, {
-          mapper: profile.defaultMapper,
-          sa1banks: [],
-        }),
-    }),
+    create: ({ state }: TargetFactoryContext) => {
+      const addressContext = () => {
+        const targetState = state.get(legacyTargetSessionStateKey);
+        return {
+          mapper: targetState.mapper,
+          sa1banks: targetState.sa1Banks,
+          bankCrossCheckMode: targetState.bankCrossMode,
+        };
+      };
+      return {
+        addressWidth: profile.addressSpace.addressWidth,
+        defaultOrigin: profile.addressSpace.defaultOrigin,
+        normalizeForWrite: (address: number) =>
+          profile.addressSpace.normalizeForWrite(address, addressContext()),
+        advance: (address: number, amount: number) =>
+          profile.addressSpace.advance(address, amount, addressContext()),
+        toOutputOffset: (address: number) =>
+          profile.addressSpace.toOutputOffset(address, addressContext()),
+        fromOutputOffset: (offset: number) =>
+          profile.addressSpace.fromOutputOffset(offset, addressContext()),
+        validateWrite: (address: number, width: number) => {
+          const targetState = state.get(legacyTargetSessionStateKey);
+          const normalized = profile.addressSpace.normalizeForWrite(address, addressContext());
+          if (
+            profile.addressSpace.toOutputOffset(normalized, addressContext()) < 0 &&
+            profile.addressSpace.unmappedWriteBehavior === "throw"
+          ) {
+            throw new Error(
+              `Logical address $${normalized.toString(16).toUpperCase()} does not map to output.`,
+            );
+          }
+          if (targetState.bankCrossMode === "off" || width <= 1) return;
+          const addressMask = 2 ** profile.addressSpace.addressWidth - 1;
+          const start = address & addressMask;
+          const end = (start + width - 1) & addressMask;
+          const bankMask = targetState.bankCrossMode === "half" ? 0x7fff8000 : 0x7fff0000;
+          if (((start ^ end) & bankMask) !== 0) {
+            const errorAddress = (start + width) & addressMask;
+            throw new Error(
+              `Ebank_border_crossed: A bank border was crossed, logical address $${errorAddress.toString(16).toUpperCase().padStart(6, "0")}.`,
+            );
+          }
+        },
+      };
+    },
   });
   const outputFormatRecord = own({
     id: outputFormatId,
-    create: () => ({
-      finalize: () => undefined,
+    create: ({ state }: TargetFactoryContext) => ({
+      finalize: ({ outputBytes }: { outputBytes: number[] | Uint8Array }) => {
+        const targetState = state.get(legacyTargetSessionStateKey);
+        profile.outputFormat.finalize({
+          canFinalize: true,
+          checksumFixEnabled: targetState.checksumEnabled,
+          bytes: outputBytes,
+          updateChecksum: () => {
+            const headerOffset = getChecksumHeaderOffset(targetState.mapper);
+            if (outputBytes.length < headerOffset + 0x20) return;
+            outputBytes[headerOffset + 0x1c] = 0xff;
+            outputBytes[headerOffset + 0x1d] = 0xff;
+            outputBytes[headerOffset + 0x1e] = 0;
+            outputBytes[headerOffset + 0x1f] = 0;
+            const checksum = calculateHeaderChecksum(outputBytes, targetState.checksumMode);
+            const complement = ~checksum & 0xffff;
+            outputBytes[headerOffset + 0x1c] = complement & 0xff;
+            outputBytes[headerOffset + 0x1d] = (complement >> 8) & 0xff;
+            outputBytes[headerOffset + 0x1e] = checksum & 0xff;
+            outputBytes[headerOffset + 0x1f] = (checksum >> 8) & 0xff;
+          },
+        });
+      },
       getOutput: ({ outputBytes }: { outputBytes: number[] | Uint8Array }) =>
         profile.outputFormat.getBinaryOutput(outputBytes),
     }),
@@ -331,16 +411,46 @@ export function createLegacyAssemblerEnvironment(
       tooling: directiveCatalog.filter((descriptor) => keywords.has(descriptor.keyword)),
     });
   });
-  const lifecycleIds = profile.directiveSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)
-    ? ["legacy.asar-dialect-lifecycle"]
-    : [];
+  const lifecycleIds = ["legacy.target-lifecycle"];
   const lifecycleRecords = lifecycleIds.map((id) =>
     own<LifecycleContribution>({
       id,
-      create: () => ({
-        shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) =>
-          shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
-      }),
+      create: ({ state }: TargetFactoryContext) => {
+        return {
+          shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) =>
+            profile.directiveSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)
+              ? shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
+              : undefined,
+          beforeWrite: ({ logicalAddress, width }) => {
+            const targetState = state.get(legacyTargetSessionStateKey);
+            if (targetState.activeFreespaceStartOffset === null) return;
+            const outputOffset = profile.addressSpace.toOutputOffset(logicalAddress, {
+              mapper: targetState.mapper,
+              sa1banks: targetState.sa1Banks,
+            });
+            if (outputOffset < 0) return;
+            const endOffset = outputOffset + width - 1;
+            targetState.activeFreespaceEndOffset = Math.max(
+              targetState.activeFreespaceEndOffset ?? endOffset,
+              endOffset,
+            );
+          },
+          beforeOutputFinalize: ({ outputBytes }) => {
+            const targetState = state.get(legacyTargetSessionStateKey);
+            const start = targetState.activeFreespaceStartOffset;
+            const contentStart = targetState.activeFreespaceContentStartOffset;
+            const end = targetState.activeFreespaceEndOffset;
+            if (start === null || contentStart === null || end === null || end < contentStart)
+              return;
+            const lengthMinusOne = Math.max(0, end - contentStart) & 0xffff;
+            const complement = ~lengthMinusOne & 0xffff;
+            outputBytes[start + 4] = lengthMinusOne & 0xff;
+            outputBytes[start + 5] = (lengthMinusOne >> 8) & 0xff;
+            outputBytes[start + 6] = complement & 0xff;
+            outputBytes[start + 7] = (complement >> 8) & 0xff;
+          },
+        };
+      },
     }),
   );
   const targetRecord = own({
@@ -365,7 +475,7 @@ export function createLegacyAssemblerEnvironment(
         apiVersion: PLUGIN_API_VERSION,
       },
     ],
-    sessionStates: [],
+    sessionStates: [sessionStateRecord],
     architectures: architectureRecords,
     addressSpaces: [addressSpaceRecord],
     outputFormats: [outputFormatRecord],

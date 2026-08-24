@@ -6,7 +6,7 @@ import { buildCompletionEntries } from "../src/lsp/catalog.js";
 import { WorkspaceIndex } from "../src/lsp/workspace-index.js";
 import { createFixturePlugin } from "./plugin/fixture-plugin.js";
 
-type FixtureState = { count: number };
+type FixtureState = { count: number; history: { values: number[] } };
 
 const fixtureStateKey = { id: "fixture.state" } as SessionStateKey<FixtureState>;
 
@@ -69,12 +69,44 @@ test("plugin state snapshots clone and restore independently", async (t) => {
   const assembler = new Assembler({ environment: manager.freeze(), target: "fixture" });
   const state = assembler.pluginState.get(fixtureStateKey);
   state.count = 3;
+  state.history.values.push(1);
   const snapshot = assembler.pluginState.cloneSnapshot();
   state.count = 8;
+  state.history.values.push(2);
 
   assembler.pluginState.restore(snapshot);
   t.is(assembler.pluginState.get(fixtureStateKey).count, 3);
+  t.deepEqual(assembler.pluginState.get(fixtureStateKey).history.values, [1]);
   t.not(assembler.pluginState.get(fixtureStateKey), state);
+  t.not(assembler.pluginState.get(fixtureStateKey).history, state.history);
+
+  assembler.dispose();
+  await manager.dispose();
+});
+
+test("stage snapshots preserve and independently clone nontrivial plugin state", async (t) => {
+  const manager = new PluginManager();
+  await manager.activatePlugins([{ plugin: createFixturePlugin() }]);
+  const assembler = new Assembler({ environment: manager.freeze(), target: "fixture" });
+  const program = assembler.buildProgramModel("fixturebyte", "fixture.asm");
+
+  assembler.assembleProgram(program);
+
+  const collect = assembler.stageExecutionStates.get("collectDefinitions")?.pluginState.get(
+    fixtureStateKey.id,
+  ) as FixtureState;
+  const layout = assembler.stageExecutionStates.get("resolveLayout")?.pluginState.get(
+    fixtureStateKey.id,
+  ) as FixtureState;
+  const emit = assembler.stageExecutionStates.get("emitProgram")?.pluginState.get(
+    fixtureStateKey.id,
+  ) as FixtureState;
+
+  t.deepEqual(collect.history.values, [1]);
+  t.deepEqual(layout.history.values, [1, 1]);
+  t.deepEqual(emit.history.values, [1, 1, 1]);
+  t.not(collect.history, layout.history);
+  t.not(layout.history, emit.history);
 
   assembler.dispose();
   await manager.dispose();

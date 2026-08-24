@@ -14,7 +14,7 @@ export declare const ASAR_COMPAT_NO_OP_DIRECTIVES: readonly ["fastrom", "dpbase"
  */
 export interface MapperCompatibilityState {
     mapper: string;
-    checksumFixEnabled: boolean;
+    checksumEnabled: boolean;
 }
 /**
  * Rejects mapper changes while assembling an SPC block.

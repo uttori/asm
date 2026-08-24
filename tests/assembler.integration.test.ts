@@ -248,7 +248,7 @@ const assembleSmrpgU = (useLegacy: boolean): Buffer => {
     // FileType 2 FinalizeROM writes almost nothing. Constructor keeps baseImage
     // for reads only (spcblock tests pass a zero-filled buffer as targetRom).
     if (baseRom && baseRom.length > 0) {
-      assembler.romdata = Array.from(baseRom);
+      assembler.outputBytes = Array.from(baseRom);
     }
     assembler.setChecksumMode("asar");
     assembler.setIncludePaths(includePaths);
@@ -300,7 +300,7 @@ const assembleTmntivUsa = (useLegacy: boolean): Buffer => {
   ): Buffer => {
     const assembler = new Assembler(baseRom, { collectSourceMetadata: false });
     if (baseRom && baseRom.length > 0) {
-      assembler.romdata = Array.from(baseRom);
+      assembler.outputBytes = Array.from(baseRom);
     }
     assembler.setChecksumMode("asar");
     assembler.setIncludePaths(includePaths);

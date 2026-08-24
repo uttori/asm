@@ -1,5 +1,5 @@
 import type { NormalizedCommand } from "../ir/normalized-command.js";
-import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, AssemblerPolicyDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, MapperDirectiveContext, MemoryDirectiveContext, NarrowDirectiveHandler, NamespaceDirectiveContext, OrgDirectiveContext, SpcDirectiveContext, StartposDirectiveContext, StructDirectiveContext, TableDirectiveContext, DiagnosticDirectiveContext } from "./types.js";
+import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, AssemblerPolicyDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, MapperDirectiveContext, MemoryDirectiveContext, NarrowDirectiveHandler, NamespaceDirectiveContext, OrgDirectiveContext, RuntimeDirectiveContext, SpcDirectiveContext, StartposDirectiveContext, StructDirectiveContext, TableDirectiveContext, DiagnosticDirectiveContext } from "./types.js";
 type BoundDirectiveHandler = (words: readonly string[], raw: string, command?: NormalizedCommand) => void;
 export type DirectiveExecutionPhase = "preprocess" | "lowered";
 export interface DirectiveRegistryContexts {
@@ -14,7 +14,7 @@ export interface DirectiveRegistryContexts {
         mapper: MapperDirectiveContext;
         org: OrgDirectiveContext;
         policy: AssemblerPolicyDirectiveContext;
-        runtime: SpcDirectiveContext;
+        runtime: RuntimeDirectiveContext;
         startpos: StartposDirectiveContext;
     };
     memory: MemoryDirectiveContext;

@@ -16,8 +16,8 @@ test("SNES remains the default composed target", (t) => {
 
   t.is(assembler.targetProfile, snesTargetProfile);
   t.is(assembler.arch, "65816");
-  t.is(assembler.mapper, "lorom");
-  t.true(assembler.checksumFixEnabled);
+  t.is(assembler.targetState.mapper, "lorom");
+  t.true(assembler.targetState.checksumEnabled);
   t.true(assembler.directiveRegistry.has("lorom"));
   t.true(assembler.directiveRegistry.has("spcblock"));
   t.true(assembler.directiveRegistry.has("freespace"));
@@ -37,8 +37,8 @@ test("6502 target is an explicit non-functional framework stub", (t) => {
   const assembler = new Assembler(undefined, { targetProfile: mos6502StubTargetProfile });
 
   t.is(assembler.arch, "6502");
-  t.is(assembler.mapper, "flat");
-  t.false(assembler.checksumFixEnabled);
+  t.is(assembler.targetState.mapper, "flat");
+  t.false(assembler.targetState.checksumEnabled);
   t.truthy(assembler.architectureRegistry.getDefinition("mos6502"));
   t.deepEqual(assembler.architectureRegistry.getInstructionCatalog("6502"), []);
   t.true(assembler.directiveRegistry.has("org"));

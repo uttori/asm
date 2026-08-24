@@ -14,8 +14,11 @@ export const registerFixtureContributions = (
 ): void => {
   const fixtureState = context.registerSessionState({
     id: "fixture.state",
-    create: () => ({ count: 0 }),
-    clone: (value) => ({ ...value }),
+    create: () => ({ count: 0, history: { values: [] as number[] } }),
+    clone: (value) => ({
+      ...value,
+      history: { values: [...value.history.values] },
+    }),
     resetForStage: (value) => {
       value.count = 0;
     },
@@ -68,7 +71,9 @@ export const registerFixtureContributions = (
         keywords: ["fixturebyte"],
         phase: "lowered",
         createHandler: ({ state }) => () => {
-          state.get(fixtureState).count++;
+          const value = state.get(fixtureState);
+          value.count++;
+          value.history.values.push(value.count);
         },
         tooling: [
           {

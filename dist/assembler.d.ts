@@ -10,7 +10,6 @@ import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
 import { DirectiveRegistry } from "./directives/registry.js";
-import type { SpcblockData } from "./directives/types.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService, type PushPcStackEntry } from "./services/directive-runtime-service.js";
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
@@ -19,13 +18,14 @@ import { FrontEndCommandService } from "./services/front-end-command-service.js"
 import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
 import { MacroEngine, type MacroDefinition } from "./services/macro-engine.js";
 import { ProgramModelBuilder, type IncrementalProgramParseState, type ProgramModel } from "./services/program-model-builder.js";
-import { RomWriterService } from "./services/rom-writer-service.js";
+import { OutputWriterService } from "./services/output-writer-service.js";
+import { LegacySpcRuntimeService } from "./services/legacy-spc-runtime-service.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
 import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
 import type { SourceSpan } from "./source-location.js";
 import { type AssemblyFileProvider } from "./file-provider.js";
 import type { TargetProfile } from "./target-profile.js";
-import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
+import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot, type LegacyTargetSessionState } from "./plugin/index.js";
 import type { AssemblyStageName } from "./plugin/contracts.js";
 type RuntimeConditionalNode = ConditionalBranchNode;
 export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
@@ -71,20 +71,12 @@ export type StageControlState = {
     inMacroExpansion: boolean;
     macroLabelInstance: number;
 };
-export type StageWriteState = {
-    inSpcblock: boolean;
-    spcblockData: SpcblockData | null;
-    spcInlineCompatMode: boolean;
-    activeFreespaceStartPc: number | null;
-    activeFreespaceContentStartPc: number | null;
-};
 export type StageExecutionState = {
     stage: AssemblyStageName;
     capabilities: StageExecutionCapabilities;
     cursor: StageCursorState;
     symbols: StageSymbolState;
     control: StageControlState;
-    writeState: StageWriteState;
     pluginState: PluginStateSnapshot;
     loweredProgram: LoweredProgram | null;
 };
@@ -98,7 +90,8 @@ type AssemblerServiceBag = {
     includeSource: IncludeSourceService;
     lowering?: CommandLoweringService;
     macroEngine: MacroEngine;
-    romWriter: RomWriterService;
+    outputWriter: OutputWriterService;
+    spcRuntime: LegacySpcRuntimeService;
     structEngine: StructEngine;
     symbolScope: SymbolScopeService;
 };
@@ -146,29 +139,8 @@ export declare class Assembler {
     currentTargetBaseStartAddress: number;
     bytes: number;
     pushBaseStack: number[];
-    /** Possible values: lorom, hirom, exlorom, exhirom, sa1rom, sfxrom, bigsa1rom, norom */
-    mapper: string;
-    /** Disabled after `norom` to match Asar checksum behavior. */
-    checksumFixEnabled: boolean;
-    /** Header checksum algorithm mode: "asar" (default) or "simple". */
-    checksumMode: "asar" | "simple";
-    /**
-     * Super FX auto-MOVE short RAM form. Hardware (default) writes `addr >> 1`.
-     * Asar writes `addr & 0xff`; enable to match existing Asar patches.
-     */
-    asarSuperFxMoveShortAddress: boolean;
-    /** Bank crossing policy controlled by `check bankcross ...`. */
-    bankCrossCheckMode: "off" | "full" | "half";
-    /** Read* functions are enabled when patch-style title check is active. */
-    readFunctionsEnabled: boolean;
-    /** Controls direct-page shortening for 65816 when no explicit length is given. */
-    optimizeDirectPage: boolean;
-    sa1banks: number[];
-    /** Placeholder for ROM */
-    romdata: number[] | Uint8Array;
-    defaultFreespaceByte: number;
-    activeFreespaceStartPc: number | null;
-    activeFreespaceContentStartPc: number | null;
+    /** Mutable bytes produced by this assembly session. */
+    outputBytes: number[] | Uint8Array;
     whileStatus: WhileTracker[];
     namespaceStack: string[];
     currentNamespace: string;
@@ -221,7 +193,7 @@ export declare class Assembler {
     savedPCStack: number[];
     /** Initialize fill pattern */
     fillbyte: number[];
-    targetRom: Uint8Array;
+    baseImage: Uint8Array;
     static crcTable: number[] | null;
     includedFiles: Map<string, IncludedFileInfo>;
     includeStack: string[];
@@ -232,9 +204,6 @@ export declare class Assembler {
     currentParentIsGlobal: boolean;
     currentGlobalParentLabel: string;
     labelParents: Map<string, string | null>;
-    inSpcblock: boolean;
-    spcblockData: SpcblockData | null;
-    spcInlineCompatMode: boolean;
     requireStaticLabelLookup: boolean;
     readonly passProgramCache: Map<string, RuntimeNode[]>;
     directiveRegistry: DirectiveRegistry;
@@ -243,6 +212,7 @@ export declare class Assembler {
     readonly targetId: string;
     readonly targetOptions: Readonly<Record<string, unknown>>;
     readonly pluginState: PluginSessionStateStore;
+    readonly hasLegacyTargetState: boolean;
     readonly pluginAddressSpace: PluginTargetAddressSpace;
     readonly pluginOutputFormat: PluginTargetOutputFormat;
     readonly activeLifecycles: readonly ActiveLifecycle[];
@@ -266,11 +236,30 @@ export declare class Assembler {
     sessionDisposed: boolean;
     get defineEngine(): DefineEngine;
     get directiveRuntime(): DirectiveRuntimeService;
+    get spcRuntime(): LegacySpcRuntimeService;
+    get addressWidth(): number;
+    get availableArchitectures(): ReadonlySet<string>;
+    get targetDisplayName(): string;
+    get legacyTargetState(): LegacyTargetSessionState | undefined;
+    get targetState(): LegacyTargetSessionState;
+    get outputFillByte(): number;
+    set outputFillByte(value: number);
+    get activeAllocationStartOffset(): number | null;
+    set activeAllocationStartOffset(value: number | null);
+    get activeAllocationContentStartOffset(): number | null;
+    set activeAllocationContentStartOffset(value: number | null);
+    get inTargetBlock(): boolean;
+    set inTargetBlock(value: boolean);
+    get targetBlockData(): LegacyTargetSessionState["spcBlock"];
+    set targetBlockData(value: LegacyTargetSessionState["spcBlock"]);
+    get targetBlockInlineCompatibility(): boolean;
+    set targetBlockInlineCompatibility(value: boolean);
+    requireLegacyTargetState(): LegacyTargetSessionState;
     get frontEndCommandService(): FrontEndCommandService;
     get includeSource(): IncludeSourceService;
     get macroEngine(): MacroEngine;
     get symbolScope(): SymbolScopeService;
-    get romWriter(): RomWriterService;
+    get outputWriter(): OutputWriterService;
     get structEngine(): StructEngine;
     get currentAddress(): number;
     /**
@@ -577,7 +566,7 @@ export declare class Assembler {
      * @param {number} value The value to fill with.
      * @param {number} length The length of the section to fill.
      */
-    fillRomData(start: number, value: number, length: number): void;
+    fillOutputBytes(start: number, value: number, length: number): void;
     /**
      * Creates ephemeral stage execution state.
      * @param {AssemblyStageName} stage The stage.
@@ -946,23 +935,20 @@ export declare class Assembler {
      */
     assembleSource(source: string, sourceFile?: string, startLine?: number): ProgramModel;
     /**
-     * Writes a block of data to ROM.
+     * Writes a repeated byte into the output buffer.
      * @param {number} start The starting address of the block to write.
      * @param {number} value The byte value to write.
      * @param {number} [length] The length of the block to write.
      */
-    writeDataBytes(start: number, value: number, length?: number): void;
+    writeOutputBytes(start: number, value: number, length?: number): void;
     /**
-     * Expands ROM size and fills it with a specified byte.
-     * @param {number} newSize The new size of the ROM.
-     * @param {number} fsByte The byte value to fill the ROM with.
+     * Expands the output buffer and fills it with a specified byte.
+     * @param {number} newSize The new output size.
+     * @param {number} fillByte The byte used for the new range.
      */
-    expandRom(newSize: number, fsByte: number): void;
-    /**
-     * Updates the header checksum (16-bit) and CRC32.
-     * For LoROM, the header is at 0x7FC0; for HiROM (and exhirom) at 0xFFC0.
-     */
-    updateHeaderAndCRC32(): void;
+    expandOutput(newSize: number, fillByte: number): void;
+    /** Runs the active output-format finalizer. */
+    finalizeOutput(): void;
     /**
      * Returns the compiled binary output.
      * @returns {Uint8Array} The compiled binary output.

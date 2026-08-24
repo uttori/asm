@@ -12,25 +12,25 @@ export const handleFreespace = (
   { session }: MemoryDirectiveContext,
   words: readonly string[],
 ): void => {
-  if (session.inSpcblock) {
+  if (session.inTargetBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
   }
 
-  if (!isFreespaceAvailable(session.mapper)) {
+  if (!isFreespaceAvailable(session.targetState.mapper)) {
     throw new Error("No freespace available in norom.");
   }
 
   const sourceLen =
-    session.targetRom && session.targetRom.length > 0
-      ? session.targetRom.length
-      : session.romdata.length;
+    session.baseImage && session.baseImage.length > 0
+      ? session.baseImage.length
+      : session.outputBytes.length;
   const startPc = Math.max(0x80000, sourceLen);
 
   // Expand to at least 1MB for the 512KB -> 1MB bank crossing behavior expected by tests.
-  if (session.romdata.length < 0x100000) {
-    session.expandRom(0x100000, session.defaultFreespaceByte);
+  if (session.outputBytes.length < 0x100000) {
+    session.expandOutput(0x100000, session.outputFillByte);
   }
-  const startSnes = session.romWriter.pctosnes(startPc);
+  const startSnes = session.outputWriter.fromOutputOffset(startPc);
   if (startSnes < 0) {
     throw new Error("Unable to map freespace start to SNES address.");
   }
@@ -40,7 +40,7 @@ export const handleFreespace = (
   session.currentTargetStartAddress = startSnes;
   session.currentTargetBaseStartAddress = startSnes;
 
-  session.activeFreespaceStartPc = startPc;
+  session.activeAllocationStartOffset = startPc;
 
   // RATS tag: STAR + (size-1) + ~(size-1), patched in finishPass when final size is known.
   session.write1(0x53); // S
@@ -52,7 +52,7 @@ export const handleFreespace = (
   session.write1(0xff);
   session.write1(0xff);
 
-  session.activeFreespaceContentStartPc = startPc + 8;
+  session.activeAllocationContentStartOffset = startPc + 8;
 };
 
 /**
@@ -69,7 +69,7 @@ export const handleFreespaceByte = (
     throw new Error("FREESPACEBYTE requires exactly one parameter.");
   }
   const value = session.resolvedefines(params[0]);
-  session.defaultFreespaceByte = operandResolver.getnum(value) & 0xff;
+  session.outputFillByte = operandResolver.getnum(value) & 0xff;
 };
 
 /**

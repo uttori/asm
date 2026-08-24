@@ -1,10 +1,7 @@
 import type { OperandResolver } from "../operand-resolver.js";
-import type { SpcblockData } from "../directives/types.js";
 import type { DefineEngine } from "./define-engine.js";
-import type { RomWriterService } from "./rom-writer-service.js";
 import type { StructEngine } from "./struct-engine.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
-import type { TargetProfile } from "../target-profile.js";
 export type PushPcStackEntry = {
     currentTargetAddress: number;
     currentTargetStartAddress: number;
@@ -12,17 +9,13 @@ export type PushPcStackEntry = {
     currentTargetBaseStartAddress: number;
 };
 export interface DirectiveRuntimeHost {
-    activeFreespaceContentStartPc: number | null;
-    activeFreespaceStartPc: number | null;
-    canFinalize: boolean;
+    addressWidth: number;
     characterMappings: Map<string, number>;
-    currentNamespace: string;
     currentTargetAddress: number;
     currentTargetBaseAddress: number;
     currentTargetBaseStartAddress: number;
     currentTargetStartAddress: number;
     defineEngine: DefineEngine;
-    inSpcblock: boolean;
     isDefinitionCollectionStage: boolean;
     namespaceNestingEnabled: boolean;
     namespaceNestingPath: string[];
@@ -30,11 +23,8 @@ export interface DirectiveRuntimeHost {
     operandResolver: OperandResolver;
     pushpcStack: PushPcStackEntry[];
     pushpcnum: number;
-    romWriter: RomWriterService;
-    spcblockData: SpcblockData | null;
     structEngine: StructEngine;
     symbolScope: SymbolScopeService;
-    targetProfile: TargetProfile;
     addAddressToLine(address: number): void;
     resolvedefines(input: string): string;
     setWritePosition(address: number): void;
@@ -43,7 +33,6 @@ export interface DirectiveRuntimeHost {
     write2(value: number): void;
     write3(value: number): void;
     write4(value: number): void;
-    writeDataBytes(start: number, value: number, length?: number): void;
 }
 export declare class DirectiveRuntimeService {
     readonly host: DirectiveRuntimeHost;
@@ -61,16 +50,6 @@ export declare class DirectiveRuntimeService {
      * @returns {number[]} An array of numbers representing the mapped characters.
      */
     processStringWithMapping(input: string): number[];
-    /**
-     * Handles the `spcblock` directive.
-     * @param {string[]} words The directive words.
-     */
-    handleSpcblock(words: readonly string[]): void;
-    /**
-     * Handles the `endspcblock` directive.
-     * @param {string[]} words The directive words.
-     */
-    handleEndSpcblock(words: readonly string[]): void;
     /**
      * Handles `org`.
      * @param {string[]} params The directive parameters.

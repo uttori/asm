@@ -1,7 +1,7 @@
 export * from "./assembler.js";
 export * from "./assembler-internals.js";
 export type { AssemblyStageName } from "./plugin/contracts.js";
-export type { SpcblockData, SpcblockType } from "./directives/types.js";
+export type { LegacySpcBlockData, LegacySpcBlockType } from "./plugin/legacy-session-state.js";
 export type { PushPcStackEntry } from "./services/directive-runtime-service.js";
 export type { MacroDefinition } from "./services/macro-engine.js";
 export type { StructDefinition } from "./services/struct-engine.js";
