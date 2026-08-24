@@ -1,0 +1,33 @@
+{
+  "name": "@uttori/asm-plugin-loader-node",
+  "version": "1.0.0",
+  "description": "Node.js plugin discovery and project configuration for Uttori ASM.",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "src",
+    "asm-config.schema.json"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "module": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts"
+    },
+    "./asm-config.schema.json": "./asm-config.schema.json"
+  },
+  "scripts": {
+    "make-types": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@uttori/asm-core": "1.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

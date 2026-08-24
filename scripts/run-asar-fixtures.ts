@@ -1,4 +1,3 @@
-
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
@@ -31,7 +30,7 @@ function getFileStats(filePath: string): { size: number; checksum: string } {
   if (!fs.existsSync(filePath)) {
     return {
       size: 0,
-      checksum: createHash("sha256").update(Buffer.alloc(0)).digest("hex")
+      checksum: createHash("sha256").update(Buffer.alloc(0)).digest("hex"),
     };
   }
   const size = fs.statSync(filePath).size;
@@ -54,7 +53,7 @@ function runTest(baseName: string): TestResult {
     fs.rmSync(outputFile);
   }
 
-  const command = `npm run cli -- ${asmFile} ${outputFile} ${targetRom}`;
+  const command = `npm run cli -- ${asmFile} ${outputFile} --base-image ${targetRom}`;
   console.log(`\nRunning: ${command}`);
 
   let runError: string | undefined = undefined;
@@ -82,7 +81,7 @@ function runTest(baseName: string): TestResult {
     outputChecksum: outputStats.checksum,
     expectedChecksum: expectedStats.checksum,
     checksumMismatch,
-    overallPassed
+    overallPassed,
   };
 }
 
@@ -128,7 +127,7 @@ function main() {
       "Output Checksum": r.outputChecksum.slice(0, 8) + "...",
       "Expected Checksum": r.expectedChecksum.slice(0, 8) + "...",
       "Checksum Mismatch": r.checksumMismatch ? "❌" : "✅",
-      Overall: r.overallPassed ? "✅" : "❌"
+      Overall: r.overallPassed ? "✅" : "❌",
     }));
 
   console.log("\nTest Results Summary:");

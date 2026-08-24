@@ -3,6 +3,10 @@
 /*
 !/src/
 !/src/**
+!/packages/
+!/packages/**
+!/plugins/
+!/plugins/**
 !/editors/
 !/editors/**
 !/language-server/

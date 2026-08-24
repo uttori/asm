@@ -212,7 +212,7 @@ const createInitialState = (context: {
   };
 };
 
-const plugin: AssemblerPlugin = definePlugin({
+const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
   manifest: {
     id: "uttori.asm-plugin-snes",
     name: "Uttori ASM SNES Plugin",
@@ -220,6 +220,7 @@ const plugin: AssemblerPlugin = definePlugin({
     apiVersion: PLUGIN_API_VERSION,
     description: "SNES targets, architectures, directives, expressions, and Asar compatibility.",
   },
+  validateOptions: targetOptions,
   activate(context) {
     context.registerSessionState({
       id: SNES_SESSION_STATE_ID,

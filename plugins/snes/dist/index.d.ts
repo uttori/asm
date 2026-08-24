@@ -6,7 +6,7 @@ export interface SnesTargetOptions extends Record<string, unknown> {
     readonly checksumEnabled: boolean;
     readonly asarSuperFxMoveShortAddress: boolean;
 }
-declare const plugin: AssemblerPlugin;
+declare const plugin: AssemblerPlugin<SnesTargetOptions>;
 export default plugin;
 /**
  * Activates the SNES plugin and freezes a reusable host environment.

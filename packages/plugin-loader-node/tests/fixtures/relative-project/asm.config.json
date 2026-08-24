@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../asm-config.schema.json",
+  "plugins": [
+    {
+      "module": "../relative-plugin.mjs",
+      "options": {
+        "byte": 90
+      }
+    }
+  ],
+  "target": "loader-fixture",
+  "architecture": "loader-cpu",
+  "includePaths": ["./include"]
+}

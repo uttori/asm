@@ -289,6 +289,20 @@ export class AssemblerEnvironment {
     return id ? this.#targets.get(canonical(id))?.value : undefined;
   }
 
+  getTargetSummaries(): readonly TargetSummary[] {
+    return Object.freeze(
+      this.#targetRecords.map(({ value }) =>
+        Object.freeze({
+          id: value.id,
+          aliases: Object.freeze([...(value.aliases ?? [])]),
+          displayName: value.displayName,
+          defaultArchitecture: value.defaultArchitecture,
+          defaultOutputExtension: value.defaultOutputExtension,
+        }),
+      ),
+    );
+  }
+
   resolveArchitectureId(targetId: string, idOrAlias: string): string | undefined {
     const id = this.resolveTargetId(targetId);
     return id ? this.#architectureAliasesByTarget.get(id)?.get(canonical(idOrAlias)) : undefined;

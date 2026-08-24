@@ -840,6 +840,25 @@ Acceptance:
 - Load errors identify config entry, resolved path, and plugin ID where available.
 - No automatic `node_modules` scanning occurs.
 
+Completion note (2026-08-24): `@uttori/asm-plugin-loader-node` now owns strict
+`asm.config.json` validation and its published JSON schema, configuration-relative
+file and package resolution, absolute paths, host-bundled modules, deterministic
+activation order, plugin option validation, contextual load diagnostics, normalized
+configuration snapshots, environment caching, and replacement/disposal. Resolution
+only visits configured/default/override entries and never scans `node_modules`.
+Configuration precedence is CLI/host overrides over project configuration over host
+defaults; explicit modules append after configured plugins without reordering. The
+generic CLI supports config, repeatable plugins/includes, target, architecture,
+base-image, namespaced plugin options, verbose resolution output, and target-default
+output extensions. Its host policy supplies the bundled SNES plugin only when neither
+project configuration nor an explicit plugin is present. Fourteen loader/CLI tests
+cover all required resolution sources, caching/disposal, errors, precedence, SNES
+config builds, and non-SNES isolation. The 926-test verification suite passes with
+94.29% statement, 90.33% branch, and 95.48% function coverage. All four package
+dry-runs include the expected runtime files (including the loader schema); all 60 Asar
+fixtures, Slideshow, Chou, and the five-workload smoke benchmark pass with exact output
+validation.
+
 ### Phase 7 — Propagate plugins through LSP and VS Code
 
 Tasks:

@@ -19,7 +19,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "npm run make-types && npm run lsp:build && npm run vscode:build",
-    "make-types": "rm -rf dist packages/core/dist plugins/snes/dist plugins/6502-stub/dist && tsc --project ./tsconfig.json && npm run make-types --workspaces --if-present",
+    "make-types": "rm -rf dist packages/core/dist packages/plugin-loader-node/dist plugins/snes/dist plugins/6502-stub/dist && tsc --project ./tsconfig.json && npm run make-types --workspaces --if-present",
     "typecheck": "tsc --project ./tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
     "cli": "tsx src/cli.ts",
     "fixture:diff": "tsx scripts/diff.ts",
@@ -30,10 +30,10 @@
     "fixture:slideshow:legacy": "tsx scripts/run-slideshow-legacy.ts",
     "fixture:smrpg:extract": "tsx scripts/extract-smrpg-assets.ts",
     "fixture:tmnt:extract": "tsx scripts/extract-tmnt-assets.ts",
-    "fmt": "oxfmt ./src ./packages/core/src ./plugins/snes/src ./plugins/6502-stub/src ./language-server/src ./language-server/esbuild.mjs ./language-server/package.json ./language-server/tsconfig.json ./editors/vscode/src ./editors/vscode/esbuild.mjs ./editors/vscode/package.json ./editors/vscode/tsconfig.json ./editors/vscode/language-configuration.json ./editors/vscode/syntaxes/snes-asm.tmLanguage.json",
-    "fmt:check": "oxfmt --check ./src ./packages/core/src ./plugins/snes/src ./plugins/6502-stub/src ./language-server/src ./language-server/esbuild.mjs ./language-server/package.json ./language-server/tsconfig.json ./editors/vscode/src ./editors/vscode/esbuild.mjs ./editors/vscode/package.json ./editors/vscode/tsconfig.json ./editors/vscode/language-configuration.json ./editors/vscode/syntaxes/snes-asm.tmLanguage.json",
-    "lint": "oxlint ./src ./packages/core/src ./plugins/snes/src ./plugins/6502-stub/src ./language-server/src ./editors/vscode/src",
-    "lint:fix": "oxlint ./src ./packages/core/src ./plugins/snes/src ./plugins/6502-stub/src ./language-server/src ./editors/vscode/src --fix",
+    "fmt": "oxfmt ./src ./packages/core/src ./packages/plugin-loader-node/src ./packages/plugin-loader-node/tests ./packages/plugin-loader-node/package.json ./packages/plugin-loader-node/tsconfig.json ./packages/plugin-loader-node/asm-config.schema.json ./plugins/snes/src ./plugins/6502-stub/src ./scripts/run-asar-fixtures.ts ./scripts/run-slideshow.ts ./scripts/run-slideshow-legacy.ts ./scripts/run-chou.ts ./language-server/src ./language-server/esbuild.mjs ./language-server/package.json ./language-server/tsconfig.json ./editors/vscode/src ./editors/vscode/esbuild.mjs ./editors/vscode/package.json ./editors/vscode/tsconfig.json ./editors/vscode/language-configuration.json ./editors/vscode/syntaxes/snes-asm.tmLanguage.json",
+    "fmt:check": "oxfmt --check ./src ./packages/core/src ./packages/plugin-loader-node/src ./packages/plugin-loader-node/tests ./packages/plugin-loader-node/package.json ./packages/plugin-loader-node/tsconfig.json ./packages/plugin-loader-node/asm-config.schema.json ./plugins/snes/src ./plugins/6502-stub/src ./scripts/run-asar-fixtures.ts ./scripts/run-slideshow.ts ./scripts/run-slideshow-legacy.ts ./scripts/run-chou.ts ./language-server/src ./language-server/esbuild.mjs ./language-server/package.json ./language-server/tsconfig.json ./editors/vscode/src ./editors/vscode/esbuild.mjs ./editors/vscode/package.json ./editors/vscode/tsconfig.json ./editors/vscode/language-configuration.json ./editors/vscode/syntaxes/snes-asm.tmLanguage.json",
+    "lint": "oxlint ./src ./packages/core/src ./packages/plugin-loader-node/src ./plugins/snes/src ./plugins/6502-stub/src ./language-server/src ./editors/vscode/src",
+    "lint:fix": "oxlint ./src ./packages/core/src ./packages/plugin-loader-node/src ./plugins/snes/src ./plugins/6502-stub/src ./language-server/src ./editors/vscode/src --fix",
     "benchmark": "tsx scripts/run-production-benchmarks.ts",
     "benchmark:smoke": "tsx scripts/run-production-benchmarks.ts --fast",
     "benchmark:chou": "tsx scripts/run-production-benchmarks.ts --fast --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
@@ -50,7 +50,7 @@
     "coverage:verify": "npm run test:serial && npm run coverage:check && npm run coverage:stable",
     "validate": "npm ls",
     "verify": "npm run fmt:check && npm run lint && npm run make-types && npm run coverage:verify && npm run lsp:typecheck && npm run vscode:typecheck",
-    "pack:check": "npm run pack:check --workspace @uttori/asm-core && npm run pack:check --workspace @uttori/asm-plugin-snes && npm run pack:check --workspace @uttori/asm-plugin-6502-stub",
+    "pack:check": "npm run pack:check --workspace @uttori/asm-core && npm run pack:check --workspace @uttori/asm-plugin-loader-node && npm run pack:check --workspace @uttori/asm-plugin-snes && npm run pack:check --workspace @uttori/asm-plugin-6502-stub",
     "lsp:typecheck": "tsc -p language-server/tsconfig.json --noEmit",
     "lsp:build": "node language-server/esbuild.mjs",
     "vscode:typecheck": "tsc -p editors/vscode/tsconfig.json --noEmit",
@@ -58,6 +58,9 @@
     "vscode:package": "npm run lsp:build && npm run vscode:build && cd editors/vscode && vsce package --no-dependencies"
   },
   "dependencies": {
+    "@uttori/asm-core": "1.0.0",
+    "@uttori/asm-plugin-loader-node": "1.0.0",
+    "@uttori/asm-plugin-snes": "1.0.0",
     "semver": "^7.8.5"
   },
   "devDependencies": {
@@ -94,6 +97,7 @@
     "failFast": false,
     "files": [
       "tests/**/*.test.*",
+      "packages/*/tests/**/*.test.*",
       "plugins/*/tests/**/*.test.*"
     ],
     "nodeArguments": [
@@ -114,6 +118,7 @@
     ],
     "include": [
       "packages/core/src/**/*.ts",
+      "packages/plugin-loader-node/src/**/*.ts",
       "plugins/*/src/**/*.ts"
     ],
     "per-file": false

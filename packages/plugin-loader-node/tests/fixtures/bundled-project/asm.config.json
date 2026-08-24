@@ -1,0 +1,11 @@
+{
+  "plugins": [
+    {
+      "module": "bundled:fixture",
+      "options": {
+        "byte": 107
+      }
+    }
+  ],
+  "target": "loader.fixture-target"
+}

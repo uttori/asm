@@ -1,4 +1,4 @@
-import type { ArchitectureContribution, AssemblerPluginManifest, DirectiveSetContribution, ExpressionSetContribution, LifecycleContribution, OutputFormatContribution, SessionStateContribution, TargetContribution, ToolingCatalog, AddressSpaceContribution } from "./contracts.js";
+import type { ArchitectureContribution, AssemblerPluginManifest, DirectiveSetContribution, ExpressionSetContribution, LifecycleContribution, OutputFormatContribution, SessionStateContribution, TargetContribution, TargetSummary, ToolingCatalog, AddressSpaceContribution } from "./contracts.js";
 export interface OwnedContribution<T> {
     readonly pluginId: string;
     readonly contributionId: string;
@@ -23,6 +23,7 @@ export declare class AssemblerEnvironment {
     constructor(contributions: EnvironmentContributions);
     resolveTargetId(idOrAlias: string): string | undefined;
     getTarget(idOrAlias: string): Readonly<TargetContribution> | undefined;
+    getTargetSummaries(): readonly TargetSummary[];
     resolveArchitectureId(targetId: string, idOrAlias: string): string | undefined;
     getArchitecture(id: string): Readonly<ArchitectureContribution> | undefined;
     getAddressSpace(id: string): Readonly<AddressSpaceContribution> | undefined;

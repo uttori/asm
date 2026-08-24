@@ -1,0 +1,14 @@
+{
+  "plugins": [
+    {
+      "module": "@uttori/asm-plugin-snes",
+      "options": {
+        "checksumEnabled": false,
+        "checksumMode": "simple"
+      }
+    }
+  ],
+  "target": "snes.sfc",
+  "architecture": "snes.65816",
+  "includePaths": ["./"]
+}

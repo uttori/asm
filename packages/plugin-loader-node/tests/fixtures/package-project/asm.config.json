@@ -1,0 +1,8 @@
+{
+  "plugins": [
+    {
+      "module": "@uttori/asm-plugin-6502-stub"
+    }
+  ],
+  "target": "mos.6502-stub"
+}
