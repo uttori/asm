@@ -1,7 +1,7 @@
 import type { AssemblerEnvironment } from "../plugin/environment.js";
 import type { ToolingCatalog } from "../plugin/contracts.js";
 import type { AssemblyAnalysisResult, AssemblyDiagnostic, AssemblyIncludeEdge, AssemblySymbolDefinition, AssemblySymbolReference } from "../diagnostics.js";
-import { type DirectiveDescriptor } from "./directive-catalog.js";
+import type { DirectiveDescriptor } from "./directive-catalog.js";
 /**
  * The per-file slice of analysis artifacts produced for a single source file.
  */
@@ -29,6 +29,8 @@ export type WorkspaceIndexOptions = {
     includePaths?: string[];
     /** Target architecture contribution ID or alias. */
     architecture?: string;
+    /** Validated options for the selected target contribution. */
+    targetOptions?: Readonly<Record<string, unknown>>;
 };
 export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environment" | "target">;
 type RootAnalysis = Pick<AssemblyAnalysisResult, "diagnostics" | "symbols" | "references" | "includeEdges">;
@@ -61,6 +63,7 @@ export declare class WorkspaceIndex {
     entryPoints: string[];
     includePaths: string[];
     architecture: string;
+    readonly targetOptions: Readonly<Record<string, unknown>>;
     readonly environment: AssemblerEnvironment;
     readonly target: string;
     readonly toolingCatalog: ToolingCatalog;

@@ -54,6 +54,2000 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// node_modules/semver/internal/constants.js
+var require_constants = __commonJS({
+  "node_modules/semver/internal/constants.js"(exports, module) {
+    "use strict";
+    var SEMVER_SPEC_VERSION = "2.0.0";
+    var MAX_LENGTH = 256;
+    var MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER || /* istanbul ignore next */
+    9007199254740991;
+    var MAX_SAFE_COMPONENT_LENGTH = 16;
+    var MAX_SAFE_BUILD_LENGTH = MAX_LENGTH - 6;
+    var RELEASE_TYPES = [
+      "major",
+      "premajor",
+      "minor",
+      "preminor",
+      "patch",
+      "prepatch",
+      "prerelease"
+    ];
+    module.exports = {
+      MAX_LENGTH,
+      MAX_SAFE_COMPONENT_LENGTH,
+      MAX_SAFE_BUILD_LENGTH,
+      MAX_SAFE_INTEGER,
+      RELEASE_TYPES,
+      SEMVER_SPEC_VERSION,
+      FLAG_INCLUDE_PRERELEASE: 1,
+      FLAG_LOOSE: 2
+    };
+  }
+});
+
+// node_modules/semver/internal/debug.js
+var require_debug = __commonJS({
+  "node_modules/semver/internal/debug.js"(exports, module) {
+    "use strict";
+    var debug8 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
+    };
+    module.exports = debug8;
+  }
+});
+
+// node_modules/semver/internal/re.js
+var require_re = __commonJS({
+  "node_modules/semver/internal/re.js"(exports, module) {
+    "use strict";
+    var {
+      MAX_SAFE_COMPONENT_LENGTH,
+      MAX_SAFE_BUILD_LENGTH,
+      MAX_LENGTH
+    } = require_constants();
+    var debug8 = require_debug();
+    exports = module.exports = {};
+    var re = exports.re = [];
+    var safeRe = exports.safeRe = [];
+    var src = exports.src = [];
+    var safeSrc = exports.safeSrc = [];
+    var t = exports.t = {};
+    var R = 0;
+    var LETTERDASHNUMBER = "[a-zA-Z0-9-]";
+    var safeRegexReplacements = [
+      ["\\s", 1],
+      ["\\d", MAX_LENGTH],
+      [LETTERDASHNUMBER, MAX_SAFE_BUILD_LENGTH]
+    ];
+    var makeSafeRegex = (value) => {
+      for (const [token, max] of safeRegexReplacements) {
+        value = value.split(`${token}*`).join(`${token}{0,${max}}`).split(`${token}+`).join(`${token}{1,${max}}`);
+      }
+      return value;
+    };
+    var createToken = (name, value, isGlobal) => {
+      const safe = makeSafeRegex(value);
+      const index2 = R++;
+      debug8(name, index2, value);
+      t[name] = index2;
+      src[index2] = value;
+      safeSrc[index2] = safe;
+      re[index2] = new RegExp(value, isGlobal ? "g" : void 0);
+      safeRe[index2] = new RegExp(safe, isGlobal ? "g" : void 0);
+    };
+    createToken("NUMERICIDENTIFIER", "0|[1-9]\\d*");
+    createToken("NUMERICIDENTIFIERLOOSE", "\\d+");
+    createToken("NONNUMERICIDENTIFIER", `\\d*[a-zA-Z-]${LETTERDASHNUMBER}*`);
+    createToken("MAINVERSION", `(${src[t.NUMERICIDENTIFIER]})\\.(${src[t.NUMERICIDENTIFIER]})\\.(${src[t.NUMERICIDENTIFIER]})`);
+    createToken("MAINVERSIONLOOSE", `(${src[t.NUMERICIDENTIFIERLOOSE]})\\.(${src[t.NUMERICIDENTIFIERLOOSE]})\\.(${src[t.NUMERICIDENTIFIERLOOSE]})`);
+    createToken("PRERELEASEIDENTIFIER", `(?:${src[t.NONNUMERICIDENTIFIER]}|${src[t.NUMERICIDENTIFIER]})`);
+    createToken("PRERELEASEIDENTIFIERLOOSE", `(?:${src[t.NONNUMERICIDENTIFIER]}|${src[t.NUMERICIDENTIFIERLOOSE]})`);
+    createToken("PRERELEASE", `(?:-(${src[t.PRERELEASEIDENTIFIER]}(?:\\.${src[t.PRERELEASEIDENTIFIER]})*))`);
+    createToken("PRERELEASELOOSE", `(?:-?(${src[t.PRERELEASEIDENTIFIERLOOSE]}(?:\\.${src[t.PRERELEASEIDENTIFIERLOOSE]})*))`);
+    createToken("BUILDIDENTIFIER", `${LETTERDASHNUMBER}+`);
+    createToken("BUILD", `(?:\\+(${src[t.BUILDIDENTIFIER]}(?:\\.${src[t.BUILDIDENTIFIER]})*))`);
+    createToken("FULLPLAIN", `v?${src[t.MAINVERSION]}${src[t.PRERELEASE]}?${src[t.BUILD]}?`);
+    createToken("FULL", `^${src[t.FULLPLAIN]}$`);
+    createToken("LOOSEPLAIN", `[v=\\s]*${src[t.MAINVERSIONLOOSE]}${src[t.PRERELEASELOOSE]}?${src[t.BUILD]}?`);
+    createToken("LOOSE", `^${src[t.LOOSEPLAIN]}$`);
+    createToken("GTLT", "((?:<|>)?=?)");
+    createToken("XRANGEIDENTIFIERLOOSE", `${src[t.NUMERICIDENTIFIERLOOSE]}|x|X|\\*`);
+    createToken("XRANGEIDENTIFIER", `${src[t.NUMERICIDENTIFIER]}|x|X|\\*`);
+    createToken("XRANGEPLAIN", `[v=\\s]*(${src[t.XRANGEIDENTIFIER]})(?:\\.(${src[t.XRANGEIDENTIFIER]})(?:\\.(${src[t.XRANGEIDENTIFIER]})(?:${src[t.PRERELEASE]})?${src[t.BUILD]}?)?)?`);
+    createToken("XRANGEPLAINLOOSE", `[v=\\s]*(${src[t.XRANGEIDENTIFIERLOOSE]})(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})(?:\\.(${src[t.XRANGEIDENTIFIERLOOSE]})(?:${src[t.PRERELEASELOOSE]})?${src[t.BUILD]}?)?)?`);
+    createToken("XRANGE", `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAIN]}$`);
+    createToken("XRANGELOOSE", `^${src[t.GTLT]}\\s*${src[t.XRANGEPLAINLOOSE]}$`);
+    createToken("COERCEPLAIN", `${"(^|[^\\d])(\\d{1,"}${MAX_SAFE_COMPONENT_LENGTH}})(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?(?:\\.(\\d{1,${MAX_SAFE_COMPONENT_LENGTH}}))?`);
+    createToken("COERCE", `${src[t.COERCEPLAIN]}(?:$|[^\\d])`);
+    createToken("COERCEFULL", src[t.COERCEPLAIN] + `(?:${src[t.PRERELEASE]})?(?:${src[t.BUILD]})?(?:$|[^\\d])`);
+    createToken("COERCERTL", src[t.COERCE], true);
+    createToken("COERCERTLFULL", src[t.COERCEFULL], true);
+    createToken("LONETILDE", "(?:~>?)");
+    createToken("TILDETRIM", `(\\s*)${src[t.LONETILDE]}\\s+`, true);
+    exports.tildeTrimReplace = "$1~";
+    createToken("TILDE", `^${src[t.LONETILDE]}${src[t.XRANGEPLAIN]}$`);
+    createToken("TILDELOOSE", `^${src[t.LONETILDE]}${src[t.XRANGEPLAINLOOSE]}$`);
+    createToken("LONECARET", "(?:\\^)");
+    createToken("CARETTRIM", `(\\s*)${src[t.LONECARET]}\\s+`, true);
+    exports.caretTrimReplace = "$1^";
+    createToken("CARET", `^${src[t.LONECARET]}${src[t.XRANGEPLAIN]}$`);
+    createToken("CARETLOOSE", `^${src[t.LONECARET]}${src[t.XRANGEPLAINLOOSE]}$`);
+    createToken("COMPARATORLOOSE", `^${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]})$|^$`);
+    createToken("COMPARATOR", `^${src[t.GTLT]}\\s*(${src[t.FULLPLAIN]})$|^$`);
+    createToken("COMPARATORTRIM", `(\\s*)${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]}|${src[t.XRANGEPLAIN]})`, true);
+    exports.comparatorTrimReplace = "$1$2$3";
+    createToken("HYPHENRANGE", `^\\s*(${src[t.XRANGEPLAIN]})\\s+-\\s+(${src[t.XRANGEPLAIN]})\\s*$`);
+    createToken("HYPHENRANGELOOSE", `^\\s*(${src[t.XRANGEPLAINLOOSE]})\\s+-\\s+(${src[t.XRANGEPLAINLOOSE]})\\s*$`);
+    createToken("STAR", "(<|>)?=?\\s*\\*");
+    createToken("GTE0", "^\\s*>=\\s*0\\.0\\.0\\s*$");
+    createToken("GTE0PRE", "^\\s*>=\\s*0\\.0\\.0-0\\s*$");
+  }
+});
+
+// node_modules/semver/internal/parse-options.js
+var require_parse_options = __commonJS({
+  "node_modules/semver/internal/parse-options.js"(exports, module) {
+    "use strict";
+    var looseOption = Object.freeze({ loose: true });
+    var emptyOpts = Object.freeze({});
+    var parseOptions = (options) => {
+      if (!options) {
+        return emptyOpts;
+      }
+      if (typeof options !== "object") {
+        return looseOption;
+      }
+      return options;
+    };
+    module.exports = parseOptions;
+  }
+});
+
+// node_modules/semver/internal/identifiers.js
+var require_identifiers = __commonJS({
+  "node_modules/semver/internal/identifiers.js"(exports, module) {
+    "use strict";
+    var numeric = /^[0-9]+$/;
+    var compareIdentifiers = (a, b) => {
+      if (typeof a === "number" && typeof b === "number") {
+        return a === b ? 0 : a < b ? -1 : 1;
+      }
+      const anum = numeric.test(a);
+      const bnum = numeric.test(b);
+      if (anum && bnum) {
+        a = +a;
+        b = +b;
+      }
+      return a === b ? 0 : anum && !bnum ? -1 : bnum && !anum ? 1 : a < b ? -1 : 1;
+    };
+    var rcompareIdentifiers = (a, b) => compareIdentifiers(b, a);
+    module.exports = {
+      compareIdentifiers,
+      rcompareIdentifiers
+    };
+  }
+});
+
+// node_modules/semver/classes/semver.js
+var require_semver = __commonJS({
+  "node_modules/semver/classes/semver.js"(exports, module) {
+    "use strict";
+    var debug8 = require_debug();
+    var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
+    var { safeRe: re, t } = require_re();
+    var parseOptions = require_parse_options();
+    var { compareIdentifiers } = require_identifiers();
+    var isPrereleaseIdentifier = (prerelease, identifier) => {
+      const identifiers = identifier.split(".");
+      if (identifiers.length > prerelease.length) {
+        return false;
+      }
+      for (let i = 0; i < identifiers.length; i++) {
+        if (compareIdentifiers(prerelease[i], identifiers[i]) !== 0) {
+          return false;
+        }
+      }
+      return true;
+    };
+    var SemVer = class _SemVer {
+      constructor(version, options) {
+        options = parseOptions(options);
+        if (version instanceof _SemVer) {
+          if (version.loose === !!options.loose && version.includePrerelease === !!options.includePrerelease) {
+            return version;
+          } else {
+            version = version.version;
+          }
+        } else if (typeof version !== "string") {
+          throw new TypeError(`Invalid version. Must be a string. Got type "${typeof version}".`);
+        }
+        if (version.length > MAX_LENGTH) {
+          throw new TypeError(
+            `version is longer than ${MAX_LENGTH} characters`
+          );
+        }
+        debug8("SemVer", version, options);
+        this.options = options;
+        this.loose = !!options.loose;
+        this.includePrerelease = !!options.includePrerelease;
+        const m = version.trim().match(options.loose ? re[t.LOOSE] : re[t.FULL]);
+        if (!m) {
+          throw new TypeError(`Invalid Version: ${version}`);
+        }
+        this.raw = version;
+        this.major = +m[1];
+        this.minor = +m[2];
+        this.patch = +m[3];
+        if (this.major > MAX_SAFE_INTEGER || this.major < 0) {
+          throw new TypeError("Invalid major version");
+        }
+        if (this.minor > MAX_SAFE_INTEGER || this.minor < 0) {
+          throw new TypeError("Invalid minor version");
+        }
+        if (this.patch > MAX_SAFE_INTEGER || this.patch < 0) {
+          throw new TypeError("Invalid patch version");
+        }
+        if (!m[4]) {
+          this.prerelease = [];
+        } else {
+          this.prerelease = m[4].split(".").map((id) => {
+            if (/^[0-9]+$/.test(id)) {
+              const num = +id;
+              if (num >= 0 && num < MAX_SAFE_INTEGER) {
+                return num;
+              }
+            }
+            return id;
+          });
+        }
+        this.build = m[5] ? m[5].split(".") : [];
+        this.format();
+      }
+      format() {
+        this.version = `${this.major}.${this.minor}.${this.patch}`;
+        if (this.prerelease.length) {
+          this.version += `-${this.prerelease.join(".")}`;
+        }
+        return this.version;
+      }
+      toString() {
+        return this.version;
+      }
+      compare(other) {
+        debug8("SemVer.compare", this.version, this.options, other);
+        if (!(other instanceof _SemVer)) {
+          if (typeof other === "string" && other === this.version) {
+            return 0;
+          }
+          other = new _SemVer(other, this.options);
+        }
+        if (other.version === this.version) {
+          return 0;
+        }
+        return this.compareMain(other) || this.comparePre(other);
+      }
+      compareMain(other) {
+        if (!(other instanceof _SemVer)) {
+          other = new _SemVer(other, this.options);
+        }
+        if (this.major < other.major) {
+          return -1;
+        }
+        if (this.major > other.major) {
+          return 1;
+        }
+        if (this.minor < other.minor) {
+          return -1;
+        }
+        if (this.minor > other.minor) {
+          return 1;
+        }
+        if (this.patch < other.patch) {
+          return -1;
+        }
+        if (this.patch > other.patch) {
+          return 1;
+        }
+        return 0;
+      }
+      comparePre(other) {
+        if (!(other instanceof _SemVer)) {
+          other = new _SemVer(other, this.options);
+        }
+        if (this.prerelease.length && !other.prerelease.length) {
+          return -1;
+        } else if (!this.prerelease.length && other.prerelease.length) {
+          return 1;
+        } else if (!this.prerelease.length && !other.prerelease.length) {
+          return 0;
+        }
+        let i = 0;
+        do {
+          const a = this.prerelease[i];
+          const b = other.prerelease[i];
+          debug8("prerelease compare", i, a, b);
+          if (a === void 0 && b === void 0) {
+            return 0;
+          } else if (b === void 0) {
+            return 1;
+          } else if (a === void 0) {
+            return -1;
+          } else if (a === b) {
+            continue;
+          } else {
+            return compareIdentifiers(a, b);
+          }
+        } while (++i);
+      }
+      compareBuild(other) {
+        if (!(other instanceof _SemVer)) {
+          other = new _SemVer(other, this.options);
+        }
+        let i = 0;
+        do {
+          const a = this.build[i];
+          const b = other.build[i];
+          debug8("build compare", i, a, b);
+          if (a === void 0 && b === void 0) {
+            return 0;
+          } else if (b === void 0) {
+            return 1;
+          } else if (a === void 0) {
+            return -1;
+          } else if (a === b) {
+            continue;
+          } else {
+            return compareIdentifiers(a, b);
+          }
+        } while (++i);
+      }
+      // preminor will bump the version up to the next minor release, and immediately
+      // down to pre-release. premajor and prepatch work the same way.
+      inc(release, identifier, identifierBase) {
+        if (release.startsWith("pre")) {
+          if (!identifier && identifierBase === false) {
+            throw new Error("invalid increment argument: identifier is empty");
+          }
+          if (identifier) {
+            const match = `-${identifier}`.match(this.options.loose ? re[t.PRERELEASELOOSE] : re[t.PRERELEASE]);
+            if (!match || match[1] !== identifier) {
+              throw new Error(`invalid identifier: ${identifier}`);
+            }
+          }
+        }
+        switch (release) {
+          case "premajor":
+            this.prerelease.length = 0;
+            this.patch = 0;
+            this.minor = 0;
+            this.major++;
+            this.inc("pre", identifier, identifierBase);
+            break;
+          case "preminor":
+            this.prerelease.length = 0;
+            this.patch = 0;
+            this.minor++;
+            this.inc("pre", identifier, identifierBase);
+            break;
+          case "prepatch":
+            this.prerelease.length = 0;
+            this.inc("patch", identifier, identifierBase);
+            this.inc("pre", identifier, identifierBase);
+            break;
+          // If the input is a non-prerelease version, this acts the same as
+          // prepatch.
+          case "prerelease":
+            if (this.prerelease.length === 0) {
+              this.inc("patch", identifier, identifierBase);
+            }
+            this.inc("pre", identifier, identifierBase);
+            break;
+          case "release":
+            if (this.prerelease.length === 0) {
+              throw new Error(`version ${this.raw} is not a prerelease`);
+            }
+            this.prerelease.length = 0;
+            break;
+          case "major":
+            if (this.minor !== 0 || this.patch !== 0 || this.prerelease.length === 0) {
+              this.major++;
+            }
+            this.minor = 0;
+            this.patch = 0;
+            this.prerelease = [];
+            break;
+          case "minor":
+            if (this.patch !== 0 || this.prerelease.length === 0) {
+              this.minor++;
+            }
+            this.patch = 0;
+            this.prerelease = [];
+            break;
+          case "patch":
+            if (this.prerelease.length === 0) {
+              this.patch++;
+            }
+            this.prerelease = [];
+            break;
+          // This probably shouldn't be used publicly.
+          // 1.0.0 'pre' would become 1.0.0-0 which is the wrong direction.
+          case "pre": {
+            const base = Number(identifierBase) ? 1 : 0;
+            if (this.prerelease.length === 0) {
+              this.prerelease = [base];
+            } else {
+              let i = this.prerelease.length;
+              while (--i >= 0) {
+                if (typeof this.prerelease[i] === "number") {
+                  this.prerelease[i]++;
+                  i = -2;
+                }
+              }
+              if (i === -1) {
+                if (identifier === this.prerelease.join(".") && identifierBase === false) {
+                  throw new Error("invalid increment argument: identifier already exists");
+                }
+                this.prerelease.push(base);
+              }
+            }
+            if (identifier) {
+              let prerelease = [identifier, base];
+              if (identifierBase === false) {
+                prerelease = [identifier];
+              }
+              if (isPrereleaseIdentifier(this.prerelease, identifier)) {
+                const prereleaseBase = this.prerelease[identifier.split(".").length];
+                if (isNaN(prereleaseBase)) {
+                  this.prerelease = prerelease;
+                }
+              } else {
+                this.prerelease = prerelease;
+              }
+            }
+            break;
+          }
+          default:
+            throw new Error(`invalid increment argument: ${release}`);
+        }
+        this.raw = this.format();
+        if (this.build.length) {
+          this.raw += `+${this.build.join(".")}`;
+        }
+        return this;
+      }
+    };
+    module.exports = SemVer;
+  }
+});
+
+// node_modules/semver/functions/parse.js
+var require_parse = __commonJS({
+  "node_modules/semver/functions/parse.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var parse = (version, options, throwErrors = false) => {
+      if (version instanceof SemVer) {
+        return version;
+      }
+      try {
+        return new SemVer(version, options);
+      } catch (er) {
+        if (!throwErrors) {
+          return null;
+        }
+        throw er;
+      }
+    };
+    module.exports = parse;
+  }
+});
+
+// node_modules/semver/functions/valid.js
+var require_valid = __commonJS({
+  "node_modules/semver/functions/valid.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var valid = (version, options) => {
+      const v = parse(version, options);
+      return v ? v.version : null;
+    };
+    module.exports = valid;
+  }
+});
+
+// node_modules/semver/functions/clean.js
+var require_clean = __commonJS({
+  "node_modules/semver/functions/clean.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var clean = (version, options) => {
+      const s = parse(version.trim().replace(/^[=v]+/, ""), options);
+      return s ? s.version : null;
+    };
+    module.exports = clean;
+  }
+});
+
+// node_modules/semver/functions/inc.js
+var require_inc = __commonJS({
+  "node_modules/semver/functions/inc.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var inc = (version, release, options, identifier, identifierBase) => {
+      if (typeof options === "string") {
+        identifierBase = identifier;
+        identifier = options;
+        options = void 0;
+      }
+      try {
+        return new SemVer(
+          version instanceof SemVer ? version.version : version,
+          options
+        ).inc(release, identifier, identifierBase).version;
+      } catch (er) {
+        return null;
+      }
+    };
+    module.exports = inc;
+  }
+});
+
+// node_modules/semver/functions/diff.js
+var require_diff = __commonJS({
+  "node_modules/semver/functions/diff.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var diff = (version1, version2) => {
+      const v1 = parse(version1, null, true);
+      const v2 = parse(version2, null, true);
+      const comparison = v1.compare(v2);
+      if (comparison === 0) {
+        return null;
+      }
+      const v1Higher = comparison > 0;
+      const highVersion = v1Higher ? v1 : v2;
+      const lowVersion = v1Higher ? v2 : v1;
+      const highHasPre = !!highVersion.prerelease.length;
+      const lowHasPre = !!lowVersion.prerelease.length;
+      if (lowHasPre && !highHasPre) {
+        if (!lowVersion.patch && !lowVersion.minor) {
+          return "major";
+        }
+        if (lowVersion.compareMain(highVersion) === 0) {
+          if (lowVersion.minor && !lowVersion.patch) {
+            return "minor";
+          }
+          return "patch";
+        }
+      }
+      const prefix = highHasPre ? "pre" : "";
+      if (v1.major !== v2.major) {
+        return prefix + "major";
+      }
+      if (v1.minor !== v2.minor) {
+        return prefix + "minor";
+      }
+      if (v1.patch !== v2.patch) {
+        return prefix + "patch";
+      }
+      return "prerelease";
+    };
+    module.exports = diff;
+  }
+});
+
+// node_modules/semver/functions/major.js
+var require_major = __commonJS({
+  "node_modules/semver/functions/major.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var major = (a, loose) => new SemVer(a, loose).major;
+    module.exports = major;
+  }
+});
+
+// node_modules/semver/functions/minor.js
+var require_minor = __commonJS({
+  "node_modules/semver/functions/minor.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var minor = (a, loose) => new SemVer(a, loose).minor;
+    module.exports = minor;
+  }
+});
+
+// node_modules/semver/functions/patch.js
+var require_patch = __commonJS({
+  "node_modules/semver/functions/patch.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var patch = (a, loose) => new SemVer(a, loose).patch;
+    module.exports = patch;
+  }
+});
+
+// node_modules/semver/functions/prerelease.js
+var require_prerelease = __commonJS({
+  "node_modules/semver/functions/prerelease.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var prerelease = (version, options) => {
+      const parsed = parse(version, options);
+      return parsed && parsed.prerelease.length ? parsed.prerelease : null;
+    };
+    module.exports = prerelease;
+  }
+});
+
+// node_modules/semver/functions/compare.js
+var require_compare = __commonJS({
+  "node_modules/semver/functions/compare.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
+    module.exports = compare;
+  }
+});
+
+// node_modules/semver/functions/rcompare.js
+var require_rcompare = __commonJS({
+  "node_modules/semver/functions/rcompare.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var rcompare = (a, b, loose) => compare(b, a, loose);
+    module.exports = rcompare;
+  }
+});
+
+// node_modules/semver/functions/compare-loose.js
+var require_compare_loose = __commonJS({
+  "node_modules/semver/functions/compare-loose.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var compareLoose = (a, b) => compare(a, b, true);
+    module.exports = compareLoose;
+  }
+});
+
+// node_modules/semver/functions/compare-build.js
+var require_compare_build = __commonJS({
+  "node_modules/semver/functions/compare-build.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var compareBuild = (a, b, loose) => {
+      const versionA = new SemVer(a, loose);
+      const versionB = new SemVer(b, loose);
+      return versionA.compare(versionB) || versionA.compareBuild(versionB);
+    };
+    module.exports = compareBuild;
+  }
+});
+
+// node_modules/semver/functions/sort.js
+var require_sort = __commonJS({
+  "node_modules/semver/functions/sort.js"(exports, module) {
+    "use strict";
+    var compareBuild = require_compare_build();
+    var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
+    module.exports = sort;
+  }
+});
+
+// node_modules/semver/functions/rsort.js
+var require_rsort = __commonJS({
+  "node_modules/semver/functions/rsort.js"(exports, module) {
+    "use strict";
+    var compareBuild = require_compare_build();
+    var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
+    module.exports = rsort;
+  }
+});
+
+// node_modules/semver/functions/gt.js
+var require_gt = __commonJS({
+  "node_modules/semver/functions/gt.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var gt = (a, b, loose) => compare(a, b, loose) > 0;
+    module.exports = gt;
+  }
+});
+
+// node_modules/semver/functions/lt.js
+var require_lt = __commonJS({
+  "node_modules/semver/functions/lt.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var lt = (a, b, loose) => compare(a, b, loose) < 0;
+    module.exports = lt;
+  }
+});
+
+// node_modules/semver/functions/eq.js
+var require_eq = __commonJS({
+  "node_modules/semver/functions/eq.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var eq = (a, b, loose) => compare(a, b, loose) === 0;
+    module.exports = eq;
+  }
+});
+
+// node_modules/semver/functions/neq.js
+var require_neq = __commonJS({
+  "node_modules/semver/functions/neq.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var neq = (a, b, loose) => compare(a, b, loose) !== 0;
+    module.exports = neq;
+  }
+});
+
+// node_modules/semver/functions/gte.js
+var require_gte = __commonJS({
+  "node_modules/semver/functions/gte.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var gte = (a, b, loose) => compare(a, b, loose) >= 0;
+    module.exports = gte;
+  }
+});
+
+// node_modules/semver/functions/lte.js
+var require_lte = __commonJS({
+  "node_modules/semver/functions/lte.js"(exports, module) {
+    "use strict";
+    var compare = require_compare();
+    var lte = (a, b, loose) => compare(a, b, loose) <= 0;
+    module.exports = lte;
+  }
+});
+
+// node_modules/semver/functions/cmp.js
+var require_cmp = __commonJS({
+  "node_modules/semver/functions/cmp.js"(exports, module) {
+    "use strict";
+    var eq = require_eq();
+    var neq = require_neq();
+    var gt = require_gt();
+    var gte = require_gte();
+    var lt = require_lt();
+    var lte = require_lte();
+    var cmp = (a, op, b, loose) => {
+      switch (op) {
+        case "===":
+          if (typeof a === "object") {
+            a = a.version;
+          }
+          if (typeof b === "object") {
+            b = b.version;
+          }
+          return a === b;
+        case "!==":
+          if (typeof a === "object") {
+            a = a.version;
+          }
+          if (typeof b === "object") {
+            b = b.version;
+          }
+          return a !== b;
+        case "":
+        case "=":
+        case "==":
+          return eq(a, b, loose);
+        case "!=":
+          return neq(a, b, loose);
+        case ">":
+          return gt(a, b, loose);
+        case ">=":
+          return gte(a, b, loose);
+        case "<":
+          return lt(a, b, loose);
+        case "<=":
+          return lte(a, b, loose);
+        default:
+          throw new TypeError(`Invalid operator: ${op}`);
+      }
+    };
+    module.exports = cmp;
+  }
+});
+
+// node_modules/semver/functions/coerce.js
+var require_coerce = __commonJS({
+  "node_modules/semver/functions/coerce.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var parse = require_parse();
+    var { safeRe: re, t } = require_re();
+    var coerce = (version, options) => {
+      if (version instanceof SemVer) {
+        return version;
+      }
+      if (typeof version === "number") {
+        version = String(version);
+      }
+      if (typeof version !== "string") {
+        return null;
+      }
+      options = options || {};
+      let match = null;
+      if (!options.rtl) {
+        match = version.match(options.includePrerelease ? re[t.COERCEFULL] : re[t.COERCE]);
+      } else {
+        const coerceRtlRegex = options.includePrerelease ? re[t.COERCERTLFULL] : re[t.COERCERTL];
+        let next;
+        while ((next = coerceRtlRegex.exec(version)) && (!match || match.index + match[0].length !== version.length)) {
+          if (!match || next.index + next[0].length !== match.index + match[0].length) {
+            match = next;
+          }
+          coerceRtlRegex.lastIndex = next.index + next[1].length + next[2].length;
+        }
+        coerceRtlRegex.lastIndex = -1;
+      }
+      if (match === null) {
+        return null;
+      }
+      const major = match[2];
+      const minor = match[3] || "0";
+      const patch = match[4] || "0";
+      const prerelease = options.includePrerelease && match[5] ? `-${match[5]}` : "";
+      const build = options.includePrerelease && match[6] ? `+${match[6]}` : "";
+      return parse(`${major}.${minor}.${patch}${prerelease}${build}`, options);
+    };
+    module.exports = coerce;
+  }
+});
+
+// node_modules/semver/functions/truncate.js
+var require_truncate = __commonJS({
+  "node_modules/semver/functions/truncate.js"(exports, module) {
+    "use strict";
+    var parse = require_parse();
+    var constants = require_constants();
+    var SemVer = require_semver();
+    var truncate = (version, truncation, options) => {
+      if (!constants.RELEASE_TYPES.includes(truncation)) {
+        return null;
+      }
+      const clonedVersion = cloneInputVersion(version, options);
+      return clonedVersion && doTruncation(clonedVersion, truncation);
+    };
+    var cloneInputVersion = (version, options) => {
+      const versionStringToParse = version instanceof SemVer ? version.version : version;
+      return parse(versionStringToParse, options);
+    };
+    var doTruncation = (version, truncation) => {
+      if (isPrerelease(truncation)) {
+        return version.version;
+      }
+      version.prerelease = [];
+      switch (truncation) {
+        case "major":
+          version.minor = 0;
+          version.patch = 0;
+          break;
+        case "minor":
+          version.patch = 0;
+          break;
+      }
+      return version.format();
+    };
+    var isPrerelease = (type) => {
+      return type.startsWith("pre");
+    };
+    module.exports = truncate;
+  }
+});
+
+// node_modules/semver/internal/lrucache.js
+var require_lrucache = __commonJS({
+  "node_modules/semver/internal/lrucache.js"(exports, module) {
+    "use strict";
+    var LRUCache = class {
+      constructor() {
+        this.max = 1e3;
+        this.map = /* @__PURE__ */ new Map();
+      }
+      get(key) {
+        const value = this.map.get(key);
+        if (value === void 0) {
+          return void 0;
+        } else {
+          this.map.delete(key);
+          this.map.set(key, value);
+          return value;
+        }
+      }
+      delete(key) {
+        return this.map.delete(key);
+      }
+      set(key, value) {
+        const deleted = this.delete(key);
+        if (!deleted && value !== void 0) {
+          if (this.map.size >= this.max) {
+            const firstKey = this.map.keys().next().value;
+            this.delete(firstKey);
+          }
+          this.map.set(key, value);
+        }
+        return this;
+      }
+    };
+    module.exports = LRUCache;
+  }
+});
+
+// node_modules/semver/classes/range.js
+var require_range = __commonJS({
+  "node_modules/semver/classes/range.js"(exports, module) {
+    "use strict";
+    var SPACE_CHARACTERS = /\s+/g;
+    var Range4 = class _Range {
+      constructor(range, options) {
+        options = parseOptions(options);
+        if (range instanceof _Range) {
+          if (range.loose === !!options.loose && range.includePrerelease === !!options.includePrerelease) {
+            return range;
+          } else {
+            return new _Range(range.raw, options);
+          }
+        }
+        if (range instanceof Comparator) {
+          this.raw = range.value;
+          this.set = [[range]];
+          this.formatted = void 0;
+          return this;
+        }
+        this.options = options;
+        this.loose = !!options.loose;
+        this.includePrerelease = !!options.includePrerelease;
+        this.raw = range.trim().replace(SPACE_CHARACTERS, " ");
+        this.set = this.raw.split("||").map((r) => this.parseRange(r.trim())).filter((c) => c.length);
+        if (!this.set.length) {
+          throw new TypeError(`Invalid SemVer Range: ${this.raw}`);
+        }
+        if (this.set.length > 1) {
+          const first = this.set[0];
+          this.set = this.set.filter((c) => !isNullSet(c[0]));
+          if (this.set.length === 0) {
+            this.set = [first];
+          } else if (this.set.length > 1) {
+            for (const c of this.set) {
+              if (c.length === 1 && isAny(c[0])) {
+                this.set = [c];
+                break;
+              }
+            }
+          }
+        }
+        this.formatted = void 0;
+      }
+      get range() {
+        if (this.formatted === void 0) {
+          this.formatted = "";
+          for (let i = 0; i < this.set.length; i++) {
+            if (i > 0) {
+              this.formatted += "||";
+            }
+            const comps = this.set[i];
+            for (let k = 0; k < comps.length; k++) {
+              if (k > 0) {
+                this.formatted += " ";
+              }
+              this.formatted += comps[k].toString().trim();
+            }
+          }
+        }
+        return this.formatted;
+      }
+      format() {
+        return this.range;
+      }
+      toString() {
+        return this.range;
+      }
+      parseRange(range) {
+        range = range.replace(BUILDSTRIPRE, "");
+        const memoOpts = (this.options.includePrerelease && FLAG_INCLUDE_PRERELEASE) | (this.options.loose && FLAG_LOOSE);
+        const memoKey = memoOpts + ":" + range;
+        const cached = cache.get(memoKey);
+        if (cached) {
+          return cached;
+        }
+        const loose = this.options.loose;
+        const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
+        range = range.replace(hr, hyphenReplace(this.options.includePrerelease));
+        debug8("hyphen replace", range);
+        range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
+        debug8("comparator trim", range);
+        range = range.replace(re[t.TILDETRIM], tildeTrimReplace);
+        debug8("tilde trim", range);
+        range = range.replace(re[t.CARETTRIM], caretTrimReplace);
+        debug8("caret trim", range);
+        let rangeList = range.split(" ").map((comp) => parseComparator(comp, this.options)).join(" ").split(/\s+/).map((comp) => replaceGTE0(comp, this.options));
+        if (loose) {
+          rangeList = rangeList.filter((comp) => {
+            debug8("loose invalid filter", comp, this.options);
+            return !!comp.match(re[t.COMPARATORLOOSE]);
+          });
+        }
+        debug8("range list", rangeList);
+        const rangeMap = /* @__PURE__ */ new Map();
+        const comparators = rangeList.map((comp) => new Comparator(comp, this.options));
+        for (const comp of comparators) {
+          if (isNullSet(comp)) {
+            return [comp];
+          }
+          rangeMap.set(comp.value, comp);
+        }
+        if (rangeMap.size > 1 && rangeMap.has("")) {
+          rangeMap.delete("");
+        }
+        const result = [...rangeMap.values()];
+        cache.set(memoKey, result);
+        return result;
+      }
+      intersects(range, options) {
+        if (!(range instanceof _Range)) {
+          throw new TypeError("a Range is required");
+        }
+        return this.set.some((thisComparators) => {
+          return isSatisfiable(thisComparators, options) && range.set.some((rangeComparators) => {
+            return isSatisfiable(rangeComparators, options) && thisComparators.every((thisComparator) => {
+              return rangeComparators.every((rangeComparator) => {
+                return thisComparator.intersects(rangeComparator, options);
+              });
+            });
+          });
+        });
+      }
+      // if ANY of the sets match ALL of its comparators, then pass
+      test(version) {
+        if (!version) {
+          return false;
+        }
+        if (typeof version === "string") {
+          try {
+            version = new SemVer(version, this.options);
+          } catch (er) {
+            return false;
+          }
+        }
+        for (let i = 0; i < this.set.length; i++) {
+          if (testSet(this.set[i], version, this.options)) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+    module.exports = Range4;
+    var LRU = require_lrucache();
+    var cache = new LRU();
+    var parseOptions = require_parse_options();
+    var Comparator = require_comparator();
+    var debug8 = require_debug();
+    var SemVer = require_semver();
+    var {
+      safeRe: re,
+      src,
+      t,
+      comparatorTrimReplace,
+      tildeTrimReplace,
+      caretTrimReplace
+    } = require_re();
+    var { FLAG_INCLUDE_PRERELEASE, FLAG_LOOSE } = require_constants();
+    var BUILDSTRIPRE = new RegExp(src[t.BUILD], "g");
+    var isNullSet = (c) => c.value === "<0.0.0-0";
+    var isAny = (c) => c.value === "";
+    var isSatisfiable = (comparators, options) => {
+      let result = true;
+      const remainingComparators = comparators.slice();
+      let testComparator = remainingComparators.pop();
+      while (result && remainingComparators.length) {
+        result = remainingComparators.every((otherComparator) => {
+          return testComparator.intersects(otherComparator, options);
+        });
+        testComparator = remainingComparators.pop();
+      }
+      return result;
+    };
+    var parseComparator = (comp, options) => {
+      comp = comp.replace(re[t.BUILD], "");
+      debug8("comp", comp, options);
+      comp = replaceCarets(comp, options);
+      debug8("caret", comp);
+      comp = replaceTildes(comp, options);
+      debug8("tildes", comp);
+      comp = replaceXRanges(comp, options);
+      debug8("xrange", comp);
+      comp = replaceStars(comp, options);
+      debug8("stars", comp);
+      return comp;
+    };
+    var isX = (id) => !id || id.toLowerCase() === "x" || id === "*";
+    var invalidXRangeOrder = (M, m, p) => isX(M) && !isX(m) || isX(m) && p && !isX(p);
+    var replaceTildes = (comp, options) => {
+      return comp.trim().split(/\s+/).map((c) => replaceTilde(c, options)).join(" ");
+    };
+    var replaceTilde = (comp, options) => {
+      const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
+      const z = options.includePrerelease ? "-0" : "";
+      return comp.replace(r, (_, M, m, p, pr) => {
+        debug8("tilde", comp, _, M, m, p, pr);
+        let ret;
+        if (isX(M)) {
+          ret = "";
+        } else if (isX(m)) {
+          ret = `>=${M}.0.0${z} <${+M + 1}.0.0-0`;
+        } else if (isX(p)) {
+          ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
+        } else if (pr) {
+          debug8("replaceTilde pr", pr);
+          ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
+        } else {
+          ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
+        }
+        debug8("tilde return", ret);
+        return ret;
+      });
+    };
+    var replaceCarets = (comp, options) => {
+      return comp.trim().split(/\s+/).map((c) => replaceCaret(c, options)).join(" ");
+    };
+    var replaceCaret = (comp, options) => {
+      debug8("caret", comp, options);
+      const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
+      const z = options.includePrerelease ? "-0" : "";
+      return comp.replace(r, (_, M, m, p, pr) => {
+        debug8("caret", comp, _, M, m, p, pr);
+        let ret;
+        if (isX(M)) {
+          ret = "";
+        } else if (isX(m)) {
+          ret = `>=${M}.0.0${z} <${+M + 1}.0.0-0`;
+        } else if (isX(p)) {
+          if (M === "0") {
+            ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
+          } else {
+            ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
+          }
+        } else if (pr) {
+          debug8("replaceCaret pr", pr);
+          if (M === "0") {
+            if (m === "0") {
+              ret = `>=${M}.${m}.${p}-${pr} <${M}.${m}.${+p + 1}-0`;
+            } else {
+              ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
+            }
+          } else {
+            ret = `>=${M}.${m}.${p}-${pr} <${+M + 1}.0.0-0`;
+          }
+        } else {
+          debug8("no pr");
+          if (M === "0") {
+            if (m === "0") {
+              ret = `>=${M}.${m}.${p} <${M}.${m}.${+p + 1}-0`;
+            } else {
+              ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
+            }
+          } else {
+            ret = `>=${M}.${m}.${p} <${+M + 1}.0.0-0`;
+          }
+        }
+        debug8("caret return", ret);
+        return ret;
+      });
+    };
+    var replaceXRanges = (comp, options) => {
+      debug8("replaceXRanges", comp, options);
+      return comp.split(/\s+/).map((c) => replaceXRange(c, options)).join(" ");
+    };
+    var replaceXRange = (comp, options) => {
+      comp = comp.trim();
+      const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
+      return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
+        debug8("xRange", comp, ret, gtlt, M, m, p, pr);
+        if (invalidXRangeOrder(M, m, p)) {
+          return comp;
+        }
+        const xM = isX(M);
+        const xm = xM || isX(m);
+        const xp = xm || isX(p);
+        const anyX = xp;
+        if (gtlt === "=" && anyX) {
+          gtlt = "";
+        }
+        pr = options.includePrerelease ? "-0" : "";
+        if (xM) {
+          if (gtlt === ">" || gtlt === "<") {
+            ret = "<0.0.0-0";
+          } else {
+            ret = "*";
+          }
+        } else if (gtlt && anyX) {
+          if (xm) {
+            m = 0;
+          }
+          p = 0;
+          if (gtlt === ">") {
+            gtlt = ">=";
+            if (xm) {
+              M = +M + 1;
+              m = 0;
+              p = 0;
+            } else {
+              m = +m + 1;
+              p = 0;
+            }
+          } else if (gtlt === "<=") {
+            gtlt = "<";
+            if (xm) {
+              M = +M + 1;
+            } else {
+              m = +m + 1;
+            }
+          }
+          if (gtlt === "<") {
+            pr = "-0";
+          }
+          ret = `${gtlt + M}.${m}.${p}${pr}`;
+        } else if (xm) {
+          ret = `>=${M}.0.0${pr} <${+M + 1}.0.0-0`;
+        } else if (xp) {
+          ret = `>=${M}.${m}.0${pr} <${M}.${+m + 1}.0-0`;
+        }
+        debug8("xRange return", ret);
+        return ret;
+      });
+    };
+    var replaceStars = (comp, options) => {
+      debug8("replaceStars", comp, options);
+      return comp.trim().replace(re[t.STAR], "");
+    };
+    var replaceGTE0 = (comp, options) => {
+      debug8("replaceGTE0", comp, options);
+      return comp.trim().replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], "");
+    };
+    var hyphenReplace = (incPr) => ($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr) => {
+      if (isX(fM)) {
+        from = "";
+      } else if (isX(fm)) {
+        from = `>=${fM}.0.0${incPr ? "-0" : ""}`;
+      } else if (isX(fp)) {
+        from = `>=${fM}.${fm}.0${incPr ? "-0" : ""}`;
+      } else if (fpr) {
+        from = `>=${from}`;
+      } else {
+        from = `>=${from}${incPr ? "-0" : ""}`;
+      }
+      if (isX(tM)) {
+        to = "";
+      } else if (isX(tm)) {
+        to = `<${+tM + 1}.0.0-0`;
+      } else if (isX(tp)) {
+        to = `<${tM}.${+tm + 1}.0-0`;
+      } else if (tpr) {
+        to = `<=${tM}.${tm}.${tp}-${tpr}`;
+      } else if (incPr) {
+        to = `<${tM}.${tm}.${+tp + 1}-0`;
+      } else {
+        to = `<=${to}`;
+      }
+      return `${from} ${to}`.trim();
+    };
+    var testSet = (set, version, options) => {
+      for (let i = 0; i < set.length; i++) {
+        if (!set[i].test(version)) {
+          return false;
+        }
+      }
+      if (version.prerelease.length && !options.includePrerelease) {
+        for (let i = 0; i < set.length; i++) {
+          debug8(set[i].semver);
+          if (set[i].semver === Comparator.ANY) {
+            continue;
+          }
+          if (set[i].semver.prerelease.length > 0) {
+            const allowed = set[i].semver;
+            if (allowed.major === version.major && allowed.minor === version.minor && allowed.patch === version.patch) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+      return true;
+    };
+  }
+});
+
+// node_modules/semver/classes/comparator.js
+var require_comparator = __commonJS({
+  "node_modules/semver/classes/comparator.js"(exports, module) {
+    "use strict";
+    var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
+    var Comparator = class _Comparator {
+      static get ANY() {
+        return ANY;
+      }
+      constructor(comp, options) {
+        options = parseOptions(options);
+        if (comp instanceof _Comparator) {
+          if (comp.loose === !!options.loose) {
+            return comp;
+          } else {
+            comp = comp.value;
+          }
+        }
+        comp = comp.trim().split(/\s+/).join(" ");
+        debug8("comparator", comp, options);
+        this.options = options;
+        this.loose = !!options.loose;
+        this.parse(comp);
+        if (this.semver === ANY) {
+          this.value = "";
+        } else {
+          this.value = this.operator + this.semver.version;
+        }
+        debug8("comp", this);
+      }
+      parse(comp) {
+        const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
+        const m = comp.match(r);
+        if (!m) {
+          throw new TypeError(`Invalid comparator: ${comp}`);
+        }
+        this.operator = m[1] !== void 0 ? m[1] : "";
+        if (this.operator === "=") {
+          this.operator = "";
+        }
+        if (!m[2]) {
+          this.semver = ANY;
+        } else {
+          this.semver = new SemVer(m[2], this.options.loose);
+        }
+      }
+      toString() {
+        return this.value;
+      }
+      test(version) {
+        debug8("Comparator.test", version, this.options.loose);
+        if (this.semver === ANY || version === ANY) {
+          return true;
+        }
+        if (typeof version === "string") {
+          try {
+            version = new SemVer(version, this.options);
+          } catch (er) {
+            return false;
+          }
+        }
+        return cmp(version, this.operator, this.semver, this.options);
+      }
+      intersects(comp, options) {
+        if (!(comp instanceof _Comparator)) {
+          throw new TypeError("a Comparator is required");
+        }
+        if (this.operator === "") {
+          if (this.value === "") {
+            return true;
+          }
+          return new Range4(comp.value, options).test(this.value);
+        } else if (comp.operator === "") {
+          if (comp.value === "") {
+            return true;
+          }
+          return new Range4(this.value, options).test(comp.semver);
+        }
+        options = parseOptions(options);
+        if (options.includePrerelease && (this.value === "<0.0.0-0" || comp.value === "<0.0.0-0")) {
+          return false;
+        }
+        if (!options.includePrerelease && (this.value.startsWith("<0.0.0") || comp.value.startsWith("<0.0.0"))) {
+          return false;
+        }
+        if (this.operator.startsWith(">") && comp.operator.startsWith(">")) {
+          return true;
+        }
+        if (this.operator.startsWith("<") && comp.operator.startsWith("<")) {
+          return true;
+        }
+        if (this.semver.version === comp.semver.version && this.operator.includes("=") && comp.operator.includes("=")) {
+          return true;
+        }
+        if (cmp(this.semver, "<", comp.semver, options) && this.operator.startsWith(">") && comp.operator.startsWith("<")) {
+          return true;
+        }
+        if (cmp(this.semver, ">", comp.semver, options) && this.operator.startsWith("<") && comp.operator.startsWith(">")) {
+          return true;
+        }
+        return false;
+      }
+    };
+    module.exports = Comparator;
+    var parseOptions = require_parse_options();
+    var { safeRe: re, t } = require_re();
+    var cmp = require_cmp();
+    var debug8 = require_debug();
+    var SemVer = require_semver();
+    var Range4 = require_range();
+  }
+});
+
+// node_modules/semver/functions/satisfies.js
+var require_satisfies = __commonJS({
+  "node_modules/semver/functions/satisfies.js"(exports, module) {
+    "use strict";
+    var Range4 = require_range();
+    var satisfies = (version, range, options) => {
+      try {
+        range = new Range4(range, options);
+      } catch (er) {
+        return false;
+      }
+      return range.test(version);
+    };
+    module.exports = satisfies;
+  }
+});
+
+// node_modules/semver/ranges/to-comparators.js
+var require_to_comparators = __commonJS({
+  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
+    "use strict";
+    var Range4 = require_range();
+    var toComparators = (range, options) => new Range4(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
+    module.exports = toComparators;
+  }
+});
+
+// node_modules/semver/ranges/max-satisfying.js
+var require_max_satisfying = __commonJS({
+  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var Range4 = require_range();
+    var maxSatisfying = (versions, range, options) => {
+      let max = null;
+      let maxSV = null;
+      let rangeObj = null;
+      try {
+        rangeObj = new Range4(range, options);
+      } catch (er) {
+        return null;
+      }
+      versions.forEach((v) => {
+        if (rangeObj.test(v)) {
+          if (!max || maxSV.compare(v) === -1) {
+            max = v;
+            maxSV = new SemVer(max, options);
+          }
+        }
+      });
+      return max;
+    };
+    module.exports = maxSatisfying;
+  }
+});
+
+// node_modules/semver/ranges/min-satisfying.js
+var require_min_satisfying = __commonJS({
+  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var Range4 = require_range();
+    var minSatisfying = (versions, range, options) => {
+      let min = null;
+      let minSV = null;
+      let rangeObj = null;
+      try {
+        rangeObj = new Range4(range, options);
+      } catch (er) {
+        return null;
+      }
+      versions.forEach((v) => {
+        if (rangeObj.test(v)) {
+          if (!min || minSV.compare(v) === 1) {
+            min = v;
+            minSV = new SemVer(min, options);
+          }
+        }
+      });
+      return min;
+    };
+    module.exports = minSatisfying;
+  }
+});
+
+// node_modules/semver/ranges/min-version.js
+var require_min_version = __commonJS({
+  "node_modules/semver/ranges/min-version.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var Range4 = require_range();
+    var gt = require_gt();
+    var minVersion = (range, loose) => {
+      range = new Range4(range, loose);
+      let minver = new SemVer("0.0.0");
+      if (range.test(minver)) {
+        return minver;
+      }
+      minver = new SemVer("0.0.0-0");
+      if (range.test(minver)) {
+        return minver;
+      }
+      minver = null;
+      for (let i = 0; i < range.set.length; ++i) {
+        const comparators = range.set[i];
+        let setMin = null;
+        comparators.forEach((comparator) => {
+          const compver = new SemVer(comparator.semver.version);
+          switch (comparator.operator) {
+            case ">":
+              if (compver.prerelease.length === 0) {
+                compver.patch++;
+              } else {
+                compver.prerelease.push(0);
+              }
+              compver.raw = compver.format();
+            /* fallthrough */
+            case "":
+            case ">=":
+              if (!setMin || gt(compver, setMin)) {
+                setMin = compver;
+              }
+              break;
+            case "<":
+            case "<=":
+              break;
+            /* istanbul ignore next */
+            default:
+              throw new Error(`Unexpected operation: ${comparator.operator}`);
+          }
+        });
+        if (setMin && (!minver || gt(minver, setMin))) {
+          minver = setMin;
+        }
+      }
+      if (minver && range.test(minver)) {
+        return minver;
+      }
+      return null;
+    };
+    module.exports = minVersion;
+  }
+});
+
+// node_modules/semver/ranges/valid.js
+var require_valid2 = __commonJS({
+  "node_modules/semver/ranges/valid.js"(exports, module) {
+    "use strict";
+    var Range4 = require_range();
+    var validRange = (range, options) => {
+      try {
+        return new Range4(range, options).range || "*";
+      } catch (er) {
+        return null;
+      }
+    };
+    module.exports = validRange;
+  }
+});
+
+// node_modules/semver/ranges/outside.js
+var require_outside = __commonJS({
+  "node_modules/semver/ranges/outside.js"(exports, module) {
+    "use strict";
+    var SemVer = require_semver();
+    var Comparator = require_comparator();
+    var { ANY } = Comparator;
+    var Range4 = require_range();
+    var satisfies = require_satisfies();
+    var gt = require_gt();
+    var lt = require_lt();
+    var lte = require_lte();
+    var gte = require_gte();
+    var outside = (version, range, hilo, options) => {
+      version = new SemVer(version, options);
+      range = new Range4(range, options);
+      let gtfn, ltefn, ltfn, comp, ecomp;
+      switch (hilo) {
+        case ">":
+          gtfn = gt;
+          ltefn = lte;
+          ltfn = lt;
+          comp = ">";
+          ecomp = ">=";
+          break;
+        case "<":
+          gtfn = lt;
+          ltefn = gte;
+          ltfn = gt;
+          comp = "<";
+          ecomp = "<=";
+          break;
+        default:
+          throw new TypeError('Must provide a hilo val of "<" or ">"');
+      }
+      if (satisfies(version, range, options)) {
+        return false;
+      }
+      for (let i = 0; i < range.set.length; ++i) {
+        const comparators = range.set[i];
+        let high = null;
+        let low = null;
+        comparators.forEach((comparator) => {
+          if (comparator.semver === ANY) {
+            comparator = new Comparator(">=0.0.0");
+          }
+          high = high || comparator;
+          low = low || comparator;
+          if (gtfn(comparator.semver, high.semver, options)) {
+            high = comparator;
+          } else if (ltfn(comparator.semver, low.semver, options)) {
+            low = comparator;
+          }
+        });
+        if (high.operator === comp || high.operator === ecomp) {
+          return false;
+        }
+        if ((!low.operator || low.operator === comp) && ltefn(version, low.semver)) {
+          return false;
+        } else if (low.operator === ecomp && ltfn(version, low.semver)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    module.exports = outside;
+  }
+});
+
+// node_modules/semver/ranges/gtr.js
+var require_gtr = __commonJS({
+  "node_modules/semver/ranges/gtr.js"(exports, module) {
+    "use strict";
+    var outside = require_outside();
+    var gtr = (version, range, options) => outside(version, range, ">", options);
+    module.exports = gtr;
+  }
+});
+
+// node_modules/semver/ranges/ltr.js
+var require_ltr = __commonJS({
+  "node_modules/semver/ranges/ltr.js"(exports, module) {
+    "use strict";
+    var outside = require_outside();
+    var ltr = (version, range, options) => outside(version, range, "<", options);
+    module.exports = ltr;
+  }
+});
+
+// node_modules/semver/ranges/intersects.js
+var require_intersects = __commonJS({
+  "node_modules/semver/ranges/intersects.js"(exports, module) {
+    "use strict";
+    var Range4 = require_range();
+    var intersects = (r1, r2, options) => {
+      r1 = new Range4(r1, options);
+      r2 = new Range4(r2, options);
+      return r1.intersects(r2, options);
+    };
+    module.exports = intersects;
+  }
+});
+
+// node_modules/semver/ranges/simplify.js
+var require_simplify = __commonJS({
+  "node_modules/semver/ranges/simplify.js"(exports, module) {
+    "use strict";
+    var satisfies = require_satisfies();
+    var compare = require_compare();
+    module.exports = (versions, range, options) => {
+      const set = [];
+      let first = null;
+      let prev = null;
+      const v = versions.sort((a, b) => compare(a, b, options));
+      for (const version of v) {
+        const included = satisfies(version, range, options);
+        if (included) {
+          prev = version;
+          if (!first) {
+            first = version;
+          }
+        } else {
+          if (prev) {
+            set.push([first, prev]);
+          }
+          prev = null;
+          first = null;
+        }
+      }
+      if (first) {
+        set.push([first, null]);
+      }
+      const ranges = [];
+      for (const [min, max] of set) {
+        if (min === max) {
+          ranges.push(min);
+        } else if (!max && min === v[0]) {
+          ranges.push("*");
+        } else if (!max) {
+          ranges.push(`>=${min}`);
+        } else if (min === v[0]) {
+          ranges.push(`<=${max}`);
+        } else {
+          ranges.push(`${min} - ${max}`);
+        }
+      }
+      const simplified = ranges.join(" || ");
+      const original = typeof range.raw === "string" ? range.raw : String(range);
+      return simplified.length < original.length ? simplified : range;
+    };
+  }
+});
+
+// node_modules/semver/ranges/subset.js
+var require_subset = __commonJS({
+  "node_modules/semver/ranges/subset.js"(exports, module) {
+    "use strict";
+    var Range4 = require_range();
+    var Comparator = require_comparator();
+    var { ANY } = Comparator;
+    var satisfies = require_satisfies();
+    var compare = require_compare();
+    var subset = (sub, dom, options = {}) => {
+      if (sub === dom) {
+        return true;
+      }
+      sub = new Range4(sub, options);
+      dom = new Range4(dom, options);
+      let sawNonNull = false;
+      OUTER: for (const simpleSub of sub.set) {
+        for (const simpleDom of dom.set) {
+          const isSub = simpleSubset(simpleSub, simpleDom, options);
+          sawNonNull = sawNonNull || isSub !== null;
+          if (isSub) {
+            continue OUTER;
+          }
+        }
+        if (sawNonNull) {
+          return false;
+        }
+      }
+      return true;
+    };
+    var minimumVersionWithPreRelease = [new Comparator(">=0.0.0-0")];
+    var minimumVersion = [new Comparator(">=0.0.0")];
+    var simpleSubset = (sub, dom, options) => {
+      if (sub === dom) {
+        return true;
+      }
+      if (sub.length === 1 && sub[0].semver === ANY) {
+        if (dom.length === 1 && dom[0].semver === ANY) {
+          return true;
+        } else if (options.includePrerelease) {
+          sub = minimumVersionWithPreRelease;
+        } else {
+          sub = minimumVersion;
+        }
+      }
+      if (dom.length === 1 && dom[0].semver === ANY) {
+        if (options.includePrerelease) {
+          return true;
+        } else {
+          dom = minimumVersion;
+        }
+      }
+      const eqSet = /* @__PURE__ */ new Set();
+      let gt, lt;
+      for (const c of sub) {
+        if (c.operator === ">" || c.operator === ">=") {
+          gt = higherGT(gt, c, options);
+        } else if (c.operator === "<" || c.operator === "<=") {
+          lt = lowerLT(lt, c, options);
+        } else {
+          eqSet.add(c.semver);
+        }
+      }
+      if (eqSet.size > 1) {
+        return null;
+      }
+      let gtltComp;
+      if (gt && lt) {
+        gtltComp = compare(gt.semver, lt.semver, options);
+        if (gtltComp > 0) {
+          return null;
+        } else if (gtltComp === 0 && (gt.operator !== ">=" || lt.operator !== "<=")) {
+          return null;
+        }
+      }
+      for (const eq of eqSet) {
+        if (gt && !satisfies(eq, String(gt), options)) {
+          return null;
+        }
+        if (lt && !satisfies(eq, String(lt), options)) {
+          return null;
+        }
+        for (const c of dom) {
+          if (!satisfies(eq, String(c), options)) {
+            return false;
+          }
+        }
+        return true;
+      }
+      let higher, lower;
+      let hasDomLT, hasDomGT;
+      let needDomLTPre = lt && !options.includePrerelease && lt.semver.prerelease.length ? lt.semver : false;
+      let needDomGTPre = gt && !options.includePrerelease && gt.semver.prerelease.length ? gt.semver : false;
+      if (needDomLTPre && needDomLTPre.prerelease.length === 1 && lt.operator === "<" && needDomLTPre.prerelease[0] === 0) {
+        needDomLTPre = false;
+      }
+      for (const c of dom) {
+        hasDomGT = hasDomGT || c.operator === ">" || c.operator === ">=";
+        hasDomLT = hasDomLT || c.operator === "<" || c.operator === "<=";
+        if (gt) {
+          if (needDomGTPre) {
+            if (c.semver.prerelease && c.semver.prerelease.length && c.semver.major === needDomGTPre.major && c.semver.minor === needDomGTPre.minor && c.semver.patch === needDomGTPre.patch) {
+              needDomGTPre = false;
+            }
+          }
+          if (c.operator === ">" || c.operator === ">=") {
+            higher = higherGT(gt, c, options);
+            if (higher === c && higher !== gt) {
+              return false;
+            }
+          } else if (gt.operator === ">=" && !c.test(gt.semver)) {
+            return false;
+          }
+        }
+        if (lt) {
+          if (needDomLTPre) {
+            if (c.semver.prerelease && c.semver.prerelease.length && c.semver.major === needDomLTPre.major && c.semver.minor === needDomLTPre.minor && c.semver.patch === needDomLTPre.patch) {
+              needDomLTPre = false;
+            }
+          }
+          if (c.operator === "<" || c.operator === "<=") {
+            lower = lowerLT(lt, c, options);
+            if (lower === c && lower !== lt) {
+              return false;
+            }
+          } else if (lt.operator === "<=" && !c.test(lt.semver)) {
+            return false;
+          }
+        }
+        if (!c.operator && (lt || gt) && gtltComp !== 0) {
+          return false;
+        }
+      }
+      if (gt && hasDomLT && !lt && gtltComp !== 0) {
+        return false;
+      }
+      if (lt && hasDomGT && !gt && gtltComp !== 0) {
+        return false;
+      }
+      if (needDomGTPre || needDomLTPre) {
+        return false;
+      }
+      return true;
+    };
+    var higherGT = (a, b, options) => {
+      if (!a) {
+        return b;
+      }
+      const comp = compare(a.semver, b.semver, options);
+      return comp > 0 ? a : comp < 0 ? b : b.operator === ">" && a.operator === ">=" ? b : a;
+    };
+    var lowerLT = (a, b, options) => {
+      if (!a) {
+        return b;
+      }
+      const comp = compare(a.semver, b.semver, options);
+      return comp < 0 ? a : comp > 0 ? b : b.operator === "<" && a.operator === "<=" ? b : a;
+    };
+    module.exports = subset;
+  }
+});
+
+// node_modules/semver/index.js
+var require_semver2 = __commonJS({
+  "node_modules/semver/index.js"(exports, module) {
+    "use strict";
+    var internalRe = require_re();
+    var constants = require_constants();
+    var SemVer = require_semver();
+    var identifiers = require_identifiers();
+    var parse = require_parse();
+    var valid = require_valid();
+    var clean = require_clean();
+    var inc = require_inc();
+    var diff = require_diff();
+    var major = require_major();
+    var minor = require_minor();
+    var patch = require_patch();
+    var prerelease = require_prerelease();
+    var compare = require_compare();
+    var rcompare = require_rcompare();
+    var compareLoose = require_compare_loose();
+    var compareBuild = require_compare_build();
+    var sort = require_sort();
+    var rsort = require_rsort();
+    var gt = require_gt();
+    var lt = require_lt();
+    var eq = require_eq();
+    var neq = require_neq();
+    var gte = require_gte();
+    var lte = require_lte();
+    var cmp = require_cmp();
+    var coerce = require_coerce();
+    var truncate = require_truncate();
+    var Comparator = require_comparator();
+    var Range4 = require_range();
+    var satisfies = require_satisfies();
+    var toComparators = require_to_comparators();
+    var maxSatisfying = require_max_satisfying();
+    var minSatisfying = require_min_satisfying();
+    var minVersion = require_min_version();
+    var validRange = require_valid2();
+    var outside = require_outside();
+    var gtr = require_gtr();
+    var ltr = require_ltr();
+    var intersects = require_intersects();
+    var simplifyRange = require_simplify();
+    var subset = require_subset();
+    module.exports = {
+      parse,
+      valid,
+      clean,
+      inc,
+      diff,
+      major,
+      minor,
+      patch,
+      prerelease,
+      compare,
+      rcompare,
+      compareLoose,
+      compareBuild,
+      sort,
+      rsort,
+      gt,
+      lt,
+      eq,
+      neq,
+      gte,
+      lte,
+      cmp,
+      coerce,
+      truncate,
+      Comparator,
+      Range: Range4,
+      satisfies,
+      toComparators,
+      maxSatisfying,
+      minSatisfying,
+      minVersion,
+      validRange,
+      outside,
+      gtr,
+      ltr,
+      intersects,
+      simplifyRange,
+      subset,
+      SemVer,
+      re: internalRe.re,
+      src: internalRe.src,
+      tokens: internalRe.t,
+      SEMVER_SPEC_VERSION: constants.SEMVER_SPEC_VERSION,
+      RELEASE_TYPES: constants.RELEASE_TYPES,
+      compareIdentifiers: identifiers.compareIdentifiers,
+      rcompareIdentifiers: identifiers.rcompareIdentifiers
+    };
+  }
+});
+
 // node_modules/vscode-languageserver/lib/common/utils/is.js
 var require_is = __commonJS({
   "node_modules/vscode-languageserver/lib/common/utils/is.js"(exports) {
@@ -65,7 +2059,7 @@ var require_is = __commonJS({
     exports.error = error;
     exports.func = func;
     exports.array = array;
-    exports.stringArray = stringArray;
+    exports.stringArray = stringArray2;
     exports.typedArray = typedArray;
     exports.thenable = thenable;
     function boolean(value) {
@@ -86,7 +2080,7 @@ var require_is = __commonJS({
     function array(value) {
       return Array.isArray(value);
     }
-    function stringArray(value) {
+    function stringArray2(value) {
       return array(value) && value.every((elem) => string(elem));
     }
     function typedArray(value, check) {
@@ -109,7 +2103,7 @@ var require_is2 = __commonJS({
     exports.error = error;
     exports.func = func;
     exports.array = array;
-    exports.stringArray = stringArray;
+    exports.stringArray = stringArray2;
     function boolean(value) {
       return value === true || value === false;
     }
@@ -128,7 +2122,7 @@ var require_is2 = __commonJS({
     function array(value) {
       return Array.isArray(value);
     }
-    function stringArray(value) {
+    function stringArray2(value) {
       return array(value) && value.every((elem) => string(elem));
     }
   }
@@ -3434,7 +5428,7 @@ var init_main = __esm({
       }
       Position3.is = is;
     })(Position || (Position = {}));
-    (function(Range3) {
+    (function(Range4) {
       function create(one, two, three, four) {
         if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
           return { start: Position.create(one, two), end: Position.create(three, four) };
@@ -3444,12 +5438,12 @@ var init_main = __esm({
           throw new Error(`Range#create called with invalid arguments[${one}, ${two}, ${three}, ${four}]`);
         }
       }
-      Range3.create = create;
+      Range4.create = create;
       function is(value) {
         const candidate = value;
         return Is.objectLiteral(candidate) && Position.is(candidate.start) && Position.is(candidate.end);
       }
-      Range3.is = is;
+      Range4.is = is;
     })(Range || (Range = {}));
     (function(Location3) {
       function create(uri, range) {
@@ -3564,11 +5558,11 @@ var init_main = __esm({
       }
       DiagnosticRelatedInformation2.is = is;
     })(DiagnosticRelatedInformation || (DiagnosticRelatedInformation = {}));
-    (function(DiagnosticSeverity3) {
-      DiagnosticSeverity3.Error = 1;
-      DiagnosticSeverity3.Warning = 2;
-      DiagnosticSeverity3.Information = 3;
-      DiagnosticSeverity3.Hint = 4;
+    (function(DiagnosticSeverity4) {
+      DiagnosticSeverity4.Error = 1;
+      DiagnosticSeverity4.Warning = 2;
+      DiagnosticSeverity4.Information = 3;
+      DiagnosticSeverity4.Hint = 4;
     })(DiagnosticSeverity || (DiagnosticSeverity = {}));
     (function(DiagnosticTag2) {
       DiagnosticTag2.Unnecessary = 1;
@@ -3581,7 +5575,7 @@ var init_main = __esm({
       }
       CodeDescription2.is = is;
     })(CodeDescription || (CodeDescription = {}));
-    (function(Diagnostic3) {
+    (function(Diagnostic4) {
       function create(range, message, severity, code, source, relatedInformation) {
         const result = { range, message };
         if (Is.defined(severity)) {
@@ -3598,17 +5592,17 @@ var init_main = __esm({
         }
         return result;
       }
-      Diagnostic3.create = create;
+      Diagnostic4.create = create;
       function is(value) {
         var _a;
         const candidate = value;
         return Is.defined(candidate) && Range.is(candidate.range) && (Is.string(candidate.message) || MarkupContent.is(candidate.message)) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
       }
-      Diagnostic3.is = is;
+      Diagnostic4.is = is;
       function is3_17(value) {
         return Is.string(value.message);
       }
-      Diagnostic3.is3_17 = is3_17;
+      Diagnostic4.is3_17 = is3_17;
       function getMessageString(diagnostic) {
         if (Is.string(diagnostic.message)) {
           return diagnostic.message;
@@ -3618,7 +5612,7 @@ var init_main = __esm({
           throw new Error(`Unknown message type ${typeof diagnostic.message}`);
         }
       }
-      Diagnostic3.getMessageString = getMessageString;
+      Diagnostic4.getMessageString = getMessageString;
     })(Diagnostic || (Diagnostic = {}));
     (function(Command2) {
       function create(title, command, ...args) {
@@ -4959,7 +6953,7 @@ var require_is3 = __commonJS({
     exports.error = error;
     exports.func = func;
     exports.array = array;
-    exports.stringArray = stringArray;
+    exports.stringArray = stringArray2;
     exports.typedArray = typedArray;
     exports.objectLiteral = objectLiteral;
     function boolean(value) {
@@ -4980,7 +6974,7 @@ var require_is3 = __commonJS({
     function array(value) {
       return Array.isArray(value);
     }
-    function stringArray(value) {
+    function stringArray2(value) {
       return array(value) && value.every((elem) => string(elem));
     }
     function typedArray(value, check) {
@@ -8863,8 +10857,8 @@ var require_files = __commonJS({
     exports.resolveGlobalYarnPath = resolveGlobalYarnPath;
     exports.resolveModulePath = resolveModulePath;
     var url = __importStar(__require("url"));
-    var path6 = __importStar(__require("path"));
-    var fs4 = __importStar(__require("fs"));
+    var path9 = __importStar(__require("path"));
+    var fs5 = __importStar(__require("fs"));
     var child_process_1 = __require("child_process");
     function uriToFilePath(uri) {
       const parsed = url.parse(uri);
@@ -8882,7 +10876,7 @@ var require_files = __commonJS({
           segments.shift();
         }
       }
-      return path6.normalize(segments.join("/"));
+      return path9.normalize(segments.join("/"));
     }
     function isWindows() {
       return process.platform === "win32";
@@ -8910,9 +10904,9 @@ var require_files = __commonJS({
         const env = process.env;
         const newEnv = /* @__PURE__ */ Object.create(null);
         Object.keys(env).forEach((key) => newEnv[key] = env[key]);
-        if (nodePath && fs4.existsSync(nodePath)) {
+        if (nodePath && fs5.existsSync(nodePath)) {
           if (newEnv[nodePathKey]) {
-            newEnv[nodePathKey] = nodePath + path6.delimiter + newEnv[nodePathKey];
+            newEnv[nodePathKey] = nodePath + path9.delimiter + newEnv[nodePathKey];
           } else {
             newEnv[nodePathKey] = nodePath;
           }
@@ -8984,9 +10978,9 @@ var require_files = __commonJS({
         }
         if (prefix.length > 0) {
           if (isWindows()) {
-            return path6.join(prefix, "node_modules");
+            return path9.join(prefix, "node_modules");
           } else {
-            return path6.join(prefix, "lib", "node_modules");
+            return path9.join(prefix, "lib", "node_modules");
           }
         }
         return void 0;
@@ -9025,7 +11019,7 @@ var require_files = __commonJS({
           try {
             const yarn = JSON.parse(line);
             if (yarn.type === "log") {
-              return path6.join(yarn.data, "node_modules");
+              return path9.join(yarn.data, "node_modules");
             }
           } catch (e) {
           }
@@ -9047,24 +11041,24 @@ var require_files = __commonJS({
         if (process.platform === "win32") {
           _isCaseSensitive = false;
         } else {
-          _isCaseSensitive = !fs4.existsSync(__filename.toUpperCase()) || !fs4.existsSync(__filename.toLowerCase());
+          _isCaseSensitive = !fs5.existsSync(__filename.toUpperCase()) || !fs5.existsSync(__filename.toLowerCase());
         }
         return _isCaseSensitive;
       }
       FileSystem2.isCaseSensitive = isCaseSensitive;
       function isParent(parent, child) {
         if (isCaseSensitive()) {
-          return path6.normalize(child).indexOf(path6.normalize(parent)) === 0;
+          return path9.normalize(child).indexOf(path9.normalize(parent)) === 0;
         } else {
-          return path6.normalize(child).toLowerCase().indexOf(path6.normalize(parent).toLowerCase()) === 0;
+          return path9.normalize(child).toLowerCase().indexOf(path9.normalize(parent).toLowerCase()) === 0;
         }
       }
       FileSystem2.isParent = isParent;
     })(FileSystem || (exports.FileSystem = FileSystem = {}));
-    function resolveModulePath(workspaceRoot, moduleName, nodePath, tracer) {
+    function resolveModulePath(workspaceRoot2, moduleName, nodePath, tracer) {
       if (nodePath) {
-        if (!path6.isAbsolute(nodePath)) {
-          nodePath = path6.join(workspaceRoot, nodePath);
+        if (!path9.isAbsolute(nodePath)) {
+          nodePath = path9.join(workspaceRoot2, nodePath);
         }
         return resolve(moduleName, nodePath, nodePath, tracer).then((value) => {
           if (FileSystem.isParent(nodePath, value)) {
@@ -9073,10 +11067,10 @@ var require_files = __commonJS({
             return Promise.reject(new Error(`Failed to load ${moduleName} from node path location.`));
           }
         }).then(void 0, (_error) => {
-          return resolve(moduleName, resolveGlobalNodePath(tracer), workspaceRoot, tracer);
+          return resolve(moduleName, resolveGlobalNodePath(tracer), workspaceRoot2, tracer);
         });
       } else {
-        return resolve(moduleName, resolveGlobalNodePath(tracer), workspaceRoot, tracer);
+        return resolve(moduleName, resolveGlobalNodePath(tracer), workspaceRoot2, tracer);
       }
     }
   }
@@ -9297,9 +11291,9 @@ var require_main = __commonJS({
     exports.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path6 = __importStar(__require("path"));
+    var path9 = __importStar(__require("path"));
     var os = __importStar(__require("os"));
-    var fs4 = __importStar(__require("fs"));
+    var fs5 = __importStar(__require("fs"));
     var crypto_1 = __require("crypto");
     var net_1 = __require("net");
     var api_1 = require_api();
@@ -9440,7 +11434,7 @@ var require_main = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs4.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
+      const tmpDir = fs5.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -9449,7 +11443,7 @@ var require_main = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path6.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path9.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -9891,264 +11885,13 @@ ${stack}`);
 });
 
 // language-server/src/server.ts
-var import_node = __toESM(require_main3(), 1);
+import fs4 from "node:fs";
+import path8 from "node:path";
 
-// node_modules/vscode-languageserver-textdocument/lib/esm/main.js
-var FullTextDocument2 = class _FullTextDocument {
-  constructor(uri, languageId, version, content) {
-    this._uri = uri;
-    this._languageId = languageId;
-    this._version = version;
-    this._content = content;
-    this._lineOffsets = void 0;
-  }
-  get uri() {
-    return this._uri;
-  }
-  get languageId() {
-    return this._languageId;
-  }
-  get version() {
-    return this._version;
-  }
-  getText(range) {
-    if (range) {
-      const start = this.offsetAt(range.start);
-      const end = this.offsetAt(range.end);
-      return this._content.substring(start, end);
-    }
-    return this._content;
-  }
-  update(changes, version) {
-    for (const change of changes) {
-      if (_FullTextDocument.isIncremental(change)) {
-        const range = getWellformedRange(change.range);
-        const startOffset = this.offsetAt(range.start);
-        const endOffset = this.offsetAt(range.end);
-        this._content = this._content.substring(0, startOffset) + change.text + this._content.substring(endOffset, this._content.length);
-        const startLine = Math.max(range.start.line, 0);
-        const endLine = Math.max(range.end.line, 0);
-        let lineOffsets = this._lineOffsets;
-        const addedLineOffsets = computeLineOffsets(change.text, false, startOffset);
-        if (endLine - startLine === addedLineOffsets.length) {
-          for (let i = 0, len = addedLineOffsets.length; i < len; i++) {
-            lineOffsets[i + startLine + 1] = addedLineOffsets[i];
-          }
-        } else {
-          if (addedLineOffsets.length < 1e4) {
-            lineOffsets.splice(startLine + 1, endLine - startLine, ...addedLineOffsets);
-          } else {
-            this._lineOffsets = lineOffsets = lineOffsets.slice(0, startLine + 1).concat(addedLineOffsets, lineOffsets.slice(endLine + 1));
-          }
-        }
-        const diff = change.text.length - (endOffset - startOffset);
-        if (diff !== 0) {
-          for (let i = startLine + 1 + addedLineOffsets.length, len = lineOffsets.length; i < len; i++) {
-            lineOffsets[i] = lineOffsets[i] + diff;
-          }
-        }
-      } else if (_FullTextDocument.isFull(change)) {
-        this._content = change.text;
-        this._lineOffsets = void 0;
-      } else {
-        throw new Error("Unknown change event received");
-      }
-    }
-    this._version = version;
-  }
-  getLineOffsets() {
-    if (this._lineOffsets === void 0) {
-      this._lineOffsets = computeLineOffsets(this._content, true);
-    }
-    return this._lineOffsets;
-  }
-  positionAt(offset) {
-    offset = Math.max(Math.min(offset, this._content.length), 0);
-    const lineOffsets = this.getLineOffsets();
-    let low = 0, high = lineOffsets.length;
-    if (high === 0) {
-      return { line: 0, character: offset };
-    }
-    while (low < high) {
-      const mid = Math.floor((low + high) / 2);
-      if (lineOffsets[mid] > offset) {
-        high = mid;
-      } else {
-        low = mid + 1;
-      }
-    }
-    const line = low - 1;
-    offset = this.ensureBeforeEOL(offset, lineOffsets[line]);
-    return { line, character: offset - lineOffsets[line] };
-  }
-  offsetAt(position) {
-    const lineOffsets = this.getLineOffsets();
-    if (position.line >= lineOffsets.length) {
-      return this._content.length;
-    } else if (position.line < 0) {
-      return 0;
-    }
-    const lineOffset = lineOffsets[position.line];
-    if (position.character <= 0) {
-      return lineOffset;
-    }
-    const nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
-    const offset = Math.min(lineOffset + position.character, nextLineOffset);
-    return this.ensureBeforeEOL(offset, lineOffset);
-  }
-  getLineRange(line) {
-    const lineOffsets = this.getLineOffsets();
-    if (line >= lineOffsets.length) {
-      const lastLine = lineOffsets.length - 1;
-      return { start: { line: lastLine, character: 0 }, end: { line: lastLine, character: this._content.length - lineOffsets[lastLine] } };
-    } else if (line < 0) {
-      return { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
-    }
-    const startOffset = lineOffsets[line];
-    const nextLineOffset = line + 1 < lineOffsets.length ? lineOffsets[line + 1] : this._content.length;
-    const endOffset = this.ensureBeforeEOL(nextLineOffset, startOffset);
-    return { start: { line, character: 0 }, end: { line, character: endOffset - startOffset } };
-  }
-  getEOLCharacters(line) {
-    const lineOffsets = this.getLineOffsets();
-    if (line >= lineOffsets.length) {
-      return "";
-    } else if (line < 0) {
-      return "";
-    }
-    const nextLineOffset = line + 1 < lineOffsets.length ? lineOffsets[line + 1] : this._content.length;
-    const eolOffset = this.ensureBeforeEOL(nextLineOffset, lineOffsets[line]);
-    return this._content.substring(eolOffset, nextLineOffset);
-  }
-  ensureBeforeEOL(offset, lineOffset) {
-    while (offset > lineOffset && isEOL(this._content.charCodeAt(offset - 1))) {
-      offset--;
-    }
-    return offset;
-  }
-  get lineCount() {
-    return this.getLineOffsets().length;
-  }
-  static isIncremental(event) {
-    const candidate = event;
-    return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range !== void 0 && (candidate.rangeLength === void 0 || typeof candidate.rangeLength === "number");
-  }
-  static isFull(event) {
-    const candidate = event;
-    return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range === void 0 && candidate.rangeLength === void 0;
-  }
-};
-var TextDocument2;
-(function(TextDocument3) {
-  function create(uri, languageId, version, content) {
-    return new FullTextDocument2(uri, languageId, version, content);
-  }
-  TextDocument3.create = create;
-  function update(document, changes, version) {
-    if (document instanceof FullTextDocument2) {
-      document.update(changes, version);
-      return document;
-    } else {
-      throw new Error("TextDocument.update: document must be created by TextDocument.create");
-    }
-  }
-  TextDocument3.update = update;
-  function applyEdits(document, edits) {
-    const text = document.getText();
-    const sortedEdits = mergeSort(edits.map(getWellformedEdit), (a, b) => {
-      const diff = a.range.start.line - b.range.start.line;
-      if (diff === 0) {
-        return a.range.start.character - b.range.start.character;
-      }
-      return diff;
-    });
-    let lastModifiedOffset = 0;
-    const spans = [];
-    for (const e of sortedEdits) {
-      const startOffset = document.offsetAt(e.range.start);
-      if (startOffset < lastModifiedOffset) {
-        throw new Error("Overlapping edit");
-      } else if (startOffset > lastModifiedOffset) {
-        spans.push(text.substring(lastModifiedOffset, startOffset));
-      }
-      if (e.newText.length) {
-        spans.push(e.newText);
-      }
-      lastModifiedOffset = document.offsetAt(e.range.end);
-    }
-    spans.push(text.substr(lastModifiedOffset));
-    return spans.join("");
-  }
-  TextDocument3.applyEdits = applyEdits;
-})(TextDocument2 || (TextDocument2 = {}));
-function mergeSort(data, compare) {
-  if (data.length <= 1) {
-    return data;
-  }
-  const p = data.length / 2 | 0;
-  const left = data.slice(0, p);
-  const right = data.slice(p);
-  mergeSort(left, compare);
-  mergeSort(right, compare);
-  let leftIdx = 0;
-  let rightIdx = 0;
-  let i = 0;
-  while (leftIdx < left.length && rightIdx < right.length) {
-    const ret = compare(left[leftIdx], right[rightIdx]);
-    if (ret <= 0) {
-      data[i++] = left[leftIdx++];
-    } else {
-      data[i++] = right[rightIdx++];
-    }
-  }
-  while (leftIdx < left.length) {
-    data[i++] = left[leftIdx++];
-  }
-  while (rightIdx < right.length) {
-    data[i++] = right[rightIdx++];
-  }
-  return data;
-}
-function computeLineOffsets(text, isAtLineStart, textOffset = 0) {
-  const result = isAtLineStart ? [textOffset] : [];
-  for (let i = 0; i < text.length; i++) {
-    const ch = text.charCodeAt(i);
-    if (isEOL(ch)) {
-      if (ch === 13 && i + 1 < text.length && text.charCodeAt(i + 1) === 10) {
-        i++;
-      }
-      result.push(textOffset + i + 1);
-    }
-  }
-  return result;
-}
-function isEOL(char) {
-  return char === 13 || char === 10;
-}
-function getWellformedRange(range) {
-  const start = range.start;
-  const end = range.end;
-  if (start.line > end.line || start.line === end.line && start.character > end.character) {
-    return { start: end, end: start };
-  }
-  return range;
-}
-function getWellformedEdit(textEdit) {
-  const range = getWellformedRange(textEdit.range);
-  if (range !== textEdit.range) {
-    return { newText: textEdit.newText, range };
-  }
-  return textEdit;
-}
-
-// language-server/src/server.ts
-import fs3 from "node:fs";
-import path5 from "node:path";
-
-// src/addressToLine.ts
+// packages/core/src/addressToLine.ts
 import * as fs from "fs";
 
-// src/crc32.ts
+// packages/core/src/crc32.ts
 var CRC32 = class _CRC32 {
   /** Precomputed CRC32 table. */
   static table = _CRC32.makeCRCTable();
@@ -10181,7 +11924,7 @@ var CRC32 = class _CRC32 {
   }
 };
 
-// src/addressToLine.ts
+// packages/core/src/addressToLine.ts
 var debug = (..._args) => {
 };
 try {
@@ -10249,7 +11992,7 @@ var AddressToLineMapping = class {
   }
 };
 
-// src/source-location.ts
+// packages/core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -10301,7 +12044,7 @@ function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
   };
 }
 
-// src/diagnostics.ts
+// packages/core/src/diagnostics.ts
 var AssemblyError = class extends Error {
   code;
   severity;
@@ -10361,7 +12104,7 @@ function diagnosticFromError(error, fallbackLocation, stage) {
   };
 }
 
-// src/ir/expression-node.ts
+// packages/core/src/ir/expression-node.ts
 function attachRootSpan(node, text) {
   if (!node.span) {
     node.span = createSourceSpan(0, text.length);
@@ -10974,7 +12717,7 @@ function isBinaryOperator(value) {
   return value in binaryPrecedence;
 }
 
-// src/internal-instrumentation.ts
+// packages/core/src/internal-instrumentation.ts
 import { performance } from "node:perf_hooks";
 var activeInstrumentation;
 function sampleMemory(metrics) {
@@ -11011,7 +12754,7 @@ function measureInternalPhase(name, callback) {
   }
 }
 
-// src/ir/normalized-command.ts
+// packages/core/src/ir/normalized-command.ts
 function createCommandProvenance(raw, normalized, words, file, line) {
   return {
     file,
@@ -11265,7 +13008,7 @@ function splitCommaArguments(input) {
   return values;
 }
 
-// src/mathcore.ts
+// packages/core/src/mathcore.ts
 var debug2 = (..._) => {
 };
 try {
@@ -12466,7 +14209,7 @@ var MathCore = class {
   }
 };
 
-// src/operand-syntax.ts
+// packages/core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -12483,7 +14226,7 @@ function parseOperandSyntax(operand) {
   };
 }
 
-// src/operand-classifiers.ts
+// packages/core/src/operand-classifiers.ts
 function sourceUsesNumericSpelling(raw) {
   const base = raw.trim().replace(/\s*,\s*[sxy]$/i, "");
   if (!base) {
@@ -12627,28 +14370,8 @@ function classifyGenericOperand(input) {
     indirect: syntax.indirect
   };
 }
-function classify65816Operand(resolver, operand) {
-  const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand({ raw, expanded, length });
-}
-function classify6502Operand(resolver, operand) {
-  const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand({ raw, expanded, length });
-}
-function classifySpc700Operand(resolver, operand) {
-  const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand({ raw, expanded, length });
-}
-function classifySuperFxOperand(resolver, operand) {
-  const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand({ raw, expanded, length });
-}
 
-// src/operand-resolver.ts
+// packages/core/src/operand-resolver.ts
 var debug3 = (..._) => {
 };
 try {
@@ -12735,7 +14458,7 @@ var OperandResolver = class {
     return true;
   }
   /**
-   * Sizes `label,x` by SNES bank: same bank is abs,x (2), any other bank —
+   * Sizes `label,x` by logical bank: same bank is abs,x (2), any other bank —
    * including `$00xxxx` — is long,x (3).
    * @param {string} operand The raw source operand.
    * @param {string} expanded The resolved operand text.
@@ -13122,7 +14845,7 @@ var OperandResolver = class {
   }
 };
 
-// src/architecture-registry.ts
+// packages/core/src/architecture-registry.ts
 var ArchitectureRegistry = class {
   definitions = /* @__PURE__ */ new Map();
   aliases = /* @__PURE__ */ new Map();
@@ -13168,38 +14891,9 @@ var ArchitectureRegistry = class {
     const definition = this.getDefinition(name);
     return [...definition?.instructions ?? definition?.encoder.getInstructionCatalog?.() ?? []];
   }
-  /**
-   * Binds an extension factory to this assembler session.
-   * @param {ArchitectureExtension} extension Architecture extension.
-   * @param {ArchitectureEncoderContext} context Session-bound encoder context.
-   */
-  registerExtension(extension, context) {
-    this.register(
-      {
-        name: extension.name,
-        encoder: extension.createEncoder(context),
-        classifyOperand: extension.classifyOperand,
-        splitOperands: extension.splitOperands,
-        unknownInstructionBehavior: extension.unknownInstructionBehavior
-      },
-      [...extension.aliases ?? []]
-    );
-  }
 };
 
-// src/directives/directive-set-ids.ts
-var LEGACY_SNES_MAPPER_DIRECTIVE_SET = "legacy.snes-mapper-directives";
-var LEGACY_SNES_MEMORY_DIRECTIVE_SET = "legacy.snes-memory-directives";
-var LEGACY_SNES_POLICY_DIRECTIVE_SET = "legacy.snes-policy-directives";
-var LEGACY_SPC_DIRECTIVE_SET = "legacy.spc-directives";
-var ALL_LEGACY_TARGET_DIRECTIVE_SETS = /* @__PURE__ */ new Set([
-  LEGACY_SNES_MAPPER_DIRECTIVE_SET,
-  LEGACY_SNES_MEMORY_DIRECTIVE_SET,
-  LEGACY_SNES_POLICY_DIRECTIVE_SET,
-  LEGACY_SPC_DIRECTIVE_SET
-]);
-
-// src/directives/data.ts
+// packages/core/src/directives/data.ts
 var handleDataDirective = ({ runtime }, words) => {
   runtime.handleDataDirective(words[0], words.slice(1));
 };
@@ -13207,7 +14901,7 @@ var registerDataDirectives = (registry, context) => {
   registry.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
 };
 
-// src/directives/fill-pad.ts
+// packages/core/src/directives/fill-pad.ts
 var FILL_PATTERN_SIZE = 12;
 var PATTERN_WIDTH = {
   fillbyte: 1,
@@ -13271,10 +14965,10 @@ var handlePad = ({ session, operandResolver }, words) => {
   if (words.length === 1) {
     gap = 65536 - (session.currentTargetAddress & 65535);
   } else if (words.length === 2) {
-    const targetSNES = operandResolver.getnum(session.resolvedefines(words[1]));
-    const targetPC = session.outputWriter.toOutputOffset(targetSNES);
+    const targetAddress = operandResolver.getnum(session.resolvedefines(words[1]));
+    const targetPC = session.outputWriter.toOutputOffset(targetAddress);
     if (targetPC < 0) {
-      throw new Error(`Target SNES address ${targetSNES.toString(16)} does not map to ROM.`);
+      throw new Error(`Target address ${targetAddress.toString(16)} does not map to output.`);
     }
     const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
     if (targetPC <= currentPC) {
@@ -13303,7 +14997,7 @@ var registerFillPadDirectives = (registry, context) => {
   registry.registerLowered("pad", context, handlePad);
 };
 
-// src/directives/flow-control.ts
+// packages/core/src/directives/flow-control.ts
 var handleRelativeLabel = ({ session }, _words, raw) => {
   session.symbolScope.handleRelativeLabel(raw);
 };
@@ -13311,7 +15005,7 @@ var registerFlowControlDirectives = (registry, context) => {
   registry.register(["+", "-"], context, handleRelativeLabel);
 };
 
-// src/directives/include-source.ts
+// packages/core/src/directives/include-source.ts
 var IDENTITY_INCLUDE_DEFINES = {
   resolveDefinesInStringLiteral: (content) => content,
   resolveRegularDefines: (content) => content
@@ -13327,10 +15021,10 @@ var expandIncludeFilename = (target, defineEngine) => {
   }
   return defineEngine.resolveRegularDefines(target);
 };
-var resolveIncludeTarget = (words, command, directive, defineEngine) => {
+var resolveIncludeTarget = (words, command, directive2, defineEngine) => {
   const target = command?.parsed.includeTarget?.target ?? words[1];
   if (!target) {
-    throw new Error(`${directive} requires exactly one filename parameter`);
+    throw new Error(`${directive2} requires exactly one filename parameter`);
   }
   return expandIncludeFilename(target, defineEngine);
 };
@@ -13585,80 +15279,7 @@ var registerIncludeSourceDirectives = (registry, context) => {
   registry.registerLowered("incbin", context, handleIncbin);
 };
 
-// src/compatibility/asar-compatibility-profile.ts
-var ASAR_COMPAT_NO_OP_DIRECTIVES = [
-  "fastrom",
-  "dpbase",
-  "warnings",
-  "print",
-  "warn",
-  "autoclean",
-  "autoclear",
-  "includefrom",
-  "asar",
-  "reset",
-  "{",
-  "}"
-];
-var assertMapperAvailable = (inSpcblock) => {
-  if (inSpcblock) {
-    throw new Error("Mapper directives are unavailable inside spcblock.");
-  }
-};
-var applyMapperSelection = (state, mapper) => {
-  state.mapper = mapper;
-  if (mapper === "norom") {
-    state.checksumEnabled = false;
-  }
-};
-var isFreespaceAvailable = (mapper) => mapper !== "norom";
-var encodeSuperFxMoveShortAddress = (addrVal, mode = "hardware") => {
-  if (mode === "asar") {
-    return addrVal & 255;
-  }
-  return addrVal >> 1 & 255;
-};
-var getChecksumHeaderOffset = (mapper) => {
-  if (mapper === "lorom" || mapper === "sa1rom" || mapper === "bigsa1rom") {
-    return 32704;
-  }
-  return 65472;
-};
-var calculateHeaderChecksum = (romdata, mode) => {
-  const romLength = romdata.length;
-  if (romLength === 0) {
-    return 0;
-  }
-  let checksum = 0;
-  if (mode === "simple" || (romLength & romLength - 1) === 0) {
-    for (let i = 0; i < romLength; i++) {
-      checksum += romdata[i] & 255;
-    }
-    return checksum & 65535;
-  }
-  let bitround = 1;
-  while (bitround < romLength) {
-    bitround <<= 1;
-  }
-  const firstPart = bitround >> 1;
-  const secondPart = romLength - firstPart;
-  const repeatCount = Math.floor(firstPart / secondPart);
-  let secondPartSum = 0;
-  for (let i = 0; i < firstPart; i++) {
-    checksum += romdata[i] & 255;
-  }
-  for (let i = firstPart; i < romLength; i++) {
-    secondPartSum += romdata[i] & 255;
-  }
-  return checksum + secondPartSum * repeatCount & 65535;
-};
-var shouldRedirectOrgToSpcblock = (spcInlineCompatMode) => spcInlineCompatMode;
-var shouldEnableSpcInlineCompat = (architecture) => architecture === "spc700-inline";
-var shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
-var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
-var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
-
-// src/directives/layout.ts
+// packages/core/src/directives/layout.ts
 var handlePushBase = ({ session }) => {
   session.pushBaseStack.push(session.currentTargetAddress);
 };
@@ -13673,9 +15294,6 @@ var handlePullBase = ({ session }) => {
   session.currentTargetAddress = baseAddress;
 };
 var handleArch = ({ session }, words) => {
-  if (session.inTargetBlock) {
-    throw new Error("ARCH is unavailable inside spcblock.");
-  }
   if (!words[1]) {
     throw new Error("ARCH command requires an architecture parameter.");
   }
@@ -13684,10 +15302,6 @@ var handleArch = ({ session }, words) => {
   if (!canonical2) {
     if (session.selectArchitecture) {
       session.selectArchitecture(archParam, archParam);
-      session.targetBlockInlineCompatibility = shouldEnableSpcInlineCompat(archParam);
-      if (shouldUseNoromAddressing(archParam)) {
-        applyMapperSelection(session.targetState, "norom");
-      }
       return;
     }
     throw new Error("Unsupported architecture: " + archParam);
@@ -13702,20 +15316,6 @@ var handleArch = ({ session }, words) => {
   } else {
     session.arch = canonical2;
   }
-  session.targetBlockInlineCompatibility = shouldEnableSpcInlineCompat(archParam);
-  if (shouldUseNoromAddressing(archParam)) {
-    applyMapperSelection(session.targetState, "norom");
-  }
-};
-var handleStartpos = ({ session, operandResolver }, words) => {
-  const params = words.slice(1);
-  if (!session.inTargetBlock || !session.targetBlockData) {
-    throw new Error("startpos used without an active spcblock.");
-  }
-  if (params.length !== 1) {
-    throw new Error("startpos requires exactly one parameter.");
-  }
-  session.targetBlockData.executeAddress = operandResolver.getnum(session.resolvedefines(params[0])) & 65535;
 };
 var registerGenericLayoutDirectives = (registry, context) => {
   registry.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
@@ -13739,14 +15339,7 @@ var registerGenericLayoutDirectives = (registry, context) => {
     session.currentTargetAddress = value;
     session.currentTargetStartAddress = value;
   });
-  registry.registerLowered("org", context.org, ({ session, runtime, spcRuntime }, words) => {
-    if (session.inTargetBlock) {
-      throw new Error("ORG is unavailable inside spcblock.");
-    }
-    if (shouldRedirectOrgToSpcblock(session.targetBlockInlineCompatibility)) {
-      spcRuntime.handleSpcblock(["spcblock", ...words.slice(1)]);
-      return;
-    }
+  registry.registerLowered("org", context.org, ({ runtime }, words) => {
     runtime.handleOrg(words.slice(1));
   });
   registry.registerLowered("pushbase", context.addressStack, handlePushBase);
@@ -13759,163 +15352,11 @@ var registerGenericLayoutDirectives = (registry, context) => {
   });
   registry.registerLowered("arch", context.architecture, handleArch);
 };
-var registerSnesMapperDirectives = (registry, context) => {
-  const registerMapper = (keyword, mapper) => registry.registerLowered(keyword, context.mapper, ({ session }) => {
-    assertMapperAvailable(session.inTargetBlock);
-    applyMapperSelection(session.targetState, mapper);
-  });
-  registerMapper("lorom", "lorom");
-  registerMapper("hirom", "hirom");
-  registerMapper("exlorom", "exlorom");
-  registerMapper("exhirom", "exhirom");
-  registerMapper("sfxrom", "sfxrom");
-  registerMapper("norom", "norom");
-  registerMapper("fullsa1rom", "bigsa1rom");
-  registry.registerLowered("sa1rom", context.mapper, ({ session }, words) => {
-    assertMapperAvailable(session.inTargetBlock);
-    if (words.length > 1) {
-      const parts = words[1].split(",");
-      if (parts.length !== 4) {
-        throw new Error("Invalid SA1ROM mapper specification. Expected 4 comma-separated values.");
-      }
-      session.targetState.sa1Banks = [];
-      session.targetState.sa1Banks[0] = parseInt(parts[0], 10) << 20;
-      session.targetState.sa1Banks[1] = parseInt(parts[1], 10) << 20;
-      session.targetState.sa1Banks[4] = parseInt(parts[2], 10) << 20;
-      session.targetState.sa1Banks[5] = parseInt(parts[3], 10) << 20;
-    } else {
-      session.targetState.sa1Banks = [];
-      session.targetState.sa1Banks[0] = 0 << 20;
-      session.targetState.sa1Banks[1] = 1 << 20;
-      session.targetState.sa1Banks[4] = 2 << 20;
-      session.targetState.sa1Banks[5] = 3 << 20;
-    }
-    applyMapperSelection(session.targetState, "sa1rom");
-  });
-};
-var registerSpcLayoutDirectives = (registry, context) => {
-  registry.registerLowered("startpos", context.startpos, handleStartpos);
-};
-var registerSnesPolicyDirectives = (registry, context) => {
-  registry.registerLowered("check", context.policy, ({ session }, words) => {
-    if (words.length >= 2 && words[1].toLowerCase() === "title") {
-      session.targetState.readFunctionsEnabled = true;
-      return;
-    }
-    if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
-      throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
-    }
-    const mode = words[2].toLowerCase();
-    if (mode === "off") {
-      session.targetState.bankCrossMode = "off";
-    } else if (mode === "half") {
-      session.targetState.bankCrossMode = "half";
-    } else if (mode === "full" || mode === "on") {
-      session.targetState.bankCrossMode = "full";
-    } else {
-      throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
-    }
-  });
-  registry.registerLowered("optimize", context.policy, ({ session }, words) => {
-    if (words.length >= 3 && words[1].toLowerCase() === "dp") {
-      const mode = words[2].toLowerCase();
-      if (mode === "none") {
-        session.targetState.optimizeDirectPage = false;
-      } else if (mode === "ram" || mode === "always") {
-        session.targetState.optimizeDirectPage = true;
-      }
-    }
-  });
-};
-var registerLayoutDirectives = (registry, context, activeSetIds = ALL_LEGACY_TARGET_DIRECTIVE_SETS) => {
+var registerLayoutDirectives = (registry, context) => {
   registerGenericLayoutDirectives(registry, context);
-  if (activeSetIds.has(LEGACY_SNES_MAPPER_DIRECTIVE_SET)) {
-    registerSnesMapperDirectives(registry, context);
-  }
-  if (activeSetIds.has(LEGACY_SPC_DIRECTIVE_SET)) {
-    registerSpcLayoutDirectives(registry, context);
-  }
-  if (activeSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)) {
-    registerSnesPolicyDirectives(registry, context);
-  }
 };
 
-// src/directives/memory.ts
-var handleFreespace = ({ session }, words) => {
-  if (session.inTargetBlock) {
-    throw new Error(`${words[0]} is unavailable inside spcblock.`);
-  }
-  if (!isFreespaceAvailable(session.targetState.mapper)) {
-    throw new Error("No freespace available in norom.");
-  }
-  const sourceLen = session.baseImage && session.baseImage.length > 0 ? session.baseImage.length : session.outputBytes.length;
-  const startPc = Math.max(524288, sourceLen);
-  if (session.outputBytes.length < 1048576) {
-    session.expandOutput(1048576, session.outputFillByte);
-  }
-  const startSnes = session.outputWriter.fromOutputOffset(startPc);
-  if (startSnes < 0) {
-    throw new Error("Unable to map freespace start to SNES address.");
-  }
-  session.currentTargetAddress = startSnes;
-  session.currentTargetBaseAddress = startSnes;
-  session.currentTargetStartAddress = startSnes;
-  session.currentTargetBaseStartAddress = startSnes;
-  session.activeAllocationStartOffset = startPc;
-  session.write1(83);
-  session.write1(84);
-  session.write1(65);
-  session.write1(82);
-  session.write1(0);
-  session.write1(0);
-  session.write1(255);
-  session.write1(255);
-  session.activeAllocationContentStartOffset = startPc + 8;
-};
-var handleFreespaceByte = ({ session, operandResolver }, words) => {
-  const params = words.slice(1);
-  if (params.length !== 1) {
-    throw new Error("FREESPACEBYTE requires exactly one parameter.");
-  }
-  const value = session.resolvedefines(params[0]);
-  session.outputFillByte = operandResolver.getnum(value) & 255;
-};
-var handleProt = ({ session }, words) => {
-  const labelList = words.slice(1);
-  if (labelList.length === 0) {
-    throw new Error("PROT command requires at least one label parameter.");
-  }
-  const labels = labelList.join(" ").split(",").map((label) => label.trim()).filter(Boolean);
-  if (labels.length === 0) {
-    throw new Error("PROT command requires at least one valid label.");
-  }
-  session.write1(80);
-  session.write1(82);
-  session.write1(79);
-  session.write1(84);
-  session.write1(labels.length * 3 & 255);
-  for (const label of labels) {
-    let address = 0;
-    try {
-      address = session.symbolScope.getLabelValue(label, false) & 16777215;
-    } catch (_error) {
-      address = 0;
-    }
-    session.write3(address);
-  }
-  session.write1(83);
-  session.write1(84);
-  session.write1(79);
-  session.write1(80);
-  session.write1(0);
-};
-var registerMemoryDirectives = (registry, context) => {
-  registry.registerLowered(["freecode", "freespace", "freedata"], context, handleFreespace);
-  registry.registerLowered("freespacebyte", context, handleFreespaceByte);
-  registry.registerLowered("prot", context, handleProt);
-};
-
-// src/services/command-text-service.ts
+// packages/core/src/services/command-text-service.ts
 var removeInlineComment = (line) => {
   let inQuote = false;
   for (let i = 0; i < line.length; i++) {
@@ -14149,7 +15590,7 @@ function isBareLabelReference(input) {
   return index2 === input.length;
 }
 
-// src/directives/misc.ts
+// packages/core/src/directives/misc.ts
 var handlePullTable = ({ session }) => {
   if (session.tableStack.length === 0) {
     throw new Error("pulltable without pushtable");
@@ -14303,12 +15744,8 @@ var registerMiscDirectives = (registry, context) => {
   registry.registerLowered("error", context.diagnostic, handleError);
   registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
 };
-var registerAsarCompatibilityDirectives = (registry, context) => {
-  registry.registerLowered([...ASAR_COMPAT_NO_OP_DIRECTIVES], context, () => {
-  });
-};
 
-// src/directives/namespace.ts
+// packages/core/src/directives/namespace.ts
 var handlePushNamespace = ({ session }) => {
   session.namespaceStack.push(session.currentNamespace);
   if (session.namespaceNestingEnabled) {
@@ -14327,9 +15764,6 @@ var handlePullNamespace = ({ session }) => {
   session.currentNamespace = session.namespaceStack.pop() ?? "";
 };
 var handleNamespace = ({ session }, words) => {
-  if (session.inTargetBlock) {
-    throw new Error("NAMESPACE is unavailable inside spcblock.");
-  }
   const params = words.slice(1);
   if (params.length >= 2 && params[0].toLowerCase() === "nested") {
     const action2 = params[1].toLowerCase();
@@ -14390,19 +15824,7 @@ var registerNamespaceDirectives = (registry, context) => {
   registry.registerLowered("pullns", context, handlePullNamespace);
 };
 
-// src/directives/spc.ts
-var handleSpcblock = ({ runtime }, words) => {
-  runtime.handleSpcblock(words);
-};
-var handleEndSpcblock = ({ runtime }, words) => {
-  runtime.handleEndSpcblock(words);
-};
-var registerSpcDirectives = (registry, context) => {
-  registry.registerLowered("spcblock", context, handleSpcblock);
-  registry.registerLowered("endspcblock", context, handleEndSpcblock);
-};
-
-// src/directives/struct-binary.ts
+// packages/core/src/directives/struct-binary.ts
 var registerStructBinaryDirectives = (registry, context) => {
   registry.register("struct", context, ({ session }, words) => {
     session.structEngine.handleStruct(words);
@@ -14412,7 +15834,7 @@ var registerStructBinaryDirectives = (registry, context) => {
   });
 };
 
-// src/directives/registry.ts
+// packages/core/src/directives/registry.ts
 var DirectiveRegistry = class {
   handlers = /* @__PURE__ */ new Map();
   phases = /* @__PURE__ */ new Map();
@@ -14494,32 +15916,23 @@ var DirectiveRegistry = class {
     return void 0;
   }
 };
-var createDirectiveRegistry = (contexts, activeSetIds = ALL_LEGACY_TARGET_DIRECTIVE_SETS) => {
+var createDirectiveRegistry = (contexts) => {
   const registry = new DirectiveRegistry();
   registerIncludeSourceDirectives(registry, contexts.includeSource);
   registerFillPadDirectives(registry, contexts.fillPad);
   registerFlowControlDirectives(registry, contexts.flowControl);
   registerNamespaceDirectives(registry, contexts.namespace);
-  registerLayoutDirectives(registry, contexts.layout, activeSetIds);
+  registerLayoutDirectives(registry, contexts.layout);
   registerDataDirectives(registry, contexts.data);
-  if (activeSetIds.has(LEGACY_SPC_DIRECTIVE_SET)) {
-    registerSpcDirectives(registry, contexts.spc);
-  }
   registerStructBinaryDirectives(registry, contexts.struct);
   registerMiscDirectives(registry, {
     table: contexts.table,
     diagnostic: contexts.diagnostic
   });
-  if (activeSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET)) {
-    registerAsarCompatibilityDirectives(registry, contexts.table);
-  }
-  if (activeSetIds.has(LEGACY_SNES_MEMORY_DIRECTIVE_SET)) {
-    registerMemoryDirectives(registry, contexts.memory);
-  }
   return registry;
 };
 
-// src/services/define-engine.ts
+// packages/core/src/services/define-engine.ts
 var DefineEngine = class {
   constructor(host) {
     this.host = host;
@@ -14858,7 +16271,7 @@ var DefineEngine = class {
   }
 };
 
-// src/services/directive-runtime-service.ts
+// packages/core/src/services/directive-runtime-service.ts
 var DirectiveRuntimeService = class {
   constructor(host) {
     this.host = host;
@@ -15103,7 +16516,7 @@ var DirectiveRuntimeService = class {
   }
 };
 
-// src/services/program-model-builder.ts
+// packages/core/src/services/program-model-builder.ts
 var ProgramModelBuilder = class {
   constructor(host) {
     this.host = host;
@@ -15394,7 +16807,7 @@ var ProgramModelBuilder = class {
   }
 };
 
-// src/services/assembly-front-end-service.ts
+// packages/core/src/services/assembly-front-end-service.ts
 var AssemblyFrontEndService = class {
   constructor(host) {
     this.host = host;
@@ -15451,7 +16864,7 @@ var AssemblyFrontEndService = class {
   }
 };
 
-// src/services/command-lowering-service.ts
+// packages/core/src/services/command-lowering-service.ts
 var canonicalDirectiveKeyword = (keyword, registry) => {
   const normalized = keyword.toLowerCase();
   if (normalized.startsWith("@") && registry.has(normalized.slice(1))) {
@@ -15616,7 +17029,7 @@ var CommandLoweringService = class {
   }
 };
 
-// src/services/front-end-command-service.ts
+// packages/core/src/services/front-end-command-service.ts
 var FrontEndCommandService = class {
   constructor(host) {
     this.host = host;
@@ -15775,7 +17188,7 @@ var FrontEndCommandService = class {
   }
 };
 
-// src/services/include-source-service.ts
+// packages/core/src/services/include-source-service.ts
 var IncludeSourceService = class {
   constructor(host) {
     this.host = host;
@@ -15957,7 +17370,7 @@ var IncludeSourceService = class {
   }
 };
 
-// src/services/macro-engine.ts
+// packages/core/src/services/macro-engine.ts
 var MacroEngine = class {
   host;
   macroExpansionControlStack = [];
@@ -16565,7 +17978,7 @@ var MacroEngine = class {
   }
 };
 
-// src/services/output-writer-service.ts
+// packages/core/src/services/output-writer-service.ts
 var OutputWriterService = class {
   constructor(host) {
     this.host = host;
@@ -16746,94 +18159,7 @@ var OutputWriterService = class {
   }
 };
 
-// src/services/legacy-spc-runtime-service.ts
-var LegacySpcRuntimeService = class {
-  constructor(host) {
-    this.host = host;
-  }
-  host;
-  finishPass() {
-    if (shouldAutoCloseSpcblock(this.host.targetBlockInlineCompatibility, this.host.inTargetBlock)) {
-      this.handleEndSpcblock(["endspcblock", "execute", "0"]);
-    }
-    if (this.host.inTargetBlock) {
-      throw new Error("Missing endspcblock before end of pass.");
-    }
-  }
-  handleSpcblock(words) {
-    if (words.length < 2) throw new Error("spcblock requires at least a destination address.");
-    if (words.length > 4) throw new Error("spcblock has too many arguments.");
-    if (this.host.inTargetBlock) throw new Error("Nested spcblock directives are not supported.");
-    const destination = this.host.operandResolver.getnum(this.host.resolvedefines(words[1]));
-    if ((destination & ~65535) !== 0) {
-      throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
-    }
-    let type = "nspc";
-    if (words.length === 3) {
-      const kind = words[2].toLowerCase();
-      if (kind === "nspc") type = "nspc";
-      else if (kind === "custom") {
-        throw new Error("Custom spcblock mode requires a macro and is not implemented.");
-      } else throw new Error(`Unknown spcblock type: ${words[2]}`);
-    } else if (words.length === 4) {
-      if (words[2].toLowerCase() !== "custom") {
-        throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
-      }
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-    if (type !== "nspc") throw new Error("Custom spcblock mode is not implemented.");
-    const sizeAddress = this.host.currentTargetBaseAddress;
-    this.host.write2(0);
-    this.host.write2(destination);
-    this.host.currentTargetAddress = destination;
-    this.host.currentTargetStartAddress = destination;
-    this.host.targetBlockData = {
-      destination,
-      type,
-      sizeAddress,
-      executeAddress: null,
-      namespaceBackup: this.host.currentNamespace
-    };
-    this.host.currentNamespace = `:SPCBLOCK:_${this.host.currentNamespace}`;
-    this.host.inTargetBlock = true;
-  }
-  handleEndSpcblock(words) {
-    if (!this.host.inTargetBlock || !this.host.targetBlockData) {
-      throw new Error("endspcblock used without an active spcblock.");
-    }
-    if (this.host.targetBlockData.type !== "nspc") {
-      throw new Error("Custom spcblock mode is not implemented.");
-    }
-    if (this.host.canFinalize) {
-      const sizeOffset = this.host.outputWriter.toOutputOffset(
-        this.host.targetBlockData.sizeAddress & 16777215
-      );
-      if (sizeOffset < 0) throw new Error("spcblock size address does not map to output.");
-      const blockSize = this.host.currentTargetAddress - this.host.targetBlockData.destination & 65535;
-      this.host.writeOutputBytes(sizeOffset, blockSize & 255, 1);
-      this.host.writeOutputBytes(sizeOffset + 1, blockSize >> 8 & 255, 1);
-    }
-    if (words.length === 3) {
-      if (words[1].toLowerCase() !== "execute") {
-        throw new Error(`Invalid endspcblock argument: ${words[1]}`);
-      }
-      this.host.write2(0);
-      this.host.write2(
-        this.host.operandResolver.getnum(this.host.resolvedefines(words[2])) & 65535
-      );
-    } else if (words.length !== 1) {
-      throw new Error("Unknown endspcblock format.");
-    } else if (this.host.targetBlockData.executeAddress !== null) {
-      this.host.write2(0);
-      this.host.write2(this.host.targetBlockData.executeAddress & 65535);
-    }
-    this.host.currentNamespace = this.host.targetBlockData.namespaceBackup;
-    this.host.targetBlockData = null;
-    this.host.inTargetBlock = false;
-  }
-};
-
-// src/services/struct-engine.ts
+// packages/core/src/services/struct-engine.ts
 var StructEngine = class {
   constructor(host) {
     this.host = host;
@@ -16906,7 +18232,7 @@ var StructEngine = class {
     } else {
       base = this.host.operandResolver.getnum(words[2]);
       if (base < 0 || base > 16777215) {
-        throw new Error(`Invalid SNES address for struct: ${words[2]}`);
+        throw new Error(`Invalid logical address for struct: ${words[2]}`);
       }
     }
     this.host.enterStructDefinition(base);
@@ -17089,7 +18415,7 @@ var StructEngine = class {
   }
 };
 
-// src/services/symbol-scope-service.ts
+// packages/core/src/services/symbol-scope-service.ts
 var SymbolScopeService = class {
   constructor(host) {
     this.host = host;
@@ -17775,7 +19101,7 @@ var SymbolScopeService = class {
   }
 };
 
-// src/file-provider.ts
+// packages/core/src/file-provider.ts
 import fs2 from "node:fs";
 import path from "node:path";
 var NodeAssemblyFileProvider = class {
@@ -17861,10 +19187,13 @@ function stripWrappingQuotes(filename) {
   return filename;
 }
 
-// src/plugin/contracts.ts
+// packages/core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 1;
+function definePlugin(plugin2) {
+  return plugin2;
+}
 
-// src/plugin/diagnostics.ts
+// packages/core/src/plugin/diagnostics.ts
 var PluginError = class extends Error {
   code;
   pluginId;
@@ -17884,7 +19213,81 @@ var PluginError = class extends Error {
   }
 };
 
-// src/plugin/environment.ts
+// packages/core/src/lsp/directive-catalog.ts
+var descriptor = (keyword, summary, syntax, group) => ({ keyword, summary, syntax, group });
+var directiveCatalog = [
+  ...[
+    ["db", "Emit one or more bytes.", "db value[, value...]"],
+    ["dw", "Emit one or more 16-bit words.", "dw value[, value...]"],
+    ["dl", "Emit one or more 24-bit long values.", "dl value[, value...]"],
+    ["dd", "Emit one or more 32-bit double words.", "dd value[, value...]"],
+    ["dc.b", "Emit byte-sized data constants.", "dc.b value[, value...]"],
+    ["dc.w", "Emit word-sized data constants.", "dc.w value[, value...]"],
+    ["dc.l", "Emit long-sized data constants.", "dc.l value[, value...]"]
+  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "data")),
+  ...[
+    ["fillbyte", "Set the byte used by fill.", "fillbyte value"],
+    ["fillword", "Set the word used by fill.", "fillword value"],
+    ["filllong", "Set the long value used by fill.", "filllong value"],
+    ["filldword", "Set the double word used by fill.", "filldword value"],
+    ["fill", "Fill a number of bytes.", "fill count"],
+    ["padbyte", "Set the byte used by pad.", "padbyte value"],
+    ["padword", "Set the word used by pad.", "padword value"],
+    ["padlong", "Set the long value used by pad.", "padlong value"],
+    ["paddword", "Set the double word used by pad.", "paddword value"],
+    ["pad", "Pad output up to an address.", "pad address"]
+  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "memory")),
+  ...[
+    ["incsrc", "Assemble another source file inline.", 'incsrc "file.asm"'],
+    ["include", "Include and assemble another source file.", 'include "file.asm"'],
+    ["includeonce", "Guard a file against repeated inclusion.", "includeonce"],
+    ["incbin", "Embed bytes from a binary file.", 'incbin "file.bin"[,start,length]']
+  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "include")),
+  ...[
+    ["base", "Set the logical base address.", "base address"],
+    ["org", "Set the logical origin address.", "org address"],
+    ["pushbase", "Push the current base address.", "pushbase"],
+    ["pullbase", "Restore the most recently pushed base address.", "pullbase"],
+    ["pushpc", "Push the current logical address.", "pushpc"],
+    ["pullpc", "Restore the most recently pushed logical address.", "pullpc"],
+    ["arch", "Select the active architecture.", "arch architecture"]
+  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "layout")),
+  ...[
+    ["namespace", "Set the active label namespace.", "namespace name"],
+    ["pushns", "Push the current namespace.", "pushns"],
+    ["pullns", "Restore the most recently pushed namespace.", "pullns"]
+  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "namespace")),
+  ...[
+    ["table", "Load a character mapping table.", 'table "file"[,ltr|rtl]'],
+    ["cleartable", "Reset character mappings.", "cleartable"],
+    ["pushtable", "Push the current mapping table.", "pushtable"],
+    ["pulltable", "Restore the most recently pushed mapping table.", "pulltable"]
+  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "table")),
+  descriptor("struct", "Begin a structure definition.", "struct name", "struct"),
+  descriptor("endstruct", "End a structure definition.", "endstruct", "struct"),
+  ...[
+    ["if", "Begin a conditional block.", "if expression"],
+    ["elseif", "Begin an alternate conditional branch.", "elseif expression"],
+    ["else", "Begin a fallback conditional branch.", "else"],
+    ["endif", "End a conditional block.", "endif"],
+    ["while", "Begin a while loop.", "while expression"],
+    ["endwhile", "End a while loop.", "endwhile"],
+    ["for", "Begin a counted loop.", "for var = start..end"],
+    ["endfor", "End a counted loop.", "endfor"]
+  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "control")),
+  descriptor("macro", "Begin a macro definition.", "macro name(args)", "macro"),
+  descriptor("endmacro", "End a macro definition.", "endmacro", "macro"),
+  descriptor("assert", "Fail when a condition is false.", "assert condition", "diagnostic"),
+  descriptor("error", "Fail with a user-defined error.", "error message", "diagnostic"),
+  descriptor(
+    "warnpc",
+    "Fail when the logical address exceeds a bound.",
+    "warnpc address",
+    "diagnostic"
+  )
+];
+
+// packages/core/src/plugin/environment.ts
 var canonical = (value) => value.toLowerCase();
 var toMap = (records) => new Map(records.map((record) => [canonical(record.contributionId), record]));
 var targetInvalid = (target, message) => {
@@ -17918,10 +19321,18 @@ var ResolvedToolingCatalog = class {
     return this.architectures.get(id)?.value.instructions ?? [];
   }
   getDirectives() {
-    return this.target.directiveSets.flatMap((id) => {
+    const contributed = this.target.directiveSets.flatMap((id) => {
       const set = this.directiveSets.get(canonical(id))?.value;
       return set ? [...set.tooling ?? [], ...set.directives.flatMap((item) => item.tooling)] : [];
     });
+    return Object.freeze([
+      ...new Map(
+        [...directiveCatalog, ...contributed].map((descriptor2) => [
+          canonical(descriptor2.keyword),
+          descriptor2
+        ])
+      ).values()
+    ]);
   }
   getExpressionFunctions() {
     return this.target.expressionSets.flatMap(
@@ -18056,17 +19467,17 @@ var AssemblerEnvironment = class {
       if (!set) {
         targetInvalid(targetRecord, `missing directive-set contribution '${setId}'.`);
       }
-      for (const directive of set.value.directives) {
-        for (const keyword of directive.keywords) {
+      for (const directive2 of set.value.directives) {
+        for (const keyword of directive2.keywords) {
           const key = canonical(keyword);
           const previous = directiveKeywords.get(key);
           if (previous) {
             targetInvalid(
               targetRecord,
-              `directive keyword '${keyword}' is supplied by '${previous.id}' (${previous.pluginId}) and '${directive.id}' (${set.pluginId}).`
+              `directive keyword '${keyword}' is supplied by '${previous.id}' (${previous.pluginId}) and '${directive2.id}' (${set.pluginId}).`
             );
           }
-          directiveKeywords.set(key, { id: directive.id, pluginId: set.pluginId });
+          directiveKeywords.set(key, { id: directive2.id, pluginId: set.pluginId });
         }
       }
     }
@@ -18103,6 +19514,19 @@ var AssemblerEnvironment = class {
   getTarget(idOrAlias) {
     const id = this.resolveTargetId(idOrAlias);
     return id ? this.#targets.get(canonical(id))?.value : void 0;
+  }
+  getTargetSummaries() {
+    return Object.freeze(
+      this.#targetRecords.map(
+        ({ value }) => Object.freeze({
+          id: value.id,
+          aliases: Object.freeze([...value.aliases ?? []]),
+          displayName: value.displayName,
+          defaultArchitecture: value.defaultArchitecture,
+          defaultOutputExtension: value.defaultOutputExtension
+        })
+      )
+    );
   }
   resolveArchitectureId(targetId, idOrAlias) {
     const id = this.resolveTargetId(targetId);
@@ -18167,7 +19591,560 @@ var AssemblerEnvironment = class {
   }
 };
 
-// src/plugin/session-state.ts
+// packages/core/src/plugin/manager.ts
+var import_semver = __toESM(require_semver2(), 1);
+var noopLogger = {
+  debug: () => void 0,
+  info: () => void 0,
+  warn: () => void 0,
+  error: () => void 0
+};
+var isLowerAlphaNumeric = (character) => character >= "a" && character <= "z" || character >= "0" && character <= "9";
+var isValidId = (value) => {
+  if (value.length === 0 || value[0] < "a" || value[0] > "z") return false;
+  let previousWasSeparator = false;
+  for (const character of value) {
+    const separator = character === "." || character === "-";
+    if (!isLowerAlphaNumeric(character) && !separator) return false;
+    if (separator && previousWasSeparator) return false;
+    previousWasSeparator = separator;
+  }
+  return !previousWasSeparator;
+};
+var isValidContributionId = (value) => value.includes(".") && isValidId(value);
+var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isArray = (value) => Array.isArray(value);
+var isEmptyOptions = (value) => value === void 0 || isRecord(value) && Object.keys(value).length === 0;
+var deepFreeze = (value, seen = /* @__PURE__ */ new Set()) => {
+  if (typeof value !== "object" && typeof value !== "function" || value === null || seen.has(value)) {
+    return value;
+  }
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) deepFreeze(item, seen);
+  } else {
+    for (const item of Object.values(value)) deepFreeze(item, seen);
+  }
+  return Object.freeze(value);
+};
+var validateText = (value, field, pluginId) => {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new PluginError(`Plugin field '${field}' must be a non-empty string.`, {
+      code: "PLUGIN_INVALID_MANIFEST",
+      pluginId
+    });
+  }
+  return value;
+};
+var validateManifest = (manifest, pluginModule) => {
+  if (!isRecord(manifest)) {
+    throw new PluginError("Plugin manifest must be an object.", {
+      code: "PLUGIN_INVALID_MANIFEST",
+      pluginModule
+    });
+  }
+  const id = validateText(manifest.id, "id");
+  if (!isValidId(id)) {
+    throw new PluginError(`Plugin ID '${id}' is invalid.`, {
+      code: "PLUGIN_INVALID_MANIFEST",
+      pluginId: id,
+      pluginModule
+    });
+  }
+  const name = validateText(manifest.name, "name", id);
+  const version = validateText(manifest.version, "version", id);
+  if (!import_semver.default.valid(version)) {
+    throw new PluginError(`Plugin '${id}' has invalid semantic version '${version}'.`, {
+      code: "PLUGIN_INVALID_MANIFEST",
+      pluginId: id,
+      pluginModule
+    });
+  }
+  if (manifest.apiVersion !== PLUGIN_API_VERSION) {
+    throw new PluginError(
+      `Plugin '${id}' requires plugin API ${String(manifest.apiVersion)}; this host supports ${PLUGIN_API_VERSION}.`,
+      { code: "PLUGIN_API_INCOMPATIBLE", pluginId: id, pluginModule }
+    );
+  }
+  if (manifest.description !== void 0 && typeof manifest.description !== "string") {
+    throw new PluginError(`Plugin '${id}' description must be a string.`, {
+      code: "PLUGIN_INVALID_MANIFEST",
+      pluginId: id,
+      pluginModule
+    });
+  }
+  if (manifest.requires !== void 0 && !Array.isArray(manifest.requires)) {
+    throw new PluginError(`Plugin '${id}' dependencies must be an array.`, {
+      code: "PLUGIN_INVALID_MANIFEST",
+      pluginId: id,
+      pluginModule
+    });
+  }
+  const requires = (manifest.requires ?? []).map((dependency) => {
+    if (!isRecord(dependency)) {
+      throw new PluginError(`Plugin '${id}' has a malformed dependency.`, {
+        code: "PLUGIN_INVALID_MANIFEST",
+        pluginId: id,
+        pluginModule
+      });
+    }
+    const pluginId = validateText(dependency.pluginId, "requires.pluginId", id);
+    const range = validateText(dependency.version, "requires.version", id);
+    if (!isValidId(pluginId) || !import_semver.default.validRange(range)) {
+      throw new PluginError(`Plugin '${id}' has invalid dependency '${pluginId}@${range}'.`, {
+        code: "PLUGIN_INVALID_MANIFEST",
+        pluginId: id,
+        pluginModule
+      });
+    }
+    return { pluginId, version: range };
+  });
+  return deepFreeze({
+    id,
+    name,
+    version,
+    apiVersion: PLUGIN_API_VERSION,
+    ...manifest.description === void 0 ? {} : { description: manifest.description },
+    ...requires.length === 0 ? {} : { requires }
+  });
+};
+var validatePlugin = (value, pluginModule) => {
+  if (!isRecord(value) || typeof value.activate !== "function") {
+    throw new PluginError(
+      `Module '${pluginModule ?? "<programmatic>"}' has no valid default plugin export.`,
+      {
+        code: "PLUGIN_INVALID_EXPORT",
+        pluginModule
+      }
+    );
+  }
+  const manifest = validateManifest(value.manifest, pluginModule);
+  if (value.validateOptions !== void 0 && typeof value.validateOptions !== "function") {
+    throw new PluginError(`Plugin '${manifest.id}' validateOptions must be a function.`, {
+      code: "PLUGIN_INVALID_EXPORT",
+      pluginId: manifest.id,
+      pluginModule
+    });
+  }
+  const plugin2 = value;
+  return {
+    manifest,
+    ...plugin2.validateOptions ? { validateOptions: plugin2.validateOptions.bind(plugin2) } : {},
+    activate: plugin2.activate.bind(plugin2)
+  };
+};
+var validateContributionId = (id, pluginId) => {
+  if (typeof id !== "string" || !isValidContributionId(id)) {
+    throw new PluginError(
+      `Plugin '${pluginId}' registered invalid contribution ID '${String(id)}'.`,
+      {
+        code: "PLUGIN_CONFIGURATION_INVALID",
+        pluginId,
+        contributionId: typeof id === "string" ? id : void 0
+      }
+    );
+  }
+  return id;
+};
+var validateAliases = (aliases, pluginId, contributionId) => {
+  if (aliases === void 0) return;
+  if (!Array.isArray(aliases) || aliases.some((alias) => typeof alias !== "string" || alias === "")) {
+    throw new PluginError(`Contribution '${contributionId}' has invalid aliases.`, {
+      code: "PLUGIN_CONFIGURATION_INVALID",
+      pluginId,
+      contributionId
+    });
+  }
+};
+var PluginManager = class {
+  #logger;
+  #activated = [];
+  #manifests = /* @__PURE__ */ new Map();
+  #contributionOwners = /* @__PURE__ */ new Map();
+  #sessionStates = [];
+  #architectures = [];
+  #addressSpaces = [];
+  #outputFormats = [];
+  #directiveSets = [];
+  #expressionSets = [];
+  #lifecycles = [];
+  #targets = [];
+  #registrationOrder = 0;
+  #environment;
+  #disposed = false;
+  constructor(options = {}) {
+    this.#logger = options.logger ?? noopLogger;
+  }
+  get activatedPlugins() {
+    return this.#activated.map((item) => item.manifest);
+  }
+  async activateModules(requests) {
+    const normalized = requests.map((request) => {
+      if (!isRecord(request.module) || !("default" in request.module)) {
+        throw new PluginError(`Module '${request.pluginModule}' has no default export.`, {
+          code: "PLUGIN_INVALID_EXPORT",
+          pluginModule: request.pluginModule
+        });
+      }
+      return {
+        plugin: validatePlugin(request.module.default, request.pluginModule),
+        options: request.options,
+        pluginModule: request.pluginModule
+      };
+    });
+    await this.activatePlugins(normalized);
+  }
+  async activatePlugins(requests) {
+    if (this.#disposed) {
+      throw new PluginError("Cannot activate plugins after the manager has been disposed.", {
+        code: "PLUGIN_ACTIVATION_FAILED"
+      });
+    }
+    if (this.#environment) {
+      throw new PluginError("Cannot activate plugins after the environment has been frozen.", {
+        code: "PLUGIN_ACTIVATION_FAILED"
+      });
+    }
+    const normalized = requests.map((request) => ({
+      ...request,
+      plugin: validatePlugin(request.plugin, request.pluginModule)
+    }));
+    const pending = /* @__PURE__ */ new Map();
+    for (const request of normalized) {
+      const id = request.plugin.manifest.id;
+      if (this.#manifests.has(id) || pending.has(id)) {
+        throw new PluginError(`Duplicate plugin ID '${id}'.`, {
+          code: "PLUGIN_CONTRIBUTION_DUPLICATE",
+          pluginId: id,
+          pluginModule: request.pluginModule
+        });
+      }
+      pending.set(id, request);
+    }
+    const available = new Map(this.#manifests);
+    for (const [id, request] of pending) available.set(id, request.plugin.manifest);
+    for (const request of normalized) {
+      for (const dependency of request.plugin.manifest.requires ?? []) {
+        const installed = available.get(dependency.pluginId);
+        if (!installed) {
+          throw new PluginError(
+            `Plugin '${request.plugin.manifest.id}' requires missing plugin '${dependency.pluginId}'.`,
+            {
+              code: "PLUGIN_DEPENDENCY_MISSING",
+              pluginId: request.plugin.manifest.id,
+              pluginModule: request.pluginModule
+            }
+          );
+        }
+        if (!import_semver.default.satisfies(installed.version, dependency.version)) {
+          throw new PluginError(
+            `Plugin '${request.plugin.manifest.id}' requires '${dependency.pluginId}@${dependency.version}', but ${installed.version} is active.`,
+            {
+              code: "PLUGIN_DEPENDENCY_INCOMPATIBLE",
+              pluginId: request.plugin.manifest.id,
+              pluginModule: request.pluginModule
+            }
+          );
+        }
+      }
+    }
+    const activatedThisCall = new Set(this.#manifests.keys());
+    while (pending.size > 0) {
+      const ready = [...pending.values()].find(
+        (request) => (request.plugin.manifest.requires ?? []).every(
+          (dependency) => activatedThisCall.has(dependency.pluginId)
+        )
+      );
+      if (!ready) {
+        const ids = [...pending.keys()].join(", ");
+        throw new PluginError(`Plugin dependency cycle among: ${ids}.`, {
+          code: "PLUGIN_DEPENDENCY_CYCLE"
+        });
+      }
+      await this.#activateOne(ready);
+      pending.delete(ready.plugin.manifest.id);
+      activatedThisCall.add(ready.plugin.manifest.id);
+    }
+  }
+  async #activateOne(request) {
+    const plugin2 = request.plugin;
+    const manifest = plugin2.manifest;
+    let options;
+    try {
+      if (plugin2.validateOptions) {
+        options = plugin2.validateOptions(request.options);
+      } else if (isEmptyOptions(request.options)) {
+        options = {};
+      } else {
+        throw new PluginError(`Plugin '${manifest.id}' does not accept options.`, {
+          code: "PLUGIN_CONFIGURATION_INVALID",
+          pluginId: manifest.id,
+          pluginModule: request.pluginModule
+        });
+      }
+    } catch (error) {
+      if (error instanceof PluginError) throw error;
+      throw new PluginError(`Configuration for plugin '${manifest.id}' is invalid.`, {
+        code: "PLUGIN_CONFIGURATION_INVALID",
+        pluginId: manifest.id,
+        pluginModule: request.pluginModule,
+        cause: error
+      });
+    }
+    const frozenOptions = deepFreeze(options);
+    const transaction = this.#createTransaction(manifest, request.pluginModule);
+    const context = this.#createActivationContext(transaction, frozenOptions);
+    let disposable;
+    try {
+      disposable = await plugin2.activate(context, frozenOptions);
+      if (disposable !== void 0 && (!isRecord(disposable) || typeof disposable.dispose !== "function")) {
+        throw new Error("activate() returned an invalid disposable.");
+      }
+      this.#validateTransaction(transaction);
+      this.#commit(transaction);
+      this.#activated.push({
+        manifest,
+        module: request.pluginModule,
+        disposable: disposable ?? void 0
+      });
+      this.#manifests.set(manifest.id, manifest);
+    } catch (error) {
+      if (disposable) await disposable.dispose();
+      if (error instanceof PluginError) throw error;
+      throw new PluginError(`Activation failed for plugin '${manifest.id}'.`, {
+        code: "PLUGIN_ACTIVATION_FAILED",
+        pluginId: manifest.id,
+        pluginModule: request.pluginModule,
+        cause: error
+      });
+    }
+  }
+  #createTransaction(manifest, module) {
+    return {
+      manifest,
+      module,
+      sessionStates: [],
+      architectures: [],
+      addressSpaces: [],
+      outputFormats: [],
+      directiveSets: [],
+      expressionSets: [],
+      lifecycles: [],
+      targets: []
+    };
+  }
+  #createActivationContext(transaction, options) {
+    const add = (list, contribution) => {
+      const contributionId = validateContributionId(contribution.id, transaction.manifest.id);
+      list.push({
+        pluginId: transaction.manifest.id,
+        contributionId,
+        registrationOrder: this.#registrationOrder++,
+        value: contribution
+      });
+    };
+    const logger = this.#namespacedLogger(transaction.manifest.id);
+    return Object.freeze({
+      pluginId: transaction.manifest.id,
+      logger,
+      options,
+      registerSessionState: (contribution) => {
+        add(
+          transaction.sessionStates,
+          contribution
+        );
+        return Object.freeze({ id: contribution.id });
+      },
+      registerArchitecture: (contribution) => add(transaction.architectures, contribution),
+      registerAddressSpace: (contribution) => add(transaction.addressSpaces, contribution),
+      registerOutputFormat: (contribution) => add(transaction.outputFormats, contribution),
+      registerDirectiveSet: (contribution) => add(transaction.directiveSets, contribution),
+      registerExpressionSet: (contribution) => add(transaction.expressionSets, contribution),
+      registerLifecycle: (contribution) => add(transaction.lifecycles, contribution),
+      registerTarget: (contribution) => add(transaction.targets, contribution)
+    });
+  }
+  #namespacedLogger(pluginId) {
+    const log = (level) => (message, details) => this.#logger[level](`[${pluginId}] ${message}`, details);
+    return Object.freeze({
+      debug: log("debug"),
+      info: log("info"),
+      warn: log("warn"),
+      error: log("error")
+    });
+  }
+  #validateTransaction(transaction) {
+    const local = /* @__PURE__ */ new Set();
+    const all = [
+      ...transaction.sessionStates,
+      ...transaction.architectures,
+      ...transaction.addressSpaces,
+      ...transaction.outputFormats,
+      ...transaction.directiveSets,
+      ...transaction.expressionSets,
+      ...transaction.lifecycles,
+      ...transaction.targets
+    ];
+    for (const record of all) {
+      const id = record.contributionId.toLowerCase();
+      const existingOwner = this.#contributionOwners.get(id);
+      if (existingOwner || local.has(id)) {
+        throw new PluginError(
+          `Contribution '${record.contributionId}' from '${transaction.manifest.id}' conflicts with owner '${existingOwner ?? transaction.manifest.id}'.`,
+          {
+            code: "PLUGIN_CONTRIBUTION_DUPLICATE",
+            pluginId: transaction.manifest.id,
+            pluginModule: transaction.module,
+            contributionId: record.contributionId
+          }
+        );
+      }
+      local.add(id);
+    }
+    for (const record of transaction.architectures) {
+      validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
+      if (typeof record.value.displayName !== "string" || typeof record.value.createEncoder !== "function" || typeof record.value.classifyOperand !== "function" || typeof record.value.splitOperands !== "function" || !isArray(record.value.instructions)) {
+        throw new PluginError(`Architecture '${record.contributionId}' is malformed.`, {
+          code: "PLUGIN_CONFIGURATION_INVALID",
+          pluginId: transaction.manifest.id,
+          contributionId: record.contributionId
+        });
+      }
+    }
+    for (const record of transaction.addressSpaces) {
+      if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+    }
+    for (const record of transaction.outputFormats) {
+      if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+    }
+    for (const record of transaction.sessionStates) {
+      if (typeof record.value.create !== "function" || typeof record.value.clone !== "function") {
+        this.#malformed(transaction, record);
+      }
+    }
+    for (const record of transaction.directiveSets) {
+      if (!isArray(record.value.directives) || record.value.tooling !== void 0 && !isArray(record.value.tooling)) {
+        this.#malformed(transaction, record);
+      }
+      for (const directive2 of record.value.directives) {
+        validateContributionId(directive2.id, transaction.manifest.id);
+        if (local.has(directive2.id.toLowerCase()) || this.#contributionOwners.has(directive2.id.toLowerCase())) {
+          throw new PluginError(`Duplicate directive contribution '${directive2.id}'.`, {
+            code: "PLUGIN_CONTRIBUTION_DUPLICATE",
+            pluginId: transaction.manifest.id,
+            contributionId: directive2.id
+          });
+        }
+        local.add(directive2.id.toLowerCase());
+        if (!isArray(directive2.keywords) || directive2.keywords.length === 0 || directive2.keywords.some(
+          (keyword) => typeof keyword !== "string" || keyword === ""
+        ) || typeof directive2.createHandler !== "function" || !isArray(directive2.tooling)) {
+          throw new PluginError(`Directive '${directive2.id}' is malformed.`, {
+            code: "PLUGIN_CONFIGURATION_INVALID",
+            pluginId: transaction.manifest.id,
+            contributionId: directive2.id
+          });
+        }
+      }
+    }
+    for (const record of transaction.expressionSets) {
+      if (!isArray(record.value.functions)) this.#malformed(transaction, record);
+      for (const expression of record.value.functions) {
+        validateAliases(expression.aliases, transaction.manifest.id, record.contributionId);
+        if (typeof expression.name !== "string" || expression.name === "" || typeof expression.evaluate !== "function" || typeof expression.summary !== "string" || !isRecord(expression.signature)) {
+          this.#malformed(transaction, record);
+        }
+      }
+    }
+    for (const record of transaction.lifecycles) {
+      if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+    }
+    for (const record of transaction.targets) {
+      validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
+      if (typeof record.value.displayName !== "string" || typeof record.value.defaultArchitecture !== "string" || !isArray(record.value.architectures) || typeof record.value.addressSpace !== "string" || typeof record.value.outputFormat !== "string" || !isArray(record.value.directiveSets) || !isArray(record.value.expressionSets) || !isArray(record.value.lifecycle) || typeof record.value.defaultOutputExtension !== "string") {
+        this.#malformed(transaction, record);
+      }
+    }
+  }
+  #malformed(transaction, record) {
+    throw new PluginError(`Contribution '${record.contributionId}' is malformed.`, {
+      code: "PLUGIN_CONFIGURATION_INVALID",
+      pluginId: transaction.manifest.id,
+      pluginModule: transaction.module,
+      contributionId: record.contributionId
+    });
+  }
+  #commit(transaction) {
+    const lists = [
+      transaction.sessionStates,
+      transaction.architectures,
+      transaction.addressSpaces,
+      transaction.outputFormats,
+      transaction.directiveSets,
+      transaction.expressionSets,
+      transaction.lifecycles,
+      transaction.targets
+    ];
+    for (const list of lists) {
+      for (const record of list) {
+        this.#contributionOwners.set(record.contributionId.toLowerCase(), record.pluginId);
+        deepFreeze(record.value);
+        Object.freeze(record);
+      }
+    }
+    for (const set of transaction.directiveSets) {
+      for (const directive2 of set.value.directives) {
+        this.#contributionOwners.set(directive2.id.toLowerCase(), set.pluginId);
+      }
+    }
+    this.#sessionStates.push(...transaction.sessionStates);
+    this.#architectures.push(...transaction.architectures);
+    this.#addressSpaces.push(...transaction.addressSpaces);
+    this.#outputFormats.push(...transaction.outputFormats);
+    this.#directiveSets.push(...transaction.directiveSets);
+    this.#expressionSets.push(...transaction.expressionSets);
+    this.#lifecycles.push(...transaction.lifecycles);
+    this.#targets.push(...transaction.targets);
+  }
+  freeze() {
+    if (this.#disposed) {
+      throw new PluginError("Cannot freeze a disposed plugin manager.", {
+        code: "PLUGIN_ACTIVATION_FAILED"
+      });
+    }
+    if (this.#environment) return this.#environment;
+    const contributions = {
+      manifests: deepFreeze([...this.#manifests.values()]),
+      sessionStates: Object.freeze([...this.#sessionStates]),
+      architectures: Object.freeze([...this.#architectures]),
+      addressSpaces: Object.freeze([...this.#addressSpaces]),
+      outputFormats: Object.freeze([...this.#outputFormats]),
+      directiveSets: Object.freeze([...this.#directiveSets]),
+      expressionSets: Object.freeze([...this.#expressionSets]),
+      lifecycles: Object.freeze([...this.#lifecycles]),
+      targets: Object.freeze([...this.#targets])
+    };
+    this.#environment = new AssemblerEnvironment(contributions);
+    return this.#environment;
+  }
+  async dispose() {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    const errors = [];
+    for (const plugin2 of [...this.#activated].reverse()) {
+      try {
+        await plugin2.disposable?.dispose();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(errors, "One or more plugins failed to dispose.");
+    }
+  }
+};
+
+// packages/core/src/plugin/session-state.ts
 var PluginSessionStateStore = class {
   #contributions;
   #values;
@@ -18261,33 +20238,2984 @@ var PluginSessionStateStore = class {
   }
 };
 
-// src/Arch6502.ts
-var unsupported = () => {
-  throw new Error("MOS 6502 encoding is not implemented; this architecture is a framework stub.");
+// packages/core/src/assembler.ts
+var debug4 = (..._args) => {
 };
-var Arch6502 = class {
-  constructor(context) {
-    this.context = context;
+try {
+  const { default: d } = await import("debug");
+  debug4 = d("Assembler");
+} catch {
+}
+var Assembler = class _Assembler {
+  /** The current logical target address. */
+  currentTargetAddress = 0;
+  /** The current logical target base address. */
+  currentTargetBaseAddress = 0;
+  /** The current target start address. `startpos` */
+  currentTargetStartAddress = 0;
+  /** The current target base start address. `realstartpos` */
+  currentTargetBaseStartAddress = 0;
+  bytes = 0;
+  pushBaseStack = [];
+  /** Mutable bytes produced by this assembly session. */
+  outputBytes = [];
+  /** Byte used when expanding a sparse output range. */
+  outputFillByte = 0;
+  whileStatus = [];
+  namespaceStack = [];
+  currentNamespace = "";
+  namespaceNestingEnabled = false;
+  namespaceNestingPath = [];
+  // Current macro tracking
+  inMacroDefinition = false;
+  currentMacroName = "";
+  currentMacroParams = [];
+  currentMacroBody = [];
+  currentVariadicCount = void 0;
+  currentVariadicArgs = [];
+  macros = /* @__PURE__ */ new Map();
+  mathCore;
+  operandResolver;
+  addressToLineMapping = new AddressToLineMapping();
+  currentFile = "";
+  currentLine = 0;
+  /** Optional sink for structured tracing used by tests and ad-hoc debug scripts. */
+  traceListener = null;
+  /** Active command contexts so nested byte writes inherit the right source line. */
+  traceCommandStack = [];
+  defines = /* @__PURE__ */ new Map();
+  // Character mapping support
+  characterMappings = /* @__PURE__ */ new Map();
+  currentTable = null;
+  tableStack = [];
+  inFunctionDefinition = false;
+  functionDefinitionLines = [];
+  arch = "";
+  pushpcStack = [];
+  pushpcnum = 0;
+  labelTable = /* @__PURE__ */ new Map();
+  /** Track multiple `+` labels */
+  forwardLabels = {};
+  /** Track multiple `-` labels */
+  backwardLabels = {};
+  padUnit = 1;
+  padbyte = [];
+  structs = /* @__PURE__ */ new Map();
+  currentStruct = null;
+  savedPCStack = [];
+  /** Initialize fill pattern */
+  fillbyte = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  baseImage;
+  // Add a static property to hold our CRC table.
+  static crcTable = null;
+  includedFiles = /* @__PURE__ */ new Map();
+  includeStack = [];
+  includePaths = ["./"];
+  macroLabelInstance = 0;
+  // Tracks the current macro instance
+  inMacroExpansion = false;
+  // Flag to track if we're inside a macro expansion
+  currentParentLabel = "";
+  // Track the most recent parent label
+  currentParentIsGlobal = false;
+  // Track if the parent label is global
+  currentGlobalParentLabel = "";
+  // Track the active top-level parent for single-dot labels
+  labelParents = /* @__PURE__ */ new Map();
+  // Track explicit label ancestry without relying on underscores
+  requireStaticLabelLookup = false;
+  passProgramCache = /* @__PURE__ */ new Map();
+  directiveRegistry;
+  architectureRegistry;
+  environment;
+  targetId;
+  targetOptions;
+  pluginState;
+  pluginAddressSpace;
+  pluginOutputFormat;
+  activeLifecycles;
+  cursorAddress;
+  fileProvider;
+  frontEndService;
+  programModelBuilder;
+  commandLoweringService;
+  incrementalProgramParseState;
+  services;
+  stageExecutionStates = /* @__PURE__ */ new Map();
+  diagnostics = [];
+  symbolDefinitions = [];
+  symbolReferences = [];
+  includeEdges = [];
+  collectSourceMetadata;
+  activeStageExecutionState = null;
+  analysisErrorRecoveryEnabled = false;
+  runtimePassthroughRewriteEnabled = false;
+  sessionDisposed = false;
+  get defineEngine() {
+    return this.services.defineEngine;
   }
-  context;
-  getInstructionCatalog() {
-    return [];
+  get directiveRuntime() {
+    return this.services.directiveRuntime;
   }
-  estimateSize(_words) {
-    return unsupported();
+  get addressWidth() {
+    return this.pluginAddressSpace.addressWidth;
   }
-  encode(_words) {
-    return unsupported();
+  get availableArchitectures() {
+    return new Set(this.environment.getTarget(this.targetId)?.architectures ?? []);
   }
-  estimateInstruction(_instruction) {
-    return unsupported();
+  get targetDisplayName() {
+    return this.environment.getTarget(this.targetId)?.displayName ?? this.targetId;
   }
-  encodeInstruction(_instruction) {
-    return unsupported();
+  get frontEndCommandService() {
+    return this.services.frontEndCommandService;
+  }
+  get includeSource() {
+    return this.services.includeSource;
+  }
+  get macroEngine() {
+    return this.services.macroEngine;
+  }
+  get symbolScope() {
+    return this.services.symbolScope;
+  }
+  get outputWriter() {
+    return this.services.outputWriter;
+  }
+  get structEngine() {
+    return this.services.structEngine;
+  }
+  // Core assembler wrapper helpers
+  get currentAddress() {
+    return this.currentTargetAddress;
+  }
+  /**
+   * Records current address.
+   */
+  recordCurrentAddress() {
+    this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
+  }
+  /**
+   * Sets write position.
+   * @param {number} address The address.
+   */
+  setWritePosition(address) {
+    this.currentTargetAddress = address;
+    this.currentTargetBaseAddress = address;
+    this.currentTargetStartAddress = address;
+    this.currentTargetBaseStartAddress = address;
+    if (this.activeStageExecutionState) {
+      this.activeStageExecutionState.cursor.currentTargetAddress = address;
+      this.activeStageExecutionState.cursor.currentTargetBaseAddress = address;
+      this.activeStageExecutionState.cursor.currentTargetStartAddress = address;
+      this.activeStageExecutionState.cursor.currentTargetBaseStartAddress = address;
+    }
+  }
+  /**
+   * Enters struct definition.
+   * @param {number} base The base.
+   */
+  enterStructDefinition(base) {
+    this.savedPCStack.push(this.currentTargetAddress);
+    this.cursorAddress.setWritePosition(base);
+  }
+  /**
+   * Restores struct definition.
+   */
+  restoreStructDefinition() {
+    if (this.savedPCStack.length === 0) {
+      return;
+    }
+    const previousPosition = this.savedPCStack.pop();
+    if (previousPosition !== void 0) {
+      this.cursorAddress.setWritePosition(previousPosition);
+    }
+  }
+  /**
+   * Synchronizes write starts.
+   */
+  syncWriteStarts() {
+    this.currentTargetStartAddress = this.currentTargetAddress;
+    this.currentTargetBaseStartAddress = this.currentTargetBaseAddress;
+  }
+  /**
+   * Increments bytes written.
+   * @param {number} num The num.
+   */
+  incrementBytesWritten(num) {
+    this.bytes += num;
+  }
+  get mode() {
+    return this.getActiveStageCapabilities().instructionMode;
+  }
+  get canEmitBytes() {
+    return this.getActiveStageCapabilities().canEmitBytes;
+  }
+  get canFinalize() {
+    return this.getActiveStageCapabilities().canFinalize;
+  }
+  get enforceResolvedLabels() {
+    return this.getActiveStageCapabilities().enforceResolvedLabels;
+  }
+  get isDefinitionCollectionStage() {
+    return this.getActiveStageCapabilities().isDefinitionCollectionStage;
+  }
+  /**
+   * Traces write.
+   * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
+   */
+  traceWrite(event) {
+    const source = this.traceCommandStack[this.traceCommandStack.length - 1];
+    this.traceListener?.({
+      type: "write",
+      ...event,
+      file: source?.file ?? this.currentFile,
+      line: source?.line ?? this.currentLine,
+      raw: source?.raw ?? "",
+      normalized: source?.normalized ?? ""
+    });
+  }
+  /**
+   * Installs or clears the structured trace listener.
+   * @param {AssemblerTraceListener | null} listener The listener to receive trace events.
+   */
+  setTraceListener(listener) {
+    this.traceListener = listener;
+  }
+  /**
+   * Clears accumulated diagnostics and symbol definitions.
+   */
+  clearAnalysisArtifacts() {
+    this.diagnostics.length = 0;
+    this.symbolDefinitions.length = 0;
+    this.symbolReferences.length = 0;
+    this.includeEdges.length = 0;
+  }
+  /**
+   * Records a directed include-graph edge if it has not already been recorded.
+   * Includes execute once per pass, so edges are de-duplicated by file pair.
+   * @param {string} fromFile The file issuing the include directive.
+   * @param {string} toFile The resolved path of the included file.
+   */
+  recordIncludeEdge(fromFile, toFile) {
+    if (!this.collectSourceMetadata) {
+      return;
+    }
+    if (!fromFile || !toFile) {
+      return;
+    }
+    const duplicate = this.includeEdges.some(
+      (edge) => edge.fromFile === fromFile && edge.toFile === toFile
+    );
+    if (duplicate) {
+      return;
+    }
+    this.includeEdges.push({ fromFile, toFile });
+  }
+  /**
+   * Returns the current source location.
+   * @param {SourceSpan} [span] Optional source span override.
+   * @returns {AssemblySourceLocation} The current source location.
+   */
+  getCurrentSourceLocation(span) {
+    return createAssemblySourceLocation(this.currentFile, this.currentLine, span);
+  }
+  /**
+   * Converts and records an unknown error.
+   * @param {unknown} error The error to normalize.
+   * @param {SourceSpan} [span] Optional source span override.
+   * @param {string} [stage] Optional stage name.
+   * @returns {AssemblyDiagnostic} The recorded diagnostic.
+   */
+  reportErrorDiagnostic(error, span, stage) {
+    const diagnostic = diagnosticFromError(error, this.getCurrentSourceLocation(span), stage);
+    this.diagnostics.push(diagnostic);
+    return diagnostic;
+  }
+  /**
+   * Records a symbol definition if it has not already been recorded.
+   * @param {AssemblySymbolKind} kind The symbol kind.
+   * @param {string} name The symbol name.
+   * @param {{ file?: string; line?: number; span?: SourceSpan; value?: number | string; containerName?: string }} [options] Optional symbol metadata.
+   * @param {string} [options.file] Optional source file override.
+   * @param {number} [options.line] Optional source line override.
+   * @param {SourceSpan} [options.span] Optional precise source span.
+   * @param {number | string} [options.value] Optional resolved symbol value.
+   * @param {string} [options.containerName] Optional owning container name.
+   */
+  recordSymbolDefinition(kind, name, options = {}) {
+    if (!this.collectSourceMetadata) {
+      return;
+    }
+    const file = options.file ?? this.currentFile;
+    const line = options.line ?? this.currentLine;
+    const duplicate = this.symbolDefinitions.some(
+      (entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName
+    );
+    if (duplicate) {
+      return;
+    }
+    this.symbolDefinitions.push({
+      name,
+      kind,
+      location: createAssemblySourceLocation(file, line, options.span),
+      value: options.value,
+      containerName: options.containerName
+    });
+  }
+  /**
+   * Records a symbol reference if it has not already been recorded.
+   * @param {AssemblySymbolReferenceKind} kind The reference kind.
+   * @param {string} name The reference name.
+   * @param {{ file?: string; line?: number; span?: SourceSpan; containerName?: string }} [options] Optional reference metadata.
+   * @param {string} [options.file] Optional source file override.
+   * @param {number} [options.line] Optional source line override.
+   * @param {SourceSpan} [options.span] Optional precise source span.
+   * @param {string} [options.containerName] Optional owning container name.
+   */
+  recordSymbolReference(kind, name, options = {}) {
+    if (!this.collectSourceMetadata) {
+      return;
+    }
+    const file = options.file ?? this.currentFile;
+    const line = options.line ?? this.currentLine;
+    const duplicate = this.symbolReferences.some(
+      (entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName
+    );
+    if (duplicate) {
+      return;
+    }
+    this.symbolReferences.push({
+      name,
+      kind,
+      location: createAssemblySourceLocation(file, line, options.span),
+      containerName: options.containerName
+    });
+  }
+  /**
+   * Collects expression references.
+   * @param {ExpressionNode | undefined} expression The expression.
+   * @param {SourceSpan} [fallbackSpan] The fallback span.
+   */
+  collectExpressionReferences(expression, fallbackSpan) {
+    if (!expression) {
+      return;
+    }
+    switch (expression.type) {
+      case "defineReference":
+        if (expression.name || expression.content) {
+          this.recordSymbolReference(
+            "define",
+            expression.braced ? expression.content ?? "" : expression.name ?? "",
+            {
+              span: expression.span ?? fallbackSpan
+            }
+          );
+        }
+        return;
+      case "identifier":
+        this.recordSymbolReference("label", expression.name, {
+          span: expression.span ?? fallbackSpan
+        });
+        return;
+      case "member":
+      case "index":
+        this.recordSymbolReference("label", renderReferenceExpressionNode(expression), {
+          span: expression.span ?? fallbackSpan
+        });
+        if (expression.type === "index") {
+          this.collectExpressionReferences(expression.index, fallbackSpan);
+        }
+        return;
+      case "call":
+        this.recordSymbolReference("function", expression.callee.name, {
+          span: expression.callee.span ?? expression.span ?? fallbackSpan
+        });
+        for (const argument of expression.arguments) {
+          this.collectExpressionReferences(argument, fallbackSpan);
+        }
+        return;
+      case "unary":
+        this.collectExpressionReferences(expression.argument, fallbackSpan);
+        return;
+      case "binary":
+        this.collectExpressionReferences(expression.left, fallbackSpan);
+        this.collectExpressionReferences(expression.right, fallbackSpan);
+        return;
+      case "range":
+        this.collectExpressionReferences(expression.start, fallbackSpan);
+        this.collectExpressionReferences(expression.end, fallbackSpan);
+        return;
+      default:
+        return;
+    }
+  }
+  /**
+   * Collects command references.
+   * @param {NormalizedCommand} command The command.
+   */
+  collectCommandReferences(command) {
+    incrementInternalCounter("referenceCollections");
+    if (!this.collectSourceMetadata) {
+      return;
+    }
+    const fallbackSpan = command.source.normalizedSpan;
+    const parsed = command.parsed;
+    this.collectExpressionReferences(parsed.assignment?.expression, fallbackSpan);
+    this.collectExpressionReferences(parsed.condition?.expression, fallbackSpan);
+    this.collectExpressionReferences(parsed.forLoop?.range, fallbackSpan);
+    this.collectExpressionReferences(parsed.forLoop?.start, fallbackSpan);
+    this.collectExpressionReferences(parsed.forLoop?.end, fallbackSpan);
+    this.collectExpressionReferences(parsed.incbinRange?.range, fallbackSpan);
+    this.collectExpressionReferences(parsed.incbinRange?.start, fallbackSpan);
+    this.collectExpressionReferences(parsed.incbinRange?.end, fallbackSpan);
+    if (parsed.macroInvocation?.name) {
+      this.recordSymbolReference("macro", parsed.macroInvocation.name, {
+        span: command.source.tokenSpans[0] ?? fallbackSpan
+      });
+      for (const arg of parsed.macroInvocation.args) {
+        this.collectExpressionReferences(parseExpressionNode(arg), fallbackSpan);
+      }
+    }
+    if (parsed.includeTarget?.target) {
+      this.recordSymbolReference(
+        "include",
+        parsed.includeTarget.target.replace(/^["'`](.*)["'`]$/, "$1"),
+        {
+          span: command.source.tokenSpans[1] ?? fallbackSpan
+        }
+      );
+    }
+    if (parsed.opcodeOperands?.mnemonic) {
+      this.recordSymbolReference("instruction", parsed.opcodeOperands.mnemonic, {
+        span: command.source.tokenSpans[0] ?? fallbackSpan
+      });
+    }
+    for (const operand of parsed.dataDirective?.operands ?? []) {
+      this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
+    }
+    for (const operand of parsed.opcodeOperands?.operands ?? []) {
+      this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
+    }
+    for (const arg of parsed.directiveArgs?.args ?? []) {
+      this.collectExpressionReferences(parseExpressionNode(arg), fallbackSpan);
+    }
+  }
+  /**
+   * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
+   * @param {ProgramModel} program The program model to analyze.
+   * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
+   */
+  collectProgramAnalysis(program) {
+    this.clearAnalysisArtifacts();
+    this.analysisErrorRecoveryEnabled = true;
+    try {
+      this.assembleProgram(program);
+    } catch (error) {
+      this.reportErrorDiagnostic(error, void 0, this.activeStageExecutionState?.stage);
+    } finally {
+      this.analysisErrorRecoveryEnabled = false;
+    }
+    return {
+      diagnostics: [...this.diagnostics],
+      symbols: [...this.symbolDefinitions],
+      references: [...this.symbolReferences],
+      includeEdges: [...this.includeEdges]
+    };
+  }
+  /**
+   * Creates an isolated assembler session suitable for editor-style analysis.
+   * This keeps batch assembly state and tooling state from leaking into each
+   * other while still sharing the same file provider and directive registry.
+   * @returns {Assembler} A configured analysis session.
+   */
+  createToolingSession() {
+    const session = new _Assembler({
+      environment: this.environment,
+      target: this.targetId,
+      architecture: this.arch,
+      targetOptions: this.targetOptions,
+      baseImage: this.baseImage,
+      fileProvider: this.fileProvider
+    });
+    session.includePaths = [...this.includePaths];
+    session.pluginState.restore(this.pluginState.cloneSnapshot());
+    session.outputFillByte = this.outputFillByte;
+    session.padbyte = [...this.padbyte];
+    session.fillbyte = [...this.fillbyte];
+    session.padUnit = this.padUnit;
+    session.arch = this.arch;
+    return session;
+  }
+  /**
+   * Creates directive handlers bound to a fresh session's family capabilities.
+   * @param {Assembler} session The session that should receive directive calls.
+   * @returns {DirectiveRegistry} A registry bound to the provided session.
+   */
+  cloneDirectiveRegistryForSession(session) {
+    const operandResolver = session.operandResolver;
+    const runtime = session.directiveRuntime;
+    const registry = createDirectiveRegistry({
+      data: { runtime },
+      fillPad: { session, operandResolver },
+      flowControl: { session },
+      includeSource: {
+        session,
+        includeSource: session.includeSource,
+        operandResolver,
+        runtime,
+        defineEngine: session.defineEngine
+      },
+      layout: {
+        addressStack: { session },
+        architecture: { session },
+        base: { session, operandResolver },
+        org: { runtime },
+        runtime: { runtime }
+      },
+      namespace: { session },
+      struct: { session },
+      table: { session },
+      diagnostic: { session }
+    });
+    const target = session.environment.getTarget(session.targetId);
+    for (const setId of target?.directiveSets ?? []) {
+      const set = session.environment.getDirectiveSet(setId);
+      if (!set) continue;
+      const pluginId = session.environment.getContributionOwner(setId);
+      for (const directive2 of set.directives) {
+        let handler;
+        try {
+          handler = directive2.createHandler({
+            targetId: session.targetId,
+            state: session.pluginState,
+            session
+          });
+        } catch (cause) {
+          throw new PluginError(`Directive factory '${directive2.id}' failed.`, {
+            code: "PLUGIN_ACTIVATION_FAILED",
+            pluginId,
+            contributionId: directive2.id,
+            targetId: session.targetId,
+            cause
+          });
+        }
+        registry.register(
+          [...directive2.keywords],
+          void 0,
+          (_context, words, raw) => {
+            try {
+              handler({ state: session.pluginState }, words, raw);
+            } catch (cause) {
+              throw new PluginError(`Directive '${directive2.id}' failed.`, {
+                code: "PLUGIN_HOOK_FAILED",
+                pluginId,
+                contributionId: directive2.id,
+                targetId: session.targetId,
+                cause
+              });
+            }
+          },
+          directive2.phase
+        );
+      }
+    }
+    for (const [keyword, handler] of registry.handlers) {
+      registry.handlers.set(keyword, (words, raw, command) => {
+        if (session.runBeforeDirective(keyword, words, raw) === "handled") return;
+        handler(words, raw, command);
+      });
+    }
+    return registry;
+  }
+  /**
+   * Analyzes program.
+   * @param {ProgramModel} program The program.
+   * @returns {AssemblyAnalysisResult} The result.
+   */
+  analyzeProgram(program) {
+    const session = this.createToolingSession();
+    try {
+      return session.collectProgramAnalysis(program);
+    } finally {
+      session.dispose();
+    }
+  }
+  /**
+   * Builds and analyzes raw source without throwing on the first error.
+   * @param {string} source The source to analyze.
+   * @param {string} [sourceFile] Optional source file override.
+   * @param {number} [startLine] Optional starting line number.
+   * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
+   */
+  analyzeSource(source, sourceFile = this.currentFile, startLine = 0) {
+    const session = this.createToolingSession();
+    try {
+      const program = session.buildProgramModel(source, sourceFile, startLine);
+      return {
+        program,
+        ...session.collectProgramAnalysis(program)
+      };
+    } finally {
+      session.dispose();
+    }
+  }
+  /**
+   * Analyzes workspace.
+   * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
+   * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
+   */
+  analyzeWorkspace(documents2) {
+    const results = [];
+    for (const document of documents2) {
+      const session = this.createToolingSession();
+      try {
+        const program = session.buildProgramModel(
+          document.source,
+          document.sourceFile,
+          document.startLine ?? 0
+        );
+        const result = session.collectProgramAnalysis(program);
+        results.push({
+          sourceFile: document.sourceFile,
+          program,
+          ...result
+        });
+      } finally {
+        session.dispose();
+      }
+    }
+    return results;
+  }
+  /**
+   * Loads base-image data.
+   */
+  seedOutputFromBaseImage() {
+    const seedSize = 512 * 1024;
+    if (!this.baseImage || this.baseImage.length === 0) {
+      return;
+    }
+    for (let i = 0; i < Math.min(seedSize, this.baseImage.length); i++) {
+      this.outputBytes[i] = this.baseImage[i];
+    }
+  }
+  /**
+   * Creates cursor address facade.
+   * @returns {CursorAddressFacade} The result.
+   */
+  createCursorAddressFacade() {
+    return {
+      recordCurrentAddress: () => this.recordCurrentAddress(),
+      setWritePosition: (address) => this.setWritePosition(address),
+      syncWriteStarts: () => this.syncWriteStarts(),
+      incrementBytesWritten: (num) => this.incrementBytesWritten(num)
+    };
+  }
+  /**
+   * Creates services.
+   * @returns {AssemblerServiceBag} The result.
+   */
+  createServices() {
+    const defineEngine = new DefineEngine(this);
+    const directiveRuntime = new DirectiveRuntimeService(this);
+    const frontEndCommandService = new FrontEndCommandService(this);
+    const includeSource = new IncludeSourceService(this);
+    const symbolScope = new SymbolScopeService(this);
+    const outputWriter = new OutputWriterService(this);
+    const macroEngine = new MacroEngine(this);
+    const structEngine = new StructEngine(this);
+    return {
+      defineEngine,
+      directiveRuntime,
+      fileProvider: this.fileProvider,
+      frontEndCommandService,
+      includeSource,
+      macroEngine,
+      outputWriter,
+      structEngine,
+      symbolScope
+    };
+  }
+  constructor(options) {
+    if (!options?.environment) {
+      throw new PluginError("Assembler construction requires a frozen plugin environment.", {
+        code: "PLUGIN_CONFIGURATION_INVALID"
+      });
+    }
+    this.environment = options.environment;
+    const targetId = this.environment.resolveTargetId(options.target);
+    const target = targetId ? this.environment.getTarget(targetId) : void 0;
+    if (!targetId || !target) {
+      throw new PluginError(`Assembler target '${options.target}' is not available.`, {
+        code: "PLUGIN_TARGET_INVALID",
+        targetId: options.target
+      });
+    }
+    this.targetId = targetId;
+    const configuredTargetOptions = options.targetOptions;
+    if (!target.createOptions && configuredTargetOptions !== void 0) {
+      const emptyObject = typeof configuredTargetOptions === "object" && configuredTargetOptions !== null && !Array.isArray(configuredTargetOptions) && Object.keys(configuredTargetOptions).length === 0;
+      if (!emptyObject) {
+        throw new PluginError(`Target '${targetId}' does not accept options.`, {
+          code: "PLUGIN_CONFIGURATION_INVALID",
+          pluginId: this.environment.getContributionOwner(targetId),
+          contributionId: targetId,
+          targetId
+        });
+      }
+    }
+    const normalizedTargetOptions = target.createOptions?.(configuredTargetOptions) ?? {};
+    this.targetOptions = Object.freeze({ ...normalizedTargetOptions });
+    this.pluginState = new PluginSessionStateStore(this.environment.sessionStates, {
+      targetId,
+      targetOptions: this.targetOptions
+    });
+    const targetFactoryContext = {
+      targetId,
+      options: this.targetOptions,
+      state: this.pluginState
+    };
+    const addressContribution = this.environment.getAddressSpace(target.addressSpace);
+    const outputContribution = this.environment.getOutputFormat(target.outputFormat);
+    if (!addressContribution || !outputContribution) {
+      throw new PluginError(`Target '${targetId}' has unresolved output factories.`, {
+        code: "PLUGIN_TARGET_INVALID",
+        targetId
+      });
+    }
+    try {
+      this.pluginAddressSpace = addressContribution.create(targetFactoryContext);
+    } catch (cause) {
+      throw new PluginError(`Address-space factory '${target.addressSpace}' failed.`, {
+        code: "PLUGIN_ACTIVATION_FAILED",
+        pluginId: this.environment.getContributionOwner(target.addressSpace),
+        contributionId: target.addressSpace,
+        targetId,
+        cause
+      });
+    }
+    try {
+      this.pluginOutputFormat = outputContribution.create(targetFactoryContext);
+    } catch (cause) {
+      throw new PluginError(`Output-format factory '${target.outputFormat}' failed.`, {
+        code: "PLUGIN_ACTIVATION_FAILED",
+        pluginId: this.environment.getContributionOwner(target.outputFormat),
+        contributionId: target.outputFormat,
+        targetId,
+        cause
+      });
+    }
+    const requestedArchitecture = options.architecture ?? target.defaultArchitecture;
+    const architectureId = this.environment.resolveArchitectureId(targetId, requestedArchitecture);
+    if (!architectureId) {
+      throw new PluginError(
+        `Architecture '${requestedArchitecture}' is unavailable for target '${targetId}'.`,
+        {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId,
+          contributionId: requestedArchitecture
+        }
+      );
+    }
+    this.arch = architectureId;
+    this.baseImage = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
+    this.fileProvider = options.fileProvider ?? new NodeAssemblyFileProvider();
+    this.collectSourceMetadata = options.collectSourceMetadata ?? true;
+    this.cursorAddress = this.createCursorAddressFacade();
+    this.mathCore = new MathCore();
+    this.mathCore.host = this.expressionHost;
+    this.installExpressionFunctions(target.expressionSets);
+    this.services = this.createServices();
+    const frontEndHost = {
+      passProgramCache: this.passProgramCache,
+      resolveVariadicPlaceholders: (command) => this.macroEngine.resolveVariadicPlaceholders(command),
+      shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
+    };
+    Object.defineProperties(frontEndHost, {
+      currentFile: { get: () => this.currentFile },
+      currentLine: { get: () => this.currentLine },
+      inMacroExpansion: { get: () => this.inMacroExpansion },
+      isDefinitionCollectionStage: { get: () => this.isDefinitionCollectionStage }
+    });
+    this.frontEndService = new AssemblyFrontEndService(frontEndHost);
+    this.programModelBuilder = this.frontEndService.programModelBuilder;
+    this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
+    this.operandResolver = new OperandResolver({
+      resolveDefines: (input) => this.resolvedefines(input),
+      isStructReference: (input) => this.structEngine.hasStructReference(input),
+      resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
+      tryResolveLabel: (input, requireStatic) => this.symbolScope.tryGetLabelValue(input, requireStatic),
+      resolveLabel: (input, requireStatic) => this.symbolScope.getLabelValue(input, requireStatic),
+      evaluateMath: (input) => this.mathCore.math(input),
+      shouldDeferExpressionEvaluation: () => !this.getActiveStageCapabilities().enforceResolvedLabels,
+      getCurrentAddress: () => this.currentTargetAddress,
+      requireStaticLabelLookup: () => this.requireStaticLabelLookup
+    });
+    const encoderContext = {
+      operands: this.operandResolver,
+      emission: {
+        write1: (value) => this.write1(value),
+        write2: (value) => this.write2(value),
+        write3: (value) => this.write3(value),
+        writeByte: (value) => this.write1(value),
+        writeBytes: (values) => this.outputWriter.writeBytes(values),
+        writeValue: (value, width, endianness) => this.outputWriter.writeValue(value, width, endianness)
+      },
+      sizing: {
+        getCurrentAddress: () => this.currentTargetAddress
+      },
+      branches: {
+        enforceResolvedLabels: () => this.enforceResolvedLabels,
+        findNextLabel: (label, referenceAddress) => this.symbolScope.findNextLabel(label, referenceAddress),
+        findPreviousLabel: (label, referenceAddress) => this.symbolScope.findPreviousLabel(label, referenceAddress)
+      },
+      diagnostics: {
+        error: (message) => new Error(message)
+      }
+    };
+    this.architectureRegistry = new ArchitectureRegistry();
+    for (const contributionId of target.architectures) {
+      const contribution = this.environment.getArchitecture(contributionId);
+      if (!contribution) {
+        throw new PluginError(`Architecture contribution '${contributionId}' is unavailable.`, {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId,
+          contributionId
+        });
+      }
+      let encoder;
+      try {
+        encoder = contribution.createEncoder({
+          ...encoderContext,
+          targetId,
+          options: this.targetOptions,
+          state: this.pluginState
+        });
+      } catch (cause) {
+        throw new PluginError(`Architecture factory '${contributionId}' failed.`, {
+          code: "PLUGIN_ACTIVATION_FAILED",
+          pluginId: this.environment.getContributionOwner(contributionId),
+          contributionId,
+          targetId,
+          cause
+        });
+      }
+      this.architectureRegistry.register(
+        {
+          name: contribution.id,
+          encoder,
+          instructions: contribution.instructions.length > 0 ? contribution.instructions : void 0,
+          classifyOperand: (resolver, operand) => contribution.classifyOperand({ operands: resolver }, operand),
+          splitOperands: contribution.splitOperands,
+          unknownInstructionBehavior: contribution.unknownInstructionBehavior
+        },
+        [...contribution.aliases ?? []]
+      );
+    }
+    this.directiveRegistry = this.cloneDirectiveRegistryForSession(this);
+    this.commandLoweringService = new CommandLoweringService(this);
+    this.services.frontEnd = this.frontEndService;
+    this.services.lowering = this.commandLoweringService;
+    this.activeLifecycles = this.environment.getTargetLifecycles(targetId).map((record) => {
+      try {
+        return { record, instance: record.value.create(targetFactoryContext) };
+      } catch (cause) {
+        throw new PluginError(`Lifecycle factory '${record.contributionId}' failed.`, {
+          code: "PLUGIN_ACTIVATION_FAILED",
+          pluginId: record.pluginId,
+          contributionId: record.contributionId,
+          targetId,
+          cause
+        });
+      }
+    });
+    this.runLifecycleHook(
+      "onSessionCreated",
+      (lifecycle) => lifecycle.onSessionCreated?.({ state: this.pluginState, session: this })
+    );
+    this.selectArchitecture(this.arch, this.arch);
+    this.activateStage("collectDefinitions");
+  }
+  runLifecycleHook(hookName, invoke) {
+    for (const { record, instance } of this.activeLifecycles) {
+      try {
+        invoke(instance);
+      } catch (cause) {
+        throw new PluginError(`Lifecycle hook '${hookName}' failed.`, {
+          code: "PLUGIN_HOOK_FAILED",
+          pluginId: record.pluginId,
+          contributionId: record.contributionId,
+          targetId: this.targetId,
+          cause
+        });
+      }
+    }
+  }
+  runBeforeDirective(keyword, words, raw) {
+    let result = "continue";
+    this.runLifecycleHook("beforeDirective", (lifecycle) => {
+      if (result === "continue" && lifecycle.beforeDirective?.({
+        state: this.pluginState,
+        session: this,
+        keyword,
+        words,
+        raw
+      }) === "handled") {
+        result = "handled";
+      }
+    });
+    return result;
+  }
+  /**
+   * Resolves ambiguous `endif` handling through active dialect lifecycles.
+   * @param {"for" | "while"} [loopType] The innermost loop type.
+   * @param {number} [loopStartLine] The innermost loop start line.
+   * @param {number} [ifStartLine] The innermost conditional start line.
+   * @returns {boolean} Whether `endif` should close the innermost while loop.
+   */
+  shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine) {
+    let result = false;
+    this.runLifecycleHook("shouldEndifCloseInnermostWhile", (lifecycle) => {
+      const resolution = lifecycle.shouldEndifCloseInnermostWhile?.({
+        state: this.pluginState,
+        session: this,
+        loopType,
+        loopStartLine,
+        ifStartLine
+      });
+      if (resolution !== void 0) {
+        result = resolution;
+      }
+    });
+    return result;
+  }
+  selectArchitecture(architecture, sourceAlias = architecture) {
+    const resolved = this.environment.resolveArchitectureId(this.targetId, architecture);
+    if (!resolved) {
+      throw new PluginError(
+        `Architecture ${architecture} is unavailable for target ${this.targetDisplayName}.`,
+        {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId: this.targetId,
+          contributionId: architecture
+        }
+      );
+    }
+    const previousArchitecture = this.arch || void 0;
+    this.arch = resolved;
+    this.runLifecycleHook(
+      "onArchitectureSelected",
+      (lifecycle) => lifecycle.onArchitectureSelected?.({
+        state: this.pluginState,
+        session: this,
+        previousArchitecture,
+        architecture: resolved,
+        sourceAlias
+      })
+    );
+  }
+  beforeWrite(logicalAddress, width) {
+    this.pluginAddressSpace.validateWrite?.(logicalAddress, width);
+    this.runLifecycleHook(
+      "beforeWrite",
+      (lifecycle) => lifecycle.beforeWrite?.({
+        state: this.pluginState,
+        session: this,
+        logicalAddress,
+        width
+      })
+    );
+  }
+  dispose() {
+    if (this.sessionDisposed) return;
+    this.sessionDisposed = true;
+    const errors = [];
+    for (const { record, instance } of [...this.activeLifecycles].reverse()) {
+      try {
+        instance.onSessionDispose?.({ state: this.pluginState, session: this });
+      } catch (cause) {
+        errors.push(
+          new PluginError("Lifecycle hook 'onSessionDispose' failed.", {
+            code: "PLUGIN_HOOK_FAILED",
+            pluginId: record.pluginId,
+            contributionId: record.contributionId,
+            targetId: this.targetId,
+            cause
+          })
+        );
+      }
+    }
+    try {
+      this.pluginState.dispose();
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(
+        errors,
+        "One or more assembler session resources failed to dispose."
+      );
+    }
+  }
+  /**
+   * Reads little endian.
+   * @param {Uint8Array} bytes The bytes.
+   * @param {number} pos The pos.
+   * @param {number} width The width.
+   * @returns {number | undefined} The result.
+   */
+  readLittleEndian(bytes, pos, width) {
+    if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes.length) {
+      return void 0;
+    }
+    let out = 0;
+    for (let i = 0; i < width; i++) {
+      out |= (bytes[pos + i] ?? 0) << 8 * i;
+    }
+    return out >>> 0;
+  }
+  /**
+   * Checks whether it can read byte range.
+   * @param {number} sourceLength The source length.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @returns {number} The result.
+   */
+  canReadByteRange(sourceLength, position, size) {
+    const pos = Math.trunc(position);
+    const num = Math.trunc(size);
+    return Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength ? 1 : 0;
+  }
+  /**
+   * Reads byte range.
+   * @param {Uint8Array} source The source.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @param {number | undefined} defaultValue The default value.
+   * @param {string} errorMessage The error message.
+   * @returns {number} The result.
+   */
+  readByteRange(source, position, size, defaultValue, errorMessage) {
+    const pos = Math.trunc(position);
+    const num = Math.trunc(size);
+    const value = this.readLittleEndian(source, pos, num);
+    if (value === void 0) {
+      if (defaultValue !== void 0) {
+        return defaultValue;
+      }
+      throw new Error(errorMessage);
+    }
+    return value;
+  }
+  /**
+   * Resolves readable path.
+   * @param {string} filename The filename.
+   * @returns {string | undefined} The result.
+   */
+  resolveReadablePath(filename) {
+    return this.fileProvider.resolvePath(filename, {
+      currentFile: this.currentFile,
+      includePaths: this.includePaths,
+      macroSourceFile: this.currentMacroSourceFile
+    });
+  }
+  /**
+   * Resolves expression host label.
+   * @param {string} identifier The identifier.
+   * @returns {number | string} The result.
+   */
+  resolveExpressionHostLabel(identifier) {
+    const parsed = parseExpressionNode(identifier.trim());
+    if (isReferenceExpressionNode(parsed)) {
+      return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
+    }
+    return this.symbolScope.getLabelValue(identifier, this.requireStaticLabelLookup);
+  }
+  /**
+   * Gets expression object size.
+   * @param {string} identifier The identifier.
+   * @param {boolean} [baseOnly] Whether to return only the base object size.
+   * @returns {number} The result.
+   */
+  getExpressionObjectSize(identifier, baseOnly = false) {
+    if (baseOnly && (identifier === "..." || identifier === "\u2026")) {
+      if (this.inMacroExpansion && this.currentVariadicCount !== void 0) {
+        return this.currentVariadicCount;
+      }
+      if (this.inMacroDefinition) {
+        return 0;
+      }
+      return 0;
+    }
+    return this.symbolScope.getObjectSize(identifier, baseOnly);
+  }
+  /**
+   * Looks up define value.
+   * @param {string} varName The var name.
+   * @returns {string | undefined} The result.
+   */
+  lookupDefineValue(varName) {
+    const defineValue = this.defines.get(varName);
+    if (defineValue !== void 0) {
+      return defineValue;
+    }
+    for (let i = this.whileStatus.length - 1; i >= 0; i--) {
+      const loop = this.whileStatus[i];
+      if (loop.is_for && loop.for_variable === varName && loop.for_cur !== void 0) {
+        return loop.for_cur.toString();
+      }
+    }
+    return void 0;
+  }
+  get currentMacroSourceFile() {
+    if (!this.inMacroExpansion || !this.currentMacroName) {
+      return void 0;
+    }
+    return this.macros.get(this.currentMacroName)?.sourceFile;
+  }
+  /**
+   * Checks whether it can read the base image.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @returns {number} The result.
+   */
+  canReadBaseImage(position, size) {
+    const sourceLength = this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
+    return this.canReadByteRange(sourceLength, position, size);
+  }
+  /**
+   * Reads the base image.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @param {number} [defaultValue] The default value.
+   * @returns {number} The result.
+   */
+  readBaseImage(position, size, defaultValue) {
+    const pos = Math.trunc(position);
+    const pcPos = this.outputWriter.toOutputOffset(pos);
+    const source = this.baseImage && this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
+    if (pcPos < 0) {
+      if (defaultValue !== void 0) {
+        return defaultValue;
+      }
+      throw new Error(`read${Math.trunc(size)} out of bounds at ${pos}`);
+    }
+    const sourceBytes = Uint8Array.from(source);
+    return this.readByteRange(
+      sourceBytes,
+      pcPos,
+      size,
+      defaultValue,
+      `read${Math.trunc(size)} out of bounds at ${pos}`
+    );
+  }
+  /**
+   * Checks whether it can read expression file.
+   * @param {string} filename The filename.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @returns {number} The result.
+   */
+  canReadExpressionFile(filename, position, size) {
+    const resolvedPath = this.resolveReadablePath(filename);
+    if (!resolvedPath) {
+      return 0;
+    }
+    const fileSize = this.fileProvider.stat(resolvedPath).size;
+    if (fileSize === void 0) {
+      return 0;
+    }
+    return this.canReadByteRange(fileSize, position, size);
+  }
+  /**
+   * Reads expression file.
+   * @param {string} filename The filename.
+   * @param {number} position The position.
+   * @param {number} size The size.
+   * @param {number} [defaultValue] The default value.
+   * @returns {number} The result.
+   */
+  readExpressionFile(filename, position, size, defaultValue) {
+    const pos = Math.trunc(position);
+    const resolvedPath = this.resolveReadablePath(filename);
+    if (!resolvedPath) {
+      if (defaultValue !== void 0) {
+        return defaultValue;
+      }
+      throw new Error(`Could not read file: ${filename}`);
+    }
+    const fileBytes = this.fileProvider.readFile(resolvedPath);
+    return this.readByteRange(
+      fileBytes,
+      pos,
+      size,
+      defaultValue,
+      `readfile${Math.trunc(size)} out of bounds at ${pos}`
+    );
+  }
+  /**
+   * Installs the active target's expression contributions into this session.
+   * @param {readonly string[]} setIds Resolved expression-set contribution IDs.
+   */
+  installExpressionFunctions(setIds) {
+    for (const setId of setIds) {
+      const set = this.environment.getExpressionSet(setId);
+      if (!set) continue;
+      const pluginId = this.environment.getContributionOwner(setId);
+      for (const expressionFunction of set.functions) {
+        const minimumArguments = expressionFunction.signature.minimumArguments ?? expressionFunction.signature.parameters.length;
+        const maximumArguments = expressionFunction.signature.maximumArguments ?? (expressionFunction.signature.minimumArguments === void 0 ? expressionFunction.signature.parameters.length : Number.POSITIVE_INFINITY);
+        this.mathCore.registerExpressionFunction(
+          [expressionFunction.name, ...expressionFunction.aliases ?? []],
+          {
+            minimumArguments,
+            maximumArguments,
+            evaluate: (args) => {
+              try {
+                return expressionFunction.evaluate(
+                  {
+                    state: this.pluginState,
+                    addresses: {
+                      toOutputOffset: (address) => this.outputWriter.toOutputOffset(address),
+                      fromOutputOffset: (offset) => this.outputWriter.fromOutputOffset(offset)
+                    },
+                    output: {
+                      canRead: (position, size) => this.canReadBaseImage(position, size),
+                      read: (position, size, defaultValue) => this.readBaseImage(position, size, defaultValue)
+                    }
+                  },
+                  args
+                );
+              } catch (cause) {
+                throw new PluginError(`Expression function '${expressionFunction.name}' failed.`, {
+                  code: "PLUGIN_HOOK_FAILED",
+                  pluginId,
+                  contributionId: set.id,
+                  targetId: this.targetId,
+                  cause
+                });
+              }
+            }
+          }
+        );
+      }
+    }
+  }
+  expressionHost = {
+    resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
+    convertLogicalToOutputOffset: (address) => this.outputWriter.toOutputOffset(address),
+    convertOutputOffsetToLogical: (offset) => this.outputWriter.fromOutputOffset(offset),
+    getCurrentAddress: () => this.currentTargetAddress,
+    getCurrentBaseAddress: () => this.currentTargetBaseAddress,
+    isDefined: (identifier) => {
+      if (this.defines.has(identifier)) return 1;
+      if (this.structs.has(identifier)) return 1;
+      return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
+    },
+    getExpressionObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
+    getFileSize: (filename) => {
+      const resolvedPath = this.resolveReadablePath(filename);
+      if (!resolvedPath) {
+        throw new Error(`Could not get filesize for '${filename}'`);
+      }
+      const stat = this.fileProvider.stat(resolvedPath);
+      if (stat.size === void 0) {
+        throw new Error(`Could not get filesize for '${filename}'`);
+      }
+      return stat.size;
+    },
+    getFileStatus: (filename) => {
+      const resolvedPath = this.resolveReadablePath(filename);
+      if (!resolvedPath) {
+        return 1;
+      }
+      return this.fileProvider.stat(resolvedPath).readable ? 0 : 2;
+    },
+    canReadFile: (filename, position, size) => this.canReadExpressionFile(filename, position, size),
+    readFile: (filename, position, size, defaultValue) => this.readExpressionFile(filename, position, size, defaultValue),
+    canReadBaseImage: (position, size) => this.canReadBaseImage(position, size),
+    readBaseImage: (position, size, defaultValue) => this.readBaseImage(position, size, defaultValue)
+  };
+  /**
+   * Advances the logical program counter.
+   * @param {number} num Number of logical address units to advance.
+   */
+  step(num) {
+    this.outputWriter.step(num);
+  }
+  /**
+   * Writes a single architecture byte to output.
+   * @param {number} num Byte value to write.
+   */
+  writeArchitectureByte(num) {
+    this.outputWriter.write1(num);
+  }
+  /**
+   * Fills a section of output data with a value.
+   * @param {number} start The starting address.
+   * @param {number} value The value to fill with.
+   * @param {number} length The length of the section to fill.
+   */
+  fillOutputBytes(start, value, length) {
+    debug4("fillOutputBytes", start, value, length);
+    for (let i = 0; i < length; i++) {
+      this.outputBytes[start + i] = value & 255;
+    }
+  }
+  /**
+   * Creates ephemeral stage execution state.
+   * @param {AssemblyStageName} stage The stage.
+   * @returns {StageExecutionState} The result.
+   */
+  createEphemeralStageExecutionState(stage) {
+    const descriptor2 = this.getStageDescriptor(stage);
+    return {
+      ...descriptor2,
+      cursor: {
+        currentTargetAddress: this.currentTargetAddress,
+        currentTargetBaseAddress: this.currentTargetBaseAddress,
+        currentTargetStartAddress: this.currentTargetStartAddress,
+        currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
+        bytes: this.bytes
+      },
+      symbols: {
+        labelTable: this.labelTable,
+        forwardLabels: this.forwardLabels,
+        backwardLabels: this.backwardLabels,
+        currentParentLabel: this.currentParentLabel,
+        currentParentIsGlobal: this.currentParentIsGlobal,
+        currentGlobalParentLabel: this.currentGlobalParentLabel,
+        labelParents: this.labelParents
+      },
+      control: {
+        namespaceStack: this.namespaceStack,
+        currentNamespace: this.currentNamespace,
+        namespaceNestingEnabled: this.namespaceNestingEnabled,
+        namespaceNestingPath: this.namespaceNestingPath,
+        inMacroExpansion: this.inMacroExpansion,
+        macroLabelInstance: this.macroLabelInstance
+      },
+      pluginState: this.pluginState.cloneSnapshot(),
+      loweredProgram: null
+    };
+  }
+  /**
+   * Synchronizes active stage execution state.
+   * @param {AssemblyStageName} stage The stage.
+   */
+  syncActiveStageExecutionState(stage) {
+    const descriptor2 = this.getStageDescriptor(stage);
+    if (!this.activeStageExecutionState) {
+      this.activeStageExecutionState = this.createEphemeralStageExecutionState(stage);
+      return;
+    }
+    this.activeStageExecutionState.stage = descriptor2.stage;
+    this.activeStageExecutionState.capabilities = descriptor2.capabilities;
+  }
+  /**
+   * Gets active stage capabilities.
+   * @returns {StageExecutionCapabilities} The result.
+   */
+  getActiveStageCapabilities() {
+    if (!this.activeStageExecutionState) {
+      this.activeStageExecutionState = this.createEphemeralStageExecutionState("collectDefinitions");
+    }
+    return this.activeStageExecutionState.capabilities;
+  }
+  get traceStage() {
+    return this.activeStageExecutionState?.stage ?? "collectDefinitions";
+  }
+  /**
+   * Lays out instruction.
+   * @param {string[] | LoweredInstruction} input The input.
+   * @returns {boolean} The result.
+   */
+  layoutInstruction(input) {
+    const words = Array.isArray(input) ? input : input.words;
+    if (words.length === 0) {
+      return true;
+    }
+    const architecture = this.resolveActiveArchitecture();
+    if (!architecture.definition) {
+      return true;
+    }
+    const size = Array.isArray(input) ? architecture.definition.encoder.estimateSize(words) : architecture.definition.encoder.estimateInstruction?.(input) ?? architecture.definition.encoder.estimateSize(words);
+    this.step(size);
+    return true;
+  }
+  /**
+   * Emits instruction.
+   * @param {string[] | LoweredInstruction} input The input.
+   * @returns {boolean} The result.
+   */
+  emitInstruction(input) {
+    const words = Array.isArray(input) ? input : input.words;
+    if (words.length === 0) {
+      return true;
+    }
+    const architecture = this.resolveActiveArchitecture();
+    if (!architecture.definition) {
+      return true;
+    }
+    const encoded = Array.isArray(input) ? architecture.definition.encoder.encode(words) : architecture.definition.encoder.encodeInstruction?.(input) ?? architecture.definition.encoder.encode(words);
+    if (!encoded) {
+      if (architecture.definition.unknownInstructionBehavior === "returnFalse") {
+        return false;
+      }
+      throw new Error(`Unknown instruction: ${words[0]}`);
+    }
+    return true;
+  }
+  /**
+   * Picks the appropriate instruction handler based on architecture.
+   * @param {string[] | LoweredInstruction} input The instruction to pick.
+   * @returns {boolean} True if the instruction was handled, false otherwise.
+   */
+  asblock_pick(input) {
+    debug4("asblock_pick", Array.isArray(input) ? input : input.words);
+    debug4("asblock_pick arch", this.arch);
+    const words = Array.isArray(input) ? input : input.words;
+    const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
+    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(raw)) {
+      return true;
+    }
+    const keyword = words[0]?.toLowerCase() ?? "";
+    if (keyword !== "" && this.directiveRegistry.has(keyword)) {
+      return this.directiveRegistry.dispatch(keyword, words, words.join(" "));
+    }
+    const instructionExecutionMode = this.getActiveStageCapabilities().instructionMode;
+    if (instructionExecutionMode === "layout") {
+      return this.layoutInstruction(input);
+    }
+    return this.emitInstruction(input);
+  }
+  /**
+   * Resolves active architecture.
+   * @returns {{ name: string; definition?: ArchitectureDefinition }} The result.
+   */
+  resolveActiveArchitecture() {
+    const normalized = this.arch.toLowerCase();
+    const canonical2 = this.architectureRegistry.getCanonicalName(normalized);
+    const name = canonical2 ?? normalized;
+    return {
+      name,
+      definition: this.architectureRegistry.getDefinition(name)
+    };
+  }
+  /**
+   * Classifies operand for active architecture.
+   * @param {string} operand The operand.
+   * @returns {LoweredOperand} The classified operand.
+   */
+  classifyOperandForActiveArchitecture(operand) {
+    const architecture = this.resolveActiveArchitecture();
+    if (!architecture.definition) {
+      return this.operandResolver.lowerOperand(operand);
+    }
+    return architecture.definition.classifyOperand(this.operandResolver, operand);
+  }
+  /**
+   * Writes 1, 2, 3, or 4 bytes to output.
+   * @param {number} num - The byte to write.
+   */
+  write1(num) {
+    this.outputWriter.write1(num);
+  }
+  /**
+   * Writes 2.
+   * @param {number} num The num.
+   */
+  write2(num) {
+    this.outputWriter.write2(num);
+  }
+  /**
+   * Writes 3.
+   * @param {number} num The num.
+   */
+  write3(num) {
+    this.outputWriter.write3(num);
+  }
+  /**
+   * Writes 4.
+   * @param {number} num The num.
+   */
+  write4(num) {
+    this.outputWriter.write4(num);
+  }
+  /**
+   * Reads 1, 2, or 3 bytes from the configured output image.
+   * @param {number} logicalPosition The logical address to read from.
+   * @returns {number} The byte read from the output image.
+   */
+  read1(logicalPosition) {
+    const addr = this.outputWriter.toOutputOffset(logicalPosition);
+    if (addr < 0 || addr + 1 > this.outputBytes.length) {
+      return -1;
+    }
+    return this.outputBytes[addr];
+  }
+  /**
+   * Reads 2.
+   * @param {number} logicalPosition The logical address.
+   * @returns {number} The result.
+   */
+  read2(logicalPosition) {
+    const addr = this.outputWriter.toOutputOffset(logicalPosition);
+    if (addr < 0 || addr + 2 > this.outputBytes.length) {
+      return -1;
+    }
+    return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8;
+  }
+  /**
+   * Reads 3.
+   * @param {number} logicalPosition The logical address.
+   * @returns {number} The result.
+   */
+  read3(logicalPosition) {
+    const addr = this.outputWriter.toOutputOffset(logicalPosition);
+    if (addr < 0 || addr + 3 > this.outputBytes.length) {
+      return -1;
+    }
+    return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8 | this.outputBytes[addr + 2] << 16;
+  }
+  /**
+   * Handles assembleblock.
+   * @param {string} block The block.
+   */
+  assembleblock(block) {
+    if (!block.trim()) {
+      return;
+    }
+    const processedCommands = this.frontEndService.preprocessBlockCommands(block);
+    block = processedCommands.join("\n");
+    const words = block.trim().split(/\s+/);
+    if (words.length === 0) {
+      debug4("assembler assembleblock no words", { words });
+      return;
+    }
+    const splitCommands = splitInlineCommands(processedCommands);
+    if (block.includes("\n") && this.incrementalProgramParseState.roots.length === 0) {
+      const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
+      this.lowerAndExecuteRuntimeNodes(nodes);
+      return;
+    }
+    for (const command of splitCommands) {
+      const nodes = this.programModelBuilder.consumeIncrementalCommand(
+        this.incrementalProgramParseState,
+        command.trim(),
+        this.currentFile,
+        this.currentLine
+      );
+      this.lowerAndExecuteRuntimeNodes(nodes);
+    }
+  }
+  /**
+   * Rewrites raw command.
+   * @param {string} command The command.
+   * @returns {string} The result.
+   */
+  rewriteRawCommand(command) {
+    return this.macroEngine.rewriteMacroLabelReferences(command);
+  }
+  /**
+   * Creates normalized command from raw.
+   * @param {string} command The command.
+   * @param {string} sourceFile The source file.
+   * @param {number} sourceLine The source line.
+   * @param {boolean} [allowEmpty] The allow empty.
+   * @returns {NormalizedCommand | null} The result.
+   */
+  createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
+    return this.frontEndService.createNormalizedCommandFromRaw(
+      command,
+      sourceFile,
+      sourceLine,
+      allowEmpty
+    );
+  }
+  /**
+   * Applies a `!name =` assignment without routing it through the incremental if-tree.
+   * @param {string} command The define assignment command.
+   * @returns {boolean} `true` when the define engine handled the command.
+   */
+  applyDefineAssignment(command) {
+    const commandNode = this.createNormalizedCommandFromRaw(
+      command,
+      this.currentFile,
+      this.currentLine,
+      true
+    );
+    if (!commandNode) {
+      return false;
+    }
+    return this.defineEngine.handleCommand(commandNode);
+  }
+  /**
+   * Asar `'X' = $nn` / `"X" = $nn` table entries, including `''' = $2A` for apostrophe.
+   * @param {string} command Raw command text.
+   * @returns {boolean} `true` when the line was a character mapping.
+   */
+  tryHandleCharacterMapping(command) {
+    const trimmed = command.trim();
+    const singleQuoted = /^'([\s\S])'\s*=\s*(.+)$/.exec(trimmed);
+    const doubleQuoted = /^"([\s\S])"\s*=\s*(.+)$/.exec(trimmed);
+    const match = singleQuoted ?? doubleQuoted;
+    if (!match) {
+      return false;
+    }
+    const quote = singleQuoted ? "'" : '"';
+    this.directiveRuntime.handleCharacterMapping([
+      `${quote}${match[1]}${quote}`,
+      "=",
+      match[2].trim()
+    ]);
+    return true;
+  }
+  /**
+   * Preprocesses normalized command.
+   * @param {NormalizedCommand} state The state.
+   * @returns {CommandPreprocessResult} The result.
+   */
+  preprocessNormalizedCommand(state) {
+    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(state.command)) {
+      setCommandKind(state, "characterMapping");
+      return "handled";
+    }
+    if (!this.inMacroDefinition && state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
+      setCommandKind(state, "characterMapping");
+      debug4("handleCharacterMapping", state.words);
+      this.directiveRuntime.handleCharacterMapping(state.words);
+      return "handled";
+    }
+    if (this.frontEndCommandService.startFunctionDefinition(state)) {
+      return "handled";
+    }
+    if (this.macroEngine.handleDefinitionCommand(state)) {
+      return "handled";
+    }
+    if (this.defineEngine.handleCommand(state)) {
+      if (state.command.includes("=")) {
+        this.cursorAddress.recordCurrentAddress();
+      }
+      return "handled";
+    }
+    if (this.structEngine.handleStructMode(state)) {
+      return "handled";
+    }
+    if (this.frontEndCommandService.handleRelativeLabelDefinition(state)) {
+      return "handled";
+    }
+    if (this.frontEndCommandService.handleGlobalLabel(state)) {
+      return "handled";
+    }
+    if (this.frontEndCommandService.consumeNamedLabelDefinitions(state)) {
+      return "handled";
+    }
+    if (this.macroEngine.handleDefinitionCommand(state)) {
+      return "handled";
+    }
+    if (this.frontEndCommandService.handleStaticLabelAssignment(state)) {
+      return "handled";
+    }
+    return "continue";
+  }
+  /**
+   * Prepares normalized command for dispatch.
+   * @param {NormalizedCommand} state The state.
+   * @returns {boolean} The result.
+   */
+  prepareNormalizedCommandForDispatch(state) {
+    if (state.kind === "unknown") {
+      setCommandWords(state, state.words, state.command);
+      setCommandKind(state, "opcodeCandidate");
+    }
+    return true;
+  }
+  /**
+   * Processes a single command from `assembleblock`.
+   * @param {string} command - The command to process.
+   */
+  processCommand(command) {
+    debug4(
+      "processCommand",
+      { command },
+      this.currentTargetAddress,
+      "/",
+      this.currentTargetAddress.toString(16),
+      `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`
+    );
+    if (command.trim() === "") {
+      return;
+    }
+    command = this.rewriteRawCommand(command);
+    if (this.frontEndCommandService.continueFunctionDefinition(command)) {
+      return;
+    }
+    this.assembleblock(command);
+    this.flushCompletedIncrementalNodes();
+  }
+  /**
+   * Processes normalized command.
+   * @param {NormalizedCommand} state The state.
+   * @param {boolean} [rewriteRaw] The rewrite raw.
+   */
+  processNormalizedCommand(state, rewriteRaw = true) {
+    let workingState = cloneNormalizedCommand(state);
+    this.currentFile = workingState.source.file;
+    this.currentLine = workingState.source.line;
+    if (workingState.source.raw.trim().startsWith(";`+")) {
+      this.seedOutputFromBaseImage();
+      return;
+    }
+    if (workingState.command.trim() === "") {
+      return;
+    }
+    if (this.frontEndCommandService.continueFunctionDefinition(workingState.command)) {
+      return;
+    }
+    if (rewriteRaw) {
+      const rewrittenRaw = this.rewriteRawCommand(workingState.source.raw);
+      const requiresVariadicResolution = this.inMacroExpansion && !this.isDefinitionCollectionStage && (rewrittenRaw.includes("...") || rewrittenRaw.includes("\u2026"));
+      if (rewrittenRaw !== workingState.source.raw || requiresVariadicResolution) {
+        incrementInternalCounter("actualReparses");
+        const rewrittenState = this.createNormalizedCommandFromRaw(
+          rewrittenRaw,
+          workingState.source.file,
+          workingState.source.line,
+          true
+        );
+        if (!rewrittenState) {
+          return;
+        }
+        workingState = rewrittenState;
+      }
+    }
+    const preprocessResult = this.preprocessNormalizedCommand(workingState);
+    if (preprocessResult === "handled") {
+      return;
+    }
+    const startPC = this.currentTargetBaseAddress & 16777215;
+    if (!this.prepareNormalizedCommandForDispatch(workingState)) {
+      return;
+    }
+    this.collectCommandReferences(workingState);
+    const traceContext = {
+      file: workingState.source.file,
+      line: workingState.source.line,
+      raw: workingState.source.raw,
+      normalized: workingState.command
+    };
+    this.traceListener?.({
+      type: "command-start",
+      stage: this.traceStage,
+      arch: this.arch,
+      ...traceContext,
+      logicalAddress: startPC,
+      outputOffset: this.outputWriter.toOutputOffset(startPC)
+    });
+    this.traceCommandStack.push(traceContext);
+    try {
+      const lowered = this.commandLoweringService.lowerCommand(workingState);
+      this.dispatchLoweredNode(lowered);
+    } finally {
+      this.traceCommandStack.pop();
+    }
+    const commandSize = (this.currentTargetBaseAddress & 16777215) - startPC;
+    debug4("processCommand bytes written", commandSize);
+    const endPC = this.currentTargetBaseAddress & 16777215;
+    this.traceListener?.({
+      type: "command-end",
+      stage: this.traceStage,
+      arch: this.arch,
+      ...traceContext,
+      logicalAddress: startPC,
+      outputOffset: this.outputWriter.toOutputOffset(startPC),
+      endLogicalAddress: endPC,
+      endOutputOffset: this.outputWriter.toOutputOffset(endPC),
+      bytesWritten: commandSize
+    });
+    this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
+  }
+  /**
+   * Gets or create lowered program.
+   * @param {StageExecutionState} stageState The stage state.
+   * @param {ProgramModel} program The program.
+   * @returns {LoweredProgram} The result.
+   */
+  getOrCreateLoweredProgram(stageState, program) {
+    if (!stageState.loweredProgram) {
+      stageState.loweredProgram = measureInternalPhase(
+        "lowerProgram",
+        () => this.commandLoweringService.lowerProgram(program)
+      );
+    }
+    return stageState.loweredProgram;
+  }
+  /**
+   * Dispatches lowered node.
+   * @param {LoweredCommand} lowered The lowered.
+   */
+  dispatchLoweredNode(lowered) {
+    if (lowered.kind === "directive") {
+      const loweredCommand = lowered.command;
+      const handledDirective = this.directiveRegistry.dispatch(
+        lowered.keyword,
+        lowered.words,
+        lowered.source.raw,
+        loweredCommand
+      );
+      if (!handledDirective && lowered.keyword) {
+        debug4("\u{1F4A5} assembler dispatchLoweredNode unknown directive", lowered.keyword);
+      }
+      return;
+    }
+    let instruction2 = lowered;
+    if (lowered.command) {
+      const refreshed = this.commandLoweringService.lowerCommand(lowered.command);
+      if (refreshed.kind === "instruction") {
+        instruction2 = refreshed;
+      }
+    }
+    const wasOpcode = this.asblock_pick(instruction2);
+    if (!wasOpcode) {
+      debug4("\u{1F4A5} assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
+    }
+  }
+  /**
+   * Parses a function definition of the form:
+   *   function name(param1, param2...) = expression
+   * Possibly spanning multiple lines joined by backslashes.
+   * @param {string} defLine - The function definition line.
+   */
+  parseFunctionDefinition(defLine) {
+    debug4("parseFunctionDefinition", defLine);
+    this.mathCore.str = defLine;
+    this.mathCore.parseFunctionDefinition();
+    const functionName = defLine.match(/^function\s+([_a-z]\w*)\s*\(/i)?.[1];
+    if (functionName) {
+      this.recordSymbolDefinition("function", functionName);
+    }
+  }
+  /**
+   * Adds a mapping of the current address to the source line number.
+   * @param {number} address The logical address to add to the mapping.
+   */
+  addAddressToLine(address) {
+    incrementInternalCounter("addressMappings");
+    if (!this.collectSourceMetadata) {
+      return;
+    }
+    this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
+  }
+  /**
+   * Evaluates a range expression and returns the result.
+   * @param {string} expr The expression to evaluate.
+   * @returns {number} The result of the expression.
+   */
+  evaluateRangeExpression(expr) {
+    debug4("assemlber evaluateRangeExpression", expr);
+    const resolvedExpr = this.resolveExpressionInput(expr);
+    if (isReferenceExpressionNode(resolvedExpr)) {
+      return this.evaluateReferenceExpressionNode(resolvedExpr, true);
+    }
+    try {
+      const result = this.mathCore.math(resolvedExpr);
+      if (!Number.isNaN(result)) {
+        return result;
+      }
+    } catch (error) {
+    }
+    return this.symbolScope.getLabelValue(renderExpressionNode(resolvedExpr), true);
+  }
+  /**
+   * Sets the paths to search for included files.
+   * @param {string[]} paths The paths to search for included files.
+   */
+  setIncludePaths(paths) {
+    this.includePaths = paths;
+  }
+  /**
+   * Evaluates an expression for conditionals (if, while).
+   * @param {string} expression - The expression to evaluate.
+   * @returns {boolean} True if the expression is true, false otherwise.
+   */
+  evaluateExpression(expression) {
+    debug4("evaluateExpression", expression);
+    let resolvedExpr;
+    let result;
+    try {
+      resolvedExpr = this.resolveExpressionInput(expression);
+      debug4("evaluateExpression resolvedExpr", resolvedExpr);
+      result = isReferenceExpressionNode(resolvedExpr) ? this.evaluateReferenceExpressionNode(resolvedExpr) : this.mathCore.math(resolvedExpr);
+    } catch (e) {
+      const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
+      const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
+      throw new Error(
+        `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`
+      );
+    }
+    debug4("evaluateExpression result", result, "=>", result !== 0);
+    return result !== 0;
+  }
+  /**
+   * Parses string input into an expression node and resolves nested references/defines.
+   * @param {string | ExpressionNode} expression The expression source or parsed node.
+   * @returns {ExpressionNode} The resolved expression tree.
+   */
+  resolveExpressionInput(expression) {
+    const parsed = typeof expression === "string" ? parseExpressionNode(expression.trim()) : expression;
+    return this.resolveExpressionNode(parsed);
+  }
+  /**
+   * Recursively resolves define references and nested reference-expression nodes.
+   * @param {ExpressionNode} expression The expression node to resolve.
+   * @returns {ExpressionNode} The resolved expression node.
+   */
+  resolveExpressionNode(expression) {
+    if (isReferenceExpressionNode(expression)) {
+      return this.resolveReferenceExpressionNode(expression);
+    }
+    switch (expression.type) {
+      case "binary":
+        return {
+          ...expression,
+          left: this.resolveExpressionNode(expression.left),
+          right: this.resolveExpressionNode(expression.right)
+        };
+      case "unary":
+        return {
+          ...expression,
+          argument: this.resolveExpressionNode(expression.argument)
+        };
+      case "range":
+        return {
+          ...expression,
+          start: this.resolveExpressionNode(expression.start),
+          end: this.resolveExpressionNode(expression.end)
+        };
+      case "call":
+        return {
+          ...expression,
+          arguments: expression.arguments.map((argument) => this.resolveExpressionNode(argument))
+        };
+      case "raw":
+        if (/(^|[^!<=>])![\w{]/.test(expression.value)) {
+          return this.resolveExpressionInput(this.resolvedefines(expression.value));
+        }
+        return expression;
+      default:
+        return expression;
+    }
+  }
+  /**
+   * Resolves reference-style expressions such as identifiers, define references,
+   * member access, and indexed access into either simpler reference nodes or
+   * raw/math expressions when defines collapse them further.
+   * @param {ReferenceExpressionNode} expression The reference expression to resolve.
+   * @returns {ExpressionNode} The resolved expression tree.
+   */
+  resolveReferenceExpressionNode(expression) {
+    switch (expression.type) {
+      case "identifier":
+        return expression;
+      case "defineReference": {
+        const defineName = expression.braced ? this.resolvedefines(expression.content ?? "") : expression.name ?? "";
+        const value = this.lookupDefineValue(defineName);
+        if (value === void 0) {
+          throw new Error(`Define '${defineName}' not found.`);
+        }
+        return this.resolveExpressionInput(value);
+      }
+      case "member": {
+        const object = this.resolveReferenceExpressionNode(expression.object);
+        if (!isReferenceExpressionNode(object)) {
+          const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
+          if (expandedReference) {
+            return expandedReference;
+          }
+          return {
+            type: "raw",
+            value: `${renderExpressionNode(object)}.${expression.property.name}`
+          };
+        }
+        return {
+          ...expression,
+          object
+        };
+      }
+      case "index": {
+        const object = this.resolveReferenceExpressionNode(expression.object);
+        const index2 = this.resolveExpressionNode(expression.index);
+        if (!isReferenceExpressionNode(object)) {
+          const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
+          if (expandedReference) {
+            return expandedReference;
+          }
+          return {
+            type: "raw",
+            value: `${renderExpressionNode(object)}[${renderExpressionNode(index2)}]`
+          };
+        }
+        return {
+          ...expression,
+          object,
+          index: index2
+        };
+      }
+      default:
+        return expression;
+    }
+  }
+  /**
+   * Resolves a reference expression all the way to a numeric value.
+   * @param {ReferenceExpressionNode} expression The reference expression to evaluate.
+   * @param {boolean} [requireStatic] Whether labels must be static.
+   * @returns {number} The numeric value of the reference.
+   */
+  evaluateReferenceExpressionNode(expression, requireStatic = false) {
+    const resolved = this.resolveReferenceLabelValue(expression, requireStatic);
+    if (typeof resolved === "number") {
+      return resolved;
+    }
+    throw new Error(`Reference '${resolved}' did not resolve to a numeric value.`);
+  }
+  /**
+   * Resolves a reference expression to either a numeric value or a normalized
+   * label/struct lookup target, depending on how far the expression collapses.
+   * @param {ReferenceExpressionNode} expression The reference expression to resolve.
+   * @param {boolean} [requireStatic] Whether labels must be static.
+   * @returns {number | string} The resolved numeric value.
+   */
+  resolveReferenceLabelValue(expression, requireStatic = false) {
+    const resolved = this.resolveReferenceExpressionNode(expression);
+    if (!isReferenceExpressionNode(resolved)) {
+      return this.mathCore.math(resolved);
+    }
+    return this.resolveNormalizedReferenceLabelValue(
+      this.renderResolvedReferenceExpression(resolved),
+      requireStatic
+    );
+  }
+  /**
+   * Resolves an already-normalized reference string as either a struct member/base
+   * or a plain label lookup.
+   * @param {string} normalizedReference The normalized reference text.
+   * @param {boolean} [requireStatic] Whether labels must be static.
+   * @returns {number} The resolved numeric address/value.
+   */
+  resolveNormalizedReferenceLabelValue(normalizedReference, requireStatic = false) {
+    if (this.structEngine.hasStructReference(normalizedReference)) {
+      return this.structEngine.resolveStructLabel(normalizedReference);
+    }
+    return this.symbolScope.getLabelValue(normalizedReference, requireStatic);
+  }
+  /**
+   * Renders an index expression for a normalized reference string.
+   * @param {ExpressionNode} indexExpression The index expression to render.
+   * @returns {string} The rendered numeric or source-like index text.
+   */
+  resolveReferenceIndexText(indexExpression) {
+    const resolvedIndex = this.resolveExpressionNode(indexExpression);
+    try {
+      return this.mathCore.math(resolvedIndex).toString();
+    } catch {
+      return renderExpressionNode(resolvedIndex);
+    }
+  }
+  /**
+   * Renders a reference expression after resolving any nested index expressions.
+   * @param {ReferenceExpressionNode} expression The reference expression to render.
+   * @returns {string} The normalized reference text.
+   */
+  renderResolvedReferenceExpression(expression) {
+    return renderReferenceExpressionNode(expression, {
+      renderIndex: (indexExpression) => this.resolveReferenceIndexText(indexExpression)
+    });
+  }
+  /**
+   * Re-runs `resolvedefines()` across a rendered reference expression and reparses
+   * it only when define expansion materially changes the text.
+   * @param {ReferenceExpressionNode} expression The reference expression to expand.
+   * @returns {ExpressionNode | undefined} The reparsed expression, if expansion changed it.
+   */
+  tryResolveExpandedReferenceExpression(expression) {
+    const renderedReference = this.renderResolvedReferenceExpression(expression);
+    const expandedReference = this.resolvedefines(renderedReference);
+    if (expandedReference === renderedReference) {
+      return void 0;
+    }
+    return this.resolveExpressionInput(expandedReference);
+  }
+  /**
+   * Resolves standalone relative-label tokens used in define contexts.
+   * @param {string} input The token to resolve.
+   * @returns {string | undefined} The resolved address string, if applicable.
+   */
+  tryResolveRelativeLabelToken(input) {
+    if (input !== "+" && input !== "-" && input !== "?+" && input !== "?-") {
+      return void 0;
+    }
+    debug4(`resolvedefines handling relative label: ${input}`);
+    try {
+      switch (input) {
+        case "+":
+          return `$${this.symbolScope.findNextLabel("+").toString(16)}`;
+        case "-":
+          return `$${this.symbolScope.findPreviousLabel("-").toString(16)}`;
+        case "?+":
+          return `$${this.symbolScope.findNextLabel("?+").toString(16)}`;
+        case "?-":
+          return `$${this.symbolScope.findPreviousLabel("?-").toString(16)}`;
+        default:
+          return void 0;
+      }
+    } catch (error) {
+      if (!this.enforceResolvedLabels) {
+        debug4("resolvedefines stage does not enforce labels, returning placeholder");
+        return "$0000";
+      }
+      debug4(
+        `resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`
+      );
+      throw error;
+    }
+  }
+  /**
+   * Resolves direct `!name` define references that are not assignments.
+   * @param {string} input The token to resolve.
+   * @returns {string | undefined} The resolved define value, if applicable.
+   */
+  tryResolveDirectDefineReference(input) {
+    if (!input.startsWith("!") || input.includes(" ") || input.includes("=") || input.includes("{")) {
+      return void 0;
+    }
+    debug4("resolvedefines direct variable reference", input);
+    const varName = input.substring(1);
+    return this.lookupDefineValue(varName);
+  }
+  /**
+   * Resolves macro-label references such as `?label` or `#+?label`.
+   * @param {string} input The token to resolve.
+   * @returns {string | undefined} The resolved macro-label value, if applicable.
+   */
+  tryResolveMacroLabelReference(input) {
+    const prefixMatch = input.match(/^(#\?|\?|#\?\.|\?\+|\?-)(.*)/);
+    if (!prefixMatch) {
+      return void 0;
+    }
+    const prefix = prefixMatch[1];
+    const labelName = prefixMatch[2];
+    debug4("resolvedefines macro label found with prefix", { prefix, labelName });
+    return this.symbolScope.getLabelValue(labelName, false).toString();
+  }
+  /**
+   * Resolves bare label-like tokens before the generic character-by-character
+   * define scanner runs.
+   * @param {string} input The token to resolve.
+   * @returns {string | undefined} The resolved label value, if applicable.
+   */
+  tryResolveBareLabelReference(input) {
+    if (!isBareLabelReference(input)) {
+      return void 0;
+    }
+    debug4("resolvedefines checking if input is a label reference", input);
+    const labelValue = this.symbolScope.tryGetLabelValue(input, false);
+    if (labelValue === void 0) {
+      if (this.isDefinitionCollectionStage) {
+        return "0";
+      }
+      debug4("resolvedefines not a label, continuing");
+      return void 0;
+    }
+    debug4("resolvedefines labelValue", labelValue);
+    return labelValue.toString();
+  }
+  /**
+   * Resolves all define replacements in a given string.
+   * @param {string} input The string to resolve defines in.
+   * @returns {string} The string with defines resolved.
+   */
+  resolvedefines(input) {
+    debug4("resolvedefines", { input });
+    if (!input) {
+      debug4("resolvedefines input is empty, returning empty string");
+      return "";
+    }
+    let result = "";
+    let index2 = 0;
+    const resolvedRelativeLabel = this.tryResolveRelativeLabelToken(input);
+    if (resolvedRelativeLabel !== void 0) {
+      return resolvedRelativeLabel;
+    }
+    if (input.includes("!=")) {
+      debug4("resolvedefines != operator found in", input);
+      const parts = input.split("!=");
+      const resolvedParts = parts.map((part) => this.resolvedefines(part.trim()));
+      return resolvedParts.join("!=");
+    }
+    if ((input.startsWith("sizeof(") || input.startsWith("objectsize(")) && input.endsWith(")")) {
+      debug4("resolvedefines sizeof found, skipping", input);
+      return input;
+    }
+    const resolvedDirectDefine = this.tryResolveDirectDefineReference(input);
+    if (resolvedDirectDefine !== void 0) {
+      return resolvedDirectDefine;
+    }
+    const resolvedMacroLabel = this.tryResolveMacroLabelReference(input);
+    if (resolvedMacroLabel !== void 0) {
+      return resolvedMacroLabel;
+    }
+    const resolvedBareLabel = this.tryResolveBareLabelReference(input);
+    if (resolvedBareLabel !== void 0) {
+      return resolvedBareLabel;
+    }
+    while (index2 < input.length) {
+      const char = input[index2];
+      if (char === "\\" && input[index2 + 1] === "\\") {
+        debug4("resolvedefines double slash", input);
+        result += "\\";
+        index2 += 2;
+      } else if (char === "\\" && input[index2 + 1] === "!") {
+        debug4("resolvedefines \\!define", input);
+        result += "!";
+        index2 += 2;
+      } else if (char === "!") {
+        debug4("resolvedefines !define", input);
+        let defineName = "";
+        index2++;
+        if (input[index2] === "{") {
+          index2++;
+          let unprocessedName = "";
+          let braces = 1;
+          while (index2 < input.length) {
+            if (input[index2] === "{") braces++;
+            if (input[index2] === "}") braces--;
+            if (braces === 0) break;
+            unprocessedName += input[index2++];
+          }
+          if (braces !== 0) throw new Error("Error: Mismatched braces in define name.");
+          index2++;
+          defineName = this.resolvedefines(unprocessedName);
+          debug4("resolvedefines !define defineName", defineName);
+        } else {
+          while (index2 < input.length && /\w/.test(input[index2])) {
+            defineName += input[index2++];
+          }
+          debug4("resolvedefines !define defineName", defineName);
+        }
+        if (defineName === "") {
+          result += "!";
+          continue;
+        }
+        const value = this.lookupDefineValue(defineName);
+        if (value === void 0) {
+          throw new Error(`Define '${defineName}' not found.`);
+        } else {
+          result += value;
+        }
+      } else {
+        result += char;
+        index2++;
+      }
+    }
+    debug4("resolvedefines result =", { result });
+    return result;
+  }
+  /**
+   * Handles activate stage.
+   * @param {AssemblyStageName} stage The stage.
+   */
+  activateStage(stage) {
+    debug4("\u{1F3C1} activateStage", stage);
+    this.syncActiveStageExecutionState(stage);
+    if (stage === "resolveLayout") {
+      this.forwardLabels = {};
+      this.backwardLabels = {};
+    }
+    this.macroLabelInstance = 0;
+    this.includeSource.resetGuards();
+    this.inMacroExpansion = false;
+    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
+    for (const definition of this.architectureRegistry.definitions.values()) {
+      definition.encoder.beginPass?.();
+    }
+    this.pluginState.resetForStage(stage);
+    this.runLifecycleHook(
+      "onStageStart",
+      (lifecycle) => lifecycle.onStageStart?.({ state: this.pluginState, session: this, stage })
+    );
+  }
+  /**
+   * Completes the current pass, performing any necessary cleanup.
+   */
+  finishPass() {
+    const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
+    this.runLifecycleHook(
+      "onStageEnd",
+      (lifecycle) => lifecycle.onStageEnd?.({ state: this.pluginState, session: this, stage })
+    );
+    if (this.getActiveStageCapabilities().canFinalize) {
+      this.runLifecycleHook(
+        "beforeOutputFinalize",
+        (lifecycle) => lifecycle.beforeOutputFinalize?.({
+          state: this.pluginState,
+          session: this,
+          outputBytes: this.outputBytes
+        })
+      );
+    }
+    this.outputWriter.finishPass();
+    if (this.getActiveStageCapabilities().canFinalize) {
+      this.includeSource.endAssemblySnapshot();
+      this.mathCore.endAssemblySnapshot();
+      this.passProgramCache.clear();
+    }
+  }
+  /**
+   * Sets the current file being processed.
+   * @param {string} filename - The filename to set.
+   */
+  setCurrentFile(filename) {
+    debug4("setCurrentFile", filename);
+    this.currentFile = filename;
+    this.currentLine = 0;
+    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
+  }
+  /**
+   * Sets the current line number.
+   * @param {number} line - The line number to set.
+   */
+  setCurrentLine(line) {
+    this.currentLine = line;
+  }
+  /**
+   * Gets stage descriptor.
+   * @param {AssemblyStageName} stage The stage.
+   * @returns {Pick<StageExecutionState, "stage" | "capabilities">} The result.
+   */
+  getStageDescriptor(stage) {
+    if (stage === "collectDefinitions") {
+      return {
+        stage,
+        capabilities: {
+          instructionMode: "layout",
+          canEmitBytes: false,
+          canFinalize: false,
+          enforceResolvedLabels: false,
+          isDefinitionCollectionStage: true
+        }
+      };
+    }
+    if (stage === "resolveLayout") {
+      return {
+        stage,
+        capabilities: {
+          instructionMode: "emit",
+          canEmitBytes: false,
+          canFinalize: false,
+          enforceResolvedLabels: false,
+          isDefinitionCollectionStage: false
+        }
+      };
+    }
+    return {
+      stage,
+      capabilities: {
+        instructionMode: "emit",
+        canEmitBytes: true,
+        canFinalize: true,
+        enforceResolvedLabels: true,
+        isDefinitionCollectionStage: false
+      }
+    };
+  }
+  /**
+   * Clones relative labels.
+   * @param {{ [depth: number]: { addr: number; macroInstance?: number }[] }} source The source.
+   * @returns {{ [depth: number]: { addr: number; macroInstance?: number }[]; }} The result.
+   */
+  cloneRelativeLabels(source) {
+    const clone = {};
+    for (const [depth, entries] of Object.entries(source)) {
+      clone[Number(depth)] = entries.map((entry) => ({ ...entry }));
+    }
+    return clone;
+  }
+  /**
+   * Creates stage execution state.
+   * @param {AssemblyStageName} stage The stage.
+   * @returns {StageExecutionState} The result.
+   */
+  createStageExecutionState(stage) {
+    const descriptor2 = this.getStageDescriptor(stage);
+    let previousStage;
+    if (stage === "resolveLayout") {
+      previousStage = "collectDefinitions";
+    } else if (stage === "emitProgram") {
+      previousStage = "resolveLayout";
+    }
+    const seed = previousStage ? this.stageExecutionStates.get(previousStage) : void 0;
+    const cursorSeed = seed?.cursor ?? {
+      currentTargetAddress: this.currentTargetAddress,
+      currentTargetBaseAddress: this.currentTargetBaseAddress,
+      currentTargetStartAddress: this.currentTargetStartAddress,
+      currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
+      bytes: this.bytes
+    };
+    const symbolSeed = seed?.symbols ?? {
+      labelTable: this.labelTable,
+      forwardLabels: this.forwardLabels,
+      backwardLabels: this.backwardLabels,
+      currentParentLabel: this.currentParentLabel,
+      currentParentIsGlobal: this.currentParentIsGlobal,
+      currentGlobalParentLabel: this.currentGlobalParentLabel,
+      labelParents: this.labelParents
+    };
+    const controlSeed = seed?.control ?? {
+      namespaceStack: this.namespaceStack,
+      currentNamespace: this.currentNamespace,
+      namespaceNestingEnabled: this.namespaceNestingEnabled,
+      namespaceNestingPath: this.namespaceNestingPath,
+      inMacroExpansion: this.inMacroExpansion,
+      macroLabelInstance: this.macroLabelInstance
+    };
+    return {
+      ...descriptor2,
+      cursor: { ...cursorSeed },
+      symbols: {
+        labelTable: new Map(
+          Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }])
+        ),
+        forwardLabels: this.cloneRelativeLabels(symbolSeed.forwardLabels),
+        backwardLabels: this.cloneRelativeLabels(symbolSeed.backwardLabels),
+        currentParentLabel: symbolSeed.currentParentLabel,
+        currentParentIsGlobal: symbolSeed.currentParentIsGlobal,
+        currentGlobalParentLabel: symbolSeed.currentGlobalParentLabel,
+        labelParents: new Map(symbolSeed.labelParents)
+      },
+      control: {
+        namespaceStack: [...controlSeed.namespaceStack],
+        currentNamespace: controlSeed.currentNamespace,
+        namespaceNestingEnabled: controlSeed.namespaceNestingEnabled,
+        namespaceNestingPath: [...controlSeed.namespaceNestingPath],
+        inMacroExpansion: controlSeed.inMacroExpansion,
+        macroLabelInstance: controlSeed.macroLabelInstance
+      },
+      pluginState: this.pluginState.cloneSnapshot(seed?.pluginState),
+      loweredProgram: null
+    };
+  }
+  /**
+   * Applies stage execution state.
+   * @param {StageExecutionState} stageState The stage state.
+   */
+  applyStageExecutionState(stageState) {
+    this.pluginState.restore(this.pluginState.cloneSnapshot(stageState.pluginState));
+    this.currentTargetAddress = stageState.cursor.currentTargetAddress;
+    this.currentTargetBaseAddress = stageState.cursor.currentTargetBaseAddress;
+    this.currentTargetStartAddress = stageState.cursor.currentTargetStartAddress;
+    this.currentTargetBaseStartAddress = stageState.cursor.currentTargetBaseStartAddress;
+    this.bytes = stageState.cursor.bytes;
+    this.labelTable = stageState.symbols.labelTable;
+    this.forwardLabels = stageState.symbols.forwardLabels;
+    this.backwardLabels = stageState.symbols.backwardLabels;
+    this.currentParentLabel = stageState.symbols.currentParentLabel;
+    this.currentParentIsGlobal = stageState.symbols.currentParentIsGlobal;
+    this.currentGlobalParentLabel = stageState.symbols.currentGlobalParentLabel;
+    this.labelParents = stageState.symbols.labelParents;
+    this.namespaceStack = stageState.control.namespaceStack;
+    this.currentNamespace = stageState.control.currentNamespace;
+    this.namespaceNestingEnabled = stageState.control.namespaceNestingEnabled;
+    this.namespaceNestingPath = stageState.control.namespaceNestingPath;
+    this.inMacroExpansion = stageState.control.inMacroExpansion;
+    this.macroLabelInstance = stageState.control.macroLabelInstance;
+  }
+  /**
+   * Captures stage execution state.
+   * @param {StageExecutionState} stageState The stage state.
+   */
+  captureStageExecutionState(stageState) {
+    stageState.pluginState = this.pluginState.cloneSnapshot();
+    stageState.cursor = {
+      currentTargetAddress: this.currentTargetAddress,
+      currentTargetBaseAddress: this.currentTargetBaseAddress,
+      currentTargetStartAddress: this.currentTargetStartAddress,
+      currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
+      bytes: this.bytes
+    };
+    stageState.symbols = {
+      labelTable: this.labelTable,
+      forwardLabels: this.forwardLabels,
+      backwardLabels: this.backwardLabels,
+      currentParentLabel: this.currentParentLabel,
+      currentParentIsGlobal: this.currentParentIsGlobal,
+      currentGlobalParentLabel: this.currentGlobalParentLabel,
+      labelParents: this.labelParents
+    };
+    stageState.control = {
+      namespaceStack: this.namespaceStack,
+      currentNamespace: this.currentNamespace,
+      namespaceNestingEnabled: this.namespaceNestingEnabled,
+      namespaceNestingPath: this.namespaceNestingPath,
+      inMacroExpansion: this.inMacroExpansion,
+      macroLabelInstance: this.macroLabelInstance
+    };
+  }
+  /**
+   * Gets or create stage execution state.
+   * @param {AssemblyStageName} stage The stage.
+   * @returns {StageExecutionState} The result.
+   */
+  getOrCreateStageExecutionState(stage) {
+    const existing = this.stageExecutionStates.get(stage);
+    if (existing) {
+      return existing;
+    }
+    const created = this.createStageExecutionState(stage);
+    this.stageExecutionStates.set(stage, created);
+    return created;
+  }
+  /**
+   * Builds program model.
+   * @param {string} source The source.
+   * @param {string} [sourceFile] The source file.
+   * @param {number} [startLine] The start line.
+   * @returns {ProgramModel} The result.
+   */
+  buildProgramModel(source, sourceFile = this.currentFile, startLine = 0) {
+    return measureInternalPhase("buildProgramModel", () => {
+      const program = this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
+      return {
+        sourceFile: program.sourceFile,
+        startLine: program.startLine,
+        nodes: program.nodes
+      };
+    });
+  }
+  /**
+   * Runs stage.
+   * @param {AssemblyStageName} stage The stage.
+   * @param {ProgramModel} program The program.
+   * @returns {StageExecutionState} The result.
+   */
+  runStage(stage, program) {
+    return measureInternalPhase(stage, () => {
+      if (stage === "collectDefinitions") {
+        this.includeSource.beginAssemblySnapshot();
+        this.mathCore.beginAssemblySnapshot();
+        this.stageExecutionStates.clear();
+        this.activeStageExecutionState = null;
+      }
+      const stageState = this.getOrCreateStageExecutionState(stage);
+      this.activeStageExecutionState = stageState;
+      this.applyStageExecutionState(stageState);
+      this.setCurrentFile(program.sourceFile);
+      this.activateStage(stage);
+      const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
+      measureInternalPhase(
+        "executeProgram",
+        () => this.executeLoweredNodeStream(loweredProgram.nodes)
+      );
+      measureInternalPhase("finishPass", () => this.finishPass());
+      this.captureStageExecutionState(stageState);
+      return stageState;
+    });
+  }
+  /**
+   * Handles assemble program.
+   * @param {ProgramModel} program The program.
+   */
+  assembleProgram(program) {
+    this.runStage("collectDefinitions", program);
+    this.runStage("resolveLayout", program);
+    this.runStage("emitProgram", program);
+  }
+  /**
+   * Handles assemble source.
+   * @param {string} source The source.
+   * @param {string} [sourceFile] The source file.
+   * @param {number} [startLine] The start line.
+   * @returns {ProgramModel} The result.
+   */
+  assembleSource(source, sourceFile = this.currentFile, startLine = 0) {
+    const program = this.buildProgramModel(source, sourceFile, startLine);
+    this.assembleProgram(program);
+    return program;
+  }
+  /**
+   * Writes a repeated byte into the output buffer.
+   * @param {number} start The starting address of the block to write.
+   * @param {number} value The byte value to write.
+   * @param {number} [length] The length of the block to write.
+   */
+  writeOutputBytes(start, value, length = 1) {
+    debug4("writeOutputBytes", { start, value, length });
+    if (typeof start !== "number" || typeof value !== "number" || typeof length !== "number") {
+      throw new Error("writeOutputBytes requires a number for start, value, and length");
+    }
+    if (value > 255) {
+      debug4("writeOutputBytes \u{1F4A5} value must be less than 0xFF", value);
+    }
+    debug4(
+      "writeOutputBytes before this.outputBytes.length",
+      this.outputBytes.length,
+      "/",
+      this.outputBytes.length.toString(16)
+    );
+    for (let i = 0; i < length; i++) {
+      this.outputBytes[start + i] = value & 255;
+    }
+    debug4(
+      "writeOutputBytes after this.outputBytes.length",
+      this.outputBytes.length,
+      "/",
+      this.outputBytes.length.toString(16)
+    );
+  }
+  /**
+   * Expands the output buffer and fills it with a specified byte.
+   * @param {number} newSize The new output size.
+   * @param {number} fillByte The byte used for the new range.
+   */
+  expandOutput(newSize, fillByte) {
+    debug4("expandOutput", { newSize, fillByte });
+    if (typeof newSize !== "number" || typeof fillByte !== "number") {
+      throw new Error("expandOutput requires a number for newSize and fillByte");
+    }
+    if (newSize > this.outputBytes.length) {
+      this.writeOutputBytes(this.outputBytes.length, fillByte, newSize - this.outputBytes.length);
+    } else {
+      debug4("expandOutput newSize <= this.outputBytes.length, no expansion needed");
+    }
+  }
+  /** Runs the active output-format finalizer. */
+  finalizeOutput() {
+    this.pluginOutputFormat.finalize({
+      state: this.pluginState,
+      outputBytes: this.outputBytes
+    });
+  }
+  /**
+   * Returns the compiled binary output.
+   * @returns {Uint8Array} The compiled binary output.
+   */
+  getBinaryOutput = () => {
+    return this.pluginOutputFormat.getOutput({
+      state: this.pluginState,
+      outputBytes: this.outputBytes
+    });
+  };
+  /**
+   * Lowers completed runtime nodes and executes them through the production executor.
+   * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
+   */
+  lowerAndExecuteRuntimeNodes(nodes) {
+    const previousRewrite = this.runtimePassthroughRewriteEnabled;
+    this.runtimePassthroughRewriteEnabled = true;
+    try {
+      const loweredNodes = nodes.map(
+        (node) => this.commandLoweringService.lowerExecutableNode(node)
+      );
+      for (const node of loweredNodes) {
+        this.executeWithAnalysisRecovery(
+          node,
+          (currentNode) => this.getLoweredNodeSpan(currentNode),
+          (currentNode) => this.executeLoweredNode(currentNode)
+        );
+      }
+    } finally {
+      this.runtimePassthroughRewriteEnabled = previousRewrite;
+    }
+  }
+  /**
+   * Resolves for loop bounds.
+   * @param {LoweredLoopNode} forBlock The for block.
+   * @returns {{ variable?: string; start?: number; end?: number; }} The result.
+   */
+  resolveForLoopBounds(forBlock) {
+    const parsedForLoop = forBlock.header?.parsed.forLoop;
+    const variable = forBlock.variable ?? parsedForLoop?.variable;
+    let start = forBlock.start;
+    let end = forBlock.end;
+    const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
+    const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
+    if (startExpression && endExpression) {
+      const startExpr = renderExpressionNode(startExpression);
+      const endExpr = renderExpressionNode(endExpression);
+      const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
+      const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
+      start = this.operandResolver.getnum(startDefinesResolved);
+      end = this.operandResolver.getnum(endDefinesResolved);
+    }
+    return { variable, start, end };
+  }
+  /**
+   * Executes for loop iterations.
+   * @param {LoweredLoopNode} forBlock The for block.
+   * @param {() => void} executeBody The execute body.
+   */
+  executeForLoopIterations(forBlock, executeBody) {
+    const { variable, start, end } = this.resolveForLoopBounds(forBlock);
+    if (!variable || start === void 0 || end === void 0) {
+      debug4("executeForLoopIterations missing loop semantics:", forBlock);
+      return;
+    }
+    const originalValue = this.defines.get(variable);
+    if (start < end) {
+      for (let i = start; i < end; i++) {
+        this.defines.set(variable, i.toString());
+        executeBody();
+      }
+    }
+    if (originalValue !== void 0) {
+      this.defines.set(variable, originalValue);
+    } else {
+      this.defines.delete(variable);
+    }
+  }
+  /**
+   * Executes lowered loop.
+   * @param {LoweredLoopNode} loopBlock The loop block.
+   */
+  executeLoweredLoop(loopBlock) {
+    debug4("executeLoweredLoop", loopBlock);
+    if (loopBlock.loopType === "for") {
+      this.executeLoweredForLoop(loopBlock);
+    } else if (loopBlock.loopType === "while") {
+      this.executeLoweredWhileLoop(loopBlock);
+    }
+  }
+  /**
+   * Executes lowered for loop.
+   * @param {LoweredLoopNode} forBlock The for block.
+   */
+  executeLoweredForLoop(forBlock) {
+    debug4("executeLoweredForLoop", forBlock);
+    this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
+  }
+  /**
+   * Executes while loop commands.
+   * @param {LoweredLoopNode} whileBlock The while block.
+   * @param {TCommand[]} commands The commands.
+   * @param {(command: TCommand) => string | null} getDefineTarget The get define target.
+   * @param {(command: TCommand) => void} executeCommand The execute command.
+   */
+  executeWhileLoopCommands(whileBlock, commands, getDefineTarget, executeCommand) {
+    const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
+    if (!conditionNode) {
+      debug4("executeWhileLoopCommands missing condition expression", whileBlock);
+      return;
+    }
+    let iteration = 0;
+    const MAX_ITERATIONS = 1e4;
+    const loopVars = /* @__PURE__ */ new Set();
+    const originalValues = /* @__PURE__ */ new Map();
+    while (this.evaluateExpression(conditionNode) && iteration < MAX_ITERATIONS) {
+      for (const cmd of commands) {
+        const defineTarget = getDefineTarget(cmd);
+        if (defineTarget && !loopVars.has(defineTarget)) {
+          loopVars.add(defineTarget);
+          originalValues.set(defineTarget, this.defines.get(defineTarget));
+        }
+        executeCommand(cmd);
+      }
+      iteration++;
+    }
+    if (iteration >= MAX_ITERATIONS) {
+      debug4(
+        "executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected."
+      );
+    }
+    for (const [varName, value] of originalValues.entries()) {
+      if (value !== void 0) {
+        debug4(`executeWhileLoopCommands setting ${varName} to ${value}`);
+        this.defines.set(varName, value);
+      } else {
+        debug4(`executeWhileLoopCommands delete entry for ${varName}`);
+        this.defines.delete(varName);
+      }
+    }
+  }
+  /**
+   * Executes lowered while loop.
+   * @param {LoweredLoopNode} whileBlock The while block.
+   */
+  executeLoweredWhileLoop(whileBlock) {
+    debug4("executeLoweredWhileLoop", whileBlock);
+    this.executeWhileLoopCommands(
+      whileBlock,
+      whileBlock.commands,
+      (cmd) => cmd.kind === "command" && cmd.command.kind === "defineCommand" ? getDefineVariable(cmd.command.command) ?? null : null,
+      (cmd) => this.executeLoweredNodeWithRecovery(cmd)
+    );
+  }
+  /**
+   * Gets lowered node span.
+   * @param {LoweredExecutableNode} node The node.
+   * @returns {SourceSpan | undefined} The result.
+   */
+  getLoweredNodeSpan(node) {
+    if (node.kind === "command") {
+      return node.command.source.normalizedSpan;
+    }
+    if (node.kind === "directive") {
+      return node.source.normalizedSpan;
+    }
+    if (node.kind === "loop" || node.kind === "conditional") {
+      return node.header?.source.normalizedSpan;
+    }
+    return void 0;
+  }
+  /**
+   * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
+   * @param {TNode} node The node to execute.
+   * @param {(node: TNode) => SourceSpan | undefined} getSpan Resolves the node span for diagnostics.
+   * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
+   */
+  executeWithAnalysisRecovery(node, getSpan, executeNode) {
+    if (!this.analysisErrorRecoveryEnabled) {
+      executeNode(node);
+      return;
+    }
+    try {
+      executeNode(node);
+    } catch (error) {
+      this.reportErrorDiagnostic(error, getSpan(node), this.activeStageExecutionState?.stage);
+    }
+  }
+  /**
+   * Executes lowered node with recovery.
+   * @param {LoweredExecutableNode} node The node.
+   */
+  executeLoweredNodeWithRecovery(node) {
+    this.executeWithAnalysisRecovery(
+      node,
+      (currentNode) => this.getLoweredNodeSpan(currentNode),
+      (currentNode) => this.executeLoweredNode(currentNode)
+    );
+  }
+  /**
+   * Executes lowered node.
+   * @param {LoweredExecutableNode} node The node.
+   */
+  executeLoweredNode(node) {
+    const sourceCommand = node.kind === "loop" || node.kind === "conditional" ? node.header : node.command;
+    if (sourceCommand) {
+      this.currentFile = sourceCommand.source.file;
+      this.currentLine = sourceCommand.source.line;
+    }
+    if (node.kind === "command") {
+      incrementInternalCounter("passthroughDispatches");
+      this.processNormalizedCommand(node.command, this.runtimePassthroughRewriteEnabled);
+      return;
+    }
+    if (node.kind === "directive" || node.kind === "instruction") {
+      if (node.command) {
+        this.collectCommandReferences(node.command);
+      }
+    }
+    if (node.kind === "loop") {
+      this.executeLoweredLoop(node);
+      return;
+    }
+    if (node.kind === "conditional") {
+      this.executeConditionalBranches(
+        node.branches,
+        (commands) => this.executeLoweredNodeStream(commands)
+      );
+      return;
+    }
+    this.dispatchLoweredNode(node);
+  }
+  /**
+   * Executes lowered node stream.
+   * @param {LoweredExecutableNode[]} nodes The nodes.
+   */
+  executeLoweredNodeStream(nodes) {
+    for (const node of nodes) {
+      this.executeLoweredNodeWithRecovery(node);
+    }
+  }
+  /**
+   * Drains and executes any completed nodes still buffered in the incremental parser.
+   * This protects re-entrant command sources, such as macro expansion, from leaving
+   * finished typed roots stranded until the next top-level line arrives.
+   */
+  flushCompletedIncrementalNodes() {
+    const ready = this.programModelBuilder.drainCompletedRoots(this.incrementalProgramParseState);
+    if (ready.length > 0) {
+      this.lowerAndExecuteRuntimeNodes(ready);
+    }
+  }
+  /**
+   * Executes conditional branches.
+   * @param {Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[]; }>} branches The branches.
+   * @param {(commands: TCommand[]) => void} executeCommands The execute commands.
+   */
+  executeConditionalBranches(branches, executeCommands) {
+    for (const branch2 of branches) {
+      if (branch2.kind === "else") {
+        executeCommands(branch2.commands);
+        return;
+      }
+      if (!branch2.conditionNode) {
+        continue;
+      }
+      let branchConditionMatched = false;
+      this.requireStaticLabelLookup = true;
+      try {
+        branchConditionMatched = this.evaluateExpression(branch2.conditionNode);
+      } finally {
+        this.requireStaticLabelLookup = false;
+      }
+      if (branchConditionMatched) {
+        executeCommands(branch2.commands);
+        return;
+      }
+    }
+  }
+  /**
+   * Parses command stream to nodes.
+   * @param {string[]} commands The commands.
+   * @param {string} [sourceFile] The source file.
+   * @param {number} [startLine] The start line.
+   * @returns {RuntimeNode[]} The result.
+   */
+  parseCommandStreamToNodes(commands, sourceFile = this.currentFile, startLine = this.currentLine) {
+    return this.programModelBuilder.parseCommandStreamToNodes(commands, sourceFile, startLine);
+  }
+  /**
+   * Gets or build pass program.
+   * @param {string[]} commands The commands.
+   * @param {string} [sourceFile] The source file.
+   * @param {number} [startLine] The start line.
+   * @returns {RuntimeNode[]} The result.
+   */
+  getOrBuildPassProgram(commands, sourceFile = this.currentFile, startLine = this.currentLine) {
+    return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine);
+  }
+  /**
+   * Gets macro definition node.
+   * @param {string} name The name.
+   * @returns {MacroDefinitionNode | undefined} The result.
+   */
+  getMacroDefinitionNode(name) {
+    const macro = this.macros.get(name);
+    if (!macro) {
+      return void 0;
+    }
+    const body = macro.body.map((entry) => entry);
+    return {
+      type: "macroDefinition",
+      name: macro.name,
+      params: [...macro.params],
+      variadic: macro.variadic,
+      body,
+      sourceFile: macro.sourceFile
+    };
   }
 };
 
-// src/architecture-types.ts
+// packages/core/src/architecture-types.ts
 var createEncoderRuntime = (context) => ({
   operandResolver: context.operands,
   write1: (value) => context.emission.write1(value),
@@ -18299,14 +23227,8 @@ var createEncoderRuntime = (context) => ({
   get currentTargetAddress() {
     return context.sizing.getCurrentAddress();
   },
-  get optimizeDirectPage() {
-    return context.sizing.optimizeDirectPage();
-  },
   get enforceResolvedLabels() {
     return context.branches.enforceResolvedLabels();
-  },
-  get asarSuperFxMoveShortAddress() {
-    return context.compatibility?.asarSuperFxMoveShortAddress() ?? false;
   },
   symbolScope: {
     findNextLabel: (label, referenceAddress) => context.branches.findNextLabel(label, referenceAddress),
@@ -18315,7 +23237,673 @@ var createEncoderRuntime = (context) => ({
   diagnostics: context.diagnostics
 });
 
-// src/lsp/instruction-catalog.ts
+// packages/core/src/lsp/overlay-file-provider.ts
+import path2 from "node:path";
+var OverlayFileProvider = class {
+  /** Open document contents keyed by absolute, normalized path. */
+  overlay;
+  /** The backing provider used when a path is not in the overlay. */
+  base;
+  /**
+   * Creates an overlay provider.
+   * @param {Map<string, string>} [overlay] Initial overlay contents keyed by absolute path.
+   * @param {AssemblyFileProvider} [base] Backing provider for disk reads.
+   */
+  constructor(overlay = /* @__PURE__ */ new Map(), base = new NodeAssemblyFileProvider()) {
+    this.overlay = overlay;
+    this.base = base;
+  }
+  /**
+   * Resolves a filename to an absolute path, preferring overlay entries.
+   * @param {string} filename The filename or relative path to resolve.
+   * @param {AssemblyFileResolutionOptions} [options] Resolution context (current file, include paths).
+   * @returns {string | undefined} The resolved absolute path, or undefined when not found.
+   */
+  resolvePath(filename, options = {}) {
+    if (!filename) {
+      return void 0;
+    }
+    const normalized = stripWrappingQuotes(filename);
+    const baseResolved = this.base.resolvePath(filename, options);
+    if (baseResolved) {
+      return baseResolved;
+    }
+    if (path2.isAbsolute(normalized) && this.overlay.has(normalized)) {
+      return normalized;
+    }
+    for (const candidate of this.candidatePaths(normalized, options)) {
+      if (this.overlay.has(candidate)) {
+        return candidate;
+      }
+    }
+    return void 0;
+  }
+  /**
+   * Returns stat information, treating overlay entries as readable files.
+   * @param {string} filePath The absolute path to stat.
+   * @returns {AssemblyFileStat} The stat result.
+   */
+  stat(filePath) {
+    const entry = this.overlay.get(filePath);
+    if (entry !== void 0) {
+      return {
+        exists: true,
+        readable: true,
+        size: Buffer.byteLength(entry, "utf8")
+      };
+    }
+    return this.base.stat(filePath);
+  }
+  /**
+   * Reads a file as bytes, using overlay content when present.
+   * @param {string} filePath The absolute path to read.
+   * @returns {Uint8Array} The file bytes.
+   */
+  readFile(filePath) {
+    const entry = this.overlay.get(filePath);
+    if (entry !== void 0) {
+      return new Uint8Array(Buffer.from(entry, "utf8"));
+    }
+    return this.base.readFile(filePath);
+  }
+  /**
+   * Reads a file as text, using overlay content when present.
+   * @param {string} filePath The absolute path to read.
+   * @param {string} [encoding] The text encoding for disk reads.
+   * @returns {string} The file text.
+   */
+  readTextFile(filePath, encoding = "utf8") {
+    const entry = this.overlay.get(filePath);
+    if (entry !== void 0) {
+      return entry;
+    }
+    return this.base.readTextFile(filePath, encoding);
+  }
+  /**
+   * Builds the candidate absolute paths for a relative filename, mirroring the
+   * Node provider's resolution order.
+   * @param {string} normalized The unquoted filename.
+   * @param {AssemblyFileResolutionOptions} options Resolution context.
+   * @returns {string[]} The candidate absolute paths to probe in the overlay.
+   */
+  candidatePaths(normalized, options) {
+    if (path2.isAbsolute(normalized)) {
+      return [normalized];
+    }
+    const baseDirectories = [
+      options.macroSourceFile ? path2.dirname(options.macroSourceFile) : void 0,
+      options.currentFile ? path2.dirname(options.currentFile) : void 0,
+      ...options.includePaths ?? [],
+      process.cwd()
+    ].filter((entry) => Boolean(entry));
+    return baseDirectories.map((directory) => path2.resolve(directory, normalized));
+  }
+};
+
+// packages/core/src/lsp/workspace-index.ts
+import path3 from "node:path";
+var WorkspaceIndex = class {
+  /** Open editor buffers keyed by absolute path. */
+  overlay = /* @__PURE__ */ new Map();
+  /** Per-file analysis buckets keyed by absolute path. */
+  fileAnalysis = /* @__PURE__ */ new Map();
+  /** Merged include-graph edges across all analysed roots. */
+  includeEdges = [];
+  /** All symbol definitions across the workspace (for cross-file resolution). */
+  allSymbols = [];
+  /** All symbol references across the workspace (for find-references). */
+  allReferences = [];
+  /** Cached complete analysis artifacts for each configured root. */
+  rootAnalyses = /* @__PURE__ */ new Map();
+  /** Files whose content changed since the last analysis. */
+  dirtyFiles = /* @__PURE__ */ new Set();
+  /** Whether configuration changes require every root to be rebuilt. */
+  fullReindexRequired = true;
+  entryPoints;
+  includePaths;
+  architecture;
+  targetOptions;
+  environment;
+  target;
+  toolingCatalog;
+  directiveCatalog;
+  /**
+   * Creates a workspace index.
+   * @param {WorkspaceIndexOptions} [options] Initial index configuration.
+   */
+  constructor(options) {
+    this.environment = options.environment;
+    this.target = options.target;
+    this.toolingCatalog = this.environment.getToolingCatalog(this.target);
+    this.entryPoints = (options.entryPoints ?? []).map((entry) => path3.resolve(entry));
+    this.includePaths = options.includePaths ?? ["./"];
+    this.architecture = options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
+    this.targetOptions = Object.freeze({ ...options.targetOptions ?? {} });
+    this.directiveCatalog = this.toolingCatalog.getDirectives();
+  }
+  /**
+   * Updates index configuration and re-analyses the workspace.
+   * @param {WorkspaceIndexOptions} options The configuration to apply.
+   */
+  configure(options) {
+    if (options.entryPoints) {
+      this.entryPoints = options.entryPoints.map((entry) => path3.resolve(entry));
+    }
+    if (options.includePaths) {
+      this.includePaths = options.includePaths;
+    }
+    if (options.architecture) {
+      this.architecture = options.architecture;
+    }
+    this.fullReindexRequired = true;
+    this.reindex();
+  }
+  /**
+   * Adds or replaces an open editor buffer and re-analyses the workspace.
+   * @param {string} file The absolute path of the document.
+   * @param {string} content The current document text.
+   */
+  openDocument(file, content) {
+    const resolved = path3.resolve(file);
+    this.overlay.set(resolved, content);
+    this.dirtyFiles.add(resolved);
+    this.reindex();
+  }
+  /**
+   * Updates the content of an already-open document without re-analysing.
+   * Callers can debounce multiple edits before invoking {@link reindex}.
+   * @param {string} file The absolute path of the document.
+   * @param {string} content The new document text.
+   */
+  updateDocument(file, content) {
+    const resolved = path3.resolve(file);
+    this.overlay.set(resolved, content);
+    this.dirtyFiles.add(resolved);
+  }
+  /**
+   * Removes an open editor buffer (reverting to disk) and re-analyses.
+   * @param {string} file The absolute path of the document.
+   */
+  closeDocument(file) {
+    const resolved = path3.resolve(file);
+    this.overlay.delete(resolved);
+    this.dirtyFiles.add(resolved);
+    this.reindex();
+  }
+  /**
+   * Marks a disk-backed file as changed for the next debounced reindex.
+   * @param {string} file The changed absolute path.
+   */
+  invalidateFile(file) {
+    this.dirtyFiles.add(path3.resolve(file));
+  }
+  /**
+   * Returns the current text for a file, preferring the open buffer.
+   * @param {string} file The absolute path of the file.
+   * @returns {string | undefined} The file text, or undefined when unavailable.
+   */
+  getText(file) {
+    return this.overlay.get(path3.resolve(file));
+  }
+  /**
+   * Returns the text for a file from the open buffer, falling back to disk.
+   * Used by features that must compute precise ranges in files that may not be
+   * open in the editor (for example, cross-file rename targets).
+   * @param {string} file The absolute path of the file.
+   * @returns {string | undefined} The file text, or undefined when unreadable.
+   */
+  getFileText(file) {
+    const resolved = path3.resolve(file);
+    const open = this.overlay.get(resolved);
+    if (open !== void 0) {
+      return open;
+    }
+    try {
+      const provider = new OverlayFileProvider(this.overlay);
+      const stat = provider.stat(resolved);
+      if (!stat.exists || !stat.readable) {
+        return void 0;
+      }
+      return provider.readTextFile(resolved);
+    } catch {
+      return void 0;
+    }
+  }
+  /**
+   * Returns the analysis bucket for a file, if it has been analysed.
+   * @param {string} file The absolute path of the file.
+   * @returns {FileAnalysis | undefined} The per-file analysis, or undefined.
+   */
+  getFileAnalysis(file) {
+    return this.fileAnalysis.get(path3.resolve(file));
+  }
+  /**
+   * Returns diagnostics for a file.
+   * @param {string} file The absolute path of the file.
+   * @returns {AssemblyDiagnostic[]} The diagnostics for the file.
+   */
+  getDiagnostics(file) {
+    return this.getFileAnalysis(file)?.diagnostics ?? [];
+  }
+  /**
+   * Returns symbol definitions declared in a file.
+   * @param {string} file The absolute path of the file.
+   * @returns {AssemblySymbolDefinition[]} The symbols defined in the file.
+   */
+  getSymbols(file) {
+    return this.getFileAnalysis(file)?.symbols ?? [];
+  }
+  /**
+   * Returns symbol references that occur in a file.
+   * @param {string} file The absolute path of the file.
+   * @returns {AssemblySymbolReference[]} The references in the file.
+   */
+  getReferences(file) {
+    return this.getFileAnalysis(file)?.references ?? [];
+  }
+  /**
+   * Returns every symbol definition known across the workspace.
+   * @returns {AssemblySymbolDefinition[]} All workspace symbol definitions.
+   */
+  getAllSymbols() {
+    return this.allSymbols;
+  }
+  /**
+   * Returns every symbol reference known across the workspace.
+   * @returns {AssemblySymbolReference[]} All workspace symbol references.
+   */
+  getAllReferences() {
+    return this.allReferences;
+  }
+  /**
+   * Returns the merged include-graph edges.
+   * @returns {AssemblyIncludeEdge[]} The include edges across all roots.
+   */
+  getIncludeEdges() {
+    return this.includeEdges;
+  }
+  /**
+   * Returns the absolute paths of every file with analysis artifacts.
+   * @returns {string[]} The analysed file paths.
+   */
+  getAnalyzedFiles() {
+    return [...this.fileAnalysis.keys()];
+  }
+  /**
+   * Re-runs analysis for every root and rebuilds all per-file buckets.
+   * Roots are the configured entry points, or every open document when no
+   * entry points are configured.
+   */
+  reindex() {
+    const roots = this.resolveRoots();
+    const activeRoots = new Set(roots);
+    for (const cachedRoot of this.rootAnalyses.keys()) {
+      if (!activeRoots.has(cachedRoot)) {
+        this.rootAnalyses.delete(cachedRoot);
+      }
+    }
+    const analyzeAll = this.fullReindexRequired || this.dirtyFiles.size === 0;
+    const dirtyFiles = [...this.dirtyFiles];
+    const hasUnknownDependency = dirtyFiles.some(
+      (file) => !roots.some((root) => this.rootDependsOnFile(root, file))
+    );
+    const rootsToAnalyze = analyzeAll || hasUnknownDependency ? roots : roots.filter(
+      (root) => !this.rootAnalyses.has(root) || dirtyFiles.some((file) => this.rootDependsOnFile(root, file))
+    );
+    for (const root of rootsToAnalyze) {
+      const result = this.analyzeRoot(root);
+      if (result) {
+        this.rootAnalyses.set(root, result);
+      } else {
+        this.rootAnalyses.delete(root);
+      }
+    }
+    this.dirtyFiles.clear();
+    this.fullReindexRequired = false;
+    this.rebuildMergedIndex(roots);
+  }
+  /**
+   * Determines whether a cached root analysis contains a changed file.
+   * @param {string} root The root source file.
+   * @param {string} file The changed source file.
+   * @returns {boolean} Whether the root must be re-analysed.
+   */
+  rootDependsOnFile(root, file) {
+    if (root === file) {
+      return true;
+    }
+    const analysis = this.rootAnalyses.get(root);
+    if (!analysis) {
+      return true;
+    }
+    return analysis.includeEdges.some((edge) => edge.fromFile === file || edge.toFile === file);
+  }
+  /**
+   * Analyses one root using the current overlay snapshot.
+   * @param {string} root The root source file.
+   * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
+   */
+  analyzeRoot(root) {
+    const content = this.overlay.get(root) ?? this.readDiskRoot(root);
+    if (content === void 0) {
+      return void 0;
+    }
+    const provider = new OverlayFileProvider(this.overlay);
+    const assembler = new Assembler({
+      environment: this.environment,
+      target: this.target,
+      architecture: this.architecture,
+      targetOptions: this.targetOptions,
+      fileProvider: provider
+    });
+    assembler.includePaths = this.deriveIncludePaths(root);
+    try {
+      const result = assembler.analyzeSource(content, root, 0);
+      return {
+        diagnostics: result.diagnostics,
+        symbols: result.symbols,
+        references: result.references,
+        includeEdges: result.includeEdges
+      };
+    } catch {
+      return void 0;
+    } finally {
+      assembler.dispose();
+    }
+  }
+  /**
+   * Rebuilds workspace-wide buckets from cached per-root artifacts.
+   * @param {string[]} roots The active roots in deterministic order.
+   */
+  rebuildMergedIndex(roots) {
+    this.fileAnalysis.clear();
+    this.includeEdges = [];
+    this.allSymbols = [];
+    this.allReferences = [];
+    const seenEdges = /* @__PURE__ */ new Set();
+    for (const root of roots) {
+      const result = this.rootAnalyses.get(root);
+      if (!result) {
+        continue;
+      }
+      this.ingestArtifacts(root, result.diagnostics, result.symbols, result.references);
+      for (const edge of result.includeEdges) {
+        const key = `${edge.fromFile}\0${edge.toFile}`;
+        if (seenEdges.has(key)) {
+          continue;
+        }
+        seenEdges.add(key);
+        this.includeEdges.push(edge);
+      }
+    }
+  }
+  /**
+   * Buckets flat analysis artifacts into their owning files.
+   * @param {string} root The root file that produced these artifacts.
+   * @param {AssemblyDiagnostic[]} diagnostics The diagnostics to bucket.
+   * @param {AssemblySymbolDefinition[]} symbols The symbols to bucket.
+   * @param {AssemblySymbolReference[]} references The references to bucket.
+   */
+  ingestArtifacts(root, diagnostics, symbols, references) {
+    for (const diagnostic of diagnostics) {
+      this.bucketFor(diagnostic.location.file || root).diagnostics.push(diagnostic);
+    }
+    for (const symbol of symbols) {
+      this.bucketFor(symbol.location.file || root).symbols.push(symbol);
+      this.allSymbols.push(symbol);
+    }
+    for (const reference of references) {
+      this.bucketFor(reference.location.file || root).references.push(reference);
+      this.allReferences.push(reference);
+    }
+  }
+  /**
+   * Returns (creating if needed) the analysis bucket for a file.
+   * @param {string} file The absolute path of the file.
+   * @returns {FileAnalysis} The mutable analysis bucket.
+   */
+  bucketFor(file) {
+    const resolved = path3.resolve(file);
+    let bucket = this.fileAnalysis.get(resolved);
+    if (!bucket) {
+      bucket = { file: resolved, diagnostics: [], symbols: [], references: [] };
+      this.fileAnalysis.set(resolved, bucket);
+    }
+    return bucket;
+  }
+  /**
+   * Determines the set of root files to analyse.
+   * @returns {string[]} The absolute root paths.
+   */
+  resolveRoots() {
+    if (this.entryPoints.length > 0) {
+      return [...new Set(this.entryPoints)];
+    }
+    return [...this.overlay.keys()];
+  }
+  /**
+   * Reads a root file from disk when it is not open in the editor.
+   * @param {string} root The absolute root path.
+   * @returns {string | undefined} The file text, or undefined when unreadable.
+   */
+  readDiskRoot(root) {
+    try {
+      const provider = new OverlayFileProvider(this.overlay);
+      const stat = provider.stat(root);
+      if (!stat.exists || !stat.readable) {
+        return void 0;
+      }
+      return provider.readTextFile(root);
+    } catch {
+      return void 0;
+    }
+  }
+  /**
+   * Derives the include search paths for a root, always including its directory.
+   * @param {string} root The absolute root path.
+   * @returns {string[]} The include paths to hand to the assembler.
+   */
+  deriveIncludePaths(root) {
+    const directory = path3.dirname(root);
+    return [.../* @__PURE__ */ new Set([directory, ...this.includePaths])];
+  }
+};
+
+// packages/core/src/lsp/position-lookup.ts
+function locationRange(location) {
+  if (location.range) {
+    return location.range;
+  }
+  if (location.span) {
+    return sourceSpanToRange(location.span, location.span.line ?? location.line);
+  }
+  return void 0;
+}
+function positionInRange(position, range) {
+  if (position.line < range.start.line || position.line > range.end.line) {
+    return false;
+  }
+  if (position.line === range.start.line && position.character < range.start.character) {
+    return false;
+  }
+  if (position.line === range.end.line && position.character > range.end.character) {
+    return false;
+  }
+  return true;
+}
+function referenceAt(references, position) {
+  return narrowestMatch(references, position);
+}
+function symbolAt(symbols, position) {
+  return narrowestMatch(symbols, position);
+}
+function resolveDefinition(reference, allSymbols) {
+  const byName = allSymbols.filter((symbol) => symbol.name === reference.name);
+  if (byName.length === 0) {
+    return [];
+  }
+  const byKind = byName.filter((symbol) => kindMatches(reference.kind, symbol.kind));
+  const candidates = byKind.length > 0 ? byKind : byName;
+  if (reference.containerName) {
+    const scoped = candidates.filter((symbol) => symbol.containerName === reference.containerName);
+    if (scoped.length > 0) {
+      return scoped;
+    }
+  }
+  return candidates;
+}
+function findReferences(name, allReferences, containerName) {
+  return allReferences.filter(
+    (reference) => reference.name === name && (containerName === void 0 || reference.containerName === containerName)
+  );
+}
+function kindMatches(referenceKind, symbolKind) {
+  switch (referenceKind) {
+    case "label":
+      return symbolKind === "label" || symbolKind === "structMember" || symbolKind === "struct";
+    case "define":
+      return symbolKind === "define";
+    case "macro":
+      return symbolKind === "macro";
+    case "function":
+      return symbolKind === "function" || symbolKind === "macro";
+    case "include":
+    case "instruction":
+      return false;
+    case "unknown":
+    default:
+      return true;
+  }
+}
+function narrowestMatch(located, position) {
+  let best;
+  let bestWidth = Number.POSITIVE_INFINITY;
+  for (const item of located) {
+    const range = locationRange(item.location);
+    if (!range || !positionInRange(position, range)) {
+      continue;
+    }
+    const width = rangeWidth(range);
+    if (width < bestWidth) {
+      best = item;
+      bestWidth = width;
+    }
+  }
+  return best;
+}
+function rangeWidth(range) {
+  const lineSpan = range.end.line - range.start.line;
+  const columnSpan = range.end.character - range.start.character;
+  return lineSpan * 1e6 + columnSpan;
+}
+
+// packages/core/src/lsp/instruction-catalog.ts
+var InstructionCatalogRegistry = class {
+  catalogs = /* @__PURE__ */ new Map();
+  aliases = /* @__PURE__ */ new Map();
+  register(architecture, catalog, aliases = []) {
+    const canonical2 = architecture.toLowerCase();
+    this.catalogs.set(canonical2, catalog);
+    this.aliases.set(canonical2, canonical2);
+    for (const alias of aliases) {
+      this.aliases.set(alias.toLowerCase(), canonical2);
+    }
+  }
+  getInstructionCatalog(architecture) {
+    const canonical2 = this.aliases.get(architecture.toLowerCase());
+    return canonical2 ? this.catalogs.get(canonical2) ?? [] : [];
+  }
+};
+var emptyCatalogs = new InstructionCatalogRegistry();
+function getCatalogForArchitecture(architecture, provider = emptyCatalogs) {
+  return [...provider.getInstructionCatalog(architecture)];
+}
+
+// packages/core/src/lsp/catalog.ts
+function findInstruction(mnemonic, architecture, provider) {
+  const upper = mnemonic.toUpperCase();
+  return getCatalogForArchitecture(architecture, provider).find(
+    (entry) => entry.mnemonic === upper
+  );
+}
+function findDirectiveInCatalog(keyword, directives = directiveCatalog) {
+  const canonical2 = keyword.toLowerCase().replace(/^@/, "");
+  return directives.find((directive2) => directive2.keyword.toLowerCase() === canonical2);
+}
+function renderInstructionDocs(descriptor2) {
+  const lines = [];
+  lines.push(`**${descriptor2.mnemonic}** \u2014 instruction`);
+  if (descriptor2.summary) {
+    lines.push("", descriptor2.summary);
+  }
+  if (descriptor2.modes.length > 0) {
+    lines.push("", "Addressing modes:");
+    for (const mode of descriptor2.modes) {
+      const opcode = mode.opcode === void 0 ? "" : ` \`$${mode.opcode.toString(16).padStart(2, "0").toUpperCase()}\``;
+      const size = mode.size === void 0 ? "" : ` (${mode.size} bytes)`;
+      const example = mode.syntax ? ` \`${descriptor2.mnemonic} ${mode.syntax}\`` : ` \`${descriptor2.mnemonic}\``;
+      lines.push(`- ${mode.mode}:${example}${opcode}${size}`);
+    }
+  }
+  return lines.join("\n");
+}
+function renderDirectiveDocs(descriptor2) {
+  return [
+    `**${descriptor2.keyword}** \u2014 directive`,
+    "",
+    descriptor2.summary,
+    "",
+    `\`${descriptor2.syntax}\``
+  ].join("\n");
+}
+function renderExpressionFunctionDocs(descriptor2) {
+  const parameters = descriptor2.signature.parameters.join(", ");
+  return [
+    `**${descriptor2.name}** \u2014 expression function`,
+    "",
+    descriptor2.summary,
+    "",
+    `\`${descriptor2.name}(${parameters})\``
+  ].join("\n");
+}
+function buildCompletionEntries(architecture, provider, directives = directiveCatalog, expressionFunctions = []) {
+  const entries = [];
+  for (const instruction2 of getCatalogForArchitecture(architecture, provider)) {
+    entries.push({
+      label: instruction2.mnemonic,
+      kind: "instruction",
+      detail: instruction2.summary ?? "instruction",
+      documentation: renderInstructionDocs(instruction2)
+    });
+  }
+  for (const directive2 of directives) {
+    entries.push({
+      label: directive2.keyword,
+      kind: "directive",
+      detail: directive2.summary,
+      documentation: renderDirectiveDocs(directive2)
+    });
+  }
+  for (const expressionFunction of expressionFunctions) {
+    entries.push({
+      label: expressionFunction.name,
+      kind: "expression",
+      detail: expressionFunction.summary,
+      documentation: renderExpressionFunctionDocs(expressionFunction)
+    });
+    for (const alias of expressionFunction.aliases) {
+      entries.push({
+        label: alias,
+        kind: "expression",
+        detail: expressionFunction.summary,
+        documentation: renderExpressionFunctionDocs({ ...expressionFunction, name: alias })
+      });
+    }
+  }
+  return entries;
+}
+
+// plugins/snes/src/tooling/instruction-catalog.ts
 function implied(mnemonic, summary, opcode, size = 1) {
   return { mnemonic, summary, modes: [{ mode: "implied", syntax: "", opcode, size }] };
 }
@@ -18729,7 +24317,7 @@ var superFxCatalog = [
     { mode: "registerIndirect", syntax: "Rn,(Rm)" }
   ])
 ];
-var InstructionCatalogRegistry = class {
+var InstructionCatalogRegistry2 = class {
   catalogs = /* @__PURE__ */ new Map();
   aliases = /* @__PURE__ */ new Map();
   register(architecture, catalog, aliases = []) {
@@ -18745,21 +24333,18 @@ var InstructionCatalogRegistry = class {
     return canonical2 ? this.catalogs.get(canonical2) ?? [] : [];
   }
 };
-var builtInInstructionCatalogs = new InstructionCatalogRegistry();
+var builtInInstructionCatalogs = new InstructionCatalogRegistry2();
 builtInInstructionCatalogs.register("65816", cpu65816Catalog);
 builtInInstructionCatalogs.register("spc700", spc700Catalog, ["spc700-raw", "spc700-inline"]);
 builtInInstructionCatalogs.register("superfx", superFxCatalog);
 builtInInstructionCatalogs.register("6502", [], ["mos6502"]);
-function getCatalogForArchitecture(architecture, provider = builtInInstructionCatalogs) {
-  return [...provider.getInstructionCatalog(architecture)];
-}
 
-// src/Arch65816.ts
-var debug4 = (..._args) => {
+// plugins/snes/src/architectures/65816.ts
+var debug5 = (..._args) => {
 };
 try {
   const { default: d } = await import("debug");
-  debug4 = d("Arch65816");
+  debug5 = d("Arch65816");
 } catch {
 }
 var keepsFixedWidthAddressingMode = (mode, explicitLength) => {
@@ -18773,16 +24358,18 @@ var keepsFixedWidthAddressingMode = (mode, explicitLength) => {
 };
 var isIndexedMemory = (operand, register) => operand.indexRegister === register && !keepsFixedWidthAddressingMode(operand.mode, 1);
 var Arch65816 = class {
+  constructor(context, optimizeDirectPage = () => false) {
+    this.optimizeDirectPage = optimizeDirectPage;
+    this.assembler = createEncoderRuntime(context);
+    this.m16 = false;
+    this.x16 = false;
+  }
+  optimizeDirectPage;
   assembler;
   /** Native 16-bit accumulator (REP #$20). Reset at the start of each assembly stage. */
   m16;
   /** Native 16-bit index registers (REP #$10). Reset at the start of each assembly stage. */
   x16;
-  constructor(context) {
-    this.assembler = createEncoderRuntime(context);
-    this.m16 = false;
-    this.x16 = false;
-  }
   /**
    * Resets M/X size flags at the start of each assembly stage.
    * @returns {void}
@@ -19066,7 +24653,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   encode(words) {
-    debug4("asblock_65816", words);
+    debug5("asblock_65816", words);
     if (words.length === 0) {
       return false;
     }
@@ -19092,7 +24679,7 @@ var Arch65816 = class {
    */
   encodeResolvedInstruction(mnemonic, rawOperand, operand, operandLength) {
     let opcode = mnemonic.toUpperCase();
-    debug4("asblock_65816 operand expanded", operand, "expected length:", operandLength);
+    debug5("asblock_65816 operand expanded", operand, "expected length:", operandLength);
     let len = 0;
     let explicitlen = false;
     const sizedOpcode = this.readMnemonicLength(opcode);
@@ -19104,8 +24691,8 @@ var Arch65816 = class {
       len = operandLength;
     }
     this.applySepRep(opcode, rawOperand);
-    debug4("asblock_65816 opcode", opcode);
-    debug4("asblock_65816 operand", operand);
+    debug5("asblock_65816 opcode", opcode);
+    debug5("asblock_65816 operand", operand);
     if (["ASL", "LSR", "ROL", "ROR", "INC", "DEC"].includes(opcode)) {
       let arithmeticOperand = operand;
       if (/^a$/i.test(rawOperand.trim())) {
@@ -19159,7 +24746,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleMemoryOperations(opcode, operand, len, explicitlen, rawOperand = operand) {
-    debug4("handleMemoryOperations", { opcode, operand, len, explicitlen });
+    debug5("handleMemoryOperations", { opcode, operand, len, explicitlen });
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
@@ -19169,7 +24756,7 @@ var Arch65816 = class {
     const isExplicitDirectPage = loweredOperand.explicitDirectPage ?? false;
     const isExplicitDirectPageIndexedX = loweredOperand.explicitDirectPageIndexedX ?? false;
     if (loweredOperand.immediate) {
-      debug4("handleMemoryOperations Immediate Mode (#$XX)", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Immediate Mode (#$XX)", opcode, resolvedOperand);
       const immediateOpcodes = {
         ADC: 105,
         LDA: 169,
@@ -19244,7 +24831,7 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "absoluteIndexedX") {
-      debug4("handleMemoryOperations Absolute Indexed,X", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Absolute Indexed,X", opcode, resolvedOperand);
       const absoluteIndexedXOpcodes = {
         ADC: 125,
         STA: 157,
@@ -19252,9 +24839,9 @@ var Arch65816 = class {
         SBC: 253
       };
       if (opcode in absoluteIndexedXOpcodes) {
-        debug4("handleMemoryOperations =", absoluteIndexedXOpcodes[opcode].toString(16));
+        debug5("handleMemoryOperations =", absoluteIndexedXOpcodes[opcode].toString(16));
         this.assembler.write1(absoluteIndexedXOpcodes[opcode]);
-        debug4(
+        debug5(
           "handleMemoryOperations =",
           this.assembler.operandResolver.getnum(baseOperand).toString(16)
         );
@@ -19263,7 +24850,7 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "absoluteLongIndexedX") {
-      debug4("handleMemoryOperations Absolute Long Indexed,X", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Absolute Long Indexed,X", opcode, resolvedOperand);
       const absoluteLongIndexedXOpcodes = {
         ADC: 127,
         STA: 159,
@@ -19277,7 +24864,7 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "indexedIndirectX") {
-      debug4("handleMemoryOperations Indexed Indirect (X)", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Indexed Indirect (X)", opcode, resolvedOperand);
       const indexedIndirectOpcodes = {
         ADC: 97,
         STA: 129,
@@ -19291,7 +24878,7 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "directPageIndirect") {
-      debug4("handleMemoryOperations Direct Page Indirect", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Direct Page Indirect", opcode, resolvedOperand);
       const indirectDPIndirect = {
         ADC: 114,
         STA: 146,
@@ -19304,8 +24891,8 @@ var Arch65816 = class {
         return true;
       }
     }
-    if ((this.assembler.optimizeDirectPage || isExplicitDirectPageIndexedX) && loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
-      debug4("handleMemoryOperations DP Indexed,X", opcode, resolvedOperand);
+    if ((this.optimizeDirectPage() || isExplicitDirectPageIndexedX) && loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
+      debug5("handleMemoryOperations DP Indexed,X", opcode, resolvedOperand);
       const dpIndexedXOpcodes = {
         ADC: 117,
         STA: 149,
@@ -19313,17 +24900,17 @@ var Arch65816 = class {
         SBC: 245
       };
       if (opcode in dpIndexedXOpcodes) {
-        debug4("handleMemoryOperations = 1", dpIndexedXOpcodes[opcode].toString(16));
+        debug5("handleMemoryOperations = 1", dpIndexedXOpcodes[opcode].toString(16));
         this.assembler.write1(dpIndexedXOpcodes[opcode]);
-        debug4("handleMemoryOperations = 1.5", baseOperand);
+        debug5("handleMemoryOperations = 1.5", baseOperand);
         const dpAddress = this.assembler.operandResolver.getnum(baseOperand);
-        debug4("handleMemoryOperations = 2", dpAddress.toString(16));
+        debug5("handleMemoryOperations = 2", dpAddress.toString(16));
         this.assembler.write1(dpAddress);
         return true;
       }
     }
     if (loweredOperand.mode === "stackRelative") {
-      debug4("handleMemoryOperations Indexed Indirect (sr,S)", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Indexed Indirect (sr,S)", opcode, resolvedOperand);
       const stackRelativeOpcodes = {
         ADC: 99,
         STA: 131,
@@ -19337,7 +24924,7 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "stackRelativeIndexedIndirectY") {
-      debug4(
+      debug5(
         "handleMemoryOperations Stack Relative Indexed Indirect (sr,S),Y",
         opcode,
         resolvedOperand
@@ -19381,7 +24968,7 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "indirectIndexedY") {
-      debug4("handleMemoryOperations Indirect Indexed (Y)", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Indirect Indexed (Y)", opcode, resolvedOperand);
       const indirectIndexedOpcodes = {
         ADC: 113,
         STA: 145,
@@ -19395,7 +24982,7 @@ var Arch65816 = class {
       }
     }
     if (isIndexedMemory(loweredOperand, "x")) {
-      debug4("handleMemoryOperations Absolute Indexed (X)", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Absolute Indexed (X)", opcode, resolvedOperand);
       const absoluteXOpcodes = {
         ADC: 125,
         STA: 157,
@@ -19409,7 +24996,7 @@ var Arch65816 = class {
       }
     }
     if (isIndexedMemory(loweredOperand, "y")) {
-      debug4("handleMemoryOperations Absolute Indexed (Y)", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Absolute Indexed (Y)", opcode, resolvedOperand);
       const absoluteYOpcodes = {
         ADC: 121,
         STA: 153,
@@ -19423,7 +25010,7 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "absoluteLong") {
-      debug4("handleMemoryOperations Absolute Long ($000000)", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Absolute Long ($000000)", opcode, resolvedOperand);
       const longOpcodes = {
         ADC: 111,
         STA: 143,
@@ -19437,7 +25024,7 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "absolute") {
-      debug4("handleMemoryOperations Absolute", opcode, resolvedOperand);
+      debug5("handleMemoryOperations Absolute", opcode, resolvedOperand);
       const absoluteOpcodes = {
         ADC: 109,
         STA: 141,
@@ -19450,8 +25037,8 @@ var Arch65816 = class {
         return true;
       }
     }
-    if (this.assembler.optimizeDirectPage || isExplicitDirectPage) {
-      debug4("handleMemoryOperations Direct Page", opcode, operand);
+    if (this.optimizeDirectPage() || isExplicitDirectPage) {
+      debug5("handleMemoryOperations Direct Page", opcode, operand);
       const directPageOpcodes = {
         ADC: 101,
         STA: 133,
@@ -19464,7 +25051,7 @@ var Arch65816 = class {
         return true;
       }
     } else {
-      debug4(
+      debug5(
         "handleMemoryOperations Direct Page optimization disabled; using absolute",
         opcode,
         operand
@@ -19493,7 +25080,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleLogicAndCompareOperations(opcode, operand, len, explicitlen, rawOperand = operand) {
-    debug4("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
+    debug5("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
     const opcodes = {
       ORA: {
         immediate: 9,
@@ -19624,7 +25211,7 @@ var Arch65816 = class {
     let address = 0;
     let mode;
     if (loweredOperand.immediate) {
-      debug4("handleLogicAndCompareOperations Immediate Mode", opcode, resolvedOperand);
+      debug5("handleLogicAndCompareOperations Immediate Mode", opcode, resolvedOperand);
       mode = "immediate";
       address = this.assembler.operandResolver.getnum(baseOperand);
       this.assembler.write1(opcodes[logicOpcode].immediate);
@@ -19748,7 +25335,7 @@ var Arch65816 = class {
     } else {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
     }
-    debug4("handleLogicAndCompareOperations mode", mode, operand);
+    debug5("handleLogicAndCompareOperations mode", mode, operand);
     const opcodeByte = opcodes[logicOpcode][mode];
     if (!opcodeByte) {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
@@ -19821,7 +25408,7 @@ var Arch65816 = class {
     if (!(opcode in stackOpcodes)) {
       return false;
     }
-    debug4("handleNoOperandOperations", {
+    debug5("handleNoOperandOperations", {
       opcode,
       operand,
       value: stackOpcodes[opcode].toString(16)
@@ -19831,10 +25418,10 @@ var Arch65816 = class {
       let repStr = operand.substring(1);
       if (repStr.startsWith("$")) {
         repStr = repStr.substring(1);
-        debug4("handleNoOperandOperations removed $ prefix", repStr);
+        debug5("handleNoOperandOperations removed $ prefix", repStr);
       }
       count = Number.parseInt(repStr, 10);
-      debug4("handleNoOperandOperations count", count);
+      debug5("handleNoOperandOperations count", count);
       if (Number.isNaN(count)) {
         throw new Error(`Invalid repeat count in pseudo opcode: ${operand}`);
       }
@@ -19856,7 +25443,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleArithmeticOperations(opcode, operand, len, explicitlen) {
-    debug4("handleArithmeticOperations", opcode, operand);
+    debug5("handleArithmeticOperations", opcode, operand);
     const operandText = operand?.trim() || "A";
     const accumulatorOpcodes = {
       ASL: 10,
@@ -19937,7 +25524,7 @@ var Arch65816 = class {
       }
     }
     if (/^\$[\da-f]{2}$/i.test(normalizedOperand) && loweredOperand.mode === "directPageIndexedX") {
-      debug4("handleArithmeticOperations DP Indexed,X", opcode, rawOperand);
+      debug5("handleArithmeticOperations DP Indexed,X", opcode, rawOperand);
       const dpIndexedXOpcodes = {
         ASL: 22,
         ROL: 54,
@@ -20006,7 +25593,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleLoadRegister(opcode, operand, len, explicitlen) {
-    debug4("handleLoadRegister", { opcode, operand, len, explicitlen });
+    debug5("handleLoadRegister", { opcode, operand, len, explicitlen });
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
@@ -20126,7 +25713,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode and operand were handled successfully, false otherwise.
    */
   handleJump(opcode, operand, rawOperand = operand) {
-    debug4("handleJump", { opcode, operand, rawOperand });
+    debug5("handleJump", { opcode, operand, rawOperand });
     const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
     const baseOperand = loweredOperand.baseExpression ?? rawOperand;
     const symbolicOperand = rawOperand.trim();
@@ -20188,42 +25775,42 @@ var Arch65816 = class {
         opcode,
         this.assembler.operandResolver.getnum(operand)
       ));
-      debug4("handleJump mode", mode);
+      debug5("handleJump mode", mode);
     } else if (/^\$[\dA-Fa-f]{1,6}$/.test(operand)) {
       ({ mode, address } = selectDirectJumpMode(
         opcode,
         this.assembler.operandResolver.getnum(operand)
       ));
-      debug4("handleJump mode", mode);
+      debug5("handleJump mode", mode);
     } else if (loweredOperand.mode === "indirectLong") {
       mode = "JMP_INDIRECT_LONG";
-      debug4("handleJump mode", mode);
+      debug5("handleJump mode", mode);
       address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
     } else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX") {
       address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JSR_INDEXED_INDIRECT";
-      debug4("handleJump mode", mode);
+      debug5("handleJump mode", mode);
     } else if (loweredOperand.mode === "indexedIndirectX") {
       address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JMP_INDEXED_INDIRECT";
-      debug4("handleJump mode", mode);
+      debug5("handleJump mode", mode);
     } else if (loweredOperand.mode === "directPageIndirect") {
       address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode = "JMP_INDIRECT";
-      debug4("handleJump mode", mode);
+      debug5("handleJump mode", mode);
     } else {
       try {
         ({ mode, address } = selectDirectJumpMode(
           opcode,
           this.assembler.operandResolver.getnum(baseOperand)
         ));
-        debug4("handleJump mode", mode);
+        debug5("handleJump mode", mode);
       } catch {
-        debug4("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`);
+        debug5("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`);
         throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
       }
     }
-    debug4("handleJump address", address?.toString(16));
+    debug5("handleJump address", address?.toString(16));
     if (mode in jumpOpcodes) {
       this.assembler.write1(jumpOpcodes[mode]);
       if (mode === "JSL" || mode === "JML") {
@@ -20243,7 +25830,7 @@ var Arch65816 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handlePER(operand) {
-    debug4("handlePER", operand);
+    debug5("handlePER", operand);
     if (!operand) {
       throw new Error("Error: PER requires an operand.");
     }
@@ -20262,7 +25849,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the instruction was handled, false otherwise
    */
   handleStoreOperations(opcode, operand, len, explicitlen) {
-    debug4("handleStoreOperations", { opcode, operand, len, explicitlen });
+    debug5("handleStoreOperations", { opcode, operand, len, explicitlen });
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
     const rawOperand = operand;
     const storeOpcodes = {
@@ -20337,14 +25924,14 @@ var Arch65816 = class {
       address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].absolute);
       this.assembler.write2(address);
-      debug4("handleStoreOperations mode", mode);
+      debug5("handleStoreOperations mode", mode);
       return true;
     } else if (!isIndexed && /^\$[\dA-Fa-f]{2}$/.test(operand)) {
       mode = "direct";
       address = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].direct);
       this.assembler.write1(address);
-      debug4("handleStoreOperations mode", mode);
+      debug5("handleStoreOperations mode", mode);
       return true;
     } else if (isIndexed) {
       if (storeOpcode === "STX") {
@@ -20358,7 +25945,7 @@ var Arch65816 = class {
           this.assembler.write1(storeOpcodes[storeOpcode].directY);
           this.assembler.write1(address);
         }
-        debug4("handleStoreOperations mode", mode);
+        debug5("handleStoreOperations mode", mode);
         return true;
       } else if (storeOpcode === "STY") {
         address = this.assembler.operandResolver.getnum(operand);
@@ -20371,7 +25958,7 @@ var Arch65816 = class {
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
           this.assembler.write1(address);
         }
-        debug4("handleStoreOperations mode", mode);
+        debug5("handleStoreOperations mode", mode);
         return true;
       } else if (storeOpcode === "STZ") {
         address = this.assembler.operandResolver.getnum(operand);
@@ -20384,7 +25971,7 @@ var Arch65816 = class {
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
           this.assembler.write1(address);
         }
-        debug4("handleStoreOperations mode", mode);
+        debug5("handleStoreOperations mode", mode);
         return true;
       }
     }
@@ -20397,7 +25984,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleBlockMove(opcode, operand) {
-    debug4("handleBlockMove", opcode, operand);
+    debug5("handleBlockMove", opcode, operand);
     const params = operand.split(",").map((p) => p.trim());
     if (params.length !== 2) {
       throw new Error(`Error: ${opcode} requires two parameters (source, destination).`);
@@ -20418,7 +26005,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleBitTestOperations(opcode, operand, len, explicitlen) {
-    debug4("handleBitTestOperations", { opcode, operand });
+    debug5("handleBitTestOperations", { opcode, operand });
     opcode = opcode.toUpperCase();
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
     const rawOperand = operand;
@@ -20452,7 +26039,7 @@ var Arch65816 = class {
     let address = 0;
     let outLength = 0;
     if (operand.startsWith("#")) {
-      debug4("handleBitTestOperations immediate", {
+      debug5("handleBitTestOperations immediate", {
         opcode,
         operand,
         value: forcedMaps[bitOpcode].immediate?.toString(16)
@@ -20533,7 +26120,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleGenericOpcode(opcode, num, len, explicitlen, hexconstant) {
-    debug4("handleGenericOpcode", { opcode, num, len, explicitlen, hexconstant });
+    debug5("handleGenericOpcode", { opcode, num, len, explicitlen, hexconstant });
     const opcodeMap = {
       BRK: 0,
       COP: 2,
@@ -20550,7 +26137,7 @@ var Arch65816 = class {
         throw new Error("Error: invalid_number");
       }
       if (!explicitlen && !hexconstant) {
-        debug4(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
+        debug5(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
       }
       this.assembler.write1(opcodeByte);
       if (opcode === "PEA") {
@@ -20569,7 +26156,7 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleBranchInstructions(opcode, operand) {
-    debug4("handleBranchInstructions", opcode, operand);
+    debug5("handleBranchInstructions", opcode, operand);
     const branchOpcodes2 = {
       BPL: 16,
       BMI: 48,
@@ -20607,19 +26194,19 @@ var Arch65816 = class {
       relativeAddress = targetAddress - branchReferenceAddress;
     }
     const currentAddress = branchReferenceAddress;
-    debug4(
+    debug5(
       "handleBranchInstructions targetAddress:",
       targetAddress,
       "/",
       targetAddress.toString(16)
     );
-    debug4(
+    debug5(
       "handleBranchInstructions currentAddress:",
       currentAddress,
       "/",
       currentAddress.toString(16)
     );
-    debug4(
+    debug5(
       "handleBranchInstructions relativeAddress:",
       relativeAddress,
       "/",
@@ -20637,7 +26224,7 @@ var Arch65816 = class {
     if (Number.isNaN(relativeAddress)) {
       throw this.assembler.diagnostics.error("Error: relativeAddress is NaN.");
     }
-    debug4(
+    debug5(
       "handleBranchInstructions relativeAddress",
       relativeAddress,
       "/",
@@ -20674,7 +26261,7 @@ var Arch65816 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleMemoryBitInstructions(opcode, operand) {
-    debug4("handleMemoryBitInstructions", opcode, operand);
+    debug5("handleMemoryBitInstructions", opcode, operand);
     const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
     const memoryBitOpcodes = {
       TSB: { direct: 4, absolute: 12 },
@@ -20718,7 +26305,7 @@ var Arch65816 = class {
    * @returns {number} The operand length.
    */
   getlenfromchar(c) {
-    debug4("getlenfromchar", c);
+    debug5("getlenfromchar", c);
     if (!c) {
       throw new Error("Error: Invalid opcode length.");
     }
@@ -20730,7 +26317,7 @@ var Arch65816 = class {
       case "l":
         return 3;
       case "d":
-        debug4("Warning: .d opcode suffix is deprecated.");
+        debug5("Warning: .d opcode suffix is deprecated.");
         return 4;
       default:
         throw new Error("Error: Invalid opcode length.");
@@ -20738,12 +26325,12 @@ var Arch65816 = class {
   }
 };
 
-// src/ArchSPC700.ts
-var debug5 = (..._) => {
+// plugins/snes/src/architectures/spc700.ts
+var debug6 = (..._) => {
 };
 try {
   const { default: d } = await import("debug");
-  debug5 = d("ArchSPC700");
+  debug6 = d("ArchSPC700");
 } catch {
 }
 var hasOwn = (obj, key) => Object.hasOwn(obj, key);
@@ -21255,7 +26842,7 @@ var ArchSPC700 = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   encode(words) {
-    debug5("asblock_spc700", words);
+    debug6("asblock_spc700", words);
     if (words.length === 0) {
       return false;
     }
@@ -21291,7 +26878,7 @@ var ArchSPC700 = class {
       opcode = opcode.substring(0, dotIndex);
     }
     opcode = opcode.toUpperCase().trim();
-    debug5("asblock_spc700", { opcode, operand, forcedLen, explicitlen });
+    debug6("asblock_spc700", { opcode, operand, forcedLen, explicitlen });
     if (this.handleSingleNoOperand(opcode)) {
       return true;
     }
@@ -21363,7 +26950,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleSingleNoOperand(opcode) {
-    debug5("handleSingleNoOperand", opcode);
+    debug6("handleSingleNoOperand", opcode);
     const singleByte = {
       NOP: 0,
       BRK: 15,
@@ -21399,7 +26986,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleOneOperand(opcode, operand, forcedLen, explicitlen, loweredOperand) {
-    debug5("handleOneOperand", { opcode, operand, forcedLen, explicitlen });
+    debug6("handleOneOperand", { opcode, operand, forcedLen, explicitlen });
     if (this.handleShiftIncDec(opcode, operand, forcedLen, explicitlen)) {
       return true;
     }
@@ -21444,7 +27031,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleTwoOperands(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered) {
-    debug5("handleTwoOperands", { opcode, left, right, forcedLen, explicitlen });
+    debug6("handleTwoOperands", { opcode, left, right, forcedLen, explicitlen });
     if (parseBitBranchOpcode(opcode)) {
       if (this.handleTwoOperandsBitBranch(opcode, left, right)) {
         return true;
@@ -21516,7 +27103,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleWordOpsTwoOperands(opcode, left, right) {
-    debug5("handleWordOpsTwoOperands", { opcode, left, right });
+    debug6("handleWordOpsTwoOperands", { opcode, left, right });
     const upOp = opcode.toUpperCase();
     const leftUp = left.trim().toUpperCase();
     const rightUp = right.trim().toUpperCase();
@@ -21546,15 +27133,15 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleMemoryInstruction(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered) {
-    debug5("handleMemoryInstruction", { opcode, left, right });
+    debug6("handleMemoryInstruction", { opcode, left, right });
     const opName = opcode.toUpperCase();
     if (!hasOwn(memOpTables, opName)) {
-      debug5("handleMemoryInstruction not in table", { opcode, left, right });
+      debug6("handleMemoryInstruction not in table", { opcode, left, right });
       return false;
     }
     const table = memOpTables[opName];
     if (isAccumulator(left, leftLowered)) {
-      debug5("handleMemoryInstruction left is A", { opcode, left, right });
+      debug6("handleMemoryInstruction left is A", { opcode, left, right });
       const modeInfo = this.classifySpc700Addressing(right, rightLowered);
       const addr = modeInfo.val;
       const mode = modeInfo.mode;
@@ -21655,7 +27242,7 @@ var ArchSPC700 = class {
    * @param {number} length 1 for direct page, 2 for absolute.
    */
   writeDpOrAbs(value, length) {
-    debug5("writeDpOrAbs", { value, length });
+    debug6("writeDpOrAbs", { value, length });
     this.assembler.write1(value & 255);
     if (length <= 1) {
       return;
@@ -21670,7 +27257,7 @@ var ArchSPC700 = class {
    * @returns {{ mode: string; val: number }} the address mode and value
    */
   classifySpc700Addressing(operand, loweredOperand) {
-    debug5("classifySpc700Addressing", operand);
+    debug6("classifySpc700Addressing", operand);
     const resolveValue = (value) => {
       try {
         return this.assembler.operandResolver.getnum(value) & 65535;
@@ -21748,7 +27335,7 @@ var ArchSPC700 = class {
    * @returns {boolean} The result.
    */
   isDpOrAbs(operand) {
-    debug5("isDpOrAbs", operand);
+    debug6("isDpOrAbs", operand);
     const trimmed = operand.trim();
     if (/^(A|X|Y|YA|SP)$/i.test(trimmed)) {
       return false;
@@ -21768,7 +27355,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleShiftIncDec(opcode, operand, forcedLen, explicitlen) {
-    debug5("handleShiftIncDec", { opcode, operand, forcedLen, explicitlen });
+    debug6("handleShiftIncDec", { opcode, operand, forcedLen, explicitlen });
     const table = {
       ASL: { a: 28, dpX: 27, dp: 11, abs: 12 },
       DEC: { a: 156, dpX: 155, dp: 139, abs: 140 },
@@ -21802,7 +27389,7 @@ var ArchSPC700 = class {
       }
     }
     if (isAccumulator(operand)) {
-      debug5("handleShiftIncDec operand is A", {
+      debug6("handleShiftIncDec operand is A", {
         opcode,
         operand,
         write: table[upper].a.toString(16)
@@ -21812,17 +27399,17 @@ var ArchSPC700 = class {
     }
     const plusX = operand.toUpperCase().endsWith("+X");
     if (plusX) {
-      debug5("handleShiftIncDec operand ends with +X", {
+      debug6("handleShiftIncDec operand ends with +X", {
         opcode,
         operand,
         write: table[upper].dpX.toString(16)
       });
       const baseStr = operand.replace(/\+x$/i, "").trim();
-      debug5("handleShiftIncDec baseStr", baseStr);
+      debug6("handleShiftIncDec baseStr", baseStr);
       const val2 = parseInt(baseStr.replace(/\$/g, ""), 16) & 65535;
-      debug5("handleShiftIncDec val", val2);
+      debug6("handleShiftIncDec val", val2);
       if (explicitlen) {
-        debug5("handleShiftIncDec explicitlen", { opcode, operand, forcedLen, explicitlen });
+        debug6("handleShiftIncDec explicitlen", { opcode, operand, forcedLen, explicitlen });
         if (forcedLen === 1) {
           this.assembler.write1(table[upper].dpX);
           this.assembler.write1(val2 & 255);
@@ -21833,7 +27420,7 @@ var ArchSPC700 = class {
         return true;
       }
       if (val2 <= 255) {
-        debug5("handleShiftIncDec val <= 0xff", {
+        debug6("handleShiftIncDec val <= 0xff", {
           opcode,
           operand,
           forcedLen,
@@ -21843,7 +27430,7 @@ var ArchSPC700 = class {
         this.assembler.write1(table[upper].dpX);
         this.assembler.write1(val2 & 255);
       } else {
-        debug5("handleShiftIncDec val > 0xff", {
+        debug6("handleShiftIncDec val > 0xff", {
           opcode,
           operand,
           forcedLen,
@@ -21886,7 +27473,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleBitSetClear(opcode, operand) {
-    debug5("handleBitSetClear", { opcode, operand });
+    debug6("handleBitSetClear", { opcode, operand });
     const normalizedOpcode = opcode.toUpperCase();
     if (!hasOwn(bitSetClearOpcodes, normalizedOpcode)) {
       return false;
@@ -21917,7 +27504,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleBranch(opcode, operand) {
-    debug5("handleBranch", { opcode, operand });
+    debug6("handleBranch", { opcode, operand });
     if (!hasOwn(branchOpcodes, opcode)) {
       return false;
     }
@@ -21932,16 +27519,16 @@ var ArchSPC700 = class {
     } else {
       targetAddr = this.assembler.operandResolver.getnum(operand);
     }
-    debug5("handleBranch targetAddr", targetAddr);
+    debug6("handleBranch targetAddr", targetAddr);
     const currentAddr = this.assembler.currentTargetAddress;
-    debug5("handleBranch currentAddr", currentAddr);
+    debug6("handleBranch currentAddr", currentAddr);
     const offset = targetAddr - (currentAddr + 1);
-    debug5("handleBranch offset", offset);
+    debug6("handleBranch offset", offset);
     if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(255);
     } else {
       const unsignedOffset = offset < 0 ? 256 + offset : offset;
-      debug5("handleBranch unsignedOffset", unsignedOffset);
+      debug6("handleBranch unsignedOffset", unsignedOffset);
       this.assembler.write1(unsignedOffset & 255);
     }
     return true;
@@ -21956,10 +27543,10 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleTwoOperandsBitBranch(opcode, left, right) {
-    debug5("handleTwoOperandsBitBranch", { opcode, left, right });
+    debug6("handleTwoOperandsBitBranch", { opcode, left, right });
     const parsed = parseBitBranchOpcode(opcode);
     if (!parsed) {
-      debug5("handleTwoOperandsBitBranch no match", { opcode, left, right });
+      debug6("handleTwoOperandsBitBranch no match", { opcode, left, right });
       return false;
     }
     const trimmed = left.trim();
@@ -21976,11 +27563,11 @@ var ArchSPC700 = class {
       return false;
     }
     const opcodeByte = bitBranchOpcodeByte(parsed.family, bit);
-    debug5("handleTwoOperandsBitBranch =", opcodeByte.toString(16));
+    debug6("handleTwoOperandsBitBranch =", opcodeByte.toString(16));
     this.assembler.write1(opcodeByte);
-    debug5("handleTwoOperandsBitBranch =", dpVal.toString(16));
+    debug6("handleTwoOperandsBitBranch =", dpVal.toString(16));
     this.assembler.write1(dpVal);
-    debug5("handleTwoOperandsBitBranch right", right);
+    debug6("handleTwoOperandsBitBranch right", right);
     if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(255);
     } else {
@@ -21990,7 +27577,7 @@ var ArchSPC700 = class {
       const relativeOffset = target - (pc + 1);
       offset = relativeOffset < 0 ? 256 + relativeOffset : relativeOffset;
       offset &= 255;
-      debug5("handleTwoOperandsBitBranch =", offset.toString(16));
+      debug6("handleTwoOperandsBitBranch =", offset.toString(16));
       this.assembler.write1(offset);
     }
     return true;
@@ -22006,7 +27593,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
-    debug5("handleDbnzCbne", { opcode, left, right });
+    debug6("handleDbnzCbne", { opcode, left, right });
     const isYForm = opcode.toUpperCase() === "DBNZ" && isRegisterY(left, leftLowered);
     let instructionSize = 3;
     if (isYForm) {
@@ -22014,7 +27601,7 @@ var ArchSPC700 = class {
     }
     const target = this.assembler.operandResolver.getnum(right);
     const offset = target - (this.assembler.currentTargetAddress + instructionSize);
-    debug5("handleDbnzCbne offset", offset);
+    debug6("handleDbnzCbne offset", offset);
     if (this.assembler.enforceResolvedLabels && (offset < -128 || offset > 127)) {
       throw this.assembler.diagnostics.error(`Branch target out of range (${offset})`);
     }
@@ -22057,7 +27644,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handlePushPop(opcode, operand, loweredOperand) {
-    debug5("handlePushPop", { opcode, operand });
+    debug6("handlePushPop", { opcode, operand });
     const pushMap = {
       P: 13,
       A: 45,
@@ -22095,7 +27682,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleCallJump(opcode, operand, loweredOperand) {
-    debug5("handleCallJump", { opcode, operand });
+    debug6("handleCallJump", { opcode, operand });
     const upper = opcode.toUpperCase();
     const resolveOperand = (value) => {
       try {
@@ -22118,7 +27705,7 @@ var ArchSPC700 = class {
     }
     if (upper === "JMP") {
       const trimmed = operand.trim().toUpperCase();
-      debug5("handleCallJump JMP trimmed", trimmed);
+      debug6("handleCallJump JMP trimmed", trimmed);
       if (loweredOperand?.mode === "directPageIndexedXIndirect" || trimmed.startsWith("(") && trimmed.endsWith("+X)")) {
         this.assembler.write1(31);
         const inner = loweredOperand?.baseExpression ?? operand.trim().slice(1, operand.trim().length - 3).trim();
@@ -22153,7 +27740,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleCmpXyOrMovXy(opcode, operand, forcedLen, explicitlen, leftLowered, rightLowered) {
-    debug5("handleCmpXyOrMovXy", { opcode, operand, forcedLen, explicitlen });
+    debug6("handleCmpXyOrMovXy", { opcode, operand, forcedLen, explicitlen });
     const upper = opcode.toUpperCase();
     if (upper === "CMP") {
       const upOp = operand.toUpperCase();
@@ -22250,7 +27837,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleTsetTclr(opcode, left, right, rightLowered) {
-    debug5("handleTsetTclr", { opcode, left, right });
+    debug6("handleTsetTclr", { opcode, left, right });
     const up = opcode.toUpperCase();
     if (up !== "TSET" && up !== "TCLR") {
       return false;
@@ -22276,7 +27863,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handleMovInstruction(left, right, forcedLen, explicitlen) {
-    debug5("handleMovInstruction", { left, right, forcedLen, explicitlen });
+    debug6("handleMovInstruction", { left, right, forcedLen, explicitlen });
     const tableMoves = [
       { pattern: /^x\s*,\s*a$/i, opcode: 93 },
       { pattern: /^a\s*,\s*x$/i, opcode: 125 },
@@ -22411,9 +27998,9 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the combo was handled, false otherwise
    */
   handleMovMemoryCombo(left, right) {
-    debug5("handleMovMemoryCombo", { left, right });
+    debug6("handleMovMemoryCombo", { left, right });
     const combined = `${left.trim()},${right.trim()}`.toUpperCase();
-    debug5("handleMovMemoryCombo combined", combined);
+    debug6("handleMovMemoryCombo combined", combined);
     let m = combined.match(/^\(?\$([\dA-F]+)\+X?\),A$/);
     if (m) {
       const dpVal = parseInt(m[1], 16) & 255;
@@ -22453,7 +28040,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the combo was handled, false otherwise
    */
   handleMovMemoryCombo2(left, right) {
-    debug5("handleMovMemoryCombo2", { left, right });
+    debug6("handleMovMemoryCombo2", { left, right });
     const combined = `${left.trim()},${right.trim()}`.toUpperCase();
     const resolveIndexedExpression = (operand) => {
       if (operand.includes("(") || operand.includes(")")) {
@@ -22654,7 +28241,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the combo was handled, false otherwise
    */
   handleBitManipulation(opcode, left, right, explicitBitText = "") {
-    debug5("handleBitManipulation", { opcode, left, right, explicitBitText });
+    debug6("handleBitManipulation", { opcode, left, right, explicitBitText });
     const parsed = parseNumberedBitOpcode(opcode);
     if (!parsed) {
       return false;
@@ -22755,7 +28342,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the combo was handled, false otherwise
    */
   handleSingleOperandSpecial(opcode, operand) {
-    debug5("handleSingleOperandSpecial", { opcode, operand });
+    debug6("handleSingleOperandSpecial", { opcode, operand });
     const upOpcode = opcode.toUpperCase();
     const upOperand = operand.toUpperCase();
     if ((upOpcode === "DAA" || upOpcode === "DAS") && upOperand === "A") {
@@ -22790,7 +28377,7 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the combo was handled, false otherwise
    */
   handleWordOps(opcode, operand) {
-    debug5("handleWordOps", { opcode, operand });
+    debug6("handleWordOps", { opcode, operand });
     const up = opcode.toUpperCase();
     if (hasOwn(singleWordOps, up)) {
       const val = parseInt(operand.replace(/\$/g, ""), 16) & 255;
@@ -22806,7 +28393,7 @@ var ArchSPC700 = class {
    * @returns {number} the operand length
    */
   getlenfromchar(c) {
-    debug5("getlenfromchar", c);
+    debug6("getlenfromchar", c);
     switch (c.toLowerCase()) {
       case "b":
         return 1;
@@ -22815,7 +28402,7 @@ var ArchSPC700 = class {
       case "l":
         return 3;
       case "d":
-        debug5("Warning: .d opcode suffix is deprecated.");
+        debug6("Warning: .d opcode suffix is deprecated.");
         return 4;
       default:
         throw new Error("Error: Invalid opcode length.");
@@ -22823,12 +28410,85 @@ var ArchSPC700 = class {
   }
 };
 
-// src/ArchSuperFX.ts
-var debug6 = (..._) => {
+// plugins/snes/src/asar/compatibility.ts
+var ASAR_COMPAT_NO_OP_DIRECTIVES = [
+  "fastrom",
+  "dpbase",
+  "warnings",
+  "print",
+  "warn",
+  "autoclean",
+  "autoclear",
+  "includefrom",
+  "asar",
+  "reset",
+  "{",
+  "}"
+];
+var assertMapperAvailable = (inSpcblock) => {
+  if (inSpcblock) {
+    throw new Error("Mapper directives are unavailable inside spcblock.");
+  }
+};
+var applyMapperSelection = (state, mapper) => {
+  state.mapper = mapper;
+  if (mapper === "norom") {
+    state.checksumEnabled = false;
+  }
+};
+var isFreespaceAvailable = (mapper) => mapper !== "norom";
+var encodeSuperFxMoveShortAddress = (addrVal, mode = "hardware") => {
+  if (mode === "asar") {
+    return addrVal & 255;
+  }
+  return addrVal >> 1 & 255;
+};
+var getChecksumHeaderOffset = (mapper) => {
+  if (mapper === "lorom" || mapper === "sa1rom" || mapper === "bigsa1rom") {
+    return 32704;
+  }
+  return 65472;
+};
+var calculateHeaderChecksum = (romdata, mode) => {
+  const romLength = romdata.length;
+  if (romLength === 0) {
+    return 0;
+  }
+  let checksum = 0;
+  if (mode === "simple" || (romLength & romLength - 1) === 0) {
+    for (let i = 0; i < romLength; i++) {
+      checksum += romdata[i] & 255;
+    }
+    return checksum & 65535;
+  }
+  let bitround = 1;
+  while (bitround < romLength) {
+    bitround <<= 1;
+  }
+  const firstPart = bitround >> 1;
+  const secondPart = romLength - firstPart;
+  const repeatCount = Math.floor(firstPart / secondPart);
+  let secondPartSum = 0;
+  for (let i = 0; i < firstPart; i++) {
+    checksum += romdata[i] & 255;
+  }
+  for (let i = firstPart; i < romLength; i++) {
+    secondPartSum += romdata[i] & 255;
+  }
+  return checksum + secondPartSum * repeatCount & 65535;
+};
+var shouldRedirectOrgToSpcblock = (spcInlineCompatMode) => spcInlineCompatMode;
+var shouldEnableSpcInlineCompat = (architecture) => architecture === "spc700-inline";
+var shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
+var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
+var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
+
+// plugins/snes/src/architectures/superfx.ts
+var debug7 = (..._) => {
 };
 try {
   const { default: d } = await import("debug");
-  debug6 = d("ArchSuperFX");
+  debug7 = d("ArchSuperFX");
 } catch {
 }
 var hasOwn2 = (obj, key) => Object.hasOwn(obj, key);
@@ -22934,10 +28594,12 @@ var fitsSignedByte = (value) => {
 };
 var isShortRamAddress = (addrVal) => (addrVal & 1) === 0 && addrVal < 512;
 var ArchSuperFX = class {
-  assembler;
-  constructor(context) {
+  constructor(context, asarMoveShortAddress = () => false) {
+    this.asarMoveShortAddress = asarMoveShortAddress;
     this.assembler = createEncoderRuntime(context);
   }
+  asarMoveShortAddress;
+  assembler;
   /**
    * Returns the static Super FX instruction catalog for editor tooling.
    * @returns {InstructionDescriptor[]} The instruction descriptors.
@@ -23116,7 +28778,7 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   encode(words) {
-    debug6("asblock_superfx", words);
+    debug7("asblock_superfx", words);
     if (words.length === 0) {
       return false;
     }
@@ -23143,8 +28805,8 @@ var ArchSuperFX = class {
     const secondLowered = loweredOperands[1];
     const operand = firstLowered?.expanded ?? "";
     const operandLength = firstLowered?.length ?? this.getOperandLength(operand);
-    debug6("asblock_superfx opcode", opcode);
-    debug6("asblock_superfx operand", operand);
+    debug7("asblock_superfx opcode", opcode);
+    debug7("asblock_superfx operand", operand);
     if (hasOwn2(IMPLIED_OPCODES, opcode) || hasOwn2(PREFIXED_OPCODES, opcode)) {
       if (operands.length !== 0) {
         throw this.assembler.diagnostics.error(`${opcode} does not take operands`);
@@ -23171,7 +28833,7 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleSingleWordOpcode(opcode) {
-    debug6("handleSingleWordOpcode", opcode);
+    debug7("handleSingleWordOpcode", opcode);
     if (hasOwn2(IMPLIED_OPCODES, opcode)) {
       this.assembler.write1(IMPLIED_OPCODES[opcode]);
       return true;
@@ -23193,7 +28855,7 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleOneOperandOpcode(opcode, operand, operandLength, loweredOperand) {
-    debug6("handleOneOperandOpcode", opcode, operand, operandLength);
+    debug7("handleOneOperandOpcode", opcode, operand, operandLength);
     if (hasOwn2(SHORT_BRANCH_OPCODES, opcode)) {
       const branchOpcode = SHORT_BRANCH_OPCODES[opcode];
       const sourceSpelling = (loweredOperand?.raw ?? operand).trim();
@@ -23239,12 +28901,12 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleTwoOperandOpcode(opcode, leftOp, rightOp, leftLowered, rightLowered) {
-    debug6("handleTwoOperandOpcode", { opcode, leftOp, rightOp });
+    debug7("handleTwoOperandOpcode", { opcode, leftOp, rightOp });
     const reg1r = this.resolveRegister(leftOp, leftLowered, "r");
     const reg1parr = this.resolveRegister(leftOp, leftLowered, "parr");
     const reg2r = this.resolveRegister(rightOp, rightLowered, "r");
     const reg2parr = this.resolveRegister(rightOp, rightLowered, "parr");
-    debug6("handleTwoOperandOpcode", { reg1r, reg1parr, reg2r, reg2parr });
+    debug7("handleTwoOperandOpcode", { reg1r, reg1parr, reg2r, reg2parr });
     if (reg1r !== null && reg2r !== null) {
       switch (opcode) {
         case "MOVE":
@@ -23464,7 +29126,7 @@ var ArchSuperFX = class {
       }
       const regnum = this.assembler.operandResolver.getnum(str.slice(1));
       if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
-        debug6("Invalid register number", str, regnum);
+        debug7("Invalid register number", str, regnum);
         return null;
       }
       return regnum;
@@ -23505,7 +29167,7 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the address is valid.
    */
   checkShortAddr(num) {
-    debug6("checkShortAddr", num);
+    debug7("checkShortAddr", num);
     if (num % 2 !== 0 || num < 0 || num > 510) {
       throw this.assembler.diagnostics.error(
         `Invalid short address ${num}. Must be even and in range 0..0x1FE`
@@ -23565,7 +29227,7 @@ var ArchSuperFX = class {
    */
   moveShortAddressByte(addrVal) {
     let mode = "hardware";
-    if (this.assembler.asarSuperFxMoveShortAddress) {
+    if (this.asarMoveShortAddress()) {
       mode = "asar";
     }
     return encodeSuperFxMoveShortAddress(addrVal, mode);
@@ -23588,8 +29250,557 @@ var ArchSuperFX = class {
   }
 };
 
-// src/lsp/directive-catalog.ts
-var directiveCatalog = [
+// plugins/snes/src/architectures/operand-classifiers.ts
+function sourceUsesNumericSpelling2(raw) {
+  const base = raw.trim().replace(/\s*,\s*[sxy]$/i, "");
+  if (!base) {
+    return false;
+  }
+  if (base.startsWith("#") || base.startsWith("$")) {
+    return true;
+  }
+  if (/^[\d!%]/.test(base)) {
+    return true;
+  }
+  return false;
+}
+function isExplicitDirectPageSpelling2(raw, expanded, indexedX) {
+  let hexPattern = /^\$[\da-f]{1,2}$/i;
+  if (indexedX) {
+    hexPattern = /^\$[\da-f]{1,2}\s*,\s*x$/i;
+  }
+  if (hexPattern.test(raw.trim())) {
+    return true;
+  }
+  if (!hexPattern.test(expanded.trim())) {
+    return false;
+  }
+  return sourceUsesNumericSpelling2(raw);
+}
+function classifyGenericOperand2(input) {
+  const { raw, expanded, length } = input;
+  const syntax = parseOperandSyntax(raw);
+  const lowered = expanded.toLowerCase();
+  const normalizedExpanded = expanded.trim();
+  const normalizedUpper = normalizedExpanded.toUpperCase();
+  const explicitDirectPage = isExplicitDirectPageSpelling2(raw, normalizedExpanded, false);
+  const explicitDirectPageIndexedX = isExplicitDirectPageSpelling2(raw, normalizedExpanded, true);
+  let mode = "unknown";
+  let baseExpression = expanded;
+  let registerName;
+  const rawUpper = raw.trim().toUpperCase();
+  const registerOperandMatch = rawUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/) ?? normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
+  const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
+  const registerIndirectAutoIncrementMatch = normalizedUpper.match(
+    /^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/
+  );
+  const directPageIndexedXIndirectMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\+\s*x\s*\)$/i);
+  const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*y$/i);
+  const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
+  if (registerOperandMatch) {
+    mode = "register";
+    registerName = registerOperandMatch[1].toLowerCase();
+    baseExpression = normalizedExpanded;
+  } else if (registerIndirectAutoIncrementMatch) {
+    mode = "registerIndirectAutoIncrement";
+    registerName = registerIndirectAutoIncrementMatch[1].toLowerCase();
+    baseExpression = registerIndirectAutoIncrementMatch[1];
+  } else if (registerIndirectMatch) {
+    mode = "registerIndirect";
+    registerName = registerIndirectMatch[1].toLowerCase();
+    baseExpression = registerIndirectMatch[1];
+  } else if (directPageIndexedXIndirectMatch) {
+    mode = "directPageIndexedXIndirect";
+    baseExpression = directPageIndexedXIndirectMatch[1].trim();
+  } else if (directPageIndirectIndexedYMatch) {
+    mode = "directPageIndirectIndexedY";
+    baseExpression = directPageIndirectIndexedYMatch[1].trim();
+  } else if (bitAddressMatch) {
+    mode = bitAddressMatch[1].length <= 3 ? "directPageBit" : "absoluteBit";
+    baseExpression = bitAddressMatch[1].toUpperCase();
+  }
+  if (mode === "unknown" && expanded.startsWith("#")) {
+    mode = "immediate";
+    baseExpression = expanded.slice(1).trim();
+  } else if (mode === "unknown" && /^\$[\da-f]{6}\s*,\s*x$/i.test(expanded)) {
+    if (length >= 3) {
+      mode = "absoluteLongIndexedX";
+    } else {
+      mode = "absoluteIndexedX";
+    }
+    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
+  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*x$/i.test(expanded)) {
+    if (length >= 3) {
+      mode = "absoluteLongIndexedX";
+    } else {
+      mode = "absoluteIndexedX";
+    }
+    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
+  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*y$/i.test(expanded)) {
+    mode = "absoluteIndexedY";
+    baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*x\s*\)$/i.test(normalizedExpanded)) {
+    mode = "indexedIndirectX";
+    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*x\s*\)$/i, "").trim();
+  } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
+    mode = "directPageIndirect";
+    baseExpression = expanded.slice(1, -1).trim();
+  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode = "stackRelativeIndexedIndirectY";
+    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*s\s*\)\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && /,\s*s$/i.test(lowered)) {
+    mode = "stackRelative";
+    baseExpression = expanded.replace(/\s*,\s*s$/i, "").trim();
+  } else if (mode === "unknown" && /^\[\s*(.+?)\s*]\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode = "indirectLongIndexedY";
+    baseExpression = normalizedExpanded.replace(/^\[\s*/, "").replace(/\s*]\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
+    mode = "indirectLong";
+    baseExpression = expanded.slice(1, -1).trim();
+  } else if (mode === "unknown" && /^\(\s*(.+?)\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode = "indirectIndexedY";
+    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*\)\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && /,\s*y$/i.test(lowered)) {
+    mode = "absoluteIndexedY";
+    baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && /,\s*x$/i.test(lowered)) {
+    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
+    if (length >= 3) {
+      mode = "absoluteLongIndexedX";
+    } else if (length === 2) {
+      mode = "absoluteIndexedX";
+    } else {
+      mode = "directPageIndexedX";
+    }
+  } else if (mode === "unknown" && /^\$[\da-f]+$/i.test(expanded)) {
+    if (length >= 3) {
+      mode = "absoluteLong";
+    } else if (length === 2) {
+      mode = "absolute";
+    }
+    baseExpression = expanded;
+  }
+  return {
+    mode,
+    baseExpression,
+    registerName,
+    explicitDirectPage,
+    explicitDirectPageIndexedX,
+    raw,
+    expanded,
+    length,
+    indexRegister: syntax.indexRegister,
+    immediate: syntax.immediate,
+    indirect: syntax.indirect
+  };
+}
+function classify65816Operand(resolver, operand) {
+  const raw = operand.trim();
+  const { expanded, length } = resolver.expandOperand(raw);
+  return classifyGenericOperand2({ raw, expanded, length });
+}
+function classifySpc700Operand(resolver, operand) {
+  const raw = operand.trim();
+  const { expanded, length } = resolver.expandOperand(raw);
+  return classifyGenericOperand2({ raw, expanded, length });
+}
+function classifySuperFxOperand(resolver, operand) {
+  const raw = operand.trim();
+  const { expanded, length } = resolver.expandOperand(raw);
+  return classifyGenericOperand2({ raw, expanded, length });
+}
+
+// plugins/snes/src/directives/freespace.ts
+function handleFreespace(session, state, words) {
+  if (state.inSpcBlock) {
+    throw new Error(`${words[0]} is unavailable inside spcblock.`);
+  }
+  if (!isFreespaceAvailable(state.mapper)) {
+    throw new Error("No freespace available in norom.");
+  }
+  const sourceLength = session.baseImage.length > 0 ? session.baseImage.length : session.outputBytes.length;
+  const startOffset = Math.max(524288, sourceLength);
+  if (session.outputBytes.length < 1048576) {
+    session.expandOutput(1048576, state.outputFillByte);
+  }
+  const startAddress = session.outputWriter.fromOutputOffset(startOffset);
+  if (startAddress < 0) {
+    throw new Error("Unable to map freespace start to a logical address.");
+  }
+  session.currentTargetAddress = startAddress;
+  session.currentTargetBaseAddress = startAddress;
+  session.currentTargetStartAddress = startAddress;
+  session.currentTargetBaseStartAddress = startAddress;
+  state.activeFreespaceStartOffset = startOffset;
+  for (const value of [83, 84, 65, 82, 0, 0, 255, 255]) {
+    session.write1(value);
+  }
+  state.activeFreespaceContentStartOffset = startOffset + 8;
+}
+function handleFreespaceByte(session, state, words) {
+  if (words.length !== 2) {
+    throw new Error("FREESPACEBYTE requires exactly one parameter.");
+  }
+  state.outputFillByte = session.operandResolver.getnum(session.resolvedefines(words[1])) & 255;
+  session.outputFillByte = state.outputFillByte;
+}
+function handleProt(session, words) {
+  const labels = words.slice(1).join(" ").split(",").map((label) => label.trim()).filter(Boolean);
+  if (labels.length === 0) {
+    throw new Error("PROT command requires at least one label parameter.");
+  }
+  for (const value of [80, 82, 79, 84, labels.length * 3 & 255]) {
+    session.write1(value);
+  }
+  for (const label of labels) {
+    let address = 0;
+    try {
+      address = session.symbolScope.getLabelValue(label, false) & 16777215;
+    } catch {
+      address = 0;
+    }
+    session.write3(address);
+  }
+  for (const value of [83, 84, 79, 80, 0]) {
+    session.write1(value);
+  }
+}
+
+// plugins/snes/src/directives/layout.ts
+var MAPPER_KEYWORDS = [
+  "lorom",
+  "hirom",
+  "exlorom",
+  "exhirom",
+  "sfxrom",
+  "norom",
+  "fullsa1rom",
+  "sa1rom"
+];
+function handleMapper(state, words) {
+  assertMapperAvailable(state.inSpcBlock);
+  const keyword = words[0].toLowerCase();
+  if (keyword !== "sa1rom") {
+    applyMapperSelection(state, keyword === "fullsa1rom" ? "bigsa1rom" : keyword);
+    return;
+  }
+  if (words.length > 1) {
+    const parts = words[1].split(",");
+    if (parts.length !== 4) {
+      throw new Error("Invalid SA1ROM mapper specification. Expected 4 comma-separated values.");
+    }
+    state.sa1Banks = [];
+    state.sa1Banks[0] = parseInt(parts[0], 10) << 20;
+    state.sa1Banks[1] = parseInt(parts[1], 10) << 20;
+    state.sa1Banks[4] = parseInt(parts[2], 10) << 20;
+    state.sa1Banks[5] = parseInt(parts[3], 10) << 20;
+  } else {
+    state.sa1Banks = [];
+    state.sa1Banks[0] = 0 << 20;
+    state.sa1Banks[1] = 1 << 20;
+    state.sa1Banks[4] = 2 << 20;
+    state.sa1Banks[5] = 3 << 20;
+  }
+  applyMapperSelection(state, "sa1rom");
+}
+function handleCheck(state, words) {
+  if (words.length >= 2 && words[1].toLowerCase() === "title") {
+    state.readFunctionsEnabled = true;
+    return;
+  }
+  if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
+    throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
+  }
+  const mode = words[2].toLowerCase();
+  if (mode === "off") state.bankCrossMode = "off";
+  else if (mode === "half") state.bankCrossMode = "half";
+  else if (mode === "full" || mode === "on") state.bankCrossMode = "full";
+  else throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+}
+function handleOptimize(state, words) {
+  if (words.length < 3 || words[1].toLowerCase() !== "dp") return;
+  const mode = words[2].toLowerCase();
+  if (mode === "none") state.optimizeDirectPage = false;
+  else if (mode === "ram" || mode === "always") state.optimizeDirectPage = true;
+}
+function handleStartpos(session, state, words) {
+  if (!state.inSpcBlock || !state.spcBlock) {
+    throw new Error("startpos used without an active spcblock.");
+  }
+  if (words.length !== 2) {
+    throw new Error("startpos requires exactly one parameter.");
+  }
+  state.spcBlock.executeAddress = session.operandResolver.getnum(session.resolvedefines(words[1])) & 65535;
+}
+
+// plugins/snes/src/services/spc-runtime.ts
+var SnesSpcRuntimeService = class {
+  constructor(session, state) {
+    this.session = session;
+    this.state = state;
+  }
+  session;
+  state;
+  finishPass() {
+    if (shouldAutoCloseSpcblock(this.state.spcInlineCompatibility, this.state.inSpcBlock)) {
+      this.handleEndSpcblock(["endspcblock", "execute", "0"]);
+    }
+    if (this.state.inSpcBlock) {
+      throw new Error("Missing endspcblock before end of pass.");
+    }
+  }
+  handleSpcblock(words) {
+    if (words.length < 2) throw new Error("spcblock requires at least a destination address.");
+    if (words.length > 4) throw new Error("spcblock has too many arguments.");
+    if (this.state.inSpcBlock) throw new Error("Nested spcblock directives are not supported.");
+    const destination = this.session.operandResolver.getnum(this.session.resolvedefines(words[1]));
+    if ((destination & ~65535) !== 0) {
+      throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
+    }
+    let type = "nspc";
+    if (words.length === 3) {
+      const kind = words[2].toLowerCase();
+      if (kind === "nspc") type = "nspc";
+      else if (kind === "custom") {
+        throw new Error("Custom spcblock mode requires a macro and is not implemented.");
+      } else throw new Error(`Unknown spcblock type: ${words[2]}`);
+    } else if (words.length === 4) {
+      if (words[2].toLowerCase() !== "custom") {
+        throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
+      }
+      throw new Error("Custom spcblock mode is not implemented.");
+    }
+    if (type !== "nspc") throw new Error("Custom spcblock mode is not implemented.");
+    const sizeAddress = this.session.currentTargetBaseAddress;
+    this.session.write2(0);
+    this.session.write2(destination);
+    this.session.currentTargetAddress = destination;
+    this.session.currentTargetStartAddress = destination;
+    this.state.spcBlock = {
+      destination,
+      type,
+      sizeAddress,
+      executeAddress: null,
+      namespaceBackup: this.session.currentNamespace
+    };
+    this.session.currentNamespace = `:SPCBLOCK:_${this.session.currentNamespace}`;
+    this.state.spcPreviousArchitecture = this.session.arch;
+    this.state.inSpcBlock = true;
+    this.session.selectArchitecture(
+      "spc700",
+      this.state.spcInlineCompatibility ? "spc700-inline" : "spc700"
+    );
+  }
+  handleEndSpcblock(words) {
+    const block = this.state.spcBlock;
+    if (!this.state.inSpcBlock || !block) {
+      throw new Error("endspcblock used without an active spcblock.");
+    }
+    if (block.type !== "nspc") {
+      throw new Error("Custom spcblock mode is not implemented.");
+    }
+    if (this.session.canFinalize) {
+      const sizeOffset = this.session.outputWriter.toOutputOffset(block.sizeAddress & 16777215);
+      if (sizeOffset < 0) throw new Error("spcblock size address does not map to output.");
+      const blockSize = this.session.currentTargetAddress - block.destination & 65535;
+      this.session.writeOutputBytes(sizeOffset, blockSize & 255, 1);
+      this.session.writeOutputBytes(sizeOffset + 1, blockSize >> 8 & 255, 1);
+    }
+    if (words.length === 3) {
+      if (words[1].toLowerCase() !== "execute") {
+        throw new Error(`Invalid endspcblock argument: ${words[1]}`);
+      }
+      this.session.write2(0);
+      this.session.write2(
+        this.session.operandResolver.getnum(this.session.resolvedefines(words[2])) & 65535
+      );
+    } else if (words.length !== 1) {
+      throw new Error("Unknown endspcblock format.");
+    } else if (block.executeAddress !== null) {
+      this.session.write2(0);
+      this.session.write2(block.executeAddress & 65535);
+    }
+    this.session.currentNamespace = block.namespaceBackup;
+    const previousArchitecture = this.state.spcPreviousArchitecture;
+    this.state.spcBlock = null;
+    this.state.spcPreviousArchitecture = null;
+    this.state.inSpcBlock = false;
+    if (previousArchitecture) {
+      this.session.selectArchitecture(previousArchitecture, previousArchitecture);
+    }
+  }
+};
+
+// plugins/snes/src/directives/spc.ts
+var createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
+
+// plugins/snes/src/session-state.ts
+var SNES_SESSION_STATE_ID = "snes.session-state";
+var snesSessionStateKey = {
+  id: SNES_SESSION_STATE_ID
+};
+function cloneSnesSessionState(value) {
+  return {
+    ...value,
+    sa1Banks: [...value.sa1Banks],
+    spcBlock: value.spcBlock ? { ...value.spcBlock } : null
+  };
+}
+
+// plugins/snes/src/target/address-space.ts
+var snesRomAddressSpace = {
+  name: "snes-rom",
+  addressWidth: 24,
+  defaultOrigin: 32768,
+  unmappedWriteBehavior: "allow",
+  normalizeForWrite(address, context) {
+    return this.advance(address, 0, context);
+  },
+  advance(address, amount, context) {
+    const prefix = address & 4278190080;
+    const logicalAddress = address & 16777215;
+    const newAddress = logicalAddress + amount;
+    const finish = (value) => prefix | value;
+    if ((logicalAddress & 16711680) !== (newAddress & 16711680)) {
+      const wrapOnBankCross = context.bankCrossCheckMode !== "full" && context.bankCrossCheckMode !== "half";
+      switch (context.mapper) {
+        case "lorom":
+          if (wrapOnBankCross) {
+            return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
+          }
+          return finish(newAddress);
+        case "hirom":
+        case "exhirom":
+        case "sfxrom":
+        case "sa1rom":
+          if (wrapOnBankCross && (logicalAddress & 4194304) === 0) {
+            return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
+          }
+          return finish(newAddress);
+        case "exlorom":
+        case "bigsa1rom": {
+          if (!wrapOnBankCross) {
+            return finish(newAddress);
+          }
+          const offset = this.toOutputOffset(logicalAddress, context);
+          const mapped = offset < 0 ? -1 : this.fromOutputOffset(offset + amount, context);
+          return mapped < 0 ? -1 : finish(mapped);
+        }
+        case "norom":
+          return finish(newAddress);
+        default:
+          throw new Error(`Unknown mapper type: ${context.mapper}`);
+      }
+    }
+    return finish(newAddress);
+  },
+  toOutputOffset(address, context) {
+    if (address < 0 || address > 16777215) return -1;
+    if (context.mapper === "lorom") {
+      if ((address & 16646144) === 8257536 || (address & 4227072) === 0 || (address & 7372800) === 7340032) {
+        return -1;
+      }
+      return (address & 8323072) >> 1 | address & 32767;
+    }
+    if (context.mapper === "hirom") {
+      if ((address & 16646144) === 8257536 || (address & 4227072) === 0) {
+        return -1;
+      }
+      return address & 4194303;
+    }
+    if (context.mapper === "exlorom") {
+      if ((address & 15728640) === 7340032 || (address & 4227072) === 0) {
+        return -1;
+      }
+      const mapped = (address & 8323072) >> 1 | address & 32767;
+      return address & 8388608 ? mapped : mapped + 4194304;
+    }
+    if (context.mapper === "exhirom") {
+      if ((address & 16646144) === 8257536 || (address & 4227072) === 0) {
+        return -1;
+      }
+      return (address & 8388608) === 0 ? address & 4194303 | 4194304 : address & 4194303;
+    }
+    if (context.mapper === "sfxrom") {
+      if ((address & 6291456) === 6291456 || (address & 4227072) === 0 || (address & 8388608) === 8388608) {
+        return -1;
+      }
+      return address & 4194304 ? address & 4194303 : (address & 8323072) >> 1 | address & 32767;
+    }
+    if (context.mapper === "sa1rom") {
+      if ((address & 4227072) === 32768) {
+        return context.sa1banks[(address & 14680064) >> 21] | (address & 2031616) >> 1 | address & 32767;
+      }
+      if ((address & 12582912) === 12582912) {
+        return context.sa1banks[(address & 1048576) >> 20 | (address & 2097152) >> 19] | address & 1048575;
+      }
+      return -1;
+    }
+    if (context.mapper === "bigsa1rom") {
+      if ((address & 12582912) === 12582912) {
+        return address & 4194303 | 4194304;
+      }
+      if ((address & 12582912) === 0 || (address & 12582912) === 8388608) {
+        if ((address & 32768) === 0) return -1;
+        return (address & 8388608) >> 2 | (address & 4128768) >> 1 | address & 32767;
+      }
+      return -1;
+    }
+    return context.mapper === "norom" ? address : -1;
+  },
+  fromOutputOffset(offset, context) {
+    if (offset < 0) return -1;
+    let address = offset;
+    if (context.mapper === "lorom") {
+      if (address >= 4194304) return -1;
+      address = address << 1 & 8323072 | address & 32767 | 32768;
+      return address | 8388608;
+    }
+    if (context.mapper === "hirom") {
+      return address >= 4194304 ? -1 : address | 12582912;
+    }
+    if (context.mapper === "exlorom") {
+      if (address >= 8388608) return -1;
+      if (address & 4194304) {
+        address -= 4194304;
+        return address << 1 & 8323072 | address & 32767 | 32768;
+      }
+      address = address << 1 & 8323072 | address & 32767 | 32768;
+      return address | 8388608;
+    }
+    if (context.mapper === "exhirom") {
+      if (address >= 8388608) return -1;
+      return address & 4194304 ? address : address | 12582912;
+    }
+    if (context.mapper === "sa1rom") {
+      if (address >= 8388608) return -1;
+      for (let index2 = 0; index2 < 8; index2++) {
+        if (context.sa1banks[index2] === (address & 7340032)) {
+          return 32768 | index2 << 21 | (address & 1015808) << 1 | address & 32767;
+        }
+      }
+      return -1;
+    }
+    if (context.mapper === "bigsa1rom") {
+      if (address >= 8388608) return -1;
+      if ((address & 4194304) === 4194304) return address | 12582912;
+      if ((address & 6291456) === 0) {
+        return address << 1 & 4128768 | 32768 | address & 32767;
+      }
+      if ((address & 6291456) === 2097152) {
+        return 8388608 | address << 1 & 4128768 | 32768 | address & 32767;
+      }
+      return -1;
+    }
+    if (context.mapper === "sfxrom") {
+      return address >= 2097152 ? -1 : address << 1 & 8323072 | address & 32767 | 32768;
+    }
+    return context.mapper === "norom" ? address : -1;
+  }
+};
+
+// plugins/snes/src/tooling/directive-catalog.ts
+var directiveCatalog2 = [
   {
     keyword: "db",
     summary: "Emit one or more bytes.",
@@ -24004,268 +30215,11 @@ var directiveCatalog = [
   }
 ];
 var directiveByKeyword = new Map(
-  directiveCatalog.map((descriptor) => [descriptor.keyword.toLowerCase(), descriptor])
+  directiveCatalog2.map((descriptor2) => [descriptor2.keyword.toLowerCase(), descriptor2])
 );
 
-// src/target-profile.ts
-var TargetProfileRegistry = class {
-  profiles = /* @__PURE__ */ new Map();
-  aliases = /* @__PURE__ */ new Map();
-  register(profile, aliases = []) {
-    const canonical2 = profile.name.toLowerCase();
-    this.profiles.set(canonical2, profile);
-    this.aliases.set(canonical2, canonical2);
-    for (const alias of aliases) {
-      this.aliases.set(alias.toLowerCase(), canonical2);
-    }
-  }
-  get(name) {
-    const canonical2 = this.aliases.get(name.toLowerCase());
-    return canonical2 ? this.profiles.get(canonical2) : void 0;
-  }
-};
-var validateFlat16Address = (address) => Number.isInteger(address) && address >= 0 && address <= 65535;
-var flat16AddressSpace = {
-  name: "flat16",
-  addressWidth: 16,
-  defaultOrigin: 0,
-  unmappedWriteBehavior: "throw",
-  normalizeForWrite(address) {
-    if (!validateFlat16Address(address)) {
-      throw new Error(`Address $${address.toString(16).toUpperCase()} is outside flat16.`);
-    }
-    return address;
-  },
-  advance(address, amount) {
-    const next = address + amount;
-    if (!validateFlat16Address(next)) {
-      throw new Error(`Address $${next.toString(16).toUpperCase()} is outside flat16.`);
-    }
-    return next;
-  },
-  toOutputOffset(address) {
-    return validateFlat16Address(address) ? address : -1;
-  },
-  fromOutputOffset(offset) {
-    return validateFlat16Address(offset) ? offset : -1;
-  }
-};
-var snesRomAddressSpace = {
-  name: "snes-rom",
-  addressWidth: 24,
-  defaultOrigin: 32768,
-  unmappedWriteBehavior: "allow",
-  normalizeForWrite(address, context) {
-    return this.advance(address, 0, context);
-  },
-  advance(address, amount, context) {
-    const prefix = address & 4278190080;
-    const logicalAddress = address & 16777215;
-    const newAddress = logicalAddress + amount;
-    const finish = (value) => prefix | value;
-    if ((logicalAddress & 16711680) !== (newAddress & 16711680)) {
-      const wrapOnBankCross = context.bankCrossCheckMode !== "full" && context.bankCrossCheckMode !== "half";
-      switch (context.mapper) {
-        case "lorom":
-          if (wrapOnBankCross) {
-            return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
-          }
-          return finish(newAddress);
-        case "hirom":
-        case "exhirom":
-        case "sfxrom":
-        case "sa1rom":
-          if (wrapOnBankCross && (logicalAddress & 4194304) === 0) {
-            return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
-          }
-          return finish(newAddress);
-        case "exlorom":
-        case "bigsa1rom": {
-          if (!wrapOnBankCross) {
-            return finish(newAddress);
-          }
-          const offset = this.toOutputOffset(logicalAddress, context);
-          const mapped = offset < 0 ? -1 : this.fromOutputOffset(offset + amount, context);
-          return mapped < 0 ? -1 : finish(mapped);
-        }
-        case "norom":
-          return finish(newAddress);
-        default:
-          throw new Error(`Unknown mapper type: ${context.mapper}`);
-      }
-    }
-    return finish(newAddress);
-  },
-  toOutputOffset(address, context) {
-    if (address < 0 || address > 16777215) return -1;
-    if (context.mapper === "lorom") {
-      if ((address & 16646144) === 8257536 || (address & 4227072) === 0 || (address & 7372800) === 7340032) {
-        return -1;
-      }
-      return (address & 8323072) >> 1 | address & 32767;
-    }
-    if (context.mapper === "hirom") {
-      if ((address & 16646144) === 8257536 || (address & 4227072) === 0) {
-        return -1;
-      }
-      return address & 4194303;
-    }
-    if (context.mapper === "exlorom") {
-      if ((address & 15728640) === 7340032 || (address & 4227072) === 0) {
-        return -1;
-      }
-      const mapped = (address & 8323072) >> 1 | address & 32767;
-      return address & 8388608 ? mapped : mapped + 4194304;
-    }
-    if (context.mapper === "exhirom") {
-      if ((address & 16646144) === 8257536 || (address & 4227072) === 0) {
-        return -1;
-      }
-      return (address & 8388608) === 0 ? address & 4194303 | 4194304 : address & 4194303;
-    }
-    if (context.mapper === "sfxrom") {
-      if ((address & 6291456) === 6291456 || (address & 4227072) === 0 || (address & 8388608) === 8388608) {
-        return -1;
-      }
-      return address & 4194304 ? address & 4194303 : (address & 8323072) >> 1 | address & 32767;
-    }
-    if (context.mapper === "sa1rom") {
-      if ((address & 4227072) === 32768) {
-        return context.sa1banks[(address & 14680064) >> 21] | (address & 2031616) >> 1 | address & 32767;
-      }
-      if ((address & 12582912) === 12582912) {
-        return context.sa1banks[(address & 1048576) >> 20 | (address & 2097152) >> 19] | address & 1048575;
-      }
-      return -1;
-    }
-    if (context.mapper === "bigsa1rom") {
-      if ((address & 12582912) === 12582912) {
-        return address & 4194303 | 4194304;
-      }
-      if ((address & 12582912) === 0 || (address & 12582912) === 8388608) {
-        if ((address & 32768) === 0) return -1;
-        return (address & 8388608) >> 2 | (address & 4128768) >> 1 | address & 32767;
-      }
-      return -1;
-    }
-    return context.mapper === "norom" ? address : -1;
-  },
-  fromOutputOffset(offset, context) {
-    if (offset < 0) return -1;
-    let address = offset;
-    if (context.mapper === "lorom") {
-      if (address >= 4194304) return -1;
-      address = address << 1 & 8323072 | address & 32767 | 32768;
-      return address | 8388608;
-    }
-    if (context.mapper === "hirom") {
-      return address >= 4194304 ? -1 : address | 12582912;
-    }
-    if (context.mapper === "exlorom") {
-      if (address >= 8388608) return -1;
-      if (address & 4194304) {
-        address -= 4194304;
-        return address << 1 & 8323072 | address & 32767 | 32768;
-      }
-      address = address << 1 & 8323072 | address & 32767 | 32768;
-      return address | 8388608;
-    }
-    if (context.mapper === "exhirom") {
-      if (address >= 8388608) return -1;
-      return address & 4194304 ? address : address | 12582912;
-    }
-    if (context.mapper === "sa1rom") {
-      if (address >= 8388608) return -1;
-      for (let index2 = 0; index2 < 8; index2++) {
-        if (context.sa1banks[index2] === (address & 7340032)) {
-          return 32768 | index2 << 21 | (address & 1015808) << 1 | address & 32767;
-        }
-      }
-      return -1;
-    }
-    if (context.mapper === "bigsa1rom") {
-      if (address >= 8388608) return -1;
-      if ((address & 4194304) === 4194304) return address | 12582912;
-      if ((address & 6291456) === 0) {
-        return address << 1 & 4128768 | 32768 | address & 32767;
-      }
-      if ((address & 6291456) === 2097152) {
-        return 8388608 | address << 1 & 4128768 | 32768 | address & 32767;
-      }
-      return -1;
-    }
-    if (context.mapper === "sfxrom") {
-      return address >= 2097152 ? -1 : address << 1 & 8323072 | address & 32767 | 32768;
-    }
-    return context.mapper === "norom" ? address : -1;
-  }
-};
-var copyOutput = (bytes) => new Uint8Array(bytes.slice(0, bytes.length));
-var snesRomOutputFormat = {
-  name: "sfc",
-  defaultExtension: ".sfc",
-  finalize(context) {
-    if (context.canFinalize && context.checksumFixEnabled) {
-      context.updateChecksum();
-    }
-  },
-  getBinaryOutput: copyOutput
-};
-var rawBinaryOutputFormat = {
-  name: "raw",
-  defaultExtension: ".bin",
-  finalize() {
-  },
-  getBinaryOutput: copyOutput
-};
-var snesTargetProfile = {
-  name: "snes",
-  defaultArchitecture: "65816",
-  architectures: /* @__PURE__ */ new Set(["65816", "spc700", "superfx"]),
-  defaultMapper: "lorom",
-  checksumFixEnabled: true,
-  addressSpace: snesRomAddressSpace,
-  outputFormat: snesRomOutputFormat,
-  directiveSetIds: /* @__PURE__ */ new Set([
-    "legacy.snes-mapper-directives",
-    "legacy.snes-memory-directives",
-    "legacy.snes-policy-directives",
-    "legacy.spc-directives"
-  ]),
-  expressionSetIds: /* @__PURE__ */ new Set(["legacy.snes-address-functions", "legacy.rom-read-functions"])
-};
-var mos6502StubTargetProfile = {
-  name: "mos6502-stub",
-  defaultArchitecture: "6502",
-  architectures: /* @__PURE__ */ new Set(["6502"]),
-  defaultMapper: "flat",
-  checksumFixEnabled: false,
-  addressSpace: flat16AddressSpace,
-  outputFormat: rawBinaryOutputFormat,
-  directiveSetIds: /* @__PURE__ */ new Set(),
-  expressionSetIds: /* @__PURE__ */ new Set()
-};
-var builtInTargetProfiles = new TargetProfileRegistry();
-builtInTargetProfiles.register(snesTargetProfile, ["sfc", "snes-65816"]);
-builtInTargetProfiles.register(mos6502StubTargetProfile, ["6502-stub"]);
-
-// src/plugin/legacy-session-state.ts
-var LEGACY_TARGET_SESSION_STATE_ID = "legacy.target-session-state";
-var legacyTargetSessionStateKey = {
-  id: LEGACY_TARGET_SESSION_STATE_ID
-};
-function cloneLegacyTargetSessionState(value) {
-  return {
-    ...value,
-    sa1Banks: [...value.sa1Banks],
-    spcBlock: value.spcBlock ? { ...value.spcBlock } : null
-  };
-}
-
-// src/plugin/legacy-adapter.ts
+// plugins/snes/src/index.ts
 var SNES_TARGET_ID = "snes.sfc";
-var MOS6502_STUB_TARGET_ID = "mos.6502-stub";
-var legacyProfiles = /* @__PURE__ */ new WeakMap();
 var splitSingleOperand = (text) => text ? [text] : [];
 var splitCommaOperands = (text) => text ? text.split(",").map((operand) => operand.trim()) : [];
 var splitTopLevelCommaOperands = (text) => {
@@ -24285,108 +30239,55 @@ var splitTopLevelCommaOperands = (text) => {
   if (current.trim()) operands.push(current.trim());
   return operands;
 };
-var builtInArchitectures = [
-  {
-    id: "snes.65816",
-    aliases: ["65816"],
-    displayName: "WDC 65C816",
-    unknownInstructionBehavior: "throw",
-    splitOperands: splitSingleOperand,
-    classifyOperand: ({ operands }, operand) => classify65816Operand(operands, operand),
-    createEncoder: (context) => new Arch65816(context),
-    instructions: cpu65816Catalog
-  },
-  {
-    id: "snes.spc700",
-    aliases: ["spc700", "spc700-raw", "spc700-inline"],
-    displayName: "Sony SPC700",
-    unknownInstructionBehavior: "throw",
-    splitOperands: splitTopLevelCommaOperands,
-    classifyOperand: ({ operands }, operand) => classifySpc700Operand(operands, operand),
-    createEncoder: (context) => new ArchSPC700(context),
-    instructions: spc700Catalog
-  },
-  {
-    id: "snes.superfx",
-    aliases: ["superfx"],
-    displayName: "Super FX",
-    unknownInstructionBehavior: "returnFalse",
-    splitOperands: splitCommaOperands,
-    classifyOperand: ({ operands }, operand) => classifySuperFxOperand(operands, operand),
-    createEncoder: (context) => new ArchSuperFX(context),
-    instructions: superFxCatalog
-  },
-  {
-    id: "mos.6502-stub",
-    aliases: ["6502", "mos6502"],
-    displayName: "MOS 6502 (stub)",
-    unknownInstructionBehavior: "throw",
-    splitOperands: splitSingleOperand,
-    classifyOperand: ({ operands }, operand) => classify6502Operand(operands, operand),
-    createEncoder: (context) => new Arch6502(context),
-    instructions: []
-  }
-];
-var builtInIds = new Map(
-  builtInArchitectures.flatMap(
-    (architecture) => [architecture.id, ...architecture.aliases ?? []].map((alias) => [alias, architecture.id])
-  )
-);
-var slug = (value) => {
-  const normalized = value.toLowerCase().split("").map((character) => /[\da-z-]/.test(character) ? character : "-").join("").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  return normalized || "target";
+var toolingFor = (keywords) => {
+  const wanted = new Set(keywords);
+  return directiveCatalog2.filter((descriptor2) => wanted.has(descriptor2.keyword));
 };
-var extensionContribution = (extension, index2) => ({
-  id: `legacy.${slug(extension.name)}-${index2}`,
-  aliases: [extension.name, ...extension.aliases ?? []],
-  displayName: extension.name,
-  unknownInstructionBehavior: extension.unknownInstructionBehavior,
-  splitOperands: extension.splitOperands,
-  classifyOperand: ({ operands }, operand) => extension.classifyOperand(operands, operand),
-  createEncoder: (context) => extension.createEncoder(context),
-  instructions: []
+var directive = (id, keywords, handler) => ({
+  id,
+  keywords,
+  phase: "lowered",
+  createHandler: handler,
+  tooling: toolingFor(keywords)
 });
-var numericExpressionArgument = (functionName, args, index2) => {
+var numericArgument = (functionName, args, index2) => {
   const value = args[index2];
   if (typeof value !== "number") {
     throw new Error(`${functionName}() argument ${index2 + 1} must be numeric.`);
   }
   return value;
 };
-var legacyAddressExpressionSet = {
-  id: "legacy.snes-address-functions",
+var addressExpressions = {
+  id: "snes.address-functions",
   functions: [
     {
       name: "snestopc",
       signature: { parameters: ["address"] },
       summary: "Convert a SNES address to an output offset.",
-      evaluate: ({ addresses }, args) => addresses.toOutputOffset(numericExpressionArgument("snestopc", args, 0))
+      evaluate: ({ addresses }, args) => addresses.toOutputOffset(numericArgument("snestopc", args, 0))
     },
     {
       name: "pctosnes",
       signature: { parameters: ["offset"] },
       summary: "Convert an output offset to a SNES address.",
-      evaluate: ({ addresses }, args) => addresses.fromOutputOffset(numericExpressionArgument("pctosnes", args, 0))
+      evaluate: ({ addresses }, args) => addresses.fromOutputOffset(numericArgument("pctosnes", args, 0))
     }
   ]
 };
-var legacyRomReadExpressionSet = {
-  id: "legacy.rom-read-functions",
+var readExpressions = {
+  id: "snes.read-functions",
   functions: [
     ...[1, 2, 3, 4].map((size) => ({
       name: `canread${size}`,
       signature: { parameters: ["position"] },
       summary: `Return whether ${size} byte(s) can be read from the base image.`,
-      evaluate: (context, args) => context.output.canRead(numericExpressionArgument(`canread${size}`, args, 0), size)
+      evaluate: (context, args) => context.output.canRead(numericArgument(`canread${size}`, args, 0), size)
     })),
     {
       name: "canread",
       signature: { parameters: ["position", "size"] },
       summary: "Return whether a range can be read from the base image.",
-      evaluate: ({ output }, args) => output.canRead(
-        numericExpressionArgument("canread", args, 0),
-        numericExpressionArgument("canread", args, 1)
-      )
+      evaluate: ({ output }, args) => output.canRead(numericArgument("canread", args, 0), numericArgument("canread", args, 1))
     },
     ...[1, 2, 3, 4].map((size) => ({
       name: `read${size}`,
@@ -24396,4026 +30297,1060 @@ var legacyRomReadExpressionSet = {
         maximumArguments: 2
       },
       summary: `Read ${size} byte(s) from the base image.`,
-      evaluate: (context, args) => context.output.read(
-        numericExpressionArgument(`read${size}`, args, 0),
-        size,
-        args.length > 1 ? numericExpressionArgument(`read${size}`, args, 1) : void 0
-      )
+      evaluate: (context, args) => {
+        const position = numericArgument(`read${size}`, args, 0);
+        const defaultValue = args.length > 1 ? numericArgument(`read${size}`, args, 1) : void 0;
+        const state = context.state.get(snesSessionStateKey);
+        if (!state.readFunctionsEnabled && defaultValue === void 0) {
+          throw new Error(
+            `Esnes_address_out_of_bounds: SNES address ${position.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`
+          );
+        }
+        return context.output.read(position, size, defaultValue);
+      }
     }))
   ]
 };
-function createLegacyAssemblerEnvironment(options = {}) {
-  const profile = options.targetProfile ?? snesTargetProfile;
-  const extensions = (options.architectureExtensions ?? []).map(extensionContribution);
-  const architectures = [...builtInArchitectures, ...extensions];
-  const aliasToId = new Map(builtInIds);
-  for (const extension of extensions) {
-    for (const alias of [extension.id, ...extension.aliases ?? []]) {
-      aliasToId.set(alias.toLowerCase(), extension.id);
-    }
+var targetOptions = (configured) => {
+  const value = typeof configured === "object" && configured !== null && !Array.isArray(configured) ? configured : {};
+  const checksumMode = value.checksumMode ?? "asar";
+  if (checksumMode !== "asar" && checksumMode !== "simple") {
+    throw new Error("checksumMode must be 'asar' or 'simple'.");
   }
-  const resolveArchitecture = (name) => aliasToId.get(name.toLowerCase()) ?? name;
-  let targetId;
-  if (profile === snesTargetProfile) {
-    targetId = SNES_TARGET_ID;
-  } else if (profile === mos6502StubTargetProfile) {
-    targetId = MOS6502_STUB_TARGET_ID;
-  } else {
-    targetId = `legacy.${slug(profile.name)}`;
-  }
-  const addressSpaceId = `${targetId}.address-space`;
-  const outputFormatId = `${targetId}.output-format`;
-  let registrationOrder = 0;
-  const own = (value) => ({
-    pluginId: "uttori.legacy-adapter",
-    contributionId: value.id,
-    registrationOrder: registrationOrder++,
-    value
-  });
-  const architectureRecords = architectures.map(own);
-  const sessionStateRecord = own({
-    id: LEGACY_TARGET_SESSION_STATE_ID,
-    create: () => ({
-      mapper: profile.defaultMapper,
-      sa1Banks: [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1],
-      checksumEnabled: profile.checksumFixEnabled,
-      checksumMode: "asar",
-      bankCrossMode: "full",
-      readFunctionsEnabled: false,
-      optimizeDirectPage: false,
-      asarSuperFxMoveShortAddress: false,
-      outputFillByte: 0,
-      activeFreespaceStartOffset: null,
-      activeFreespaceContentStartOffset: null,
-      activeFreespaceEndOffset: null,
-      inSpcBlock: false,
-      spcBlock: null,
-      spcInlineCompatibility: false
-    }),
-    clone: cloneLegacyTargetSessionState,
-    resetForStage: (state) => {
-      state.activeFreespaceStartOffset = null;
-      state.activeFreespaceContentStartOffset = null;
-      state.activeFreespaceEndOffset = null;
-      state.inSpcBlock = false;
-      state.spcBlock = null;
-      state.spcInlineCompatibility = false;
-    }
-  });
-  const addressSpaceRecord = own({
-    id: addressSpaceId,
-    create: ({ state }) => {
-      const addressContext = () => {
-        const targetState = state.get(legacyTargetSessionStateKey);
-        return {
-          mapper: targetState.mapper,
-          sa1banks: targetState.sa1Banks,
-          bankCrossCheckMode: targetState.bankCrossMode
-        };
-      };
-      return {
-        addressWidth: profile.addressSpace.addressWidth,
-        defaultOrigin: profile.addressSpace.defaultOrigin,
-        normalizeForWrite: (address) => profile.addressSpace.normalizeForWrite(address, addressContext()),
-        advance: (address, amount) => profile.addressSpace.advance(address, amount, addressContext()),
-        toOutputOffset: (address) => profile.addressSpace.toOutputOffset(address, addressContext()),
-        fromOutputOffset: (offset) => profile.addressSpace.fromOutputOffset(offset, addressContext()),
-        validateWrite: (address, width) => {
-          const targetState = state.get(legacyTargetSessionStateKey);
-          const normalized = profile.addressSpace.normalizeForWrite(address, addressContext());
-          if (profile.addressSpace.toOutputOffset(normalized, addressContext()) < 0 && profile.addressSpace.unmappedWriteBehavior === "throw") {
-            throw new Error(
-              `Logical address $${normalized.toString(16).toUpperCase()} does not map to output.`
-            );
-          }
-          if (targetState.bankCrossMode === "off" || width <= 1) return;
-          const addressMask = 2 ** profile.addressSpace.addressWidth - 1;
-          const start = address & addressMask;
-          const end = start + width - 1 & addressMask;
-          const bankMask = targetState.bankCrossMode === "half" ? 2147450880 : 2147418112;
-          if (((start ^ end) & bankMask) !== 0) {
-            const errorAddress = start + width & addressMask;
-            throw new Error(
-              `Ebank_border_crossed: A bank border was crossed, logical address $${errorAddress.toString(16).toUpperCase().padStart(6, "0")}.`
-            );
-          }
-        }
-      };
-    }
-  });
-  const outputFormatRecord = own({
-    id: outputFormatId,
-    create: ({ state }) => ({
-      finalize: ({ outputBytes }) => {
-        const targetState = state.get(legacyTargetSessionStateKey);
-        profile.outputFormat.finalize({
-          canFinalize: true,
-          checksumFixEnabled: targetState.checksumEnabled,
-          bytes: outputBytes,
-          updateChecksum: () => {
-            const headerOffset = getChecksumHeaderOffset(targetState.mapper);
-            if (outputBytes.length < headerOffset + 32) return;
-            outputBytes[headerOffset + 28] = 255;
-            outputBytes[headerOffset + 29] = 255;
-            outputBytes[headerOffset + 30] = 0;
-            outputBytes[headerOffset + 31] = 0;
-            const checksum = calculateHeaderChecksum(outputBytes, targetState.checksumMode);
-            const complement = ~checksum & 65535;
-            outputBytes[headerOffset + 28] = complement & 255;
-            outputBytes[headerOffset + 29] = complement >> 8 & 255;
-            outputBytes[headerOffset + 30] = checksum & 255;
-            outputBytes[headerOffset + 31] = checksum >> 8 & 255;
-          }
-        });
-      },
-      getOutput: ({ outputBytes }) => profile.outputFormat.getBinaryOutput(outputBytes)
-    })
-  });
-  const expressionSetsById = new Map(
-    [legacyAddressExpressionSet, legacyRomReadExpressionSet].map((set) => [set.id, set])
-  );
-  const expressionSets = [...profile.expressionSetIds].flatMap((id) => {
-    const set = expressionSetsById.get(id);
-    return set ? [set] : [];
-  });
-  const expressionSetRecords = expressionSets.map(own);
-  const knownDirectiveSetIds = /* @__PURE__ */ new Set([
-    LEGACY_SNES_MAPPER_DIRECTIVE_SET,
-    LEGACY_SNES_MEMORY_DIRECTIVE_SET,
-    LEGACY_SNES_POLICY_DIRECTIVE_SET,
-    LEGACY_SPC_DIRECTIVE_SET
-  ]);
-  const directiveSetIds = [...profile.directiveSetIds].filter((id) => knownDirectiveSetIds.has(id));
-  const directiveKeywordsBySet = /* @__PURE__ */ new Map([
-    [
-      LEGACY_SNES_MAPPER_DIRECTIVE_SET,
-      /* @__PURE__ */ new Set(["lorom", "hirom", "exlorom", "exhirom", "sfxrom", "norom", "fullsa1rom", "sa1rom"])
-    ],
-    [
-      LEGACY_SNES_MEMORY_DIRECTIVE_SET,
-      /* @__PURE__ */ new Set(["freecode", "freespace", "freedata", "freespacebyte", "prot"])
-    ],
-    [
-      LEGACY_SNES_POLICY_DIRECTIVE_SET,
-      /* @__PURE__ */ new Set(["check", "optimize", ...ASAR_COMPAT_NO_OP_DIRECTIVES])
-    ],
-    [LEGACY_SPC_DIRECTIVE_SET, /* @__PURE__ */ new Set(["spcblock", "endspcblock", "startpos"])]
-  ]);
-  const directiveSetRecords = directiveSetIds.map((id) => {
-    const keywords = directiveKeywordsBySet.get(id) ?? /* @__PURE__ */ new Set();
-    return own({
-      id,
-      directives: [],
-      tooling: directiveCatalog.filter((descriptor) => keywords.has(descriptor.keyword))
-    });
-  });
-  const lifecycleIds = ["legacy.target-lifecycle"];
-  const lifecycleRecords = lifecycleIds.map(
-    (id) => own({
-      id,
-      create: ({ state }) => {
-        return {
-          shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => profile.directiveSetIds.has(LEGACY_SNES_POLICY_DIRECTIVE_SET) ? shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine) : void 0,
-          beforeWrite: ({ logicalAddress, width }) => {
-            const targetState = state.get(legacyTargetSessionStateKey);
-            if (targetState.activeFreespaceStartOffset === null) return;
-            const outputOffset = profile.addressSpace.toOutputOffset(logicalAddress, {
-              mapper: targetState.mapper,
-              sa1banks: targetState.sa1Banks
-            });
-            if (outputOffset < 0) return;
-            const endOffset = outputOffset + width - 1;
-            targetState.activeFreespaceEndOffset = Math.max(
-              targetState.activeFreespaceEndOffset ?? endOffset,
-              endOffset
-            );
-          },
-          beforeOutputFinalize: ({ outputBytes }) => {
-            const targetState = state.get(legacyTargetSessionStateKey);
-            const start = targetState.activeFreespaceStartOffset;
-            const contentStart = targetState.activeFreespaceContentStartOffset;
-            const end = targetState.activeFreespaceEndOffset;
-            if (start === null || contentStart === null || end === null || end < contentStart)
-              return;
-            const lengthMinusOne = Math.max(0, end - contentStart) & 65535;
-            const complement = ~lengthMinusOne & 65535;
-            outputBytes[start + 4] = lengthMinusOne & 255;
-            outputBytes[start + 5] = lengthMinusOne >> 8 & 255;
-            outputBytes[start + 6] = complement & 255;
-            outputBytes[start + 7] = complement >> 8 & 255;
-          }
-        };
-      }
-    })
-  );
-  const targetRecord = own({
-    id: targetId,
-    aliases: [profile.name],
-    displayName: profile.name,
-    defaultArchitecture: resolveArchitecture(profile.defaultArchitecture),
-    architectures: [...profile.architectures].map(resolveArchitecture),
-    addressSpace: addressSpaceId,
-    outputFormat: outputFormatId,
-    directiveSets: directiveSetIds,
-    expressionSets: expressionSets.map((set) => set.id),
-    lifecycle: lifecycleIds,
-    defaultOutputExtension: profile.outputFormat.defaultExtension
-  });
-  const contributions = {
-    manifests: [
-      {
-        id: "uttori.legacy-adapter",
-        name: "Temporary built-in target adapter",
-        version: "1.0.0",
-        apiVersion: PLUGIN_API_VERSION
-      }
-    ],
-    sessionStates: [sessionStateRecord],
-    architectures: architectureRecords,
-    addressSpaces: [addressSpaceRecord],
-    outputFormats: [outputFormatRecord],
-    directiveSets: directiveSetRecords,
-    expressionSets: expressionSetRecords,
-    lifecycles: lifecycleRecords,
-    targets: [targetRecord]
+  return {
+    checksumMode,
+    checksumEnabled: value.checksumEnabled === void 0 ? true : value.checksumEnabled === true,
+    asarSuperFxMoveShortAddress: value.asarSuperFxMoveShortAddress === true
   };
-  const environment = new AssemblerEnvironment(contributions);
-  legacyProfiles.set(environment, /* @__PURE__ */ new Map([[targetId, profile]]));
-  return { environment, target: targetId };
-}
-function getLegacyTargetProfile(environment, targetId) {
-  return legacyProfiles.get(environment)?.get(targetId);
-}
-var snesAssemblerHost = createLegacyAssemblerEnvironment({
-  targetProfile: snesTargetProfile
-});
-var mos6502StubAssemblerHost = createLegacyAssemblerEnvironment({
-  targetProfile: mos6502StubTargetProfile
-});
-
-// src/assembler.ts
-var debug7 = (..._args) => {
 };
-try {
-  const { default: d } = await import("debug");
-  debug7 = d("Assembler");
-} catch {
-}
-var Assembler = class _Assembler {
-  /** The current target address. `snespos` */
-  currentTargetAddress = 0;
-  /** The current target base address. `realsnespos` */
-  currentTargetBaseAddress = 0;
-  /** The current target start address. `startpos` */
-  currentTargetStartAddress = 0;
-  /** The current target base start address. `realstartpos` */
-  currentTargetBaseStartAddress = 0;
-  bytes = 0;
-  pushBaseStack = [];
-  /** Mutable bytes produced by this assembly session. */
-  outputBytes = [];
-  whileStatus = [];
-  namespaceStack = [];
-  currentNamespace = "";
-  namespaceNestingEnabled = false;
-  namespaceNestingPath = [];
-  // Current macro tracking
-  inMacroDefinition = false;
-  currentMacroName = "";
-  currentMacroParams = [];
-  currentMacroBody = [];
-  currentVariadicCount = void 0;
-  currentVariadicArgs = [];
-  macros = /* @__PURE__ */ new Map();
-  mathCore;
-  operandResolver;
-  addressToLineMapping = new AddressToLineMapping();
-  currentFile = "";
-  currentLine = 0;
-  /** Optional sink for structured tracing used by tests and ad-hoc debug scripts. */
-  traceListener = null;
-  /** Active command contexts so nested byte writes inherit the right source line. */
-  traceCommandStack = [];
-  defines = /* @__PURE__ */ new Map();
-  // Character mapping support
-  characterMappings = /* @__PURE__ */ new Map();
-  currentTable = null;
-  tableStack = [];
-  inFunctionDefinition = false;
-  functionDefinitionLines = [];
-  arch = "";
-  pushpcStack = [];
-  pushpcnum = 0;
-  labelTable = /* @__PURE__ */ new Map();
-  /** Track multiple `+` labels */
-  forwardLabels = {};
-  /** Track multiple `-` labels */
-  backwardLabels = {};
-  padUnit = 1;
-  padbyte = [];
-  structs = /* @__PURE__ */ new Map();
-  currentStruct = null;
-  savedPCStack = [];
-  /** Initialize fill pattern */
-  fillbyte = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-  baseImage;
-  // Add a static property to hold our CRC table.
-  static crcTable = null;
-  includedFiles = /* @__PURE__ */ new Map();
-  includeStack = [];
-  includePaths = ["./"];
-  macroLabelInstance = 0;
-  // Tracks the current macro instance
-  inMacroExpansion = false;
-  // Flag to track if we're inside a macro expansion
-  currentParentLabel = "";
-  // Track the most recent parent label
-  currentParentIsGlobal = false;
-  // Track if the parent label is global
-  currentGlobalParentLabel = "";
-  // Track the active top-level parent for single-dot labels
-  labelParents = /* @__PURE__ */ new Map();
-  // Track explicit label ancestry without relying on underscores
-  requireStaticLabelLookup = false;
-  passProgramCache = /* @__PURE__ */ new Map();
-  directiveRegistry;
-  architectureRegistry;
-  environment;
-  targetId;
-  targetOptions;
-  pluginState;
-  hasLegacyTargetState;
-  pluginAddressSpace;
-  pluginOutputFormat;
-  activeLifecycles;
-  targetProfile;
-  cursorAddress;
-  fileProvider;
-  frontEndService;
-  programModelBuilder;
-  commandLoweringService;
-  incrementalProgramParseState;
-  services;
-  stageExecutionStates = /* @__PURE__ */ new Map();
-  diagnostics = [];
-  symbolDefinitions = [];
-  symbolReferences = [];
-  includeEdges = [];
-  collectSourceMetadata;
-  activeStageExecutionState = null;
-  analysisErrorRecoveryEnabled = false;
-  runtimePassthroughRewriteEnabled = false;
-  sessionDisposed = false;
-  get defineEngine() {
-    return this.services.defineEngine;
-  }
-  get directiveRuntime() {
-    return this.services.directiveRuntime;
-  }
-  get spcRuntime() {
-    return this.services.spcRuntime;
-  }
-  get addressWidth() {
-    return this.pluginAddressSpace.addressWidth;
-  }
-  get availableArchitectures() {
-    return new Set(this.environment.getTarget(this.targetId)?.architectures ?? []);
-  }
-  get targetDisplayName() {
-    return this.environment.getTarget(this.targetId)?.displayName ?? this.targetId;
-  }
-  get legacyTargetState() {
-    return this.hasLegacyTargetState ? this.pluginState.get(legacyTargetSessionStateKey) : void 0;
-  }
-  get targetState() {
-    return this.requireLegacyTargetState();
-  }
-  get outputFillByte() {
-    return this.legacyTargetState?.outputFillByte ?? 0;
-  }
-  set outputFillByte(value) {
-    if (this.legacyTargetState) this.legacyTargetState.outputFillByte = value;
-  }
-  get activeAllocationStartOffset() {
-    return this.legacyTargetState?.activeFreespaceStartOffset ?? null;
-  }
-  set activeAllocationStartOffset(value) {
-    this.requireLegacyTargetState().activeFreespaceStartOffset = value;
-  }
-  get activeAllocationContentStartOffset() {
-    return this.legacyTargetState?.activeFreespaceContentStartOffset ?? null;
-  }
-  set activeAllocationContentStartOffset(value) {
-    this.requireLegacyTargetState().activeFreespaceContentStartOffset = value;
-  }
-  get inTargetBlock() {
-    return this.legacyTargetState?.inSpcBlock ?? false;
-  }
-  set inTargetBlock(value) {
-    this.requireLegacyTargetState().inSpcBlock = value;
-  }
-  get targetBlockData() {
-    return this.legacyTargetState?.spcBlock ?? null;
-  }
-  set targetBlockData(value) {
-    this.requireLegacyTargetState().spcBlock = value;
-  }
-  get targetBlockInlineCompatibility() {
-    return this.legacyTargetState?.spcInlineCompatibility ?? false;
-  }
-  set targetBlockInlineCompatibility(value) {
-    this.requireLegacyTargetState().spcInlineCompatibility = value;
-  }
-  requireLegacyTargetState() {
-    if (!this.legacyTargetState) {
-      throw new PluginError(`Target '${this.targetId}' does not provide legacy target state.`, {
-        code: "PLUGIN_CONFIGURATION_INVALID",
-        targetId: this.targetId
-      });
-    }
-    return this.legacyTargetState;
-  }
-  get frontEndCommandService() {
-    return this.services.frontEndCommandService;
-  }
-  get includeSource() {
-    return this.services.includeSource;
-  }
-  get macroEngine() {
-    return this.services.macroEngine;
-  }
-  get symbolScope() {
-    return this.services.symbolScope;
-  }
-  get outputWriter() {
-    return this.services.outputWriter;
-  }
-  get structEngine() {
-    return this.services.structEngine;
-  }
-  // Core assembler wrapper helpers
-  get currentAddress() {
-    return this.currentTargetAddress;
-  }
-  /**
-   * Records current address.
-   */
-  recordCurrentAddress() {
-    this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
-  }
-  /**
-   * Sets write position.
-   * @param {number} address The address.
-   */
-  setWritePosition(address) {
-    this.currentTargetAddress = address;
-    this.currentTargetBaseAddress = address;
-    this.currentTargetStartAddress = address;
-    this.currentTargetBaseStartAddress = address;
-    if (this.activeStageExecutionState) {
-      this.activeStageExecutionState.cursor.currentTargetAddress = address;
-      this.activeStageExecutionState.cursor.currentTargetBaseAddress = address;
-      this.activeStageExecutionState.cursor.currentTargetStartAddress = address;
-      this.activeStageExecutionState.cursor.currentTargetBaseStartAddress = address;
-    }
-  }
-  /**
-   * Enters struct definition.
-   * @param {number} base The base.
-   */
-  enterStructDefinition(base) {
-    this.savedPCStack.push(this.currentTargetAddress);
-    this.cursorAddress.setWritePosition(base);
-  }
-  /**
-   * Restores struct definition.
-   */
-  restoreStructDefinition() {
-    if (this.savedPCStack.length === 0) {
-      return;
-    }
-    const previousPosition = this.savedPCStack.pop();
-    if (previousPosition !== void 0) {
-      this.cursorAddress.setWritePosition(previousPosition);
-    }
-  }
-  /**
-   * Synchronizes write starts.
-   */
-  syncWriteStarts() {
-    this.currentTargetStartAddress = this.currentTargetAddress;
-    this.currentTargetBaseStartAddress = this.currentTargetBaseAddress;
-  }
-  /**
-   * Increments bytes written.
-   * @param {number} num The num.
-   */
-  incrementBytesWritten(num) {
-    this.bytes += num;
-  }
-  get mode() {
-    return this.getActiveStageCapabilities().instructionMode;
-  }
-  get canEmitBytes() {
-    return this.getActiveStageCapabilities().canEmitBytes;
-  }
-  get canFinalize() {
-    return this.getActiveStageCapabilities().canFinalize;
-  }
-  get enforceResolvedLabels() {
-    return this.getActiveStageCapabilities().enforceResolvedLabels;
-  }
-  get isDefinitionCollectionStage() {
-    return this.getActiveStageCapabilities().isDefinitionCollectionStage;
-  }
-  /**
-   * Traces write.
-   * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
-   */
-  traceWrite(event) {
-    const source = this.traceCommandStack[this.traceCommandStack.length - 1];
-    this.traceListener?.({
-      type: "write",
-      ...event,
-      file: source?.file ?? this.currentFile,
-      line: source?.line ?? this.currentLine,
-      raw: source?.raw ?? "",
-      normalized: source?.normalized ?? ""
-    });
-  }
-  /**
-   * Installs or clears the structured trace listener.
-   * @param {AssemblerTraceListener | null} listener The listener to receive trace events.
-   */
-  setTraceListener(listener) {
-    this.traceListener = listener;
-  }
-  /**
-   * Clears accumulated diagnostics and symbol definitions.
-   */
-  clearAnalysisArtifacts() {
-    this.diagnostics.length = 0;
-    this.symbolDefinitions.length = 0;
-    this.symbolReferences.length = 0;
-    this.includeEdges.length = 0;
-  }
-  /**
-   * Records a directed include-graph edge if it has not already been recorded.
-   * Includes execute once per pass, so edges are de-duplicated by file pair.
-   * @param {string} fromFile The file issuing the include directive.
-   * @param {string} toFile The resolved path of the included file.
-   */
-  recordIncludeEdge(fromFile, toFile) {
-    if (!this.collectSourceMetadata) {
-      return;
-    }
-    if (!fromFile || !toFile) {
-      return;
-    }
-    const duplicate = this.includeEdges.some(
-      (edge) => edge.fromFile === fromFile && edge.toFile === toFile
-    );
-    if (duplicate) {
-      return;
-    }
-    this.includeEdges.push({ fromFile, toFile });
-  }
-  /**
-   * Returns the current source location.
-   * @param {SourceSpan} [span] Optional source span override.
-   * @returns {AssemblySourceLocation} The current source location.
-   */
-  getCurrentSourceLocation(span) {
-    return createAssemblySourceLocation(this.currentFile, this.currentLine, span);
-  }
-  /**
-   * Converts and records an unknown error.
-   * @param {unknown} error The error to normalize.
-   * @param {SourceSpan} [span] Optional source span override.
-   * @param {string} [stage] Optional stage name.
-   * @returns {AssemblyDiagnostic} The recorded diagnostic.
-   */
-  reportErrorDiagnostic(error, span, stage) {
-    const diagnostic = diagnosticFromError(error, this.getCurrentSourceLocation(span), stage);
-    this.diagnostics.push(diagnostic);
-    return diagnostic;
-  }
-  /**
-   * Records a symbol definition if it has not already been recorded.
-   * @param {AssemblySymbolKind} kind The symbol kind.
-   * @param {string} name The symbol name.
-   * @param {{ file?: string; line?: number; span?: SourceSpan; value?: number | string; containerName?: string }} [options] Optional symbol metadata.
-   * @param {string} [options.file] Optional source file override.
-   * @param {number} [options.line] Optional source line override.
-   * @param {SourceSpan} [options.span] Optional precise source span.
-   * @param {number | string} [options.value] Optional resolved symbol value.
-   * @param {string} [options.containerName] Optional owning container name.
-   */
-  recordSymbolDefinition(kind, name, options = {}) {
-    if (!this.collectSourceMetadata) {
-      return;
-    }
-    const file = options.file ?? this.currentFile;
-    const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolDefinitions.some(
-      (entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName
-    );
-    if (duplicate) {
-      return;
-    }
-    this.symbolDefinitions.push({
-      name,
-      kind,
-      location: createAssemblySourceLocation(file, line, options.span),
-      value: options.value,
-      containerName: options.containerName
-    });
-  }
-  /**
-   * Records a symbol reference if it has not already been recorded.
-   * @param {AssemblySymbolReferenceKind} kind The reference kind.
-   * @param {string} name The reference name.
-   * @param {{ file?: string; line?: number; span?: SourceSpan; containerName?: string }} [options] Optional reference metadata.
-   * @param {string} [options.file] Optional source file override.
-   * @param {number} [options.line] Optional source line override.
-   * @param {SourceSpan} [options.span] Optional precise source span.
-   * @param {string} [options.containerName] Optional owning container name.
-   */
-  recordSymbolReference(kind, name, options = {}) {
-    if (!this.collectSourceMetadata) {
-      return;
-    }
-    const file = options.file ?? this.currentFile;
-    const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolReferences.some(
-      (entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName
-    );
-    if (duplicate) {
-      return;
-    }
-    this.symbolReferences.push({
-      name,
-      kind,
-      location: createAssemblySourceLocation(file, line, options.span),
-      containerName: options.containerName
-    });
-  }
-  /**
-   * Collects expression references.
-   * @param {ExpressionNode | undefined} expression The expression.
-   * @param {SourceSpan} [fallbackSpan] The fallback span.
-   */
-  collectExpressionReferences(expression, fallbackSpan) {
-    if (!expression) {
-      return;
-    }
-    switch (expression.type) {
-      case "defineReference":
-        if (expression.name || expression.content) {
-          this.recordSymbolReference(
-            "define",
-            expression.braced ? expression.content ?? "" : expression.name ?? "",
-            {
-              span: expression.span ?? fallbackSpan
-            }
-          );
-        }
-        return;
-      case "identifier":
-        this.recordSymbolReference("label", expression.name, {
-          span: expression.span ?? fallbackSpan
-        });
-        return;
-      case "member":
-      case "index":
-        this.recordSymbolReference("label", renderReferenceExpressionNode(expression), {
-          span: expression.span ?? fallbackSpan
-        });
-        if (expression.type === "index") {
-          this.collectExpressionReferences(expression.index, fallbackSpan);
-        }
-        return;
-      case "call":
-        this.recordSymbolReference("function", expression.callee.name, {
-          span: expression.callee.span ?? expression.span ?? fallbackSpan
-        });
-        for (const argument of expression.arguments) {
-          this.collectExpressionReferences(argument, fallbackSpan);
-        }
-        return;
-      case "unary":
-        this.collectExpressionReferences(expression.argument, fallbackSpan);
-        return;
-      case "binary":
-        this.collectExpressionReferences(expression.left, fallbackSpan);
-        this.collectExpressionReferences(expression.right, fallbackSpan);
-        return;
-      case "range":
-        this.collectExpressionReferences(expression.start, fallbackSpan);
-        this.collectExpressionReferences(expression.end, fallbackSpan);
-        return;
-      default:
-        return;
-    }
-  }
-  /**
-   * Collects command references.
-   * @param {NormalizedCommand} command The command.
-   */
-  collectCommandReferences(command) {
-    incrementInternalCounter("referenceCollections");
-    if (!this.collectSourceMetadata) {
-      return;
-    }
-    const fallbackSpan = command.source.normalizedSpan;
-    const parsed = command.parsed;
-    this.collectExpressionReferences(parsed.assignment?.expression, fallbackSpan);
-    this.collectExpressionReferences(parsed.condition?.expression, fallbackSpan);
-    this.collectExpressionReferences(parsed.forLoop?.range, fallbackSpan);
-    this.collectExpressionReferences(parsed.forLoop?.start, fallbackSpan);
-    this.collectExpressionReferences(parsed.forLoop?.end, fallbackSpan);
-    this.collectExpressionReferences(parsed.incbinRange?.range, fallbackSpan);
-    this.collectExpressionReferences(parsed.incbinRange?.start, fallbackSpan);
-    this.collectExpressionReferences(parsed.incbinRange?.end, fallbackSpan);
-    if (parsed.macroInvocation?.name) {
-      this.recordSymbolReference("macro", parsed.macroInvocation.name, {
-        span: command.source.tokenSpans[0] ?? fallbackSpan
-      });
-      for (const arg of parsed.macroInvocation.args) {
-        this.collectExpressionReferences(parseExpressionNode(arg), fallbackSpan);
-      }
-    }
-    if (parsed.includeTarget?.target) {
-      this.recordSymbolReference(
-        "include",
-        parsed.includeTarget.target.replace(/^["'`](.*)["'`]$/, "$1"),
-        {
-          span: command.source.tokenSpans[1] ?? fallbackSpan
-        }
-      );
-    }
-    if (parsed.opcodeOperands?.mnemonic) {
-      this.recordSymbolReference("instruction", parsed.opcodeOperands.mnemonic, {
-        span: command.source.tokenSpans[0] ?? fallbackSpan
-      });
-    }
-    for (const operand of parsed.dataDirective?.operands ?? []) {
-      this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
-    }
-    for (const operand of parsed.opcodeOperands?.operands ?? []) {
-      this.collectExpressionReferences(parseExpressionNode(operand), fallbackSpan);
-    }
-    for (const arg of parsed.directiveArgs?.args ?? []) {
-      this.collectExpressionReferences(parseExpressionNode(arg), fallbackSpan);
-    }
-  }
-  /**
-   * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
-   * @param {ProgramModel} program The program model to analyze.
-   * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
-   */
-  collectProgramAnalysis(program) {
-    this.clearAnalysisArtifacts();
-    this.analysisErrorRecoveryEnabled = true;
-    try {
-      this.assembleProgram(program);
-    } catch (error) {
-      this.reportErrorDiagnostic(error, void 0, this.activeStageExecutionState?.stage);
-    } finally {
-      this.analysisErrorRecoveryEnabled = false;
-    }
-    return {
-      diagnostics: [...this.diagnostics],
-      symbols: [...this.symbolDefinitions],
-      references: [...this.symbolReferences],
-      includeEdges: [...this.includeEdges]
-    };
-  }
-  /**
-   * Creates an isolated assembler session suitable for editor-style analysis.
-   * This keeps batch assembly state and tooling state from leaking into each
-   * other while still sharing the same file provider and directive registry.
-   * @returns {Assembler} A configured analysis session.
-   */
-  createToolingSession() {
-    const session = new _Assembler({
-      environment: this.environment,
-      target: this.targetId,
-      architecture: this.arch,
-      targetOptions: this.targetOptions,
-      baseImage: this.baseImage,
-      fileProvider: this.fileProvider
-    });
-    session.includePaths = [...this.includePaths];
-    if (this.legacyTargetState && session.legacyTargetState) {
-      session.legacyTargetState.mapper = this.legacyTargetState.mapper;
-      session.legacyTargetState.checksumEnabled = this.legacyTargetState.checksumEnabled;
-      session.legacyTargetState.checksumMode = this.legacyTargetState.checksumMode;
-      session.legacyTargetState.asarSuperFxMoveShortAddress = this.legacyTargetState.asarSuperFxMoveShortAddress;
-      session.legacyTargetState.bankCrossMode = this.legacyTargetState.bankCrossMode;
-      session.legacyTargetState.readFunctionsEnabled = this.legacyTargetState.readFunctionsEnabled;
-      session.legacyTargetState.optimizeDirectPage = this.legacyTargetState.optimizeDirectPage;
-      session.legacyTargetState.outputFillByte = this.legacyTargetState.outputFillByte;
-      session.legacyTargetState.sa1Banks = [...this.legacyTargetState.sa1Banks];
-    }
-    session.padbyte = [...this.padbyte];
-    session.fillbyte = [...this.fillbyte];
-    session.padUnit = this.padUnit;
-    session.arch = this.arch;
-    return session;
-  }
-  /**
-   * Creates directive handlers bound to a fresh session's family capabilities.
-   * @param {Assembler} session The session that should receive directive calls.
-   * @returns {DirectiveRegistry} A registry bound to the provided session.
-   */
-  cloneDirectiveRegistryForSession(session) {
-    const operandResolver = session.operandResolver;
-    const runtime = session.directiveRuntime;
-    const registry = createDirectiveRegistry(
-      {
-        data: { runtime },
-        fillPad: { session, operandResolver },
-        flowControl: { session },
-        includeSource: {
-          session,
-          includeSource: session.includeSource,
-          operandResolver,
-          runtime,
-          defineEngine: session.defineEngine
-        },
-        layout: {
-          addressStack: { session },
-          architecture: { session },
-          base: { session, operandResolver },
-          mapper: { session },
-          org: { session, runtime, spcRuntime: session.spcRuntime },
-          policy: { session },
-          runtime: { runtime },
-          startpos: { session, operandResolver }
-        },
-        memory: { session, operandResolver },
-        namespace: { session },
-        spc: { runtime: session.spcRuntime },
-        struct: { session },
-        table: { session },
-        diagnostic: { session }
-      },
-      new Set(session.environment.getTarget(session.targetId)?.directiveSets ?? [])
-    );
-    const target = session.environment.getTarget(session.targetId);
-    for (const setId of target?.directiveSets ?? []) {
-      const set = session.environment.getDirectiveSet(setId);
-      if (!set) continue;
-      const pluginId = session.environment.getContributionOwner(setId);
-      for (const directive of set.directives) {
-        let handler;
-        try {
-          handler = directive.createHandler({
-            targetId: session.targetId,
-            state: session.pluginState
-          });
-        } catch (cause) {
-          throw new PluginError(`Directive factory '${directive.id}' failed.`, {
-            code: "PLUGIN_ACTIVATION_FAILED",
-            pluginId,
-            contributionId: directive.id,
-            targetId: session.targetId,
-            cause
-          });
-        }
-        registry.register(
-          [...directive.keywords],
-          void 0,
-          (_context, words, raw) => {
-            try {
-              handler({ state: session.pluginState }, words, raw);
-            } catch (cause) {
-              throw new PluginError(`Directive '${directive.id}' failed.`, {
-                code: "PLUGIN_HOOK_FAILED",
-                pluginId,
-                contributionId: directive.id,
-                targetId: session.targetId,
-                cause
-              });
-            }
-          },
-          directive.phase
-        );
-      }
-    }
-    for (const [keyword, handler] of registry.handlers) {
-      registry.handlers.set(keyword, (words, raw, command) => {
-        if (session.runBeforeDirective(keyword, words, raw) === "handled") return;
-        handler(words, raw, command);
-      });
-    }
-    return registry;
-  }
-  /**
-   * Analyzes program.
-   * @param {ProgramModel} program The program.
-   * @returns {AssemblyAnalysisResult} The result.
-   */
-  analyzeProgram(program) {
-    const session = this.createToolingSession();
-    try {
-      return session.collectProgramAnalysis(program);
-    } finally {
-      session.dispose();
-    }
-  }
-  /**
-   * Builds and analyzes raw source without throwing on the first error.
-   * @param {string} source The source to analyze.
-   * @param {string} [sourceFile] Optional source file override.
-   * @param {number} [startLine] Optional starting line number.
-   * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
-   */
-  analyzeSource(source, sourceFile = this.currentFile, startLine = 0) {
-    const session = this.createToolingSession();
-    try {
-      const program = session.buildProgramModel(source, sourceFile, startLine);
-      return {
-        program,
-        ...session.collectProgramAnalysis(program)
-      };
-    } finally {
-      session.dispose();
-    }
-  }
-  /**
-   * Analyzes workspace.
-   * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
-   * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
-   */
-  analyzeWorkspace(documents2) {
-    const results = [];
-    for (const document of documents2) {
-      const session = this.createToolingSession();
-      try {
-        const program = session.buildProgramModel(
-          document.source,
-          document.sourceFile,
-          document.startLine ?? 0
-        );
-        const result = session.collectProgramAnalysis(program);
-        results.push({
-          sourceFile: document.sourceFile,
-          program,
-          ...result
-        });
-      } finally {
-        session.dispose();
-      }
-    }
-    return results;
-  }
-  /**
-   * Loads test rom data.
-   */
-  loadTestRomData() {
-    const testRomSize = 512 * 1024;
-    if (!this.baseImage || this.baseImage.length === 0) {
-      return;
-    }
-    for (let i = 0; i < Math.min(testRomSize, this.baseImage.length); i++) {
-      this.outputBytes[i] = this.baseImage[i];
-    }
-  }
-  /**
-   * Creates cursor address facade.
-   * @returns {CursorAddressFacade} The result.
-   */
-  createCursorAddressFacade() {
-    return {
-      recordCurrentAddress: () => this.recordCurrentAddress(),
-      setWritePosition: (address) => this.setWritePosition(address),
-      syncWriteStarts: () => this.syncWriteStarts(),
-      incrementBytesWritten: (num) => this.incrementBytesWritten(num)
-    };
-  }
-  /**
-   * Creates services.
-   * @returns {AssemblerServiceBag} The result.
-   */
-  createServices() {
-    const defineEngine = new DefineEngine(this);
-    const directiveRuntime = new DirectiveRuntimeService(this);
-    const frontEndCommandService = new FrontEndCommandService(this);
-    const includeSource = new IncludeSourceService(this);
-    const symbolScope = new SymbolScopeService(this);
-    const outputWriter = new OutputWriterService(this);
-    const spcRuntime = new LegacySpcRuntimeService(this);
-    const macroEngine = new MacroEngine(this);
-    const structEngine = new StructEngine(this);
-    return {
-      defineEngine,
-      directiveRuntime,
-      fileProvider: this.fileProvider,
-      frontEndCommandService,
-      includeSource,
-      macroEngine,
-      outputWriter,
-      spcRuntime,
-      structEngine,
-      symbolScope
-    };
-  }
-  constructor(options) {
-    if (!options?.environment) {
-      throw new PluginError("Assembler construction requires a frozen plugin environment.", {
-        code: "PLUGIN_CONFIGURATION_INVALID"
-      });
-    }
-    this.environment = options.environment;
-    const targetId = this.environment.resolveTargetId(options.target);
-    const target = targetId ? this.environment.getTarget(targetId) : void 0;
-    if (!targetId || !target) {
-      throw new PluginError(`Assembler target '${options.target}' is not available.`, {
-        code: "PLUGIN_TARGET_INVALID",
-        targetId: options.target
-      });
-    }
-    this.targetId = targetId;
-    const configuredTargetOptions = options.targetOptions;
-    if (!target.createOptions && configuredTargetOptions !== void 0) {
-      const emptyObject = typeof configuredTargetOptions === "object" && configuredTargetOptions !== null && !Array.isArray(configuredTargetOptions) && Object.keys(configuredTargetOptions).length === 0;
-      if (!emptyObject) {
-        throw new PluginError(`Target '${targetId}' does not accept options.`, {
-          code: "PLUGIN_CONFIGURATION_INVALID",
-          pluginId: this.environment.getContributionOwner(targetId),
-          contributionId: targetId,
-          targetId
-        });
-      }
-    }
-    const normalizedTargetOptions = target.createOptions?.(configuredTargetOptions) ?? {};
-    this.targetOptions = Object.freeze({ ...normalizedTargetOptions });
-    this.pluginState = new PluginSessionStateStore(this.environment.sessionStates, {
-      targetId,
-      targetOptions: this.targetOptions
-    });
-    this.hasLegacyTargetState = this.environment.sessionStates.some(
-      (record) => record.contributionId === LEGACY_TARGET_SESSION_STATE_ID
-    );
-    const targetFactoryContext = {
-      targetId,
-      options: this.targetOptions,
-      state: this.pluginState
-    };
-    const addressContribution = this.environment.getAddressSpace(target.addressSpace);
-    const outputContribution = this.environment.getOutputFormat(target.outputFormat);
-    if (!addressContribution || !outputContribution) {
-      throw new PluginError(`Target '${targetId}' has unresolved output factories.`, {
-        code: "PLUGIN_TARGET_INVALID",
-        targetId
-      });
-    }
-    try {
-      this.pluginAddressSpace = addressContribution.create(targetFactoryContext);
-    } catch (cause) {
-      throw new PluginError(`Address-space factory '${target.addressSpace}' failed.`, {
-        code: "PLUGIN_ACTIVATION_FAILED",
-        pluginId: this.environment.getContributionOwner(target.addressSpace),
-        contributionId: target.addressSpace,
-        targetId,
-        cause
-      });
-    }
-    try {
-      this.pluginOutputFormat = outputContribution.create(targetFactoryContext);
-    } catch (cause) {
-      throw new PluginError(`Output-format factory '${target.outputFormat}' failed.`, {
-        code: "PLUGIN_ACTIVATION_FAILED",
-        pluginId: this.environment.getContributionOwner(target.outputFormat),
-        contributionId: target.outputFormat,
-        targetId,
-        cause
-      });
-    }
-    const legacyProfile = getLegacyTargetProfile(this.environment, targetId);
-    this.targetProfile = legacyProfile ?? {
-      name: targetId,
-      defaultArchitecture: target.defaultArchitecture,
-      architectures: new Set(target.architectures),
-      defaultMapper: "flat",
-      checksumFixEnabled: false,
-      addressSpace: {
-        name: target.addressSpace,
-        addressWidth: this.pluginAddressSpace.addressWidth,
-        defaultOrigin: this.pluginAddressSpace.defaultOrigin,
-        unmappedWriteBehavior: "throw",
-        normalizeForWrite: (address) => this.pluginAddressSpace.normalizeForWrite(address),
-        advance: (address, amount) => this.pluginAddressSpace.advance(address, amount),
-        toOutputOffset: (address) => this.pluginAddressSpace.toOutputOffset(address),
-        fromOutputOffset: (offset) => this.pluginAddressSpace.fromOutputOffset(offset)
-      },
-      outputFormat: {
-        name: target.outputFormat,
-        defaultExtension: target.defaultOutputExtension,
-        finalize: ({ bytes }) => this.pluginOutputFormat.finalize({
-          state: this.pluginState,
-          outputBytes: bytes
-        }),
-        getBinaryOutput: (bytes) => this.pluginOutputFormat.getOutput({
-          state: this.pluginState,
-          outputBytes: bytes
-        })
-      },
-      directiveSetIds: new Set(target.directiveSets),
-      expressionSetIds: new Set(target.expressionSets)
-    };
-    const requestedArchitecture = options.architecture ?? target.defaultArchitecture;
-    const architectureId = this.environment.resolveArchitectureId(targetId, requestedArchitecture);
-    if (!architectureId) {
-      throw new PluginError(
-        `Architecture '${requestedArchitecture}' is unavailable for target '${targetId}'.`,
-        {
-          code: "PLUGIN_TARGET_INVALID",
-          targetId,
-          contributionId: requestedArchitecture
-        }
-      );
-    }
-    this.arch = architectureId;
-    this.baseImage = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
-    this.fileProvider = options.fileProvider ?? new NodeAssemblyFileProvider();
-    this.collectSourceMetadata = options.collectSourceMetadata ?? true;
-    this.cursorAddress = this.createCursorAddressFacade();
-    this.mathCore = new MathCore();
-    this.mathCore.host = this.expressionHost;
-    this.installExpressionFunctions(target.expressionSets);
-    this.services = this.createServices();
-    const frontEndHost = {
-      passProgramCache: this.passProgramCache,
-      resolveVariadicPlaceholders: (command) => this.macroEngine.resolveVariadicPlaceholders(command),
-      shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
-    };
-    Object.defineProperties(frontEndHost, {
-      currentFile: { get: () => this.currentFile },
-      currentLine: { get: () => this.currentLine },
-      inMacroExpansion: { get: () => this.inMacroExpansion },
-      isDefinitionCollectionStage: { get: () => this.isDefinitionCollectionStage }
-    });
-    this.frontEndService = new AssemblyFrontEndService(frontEndHost);
-    this.programModelBuilder = this.frontEndService.programModelBuilder;
-    this.incrementalProgramParseState = this.programModelBuilder.createIncrementalParseState();
-    this.operandResolver = new OperandResolver({
-      resolveDefines: (input) => this.resolvedefines(input),
-      isStructReference: (input) => this.structEngine.hasStructReference(input),
-      resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
-      tryResolveLabel: (input, requireStatic) => this.symbolScope.tryGetLabelValue(input, requireStatic),
-      resolveLabel: (input, requireStatic) => this.symbolScope.getLabelValue(input, requireStatic),
-      evaluateMath: (input) => this.mathCore.math(input),
-      shouldDeferExpressionEvaluation: () => !this.getActiveStageCapabilities().enforceResolvedLabels,
-      getCurrentAddress: () => this.currentTargetAddress,
-      requireStaticLabelLookup: () => this.requireStaticLabelLookup
-    });
-    const encoderContext = {
-      operands: this.operandResolver,
-      emission: {
-        write1: (value) => this.write1(value),
-        write2: (value) => this.write2(value),
-        write3: (value) => this.write3(value),
-        writeByte: (value) => this.write1(value),
-        writeBytes: (values) => this.outputWriter.writeBytes(values),
-        writeValue: (value, width, endianness) => this.outputWriter.writeValue(value, width, endianness)
-      },
-      sizing: {
-        getCurrentAddress: () => this.currentTargetAddress,
-        optimizeDirectPage: () => this.legacyTargetState?.optimizeDirectPage ?? false
-      },
-      branches: {
-        enforceResolvedLabels: () => this.enforceResolvedLabels,
-        findNextLabel: (label, referenceAddress) => this.symbolScope.findNextLabel(label, referenceAddress),
-        findPreviousLabel: (label, referenceAddress) => this.symbolScope.findPreviousLabel(label, referenceAddress)
-      },
-      diagnostics: {
-        error: (message) => new Error(message)
-      },
-      compatibility: {
-        asarSuperFxMoveShortAddress: () => this.legacyTargetState?.asarSuperFxMoveShortAddress ?? false
-      }
-    };
-    this.architectureRegistry = new ArchitectureRegistry();
-    for (const contributionId of target.architectures) {
-      const contribution = this.environment.getArchitecture(contributionId);
-      if (!contribution) {
-        throw new PluginError(`Architecture contribution '${contributionId}' is unavailable.`, {
-          code: "PLUGIN_TARGET_INVALID",
-          targetId,
-          contributionId
-        });
-      }
-      let encoder;
-      try {
-        encoder = contribution.createEncoder(encoderContext);
-      } catch (cause) {
-        throw new PluginError(`Architecture factory '${contributionId}' failed.`, {
-          code: "PLUGIN_ACTIVATION_FAILED",
-          pluginId: this.environment.getContributionOwner(contributionId),
-          contributionId,
-          targetId,
-          cause
-        });
-      }
-      this.architectureRegistry.register(
-        {
-          name: contribution.id,
-          encoder,
-          instructions: contribution.instructions.length > 0 ? contribution.instructions : void 0,
-          classifyOperand: (resolver, operand) => contribution.classifyOperand({ operands: resolver }, operand),
-          splitOperands: contribution.splitOperands,
-          unknownInstructionBehavior: contribution.unknownInstructionBehavior
-        },
-        [...contribution.aliases ?? []]
-      );
-    }
-    this.directiveRegistry = this.cloneDirectiveRegistryForSession(this);
-    this.commandLoweringService = new CommandLoweringService(this);
-    this.services.frontEnd = this.frontEndService;
-    this.services.lowering = this.commandLoweringService;
-    this.activeLifecycles = this.environment.getTargetLifecycles(targetId).map((record) => {
-      try {
-        return { record, instance: record.value.create(targetFactoryContext) };
-      } catch (cause) {
-        throw new PluginError(`Lifecycle factory '${record.contributionId}' failed.`, {
-          code: "PLUGIN_ACTIVATION_FAILED",
-          pluginId: record.pluginId,
-          contributionId: record.contributionId,
-          targetId,
-          cause
-        });
-      }
-    });
-    this.runLifecycleHook(
-      "onSessionCreated",
-      (lifecycle) => lifecycle.onSessionCreated?.({ state: this.pluginState })
-    );
-    this.selectArchitecture(this.arch, this.arch);
-    this.activateStage("collectDefinitions");
-  }
-  runLifecycleHook(hookName, invoke) {
-    for (const { record, instance } of this.activeLifecycles) {
-      try {
-        invoke(instance);
-      } catch (cause) {
-        throw new PluginError(`Lifecycle hook '${hookName}' failed.`, {
-          code: "PLUGIN_HOOK_FAILED",
-          pluginId: record.pluginId,
-          contributionId: record.contributionId,
-          targetId: this.targetId,
-          cause
-        });
-      }
-    }
-  }
-  runBeforeDirective(keyword, words, raw) {
-    let result = "continue";
-    this.runLifecycleHook("beforeDirective", (lifecycle) => {
-      if (result === "continue" && lifecycle.beforeDirective?.({
-        state: this.pluginState,
-        keyword,
-        words,
-        raw
-      }) === "handled") {
-        result = "handled";
-      }
-    });
-    return result;
-  }
-  /**
-   * Resolves ambiguous `endif` handling through active dialect lifecycles.
-   * @param {"for" | "while"} [loopType] The innermost loop type.
-   * @param {number} [loopStartLine] The innermost loop start line.
-   * @param {number} [ifStartLine] The innermost conditional start line.
-   * @returns {boolean} Whether `endif` should close the innermost while loop.
-   */
-  shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine) {
-    let result = false;
-    this.runLifecycleHook("shouldEndifCloseInnermostWhile", (lifecycle) => {
-      const resolution = lifecycle.shouldEndifCloseInnermostWhile?.({
-        state: this.pluginState,
-        loopType,
-        loopStartLine,
-        ifStartLine
-      });
-      if (resolution !== void 0) {
-        result = resolution;
-      }
-    });
-    return result;
-  }
-  selectArchitecture(architecture, sourceAlias = architecture) {
-    const resolved = this.environment.resolveArchitectureId(this.targetId, architecture);
-    if (!resolved) {
-      throw new PluginError(
-        `Architecture ${architecture} is unavailable for target ${this.targetProfile.name}.`,
-        {
-          code: "PLUGIN_TARGET_INVALID",
-          targetId: this.targetId,
-          contributionId: architecture
-        }
-      );
-    }
-    const previousArchitecture = this.arch || void 0;
-    this.arch = resolved;
-    this.runLifecycleHook(
-      "onArchitectureSelected",
-      (lifecycle) => lifecycle.onArchitectureSelected?.({
-        state: this.pluginState,
-        previousArchitecture,
-        architecture: resolved,
-        sourceAlias
-      })
-    );
-  }
-  beforeWrite(logicalAddress, width) {
-    this.pluginAddressSpace.validateWrite?.(logicalAddress, width);
-    this.runLifecycleHook(
-      "beforeWrite",
-      (lifecycle) => lifecycle.beforeWrite?.({ state: this.pluginState, logicalAddress, width })
-    );
-  }
-  dispose() {
-    if (this.sessionDisposed) return;
-    this.sessionDisposed = true;
-    const errors = [];
-    for (const { record, instance } of [...this.activeLifecycles].reverse()) {
-      try {
-        instance.onSessionDispose?.({ state: this.pluginState });
-      } catch (cause) {
-        errors.push(
-          new PluginError("Lifecycle hook 'onSessionDispose' failed.", {
-            code: "PLUGIN_HOOK_FAILED",
-            pluginId: record.pluginId,
-            contributionId: record.contributionId,
-            targetId: this.targetId,
-            cause
-          })
-        );
-      }
-    }
-    try {
-      this.pluginState.dispose();
-    } catch (error) {
-      errors.push(error);
-    }
-    if (errors.length > 0) {
-      throw new AggregateError(
-        errors,
-        "One or more assembler session resources failed to dispose."
-      );
-    }
-  }
-  /**
-   * Sets ROM header checksum calculation mode.
-   * @param {"asar" | "simple"} mode The checksum mode to use.
-   */
-  setChecksumMode(mode) {
-    this.requireLegacyTargetState().checksumMode = mode;
-  }
-  /**
-   * Selects Super FX auto-MOVE short-address encoding.
-   * @param {boolean} enabled True to match Asar (`addr & 0xff`); false for hardware (`addr >> 1`).
-   */
-  setAsarSuperFxMoveShortAddress(enabled) {
-    this.requireLegacyTargetState().asarSuperFxMoveShortAddress = enabled;
-  }
-  /**
-   * Reads little endian.
-   * @param {Uint8Array} bytes The bytes.
-   * @param {number} pos The pos.
-   * @param {number} width The width.
-   * @returns {number | undefined} The result.
-   */
-  readLittleEndian(bytes, pos, width) {
-    if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes.length) {
-      return void 0;
-    }
-    let out = 0;
-    for (let i = 0; i < width; i++) {
-      out |= (bytes[pos + i] ?? 0) << 8 * i;
-    }
-    return out >>> 0;
-  }
-  /**
-   * Checks whether it can read byte range.
-   * @param {number} sourceLength The source length.
-   * @param {number} position The position.
-   * @param {number} size The size.
-   * @returns {number} The result.
-   */
-  canReadByteRange(sourceLength, position, size) {
-    const pos = Math.trunc(position);
-    const num = Math.trunc(size);
-    return Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength ? 1 : 0;
-  }
-  /**
-   * Reads byte range.
-   * @param {Uint8Array} source The source.
-   * @param {number} position The position.
-   * @param {number} size The size.
-   * @param {number | undefined} defaultValue The default value.
-   * @param {string} errorMessage The error message.
-   * @returns {number} The result.
-   */
-  readByteRange(source, position, size, defaultValue, errorMessage) {
-    const pos = Math.trunc(position);
-    const num = Math.trunc(size);
-    const value = this.readLittleEndian(source, pos, num);
-    if (value === void 0) {
-      if (defaultValue !== void 0) {
-        return defaultValue;
-      }
-      throw new Error(errorMessage);
-    }
-    return value;
-  }
-  /**
-   * Resolves readable path.
-   * @param {string} filename The filename.
-   * @returns {string | undefined} The result.
-   */
-  resolveReadablePath(filename) {
-    return this.fileProvider.resolvePath(filename, {
-      currentFile: this.currentFile,
-      includePaths: this.includePaths,
-      macroSourceFile: this.currentMacroSourceFile
-    });
-  }
-  /**
-   * Resolves expression host label.
-   * @param {string} identifier The identifier.
-   * @returns {number | string} The result.
-   */
-  resolveExpressionHostLabel(identifier) {
-    const parsed = parseExpressionNode(identifier.trim());
-    if (isReferenceExpressionNode(parsed)) {
-      return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
-    }
-    return this.symbolScope.getLabelValue(identifier, this.requireStaticLabelLookup);
-  }
-  /**
-   * Gets expression object size.
-   * @param {string} identifier The identifier.
-   * @param {boolean} [baseOnly] Whether to return only the base object size.
-   * @returns {number} The result.
-   */
-  getExpressionObjectSize(identifier, baseOnly = false) {
-    if (baseOnly && (identifier === "..." || identifier === "\u2026")) {
-      if (this.inMacroExpansion && this.currentVariadicCount !== void 0) {
-        return this.currentVariadicCount;
-      }
-      if (this.inMacroDefinition) {
-        return 0;
-      }
-      return 0;
-    }
-    return this.symbolScope.getObjectSize(identifier, baseOnly);
-  }
-  /**
-   * Looks up define value.
-   * @param {string} varName The var name.
-   * @returns {string | undefined} The result.
-   */
-  lookupDefineValue(varName) {
-    const defineValue = this.defines.get(varName);
-    if (defineValue !== void 0) {
-      return defineValue;
-    }
-    for (let i = this.whileStatus.length - 1; i >= 0; i--) {
-      const loop = this.whileStatus[i];
-      if (loop.is_for && loop.for_variable === varName && loop.for_cur !== void 0) {
-        return loop.for_cur.toString();
-      }
-    }
-    return void 0;
-  }
-  get currentMacroSourceFile() {
-    if (!this.inMacroExpansion || !this.currentMacroName) {
-      return void 0;
-    }
-    return this.macros.get(this.currentMacroName)?.sourceFile;
-  }
-  /**
-   * Checks whether it can read target rom.
-   * @param {number} position The position.
-   * @param {number} size The size.
-   * @returns {number} The result.
-   */
-  canReadTargetRom(position, size) {
-    const sourceLength = this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
-    return this.canReadByteRange(sourceLength, position, size);
-  }
-  /**
-   * Reads target rom.
-   * @param {number} position The position.
-   * @param {number} size The size.
-   * @param {number} [defaultValue] The default value.
-   * @returns {number} The result.
-   */
-  readTargetRom(position, size, defaultValue) {
-    const pos = Math.trunc(position);
-    if (!(this.legacyTargetState?.readFunctionsEnabled ?? false) && defaultValue === void 0) {
-      throw new Error(
-        `Esnes_address_out_of_bounds: SNES address ${pos.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`
-      );
-    }
-    const pcPos = this.outputWriter.toOutputOffset(pos);
-    const source = this.baseImage && this.baseImage.length > 0 ? this.baseImage : this.outputBytes;
-    if (pcPos < 0) {
-      if (defaultValue !== void 0) {
-        return defaultValue;
-      }
-      throw new Error(`read${Math.trunc(size)} out of bounds at ${pos}`);
-    }
-    const romBytes = Uint8Array.from(source);
-    return this.readByteRange(
-      romBytes,
-      pcPos,
-      size,
-      defaultValue,
-      `read${Math.trunc(size)} out of bounds at ${pos}`
-    );
-  }
-  /**
-   * Checks whether it can read expression file.
-   * @param {string} filename The filename.
-   * @param {number} position The position.
-   * @param {number} size The size.
-   * @returns {number} The result.
-   */
-  canReadExpressionFile(filename, position, size) {
-    const resolvedPath = this.resolveReadablePath(filename);
-    if (!resolvedPath) {
-      return 0;
-    }
-    const fileSize = this.fileProvider.stat(resolvedPath).size;
-    if (fileSize === void 0) {
-      return 0;
-    }
-    return this.canReadByteRange(fileSize, position, size);
-  }
-  /**
-   * Reads expression file.
-   * @param {string} filename The filename.
-   * @param {number} position The position.
-   * @param {number} size The size.
-   * @param {number} [defaultValue] The default value.
-   * @returns {number} The result.
-   */
-  readExpressionFile(filename, position, size, defaultValue) {
-    const pos = Math.trunc(position);
-    const resolvedPath = this.resolveReadablePath(filename);
-    if (!resolvedPath) {
-      if (defaultValue !== void 0) {
-        return defaultValue;
-      }
-      throw new Error(`Could not read file: ${filename}`);
-    }
-    const fileBytes = this.fileProvider.readFile(resolvedPath);
-    return this.readByteRange(
-      fileBytes,
-      pos,
-      size,
-      defaultValue,
-      `readfile${Math.trunc(size)} out of bounds at ${pos}`
-    );
-  }
-  /**
-   * Installs the active target's expression contributions into this session.
-   * @param {readonly string[]} setIds Resolved expression-set contribution IDs.
-   */
-  installExpressionFunctions(setIds) {
-    for (const setId of setIds) {
-      const set = this.environment.getExpressionSet(setId);
-      if (!set) continue;
-      const pluginId = this.environment.getContributionOwner(setId);
-      for (const expressionFunction of set.functions) {
-        const minimumArguments = expressionFunction.signature.minimumArguments ?? expressionFunction.signature.parameters.length;
-        const maximumArguments = expressionFunction.signature.maximumArguments ?? (expressionFunction.signature.minimumArguments === void 0 ? expressionFunction.signature.parameters.length : Number.POSITIVE_INFINITY);
-        this.mathCore.registerExpressionFunction(
-          [expressionFunction.name, ...expressionFunction.aliases ?? []],
-          {
-            minimumArguments,
-            maximumArguments,
-            evaluate: (args) => {
-              try {
-                return expressionFunction.evaluate(
-                  {
-                    state: this.pluginState,
-                    addresses: {
-                      toOutputOffset: (address) => this.outputWriter.toOutputOffset(address),
-                      fromOutputOffset: (offset) => this.outputWriter.fromOutputOffset(offset)
-                    },
-                    output: {
-                      canRead: (position, size) => this.canReadTargetRom(position, size),
-                      read: (position, size, defaultValue) => this.readTargetRom(position, size, defaultValue)
-                    }
-                  },
-                  args
-                );
-              } catch (cause) {
-                throw new PluginError(`Expression function '${expressionFunction.name}' failed.`, {
-                  code: "PLUGIN_HOOK_FAILED",
-                  pluginId,
-                  contributionId: set.id,
-                  targetId: this.targetId,
-                  cause
-                });
-              }
-            }
-          }
-        );
-      }
-    }
-  }
-  expressionHost = {
-    resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
-    convertSnesToPc: (address) => this.outputWriter.toOutputOffset(address),
-    convertPcToSnes: (offset) => this.outputWriter.fromOutputOffset(offset),
-    getCurrentAddress: () => this.currentTargetAddress,
-    getCurrentBaseAddress: () => this.currentTargetBaseAddress,
-    isDefined: (identifier) => {
-      if (this.defines.has(identifier)) return 1;
-      if (this.structs.has(identifier)) return 1;
-      return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
-    },
-    getExpressionObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
-    getFileSize: (filename) => {
-      const resolvedPath = this.resolveReadablePath(filename);
-      if (!resolvedPath) {
-        throw new Error(`Could not get filesize for '${filename}'`);
-      }
-      const stat = this.fileProvider.stat(resolvedPath);
-      if (stat.size === void 0) {
-        throw new Error(`Could not get filesize for '${filename}'`);
-      }
-      return stat.size;
-    },
-    getFileStatus: (filename) => {
-      const resolvedPath = this.resolveReadablePath(filename);
-      if (!resolvedPath) {
-        return 1;
-      }
-      return this.fileProvider.stat(resolvedPath).readable ? 0 : 2;
-    },
-    canReadFile: (filename, position, size) => this.canReadExpressionFile(filename, position, size),
-    readFile: (filename, position, size, defaultValue) => this.readExpressionFile(filename, position, size, defaultValue),
-    canReadRom: (position, size) => this.canReadTargetRom(position, size),
-    readRom: (position, size, defaultValue) => this.readTargetRom(position, size, defaultValue)
+var createInitialState = (context) => {
+  const options = targetOptions(context.targetOptions);
+  return {
+    mapper: "lorom",
+    sa1Banks: [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1],
+    checksumEnabled: options.checksumEnabled,
+    checksumMode: options.checksumMode,
+    bankCrossMode: "full",
+    readFunctionsEnabled: false,
+    optimizeDirectPage: false,
+    asarSuperFxMoveShortAddress: options.asarSuperFxMoveShortAddress,
+    outputFillByte: 0,
+    activeFreespaceStartOffset: null,
+    activeFreespaceContentStartOffset: null,
+    activeFreespaceEndOffset: null,
+    inSpcBlock: false,
+    spcBlock: null,
+    spcPreviousArchitecture: null,
+    spcInlineCompatibility: false
   };
-  /**
-   * Advances SNES `pc()` linearly. Mapper conversion happens only when writing.
-   * @param {number} num The number of bytes to advance.
-   */
-  step(num) {
-    this.outputWriter.step(num);
-  }
-  /**
-   * Writes a single byte to ROM.
-   * @param {number} num - The byte to write.
-   */
-  write1_65816(num) {
-    this.outputWriter.write1(num);
-  }
-  /**
-   * Fills a section of ROM data with a value.
-   * @param {number} start The starting address.
-   * @param {number} value The value to fill with.
-   * @param {number} length The length of the section to fill.
-   */
-  fillOutputBytes(start, value, length) {
-    debug7("fillOutputBytes", start, value, length);
-    for (let i = 0; i < length; i++) {
-      this.outputBytes[start + i] = value & 255;
-    }
-  }
-  /**
-   * Creates ephemeral stage execution state.
-   * @param {AssemblyStageName} stage The stage.
-   * @returns {StageExecutionState} The result.
-   */
-  createEphemeralStageExecutionState(stage) {
-    const descriptor = this.getStageDescriptor(stage);
-    return {
-      ...descriptor,
-      cursor: {
-        currentTargetAddress: this.currentTargetAddress,
-        currentTargetBaseAddress: this.currentTargetBaseAddress,
-        currentTargetStartAddress: this.currentTargetStartAddress,
-        currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
-        bytes: this.bytes
-      },
-      symbols: {
-        labelTable: this.labelTable,
-        forwardLabels: this.forwardLabels,
-        backwardLabels: this.backwardLabels,
-        currentParentLabel: this.currentParentLabel,
-        currentParentIsGlobal: this.currentParentIsGlobal,
-        currentGlobalParentLabel: this.currentGlobalParentLabel,
-        labelParents: this.labelParents
-      },
-      control: {
-        namespaceStack: this.namespaceStack,
-        currentNamespace: this.currentNamespace,
-        namespaceNestingEnabled: this.namespaceNestingEnabled,
-        namespaceNestingPath: this.namespaceNestingPath,
-        inMacroExpansion: this.inMacroExpansion,
-        macroLabelInstance: this.macroLabelInstance
-      },
-      pluginState: this.pluginState.cloneSnapshot(),
-      loweredProgram: null
-    };
-  }
-  /**
-   * Synchronizes active stage execution state.
-   * @param {AssemblyStageName} stage The stage.
-   */
-  syncActiveStageExecutionState(stage) {
-    const descriptor = this.getStageDescriptor(stage);
-    if (!this.activeStageExecutionState) {
-      this.activeStageExecutionState = this.createEphemeralStageExecutionState(stage);
-      return;
-    }
-    this.activeStageExecutionState.stage = descriptor.stage;
-    this.activeStageExecutionState.capabilities = descriptor.capabilities;
-  }
-  /**
-   * Gets active stage capabilities.
-   * @returns {StageExecutionCapabilities} The result.
-   */
-  getActiveStageCapabilities() {
-    if (!this.activeStageExecutionState) {
-      this.activeStageExecutionState = this.createEphemeralStageExecutionState("collectDefinitions");
-    }
-    return this.activeStageExecutionState.capabilities;
-  }
-  get traceStage() {
-    return this.activeStageExecutionState?.stage ?? "collectDefinitions";
-  }
-  /**
-   * Lays out instruction.
-   * @param {string[] | LoweredInstruction} input The input.
-   * @returns {boolean} The result.
-   */
-  layoutInstruction(input) {
-    const words = Array.isArray(input) ? input : input.words;
-    if (words.length === 0) {
-      return true;
-    }
-    const architecture = this.resolveActiveArchitecture();
-    if (!architecture.definition) {
-      return true;
-    }
-    const size = Array.isArray(input) ? architecture.definition.encoder.estimateSize(words) : architecture.definition.encoder.estimateInstruction?.(input) ?? architecture.definition.encoder.estimateSize(words);
-    this.step(size);
-    return true;
-  }
-  /**
-   * Emits instruction.
-   * @param {string[] | LoweredInstruction} input The input.
-   * @returns {boolean} The result.
-   */
-  emitInstruction(input) {
-    const words = Array.isArray(input) ? input : input.words;
-    if (words.length === 0) {
-      return true;
-    }
-    const architecture = this.resolveActiveArchitecture();
-    if (!architecture.definition) {
-      return true;
-    }
-    const encoded = Array.isArray(input) ? architecture.definition.encoder.encode(words) : architecture.definition.encoder.encodeInstruction?.(input) ?? architecture.definition.encoder.encode(words);
-    if (!encoded) {
-      if (architecture.definition.unknownInstructionBehavior === "returnFalse") {
-        return false;
+};
+var plugin = definePlugin({
+  manifest: {
+    id: "uttori.asm-plugin-snes",
+    name: "Uttori ASM SNES Plugin",
+    version: "1.0.0",
+    apiVersion: PLUGIN_API_VERSION,
+    description: "SNES targets, architectures, directives, expressions, and Asar compatibility."
+  },
+  validateOptions: targetOptions,
+  activate(context) {
+    context.registerSessionState({
+      id: SNES_SESSION_STATE_ID,
+      create: createInitialState,
+      clone: cloneSnesSessionState,
+      resetForStage: (state) => {
+        state.activeFreespaceStartOffset = null;
+        state.activeFreespaceContentStartOffset = null;
+        state.activeFreespaceEndOffset = null;
+        state.inSpcBlock = false;
+        state.spcBlock = null;
+        state.spcPreviousArchitecture = null;
+        state.spcInlineCompatibility = false;
       }
-      throw new Error(`Unknown instruction: ${words[0]}`);
-    }
-    return true;
-  }
-  /**
-   * Picks the appropriate instruction handler based on architecture.
-   * @param {string[] | LoweredInstruction} input The instruction to pick.
-   * @returns {boolean} True if the instruction was handled, false otherwise.
-   */
-  asblock_pick(input) {
-    debug7("asblock_pick", Array.isArray(input) ? input : input.words);
-    debug7("asblock_pick arch", this.arch);
-    const words = Array.isArray(input) ? input : input.words;
-    const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
-    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(raw)) {
-      return true;
-    }
-    const keyword = words[0]?.toLowerCase() ?? "";
-    if (keyword !== "" && this.directiveRegistry.has(keyword)) {
-      return this.directiveRegistry.dispatch(keyword, words, words.join(" "));
-    }
-    const instructionExecutionMode = this.getActiveStageCapabilities().instructionMode;
-    if (instructionExecutionMode === "layout") {
-      return this.layoutInstruction(input);
-    }
-    return this.emitInstruction(input);
-  }
-  /**
-   * Resolves active architecture.
-   * @returns {{ name: string; definition?: ArchitectureDefinition }} The result.
-   */
-  resolveActiveArchitecture() {
-    if (this.inTargetBlock || this.arch === "spc700") {
-      return {
-        name: "spc700",
-        definition: this.architectureRegistry.getDefinition("spc700")
-      };
-    }
-    const normalized = this.arch.toLowerCase();
-    const canonical2 = this.architectureRegistry.getCanonicalName(normalized);
-    const name = canonical2 ?? normalized;
-    return {
-      name,
-      definition: this.architectureRegistry.getDefinition(name)
-    };
-  }
-  /**
-   * Classifies operand for active architecture.
-   * @param {string} operand The operand.
-   * @returns {LoweredOperand} The classified operand.
-   */
-  classifyOperandForActiveArchitecture(operand) {
-    const architecture = this.resolveActiveArchitecture();
-    if (!architecture.definition) {
-      return this.operandResolver.lowerOperand(operand);
-    }
-    return architecture.definition.classifyOperand(this.operandResolver, operand);
-  }
-  /**
-   * Writes 1, 2, 3, or 4 bytes to ROM.
-   * @param {number} num - The byte to write.
-   */
-  write1(num) {
-    this.outputWriter.write1(num);
-  }
-  /**
-   * Writes 2.
-   * @param {number} num The num.
-   */
-  write2(num) {
-    this.outputWriter.write2(num);
-  }
-  /**
-   * Writes 3.
-   * @param {number} num The num.
-   */
-  write3(num) {
-    this.outputWriter.write3(num);
-  }
-  /**
-   * Writes 4.
-   * @param {number} num The num.
-   */
-  write4(num) {
-    this.outputWriter.write4(num);
-  }
-  /**
-   * Reads 1, 2, or 3 bytes from ROM.
-   * @param {number} insnespos - The SNES address to read from.
-   * @returns {number} The byte read from ROM.
-   */
-  read1(insnespos) {
-    const addr = this.outputWriter.toOutputOffset(insnespos);
-    if (addr < 0 || addr + 1 > this.outputBytes.length) {
-      return -1;
-    }
-    return this.outputBytes[addr];
-  }
-  /**
-   * Reads 2.
-   * @param {number} insnespos The insnespos.
-   * @returns {number} The result.
-   */
-  read2(insnespos) {
-    const addr = this.outputWriter.toOutputOffset(insnespos);
-    if (addr < 0 || addr + 2 > this.outputBytes.length) {
-      return -1;
-    }
-    return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8;
-  }
-  /**
-   * Reads 3.
-   * @param {number} insnespos The insnespos.
-   * @returns {number} The result.
-   */
-  read3(insnespos) {
-    const addr = this.outputWriter.toOutputOffset(insnespos);
-    if (addr < 0 || addr + 3 > this.outputBytes.length) {
-      return -1;
-    }
-    return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8 | this.outputBytes[addr + 2] << 16;
-  }
-  /**
-   * Handles assembleblock.
-   * @param {string} block The block.
-   */
-  assembleblock(block) {
-    if (!block.trim()) {
-      return;
-    }
-    const processedCommands = this.frontEndService.preprocessBlockCommands(block);
-    block = processedCommands.join("\n");
-    const words = block.trim().split(/\s+/);
-    if (words.length === 0) {
-      debug7("assembler assembleblock no words", { words });
-      return;
-    }
-    const splitCommands = splitInlineCommands(processedCommands);
-    if (block.includes("\n") && this.incrementalProgramParseState.roots.length === 0) {
-      const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
-      this.lowerAndExecuteRuntimeNodes(nodes);
-      return;
-    }
-    for (const command of splitCommands) {
-      const nodes = this.programModelBuilder.consumeIncrementalCommand(
-        this.incrementalProgramParseState,
-        command.trim(),
-        this.currentFile,
-        this.currentLine
-      );
-      this.lowerAndExecuteRuntimeNodes(nodes);
-    }
-  }
-  /**
-   * Rewrites raw command.
-   * @param {string} command The command.
-   * @returns {string} The result.
-   */
-  rewriteRawCommand(command) {
-    return this.macroEngine.rewriteMacroLabelReferences(command);
-  }
-  /**
-   * Creates normalized command from raw.
-   * @param {string} command The command.
-   * @param {string} sourceFile The source file.
-   * @param {number} sourceLine The source line.
-   * @param {boolean} [allowEmpty] The allow empty.
-   * @returns {NormalizedCommand | null} The result.
-   */
-  createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
-    return this.frontEndService.createNormalizedCommandFromRaw(
-      command,
-      sourceFile,
-      sourceLine,
-      allowEmpty
-    );
-  }
-  /**
-   * Applies a `!name =` assignment without routing it through the incremental if-tree.
-   * @param {string} command The define assignment command.
-   * @returns {boolean} `true` when the define engine handled the command.
-   */
-  applyDefineAssignment(command) {
-    const commandNode = this.createNormalizedCommandFromRaw(
-      command,
-      this.currentFile,
-      this.currentLine,
-      true
-    );
-    if (!commandNode) {
-      return false;
-    }
-    return this.defineEngine.handleCommand(commandNode);
-  }
-  /**
-   * Asar `'X' = $nn` / `"X" = $nn` table entries, including `''' = $2A` for apostrophe.
-   * @param {string} command Raw command text.
-   * @returns {boolean} `true` when the line was a character mapping.
-   */
-  tryHandleCharacterMapping(command) {
-    const trimmed = command.trim();
-    const singleQuoted = /^'([\s\S])'\s*=\s*(.+)$/.exec(trimmed);
-    const doubleQuoted = /^"([\s\S])"\s*=\s*(.+)$/.exec(trimmed);
-    const match = singleQuoted ?? doubleQuoted;
-    if (!match) {
-      return false;
-    }
-    const quote = singleQuoted ? "'" : '"';
-    this.directiveRuntime.handleCharacterMapping([
-      `${quote}${match[1]}${quote}`,
-      "=",
-      match[2].trim()
-    ]);
-    return true;
-  }
-  /**
-   * Preprocesses normalized command.
-   * @param {NormalizedCommand} state The state.
-   * @returns {CommandPreprocessResult} The result.
-   */
-  preprocessNormalizedCommand(state) {
-    if (!this.inMacroDefinition && this.tryHandleCharacterMapping(state.command)) {
-      setCommandKind(state, "characterMapping");
-      return "handled";
-    }
-    if (!this.inMacroDefinition && state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
-      setCommandKind(state, "characterMapping");
-      debug7("handleCharacterMapping", state.words);
-      this.directiveRuntime.handleCharacterMapping(state.words);
-      return "handled";
-    }
-    if (this.frontEndCommandService.startFunctionDefinition(state)) {
-      return "handled";
-    }
-    if (this.macroEngine.handleDefinitionCommand(state)) {
-      return "handled";
-    }
-    if (this.defineEngine.handleCommand(state)) {
-      if (state.command.includes("=")) {
-        this.cursorAddress.recordCurrentAddress();
-      }
-      return "handled";
-    }
-    if (this.structEngine.handleStructMode(state)) {
-      return "handled";
-    }
-    if (this.frontEndCommandService.handleRelativeLabelDefinition(state)) {
-      return "handled";
-    }
-    if (this.frontEndCommandService.handleGlobalLabel(state)) {
-      return "handled";
-    }
-    if (this.frontEndCommandService.consumeNamedLabelDefinitions(state)) {
-      return "handled";
-    }
-    if (this.macroEngine.handleDefinitionCommand(state)) {
-      return "handled";
-    }
-    if (this.frontEndCommandService.handleStaticLabelAssignment(state)) {
-      return "handled";
-    }
-    return "continue";
-  }
-  /**
-   * Prepares normalized command for dispatch.
-   * @param {NormalizedCommand} state The state.
-   * @returns {boolean} The result.
-   */
-  prepareNormalizedCommandForDispatch(state) {
-    if (state.kind === "unknown") {
-      setCommandWords(state, state.words, state.command);
-      setCommandKind(state, "opcodeCandidate");
-    }
-    return true;
-  }
-  /**
-   * Processes a single command from `assembleblock`.
-   * @param {string} command - The command to process.
-   */
-  processCommand(command) {
-    debug7(
-      "processCommand",
-      { command },
-      this.currentTargetAddress,
-      "/",
-      this.currentTargetAddress.toString(16),
-      `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`
-    );
-    if (command.trim() === "") {
-      return;
-    }
-    command = this.rewriteRawCommand(command);
-    if (this.frontEndCommandService.continueFunctionDefinition(command)) {
-      return;
-    }
-    this.assembleblock(command);
-    this.flushCompletedIncrementalNodes();
-  }
-  /**
-   * Processes normalized command.
-   * @param {NormalizedCommand} state The state.
-   * @param {boolean} [rewriteRaw] The rewrite raw.
-   */
-  processNormalizedCommand(state, rewriteRaw = true) {
-    let workingState = cloneNormalizedCommand(state);
-    this.currentFile = workingState.source.file;
-    this.currentLine = workingState.source.line;
-    if (workingState.source.raw.trim().startsWith(";`+")) {
-      this.loadTestRomData();
-      return;
-    }
-    if (workingState.command.trim() === "") {
-      return;
-    }
-    if (this.frontEndCommandService.continueFunctionDefinition(workingState.command)) {
-      return;
-    }
-    if (rewriteRaw) {
-      const rewrittenRaw = this.rewriteRawCommand(workingState.source.raw);
-      const requiresVariadicResolution = this.inMacroExpansion && !this.isDefinitionCollectionStage && (rewrittenRaw.includes("...") || rewrittenRaw.includes("\u2026"));
-      if (rewrittenRaw !== workingState.source.raw || requiresVariadicResolution) {
-        incrementInternalCounter("actualReparses");
-        const rewrittenState = this.createNormalizedCommandFromRaw(
-          rewrittenRaw,
-          workingState.source.file,
-          workingState.source.line,
-          true
-        );
-        if (!rewrittenState) {
-          return;
-        }
-        workingState = rewrittenState;
-      }
-    }
-    const preprocessResult = this.preprocessNormalizedCommand(workingState);
-    if (preprocessResult === "handled") {
-      return;
-    }
-    const startPC = this.currentTargetBaseAddress & 16777215;
-    if (!this.prepareNormalizedCommandForDispatch(workingState)) {
-      return;
-    }
-    this.collectCommandReferences(workingState);
-    const traceContext = {
-      file: workingState.source.file,
-      line: workingState.source.line,
-      raw: workingState.source.raw,
-      normalized: workingState.command
-    };
-    this.traceListener?.({
-      type: "command-start",
-      stage: this.traceStage,
-      arch: this.arch,
-      ...traceContext,
-      logicalAddress: startPC,
-      outputOffset: this.outputWriter.toOutputOffset(startPC)
     });
-    this.traceCommandStack.push(traceContext);
-    try {
-      const lowered = this.commandLoweringService.lowerCommand(workingState);
-      this.dispatchLoweredNode(lowered);
-    } finally {
-      this.traceCommandStack.pop();
-    }
-    const commandSize = (this.currentTargetBaseAddress & 16777215) - startPC;
-    debug7("processCommand bytes written", commandSize);
-    const endPC = this.currentTargetBaseAddress & 16777215;
-    this.traceListener?.({
-      type: "command-end",
-      stage: this.traceStage,
-      arch: this.arch,
-      ...traceContext,
-      logicalAddress: startPC,
-      outputOffset: this.outputWriter.toOutputOffset(startPC),
-      endLogicalAddress: endPC,
-      endOutputOffset: this.outputWriter.toOutputOffset(endPC),
-      bytesWritten: commandSize
+    context.registerArchitecture({
+      id: "snes.65816",
+      aliases: ["65816"],
+      displayName: "WDC 65C816",
+      unknownInstructionBehavior: "throw",
+      splitOperands: splitSingleOperand,
+      classifyOperand: ({ operands }, operand) => classify65816Operand(operands, operand),
+      createEncoder: (factory) => new Arch65816(factory, () => factory.state.get(snesSessionStateKey).optimizeDirectPage),
+      instructions: cpu65816Catalog
     });
-    this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
-  }
-  /**
-   * Gets or create lowered program.
-   * @param {StageExecutionState} stageState The stage state.
-   * @param {ProgramModel} program The program.
-   * @returns {LoweredProgram} The result.
-   */
-  getOrCreateLoweredProgram(stageState, program) {
-    if (!stageState.loweredProgram) {
-      stageState.loweredProgram = measureInternalPhase(
-        "lowerProgram",
-        () => this.commandLoweringService.lowerProgram(program)
-      );
-    }
-    return stageState.loweredProgram;
-  }
-  /**
-   * Dispatches lowered node.
-   * @param {LoweredCommand} lowered The lowered.
-   */
-  dispatchLoweredNode(lowered) {
-    if (lowered.kind === "directive") {
-      const loweredCommand = lowered.command;
-      const handledDirective = this.directiveRegistry.dispatch(
-        lowered.keyword,
-        lowered.words,
-        lowered.source.raw,
-        loweredCommand
-      );
-      if (!handledDirective && lowered.keyword) {
-        debug7("\u{1F4A5} assembler dispatchLoweredNode unknown directive", lowered.keyword);
-      }
-      return;
-    }
-    let instruction2 = lowered;
-    if (lowered.command) {
-      const refreshed = this.commandLoweringService.lowerCommand(lowered.command);
-      if (refreshed.kind === "instruction") {
-        instruction2 = refreshed;
-      }
-    }
-    const wasOpcode = this.asblock_pick(instruction2);
-    if (!wasOpcode) {
-      debug7("\u{1F4A5} assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
-    }
-  }
-  /**
-   * Parses a function definition of the form:
-   *   function name(param1, param2...) = expression
-   * Possibly spanning multiple lines joined by backslashes.
-   * @param {string} defLine - The function definition line.
-   */
-  parseFunctionDefinition(defLine) {
-    debug7("parseFunctionDefinition", defLine);
-    this.mathCore.str = defLine;
-    this.mathCore.parseFunctionDefinition();
-    const functionName = defLine.match(/^function\s+([_a-z]\w*)\s*\(/i)?.[1];
-    if (functionName) {
-      this.recordSymbolDefinition("function", functionName);
-    }
-  }
-  /**
-   * Adds a mapping of the current address to the source line number.
-   * @param {number} address The SNES address to add to the mapping.
-   */
-  addAddressToLine(address) {
-    incrementInternalCounter("addressMappings");
-    if (!this.collectSourceMetadata) {
-      return;
-    }
-    this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
-  }
-  /**
-   * Evaluates a range expression and returns the result.
-   * @param {string} expr The expression to evaluate.
-   * @returns {number} The result of the expression.
-   */
-  evaluateRangeExpression(expr) {
-    debug7("assemlber evaluateRangeExpression", expr);
-    const resolvedExpr = this.resolveExpressionInput(expr);
-    if (isReferenceExpressionNode(resolvedExpr)) {
-      return this.evaluateReferenceExpressionNode(resolvedExpr, true);
-    }
-    try {
-      const result = this.mathCore.math(resolvedExpr);
-      if (!Number.isNaN(result)) {
-        return result;
-      }
-    } catch (error) {
-    }
-    return this.symbolScope.getLabelValue(renderExpressionNode(resolvedExpr), true);
-  }
-  /**
-   * Sets the paths to search for included files.
-   * @param {string[]} paths The paths to search for included files.
-   */
-  setIncludePaths(paths) {
-    this.includePaths = paths;
-  }
-  /**
-   * Evaluates an expression for conditionals (if, while).
-   * @param {string} expression - The expression to evaluate.
-   * @returns {boolean} True if the expression is true, false otherwise.
-   */
-  evaluateExpression(expression) {
-    debug7("evaluateExpression", expression);
-    let resolvedExpr;
-    let result;
-    try {
-      resolvedExpr = this.resolveExpressionInput(expression);
-      debug7("evaluateExpression resolvedExpr", resolvedExpr);
-      result = isReferenceExpressionNode(resolvedExpr) ? this.evaluateReferenceExpressionNode(resolvedExpr) : this.mathCore.math(resolvedExpr);
-    } catch (e) {
-      const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
-      const resolvedText = resolvedExpr ? renderExpressionNode(resolvedExpr) : "<unresolved>";
-      throw new Error(
-        `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`
-      );
-    }
-    debug7("evaluateExpression result", result, "=>", result !== 0);
-    return result !== 0;
-  }
-  /**
-   * Parses string input into an expression node and resolves nested references/defines.
-   * @param {string | ExpressionNode} expression The expression source or parsed node.
-   * @returns {ExpressionNode} The resolved expression tree.
-   */
-  resolveExpressionInput(expression) {
-    const parsed = typeof expression === "string" ? parseExpressionNode(expression.trim()) : expression;
-    return this.resolveExpressionNode(parsed);
-  }
-  /**
-   * Recursively resolves define references and nested reference-expression nodes.
-   * @param {ExpressionNode} expression The expression node to resolve.
-   * @returns {ExpressionNode} The resolved expression node.
-   */
-  resolveExpressionNode(expression) {
-    if (isReferenceExpressionNode(expression)) {
-      return this.resolveReferenceExpressionNode(expression);
-    }
-    switch (expression.type) {
-      case "binary":
-        return {
-          ...expression,
-          left: this.resolveExpressionNode(expression.left),
-          right: this.resolveExpressionNode(expression.right)
-        };
-      case "unary":
-        return {
-          ...expression,
-          argument: this.resolveExpressionNode(expression.argument)
-        };
-      case "range":
-        return {
-          ...expression,
-          start: this.resolveExpressionNode(expression.start),
-          end: this.resolveExpressionNode(expression.end)
-        };
-      case "call":
-        return {
-          ...expression,
-          arguments: expression.arguments.map((argument) => this.resolveExpressionNode(argument))
-        };
-      case "raw":
-        if (/(^|[^!<=>])![\w{]/.test(expression.value)) {
-          return this.resolveExpressionInput(this.resolvedefines(expression.value));
-        }
-        return expression;
-      default:
-        return expression;
-    }
-  }
-  /**
-   * Resolves reference-style expressions such as identifiers, define references,
-   * member access, and indexed access into either simpler reference nodes or
-   * raw/math expressions when defines collapse them further.
-   * @param {ReferenceExpressionNode} expression The reference expression to resolve.
-   * @returns {ExpressionNode} The resolved expression tree.
-   */
-  resolveReferenceExpressionNode(expression) {
-    switch (expression.type) {
-      case "identifier":
-        return expression;
-      case "defineReference": {
-        const defineName = expression.braced ? this.resolvedefines(expression.content ?? "") : expression.name ?? "";
-        const value = this.lookupDefineValue(defineName);
-        if (value === void 0) {
-          throw new Error(`Define '${defineName}' not found.`);
-        }
-        return this.resolveExpressionInput(value);
-      }
-      case "member": {
-        const object = this.resolveReferenceExpressionNode(expression.object);
-        if (!isReferenceExpressionNode(object)) {
-          const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
-          if (expandedReference) {
-            return expandedReference;
-          }
+    context.registerArchitecture({
+      id: "snes.spc700",
+      aliases: ["spc700", "spc700-raw", "spc700-inline"],
+      displayName: "Sony SPC700",
+      unknownInstructionBehavior: "throw",
+      splitOperands: splitTopLevelCommaOperands,
+      classifyOperand: ({ operands }, operand) => classifySpc700Operand(operands, operand),
+      createEncoder: (factory) => new ArchSPC700(factory),
+      instructions: spc700Catalog
+    });
+    context.registerArchitecture({
+      id: "snes.superfx",
+      aliases: ["superfx"],
+      displayName: "Super FX",
+      unknownInstructionBehavior: "returnFalse",
+      splitOperands: splitCommaOperands,
+      classifyOperand: ({ operands }, operand) => classifySuperFxOperand(operands, operand),
+      createEncoder: (factory) => new ArchSuperFX(
+        factory,
+        () => factory.state.get(snesSessionStateKey).asarSuperFxMoveShortAddress
+      ),
+      instructions: superFxCatalog
+    });
+    context.registerAddressSpace({
+      id: "snes.address-space",
+      create: ({ state }) => {
+        const mappingContext = () => {
+          const targetState = state.get(snesSessionStateKey);
           return {
-            type: "raw",
-            value: `${renderExpressionNode(object)}.${expression.property.name}`
+            mapper: targetState.mapper,
+            sa1banks: targetState.sa1Banks,
+            bankCrossCheckMode: targetState.bankCrossMode
           };
-        }
-        return {
-          ...expression,
-          object
         };
-      }
-      case "index": {
-        const object = this.resolveReferenceExpressionNode(expression.object);
-        const index2 = this.resolveExpressionNode(expression.index);
-        if (!isReferenceExpressionNode(object)) {
-          const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
-          if (expandedReference) {
-            return expandedReference;
+        return {
+          addressWidth: snesRomAddressSpace.addressWidth,
+          defaultOrigin: snesRomAddressSpace.defaultOrigin,
+          normalizeForWrite: (address) => snesRomAddressSpace.normalizeForWrite(address, mappingContext()),
+          advance: (address, amount) => snesRomAddressSpace.advance(address, amount, mappingContext()),
+          toOutputOffset: (address) => snesRomAddressSpace.toOutputOffset(address, mappingContext()),
+          fromOutputOffset: (offset) => snesRomAddressSpace.fromOutputOffset(offset, mappingContext()),
+          validateWrite: (address, width) => {
+            const targetState = state.get(snesSessionStateKey);
+            const normalized = snesRomAddressSpace.normalizeForWrite(address, mappingContext());
+            if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) return;
+            if (targetState.bankCrossMode === "off" || width <= 1) return;
+            const start = address & 16777215;
+            const end = start + width - 1 & 16777215;
+            const bankMask = targetState.bankCrossMode === "half" ? 2147450880 : 2147418112;
+            if (((start ^ end) & bankMask) !== 0) {
+              const errorAddress = start + width & 16777215;
+              throw new Error(
+                `Ebank_border_crossed: A bank border was crossed, logical address $${errorAddress.toString(16).toUpperCase().padStart(6, "0")}.`
+              );
+            }
           }
-          return {
-            type: "raw",
-            value: `${renderExpressionNode(object)}[${renderExpressionNode(index2)}]`
-          };
-        }
-        return {
-          ...expression,
-          object,
-          index: index2
         };
       }
-      default:
-        return expression;
-    }
-  }
-  /**
-   * Resolves a reference expression all the way to a numeric value.
-   * @param {ReferenceExpressionNode} expression The reference expression to evaluate.
-   * @param {boolean} [requireStatic] Whether labels must be static.
-   * @returns {number} The numeric value of the reference.
-   */
-  evaluateReferenceExpressionNode(expression, requireStatic = false) {
-    const resolved = this.resolveReferenceLabelValue(expression, requireStatic);
-    if (typeof resolved === "number") {
-      return resolved;
-    }
-    throw new Error(`Reference '${resolved}' did not resolve to a numeric value.`);
-  }
-  /**
-   * Resolves a reference expression to either a numeric value or a normalized
-   * label/struct lookup target, depending on how far the expression collapses.
-   * @param {ReferenceExpressionNode} expression The reference expression to resolve.
-   * @param {boolean} [requireStatic] Whether labels must be static.
-   * @returns {number | string} The resolved numeric value.
-   */
-  resolveReferenceLabelValue(expression, requireStatic = false) {
-    const resolved = this.resolveReferenceExpressionNode(expression);
-    if (!isReferenceExpressionNode(resolved)) {
-      return this.mathCore.math(resolved);
-    }
-    return this.resolveNormalizedReferenceLabelValue(
-      this.renderResolvedReferenceExpression(resolved),
-      requireStatic
-    );
-  }
-  /**
-   * Resolves an already-normalized reference string as either a struct member/base
-   * or a plain label lookup.
-   * @param {string} normalizedReference The normalized reference text.
-   * @param {boolean} [requireStatic] Whether labels must be static.
-   * @returns {number} The resolved numeric address/value.
-   */
-  resolveNormalizedReferenceLabelValue(normalizedReference, requireStatic = false) {
-    if (this.structEngine.hasStructReference(normalizedReference)) {
-      return this.structEngine.resolveStructLabel(normalizedReference);
-    }
-    return this.symbolScope.getLabelValue(normalizedReference, requireStatic);
-  }
-  /**
-   * Renders an index expression for a normalized reference string.
-   * @param {ExpressionNode} indexExpression The index expression to render.
-   * @returns {string} The rendered numeric or source-like index text.
-   */
-  resolveReferenceIndexText(indexExpression) {
-    const resolvedIndex = this.resolveExpressionNode(indexExpression);
-    try {
-      return this.mathCore.math(resolvedIndex).toString();
-    } catch {
-      return renderExpressionNode(resolvedIndex);
-    }
-  }
-  /**
-   * Renders a reference expression after resolving any nested index expressions.
-   * @param {ReferenceExpressionNode} expression The reference expression to render.
-   * @returns {string} The normalized reference text.
-   */
-  renderResolvedReferenceExpression(expression) {
-    return renderReferenceExpressionNode(expression, {
-      renderIndex: (indexExpression) => this.resolveReferenceIndexText(indexExpression)
+    });
+    context.registerOutputFormat({
+      id: "snes.sfc-output",
+      create: ({ state }) => ({
+        finalize: ({ outputBytes }) => {
+          const targetState = state.get(snesSessionStateKey);
+          if (!targetState.checksumEnabled) return;
+          const headerOffset = getChecksumHeaderOffset(targetState.mapper);
+          if (outputBytes.length < headerOffset + 32) return;
+          outputBytes[headerOffset + 28] = 255;
+          outputBytes[headerOffset + 29] = 255;
+          outputBytes[headerOffset + 30] = 0;
+          outputBytes[headerOffset + 31] = 0;
+          const checksum = calculateHeaderChecksum(outputBytes, targetState.checksumMode);
+          const complement = ~checksum & 65535;
+          outputBytes[headerOffset + 28] = complement & 255;
+          outputBytes[headerOffset + 29] = complement >> 8 & 255;
+          outputBytes[headerOffset + 30] = checksum & 255;
+          outputBytes[headerOffset + 31] = checksum >> 8 & 255;
+        },
+        getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+      })
+    });
+    context.registerDirectiveSet({
+      id: "snes.mapper-directives",
+      directives: [
+        directive(
+          "snes.directive.mapper",
+          MAPPER_KEYWORDS,
+          ({ state }) => (_ctx, words) => handleMapper(state.get(snesSessionStateKey), words)
+        )
+      ]
+    });
+    context.registerDirectiveSet({
+      id: "snes.policy-directives",
+      directives: [
+        directive(
+          "snes.directive.check",
+          ["check"],
+          ({ state }) => (_ctx, words) => handleCheck(state.get(snesSessionStateKey), words)
+        ),
+        directive(
+          "snes.directive.optimize",
+          ["optimize"],
+          ({ state }) => (_ctx, words) => handleOptimize(state.get(snesSessionStateKey), words)
+        ),
+        directive("snes.directive.asar-noops", ASAR_COMPAT_NO_OP_DIRECTIVES, () => () => void 0)
+      ]
+    });
+    context.registerDirectiveSet({
+      id: "snes.memory-directives",
+      directives: [
+        directive(
+          "snes.directive.freespace",
+          ["freecode", "freespace", "freedata"],
+          ({ session, state }) => (_ctx, words) => handleFreespace(session, state.get(snesSessionStateKey), words)
+        ),
+        directive(
+          "snes.directive.freespacebyte",
+          ["freespacebyte"],
+          ({ session, state }) => (_ctx, words) => handleFreespaceByte(session, state.get(snesSessionStateKey), words)
+        ),
+        directive(
+          "snes.directive.prot",
+          ["prot"],
+          ({ session }) => (_ctx, words) => handleProt(session, words)
+        )
+      ]
+    });
+    context.registerDirectiveSet({
+      id: "snes.spc-directives",
+      directives: [
+        directive(
+          "snes.directive.spcblock",
+          ["spcblock"],
+          ({ session, state }) => (_ctx, words) => createSpcRuntime(session, state.get(snesSessionStateKey)).handleSpcblock(words)
+        ),
+        directive(
+          "snes.directive.endspcblock",
+          ["endspcblock"],
+          ({ session, state }) => (_ctx, words) => createSpcRuntime(session, state.get(snesSessionStateKey)).handleEndSpcblock(words)
+        ),
+        directive(
+          "snes.directive.startpos",
+          ["startpos"],
+          ({ session, state }) => (_ctx, words) => handleStartpos(session, state.get(snesSessionStateKey), words)
+        )
+      ]
+    });
+    context.registerExpressionSet(addressExpressions);
+    context.registerExpressionSet(readExpressions);
+    context.registerLifecycle({
+      id: "snes.lifecycle",
+      create: ({ state }) => ({
+        onSessionCreated: ({ session }) => {
+          session.outputFillByte = state.get(snesSessionStateKey).outputFillByte;
+        },
+        beforeDirective: ({ session, keyword, words }) => {
+          const targetState = state.get(snesSessionStateKey);
+          if (targetState.inSpcBlock && ["arch", "org", "namespace"].includes(keyword)) {
+            throw new Error(`${keyword.toUpperCase()} is unavailable inside spcblock.`);
+          }
+          if (keyword === "org" && shouldRedirectOrgToSpcblock(targetState.spcInlineCompatibility)) {
+            createSpcRuntime(session, targetState).handleSpcblock(["spcblock", ...words.slice(1)]);
+            return "handled";
+          }
+          return "continue";
+        },
+        onArchitectureSelected: ({ sourceAlias }) => {
+          const targetState = state.get(snesSessionStateKey);
+          targetState.spcInlineCompatibility = shouldEnableSpcInlineCompat(sourceAlias);
+          if (shouldUseNoromAddressing(sourceAlias)) {
+            applyMapperSelection(targetState, "norom");
+          }
+        },
+        shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+        beforeWrite: ({ session, logicalAddress, width }) => {
+          const targetState = state.get(snesSessionStateKey);
+          if (targetState.activeFreespaceStartOffset === null) return;
+          const outputOffset = session.outputWriter.toOutputOffset(logicalAddress);
+          if (outputOffset < 0) return;
+          const endOffset = outputOffset + width - 1;
+          targetState.activeFreespaceEndOffset = Math.max(
+            targetState.activeFreespaceEndOffset ?? endOffset,
+            endOffset
+          );
+        },
+        onStageEnd: ({ session }) => {
+          createSpcRuntime(session, state.get(snesSessionStateKey)).finishPass();
+        },
+        beforeOutputFinalize: ({ outputBytes }) => {
+          const targetState = state.get(snesSessionStateKey);
+          const start = targetState.activeFreespaceStartOffset;
+          const contentStart = targetState.activeFreespaceContentStartOffset;
+          const end = targetState.activeFreespaceEndOffset;
+          if (start === null || contentStart === null || end === null || end < contentStart) return;
+          const lengthMinusOne = Math.max(0, end - contentStart) & 65535;
+          const complement = ~lengthMinusOne & 65535;
+          outputBytes[start + 4] = lengthMinusOne & 255;
+          outputBytes[start + 5] = lengthMinusOne >> 8 & 255;
+          outputBytes[start + 6] = complement & 255;
+          outputBytes[start + 7] = complement >> 8 & 255;
+        }
+      })
+    });
+    context.registerTarget({
+      id: SNES_TARGET_ID,
+      aliases: ["snes", "sfc", "snes-65816"],
+      displayName: "SNES",
+      defaultArchitecture: "snes.65816",
+      architectures: ["snes.65816", "snes.spc700", "snes.superfx"],
+      addressSpace: "snes.address-space",
+      outputFormat: "snes.sfc-output",
+      directiveSets: [
+        "snes.mapper-directives",
+        "snes.memory-directives",
+        "snes.policy-directives",
+        "snes.spc-directives"
+      ],
+      expressionSets: ["snes.address-functions", "snes.read-functions"],
+      lifecycle: ["snes.lifecycle"],
+      defaultOutputExtension: ".sfc",
+      createOptions: targetOptions
     });
   }
-  /**
-   * Re-runs `resolvedefines()` across a rendered reference expression and reparses
-   * it only when define expansion materially changes the text.
-   * @param {ReferenceExpressionNode} expression The reference expression to expand.
-   * @returns {ExpressionNode | undefined} The reparsed expression, if expansion changed it.
-   */
-  tryResolveExpandedReferenceExpression(expression) {
-    const renderedReference = this.renderResolvedReferenceExpression(expression);
-    const expandedReference = this.resolvedefines(renderedReference);
-    if (expandedReference === renderedReference) {
-      return void 0;
-    }
-    return this.resolveExpressionInput(expandedReference);
+});
+var src_default = plugin;
+
+// language-server/src/server.ts
+var import_node = __toESM(require_main3(), 1);
+
+// node_modules/vscode-languageserver-textdocument/lib/esm/main.js
+var FullTextDocument2 = class _FullTextDocument {
+  constructor(uri, languageId, version, content) {
+    this._uri = uri;
+    this._languageId = languageId;
+    this._version = version;
+    this._content = content;
+    this._lineOffsets = void 0;
   }
-  /**
-   * Resolves standalone relative-label tokens used in define contexts.
-   * @param {string} input The token to resolve.
-   * @returns {string | undefined} The resolved address string, if applicable.
-   */
-  tryResolveRelativeLabelToken(input) {
-    if (input !== "+" && input !== "-" && input !== "?+" && input !== "?-") {
-      return void 0;
+  get uri() {
+    return this._uri;
+  }
+  get languageId() {
+    return this._languageId;
+  }
+  get version() {
+    return this._version;
+  }
+  getText(range) {
+    if (range) {
+      const start = this.offsetAt(range.start);
+      const end = this.offsetAt(range.end);
+      return this._content.substring(start, end);
     }
-    debug7(`resolvedefines handling relative label: ${input}`);
-    try {
-      switch (input) {
-        case "+":
-          return `$${this.symbolScope.findNextLabel("+").toString(16)}`;
-        case "-":
-          return `$${this.symbolScope.findPreviousLabel("-").toString(16)}`;
-        case "?+":
-          return `$${this.symbolScope.findNextLabel("?+").toString(16)}`;
-        case "?-":
-          return `$${this.symbolScope.findPreviousLabel("?-").toString(16)}`;
-        default:
-          return void 0;
+    return this._content;
+  }
+  update(changes, version) {
+    for (const change of changes) {
+      if (_FullTextDocument.isIncremental(change)) {
+        const range = getWellformedRange(change.range);
+        const startOffset = this.offsetAt(range.start);
+        const endOffset = this.offsetAt(range.end);
+        this._content = this._content.substring(0, startOffset) + change.text + this._content.substring(endOffset, this._content.length);
+        const startLine = Math.max(range.start.line, 0);
+        const endLine = Math.max(range.end.line, 0);
+        let lineOffsets = this._lineOffsets;
+        const addedLineOffsets = computeLineOffsets(change.text, false, startOffset);
+        if (endLine - startLine === addedLineOffsets.length) {
+          for (let i = 0, len = addedLineOffsets.length; i < len; i++) {
+            lineOffsets[i + startLine + 1] = addedLineOffsets[i];
+          }
+        } else {
+          if (addedLineOffsets.length < 1e4) {
+            lineOffsets.splice(startLine + 1, endLine - startLine, ...addedLineOffsets);
+          } else {
+            this._lineOffsets = lineOffsets = lineOffsets.slice(0, startLine + 1).concat(addedLineOffsets, lineOffsets.slice(endLine + 1));
+          }
+        }
+        const diff = change.text.length - (endOffset - startOffset);
+        if (diff !== 0) {
+          for (let i = startLine + 1 + addedLineOffsets.length, len = lineOffsets.length; i < len; i++) {
+            lineOffsets[i] = lineOffsets[i] + diff;
+          }
+        }
+      } else if (_FullTextDocument.isFull(change)) {
+        this._content = change.text;
+        this._lineOffsets = void 0;
+      } else {
+        throw new Error("Unknown change event received");
       }
-    } catch (error) {
-      if (!this.enforceResolvedLabels) {
-        debug7("resolvedefines stage does not enforce labels, returning placeholder");
-        return "$0000";
+    }
+    this._version = version;
+  }
+  getLineOffsets() {
+    if (this._lineOffsets === void 0) {
+      this._lineOffsets = computeLineOffsets(this._content, true);
+    }
+    return this._lineOffsets;
+  }
+  positionAt(offset) {
+    offset = Math.max(Math.min(offset, this._content.length), 0);
+    const lineOffsets = this.getLineOffsets();
+    let low = 0, high = lineOffsets.length;
+    if (high === 0) {
+      return { line: 0, character: offset };
+    }
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (lineOffsets[mid] > offset) {
+        high = mid;
+      } else {
+        low = mid + 1;
       }
-      debug7(
-        `resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`
-      );
-      throw error;
     }
+    const line = low - 1;
+    offset = this.ensureBeforeEOL(offset, lineOffsets[line]);
+    return { line, character: offset - lineOffsets[line] };
   }
-  /**
-   * Resolves direct `!name` define references that are not assignments.
-   * @param {string} input The token to resolve.
-   * @returns {string | undefined} The resolved define value, if applicable.
-   */
-  tryResolveDirectDefineReference(input) {
-    if (!input.startsWith("!") || input.includes(" ") || input.includes("=") || input.includes("{")) {
-      return void 0;
+  offsetAt(position) {
+    const lineOffsets = this.getLineOffsets();
+    if (position.line >= lineOffsets.length) {
+      return this._content.length;
+    } else if (position.line < 0) {
+      return 0;
     }
-    debug7("resolvedefines direct variable reference", input);
-    const varName = input.substring(1);
-    return this.lookupDefineValue(varName);
+    const lineOffset = lineOffsets[position.line];
+    if (position.character <= 0) {
+      return lineOffset;
+    }
+    const nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
+    const offset = Math.min(lineOffset + position.character, nextLineOffset);
+    return this.ensureBeforeEOL(offset, lineOffset);
   }
-  /**
-   * Resolves macro-label references such as `?label` or `#+?label`.
-   * @param {string} input The token to resolve.
-   * @returns {string | undefined} The resolved macro-label value, if applicable.
-   */
-  tryResolveMacroLabelReference(input) {
-    const prefixMatch = input.match(/^(#\?|\?|#\?\.|\?\+|\?-)(.*)/);
-    if (!prefixMatch) {
-      return void 0;
+  getLineRange(line) {
+    const lineOffsets = this.getLineOffsets();
+    if (line >= lineOffsets.length) {
+      const lastLine = lineOffsets.length - 1;
+      return { start: { line: lastLine, character: 0 }, end: { line: lastLine, character: this._content.length - lineOffsets[lastLine] } };
+    } else if (line < 0) {
+      return { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
     }
-    const prefix = prefixMatch[1];
-    const labelName = prefixMatch[2];
-    debug7("resolvedefines macro label found with prefix", { prefix, labelName });
-    return this.symbolScope.getLabelValue(labelName, false).toString();
+    const startOffset = lineOffsets[line];
+    const nextLineOffset = line + 1 < lineOffsets.length ? lineOffsets[line + 1] : this._content.length;
+    const endOffset = this.ensureBeforeEOL(nextLineOffset, startOffset);
+    return { start: { line, character: 0 }, end: { line, character: endOffset - startOffset } };
   }
-  /**
-   * Resolves bare label-like tokens before the generic character-by-character
-   * define scanner runs.
-   * @param {string} input The token to resolve.
-   * @returns {string | undefined} The resolved label value, if applicable.
-   */
-  tryResolveBareLabelReference(input) {
-    if (!isBareLabelReference(input)) {
-      return void 0;
-    }
-    debug7("resolvedefines checking if input is a label reference", input);
-    const labelValue = this.symbolScope.tryGetLabelValue(input, false);
-    if (labelValue === void 0) {
-      if (this.isDefinitionCollectionStage) {
-        return "0";
-      }
-      debug7("resolvedefines not a label, continuing");
-      return void 0;
-    }
-    debug7("resolvedefines labelValue", labelValue);
-    return labelValue.toString();
-  }
-  /**
-   * Resolves all define replacements in a given string.
-   * @param {string} input The string to resolve defines in.
-   * @returns {string} The string with defines resolved.
-   */
-  resolvedefines(input) {
-    debug7("resolvedefines", { input });
-    if (!input) {
-      debug7("resolvedefines input is empty, returning empty string");
+  getEOLCharacters(line) {
+    const lineOffsets = this.getLineOffsets();
+    if (line >= lineOffsets.length) {
+      return "";
+    } else if (line < 0) {
       return "";
     }
-    let result = "";
-    let index2 = 0;
-    const resolvedRelativeLabel = this.tryResolveRelativeLabelToken(input);
-    if (resolvedRelativeLabel !== void 0) {
-      return resolvedRelativeLabel;
-    }
-    if (input.includes("!=")) {
-      debug7("resolvedefines != operator found in", input);
-      const parts = input.split("!=");
-      const resolvedParts = parts.map((part) => this.resolvedefines(part.trim()));
-      return resolvedParts.join("!=");
-    }
-    if ((input.startsWith("sizeof(") || input.startsWith("objectsize(")) && input.endsWith(")")) {
-      debug7("resolvedefines sizeof found, skipping", input);
-      return input;
-    }
-    const resolvedDirectDefine = this.tryResolveDirectDefineReference(input);
-    if (resolvedDirectDefine !== void 0) {
-      return resolvedDirectDefine;
-    }
-    const resolvedMacroLabel = this.tryResolveMacroLabelReference(input);
-    if (resolvedMacroLabel !== void 0) {
-      return resolvedMacroLabel;
-    }
-    const resolvedBareLabel = this.tryResolveBareLabelReference(input);
-    if (resolvedBareLabel !== void 0) {
-      return resolvedBareLabel;
-    }
-    while (index2 < input.length) {
-      const char = input[index2];
-      if (char === "\\" && input[index2 + 1] === "\\") {
-        debug7("resolvedefines double slash", input);
-        result += "\\";
-        index2 += 2;
-      } else if (char === "\\" && input[index2 + 1] === "!") {
-        debug7("resolvedefines \\!define", input);
-        result += "!";
-        index2 += 2;
-      } else if (char === "!") {
-        debug7("resolvedefines !define", input);
-        let defineName = "";
-        index2++;
-        if (input[index2] === "{") {
-          index2++;
-          let unprocessedName = "";
-          let braces = 1;
-          while (index2 < input.length) {
-            if (input[index2] === "{") braces++;
-            if (input[index2] === "}") braces--;
-            if (braces === 0) break;
-            unprocessedName += input[index2++];
-          }
-          if (braces !== 0) throw new Error("Error: Mismatched braces in define name.");
-          index2++;
-          defineName = this.resolvedefines(unprocessedName);
-          debug7("resolvedefines !define defineName", defineName);
-        } else {
-          while (index2 < input.length && /\w/.test(input[index2])) {
-            defineName += input[index2++];
-          }
-          debug7("resolvedefines !define defineName", defineName);
-        }
-        if (defineName === "") {
-          result += "!";
-          continue;
-        }
-        const value = this.lookupDefineValue(defineName);
-        if (value === void 0) {
-          throw new Error(`Define '${defineName}' not found.`);
-        } else {
-          result += value;
-        }
-      } else {
-        result += char;
-        index2++;
-      }
-    }
-    debug7("resolvedefines result =", { result });
-    return result;
+    const nextLineOffset = line + 1 < lineOffsets.length ? lineOffsets[line + 1] : this._content.length;
+    const eolOffset = this.ensureBeforeEOL(nextLineOffset, lineOffsets[line]);
+    return this._content.substring(eolOffset, nextLineOffset);
   }
-  /**
-   * Handles activate stage.
-   * @param {AssemblyStageName} stage The stage.
-   */
-  activateStage(stage) {
-    debug7("\u{1F3C1} activateStage", stage);
-    this.syncActiveStageExecutionState(stage);
-    if (stage === "resolveLayout") {
-      this.forwardLabels = {};
-      this.backwardLabels = {};
+  ensureBeforeEOL(offset, lineOffset) {
+    while (offset > lineOffset && isEOL(this._content.charCodeAt(offset - 1))) {
+      offset--;
     }
-    this.macroLabelInstance = 0;
-    this.includeSource.resetGuards();
-    this.inMacroExpansion = false;
-    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
-    for (const definition of this.architectureRegistry.definitions.values()) {
-      definition.encoder.beginPass?.();
-    }
-    this.pluginState.resetForStage(stage);
-    this.runLifecycleHook(
-      "onStageStart",
-      (lifecycle) => lifecycle.onStageStart?.({ state: this.pluginState, stage })
-    );
+    return offset;
   }
-  /**
-   * Completes the current pass, performing any necessary cleanup.
-   */
-  finishPass() {
-    const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
-    this.spcRuntime.finishPass();
-    if (this.getActiveStageCapabilities().canFinalize) {
-      this.runLifecycleHook(
-        "beforeOutputFinalize",
-        (lifecycle) => lifecycle.beforeOutputFinalize?.({
-          state: this.pluginState,
-          outputBytes: this.outputBytes
-        })
-      );
-    }
-    this.outputWriter.finishPass();
-    this.runLifecycleHook(
-      "onStageEnd",
-      (lifecycle) => lifecycle.onStageEnd?.({ state: this.pluginState, stage })
-    );
-    if (this.getActiveStageCapabilities().canFinalize) {
-      this.includeSource.endAssemblySnapshot();
-      this.mathCore.endAssemblySnapshot();
-      this.passProgramCache.clear();
-    }
+  get lineCount() {
+    return this.getLineOffsets().length;
   }
-  /**
-   * Sets the current file being processed.
-   * @param {string} filename - The filename to set.
-   */
-  setCurrentFile(filename) {
-    debug7("setCurrentFile", filename);
-    this.currentFile = filename;
-    this.currentLine = 0;
-    this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
+  static isIncremental(event) {
+    const candidate = event;
+    return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range !== void 0 && (candidate.rangeLength === void 0 || typeof candidate.rangeLength === "number");
   }
-  /**
-   * Sets the current line number.
-   * @param {number} line - The line number to set.
-   */
-  setCurrentLine(line) {
-    this.currentLine = line;
+  static isFull(event) {
+    const candidate = event;
+    return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range === void 0 && candidate.rangeLength === void 0;
   }
-  /**
-   * Gets stage descriptor.
-   * @param {AssemblyStageName} stage The stage.
-   * @returns {Pick<StageExecutionState, "stage" | "capabilities">} The result.
-   */
-  getStageDescriptor(stage) {
-    if (stage === "collectDefinitions") {
-      return {
-        stage,
-        capabilities: {
-          instructionMode: "layout",
-          canEmitBytes: false,
-          canFinalize: false,
-          enforceResolvedLabels: false,
-          isDefinitionCollectionStage: true
-        }
-      };
-    }
-    if (stage === "resolveLayout") {
-      return {
-        stage,
-        capabilities: {
-          instructionMode: "emit",
-          canEmitBytes: false,
-          canFinalize: false,
-          enforceResolvedLabels: false,
-          isDefinitionCollectionStage: false
-        }
-      };
-    }
-    return {
-      stage,
-      capabilities: {
-        instructionMode: "emit",
-        canEmitBytes: true,
-        canFinalize: true,
-        enforceResolvedLabels: true,
-        isDefinitionCollectionStage: false
-      }
-    };
+};
+var TextDocument2;
+(function(TextDocument3) {
+  function create(uri, languageId, version, content) {
+    return new FullTextDocument2(uri, languageId, version, content);
   }
-  /**
-   * Clones relative labels.
-   * @param {{ [depth: number]: { addr: number; macroInstance?: number }[] }} source The source.
-   * @returns {{ [depth: number]: { addr: number; macroInstance?: number }[]; }} The result.
-   */
-  cloneRelativeLabels(source) {
-    const clone = {};
-    for (const [depth, entries] of Object.entries(source)) {
-      clone[Number(depth)] = entries.map((entry) => ({ ...entry }));
-    }
-    return clone;
-  }
-  /**
-   * Creates stage execution state.
-   * @param {AssemblyStageName} stage The stage.
-   * @returns {StageExecutionState} The result.
-   */
-  createStageExecutionState(stage) {
-    const descriptor = this.getStageDescriptor(stage);
-    let previousStage;
-    if (stage === "resolveLayout") {
-      previousStage = "collectDefinitions";
-    } else if (stage === "emitProgram") {
-      previousStage = "resolveLayout";
-    }
-    const seed = previousStage ? this.stageExecutionStates.get(previousStage) : void 0;
-    const cursorSeed = seed?.cursor ?? {
-      currentTargetAddress: this.currentTargetAddress,
-      currentTargetBaseAddress: this.currentTargetBaseAddress,
-      currentTargetStartAddress: this.currentTargetStartAddress,
-      currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
-      bytes: this.bytes
-    };
-    const symbolSeed = seed?.symbols ?? {
-      labelTable: this.labelTable,
-      forwardLabels: this.forwardLabels,
-      backwardLabels: this.backwardLabels,
-      currentParentLabel: this.currentParentLabel,
-      currentParentIsGlobal: this.currentParentIsGlobal,
-      currentGlobalParentLabel: this.currentGlobalParentLabel,
-      labelParents: this.labelParents
-    };
-    const controlSeed = seed?.control ?? {
-      namespaceStack: this.namespaceStack,
-      currentNamespace: this.currentNamespace,
-      namespaceNestingEnabled: this.namespaceNestingEnabled,
-      namespaceNestingPath: this.namespaceNestingPath,
-      inMacroExpansion: this.inMacroExpansion,
-      macroLabelInstance: this.macroLabelInstance
-    };
-    return {
-      ...descriptor,
-      cursor: { ...cursorSeed },
-      symbols: {
-        labelTable: new Map(
-          Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }])
-        ),
-        forwardLabels: this.cloneRelativeLabels(symbolSeed.forwardLabels),
-        backwardLabels: this.cloneRelativeLabels(symbolSeed.backwardLabels),
-        currentParentLabel: symbolSeed.currentParentLabel,
-        currentParentIsGlobal: symbolSeed.currentParentIsGlobal,
-        currentGlobalParentLabel: symbolSeed.currentGlobalParentLabel,
-        labelParents: new Map(symbolSeed.labelParents)
-      },
-      control: {
-        namespaceStack: [...controlSeed.namespaceStack],
-        currentNamespace: controlSeed.currentNamespace,
-        namespaceNestingEnabled: controlSeed.namespaceNestingEnabled,
-        namespaceNestingPath: [...controlSeed.namespaceNestingPath],
-        inMacroExpansion: controlSeed.inMacroExpansion,
-        macroLabelInstance: controlSeed.macroLabelInstance
-      },
-      pluginState: this.pluginState.cloneSnapshot(seed?.pluginState),
-      loweredProgram: null
-    };
-  }
-  /**
-   * Applies stage execution state.
-   * @param {StageExecutionState} stageState The stage state.
-   */
-  applyStageExecutionState(stageState) {
-    this.pluginState.restore(this.pluginState.cloneSnapshot(stageState.pluginState));
-    this.currentTargetAddress = stageState.cursor.currentTargetAddress;
-    this.currentTargetBaseAddress = stageState.cursor.currentTargetBaseAddress;
-    this.currentTargetStartAddress = stageState.cursor.currentTargetStartAddress;
-    this.currentTargetBaseStartAddress = stageState.cursor.currentTargetBaseStartAddress;
-    this.bytes = stageState.cursor.bytes;
-    this.labelTable = stageState.symbols.labelTable;
-    this.forwardLabels = stageState.symbols.forwardLabels;
-    this.backwardLabels = stageState.symbols.backwardLabels;
-    this.currentParentLabel = stageState.symbols.currentParentLabel;
-    this.currentParentIsGlobal = stageState.symbols.currentParentIsGlobal;
-    this.currentGlobalParentLabel = stageState.symbols.currentGlobalParentLabel;
-    this.labelParents = stageState.symbols.labelParents;
-    this.namespaceStack = stageState.control.namespaceStack;
-    this.currentNamespace = stageState.control.currentNamespace;
-    this.namespaceNestingEnabled = stageState.control.namespaceNestingEnabled;
-    this.namespaceNestingPath = stageState.control.namespaceNestingPath;
-    this.inMacroExpansion = stageState.control.inMacroExpansion;
-    this.macroLabelInstance = stageState.control.macroLabelInstance;
-  }
-  /**
-   * Captures stage execution state.
-   * @param {StageExecutionState} stageState The stage state.
-   */
-  captureStageExecutionState(stageState) {
-    stageState.pluginState = this.pluginState.cloneSnapshot();
-    stageState.cursor = {
-      currentTargetAddress: this.currentTargetAddress,
-      currentTargetBaseAddress: this.currentTargetBaseAddress,
-      currentTargetStartAddress: this.currentTargetStartAddress,
-      currentTargetBaseStartAddress: this.currentTargetBaseStartAddress,
-      bytes: this.bytes
-    };
-    stageState.symbols = {
-      labelTable: this.labelTable,
-      forwardLabels: this.forwardLabels,
-      backwardLabels: this.backwardLabels,
-      currentParentLabel: this.currentParentLabel,
-      currentParentIsGlobal: this.currentParentIsGlobal,
-      currentGlobalParentLabel: this.currentGlobalParentLabel,
-      labelParents: this.labelParents
-    };
-    stageState.control = {
-      namespaceStack: this.namespaceStack,
-      currentNamespace: this.currentNamespace,
-      namespaceNestingEnabled: this.namespaceNestingEnabled,
-      namespaceNestingPath: this.namespaceNestingPath,
-      inMacroExpansion: this.inMacroExpansion,
-      macroLabelInstance: this.macroLabelInstance
-    };
-  }
-  /**
-   * Gets or create stage execution state.
-   * @param {AssemblyStageName} stage The stage.
-   * @returns {StageExecutionState} The result.
-   */
-  getOrCreateStageExecutionState(stage) {
-    const existing = this.stageExecutionStates.get(stage);
-    if (existing) {
-      return existing;
-    }
-    const created = this.createStageExecutionState(stage);
-    this.stageExecutionStates.set(stage, created);
-    return created;
-  }
-  /**
-   * Builds program model.
-   * @param {string} source The source.
-   * @param {string} [sourceFile] The source file.
-   * @param {number} [startLine] The start line.
-   * @returns {ProgramModel} The result.
-   */
-  buildProgramModel(source, sourceFile = this.currentFile, startLine = 0) {
-    return measureInternalPhase("buildProgramModel", () => {
-      const program = this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
-      return {
-        sourceFile: program.sourceFile,
-        startLine: program.startLine,
-        nodes: program.nodes
-      };
-    });
-  }
-  /**
-   * Runs stage.
-   * @param {AssemblyStageName} stage The stage.
-   * @param {ProgramModel} program The program.
-   * @returns {StageExecutionState} The result.
-   */
-  runStage(stage, program) {
-    return measureInternalPhase(stage, () => {
-      if (stage === "collectDefinitions") {
-        this.includeSource.beginAssemblySnapshot();
-        this.mathCore.beginAssemblySnapshot();
-        this.stageExecutionStates.clear();
-        this.activeStageExecutionState = null;
-      }
-      const stageState = this.getOrCreateStageExecutionState(stage);
-      this.activeStageExecutionState = stageState;
-      this.applyStageExecutionState(stageState);
-      this.setCurrentFile(program.sourceFile);
-      this.activateStage(stage);
-      const loweredProgram = this.getOrCreateLoweredProgram(stageState, program);
-      measureInternalPhase(
-        "executeProgram",
-        () => this.executeLoweredNodeStream(loweredProgram.nodes)
-      );
-      measureInternalPhase("finishPass", () => this.finishPass());
-      this.captureStageExecutionState(stageState);
-      return stageState;
-    });
-  }
-  /**
-   * Handles assemble program.
-   * @param {ProgramModel} program The program.
-   */
-  assembleProgram(program) {
-    this.runStage("collectDefinitions", program);
-    this.runStage("resolveLayout", program);
-    this.runStage("emitProgram", program);
-  }
-  /**
-   * Handles assemble source.
-   * @param {string} source The source.
-   * @param {string} [sourceFile] The source file.
-   * @param {number} [startLine] The start line.
-   * @returns {ProgramModel} The result.
-   */
-  assembleSource(source, sourceFile = this.currentFile, startLine = 0) {
-    const program = this.buildProgramModel(source, sourceFile, startLine);
-    this.assembleProgram(program);
-    return program;
-  }
-  /**
-   * Writes a repeated byte into the output buffer.
-   * @param {number} start The starting address of the block to write.
-   * @param {number} value The byte value to write.
-   * @param {number} [length] The length of the block to write.
-   */
-  writeOutputBytes(start, value, length = 1) {
-    debug7("writeOutputBytes", { start, value, length });
-    if (typeof start !== "number" || typeof value !== "number" || typeof length !== "number") {
-      throw new Error("writeOutputBytes requires a number for start, value, and length");
-    }
-    if (value > 255) {
-      debug7("writeOutputBytes \u{1F4A5} value must be less than 0xFF", value);
-    }
-    debug7(
-      "writeOutputBytes before this.outputBytes.length",
-      this.outputBytes.length,
-      "/",
-      this.outputBytes.length.toString(16)
-    );
-    for (let i = 0; i < length; i++) {
-      this.outputBytes[start + i] = value & 255;
-    }
-    debug7(
-      "writeOutputBytes after this.outputBytes.length",
-      this.outputBytes.length,
-      "/",
-      this.outputBytes.length.toString(16)
-    );
-  }
-  /**
-   * Expands the output buffer and fills it with a specified byte.
-   * @param {number} newSize The new output size.
-   * @param {number} fillByte The byte used for the new range.
-   */
-  expandOutput(newSize, fillByte) {
-    debug7("expandOutput", { newSize, fillByte });
-    if (typeof newSize !== "number" || typeof fillByte !== "number") {
-      throw new Error("expandOutput requires a number for newSize and fillByte");
-    }
-    if (newSize > this.outputBytes.length) {
-      this.writeOutputBytes(this.outputBytes.length, fillByte, newSize - this.outputBytes.length);
+  TextDocument3.create = create;
+  function update(document, changes, version) {
+    if (document instanceof FullTextDocument2) {
+      document.update(changes, version);
+      return document;
     } else {
-      debug7("expandOutput newSize <= this.outputBytes.length, no expansion needed");
+      throw new Error("TextDocument.update: document must be created by TextDocument.create");
     }
   }
-  /** Runs the active output-format finalizer. */
-  finalizeOutput() {
-    this.pluginOutputFormat.finalize({
-      state: this.pluginState,
-      outputBytes: this.outputBytes
+  TextDocument3.update = update;
+  function applyEdits(document, edits) {
+    const text = document.getText();
+    const sortedEdits = mergeSort(edits.map(getWellformedEdit), (a, b) => {
+      const diff = a.range.start.line - b.range.start.line;
+      if (diff === 0) {
+        return a.range.start.character - b.range.start.character;
+      }
+      return diff;
+    });
+    let lastModifiedOffset = 0;
+    const spans = [];
+    for (const e of sortedEdits) {
+      const startOffset = document.offsetAt(e.range.start);
+      if (startOffset < lastModifiedOffset) {
+        throw new Error("Overlapping edit");
+      } else if (startOffset > lastModifiedOffset) {
+        spans.push(text.substring(lastModifiedOffset, startOffset));
+      }
+      if (e.newText.length) {
+        spans.push(e.newText);
+      }
+      lastModifiedOffset = document.offsetAt(e.range.end);
+    }
+    spans.push(text.substr(lastModifiedOffset));
+    return spans.join("");
+  }
+  TextDocument3.applyEdits = applyEdits;
+})(TextDocument2 || (TextDocument2 = {}));
+function mergeSort(data, compare) {
+  if (data.length <= 1) {
+    return data;
+  }
+  const p = data.length / 2 | 0;
+  const left = data.slice(0, p);
+  const right = data.slice(p);
+  mergeSort(left, compare);
+  mergeSort(right, compare);
+  let leftIdx = 0;
+  let rightIdx = 0;
+  let i = 0;
+  while (leftIdx < left.length && rightIdx < right.length) {
+    const ret = compare(left[leftIdx], right[rightIdx]);
+    if (ret <= 0) {
+      data[i++] = left[leftIdx++];
+    } else {
+      data[i++] = right[rightIdx++];
+    }
+  }
+  while (leftIdx < left.length) {
+    data[i++] = left[leftIdx++];
+  }
+  while (rightIdx < right.length) {
+    data[i++] = right[rightIdx++];
+  }
+  return data;
+}
+function computeLineOffsets(text, isAtLineStart, textOffset = 0) {
+  const result = isAtLineStart ? [textOffset] : [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text.charCodeAt(i);
+    if (isEOL(ch)) {
+      if (ch === 13 && i + 1 < text.length && text.charCodeAt(i + 1) === 10) {
+        i++;
+      }
+      result.push(textOffset + i + 1);
+    }
+  }
+  return result;
+}
+function isEOL(char) {
+  return char === 13 || char === 10;
+}
+function getWellformedRange(range) {
+  const start = range.start;
+  const end = range.end;
+  if (start.line > end.line || start.line === end.line && start.character > end.character) {
+    return { start: end, end: start };
+  }
+  return range;
+}
+function getWellformedEdit(textEdit) {
+  const range = getWellformedRange(textEdit.range);
+  if (range !== textEdit.range) {
+    return { newText: textEdit.newText, range };
+  }
+  return textEdit;
+}
+
+// language-server/src/project-environment.ts
+import { existsSync } from "node:fs";
+import path6 from "node:path";
+
+// packages/plugin-loader-node/src/configuration.ts
+import { promises as fs3 } from "node:fs";
+import path4 from "node:path";
+var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set(["$schema", "plugins", "target", "architecture", "includePaths"]);
+var PLUGIN_KEYS = /* @__PURE__ */ new Set(["module", "options"]);
+var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var configurationError = (message, cause) => new PluginError(message, {
+  code: "PLUGIN_CONFIGURATION_INVALID",
+  cause
+});
+var optionalText = (value, field) => {
+  if (value === void 0) return void 0;
+  if (typeof value !== "string" || value.trim() === "") {
+    throw configurationError(`Configuration field '${field}' must be a non-empty string.`);
+  }
+  return value;
+};
+var validatePluginEntry = (value, index2) => {
+  const entry = `plugins[${index2}]`;
+  if (!isRecord2(value)) {
+    throw configurationError(`Configuration entry '${entry}' must be an object.`);
+  }
+  const unknown = Object.keys(value).filter((key) => !PLUGIN_KEYS.has(key));
+  if (unknown.length > 0) {
+    throw configurationError(
+      `Configuration entry '${entry}' has unknown field(s): ${unknown.join(", ")}.`
+    );
+  }
+  if (typeof value.module !== "string" || value.module.trim() === "") {
+    throw configurationError(`Configuration entry '${entry}.module' must be a non-empty string.`);
+  }
+  if (value.options !== void 0 && !isRecord2(value.options)) {
+    throw configurationError(`Configuration entry '${entry}.options' must be an object.`);
+  }
+  return {
+    module: value.module,
+    ...value.options === void 0 ? {} : { options: value.options }
+  };
+};
+var validateProjectConfiguration = (value) => {
+  if (!isRecord2(value)) {
+    throw configurationError("Project configuration must be a JSON object.");
+  }
+  const unknown = Object.keys(value).filter((key) => !TOP_LEVEL_KEYS.has(key));
+  if (unknown.length > 0) {
+    throw configurationError(`Project configuration has unknown field(s): ${unknown.join(", ")}.`);
+  }
+  if (value.plugins !== void 0 && !Array.isArray(value.plugins)) {
+    throw configurationError("Configuration field 'plugins' must be an array.");
+  }
+  if (value.includePaths !== void 0 && (!Array.isArray(value.includePaths) || value.includePaths.some((item) => typeof item !== "string" || item.trim() === ""))) {
+    throw configurationError("Configuration field 'includePaths' must be an array of strings.");
+  }
+  const schema = optionalText(value.$schema, "$schema");
+  const target = optionalText(value.target, "target");
+  const architecture = optionalText(value.architecture, "architecture");
+  return {
+    ...schema === void 0 ? {} : { $schema: schema },
+    ...value.plugins === void 0 ? {} : { plugins: value.plugins.map((entry, index2) => validatePluginEntry(entry, index2)) },
+    ...target === void 0 ? {} : { target },
+    ...architecture === void 0 ? {} : { architecture },
+    ...value.includePaths === void 0 ? {} : { includePaths: value.includePaths }
+  };
+};
+var readProjectConfiguration = async (cwd, configuredPath) => {
+  const explicit = configuredPath !== void 0;
+  const configPath = path4.resolve(cwd, configuredPath ?? "asm.config.json");
+  let source;
+  try {
+    source = await fs3.readFile(configPath, "utf8");
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error ? error.code : void 0;
+    if (!explicit && code === "ENOENT") {
+      return { directory: path4.resolve(cwd), configuration: {} };
+    }
+    throw configurationError(`Unable to read project configuration '${configPath}'.`, error);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(source);
+  } catch (error) {
+    throw configurationError(`Project configuration '${configPath}' is not valid JSON.`, error);
+  }
+  return {
+    path: configPath,
+    directory: path4.dirname(configPath),
+    configuration: validateProjectConfiguration(parsed)
+  };
+};
+
+// packages/plugin-loader-node/src/loader.ts
+import { realpath } from "node:fs/promises";
+import path5 from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var toOptionsRecord = (value, entry) => {
+  if (value === void 0) return {};
+  if (!isRecord3(value)) {
+    throw new PluginError(`Configuration entry '${entry}.options' must be an object.`, {
+      code: "PLUGIN_CONFIGURATION_INVALID"
     });
   }
-  /**
-   * Returns the compiled binary output.
-   * @returns {Uint8Array} The compiled binary output.
-   */
-  getBinaryOutput = () => {
-    return this.pluginOutputFormat.getOutput({
-      state: this.pluginState,
-      outputBytes: this.outputBytes
+  return { ...value };
+};
+var pluginIdFromNamespace = (namespace) => {
+  if (!isRecord3(namespace) || !isRecord3(namespace.default) || !isRecord3(namespace.default.manifest)) {
+    return void 0;
+  }
+  return typeof namespace.default.manifest.id === "string" ? namespace.default.manifest.id : void 0;
+};
+var stableValue = (value) => {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (isRecord3(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, stableValue(value[key])])
+    );
+  }
+  return value;
+};
+var normalizeFileUrl = async (url) => {
+  try {
+    return pathToFileURL(await realpath(fileURLToPath(url))).href;
+  } catch {
+    return url.href;
+  }
+};
+var moduleLoadError = (request, message, resolvedModule, cause) => new PluginError(
+  `Configuration entry '${request.configEntry}' (${request.module})${resolvedModule ? ` resolved to '${resolvedModule}'` : ""}: ${message}`,
+  {
+    code: "PLUGIN_MODULE_NOT_FOUND",
+    pluginModule: resolvedModule ?? request.module,
+    cause
+  }
+);
+var resolveExternalModule = async (request) => {
+  try {
+    if (request.module.startsWith("file:")) {
+      return normalizeFileUrl(new URL(request.module));
+    }
+    if (path5.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
+      return normalizeFileUrl(pathToFileURL(path5.resolve(request.baseDirectory, request.module)));
+    }
+    const parent = pathToFileURL(path5.join(request.baseDirectory, "asm.config.json"));
+    return await normalizeFileUrl(new URL(import.meta.resolve(request.module, parent.href)));
+  } catch (error) {
+    throw moduleLoadError(request, "module could not be resolved", void 0, error);
+  }
+};
+var wrapActivationError = (error, modules) => {
+  if (!(error instanceof PluginError)) {
+    return new PluginError("Plugin activation failed.", {
+      code: "PLUGIN_ACTIVATION_FAILED",
+      cause: error
     });
-  };
-  /**
-   * Lowers completed runtime nodes and executes them through the production executor.
-   * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
-   */
-  lowerAndExecuteRuntimeNodes(nodes) {
-    const previousRewrite = this.runtimePassthroughRewriteEnabled;
-    this.runtimePassthroughRewriteEnabled = true;
-    try {
-      const loweredNodes = nodes.map(
-        (node) => this.commandLoweringService.lowerExecutableNode(node)
-      );
-      for (const node of loweredNodes) {
-        this.executeWithAnalysisRecovery(
-          node,
-          (currentNode) => this.getLoweredNodeSpan(currentNode),
-          (currentNode) => this.executeLoweredNode(currentNode)
+  }
+  const entry = modules.find(
+    (item) => item.resolvedModule === error.pluginModule || error.pluginId !== void 0 && item.pluginId === error.pluginId
+  );
+  if (!entry) return error;
+  return new PluginError(
+    `Configuration entry '${entry.configEntry}' resolved to '${entry.resolvedModule}': ${error.message}`,
+    {
+      code: error.code,
+      pluginId: error.pluginId ?? entry.pluginId,
+      pluginModule: error.pluginModule ?? entry.resolvedModule,
+      contributionId: error.contributionId,
+      targetId: error.targetId,
+      cause: error.cause ?? error
+    }
+  );
+};
+var NodePluginLoader = class {
+  #current;
+  async loadProjectEnvironment(options) {
+    const cwd = path5.resolve(options.cwd);
+    const loadedConfig = options.allowProjectConfiguration === false ? { directory: cwd, configuration: {} } : await readProjectConfiguration(cwd, options.configFile);
+    const configPlugins = loadedConfig.configuration.plugins ?? [];
+    const defaultPlugins = configPlugins.length === 0 ? options.defaults?.plugins ?? [] : [];
+    const requests = [
+      ...configPlugins.map((request, index2) => ({
+        ...request,
+        baseDirectory: loadedConfig.directory,
+        source: "configuration",
+        configEntry: `plugins[${index2}]`
+      })),
+      ...defaultPlugins.map((request, index2) => ({
+        ...request,
+        baseDirectory: cwd,
+        source: "host-default",
+        configEntry: `hostDefaults.plugins[${index2}]`
+      })),
+      ...(options.pluginModules ?? []).map((request, index2) => ({
+        ...request,
+        baseDirectory: cwd,
+        source: "override",
+        configEntry: `pluginModules[${index2}]`
+      }))
+    ];
+    const modules = [];
+    for (const request of requests) {
+      modules.push(await this.#resolveAndImport(request, options));
+    }
+    const duplicates = /* @__PURE__ */ new Map();
+    for (const item of modules) {
+      const previous = duplicates.get(item.resolvedModule);
+      if (previous) {
+        throw new PluginError(
+          `Configuration entries '${previous.configEntry}' and '${item.configEntry}' resolve to the same module '${item.resolvedModule}'.`,
+          {
+            code: "PLUGIN_CONFIGURATION_INVALID",
+            pluginId: item.pluginId || void 0,
+            pluginModule: item.resolvedModule
+          }
         );
       }
-    } finally {
-      this.runtimePassthroughRewriteEnabled = previousRewrite;
+      duplicates.set(item.resolvedModule, item);
     }
-  }
-  /**
-   * Resolves for loop bounds.
-   * @param {LoweredLoopNode} forBlock The for block.
-   * @returns {{ variable?: string; start?: number; end?: number; }} The result.
-   */
-  resolveForLoopBounds(forBlock) {
-    const parsedForLoop = forBlock.header?.parsed.forLoop;
-    const variable = forBlock.variable ?? parsedForLoop?.variable;
-    let start = forBlock.start;
-    let end = forBlock.end;
-    const startExpression = forBlock.startExpression ?? parsedForLoop?.start;
-    const endExpression = forBlock.endExpression ?? parsedForLoop?.end;
-    if (startExpression && endExpression) {
-      const startExpr = renderExpressionNode(startExpression);
-      const endExpr = renderExpressionNode(endExpression);
-      const startDefinesResolved = /^-?\d+$/.test(startExpr) ? startExpr : this.resolvedefines(startExpr);
-      const endDefinesResolved = /^-?\d+$/.test(endExpr) ? endExpr : this.resolvedefines(endExpr);
-      start = this.operandResolver.getnum(startDefinesResolved);
-      end = this.operandResolver.getnum(endDefinesResolved);
+    this.#assertAllPluginOptionOverridesMatched(options, modules);
+    const targetInput = options.overrides?.target ?? loadedConfig.configuration.target ?? options.defaults?.target;
+    const architectureInput = options.overrides?.architecture ?? loadedConfig.configuration.architecture ?? options.defaults?.architecture;
+    const configuredIncludePaths = options.overrides?.includePaths ?? loadedConfig.configuration.includePaths ?? options.defaults?.includePaths ?? ["./"];
+    let includeBase = cwd;
+    if (options.overrides?.includePaths === void 0 && loadedConfig.configuration.includePaths !== void 0) {
+      includeBase = loadedConfig.directory;
     }
-    return { variable, start, end };
-  }
-  /**
-   * Executes for loop iterations.
-   * @param {LoweredLoopNode} forBlock The for block.
-   * @param {() => void} executeBody The execute body.
-   */
-  executeForLoopIterations(forBlock, executeBody) {
-    const { variable, start, end } = this.resolveForLoopBounds(forBlock);
-    if (!variable || start === void 0 || end === void 0) {
-      debug7("executeForLoopIterations missing loop semantics:", forBlock);
-      return;
-    }
-    const originalValue = this.defines.get(variable);
-    if (start < end) {
-      for (let i = start; i < end; i++) {
-        this.defines.set(variable, i.toString());
-        executeBody();
-      }
-    }
-    if (originalValue !== void 0) {
-      this.defines.set(variable, originalValue);
-    } else {
-      this.defines.delete(variable);
-    }
-  }
-  /**
-   * Executes lowered loop.
-   * @param {LoweredLoopNode} loopBlock The loop block.
-   */
-  executeLoweredLoop(loopBlock) {
-    debug7("executeLoweredLoop", loopBlock);
-    if (loopBlock.loopType === "for") {
-      this.executeLoweredForLoop(loopBlock);
-    } else if (loopBlock.loopType === "while") {
-      this.executeLoweredWhileLoop(loopBlock);
-    }
-  }
-  /**
-   * Executes lowered for loop.
-   * @param {LoweredLoopNode} forBlock The for block.
-   */
-  executeLoweredForLoop(forBlock) {
-    debug7("executeLoweredForLoop", forBlock);
-    this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
-  }
-  /**
-   * Executes while loop commands.
-   * @param {LoweredLoopNode} whileBlock The while block.
-   * @param {TCommand[]} commands The commands.
-   * @param {(command: TCommand) => string | null} getDefineTarget The get define target.
-   * @param {(command: TCommand) => void} executeCommand The execute command.
-   */
-  executeWhileLoopCommands(whileBlock, commands, getDefineTarget, executeCommand) {
-    const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
-    if (!conditionNode) {
-      debug7("executeWhileLoopCommands missing condition expression", whileBlock);
-      return;
-    }
-    let iteration = 0;
-    const MAX_ITERATIONS = 1e4;
-    const loopVars = /* @__PURE__ */ new Set();
-    const originalValues = /* @__PURE__ */ new Map();
-    while (this.evaluateExpression(conditionNode) && iteration < MAX_ITERATIONS) {
-      for (const cmd of commands) {
-        const defineTarget = getDefineTarget(cmd);
-        if (defineTarget && !loopVars.has(defineTarget)) {
-          loopVars.add(defineTarget);
-          originalValues.set(defineTarget, this.defines.get(defineTarget));
-        }
-        executeCommand(cmd);
-      }
-      iteration++;
-    }
-    if (iteration >= MAX_ITERATIONS) {
-      debug7(
-        "executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected."
-      );
-    }
-    for (const [varName, value] of originalValues.entries()) {
-      if (value !== void 0) {
-        debug7(`executeWhileLoopCommands setting ${varName} to ${value}`);
-        this.defines.set(varName, value);
-      } else {
-        debug7(`executeWhileLoopCommands delete entry for ${varName}`);
-        this.defines.delete(varName);
-      }
-    }
-  }
-  /**
-   * Executes lowered while loop.
-   * @param {LoweredLoopNode} whileBlock The while block.
-   */
-  executeLoweredWhileLoop(whileBlock) {
-    debug7("executeLoweredWhileLoop", whileBlock);
-    this.executeWhileLoopCommands(
-      whileBlock,
-      whileBlock.commands,
-      (cmd) => cmd.kind === "command" && cmd.command.kind === "defineCommand" ? getDefineVariable(cmd.command.command) ?? null : null,
-      (cmd) => this.executeLoweredNodeWithRecovery(cmd)
+    const includePaths = [
+      ...new Set(configuredIncludePaths.map((entry) => path5.resolve(includeBase, entry)))
+    ];
+    const preliminarySnapshot = JSON.stringify(
+      stableValue({
+        configFile: loadedConfig.path,
+        modules: modules.map((item) => ({
+          module: item.module,
+          resolvedModule: item.resolvedModule,
+          pluginId: item.pluginId,
+          options: item.normalizedOptions,
+          source: item.source
+        })),
+        targetInput,
+        architectureInput,
+        includePaths
+      })
     );
-  }
-  /**
-   * Gets lowered node span.
-   * @param {LoweredExecutableNode} node The node.
-   * @returns {SourceSpan | undefined} The result.
-   */
-  getLoweredNodeSpan(node) {
-    if (node.kind === "command") {
-      return node.command.source.normalizedSpan;
+    if (this.#current?.snapshot === preliminarySnapshot && !this.#current.disposed) {
+      return this.#current.loaded;
     }
-    if (node.kind === "directive") {
-      return node.source.normalizedSpan;
-    }
-    if (node.kind === "loop" || node.kind === "conditional") {
-      return node.header?.source.normalizedSpan;
-    }
-    return void 0;
-  }
-  /**
-   * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.
-   * @param {TNode} node The node to execute.
-   * @param {(node: TNode) => SourceSpan | undefined} getSpan Resolves the node span for diagnostics.
-   * @param {(node: TNode) => void} executeNode Executes the node with its native dispatcher.
-   */
-  executeWithAnalysisRecovery(node, getSpan, executeNode) {
-    if (!this.analysisErrorRecoveryEnabled) {
-      executeNode(node);
-      return;
-    }
+    await this.#disposeCurrent();
+    const manager = new PluginManager({ logger: options.logger });
     try {
-      executeNode(node);
-    } catch (error) {
-      this.reportErrorDiagnostic(error, getSpan(node), this.activeStageExecutionState?.stage);
-    }
-  }
-  /**
-   * Executes lowered node with recovery.
-   * @param {LoweredExecutableNode} node The node.
-   */
-  executeLoweredNodeWithRecovery(node) {
-    this.executeWithAnalysisRecovery(
-      node,
-      (currentNode) => this.getLoweredNodeSpan(currentNode),
-      (currentNode) => this.executeLoweredNode(currentNode)
-    );
-  }
-  /**
-   * Executes lowered node.
-   * @param {LoweredExecutableNode} node The node.
-   */
-  executeLoweredNode(node) {
-    const sourceCommand = node.kind === "loop" || node.kind === "conditional" ? node.header : node.command;
-    if (sourceCommand) {
-      this.currentFile = sourceCommand.source.file;
-      this.currentLine = sourceCommand.source.line;
-    }
-    if (node.kind === "command") {
-      incrementInternalCounter("passthroughDispatches");
-      this.processNormalizedCommand(node.command, this.runtimePassthroughRewriteEnabled);
-      return;
-    }
-    if (node.kind === "directive" || node.kind === "instruction") {
-      if (node.command) {
-        this.collectCommandReferences(node.command);
+      const activationRequests = modules.map((item) => ({
+        module: item.namespace,
+        options: item.normalizedOptions,
+        pluginModule: item.resolvedModule
+      }));
+      await manager.activateModules(activationRequests);
+      const environment = manager.freeze();
+      const targets = environment.getTargetSummaries();
+      const targetCandidate = targetInput ?? (targets.length === 1 ? targets[0]?.id : void 0);
+      if (!targetCandidate) {
+        throw new PluginError(
+          targets.length === 0 ? "No target is configured and the active plugins provide no targets." : `No target is configured; choose one of: ${targets.map((target2) => target2.id).join(", ")}.`,
+          { code: "PLUGIN_TARGET_INVALID" }
+        );
       }
-    }
-    if (node.kind === "loop") {
-      this.executeLoweredLoop(node);
-      return;
-    }
-    if (node.kind === "conditional") {
-      this.executeConditionalBranches(
-        node.branches,
-        (commands) => this.executeLoweredNodeStream(commands)
+      const target = environment.resolveTargetId(targetCandidate);
+      if (!target) {
+        throw new PluginError(`Unknown configured target '${targetCandidate}'.`, {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId: targetCandidate
+        });
+      }
+      const targetContribution = environment.getTarget(target);
+      const architectureCandidate = architectureInput ?? targetContribution.defaultArchitecture;
+      const architecture = environment.resolveArchitectureId(target, architectureCandidate);
+      if (!architecture) {
+        throw new PluginError(
+          `Architecture '${architectureCandidate}' is not available for target '${target}'.`,
+          {
+            code: "PLUGIN_TARGET_INVALID",
+            targetId: target,
+            contributionId: architectureCandidate
+          }
+        );
+      }
+      const targetOwner = environment.getContributionOwner(target);
+      const configuredTargetOptions = modules.find((item) => item.pluginId === targetOwner)?.normalizedOptions ?? {};
+      const targetOptions2 = Object.freeze({
+        ...targetContribution.createOptions ? configuredTargetOptions : {}
+      });
+      const normalizedPlugins = Object.freeze(
+        modules.map(
+          (item) => Object.freeze({
+            module: item.module,
+            resolvedModule: item.resolvedModule,
+            pluginId: item.pluginId,
+            options: item.normalizedOptions,
+            source: item.source,
+            configEntry: item.configEntry,
+            bundled: item.bundled
+          })
+        )
       );
-      return;
+      const configuration = Object.freeze({
+        ...loadedConfig.path === void 0 ? {} : { configFile: loadedConfig.path },
+        projectRoot: loadedConfig.directory,
+        plugins: normalizedPlugins,
+        target,
+        architecture,
+        targetOptions: targetOptions2,
+        includePaths: Object.freeze(includePaths)
+      });
+      const current = {};
+      const loaded = Object.freeze({
+        environment,
+        target,
+        architecture,
+        targetOptions: targetOptions2,
+        includePaths: configuration.includePaths,
+        configuration,
+        diagnostics: Object.freeze([]),
+        dispose: async () => {
+          if (this.#current === current) this.#current = void 0;
+          await this.#disposeEntry(current);
+        }
+      });
+      Object.assign(current, {
+        snapshot: preliminarySnapshot,
+        manager,
+        loaded,
+        disposed: false
+      });
+      this.#current = current;
+      return loaded;
+    } catch (error) {
+      await manager.dispose();
+      throw wrapActivationError(error, modules);
     }
-    this.dispatchLoweredNode(node);
   }
-  /**
-   * Executes lowered node stream.
-   * @param {LoweredExecutableNode[]} nodes The nodes.
-   */
-  executeLoweredNodeStream(nodes) {
-    for (const node of nodes) {
-      this.executeLoweredNodeWithRecovery(node);
-    }
+  async dispose() {
+    await this.#disposeCurrent();
   }
-  /**
-   * Drains and executes any completed nodes still buffered in the incremental parser.
-   * This protects re-entrant command sources, such as macro expansion, from leaving
-   * finished typed roots stranded until the next top-level line arrives.
-   */
-  flushCompletedIncrementalNodes() {
-    const ready = this.programModelBuilder.drainCompletedRoots(this.incrementalProgramParseState);
-    if (ready.length > 0) {
-      this.lowerAndExecuteRuntimeNodes(ready);
-    }
-  }
-  /**
-   * Executes conditional branches.
-   * @param {Array<{ kind: "if" | "elseif" | "else"; conditionNode?: ExpressionNode; commands: TCommand[]; }>} branches The branches.
-   * @param {(commands: TCommand[]) => void} executeCommands The execute commands.
-   */
-  executeConditionalBranches(branches, executeCommands) {
-    for (const branch2 of branches) {
-      if (branch2.kind === "else") {
-        executeCommands(branch2.commands);
-        return;
-      }
-      if (!branch2.conditionNode) {
-        continue;
-      }
-      let branchConditionMatched = false;
-      this.requireStaticLabelLookup = true;
+  async #resolveAndImport(request, options) {
+    const bundled = options.bundledPlugins?.get(request.module);
+    let resolvedModule;
+    let namespace;
+    if (bundled) {
+      resolvedModule = `bundled:${request.module}`;
+      namespace = { default: bundled };
+    } else {
+      resolvedModule = await resolveExternalModule(request);
       try {
-        branchConditionMatched = this.evaluateExpression(branch2.conditionNode);
-      } finally {
-        this.requireStaticLabelLookup = false;
-      }
-      if (branchConditionMatched) {
-        executeCommands(branch2.commands);
-        return;
+        namespace = await import(resolvedModule);
+      } catch (error) {
+        throw moduleLoadError(request, "module could not be imported", resolvedModule, error);
       }
     }
-  }
-  /**
-   * Parses command stream to nodes.
-   * @param {string[]} commands The commands.
-   * @param {string} [sourceFile] The source file.
-   * @param {number} [startLine] The start line.
-   * @returns {RuntimeNode[]} The result.
-   */
-  parseCommandStreamToNodes(commands, sourceFile = this.currentFile, startLine = this.currentLine) {
-    return this.programModelBuilder.parseCommandStreamToNodes(commands, sourceFile, startLine);
-  }
-  /**
-   * Gets or build pass program.
-   * @param {string[]} commands The commands.
-   * @param {string} [sourceFile] The source file.
-   * @param {number} [startLine] The start line.
-   * @returns {RuntimeNode[]} The result.
-   */
-  getOrBuildPassProgram(commands, sourceFile = this.currentFile, startLine = this.currentLine) {
-    return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine);
-  }
-  /**
-   * Gets macro definition node.
-   * @param {string} name The name.
-   * @returns {MacroDefinitionNode | undefined} The result.
-   */
-  getMacroDefinitionNode(name) {
-    const macro = this.macros.get(name);
-    if (!macro) {
-      return void 0;
-    }
-    const body = macro.body.map((entry) => entry);
+    const pluginId = pluginIdFromNamespace(namespace) ?? "";
+    const configuredOptions = toOptionsRecord(request.options, request.configEntry);
+    const moduleOverride = options.overrides?.pluginOptions?.[request.module] ?? {};
+    const idOverride = pluginId ? options.overrides?.pluginOptions?.[pluginId] ?? {} : {};
     return {
-      type: "macroDefinition",
-      name: macro.name,
-      params: [...macro.params],
-      variadic: macro.variadic,
-      body,
-      sourceFile: macro.sourceFile
+      ...request,
+      resolvedModule,
+      bundled: bundled !== void 0,
+      namespace,
+      pluginId,
+      normalizedOptions: Object.freeze({ ...configuredOptions, ...moduleOverride, ...idOverride })
     };
   }
-};
-
-// src/lsp/overlay-file-provider.ts
-import path2 from "node:path";
-var OverlayFileProvider = class {
-  /** Open document contents keyed by absolute, normalized path. */
-  overlay;
-  /** The backing provider used when a path is not in the overlay. */
-  base;
-  /**
-   * Creates an overlay provider.
-   * @param {Map<string, string>} [overlay] Initial overlay contents keyed by absolute path.
-   * @param {AssemblyFileProvider} [base] Backing provider for disk reads.
-   */
-  constructor(overlay = /* @__PURE__ */ new Map(), base = new NodeAssemblyFileProvider()) {
-    this.overlay = overlay;
-    this.base = base;
-  }
-  /**
-   * Resolves a filename to an absolute path, preferring overlay entries.
-   * @param {string} filename The filename or relative path to resolve.
-   * @param {AssemblyFileResolutionOptions} [options] Resolution context (current file, include paths).
-   * @returns {string | undefined} The resolved absolute path, or undefined when not found.
-   */
-  resolvePath(filename, options = {}) {
-    if (!filename) {
-      return void 0;
-    }
-    const normalized = stripWrappingQuotes(filename);
-    const baseResolved = this.base.resolvePath(filename, options);
-    if (baseResolved) {
-      return baseResolved;
-    }
-    if (path2.isAbsolute(normalized) && this.overlay.has(normalized)) {
-      return normalized;
-    }
-    for (const candidate of this.candidatePaths(normalized, options)) {
-      if (this.overlay.has(candidate)) {
-        return candidate;
+  #assertAllPluginOptionOverridesMatched(options, modules) {
+    for (const key of Object.keys(options.overrides?.pluginOptions ?? {})) {
+      if (!modules.some((item) => item.module === key || item.pluginId === key)) {
+        throw new PluginError(`Plugin option override '${key}' does not match a loaded plugin.`, {
+          code: "PLUGIN_CONFIGURATION_INVALID",
+          pluginId: key
+        });
       }
     }
-    return void 0;
   }
-  /**
-   * Returns stat information, treating overlay entries as readable files.
-   * @param {string} filePath The absolute path to stat.
-   * @returns {AssemblyFileStat} The stat result.
-   */
-  stat(filePath) {
-    const entry = this.overlay.get(filePath);
-    if (entry !== void 0) {
-      return {
-        exists: true,
-        readable: true,
-        size: Buffer.byteLength(entry, "utf8")
-      };
-    }
-    return this.base.stat(filePath);
+  async #disposeCurrent() {
+    const current = this.#current;
+    this.#current = void 0;
+    if (current) await this.#disposeEntry(current);
   }
-  /**
-   * Reads a file as bytes, using overlay content when present.
-   * @param {string} filePath The absolute path to read.
-   * @returns {Uint8Array} The file bytes.
-   */
-  readFile(filePath) {
-    const entry = this.overlay.get(filePath);
-    if (entry !== void 0) {
-      return new Uint8Array(Buffer.from(entry, "utf8"));
-    }
-    return this.base.readFile(filePath);
-  }
-  /**
-   * Reads a file as text, using overlay content when present.
-   * @param {string} filePath The absolute path to read.
-   * @param {string} [encoding] The text encoding for disk reads.
-   * @returns {string} The file text.
-   */
-  readTextFile(filePath, encoding = "utf8") {
-    const entry = this.overlay.get(filePath);
-    if (entry !== void 0) {
-      return entry;
-    }
-    return this.base.readTextFile(filePath, encoding);
-  }
-  /**
-   * Builds the candidate absolute paths for a relative filename, mirroring the
-   * Node provider's resolution order.
-   * @param {string} normalized The unquoted filename.
-   * @param {AssemblyFileResolutionOptions} options Resolution context.
-   * @returns {string[]} The candidate absolute paths to probe in the overlay.
-   */
-  candidatePaths(normalized, options) {
-    if (path2.isAbsolute(normalized)) {
-      return [normalized];
-    }
-    const baseDirectories = [
-      options.macroSourceFile ? path2.dirname(options.macroSourceFile) : void 0,
-      options.currentFile ? path2.dirname(options.currentFile) : void 0,
-      ...options.includePaths ?? [],
-      process.cwd()
-    ].filter((entry) => Boolean(entry));
-    return baseDirectories.map((directory) => path2.resolve(directory, normalized));
+  async #disposeEntry(current) {
+    if (current.disposed) return;
+    current.disposed = true;
+    await current.manager.dispose();
   }
 };
 
-// src/lsp/workspace-index.ts
-import path3 from "node:path";
-var WorkspaceIndex = class {
-  /** Open editor buffers keyed by absolute path. */
-  overlay = /* @__PURE__ */ new Map();
-  /** Per-file analysis buckets keyed by absolute path. */
-  fileAnalysis = /* @__PURE__ */ new Map();
-  /** Merged include-graph edges across all analysed roots. */
-  includeEdges = [];
-  /** All symbol definitions across the workspace (for cross-file resolution). */
-  allSymbols = [];
-  /** All symbol references across the workspace (for find-references). */
-  allReferences = [];
-  /** Cached complete analysis artifacts for each configured root. */
-  rootAnalyses = /* @__PURE__ */ new Map();
-  /** Files whose content changed since the last analysis. */
-  dirtyFiles = /* @__PURE__ */ new Set();
-  /** Whether configuration changes require every root to be rebuilt. */
-  fullReindexRequired = true;
-  entryPoints;
-  includePaths;
-  architecture;
-  environment;
-  target;
-  toolingCatalog;
-  directiveCatalog;
-  /**
-   * Creates a workspace index.
-   * @param {WorkspaceIndexOptions} [options] Initial index configuration.
-   */
+// language-server/src/project-environment.ts
+var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) => {
+  if (typeof entry === "string") {
+    if (!entry.trim()) throw new Error(`Plugin setting at index ${index2} must not be empty.`);
+    return { module: entry };
+  }
+  if (!entry || typeof entry !== "object" || typeof entry.module !== "string") {
+    throw new Error(`Plugin setting at index ${index2} must be a module string or object.`);
+  }
+  return {
+    module: entry.module,
+    ...entry.options === void 0 ? {} : { options: entry.options }
+  };
+});
+var ProjectEnvironmentController = class {
   constructor(options) {
-    this.environment = options.environment;
-    this.target = options.target;
-    this.toolingCatalog = this.environment.getToolingCatalog(this.target);
-    this.entryPoints = (options.entryPoints ?? []).map((entry) => path3.resolve(entry));
-    this.includePaths = options.includePaths ?? ["./"];
-    this.architecture = options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
-    const toolingSession = new Assembler({
-      environment: this.environment,
-      target: this.target,
-      architecture: this.architecture
-    });
+    this.options = options;
+  }
+  options;
+  #state;
+  get current() {
+    if (!this.#state) throw new Error("The project environment has not been initialized.");
+    return this.#state;
+  }
+  async replace(settings2, overlays = /* @__PURE__ */ new Map()) {
+    const cwd = path6.resolve(settings2.cwd);
+    const pluginModules = configuredPluginModules(settings2.plugins);
+    const configuredPath = settings2.configFile ? path6.resolve(cwd, settings2.configFile) : path6.join(cwd, "asm.config.json");
+    const hasWorkspaceConfiguration = Boolean(settings2.configFile) || existsSync(configuredPath);
+    const workspacePluginsRequested = hasWorkspaceConfiguration || pluginModules.length > 0;
+    const useHostDefaults = !settings2.workspaceTrusted || !hasWorkspaceConfiguration && pluginModules.length === 0;
+    const loader = new NodePluginLoader();
+    let next;
     try {
-      const activeKeywords = new Set(toolingSession.directiveRegistry.handlers.keys());
-      const descriptors = [
-        ...directiveCatalog.filter((descriptor) => activeKeywords.has(descriptor.keyword)),
-        ...this.toolingCatalog.getDirectives()
-      ];
-      this.directiveCatalog = [
-        ...new Map(
-          descriptors.map((descriptor) => [descriptor.keyword.toLowerCase(), descriptor])
-        ).values()
-      ];
-    } finally {
-      toolingSession.dispose();
+      const loaded = await loader.loadProjectEnvironment({
+        cwd,
+        allowProjectConfiguration: settings2.workspaceTrusted,
+        ...settings2.workspaceTrusted && settings2.configFile ? { configFile: settings2.configFile } : {},
+        pluginModules: settings2.workspaceTrusted ? pluginModules : [],
+        bundledPlugins: this.options.bundledPlugins,
+        ...useHostDefaults ? { defaults: this.options.defaults } : {},
+        overrides: {
+          ...settings2.target ? { target: settings2.target } : {},
+          ...settings2.architecture ? { architecture: settings2.architecture } : {},
+          ...settings2.includePaths ? { includePaths: settings2.includePaths } : {}
+        },
+        logger: this.options.logger
+      });
+      const index2 = new WorkspaceIndex({
+        environment: loaded.environment,
+        target: loaded.target,
+        architecture: loaded.architecture,
+        targetOptions: loaded.targetOptions,
+        entryPoints: [...settings2.entryPoints ?? []],
+        includePaths: [...loaded.includePaths]
+      });
+      for (const [file, content] of overlays) index2.updateDocument(file, content);
+      if (overlays.size > 0 || (settings2.entryPoints?.length ?? 0) > 0) index2.reindex();
+      next = Object.freeze({
+        loaded,
+        index: index2,
+        ...!settings2.workspaceTrusted && workspacePluginsRequested ? {
+          trustNotice: "Workspace plugin configuration is disabled until this workspace is trusted."
+        } : {}
+      });
+    } catch (error) {
+      await loader.dispose();
+      throw error;
     }
-  }
-  /**
-   * Updates index configuration and re-analyses the workspace.
-   * @param {WorkspaceIndexOptions} options The configuration to apply.
-   */
-  configure(options) {
-    if (options.entryPoints) {
-      this.entryPoints = options.entryPoints.map((entry) => path3.resolve(entry));
-    }
-    if (options.includePaths) {
-      this.includePaths = options.includePaths;
-    }
-    if (options.architecture) {
-      this.architecture = options.architecture;
-    }
-    this.fullReindexRequired = true;
-    this.reindex();
-  }
-  /**
-   * Adds or replaces an open editor buffer and re-analyses the workspace.
-   * @param {string} file The absolute path of the document.
-   * @param {string} content The current document text.
-   */
-  openDocument(file, content) {
-    const resolved = path3.resolve(file);
-    this.overlay.set(resolved, content);
-    this.dirtyFiles.add(resolved);
-    this.reindex();
-  }
-  /**
-   * Updates the content of an already-open document without re-analysing.
-   * Callers can debounce multiple edits before invoking {@link reindex}.
-   * @param {string} file The absolute path of the document.
-   * @param {string} content The new document text.
-   */
-  updateDocument(file, content) {
-    const resolved = path3.resolve(file);
-    this.overlay.set(resolved, content);
-    this.dirtyFiles.add(resolved);
-  }
-  /**
-   * Removes an open editor buffer (reverting to disk) and re-analyses.
-   * @param {string} file The absolute path of the document.
-   */
-  closeDocument(file) {
-    const resolved = path3.resolve(file);
-    this.overlay.delete(resolved);
-    this.dirtyFiles.add(resolved);
-    this.reindex();
-  }
-  /**
-   * Marks a disk-backed file as changed for the next debounced reindex.
-   * @param {string} file The changed absolute path.
-   */
-  invalidateFile(file) {
-    this.dirtyFiles.add(path3.resolve(file));
-  }
-  /**
-   * Returns the current text for a file, preferring the open buffer.
-   * @param {string} file The absolute path of the file.
-   * @returns {string | undefined} The file text, or undefined when unavailable.
-   */
-  getText(file) {
-    return this.overlay.get(path3.resolve(file));
-  }
-  /**
-   * Returns the text for a file from the open buffer, falling back to disk.
-   * Used by features that must compute precise ranges in files that may not be
-   * open in the editor (for example, cross-file rename targets).
-   * @param {string} file The absolute path of the file.
-   * @returns {string | undefined} The file text, or undefined when unreadable.
-   */
-  getFileText(file) {
-    const resolved = path3.resolve(file);
-    const open = this.overlay.get(resolved);
-    if (open !== void 0) {
-      return open;
-    }
+    const previous = this.#state;
+    this.#state = next;
     try {
-      const provider = new OverlayFileProvider(this.overlay);
-      const stat = provider.stat(resolved);
-      if (!stat.exists || !stat.readable) {
-        return void 0;
-      }
-      return provider.readTextFile(resolved);
-    } catch {
-      return void 0;
-    }
-  }
-  /**
-   * Returns the analysis bucket for a file, if it has been analysed.
-   * @param {string} file The absolute path of the file.
-   * @returns {FileAnalysis | undefined} The per-file analysis, or undefined.
-   */
-  getFileAnalysis(file) {
-    return this.fileAnalysis.get(path3.resolve(file));
-  }
-  /**
-   * Returns diagnostics for a file.
-   * @param {string} file The absolute path of the file.
-   * @returns {AssemblyDiagnostic[]} The diagnostics for the file.
-   */
-  getDiagnostics(file) {
-    return this.getFileAnalysis(file)?.diagnostics ?? [];
-  }
-  /**
-   * Returns symbol definitions declared in a file.
-   * @param {string} file The absolute path of the file.
-   * @returns {AssemblySymbolDefinition[]} The symbols defined in the file.
-   */
-  getSymbols(file) {
-    return this.getFileAnalysis(file)?.symbols ?? [];
-  }
-  /**
-   * Returns symbol references that occur in a file.
-   * @param {string} file The absolute path of the file.
-   * @returns {AssemblySymbolReference[]} The references in the file.
-   */
-  getReferences(file) {
-    return this.getFileAnalysis(file)?.references ?? [];
-  }
-  /**
-   * Returns every symbol definition known across the workspace.
-   * @returns {AssemblySymbolDefinition[]} All workspace symbol definitions.
-   */
-  getAllSymbols() {
-    return this.allSymbols;
-  }
-  /**
-   * Returns every symbol reference known across the workspace.
-   * @returns {AssemblySymbolReference[]} All workspace symbol references.
-   */
-  getAllReferences() {
-    return this.allReferences;
-  }
-  /**
-   * Returns the merged include-graph edges.
-   * @returns {AssemblyIncludeEdge[]} The include edges across all roots.
-   */
-  getIncludeEdges() {
-    return this.includeEdges;
-  }
-  /**
-   * Returns the absolute paths of every file with analysis artifacts.
-   * @returns {string[]} The analysed file paths.
-   */
-  getAnalyzedFiles() {
-    return [...this.fileAnalysis.keys()];
-  }
-  /**
-   * Re-runs analysis for every root and rebuilds all per-file buckets.
-   * Roots are the configured entry points, or every open document when no
-   * entry points are configured.
-   */
-  reindex() {
-    const roots = this.resolveRoots();
-    const activeRoots = new Set(roots);
-    for (const cachedRoot of this.rootAnalyses.keys()) {
-      if (!activeRoots.has(cachedRoot)) {
-        this.rootAnalyses.delete(cachedRoot);
-      }
-    }
-    const analyzeAll = this.fullReindexRequired || this.dirtyFiles.size === 0;
-    const dirtyFiles = [...this.dirtyFiles];
-    const hasUnknownDependency = dirtyFiles.some(
-      (file) => !roots.some((root) => this.rootDependsOnFile(root, file))
-    );
-    const rootsToAnalyze = analyzeAll || hasUnknownDependency ? roots : roots.filter(
-      (root) => !this.rootAnalyses.has(root) || dirtyFiles.some((file) => this.rootDependsOnFile(root, file))
-    );
-    for (const root of rootsToAnalyze) {
-      const result = this.analyzeRoot(root);
-      if (result) {
-        this.rootAnalyses.set(root, result);
-      } else {
-        this.rootAnalyses.delete(root);
-      }
-    }
-    this.dirtyFiles.clear();
-    this.fullReindexRequired = false;
-    this.rebuildMergedIndex(roots);
-  }
-  /**
-   * Determines whether a cached root analysis contains a changed file.
-   * @param {string} root The root source file.
-   * @param {string} file The changed source file.
-   * @returns {boolean} Whether the root must be re-analysed.
-   */
-  rootDependsOnFile(root, file) {
-    if (root === file) {
-      return true;
-    }
-    const analysis = this.rootAnalyses.get(root);
-    if (!analysis) {
-      return true;
-    }
-    return analysis.includeEdges.some((edge) => edge.fromFile === file || edge.toFile === file);
-  }
-  /**
-   * Analyses one root using the current overlay snapshot.
-   * @param {string} root The root source file.
-   * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
-   */
-  analyzeRoot(root) {
-    const content = this.overlay.get(root) ?? this.readDiskRoot(root);
-    if (content === void 0) {
-      return void 0;
-    }
-    const provider = new OverlayFileProvider(this.overlay);
-    const assembler = new Assembler({
-      environment: this.environment,
-      target: this.target,
-      architecture: this.architecture,
-      fileProvider: provider
-    });
-    assembler.includePaths = this.deriveIncludePaths(root);
-    try {
-      const result = assembler.analyzeSource(content, root, 0);
-      return {
-        diagnostics: result.diagnostics,
-        symbols: result.symbols,
-        references: result.references,
-        includeEdges: result.includeEdges
-      };
-    } catch {
-      return void 0;
-    } finally {
-      assembler.dispose();
-    }
-  }
-  /**
-   * Rebuilds workspace-wide buckets from cached per-root artifacts.
-   * @param {string[]} roots The active roots in deterministic order.
-   */
-  rebuildMergedIndex(roots) {
-    this.fileAnalysis.clear();
-    this.includeEdges = [];
-    this.allSymbols = [];
-    this.allReferences = [];
-    const seenEdges = /* @__PURE__ */ new Set();
-    for (const root of roots) {
-      const result = this.rootAnalyses.get(root);
-      if (!result) {
-        continue;
-      }
-      this.ingestArtifacts(root, result.diagnostics, result.symbols, result.references);
-      for (const edge of result.includeEdges) {
-        const key = `${edge.fromFile}\0${edge.toFile}`;
-        if (seenEdges.has(key)) {
-          continue;
-        }
-        seenEdges.add(key);
-        this.includeEdges.push(edge);
-      }
-    }
-  }
-  /**
-   * Buckets flat analysis artifacts into their owning files.
-   * @param {string} root The root file that produced these artifacts.
-   * @param {AssemblyDiagnostic[]} diagnostics The diagnostics to bucket.
-   * @param {AssemblySymbolDefinition[]} symbols The symbols to bucket.
-   * @param {AssemblySymbolReference[]} references The references to bucket.
-   */
-  ingestArtifacts(root, diagnostics, symbols, references) {
-    for (const diagnostic of diagnostics) {
-      this.bucketFor(diagnostic.location.file || root).diagnostics.push(diagnostic);
-    }
-    for (const symbol of symbols) {
-      this.bucketFor(symbol.location.file || root).symbols.push(symbol);
-      this.allSymbols.push(symbol);
-    }
-    for (const reference of references) {
-      this.bucketFor(reference.location.file || root).references.push(reference);
-      this.allReferences.push(reference);
-    }
-  }
-  /**
-   * Returns (creating if needed) the analysis bucket for a file.
-   * @param {string} file The absolute path of the file.
-   * @returns {FileAnalysis} The mutable analysis bucket.
-   */
-  bucketFor(file) {
-    const resolved = path3.resolve(file);
-    let bucket = this.fileAnalysis.get(resolved);
-    if (!bucket) {
-      bucket = { file: resolved, diagnostics: [], symbols: [], references: [] };
-      this.fileAnalysis.set(resolved, bucket);
-    }
-    return bucket;
-  }
-  /**
-   * Determines the set of root files to analyse.
-   * @returns {string[]} The absolute root paths.
-   */
-  resolveRoots() {
-    if (this.entryPoints.length > 0) {
-      return [...new Set(this.entryPoints)];
-    }
-    return [...this.overlay.keys()];
-  }
-  /**
-   * Reads a root file from disk when it is not open in the editor.
-   * @param {string} root The absolute root path.
-   * @returns {string | undefined} The file text, or undefined when unreadable.
-   */
-  readDiskRoot(root) {
-    try {
-      const provider = new OverlayFileProvider(this.overlay);
-      const stat = provider.stat(root);
-      if (!stat.exists || !stat.readable) {
-        return void 0;
-      }
-      return provider.readTextFile(root);
-    } catch {
-      return void 0;
-    }
-  }
-  /**
-   * Derives the include search paths for a root, always including its directory.
-   * @param {string} root The absolute root path.
-   * @returns {string[]} The include paths to hand to the assembler.
-   */
-  deriveIncludePaths(root) {
-    const directory = path3.dirname(root);
-    return [.../* @__PURE__ */ new Set([directory, ...this.includePaths])];
-  }
-};
-
-// src/lsp/position-lookup.ts
-function locationRange(location) {
-  if (location.range) {
-    return location.range;
-  }
-  if (location.span) {
-    return sourceSpanToRange(location.span, location.span.line ?? location.line);
-  }
-  return void 0;
-}
-function positionInRange(position, range) {
-  if (position.line < range.start.line || position.line > range.end.line) {
-    return false;
-  }
-  if (position.line === range.start.line && position.character < range.start.character) {
-    return false;
-  }
-  if (position.line === range.end.line && position.character > range.end.character) {
-    return false;
-  }
-  return true;
-}
-function referenceAt(references, position) {
-  return narrowestMatch(references, position);
-}
-function symbolAt(symbols, position) {
-  return narrowestMatch(symbols, position);
-}
-function resolveDefinition(reference, allSymbols) {
-  const byName = allSymbols.filter((symbol) => symbol.name === reference.name);
-  if (byName.length === 0) {
-    return [];
-  }
-  const byKind = byName.filter((symbol) => kindMatches(reference.kind, symbol.kind));
-  const candidates = byKind.length > 0 ? byKind : byName;
-  if (reference.containerName) {
-    const scoped = candidates.filter((symbol) => symbol.containerName === reference.containerName);
-    if (scoped.length > 0) {
-      return scoped;
-    }
-  }
-  return candidates;
-}
-function findReferences(name, allReferences, containerName) {
-  return allReferences.filter(
-    (reference) => reference.name === name && (containerName === void 0 || reference.containerName === containerName)
-  );
-}
-function kindMatches(referenceKind, symbolKind) {
-  switch (referenceKind) {
-    case "label":
-      return symbolKind === "label" || symbolKind === "structMember" || symbolKind === "struct";
-    case "define":
-      return symbolKind === "define";
-    case "macro":
-      return symbolKind === "macro";
-    case "function":
-      return symbolKind === "function" || symbolKind === "macro";
-    case "include":
-    case "instruction":
-      return false;
-    case "unknown":
-    default:
-      return true;
-  }
-}
-function narrowestMatch(located, position) {
-  let best;
-  let bestWidth = Number.POSITIVE_INFINITY;
-  for (const item of located) {
-    const range = locationRange(item.location);
-    if (!range || !positionInRange(position, range)) {
-      continue;
-    }
-    const width = rangeWidth(range);
-    if (width < bestWidth) {
-      best = item;
-      bestWidth = width;
-    }
-  }
-  return best;
-}
-function rangeWidth(range) {
-  const lineSpan = range.end.line - range.start.line;
-  const columnSpan = range.end.character - range.start.character;
-  return lineSpan * 1e6 + columnSpan;
-}
-
-// src/lsp/catalog.ts
-function findInstruction(mnemonic, architecture, provider) {
-  const upper = mnemonic.toUpperCase();
-  return getCatalogForArchitecture(architecture, provider).find(
-    (entry) => entry.mnemonic === upper
-  );
-}
-function findDirectiveInCatalog(keyword, directives = directiveCatalog) {
-  const canonical2 = keyword.toLowerCase().replace(/^@/, "");
-  return directives.find((directive) => directive.keyword.toLowerCase() === canonical2);
-}
-function renderInstructionDocs(descriptor) {
-  const lines = [];
-  lines.push(`**${descriptor.mnemonic}** \u2014 instruction`);
-  if (descriptor.summary) {
-    lines.push("", descriptor.summary);
-  }
-  if (descriptor.modes.length > 0) {
-    lines.push("", "Addressing modes:");
-    for (const mode of descriptor.modes) {
-      const opcode = mode.opcode === void 0 ? "" : ` \`$${mode.opcode.toString(16).padStart(2, "0").toUpperCase()}\``;
-      const size = mode.size === void 0 ? "" : ` (${mode.size} bytes)`;
-      const example = mode.syntax ? ` \`${descriptor.mnemonic} ${mode.syntax}\`` : ` \`${descriptor.mnemonic}\``;
-      lines.push(`- ${mode.mode}:${example}${opcode}${size}`);
-    }
-  }
-  return lines.join("\n");
-}
-function renderDirectiveDocs(descriptor) {
-  return [
-    `**${descriptor.keyword}** \u2014 directive`,
-    "",
-    descriptor.summary,
-    "",
-    `\`${descriptor.syntax}\``
-  ].join("\n");
-}
-function renderExpressionFunctionDocs(descriptor) {
-  const parameters = descriptor.signature.parameters.join(", ");
-  return [
-    `**${descriptor.name}** \u2014 expression function`,
-    "",
-    descriptor.summary,
-    "",
-    `\`${descriptor.name}(${parameters})\``
-  ].join("\n");
-}
-function buildCompletionEntries(architecture, provider, directives = directiveCatalog, expressionFunctions = []) {
-  const entries = [];
-  for (const instruction2 of getCatalogForArchitecture(architecture, provider)) {
-    entries.push({
-      label: instruction2.mnemonic,
-      kind: "instruction",
-      detail: instruction2.summary ?? "instruction",
-      documentation: renderInstructionDocs(instruction2)
-    });
-  }
-  for (const directive of directives) {
-    entries.push({
-      label: directive.keyword,
-      kind: "directive",
-      detail: directive.summary,
-      documentation: renderDirectiveDocs(directive)
-    });
-  }
-  for (const expressionFunction of expressionFunctions) {
-    entries.push({
-      label: expressionFunction.name,
-      kind: "expression",
-      detail: expressionFunction.summary,
-      documentation: renderExpressionFunctionDocs(expressionFunction)
-    });
-    for (const alias of expressionFunction.aliases) {
-      entries.push({
-        label: alias,
-        kind: "expression",
-        detail: expressionFunction.summary,
-        documentation: renderExpressionFunctionDocs({ ...expressionFunction, name: alias })
+      await previous?.loaded.dispose();
+    } catch (error) {
+      this.options.logger?.warn("The replaced plugin environment failed to dispose cleanly.", {
+        error: error instanceof Error ? error.message : String(error)
       });
     }
+    return next;
   }
-  return entries;
-}
+  createAssembler(options = {}) {
+    const { loaded } = this.current;
+    return new Assembler({
+      environment: loaded.environment,
+      target: loaded.target,
+      architecture: loaded.architecture,
+      targetOptions: loaded.targetOptions,
+      ...options
+    });
+  }
+  async dispose() {
+    const current = this.#state;
+    this.#state = void 0;
+    await current?.loaded.dispose();
+  }
+};
 
 // language-server/src/providers.ts
 var import_vscode_languageserver = __toESM(require_api3(), 1);
-import { pathToFileURL, fileURLToPath } from "node:url";
-import path4 from "node:path";
+import { pathToFileURL as pathToFileURL2, fileURLToPath as fileURLToPath2 } from "node:url";
+import path7 from "node:path";
 var semanticTokensLegend = {
   tokenTypes: [
     import_vscode_languageserver.SemanticTokenTypes.keyword,
@@ -28436,10 +31371,10 @@ var tokenTypeIndex = new Map(
 var definitionTokenModifier = 1 << semanticTokensLegend.tokenModifiers.indexOf(import_vscode_languageserver.SemanticTokenModifiers.definition);
 var IDENTIFIER_CHAR = /[\w!.]/;
 function pathToUri(filePath) {
-  return pathToFileURL(filePath).toString();
+  return pathToFileURL2(filePath).toString();
 }
 function uriToPath(uri) {
-  return fileURLToPath(uri);
+  return fileURLToPath2(uri);
 }
 function toRange(range) {
   return import_vscode_languageserver.Range.create(range.start.line, range.start.character, range.end.line, range.end.character);
@@ -28575,7 +31510,7 @@ function diagnosticsFor(index2, file) {
       diagnostic.message,
       toDiagnosticSeverity(diagnostic.severity),
       diagnostic.code,
-      "snes-asm"
+      "uttori-asm"
     );
   });
 }
@@ -28636,15 +31571,16 @@ function referencesFor(index2, file, position, includeDeclaration) {
   }
   return locations;
 }
-function hoverFor(index2, file, position, text, architecture) {
+function hoverFor(index2, file, position, text) {
+  const architecture = index2.architecture;
   const word = wordAt(text, position);
   const reference = cursorReference(index2, file, position, word);
   if (reference?.kind === "instruction") {
-    const descriptor = findInstruction(reference.name, architecture, {
+    const descriptor2 = findInstruction(reference.name, architecture, {
       getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name)
     });
-    if (descriptor) {
-      return markdownHover(renderInstructionDocs(descriptor));
+    if (descriptor2) {
+      return markdownHover(renderInstructionDocs(descriptor2));
     }
   }
   if (reference) {
@@ -28666,21 +31602,21 @@ function hoverFor(index2, file, position, text, architecture) {
   if (instruction2) {
     return markdownHover(renderInstructionDocs(instruction2));
   }
-  const directive = findDirectiveInCatalog(word, index2.directiveCatalog);
-  if (directive) {
-    return markdownHover(renderDirectiveDocs(directive));
+  const directive2 = findDirectiveInCatalog(word, index2.directiveCatalog);
+  if (directive2) {
+    return markdownHover(renderDirectiveDocs(directive2));
   }
   const expressionFunction = index2.toolingCatalog.getExpressionFunctions().find(
-    (descriptor) => descriptor.name.toLowerCase() === word.toLowerCase() || descriptor.aliases.some((alias) => alias.toLowerCase() === word.toLowerCase())
+    (descriptor2) => descriptor2.name.toLowerCase() === word.toLowerCase() || descriptor2.aliases.some((alias) => alias.toLowerCase() === word.toLowerCase())
   );
   if (expressionFunction) {
     return markdownHover(renderExpressionFunctionDocs(expressionFunction));
   }
   return null;
 }
-function completionsFor(index2, architecture) {
+function completionsFor(index2) {
   const items = buildCompletionEntries(
-    architecture,
+    index2.architecture,
     { getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name) },
     index2.directiveCatalog,
     index2.toolingCatalog.getExpressionFunctions()
@@ -28705,16 +31641,14 @@ function completionsFor(index2, architecture) {
   }
   return items;
 }
-function signatureHelpFor(lineText, architecture, index2) {
+function signatureHelpFor(lineText, index2) {
   const leading = lineText.trim().split(/\s+/)[0];
   if (!leading) {
     return null;
   }
-  const instruction2 = findInstruction(
-    leading,
-    architecture,
-    index2 ? { getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name) } : void 0
-  );
+  const instruction2 = findInstruction(leading, index2.architecture, {
+    getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name)
+  });
   if (instruction2) {
     const signatures = instruction2.modes.map(
       (mode) => import_vscode_languageserver.SignatureInformation.create(
@@ -28724,10 +31658,10 @@ function signatureHelpFor(lineText, architecture, index2) {
     );
     return { signatures, activeSignature: 0 };
   }
-  const directive = findDirectiveInCatalog(leading, index2?.directiveCatalog);
-  if (directive) {
+  const directive2 = findDirectiveInCatalog(leading, index2.directiveCatalog);
+  if (directive2) {
     return {
-      signatures: [import_vscode_languageserver.SignatureInformation.create(directive.syntax, directive.summary)],
+      signatures: [import_vscode_languageserver.SignatureInformation.create(directive2.syntax, directive2.summary)],
       activeSignature: 0
     };
   }
@@ -28863,10 +31797,10 @@ function definitionToLocation(index2, symbol) {
 }
 function resolveIncludeTarget2(index2, file, target) {
   const normalizedTarget = target.replace(/\\/g, "/");
-  const base = path4.basename(normalizedTarget);
+  const base = path7.basename(normalizedTarget);
   const edges = index2.getIncludeEdges().filter((edge) => edge.fromFile === file);
   const match = edges.find(
-    (edge) => edge.toFile === normalizedTarget || path4.basename(edge.toFile) === base
+    (edge) => edge.toFile === normalizedTarget || path7.basename(edge.toFile) === base
   );
   return match?.toFile;
 }
@@ -28891,7 +31825,7 @@ function renderSymbolDocs(symbol) {
     const value = typeof symbol.value === "number" ? `$${symbol.value.toString(16).toUpperCase()}` : symbol.value;
     lines.push("", `Value: \`${value}\``);
   }
-  lines.push("", `Defined in \`${path4.basename(symbol.location.file)}\``);
+  lines.push("", `Defined in \`${path7.basename(symbol.location.file)}\``);
   return lines.join("\n");
 }
 function markdownHover(value) {
@@ -28954,21 +31888,126 @@ function referenceTokenType(kind) {
 // language-server/src/server.ts
 var connection = (0, import_node.createConnection)(import_node.ProposedFeatures.all);
 var documents = new import_node.TextDocuments(TextDocument2);
+var environmentController = new ProjectEnvironmentController({
+  bundledPlugins: /* @__PURE__ */ new Map([["@uttori/asm-plugin-snes", src_default]]),
+  defaults: {
+    plugins: [{ module: "@uttori/asm-plugin-snes" }],
+    target: SNES_TARGET_ID,
+    includePaths: ["./"]
+  },
+  logger: {
+    debug: (message) => connection.console.log(message),
+    info: (message) => connection.console.info(message),
+    warn: (message) => connection.console.warn(message),
+    error: (message) => connection.console.error(message)
+  }
+});
 var defaultSettings = {
+  plugins: [],
   entryPoints: [],
-  includePaths: ["./"],
-  architecture: "65816"
+  includePaths: [],
+  workspaceTrusted: false
 };
-var settings = { ...defaultSettings };
+var settings = defaultSettings;
+var index;
+var workspaceRoots = [];
 var hasConfigurationCapability = false;
 var hasDidChangeConfigurationDynamicRegistration = false;
-var workspaceRoots = [];
-var index = new WorkspaceIndex({ ...snesAssemblerHost, ...settings });
 var reindexTimer;
-function scheduleReindex() {
-  if (reindexTimer) {
-    clearTimeout(reindexTimer);
+var configurationDiagnostic;
+var configurationQueue = Promise.resolve();
+var workspaceRoot = () => workspaceRoots[0] ?? process.cwd();
+function resolveAgainstWorkspace(value) {
+  return path8.isAbsolute(value) ? path8.normalize(value) : path8.resolve(workspaceRoot(), value);
+}
+function stringValue(value) {
+  return typeof value === "string" && value.trim() ? value : void 0;
+}
+function stringArray(value) {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : void 0;
+}
+function pluginArray(value) {
+  return Array.isArray(value) ? value : void 0;
+}
+function mergeServerSettings(previous, value) {
+  if (!value || typeof value !== "object") return previous;
+  const next = value;
+  const has = (key) => Object.prototype.hasOwnProperty.call(next, key);
+  return {
+    configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
+    plugins: pluginArray(next.plugins) ?? previous.plugins,
+    target: has("target") ? stringValue(next.target) : previous.target,
+    architecture: has("architecture") ? stringValue(next.architecture) : previous.architecture,
+    entryPoints: stringArray(next.entryPoints) ?? previous.entryPoints,
+    includePaths: stringArray(next.includePaths) ?? previous.includePaths,
+    buildOutput: has("buildOutput") ? stringValue(next.buildOutput) : previous.buildOutput,
+    baseImage: has("baseImage") ? stringValue(next.baseImage) : previous.baseImage,
+    workspaceTrusted: typeof next.workspaceTrusted === "boolean" ? next.workspaceTrusted : previous.workspaceTrusted
+  };
+}
+function projectSettings(next) {
+  return {
+    cwd: workspaceRoot(),
+    workspaceTrusted: next.workspaceTrusted,
+    ...next.configFile ? { configFile: next.configFile } : {},
+    plugins: next.plugins,
+    ...next.target ? { target: next.target } : {},
+    ...next.architecture ? { architecture: next.architecture } : {},
+    entryPoints: next.entryPoints.map(resolveAgainstWorkspace),
+    ...next.includePaths.length > 0 ? { includePaths: next.includePaths } : {}
+  };
+}
+function currentOverlays() {
+  return new Map(documents.all().map((document) => [uriToPath(document.uri), document.getText()]));
+}
+function diagnosticUri(next) {
+  return pathToUri(resolveAgainstWorkspace(next.configFile ?? "asm.config.json"));
+}
+function setConfigurationDiagnostic(next, message, severity = import_node.DiagnosticSeverity.Error) {
+  const previousUri = configurationDiagnostic?.uri;
+  configurationDiagnostic = message ? {
+    uri: diagnosticUri(next),
+    message,
+    diagnostic: import_node.Diagnostic.create(
+      import_node.Range.create(0, 0, 0, 1),
+      message,
+      severity,
+      "PLUGIN_CONFIGURATION_INVALID",
+      "uttori-asm"
+    )
+  } : void 0;
+  if (previousUri && previousUri !== configurationDiagnostic?.uri) {
+    void connection.sendDiagnostics({ uri: previousUri, diagnostics: [] });
   }
+}
+async function replaceProjectEnvironment(next) {
+  try {
+    const state = await environmentController.replace(projectSettings(next), currentOverlays());
+    index = state.index;
+    settings = next;
+    setConfigurationDiagnostic(next, state.trustNotice, import_node.DiagnosticSeverity.Warning);
+    publishAllDiagnostics();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    settings = next;
+    connection.console.error(`Assembly project configuration failed: ${message}`);
+    setConfigurationDiagnostic(next, message);
+    publishAllDiagnostics();
+    throw error;
+  }
+}
+async function applyQueuedEnvironment(previous, next) {
+  try {
+    await previous;
+    await replaceProjectEnvironment(next);
+  } catch {
+  }
+}
+function enqueueProjectEnvironment(next) {
+  configurationQueue = applyQueuedEnvironment(configurationQueue, next);
+}
+function scheduleReindex() {
+  if (reindexTimer) clearTimeout(reindexTimer);
   reindexTimer = setTimeout(() => {
     reindexTimer = void 0;
     index.reindex();
@@ -28976,6 +32015,7 @@ function scheduleReindex() {
   }, 150);
 }
 function publishAllDiagnostics() {
+  if (!index) return;
   for (const document of documents.all()) {
     const file = uriToPath(document.uri);
     void connection.sendDiagnostics({
@@ -28983,20 +32023,35 @@ function publishAllDiagnostics() {
       diagnostics: diagnosticsFor(index, file)
     });
   }
+  if (configurationDiagnostic) {
+    void connection.sendDiagnostics({
+      uri: configurationDiagnostic.uri,
+      diagnostics: [configurationDiagnostic.diagnostic]
+    });
+  }
 }
-connection.onInitialize((params) => {
+connection.onInitialize(async (params) => {
   hasConfigurationCapability = Boolean(params.capabilities.workspace?.configuration);
   hasDidChangeConfigurationDynamicRegistration = Boolean(
     params.capabilities.workspace?.didChangeConfiguration?.dynamicRegistration
   );
-  applyInitializationOptions(params);
+  workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
+  if (workspaceRoots.length === 0 && params.rootUri) workspaceRoots = [uriToPath(params.rootUri)];
+  const requested = mergeServerSettings(defaultSettings, params.initializationOptions);
+  try {
+    await replaceProjectEnvironment(requested);
+  } catch {
+    settings = requested;
+    const fallback = await environmentController.replace(
+      { ...projectSettings(defaultSettings), cwd: workspaceRoot(), workspaceTrusted: false },
+      currentOverlays()
+    );
+    index = fallback.index;
+  }
   return {
     capabilities: {
       positionEncoding: import_node.PositionEncodingKind.UTF16,
-      textDocumentSync: {
-        openClose: true,
-        change: import_node.TextDocumentSyncKind.Incremental
-      },
+      textDocumentSync: { openClose: true, change: import_node.TextDocumentSyncKind.Incremental },
       completionProvider: { triggerCharacters: [".", "!", "$"] },
       hoverProvider: true,
       definitionProvider: true,
@@ -29005,42 +32060,70 @@ connection.onInitialize((params) => {
       workspaceSymbolProvider: true,
       renameProvider: { prepareProvider: true },
       signatureHelpProvider: { triggerCharacters: [" ", ","] },
-      executeCommandProvider: { commands: ["snesAsm.build"] },
-      semanticTokensProvider: {
-        legend: semanticTokensLegend,
-        full: true
-      }
+      executeCommandProvider: { commands: ["asm.build"] },
+      semanticTokensProvider: { legend: semanticTokensLegend, full: true }
     }
   };
 });
-function buildRom(file, outputPath, targetRomPath) {
+connection.onInitialized(() => {
+  if (hasDidChangeConfigurationDynamicRegistration) {
+    connection.client.register(import_node.DidChangeConfigurationNotification.type, void 0).catch(() => {
+    });
+  }
+  if (hasConfigurationCapability) void refreshConfiguration();
+});
+async function refreshConfiguration() {
   try {
-    const overlay = /* @__PURE__ */ new Map();
-    for (const document of documents.all()) {
-      overlay.set(uriToPath(document.uri), document.getText());
-    }
-    const provider = new OverlayFileProvider(overlay);
-    let targetRom;
-    if (targetRomPath) {
-      targetRom = new Uint8Array(fs3.readFileSync(targetRomPath));
-    }
-    const source = provider.readTextFile(file);
-    const assembler = new Assembler({
-      ...snesAssemblerHost,
-      architecture: settings.architecture,
-      baseImage: targetRom,
+    const config = await connection.workspace.getConfiguration("asm");
+    enqueueProjectEnvironment(mergeServerSettings(settings, config));
+  } catch (error) {
+    connection.console.warn(
+      `Unable to read Assembly configuration: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+connection.onDidChangeConfiguration((params) => {
+  if (hasConfigurationCapability) {
+    void refreshConfiguration();
+    return;
+  }
+  const changed = params.settings;
+  enqueueProjectEnvironment(mergeServerSettings(settings, changed?.asm ?? changed));
+});
+function defaultOutputPath(file) {
+  const parsed = path8.parse(file);
+  const { loaded } = environmentController.current;
+  const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
+  return path8.join(
+    parsed.dir,
+    `${parsed.name}${extension.startsWith(".") ? extension : `.${extension}`}`
+  );
+}
+function resolveOptionalBuildPath(configured, file) {
+  if (!configured) return void 0;
+  return path8.isAbsolute(configured) ? path8.normalize(configured) : path8.resolve(workspaceRoots[0] ?? path8.dirname(file), configured);
+}
+function buildBinary(file, output, baseImage) {
+  try {
+    const provider = new OverlayFileProvider(currentOverlays());
+    const baseImagePath = resolveOptionalBuildPath(baseImage ?? settings.baseImage, file);
+    const assembler = environmentController.createAssembler({
+      ...baseImagePath ? { baseImage: new Uint8Array(fs4.readFileSync(baseImagePath)) } : {},
       fileProvider: provider,
       collectSourceMetadata: false
     });
     try {
-      assembler.setIncludePaths([path5.dirname(file), ...settings.includePaths]);
+      assembler.setIncludePaths([
+        .../* @__PURE__ */ new Set([path8.dirname(file), ...environmentController.current.loaded.includePaths])
+      ]);
       assembler.setCurrentFile(file);
-      const program = assembler.buildProgramModel(source, file, 0);
-      assembler.assembleProgram(program);
-      const output = assembler.getBinaryOutput();
-      fs3.mkdirSync(path5.dirname(outputPath), { recursive: true });
-      fs3.writeFileSync(outputPath, Buffer.from(output));
-      return { ok: true, outputPath, bytes: output.length };
+      const source = provider.readTextFile(file);
+      assembler.assembleProgram(assembler.buildProgramModel(source, file, 0));
+      const bytes = assembler.getBinaryOutput();
+      const outputPath = resolveOptionalBuildPath(output ?? settings.buildOutput, file) ?? defaultOutputPath(file);
+      fs4.mkdirSync(path8.dirname(outputPath), { recursive: true });
+      fs4.writeFileSync(outputPath, Buffer.from(bytes));
+      return { ok: true, outputPath, bytes: bytes.length };
     } finally {
       assembler.dispose();
     }
@@ -29048,104 +32131,47 @@ function buildRom(file, outputPath, targetRomPath) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
   }
 }
-function defaultOutputPath(file) {
-  const parsed = path5.parse(file);
-  return path5.join(parsed.dir, `${parsed.name}.sfc`);
-}
 connection.onExecuteCommand((params) => {
-  if (params.command !== "snesAsm.build") {
-    return void 0;
-  }
+  if (params.command !== "asm.build") return void 0;
   const args = params.arguments ?? [];
   const uriOrPath = args[0];
-  if (!uriOrPath) {
-    return { ok: false, message: "No file provided to build." };
-  }
+  if (!uriOrPath) return { ok: false, message: "No file provided to build." };
   const file = uriOrPath.startsWith("file:") ? uriToPath(uriOrPath) : uriOrPath;
-  let outputPath = defaultOutputPath(file);
-  if (args[1]) {
-    outputPath = args[1].startsWith("file:") ? uriToPath(args[1]) : args[1];
-  }
-  let targetRomPath;
-  if (args[2]) {
-    targetRomPath = args[2].startsWith("file:") ? uriToPath(args[2]) : args[2];
-  }
-  return buildRom(file, outputPath, targetRomPath);
+  const output = args[1]?.startsWith("file:") ? uriToPath(args[1]) : args[1];
+  const baseImage = args[2]?.startsWith("file:") ? uriToPath(args[2]) : args[2];
+  return buildBinary(file, output, baseImage);
 });
-connection.onInitialized(() => {
-  if (hasDidChangeConfigurationDynamicRegistration) {
-    connection.client.register(import_node.DidChangeConfigurationNotification.type, void 0).catch(() => {
-    });
-  }
-  if (hasConfigurationCapability) {
-    void refreshConfiguration();
-  }
-});
-function applyInitializationOptions(params) {
-  const options = params.initializationOptions ?? {};
-  workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
-  if (workspaceRoots.length === 0 && params.rootUri) {
-    workspaceRoots = [uriToPath(params.rootUri)];
-  }
-  settings = {
-    entryPoints: resolveConfiguredPaths(options.entryPoints ?? [], workspaceRoots),
-    includePaths: resolveConfiguredPaths(
-      options.includePaths ?? defaultSettings.includePaths,
-      workspaceRoots
-    ),
-    architecture: options.architecture ?? defaultSettings.architecture
+connection.onRequest("asm/projectMetadata", async () => {
+  await configurationQueue;
+  const { loaded, index: activeIndex } = environmentController.current;
+  return {
+    activeTarget: loaded.target,
+    activeArchitecture: loaded.architecture,
+    targets: activeIndex.toolingCatalog.getTargets(),
+    architectures: activeIndex.toolingCatalog.getArchitectures(),
+    plugins: loaded.configuration.plugins.map((plugin2) => ({
+      id: plugin2.pluginId,
+      module: plugin2.module,
+      bundled: plugin2.bundled
+    }))
   };
-  index.configure(settings);
-}
-function resolveAgainst(roots, entry) {
-  if (roots.length === 0) {
-    return path5.resolve(entry);
-  }
-  return path5.isAbsolute(entry) ? path5.normalize(entry) : path5.resolve(roots[0], entry);
-}
-function resolveConfiguredPaths(values, roots) {
-  return values.map((value) => resolveAgainst(roots, value));
-}
-async function refreshConfiguration() {
-  try {
-    const config = await connection.workspace.getConfiguration("snesAsm");
-    applyConfiguration(config);
-  } catch {
-  }
-}
-function applyConfiguration(config) {
-  if (!config || typeof config !== "object") {
-    return;
-  }
-  const next = config;
-  settings = {
-    entryPoints: next.entryPoints ? resolveConfiguredPaths(next.entryPoints, workspaceRoots) : settings.entryPoints,
-    includePaths: next.includePaths ? resolveConfiguredPaths(next.includePaths, workspaceRoots) : settings.includePaths,
-    architecture: next.architecture ?? settings.architecture
-  };
-  index.configure(settings);
-  publishAllDiagnostics();
-}
-connection.onDidChangeConfiguration((params) => {
-  if (hasConfigurationCapability) {
-    void refreshConfiguration();
-    return;
-  }
-  const changedSettings = params.settings;
-  applyConfiguration(changedSettings?.snesAsm ?? changedSettings);
 });
 connection.onDidChangeWatchedFiles((params) => {
+  let reload = false;
   for (const change of params.changes) {
-    index.invalidateFile(uriToPath(change.uri));
+    const file = uriToPath(change.uri);
+    if (path8.resolve(file) === resolveAgainstWorkspace(settings.configFile ?? "asm.config.json")) {
+      reload = true;
+    } else {
+      index.invalidateFile(file);
+    }
   }
-  scheduleReindex();
+  if (reload) enqueueProjectEnvironment(settings);
+  else scheduleReindex();
 });
 documents.onDidOpen((event) => {
   index.openDocument(uriToPath(event.document.uri), event.document.getText());
-  void connection.sendDiagnostics({
-    uri: event.document.uri,
-    diagnostics: diagnosticsFor(index, uriToPath(event.document.uri))
-  });
+  publishAllDiagnostics();
 });
 documents.onDidChangeContent((event) => {
   index.updateDocument(uriToPath(event.document.uri), event.document.getText());
@@ -29155,19 +32181,10 @@ documents.onDidClose((event) => {
   index.closeDocument(uriToPath(event.document.uri));
   void connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
-connection.onCompletion(() => completionsFor(index, settings.architecture));
+connection.onCompletion(() => completionsFor(index));
 connection.onHover((params) => {
   const document = documents.get(params.textDocument.uri);
-  if (!document) {
-    return null;
-  }
-  return hoverFor(
-    index,
-    uriToPath(params.textDocument.uri),
-    params.position,
-    document.getText(),
-    settings.architecture
-  );
+  return document ? hoverFor(index, uriToPath(params.textDocument.uri), params.position, document.getText()) : null;
 });
 connection.onDefinition(
   (params) => definitionFor(index, uriToPath(params.textDocument.uri), params.position)
@@ -29185,32 +32202,26 @@ connection.onDocumentSymbol(
 );
 connection.onWorkspaceSymbol((params) => {
   const query = params.query.toLowerCase();
-  const results = [];
-  for (const file of index.getAnalyzedFiles()) {
-    for (const symbol of documentSymbolsFor(index, file)) {
-      if (!query || symbol.name.toLowerCase().includes(query)) {
-        results.push(
-          import_node.SymbolInformation.create(
-            symbol.name,
-            symbol.kind,
-            symbol.selectionRange,
-            pathToUri(file),
-            symbol.detail
-          )
-        );
-      }
-    }
-  }
-  return results;
+  return index.getAnalyzedFiles().flatMap(
+    (file) => documentSymbolsFor(index, file).filter((symbol) => !query || symbol.name.toLowerCase().includes(query)).map(
+      (symbol) => import_node.SymbolInformation.create(
+        symbol.name,
+        symbol.kind,
+        symbol.selectionRange,
+        pathToUri(file),
+        symbol.detail
+      )
+    )
+  );
 });
 connection.onSignatureHelp((params) => {
   const document = documents.get(params.textDocument.uri);
-  if (!document) {
-    return null;
-  }
-  const lineStart = { line: params.position.line, character: 0 };
-  const lineText = document.getText({ start: lineStart, end: params.position });
-  return signatureHelpFor(lineText, settings.architecture, index);
+  if (!document) return null;
+  const lineText = document.getText({
+    start: { line: params.position.line, character: 0 },
+    end: params.position
+  });
+  return signatureHelpFor(lineText, index);
 });
 connection.onPrepareRename(
   (params) => prepareRenameFor(index, uriToPath(params.textDocument.uri), params.position)
@@ -29221,5 +32232,9 @@ connection.onRenameRequest(
 connection.languages.semanticTokens.on(
   (params) => semanticTokensFor(index, uriToPath(params.textDocument.uri))
 );
+connection.onShutdown(() => environmentController.dispose());
 documents.listen(connection);
 connection.listen();
+export {
+  mergeServerSettings
+};

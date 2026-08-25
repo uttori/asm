@@ -197,21 +197,26 @@ language client/server SDK.
 
 ## VS Code Extension
 
-The extension in [`editors/vscode`](editors/vscode) registers SNES assembly for `.asm`, `.src`, `.SRC`, `.s`, and `.inc` files. In addition to the language server features above, it provides:
+The extension in [`editors/vscode`](editors/vscode) registers Uttori Assembly for `.asm`, `.src`, `.SRC`, `.s`, and `.inc` files. It bundles the first-party SNES plugin for zero-configuration projects and can load project plugins from trusted workspaces. In addition to the language server features above, it provides:
 
-- **SNES Assembly: Build ROM** — build the active source, including unsaved editor contents;
-- **SNES Assembly: Toggle Build on Save (Watch)** — rebuild the configured entry point whenever an assembly source is saved; and
+- **Assembly: Build Binary** — build the active source, including unsaved editor contents;
+- **Assembly: Toggle Build on Save (Watch)** — rebuild the configured entry point whenever an assembly source is saved; and
 - syntax highlighting, comment configuration, bracket pairing, and a watch status item.
 
 Project settings:
 
 | Setting | Purpose | Default |
 | --- | --- | --- |
-| `snesAsm.entryPoints` | Workspace-relative root files used for include-aware analysis and watch builds | `[]` |
-| `snesAsm.includePaths` | Extra workspace-relative include search paths | `["./"]` |
-| `snesAsm.architecture` | Default instruction catalog and assembler architecture | `"65816"` |
-| `snesAsm.buildOutput` | Workspace-relative or absolute ROM output path | Source file with `.sfc` extension |
-| `snesAsm.targetRom` | Workspace-relative or absolute base ROM to patch | none |
+| `asm.configFile` | Workspace-relative project configuration path | Auto-discovered `asm.config.json` |
+| `asm.plugins` | Plugin module specifiers/options appended to project configuration | `[]` |
+| `asm.target` | Target contribution ID or alias | Plugin/config default |
+| `asm.architecture` | Architecture contribution ID or alias | Target default |
+| `asm.entryPoints` | Workspace-relative roots used for include-aware analysis and watch builds | `[]` |
+| `asm.includePaths` | Extra workspace-relative include search paths | Project/default paths |
+| `asm.buildOutput` | Workspace-relative or absolute binary output path | Target-specific extension |
+| `asm.baseImage` | Workspace-relative or absolute base image to patch | none |
+
+Workspace configuration and plugin modules execute only after VS Code grants Workspace Trust. In restricted mode the bundled SNES target remains available and the server publishes a configuration warning.
 
 Build a VSIX package:
 

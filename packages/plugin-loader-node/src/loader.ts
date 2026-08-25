@@ -8,7 +8,7 @@ import {
   type PluginModuleActivationRequest,
 } from "@uttori/asm-core/plugin";
 
-import { readProjectConfiguration } from "./configuration.js";
+import { readProjectConfiguration, type LoadedConfigurationFile } from "./configuration.js";
 import type {
   LoadedProjectEnvironment,
   LoadProjectEnvironmentOptions,
@@ -158,7 +158,10 @@ export class NodePluginLoader {
     options: LoadProjectEnvironmentOptions,
   ): Promise<LoadedProjectEnvironment> {
     const cwd = path.resolve(options.cwd);
-    const loadedConfig = await readProjectConfiguration(cwd, options.configFile);
+    const loadedConfig: LoadedConfigurationFile =
+      options.allowProjectConfiguration === false
+        ? { directory: cwd, configuration: {} }
+        : await readProjectConfiguration(cwd, options.configFile);
     const configPlugins = loadedConfig.configuration.plugins ?? [];
     const defaultPlugins = configPlugins.length === 0 ? (options.defaults?.plugins ?? []) : [];
     const requests: RequestedModule[] = [

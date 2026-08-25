@@ -9,6 +9,7 @@ import {
 } from "../packages/core/src/plugin/index.js";
 import { createFixturePlugin } from "./plugin/fixture-plugin.js";
 import type { FixturePluginOptions } from "./plugin/fixture-plugin.js";
+import { directiveCatalog } from "../packages/core/src/lsp/directive-catalog.js";
 
 const errorCode = (error: unknown): string | undefined =>
   error instanceof PluginError ? error.code : undefined;
@@ -38,7 +39,7 @@ test("plugin manager activates a complete fixture plugin and freezes its environ
   );
   t.deepEqual(
     catalog.getDirectives().map((item) => item.keyword),
-    ["fixturebyte"],
+    [...directiveCatalog.map((item) => item.keyword), "fixturebyte"],
   );
   t.deepEqual(
     catalog.getExpressionFunctions().map((item) => item.name),

@@ -1,5 +1,5 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
-import type { DirectiveDescriptor } from "../lsp/directive-catalog.js";
+import { directiveCatalog, type DirectiveDescriptor } from "../lsp/directive-catalog.js";
 import { PluginError } from "./diagnostics.js";
 import type {
   ArchitectureContribution,
@@ -78,10 +78,18 @@ class ResolvedToolingCatalog implements ToolingCatalog {
   }
 
   getDirectives(): readonly DirectiveDescriptor[] {
-    return this.target.directiveSets.flatMap((id) => {
+    const contributed = this.target.directiveSets.flatMap((id) => {
       const set = this.directiveSets.get(canonical(id))?.value;
       return set ? [...(set.tooling ?? []), ...set.directives.flatMap((item) => item.tooling)] : [];
     });
+    return Object.freeze([
+      ...new Map(
+        [...directiveCatalog, ...contributed].map((descriptor) => [
+          canonical(descriptor.keyword),
+          descriptor,
+        ]),
+      ).values(),
+    ]);
   }
 
   getExpressionFunctions(): readonly ExpressionFunctionDescriptor[] {

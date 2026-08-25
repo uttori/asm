@@ -67,6 +67,8 @@ export interface LoadedProjectEnvironment {
 export interface LoadProjectEnvironmentOptions {
   readonly configFile?: string;
   readonly cwd: string;
+  /** Whether to read an explicit or discovered workspace configuration file. Defaults to true. */
+  readonly allowProjectConfiguration?: boolean;
   /** Explicit host/CLI modules, appended after configuration plugins. */
   readonly pluginModules?: readonly PluginModuleRequest[];
   readonly bundledPlugins?: ReadonlyMap<string, AssemblerPlugin>;

@@ -41,17 +41,17 @@ test("language-server providers expose navigation, docs, completion, and tokens"
   t.true(references.some((location) => location.range.start.line === 1));
   t.true(references.some((location) => location.range.start.line === 2));
 
-  const hover = hoverFor(index, file, { line: 2, character: 3 }, source, "65816");
+  const hover = hoverFor(index, file, { line: 2, character: 3 }, source);
   t.regex(JSON.stringify(hover), /LDA/);
 
-  const completions = completionsFor(index, "65816");
+  const completions = completionsFor(index);
   t.true(completions.some((item) => item.label === "LDA"));
   t.true(
     completions.some((item) => item.label === "org" && item.kind === CompletionItemKind.Keyword),
   );
   t.true(completions.some((item) => item.label === "Target"));
 
-  const signature = signatureHelpFor("  LDA ", "65816", index);
+  const signature = signatureHelpFor("  LDA ", index);
   t.true((signature?.signatures.length ?? 0) > 1);
   t.is(signature?.activeParameter, undefined);
 

@@ -1,4 +1,4 @@
-/** Re-exports the analysis surface and explicitly activates the SNES plugin. */
+/** Re-exports the target-neutral analysis surface used by LSP providers. */
 export {
   Assembler,
   WorkspaceIndex,
@@ -18,8 +18,3 @@ export {
   resolveDefinition,
   findReferences,
 } from "@uttori/asm-core";
-export { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
-
-import { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
-
-export const snesAssemblerHost = await createSnesAssemblerHost();

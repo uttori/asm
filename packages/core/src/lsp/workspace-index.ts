@@ -10,10 +10,7 @@ import type {
   AssemblySymbolReference,
 } from "../diagnostics.js";
 import { OverlayFileProvider } from "./overlay-file-provider.js";
-import {
-  directiveCatalog as staticDirectiveCatalog,
-  type DirectiveDescriptor,
-} from "./directive-catalog.js";
+import type { DirectiveDescriptor } from "./directive-catalog.js";
 
 /**
  * The per-file slice of analysis artifacts produced for a single source file.
@@ -43,6 +40,8 @@ export type WorkspaceIndexOptions = {
   includePaths?: string[];
   /** Target architecture contribution ID or alias. */
   architecture?: string;
+  /** Validated options for the selected target contribution. */
+  targetOptions?: Readonly<Record<string, unknown>>;
 };
 
 export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environment" | "target">;
@@ -89,6 +88,7 @@ export class WorkspaceIndex {
   entryPoints: string[];
   includePaths: string[];
   architecture: string;
+  readonly targetOptions: Readonly<Record<string, unknown>>;
   readonly environment: AssemblerEnvironment;
   readonly target: string;
   readonly toolingCatalog: ToolingCatalog;
@@ -106,25 +106,8 @@ export class WorkspaceIndex {
     this.includePaths = options.includePaths ?? ["./"];
     this.architecture =
       options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
-    const toolingSession = new Assembler({
-      environment: this.environment,
-      target: this.target,
-      architecture: this.architecture,
-    });
-    try {
-      const activeKeywords = new Set(toolingSession.directiveRegistry.handlers.keys());
-      const descriptors = [
-        ...staticDirectiveCatalog.filter((descriptor) => activeKeywords.has(descriptor.keyword)),
-        ...this.toolingCatalog.getDirectives(),
-      ];
-      this.directiveCatalog = [
-        ...new Map(
-          descriptors.map((descriptor) => [descriptor.keyword.toLowerCase(), descriptor]),
-        ).values(),
-      ];
-    } finally {
-      toolingSession.dispose();
-    }
+    this.targetOptions = Object.freeze({ ...(options.targetOptions ?? {}) });
+    this.directiveCatalog = this.toolingCatalog.getDirectives();
   }
 
   /**
@@ -365,6 +348,7 @@ export class WorkspaceIndex {
       environment: this.environment,
       target: this.target,
       architecture: this.architecture,
+      targetOptions: this.targetOptions,
       fileProvider: provider,
     });
     assembler.includePaths = this.deriveIncludePaths(root);

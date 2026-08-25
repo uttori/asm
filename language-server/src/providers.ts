@@ -350,7 +350,7 @@ export function diagnosticsFor(index: WorkspaceIndex, file: string): Diagnostic[
       diagnostic.message,
       toDiagnosticSeverity(diagnostic.severity),
       diagnostic.code,
-      "snes-asm",
+      "uttori-asm",
     );
   });
 }
@@ -454,7 +454,6 @@ export function referencesFor(
  * @param {string} file The absolute file path.
  * @param {Position} position The cursor position.
  * @param {string} text The full document text.
- * @param {string} architecture The active architecture name.
  * @returns {Hover | null} The hover, or null when nothing is documented.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#hover-request-leftwards_arrow_with_hook
  */
@@ -463,8 +462,8 @@ export function hoverFor(
   file: string,
   position: Position,
   text: string,
-  architecture: string,
 ): Hover | null {
+  const architecture = index.architecture;
   const word = wordAt(text, position);
   const reference = cursorReference(index, file, position, word);
   if (reference?.kind === "instruction") {
@@ -517,13 +516,12 @@ export function hoverFor(
 /**
  * Builds completion items for instructions, directives, and in-scope symbols.
  * @param {WorkspaceIndex} index The workspace index.
- * @param {string} architecture The active architecture name.
  * @returns {CompletionItem[]} The completion items.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook
  */
-export function completionsFor(index: WorkspaceIndex, architecture: string): CompletionItem[] {
+export function completionsFor(index: WorkspaceIndex): CompletionItem[] {
   const items: CompletionItem[] = buildCompletionEntries(
-    architecture,
+    index.architecture,
     { getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name) },
     index.directiveCatalog,
     index.toolingCatalog.getExpressionFunctions(),
@@ -553,28 +551,19 @@ export function completionsFor(index: WorkspaceIndex, architecture: string): Com
 /**
  * Builds signature help for the instruction or directive starting the line.
  * @param {string} lineText The current line text up to the cursor.
- * @param {string} architecture The active architecture name.
- * @param {WorkspaceIndex} [index] Active target tooling metadata.
+ * @param {WorkspaceIndex} index Active target tooling metadata.
  * @returns {SignatureHelp | null} The signature help, or null.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#signature-help-request-leftwards_arrow_with_hook
  */
-export function signatureHelpFor(
-  lineText: string,
-  architecture: string,
-  index?: WorkspaceIndex,
-): SignatureHelp | null {
+export function signatureHelpFor(lineText: string, index: WorkspaceIndex): SignatureHelp | null {
   const leading = lineText.trim().split(/\s+/)[0];
   if (!leading) {
     return null;
   }
 
-  const instruction = findInstruction(
-    leading,
-    architecture,
-    index
-      ? { getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name) }
-      : undefined,
-  );
+  const instruction = findInstruction(leading, index.architecture, {
+    getInstructionCatalog: (name) => index.toolingCatalog.getInstructions(name),
+  });
   if (instruction) {
     const signatures = instruction.modes.map((mode) =>
       SignatureInformation.create(
@@ -585,7 +574,7 @@ export function signatureHelpFor(
     return { signatures, activeSignature: 0 };
   }
 
-  const directive = findDirectiveInCatalog(leading, index?.directiveCatalog);
+  const directive = findDirectiveInCatalog(leading, index.directiveCatalog);
   if (directive) {
     return {
       signatures: [SignatureInformation.create(directive.syntax, directive.summary)],

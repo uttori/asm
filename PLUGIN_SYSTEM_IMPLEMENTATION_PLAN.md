@@ -879,6 +879,19 @@ Acceptance:
 - Changing target/plugin configuration reindexes without restarting the server.
 - The VSIX works for default SNES projects and for a workspace-local fixture plugin.
 
+Completion note (2026-08-24): the language server now activates project plugins through
+the Node loader and a transactional environment controller, preserving the previous
+environment after failed reloads and sharing the exact environment, target, architecture,
+target options, include paths, and overlays between analysis and builds. Tooling providers
+consume only the active target catalog; configuration failures are logged and published as
+workspace diagnostics. The VS Code surface now uses generic `asm.*` settings and commands,
+the `uttori-asm` language ID, a target-neutral grammar, target-derived output extensions,
+and Workspace Trust gating. The server bundle registers the first-party SNES plugin through
+the bundled-plugin map. The 931-test verification suite passes with 94.29% statement,
+90.35% branch, and 95.61% function coverage; all package dry-runs, 60 Asar fixtures,
+Slideshow, Chou, and the five-workload benchmark pass. A packaged-server stdio smoke test
+builds both the bundled SNES target and a workspace-local ESM fixture plugin successfully.
+
 ### Phase 8 — Enforce boundaries, finish documentation, and remove dead APIs
 
 Tasks:

@@ -18,8 +18,8 @@
   "main": "out/extension.js",
   "scripts": {
     "build": "node esbuild.mjs",
-    "fmt": "oxfmt --config ../../.oxfmtrc.json src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes/snes-asm.tmLanguage.json",
-    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes/snes-asm.tmLanguage.json",
+    "fmt": "oxfmt --config ../../.oxfmtrc.json src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes/uttori-asm.tmLanguage.json",
+    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes/uttori-asm.tmLanguage.json",
     "lint": "oxlint --config ../../.oxlintrc.json src",
     "lint:fix": "oxlint --config ../../.oxlintrc.json src --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -36,41 +36,41 @@
   "contributes": {
     "commands": [
       {
-        "command": "snesAsm.build",
-        "title": "Build ROM",
-        "category": "SNES Assembly"
+        "command": "asm.build",
+        "title": "Build Binary",
+        "category": "Assembly"
       },
       {
-        "command": "snesAsm.toggleWatch",
+        "command": "asm.toggleWatch",
         "title": "Toggle Build on Save (Watch)",
-        "category": "SNES Assembly"
+        "category": "Assembly"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "snesAsm.build",
-          "when": "editorLangId == snes-asm"
+          "command": "asm.build",
+          "when": "editorLangId == uttori-asm"
         },
         {
-          "command": "snesAsm.toggleWatch",
-          "when": "editorLangId == snes-asm"
+          "command": "asm.toggleWatch",
+          "when": "editorLangId == uttori-asm"
         }
       ],
       "editor/title/run": [
         {
-          "command": "snesAsm.build",
-          "when": "editorLangId == snes-asm",
+          "command": "asm.build",
+          "when": "editorLangId == uttori-asm",
           "group": "navigation"
         }
       ]
     },
     "languages": [
       {
-        "id": "snes-asm",
+        "id": "uttori-asm",
         "aliases": [
-          "SNES Assembly",
-          "snes-asm"
+          "Uttori Assembly",
+          "uttori-asm"
         ],
         "extensions": [
           ".asm",
@@ -84,15 +84,52 @@
     ],
     "grammars": [
       {
-        "language": "snes-asm",
-        "scopeName": "source.snes-asm",
-        "path": "./syntaxes/snes-asm.tmLanguage.json"
+        "language": "uttori-asm",
+        "scopeName": "source.uttori-asm",
+        "path": "./syntaxes/uttori-asm.tmLanguage.json"
       }
     ],
     "configuration": {
-      "title": "SNES Assembly",
+      "title": "Uttori Assembly",
       "properties": {
-        "snesAsm.entryPoints": {
+        "asm.configFile": {
+          "type": "string",
+          "default": "",
+          "description": "Path to asm.config.json relative to the workspace root. When empty, asm.config.json is discovered automatically."
+        },
+        "asm.plugins": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "module"
+                ],
+                "properties": {
+                  "module": {
+                    "type": "string"
+                  },
+                  "options": {
+                    "type": "object"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "default": [],
+          "description": "Plugin module specifiers appended to plugins from asm.config.json. Workspace Trust is required."
+        },
+        "asm.target": {
+          "type": "string",
+          "default": "",
+          "description": "Target contribution ID or alias. The language server validates it against active plugin metadata."
+        },
+        "asm.entryPoints": {
           "type": "array",
           "items": {
             "type": "string"
@@ -100,41 +137,44 @@
           "default": [],
           "description": "Project entry-point files (relative to the workspace root) analysed as include roots. When empty, each open file is treated as its own root."
         },
-        "snesAsm.includePaths": {
+        "asm.includePaths": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "default": [
-            "./"
-          ],
-          "description": "Additional include search paths handed to the assembler."
+          "default": [],
+          "description": "Additional include search paths handed to the assembler. When empty, project configuration or target defaults apply."
         },
-        "snesAsm.architecture": {
-          "type": "string",
-          "enum": [
-            "65816",
-            "spc700",
-            "superfx"
-          ],
-          "default": "65816",
-          "description": "Default CPU architecture used for hover, completion, and signature help."
-        },
-        "snesAsm.buildOutput": {
+        "asm.architecture": {
           "type": "string",
           "default": "",
-          "description": "Output path for the assembled ROM. When empty, the source file's '.sfc' sibling is used."
+          "description": "Architecture contribution ID or alias. The language server validates it against the selected target."
         },
-        "snesAsm.targetRom": {
+        "asm.buildOutput": {
           "type": "string",
           "default": "",
-          "description": "Optional base ROM file to patch into when building."
+          "description": "Output path for the assembled binary. When empty, the selected target's default extension is used."
+        },
+        "asm.baseImage": {
+          "type": "string",
+          "default": "",
+          "description": "Optional base image file to patch when building."
         }
       }
     }
   },
   "activationEvents": [],
   "engines": {
-    "vscode": "^1.91.0"
+    "vscode": "^1.134.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Built-in assembly support remains available, but workspace plugin modules and asm.config.json are disabled until the workspace is trusted.",
+      "restrictedConfigurations": [
+        "asm.configFile",
+        "asm.plugins"
+      ]
+    }
   }
 }

@@ -52,6 +52,7 @@ typings/
 
 # Output of 'npm pack'
 *.tgz
+editors/vscode/*.vsix
 
 # Yarn Integrity file
 .yarn-integrity

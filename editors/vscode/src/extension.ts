@@ -63,7 +63,26 @@ let watchTimer: ReturnType<typeof setTimeout> | undefined;
 let statusItem: StatusBarItem;
 
 /**
- * Activates the extension and starts the SNES assembly language server.
+ * Returns the JSON-safe project settings sent across the LSP boundary.
+ * @returns {Record<string, unknown>} The complete language-server initialization settings.
+ */
+function serverInitializationOptions(): Record<string, unknown> {
+  const config = workspace.getConfiguration("asm");
+  return {
+    configFile: config.get<string>("configFile", ""),
+    plugins: config.get<unknown[]>("plugins", []),
+    target: config.get<string>("target", ""),
+    entryPoints: config.get<string[]>("entryPoints", []),
+    includePaths: config.get<string[]>("includePaths", []),
+    architecture: config.get<string>("architecture", ""),
+    buildOutput: config.get<string>("buildOutput", ""),
+    baseImage: config.get<string>("baseImage", ""),
+    workspaceTrusted: workspace.isTrusted,
+  };
+}
+
+/**
+ * Activates the extension and starts the Uttori Assembly language server.
  * @param {ExtensionContext} context The extension context.
  * @see https://code.visualstudio.com/api/references/vscode-api#ExtensionContext
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.createFileSystemWatcher
@@ -79,36 +98,41 @@ export function activate(context: ExtensionContext): void {
     debug: { module: serverModule, transport: TransportKind.stdio },
   };
 
-  const config = workspace.getConfiguration("snesAsm");
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "snes-asm" }],
+    documentSelector: [{ scheme: "file", language: "uttori-asm" }],
     synchronize: {
-      configurationSection: "snesAsm",
-      fileEvents: workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
+      configurationSection: "asm",
+      fileEvents: [
+        workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
+        workspace.createFileSystemWatcher("**/asm.config.json"),
+      ],
     },
-    initializationOptions: {
-      entryPoints: config.get<string[]>("entryPoints", []),
-      includePaths: config.get<string[]>("includePaths", ["./"]),
-      architecture: config.get<string>("architecture", "65816"),
-    },
+    initializationOptions: serverInitializationOptions(),
   };
 
   client = new LanguageClient(
-    "snesAsmLanguageServer",
-    "SNES Assembly Language Server",
+    "uttoriAsmLanguageServer",
+    "Uttori Assembly Language Server",
     serverOptions,
     clientOptions,
   );
 
   statusItem = window.createStatusBarItem(StatusBarAlignment.Left, 0);
-  statusItem.command = "snesAsm.toggleWatch";
+  statusItem.command = "asm.toggleWatch";
   updateStatusItem();
   statusItem.show();
 
   context.subscriptions.push(
     statusItem,
-    commands.registerCommand("snesAsm.build", () => runBuild(activeDocumentUri())),
-    commands.registerCommand("snesAsm.toggleWatch", toggleWatch),
+    commands.registerCommand("asm.build", () => runBuild(activeDocumentUri())),
+    commands.registerCommand("asm.toggleWatch", toggleWatch),
+    workspace.onDidGrantWorkspaceTrust(() => {
+      void client?.sendNotification("workspace/didChangeConfiguration", {
+        settings: {
+          asm: serverInitializationOptions(),
+        },
+      });
+    }),
   );
 
   void client.start();
@@ -153,13 +177,13 @@ function toggleWatch(): void {
     if (!watchEntryUri) {
       watchEnabled = false;
       void window.showErrorMessage(
-        "SNES Assembly: open a source file (or set snesAsm.entryPoints) before watching.",
+        "Assembly: open a source file (or set asm.entryPoints) before watching.",
       );
       return;
     }
     saveListener = workspace.onDidSaveTextDocument(onDocumentSaved);
     void window.showInformationMessage(
-      `SNES Assembly: watching ${path.basename(Uri.parse(watchEntryUri).fsPath)} — rebuilding on save.`,
+      `Assembly: watching ${path.basename(Uri.parse(watchEntryUri).fsPath)} — rebuilding on save.`,
     );
   } else {
     saveListener?.dispose();
@@ -185,9 +209,7 @@ function toggleWatch(): void {
  */
 function resolveWatchEntry(): string | undefined {
   const activeUri = window.activeTextEditor?.document.uri;
-  const entryPoints = workspace
-    .getConfiguration("snesAsm", activeUri)
-    .get<string[]>("entryPoints", []);
+  const entryPoints = workspace.getConfiguration("asm", activeUri).get<string[]>("entryPoints", []);
   const folder = activeUri
     ? workspace.getWorkspaceFolder(activeUri)
     : workspace.workspaceFolders?.[0];
@@ -220,13 +242,13 @@ function onDocumentSaved(document: TextDocument): void {
 }
 
 /**
- * Determines whether a document is a SNES assembly source file.
+ * Determines whether a document is an assembly source file.
  * @param {TextDocument} document The document to test.
  * @returns {boolean} True when the document is an assembly source.
  * @see https://code.visualstudio.com/api/references/vscode-api#TextDocument
  */
 function isAssemblyDocument(document: TextDocument): boolean {
-  return document.languageId === "snes-asm" || /\.(asm|src|s|inc)$/i.test(document.fileName);
+  return document.languageId === "uttori-asm" || /\.(asm|src|s|inc)$/i.test(document.fileName);
 }
 
 /**
@@ -246,23 +268,23 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
     return;
   }
   if (!documentUri) {
-    void window.showErrorMessage("SNES Assembly: open a source file to build.");
+    void window.showErrorMessage("Assembly: open a source file to build.");
     return;
   }
 
   const document = Uri.parse(documentUri);
-  const config = workspace.getConfiguration("snesAsm", document);
+  const config = workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get<string>("buildOutput", ""), document);
-  const targetRom = resolveConfiguredPath(config.get<string>("targetRom", ""), document);
+  const baseImage = resolveConfiguredPath(config.get<string>("baseImage", ""), document);
 
   try {
     const result = (await client.sendRequest(ExecuteCommandRequest.type, {
-      command: "snesAsm.build",
-      arguments: [documentUri, output, targetRom],
+      command: "asm.build",
+      arguments: [documentUri, output, baseImage],
     })) as BuildResult | undefined;
 
     if (result?.ok) {
-      const message = `SNES Assembly: built ${result.bytes ?? 0} bytes → ${result.outputPath ?? "output"}.`;
+      const message = `Assembly: built ${result.bytes ?? 0} bytes → ${result.outputPath ?? "output"}.`;
       if (transient) {
         window.setStatusBarMessage(message, 4000);
       } else {
@@ -270,12 +292,12 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
       }
     } else {
       void window.showErrorMessage(
-        `SNES Assembly: build failed — ${result?.message ?? "unknown error"}.`,
+        `Assembly: build failed — ${result?.message ?? "unknown error"}.`,
       );
     }
   } catch (error) {
     void window.showErrorMessage(
-      `SNES Assembly: build failed — ${error instanceof Error ? error.message : String(error)}.`,
+      `Assembly: build failed — ${error instanceof Error ? error.message : String(error)}.`,
     );
   }
 }
@@ -309,8 +331,10 @@ function updateStatusItem(): void {
   if (!statusItem) {
     return;
   }
-  statusItem.text = watchEnabled ? "$(eye) SNES Watch: On" : "$(eye-closed) SNES Watch: Off";
+  statusItem.text = watchEnabled
+    ? "$(eye) Assembly Watch: On"
+    : "$(eye-closed) Assembly Watch: Off";
   statusItem.tooltip = watchEnabled
-    ? "SNES Assembly is rebuilding on save. Click to stop."
-    : "Click to rebuild the SNES ROM on every save.";
+    ? "Assembly is rebuilding on save. Click to stop."
+    : "Click to rebuild the binary on every save.";
 }
