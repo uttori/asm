@@ -1856,6 +1856,42 @@ test("Arch65816.handleLogicAndCompareOperations writes 16-bit immediate operands
   t.true(write3Stub.notCalled);
 });
 
+test("Arch65816.handleLogicAndCompareOperations keeps X width for lowered expressions", t => {
+  const { assembler, arch } = createArch65816();
+  arch.x16 = true;
+  const lowerOperandStub = sinon.stub(assembler.operandResolver, "lowerOperand");
+  lowerOperandStub.withArgs("#FontEnd-FontStart").returns({
+    raw: "#FontEnd-FontStart",
+    expanded: "#$80",
+    length: 1,
+    immediate: true,
+    indirect: false,
+    baseExpression: "$80",
+  });
+  const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
+  getnumStub.withArgs("$80").returns(0x80);
+  const write1Stub = sinon.stub(assembler, "write1");
+  const write2Stub = sinon.stub(assembler, "write2");
+  t.teardown(() => {
+    lowerOperandStub.restore();
+    getnumStub.restore();
+    write1Stub.restore();
+    write2Stub.restore();
+  });
+
+  t.true(
+    arch.handleLogicAndCompareOperations(
+      "CPX",
+      "#$80",
+      1,
+      false,
+      "#FontEnd-FontStart",
+    ),
+  );
+  t.true(write1Stub.calledOnceWithExactly(0xE0));
+  t.true(write2Stub.calledOnceWithExactly(0x80));
+});
+
 test("Arch65816.handleLogicAndCompareOperations writes 16-bit ORA immediates", t => {
   const { assembler, arch } = createArch65816();
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");

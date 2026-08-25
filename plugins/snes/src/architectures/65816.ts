@@ -1084,7 +1084,11 @@ export class Arch65816 implements ArchitectureEncoder {
       // Remove `#`
       address = this.assembler.operandResolver.getnum(baseOperand);
       this.assembler.write1(opcodes[logicOpcode].immediate);
-      const width = this.immediateBytes(opcode, len, explicitlen, operand);
+      // Width-sensitive comparisons must inspect the original expression.
+      // The lowered operand may be a short literal (for example `$80`), which
+      // loses the fact that `#FontEnd-FontStart` is a math expression and must
+      // follow the X flag for CPX/CPY.
+      const width = this.immediateBytes(opcode, len, explicitlen, rawOperand);
       if (width === 1) {
         this.assembler.write1(address);
       } else {
