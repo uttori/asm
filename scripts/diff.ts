@@ -3,11 +3,14 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { Assembler } from "@uttori/asm-core";
-import { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
+import {
+  createSnesAssemblerEnvironment,
+  SNES_TARGET_ID,
+} from "@uttori/asm-plugin-snes";
 import { removeInlineComment, splitInlineCommands } from "../packages/core/src/services/command-text-service.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const snesAssemblerHost = await createSnesAssemblerHost();
+const snesEnvironment = await createSnesAssemblerEnvironment();
 
 type ChecksumMode = "asar" | "simple";
 type Mapper = "lorom" | "hirom";
@@ -457,7 +460,8 @@ function assembleSource(input: {
 }): { bytes: Buffer; hits: EmitHit[] } {
   const source = fs.readFileSync(input.sourcePath, "utf8");
   const assembler = new Assembler({
-    ...snesAssemblerHost,
+    environment: snesEnvironment,
+    target: SNES_TARGET_ID,
     targetOptions: { checksumMode: input.checksumMode },
     collectSourceMetadata: false,
   });

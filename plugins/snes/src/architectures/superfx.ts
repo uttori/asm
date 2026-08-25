@@ -434,9 +434,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
     return this.encodeResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
 
-  /** Legacy API alias for {@link encode}. */
-  readonly asblock_superfx = this.encode.bind(this);
-
   /**
    * Encodes a resolved instruction.
    * @param {string} mnemonic The mnemonic.

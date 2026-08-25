@@ -1,32 +1,23 @@
 # uttori-asm
 
-A pluggable assembler toolkit written in TypeScript. The current first-party target is an Asar-compatible SNES assembler with 65816, SPC700, and Super FX support.
+Uttori ASM is a pluggable assembler toolkit for TypeScript and Node.js. Its architecture-neutral core owns parsing, the three-stage assembly pipeline, symbols, macros, includes, diagnostics, output writing, and editor analysis. Plugins own targets, instruction encoders, address spaces, output formats, target directives, expression functions, lifecycle behavior, and per-session state.
 
-The repository also includes a Language Server Protocol implementation and a VS Code extension powered by the same parser and analysis pipeline as the assembler.
+The repository ships four packages:
 
-The assembler can create a binary from source or apply assembly to an existing ROM. It is designed for programmatic use, command-line builds, and editor tooling.
+| Package | Purpose |
+| --- | --- |
+| `@uttori/asm-core` | Generic assembler runtime, analysis APIs, and plugin contracts |
+| `@uttori/asm-plugin-loader-node` | Trusted Node.js plugin discovery and `asm.config.json` loading |
+| `@uttori/asm-plugin-snes` | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility |
+| `@uttori/asm-plugin-6502-stub` | Small target stub that demonstrates a deliberately unimplemented encoder |
 
-## Features
+The language server and VS Code extension use the same loaded plugin environment as command-line builds, so diagnostics and editor catalogs match the selected target.
 
-- Three-stage assembly pipeline: definition collection, layout resolution, and byte emission.
-- 65816, SPC700, inline SPC700, and Super FX instruction encoding.
-- LoROM, HiROM, ExLoROM, ExHiROM, SA-1, full SA-1, Super FX, and mapper-free layouts.
-- Named, local, relative, static, macro, namespaced, and struct-member labels.
-- Defines, user functions, macros (including variadic macros), structs, namespaces, loops, and conditional assembly.
-- Data, fill/pad, freespace, binary include, source include, character-table, and SPC block directives.
-- Asar-compatible expression syntax, checksum behavior, and selected compatibility no-ops.
-- File-provider abstraction for disk, memory, and unsaved editor overlays.
-- Recovery-friendly analysis with structured diagnostics, symbols, references, precise source ranges, and an include graph.
-
-## Requirements
+## Requirements and installation
 
 - Node.js 20 or newer for the assembler and bundled editor tools.
-- A Node.js release accepted by AVA 8 (`^22.20`, `^24.12`, or `>=26`) to run the development test suite.
-- npm for the documented workspace scripts.
-
-## Install
-
-Clone the repository and install all workspace dependencies:
+- A Node.js release accepted by AVA 8 (`^22.20`, `^24.12`, or `>=26`) for the development suite.
+- npm workspaces.
 
 ```sh
 git clone https://github.com/MatthewCallis/uttori-asm.git
@@ -34,242 +25,197 @@ cd uttori-asm
 npm install
 ```
 
-The package is ESM and currently exports its TypeScript source. Use it from a TypeScript-aware runtime or bundler (the repository uses `tsx` during development).
+The packages are ESM and currently expose TypeScript source as their runtime import. Use a TypeScript-aware runtime or bundler; this repository uses `tsx` during development.
 
-## Command Line
+## Generic core usage
 
-Assemble a source file into a new binary:
+Core has no default target and never imports a plugin. Activate plugins, freeze the environment, then pass an explicit target to every build or analysis session:
 
-```sh
-npm run cli -- path/to/main.asm path/to/main.sfc
+```ts
+import { Assembler, PluginManager } from "@uttori/asm-core";
+import examplePlugin from "./my-plugin.js";
+
+const manager = new PluginManager();
+await manager.activatePlugins([{ plugin: examplePlugin, options: { byte: 0x42 } }]);
+
+const assembler = new Assembler({
+  environment: manager.freeze(),
+  target: "example.raw",
+});
+
+try {
+  assembler.assembleSource("org 0\nbyte", "main.asm");
+  console.log(assembler.getBinaryOutput());
+} finally {
+  assembler.dispose();
+  await manager.dispose();
+}
 ```
 
-Apply the assembly to an existing ROM:
+Construction without a resolved environment and target is an error. Encoders, directive handlers, lifecycle hooks, and mutable plugin state are created independently for each session.
 
-```sh
-npm run cli -- path/to/patch.asm path/to/patched.sfc path/to/base.sfc
-```
+For individual stages, call `buildProgramModel()` followed by `runStage("collectDefinitions")`, `runStage("resolveLayout")`, and `runStage("emitProgram")`. `assembleProgram()` runs all three. `analyzeSource()`, `analyzeDocument()`, `analyzeProgram()`, and `analyzeWorkspace()` use the production front end with recovery-oriented diagnostics.
 
-The optional checksum mode may appear after the positional arguments:
+## SNES quick start
 
-```sh
-npm run cli -- main.asm main.sfc base.sfc --checksum-mode=asar
-npm run cli -- main.asm main.sfc --checksum-mode=simple
-```
-
-`asar` is the default and follows Asar-compatible header/checksum behavior.
-`simple` uses a direct 16-bit sum and is useful for controlled compatibility fixtures.
-
-## Programmatic API
+The SNES package exposes an explicit environment factory and target ID:
 
 ```ts
 import fs from "node:fs";
-import path from "node:path";
-import { Assembler } from "uttori-asm";
-import { snesAssemblerHost } from "uttori-asm/plugin";
+import { Assembler } from "@uttori/asm-core";
+import {
+  createSnesAssemblerEnvironment,
+  SNES_TARGET_ID,
+} from "@uttori/asm-plugin-snes";
 
-const sourceFile = path.resolve("src/main.asm");
-const source = fs.readFileSync(sourceFile, "utf8");
-const baseRom = fs.existsSync("game.sfc")
-  ? new Uint8Array(fs.readFileSync("game.sfc"))
-  : undefined;
-
+const environment = await createSnesAssemblerEnvironment();
 const assembler = new Assembler({
-  ...snesAssemblerHost,
-  baseImage: baseRom,
-  collectSourceMetadata: false,
+  environment,
+  target: SNES_TARGET_ID,
+  targetOptions: { checksumMode: "asar", checksumEnabled: true },
 });
+
 try {
-  assembler.setCurrentFile(sourceFile);
-  assembler.setIncludePaths([path.dirname(sourceFile)]);
-  assembler.setChecksumMode("asar");
-  assembler.assembleSource(source, sourceFile);
-  fs.writeFileSync("build/game.sfc", assembler.getBinaryOutput());
+  assembler.assembleSource("lorom\norg $008000\nsei", "main.asm");
+  fs.writeFileSync("main.sfc", assembler.getBinaryOutput());
 } finally {
   assembler.dispose();
 }
 ```
 
-### Plugin environments
+See the [SNES plugin reference](plugins/snes/README.md) for target aliases, architectures, mapper directives, expressions, checksum options, and output behavior.
 
-Assembler construction is explicit: every session receives a frozen
-`AssemblerEnvironment` and a target ID. Hosts activate configured plugins with
-`PluginManager`, freeze the resulting environment, and reuse it for build and
-analysis sessions. Encoders, directive handlers, lifecycle hooks, and mutable
-plugin state are still created separately for every session.
+## Command line
 
-The exported `snesAssemblerHost` is a temporary first-party bridge used while
-the SNES implementation is moved into `@uttori/asm-plugin-snes`. Core itself has
-no implicit target. Version 1 plugins are trusted in-process code and should
-only be loaded from packages or paths the user explicitly configured.
+With no `asm.config.json` and no explicit plugin, the CLI product supplies the bundled SNES plugin as its host-level default. Core itself still has no default.
 
-`collectSourceMetadata: false` is intended for ROM-only builds and skips symbol, reference, include-graph, and address-to-line artifacts. Leave it enabled (the default) when reading those artifacts directly. The `analyze*` APIs always use their own metadata-enabled analysis session.
+```sh
+# SNES zero-configuration build
+npm run cli -- path/to/main.asm path/to/main.sfc
 
-For callers that need control over individual phases:
+# Explicit project/plugin build
+npm run cli -- examples/plugin-author/main.asm build/main.bin \
+  --config examples/plugin-author/asm.config.json
 
-```ts
-const program = assembler.buildProgramModel(source, sourceFile);
-
-assembler.runStage("collectDefinitions", program);
-assembler.runStage("resolveLayout", program);
-assembler.runStage("emitProgram", program);
+# Overrides
+npm run cli -- main.asm --plugin ./plugin.js --target custom.raw \
+  --architecture custom.cpu --base-image base.bin --include-path includes \
+  --plugin-option custom.plugin:mode="strict" --verbose
 ```
 
-`assembler.assembleProgram(program)` runs those three stages in order.
+Options are `--config`, repeatable `--plugin`, `--target`, `--architecture`, `--base-image`, repeatable `--include-path`, repeatable `--plugin-option <plugin:key=value>`, `--verbose`, and `--help`. When output is omitted, the selected target supplies its extension.
 
-### Analysis API
+Resolution precedence is CLI/editor overrides, then project configuration, then host defaults. Configured plugins retain declaration order; explicit `--plugin` entries append without reordering.
 
-Analysis uses the production front end and recovers after local assembly errors where possible:
+## Project configuration
 
-```ts
-const result = assembler.analyzeSource(source, sourceFile);
+`@uttori/asm-plugin-loader-node` discovers `asm.config.json` from the project directory or accepts an explicit file. The published schema is available as `@uttori/asm-plugin-loader-node/asm-config.schema.json`.
 
-console.log(result.diagnostics);
-console.log(result.symbols);
-console.log(result.references);
-console.log(result.includeEdges);
+```json
+{
+  "$schema": "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
+  "plugins": [
+    {
+      "module": "@uttori/asm-plugin-snes",
+      "options": {
+        "checksumMode": "asar",
+        "checksumEnabled": true,
+        "asarSuperFxMoveShortAddress": false
+      }
+    }
+  ],
+  "target": "snes.sfc",
+  "architecture": "snes.65816",
+  "includePaths": ["./", "./include"]
+}
 ```
 
-The analysis result also includes the parsed `program` model. `analyzeDocument`, `analyzeProgram`, and `analyzeWorkspace` are available for editor and build-tool integrations.
+| Field | Meaning |
+| --- | --- |
+| `$schema` | Optional editor/schema URI |
+| `plugins` | Ordered plugin modules and package-specific option objects |
+| `target` | Target contribution ID or alias |
+| `architecture` | Architecture contribution ID or alias valid for the target |
+| `includePaths` | Paths resolved relative to the configuration file |
 
-## Source Example
+Package names resolve like normal ESM imports. Relative and absolute paths resolve from the configuration directory. The loader validates plugin options before activation, rejects duplicate modules and ownership collisions, freezes successful environments, and disposes replaced environments in reverse activation order.
 
-```asm
-lorom
-org $008000
+## Plugin authoring
 
-!counter = $10
+A plugin is a default-exported `AssemblerPlugin` built with the documented `@uttori/asm-core/plugin` entry point. Its manifest contains:
 
-Start:
-  sei
-  clc
-  xce
-  stz !counter
+- `id`, `name`, `version`, and `apiVersion`;
+- optional `description`; and
+- optional `requires` entries containing a plugin ID and semver range.
 
-.loop:
-  inc !counter
-  bra .loop
-```
+`validateOptions()` normalizes configuration before `activate()` registers contributions. Version 1 supports session-state slots, architectures, address spaces, output formats, directive sets, expression sets, lifecycle hooks, and targets. Contribution IDs should be namespaced to the plugin. Duplicate IDs and user-facing aliases fail activation with owner-rich diagnostics; overrides are not supported.
 
-The language is intentionally close to Asar. See [`fixtures/asar/tests`](fixtures/asar/tests) for focused supported examples and [`fixtures/integration`](fixtures/integration) for real-world regression projects.
+The [plugin author example](examples/plugin-author/README.md) is a runnable copy of the tiny fixture-plugin pattern. It contributes a raw target, one-byte encoder, flat address space, output format, directive metadata, and cloned per-session state. Production plugins must import only `@uttori/asm-core` or `@uttori/asm-core/plugin`, never internal source paths.
 
-## Compatibility Scope
+### Trusted-code warning
 
-This project targets practical Asar compatibility, but it is not yet a complete
-drop-in replacement for every Asar feature. The main fixture suite and the
-slideshow, Chou Makaimura, and Yoshi's Island (Super FX) integration projects
-are used as byte-parity gates.
-Known unsupported or deferred syntax is retained under
-[`fixtures/asar/tests/Unsupported`](fixtures/asar/tests/Unsupported) so the
-boundary remains visible.
+Plugins are trusted, in-process JavaScript modules. Loading one can execute arbitrary code with the assembler process’s permissions. Only configure packages or paths you trust. The CLI loads explicitly configured plugins; VS Code loads workspace-configured plugins only after Workspace Trust is granted. Contribution state is session-isolated, but this is not a security sandbox.
 
-Compatibility-specific policy is centralized in
-[`src/compatibility/asar-compatibility-profile.ts`](src/compatibility/asar-compatibility-profile.ts),
-including checksum selection, mapper behavior, freespace availability, inline
-SPC behavior, intentional no-op directives, and Super FX auto-MOVE short-address
-encoding (hardware word-index by default; Asar's raw-byte form via
-`setAsarSuperFxMoveShortAddress(true)`).
+## Language server and VS Code
 
-## Language Server
-
-The language server lives in [`language-server`](language-server) and supports:
-
-- incremental document synchronization and diagnostics;
-- document and workspace symbols;
-- go-to-definition and find-references across source includes;
-- hover documentation and completion for instructions, directives, and project symbols;
-- instruction/directive signature help;
-- semantic tokens; and
-- cross-file rename for user-defined symbols.
-
-Build and run it over standard input/output:
+Build and smoke-test the stdio language server:
 
 ```sh
 npm run lsp:typecheck
 npm run lsp:build
-./language-server/out/server.mjs --stdio
+npm run lsp:smoke
 ```
 
-The generated server is self-contained except for the optional `debug` package.
-It targets the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/),
-uses UTF-16 positions explicitly, and is built on Microsoft’s stable 10.1.x
-language client/server SDK.
+It supports incremental diagnostics, symbols, definitions, references, rename, hover, completion, signature help, semantic tokens, unsaved overlays, and target-filtered tooling catalogs.
 
-## VS Code Extension
-
-The extension in [`editors/vscode`](editors/vscode) registers Uttori Assembly for `.asm`, `.src`, `.SRC`, `.s`, and `.inc` files. It bundles the first-party SNES plugin for zero-configuration projects and can load project plugins from trusted workspaces. In addition to the language server features above, it provides:
-
-- **Assembly: Build Binary** — build the active source, including unsaved editor contents;
-- **Assembly: Toggle Build on Save (Watch)** — rebuild the configured entry point whenever an assembly source is saved; and
-- syntax highlighting, comment configuration, bracket pairing, and a watch status item.
-
-Project settings:
-
-| Setting | Purpose | Default |
-| --- | --- | --- |
-| `asm.configFile` | Workspace-relative project configuration path | Auto-discovered `asm.config.json` |
-| `asm.plugins` | Plugin module specifiers/options appended to project configuration | `[]` |
-| `asm.target` | Target contribution ID or alias | Plugin/config default |
-| `asm.architecture` | Architecture contribution ID or alias | Target default |
-| `asm.entryPoints` | Workspace-relative roots used for include-aware analysis and watch builds | `[]` |
-| `asm.includePaths` | Extra workspace-relative include search paths | Project/default paths |
-| `asm.buildOutput` | Workspace-relative or absolute binary output path | Target-specific extension |
-| `asm.baseImage` | Workspace-relative or absolute base image to patch | none |
-
-Workspace configuration and plugin modules execute only after VS Code grants Workspace Trust. In restricted mode the bundled SNES target remains available and the server publishes a configuration warning.
-
-Build a VSIX package:
+The extension in [editors/vscode](editors/vscode) registers the `uttori-asm` language for `.asm`, `.src`, `.SRC`, `.s`, and `.inc`. It bundles SNES for zero-configuration workspaces and propagates `asm.configFile`, `asm.plugins`, `asm.target`, `asm.architecture`, `asm.entryPoints`, `asm.includePaths`, `asm.buildOutput`, and `asm.baseImage` to the server. In restricted workspaces it refuses workspace plugin/configuration execution and publishes a warning.
 
 ```sh
+npm run vscode:typecheck
 npm run vscode:package
 ```
 
-For extension development, open `editors/vscode` as the VS Code workspace and press F5. Its launch task rebuilds both the server and extension before opening an Extension Development Host.
+See the [extension README](editors/vscode/README.md) for the end-user command and settings reference.
 
-See the [extension README](editors/vscode/README.md) for the concise end-user reference.
+## SNES compatibility scope
+
+The first-party plugin targets practical Asar compatibility, including 65816, SPC700/inline SPC, Super FX, mapper and checksum behavior, freespace/RATS allocation, and selected compatibility no-ops. It is not a promise that every Asar feature is implemented. Focused fixtures live in `fixtures/asar/tests`; slideshow, Chou Makaimura, Yoshi’s Island, and disassembly projects provide byte-parity gates. Deferred syntax remains visible under `fixtures/asar/tests/Unsupported`.
+
+Compatibility policy is isolated in `plugins/snes/src/asar/compatibility.ts`; no SNES target policy exists in core.
 
 ## Development
 
-Common commands:
-
 | Command | Purpose |
 | --- | --- |
-| `npm test` | Run the AVA test suite |
-| `npm run test:coverage` | Run tests with source coverage |
-| `npm run coverage:verify` | Enforce aggregate and stable-module coverage thresholds |
-| `npm run lint` | Lint production source |
-| `npm run make-types` | Emit declarations to `dist` |
+| `npm test` | Run all AVA tests |
+| `npm run typecheck` | Type-check root, workspaces, scripts, and the author example |
+| `npm run check:boundaries` | Enforce core/plugin/LSP ownership boundaries |
+| `npm run test:coverage` | Run source coverage |
+| `npm run verify` | Run formatting, lint, boundaries, types, declarations, coverage, LSP, and editor gates |
+| `npm run pack:check` | Assert required runtime files and the loader schema exist in package dry-runs |
 | `npm run fixture:asar` | Run the Asar fixture harness |
 | `npm run fixture:slideshow` | Run the slideshow integration fixture |
 | `npm run fixture:chou` | Run the Chou Makaimura integration fixture |
 | `npm run benchmark:smoke` | Run correctness-checked smoke benchmarks |
-| `npm run benchmark:chou` | Run one isolated, parity-checked Chou performance gate |
-| `npm run benchmark:chou:stable` | Run three isolated Chou samples and enforce the performance budget |
-| `npm run verify` | Run the primary lint, type, coverage, LSP, and extension checks |
-| `npm run pack:check` | Inspect the npm package without publishing it |
 
-The coverage gate currently requires at least 92% statements, 88% branches, and 93% functions overall, with stricter per-file thresholds for selected stable directive, macro, and LSP modules.
+The final migration gates are `npm run verify`, `npm run pack:check`, all three fixture commands above, and `npm run benchmark:smoke`.
 
-## Repository Layout
+## Repository layout
 
 ```text
-src/                 assembler, IR, directives, services, and analysis APIs
-src/lsp/             editor-neutral catalogs, indexing, and position lookup
-language-server/     LSP transport and protocol providers
-editors/vscode/      VS Code language client and extension contributions
-tests/               unit, service-seam, integration, and editor-provider tests
-fixtures/asar/       Asar compatibility sources and golden binaries
-fixtures/integration real-world slideshow and disassembly regressions
-scripts/             fixture runners and benchmark tooling
+packages/core/                architecture-neutral runtime and plugin API
+packages/plugin-loader-node/  Node discovery, config loader, and JSON schema
+plugins/snes/                 SNES implementation and parity tests
+plugins/6502-stub/            intentionally incomplete example target
+src/                          generic CLI host
+language-server/              LSP transport and environment controller
+editors/vscode/               VS Code client and bundled artifacts
+examples/plugin-author/       runnable third-party plugin template
+tests/                        core, loader, LSP, and cross-package tests
+fixtures/                     focused and production integration projects
+scripts/                      boundary, package, fixture, smoke, and benchmark gates
 ```
-
-## Project Status & Direction
-
-The production assembler uses one lowered execution pipeline for commands,
-loops, conditionals, and includes. Directive effects and architecture encoders
-are separated behind focused capability contracts, and the assembler and editor
-features consume the same analysis artifacts.
 
 ## License
 
-MIT © Matthew Callis. See [`LICENSE`](LICENSE).
+MIT © Matthew Callis. See [LICENSE](LICENSE).

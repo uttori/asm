@@ -4,23 +4,28 @@ import {
   Arch65816,
   ArchSPC700,
   ArchSuperFX,
-  createSnesAssemblerHost,
+  createSnesAssemblerEnvironment,
   createSpcRuntime,
+  SNES_TARGET_ID,
   snesSessionStateKey,
 } from "@uttori/asm-plugin-snes";
 
-export const snesAssemblerHost = await createSnesAssemblerHost();
+export const snesTestEnvironment = await createSnesAssemblerEnvironment();
+export const snesTestAssemblerOptions = {
+  environment: snesTestEnvironment,
+  target: SNES_TARGET_ID,
+} as const;
 
-export type LegacyTestAssemblerOptions = {
+export type TestAssemblerOptions = {
   fileProvider?: AssemblyFileProvider;
   collectSourceMetadata?: boolean;
 };
 
-/** Test-only compatibility facade for the pre-plugin constructor shape. */
+/** Test-only facade that keeps byte-parity tests concise while activating SNES explicitly. */
 export class Assembler extends CoreAssembler {
-  constructor(baseImage?: number[] | Uint8Array, options: LegacyTestAssemblerOptions = {}) {
+  constructor(baseImage?: number[] | Uint8Array, options: TestAssemblerOptions = {}) {
     super({
-      ...snesAssemblerHost,
+      ...snesTestAssemblerOptions,
       baseImage,
       fileProvider: options.fileProvider,
       collectSourceMetadata: options.collectSourceMetadata,
@@ -73,4 +78,4 @@ export class Assembler extends CoreAssembler {
 
 export const snesWorkspaceIndexOptions = (
   options: Omit<WorkspaceIndexOptions, "environment" | "target"> = {},
-): WorkspaceIndexOptions => ({ ...snesAssemblerHost, ...options });
+): WorkspaceIndexOptions => ({ ...snesTestAssemblerOptions, ...options });

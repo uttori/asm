@@ -2279,13 +2279,13 @@ test("Arch65816.handleNoOperandOperations handles unsupported, zero-count, and i
   }, { message: "Invalid repeat count in pseudo opcode: #abc" });
 });
 
-test("Arch65816.asblock_65816 returns false for empty input", t => {
+test("Arch65816.encode returns false for empty input", t => {
   const { arch } = createArch65816();
 
-  t.false(arch.asblock_65816([]));
+  t.false(arch.encode([]));
 });
 
-test("Arch65816.asblock_65816 routes arithmetic opcodes with explicit length suffixes", t => {
+test("Arch65816.encode routes arithmetic opcodes with explicit length suffixes", t => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
@@ -2298,13 +2298,13 @@ test("Arch65816.asblock_65816 routes arithmetic opcodes with explicit length suf
     arithmeticStub.restore();
   });
 
-  t.true(arch.asblock_65816(["asl.b", "$12"]));
+  t.true(arch.encode(["asl.b", "$12"]));
   t.true(expandOperandStub.calledOnceWithExactly("$12"));
   t.true(getlenStub.calledOnceWithExactly("B"));
   t.true(arithmeticStub.calledOnceWithExactly("ASL", "$12", 1, true));
 });
 
-test("Arch65816.asblock_65816 routes no-operand opcodes before other helpers", t => {
+test("Arch65816.encode routes no-operand opcodes before other helpers", t => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("#3").returns({ expanded: "#3", length: 1 });
@@ -2316,12 +2316,12 @@ test("Arch65816.asblock_65816 routes no-operand opcodes before other helpers", t
     loadRegisterStub.restore();
   });
 
-  t.true(arch.asblock_65816(["nop", "#3"]));
+  t.true(arch.encode(["nop", "#3"]));
   t.true(noOperandStub.calledOnceWithExactly("NOP", "#3"));
   t.true(loadRegisterStub.notCalled);
 });
 
-test("Arch65816.asblock_65816 routes branch helpers before generic fallback", t => {
+test("Arch65816.encode routes branch helpers before generic fallback", t => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$1234").returns({ expanded: "$1234", length: 2 });
@@ -2338,12 +2338,12 @@ test("Arch65816.asblock_65816 routes branch helpers before generic fallback", t 
     genericStub.restore();
   });
 
-  t.true(arch.asblock_65816(["bra", "$1234"]));
+  t.true(arch.encode(["bra", "$1234"]));
   t.true(branchStub.calledOnceWithExactly("BRA", "$1234"));
   t.true(genericStub.calledOnceWithExactly("BRA", 0x1234, 2, false, true));
 });
 
-test("Arch65816.asblock_65816 falls back to generic opcode handling with resolved num and hexconstant", t => {
+test("Arch65816.encode falls back to generic opcode handling with resolved num and hexconstant", t => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
@@ -2360,11 +2360,11 @@ test("Arch65816.asblock_65816 falls back to generic opcode handling with resolve
     genericStub.restore();
   });
 
-  t.true(arch.asblock_65816(["wdm", "$12"]));
+  t.true(arch.encode(["wdm", "$12"]));
   t.true(genericStub.calledOnceWithExactly("WDM", 0x12, 1, false, true));
 });
 
-test("Arch65816.asblock_65816 routes bit-test opcodes without falling through to memory-bit helper", t => {
+test("Arch65816.encode routes bit-test opcodes without falling through to memory-bit helper", t => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
@@ -2376,12 +2376,12 @@ test("Arch65816.asblock_65816 routes bit-test opcodes without falling through to
     memoryBitStub.restore();
   });
 
-  t.true(arch.asblock_65816(["trb", "$12"]));
+  t.true(arch.encode(["trb", "$12"]));
   t.true(bitTestStub.calledOnceWithExactly("TRB", "$12", 1, false));
   t.true(memoryBitStub.notCalled);
 });
 
-test("Arch65816.asblock_65816 routes memory and load-register opcodes using expanded operands", t => {
+test("Arch65816.encode routes memory and load-register opcodes using expanded operands", t => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("#!VALUE").returns({ expanded: "#$34", length: 1 });
@@ -2394,8 +2394,8 @@ test("Arch65816.asblock_65816 routes memory and load-register opcodes using expa
     loadRegisterStub.restore();
   });
 
-  t.true(arch.asblock_65816(["lda", "#!VALUE"]));
-  t.true(arch.asblock_65816(["ldx", "$1234,y"]));
+  t.true(arch.encode(["lda", "#!VALUE"]));
+  t.true(arch.encode(["ldx", "$1234,y"]));
   t.true(memoryStub.calledOnceWithExactly("LDA", "#$34", 1, false, "#!VALUE"));
   t.true(loadRegisterStub.calledOnceWithExactly("LDX", "$1234,y", 2, false));
 });

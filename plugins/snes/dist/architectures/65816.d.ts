@@ -69,8 +69,6 @@ export declare class Arch65816 implements ArchitectureEncoder {
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     encode(words: string[]): boolean;
-    /** Legacy API alias for {@link encode}. */
-    readonly asblock_65816: (words: string[]) => boolean;
     /**
      * Encodes resolved instruction.
      * @param {string} mnemonic The mnemonic.

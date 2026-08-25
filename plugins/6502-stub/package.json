@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Deliberately nonfunctional MOS 6502 contract-test plugin for Uttori ASM.",
   "license": "MIT",
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
   "sideEffects": false,
   "module": "src/index.ts",
@@ -13,7 +17,6 @@
       "import": "./src/index.ts"
     }
   },
-  "files": ["dist", "src"],
   "scripts": {
     "make-types": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",

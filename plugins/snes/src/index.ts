@@ -516,17 +516,6 @@ export async function createSnesAssemblerEnvironment(): Promise<AssemblerEnviron
   return manager.freeze();
 }
 
-/**
- * Creates the explicit environment/target pair expected by assembler hosts.
- * @returns {Promise<object>} Explicit SNES assembler host options.
- */
-export async function createSnesAssemblerHost(): Promise<{
-  environment: AssemblerEnvironment;
-  target: typeof SNES_TARGET_ID;
-}> {
-  return { environment: await createSnesAssemblerEnvironment(), target: SNES_TARGET_ID };
-}
-
 export { Arch65816 } from "./architectures/65816.js";
 export { ArchSPC700 } from "./architectures/spc700.js";
 export { ArchSuperFX } from "./architectures/superfx.js";

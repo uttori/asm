@@ -158,7 +158,7 @@ export class SymbolScopeService {
   handleRelativeLabel(label: string): number {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-    const snesAddress = this.host.currentTargetAddress;
+    const targetAddress = this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
 
     if (this.host.enforceResolvedLabels) {
@@ -169,32 +169,32 @@ export class SymbolScopeService {
       } else if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
         throw new Error(`Error: Undefined backward label '${label}'.`);
       }
-      return snesAddress;
+      return targetAddress;
     }
 
     if (isPositive) {
       if (!this.host.forwardLabels[depth]) this.host.forwardLabels[depth] = [];
       if (isMacroLocal && this.host.inMacroExpansion) {
         this.host.forwardLabels[depth].push({
-          addr: snesAddress,
+          addr: targetAddress,
           macroInstance: this.host.macroLabelInstance,
         });
       } else {
-        this.host.forwardLabels[depth].push({ addr: snesAddress });
+        this.host.forwardLabels[depth].push({ addr: targetAddress });
       }
     } else {
       if (!this.host.backwardLabels[depth]) this.host.backwardLabels[depth] = [];
       if (isMacroLocal && this.host.inMacroExpansion) {
         this.host.backwardLabels[depth].push({
-          addr: snesAddress,
+          addr: targetAddress,
           macroInstance: this.host.macroLabelInstance,
         });
       } else {
-        this.host.backwardLabels[depth].push({ addr: snesAddress });
+        this.host.backwardLabels[depth].push({ addr: targetAddress });
       }
     }
 
-    return snesAddress;
+    return targetAddress;
   }
 
   /**

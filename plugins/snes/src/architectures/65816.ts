@@ -410,9 +410,6 @@ export class Arch65816 implements ArchitectureEncoder {
     );
   }
 
-  /** Legacy API alias for {@link encode}. */
-  readonly asblock_65816 = this.encode.bind(this);
-
   /**
    * Encodes resolved instruction.
    * @param {string} mnemonic The mnemonic.

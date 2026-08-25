@@ -919,6 +919,21 @@ Acceptance:
 - Package tarball dry runs contain required runtime files and JSON schema.
 - No dead compatibility path can create an implicit SNES assembler.
 
+Completion note (2026-08-24): `scripts/check-package-boundaries.ts` now enforces
+core/plugin import direction, public core export usage, target-neutral core
+identifiers, and environment-backed LSP providers as part of `npm run verify`.
+The temporary SNES host factory, legacy encoder aliases, duplicate SNES catalog
+registry, stale generated declarations, and final SNES-named core local are gone.
+The root and SNES READMEs now cover generic and SNES usage, configuration,
+trusted-code policy, contributions, mapper/checksum behavior, CLI, and editor
+setup; `examples/plugin-author` provides a runnable non-SNES plugin that emits
+`0x42`. Package dry-runs assert required source, declaration, and schema files,
+and the 6502 stub declaration layout now matches its export map. The 935-test
+verification suite passes with 94.31% statement, 90.34% branch, and 95.82%
+function coverage. All four package assertions, 60 Asar fixtures, Slideshow,
+Chou, five correctness-checked benchmark workloads, the packaged language
+server smoke test, and VSIX packaging pass.
+
 ## 9. Test migration and verification matrix
 
 Tests may change imports and APIs, but assertions about emitted bytes and supported language behavior must remain.

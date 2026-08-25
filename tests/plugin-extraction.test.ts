@@ -3,7 +3,7 @@ import { test } from "./ava-helper.js";
 import { Assembler, PluginManager } from "@uttori/asm-core";
 import mos6502StubPlugin, { MOS6502_STUB_TARGET_ID } from "@uttori/asm-plugin-6502-stub";
 import snesPlugin, {
-  createSnesAssemblerHost,
+  createSnesAssemblerEnvironment,
   SNES_TARGET_ID,
   snesSessionStateKey,
 } from "@uttori/asm-plugin-snes";
@@ -21,7 +21,10 @@ test("SNES behavior appears only after explicit plugin activation", async (t) =>
     message: /unknown built-in function 'snestopc'/i,
   });
 
-  const snes = new Assembler(await createSnesAssemblerHost());
+  const snes = new Assembler({
+    environment: await createSnesAssemblerEnvironment(),
+    target: SNES_TARGET_ID,
+  });
   t.is(snes.targetId, SNES_TARGET_ID);
   t.is(snes.pluginState.get(snesSessionStateKey).mapper, "lorom");
   t.true(snes.directiveRegistry.has("lorom"));

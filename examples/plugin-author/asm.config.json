@@ -1,0 +1,14 @@
+{
+  "$schema": "../../packages/plugin-loader-node/asm-config.schema.json",
+  "plugins": [
+    {
+      "module": "./src/index.ts",
+      "options": {
+        "byte": 66
+      }
+    }
+  ],
+  "target": "example.raw",
+  "architecture": "example.byte",
+  "includePaths": ["./"]
+}

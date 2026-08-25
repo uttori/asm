@@ -740,9 +740,6 @@ export class ArchSPC700 implements ArchitectureEncoder {
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
 
-  /** Legacy API alias for {@link encode}. */
-  readonly asblock_spc700 = this.encode.bind(this);
-
   /**
    * Encodes resolved instruction.
    * @param {string} mnemonic The mnemonic.

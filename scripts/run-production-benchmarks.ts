@@ -6,14 +6,17 @@ import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { Assembler } from "@uttori/asm-core";
-import { createSnesAssemblerHost } from "@uttori/asm-plugin-snes";
+import {
+  createSnesAssemblerEnvironment,
+  SNES_TARGET_ID,
+} from "@uttori/asm-plugin-snes";
 import {
   runWithInternalInstrumentation,
   type InternalInstrumentationSnapshot,
 } from "../packages/core/src/internal-instrumentation.js";
 import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
 
-const snesAssemblerHost = await createSnesAssemblerHost();
+const snesEnvironment = await createSnesAssemblerEnvironment();
 
 type Fixture = {
   id: string;
@@ -184,7 +187,8 @@ function assembleFixture(fixture: Fixture): Uint8Array {
   const source = fs.readFileSync(sourcePath, "utf8");
   const target = new Uint8Array(fs.readFileSync(targetPath));
   const assembler = new Assembler({
-    ...snesAssemblerHost,
+    environment: snesEnvironment,
+    target: SNES_TARGET_ID,
     targetOptions: { checksumMode: fixture.checksumMode },
     baseImage: target,
     collectSourceMetadata: false,

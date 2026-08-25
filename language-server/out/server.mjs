@@ -18524,7 +18524,7 @@ var SymbolScopeService = class {
   handleRelativeLabel(label) {
     const isPositive = label.includes("+");
     const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-    const snesAddress = this.host.currentTargetAddress;
+    const targetAddress = this.host.currentTargetAddress;
     const isMacroLocal = label.startsWith("?");
     if (this.host.enforceResolvedLabels) {
       if (isPositive) {
@@ -18534,30 +18534,30 @@ var SymbolScopeService = class {
       } else if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
         throw new Error(`Error: Undefined backward label '${label}'.`);
       }
-      return snesAddress;
+      return targetAddress;
     }
     if (isPositive) {
       if (!this.host.forwardLabels[depth]) this.host.forwardLabels[depth] = [];
       if (isMacroLocal && this.host.inMacroExpansion) {
         this.host.forwardLabels[depth].push({
-          addr: snesAddress,
+          addr: targetAddress,
           macroInstance: this.host.macroLabelInstance
         });
       } else {
-        this.host.forwardLabels[depth].push({ addr: snesAddress });
+        this.host.forwardLabels[depth].push({ addr: targetAddress });
       }
     } else {
       if (!this.host.backwardLabels[depth]) this.host.backwardLabels[depth] = [];
       if (isMacroLocal && this.host.inMacroExpansion) {
         this.host.backwardLabels[depth].push({
-          addr: snesAddress,
+          addr: targetAddress,
           macroInstance: this.host.macroLabelInstance
         });
       } else {
-        this.host.backwardLabels[depth].push({ addr: snesAddress });
+        this.host.backwardLabels[depth].push({ addr: targetAddress });
       }
     }
-    return snesAddress;
+    return targetAddress;
   }
   /**
    * Finds the next label.
@@ -24317,27 +24317,6 @@ var superFxCatalog = [
     { mode: "registerIndirect", syntax: "Rn,(Rm)" }
   ])
 ];
-var InstructionCatalogRegistry2 = class {
-  catalogs = /* @__PURE__ */ new Map();
-  aliases = /* @__PURE__ */ new Map();
-  register(architecture, catalog, aliases = []) {
-    const canonical2 = architecture.toLowerCase();
-    this.catalogs.set(canonical2, catalog);
-    this.aliases.set(canonical2, canonical2);
-    for (const alias of aliases) {
-      this.aliases.set(alias.toLowerCase(), canonical2);
-    }
-  }
-  getInstructionCatalog(architecture) {
-    const canonical2 = this.aliases.get(architecture.toLowerCase());
-    return canonical2 ? this.catalogs.get(canonical2) ?? [] : [];
-  }
-};
-var builtInInstructionCatalogs = new InstructionCatalogRegistry2();
-builtInInstructionCatalogs.register("65816", cpu65816Catalog);
-builtInInstructionCatalogs.register("spc700", spc700Catalog, ["spc700-raw", "spc700-inline"]);
-builtInInstructionCatalogs.register("superfx", superFxCatalog);
-builtInInstructionCatalogs.register("6502", [], ["mos6502"]);
 
 // plugins/snes/src/architectures/65816.ts
 var debug5 = (..._args) => {
@@ -24667,8 +24646,6 @@ var Arch65816 = class {
       loweredOperand.length
     );
   }
-  /** Legacy API alias for {@link encode}. */
-  asblock_65816 = this.encode.bind(this);
   /**
    * Encodes resolved instruction.
    * @param {string} mnemonic The mnemonic.
@@ -26855,8 +26832,6 @@ var ArchSPC700 = class {
     );
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
-  /** Legacy API alias for {@link encode}. */
-  asblock_spc700 = this.encode.bind(this);
   /**
    * Encodes resolved instruction.
    * @param {string} mnemonic The mnemonic.
@@ -28789,8 +28764,6 @@ var ArchSuperFX = class {
     );
     return this.encodeResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
-  /** Legacy API alias for {@link encode}. */
-  asblock_superfx = this.encode.bind(this);
   /**
    * Encodes a resolved instruction.
    * @param {string} mnemonic The mnemonic.

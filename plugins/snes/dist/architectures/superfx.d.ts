@@ -48,8 +48,6 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     encode(words: string[]): boolean;
-    /** Legacy API alias for {@link encode}. */
-    readonly asblock_superfx: (words: string[]) => boolean;
     /**
      * Encodes a resolved instruction.
      * @param {string} mnemonic The mnemonic.
