@@ -5,17 +5,16 @@ import { Assembler } from "../../../tests/test-assembler.js";
 import { createTraceCollector } from "../../../packages/core/src/debug-tracing.js";
 import { parseExpressionNode } from "../../../packages/core/src/ir/expression-node.js";
 import { createNormalizedCommand } from "../../../packages/core/src/ir/normalized-command.js";
-import { getDefineVariable, splitCommandIntoWords, splitInlineCommands } from "../../../packages/core/src/services/command-text-service.js";
+import {
+  getDefineVariable,
+  splitCommandIntoWords,
+  splitInlineCommands,
+} from "../../../packages/core/src/services/command-text-service.js";
 import { handleArch } from "../../../packages/core/src/directives/layout.js";
 import { handleIncbin } from "../../../packages/core/src/directives/include-source.js";
 
-const makeCommand = (command: string) => createNormalizedCommand(
-  command,
-  command,
-  command.trim().split(/\s+/),
-  "test.asm",
-  1
-);
+const makeCommand = (command: string) =>
+  createNormalizedCommand(command, command, command.trim().split(/\s+/), "test.asm", 1);
 
 test("binary-build mode skips source metadata collection", (t) => {
   const assembler = new Assembler(undefined, { collectSourceMetadata: false });
@@ -31,7 +30,7 @@ test("binary-build mode skips source metadata collection", (t) => {
   t.deepEqual(assembler.addressToLineMapping.addrToLineInfo, []);
 });
 
-test("getnum - handles numeric literals", t => {
+test("getnum - handles numeric literals", (t) => {
   const assembler = new Assembler();
 
   // Decimal literals
@@ -53,7 +52,7 @@ test("getnum - handles numeric literals", t => {
   t.is(assembler.operandResolver.getnum(" 42 "), 42, "Should handle whitespace");
 });
 
-test("getnum - handles immediate values", t => {
+test("getnum - handles immediate values", (t) => {
   const assembler = new Assembler();
 
   // Immediate values with # prefix
@@ -62,19 +61,31 @@ test("getnum - handles immediate values", t => {
   t.is(assembler.operandResolver.getnum("# 42"), 42, "Should handle whitespace after #");
 });
 
-test("getnum - resolves defines", t => {
+test("getnum - resolves defines", (t) => {
   const assembler = new Assembler();
 
   // Setup some defines
   assembler.defines.set("TEST_VALUE", "42");
   assembler.defines.set("HEX_VALUE", "$FF");
 
-  t.is(assembler.operandResolver.getnum("!TEST_VALUE"), 42, "Should resolve defines to their values");
-  t.is(assembler.operandResolver.getnum("#!TEST_VALUE"), 42, "Should resolve defines in immediate mode");
-  t.is(assembler.operandResolver.getnum("!HEX_VALUE"), 255, "Should resolve defines with hex values");
+  t.is(
+    assembler.operandResolver.getnum("!TEST_VALUE"),
+    42,
+    "Should resolve defines to their values",
+  );
+  t.is(
+    assembler.operandResolver.getnum("#!TEST_VALUE"),
+    42,
+    "Should resolve defines in immediate mode",
+  );
+  t.is(
+    assembler.operandResolver.getnum("!HEX_VALUE"),
+    255,
+    "Should resolve defines with hex values",
+  );
 });
 
-test("getnum - handles labels", t => {
+test("getnum - handles labels", (t) => {
   const assembler = new Assembler();
 
   // Mock the non-throwing lookup used by define expansion.
@@ -83,10 +94,14 @@ test("getnum - handles labels", t => {
   getLabelValueStub.withArgs("another_label", false).returns(0x2000);
 
   t.is(assembler.operandResolver.getnum("label1"), 0x1000, "Should resolve label values");
-  t.is(assembler.operandResolver.getnum("another_label"), 0x2000, "Should resolve different label values");
+  t.is(
+    assembler.operandResolver.getnum("another_label"),
+    0x2000,
+    "Should resolve different label values",
+  );
 });
 
-test("getnum - handles math expressions", t => {
+test("getnum - handles math expressions", (t) => {
   const assembler = new Assembler();
 
   // Mock the math method
@@ -96,18 +111,26 @@ test("getnum - handles math expressions", t => {
   mathStub.withArgs("(20-5)/3").returns(5);
 
   t.is(assembler.operandResolver.getnum("10+5"), 15, "Should evaluate addition expressions");
-  t.is(assembler.operandResolver.getnum("$10*2"), 32, "Should evaluate multiplication with hex values");
-  t.is(assembler.operandResolver.getnum("(20-5)/3"), 5, "Should evaluate complex expressions with parentheses");
+  t.is(
+    assembler.operandResolver.getnum("$10*2"),
+    32,
+    "Should evaluate multiplication with hex values",
+  );
+  t.is(
+    assembler.operandResolver.getnum("(20-5)/3"),
+    5,
+    "Should evaluate complex expressions with parentheses",
+  );
 });
 
-test("resolvedefines - preserves local label arithmetic expressions", t => {
+test("resolvedefines - preserves local label arithmetic expressions", (t) => {
   const assembler = new Assembler();
 
-  assembler.symbolScope.setLabel("zombie_spawner_data", 0xDA6E, false, false, true);
-  assembler.symbolScope.setLabel("zombie_spawner_data_zone", 0xDA8A);
-  assembler.symbolScope.setLabel("zombie_spawner_data_zone_difficulty_offset", 0xDA8A);
-  assembler.symbolScope.setLabel("zombie_spawner_data_zone_max", 0xDA8E);
-  assembler.symbolScope.setLabel("zombie_spawner_data_zone_n", 0xDA98);
+  assembler.symbolScope.setLabel("zombie_spawner_data", 0xda6e, false, false, true);
+  assembler.symbolScope.setLabel("zombie_spawner_data_zone", 0xda8a);
+  assembler.symbolScope.setLabel("zombie_spawner_data_zone_difficulty_offset", 0xda8a);
+  assembler.symbolScope.setLabel("zombie_spawner_data_zone_max", 0xda8e);
+  assembler.symbolScope.setLabel("zombie_spawner_data_zone_n", 0xda98);
 
   assembler.currentParentLabel = "zombie_spawner_data_zone_difficulty_offset";
   assembler.currentGlobalParentLabel = "zombie_spawner_data";
@@ -119,51 +142,51 @@ test("resolvedefines - preserves local label arithmetic expressions", t => {
     ".zone_n-.zone_max",
     "Should leave dotted local arithmetic intact for later evaluation",
   );
-  t.is(assembler.operandResolver.getnum(".zone_n-.zone_max"), 0x0A);
+  t.is(assembler.operandResolver.getnum(".zone_n-.zone_max"), 0x0a);
 });
 
-test("getnum - keeps parent stride for extended struct array members", t => {
+test("getnum - keeps parent stride for extended struct array members", (t) => {
   const assembler = new Assembler();
 
-  assembler.assembleblock("struct obj 0");
-  assembler.assembleblock(".base: skip 0");
-  assembler.assembleblock(".active: skip 1");
-  assembler.assembleblock(".timer: skip 1");
-  assembler.assembleblock(".state: skip 4");
-  assembler.assembleblock(".type: skip 1");
-  assembler.assembleblock(".init_param: skip 1");
-  assembler.assembleblock(".flags1: skip 1");
-  assembler.assembleblock(".flags2: skip 1");
-  assembler.assembleblock("._0A_0D: skip 4");
-  assembler.assembleblock(".hp: skip 1");
-  assembler.assembleblock("._0F: skip 1");
-  assembler.assembleblock("._10: skip 1");
-  assembler.assembleblock(".direction: skip 1");
-  assembler.assembleblock(".facing: skip 1");
-  assembler.assembleblock("._13: skip 2");
-  assembler.assembleblock("._15: skip 1");
-  assembler.assembleblock(".speed_x: skip 3");
-  assembler.assembleblock(".speed_y: skip 3");
-  assembler.assembleblock(".gravity: skip 1");
-  assembler.assembleblock("._1D: skip 1");
-  assembler.assembleblock(".pos_x: skip 3");
-  assembler.assembleblock(".pos_y: skip 3");
-  assembler.assembleblock(".anim_timer: skip 1");
-  assembler.assembleblock("._25: skip 1");
-  assembler.assembleblock("._26: skip 1");
-  assembler.assembleblock("._27: skip 2");
-  assembler.assembleblock("._29: skip 2");
-  assembler.assembleblock("._2B: skip 2");
-  assembler.assembleblock("endstruct");
+  assembler.processCommand("struct obj 0");
+  assembler.processCommand(".base: skip 0");
+  assembler.processCommand(".active: skip 1");
+  assembler.processCommand(".timer: skip 1");
+  assembler.processCommand(".state: skip 4");
+  assembler.processCommand(".type: skip 1");
+  assembler.processCommand(".init_param: skip 1");
+  assembler.processCommand(".flags1: skip 1");
+  assembler.processCommand(".flags2: skip 1");
+  assembler.processCommand("._0A_0D: skip 4");
+  assembler.processCommand(".hp: skip 1");
+  assembler.processCommand("._0F: skip 1");
+  assembler.processCommand("._10: skip 1");
+  assembler.processCommand(".direction: skip 1");
+  assembler.processCommand(".facing: skip 1");
+  assembler.processCommand("._13: skip 2");
+  assembler.processCommand("._15: skip 1");
+  assembler.processCommand(".speed_x: skip 3");
+  assembler.processCommand(".speed_y: skip 3");
+  assembler.processCommand(".gravity: skip 1");
+  assembler.processCommand("._1D: skip 1");
+  assembler.processCommand(".pos_x: skip 3");
+  assembler.processCommand(".pos_y: skip 3");
+  assembler.processCommand(".anim_timer: skip 1");
+  assembler.processCommand("._25: skip 1");
+  assembler.processCommand("._26: skip 1");
+  assembler.processCommand("._27: skip 2");
+  assembler.processCommand("._29: skip 2");
+  assembler.processCommand("._2B: skip 2");
+  assembler.processCommand("endstruct");
 
-  assembler.assembleblock("struct ext extends obj");
-  assembler.assembleblock("._2D_3D: skip 17");
-  assembler.assembleblock("._3E_3F: skip 2");
-  assembler.assembleblock(".index: skip 1");
-  assembler.assembleblock(".len: skip 0");
-  assembler.assembleblock("endstruct");
+  assembler.processCommand("struct ext extends obj");
+  assembler.processCommand("._2D_3D: skip 17");
+  assembler.processCommand("._3E_3F: skip 2");
+  assembler.processCommand(".index: skip 1");
+  assembler.processCommand(".len: skip 0");
+  assembler.processCommand("endstruct");
 
-  assembler.symbolScope.setLabel("obj_start", 0x043C, false, false, true);
+  assembler.symbolScope.setLabel("obj_start", 0x043c, false, false, true);
   assembler.defines.set("obj_objects", "obj_start+obj[19]");
 
   t.is(
@@ -173,24 +196,30 @@ test("getnum - keeps parent stride for extended struct array members", t => {
   );
   t.is(
     assembler.operandResolver.getnum("!obj_objects.ext.index"),
-    0x094F,
+    0x094f,
     "Define math should keep the parent stride for extension members",
   );
 });
 
-test("getnum - throws error for undefined defines", t => {
+test("getnum - throws error for undefined defines", (t) => {
   const assembler = new Assembler();
 
   // Mock resolvedefines to throw for undefined defines
   const resolvedefinesStub = sinon.stub(assembler, "resolvedefines");
-  resolvedefinesStub.withArgs("UNDEFINED_DEFINE").throws(new Error("Define 'UNDEFINED_DEFINE' not found."));
+  resolvedefinesStub
+    .withArgs("UNDEFINED_DEFINE")
+    .throws(new Error("Define 'UNDEFINED_DEFINE' not found."));
 
-  t.throws(() => {
-    assembler.operandResolver.getnum("UNDEFINED_DEFINE");
-  }, { message: "Define 'UNDEFINED_DEFINE' not found." }, "Should throw for undefined defines");
+  t.throws(
+    () => {
+      assembler.operandResolver.getnum("UNDEFINED_DEFINE");
+    },
+    { message: "Define 'UNDEFINED_DEFINE' not found." },
+    "Should throw for undefined defines",
+  );
 });
 
-test("activateStage updates the current stage of assembly", t => {
+test("activateStage updates the current stage of assembly", (t) => {
   const assembler = new Assembler();
 
   t.true(assembler.isDefinitionCollectionStage, "Default stage should collect definitions");
@@ -208,7 +237,7 @@ test("activateStage updates the current stage of assembly", t => {
   t.false(assembler.canEmitBytes, "Layout stage should not emit bytes");
 });
 
-test("activateStage resets guarded status for included files", t => {
+test("activateStage resets guarded status for included files", (t) => {
   const assembler = new Assembler();
 
   // Add a guarded file to the included files map
@@ -224,26 +253,20 @@ test("activateStage resets guarded status for included files", t => {
   t.false(assembler.includedFiles.get(testFile)?.guarded);
 });
 
-test("splitInlineCommands splits relative-label command fragments after inline separators", t => {
-  t.deepEqual(
-    splitInlineCommands(["jmp (+,X) : +: dw .mode1, .mode2, .mode3"]),
-    ["jmp (+,X)", "+:", "dw .mode1, .mode2, .mode3"],
-  );
-  t.deepEqual(
-    splitInlineCommands(["bra + : ++: db $01"]),
-    ["bra +", "++:", "db $01"],
-  );
-  t.deepEqual(
-    splitInlineCommands(["set_hp: lda #$01"]),
-    ["set_hp: lda #$01"],
-  );
-  t.deepEqual(
-    splitInlineCommands(['db $08,$1C,$00," : 1. What will",$0F," do?)",$02']),
-    ['db $08,$1C,$00," : 1. What will",$0F," do?)",$02'],
-  );
+test("splitInlineCommands splits relative-label command fragments after inline separators", (t) => {
+  t.deepEqual(splitInlineCommands(["jmp (+,X) : +: dw .mode1, .mode2, .mode3"]), [
+    "jmp (+,X)",
+    "+:",
+    "dw .mode1, .mode2, .mode3",
+  ]);
+  t.deepEqual(splitInlineCommands(["bra + : ++: db $01"]), ["bra +", "++:", "db $01"]);
+  t.deepEqual(splitInlineCommands(["set_hp: lda #$01"]), ["set_hp: lda #$01"]);
+  t.deepEqual(splitInlineCommands(['db $08,$1C,$00," : 1. What will",$0F," do?)",$02']), [
+    'db $08,$1C,$00," : 1. What will",$0F," do?)",$02',
+  ]);
 });
 
-test("trace listener captures command and write events", t => {
+test("trace listener captures command and write events", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.outputBytes = new Uint8Array(0x100000);
@@ -283,8 +306,12 @@ test("trace listener captures command and write events", t => {
   t.is(endEvent.endLogicalAddress, 0x808001);
 });
 
-test("trace collector filters to matching address ranges", t => {
-  const collector = createTraceCollector({ startAddress: 0x1234, endAddress: 0x1234, eventTypes: ["write"] });
+test("trace collector filters to matching address ranges", (t) => {
+  const collector = createTraceCollector({
+    startAddress: 0x1234,
+    endAddress: 0x1234,
+    eventTypes: ["write"],
+  });
 
   collector.listener({
     type: "write",
@@ -315,7 +342,7 @@ test("trace collector filters to matching address ranges", t => {
   t.is(collector.events[0].logicalAddress, 0x1234);
 });
 
-test("finishPass delegates finalization to the active output format", t => {
+test("finishPass delegates finalization to the active output format", (t) => {
   const assembler = new Assembler();
   const finalizeSpy = sinon.spy(assembler.pluginOutputFormat, "finalize");
   t.teardown(() => finalizeSpy.restore());
@@ -326,7 +353,7 @@ test("finishPass delegates finalization to the active output format", t => {
   t.is(finalizeSpy.callCount, 1);
 });
 
-test("addAddressToLine - adds mapping", t => {
+test("addAddressToLine - adds mapping", (t) => {
   const assembler = new Assembler();
 
   // Mock the includeMapping method of addressToLineMapping
@@ -346,11 +373,11 @@ test("addAddressToLine - adds mapping", t => {
   t.deepEqual(
     includeMappingSpy.firstCall.args,
     ["test.asm", 11, 0x8000],
-    "Mapping should include file, line+1, and address"
+    "Mapping should include file, line+1, and address",
   );
 });
 
-test("setCurrentFile - updates the current file being processed", t => {
+test("setCurrentFile - updates the current file being processed", (t) => {
   const assembler = new Assembler();
   const filename = "test.asm";
 
@@ -360,7 +387,7 @@ test("setCurrentFile - updates the current file being processed", t => {
   t.is(assembler.currentLine, 0, "currentLine should be reset to 0 when setting a new file");
 });
 
-test("setCurrentLine - setting a new file should reset the line number", t => {
+test("setCurrentLine - setting a new file should reset the line number", (t) => {
   const assembler = new Assembler();
 
   // Set initial values
@@ -379,11 +406,15 @@ test("setCurrentLine - setting a new file should reset the line number", t => {
   // Setting the line number shouldn't affect the file
   assembler.setCurrentLine(20);
 
-  t.is(assembler.currentFile, "second.asm", "File should remain unchanged when setting line number");
+  t.is(
+    assembler.currentFile,
+    "second.asm",
+    "File should remain unchanged when setting line number",
+  );
   t.is(assembler.currentLine, 20);
 });
 
-test("setCurrentLine - updates the current line number", t => {
+test("setCurrentLine - updates the current line number", (t) => {
   const assembler = new Assembler();
   const lineNumber = 42;
 
@@ -392,90 +423,90 @@ test("setCurrentLine - updates the current line number", t => {
   t.is(assembler.currentLine, lineNumber);
 });
 
-test("writeOutputBytes - writes a single byte to ROM", t => {
+test("writeOutputBytes - writes a single byte to ROM", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
   assembler.outputBytes = Array(10).fill(0);
 
   // Write a single byte
-  assembler.writeOutputBytes(5, 0xAA);
+  assembler.writeOutputBytes(5, 0xaa);
 
   // Check that only the specified position was modified
   for (let i = 0; i < 10; i++) {
     if (i === 5) {
-      t.is(assembler.outputBytes[i], 0xAA);
+      t.is(assembler.outputBytes[i], 0xaa);
     } else {
       t.is(assembler.outputBytes[i], 0);
     }
   }
 });
 
-test("writeOutputBytes - writes multiple bytes to ROM", t => {
+test("writeOutputBytes - writes multiple bytes to ROM", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
   assembler.outputBytes = Array(20).fill(0);
 
   // Write multiple bytes
-  assembler.writeOutputBytes(5, 0xBB, 5);
+  assembler.writeOutputBytes(5, 0xbb, 5);
 
   // Check that only the specified range was modified
   for (let i = 0; i < 20; i++) {
     if (i >= 5 && i < 10) {
-      t.is(assembler.outputBytes[i], 0xBB);
+      t.is(assembler.outputBytes[i], 0xbb);
     } else {
       t.is(assembler.outputBytes[i], 0);
     }
   }
 });
 
-test("writeOutputBytes - writes to the beginning of ROM", t => {
+test("writeOutputBytes - writes to the beginning of ROM", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
   assembler.outputBytes = Array(10).fill(0);
 
   // Write to the beginning
-  assembler.writeOutputBytes(0, 0xCC, 3);
+  assembler.writeOutputBytes(0, 0xcc, 3);
 
   // Check that only the beginning was modified
   for (let i = 0; i < 10; i++) {
     if (i < 3) {
-      t.is(assembler.outputBytes[i], 0xCC);
+      t.is(assembler.outputBytes[i], 0xcc);
     } else {
       t.is(assembler.outputBytes[i], 0);
     }
   }
 });
 
-test("writeOutputBytes - writes to the end of ROM", t => {
+test("writeOutputBytes - writes to the end of ROM", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
   assembler.outputBytes = Array(10).fill(0);
 
   // Write to the end
-  assembler.writeOutputBytes(7, 0xDD, 3);
+  assembler.writeOutputBytes(7, 0xdd, 3);
 
   // Check that only the end was modified
   for (let i = 0; i < 10; i++) {
     if (i >= 7) {
-      t.is(assembler.outputBytes[i], 0xDD);
+      t.is(assembler.outputBytes[i], 0xdd);
     } else {
       t.is(assembler.outputBytes[i], 0);
     }
   }
 });
 
-test("writeOutputBytes - handles zero length correctly", t => {
+test("writeOutputBytes - handles zero length correctly", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with zeros
   assembler.outputBytes = Array(10).fill(0);
 
   // Write with length 0
-  assembler.writeOutputBytes(5, 0xEE, 0);
+  assembler.writeOutputBytes(5, 0xee, 0);
 
   // Check that nothing was modified
   for (let i = 0; i < 10; i++) {
@@ -483,7 +514,7 @@ test("writeOutputBytes - handles zero length correctly", t => {
   }
 });
 
-test("writeOutputBytes - handles different byte values", t => {
+test("writeOutputBytes - handles different byte values", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM
@@ -491,89 +522,98 @@ test("writeOutputBytes - handles different byte values", t => {
 
   // Write different values
   assembler.writeOutputBytes(0, 0x00);
-  assembler.writeOutputBytes(1, 0x7F);
+  assembler.writeOutputBytes(1, 0x7f);
   assembler.writeOutputBytes(2, 0x80);
-  assembler.writeOutputBytes(3, 0xFF);
+  assembler.writeOutputBytes(3, 0xff);
   assembler.writeOutputBytes(4, 0x100); // Should wrap to 0x00
 
   // Check values
   t.is(assembler.outputBytes[0], 0x00);
-  t.is(assembler.outputBytes[1], 0x7F);
+  t.is(assembler.outputBytes[1], 0x7f);
   t.is(assembler.outputBytes[2], 0x80);
-  t.is(assembler.outputBytes[3], 0xFF);
+  t.is(assembler.outputBytes[3], 0xff);
   t.is(assembler.outputBytes[4], 0x00); // 0x100 & 0xFF = 0x00
 });
 
-test("writeOutputBytes - throws error when parameters are not numbers", t => {
+test("writeOutputBytes - throws error when parameters are not numbers", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM
   assembler.outputBytes = Array(10).fill(0);
 
   // Test with non-number start parameter
-  const error1 = t.throws(() => {
-    // @ts-expect-error Testing invalid parameter type
-    assembler.writeOutputBytes("0", 0xFF);
-  }, { instanceOf: Error });
+  const error1 = t.throws(
+    () => {
+      // @ts-expect-error Testing invalid parameter type
+      assembler.writeOutputBytes("0", 0xff);
+    },
+    { instanceOf: Error },
+  );
   t.is(error1.message, "writeOutputBytes requires a number for start, value, and length");
 
   // Test with non-number value parameter
-  const error2 = t.throws(() => {
-    // @ts-expect-error Testing invalid parameter type
-    assembler.writeOutputBytes(0, "0xFF");
-  }, { instanceOf: Error });
+  const error2 = t.throws(
+    () => {
+      // @ts-expect-error Testing invalid parameter type
+      assembler.writeOutputBytes(0, "0xFF");
+    },
+    { instanceOf: Error },
+  );
   t.is(error2.message, "writeOutputBytes requires a number for start, value, and length");
 
   // Test with non-number length parameter
-  const error3 = t.throws(() => {
-    // @ts-expect-error Testing invalid parameter type
-    assembler.writeOutputBytes(0, 0xFF, "5");
-  }, { instanceOf: Error });
+  const error3 = t.throws(
+    () => {
+      // @ts-expect-error Testing invalid parameter type
+      assembler.writeOutputBytes(0, 0xff, "5");
+    },
+    { instanceOf: Error },
+  );
   t.is(error3.message, "writeOutputBytes requires a number for start, value, and length");
 });
 
-test("expandOutput - expands ROM size and fills with specified byte", t => {
+test("expandOutput - expands ROM size and fills with specified byte", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with some data
-  assembler.outputBytes = Array(50).fill(0xAA);
+  assembler.outputBytes = Array(50).fill(0xaa);
 
   // Expand ROM to 100 bytes with 0xFF fill
-  assembler.expandOutput(100, 0xFF);
+  assembler.expandOutput(100, 0xff);
 
   // Check ROM length was updated
   t.is(assembler.outputBytes.length, 100);
 
   // Check original data is preserved
   for (let i = 0; i < 50; i++) {
-    t.is(assembler.outputBytes[i], 0xAA);
+    t.is(assembler.outputBytes[i], 0xaa);
   }
 
   // Check new space is filled with specified byte
   for (let i = 50; i < 100; i++) {
-    t.is(assembler.outputBytes[i], 0xFF);
+    t.is(assembler.outputBytes[i], 0xff);
   }
 });
 
-test("expandOutput - does nothing when new size is smaller than current size", t => {
+test("expandOutput - does nothing when new size is smaller than current size", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with some data
-  assembler.outputBytes = Array(100).fill(0xAA);
+  assembler.outputBytes = Array(100).fill(0xaa);
 
   // Try to "expand" ROM to a smaller size
-  assembler.expandOutput(50, 0xFF);
+  assembler.expandOutput(50, 0xff);
 
   // Check ROM length remains unchanged
   t.is(assembler.outputBytes.length, 100);
 
   // Check data remains unchanged
   for (let i = 0; i < 100; i++) {
-    t.is(assembler.outputBytes[i], 0xAA);
+    t.is(assembler.outputBytes[i], 0xaa);
   }
 });
 
-test("expandOutput - expands empty ROM", t => {
+test("expandOutput - expands empty ROM", (t) => {
   const assembler = new Assembler();
 
   // Start with empty ROM
@@ -591,51 +631,51 @@ test("expandOutput - expands empty ROM", t => {
   }
 });
 
-test("expandOutput - handles large expansions", t => {
+test("expandOutput - handles large expansions", (t) => {
   const assembler = new Assembler();
 
   // Initialize small ROM
-  assembler.outputBytes = Array(10).fill(0xAA);
+  assembler.outputBytes = Array(10).fill(0xaa);
 
   // Expand ROM significantly
   const newSize = 10000;
-  assembler.expandOutput(newSize, 0xBB);
+  assembler.expandOutput(newSize, 0xbb);
 
   // Check ROM length was updated
   t.is(assembler.outputBytes.length, newSize);
 
   // Check original data is preserved
   for (let i = 0; i < 10; i++) {
-    t.is(assembler.outputBytes[i], 0xAA);
+    t.is(assembler.outputBytes[i], 0xaa);
   }
 
   // Check new space is filled with specified byte (check boundaries and sample)
-  t.is(assembler.outputBytes[10], 0xBB);
-  t.is(assembler.outputBytes[100], 0xBB);
-  t.is(assembler.outputBytes[1000], 0xBB);
-  t.is(assembler.outputBytes[newSize - 1], 0xBB);
+  t.is(assembler.outputBytes[10], 0xbb);
+  t.is(assembler.outputBytes[100], 0xbb);
+  t.is(assembler.outputBytes[1000], 0xbb);
+  t.is(assembler.outputBytes[newSize - 1], 0xbb);
 });
 
-test("expandOutput - throws error when newSize is not a number", t => {
+test("expandOutput - throws error when newSize is not a number", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM
-  assembler.outputBytes = Array(10).fill(0xAA);
+  assembler.outputBytes = Array(10).fill(0xaa);
 
   // Test with invalid newSize
   const error = t.throws(() => {
     // @ts-expect-error: Testing invalid parameter type
-    assembler.expandOutput("invalid", 0xBB);
+    assembler.expandOutput("invalid", 0xbb);
   });
 
   t.is(error.message, "expandOutput requires a number for newSize and fillByte");
 });
 
-test("expandOutput - throws error when fillByte is not a number", t => {
+test("expandOutput - throws error when fillByte is not a number", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM
-  assembler.outputBytes = Array(10).fill(0xAA);
+  assembler.outputBytes = Array(10).fill(0xaa);
 
   // Test with invalid fillByte
   const error = t.throws(() => {
@@ -646,7 +686,7 @@ test("expandOutput - throws error when fillByte is not a number", t => {
   t.is(error.message, "expandOutput requires a number for newSize and fillByte");
 });
 
-test("expandOperand - handles resolvedefines errors", t => {
+test("expandOperand - handles resolvedefines errors", (t) => {
   const assembler = new Assembler();
 
   // Set up a stub for resolvedefines to throw an error
@@ -667,7 +707,7 @@ test("expandOperand - handles resolvedefines errors", t => {
   sinon.restore();
 });
 
-test("expandOperand - immediate mode with small value", t => {
+test("expandOperand - immediate mode with small value", (t) => {
   const assembler = new Assembler();
   const { expanded, length } = assembler.operandResolver.expandOperand("#$10");
 
@@ -675,7 +715,7 @@ test("expandOperand - immediate mode with small value", t => {
   t.is(length, 1);
 });
 
-test("expandOperand - immediate mode with large value", t => {
+test("expandOperand - immediate mode with large value", (t) => {
   const assembler = new Assembler();
   const { expanded, length } = assembler.operandResolver.expandOperand("#$1000");
 
@@ -683,7 +723,7 @@ test("expandOperand - immediate mode with large value", t => {
   t.is(length, 2);
 });
 
-test("expandOperand - immediate mode with very large value", t => {
+test("expandOperand - immediate mode with very large value", (t) => {
   const assembler = new Assembler();
   const { expanded, length } = assembler.operandResolver.expandOperand("#$100000");
 
@@ -691,7 +731,7 @@ test("expandOperand - immediate mode with very large value", t => {
   t.is(length, 3);
 });
 
-test("expandOperand - immediate mode with decimal value", t => {
+test("expandOperand - immediate mode with decimal value", (t) => {
   const assembler = new Assembler();
   const { expanded, length } = assembler.operandResolver.expandOperand("#42");
 
@@ -699,7 +739,7 @@ test("expandOperand - immediate mode with decimal value", t => {
   t.is(length, 1);
 });
 
-test("expandOperand - immediate mode with expression", t => {
+test("expandOperand - immediate mode with expression", (t) => {
   const assembler = new Assembler();
   const { expanded, length } = assembler.operandResolver.expandOperand("#10+20");
 
@@ -707,7 +747,7 @@ test("expandOperand - immediate mode with expression", t => {
   t.is(length, 1);
 });
 
-test("expandOperand - immediate mode with failed expression evaluation", t => {
+test("expandOperand - immediate mode with failed expression evaluation", (t) => {
   const assembler = new Assembler();
   sinon.stub(assembler.operandResolver, "getnum").throws(new Error("Invalid expression"));
 
@@ -717,7 +757,7 @@ test("expandOperand - immediate mode with failed expression evaluation", t => {
   t.is(length, 2);
 });
 
-test("expandOperand - immediate mode with unresolved label", t => {
+test("expandOperand - immediate mode with unresolved label", (t) => {
   const assembler = new Assembler();
   sinon.stub(assembler.operandResolver, "getnum").throws(new Error("Label not found"));
 
@@ -727,7 +767,7 @@ test("expandOperand - immediate mode with unresolved label", t => {
   t.is(length, 2);
 });
 
-test("expandOperand - bank operation forces two bytes", t => {
+test("expandOperand - bank operation forces two bytes", (t) => {
   const assembler = new Assembler();
   sinon.stub(assembler.mathCore, "math").returns(0x10); // Return a small value that would normally be 1 byte
 
@@ -737,7 +777,7 @@ test("expandOperand - bank operation forces two bytes", t => {
   t.is(length, 2); // Should force 2 bytes despite small value
 });
 
-test("expandOperand - immediate mode with bank operation", t => {
+test("expandOperand - immediate mode with bank operation", (t) => {
   const assembler = new Assembler();
   sinon.stub(assembler.mathCore, "math").returns(0x10);
 
@@ -747,7 +787,7 @@ test("expandOperand - immediate mode with bank operation", t => {
   t.is(length, 2); // Should force 2 bytes despite small value
 });
 
-test("expandOperand - indexed mode", t => {
+test("expandOperand - indexed mode", (t) => {
   const assembler = new Assembler();
   const { expanded, length } = assembler.operandResolver.expandOperand("$1000,X");
 
@@ -755,7 +795,7 @@ test("expandOperand - indexed mode", t => {
   t.is(length, 2);
 });
 
-test("expandOperand - indirect mode", t => {
+test("expandOperand - indirect mode", (t) => {
   const assembler = new Assembler();
   const { expanded, length } = assembler.operandResolver.expandOperand("[$1234]");
 
@@ -763,7 +803,7 @@ test("expandOperand - indirect mode", t => {
   t.is(length, 2);
 });
 
-test("expandOperand - resolves defines", t => {
+test("expandOperand - resolves defines", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("TEST_DEFINE", "$2000");
 
@@ -773,7 +813,7 @@ test("expandOperand - resolves defines", t => {
   t.is(length, 2);
 });
 
-test("expandOperand - evaluates math expressions", t => {
+test("expandOperand - evaluates math expressions", (t) => {
   const assembler = new Assembler();
 
   // Set up a stub for mathCore.math to return a predictable value
@@ -786,12 +826,13 @@ test("expandOperand - evaluates math expressions", t => {
   t.is(length, 1); // Small value, so 1 byte
 });
 
-test("expandOperand - handles label references", t => {
+test("expandOperand - handles label references", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Test 1: Label not found
-  const { expanded: expanded1, length: length1 } = assembler.operandResolver.expandOperand("some_label");
+  const { expanded: expanded1, length: length1 } =
+    assembler.operandResolver.expandOperand("some_label");
   t.is(expanded1, "some_label");
   t.is(length1, 2); // Default for labels
 
@@ -799,12 +840,13 @@ test("expandOperand - handles label references", t => {
   // Set up the label in the label table
   assembler.symbolScope.setLabel("found_label", 0x1234, false);
 
-  const { expanded: expanded2, length: length2 } = assembler.operandResolver.expandOperand("found_label");
+  const { expanded: expanded2, length: length2 } =
+    assembler.operandResolver.expandOperand("found_label");
   t.is(expanded2, "4660");
   t.is(length2, 2); // Should be 2 bytes for this address
 });
 
-test("expandOperand - handles complex math expressions", t => {
+test("expandOperand - handles complex math expressions", (t) => {
   const assembler = new Assembler();
 
   // Set up stubs
@@ -817,7 +859,7 @@ test("expandOperand - handles complex math expressions", t => {
   t.is(length, 1);
 });
 
-test("expandOperand - skips math evaluation when it fails", t => {
+test("expandOperand - skips math evaluation when it fails", (t) => {
   const assembler = new Assembler();
 
   // Make resolvedefines work but math throw an error
@@ -830,7 +872,7 @@ test("expandOperand - skips math evaluation when it fails", t => {
   t.is(length, 2); // Default length
 });
 
-test("expandOperand - handles math expressions that throw errors", t => {
+test("expandOperand - handles math expressions that throw errors", (t) => {
   const assembler = new Assembler();
 
   // Set up a math expression that will throw an error
@@ -849,7 +891,7 @@ test("expandOperand - handles math expressions that throw errors", t => {
   t.true(mathStub.calledWith("(1 + 2) * 3"));
 });
 
-test("getExpressionObjectSize - returns size for non-extended struct", t => {
+test("getExpressionObjectSize - returns size for non-extended struct", (t) => {
   const assembler = new Assembler();
   const structName = "TestStruct";
 
@@ -861,7 +903,7 @@ test("getExpressionObjectSize - returns size for non-extended struct", t => {
     size: 10,
     labels: new Map(),
     parent: undefined,
-    extensionSize: 5
+    extensionSize: 5,
   };
 
   // Set up the struct in the assembler
@@ -875,7 +917,7 @@ test("getExpressionObjectSize - returns size for non-extended struct", t => {
   t.is(size, 15);
 });
 
-test("getExpressionObjectSize - returns size for extended struct", t => {
+test("getExpressionObjectSize - returns size for extended struct", (t) => {
   const assembler = new Assembler();
   const parentStructName = "ParentStruct";
   const childStructName = "ChildStruct";
@@ -888,7 +930,7 @@ test("getExpressionObjectSize - returns size for extended struct", t => {
     size: 10,
     labels: new Map(),
     parent: undefined,
-    extensionSize: 5
+    extensionSize: 5,
   };
 
   const childStruct = {
@@ -898,7 +940,7 @@ test("getExpressionObjectSize - returns size for extended struct", t => {
     size: 5,
     labels: new Map(),
     parent: parentStructName,
-    extensionSize: 0
+    extensionSize: 0,
   };
 
   // Set up the structs in the assembler
@@ -913,7 +955,7 @@ test("getExpressionObjectSize - returns size for extended struct", t => {
   t.is(size, 5);
 });
 
-test("getExpressionObjectSize - handles quoted struct names", t => {
+test("getExpressionObjectSize - handles quoted struct names", (t) => {
   const assembler = new Assembler();
   const structName = "TestStruct";
 
@@ -925,7 +967,7 @@ test("getExpressionObjectSize - handles quoted struct names", t => {
     size: 10,
     labels: new Map(),
     parent: undefined,
-    extensionSize: 5
+    extensionSize: 5,
   };
 
   // Set up the struct in the assembler
@@ -939,16 +981,14 @@ test("getExpressionObjectSize - handles quoted struct names", t => {
   t.is(size, 15);
 });
 
-test("resolveReferenceLabelValue - resolves indexed struct base references", t => {
+test("resolveReferenceLabelValue - resolves indexed struct base references", (t) => {
   const assembler = new Assembler();
   assembler.structs.set("obj", {
     name: "obj",
     base: 0,
     offset: 16,
     size: 16,
-    labels: new Map([
-      ["base", 0],
-    ]),
+    labels: new Map([["base", 0]]),
     extensionSize: 0,
   });
 
@@ -961,16 +1001,14 @@ test("resolveReferenceLabelValue - resolves indexed struct base references", t =
   t.is(assembler.resolveReferenceLabelValue(expression), 16);
 });
 
-test("resolveReferenceLabelValue - resolves bare struct base references", t => {
+test("resolveReferenceLabelValue - resolves bare struct base references", (t) => {
   const assembler = new Assembler();
   assembler.structs.set("obj", {
     name: "obj",
     base: 0,
     offset: 32,
     size: 16,
-    labels: new Map([
-      ["base", 0],
-    ]),
+    labels: new Map([["base", 0]]),
     extensionSize: 0,
   });
 
@@ -983,7 +1021,7 @@ test("resolveReferenceLabelValue - resolves bare struct base references", t => {
   t.is(assembler.resolveReferenceLabelValue(expression), 0);
 });
 
-test("resolveReferenceLabelValue - preserves struct members after define expansion", t => {
+test("resolveReferenceLabelValue - preserves struct members after define expansion", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("task_offset", "$004E+task");
   assembler.structs.set("task", {
@@ -1007,7 +1045,7 @@ test("resolveReferenceLabelValue - preserves struct members after define expansi
   t.is(assembler.mathCore.math(assembler.resolveExpressionInput(expression)), 0x52);
 });
 
-test("getExpressionObjectSize - throws error for non-existent struct", t => {
+test("getExpressionObjectSize - throws error for non-existent struct", (t) => {
   const assembler = new Assembler();
   const nonExistentStruct = "NonExistentStruct";
 
@@ -1015,14 +1053,17 @@ test("getExpressionObjectSize - throws error for non-existent struct", t => {
   assembler.structs = new Map();
 
   // Test that calling getObjectSize with a non-existent struct throws an error
-  const error = t.throws(() => {
-    assembler.getExpressionObjectSize(nonExistentStruct);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.getExpressionObjectSize(nonExistentStruct);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, `Struct '${nonExistentStruct}' doesn't exist.`);
 });
 
-test("getExpressionObjectSize - baseOnly parameter returns only base size", t => {
+test("getExpressionObjectSize - baseOnly parameter returns only base size", (t) => {
   const assembler = new Assembler();
   const structName = "TestStruct";
 
@@ -1034,7 +1075,7 @@ test("getExpressionObjectSize - baseOnly parameter returns only base size", t =>
     size: 10,
     labels: new Map(),
     parent: undefined,
-    extensionSize: 5
+    extensionSize: 5,
   };
 
   // Set up the struct in the assembler
@@ -1057,7 +1098,7 @@ test("getExpressionObjectSize - baseOnly parameter returns only base size", t =>
   t.is(defaultSize, 15);
 });
 
-test("finalizeOutput - lorom mapper updates header at 0x7FC0", t => {
+test("finalizeOutput - lorom mapper updates header at 0x7FC0", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
   assembler.outputBytes = new Array(0x8000).fill(0);
@@ -1065,13 +1106,15 @@ test("finalizeOutput - lorom mapper updates header at 0x7FC0", t => {
   assembler.finalizeOutput();
 
   // Verify checksum and complement were written to the correct locations
-  const checksum = (assembler.outputBytes[0x7FC0 + 0x1E] | (assembler.outputBytes[0x7FC0 + 0x1F] << 8)) & 0xFFFF;
-  const complement = (assembler.outputBytes[0x7FC0 + 0x1C] | (assembler.outputBytes[0x7FC0 + 0x1D] << 8)) & 0xFFFF;
+  const checksum =
+    (assembler.outputBytes[0x7fc0 + 0x1e] | (assembler.outputBytes[0x7fc0 + 0x1f] << 8)) & 0xffff;
+  const complement =
+    (assembler.outputBytes[0x7fc0 + 0x1c] | (assembler.outputBytes[0x7fc0 + 0x1d] << 8)) & 0xffff;
 
-  t.is((checksum + complement) & 0xFFFF, 0xFFFF, "Checksum and complement should be complementary");
+  t.is((checksum + complement) & 0xffff, 0xffff, "Checksum and complement should be complementary");
 });
 
-test("finalizeOutput - hirom mapper updates header at 0xFFC0", t => {
+test("finalizeOutput - hirom mapper updates header at 0xFFC0", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "hirom";
   assembler.outputBytes = new Array(0x10000).fill(0);
@@ -1079,13 +1122,15 @@ test("finalizeOutput - hirom mapper updates header at 0xFFC0", t => {
   assembler.finalizeOutput();
 
   // Verify checksum and complement were written to the correct locations
-  const checksum = (assembler.outputBytes[0xFFC0 + 0x1E] | (assembler.outputBytes[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
-  const complement = (assembler.outputBytes[0xFFC0 + 0x1C] | (assembler.outputBytes[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
+  const checksum =
+    (assembler.outputBytes[0xffc0 + 0x1e] | (assembler.outputBytes[0xffc0 + 0x1f] << 8)) & 0xffff;
+  const complement =
+    (assembler.outputBytes[0xffc0 + 0x1c] | (assembler.outputBytes[0xffc0 + 0x1d] << 8)) & 0xffff;
 
-  t.is((checksum + complement) & 0xFFFF, 0xFFFF, "Checksum and complement should be complementary");
+  t.is((checksum + complement) & 0xffff, 0xffff, "Checksum and complement should be complementary");
 });
 
-test("finalizeOutput - exhirom mapper updates header at 0xFFC0", t => {
+test("finalizeOutput - exhirom mapper updates header at 0xFFC0", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "exhirom";
   assembler.outputBytes = new Array(0x10000).fill(0);
@@ -1093,13 +1138,15 @@ test("finalizeOutput - exhirom mapper updates header at 0xFFC0", t => {
   assembler.finalizeOutput();
 
   // Verify checksum and complement were written to the correct locations
-  const checksum = (assembler.outputBytes[0xFFC0 + 0x1E] | (assembler.outputBytes[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
-  const complement = (assembler.outputBytes[0xFFC0 + 0x1C] | (assembler.outputBytes[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
+  const checksum =
+    (assembler.outputBytes[0xffc0 + 0x1e] | (assembler.outputBytes[0xffc0 + 0x1f] << 8)) & 0xffff;
+  const complement =
+    (assembler.outputBytes[0xffc0 + 0x1c] | (assembler.outputBytes[0xffc0 + 0x1d] << 8)) & 0xffff;
 
-  t.is((checksum + complement) & 0xFFFF, 0xFFFF, "Checksum and complement should be complementary");
+  t.is((checksum + complement) & 0xffff, 0xffff, "Checksum and complement should be complementary");
 });
 
-test("finalizeOutput - other mappers default to 0xFFC0", t => {
+test("finalizeOutput - other mappers default to 0xFFC0", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "other";
   assembler.outputBytes = new Array(0x10000).fill(0);
@@ -1107,16 +1154,18 @@ test("finalizeOutput - other mappers default to 0xFFC0", t => {
   assembler.finalizeOutput();
 
   // Verify checksum and complement were written to the correct locations
-  const checksum = (assembler.outputBytes[0xFFC0 + 0x1E] | (assembler.outputBytes[0xFFC0 + 0x1F] << 8)) & 0xFFFF;
-  const complement = (assembler.outputBytes[0xFFC0 + 0x1C] | (assembler.outputBytes[0xFFC0 + 0x1D] << 8)) & 0xFFFF;
+  const checksum =
+    (assembler.outputBytes[0xffc0 + 0x1e] | (assembler.outputBytes[0xffc0 + 0x1f] << 8)) & 0xffff;
+  const complement =
+    (assembler.outputBytes[0xffc0 + 0x1c] | (assembler.outputBytes[0xffc0 + 0x1d] << 8)) & 0xffff;
 
-  t.is((checksum + complement) & 0xFFFF, 0xFFFF, "Checksum and complement should be complementary");
+  t.is((checksum + complement) & 0xffff, 0xffff, "Checksum and complement should be complementary");
 });
 
-test("finalizeOutput - ROM too small for header update", t => {
+test("finalizeOutput - ROM too small for header update", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
-  assembler.outputBytes = new Array(0x7FC0).fill(0); // Too small for lorom header
+  assembler.outputBytes = new Array(0x7fc0).fill(0); // Too small for lorom header
 
   // Just verify the function doesn't throw an error
   t.notThrows(() => {
@@ -1124,7 +1173,7 @@ test("finalizeOutput - ROM too small for header update", t => {
   });
 });
 
-test("finalizeOutput - checksum calculation is correct", t => {
+test("finalizeOutput - checksum calculation is correct", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
   // Create a small ROM with known values to verify checksum calculation
@@ -1133,17 +1182,19 @@ test("finalizeOutput - checksum calculation is correct", t => {
   assembler.finalizeOutput();
 
   // Asar seeds header bytes as FF FF 00 00 first, then sums the full ROM.
-  const expectedChecksum = 0x81FA;
-  const expectedComplement = (~expectedChecksum) & 0xFFFF;
+  const expectedChecksum = 0x81fa;
+  const expectedComplement = ~expectedChecksum & 0xffff;
 
-  const actualChecksum = (assembler.outputBytes[0x7FC0 + 0x1E] | (assembler.outputBytes[0x7FC0 + 0x1F] << 8)) & 0xFFFF;
-  const actualComplement = (assembler.outputBytes[0x7FC0 + 0x1C] | (assembler.outputBytes[0x7FC0 + 0x1D] << 8)) & 0xFFFF;
+  const actualChecksum =
+    (assembler.outputBytes[0x7fc0 + 0x1e] | (assembler.outputBytes[0x7fc0 + 0x1f] << 8)) & 0xffff;
+  const actualComplement =
+    (assembler.outputBytes[0x7fc0 + 0x1c] | (assembler.outputBytes[0x7fc0 + 0x1d] << 8)) & 0xffff;
 
   t.is(actualChecksum, expectedChecksum, "Checksum should match expected value");
   t.is(actualComplement, expectedComplement, "Complement should match expected value");
 });
 
-test("getBinaryOutput - returns a Uint8Array of the ROM data", t => {
+test("getBinaryOutput - returns a Uint8Array of the ROM data", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with some test data
@@ -1152,10 +1203,14 @@ test("getBinaryOutput - returns a Uint8Array of the ROM data", t => {
   const result = assembler.getBinaryOutput();
 
   t.true(result instanceof Uint8Array, "Result should be a Uint8Array");
-  t.deepEqual(Array.from(result), [0x01, 0x02, 0x03, 0x04, 0x05], "Output should match the ROM data");
+  t.deepEqual(
+    Array.from(result),
+    [0x01, 0x02, 0x03, 0x04, 0x05],
+    "Output should match the ROM data",
+  );
 });
 
-test("getBinaryOutput - returns a copy of the data, not a reference", t => {
+test("getBinaryOutput - returns a copy of the data, not a reference", (t) => {
   const assembler = new Assembler();
 
   // Initialize ROM with test data
@@ -1164,13 +1219,13 @@ test("getBinaryOutput - returns a copy of the data, not a reference", t => {
   const result = assembler.getBinaryOutput();
 
   // Modify the original data
-  assembler.outputBytes[0] = 0xFF;
+  assembler.outputBytes[0] = 0xff;
 
   // The returned array should not be affected by changes to the original
   t.is(result[0], 0x10, "Output should be a copy, not affected by changes to the original");
 });
 
-test("getBinaryOutput - handles empty ROM data", t => {
+test("getBinaryOutput - handles empty ROM data", (t) => {
   const assembler = new Assembler();
 
   // Initialize with empty ROM
@@ -1182,24 +1237,32 @@ test("getBinaryOutput - handles empty ROM data", t => {
   t.is(result.length, 0, "Output length should be 0 for empty ROM data");
 });
 
-test("getBinaryOutput - slices to the correct length", t => {
+test("getBinaryOutput - slices to the correct length", (t) => {
   const assembler = new Assembler();
 
   // Create an array with allocated but unused space
   assembler.outputBytes = new Array(10);
-  assembler.outputBytes.fill(0xFF, 0, 5); // Only first 5 elements have meaningful data
+  assembler.outputBytes.fill(0xff, 0, 5); // Only first 5 elements have meaningful data
 
   const result = assembler.getBinaryOutput();
 
-  t.is(result.length, assembler.outputBytes.length, "Output length should match the ROM data length");
+  t.is(
+    result.length,
+    assembler.outputBytes.length,
+    "Output length should match the ROM data length",
+  );
 });
 
-test("readFile - successful read", t => {
+test("readFile - successful read", (t) => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
 
-  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/test.bin");
-  const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0x01, 0x02, 0x03, 0x04]));
+  const resolvePathStub = sinon
+    .stub(assembler.fileProvider, "resolvePath")
+    .returns("/test/path/test.bin");
+  const readFileStub = sinon
+    .stub(assembler.fileProvider, "readFile")
+    .returns(new Uint8Array([0x01, 0x02, 0x03, 0x04]));
 
   const result = assembler.includeSource.readFile("test.bin");
 
@@ -1211,31 +1274,44 @@ test("readFile - successful read", t => {
   readFileStub.restore();
 });
 
-test("readFile - relative path resolution", t => {
+test("readFile - relative path resolution", (t) => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
 
-  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/data.bin");
-  const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0xFF]));
+  const resolvePathStub = sinon
+    .stub(assembler.fileProvider, "resolvePath")
+    .returns("/test/path/data.bin");
+  const readFileStub = sinon
+    .stub(assembler.fileProvider, "readFile")
+    .returns(new Uint8Array([0xff]));
 
   assembler.includeSource.readFile("data.bin");
 
-  t.true(resolvePathStub.calledWith("data.bin", sinon.match.has("currentFile", "/test/path/current.asm")));
+  t.true(
+    resolvePathStub.calledWith(
+      "data.bin",
+      sinon.match.has("currentFile", "/test/path/current.asm"),
+    ),
+  );
   t.true(readFileStub.calledWith("/test/path/data.bin"));
 
   resolvePathStub.restore();
   readFileStub.restore();
 });
 
-test("readFile - fallback to cwd when no current file", t => {
+test("readFile - fallback to cwd when no current file", (t) => {
   const assembler = new Assembler();
   assembler.currentFile = ""; // No current file
 
   const cwdStub = sinon.stub(process, "cwd");
   cwdStub.returns("/fallback/dir");
 
-  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").callsFake((filename) => `/fallback/dir/${filename}`);
-  const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array([0xAA]));
+  const resolvePathStub = sinon
+    .stub(assembler.fileProvider, "resolvePath")
+    .callsFake((filename) => `/fallback/dir/${filename}`);
+  const readFileStub = sinon
+    .stub(assembler.fileProvider, "readFile")
+    .returns(new Uint8Array([0xaa]));
 
   assembler.includeSource.readFile("data.bin");
 
@@ -1247,7 +1323,7 @@ test("readFile - fallback to cwd when no current file", t => {
   readFileStub.restore();
 });
 
-test("readFile - throws error on file not found", t => {
+test("readFile - throws error on file not found", (t) => {
   const assembler = new Assembler();
 
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(undefined);
@@ -1261,17 +1337,26 @@ test("readFile - throws error on file not found", t => {
   resolvePathStub.restore();
 });
 
-test("readFile - handles binary data correctly", t => {
+test("readFile - handles binary data correctly", (t) => {
   const assembler = new Assembler();
 
   // Create a buffer with various byte values
   const testBuffer = Buffer.from([
-    0x00, 0x7F, 0xFF, // Various values
-    0xDE, 0xAD, 0xBE, 0xEF // Common magic bytes
+    0x00,
+    0x7f,
+    0xff, // Various values
+    0xde,
+    0xad,
+    0xbe,
+    0xef, // Common magic bytes
   ]);
 
-  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/binary.dat");
-  const readFileStub = sinon.stub(assembler.fileProvider, "readFile").returns(new Uint8Array(testBuffer));
+  const resolvePathStub = sinon
+    .stub(assembler.fileProvider, "resolvePath")
+    .returns("/test/path/binary.dat");
+  const readFileStub = sinon
+    .stub(assembler.fileProvider, "readFile")
+    .returns(new Uint8Array(testBuffer));
 
   const result = assembler.includeSource.readFile("binary.dat");
 
@@ -1285,12 +1370,14 @@ test("readFile - handles binary data correctly", t => {
   readFileStub.restore();
 });
 
-test("readFile - handles text data with encoding", t => {
+test("readFile - handles text data with encoding", (t) => {
   const assembler = new Assembler();
 
   // Create a string with sample text content
   const testString = "This is a test file with text content.";
-  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/text.txt");
+  const resolvePathStub = sinon
+    .stub(assembler.fileProvider, "resolvePath")
+    .returns("/test/path/text.txt");
   const readFileStub = sinon.stub(assembler.fileProvider, "readTextFile").returns(testString);
 
   const result = assembler.includeSource.readFile("text.txt", "utf8");
@@ -1304,7 +1391,7 @@ test("readFile - handles text data with encoding", t => {
   readFileStub.restore();
 });
 
-test("resolveIncludePath - absolute path", t => {
+test("resolveIncludePath - absolute path", (t) => {
   const assembler = new Assembler();
   const absolutePath = process.platform === "win32" ? "C:\\test\\file.asm" : "/test/file.asm";
   const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns(absolutePath);
@@ -1317,7 +1404,7 @@ test("resolveIncludePath - absolute path", t => {
   resolvePathStub.restore();
 });
 
-test("resolveIncludePath - relative to current file", t => {
+test("resolveIncludePath - relative to current file", (t) => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
   const relativePath = "file.asm";
@@ -1327,12 +1414,17 @@ test("resolveIncludePath - relative to current file", t => {
   const result = assembler.includeSource.resolveIncludePath(relativePath);
 
   t.is(result, expectedPath);
-  t.true(resolvePathStub.calledWith(relativePath, sinon.match.has("currentFile", "/test/path/current.asm")));
+  t.true(
+    resolvePathStub.calledWith(
+      relativePath,
+      sinon.match.has("currentFile", "/test/path/current.asm"),
+    ),
+  );
 
   resolvePathStub.restore();
 });
 
-test("resolveIncludePath - from include paths", t => {
+test("resolveIncludePath - from include paths", (t) => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
   assembler.includePaths = ["./", "/other/include/path"];
@@ -1343,15 +1435,19 @@ test("resolveIncludePath - from include paths", t => {
   const result = assembler.includeSource.resolveIncludePath(filename);
 
   t.is(result, secondAttempt);
-  t.true(resolvePathStub.calledWith(filename, sinon.match.has("includePaths", assembler.includePaths)));
+  t.true(
+    resolvePathStub.calledWith(filename, sinon.match.has("includePaths", assembler.includePaths)),
+  );
 
   resolvePathStub.restore();
 });
 
-test("resolveIncludePath - strips quotes", t => {
+test("resolveIncludePath - strips quotes", (t) => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
-  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").returns("/test/path/file.asm");
+  const resolvePathStub = sinon
+    .stub(assembler.fileProvider, "resolvePath")
+    .returns("/test/path/file.asm");
 
   const doubleQuoted = '"file.asm"';
   const singleQuoted = "'file.asm'";
@@ -1366,7 +1462,7 @@ test("resolveIncludePath - strips quotes", t => {
   resolvePathStub.restore();
 });
 
-test("resolveIncludePath - throws error when file not found", t => {
+test("resolveIncludePath - throws error when file not found", (t) => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
   assembler.includePaths = ["./", "/other/include/path"];
@@ -1374,20 +1470,25 @@ test("resolveIncludePath - throws error when file not found", t => {
 
   const filename = "nonexistent.asm";
 
-  const error = t.throws(() => {
-    assembler.includeSource.resolveIncludePath(filename);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.includeSource.resolveIncludePath(filename);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, `Could not find file: ${filename}`);
 
   resolvePathStub.restore();
 });
 
-test("handleInclude - includeonce adds current file to guarded set", t => {
+test("handleInclude - includeonce adds current file to guarded set", (t) => {
   const assembler = new Assembler();
   assembler.currentFile = "/test/path/current.asm";
 
-  const resolveIncludePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath").returns("/test/path/file.asm");
+  const resolveIncludePathStub = sinon
+    .stub(assembler.includeSource, "resolveIncludePath")
+    .returns("/test/path/file.asm");
   const assemblefileStub = sinon.stub(assembler.includeSource, "assembleFile");
 
   assembler.includeSource.includeFile("file.asm");
@@ -1401,10 +1502,12 @@ test("handleInclude - includeonce adds current file to guarded set", t => {
   assemblefileStub.restore();
 });
 
-test("handleInclude - regular include calls assemblefile", t => {
+test("handleInclude - regular include calls assemblefile", (t) => {
   const assembler = new Assembler();
 
-  const resolveIncludePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath").returns("/resolved/file.asm");
+  const resolveIncludePathStub = sinon
+    .stub(assembler.includeSource, "resolveIncludePath")
+    .returns("/resolved/file.asm");
   const assemblefileStub = sinon.stub(assembler.includeSource, "assembleFile");
 
   assembler.includeSource.includeFile("file.asm");
@@ -1420,10 +1523,12 @@ test("handleInclude - regular include calls assemblefile", t => {
   assemblefileStub.restore();
 });
 
-test("handleInclude - adds file to included files set", t => {
+test("handleInclude - adds file to included files set", (t) => {
   const assembler = new Assembler();
 
-  const resolveIncludePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath").returns("/resolved/newfile.asm");
+  const resolveIncludePathStub = sinon
+    .stub(assembler.includeSource, "resolveIncludePath")
+    .returns("/resolved/newfile.asm");
   const assemblefileStub = sinon.stub(assembler.includeSource, "assembleFile");
 
   assembler.includeSource.includeFile("newfile.asm");
@@ -1437,7 +1542,7 @@ test("handleInclude - adds file to included files set", t => {
   assemblefileStub.restore();
 });
 
-test("handleInclude - handles undefined filename", t => {
+test("handleInclude - handles undefined filename", (t) => {
   const assembler = new Assembler();
   const error = t.throws(() => {
     assembler.includeSource.includeFile(undefined as unknown as string);
@@ -1445,7 +1550,7 @@ test("handleInclude - handles undefined filename", t => {
   t.is(error.message, "Invalid or missing filename");
 });
 
-test("assemblefile - basic file assembly", t => {
+test("assemblefile - basic file assembly", (t) => {
   const assembler = new Assembler();
   const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
   const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
@@ -1463,7 +1568,9 @@ test("assemblefile - basic file assembly", t => {
   assembler.includeSource.assembleFile("file.asm");
 
   t.is(dispatchLoweredNodeStub.callCount, 2);
-  const mnemonics = dispatchLoweredNodeStub.getCalls().map((call) => call.args[0]?.mnemonic?.toLowerCase());
+  const mnemonics = dispatchLoweredNodeStub
+    .getCalls()
+    .map((call) => call.args[0]?.mnemonic?.toLowerCase());
   t.deepEqual(mnemonics.sort(), ["lda", "sta"]);
 
   // Cleanup
@@ -1472,7 +1579,7 @@ test("assemblefile - basic file assembly", t => {
   dispatchLoweredNodeStub.restore();
 });
 
-test("assemblefile - respects include guards", t => {
+test("assemblefile - respects include guards", (t) => {
   const assembler = new Assembler();
   const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
   const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
@@ -1497,7 +1604,7 @@ test("assemblefile - respects include guards", t => {
   readTextFileStub.restore();
 });
 
-test("assemblefile - throws on recursion limit", t => {
+test("assemblefile - throws on recursion limit", (t) => {
   const assembler = new Assembler();
   const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
 
@@ -1517,7 +1624,7 @@ test("assemblefile - throws on recursion limit", t => {
   resolvePathStub.restore();
 });
 
-test("assemblefile - throws on recursive include cycle before recursion limit", t => {
+test("assemblefile - throws on recursive include cycle before recursion limit", (t) => {
   const assembler = new Assembler();
   const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
 
@@ -1534,7 +1641,7 @@ test("assemblefile - throws on recursive include cycle before recursion limit", 
   resolvePathStub.restore();
 });
 
-test("assemblefile - maintains include stack", t => {
+test("assemblefile - maintains include stack", (t) => {
   const assembler = new Assembler();
   const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
   const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
@@ -1562,7 +1669,7 @@ test("assemblefile - maintains include stack", t => {
   t.is(assembler.includeStack.length, 0);
 });
 
-test("assemblefile - handles file read errors", t => {
+test("assemblefile - handles file read errors", (t) => {
   const assembler = new Assembler();
   const resolvePathStub = sinon.stub(assembler.includeSource, "resolveIncludePath");
   const readTextFileStub = sinon.stub(assembler.fileProvider, "readTextFile");
@@ -1592,7 +1699,7 @@ test("assemblefile - handles file read errors", t => {
   t.is(assembler.currentFile, originalFile);
 });
 
-test("directive runtime handleCharacterMapping - basic mapping", t => {
+test("directive runtime handleCharacterMapping - basic mapping", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
@@ -1601,7 +1708,7 @@ test("directive runtime handleCharacterMapping - basic mapping", t => {
   t.is(assembler.characterMappings.get("A"), 0x42);
 });
 
-test("directive runtime handleCharacterMapping - single quotes", t => {
+test("directive runtime handleCharacterMapping - single quotes", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
@@ -1610,7 +1717,7 @@ test("directive runtime handleCharacterMapping - single quotes", t => {
   t.is(assembler.characterMappings.get("B"), 0x43);
 });
 
-test("directive runtime handleCharacterMapping - numeric value", t => {
+test("directive runtime handleCharacterMapping - numeric value", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
@@ -1619,16 +1726,16 @@ test("directive runtime handleCharacterMapping - numeric value", t => {
   t.is(assembler.characterMappings.get("C"), 65);
 });
 
-test("directive runtime handleCharacterMapping - hex value", t => {
+test("directive runtime handleCharacterMapping - hex value", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Test with hex number
   assembler.directiveRuntime.handleCharacterMapping(['"D"', "=", "$FF"]);
-  t.is(assembler.characterMappings.get("D"), 0xFF);
+  t.is(assembler.characterMappings.get("D"), 0xff);
 });
 
-test("directive runtime handleCharacterMapping - overwrite existing mapping", t => {
+test("directive runtime handleCharacterMapping - overwrite existing mapping", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
@@ -1641,101 +1748,107 @@ test("directive runtime handleCharacterMapping - overwrite existing mapping", t 
   t.is(assembler.characterMappings.get("E"), 0x51);
 });
 
-test("directive runtime handleCharacterMapping - throws error with incorrect format", t => {
+test("directive runtime handleCharacterMapping - throws error with incorrect format", (t) => {
   const assembler = new Assembler();
 
   // Test with too few arguments
-  const error1 = t.throws(() => {
-    assembler.directiveRuntime.handleCharacterMapping(['"F"', "="]);
-  }, {instanceOf: Error});
+  const error1 = t.throws(
+    () => {
+      assembler.directiveRuntime.handleCharacterMapping(['"F"', "="]);
+    },
+    { instanceOf: Error },
+  );
   t.is(error1.message, "Character mapping requires format: 'char' = value");
 
   // Test with too many arguments
-  const error2 = t.throws(() => {
-    assembler.directiveRuntime.handleCharacterMapping(['"G"', "=", "0x60", "extra"]);
-  }, {instanceOf: Error});
+  const error2 = t.throws(
+    () => {
+      assembler.directiveRuntime.handleCharacterMapping(['"G"', "=", "0x60", "extra"]);
+    },
+    { instanceOf: Error },
+  );
   t.is(error2.message, "Character mapping requires format: 'char' = value");
 });
 
-test("cleartable is a 0-byte directive, not a 3-byte unknown opcode", t => {
+test("cleartable is a 0-byte directive, not a 3-byte unknown opcode", (t) => {
   const assembler = new Assembler();
-  assembler.assembleblock("org $8000");
-  assembler.assembleblock("db $AA");
-  assembler.assembleblock("cleartable");
+  assembler.processCommand("org $8000");
+  assembler.processCommand("db $AA");
+  assembler.processCommand("cleartable");
   t.is(assembler.currentTargetAddress, 0x8001);
 });
 
-test("cleartable stays 0 bytes through layout and emit stages", t => {
+test("cleartable stays 0 bytes through layout and emit stages", (t) => {
   const assembler = new Assembler();
   const lines = ["org $8000", "db $AA", "cleartable"];
   for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
     assembler.activateStage(stage);
     for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
       assembler.setCurrentLine(lineNumber);
-      assembler.assembleblock(lines[lineNumber]);
+      assembler.processCommand(lines[lineNumber]);
     }
     assembler.finishPass();
   }
   t.is(assembler.currentTargetAddress, 0x8001);
 });
 
-test("asar apostrophe table mapping ''' = $2A is 0 bytes", t => {
+test("asar apostrophe table mapping ''' = $2A is 0 bytes", (t) => {
   const assembler = new Assembler();
-  assembler.assembleblock("org $8000");
-  assembler.assembleblock("''' = $2A");
+  assembler.processCommand("org $8000");
+  assembler.processCommand("''' = $2A");
   t.is(assembler.characterMappings.get("'"), 0x2a);
   t.is(assembler.currentTargetAddress, 0x8000);
 });
 
-test("character mappings inside a macro apply on invoke, not on define", t => {
+test("character mappings inside a macro apply on invoke, not on define", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x100).fill(0);
-  assembler.assembleblock("macro LoadFont()");
-  assembler.assembleblock("cleartable");
-  assembler.assembleblock("'A' = $10");
-  assembler.assembleblock("' ' = $00");
-  assembler.assembleblock("''' = $2A");
-  assembler.assembleblock("endmacro");
+  assembler.processCommand("macro LoadFont()");
+  assembler.processCommand("cleartable");
+  assembler.processCommand("'A' = $10");
+  assembler.processCommand("' ' = $00");
+  assembler.processCommand("''' = $2A");
+  assembler.processCommand("endmacro");
 
   t.is(assembler.characterMappings.size, 0, "defining a font macro must not leak the table");
 
   assembler.activateStage("emitProgram");
-  assembler.assembleblock("org $8000");
-  assembler.assembleblock('db "A"');
+  assembler.processCommand("org $8000");
+  assembler.processCommand('db "A"');
   t.is(assembler.outputBytes[0], 0x41, "db before invoke stays ASCII (header-style)");
 
-  assembler.assembleblock("%LoadFont()");
+  assembler.processCommand("%LoadFont()");
   t.is(assembler.characterMappings.get("A"), 0x10);
   t.is(assembler.characterMappings.get(" "), 0x00);
   t.is(assembler.characterMappings.get("'"), 0x2a);
 
-  assembler.assembleblock('db "A A", $FF');
+  assembler.processCommand('db "A A", $FF');
   t.is(assembler.outputBytes[1], 0x10);
   t.is(assembler.outputBytes[2], 0x00);
   t.is(assembler.outputBytes[3], 0x10);
   t.is(assembler.outputBytes[4], 0xff);
 });
 
-test("last defined font macro does not leave its table active", t => {
+test("last defined font macro does not leave its table active", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x100).fill(0);
-  assembler.assembleblock("macro FontA()");
-  assembler.assembleblock("cleartable");
-  assembler.assembleblock("'T' = $14");
-  assembler.assembleblock("endmacro");
-  assembler.assembleblock("macro FontB()");
-  assembler.assembleblock("cleartable");
-  assembler.assembleblock("'T' = $23");
-  assembler.assembleblock("endmacro");
+  assembler.processCommand("macro FontA()");
+  assembler.processCommand("cleartable");
+  assembler.processCommand("'T' = $14");
+  assembler.processCommand("endmacro");
+  assembler.processCommand("macro FontB()");
+  assembler.processCommand("cleartable");
+  assembler.processCommand("'T' = $23");
+  assembler.processCommand("endmacro");
   t.is(assembler.characterMappings.size, 0);
 
   assembler.activateStage("emitProgram");
-  assembler.assembleblock("org $8000");
-  assembler.assembleblock('db "T"');
+  assembler.processCommand("org $8000");
+  assembler.processCommand('db "T"');
   t.is(assembler.outputBytes[0], 0x54);
 });
 
-test("directive runtime processStringWithMapping - basic character mapping", t => {
+test("directive runtime processStringWithMapping - basic character mapping", (t) => {
   const assembler = new Assembler();
 
   // Set up some character mappings
@@ -1744,36 +1857,31 @@ test("directive runtime processStringWithMapping - basic character mapping", t =
   assembler.characterMappings.set("C", 0x43);
 
   // Test basic mapping
-  t.deepEqual(
-    assembler.directiveRuntime.processStringWithMapping("ABC"),
-    [0x41, 0x42, 0x43]
-  );
+  t.deepEqual(assembler.directiveRuntime.processStringWithMapping("ABC"), [0x41, 0x42, 0x43]);
 });
 
-test("directive runtime processStringWithMapping - unmapped characters use charCode", t => {
+test("directive runtime processStringWithMapping - unmapped characters use charCode", (t) => {
   const assembler = new Assembler();
 
   // Set up some character mappings
   assembler.characterMappings.set("A", 0x41);
 
   // Test with unmapped characters (should use charCodeAt)
-  t.deepEqual(
-    assembler.directiveRuntime.processStringWithMapping("AXY"),
-    [0x41, "X".charCodeAt(0), "Y".charCodeAt(0)]
-  );
+  t.deepEqual(assembler.directiveRuntime.processStringWithMapping("AXY"), [
+    0x41,
+    "X".charCodeAt(0),
+    "Y".charCodeAt(0),
+  ]);
 });
 
-test("directive runtime processStringWithMapping - empty string", t => {
+test("directive runtime processStringWithMapping - empty string", (t) => {
   const assembler = new Assembler();
 
   // Test with empty string
-  t.deepEqual(
-    assembler.directiveRuntime.processStringWithMapping(""),
-    []
-  );
+  t.deepEqual(assembler.directiveRuntime.processStringWithMapping(""), []);
 });
 
-test("directive runtime processStringWithMapping - custom mappings", t => {
+test("directive runtime processStringWithMapping - custom mappings", (t) => {
   const assembler = new Assembler();
 
   // Set up custom mappings that differ from ASCII
@@ -1782,13 +1890,10 @@ test("directive runtime processStringWithMapping - custom mappings", t => {
   assembler.characterMappings.set("C", 0x30);
 
   // Test custom mappings
-  t.deepEqual(
-    assembler.directiveRuntime.processStringWithMapping("ABC"),
-    [0x10, 0x20, 0x30]
-  );
+  t.deepEqual(assembler.directiveRuntime.processStringWithMapping("ABC"), [0x10, 0x20, 0x30]);
 });
 
-test("directive runtime processStringWithMapping - mixed mapped and unmapped", t => {
+test("directive runtime processStringWithMapping - mixed mapped and unmapped", (t) => {
   const assembler = new Assembler();
 
   // Set up some character mappings
@@ -1796,154 +1901,149 @@ test("directive runtime processStringWithMapping - mixed mapped and unmapped", t
   assembler.characterMappings.set("C", 0x30);
 
   // Test with mixed mapped and unmapped characters
-  t.deepEqual(
-    assembler.directiveRuntime.processStringWithMapping("ABCD"),
-    [0x10, "B".charCodeAt(0), 0x30, "D".charCodeAt(0)]
-  );
+  t.deepEqual(assembler.directiveRuntime.processStringWithMapping("ABCD"), [
+    0x10,
+    "B".charCodeAt(0),
+    0x30,
+    "D".charCodeAt(0),
+  ]);
 });
 
-test("directive runtime processStringWithMapping - special characters", t => {
+test("directive runtime processStringWithMapping - special characters", (t) => {
   const assembler = new Assembler();
 
   // Set up mappings for special characters
-  assembler.characterMappings.set(" ", 0xFF);
-  assembler.characterMappings.set("!", 0xFE);
-  assembler.characterMappings.set("?", 0xFD);
+  assembler.characterMappings.set(" ", 0xff);
+  assembler.characterMappings.set("!", 0xfe);
+  assembler.characterMappings.set("?", 0xfd);
 
   // Test with special characters
-  t.deepEqual(
-    assembler.directiveRuntime.processStringWithMapping("Hello! ?"),
-    ["H".charCodeAt(0), "e".charCodeAt(0), "l".charCodeAt(0), "l".charCodeAt(0), "o".charCodeAt(0), 0xFE, 0xFF, 0xFD]
-  );
+  t.deepEqual(assembler.directiveRuntime.processStringWithMapping("Hello! ?"), [
+    "H".charCodeAt(0),
+    "e".charCodeAt(0),
+    "l".charCodeAt(0),
+    "l".charCodeAt(0),
+    "o".charCodeAt(0),
+    0xfe,
+    0xff,
+    0xfd,
+  ]);
 });
 
-test("directive runtime processStringWithMapping - unicode characters", t => {
+test("directive runtime processStringWithMapping - unicode characters", (t) => {
   const assembler = new Assembler();
 
   // Set up mappings for some unicode characters
-  assembler.characterMappings.set("é", 0xE9);
-  assembler.characterMappings.set("ñ", 0xF1);
+  assembler.characterMappings.set("é", 0xe9);
+  assembler.characterMappings.set("ñ", 0xf1);
 
   // Test with unicode characters
-  t.deepEqual(
-    assembler.directiveRuntime.processStringWithMapping("café niño"),
-    ["c".charCodeAt(0), "a".charCodeAt(0), "f".charCodeAt(0), 0xE9, " ".charCodeAt(0),
-     "n".charCodeAt(0), "i".charCodeAt(0), 0xF1, "o".charCodeAt(0)]
-  );
+  t.deepEqual(assembler.directiveRuntime.processStringWithMapping("café niño"), [
+    "c".charCodeAt(0),
+    "a".charCodeAt(0),
+    "f".charCodeAt(0),
+    0xe9,
+    " ".charCodeAt(0),
+    "n".charCodeAt(0),
+    "i".charCodeAt(0),
+    0xf1,
+    "o".charCodeAt(0),
+  ]);
 });
 
-test("splitCommandIntoWords - basic splitting", t => {
+test("splitCommandIntoWords - basic splitting", (t) => {
   // Basic whitespace splitting
-  t.deepEqual(
-    splitCommandIntoWords("word1 word2 word3"),
-    ["word1", "word2", "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords("word1 word2 word3"), ["word1", "word2", "word3"]);
 
   // Extra whitespace should be ignored
-  t.deepEqual(
-    splitCommandIntoWords("  word1   word2  word3  "),
-    ["word1", "word2", "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords("  word1   word2  word3  "), ["word1", "word2", "word3"]);
 
   // Empty string should return empty array
-  t.deepEqual(
-    splitCommandIntoWords(""),
-    []
-  );
+  t.deepEqual(splitCommandIntoWords(""), []);
 
   // String with only whitespace should return empty array
-  t.deepEqual(
-    splitCommandIntoWords("   "),
-    []
-  );
+  t.deepEqual(splitCommandIntoWords("   "), []);
 });
 
-test("splitCommandIntoWords - quoted strings", t => {
+test("splitCommandIntoWords - quoted strings", (t) => {
   // Double quotes
-  t.deepEqual(
-    splitCommandIntoWords('word1 "quoted string" word3'),
-    ["word1", '"quoted string"', "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords('word1 "quoted string" word3'), [
+    "word1",
+    '"quoted string"',
+    "word3",
+  ]);
 
   // Single quotes
-  t.deepEqual(
-    splitCommandIntoWords("word1 'quoted string' word3"),
-    ["word1", "'quoted string'", "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords("word1 'quoted string' word3"), [
+    "word1",
+    "'quoted string'",
+    "word3",
+  ]);
 
   // Quotes at the beginning
-  t.deepEqual(
-    splitCommandIntoWords('"quoted string" word2'),
-    ['"quoted string"', "word2"]
-  );
+  t.deepEqual(splitCommandIntoWords('"quoted string" word2'), ['"quoted string"', "word2"]);
 
   // Quotes at the end
-  t.deepEqual(
-    splitCommandIntoWords('word1 "quoted string"'),
-    ["word1", '"quoted string"']
-  );
+  t.deepEqual(splitCommandIntoWords('word1 "quoted string"'), ["word1", '"quoted string"']);
 
   // Only a quoted string
-  t.deepEqual(
-    splitCommandIntoWords('"quoted string"'),
-    ['"quoted string"']
-  );
+  t.deepEqual(splitCommandIntoWords('"quoted string"'), ['"quoted string"']);
 });
 
-test("splitCommandIntoWords - nested quotes", t => {
+test("splitCommandIntoWords - nested quotes", (t) => {
   // Different quote types inside quotes
-  t.deepEqual(
-    splitCommandIntoWords('word1 "string with \'nested\' quotes" word3'),
-    ["word1", '"string with \'nested\' quotes"', "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords("word1 \"string with 'nested' quotes\" word3"), [
+    "word1",
+    "\"string with 'nested' quotes\"",
+    "word3",
+  ]);
 
-  t.deepEqual(
-    splitCommandIntoWords("word1 'string with \"nested\" quotes' word3"),
-    ["word1", "'string with \"nested\" quotes'", "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords("word1 'string with \"nested\" quotes' word3"), [
+    "word1",
+    "'string with \"nested\" quotes'",
+    "word3",
+  ]);
 });
 
-test("splitCommandIntoWords - escaped quotes", t => {
+test("splitCommandIntoWords - escaped quotes", (t) => {
   // Escaped quotes should be treated as regular characters
-  t.deepEqual(
-    splitCommandIntoWords('word1 "string with \\" escaped quote" word3'),
-    ["word1", '"string with \\" escaped quote"', "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords('word1 "string with \\" escaped quote" word3'), [
+    "word1",
+    '"string with \\" escaped quote"',
+    "word3",
+  ]);
 
-  t.deepEqual(
-    splitCommandIntoWords("word1 'string with \\' escaped quote' word3"),
-    ["word1", "'string with \\' escaped quote'", "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords("word1 'string with \\' escaped quote' word3"), [
+    "word1",
+    "'string with \\' escaped quote'",
+    "word3",
+  ]);
 });
 
-test("splitCommandIntoWords - whitespace in quotes", t => {
+test("splitCommandIntoWords - whitespace in quotes", (t) => {
   // Whitespace inside quotes should be preserved
-  t.deepEqual(
-    splitCommandIntoWords('word1 "  quoted  string  with  spaces  " word3'),
-    ["word1", '"  quoted  string  with  spaces  "', "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords('word1 "  quoted  string  with  spaces  " word3'), [
+    "word1",
+    '"  quoted  string  with  spaces  "',
+    "word3",
+  ]);
 
   // Multiple spaces between words outside quotes should be treated as a single delimiter
-  t.deepEqual(
-    splitCommandIntoWords('word1    "quoted string"    word3'),
-    ["word1", '"quoted string"', "word3"]
-  );
+  t.deepEqual(splitCommandIntoWords('word1    "quoted string"    word3'), [
+    "word1",
+    '"quoted string"',
+    "word3",
+  ]);
 });
 
-test("splitCommandIntoWords - unclosed quotes", t => {
+test("splitCommandIntoWords - unclosed quotes", (t) => {
   // Unclosed quotes should still capture the rest of the string
-  t.deepEqual(
-    splitCommandIntoWords('word1 "unclosed quote'),
-    ["word1", '"unclosed quote']
-  );
+  t.deepEqual(splitCommandIntoWords('word1 "unclosed quote'), ["word1", '"unclosed quote']);
 
-  t.deepEqual(
-    splitCommandIntoWords("word1 'unclosed quote"),
-    ["word1", "'unclosed quote"]
-  );
+  t.deepEqual(splitCommandIntoWords("word1 'unclosed quote"), ["word1", "'unclosed quote"]);
 });
 
-test("snestopc - lorom mapping", t => {
+test("snestopc - lorom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
 
@@ -1951,12 +2051,12 @@ test("snestopc - lorom mapping", t => {
   t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x200000);
   t.is(assembler.outputWriter.toOutputOffset(0x808000), 0x000000);
   t.is(assembler.outputWriter.toOutputOffset(0x818000), 0x008000);
-  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xffffff), 0x3fffff);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.outputWriter.toOutputOffset(0x7E0000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0x7F0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7e0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7f0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
   t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
@@ -1964,26 +2064,26 @@ test("snestopc - lorom mapping", t => {
   // SRAM (low parts of banks 70-7D)
   t.is(assembler.outputWriter.toOutputOffset(0x700000), -1);
   t.is(assembler.outputWriter.toOutputOffset(0x706000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0x707FFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x707fff), -1);
 
   // Out of range
   t.is(assembler.outputWriter.toOutputOffset(-1), -1);
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
-test("snestopc - hirom mapping", t => {
+test("snestopc - hirom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "hirom";
 
   // Valid addresses
   t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0xC00000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xc00000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0xffffff), 0x3fffff);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.outputWriter.toOutputOffset(0x7E0000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0x7F0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7e0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7f0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
   t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
@@ -1993,70 +2093,70 @@ test("snestopc - hirom mapping", t => {
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
-test("snestopc - exlorom mapping", t => {
+test("snestopc - exlorom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "exlorom";
 
   // Valid addresses in first 4MB
   t.is(assembler.outputWriter.toOutputOffset(0x808000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xffffff), 0x3fffff);
 
   // Valid addresses in second 4MB
   t.is(assembler.outputWriter.toOutputOffset(0x008000), 0x400000);
-  t.is(assembler.outputWriter.toOutputOffset(0x00FFFF), 0x407FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x00ffff), 0x407fff);
   t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x600000);
 
   // Invalid addresses
   // SRAM
   t.is(assembler.outputWriter.toOutputOffset(0x700000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0x7FFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7fffff), -1);
 
   // Hardware registers, RAM mirrors, etc.
   t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0x7FFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7fffff), -1);
 
   // Out of range
   t.is(assembler.outputWriter.toOutputOffset(-1), -1);
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
-test("snestopc - exhirom mapping", t => {
+test("snestopc - exhirom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "exhirom";
 
   // Valid addresses
   t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x400000);
-  t.is(assembler.outputWriter.toOutputOffset(0xC00000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xc00000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0xffffff), 0x3fffff);
 
   // Invalid addresses
   // WRAM
-  t.is(assembler.outputWriter.toOutputOffset(0x7E0000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0x7F0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7e0000), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7f0000), -1);
 
   // Hardware registers, RAM mirrors, etc.
   t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0x7FFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7fffff), -1);
 
   // Out of range
   t.is(assembler.outputWriter.toOutputOffset(-1), -1);
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
-test("snestopc - sfxrom mapping", t => {
+test("snestopc - sfxrom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "sfxrom";
 
   // Valid addresses
   t.is(assembler.outputWriter.toOutputOffset(0x008000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0x00FFFF), 0x007FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x00ffff), 0x007fff);
   t.is(assembler.outputWriter.toOutputOffset(0x400000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0x5FFFFF), 0x1FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x5fffff), 0x1fffff);
 
   // Invalid addresses
   // $600000-$7FFFFF
   t.is(assembler.outputWriter.toOutputOffset(0x600000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0x7FFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0x7fffff), -1);
 
   // Hardware registers, RAM mirrors, etc.
   t.is(assembler.outputWriter.toOutputOffset(0x000000), -1);
@@ -2064,31 +2164,33 @@ test("snestopc - sfxrom mapping", t => {
 
   // $800000-$FFFFFF
   t.is(assembler.outputWriter.toOutputOffset(0x800000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0xffffff), -1);
 
   // Out of range
   t.is(assembler.outputWriter.toOutputOffset(-1), -1);
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
-test("snestopc - sa1rom mapping", t => {
+test("snestopc - sa1rom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "sa1rom";
 
   // Setup SA-1 banks (default values)
-  assembler.targetState.sa1Banks = [0, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000];
+  assembler.targetState.sa1Banks = [
+    0, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000,
+  ];
 
   // Valid addresses - LoROM-mapped area
   t.is(assembler.outputWriter.toOutputOffset(0x008000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0x00FFFF), 0x007FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x00ffff), 0x007fff);
   t.is(assembler.outputWriter.toOutputOffset(0x208000), 0x100000);
-  t.is(assembler.outputWriter.toOutputOffset(0x20FFFF), 0x107FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x20ffff), 0x107fff);
 
   // Valid addresses - HiROM-mapped area
-  t.is(assembler.outputWriter.toOutputOffset(0xC00000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0xCFFFFF), 0x0FFFFF);
-  t.is(assembler.outputWriter.toOutputOffset(0xD00000), 0x100000);
-  t.is(assembler.outputWriter.toOutputOffset(0xDFFFFF), 0x1FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xc00000), 0x000000);
+  t.is(assembler.outputWriter.toOutputOffset(0xcfffff), 0x0fffff);
+  t.is(assembler.outputWriter.toOutputOffset(0xd00000), 0x100000);
+  t.is(assembler.outputWriter.toOutputOffset(0xdfffff), 0x1fffff);
 
   // Invalid addresses
   t.is(assembler.outputWriter.toOutputOffset(0x000000), -1); // Hardware registers
@@ -2096,21 +2198,21 @@ test("snestopc - sa1rom mapping", t => {
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1); // Out of range
 });
 
-test("snestopc - bigsa1rom mapping", t => {
+test("snestopc - bigsa1rom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "bigsa1rom";
 
   // Valid addresses - HiROM-mapped area
-  t.is(assembler.outputWriter.toOutputOffset(0xC00000), 0x400000);
-  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0x7FFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xc00000), 0x400000);
+  t.is(assembler.outputWriter.toOutputOffset(0xffffff), 0x7fffff);
 
   // Valid addresses - LoROM-mapped area (first 8MB)
   t.is(assembler.outputWriter.toOutputOffset(0x008000), 0x000000);
-  t.is(assembler.outputWriter.toOutputOffset(0x00FFFF), 0x007FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x00ffff), 0x007fff);
 
   // Valid addresses - LoROM-mapped area (second 8MB)
   t.is(assembler.outputWriter.toOutputOffset(0x808000), 0x200000);
-  t.is(assembler.outputWriter.toOutputOffset(0x80FFFF), 0x207FFF);
+  t.is(assembler.outputWriter.toOutputOffset(0x80ffff), 0x207fff);
 
   // Invalid addresses
   t.is(assembler.outputWriter.toOutputOffset(0x000000), -1); // No ROM at $000000-$007FFF
@@ -2120,101 +2222,103 @@ test("snestopc - bigsa1rom mapping", t => {
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1); // Out of range
 });
 
-test("snestopc - norom mapping", t => {
+test("snestopc - norom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged
   t.is(assembler.outputWriter.toOutputOffset(0x000000), 0x000000);
   t.is(assembler.outputWriter.toOutputOffset(0x123456), 0x123456);
-  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.toOutputOffset(0xffffff), 0xffffff);
 
   // Out of range
   t.is(assembler.outputWriter.toOutputOffset(-1), -1);
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1);
 });
 
-test("snestopc - no mapper set", t => {
+test("snestopc - no mapper set", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = undefined;
 
   // Invalid addresses
   t.is(assembler.outputWriter.toOutputOffset(0x808000), -1);
   t.is(assembler.outputWriter.toOutputOffset(0x818000), -1);
-  t.is(assembler.outputWriter.toOutputOffset(0xFFFFFF), -1);
+  t.is(assembler.outputWriter.toOutputOffset(0xffffff), -1);
   t.is(assembler.outputWriter.toOutputOffset(0x000000), -1); // Hardware registers
-  t.is(assembler.outputWriter.toOutputOffset(0x7E0000), -1); // WRAM
+  t.is(assembler.outputWriter.toOutputOffset(0x7e0000), -1); // WRAM
   t.is(assembler.outputWriter.toOutputOffset(0x700000), -1); // SRAM
   t.is(assembler.outputWriter.toOutputOffset(-1), -1); // Out of range
   t.is(assembler.outputWriter.toOutputOffset(0x1000000), -1); // Out of range
 });
 
-test("fromOutputOffset - lorom mapping", t => {
+test("fromOutputOffset - lorom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
 
   // Valid addresses
   t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x808000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x007FFF), 0x80FFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x007fff), 0x80ffff);
   t.is(assembler.outputWriter.fromOutputOffset(0x008000), 0x818000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3fffff), 0xffffff);
 
   // Invalid address (too large)
   t.is(assembler.outputWriter.fromOutputOffset(0x400000), -1);
 });
 
-test("fromOutputOffset - hirom mapping", t => {
+test("fromOutputOffset - hirom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "hirom";
 
   // Valid addresses
-  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0xC00000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0xc00000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3fffff), 0xffffff);
 
   // Invalid address (too large)
   t.is(assembler.outputWriter.fromOutputOffset(0x400000), -1);
 });
 
-test("fromOutputOffset - exlorom mapping", t => {
+test("fromOutputOffset - exlorom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "exlorom";
 
   // Valid addresses in first 4MB
   t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x808000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x007FFF), 0x80FFFF);
-  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x007fff), 0x80ffff);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3fffff), 0xffffff);
 
   // Valid addresses in second 4MB
   t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0x008000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x407FFF), 0x00FFFF);
-  t.is(assembler.outputWriter.fromOutputOffset(0x7FFFFF), 0x7FFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x407fff), 0x00ffff);
+  t.is(assembler.outputWriter.fromOutputOffset(0x7fffff), 0x7fffff);
 
   // Invalid address (too large)
   t.is(assembler.outputWriter.fromOutputOffset(0x800000), -1);
 });
 
-test("fromOutputOffset - exhirom mapping", t => {
+test("fromOutputOffset - exhirom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "exhirom";
 
   // Valid addresses in first 4MB
-  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0xC00000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0xc00000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3fffff), 0xffffff);
 
   // Valid addresses in second 4MB
   t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0x400000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x7FFFFF), 0x7FFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x7fffff), 0x7fffff);
 
   // Invalid address (too large)
   t.is(assembler.outputWriter.fromOutputOffset(0x800000), -1);
 });
 
-test("fromOutputOffset - sa1rom mapping", t => {
+test("fromOutputOffset - sa1rom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "sa1rom";
 
   // Setup SA-1 banks
-  assembler.targetState.sa1Banks = [0x000000, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000];
+  assembler.targetState.sa1Banks = [
+    0x000000, 0x100000, 0x200000, 0x300000, 0x400000, 0x500000, 0x600000, 0x700000,
+  ];
 
   // Test each bank mapping
   t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x008000);
@@ -2222,69 +2326,69 @@ test("fromOutputOffset - sa1rom mapping", t => {
   t.is(assembler.outputWriter.fromOutputOffset(0x200000), 0x408000);
   t.is(assembler.outputWriter.fromOutputOffset(0x300000), 0x608000);
   t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0x808000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x500000), 0xA08000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x600000), 0xC08000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x700000), 0xE08000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x500000), 0xa08000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x600000), 0xc08000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x700000), 0xe08000);
 
   // Invalid address (not matching any bank)
   t.is(assembler.outputWriter.fromOutputOffset(0x800000), -1);
 });
 
-test("fromOutputOffset - bigsa1rom mapping", t => {
+test("fromOutputOffset - bigsa1rom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "bigsa1rom";
 
   // Valid addresses in different regions
   // First 2MB region (000000-1FFFFF)
   t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x008000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x007FFF), 0x00FFFF);
-  t.is(assembler.outputWriter.fromOutputOffset(0x1FFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x007fff), 0x00ffff);
+  t.is(assembler.outputWriter.fromOutputOffset(0x1fffff), 0x3fffff);
 
   // Second 2MB region (200000-3FFFFF)
   t.is(assembler.outputWriter.fromOutputOffset(0x200000), 0x808000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x207FFF), 0x80FFFF);
-  t.is(assembler.outputWriter.fromOutputOffset(0x3FFFFF), 0xBFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x207fff), 0x80ffff);
+  t.is(assembler.outputWriter.fromOutputOffset(0x3fffff), 0xbfffff);
 
   // Third 4MB region (400000-7FFFFF)
-  t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0xC00000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x500000), 0xD00000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x7FFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x400000), 0xc00000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x500000), 0xd00000);
+  t.is(assembler.outputWriter.fromOutputOffset(0x7fffff), 0xffffff);
 
   // Invalid address (too large)
   t.is(assembler.outputWriter.fromOutputOffset(0x800000), -1);
 });
 
-test("fromOutputOffset - sfxrom mapping", t => {
+test("fromOutputOffset - sfxrom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "sfxrom";
 
   // Valid addresses
   t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x008000);
-  t.is(assembler.outputWriter.fromOutputOffset(0x007FFF), 0x00FFFF);
-  t.is(assembler.outputWriter.fromOutputOffset(0x1FFFFF), 0x3FFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0x007fff), 0x00ffff);
+  t.is(assembler.outputWriter.fromOutputOffset(0x1fffff), 0x3fffff);
 
   // Invalid address (too large)
   t.is(assembler.outputWriter.fromOutputOffset(0x200000), -1);
 });
 
-test("fromOutputOffset - norom mapping", t => {
+test("fromOutputOffset - norom mapping", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged
   t.is(assembler.outputWriter.fromOutputOffset(0x000000), 0x000000);
   t.is(assembler.outputWriter.fromOutputOffset(0x123456), 0x123456);
-  t.is(assembler.outputWriter.fromOutputOffset(0xFFFFFF), 0xFFFFFF);
+  t.is(assembler.outputWriter.fromOutputOffset(0xffffff), 0xffffff);
 });
 
-test("fromOutputOffset - negative input", t => {
+test("fromOutputOffset - negative input", (t) => {
   const assembler = new Assembler();
 
   // Negative input should always return -1
   t.is(assembler.outputWriter.fromOutputOffset(-1), -1);
 });
 
-test("fromOutputOffset - no mapper set", t => {
+test("fromOutputOffset - no mapper set", (t) => {
   const assembler = new Assembler();
   // Explicitly set mapper to undefined to ensure we're testing the default behavior
   assembler.targetState.mapper = undefined;
@@ -2292,14 +2396,14 @@ test("fromOutputOffset - no mapper set", t => {
   // When no mapper is set, fromOutputOffset should return -1 for any address
   t.is(assembler.outputWriter.fromOutputOffset(0x000000), -1);
   t.is(assembler.outputWriter.fromOutputOffset(0x123456), -1);
-  t.is(assembler.outputWriter.fromOutputOffset(0xFFFFFF), -1);
+  t.is(assembler.outputWriter.fromOutputOffset(0xffffff), -1);
 
   // Test with a few more addresses to be thorough
   t.is(assembler.outputWriter.fromOutputOffset(0x008000), -1);
   t.is(assembler.outputWriter.fromOutputOffset(0x400000), -1);
 });
 
-test("verifyLogicalPosition - valid positions", t => {
+test("verifyLogicalPosition - valid positions", (t) => {
   const assembler = new Assembler();
 
   // Set valid SNES positions
@@ -2319,7 +2423,7 @@ test("verifyLogicalPosition - valid positions", t => {
   t.is(assembler.currentTargetBaseAddress, 0x018000);
 });
 
-test("verifyLogicalPosition - negative currentTargetAddress", t => {
+test("verifyLogicalPosition - negative currentTargetAddress", (t) => {
   const assembler = new Assembler();
 
   // Set negative currentTargetAddress
@@ -2334,7 +2438,7 @@ test("verifyLogicalPosition - negative currentTargetAddress", t => {
   t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
-test("verifyLogicalPosition - negative currentTargetBaseAddress", t => {
+test("verifyLogicalPosition - negative currentTargetBaseAddress", (t) => {
   const assembler = new Assembler();
 
   // Set negative currentTargetBaseAddress
@@ -2349,7 +2453,7 @@ test("verifyLogicalPosition - negative currentTargetBaseAddress", t => {
   t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
-test("verifyLogicalPosition - both positions negative", t => {
+test("verifyLogicalPosition - both positions negative", (t) => {
   const assembler = new Assembler();
 
   // Set both positions negative
@@ -2364,7 +2468,7 @@ test("verifyLogicalPosition - both positions negative", t => {
   t.is(assembler.currentTargetBaseStartAddress, 0x008000);
 });
 
-test("advanceLogicalAddress - no bank crossing", t => {
+test("advanceLogicalAddress - no bank crossing", (t) => {
   const assembler = new Assembler();
 
   // When there's no bank crossing, advanceLogicalAddress should just return the new address
@@ -2373,114 +2477,117 @@ test("advanceLogicalAddress - no bank crossing", t => {
   // Test with lorom mapper
   assembler.targetState.mapper = "lorom";
   t.is(assembler.outputWriter.advanceLogicalAddress(0x008000, 0x100), 0x008100);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FF00, 0x10), 0x00FF10);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ff00, 0x10), 0x00ff10);
 
   // Test with hirom mapper
   assembler.targetState.mapper = "hirom";
   t.is(assembler.outputWriter.advanceLogicalAddress(0x408000, 0x100), 0x408100);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0xC08000, 0x100), 0xC08100);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0xc08000, 0x100), 0xc08100);
 
   // Test with norom mapper
   assembler.targetState.mapper = "norom";
   t.is(assembler.outputWriter.advanceLogicalAddress(0x123456, 0x100), 0x123556);
 });
 
-test("advanceLogicalAddress - lorom bank crossing", t => {
+test("advanceLogicalAddress - lorom bank crossing", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
 
   // Default check bankcross is on: pc() stays linear, $00FFFF + 1 is $010000.
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x01FFFF, 1), 0x020000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x7FFFFF, 1), 0x800000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x01ffff, 1), 0x020000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x7fffff, 1), 0x800000);
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FF00, 0x200), 0x010100);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ff00, 0x200), 0x010100);
 
   assembler.targetState.bankCrossMode = "off";
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x018000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1), 0x018000);
 });
 
-test("advanceLogicalAddress - hirom bank crossing", t => {
+test("advanceLogicalAddress - hirom bank crossing", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "hirom";
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x3FFFFF, 1), 0x400000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x3fffff, 1), 0x400000);
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x40FFFF, 1), 0x410000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0xC0FFFF, 1), 0xC10000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x40ffff, 1), 0x410000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0xc0ffff, 1), 0xc10000);
 });
 
-test("advanceLogicalAddress - exlorom and bigsa1rom bank crossing", t => {
+test("advanceLogicalAddress - exlorom and bigsa1rom bank crossing", (t) => {
   const assembler = new Assembler();
 
   assembler.targetState.mapper = "exlorom";
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x80FFFF, 1), 0x810000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x80ffff, 1), 0x810000);
 
   assembler.targetState.mapper = "bigsa1rom";
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1), 0x010000);
 });
 
-test("advanceLogicalAddress - exhirom bank crossing", t => {
+test("advanceLogicalAddress - exhirom bank crossing", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "exhirom";
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x3FFFFF, 1), 0x400000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x3fffff, 1), 0x400000);
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x40FFFF, 1), 0x410000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0xC0FFFF, 1), 0xC10000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x40ffff, 1), 0x410000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0xc0ffff, 1), 0xc10000);
 });
 
-test("advanceLogicalAddress - sfxrom bank crossing", t => {
+test("advanceLogicalAddress - sfxrom bank crossing", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "sfxrom";
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x3FFFFF, 1), 0x400000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x3fffff, 1), 0x400000);
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x40FFFF, 1), 0x410000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x40ffff, 1), 0x410000);
 });
 
-test("advanceLogicalAddress - sa1rom bank crossing", t => {
+test("advanceLogicalAddress - sa1rom bank crossing", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "sa1rom";
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x3FFFFF, 1), 0x400000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x3fffff, 1), 0x400000);
 
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x40FFFF, 1), 0x410000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x40ffff, 1), 0x410000);
 });
 
-test("advanceLogicalAddress - norom bank crossing", t => {
+test("advanceLogicalAddress - norom bank crossing", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "norom";
 
   // In norom mode, addresses are passed through unchanged, even when crossing banks
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1), 0x010000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0xFFFFFF, 1), 0x1000000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1), 0x010000);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0xffffff, 1), 0x1000000);
 });
 
-test("advanceLogicalAddress - unknown mapper", t => {
+test("advanceLogicalAddress - unknown mapper", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "unknownmapper";
 
   // Should throw an error for unknown mapper types
-  t.throws(() => {
-    assembler.outputWriter.advanceLogicalAddress(0x00FFFF, 1);
-  }, { message: "Unknown mapper type: unknownmapper" });
+  t.throws(
+    () => {
+      assembler.outputWriter.advanceLogicalAddress(0x00ffff, 1);
+    },
+    { message: "Unknown mapper type: unknownmapper" },
+  );
 });
 
-test("advanceLogicalAddress - default step parameter", t => {
+test("advanceLogicalAddress - default step parameter", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
 
   // When step is not provided, it should default to 0
   t.is(assembler.outputWriter.advanceLogicalAddress(0x008000), 0x008000);
-  t.is(assembler.outputWriter.advanceLogicalAddress(0x00FFFF), 0x00FFFF);
+  t.is(assembler.outputWriter.advanceLogicalAddress(0x00ffff), 0x00ffff);
 });
 
-test("resolvedefines - basic define replacement", t => {
+test("resolvedefines - basic define replacement", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("TEST", "42");
   assembler.defines.set("FOO", "bar");
@@ -2493,7 +2600,7 @@ test("resolvedefines - basic define replacement", t => {
   t.is(assembler.resolvedefines("!(1+2)"), "!(1+2)");
 });
 
-test("resolvedefines - not equal operator", t => {
+test("resolvedefines - not equal operator", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   assembler.defines.set("TEST", "42");
@@ -2514,7 +2621,7 @@ test("resolvedefines - not equal operator", t => {
   t.is(assembler.resolvedefines("(!TEST != !MIN) && (!MAX != 50)"), "(42!=10) && (100!=50)");
 });
 
-test("resolvedefines - escaped defines", t => {
+test("resolvedefines - escaped defines", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("TEST", "42");
 
@@ -2523,7 +2630,7 @@ test("resolvedefines - escaped defines", t => {
   t.is(assembler.resolvedefines("\\\\!TEST"), "\\42");
 });
 
-test("resolvedefines - double backslash handling", t => {
+test("resolvedefines - double backslash handling", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("TEST", "42");
 
@@ -2532,7 +2639,7 @@ test("resolvedefines - double backslash handling", t => {
   t.is(assembler.resolvedefines("Path\\\\folder\\\\!TEST"), "Path\\folder\\42");
 });
 
-test("resolvedefines - curly brace syntax", t => {
+test("resolvedefines - curly brace syntax", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   assembler.defines.set("TEST", "42");
@@ -2544,7 +2651,7 @@ test("resolvedefines - curly brace syntax", t => {
   t.is(assembler.resolvedefines("prefix!{FOO_BAR}suffix"), "prefixbazsuffix");
 });
 
-test("resolvedefines - nested defines", t => {
+test("resolvedefines - nested defines", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("INNER", "value");
   assembler.defines.set("OUTER", "!INNER");
@@ -2564,7 +2671,7 @@ test("resolvedefines - nested defines", t => {
   // t.is(assembler.resolvedefines("Nested curly: !{DOUBLE_CURLY}"), "Nested curly: curly_value");
 });
 
-test("resolvedefines - sizeof and objectsize special cases", t => {
+test("resolvedefines - sizeof and objectsize special cases", (t) => {
   const assembler = new Assembler();
 
   t.is(assembler.resolvedefines("sizeof(label)"), "sizeof(label)");
@@ -2572,14 +2679,14 @@ test("resolvedefines - sizeof and objectsize special cases", t => {
   t.is(assembler.resolvedefines("prefix_sizeof(label)"), "prefix_sizeof(label)");
 });
 
-test("resolvedefines - direct variable reference", t => {
+test("resolvedefines - direct variable reference", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("i", "42");
 
   t.is(assembler.resolvedefines("!i"), "42");
 });
 
-test("resolvedefines - loop-like variable values from defines", t => {
+test("resolvedefines - loop-like variable values from defines", (t) => {
   const assembler = new Assembler();
 
   // Use define values to mirror loop variable updates without mutating whileStatus internals.
@@ -2592,7 +2699,7 @@ test("resolvedefines - loop-like variable values from defines", t => {
   t.is(assembler.resolvedefines("!i"), "8");
 });
 
-test("resolvedefines - indirect variables in expressions", t => {
+test("resolvedefines - indirect variables in expressions", (t) => {
   const assembler = new Assembler();
 
   assembler.defines.set("i", "5");
@@ -2616,20 +2723,26 @@ test("resolvedefines - indirect variables in expressions", t => {
   t.is(assembler.resolvedefines("!i + !j == 8"), "5 + 3 == 8");
 });
 
-test("resolvedefines - undefined defines", t => {
+test("resolvedefines - undefined defines", (t) => {
   const assembler = new Assembler();
 
   // Undefined defines should throw an error
-  t.throws(() => {
-    assembler.resolvedefines("!UNDEFINED");
-  }, { message: "Define 'UNDEFINED' not found." });
+  t.throws(
+    () => {
+      assembler.resolvedefines("!UNDEFINED");
+    },
+    { message: "Define 'UNDEFINED' not found." },
+  );
 
-  t.throws(() => {
-    assembler.resolvedefines("Value: !UNDEFINED");
-  }, { message: "Define 'UNDEFINED' not found." });
+  t.throws(
+    () => {
+      assembler.resolvedefines("Value: !UNDEFINED");
+    },
+    { message: "Define 'UNDEFINED' not found." },
+  );
 });
 
-test("resolvedefines - complex expressions", t => {
+test("resolvedefines - complex expressions", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   assembler.defines.set("X", "10");
@@ -2640,7 +2753,7 @@ test("resolvedefines - complex expressions", t => {
   t.is(assembler.resolvedefines("!{X}*!{Y}"), "10*20");
 });
 
-test("evaluateExpression - basic expressions", t => {
+test("evaluateExpression - basic expressions", (t) => {
   const assembler = new Assembler();
 
   // Simple numeric expressions
@@ -2671,7 +2784,7 @@ test("evaluateExpression - basic expressions", t => {
   t.false(assembler.evaluateExpression("5 != 5"));
 });
 
-test("evaluateExpression - with defines", t => {
+test("evaluateExpression - with defines", (t) => {
   const assembler = new Assembler();
 
   // Set up some defines
@@ -2698,7 +2811,7 @@ test("evaluateExpression - with defines", t => {
   t.true(assembler.evaluateExpression("(!TRUE && !VALUE > 30) || !FALSE"));
 });
 
-test("evaluateExpression - with define-backed loop variables", t => {
+test("evaluateExpression - with define-backed loop variables", (t) => {
   const assembler = new Assembler();
 
   assembler.defines.set("i", "5");
@@ -2722,22 +2835,31 @@ test("evaluateExpression - with define-backed loop variables", t => {
   t.true(assembler.evaluateExpression("!i + !j == 8"));
 });
 
-test("evaluateExpression - error handling", t => {
+test("evaluateExpression - error handling", (t) => {
   const assembler = new Assembler();
 
   // Test with undefined define
-  t.throws(() => {
-    assembler.evaluateExpression("!UNDEFINED");
-  }, { message: /Define 'UNDEFINED' not found/ });
+  t.throws(
+    () => {
+      assembler.evaluateExpression("!UNDEFINED");
+    },
+    { message: /Define 'UNDEFINED' not found/ },
+  );
 
   // Test with syntax errors
-  t.throws(() => {
-    assembler.evaluateExpression("1 + ");
-  }, { message: /Error evaluating expression/ });
+  t.throws(
+    () => {
+      assembler.evaluateExpression("1 + ");
+    },
+    { message: /Error evaluating expression/ },
+  );
 
-  t.throws(() => {
-    assembler.evaluateExpression("(1 + 2");
-  }, { message: /Error evaluating expression/ });
+  t.throws(
+    () => {
+      assembler.evaluateExpression("(1 + 2");
+    },
+    { message: /Error evaluating expression/ },
+  );
 
   // TODO: This is a bug in mathcore.ts
   // t.throws(() => {
@@ -2745,7 +2867,7 @@ test("evaluateExpression - error handling", t => {
   // }, { message: /Error evaluating expression/ });
 });
 
-test("evaluateExpression - complex scenarios", t => {
+test("evaluateExpression - complex scenarios", (t) => {
   const assembler = new Assembler();
 
   // Set up defines and loop variables
@@ -2776,7 +2898,7 @@ test("evaluateExpression - complex scenarios", t => {
   t.true(assembler.evaluateExpression("(%110010 == !i)"));
 });
 
-test("evaluateExpression - sizeof and objectsize", t => {
+test("evaluateExpression - sizeof and objectsize", (t) => {
   const assembler = new Assembler();
   assembler.structs.set("MyStruct", {
     size: 42,
@@ -2810,7 +2932,7 @@ test("evaluateExpression - sizeof and objectsize", t => {
   t.true(assembler.evaluateExpression("objectsize(MyObject) < 30"));
 });
 
-test("setIncludePaths", t => {
+test("setIncludePaths", (t) => {
   const assembler = new Assembler();
 
   // Test setting include paths
@@ -2830,7 +2952,7 @@ test("setIncludePaths", t => {
   t.deepEqual(assembler.includePaths, singlePath);
 });
 
-test("handleIncbin", t => {
+test("handleIncbin", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
 
@@ -2852,72 +2974,106 @@ test("handleIncbin", t => {
   };
 
   // Test basic incbin
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-  }, ["incbin", "testfile.bin"]);
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+    },
+    ["incbin", "testfile.bin"],
+  );
   t.deepEqual(writtenBytes, Array.from(mockData), "Basic incbin should write all bytes");
 
   // Test with range using ".." syntax
   writtenBytes.length = 0;
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-  }, ["incbin", "testfile.bin:2..5"]);
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+    },
+    ["incbin", "testfile.bin:2..5"],
+  );
   t.deepEqual(writtenBytes, [0x03, 0x04, 0x05], "Range with .. syntax should work");
 
   // Preserve spaced math expressions that have already been tokenized.
   writtenBytes.length = 0;
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-  }, ["incbin", "testfile.bin:(000", "*", "2)..(003", "*", "2)"]);
-  t.deepEqual(writtenBytes, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06], "Range math with spaces should work");
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+    },
+    ["incbin", "testfile.bin:(000", "*", "2)..(003", "*", "2)"],
+  );
+  t.deepEqual(
+    writtenBytes,
+    [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+    "Range math with spaces should work",
+  );
 
   // 0 should be treated as EOF
   writtenBytes.length = 0;
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-  }, ["incbin", "testfile.bin:2..0"]);
-  t.deepEqual(writtenBytes, [0x03, 0x04, 0x05, 0x06, 0x07, 0x08], "Range with .. syntax should work");
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+    },
+    ["incbin", "testfile.bin:2..0"],
+  );
+  t.deepEqual(
+    writtenBytes,
+    [0x03, 0x04, 0x05, 0x06, 0x07, 0x08],
+    "Range with .. syntax should work",
+  );
 
   // Test with range using "-" syntax (deprecated)
   writtenBytes.length = 0;
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-  }, ["incbin", "testfile.bin:1-4"]);
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+    },
+    ["incbin", "testfile.bin:1-4"],
+  );
   t.deepEqual(writtenBytes, [0x02, 0x03, 0x04], "Range with - syntax should work");
 
   // Test with quoted filename
   writtenBytes.length = 0;
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver
-  }, ["incbin", '"testfile.bin"']);
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+    },
+    ["incbin", '"testfile.bin"'],
+  );
   t.deepEqual(writtenBytes, Array.from(mockData), "Quoted filename should work");
 
   // Test with arrow syntax and numeric address
   writtenBytes.length = 0;
   assembler.directiveRuntime.handlePushPC = () => {}; // Mock
   assembler.directiveRuntime.handlePullPC = () => {}; // Mock
-  assembler.operandResolver.getnum = (val) => parseInt((typeof val === "string" ? val : "").replace("$", ""), 16); // Mock
+  assembler.operandResolver.getnum = (val) =>
+    parseInt((typeof val === "string" ? val : "").replace("$", ""), 16); // Mock
   assembler.addAddressToLine = () => {}; // Mock
 
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-    runtime: assembler.directiveRuntime,
-  }, ["incbin", "testfile.bin", "->", "$1000"]);
-  t.is(assembler.currentTargetAddress, 0x1000 + mockData.length, "Arrow syntax with numeric address should set position");
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+      runtime: assembler.directiveRuntime,
+    },
+    ["incbin", "testfile.bin", "->", "$1000"],
+  );
+  t.is(
+    assembler.currentTargetAddress,
+    0x1000 + mockData.length,
+    "Arrow syntax with numeric address should set position",
+  );
 
   // Test with arrow syntax and label (pass 0)
   writtenBytes.length = 0;
@@ -2926,35 +3082,46 @@ test("handleIncbin", t => {
     t.is(label, "TestLabel", "Label should be set correctly");
   });
 
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-    runtime: assembler.directiveRuntime,
-  }, ["incbin", "testfile.bin", "->", "TestLabel"]);
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+      runtime: assembler.directiveRuntime,
+    },
+    ["incbin", "testfile.bin", "->", "TestLabel"],
+  );
   t.is(writtenBytes.length, 8, "Bytes should be written on pass 0");
 
   // Test with arrow syntax and label (pass 1)
   writtenBytes.length = 0;
   assembler.activateStage("resolveLayout");
-  const getLabelValueStub = sinon.stub(assembler.symbolScope, "getLabelValue").callsFake((label) => {
-    t.is(label, "TestLabel", "Label should be looked up correctly");
-    return 0x2000;
-  });
+  const getLabelValueStub = sinon
+    .stub(assembler.symbolScope, "getLabelValue")
+    .callsFake((label) => {
+      t.is(label, "TestLabel", "Label should be looked up correctly");
+      return 0x2000;
+    });
 
-  handleIncbin({
-    session: assembler,
-    includeSource: assembler.includeSource,
-    operandResolver: assembler.operandResolver,
-    runtime: assembler.directiveRuntime,
-  }, ["incbin", "testfile.bin", "->", "TestLabel"]);
-  t.is(assembler.currentTargetAddress, 0x2000 + mockData.length, "Arrow syntax with label should set position");
+  handleIncbin(
+    {
+      session: assembler,
+      includeSource: assembler.includeSource,
+      operandResolver: assembler.operandResolver,
+      runtime: assembler.directiveRuntime,
+    },
+    ["incbin", "testfile.bin", "->", "TestLabel"],
+  );
+  t.is(
+    assembler.currentTargetAddress,
+    0x2000 + mockData.length,
+    "Arrow syntax with label should set position",
+  );
   setLabelStub.restore();
   getLabelValueStub.restore();
+});
 
-})
-
-test("handleIncbin - error handling", t => {
+test("handleIncbin - error handling", (t) => {
   const assembler = new Assembler();
 
   // Mock the readFile method
@@ -2975,58 +3142,100 @@ test("handleIncbin - error handling", t => {
   };
 
   // Test with invalid range specification
-  t.throws(() => {
-    handleIncbin({
-      session: assembler,
-      includeSource: assembler.includeSource,
-      operandResolver: assembler.operandResolver,
-    }, ["incbin", "testfile.bin:invalid"]);
-  }, { message: /Invalid range specification/ }, "Invalid range should throw error");
+  t.throws(
+    () => {
+      handleIncbin(
+        {
+          session: assembler,
+          includeSource: assembler.includeSource,
+          operandResolver: assembler.operandResolver,
+        },
+        ["incbin", "testfile.bin:invalid"],
+      );
+    },
+    { message: /Invalid range specification/ },
+    "Invalid range should throw error",
+  );
 
   // Test with missing file
-  t.throws(() => {
-    handleIncbin({
-      session: assembler,
-      includeSource: assembler.includeSource,
-      operandResolver: assembler.operandResolver,
-    }, ["incbin", "nonexistent.bin"]);
-  }, { message: /Failed to read file/ }, "Missing file should throw error");
+  t.throws(
+    () => {
+      handleIncbin(
+        {
+          session: assembler,
+          includeSource: assembler.includeSource,
+          operandResolver: assembler.operandResolver,
+        },
+        ["incbin", "nonexistent.bin"],
+      );
+    },
+    { message: /Failed to read file/ },
+    "Missing file should throw error",
+  );
 
   // Test with arrow syntax but missing target
-  t.throws(() => {
-    handleIncbin({
-      session: assembler,
-      includeSource: assembler.includeSource,
-      operandResolver: assembler.operandResolver,
-    }, ["incbin", "testfile.bin", "->"]);
-  }, { message: /requires a target location/ }, "Missing target should throw error");
+  t.throws(
+    () => {
+      handleIncbin(
+        {
+          session: assembler,
+          includeSource: assembler.includeSource,
+          operandResolver: assembler.operandResolver,
+        },
+        ["incbin", "testfile.bin", "->"],
+      );
+    },
+    { message: /requires a target location/ },
+    "Missing target should throw error",
+  );
 
   // Test with missing parts
-  t.throws(() => {
-    handleIncbin({
-      session: assembler,
-      includeSource: assembler.includeSource,
-      operandResolver: assembler.operandResolver,
-    }, ["incbin", "testfile.bin:5.."]);
-  }, { message: /Invalid range specification/ }, "Invalid range should throw error");
+  t.throws(
+    () => {
+      handleIncbin(
+        {
+          session: assembler,
+          includeSource: assembler.includeSource,
+          operandResolver: assembler.operandResolver,
+        },
+        ["incbin", "testfile.bin:5.."],
+      );
+    },
+    { message: /Invalid range specification/ },
+    "Invalid range should throw error",
+  );
 
   // Test with range start > end
-  t.throws(() => {
-    handleIncbin({
-      session: assembler,
-      includeSource: assembler.includeSource,
-      operandResolver: assembler.operandResolver,
-    }, ["incbin", "testfile.bin:5..2"]);
-  }, { message: /Start offset 5 out of bounds for file/ }, "Invalid range should throw error");
+  t.throws(
+    () => {
+      handleIncbin(
+        {
+          session: assembler,
+          includeSource: assembler.includeSource,
+          operandResolver: assembler.operandResolver,
+        },
+        ["incbin", "testfile.bin:5..2"],
+      );
+    },
+    { message: /Start offset 5 out of bounds for file/ },
+    "Invalid range should throw error",
+  );
 
   // Test with out of bounds range
-  t.throws(() => {
-    handleIncbin({
-      session: assembler,
-      includeSource: assembler.includeSource,
-      operandResolver: assembler.operandResolver,
-    }, ["incbin", "testfile.bin:0..100"]);
-  }, { message: /End offset 100 out of bounds for file/ }, "Out of bounds range should throw error");
+  t.throws(
+    () => {
+      handleIncbin(
+        {
+          session: assembler,
+          includeSource: assembler.includeSource,
+          operandResolver: assembler.operandResolver,
+        },
+        ["incbin", "testfile.bin:0..100"],
+      );
+    },
+    { message: /End offset 100 out of bounds for file/ },
+    "Out of bounds range should throw error",
+  );
 });
 
 test("evaluateRangeExpression", (t) => {
@@ -3043,7 +3252,11 @@ test("evaluateRangeExpression", (t) => {
   t.is(assembler.evaluateRangeExpression("  5+3  "), 8, "Should handle whitespace");
 
   // Test fallback to static label when math fails
-  t.is(assembler.evaluateRangeExpression("VALID_LABEL"), 8, "Should resolve static label when math fails");
+  t.is(
+    assembler.evaluateRangeExpression("VALID_LABEL"),
+    8,
+    "Should resolve static label when math fails",
+  );
 
   // TODO: This is a maybe bug in evaluateRangeExpression, we expect this to throw an error, but dynamic labels seem fine.
   // Test error cases
@@ -3066,8 +3279,8 @@ test("resolveStructLabel", (t) => {
       ["x", 0],
       ["y", 2],
       ["z", 4],
-      ["data", 6]
-    ])
+      ["data", 6],
+    ]),
   };
   assembler.structs.set("BasicStruct", basicStruct);
 
@@ -3081,8 +3294,8 @@ test("resolveStructLabel", (t) => {
     labels: new Map([
       ["index", 0],
       ["value", 2],
-      ["flag", 8]
-    ])
+      ["flag", 8],
+    ]),
   };
   assembler.structs.set("ArrayStruct", arrayStruct);
 
@@ -3096,8 +3309,8 @@ test("resolveStructLabel", (t) => {
     labels: new Map([
       ["id", 0],
       ["name", 2],
-      ["type", 10]
-    ])
+      ["type", 10],
+    ]),
   };
   assembler.structs.set("ParentStruct", parentStruct);
 
@@ -3111,8 +3324,8 @@ test("resolveStructLabel", (t) => {
     extensionSize: 0,
     labels: new Map([
       ["extra", 0],
-      ["data", 4]
-    ])
+      ["data", 4],
+    ]),
   };
   assembler.structs.set("ExtensionStruct", extensionStruct);
   assembler.structs.set("ParentStruct.ExtensionStruct", extensionStruct);
@@ -3121,106 +3334,118 @@ test("resolveStructLabel", (t) => {
   t.is(
     assembler.structEngine.resolveStructLabel("BasicStruct"),
     0x1000,
-    "Should return base address for direct struct reference"
+    "Should return base address for direct struct reference",
   );
 
   // Test 2: Basic struct member reference
   t.is(
     assembler.structEngine.resolveStructLabel("BasicStruct.x"),
     0x1000,
-    "Should resolve basic struct member"
+    "Should resolve basic struct member",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("BasicStruct.y"),
     0x1002,
-    "Should resolve basic struct member with offset"
+    "Should resolve basic struct member with offset",
   );
 
   // Test 3: Array indexing
   t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[0]"),
     0x2000,
-    "Should resolve array struct with index 0"
+    "Should resolve array struct with index 0",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[1]"),
-    0x200A,
-    "Should resolve array struct with index 1"
+    0x200a,
+    "Should resolve array struct with index 1",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[$01]"),
-    0x200A,
-    "Should resolve array struct with a hex index"
+    0x200a,
+    "Should resolve array struct with a hex index",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[$01].value"),
-    0x200C,
-    "Should resolve hex-indexed struct members"
+    0x200c,
+    "Should resolve hex-indexed struct members",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[2]"),
     0x2014,
-    "Should resolve array struct member with index"
+    "Should resolve array struct member with index",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[2].value"),
     0x2016,
-    "Should resolve array struct member with index"
+    "Should resolve array struct member with index",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[-1]"),
-    0x1FF6,
-    "Should resolve array struct bases with negative indices"
+    0x1ff6,
+    "Should resolve array struct bases with negative indices",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ArrayStruct[-1].value"),
-    0x1FF8,
-    "Should resolve array struct members with negative indices"
+    0x1ff8,
+    "Should resolve array struct members with negative indices",
   );
 
   // Test 4: Extension struct
   t.is(
     assembler.structEngine.resolveStructLabel("ExtensionStruct"),
     0x3000,
-    "Should return base address for extension struct"
+    "Should return base address for extension struct",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ExtensionStruct.extra"),
-    0x300C,
-    "Should resolve extension struct member with parent size offset"
+    0x300c,
+    "Should resolve extension struct member with parent size offset",
   );
 
   // Test 5: Array indexing with extension struct
   t.is(
     assembler.structEngine.resolveStructLabel("ExtensionStruct[1].data"),
     0x3018, // Updated from 0x301C to 0x3018 to match calculation: 0x3000 + 12 + (1 * 8) + 4
-    "Should resolve extension struct array member with correct offset"
+    "Should resolve extension struct array member with correct offset",
   );
 
   // Test 6: Nested member access
   t.is(
     assembler.structEngine.resolveStructLabel("ParentStruct.ExtensionStruct.data"),
     0x3010,
-    "Should resolve nested struct member reference"
+    "Should resolve nested struct member reference",
   );
   t.is(
     assembler.structEngine.resolveStructLabel("ParentStruct[1].ExtensionStruct.data"),
     0x3024,
-    "Should resolve extension members through a parent array element"
+    "Should resolve extension members through a parent array element",
   );
 
   // Test 7: Error cases
-  t.throws(() => {
-    assembler.structEngine.resolveStructLabel("NonExistentStruct");
-  }, { message: /Struct not defined in reference/ }, "Should throw for non-existent struct");
+  t.throws(
+    () => {
+      assembler.structEngine.resolveStructLabel("NonExistentStruct");
+    },
+    { message: /Struct not defined in reference/ },
+    "Should throw for non-existent struct",
+  );
 
-  t.throws(() => {
-    assembler.structEngine.resolveStructLabel("BasicStruct.nonexistent");
-  }, { message: /Member 'nonexistent' not defined in struct/ }, "Should throw for non-existent member");
+  t.throws(
+    () => {
+      assembler.structEngine.resolveStructLabel("BasicStruct.nonexistent");
+    },
+    { message: /Member 'nonexistent' not defined in struct/ },
+    "Should throw for non-existent member",
+  );
 
-  t.throws(() => {
-    assembler.structEngine.resolveStructLabel("ExtensionStruct.nonexistent");
-  }, { message: /Member 'nonexistent' not defined in struct/ }, "Should throw for non-existent extension member");
+  t.throws(
+    () => {
+      assembler.structEngine.resolveStructLabel("ExtensionStruct.nonexistent");
+    },
+    { message: /Member 'nonexistent' not defined in struct/ },
+    "Should throw for non-existent extension member",
+  );
 
   // Test 8: Complex array indexing with extra member
   const complexStruct = {
@@ -3233,15 +3458,15 @@ test("resolveStructLabel", (t) => {
       ["header", 0],
       ["subitem_x", 4],
       ["subitem_y", 8],
-      ["footer", 16]
-    ])
+      ["footer", 16],
+    ]),
   };
   assembler.structs.set("ComplexStruct", complexStruct);
 
   t.is(
     assembler.structEngine.resolveStructLabel("ComplexStruct[3].subitem_x"),
     0x4040, // Updated from 0x4064 to 0x4040 to match size 20 math: 0x4000 + (3 * 20) + 4
-    "Should resolve complex nested member with array index"
+    "Should resolve complex nested member with array index",
   );
 
   // Test 9: Missing parent for extension
@@ -3252,18 +3477,20 @@ test("resolveStructLabel", (t) => {
     size: 4,
     offset: 4,
     extensionSize: 0,
-    labels: new Map([
-      ["data", 0]
-    ])
+    labels: new Map([["data", 0]]),
   };
   assembler.structs.set("OrphanExtension", orphanExtension);
 
-  t.throws(() => {
-    assembler.structEngine.resolveStructLabel("OrphanExtension.data");
-  }, { message: /Parent struct 'MissingParent' not defined for extension/ }, "Should throw when parent struct is missing");
+  t.throws(
+    () => {
+      assembler.structEngine.resolveStructLabel("OrphanExtension.data");
+    },
+    { message: /Parent struct 'MissingParent' not defined for extension/ },
+    "Should throw when parent struct is missing",
+  );
 });
 
-test("hasStructReference distinguishes pure references from struct arithmetic", t => {
+test("hasStructReference distinguishes pure references from struct arithmetic", (t) => {
   const assembler = new Assembler();
   assembler.structs.set("obj", {
     name: "obj",
@@ -3299,7 +3526,7 @@ test("resolveStructMember supports negative indices", (t) => {
   t.is(assembler.symbolScope.resolveStructMember("Task[-1].state"), -14);
 });
 
-test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
+test("resolveStructLabel - handles extensions with maxExtensionSize", (t) => {
   const assembler = new Assembler();
 
   // Set up a parent struct
@@ -3312,8 +3539,8 @@ test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
     extensionSize: 12,
     labels: new Map([
       ["header", 0],
-      ["data", 4]
-    ])
+      ["data", 4],
+    ]),
   };
   assembler.structs.set("ParentStruct", parentStruct);
 
@@ -3321,27 +3548,25 @@ test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
   const smallExtension = {
     name: "ParentStruct.SmallExt",
     parent: "ParentStruct",
-    base: 0x600A, // Base + size of parent
+    base: 0x600a, // Base + size of parent
     size: 6,
     offset: 6,
     extensionSize: 0,
-    labels: new Map([
-      ["extra", 0]
-    ])
+    labels: new Map([["extra", 0]]),
   };
   assembler.structs.set("ParentStruct.SmallExt", smallExtension);
 
   const largeExtension = {
     name: "ParentStruct.LargeExt",
     parent: "ParentStruct",
-    base: 0x600A, // Base + size of parent
+    base: 0x600a, // Base + size of parent
     size: 12,
     offset: 12,
     extensionSize: 0,
     labels: new Map([
       ["moreData", 0],
-      ["evenMore", 8]
-    ])
+      ["evenMore", 8],
+    ]),
   };
   assembler.structs.set("ParentStruct.LargeExt", largeExtension);
 
@@ -3349,47 +3574,47 @@ test("resolveStructLabel - handles extensions with maxExtensionSize", t => {
   t.is(
     assembler.structEngine.resolveStructLabel("ParentStruct"),
     0x6000,
-    "Should return the base address of the parent struct"
+    "Should return the base address of the parent struct",
   );
 
   // Test array indexing with parent struct (should account for alignment and largest extension)
   // Effective size = 12 (aligned parent size) + 12 (largest extension) = 24
   t.is(
     assembler.structEngine.resolveStructLabel("ParentStruct[2]"),
-    0x6000 + (2 * 24),
-    "Should account for alignment and largest extension when calculating array index"
+    0x6000 + 2 * 24,
+    "Should account for alignment and largest extension when calculating array index",
   );
 
   // Test accessing the extension directly
   t.is(
     assembler.structEngine.resolveStructLabel("ParentStruct.LargeExt"),
-    0x600A,
-    "Should return the base address of the extension"
+    0x600a,
+    "Should return the base address of the extension",
   );
 
   // Test array indexing with extension
   t.is(
     assembler.structEngine.resolveStructLabel("ParentStruct.LargeExt[3]"),
-    0x600A + (3 * 12),
-    "Should calculate the correct array index for extension"
+    0x600a + 3 * 12,
+    "Should calculate the correct array index for extension",
   );
 
   // Test accessing a member of the extension
   t.is(
     assembler.structEngine.resolveStructLabel("ParentStruct.LargeExt.evenMore"),
     0x6000 + 12 + 8, // Updated to use correct calculation: parent base (0x6000) + parent aligned size (12) + member offset (8)
-    "Should return the correct address for extension member"
+    "Should return the correct address for extension member",
   );
 
   // Test array indexing with extension member
   t.is(
     assembler.structEngine.resolveStructLabel("ParentStruct.LargeExt[2].evenMore"),
-    0x6000 + 12 + (2 * 12) + 8, // Parent base + aligned parent size + (index * extension size) + member offset
-    "Should calculate the correct array index for extension member"
+    0x6000 + 12 + 2 * 12 + 8, // Parent base + aligned parent size + (index * extension size) + member offset
+    "Should calculate the correct array index for extension member",
   );
 });
 
-test("handleEndStruct - basic struct definition", t => {
+test("handleEndStruct - basic struct definition", (t) => {
   const assembler = new Assembler();
 
   // Set up a struct context
@@ -3397,12 +3622,12 @@ test("handleEndStruct - basic struct definition", t => {
     name: "BasicStruct",
     base: 0x7000,
     offset: 16, // Simulating a struct with 16 bytes of members
-    size: 0,    // Will be set by handleEndStruct
+    size: 0, // Will be set by handleEndStruct
     extensionSize: 0,
     labels: new Map([
       ["member1", 0],
-      ["member2", 8]
-    ])
+      ["member2", 8],
+    ]),
   };
 
   // Save the current PC
@@ -3427,7 +3652,7 @@ test("handleEndStruct - basic struct definition", t => {
   t.is(assembler.currentStruct, null, "currentStruct should be cleared");
 });
 
-test("handleEndStruct - with alignment", t => {
+test("handleEndStruct - with alignment", (t) => {
   const assembler = new Assembler();
 
   // Set up a struct context
@@ -3435,12 +3660,12 @@ test("handleEndStruct - with alignment", t => {
     name: "AlignedStruct",
     base: 0x7000,
     offset: 10, // 10 bytes of members
-    size: 0,    // Will be set by handleEndStruct
+    size: 0, // Will be set by handleEndStruct
     extensionSize: 0,
     labels: new Map([
       ["member1", 0],
-      ["member2", 6]
-    ])
+      ["member2", 6],
+    ]),
   };
 
   // Save the current PC
@@ -3462,7 +3687,7 @@ test("handleEndStruct - with alignment", t => {
   t.is(assembler.currentTargetAddress, 0x8000, "PC should be restored from savedPCStack");
 });
 
-test("handleEndStruct - extension struct", t => {
+test("handleEndStruct - extension struct", (t) => {
   const assembler = new Assembler();
 
   // First set up a parent struct
@@ -3474,8 +3699,8 @@ test("handleEndStruct - extension struct", t => {
     extensionSize: 0,
     labels: new Map([
       ["parentMember1", 0],
-      ["parentMember2", 10]
-    ])
+      ["parentMember2", 10],
+    ]),
   };
   assembler.structs.set("ParentStruct", parentStruct);
 
@@ -3483,14 +3708,14 @@ test("handleEndStruct - extension struct", t => {
   assembler.currentStruct = {
     name: "ExtensionStruct",
     base: 0x7000, // Same base as parent
-    offset: 12,   // 12 bytes of members in the extension
-    size: 0,      // Will be set by handleEndStruct
+    offset: 12, // 12 bytes of members in the extension
+    size: 0, // Will be set by handleEndStruct
     parent: "ParentStruct",
     extensionSize: 0,
     labels: new Map([
       ["extMember1", 0],
-      ["extMember2", 8]
-    ])
+      ["extMember2", 8],
+    ]),
   };
 
   // Save the current PC
@@ -3501,7 +3726,10 @@ test("handleEndStruct - extension struct", t => {
   assembler.structEngine.handleEndStruct(["endstruct"]);
 
   // Verify the extension struct was added to the structs map
-  t.true(assembler.structs.has("ParentStruct.ExtensionStruct"), "Extension struct should be added with combined name");
+  t.true(
+    assembler.structs.has("ParentStruct.ExtensionStruct"),
+    "Extension struct should be added with combined name",
+  );
 
   // Verify extension struct properties
   const extStruct = assembler.structs.get("ParentStruct.ExtensionStruct");
@@ -3516,7 +3744,7 @@ test("handleEndStruct - extension struct", t => {
   t.is(assembler.currentTargetAddress, 0x8000, "PC should be restored from savedPCStack");
 });
 
-test("handleEndStruct - extension struct with larger existing extension", t => {
+test("handleEndStruct - extension struct with larger existing extension", (t) => {
   const assembler = new Assembler();
 
   // First set up a parent struct with an existing extension size
@@ -3528,8 +3756,8 @@ test("handleEndStruct - extension struct with larger existing extension", t => {
     extensionSize: 16, // Existing larger extension
     labels: new Map([
       ["parentMember1", 0],
-      ["parentMember2", 10]
-    ])
+      ["parentMember2", 10],
+    ]),
   };
   assembler.structs.set("ParentStruct", parentStruct);
 
@@ -3543,8 +3771,8 @@ test("handleEndStruct - extension struct with larger existing extension", t => {
     extensionSize: 0,
     labels: new Map([
       ["extMember1", 0],
-      ["extMember2", 4]
-    ])
+      ["extMember2", 4],
+    ]),
   };
 
   // Save the current PC
@@ -3563,7 +3791,7 @@ test("handleEndStruct - extension struct with larger existing extension", t => {
   t.is(updatedParent.extensionSize, 16, "Parent should keep the size of its largest extension");
 });
 
-test("handleEndStruct - extension struct with alignment", t => {
+test("handleEndStruct - extension struct with alignment", (t) => {
   const assembler = new Assembler();
 
   // First set up a parent struct
@@ -3575,8 +3803,8 @@ test("handleEndStruct - extension struct with alignment", t => {
     extensionSize: 0,
     labels: new Map([
       ["parentMember1", 0],
-      ["parentMember2", 10]
-    ])
+      ["parentMember2", 10],
+    ]),
   };
   assembler.structs.set("ParentStruct", parentStruct);
 
@@ -3590,8 +3818,8 @@ test("handleEndStruct - extension struct with alignment", t => {
     extensionSize: 0,
     labels: new Map([
       ["extMember1", 0],
-      ["extMember2", 6]
-    ])
+      ["extMember2", 6],
+    ]),
   };
 
   // Save the current PC
@@ -3611,13 +3839,16 @@ test("handleEndStruct - extension struct with alignment", t => {
   t.is(updatedParent.extensionSize, 16, "Parent should track the aligned size of its extension");
 });
 
-test("handleEndStruct - error cases", t => {
+test("handleEndStruct - error cases", (t) => {
   const assembler = new Assembler();
 
   // Test: endstruct without being in a struct
-  t.throws(() => {
-    assembler.structEngine.handleEndStruct(["endstruct"]);
-  }, { message: "endstruct encountered but not inside a struct definition." });
+  t.throws(
+    () => {
+      assembler.structEngine.handleEndStruct(["endstruct"]);
+    },
+    { message: "endstruct encountered but not inside a struct definition." },
+  );
 
   // Set up a struct context for remaining tests
   assembler.currentStruct = {
@@ -3626,29 +3857,38 @@ test("handleEndStruct - error cases", t => {
     offset: 10,
     size: 0,
     extensionSize: 0,
-    labels: new Map()
+    labels: new Map(),
   };
 
   // Test: endstruct align without parameter
-  t.throws(() => {
-    assembler.structEngine.handleEndStruct(["endstruct", "align"]);
-  }, { message: "endstruct align requires a single alignment parameter." });
+  t.throws(
+    () => {
+      assembler.structEngine.handleEndStruct(["endstruct", "align"]);
+    },
+    { message: "endstruct align requires a single alignment parameter." },
+  );
 
   // Test: endstruct align with too many parameters
-  t.throws(() => {
-    assembler.structEngine.handleEndStruct(["endstruct", "align", "4", "extra"]);
-  }, { message: "endstruct align requires a single alignment parameter." });
+  t.throws(
+    () => {
+      assembler.structEngine.handleEndStruct(["endstruct", "align", "4", "extra"]);
+    },
+    { message: "endstruct align requires a single alignment parameter." },
+  );
 
   // Test: endstruct align with invalid alignment
-  t.throws(() => {
-    assembler.structEngine.handleEndStruct(["endstruct", "align", "0"]);
-  }, { message: "Alignment must be at least 1." });
+  t.throws(
+    () => {
+      assembler.structEngine.handleEndStruct(["endstruct", "align", "0"]);
+    },
+    { message: "Alignment must be at least 1." },
+  );
 
   // Clean up
   assembler.currentStruct = null;
 });
 
-test("handleEndStruct - multiple extensions updating parent", t => {
+test("handleEndStruct - multiple extensions updating parent", (t) => {
   const assembler = new Assembler();
 
   // First set up a parent struct
@@ -3658,9 +3898,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
     offset: 16,
     size: 16,
     extensionSize: 0,
-    labels: new Map([
-      ["baseMember", 0]
-    ])
+    labels: new Map([["baseMember", 0]]),
   };
   assembler.structs.set("BaseStruct", parentStruct);
 
@@ -3672,9 +3910,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
     size: 0,
     parent: "BaseStruct",
     extensionSize: 0,
-    labels: new Map([
-      ["firstMember", 0]
-    ])
+    labels: new Map([["firstMember", 0]]),
   };
   assembler.structEngine.handleEndStruct(["endstruct"]);
 
@@ -3690,9 +3926,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
     size: 0,
     parent: "BaseStruct",
     extensionSize: 0,
-    labels: new Map([
-      ["secondMember", 0]
-    ])
+    labels: new Map([["secondMember", 0]]),
   };
   assembler.structEngine.handleEndStruct(["endstruct"]);
 
@@ -3708,9 +3942,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
     size: 0,
     parent: "BaseStruct",
     extensionSize: 0,
-    labels: new Map([
-      ["thirdMember", 0]
-    ])
+    labels: new Map([["thirdMember", 0]]),
   };
   assembler.structEngine.handleEndStruct(["endstruct"]);
 
@@ -3719,7 +3951,7 @@ test("handleEndStruct - multiple extensions updating parent", t => {
   t.is(updatedParent.extensionSize, 12, "Parent should keep largest extension size");
 });
 
-test("handleStruct - basic struct definition", t => {
+test("handleStruct - basic struct definition", (t) => {
   const assembler = new Assembler();
 
   // Set initial PC
@@ -3740,15 +3972,27 @@ test("handleStruct - basic struct definition", t => {
   t.is(assembler.savedPCStack.length, 1, "PC should be saved to stack");
   t.is(assembler.savedPCStack[0], 0x8000, "Original PC should be saved");
   t.is(assembler.currentTargetAddress, 0x7000, "PC should be set to struct base address");
-  t.is(assembler.currentTargetStartAddress, 0x7000, "currentTargetStartAddress should be set to struct base address");
-  t.is(assembler.currentTargetBaseAddress, 0x7000, "currentTargetBaseAddress should be set to struct base address");
-  t.is(assembler.currentTargetBaseStartAddress, 0x7000, "currentTargetBaseStartAddress should be set to struct base address");
+  t.is(
+    assembler.currentTargetStartAddress,
+    0x7000,
+    "currentTargetStartAddress should be set to struct base address",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress,
+    0x7000,
+    "currentTargetBaseAddress should be set to struct base address",
+  );
+  t.is(
+    assembler.currentTargetBaseStartAddress,
+    0x7000,
+    "currentTargetBaseStartAddress should be set to struct base address",
+  );
 
   // Clean up
   assembler.currentStruct = null;
 });
 
-test("handleStruct - extension struct", t => {
+test("handleStruct - extension struct", (t) => {
   const assembler = new Assembler();
 
   // Create a parent struct first
@@ -3760,8 +4004,8 @@ test("handleStruct - extension struct", t => {
     extensionSize: 0,
     labels: new Map([
       ["header", 0],
-      ["data", 8]
-    ])
+      ["data", 8],
+    ]),
   };
   assembler.structs.set("ParentStruct", parentStruct);
 
@@ -3788,35 +4032,60 @@ test("handleStruct - extension struct", t => {
   assembler.currentStruct = null;
 });
 
-test("handleStruct - error cases", t => {
+test("handleStruct - error cases", (t) => {
   const assembler = new Assembler();
 
   // struct Name (no base) is valid per Asar; only single-word "struct" is insufficient
-  t.throws(() => {
-    assembler.structEngine.handleStruct(["struct"]);
-  }, { message: /Struct definition requires at least two parameters/ }, "Should throw for insufficient parameters");
+  t.throws(
+    () => {
+      assembler.structEngine.handleStruct(["struct"]);
+    },
+    { message: /Struct definition requires at least two parameters/ },
+    "Should throw for insufficient parameters",
+  );
 
   // Test with invalid logical address
-  t.throws(() => {
-    assembler.structEngine.handleStruct(["struct", "TestStruct", "-1"]);
-  }, { message: /Invalid logical address for struct/ }, "Should throw for negative address");
+  t.throws(
+    () => {
+      assembler.structEngine.handleStruct(["struct", "TestStruct", "-1"]);
+    },
+    { message: /Invalid logical address for struct/ },
+    "Should throw for negative address",
+  );
 
-  t.throws(() => {
-    assembler.structEngine.handleStruct(["struct", "TestStruct", "$1000000"]);
-  }, { message: /Invalid logical address for struct/ }, "Should throw for address > 0xFFFFFF");
+  t.throws(
+    () => {
+      assembler.structEngine.handleStruct(["struct", "TestStruct", "$1000000"]);
+    },
+    { message: /Invalid logical address for struct/ },
+    "Should throw for address > 0xFFFFFF",
+  );
 
   // Test with non-existent parent struct
-  t.throws(() => {
-    assembler.structEngine.handleStruct(["struct", "ChildStruct", "extends", "NonExistentParent"]);
-  }, { message: /Parent struct 'NonExistentParent' not defined/ }, "Should throw for non-existent parent");
+  t.throws(
+    () => {
+      assembler.structEngine.handleStruct([
+        "struct",
+        "ChildStruct",
+        "extends",
+        "NonExistentParent",
+      ]);
+    },
+    { message: /Parent struct 'NonExistentParent' not defined/ },
+    "Should throw for non-existent parent",
+  );
 
   // Test with missing parent name
-  t.throws(() => {
-    assembler.structEngine.handleStruct(["struct", "ChildStruct", "extends"]);
-  }, { message: /Struct extension must specify a parent struct/ }, "Should throw for missing parent name");
+  t.throws(
+    () => {
+      assembler.structEngine.handleStruct(["struct", "ChildStruct", "extends"]);
+    },
+    { message: /Struct extension must specify a parent struct/ },
+    "Should throw for missing parent name",
+  );
 });
 
-test("handleStruct and handleEndStruct - complete workflow", t => {
+test("handleStruct and handleEndStruct - complete workflow", (t) => {
   const assembler = new Assembler();
 
   // Set initial PC
@@ -3880,7 +4149,7 @@ test("handleStruct and handleEndStruct - complete workflow", t => {
   t.is(alignedStruct.align, 4, "Alignment should be stored");
 });
 
-test("handleStruct and handleEndStruct - with multiple extensions", t => {
+test("handleStruct and handleEndStruct - with multiple extensions", (t) => {
   const assembler = new Assembler();
 
   // Define base struct
@@ -3911,7 +4180,11 @@ test("handleStruct and handleEndStruct - with multiple extensions", t => {
   // Verify second extension and parent update
   t.true(assembler.structs.has("BaseStruct.Ext2"), "Second extension should be added");
   t.is(assembler.structs.get("BaseStruct.Ext2").size, 12, "Extension size should be correct");
-  t.is(assembler.structs.get("BaseStruct").extensionSize, 12, "Parent should update to larger extension");
+  t.is(
+    assembler.structs.get("BaseStruct").extensionSize,
+    12,
+    "Parent should update to larger extension",
+  );
 
   // Add third, smaller extension
   assembler.structEngine.handleStruct(["struct", "Ext3", "extends", "BaseStruct"]);
@@ -3921,10 +4194,14 @@ test("handleStruct and handleEndStruct - with multiple extensions", t => {
   // Verify third extension and parent unchanged
   t.true(assembler.structs.has("BaseStruct.Ext3"), "Third extension should be added");
   t.is(assembler.structs.get("BaseStruct.Ext3").size, 4, "Extension size should be correct");
-  t.is(assembler.structs.get("BaseStruct").extensionSize, 12, "Parent should keep largest extension size");
+  t.is(
+    assembler.structs.get("BaseStruct").extensionSize,
+    12,
+    "Parent should keep largest extension size",
+  );
 });
 
-test("handlePushPC and handlePullPC - basic functionality", t => {
+test("handlePushPC and handlePullPC - basic functionality", (t) => {
   const assembler = new Assembler();
 
   // Set initial positions
@@ -3949,10 +4226,14 @@ test("handlePushPC and handlePullPC - basic functionality", t => {
   t.is(assembler.currentTargetAddress, 0x8000, "currentTargetAddress should be restored");
   t.is(assembler.currentTargetStartAddress, 0x8000, "currentTargetStartAddress should be restored");
   t.is(assembler.currentTargetBaseAddress, 0x8000, "currentTargetBaseAddress should be restored");
-  t.is(assembler.currentTargetBaseStartAddress, 0x8000, "currentTargetBaseStartAddress should be restored");
+  t.is(
+    assembler.currentTargetBaseStartAddress,
+    0x8000,
+    "currentTargetBaseStartAddress should be restored",
+  );
 });
 
-test("handlePushPC - multiple pushes", t => {
+test("handlePushPC - multiple pushes", (t) => {
   const assembler = new Assembler();
 
   // Set initial positions
@@ -3981,14 +4262,22 @@ test("handlePushPC - multiple pushes", t => {
 
   // First pull should restore to second position
   assembler.directiveRuntime.handlePullPC();
-  t.is(assembler.currentTargetAddress, 0x2000, "currentTargetAddress should be restored to second position");
+  t.is(
+    assembler.currentTargetAddress,
+    0x2000,
+    "currentTargetAddress should be restored to second position",
+  );
 
   // Second pull should restore to first position
   assembler.directiveRuntime.handlePullPC();
-  t.is(assembler.currentTargetAddress, 0x1000, "currentTargetAddress should be restored to first position");
+  t.is(
+    assembler.currentTargetAddress,
+    0x1000,
+    "currentTargetAddress should be restored to first position",
+  );
 });
 
-test("handlePushPC - stack overflow", t => {
+test("handlePushPC - stack overflow", (t) => {
   const assembler = new Assembler();
 
   // Fill the stack to the limit (256 pushes)
@@ -3997,25 +4286,31 @@ test("handlePushPC - stack overflow", t => {
   }
 
   // Next push should throw an error
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handlePushPC();
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handlePushPC();
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, "PushPC stack overflow.");
 });
 
-test("handlePullPC - without matching push", t => {
+test("handlePullPC - without matching push", (t) => {
   const assembler = new Assembler();
 
   // Pull without push should throw an error
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handlePullPC();
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handlePullPC();
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, "PullPC without PushPC.");
 });
 
-test("handlePushPC and handlePullPC - nested operations", t => {
+test("handlePushPC and handlePullPC - nested operations", (t) => {
   const assembler = new Assembler();
 
   // Set initial positions
@@ -4065,7 +4360,7 @@ test("handlePushPC and handlePullPC - nested operations", t => {
   t.is(assembler.pushpcnum, 0, "pushpcnum should be 0 after all pulls");
 });
 
-test("handlePushPC and handlePullPC - with different position values", t => {
+test("handlePushPC and handlePullPC - with different position values", (t) => {
   const assembler = new Assembler();
 
   // Set initial positions with different values for each property
@@ -4087,13 +4382,29 @@ test("handlePushPC and handlePullPC - with different position values", t => {
   assembler.directiveRuntime.handlePullPC();
 
   // Verify each position was restored correctly
-  t.is(assembler.currentTargetAddress, 0x1000, "currentTargetAddress should be restored to original value");
-  t.is(assembler.currentTargetStartAddress, 0x1100, "currentTargetStartAddress should be restored to original value");
-  t.is(assembler.currentTargetBaseAddress, 0x1200, "currentTargetBaseAddress should be restored to original value");
-  t.is(assembler.currentTargetBaseStartAddress, 0x1300, "currentTargetBaseStartAddress should be restored to original value");
+  t.is(
+    assembler.currentTargetAddress,
+    0x1000,
+    "currentTargetAddress should be restored to original value",
+  );
+  t.is(
+    assembler.currentTargetStartAddress,
+    0x1100,
+    "currentTargetStartAddress should be restored to original value",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress,
+    0x1200,
+    "currentTargetBaseAddress should be restored to original value",
+  );
+  t.is(
+    assembler.currentTargetBaseStartAddress,
+    0x1300,
+    "currentTargetBaseStartAddress should be restored to original value",
+  );
 });
 
-test("handlePushPC and handlePullPC - pushpcnum tracking", t => {
+test("handlePushPC and handlePullPC - pushpcnum tracking", (t) => {
   const assembler = new Assembler();
 
   // Initial pushpcnum should be 0
@@ -4114,7 +4425,7 @@ test("handlePushPC and handlePullPC - pushpcnum tracking", t => {
   t.is(assembler.pushpcnum, 0, "pushpcnum should be 0 after second pull");
 });
 
-test("namespace directive handles assignment, case, and reset", t => {
+test("namespace directive handles assignment, case, and reset", (t) => {
   const assembler = new Assembler();
   t.is(assembler.currentNamespace, "", "Initial namespace should be empty");
 
@@ -4131,7 +4442,7 @@ test("namespace directive handles assignment, case, and reset", t => {
   t.is(assembler.currentNamespace, "", "Namespace should be empty with no name");
 });
 
-test("pushns and pullns directives restore multiple namespace levels", t => {
+test("pushns and pullns directives restore multiple namespace levels", (t) => {
   const assembler = new Assembler();
   assembler.processCommand("namespace Level1");
   assembler.processCommand("pushns");
@@ -4146,33 +4457,40 @@ test("pushns and pullns directives restore multiple namespace levels", t => {
   t.is(assembler.currentNamespace, "Level1", "Namespace should be restored to Level1");
 });
 
-test("pushns and pullns directives restore an empty namespace", t => {
+test("pushns and pullns directives restore an empty namespace", (t) => {
   const assembler = new Assembler();
   assembler.processCommand("pushns");
   assembler.processCommand("namespace AnotherNamespace");
-  t.is(assembler.currentNamespace, "AnotherNamespace", "Namespace should be set correctly after being turned off");
+  t.is(
+    assembler.currentNamespace,
+    "AnotherNamespace",
+    "Namespace should be set correctly after being turned off",
+  );
   assembler.processCommand("pullns");
   t.is(assembler.currentNamespace, "", "Empty namespace should be restored");
 });
 
-test("pullns directive errors on an empty stack", t => {
+test("pullns directive errors on an empty stack", (t) => {
   const assembler = new Assembler();
-  const error = t.throws(() => {
-    assembler.processCommand("pullns");
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.processCommand("pullns");
+    },
+    { instanceOf: Error },
+  );
   t.is(error.message, "pullns without pushns", "Should throw correct error message");
 });
 
-test("pullns directive sanitizes malformed nested namespace state", t => {
+test("pullns directive sanitizes malformed nested namespace state", (t) => {
   const assembler = new Assembler();
   assembler.namespaceNestingEnabled = true;
-  assembler.namespaceStack.push("Root", "{\"not\":\"a path\"}");
+  assembler.namespaceStack.push("Root", '{"not":"a path"}');
   assembler.processCommand("pullns");
   t.deepEqual(assembler.namespaceNestingPath, []);
   t.is(assembler.currentNamespace, "Root");
 });
 
-test("directive runtime writeDataByLength - writes data of different lengths", t => {
+test("directive runtime writeDataByLength - writes data of different lengths", (t) => {
   const assembler = new Assembler();
 
   // Spy on the write methods
@@ -4182,58 +4500,64 @@ test("directive runtime writeDataByLength - writes data of different lengths", t
   const write4Spy = sinon.spy(assembler, "write4");
 
   // Test 1-byte write
-  assembler.directiveRuntime.writeDataByLength(1, 0xAB);
-  t.true(write1Spy.calledOnceWith(0xAB), "Should call write1 with correct value");
+  assembler.directiveRuntime.writeDataByLength(1, 0xab);
+  t.true(write1Spy.calledOnceWith(0xab), "Should call write1 with correct value");
 
   // Reset spies
   write1Spy.resetHistory();
 
   // Test 2-byte write
-  assembler.directiveRuntime.writeDataByLength(2, 0xABCD);
-  t.true(write2Spy.calledOnceWith(0xABCD), "Should call write2 with correct value");
+  assembler.directiveRuntime.writeDataByLength(2, 0xabcd);
+  t.true(write2Spy.calledOnceWith(0xabcd), "Should call write2 with correct value");
 
   // Test 3-byte write
-  assembler.directiveRuntime.writeDataByLength(3, 0xABCDEF);
-  t.true(write3Spy.calledOnceWith(0xABCDEF), "Should call write3 with correct value");
+  assembler.directiveRuntime.writeDataByLength(3, 0xabcdef);
+  t.true(write3Spy.calledOnceWith(0xabcdef), "Should call write3 with correct value");
 
   // Test 4-byte write
-  assembler.directiveRuntime.writeDataByLength(4, 0xABCDEF12);
-  t.true(write4Spy.calledOnceWith(0xABCDEF12), "Should call write4 with correct value");
+  assembler.directiveRuntime.writeDataByLength(4, 0xabcdef12);
+  t.true(write4Spy.calledOnceWith(0xabcdef12), "Should call write4 with correct value");
 });
 
-test("directive runtime writeDataByLength - handles string length parameter", t => {
+test("directive runtime writeDataByLength - handles string length parameter", (t) => {
   const assembler = new Assembler();
 
   const write1Spy = sinon.spy(assembler, "write1");
 
   // Test with string length parameter (which the code comments indicate happens sometimes)
-  assembler.directiveRuntime.writeDataByLength("1" as unknown as number, 0xAB);
-  t.true(write1Spy.calledOnceWith(0xAB), "Should handle string length parameter");
+  assembler.directiveRuntime.writeDataByLength("1" as unknown as number, 0xab);
+  t.true(write1Spy.calledOnceWith(0xab), "Should handle string length parameter");
 });
 
-test("directive runtime writeDataByLength - throws on invalid length", t => {
+test("directive runtime writeDataByLength - throws on invalid length", (t) => {
   const assembler = new Assembler();
 
   // Test with invalid length
-  const error = t.throws(() => {
-    assembler.directiveRuntime.writeDataByLength(5, 0xAB);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.writeDataByLength(5, 0xab);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, "Unsupported data length 5", "Should throw with correct error message");
 });
 
-test("directive runtime writeDataByLength - throws on NaN length", t => {
+test("directive runtime writeDataByLength - throws on NaN length", (t) => {
   const assembler = new Assembler();
 
   // Test with NaN length
-  const error = t.throws(() => {
-    assembler.directiveRuntime.writeDataByLength("invalid" as unknown as number, 0xAB);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.writeDataByLength("invalid" as unknown as number, 0xab);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, "writeDataByLength: len is NaN", "Should throw with correct error message");
 });
 
-test("directive runtime writeDataByLength - handles edge values", t => {
+test("directive runtime writeDataByLength - handles edge values", (t) => {
   const assembler = new Assembler();
 
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4246,20 +4570,20 @@ test("directive runtime writeDataByLength - handles edge values", t => {
   t.true(write1Spy.calledWith(0), "Should handle minimum value for 1-byte");
 
   // Test with maximum values
-  assembler.directiveRuntime.writeDataByLength(1, 0xFF);
-  t.true(write1Spy.calledWith(0xFF), "Should handle maximum value for 1-byte");
+  assembler.directiveRuntime.writeDataByLength(1, 0xff);
+  t.true(write1Spy.calledWith(0xff), "Should handle maximum value for 1-byte");
 
-  assembler.directiveRuntime.writeDataByLength(2, 0xFFFF);
-  t.true(write2Spy.calledWith(0xFFFF), "Should handle maximum value for 2-byte");
+  assembler.directiveRuntime.writeDataByLength(2, 0xffff);
+  t.true(write2Spy.calledWith(0xffff), "Should handle maximum value for 2-byte");
 
-  assembler.directiveRuntime.writeDataByLength(3, 0xFFFFFF);
-  t.true(write3Spy.calledWith(0xFFFFFF), "Should handle maximum value for 3-byte");
+  assembler.directiveRuntime.writeDataByLength(3, 0xffffff);
+  t.true(write3Spy.calledWith(0xffffff), "Should handle maximum value for 3-byte");
 
-  assembler.directiveRuntime.writeDataByLength(4, 0xFFFFFFFF);
-  t.true(write4Spy.calledWith(0xFFFFFFFF), "Should handle maximum value for 4-byte");
+  assembler.directiveRuntime.writeDataByLength(4, 0xffffffff);
+  t.true(write4Spy.calledWith(0xffffffff), "Should handle maximum value for 4-byte");
 });
 
-test("handleDataDirective - basic numeric values", t => {
+test("handleDataDirective - basic numeric values", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4278,13 +4602,13 @@ test("handleDataDirective - basic numeric values", t => {
   assembler.directiveRuntime.handleDataDirective("db", ["10,20,30"]);
   t.true(write1Spy.calledThrice, "Should handle multiple values");
   t.deepEqual(
-    write1Spy.args.map(args => args[0]),
+    write1Spy.args.map((args) => args[0]),
     [10, 20, 30],
-    "Should write multiple values in order"
+    "Should write multiple values in order",
   );
 });
 
-test("handleDataDirective - different directives", t => {
+test("handleDataDirective - different directives", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4321,7 +4645,7 @@ test("handleDataDirective - different directives", t => {
   t.true(write4Spy.calledWith(12345678), "dd should write 4 bytes");
 });
 
-test("handleDataDirective - pass 0 estimates byte size", t => {
+test("handleDataDirective - pass 0 estimates byte size", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("collectDefinitions");
   assembler.defines.set("bytes", "1,2,3");
@@ -4333,13 +4657,13 @@ test("handleDataDirective - pass 0 estimates byte size", t => {
   t.deepEqual(
     stepSpy.getCalls().map((call) => call.args[0]),
     [2, 6],
-    "Pass 0 should advance by the estimated byte count for strings and expanded lists"
+    "Pass 0 should advance by the estimated byte count for strings and expanded lists",
   );
 
   stepSpy.restore();
 });
 
-test("handleDataDirective - string values", t => {
+test("handleDataDirective - string values", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4348,9 +4672,9 @@ test("handleDataDirective - string values", t => {
   assembler.directiveRuntime.handleDataDirective("db", ['"Hello"']);
   t.is(write1Spy.callCount, 5, "Should write each character of the string");
   t.deepEqual(
-    write1Spy.args.map(args => args[0]),
+    write1Spy.args.map((args) => args[0]),
     [72, 101, 108, 108, 111], // ASCII values for "Hello"
-    "Should write correct ASCII values"
+    "Should write correct ASCII values",
   );
 
   // Test with single quotes
@@ -4358,23 +4682,23 @@ test("handleDataDirective - string values", t => {
   assembler.directiveRuntime.handleDataDirective("db", ["'World'"]);
   t.is(write1Spy.callCount, 5, "Should handle single-quoted strings");
   t.deepEqual(
-    write1Spy.args.map(args => args[0]),
+    write1Spy.args.map((args) => args[0]),
     [87, 111, 114, 108, 100], // ASCII values for "World"
-    "Should write correct ASCII values for single-quoted string"
+    "Should write correct ASCII values for single-quoted string",
   );
 
   // Test with mixed string and numeric values
   write1Spy.resetHistory();
-  assembler.directiveRuntime.handleDataDirective("db", ['"Hi",44,\'Bye\'']);
+  assembler.directiveRuntime.handleDataDirective("db", ["\"Hi\",44,'Bye'"]);
   // t.is(write1Spy.callCount, 6, "Should handle mixed string and numeric values");
   t.deepEqual(
-    write1Spy.args.map(args => args[0]),
+    write1Spy.args.map((args) => args[0]),
     [72, 105, 44, 66, 121, 101], // "Hi", 44 (comma), "Bye"
-    "Should write correct values for mixed input"
+    "Should write correct values for mixed input",
   );
 });
 
-test("handleDataDirective - deprecated # syntax", t => {
+test("handleDataDirective - deprecated # syntax", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4390,7 +4714,7 @@ test("handleDataDirective - deprecated # syntax", t => {
   // );
 });
 
-test("handleDataDirective - math expressions", t => {
+test("handleDataDirective - math expressions", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4411,13 +4735,13 @@ test("handleDataDirective - math expressions", t => {
   t.true(write1Spy.calledWith(40), "Should write result of complex expression");
 });
 
-test("handleDataDirective - struct references", t => {
+test("handleDataDirective - struct references", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
-  sinon.stub(assembler.structEngine, "hasStructReference").callsFake(
-    reference => reference === "sprite.x_pos",
-  );
+  sinon
+    .stub(assembler.structEngine, "hasStructReference")
+    .callsFake((reference) => reference === "sprite.x_pos");
   const resolveStructLabelStub = sinon.stub(assembler.structEngine, "resolveStructLabel");
   const getnumStub = sinon.stub(assembler.operandResolver, "getnum");
 
@@ -4426,18 +4750,24 @@ test("handleDataDirective - struct references", t => {
 
   // Test with valid struct reference
   assembler.directiveRuntime.handleDataDirective("db", ["sprite.x_pos"]);
-  t.true(resolveStructLabelStub.calledWith("sprite.x_pos"), "Should attempt to resolve struct references");
+  t.true(
+    resolveStructLabelStub.calledWith("sprite.x_pos"),
+    "Should attempt to resolve struct references",
+  );
   t.true(write1Spy.calledWith(42), "Should write resolved struct value");
 
   // Test fallback to numeric resolver when the reference is not a struct
   getnumStub.withArgs("unknown.field").returns(100);
   write1Spy.resetHistory();
   assembler.directiveRuntime.handleDataDirective("db", ["unknown.field"]);
-  t.true(getnumStub.calledWith("unknown.field"), "Should fall back to numeric resolution when struct resolution fails");
+  t.true(
+    getnumStub.calledWith("unknown.field"),
+    "Should fall back to numeric resolution when struct resolution fails",
+  );
   t.true(write1Spy.calledWith(100), "Should write result from numeric fallback");
 });
 
-test("handleDataDirective - label references", t => {
+test("handleDataDirective - label references", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
   const write1Spy = sinon.spy(assembler, "write1");
@@ -4449,43 +4779,61 @@ test("handleDataDirective - label references", t => {
 
   // Test with label reference
   assembler.directiveRuntime.handleDataDirective("db", ["LABEL1"]);
-  t.true(getLabelValueStub.calledWith("LABEL1", false), "Should attempt to resolve label through numeric resolver");
+  t.true(
+    getLabelValueStub.calledWith("LABEL1", false),
+    "Should attempt to resolve label through numeric resolver",
+  );
   t.true(write1Spy.calledWith(50), "Should write resolved label value");
 
   // Test error when label resolution fails
-  getLabelValueStub.withArgs("UNKNOWN_LABEL", false).throws(new Error("Label 'UNKNOWN_LABEL' not found."));
+  getLabelValueStub
+    .withArgs("UNKNOWN_LABEL", false)
+    .throws(new Error("Label 'UNKNOWN_LABEL' not found."));
 
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handleDataDirective("db", ["UNKNOWN_LABEL"]);
-  }, { instanceOf: Error });
-
-  t.true(
-    error.message.includes("UNKNOWN_LABEL"),
-    "Should throw when label resolution fails"
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handleDataDirective("db", ["UNKNOWN_LABEL"]);
+    },
+    { instanceOf: Error },
   );
 
+  t.true(error.message.includes("UNKNOWN_LABEL"), "Should throw when label resolution fails");
 });
 
-test("handleDataDirective - throws on unsupported directive type", t => {
+test("handleDataDirective - throws on unsupported directive type", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Test with invalid directive type
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handleDataDirective("dx", ["42"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handleDataDirective("dx", ["42"]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error.message, "Invalid data directive: dx", "Should throw with correct error message for unsupported directive");
+  t.is(
+    error.message,
+    "Invalid data directive: dx",
+    "Should throw with correct error message for unsupported directive",
+  );
 
   // Test with completely invalid directive
-  const error2 = t.throws(() => {
-    assembler.directiveRuntime.handleDataDirective("invalid_directive", ["42"]);
-  }, { instanceOf: Error });
+  const error2 = t.throws(
+    () => {
+      assembler.directiveRuntime.handleDataDirective("invalid_directive", ["42"]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error2.message, "Invalid data directive: invalid_directive", "Should throw with correct error message for invalid directive");
+  t.is(
+    error2.message,
+    "Invalid data directive: invalid_directive",
+    "Should throw with correct error message for invalid directive",
+  );
 });
 
-test("handleDataDirective - skips writing in pass 0", t => {
+test("handleDataDirective - skips writing in pass 0", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("collectDefinitions");
 
@@ -4511,150 +4859,248 @@ test("handleDataDirective - skips writing in pass 0", t => {
   sinon.restore();
 });
 
-test("handleDataDirective - throws on empty or invalid params", t => {
+test("handleDataDirective - throws on empty or invalid params", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
   // Test with empty params array
-  const error1 = t.throws(() => {
-    assembler.directiveRuntime.handleDataDirective("db", []);
-  }, { instanceOf: Error });
+  const error1 = t.throws(
+    () => {
+      assembler.directiveRuntime.handleDataDirective("db", []);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error1.message, "DB directive requires at least one parameter.", "Should throw when params array is empty");
+  t.is(
+    error1.message,
+    "DB directive requires at least one parameter.",
+    "Should throw when params array is empty",
+  );
 
   // Test with undefined params
-  const error2 = t.throws(() => {
-    assembler.directiveRuntime.handleDataDirective("dw", undefined as unknown as string[]);
-  }, { instanceOf: Error });
+  const error2 = t.throws(
+    () => {
+      assembler.directiveRuntime.handleDataDirective("dw", undefined as unknown as string[]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error2.message, "DW directive requires at least one parameter.", "Should throw when params is undefined");
+  t.is(
+    error2.message,
+    "DW directive requires at least one parameter.",
+    "Should throw when params is undefined",
+  );
 
   // Test with null params
-  const error3 = t.throws(() => {
-    assembler.directiveRuntime.handleDataDirective("dl", null as unknown as string[]);
-  }, { instanceOf: Error });
+  const error3 = t.throws(
+    () => {
+      assembler.directiveRuntime.handleDataDirective("dl", null as unknown as string[]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error3.message, "DL directive requires at least one parameter.", "Should throw when params is null");
+  t.is(
+    error3.message,
+    "DL directive requires at least one parameter.",
+    "Should throw when params is null",
+  );
 
   // Test with non-array params
-  const error4 = t.throws(() => {
-    assembler.directiveRuntime.handleDataDirective("dd", "not an array" as unknown as string[]);
-  }, { instanceOf: Error });
+  const error4 = t.throws(
+    () => {
+      assembler.directiveRuntime.handleDataDirective("dd", "not an array" as unknown as string[]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error4.message, "DD directive requires at least one parameter.", "Should throw when params is not an array");
+  t.is(
+    error4.message,
+    "DD directive requires at least one parameter.",
+    "Should throw when params is not an array",
+  );
 });
 
-test("handleOrg - sets SNES memory location with hex value", t => {
+test("handleOrg - sets SNES memory location with hex value", (t) => {
   const assembler = new Assembler();
 
   assembler.directiveRuntime.handleOrg(["$8000"]);
 
-  t.is(assembler.currentTargetAddress, 0x8000, "currentTargetAddress should be set to the hex value");
-  t.is(assembler.currentTargetBaseAddress, 0x8000, "currentTargetBaseAddress should be set to the hex value");
-  t.is(assembler.currentTargetStartAddress, 0x8000, "currentTargetStartAddress should be set to the hex value");
-  t.is(assembler.currentTargetBaseStartAddress, 0x8000, "currentTargetBaseStartAddress should be set to the hex value");
+  t.is(
+    assembler.currentTargetAddress,
+    0x8000,
+    "currentTargetAddress should be set to the hex value",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress,
+    0x8000,
+    "currentTargetBaseAddress should be set to the hex value",
+  );
+  t.is(
+    assembler.currentTargetStartAddress,
+    0x8000,
+    "currentTargetStartAddress should be set to the hex value",
+  );
+  t.is(
+    assembler.currentTargetBaseStartAddress,
+    0x8000,
+    "currentTargetBaseStartAddress should be set to the hex value",
+  );
 });
 
-test("handleOrg - sets SNES memory location with decimal value", t => {
+test("handleOrg - sets SNES memory location with decimal value", (t) => {
   const assembler = new Assembler();
 
   assembler.directiveRuntime.handleOrg(["32768"]);
 
-  t.is(assembler.currentTargetAddress, 32768, "currentTargetAddress should be set to the decimal value");
-  t.is(assembler.currentTargetBaseAddress, 32768, "currentTargetBaseAddress should be set to the decimal value");
-  t.is(assembler.currentTargetStartAddress, 32768, "currentTargetStartAddress should be set to the decimal value");
-  t.is(assembler.currentTargetBaseStartAddress, 32768, "currentTargetBaseStartAddress should be set to the decimal value");
+  t.is(
+    assembler.currentTargetAddress,
+    32768,
+    "currentTargetAddress should be set to the decimal value",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress,
+    32768,
+    "currentTargetBaseAddress should be set to the decimal value",
+  );
+  t.is(
+    assembler.currentTargetStartAddress,
+    32768,
+    "currentTargetStartAddress should be set to the decimal value",
+  );
+  t.is(
+    assembler.currentTargetBaseStartAddress,
+    32768,
+    "currentTargetBaseStartAddress should be set to the decimal value",
+  );
 });
 
-test("handleOrg - throws error with no parameters", t => {
+test("handleOrg - throws error with no parameters", (t) => {
   const assembler = new Assembler();
 
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handleOrg([]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handleOrg([]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error.message, "ORG requires a single address parameter.", "Should throw with correct error message");
+  t.is(
+    error.message,
+    "ORG requires a single address parameter.",
+    "Should throw with correct error message",
+  );
 });
 
-test("handleOrg - throws error with multiple parameters", t => {
+test("handleOrg - throws error with multiple parameters", (t) => {
   const assembler = new Assembler();
 
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handleOrg(["$8000", "$9000"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handleOrg(["$8000", "$9000"]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error.message, "ORG requires a single address parameter.", "Should throw with correct error message");
+  t.is(
+    error.message,
+    "ORG requires a single address parameter.",
+    "Should throw with correct error message",
+  );
 });
 
-test("handleOrg - throws error with invalid hex value", t => {
+test("handleOrg - throws error with invalid hex value", (t) => {
   const assembler = new Assembler();
 
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handleOrg(["$INVALID"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handleOrg(["$INVALID"]);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, "Invalid ORG address: $INVALID", "Should throw with correct error message");
 });
 
-test("handleOrg - throws error with invalid decimal value", t => {
+test("handleOrg - throws error with invalid decimal value", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
 
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handleOrg(["INVALID"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handleOrg(["INVALID"]);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, "Invalid ORG address: INVALID", "Should throw with correct error message");
 });
 
-test("handleOrg - throws error with negative value", t => {
+test("handleOrg - throws error with negative value", (t) => {
   const assembler = new Assembler();
 
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handleOrg(["-1"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handleOrg(["-1"]);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, "Invalid ORG address: -1", "Should throw with correct error message");
 });
 
-test("handleOrg - throws error with value exceeding 24-bit address space", t => {
+test("handleOrg - throws error with value exceeding 24-bit address space", (t) => {
   const assembler = new Assembler();
 
-  const error = t.throws(() => {
-    assembler.directiveRuntime.handleOrg(["$1000000"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.directiveRuntime.handleOrg(["$1000000"]);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error.message, "Invalid ORG address: $1000000", "Should throw with correct error message");
 });
 
-test("handleOrg - handles address at 24-bit boundary", t => {
+test("handleOrg - handles address at 24-bit boundary", (t) => {
   const assembler = new Assembler();
 
   assembler.directiveRuntime.handleOrg(["$FFFFFF"]);
 
-  t.is(assembler.currentTargetAddress, 0xFFFFFF, "currentTargetAddress should be set to the maximum 24-bit value");
-  t.is(assembler.currentTargetBaseAddress, 0xFFFFFF, "currentTargetBaseAddress should be set to the maximum 24-bit value");
+  t.is(
+    assembler.currentTargetAddress,
+    0xffffff,
+    "currentTargetAddress should be set to the maximum 24-bit value",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress,
+    0xffffff,
+    "currentTargetBaseAddress should be set to the maximum 24-bit value",
+  );
 });
 
-test("handleOrg - handles address with whitespace", t => {
+test("handleOrg - handles address with whitespace", (t) => {
   const assembler = new Assembler();
 
   assembler.directiveRuntime.handleOrg([" $A000 "]);
 
-  t.is(assembler.currentTargetAddress, 0xA000, "currentTargetAddress should be set correctly with trimmed value");
+  t.is(
+    assembler.currentTargetAddress,
+    0xa000,
+    "currentTargetAddress should be set correctly with trimmed value",
+  );
 });
 
-test("handleOrg - evaluates define math expressions", t => {
+test("handleOrg - evaluates define math expressions", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("MaxROMSize", "$008000");
 
   assembler.directiveRuntime.handleOrg(["!MaxROMSize-$01"]);
 
-  t.is(assembler.currentTargetAddress, 0x7FFF);
-  t.is(assembler.currentTargetBaseAddress, 0x7FFF);
+  t.is(assembler.currentTargetAddress, 0x7fff);
+  t.is(assembler.currentTargetBaseAddress, 0x7fff);
 });
 
-test("handleOrg - evaluates bitwise header-location expressions", t => {
+test("handleOrg - evaluates bitwise header-location expressions", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("SNESHeaderLoc", "$00FFB0");
   assembler.defines.set("FastROMAddressOffset", "$000000");
@@ -4667,19 +5113,19 @@ test("handleOrg - evaluates bitwise header-location expressions", t => {
   t.is(assembler.currentTargetAddress, 0x10000);
 });
 
-test("base preserves define casing and still accepts BASE OFF", t => {
+test("base preserves define casing and still accepts BASE OFF", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("Define_SMRPG_SPC700_EngineStartAddress", "0200");
-  assembler.assembleblock("base $!Define_SMRPG_SPC700_EngineStartAddress");
+  assembler.processCommand("base $!Define_SMRPG_SPC700_EngineStartAddress");
   t.is(assembler.currentTargetAddress, 0x200);
 
   assembler.currentTargetBaseAddress = 0x8000;
   assembler.currentTargetBaseStartAddress = 0x8000;
-  assembler.assembleblock("BASE OFF");
+  assembler.processCommand("BASE OFF");
   t.is(assembler.currentTargetAddress, 0x8000);
 });
 
-test("typed conditional nodes execute the first matching branch", t => {
+test("typed conditional nodes execute the first matching branch", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.defines.set("state", "1");
@@ -4688,15 +5134,11 @@ test("typed conditional nodes execute the first matching branch", t => {
     executed.push(command.command);
   });
 
-  const [node] = assembler.parseCommandStreamToNodes([
-    "if !state == 0",
-    "db $00",
-    "elseif !state == 1",
-    "db $01",
-    "else",
-    "db $02",
-    "endif",
-  ], "conditional.asm", 0);
+  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
+    ["if !state == 0", "db $00", "elseif !state == 1", "db $01", "else", "db $02", "endif"],
+    "conditional.asm",
+    0,
+  );
 
   if (!node || typeof node === "string" || !("type" in node) || node.type !== "if") {
     t.fail();
@@ -4749,7 +5191,7 @@ test("macro if body assigns !TEMP1 before a later if !TEMP1 == !TRUE", (t) => {
   t.is(assembler.defines.get("SAW_TRUE"), "0");
 });
 
-test("typed conditional nodes support nested branch execution", t => {
+test("typed conditional nodes support nested branch execution", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.defines.set("outer", "1");
@@ -4759,17 +5201,21 @@ test("typed conditional nodes support nested branch execution", t => {
     executed.push(command.command);
   });
 
-  const [node] = assembler.parseCommandStreamToNodes([
-    "if !outer == 1",
-    "  if !inner == 1",
-    "    db $11",
-    "  else",
-    "    db $22",
-    "  endif",
-    "else",
-    "  db $33",
-    "endif",
-  ], "nested-conditional.asm", 0);
+  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
+    [
+      "if !outer == 1",
+      "  if !inner == 1",
+      "    db $11",
+      "  else",
+      "    db $22",
+      "  endif",
+      "else",
+      "  db $33",
+      "endif",
+    ],
+    "nested-conditional.asm",
+    0,
+  );
 
   if (!node || typeof node === "string" || !("type" in node) || node.type !== "if") {
     t.fail();
@@ -4780,7 +5226,7 @@ test("typed conditional nodes support nested branch execution", t => {
   t.deepEqual(executed, ["db $22"]);
 });
 
-test("getDefineVariable - extracts variable name from define statements", t => {
+test("getDefineVariable - extracts variable name from define statements", (t) => {
   // Valid variable extractions
   t.is(getDefineVariable("!var = 123"), "var", "Basic variable name");
   t.is(getDefineVariable("!VAR = 123"), "VAR", "Uppercase variable name");
@@ -4803,43 +5249,32 @@ test("getDefineVariable - extracts variable name from define statements", t => {
   t.is(getDefineVariable("lda #$10"), undefined, "Instruction line");
 });
 
-test("getDefineVariable - integration", t => {
+test("getDefineVariable - integration", (t) => {
   const assembler = new Assembler();
 
   // Test cases that should work with both methods
-  const validCases = [
-    "!counter = 0",
-    "!MAX_VALUE = 255",
-    "!offset_x = 10",
-    "!game_active = 1"
-  ];
+  const validCases = ["!counter = 0", "!MAX_VALUE = 255", "!offset_x = 10", "!game_active = 1"];
 
   for (const testCase of validCases) {
     t.not(getDefineVariable(testCase), undefined, `Should extract variable from: ${testCase}`);
   }
 
   // Test cases that should fail with both methods
-  const invalidCases = [
-    "counter = 0",
-    "define MAX_VALUE = 255",
-    "#offset_x = 10",
-    "lda #$10"
-  ];
+  const invalidCases = ["counter = 0", "define MAX_VALUE = 255", "#offset_x = 10", "lda #$10"];
 
   for (const testCase of invalidCases) {
     t.is(getDefineVariable(testCase), undefined, `Should not extract variable from: ${testCase}`);
   }
 });
 
-
-test("typed parser builds while nodes with preserved conditions", t => {
+test("typed parser builds while nodes with preserved conditions", (t) => {
   const assembler = new Assembler();
 
-  const [node] = assembler.parseCommandStreamToNodes([
-    "while !defined(DEBUG) && VERSION > 1.0",
-    "db $01",
-    "endwhile",
-  ], "while.asm", 0);
+  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
+    ["while !defined(DEBUG) && VERSION > 1.0", "db $01", "endwhile"],
+    "while.asm",
+    0,
+  );
 
   if (!node || typeof node === "string" || !("type" in node) || node.type !== "while") {
     t.fail();
@@ -4850,14 +5285,14 @@ test("typed parser builds while nodes with preserved conditions", t => {
   t.is(node.commands.length, 1);
 });
 
-test("typed parser builds for nodes with preserved range expressions", t => {
+test("typed parser builds for nodes with preserved range expressions", (t) => {
   const assembler = new Assembler();
 
-  const [node] = assembler.parseCommandStreamToNodes([
-    "for j = !start .. !end + 5",
-    "db !j",
-    "endfor",
-  ], "for.asm", 0);
+  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
+    ["for j = !start .. !end + 5", "db !j", "endfor"],
+    "for.asm",
+    0,
+  );
 
   if (!node || typeof node === "string" || !("type" in node) || node.type !== "for") {
     t.fail();
@@ -4869,16 +5304,14 @@ test("typed parser builds for nodes with preserved range expressions", t => {
   t.is(node.commands.length, 1);
 });
 
-test("typed parser closes top-level loop nodes at end markers", t => {
+test("typed parser closes top-level loop nodes at end markers", (t) => {
   const assembler = new Assembler();
 
-  const nodes = assembler.parseCommandStreamToNodes([
-    "for i = 0..2",
-    "while !i < 2",
-    "db !i",
-    "endwhile",
-    "endfor",
-  ], "nested-loops.asm", 0);
+  const nodes = assembler.programModelBuilder.parseCommandStreamToNodes(
+    ["for i = 0..2", "while !i < 2", "db !i", "endwhile", "endfor"],
+    "nested-loops.asm",
+    0,
+  );
 
   t.is(nodes.length, 1);
   const [loop] = nodes;
@@ -4892,7 +5325,7 @@ test("typed parser closes top-level loop nodes at end markers", t => {
   t.true(typeof nested !== "string" && "type" in nested && nested.type === "while");
 });
 
-test("addAddressToLine - adds mapping in all passes", t => {
+test("addAddressToLine - adds mapping in all passes", (t) => {
   const assembler = new Assembler();
 
   // Create a spy on the includeMapping method
@@ -4914,14 +5347,16 @@ test("addAddressToLine - adds mapping in all passes", t => {
   assembler.activateStage("emitProgram");
   assembler.addAddressToLine(0x8000);
   t.true(includeMappingSpy.called, "Should add mapping in pass 2");
-  t.true(includeMappingSpy.calledWith("test.asm", 11, 0x8000),
-    "Should call includeMapping with correct parameters");
+  t.true(
+    includeMappingSpy.calledWith("test.asm", 11, 0x8000),
+    "Should call includeMapping with correct parameters",
+  );
 
   // Cleanup
   includeMappingSpy.restore();
 });
 
-test("addAddressToLine - handles different address values", t => {
+test("addAddressToLine - handles different address values", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.currentFile = "test.asm";
@@ -4931,26 +5366,29 @@ test("addAddressToLine - handles different address values", t => {
 
   // Test with zero address
   assembler.addAddressToLine(0);
-  t.true(includeMappingSpy.calledWith("test.asm", 6, 0),
-    "Should handle zero address");
+  t.true(includeMappingSpy.calledWith("test.asm", 6, 0), "Should handle zero address");
 
   // Test with max 24-bit address
   includeMappingSpy.resetHistory();
-  assembler.addAddressToLine(0xFFFFFF);
-  t.true(includeMappingSpy.calledWith("test.asm", 6, 0xFFFFFF),
-    "Should handle maximum 24-bit address");
+  assembler.addAddressToLine(0xffffff);
+  t.true(
+    includeMappingSpy.calledWith("test.asm", 6, 0xffffff),
+    "Should handle maximum 24-bit address",
+  );
 
   // Test with typical ROM address
   includeMappingSpy.resetHistory();
   assembler.addAddressToLine(0x808000);
-  t.true(includeMappingSpy.calledWith("test.asm", 6, 0x808000),
-    "Should handle typical ROM address");
+  t.true(
+    includeMappingSpy.calledWith("test.asm", 6, 0x808000),
+    "Should handle typical ROM address",
+  );
 
   // Cleanup
   includeMappingSpy.restore();
 });
 
-test("addAddressToLine - uses correct line number", t => {
+test("addAddressToLine - uses correct line number", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
 
@@ -4960,28 +5398,25 @@ test("addAddressToLine - uses correct line number", t => {
   assembler.currentFile = "file1.asm";
   assembler.currentLine = 0;
   assembler.addAddressToLine(0x8000);
-  t.true(includeMappingSpy.calledWith("file1.asm", 1, 0x8000),
-    "Should add 1 to line number 0");
+  t.true(includeMappingSpy.calledWith("file1.asm", 1, 0x8000), "Should add 1 to line number 0");
 
   includeMappingSpy.resetHistory();
   assembler.currentLine = 99;
   assembler.addAddressToLine(0x8010);
-  t.true(includeMappingSpy.calledWith("file1.asm", 100, 0x8010),
-    "Should add 1 to line number 99");
+  t.true(includeMappingSpy.calledWith("file1.asm", 100, 0x8010), "Should add 1 to line number 99");
 
   // Test with different file
   includeMappingSpy.resetHistory();
   assembler.currentFile = "file2.asm";
   assembler.currentLine = 50;
   assembler.addAddressToLine(0x8020);
-  t.true(includeMappingSpy.calledWith("file2.asm", 51, 0x8020),
-    "Should use correct file name");
+  t.true(includeMappingSpy.calledWith("file2.asm", 51, 0x8020), "Should use correct file name");
 
   // Cleanup
   includeMappingSpy.restore();
 });
 
-test("getLabelValue - retrieves label values correctly", t => {
+test("getLabelValue - retrieves label values correctly", (t) => {
   const assembler = new Assembler();
 
   // Set up some test labels
@@ -4990,51 +5425,81 @@ test("getLabelValue - retrieves label values correctly", t => {
   assembler.symbolScope.setLabel("staticLabel", 0x5678, true);
 
   assembler.currentNamespace = "testNS";
-  assembler.symbolScope.setLabel("namespaceLabel", 0xABCD);
-  assembler.symbolScope.setLabel("staticNamespaceLabel", 0xEF01, true);
+  assembler.symbolScope.setLabel("namespaceLabel", 0xabcd);
+  assembler.symbolScope.setLabel("staticNamespaceLabel", 0xef01, true);
 
   // Reset namespace for testing
   assembler.currentNamespace = "";
 
   // Test retrieving global labels
-  t.is(assembler.symbolScope.getLabelValue("globalLabel", false), 0x1234,
-    "Should retrieve global label value correctly");
-  t.is(assembler.symbolScope.getLabelValue("staticLabel", false), 0x5678,
-    "Should retrieve static global label value correctly");
+  t.is(
+    assembler.symbolScope.getLabelValue("globalLabel", false),
+    0x1234,
+    "Should retrieve global label value correctly",
+  );
+  t.is(
+    assembler.symbolScope.getLabelValue("staticLabel", false),
+    0x5678,
+    "Should retrieve static global label value correctly",
+  );
 
   // Test retrieving namespaced labels
   assembler.currentNamespace = "testNS";
-  t.is(assembler.symbolScope.getLabelValue("namespaceLabel", false), 0xABCD,
-    "Should retrieve namespaced label value correctly");
-  t.is(assembler.symbolScope.getLabelValue("staticNamespaceLabel", false), 0xEF01,
-    "Should retrieve static namespaced label value correctly");
+  t.is(
+    assembler.symbolScope.getLabelValue("namespaceLabel", false),
+    0xabcd,
+    "Should retrieve namespaced label value correctly",
+  );
+  t.is(
+    assembler.symbolScope.getLabelValue("staticNamespaceLabel", false),
+    0xef01,
+    "Should retrieve static namespaced label value correctly",
+  );
 
   // Test requiring static labels
   assembler.currentNamespace = "";
-  t.is(assembler.symbolScope.getLabelValue("staticLabel", true), 0x5678,
-    "Should retrieve static label when required");
+  t.is(
+    assembler.symbolScope.getLabelValue("staticLabel", true),
+    0x5678,
+    "Should retrieve static label when required",
+  );
   assembler.currentNamespace = "testNS";
-  t.is(assembler.symbolScope.getLabelValue("staticNamespaceLabel", true), 0xEF01,
-    "Should retrieve static namespaced label when required");
+  t.is(
+    assembler.symbolScope.getLabelValue("staticNamespaceLabel", true),
+    0xef01,
+    "Should retrieve static namespaced label when required",
+  );
 
   // Test error case for non-static label used in conditional
-  const error = t.throws(() => {
-    assembler.symbolScope.getLabelValue("namespaceLabel", true);
-  }, { instanceOf: Error });
-  t.is(error.message, "Error: Non-static label 'testNS_namespaceLabel' used in conditional.",
-    "Should throw error when non-static label is used in conditional");
+  const error = t.throws(
+    () => {
+      assembler.symbolScope.getLabelValue("namespaceLabel", true);
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error.message,
+    "Error: Non-static label 'testNS_namespaceLabel' used in conditional.",
+    "Should throw error when non-static label is used in conditional",
+  );
 
   // Test undefined label behavior
   assembler.currentNamespace = "";
-  t.is(assembler.symbolScope.getLabelValue("undefinedLabel", false), 0,
-    "Should return 0 for undefined label");
+  t.is(
+    assembler.symbolScope.getLabelValue("undefinedLabel", false),
+    0,
+    "Should return 0 for undefined label",
+  );
 
   // Test with full label name including namespace (assembler uses underscore for namespace prefix)
-  t.is(assembler.symbolScope.getLabelValue("testNS_namespaceLabel", false), 0xABCD,
-    "Should retrieve label with explicit namespace");
+  t.is(
+    assembler.symbolScope.getLabelValue("testNS_namespaceLabel", false),
+    0xabcd,
+    "Should retrieve label with explicit namespace",
+  );
 });
 
-test("setLabel - handles label creation and redefinition across passes", t => {
+test("setLabel - handles label creation and redefinition across passes", (t) => {
   const assembler = new Assembler();
 
   // Test pass 0 behavior
@@ -5048,17 +5513,33 @@ test("setLabel - handles label creation and redefinition across passes", t => {
 
   // Static label setting
   assembler.symbolScope.setLabel("staticTestLabel", 0x2000, true);
-  t.is(assembler.labelTable.get("staticTestLabel").value, 0x2000, "Should set static label value in pass 0");
-  t.is(assembler.labelTable.get("staticTestLabel").isStatic, true, "Should set isStatic flag to true for static labels");
+  t.is(
+    assembler.labelTable.get("staticTestLabel").value,
+    0x2000,
+    "Should set static label value in pass 0",
+  );
+  t.is(
+    assembler.labelTable.get("staticTestLabel").isStatic,
+    true,
+    "Should set isStatic flag to true for static labels",
+  );
 
   // Namespaced label (assembler uses underscore for namespace prefix, not colon)
   assembler.currentNamespace = "testNS";
   assembler.symbolScope.setLabel("nsLabel", 0x3000);
-  t.is(assembler.labelTable.get("testNS_nsLabel").value, 0x3000, "Should set namespaced label correctly");
+  t.is(
+    assembler.labelTable.get("testNS_nsLabel").value,
+    0x3000,
+    "Should set namespaced label correctly",
+  );
 
   // Label redefinition in pass 0 (should just log warning, not throw)
   assembler.symbolScope.setLabel("nsLabel", 0x3500);
-  t.is(assembler.labelTable.get("testNS_nsLabel").value, 0x3500, "Should update label value when redefined in pass 0");
+  t.is(
+    assembler.labelTable.get("testNS_nsLabel").value,
+    0x3500,
+    "Should update label value when redefined in pass 0",
+  );
 
   // Test pass 1 behavior
   assembler.activateStage("resolveLayout");
@@ -5076,9 +5557,13 @@ test("setLabel - handles label creation and redefinition across passes", t => {
   assembler.activateStage("emitProgram");
 
   // In pass 2, changing an existing label's value throws (assembler detects inconsistency)
-  t.throws(() => {
-    assembler.symbolScope.setLabel("testLabel", 0x1600);
-  }, { message: /Label "testLabel" changed/ }, "Should throw when label value changes in pass 2");
+  t.throws(
+    () => {
+      assembler.symbolScope.setLabel("testLabel", 0x1600);
+    },
+    { message: /Label "testLabel" changed/ },
+    "Should throw when label value changes in pass 2",
+  );
   t.is(assembler.labelTable.get("testLabel").value, 0x1500, "Label value unchanged after throw");
 
   // In pass 2, setting a label that didn't exist in pass 0/1 is allowed (no throw)
@@ -5087,10 +5572,17 @@ test("setLabel - handles label creation and redefinition across passes", t => {
 
   // Test error case: static label mismatch
   assembler.currentNamespace = "testNS";
-  const error2 = t.throws(() => {
-    assembler.symbolScope.setLabel("nsLabel", 0x3600, true);
-  }, { instanceOf: Error });
-  t.is(error2.message, "Label 'testNS_nsLabel' is not static and cannot be used in conditionals.", "Should throw error when static flag doesn't match original definition");
+  const error2 = t.throws(
+    () => {
+      assembler.symbolScope.setLabel("nsLabel", 0x3600, true);
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error2.message,
+    "Label 'testNS_nsLabel' is not static and cannot be used in conditionals.",
+    "Should throw error when static flag doesn't match original definition",
+  );
 
   // Symbol writes remain allowed in the active emit stage.
   t.notThrows(() => {
@@ -5102,7 +5594,11 @@ test("setLabel - handles label creation and redefinition across passes", t => {
   assembler.currentTargetAddress = 0x8000;
   assembler.currentNamespace = "";
   assembler.symbolScope.setLabel("positionLabel");
-  t.is(assembler.labelTable.get("positionLabel").value, 0x8000, "Should use current SNES position when value not provided");
+  t.is(
+    assembler.labelTable.get("positionLabel").value,
+    0x8000,
+    "Should use current SNES position when value not provided",
+  );
 });
 
 test("findNextLabel and findPreviousLabel", (t) => {
@@ -5124,16 +5620,30 @@ test("findNextLabel and findPreviousLabel", (t) => {
   assembler.activateStage("emitProgram");
 
   // Test findNextLabel with no labels defined
-  const error1 = t.throws(() => {
-    assembler.symbolScope.findNextLabel("+");
-  }, { instanceOf: Error });
-  t.is(error1.message, "Error: No + label '+' found after 1000.", "Should throw when no forward labels exist");
+  const error1 = t.throws(
+    () => {
+      assembler.symbolScope.findNextLabel("+");
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error1.message,
+    "Error: No + label '+' found after 1000.",
+    "Should throw when no forward labels exist",
+  );
 
   // Test findPreviousLabel with no labels defined
-  const error2 = t.throws(() => {
-    assembler.symbolScope.findPreviousLabel("-");
-  }, { instanceOf: Error });
-  t.is(error2.message, "Error: No - label '-' found before 1000.", "Should throw when no backward labels exist");
+  const error2 = t.throws(
+    () => {
+      assembler.symbolScope.findPreviousLabel("-");
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error2.message,
+    "Error: No - label '-' found before 1000.",
+    "Should throw when no backward labels exist",
+  );
 
   // Setup some forward labels
   assembler.forwardLabels[1] = [
@@ -5148,19 +5658,34 @@ test("findNextLabel and findPreviousLabel", (t) => {
     },
     {
       addr: 0x2000,
-    }
+    },
   ];
   // Test findNextLabel with no labels after current position
   assembler.currentTargetAddress = 0x2100;
-  const error3 = t.throws(() => {
-    assembler.symbolScope.findNextLabel("+");
-  }, { instanceOf: Error });
-  t.is(error3.message, "Error: No + label '+' found after 2100.", "Should throw when no forward labels exist after current position");
+  const error3 = t.throws(
+    () => {
+      assembler.symbolScope.findNextLabel("+");
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error3.message,
+    "Error: No + label '+' found after 2100.",
+    "Should throw when no forward labels exist after current position",
+  );
 
   // Test findNextLabel with labels after current position
   assembler.currentTargetAddress = 0x1100;
-  t.is(assembler.symbolScope.findNextLabel("+"), 0x1200, "Should find the closest forward label after current position");
-  t.is(assembler.symbolScope.findNextLabel("+", 0x1200), 0x1200, "Should allow inline + labels at the branch reference address");
+  t.is(
+    assembler.symbolScope.findNextLabel("+"),
+    0x1200,
+    "Should find the closest forward label after current position",
+  );
+  t.is(
+    assembler.symbolScope.findNextLabel("+", 0x1200),
+    0x1200,
+    "Should allow inline + labels at the branch reference address",
+  );
 
   // Setup some backward labels
   assembler.backwardLabels[1] = [
@@ -5175,19 +5700,30 @@ test("findNextLabel and findPreviousLabel", (t) => {
     },
     {
       addr: 0x1800,
-    }
+    },
   ];
 
   // Test findPreviousLabel with no labels before current position
   assembler.currentTargetAddress = 0x400;
-  const error4 = t.throws(() => {
-    assembler.symbolScope.findPreviousLabel("-");
-  }, { instanceOf: Error });
-  t.is(error4.message, "Error: No - label '-' found before 400.", "Should throw when no backward labels exist before current position");
+  const error4 = t.throws(
+    () => {
+      assembler.symbolScope.findPreviousLabel("-");
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error4.message,
+    "Error: No - label '-' found before 400.",
+    "Should throw when no backward labels exist before current position",
+  );
 
   // Test findPreviousLabel with labels before current position
   assembler.currentTargetAddress = 0x1100;
-  t.is(assembler.symbolScope.findPreviousLabel("-"), 0x1050, "Should find the closest backward label before current position");
+  t.is(
+    assembler.symbolScope.findPreviousLabel("-"),
+    0x1050,
+    "Should find the closest backward label before current position",
+  );
 
   // Test with different depths (number of + or - characters)
   assembler.forwardLabels[2] = [
@@ -5196,7 +5732,7 @@ test("findNextLabel and findPreviousLabel", (t) => {
     },
     {
       addr: 0x1600,
-    }
+    },
   ];
   assembler.backwardLabels[2] = [
     {
@@ -5204,12 +5740,20 @@ test("findNextLabel and findPreviousLabel", (t) => {
     },
     {
       addr: 0x900,
-    }
+    },
   ];
 
   assembler.currentTargetAddress = 0x1000;
-  t.is(assembler.symbolScope.findNextLabel("++"), 0x1300, "Should find the correct forward label with depth 2");
-  t.is(assembler.symbolScope.findPreviousLabel("--"), 0x900, "Should find the correct backward label with depth 2");
+  t.is(
+    assembler.symbolScope.findNextLabel("++"),
+    0x1300,
+    "Should find the correct forward label with depth 2",
+  );
+  t.is(
+    assembler.symbolScope.findPreviousLabel("--"),
+    0x900,
+    "Should find the correct backward label with depth 2",
+  );
 });
 
 test("handleRelativeLabel", (t) => {
@@ -5225,37 +5769,53 @@ test("handleRelativeLabel", (t) => {
 
   // Test forward label tracking in pass 0
   assembler.symbolScope.handleRelativeLabel("+");
-  t.deepEqual(assembler.forwardLabels[1], [
-    {
-      addr: 0x1000,
-    }
-  ], "Should track forward label in pass 0");
+  t.deepEqual(
+    assembler.forwardLabels[1],
+    [
+      {
+        addr: 0x1000,
+      },
+    ],
+    "Should track forward label in pass 0",
+  );
 
   // Test backward label tracking in pass 0
   assembler.currentTargetAddress = 0x1200;
   assembler.symbolScope.handleRelativeLabel("-");
-  t.deepEqual(assembler.backwardLabels[1], [
-    {
-      addr: 0x1200,
-    }
-  ], "Should track backward label in pass 0");
+  t.deepEqual(
+    assembler.backwardLabels[1],
+    [
+      {
+        addr: 0x1200,
+      },
+    ],
+    "Should track backward label in pass 0",
+  );
 
   // Test multiple depths
   assembler.currentTargetAddress = 0x1400;
   assembler.symbolScope.handleRelativeLabel("++");
-  t.deepEqual(assembler.forwardLabels[2], [
-    {
-      addr: 0x1400,
-    }
-  ], "Should track forward label with correct depth");
+  t.deepEqual(
+    assembler.forwardLabels[2],
+    [
+      {
+        addr: 0x1400,
+      },
+    ],
+    "Should track forward label with correct depth",
+  );
 
   assembler.currentTargetAddress = 0x1600;
   assembler.symbolScope.handleRelativeLabel("--");
-  t.deepEqual(assembler.backwardLabels[2], [
-    {
-      addr: 0x1600,
-    }
-  ], "Should track backward label with correct depth");
+  t.deepEqual(
+    assembler.backwardLabels[2],
+    [
+      {
+        addr: 0x1600,
+      },
+    ],
+    "Should track backward label with correct depth",
+  );
 
   // Test pass 2 behavior - should resolve labels
   assembler.activateStage("emitProgram");
@@ -5268,7 +5828,7 @@ test("handleRelativeLabel", (t) => {
       },
       {
         addr: 0x3000,
-      }
+      },
     ],
     2: [
       {
@@ -5276,8 +5836,8 @@ test("handleRelativeLabel", (t) => {
       },
       {
         addr: 0x3500,
-      }
-    ]
+      },
+    ],
   };
   assembler.backwardLabels = {
     1: [
@@ -5286,7 +5846,7 @@ test("handleRelativeLabel", (t) => {
       },
       {
         addr: 0x1500,
-      }
+      },
     ],
     2: [
       {
@@ -5294,52 +5854,96 @@ test("handleRelativeLabel", (t) => {
       },
       {
         addr: 0x1200,
-      }
-    ]
+      },
+    ],
   };
 
   // Test forward label resolution
   assembler.currentTargetAddress = 0x1800;
-  t.is(assembler.symbolScope.handleRelativeLabel("+"), 0x1800, "Should resolve to next forward label");
-  t.is(assembler.symbolScope.handleRelativeLabel("++"), 0x1800, "Should resolve to next forward label with depth 2");
+  t.is(
+    assembler.symbolScope.handleRelativeLabel("+"),
+    0x1800,
+    "Should resolve to next forward label",
+  );
+  t.is(
+    assembler.symbolScope.handleRelativeLabel("++"),
+    0x1800,
+    "Should resolve to next forward label with depth 2",
+  );
 
   // Test backward label resolution
   assembler.currentTargetAddress = 0x1600;
-  t.is(assembler.symbolScope.handleRelativeLabel("-"), 0x1600, "Should resolve to previous backward label");
-  t.is(assembler.symbolScope.handleRelativeLabel("--"), 0x1600, "Should resolve to previous backward label with depth 2");
+  t.is(
+    assembler.symbolScope.handleRelativeLabel("-"),
+    0x1600,
+    "Should resolve to previous backward label",
+  );
+  t.is(
+    assembler.symbolScope.handleRelativeLabel("--"),
+    0x1600,
+    "Should resolve to previous backward label with depth 2",
+  );
 
   // Test error cases
   assembler.forwardLabels = {};
   assembler.backwardLabels = {};
 
   // No forward labels defined
-  const error1 = t.throws(() => {
-    assembler.symbolScope.handleRelativeLabel("+");
-  }, { instanceOf: Error });
-  t.is(error1.message, "Error: Undefined forward label '+'.", "Should throw when no forward labels defined");
+  const error1 = t.throws(
+    () => {
+      assembler.symbolScope.handleRelativeLabel("+");
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error1.message,
+    "Error: Undefined forward label '+'.",
+    "Should throw when no forward labels defined",
+  );
 
   // No backward labels defined
-  const error2 = t.throws(() => {
-    assembler.symbolScope.handleRelativeLabel("-");
-  }, { instanceOf: Error });
-  t.is(error2.message, "Error: Undefined backward label '-'.", "Should throw when no backward labels defined");
+  const error2 = t.throws(
+    () => {
+      assembler.symbolScope.handleRelativeLabel("-");
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error2.message,
+    "Error: Undefined backward label '-'.",
+    "Should throw when no backward labels defined",
+  );
 
   // Test with empty arrays
   assembler.forwardLabels[1] = [];
   assembler.backwardLabels[1] = [];
 
-  const error3 = t.throws(() => {
-    assembler.symbolScope.handleRelativeLabel("+");
-  }, { instanceOf: Error });
-  t.is(error3.message, "Error: Undefined forward label '+'.", "Should throw when forward labels array is empty");
+  const error3 = t.throws(
+    () => {
+      assembler.symbolScope.handleRelativeLabel("+");
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error3.message,
+    "Error: Undefined forward label '+'.",
+    "Should throw when forward labels array is empty",
+  );
 
-  const error4 = t.throws(() => {
-    assembler.symbolScope.handleRelativeLabel("-");
-  }, { instanceOf: Error });
-  t.is(error4.message, "Error: Undefined backward label '-'.", "Should throw when backward labels array is empty");
+  const error4 = t.throws(
+    () => {
+      assembler.symbolScope.handleRelativeLabel("-");
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    error4.message,
+    "Error: Undefined backward label '-'.",
+    "Should throw when backward labels array is empty",
+  );
 });
 
-test("defineEngine.handleDefineCommand - basic define operations", t => {
+test("defineEngine.handleDefineCommand - basic define operations", (t) => {
   const assembler = new Assembler();
 
   // Test basic assignment (=)
@@ -5353,7 +5957,11 @@ test("defineEngine.handleDefineCommand - basic define operations", t => {
   // Test immediate evaluation (:=)
   assembler.defines.set("base", "10");
   assembler.defineEngine.handleDefineCommand("!derived := !base + 5");
-  t.is(assembler.defines.get("derived"), "$F", "Immediate evaluation should resolve defines in the value (10 + 5)");
+  t.is(
+    assembler.defines.get("derived"),
+    "$F",
+    "Immediate evaluation should resolve defines in the value (10 + 5)",
+  );
 
   // Test math evaluation (#=)
   assembler.defineEngine.handleDefineCommand("!math #= 5 + 7");
@@ -5368,7 +5976,11 @@ test("defineEngine.handleDefineCommand - basic define operations", t => {
   // Test conditional assignment (?=)
   assembler.defines.set("existing", "original");
   assembler.defineEngine.handleDefineCommand("!existing ?= new value");
-  t.is(assembler.defines.get("existing"), "original", "Conditional assignment shouldn't change existing values");
+  t.is(
+    assembler.defines.get("existing"),
+    "original",
+    "Conditional assignment shouldn't change existing values",
+  );
 
   assembler.defineEngine.handleDefineCommand("!new ?= first value");
   t.is(assembler.defines.get("new"), "first value", "Conditional assignment should set new values");
@@ -5380,20 +5992,31 @@ test("defineEngine.handleDefineCommand - basic define operations", t => {
 
   // Test complex expressions
   assembler.defineEngine.handleDefineCommand("!complex #= (10 * 2) / 4");
-  t.is(assembler.defines.get("complex"), "5", "Complex math expressions should be evaluated correctly");
+  t.is(
+    assembler.defines.get("complex"),
+    "5",
+    "Complex math expressions should be evaluated correctly",
+  );
 
   assembler.defineEngine.handleDefineCommand("!task_offset = $004E+task");
-  t.is(assembler.defines.get("task_offset"), "$004E+task", "Symbolic math defines should retain struct references for later member access");
+  t.is(
+    assembler.defines.get("task_offset"),
+    "$004E+task",
+    "Symbolic math defines should retain struct references for later member access",
+  );
 });
 
-test("handleUndef - removes defines from processCommand", t => {
+test("handleUndef - removes defines from processCommand", (t) => {
   const assembler = new Assembler();
 
   assembler.defineEngine.handleDefineCommand('!testdefine = "poop"');
   t.true(assembler.defines.has("testdefine"), "Define should exist before undef");
 
   assembler.defineEngine.handleDefineCommand('undef "testdefine"');
-  t.false(assembler.defines.has("testdefine"), "Direct handleDefineCommand undef should remove define");
+  t.false(
+    assembler.defines.has("testdefine"),
+    "Direct handleDefineCommand undef should remove define",
+  );
 
   assembler.defineEngine.handleDefineCommand('!testdefine = "poop"');
   assembler.processCommand('undef "testdefine"');
@@ -5403,42 +6026,71 @@ test("handleUndef - removes defines from processCommand", t => {
   assembler.processCommand("undef testdefine");
   t.false(assembler.defines.has("testdefine"), "Unquoted undef should remove define");
 
-  const error = t.throws(() => {
-    assembler.defineEngine.handleDefineCommand("undef");
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.defineEngine.handleDefineCommand("undef");
+    },
+    { instanceOf: Error },
+  );
   t.is(error.message, "undef requires exactly one identifier parameter");
 });
 
-test("expressionHost - defined and string expansion behavior", t => {
+test("expressionHost - defined and string expansion behavior", (t) => {
   const assembler = new Assembler();
   assembler.defines.set("testdefine", "poop");
   assembler.defines.set("a", "x");
 
-  t.is(assembler.expressionHost.isDefined("testdefine"), 1, "defined() should detect preprocessor defines");
-  t.is(assembler.expressionHost.isDefined("missing_define"), 0, "defined() should return 0 for missing defines");
+  t.is(
+    assembler.expressionHost.isDefined("testdefine"),
+    1,
+    "defined() should detect preprocessor defines",
+  );
+  t.is(
+    assembler.expressionHost.isDefined("missing_define"),
+    0,
+    "defined() should return 0 for missing defines",
+  );
 
-  t.is(assembler.defineEngine.resolveDefinesInStringLiteral("!a"), "x", "Unescaped string define should expand");
-  t.is(assembler.defineEngine.resolveDefinesInStringLiteral("\\!a"), "!a", "Escaped bang should stay literal");
-  t.is(assembler.defineEngine.resolveDefinesInStringLiteral("\\\\!a"), "\\x", "Double slash should keep slash and expand define");
+  t.is(
+    assembler.defineEngine.resolveDefinesInStringLiteral("!a"),
+    "x",
+    "Unescaped string define should expand",
+  );
+  t.is(
+    assembler.defineEngine.resolveDefinesInStringLiteral("\\!a"),
+    "!a",
+    "Escaped bang should stay literal",
+  );
+  t.is(
+    assembler.defineEngine.resolveDefinesInStringLiteral("\\\\!a"),
+    "\\x",
+    "Double slash should keep slash and expand define",
+  );
 });
 
-test("defineEngine.handleDefineCommand - error cases", t => {
+test("defineEngine.handleDefineCommand - error cases", (t) => {
   const assembler = new Assembler();
 
   // Test invalid syntax
-  const error = t.throws(() => {
-    assembler.defineEngine.handleDefineCommand("!invalid syntax");
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.defineEngine.handleDefineCommand("!invalid syntax");
+    },
+    { instanceOf: Error },
+  );
   t.is(error.message, "Invalid define syntax: !invalid syntax", "Should throw on invalid syntax");
 
   // Test math evaluation errors
-  const mathError = t.throws(() => {
-    assembler.defineEngine.handleDefineCommand("!bad #= not a math expression");
-  }, { instanceOf: Error });
+  const mathError = t.throws(
+    () => {
+      assembler.defineEngine.handleDefineCommand("!bad #= not a math expression");
+    },
+    { instanceOf: Error },
+  );
   t.is(mathError.message, "Mismatched parentheses.", "Should throw on invalid math expression");
 });
 
-test("handleDefineCommand - edge cases", t => {
+test("handleDefineCommand - edge cases", (t) => {
   const assembler = new Assembler();
 
   // TODO: Validate this
@@ -5466,7 +6118,7 @@ test("handleDefineCommand - edge cases", t => {
   t.is(assembler.defines.get("complex"), "14", "Should respect operator precedence in math");
 });
 
-test("parseFunctionDefinition - basic functionality", t => {
+test("parseFunctionDefinition - basic functionality", (t) => {
   const assembler = new Assembler();
 
   // Test basic function definition
@@ -5478,18 +6130,22 @@ test("parseFunctionDefinition - basic functionality", t => {
   t.is(assembler.mathCore.math("add(5, 3)"), 8, "Function should be callable with arguments");
 });
 
-test("parseFunctionDefinition - multiline functions", t => {
+test("parseFunctionDefinition - multiline functions", (t) => {
   const assembler = new Assembler();
 
   // Test function definition with line continuation
   assembler.parseFunctionDefinition("function complex(x, y) = \\\n  x * 2 + \\\n  y * 3");
-  t.is(typeof assembler.mathCore.userFunctions.get("complex"), "object", "Multiline function should be defined");
+  t.is(
+    typeof assembler.mathCore.userFunctions.get("complex"),
+    "object",
+    "Multiline function should be defined",
+  );
 
   // Test multiline function usage
   t.is(assembler.mathCore.math("complex(2, 3)"), 13, "Multiline function should work correctly");
 });
 
-test("parseFunctionDefinition - edge cases", t => {
+test("parseFunctionDefinition - edge cases", (t) => {
   const assembler = new Assembler();
 
   // Test function with no parameters
@@ -5498,7 +6154,11 @@ test("parseFunctionDefinition - edge cases", t => {
 
   // Test function with many parameters
   assembler.parseFunctionDefinition("function many(a, b, c, d, e) = a + b + c + d + e");
-  t.is(assembler.mathCore.math("many(1, 2, 3, 4, 5)"), 15, "Function with many parameters should work");
+  t.is(
+    assembler.mathCore.math("many(1, 2, 3, 4, 5)"),
+    15,
+    "Function with many parameters should work",
+  );
 
   // Test nested function calls
   assembler.parseFunctionDefinition("function double(x) = x * 2");
@@ -5507,7 +6167,7 @@ test("parseFunctionDefinition - edge cases", t => {
   t.is(assembler.mathCore.math("compose(2)"), 12, "Nested function calls should work");
 });
 
-test("parseFunctionDefinition - error cases", t => {
+test("parseFunctionDefinition - error cases", (t) => {
   const assembler = new Assembler();
 
   // Test redefining a function
@@ -5518,9 +6178,12 @@ test("parseFunctionDefinition - error cases", t => {
   t.is(assembler.mathCore.math("test(5)"), 10, "Redefined function should use the new definition");
 
   // Test syntax errors
-  const error = t.throws(() => {
-    assembler.parseFunctionDefinition("function broken(x, = x + 1");
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.parseFunctionDefinition("function broken(x, = x + 1");
+    },
+    { instanceOf: Error },
+  );
   t.truthy(error, "Should throw on invalid function syntax");
 
   // Test recursive function (if supported)
@@ -5533,125 +6196,203 @@ test("parseFunctionDefinition - error cases", t => {
   }
 });
 
-test("handleArch - valid architectures", t => {
+test("handleArch - valid architectures", (t) => {
   const assembler = new Assembler();
 
   // Test 65816 architecture
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "65816"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "65816"],
+  );
   t.is(assembler.arch, "65816", "Should set architecture to 65816");
 
   // Test spc700 architecture
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "spc700"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "spc700"],
+  );
   t.is(assembler.arch, "spc700", "Should set architecture to spc700");
-  t.false(assembler.targetState.spcInlineCompatibility, "spc700 should not enable inline compatibility mode");
+  t.false(
+    assembler.targetState.spcInlineCompatibility,
+    "spc700 should not enable inline compatibility mode",
+  );
 
   // Test spc700-inline architecture
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "spc700-inline"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "spc700-inline"],
+  );
   t.is(assembler.arch, "spc700", "spc700-inline should compile with spc700 arch backend");
-  t.true(assembler.targetState.spcInlineCompatibility, "spc700-inline should enable inline compatibility mode");
+  t.true(
+    assembler.targetState.spcInlineCompatibility,
+    "spc700-inline should enable inline compatibility mode",
+  );
 
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "spc700-raw"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "spc700-raw"],
+  );
   t.is(assembler.arch, "spc700", "spc700-raw should compile with spc700 arch backend");
   t.is(assembler.targetState.mapper, "norom", "spc700-raw should switch to norom addressing");
-  t.false(assembler.targetState.spcInlineCompatibility, "spc700-raw should not enable inline compatibility mode");
+  t.false(
+    assembler.targetState.spcInlineCompatibility,
+    "spc700-raw should not enable inline compatibility mode",
+  );
 
   // Test superfx architecture
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "superfx"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "superfx"],
+  );
   t.is(assembler.arch, "superfx", "Should set architecture to superfx");
-  t.false(assembler.targetState.spcInlineCompatibility, "superfx should disable inline compatibility mode");
+  t.false(
+    assembler.targetState.spcInlineCompatibility,
+    "superfx should disable inline compatibility mode",
+  );
 
   // Test case insensitivity
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "65816"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "65816"],
+  );
   t.is(assembler.arch, "65816", "Should handle lowercase architecture name");
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "SPC700"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "SPC700"],
+  );
   t.is(assembler.arch, "spc700", "Should handle uppercase architecture name");
 });
 
-test("handleArch - error cases", t => {
+test("handleArch - error cases", (t) => {
   const assembler = new Assembler();
 
   // Test missing architecture parameter
-  const missingParamError = t.throws(() => {
-    handleArch({
-      session: assembler,
-      operandResolver: assembler.operandResolver,
-    }, ["arch"]);
-  }, { instanceOf: Error });
-  t.is(missingParamError?.message, "ARCH command requires an architecture parameter.",
-    "Should throw when architecture parameter is missing");
+  const missingParamError = t.throws(
+    () => {
+      handleArch(
+        {
+          session: assembler,
+          operandResolver: assembler.operandResolver,
+        },
+        ["arch"],
+      );
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    missingParamError?.message,
+    "ARCH command requires an architecture parameter.",
+    "Should throw when architecture parameter is missing",
+  );
 
   // Test unsupported architecture
-  const unsupportedArchError = t.throws(() => {
-    handleArch({
-      session: assembler,
-      operandResolver: assembler.operandResolver,
-    }, ["arch", "z80"]);
-  }, { instanceOf: Error });
-  t.is(unsupportedArchError?.message, "Unsupported architecture: z80",
-    "Should throw on unsupported architecture");
+  const unsupportedArchError = t.throws(
+    () => {
+      handleArch(
+        {
+          session: assembler,
+          operandResolver: assembler.operandResolver,
+        },
+        ["arch", "z80"],
+      );
+    },
+    { instanceOf: Error },
+  );
+  t.is(
+    unsupportedArchError?.message,
+    "Unsupported architecture: z80",
+    "Should throw on unsupported architecture",
+  );
 });
 
-test("handleArch - architecture switching", t => {
+test("handleArch - architecture switching", (t) => {
   const assembler = new Assembler();
 
   // Test switching between architectures
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "65816"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "65816"],
+  );
   t.is(assembler.arch, "65816", "Should start with 65816 architecture");
 
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "spc700"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "spc700"],
+  );
   t.is(assembler.arch, "spc700", "Should switch to spc700 architecture");
-  t.false(assembler.targetState.spcInlineCompatibility, "spc700 should not use inline compatibility mode");
+  t.false(
+    assembler.targetState.spcInlineCompatibility,
+    "spc700 should not use inline compatibility mode",
+  );
 
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "spc700-inline"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "spc700-inline"],
+  );
   t.is(assembler.arch, "spc700", "spc700-inline should still use spc700 backend");
-  t.true(assembler.targetState.spcInlineCompatibility, "spc700-inline should enable inline compatibility mode");
+  t.true(
+    assembler.targetState.spcInlineCompatibility,
+    "spc700-inline should enable inline compatibility mode",
+  );
 
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "superfx"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "superfx"],
+  );
   t.is(assembler.arch, "superfx", "Should switch to superfx architecture");
-  t.false(assembler.targetState.spcInlineCompatibility, "switching away should clear inline compatibility mode");
+  t.false(
+    assembler.targetState.spcInlineCompatibility,
+    "switching away should clear inline compatibility mode",
+  );
 
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "65816"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "65816"],
+  );
   t.is(assembler.arch, "65816", "Should switch back to 65816 architecture");
-  t.false(assembler.targetState.spcInlineCompatibility, "65816 should keep inline compatibility mode disabled");
+  t.false(
+    assembler.targetState.spcInlineCompatibility,
+    "65816 should keep inline compatibility mode disabled",
+  );
 });
 
-test("processCommand - spcblock emits expected nspc stream", t => {
+test("processCommand - spcblock emits expected nspc stream", (t) => {
   const assembler = new Assembler(new Uint8Array(0x80000));
   assembler.setCurrentFile("plugins/snes/tests/assembler.test.ts");
 
@@ -5682,22 +6423,19 @@ test("processCommand - spcblock emits expected nspc stream", t => {
   const result = Array.from(assembler.getBinaryOutput());
   t.deepEqual(
     result,
-    [0xA9, 0xAA, 0x03, 0x00, 0x00, 0x60, 0x8F, 0x44, 0x33, 0x06, 0x00, 0x00, 0x50, 0x5F, 0x03, 0x50, 0x8F, 0x22, 0x11, 0x00, 0x00, 0x00, 0x50, 0xA9, 0xBB],
-    "spcblock stream should match Asar reference bytes"
+    [
+      0xa9, 0xaa, 0x03, 0x00, 0x00, 0x60, 0x8f, 0x44, 0x33, 0x06, 0x00, 0x00, 0x50, 0x5f, 0x03,
+      0x50, 0x8f, 0x22, 0x11, 0x00, 0x00, 0x00, 0x50, 0xa9, 0xbb,
+    ],
+    "spcblock stream should match Asar reference bytes",
   );
 });
 
-test("processCommand - spc700-inline auto-wraps in implicit spcblock", t => {
+test("processCommand - spc700-inline auto-wraps in implicit spcblock", (t) => {
   const assembler = new Assembler(new Uint8Array(0x80000));
   assembler.setCurrentFile("plugins/snes/tests/assembler.test.ts");
 
-  const lines = [
-    "org $008000",
-    "arch spc700-inline",
-    "org $5000",
-    "jmp lab",
-    "lab:",
-  ];
+  const lines = ["org $008000", "arch spc700-inline", "org $5000", "jmp lab", "lab:"];
 
   for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
     assembler.activateStage(stage);
@@ -5711,12 +6449,12 @@ test("processCommand - spc700-inline auto-wraps in implicit spcblock", t => {
   const result = Array.from(assembler.getBinaryOutput());
   t.deepEqual(
     result,
-    [0x03, 0x00, 0x00, 0x50, 0x5F, 0x03, 0x50, 0x00, 0x00, 0x00, 0x00],
-    "spc700-inline output should match legacy inline stream format"
+    [0x03, 0x00, 0x00, 0x50, 0x5f, 0x03, 0x50, 0x00, 0x00, 0x00, 0x00],
+    "spc700-inline output should match legacy inline stream format",
   );
 });
 
-test("processCommand - spc700-raw writes org $000000 into a norom payload", t => {
+test("processCommand - spc700-raw writes org $000000 into a norom payload", (t) => {
   const assembler = new Assembler(undefined, { collectSourceMetadata: false });
   assembler.setCurrentFile("engine.asm");
 
@@ -5735,7 +6473,7 @@ test("processCommand - spc700-raw writes org $000000 into a norom payload", t =>
   t.deepEqual(Array.from(assembler.getBinaryOutput()), [0xe8, 0x00]);
 });
 
-test("processCommand - SPC700 MOV label, A encodes as abs store", t => {
+test("processCommand - SPC700 MOV label, A encodes as abs store", (t) => {
   const assembler = new Assembler(undefined, { collectSourceMetadata: false });
   const lines = [
     "norom",
@@ -5757,10 +6495,13 @@ test("processCommand - SPC700 MOV label, A encodes as abs store", t => {
     assembler.finishPass();
   }
 
-  t.deepEqual(Array.from(assembler.getBinaryOutput()), [0xc5, 0x06, 0x02, 0x8f, 0x00, 0x20, 0x02, 0x20]);
+  t.deepEqual(
+    Array.from(assembler.getBinaryOutput()),
+    [0xc5, 0x06, 0x02, 0x8f, 0x00, 0x20, 0x02, 0x20],
+  );
 });
 
-test("processCommand - LDA.l grouping bank math ,x encodes as long indexed X", t => {
+test("processCommand - LDA.l grouping bank math ,x encodes as long indexed X", (t) => {
   const assembler = new Assembler(undefined, { collectSourceMetadata: false });
   const lines = ["lorom", "org $808000", "LDA.l ($7F0000&$FF0000)+$03,x"];
 
@@ -5776,7 +6517,7 @@ test("processCommand - LDA.l grouping bank math ,x encodes as long indexed X", t
   t.deepEqual(Array.from(assembler.getBinaryOutput()).slice(0, 4), [0xbf, 0x03, 0x00, 0x7f]);
 });
 
-test("step - basic functionality", t => {
+test("step - basic functionality", (t) => {
   const assembler = new Assembler();
 
   // Set initial positions
@@ -5790,32 +6531,52 @@ test("step - basic functionality", t => {
   assembler.step(10);
 
   // Check that all positions are updated correctly
-  t.is(assembler.currentTargetAddress, 0x00800A, "currentTargetAddress should be incremented by step amount");
-  t.is(assembler.currentTargetBaseAddress, 0x00800A, "currentTargetBaseAddress should be incremented by step amount");
-  t.is(assembler.currentTargetStartAddress, 0x00800A, "currentTargetStartAddress should match new currentTargetAddress");
-  t.is(assembler.currentTargetBaseStartAddress, 0x00800A, "currentTargetBaseStartAddress should match currentTargetBaseAddress");
+  t.is(
+    assembler.currentTargetAddress,
+    0x00800a,
+    "currentTargetAddress should be incremented by step amount",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress,
+    0x00800a,
+    "currentTargetBaseAddress should be incremented by step amount",
+  );
+  t.is(
+    assembler.currentTargetStartAddress,
+    0x00800a,
+    "currentTargetStartAddress should match new currentTargetAddress",
+  );
+  t.is(
+    assembler.currentTargetBaseStartAddress,
+    0x00800a,
+    "currentTargetBaseStartAddress should match currentTargetBaseAddress",
+  );
   t.is(assembler.bytes, 10, "bytes counter should be incremented by step amount");
 });
 
-test("step - bank crossing with different mappers", t => {
+test("step - bank crossing with different mappers", (t) => {
   const assembler = new Assembler();
 
   // Test lorom mapper bank crossing
   assembler.targetState.mapper = "lorom";
-  assembler.currentTargetAddress = 0x00FFFC;
-  assembler.currentTargetBaseAddress = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00fffc;
+  assembler.currentTargetBaseAddress = 0x00fffc;
 
   // Step across bank boundary
   assembler.step(8);
 
   // Asar pc() is linear across bank bytes, including the unmapped LoROM hole.
   t.is(assembler.currentTargetAddress, 0x010004, "lorom pc() increments linearly across $00FFFF");
-  t.is(assembler.currentTargetBaseAddress, 0x010004, "currentTargetBaseAddress should follow the same linear pc()");
+  t.is(
+    assembler.currentTargetBaseAddress,
+    0x010004,
+    "currentTargetBaseAddress should follow the same linear pc()",
+  );
 
   // Test hirom mapper bank crossing
   assembler.targetState.mapper = "hirom";
-  assembler.currentTargetAddress = 0x00FFFC;
-  assembler.currentTargetBaseAddress = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00fffc;
+  assembler.currentTargetBaseAddress = 0x00fffc;
 
   // Step across bank boundary
   assembler.step(8);
@@ -5824,19 +6585,23 @@ test("step - bank crossing with different mappers", t => {
 
   // Test hirom mapper bank crossing above 0x400000
   assembler.targetState.mapper = "hirom";
-  assembler.currentTargetAddress = 0x40FFFC;
-  assembler.currentTargetBaseAddress = 0x40FFFC;
+  assembler.currentTargetAddress = 0x40fffc;
+  assembler.currentTargetBaseAddress = 0x40fffc;
 
   // Step across bank boundary
   assembler.step(8);
 
   // In hirom for addresses above 0x400000, should just increment
-  t.is(assembler.currentTargetAddress, 0x410004, "hirom should not wrap for addresses above 0x400000");
+  t.is(
+    assembler.currentTargetAddress,
+    0x410004,
+    "hirom should not wrap for addresses above 0x400000",
+  );
 
   // Test norom mapper (no wrapping)
   assembler.targetState.mapper = "norom";
-  assembler.currentTargetAddress = 0x00FFFC;
-  assembler.currentTargetBaseAddress = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00fffc;
+  assembler.currentTargetBaseAddress = 0x00fffc;
 
   // Step across bank boundary
   assembler.step(8);
@@ -5845,7 +6610,7 @@ test("step - bank crossing with different mappers", t => {
   t.is(assembler.currentTargetAddress, 0x010004, "norom should not wrap addresses");
 });
 
-test("step - large steps across multiple banks", t => {
+test("step - large steps across multiple banks", (t) => {
   const assembler = new Assembler();
   assembler.targetState.mapper = "lorom";
 
@@ -5856,83 +6621,115 @@ test("step - large steps across multiple banks", t => {
   // Step forward by more than one bank (0x8000 bytes)
   assembler.step(0x10000);
 
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x018000, "Should handle steps larger than one bank");
-  t.is(assembler.currentTargetBaseAddress & 0xFFFFFF, 0x018000, "currentTargetBaseAddress should follow same rules for large steps");
+  t.is(
+    assembler.currentTargetAddress & 0xffffff,
+    0x018000,
+    "Should handle steps larger than one bank",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress & 0xffffff,
+    0x018000,
+    "currentTargetBaseAddress should follow same rules for large steps",
+  );
 });
 
-test("step - exlorom and bigsa1rom bank crossing", t => {
+test("step - exlorom and bigsa1rom bank crossing", (t) => {
   const assembler = new Assembler();
 
   // Test exlorom
   assembler.targetState.mapper = "exlorom";
-  assembler.currentTargetAddress = 0x80FFFC;
-  assembler.currentTargetBaseAddress = 0x80FFFC;
+  assembler.currentTargetAddress = 0x80fffc;
+  assembler.currentTargetBaseAddress = 0x80fffc;
 
   // Step across bank boundary
   assembler.step(8);
 
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x810004, "exlorom pc() increments linearly across $80FFFF");
+  t.is(
+    assembler.currentTargetAddress & 0xffffff,
+    0x810004,
+    "exlorom pc() increments linearly across $80FFFF",
+  );
 
   // Test bigsa1rom
   assembler.targetState.mapper = "bigsa1rom";
-  assembler.currentTargetAddress = 0x00FFFC;
-  assembler.currentTargetBaseAddress = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00fffc;
+  assembler.currentTargetBaseAddress = 0x00fffc;
 
   // Step across bank boundary
   assembler.step(8);
 
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x010004, "bigsa1rom pc() increments linearly across $00FFFF");
+  t.is(
+    assembler.currentTargetAddress & 0xffffff,
+    0x010004,
+    "bigsa1rom pc() increments linearly across $00FFFF",
+  );
 });
 
-test("step - exhirom, sfxrom, and sa1rom bank crossing", t => {
+test("step - exhirom, sfxrom, and sa1rom bank crossing", (t) => {
   const assembler = new Assembler();
 
   // Test exhirom below 0x400000
   assembler.targetState.mapper = "exhirom";
-  assembler.currentTargetAddress = 0x00FFFC;
-  assembler.currentTargetBaseAddress = 0x00FFFC;
+  assembler.currentTargetAddress = 0x00fffc;
+  assembler.currentTargetBaseAddress = 0x00fffc;
 
   // Step across bank boundary
   assembler.step(8);
 
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x010004, "exhirom pc() increments linearly across $00FFFF");
+  t.is(
+    assembler.currentTargetAddress & 0xffffff,
+    0x010004,
+    "exhirom pc() increments linearly across $00FFFF",
+  );
 
   // Test exhirom above 0x400000
-  assembler.currentTargetAddress = 0x40FFFC;
-  assembler.currentTargetBaseAddress = 0x40FFFC;
+  assembler.currentTargetAddress = 0x40fffc;
+  assembler.currentTargetBaseAddress = 0x40fffc;
 
   // Step across bank boundary
   assembler.step(8);
 
   // Should not wrap above 0x400000
-  t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x410004, "exhirom should not wrap above 0x400000");
+  t.is(
+    assembler.currentTargetAddress & 0xffffff,
+    0x410004,
+    "exhirom should not wrap above 0x400000",
+  );
 
   // Test sfxrom and sa1rom (they behave the same way)
   for (const mapper of ["sfxrom", "sa1rom"]) {
     assembler.targetState.mapper = mapper;
 
     // Test below 0x400000
-    assembler.currentTargetAddress = 0x00FFFC;
-    assembler.currentTargetBaseAddress = 0x00FFFC;
+    assembler.currentTargetAddress = 0x00fffc;
+    assembler.currentTargetBaseAddress = 0x00fffc;
 
     // Step across bank boundary
     assembler.step(8);
 
-    t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x010004, `${mapper} pc() increments linearly across $00FFFF`);
+    t.is(
+      assembler.currentTargetAddress & 0xffffff,
+      0x010004,
+      `${mapper} pc() increments linearly across $00FFFF`,
+    );
 
     // Test above 0x400000
-    assembler.currentTargetAddress = 0x40FFFC;
-    assembler.currentTargetBaseAddress = 0x40FFFC;
+    assembler.currentTargetAddress = 0x40fffc;
+    assembler.currentTargetBaseAddress = 0x40fffc;
 
     // Step across bank boundary
     assembler.step(8);
 
     // Should not wrap above 0x400000
-    t.is(assembler.currentTargetAddress & 0xFFFFFF, 0x410004, `${mapper} should not wrap above 0x400000`);
+    t.is(
+      assembler.currentTargetAddress & 0xffffff,
+      0x410004,
+      `${mapper} should not wrap above 0x400000`,
+    );
   }
 });
 
-test("step - zero step", t => {
+test("step - zero step", (t) => {
   const assembler = new Assembler();
 
   // Set initial positions
@@ -5946,14 +6743,30 @@ test("step - zero step", t => {
   assembler.step(0);
 
   // Positions should remain the same
-  t.is(assembler.currentTargetAddress, 0x008000, "currentTargetAddress should not change with zero step");
-  t.is(assembler.currentTargetBaseAddress, 0x008000, "currentTargetBaseAddress should not change with zero step");
-  t.is(assembler.currentTargetStartAddress, 0x008000, "currentTargetStartAddress should not change with zero step");
-  t.is(assembler.currentTargetBaseStartAddress, 0x008000, "currentTargetBaseStartAddress should not change with zero step");
+  t.is(
+    assembler.currentTargetAddress,
+    0x008000,
+    "currentTargetAddress should not change with zero step",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress,
+    0x008000,
+    "currentTargetBaseAddress should not change with zero step",
+  );
+  t.is(
+    assembler.currentTargetStartAddress,
+    0x008000,
+    "currentTargetStartAddress should not change with zero step",
+  );
+  t.is(
+    assembler.currentTargetBaseStartAddress,
+    0x008000,
+    "currentTargetBaseStartAddress should not change with zero step",
+  );
   t.is(assembler.bytes, 0, "bytes counter should not change with zero step");
 });
 
-test("step - negative step", t => {
+test("step - negative step", (t) => {
   const assembler = new Assembler();
 
   // Set initial positions
@@ -5961,21 +6774,27 @@ test("step - negative step", t => {
   assembler.currentTargetBaseAddress = 0x008100;
 
   // Step with negative value should throw an error
-  const error = t.throws(() => {
-    assembler.step(-10);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.step(-10);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error?.message, "step num is negative", "Should throw error for negative step");
 
   // Also test with a different negative value
-  const error2 = t.throws(() => {
-    assembler.step(-20);
-  }, { instanceOf: Error });
+  const error2 = t.throws(
+    () => {
+      assembler.step(-20);
+    },
+    { instanceOf: Error },
+  );
 
   t.is(error2?.message, "step num is negative", "Should throw error for negative step");
 });
 
-test("expressionHost - resolveLabel", t => {
+test("expressionHost - resolveLabel", (t) => {
   const assembler = new Assembler();
 
   // Setup a label
@@ -5985,7 +6804,11 @@ test("expressionHost - resolveLabel", t => {
   });
 
   // Test resolving an existing label
-  t.is(assembler.expressionHost.resolveLabel("test_label"), 0x1234, "Should resolve existing label");
+  t.is(
+    assembler.expressionHost.resolveLabel("test_label"),
+    0x1234,
+    "Should resolve existing label",
+  );
 
   // Setup a struct
   assembler.structs.set("test_struct", {
@@ -5999,31 +6822,45 @@ test("expressionHost - resolveLabel", t => {
 
   // Bare struct identifiers now resolve to their declared base address so later
   // math and indexed operands can treat them like canonical labels.
-  t.is(assembler.expressionHost.resolveLabel("test_struct"), 0x2000, "Should resolve bare struct names to their base address");
+  t.is(
+    assembler.expressionHost.resolveLabel("test_struct"),
+    0x2000,
+    "Should resolve bare struct names to their base address",
+  );
 });
 
-test("expressionHost - snestopc and fromOutputOffset", t => {
+test("expressionHost - snestopc and fromOutputOffset", (t) => {
   const assembler = new Assembler();
 
   // Mock the address conversion methods.
-  const originalConvertTargetAddressToRomOffset = assembler.outputWriter.toOutputOffset.bind(assembler.outputWriter);
+  const originalConvertTargetAddressToRomOffset = assembler.outputWriter.toOutputOffset.bind(
+    assembler.outputWriter,
+  );
   const originalPctosnes = assembler.outputWriter.fromOutputOffset.bind(assembler.outputWriter);
 
   assembler.outputWriter.toOutputOffset = (addr: number) => addr + 0x1000;
   assembler.outputWriter.fromOutputOffset = (addr: number) => addr - 0x1000;
 
   // Test snestopc
-  t.is(assembler.expressionHost.convertLogicalToOutputOffset(0x8000), 0x9000, "Should convert SNES to PC address");
+  t.is(
+    assembler.expressionHost.convertLogicalToOutputOffset(0x8000),
+    0x9000,
+    "Should convert SNES to PC address",
+  );
 
   // Test fromOutputOffset
-  t.is(assembler.expressionHost.convertOutputOffsetToLogical(0x9000), 0x8000, "Should convert PC to SNES address");
+  t.is(
+    assembler.expressionHost.convertOutputOffsetToLogical(0x9000),
+    0x8000,
+    "Should convert PC to SNES address",
+  );
 
   // Restore original methods.
   assembler.outputWriter.toOutputOffset = originalConvertTargetAddressToRomOffset;
   assembler.outputWriter.fromOutputOffset = originalPctosnes;
 });
 
-test("expressionHost - pc and realbase", t => {
+test("expressionHost - pc and realbase", (t) => {
   const assembler = new Assembler();
 
   // Set positions
@@ -6031,13 +6868,21 @@ test("expressionHost - pc and realbase", t => {
   assembler.currentTargetBaseAddress = 0x9000;
 
   // Test pc
-  t.is(assembler.expressionHost.getCurrentAddress(), 0x8000, "Should return current currentTargetAddress");
+  t.is(
+    assembler.expressionHost.getCurrentAddress(),
+    0x8000,
+    "Should return current currentTargetAddress",
+  );
 
   // Test realbase
-  t.is(assembler.expressionHost.getCurrentBaseAddress(), 0x9000, "Should return currentTargetBaseAddress");
+  t.is(
+    assembler.expressionHost.getCurrentBaseAddress(),
+    0x9000,
+    "Should return currentTargetBaseAddress",
+  );
 });
 
-test("expressionHost - defined", t => {
+test("expressionHost - defined", (t) => {
   const assembler = new Assembler();
 
   // Setup a label
@@ -6060,13 +6905,21 @@ test("expressionHost - defined", t => {
   t.is(assembler.expressionHost.isDefined("defined_label"), 1, "Should return 1 for defined label");
 
   // Test defined with existing struct
-  t.is(assembler.expressionHost.isDefined("defined_struct"), 1, "Should return 1 for defined struct");
+  t.is(
+    assembler.expressionHost.isDefined("defined_struct"),
+    1,
+    "Should return 1 for defined struct",
+  );
 
   // Test defined with non-existent identifier
-  t.is(assembler.expressionHost.isDefined("undefined_item"), 0, "Should return 0 for undefined item");
+  t.is(
+    assembler.expressionHost.isDefined("undefined_item"),
+    0,
+    "Should return 0 for undefined item",
+  );
 });
 
-test("expressionHost - sizeof, objectsize, datasize", t => {
+test("expressionHost - sizeof, objectsize, datasize", (t) => {
   const assembler = new Assembler();
 
   // Mock getExpressionObjectSize method
@@ -6080,13 +6933,25 @@ test("expressionHost - sizeof, objectsize, datasize", t => {
   };
 
   // Test sizeof (with includeParent=true)
-  t.is(assembler.expressionHost.getExpressionObjectSize("test_object", true), 0x200, "sizeof should include parent size");
+  t.is(
+    assembler.expressionHost.getExpressionObjectSize("test_object", true),
+    0x200,
+    "sizeof should include parent size",
+  );
 
   // Test objectsize (with default includeParent=false)
-  t.is(assembler.expressionHost.getExpressionObjectSize("test_object", false), 0x100, "objectsize should not include parent size");
+  t.is(
+    assembler.expressionHost.getExpressionObjectSize("test_object", false),
+    0x100,
+    "objectsize should not include parent size",
+  );
 
   // Test datasize (same as objectsize)
-  t.is(assembler.expressionHost.getExpressionObjectSize("test_object", false), 0x100, "datasize should be same as objectsize");
+  t.is(
+    assembler.expressionHost.getExpressionObjectSize("test_object", false),
+    0x100,
+    "datasize should be same as objectsize",
+  );
 
   // Test with non-existent object
   const error = t.throws(() => {
@@ -6098,12 +6963,14 @@ test("expressionHost - sizeof, objectsize, datasize", t => {
   assembler.getExpressionObjectSize = originalGetObjectSize;
 });
 
-test("expressionHost - filesize", t => {
+test("expressionHost - filesize", (t) => {
   const assembler = new Assembler();
   const expectedPath = `${process.cwd()}/existing_file.txt`;
-  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").callsFake((filename) => {
-    return filename === "existing_file.txt" ? expectedPath : undefined;
-  });
+  const resolvePathStub = sinon
+    .stub(assembler.fileProvider, "resolvePath")
+    .callsFake((filename) => {
+      return filename === "existing_file.txt" ? expectedPath : undefined;
+    });
   const statStub = sinon.stub(assembler.fileProvider, "stat").callsFake((filePath: string) => {
     if (filePath === expectedPath) {
       return { exists: true, readable: true, size: 1024 };
@@ -6112,7 +6979,11 @@ test("expressionHost - filesize", t => {
   });
 
   // Test filesize with existing file
-  t.is(assembler.expressionHost.getFileSize("existing_file.txt"), 1024, "Should return correct file size");
+  t.is(
+    assembler.expressionHost.getFileSize("existing_file.txt"),
+    1024,
+    "Should return correct file size",
+  );
   t.true(resolvePathStub.called, "Should resolve file existence before stat");
   t.true(statStub.calledOnce, "Should stat resolved file path");
 
@@ -6128,19 +6999,21 @@ test("expressionHost - filesize", t => {
   statStub.restore();
 });
 
-test("expressionHost - getfilestatus", t => {
+test("expressionHost - getfilestatus", (t) => {
   const assembler = new Assembler();
   const readablePath = `${process.cwd()}/readable_file.txt`;
   const unreadablePath = `${process.cwd()}/unreadable_file.txt`;
-  const resolvePathStub = sinon.stub(assembler.fileProvider, "resolvePath").callsFake((filename) => {
-    if (filename === "readable_file.txt") {
-      return readablePath;
-    }
-    if (filename === "unreadable_file.txt") {
-      return unreadablePath;
-    }
-    return undefined;
-  });
+  const resolvePathStub = sinon
+    .stub(assembler.fileProvider, "resolvePath")
+    .callsFake((filename) => {
+      if (filename === "readable_file.txt") {
+        return readablePath;
+      }
+      if (filename === "unreadable_file.txt") {
+        return unreadablePath;
+      }
+      return undefined;
+    });
   const statStub = sinon.stub(assembler.fileProvider, "stat").callsFake((filePath: string) => {
     if (filePath === readablePath) {
       return { exists: true, readable: true, size: 1 };
@@ -6152,13 +7025,25 @@ test("expressionHost - getfilestatus", t => {
   });
 
   // Test getfilestatus with readable file
-  t.is(assembler.expressionHost.getFileStatus("readable_file.txt"), 0, "Should return 0 for readable file");
+  t.is(
+    assembler.expressionHost.getFileStatus("readable_file.txt"),
+    0,
+    "Should return 0 for readable file",
+  );
 
   // Test getfilestatus with unreadable file
-  t.is(assembler.expressionHost.getFileStatus("unreadable_file.txt"), 2, "Should return 2 for unreadable file");
+  t.is(
+    assembler.expressionHost.getFileStatus("unreadable_file.txt"),
+    2,
+    "Should return 2 for unreadable file",
+  );
 
   // Test getfilestatus with non-existent file
-  t.is(assembler.expressionHost.getFileStatus("nonexistent_file.txt"), 1, "Should return 1 for non-existent file");
+  t.is(
+    assembler.expressionHost.getFileStatus("nonexistent_file.txt"),
+    1,
+    "Should return 1 for non-existent file",
+  );
 
   t.true(resolvePathStub.callCount >= 3, "Should check file existence for each query");
   t.is(statStub.callCount, 2, "Should only stat existing files");
@@ -6167,8 +7052,7 @@ test("expressionHost - getfilestatus", t => {
   statStub.restore();
 });
 
-
-test("write1_65816 - basic functionality", t => {
+test("write1_65816 - basic functionality", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("emitProgram");
@@ -6184,7 +7068,7 @@ test("write1_65816 - basic functionality", t => {
   t.is(assembler.currentTargetBaseAddress, 0x008001, "Should increment currentTargetBaseAddress");
 });
 
-test("write1_65816 - NaN handling", t => {
+test("write1_65816 - NaN handling", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("emitProgram");
@@ -6198,20 +7082,20 @@ test("write1_65816 - NaN handling", t => {
   t.is(error?.message, "write1 value is NaN", "Should throw error for NaN input");
 });
 
-test("write1_65816 - bank wrapping", t => {
+test("write1_65816 - bank wrapping", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x10000).fill(0);
   assembler.activateStage("emitProgram");
 
   // Position at the end of a bank
-  assembler.currentTargetAddress = 0x00FFFF;
-  assembler.currentTargetBaseAddress = 0x00FFFF;
-  assembler.currentTargetStartAddress = 0x00FFFF;
-  assembler.currentTargetBaseStartAddress = 0x00FFFF;
+  assembler.currentTargetAddress = 0x00ffff;
+  assembler.currentTargetBaseAddress = 0x00ffff;
+  assembler.currentTargetStartAddress = 0x00ffff;
+  assembler.currentTargetBaseStartAddress = 0x00ffff;
 
   assembler.write1_65816(0x42);
 
-  const pcpos = assembler.outputWriter.toOutputOffset(0x00FFFF);
+  const pcpos = assembler.outputWriter.toOutputOffset(0x00ffff);
   t.is(assembler.outputBytes[pcpos], 0x42, "Should write the byte to the correct position");
 
   // Default `check bankcross on`: pc() is linear, including one-past-end $010000.
@@ -6219,15 +7103,15 @@ test("write1_65816 - bank wrapping", t => {
   t.is(assembler.currentTargetBaseAddress, 0x010000);
 });
 
-test("write1_65816 - bank wrapping with bankcross off", t => {
+test("write1_65816 - bank wrapping with bankcross off", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x10000).fill(0);
   assembler.activateStage("emitProgram");
   assembler.targetState.bankCrossMode = "off";
-  assembler.currentTargetAddress = 0x00FFFF;
-  assembler.currentTargetBaseAddress = 0x00FFFF;
-  assembler.currentTargetStartAddress = 0x00FFFF;
-  assembler.currentTargetBaseStartAddress = 0x00FFFF;
+  assembler.currentTargetAddress = 0x00ffff;
+  assembler.currentTargetBaseAddress = 0x00ffff;
+  assembler.currentTargetStartAddress = 0x00ffff;
+  assembler.currentTargetBaseStartAddress = 0x00ffff;
 
   assembler.write1_65816(0x42);
 
@@ -6235,11 +7119,11 @@ test("write1_65816 - bank wrapping with bankcross off", t => {
   t.is(assembler.currentTargetBaseAddress, 0x18000);
 });
 
-test("write1_65816 - ROM expansion", t => {
+test("write1_65816 - ROM expansion", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x10).fill(0);
   assembler.activateStage("emitProgram");
-  assembler.outputFillByte = 0xFF;
+  assembler.outputFillByte = 0xff;
 
   // Position beyond current ROM size
   const initialPos = 0x008020;
@@ -6267,7 +7151,7 @@ test("write1_65816 - ROM expansion", t => {
   t.is(assembler.outputBytes.length, pcpos + 1, "romlen should be updated");
 });
 
-test("write1_65816 - pass 1 behavior", t => {
+test("write1_65816 - pass 1 behavior", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("resolveLayout");
@@ -6283,11 +7167,19 @@ test("write1_65816 - pass 1 behavior", t => {
   t.is(assembler.outputBytes[0], 0, "Should not write the byte in pass 1");
 
   // But positions should still be updated
-  t.is(assembler.currentTargetAddress, 0x008001, "Should still increment currentTargetAddress in pass 1");
-  t.is(assembler.currentTargetBaseAddress, 0x008001, "Should still increment currentTargetBaseAddress in pass 1");
+  t.is(
+    assembler.currentTargetAddress,
+    0x008001,
+    "Should still increment currentTargetAddress in pass 1",
+  );
+  t.is(
+    assembler.currentTargetBaseAddress,
+    0x008001,
+    "Should still increment currentTargetBaseAddress in pass 1",
+  );
 });
 
-test("write1_65816 - byte masking", t => {
+test("write1_65816 - byte masking", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("emitProgram");
@@ -6301,7 +7193,7 @@ test("write1_65816 - byte masking", t => {
   t.is(assembler.outputBytes[0], 0x34, "Should only write the lower 8 bits");
 });
 
-test("write1_65816 - step behavior", t => {
+test("write1_65816 - step behavior", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(0x1000).fill(0);
   assembler.activateStage("emitProgram");
@@ -6316,7 +7208,7 @@ test("write1_65816 - step behavior", t => {
   t.is(assembler.bytes, 1, "Should increment bytes counter");
 });
 
-test("fillOutputBytes - basic fill", t => {
+test("fillOutputBytes - basic fill", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(10).fill(0);
 
@@ -6332,7 +7224,7 @@ test("fillOutputBytes - basic fill", t => {
   t.is(assembler.outputBytes[5], 0, "Should not modify data after end");
 });
 
-test("fillOutputBytes - zero length", t => {
+test("fillOutputBytes - zero length", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(10).fill(0);
 
@@ -6340,10 +7232,14 @@ test("fillOutputBytes - zero length", t => {
   assembler.fillOutputBytes(2, 0x42, 0);
 
   // Check that no data was modified
-  t.deepEqual(assembler.outputBytes, new Array(10).fill(0), "Should not modify any data with length 0");
+  t.deepEqual(
+    assembler.outputBytes,
+    new Array(10).fill(0),
+    "Should not modify any data with length 0",
+  );
 });
 
-test("fillOutputBytes - fill at start of ROM", t => {
+test("fillOutputBytes - fill at start of ROM", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(10).fill(0);
 
@@ -6357,7 +7253,7 @@ test("fillOutputBytes - fill at start of ROM", t => {
   t.is(assembler.outputBytes[3], 0, "Should not modify data after end");
 });
 
-test("fillOutputBytes - fill at end of ROM", t => {
+test("fillOutputBytes - fill at end of ROM", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(10).fill(0);
 
@@ -6371,7 +7267,7 @@ test("fillOutputBytes - fill at end of ROM", t => {
   t.is(assembler.outputBytes[9], 0x42, "Should fill last position");
 });
 
-test("fillOutputBytes - fill entire ROM", t => {
+test("fillOutputBytes - fill entire ROM", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(5).fill(0);
 
@@ -6382,22 +7278,22 @@ test("fillOutputBytes - fill entire ROM", t => {
   t.deepEqual(assembler.outputBytes, new Array(5).fill(0x42), "Should fill entire ROM");
 });
 
-test("fillOutputBytes - with different values", t => {
+test("fillOutputBytes - with different values", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(10).fill(0);
 
   // Fill with different values
-  assembler.fillOutputBytes(2, 0xFF, 2);
-  assembler.fillOutputBytes(5, 0xAA, 2);
+  assembler.fillOutputBytes(2, 0xff, 2);
+  assembler.fillOutputBytes(5, 0xaa, 2);
 
   // Check that the correct values were written
-  t.is(assembler.outputBytes[2], 0xFF, "Should fill with first value");
-  t.is(assembler.outputBytes[3], 0xFF, "Should fill with first value");
-  t.is(assembler.outputBytes[5], 0xAA, "Should fill with second value");
-  t.is(assembler.outputBytes[6], 0xAA, "Should fill with second value");
+  t.is(assembler.outputBytes[2], 0xff, "Should fill with first value");
+  t.is(assembler.outputBytes[3], 0xff, "Should fill with first value");
+  t.is(assembler.outputBytes[5], 0xaa, "Should fill with second value");
+  t.is(assembler.outputBytes[6], 0xaa, "Should fill with second value");
 });
 
-test("fillOutputBytes - value byte masking", t => {
+test("fillOutputBytes - value byte masking", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(5).fill(0);
 
@@ -6410,38 +7306,41 @@ test("fillOutputBytes - value byte masking", t => {
   t.is(assembler.outputBytes[3], 0x34, "Should only use lower 8 bits of value");
 });
 
-test("fillOutputBytes - overlapping fills", t => {
+test("fillOutputBytes - overlapping fills", (t) => {
   const assembler = new Assembler();
   assembler.outputBytes = new Array(10).fill(0);
 
   // Create overlapping fills
   assembler.fillOutputBytes(2, 0x42, 4);
-  assembler.fillOutputBytes(4, 0xFF, 3);
+  assembler.fillOutputBytes(4, 0xff, 3);
 
   // Check that later fills override earlier ones
   t.is(assembler.outputBytes[2], 0x42, "Should keep first fill value");
   t.is(assembler.outputBytes[3], 0x42, "Should keep first fill value");
-  t.is(assembler.outputBytes[4], 0xFF, "Should be overwritten by second fill");
-  t.is(assembler.outputBytes[5], 0xFF, "Should have second fill value");
-  t.is(assembler.outputBytes[6], 0xFF, "Should have second fill value");
+  t.is(assembler.outputBytes[4], 0xff, "Should be overwritten by second fill");
+  t.is(assembler.outputBytes[5], 0xff, "Should have second fill value");
+  t.is(assembler.outputBytes[6], 0xff, "Should have second fill value");
 });
 
-test("asblock_pick - empty words array", t => {
+test("asblock_pick - empty words array", (t) => {
   const assembler = new Assembler();
 
   // Empty words array should return true
   t.true(assembler.asblock_pick([]), "Should return true for empty words array");
 });
 
-test("asblock_pick - pass 0 handling", t => {
+test("asblock_pick - pass 0 handling", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("collectDefinitions");
 
   // In pass 0, should always return true to allow forward references
-  t.true(assembler.asblock_pick(["unknown_instruction"]), "Should return true in pass 0 regardless of instruction");
+  t.true(
+    assembler.asblock_pick(["unknown_instruction"]),
+    "Should return true in pass 0 regardless of instruction",
+  );
 });
 
-test("asblock_pick - lowered instruction path uses architecture adapters", t => {
+test("asblock_pick - lowered instruction path uses architecture adapters", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "65816";
@@ -6457,13 +7356,15 @@ test("asblock_pick - lowered instruction path uses architecture adapters", t => 
     mnemonic: "lda",
     operandText: "#$10",
     operands: ["#$10"],
-    loweredOperands: [{
-      raw: "#$10",
-      expanded: "#$10",
-      length: 1,
-      immediate: true,
-      indirect: false,
-    }],
+    loweredOperands: [
+      {
+        raw: "#$10",
+        expanded: "#$10",
+        length: 1,
+        immediate: true,
+        indirect: false,
+      },
+    ],
     loweredOperand: {
       raw: "#$10",
       expanded: "#$10",
@@ -6482,7 +7383,7 @@ test("asblock_pick - lowered instruction path uses architecture adapters", t => 
   assembler.arch65816.encodeInstruction = original;
 });
 
-test("asblock_pick - spc700 architecture", t => {
+test("asblock_pick - spc700 architecture", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "spc700";
@@ -6500,7 +7401,7 @@ test("asblock_pick - spc700 architecture", t => {
   assembler.archSPC700.encode = originalMethod;
 });
 
-test("asblock_pick - spc700 architecture error handling", t => {
+test("asblock_pick - spc700 architecture error handling", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "spc700";
@@ -6508,16 +7409,23 @@ test("asblock_pick - spc700 architecture error handling", t => {
   const originalMethod = assembler.archSPC700.encode;
   assembler.archSPC700.encode = () => false;
 
-  const error = t.throws(() => {
-    assembler.asblock_pick(["unknown_instruction"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.asblock_pick(["unknown_instruction"]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error.message, "Unknown instruction: unknown_instruction", "Should throw error for unknown SPC700 instruction");
+  t.is(
+    error.message,
+    "Unknown instruction: unknown_instruction",
+    "Should throw error for unknown SPC700 instruction",
+  );
 
   assembler.archSPC700.encode = originalMethod;
 });
 
-test("asblock_pick - superfx architecture", t => {
+test("asblock_pick - superfx architecture", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "superfx";
@@ -6535,7 +7443,7 @@ test("asblock_pick - superfx architecture", t => {
   assembler.archSuperFX.encode = originalMethod;
 });
 
-test("asblock_pick - superfx architecture failure", t => {
+test("asblock_pick - superfx architecture failure", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "superfx";
@@ -6543,12 +7451,15 @@ test("asblock_pick - superfx architecture failure", t => {
   const originalMethod = assembler.archSuperFX.encode;
   assembler.archSuperFX.encode = () => false;
 
-  t.false(assembler.asblock_pick(["unknown_instruction"]), "Should return false when the SuperFX encoder fails");
+  t.false(
+    assembler.asblock_pick(["unknown_instruction"]),
+    "Should return false when the SuperFX encoder fails",
+  );
 
   assembler.archSuperFX.encode = originalMethod;
 });
 
-test("asblock_pick - superfx architecture error handling", t => {
+test("asblock_pick - superfx architecture error handling", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "superfx";
@@ -6558,16 +7469,23 @@ test("asblock_pick - superfx architecture error handling", t => {
     throw new Error(`Unknown instruction: ${words[0]}`);
   };
 
-  const error = t.throws(() => {
-    assembler.asblock_pick(["unknown_instruction"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.asblock_pick(["unknown_instruction"]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error.message, "Unknown instruction: unknown_instruction", "Should throw error for unknown SuperFX instruction");
+  t.is(
+    error.message,
+    "Unknown instruction: unknown_instruction",
+    "Should throw error for unknown SuperFX instruction",
+  );
 
   assembler.archSuperFX.encode = originalMethod;
 });
 
-test("asblock_pick - 65816 architecture", t => {
+test("asblock_pick - 65816 architecture", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "65816";
@@ -6585,7 +7503,7 @@ test("asblock_pick - 65816 architecture", t => {
   assembler.arch65816.encode = originalMethod;
 });
 
-test("asblock_pick - 65816 architecture failure", t => {
+test("asblock_pick - 65816 architecture failure", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "65816";
@@ -6593,25 +7511,35 @@ test("asblock_pick - 65816 architecture failure", t => {
   const originalMethod = assembler.arch65816.encode;
   assembler.arch65816.encode = () => false;
 
-  const error = t.throws(() => {
-    assembler.asblock_pick(["unknown_instruction"]);
-  }, { instanceOf: Error });
+  const error = t.throws(
+    () => {
+      assembler.asblock_pick(["unknown_instruction"]);
+    },
+    { instanceOf: Error },
+  );
 
-  t.is(error.message, "Unknown instruction: unknown_instruction", "Should throw error for unknown 65816 instruction");
+  t.is(
+    error.message,
+    "Unknown instruction: unknown_instruction",
+    "Should throw error for unknown 65816 instruction",
+  );
 
   assembler.arch65816.encode = originalMethod;
 });
 
-test("asblock_pick - default architecture", t => {
+test("asblock_pick - default architecture", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.arch = "unknown_arch"; // Set to an unrecognized architecture
 
   // Should default to returning true for unrecognized architectures
-  t.true(assembler.asblock_pick(["some_instruction"]), "Should return true for unrecognized architectures");
+  t.true(
+    assembler.asblock_pick(["some_instruction"]),
+    "Should return true for unrecognized architectures",
+  );
 });
 
-test("asblock_pick - pass 0 uses active encoder estimateSize", t => {
+test("asblock_pick - pass 0 uses active encoder estimateSize", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("collectDefinitions");
   assembler.arch = "spc700";
@@ -6624,7 +7552,7 @@ test("asblock_pick - pass 0 uses active encoder estimateSize", t => {
   assembler.archSPC700.estimateSize = originalMethod;
 });
 
-test("asblock_pick - selected spc700 architecture uses spc700 encoder", t => {
+test("asblock_pick - selected spc700 architecture uses spc700 encoder", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("emitProgram");
   assembler.selectArchitecture("spc700");
@@ -6635,7 +7563,10 @@ test("asblock_pick - selected spc700 architecture uses spc700 encoder", t => {
     return true;
   };
 
-  t.true(assembler.asblock_pick(["mov", "a", "#$42"]), "Should route instructions through the selected SPC700 encoder");
+  t.true(
+    assembler.asblock_pick(["mov", "a", "#$42"]),
+    "Should route instructions through the selected SPC700 encoder",
+  );
   t.true(wasCalled, "Should use the selected SPC700 encoder");
 
   assembler.archSPC700.encode = originalMethod;

@@ -283,7 +283,10 @@ test("expression nodes parse binary precedence and unary operators", (t) => {
 
 test("typed for nodes preserve parsed range semantics", (t) => {
   const assembler = new Assembler();
-  const [loop] = assembler.parseCommandStreamToNodes(["for i = 0..2", "endfor"]);
+  const [loop] = assembler.programModelBuilder.parseCommandStreamToNodes([
+    "for i = 0..2",
+    "endfor",
+  ]);
 
   if (!loop || typeof loop === "string" || !("type" in loop) || loop.type !== "for") {
     t.fail();
@@ -308,7 +311,7 @@ test("typed for nodes preserve parsed range semantics", (t) => {
 
 test("typed while nodes retain normalized loop body commands", (t) => {
   const assembler = new Assembler();
-  const [loop] = assembler.parseCommandStreamToNodes(
+  const [loop] = assembler.programModelBuilder.parseCommandStreamToNodes(
     ["while !COUNT < 2", "Label = 1 ; comment", "endwhile"],
     "loop.asm",
     0,
@@ -342,7 +345,7 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
   stub(assembler, "processNormalizedCommand").callsFake((command) => {
     executed.push({ command: command.command, value: assembler.defines.get("i") });
   });
-  const [loop] = assembler.parseCommandStreamToNodes(
+  const [loop] = assembler.programModelBuilder.parseCommandStreamToNodes(
     ["for i = 0..3", "db !i", "endfor"],
     "loop.asm",
     0,
@@ -365,8 +368,8 @@ test("typed loop nodes execute through normalized dispatch", (t) => {
 test("tree pass programs are cached per source block key", (t) => {
   const assembler = new Assembler();
   const commands = ["db $01", "db $02"];
-  const first = assembler.getOrBuildPassProgram(commands, "cache.asm", 0);
-  const second = assembler.getOrBuildPassProgram(commands, "cache.asm", 0);
+  const first = assembler.programModelBuilder.getOrBuildPassProgram(commands, "cache.asm", 0);
+  const second = assembler.programModelBuilder.getOrBuildPassProgram(commands, "cache.asm", 0);
 
   t.is(first, second);
 });
@@ -377,7 +380,11 @@ test("include nodes and parsed programs keep typed executable leaves", (t) => {
     "include.asm",
     "db $01\ndb $02",
   );
-  const rootNodes = assembler.getOrBuildPassProgram(["db $01", "db $02"], "root.asm", 0);
+  const rootNodes = assembler.programModelBuilder.getOrBuildPassProgram(
+    ["db $01", "db $02"],
+    "root.asm",
+    0,
+  );
 
   t.true(includeNode.commands.every((node) => typeof node !== "string"));
   t.true(rootNodes.every((node) => typeof node !== "string"));
@@ -385,7 +392,7 @@ test("include nodes and parsed programs keep typed executable leaves", (t) => {
 
 test("tree parser resolves ambiguous endif to innermost while block", (t) => {
   const assembler = new Assembler();
-  const nodes = assembler.parseCommandStreamToNodes([
+  const nodes = assembler.programModelBuilder.parseCommandStreamToNodes([
     "if 1",
     "while 1",
     "db $01",

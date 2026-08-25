@@ -21833,32 +21833,6 @@ var Assembler = class _Assembler {
     return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8 | this.outputBytes[addr + 2] << 16;
   }
   /**
-   * Handles assembleblock.
-   * @param {string} block The block.
-   */
-  assembleblock(block) {
-    if (!block.trim()) {
-      return;
-    }
-    const processedCommands = this.frontEndService.preprocessBlockCommands(block);
-    block = processedCommands.join("\n");
-    const splitCommands = splitInlineCommands(processedCommands);
-    if (block.includes("\n") && this.incrementalProgramParseState.roots.length === 0) {
-      const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
-      this.lowerAndExecuteRuntimeNodes(nodes);
-      return;
-    }
-    for (const command of splitCommands) {
-      const nodes = this.programModelBuilder.consumeIncrementalCommand(
-        this.incrementalProgramParseState,
-        command.trim(),
-        this.currentFile,
-        this.currentLine
-      );
-      this.lowerAndExecuteRuntimeNodes(nodes);
-    }
-  }
-  /**
    * Rewrites raw command.
    * @param {string} command The command.
    * @returns {string} The result.
@@ -21981,7 +21955,7 @@ var Assembler = class _Assembler {
     return true;
   }
   /**
-   * Processes a single command from `assembleblock`.
+   * Processes a command from an internal re-entrant source.
    * @param {string} command - The command to process.
    * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
    */
@@ -22024,7 +21998,17 @@ var Assembler = class _Assembler {
         this.lowerAndExecuteRuntimeNodes(nodes);
       }
     } else {
-      this.assembleblock(command);
+      const processedCommands = this.frontEndService.preprocessBlockCommands(command);
+      const splitCommands = splitInlineCommands(processedCommands);
+      for (const splitCommand of splitCommands) {
+        const nodes = this.programModelBuilder.consumeIncrementalCommand(
+          this.incrementalProgramParseState,
+          splitCommand.trim(),
+          this.currentFile,
+          this.currentLine
+        );
+        this.lowerAndExecuteRuntimeNodes(nodes);
+      }
     }
     this.flushCompletedIncrementalNodes();
   }
@@ -23257,46 +23241,6 @@ var Assembler = class _Assembler {
         return;
       }
     }
-  }
-  /**
-   * Parses command stream to nodes.
-   * @param {string[]} commands The commands.
-   * @param {string} [sourceFile] The source file.
-   * @param {number} [startLine] The start line.
-   * @returns {RuntimeNode[]} The result.
-   */
-  parseCommandStreamToNodes(commands, sourceFile = this.currentFile, startLine = this.currentLine) {
-    return this.programModelBuilder.parseCommandStreamToNodes(commands, sourceFile, startLine);
-  }
-  /**
-   * Gets or build pass program.
-   * @param {string[]} commands The commands.
-   * @param {string} [sourceFile] The source file.
-   * @param {number} [startLine] The start line.
-   * @returns {RuntimeNode[]} The result.
-   */
-  getOrBuildPassProgram(commands, sourceFile = this.currentFile, startLine = this.currentLine) {
-    return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine);
-  }
-  /**
-   * Gets macro definition node.
-   * @param {string} name The name.
-   * @returns {MacroDefinitionNode | undefined} The result.
-   */
-  getMacroDefinitionNode(name) {
-    const macro = this.macros.get(name);
-    if (!macro) {
-      return void 0;
-    }
-    const body = macro.body.map((entry) => entry);
-    return {
-      type: "macroDefinition",
-      name: macro.name,
-      params: [...macro.params],
-      variadic: macro.variadic,
-      body,
-      sourceFile: macro.sourceFile
-    };
   }
 };
 

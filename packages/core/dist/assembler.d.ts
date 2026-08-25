@@ -1,9 +1,8 @@
-import type { CursorAddressFacade } from "./assembler-internals.js";
 import type { ExpressionHost, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addressToLine.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import { type AssemblyAnalysisResult, type AssemblyDiagnostic, type AssemblyIncludeEdge, type AssemblySourceLocation, type AssemblySymbolDefinition, type AssemblySymbolKind, type AssemblySymbolReference, type AssemblySymbolReferenceKind } from "./diagnostics.js";
-import type { ConditionalBranchNode, ExecutableNode, LoopNode, MacroDefinitionNode } from "./ir/assembly-tree.js";
+import type { ConditionalBranchNode, ExecutableNode, LoopNode } from "./ir/assembly-tree.js";
 import { type ExpressionNode, type ReferenceExpressionNode } from "./ir/expression-node.js";
 import { type NormalizedCommand } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
@@ -26,23 +25,23 @@ import { type AssemblyFileProvider } from "./file-provider.js";
 import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
 import type { AssemblyStageName } from "./plugin/contracts.js";
 type RuntimeConditionalNode = ConditionalBranchNode;
-export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
-export type StageExecutionMode = "layout" | "emit";
-export type StageExecutionCapabilities = {
+type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
+type StageExecutionMode = "layout" | "emit";
+type StageExecutionCapabilities = {
     instructionMode: StageExecutionMode;
     canEmitBytes: boolean;
     canFinalize: boolean;
     enforceResolvedLabels: boolean;
     isDefinitionCollectionStage: boolean;
 };
-export type StageCursorState = {
+type StageCursorState = {
     currentTargetAddress: number;
     currentTargetBaseAddress: number;
     currentTargetStartAddress: number;
     currentTargetBaseStartAddress: number;
     bytes: number;
 };
-export type StageSymbolState = {
+type StageSymbolState = {
     labelTable: Map<string, LabelEntry>;
     forwardLabels: {
         [depth: number]: {
@@ -61,7 +60,7 @@ export type StageSymbolState = {
     currentGlobalParentLabel: string;
     labelParents: Map<string, string | null>;
 };
-export type StageControlState = {
+type StageControlState = {
     namespaceStack: string[];
     currentNamespace: string;
     namespaceNestingEnabled: boolean;
@@ -69,7 +68,7 @@ export type StageControlState = {
     inMacroExpansion: boolean;
     macroLabelInstance: number;
 };
-export type StageExecutionState = {
+type StageExecutionState = {
     stage: AssemblyStageName;
     capabilities: StageExecutionCapabilities;
     cursor: StageCursorState;
@@ -92,8 +91,14 @@ type AssemblerServiceBag = {
     structEngine: StructEngine;
     symbolScope: SymbolScopeService;
 };
+type CursorAddressFacade = {
+    recordCurrentAddress(): void;
+    setWritePosition(address: number): void;
+    syncWriteStarts(): void;
+    incrementBytesWritten(num: number): void;
+};
 type TraceCommandContext = Pick<AssemblerTraceCommandEvent, "file" | "line" | "raw" | "normalized">;
-export type WhileTracker = {
+type WhileTracker = {
     iswhile: boolean;
     startline: number;
     cond: boolean;
@@ -416,12 +421,12 @@ export declare class Assembler {
      * Creates cursor address facade.
      * @returns {CursorAddressFacade} The result.
      */
-    createCursorAddressFacade(): CursorAddressFacade;
+    private createCursorAddressFacade;
     /**
      * Creates services.
      * @returns {AssemblerServiceBag} The result.
      */
-    createServices(): AssemblerServiceBag;
+    private createServices;
     constructor(options: AssemblerOptions);
     runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void;
     runBeforeDirective(keyword: string, words: readonly string[], raw: string): "continue" | "handled";
@@ -631,11 +636,6 @@ export declare class Assembler {
      */
     read3(logicalPosition: number): number;
     /**
-     * Handles assembleblock.
-     * @param {string} block The block.
-     */
-    assembleblock(block: string): void;
-    /**
      * Rewrites raw command.
      * @param {string} command The command.
      * @returns {string} The result.
@@ -675,7 +675,7 @@ export declare class Assembler {
      */
     prepareNormalizedCommandForDispatch(state: NormalizedCommand): boolean;
     /**
-     * Processes a single command from `assembleblock`.
+     * Processes a command from an internal re-entrant source.
      * @param {string} command - The command to process.
      * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
      */
@@ -1019,28 +1019,6 @@ export declare class Assembler {
         conditionNode?: ExpressionNode;
         commands: TCommand[];
     }>, executeCommands: (commands: TCommand[]) => void): void;
-    /**
-     * Parses command stream to nodes.
-     * @param {string[]} commands The commands.
-     * @param {string} [sourceFile] The source file.
-     * @param {number} [startLine] The start line.
-     * @returns {RuntimeNode[]} The result.
-     */
-    parseCommandStreamToNodes(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
-    /**
-     * Gets or build pass program.
-     * @param {string[]} commands The commands.
-     * @param {string} [sourceFile] The source file.
-     * @param {number} [startLine] The start line.
-     * @returns {RuntimeNode[]} The result.
-     */
-    getOrBuildPassProgram(commands: string[], sourceFile?: string, startLine?: number): RuntimeNode[];
-    /**
-     * Gets macro definition node.
-     * @param {string} name The name.
-     * @returns {MacroDefinitionNode | undefined} The result.
-     */
-    getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined;
 }
 export {};
 //# sourceMappingURL=assembler.d.ts.map

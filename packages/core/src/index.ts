@@ -1,5 +1,4 @@
 export * from "./assembler.js";
-export * from "./assembler-internals.js";
 export type { AssemblyStageName } from "./plugin/contracts.js";
 export type { PushPcStackEntry } from "./services/directive-runtime-service.js";
 export type { MacroDefinition } from "./services/macro-engine.js";

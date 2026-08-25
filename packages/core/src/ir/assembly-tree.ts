@@ -33,20 +33,4 @@ export type ConditionalBranchNode = {
   endLine?: number;
 };
 
-export type MacroDefinitionNode = {
-  type: "macroDefinition";
-  name: string;
-  params: string[];
-  variadic: boolean;
-  body: ExecutableNode[];
-  sourceFile?: string;
-};
-
-export type IncludeNode = {
-  type: "include";
-  file: string;
-  commands: ExecutableNode[];
-};
-
 export type ExecutableNode = NormalizedCommand | LoopNode | ConditionalBranchNode;
-export type AssemblyTreeNode = LoopNode | ConditionalBranchNode | MacroDefinitionNode | IncludeNode;

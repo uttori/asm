@@ -203,7 +203,7 @@ test("incsrc inside a nested macro is relative to the defining file", (t) => {
       assembler.setWritePosition(0x808000);
       for (const [lineNumber, line] of source.split("\n").entries()) {
         assembler.setCurrentLine(lineNumber);
-        assembler.assembleblock(line.trim());
+        assembler.processCommand(line.trim());
       }
       assembler.finishPass();
     }

@@ -1,4 +1,3 @@
-import type { CursorAddressFacade } from "./assembler-internals.js";
 import type {
   ArchitectureEncoder,
   ArchitectureEncoderContext,
@@ -24,12 +23,7 @@ import {
   createAssemblySourceLocation,
   diagnosticFromError,
 } from "./diagnostics.js";
-import type {
-  ConditionalBranchNode,
-  ExecutableNode,
-  LoopNode,
-  MacroDefinitionNode,
-} from "./ir/assembly-tree.js";
+import type { ConditionalBranchNode, ExecutableNode, LoopNode } from "./ir/assembly-tree.js";
 import {
   isReferenceExpressionNode,
   parseExpressionNode,
@@ -106,23 +100,23 @@ try {
 // }
 
 type RuntimeConditionalNode = ConditionalBranchNode;
-export type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
-export type StageExecutionMode = "layout" | "emit";
-export type StageExecutionCapabilities = {
+type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
+type StageExecutionMode = "layout" | "emit";
+type StageExecutionCapabilities = {
   instructionMode: StageExecutionMode;
   canEmitBytes: boolean;
   canFinalize: boolean;
   enforceResolvedLabels: boolean;
   isDefinitionCollectionStage: boolean;
 };
-export type StageCursorState = {
+type StageCursorState = {
   currentTargetAddress: number;
   currentTargetBaseAddress: number;
   currentTargetStartAddress: number;
   currentTargetBaseStartAddress: number;
   bytes: number;
 };
-export type StageSymbolState = {
+type StageSymbolState = {
   labelTable: Map<string, LabelEntry>;
   forwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
   backwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
@@ -131,7 +125,7 @@ export type StageSymbolState = {
   currentGlobalParentLabel: string;
   labelParents: Map<string, string | null>;
 };
-export type StageControlState = {
+type StageControlState = {
   namespaceStack: string[];
   currentNamespace: string;
   namespaceNestingEnabled: boolean;
@@ -139,7 +133,7 @@ export type StageControlState = {
   inMacroExpansion: boolean;
   macroLabelInstance: number;
 };
-export type StageExecutionState = {
+type StageExecutionState = {
   stage: AssemblyStageName;
   capabilities: StageExecutionCapabilities;
   cursor: StageCursorState;
@@ -163,11 +157,18 @@ type AssemblerServiceBag = {
   structEngine: StructEngine;
   symbolScope: SymbolScopeService;
 };
+
+type CursorAddressFacade = {
+  recordCurrentAddress(): void;
+  setWritePosition(address: number): void;
+  syncWriteStarts(): void;
+  incrementBytesWritten(num: number): void;
+};
 // Source context stack used to associate low-level byte writes with the
 // currently executing normalized command, even when directives recurse.
 type TraceCommandContext = Pick<AssemblerTraceCommandEvent, "file" | "line" | "raw" | "normalized">;
 
-export type WhileTracker = {
+type WhileTracker = {
   iswhile: boolean;
   startline: number;
   cond: boolean;
@@ -978,7 +979,7 @@ export class Assembler {
    * Creates cursor address facade.
    * @returns {CursorAddressFacade} The result.
    */
-  createCursorAddressFacade(): CursorAddressFacade {
+  private createCursorAddressFacade(): CursorAddressFacade {
     return {
       recordCurrentAddress: () => this.recordCurrentAddress(),
       setWritePosition: (address: number) => this.setWritePosition(address),
@@ -991,7 +992,7 @@ export class Assembler {
    * Creates services.
    * @returns {AssemblerServiceBag} The result.
    */
-  createServices(): AssemblerServiceBag {
+  private createServices(): AssemblerServiceBag {
     const defineEngine = new DefineEngine(this);
     const directiveRuntime = new DirectiveRuntimeService(this);
     const frontEndCommandService = new FrontEndCommandService(this);
@@ -1962,37 +1963,6 @@ export class Assembler {
   }
 
   /**
-   * Handles assembleblock.
-   * @param {string} block The block.
-   */
-  assembleblock(block: string): void {
-    // debug('assembleblock', block);
-    if (!block.trim()) {
-      return;
-    }
-
-    const processedCommands = this.frontEndService.preprocessBlockCommands(block);
-    block = processedCommands.join("\n");
-
-    const splitCommands = splitInlineCommands(processedCommands);
-    if (block.includes("\n") && this.incrementalProgramParseState.roots.length === 0) {
-      const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
-      this.lowerAndExecuteRuntimeNodes(nodes);
-      return;
-    }
-
-    for (const command of splitCommands) {
-      const nodes = this.programModelBuilder.consumeIncrementalCommand(
-        this.incrementalProgramParseState,
-        command.trim(),
-        this.currentFile,
-        this.currentLine,
-      );
-      this.lowerAndExecuteRuntimeNodes(nodes);
-    }
-  }
-
-  /**
    * Rewrites raw command.
    * @param {string} command The command.
    * @returns {string} The result.
@@ -2146,7 +2116,7 @@ export class Assembler {
   }
 
   /**
-   * Processes a single command from `assembleblock`.
+   * Processes a command from an internal re-entrant source.
    * @param {string} command - The command to process.
    * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
    */
@@ -2194,9 +2164,18 @@ export class Assembler {
         this.lowerAndExecuteRuntimeNodes(nodes);
       }
     } else {
-      // Route raw single-command entrypoints through the same typed incremental
-      // parser used by line-by-line `assembleblock()`.
-      this.assembleblock(command);
+      const processedCommands = this.frontEndService.preprocessBlockCommands(command);
+      const splitCommands = splitInlineCommands(processedCommands);
+
+      for (const splitCommand of splitCommands) {
+        const nodes = this.programModelBuilder.consumeIncrementalCommand(
+          this.incrementalProgramParseState,
+          splitCommand.trim(),
+          this.currentFile,
+          this.currentLine,
+        );
+        this.lowerAndExecuteRuntimeNodes(nodes);
+      }
     }
     this.flushCompletedIncrementalNodes();
   }
@@ -3634,56 +3613,5 @@ export class Assembler {
         return;
       }
     }
-  }
-
-  /**
-   * Parses command stream to nodes.
-   * @param {string[]} commands The commands.
-   * @param {string} [sourceFile] The source file.
-   * @param {number} [startLine] The start line.
-   * @returns {RuntimeNode[]} The result.
-   */
-  parseCommandStreamToNodes(
-    commands: string[],
-    sourceFile = this.currentFile,
-    startLine = this.currentLine,
-  ): RuntimeNode[] {
-    return this.programModelBuilder.parseCommandStreamToNodes(commands, sourceFile, startLine);
-  }
-
-  /**
-   * Gets or build pass program.
-   * @param {string[]} commands The commands.
-   * @param {string} [sourceFile] The source file.
-   * @param {number} [startLine] The start line.
-   * @returns {RuntimeNode[]} The result.
-   */
-  getOrBuildPassProgram(
-    commands: string[],
-    sourceFile = this.currentFile,
-    startLine = this.currentLine,
-  ): RuntimeNode[] {
-    return this.programModelBuilder.getOrBuildPassProgram(commands, sourceFile, startLine);
-  }
-
-  /**
-   * Gets macro definition node.
-   * @param {string} name The name.
-   * @returns {MacroDefinitionNode | undefined} The result.
-   */
-  getMacroDefinitionNode(name: string): MacroDefinitionNode | undefined {
-    const macro = this.macros.get(name);
-    if (!macro) {
-      return undefined;
-    }
-    const body: ExecutableNode[] = macro.body.map((entry) => entry);
-    return {
-      type: "macroDefinition",
-      name: macro.name,
-      params: [...macro.params],
-      variadic: macro.variadic,
-      body,
-      sourceFile: macro.sourceFile,
-    };
   }
 }

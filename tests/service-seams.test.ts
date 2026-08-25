@@ -8,13 +8,8 @@ import { MemoryAssemblyFileProvider } from "../packages/core/src/file-provider.j
 import { createNormalizedCommand } from "../packages/core/src/ir/normalized-command.js";
 import { handleArch } from "../packages/core/src/directives/layout.js";
 
-const commandNode = (command: string) => createNormalizedCommand(
-  command,
-  command,
-  command.trim().split(/\s+/),
-  "test.asm",
-  1
-);
+const commandNode = (command: string) =>
+  createNormalizedCommand(command, command, command.trim().split(/\s+/), "test.asm", 1);
 
 test("macro engine expands fixed and variadic parameters", (t) => {
   const assembler = new Assembler();
@@ -109,7 +104,10 @@ test("processCommand routes raw loop directives into the typed incremental parse
 
   t.is(assembler.incrementalProgramParseState.loopStack.length, 1);
   t.is(assembler.incrementalProgramParseState.roots.length, 1);
-  t.deepEqual(assembler.incrementalProgramParseState.roots[0], assembler.incrementalProgramParseState.loopStack[0]);
+  t.deepEqual(
+    assembler.incrementalProgramParseState.roots[0],
+    assembler.incrementalProgramParseState.loopStack[0],
+  );
 });
 
 test("pre-dispatch pipeline loads test rom directive", (t) => {
@@ -174,16 +172,24 @@ test("expression host readBaseImage and readFile preserve defaults and bounds be
   const romStart = assembler.outputWriter.fromOutputOffset(0);
 
   t.is(assembler.expressionHost.readBaseImage(romStart, 2), 0x2211);
-  t.is(assembler.expressionHost.readBaseImage(assembler.outputWriter.fromOutputOffset(2), 2, 0x77), 0x77);
-  t.throws(() => assembler.expressionHost.readBaseImage(assembler.outputWriter.fromOutputOffset(2), 2), { message: /out of bounds/i });
+  t.is(
+    assembler.expressionHost.readBaseImage(assembler.outputWriter.fromOutputOffset(2), 2, 0x77),
+    0x77,
+  );
+  t.throws(
+    () => assembler.expressionHost.readBaseImage(assembler.outputWriter.fromOutputOffset(2), 2),
+    { message: /out of bounds/i },
+  );
 
   const fixturePath = path.join(process.cwd(), "tests", "read-expression.bin");
   try {
-    fs.writeFileSync(fixturePath, Buffer.from([0xAA, 0xBB, 0xCC]));
+    fs.writeFileSync(fixturePath, Buffer.from([0xaa, 0xbb, 0xcc]));
     t.is(assembler.expressionHost.canReadFile(fixturePath, 1, 2), 1);
-    t.is(assembler.expressionHost.readFile(fixturePath, 0, 2), 0xBBAA);
+    t.is(assembler.expressionHost.readFile(fixturePath, 0, 2), 0xbbaa);
     t.is(assembler.expressionHost.readFile(fixturePath, 5, 1, 0x44), 0x44);
-    t.throws(() => assembler.expressionHost.readFile(fixturePath, 5, 1), { message: /out of bounds/i });
+    t.throws(() => assembler.expressionHost.readFile(fixturePath, 5, 1), {
+      message: /out of bounds/i,
+    });
   } finally {
     if (fs.existsSync(fixturePath)) {
       fs.unlinkSync(fixturePath);
@@ -364,18 +370,21 @@ test("symbol scope resolves namespaced local sibling labels without collapsing d
   assembler.currentParentLabel = "knife__E449_E44C";
 
   t.true(assembler.labelTable.has("knife__E449_E4CA"));
-  t.is(assembler.symbolScope.getLabelValue(".E4CA", false), assembler.labelTable.get("knife__E449_E4CA")?.value ?? 0);
+  t.is(
+    assembler.symbolScope.getLabelValue(".E4CA", false),
+    assembler.labelTable.get("knife__E449_E4CA")?.value ?? 0,
+  );
 });
 
 test("symbol scope falls back to global labels when a namespace-local symbol is absent", (t) => {
   const assembler = new Assembler();
   assembler.activateStage("resolveLayout");
 
-  assembler.symbolScope.setLabel("difficulty", 0x27C, true);
+  assembler.symbolScope.setLabel("difficulty", 0x27c, true);
   assembler.currentNamespace = "zombie";
 
   t.false(assembler.labelTable.has("zombie_difficulty"));
-  t.is(assembler.symbolScope.getLabelValue("difficulty", false), 0x27C);
+  t.is(assembler.symbolScope.getLabelValue("difficulty", false), 0x27c);
 });
 
 test("symbol scope resolves local labels under underscore-prefixed parents", (t) => {
@@ -384,13 +393,13 @@ test("symbol scope resolves local labels under underscore-prefixed parents", (t)
 
   assembler.currentParentLabel = "_0083C2_83C3_83DE";
   assembler.labelTable.set("_0083C2_83EB", {
-    value: 0x83EB,
+    value: 0x83eb,
     isStatic: false,
     isMacroLabel: false,
     modifiesHierarchy: true,
   });
 
-  t.is(assembler.symbolScope.getLabelValue(".83EB", false), 0x83EB);
+  t.is(assembler.symbolScope.getLabelValue(".83EB", false), 0x83eb);
 });
 
 test("symbol scope resolves compressed nested local label references", (t) => {
@@ -414,13 +423,13 @@ test("symbol scope resolves double-dot local label references", (t) => {
 
   assembler.currentParentLabel = "_00ED00_arthur_underwear";
   assembler.labelTable.set("_00ED00_arthur_underwear_idle", {
-    value: 0xED39,
+    value: 0xed39,
     isStatic: false,
     isMacroLabel: false,
     modifiesHierarchy: true,
   });
 
-  t.is(assembler.symbolScope.getLabelValue("..idle", false), 0xED39);
+  t.is(assembler.symbolScope.getLabelValue("..idle", false), 0xed39);
 });
 
 test("typed conditional nodes skip inactive branches during execution", (t) => {
@@ -430,13 +439,11 @@ test("typed conditional nodes skip inactive branches during execution", (t) => {
     executed.push(command.command);
   });
 
-  const [node] = assembler.parseCommandStreamToNodes([
-    "if 0",
-    "db $10",
-    "else",
-    "db $20",
-    "endif",
-  ], "typed-conditional.asm", 0);
+  const [node] = assembler.programModelBuilder.parseCommandStreamToNodes(
+    ["if 0", "db $10", "else", "db $20", "endif"],
+    "typed-conditional.asm",
+    0,
+  );
 
   if (!node || typeof node === "string" || !("type" in node) || node.type !== "if") {
     t.fail();
@@ -467,7 +474,7 @@ test("macro-expanded control flow executes through typed nodes", (t) => {
     assembler.setWritePosition(0x808000);
     for (const [lineNumber, line] of source.split("\n").entries()) {
       assembler.setCurrentLine(lineNumber);
-      assembler.assembleblock(line);
+      assembler.processCommand(line);
     }
     assembler.finishPass();
   }
@@ -493,7 +500,7 @@ test("macro-expanded variadic loop bodies defer placeholder resolution until exe
     assembler.setWritePosition(0x808000);
     for (const [lineNumber, line] of source.split("\n").entries()) {
       assembler.setCurrentLine(lineNumber);
-      assembler.assembleblock(line);
+      assembler.processCommand(line);
     }
     assembler.finishPass();
   }
@@ -539,7 +546,7 @@ test("rom writer converts lorom pc offsets to snes and back", (t) => {
 test("rom writer enforces bank crossing checks before multi-byte writes", (t) => {
   const assembler = new Assembler();
   assembler.targetState.bankCrossMode = "full";
-  assembler.currentTargetBaseAddress = 0x00FFFF;
+  assembler.currentTargetBaseAddress = 0x00ffff;
 
   const error = t.throws(() => {
     assembler.write2(0x1234);
@@ -551,7 +558,7 @@ test("rom writer enforces bank crossing checks before multi-byte writes", (t) =>
 
 test("node parser lifts loops and conditionals into typed nodes", (t) => {
   const assembler = new Assembler();
-  const nodes = assembler.parseCommandStreamToNodes([
+  const nodes = assembler.programModelBuilder.parseCommandStreamToNodes([
     "if 1",
     "for i = 0..2",
     "db !i",
@@ -571,7 +578,12 @@ test("node parser lifts loops and conditionals into typed nodes", (t) => {
   t.is(ifNode.branches[0].kind, "if");
   t.is(ifNode.branches[1].kind, "else");
   const firstBranchNode = ifNode.branches[0].commands[0];
-  t.truthy(firstBranchNode && typeof firstBranchNode !== "string" && "type" in firstBranchNode && firstBranchNode.type === "for");
+  t.truthy(
+    firstBranchNode &&
+      typeof firstBranchNode !== "string" &&
+      "type" in firstBranchNode &&
+      firstBranchNode.type === "for",
+  );
 });
 
 test("node execution seam dispatches typed command and conditional nodes", (t) => {
@@ -581,20 +593,22 @@ test("node execution seam dispatches typed command and conditional nodes", (t) =
     processed.push(command.command);
   });
 
-  assembler.lowerAndExecuteRuntimeNodes(assembler.parseCommandStreamToNodes([
-    "if 1",
-    "db $01",
-    "else",
-    "db $ff",
-    "endif",
-  ]));
+  assembler.lowerAndExecuteRuntimeNodes(
+    assembler.programModelBuilder.parseCommandStreamToNodes([
+      "if 1",
+      "db $01",
+      "else",
+      "db $ff",
+      "endif",
+    ]),
+  );
 
   t.deepEqual(processed, ["db $01"]);
 });
 
 test("node execution seam does not re-normalize cached command nodes", (t) => {
   const assembler = new Assembler();
-  const [commandNode] = assembler.parseCommandStreamToNodes(["db $01"]);
+  const [commandNode] = assembler.programModelBuilder.parseCommandStreamToNodes(["db $01"]);
   if (!commandNode || !("source" in commandNode)) {
     t.fail();
     return;
@@ -606,7 +620,7 @@ test("node execution seam does not re-normalize cached command nodes", (t) => {
   t.false(createLoopNodeStub.called);
 });
 
-test("macro/include lifting exposes typed macro and include nodes", (t) => {
+test("macro/include lifting preserves typed commands", (t) => {
   const assembler = new Assembler();
   stub(assembler, "addAddressToLine");
   assembler.activateStage("collectDefinitions");
@@ -614,16 +628,14 @@ test("macro/include lifting exposes typed macro and include nodes", (t) => {
   assembler.processCommand("db <v>");
   assembler.processCommand("endmacro");
 
-  const macroNode = assembler.getMacroDefinitionNode("emit");
-  t.truthy(macroNode);
-  t.is(macroNode?.type, "macroDefinition");
-  t.is(macroNode?.body.length, 1);
-  if (macroNode && macroNode.body.length > 0) {
-    const command = macroNode.body[0];
-    t.true(typeof command !== "string" && "source" in command);
-  }
+  const macro = assembler.macros.get("emit");
+  t.is(macro?.body.length, 1);
+  t.truthy(macro?.body[0]?.source);
 
-  const includeNode = assembler.programModelBuilder.createIncludeNode("inline.asm", "if 1\ndb $01\nendif");
+  const includeNode = assembler.programModelBuilder.createIncludeNode(
+    "inline.asm",
+    "if 1\ndb $01\nendif",
+  );
   t.is(includeNode.type, "include");
   t.is(includeNode.commands.length, 1);
   const includeChild = includeNode.commands[0];
@@ -637,7 +649,7 @@ test("typed parser keeps nested condition-loop structures executable", (t) => {
     executed.push(command.command);
   });
 
-  const nodes = assembler.parseCommandStreamToNodes([
+  const nodes = assembler.programModelBuilder.parseCommandStreamToNodes([
     "if 1",
     "for i = 0..1",
     "db $01",
@@ -654,16 +666,16 @@ test("stage runner builds program once and executes all stages", (t) => {
   const assembler = new Assembler();
   const parseSpy = stub(assembler.programModelBuilder, "parseCommandStreamToNodes").callThrough();
   const stagedAssembler = assembler as Assembler & {
-    buildProgramModel(source: string, sourceFile?: string, startLine?: number): {
+    buildProgramModel(
+      source: string,
+      sourceFile?: string,
+      startLine?: number,
+    ): {
       sourceFile: string;
       startLine: number;
       nodes: unknown[];
     };
-    assembleProgram(program: {
-      sourceFile: string;
-      startLine: number;
-      nodes: unknown[];
-    }): void;
+    assembleProgram(program: { sourceFile: string; startLine: number; nodes: unknown[] }): void;
   };
 
   const program = stagedAssembler.buildProgramModel("org $808000\ndb $01", "test.asm", 0);
@@ -683,7 +695,7 @@ test("stage runner builds program once and executes all stages", (t) => {
   t.is(assembler.outputBytes[0], 0x01);
 });
 
-test("line-by-line assembleblock uses typed control-flow parsing", (t) => {
+test("line-by-line processCommand uses typed control-flow parsing", (t) => {
   const source = [
     "if 1",
     "  db $01",
@@ -699,27 +711,17 @@ test("line-by-line assembleblock uses typed control-flow parsing", (t) => {
     const assembler = new Assembler();
     for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
       assembler.activateStage(stage);
+      assembler.setWritePosition(0x808000);
       for (const [lineNumber, line] of source.split("\n").entries()) {
         assembler.setCurrentLine(lineNumber);
-        assembler.assembleblock(line);
+        assembler.processCommand(line);
       }
       assembler.finishPass();
     }
     return Array.from(assembler.getBinaryOutput());
   };
 
-  const assembleByTree = (): number[] => {
-    const assembler = new Assembler();
-    for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
-      assembler.activateStage(stage);
-      assembler.setCurrentLine(0);
-      assembler.assembleblock(source);
-      assembler.finishPass();
-    }
-    return Array.from(assembler.getBinaryOutput());
-  };
-
-  t.deepEqual(assembleByLine(), assembleByTree());
+  t.deepEqual(assembleByLine(), [0x01, 0x00, 0x01]);
 });
 
 test("stage execution state is recreated per collect stage run", (t) => {
@@ -727,13 +729,17 @@ test("stage execution state is recreated per collect stage run", (t) => {
   const program = assembler.buildProgramModel("db $01", "test.asm", 0);
 
   assembler.setWritePosition(0x808000);
-  const firstCollect = assembler.runStage("collectDefinitions", program) as { cursor: { currentTargetAddress: number } };
+  const firstCollect = assembler.runStage("collectDefinitions", program) as {
+    cursor: { currentTargetAddress: number };
+  };
   t.is(firstCollect.cursor.currentTargetAddress, 0x808001);
 
-  assembler.setWritePosition(0x80A000);
-  const secondCollect = assembler.runStage("collectDefinitions", program) as { cursor: { currentTargetAddress: number } };
+  assembler.setWritePosition(0x80a000);
+  const secondCollect = assembler.runStage("collectDefinitions", program) as {
+    cursor: { currentTargetAddress: number };
+  };
   t.not(firstCollect, secondCollect);
-  t.is(secondCollect.cursor.currentTargetAddress, 0x80A001);
+  t.is(secondCollect.cursor.currentTargetAddress, 0x80a001);
 });
 
 test("stage states keep symbols, control, and plugin state isolated by stage", (t) => {
@@ -773,17 +779,23 @@ test("instruction dispatch follows active stage capabilities", (t) => {
 test("architecture registry resolves aliases through arch directive", (t) => {
   const assembler = new Assembler();
 
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "spc700-inline"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "spc700-inline"],
+  );
   t.is(assembler.arch, "spc700");
   t.true(assembler.targetState.spcInlineCompatibility);
 
-  handleArch({
-    session: assembler,
-    operandResolver: assembler.operandResolver,
-  }, ["arch", "superfx"]);
+  handleArch(
+    {
+      session: assembler,
+      operandResolver: assembler.operandResolver,
+    },
+    ["arch", "superfx"],
+  );
   t.is(assembler.arch, "superfx");
   t.false(assembler.targetState.spcInlineCompatibility);
 });
@@ -809,12 +821,10 @@ test("activateStage keeps stage capabilities authoritative", (t) => {
 
 test("runStage materializes a durable lowered program tree", (t) => {
   const assembler = new Assembler();
-  const program = assembler.buildProgramModel([
-    "db $01",
-    "if 1",
-    "db $02",
-    "endif",
-  ].join("\n"), "lowered.asm");
+  const program = assembler.buildProgramModel(
+    ["db $01", "if 1", "db $02", "endif"].join("\n"),
+    "lowered.asm",
+  );
 
   const stageState = assembler.runStage("resolveLayout", program);
 
@@ -823,38 +833,44 @@ test("runStage materializes a durable lowered program tree", (t) => {
   t.is(stageState.loweredProgram?.nodes[1]?.kind, "conditional");
 });
 
-test("lowered nested loop and conditional executors select the expected work", t => {
+test("lowered nested loop and conditional executors select the expected work", (t) => {
   const assembler = new Assembler();
-  const nested = assembler.buildProgramModel([
-    "if 1",
-    "for i = 0..2",
-    "freespacebyte !i",
-    "endfor",
-    "else",
-    "freespacebyte $99",
-    "endif",
-    "!i = 0",
-    "while !i < 2",
-    "!i #= !i+1",
-    "endwhile",
-  ].join("\n"), "lowered-nested-control.asm");
+  const nested = assembler.buildProgramModel(
+    [
+      "if 1",
+      "for i = 0..2",
+      "freespacebyte !i",
+      "endfor",
+      "else",
+      "freespacebyte $99",
+      "endif",
+      "!i = 0",
+      "while !i < 2",
+      "!i #= !i+1",
+      "endwhile",
+    ].join("\n"),
+    "lowered-nested-control.asm",
+  );
   assembler.executeLoweredNodeStream(assembler.commandLoweringService.lowerProgram(nested).nodes);
 
   t.is(assembler.outputFillByte, 1);
   t.is(assembler.defines.get("i"), "2");
 });
 
-test("lowered loop and conditional executors select the expected work", t => {
+test("lowered loop and conditional executors select the expected work", (t) => {
   const assembler = new Assembler();
-  const loops = assembler.buildProgramModel([
-    "for i = 0..2",
-    "freespacebyte !i",
-    "endfor",
-    "!i = 0",
-    "while !i < 2",
-    "!i #= !i+1",
-    "endwhile",
-  ].join("\n"), "lowered-loops.asm");
+  const loops = assembler.buildProgramModel(
+    [
+      "for i = 0..2",
+      "freespacebyte !i",
+      "endfor",
+      "!i = 0",
+      "while !i < 2",
+      "!i #= !i+1",
+      "endwhile",
+    ].join("\n"),
+    "lowered-loops.asm",
+  );
   const loweredLoops = assembler.commandLoweringService.lowerProgram(loops);
 
   assembler.executeLoweredNodeStream(loweredLoops.nodes);
@@ -862,21 +878,26 @@ test("lowered loop and conditional executors select the expected work", t => {
   t.is(assembler.outputFillByte, 1);
   t.is(assembler.defines.get("i"), "2");
 
-  const conditional = assembler.buildProgramModel([
-    "if 0",
-    "freespacebyte $11",
-    "elseif 1",
-    "freespacebyte $22",
-    "else",
-    "freespacebyte $33",
-    "endif",
-  ].join("\n"), "lowered-conditional.asm");
-  assembler.executeLoweredNodeStream(assembler.commandLoweringService.lowerProgram(conditional).nodes);
+  const conditional = assembler.buildProgramModel(
+    [
+      "if 0",
+      "freespacebyte $11",
+      "elseif 1",
+      "freespacebyte $22",
+      "else",
+      "freespacebyte $33",
+      "endif",
+    ].join("\n"),
+    "lowered-conditional.asm",
+  );
+  assembler.executeLoweredNodeStream(
+    assembler.commandLoweringService.lowerProgram(conditional).nodes,
+  );
 
   t.is(assembler.outputFillByte, 0x22);
 });
 
-test("lowered instructions refresh against architecture changes at dispatch", t => {
+test("lowered instructions refresh against architecture changes at dispatch", (t) => {
   const assembler = new Assembler();
   const spcDefinition = assembler.architectureRegistry.getDefinition("spc700");
   const mainDefinition = assembler.architectureRegistry.getDefinition("65816");
@@ -886,12 +907,10 @@ test("lowered instructions refresh against architecture changes at dispatch", t 
   }
   const spcLowerSpy = spy(spcDefinition, "classifyOperand");
   const mainLowerSpy = spy(mainDefinition, "classifyOperand");
-  const program = assembler.buildProgramModel([
-    "arch spc700",
-    "nop",
-    "arch 65816",
-    "nop",
-  ].join("\n"), "arch-switch.asm");
+  const program = assembler.buildProgramModel(
+    ["arch spc700", "nop", "arch 65816", "nop"].join("\n"),
+    "arch-switch.asm",
+  );
 
   const lowered = assembler.commandLoweringService.lowerProgram(program);
   assembler.executeLoweredNodeStream(lowered.nodes);
@@ -902,10 +921,10 @@ test("lowered instructions refresh against architecture changes at dispatch", t 
 
 test("analyzeSource accumulates multiple diagnostics and references", (t) => {
   const assembler = new Assembler();
-  const result = assembler.analyzeSource([
-    "db MissingOne",
-    "db MissingTwo",
-  ].join("\n"), "analysis.asm");
+  const result = assembler.analyzeSource(
+    ["db MissingOne", "db MissingTwo"].join("\n"),
+    "analysis.asm",
+  );
 
   t.true(result.diagnostics.length >= 2);
   t.true(result.references.some((entry) => entry.name === "MissingOne"));
@@ -913,10 +932,12 @@ test("analyzeSource accumulates multiple diagnostics and references", (t) => {
 });
 
 test("file provider can serve includes from virtual documents", (t) => {
-  const fileProvider = new MemoryAssemblyFileProvider(new Map<string, string>([
-    ["/proj/main.asm", 'include "shared.asm"'],
-    ["/proj/shared.asm", "db $01"],
-  ]));
+  const fileProvider = new MemoryAssemblyFileProvider(
+    new Map<string, string>([
+      ["/proj/main.asm", 'include "shared.asm"'],
+      ["/proj/shared.asm", "db $01"],
+    ]),
+  );
   const assembler = new Assembler(undefined, { fileProvider });
   assembler.setCurrentFile("/proj/main.asm");
 
@@ -927,18 +948,15 @@ test("file provider can serve includes from virtual documents", (t) => {
 });
 
 test("lowered include executes nested conditional control flow", (t) => {
-  const fileProvider = new MemoryAssemblyFileProvider(new Map<string, string>([
-    ["/proj/main.asm", 'include "child.asm"'],
-    ["/proj/child.asm", [
-      "if 1",
-      "for i = 0..2",
-      "db !i",
-      "endfor",
-      "else",
-      "db $ff",
-      "endif",
-    ].join("\n")],
-  ]));
+  const fileProvider = new MemoryAssemblyFileProvider(
+    new Map<string, string>([
+      ["/proj/main.asm", 'include "child.asm"'],
+      [
+        "/proj/child.asm",
+        ["if 1", "for i = 0..2", "db !i", "endfor", "else", "db $ff", "endif"].join("\n"),
+      ],
+    ]),
+  );
   const assembler = new Assembler(undefined, { fileProvider });
   assembler.activateStage("emitProgram");
   assembler.setWritePosition(0x808000);
@@ -957,7 +975,9 @@ test("analyzeWorkspace isolates documents into separate analysis sessions", (t) 
   ]);
 
   t.is(results.length, 2);
-  t.true(results[0].symbols.some((entry) => entry.kind === "label" && entry.name === "SharedLabel"));
+  t.true(
+    results[0].symbols.some((entry) => entry.kind === "label" && entry.name === "SharedLabel"),
+  );
   t.false(results[0].diagnostics.some((entry) => entry.message.includes("not found")));
   t.true(results[1].diagnostics.length >= 1);
   t.true(results[1].diagnostics.some((entry) => entry.message.includes("SharedLabel")));
