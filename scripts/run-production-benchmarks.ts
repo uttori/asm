@@ -6,11 +6,9 @@ import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { Assembler } from "@uttori/asm-core";
+import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import {
-  createSnesAssemblerEnvironment,
-  SNES_TARGET_ID,
-} from "@uttori/asm-plugin-snes";
-import {
+  measureInternalPhase,
   runWithInternalInstrumentation,
   type InternalInstrumentationSnapshot,
 } from "../packages/core/src/internal-instrumentation.js";
@@ -18,13 +16,23 @@ import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
 
 const snesEnvironment = await createSnesAssemblerEnvironment();
 
-type Fixture = {
+type FixtureBase = {
   id: string;
   category: "production" | "macro-heavy" | "include-heavy" | "instruction-encoding";
   source: string;
+};
+
+type SingleSourceFixture = FixtureBase & {
+  kind?: "single-source";
   target: string;
   checksumMode: "asar" | "simple";
 };
+
+type SmrpgFixture = FixtureBase & {
+  kind: "smrpg";
+};
+
+type Fixture = SingleSourceFixture | SmrpgFixture;
 
 type Golden = {
   bytes: number;
@@ -84,6 +92,12 @@ const fixtures: Fixture[] = [
     source: "fixtures/integration/chou/Chou.asm",
     target: "fixtures/integration/chou/test.sfc",
     checksumMode: "simple",
+  },
+  {
+    id: "smrpg",
+    category: "production",
+    kind: "smrpg",
+    source: "fixtures/integration/Super-Mario-RPG-Disassembly/Global/AssembleFile.asm",
   },
 ];
 const fixtureById = new Map(fixtures.map((fixture) => [fixture.id, fixture]));
@@ -181,7 +195,70 @@ function emptyMetrics(): InternalInstrumentationSnapshot {
   };
 }
 
+function assembleSmrpgFixture(): Uint8Array {
+  const fixtureDir = path.join(root, "fixtures/integration/Super-Mario-RPG-Disassembly");
+  const globalDir = path.join(fixtureDir, "Global");
+  const gameDir = path.join(fixtureDir, "SMRPG");
+  const sourcePath = path.join(globalDir, "AssembleFile.asm");
+  const enginePath = path.join(gameDir, "SPC700/Engine.bin");
+  const source = fs.readFileSync(sourcePath, "utf8");
+  const includePaths = ["./", globalDir, gameDir];
+
+  const assembleProduct = (
+    fileType: number,
+    extraDefines: Readonly<Record<string, string>> | undefined,
+    baseImage: Uint8Array | undefined,
+  ): Uint8Array => {
+    const assembler = new Assembler({
+      environment: snesEnvironment,
+      target: SNES_TARGET_ID,
+      targetOptions: { checksumMode: "asar" },
+      baseImage,
+      collectSourceMetadata: false,
+    });
+    try {
+      if (baseImage && baseImage.length > 0) {
+        assembler.outputBytes = Array.from(baseImage);
+      }
+      assembler.setIncludePaths(includePaths);
+      assembler.setCurrentFile(sourcePath);
+      assembler.defines.set("GameID", "SMRPG");
+      assembler.defines.set("ROMID", "SMRPG_U");
+      assembler.defines.set("FileType", String(fileType));
+      if (extraDefines) {
+        for (const [name, value] of Object.entries(extraDefines)) {
+          assembler.defines.set(name, value);
+        }
+      }
+      const program = assembler.buildProgramModel(source, sourcePath, 0);
+      assembler.assembleProgram(program);
+      return assembler.getBinaryOutput();
+    } finally {
+      assembler.dispose();
+    }
+  };
+
+  const initialized = measureInternalPhase("smrpg.initialize", () =>
+    assembleProduct(0, undefined, undefined),
+  );
+  const engine = measureInternalPhase("smrpg.engine", () =>
+    assembleProduct(4, { PathToFile: "SPC700/Engine.asm" }, undefined),
+  );
+  fs.writeFileSync(enginePath, engine);
+  try {
+    const assembled = measureInternalPhase("smrpg.main", () =>
+      assembleProduct(1, undefined, initialized),
+    );
+    return measureInternalPhase("smrpg.finalize", () => assembleProduct(2, undefined, assembled));
+  } finally {
+    fs.rmSync(enginePath, { force: true });
+  }
+}
+
 function assembleFixture(fixture: Fixture): Uint8Array {
+  if (fixture.kind === "smrpg") {
+    return assembleSmrpgFixture();
+  }
   const sourcePath = path.join(root, fixture.source);
   const targetPath = path.join(root, fixture.target);
   const source = fs.readFileSync(sourcePath, "utf8");

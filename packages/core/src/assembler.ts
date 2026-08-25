@@ -459,6 +459,14 @@ export class Assembler {
   }
 
   /**
+   * Reports whether structured tracing is active for this assembly session.
+   * @returns {boolean} Whether a trace listener is installed.
+   */
+  get isTracing(): boolean {
+    return this.traceListener !== null;
+  }
+
+  /**
    * Traces write.
    * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
    */
@@ -1966,12 +1974,6 @@ export class Assembler {
     const processedCommands = this.frontEndService.preprocessBlockCommands(block);
     block = processedCommands.join("\n");
 
-    const words = block.trim().split(/\s+/);
-    if (words.length === 0) {
-      debug("assembler assembleblock no words", { words });
-      return;
-    }
-
     const splitCommands = splitInlineCommands(processedCommands);
     if (block.includes("\n") && this.incrementalProgramParseState.roots.length === 0) {
       const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
@@ -2146,8 +2148,9 @@ export class Assembler {
   /**
    * Processes a single command from `assembleblock`.
    * @param {string} command - The command to process.
+   * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
    */
-  processCommand(command: string): void {
+  processCommand(command: string, preprocessed = false): void {
     debug(
       "processCommand",
       { command },
@@ -2166,10 +2169,35 @@ export class Assembler {
       return;
     }
 
-    // Route single-command entrypoints through the same typed incremental parser
-    // used by line-by-line `assembleblock()` so macro-expanded control flow and
-    // raw direct calls share one structural execution model.
-    this.assembleblock(command);
+    // Macro bodies were normalized when their containing program was parsed.
+    // Preserve inline separators while skipping another block/comment scan.
+    if (preprocessed) {
+      if (!command.includes(":")) {
+        const nodes = this.programModelBuilder.consumeIncrementalCommand(
+          this.incrementalProgramParseState,
+          command.trim(),
+          this.currentFile,
+          this.currentLine,
+        );
+        this.lowerAndExecuteRuntimeNodes(nodes);
+        this.flushCompletedIncrementalNodes();
+        return;
+      }
+      const splitCommands = splitInlineCommands([command]);
+      for (const splitCommand of splitCommands) {
+        const nodes = this.programModelBuilder.consumeIncrementalCommand(
+          this.incrementalProgramParseState,
+          splitCommand.trim(),
+          this.currentFile,
+          this.currentLine,
+        );
+        this.lowerAndExecuteRuntimeNodes(nodes);
+      }
+    } else {
+      // Route raw single-command entrypoints through the same typed incremental
+      // parser used by line-by-line `assembleblock()`.
+      this.assembleblock(command);
+    }
     this.flushCompletedIncrementalNodes();
   }
 
@@ -2234,52 +2262,62 @@ export class Assembler {
       return;
     }
 
-    this.collectCommandReferences(workingState);
+    if (this.collectSourceMetadata) {
+      this.collectCommandReferences(workingState);
+    }
 
-    const traceContext: TraceCommandContext = {
-      file: workingState.source.file,
-      line: workingState.source.line,
-      raw: workingState.source.raw,
-      normalized: workingState.command,
-    };
-
-    this.traceListener?.({
-      type: "command-start",
-      stage: this.traceStage,
-      arch: this.arch,
-      ...traceContext,
-      logicalAddress: startPC,
-      outputOffset: this.outputWriter.toOutputOffset(startPC),
-    });
-
-    // Nested directives can emit additional writes while this command is still
-    // active, so keep the current source context on a stack until dispatch ends.
-    this.traceCommandStack.push(traceContext);
-    try {
+    const traceListener = this.traceListener;
+    if (!traceListener) {
       const lowered = this.commandLoweringService.lowerCommand(workingState);
       this.dispatchLoweredNode(lowered);
-    } finally {
-      this.traceCommandStack.pop();
+    } else {
+      const traceContext: TraceCommandContext = {
+        file: workingState.source.file,
+        line: workingState.source.line,
+        raw: workingState.source.raw,
+        normalized: workingState.command,
+      };
+
+      traceListener({
+        type: "command-start",
+        stage: this.traceStage,
+        arch: this.arch,
+        ...traceContext,
+        logicalAddress: startPC,
+        outputOffset: this.outputWriter.toOutputOffset(startPC),
+      });
+
+      // Nested directives can emit additional writes while this command is still
+      // active, so keep the current source context on a stack until dispatch ends.
+      this.traceCommandStack.push(traceContext);
+      try {
+        const lowered = this.commandLoweringService.lowerCommand(workingState);
+        this.dispatchLoweredNode(lowered);
+      } finally {
+        this.traceCommandStack.pop();
+      }
+
+      const endPC = this.currentTargetBaseAddress & 0xffffff;
+      traceListener({
+        type: "command-end",
+        stage: this.traceStage,
+        arch: this.arch,
+        ...traceContext,
+        logicalAddress: startPC,
+        outputOffset: this.outputWriter.toOutputOffset(startPC),
+        endLogicalAddress: endPC,
+        endOutputOffset: this.outputWriter.toOutputOffset(endPC),
+        bytesWritten: endPC - startPC,
+      });
     }
 
     // Determine how many bytes were written in this command.
     const commandSize = (this.currentTargetBaseAddress & 0xffffff) - startPC;
     debug("processCommand bytes written", commandSize);
 
-    const endPC = this.currentTargetBaseAddress & 0xffffff;
-    this.traceListener?.({
-      type: "command-end",
-      stage: this.traceStage,
-      arch: this.arch,
-      ...traceContext,
-      logicalAddress: startPC,
-      outputOffset: this.outputWriter.toOutputOffset(startPC),
-      endLogicalAddress: endPC,
-      endOutputOffset: this.outputWriter.toOutputOffset(endPC),
-      bytesWritten: commandSize,
-    });
-
-    this.addAddressToLine(this.currentTargetBaseAddress & 0xffffff);
+    if (this.collectSourceMetadata) {
+      this.addAddressToLine(this.currentTargetBaseAddress & 0xffffff);
+    }
   }
 
   /**
@@ -3519,7 +3557,7 @@ export class Assembler {
     }
 
     if (node.kind === "directive" || node.kind === "instruction") {
-      if (node.command) {
+      if (node.command && this.collectSourceMetadata) {
         this.collectCommandReferences(node.command);
       }
     }

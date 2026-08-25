@@ -25,6 +25,7 @@ export interface DirectiveRuntimeHost {
     pushpcnum: number;
     structEngine: StructEngine;
     symbolScope: SymbolScopeService;
+    collectSourceMetadata: boolean;
     addAddressToLine(address: number): void;
     resolvedefines(input: string): string;
     setWritePosition(address: number): void;

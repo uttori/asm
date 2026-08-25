@@ -40,6 +40,9 @@ export type NormalizedCommand = {
   parsed: CommandSemantics;
 };
 
+const EMPTY_COMMAND_SPAN: SourceSpan = Object.freeze({ start: 0, end: 0 });
+const EMPTY_TOKEN_SPANS: readonly SourceSpan[] = Object.freeze([]);
+
 /**
  * Creates immutable provenance metadata for a normalized command.
  * @param {string} raw The original source line.
@@ -47,6 +50,7 @@ export type NormalizedCommand = {
  * @param {string[]} words The tokenized command words.
  * @param {string} file The current source file.
  * @param {number} line The current source line number.
+ * @param {boolean} [collectSourceMetadata] Whether to derive precise source spans.
  * @returns {CommandProvenance} The command provenance.
  */
 export function createCommandProvenance(
@@ -55,7 +59,19 @@ export function createCommandProvenance(
   words: string[],
   file: string,
   line: number,
+  collectSourceMetadata = true,
 ): CommandProvenance {
+  if (!collectSourceMetadata) {
+    return {
+      file,
+      line,
+      raw,
+      normalized,
+      span: EMPTY_COMMAND_SPAN,
+      normalizedSpan: EMPTY_COMMAND_SPAN,
+      tokenSpans: EMPTY_TOKEN_SPANS,
+    };
+  }
   return {
     file,
     line,
@@ -140,6 +156,7 @@ export type CommandSemantics = {
  * @param {string[]} words The tokenized command words.
  * @param {string} file The current source file.
  * @param {number} line The current source line number.
+ * @param {boolean} [collectSourceMetadata] Whether to derive precise source spans.
  * @returns {NormalizedCommand} The normalized command node.
  */
 export function createNormalizedCommand(
@@ -148,12 +165,13 @@ export function createNormalizedCommand(
   words: string[],
   file: string,
   line: number,
+  collectSourceMetadata = true,
 ): NormalizedCommand {
   const command = normalized.trim();
   const keyword = words[0] ?? "";
   return {
     kind: classifyCommand(command, words),
-    source: createCommandProvenance(raw, normalized, words, file, line),
+    source: createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata),
     command,
     words,
     keyword,
@@ -219,12 +237,21 @@ export function setCommandWords(
   command.keyword = words[0] ?? "";
   command.command = (normalized ?? words.join(" ")).trim();
   const normalizedSource = normalized ?? command.command;
-  command.source = {
-    ...command.source,
-    normalized: normalizedSource,
-    normalizedSpan: createLineSpan(normalizedSource, command.source.line),
-    tokenSpans: deriveTokenSpans(normalizedSource, words, command.source.line),
-  };
+  if (command.source.tokenSpans === EMPTY_TOKEN_SPANS) {
+    command.source = {
+      ...command.source,
+      normalized: normalizedSource,
+      normalizedSpan: EMPTY_COMMAND_SPAN,
+      tokenSpans: EMPTY_TOKEN_SPANS,
+    };
+  } else {
+    command.source = {
+      ...command.source,
+      normalized: normalizedSource,
+      normalizedSpan: createLineSpan(normalizedSource, command.source.line),
+      tokenSpans: deriveTokenSpans(normalizedSource, words, command.source.line),
+    };
+  }
   command.labelName = deriveLabelName(command.keyword);
   command.assignmentTarget = deriveAssignmentTarget(words);
   command.parsed = deriveCommandSemantics(command.command, words);

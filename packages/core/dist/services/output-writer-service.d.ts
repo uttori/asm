@@ -18,6 +18,8 @@ export interface OutputWriterHost {
     syncWriteStarts(): void;
     incrementBytesWritten(num: number): void;
     beforeWrite?(logicalAddress: number, width: number): void;
+    /** Whether structured tracing is active for this assembly session. */
+    readonly isTracing: boolean;
     /** Optional structured trace hook invoked once per emitted byte. */
     traceWrite?(event: Omit<AssemblerTraceWriteEvent, "type">): void;
 }

@@ -12755,7 +12755,20 @@ function measureInternalPhase(name, callback) {
 }
 
 // packages/core/src/ir/normalized-command.ts
-function createCommandProvenance(raw, normalized, words, file, line) {
+var EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
+var EMPTY_TOKEN_SPANS = Object.freeze([]);
+function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
+  if (!collectSourceMetadata) {
+    return {
+      file,
+      line,
+      raw,
+      normalized,
+      span: EMPTY_COMMAND_SPAN,
+      normalizedSpan: EMPTY_COMMAND_SPAN,
+      tokenSpans: EMPTY_TOKEN_SPANS
+    };
+  }
   return {
     file,
     line,
@@ -12766,12 +12779,12 @@ function createCommandProvenance(raw, normalized, words, file, line) {
     tokenSpans: deriveTokenSpans(normalized, words, line)
   };
 }
-function createNormalizedCommand(raw, normalized, words, file, line) {
+function createNormalizedCommand(raw, normalized, words, file, line, collectSourceMetadata = true) {
   const command = normalized.trim();
   const keyword = words[0] ?? "";
   return {
     kind: classifyCommand(command, words),
-    source: createCommandProvenance(raw, normalized, words, file, line),
+    source: createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata),
     command,
     words,
     keyword,
@@ -12789,12 +12802,21 @@ function setCommandWords(command, words, normalized) {
   command.keyword = words[0] ?? "";
   command.command = (normalized ?? words.join(" ")).trim();
   const normalizedSource = normalized ?? command.command;
-  command.source = {
-    ...command.source,
-    normalized: normalizedSource,
-    normalizedSpan: createLineSpan(normalizedSource, command.source.line),
-    tokenSpans: deriveTokenSpans(normalizedSource, words, command.source.line)
-  };
+  if (command.source.tokenSpans === EMPTY_TOKEN_SPANS) {
+    command.source = {
+      ...command.source,
+      normalized: normalizedSource,
+      normalizedSpan: EMPTY_COMMAND_SPAN,
+      tokenSpans: EMPTY_TOKEN_SPANS
+    };
+  } else {
+    command.source = {
+      ...command.source,
+      normalized: normalizedSource,
+      normalizedSpan: createLineSpan(normalizedSource, command.source.line),
+      tokenSpans: deriveTokenSpans(normalizedSource, words, command.source.line)
+    };
+  }
   command.labelName = deriveLabelName(command.keyword);
   command.assignmentTarget = deriveAssignmentTarget(words);
   command.parsed = deriveCommandSemantics(command.command, words);
@@ -16408,7 +16430,9 @@ var DirectiveRuntimeService = class {
       }
       this.writeDataByLength(len, num);
     }
-    this.host.addAddressToLine(this.host.currentTargetBaseAddress & 16777215);
+    if (this.host.collectSourceMetadata) {
+      this.host.addAddressToLine(this.host.currentTargetBaseAddress & 16777215);
+    }
   }
   /**
    * Writes a value using the data directive byte width.
@@ -16481,7 +16505,9 @@ var DirectiveRuntimeService = class {
       estimatedItems += 1;
     }
     this.host.step(estimatedItems * len);
-    this.host.addAddressToLine(this.host.currentTargetBaseAddress & 16777215);
+    if (this.host.collectSourceMetadata) {
+      this.host.addAddressToLine(this.host.currentTargetBaseAddress & 16777215);
+    }
   }
   /**
    * Pushes the current PC state.
@@ -16850,7 +16876,14 @@ var AssemblyFrontEndService = class {
     if (!allowEmpty && words.length === 0) {
       return null;
     }
-    return createNormalizedCommand(command, normalizedCommand, words, sourceFile, sourceLine);
+    return createNormalizedCommand(
+      command,
+      normalizedCommand,
+      words,
+      sourceFile,
+      sourceLine,
+      this.host.collectSourceMetadata
+    );
   }
   /**
    * Creates a loop-aware normalized command node for the typed parser.
@@ -16860,7 +16893,14 @@ var AssemblyFrontEndService = class {
    * @returns {NormalizedCommand} The normalized node.
    */
   createLoopCommandNode(command, sourceFile = this.host.currentFile, sourceLine = this.host.currentLine) {
-    return this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true) ?? createNormalizedCommand(command, "", [], sourceFile, sourceLine);
+    return this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true) ?? createNormalizedCommand(
+      command,
+      "",
+      [],
+      sourceFile,
+      sourceLine,
+      this.host.collectSourceMetadata
+    );
   }
 };
 
@@ -17929,37 +17969,43 @@ var MacroEngine = class {
    */
   processMacroLine(line) {
     incrementInternalCounter("macroLinesProcessed");
-    const trimmed = removeInlineComment(line).trim();
-    const keyword = trimmed.split(/\s+/, 1)[0]?.toLowerCase();
+    const preprocessedLine = removeInlineComment(line);
+    const trimmed = preprocessedLine.trim();
+    const commandLine = preprocessedLine === line.trim() ? line : preprocessedLine;
+    let keyword = trimmed.toLowerCase();
+    const keywordEnd = keyword.search(/\s/);
+    if (keywordEnd >= 0) {
+      keyword = keyword.slice(0, keywordEnd);
+    }
     const isControlDirective = keyword === "if" || keyword === "elseif" || keyword === "else" || keyword === "endif" || keyword === "while" || keyword === "endwhile" || keyword === "for" || keyword === "endfor";
     if (!this.isMacroExpansionActive() && !isControlDirective) {
       return;
     }
-    if (/^\s*[#?][\w+.-]+:/.test(line)) {
-      if (line.trim().startsWith("?+:") || line.trim().startsWith("?-:")) {
-        const labelChar = line.trim();
-        const remainder = line.trim().substring(3).trim();
+    if (/^[#?][\w+.-]+:/.test(trimmed)) {
+      if (trimmed.startsWith("?+:") || trimmed.startsWith("?-:")) {
+        const labelChar = trimmed;
+        const remainder = trimmed.substring(3).trim();
         this.host.symbolScope.handleRelativeLabel(labelChar);
         if (remainder) {
-          this.host.processCommand(remainder);
+          this.host.processCommand(remainder, true);
           this.updateMacroExpansionControlState(remainder);
         }
         return;
       }
-      const match = line.match(/^\s*([#?][\w+.-]+):/);
+      const match = trimmed.match(/^([#?][\w+.-]+):/);
       if (match) {
         const labelName = match[1];
-        const remainder = line.substring(match[0].length).trim();
+        const remainder = trimmed.substring(match[0].length).trim();
         this.host.symbolScope.setLabel(labelName, void 0, false, true);
         if (remainder) {
-          this.host.processCommand(remainder);
+          this.host.processCommand(remainder, true);
           this.updateMacroExpansionControlState(remainder);
         }
         return;
       }
     }
-    if (/^\s*\?[\w+.-]+ *=/.test(line)) {
-      const match = line.match(/^\s*(\?[\w+.-]+) *=\s*(.*)/);
+    if (/^\?[\w+.-]+ *=/.test(trimmed)) {
+      const match = trimmed.match(/^(\?[\w+.-]+) *=\s*(.*)/);
       if (match) {
         const labelName = match[1];
         const expression = match[2].trim();
@@ -17970,11 +18016,11 @@ var MacroEngine = class {
     }
     const isDefineAssignment = /^!\w+\s*(?:#=|\+=|:=|\?=|=(?!=))/.test(trimmed);
     if (isDefineAssignment && !this.isMacroExpansionLoopActive()) {
-      this.host.applyDefineAssignment(line);
+      this.host.applyDefineAssignment(commandLine);
     } else {
-      this.host.processCommand(line);
+      this.host.processCommand(commandLine, true);
     }
-    this.updateMacroExpansionControlState(line);
+    this.updateMacroExpansionControlState(trimmed);
   }
 };
 
@@ -18023,17 +18069,19 @@ var OutputWriterService = class {
     const logicalAddress = newPos & logicalMask;
     this.host.beforeWrite?.(logicalAddress, 1);
     const outputOffset = this.toOutputOffset(logicalAddress);
-    this.host.traceWrite?.({
-      stage: this.host.traceStage,
-      arch: this.host.arch,
-      file: "",
-      line: 0,
-      raw: "",
-      normalized: "",
-      logicalAddress,
-      outputOffset,
-      value: num & 255
-    });
+    if (this.host.isTracing) {
+      this.host.traceWrite?.({
+        stage: this.host.traceStage,
+        arch: this.host.arch,
+        file: "",
+        line: 0,
+        raw: "",
+        normalized: "",
+        logicalAddress,
+        outputOffset,
+        value: num & 255
+      });
+    }
     if (outputOffset < 0) {
       this.step(1);
       return;
@@ -20460,6 +20508,13 @@ var Assembler = class _Assembler {
     return this.getActiveStageCapabilities().isDefinitionCollectionStage;
   }
   /**
+   * Reports whether structured tracing is active for this assembly session.
+   * @returns {boolean} Whether a trace listener is installed.
+   */
+  get isTracing() {
+    return this.traceListener !== null;
+  }
+  /**
    * Traces write.
    * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
    */
@@ -21787,11 +21842,6 @@ var Assembler = class _Assembler {
     }
     const processedCommands = this.frontEndService.preprocessBlockCommands(block);
     block = processedCommands.join("\n");
-    const words = block.trim().split(/\s+/);
-    if (words.length === 0) {
-      debug4("assembler assembleblock no words", { words });
-      return;
-    }
     const splitCommands = splitInlineCommands(processedCommands);
     if (block.includes("\n") && this.incrementalProgramParseState.roots.length === 0) {
       const nodes = this.getOrBuildPassProgram(splitCommands, this.currentFile, this.currentLine);
@@ -21933,8 +21983,9 @@ var Assembler = class _Assembler {
   /**
    * Processes a single command from `assembleblock`.
    * @param {string} command - The command to process.
+   * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
    */
-  processCommand(command) {
+  processCommand(command, preprocessed = false) {
     debug4(
       "processCommand",
       { command },
@@ -21950,7 +22001,31 @@ var Assembler = class _Assembler {
     if (this.frontEndCommandService.continueFunctionDefinition(command)) {
       return;
     }
-    this.assembleblock(command);
+    if (preprocessed) {
+      if (!command.includes(":")) {
+        const nodes = this.programModelBuilder.consumeIncrementalCommand(
+          this.incrementalProgramParseState,
+          command.trim(),
+          this.currentFile,
+          this.currentLine
+        );
+        this.lowerAndExecuteRuntimeNodes(nodes);
+        this.flushCompletedIncrementalNodes();
+        return;
+      }
+      const splitCommands = splitInlineCommands([command]);
+      for (const splitCommand of splitCommands) {
+        const nodes = this.programModelBuilder.consumeIncrementalCommand(
+          this.incrementalProgramParseState,
+          splitCommand.trim(),
+          this.currentFile,
+          this.currentLine
+        );
+        this.lowerAndExecuteRuntimeNodes(nodes);
+      }
+    } else {
+      this.assembleblock(command);
+    }
     this.flushCompletedIncrementalNodes();
   }
   /**
@@ -21997,43 +22072,53 @@ var Assembler = class _Assembler {
     if (!this.prepareNormalizedCommandForDispatch(workingState)) {
       return;
     }
-    this.collectCommandReferences(workingState);
-    const traceContext = {
-      file: workingState.source.file,
-      line: workingState.source.line,
-      raw: workingState.source.raw,
-      normalized: workingState.command
-    };
-    this.traceListener?.({
-      type: "command-start",
-      stage: this.traceStage,
-      arch: this.arch,
-      ...traceContext,
-      logicalAddress: startPC,
-      outputOffset: this.outputWriter.toOutputOffset(startPC)
-    });
-    this.traceCommandStack.push(traceContext);
-    try {
+    if (this.collectSourceMetadata) {
+      this.collectCommandReferences(workingState);
+    }
+    const traceListener = this.traceListener;
+    if (!traceListener) {
       const lowered = this.commandLoweringService.lowerCommand(workingState);
       this.dispatchLoweredNode(lowered);
-    } finally {
-      this.traceCommandStack.pop();
+    } else {
+      const traceContext = {
+        file: workingState.source.file,
+        line: workingState.source.line,
+        raw: workingState.source.raw,
+        normalized: workingState.command
+      };
+      traceListener({
+        type: "command-start",
+        stage: this.traceStage,
+        arch: this.arch,
+        ...traceContext,
+        logicalAddress: startPC,
+        outputOffset: this.outputWriter.toOutputOffset(startPC)
+      });
+      this.traceCommandStack.push(traceContext);
+      try {
+        const lowered = this.commandLoweringService.lowerCommand(workingState);
+        this.dispatchLoweredNode(lowered);
+      } finally {
+        this.traceCommandStack.pop();
+      }
+      const endPC = this.currentTargetBaseAddress & 16777215;
+      traceListener({
+        type: "command-end",
+        stage: this.traceStage,
+        arch: this.arch,
+        ...traceContext,
+        logicalAddress: startPC,
+        outputOffset: this.outputWriter.toOutputOffset(startPC),
+        endLogicalAddress: endPC,
+        endOutputOffset: this.outputWriter.toOutputOffset(endPC),
+        bytesWritten: endPC - startPC
+      });
     }
     const commandSize = (this.currentTargetBaseAddress & 16777215) - startPC;
     debug4("processCommand bytes written", commandSize);
-    const endPC = this.currentTargetBaseAddress & 16777215;
-    this.traceListener?.({
-      type: "command-end",
-      stage: this.traceStage,
-      arch: this.arch,
-      ...traceContext,
-      logicalAddress: startPC,
-      outputOffset: this.outputWriter.toOutputOffset(startPC),
-      endLogicalAddress: endPC,
-      endOutputOffset: this.outputWriter.toOutputOffset(endPC),
-      bytesWritten: commandSize
-    });
-    this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
+    if (this.collectSourceMetadata) {
+      this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
+    }
   }
   /**
    * Gets or create lowered program.
@@ -23109,7 +23194,7 @@ var Assembler = class _Assembler {
       return;
     }
     if (node.kind === "directive" || node.kind === "instruction") {
-      if (node.command) {
+      if (node.command && this.collectSourceMetadata) {
         this.collectCommandReferences(node.command);
       }
     }
@@ -29626,46 +29711,45 @@ var snesRomAddressSpace = {
   addressWidth: 24,
   defaultOrigin: 32768,
   unmappedWriteBehavior: "allow",
-  normalizeForWrite(address, context) {
-    return this.advance(address, 0, context);
+  normalizeForWrite(address) {
+    return address | 0;
   },
   advance(address, amount, context) {
     const prefix = address & 4278190080;
     const logicalAddress = address & 16777215;
     const newAddress = logicalAddress + amount;
-    const finish = (value) => prefix | value;
     if ((logicalAddress & 16711680) !== (newAddress & 16711680)) {
       const wrapOnBankCross = context.bankCrossCheckMode !== "full" && context.bankCrossCheckMode !== "half";
       switch (context.mapper) {
         case "lorom":
           if (wrapOnBankCross) {
-            return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
+            return prefix | newAddress & 16711680 | (newAddress & 65535) + 32768;
           }
-          return finish(newAddress);
+          return prefix | newAddress;
         case "hirom":
         case "exhirom":
         case "sfxrom":
         case "sa1rom":
           if (wrapOnBankCross && (logicalAddress & 4194304) === 0) {
-            return finish(newAddress & 16711680 | (newAddress & 65535) + 32768);
+            return prefix | newAddress & 16711680 | (newAddress & 65535) + 32768;
           }
-          return finish(newAddress);
+          return prefix | newAddress;
         case "exlorom":
         case "bigsa1rom": {
           if (!wrapOnBankCross) {
-            return finish(newAddress);
+            return prefix | newAddress;
           }
           const offset = this.toOutputOffset(logicalAddress, context);
           const mapped = offset < 0 ? -1 : this.fromOutputOffset(offset + amount, context);
-          return mapped < 0 ? -1 : finish(mapped);
+          return mapped < 0 ? -1 : prefix | mapped;
         }
         case "norom":
-          return finish(newAddress);
+          return prefix | newAddress;
         default:
           throw new Error(`Unknown mapper type: ${context.mapper}`);
       }
     }
-    return finish(newAddress);
+    return prefix | newAddress;
   },
   toOutputOffset(address, context) {
     if (address < 0 || address > 16777215) return -1;

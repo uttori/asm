@@ -45,7 +45,7 @@ export interface MacroEngineHost {
   symbolScope: SymbolScopeService;
   evaluateExpression(input: string): boolean;
   resolvedefines(input: string): string;
-  processCommand(command: string): void;
+  processCommand(command: string, preprocessed?: boolean): void;
   applyDefineAssignment(command: string): boolean;
   recordSymbolDefinition(kind: "macro", name: string, options?: { value?: number | string }): void;
 }
@@ -725,8 +725,14 @@ export class MacroEngine {
    */
   processMacroLine(line: string): void {
     incrementInternalCounter("macroLinesProcessed");
-    const trimmed = removeInlineComment(line).trim();
-    const keyword = trimmed.split(/\s+/, 1)[0]?.toLowerCase();
+    const preprocessedLine = removeInlineComment(line);
+    const trimmed = preprocessedLine.trim();
+    const commandLine = preprocessedLine === line.trim() ? line : preprocessedLine;
+    let keyword = trimmed.toLowerCase();
+    const keywordEnd = keyword.search(/\s/);
+    if (keywordEnd >= 0) {
+      keyword = keyword.slice(0, keywordEnd);
+    }
     const isControlDirective =
       keyword === "if" ||
       keyword === "elseif" ||
@@ -741,33 +747,33 @@ export class MacroEngine {
       return;
     }
 
-    if (/^\s*[#?][\w+.-]+:/.test(line)) {
-      if (line.trim().startsWith("?+:") || line.trim().startsWith("?-:")) {
-        const labelChar = line.trim();
-        const remainder = line.trim().substring(3).trim();
+    if (/^[#?][\w+.-]+:/.test(trimmed)) {
+      if (trimmed.startsWith("?+:") || trimmed.startsWith("?-:")) {
+        const labelChar = trimmed;
+        const remainder = trimmed.substring(3).trim();
         this.host.symbolScope.handleRelativeLabel(labelChar);
         if (remainder) {
-          this.host.processCommand(remainder);
+          this.host.processCommand(remainder, true);
           this.updateMacroExpansionControlState(remainder);
         }
         return;
       }
 
-      const match = line.match(/^\s*([#?][\w+.-]+):/);
+      const match = trimmed.match(/^([#?][\w+.-]+):/);
       if (match) {
         const labelName = match[1];
-        const remainder = line.substring(match[0].length).trim();
+        const remainder = trimmed.substring(match[0].length).trim();
         this.host.symbolScope.setLabel(labelName, undefined, false, true);
         if (remainder) {
-          this.host.processCommand(remainder);
+          this.host.processCommand(remainder, true);
           this.updateMacroExpansionControlState(remainder);
         }
         return;
       }
     }
 
-    if (/^\s*\?[\w+.-]+ *=/.test(line)) {
-      const match = line.match(/^\s*(\?[\w+.-]+) *=\s*(.*)/);
+    if (/^\?[\w+.-]+ *=/.test(trimmed)) {
+      const match = trimmed.match(/^(\?[\w+.-]+) *=\s*(.*)/);
       if (match) {
         const labelName = match[1];
         const expression = match[2].trim();
@@ -784,10 +790,10 @@ export class MacroEngine {
     // stay in the loop body.
     const isDefineAssignment = /^!\w+\s*(?:#=|\+=|:=|\?=|=(?!=))/.test(trimmed);
     if (isDefineAssignment && !this.isMacroExpansionLoopActive()) {
-      this.host.applyDefineAssignment(line);
+      this.host.applyDefineAssignment(commandLine);
     } else {
-      this.host.processCommand(line);
+      this.host.processCommand(commandLine, true);
     }
-    this.updateMacroExpansionControlState(line);
+    this.updateMacroExpansionControlState(trimmed);
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "uttori-asm",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "description": "A pluggable assembler toolkit for TypeScript and Node.js.",
   "keywords": [],
   "homepage": "https://github.com/MatthewCallis/uttori-asm",
@@ -41,6 +41,8 @@
     "benchmark:smoke": "tsx scripts/run-production-benchmarks.ts --fast",
     "benchmark:chou": "tsx scripts/run-production-benchmarks.ts --fast --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
     "benchmark:chou:stable": "tsx scripts/run-production-benchmarks.ts --warmups 0 --repetitions 3 --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
+    "benchmark:smrpg": "tsx scripts/run-production-benchmarks.ts --fast --fixture smrpg --isolate --max-median-ms 60000",
+    "benchmark:smrpg:stable": "tsx scripts/run-production-benchmarks.ts --warmups 0 --repetitions 3 --fixture smrpg --isolate --no-instrumentation --max-median-ms 60000",
     "benchmark:typecheck": "npm run scripts:typecheck",
     "test": "NODE_ENV=test ava",
     "test:coverage": "NODE_ENV=test c8 ava",

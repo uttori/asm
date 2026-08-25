@@ -276,6 +276,11 @@ export declare class Assembler {
     get enforceResolvedLabels(): boolean;
     get isDefinitionCollectionStage(): boolean;
     /**
+     * Reports whether structured tracing is active for this assembly session.
+     * @returns {boolean} Whether a trace listener is installed.
+     */
+    get isTracing(): boolean;
+    /**
      * Traces write.
      * @param {Omit<AssemblerTraceWriteEvent, "type">} event The event.
      */
@@ -672,8 +677,9 @@ export declare class Assembler {
     /**
      * Processes a single command from `assembleblock`.
      * @param {string} command - The command to process.
+     * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
      */
-    processCommand(command: string): void;
+    processCommand(command: string, preprocessed?: boolean): void;
     /**
      * Processes normalized command.
      * @param {NormalizedCommand} state The state.

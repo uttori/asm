@@ -28,6 +28,7 @@ export interface DirectiveRuntimeHost {
   pushpcnum: number;
   structEngine: StructEngine;
   symbolScope: SymbolScopeService;
+  collectSourceMetadata: boolean;
   addAddressToLine(address: number): void;
   resolvedefines(input: string): string;
   setWritePosition(address: number): void;
@@ -201,7 +202,9 @@ export class DirectiveRuntimeService {
       this.writeDataByLength(len, num);
     }
 
-    this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xffffff);
+    if (this.host.collectSourceMetadata) {
+      this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xffffff);
+    }
   }
 
   /**
@@ -288,7 +291,9 @@ export class DirectiveRuntimeService {
     }
 
     this.host.step(estimatedItems * len);
-    this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xffffff);
+    if (this.host.collectSourceMetadata) {
+      this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xffffff);
+    }
   }
 
   /**

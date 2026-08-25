@@ -23,6 +23,8 @@ export interface OutputWriterHost {
   syncWriteStarts(): void;
   incrementBytesWritten(num: number): void;
   beforeWrite?(logicalAddress: number, width: number): void;
+  /** Whether structured tracing is active for this assembly session. */
+  readonly isTracing: boolean;
   /** Optional structured trace hook invoked once per emitted byte. */
   traceWrite?(event: Omit<AssemblerTraceWriteEvent, "type">): void;
 }
@@ -75,17 +77,19 @@ export class OutputWriterService {
 
     // Emit tracing before the position advances so listeners see the exact byte
     // address that will be written for this stage.
-    this.host.traceWrite?.({
-      stage: this.host.traceStage,
-      arch: this.host.arch,
-      file: "",
-      line: 0,
-      raw: "",
-      normalized: "",
-      logicalAddress,
-      outputOffset,
-      value: num & 0xff,
-    });
+    if (this.host.isTracing) {
+      this.host.traceWrite?.({
+        stage: this.host.traceStage,
+        arch: this.host.arch,
+        file: "",
+        line: 0,
+        raw: "",
+        normalized: "",
+        logicalAddress,
+        outputOffset,
+        value: num & 0xff,
+      });
+    }
 
     if (outputOffset < 0) {
       this.step(1);

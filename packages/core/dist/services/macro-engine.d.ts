@@ -40,7 +40,7 @@ export interface MacroEngineHost {
     symbolScope: SymbolScopeService;
     evaluateExpression(input: string): boolean;
     resolvedefines(input: string): string;
-    processCommand(command: string): void;
+    processCommand(command: string, preprocessed?: boolean): void;
     applyDefineAssignment(command: string): boolean;
     recordSymbolDefinition(kind: "macro", name: string, options?: {
         value?: number | string;

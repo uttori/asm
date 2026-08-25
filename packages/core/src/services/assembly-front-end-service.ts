@@ -11,6 +11,7 @@ export type AssemblyFrontEndHost = {
   currentFile: string;
   currentLine: number;
   passProgramCache: Map<string, ExecutableNode[]>;
+  collectSourceMetadata: boolean;
   inMacroExpansion: boolean;
   isDefinitionCollectionStage: boolean;
   resolveVariadicPlaceholders(command: string): string;
@@ -86,7 +87,14 @@ export class AssemblyFrontEndService {
       return null;
     }
 
-    return createNormalizedCommand(command, normalizedCommand, words, sourceFile, sourceLine);
+    return createNormalizedCommand(
+      command,
+      normalizedCommand,
+      words,
+      sourceFile,
+      sourceLine,
+      this.host.collectSourceMetadata,
+    );
   }
 
   /**
@@ -103,7 +111,14 @@ export class AssemblyFrontEndService {
   ): NormalizedCommand {
     return (
       this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true) ??
-      createNormalizedCommand(command, "", [], sourceFile, sourceLine)
+      createNormalizedCommand(
+        command,
+        "",
+        [],
+        sourceFile,
+        sourceLine,
+        this.host.collectSourceMetadata,
+      )
     );
   }
 }

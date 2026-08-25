@@ -27,9 +27,10 @@ export type NormalizedCommand = {
  * @param {string[]} words The tokenized command words.
  * @param {string} file The current source file.
  * @param {number} line The current source line number.
+ * @param {boolean} [collectSourceMetadata] Whether to derive precise source spans.
  * @returns {CommandProvenance} The command provenance.
  */
-export declare function createCommandProvenance(raw: string, normalized: string, words: string[], file: string, line: number): CommandProvenance;
+export declare function createCommandProvenance(raw: string, normalized: string, words: string[], file: string, line: number, collectSourceMetadata?: boolean): CommandProvenance;
 export type ParsedCondition = {
     expression: ExpressionNode;
 };
@@ -92,9 +93,10 @@ export type CommandSemantics = {
  * @param {string[]} words The tokenized command words.
  * @param {string} file The current source file.
  * @param {number} line The current source line number.
+ * @param {boolean} [collectSourceMetadata] Whether to derive precise source spans.
  * @returns {NormalizedCommand} The normalized command node.
  */
-export declare function createNormalizedCommand(raw: string, normalized: string, words: string[], file: string, line: number): NormalizedCommand;
+export declare function createNormalizedCommand(raw: string, normalized: string, words: string[], file: string, line: number, collectSourceMetadata?: boolean): NormalizedCommand;
 /**
  * Creates a lightweight command node for deferred loop or macro collection.
  * @param {string} raw The unprocessed source line.

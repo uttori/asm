@@ -5,6 +5,7 @@ export type AssemblyFrontEndHost = {
     currentFile: string;
     currentLine: number;
     passProgramCache: Map<string, ExecutableNode[]>;
+    collectSourceMetadata: boolean;
     inMacroExpansion: boolean;
     isDefinitionCollectionStage: boolean;
     resolveVariadicPlaceholders(command: string): string;

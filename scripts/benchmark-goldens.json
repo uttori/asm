@@ -18,5 +18,9 @@
   "instruction-encoding": {
     "bytes": 614,
     "sha256": "1f76d7bd6d06ab30c090daa6a5f3555c4bdcc8c8084871880b4caa403326b730"
+  },
+  "smrpg": {
+    "bytes": 4194304,
+    "sha256": "740646f3535bfb365ca44e70d46ab433467b142bd84010393070bd0b141af853"
   }
 }
