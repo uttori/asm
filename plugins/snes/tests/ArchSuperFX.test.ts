@@ -73,6 +73,22 @@ test("ArchSuperFX.estimateSize matches encoded SuperFX widths", (t) => {
   t.is(arch.estimateSize(["MOVEW", "R3, (R1)"]), 2);
 });
 
+test("ArchSuperFX.estimateSize MOVE RAM: short=3, long=4, unresolved=4", (t) => {
+  const { arch } = createArchSuperFX();
+
+  // Short RAM (even, < $200): LMS-shaped, 3 bytes.
+  t.is(arch.estimateSize(["MOVE", "R0, ($40)"]), 3);
+  t.is(arch.estimateSize(["MOVE", "($40), R1"]), 3);
+  // Non-short RAM: LM/SM-shaped, 4 bytes.
+  t.is(arch.estimateSize(["MOVE", "R0, ($300)"]), 4);
+  t.is(arch.estimateSize(["MOVE", "($300), R1"]), 4);
+  // Unresolved label: pessimistic estimate of 4; may shrink to 3 after layout resolves.
+  t.is(arch.estimateSize(["MOVE", "R0, (unknownLabel)"]), 4);
+  t.is(arch.estimateSize(["MOVE", "(unknownLabel), R1"]), 4);
+  // LEA is IWT-shaped (no ALT1): 3 bytes regardless.
+  t.is(arch.estimateSize(["LEA", "R0, $1234"]), 3);
+});
+
 test("ArchSuperFX.encodeInstruction routes lowered operands directly", (t) => {
   const { assembler, arch } = createArchSuperFX();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");

@@ -1,6 +1,7 @@
 import type { InstructionDescriptor } from "@uttori/asm-core";
 import type { InstructionForm } from "./schema.js";
 
+/** Hover/completion syntax strings keyed by addressing mode. */
 const syntax: Readonly<Record<InstructionForm["mode"], string>> = {
   implied: "",
   accumulator: "A",
@@ -28,6 +29,7 @@ const syntax: Readonly<Record<InstructionForm["mode"], string>> = {
   quadAccumulator: "Q",
 };
 
+/** Documented-mnemonic summaries; unofficial ops fall back in {@link buildInstructionCatalog}. */
 const summaries: Readonly<Record<string, string>> = {
   ADC: "Add memory to the accumulator with carry.",
   AND: "Bitwise AND memory with the accumulator.",
@@ -59,6 +61,12 @@ const summaries: Readonly<Record<string, string>> = {
   STY: "Store Y.",
 };
 
+/**
+ * Groups forms by mnemonic for editor tooling (hover, completion, signatures).
+ *
+ * @param {readonly InstructionForm[]} forms Assembly forms for one CPU.
+ * @returns {InstructionDescriptor[]} Sorted instruction descriptors.
+ */
 export function buildInstructionCatalog(
   forms: readonly InstructionForm[],
 ): InstructionDescriptor[] {

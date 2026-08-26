@@ -89,7 +89,7 @@ export function findDirectiveInCatalog(
  */
 export function renderInstructionDocs(descriptor: InstructionDescriptor): string {
   const lines: string[] = [];
-  lines.push(`**${descriptor.mnemonic}** — instruction`);
+  lines.push(`**${descriptor.mnemonic}** - instruction`);
   if (descriptor.summary) {
     lines.push("", descriptor.summary);
   }
@@ -117,7 +117,7 @@ export function renderInstructionDocs(descriptor: InstructionDescriptor): string
  */
 export function renderDirectiveDocs(descriptor: DirectiveDescriptor): string {
   return [
-    `**${descriptor.keyword}** — directive`,
+    `**${descriptor.keyword}** - directive`,
     "",
     descriptor.summary,
     "",
@@ -133,7 +133,7 @@ export function renderDirectiveDocs(descriptor: DirectiveDescriptor): string {
 export function renderExpressionFunctionDocs(descriptor: ExpressionFunctionDescriptor): string {
   const parameters = descriptor.signature.parameters.join(", ");
   return [
-    `**${descriptor.name}** — expression function`,
+    `**${descriptor.name}** - expression function`,
     "",
     descriptor.summary,
     "",

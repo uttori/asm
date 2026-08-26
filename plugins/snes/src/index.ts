@@ -31,6 +31,18 @@ import {
   shouldRedirectOrgToSpcblock,
   shouldUseNoromAddressing,
 } from "./asar/compatibility.js";
+import {
+  handleA8,
+  handleA16,
+  handleAccu,
+  handleI8,
+  handleI16,
+  handleIndex,
+  handleSmart,
+  handleSetcpu,
+  handlePushcpu,
+  handlePopcpu,
+} from "./directives/ca65-compat.js";
 import { handleFreespace, handleFreespaceByte, handleProt } from "./directives/freespace.js";
 import {
   handleCheck,
@@ -50,17 +62,41 @@ import { snesRomAddressSpace } from "./target/address-space.js";
 import { directiveCatalog } from "./tooling/directive-catalog.js";
 import { cpu65816Catalog, spc700Catalog, superFxCatalog } from "./tooling/instruction-catalog.js";
 
+/** Canonical SNES cartridge target id (`snes`, `sfc`, `snes-65816` are aliases). */
 export const SNES_TARGET_ID = "snes.sfc";
 
+/**
+ * Target options accepted by `validateOptions` / `createOptions`.
+ * Unknown keys are ignored; `checksumMode` is the only enum that throws.
+ */
 export interface SnesTargetOptions extends Record<string, unknown> {
   readonly checksumMode: "asar" | "simple";
   readonly checksumEnabled: boolean;
+  /** When true, Super FX auto-MOVE short RAM uses Asar's raw byte, not `addr >> 1`. */
   readonly asarSuperFxMoveShortAddress: boolean;
 }
 
+/**
+ * 65816 keeps the rest of the line as a single operand (`LDA $12,x` is one form,
+ * not two arguments). Splitting on commas would break indexed modes.
+ * @param {string} text The text to split.
+ * @returns {string[]} The split text.
+ */
 const splitSingleOperand = (text: string): string[] => (text ? [text] : []);
+/**
+ * Super FX `MOVE Rn, Rm` style: commas are always operand separators.
+ * @param {string} text The text to split.
+ * @returns {string[]} The split text.
+ */
 const splitCommaOperands = (text: string): string[] =>
   text ? text.split(",").map((operand) => operand.trim()) : [];
+
+/**
+ * SPC700 `MOV A,($12+X)` - commas inside parentheses are addressing syntax,
+ * not argument splits. Bracket forms are rare here; only `()` depth is tracked.
+ * @param {string} text The text to split.
+ * @returns {string[]} The split text.
+ */
 const splitTopLevelCommaOperands = (text: string): string[] => {
   const operands: string[] = [];
   let level = 0;
@@ -84,6 +120,13 @@ const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
   return directiveCatalog.filter((descriptor) => wanted.has(descriptor.keyword));
 };
 
+/**
+ * Registers a lowered-phase SNES directive and attaches matching hover/completion copy.
+ * @param {string} id The directive id.
+ * @param {readonly string[]} keywords The directive keywords.
+ * @param {DirectiveContribution["createHandler"]} handler The directive handler.
+ * @returns {DirectiveContribution} The directive contribution.
+*/
 const directive = (
   id: string,
   keywords: readonly string[],
@@ -108,6 +151,7 @@ const numericArgument = (
   return value;
 };
 
+/** `snestopc` / `pctosnes` - mapper-aware CPU ↔ file offset conversion. */
 const addressExpressions: ExpressionSetContribution = {
   id: "snes.address-functions",
   functions: [
@@ -128,6 +172,10 @@ const addressExpressions: ExpressionSetContribution = {
   ],
 };
 
+/**
+ * Asar `readN` / `canreadN` against the base image.
+ * `readN` without a default throws until `check title` sets `readFunctionsEnabled`.
+ */
 const readExpressions: ExpressionSetContribution = {
   id: "snes.read-functions",
   functions: [
@@ -173,6 +221,12 @@ const readExpressions: ExpressionSetContribution = {
   ],
 };
 
+/**
+ * Coerces plugin/target options. Missing object → defaults.
+ * `checksumEnabled` defaults true; only an explicit `false` disables it.
+ * @param {unknown} configured The configured options.
+ * @returns {SnesTargetOptions} The target options.
+ */
 const targetOptions = (configured: unknown): SnesTargetOptions => {
   const value =
     typeof configured === "object" && configured !== null && !Array.isArray(configured)
@@ -189,6 +243,13 @@ const targetOptions = (configured: unknown): SnesTargetOptions => {
   };
 };
 
+/**
+ * Default session: LoROM, SA-1 banks 0/1/2/3 in slots 0/1/4/5, bankcross full,
+ * DP optimize off, checksum from target options.
+ * @param {Readonly<Record<string, unknown>>} context The context.
+ * @param {Readonly<Record<string, unknown>>} context.targetOptions The target options.
+ * @returns {SnesSessionState} The initial state.
+ */
 const createInitialState = (context: {
   targetOptions: Readonly<Record<string, unknown>>;
 }): SnesSessionState => {
@@ -210,9 +271,15 @@ const createInitialState = (context: {
     spcBlock: null,
     spcPreviousArchitecture: null,
     spcInlineCompatibility: false,
+    cpuStack: [],
   };
 };
 
+/**
+ * SNES plugin: 65816 / SPC700 / Super FX, mapper address space, `.sfc` checksum
+ * output, Asar-flavored directives, and lifecycle hooks (inline SPC, freespace
+ * STAR patch, bank-cross writes).
+ */
 const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
   manifest: {
     id: "uttori.asm-plugin-snes",
@@ -228,6 +295,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
       create: createInitialState,
       clone: cloneSnesSessionState,
       resetForStage: (state) => {
+        // Mapper/checksum/optimize persist across stages; open blocks do not.
         state.activeFreespaceStartOffset = null;
         state.activeFreespaceContentStartOffset = null;
         state.activeFreespaceEndOffset = null;
@@ -240,7 +308,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
 
     context.registerArchitecture({
       id: "snes.65816",
-      aliases: ["65816"],
+      aliases: ["65816", "65c816", "65802"],
       displayName: "WDC 65C816",
       unknownInstructionBehavior: "throw",
       splitOperands: splitSingleOperand,
@@ -299,10 +367,13 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
           validateWrite: (address, width) => {
             const targetState = state.get(snesSessionStateKey);
             const normalized = snesRomAddressSpace.normalizeForWrite(address, mappingContext());
+            // Unmapped writes are allowed (Asar); only mapped multi-byte stores check borders.
             if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) return;
             if (targetState.bankCrossMode === "off" || width <= 1) return;
             const start = address & 0xffffff;
             const end = (start + width - 1) & 0xffffff;
+            // `half` = 32 KiB ($8000) border; `full` = 64 KiB bank. Bit 23 is ignored
+            // so $7Fxxxx and $FFxxxx are the same bank for this check.
             const bankMask = targetState.bankCrossMode === "half" ? 0x7fff8000 : 0x7fff0000;
             if (((start ^ end) & bankMask) !== 0) {
               const errorAddress = (start + width) & 0xffffff;
@@ -323,6 +394,8 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
           if (!targetState.checksumEnabled) return;
           const headerOffset = getChecksumHeaderOffset(targetState.mapper);
           if (outputBytes.length < headerOffset + 0x20) return;
+          // Zero the checksum fields first so they do not contribute to the sum
+          // (complement starts as $FFFF, checksum as $0000 - SNES header convention).
           outputBytes[headerOffset + 0x1c] = 0xff;
           outputBytes[headerOffset + 0x1d] = 0xff;
           outputBytes[headerOffset + 0x1e] = 0;
@@ -368,6 +441,81 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
               handleOptimize(state.get(snesSessionStateKey), words),
         ),
         directive("snes.directive.asar-noops", ASAR_COMPAT_NO_OP_DIRECTIVES, () => () => undefined),
+      ],
+    });
+    context.registerDirectiveSet({
+      id: "snes.ca65-compat-directives",
+      directives: [
+        directive(
+          "snes.directive.ca65.a8",
+          [".a8"],
+          ({ session }) =>
+            () =>
+              handleA8(session),
+        ),
+        directive(
+          "snes.directive.ca65.a16",
+          [".a16"],
+          ({ session }) =>
+            () =>
+              handleA16(session),
+        ),
+        directive(
+          "snes.directive.ca65.i8",
+          [".i8"],
+          ({ session }) =>
+            () =>
+              handleI8(session),
+        ),
+        directive(
+          "snes.directive.ca65.i16",
+          [".i16"],
+          ({ session }) =>
+            () =>
+              handleI16(session),
+        ),
+        directive(
+          "snes.directive.ca65.accu",
+          [".accu"],
+          ({ session }) =>
+            (_ctx, words) =>
+              handleAccu(session, words),
+        ),
+        directive(
+          "snes.directive.ca65.index",
+          [".index"],
+          ({ session }) =>
+            (_ctx, words) =>
+              handleIndex(session, words),
+        ),
+        directive(
+          "snes.directive.ca65.smart",
+          [".smart"],
+          ({ session }) =>
+            (_ctx, words) =>
+              handleSmart(session, words),
+        ),
+        directive(
+          "snes.directive.ca65.setcpu",
+          [".setcpu"],
+          ({ session }) =>
+            (_ctx, words) =>
+              handleSetcpu(session, words),
+        ),
+        directive(
+          "snes.directive.ca65.pushcpu",
+          [".pushcpu"],
+          ({ session, state }) =>
+            () =>
+              handlePushcpu(session, state.get(snesSessionStateKey)),
+        ),
+        directive(
+          "snes.directive.ca65.popcpu",
+          [".popcpu"],
+          ({ session, state }) =>
+            () =>
+              handlePopcpu(session, state.get(snesSessionStateKey)),
+        ),
       ],
     });
     context.registerDirectiveSet({
@@ -474,6 +622,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
           const contentStart = targetState.activeFreespaceContentStartOffset;
           const end = targetState.activeFreespaceEndOffset;
           if (start === null || contentStart === null || end === null || end < contentStart) return;
+          // Asar STAR: bytes 4–5 = size-1, 6–7 = ~size-1. Empty payload → $0000 / $FFFF.
           const lengthMinusOne = Math.max(0, end - contentStart) & 0xffff;
           const complement = ~lengthMinusOne & 0xffff;
           outputBytes[start + 4] = lengthMinusOne & 0xff;
@@ -496,6 +645,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
         "snes.memory-directives",
         "snes.policy-directives",
         "snes.spc-directives",
+        "snes.ca65-compat-directives",
       ],
       expressionSets: ["snes.address-functions", "snes.read-functions"],
       lifecycle: ["snes.lifecycle"],
@@ -522,6 +672,7 @@ export { Arch65816 } from "./architectures/65816.js";
 export { ArchSPC700 } from "./architectures/spc700.js";
 export { ArchSuperFX } from "./architectures/superfx.js";
 export * from "./asar/compatibility.js";
+export * from "./directives/ca65-compat.js";
 export * from "./session-state.js";
 export * from "./directives/spc.js";
 export * from "./target/address-space.js";

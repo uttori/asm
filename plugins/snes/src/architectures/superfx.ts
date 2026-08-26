@@ -14,6 +14,12 @@ import {
 import { superFxCatalog } from "../tooling/instruction-catalog.js";
 import { classifyGenericOperand } from "./operand-classifiers.js";
 
+/**
+ * Core may already classify; unknown forms go through {@link classifyGenericOperand}.
+ * @param {ArchitectureEncoderContext["operands"]} resolver The operand resolver.
+ * @param {string} operand The operand to lower.
+ * @returns {LoweredOperand} The lowered operand.
+ */
 const lowerSuperFxOperand = (
   resolver: ArchitectureEncoderContext["operands"],
   operand: string,
@@ -210,7 +216,8 @@ const fitsSignedByte = (value: number): boolean => {
 
 /**
  * LMS/SMS short form: even RAM byte address in `$000`–`$1FE`.
- * Auto-MOVE uses this opcode too; the stored byte is {@link encodeSuperFxMoveShortAddress}.
+ * Auto-MOVE uses the same window; the stored byte is {@link encodeSuperFxMoveShortAddress}.
+ * Explicit LMS/SMS always write `addr >> 1` and ignore the Asar MOVE flag.
  * @param {number} addrVal The RAM byte address.
  * @returns {boolean} True if the address fits the short form.
  */
@@ -219,6 +226,12 @@ const isShortRamAddress = (addrVal: number): boolean => (addrVal & 1) === 0 && a
 export class ArchSuperFX implements ArchitectureEncoder {
   assembler: EncoderRuntime;
 
+  /**
+   * @param {ArchitectureEncoderContext} context Encoder host.
+   * @param {() => boolean} asarMoveShortAddress Session flag for **auto-MOVE** short RAM only.
+   *   Hardware stores a word index (`addr >> 1`); Asar stores `addr & 0xff`. Explicit
+   *   `LMS`/`SMS` always encode `addr >> 1` and ignore this flag. Default is hardware.
+   */
   constructor(
     context: ArchitectureEncoderContext,
     readonly asarMoveShortAddress: () => boolean = () => false,
@@ -362,6 +375,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
     }
 
     if (reg1parr !== null && reg2r !== null) {
+      // MOVEB/MOVEW with `(R0)` omit TO/FROM: STW/LDW already target R0.
       if (opcode === "MOVEB") {
         return reg1parr === 0 ? 2 : 3;
       }
@@ -379,6 +393,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
       }
     }
 
+    // RAM load: `Rn, (addr)`. Sizes match encode: LM=4, LMS=3, LEA=3 (IWT, no ALT1).
+    // Auto-MOVE short (`<$200` even) is LMS-shaped (3); else LM (4). Unresolved
+    // addresses cannot prove short form, so estimate 4 - layout may shrink later.
     if (reg1r !== null) {
       if (opcode === "LM") {
         return 4;
@@ -399,6 +416,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
       }
     }
 
+    // RAM store: `(addr), Rn`. Skip `(Rn)` - that is MOVEB/MOVEW, already sized.
     const leftIsRegisterIndirect = firstLowered?.mode === "registerIndirect";
     if (
       reg2r !== null &&
@@ -444,10 +462,13 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Encodes a resolved instruction.
+   * Encodes a resolved Super FX mnemonic. Implied/prefixed ops reject extra
+   * operands; unknown mnemonics return false (`unknownInstructionBehavior` is
+   * `returnFalse` so 65816 can try next).
+   *
    * @param {string} mnemonic The mnemonic.
-   * @param {string[]} operands The operands.
-   * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+   * @param {string[]} operands Split operands.
+   * @param {LoweredOperand} [loweredOperand] Combined lowered operand.
    * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
    * @returns {boolean} True if the instruction was encoded.
    */
@@ -490,8 +511,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Handles implied SuperFX opcodes with no operands.
-   * @param {string} opcode - the opcode
+   * Handles implied SuperFX opcodes with no operands (STOP, NOP, ALT1, …) and
+   * two-byte prefixed ops (PLOT, SWAP, …) from PREFIXED_OPCODES.
+   * @param {string} opcode Uppercased mnemonic.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleSingleWordOpcode(opcode: string): boolean {
@@ -513,11 +535,12 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Handles instructions with a single operand (e.g., "TO R1", "BRA label").
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {number} operandLength - the length of the operand
-   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
+   * Single-operand Super FX: short branches (`$XX` is a raw offset; labels stay
+   * PC-relative), then register / `#0`–`#15` / `(Rn)` ops.
+   * @param {string} opcode Uppercased mnemonic.
+   * @param {string} operand The operand.
+   * @param {number} operandLength Logged only; encoded size is fixed per opcode family.
+   * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleOneOperandOpcode(
@@ -559,6 +582,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
       return true;
     }
 
+    // `#n` here is a register field 0–15 (ADD #4 → ALT2 + ADD R4), not a 16-bit immediate.
     if (regHash !== null && hasOwn(IMMEDIATE_OPS, opcode)) {
       this.writeRegisterOp(IMMEDIATE_OPS[opcode], regHash);
       return true;
@@ -573,13 +597,19 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Handles instructions with two operands (e.g., MOVE r1, r2).
-   * @param {string} opcode - the opcode
-   * @param {string} leftOp - the left operand
-   * @param {string} rightOp - the right operand
-   * @param {LoweredOperand} leftLowered - optional lowered metadata for left operand
-   * @param {LoweredOperand} rightLowered - optional lowered metadata for right operand
-   * @returns {boolean} True if the instruction was handled, false otherwise.
+   * Two-operand Super FX: MOVE/MOVES register pairs, IBT/IWT/`MOVE Rn,#imm`
+   * (signed-byte → IBT), MOVEB/MOVEW via `(Rn)`, then LM/LMS/LEA/SM/SMS and
+   * auto-MOVE RAM. `(R0)` omits TO/FROM because B/D already default to R0.
+   *
+   * Explicit `LMS`/`SMS` always store `addr >> 1`. Auto-`MOVE` short form uses
+   * {@link moveShortAddressByte} (honors Asar compat). LEA is IWT-shaped: no ALT1.
+   *
+   * @param {string} opcode Uppercased mnemonic.
+   * @param {string} leftOp Left operand.
+   * @param {string} rightOp Right operand.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {boolean} True if encoded.
    */
   handleTwoOperandOpcode(
     opcode: string,
@@ -625,6 +655,8 @@ export class ArchSuperFX implements ArchitectureEncoder {
           this.assembler.write1((immVal >> 8) & 0xff);
           return true;
         case "MOVE":
+          // IBT if the 16-bit value sign-extends from a byte (`$FF80`–`$FFFF` or `<$80`).
+          // `$00FF` is IWT - `fitsSignedByte` rejects it on purpose.
           if (fitsSignedByte(immVal)) {
             this.assembler.write1(0xa0 + reg1r);
             this.assembler.write1(immVal & 0xff);
@@ -692,23 +724,27 @@ export class ArchSuperFX implements ArchitectureEncoder {
       }
     }
 
+    // Load from RAM / LEA: left is `Rn`, right is an address (use baseExpression so
+    // `($40)` resolves `$40`, not the parens). ALT1 = load; ALT2 = store below.
     if (reg1r !== null) {
       const addressExpression = rightLowered?.baseExpression ?? rightOp;
       const addrVal = this.assembler.operandResolver.getnum(addressExpression);
       switch (opcode) {
         case "LM":
+          // ALT1 + IWT-shaped (`F0+Rn`) + 16-bit byte address. No short form.
           this.assembler.write1(ALT1);
           this.assembler.write1(0xf0 + reg1r);
           this.assembler.write2(addrVal);
           return true;
         case "LMS":
+          // Always hardware word index (`addr >> 1`). Asar MOVE compat does not apply.
           this.checkShortAddr(addrVal);
           this.assembler.write1(ALT1);
           this.assembler.write1(0xa0 + reg1r);
           this.assembler.write1(addrVal >> 1);
           return true;
         case "MOVE":
-          // Auto LMS vs LM. Short-form byte is hardware `addr>>1` unless Asar compat is on.
+          // Auto LMS vs LM. Short-form byte honors Asar compat; explicit LMS above does not.
           if (isShortRamAddress(addrVal)) {
             this.assembler.write1(ALT1);
             this.assembler.write1(0xa0 + reg1r);
@@ -720,6 +756,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
           }
           return true;
         case "LEA":
+          // IWT-shaped (`F0+Rn` + word), no ALT1 - loads the address, not RAM.
           this.assembler.write1(0xf0 + reg1r);
           this.assembler.write1(addrVal & 0xff);
           this.assembler.write1((addrVal >> 8) & 0xff);
@@ -727,6 +764,7 @@ export class ArchSuperFX implements ArchitectureEncoder {
       }
     }
 
+    // Store to RAM: left is `(addr)` but not `(Rn)` (that was MOVEB/MOVEW).
     const leftIsRegisterIndirect = leftLowered?.mode === "registerIndirect";
     if (
       reg2r !== null &&
@@ -742,12 +780,14 @@ export class ArchSuperFX implements ArchitectureEncoder {
           this.assembler.write2(addrVal);
           return true;
         case "SMS":
+          // Same as LMS: always `addr >> 1`, never the Asar raw byte.
           this.checkShortAddr(addrVal);
           this.assembler.write1(ALT2);
           this.assembler.write1(0xa0 + reg2r);
           this.assembler.write1(addrVal >> 1);
           return true;
         case "MOVE":
+          // Auto SMS vs SM. Short-form byte honors Asar compat; explicit SMS above does not.
           if (isShortRamAddress(addrVal)) {
             this.assembler.write1(ALT2);
             this.assembler.write1(0xa0 + reg2r);
@@ -880,8 +920,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * Raises an error if `mid < min` or `mid > max`.
    * @param {number} min The minimum value.
    * @param {number} mid The middle value.
-   * @param {number} max The maximum value.
-   * @throws {Error} If the middle value is out of range.
+   * @param {number} max Inclusive maximum.
+   * @returns {void}
+   * @throws {Error} If `mid` is outside `[min, max]`.
    */
   rangeCheck(min: number, mid: number, max: number) {
     if (mid < min || mid > max) {
@@ -890,9 +931,11 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * For LMS/SMS short addressing, the address must be even and in `[0x000..0x1FE]`.
-   * @param {number} num - the address
-   * @returns {boolean} True if the address is valid.
+   * LMS/SMS require an even RAM byte address in `[0x000..0x1FE]`. Throws otherwise.
+   * Encode then stores `addr >> 1`; this check is the byte-address constraint.
+   * @param {number} num RAM byte address (not the word index).
+   * @returns {boolean} Always `true` when the address is valid.
+   * @throws {Error} If the address is odd or outside the short-RAM window.
    */
   checkShortAddr(num: number): boolean {
     debug("checkShortAddr", num);
@@ -915,9 +958,10 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Returns 1 for a 2-digit hex operand (`$XX`), otherwise 2.
-   * @param {string} operand the operand
-   * @returns {number} The operand length.
+   * Fallback width when lowering did not supply `length`. `$XX` is 1; everything else is 2.
+   * Super FX uses this for one-operand branches when `loweredOperand` is missing.
+   * @param {string} operand Operand text.
+   * @returns {number} 1 for an explicit `$XX` spelling, otherwise 2.
    */
   getOperandLength(operand: string): number {
     if (this.isRawBranchOffset(operand)) {
@@ -943,9 +987,12 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Writes a register-encoded ALU/load op, with optional ALT prefix and range check.
-   * @param {RegisterOpEncoding} encoding The encoding table entry.
-   * @param {number} register The register number.
+   * Writes optional ALT prefix then `base + register`. AND/OR/BIC/XOR reject R0
+   * (those encodings are MERGE/HIB).
+   *
+   * @param {RegisterOpEncoding} encoding Table entry (prefix, base, optional min/max).
+   * @param {number} register Register number 0–15.
+   * @returns {void}
    */
   writeRegisterOp(encoding: RegisterOpEncoding, register: number) {
     if (encoding.min !== undefined && encoding.max !== undefined) {
@@ -958,7 +1005,8 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Encodes the LMS/SMS operand byte for auto-MOVE short addressing.
+   * Encodes the short-RAM operand byte for **auto-MOVE** only (`MOVE Rn,(addr)` /
+   * `MOVE (addr),Rn`). Explicit LMS/SMS call `addr >> 1` directly and skip this.
    * @param {number} addrVal Even RAM byte address below `$200`.
    * @returns {number} Hardware word index, or Asar's raw byte when compat is enabled.
    */

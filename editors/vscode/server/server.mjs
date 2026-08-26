@@ -14265,9 +14265,9 @@ function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
   const normalizedUpper = trimmed.toUpperCase();
-  const indexMatch = trimmed.match(/,\s*([A-Z][A-Z\d]*)$/i);
+  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
   const indexRegister = indexMatch?.[1].toLowerCase();
-  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[A-Z][A-Z\d]*$/i, "").trim();
+  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
   const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
   const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
   return {
@@ -14278,7 +14278,7 @@ function parseOperandSyntax(operand) {
     indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
     indexRegister,
     explicitWidth,
-    numericSpelling: /^[#$%\d]/.test(trimmed)
+    numericSpelling: /^[\d#$%]/.test(trimmed)
   };
 }
 
@@ -14965,7 +14965,7 @@ var assertIncbinMathParensBalanced = (text) => {
   }
 };
 var parseIncbinUnprefixedHex = (text) => {
-  const match = text.match(/^([0-9A-Fa-f]*)/);
+  const match = text.match(/^([\dA-Fa-f]*)/);
   const digits = match?.[1] ?? "";
   let value = 0;
   if (digits !== "") {
@@ -15546,7 +15546,7 @@ var parseAsarTableLine = (line, rtl, lineNumber) => {
       throw invalidTableLine(lineNumber);
     }
     const hex2 = line.slice(0, eq);
-    if (!/^[0-9a-fA-F]+$/.test(hex2)) {
+    if (!/^[\dA-Fa-f]+$/.test(hex2)) {
       throw invalidTableLine(lineNumber);
     }
     return { char: line[eq + 1], value: Number.parseInt(hex2, 16) };
@@ -15555,7 +15555,7 @@ var parseAsarTableLine = (line, rtl, lineNumber) => {
     throw invalidTableLine(lineNumber);
   }
   const hex = line.slice(2);
-  if (!/^[0-9a-fA-F]+$/.test(hex)) {
+  if (!/^[\dA-Fa-f]+$/.test(hex)) {
     throw invalidTableLine(lineNumber);
   }
   return { char: line[0], value: Number.parseInt(hex, 16) };
@@ -16179,7 +16179,7 @@ var DirectiveRuntimeService = class {
       throw new Error("Character mapping requires format: 'char' = value");
     }
     const token = words[0];
-    const quoted = /^'([\s\S])'$/.exec(token) ?? /^"([\s\S])"$/.exec(token);
+    const quoted = /^'([\S\s])'$/.exec(token) ?? /^"([\S\s])"$/.exec(token);
     const char = quoted ? quoted[1] : token.replace(/["']/g, "");
     if (char.length !== 1) {
       throw new Error("Character mapping requires format: 'char' = value");
@@ -19527,8 +19527,10 @@ var noopLogger = {
   error: () => void 0
 };
 var isLowerAlphaNumeric = (character) => character >= "a" && character <= "z" || character >= "0" && character <= "9";
-var isValidId = (value) => {
-  if (value.length === 0 || value[0] < "a" || value[0] > "z") return false;
+var isValidId = (value, allowLeadingDigit = false) => {
+  if (value.length === 0 || !isLowerAlphaNumeric(value[0]) || !allowLeadingDigit && (value[0] < "a" || value[0] > "z")) {
+    return false;
+  }
   let previousWasSeparator = false;
   for (const character of value) {
     const separator = character === "." || character === "-";
@@ -19538,7 +19540,7 @@ var isValidId = (value) => {
   }
   return !previousWasSeparator;
 };
-var isValidContributionId = (value) => value.includes(".") && isValidId(value);
+var isValidContributionId = (value) => value.includes(".") && isValidId(value, true);
 var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var isArray = (value) => Array.isArray(value);
 var isEmptyOptions = (value) => value === void 0 || isRecord(value) && Object.keys(value).length === 0;
@@ -21800,8 +21802,8 @@ var Assembler = class _Assembler {
    */
   tryHandleCharacterMapping(command) {
     const trimmed = command.trim();
-    const singleQuoted = /^'([\s\S])'\s*=\s*(.+)$/.exec(trimmed);
-    const doubleQuoted = /^"([\s\S])"\s*=\s*(.+)$/.exec(trimmed);
+    const singleQuoted = /^'([\S\s])'\s*=\s*(.+)$/.exec(trimmed);
+    const doubleQuoted = /^"([\S\s])"\s*=\s*(.+)$/.exec(trimmed);
     const match = singleQuoted ?? doubleQuoted;
     if (!match) {
       return false;
@@ -23793,7 +23795,7 @@ function findDirectiveInCatalog(keyword, directives = directiveCatalog, directiv
 }
 function renderInstructionDocs(descriptor2) {
   const lines = [];
-  lines.push(`**${descriptor2.mnemonic}** \u2014 instruction`);
+  lines.push(`**${descriptor2.mnemonic}** - instruction`);
   if (descriptor2.summary) {
     lines.push("", descriptor2.summary);
   }
@@ -23810,7 +23812,7 @@ function renderInstructionDocs(descriptor2) {
 }
 function renderDirectiveDocs(descriptor2) {
   return [
-    `**${descriptor2.keyword}** \u2014 directive`,
+    `**${descriptor2.keyword}** - directive`,
     "",
     descriptor2.summary,
     "",
@@ -23820,7 +23822,7 @@ function renderDirectiveDocs(descriptor2) {
 function renderExpressionFunctionDocs(descriptor2) {
   const parameters = descriptor2.signature.parameters.join(", ");
   return [
-    `**${descriptor2.name}** \u2014 expression function`,
+    `**${descriptor2.name}** - expression function`,
     "",
     descriptor2.summary,
     "",
@@ -23980,6 +23982,8 @@ var cpu65816Catalog = [
   ]),
   instruction("LSR", "Logical shift right.", shiftModes),
   instruction("MVN", "Block move next (ascending).", [
+    // Hover syntax is WDC dest,src; the encoder writes operands in source order
+    // (Asar). See Arch65816.handleBlockMove.
     { mode: "blockMove", syntax: "destBank,srcBank", opcode: 84, size: 3 }
   ]),
   instruction("MVP", "Block move previous (descending).", [
@@ -24507,6 +24511,7 @@ var Arch65816 = class {
     this.assembler = createEncoderRuntime(context);
     this.m16 = false;
     this.x16 = false;
+    this.smartMode = true;
   }
   optimizeDirectPage;
   assembler;
@@ -24515,7 +24520,13 @@ var Arch65816 = class {
   /** Native 16-bit index registers (REP #$10). Reset at the start of each assembly stage. */
   x16;
   /**
+   * When true, `SEP`/`REP` auto-update M/X hints (Asar-compatible default).
+   * Set to false by `.smart off`; re-enabled by `.smart` or `.smart on`.
+   */
+  smartMode;
+  /**
    * Resets M/X size flags at the start of each assembly stage.
+   * `smartMode` is intentionally NOT reset so `.smart off` persists across stages.
    * @returns {void}
    */
   beginPass() {
@@ -24523,13 +24534,43 @@ var Arch65816 = class {
     this.x16 = false;
   }
   /**
-   * Applies SEP/REP to the assembler-facing M/X size flags.
+   * Sets the accumulator (M-flag) width hint.
+   * Used by the ca65-compatible `.a8` and `.a16` directives.
+   * @param {boolean} is16 True for 16-bit accumulator, false for 8-bit.
+   * @returns {void}
+   */
+  setAccumulatorWidth(is16) {
+    this.m16 = is16;
+  }
+  /**
+   * Sets the index register (X-flag) width hint.
+   * Used by the ca65-compatible `.i8` and `.i16` directives.
+   * @param {boolean} is16 True for 16-bit index registers, false for 8-bit.
+   * @returns {void}
+   */
+  setIndexWidth(is16) {
+    this.x16 = is16;
+  }
+  /**
+   * Enables or disables automatic M/X tracking via `SEP`/`REP` instructions.
+   * Used by the ca65-compatible `.smart` directive.
+   * @param {boolean} enabled True to enable smart mode (default), false to disable.
+   * @returns {void}
+   */
+  setSmartMode(enabled) {
+    this.smartMode = enabled;
+  }
+  /**
+   * Applies SEP/REP to assembler-facing M/X flags. Unresolvable immediates
+   * (forward labels) are ignored - flags stay at the last known value, matching
+   * Asar's "best effort" size tracking across passes.
+   * Skipped when `smartMode` is false (explicit `.a8`/`.a16`/`.i8`/`.i16` only).
    * @param {string} opcode The opcode.
    * @param {string} rawOperand The raw operand.
    * @returns {void}
    */
   applySepRep(opcode, rawOperand) {
-    if (opcode !== "SEP" && opcode !== "REP") {
+    if (!this.smartMode || opcode !== "SEP" && opcode !== "REP") {
       return;
     }
     let value = 0;
@@ -24605,9 +24646,10 @@ var Arch65816 = class {
     return cpu65816Catalog;
   }
   /**
-   * Estimates instruction.
+   * Size of a lowered instruction. Must match {@link encodeResolvedInstruction}
+   * so layout `step()` stays in sync with emit (including SEP/REP side effects).
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes, or 0 if not a 65816 op.
    */
   estimateInstruction(instruction2) {
     return this.estimateResolvedInstruction(
@@ -24618,9 +24660,9 @@ var Arch65816 = class {
     );
   }
   /**
-   * Encodes instruction.
+   * Encodes a lowered instruction. Returns false only when the mnemonic is not ours.
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {boolean} The result.
+   * @returns {boolean} True if encoded.
    */
   encodeInstruction(instruction2) {
     return this.encodeResolvedInstruction(
@@ -24631,9 +24673,9 @@ var Arch65816 = class {
     );
   }
   /**
-   * Estimates size.
+   * Estimates size from tokenized words (mnemonic + rest-of-line operand).
    * @param {string[]} words The words.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes.
    */
   estimateSize(words) {
     if (words.length === 0) {
@@ -24650,12 +24692,18 @@ var Arch65816 = class {
     );
   }
   /**
-   * Estimates resolved instruction.
+   * Size for a resolved mnemonic/operand. SEP/REP is applied here too so a
+   * following immediate in the same estimate pass sees the new M/X width.
+   *
+   * Asar quirk: `NOP #$n` (and other implied ops with `#`) is a repeat count,
+   * not an immediate - size is `n` bytes of the same opcode.
+   * `ASL #$n` is the same for shift/inc/dec (repeat the accumulator form).
+   *
    * @param {string} mnemonic The mnemonic.
    * @param {string} rawOperand The raw operand.
-   * @param {string} operand The operand.
-   * @param {number} operandLength The operand length.
-   * @returns {number} The result.
+   * @param {string} operand Expanded operand.
+   * @param {number} operandLength Inferred operand width.
+   * @returns {number} Encoded size in bytes.
    */
   estimateResolvedInstruction(mnemonic, rawOperand, operand, operandLength) {
     let opcode = mnemonic.toUpperCase();
@@ -24812,12 +24860,13 @@ var Arch65816 = class {
     );
   }
   /**
-   * Encodes resolved instruction.
+   * Encodes a resolved mnemonic/operand. Width suffixes (`.b/.w/.l`) and
+   * classified modes choose among opcode tables in the `handle*` methods.
    * @param {string} mnemonic The mnemonic.
-   * @param {string} rawOperand The raw operand.
-   * @param {string} operand The operand.
-   * @param {number} operandLength The operand length.
-   * @returns {boolean} The result.
+   * @param {string} rawOperand Source operand (for `#` / indexing tests).
+   * @param {string} operand Expanded operand.
+   * @param {number} operandLength Inferred width before `.b/.w/.l`.
+   * @returns {boolean} True if this architecture handled the instruction.
    */
   encodeResolvedInstruction(mnemonic, rawOperand, operand, operandLength) {
     let opcode = mnemonic.toUpperCase();
@@ -24879,13 +24928,19 @@ var Arch65816 = class {
     return this.handleGenericOpcode(opcode, num, len, explicitlen, hexconstant);
   }
   /**
-   * Handles ORA, SBC, STA, LDA, EOR, CMP, AND, ADC with all valid addressing modes.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @param {string} rawOperand The raw source operand before expansion.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
+   * {@link handleLogicAndCompareOperations}; STA has no immediate form.
+   *
+   * DP (`$xx` / `$xx,x`) is used only when `optimize dp ram|always` is on or
+   * the source spelling is explicit 1–2 digit hex. Otherwise a DP-sized value
+   * still emits absolute (Asar `optimize dp none` default).
+   *
+   * @param {string} opcode ADC, LDA, SBC, or STA.
+   * @param {string} operand Expanded operand.
+   * @param {number} len Inferred or forced operand width.
+   * @param {boolean} explicitlen True when `.b/.w/.l` forced the width.
+   * @param {string} rawOperand Source operand (immediates / indexing tests).
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleMemoryOperations(opcode, operand, len, explicitlen, rawOperand = operand) {
     debug5("handleMemoryOperations", { opcode, operand, len, explicitlen });
@@ -25213,13 +25268,25 @@ var Arch65816 = class {
     return false;
   }
   /**
-   * Handles AND, EOR, ORA, CMP, CPX, and CPY instructions.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @param {string} [rawOperand] The raw source operand before expansion.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes AND / EOR / ORA / CMP / CPX / CPY.
+   *
+   * Unforced DP is **spelling-based**, not `optimize dp`: expanded `$xx` (exactly two
+   * hex digits) is DP even when `optimize dp none`. That diverges from
+   * {@link handleMemoryOperations} (ADC/LDA/SBC/STA), which require the optimize
+   * flag or an explicit 1–2 digit hex spelling. `$007E` is four digits → absolute.
+   *
+   * Classifier `[$nn]` is `indirectLong` and remaps to `directIndirectLong` (1-byte
+   * DP, ORA `$07`) when the table has that key. CPX/CPY omit it and throw.
+   * Forced `.l,x` is abs,x + 2 (ORA `$1D` + 2 = `$1F`). Forced `,y` is abs only
+   * (`len === 2`); this family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
+   * long / stack forms.
+   *
+   * @param {string} opcode AND, EOR, ORA, CMP, CPX, or CPY.
+   * @param {string} operand Expanded operand.
+   * @param {number} len Inferred or forced operand width.
+   * @param {boolean} explicitlen True when `.b/.w/.l` forced the width.
+   * @param {string} [rawOperand] Source operand before expansion.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleLogicAndCompareOperations(opcode, operand, len, explicitlen, rawOperand = operand) {
     debug5("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
@@ -25234,6 +25301,9 @@ var Arch65816 = class {
         indirectX: 1,
         indirectY: 17,
         indirect: 18,
+        // Same bytes as absoluteLong / absoluteLongX (ORA al / al,x). Classifier
+        // `[...]` is remapped to directIndirectLong first; these keys are the
+        // leftover path for opcodes that lack [dp] (CPX/CPY → throw).
         indirectLong: 15,
         indirectLongY: 31,
         stackRelative: 3,
@@ -25495,7 +25565,9 @@ var Arch65816 = class {
     return true;
   }
   /**
-   * Handles operators that do not take operands.
+   * Implied ops. `OPCODE #$n` is Asar's repeat: write the opcode `n` times.
+   * `expandOperand` may turn `#10` into `#$A`; strip `$` before parseInt.
+   * Count `0` emits nothing (still "handled").
    * @param {string} opcode The opcode to handle.
    * @param {string} operand The operand to handle.
    * @returns {boolean} True if the opcode was handled, false otherwise.
@@ -25576,13 +25648,15 @@ var Arch65816 = class {
     return true;
   }
   /**
-   * Handles ASL (Arithmetic Shift Left), LSR (Logical Shift Right),
-   * ROL (Rotate Left), ROR (Rotate Right), INC (Increment), and DEC (Decrement).
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes ASL / LSR / ROL / ROR / INC / DEC.
+   * Bare or `A` is accumulator. `ASL #$n` (and friends) repeats the accumulator
+   * opcode `n` times - Asar pseudo, not a DP address. `.l` is rejected.
+   *
+   * @param {string} opcode Shift, rotate, INC, or DEC.
+   * @param {string} operand Operand or empty for implied accumulator.
+   * @param {number} len Forced width when `explicitlen` is true.
+   * @param {boolean} explicitlen True when `.b/.w` forced the width.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleArithmeticOperations(opcode, operand, len, explicitlen) {
     debug5("handleArithmeticOperations", opcode, operand);
@@ -25727,12 +25801,15 @@ var Arch65816 = class {
     return false;
   }
   /**
-   * Handles Load X/Y Register instructions.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes LDX / LDY. Immediate width follows {@link immediateBytes} (X flag).
+   * Hardware: LDX indexes Y, LDY indexes X - there is no LDX abs,x.
+   * `.l` is rejected. Without `.b/.w`, `$xxxx` spelling or value `> $FF` picks abs.
+   *
+   * @param {string} opcode LDX or LDY.
+   * @param {string} operand Source operand.
+   * @param {number} len Inferred or forced width.
+   * @param {boolean} explicitlen True when `.b/.w` forced the width.
+   * @returns {boolean} True if LDX/LDY was encoded.
    */
   handleLoadRegister(opcode, operand, len, explicitlen) {
     debug5("handleLoadRegister", { opcode, operand, len, explicitlen });
@@ -25848,7 +25925,9 @@ var Arch65816 = class {
     return true;
   }
   /**
-   * Handles the JMP (Jump), JSR (Jump to Subroutine), and JSL (Jump to Subroutine Long) instructions.
+   * Handles JMP / JSR / JML / JSL, including `(addr)`, `[addr]`, and `(addr,x)`.
+   * `_bbxxxx` label names can supply a bank when the symbol value is 16-bit.
+   * JMP/JSR promote to JML/JSL when the target is outside the current bank.
    * @param {string} opcode - The opcode to handle.
    * @param {string} operand - The resolved operand to handle.
    * @param {string} rawOperand - The original source operand before expansion.
@@ -25967,7 +26046,9 @@ var Arch65816 = class {
     return true;
   }
   /**
-   * Handles the PER (Push Effective Relative Address) instruction.
+   * PER (Push Effective Relative): encodes a 16-bit displacement as the operand
+   * value itself. Asar does not subtract PC here - authors write `label-*` or a
+   * literal offset. Adding `currentTargetAddress` double-counted and was removed.
    * @param {string} operand The operand to handle.
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
@@ -25983,12 +26064,14 @@ var Arch65816 = class {
     return true;
   }
   /**
-   * Handles STX, STY, and STZ instructions.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @returns {boolean} True if the instruction was handled, false otherwise
+   * Encodes STX / STY / STZ. STX indexes Y only (no abs,y); STY indexes X only
+   * (no abs,x). Forced `.w` on those indexed forms still emits the DP opcode.
+   *
+   * @param {string} opcode STX, STY, or STZ.
+   * @param {string} operand Source operand.
+   * @param {number} len Forced width when `explicitlen` is true.
+   * @param {boolean} explicitlen True when `.b/.w` forced the width.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleStoreOperations(opcode, operand, len, explicitlen) {
     debug5("handleStoreOperations", { opcode, operand, len, explicitlen });
@@ -26120,7 +26203,12 @@ var Arch65816 = class {
     throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
   }
   /**
-   * Handles MVN (Move Negative) and MVP (Move Positive) instructions.
+   * MVN/MVP. WDC and the hover catalog spell `dest, src`; we still write bytes
+   * in source order (first operand, then second) - Asar's wire format. Locals
+   * are named src/dest after that write order, not WDC's dest-then-src names.
+   *
+   * Hardware: opcode $54 MVN (ascending), $44 MVP (descending), then two bank bytes.
+   *
    * @param {string} opcode The opcode to handle.
    * @param {string} operand The operand to handle.
    * @returns {boolean} True if the opcode was handled, false otherwise.
@@ -26139,12 +26227,15 @@ var Arch65816 = class {
     return true;
   }
   /**
-   * Handles BIT, TSB, and TRB instructions, including all their addressing modes.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes BIT / TSB / TRB. TSB/TRB have no immediate or `,x`.
+   * Unforced `BIT #$0000` is 16-bit because the source spelling is 6 chars
+   * (`#$` + 4 hex digits), not because the value needs a word.
+   *
+   * @param {string} opcode BIT, TSB, or TRB.
+   * @param {string} operand Source operand.
+   * @param {number} len Forced width when `explicitlen` is true.
+   * @param {boolean} explicitlen True when `.b/.w` forced the width.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleBitTestOperations(opcode, operand, len, explicitlen) {
     debug5("handleBitTestOperations", { opcode, operand });
@@ -26253,13 +26344,16 @@ var Arch65816 = class {
     return true;
   }
   /**
-   * Handles generic opcodes with standard addressing.
-   * @param {string} opcode The opcode to handle.
-   * @param {number} num The operand value.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @param {boolean} hexconstant Whether the operand is a hex constant.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
+   * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
+   * `hexconstant` is diagnostic-only (non-hex immediates log "assuming 8-bit").
+   *
+   * @param {string} opcode Candidate mnemonic.
+   * @param {number} num Already-evaluated operand value.
+   * @param {number} len Inferred width (REP/SEP range check).
+   * @param {boolean} explicitlen Whether a suffix forced the width.
+   * @param {boolean} hexconstant True when the operand spelling starts with `$` or `%`.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleGenericOpcode(opcode, num, len, explicitlen, hexconstant) {
     debug5("handleGenericOpcode", { opcode, num, len, explicitlen, hexconstant });
@@ -26292,7 +26386,9 @@ var Arch65816 = class {
     return false;
   }
   /**
-   * Handle Branch Instructions
+   * Relative branches. `$xx` (1–2 hex digits) is a raw displacement, not a
+   * target - same Asar rule as Super FX. `+`/`-` unnamed labels resolve from
+   * the instruction *after* the branch (PC+2 or PC+3 for BRL).
    * @param {string} opcode The opcode to handle.
    * @param {string} operand The operand to handle.
    * @returns {boolean} True if the opcode was handled, false otherwise.
@@ -26397,10 +26493,13 @@ var Arch65816 = class {
     }
   }
   /**
-   * Handles bit manipulation instructions (TSB, TRB) with both absolute and direct page addressing modes.
-   * @param {string} opcode (TSB or TRB)
-   * @param {string} operand (absolute or direct)
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * Fallback TSB/TRB encoder (tests call this directly). Live encode uses
+   * {@link handleBitTestOperations}. `$` + 4 hex digits (`operand.length === 5`)
+   * is treated as absolute even if the value fits in a byte.
+   *
+   * @param {string} opcode TSB or TRB.
+   * @param {string} operand Absolute or direct-page address.
+   * @returns {boolean} True if TSB/TRB was encoded.
    */
   handleMemoryBitInstructions(opcode, operand) {
     debug5("handleMemoryBitInstructions", opcode, operand);
@@ -26442,9 +26541,11 @@ var Arch65816 = class {
     };
   }
   /**
-   * Resolves the operand length from opcode suffix.
+   * `.b` = 1, `.w` = 2, `.l` = 3. `.d` (32-bit) is accepted but deprecated -
+   * 65816 has no 32-bit immediate; callers treat it as width 4 for PEA-like repeats.
    * @param {string} c The opcode suffix to resolve the length of.
    * @returns {number} The operand length.
+   * @throws {Error} If the opcode length is invalid.
    */
   getlenfromchar(c) {
     debug5("getlenfromchar", c);
@@ -26764,9 +26865,9 @@ var ArchSPC700 = class {
     return spc700Catalog;
   }
   /**
-   * Estimates instruction.
+   * Size of a lowered instruction. Must match encode so layout stays in sync.
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes.
    */
   estimateInstruction(instruction2) {
     const loweredOperands = instruction2.loweredOperands ?? [];
@@ -26778,9 +26879,9 @@ var ArchSPC700 = class {
     );
   }
   /**
-   * Encodes instruction.
+   * Encodes a lowered instruction.
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {boolean} The result.
+   * @returns {boolean} True if encoded.
    */
   encodeInstruction(instruction2) {
     const loweredOperands = instruction2.loweredOperands ?? [];
@@ -26792,9 +26893,9 @@ var ArchSPC700 = class {
     );
   }
   /**
-   * Estimates size.
+   * Estimates size from tokenized words.
    * @param {string[]} words The words.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes.
    */
   estimateSize(words) {
     if (words.length === 0) {
@@ -26809,12 +26910,15 @@ var ArchSPC700 = class {
     return this.estimateResolvedInstruction(words[0], rawOperand, loweredOperand, loweredOperands);
   }
   /**
-   * Estimates resolved instruction.
+   * Size for a resolved mnemonic. `.b/.w` suffixes are stripped (SPC700 width
+   * is spelling-based, not 65816 `.l`). Unknown ops return 1 so layout does
+   * not stall; encode will still reject them.
+   *
    * @param {string} mnemonic The mnemonic.
    * @param {string} operandText The operand text.
-   * @param {LoweredOperand} [loweredOperand] The lowered operand.
-   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-   * @returns {number} The result.
+   * @param {LoweredOperand} [loweredOperand] Combined lowered operand.
+   * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+   * @returns {number} Encoded size in bytes.
    */
   estimateResolvedInstruction(mnemonic, operandText, loweredOperand, loweredOperands = []) {
     let opcode = mnemonic.toUpperCase().trim();
@@ -27002,12 +27106,15 @@ var ArchSPC700 = class {
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
   /**
-   * Encodes resolved instruction.
-   * @param {string} mnemonic The mnemonic.
-   * @param {string[]} operands The operands.
-   * @param {LoweredOperand} [loweredOperand] The lowered operand.
-   * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-   * @returns {boolean} The result.
+   * Encodes a resolved mnemonic. `.b/.w/.l` is stripped (SPC700 width is
+   * spelling-based). Dispatch is operand-count: 0/implied → 1 → 2 → numbered
+   * bit ops with a third bit argument (`AND1 C,$addr,2`).
+   *
+   * @param {string} mnemonic Raw mnemonic, possibly with a length suffix.
+   * @param {string[]} operands Split operands (already expanded when possible).
+   * @param {LoweredOperand} [loweredOperand] Combined rest-of-line operand.
+   * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+   * @returns {boolean} True if encoded.
    */
   encodeResolvedInstruction(mnemonic, operands, loweredOperand, loweredOperands = []) {
     let opcode = mnemonic;
@@ -27059,10 +27166,10 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * Splits by commas at top-level, ignoring any parentheses grouping.
-   * For spc700 code, we typically do not nest parentheses deeply, so a simpler approach may suffice.
-   * @param {string} text - the operand string
-   * @returns {string[]} array of operands
+   * Splits on commas outside parentheses. Does not track `[]` - SPC700 bit
+   * syntax uses `.n`, not 65816-style `[dp]`.
+   * @param {string} text The operand string.
+   * @returns {string[]} The array of operands.
    */
   splitTopLevelComma(text) {
     const result = [];
@@ -27089,9 +27196,11 @@ var ArchSPC700 = class {
     return result;
   }
   /**
-   * Handles single, no-operand opcodes, like NOP, BRK, etc.
-   * @param {string} opcode - the opcode
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * Implied single-byte ops (NOP, BRK, RET, flag ops, SLEEP, STOP, XCN).
+   * Returns false when the mnemonic is not in this set so other handlers can run.
+   *
+   * @param {string} opcode Uppercased mnemonic.
+   * @returns {boolean} True if a 1-byte opcode was written.
    */
   handleSingleNoOperand(opcode) {
     debug6("handleSingleNoOperand", opcode);
@@ -27119,15 +27228,15 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * Handle instructions that have exactly one operand
-   * e.g. ASL A, LSR A, DEC A, DEC X, DEC Y,
-   * or branches like BRA label, or bit set/clear with one operand, etc.
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {number | null} forcedLen - the forced length
-   * @param {boolean} explicitlen - the explicit length
-   * @param {LoweredOperand} loweredOperand - optional lowered metadata
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * One-operand dispatch: shift/inc/dec, SET/CLR bits, relative branches,
+   * TCALL n (decimal 0–15, not `$n`), PUSH/POP, CALL/JMP/PCALL, then MUL/DIV/DAA.
+   *
+   * @param {string} opcode Uppercased mnemonic.
+   * @param {string} operand Single operand text.
+   * @param {number | null} forcedLen `.b`=1 / `.w`=2 when a suffix was present.
+   * @param {boolean} explicitlen True when `forcedLen` came from a suffix.
+   * @param {LoweredOperand} [loweredOperand] Lowered metadata for `operand`.
+   * @returns {boolean} True if encoded.
    */
   handleOneOperand(opcode, operand, forcedLen, explicitlen, loweredOperand) {
     debug6("handleOneOperand", { opcode, operand, forcedLen, explicitlen });
@@ -27164,15 +27273,17 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * Handle instructions that have exactly two operands, e.g. "ADC A,($12+X)" or "MOV $12,#$34".
-   * @param {string} opcode - the opcode
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @param {number | null} forcedLen - the forced length
-   * @param {boolean} explicitlen - the explicit length
-   * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
-   * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * Two-operand dispatch: BBS/BBC, DBNZ/CBNE, CMP/MOV X|Y, ALU memory forms,
+   * TSET/TCLR, MOV, mem.bit carry ops, then YA word ops.
+   *
+   * @param {string} opcode Uppercased mnemonic.
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @param {number | null} forcedLen `.b`=1 / `.w`=2 when a suffix was present.
+   * @param {boolean} explicitlen True when `forcedLen` came from a suffix.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {boolean} True if encoded.
    */
   handleTwoOperands(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered) {
     debug6("handleTwoOperands", { opcode, left, right, forcedLen, explicitlen });
@@ -27225,26 +27336,13 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * handleWordOpsTwoOperands: covers
-   *   CMPW YA,$12  => 5A dp
-   *   ADDW YA,$12  => 7A dp
-   *   SUBW YA,$12  => 9A dp
-   *   MOVW YA,$12  => BA dp
-   *   MOVW $12,YA  => DA dp
+   * YA word ops: CMPW/ADDW/SUBW/MOVW YA,$dp and MOVW $dp,YA. DP only -
+   * `$1234` is not a documented form here (Asar tests are 8-bit).
    *
-   * According to the test file lines:
-   *   "CMPW YA,$12 => 5A 12"
-   *   "ADDW YA,$12 => 7A 12"
-   *   "SUBW YA,$12 => 9A 12"
-   *   "MOVW YA,$12 => BA 12"
-   *   "MOVW $12,YA => DA 12"
-   *
-   * The test only shows an 8-bit direct-page operand. No examples of $1234 for these instructions,
-   * so we assume DP only.
-   * @param {string} opcode - the opcode
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * @param {string} opcode Word mnemonic.
+   * @param {string} left Left operand (`YA` or `$dp`).
+   * @param {string} right Right operand (`$dp` or `YA`).
+   * @returns {boolean} True if encoded.
    */
   handleWordOpsTwoOperands(opcode, left, right) {
     debug6("handleWordOpsTwoOperands", { opcode, left, right });
@@ -27266,15 +27364,19 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * Handle instructions like "ADC A,(X)" or "SBC (X),(Y)", "AND A,$1234", etc.
-   * @param {string} opcode - the opcode
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @param {number | null} forcedLen - the forced length
-   * @param {boolean} explicitlen - the explicit length
-   * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
-   * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * Encodes ADC/AND/EOR/OR/SBC/CMP from {@link memOpTables}.
+   * `A,<mode>` uses {@link classifySpc700Addressing}. `(X),(Y)` is 1 byte.
+   * `dp,#imm` and `dp,dp` write the *right* operand first (hardware order),
+   * opposite of source order.
+   *
+   * @param {string} opcode ALU mnemonic.
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @param {number | null} forcedLen `.b`/`.w` override for A,dp vs A,abs.
+   * @param {boolean} explicitlen True when a suffix forced the width.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {boolean} True if encoded.
    */
   handleMemoryInstruction(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered) {
     debug6("handleMemoryInstruction", { opcode, left, right });
@@ -27384,6 +27486,7 @@ var ArchSPC700 = class {
    * `$0030` is absolute even though 0x30 is a direct-page number.
    * @param {number} value Address to write.
    * @param {number} length 1 for direct page, 2 for absolute.
+   * @returns {void}
    */
   writeDpOrAbs(value, length) {
     debug6("writeDpOrAbs", { value, length });
@@ -27394,11 +27497,13 @@ var ArchSPC700 = class {
     this.assembler.write1(value >> 8 & 255);
   }
   /**
-   * Classify operand for "A,(X)" style memory instructions,
-   * returning an address mode name that matches e.g. a_indirectX, a_dp, a_abs, etc.
-   * @param {string} operand - the operand
-   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-   * @returns {{ mode: string; val: number }} the address mode and value
+   * Maps an `A,<addr>` operand onto {@link memOpTables} keys.
+   * Labels keep original case so `spc_07C2+Y` still looks up. `(X)` is
+   * indirectX (no extra byte); `($dp+X)` is indirectDpX.
+   *
+   * @param {string} operand Right-hand operand of an A-destination ALU op.
+   * @param {LoweredOperand} [loweredOperand] Lowered metadata when available.
+   * @returns {{ mode: string; val: number }} Addressing mode and numeric payload.
    */
   classifySpc700Addressing(operand, loweredOperand) {
     debug6("classifySpc700Addressing", operand);
@@ -27474,14 +27579,17 @@ var ArchSPC700 = class {
     return fallbackLength === 1 ? { mode: "dp", val: fallbackValue & 255 } : { mode: "abs", val: fallbackValue };
   }
   /**
-   * Checks whether dp or abs.
-   * @param {string} operand The operand.
-   * @returns {boolean} The result.
+   * True for a hex address spelling (`$12`, `$1234`, or bare hex). Registers
+   * `A`/`X`/`Y`/`YA`/`SP` are excluded - otherwise `MOV label, A` becomes dp,dp
+   * with source `$0A`.
+   *
+   * @param {string} operand Operand text.
+   * @returns {boolean} True when the operand is a dp/abs hex address.
    */
   isDpOrAbs(operand) {
     debug6("isDpOrAbs", operand);
     const trimmed = operand.trim();
-    if (/^(A|X|Y|YA|SP)$/i.test(trimmed)) {
+    if (/^(a|x|y|ya|sp)$/i.test(trimmed)) {
       return false;
     }
     const cleaned = trimmed.replace(/\$/g, "");
@@ -27491,12 +27599,15 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * SHIFT, INC, DEC instructions. e.g. "ASL A" => 0x1C, "ASL $12+X" => 0x1B 12, etc.
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {number | null} forcedLen - the forced length
-   * @param {boolean} explicitlen - whether the length is explicit
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc; `DEC X`/`DEC Y` and
+   * `INC X`/`INC Y` are 1-byte register forms. `$dp+X` vs `$abs+X` follows
+   * {@link getAddressSize} (spelling), not the numeric value.
+   *
+   * @param {string} opcode Shift or inc/dec mnemonic.
+   * @param {string} operand Operand (`A`, `X`, `Y`, `$dp`, `$dp+X`, `$abs`).
+   * @param {number | null} forcedLen `.b`/`.w` override for dp vs abs.
+   * @param {boolean} explicitlen True when a suffix forced the width.
+   * @returns {boolean} True if encoded.
    */
   handleShiftIncDec(opcode, operand, forcedLen, explicitlen) {
     debug6("handleShiftIncDec", { opcode, operand, forcedLen, explicitlen });
@@ -27607,14 +27718,12 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * Actually that's 2 "operands," but the test lumps them into a single comma-split line "BBS0 $12,Mylabel".
-   * We'll handle that in handleTwoOperands.
+   * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic; Asar also accepts
+   * `SET1 $13.7` where `.n` overrides the mnemonic digit.
    *
-   * For "SETn $12 => 0x02 12" or "CLRn $12 => 0x12 12," that's one operand + the bit # is in the opcode name.
-   * Asar also accepts `SET1 $13.7` / `CLR1 $13.7`, where the bit comes from the operand.
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * @param {string} opcode SET/CLR mnemonic with bit digit.
+   * @param {string} operand Direct-page address, optionally `$dp.n`.
+   * @returns {boolean} True if encoded.
    */
   handleBitSetClear(opcode, operand) {
     debug6("handleBitSetClear", { opcode, operand });
@@ -27642,10 +27751,13 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * BPL / BMI / BVC / BVS / BCC / BCS / BNE / BEQ / BRA => 1 operand (the label).
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * Relative branches (BPL…BRA). Opcode is written first, so the displacement
+   * is `target - (pc + 1)` - equivalent to `target - (start + 2)` before the
+   * write. `+`/`-` unnamed labels use that same post-opcode PC.
+   *
+   * @param {string} opcode Branch mnemonic.
+   * @param {string} operand Label, `$xx`, or `+`/`-` unnamed label.
+   * @returns {boolean} True if encoded.
    */
   handleBranch(opcode, operand) {
     debug6("handleBranch", { opcode, operand });
@@ -27678,13 +27790,13 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * BBSn / BBCn / wiki-native `BBS $dp.n`: e.g. "BBC0 $12,Mylabel => 13 12 FF",
-   * "BBS $12.3,L => 63 12 FF". Bit comes from `$dp.n` if present, else the mnemonic digit.
-   * That logic is in handleTwoOperands because we have two comma-split sections.
-   * @param {string} opcode - the opcode
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * BBS/BBC `$dp,label`. Bit from `$dp.n` if present, else the mnemonic digit
+   * (`BBS3`). Wiki-native `BBS $12.3,L` has no digit in the mnemonic.
+   *
+   * @param {string} opcode BBS/BBC, optionally with a bit digit.
+   * @param {string} left Direct-page operand (`$dp` or `$dp.n`).
+   * @param {string} right Branch target.
+   * @returns {boolean} True if encoded.
    */
   handleTwoOperandsBitBranch(opcode, left, right) {
     debug6("handleTwoOperandsBitBranch", { opcode, left, right });
@@ -27727,14 +27839,15 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * e.g. DBNZ Y,Mylabel => FE offset, DBNZ $dp,Mylabel => 6E dp offset
-   * also "CBNE $dp+X,Mylabel => DE dp offset" or "CBNE $dp,Mylabel => 2E dp offset"
-   * @param {string} opcode - the opcode
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
-   * @param {LoweredOperand} _rightLowered - optional lowered metadata for the right operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * DBNZ Y,label (2 bytes) vs DBNZ $dp,label (3 bytes). CBNE is always 3 bytes:
+   * `$dp` or `$dp+X`.
+   *
+   * @param {string} opcode DBNZ or CBNE.
+   * @param {string} left Register, `$dp`, or `$dp+X`.
+   * @param {string} right Branch target.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [_rightLowered] Unused; kept for call-site symmetry.
+   * @returns {boolean} True if encoded.
    */
   handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
     debug6("handleDbnzCbne", { opcode, left, right });
@@ -27781,11 +27894,12 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * handle push/pop with single operand => e.g. PUSH A => 0x2D, PUSH X => 0x4D, etc.
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * PUSH/POP A, X, Y, or P (PSW). No `(X)` form.
+   *
+   * @param {string} opcode PUSH or POP.
+   * @param {string} operand Register name.
+   * @param {LoweredOperand} [loweredOperand] Lowered register operand.
+   * @returns {boolean} True if encoded.
    */
   handlePushPop(opcode, operand, loweredOperand) {
     debug6("handlePushPop", { opcode, operand });
@@ -27818,12 +27932,13 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * handle call/jump instructions with single operand => e.g. "CALL $1234", "PCALL $12"
-   * "JMP $1234", "JMP ($1234+X)"
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * CALL `$abs` (3F), PCALL `$dp` (4F page-zero), JMP `$abs` (5F) or
+   * JMP `($abs+X)` (1F). JMP indirect uses a 16-bit pointer, not DP.
+   *
+   * @param {string} opcode CALL, PCALL, or JMP.
+   * @param {string} operand Target or `($abs+X)`.
+   * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
+   * @returns {boolean} True if encoded.
    */
   handleCallJump(opcode, operand, loweredOperand) {
     debug6("handleCallJump", { opcode, operand });
@@ -27866,22 +27981,16 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * handle "CMP X,#$12" or "CMP X,$1234" or "MOV X,#$12" or "MOV Y,#$12" etc.
-   * We see from the test code lines like:
-   *  CMP X,#$12 => C8 12
-   *  CMP X,$1234 => 1E 34 12
-   *  CMP X,$12 => 3E 12
-   *  MOV X,#$12 => CD 12
-   *  MOV Y,#$12 => 8D 12
+   * CMP/MOV with X or Y on the left (`CMP X,#$12`, `MOV Y,$1234`).
+   * `operand` is `left,right` joined - a leftover from the one-operand path.
    *
-   * We'll unify them here.
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {number | null} forcedLen - the forced length
-   * @param {boolean} explicitlen - whether the length is explicit
-   * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
-   * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * @param {string} opcode CMP or MOV.
+   * @param {string} operand Combined `left,right` text.
+   * @param {number | null} forcedLen `.b`/`.w` override for dp vs abs.
+   * @param {boolean} explicitlen True when a suffix forced the width.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {boolean} True if encoded.
    */
   handleCmpXyOrMovXy(opcode, operand, forcedLen, explicitlen, leftLowered, rightLowered) {
     debug6("handleCmpXyOrMovXy", { opcode, operand, forcedLen, explicitlen });
@@ -27973,12 +28082,13 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * TSET / TCLR => e.g. "TSET $1234,A" => 0x0E 34 12
-   * @param {string} opcode - the opcode
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * TSET/TCLR `$abs,A` - always 16-bit absolute, even for `$12`. Right must be A.
+   *
+   * @param {string} opcode TSET or TCLR.
+   * @param {string} left Absolute address.
+   * @param {string} right Must classify as A.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {boolean} True if encoded.
    */
   handleTsetTclr(opcode, left, right, rightLowered) {
     debug6("handleTsetTclr", { opcode, left, right });
@@ -27997,14 +28107,15 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * handle e.g. "MOV X,A" or "MOV (X+),A" or "MOV $12,#$34".
-   * Some are covered by memory instructions if the left side is A.
-   * This function focuses on the big variety from the test lines.
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @param {number | null} forcedLen - the forced length
-   * @param {boolean} explicitlen - whether the length is explicit
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * MOV register pairs, then A/X/Y ↔ memory. `.b`/`.w` on `MOV.w A,$0000`
+   * forces abs even when the hex is 4 digits of zeros. Remaining indexed
+   * forms go to {@link handleMovMemoryCombo} / {@link handleMovMemoryCombo2}.
+   *
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @param {number | null} forcedLen `.b`=1 / `.w`=2 when a suffix was present.
+   * @param {boolean} explicitlen True when `forcedLen` came from a suffix.
+   * @returns {boolean} True if encoded.
    */
   handleMovInstruction(left, right, forcedLen, explicitlen) {
     debug6("handleMovInstruction", { left, right, forcedLen, explicitlen });
@@ -28133,13 +28244,12 @@ var ArchSPC700 = class {
     return this.handleMovMemoryCombo(left, right) || this.handleMovMemoryCombo2(left, right);
   }
   /**
-   * handle combos like "MOV ($12+X),A => 0xC7 12"
-   * or "MOV ($12)+Y,A => 0xD7 12"
-   * or "MOV A,($12+X) => 0xE7 12"
-   * or "MOV A,($12)+Y => 0xF7 12"
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @returns {boolean} true if the combo was handled, false otherwise
+   * MOV `(dp+X)` / `(dp)+Y` ↔ A. Parentheses are optional in the regex so
+   * `$12+X,A` can still match C7 - combo2 handles the abs+X variants.
+   *
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @returns {boolean} True if encoded.
    */
   handleMovMemoryCombo(left, right) {
     debug6("handleMovMemoryCombo", { left, right });
@@ -28176,12 +28286,13 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * handle combos like "MOV $1234+X,A => 0xD5 34 12", "MOV $12+X,A => 0xD4 12", etc.
-   * or "MOV A,$1234+X => 0xF5 34 12" etc.
-   * or "MOV $12+Y,X => 0xD9 12", etc.
-   * @param {string} left - the left operand
-   * @param {string} right - the right operand
-   * @returns {boolean} true if the combo was handled, false otherwise
+   * MOV `$addr+X|+Y` ↔ A/X/Y. Width from {@link getAddressSize} on the base
+   * expression (`$12+X` vs `$1234+X`). Skips anything with parentheses
+   * (those belong to {@link handleMovMemoryCombo}).
+   *
+   * @param {string} left Left operand.
+   * @param {string} right Right operand.
+   * @returns {boolean} True if encoded.
    */
   handleMovMemoryCombo2(left, right) {
     debug6("handleMovMemoryCombo2", { left, right });
@@ -28480,10 +28591,12 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * handle instructions with 1 operand that didn't match the prior sets, e.g. "DAA A => DF," "DAS A => BE," "MUL YA => CF," "DIV YA,X => 9E"
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @returns {boolean} true if the combo was handled, false otherwise
+   * DAA A, DAS A, MUL YA, DIV YA,X, then DECW/INCW `$dp`. DIV is passed as
+   * `"YA,X"` from {@link handleTwoOperands} via join - still one "operand" here.
+   *
+   * @param {string} opcode Special mnemonic.
+   * @param {string} operand Register combo or `$dp`.
+   * @returns {boolean} True if encoded.
    */
   handleSingleOperandSpecial(opcode, operand) {
     debug6("handleSingleOperandSpecial", { opcode, operand });
@@ -28514,11 +28627,12 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * e.g. "DECW $12 => 1A 12", "INCW $12 => 3A 12", "CMPW YA,$12 => 5A ???" => That's 2 operands though
-   * We'll handle the single-operand forms: DECW dp => 1A dp, INCW dp => 3A dp
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @returns {boolean} true if the combo was handled, false otherwise
+   * DECW/INCW `$dp` only. YA word ops with two operands are
+   * {@link handleWordOpsTwoOperands}.
+   *
+   * @param {string} opcode DECW or INCW.
+   * @param {string} operand Direct-page address.
+   * @returns {boolean} True if encoded.
    */
   handleWordOps(opcode, operand) {
     debug6("handleWordOps", { opcode, operand });
@@ -28532,9 +28646,11 @@ var ArchSPC700 = class {
     return false;
   }
   /**
-   * Resolves the operand length from opcode suffix.
-   * @param {string} c - the opcode suffix
-   * @returns {number} the operand length
+   * `.b`=1, `.w`=2, `.l`=3. `.d` is accepted (deprecated) but SPC700 never
+   * emits 32-bit immediates - callers treat 4 as "not dp".
+   *
+   * @param {string} c Length suffix character.
+   * @returns {number} Operand width in bytes.
    */
   getlenfromchar(c) {
     debug6("getlenfromchar", c);
@@ -28742,6 +28858,12 @@ var fitsSignedByte = (value) => {
 };
 var isShortRamAddress = (addrVal) => (addrVal & 1) === 0 && addrVal < 512;
 var ArchSuperFX = class {
+  /**
+   * @param {ArchitectureEncoderContext} context Encoder host.
+   * @param {() => boolean} asarMoveShortAddress Session flag for **auto-MOVE** short RAM only.
+   *   Hardware stores a word index (`addr >> 1`); Asar stores `addr & 0xff`. Explicit
+   *   `LMS`/`SMS` always encode `addr >> 1` and ignore this flag. Default is hardware.
+   */
   constructor(context, asarMoveShortAddress = () => false) {
     this.asarMoveShortAddress = asarMoveShortAddress;
     this.assembler = createEncoderRuntime(context);
@@ -28938,10 +29060,13 @@ var ArchSuperFX = class {
     return this.encodeResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
   /**
-   * Encodes a resolved instruction.
+   * Encodes a resolved Super FX mnemonic. Implied/prefixed ops reject extra
+   * operands; unknown mnemonics return false (`unknownInstructionBehavior` is
+   * `returnFalse` so 65816 can try next).
+   *
    * @param {string} mnemonic The mnemonic.
-   * @param {string[]} operands The operands.
-   * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+   * @param {string[]} operands Split operands.
+   * @param {LoweredOperand} [loweredOperand] Combined lowered operand.
    * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
    * @returns {boolean} True if the instruction was encoded.
    */
@@ -28974,8 +29099,9 @@ var ArchSuperFX = class {
     return false;
   }
   /**
-   * Handles implied SuperFX opcodes with no operands.
-   * @param {string} opcode - the opcode
+   * Handles implied SuperFX opcodes with no operands (STOP, NOP, ALT1, …) and
+   * two-byte prefixed ops (PLOT, SWAP, …) from PREFIXED_OPCODES.
+   * @param {string} opcode Uppercased mnemonic.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleSingleWordOpcode(opcode) {
@@ -28993,11 +29119,12 @@ var ArchSuperFX = class {
     return false;
   }
   /**
-   * Handles instructions with a single operand (e.g., "TO R1", "BRA label").
-   * @param {string} opcode - the opcode
-   * @param {string} operand - the operand
-   * @param {number} operandLength - the length of the operand
-   * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
+   * Single-operand Super FX: short branches (`$XX` is a raw offset; labels stay
+   * PC-relative), then register / `#0`–`#15` / `(Rn)` ops.
+   * @param {string} opcode Uppercased mnemonic.
+   * @param {string} operand The operand.
+   * @param {number} operandLength Logged only; encoded size is fixed per opcode family.
+   * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleOneOperandOpcode(opcode, operand, operandLength, loweredOperand) {
@@ -29038,13 +29165,19 @@ var ArchSuperFX = class {
     return false;
   }
   /**
-   * Handles instructions with two operands (e.g., MOVE r1, r2).
-   * @param {string} opcode - the opcode
-   * @param {string} leftOp - the left operand
-   * @param {string} rightOp - the right operand
-   * @param {LoweredOperand} leftLowered - optional lowered metadata for left operand
-   * @param {LoweredOperand} rightLowered - optional lowered metadata for right operand
-   * @returns {boolean} True if the instruction was handled, false otherwise.
+   * Two-operand Super FX: MOVE/MOVES register pairs, IBT/IWT/`MOVE Rn,#imm`
+   * (signed-byte → IBT), MOVEB/MOVEW via `(Rn)`, then LM/LMS/LEA/SM/SMS and
+   * auto-MOVE RAM. `(R0)` omits TO/FROM because B/D already default to R0.
+   *
+   * Explicit `LMS`/`SMS` always store `addr >> 1`. Auto-`MOVE` short form uses
+   * {@link moveShortAddressByte} (honors Asar compat). LEA is IWT-shaped: no ALT1.
+   *
+   * @param {string} opcode Uppercased mnemonic.
+   * @param {string} leftOp Left operand.
+   * @param {string} rightOp Right operand.
+   * @param {LoweredOperand} [leftLowered] Lowered left operand.
+   * @param {LoweredOperand} [rightLowered] Lowered right operand.
+   * @returns {boolean} True if encoded.
    */
   handleTwoOperandOpcode(opcode, leftOp, rightOp, leftLowered, rightLowered) {
     debug7("handleTwoOperandOpcode", { opcode, leftOp, rightOp });
@@ -29299,8 +29432,9 @@ var ArchSuperFX = class {
    * Raises an error if `mid < min` or `mid > max`.
    * @param {number} min The minimum value.
    * @param {number} mid The middle value.
-   * @param {number} max The maximum value.
-   * @throws {Error} If the middle value is out of range.
+   * @param {number} max Inclusive maximum.
+   * @returns {void}
+   * @throws {Error} If `mid` is outside `[min, max]`.
    */
   rangeCheck(min, mid, max) {
     if (mid < min || mid > max) {
@@ -29308,9 +29442,11 @@ var ArchSuperFX = class {
     }
   }
   /**
-   * For LMS/SMS short addressing, the address must be even and in `[0x000..0x1FE]`.
-   * @param {number} num - the address
-   * @returns {boolean} True if the address is valid.
+   * LMS/SMS require an even RAM byte address in `[0x000..0x1FE]`. Throws otherwise.
+   * Encode then stores `addr >> 1`; this check is the byte-address constraint.
+   * @param {number} num RAM byte address (not the word index).
+   * @returns {boolean} Always `true` when the address is valid.
+   * @throws {Error} If the address is odd or outside the short-RAM window.
    */
   checkShortAddr(num) {
     debug7("checkShortAddr", num);
@@ -29331,9 +29467,10 @@ var ArchSuperFX = class {
     return /^\$[\dA-Fa-f]{2}$/.test(operand.trim());
   }
   /**
-   * Returns 1 for a 2-digit hex operand (`$XX`), otherwise 2.
-   * @param {string} operand the operand
-   * @returns {number} The operand length.
+   * Fallback width when lowering did not supply `length`. `$XX` is 1; everything else is 2.
+   * Super FX uses this for one-operand branches when `loweredOperand` is missing.
+   * @param {string} operand Operand text.
+   * @returns {number} 1 for an explicit `$XX` spelling, otherwise 2.
    */
   getOperandLength(operand) {
     if (this.isRawBranchOffset(operand)) {
@@ -29353,9 +29490,12 @@ var ArchSuperFX = class {
     return { opcode, operands, rawOperand };
   }
   /**
-   * Writes a register-encoded ALU/load op, with optional ALT prefix and range check.
-   * @param {RegisterOpEncoding} encoding The encoding table entry.
-   * @param {number} register The register number.
+   * Writes optional ALT prefix then `base + register`. AND/OR/BIC/XOR reject R0
+   * (those encodings are MERGE/HIB).
+   *
+   * @param {RegisterOpEncoding} encoding Table entry (prefix, base, optional min/max).
+   * @param {number} register Register number 0–15.
+   * @returns {void}
    */
   writeRegisterOp(encoding, register) {
     if (encoding.min !== void 0 && encoding.max !== void 0) {
@@ -29367,7 +29507,8 @@ var ArchSuperFX = class {
     this.assembler.write1(encoding.base + register);
   }
   /**
-   * Encodes the LMS/SMS operand byte for auto-MOVE short addressing.
+   * Encodes the short-RAM operand byte for **auto-MOVE** only (`MOVE Rn,(addr)` /
+   * `MOVE (addr),Rn`). Explicit LMS/SMS call `addr >> 1` directly and skip this.
    * @param {number} addrVal Even RAM byte address below `$200`.
    * @returns {number} Hardware word index, or Asar's raw byte when compat is enabled.
    */
@@ -29395,6 +29536,94 @@ var ArchSuperFX = class {
     }
   }
 };
+
+// plugins/snes/src/directives/ca65-compat.ts
+function getActiveArch65816(session) {
+  const { definition } = session.resolveActiveArchitecture();
+  if (definition?.encoder instanceof Arch65816) {
+    return definition.encoder;
+  }
+  return void 0;
+}
+function handleA8(session) {
+  getActiveArch65816(session)?.setAccumulatorWidth(false);
+}
+function handleA16(session) {
+  getActiveArch65816(session)?.setAccumulatorWidth(true);
+}
+function handleAccu(session, words) {
+  const widthToken = words[1]?.trim();
+  if (widthToken === "8") {
+    handleA8(session);
+  } else if (widthToken === "16") {
+    handleA16(session);
+  } else {
+    throw new Error(
+      `.accu requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`
+    );
+  }
+}
+function handleI8(session) {
+  getActiveArch65816(session)?.setIndexWidth(false);
+}
+function handleI16(session) {
+  getActiveArch65816(session)?.setIndexWidth(true);
+}
+function handleIndex(session, words) {
+  const widthToken = words[1]?.trim();
+  if (widthToken === "8") {
+    handleI8(session);
+  } else if (widthToken === "16") {
+    handleI16(session);
+  } else {
+    throw new Error(
+      `.index requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`
+    );
+  }
+}
+function handleSmart(session, words) {
+  const arg = words[1]?.trim().toLowerCase();
+  const enabled = arg !== "off";
+  getActiveArch65816(session)?.setSmartMode(enabled);
+}
+function resolveSnesCpuName(name) {
+  switch (name.toLowerCase()) {
+    case "65816":
+    case "65c816":
+    case "65802":
+      return "snes.65816";
+    case "spc700":
+      return "snes.spc700";
+    case "superfx":
+      return "snes.superfx";
+    default:
+      return void 0;
+  }
+}
+function handleSetcpu(session, words) {
+  if (!words[1]) {
+    throw new Error(".setcpu requires a CPU name argument.");
+  }
+  const raw = words[1].trim().replace(/^["']|["']$/g, "");
+  const archId = resolveSnesCpuName(raw);
+  if (!archId) {
+    throw new Error(
+      `.setcpu "${raw}" is not available on the SNES target. Supported names: 65816, 65C816, 65802, spc700, superfx.`
+    );
+  }
+  session.selectArchitecture(archId, raw.toLowerCase());
+}
+function handlePushcpu(session, state) {
+  const { name } = session.resolveActiveArchitecture();
+  state.cpuStack.push(name);
+}
+function handlePopcpu(session, state) {
+  if (state.cpuStack.length === 0) {
+    throw new Error(".popcpu: CPU stack is empty.");
+  }
+  const archId = state.cpuStack.pop();
+  session.selectArchitecture(archId, archId);
+}
 
 // plugins/snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
@@ -29527,6 +29756,10 @@ var SnesSpcRuntimeService = class {
   }
   session;
   state;
+  /**
+   * Closes an implicit inline-SPC block (`arch spc700-inline`), then errors if
+   * a block is still open. Called from `onStageEnd`.
+   */
   finishPass() {
     if (shouldAutoCloseSpcblock(this.state.spcInlineCompatibility, this.state.inSpcBlock)) {
       this.handleEndSpcblock(["endspcblock", "execute", "0"]);
@@ -29535,6 +29768,14 @@ var SnesSpcRuntimeService = class {
       throw new Error("Missing endspcblock before end of pass.");
     }
   }
+  /**
+   * Opens an NSPC block: writes size/dest placeholders, retargets PC to the
+   * 16-bit SPC destination, and switches architecture.
+   *
+   * `custom` with a macro name is recognized as Asar syntax but not implemented.
+   *
+   * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
+   */
   handleSpcblock(words) {
     if (words.length < 2) throw new Error("spcblock requires at least a destination address.");
     if (words.length > 4) throw new Error("spcblock has too many arguments.");
@@ -29577,6 +29818,18 @@ var SnesSpcRuntimeService = class {
       this.state.spcInlineCompatibility ? "spc700-inline" : "spc700"
     );
   }
+  /**
+   * Closes the open block: patches the NSPC size word, optionally writes an
+   * execute trailer, then restores namespace and the previous architecture.
+   *
+   * Size is `(pc - dest) & $FFFF` - 64 KiB wrap, matching Asar.
+   * Size is only patched when `canFinalize` (emit pass); collect/layout leave
+   * the placeholder so later passes can rewrite it.
+   *
+   * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.
+   *
+   * @param {readonly string[]} words Tokenized line.
+   */
   handleEndSpcblock(words) {
     const block = this.state.spcBlock;
     if (!this.state.inSpcBlock || !block) {
@@ -29629,7 +29882,8 @@ function cloneSnesSessionState(value) {
   return {
     ...value,
     sa1Banks: [...value.sa1Banks],
-    spcBlock: value.spcBlock ? { ...value.spcBlock } : null
+    spcBlock: value.spcBlock ? { ...value.spcBlock } : null,
+    cpuStack: [...value.cpuStack]
   };
 }
 
@@ -29679,6 +29933,14 @@ var snesRomAddressSpace = {
     }
     return prefix | newAddress;
   },
+  /**
+   * CPU bus → ROM file offset. Returns `-1` for WRAM, SRAM, or unmapped holes.
+   * Formulas match Asar's `snestopc` (not a hardware bus trace).
+   *
+   * @param {number} address The address to convert.
+   * @param {AddressSpaceContext} context The address space context.
+   * @returns {number} The output offset.
+   */
   toOutputOffset(address, context) {
     if (address < 0 || address > 16777215) return -1;
     if (context.mapper === "lorom") {
@@ -29733,6 +29995,14 @@ var snesRomAddressSpace = {
     }
     return context.mapper === "norom" ? address : -1;
   },
+  /**
+   * Inverse of {@link snesRomAddressSpace.toOutputOffset}: file offset → a
+   * canonical CPU address (usually the FastROM mirror). `-1` if the offset
+   * cannot exist for this mapper.
+   * @param {number} offset The offset to convert.
+   * @param {AddressSpaceContext} context The address space context.
+   * @returns {number} The canonical CPU address.
+   */
   fromOutputOffset(offset, context) {
     if (offset < 0) return -1;
     let address = offset;
@@ -30197,6 +30467,67 @@ var directiveCatalog2 = [
     summary: "Assert a minimum asar version (compat no-op).",
     syntax: "asar version",
     group: "compat"
+  },
+  // ca65 65816 width-state directives
+  {
+    keyword: ".a8",
+    summary: "Set accumulator width hint to 8-bit (ca65 compatible).",
+    syntax: ".a8",
+    group: "compat"
+  },
+  {
+    keyword: ".a16",
+    summary: "Set accumulator width hint to 16-bit (ca65 compatible).",
+    syntax: ".a16",
+    group: "compat"
+  },
+  {
+    keyword: ".i8",
+    summary: "Set index register width hint to 8-bit (ca65 compatible).",
+    syntax: ".i8",
+    group: "compat"
+  },
+  {
+    keyword: ".i16",
+    summary: "Set index register width hint to 16-bit (ca65 compatible).",
+    syntax: ".i16",
+    group: "compat"
+  },
+  {
+    keyword: ".accu",
+    summary: "Set accumulator width hint (ca65 alias for .a8/.a16).",
+    syntax: ".accu 8|16",
+    group: "compat"
+  },
+  {
+    keyword: ".index",
+    summary: "Set index register width hint (ca65 alias for .i8/.i16).",
+    syntax: ".index 8|16",
+    group: "compat"
+  },
+  {
+    keyword: ".smart",
+    summary: "Enable/disable automatic M/X width tracking via SEP/REP (ca65 compatible).",
+    syntax: ".smart [on|off]",
+    group: "compat"
+  },
+  {
+    keyword: ".setcpu",
+    summary: "Select a CPU by name for the current SNES target (ca65 compatible).",
+    syntax: '.setcpu "65816"',
+    group: "compat"
+  },
+  {
+    keyword: ".pushcpu",
+    summary: "Push the current CPU onto the CPU stack (ca65 compatible).",
+    syntax: ".pushcpu",
+    group: "compat"
+  },
+  {
+    keyword: ".popcpu",
+    summary: "Restore the most recently pushed CPU (ca65 compatible).",
+    syntax: ".popcpu",
+    group: "compat"
   }
 ];
 var directiveByKeyword = new Map(
@@ -30326,7 +30657,8 @@ var createInitialState = (context) => {
     inSpcBlock: false,
     spcBlock: null,
     spcPreviousArchitecture: null,
-    spcInlineCompatibility: false
+    spcInlineCompatibility: false,
+    cpuStack: []
   };
 };
 var plugin = definePlugin({
@@ -30355,7 +30687,7 @@ var plugin = definePlugin({
     });
     context.registerArchitecture({
       id: "snes.65816",
-      aliases: ["65816"],
+      aliases: ["65816", "65c816", "65802"],
       displayName: "WDC 65C816",
       unknownInstructionBehavior: "throw",
       splitOperands: splitSingleOperand,
@@ -30471,6 +30803,61 @@ var plugin = definePlugin({
       ]
     });
     context.registerDirectiveSet({
+      id: "snes.ca65-compat-directives",
+      directives: [
+        directive(
+          "snes.directive.ca65.a8",
+          [".a8"],
+          ({ session }) => () => handleA8(session)
+        ),
+        directive(
+          "snes.directive.ca65.a16",
+          [".a16"],
+          ({ session }) => () => handleA16(session)
+        ),
+        directive(
+          "snes.directive.ca65.i8",
+          [".i8"],
+          ({ session }) => () => handleI8(session)
+        ),
+        directive(
+          "snes.directive.ca65.i16",
+          [".i16"],
+          ({ session }) => () => handleI16(session)
+        ),
+        directive(
+          "snes.directive.ca65.accu",
+          [".accu"],
+          ({ session }) => (_ctx, words) => handleAccu(session, words)
+        ),
+        directive(
+          "snes.directive.ca65.index",
+          [".index"],
+          ({ session }) => (_ctx, words) => handleIndex(session, words)
+        ),
+        directive(
+          "snes.directive.ca65.smart",
+          [".smart"],
+          ({ session }) => (_ctx, words) => handleSmart(session, words)
+        ),
+        directive(
+          "snes.directive.ca65.setcpu",
+          [".setcpu"],
+          ({ session }) => (_ctx, words) => handleSetcpu(session, words)
+        ),
+        directive(
+          "snes.directive.ca65.pushcpu",
+          [".pushcpu"],
+          ({ session, state }) => () => handlePushcpu(session, state.get(snesSessionStateKey))
+        ),
+        directive(
+          "snes.directive.ca65.popcpu",
+          [".popcpu"],
+          ({ session, state }) => () => handlePopcpu(session, state.get(snesSessionStateKey))
+        )
+      ]
+    });
+    context.registerDirectiveSet({
       id: "snes.memory-directives",
       directives: [
         directive(
@@ -30578,7 +30965,8 @@ var plugin = definePlugin({
         "snes.mapper-directives",
         "snes.memory-directives",
         "snes.policy-directives",
-        "snes.spc-directives"
+        "snes.spc-directives",
+        "snes.ca65-compat-directives"
       ],
       expressionSets: ["snes.address-functions", "snes.read-functions"],
       lifecycle: ["snes.lifecycle"],
@@ -31639,7 +32027,7 @@ function signatureHelpFor(lineText, index2) {
     const signatures = instruction2.modes.map(
       (mode) => import_vscode_languageserver.SignatureInformation.create(
         `${instruction2.mnemonic} ${mode.syntax}`.trim(),
-        `${mode.mode}${instruction2.summary ? ` \u2014 ${instruction2.summary}` : ""}`
+        `${mode.mode}${instruction2.summary ? ` - ${instruction2.summary}` : ""}`
       )
     );
     return { signatures, activeSignature: 0 };
@@ -31807,7 +32195,7 @@ function identifierNameAt(index2, file, position) {
   return word;
 }
 function renderSymbolDocs(symbol) {
-  const lines = [`**${symbol.name}** \u2014 ${symbol.kind}`];
+  const lines = [`**${symbol.name}** - ${symbol.kind}`];
   if (symbol.containerName) {
     lines.push("", `In \`${symbol.containerName}\``);
   }

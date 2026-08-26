@@ -146,11 +146,11 @@ const FILE_STRING_FUNCTION = /^(?:canreadfile|readfile)\d?$/;
  * @returns {boolean} Whether the character is trim whitespace.
  */
 function isScanWhitespace(code: number): boolean {
-  // Space, tab, LF, CR — the common ASCII trim set.
+  // Space, tab, LF, CR - the common ASCII trim set.
   if (code === 32 || code === 9 || code === 10 || code === 13) {
     return true;
   }
-  // VT, FF, NBSP, BOM — also stripped by String#trim.
+  // VT, FF, NBSP, BOM - also stripped by String#trim.
   if (code === 11 || code === 12 || code === 0xa0 || code === 0xfeff) {
     return true;
   }

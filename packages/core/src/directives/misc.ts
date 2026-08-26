@@ -141,7 +141,7 @@ const invalidTableLine = (lineNumber: number): Error =>
 
 /**
  * Parses one asar `table` file line. LTR is `char=hex` with the mapped character
- * at index 0 — leading space is significant (` =20`). Hex is a single integer,
+ * at index 0 - leading space is significant (` =20`). Hex is a single integer,
  * not a byte list; `db` later truncates it to 8 bits.
  * @param {string} line One table line, with trailing CR already stripped.
  * @param {boolean} rtl When true, the line is `hex=char` instead of `char=hex`.
@@ -198,7 +198,7 @@ export const handleClearTable = ({ session }: TableDirectiveContext): void => {
 /**
  * Deprecated asar `table "file"[,ltr|rtl]`. Loads `char=hex` lines into the
  * mapping table. Unlike asar we leave unmapped characters as identity instead
- * of filling a garbage sentinel — SMRPG dialogue only uses listed glyphs, and
+ * of filling a garbage sentinel - SMRPG dialogue only uses listed glyphs, and
  * remaining bank data is raw `db $xx` after `cleartable`.
  * @param {TableDirectiveContext} ctx Session with `includeSource.readFile`.
  * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.

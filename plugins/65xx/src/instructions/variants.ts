@@ -18,6 +18,11 @@ interface ModeDefinition {
   readonly codec?: OperandCodecId;
 }
 
+/**
+ * Maps ca65 addressing-mode bit indices (0–31) onto our {@link AddressingMode}s.
+ * Indices 21–23 are all immediate (8-bit variants in ca65's table); 27 is 16-bit
+ * immediate. Mode 10 is zp-indirect on 65C02-class, (zp),z on CE02/4510.
+ */
 const commonModes: Readonly<Partial<Record<number, ModeDefinition>>> = {
   0: { mode: "implied" },
   1: { mode: "accumulator" },
@@ -44,6 +49,7 @@ const commonModes: Readonly<Partial<Record<number, ModeDefinition>>> = {
   31: { mode: "quadAccumulator" },
 };
 
+/** ca65 table name → the feature that unlocks those forms. */
 const featureByTable: Readonly<Record<keyof typeof ca65VariantTables, CpuFeature>> = {
   "6502DTV": "dtv",
   "65SC02": "cmos",
@@ -54,6 +60,14 @@ const featureByTable: Readonly<Record<keyof typeof ca65VariantTables, CpuFeature
   "45GS02": "45gs02",
 };
 
+/**
+ * Opcode for one (row, mode) cell: `base | eaTable[mode]`, then 4510/45GS02
+ * remaps. Put4510 swaps several 65CE02 opcodes onto the 4510 encoding;
+ * Put45GS02_Q rewrites INC/DEC accumulator to $1A/$3A under the Q prefix.
+ * @param {Ca65InstructionRow} row The ca65 instruction row.
+ * @param {number} modeIndex The mode index.
+ * @returns {number} The opcode.
+ */
 function opcodeFor(row: Ca65InstructionRow, modeIndex: number): number {
   const [, , base, eaTable] = row;
   const extension = ca65EaTable[eaTable]?.[modeIndex];
@@ -81,6 +95,13 @@ function opcodeFor(row: Ca65InstructionRow, modeIndex: number): number {
   return opcode;
 }
 
+/**
+ * Resolves a ca65 mode bit. Mode 10 is the CMOS vs CE02 fork:
+ * 65SC02/65C02/W65C02 → `(zp)`; 65CE02/4510/45GS02 → `(zp),z`.
+ * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
+ * @param {number} modeIndex The mode index.
+ * @returns {ModeDefinition | undefined} The mode definition.
+ */
 function modeFor(
   table: keyof typeof ca65VariantTables,
   modeIndex: number,
@@ -93,6 +114,15 @@ function modeFor(
   return commonModes[modeIndex];
 }
 
+/**
+ * Builds one {@link InstructionForm}. 45GS02 Q ops prefix `42 42`; `[zp],z`
+ * (modes 12 and 30) also needs a leading `EA` NOP prefix.
+ * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
+ * @param {Ca65InstructionRow} row The ca65 instruction row.
+ * @param {number} modeIndex The mode index.
+ * @param {ModeDefinition} modeDefinition The mode definition.
+ * @returns {InstructionForm} The instruction form.
+ */
 function createForm(
   table: keyof typeof ca65VariantTables,
   row: Ca65InstructionRow,
@@ -123,6 +153,13 @@ function createForm(
   });
 }
 
+/**
+ * Expands one ca65 instruction table into frozen forms.
+ * `PutBitBranch` is BBR/BBS (rel base = 3). `PutPCRel8` / `PutPCRel4510`
+ * skip the bit mask and use relative / relative16 directly.
+ * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
+ * @returns {readonly InstructionForm[]} The decode table.
+ */
 function decodeTable(table: keyof typeof ca65VariantTables): readonly InstructionForm[] {
   const forms: InstructionForm[] = [];
   for (const row of ca65VariantTables[table] as readonly Ca65InstructionRow[]) {

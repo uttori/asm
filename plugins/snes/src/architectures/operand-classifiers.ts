@@ -1,6 +1,10 @@
 import type { LoweredOperand, OperandResolutionContext } from "@uttori/asm-core";
 import { parseOperandSyntax } from "@uttori/asm-core";
 
+/**
+ * Operand facts after core expansion. `length` is the inferred byte width
+ * (1/2/3) before architecture-specific width policy.
+ */
 export type ClassificationInput = {
   raw: string;
   expanded: string;
@@ -264,8 +268,8 @@ export function classifyGenericOperand(input: ClassificationInput): LoweredOpera
 }
 
 /**
- * Classifies 65816 operands.
- * @param {OperandResolver} resolver Operand resolver dependency.
+ * Classifies 65816 operands (expand, then {@link apply65816WidthPolicy}).
+ * @param {OperandResolutionContext} resolver Operand resolver dependency.
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.
  */
@@ -292,8 +296,8 @@ export function classifyExpanded65816Operand(
 }
 
 /**
- * Classifies SPC700 operands.
- * @param {OperandResolver} resolver Operand resolver dependency.
+ * Classifies SPC700 operands. No 65816 bank-shortening; hex spelling owns width.
+ * @param {OperandResolutionContext} resolver Operand resolver dependency.
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.
  */
@@ -307,8 +311,8 @@ export function classifySpc700Operand(
 }
 
 /**
- * Classifies SuperFX operands.
- * @param {OperandResolver} resolver Operand resolver dependency.
+ * Classifies Super FX operands (register / `#imm` / `(Rn)` / RAM forms).
+ * @param {OperandResolutionContext} resolver Operand resolver dependency.
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.
  */

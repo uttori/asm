@@ -6,6 +6,11 @@ import type {
   LoweredOperand,
 } from "@uttori/asm-core";
 
+/**
+ * Table-driven 65xx encoder. Forms come from the NMOS grid or ca65-derived
+ * variant tables; `.b`/`.w` force zp vs abs; branches use `+`/`-` unnamed labels.
+ */
+
 import { buildInstructionCatalog } from "./instructions/catalog.js";
 import { getCpuAssemblyForms, nmos6502DecodeTable } from "./instructions/opcodes.js";
 import {
@@ -16,6 +21,7 @@ import {
 } from "./instructions/schema.js";
 import { variantFormsByCpuId } from "./instructions/variants.js";
 
+/** `.w` / inferred-abs: promote zp forms to their 16-bit twins. */
 const directToAbsolute: Readonly<Partial<Record<AddressingMode, AddressingMode>>> = {
   zeroPage: "absolute",
   zeroPageIndexedX: "absoluteIndexedX",
@@ -23,6 +29,7 @@ const directToAbsolute: Readonly<Partial<Record<AddressingMode, AddressingMode>>
   zeroPageIndirect: "indirect",
   indexedIndirectX: "absoluteIndexedIndirect",
 };
+/** `.b`: demote abs forms. Missing twins (e.g. no `STX abs,y`) error at resolve. */
 const absoluteToDirect: Readonly<Partial<Record<AddressingMode, AddressingMode>>> = {
   absolute: "zeroPage",
   absoluteIndexedX: "zeroPageIndexedX",
@@ -41,6 +48,12 @@ interface ParsedMnemonic {
   readonly forcedWidth?: 1 | 2;
 }
 
+/**
+ * Parses a mnemonic with optional width suffix.
+ * `LDA.B` / `STA.W` - ca65-style width force. `.L` is not a 65xx suffix here.
+ * @param {string} value The mnemonic to parse.
+ * @returns {ParsedMnemonic} The parsed mnemonic.
+ */
 function parseMnemonic(value: string): ParsedMnemonic {
   const match = value
     .trim()
@@ -56,14 +69,33 @@ function parseMnemonic(value: string): ParsedMnemonic {
   };
 }
 
+/**
+ * Calculates the size of an instruction in bytes.
+ * @param {InstructionForm} form The instruction form.
+ * @returns {number} The size of the instruction in bytes.
+ */
 function modeSize(form: InstructionForm): number {
   return form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
 }
 
+/**
+ * Normalizes a relative delta to a signed 16-bit value.
+ * Sign-extend a 16-bit wrapping subtraction so 8-bit branches can range-check.
+ * @param {number} target The target address.
+ * @param {number} reference The reference address.
+ * @returns {number} The normalized relative delta.
+ */
 function normalizeRelativeDelta(target: number, reference: number): number {
   return ((target - reference + 0x8000) & 0xffff) - 0x8000;
 }
 
+/**
+ * Concatenates opcode/prefix bytes with already-encoded operand bytes.
+ * Used by tests and tooling; the live encoder writes through `emission` instead.
+ * @param {InstructionForm} form The instruction form.
+ * @param {readonly number[]} operandBytes The operand bytes.
+ * @returns {Uint8Array} The materialized opcode form.
+ */
 export function materializeOpcodeForm(
   form: InstructionForm,
   operandBytes: readonly number[] = [],
@@ -82,11 +114,43 @@ export function materializeOpcodeForm(
   return Uint8Array.from([...form.encoding, ...operandBytes]);
 }
 
+/**
+ * Splits top-level operands in a string.
+ * BBR/BBS `zp,target` - do not split on commas inside `(…)` or `[…]`.
+ * @param {string} value The string to split.
+ * @returns {string[]} The split operands.
+ */
+function splitTopLevelOperands(value: string): string[] {
+  const operands: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(" || character === "[") depth++;
+    else if (character === ")" || character === "]") depth--;
+    else if (character === "," && depth === 0) {
+      operands.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  operands.push(value.slice(start).trim());
+  return operands.filter(Boolean);
+}
+
+/**
+ * Table-driven encoder for one {@link CpuDefinition}. Unknown mnemonics that
+ * exist only on another CPU get a targeted diagnostic; truly unknown ops
+ * return false so the assembler can try the next architecture.
+ */
 export class Arch65xx implements ArchitectureEncoder {
   readonly forms: readonly InstructionForm[];
   readonly catalog: InstructionDescriptor[];
   readonly formsByMnemonic = new Map<string, readonly InstructionForm[]>();
 
+  /**
+   * @param {ArchitectureEncoderContext} context Encoder host (operands, emission, diagnostics).
+   * @param {CpuDefinition} cpu CPU whose feature set filters {@link getCpuAssemblyForms}.
+   */
   constructor(
     readonly context: ArchitectureEncoderContext,
     readonly cpu: CpuDefinition,
@@ -108,12 +172,22 @@ export class Arch65xx implements ArchitectureEncoder {
     return this.catalog;
   }
 
+  /**
+   * Estimates size from tokenized words.
+   * @param {readonly string[]} words Mnemonic plus rest-of-line operand.
+   * @returns {number} Encoded size in bytes, or 0 if unknown.
+   */
   estimateSize(words: readonly string[]): number {
     if (words.length === 0) return 0;
     const operand = words.slice(1).join(" ");
     return this.estimateResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
   }
 
+  /**
+   * Encodes tokenized words. Returns false when the mnemonic is unknown on this CPU.
+   * @param {readonly string[]} words Mnemonic plus rest-of-line operand.
+   * @returns {boolean} True if encoded.
+   */
   encode(words: readonly string[]): boolean {
     if (words.length === 0) return true;
     const operand = words.slice(1).join(" ");
@@ -212,6 +286,8 @@ export class Arch65xx implements ArchitectureEncoder {
     }
     const { forcedWidth } = parsed;
     if (!forms) {
+      // Wrong-CPU diagnostics: "this mnemonic exists on 65c02, not 6502"
+      // vs unofficial-only "needs 65xx.6502x".
       if (variantArchitectures.length > 0) {
         throw this.context.diagnostics.error(
           `Instruction '${parsed.mnemonic}' is available on ${variantArchitectures.join(", ")}, not ${this.cpu.id}.`,
@@ -235,6 +311,7 @@ export class Arch65xx implements ArchitectureEncoder {
     let mode = operand.mode as AddressingMode | undefined;
     if (operand.raw.trim().toUpperCase() === "A") mode = "accumulator";
     if (operand.raw.trim().toUpperCase() === "Q") mode = "quadAccumulator";
+    // Branches: any operand is a target; don't treat `$12` as zp.
     if (hasOperand && forms.some((entry) => entry.mode === "relative16")) mode = "relative16";
     else if (hasOperand && forms.some((entry) => entry.mode === "relative")) mode = "relative";
     if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
@@ -287,6 +364,7 @@ export class Arch65xx implements ArchitectureEncoder {
     let maximum = 0xff;
     if (width === 2) maximum = 0xffff;
     else if (width === 3) maximum = 0xffffff;
+    // Immediate `#-1` is allowed for 8-bit (signed); addresses stay unsigned.
     if (!Number.isInteger(value) || value < minimum || value > maximum) {
       throw this.context.diagnostics.error(
         `${description} ${value} is outside the ${width * 8}-bit range.`,
@@ -315,6 +393,7 @@ export class Arch65xx implements ArchitectureEncoder {
     if (!this.context.branches.enforceResolvedLabels()) return 0;
     const reference = (this.context.sizing.getCurrentAddress() + relativeBaseOffset) & 0xffff;
     let target: number;
+    // Unnamed labels: `+` / `++` forward, `-` / `--` backward (ca65 / native).
     if (/^\++$/.test(expression)) {
       target = this.context.branches.findNextLabel(expression, reference);
     } else if (/^-+$/.test(expression)) {
@@ -337,21 +416,4 @@ export class Arch65xx implements ArchitectureEncoder {
     }
     return delta;
   }
-}
-
-function splitTopLevelOperands(value: string): string[] {
-  const operands: string[] = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < value.length; index++) {
-    const character = value[index];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) {
-      operands.push(value.slice(start, index).trim());
-      start = index + 1;
-    }
-  }
-  operands.push(value.slice(start).trim());
-  return operands.filter(Boolean);
 }

@@ -10,6 +10,13 @@ import {
 import { cpu65816Catalog } from "../tooling/instruction-catalog.js";
 import { classifyExpanded65816Operand } from "./operand-classifiers.js";
 
+/**
+ * Lowers a 65816 operand.
+ * Core may already classify; unknown (math, labels) gets 65816 width policy.
+ * @param {ArchitectureEncoderContext["operands"]} resolver The operand resolver.
+ * @param {string} operand The operand to lower.
+ * @returns {LoweredOperand} The lowered operand.
+ */
 const lower65816Operand = (
   resolver: ArchitectureEncoderContext["operands"],
   operand: string,
@@ -64,12 +71,29 @@ const keepsFixedWidthAddressingMode = (
 const isIndexedMemory = (operand: LoweredOperand, register: "x" | "y"): boolean =>
   operand.indexRegister === register && !keepsFixedWidthAddressingMode(operand.mode, 1);
 
+/**
+ * WDC 65C816 encoder. M/X size flags start 8-bit each pass (`beginPass`) and
+ * track SEP/REP so immediates (`LDA #expr`) match the current register width.
+ *
+ * `optimizeDirectPage` is a session callback - `optimize dp ram|always` can
+ * change mid-source; we must not snapshot it in the constructor.
+ *
+ * `smartMode` mirrors ca65's `.smart` directive. When `true` (the default),
+ * `SEP`/`REP` instructions automatically update M/X width hints. When `false`,
+ * the hints are only changed by explicit `.a8`/`.a16`/`.i8`/`.i16` directives.
+ * The default matches Asar's always-tracking behaviour.
+ */
 export class Arch65816 implements ArchitectureEncoder {
   assembler: EncoderRuntime;
   /** Native 16-bit accumulator (REP #$20). Reset at the start of each assembly stage. */
   m16: boolean;
   /** Native 16-bit index registers (REP #$10). Reset at the start of each assembly stage. */
   x16: boolean;
+  /**
+   * When true, `SEP`/`REP` auto-update M/X hints (Asar-compatible default).
+   * Set to false by `.smart off`; re-enabled by `.smart` or `.smart on`.
+   */
+  smartMode: boolean;
 
   constructor(
     context: ArchitectureEncoderContext,
@@ -78,10 +102,12 @@ export class Arch65816 implements ArchitectureEncoder {
     this.assembler = createEncoderRuntime(context);
     this.m16 = false;
     this.x16 = false;
+    this.smartMode = true;
   }
 
   /**
    * Resets M/X size flags at the start of each assembly stage.
+   * `smartMode` is intentionally NOT reset so `.smart off` persists across stages.
    * @returns {void}
    */
   beginPass(): void {
@@ -90,13 +116,46 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Applies SEP/REP to the assembler-facing M/X size flags.
+   * Sets the accumulator (M-flag) width hint.
+   * Used by the ca65-compatible `.a8` and `.a16` directives.
+   * @param {boolean} is16 True for 16-bit accumulator, false for 8-bit.
+   * @returns {void}
+   */
+  setAccumulatorWidth(is16: boolean): void {
+    this.m16 = is16;
+  }
+
+  /**
+   * Sets the index register (X-flag) width hint.
+   * Used by the ca65-compatible `.i8` and `.i16` directives.
+   * @param {boolean} is16 True for 16-bit index registers, false for 8-bit.
+   * @returns {void}
+   */
+  setIndexWidth(is16: boolean): void {
+    this.x16 = is16;
+  }
+
+  /**
+   * Enables or disables automatic M/X tracking via `SEP`/`REP` instructions.
+   * Used by the ca65-compatible `.smart` directive.
+   * @param {boolean} enabled True to enable smart mode (default), false to disable.
+   * @returns {void}
+   */
+  setSmartMode(enabled: boolean): void {
+    this.smartMode = enabled;
+  }
+
+  /**
+   * Applies SEP/REP to assembler-facing M/X flags. Unresolvable immediates
+   * (forward labels) are ignored - flags stay at the last known value, matching
+   * Asar's "best effort" size tracking across passes.
+   * Skipped when `smartMode` is false (explicit `.a8`/`.a16`/`.i8`/`.i16` only).
    * @param {string} opcode The opcode.
    * @param {string} rawOperand The raw operand.
    * @returns {void}
    */
   applySepRep(opcode: string, rawOperand: string): void {
-    if (opcode !== "SEP" && opcode !== "REP") {
+    if (!this.smartMode || (opcode !== "SEP" && opcode !== "REP")) {
       return;
     }
     let value = 0;
@@ -180,9 +239,10 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Estimates instruction.
+   * Size of a lowered instruction. Must match {@link encodeResolvedInstruction}
+   * so layout `step()` stays in sync with emit (including SEP/REP side effects).
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes, or 0 if not a 65816 op.
    */
   estimateInstruction(instruction: LoweredInstruction): number {
     return this.estimateResolvedInstruction(
@@ -194,9 +254,9 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Encodes instruction.
+   * Encodes a lowered instruction. Returns false only when the mnemonic is not ours.
    * @param {LoweredInstruction} instruction The instruction.
-   * @returns {boolean} The result.
+   * @returns {boolean} True if encoded.
    */
   encodeInstruction(instruction: LoweredInstruction): boolean {
     return this.encodeResolvedInstruction(
@@ -208,9 +268,9 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Estimates size.
+   * Estimates size from tokenized words (mnemonic + rest-of-line operand).
    * @param {string[]} words The words.
-   * @returns {number} The result.
+   * @returns {number} Encoded size in bytes.
    */
   estimateSize(words: string[]): number {
     if (words.length === 0) {
@@ -228,12 +288,18 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Estimates resolved instruction.
+   * Size for a resolved mnemonic/operand. SEP/REP is applied here too so a
+   * following immediate in the same estimate pass sees the new M/X width.
+   *
+   * Asar quirk: `NOP #$n` (and other implied ops with `#`) is a repeat count,
+   * not an immediate - size is `n` bytes of the same opcode.
+   * `ASL #$n` is the same for shift/inc/dec (repeat the accumulator form).
+   *
    * @param {string} mnemonic The mnemonic.
    * @param {string} rawOperand The raw operand.
-   * @param {string} operand The operand.
-   * @param {number} operandLength The operand length.
-   * @returns {number} The result.
+   * @param {string} operand Expanded operand.
+   * @param {number} operandLength Inferred operand width.
+   * @returns {number} Encoded size in bytes.
    */
   estimateResolvedInstruction(
     mnemonic: string,
@@ -420,12 +486,13 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Encodes resolved instruction.
+   * Encodes a resolved mnemonic/operand. Width suffixes (`.b/.w/.l`) and
+   * classified modes choose among opcode tables in the `handle*` methods.
    * @param {string} mnemonic The mnemonic.
-   * @param {string} rawOperand The raw operand.
-   * @param {string} operand The operand.
-   * @param {number} operandLength The operand length.
-   * @returns {boolean} The result.
+   * @param {string} rawOperand Source operand (for `#` / indexing tests).
+   * @param {string} operand Expanded operand.
+   * @param {number} operandLength Inferred width before `.b/.w/.l`.
+   * @returns {boolean} True if this architecture handled the instruction.
    */
   encodeResolvedInstruction(
     mnemonic: string,
@@ -514,13 +581,19 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles ORA, SBC, STA, LDA, EOR, CMP, AND, ADC with all valid addressing modes.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @param {string} rawOperand The raw source operand before expansion.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
+   * {@link handleLogicAndCompareOperations}; STA has no immediate form.
+   *
+   * DP (`$xx` / `$xx,x`) is used only when `optimize dp ram|always` is on or
+   * the source spelling is explicit 1–2 digit hex. Otherwise a DP-sized value
+   * still emits absolute (Asar `optimize dp none` default).
+   *
+   * @param {string} opcode ADC, LDA, SBC, or STA.
+   * @param {string} operand Expanded operand.
+   * @param {number} len Inferred or forced operand width.
+   * @param {boolean} explicitlen True when `.b/.w/.l` forced the width.
+   * @param {string} rawOperand Source operand (immediates / indexing tests).
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleMemoryOperations(
     opcode: string,
@@ -561,7 +634,7 @@ export class Arch65816 implements ArchitectureEncoder {
       throw new Error(`Error: ${opcode} does not support immediate mode.`);
     }
 
-    // If an explicit length is specified, override the normal guess —
+    // If an explicit length is specified, override the normal guess -
     // except for DP-indirect forms whose operand width is always 1.
     if (explicitlen && !keepsFixedWidthAddressingMode(loweredOperand.mode, len)) {
       if (isIndexedMemory(loweredOperand, "x")) {
@@ -689,7 +762,7 @@ export class Arch65816 implements ArchitectureEncoder {
       }
     }
 
-    // DP Indexed, X
+    // DP,X: same optimize-dp / explicit `$xx,x` gate as non-indexed DP below.
     if (
       (this.optimizeDirectPage() || isExplicitDirectPageIndexedX) &&
       loweredOperand.indexRegister === "x" &&
@@ -899,13 +972,25 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles AND, EOR, ORA, CMP, CPX, and CPY instructions.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @param {string} [rawOperand] The raw source operand before expansion.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes AND / EOR / ORA / CMP / CPX / CPY.
+   *
+   * Unforced DP is **spelling-based**, not `optimize dp`: expanded `$xx` (exactly two
+   * hex digits) is DP even when `optimize dp none`. That diverges from
+   * {@link handleMemoryOperations} (ADC/LDA/SBC/STA), which require the optimize
+   * flag or an explicit 1–2 digit hex spelling. `$007E` is four digits → absolute.
+   *
+   * Classifier `[$nn]` is `indirectLong` and remaps to `directIndirectLong` (1-byte
+   * DP, ORA `$07`) when the table has that key. CPX/CPY omit it and throw.
+   * Forced `.l,x` is abs,x + 2 (ORA `$1D` + 2 = `$1F`). Forced `,y` is abs only
+   * (`len === 2`); this family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
+   * long / stack forms.
+   *
+   * @param {string} opcode AND, EOR, ORA, CMP, CPX, or CPY.
+   * @param {string} operand Expanded operand.
+   * @param {number} len Inferred or forced operand width.
+   * @param {boolean} explicitlen True when `.b/.w/.l` forced the width.
+   * @param {string} [rawOperand] Source operand before expansion.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleLogicAndCompareOperations(
     opcode: string,
@@ -965,6 +1050,9 @@ export class Arch65816 implements ArchitectureEncoder {
         indirectX: 0x01,
         indirectY: 0x11,
         indirect: 0x12,
+        // Same bytes as absoluteLong / absoluteLongX (ORA al / al,x). Classifier
+        // `[...]` is remapped to directIndirectLong first; these keys are the
+        // leftover path for opcodes that lack [dp] (CPX/CPY → throw).
         indirectLong: 0x0f,
         indirectLongY: 0x1f,
         stackRelative: 0x03,
@@ -1050,13 +1138,14 @@ export class Arch65816 implements ArchitectureEncoder {
       CPX: 0xec,
       CPY: 0xcc,
     };
-    // For "long" (i.e. 3-byte) addressing we assume a variant that is 2 higher than the absolute opcode:
+    // Forced `.l` non-indexed. Values are abs+2 (ORA `$0D` → `$0F`); CPX/CPY omitted.
     const absLongMap: Partial<Record<LogicOpcode, number>> = {
       AND: 0x2f,
       ORA: 0x0f,
       EOR: 0x4f,
       CMP: 0xcf,
     };
+    // Forced-size maps. CPX/CPY omitted: `.b foo,x` / `.w foo,y` throw.
     const dpXMap: Partial<Record<LogicOpcode, number>> = {
       AND: 0x35,
       ORA: 0x15,
@@ -1135,7 +1224,7 @@ export class Arch65816 implements ArchitectureEncoder {
           this.assembler.write1(forcedOpcode);
           this.assembler.write2(this.assembler.operandResolver.getnum(explicitOperand));
         } else if (len === 3) {
-          // For long indexed, assume the opcode is 2 greater than the absoluteX variant.
+          // Hardware: abs,x | 2 = long,x (ORA `$1D` + 2 = `$1F`). CPX/CPY have no abs,x.
           const forcedOpcode = absXMap[logicOpcode];
           if (forcedOpcode === undefined) {
             throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
@@ -1145,6 +1234,7 @@ export class Arch65816 implements ArchitectureEncoder {
         }
         return true;
       } else if (forcedIndexedMode === "y") {
+        // Abs,y only. `.b foo,y` / `.l foo,y` throw - no dp,y or long,y in this family.
         if (len !== 2) {
           throw new Error(`Opcode ${logicOpcode} not supported in forced indexed mode.`);
         }
@@ -1209,12 +1299,13 @@ export class Arch65816 implements ArchitectureEncoder {
       mode = "stackRelativeIndirectY";
       address = this.assembler.operandResolver.getnum(baseOperand); // Extract indirect address
     }
-    // **Direct Page Mode (e.g., ORA $00, CMP $00)**
+    // Unforced DP is expanded spelling `$xx` (2 hex digits), not `optimize dp`.
+    // A label that expands to `$12` is DP even with `optimize dp none`. `$0012` is abs.
     else if (/^\$[\dA-Fa-f]{2}$/.test(resolvedOperand)) {
       mode = "direct";
       address = this.assembler.operandResolver.getnum(resolvedOperand);
     }
-    // **Direct Page Indexed, X Mode (e.g., ORA $00,X)**
+    // **Direct Page Indexed, X Mode (e.g., ORA $00,X)** - classifier length, not optimize-dp.
     else if (loweredOperand.mode === "directPageIndexedX" && opcodes[logicOpcode].directX) {
       mode = "directX";
       address = this.assembler.operandResolver.getnum(baseOperand); // Extract DP address
@@ -1234,7 +1325,7 @@ export class Arch65816 implements ArchitectureEncoder {
       mode = "indirect";
       address = this.assembler.operandResolver.getnum(baseOperand); // Extract indirect address
     }
-    // **Direct Page Indirect Long (ORA [$00])**
+    // Classifier `[$nn]` is `indirectLong`. ALU ops remap to [dp] (`$07` family).
     else if (loweredOperand.mode === "indirectLong" && opcodes[logicOpcode].directIndirectLong) {
       mode = "directIndirectLong";
       address = this.assembler.operandResolver.getnum(baseOperand);
@@ -1247,7 +1338,7 @@ export class Arch65816 implements ArchitectureEncoder {
       mode = "directIndirectLongY";
       address = this.assembler.operandResolver.getnum(baseOperand);
     }
-    // **Indirect Long Mode (e.g., ORA [$00])**
+    // CPX/CPY miss the remap above: table has no indirectLong key → `!opcodeByte` throws.
     else if (loweredOperand.mode === "indirectLong") {
       mode = "indirectLong";
       address = this.assembler.operandResolver.getnum(baseOperand); // Extract indirect long address
@@ -1268,11 +1359,14 @@ export class Arch65816 implements ArchitectureEncoder {
     // **Write opcode & address**
     debug("handleLogicAndCompareOperations mode", mode, operand);
     const opcodeByte = opcodes[logicOpcode][mode];
+    // `!opcodeByte` also treats `$00` as missing; none of these opcodes are BRK.
     if (!opcodeByte) {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
     }
-    // Keep legacy behavior for unsupported routed modes (e.g. CPX/CPY fallback tests).
     this.assembler.write1(opcodeByte);
+    // [dp] is 1 byte. The 2-byte branch also lists `directIndirectLong`; unreachable
+    // for ALU because the first if already handled it. CPX/CPY never set that mode.
+    // abs / abs,x / abs,y → 2; long + leftover `indirectLong` keys → 3; else 1 (DP, (dp), stack).
     if (
       (opcode === "AND" ||
         opcode === "ORA" ||
@@ -1295,7 +1389,9 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles operators that do not take operands.
+   * Implied ops. `OPCODE #$n` is Asar's repeat: write the opcode `n` times.
+   * `expandOperand` may turn `#10` into `#$A`; strip `$` before parseInt.
+   * Count `0` emits nothing (still "handled").
    * @param {string} opcode The opcode to handle.
    * @param {string} operand The operand to handle.
    * @returns {boolean} True if the opcode was handled, false otherwise.
@@ -1385,13 +1481,15 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles ASL (Arithmetic Shift Left), LSR (Logical Shift Right),
-   * ROL (Rotate Left), ROR (Rotate Right), INC (Increment), and DEC (Decrement).
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes ASL / LSR / ROL / ROR / INC / DEC.
+   * Bare or `A` is accumulator. `ASL #$n` (and friends) repeats the accumulator
+   * opcode `n` times - Asar pseudo, not a DP address. `.l` is rejected.
+   *
+   * @param {string} opcode Shift, rotate, INC, or DEC.
+   * @param {string} operand Operand or empty for implied accumulator.
+   * @param {number} len Forced width when `explicitlen` is true.
+   * @param {boolean} explicitlen True when `.b/.w` forced the width.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleArithmeticOperations(
     opcode: string,
@@ -1568,12 +1666,15 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles Load X/Y Register instructions.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes LDX / LDY. Immediate width follows {@link immediateBytes} (X flag).
+   * Hardware: LDX indexes Y, LDY indexes X - there is no LDX abs,x.
+   * `.l` is rejected. Without `.b/.w`, `$xxxx` spelling or value `> $FF` picks abs.
+   *
+   * @param {string} opcode LDX or LDY.
+   * @param {string} operand Source operand.
+   * @param {number} len Inferred or forced width.
+   * @param {boolean} explicitlen True when `.b/.w` forced the width.
+   * @returns {boolean} True if LDX/LDY was encoded.
    */
   handleLoadRegister(opcode: string, operand: string, len: number, explicitlen: boolean): boolean {
     debug("handleLoadRegister", { opcode, operand, len, explicitlen });
@@ -1728,7 +1829,9 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles the JMP (Jump), JSR (Jump to Subroutine), and JSL (Jump to Subroutine Long) instructions.
+   * Handles JMP / JSR / JML / JSL, including `(addr)`, `[addr]`, and `(addr,x)`.
+   * `_bbxxxx` label names can supply a bank when the symbol value is 16-bit.
+   * JMP/JSR promote to JML/JSL when the target is outside the current bank.
    * @param {string} opcode - The opcode to handle.
    * @param {string} operand - The resolved operand to handle.
    * @param {string} rawOperand - The original source operand before expansion.
@@ -1757,6 +1860,8 @@ export class Arch65816 implements ArchitectureEncoder {
     let address = 0;
     let mode: keyof typeof jumpOpcodes;
     const hintedBank = (() => {
+      // Asar `_bbaddr` labels: first 6 hex digits after `_` are a 24-bit address.
+      // Used when the symbol value is 16-bit but the name still implies a bank.
       const simpleBankedLabel =
         symbolicOperand.startsWith("_") &&
         symbolicOperand.length >= 7 &&
@@ -1884,7 +1989,9 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles the PER (Push Effective Relative Address) instruction.
+   * PER (Push Effective Relative): encodes a 16-bit displacement as the operand
+   * value itself. Asar does not subtract PC here - authors write `label-*` or a
+   * literal offset. Adding `currentTargetAddress` double-counted and was removed.
    * @param {string} operand The operand to handle.
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
@@ -1895,7 +2002,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     const offset = this.assembler.operandResolver.getnum(operand);
-    const address = offset; // (this.assembler.currentTargetAddress + offset) & 0xFFFF; // 16-bit wraparound
+    const address = offset;
 
     this.assembler.write1(0x62); // Opcode for PER
     this.assembler.write2(address);
@@ -1904,12 +2011,14 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles STX, STY, and STZ instructions.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @returns {boolean} True if the instruction was handled, false otherwise
+   * Encodes STX / STY / STZ. STX indexes Y only (no abs,y); STY indexes X only
+   * (no abs,x). Forced `.w` on those indexed forms still emits the DP opcode.
+   *
+   * @param {string} opcode STX, STY, or STZ.
+   * @param {string} operand Source operand.
+   * @param {number} len Forced width when `explicitlen` is true.
+   * @param {boolean} explicitlen True when `.b/.w` forced the width.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleStoreOperations(
     opcode: string,
@@ -2084,7 +2193,12 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles MVN (Move Negative) and MVP (Move Positive) instructions.
+   * MVN/MVP. WDC and the hover catalog spell `dest, src`; we still write bytes
+   * in source order (first operand, then second) - Asar's wire format. Locals
+   * are named src/dest after that write order, not WDC's dest-then-src names.
+   *
+   * Hardware: opcode $54 MVN (ascending), $44 MVP (descending), then two bank bytes.
+   *
    * @param {string} opcode The opcode to handle.
    * @param {string} operand The operand to handle.
    * @returns {boolean} True if the opcode was handled, false otherwise.
@@ -2107,12 +2221,15 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles BIT, TSB, and TRB instructions, including all their addressing modes.
-   * @param {string} opcode The opcode to handle.
-   * @param {string} operand The operand to handle.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes BIT / TSB / TRB. TSB/TRB have no immediate or `,x`.
+   * Unforced `BIT #$0000` is 16-bit because the source spelling is 6 chars
+   * (`#$` + 4 hex digits), not because the value needs a word.
+   *
+   * @param {string} opcode BIT, TSB, or TRB.
+   * @param {string} operand Source operand.
+   * @param {number} len Forced width when `explicitlen` is true.
+   * @param {boolean} explicitlen True when `.b/.w` forced the width.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleBitTestOperations(
     opcode: string,
@@ -2261,13 +2378,16 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles generic opcodes with standard addressing.
-   * @param {string} opcode The opcode to handle.
-   * @param {number} num The operand value.
-   * @param {number} len The length of the operand.
-   * @param {boolean} explicitlen Whether the operand length is explicit.
-   * @param {boolean} hexconstant Whether the operand is a hex constant.
-   * @returns {boolean} True if the opcode was handled, false otherwise.
+   * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
+   * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
+   * `hexconstant` is diagnostic-only (non-hex immediates log "assuming 8-bit").
+   *
+   * @param {string} opcode Candidate mnemonic.
+   * @param {number} num Already-evaluated operand value.
+   * @param {number} len Inferred width (REP/SEP range check).
+   * @param {boolean} explicitlen Whether a suffix forced the width.
+   * @param {boolean} hexconstant True when the operand spelling starts with `$` or `%`.
+   * @returns {boolean} True if this family handled the opcode.
    */
   handleGenericOpcode(
     opcode: string,
@@ -2310,7 +2430,9 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handle Branch Instructions
+   * Relative branches. `$xx` (1–2 hex digits) is a raw displacement, not a
+   * target - same Asar rule as Super FX. `+`/`-` unnamed labels resolve from
+   * the instruction *after* the branch (PC+2 or PC+3 for BRL).
    * @param {string} opcode The opcode to handle.
    * @param {string} operand The operand to handle.
    * @returns {boolean} True if the opcode was handled, false otherwise.
@@ -2425,10 +2547,13 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Handles bit manipulation instructions (TSB, TRB) with both absolute and direct page addressing modes.
-   * @param {string} opcode (TSB or TRB)
-   * @param {string} operand (absolute or direct)
-   * @returns {boolean} true if the instruction was handled, false otherwise
+   * Fallback TSB/TRB encoder (tests call this directly). Live encode uses
+   * {@link handleBitTestOperations}. `$` + 4 hex digits (`operand.length === 5`)
+   * is treated as absolute even if the value fits in a byte.
+   *
+   * @param {string} opcode TSB or TRB.
+   * @param {string} operand Absolute or direct-page address.
+   * @returns {boolean} True if TSB/TRB was encoded.
    */
   handleMemoryBitInstructions(opcode: string, operand: string): boolean {
     debug("handleMemoryBitInstructions", opcode, operand);
@@ -2481,9 +2606,11 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Resolves the operand length from opcode suffix.
+   * `.b` = 1, `.w` = 2, `.l` = 3. `.d` (32-bit) is accepted but deprecated -
+   * 65816 has no 32-bit immediate; callers treat it as width 4 for PEA-like repeats.
    * @param {string} c The opcode suffix to resolve the length of.
    * @returns {number} The operand length.
+   * @throws {Error} If the opcode length is invalid.
    */
   getlenfromchar(c: string): number {
     debug("getlenfromchar", c);

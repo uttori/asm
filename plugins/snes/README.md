@@ -152,7 +152,7 @@ Environment and target are required. `new Assembler()` without them is not short
 
 ## Your first SNES image
 
-Here is the smallest useful kind of Hello World: a self-contained LoROM that boots and puts `HELLO WORLD` on the television. It does not rely on a BIOS, operating system, text routine, DMA helper, or external font. The trade-off is rather charmingly SNES-shaped—we must supply eight tiny letter tiles and tell the PPU where every piece lives. There is no `printf` waiting behind the curtain.
+Here is the smallest useful kind of Hello World: a self-contained LoROM that boots and puts `HELLO WORLD` on the television. It does not rely on a BIOS, operating system, text routine, DMA helper, or external font. The trade-off is rather charmingly SNES-shaped-we must supply eight tiny letter tiles and tell the PPU where every piece lives. There is no `printf` waiting behind the curtain.
 
 Save the complete listing as `hello-world.asm`:
 
@@ -165,7 +165,7 @@ lorom                         ; Map CPU $00:8000-$00:FFFF to this ROM.
 org $008000                   ; The reset routine begins at CPU $00:8000.
 Reset:
   sei                         ; Mask IRQ while the machine is being prepared.
-  cld                         ; Binary arithmetic, please—no decimal surprises.
+  cld                         ; Binary arithmetic, please-no decimal surprises.
   clc                         ; Clear carry so XCE will select native mode.
   xce                         ; Leave 6502 emulation mode for 65C816 native mode.
   rep #$30                    ; Make A, X, and Y 16-bit for setup and long loops.
@@ -185,7 +185,7 @@ Reset:
   stz $420C                   ; HDMAEN: make sure no H-DMA channel is active.
 
   ; Configure one modest background layer. Mode 0 gives BG1 four colors per tile,
-  ; which is plenty for white letters on black—very public-access television.
+  ; which is plenty for white letters on black-very public-access television.
   stz $2105                   ; BGMODE: Mode 0, every background uses 8x8 tiles.
   stz $2107                   ; BG1SC: 32x32 tilemap at VRAM word address $0000.
   lda #$01
@@ -563,7 +563,7 @@ bra .again
   nop
 ```
 
-Super FX ALT variants are emitted automatically for mnemonics such as `ADC`, `BIC`, `UMULT`, `STB`, and `LDB`; explicit `ALT1`, `ALT2`, and `ALT3` remain available. Register constraints are checked—for example, jumps use `R8` through `R13`, while increment/decrement top out at `R14`.
+Super FX ALT variants are emitted automatically for mnemonics such as `ADC`, `BIC`, `UMULT`, `STB`, and `LDB`; explicit `ALT1`, `ALT2`, and `ALT3` remain available. Register constraints are checked-for example, jumps use `R8` through `R13`, while increment/decrement top out at `R14`.
 
 One compatibility wrinkle deserves a spotlight. Hardware encodes short `LMS`/`SMS` addresses as a word index (`address >> 1`). Asar writes the raw low byte. The plugin defaults to hardware-correct behavior. Set `asarSuperFxMoveShortAddress: true` only when reproducing Asar bytes is the actual goal, perhaps because a 1997 toolchain has become part of the archaeological site.
 
@@ -586,7 +586,7 @@ A SNES CPU address is not a file offset. The cartridge decoder maps portions of 
 
 The default is `lorom`. Mapper switches are allowed during a source file and are exercised by [`mappers.asm`](../../fixtures/asar/tests/mappers.asm), although real projects are usually easier to reason about with one map per output.
 
-`fastrom` is currently an accepted no-op. It does not alter mapping, the internal header byte, or any generated timing property. FastROM is a cartridge and CPU timing concern—see the wiki's [FastROM tutorial](https://wiki.superfamicom.org/programming-with-fast-roms-for-lorom-mapping)—so set the ROM header and runtime registers as your program requires.
+`fastrom` is currently an accepted no-op. It does not alter mapping, the internal header byte, or any generated timing property. FastROM is a cartridge and CPU timing concern-see the wiki's [FastROM tutorial](https://wiki.superfamicom.org/programming-with-fast-roms-for-lorom-mapping)-so set the ROM header and runtime registers as your program requires.
 
 `sa1rom` optionally accepts four decimal bank selectors:
 
@@ -843,7 +843,7 @@ check title
 assert read1($00FFD5) == $20, "Expected LoROM header"
 ```
 
-When patching, these functions read `baseImage`; on a fresh build they read the current output buffer. The distinction between `canread*` range positions and mapped `read*` logical addresses is deliberate documentation of the current implementation—do not silently substitute one for the other.
+When patching, these functions read `baseImage`; on a fresh build they read the current output buffer. The distinction between `canread*` range positions and mapped `read*` logical addresses is deliberate documentation of the current implementation-do not silently substitute one for the other.
 
 ### User functions
 
@@ -1304,7 +1304,7 @@ That narrows the investigation but does not settle it. Check the compatibility l
 
 ## Instruction catalogs
 
-These tables come from the same descriptors used by hover and completion. They list canonical accepted operand spellings; the encoders also recognize fixture-backed aliases and size-forced variants described above. For opcode bytes, processor flags, timing, and silicon behavior, use the linked hardware references—the assembler's catalog should not become a shaky photocopy of the data sheet.
+These tables come from the same descriptors used by hover and completion. They list canonical accepted operand spellings; the encoders also recognize fixture-backed aliases and size-forced variants described above. For opcode bytes, processor flags, timing, and silicon behavior, use the linked hardware references-the assembler's catalog should not become a shaky photocopy of the data sheet.
 
 ### 65C816 instruction catalog
 

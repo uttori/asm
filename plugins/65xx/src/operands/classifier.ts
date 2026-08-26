@@ -1,5 +1,4 @@
 import type { LoweredOperand, OperandResolutionContext } from "@uttori/asm-core";
-import { parseOperandSyntax } from "@uttori/asm-core";
 
 /**
  * Classifies baseline 6502 syntax without importing SNES addressing policy.
@@ -13,7 +12,6 @@ export function classify65xxOperand(
 ): LoweredOperand {
   const raw = operand.trim();
   const { expanded, length } = resolver.expandOperand(raw);
-  const syntax = parseOperandSyntax(raw);
   const normalized = expanded.trim();
   const normalizedUpper = normalized.toUpperCase();
 
@@ -71,6 +69,7 @@ export function classify65xxOperand(
     } else if (indexed) {
       const register = indexed[2].toLowerCase();
       if (register === "s") mode = "stackRelative";
+      // `,z` without parens/brackets is not a 65xx mode we encode.
       else if (register === "z") mode = "unknown";
       else if (length > 2 && register === "x") mode = "absoluteLongIndexedX";
       else mode = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register.toUpperCase()}`;
@@ -84,19 +83,27 @@ export function classify65xxOperand(
   }
 
   return {
+    // Unused
+    immediate: false,
+    // Unused
+    indirect: false,
     mode,
     baseExpression,
     registerName,
     raw,
     expanded,
     length,
-    indexRegister: syntax.indexRegister,
-    immediate: syntax.immediate,
-    indirect: syntax.indirect,
+    // 24-bit values are not 6502-legal; encoder can still emit long-x on 4510.
     metadata: length > 2 ? { addressOutOfRange: true } : undefined,
   };
 }
 
+/**
+ * Finds the first top-level comma in a string.
+ * Same idea as SPC700: BBR/BBS `zp,target` - ignore commas inside () or [].
+ * @param {string} value The string to search.
+ * @returns {number} The index of the first top-level comma.
+ */
 function findTopLevelComma(value: string): number {
   let depth = 0;
   for (let index = 0; index < value.length; index++) {

@@ -183,7 +183,7 @@ function toggleWatch(): void {
     }
     saveListener = workspace.onDidSaveTextDocument(onDocumentSaved);
     void window.showInformationMessage(
-      `Assembly: watching ${path.basename(Uri.parse(watchEntryUri).fsPath)} — rebuilding on save.`,
+      `Assembly: watching ${path.basename(Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`,
     );
   } else {
     saveListener?.dispose();
@@ -292,12 +292,12 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
       }
     } else {
       void window.showErrorMessage(
-        `Assembly: build failed — ${result?.message ?? "unknown error"}.`,
+        `Assembly: build failed - ${result?.message ?? "unknown error"}.`,
       );
     }
   } catch (error) {
     void window.showErrorMessage(
-      `Assembly: build failed — ${error instanceof Error ? error.message : String(error)}.`,
+      `Assembly: build failed - ${error instanceof Error ? error.message : String(error)}.`,
     );
   }
 }

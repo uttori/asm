@@ -1,8 +1,8 @@
 import { type ArchitectureEncoder, type ArchitectureEncoderContext, type EncoderRuntime, type InstructionDescriptor, type LoweredInstruction, type LoweredOperand } from "@uttori/asm-core";
 /**
- * Additional instructions share similar addressing forms but have unique opcodes,
- * e.g. "(X),(Y)" or "$dp,#$imm", etc. However, some instructions (like "CMP X,#imm")
- * differ in syntax. We'll handle that in code directly.
+ * Sony SPC700 encoder. Operand commas are split at top-level only so
+ * `MOV A,($12+X)` stays two operands. Address width follows hex spelling,
+ * not the resolved value - see {@link getAddressSize}.
  */
 export declare class ArchSPC700 implements ArchitectureEncoder {
     assembler: EncoderRuntime;
@@ -13,30 +13,33 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     getInstructionCatalog(): InstructionDescriptor[];
     /**
-     * Estimates instruction.
+     * Size of a lowered instruction. Must match encode so layout stays in sync.
      * @param {LoweredInstruction} instruction The instruction.
-     * @returns {number} The result.
+     * @returns {number} Encoded size in bytes.
      */
     estimateInstruction(instruction: LoweredInstruction): number;
     /**
-     * Encodes instruction.
+     * Encodes a lowered instruction.
      * @param {LoweredInstruction} instruction The instruction.
-     * @returns {boolean} The result.
+     * @returns {boolean} True if encoded.
      */
     encodeInstruction(instruction: LoweredInstruction): boolean;
     /**
-     * Estimates size.
+     * Estimates size from tokenized words.
      * @param {string[]} words The words.
-     * @returns {number} The result.
+     * @returns {number} Encoded size in bytes.
      */
     estimateSize(words: string[]): number;
     /**
-     * Estimates resolved instruction.
+     * Size for a resolved mnemonic. `.b/.w` suffixes are stripped (SPC700 width
+     * is spelling-based, not 65816 `.l`). Unknown ops return 1 so layout does
+     * not stall; encode will still reject them.
+     *
      * @param {string} mnemonic The mnemonic.
      * @param {string} operandText The operand text.
-     * @param {LoweredOperand} [loweredOperand] The lowered operand.
-     * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-     * @returns {number} The result.
+     * @param {LoweredOperand} [loweredOperand] Combined lowered operand.
+     * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+     * @returns {number} Encoded size in bytes.
      */
     estimateResolvedInstruction(mnemonic: string, operandText: string, loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): number;
     /**
@@ -64,84 +67,82 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     encode(words: string[]): boolean;
     /**
-     * Encodes resolved instruction.
-     * @param {string} mnemonic The mnemonic.
-     * @param {string[]} operands The operands.
-     * @param {LoweredOperand} [loweredOperand] The lowered operand.
-     * @param {LoweredOperand[]} [loweredOperands] The lowered operands.
-     * @returns {boolean} The result.
+     * Encodes a resolved mnemonic. `.b/.w/.l` is stripped (SPC700 width is
+     * spelling-based). Dispatch is operand-count: 0/implied → 1 → 2 → numbered
+     * bit ops with a third bit argument (`AND1 C,$addr,2`).
+     *
+     * @param {string} mnemonic Raw mnemonic, possibly with a length suffix.
+     * @param {string[]} operands Split operands (already expanded when possible).
+     * @param {LoweredOperand} [loweredOperand] Combined rest-of-line operand.
+     * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
+     * @returns {boolean} True if encoded.
      */
     encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
-     * Splits by commas at top-level, ignoring any parentheses grouping.
-     * For spc700 code, we typically do not nest parentheses deeply, so a simpler approach may suffice.
-     * @param {string} text - the operand string
-     * @returns {string[]} array of operands
+     * Splits on commas outside parentheses. Does not track `[]` - SPC700 bit
+     * syntax uses `.n`, not 65816-style `[dp]`.
+     * @param {string} text The operand string.
+     * @returns {string[]} The array of operands.
      */
     splitTopLevelComma(text: string): string[];
     /**
-     * Handles single, no-operand opcodes, like NOP, BRK, etc.
-     * @param {string} opcode - the opcode
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * Implied single-byte ops (NOP, BRK, RET, flag ops, SLEEP, STOP, XCN).
+     * Returns false when the mnemonic is not in this set so other handlers can run.
+     *
+     * @param {string} opcode Uppercased mnemonic.
+     * @returns {boolean} True if a 1-byte opcode was written.
      */
     handleSingleNoOperand(opcode: string): boolean;
     /**
-     * Handle instructions that have exactly one operand
-     * e.g. ASL A, LSR A, DEC A, DEC X, DEC Y,
-     * or branches like BRA label, or bit set/clear with one operand, etc.
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @param {number | null} forcedLen - the forced length
-     * @param {boolean} explicitlen - the explicit length
-     * @param {LoweredOperand} loweredOperand - optional lowered metadata
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * One-operand dispatch: shift/inc/dec, SET/CLR bits, relative branches,
+     * TCALL n (decimal 0–15, not `$n`), PUSH/POP, CALL/JMP/PCALL, then MUL/DIV/DAA.
+     *
+     * @param {string} opcode Uppercased mnemonic.
+     * @param {string} operand Single operand text.
+     * @param {number | null} forcedLen `.b`=1 / `.w`=2 when a suffix was present.
+     * @param {boolean} explicitlen True when `forcedLen` came from a suffix.
+     * @param {LoweredOperand} [loweredOperand] Lowered metadata for `operand`.
+     * @returns {boolean} True if encoded.
      */
     handleOneOperand(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean, loweredOperand?: LoweredOperand): boolean;
     /**
-     * Handle instructions that have exactly two operands, e.g. "ADC A,($12+X)" or "MOV $12,#$34".
-     * @param {string} opcode - the opcode
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @param {number | null} forcedLen - the forced length
-     * @param {boolean} explicitlen - the explicit length
-     * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
-     * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * Two-operand dispatch: BBS/BBC, DBNZ/CBNE, CMP/MOV X|Y, ALU memory forms,
+     * TSET/TCLR, MOV, mem.bit carry ops, then YA word ops.
+     *
+     * @param {string} opcode Uppercased mnemonic.
+     * @param {string} left Left operand.
+     * @param {string} right Right operand.
+     * @param {number | null} forcedLen `.b`=1 / `.w`=2 when a suffix was present.
+     * @param {boolean} explicitlen True when `forcedLen` came from a suffix.
+     * @param {LoweredOperand} [leftLowered] Lowered left operand.
+     * @param {LoweredOperand} [rightLowered] Lowered right operand.
+     * @returns {boolean} True if encoded.
      */
     handleTwoOperands(opcode: string, left: string, right: string, forcedLen: number | null, explicitlen: boolean, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
-     * handleWordOpsTwoOperands: covers
-     *   CMPW YA,$12  => 5A dp
-     *   ADDW YA,$12  => 7A dp
-     *   SUBW YA,$12  => 9A dp
-     *   MOVW YA,$12  => BA dp
-     *   MOVW $12,YA  => DA dp
+     * YA word ops: CMPW/ADDW/SUBW/MOVW YA,$dp and MOVW $dp,YA. DP only -
+     * `$1234` is not a documented form here (Asar tests are 8-bit).
      *
-     * According to the test file lines:
-     *   "CMPW YA,$12 => 5A 12"
-     *   "ADDW YA,$12 => 7A 12"
-     *   "SUBW YA,$12 => 9A 12"
-     *   "MOVW YA,$12 => BA 12"
-     *   "MOVW $12,YA => DA 12"
-     *
-     * The test only shows an 8-bit direct-page operand. No examples of $1234 for these instructions,
-     * so we assume DP only.
-     * @param {string} opcode - the opcode
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * @param {string} opcode Word mnemonic.
+     * @param {string} left Left operand (`YA` or `$dp`).
+     * @param {string} right Right operand (`$dp` or `YA`).
+     * @returns {boolean} True if encoded.
      */
     handleWordOpsTwoOperands(opcode: string, left: string, right: string): boolean;
     /**
-     * Handle instructions like "ADC A,(X)" or "SBC (X),(Y)", "AND A,$1234", etc.
-     * @param {string} opcode - the opcode
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @param {number | null} forcedLen - the forced length
-     * @param {boolean} explicitlen - the explicit length
-     * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
-     * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * Encodes ADC/AND/EOR/OR/SBC/CMP from {@link memOpTables}.
+     * `A,<mode>` uses {@link classifySpc700Addressing}. `(X),(Y)` is 1 byte.
+     * `dp,#imm` and `dp,dp` write the *right* operand first (hardware order),
+     * opposite of source order.
+     *
+     * @param {string} opcode ALU mnemonic.
+     * @param {string} left Left operand.
+     * @param {string} right Right operand.
+     * @param {number | null} forcedLen `.b`/`.w` override for A,dp vs A,abs.
+     * @param {boolean} explicitlen True when a suffix forced the width.
+     * @param {LoweredOperand} [leftLowered] Lowered left operand.
+     * @param {LoweredOperand} [rightLowered] Lowered right operand.
+     * @returns {boolean} True if encoded.
      */
     handleMemoryInstruction(opcode: string, left: string, right: string, forcedLen: number | null, explicitlen: boolean, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
@@ -150,146 +151,155 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * `$0030` is absolute even though 0x30 is a direct-page number.
      * @param {number} value Address to write.
      * @param {number} length 1 for direct page, 2 for absolute.
+     * @returns {void}
      */
     writeDpOrAbs(value: number, length: number): void;
     /**
-     * Classify operand for "A,(X)" style memory instructions,
-     * returning an address mode name that matches e.g. a_indirectX, a_dp, a_abs, etc.
-     * @param {string} operand - the operand
-     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-     * @returns {{ mode: string; val: number }} the address mode and value
+     * Maps an `A,<addr>` operand onto {@link memOpTables} keys.
+     * Labels keep original case so `spc_07C2+Y` still looks up. `(X)` is
+     * indirectX (no extra byte); `($dp+X)` is indirectDpX.
+     *
+     * @param {string} operand Right-hand operand of an A-destination ALU op.
+     * @param {LoweredOperand} [loweredOperand] Lowered metadata when available.
+     * @returns {{ mode: string; val: number }} Addressing mode and numeric payload.
      */
     classifySpc700Addressing(operand: string, loweredOperand?: LoweredOperand): {
         mode: "indirectX" | "indirectDpX" | "imm" | "absX" | "dpX" | "absY" | "indirectDpY" | "abs" | "dp";
         val: number;
     };
     /**
-     * Checks whether dp or abs.
-     * @param {string} operand The operand.
-     * @returns {boolean} The result.
+     * True for a hex address spelling (`$12`, `$1234`, or bare hex). Registers
+     * `A`/`X`/`Y`/`YA`/`SP` are excluded - otherwise `MOV label, A` becomes dp,dp
+     * with source `$0A`.
+     *
+     * @param {string} operand Operand text.
+     * @returns {boolean} True when the operand is a dp/abs hex address.
      */
     isDpOrAbs(operand: string): boolean;
     /**
-     * SHIFT, INC, DEC instructions. e.g. "ASL A" => 0x1C, "ASL $12+X" => 0x1B 12, etc.
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @param {number | null} forcedLen - the forced length
-     * @param {boolean} explicitlen - whether the length is explicit
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc; `DEC X`/`DEC Y` and
+     * `INC X`/`INC Y` are 1-byte register forms. `$dp+X` vs `$abs+X` follows
+     * {@link getAddressSize} (spelling), not the numeric value.
+     *
+     * @param {string} opcode Shift or inc/dec mnemonic.
+     * @param {string} operand Operand (`A`, `X`, `Y`, `$dp`, `$dp+X`, `$abs`).
+     * @param {number | null} forcedLen `.b`/`.w` override for dp vs abs.
+     * @param {boolean} explicitlen True when a suffix forced the width.
+     * @returns {boolean} True if encoded.
      */
     handleShiftIncDec(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean): boolean;
     /**
-     * Actually that's 2 "operands," but the test lumps them into a single comma-split line "BBS0 $12,Mylabel".
-     * We'll handle that in handleTwoOperands.
+     * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic; Asar also accepts
+     * `SET1 $13.7` where `.n` overrides the mnemonic digit.
      *
-     * For "SETn $12 => 0x02 12" or "CLRn $12 => 0x12 12," that's one operand + the bit # is in the opcode name.
-     * Asar also accepts `SET1 $13.7` / `CLR1 $13.7`, where the bit comes from the operand.
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * @param {string} opcode SET/CLR mnemonic with bit digit.
+     * @param {string} operand Direct-page address, optionally `$dp.n`.
+     * @returns {boolean} True if encoded.
      */
     handleBitSetClear(opcode: string, operand: string): boolean;
     /**
-     * BPL / BMI / BVC / BVS / BCC / BCS / BNE / BEQ / BRA => 1 operand (the label).
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * Relative branches (BPL…BRA). Opcode is written first, so the displacement
+     * is `target - (pc + 1)` - equivalent to `target - (start + 2)` before the
+     * write. `+`/`-` unnamed labels use that same post-opcode PC.
+     *
+     * @param {string} opcode Branch mnemonic.
+     * @param {string} operand Label, `$xx`, or `+`/`-` unnamed label.
+     * @returns {boolean} True if encoded.
      */
     handleBranch(opcode: string, operand: string): boolean;
     /**
-     * BBSn / BBCn / wiki-native `BBS $dp.n`: e.g. "BBC0 $12,Mylabel => 13 12 FF",
-     * "BBS $12.3,L => 63 12 FF". Bit comes from `$dp.n` if present, else the mnemonic digit.
-     * That logic is in handleTwoOperands because we have two comma-split sections.
-     * @param {string} opcode - the opcode
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * BBS/BBC `$dp,label`. Bit from `$dp.n` if present, else the mnemonic digit
+     * (`BBS3`). Wiki-native `BBS $12.3,L` has no digit in the mnemonic.
+     *
+     * @param {string} opcode BBS/BBC, optionally with a bit digit.
+     * @param {string} left Direct-page operand (`$dp` or `$dp.n`).
+     * @param {string} right Branch target.
+     * @returns {boolean} True if encoded.
      */
     handleTwoOperandsBitBranch(opcode: string, left: string, right: string): boolean;
     /**
-     * e.g. DBNZ Y,Mylabel => FE offset, DBNZ $dp,Mylabel => 6E dp offset
-     * also "CBNE $dp+X,Mylabel => DE dp offset" or "CBNE $dp,Mylabel => 2E dp offset"
-     * @param {string} opcode - the opcode
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
-     * @param {LoweredOperand} _rightLowered - optional lowered metadata for the right operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * DBNZ Y,label (2 bytes) vs DBNZ $dp,label (3 bytes). CBNE is always 3 bytes:
+     * `$dp` or `$dp+X`.
+     *
+     * @param {string} opcode DBNZ or CBNE.
+     * @param {string} left Register, `$dp`, or `$dp+X`.
+     * @param {string} right Branch target.
+     * @param {LoweredOperand} [leftLowered] Lowered left operand.
+     * @param {LoweredOperand} [_rightLowered] Unused; kept for call-site symmetry.
+     * @returns {boolean} True if encoded.
      */
     handleDbnzCbne(opcode: string, left: string, right: string, leftLowered?: LoweredOperand, _rightLowered?: LoweredOperand): boolean;
     /**
-     * handle push/pop with single operand => e.g. PUSH A => 0x2D, PUSH X => 0x4D, etc.
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * PUSH/POP A, X, Y, or P (PSW). No `(X)` form.
+     *
+     * @param {string} opcode PUSH or POP.
+     * @param {string} operand Register name.
+     * @param {LoweredOperand} [loweredOperand] Lowered register operand.
+     * @returns {boolean} True if encoded.
      */
     handlePushPop(opcode: string, operand: string, loweredOperand?: LoweredOperand): boolean;
     /**
-     * handle call/jump instructions with single operand => e.g. "CALL $1234", "PCALL $12"
-     * "JMP $1234", "JMP ($1234+X)"
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * CALL `$abs` (3F), PCALL `$dp` (4F page-zero), JMP `$abs` (5F) or
+     * JMP `($abs+X)` (1F). JMP indirect uses a 16-bit pointer, not DP.
+     *
+     * @param {string} opcode CALL, PCALL, or JMP.
+     * @param {string} operand Target or `($abs+X)`.
+     * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
+     * @returns {boolean} True if encoded.
      */
     handleCallJump(opcode: string, operand: string, loweredOperand?: LoweredOperand): boolean;
     /**
-     * handle "CMP X,#$12" or "CMP X,$1234" or "MOV X,#$12" or "MOV Y,#$12" etc.
-     * We see from the test code lines like:
-     *  CMP X,#$12 => C8 12
-     *  CMP X,$1234 => 1E 34 12
-     *  CMP X,$12 => 3E 12
-     *  MOV X,#$12 => CD 12
-     *  MOV Y,#$12 => 8D 12
+     * CMP/MOV with X or Y on the left (`CMP X,#$12`, `MOV Y,$1234`).
+     * `operand` is `left,right` joined - a leftover from the one-operand path.
      *
-     * We'll unify them here.
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @param {number | null} forcedLen - the forced length
-     * @param {boolean} explicitlen - whether the length is explicit
-     * @param {LoweredOperand} leftLowered - optional lowered metadata for the left operand
-     * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * @param {string} opcode CMP or MOV.
+     * @param {string} operand Combined `left,right` text.
+     * @param {number | null} forcedLen `.b`/`.w` override for dp vs abs.
+     * @param {boolean} explicitlen True when a suffix forced the width.
+     * @param {LoweredOperand} [leftLowered] Lowered left operand.
+     * @param {LoweredOperand} [rightLowered] Lowered right operand.
+     * @returns {boolean} True if encoded.
      */
     handleCmpXyOrMovXy(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
-     * TSET / TCLR => e.g. "TSET $1234,A" => 0x0E 34 12
-     * @param {string} opcode - the opcode
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @param {LoweredOperand} rightLowered - optional lowered metadata for the right operand
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * TSET/TCLR `$abs,A` - always 16-bit absolute, even for `$12`. Right must be A.
+     *
+     * @param {string} opcode TSET or TCLR.
+     * @param {string} left Absolute address.
+     * @param {string} right Must classify as A.
+     * @param {LoweredOperand} [rightLowered] Lowered right operand.
+     * @returns {boolean} True if encoded.
      */
     handleTsetTclr(opcode: string, left: string, right: string, rightLowered?: LoweredOperand): boolean;
     /**
-     * handle e.g. "MOV X,A" or "MOV (X+),A" or "MOV $12,#$34".
-     * Some are covered by memory instructions if the left side is A.
-     * This function focuses on the big variety from the test lines.
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @param {number | null} forcedLen - the forced length
-     * @param {boolean} explicitlen - whether the length is explicit
-     * @returns {boolean} true if the instruction was handled, false otherwise
+     * MOV register pairs, then A/X/Y ↔ memory. `.b`/`.w` on `MOV.w A,$0000`
+     * forces abs even when the hex is 4 digits of zeros. Remaining indexed
+     * forms go to {@link handleMovMemoryCombo} / {@link handleMovMemoryCombo2}.
+     *
+     * @param {string} left Left operand.
+     * @param {string} right Right operand.
+     * @param {number | null} forcedLen `.b`=1 / `.w`=2 when a suffix was present.
+     * @param {boolean} explicitlen True when `forcedLen` came from a suffix.
+     * @returns {boolean} True if encoded.
      */
     handleMovInstruction(left: string, right: string, forcedLen: number | null, explicitlen: boolean): boolean;
     /**
-     * handle combos like "MOV ($12+X),A => 0xC7 12"
-     * or "MOV ($12)+Y,A => 0xD7 12"
-     * or "MOV A,($12+X) => 0xE7 12"
-     * or "MOV A,($12)+Y => 0xF7 12"
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @returns {boolean} true if the combo was handled, false otherwise
+     * MOV `(dp+X)` / `(dp)+Y` ↔ A. Parentheses are optional in the regex so
+     * `$12+X,A` can still match C7 - combo2 handles the abs+X variants.
+     *
+     * @param {string} left Left operand.
+     * @param {string} right Right operand.
+     * @returns {boolean} True if encoded.
      */
     handleMovMemoryCombo(left: string, right: string): boolean;
     /**
-     * handle combos like "MOV $1234+X,A => 0xD5 34 12", "MOV $12+X,A => 0xD4 12", etc.
-     * or "MOV A,$1234+X => 0xF5 34 12" etc.
-     * or "MOV $12+Y,X => 0xD9 12", etc.
-     * @param {string} left - the left operand
-     * @param {string} right - the right operand
-     * @returns {boolean} true if the combo was handled, false otherwise
+     * MOV `$addr+X|+Y` ↔ A/X/Y. Width from {@link getAddressSize} on the base
+     * expression (`$12+X` vs `$1234+X`). Skips anything with parentheses
+     * (those belong to {@link handleMovMemoryCombo}).
+     *
+     * @param {string} left Left operand.
+     * @param {string} right Right operand.
+     * @returns {boolean} True if encoded.
      */
     handleMovMemoryCombo2(left: string, right: string): boolean;
     /**
@@ -307,24 +317,29 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     handleBitManipulation(opcode: string, left: string, right: string, explicitBitText?: string): boolean;
     /**
-     * handle instructions with 1 operand that didn't match the prior sets, e.g. "DAA A => DF," "DAS A => BE," "MUL YA => CF," "DIV YA,X => 9E"
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @returns {boolean} true if the combo was handled, false otherwise
+     * DAA A, DAS A, MUL YA, DIV YA,X, then DECW/INCW `$dp`. DIV is passed as
+     * `"YA,X"` from {@link handleTwoOperands} via join - still one "operand" here.
+     *
+     * @param {string} opcode Special mnemonic.
+     * @param {string} operand Register combo or `$dp`.
+     * @returns {boolean} True if encoded.
      */
     handleSingleOperandSpecial(opcode: string, operand: string): boolean;
     /**
-     * e.g. "DECW $12 => 1A 12", "INCW $12 => 3A 12", "CMPW YA,$12 => 5A ???" => That's 2 operands though
-     * We'll handle the single-operand forms: DECW dp => 1A dp, INCW dp => 3A dp
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @returns {boolean} true if the combo was handled, false otherwise
+     * DECW/INCW `$dp` only. YA word ops with two operands are
+     * {@link handleWordOpsTwoOperands}.
+     *
+     * @param {string} opcode DECW or INCW.
+     * @param {string} operand Direct-page address.
+     * @returns {boolean} True if encoded.
      */
     handleWordOps(opcode: string, operand: string): boolean;
     /**
-     * Resolves the operand length from opcode suffix.
-     * @param {string} c - the opcode suffix
-     * @returns {number} the operand length
+     * `.b`=1, `.w`=2, `.l`=3. `.d` is accepted (deprecated) but SPC700 never
+     * emits 32-bit immediates - callers treat 4 as "not dp".
+     *
+     * @param {string} c Length suffix character.
+     * @returns {number} Operand width in bytes.
      */
     getlenfromchar(c: string): number;
 }

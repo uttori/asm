@@ -1,14 +1,40 @@
 import type { AssemblerPlugin, PluginActivationContext } from "@uttori/asm-core/plugin";
+/** Flat 16-bit raw binary target (`65xx`, `6502-raw` aliases). */
 export declare const RAW_65XX_TARGET_ID = "65xx.raw";
+/** Identity map: logical address − origin = file offset. */
 export declare const FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 export declare const RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
+/** Resets PC to `origin` at the start of each assembly stage. */
 export declare const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
+/**
+ * Raw-target options. `origin` is both the initial PC and file offset 0
+ * (`{ origin: 32768 }` → `org $8000` with no 32 KiB prefix).
+ */
 export interface Raw65xxTargetOptions extends Readonly<Record<string, unknown>> {
     readonly origin: number;
 }
+/**
+ * Validates target options. Unknown keys throw; omitted object → `{ origin: 0 }`.
+ *
+ * @param {unknown} configured Plugin/target options object.
+ * @returns {Raw65xxTargetOptions} Normalized options.
+ */
 export declare function createRaw65xxTargetOptions(configured: unknown): Raw65xxTargetOptions;
+/**
+ * Registers NMOS/CMOS/Commodore/MEGA65 architectures plus the flat raw target.
+ * Used by the plugin `activate` hook and by tests that want contributions
+ * without constructing a full plugin object.
+ *
+ * @param {PluginActivationContext} context Plugin activation context.
+ */
 export declare function register65xxContributions(context: PluginActivationContext): void;
 declare const plugin: AssemblerPlugin<Raw65xxTargetOptions>;
+/**
+ * Activates this plugin and freezes a reusable host environment.
+ *
+ * @param {unknown} options Raw-target options (`origin`, …).
+ * @returns {Promise<AssemblerEnvironment>} Frozen assembler environment.
+ */
 export declare function create65xxAssemblerEnvironment(options?: unknown): Promise<import("@uttori/asm-core").AssemblerEnvironment>;
 export default plugin;
 export { Arch65xx, materializeOpcodeForm } from "./architecture.js";

@@ -9,6 +9,11 @@ import {
 } from "./schema.js";
 import { variantFormsByCpuId } from "./variants.js";
 
+/**
+ * 16×16 NMOS 6502 decode grid (row = high nibble, column = low nibble).
+ * Each cell is `MNEMONIC:mode`. Undocumented opcodes stay in the table so
+ * `65xx.6502x` can assemble them; `65xx.6502` filters to `legalOpcodes`.
+ */
 const rows = [
   "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
   "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
@@ -28,6 +33,7 @@ const rows = [
   "BEQ:rel SBC:iny JAM:imp ISC:iny NOP:zpx SBC:zpx INC:zpx ISC:zpx SED:imp SBC:aby NOP:imp ISC:aby NOP:abx SBC:abx INC:abx ISC:abx",
 ] as const;
 
+/** WDC/ca65 short mode tags used in {@link rows}. */
 const modeNames: Readonly<Record<string, AddressingMode>> = {
   imp: "implied",
   acc: "accumulator",
@@ -44,6 +50,7 @@ const modeNames: Readonly<Record<string, AddressingMode>> = {
   rel: "relative",
 };
 
+/** Documented NMOS opcodes (151). Everything else is unofficial / JAM. */
 const legalOpcodes = new Set([
   0x00, 0x01, 0x05, 0x06, 0x08, 0x09, 0x0a, 0x0d, 0x0e, 0x10, 0x11, 0x15, 0x16, 0x18, 0x19, 0x1d,
   0x1e, 0x20, 0x21, 0x24, 0x25, 0x26, 0x28, 0x29, 0x2a, 0x2c, 0x2d, 0x2e, 0x30, 0x31, 0x35, 0x36,
@@ -57,6 +64,7 @@ const legalOpcodes = new Set([
   0xf1, 0xf5, 0xf6, 0xf8, 0xf9, 0xfd, 0xfe,
 ]);
 
+/** Alternate mnemonics accepted as aliases of the canonical unofficial names. */
 const aliases: Readonly<Record<string, readonly string[]>> = {
   ALR: ["ASR"],
   ANC: ["AAC"],
@@ -74,6 +82,10 @@ const aliases: Readonly<Record<string, readonly string[]>> = {
   TAS: ["SHS"],
 };
 
+/**
+ * Unofficial opcodes whose result depends on analog bus behavior / die revision.
+ * We still emit a ca65-compatible byte; we do not promise runtime semantics.
+ */
 const unstable = new Set([
   "ANE:immediate",
   "LAX:immediate",
@@ -134,13 +146,20 @@ for (const form of mutableForms) {
 }
 for (const group of groups.values()) {
   const preferred = group.find((form) => form.documented) ?? group[0];
+  // Duplicate encodings (e.g. unofficial NOP mirrors): prefer the documented
+  // opcode when assembling; the full decode table still lists every cell.
   if (preferred) preferred.canonical = true;
 }
 
+/** Frozen 256-entry NMOS decode table (one form per opcode byte). */
 export const nmos6502DecodeTable: readonly InstructionForm[] = Object.freeze(
   mutableForms.map((form) => Object.freeze({ ...form })),
 );
 
+/**
+ * ca65-guide BRK signature: `BRK #$nn` / zp / abs all emit `$00` + one byte.
+ * Pinned ca65 V2.19 rejects this; we keep it for current-guide compatibility.
+ */
 const brkSignatureForms: readonly InstructionForm[] = Object.freeze(
   (["immediate", "zeroPage", "absolute"] as const).map<InstructionForm>((mode) => ({
     opcode: 0x00,
@@ -157,11 +176,13 @@ const brkSignatureForms: readonly InstructionForm[] = Object.freeze(
   })),
 );
 
+/** Documented NMOS assembly forms, plus BRK signature extensions. */
 export const nmos6502Forms = Object.freeze([
   ...nmos6502DecodeTable.filter((form) => form.documented && form.canonical),
   ...brkSignatureForms,
 ]);
 
+/** Documented + unofficial canonical forms (`65xx.6502x`). */
 export const nmos6502xForms = Object.freeze([
   ...nmos6502DecodeTable.filter((form) => form.canonical),
   ...brkSignatureForms,
@@ -181,6 +202,12 @@ export const nmos6502xCpu: CpuDefinition = Object.freeze({
   features: new Set<CpuFeature>(["nmos", "undocumented"]),
 });
 
+/**
+ * Looks up the NMOS decode-table form for a byte.
+ *
+ * @param {number} opcode Opcode 0–255.
+ * @returns {InstructionForm} The form at that slot (always defined; unofficial included).
+ */
 export function getOpcodeForm(opcode: number): InstructionForm {
   if (!Number.isInteger(opcode) || opcode < 0 || opcode > 0xff) {
     throw new RangeError(`Opcode ${opcode} is outside the byte range.`);
@@ -188,12 +215,24 @@ export function getOpcodeForm(opcode: number): InstructionForm {
   return nmos6502DecodeTable[opcode];
 }
 
+/**
+ * Full decode table for a CPU: CMOS variants use generated tables;
+ * NMOS uses {@link nmos6502DecodeTable} filtered by features.
+ * @param {CpuDefinition} cpu The CPU definition.
+ * @returns {readonly InstructionForm[]} The decode table.
+ */
 export function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[] {
   const variantForms = variantFormsByCpuId[cpu.id];
   if (variantForms) return variantForms;
   return nmos6502DecodeTable.filter((form) => matchesFeatures(form.availableWhen, cpu.features));
 }
 
+/**
+ * Forms the assembler will encode (canonical only). Decode tables keep
+ * duplicate unofficial encodings; assembly does not.
+ * @param {CpuDefinition} cpu The CPU definition.
+ * @returns {readonly InstructionForm[]} The assembly forms.
+ */
 export function getCpuAssemblyForms(cpu: CpuDefinition): readonly InstructionForm[] {
   const variantForms = variantFormsByCpuId[cpu.id];
   if (variantForms) return variantForms;

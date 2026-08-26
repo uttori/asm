@@ -455,6 +455,68 @@ export const directiveCatalog: DirectiveDescriptor[] = [
     syntax: "asar version",
     group: "compat",
   },
+
+  // ca65 65816 width-state directives
+  {
+    keyword: ".a8",
+    summary: "Set accumulator width hint to 8-bit (ca65 compatible).",
+    syntax: ".a8",
+    group: "compat",
+  },
+  {
+    keyword: ".a16",
+    summary: "Set accumulator width hint to 16-bit (ca65 compatible).",
+    syntax: ".a16",
+    group: "compat",
+  },
+  {
+    keyword: ".i8",
+    summary: "Set index register width hint to 8-bit (ca65 compatible).",
+    syntax: ".i8",
+    group: "compat",
+  },
+  {
+    keyword: ".i16",
+    summary: "Set index register width hint to 16-bit (ca65 compatible).",
+    syntax: ".i16",
+    group: "compat",
+  },
+  {
+    keyword: ".accu",
+    summary: "Set accumulator width hint (ca65 alias for .a8/.a16).",
+    syntax: ".accu 8|16",
+    group: "compat",
+  },
+  {
+    keyword: ".index",
+    summary: "Set index register width hint (ca65 alias for .i8/.i16).",
+    syntax: ".index 8|16",
+    group: "compat",
+  },
+  {
+    keyword: ".smart",
+    summary: "Enable/disable automatic M/X width tracking via SEP/REP (ca65 compatible).",
+    syntax: ".smart [on|off]",
+    group: "compat",
+  },
+  {
+    keyword: ".setcpu",
+    summary: "Select a CPU by name for the current SNES target (ca65 compatible).",
+    syntax: '.setcpu "65816"',
+    group: "compat",
+  },
+  {
+    keyword: ".pushcpu",
+    summary: "Push the current CPU onto the CPU stack (ca65 compatible).",
+    syntax: ".pushcpu",
+    group: "compat",
+  },
+  {
+    keyword: ".popcpu",
+    summary: "Restore the most recently pushed CPU (ca65 compatible).",
+    syntax: ".popcpu",
+    group: "compat",
+  },
 ];
 
 /** A case-insensitive lookup map from keyword to descriptor. */

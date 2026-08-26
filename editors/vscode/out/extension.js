@@ -22920,7 +22920,7 @@ function toggleWatch() {
     }
     saveListener = import_vscode.workspace.onDidSaveTextDocument(onDocumentSaved);
     void import_vscode.window.showInformationMessage(
-      `Assembly: watching ${path.basename(import_vscode.Uri.parse(watchEntryUri).fsPath)} \u2014 rebuilding on save.`
+      `Assembly: watching ${path.basename(import_vscode.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   } else {
     saveListener?.dispose();
@@ -22984,12 +22984,12 @@ async function runBuild(documentUri, transient = false) {
       }
     } else {
       void import_vscode.window.showErrorMessage(
-        `Assembly: build failed \u2014 ${result?.message ?? "unknown error"}.`
+        `Assembly: build failed - ${result?.message ?? "unknown error"}.`
       );
     }
   } catch (error) {
     void import_vscode.window.showErrorMessage(
-      `Assembly: build failed \u2014 ${error instanceof Error ? error.message : String(error)}.`
+      `Assembly: build failed - ${error instanceof Error ? error.message : String(error)}.`
     );
   }
 }

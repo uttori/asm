@@ -71,10 +71,19 @@ export const snesRomAddressSpace: TargetAddressSpace = {
     }
     return prefix | newAddress;
   },
+  /**
+   * CPU bus → ROM file offset. Returns `-1` for WRAM, SRAM, or unmapped holes.
+   * Formulas match Asar's `snestopc` (not a hardware bus trace).
+   *
+   * @param {number} address The address to convert.
+   * @param {AddressSpaceContext} context The address space context.
+   * @returns {number} The output offset.
+   */
   toOutputOffset(address, context) {
     if (address < 0 || address > 0xffffff) return -1;
 
     if (context.mapper === "lorom") {
+      // $7E/7F WRAM, $00-3F/$80-BF low 32K (system), $70-7D SRAM - not ROM.
       if (
         (address & 0xfe0000) === 0x7e0000 ||
         (address & 0x408000) === 0x000000 ||
@@ -82,18 +91,21 @@ export const snesRomAddressSpace: TargetAddressSpace = {
       ) {
         return -1;
       }
+      // 32 KiB banks: drop A15, pack A22-16 into file bits 21-15.
       return ((address & 0x7f0000) >> 1) | (address & 0x7fff);
     }
     if (context.mapper === "hirom") {
       if ((address & 0xfe0000) === 0x7e0000 || (address & 0x408000) === 0x000000) {
         return -1;
       }
+      // 64 KiB banks in $C0-$FF / mirrored $40-$7D; file offset is A21-0.
       return address & 0x3fffff;
     }
     if (context.mapper === "exlorom") {
       if ((address & 0xf00000) === 0x700000 || (address & 0x408000) === 0x000000) {
         return -1;
       }
+      // LoROM packing; $00-$7F image sits at +$400000 so $80-$FF is the low 4 MiB.
       const mapped = ((address & 0x7f0000) >> 1) | (address & 0x7fff);
       return address & 0x800000 ? mapped : mapped + 0x400000;
     }
@@ -101,9 +113,11 @@ export const snesRomAddressSpace: TargetAddressSpace = {
       if ((address & 0xfe0000) === 0x7e0000 || (address & 0x408000) === 0x000000) {
         return -1;
       }
+      // Fast HiROM ($80+) is the low 4 MiB; slow ($00-$7D) is the high 4 MiB.
       return (address & 0x800000) === 0 ? (address & 0x3fffff) | 0x400000 : address & 0x3fffff;
     }
     if (context.mapper === "sfxrom") {
+      // Super FX: $60-$7D GSU RAM, $80+ unused, low 32K system - unmapped.
       if (
         (address & 0x600000) === 0x600000 ||
         (address & 0x408000) === 0x000000 ||
@@ -116,6 +130,7 @@ export const snesRomAddressSpace: TargetAddressSpace = {
         : ((address & 0x7f0000) >> 1) | (address & 0x7fff);
     }
     if (context.mapper === "sa1rom") {
+      // LoROM window $xx8000 uses sa1banks[A23-21]; HiROM $C0-$CF uses banks 0/1/4/5.
       if ((address & 0x408000) === 0x008000) {
         return (
           context.sa1banks[(address & 0xe00000) >> 21] |
@@ -143,6 +158,14 @@ export const snesRomAddressSpace: TargetAddressSpace = {
     }
     return context.mapper === "norom" ? address : -1;
   },
+  /**
+   * Inverse of {@link snesRomAddressSpace.toOutputOffset}: file offset → a
+   * canonical CPU address (usually the FastROM mirror). `-1` if the offset
+   * cannot exist for this mapper.
+   * @param {number} offset The offset to convert.
+   * @param {AddressSpaceContext} context The address space context.
+   * @returns {number} The canonical CPU address.
+   */
   fromOutputOffset(offset, context) {
     if (offset < 0) return -1;
     let address = offset;

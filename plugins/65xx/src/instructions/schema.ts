@@ -1,3 +1,4 @@
+/** Feature flags used by {@link FeatureExpression} to select instruction forms. */
 export type CpuFeature =
   | "nmos"
   | "undocumented"
@@ -9,6 +10,7 @@ export type CpuFeature =
   | "4510"
   | "45gs02";
 
+/** Addressing modes recognized by the 65xx classifier and encoder. */
 export type AddressingMode =
   | "implied"
   | "accumulator"
@@ -35,6 +37,7 @@ export type AddressingMode =
   | "basePageIndirectIndexedZ"
   | "quadAccumulator";
 
+/** How operand bytes are written after the opcode (and any prefixes). */
 export type OperandCodecId =
   | "none"
   | "unsigned8"
@@ -44,12 +47,17 @@ export type OperandCodecId =
   | "relative16"
   | "zero-page-relative8";
 
+/**
+ * Boolean combination of {@link CpuFeature}s. Empty `anyOf` is treated as
+ * "no restriction"; `allOf`/`noneOf` are vacuously true when omitted.
+ */
 export interface FeatureExpression {
   readonly allOf?: readonly CpuFeature[];
   readonly anyOf?: readonly CpuFeature[];
   readonly noneOf?: readonly CpuFeature[];
 }
 
+/** One encoded operand field (immediate, address, or relative target). */
 export interface OperandField {
   readonly name: string;
   readonly width: 1 | 2 | 3;
@@ -57,6 +65,10 @@ export interface OperandField {
   readonly relative?: boolean;
 }
 
+/**
+ * One assemblable (or decodable) instruction encoding.
+ * `encoding` may include MEGA65 prefixes (`42 42`, `EA`) before the opcode byte.
+ */
 export interface InstructionForm {
   readonly opcode: number;
   readonly mnemonic: string;
@@ -74,6 +86,7 @@ export interface InstructionForm {
   readonly relativeBaseOffset?: number;
 }
 
+/** A 65xx CPU variant: id, aliases, and the feature set that unlocks forms. */
 export interface CpuDefinition {
   readonly id: string;
   readonly displayName: string;
@@ -81,6 +94,13 @@ export interface CpuDefinition {
   readonly features: ReadonlySet<CpuFeature>;
 }
 
+/**
+ * Returns whether `features` satisfy `expression`.
+ *
+ * @param {FeatureExpression} expression Required / forbidden feature sets.
+ * @param {ReadonlySet<CpuFeature>} features CPU feature set.
+ * @returns {boolean} True when the form is available on this CPU.
+ */
 export function matchesFeatures(
   expression: FeatureExpression,
   features: ReadonlySet<CpuFeature>,
@@ -91,6 +111,13 @@ export function matchesFeatures(
   return true;
 }
 
+/**
+ * Default codec for a mode. Immediate/zp/stack-relative collapse to `unsigned8`;
+ * 24-bit `absoluteLongIndexedX` is the MEGA65/4510 long-x form.
+ *
+ * @param {AddressingMode} mode Addressing mode.
+ * @returns {OperandCodecId} Operand codec id.
+ */
 export function getOperandCodec(mode: AddressingMode): OperandCodecId {
   switch (mode) {
     case "implied":
@@ -116,6 +143,12 @@ export function getOperandCodec(mode: AddressingMode): OperandCodecId {
   }
 }
 
+/**
+ * Operand field list for a codec. `zero-page-relative8` is BBR/BBS: zp then rel8.
+ *
+ * @param {OperandCodecId} codec Operand codec.
+ * @returns {readonly OperandField[]} Field descriptors in emit order.
+ */
 export function getOperandFields(codec: OperandCodecId): readonly OperandField[] {
   switch (codec) {
     case "none":

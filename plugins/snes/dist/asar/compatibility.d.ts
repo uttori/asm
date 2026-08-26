@@ -54,8 +54,10 @@ export declare const encodeSuperFxMoveShortAddress: (addrVal: number, mode?: Sup
  */
 export declare const getChecksumHeaderOffset: (mapper: string) => number;
 /**
- * Calculates the 16-bit ROM checksum using the selected compatibility mode.
- * ASAR mode mirrors the trailing non-power-of-two region.
+ * Resolves the 16-bit ROM checksum. Power-of-two images (and `simple` mode)
+ * are a straight sum. Otherwise Asar mirrors the trailing non-power-of-two
+ * tail enough times to fill to the next power of two - SNES cart checksum
+ * when the ROM is 2.5/3/4.5 MiB, etc.
  * @param {number[] | Uint8Array} romdata ROM bytes.
  * @param {ChecksumMode} mode Checksum compatibility mode.
  * @returns {number} 16-bit checksum.

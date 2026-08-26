@@ -110,6 +110,8 @@
     "no-plusplus": "off",
     "no-underscore-dangle": "off",
     "no-unused-expressions": "error",
+    "no-unused-labels": "error",
+    "no-unused-private-class-members": "error",
     "no-unused-vars": [
       "error",
       {

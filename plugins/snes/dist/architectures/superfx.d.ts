@@ -8,6 +8,12 @@ type RegisterOpEncoding = {
 export declare class ArchSuperFX implements ArchitectureEncoder {
     readonly asarMoveShortAddress: () => boolean;
     assembler: EncoderRuntime;
+    /**
+     * @param {ArchitectureEncoderContext} context Encoder host.
+     * @param {() => boolean} asarMoveShortAddress Session flag for **auto-MOVE** short RAM only.
+     *   Hardware stores a word index (`addr >> 1`); Asar stores `addr & 0xff`. Explicit
+     *   `LMS`/`SMS` always encode `addr >> 1` and ignore this flag. Default is hardware.
+     */
     constructor(context: ArchitectureEncoderContext, asarMoveShortAddress?: () => boolean);
     /**
      * Returns the static Super FX instruction catalog for editor tooling.
@@ -49,37 +55,48 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      */
     encode(words: string[]): boolean;
     /**
-     * Encodes a resolved instruction.
+     * Encodes a resolved Super FX mnemonic. Implied/prefixed ops reject extra
+     * operands; unknown mnemonics return false (`unknownInstructionBehavior` is
+     * `returnFalse` so 65816 can try next).
+     *
      * @param {string} mnemonic The mnemonic.
-     * @param {string[]} operands The operands.
-     * @param {LoweredOperand} [loweredOperand] The combined lowered operand.
+     * @param {string[]} operands Split operands.
+     * @param {LoweredOperand} [loweredOperand] Combined lowered operand.
      * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
      * @returns {boolean} True if the instruction was encoded.
      */
     encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
-     * Handles implied SuperFX opcodes with no operands.
-     * @param {string} opcode - the opcode
+     * Handles implied SuperFX opcodes with no operands (STOP, NOP, ALT1, …) and
+     * two-byte prefixed ops (PLOT, SWAP, …) from PREFIXED_OPCODES.
+     * @param {string} opcode Uppercased mnemonic.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     handleSingleWordOpcode(opcode: string): boolean;
     /**
-     * Handles instructions with a single operand (e.g., "TO R1", "BRA label").
-     * @param {string} opcode - the opcode
-     * @param {string} operand - the operand
-     * @param {number} operandLength - the length of the operand
-     * @param {LoweredOperand} loweredOperand - optional lowered operand metadata
+     * Single-operand Super FX: short branches (`$XX` is a raw offset; labels stay
+     * PC-relative), then register / `#0`–`#15` / `(Rn)` ops.
+     * @param {string} opcode Uppercased mnemonic.
+     * @param {string} operand The operand.
+     * @param {number} operandLength Logged only; encoded size is fixed per opcode family.
+     * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     handleOneOperandOpcode(opcode: string, operand: string, operandLength: number, loweredOperand?: LoweredOperand): boolean;
     /**
-     * Handles instructions with two operands (e.g., MOVE r1, r2).
-     * @param {string} opcode - the opcode
-     * @param {string} leftOp - the left operand
-     * @param {string} rightOp - the right operand
-     * @param {LoweredOperand} leftLowered - optional lowered metadata for left operand
-     * @param {LoweredOperand} rightLowered - optional lowered metadata for right operand
-     * @returns {boolean} True if the instruction was handled, false otherwise.
+     * Two-operand Super FX: MOVE/MOVES register pairs, IBT/IWT/`MOVE Rn,#imm`
+     * (signed-byte → IBT), MOVEB/MOVEW via `(Rn)`, then LM/LMS/LEA/SM/SMS and
+     * auto-MOVE RAM. `(R0)` omits TO/FROM because B/D already default to R0.
+     *
+     * Explicit `LMS`/`SMS` always store `addr >> 1`. Auto-`MOVE` short form uses
+     * {@link moveShortAddressByte} (honors Asar compat). LEA is IWT-shaped: no ALT1.
+     *
+     * @param {string} opcode Uppercased mnemonic.
+     * @param {string} leftOp Left operand.
+     * @param {string} rightOp Right operand.
+     * @param {LoweredOperand} [leftLowered] Lowered left operand.
+     * @param {LoweredOperand} [rightLowered] Lowered right operand.
+     * @returns {boolean} True if encoded.
      */
     handleTwoOperandOpcode(opcode: string, leftOp: string, rightOp: string, leftLowered?: LoweredOperand, rightLowered?: LoweredOperand): boolean;
     /**
@@ -107,14 +124,17 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      * Raises an error if `mid < min` or `mid > max`.
      * @param {number} min The minimum value.
      * @param {number} mid The middle value.
-     * @param {number} max The maximum value.
-     * @throws {Error} If the middle value is out of range.
+     * @param {number} max Inclusive maximum.
+     * @returns {void}
+     * @throws {Error} If `mid` is outside `[min, max]`.
      */
     rangeCheck(min: number, mid: number, max: number): void;
     /**
-     * For LMS/SMS short addressing, the address must be even and in `[0x000..0x1FE]`.
-     * @param {number} num - the address
-     * @returns {boolean} True if the address is valid.
+     * LMS/SMS require an even RAM byte address in `[0x000..0x1FE]`. Throws otherwise.
+     * Encode then stores `addr >> 1`; this check is the byte-address constraint.
+     * @param {number} num RAM byte address (not the word index).
+     * @returns {boolean} Always `true` when the address is valid.
+     * @throws {Error} If the address is odd or outside the short-RAM window.
      */
     checkShortAddr(num: number): boolean;
     /**
@@ -125,9 +145,10 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      */
     isRawBranchOffset(operand: string): boolean;
     /**
-     * Returns 1 for a 2-digit hex operand (`$XX`), otherwise 2.
-     * @param {string} operand the operand
-     * @returns {number} The operand length.
+     * Fallback width when lowering did not supply `length`. `$XX` is 1; everything else is 2.
+     * Super FX uses this for one-operand branches when `loweredOperand` is missing.
+     * @param {string} operand Operand text.
+     * @returns {number} 1 for an explicit `$XX` spelling, otherwise 2.
      */
     getOperandLength(operand: string): number;
     /**
@@ -141,13 +162,17 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
         rawOperand: string;
     };
     /**
-     * Writes a register-encoded ALU/load op, with optional ALT prefix and range check.
-     * @param {RegisterOpEncoding} encoding The encoding table entry.
-     * @param {number} register The register number.
+     * Writes optional ALT prefix then `base + register`. AND/OR/BIC/XOR reject R0
+     * (those encodings are MERGE/HIB).
+     *
+     * @param {RegisterOpEncoding} encoding Table entry (prefix, base, optional min/max).
+     * @param {number} register Register number 0–15.
+     * @returns {void}
      */
     writeRegisterOp(encoding: RegisterOpEncoding, register: number): void;
     /**
-     * Encodes the LMS/SMS operand byte for auto-MOVE short addressing.
+     * Encodes the short-RAM operand byte for **auto-MOVE** only (`MOVE Rn,(addr)` /
+     * `MOVE (addr),Rn`). Explicit LMS/SMS call `addr >> 1` directly and skip this.
      * @param {number} addrVal Even RAM byte address below `$200`.
      * @returns {number} Hardware word index, or Asar's raw byte when compat is enabled.
      */

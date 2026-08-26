@@ -568,7 +568,7 @@ export function signatureHelpFor(lineText: string, index: WorkspaceIndex): Signa
     const signatures = instruction.modes.map((mode) =>
       SignatureInformation.create(
         `${instruction.mnemonic} ${mode.syntax}`.trim(),
-        `${mode.mode}${instruction.summary ? ` — ${instruction.summary}` : ""}`,
+        `${mode.mode}${instruction.summary ? ` - ${instruction.summary}` : ""}`,
       ),
     );
     return { signatures, activeSignature: 0 };
@@ -899,7 +899,7 @@ function identifierNameAt(
  * @returns {string} The Markdown documentation.
  */
 function renderSymbolDocs(symbol: AssemblySymbolDefinition): string {
-  const lines = [`**${symbol.name}** — ${symbol.kind}`];
+  const lines = [`**${symbol.name}** - ${symbol.kind}`];
   if (symbol.containerName) {
     lines.push("", `In \`${symbol.containerName}\``);
   }

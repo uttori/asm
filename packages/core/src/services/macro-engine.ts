@@ -785,7 +785,7 @@ export class MacroEngine {
 
     // Define assignments inside a macro `if` must take effect before the next
     // expanded `if !TEMP1 == !TRUE`. processCommand would buffer them in the
-    // incremental if-tree until endif. Do not eager-apply inside while/for —
+    // incremental if-tree until endif. Do not eager-apply inside while/for -
     // v140features uses `while`…`endif` in macros and those `#=` updates must
     // stay in the loop body.
     const isDefineAssignment = /^!\w+\s*(?:#=|\+=|:=|\?=|=(?!=))/.test(trimmed);

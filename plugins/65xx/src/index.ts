@@ -23,15 +23,28 @@ import {
 import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
 import { classify65xxOperand } from "./operands/classifier.js";
 
+/** Flat 16-bit raw binary target (`65xx`, `6502-raw` aliases). */
 export const RAW_65XX_TARGET_ID = "65xx.raw";
+/** Identity map: logical address − origin = file offset. */
 export const FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 export const RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
+/** Resets PC to `origin` at the start of each assembly stage. */
 export const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
 
+/**
+ * Raw-target options. `origin` is both the initial PC and file offset 0
+ * (`{ origin: 32768 }` → `org $8000` with no 32 KiB prefix).
+ */
 export interface Raw65xxTargetOptions extends Readonly<Record<string, unknown>> {
   readonly origin: number;
 }
 
+/**
+ * Validates target options. Unknown keys throw; omitted object → `{ origin: 0 }`.
+ *
+ * @param {unknown} configured Plugin/target options object.
+ * @returns {Raw65xxTargetOptions} Normalized options.
+ */
 export function createRaw65xxTargetOptions(configured: unknown): Raw65xxTargetOptions {
   if (configured === undefined) return { origin: 0 };
   if (typeof configured !== "object" || configured === null || Array.isArray(configured)) {
@@ -48,6 +61,11 @@ export function createRaw65xxTargetOptions(configured: unknown): Raw65xxTargetOp
   return { origin: value };
 }
 
+/**
+ * 16-bit address space with no bank wrap; writes below `origin` are rejected.
+ * @param {TargetFactoryContext} options The target factory context.
+ * @returns {TargetAddressSpace} The address space.
+ */
 function createFlat65xxAddressSpace({ options }: TargetFactoryContext): TargetAddressSpace {
   const { origin } = createRaw65xxTargetOptions(options);
   const validate = (address: number): number => {
@@ -84,6 +102,10 @@ function createFlat65xxAddressSpace({ options }: TargetFactoryContext): TargetAd
   };
 }
 
+/**
+ * Headerless dump of the output buffer - no checksum or padding.
+ * @returns {TargetOutputFormat} The output format.
+ */
 function createRaw65xxOutputFormat(): TargetOutputFormat {
   return {
     finalize: () => undefined,
@@ -91,6 +113,13 @@ function createRaw65xxOutputFormat(): TargetOutputFormat {
   };
 }
 
+/**
+ * Registers NMOS/CMOS/Commodore/MEGA65 architectures plus the flat raw target.
+ * Used by the plugin `activate` hook and by tests that want contributions
+ * without constructing a full plugin object.
+ *
+ * @param {PluginActivationContext} context Plugin activation context.
+ */
 export function register65xxContributions(context: PluginActivationContext): void {
   for (const [cpu, forms] of [
     [nmos6502Cpu, nmos6502Forms],
@@ -103,6 +132,7 @@ export function register65xxContributions(context: PluginActivationContext): voi
       aliases: cpu.aliases,
       displayName: cpu.displayName,
       unknownInstructionBehavior: "throw",
+      // Same as 65816: `LDA $12,x` is one operand, not two.
       splitOperands: (text) => (text.trim() ? [text.trim()] : []),
       classifyOperand: ({ operands }, operand) => classify65xxOperand(operands, operand),
       createEncoder: (encoderContext) => new Arch65xx(encoderContext, cpu),
@@ -160,6 +190,12 @@ const plugin: AssemblerPlugin<Raw65xxTargetOptions> = definePlugin<Raw65xxTarget
   activate: register65xxContributions,
 });
 
+/**
+ * Activates this plugin and freezes a reusable host environment.
+ *
+ * @param {unknown} options Raw-target options (`origin`, …).
+ * @returns {Promise<AssemblerEnvironment>} Frozen assembler environment.
+ */
 export async function create65xxAssemblerEnvironment(options: unknown = {}) {
   const manager = new PluginManager();
   await manager.activatePlugins([{ plugin, options }]);

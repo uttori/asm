@@ -14,25 +14,25 @@ Requires VS Code 1.134 or newer and implements the [Language Server Protocol 3.1
 
 ## Commands
 
-- **Assembly: Build Binary** (`asm.build`) — assembles the active file with the
+- **Assembly: Build Binary** (`asm.build`) - assembles the active file with the
   selected target. Available from the command palette and the editor title run
   menu when editing an Uttori Assembly file. Unsaved buffers are
   built as-is.
-- **Assembly: Toggle Build on Save (Watch)** (`asm.toggleWatch`) — rebuilds the
+- **Assembly: Toggle Build on Save (Watch)** (`asm.toggleWatch`) - rebuilds the
   entry file (first `asm.entryPoints` value, else the active file) every time an
   assembly file is saved. A status bar item shows the
   watch state; click it to toggle.
 
 ## Settings
 
-- `asm.configFile` — optional workspace-relative path to `asm.config.json`.
-- `asm.plugins` — plugin module specifiers or `{ module, options }` objects.
-- `asm.target` — target contribution ID or alias.
-- `asm.architecture` — architecture contribution ID or alias.
-- `asm.entryPoints` — project entry-point files analysed as include roots.
-- `asm.includePaths` — extra include search paths relative to the workspace.
-- `asm.buildOutput` — output path (defaults to the target's output extension).
-- `asm.baseImage` — optional base image to patch when building.
+- `asm.configFile` - optional workspace-relative path to `asm.config.json`.
+- `asm.plugins` - plugin module specifiers or `{ module, options }` objects.
+- `asm.target` - target contribution ID or alias.
+- `asm.architecture` - architecture contribution ID or alias.
+- `asm.entryPoints` - project entry-point files analysed as include roots.
+- `asm.includePaths` - extra include search paths relative to the workspace.
+- `asm.buildOutput` - output path (defaults to the target's output extension).
+- `asm.baseImage` - optional base image to patch when building.
 
 Workspace plugin configuration is disabled in restricted workspaces. Trust the workspace to activate `asm.config.json` or `asm.plugins`; the bundled SNES target remains available before trust is granted.
 

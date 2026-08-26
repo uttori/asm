@@ -46,7 +46,7 @@ export declare const handleClearTable: ({ session }: TableDirectiveContext) => v
 /**
  * Deprecated asar `table "file"[,ltr|rtl]`. Loads `char=hex` lines into the
  * mapping table. Unlike asar we leave unmapped characters as identity instead
- * of filling a garbage sentinel — SMRPG dialogue only uses listed glyphs, and
+ * of filling a garbage sentinel - SMRPG dialogue only uses listed glyphs, and
  * remaining bank data is raw `db $xx` after `cleartable`.
  * @param {TableDirectiveContext} ctx Session with `includeSource.readFile`.
  * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.

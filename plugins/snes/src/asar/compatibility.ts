@@ -98,13 +98,15 @@ export const getChecksumHeaderOffset = (mapper: string): number => {
   return 0xffc0;
 };
 
-/**
- * Calculates the 16-bit ROM checksum using the selected compatibility mode.
- * ASAR mode mirrors the trailing non-power-of-two region.
- * @param {number[] | Uint8Array} romdata ROM bytes.
- * @param {ChecksumMode} mode Checksum compatibility mode.
- * @returns {number} 16-bit checksum.
- */
+  /**
+   * Resolves the 16-bit ROM checksum. Power-of-two images (and `simple` mode)
+   * are a straight sum. Otherwise Asar mirrors the trailing non-power-of-two
+   * tail enough times to fill to the next power of two - SNES cart checksum
+   * when the ROM is 2.5/3/4.5 MiB, etc.
+   * @param {number[] | Uint8Array} romdata ROM bytes.
+   * @param {ChecksumMode} mode Checksum compatibility mode.
+   * @returns {number} 16-bit checksum.
+   */
 export const calculateHeaderChecksum = (
   romdata: number[] | Uint8Array,
   mode: ChecksumMode,

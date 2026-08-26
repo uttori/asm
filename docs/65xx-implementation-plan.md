@@ -1,6 +1,6 @@
 # 65xx implementation plan
 
-Status: Phases 0–5 implemented; Phases 6–9 planned
+Status: Phases 0–5 and 7 implemented; Phase 6 deferred; Phases 8–9 planned
 Updated: 2026-08-26
 
 ## Outcome
@@ -346,6 +346,13 @@ pass for both variants.
 
 ### Phase 7: SNES-owned 65816 compatibility extension
 
+Implementation status: complete and verified. The SNES plugin gains ten ca65
+65816 source-compatibility directives — `.a8`, `.a16`, `.i8`, `.i16`, `.accu`,
+`.index`, `.smart`, `.setcpu`, `.pushcpu`, and `.popcpu` — and three new
+architecture aliases (`65c816`, `65802`) without disturbing the existing encoder,
+classifier, mapper, SPC block, or production hashes.  The Phase 8.1 CPU-stack
+and `.setcpu` SNES forms are also delivered here as called out by the plan.
+
 - Compare ca65's 65816 source behavior with the existing SNES `Arch65816`
   implementation and catalog without moving either into the 65xx plugin.
 - Extend the SNES plugin with the useful ca65 65816 syntax, aliases, width-state
@@ -368,7 +375,7 @@ Implement compatibility in vertical slices so real programs can be used early:
 
 1. `.setcpu`, `.pushcpu`, `.popcpu`, CPU shorthand directives, `.CPU`, and CPU
    conditional directives for every first-class 65xx architecture. The
-   corresponding 65816 forms remain part of the SNES-owned compatibility work.
+   corresponding 65816 forms are complete as part of Phase 7 (SNES-owned).
 2. ca65 number formats, unary low/high/bank operators, force-address-size
    syntax, pseudo-functions, and symbol assignment.
 3. dotted directives, label forms, cheap/unnamed locals, scopes, and procedures.

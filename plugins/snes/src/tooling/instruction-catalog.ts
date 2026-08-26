@@ -164,6 +164,8 @@ export const cpu65816Catalog: InstructionDescriptor[] = [
   ]),
   instruction("LSR", "Logical shift right.", shiftModes),
   instruction("MVN", "Block move next (ascending).", [
+    // Hover syntax is WDC dest,src; the encoder writes operands in source order
+    // (Asar). See Arch65816.handleBlockMove.
     { mode: "blockMove", syntax: "destBank,srcBank", opcode: 0x54, size: 3 },
   ]),
   instruction("MVP", "Block move previous (descending).", [

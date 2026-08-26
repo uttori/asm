@@ -1,7 +1,7 @@
 # Plugin System Implementation Plan
 
-Status: in progress — Phases 0 through 4 complete
-Scope: replace constructor-time extension injection with a complete, trusted, in-process plugin system and move every SNES-specific production behavior into a first-party SNES plugin  
+Status: in progress - Phases 0 through 4 complete
+Scope: replace constructor-time extension injection with a complete, trusted, in-process plugin system and move every SNES-specific production behavior into a first-party SNES plugin
 Compatibility policy: public API compatibility is not required; behavioral regressions covered by the test and fixture suites are not permitted
 
 ## 1. Required outcome
@@ -639,7 +639,7 @@ Requirements:
 
 Each phase should be one reviewable pull request or a short series of commits. Temporary bridges are allowed only where a phase explicitly calls for them. `npm run verify` must pass before moving to the next phase.
 
-### Phase 0 — Lock the behavioral baseline
+### Phase 0 - Lock the behavioral baseline
 
 Tasks:
 
@@ -658,7 +658,7 @@ Acceptance:
 - All existing tests pass before structural changes.
 - Golden behavior exists for every SNES subsystem being extracted.
 
-### Phase 1 — Add plugin API, manager, and environment without changing behavior
+### Phase 1 - Add plugin API, manager, and environment without changing behavior
 
 Tasks:
 
@@ -691,7 +691,7 @@ Acceptance:
 - The test plugin can create and validate an environment.
 - Existing SNES behavior is unchanged.
 
-### Phase 2 — Make assembler sessions environment-driven
+### Phase 2 - Make assembler sessions environment-driven
 
 Tasks:
 
@@ -715,7 +715,7 @@ factories and lifecycle hooks, plugin state snapshots, tooling-session isolation
 host wiring, and temporary SNES adapter are implemented. `npm run verify` passes with 797
 tests; all 60 Asar fixtures and the Slideshow and Chou checksum gates pass.
 
-### Phase 3 — Convert directives, expressions, and lowering to contributions
+### Phase 3 - Convert directives, expressions, and lowering to contributions
 
 Tasks:
 
@@ -746,7 +746,7 @@ passes with 915 tests and global coverage at 93.54% statements, 90.06% branches,
 96.35% functions; package dry-run, all 60 Asar fixtures, Slideshow, and Chou checksum
 gates pass.
 
-### Phase 4 — Generalize output and remove target-specific core state
+### Phase 4 - Generalize output and remove target-specific core state
 
 Tasks:
 
@@ -783,7 +783,7 @@ branches, and 95.95% functions. Package dry-run, all 60 Asar fixtures,
 Slideshow, Chou, language-server, editor, and full SNES staged/tree/golden parity
 gates pass.
 
-### Phase 5 — Physically extract the SNES and initial 65xx plugins
+### Phase 5 - Physically extract the SNES and initial 65xx plugins
 
 Tasks:
 
@@ -818,7 +818,7 @@ plugin dependency. CLI and language-server hosts now opt into the SNES plugin
 through an explicit environment factory, pending the generic discovery and
 configuration work in Phase 6.
 
-### Phase 6 — Add Node discovery and project configuration
+### Phase 6 - Add Node discovery and project configuration
 
 Tasks:
 
@@ -858,7 +858,7 @@ dry-runs include the expected runtime files (including the loader schema); all 6
 fixtures, Slideshow, Chou, and the five-workload smoke benchmark pass with exact output
 validation.
 
-### Phase 7 — Propagate plugins through LSP and VS Code
+### Phase 7 - Propagate plugins through LSP and VS Code
 
 Tasks:
 
@@ -891,7 +891,7 @@ the bundled-plugin map. The 931-test verification suite passes with 94.29% state
 Slideshow, Chou, and the five-workload benchmark pass. A packaged-server stdio smoke test
 builds both the bundled SNES target and a workspace-local ESM fixture plugin successfully.
 
-### Phase 8 — Enforce boundaries, finish documentation, and remove dead APIs
+### Phase 8 - Enforce boundaries, finish documentation, and remove dead APIs
 
 Tasks:
 
@@ -1038,37 +1038,37 @@ Do not silently fall back to SNES, 65816, built-in directives, or static catalog
 
 ### Stage-state regressions
 
-Risk: SNES mutable fields currently participate manually in multi-pass state copying.  
+Risk: SNES mutable fields currently participate manually in multi-pass state copying.
 Mitigation: implement typed plugin state cloning before moving any state; add state-isolation tests first.
 
 ### Hidden SNES behavior in generic-looking services
 
-Risk: `RomWriterService`, `DirectiveRuntimeService`, namespace handling, control-flow policy, expression dispatch, and tooling catalogs contain SNES/Asar behavior despite generic filenames.  
+Risk: `RomWriterService`, `DirectiveRuntimeService`, namespace handling, control-flow policy, expression dispatch, and tooling catalogs contain SNES/Asar behavior despite generic filenames.
 Mitigation: use the extraction inventory and the final prohibited-identifier/import gate.
 
 ### Catalog/runtime drift
 
-Risk: static LSP catalogs may advertise behavior that is not active.  
+Risk: static LSP catalogs may advertise behavior that is not active.
 Mitigation: executable contributions own their tooling descriptors and the environment builds one target-filtered catalog.
 
 ### Bundled versus workspace plugin resolution
 
-Risk: an esbuild-bundled language server cannot resolve workspace packages the same way as the repository runtime.  
+Risk: an esbuild-bundled language server cannot resolve workspace packages the same way as the repository runtime.
 Mitigation: distinguish host-provided bundled plugin modules from Node-resolved project plugins and test both from the packaged server.
 
 ### Plugin activation leaking partial registrations
 
-Risk: a plugin throws after registering some contributions.  
+Risk: a plugin throws after registering some contributions.
 Mitigation: collect into a private transaction, validate, then commit atomically.
 
 ### Overexposing core internals
 
-Risk: passing `Assembler` or service implementations to plugins makes the API impossible to evolve.  
+Risk: passing `Assembler` or service implementations to plugins makes the API impossible to evolve.
 Mitigation: expose capability facades and enforce package export maps/import boundaries.
 
 ### Performance regressions
 
-Risk: registry lookups and lifecycle middleware run for every command/byte.  
+Risk: registry lookups and lifecycle middleware run for every command/byte.
 Mitigation: resolve target contributions once, instantiate once per session, precompute directive/function maps, and benchmark before/after. Avoid plugin-manager lookups on the per-byte path.
 
 ## 13. Definition of done
