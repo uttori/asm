@@ -11,6 +11,8 @@ export type AssemblerTraceWriteEvent = {
     raw: string;
     normalized: string;
     logicalAddress: number;
+    /** Active target address width. Older callers default to 24-bit formatting. */
+    addressWidth?: number;
     outputOffset: number;
     value: number;
 };
@@ -28,6 +30,8 @@ export type AssemblerTraceCommandEvent = {
     raw: string;
     normalized: string;
     logicalAddress: number;
+    /** Active target address width. Older callers default to 24-bit formatting. */
+    addressWidth?: number;
     outputOffset: number;
     endLogicalAddress?: number;
     endOutputOffset?: number;

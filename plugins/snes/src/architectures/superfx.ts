@@ -12,6 +12,15 @@ import {
   type SuperFxMoveShortAddressMode,
 } from "../asar/compatibility.js";
 import { superFxCatalog } from "../tooling/instruction-catalog.js";
+import { classifyGenericOperand } from "./operand-classifiers.js";
+
+const lowerSuperFxOperand = (
+  resolver: ArchitectureEncoderContext["operands"],
+  operand: string,
+): LoweredOperand => {
+  const lowered = resolver.lowerOperand(operand);
+  return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
+};
 
 let debug = (..._: unknown[]) => {};
 try {
@@ -265,9 +274,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
       return 0;
     }
     const { opcode, operands, rawOperand } = this.parseInstructionWords(words);
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lowerSuperFxOperand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = operands.map((operand) =>
-      this.assembler.operandResolver.lowerOperand(operand),
+      lowerSuperFxOperand(this.assembler.operandResolver, operand),
     );
     return this.estimateResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
@@ -427,9 +436,9 @@ export class ArchSuperFX implements ArchitectureEncoder {
     }
 
     const { opcode, operands, rawOperand } = this.parseInstructionWords(words);
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lowerSuperFxOperand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = operands.map((operand) =>
-      this.assembler.operandResolver.lowerOperand(operand),
+      lowerSuperFxOperand(this.assembler.operandResolver, operand),
     );
     return this.encodeResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }

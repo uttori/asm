@@ -1,11 +1,80 @@
 import type { LoweredOperand, OperandResolutionContext } from "@uttori/asm-core";
 import { parseOperandSyntax } from "@uttori/asm-core";
 
-type ClassificationInput = {
+export type ClassificationInput = {
   raw: string;
   expanded: string;
   length: number;
 };
+
+/**
+ * Returns true when a resolved 24-bit operand is in the current 65816 bank.
+ * @param {string} expanded Expanded operand text.
+ * @param {number} currentAddress Current logical address.
+ * @returns {boolean} Whether the operand is in the active bank.
+ */
+function isSame65816Bank(expanded: string, currentAddress: number): boolean {
+  // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
+  const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
+  if (!match) {
+    return false;
+  }
+  const value = parseInt(match[1], 16);
+  return ((currentAddress >>> 16) & 0xff) === ((value >>> 16) & 0xff);
+}
+
+/**
+ * True for a label or label expression indexed by X rather than a numeric spelling.
+ * @param {string} rawOperand Raw operand text.
+ * @returns {boolean} Whether this is an X-indexed label expression.
+ */
+function isIndexedXLabelOperand(rawOperand: string): boolean {
+  const raw = rawOperand.trim();
+  if (!/,\s*x$/i.test(raw)) {
+    return false;
+  }
+  const base = raw.replace(/,\s*x$/i, "").trim();
+  return base !== "" && !/^[\d!#$%(]/.test(base) && !base.startsWith("[");
+}
+
+/**
+ * Applies Asar/SNES width forcing and same-bank shortening to neutral expansion metadata.
+ * @param {OperandResolutionContext} resolver Operand resolver dependency.
+ * @param {string} raw Raw operand text.
+ * @param {string} expanded Expanded operand text.
+ * @param {number} inferredLength Target-neutral inferred byte length.
+ * @returns {number} 65816-selected operand byte length.
+ */
+function apply65816WidthPolicy(
+  resolver: OperandResolutionContext,
+  raw: string,
+  expanded: string,
+  inferredLength: number,
+): number {
+  if (raw.includes("<:") || raw.includes("bank(") || raw.includes("bankbyte(")) {
+    return 2;
+  }
+
+  let length = inferredLength;
+  // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
+  const explicitLongHex = /^\$[\da-f]{5,6}(?:\s*,\s*[xy])?$/i.test(raw.trim());
+  if (length === 3 && !explicitLongHex && isSame65816Bank(expanded, resolver.getCurrentAddress())) {
+    length = 2;
+  }
+
+  if (!isIndexedXLabelOperand(raw)) {
+    return length;
+  }
+  // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
+  const match = expanded.trim().match(/^\$([\da-f]+)\s*,\s*x$/i);
+  if (!match) {
+    return length;
+  }
+  const value = parseInt(match[1], 16);
+  const currentBank = (resolver.getCurrentAddress() >>> 16) & 0xff;
+  const targetBank = (value >>> 16) & 0xff;
+  return currentBank === targetBank ? 2 : 3;
+}
 
 /**
  * True when the source is hex/define/numeric rather than a label or struct.
@@ -205,25 +274,21 @@ export function classify65816Operand(
   operand: string,
 ): LoweredOperand {
   const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand({ raw, expanded, length });
+  return classifyExpanded65816Operand(resolver, resolver.expandOperand(raw));
 }
 
 /**
- * Temporary 6502 syntax classifier. The stub backend does not encode yet, but
- * keeping classification behind its own registration avoids coupling the
- * eventual implementation to 65816 policy.
- * @param {OperandResolver} resolver Operand resolver dependency.
- * @param {string} operand Raw operand text.
- * @returns {LoweredOperand} Lowered operand metadata.
+ * Applies 65816 policy to operand facts that core has already expanded.
+ * @param {OperandResolutionContext} resolver Operand resolver dependency.
+ * @param {ClassificationInput} input Expanded operand facts.
+ * @returns {LoweredOperand} Classified 65816 operand.
  */
-export function classify6502Operand(
+export function classifyExpanded65816Operand(
   resolver: OperandResolutionContext,
-  operand: string,
+  input: ClassificationInput,
 ): LoweredOperand {
-  const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand({ raw, expanded, length });
+  const length = apply65816WidthPolicy(resolver, input.raw, input.expanded, input.length);
+  return classifyGenericOperand({ ...input, length });
 }
 
 /**

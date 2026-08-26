@@ -1,5 +1,6 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
 import { directiveCatalog, type DirectiveDescriptor } from "../lsp/directive-catalog.js";
+import { CORE_DIRECTIVE_GROUPS } from "../directive-groups.js";
 import { PluginError } from "./diagnostics.js";
 import type {
   ArchitectureContribution,
@@ -78,16 +79,17 @@ class ResolvedToolingCatalog implements ToolingCatalog {
   }
 
   getDirectives(): readonly DirectiveDescriptor[] {
+    const enabledCoreGroups = new Set<string>(
+      this.target.coreDirectiveGroups ?? CORE_DIRECTIVE_GROUPS,
+    );
+    const core = directiveCatalog.filter((descriptor) => enabledCoreGroups.has(descriptor.group));
     const contributed = this.target.directiveSets.flatMap((id) => {
       const set = this.directiveSets.get(canonical(id))?.value;
       return set ? [...(set.tooling ?? []), ...set.directives.flatMap((item) => item.tooling)] : [];
     });
     return Object.freeze([
       ...new Map(
-        [...directiveCatalog, ...contributed].map((descriptor) => [
-          canonical(descriptor.keyword),
-          descriptor,
-        ]),
+        [...core, ...contributed].map((descriptor) => [canonical(descriptor.keyword), descriptor]),
       ).values(),
     ]);
   }

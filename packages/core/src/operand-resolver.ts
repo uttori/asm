@@ -5,7 +5,7 @@ import {
   renderExpressionNode,
   renderReferenceExpressionNode,
 } from "./ir/expression-node.js";
-import { classifyGenericOperand } from "./operand-classifiers.js";
+import { parseOperandSyntax } from "./operand-syntax.js";
 
 export type OperandResolverDependencies = {
   resolveDefines(input: string): string;
@@ -75,72 +75,6 @@ export class OperandResolver {
   }
 
   /**
-   * Checks whether same bank address.
-   * @param {string} expanded The expanded.
-   * @returns {boolean} The result.
-   */
-  isSameBankAddress(expanded: string): boolean {
-    // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
-    const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
-    if (!match) {
-      return false;
-    }
-
-    const value = parseInt(match[1], 16);
-    const currentBank = (this.deps.getCurrentAddress() >>> 16) & 0xff;
-    const targetBank = (value >>> 16) & 0xff;
-    return currentBank === targetBank;
-  }
-
-  /**
-   * True when the source wrote a label (or label math) indexed by X, not a hex
-   * or define spelling. Bank 0 labels stringify to 4 hex digits, so numeric
-   * magnitude cannot distinguish abs,x from long,x.
-   * @param {string} operand The raw source operand.
-   * @returns {boolean} True if the operand is a `label,x` form.
-   */
-  isIndexedXLabelOperand(operand: string): boolean {
-    const raw = operand.trim();
-    if (!/,\s*x$/i.test(raw)) {
-      return false;
-    }
-    const base = raw.replace(/,\s*x$/i, "").trim();
-    if (!base) {
-      return false;
-    }
-    if (/^[\d!#$%(]/.test(base) || base.startsWith("[")) {
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Sizes `label,x` by logical bank: same bank is abs,x (2), any other bank —
-   * including `$00xxxx` — is long,x (3).
-   * @param {string} operand The raw source operand.
-   * @param {string} expanded The resolved operand text.
-   * @param {number} expectedLength The length selected from numeric spelling.
-   * @returns {number} Operand width in bytes (2 for abs,x, 3 for long,x).
-   */
-  applyIndexedXLabelBankWidth(operand: string, expanded: string, expectedLength: number): number {
-    if (!this.isIndexedXLabelOperand(operand)) {
-      return expectedLength;
-    }
-    // oxlint-disable-next-line security/detect-unsafe-regex -- Hex width is bounded and the suffix is anchored.
-    const match = expanded.trim().match(/^\$([\da-f]+)\s*,\s*x$/i);
-    if (!match) {
-      return expectedLength;
-    }
-    const value = parseInt(match[1], 16);
-    const currentBank = (this.deps.getCurrentAddress() >>> 16) & 0xff;
-    const targetBank = (value >>> 16) & 0xff;
-    if (currentBank === targetBank) {
-      return 2;
-    }
-    return 3;
-  }
-
-  /**
    * Resolves arithmetic token.
    * @param {string} token The token.
    * @returns {number} The result.
@@ -195,11 +129,10 @@ export class OperandResolver {
   /**
    * Determines value length.
    * @param {string | number} value The value.
-   * @param {boolean} [forceTwoBytes] The force two bytes.
    * @returns {number} The result.
    */
-  determineValueLength(value: string | number, forceTwoBytes?: boolean): number {
-    debug("determineValueLength", value, forceTwoBytes);
+  determineValueLength(value: string | number): number {
+    debug("determineValueLength", value);
     if (typeof value !== "string" && typeof value !== "number") {
       throw new Error(`Invalid value type for length determination: ${typeof value}`);
     }
@@ -209,10 +142,6 @@ export class OperandResolver {
     if (typeof value === "string" && value.trim() === "") {
       return 1;
     }
-    if (forceTwoBytes) {
-      return 2;
-    }
-
     let hexString: string;
     if (typeof value === "number") {
       hexString = value.toString(16).toUpperCase();
@@ -222,13 +151,7 @@ export class OperandResolver {
       hexString = value;
     }
 
-    if (hexString.length <= 2) {
-      return 1;
-    }
-    if (hexString.length <= 4) {
-      return 2;
-    }
-    return 3;
+    return Math.max(1, Math.ceil(hexString.length / 2));
   }
 
   /**
@@ -453,16 +376,17 @@ export class OperandResolver {
    */
   expandOperand(operand: string): ExpandedOperand {
     debug("expandOperand", operand);
+    const raw = operand.trim();
+    const syntax = parseOperandSyntax(raw);
     if (!operand) {
-      return { expanded: "", length: 2 };
+      return { raw, expanded: "", length: 2, syntax };
     }
 
-    let expanded = operand.trim();
+    let expanded = raw;
     let expectedLength = 2;
-    let forceTwoBytes = false;
 
     if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-") {
-      return { expanded, length: 2 };
+      return { raw, expanded, length: 2, syntax };
     }
 
     try {
@@ -477,31 +401,24 @@ export class OperandResolver {
 
     expanded = this.normalizeNumericBaseMember(expanded);
 
-    if (expanded.includes("<:") || expanded.includes("bank(") || expanded.includes("bankbyte(")) {
-      forceTwoBytes = true;
-    }
-
     expanded = this.tryResolveLabelInOperand(expanded);
 
     if (expanded.startsWith("#")) {
       const inner = expanded.substring(1).trim();
-      if (inner.includes("<:") || inner.includes("bank(") || inner.includes("bankbyte(")) {
-        forceTwoBytes = true;
-      }
       if (this.isMathExpression(inner)) {
         try {
           const value = this.getnum(inner);
-          expectedLength = this.determineValueLength(value, forceTwoBytes);
+          expectedLength = this.determineValueLength(value);
           expanded = "#$" + value.toString(16).toUpperCase();
         } catch (error) {
           debug("failed to evaluate immediate expression", inner, error);
         }
       } else if (inner.startsWith("$")) {
-        expectedLength = this.determineValueLength(inner.substring(1), forceTwoBytes);
+        expectedLength = this.determineValueLength(inner.substring(1));
       } else {
         try {
           const value = this.getnum(inner);
-          expectedLength = this.determineValueLength(value, forceTwoBytes);
+          expectedLength = this.determineValueLength(value);
           expanded = "#$" + value.toString(16).toUpperCase();
         } catch (error) {
           debug("failed to evaluate immediate expression", inner, error);
@@ -528,27 +445,14 @@ export class OperandResolver {
         const result = this.deps.evaluateMath(resolvedValue);
         if (!Number.isNaN(result)) {
           expanded = "$" + result.toString(16).toUpperCase() + suffix;
-          expectedLength = this.determineValueLength(result, forceTwoBytes);
+          expectedLength = this.determineValueLength(result);
         }
       } catch (error) {
         debug("math evaluation skipped for expression", expanded, error);
       }
     }
 
-    if (forceTwoBytes) {
-      expectedLength = 2;
-    }
-
-    // Labels like `_048AD3,X` often resolve to a 24-bit numeric address, but
-    // still target data in the current bank. Preserve the shorter absolute form
-    // unless the source explicitly wrote a 5–6 digit hex literal (`$007972`).
-    const explicitLongHex = /^\$[\da-f]{5,6}(?:\s*,\s*[xy])?$/i.test(operand.trim());
-    if (expectedLength === 3 && !explicitLongHex && this.isSameBankAddress(expanded)) {
-      expectedLength = 2;
-    }
-    expectedLength = this.applyIndexedXLabelBankWidth(operand, expanded, expectedLength);
-
-    return { expanded, length: expectedLength };
+    return { raw, expanded, length: expectedLength, syntax };
   }
 
   /**
@@ -558,7 +462,26 @@ export class OperandResolver {
    */
   lowerOperand(operand: string): LoweredOperand {
     const raw = operand.trim();
-    const { expanded, length } = this.expandOperand(raw);
-    return classifyGenericOperand({ raw, expanded, length });
+    const expandedOperand = this.expandOperand(raw);
+    const { expanded, length } = expandedOperand;
+    const syntax = expandedOperand.syntax ?? parseOperandSyntax(raw);
+    return {
+      mode: "unknown",
+      baseExpression: expanded,
+      raw,
+      expanded,
+      length,
+      indexRegister: syntax.indexRegister,
+      immediate: syntax.immediate,
+      indirect: syntax.indirect,
+    };
+  }
+
+  /**
+   * Returns the current logical address without applying architecture policy.
+   * @returns {number} Current logical address.
+   */
+  getCurrentAddress(): number {
+    return this.deps.getCurrentAddress();
   }
 }

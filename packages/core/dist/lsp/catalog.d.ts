@@ -40,9 +40,10 @@ export declare function findDirectiveEntry(keyword: string): DirectiveDescriptor
  * Finds a directive in an explicitly active descriptor catalog.
  * @param {string} keyword The directive keyword.
  * @param {readonly DirectiveDescriptor[]} directives Active directive descriptors.
+ * @param {readonly string[]} [directivePrefixes] Prefixes accepted by the active syntax profile.
  * @returns {DirectiveDescriptor | undefined} The matching active directive.
  */
-export declare function findDirectiveInCatalog(keyword: string, directives?: readonly DirectiveDescriptor[]): DirectiveDescriptor | undefined;
+export declare function findDirectiveInCatalog(keyword: string, directives?: readonly DirectiveDescriptor[], directivePrefixes?: readonly string[]): DirectiveDescriptor | undefined;
 /**
  * Renders an instruction descriptor as Markdown hover documentation.
  * @param {InstructionDescriptor} descriptor The instruction descriptor.

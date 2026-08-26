@@ -767,24 +767,26 @@ test("expandOperand - immediate mode with unresolved label", (t) => {
   t.is(length, 2);
 });
 
-test("expandOperand - bank operation forces two bytes", (t) => {
+test("65816 classifier owns bank-operation width forcing", (t) => {
   const assembler = new Assembler();
   sinon.stub(assembler.mathCore, "math").returns(0x10); // Return a small value that would normally be 1 byte
 
   const { expanded, length } = assembler.operandResolver.expandOperand("bank(label)");
 
   t.is(expanded, "$10");
-  t.is(length, 2); // Should force 2 bytes despite small value
+  t.is(length, 1);
+  t.is(assembler.classifyOperandForActiveArchitecture("bank(label)").length, 2);
 });
 
-test("expandOperand - immediate mode with bank operation", (t) => {
+test("65816 classifier owns immediate bank-operation width forcing", (t) => {
   const assembler = new Assembler();
   sinon.stub(assembler.mathCore, "math").returns(0x10);
 
   const { expanded, length } = assembler.operandResolver.expandOperand("#bank(label)");
 
   t.is(expanded, "#$10");
-  t.is(length, 2); // Should force 2 bytes despite small value
+  t.is(length, 1);
+  t.is(assembler.classifyOperandForActiveArchitecture("#bank(label)").length, 2);
 });
 
 test("expandOperand - indexed mode", (t) => {

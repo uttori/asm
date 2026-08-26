@@ -1,4 +1,5 @@
 import type { NormalizedCommand } from "../ir/normalized-command.js";
+import { CORE_DIRECTIVE_GROUPS, type CoreDirectiveGroup } from "../directive-groups.js";
 import { registerDataDirectives } from "./data.js";
 import { registerFillPadDirectives } from "./fill-pad.js";
 import { registerFlowControlDirectives } from "./flow-control.js";
@@ -52,6 +53,8 @@ export interface DirectiveRegistryContexts {
 export class DirectiveRegistry {
   readonly handlers = new Map<string, BoundDirectiveHandler>();
   readonly phases = new Map<string, DirectiveExecutionPhase>();
+
+  constructor(readonly directivePrefixes: readonly string[] = []) {}
 
   /**
    * Registers the value.
@@ -120,7 +123,7 @@ export class DirectiveRegistry {
   }
 
   /**
-   * Resolves a directive handler, including Asar's `@directive` file-header form.
+   * Resolves a directive handler using prefixes supplied by the active syntax profile.
    * @param {string} keyword The directive keyword.
    * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
    */
@@ -129,8 +132,10 @@ export class DirectiveRegistry {
     if (direct) {
       return direct;
     }
-    if (keyword.startsWith("@")) {
-      return this.handlers.get(keyword.slice(1));
+    for (const prefix of this.directivePrefixes) {
+      if (keyword.startsWith(prefix)) {
+        return this.handlers.get(keyword.slice(prefix.length));
+      }
     }
     return undefined;
   }
@@ -145,27 +150,40 @@ export class DirectiveRegistry {
     if (direct) {
       return direct;
     }
-    if (keyword.startsWith("@")) {
-      return this.phases.get(keyword.slice(1));
+    for (const prefix of this.directivePrefixes) {
+      if (keyword.startsWith(prefix)) {
+        return this.phases.get(keyword.slice(prefix.length));
+      }
     }
     return undefined;
   }
 }
 
-export const createDirectiveRegistry = (contexts: DirectiveRegistryContexts): DirectiveRegistry => {
-  const registry = new DirectiveRegistry();
+export const createDirectiveRegistry = (
+  contexts: DirectiveRegistryContexts,
+  enabledGroups: readonly CoreDirectiveGroup[] = CORE_DIRECTIVE_GROUPS,
+  directivePrefixes: readonly string[] = [],
+): DirectiveRegistry => {
+  const registry = new DirectiveRegistry(directivePrefixes);
+  const enabled = new Set<CoreDirectiveGroup>(enabledGroups);
 
-  registerIncludeSourceDirectives(registry, contexts.includeSource);
-  registerFillPadDirectives(registry, contexts.fillPad);
-  registerFlowControlDirectives(registry, contexts.flowControl);
-  registerNamespaceDirectives(registry, contexts.namespace);
-  registerLayoutDirectives(registry, contexts.layout);
-  registerDataDirectives(registry, contexts.data);
-  registerStructBinaryDirectives(registry, contexts.struct);
-  registerMiscDirectives(registry, {
-    table: contexts.table,
-    diagnostic: contexts.diagnostic,
-  });
+  if (enabled.has("include")) registerIncludeSourceDirectives(registry, contexts.includeSource);
+  if (enabled.has("memory")) registerFillPadDirectives(registry, contexts.fillPad);
+  if (enabled.has("control")) registerFlowControlDirectives(registry, contexts.flowControl);
+  if (enabled.has("namespace")) registerNamespaceDirectives(registry, contexts.namespace);
+  if (enabled.has("layout")) registerLayoutDirectives(registry, contexts.layout);
+  if (enabled.has("data")) registerDataDirectives(registry, contexts.data);
+  if (enabled.has("struct")) registerStructBinaryDirectives(registry, contexts.struct);
+  if (enabled.has("table") || enabled.has("diagnostic")) {
+    registerMiscDirectives(
+      registry,
+      {
+        table: contexts.table,
+        diagnostic: contexts.diagnostic,
+      },
+      enabled,
+    );
+  }
 
   return registry;
 };

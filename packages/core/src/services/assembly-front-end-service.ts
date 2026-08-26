@@ -1,11 +1,13 @@
 import {
   preprocessBlockCommands as preprocessCommandBlock,
   removeInlineComment,
+  splitInlineCommands,
   splitCommandIntoWords,
 } from "./command-text-service.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
 import { ProgramModelBuilder } from "./program-model-builder.js";
 import { createNormalizedCommand, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { SyntaxProfile } from "../syntax-profile.js";
 
 export type AssemblyFrontEndHost = {
   currentFile: string;
@@ -14,6 +16,7 @@ export type AssemblyFrontEndHost = {
   collectSourceMetadata: boolean;
   inMacroExpansion: boolean;
   isDefinitionCollectionStage: boolean;
+  syntaxProfile: SyntaxProfile;
   resolveVariadicPlaceholders(command: string): string;
   shouldEndifCloseInnermostWhile(
     loopType?: "for" | "while",
@@ -37,6 +40,7 @@ export class AssemblyFrontEndService {
       currentLine: this.host.currentLine,
       passProgramCache: this.host.passProgramCache,
       preprocessBlockCommands: (source: string) => this.preprocessBlockCommands(source),
+      splitInlineCommands: (commands: string[]) => this.splitInlineCommands(commands),
       createLoopCommandNode: (command: string, sourceFile?: string, sourceLine?: number) =>
         this.createLoopCommandNode(command, sourceFile, sourceLine),
       shouldEndifCloseInnermostWhile: (
@@ -53,9 +57,18 @@ export class AssemblyFrontEndService {
    * @returns {string[]} The normalized commands.
    */
   preprocessBlockCommands(block: string): string[] {
-    const processed = preprocessCommandBlock(block, this.commandBuffer);
+    const processed = preprocessCommandBlock(block, this.commandBuffer, this.host.syntaxProfile);
     this.commandBuffer = processed.commandBuffer;
     return processed.commands;
+  }
+
+  /**
+   * Splits statements according to the active target's source grammar.
+   * @param {string[]} commands Commands to split.
+   * @returns {string[]} Profile-aware command statements.
+   */
+  splitInlineCommands(commands: string[]): string[] {
+    return splitInlineCommands(commands, this.host.syntaxProfile);
   }
 
   /**
@@ -72,7 +85,7 @@ export class AssemblyFrontEndService {
     sourceLine: number,
     allowEmpty = false,
   ): NormalizedCommand | null {
-    let normalizedCommand = removeInlineComment(command);
+    let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
 
     if (
       this.host.inMacroExpansion &&

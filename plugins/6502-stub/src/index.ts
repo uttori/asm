@@ -1,7 +1,8 @@
-import { classifyGenericOperand, definePlugin, PLUGIN_API_VERSION } from "@uttori/asm-core";
+import { definePlugin, NATIVE_SYNTAX_PROFILE, PLUGIN_API_VERSION } from "@uttori/asm-core";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 
 import { Arch6502 } from "./architecture.js";
+import { classify6502Operand } from "./operand-classifier.js";
 
 export const MOS6502_STUB_TARGET_ID = "mos.6502-stub";
 
@@ -20,11 +21,7 @@ const plugin: AssemblerPlugin = definePlugin({
       displayName: "MOS 6502 (stub)",
       unknownInstructionBehavior: "throw",
       splitOperands: (text) => (text ? [text] : []),
-      classifyOperand: ({ operands }, operand) => {
-        const raw = operand.trim();
-        const { expanded, length } = operands.expandOperand(raw);
-        return classifyGenericOperand({ raw, expanded, length });
-      },
+      classifyOperand: ({ operands }, operand) => classify6502Operand(operands, operand),
       createEncoder: (encoderContext) => new Arch6502(encoderContext),
       instructions: [],
     });
@@ -70,6 +67,7 @@ const plugin: AssemblerPlugin = definePlugin({
       directiveSets: [],
       expressionSets: [],
       lifecycle: [],
+      syntaxProfile: NATIVE_SYNTAX_PROFILE,
       defaultOutputExtension: ".bin",
     });
   },
@@ -77,3 +75,4 @@ const plugin: AssemblerPlugin = definePlugin({
 
 export default plugin;
 export { Arch6502 } from "./architecture.js";
+export { classify6502Operand } from "./operand-classifier.js";

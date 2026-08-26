@@ -25,6 +25,7 @@ export type FrontEndCommandHost = {
     name: string,
     options?: { span?: SourceSpan; value?: number | string; containerName?: string },
   ): void;
+  isNamedLabelToken(token: string): boolean;
 };
 
 export class FrontEndCommandService {
@@ -154,7 +155,7 @@ export class FrontEndCommandService {
 
     // Preserve current behavior exactly: once the first token qualifies as a label,
     // keep consuming tokens until the command is exhausted.
-    while (remainingWords.length > 0 && (keyword.endsWith(":") || keyword.startsWith("."))) {
+    while (remainingWords.length > 0 && this.host.isNamedLabelToken(keyword)) {
       const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
       this.host.symbolScope.handleLabelDefinition(labelName);
       this.host.recordSymbolDefinition("label", labelName, {

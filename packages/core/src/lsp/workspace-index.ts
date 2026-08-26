@@ -2,6 +2,7 @@ import path from "node:path";
 import { Assembler } from "../assembler.js";
 import type { AssemblerEnvironment } from "../plugin/environment.js";
 import type { ToolingCatalog } from "../plugin/contracts.js";
+import { ASAR_SYNTAX_PROFILE } from "../syntax-profile.js";
 import type {
   AssemblyAnalysisResult,
   AssemblyDiagnostic,
@@ -93,6 +94,7 @@ export class WorkspaceIndex {
   readonly target: string;
   readonly toolingCatalog: ToolingCatalog;
   readonly directiveCatalog: readonly DirectiveDescriptor[];
+  readonly directivePrefixes: readonly string[];
 
   /**
    * Creates a workspace index.
@@ -108,6 +110,9 @@ export class WorkspaceIndex {
       options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
     this.targetOptions = Object.freeze({ ...(options.targetOptions ?? {}) });
     this.directiveCatalog = this.toolingCatalog.getDirectives();
+    this.directivePrefixes =
+      this.environment.getTarget(this.target)?.syntaxProfile?.directivePrefixes ??
+      ASAR_SYNTAX_PROFILE.directivePrefixes;
   }
 
   /**

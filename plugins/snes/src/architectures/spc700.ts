@@ -8,6 +8,15 @@ import {
   type LoweredOperand,
 } from "@uttori/asm-core";
 import { spc700Catalog } from "../tooling/instruction-catalog.js";
+import { classifyGenericOperand } from "./operand-classifiers.js";
+
+const lowerSpc700Operand = (
+  resolver: ArchitectureEncoderContext["operands"],
+  operand: string,
+): LoweredOperand => {
+  const lowered = resolver.lowerOperand(operand);
+  return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
+};
 
 let debug = (..._: unknown[]) => {};
 try {
@@ -519,9 +528,9 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
     const rawOperand = words.slice(1).join(" ").trim();
     const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lowerSpc700Operand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = parsedOperands.map((operand) =>
-      this.assembler.operandResolver.lowerOperand(operand),
+      lowerSpc700Operand(this.assembler.operandResolver, operand),
     );
     return this.estimateResolvedInstruction(words[0], rawOperand, loweredOperand, loweredOperands);
   }
@@ -733,9 +742,9 @@ export class ArchSPC700 implements ArchitectureEncoder {
     const opcode = words[0];
     const rawOperand = words.slice(1).join(" ").trim();
     const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lowerSpc700Operand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = parsedOperands.map((operand) =>
-      this.assembler.operandResolver.lowerOperand(operand),
+      lowerSpc700Operand(this.assembler.operandResolver, operand),
     );
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }

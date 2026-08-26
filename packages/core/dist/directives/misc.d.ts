@@ -1,5 +1,6 @@
 import type { DirectiveRegistry } from "./registry.js";
 import type { DiagnosticDirectiveContext, TableDirectiveContext } from "./types.js";
+import type { CoreDirectiveGroup } from "../directive-groups.js";
 export type MiscDirectiveContexts = {
     table: TableDirectiveContext;
     diagnostic: DiagnosticDirectiveContext;
@@ -62,5 +63,5 @@ export declare const handleTable: ({ session }: TableDirectiveContext, _words: r
  * @throws {Error} If the address is missing or `pc > addr`.
  */
 export declare const handleWarnpc: ({ session }: DiagnosticDirectiveContext, _words: readonly string[], raw: string) => void;
-export declare const registerMiscDirectives: (registry: DirectiveRegistry, context: MiscDirectiveContexts) => void;
+export declare const registerMiscDirectives: (registry: DirectiveRegistry, context: MiscDirectiveContexts, enabledGroups?: ReadonlySet<CoreDirectiveGroup>) => void;
 //# sourceMappingURL=misc.d.ts.map

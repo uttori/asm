@@ -1,6 +1,6 @@
 # 65xx implementation and compatibility plan
 
-Status: proposed  
+Status: Phases 0–1 implemented; Phases 2–9 planned  
 Updated: 2026-08-25
 
 ## Outcome
@@ -227,6 +227,10 @@ compatibility even after the policy behind them is moved.
 
 ### Phase 0: lock down behavior and sources of truth
 
+Implementation status: complete. The pinned source and loader migration record
+is in `docs/65xx-reference-baseline.md`, with machine-readable pins in the stub
+fixture directory. The post-change regression gates pass.
+
 - Preserve all existing SNES production hashes and architecture catalog tests.
 - Record stub/package-loader behavior that will need migration aliases.
 - Check in machine-readable reference fixtures rather than copying assembler
@@ -242,6 +246,12 @@ Exit criterion: current `verify` and SNES fixture gates pass, and reference
 provenance/versioning is documented.
 
 ### Phase 1: establish the core/plugin boundary
+
+Implementation status: complete and verified. The existing SNES classifiers
+and 65816 width policy remain SNES-owned. Core now exposes neutral operand facts,
+architecture-bound lowering, address-width operations, syntax profiles, and
+composable core directive groups. The stub has an independent 6502 classifier;
+it remains intentionally non-encoding until Phase 2.
 
 - Introduce target-neutral operand lexical/resolution metadata.
 - Move `classifyGenericOperand` and its SNES-specific tests into the SNES plugin,

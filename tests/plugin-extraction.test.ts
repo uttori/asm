@@ -64,12 +64,43 @@ test("6502 stub is isolated and fails with a clear not-implemented diagnostic", 
   t.deepEqual(assembler.architectureRegistry.getInstructionCatalog("6502"), []);
   t.false(assembler.directiveRegistry.has("lorom"));
   t.false(assembler.directiveRegistry.has("spcblock"));
+  t.is(assembler.syntaxProfile.id, "native");
+  t.false(assembler.directiveRegistry.has("@includeonce"));
   t.throws(() => assembler.assembleSource("org $8000\nnop", "stub.asm"), {
     message: /6502 encoding is not implemented/i,
   });
   t.throws(() => assembler.mathCore.math("snestopc($8000)"), {
     message: /unknown built-in function 'snestopc'/i,
   });
+
+  assembler.dispose();
+  await manager.dispose();
+});
+
+test("targets compose core runtime and tooling directive groups", async (t) => {
+  const manager = new PluginManager();
+  await manager.activatePlugins([
+    {
+      plugin: createFixturePlugin(),
+      options: { byte: 0x42, coreDirectiveGroups: ["data", "layout"] },
+    },
+  ]);
+  const environment = manager.freeze();
+  const assembler = new Assembler({ environment, target: "fixture" });
+  const toolingKeywords = environment
+    .getToolingCatalog("fixture")
+    .getDirectives()
+    .map((directive) => directive.keyword);
+
+  t.true(assembler.directiveRegistry.has("db"));
+  t.true(assembler.directiveRegistry.has("org"));
+  t.false(assembler.directiveRegistry.has("include"));
+  t.false(assembler.directiveRegistry.has("assert"));
+  t.true(toolingKeywords.includes("db"));
+  t.true(toolingKeywords.includes("org"));
+  t.false(toolingKeywords.includes("include"));
+  t.false(toolingKeywords.includes("assert"));
+  t.true(toolingKeywords.includes("fixturebyte"));
 
   assembler.dispose();
   await manager.dispose();

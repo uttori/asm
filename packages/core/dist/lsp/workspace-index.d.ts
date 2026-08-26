@@ -68,6 +68,7 @@ export declare class WorkspaceIndex {
     readonly target: string;
     readonly toolingCatalog: ToolingCatalog;
     readonly directiveCatalog: readonly DirectiveDescriptor[];
+    readonly directivePrefixes: readonly string[];
     /**
      * Creates a workspace index.
      * @param {WorkspaceIndexOptions} [options] Initial index configuration.

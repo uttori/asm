@@ -49,6 +49,7 @@ export type CommandLoweringHost = {
         definition?: ArchitectureDefinition;
     };
     classifyOperandForActiveArchitecture(operand: string): import("../architecture-types.js").LoweredOperand;
+    canonicalizeDirectiveKeyword(keyword: string): string;
 };
 /**
  * Lowers stable front-end commands into directive or instruction work units used

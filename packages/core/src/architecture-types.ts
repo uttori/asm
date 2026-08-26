@@ -1,11 +1,17 @@
 import type { ExpressionNode } from "./ir/expression-node.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
+import type { OperandSyntax } from "./operand-syntax.js";
 
 export type MathValue = number | string;
 
 export interface ExpandedOperand {
+  /** Original operand spelling before define, symbol, or expression resolution. */
+  raw: string;
   expanded: string;
+  /** Target-neutral byte width inferred from the resolved value or literal spelling. */
   length: number;
+  /** Lexical facts only; register and addressing-mode validity remain architecture-owned. */
+  syntax: OperandSyntax;
 }
 
 export interface LoweredOperand {
@@ -28,8 +34,13 @@ export interface LoweredOperand {
 
 export interface OperandResolutionContext {
   expandOperand(operand: string): ExpandedOperand;
+  /**
+   * Architecture-bound contexts classify through their registered contribution.
+   * The bare resolver returns target-neutral metadata with mode `unknown`.
+   */
   lowerOperand(operand: string): LoweredOperand;
   getnum(expression: string | ExpressionNode): number;
+  getCurrentAddress(): number;
 }
 
 export interface EncoderEmissionContext {

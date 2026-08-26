@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-08-25",
+  "references": {
+    "6502js": {
+      "repository": "https://github.com/skilldrick/6502js",
+      "commit": "ab8662b06321dd6281b9f091ee02b57d7494172c",
+      "license": "GPL-3.0-only",
+      "roles": ["black-box-oracle", "fixture-source"],
+      "implementationReuse": false
+    },
+    "ca65": {
+      "repository": "https://github.com/cc65/cc65",
+      "release": "V2.19",
+      "commit": "555282497c3ecf8b313d87d5973093af19c35bd5",
+      "license": "Zlib",
+      "roles": ["differential-oracle", "fixture-source"],
+      "implementationReuse": false
+    }
+  },
+  "crossChecks": [
+    "https://skilldrick.github.io/easy6502/",
+    "https://www.masswerk.at/6502/",
+    "https://www.masswerk.at/6502/6502_instruction_set.html",
+    "https://cc65.github.io/doc/ca65.html"
+  ]
+}

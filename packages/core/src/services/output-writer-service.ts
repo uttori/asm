@@ -1,4 +1,5 @@
 import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
+import { normalizeAddressForWidth } from "../address-width.js";
 import type {
   AssemblyStageName,
   TargetAddressSpace,
@@ -69,9 +70,10 @@ export class OutputWriterService {
     const newPos = this.host.pluginAddressSpace.normalizeForWrite(
       this.host.currentTargetBaseAddress,
     );
-    const addressWidth = this.host.pluginAddressSpace.addressWidth;
-    const logicalMask = addressWidth < 32 ? 2 ** addressWidth - 1 : 0xffffffff;
-    const logicalAddress = newPos & logicalMask;
+    const logicalAddress = normalizeAddressForWidth(
+      newPos,
+      this.host.pluginAddressSpace.addressWidth,
+    );
     this.host.beforeWrite?.(logicalAddress, 1);
     const outputOffset = this.toOutputOffset(logicalAddress);
 
@@ -86,6 +88,7 @@ export class OutputWriterService {
         raw: "",
         normalized: "",
         logicalAddress,
+        addressWidth: this.host.pluginAddressSpace.addressWidth,
         outputOffset,
         value: num & 0xff,
       });

@@ -7,19 +7,24 @@ export type PreprocessBlockCommandsResult = {
  * Removes inline comments from a command line while preserving semicolons
  * inside double-quoted text.
  * @param {string} line The raw command line.
+ * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
  * @returns {string} The comment-stripped command line.
  */
-export const removeInlineComment = (line: string): string => {
+export const removeInlineComment = (
+  line: string,
+  syntaxProfile: SyntaxProfile = ASAR_SYNTAX_PROFILE,
+): string => {
   let inQuote = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
       inQuote = !inQuote;
     } else if (!inQuote && ch === ";") {
-      return line.substring(0, i).trim();
+      const uncommented = line.substring(0, i);
+      return syntaxProfile.preserveLeadingWhitespace ? uncommented.trimEnd() : uncommented.trim();
     }
   }
-  return line.trim();
+  return syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
 };
 
 /**
@@ -27,29 +32,31 @@ export const removeInlineComment = (line: string): string => {
  * and carrying line-continuation state across calls.
  * @param {string} block Raw block text.
  * @param {string} [commandBuffer] Existing continuation buffer.
+ * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
  * @returns {PreprocessBlockCommandsResult} Parsed commands and next buffer value.
  */
 export const preprocessBlockCommands = (
   block: string,
   commandBuffer = "",
+  syntaxProfile: SyntaxProfile = ASAR_SYNTAX_PROFILE,
 ): PreprocessBlockCommandsResult => {
   const lines = block.split("\n");
   const processedLines: string[] = [];
   let nextCommandBuffer = commandBuffer;
 
   for (let line of lines) {
-    line = line.trim();
-    if (!line) continue;
+    line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
+    if (!line.trim()) continue;
 
     // Preserve the special test directive comment so downstream handling can
     // detect and execute fixture setup behavior.
-    if (line.startsWith(";`+")) {
+    if (line.trimStart().startsWith(";`+")) {
       processedLines.push(line);
       continue;
     }
 
-    line = removeInlineComment(line).trim();
-    if (!line) continue;
+    line = removeInlineComment(line, syntaxProfile);
+    if (!line.trim()) continue;
 
     if (line.endsWith("\\")) {
       nextCommandBuffer += line.slice(0, -1);
@@ -112,17 +119,25 @@ const splitOnInlineStatementSeparator = (command: string): string[] => {
 /**
  * Splits inline `:` command chains into individual commands.
  * @param {string[]} commands Command lines to split.
+ * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
  * @returns {string[]} Flattened command list.
  */
-export const splitInlineCommands = (commands: string[]): string[] => {
+export const splitInlineCommands = (
+  commands: string[],
+  syntaxProfile: SyntaxProfile = ASAR_SYNTAX_PROFILE,
+): string[] => {
   const output: string[] = [];
   for (const command of commands) {
-    const split = splitOnInlineStatementSeparator(command);
+    const split = syntaxProfile.splitColonStatements
+      ? splitOnInlineStatementSeparator(command)
+      : [command];
     if (split.length === 0) {
       continue;
     }
     for (const entry of split) {
-      const relativeLabelMatch = entry.match(/^([+-]+:)\s+(.+)$/);
+      const relativeLabelMatch = syntaxProfile.splitRelativeLabelStatements
+        ? entry.match(/^([+-]+:)\s+(.+)$/)
+        : null;
       if (relativeLabelMatch) {
         output.push(relativeLabelMatch[1].trim(), relativeLabelMatch[2].trim());
         continue;
@@ -352,3 +367,4 @@ export const CommandTextService = {
   splitInlineCommands,
   splitRespectingFunctions,
 } as const;
+import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "../syntax-profile.js";

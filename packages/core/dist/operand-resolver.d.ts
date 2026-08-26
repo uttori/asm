@@ -36,29 +36,6 @@ export declare class OperandResolver {
      */
     isNumericToken(token: string): boolean;
     /**
-     * Checks whether same bank address.
-     * @param {string} expanded The expanded.
-     * @returns {boolean} The result.
-     */
-    isSameBankAddress(expanded: string): boolean;
-    /**
-     * True when the source wrote a label (or label math) indexed by X, not a hex
-     * or define spelling. Bank 0 labels stringify to 4 hex digits, so numeric
-     * magnitude cannot distinguish abs,x from long,x.
-     * @param {string} operand The raw source operand.
-     * @returns {boolean} True if the operand is a `label,x` form.
-     */
-    isIndexedXLabelOperand(operand: string): boolean;
-    /**
-     * Sizes `label,x` by logical bank: same bank is abs,x (2), any other bank —
-     * including `$00xxxx` — is long,x (3).
-     * @param {string} operand The raw source operand.
-     * @param {string} expanded The resolved operand text.
-     * @param {number} expectedLength The length selected from numeric spelling.
-     * @returns {number} Operand width in bytes (2 for abs,x, 3 for long,x).
-     */
-    applyIndexedXLabelBankWidth(operand: string, expanded: string, expectedLength: number): number;
-    /**
      * Resolves arithmetic token.
      * @param {string} token The token.
      * @returns {number} The result.
@@ -73,10 +50,9 @@ export declare class OperandResolver {
     /**
      * Determines value length.
      * @param {string | number} value The value.
-     * @param {boolean} [forceTwoBytes] The force two bytes.
      * @returns {number} The result.
      */
-    determineValueLength(value: string | number, forceTwoBytes?: boolean): number;
+    determineValueLength(value: string | number): number;
     /**
      * Checks whether math expression.
      * @param {string} expression The expression.
@@ -119,5 +95,10 @@ export declare class OperandResolver {
      * @returns {LoweredOperand} The result.
      */
     lowerOperand(operand: string): LoweredOperand;
+    /**
+     * Returns the current logical address without applying architecture policy.
+     * @returns {number} Current logical address.
+     */
+    getCurrentAddress(): number;
 }
 //# sourceMappingURL=operand-resolver.d.ts.map

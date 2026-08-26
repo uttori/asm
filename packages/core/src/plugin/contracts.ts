@@ -8,6 +8,8 @@ import type {
 } from "../architecture-types.js";
 import type { Assembler } from "../assembler.js";
 import type { DirectiveDescriptor } from "../lsp/directive-catalog.js";
+import type { SyntaxProfile } from "../syntax-profile.js";
+import type { CoreDirectiveGroup } from "../directive-groups.js";
 
 export const PLUGIN_API_VERSION = 1 as const;
 
@@ -258,8 +260,12 @@ export interface TargetContribution {
   addressSpace: string;
   outputFormat: string;
   directiveSets: readonly string[];
+  /** Core directive families enabled for runtime and tooling. Omitted means all. */
+  coreDirectiveGroups?: readonly CoreDirectiveGroup[];
   expressionSets: readonly string[];
   lifecycle: readonly string[];
+  /** Source grammar policy. Omitted targets retain the legacy Asar-compatible profile. */
+  syntaxProfile?: SyntaxProfile;
   defaultOutputExtension: string;
   createOptions?(configured: unknown): Readonly<Record<string, unknown>>;
 }

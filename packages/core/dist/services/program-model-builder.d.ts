@@ -23,6 +23,7 @@ export type ProgramModelBuilderHost = {
     currentLine: number;
     passProgramCache: Map<string, ExecutableNode[]>;
     preprocessBlockCommands(source: string): string[];
+    splitInlineCommands(commands: string[]): string[];
     createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
 };

@@ -1,4 +1,5 @@
 import type { OperandResolver } from "../operand-resolver.js";
+import { normalizeAddressForWidth } from "../address-width.js";
 import type { DefineEngine } from "./define-engine.js";
 import type { StructEngine } from "./struct-engine.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
@@ -203,7 +204,9 @@ export class DirectiveRuntimeService {
     }
 
     if (this.host.collectSourceMetadata) {
-      this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xffffff);
+      this.host.addAddressToLine(
+        normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth),
+      );
     }
   }
 
@@ -292,7 +295,9 @@ export class DirectiveRuntimeService {
 
     this.host.step(estimatedItems * len);
     if (this.host.collectSourceMetadata) {
-      this.host.addAddressToLine(this.host.currentTargetBaseAddress & 0xffffff);
+      this.host.addAddressToLine(
+        normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth),
+      );
     }
   }
 

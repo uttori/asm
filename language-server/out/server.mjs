@@ -11992,6 +11992,35 @@ var AddressToLineMapping = class {
   }
 };
 
+// packages/core/src/address-width.ts
+function maximumAddressForWidth(addressWidth) {
+  if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
+    throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
+  }
+  return 2 ** addressWidth - 1;
+}
+function normalizeAddressForWidth(address, addressWidth) {
+  const modulus = maximumAddressForWidth(addressWidth) + 1;
+  if (!Number.isFinite(address) || !Number.isInteger(address)) {
+    throw new Error(`Logical address must be a finite integer, got ${address}.`);
+  }
+  return (address % modulus + modulus) % modulus;
+}
+
+// packages/core/src/directive-groups.ts
+var CORE_DIRECTIVE_GROUPS = Object.freeze([
+  "data",
+  "memory",
+  "include",
+  "layout",
+  "namespace",
+  "table",
+  "struct",
+  "control",
+  "macro",
+  "diagnostic"
+]);
+
 // packages/core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
@@ -14236,160 +14265,20 @@ function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
   const normalizedUpper = trimmed.toUpperCase();
-  const indexMatch = trimmed.match(/,\s*([sxy])$/i);
-  const indexRegister = indexMatch ? indexMatch[1].toLowerCase() : void 0;
+  const indexMatch = trimmed.match(/,\s*([A-Z][A-Z\d]*)$/i);
+  const indexRegister = indexMatch?.[1].toLowerCase();
+  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[A-Z][A-Z\d]*$/i, "").trim();
+  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
+  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
   return {
     raw,
     trimmed,
     normalizedUpper,
     immediate: trimmed.startsWith("#"),
     indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
-    indexRegister
-  };
-}
-
-// packages/core/src/operand-classifiers.ts
-function sourceUsesNumericSpelling(raw) {
-  const base = raw.trim().replace(/\s*,\s*[sxy]$/i, "");
-  if (!base) {
-    return false;
-  }
-  if (base.startsWith("#") || base.startsWith("$")) {
-    return true;
-  }
-  if (/^[\d!%]/.test(base)) {
-    return true;
-  }
-  return false;
-}
-function isExplicitDirectPageSpelling(raw, expanded, indexedX) {
-  let hexPattern = /^\$[\da-f]{1,2}$/i;
-  if (indexedX) {
-    hexPattern = /^\$[\da-f]{1,2}\s*,\s*x$/i;
-  }
-  if (hexPattern.test(raw.trim())) {
-    return true;
-  }
-  if (!hexPattern.test(expanded.trim())) {
-    return false;
-  }
-  return sourceUsesNumericSpelling(raw);
-}
-function classifyGenericOperand(input) {
-  const { raw, expanded, length } = input;
-  const syntax = parseOperandSyntax(raw);
-  const lowered = expanded.toLowerCase();
-  const normalizedExpanded = expanded.trim();
-  const normalizedUpper = normalizedExpanded.toUpperCase();
-  const explicitDirectPage = isExplicitDirectPageSpelling(raw, normalizedExpanded, false);
-  const explicitDirectPageIndexedX = isExplicitDirectPageSpelling(raw, normalizedExpanded, true);
-  let mode = "unknown";
-  let baseExpression = expanded;
-  let registerName;
-  const rawUpper = raw.trim().toUpperCase();
-  const registerOperandMatch = rawUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/) ?? normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
-  const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
-  const registerIndirectAutoIncrementMatch = normalizedUpper.match(
-    /^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/
-  );
-  const directPageIndexedXIndirectMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\+\s*x\s*\)$/i);
-  const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*y$/i);
-  const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
-  if (registerOperandMatch) {
-    mode = "register";
-    registerName = registerOperandMatch[1].toLowerCase();
-    baseExpression = normalizedExpanded;
-  } else if (registerIndirectAutoIncrementMatch) {
-    mode = "registerIndirectAutoIncrement";
-    registerName = registerIndirectAutoIncrementMatch[1].toLowerCase();
-    baseExpression = registerIndirectAutoIncrementMatch[1];
-  } else if (registerIndirectMatch) {
-    mode = "registerIndirect";
-    registerName = registerIndirectMatch[1].toLowerCase();
-    baseExpression = registerIndirectMatch[1];
-  } else if (directPageIndexedXIndirectMatch) {
-    mode = "directPageIndexedXIndirect";
-    baseExpression = directPageIndexedXIndirectMatch[1].trim();
-  } else if (directPageIndirectIndexedYMatch) {
-    mode = "directPageIndirectIndexedY";
-    baseExpression = directPageIndirectIndexedYMatch[1].trim();
-  } else if (bitAddressMatch) {
-    mode = bitAddressMatch[1].length <= 3 ? "directPageBit" : "absoluteBit";
-    baseExpression = bitAddressMatch[1].toUpperCase();
-  }
-  if (mode === "unknown" && expanded.startsWith("#")) {
-    mode = "immediate";
-    baseExpression = expanded.slice(1).trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{6}\s*,\s*x$/i.test(expanded)) {
-    if (length >= 3) {
-      mode = "absoluteLongIndexedX";
-    } else {
-      mode = "absoluteIndexedX";
-    }
-    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*x$/i.test(expanded)) {
-    if (length >= 3) {
-      mode = "absoluteLongIndexedX";
-    } else {
-      mode = "absoluteIndexedX";
-    }
-    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*y$/i.test(expanded)) {
-    mode = "absoluteIndexedY";
-    baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*x\s*\)$/i.test(normalizedExpanded)) {
-    mode = "indexedIndirectX";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*x\s*\)$/i, "").trim();
-  } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
-    mode = "directPageIndirect";
-    baseExpression = expanded.slice(1, -1).trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "stackRelativeIndexedIndirectY";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*s\s*\)\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*s$/i.test(lowered)) {
-    mode = "stackRelative";
-    baseExpression = expanded.replace(/\s*,\s*s$/i, "").trim();
-  } else if (mode === "unknown" && /^\[\s*(.+?)\s*]\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "indirectLongIndexedY";
-    baseExpression = normalizedExpanded.replace(/^\[\s*/, "").replace(/\s*]\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
-    mode = "indirectLong";
-    baseExpression = expanded.slice(1, -1).trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "indirectIndexedY";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*\)\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*y$/i.test(lowered)) {
-    mode = "absoluteIndexedY";
-    baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*x$/i.test(lowered)) {
-    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-    if (length >= 3) {
-      mode = "absoluteLongIndexedX";
-    } else if (length === 2) {
-      mode = "absoluteIndexedX";
-    } else {
-      mode = "directPageIndexedX";
-    }
-  } else if (mode === "unknown" && /^\$[\da-f]+$/i.test(expanded)) {
-    if (length >= 3) {
-      mode = "absoluteLong";
-    } else if (length === 2) {
-      mode = "absolute";
-    }
-    baseExpression = expanded;
-  }
-  return {
-    mode,
-    baseExpression,
-    registerName,
-    explicitDirectPage,
-    explicitDirectPageIndexedX,
-    raw,
-    expanded,
-    length,
-    indexRegister: syntax.indexRegister,
-    immediate: syntax.immediate,
-    indirect: syntax.indirect
+    indexRegister,
+    explicitWidth,
+    numericSpelling: /^[#$%\d]/.test(trimmed)
   };
 }
 
@@ -14444,66 +14333,6 @@ var OperandResolver = class {
     return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
   }
   /**
-   * Checks whether same bank address.
-   * @param {string} expanded The expanded.
-   * @returns {boolean} The result.
-   */
-  isSameBankAddress(expanded) {
-    const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
-    if (!match) {
-      return false;
-    }
-    const value = parseInt(match[1], 16);
-    const currentBank = this.deps.getCurrentAddress() >>> 16 & 255;
-    const targetBank = value >>> 16 & 255;
-    return currentBank === targetBank;
-  }
-  /**
-   * True when the source wrote a label (or label math) indexed by X, not a hex
-   * or define spelling. Bank 0 labels stringify to 4 hex digits, so numeric
-   * magnitude cannot distinguish abs,x from long,x.
-   * @param {string} operand The raw source operand.
-   * @returns {boolean} True if the operand is a `label,x` form.
-   */
-  isIndexedXLabelOperand(operand) {
-    const raw = operand.trim();
-    if (!/,\s*x$/i.test(raw)) {
-      return false;
-    }
-    const base = raw.replace(/,\s*x$/i, "").trim();
-    if (!base) {
-      return false;
-    }
-    if (/^[\d!#$%(]/.test(base) || base.startsWith("[")) {
-      return false;
-    }
-    return true;
-  }
-  /**
-   * Sizes `label,x` by logical bank: same bank is abs,x (2), any other bank —
-   * including `$00xxxx` — is long,x (3).
-   * @param {string} operand The raw source operand.
-   * @param {string} expanded The resolved operand text.
-   * @param {number} expectedLength The length selected from numeric spelling.
-   * @returns {number} Operand width in bytes (2 for abs,x, 3 for long,x).
-   */
-  applyIndexedXLabelBankWidth(operand, expanded, expectedLength) {
-    if (!this.isIndexedXLabelOperand(operand)) {
-      return expectedLength;
-    }
-    const match = expanded.trim().match(/^\$([\da-f]+)\s*,\s*x$/i);
-    if (!match) {
-      return expectedLength;
-    }
-    const value = parseInt(match[1], 16);
-    const currentBank = this.deps.getCurrentAddress() >>> 16 & 255;
-    const targetBank = value >>> 16 & 255;
-    if (currentBank === targetBank) {
-      return 2;
-    }
-    return 3;
-  }
-  /**
    * Resolves arithmetic token.
    * @param {string} token The token.
    * @returns {number} The result.
@@ -14552,11 +14381,10 @@ var OperandResolver = class {
   /**
    * Determines value length.
    * @param {string | number} value The value.
-   * @param {boolean} [forceTwoBytes] The force two bytes.
    * @returns {number} The result.
    */
-  determineValueLength(value, forceTwoBytes) {
-    debug3("determineValueLength", value, forceTwoBytes);
+  determineValueLength(value) {
+    debug3("determineValueLength", value);
     if (typeof value !== "string" && typeof value !== "number") {
       throw new Error(`Invalid value type for length determination: ${typeof value}`);
     }
@@ -14566,9 +14394,6 @@ var OperandResolver = class {
     if (typeof value === "string" && value.trim() === "") {
       return 1;
     }
-    if (forceTwoBytes) {
-      return 2;
-    }
     let hexString;
     if (typeof value === "number") {
       hexString = value.toString(16).toUpperCase();
@@ -14577,13 +14402,7 @@ var OperandResolver = class {
     } else {
       hexString = value;
     }
-    if (hexString.length <= 2) {
-      return 1;
-    }
-    if (hexString.length <= 4) {
-      return 2;
-    }
-    return 3;
+    return Math.max(1, Math.ceil(hexString.length / 2));
   }
   /**
    * Checks whether math expression.
@@ -14773,14 +14592,15 @@ var OperandResolver = class {
    */
   expandOperand(operand) {
     debug3("expandOperand", operand);
+    const raw = operand.trim();
+    const syntax = parseOperandSyntax(raw);
     if (!operand) {
-      return { expanded: "", length: 2 };
+      return { raw, expanded: "", length: 2, syntax };
     }
-    let expanded = operand.trim();
+    let expanded = raw;
     let expectedLength = 2;
-    let forceTwoBytes = false;
     if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-") {
-      return { expanded, length: 2 };
+      return { raw, expanded, length: 2, syntax };
     }
     try {
       expanded = this.deps.resolveDefines(expanded);
@@ -14791,29 +14611,23 @@ var OperandResolver = class {
       expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
     }
     expanded = this.normalizeNumericBaseMember(expanded);
-    if (expanded.includes("<:") || expanded.includes("bank(") || expanded.includes("bankbyte(")) {
-      forceTwoBytes = true;
-    }
     expanded = this.tryResolveLabelInOperand(expanded);
     if (expanded.startsWith("#")) {
       const inner = expanded.substring(1).trim();
-      if (inner.includes("<:") || inner.includes("bank(") || inner.includes("bankbyte(")) {
-        forceTwoBytes = true;
-      }
       if (this.isMathExpression(inner)) {
         try {
           const value = this.getnum(inner);
-          expectedLength = this.determineValueLength(value, forceTwoBytes);
+          expectedLength = this.determineValueLength(value);
           expanded = "#$" + value.toString(16).toUpperCase();
         } catch (error) {
           debug3("failed to evaluate immediate expression", inner, error);
         }
       } else if (inner.startsWith("$")) {
-        expectedLength = this.determineValueLength(inner.substring(1), forceTwoBytes);
+        expectedLength = this.determineValueLength(inner.substring(1));
       } else {
         try {
           const value = this.getnum(inner);
-          expectedLength = this.determineValueLength(value, forceTwoBytes);
+          expectedLength = this.determineValueLength(value);
           expanded = "#$" + value.toString(16).toUpperCase();
         } catch (error) {
           debug3("failed to evaluate immediate expression", inner, error);
@@ -14839,21 +14653,13 @@ var OperandResolver = class {
         const result = this.deps.evaluateMath(resolvedValue);
         if (!Number.isNaN(result)) {
           expanded = "$" + result.toString(16).toUpperCase() + suffix;
-          expectedLength = this.determineValueLength(result, forceTwoBytes);
+          expectedLength = this.determineValueLength(result);
         }
       } catch (error) {
         debug3("math evaluation skipped for expression", expanded, error);
       }
     }
-    if (forceTwoBytes) {
-      expectedLength = 2;
-    }
-    const explicitLongHex = /^\$[\da-f]{5,6}(?:\s*,\s*[xy])?$/i.test(operand.trim());
-    if (expectedLength === 3 && !explicitLongHex && this.isSameBankAddress(expanded)) {
-      expectedLength = 2;
-    }
-    expectedLength = this.applyIndexedXLabelBankWidth(operand, expanded, expectedLength);
-    return { expanded, length: expectedLength };
+    return { raw, expanded, length: expectedLength, syntax };
   }
   /**
    * Lowers operand.
@@ -14862,8 +14668,26 @@ var OperandResolver = class {
    */
   lowerOperand(operand) {
     const raw = operand.trim();
-    const { expanded, length } = this.expandOperand(raw);
-    return classifyGenericOperand({ raw, expanded, length });
+    const expandedOperand = this.expandOperand(raw);
+    const { expanded, length } = expandedOperand;
+    const syntax = expandedOperand.syntax ?? parseOperandSyntax(raw);
+    return {
+      mode: "unknown",
+      baseExpression: expanded,
+      raw,
+      expanded,
+      length,
+      indexRegister: syntax.indexRegister,
+      immediate: syntax.immediate,
+      indirect: syntax.indirect
+    };
+  }
+  /**
+   * Returns the current logical address without applying architecture policy.
+   * @returns {number} Current logical address.
+   */
+  getCurrentAddress() {
+    return this.deps.getCurrentAddress();
   }
 };
 
@@ -15378,32 +15202,59 @@ var registerLayoutDirectives = (registry, context) => {
   registerGenericLayoutDirectives(registry, context);
 };
 
+// packages/core/src/syntax-profile.ts
+var ASAR_SYNTAX_PROFILE = Object.freeze({
+  id: "asar",
+  preserveLeadingWhitespace: false,
+  splitColonStatements: true,
+  splitRelativeLabelStatements: true,
+  leadingDotLabels: true,
+  directivePrefixes: Object.freeze(["@"])
+});
+var NATIVE_SYNTAX_PROFILE = Object.freeze({
+  id: "native",
+  preserveLeadingWhitespace: true,
+  splitColonStatements: false,
+  splitRelativeLabelStatements: false,
+  leadingDotLabels: true,
+  directivePrefixes: Object.freeze([])
+});
+var CA65_SYNTAX_PROFILE = Object.freeze({
+  id: "ca65",
+  preserveLeadingWhitespace: true,
+  splitColonStatements: false,
+  splitRelativeLabelStatements: false,
+  leadingDotLabels: false,
+  directivePrefixes: Object.freeze(["."])
+});
+
 // packages/core/src/services/command-text-service.ts
-var removeInlineComment = (line) => {
+var removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
   let inQuote = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
       inQuote = !inQuote;
     } else if (!inQuote && ch === ";") {
-      return line.substring(0, i).trim();
+      const uncommented = line.substring(0, i);
+      return syntaxProfile.preserveLeadingWhitespace ? uncommented.trimEnd() : uncommented.trim();
     }
   }
-  return line.trim();
+  return syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
 };
-var preprocessBlockCommands = (block, commandBuffer = "") => {
+var preprocessBlockCommands = (block, commandBuffer = "", syntaxProfile = ASAR_SYNTAX_PROFILE) => {
   const lines = block.split("\n");
   const processedLines = [];
   let nextCommandBuffer = commandBuffer;
   for (let line of lines) {
-    line = line.trim();
-    if (!line) continue;
-    if (line.startsWith(";`+")) {
+    line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
+    if (!line.trim()) continue;
+    if (line.trimStart().startsWith(";`+")) {
       processedLines.push(line);
       continue;
     }
-    line = removeInlineComment(line).trim();
-    if (!line) continue;
+    line = removeInlineComment(line, syntaxProfile);
+    if (!line.trim()) continue;
     if (line.endsWith("\\")) {
       nextCommandBuffer += line.slice(0, -1);
     } else if (line.endsWith(",")) {
@@ -15452,15 +15303,15 @@ var splitOnInlineStatementSeparator = (command) => {
   }
   return parts;
 };
-var splitInlineCommands = (commands) => {
+var splitInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
   const output = [];
   for (const command of commands) {
-    const split = splitOnInlineStatementSeparator(command);
+    const split = syntaxProfile.splitColonStatements ? splitOnInlineStatementSeparator(command) : [command];
     if (split.length === 0) {
       continue;
     }
     for (const entry of split) {
-      const relativeLabelMatch = entry.match(/^([+-]+:)\s+(.+)$/);
+      const relativeLabelMatch = syntaxProfile.splitRelativeLabelStatements ? entry.match(/^([+-]+:)\s+(.+)$/) : null;
       if (relativeLabelMatch) {
         output.push(relativeLabelMatch[1].trim(), relativeLabelMatch[2].trim());
         continue;
@@ -15757,14 +15608,18 @@ var handleWarnpc = ({ session }, _words, raw) => {
     );
   }
 };
-var registerMiscDirectives = (registry, context) => {
-  registry.registerLowered("pulltable", context.table, handlePullTable);
-  registry.registerLowered("pushtable", context.table, handlePushTable);
-  registry.registerLowered("cleartable", context.table, handleClearTable);
-  registry.registerLowered("table", context.table, handleTable);
-  registry.registerLowered("assert", context.diagnostic, handleAssert);
-  registry.registerLowered("error", context.diagnostic, handleError);
-  registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+var registerMiscDirectives = (registry, context, enabledGroups = /* @__PURE__ */ new Set(["table", "diagnostic"])) => {
+  if (enabledGroups.has("table")) {
+    registry.registerLowered("pulltable", context.table, handlePullTable);
+    registry.registerLowered("pushtable", context.table, handlePushTable);
+    registry.registerLowered("cleartable", context.table, handleClearTable);
+    registry.registerLowered("table", context.table, handleTable);
+  }
+  if (enabledGroups.has("diagnostic")) {
+    registry.registerLowered("assert", context.diagnostic, handleAssert);
+    registry.registerLowered("error", context.diagnostic, handleError);
+    registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+  }
 };
 
 // packages/core/src/directives/namespace.ts
@@ -15858,6 +15713,10 @@ var registerStructBinaryDirectives = (registry, context) => {
 
 // packages/core/src/directives/registry.ts
 var DirectiveRegistry = class {
+  constructor(directivePrefixes = []) {
+    this.directivePrefixes = directivePrefixes;
+  }
+  directivePrefixes;
   handlers = /* @__PURE__ */ new Map();
   phases = /* @__PURE__ */ new Map();
   /**
@@ -15908,7 +15767,7 @@ var DirectiveRegistry = class {
     return true;
   }
   /**
-   * Resolves a directive handler, including Asar's `@directive` file-header form.
+   * Resolves a directive handler using prefixes supplied by the active syntax profile.
    * @param {string} keyword The directive keyword.
    * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
    */
@@ -15917,8 +15776,10 @@ var DirectiveRegistry = class {
     if (direct) {
       return direct;
     }
-    if (keyword.startsWith("@")) {
-      return this.handlers.get(keyword.slice(1));
+    for (const prefix of this.directivePrefixes) {
+      if (keyword.startsWith(prefix)) {
+        return this.handlers.get(keyword.slice(prefix.length));
+      }
     }
     return void 0;
   }
@@ -15932,25 +15793,34 @@ var DirectiveRegistry = class {
     if (direct) {
       return direct;
     }
-    if (keyword.startsWith("@")) {
-      return this.phases.get(keyword.slice(1));
+    for (const prefix of this.directivePrefixes) {
+      if (keyword.startsWith(prefix)) {
+        return this.phases.get(keyword.slice(prefix.length));
+      }
     }
     return void 0;
   }
 };
-var createDirectiveRegistry = (contexts) => {
-  const registry = new DirectiveRegistry();
-  registerIncludeSourceDirectives(registry, contexts.includeSource);
-  registerFillPadDirectives(registry, contexts.fillPad);
-  registerFlowControlDirectives(registry, contexts.flowControl);
-  registerNamespaceDirectives(registry, contexts.namespace);
-  registerLayoutDirectives(registry, contexts.layout);
-  registerDataDirectives(registry, contexts.data);
-  registerStructBinaryDirectives(registry, contexts.struct);
-  registerMiscDirectives(registry, {
-    table: contexts.table,
-    diagnostic: contexts.diagnostic
-  });
+var createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, directivePrefixes = []) => {
+  const registry = new DirectiveRegistry(directivePrefixes);
+  const enabled = new Set(enabledGroups);
+  if (enabled.has("include")) registerIncludeSourceDirectives(registry, contexts.includeSource);
+  if (enabled.has("memory")) registerFillPadDirectives(registry, contexts.fillPad);
+  if (enabled.has("control")) registerFlowControlDirectives(registry, contexts.flowControl);
+  if (enabled.has("namespace")) registerNamespaceDirectives(registry, contexts.namespace);
+  if (enabled.has("layout")) registerLayoutDirectives(registry, contexts.layout);
+  if (enabled.has("data")) registerDataDirectives(registry, contexts.data);
+  if (enabled.has("struct")) registerStructBinaryDirectives(registry, contexts.struct);
+  if (enabled.has("table") || enabled.has("diagnostic")) {
+    registerMiscDirectives(
+      registry,
+      {
+        table: contexts.table,
+        diagnostic: contexts.diagnostic
+      },
+      enabled
+    );
+  }
   return registry;
 };
 
@@ -16431,7 +16301,9 @@ var DirectiveRuntimeService = class {
       this.writeDataByLength(len, num);
     }
     if (this.host.collectSourceMetadata) {
-      this.host.addAddressToLine(this.host.currentTargetBaseAddress & 16777215);
+      this.host.addAddressToLine(
+        normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth)
+      );
     }
   }
   /**
@@ -16506,7 +16378,9 @@ var DirectiveRuntimeService = class {
     }
     this.host.step(estimatedItems * len);
     if (this.host.collectSourceMetadata) {
-      this.host.addAddressToLine(this.host.currentTargetBaseAddress & 16777215);
+      this.host.addAddressToLine(
+        normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth)
+      );
     }
   }
   /**
@@ -16582,7 +16456,7 @@ var ProgramModelBuilder = class {
    * @returns {ProgramModel} The parsed program model.
    */
   buildProgramModel(source, sourceFile = this.host.currentFile, startLine = 0) {
-    const commands = splitInlineCommands(this.host.preprocessBlockCommands(source));
+    const commands = this.host.splitInlineCommands(this.host.preprocessBlockCommands(source));
     return {
       sourceFile,
       startLine,
@@ -16596,7 +16470,7 @@ var ProgramModelBuilder = class {
    * @returns {IncludeProgramNode} The include node.
    */
   createIncludeNode(file, source) {
-    const commands = splitInlineCommands(this.host.preprocessBlockCommands(source));
+    const commands = this.host.splitInlineCommands(this.host.preprocessBlockCommands(source));
     return {
       type: "include",
       file,
@@ -16842,6 +16716,7 @@ var AssemblyFrontEndService = class {
       currentLine: this.host.currentLine,
       passProgramCache: this.host.passProgramCache,
       preprocessBlockCommands: (source) => this.preprocessBlockCommands(source),
+      splitInlineCommands: (commands) => this.splitInlineCommands(commands),
       createLoopCommandNode: (command, sourceFile, sourceLine) => this.createLoopCommandNode(command, sourceFile, sourceLine),
       shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.host.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
     });
@@ -16855,9 +16730,17 @@ var AssemblyFrontEndService = class {
    * @returns {string[]} The normalized commands.
    */
   preprocessBlockCommands(block) {
-    const processed = preprocessBlockCommands(block, this.commandBuffer);
+    const processed = preprocessBlockCommands(block, this.commandBuffer, this.host.syntaxProfile);
     this.commandBuffer = processed.commandBuffer;
     return processed.commands;
+  }
+  /**
+   * Splits statements according to the active target's source grammar.
+   * @param {string[]} commands Commands to split.
+   * @returns {string[]} Profile-aware command statements.
+   */
+  splitInlineCommands(commands) {
+    return splitInlineCommands(commands, this.host.syntaxProfile);
   }
   /**
    * Builds a normalized command from raw source text.
@@ -16868,7 +16751,7 @@ var AssemblyFrontEndService = class {
    * @returns {NormalizedCommand | null} The normalized command or null for empty input.
    */
   createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
-    let normalizedCommand = removeInlineComment(command);
+    let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
     if (this.host.inMacroExpansion && !this.host.isDefinitionCollectionStage && (normalizedCommand.includes("...") || normalizedCommand.includes("\u2026"))) {
       normalizedCommand = this.host.resolveVariadicPlaceholders(normalizedCommand);
     }
@@ -16905,13 +16788,6 @@ var AssemblyFrontEndService = class {
 };
 
 // packages/core/src/services/command-lowering-service.ts
-var canonicalDirectiveKeyword = (keyword, registry) => {
-  const normalized = keyword.toLowerCase();
-  if (normalized.startsWith("@") && registry.has(normalized.slice(1))) {
-    return normalized.slice(1);
-  }
-  return normalized;
-};
 var CommandLoweringService = class {
   host;
   constructor(host) {
@@ -16923,7 +16799,7 @@ var CommandLoweringService = class {
    * @returns {LoweredCommand} The lowered execution work unit.
    */
   lowerCommand(command) {
-    const keyword = canonicalDirectiveKeyword(command.keyword, this.host.directiveRegistry);
+    const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
     if (this.host.directiveRegistry.has(keyword)) {
       let directiveWords = command.words;
       if (command.parsed.includeTarget) {
@@ -17049,7 +16925,7 @@ var CommandLoweringService = class {
    * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
    */
   getPassthroughReason(command) {
-    const keyword = canonicalDirectiveKeyword(command.keyword, this.host.directiveRegistry);
+    const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
     if (/<[^>]+>/.test(command.command)) {
       return "macroPlaceholder";
     }
@@ -17181,7 +17057,7 @@ var FrontEndCommandService = class {
     let keyword = remainingWords[0] ?? command.keyword;
     let consumed = false;
     let consumedCount = 0;
-    while (remainingWords.length > 0 && (keyword.endsWith(":") || keyword.startsWith("."))) {
+    while (remainingWords.length > 0 && this.host.isNamedLabelToken(keyword)) {
       const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
       this.host.symbolScope.handleLabelDefinition(labelName);
       this.host.recordSymbolDefinition("label", labelName, {
@@ -18064,9 +17940,10 @@ var OutputWriterService = class {
     const newPos = this.host.pluginAddressSpace.normalizeForWrite(
       this.host.currentTargetBaseAddress
     );
-    const addressWidth = this.host.pluginAddressSpace.addressWidth;
-    const logicalMask = addressWidth < 32 ? 2 ** addressWidth - 1 : 4294967295;
-    const logicalAddress = newPos & logicalMask;
+    const logicalAddress = normalizeAddressForWidth(
+      newPos,
+      this.host.pluginAddressSpace.addressWidth
+    );
     this.host.beforeWrite?.(logicalAddress, 1);
     const outputOffset = this.toOutputOffset(logicalAddress);
     if (this.host.isTracing) {
@@ -18078,6 +17955,7 @@ var OutputWriterService = class {
         raw: "",
         normalized: "",
         logicalAddress,
+        addressWidth: this.host.pluginAddressSpace.addressWidth,
         outputOffset,
         value: num & 255
       });
@@ -18279,7 +18157,7 @@ var StructEngine = class {
       base = parentStruct.base;
     } else {
       base = this.host.operandResolver.getnum(words[2]);
-      if (base < 0 || base > 16777215) {
+      if (base < 0 || base > maximumAddressForWidth(this.host.addressWidth)) {
         throw new Error(`Invalid logical address for struct: ${words[2]}`);
       }
     }
@@ -19369,16 +19247,17 @@ var ResolvedToolingCatalog = class {
     return this.architectures.get(id)?.value.instructions ?? [];
   }
   getDirectives() {
+    const enabledCoreGroups = new Set(
+      this.target.coreDirectiveGroups ?? CORE_DIRECTIVE_GROUPS
+    );
+    const core = directiveCatalog.filter((descriptor2) => enabledCoreGroups.has(descriptor2.group));
     const contributed = this.target.directiveSets.flatMap((id) => {
       const set = this.directiveSets.get(canonical(id))?.value;
       return set ? [...set.tooling ?? [], ...set.directives.flatMap((item) => item.tooling)] : [];
     });
     return Object.freeze([
       ...new Map(
-        [...directiveCatalog, ...contributed].map((descriptor2) => [
-          canonical(descriptor2.keyword),
-          descriptor2
-        ])
+        [...core, ...contributed].map((descriptor2) => [canonical(descriptor2.keyword), descriptor2])
       ).values()
     ]);
   }
@@ -20109,7 +19988,9 @@ var PluginManager = class {
     }
     for (const record of transaction.targets) {
       validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
-      if (typeof record.value.displayName !== "string" || typeof record.value.defaultArchitecture !== "string" || !isArray(record.value.architectures) || typeof record.value.addressSpace !== "string" || typeof record.value.outputFormat !== "string" || !isArray(record.value.directiveSets) || !isArray(record.value.expressionSets) || !isArray(record.value.lifecycle) || typeof record.value.defaultOutputExtension !== "string") {
+      if (typeof record.value.displayName !== "string" || typeof record.value.defaultArchitecture !== "string" || !isArray(record.value.architectures) || typeof record.value.addressSpace !== "string" || typeof record.value.outputFormat !== "string" || !isArray(record.value.directiveSets) || record.value.coreDirectiveGroups !== void 0 && (!isArray(record.value.coreDirectiveGroups) || record.value.coreDirectiveGroups.some(
+        (group) => typeof group !== "string" || !CORE_DIRECTIVE_GROUPS.includes(group)
+      )) || !isArray(record.value.expressionSets) || !isArray(record.value.lifecycle) || record.value.syntaxProfile !== void 0 && (typeof record.value.syntaxProfile.id !== "string" || typeof record.value.syntaxProfile.preserveLeadingWhitespace !== "boolean" || typeof record.value.syntaxProfile.splitColonStatements !== "boolean" || typeof record.value.syntaxProfile.splitRelativeLabelStatements !== "boolean" || typeof record.value.syntaxProfile.leadingDotLabels !== "boolean" || !isArray(record.value.syntaxProfile.directivePrefixes)) || typeof record.value.defaultOutputExtension !== "string") {
         this.#malformed(transaction, record);
       }
     }
@@ -20378,6 +20259,8 @@ var Assembler = class _Assembler {
   environment;
   targetId;
   targetOptions;
+  syntaxProfile;
+  coreDirectiveGroups;
   pluginState;
   pluginAddressSpace;
   pluginOutputFormat;
@@ -20440,7 +20323,9 @@ var Assembler = class _Assembler {
    * Records current address.
    */
   recordCurrentAddress() {
-    this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
+    this.addAddressToLine(
+      normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth)
+    );
   }
   /**
    * Sets write position.
@@ -20809,29 +20694,33 @@ var Assembler = class _Assembler {
   cloneDirectiveRegistryForSession(session) {
     const operandResolver = session.operandResolver;
     const runtime = session.directiveRuntime;
-    const registry = createDirectiveRegistry({
-      data: { runtime },
-      fillPad: { session, operandResolver },
-      flowControl: { session },
-      includeSource: {
-        session,
-        includeSource: session.includeSource,
-        operandResolver,
-        runtime,
-        defineEngine: session.defineEngine
+    const registry = createDirectiveRegistry(
+      {
+        data: { runtime },
+        fillPad: { session, operandResolver },
+        flowControl: { session },
+        includeSource: {
+          session,
+          includeSource: session.includeSource,
+          operandResolver,
+          runtime,
+          defineEngine: session.defineEngine
+        },
+        layout: {
+          addressStack: { session },
+          architecture: { session },
+          base: { session, operandResolver },
+          org: { runtime },
+          runtime: { runtime }
+        },
+        namespace: { session },
+        struct: { session },
+        table: { session },
+        diagnostic: { session }
       },
-      layout: {
-        addressStack: { session },
-        architecture: { session },
-        base: { session, operandResolver },
-        org: { runtime },
-        runtime: { runtime }
-      },
-      namespace: { session },
-      struct: { session },
-      table: { session },
-      diagnostic: { session }
-    });
+      session.coreDirectiveGroups,
+      session.syntaxProfile.directivePrefixes
+    );
     const target = session.environment.getTarget(session.targetId);
     for (const setId of target?.directiveSets ?? []) {
       const set = session.environment.getDirectiveSet(setId);
@@ -21006,6 +20895,8 @@ var Assembler = class _Assembler {
       });
     }
     this.targetId = targetId;
+    this.syntaxProfile = target.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
+    this.coreDirectiveGroups = target.coreDirectiveGroups ?? CORE_DIRECTIVE_GROUPS;
     const configuredTargetOptions = options.targetOptions;
     if (!target.createOptions && configuredTargetOptions !== void 0) {
       const emptyObject = typeof configuredTargetOptions === "object" && configuredTargetOptions !== null && !Array.isArray(configuredTargetOptions) && Object.keys(configuredTargetOptions).length === 0;
@@ -21089,7 +20980,8 @@ var Assembler = class _Assembler {
       currentFile: { get: () => this.currentFile },
       currentLine: { get: () => this.currentLine },
       inMacroExpansion: { get: () => this.inMacroExpansion },
-      isDefinitionCollectionStage: { get: () => this.isDefinitionCollectionStage }
+      isDefinitionCollectionStage: { get: () => this.isDefinitionCollectionStage },
+      syntaxProfile: { get: () => this.syntaxProfile }
     });
     this.frontEndService = new AssemblyFrontEndService(frontEndHost);
     this.programModelBuilder = this.frontEndService.programModelBuilder;
@@ -21106,7 +20998,6 @@ var Assembler = class _Assembler {
       requireStaticLabelLookup: () => this.requireStaticLabelLookup
     });
     const encoderContext = {
-      operands: this.operandResolver,
       emission: {
         write1: (value) => this.write1(value),
         write2: (value) => this.write2(value),
@@ -21139,8 +21030,15 @@ var Assembler = class _Assembler {
       }
       let encoder;
       try {
+        const architectureOperands = {
+          expandOperand: (operand) => this.operandResolver.expandOperand(operand),
+          getnum: (expression) => this.operandResolver.getnum(expression),
+          getCurrentAddress: () => this.operandResolver.getCurrentAddress(),
+          lowerOperand: (operand) => contribution.classifyOperand({ operands: this.operandResolver }, operand)
+        };
         encoder = contribution.createEncoder({
           ...encoderContext,
+          operands: architectureOperands,
           targetId,
           options: this.targetOptions,
           state: this.pluginState
@@ -21769,6 +21667,28 @@ var Assembler = class _Assembler {
     return architecture.definition.classifyOperand(this.operandResolver, operand);
   }
   /**
+   * Resolves target-specific directive prefixes without teaching the registry a dialect.
+   * @param {string} keyword Source directive keyword.
+   * @returns {string} Canonical registry keyword.
+   */
+  canonicalizeDirectiveKeyword(keyword) {
+    const normalized = keyword.toLowerCase();
+    for (const prefix of this.syntaxProfile.directivePrefixes) {
+      if (normalized.startsWith(prefix) && this.directiveRegistry.has(normalized.slice(prefix.length))) {
+        return normalized.slice(prefix.length);
+      }
+    }
+    return normalized;
+  }
+  /**
+   * Returns whether the active syntax profile treats a token as a named label.
+   * @param {string} token Candidate token.
+   * @returns {boolean} Whether the token is a named label.
+   */
+  isNamedLabelToken(token) {
+    return token.endsWith(":") || this.syntaxProfile.leadingDotLabels && token.startsWith(".");
+  }
+  /**
    * Writes 1, 2, 3, or 4 bytes to output.
    * @param {number} num - The byte to write.
    */
@@ -21987,7 +21907,7 @@ var Assembler = class _Assembler {
         this.flushCompletedIncrementalNodes();
         return;
       }
-      const splitCommands = splitInlineCommands([command]);
+      const splitCommands = this.frontEndService.splitInlineCommands([command]);
       for (const splitCommand of splitCommands) {
         const nodes = this.programModelBuilder.consumeIncrementalCommand(
           this.incrementalProgramParseState,
@@ -21999,7 +21919,7 @@ var Assembler = class _Assembler {
       }
     } else {
       const processedCommands = this.frontEndService.preprocessBlockCommands(command);
-      const splitCommands = splitInlineCommands(processedCommands);
+      const splitCommands = this.frontEndService.splitInlineCommands(processedCommands);
       for (const splitCommand of splitCommands) {
         const nodes = this.programModelBuilder.consumeIncrementalCommand(
           this.incrementalProgramParseState,
@@ -22052,7 +21972,7 @@ var Assembler = class _Assembler {
     if (preprocessResult === "handled") {
       return;
     }
-    const startPC = this.currentTargetBaseAddress & 16777215;
+    const startPC = normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth);
     if (!this.prepareNormalizedCommandForDispatch(workingState)) {
       return;
     }
@@ -22076,6 +21996,7 @@ var Assembler = class _Assembler {
         arch: this.arch,
         ...traceContext,
         logicalAddress: startPC,
+        addressWidth: this.addressWidth,
         outputOffset: this.outputWriter.toOutputOffset(startPC)
       });
       this.traceCommandStack.push(traceContext);
@@ -22085,23 +22006,26 @@ var Assembler = class _Assembler {
       } finally {
         this.traceCommandStack.pop();
       }
-      const endPC = this.currentTargetBaseAddress & 16777215;
+      const endPC = normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth);
       traceListener({
         type: "command-end",
         stage: this.traceStage,
         arch: this.arch,
         ...traceContext,
         logicalAddress: startPC,
+        addressWidth: this.addressWidth,
         outputOffset: this.outputWriter.toOutputOffset(startPC),
         endLogicalAddress: endPC,
         endOutputOffset: this.outputWriter.toOutputOffset(endPC),
         bytesWritten: endPC - startPC
       });
     }
-    const commandSize = (this.currentTargetBaseAddress & 16777215) - startPC;
+    const commandSize = normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth) - startPC;
     debug4("processCommand bytes written", commandSize);
     if (this.collectSourceMetadata) {
-      this.addAddressToLine(this.currentTargetBaseAddress & 16777215);
+      this.addAddressToLine(
+        normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth)
+      );
     }
   }
   /**
@@ -23396,6 +23320,7 @@ var WorkspaceIndex = class {
   target;
   toolingCatalog;
   directiveCatalog;
+  directivePrefixes;
   /**
    * Creates a workspace index.
    * @param {WorkspaceIndexOptions} [options] Initial index configuration.
@@ -23409,6 +23334,7 @@ var WorkspaceIndex = class {
     this.architecture = options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
     this.targetOptions = Object.freeze({ ...options.targetOptions ?? {} });
     this.directiveCatalog = this.toolingCatalog.getDirectives();
+    this.directivePrefixes = this.environment.getTarget(this.target)?.syntaxProfile?.directivePrefixes ?? ASAR_SYNTAX_PROFILE.directivePrefixes;
   }
   /**
    * Updates index configuration and re-analyses the workspace.
@@ -23855,8 +23781,14 @@ function findInstruction(mnemonic, architecture, provider) {
     (entry) => entry.mnemonic === upper
   );
 }
-function findDirectiveInCatalog(keyword, directives = directiveCatalog) {
-  const canonical2 = keyword.toLowerCase().replace(/^@/, "");
+function findDirectiveInCatalog(keyword, directives = directiveCatalog, directivePrefixes = ["@"]) {
+  let canonical2 = keyword.toLowerCase();
+  for (const prefix of directivePrefixes) {
+    if (canonical2.startsWith(prefix)) {
+      canonical2 = canonical2.slice(prefix.length);
+      break;
+    }
+  }
   return directives.find((directive2) => directive2.keyword.toLowerCase() === canonical2);
 }
 function renderInstructionDocs(descriptor2) {
@@ -24347,7 +24279,211 @@ var superFxCatalog = [
   ])
 ];
 
+// plugins/snes/src/architectures/operand-classifiers.ts
+function isSame65816Bank(expanded, currentAddress) {
+  const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
+  if (!match) {
+    return false;
+  }
+  const value = parseInt(match[1], 16);
+  return (currentAddress >>> 16 & 255) === (value >>> 16 & 255);
+}
+function isIndexedXLabelOperand(rawOperand) {
+  const raw = rawOperand.trim();
+  if (!/,\s*x$/i.test(raw)) {
+    return false;
+  }
+  const base = raw.replace(/,\s*x$/i, "").trim();
+  return base !== "" && !/^[\d!#$%(]/.test(base) && !base.startsWith("[");
+}
+function apply65816WidthPolicy(resolver, raw, expanded, inferredLength) {
+  if (raw.includes("<:") || raw.includes("bank(") || raw.includes("bankbyte(")) {
+    return 2;
+  }
+  let length = inferredLength;
+  const explicitLongHex = /^\$[\da-f]{5,6}(?:\s*,\s*[xy])?$/i.test(raw.trim());
+  if (length === 3 && !explicitLongHex && isSame65816Bank(expanded, resolver.getCurrentAddress())) {
+    length = 2;
+  }
+  if (!isIndexedXLabelOperand(raw)) {
+    return length;
+  }
+  const match = expanded.trim().match(/^\$([\da-f]+)\s*,\s*x$/i);
+  if (!match) {
+    return length;
+  }
+  const value = parseInt(match[1], 16);
+  const currentBank = resolver.getCurrentAddress() >>> 16 & 255;
+  const targetBank = value >>> 16 & 255;
+  return currentBank === targetBank ? 2 : 3;
+}
+function sourceUsesNumericSpelling(raw) {
+  const base = raw.trim().replace(/\s*,\s*[sxy]$/i, "");
+  if (!base) {
+    return false;
+  }
+  if (base.startsWith("#") || base.startsWith("$")) {
+    return true;
+  }
+  if (/^[\d!%]/.test(base)) {
+    return true;
+  }
+  return false;
+}
+function isExplicitDirectPageSpelling(raw, expanded, indexedX) {
+  let hexPattern = /^\$[\da-f]{1,2}$/i;
+  if (indexedX) {
+    hexPattern = /^\$[\da-f]{1,2}\s*,\s*x$/i;
+  }
+  if (hexPattern.test(raw.trim())) {
+    return true;
+  }
+  if (!hexPattern.test(expanded.trim())) {
+    return false;
+  }
+  return sourceUsesNumericSpelling(raw);
+}
+function classifyGenericOperand(input) {
+  const { raw, expanded, length } = input;
+  const syntax = parseOperandSyntax(raw);
+  const lowered = expanded.toLowerCase();
+  const normalizedExpanded = expanded.trim();
+  const normalizedUpper = normalizedExpanded.toUpperCase();
+  const explicitDirectPage = isExplicitDirectPageSpelling(raw, normalizedExpanded, false);
+  const explicitDirectPageIndexedX = isExplicitDirectPageSpelling(raw, normalizedExpanded, true);
+  let mode = "unknown";
+  let baseExpression = expanded;
+  let registerName;
+  const rawUpper = raw.trim().toUpperCase();
+  const registerOperandMatch = rawUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/) ?? normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
+  const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
+  const registerIndirectAutoIncrementMatch = normalizedUpper.match(
+    /^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/
+  );
+  const directPageIndexedXIndirectMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\+\s*x\s*\)$/i);
+  const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*y$/i);
+  const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
+  if (registerOperandMatch) {
+    mode = "register";
+    registerName = registerOperandMatch[1].toLowerCase();
+    baseExpression = normalizedExpanded;
+  } else if (registerIndirectAutoIncrementMatch) {
+    mode = "registerIndirectAutoIncrement";
+    registerName = registerIndirectAutoIncrementMatch[1].toLowerCase();
+    baseExpression = registerIndirectAutoIncrementMatch[1];
+  } else if (registerIndirectMatch) {
+    mode = "registerIndirect";
+    registerName = registerIndirectMatch[1].toLowerCase();
+    baseExpression = registerIndirectMatch[1];
+  } else if (directPageIndexedXIndirectMatch) {
+    mode = "directPageIndexedXIndirect";
+    baseExpression = directPageIndexedXIndirectMatch[1].trim();
+  } else if (directPageIndirectIndexedYMatch) {
+    mode = "directPageIndirectIndexedY";
+    baseExpression = directPageIndirectIndexedYMatch[1].trim();
+  } else if (bitAddressMatch) {
+    mode = bitAddressMatch[1].length <= 3 ? "directPageBit" : "absoluteBit";
+    baseExpression = bitAddressMatch[1].toUpperCase();
+  }
+  if (mode === "unknown" && expanded.startsWith("#")) {
+    mode = "immediate";
+    baseExpression = expanded.slice(1).trim();
+  } else if (mode === "unknown" && /^\$[\da-f]{6}\s*,\s*x$/i.test(expanded)) {
+    if (length >= 3) {
+      mode = "absoluteLongIndexedX";
+    } else {
+      mode = "absoluteIndexedX";
+    }
+    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
+  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*x$/i.test(expanded)) {
+    if (length >= 3) {
+      mode = "absoluteLongIndexedX";
+    } else {
+      mode = "absoluteIndexedX";
+    }
+    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
+  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*y$/i.test(expanded)) {
+    mode = "absoluteIndexedY";
+    baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*x\s*\)$/i.test(normalizedExpanded)) {
+    mode = "indexedIndirectX";
+    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*x\s*\)$/i, "").trim();
+  } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
+    mode = "directPageIndirect";
+    baseExpression = expanded.slice(1, -1).trim();
+  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode = "stackRelativeIndexedIndirectY";
+    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*s\s*\)\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && /,\s*s$/i.test(lowered)) {
+    mode = "stackRelative";
+    baseExpression = expanded.replace(/\s*,\s*s$/i, "").trim();
+  } else if (mode === "unknown" && /^\[\s*(.+?)\s*]\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode = "indirectLongIndexedY";
+    baseExpression = normalizedExpanded.replace(/^\[\s*/, "").replace(/\s*]\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
+    mode = "indirectLong";
+    baseExpression = expanded.slice(1, -1).trim();
+  } else if (mode === "unknown" && /^\(\s*(.+?)\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode = "indirectIndexedY";
+    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*\)\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && /,\s*y$/i.test(lowered)) {
+    mode = "absoluteIndexedY";
+    baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
+  } else if (mode === "unknown" && /,\s*x$/i.test(lowered)) {
+    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
+    if (length >= 3) {
+      mode = "absoluteLongIndexedX";
+    } else if (length === 2) {
+      mode = "absoluteIndexedX";
+    } else {
+      mode = "directPageIndexedX";
+    }
+  } else if (mode === "unknown" && /^\$[\da-f]+$/i.test(expanded)) {
+    if (length >= 3) {
+      mode = "absoluteLong";
+    } else if (length === 2) {
+      mode = "absolute";
+    }
+    baseExpression = expanded;
+  }
+  return {
+    mode,
+    baseExpression,
+    registerName,
+    explicitDirectPage,
+    explicitDirectPageIndexedX,
+    raw,
+    expanded,
+    length,
+    indexRegister: syntax.indexRegister,
+    immediate: syntax.immediate,
+    indirect: syntax.indirect
+  };
+}
+function classify65816Operand(resolver, operand) {
+  const raw = operand.trim();
+  return classifyExpanded65816Operand(resolver, resolver.expandOperand(raw));
+}
+function classifyExpanded65816Operand(resolver, input) {
+  const length = apply65816WidthPolicy(resolver, input.raw, input.expanded, input.length);
+  return classifyGenericOperand({ ...input, length });
+}
+function classifySpc700Operand(resolver, operand) {
+  const raw = operand.trim();
+  const { expanded, length } = resolver.expandOperand(raw);
+  return classifyGenericOperand({ raw, expanded, length });
+}
+function classifySuperFxOperand(resolver, operand) {
+  const raw = operand.trim();
+  const { expanded, length } = resolver.expandOperand(raw);
+  return classifyGenericOperand({ raw, expanded, length });
+}
+
 // plugins/snes/src/architectures/65816.ts
+var lower65816Operand = (resolver, operand) => {
+  const lowered = resolver.lowerOperand(operand);
+  return lowered.mode !== "unknown" ? lowered : classifyExpanded65816Operand(resolver, lowered);
+};
 var debug5 = (..._args) => {
 };
 try {
@@ -24505,7 +24641,7 @@ var Arch65816 = class {
     }
     const mnemonic = words[0] ?? "";
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     return this.estimateResolvedInstruction(
       mnemonic,
       rawOperand,
@@ -24603,7 +24739,7 @@ var Arch65816 = class {
     if (accumulatorRepeatOpcodes.has(opcode) && rawOperand.startsWith("#")) {
       return this.assembler.operandResolver.getnum(rawOperand.substring(1));
     }
-    const lowered = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const lowered = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const registerName = (lowered.registerName ?? "").toUpperCase();
     if (accumulatorRepeatOpcodes.has(opcode) && (!rawOperand.trim() || registerName === "A" || /^a$/i.test(rawOperand.trim()))) {
       return 1;
@@ -24667,7 +24803,7 @@ var Arch65816 = class {
     }
     const mnemonic = words[0] ?? "";
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     return this.encodeResolvedInstruction(
       mnemonic,
       rawOperand,
@@ -24756,7 +24892,7 @@ var Arch65816 = class {
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
     const isExplicitDirectPage = loweredOperand.explicitDirectPage ?? false;
@@ -25211,7 +25347,7 @@ var Arch65816 = class {
       return false;
     }
     const logicOpcode = opcode;
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
     let address = 0;
@@ -25221,7 +25357,7 @@ var Arch65816 = class {
       mode = "immediate";
       address = this.assembler.operandResolver.getnum(baseOperand);
       this.assembler.write1(opcodes[logicOpcode].immediate);
-      const width = this.immediateBytes(opcode, len, explicitlen, operand);
+      const width = this.immediateBytes(opcode, len, explicitlen, rawOperand);
       if (width === 1) {
         this.assembler.write1(address);
       } else {
@@ -25480,7 +25616,7 @@ var Arch65816 = class {
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operandText);
     const rawOperand = operandText;
     const isIndexed = isIndexedMemory(loweredOperand, "x");
     const normalizedOperand = isIndexed ? rawOperand.slice(0, -2).trim() : rawOperand;
@@ -25603,7 +25739,7 @@ var Arch65816 = class {
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     let opcodeByte = 0;
     let address = 0;
     const isLDX = opcode === "LDX";
@@ -25720,7 +25856,7 @@ var Arch65816 = class {
    */
   handleJump(opcode, operand, rawOperand = operand) {
     debug5("handleJump", { opcode, operand, rawOperand });
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const baseOperand = loweredOperand.baseExpression ?? rawOperand;
     const symbolicOperand = rawOperand.trim();
     const jumpOpcodes = {
@@ -25856,7 +25992,7 @@ var Arch65816 = class {
    */
   handleStoreOperations(opcode, operand, len, explicitlen) {
     debug5("handleStoreOperations", { opcode, operand, len, explicitlen });
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const rawOperand = operand;
     const storeOpcodes = {
       STX: { direct: 134, absolute: 142, directY: 150 },
@@ -26013,7 +26149,7 @@ var Arch65816 = class {
   handleBitTestOperations(opcode, operand, len, explicitlen) {
     debug5("handleBitTestOperations", { opcode, operand });
     opcode = opcode.toUpperCase();
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const rawOperand = operand;
     const normalizedOperand = isIndexedMemory(loweredOperand, "x") ? rawOperand.slice(0, -2).trim() : rawOperand;
     const forcedMaps = {
@@ -26268,7 +26404,7 @@ var Arch65816 = class {
    */
   handleMemoryBitInstructions(opcode, operand) {
     debug5("handleMemoryBitInstructions", opcode, operand);
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const memoryBitOpcodes = {
       TSB: { direct: 4, absolute: 12 },
       TRB: { direct: 20, absolute: 28 }
@@ -26332,6 +26468,10 @@ var Arch65816 = class {
 };
 
 // plugins/snes/src/architectures/spc700.ts
+var lowerSpc700Operand = (resolver, operand) => {
+  const lowered = resolver.lowerOperand(operand);
+  return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
+};
 var debug6 = (..._) => {
 };
 try {
@@ -26662,9 +26802,9 @@ var ArchSPC700 = class {
     }
     const rawOperand = words.slice(1).join(" ").trim();
     const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lowerSpc700Operand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = parsedOperands.map(
-      (operand) => this.assembler.operandResolver.lowerOperand(operand)
+      (operand) => lowerSpc700Operand(this.assembler.operandResolver, operand)
     );
     return this.estimateResolvedInstruction(words[0], rawOperand, loweredOperand, loweredOperands);
   }
@@ -26855,9 +26995,9 @@ var ArchSPC700 = class {
     const opcode = words[0];
     const rawOperand = words.slice(1).join(" ").trim();
     const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lowerSpc700Operand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = parsedOperands.map(
-      (operand) => this.assembler.operandResolver.lowerOperand(operand)
+      (operand) => lowerSpc700Operand(this.assembler.operandResolver, operand)
     );
     return this.encodeResolvedInstruction(opcode, parsedOperands, loweredOperand, loweredOperands);
   }
@@ -28488,6 +28628,10 @@ var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineComp
 var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
 
 // plugins/snes/src/architectures/superfx.ts
+var lowerSuperFxOperand = (resolver, operand) => {
+  const lowered = resolver.lowerOperand(operand);
+  return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
+};
 var debug7 = (..._) => {
 };
 try {
@@ -28649,9 +28793,9 @@ var ArchSuperFX = class {
       return 0;
     }
     const { opcode, operands, rawOperand } = this.parseInstructionWords(words);
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lowerSuperFxOperand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = operands.map(
-      (operand) => this.assembler.operandResolver.lowerOperand(operand)
+      (operand) => lowerSuperFxOperand(this.assembler.operandResolver, operand)
     );
     return this.estimateResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
@@ -28787,9 +28931,9 @@ var ArchSuperFX = class {
       return false;
     }
     const { opcode, operands, rawOperand } = this.parseInstructionWords(words);
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lowerSuperFxOperand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = operands.map(
-      (operand) => this.assembler.operandResolver.lowerOperand(operand)
+      (operand) => lowerSuperFxOperand(this.assembler.operandResolver, operand)
     );
     return this.encodeResolvedInstruction(opcode, operands, loweredOperand, loweredOperands);
   }
@@ -29251,166 +29395,6 @@ var ArchSuperFX = class {
     }
   }
 };
-
-// plugins/snes/src/architectures/operand-classifiers.ts
-function sourceUsesNumericSpelling2(raw) {
-  const base = raw.trim().replace(/\s*,\s*[sxy]$/i, "");
-  if (!base) {
-    return false;
-  }
-  if (base.startsWith("#") || base.startsWith("$")) {
-    return true;
-  }
-  if (/^[\d!%]/.test(base)) {
-    return true;
-  }
-  return false;
-}
-function isExplicitDirectPageSpelling2(raw, expanded, indexedX) {
-  let hexPattern = /^\$[\da-f]{1,2}$/i;
-  if (indexedX) {
-    hexPattern = /^\$[\da-f]{1,2}\s*,\s*x$/i;
-  }
-  if (hexPattern.test(raw.trim())) {
-    return true;
-  }
-  if (!hexPattern.test(expanded.trim())) {
-    return false;
-  }
-  return sourceUsesNumericSpelling2(raw);
-}
-function classifyGenericOperand2(input) {
-  const { raw, expanded, length } = input;
-  const syntax = parseOperandSyntax(raw);
-  const lowered = expanded.toLowerCase();
-  const normalizedExpanded = expanded.trim();
-  const normalizedUpper = normalizedExpanded.toUpperCase();
-  const explicitDirectPage = isExplicitDirectPageSpelling2(raw, normalizedExpanded, false);
-  const explicitDirectPageIndexedX = isExplicitDirectPageSpelling2(raw, normalizedExpanded, true);
-  let mode = "unknown";
-  let baseExpression = expanded;
-  let registerName;
-  const rawUpper = raw.trim().toUpperCase();
-  const registerOperandMatch = rawUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/) ?? normalizedUpper.match(/^(A|X|Y|YA|SP|C|R\d{1,2})$/);
-  const registerIndirectMatch = normalizedUpper.match(/^\((A|X|Y|YA|SP|C|R\d{1,2})\)$/);
-  const registerIndirectAutoIncrementMatch = normalizedUpper.match(
-    /^\((A|X|Y|YA|SP|C|R\d{1,2})\)\+$/
-  );
-  const directPageIndexedXIndirectMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\+\s*x\s*\)$/i);
-  const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*y$/i);
-  const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
-  if (registerOperandMatch) {
-    mode = "register";
-    registerName = registerOperandMatch[1].toLowerCase();
-    baseExpression = normalizedExpanded;
-  } else if (registerIndirectAutoIncrementMatch) {
-    mode = "registerIndirectAutoIncrement";
-    registerName = registerIndirectAutoIncrementMatch[1].toLowerCase();
-    baseExpression = registerIndirectAutoIncrementMatch[1];
-  } else if (registerIndirectMatch) {
-    mode = "registerIndirect";
-    registerName = registerIndirectMatch[1].toLowerCase();
-    baseExpression = registerIndirectMatch[1];
-  } else if (directPageIndexedXIndirectMatch) {
-    mode = "directPageIndexedXIndirect";
-    baseExpression = directPageIndexedXIndirectMatch[1].trim();
-  } else if (directPageIndirectIndexedYMatch) {
-    mode = "directPageIndirectIndexedY";
-    baseExpression = directPageIndirectIndexedYMatch[1].trim();
-  } else if (bitAddressMatch) {
-    mode = bitAddressMatch[1].length <= 3 ? "directPageBit" : "absoluteBit";
-    baseExpression = bitAddressMatch[1].toUpperCase();
-  }
-  if (mode === "unknown" && expanded.startsWith("#")) {
-    mode = "immediate";
-    baseExpression = expanded.slice(1).trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{6}\s*,\s*x$/i.test(expanded)) {
-    if (length >= 3) {
-      mode = "absoluteLongIndexedX";
-    } else {
-      mode = "absoluteIndexedX";
-    }
-    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*x$/i.test(expanded)) {
-    if (length >= 3) {
-      mode = "absoluteLongIndexedX";
-    } else {
-      mode = "absoluteIndexedX";
-    }
-    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*y$/i.test(expanded)) {
-    mode = "absoluteIndexedY";
-    baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*x\s*\)$/i.test(normalizedExpanded)) {
-    mode = "indexedIndirectX";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*x\s*\)$/i, "").trim();
-  } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
-    mode = "directPageIndirect";
-    baseExpression = expanded.slice(1, -1).trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "stackRelativeIndexedIndirectY";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*s\s*\)\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*s$/i.test(lowered)) {
-    mode = "stackRelative";
-    baseExpression = expanded.replace(/\s*,\s*s$/i, "").trim();
-  } else if (mode === "unknown" && /^\[\s*(.+?)\s*]\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "indirectLongIndexedY";
-    baseExpression = normalizedExpanded.replace(/^\[\s*/, "").replace(/\s*]\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
-    mode = "indirectLong";
-    baseExpression = expanded.slice(1, -1).trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "indirectIndexedY";
-    baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*\)\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*y$/i.test(lowered)) {
-    mode = "absoluteIndexedY";
-    baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*x$/i.test(lowered)) {
-    baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-    if (length >= 3) {
-      mode = "absoluteLongIndexedX";
-    } else if (length === 2) {
-      mode = "absoluteIndexedX";
-    } else {
-      mode = "directPageIndexedX";
-    }
-  } else if (mode === "unknown" && /^\$[\da-f]+$/i.test(expanded)) {
-    if (length >= 3) {
-      mode = "absoluteLong";
-    } else if (length === 2) {
-      mode = "absolute";
-    }
-    baseExpression = expanded;
-  }
-  return {
-    mode,
-    baseExpression,
-    registerName,
-    explicitDirectPage,
-    explicitDirectPageIndexedX,
-    raw,
-    expanded,
-    length,
-    indexRegister: syntax.indexRegister,
-    immediate: syntax.immediate,
-    indirect: syntax.indirect
-  };
-}
-function classify65816Operand(resolver, operand) {
-  const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand2({ raw, expanded, length });
-}
-function classifySpc700Operand(resolver, operand) {
-  const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand2({ raw, expanded, length });
-}
-function classifySuperFxOperand(resolver, operand) {
-  const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
-  return classifyGenericOperand2({ raw, expanded, length });
-}
 
 // plugins/snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
@@ -30598,6 +30582,7 @@ var plugin = definePlugin({
       ],
       expressionSets: ["snes.address-functions", "snes.read-functions"],
       lifecycle: ["snes.lifecycle"],
+      syntaxProfile: ASAR_SYNTAX_PROFILE,
       defaultOutputExtension: ".sfc",
       createOptions: targetOptions
     });
@@ -31603,7 +31588,7 @@ function hoverFor(index2, file, position, text) {
   if (instruction2) {
     return markdownHover(renderInstructionDocs(instruction2));
   }
-  const directive2 = findDirectiveInCatalog(word, index2.directiveCatalog);
+  const directive2 = findDirectiveInCatalog(word, index2.directiveCatalog, index2.directivePrefixes);
   if (directive2) {
     return markdownHover(renderDirectiveDocs(directive2));
   }
@@ -31659,7 +31644,11 @@ function signatureHelpFor(lineText, index2) {
     );
     return { signatures, activeSignature: 0 };
   }
-  const directive2 = findDirectiveInCatalog(leading, index2.directiveCatalog);
+  const directive2 = findDirectiveInCatalog(
+    leading,
+    index2.directiveCatalog,
+    index2.directivePrefixes
+  );
   if (directive2) {
     return {
       signatures: [import_vscode_languageserver.SignatureInformation.create(directive2.syntax, directive2.summary)],

@@ -6,23 +6,26 @@ export type PreprocessBlockCommandsResult = {
  * Removes inline comments from a command line while preserving semicolons
  * inside double-quoted text.
  * @param {string} line The raw command line.
+ * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
  * @returns {string} The comment-stripped command line.
  */
-export declare const removeInlineComment: (line: string) => string;
+export declare const removeInlineComment: (line: string, syntaxProfile?: SyntaxProfile) => string;
 /**
  * Normalizes a multi-line command block by trimming lines, removing comments,
  * and carrying line-continuation state across calls.
  * @param {string} block Raw block text.
  * @param {string} [commandBuffer] Existing continuation buffer.
+ * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
  * @returns {PreprocessBlockCommandsResult} Parsed commands and next buffer value.
  */
-export declare const preprocessBlockCommands: (block: string, commandBuffer?: string) => PreprocessBlockCommandsResult;
+export declare const preprocessBlockCommands: (block: string, commandBuffer?: string, syntaxProfile?: SyntaxProfile) => PreprocessBlockCommandsResult;
 /**
  * Splits inline `:` command chains into individual commands.
  * @param {string[]} commands Command lines to split.
+ * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
  * @returns {string[]} Flattened command list.
  */
-export declare const splitInlineCommands: (commands: string[]) => string[];
+export declare const splitInlineCommands: (commands: string[], syntaxProfile?: SyntaxProfile) => string[];
 /**
  * Splits a command string into words while preserving quoted segments.
  * @param {string} command The normalized command string.
@@ -78,4 +81,5 @@ export declare const CommandTextService: {
     readonly splitInlineCommands: typeof splitInlineCommands;
     readonly splitRespectingFunctions: typeof splitRespectingFunctions;
 };
+import { type SyntaxProfile } from "../syntax-profile.js";
 //# sourceMappingURL=command-text-service.d.ts.map

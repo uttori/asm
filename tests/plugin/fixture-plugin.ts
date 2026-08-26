@@ -4,9 +4,11 @@ import {
   type AssemblerPlugin,
   type PluginActivationContext,
 } from "../../packages/core/src/plugin/index.js";
+import type { CoreDirectiveGroup } from "../../packages/core/src/directive-groups.js";
 
 export interface FixturePluginOptions {
   readonly byte: number;
+  readonly coreDirectiveGroups?: readonly CoreDirectiveGroup[];
 }
 
 export const registerFixtureContributions = (
@@ -70,11 +72,13 @@ export const registerFixtureContributions = (
         id: "fixture.directive.emit",
         keywords: ["fixturebyte"],
         phase: "lowered",
-        createHandler: ({ state }) => () => {
-          const value = state.get(fixtureState);
-          value.count++;
-          value.history.values.push(value.count);
-        },
+        createHandler:
+          ({ state }) =>
+          () => {
+            const value = state.get(fixtureState);
+            value.count++;
+            value.history.values.push(value.count);
+          },
         tooling: [
           {
             keyword: "fixturebyte",
@@ -111,6 +115,7 @@ export const registerFixtureContributions = (
     addressSpace: "fixture.flat",
     outputFormat: "fixture.raw",
     directiveSets: ["fixture.directives"],
+    coreDirectiveGroups: context.options.coreDirectiveGroups,
     expressionSets: ["fixture.expressions"],
     lifecycle: ["fixture.lifecycle"],
     defaultOutputExtension: ".bin",
@@ -138,7 +143,14 @@ export const createFixturePlugin = (
       if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
         throw new Error("byte must be an unsigned byte");
       }
-      return { byte };
+      const coreDirectiveGroups =
+        typeof configured === "object" &&
+        configured !== null &&
+        "coreDirectiveGroups" in configured &&
+        Array.isArray(configured.coreDirectiveGroups)
+          ? (configured.coreDirectiveGroups as CoreDirectiveGroup[])
+          : undefined;
+      return { byte, coreDirectiveGroups };
     },
     activate: (context) => registerFixtureContributions(context),
     ...overrides,

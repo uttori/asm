@@ -1,4 +1,5 @@
 import type { AssemblyStageName } from "./plugin/contracts.js";
+import { formatAddressForWidth } from "./address-width.js";
 
 /**
  * Per-byte write emitted after the logical address has been mapped to output.
@@ -12,6 +13,8 @@ export type AssemblerTraceWriteEvent = {
   raw: string;
   normalized: string;
   logicalAddress: number;
+  /** Active target address width. Older callers default to 24-bit formatting. */
+  addressWidth?: number;
   outputOffset: number;
   value: number;
 };
@@ -30,6 +33,8 @@ export type AssemblerTraceCommandEvent = {
   raw: string;
   normalized: string;
   logicalAddress: number;
+  /** Active target address width. Older callers default to 24-bit formatting. */
+  addressWidth?: number;
   outputOffset: number;
   endLogicalAddress?: number;
   endOutputOffset?: number;
@@ -155,11 +160,12 @@ export function createTraceCollector(options: TraceCollectorOptions = {}): {
  * @returns {string} The formatted trace event.
  */
 export function formatTraceEvent(event: AssemblerTraceEvent): string {
+  const addressWidth = event.addressWidth ?? 24;
   if (event.type === "write") {
     return [
       `stage=${event.stage}`,
       `arch=${event.arch}`,
-      `addr=$${toHex(event.logicalAddress, 6)}`,
+      `addr=$${formatAddressForWidth(event.logicalAddress, addressWidth)}`,
       `offset=$${toHex(event.outputOffset >>> 0, 6)}`,
       `value=$${toHex(event.value & 0xff, 2)}`,
       `${event.file}:${event.line}`,
@@ -169,13 +175,13 @@ export function formatTraceEvent(event: AssemblerTraceEvent): string {
 
   const suffix =
     event.type === "command-end"
-      ? ` end=$${toHex((event.endLogicalAddress ?? event.logicalAddress) & 0xffffff, 6)} bytes=${event.bytesWritten ?? 0}`
+      ? ` end=$${formatAddressForWidth(event.endLogicalAddress ?? event.logicalAddress, addressWidth)} bytes=${event.bytesWritten ?? 0}`
       : "";
   return [
     `stage=${event.stage}`,
     `arch=${event.arch}`,
     event.type,
-    `addr=$${toHex(event.logicalAddress & 0xffffff, 6)}`,
+    `addr=$${formatAddressForWidth(event.logicalAddress, addressWidth)}`,
     `${event.file}:${event.line}`,
     event.raw + suffix,
   ].join(" ");

@@ -4,8 +4,11 @@ import type {
   ExpressionHost,
   LoweredInstruction,
   LoweredOperand,
+  OperandResolutionContext,
 } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addressToLine.js";
+import { normalizeAddressForWidth } from "./address-width.js";
+import { CORE_DIRECTIVE_GROUPS, type CoreDirectiveGroup } from "./directive-groups.js";
 import type {
   AssemblerTraceCommandEvent,
   AssemblerTraceListener,
@@ -69,11 +72,8 @@ import {
 import { OutputWriterService } from "./services/output-writer-service.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
 import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
-import {
-  getDefineVariable,
-  isBareLabelReference,
-  splitInlineCommands,
-} from "./services/command-text-service.js";
+import { getDefineVariable, isBareLabelReference } from "./services/command-text-service.js";
+import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "./syntax-profile.js";
 import type { SourceSpan } from "./source-location.js";
 import { NodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
 import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
@@ -305,6 +305,8 @@ export class Assembler {
   public readonly environment: AssemblerEnvironment;
   public readonly targetId: string;
   public readonly targetOptions: Readonly<Record<string, unknown>>;
+  public readonly syntaxProfile: SyntaxProfile;
+  public readonly coreDirectiveGroups: readonly CoreDirectiveGroup[];
   public readonly pluginState: PluginSessionStateStore;
   public readonly pluginAddressSpace: PluginTargetAddressSpace;
   public readonly pluginOutputFormat: PluginTargetOutputFormat;
@@ -381,7 +383,9 @@ export class Assembler {
    * Records current address.
    */
   recordCurrentAddress(): void {
-    this.addAddressToLine(this.currentTargetBaseAddress & 0xffffff);
+    this.addAddressToLine(
+      normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth),
+    );
   }
 
   /**
@@ -818,29 +822,33 @@ export class Assembler {
   cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry {
     const operandResolver = session.operandResolver;
     const runtime = session.directiveRuntime;
-    const registry = createDirectiveRegistry({
-      data: { runtime },
-      fillPad: { session, operandResolver },
-      flowControl: { session },
-      includeSource: {
-        session,
-        includeSource: session.includeSource,
-        operandResolver,
-        runtime,
-        defineEngine: session.defineEngine,
+    const registry = createDirectiveRegistry(
+      {
+        data: { runtime },
+        fillPad: { session, operandResolver },
+        flowControl: { session },
+        includeSource: {
+          session,
+          includeSource: session.includeSource,
+          operandResolver,
+          runtime,
+          defineEngine: session.defineEngine,
+        },
+        layout: {
+          addressStack: { session },
+          architecture: { session },
+          base: { session, operandResolver },
+          org: { runtime },
+          runtime: { runtime },
+        },
+        namespace: { session },
+        struct: { session },
+        table: { session },
+        diagnostic: { session },
       },
-      layout: {
-        addressStack: { session },
-        architecture: { session },
-        base: { session, operandResolver },
-        org: { runtime },
-        runtime: { runtime },
-      },
-      namespace: { session },
-      struct: { session },
-      table: { session },
-      diagnostic: { session },
-    });
+      session.coreDirectiveGroups,
+      session.syntaxProfile.directivePrefixes,
+    );
     const target = session.environment.getTarget(session.targetId);
     for (const setId of target?.directiveSets ?? []) {
       const set = session.environment.getDirectiveSet(setId);
@@ -1031,6 +1039,8 @@ export class Assembler {
       });
     }
     this.targetId = targetId;
+    this.syntaxProfile = target.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
+    this.coreDirectiveGroups = target.coreDirectiveGroups ?? CORE_DIRECTIVE_GROUPS;
     const configuredTargetOptions = options.targetOptions;
     if (!target.createOptions && configuredTargetOptions !== undefined) {
       const emptyObject =
@@ -1124,6 +1134,7 @@ export class Assembler {
       currentLine: { get: (): number => this.currentLine },
       inMacroExpansion: { get: (): boolean => this.inMacroExpansion },
       isDefinitionCollectionStage: { get: (): boolean => this.isDefinitionCollectionStage },
+      syntaxProfile: { get: (): SyntaxProfile => this.syntaxProfile },
     });
     this.frontEndService = new AssemblyFrontEndService(frontEndHost);
     this.programModelBuilder = this.frontEndService.programModelBuilder;
@@ -1141,8 +1152,7 @@ export class Assembler {
       getCurrentAddress: () => this.currentTargetAddress,
       requireStaticLabelLookup: () => this.requireStaticLabelLookup,
     });
-    const encoderContext: ArchitectureEncoderContext = {
-      operands: this.operandResolver,
+    const encoderContext: Omit<ArchitectureEncoderContext, "operands"> = {
       emission: {
         write1: (value) => this.write1(value),
         write2: (value) => this.write2(value),
@@ -1178,8 +1188,16 @@ export class Assembler {
       }
       let encoder: ArchitectureEncoder;
       try {
+        const architectureOperands: OperandResolutionContext = {
+          expandOperand: (operand) => this.operandResolver.expandOperand(operand),
+          getnum: (expression) => this.operandResolver.getnum(expression),
+          getCurrentAddress: () => this.operandResolver.getCurrentAddress(),
+          lowerOperand: (operand) =>
+            contribution.classifyOperand({ operands: this.operandResolver }, operand),
+        };
         encoder = contribution.createEncoder({
           ...encoderContext,
+          operands: architectureOperands,
           targetId,
           options: this.targetOptions,
           state: this.pluginState,
@@ -1888,6 +1906,33 @@ export class Assembler {
   }
 
   /**
+   * Resolves target-specific directive prefixes without teaching the registry a dialect.
+   * @param {string} keyword Source directive keyword.
+   * @returns {string} Canonical registry keyword.
+   */
+  canonicalizeDirectiveKeyword(keyword: string): string {
+    const normalized = keyword.toLowerCase();
+    for (const prefix of this.syntaxProfile.directivePrefixes) {
+      if (
+        normalized.startsWith(prefix) &&
+        this.directiveRegistry.has(normalized.slice(prefix.length))
+      ) {
+        return normalized.slice(prefix.length);
+      }
+    }
+    return normalized;
+  }
+
+  /**
+   * Returns whether the active syntax profile treats a token as a named label.
+   * @param {string} token Candidate token.
+   * @returns {boolean} Whether the token is a named label.
+   */
+  isNamedLabelToken(token: string): boolean {
+    return token.endsWith(":") || (this.syntaxProfile.leadingDotLabels && token.startsWith("."));
+  }
+
+  /**
    * Writes 1, 2, 3, or 4 bytes to output.
    * @param {number} num - The byte to write.
    */
@@ -2153,7 +2198,7 @@ export class Assembler {
         this.flushCompletedIncrementalNodes();
         return;
       }
-      const splitCommands = splitInlineCommands([command]);
+      const splitCommands = this.frontEndService.splitInlineCommands([command]);
       for (const splitCommand of splitCommands) {
         const nodes = this.programModelBuilder.consumeIncrementalCommand(
           this.incrementalProgramParseState,
@@ -2165,7 +2210,7 @@ export class Assembler {
       }
     } else {
       const processedCommands = this.frontEndService.preprocessBlockCommands(command);
-      const splitCommands = splitInlineCommands(processedCommands);
+      const splitCommands = this.frontEndService.splitInlineCommands(processedCommands);
 
       for (const splitCommand of splitCommands) {
         const nodes = this.programModelBuilder.consumeIncrementalCommand(
@@ -2235,7 +2280,7 @@ export class Assembler {
     }
 
     // Capture the starting PC (before processing this command)
-    const startPC = this.currentTargetBaseAddress & 0xffffff;
+    const startPC = normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth);
 
     if (!this.prepareNormalizedCommandForDispatch(workingState)) {
       return;
@@ -2263,6 +2308,7 @@ export class Assembler {
         arch: this.arch,
         ...traceContext,
         logicalAddress: startPC,
+        addressWidth: this.addressWidth,
         outputOffset: this.outputWriter.toOutputOffset(startPC),
       });
 
@@ -2276,13 +2322,14 @@ export class Assembler {
         this.traceCommandStack.pop();
       }
 
-      const endPC = this.currentTargetBaseAddress & 0xffffff;
+      const endPC = normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth);
       traceListener({
         type: "command-end",
         stage: this.traceStage,
         arch: this.arch,
         ...traceContext,
         logicalAddress: startPC,
+        addressWidth: this.addressWidth,
         outputOffset: this.outputWriter.toOutputOffset(startPC),
         endLogicalAddress: endPC,
         endOutputOffset: this.outputWriter.toOutputOffset(endPC),
@@ -2291,11 +2338,14 @@ export class Assembler {
     }
 
     // Determine how many bytes were written in this command.
-    const commandSize = (this.currentTargetBaseAddress & 0xffffff) - startPC;
+    const commandSize =
+      normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth) - startPC;
     debug("processCommand bytes written", commandSize);
 
     if (this.collectSourceMetadata) {
-      this.addAddressToLine(this.currentTargetBaseAddress & 0xffffff);
+      this.addAddressToLine(
+        normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth),
+      );
     }
   }
 

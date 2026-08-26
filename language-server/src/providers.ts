@@ -496,7 +496,7 @@ export function hoverFor(
   if (instruction) {
     return markdownHover(renderInstructionDocs(instruction));
   }
-  const directive = findDirectiveInCatalog(word, index.directiveCatalog);
+  const directive = findDirectiveInCatalog(word, index.directiveCatalog, index.directivePrefixes);
   if (directive) {
     return markdownHover(renderDirectiveDocs(directive));
   }
@@ -574,7 +574,11 @@ export function signatureHelpFor(lineText: string, index: WorkspaceIndex): Signa
     return { signatures, activeSignature: 0 };
   }
 
-  const directive = findDirectiveInCatalog(leading, index.directiveCatalog);
+  const directive = findDirectiveInCatalog(
+    leading,
+    index.directiveCatalog,
+    index.directivePrefixes,
+  );
   if (directive) {
     return {
       signatures: [SignatureInformation.create(directive.syntax, directive.summary)],

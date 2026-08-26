@@ -1,4 +1,5 @@
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+import { maximumAddressForWidth } from "../address-width.js";
 
 export interface StructDefinition {
   name: string;
@@ -19,6 +20,7 @@ export interface StructDefinition {
 }
 
 export type StructHost = {
+  readonly addressWidth: number;
   currentStruct: StructDefinition | null;
   structs: Map<string, StructDefinition>;
   operandResolver: { getnum(input: string): number };
@@ -109,7 +111,7 @@ export class StructEngine {
       base = parentStruct.base;
     } else {
       base = this.host.operandResolver.getnum(words[2]);
-      if (base < 0 || base > 0xffffff) {
+      if (base < 0 || base > maximumAddressForWidth(this.host.addressWidth)) {
         throw new Error(`Invalid logical address for struct: ${words[2]}`);
       }
     }

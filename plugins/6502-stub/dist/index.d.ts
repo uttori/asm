@@ -3,4 +3,5 @@ export declare const MOS6502_STUB_TARGET_ID = "mos.6502-stub";
 declare const plugin: AssemblerPlugin;
 export default plugin;
 export { Arch6502 } from "./architecture.js";
+export { classify6502Operand } from "./operand-classifier.js";
 //# sourceMappingURL=index.d.ts.map

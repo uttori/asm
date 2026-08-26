@@ -17,6 +17,7 @@ import type {
   TargetContribution,
 } from "./contracts.js";
 import { PLUGIN_API_VERSION } from "./contracts.js";
+import { CORE_DIRECTIVE_GROUPS } from "../directive-groups.js";
 import { PluginError } from "./diagnostics.js";
 import {
   AssemblerEnvironment,
@@ -608,8 +609,22 @@ export class PluginManager implements PluginDisposable {
         typeof record.value.addressSpace !== "string" ||
         typeof record.value.outputFormat !== "string" ||
         !isArray(record.value.directiveSets) ||
+        (record.value.coreDirectiveGroups !== undefined &&
+          (!isArray(record.value.coreDirectiveGroups) ||
+            record.value.coreDirectiveGroups.some(
+              (group: unknown) =>
+                typeof group !== "string" ||
+                !(CORE_DIRECTIVE_GROUPS as readonly string[]).includes(group),
+            ))) ||
         !isArray(record.value.expressionSets) ||
         !isArray(record.value.lifecycle) ||
+        (record.value.syntaxProfile !== undefined &&
+          (typeof record.value.syntaxProfile.id !== "string" ||
+            typeof record.value.syntaxProfile.preserveLeadingWhitespace !== "boolean" ||
+            typeof record.value.syntaxProfile.splitColonStatements !== "boolean" ||
+            typeof record.value.syntaxProfile.splitRelativeLabelStatements !== "boolean" ||
+            typeof record.value.syntaxProfile.leadingDotLabels !== "boolean" ||
+            !isArray(record.value.syntaxProfile.directivePrefixes))) ||
         typeof record.value.defaultOutputExtension !== "string"
       ) {
         this.#malformed(transaction, record);

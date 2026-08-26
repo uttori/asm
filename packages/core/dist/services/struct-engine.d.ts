@@ -17,6 +17,7 @@ export interface StructDefinition {
     extensionSize: number;
 }
 export type StructHost = {
+    readonly addressWidth: number;
     currentStruct: StructDefinition | null;
     structs: Map<string, StructDefinition>;
     operandResolver: {

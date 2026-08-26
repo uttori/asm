@@ -1,6 +1,7 @@
 import type { ExecutableNode } from "../ir/assembly-tree.js";
 import { ProgramModelBuilder } from "./program-model-builder.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
+import type { SyntaxProfile } from "../syntax-profile.js";
 export type AssemblyFrontEndHost = {
     currentFile: string;
     currentLine: number;
@@ -8,6 +9,7 @@ export type AssemblyFrontEndHost = {
     collectSourceMetadata: boolean;
     inMacroExpansion: boolean;
     isDefinitionCollectionStage: boolean;
+    syntaxProfile: SyntaxProfile;
     resolveVariadicPlaceholders(command: string): string;
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
 };
@@ -26,6 +28,12 @@ export declare class AssemblyFrontEndService {
      * @returns {string[]} The normalized commands.
      */
     preprocessBlockCommands(block: string): string[];
+    /**
+     * Splits statements according to the active target's source grammar.
+     * @param {string[]} commands Commands to split.
+     * @returns {string[]} Profile-aware command statements.
+     */
+    splitInlineCommands(commands: string[]): string[];
     /**
      * Builds a normalized command from raw source text.
      * @param {string} command The raw command text.

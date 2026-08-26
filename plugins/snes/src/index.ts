@@ -1,4 +1,5 @@
 import {
+  ASAR_SYNTAX_PROFILE,
   definePlugin,
   PluginManager,
   PLUGIN_API_VERSION,
@@ -498,6 +499,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
       ],
       expressionSets: ["snes.address-functions", "snes.read-functions"],
       lifecycle: ["snes.lifecycle"],
+      syntaxProfile: ASAR_SYNTAX_PROFILE,
       defaultOutputExtension: ".sfc",
       createOptions: targetOptions,
     });

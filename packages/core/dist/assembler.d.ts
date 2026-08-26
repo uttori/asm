@@ -1,5 +1,6 @@
 import type { ExpressionHost, LoweredInstruction, LoweredOperand } from "./architecture-types.js";
 import { AddressToLineMapping } from "./addressToLine.js";
+import { type CoreDirectiveGroup } from "./directive-groups.js";
 import type { AssemblerTraceCommandEvent, AssemblerTraceListener, AssemblerTraceWriteEvent } from "./debug-tracing.js";
 import { type AssemblyAnalysisResult, type AssemblyDiagnostic, type AssemblyIncludeEdge, type AssemblySourceLocation, type AssemblySymbolDefinition, type AssemblySymbolKind, type AssemblySymbolReference, type AssemblySymbolReferenceKind } from "./diagnostics.js";
 import type { ConditionalBranchNode, ExecutableNode, LoopNode } from "./ir/assembly-tree.js";
@@ -20,6 +21,7 @@ import { ProgramModelBuilder, type IncrementalProgramParseState, type ProgramMod
 import { OutputWriterService } from "./services/output-writer-service.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
 import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
+import { type SyntaxProfile } from "./syntax-profile.js";
 import type { SourceSpan } from "./source-location.js";
 import { type AssemblyFileProvider } from "./file-provider.js";
 import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
@@ -215,6 +217,8 @@ export declare class Assembler {
     readonly environment: AssemblerEnvironment;
     readonly targetId: string;
     readonly targetOptions: Readonly<Record<string, unknown>>;
+    readonly syntaxProfile: SyntaxProfile;
+    readonly coreDirectiveGroups: readonly CoreDirectiveGroup[];
     readonly pluginState: PluginSessionStateStore;
     readonly pluginAddressSpace: PluginTargetAddressSpace;
     readonly pluginOutputFormat: PluginTargetOutputFormat;
@@ -597,6 +601,18 @@ export declare class Assembler {
      * @returns {LoweredOperand} The classified operand.
      */
     classifyOperandForActiveArchitecture(operand: string): LoweredOperand;
+    /**
+     * Resolves target-specific directive prefixes without teaching the registry a dialect.
+     * @param {string} keyword Source directive keyword.
+     * @returns {string} Canonical registry keyword.
+     */
+    canonicalizeDirectiveKeyword(keyword: string): string;
+    /**
+     * Returns whether the active syntax profile treats a token as a named label.
+     * @param {string} token Candidate token.
+     * @returns {boolean} Whether the token is a named label.
+     */
+    isNamedLabelToken(token: string): boolean;
     /**
      * Writes 1, 2, 3, or 4 bytes to output.
      * @param {number} num - The byte to write.

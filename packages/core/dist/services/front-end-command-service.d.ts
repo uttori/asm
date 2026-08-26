@@ -19,6 +19,7 @@ export type FrontEndCommandHost = {
         value?: number | string;
         containerName?: string;
     }): void;
+    isNamedLabelToken(token: string): boolean;
 };
 export declare class FrontEndCommandService {
     readonly host: FrontEndCommandHost;

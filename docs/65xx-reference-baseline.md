@@ -1,0 +1,70 @@
+# 65xx reference and migration baseline
+
+Recorded on 2026-08-25 before the Phase 1 core-boundary implementation.
+
+## Verification baseline
+
+The pre-change `npm run verify` gate passed, including formatting, lint,
+boundaries, type checks, builds, tests, coverage, LSP checks, and VS Code checks.
+The production byte and hash gates remain defined by
+`docs/plugin-migration-baseline.md` and `scripts/benchmark-goldens.json`.
+
+The post-change Phase 1 verification passed:
+
+- `npm run verify`;
+- `npm run fixture:asar` (60 passed, 0 failed);
+- `npm run fixture:slideshow`;
+- `npm run fixture:chou`;
+- `npm run benchmark:smoke`.
+
+The slideshow, Chou Makaimura, instruction-encoding, include-once, macro, and
+Super Mario RPG outputs matched their expected byte counts and SHA-256 hashes.
+Any future changed SNES hash is a regression unless separately reviewed and
+recorded.
+
+## Pinned executable references
+
+| Reference | Pin | License | Permitted role |
+| --- | --- | --- | --- |
+| 6502js | `ab8662b06321dd6281b9f091ee02b57d7494172c` | GPL-3.0-only | Black-box behavioral oracle and independently authored byte fixtures only |
+| ca65 | release `V2.19`, commit `555282497c3ecf8b313d87d5973093af19c35bd5` | Zlib | Differential assembly oracle and independently authored byte fixtures |
+
+The same values are recorded in
+`plugins/6502-stub/tests/fixtures/reference-manifest.json` so fixture generators
+and future differential tests can reject an unpinned tool.
+
+The checked-out `6502js/` directory is reference material, not product source.
+Its assembler implementation must not be copied, translated, or linked into
+this MIT-licensed repository. Expected bytes and edge cases may be derived by
+running it and then expressed as independently authored fixtures with source
+provenance. ca65 fixtures must record both the release and full commit because
+the V2.19 binary identifies itself using the underlying Git revision.
+
+Easy 6502 and mass:werk are explanatory cross-checks, not executable golden
+authorities. Official processor documentation should resolve hardware
+ambiguities; ca65 compatibility choices must be identified as compatibility
+policy rather than hardware truth.
+
+## Stub migration contract
+
+The current loader-facing identities must remain resolvable during the rename
+to `plugins/65xx`:
+
+- package: `@uttori/asm-plugin-6502-stub`;
+- plugin: `uttori.asm-plugin-6502-stub`;
+- target: `mos.6502-stub`, alias `6502-stub`;
+- architecture: `mos.6502`, aliases `6502` and `mos6502`;
+- address space: `mos.flat16`;
+- output format: `mos.raw`.
+
+Phase 2 may add the production `65xx.*` identities, but removing these names
+requires a documented deprecation window and loader migration tests.
+
+## Fixture provenance rule
+
+Every generated reference fixture must record the reference ID, exact pin,
+input source, selected CPU, command-line/profile options, expected bytes or
+diagnostic, and whether the result was independently cross-checked. A
+differential mismatch must be classified as an implementation bug,
+intentional syntax difference, known reference behavior, or hardware
+ambiguity; expected output must not be silently updated.

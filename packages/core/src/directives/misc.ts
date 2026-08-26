@@ -1,6 +1,7 @@
 import type { DirectiveRegistry } from "./registry.js";
 import { splitRespectingFunctions } from "../services/command-text-service.js";
 import type { DiagnosticDirectiveContext, TableDirectiveContext } from "./types.js";
+import type { CoreDirectiveGroup } from "../directive-groups.js";
 
 export type MiscDirectiveContexts = {
   table: TableDirectiveContext;
@@ -273,18 +274,23 @@ export const handleWarnpc = (
 export const registerMiscDirectives = (
   registry: DirectiveRegistry,
   context: MiscDirectiveContexts,
+  enabledGroups: ReadonlySet<CoreDirectiveGroup> = new Set(["table", "diagnostic"]),
 ): void => {
-  registry.registerLowered("pulltable", context.table, handlePullTable);
+  if (enabledGroups.has("table")) {
+    registry.registerLowered("pulltable", context.table, handlePullTable);
 
-  registry.registerLowered("pushtable", context.table, handlePushTable);
+    registry.registerLowered("pushtable", context.table, handlePushTable);
 
-  registry.registerLowered("cleartable", context.table, handleClearTable);
+    registry.registerLowered("cleartable", context.table, handleClearTable);
 
-  registry.registerLowered("table", context.table, handleTable);
+    registry.registerLowered("table", context.table, handleTable);
+  }
 
-  registry.registerLowered("assert", context.diagnostic, handleAssert);
+  if (enabledGroups.has("diagnostic")) {
+    registry.registerLowered("assert", context.diagnostic, handleAssert);
 
-  registry.registerLowered("error", context.diagnostic, handleError);
+    registry.registerLowered("error", context.diagnostic, handleError);
 
-  registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+    registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+  }
 };

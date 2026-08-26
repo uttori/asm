@@ -1,4 +1,5 @@
 import type { NormalizedCommand } from "../ir/normalized-command.js";
+import { type CoreDirectiveGroup } from "../directive-groups.js";
 import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, NarrowDirectiveHandler, NamespaceDirectiveContext, OrgDirectiveContext, RuntimeDirectiveContext, StructDirectiveContext, TableDirectiveContext, DiagnosticDirectiveContext } from "./types.js";
 type BoundDirectiveHandler = (words: readonly string[], raw: string, command?: NormalizedCommand) => void;
 export type DirectiveExecutionPhase = "preprocess" | "lowered";
@@ -20,8 +21,10 @@ export interface DirectiveRegistryContexts {
     diagnostic: DiagnosticDirectiveContext;
 }
 export declare class DirectiveRegistry {
+    readonly directivePrefixes: readonly string[];
     readonly handlers: Map<string, BoundDirectiveHandler>;
     readonly phases: Map<string, DirectiveExecutionPhase>;
+    constructor(directivePrefixes?: readonly string[]);
     /**
      * Registers the value.
      * @param {string | string[]} keyword The keyword.
@@ -53,7 +56,7 @@ export declare class DirectiveRegistry {
      */
     dispatch(keyword: string, words: readonly string[], raw: string, command?: NormalizedCommand): boolean;
     /**
-     * Resolves a directive handler, including Asar's `@directive` file-header form.
+     * Resolves a directive handler using prefixes supplied by the active syntax profile.
      * @param {string} keyword The directive keyword.
      * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
      */
@@ -65,6 +68,6 @@ export declare class DirectiveRegistry {
      */
     getPhase(keyword: string): DirectiveExecutionPhase | undefined;
 }
-export declare const createDirectiveRegistry: (contexts: DirectiveRegistryContexts) => DirectiveRegistry;
+export declare const createDirectiveRegistry: (contexts: DirectiveRegistryContexts, enabledGroups?: readonly CoreDirectiveGroup[], directivePrefixes?: readonly string[]) => DirectiveRegistry;
 export {};
 //# sourceMappingURL=registry.d.ts.map

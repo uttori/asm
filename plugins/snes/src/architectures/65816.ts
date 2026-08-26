@@ -8,6 +8,15 @@ import {
   type LoweredOperand,
 } from "@uttori/asm-core";
 import { cpu65816Catalog } from "../tooling/instruction-catalog.js";
+import { classifyExpanded65816Operand } from "./operand-classifiers.js";
+
+const lower65816Operand = (
+  resolver: ArchitectureEncoderContext["operands"],
+  operand: string,
+): LoweredOperand => {
+  const lowered = resolver.lowerOperand(operand);
+  return lowered.mode !== "unknown" ? lowered : classifyExpanded65816Operand(resolver, lowered);
+};
 
 let debug = (..._args: unknown[]): void => {};
 /* c8 ignore next */
@@ -209,7 +218,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
     const mnemonic = words[0] ?? "";
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     return this.estimateResolvedInstruction(
       mnemonic,
       rawOperand,
@@ -318,7 +327,7 @@ export class Arch65816 implements ArchitectureEncoder {
       return this.assembler.operandResolver.getnum(rawOperand.substring(1));
     }
 
-    const lowered = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const lowered = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const registerName = (lowered.registerName ?? "").toUpperCase();
     if (
       accumulatorRepeatOpcodes.has(opcode) &&
@@ -401,7 +410,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
     const mnemonic = words[0] ?? "";
     const rawOperand = words.length > 1 ? words.slice(1).join(" ") : "";
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     return this.encodeResolvedInstruction(
       mnemonic,
       rawOperand,
@@ -524,7 +533,7 @@ export class Arch65816 implements ArchitectureEncoder {
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
     const isExplicitDirectPage = loweredOperand.explicitDirectPage ?? false;
@@ -1070,7 +1079,7 @@ export class Arch65816 implements ArchitectureEncoder {
       return false; // Not a logic or compare instruction
     }
     const logicOpcode = opcode as LogicOpcode;
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
 
@@ -1430,7 +1439,7 @@ export class Arch65816 implements ArchitectureEncoder {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
 
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operandText);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operandText);
 
     // Track indexed addressing without mutating the raw operand.
     const rawOperand = operandText;
@@ -1571,7 +1580,7 @@ export class Arch65816 implements ArchitectureEncoder {
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
 
     let opcodeByte = 0;
     let address = 0;
@@ -1727,7 +1736,7 @@ export class Arch65816 implements ArchitectureEncoder {
    */
   handleJump(opcode: string, operand: string, rawOperand = operand): boolean {
     debug("handleJump", { opcode, operand, rawOperand });
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(rawOperand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const baseOperand = loweredOperand.baseExpression ?? rawOperand;
     const symbolicOperand = rawOperand.trim();
 
@@ -1909,7 +1918,7 @@ export class Arch65816 implements ArchitectureEncoder {
     explicitlen: boolean,
   ): boolean {
     debug("handleStoreOperations", { opcode, operand, len, explicitlen });
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const rawOperand = operand;
     type StoreOpcode = "STX" | "STY" | "STZ";
     type StoreModeMap = {
@@ -2126,7 +2135,7 @@ export class Arch65816 implements ArchitectureEncoder {
       direct: Partial<Record<1 | 2, number>>;
       directX?: Partial<Record<1 | 2, number>>;
     };
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const rawOperand = operand;
     const normalizedOperand = isIndexedMemory(loweredOperand, "x")
       ? rawOperand.slice(0, -2).trim()
@@ -2423,7 +2432,7 @@ export class Arch65816 implements ArchitectureEncoder {
    */
   handleMemoryBitInstructions(opcode: string, operand: string): boolean {
     debug("handleMemoryBitInstructions", opcode, operand);
-    const loweredOperand = this.assembler.operandResolver.lowerOperand(operand);
+    const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const memoryBitOpcodes: { [key: string]: { direct: number; absolute: number } } = {
       TSB: { direct: 0x04, absolute: 0x0c },
       TRB: { direct: 0x14, absolute: 0x1c },

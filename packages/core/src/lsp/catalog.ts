@@ -64,13 +64,21 @@ export function findDirectiveEntry(keyword: string): DirectiveDescriptor | undef
  * Finds a directive in an explicitly active descriptor catalog.
  * @param {string} keyword The directive keyword.
  * @param {readonly DirectiveDescriptor[]} directives Active directive descriptors.
+ * @param {readonly string[]} [directivePrefixes] Prefixes accepted by the active syntax profile.
  * @returns {DirectiveDescriptor | undefined} The matching active directive.
  */
 export function findDirectiveInCatalog(
   keyword: string,
   directives: readonly DirectiveDescriptor[] = directiveCatalog,
+  directivePrefixes: readonly string[] = ["@"],
 ): DirectiveDescriptor | undefined {
-  const canonical = keyword.toLowerCase().replace(/^@/, "");
+  let canonical = keyword.toLowerCase();
+  for (const prefix of directivePrefixes) {
+    if (canonical.startsWith(prefix)) {
+      canonical = canonical.slice(prefix.length);
+      break;
+    }
+  }
   return directives.find((directive) => directive.keyword.toLowerCase() === canonical);
 }
 

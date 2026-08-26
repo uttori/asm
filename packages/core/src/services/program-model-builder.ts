@@ -4,7 +4,6 @@ import type {
   ExecutableNode,
   LoopNode,
 } from "../ir/assembly-tree.js";
-import { splitInlineCommands } from "./command-text-service.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 import {
   incrementInternalCounter,
@@ -37,6 +36,7 @@ export type ProgramModelBuilderHost = {
   currentLine: number;
   passProgramCache: Map<string, ExecutableNode[]>;
   preprocessBlockCommands(source: string): string[];
+  splitInlineCommands(commands: string[]): string[];
   createLoopCommandNode(
     command: string,
     sourceFile?: string,
@@ -95,7 +95,7 @@ export class ProgramModelBuilder {
     sourceFile = this.host.currentFile,
     startLine = 0,
   ): ProgramModel {
-    const commands = splitInlineCommands(this.host.preprocessBlockCommands(source));
+    const commands = this.host.splitInlineCommands(this.host.preprocessBlockCommands(source));
     return {
       sourceFile,
       startLine,
@@ -110,7 +110,7 @@ export class ProgramModelBuilder {
    * @returns {IncludeProgramNode} The include node.
    */
   createIncludeNode(file: string, source: string): IncludeProgramNode {
-    const commands = splitInlineCommands(this.host.preprocessBlockCommands(source));
+    const commands = this.host.splitInlineCommands(this.host.preprocessBlockCommands(source));
     return {
       type: "include",
       file,
