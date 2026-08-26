@@ -1,7 +1,7 @@
 import { test } from "./ava-helper.js";
 
 import { Assembler, PluginManager } from "@uttori/asm-core";
-import mos6502StubPlugin, { MOS6502_STUB_TARGET_ID } from "@uttori/asm-plugin-6502-stub";
+import plugin65xx, { RAW_65XX_TARGET_ID } from "@uttori/asm-plugin-65xx";
 import snesPlugin, {
   createSnesAssemblerEnvironment,
   SNES_TARGET_ID,
@@ -52,23 +52,23 @@ test("SNES package has a valid default plugin export", async (t) => {
   await manager.dispose();
 });
 
-test("6502 stub is isolated and fails with a clear not-implemented diagnostic", async (t) => {
+test("65xx plugin is isolated and assembles a raw NMOS 6502 program", async (t) => {
   const manager = new PluginManager();
-  await manager.activatePlugins([{ plugin: mos6502StubPlugin }]);
+  await manager.activatePlugins([{ plugin: plugin65xx, options: { origin: 0x8000 } }]);
   const assembler = new Assembler({
     environment: manager.freeze(),
-    target: MOS6502_STUB_TARGET_ID,
+    target: RAW_65XX_TARGET_ID,
+    targetOptions: { origin: 0x8000 },
   });
 
-  t.truthy(assembler.architectureRegistry.getDefinition("mos6502"));
-  t.deepEqual(assembler.architectureRegistry.getInstructionCatalog("6502"), []);
+  t.truthy(assembler.architectureRegistry.getDefinition("65xx.6502"));
+  t.true(assembler.architectureRegistry.getInstructionCatalog("6502").length > 0);
   t.false(assembler.directiveRegistry.has("lorom"));
   t.false(assembler.directiveRegistry.has("spcblock"));
   t.is(assembler.syntaxProfile.id, "native");
   t.false(assembler.directiveRegistry.has("@includeonce"));
-  t.throws(() => assembler.assembleSource("org $8000\nnop", "stub.asm"), {
-    message: /6502 encoding is not implemented/i,
-  });
+  assembler.assembleSource("org $8000\nlda #$42\nsta $20\nnop", "6502.asm");
+  t.deepEqual([...assembler.getBinaryOutput()], [0xa9, 0x42, 0x85, 0x20, 0xea]);
   t.throws(() => assembler.mathCore.math("snestopc($8000)"), {
     message: /unknown built-in function 'snestopc'/i,
   });

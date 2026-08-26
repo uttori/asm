@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-08-25",
+  "recordedAt": "2026-08-26",
   "references": {
     "6502js": {
       "repository": "https://github.com/skilldrick/6502js",
@@ -16,6 +16,16 @@
       "license": "Zlib",
       "roles": ["differential-oracle", "fixture-source"],
       "implementationReuse": false
+    },
+    "ca65-phase4-5": {
+      "repository": "https://github.com/cc65/cc65",
+      "release": "V2.19",
+      "commit": "e11fb5c39371046ebe25485f984f644c5a0d65d3",
+      "instructionTableSha256": "bcd36f022a3534355285346d6a4149563a21f17c72b614d91e381d19d68e5a9d",
+      "license": "Zlib",
+      "roles": ["declarative-table-source", "differential-oracle", "fixture-source"],
+      "implementationReuse": false,
+      "declarativeMetadataReuse": true
     }
   },
   "crossChecks": [

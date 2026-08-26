@@ -1,4 +1,4 @@
-# 65xx reference and migration baseline
+# 65xx reference baseline
 
 Recorded on 2026-08-25 before the Phase 1 core-boundary implementation.
 
@@ -28,9 +28,10 @@ recorded.
 | --- | --- | --- | --- |
 | 6502js | `ab8662b06321dd6281b9f091ee02b57d7494172c` | GPL-3.0-only | Black-box behavioral oracle and independently authored byte fixtures only |
 | ca65 | release `V2.19`, commit `555282497c3ecf8b313d87d5973093af19c35bd5` | Zlib | Differential assembly oracle and independently authored byte fixtures |
+| ca65 Phase 4/5 snapshot | release `V2.19`, commit `e11fb5c39371046ebe25485f984f644c5a0d65d3`, `instr.c` SHA-256 `bcd36f022a3534355285346d6a4149563a21f17c72b614d91e381d19d68e5a9d` | Zlib | CMOS, Commodore, and MEGA65 declarative tables and 1,680-form differential fixture |
 
 The same values are recorded in
-`plugins/6502-stub/tests/fixtures/reference-manifest.json` so fixture generators
+`plugins/65xx/tests/fixtures/reference-manifest.json` so fixture generators
 and future differential tests can reject an unpinned tool.
 
 The checked-out `6502js/` directory is reference material, not product source.
@@ -45,20 +46,13 @@ authorities. Official processor documentation should resolve hardware
 ambiguities; ca65 compatibility choices must be identified as compatibility
 policy rather than hardware truth.
 
-## Stub migration contract
+## Production identity contract
 
-The current loader-facing identities must remain resolvable during the rename
-to `plugins/65xx`:
-
-- package: `@uttori/asm-plugin-6502-stub`;
-- plugin: `uttori.asm-plugin-6502-stub`;
-- target: `mos.6502-stub`, alias `6502-stub`;
-- architecture: `mos.6502`, aliases `6502` and `mos6502`;
-- address space: `mos.flat16`;
-- output format: `mos.raw`.
-
-Phase 2 may add the production `65xx.*` identities, but removing these names
-requires a documented deprecation window and loader migration tests.
+The sole package identity is `@uttori/asm-plugin-65xx`. Contributions use the
+`65xx.*` namespace: target `65xx.raw`, address space `65xx.flat16`, output format
+`65xx.raw-output`, and the architecture IDs documented in the implementation
+plan. Encoding-equivalent chip aliases such as `6510` are CPU names, not
+compatibility modes.
 
 ## Fixture provenance rule
 
@@ -68,3 +62,9 @@ diagnostic, and whether the result was independently cross-checked. A
 differential mismatch must be classified as an implementation bug,
 intentional syntax difference, known reference behavior, or hardware
 ambiguity; expected output must not be silently updated.
+
+One deliberate forward-compatibility difference is recorded for Phase 3: the
+current ca65 guide documents optional `BRK` signature operands, while the pinned
+V2.19 executable rejects those addressing forms. The 65xx native profile
+accepts them declaratively; the 221 canonical opcode-form fixture remains
+byte-for-byte V2.19-compatible.

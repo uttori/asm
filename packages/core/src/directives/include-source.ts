@@ -192,7 +192,7 @@ const assertIncbinMathParensBalanced = (text: string): void => {
  * @returns {{ value: number; rest: string }} Consumed value and leftover.
  */
 const parseIncbinUnprefixedHex = (text: string): { value: number; rest: string } => {
-  const match = text.match(/^([0-9A-Fa-f]*)/);
+  const match = text.match(/^([\dA-Fa-f]*)/);
   const digits = match?.[1] ?? "";
   let value = 0;
   if (digits !== "") {

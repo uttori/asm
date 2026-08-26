@@ -2063,8 +2063,8 @@ export class Assembler {
    */
   tryHandleCharacterMapping(command: string): boolean {
     const trimmed = command.trim();
-    const singleQuoted = /^'([\s\S])'\s*=\s*(.+)$/.exec(trimmed);
-    const doubleQuoted = /^"([\s\S])"\s*=\s*(.+)$/.exec(trimmed);
+    const singleQuoted = /^'([\S\s])'\s*=\s*(.+)$/.exec(trimmed);
+    const doubleQuoted = /^"([\S\s])"\s*=\s*(.+)$/.exec(trimmed);
     const match = singleQuoted ?? doubleQuoted;
     if (!match) {
       return false;

@@ -1,0 +1,249 @@
+import {
+  ca65EaTable,
+  ca65VariantTables,
+  type Ca65InstructionRow,
+} from "./variant-tables.generated.js";
+import {
+  getOperandCodec,
+  getOperandFields,
+  type AddressingMode,
+  type CpuDefinition,
+  type CpuFeature,
+  type InstructionForm,
+  type OperandCodecId,
+} from "./schema.js";
+
+interface ModeDefinition {
+  readonly mode: AddressingMode;
+  readonly codec?: OperandCodecId;
+}
+
+const commonModes: Readonly<Partial<Record<number, ModeDefinition>>> = {
+  0: { mode: "implied" },
+  1: { mode: "accumulator" },
+  2: { mode: "zeroPage" },
+  3: { mode: "absolute" },
+  5: { mode: "zeroPageIndexedX" },
+  6: { mode: "absoluteIndexedX" },
+  7: { mode: "absoluteLongIndexedX", codec: "unsigned24-le" },
+  8: { mode: "zeroPageIndexedY" },
+  9: { mode: "absoluteIndexedY" },
+  11: { mode: "indirect" },
+  12: { mode: "zeroPageIndirectLong" },
+  13: { mode: "indirectIndexedY" },
+  15: { mode: "indexedIndirectX" },
+  16: { mode: "absoluteIndexedIndirect" },
+  17: { mode: "relative" },
+  18: { mode: "relative16" },
+  20: { mode: "stackRelativeIndirectIndexedY" },
+  21: { mode: "immediate" },
+  22: { mode: "immediate" },
+  23: { mode: "immediate" },
+  27: { mode: "immediate", codec: "unsigned16-le" },
+  30: { mode: "basePageIndirectIndexedZ" },
+  31: { mode: "quadAccumulator" },
+};
+
+const featureByTable: Readonly<Record<keyof typeof ca65VariantTables, CpuFeature>> = {
+  "6502DTV": "dtv",
+  "65SC02": "cmos",
+  "65C02": "rockwell",
+  W65C02: "wdc",
+  "65CE02": "ce02",
+  "4510": "4510",
+  "45GS02": "45gs02",
+};
+
+function opcodeFor(row: Ca65InstructionRow, modeIndex: number): number {
+  const [, , base, eaTable] = row;
+  const extension = ca65EaTable[eaTable]?.[modeIndex];
+  if (extension === undefined) throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
+  let opcode = base | extension;
+  if (row[4] === "Put4510" || row[4] === "Put45GS02") {
+    opcode =
+      new Map([
+        [0x47, 0x44],
+        [0x57, 0x54],
+        [0x93, 0x82],
+        [0x9c, 0x8b],
+        [0x9e, 0x9b],
+        [0xaf, 0xab],
+        [0xbf, 0xbb],
+        [0xb3, 0xe2],
+        [0xd0, 0xc2],
+        [0xfc, 0x23],
+      ]).get(opcode) ?? opcode;
+  }
+  if (row[4] === "Put45GS02_Q") {
+    if (opcode === 0xea) opcode = 0x1a;
+    else if (opcode === 0xca) opcode = 0x3a;
+  }
+  return opcode;
+}
+
+function modeFor(
+  table: keyof typeof ca65VariantTables,
+  modeIndex: number,
+): ModeDefinition | undefined {
+  if (modeIndex === 10) {
+    return table === "65SC02" || table === "65C02" || table === "W65C02"
+      ? { mode: "zeroPageIndirect" }
+      : { mode: "zeroPageIndirectIndexedZ" };
+  }
+  return commonModes[modeIndex];
+}
+
+function createForm(
+  table: keyof typeof ca65VariantTables,
+  row: Ca65InstructionRow,
+  modeIndex: number,
+  modeDefinition: ModeDefinition,
+): InstructionForm {
+  const opcode = opcodeFor(row, modeIndex);
+  const codec = modeDefinition.codec ?? getOperandCodec(modeDefinition.mode);
+  const prefixes: number[] = [];
+  if (row[4] === "Put45GS02_Q") {
+    prefixes.push(0x42, 0x42);
+    if (modeIndex === 12 || modeIndex === 30) prefixes.push(0xea);
+  } else if (row[4] === "Put45GS02" && modeIndex === 30) {
+    prefixes.push(0xea);
+  }
+  return Object.freeze({
+    opcode,
+    mnemonic: row[0],
+    mode: modeDefinition.mode,
+    encoding: [...prefixes, opcode],
+    operands: getOperandFields(codec),
+    codec,
+    availableWhen: { allOf: [featureByTable[table]] },
+    canonical: true,
+    documented: true,
+    stability: "documented",
+    relativeBaseOffset: row[4] === "PutPCRel4510" ? 2 : undefined,
+  });
+}
+
+function decodeTable(table: keyof typeof ca65VariantTables): readonly InstructionForm[] {
+  const forms: InstructionForm[] = [];
+  for (const row of ca65VariantTables[table] as readonly Ca65InstructionRow[]) {
+    if (row[4] === "PutBitBranch") {
+      forms.push(
+        Object.freeze({
+          opcode: row[2],
+          mnemonic: row[0],
+          mode: "zeroPageRelative",
+          encoding: [row[2]],
+          operands: getOperandFields("zero-page-relative8"),
+          codec: "zero-page-relative8",
+          availableWhen: { allOf: [featureByTable[table]] },
+          canonical: true,
+          documented: true,
+          stability: "documented",
+          relativeBaseOffset: 3,
+        }),
+      );
+      continue;
+    }
+    if (row[4] === "PutPCRel8" || row[4] === "PutPCRel4510") {
+      const modeIndex = row[4] === "PutPCRel8" ? 17 : 18;
+      const modeDefinition = commonModes[modeIndex];
+      if (modeDefinition) forms.push(createForm(table, row, modeIndex, modeDefinition));
+      continue;
+    }
+
+    const seenModes = new Set<string>();
+    for (let modeIndex = 0; modeIndex < 32; modeIndex++) {
+      if ((row[1] & (2 ** modeIndex)) === 0) continue;
+      // ca65 sets both bits for accumulator instructions; the explicit accumulator
+      // form also accepts an omitted A in our native syntax.
+      if (modeIndex === 0 && (row[1] & 2) !== 0) continue;
+      const modeDefinition = modeFor(table, modeIndex);
+      if (!modeDefinition) {
+        throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
+      }
+      const key = `${modeDefinition.mode}:${modeDefinition.codec ?? ""}`;
+      if (seenModes.has(key)) continue;
+      seenModes.add(key);
+      forms.push(createForm(table, row, modeIndex, modeDefinition));
+    }
+  }
+  return Object.freeze(forms);
+}
+
+export const mos6502DtvForms = decodeTable("6502DTV");
+export const cmos65sc02Forms = decodeTable("65SC02");
+export const cmos65c02Forms = decodeTable("65C02");
+export const wdc65c02Forms = decodeTable("W65C02");
+export const csg65ce02Forms = decodeTable("65CE02");
+export const commodore4510Forms = decodeTable("4510");
+export const mega65Gs02Forms = decodeTable("45GS02");
+
+export const mos6502DtvCpu: CpuDefinition = Object.freeze({
+  id: "65xx.6502dtv",
+  displayName: "C64DTV 6502",
+  aliases: ["6502dtv", "dtv"],
+  features: new Set<CpuFeature>(["nmos", "undocumented", "dtv"]),
+});
+
+export const cmos65sc02Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.65sc02",
+  displayName: "65SC02",
+  aliases: ["65sc02"],
+  features: new Set<CpuFeature>(["cmos"]),
+});
+
+export const cmos65c02Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.65c02",
+  displayName: "65C02 with Rockwell extensions",
+  aliases: ["65c02"],
+  features: new Set<CpuFeature>(["cmos", "rockwell"]),
+});
+
+export const wdc65c02Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.w65c02",
+  displayName: "WDC W65C02",
+  aliases: ["w65c02"],
+  features: new Set<CpuFeature>(["cmos", "rockwell", "wdc"]),
+});
+
+export const csg65ce02Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.65ce02",
+  displayName: "CSG 65CE02",
+  aliases: ["65ce02"],
+  features: new Set<CpuFeature>(["cmos", "rockwell", "ce02"]),
+});
+
+export const commodore4510Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.4510",
+  displayName: "Commodore 4510",
+  aliases: ["4510"],
+  features: new Set<CpuFeature>(["cmos", "rockwell", "ce02", "4510"]),
+});
+
+export const mega65Gs02Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.45gs02",
+  displayName: "MEGA65 45GS02",
+  aliases: ["45gs02"],
+  features: new Set<CpuFeature>(["cmos", "rockwell", "ce02", "4510", "45gs02"]),
+});
+
+export const variantCpus = Object.freeze([
+  mos6502DtvCpu,
+  cmos65sc02Cpu,
+  cmos65c02Cpu,
+  wdc65c02Cpu,
+  csg65ce02Cpu,
+  commodore4510Cpu,
+  mega65Gs02Cpu,
+]);
+
+export const variantFormsByCpuId: Readonly<Record<string, readonly InstructionForm[]>> =
+  Object.freeze({
+    [mos6502DtvCpu.id]: mos6502DtvForms,
+    [cmos65sc02Cpu.id]: cmos65sc02Forms,
+    [cmos65c02Cpu.id]: cmos65c02Forms,
+    [wdc65c02Cpu.id]: wdc65c02Forms,
+    [csg65ce02Cpu.id]: csg65ce02Forms,
+    [commodore4510Cpu.id]: commodore4510Forms,
+    [mega65Gs02Cpu.id]: mega65Gs02Forms,
+  });

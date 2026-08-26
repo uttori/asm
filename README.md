@@ -2,14 +2,14 @@
 
 Uttori ASM is a pluggable assembler toolkit for TypeScript and Node.js. Its architecture-neutral core owns parsing, the three-stage assembly pipeline, symbols, macros, includes, diagnostics, output writing, and editor analysis. Plugins own targets, instruction encoders, address spaces, output formats, target directives, expression functions, lifecycle behavior, and per-session state.
 
-The repository ships four packages:
+The repository ships four production packages:
 
 | Package | Purpose |
 | --- | --- |
 | `@uttori/asm-core` | Generic assembler runtime, analysis APIs, and plugin contracts |
 | `@uttori/asm-plugin-loader-node` | Trusted Node.js plugin discovery and `asm.config.json` loading |
 | `@uttori/asm-plugin-snes` | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility |
-| `@uttori/asm-plugin-6502-stub` | Small target stub that demonstrates a deliberately unimplemented encoder |
+| `@uttori/asm-plugin-65xx` | NMOS, CMOS, Commodore, and MEGA65 65xx encoders with a configurable-origin flat raw target |
 
 The language server and VS Code extension use the same loaded plugin environment as command-line builds, so diagnostics and editor catalogs match the selected target.
 
@@ -206,7 +206,7 @@ The final migration gates are `npm run verify`, `npm run pack:check`, all three 
 packages/core/                architecture-neutral runtime and plugin API
 packages/plugin-loader-node/  Node discovery, config loader, and JSON schema
 plugins/snes/                 SNES implementation and parity tests
-plugins/6502-stub/            intentionally incomplete example target
+plugins/65xx/                 65xx-family instruction models, encoders, and fixtures
 src/                          generic CLI host
 language-server/              LSP transport and environment controller
 editors/vscode/               VS Code client and bundled artifacts

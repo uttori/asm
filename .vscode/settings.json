@@ -1,0 +1,5 @@
+{
+  "oxc.path.oxlint": "./node_modules/oxlint/bin/oxlint",
+  "oxc.path.oxfmt": "./node_modules/oxfmt/bin/oxfmt",
+  "oxc.path.tsgolint": "./node_modules/@oxlint-tsgolint/darwin-arm64/tsgolint"
+}

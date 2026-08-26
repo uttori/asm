@@ -1,0 +1,2498 @@
+{
+  "schemaVersion": 1,
+  "oracle": {
+    "name": "ca65",
+    "release": "V2.19",
+    "commit": "555282497c3ecf8b313d87d5973093af19c35bd5",
+    "reportedVersion": "V2.18 - N/A",
+    "cpu": "6502X",
+    "command": "ca65 --cpu 6502X --list-bytes 16 -l 6502x.lst -o 6502x.o 6502x.s",
+    "syntaxProfile": "ca65",
+    "independentlyCrossChecked": false
+  },
+  "operandPolicy": {
+    "immediate": "#$12",
+    "zeroPage": "$12",
+    "absolute": "$1234",
+    "relative": "next instruction"
+  },
+  "cases": [
+    {
+      "opcode": 0,
+      "mnemonic": "BRK",
+      "mode": "implied",
+      "source": "brk",
+      "documented": true,
+      "bytes": [
+        0
+      ]
+    },
+    {
+      "opcode": 1,
+      "mnemonic": "ORA",
+      "mode": "indexedIndirectX",
+      "source": "ora ($12,x)",
+      "documented": true,
+      "bytes": [
+        1,
+        18
+      ]
+    },
+    {
+      "opcode": 2,
+      "mnemonic": "JAM",
+      "mode": "implied",
+      "source": "jam",
+      "documented": false,
+      "bytes": [
+        2
+      ]
+    },
+    {
+      "opcode": 3,
+      "mnemonic": "SLO",
+      "mode": "indexedIndirectX",
+      "source": "slo ($12,x)",
+      "documented": false,
+      "bytes": [
+        3,
+        18
+      ]
+    },
+    {
+      "opcode": 4,
+      "mnemonic": "NOP",
+      "mode": "zeroPage",
+      "source": "nop $12",
+      "documented": false,
+      "bytes": [
+        4,
+        18
+      ]
+    },
+    {
+      "opcode": 5,
+      "mnemonic": "ORA",
+      "mode": "zeroPage",
+      "source": "ora $12",
+      "documented": true,
+      "bytes": [
+        5,
+        18
+      ]
+    },
+    {
+      "opcode": 6,
+      "mnemonic": "ASL",
+      "mode": "zeroPage",
+      "source": "asl $12",
+      "documented": true,
+      "bytes": [
+        6,
+        18
+      ]
+    },
+    {
+      "opcode": 7,
+      "mnemonic": "SLO",
+      "mode": "zeroPage",
+      "source": "slo $12",
+      "documented": false,
+      "bytes": [
+        7,
+        18
+      ]
+    },
+    {
+      "opcode": 8,
+      "mnemonic": "PHP",
+      "mode": "implied",
+      "source": "php",
+      "documented": true,
+      "bytes": [
+        8
+      ]
+    },
+    {
+      "opcode": 9,
+      "mnemonic": "ORA",
+      "mode": "immediate",
+      "source": "ora #$12",
+      "documented": true,
+      "bytes": [
+        9,
+        18
+      ]
+    },
+    {
+      "opcode": 10,
+      "mnemonic": "ASL",
+      "mode": "accumulator",
+      "source": "asl a",
+      "documented": true,
+      "bytes": [
+        10
+      ]
+    },
+    {
+      "opcode": 11,
+      "mnemonic": "ANC",
+      "mode": "immediate",
+      "source": "anc #$12",
+      "documented": false,
+      "bytes": [
+        11,
+        18
+      ]
+    },
+    {
+      "opcode": 12,
+      "mnemonic": "NOP",
+      "mode": "absolute",
+      "source": "nop $1234",
+      "documented": false,
+      "bytes": [
+        12,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 13,
+      "mnemonic": "ORA",
+      "mode": "absolute",
+      "source": "ora $1234",
+      "documented": true,
+      "bytes": [
+        13,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 14,
+      "mnemonic": "ASL",
+      "mode": "absolute",
+      "source": "asl $1234",
+      "documented": true,
+      "bytes": [
+        14,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 15,
+      "mnemonic": "SLO",
+      "mode": "absolute",
+      "source": "slo $1234",
+      "documented": false,
+      "bytes": [
+        15,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 16,
+      "mnemonic": "BPL",
+      "mode": "relative",
+      "source": "bpl branch_10\nbranch_10:",
+      "documented": true,
+      "bytes": [
+        16,
+        0
+      ]
+    },
+    {
+      "opcode": 17,
+      "mnemonic": "ORA",
+      "mode": "indirectIndexedY",
+      "source": "ora ($12),y",
+      "documented": true,
+      "bytes": [
+        17,
+        18
+      ]
+    },
+    {
+      "opcode": 19,
+      "mnemonic": "SLO",
+      "mode": "indirectIndexedY",
+      "source": "slo ($12),y",
+      "documented": false,
+      "bytes": [
+        19,
+        18
+      ]
+    },
+    {
+      "opcode": 20,
+      "mnemonic": "NOP",
+      "mode": "zeroPageIndexedX",
+      "source": "nop $12,x",
+      "documented": false,
+      "bytes": [
+        20,
+        18
+      ]
+    },
+    {
+      "opcode": 21,
+      "mnemonic": "ORA",
+      "mode": "zeroPageIndexedX",
+      "source": "ora $12,x",
+      "documented": true,
+      "bytes": [
+        21,
+        18
+      ]
+    },
+    {
+      "opcode": 22,
+      "mnemonic": "ASL",
+      "mode": "zeroPageIndexedX",
+      "source": "asl $12,x",
+      "documented": true,
+      "bytes": [
+        22,
+        18
+      ]
+    },
+    {
+      "opcode": 23,
+      "mnemonic": "SLO",
+      "mode": "zeroPageIndexedX",
+      "source": "slo $12,x",
+      "documented": false,
+      "bytes": [
+        23,
+        18
+      ]
+    },
+    {
+      "opcode": 24,
+      "mnemonic": "CLC",
+      "mode": "implied",
+      "source": "clc",
+      "documented": true,
+      "bytes": [
+        24
+      ]
+    },
+    {
+      "opcode": 25,
+      "mnemonic": "ORA",
+      "mode": "absoluteIndexedY",
+      "source": "ora $1234,y",
+      "documented": true,
+      "bytes": [
+        25,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 27,
+      "mnemonic": "SLO",
+      "mode": "absoluteIndexedY",
+      "source": "slo $1234,y",
+      "documented": false,
+      "bytes": [
+        27,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 28,
+      "mnemonic": "NOP",
+      "mode": "absoluteIndexedX",
+      "source": "nop $1234,x",
+      "documented": false,
+      "bytes": [
+        28,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 29,
+      "mnemonic": "ORA",
+      "mode": "absoluteIndexedX",
+      "source": "ora $1234,x",
+      "documented": true,
+      "bytes": [
+        29,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 30,
+      "mnemonic": "ASL",
+      "mode": "absoluteIndexedX",
+      "source": "asl $1234,x",
+      "documented": true,
+      "bytes": [
+        30,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 31,
+      "mnemonic": "SLO",
+      "mode": "absoluteIndexedX",
+      "source": "slo $1234,x",
+      "documented": false,
+      "bytes": [
+        31,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 32,
+      "mnemonic": "JSR",
+      "mode": "absolute",
+      "source": "jsr $1234",
+      "documented": true,
+      "bytes": [
+        32,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 33,
+      "mnemonic": "AND",
+      "mode": "indexedIndirectX",
+      "source": "and ($12,x)",
+      "documented": true,
+      "bytes": [
+        33,
+        18
+      ]
+    },
+    {
+      "opcode": 35,
+      "mnemonic": "RLA",
+      "mode": "indexedIndirectX",
+      "source": "rla ($12,x)",
+      "documented": false,
+      "bytes": [
+        35,
+        18
+      ]
+    },
+    {
+      "opcode": 36,
+      "mnemonic": "BIT",
+      "mode": "zeroPage",
+      "source": "bit $12",
+      "documented": true,
+      "bytes": [
+        36,
+        18
+      ]
+    },
+    {
+      "opcode": 37,
+      "mnemonic": "AND",
+      "mode": "zeroPage",
+      "source": "and $12",
+      "documented": true,
+      "bytes": [
+        37,
+        18
+      ]
+    },
+    {
+      "opcode": 38,
+      "mnemonic": "ROL",
+      "mode": "zeroPage",
+      "source": "rol $12",
+      "documented": true,
+      "bytes": [
+        38,
+        18
+      ]
+    },
+    {
+      "opcode": 39,
+      "mnemonic": "RLA",
+      "mode": "zeroPage",
+      "source": "rla $12",
+      "documented": false,
+      "bytes": [
+        39,
+        18
+      ]
+    },
+    {
+      "opcode": 40,
+      "mnemonic": "PLP",
+      "mode": "implied",
+      "source": "plp",
+      "documented": true,
+      "bytes": [
+        40
+      ]
+    },
+    {
+      "opcode": 41,
+      "mnemonic": "AND",
+      "mode": "immediate",
+      "source": "and #$12",
+      "documented": true,
+      "bytes": [
+        41,
+        18
+      ]
+    },
+    {
+      "opcode": 42,
+      "mnemonic": "ROL",
+      "mode": "accumulator",
+      "source": "rol a",
+      "documented": true,
+      "bytes": [
+        42
+      ]
+    },
+    {
+      "opcode": 44,
+      "mnemonic": "BIT",
+      "mode": "absolute",
+      "source": "bit $1234",
+      "documented": true,
+      "bytes": [
+        44,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 45,
+      "mnemonic": "AND",
+      "mode": "absolute",
+      "source": "and $1234",
+      "documented": true,
+      "bytes": [
+        45,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 46,
+      "mnemonic": "ROL",
+      "mode": "absolute",
+      "source": "rol $1234",
+      "documented": true,
+      "bytes": [
+        46,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 47,
+      "mnemonic": "RLA",
+      "mode": "absolute",
+      "source": "rla $1234",
+      "documented": false,
+      "bytes": [
+        47,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 48,
+      "mnemonic": "BMI",
+      "mode": "relative",
+      "source": "bmi branch_30\nbranch_30:",
+      "documented": true,
+      "bytes": [
+        48,
+        0
+      ]
+    },
+    {
+      "opcode": 49,
+      "mnemonic": "AND",
+      "mode": "indirectIndexedY",
+      "source": "and ($12),y",
+      "documented": true,
+      "bytes": [
+        49,
+        18
+      ]
+    },
+    {
+      "opcode": 51,
+      "mnemonic": "RLA",
+      "mode": "indirectIndexedY",
+      "source": "rla ($12),y",
+      "documented": false,
+      "bytes": [
+        51,
+        18
+      ]
+    },
+    {
+      "opcode": 53,
+      "mnemonic": "AND",
+      "mode": "zeroPageIndexedX",
+      "source": "and $12,x",
+      "documented": true,
+      "bytes": [
+        53,
+        18
+      ]
+    },
+    {
+      "opcode": 54,
+      "mnemonic": "ROL",
+      "mode": "zeroPageIndexedX",
+      "source": "rol $12,x",
+      "documented": true,
+      "bytes": [
+        54,
+        18
+      ]
+    },
+    {
+      "opcode": 55,
+      "mnemonic": "RLA",
+      "mode": "zeroPageIndexedX",
+      "source": "rla $12,x",
+      "documented": false,
+      "bytes": [
+        55,
+        18
+      ]
+    },
+    {
+      "opcode": 56,
+      "mnemonic": "SEC",
+      "mode": "implied",
+      "source": "sec",
+      "documented": true,
+      "bytes": [
+        56
+      ]
+    },
+    {
+      "opcode": 57,
+      "mnemonic": "AND",
+      "mode": "absoluteIndexedY",
+      "source": "and $1234,y",
+      "documented": true,
+      "bytes": [
+        57,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 59,
+      "mnemonic": "RLA",
+      "mode": "absoluteIndexedY",
+      "source": "rla $1234,y",
+      "documented": false,
+      "bytes": [
+        59,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 61,
+      "mnemonic": "AND",
+      "mode": "absoluteIndexedX",
+      "source": "and $1234,x",
+      "documented": true,
+      "bytes": [
+        61,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 62,
+      "mnemonic": "ROL",
+      "mode": "absoluteIndexedX",
+      "source": "rol $1234,x",
+      "documented": true,
+      "bytes": [
+        62,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 63,
+      "mnemonic": "RLA",
+      "mode": "absoluteIndexedX",
+      "source": "rla $1234,x",
+      "documented": false,
+      "bytes": [
+        63,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 64,
+      "mnemonic": "RTI",
+      "mode": "implied",
+      "source": "rti",
+      "documented": true,
+      "bytes": [
+        64
+      ]
+    },
+    {
+      "opcode": 65,
+      "mnemonic": "EOR",
+      "mode": "indexedIndirectX",
+      "source": "eor ($12,x)",
+      "documented": true,
+      "bytes": [
+        65,
+        18
+      ]
+    },
+    {
+      "opcode": 67,
+      "mnemonic": "SRE",
+      "mode": "indexedIndirectX",
+      "source": "sre ($12,x)",
+      "documented": false,
+      "bytes": [
+        67,
+        18
+      ]
+    },
+    {
+      "opcode": 69,
+      "mnemonic": "EOR",
+      "mode": "zeroPage",
+      "source": "eor $12",
+      "documented": true,
+      "bytes": [
+        69,
+        18
+      ]
+    },
+    {
+      "opcode": 70,
+      "mnemonic": "LSR",
+      "mode": "zeroPage",
+      "source": "lsr $12",
+      "documented": true,
+      "bytes": [
+        70,
+        18
+      ]
+    },
+    {
+      "opcode": 71,
+      "mnemonic": "SRE",
+      "mode": "zeroPage",
+      "source": "sre $12",
+      "documented": false,
+      "bytes": [
+        71,
+        18
+      ]
+    },
+    {
+      "opcode": 72,
+      "mnemonic": "PHA",
+      "mode": "implied",
+      "source": "pha",
+      "documented": true,
+      "bytes": [
+        72
+      ]
+    },
+    {
+      "opcode": 73,
+      "mnemonic": "EOR",
+      "mode": "immediate",
+      "source": "eor #$12",
+      "documented": true,
+      "bytes": [
+        73,
+        18
+      ]
+    },
+    {
+      "opcode": 74,
+      "mnemonic": "LSR",
+      "mode": "accumulator",
+      "source": "lsr a",
+      "documented": true,
+      "bytes": [
+        74
+      ]
+    },
+    {
+      "opcode": 75,
+      "mnemonic": "ALR",
+      "mode": "immediate",
+      "source": "alr #$12",
+      "documented": false,
+      "bytes": [
+        75,
+        18
+      ]
+    },
+    {
+      "opcode": 76,
+      "mnemonic": "JMP",
+      "mode": "absolute",
+      "source": "jmp $1234",
+      "documented": true,
+      "bytes": [
+        76,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 77,
+      "mnemonic": "EOR",
+      "mode": "absolute",
+      "source": "eor $1234",
+      "documented": true,
+      "bytes": [
+        77,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 78,
+      "mnemonic": "LSR",
+      "mode": "absolute",
+      "source": "lsr $1234",
+      "documented": true,
+      "bytes": [
+        78,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 79,
+      "mnemonic": "SRE",
+      "mode": "absolute",
+      "source": "sre $1234",
+      "documented": false,
+      "bytes": [
+        79,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 80,
+      "mnemonic": "BVC",
+      "mode": "relative",
+      "source": "bvc branch_50\nbranch_50:",
+      "documented": true,
+      "bytes": [
+        80,
+        0
+      ]
+    },
+    {
+      "opcode": 81,
+      "mnemonic": "EOR",
+      "mode": "indirectIndexedY",
+      "source": "eor ($12),y",
+      "documented": true,
+      "bytes": [
+        81,
+        18
+      ]
+    },
+    {
+      "opcode": 83,
+      "mnemonic": "SRE",
+      "mode": "indirectIndexedY",
+      "source": "sre ($12),y",
+      "documented": false,
+      "bytes": [
+        83,
+        18
+      ]
+    },
+    {
+      "opcode": 85,
+      "mnemonic": "EOR",
+      "mode": "zeroPageIndexedX",
+      "source": "eor $12,x",
+      "documented": true,
+      "bytes": [
+        85,
+        18
+      ]
+    },
+    {
+      "opcode": 86,
+      "mnemonic": "LSR",
+      "mode": "zeroPageIndexedX",
+      "source": "lsr $12,x",
+      "documented": true,
+      "bytes": [
+        86,
+        18
+      ]
+    },
+    {
+      "opcode": 87,
+      "mnemonic": "SRE",
+      "mode": "zeroPageIndexedX",
+      "source": "sre $12,x",
+      "documented": false,
+      "bytes": [
+        87,
+        18
+      ]
+    },
+    {
+      "opcode": 88,
+      "mnemonic": "CLI",
+      "mode": "implied",
+      "source": "cli",
+      "documented": true,
+      "bytes": [
+        88
+      ]
+    },
+    {
+      "opcode": 89,
+      "mnemonic": "EOR",
+      "mode": "absoluteIndexedY",
+      "source": "eor $1234,y",
+      "documented": true,
+      "bytes": [
+        89,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 91,
+      "mnemonic": "SRE",
+      "mode": "absoluteIndexedY",
+      "source": "sre $1234,y",
+      "documented": false,
+      "bytes": [
+        91,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 93,
+      "mnemonic": "EOR",
+      "mode": "absoluteIndexedX",
+      "source": "eor $1234,x",
+      "documented": true,
+      "bytes": [
+        93,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 94,
+      "mnemonic": "LSR",
+      "mode": "absoluteIndexedX",
+      "source": "lsr $1234,x",
+      "documented": true,
+      "bytes": [
+        94,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 95,
+      "mnemonic": "SRE",
+      "mode": "absoluteIndexedX",
+      "source": "sre $1234,x",
+      "documented": false,
+      "bytes": [
+        95,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 96,
+      "mnemonic": "RTS",
+      "mode": "implied",
+      "source": "rts",
+      "documented": true,
+      "bytes": [
+        96
+      ]
+    },
+    {
+      "opcode": 97,
+      "mnemonic": "ADC",
+      "mode": "indexedIndirectX",
+      "source": "adc ($12,x)",
+      "documented": true,
+      "bytes": [
+        97,
+        18
+      ]
+    },
+    {
+      "opcode": 99,
+      "mnemonic": "RRA",
+      "mode": "indexedIndirectX",
+      "source": "rra ($12,x)",
+      "documented": false,
+      "bytes": [
+        99,
+        18
+      ]
+    },
+    {
+      "opcode": 101,
+      "mnemonic": "ADC",
+      "mode": "zeroPage",
+      "source": "adc $12",
+      "documented": true,
+      "bytes": [
+        101,
+        18
+      ]
+    },
+    {
+      "opcode": 102,
+      "mnemonic": "ROR",
+      "mode": "zeroPage",
+      "source": "ror $12",
+      "documented": true,
+      "bytes": [
+        102,
+        18
+      ]
+    },
+    {
+      "opcode": 103,
+      "mnemonic": "RRA",
+      "mode": "zeroPage",
+      "source": "rra $12",
+      "documented": false,
+      "bytes": [
+        103,
+        18
+      ]
+    },
+    {
+      "opcode": 104,
+      "mnemonic": "PLA",
+      "mode": "implied",
+      "source": "pla",
+      "documented": true,
+      "bytes": [
+        104
+      ]
+    },
+    {
+      "opcode": 105,
+      "mnemonic": "ADC",
+      "mode": "immediate",
+      "source": "adc #$12",
+      "documented": true,
+      "bytes": [
+        105,
+        18
+      ]
+    },
+    {
+      "opcode": 106,
+      "mnemonic": "ROR",
+      "mode": "accumulator",
+      "source": "ror a",
+      "documented": true,
+      "bytes": [
+        106
+      ]
+    },
+    {
+      "opcode": 107,
+      "mnemonic": "ARR",
+      "mode": "immediate",
+      "source": "arr #$12",
+      "documented": false,
+      "bytes": [
+        107,
+        18
+      ]
+    },
+    {
+      "opcode": 108,
+      "mnemonic": "JMP",
+      "mode": "indirect",
+      "source": "jmp ($1234)",
+      "documented": true,
+      "bytes": [
+        108,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 109,
+      "mnemonic": "ADC",
+      "mode": "absolute",
+      "source": "adc $1234",
+      "documented": true,
+      "bytes": [
+        109,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 110,
+      "mnemonic": "ROR",
+      "mode": "absolute",
+      "source": "ror $1234",
+      "documented": true,
+      "bytes": [
+        110,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 111,
+      "mnemonic": "RRA",
+      "mode": "absolute",
+      "source": "rra $1234",
+      "documented": false,
+      "bytes": [
+        111,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 112,
+      "mnemonic": "BVS",
+      "mode": "relative",
+      "source": "bvs branch_70\nbranch_70:",
+      "documented": true,
+      "bytes": [
+        112,
+        0
+      ]
+    },
+    {
+      "opcode": 113,
+      "mnemonic": "ADC",
+      "mode": "indirectIndexedY",
+      "source": "adc ($12),y",
+      "documented": true,
+      "bytes": [
+        113,
+        18
+      ]
+    },
+    {
+      "opcode": 115,
+      "mnemonic": "RRA",
+      "mode": "indirectIndexedY",
+      "source": "rra ($12),y",
+      "documented": false,
+      "bytes": [
+        115,
+        18
+      ]
+    },
+    {
+      "opcode": 117,
+      "mnemonic": "ADC",
+      "mode": "zeroPageIndexedX",
+      "source": "adc $12,x",
+      "documented": true,
+      "bytes": [
+        117,
+        18
+      ]
+    },
+    {
+      "opcode": 118,
+      "mnemonic": "ROR",
+      "mode": "zeroPageIndexedX",
+      "source": "ror $12,x",
+      "documented": true,
+      "bytes": [
+        118,
+        18
+      ]
+    },
+    {
+      "opcode": 119,
+      "mnemonic": "RRA",
+      "mode": "zeroPageIndexedX",
+      "source": "rra $12,x",
+      "documented": false,
+      "bytes": [
+        119,
+        18
+      ]
+    },
+    {
+      "opcode": 120,
+      "mnemonic": "SEI",
+      "mode": "implied",
+      "source": "sei",
+      "documented": true,
+      "bytes": [
+        120
+      ]
+    },
+    {
+      "opcode": 121,
+      "mnemonic": "ADC",
+      "mode": "absoluteIndexedY",
+      "source": "adc $1234,y",
+      "documented": true,
+      "bytes": [
+        121,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 123,
+      "mnemonic": "RRA",
+      "mode": "absoluteIndexedY",
+      "source": "rra $1234,y",
+      "documented": false,
+      "bytes": [
+        123,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 125,
+      "mnemonic": "ADC",
+      "mode": "absoluteIndexedX",
+      "source": "adc $1234,x",
+      "documented": true,
+      "bytes": [
+        125,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 126,
+      "mnemonic": "ROR",
+      "mode": "absoluteIndexedX",
+      "source": "ror $1234,x",
+      "documented": true,
+      "bytes": [
+        126,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 127,
+      "mnemonic": "RRA",
+      "mode": "absoluteIndexedX",
+      "source": "rra $1234,x",
+      "documented": false,
+      "bytes": [
+        127,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 128,
+      "mnemonic": "NOP",
+      "mode": "immediate",
+      "source": "nop #$12",
+      "documented": false,
+      "bytes": [
+        128,
+        18
+      ]
+    },
+    {
+      "opcode": 129,
+      "mnemonic": "STA",
+      "mode": "indexedIndirectX",
+      "source": "sta ($12,x)",
+      "documented": true,
+      "bytes": [
+        129,
+        18
+      ]
+    },
+    {
+      "opcode": 131,
+      "mnemonic": "SAX",
+      "mode": "indexedIndirectX",
+      "source": "sax ($12,x)",
+      "documented": false,
+      "bytes": [
+        131,
+        18
+      ]
+    },
+    {
+      "opcode": 132,
+      "mnemonic": "STY",
+      "mode": "zeroPage",
+      "source": "sty $12",
+      "documented": true,
+      "bytes": [
+        132,
+        18
+      ]
+    },
+    {
+      "opcode": 133,
+      "mnemonic": "STA",
+      "mode": "zeroPage",
+      "source": "sta $12",
+      "documented": true,
+      "bytes": [
+        133,
+        18
+      ]
+    },
+    {
+      "opcode": 134,
+      "mnemonic": "STX",
+      "mode": "zeroPage",
+      "source": "stx $12",
+      "documented": true,
+      "bytes": [
+        134,
+        18
+      ]
+    },
+    {
+      "opcode": 135,
+      "mnemonic": "SAX",
+      "mode": "zeroPage",
+      "source": "sax $12",
+      "documented": false,
+      "bytes": [
+        135,
+        18
+      ]
+    },
+    {
+      "opcode": 136,
+      "mnemonic": "DEY",
+      "mode": "implied",
+      "source": "dey",
+      "documented": true,
+      "bytes": [
+        136
+      ]
+    },
+    {
+      "opcode": 138,
+      "mnemonic": "TXA",
+      "mode": "implied",
+      "source": "txa",
+      "documented": true,
+      "bytes": [
+        138
+      ]
+    },
+    {
+      "opcode": 139,
+      "mnemonic": "ANE",
+      "mode": "immediate",
+      "source": "ane #$12",
+      "documented": false,
+      "bytes": [
+        139,
+        18
+      ]
+    },
+    {
+      "opcode": 140,
+      "mnemonic": "STY",
+      "mode": "absolute",
+      "source": "sty $1234",
+      "documented": true,
+      "bytes": [
+        140,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 141,
+      "mnemonic": "STA",
+      "mode": "absolute",
+      "source": "sta $1234",
+      "documented": true,
+      "bytes": [
+        141,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 142,
+      "mnemonic": "STX",
+      "mode": "absolute",
+      "source": "stx $1234",
+      "documented": true,
+      "bytes": [
+        142,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 143,
+      "mnemonic": "SAX",
+      "mode": "absolute",
+      "source": "sax $1234",
+      "documented": false,
+      "bytes": [
+        143,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 144,
+      "mnemonic": "BCC",
+      "mode": "relative",
+      "source": "bcc branch_90\nbranch_90:",
+      "documented": true,
+      "bytes": [
+        144,
+        0
+      ]
+    },
+    {
+      "opcode": 145,
+      "mnemonic": "STA",
+      "mode": "indirectIndexedY",
+      "source": "sta ($12),y",
+      "documented": true,
+      "bytes": [
+        145,
+        18
+      ]
+    },
+    {
+      "opcode": 147,
+      "mnemonic": "SHA",
+      "mode": "indirectIndexedY",
+      "source": "sha ($12),y",
+      "documented": false,
+      "bytes": [
+        147,
+        18
+      ]
+    },
+    {
+      "opcode": 148,
+      "mnemonic": "STY",
+      "mode": "zeroPageIndexedX",
+      "source": "sty $12,x",
+      "documented": true,
+      "bytes": [
+        148,
+        18
+      ]
+    },
+    {
+      "opcode": 149,
+      "mnemonic": "STA",
+      "mode": "zeroPageIndexedX",
+      "source": "sta $12,x",
+      "documented": true,
+      "bytes": [
+        149,
+        18
+      ]
+    },
+    {
+      "opcode": 150,
+      "mnemonic": "STX",
+      "mode": "zeroPageIndexedY",
+      "source": "stx $12,y",
+      "documented": true,
+      "bytes": [
+        150,
+        18
+      ]
+    },
+    {
+      "opcode": 151,
+      "mnemonic": "SAX",
+      "mode": "zeroPageIndexedY",
+      "source": "sax $12,y",
+      "documented": false,
+      "bytes": [
+        151,
+        18
+      ]
+    },
+    {
+      "opcode": 152,
+      "mnemonic": "TYA",
+      "mode": "implied",
+      "source": "tya",
+      "documented": true,
+      "bytes": [
+        152
+      ]
+    },
+    {
+      "opcode": 153,
+      "mnemonic": "STA",
+      "mode": "absoluteIndexedY",
+      "source": "sta $1234,y",
+      "documented": true,
+      "bytes": [
+        153,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 154,
+      "mnemonic": "TXS",
+      "mode": "implied",
+      "source": "txs",
+      "documented": true,
+      "bytes": [
+        154
+      ]
+    },
+    {
+      "opcode": 155,
+      "mnemonic": "TAS",
+      "mode": "absoluteIndexedY",
+      "source": "tas $1234,y",
+      "documented": false,
+      "bytes": [
+        155,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 156,
+      "mnemonic": "SHY",
+      "mode": "absoluteIndexedX",
+      "source": "shy $1234,x",
+      "documented": false,
+      "bytes": [
+        156,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 157,
+      "mnemonic": "STA",
+      "mode": "absoluteIndexedX",
+      "source": "sta $1234,x",
+      "documented": true,
+      "bytes": [
+        157,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 158,
+      "mnemonic": "SHX",
+      "mode": "absoluteIndexedY",
+      "source": "shx $1234,y",
+      "documented": false,
+      "bytes": [
+        158,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 159,
+      "mnemonic": "SHA",
+      "mode": "absoluteIndexedY",
+      "source": "sha $1234,y",
+      "documented": false,
+      "bytes": [
+        159,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 160,
+      "mnemonic": "LDY",
+      "mode": "immediate",
+      "source": "ldy #$12",
+      "documented": true,
+      "bytes": [
+        160,
+        18
+      ]
+    },
+    {
+      "opcode": 161,
+      "mnemonic": "LDA",
+      "mode": "indexedIndirectX",
+      "source": "lda ($12,x)",
+      "documented": true,
+      "bytes": [
+        161,
+        18
+      ]
+    },
+    {
+      "opcode": 162,
+      "mnemonic": "LDX",
+      "mode": "immediate",
+      "source": "ldx #$12",
+      "documented": true,
+      "bytes": [
+        162,
+        18
+      ]
+    },
+    {
+      "opcode": 163,
+      "mnemonic": "LAX",
+      "mode": "indexedIndirectX",
+      "source": "lax ($12,x)",
+      "documented": false,
+      "bytes": [
+        163,
+        18
+      ]
+    },
+    {
+      "opcode": 164,
+      "mnemonic": "LDY",
+      "mode": "zeroPage",
+      "source": "ldy $12",
+      "documented": true,
+      "bytes": [
+        164,
+        18
+      ]
+    },
+    {
+      "opcode": 165,
+      "mnemonic": "LDA",
+      "mode": "zeroPage",
+      "source": "lda $12",
+      "documented": true,
+      "bytes": [
+        165,
+        18
+      ]
+    },
+    {
+      "opcode": 166,
+      "mnemonic": "LDX",
+      "mode": "zeroPage",
+      "source": "ldx $12",
+      "documented": true,
+      "bytes": [
+        166,
+        18
+      ]
+    },
+    {
+      "opcode": 167,
+      "mnemonic": "LAX",
+      "mode": "zeroPage",
+      "source": "lax $12",
+      "documented": false,
+      "bytes": [
+        167,
+        18
+      ]
+    },
+    {
+      "opcode": 168,
+      "mnemonic": "TAY",
+      "mode": "implied",
+      "source": "tay",
+      "documented": true,
+      "bytes": [
+        168
+      ]
+    },
+    {
+      "opcode": 169,
+      "mnemonic": "LDA",
+      "mode": "immediate",
+      "source": "lda #$12",
+      "documented": true,
+      "bytes": [
+        169,
+        18
+      ]
+    },
+    {
+      "opcode": 170,
+      "mnemonic": "TAX",
+      "mode": "implied",
+      "source": "tax",
+      "documented": true,
+      "bytes": [
+        170
+      ]
+    },
+    {
+      "opcode": 171,
+      "mnemonic": "LAX",
+      "mode": "immediate",
+      "source": "lax #$12",
+      "documented": false,
+      "bytes": [
+        171,
+        18
+      ]
+    },
+    {
+      "opcode": 172,
+      "mnemonic": "LDY",
+      "mode": "absolute",
+      "source": "ldy $1234",
+      "documented": true,
+      "bytes": [
+        172,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 173,
+      "mnemonic": "LDA",
+      "mode": "absolute",
+      "source": "lda $1234",
+      "documented": true,
+      "bytes": [
+        173,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 174,
+      "mnemonic": "LDX",
+      "mode": "absolute",
+      "source": "ldx $1234",
+      "documented": true,
+      "bytes": [
+        174,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 175,
+      "mnemonic": "LAX",
+      "mode": "absolute",
+      "source": "lax $1234",
+      "documented": false,
+      "bytes": [
+        175,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 176,
+      "mnemonic": "BCS",
+      "mode": "relative",
+      "source": "bcs branch_b0\nbranch_b0:",
+      "documented": true,
+      "bytes": [
+        176,
+        0
+      ]
+    },
+    {
+      "opcode": 177,
+      "mnemonic": "LDA",
+      "mode": "indirectIndexedY",
+      "source": "lda ($12),y",
+      "documented": true,
+      "bytes": [
+        177,
+        18
+      ]
+    },
+    {
+      "opcode": 179,
+      "mnemonic": "LAX",
+      "mode": "indirectIndexedY",
+      "source": "lax ($12),y",
+      "documented": false,
+      "bytes": [
+        179,
+        18
+      ]
+    },
+    {
+      "opcode": 180,
+      "mnemonic": "LDY",
+      "mode": "zeroPageIndexedX",
+      "source": "ldy $12,x",
+      "documented": true,
+      "bytes": [
+        180,
+        18
+      ]
+    },
+    {
+      "opcode": 181,
+      "mnemonic": "LDA",
+      "mode": "zeroPageIndexedX",
+      "source": "lda $12,x",
+      "documented": true,
+      "bytes": [
+        181,
+        18
+      ]
+    },
+    {
+      "opcode": 182,
+      "mnemonic": "LDX",
+      "mode": "zeroPageIndexedY",
+      "source": "ldx $12,y",
+      "documented": true,
+      "bytes": [
+        182,
+        18
+      ]
+    },
+    {
+      "opcode": 183,
+      "mnemonic": "LAX",
+      "mode": "zeroPageIndexedY",
+      "source": "lax $12,y",
+      "documented": false,
+      "bytes": [
+        183,
+        18
+      ]
+    },
+    {
+      "opcode": 184,
+      "mnemonic": "CLV",
+      "mode": "implied",
+      "source": "clv",
+      "documented": true,
+      "bytes": [
+        184
+      ]
+    },
+    {
+      "opcode": 185,
+      "mnemonic": "LDA",
+      "mode": "absoluteIndexedY",
+      "source": "lda $1234,y",
+      "documented": true,
+      "bytes": [
+        185,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 186,
+      "mnemonic": "TSX",
+      "mode": "implied",
+      "source": "tsx",
+      "documented": true,
+      "bytes": [
+        186
+      ]
+    },
+    {
+      "opcode": 187,
+      "mnemonic": "LAS",
+      "mode": "absoluteIndexedY",
+      "source": "las $1234,y",
+      "documented": false,
+      "bytes": [
+        187,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 188,
+      "mnemonic": "LDY",
+      "mode": "absoluteIndexedX",
+      "source": "ldy $1234,x",
+      "documented": true,
+      "bytes": [
+        188,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 189,
+      "mnemonic": "LDA",
+      "mode": "absoluteIndexedX",
+      "source": "lda $1234,x",
+      "documented": true,
+      "bytes": [
+        189,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 190,
+      "mnemonic": "LDX",
+      "mode": "absoluteIndexedY",
+      "source": "ldx $1234,y",
+      "documented": true,
+      "bytes": [
+        190,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 191,
+      "mnemonic": "LAX",
+      "mode": "absoluteIndexedY",
+      "source": "lax $1234,y",
+      "documented": false,
+      "bytes": [
+        191,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 192,
+      "mnemonic": "CPY",
+      "mode": "immediate",
+      "source": "cpy #$12",
+      "documented": true,
+      "bytes": [
+        192,
+        18
+      ]
+    },
+    {
+      "opcode": 193,
+      "mnemonic": "CMP",
+      "mode": "indexedIndirectX",
+      "source": "cmp ($12,x)",
+      "documented": true,
+      "bytes": [
+        193,
+        18
+      ]
+    },
+    {
+      "opcode": 195,
+      "mnemonic": "DCP",
+      "mode": "indexedIndirectX",
+      "source": "dcp ($12,x)",
+      "documented": false,
+      "bytes": [
+        195,
+        18
+      ]
+    },
+    {
+      "opcode": 196,
+      "mnemonic": "CPY",
+      "mode": "zeroPage",
+      "source": "cpy $12",
+      "documented": true,
+      "bytes": [
+        196,
+        18
+      ]
+    },
+    {
+      "opcode": 197,
+      "mnemonic": "CMP",
+      "mode": "zeroPage",
+      "source": "cmp $12",
+      "documented": true,
+      "bytes": [
+        197,
+        18
+      ]
+    },
+    {
+      "opcode": 198,
+      "mnemonic": "DEC",
+      "mode": "zeroPage",
+      "source": "dec $12",
+      "documented": true,
+      "bytes": [
+        198,
+        18
+      ]
+    },
+    {
+      "opcode": 199,
+      "mnemonic": "DCP",
+      "mode": "zeroPage",
+      "source": "dcp $12",
+      "documented": false,
+      "bytes": [
+        199,
+        18
+      ]
+    },
+    {
+      "opcode": 200,
+      "mnemonic": "INY",
+      "mode": "implied",
+      "source": "iny",
+      "documented": true,
+      "bytes": [
+        200
+      ]
+    },
+    {
+      "opcode": 201,
+      "mnemonic": "CMP",
+      "mode": "immediate",
+      "source": "cmp #$12",
+      "documented": true,
+      "bytes": [
+        201,
+        18
+      ]
+    },
+    {
+      "opcode": 202,
+      "mnemonic": "DEX",
+      "mode": "implied",
+      "source": "dex",
+      "documented": true,
+      "bytes": [
+        202
+      ]
+    },
+    {
+      "opcode": 203,
+      "mnemonic": "AXS",
+      "mode": "immediate",
+      "source": "axs #$12",
+      "documented": false,
+      "bytes": [
+        203,
+        18
+      ]
+    },
+    {
+      "opcode": 204,
+      "mnemonic": "CPY",
+      "mode": "absolute",
+      "source": "cpy $1234",
+      "documented": true,
+      "bytes": [
+        204,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 205,
+      "mnemonic": "CMP",
+      "mode": "absolute",
+      "source": "cmp $1234",
+      "documented": true,
+      "bytes": [
+        205,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 206,
+      "mnemonic": "DEC",
+      "mode": "absolute",
+      "source": "dec $1234",
+      "documented": true,
+      "bytes": [
+        206,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 207,
+      "mnemonic": "DCP",
+      "mode": "absolute",
+      "source": "dcp $1234",
+      "documented": false,
+      "bytes": [
+        207,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 208,
+      "mnemonic": "BNE",
+      "mode": "relative",
+      "source": "bne branch_d0\nbranch_d0:",
+      "documented": true,
+      "bytes": [
+        208,
+        0
+      ]
+    },
+    {
+      "opcode": 209,
+      "mnemonic": "CMP",
+      "mode": "indirectIndexedY",
+      "source": "cmp ($12),y",
+      "documented": true,
+      "bytes": [
+        209,
+        18
+      ]
+    },
+    {
+      "opcode": 211,
+      "mnemonic": "DCP",
+      "mode": "indirectIndexedY",
+      "source": "dcp ($12),y",
+      "documented": false,
+      "bytes": [
+        211,
+        18
+      ]
+    },
+    {
+      "opcode": 213,
+      "mnemonic": "CMP",
+      "mode": "zeroPageIndexedX",
+      "source": "cmp $12,x",
+      "documented": true,
+      "bytes": [
+        213,
+        18
+      ]
+    },
+    {
+      "opcode": 214,
+      "mnemonic": "DEC",
+      "mode": "zeroPageIndexedX",
+      "source": "dec $12,x",
+      "documented": true,
+      "bytes": [
+        214,
+        18
+      ]
+    },
+    {
+      "opcode": 215,
+      "mnemonic": "DCP",
+      "mode": "zeroPageIndexedX",
+      "source": "dcp $12,x",
+      "documented": false,
+      "bytes": [
+        215,
+        18
+      ]
+    },
+    {
+      "opcode": 216,
+      "mnemonic": "CLD",
+      "mode": "implied",
+      "source": "cld",
+      "documented": true,
+      "bytes": [
+        216
+      ]
+    },
+    {
+      "opcode": 217,
+      "mnemonic": "CMP",
+      "mode": "absoluteIndexedY",
+      "source": "cmp $1234,y",
+      "documented": true,
+      "bytes": [
+        217,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 219,
+      "mnemonic": "DCP",
+      "mode": "absoluteIndexedY",
+      "source": "dcp $1234,y",
+      "documented": false,
+      "bytes": [
+        219,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 221,
+      "mnemonic": "CMP",
+      "mode": "absoluteIndexedX",
+      "source": "cmp $1234,x",
+      "documented": true,
+      "bytes": [
+        221,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 222,
+      "mnemonic": "DEC",
+      "mode": "absoluteIndexedX",
+      "source": "dec $1234,x",
+      "documented": true,
+      "bytes": [
+        222,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 223,
+      "mnemonic": "DCP",
+      "mode": "absoluteIndexedX",
+      "source": "dcp $1234,x",
+      "documented": false,
+      "bytes": [
+        223,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 224,
+      "mnemonic": "CPX",
+      "mode": "immediate",
+      "source": "cpx #$12",
+      "documented": true,
+      "bytes": [
+        224,
+        18
+      ]
+    },
+    {
+      "opcode": 225,
+      "mnemonic": "SBC",
+      "mode": "indexedIndirectX",
+      "source": "sbc ($12,x)",
+      "documented": true,
+      "bytes": [
+        225,
+        18
+      ]
+    },
+    {
+      "opcode": 227,
+      "mnemonic": "ISC",
+      "mode": "indexedIndirectX",
+      "source": "isc ($12,x)",
+      "documented": false,
+      "bytes": [
+        227,
+        18
+      ]
+    },
+    {
+      "opcode": 228,
+      "mnemonic": "CPX",
+      "mode": "zeroPage",
+      "source": "cpx $12",
+      "documented": true,
+      "bytes": [
+        228,
+        18
+      ]
+    },
+    {
+      "opcode": 229,
+      "mnemonic": "SBC",
+      "mode": "zeroPage",
+      "source": "sbc $12",
+      "documented": true,
+      "bytes": [
+        229,
+        18
+      ]
+    },
+    {
+      "opcode": 230,
+      "mnemonic": "INC",
+      "mode": "zeroPage",
+      "source": "inc $12",
+      "documented": true,
+      "bytes": [
+        230,
+        18
+      ]
+    },
+    {
+      "opcode": 231,
+      "mnemonic": "ISC",
+      "mode": "zeroPage",
+      "source": "isc $12",
+      "documented": false,
+      "bytes": [
+        231,
+        18
+      ]
+    },
+    {
+      "opcode": 232,
+      "mnemonic": "INX",
+      "mode": "implied",
+      "source": "inx",
+      "documented": true,
+      "bytes": [
+        232
+      ]
+    },
+    {
+      "opcode": 233,
+      "mnemonic": "SBC",
+      "mode": "immediate",
+      "source": "sbc #$12",
+      "documented": true,
+      "bytes": [
+        233,
+        18
+      ]
+    },
+    {
+      "opcode": 234,
+      "mnemonic": "NOP",
+      "mode": "implied",
+      "source": "nop",
+      "documented": true,
+      "bytes": [
+        234
+      ]
+    },
+    {
+      "opcode": 236,
+      "mnemonic": "CPX",
+      "mode": "absolute",
+      "source": "cpx $1234",
+      "documented": true,
+      "bytes": [
+        236,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 237,
+      "mnemonic": "SBC",
+      "mode": "absolute",
+      "source": "sbc $1234",
+      "documented": true,
+      "bytes": [
+        237,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 238,
+      "mnemonic": "INC",
+      "mode": "absolute",
+      "source": "inc $1234",
+      "documented": true,
+      "bytes": [
+        238,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 239,
+      "mnemonic": "ISC",
+      "mode": "absolute",
+      "source": "isc $1234",
+      "documented": false,
+      "bytes": [
+        239,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 240,
+      "mnemonic": "BEQ",
+      "mode": "relative",
+      "source": "beq branch_f0\nbranch_f0:",
+      "documented": true,
+      "bytes": [
+        240,
+        0
+      ]
+    },
+    {
+      "opcode": 241,
+      "mnemonic": "SBC",
+      "mode": "indirectIndexedY",
+      "source": "sbc ($12),y",
+      "documented": true,
+      "bytes": [
+        241,
+        18
+      ]
+    },
+    {
+      "opcode": 243,
+      "mnemonic": "ISC",
+      "mode": "indirectIndexedY",
+      "source": "isc ($12),y",
+      "documented": false,
+      "bytes": [
+        243,
+        18
+      ]
+    },
+    {
+      "opcode": 245,
+      "mnemonic": "SBC",
+      "mode": "zeroPageIndexedX",
+      "source": "sbc $12,x",
+      "documented": true,
+      "bytes": [
+        245,
+        18
+      ]
+    },
+    {
+      "opcode": 246,
+      "mnemonic": "INC",
+      "mode": "zeroPageIndexedX",
+      "source": "inc $12,x",
+      "documented": true,
+      "bytes": [
+        246,
+        18
+      ]
+    },
+    {
+      "opcode": 247,
+      "mnemonic": "ISC",
+      "mode": "zeroPageIndexedX",
+      "source": "isc $12,x",
+      "documented": false,
+      "bytes": [
+        247,
+        18
+      ]
+    },
+    {
+      "opcode": 248,
+      "mnemonic": "SED",
+      "mode": "implied",
+      "source": "sed",
+      "documented": true,
+      "bytes": [
+        248
+      ]
+    },
+    {
+      "opcode": 249,
+      "mnemonic": "SBC",
+      "mode": "absoluteIndexedY",
+      "source": "sbc $1234,y",
+      "documented": true,
+      "bytes": [
+        249,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 251,
+      "mnemonic": "ISC",
+      "mode": "absoluteIndexedY",
+      "source": "isc $1234,y",
+      "documented": false,
+      "bytes": [
+        251,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 253,
+      "mnemonic": "SBC",
+      "mode": "absoluteIndexedX",
+      "source": "sbc $1234,x",
+      "documented": true,
+      "bytes": [
+        253,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 254,
+      "mnemonic": "INC",
+      "mode": "absoluteIndexedX",
+      "source": "inc $1234,x",
+      "documented": true,
+      "bytes": [
+        254,
+        52,
+        18
+      ]
+    },
+    {
+      "opcode": 255,
+      "mnemonic": "ISC",
+      "mode": "absoluteIndexedX",
+      "source": "isc $1234,x",
+      "documented": false,
+      "bytes": [
+        255,
+        52,
+        18
+      ]
+    }
+  ]
+}

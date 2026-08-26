@@ -198,6 +198,26 @@ test("plugin IDs and contribution IDs are globally unique", async (t) => {
   t.is((contributionError as PluginError).pluginId, "fixture.intruder");
 });
 
+test("contribution namespaces may begin with a digit for hardware families", async (t) => {
+  const plugin = definePlugin({
+    manifest: {
+      id: "fixture.numeric-hardware",
+      name: "Numeric hardware namespace",
+      version: "1.0.0",
+      apiVersion: PLUGIN_API_VERSION,
+    },
+    activate: (context) => {
+      context.registerOutputFormat({
+        id: "65xx.raw-output",
+        create: () => ({ finalize: () => undefined, getOutput: () => new Uint8Array() }),
+      });
+    },
+  });
+  const manager = new PluginManager();
+  await manager.activatePlugins([{ plugin }]);
+  t.truthy(manager.freeze().getOutputFormat("65xx.raw-output"));
+});
+
 test("failed plugin activation is transactional and disposes returned resources", async (t) => {
   let disposed = false;
   const invalid = definePlugin({

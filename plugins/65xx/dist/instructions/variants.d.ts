@@ -1,0 +1,18 @@
+import { type CpuDefinition, type InstructionForm } from "./schema.js";
+export declare const mos6502DtvForms: readonly InstructionForm[];
+export declare const cmos65sc02Forms: readonly InstructionForm[];
+export declare const cmos65c02Forms: readonly InstructionForm[];
+export declare const wdc65c02Forms: readonly InstructionForm[];
+export declare const csg65ce02Forms: readonly InstructionForm[];
+export declare const commodore4510Forms: readonly InstructionForm[];
+export declare const mega65Gs02Forms: readonly InstructionForm[];
+export declare const mos6502DtvCpu: CpuDefinition;
+export declare const cmos65sc02Cpu: CpuDefinition;
+export declare const cmos65c02Cpu: CpuDefinition;
+export declare const wdc65c02Cpu: CpuDefinition;
+export declare const csg65ce02Cpu: CpuDefinition;
+export declare const commodore4510Cpu: CpuDefinition;
+export declare const mega65Gs02Cpu: CpuDefinition;
+export declare const variantCpus: readonly CpuDefinition[];
+export declare const variantFormsByCpuId: Readonly<Record<string, readonly InstructionForm[]>>;
+//# sourceMappingURL=variants.d.ts.map

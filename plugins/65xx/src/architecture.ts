@@ -1,0 +1,357 @@
+import type {
+  ArchitectureEncoder,
+  ArchitectureEncoderContext,
+  InstructionDescriptor,
+  LoweredInstruction,
+  LoweredOperand,
+} from "@uttori/asm-core";
+
+import { buildInstructionCatalog } from "./instructions/catalog.js";
+import { getCpuAssemblyForms, nmos6502DecodeTable } from "./instructions/opcodes.js";
+import {
+  matchesFeatures,
+  type AddressingMode,
+  type CpuDefinition,
+  type InstructionForm,
+} from "./instructions/schema.js";
+import { variantFormsByCpuId } from "./instructions/variants.js";
+
+const directToAbsolute: Readonly<Partial<Record<AddressingMode, AddressingMode>>> = {
+  zeroPage: "absolute",
+  zeroPageIndexedX: "absoluteIndexedX",
+  zeroPageIndexedY: "absoluteIndexedY",
+  zeroPageIndirect: "indirect",
+  indexedIndirectX: "absoluteIndexedIndirect",
+};
+const absoluteToDirect: Readonly<Partial<Record<AddressingMode, AddressingMode>>> = {
+  absolute: "zeroPage",
+  absoluteIndexedX: "zeroPageIndexedX",
+  absoluteIndexedY: "zeroPageIndexedY",
+  indirect: "zeroPageIndirect",
+  absoluteIndexedIndirect: "indexedIndirectX",
+};
+
+const aliasToMnemonic = new Map<string, string>();
+for (const form of nmos6502DecodeTable) {
+  for (const alias of form.aliases ?? []) aliasToMnemonic.set(alias, form.mnemonic);
+}
+
+interface ParsedMnemonic {
+  readonly mnemonic: string;
+  readonly forcedWidth?: 1 | 2;
+}
+
+function parseMnemonic(value: string): ParsedMnemonic {
+  const match = value
+    .trim()
+    .toUpperCase()
+    .match(/^([A-Z][\dA-Z]{2,4})(?:\.([BW]))?$/);
+  if (!match) return { mnemonic: value.trim().toUpperCase() };
+  let forcedWidth: 1 | 2 | undefined;
+  if (match[2] === "B") forcedWidth = 1;
+  else if (match[2] === "W") forcedWidth = 2;
+  return {
+    mnemonic: match[1],
+    forcedWidth,
+  };
+}
+
+function modeSize(form: InstructionForm): number {
+  return form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
+}
+
+function normalizeRelativeDelta(target: number, reference: number): number {
+  return ((target - reference + 0x8000) & 0xffff) - 0x8000;
+}
+
+export function materializeOpcodeForm(
+  form: InstructionForm,
+  operandBytes: readonly number[] = [],
+): Uint8Array {
+  const expected = form.operands.reduce((size, operand) => size + operand.width, 0);
+  if (operandBytes.length !== expected) {
+    throw new Error(
+      `${form.mnemonic} ${form.mode} expects ${expected} encoded operand byte(s), got ${operandBytes.length}.`,
+    );
+  }
+  for (const byte of operandBytes) {
+    if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
+      throw new RangeError(`Encoded operand byte ${byte} is outside the byte range.`);
+    }
+  }
+  return Uint8Array.from([...form.encoding, ...operandBytes]);
+}
+
+export class Arch65xx implements ArchitectureEncoder {
+  readonly forms: readonly InstructionForm[];
+  readonly catalog: InstructionDescriptor[];
+  readonly formsByMnemonic = new Map<string, readonly InstructionForm[]>();
+
+  constructor(
+    readonly context: ArchitectureEncoderContext,
+    readonly cpu: CpuDefinition,
+  ) {
+    this.forms = getCpuAssemblyForms(cpu).filter((form) =>
+      matchesFeatures(form.availableWhen, cpu.features),
+    );
+    this.catalog = buildInstructionCatalog(this.forms);
+    const grouped = new Map<string, InstructionForm[]>();
+    for (const form of this.forms) {
+      const entries = grouped.get(form.mnemonic) ?? [];
+      entries.push(form);
+      grouped.set(form.mnemonic, entries);
+    }
+    for (const [mnemonic, entries] of grouped) this.formsByMnemonic.set(mnemonic, entries);
+  }
+
+  getInstructionCatalog(): InstructionDescriptor[] {
+    return this.catalog;
+  }
+
+  estimateSize(words: readonly string[]): number {
+    if (words.length === 0) return 0;
+    const operand = words.slice(1).join(" ");
+    return this.estimateResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
+  }
+
+  encode(words: readonly string[]): boolean {
+    if (words.length === 0) return true;
+    const operand = words.slice(1).join(" ");
+    return this.encodeResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
+  }
+
+  estimateInstruction(instruction: LoweredInstruction): number {
+    return this.estimateResolved(instruction.mnemonic, instruction.loweredOperand);
+  }
+
+  encodeInstruction(instruction: LoweredInstruction): boolean {
+    return this.encodeResolved(instruction.mnemonic, instruction.loweredOperand);
+  }
+
+  private estimateResolved(rawMnemonic: string, operand: LoweredOperand): number {
+    const resolved = this.resolveForm(rawMnemonic, operand);
+    return resolved ? modeSize(resolved) : 0;
+  }
+
+  private encodeResolved(rawMnemonic: string, operand: LoweredOperand): boolean {
+    const resolved = this.resolveForm(rawMnemonic, operand);
+    if (!resolved) return false;
+    const form = resolved;
+    const relativeBaseOffset = form.relativeBaseOffset ?? modeSize(form);
+    const branchDelta =
+      form.codec === "relative8" || form.codec === "relative16"
+        ? this.readBranchDelta(operand, relativeBaseOffset, form.codec === "relative8" ? 1 : 2)
+        : 0;
+    const compoundOperands =
+      form.codec === "zero-page-relative8" ? splitTopLevelOperands(operand.expanded) : [];
+    if (form.codec === "zero-page-relative8" && compoundOperands.length !== 2) {
+      throw this.context.diagnostics.error(
+        `${form.mnemonic} expects a zero-page address and branch target.`,
+      );
+    }
+    const compoundBranchDelta =
+      form.codec === "zero-page-relative8"
+        ? this.readBranchExpression(
+            compoundOperands[1] ?? "",
+            form.relativeBaseOffset ?? modeSize(form),
+            1,
+          )
+        : 0;
+    this.context.emission.writeBytes(form.encoding);
+    switch (form.codec) {
+      case "none":
+        return true;
+      case "unsigned8":
+        this.context.emission.writeByte(this.readValue(operand, 1, `${form.mnemonic} operand`));
+        return true;
+      case "unsigned16-le":
+        this.context.emission.writeValue(
+          this.readValue(operand, 2, `${form.mnemonic} address`),
+          2,
+          "little",
+        );
+        return true;
+      case "unsigned24-le":
+        this.context.emission.writeValue(
+          this.readValue(operand, 3, `${form.mnemonic} address`),
+          3,
+          "little",
+        );
+        return true;
+      case "relative8":
+        this.context.emission.writeByte(branchDelta & 0xff);
+        return true;
+      case "relative16":
+        this.context.emission.writeValue(branchDelta & 0xffff, 2, "little");
+        return true;
+      case "zero-page-relative8": {
+        this.context.emission.writeByte(
+          this.readExpressionValue(compoundOperands[0] ?? "", 1, `${form.mnemonic} address`, false),
+        );
+        this.context.emission.writeByte(compoundBranchDelta & 0xff);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private resolveForm(rawMnemonic: string, operand: LoweredOperand): InstructionForm | undefined {
+    const parsed = parseMnemonic(rawMnemonic);
+    let mnemonic = parsed.mnemonic;
+    let forms = this.formsByMnemonic.get(mnemonic);
+    const variantArchitectures = Object.entries(variantFormsByCpuId)
+      .filter(([, entries]) => entries.some((entry) => entry.mnemonic === parsed.mnemonic))
+      .map(([cpuId]) => cpuId);
+    if (!forms) {
+      const canonical = aliasToMnemonic.get(mnemonic);
+      const aliasedForms = canonical ? this.formsByMnemonic.get(canonical) : undefined;
+      if (canonical && aliasedForms) {
+        mnemonic = canonical;
+        forms = aliasedForms;
+      }
+    }
+    const { forcedWidth } = parsed;
+    if (!forms) {
+      if (variantArchitectures.length > 0) {
+        throw this.context.diagnostics.error(
+          `Instruction '${parsed.mnemonic}' is available on ${variantArchitectures.join(", ")}, not ${this.cpu.id}.`,
+        );
+      }
+      const knownOnlyOn6502x = nmos6502DecodeTable.some(
+        (form) => form.mnemonic === mnemonic || form.aliases?.includes(mnemonic),
+      );
+      if (knownOnlyOn6502x) {
+        throw this.context.diagnostics.error(
+          `Instruction '${mnemonic}' or this operand form requires architecture '65xx.6502x'.`,
+        );
+      }
+      return undefined;
+    }
+
+    const hasOperand = operand.raw.trim() !== "";
+    if (mnemonic === "BRK" && forcedWidth === 2)
+      throw this.context.diagnostics.error("BRK accepts at most an 8-bit signature byte.");
+
+    let mode = operand.mode as AddressingMode | undefined;
+    if (operand.raw.trim().toUpperCase() === "A") mode = "accumulator";
+    if (operand.raw.trim().toUpperCase() === "Q") mode = "quadAccumulator";
+    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) mode = "relative16";
+    else if (hasOperand && forms.some((entry) => entry.mode === "relative")) mode = "relative";
+    if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
+      if (forms.some((entry) => entry.mode === "accumulator")) mode = "accumulator";
+      else if (forms.some((entry) => entry.mode === "quadAccumulator")) mode = "quadAccumulator";
+    }
+
+    if (forcedWidth) {
+      const byteMode = mode ? absoluteToDirect[mode] : undefined;
+      const wordMode = mode ? directToAbsolute[mode] : undefined;
+      const alreadyRequestedWidth =
+        (forcedWidth === 1 && mode?.startsWith("zeroPage")) ||
+        (forcedWidth === 2 &&
+          (mode === "absolute" || mode === "indirect" || mode?.startsWith("absoluteIndexed")));
+      if (!byteMode && !wordMode && !alreadyRequestedWidth) {
+        throw this.context.diagnostics.error(
+          `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode}.`,
+        );
+      }
+      mode =
+        forcedWidth === 1 ? (absoluteToDirect[mode!] ?? mode) : (directToAbsolute[mode!] ?? mode);
+    }
+
+    let form = forms.find((entry) => entry.mode === mode);
+    if (!form && mode && directToAbsolute[mode]) {
+      form = forms.find((entry) => entry.mode === directToAbsolute[mode]);
+    }
+    if (!form) {
+      const accepted = forms.map((entry) => entry.mode).join(", ");
+      throw this.context.diagnostics.error(
+        `${mnemonic} does not support addressing mode '${mode ?? "unknown"}' on ${this.cpu.id}; expected ${accepted}.`,
+      );
+    }
+    return form;
+  }
+
+  private readValue(operand: LoweredOperand, width: 1 | 2 | 3, description: string): number {
+    const expression = operand.baseExpression ?? operand.expanded;
+    return this.readExpressionValue(expression, width, description, operand.mode === "immediate");
+  }
+
+  private readExpressionValue(
+    expression: string,
+    width: 1 | 2 | 3,
+    description: string,
+    immediate: boolean,
+  ): number {
+    const value = this.context.operands.getnum(expression);
+    const minimum = width === 1 && immediate ? -128 : 0;
+    let maximum = 0xff;
+    if (width === 2) maximum = 0xffff;
+    else if (width === 3) maximum = 0xffffff;
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+      throw this.context.diagnostics.error(
+        `${description} ${value} is outside the ${width * 8}-bit range.`,
+      );
+    }
+    return value & maximum;
+  }
+
+  private readBranchDelta(
+    operand: LoweredOperand,
+    relativeBaseOffset: number,
+    width: 1 | 2,
+  ): number {
+    return this.readBranchExpression(
+      operand.baseExpression ?? operand.expanded,
+      relativeBaseOffset,
+      width,
+    );
+  }
+
+  private readBranchExpression(
+    expression: string,
+    relativeBaseOffset: number,
+    width: 1 | 2,
+  ): number {
+    if (!this.context.branches.enforceResolvedLabels()) return 0;
+    const reference = (this.context.sizing.getCurrentAddress() + relativeBaseOffset) & 0xffff;
+    let target: number;
+    if (/^\++$/.test(expression)) {
+      target = this.context.branches.findNextLabel(expression, reference);
+    } else if (/^-+$/.test(expression)) {
+      target = this.context.branches.findPreviousLabel(expression, reference);
+    } else {
+      target = this.context.operands.getnum(expression);
+    }
+    if (!Number.isInteger(target) || target < 0 || target > 0xffff) {
+      throw this.context.diagnostics.error(
+        `Branch target ${target} is outside the 16-bit address space.`,
+      );
+    }
+    const delta = normalizeRelativeDelta(target, reference);
+    const minimum = width === 1 ? -128 : -32768;
+    const maximum = width === 1 ? 127 : 32767;
+    if (delta < minimum || delta > maximum) {
+      throw this.context.diagnostics.error(
+        `Branch target $${target.toString(16).toUpperCase()} is out of range from $${reference.toString(16).toUpperCase()} (${delta}).`,
+      );
+    }
+    return delta;
+  }
+}
+
+function splitTopLevelOperands(value: string): string[] {
+  const operands: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(" || character === "[") depth++;
+    else if (character === ")" || character === "]") depth--;
+    else if (character === "," && depth === 0) {
+      operands.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  operands.push(value.slice(start).trim());
+  return operands.filter(Boolean);
+}

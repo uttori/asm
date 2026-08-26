@@ -12,7 +12,7 @@ At the end of this work:
 - A first-party SNES plugin provides all current SNES behavior and passes the existing SNES unit, integration, and byte-parity fixtures.
 - A plugin is a loadable ESM package with a manifest, API-version validation, configuration, lifecycle, owned registrations, collision detection, session state, build contributions, and tooling metadata.
 - The CLI, language server, VS Code extension, programmatic API, and analysis sessions all use the same resolved plugin environment.
-- The 6502 implementation remains a nonfunctional test/stub plugin. It proves that a non-SNES target can be installed without adding 6502 encoding work.
+- The 65xx implementation is a separate production plugin, proving that a non-SNES target can be installed without coupling it to the SNES plugin.
 - Core can assemble a small program supplied by a test plugin while the SNES plugin is absent.
 - `npm run verify` and the SNES fixture gates pass after every mergeable phase.
 
@@ -58,7 +58,7 @@ packages/
   cli/                        # generic command-line host
 plugins/
   snes/                       # all current SNES/Asar/65816/SPC700/Super FX behavior
-  6502-stub/                  # deliberately nonfunctional contract test plugin
+  65xx/                       # 6502-family architectures and flat/raw target
 language-server/              # generic LSP host using core + loader
 editors/vscode/               # generic assembly extension and plugin configuration UI
 tests/
@@ -75,7 +75,7 @@ project; target names such as SNES belong to their plugin packages:
 - `@uttori/asm-plugin-loader-node`
 - `@uttori/asm-cli`
 - `@uttori/asm-plugin-snes`
-- `@uttori/asm-plugin-6502-stub`
+- `@uttori/asm-plugin-65xx`
 
 The root `package.json` becomes the private workspace/test orchestrator. Publishing or preserving the current root package shape is not required for this migration.
 
@@ -312,7 +312,7 @@ Changes from the current design:
 - Core's architecture registry has no built-ins and silently overwrites nothing.
 - Operand classifiers for 65816, SPC700, and Super FX move with their architecture contributions.
 
-The SNES plugin registers `snes.65816`, `snes.spc700`, and `snes.superfx`, with source aliases preserving current `arch` spellings. The 6502 stub plugin registers `mos.6502-stub` separately.
+The SNES plugin registers `snes.65816`, `snes.spc700`, and `snes.superfx`, with source aliases preserving current `arch` spellings. The 65xx plugin registers its `65xx.*` architectures separately.
 
 ### 4.6 Directive contributions
 
@@ -783,7 +783,7 @@ branches, and 95.95% functions. Package dry-run, all 60 Asar fixtures,
 Slideshow, Chou, language-server, editor, and full SNES staged/tree/golden parity
 gates pass.
 
-### Phase 5 — Physically extract the SNES and 6502-stub plugins
+### Phase 5 — Physically extract the SNES and initial 65xx plugins
 
 Tasks:
 
@@ -792,7 +792,7 @@ Tasks:
 3. Register SNES state, architectures, address space, output format, directives, expressions, lifecycle hooks, target, and tooling metadata during activation.
 4. Move mapper/checksum/SPC/freespace/Asar compatibility tests beside the SNES plugin.
 5. Move architecture tests and catalogs beside the SNES plugin.
-6. Move the current 6502 stub, flat-16 target, and its tests to `@uttori/asm-plugin-6502-stub`.
+6. Move the initial 6502 architecture scaffold, flat-16 target, and its tests to `@uttori/asm-plugin-65xx`.
 7. Delete the temporary adapter and all built-in registries from core.
 8. Add package export maps so plugins consume only documented `@uttori/asm-core` plugin API and context types.
 
@@ -801,18 +801,17 @@ Acceptance:
 - `@uttori/asm-core` has no dependency on either plugin.
 - Core tests pass with only the tiny fixture plugin installed.
 - SNES plugin tests pass when the plugin is explicitly activated.
-- 6502 stub still fails encoding with a clear “not implemented” diagnostic.
+- The initial 65xx scaffold owns its architecture and target diagnostics.
 - The core SNES identifier scan returns no matches.
 
 Completion note (2026-08-24): the repository is now a workspace with
 `@uttori/asm-core`, `@uttori/asm-plugin-snes`, and
-`@uttori/asm-plugin-6502-stub`. The SNES plugin default export registers its
+`@uttori/asm-plugin-65xx`. The SNES plugin default export registers its
 state, 65816/SPC700/Super FX encoders and catalogs, mapper/address space,
 SFC output/checksum policy, directives, expressions, and lifecycle services.
 Architecture, mapper, freespace, SPC, compatibility, and full SNES parity
-tests live beside the plugin and activate it explicitly. The 6502 stub owns
-its flat-16 target and produces an intentional “encoding is not implemented”
-diagnostic. The temporary legacy adapter, target profiles, built-in
+tests live beside the plugin and activate it explicitly. The initial 65xx
+package owns its flat-16 target and architecture boundary. The temporary legacy adapter, target profiles, built-in
 architecture factory, target directive implementations, and target state are
 gone from core; its prohibited SNES identifier scan is empty and it has no
 plugin dependency. CLI and language-server hosts now opt into the SNES plugin
@@ -928,7 +927,7 @@ The root and SNES READMEs now cover generic and SNES usage, configuration,
 trusted-code policy, contributions, mapper/checksum behavior, CLI, and editor
 setup; `examples/plugin-author` provides a runnable non-SNES plugin that emits
 `0x42`. Package dry-runs assert required source, declaration, and schema files,
-and the 6502 stub declaration layout now matches its export map. The 935-test
+and the 65xx declaration layout now matches its export map. The 935-test
 verification suite passes with 94.31% statement, 90.34% branch, and 95.82%
 function coverage. All four package assertions, 60 Asar fixtures, Slideshow,
 Chou, five correctness-checked benchmark workloads, the packaged language
@@ -953,7 +952,7 @@ Tests may change imports and APIs, but assertions about emitted bytes and suppor
 | instruction/directive catalogs | owning contribution | executable/catalog parity and target filtering |
 | LSP | language server | environment injection, target filtering, config reload, build/analysis parity |
 | VS Code | editor | settings propagation, workspace trust, generic labels, bundled SNES smoke test |
-| 6502 stub | 6502 plugin | loads and catalogs, then clearly rejects encoding |
+| 65xx architectures | 65xx plugin | load, catalog, and encode without a SNES dependency |
 
 Add these high-value integration tests:
 
@@ -1087,10 +1086,10 @@ The plugin migration is complete only when all statements below are true:
 - [ ] Workspace plugin loading is gated by VS Code Workspace Trust.
 - [ ] Every production SNES behavior listed in the extraction inventory lives under `plugins/snes`.
 - [ ] 65816, SPC700, Super FX, mapper, checksum, SPC, freespace/RATS, and Asar compatibility tests live with or explicitly activate the SNES plugin.
-- [ ] The 6502 stub is a separate plugin and remains intentionally nonfunctional.
+- [ ] The production 65xx implementation remains a separate plugin.
 - [ ] A non-SNES fixture plugin assembles successfully with the SNES plugin absent.
 - [ ] Core boundary checks reject SNES imports/identifiers.
 - [ ] All verification, fixture, build, package, and benchmark commands pass.
 - [ ] Documentation contains a working plugin-author example and trusted-code warning.
 
-Once these checks pass, adding a real 6502 implementation—or any other architecture/target—should require a new plugin package and project configuration, not edits to assembler core, the language server providers, or the VS Code extension.
+Once these checks pass, adding another architecture or target should require a plugin package and project configuration, not edits to assembler core, the language server providers, or the VS Code extension.

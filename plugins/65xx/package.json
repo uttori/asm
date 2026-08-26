@@ -1,11 +1,12 @@
 {
-  "name": "@uttori/asm-plugin-6502-stub",
+  "name": "@uttori/asm-plugin-65xx",
   "version": "1.0.0",
-  "description": "Deliberately nonfunctional MOS 6502 contract-test plugin for Uttori ASM.",
+  "description": "6502-family architectures and raw binary targets for Uttori ASM.",
   "license": "MIT",
   "files": [
     "dist",
-    "src"
+    "src",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "type": "module",
   "sideEffects": false,

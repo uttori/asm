@@ -170,7 +170,7 @@ const parseAsarTableLine = (
       throw invalidTableLine(lineNumber);
     }
     const hex = line.slice(0, eq);
-    if (!/^[0-9a-fA-F]+$/.test(hex)) {
+    if (!/^[\dA-Fa-f]+$/.test(hex)) {
       throw invalidTableLine(lineNumber);
     }
     return { char: line[eq + 1], value: Number.parseInt(hex, 16) };
@@ -179,7 +179,7 @@ const parseAsarTableLine = (
     throw invalidTableLine(lineNumber);
   }
   const hex = line.slice(2);
-  if (!/^[0-9a-fA-F]+$/.test(hex)) {
+  if (!/^[\dA-Fa-f]+$/.test(hex)) {
     throw invalidTableLine(lineNumber);
   }
   return { char: line[0], value: Number.parseInt(hex, 16) };

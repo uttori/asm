@@ -12,7 +12,10 @@ const requirements = new Map<string, readonly string[]>([
     ["package.json", "src/index.ts", "dist/index.d.ts", "asm-config.schema.json"],
   ],
   ["@uttori/asm-plugin-snes", ["package.json", "src/index.ts", "dist/index.d.ts"]],
-  ["@uttori/asm-plugin-6502-stub", ["package.json", "src/index.ts", "dist/index.d.ts"]],
+  [
+    "@uttori/asm-plugin-65xx",
+    ["package.json", "src/index.ts", "dist/index.d.ts", "THIRD_PARTY_NOTICES.md"],
+  ],
 ]);
 
 for (const [workspace, requiredFiles] of requirements) {

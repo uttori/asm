@@ -160,17 +160,17 @@ test("explicit modules append after configuration plugins without reordering", a
   await loaded.dispose();
 });
 
-test("workspace package specifiers use Node ESM resolution", async (t) => {
+test("workspace 65xx package specifiers use Node ESM resolution", async (t) => {
   const loader = new NodePluginLoader();
   const loaded = await loader.loadProjectEnvironment({
     cwd: path.join(fixtures, "package-project"),
   });
-  t.is(loaded.configuration.plugins[0]!.pluginId, "uttori.asm-plugin-6502-stub");
-  t.true(
-    loaded.configuration.plugins[0]!.resolvedModule.endsWith("plugins/6502-stub/src/index.ts"),
+  t.is(loaded.configuration.plugins[0]!.pluginId, "uttori.asm-plugin-65xx");
+  t.true(loaded.configuration.plugins[0]!.resolvedModule.endsWith("plugins/65xx/src/index.ts"));
+  t.deepEqual(
+    [...assemble(loaded, "org $8000\nlda #$42\nsta $20\nnop")],
+    [0xa9, 0x42, 0x85, 0x20, 0xea],
   );
-  const error = t.throws(() => assemble(loaded, "org $8000\nnop"));
-  t.regex(error.message, /6502 encoding is not implemented/i);
   await loaded.dispose();
 });
 

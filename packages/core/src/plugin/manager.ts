@@ -70,8 +70,14 @@ const noopLogger: PluginLogger = {
 const isLowerAlphaNumeric = (character: string): boolean =>
   (character >= "a" && character <= "z") || (character >= "0" && character <= "9");
 
-const isValidId = (value: string): boolean => {
-  if (value.length === 0 || value[0] < "a" || value[0] > "z") return false;
+const isValidId = (value: string, allowLeadingDigit = false): boolean => {
+  if (
+    value.length === 0 ||
+    !isLowerAlphaNumeric(value[0]) ||
+    (!allowLeadingDigit && (value[0] < "a" || value[0] > "z"))
+  ) {
+    return false;
+  }
   let previousWasSeparator = false;
   for (const character of value) {
     const separator = character === "." || character === "-";
@@ -82,7 +88,8 @@ const isValidId = (value: string): boolean => {
   return !previousWasSeparator;
 };
 
-const isValidContributionId = (value: string): boolean => value.includes(".") && isValidId(value);
+const isValidContributionId = (value: string): boolean =>
+  value.includes(".") && isValidId(value, true);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

@@ -1,11 +1,11 @@
-# 65xx implementation and compatibility plan
+# 65xx implementation plan
 
-Status: Phases 0–1 implemented; Phases 2–9 planned  
-Updated: 2026-08-25
+Status: Phases 0–5 implemented; Phases 6–9 planned
+Updated: 2026-08-26
 
 ## Outcome
 
-Replace `plugins/6502-stub` with a production `plugins/65xx` plugin that owns the
+Maintain a production `plugins/65xx` plugin that owns the
 6502-derived instruction-set families not already owned by the SNES plugin,
 supports native project syntax, and offers a source-compatibility profile for
 ca65. The implementation must cover undocumented NMOS instructions and the
@@ -16,7 +16,7 @@ This extends the project's architecture coverage beside the existing SNES
 65816 implementation. It does not replace or reorganize that implementation.
 Anything derived from or extending 65816 remains part of the SNES core.
 
-At the same time, correct an architectural boundary that the stub exposed:
+At the same time, correct an architectural boundary that the initial prototype exposed:
 several facilities currently called “core” encode SNES, 65816, or Asar policy.
 The assembler core should retain reusable mechanics, while architecture,
 target, and dialect policy moves behind plugin-owned contributions.
@@ -63,8 +63,8 @@ rows must land in one pull request.
 
 ### Package and target ownership
 
-- Rename `plugins/6502-stub` to `plugins/65xx` and
-  `@uttori/asm-plugin-6502-stub` to `@uttori/asm-plugin-65xx`.
+- Use `plugins/65xx` and package identity `@uttori/asm-plugin-65xx` without
+  alternate package or contribution identities.
 - Use stable architecture IDs under `65xx.*`; targets should identify a machine
   or output model rather than pretending every CPU is a distinct machine.
 - Provide a flat/raw 16-bit target for small programs, tutorials, and binary
@@ -227,12 +227,12 @@ compatibility even after the policy behind them is moved.
 
 ### Phase 0: lock down behavior and sources of truth
 
-Implementation status: complete. The pinned source and loader migration record
-is in `docs/65xx-reference-baseline.md`, with machine-readable pins in the stub
+Implementation status: complete. The pinned source record is in
+`docs/65xx-reference-baseline.md`, with machine-readable pins in the 65xx
 fixture directory. The post-change regression gates pass.
 
 - Preserve all existing SNES production hashes and architecture catalog tests.
-- Record stub/package-loader behavior that will need migration aliases.
+- Record package-loader behavior before changing the architecture contribution.
 - Check in machine-readable reference fixtures rather than copying assembler
   implementation code.
 - Treat 6502js as a behavioral oracle and fixture source only. It is GPLv3 while
@@ -250,8 +250,8 @@ provenance/versioning is documented.
 Implementation status: complete and verified. The existing SNES classifiers
 and 65816 width policy remain SNES-owned. Core now exposes neutral operand facts,
 architecture-bound lowering, address-width operations, syntax profiles, and
-composable core directive groups. The stub has an independent 6502 classifier;
-it remains intentionally non-encoding until Phase 2.
+composable core directive groups. The initial 65xx scaffold has an independent
+6502 classifier; it remains intentionally non-encoding until Phase 2.
 
 - Introduce target-neutral operand lexical/resolution metadata.
 - Move `classifyGenericOperand` and its SNES-specific tests into the SNES plugin,
@@ -262,15 +262,19 @@ it remains intentionally non-encoding until Phase 2.
   65xx, and ca65 command/label parsing without rewriting the whole front end.
 - Make active directive/tooling catalogs compositional.
 
-Exit criterion: SNES output hashes remain identical; the stub no longer imports
+Exit criterion: SNES output hashes remain identical; the 65xx scaffold does not import
 a SNES-shaped core classifier; a minimal 6502 operand matrix can be classified
 without 65816/SPC700/Super FX concepts.
 
 ### Phase 2: rename and build the 65xx architecture foundation
 
-- Rename package, plugin ID, configuration fixtures, loader tests, and docs.
-- Provide temporary aliases and a migration diagnostic for the old plugin/target
-  IDs where the loader contract permits it.
+Implementation status: complete and verified. The production
+`@uttori/asm-plugin-65xx` package owns declarative instruction forms, feature
+expressions, codecs, generated catalogs, and the configurable-origin
+`65xx.raw`/`65xx.flat16` target. It exposes only the production package and
+contribution identities.
+
+- Establish the package, plugin ID, configuration fixtures, loader tests, and docs.
 - Add the instruction schema, feature expressions, operand codecs, architecture
   factories, and generated catalogs.
 - Add a raw/flat target with configurable origin and a 16-bit address space.
@@ -279,6 +283,12 @@ Exit criterion: the plugin assembles a small legal 6502 program, emits a useful
 instruction catalog, and has no dependency on SNES internals.
 
 ### Phase 3: NMOS base, including 6502X
+
+Implementation status: complete and verified. The legal 151-opcode NMOS set,
+all 256 NMOS decode slots, ca65's undocumented 6502X names, duplicate encoding
+policy, unstable-opcode metadata, aliases, branch validation, width forcing,
+and zero-page/absolute selection are covered by generated integrity tests and a
+221-form differential fixture from pinned ca65 V2.19.
 
 - Implement every legal 6502 mnemonic and addressing mode.
 - Implement 6502X undocumented opcodes in the same milestone, including opcode
@@ -293,6 +303,11 @@ Exit criterion: exhaustive 256-opcode decode/encode coverage for both 6502 and
 
 ### Phase 4: CMOS variants
 
+Implementation status: complete and verified. The three independent ca65
+tables materialize 182 `65SC02`, 214 Rockwell `65C02`, and 216 WDC `W65C02`
+forms. Availability negatives and every emitted form are covered by the pinned
+Phase 4/5 differential fixture.
+
 - Add 65SC02, Rockwell 65C02, and W65C02 as independent capability
   compositions.
 - Test accepted and rejected instructions, not only positive encoding cases.
@@ -303,6 +318,11 @@ Exit criterion: generated availability reports and ca65 differential suites pass
 for all three variants.
 
 ### Phase 5: Commodore extensions
+
+Implementation status: complete and verified. The plugin exposes 192 C64DTV,
+263 65CE02, 263 4510, and 350 45GS02 forms. Architecture-owned codecs cover Z
+and stack syntax, bit branches, 16-bit relative offsets, Q operations, and
+compound prefixes. All 1,680 Phase 4/5 forms match the pinned ca65 fixture.
 
 - Add 6502DTV, 65CE02, 4510, and 45GS02.
 - Add codecs for new registers, 16-bit relative forms, mapping instructions,
@@ -367,9 +387,8 @@ Exit criterion: a published compatibility matrix identifies supported,
 partially supported, and unsupported ca65 features; selected real-world flat
 sources assemble byte-for-byte; no claim of object/linker parity is made.
 
-### Phase 9: consolidation and migration
+### Phase 9: consolidation and publication
 
-- Remove temporary stub IDs after the documented deprecation window.
 - Generate architecture reference tables and LSP completion/hover data from the
   instruction model.
 - Document selecting CPUs, aliases, native versus ca65 syntax, and raw targets.

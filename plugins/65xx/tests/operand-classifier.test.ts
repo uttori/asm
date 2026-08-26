@@ -1,7 +1,7 @@
 import { test } from "../../../tests/ava-helper.js";
 
 import { OperandResolver } from "../../../packages/core/src/operand-resolver.js";
-import { classify6502Operand } from "../src/operand-classifier.js";
+import { classify65xxOperand } from "../src/operands/classifier.js";
 
 const createResolver = () =>
   new OperandResolver({
@@ -20,7 +20,7 @@ const createResolver = () =>
     requireStaticLabelLookup: () => false,
   });
 
-test("6502 classifier covers the baseline addressing matrix", (t) => {
+test("65xx classifier covers the baseline addressing matrix", (t) => {
   const resolver = createResolver();
   const cases: Array<[string, string, string]> = [
     ["", "implied", ""],
@@ -36,18 +36,22 @@ test("6502 classifier covers the baseline addressing matrix", (t) => {
   ];
 
   for (const [source, mode, baseExpression] of cases) {
-    const lowered = classify6502Operand(resolver, source);
+    const lowered = classify65xxOperand(resolver, source);
     t.is(lowered.mode, mode, source || "implied");
     t.is(lowered.baseExpression, baseExpression, source || "implied");
   }
 });
 
-test("6502 classifier does not inherit 65816-only operand forms", (t) => {
+test("65xx classifier owns Commodore and 45GS02 operand forms", (t) => {
   const resolver = createResolver();
 
-  t.is(classify6502Operand(resolver, "$12,s").mode, "unknown");
-  t.is(classify6502Operand(resolver, "[$12]").mode, "unknown");
-  t.deepEqual(classify6502Operand(resolver, "$123456").metadata, {
+  t.is(classify65xxOperand(resolver, "$12,s").mode, "stackRelative");
+  t.is(classify65xxOperand(resolver, "($12,s),y").mode, "stackRelativeIndirectIndexedY");
+  t.is(classify65xxOperand(resolver, "($12),z").mode, "zeroPageIndirectIndexedZ");
+  t.is(classify65xxOperand(resolver, "[$12]").mode, "zeroPageIndirectLong");
+  t.is(classify65xxOperand(resolver, "[$12],z").mode, "basePageIndirectIndexedZ");
+  t.is(classify65xxOperand(resolver, "Q").mode, "quadAccumulator");
+  t.deepEqual(classify65xxOperand(resolver, "$123456").metadata, {
     addressOutOfRange: true,
   });
 });

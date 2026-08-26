@@ -53,7 +53,7 @@ export class DirectiveRuntimeService {
       throw new Error("Character mapping requires format: 'char' = value");
     }
     const token = words[0];
-    const quoted = /^'([\s\S])'$/.exec(token) ?? /^"([\s\S])"$/.exec(token);
+    const quoted = /^'([\S\s])'$/.exec(token) ?? /^"([\S\s])"$/.exec(token);
     const char = quoted ? quoted[1] : token.replace(/["']/g, "");
     if (char.length !== 1) {
       throw new Error("Character mapping requires format: 'char' = value");

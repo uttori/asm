@@ -1432,7 +1432,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     const trimmed = operand.trim();
     // A/X/Y are registers. Treating them as hex makes `MOV label, A` encode as
     // MOV dp,dp (FA) with src $0A.
-    if (/^(A|X|Y|YA|SP)$/i.test(trimmed)) {
+    if (/^(a|x|y|ya|sp)$/i.test(trimmed)) {
       return false;
     }
     const cleaned = trimmed.replace(/\$/g, "");

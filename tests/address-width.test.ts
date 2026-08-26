@@ -27,7 +27,7 @@ test("trace formatting uses event target width", (t) => {
   const formatted = formatTraceEvent({
     type: "command-start",
     stage: "emitProgram",
-    arch: "mos.6502",
+    arch: "65xx.6502",
     file: "main.asm",
     line: 1,
     raw: "nop",
