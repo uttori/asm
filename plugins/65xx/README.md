@@ -25,6 +25,14 @@ origin is both the initial logical address and output offset zero, so an image
 configured with `{ "origin": 32768 }` can use `org $8000` without a 32 KiB
 prefix.
 
+Target `65xx.nes` (aliases `nes`, `ines`, `6502-nes`) is a ca65/ld65-shaped iNES
+image: pass `linkerConfig` (ld65 MEMORY/SEGMENTS text) and a 16-byte `header` as
+`targetOptions`. Writes follow the current `.segment` load region; overlay
+segments (`run` ≠ `load`) use `base` so labels live in RAM while bytes go into
+PRG. Fill unused PRG with `$FF`. Native syntax remains the default for
+`65xx.raw`; the NES target selects the ca65 syntax profile (dotted directives,
+`:=`, cheap locals `@name`, unary `<`/`>`/`^`).
+
 Native syntax supports conventional `$` hexadecimal and `%` binary literals,
 `#` immediates, `A`/`Q`, parentheses and brackets, `,x`/`,y`/`,z`/`,s`, bit
 branches, 8-bit and 16-bit relative branches, and `.b`/`.w` mnemonic suffixes

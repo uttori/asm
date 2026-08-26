@@ -38,7 +38,7 @@ export type CallExpressionNode = ExpressionNodeBase & {
     callee: IdentifierExpressionNode;
     arguments: ExpressionNode[];
 };
-export type UnaryOperator = "<:" | "~" | "-" | "+";
+export type UnaryOperator = "<:" | "<" | ">" | "^" | "~" | "-" | "+";
 export type UnaryExpressionNode = ExpressionNodeBase & {
     type: "unary";
     operator: UnaryOperator;

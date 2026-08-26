@@ -64,7 +64,7 @@ export type CallExpressionNode = ExpressionNodeBase & {
   arguments: ExpressionNode[];
 };
 
-export type UnaryOperator = "<:" | "~" | "-" | "+";
+export type UnaryOperator = "<:" | "<" | ">" | "^" | "~" | "-" | "+";
 
 export type UnaryExpressionNode = ExpressionNodeBase & {
   type: "unary";
@@ -469,7 +469,7 @@ const binaryPrecedence: Record<BinaryOperator, number> = {
   "**": 6,
 };
 
-const unaryOperators = new Set<UnaryOperator>(["<:", "~", "-", "+"]);
+const unaryOperators = new Set<UnaryOperator>(["<:", "<", ">", "^", "~", "-", "+"]);
 const binaryOperators = [
   "**",
   "<<",
@@ -560,6 +560,12 @@ function tokenizeExpression(input: string): Token[] {
       continue;
     }
 
+    if (char === "@" || /[A-Z_a-z]/.test(char)) {
+      const { value, nextIndex } = readIdentifier(input, index);
+      tokens.push({ type: "identifier", value });
+      index = nextIndex;
+      continue;
+    }
     if (char === "$") {
       const match = input.slice(index).match(/^\$[\dA-Fa-f]+/);
       if (!match) {
@@ -586,12 +592,6 @@ function tokenizeExpression(input: string): Token[] {
       }
       tokens.push({ type: "literal", value: match[0] });
       index += match[0].length;
-      continue;
-    }
-    if (/[A-Z_a-z]/.test(char)) {
-      const { value, nextIndex } = readIdentifier(input, index);
-      tokens.push({ type: "identifier", value });
-      index = nextIndex;
       continue;
     }
 
@@ -633,6 +633,10 @@ function readQuotedString(
  */
 function readIdentifier(input: string, start: number): { value: string; nextIndex: number } {
   let index = start;
+  // If the identifier starts with an @, skip it
+  if (input[index] === "@") {
+    index++;
+  }
   while (index < input.length && /\w/.test(input[index])) {
     index++;
   }

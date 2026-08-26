@@ -79,6 +79,18 @@ function modeSize(form: InstructionForm): number {
 }
 
 /**
+ * Operand byte width for unsigned codecs. Relative/none codecs return 0.
+ * @param {InstructionForm["codec"]} codec Form codec.
+ * @returns {0 | 1 | 2 | 3} Width in bytes.
+ */
+function unsignedOperandWidth(codec: InstructionForm["codec"]): 0 | 1 | 2 | 3 {
+  if (codec === "unsigned8") return 1;
+  if (codec === "unsigned16-le") return 2;
+  if (codec === "unsigned24-le") return 3;
+  return 0;
+}
+
+/**
  * Normalizes a relative delta to a signed 16-bit value.
  * Sign-extend a 16-bit wrapping subtraction so 8-bit branches can range-check.
  * @param {number} target The target address.
@@ -212,10 +224,11 @@ export class Arch65xx implements ArchitectureEncoder {
     if (!resolved) return false;
     const form = resolved;
     const relativeBaseOffset = form.relativeBaseOffset ?? modeSize(form);
-    const branchDelta =
-      form.codec === "relative8" || form.codec === "relative16"
-        ? this.readBranchDelta(operand, relativeBaseOffset, form.codec === "relative8" ? 1 : 2)
-        : 0;
+    let branchDelta = 0;
+    if (form.codec === "relative8" || form.codec === "relative16") {
+      const branchWidth = form.codec === "relative8" ? 1 : 2;
+      branchDelta = this.readBranchDelta(operand, relativeBaseOffset, branchWidth);
+    }
     const compoundOperands =
       form.codec === "zero-page-relative8" ? splitTopLevelOperands(operand.expanded) : [];
     if (form.codec === "zero-page-relative8" && compoundOperands.length !== 2) {
@@ -231,26 +244,28 @@ export class Arch65xx implements ArchitectureEncoder {
             1,
           )
         : 0;
+    const operandWidth = unsignedOperandWidth(form.codec);
+    const operandKind = operandWidth === 1 ? "operand" : "address";
+    let operandValue = 0;
+    if (operandWidth !== 0) {
+      operandValue = this.readValue(operand, operandWidth, `${form.mnemonic} ${operandKind}`);
+    }
+    const zpAddress =
+      form.codec === "zero-page-relative8"
+        ? this.readExpressionValue(compoundOperands[0] ?? "", 1, `${form.mnemonic} address`, false)
+        : 0;
     this.context.emission.writeBytes(form.encoding);
     switch (form.codec) {
       case "none":
         return true;
       case "unsigned8":
-        this.context.emission.writeByte(this.readValue(operand, 1, `${form.mnemonic} operand`));
+        this.context.emission.writeByte(operandValue);
         return true;
       case "unsigned16-le":
-        this.context.emission.writeValue(
-          this.readValue(operand, 2, `${form.mnemonic} address`),
-          2,
-          "little",
-        );
+        this.context.emission.writeValue(operandValue, 2, "little");
         return true;
       case "unsigned24-le":
-        this.context.emission.writeValue(
-          this.readValue(operand, 3, `${form.mnemonic} address`),
-          3,
-          "little",
-        );
+        this.context.emission.writeValue(operandValue, 3, "little");
         return true;
       case "relative8":
         this.context.emission.writeByte(branchDelta & 0xff);
@@ -259,9 +274,7 @@ export class Arch65xx implements ArchitectureEncoder {
         this.context.emission.writeValue(branchDelta & 0xffff, 2, "little");
         return true;
       case "zero-page-relative8": {
-        this.context.emission.writeByte(
-          this.readExpressionValue(compoundOperands[0] ?? "", 1, `${form.mnemonic} address`, false),
-        );
+        this.context.emission.writeByte(zpAddress);
         this.context.emission.writeByte(compoundBranchDelta & 0xff);
         return true;
       }
@@ -393,7 +406,7 @@ export class Arch65xx implements ArchitectureEncoder {
     if (!this.context.branches.enforceResolvedLabels()) return 0;
     const reference = (this.context.sizing.getCurrentAddress() + relativeBaseOffset) & 0xffff;
     let target: number;
-    // Unnamed labels: `+` / `++` forward, `-` / `--` backward (ca65 / native).
+    // Unnamed labels: Asar `+`/`++` forward, `-`/`--` backward; ca65 `:+` / `:-`.
     if (/^\++$/.test(expression)) {
       target = this.context.branches.findNextLabel(expression, reference);
     } else if (/^-+$/.test(expression)) {

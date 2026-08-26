@@ -307,7 +307,7 @@ function classifyCommand(command: string, words: readonly string[]): CommandKind
   if (keyword === "global") {
     return "labelDefinition";
   }
-  if (words.length === 3 && words[1] === "=") {
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
     return "staticAssignment";
   }
   if (deriveLabelName(words[0] ?? "")) {
@@ -325,6 +325,9 @@ function deriveLabelName(keyword: string): string | undefined {
   if (!keyword) {
     return undefined;
   }
+  if (keyword === ":") {
+    return ":";
+  }
   if (/^\++:?$/.test(keyword) || /^-+:?$/.test(keyword)) {
     return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
   }
@@ -340,7 +343,7 @@ function deriveLabelName(keyword: string): string | undefined {
  * @returns {string | undefined} The assignment target when present.
  */
 function deriveAssignmentTarget(words: readonly string[]): string | undefined {
-  if (words.length === 3 && words[1] === "=") {
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
     return words[0];
   }
   return undefined;
@@ -354,6 +357,7 @@ function deriveAssignmentTarget(words: readonly string[]): string | undefined {
  */
 function deriveCommandSemantics(command: string, words: readonly string[]): CommandSemantics {
   const keyword = (words[0] ?? "").toLowerCase();
+  const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
   const semantics: CommandSemantics = {};
 
   if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
@@ -377,7 +381,7 @@ function deriveCommandSemantics(command: string, words: readonly string[]): Comm
 
   if (
     words.length === 3 &&
-    words[1] === "=" &&
+    (words[1] === "=" || words[1] === ":=") &&
     !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))
   ) {
     semantics.assignment = {
@@ -386,7 +390,7 @@ function deriveCommandSemantics(command: string, words: readonly string[]): Comm
     };
   }
 
-  if (keyword === "incbin" && words.length >= 2) {
+  if (bareKeyword === "incbin" && words.length >= 2) {
     const incbinSource = command
       .slice((words[0] ?? "").length)
       .split(/\s+->\s+/u, 1)[0]
@@ -417,9 +421,9 @@ function deriveCommandSemantics(command: string, words: readonly string[]): Comm
     }
   }
 
-  if ((keyword === "include" || keyword === "incsrc") && words.length >= 2) {
+  if ((bareKeyword === "include" || bareKeyword === "incsrc") && words.length >= 2) {
     semantics.includeTarget = {
-      directive: keyword,
+      directive: bareKeyword,
       target: words.slice(1).join(" ").trim(),
     };
   }

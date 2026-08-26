@@ -78,9 +78,7 @@ export function handleAccu(session: Assembler, words: readonly string[]): void {
   } else if (widthToken === "16") {
     handleA16(session);
   } else {
-    throw new Error(
-      `.accu requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`,
-    );
+    throw new Error(`.accu requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`);
   }
 }
 
@@ -121,9 +119,7 @@ export function handleIndex(session: Assembler, words: readonly string[]): void 
   } else if (widthToken === "16") {
     handleI16(session);
   } else {
-    throw new Error(
-      `.index requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`,
-    );
+    throw new Error(`.index requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`);
   }
 }
 

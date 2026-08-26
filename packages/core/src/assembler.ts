@@ -71,7 +71,11 @@ import {
 } from "./services/program-model-builder.js";
 import { OutputWriterService } from "./services/output-writer-service.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
-import { SymbolScopeService, type LabelEntry } from "./services/symbol-scope-service.js";
+import {
+  SymbolScopeService,
+  parseUnnamedLabelReference,
+  type LabelEntry,
+} from "./services/symbol-scope-service.js";
 import { getDefineVariable, isBareLabelReference } from "./services/command-text-service.js";
 import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "./syntax-profile.js";
 import type { SourceSpan } from "./source-location.js";
@@ -118,8 +122,8 @@ type StageCursorState = {
 };
 type StageSymbolState = {
   labelTable: Map<string, LabelEntry>;
-  forwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
-  backwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
+  forwardLabels: { [depth: number]: { addr: number; macroInstance?: number; unit?: string }[] };
+  backwardLabels: { [depth: number]: { addr: number; macroInstance?: number; unit?: string }[] };
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   currentGlobalParentLabel: string;
@@ -265,11 +269,17 @@ export class Assembler {
   public pushpcnum: number = 0;
 
   public labelTable: Map<string, LabelEntry> = new Map();
+  /** ca65 `.export` / `.import` names that stay session-global. */
+  public globalSymbols: Set<string> = new Set();
 
   /** Track multiple `+` labels */
-  public forwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
+  public forwardLabels: {
+    [depth: number]: { addr: number; macroInstance?: number; unit?: string }[];
+  } = {};
   /** Track multiple `-` labels */
-  public backwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] } = {};
+  public backwardLabels: {
+    [depth: number]: { addr: number; macroInstance?: number; unit?: string }[];
+  } = {};
 
   public padUnit: number = 1;
   public padbyte: number[] = [];
@@ -1173,7 +1183,7 @@ export class Assembler {
           this.symbolScope.findPreviousLabel(label, referenceAddress),
       },
       diagnostics: {
-        error: (message) => new Error(message),
+        error: (message) => new Error(`${message} (${this.currentFile}:${this.currentLine + 1})`),
       },
     };
     this.architectureRegistry = new ArchitectureRegistry();
@@ -1469,7 +1479,11 @@ export class Assembler {
    * @returns {number | string} The result.
    */
   resolveExpressionHostLabel(identifier: string): number | string {
-    const parsed = parseExpressionNode(identifier.trim());
+    const trimmed = identifier.trim();
+    if (parseUnnamedLabelReference(trimmed)) {
+      return this.symbolScope.getLabelValue(trimmed, this.requireStaticLabelLookup);
+    }
+    const parsed = parseExpressionNode(trimmed);
     if (isReferenceExpressionNode(parsed)) {
       return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
     }
@@ -1925,11 +1939,16 @@ export class Assembler {
 
   /**
    * Returns whether the active syntax profile treats a token as a named label.
-   * @param {string} token Candidate token.
+   * @param {string} candidate Candidate token.
    * @returns {boolean} Whether the token is a named label.
    */
-  isNamedLabelToken(token: string): boolean {
-    return token.endsWith(":") || (this.syntaxProfile.leadingDotLabels && token.startsWith("."));
+  isNamedLabelToken(candidate: string): boolean {
+    if (candidate === ":") {
+      return false;
+    }
+    return (
+      candidate.endsWith(":") || (this.syntaxProfile.leadingDotLabels && candidate.startsWith("."))
+    );
   }
 
   /**

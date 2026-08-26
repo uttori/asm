@@ -1,4 +1,5 @@
 import type { StructDefinition } from "./struct-engine.js";
+import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "../syntax-profile.js";
 
 export type LabelEntry = {
   value: number;
@@ -21,18 +22,72 @@ export interface SymbolScopeHost {
   inMacroExpansion: boolean;
   macroLabelInstance: number;
   labelTable: Map<string, LabelEntry>;
-  forwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
-  backwardLabels: { [depth: number]: { addr: number; macroInstance?: number }[] };
+  forwardLabels: { [depth: number]: { addr: number; macroInstance?: number; unit?: string }[] };
+  backwardLabels: { [depth: number]: { addr: number; macroInstance?: number; unit?: string }[] };
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   currentGlobalParentLabel: string;
   labelParents: Map<string, string | null>;
   structs: Map<string, StructDefinition>;
+  syntaxProfile: SyntaxProfile;
+  currentFile: string;
+  includeStack: string[];
+  /** Names treated as session-global (ca65 `.export` / `.import`). */
+  globalSymbols: Set<string>;
   recordSymbolDefinition(kind: "label", name: string, options?: { value?: number | string }): void;
 }
 
 export class SymbolScopeService {
   constructor(readonly host: SymbolScopeHost) {}
+
+  /**
+   * Returns the current ca65-style object file name (last `.asm` on the include stack).
+   * @returns {string} The object-file basename, or empty when unknown.
+   */
+  objectFileKey(): string {
+    const chain = [...this.host.includeStack, this.host.currentFile];
+    for (let index = chain.length - 1; index >= 0; index--) {
+      const base = fileBasename(chain[index] ?? "");
+      if (base.toLowerCase().endsWith(".asm")) {
+        return base;
+      }
+    }
+    return fileBasename(this.host.currentFile);
+  }
+
+  /**
+   * Qualifies a symbol for the active syntax profile's file-local rule.
+   * Exported/imported names and cheap/sublabels stay unqualified.
+   * @param {string} name The source symbol name.
+   * @returns {string} The storage key.
+   */
+  qualifySymbolName(name: string): string {
+    const profile = this.host.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
+    if (!profile.fileLocalSymbols) {
+      return name;
+    }
+    if (this.host.globalSymbols.has(name)) {
+      return name;
+    }
+    if (name.startsWith(".") || name.startsWith("@") || name.includes("::")) {
+      return name;
+    }
+    const unit = this.objectFileKey();
+    return unit ? `${unit}::${name}` : name;
+  }
+
+  /**
+   * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
+   * @param {string} name The label token, without a trailing colon.
+   * @returns {string} The rewritten name.
+   */
+  toCheapDotLabel(name: string): string {
+    const prefix = this.host.syntaxProfile?.cheapLocalPrefix ?? "";
+    if (prefix && name.startsWith(prefix) && name.length > prefix.length) {
+      return `.${name.slice(prefix.length)}`;
+    }
+    return name;
+  }
 
   /**
    * Finds nearest hierarchy ancestor.
@@ -195,6 +250,64 @@ export class SymbolScopeService {
     }
 
     return targetAddress;
+  }
+
+  /**
+   * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
+   * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
+   * @returns {number} The address of the unnamed label.
+   */
+  handleUnnamedLabel(): number {
+    const targetAddress = this.host.currentTargetAddress;
+    if (this.host.enforceResolvedLabels) {
+      if (!this.host.forwardLabels[0] || this.host.forwardLabels[0].length === 0) {
+        throw new Error("Error: Undefined unnamed label ':'.");
+      }
+      return targetAddress;
+    }
+    if (!this.host.forwardLabels[0]) this.host.forwardLabels[0] = [];
+    if (!this.host.backwardLabels[0]) this.host.backwardLabels[0] = [];
+    const entry = { addr: targetAddress, unit: this.objectFileKey() };
+    this.host.forwardLabels[0].push(entry);
+    this.host.backwardLabels[0].push({ addr: targetAddress, unit: entry.unit });
+    return targetAddress;
+  }
+
+  /**
+   * Resolves a ca65 unnamed-label reference (`:+`, `:++`, `:-`, `:--`).
+   * @param {string} label The reference token.
+   * @param {number} [currentAddressOverride] PC to search from.
+   * @returns {number} The target address.
+   */
+  findUnnamedLabel(label: string, currentAddressOverride?: number): number {
+    const parsed = parseUnnamedLabelReference(label);
+    if (!parsed) {
+      throw new Error(`Error: Invalid unnamed label '${label}'.`);
+    }
+    const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
+    if (!this.host.enforceResolvedLabels) {
+      return 0;
+    }
+    const table = parsed.direction === 1 ? this.host.forwardLabels[0] : this.host.backwardLabels[0];
+    if (!table || table.length === 0) {
+      throw new Error(
+        `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`,
+      );
+    }
+    const unit = this.objectFileKey();
+    const ordered = table
+      .filter((entry) => !entry.unit || entry.unit === unit)
+      .filter((entry) =>
+        parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress,
+      )
+      .map((entry) => entry.addr)
+      .sort((left, right) => (parsed.direction === 1 ? left - right : right - left));
+    if (ordered.length < parsed.count) {
+      throw new Error(
+        `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`,
+      );
+    }
+    return ordered[parsed.count - 1];
   }
 
   /**
@@ -535,6 +648,16 @@ export class SymbolScopeService {
    * @returns {number | undefined} The value, or undefined when not found.
    */
   tryGetLabelValue(label: string, requireStatic: boolean): number | undefined {
+    if (parseUnnamedLabelReference(label)) {
+      if (!this.host.enforceResolvedLabels) {
+        return undefined;
+      }
+      return this.findUnnamedLabel(label);
+    }
+    const cheap = this.toCheapDotLabel(label);
+    if (cheap !== label) {
+      return this.tryGetLabelValue(cheap, requireStatic);
+    }
     if (label.startsWith(".") && this.host.currentParentLabel) {
       let dotCount = 0;
       while (label[dotCount] === ".") {
@@ -601,6 +724,14 @@ export class SymbolScopeService {
         if (value !== undefined) {
           return value;
         }
+      }
+    }
+
+    const qualified = this.qualifySymbolName(label);
+    if (qualified !== label) {
+      const scoped = this.tryGetLabelValueDirect(qualified, requireStatic);
+      if (scoped !== undefined) {
+        return scoped;
       }
     }
 
@@ -801,6 +932,10 @@ export class SymbolScopeService {
    * @param {string} labelName The name of the label.
    */
   handleLabelDefinition(labelName: string): void {
+    labelName = this.toCheapDotLabel(labelName);
+    if (!(labelName.startsWith(".") || labelName.startsWith("#."))) {
+      labelName = this.qualifySymbolName(labelName);
+    }
     if (labelName.startsWith(".") || labelName.startsWith("#.")) {
       if (!this.host.currentParentLabel) {
         throw new Error("Sublabel without parent label");
@@ -868,4 +1003,34 @@ export class SymbolScopeService {
       }
     }
   }
+}
+
+/**
+ * Returns the last path segment of a source file.
+ * @param {string} file The file path.
+ * @returns {string} The basename.
+ */
+function fileBasename(file: string): string {
+  const normalized = file.replaceAll("\\", "/");
+  const slash = normalized.lastIndexOf("/");
+  return slash === -1 ? normalized : normalized.slice(slash + 1);
+}
+
+/**
+ * Parses a ca65 unnamed-label reference (`:+`, `:++`, `:-`).
+ * @param {string} token The operand token.
+ * @returns {{ direction: 1 | -1; count: number } | undefined} The skip count, or undefined.
+ */
+export function parseUnnamedLabelReference(
+  token: string,
+): { direction: 1 | -1; count: number } | undefined {
+  const match = token.trim().match(/^:(\++|-+)$/);
+  if (!match) {
+    return undefined;
+  }
+  const signs = match[1];
+  return {
+    direction: signs[0] === "+" ? 1 : -1,
+    count: signs.length,
+  };
 }

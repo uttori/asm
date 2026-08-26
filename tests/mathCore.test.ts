@@ -1073,11 +1073,19 @@ test("getnum - identifier resolution", t => {
     mathCore.getnum();
   }, { message: "Reference '.local' did not resolve to a numeric value." });
 
-  // Test invalid number
-  mathCore.str = "@invalid";
+  mathCore.str = "@cheap";
+  t.is(mathCore.getnum(), 0);
+
+  mathCore.host = createExpressionHost({
+    resolveLabel: (value) => (value === "@cheap" ? 9 : 0),
+  });
+  mathCore.str = "@cheap";
+  t.is(mathCore.getnum(), 9);
+
+  mathCore.str = "??invalid";
   t.throws(() => {
     mathCore.getnum();
-  }, { message: "Invalid number: @invalid" });
+  }, { message: "Invalid number: ??invalid" });
 });
 
 test("getnum - compound identifier resolution", t => {
@@ -2318,6 +2326,21 @@ test("math - typed expression nodes", t => {
     operator: "<:",
     argument: { type: "literal", value: "65536" },
   }), 1);
+  t.is(mathCore.math({
+    type: "unary",
+    operator: "<",
+    argument: { type: "literal", value: "$1234" },
+  }), 0x34);
+  t.is(mathCore.math({
+    type: "unary",
+    operator: ">",
+    argument: { type: "literal", value: "$1234" },
+  }), 0x12);
+  t.is(mathCore.math({
+    type: "unary",
+    operator: "^",
+    argument: { type: "literal", value: "$123456" },
+  }), 0x12);
   t.is(mathCore.math({
     type: "binary",
     operator: "+",

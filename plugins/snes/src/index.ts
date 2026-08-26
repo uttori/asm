@@ -126,7 +126,7 @@ const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
  * @param {readonly string[]} keywords The directive keywords.
  * @param {DirectiveContribution["createHandler"]} handler The directive handler.
  * @returns {DirectiveContribution} The directive contribution.
-*/
+ */
 const directive = (
   id: string,
   keywords: readonly string[],

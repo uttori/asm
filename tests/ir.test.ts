@@ -28,6 +28,12 @@ type AssemblerReferenceTestAccess = {
 const stripExpressionSpans = (node: ExpressionNode): ExpressionNode =>
   JSON.parse(JSON.stringify(node, (key, value) => (key === "span" ? undefined : value)));
 
+test("normalized command treats a lone colon as a ca65 unnamed label", (t) => {
+  const command = createNormalizedCommand(":", ":", [":"], "test.asm", 20);
+  t.is(command.labelName, ":");
+  t.is(command.kind, "labelDefinition");
+});
+
 test("normalized command captures provenance and classification", (t) => {
   const command = createNormalizedCommand(
     "Main: db $01",
@@ -120,6 +126,18 @@ test("normalized command derives semantic payloads for conditions, ranges, assig
   t.deepEqual(assignmentCommand.parsed.assignment, {
     target: "Label",
     expression: parseExpressionNode("bank($123456)"),
+  });
+  const ca65Assignment = createNormalizedCommand(
+    "CurLevel := $10",
+    "CurLevel := $10",
+    ["CurLevel", ":=", "$10"],
+    "vars.inc",
+    1,
+  );
+  t.is(ca65Assignment.kind, "staticAssignment");
+  t.deepEqual(ca65Assignment.parsed.assignment, {
+    target: "CurLevel",
+    expression: parseExpressionNode("$10"),
   });
   t.deepEqual(incbinCommand.parsed.incbinRange, {
     range: parseExpressionNode("$1..$3"),
@@ -263,6 +281,26 @@ test("expression nodes parse binary precedence and unary operators", (t) => {
     type: "unary",
     operator: "<:",
     argument: { type: "literal", value: "$123456" },
+  });
+
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("<$1234")), {
+    type: "unary",
+    operator: "<",
+    argument: { type: "literal", value: "$1234" },
+  });
+  t.deepEqual(stripExpressionSpans(parseExpressionNode(">$1234")), {
+    type: "unary",
+    operator: ">",
+    argument: { type: "literal", value: "$1234" },
+  });
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("^$123456")), {
+    type: "unary",
+    operator: "^",
+    argument: { type: "literal", value: "$123456" },
+  });
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("@Play")), {
+    type: "identifier",
+    name: "@Play",
   });
 
   t.deepEqual(stripExpressionSpans(defineNode), {

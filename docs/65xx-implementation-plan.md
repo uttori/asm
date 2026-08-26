@@ -424,24 +424,6 @@ syntax differences, known ca65 behavior, or hardware ambiguity. Do not “fix”
 fixture merely to agree with one reference without recording which policy the
 project chose.
 
-## Proposed pull-request sequence
-
-1. Core boundary tests and address-width normalization.
-2. Operand-classifier extraction plus independent 65xx classifier.
-3. Package rename, migration aliases, instruction schema, and raw target.
-4. 6502 + 6502X, including exhaustive and differential fixtures.
-5. 65SC02 + 65C02 + W65C02.
-6. 6502DTV + 65CE02 + 4510.
-7. 45GS02 compound encodings.
-8. HuC6280 + M740.
-9. SNES-owned ca65 65816 compatibility review and additions, with no ownership
-   transfer or shared encoder dependency.
-10. ca65 compatibility slices, followed by documentation and deprecation
-    cleanup.
-
-PRs may be split further, but none of the first-class architecture rows should
-be moved to a noncommittal “future extensions” section.
-
 ## Risks and mitigations
 
 | Risk | Mitigation |

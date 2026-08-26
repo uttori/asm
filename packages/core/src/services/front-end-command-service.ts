@@ -83,19 +83,33 @@ export class FrontEndCommandService {
    */
   handleRelativeLabelDefinition(command: NormalizedCommand): boolean {
     const { keyword } = command;
-    const isRelativeLabelDefinition = /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
+    const isUnnamedLabelDefinition = keyword === ":";
+    const isRelativeLabelDefinition =
+      isUnnamedLabelDefinition || /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
     if (!isRelativeLabelDefinition) {
       return false;
     }
 
-    const relativeLabel = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-    this.host.symbolScope.handleRelativeLabel(relativeLabel);
+    let relativeLabel = keyword;
+    if (isUnnamedLabelDefinition) {
+      relativeLabel = ":";
+    } else if (keyword.endsWith(":")) {
+      relativeLabel = keyword.slice(0, -1);
+    }
+    if (isUnnamedLabelDefinition) {
+      this.host.symbolScope.handleUnnamedLabel();
+    } else {
+      this.host.symbolScope.handleRelativeLabel(relativeLabel);
+    }
     this.host.recordCurrentAddress();
     this.host.recordSymbolDefinition("label", relativeLabel, {
       span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
     });
     command.labelName = relativeLabel;
     setCommandKind(command, "labelDefinition");
+    if (isUnnamedLabelDefinition && command.words.length > 1) {
+      this.host.processCommand(command.words.slice(1).join(" "));
+    }
     return true;
   }
 
@@ -184,7 +198,7 @@ export class FrontEndCommandService {
    */
   handleStaticLabelAssignment(command: NormalizedCommand): boolean {
     const { words, keyword } = command;
-    if (words.length !== 3 || words[1] !== "=") {
+    if (words.length !== 3 || (words[1] !== "=" && words[1] !== ":=")) {
       return false;
     }
 
@@ -198,13 +212,14 @@ export class FrontEndCommandService {
       value = this.host.symbolScope.getLabelValue(resolvedExpr, true);
     }
 
-    this.host.symbolScope.setLabel(labelName, value, true);
+    const assignedName = this.host.symbolScope.qualifySymbolName(labelName);
+    this.host.symbolScope.setLabel(assignedName, value, true);
     this.host.recordCurrentAddress();
-    this.host.recordSymbolDefinition("label", labelName, {
+    this.host.recordSymbolDefinition("label", assignedName, {
       span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
       value,
     });
-    command.assignmentTarget = labelName;
+    command.assignmentTarget = assignedName;
     setCommandKind(command, "staticAssignment");
     return true;
   }

@@ -49,12 +49,14 @@ type StageSymbolState = {
         [depth: number]: {
             addr: number;
             macroInstance?: number;
+            unit?: string;
         }[];
     };
     backwardLabels: {
         [depth: number]: {
             addr: number;
             macroInstance?: number;
+            unit?: string;
         }[];
     };
     currentParentLabel: string;
@@ -178,11 +180,14 @@ export declare class Assembler {
     pushpcStack: PushPcStackEntry[];
     pushpcnum: number;
     labelTable: Map<string, LabelEntry>;
+    /** ca65 `.export` / `.import` names that stay session-global. */
+    globalSymbols: Set<string>;
     /** Track multiple `+` labels */
     forwardLabels: {
         [depth: number]: {
             addr: number;
             macroInstance?: number;
+            unit?: string;
         }[];
     };
     /** Track multiple `-` labels */
@@ -190,6 +195,7 @@ export declare class Assembler {
         [depth: number]: {
             addr: number;
             macroInstance?: number;
+            unit?: string;
         }[];
     };
     padUnit: number;
@@ -609,10 +615,10 @@ export declare class Assembler {
     canonicalizeDirectiveKeyword(keyword: string): string;
     /**
      * Returns whether the active syntax profile treats a token as a named label.
-     * @param {string} token Candidate token.
+     * @param {string} candidate Candidate token.
      * @returns {boolean} Whether the token is a named label.
      */
-    isNamedLabelToken(token: string): boolean;
+    isNamedLabelToken(candidate: string): boolean;
     /**
      * Writes 1, 2, 3, or 4 bytes to output.
      * @param {number} num - The byte to write.

@@ -385,9 +385,17 @@ export class OperandResolver {
     let expanded = raw;
     let expectedLength = 2;
 
-    if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-") {
+    if (
+      /^\++$/.test(expanded) ||
+      /^-+$/.test(expanded) ||
+      expanded === "?+" ||
+      expanded === "?-" ||
+      /^:(\++|-+)$/.test(expanded)
+    ) {
       return { raw, expanded, length: 2, syntax };
     }
+
+    expanded = this.tryResolveLabelInOperand(expanded);
 
     try {
       expanded = this.deps.resolveDefines(expanded);
@@ -400,8 +408,6 @@ export class OperandResolver {
     }
 
     expanded = this.normalizeNumericBaseMember(expanded);
-
-    expanded = this.tryResolveLabelInOperand(expanded);
 
     if (expanded.startsWith("#")) {
       const inner = expanded.substring(1).trim();
@@ -437,7 +443,8 @@ export class OperandResolver {
       expectedLength = 2;
     }
 
-    const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded);
+    const isRelativeLabelPlaceholder =
+      /^\++$/.test(expanded) || /^-+$/.test(expanded) || /^:(\++|-+)$/.test(expanded);
     if (!isRelativeLabelPlaceholder && this.isMathExpression(expanded)) {
       try {
         const { expression, suffix } = this.splitMathOperandSuffix(expanded);

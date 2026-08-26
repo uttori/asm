@@ -11,7 +11,12 @@ export function classify65xxOperand(
   operand: string,
 ): LoweredOperand {
   const raw = operand.trim();
-  const { expanded, length } = resolver.expandOperand(raw);
+  const sizePrefix = parseCa65AddressSizePrefix(raw);
+  const { expanded, length: inferredLength } = resolver.expandOperand(sizePrefix.rest);
+  let length = inferredLength;
+  if (sizePrefix.force === 1) length = 1;
+  else if (sizePrefix.force === 2) length = Math.max(2, inferredLength);
+  else if (sizePrefix.force === 3) length = Math.max(3, inferredLength);
   const normalized = expanded.trim();
   const normalizedUpper = normalized.toUpperCase();
 
@@ -113,4 +118,25 @@ function findTopLevelComma(value: string): number {
     else if (character === "," && depth === 0) return index;
   }
   return -1;
+}
+
+/**
+ * Strips a ca65 address-size override (`a:` absolute, `z:` zeropage, `f:` far).
+ * Zelda uses `LDA a:ObjState, Y` to force abs,y when the symbol is a zp equate.
+ * @param {string} operand Raw operand text.
+ * @returns {{ rest: string; force: 1 | 2 | 3 | undefined }} Remainder and forced width.
+ */
+function parseCa65AddressSizePrefix(operand: string): {
+  rest: string;
+  force: 1 | 2 | 3 | undefined;
+} {
+  const match = operand.match(/^([afz]):(.*)$/i);
+  if (!match) {
+    return { rest: operand, force: undefined };
+  }
+  const rest = match[2].trim();
+  const key = match[1].toLowerCase();
+  if (key === "z") return { rest, force: 1 };
+  if (key === "a") return { rest, force: 2 };
+  return { rest, force: 3 };
 }

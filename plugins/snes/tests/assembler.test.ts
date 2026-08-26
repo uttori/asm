@@ -844,7 +844,7 @@ test("expandOperand - handles label references", (t) => {
 
   const { expanded: expanded2, length: length2 } =
     assembler.operandResolver.expandOperand("found_label");
-  t.is(expanded2, "4660");
+  t.is(expanded2, "$1234");
   t.is(length2, 2); // Should be 2 bytes for this address
 });
 

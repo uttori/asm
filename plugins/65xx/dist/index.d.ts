@@ -6,6 +6,8 @@ export declare const FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 export declare const RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
 /** Resets PC to `origin` at the start of each assembly stage. */
 export declare const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
+/** ca65 directive set used by the NES iNES target. */
+export declare const CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
 /**
  * Raw-target options. `origin` is both the initial PC and file offset 0
  * (`{ origin: 32768 }` → `org $8000` with no 32 KiB prefix).
@@ -43,5 +45,7 @@ export { getCpuAssemblyForms, getOpcodeForm, getCpuDecodeTable, nmos6502Cpu, nmo
 export { cmos65c02Cpu, cmos65c02Forms, cmos65sc02Cpu, cmos65sc02Forms, commodore4510Cpu, commodore4510Forms, csg65ce02Cpu, csg65ce02Forms, mega65Gs02Cpu, mega65Gs02Forms, mos6502DtvCpu, mos6502DtvForms, variantCpus, variantFormsByCpuId, wdc65c02Cpu, wdc65c02Forms, } from "./instructions/variants.js";
 export type { AddressingMode, CpuDefinition, CpuFeature, FeatureExpression, InstructionForm, OperandCodecId, OperandField, } from "./instructions/schema.js";
 export { matchesFeatures } from "./instructions/schema.js";
-export { classify65xxOperand } from "./operands/classifier.js";
+export { NES_65XX_ADDRESS_SPACE_ID, NES_65XX_LIFECYCLE_ID, NES_65XX_OUTPUT_FORMAT_ID, NES_65XX_TARGET_ID, createNes65xxTargetOptions, } from "./target/nes.js";
+export { NES_65XX_SESSION_STATE_ID, nes65xxSessionStateKey } from "./session-state.js";
+export { parseLd65Config, defaultLd65ConfigText } from "./linker-config.js";
 //# sourceMappingURL=index.d.ts.map

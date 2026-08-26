@@ -1,4 +1,5 @@
 import type { StructDefinition } from "./struct-engine.js";
+import { type SyntaxProfile } from "../syntax-profile.js";
 export type LabelEntry = {
     value: number;
     isStatic: boolean;
@@ -23,12 +24,14 @@ export interface SymbolScopeHost {
         [depth: number]: {
             addr: number;
             macroInstance?: number;
+            unit?: string;
         }[];
     };
     backwardLabels: {
         [depth: number]: {
             addr: number;
             macroInstance?: number;
+            unit?: string;
         }[];
     };
     currentParentLabel: string;
@@ -36,6 +39,11 @@ export interface SymbolScopeHost {
     currentGlobalParentLabel: string;
     labelParents: Map<string, string | null>;
     structs: Map<string, StructDefinition>;
+    syntaxProfile: SyntaxProfile;
+    currentFile: string;
+    includeStack: string[];
+    /** Names treated as session-global (ca65 `.export` / `.import`). */
+    globalSymbols: Set<string>;
     recordSymbolDefinition(kind: "label", name: string, options?: {
         value?: number | string;
     }): void;
@@ -43,6 +51,24 @@ export interface SymbolScopeHost {
 export declare class SymbolScopeService {
     readonly host: SymbolScopeHost;
     constructor(host: SymbolScopeHost);
+    /**
+     * Returns the current ca65-style object file name (last `.asm` on the include stack).
+     * @returns {string} The object-file basename, or empty when unknown.
+     */
+    objectFileKey(): string;
+    /**
+     * Qualifies a symbol for the active syntax profile's file-local rule.
+     * Exported/imported names and cheap/sublabels stay unqualified.
+     * @param {string} name The source symbol name.
+     * @returns {string} The storage key.
+     */
+    qualifySymbolName(name: string): string;
+    /**
+     * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
+     * @param {string} name The label token, without a trailing colon.
+     * @returns {string} The rewritten name.
+     */
+    toCheapDotLabel(name: string): string;
     /**
      * Finds nearest hierarchy ancestor.
      * @param {string} label The label.
@@ -79,6 +105,19 @@ export declare class SymbolScopeService {
      * @returns {number} The address of the label.
      */
     handleRelativeLabel(label: string): number;
+    /**
+     * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
+     * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
+     * @returns {number} The address of the unnamed label.
+     */
+    handleUnnamedLabel(): number;
+    /**
+     * Resolves a ca65 unnamed-label reference (`:+`, `:++`, `:-`, `:--`).
+     * @param {string} label The reference token.
+     * @param {number} [currentAddressOverride] PC to search from.
+     * @returns {number} The target address.
+     */
+    findUnnamedLabel(label: string, currentAddressOverride?: number): number;
     /**
      * Finds the next label.
      * @param {string} label The label to find.
@@ -151,4 +190,13 @@ export declare class SymbolScopeService {
      */
     handleLabelDefinition(labelName: string): void;
 }
+/**
+ * Parses a ca65 unnamed-label reference (`:+`, `:++`, `:-`).
+ * @param {string} token The operand token.
+ * @returns {{ direction: 1 | -1; count: number } | undefined} The skip count, or undefined.
+ */
+export declare function parseUnnamedLabelReference(token: string): {
+    direction: 1 | -1;
+    count: number;
+} | undefined;
 //# sourceMappingURL=symbol-scope-service.d.ts.map

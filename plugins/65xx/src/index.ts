@@ -1,4 +1,5 @@
 import {
+  CA65_SYNTAX_PROFILE,
   definePlugin,
   NATIVE_SYNTAX_PROFILE,
   PLUGIN_API_VERSION,
@@ -6,11 +7,13 @@ import {
 } from "@uttori/asm-core";
 import type {
   AssemblerPlugin,
+  DirectiveContribution,
   PluginActivationContext,
   TargetAddressSpace,
   TargetFactoryContext,
   TargetOutputFormat,
 } from "@uttori/asm-core/plugin";
+import type { DirectiveDescriptor } from "@uttori/asm-core";
 
 import { Arch65xx } from "./architecture.js";
 import { buildInstructionCatalog } from "./instructions/catalog.js";
@@ -22,6 +25,33 @@ import {
 } from "./instructions/opcodes.js";
 import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
 import { classify65xxOperand } from "./operands/classifier.js";
+import {
+  handleAddr,
+  handleByte,
+  handleDbyt,
+  handleExport,
+  handleHibytes,
+  handleImport,
+  handleLobytes,
+  handleSegment,
+} from "./directives/ca65.js";
+import {
+  NES_65XX_SESSION_STATE_ID,
+  cloneNes65xxSessionState,
+  nes65xxSessionStateKey,
+  resetNes65xxStageState,
+} from "./session-state.js";
+import {
+  NES_65XX_ADDRESS_SPACE_ID,
+  NES_65XX_LIFECYCLE_ID,
+  NES_65XX_OUTPUT_FORMAT_ID,
+  NES_65XX_TARGET_ID,
+  createInitialNesState,
+  createNes65xxTargetOptions,
+  createNesAddressSpace,
+  createNesLifecycle,
+  createNesOutputFormat,
+} from "./target/nes.js";
 
 /** Flat 16-bit raw binary target (`65xx`, `6502-raw` aliases). */
 export const RAW_65XX_TARGET_ID = "65xx.raw";
@@ -30,6 +60,8 @@ export const FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 export const RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
 /** Resets PC to `origin` at the start of each assembly stage. */
 export const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
+/** ca65 directive set used by the NES iNES target. */
+export const CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
 
 /**
  * Raw-target options. `origin` is both the initial PC and file offset 0
@@ -60,6 +92,65 @@ export function createRaw65xxTargetOptions(configured: unknown): Raw65xxTargetOp
   }
   return { origin: value };
 }
+
+const descriptor = (
+  keyword: string,
+  summary: string,
+  syntax: string,
+  group: string,
+): DirectiveDescriptor => ({ keyword, summary, syntax, group });
+
+const ca65Tooling: readonly DirectiveDescriptor[] = [
+  descriptor("segment", "Switch to an ld65 segment.", '.segment "NAME"', "layout"),
+  descriptor("export", "Export a symbol to other files.", ".export ident[, ident...]", "label"),
+  descriptor(
+    "import",
+    "Import a symbol defined in another file.",
+    ".import ident[, ident...]",
+    "label",
+  ),
+  descriptor("byte", "Emit one or more bytes.", ".byte value[, value...]", "data"),
+  descriptor("byt", "Alias for .byte.", ".byt value[, value...]", "data"),
+  descriptor("addr", "Emit 16-bit little-endian addresses.", ".addr value[, value...]", "data"),
+  descriptor("word", "Alias for .addr.", ".word value[, value...]", "data"),
+  descriptor(
+    "lobytes",
+    "Emit the low byte of each expression.",
+    ".lobytes expr[, expr...]",
+    "data",
+  ),
+  descriptor(
+    "hibytes",
+    "Emit the high byte of each expression.",
+    ".hibytes expr[, expr...]",
+    "data",
+  ),
+  descriptor("dbyt", "Emit 16-bit big-endian words.", ".dbyt value[, value...]", "data"),
+];
+
+const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
+  const wanted = new Set(keywords);
+  return ca65Tooling.filter((entry) => wanted.has(entry.keyword));
+};
+
+/**
+ * Registers a lowered-phase 65xx directive and attaches hover/completion copy.
+ * @param {string} id The directive id.
+ * @param {readonly string[]} keywords The directive keywords.
+ * @param {DirectiveContribution["createHandler"]} handler The directive handler.
+ * @returns {DirectiveContribution} The directive contribution.
+ */
+const directive = (
+  id: string,
+  keywords: readonly string[],
+  handler: DirectiveContribution["createHandler"],
+): DirectiveContribution => ({
+  id,
+  keywords,
+  phase: "lowered",
+  createHandler: handler,
+  tooling: toolingFor(keywords),
+});
 
 /**
  * 16-bit address space with no bank wrap; writes below `origin` are rejected.
@@ -176,6 +267,102 @@ export function register65xxContributions(context: PluginActivationContext): voi
     defaultOutputExtension: ".bin",
     createOptions: createRaw65xxTargetOptions,
   });
+
+  context.registerSessionState({
+    id: NES_65XX_SESSION_STATE_ID,
+    create: createInitialNesState,
+    clone: cloneNes65xxSessionState,
+    resetForStage: resetNes65xxStageState,
+  });
+  context.registerAddressSpace({
+    id: NES_65XX_ADDRESS_SPACE_ID,
+    create: createNesAddressSpace,
+  });
+  context.registerOutputFormat({
+    id: NES_65XX_OUTPUT_FORMAT_ID,
+    create: createNesOutputFormat,
+  });
+  context.registerLifecycle({
+    id: NES_65XX_LIFECYCLE_ID,
+    create: createNesLifecycle,
+  });
+  context.registerDirectiveSet({
+    id: CA65_65XX_DIRECTIVE_SET_ID,
+    directives: [
+      directive(
+        "65xx.directive.segment",
+        ["segment"],
+        ({ session, state }) =>
+          (_ctx, words) =>
+            handleSegment(session, state.get(nes65xxSessionStateKey), words),
+      ),
+      directive(
+        "65xx.directive.export",
+        ["export"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleExport(session, words),
+      ),
+      directive(
+        "65xx.directive.import",
+        ["import"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleImport(session, words),
+      ),
+      directive(
+        "65xx.directive.byte",
+        ["byte", "byt"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleByte(session, words),
+      ),
+      directive(
+        "65xx.directive.addr",
+        ["addr", "word"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleAddr(session, words),
+      ),
+      directive(
+        "65xx.directive.lobytes",
+        ["lobytes"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleLobytes(session, words),
+      ),
+      directive(
+        "65xx.directive.hibytes",
+        ["hibytes"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleHibytes(session, words),
+      ),
+      directive(
+        "65xx.directive.dbyt",
+        ["dbyt"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleDbyt(session, words),
+      ),
+    ],
+    tooling: ca65Tooling,
+  });
+  context.registerTarget({
+    id: NES_65XX_TARGET_ID,
+    aliases: ["nes", "ines", "6502-nes"],
+    displayName: "NES iNES (ca65 / ld65 layout)",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+    addressSpace: NES_65XX_ADDRESS_SPACE_ID,
+    outputFormat: NES_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
+    expressionSets: [],
+    lifecycle: [NES_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_SYNTAX_PROFILE,
+    defaultOutputExtension: ".nes",
+    createOptions: createNes65xxTargetOptions,
+  });
 }
 
 const plugin: AssemblerPlugin<Raw65xxTargetOptions> = definePlugin<Raw65xxTargetOptions>({
@@ -184,7 +371,8 @@ const plugin: AssemblerPlugin<Raw65xxTargetOptions> = definePlugin<Raw65xxTarget
     name: "Uttori ASM 65xx",
     version: "1.0.0",
     apiVersion: PLUGIN_API_VERSION,
-    description: "65xx NMOS, CMOS, Commodore, and MEGA65 architectures with a flat raw target.",
+    description:
+      "65xx NMOS, CMOS, Commodore, and MEGA65 architectures with raw and NES iNES targets.",
   },
   validateOptions: createRaw65xxTargetOptions,
   activate: register65xxContributions,
@@ -243,4 +431,12 @@ export type {
   OperandField,
 } from "./instructions/schema.js";
 export { matchesFeatures } from "./instructions/schema.js";
-export { classify65xxOperand } from "./operands/classifier.js";
+export {
+  NES_65XX_ADDRESS_SPACE_ID,
+  NES_65XX_LIFECYCLE_ID,
+  NES_65XX_OUTPUT_FORMAT_ID,
+  NES_65XX_TARGET_ID,
+  createNes65xxTargetOptions,
+} from "./target/nes.js";
+export { NES_65XX_SESSION_STATE_ID, nes65xxSessionStateKey } from "./session-state.js";
+export { parseLd65Config, defaultLd65ConfigText } from "./linker-config.js";

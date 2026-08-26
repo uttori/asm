@@ -43,7 +43,11 @@ test("native syntax profile preserves columns and leaves colon chains intact", (
 test("ca65 syntax reserves leading dots for directive dispatch", (t) => {
   t.false(CA65_SYNTAX_PROFILE.leadingDotLabels);
   t.deepEqual(CA65_SYNTAX_PROFILE.directivePrefixes, ["."]);
+  t.is(CA65_SYNTAX_PROFILE.cheapLocalPrefix, "@");
+  t.true(CA65_SYNTAX_PROFILE.fileLocalSymbols);
   t.true(ASAR_SYNTAX_PROFILE.leadingDotLabels);
+  t.is(ASAR_SYNTAX_PROFILE.cheapLocalPrefix, "");
+  t.false(ASAR_SYNTAX_PROFILE.fileLocalSymbols);
 });
 
 test("directive tooling applies only active syntax-profile prefixes", (t) => {

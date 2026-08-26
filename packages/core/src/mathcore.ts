@@ -540,6 +540,12 @@ export class MathCore {
     switch (operator) {
       case "<:":
         return value >>> 16;
+      case "<":
+        return value & 0xff;
+      case ">":
+        return (value >> 8) & 0xff;
+      case "^":
+        return (value >> 16) & 0xff;
       case "~":
         return ~value;
       case "-":
@@ -817,6 +823,26 @@ export class MathCore {
         this.advance(2);
         this.skipWhitespace();
         applyBitshift = true;
+      } else if (
+        this.remainingStartsWith("<") &&
+        !this.remainingStartsWith("<<") &&
+        !this.remainingStartsWith("<=")
+      ) {
+        this.advance(1);
+        this.skipWhitespace();
+        return (sign * (this.getnum() & 0xff)) | 0;
+      } else if (
+        this.remainingStartsWith(">") &&
+        !this.remainingStartsWith(">>") &&
+        !this.remainingStartsWith(">=")
+      ) {
+        this.advance(1);
+        this.skipWhitespace();
+        return (sign * ((this.getnum() >> 8) & 0xff)) | 0;
+      } else if (this.remainingStartsWith("^")) {
+        this.advance(1);
+        this.skipWhitespace();
+        return (sign * ((this.getnum() >> 16) & 0xff)) | 0;
       } else if (this.remainingStartsWith("~")) {
         this.advance(1);
         this.skipWhitespace();
@@ -961,36 +987,47 @@ export class MathCore {
     } else {
       // Fallback: try to resolve identifiers (e.g. label resolver).
       const remaining = this.str;
-      const reference = parseLeadingReferenceExpression(remaining);
-      if (reference) {
-        this.advance(reference.length);
+      const unnamedMatch = remaining.match(/^(:(\++|-+))/);
+      if (unnamedMatch) {
+        this.advance(unnamedMatch[1].length);
         this.skipWhitespace();
-        const renderedReference = renderReferenceExpressionNode(reference.node, {
-          renderIndex: (node) => this.evaluateExpressionNode(node).toString(),
-        });
-        const resolved = this.getHost().resolveLabel(renderedReference);
+        const resolved = this.getHost().resolveLabel(unnamedMatch[1]);
         if (typeof resolved !== "number") {
-          throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
+          throw new Error(`Reference '${unnamedMatch[1]}' did not resolve to a numeric value.`);
         }
         value = resolved;
       } else {
-        const localReference = this.resolveLeadingLocalLabelReference(remaining);
-        if (localReference) {
-          this.advance(localReference.length);
+        const reference = parseLeadingReferenceExpression(remaining);
+        if (reference) {
+          this.advance(reference.length);
           this.skipWhitespace();
-          const resolved = this.getHost().resolveLabel(localReference.label);
+          const renderedReference = renderReferenceExpressionNode(reference.node, {
+            renderIndex: (node) => this.evaluateExpressionNode(node).toString(),
+          });
+          const resolved = this.getHost().resolveLabel(renderedReference);
           if (typeof resolved !== "number") {
-            throw new Error(
-              `Reference '${localReference.label}' did not resolve to a numeric value.`,
-            );
+            throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
           }
           value = resolved;
         } else {
-          const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
-          if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
-            throw new Error("Mismatched brackets in struct index");
+          const localReference = this.resolveLeadingLocalLabelReference(remaining);
+          if (localReference) {
+            this.advance(localReference.length);
+            this.skipWhitespace();
+            const resolved = this.getHost().resolveLabel(localReference.label);
+            if (typeof resolved !== "number") {
+              throw new Error(
+                `Reference '${localReference.label}' did not resolve to a numeric value.`,
+              );
+            }
+            value = resolved;
+          } else {
+            const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
+            if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
+              throw new Error("Mismatched brackets in struct index");
+            }
+            throw new Error(`Invalid number: ${remaining}`);
           }
-          throw new Error(`Invalid number: ${remaining}`);
         }
       }
     }
