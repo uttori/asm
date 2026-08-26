@@ -12380,7 +12380,7 @@ var binaryPrecedence = {
   "%": 5,
   "**": 6
 };
-var unaryOperators = /* @__PURE__ */ new Set(["<:", "~", "-", "+"]);
+var unaryOperators = /* @__PURE__ */ new Set(["<:", "<", ">", "^", "~", "-", "+"]);
 var binaryOperators = [
   "**",
   "<<",
@@ -12460,6 +12460,12 @@ function tokenizeExpression(input) {
       index2 = nextIndex;
       continue;
     }
+    if (char === "@" || /[A-Z_a-z]/.test(char)) {
+      const { value, nextIndex } = readIdentifier(input, index2);
+      tokens.push({ type: "identifier", value });
+      index2 = nextIndex;
+      continue;
+    }
     if (char === "$") {
       const match = input.slice(index2).match(/^\$[\dA-Fa-f]+/);
       if (!match) {
@@ -12487,12 +12493,6 @@ function tokenizeExpression(input) {
       index2 += match[0].length;
       continue;
     }
-    if (/[A-Z_a-z]/.test(char)) {
-      const { value, nextIndex } = readIdentifier(input, index2);
-      tokens.push({ type: "identifier", value });
-      index2 = nextIndex;
-      continue;
-    }
     throw new Error(`Unexpected token '${char}'`);
   }
   return tokens;
@@ -12513,6 +12513,9 @@ function readQuotedString(input, start) {
 }
 function readIdentifier(input, start) {
   let index2 = start;
+  if (input[index2] === "@") {
+    index2++;
+  }
   while (index2 < input.length && /\w/.test(input[index2])) {
     index2++;
   }
@@ -12883,7 +12886,7 @@ function classifyCommand(command, words) {
   if (keyword === "global") {
     return "labelDefinition";
   }
-  if (words.length === 3 && words[1] === "=") {
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
     return "staticAssignment";
   }
   if (deriveLabelName(words[0] ?? "")) {
@@ -12895,6 +12898,9 @@ function deriveLabelName(keyword) {
   if (!keyword) {
     return void 0;
   }
+  if (keyword === ":") {
+    return ":";
+  }
   if (/^\++:?$/.test(keyword) || /^-+:?$/.test(keyword)) {
     return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
   }
@@ -12904,13 +12910,14 @@ function deriveLabelName(keyword) {
   return void 0;
 }
 function deriveAssignmentTarget(words) {
-  if (words.length === 3 && words[1] === "=") {
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
     return words[0];
   }
   return void 0;
 }
 function deriveCommandSemantics(command, words) {
   const keyword = (words[0] ?? "").toLowerCase();
+  const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
   const semantics = {};
   if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
     semantics.condition = {
@@ -12929,13 +12936,13 @@ function deriveCommandSemantics(command, words) {
       };
     }
   }
-  if (words.length === 3 && words[1] === "=" && !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=") && !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
     semantics.assignment = {
       target: words[0],
       expression: parseExpressionNode(words[2])
     };
   }
-  if (keyword === "incbin" && words.length >= 2) {
+  if (bareKeyword === "incbin" && words.length >= 2) {
     const incbinSource = command.slice((words[0] ?? "").length).split(/\s+->\s+/u, 1)[0].trim();
     const rangeCandidate = extractIncbinRange(incbinSource);
     if (rangeCandidate) {
@@ -12961,9 +12968,9 @@ function deriveCommandSemantics(command, words) {
       semantics.macroInvocation = { name: invocationText.trim(), args: [] };
     }
   }
-  if ((keyword === "include" || keyword === "incsrc") && words.length >= 2) {
+  if ((bareKeyword === "include" || bareKeyword === "incsrc") && words.length >= 2) {
     semantics.includeTarget = {
-      directive: keyword,
+      directive: bareKeyword,
       target: words.slice(1).join(" ").trim()
     };
   }
@@ -13475,6 +13482,12 @@ var MathCore = class {
     switch (operator) {
       case "<:":
         return value >>> 16;
+      case "<":
+        return value & 255;
+      case ">":
+        return value >> 8 & 255;
+      case "^":
+        return value >> 16 & 255;
       case "~":
         return ~value;
       case "-":
@@ -13697,6 +13710,18 @@ var MathCore = class {
         this.advance(2);
         this.skipWhitespace();
         applyBitshift = true;
+      } else if (this.remainingStartsWith("<") && !this.remainingStartsWith("<<") && !this.remainingStartsWith("<=")) {
+        this.advance(1);
+        this.skipWhitespace();
+        return sign * (this.getnum() & 255) | 0;
+      } else if (this.remainingStartsWith(">") && !this.remainingStartsWith(">>") && !this.remainingStartsWith(">=")) {
+        this.advance(1);
+        this.skipWhitespace();
+        return sign * (this.getnum() >> 8 & 255) | 0;
+      } else if (this.remainingStartsWith("^")) {
+        this.advance(1);
+        this.skipWhitespace();
+        return sign * (this.getnum() >> 16 & 255) | 0;
       } else if (this.remainingStartsWith("~")) {
         this.advance(1);
         this.skipWhitespace();
@@ -13812,36 +13837,47 @@ var MathCore = class {
       value = parseFloat(this.consumeWhile(/[\d.]/));
     } else {
       const remaining = this.str;
-      const reference = parseLeadingReferenceExpression(remaining);
-      if (reference) {
-        this.advance(reference.length);
+      const unnamedMatch = remaining.match(/^(:(\++|-+))/);
+      if (unnamedMatch) {
+        this.advance(unnamedMatch[1].length);
         this.skipWhitespace();
-        const renderedReference = renderReferenceExpressionNode(reference.node, {
-          renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-        });
-        const resolved = this.getHost().resolveLabel(renderedReference);
+        const resolved = this.getHost().resolveLabel(unnamedMatch[1]);
         if (typeof resolved !== "number") {
-          throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
+          throw new Error(`Reference '${unnamedMatch[1]}' did not resolve to a numeric value.`);
         }
         value = resolved;
       } else {
-        const localReference = this.resolveLeadingLocalLabelReference(remaining);
-        if (localReference) {
-          this.advance(localReference.length);
+        const reference = parseLeadingReferenceExpression(remaining);
+        if (reference) {
+          this.advance(reference.length);
           this.skipWhitespace();
-          const resolved = this.getHost().resolveLabel(localReference.label);
+          const renderedReference = renderReferenceExpressionNode(reference.node, {
+            renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+          });
+          const resolved = this.getHost().resolveLabel(renderedReference);
           if (typeof resolved !== "number") {
-            throw new Error(
-              `Reference '${localReference.label}' did not resolve to a numeric value.`
-            );
+            throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
           }
           value = resolved;
         } else {
-          const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
-          if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
-            throw new Error("Mismatched brackets in struct index");
+          const localReference = this.resolveLeadingLocalLabelReference(remaining);
+          if (localReference) {
+            this.advance(localReference.length);
+            this.skipWhitespace();
+            const resolved = this.getHost().resolveLabel(localReference.label);
+            if (typeof resolved !== "number") {
+              throw new Error(
+                `Reference '${localReference.label}' did not resolve to a numeric value.`
+              );
+            }
+            value = resolved;
+          } else {
+            const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
+            if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
+              throw new Error("Mismatched brackets in struct index");
+            }
+            throw new Error(`Invalid number: ${remaining}`);
           }
-          throw new Error(`Invalid number: ${remaining}`);
         }
       }
     }
@@ -14599,9 +14635,10 @@ var OperandResolver = class {
     }
     let expanded = raw;
     let expectedLength = 2;
-    if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-") {
+    if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-" || /^:(\++|-+)$/.test(expanded)) {
       return { raw, expanded, length: 2, syntax };
     }
+    expanded = this.tryResolveLabelInOperand(expanded);
     try {
       expanded = this.deps.resolveDefines(expanded);
     } catch (error) {
@@ -14611,7 +14648,6 @@ var OperandResolver = class {
       expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
     }
     expanded = this.normalizeNumericBaseMember(expanded);
-    expanded = this.tryResolveLabelInOperand(expanded);
     if (expanded.startsWith("#")) {
       const inner = expanded.substring(1).trim();
       if (this.isMathExpression(inner)) {
@@ -14645,7 +14681,7 @@ var OperandResolver = class {
     } else {
       expectedLength = 2;
     }
-    const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded);
+    const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded) || /^:(\++|-+)$/.test(expanded);
     if (!isRelativeLabelPlaceholder && this.isMathExpression(expanded)) {
       try {
         const { expression, suffix } = this.splitMathOperandSuffix(expanded);
@@ -15209,7 +15245,9 @@ var ASAR_SYNTAX_PROFILE = Object.freeze({
   splitColonStatements: true,
   splitRelativeLabelStatements: true,
   leadingDotLabels: true,
-  directivePrefixes: Object.freeze(["@"])
+  directivePrefixes: Object.freeze(["@"]),
+  cheapLocalPrefix: "",
+  fileLocalSymbols: false
 });
 var NATIVE_SYNTAX_PROFILE = Object.freeze({
   id: "native",
@@ -15217,7 +15255,9 @@ var NATIVE_SYNTAX_PROFILE = Object.freeze({
   splitColonStatements: false,
   splitRelativeLabelStatements: false,
   leadingDotLabels: true,
-  directivePrefixes: Object.freeze([])
+  directivePrefixes: Object.freeze([]),
+  cheapLocalPrefix: "",
+  fileLocalSymbols: false
 });
 var CA65_SYNTAX_PROFILE = Object.freeze({
   id: "ca65",
@@ -15225,7 +15265,9 @@ var CA65_SYNTAX_PROFILE = Object.freeze({
   splitColonStatements: false,
   splitRelativeLabelStatements: false,
   leadingDotLabels: false,
-  directivePrefixes: Object.freeze(["."])
+  directivePrefixes: Object.freeze(["."]),
+  cheapLocalPrefix: "@",
+  fileLocalSymbols: true
 });
 
 // packages/core/src/services/command-text-service.ts
@@ -16997,18 +17039,31 @@ var FrontEndCommandService = class {
    */
   handleRelativeLabelDefinition(command) {
     const { keyword } = command;
-    const isRelativeLabelDefinition = /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
+    const isUnnamedLabelDefinition = keyword === ":";
+    const isRelativeLabelDefinition = isUnnamedLabelDefinition || /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
     if (!isRelativeLabelDefinition) {
       return false;
     }
-    const relativeLabel = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-    this.host.symbolScope.handleRelativeLabel(relativeLabel);
+    let relativeLabel = keyword;
+    if (isUnnamedLabelDefinition) {
+      relativeLabel = ":";
+    } else if (keyword.endsWith(":")) {
+      relativeLabel = keyword.slice(0, -1);
+    }
+    if (isUnnamedLabelDefinition) {
+      this.host.symbolScope.handleUnnamedLabel();
+    } else {
+      this.host.symbolScope.handleRelativeLabel(relativeLabel);
+    }
     this.host.recordCurrentAddress();
     this.host.recordSymbolDefinition("label", relativeLabel, {
       span: command.source.tokenSpans[0] ?? command.source.normalizedSpan
     });
     command.labelName = relativeLabel;
     setCommandKind(command, "labelDefinition");
+    if (isUnnamedLabelDefinition && command.words.length > 1) {
+      this.host.processCommand(command.words.slice(1).join(" "));
+    }
     return true;
   }
   /**
@@ -17081,7 +17136,7 @@ var FrontEndCommandService = class {
    */
   handleStaticLabelAssignment(command) {
     const { words, keyword } = command;
-    if (words.length !== 3 || words[1] !== "=") {
+    if (words.length !== 3 || words[1] !== "=" && words[1] !== ":=") {
       return false;
     }
     const assignment = command.parsed.assignment;
@@ -17092,13 +17147,14 @@ var FrontEndCommandService = class {
     if (Number.isNaN(value)) {
       value = this.host.symbolScope.getLabelValue(resolvedExpr, true);
     }
-    this.host.symbolScope.setLabel(labelName, value, true);
+    const assignedName = this.host.symbolScope.qualifySymbolName(labelName);
+    this.host.symbolScope.setLabel(assignedName, value, true);
     this.host.recordCurrentAddress();
-    this.host.recordSymbolDefinition("label", labelName, {
+    this.host.recordSymbolDefinition("label", assignedName, {
       span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
       value
     });
-    command.assignmentTarget = labelName;
+    command.assignmentTarget = assignedName;
     setCommandKind(command, "staticAssignment");
     return true;
   }
@@ -18348,6 +18404,52 @@ var SymbolScopeService = class {
   }
   host;
   /**
+   * Returns the current ca65-style object file name (last `.asm` on the include stack).
+   * @returns {string} The object-file basename, or empty when unknown.
+   */
+  objectFileKey() {
+    const chain = [...this.host.includeStack, this.host.currentFile];
+    for (let index2 = chain.length - 1; index2 >= 0; index2--) {
+      const base = fileBasename(chain[index2] ?? "");
+      if (base.toLowerCase().endsWith(".asm")) {
+        return base;
+      }
+    }
+    return fileBasename(this.host.currentFile);
+  }
+  /**
+   * Qualifies a symbol for the active syntax profile's file-local rule.
+   * Exported/imported names and cheap/sublabels stay unqualified.
+   * @param {string} name The source symbol name.
+   * @returns {string} The storage key.
+   */
+  qualifySymbolName(name) {
+    const profile = this.host.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
+    if (!profile.fileLocalSymbols) {
+      return name;
+    }
+    if (this.host.globalSymbols.has(name)) {
+      return name;
+    }
+    if (name.startsWith(".") || name.startsWith("@") || name.includes("::")) {
+      return name;
+    }
+    const unit = this.objectFileKey();
+    return unit ? `${unit}::${name}` : name;
+  }
+  /**
+   * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
+   * @param {string} name The label token, without a trailing colon.
+   * @returns {string} The rewritten name.
+   */
+  toCheapDotLabel(name) {
+    const prefix = this.host.syntaxProfile?.cheapLocalPrefix ?? "";
+    if (prefix && name.startsWith(prefix) && name.length > prefix.length) {
+      return `.${name.slice(prefix.length)}`;
+    }
+    return name;
+  }
+  /**
    * Finds nearest hierarchy ancestor.
    * @param {string} label The label.
    * @returns {string | null} The result.
@@ -18484,6 +18586,58 @@ var SymbolScopeService = class {
       }
     }
     return targetAddress;
+  }
+  /**
+   * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
+   * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
+   * @returns {number} The address of the unnamed label.
+   */
+  handleUnnamedLabel() {
+    const targetAddress = this.host.currentTargetAddress;
+    if (this.host.enforceResolvedLabels) {
+      if (!this.host.forwardLabels[0] || this.host.forwardLabels[0].length === 0) {
+        throw new Error("Error: Undefined unnamed label ':'.");
+      }
+      return targetAddress;
+    }
+    if (!this.host.forwardLabels[0]) this.host.forwardLabels[0] = [];
+    if (!this.host.backwardLabels[0]) this.host.backwardLabels[0] = [];
+    const entry = { addr: targetAddress, unit: this.objectFileKey() };
+    this.host.forwardLabels[0].push(entry);
+    this.host.backwardLabels[0].push({ addr: targetAddress, unit: entry.unit });
+    return targetAddress;
+  }
+  /**
+   * Resolves a ca65 unnamed-label reference (`:+`, `:++`, `:-`, `:--`).
+   * @param {string} label The reference token.
+   * @param {number} [currentAddressOverride] PC to search from.
+   * @returns {number} The target address.
+   */
+  findUnnamedLabel(label, currentAddressOverride) {
+    const parsed = parseUnnamedLabelReference(label);
+    if (!parsed) {
+      throw new Error(`Error: Invalid unnamed label '${label}'.`);
+    }
+    const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
+    if (!this.host.enforceResolvedLabels) {
+      return 0;
+    }
+    const table = parsed.direction === 1 ? this.host.forwardLabels[0] : this.host.backwardLabels[0];
+    if (!table || table.length === 0) {
+      throw new Error(
+        `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
+      );
+    }
+    const unit = this.objectFileKey();
+    const ordered = table.filter((entry) => !entry.unit || entry.unit === unit).filter(
+      (entry) => parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress
+    ).map((entry) => entry.addr).sort((left, right) => parsed.direction === 1 ? left - right : right - left);
+    if (ordered.length < parsed.count) {
+      throw new Error(
+        `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
+      );
+    }
+    return ordered[parsed.count - 1];
   }
   /**
    * Finds the next label.
@@ -18752,6 +18906,16 @@ var SymbolScopeService = class {
    * @returns {number | undefined} The value, or undefined when not found.
    */
   tryGetLabelValue(label, requireStatic) {
+    if (parseUnnamedLabelReference(label)) {
+      if (!this.host.enforceResolvedLabels) {
+        return void 0;
+      }
+      return this.findUnnamedLabel(label);
+    }
+    const cheap = this.toCheapDotLabel(label);
+    if (cheap !== label) {
+      return this.tryGetLabelValue(cheap, requireStatic);
+    }
     if (label.startsWith(".") && this.host.currentParentLabel) {
       let dotCount = 0;
       while (label[dotCount] === ".") {
@@ -18801,6 +18965,13 @@ var SymbolScopeService = class {
         if (value !== void 0) {
           return value;
         }
+      }
+    }
+    const qualified = this.qualifySymbolName(label);
+    if (qualified !== label) {
+      const scoped = this.tryGetLabelValueDirect(qualified, requireStatic);
+      if (scoped !== void 0) {
+        return scoped;
       }
     }
     const isMacroLabelRef = label.startsWith("?");
@@ -18975,6 +19146,10 @@ var SymbolScopeService = class {
    * @param {string} labelName The name of the label.
    */
   handleLabelDefinition(labelName) {
+    labelName = this.toCheapDotLabel(labelName);
+    if (!(labelName.startsWith(".") || labelName.startsWith("#."))) {
+      labelName = this.qualifySymbolName(labelName);
+    }
     if (labelName.startsWith(".") || labelName.startsWith("#.")) {
       if (!this.host.currentParentLabel) {
         throw new Error("Sublabel without parent label");
@@ -19026,6 +19201,22 @@ var SymbolScopeService = class {
     }
   }
 };
+function fileBasename(file) {
+  const normalized = file.replaceAll("\\", "/");
+  const slash = normalized.lastIndexOf("/");
+  return slash === -1 ? normalized : normalized.slice(slash + 1);
+}
+function parseUnnamedLabelReference(token) {
+  const match = token.trim().match(/^:(\++|-+)$/);
+  if (!match) {
+    return void 0;
+  }
+  const signs = match[1];
+  return {
+    direction: signs[0] === "+" ? 1 : -1,
+    count: signs.length
+  };
+}
 
 // packages/core/src/file-provider.ts
 import fs2 from "node:fs";
@@ -20225,6 +20416,8 @@ var Assembler = class _Assembler {
   pushpcStack = [];
   pushpcnum = 0;
   labelTable = /* @__PURE__ */ new Map();
+  /** ca65 `.export` / `.import` names that stay session-global. */
+  globalSymbols = /* @__PURE__ */ new Set();
   /** Track multiple `+` labels */
   forwardLabels = {};
   /** Track multiple `-` labels */
@@ -21017,7 +21210,7 @@ var Assembler = class _Assembler {
         findPreviousLabel: (label, referenceAddress) => this.symbolScope.findPreviousLabel(label, referenceAddress)
       },
       diagnostics: {
-        error: (message) => new Error(message)
+        error: (message) => new Error(`${message} (${this.currentFile}:${this.currentLine + 1})`)
       }
     };
     this.architectureRegistry = new ArchitectureRegistry();
@@ -21279,7 +21472,11 @@ var Assembler = class _Assembler {
    * @returns {number | string} The result.
    */
   resolveExpressionHostLabel(identifier) {
-    const parsed = parseExpressionNode(identifier.trim());
+    const trimmed = identifier.trim();
+    if (parseUnnamedLabelReference(trimmed)) {
+      return this.symbolScope.getLabelValue(trimmed, this.requireStaticLabelLookup);
+    }
+    const parsed = parseExpressionNode(trimmed);
     if (isReferenceExpressionNode(parsed)) {
       return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
     }
@@ -21684,11 +21881,14 @@ var Assembler = class _Assembler {
   }
   /**
    * Returns whether the active syntax profile treats a token as a named label.
-   * @param {string} token Candidate token.
+   * @param {string} candidate Candidate token.
    * @returns {boolean} Whether the token is a named label.
    */
-  isNamedLabelToken(token) {
-    return token.endsWith(":") || this.syntaxProfile.leadingDotLabels && token.startsWith(".");
+  isNamedLabelToken(candidate) {
+    if (candidate === ":") {
+      return false;
+    }
+    return candidate.endsWith(":") || this.syntaxProfile.leadingDotLabels && candidate.startsWith(".");
   }
   /**
    * Writes 1, 2, 3, or 4 bytes to output.
@@ -29558,9 +29758,7 @@ function handleAccu(session, words) {
   } else if (widthToken === "16") {
     handleA16(session);
   } else {
-    throw new Error(
-      `.accu requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`
-    );
+    throw new Error(`.accu requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`);
   }
 }
 function handleI8(session) {
@@ -29576,9 +29774,7 @@ function handleIndex(session, words) {
   } else if (widthToken === "16") {
     handleI16(session);
   } else {
-    throw new Error(
-      `.index requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`
-    );
+    throw new Error(`.index requires an argument of 8 or 16, got: ${widthToken ?? "<none>"}`);
   }
 }
 function handleSmart(session, words) {

@@ -43,10 +43,8 @@
     "benchmark:chou:stable": "tsx scripts/run-production-benchmarks.ts --warmups 0 --repetitions 3 --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
     "benchmark:smrpg": "tsx scripts/run-production-benchmarks.ts --fast --fixture smrpg --isolate --max-median-ms 60000",
     "benchmark:smrpg:stable": "tsx scripts/run-production-benchmarks.ts --warmups 0 --repetitions 3 --fixture smrpg --isolate --no-instrumentation --max-median-ms 60000",
-    "benchmark:typecheck": "npm run scripts:typecheck",
     "test": "NODE_ENV=test ava",
     "test:coverage": "NODE_ENV=test c8 ava",
-    "test:coverage:focused": "NODE_ENV=test c8 ava --serial --concurrency=1 tests/directives/memory.test.ts tests/directives/namespace.test.ts tests/services/macro-engine.test.ts tests/lsp/position-lookup.test.ts tests/lsp/workspace-index.test.ts",
     "test:serial": "NODE_ENV=test c8 ava --serial --concurrency=1",
     "test:debug": "NODE_ENV=test DEBUG=Uttori* c8 ava --serial --concurrency=1",
     "test:watch": "NODE_ENV=test DEBUG=Assembler,MathCore ava --watch",
@@ -130,7 +128,7 @@
     "per-file": false
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=26"
   },
   "allowScripts": {
     "esbuild@0.25.12": true,
