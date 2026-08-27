@@ -1,5 +1,13 @@
+/** A preprocessed command tagged with its original 0-based source line. */
+export type SourcedCommand = {
+    /** Normalized command text. */
+    text: string;
+    /** Zero-based line number in the source block. */
+    line: number;
+};
 export type PreprocessBlockCommandsResult = {
     commands: string[];
+    sourcedCommands: SourcedCommand[];
     commandBuffer: string;
 };
 /**
@@ -26,6 +34,13 @@ export declare const preprocessBlockCommands: (block: string, commandBuffer?: st
  * @returns {string[]} Flattened command list.
  */
 export declare const splitInlineCommands: (commands: string[], syntaxProfile?: SyntaxProfile) => string[];
+/**
+ * Splits sourced command lines, copying the original line onto every fragment.
+ * @param {SourcedCommand[]} commands Sourced command lines to split.
+ * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
+ * @returns {SourcedCommand[]} Flattened sourced command list.
+ */
+export declare const splitSourcedInlineCommands: (commands: SourcedCommand[], syntaxProfile?: SyntaxProfile) => SourcedCommand[];
 /**
  * Splits a command string into words while preserving quoted segments.
  * @param {string} command The normalized command string.
@@ -79,6 +94,7 @@ export declare const CommandTextService: {
     readonly removeInlineComment: typeof removeInlineComment;
     readonly splitCommandIntoWords: typeof splitCommandIntoWords;
     readonly splitInlineCommands: typeof splitInlineCommands;
+    readonly splitSourcedInlineCommands: typeof splitSourcedInlineCommands;
     readonly splitRespectingFunctions: typeof splitRespectingFunctions;
 };
 import { type SyntaxProfile } from "../syntax-profile.js";

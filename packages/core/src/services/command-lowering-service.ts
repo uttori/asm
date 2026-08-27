@@ -104,7 +104,7 @@ export class CommandLoweringService {
 
     if (this.host.directiveRegistry.has(keyword)) {
       let directiveWords = command.words;
-      if (command.parsed.includeTarget) {
+      if (command.parsed.includeTarget && command.parsed.includeTarget.directive !== "incbin") {
         directiveWords = [
           command.parsed.includeTarget.directive,
           command.parsed.includeTarget.target,

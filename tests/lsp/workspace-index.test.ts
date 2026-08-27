@@ -89,16 +89,20 @@ test("workspace index re-analyses only roots affected by an edited include", (t)
   index.openDocument(shared, "SharedBefore:\n");
   index.openDocument(rootA, 'incsrc "shared.asm"\nRootA:\n');
   index.openDocument(rootB, "RootB:\n");
-
-  const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
-  index.updateDocument(shared, "SharedAfter:\n");
   index.reindex();
 
-  t.true(analyzeSource.calledOnce);
-  t.true(index.getSymbols(shared).some((entry) => entry.name === "SharedAfter"));
-  t.false(index.getSymbols(shared).some((entry) => entry.name === "SharedBefore"));
-  t.true(index.getSymbols(rootB).some((entry) => entry.name === "RootB"));
-  analyzeSource.restore();
+  const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
+  try {
+    index.updateDocument(shared, "SharedAfter:\n");
+    index.reindex();
+
+    t.true(analyzeSource.calledOnce);
+    t.true(index.getSymbols(shared).some((entry) => entry.name === "SharedAfter"));
+    t.false(index.getSymbols(shared).some((entry) => entry.name === "SharedBefore"));
+    t.true(index.getSymbols(rootB).some((entry) => entry.name === "RootB"));
+  } finally {
+    analyzeSource.restore();
+  }
 });
 
 test("workspace index conservatively re-analyses roots for unknown new dependencies", (t) => {
@@ -107,13 +111,17 @@ test("workspace index conservatively re-analyses roots for unknown new dependenc
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions({ entryPoints: [rootA, rootB] }));
   index.openDocument(rootA, "RootA:\n");
   index.openDocument(rootB, "RootB:\n");
-
-  const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
-  index.invalidateFile(path.resolve("/virtual/new-include.asm"));
   index.reindex();
 
-  t.is(analyzeSource.callCount, 2);
-  analyzeSource.restore();
+  const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
+  try {
+    index.invalidateFile(path.resolve("/virtual/new-include.asm"));
+    index.reindex();
+
+    t.is(analyzeSource.callCount, 2);
+  } finally {
+    analyzeSource.restore();
+  }
 });
 
 test("workspace index skips unreadable roots and unexpected analysis failures", (t) => {
@@ -123,11 +131,14 @@ test("workspace index skips unreadable roots and unexpected analysis failures", 
   index.openDocument(broken, "org $8000\n");
 
   const analyzeSource = stub(Assembler.prototype, "analyzeSource").throws(new Error("unexpected"));
-  index.reindex();
+  try {
+    index.reindex();
 
-  t.true(analyzeSource.calledOnce);
-  t.deepEqual(index.getAnalyzedFiles(), []);
-  analyzeSource.restore();
+    t.true(analyzeSource.calledOnce);
+    t.deepEqual(index.getAnalyzedFiles(), []);
+  } finally {
+    analyzeSource.restore();
+  }
 });
 
 test("workspace index deduplicates include edges from repeated roots", (t) => {
@@ -146,12 +157,173 @@ test("workspace index deduplicates include edges from repeated roots", (t) => {
     program: { sourceFile: root, startLine: 0, nodes: [] },
   });
 
+  try {
+    index.reindex();
+
+    t.is(
+      index.getIncludeEdges().filter((edge) => edge.fromFile === root && edge.toFile === include)
+        .length,
+      1,
+    );
+  } finally {
+    analyzeSource.restore();
+  }
+});
+
+test("openDocument indexes the opened file without waiting on includes", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-local-"));
+  const include = path.join(directory, "slow.asm");
+  const root = path.join(directory, "main.asm");
+  fs.writeFileSync(include, "IncludedLabel:\n  nop\n");
+
+  try {
+    const messages: string[] = [];
+    const index = new WorkspaceIndex(
+      snesWorkspaceIndexOptions({
+        logger: { info: (message) => messages.push(message) },
+      }),
+    );
+    index.openDocument(root, 'incsrc "slow.asm"\nLocalLabel:\n  nop\n');
+
+    t.true(index.getSymbols(root).some((entry) => entry.name === "LocalLabel"));
+    t.false(index.getSymbols(include).some((entry) => entry.name === "IncludedLabel"));
+    t.true(
+      index
+        .getIncludeEdges()
+        .some((edge) => edge.fromFile === root && path.basename(edge.toFile) === "slow.asm"),
+    );
+    t.true(messages.some((message) => message.includes("followIncludes=false")));
+
+    index.reindex();
+
+    t.true(index.getSymbols(include).some((entry) => entry.name === "IncludedLabel"));
+    t.true(messages.some((message) => message.includes("followIncludes=true")));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("covered file opened directly does not produce false diagnostics", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-covered-"));
+  const parent = path.join(directory, "root.asm");
+  const child = path.join(directory, "child.asm");
+  fs.writeFileSync(parent, '!config = 1\nincsrc "child.asm"\n');
+  fs.writeFileSync(child, "if !config == 1\n  nop\nendif\n");
+
+  try {
+    const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+    index.openDocument(parent, '!config = 1\nincsrc "child.asm"\n');
+    index.openDocument(child, "if !config == 1\n  nop\nendif\n");
+    index.reindex();
+
+    // child.asm is covered by parent's full-pass analysis; its standalone
+    // analysis (which would produce "Define 'config' not found") must be
+    // superseded so no false errors appear.
+    const childDiagnostics = index.getDiagnostics(child);
+    t.deepEqual(childDiagnostics, []);
+
+    // Symbols defined in child.asm are still visible via parent's analysis.
+    t.true(index.getIncludeEdges().some((edge) => edge.toFile === child));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("openDocument does not dirty a file whose buffer matches disk", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-clean-open-"));
+  const file = path.join(directory, "main.asm");
+  const source = "org $8000\nStart:\n  nop\n";
+  fs.writeFileSync(file, source);
+
+  try {
+    const index = new WorkspaceIndex(snesWorkspaceIndexOptions({ entryPoints: [file] }));
+    index.openDocument(file, source);
+    t.false(index.dirtyFiles.has(file));
+    t.true(index.isFileDirtyOrUncovered(file));
+    index.reindex();
+    t.false(index.isFileDirtyOrUncovered(file));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("reindex does not re-analyse roots when nothing is dirty", (t) => {
+  const file = path.resolve("/virtual/stable.asm");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions({ entryPoints: [file] }));
+  index.openDocument(file, "org $8000\nStart:\n  nop\n");
   index.reindex();
 
-  t.is(
-    index.getIncludeEdges().filter((edge) => edge.fromFile === root && edge.toFile === include)
-      .length,
-    1,
-  );
-  analyzeSource.restore();
+  const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
+  try {
+    index.reindex();
+    t.is(analyzeSource.callCount, 0);
+  } finally {
+    analyzeSource.restore();
+  }
+});
+
+test("covered include is not a reason to reindex after the parent is analysed", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-covered-open-"));
+  const parent = path.join(directory, "root.asm");
+  const child = path.join(directory, "child.asm");
+  const parentSource = '!config = 1\nincsrc "child.asm"\n';
+  const childSource = "ChildLabel:\n  nop\n";
+  fs.writeFileSync(parent, parentSource);
+  fs.writeFileSync(child, childSource);
+
+  try {
+    const index = new WorkspaceIndex(snesWorkspaceIndexOptions({ entryPoints: [parent] }));
+    index.openDocument(parent, parentSource);
+    index.reindex();
+
+    t.false(index.isFileDirtyOrUncovered(child));
+    index.openDocument(child, childSource);
+    t.false(index.dirtyFiles.has(child));
+    t.false(index.isFileDirtyOrUncovered(child));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("disk cache reuses a full-pass analysis when file hashes match", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-cache-"));
+  const cacheDir = path.join(directory, "cache");
+  const file = path.join(directory, "main.asm");
+  const source = "org $8000\nCachedLabel:\n  nop\n";
+  fs.writeFileSync(file, source);
+  const messages: string[] = [];
+
+  try {
+    const first = new WorkspaceIndex(
+      snesWorkspaceIndexOptions({
+        entryPoints: [file],
+        cacheDir,
+        logger: { info: (message) => messages.push(message) },
+      }),
+    );
+    first.openDocument(file, source);
+    first.reindex();
+    t.true(first.getSymbols(file).some((entry) => entry.name === "CachedLabel"));
+    t.true(messages.some((message) => message.includes("Analyzing")));
+
+    const second = new WorkspaceIndex(
+      snesWorkspaceIndexOptions({
+        entryPoints: [file],
+        cacheDir,
+        logger: { info: (message) => messages.push(message) },
+      }),
+    );
+    second.openDocument(file, source);
+    const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
+    try {
+      second.reindex();
+      t.is(analyzeSource.callCount, 0);
+      t.true(second.getSymbols(file).some((entry) => entry.name === "CachedLabel"));
+      t.true(messages.some((message) => message.includes("Using cached analysis")));
+    } finally {
+      analyzeSource.restore();
+    }
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });

@@ -1,5 +1,14 @@
+/** A preprocessed command tagged with its original 0-based source line. */
+export type SourcedCommand = {
+  /** Normalized command text. */
+  text: string;
+  /** Zero-based line number in the source block. */
+  line: number;
+};
+
 export type PreprocessBlockCommandsResult = {
   commands: string[];
+  sourcedCommands: SourcedCommand[];
   commandBuffer: string;
 };
 
@@ -41,17 +50,19 @@ export const preprocessBlockCommands = (
   syntaxProfile: SyntaxProfile = ASAR_SYNTAX_PROFILE,
 ): PreprocessBlockCommandsResult => {
   const lines = block.split("\n");
-  const processedLines: string[] = [];
+  const sourcedCommands: SourcedCommand[] = [];
   let nextCommandBuffer = commandBuffer;
+  let bufferStartLine: number | undefined;
 
-  for (let line of lines) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    let line = lines[lineIndex];
     line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
     if (!line.trim()) continue;
 
     // Preserve the special test directive comment so downstream handling can
     // detect and execute fixture setup behavior.
     if (line.trimStart().startsWith(";`+")) {
-      processedLines.push(line);
+      sourcedCommands.push({ text: line, line: lineIndex });
       continue;
     }
 
@@ -59,17 +70,28 @@ export const preprocessBlockCommands = (
     if (!line.trim()) continue;
 
     if (line.endsWith("\\")) {
+      if (nextCommandBuffer === "") {
+        bufferStartLine = lineIndex;
+      }
       nextCommandBuffer += line.slice(0, -1);
     } else if (line.endsWith(",")) {
+      if (nextCommandBuffer === "") {
+        bufferStartLine = lineIndex;
+      }
       nextCommandBuffer += line;
     } else {
-      processedLines.push(nextCommandBuffer + line);
+      sourcedCommands.push({
+        text: nextCommandBuffer + line,
+        line: nextCommandBuffer === "" ? lineIndex : (bufferStartLine ?? lineIndex),
+      });
       nextCommandBuffer = "";
+      bufferStartLine = undefined;
     }
   }
 
   return {
-    commands: processedLines,
+    commands: sourcedCommands.map((command) => command.text),
+    sourcedCommands,
     commandBuffer: nextCommandBuffer,
   };
 };
@@ -143,6 +165,25 @@ export const splitInlineCommands = (
         continue;
       }
       output.push(entry);
+    }
+  }
+  return output;
+};
+
+/**
+ * Splits sourced command lines, copying the original line onto every fragment.
+ * @param {SourcedCommand[]} commands Sourced command lines to split.
+ * @param {SyntaxProfile} [syntaxProfile] Active source syntax profile.
+ * @returns {SourcedCommand[]} Flattened sourced command list.
+ */
+export const splitSourcedInlineCommands = (
+  commands: SourcedCommand[],
+  syntaxProfile: SyntaxProfile = ASAR_SYNTAX_PROFILE,
+): SourcedCommand[] => {
+  const output: SourcedCommand[] = [];
+  for (const command of commands) {
+    for (const text of splitInlineCommands([command.text], syntaxProfile)) {
+      output.push({ text, line: command.line });
     }
   }
   return output;
@@ -365,6 +406,7 @@ export const CommandTextService = {
   removeInlineComment,
   splitCommandIntoWords,
   splitInlineCommands,
+  splitSourcedInlineCommands,
   splitRespectingFunctions,
 } as const;
 import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "../syntax-profile.js";

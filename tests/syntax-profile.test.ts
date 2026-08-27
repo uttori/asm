@@ -54,3 +54,28 @@ test("directive tooling applies only active syntax-profile prefixes", (t) => {
   t.is(findDirectiveInCatalog("@org", directiveCatalog, []), undefined);
   t.is(findDirectiveInCatalog("@org", directiveCatalog, ["@"])?.keyword, "org");
 });
+
+test("preprocess preserves original 0-based lines across comments and blanks", (t) => {
+  const processed = preprocessBlockCommands(
+    "; comment\n\nlorom\n\norg $008000\n\nReset:\n  sei\n",
+    "",
+    ASAR_SYNTAX_PROFILE,
+  );
+
+  t.deepEqual(processed.sourcedCommands, [
+    { text: "lorom", line: 2 },
+    { text: "org $008000", line: 4 },
+    { text: "Reset:", line: 6 },
+    { text: "sei", line: 7 },
+  ]);
+  t.deepEqual(processed.commands, ["lorom", "org $008000", "Reset:", "sei"]);
+});
+
+test("preprocess continuation keeps the first source line of the statement", (t) => {
+  const processed = preprocessBlockCommands("db $01,\\\n$02\nlda #$01\n", "", ASAR_SYNTAX_PROFILE);
+
+  t.deepEqual(processed.sourcedCommands, [
+    { text: "db $01,$02", line: 0 },
+    { text: "lda #$01", line: 2 },
+  ]);
+});

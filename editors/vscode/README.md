@@ -2,7 +2,7 @@
 
 Assembly language support powered by [uttori-asm](https://github.com/MatthewCallis/uttori-asm), currently bundled with the first-party SNES target.
 
-Requires VS Code 1.134 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
+Requires VS Code 1.128 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
 
 ## Features
 
@@ -11,6 +11,7 @@ Requires VS Code 1.134 or newer and implements the [Language Server Protocol 3.1
 - Go-to-definition and find-references across `incsrc`/`include` boundaries.
 - Target-filtered hover and completion from the active plugins, including bundled 65816 / SPC700 / Super FX support.
 - Signature help, semantic tokens, and cross-file rename for user-defined symbols.
+- **Uttori SNES** and **Uttori 65xx** language modes (status bar / Change Language Mode). SNES is the default for `.asm` and includes SPC700, Super FX, and mapper directives; 65xx is CPU-only.
 
 ## Commands
 
@@ -25,7 +26,7 @@ Requires VS Code 1.134 or newer and implements the [Language Server Protocol 3.1
 
 ## Settings
 
-- `asm.configFile` - optional workspace-relative path to `asm.config.json`.
+- `asm.configFile` - optional workspace-relative path to `uttori-asm.config.json`.
 - `asm.plugins` - plugin module specifiers or `{ module, options }` objects.
 - `asm.target` - target contribution ID or alias.
 - `asm.architecture` - architecture contribution ID or alias.
@@ -34,7 +35,7 @@ Requires VS Code 1.134 or newer and implements the [Language Server Protocol 3.1
 - `asm.buildOutput` - output path (defaults to the target's output extension).
 - `asm.baseImage` - optional base image to patch when building.
 
-Workspace plugin configuration is disabled in restricted workspaces. Trust the workspace to activate `asm.config.json` or `asm.plugins`; the bundled SNES target remains available before trust is granted.
+Workspace plugin configuration is disabled in restricted workspaces. Trust the workspace to activate `uttori-asm.config.json` or `asm.plugins`; the bundled SNES target remains available before trust is granted.
 
 ## Building
 

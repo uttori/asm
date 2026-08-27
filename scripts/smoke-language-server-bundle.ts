@@ -131,7 +131,7 @@ try {
     fixturePlugin,
   );
   fs.writeFileSync(
-    path.join(fixtureDirectory, "asm.config.json"),
+    path.join(fixtureDirectory, "uttori-asm.config.json"),
     JSON.stringify({
       plugins: [{ module: "./fixture-plugin.mjs", options: { byte: 0x5a } }],
       target: "loader-fixture",

@@ -144,6 +144,10 @@ test("normalized command derives semantic payloads for conditions, ranges, assig
     start: parseExpressionNode("$1"),
     end: parseExpressionNode("$3"),
   });
+  t.deepEqual(incbinCommand.parsed.includeTarget, {
+    directive: "incbin",
+    target: "test.bin",
+  });
 });
 
 test("normalized command derives macro include data and label split semantics", (t) => {

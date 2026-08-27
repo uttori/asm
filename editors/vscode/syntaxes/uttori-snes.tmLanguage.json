@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Uttori SNES",
+  "scopeName": "source.uttori-snes",
+  "patterns": [
+    { "include": "source.uttori-asm.base#comments" },
+    { "include": "source.uttori-asm.base" },
+    { "include": "#mnemonics-spc700" },
+    { "include": "#mnemonics-superfx" },
+    { "include": "#registers" },
+    { "include": "#pseudo-ops-snes" }
+  ],
+  "repository": {
+    "mnemonics-spc700": {
+      "patterns": [
+        {
+          "name": "keyword.mnemonic.spc700.uttori-snes",
+          "match": "\\b(?i:ADC|ADDW|AND|AND1|ASL|BBC|BBS|BCC|BCS|BEQ|BMI|BNE|BPL|BVC|BVS|BRA|BRK|CALL|CBNE|CLR1|CLRC|CLRP|CLRV|CMP|CMPW|DAA|DAS|DBNZ|DEC|DECW|DI|DIV|EI|EOR|EOR1|INC|INCW|JMP|LSR|MOV|MOV1|MOVW|MUL|NOP|NOT1|NOTC|OR|OR1|PCALL|POP|PUSH|RET|RETI|ROL|ROR|SBC|SET1|SETC|SETP|SLEEP|STOP|SUBW|TCALL|TCLR1|TSET1|XCN)\\b"
+        }
+      ]
+    },
+    "mnemonics-superfx": {
+      "patterns": [
+        {
+          "name": "keyword.mnemonic.superfx.uttori-snes",
+          "match": "\\b(?i:ADD|ADC|ALT1|ALT2|ALT3|AND|ASR|BCC|BCS|BEQ|BGE|BIC|BLT|BMI|BNE|BPL|BRA|BVC|BVS|CACHE|CMODE|CMP|COLOR|DEC|DIV2|FMULT|FROM|GETB|GETBH|GETBL|GETBS|GETC|HIB|IBT|INC|IWT|JAL|JMP|LDB|LDW|LEA|LINK|LJMP|LM|LMS|LMULT|LOB|LOOP|LSR|MERGE|MOVE|MOVEB|MOVES|MOVEW|MULT|NOP|NOT|OR|PLOT|POP|PUSH|RAMB|RET|ROL|ROMB|ROR|RPIX|SBC|SBK|SEX|SM|SMS|STB|STOP|STW|SUB|SWAP|TO|UMULT|WITH|XOR)\\b"
+        }
+      ]
+    },
+    "registers": {
+      "patterns": [
+        {
+          "name": "storage.type.register.spc700.uttori-snes",
+          "match": "\\b(?i:F[0-9A-F]|SP|PC|PSW)\\b"
+        },
+        {
+          "name": "storage.type.register.superfx.uttori-snes",
+          "match": "\\b(?i:R(?:1[0-5]|[0-9])|SP|LR|PC|SFR|BRAMR|PBR|ROMBR|CFGR|SCBR|CLSR|SCMR|VCR|RAMBR|CBR)\\b"
+        }
+      ]
+    },
+    "pseudo-ops-snes": {
+      "patterns": [
+        {
+          "name": "support.function.pseudo.uttori-snes",
+          "match": "\\b(?i:lorom|hirom|exlorom|exhirom|sa1rom|sfxrom|norom|fullsa1rom|warnpc|pushpc|pullpc|pushbase|pullbase|asar)\\b"
+        }
+      ]
+    }
+  }
+}

@@ -2012,13 +2012,13 @@ var require_connection = __commonJS({
       log: () => {
       }
     });
-    var Trace;
-    (function(Trace2) {
-      Trace2[Trace2["Off"] = 0] = "Off";
-      Trace2[Trace2["Messages"] = 1] = "Messages";
-      Trace2[Trace2["Compact"] = 2] = "Compact";
-      Trace2[Trace2["Verbose"] = 3] = "Verbose";
-    })(Trace || (exports2.Trace = Trace = {}));
+    var Trace2;
+    (function(Trace3) {
+      Trace3[Trace3["Off"] = 0] = "Off";
+      Trace3[Trace3["Messages"] = 1] = "Messages";
+      Trace3[Trace3["Compact"] = 2] = "Compact";
+      Trace3[Trace3["Verbose"] = 3] = "Verbose";
+    })(Trace2 || (exports2.Trace = Trace2 = {}));
     var TraceValue;
     (function(TraceValue2) {
       TraceValue2.Off = "off";
@@ -2027,42 +2027,42 @@ var require_connection = __commonJS({
       TraceValue2.Verbose = "verbose";
     })(TraceValue || (exports2.TraceValue = TraceValue = {}));
     exports2.TraceValues = TraceValue;
-    (function(Trace2) {
+    (function(Trace3) {
       function fromString(value) {
         if (!Is2.string(value)) {
-          return Trace2.Off;
+          return Trace3.Off;
         }
         value = value.toLowerCase();
         switch (value) {
           case "off":
-            return Trace2.Off;
+            return Trace3.Off;
           case "messages":
-            return Trace2.Messages;
+            return Trace3.Messages;
           case "compact":
-            return Trace2.Compact;
+            return Trace3.Compact;
           case "verbose":
-            return Trace2.Verbose;
+            return Trace3.Verbose;
           default:
-            return Trace2.Off;
+            return Trace3.Off;
         }
       }
-      Trace2.fromString = fromString;
+      Trace3.fromString = fromString;
       function toString(value) {
         switch (value) {
-          case Trace2.Off:
+          case Trace3.Off:
             return "off";
-          case Trace2.Messages:
+          case Trace3.Messages:
             return "messages";
-          case Trace2.Compact:
+          case Trace3.Compact:
             return "compact";
-          case Trace2.Verbose:
+          case Trace3.Verbose:
             return "verbose";
           default:
             return "off";
         }
       }
-      Trace2.toString = toString;
-    })(Trace || (exports2.Trace = Trace = {}));
+      Trace3.toString = toString;
+    })(Trace2 || (exports2.Trace = Trace2 = {}));
     var TraceFormat;
     (function(TraceFormat2) {
       TraceFormat2["Text"] = "text";
@@ -2209,7 +2209,7 @@ var require_connection = __commonJS({
       let responsePromises = /* @__PURE__ */ new Map();
       let knownCanceledRequests = /* @__PURE__ */ new Set();
       let requestTokens = /* @__PURE__ */ new Map();
-      let trace = Trace.Off;
+      let trace = Trace2.Off;
       let traceFormat = TraceFormat.Text;
       let tracer;
       let state = ConnectionState.New;
@@ -2565,21 +2565,21 @@ ${JSON.stringify(message, null, 4)}`);
           return void 0;
         }
         switch (trace) {
-          case Trace.Verbose:
+          case Trace2.Verbose:
             return JSON.stringify(params, null, 4);
-          case Trace.Compact:
+          case Trace2.Compact:
             return JSON.stringify(params);
           default:
             return void 0;
         }
       }
       function traceSendingRequest(message) {
-        if (trace === Trace.Off || !tracer) {
+        if (trace === Trace2.Off || !tracer) {
           return;
         }
         if (traceFormat === TraceFormat.Text) {
           let data = void 0;
-          if ((trace === Trace.Verbose || trace === Trace.Compact) && message.params) {
+          if ((trace === Trace2.Verbose || trace === Trace2.Compact) && message.params) {
             data = `Params: ${stringifyTrace(message.params)}`;
           }
           tracer.log(`Sending request '${message.method} - (${message.id})'.`, data);
@@ -2588,12 +2588,12 @@ ${JSON.stringify(message, null, 4)}`);
         }
       }
       function traceSendingNotification(message) {
-        if (trace === Trace.Off || !tracer) {
+        if (trace === Trace2.Off || !tracer) {
           return;
         }
         if (traceFormat === TraceFormat.Text) {
           let data = void 0;
-          if (trace === Trace.Verbose || trace === Trace.Compact) {
+          if (trace === Trace2.Verbose || trace === Trace2.Compact) {
             if (message.params) {
               data = `Params: ${stringifyTrace(message.params)}`;
             } else {
@@ -2606,12 +2606,12 @@ ${JSON.stringify(message, null, 4)}`);
         }
       }
       function traceSendingResponse(message, method, startTime) {
-        if (trace === Trace.Off || !tracer) {
+        if (trace === Trace2.Off || !tracer) {
           return;
         }
         if (traceFormat === TraceFormat.Text) {
           let data = void 0;
-          if (trace === Trace.Verbose || trace === Trace.Compact) {
+          if (trace === Trace2.Verbose || trace === Trace2.Compact) {
             if (message.error && message.error.data) {
               data = `Error data: ${stringifyTrace(message.error.data)}`;
             } else {
@@ -2628,12 +2628,12 @@ ${JSON.stringify(message, null, 4)}`);
         }
       }
       function traceReceivedRequest(message) {
-        if (trace === Trace.Off || !tracer) {
+        if (trace === Trace2.Off || !tracer) {
           return;
         }
         if (traceFormat === TraceFormat.Text) {
           let data = void 0;
-          if ((trace === Trace.Verbose || trace === Trace.Compact) && message.params) {
+          if ((trace === Trace2.Verbose || trace === Trace2.Compact) && message.params) {
             data = `Params: ${stringifyTrace(message.params)}`;
           }
           tracer.log(`Received request '${message.method} - (${message.id})'.`, data);
@@ -2642,12 +2642,12 @@ ${JSON.stringify(message, null, 4)}`);
         }
       }
       function traceReceivedNotification(message) {
-        if (trace === Trace.Off || !tracer || message.method === LogTraceNotification.type.method) {
+        if (trace === Trace2.Off || !tracer || message.method === LogTraceNotification.type.method) {
           return;
         }
         if (traceFormat === TraceFormat.Text) {
           let data = void 0;
-          if (trace === Trace.Verbose || trace === Trace.Compact) {
+          if (trace === Trace2.Verbose || trace === Trace2.Compact) {
             if (message.params) {
               data = `Params: ${stringifyTrace(message.params)}`;
             } else {
@@ -2660,12 +2660,12 @@ ${JSON.stringify(message, null, 4)}`);
         }
       }
       function traceReceivedResponse(message, responsePromise) {
-        if (trace === Trace.Off || !tracer) {
+        if (trace === Trace2.Off || !tracer) {
           return;
         }
         if (traceFormat === TraceFormat.Text) {
           let data = void 0;
-          if (trace === Trace.Verbose || trace === Trace.Compact) {
+          if (trace === Trace2.Verbose || trace === Trace2.Compact) {
             if (message.error && message.error.data) {
               data = `Error data: ${stringifyTrace(message.error.data)}`;
             } else {
@@ -2687,7 +2687,7 @@ ${JSON.stringify(message, null, 4)}`);
         }
       }
       function logLSPMessage(type, message) {
-        if (!tracer || trace === Trace.Off) {
+        if (!tracer || trace === Trace2.Off) {
           return;
         }
         const lspMessage = {
@@ -3015,13 +3015,13 @@ ${JSON.stringify(message, null, 4)}`);
           }
           trace = _value;
           traceFormat = _traceFormat;
-          if (trace === Trace.Off) {
+          if (trace === Trace2.Off) {
             tracer = void 0;
           } else {
             tracer = _tracer;
           }
           if (_sendNotification && !isClosed() && !isDisposed()) {
-            await connection.sendNotification(SetTraceNotification.type, { value: Trace.toString(_value) });
+            await connection.sendNotification(SetTraceNotification.type, { value: Trace2.toString(_value) });
           }
         },
         onError: errorEmitter.event,
@@ -3063,10 +3063,10 @@ ${JSON.stringify(message, null, 4)}`);
         }
       };
       connection.onNotification(LogTraceNotification.type, (params) => {
-        if (trace === Trace.Off || !tracer) {
+        if (trace === Trace2.Off || !tracer) {
           return;
         }
-        const verbose = trace === Trace.Verbose || trace === Trace.Compact;
+        const verbose = trace === Trace2.Verbose || trace === Trace2.Compact;
         tracer.log(params.message, verbose ? params.verbose : void 0);
       });
       connection.onNotification(ProgressNotification.type, async (params) => {
@@ -11271,11 +11271,11 @@ var require_commonjs3 = __commonJS({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    var path2 = {
+    var path3 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    exports2.sep = defaultPlatform === "win32" ? path2.win32.sep : path2.posix.sep;
+    exports2.sep = defaultPlatform === "win32" ? path3.win32.sep : path3.posix.sep;
     exports2.minimatch.sep = exports2.sep;
     exports2.GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     exports2.minimatch.GLOBSTAR = exports2.GLOBSTAR;
@@ -14110,13 +14110,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path2) {
+        function ensurePath(config, path3) {
           let current = config;
-          for (let i = 0; i < path2.length - 1; i++) {
-            let obj = current[path2[i]];
+          for (let i = 0; i < path3.length - 1; i++) {
+            let obj = current[path3[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path2[i]] = obj;
+              current[path3[i]] = obj;
             }
             current = obj;
           }
@@ -14134,8 +14134,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key);
           }
           if (config) {
-            const path2 = keys[i].split(".");
-            ensurePath(result, path2)[path2[path2.length - 1]] = toJSONObject(config);
+            const path3 = keys[i].split(".");
+            ensurePath(result, path3)[path3[path3.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -18110,13 +18110,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path2 = uri.fsPath.replace(/\\/g, "/");
+          const path3 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path2)) {
+              if (filter.matcher.match(path3)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -18130,7 +18130,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path2}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path3}/`)) {
                   return true;
                 }
               }
@@ -20778,7 +20778,7 @@ var require_main = __commonJS({
     exports2.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path2 = __importStar(require("path"));
+    var path3 = __importStar(require("path"));
     var os = __importStar(require("os"));
     var fs = __importStar(require("fs"));
     var crypto_1 = require("crypto");
@@ -20930,7 +20930,7 @@ var require_main = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path2.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path3.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -22291,7 +22291,7 @@ var require_main3 = __commonJS({
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = __importStar(require("child_process"));
     var fs = __importStar(require("fs"));
-    var path2 = __importStar(require("path"));
+    var path3 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
     var Is2 = __importStar(require_is());
@@ -22736,18 +22736,18 @@ var require_main3 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path2.isAbsolute(runtime)) {
+        if (path3.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path2.join(mainRootPath, runtime);
+          const result = path3.join(mainRootPath, runtime);
           if (fs.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path2.join(serverWorkingDirectory, runtime);
+          const result = path3.join(serverWorkingDirectory, runtime);
           if (fs.existsSync(result)) {
             return result;
           }
@@ -22833,9 +22833,292 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
+var path2 = __toESM(require("node:path"));
+var import_vscode2 = require("vscode");
+var import_node = __toESM(require_main3());
+
+// editors/vscode/src/panel.ts
 var path = __toESM(require("node:path"));
 var import_vscode = require("vscode");
-var import_node = __toESM(require_main3());
+var ProjectPanelProvider = class {
+  constructor(getClient, initConfig2) {
+    this.getClient = getClient;
+    this.initConfig = initConfig2;
+  }
+  getClient;
+  initConfig;
+  static viewId = "uttori-asm.projectPanel";
+  #view;
+  /**
+   * Called when the view becomes visible.
+   * @param {WebviewView} webviewView The hosted webview.
+   */
+  resolveWebviewView(webviewView) {
+    this.#view = webviewView;
+    webviewView.webview.options = { enableScripts: true };
+    webviewView.webview.html = this.renderHtml();
+    webviewView.webview.onDidReceiveMessage((message) => {
+      void this.onMessage(message);
+    });
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible) {
+        void this.refresh();
+      }
+    });
+    void this.refresh();
+  }
+  /**
+   * Pushes a fresh status snapshot to the webview.
+   */
+  async refresh() {
+    if (!this.#view) {
+      return;
+    }
+    const snapshot = await this.snapshot();
+    void this.#view.webview.postMessage({ type: "snapshot", ...snapshot });
+  }
+  async onMessage(message) {
+    switch (message.type) {
+      case "ready":
+      case "refresh":
+        await this.refresh();
+        return;
+      case "initConfig":
+        await this.initConfig();
+        await this.refresh();
+        return;
+      case "addEntryPoint":
+        await this.addPath("entryPoints", false);
+        return;
+      case "removeEntryPoint":
+        await this.removePath("entryPoints", asString(message.value));
+        return;
+      case "addIncludePath":
+        await this.addPath("includePaths", true);
+        return;
+      case "removeIncludePath":
+        await this.removePath("includePaths", asString(message.value));
+        return;
+      case "setTarget":
+        await this.updateSetting("target", asString(message.value));
+        return;
+      case "setArchitecture":
+        await this.updateSetting("architecture", asString(message.value));
+        return;
+      case "setBuildOutput":
+        await this.updateSetting("buildOutput", asString(message.value));
+        return;
+      default:
+        return;
+    }
+  }
+  async snapshot() {
+    const config = import_vscode.workspace.getConfiguration("asm");
+    const fallback = {
+      fileCount: 0,
+      symbolCount: 0,
+      referenceCount: 0,
+      errorCount: 0,
+      lastReindexCachedRoots: 0,
+      lastReindexAnalyzedRoots: 0,
+      configFile: config.get("configFile", ""),
+      target: config.get("target", ""),
+      architecture: config.get("architecture", ""),
+      buildOutput: config.get("buildOutput", ""),
+      baseImage: config.get("baseImage", ""),
+      entryPoints: config.get("entryPoints", []),
+      includePaths: config.get("includePaths", [])
+    };
+    const client2 = this.getClient();
+    if (!client2) {
+      return { status: fallback };
+    }
+    try {
+      const [status, metadata] = await Promise.all([
+        client2.sendRequest("asm/status"),
+        client2.sendRequest("asm/projectMetadata")
+      ]);
+      return { status: { ...fallback, ...status }, metadata };
+    } catch {
+      return { status: fallback };
+    }
+  }
+  async addPath(key, folders) {
+    const picked = await import_vscode.window.showOpenDialog({
+      canSelectFiles: !folders,
+      canSelectFolders: folders,
+      canSelectMany: true,
+      openLabel: folders ? "Add include path" : "Add entry point"
+    });
+    if (!picked?.length) {
+      return;
+    }
+    const current = import_vscode.workspace.getConfiguration("asm").get(key, []);
+    const next = [...current];
+    for (const uri of picked) {
+      const relative3 = toWorkspaceRelative(uri.fsPath);
+      if (!next.includes(relative3)) {
+        next.push(relative3);
+      }
+    }
+    await this.updateSetting(key, next);
+  }
+  async removePath(key, value) {
+    const current = import_vscode.workspace.getConfiguration("asm").get(key, []);
+    await this.updateSetting(
+      key,
+      current.filter((entry) => entry !== value)
+    );
+  }
+  async updateSetting(key, value) {
+    await import_vscode.workspace.getConfiguration("asm").update(key, value, import_vscode.ConfigurationTarget.Workspace);
+    await this.refresh();
+  }
+  renderHtml() {
+    const nonce = getNonce();
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+      color: var(--vscode-foreground);
+      margin: 0;
+      padding: 10px 12px 16px;
+    }
+    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8; margin: 16px 0 8px; }
+    .status, .list { display: grid; gap: 6px; }
+    .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .muted { opacity: 0.75; }
+    button, select, input {
+      font: inherit;
+      color: var(--vscode-foreground);
+      background: var(--vscode-input-background);
+      border: 1px solid var(--vscode-widget-border, var(--vscode-input-border));
+      border-radius: 2px;
+      padding: 3px 8px;
+    }
+    button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; }
+    button.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); width: 100%; }
+    .item { display: flex; gap: 6px; align-items: center; }
+    .item span { flex: 1; word-break: break-all; }
+    .actions { display: flex; gap: 6px; margin-top: 8px; }
+    select, input { width: 100%; }
+  </style>
+</head>
+<body>
+  <h2>Analysis</h2>
+  <div class="status" id="status"></div>
+  <h2>Entry points</h2>
+  <div class="list" id="entryPoints"></div>
+  <div class="actions"><button data-cmd="addEntryPoint">Add file</button></div>
+  <h2>Include paths</h2>
+  <div class="list" id="includePaths"></div>
+  <div class="actions"><button data-cmd="addIncludePath">Add folder</button></div>
+  <h2>Target</h2>
+  <select id="target"></select>
+  <h2>Architecture</h2>
+  <select id="architecture"></select>
+  <h2>Build output</h2>
+  <input id="buildOutput" placeholder="game.sfc" />
+  <div class="actions">
+    <button class="primary" data-cmd="initConfig">Initialize uttori-asm.config.json</button>
+  </div>
+  <script nonce="${nonce}">
+    const vscode = acquireVsCodeApi();
+    const $ = (id) => document.getElementById(id);
+    const fillList = (id, items, removeType) => {
+      const root = $(id);
+      root.innerHTML = "";
+      if (!items.length) {
+        root.innerHTML = '<div class="muted">None</div>';
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement("div");
+        row.className = "item";
+        row.innerHTML = "<span></span>";
+        row.querySelector("span").textContent = item;
+        const button = document.createElement("button");
+        button.textContent = "Remove";
+        button.addEventListener("click", () => vscode.postMessage({ type: removeType, value: item }));
+        row.appendChild(button);
+        root.appendChild(row);
+      }
+    };
+    const fillSelect = (id, options, value) => {
+      const select = $(id);
+      const ids = [...new Set(options.map((entry) => entry.id))];
+      select.innerHTML = ids.map((idValue) => {
+        const selected = idValue === value ? " selected" : "";
+        return "<option value=\\"" + idValue + "\\"" + selected + ">" + idValue + "</option>";
+      }).join("");
+      if (value && !ids.includes(value)) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.selected = true;
+        option.textContent = value;
+        select.prepend(option);
+      }
+    };
+    window.addEventListener("message", (event) => {
+      const { status, metadata } = event.data || {};
+      if (!status) return;
+      const duration = status.lastReindexDurationMs == null ? "\u2014" : status.lastReindexDurationMs + "ms";
+      $("status").innerHTML = [
+        ["Files", status.fileCount],
+        ["Symbols", status.symbolCount],
+        ["Errors", status.errorCount],
+        ["Last reindex", duration],
+        ["Cached / analysed roots", (status.lastReindexCachedRoots || 0) + " / " + (status.lastReindexAnalyzedRoots || 0)],
+        ["Config", status.configFile || "\u2014"]
+      ].map(([label, value]) => '<div class="row"><span class="muted">' + label + '</span><span>' + value + '</span></div>').join("");
+      fillList("entryPoints", status.entryPoints || [], "removeEntryPoint");
+      fillList("includePaths", status.includePaths || [], "removeIncludePath");
+      fillSelect("target", metadata?.targets || [], status.target || metadata?.activeTarget || "");
+      fillSelect("architecture", metadata?.architectures || [], status.architecture || metadata?.activeArchitecture || "");
+      $("buildOutput").value = status.buildOutput || "";
+    });
+    document.addEventListener("click", (event) => {
+      const cmd = event.target && event.target.getAttribute && event.target.getAttribute("data-cmd");
+      if (cmd) vscode.postMessage({ type: cmd });
+    });
+    $("target").addEventListener("change", (event) => vscode.postMessage({ type: "setTarget", value: event.target.value }));
+    $("architecture").addEventListener("change", (event) => vscode.postMessage({ type: "setArchitecture", value: event.target.value }));
+    $("buildOutput").addEventListener("change", (event) => vscode.postMessage({ type: "setBuildOutput", value: event.target.value }));
+    vscode.postMessage({ type: "ready" });
+  </script>
+</body>
+</html>`;
+  }
+};
+function asString(value) {
+  return typeof value === "string" ? value : "";
+}
+function toWorkspaceRelative(filePath) {
+  const folder = import_vscode.workspace.workspaceFolders?.[0];
+  if (!folder) {
+    return filePath;
+  }
+  const relative3 = path.relative(folder.uri.fsPath, filePath);
+  return relative3 && !relative3.startsWith("..") ? relative3 : filePath;
+}
+function getNonce() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let nonce = "";
+  for (let index = 0; index < 32; index += 1) {
+    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return nonce;
+}
+
+// editors/vscode/src/extension.ts
+var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var client;
 var watchEnabled = false;
 var watchEntryUri;
@@ -22843,7 +23126,7 @@ var saveListener;
 var watchTimer;
 var statusItem;
 function serverInitializationOptions() {
-  const config = import_vscode.workspace.getConfiguration("asm");
+  const config = import_vscode2.workspace.getConfiguration("asm");
   return {
     configFile: config.get("configFile", ""),
     plugins: config.get("plugins", []),
@@ -22853,25 +23136,37 @@ function serverInitializationOptions() {
     architecture: config.get("architecture", ""),
     buildOutput: config.get("buildOutput", ""),
     baseImage: config.get("baseImage", ""),
-    workspaceTrusted: import_vscode.workspace.isTrusted
+    workspaceTrusted: import_vscode2.workspace.isTrusted
   };
 }
 function activate(context) {
-  const serverModule = context.asAbsolutePath(path.join("server", "server.mjs"));
+  const serverModule = context.asAbsolutePath(path2.join("server", "server.mjs"));
   const serverOptions = {
-    run: { module: serverModule, transport: import_node.TransportKind.stdio },
-    debug: { module: serverModule, transport: import_node.TransportKind.stdio }
+    run: { command: process.execPath, args: [serverModule], transport: import_node.TransportKind.stdio },
+    debug: {
+      command: process.execPath,
+      args: ["--nolazy", "--inspect=6009", serverModule],
+      transport: import_node.TransportKind.stdio
+    }
   };
+  const outputChannel = import_vscode2.window.createOutputChannel("Uttori Assembly Language Server", {
+    log: true
+  });
   const clientOptions = {
-    documentSelector: [{ scheme: "file", language: "uttori-asm" }],
+    documentSelector: ASSEMBLY_LANGUAGE_IDS.map((language) => ({
+      scheme: "file",
+      language
+    })),
     synchronize: {
       configurationSection: "asm",
       fileEvents: [
-        import_vscode.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
-        import_vscode.workspace.createFileSystemWatcher("**/asm.config.json")
+        import_vscode2.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
+        import_vscode2.workspace.createFileSystemWatcher("**/uttori-asm.config.json")
       ]
     },
-    initializationOptions: serverInitializationOptions()
+    initializationOptions: serverInitializationOptions(),
+    outputChannel,
+    traceOutputChannel: outputChannel
   };
   client = new import_node.LanguageClient(
     "uttoriAsmLanguageServer",
@@ -22879,23 +23174,43 @@ function activate(context) {
     serverOptions,
     clientOptions
   );
-  statusItem = import_vscode.window.createStatusBarItem(import_vscode.StatusBarAlignment.Left, 0);
+  statusItem = import_vscode2.window.createStatusBarItem(import_vscode2.StatusBarAlignment.Left, 0);
   statusItem.command = "asm.toggleWatch";
   updateStatusItem();
   statusItem.show();
+  const panelProvider = new ProjectPanelProvider(
+    () => client,
+    () => initConfig()
+  );
   context.subscriptions.push(
+    outputChannel,
     statusItem,
-    import_vscode.commands.registerCommand("asm.build", () => runBuild(activeDocumentUri())),
-    import_vscode.commands.registerCommand("asm.toggleWatch", toggleWatch),
-    import_vscode.workspace.onDidGrantWorkspaceTrust(() => {
+    import_vscode2.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider),
+    import_vscode2.commands.registerCommand("asm.build", () => runBuild(activeDocumentUri())),
+    import_vscode2.commands.registerCommand("asm.toggleWatch", toggleWatch),
+    import_vscode2.commands.registerCommand("asm.initConfig", () => initConfig()),
+    import_vscode2.commands.registerCommand(
+      "asm.openPanel",
+      () => import_vscode2.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
+    ),
+    import_vscode2.workspace.onDidGrantWorkspaceTrust(() => {
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
           asm: serverInitializationOptions()
         }
       });
+    }),
+    import_vscode2.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("asm")) {
+        void panelProvider.refresh();
+      }
     })
   );
-  void client.start();
+  void client.start().then(() => {
+    if (context.extensionMode === import_vscode2.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
+      void client?.setTrace(import_node.Trace.Verbose);
+    }
+  });
 }
 function deactivate() {
   saveListener?.dispose();
@@ -22905,7 +23220,7 @@ function deactivate() {
   return client?.stop();
 }
 function activeDocumentUri() {
-  return import_vscode.window.activeTextEditor?.document.uri.toString();
+  return import_vscode2.window.activeTextEditor?.document.uri.toString();
 }
 function toggleWatch() {
   watchEnabled = !watchEnabled;
@@ -22913,14 +23228,14 @@ function toggleWatch() {
     watchEntryUri = resolveWatchEntry();
     if (!watchEntryUri) {
       watchEnabled = false;
-      void import_vscode.window.showErrorMessage(
+      void import_vscode2.window.showErrorMessage(
         "Assembly: open a source file (or set asm.entryPoints) before watching."
       );
       return;
     }
-    saveListener = import_vscode.workspace.onDidSaveTextDocument(onDocumentSaved);
-    void import_vscode.window.showInformationMessage(
-      `Assembly: watching ${path.basename(import_vscode.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+    saveListener = import_vscode2.workspace.onDidSaveTextDocument(onDocumentSaved);
+    void import_vscode2.window.showInformationMessage(
+      `Assembly: watching ${path2.basename(import_vscode2.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   } else {
     saveListener?.dispose();
@@ -22934,12 +23249,12 @@ function toggleWatch() {
   updateStatusItem();
 }
 function resolveWatchEntry() {
-  const activeUri = import_vscode.window.activeTextEditor?.document.uri;
-  const entryPoints = import_vscode.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
-  const folder = activeUri ? import_vscode.workspace.getWorkspaceFolder(activeUri) : import_vscode.workspace.workspaceFolders?.[0];
+  const activeUri = import_vscode2.window.activeTextEditor?.document.uri;
+  const entryPoints = import_vscode2.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
+  const folder = activeUri ? import_vscode2.workspace.getWorkspaceFolder(activeUri) : import_vscode2.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    return path.isAbsolute(first) ? import_vscode.Uri.file(first).toString() : import_vscode.Uri.joinPath(folder.uri, first).toString();
+    return path2.isAbsolute(first) ? import_vscode2.Uri.file(first).toString() : import_vscode2.Uri.joinPath(folder.uri, first).toString();
   }
   return activeDocumentUri();
 }
@@ -22956,18 +23271,73 @@ function onDocumentSaved(document) {
   }, 250);
 }
 function isAssemblyDocument(document) {
-  return document.languageId === "uttori-asm" || /\.(asm|src|s|inc)$/i.test(document.fileName);
+  return ASSEMBLY_LANGUAGE_IDS.includes(document.languageId) || /\.(asm|src|s|inc)$/i.test(document.fileName);
+}
+async function initConfig() {
+  const folder = import_vscode2.workspace.workspaceFolders?.[0];
+  if (!folder) {
+    void import_vscode2.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
+    return;
+  }
+  const configUri = import_vscode2.Uri.joinPath(folder.uri, "uttori-asm.config.json");
+  const config = import_vscode2.workspace.getConfiguration("asm");
+  let entryPoints = config.get("entryPoints", []);
+  const active = import_vscode2.window.activeTextEditor?.document;
+  if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
+    const relative3 = path2.relative(folder.uri.fsPath, active.fileName);
+    entryPoints = [
+      relative3 && !relative3.startsWith("..") ? relative3 : path2.basename(active.fileName)
+    ];
+  }
+  const includePaths = config.get("includePaths", []);
+  let metadata = {};
+  try {
+    if (client) {
+      metadata = await client.sendRequest("asm/projectMetadata") ?? {};
+    }
+  } catch {
+  }
+  const configuredTarget = config.get("target", "");
+  const target = configuredTarget || metadata.activeTarget;
+  const plugins = metadata.plugins?.map((p) => ({ module: p.module })) ?? [
+    { module: "@uttori/asm-plugin-snes" }
+  ];
+  const body = {
+    plugins,
+    ...target ? { target } : {},
+    entryPoints,
+    includePaths: includePaths.length > 0 ? includePaths : ["./"]
+  };
+  const architecture = config.get("architecture", "");
+  const buildOutput = config.get("buildOutput", "");
+  const baseImage = config.get("baseImage", "");
+  if (architecture) body.architecture = architecture;
+  if (buildOutput) body.buildOutput = buildOutput;
+  if (baseImage) body.baseImage = baseImage;
+  try {
+    await import_vscode2.workspace.fs.stat(configUri);
+    const existing = await import_vscode2.workspace.openTextDocument(configUri);
+    await import_vscode2.window.showTextDocument(existing);
+    void import_vscode2.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
+    return;
+  } catch {
+  }
+  await import_vscode2.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
+`));
+  await config.update("configFile", "uttori-asm.config.json", import_vscode2.ConfigurationTarget.Workspace);
+  const document = await import_vscode2.workspace.openTextDocument(configUri);
+  await import_vscode2.window.showTextDocument(document);
 }
 async function runBuild(documentUri, transient = false) {
   if (!client) {
     return;
   }
   if (!documentUri) {
-    void import_vscode.window.showErrorMessage("Assembly: open a source file to build.");
+    void import_vscode2.window.showErrorMessage("Assembly: open a source file to build.");
     return;
   }
-  const document = import_vscode.Uri.parse(documentUri);
-  const config = import_vscode.workspace.getConfiguration("asm", document);
+  const document = import_vscode2.Uri.parse(documentUri);
+  const config = import_vscode2.workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get("buildOutput", ""), document);
   const baseImage = resolveConfiguredPath(config.get("baseImage", ""), document);
   try {
@@ -22978,17 +23348,17 @@ async function runBuild(documentUri, transient = false) {
     if (result?.ok) {
       const message = `Assembly: built ${result.bytes ?? 0} bytes \u2192 ${result.outputPath ?? "output"}.`;
       if (transient) {
-        import_vscode.window.setStatusBarMessage(message, 4e3);
+        import_vscode2.window.setStatusBarMessage(message, 4e3);
       } else {
-        void import_vscode.window.showInformationMessage(message);
+        void import_vscode2.window.showInformationMessage(message);
       }
     } else {
-      void import_vscode.window.showErrorMessage(
+      void import_vscode2.window.showErrorMessage(
         `Assembly: build failed - ${result?.message ?? "unknown error"}.`
       );
     }
   } catch (error) {
-    void import_vscode.window.showErrorMessage(
+    void import_vscode2.window.showErrorMessage(
       `Assembly: build failed - ${error instanceof Error ? error.message : String(error)}.`
     );
   }
@@ -22997,11 +23367,11 @@ function resolveConfiguredPath(configuredPath, document) {
   if (!configuredPath) {
     return void 0;
   }
-  if (path.isAbsolute(configuredPath)) {
-    return path.normalize(configuredPath);
+  if (path2.isAbsolute(configuredPath)) {
+    return path2.normalize(configuredPath);
   }
-  const folder = import_vscode.workspace.getWorkspaceFolder(document);
-  return path.resolve(folder?.uri.fsPath ?? path.dirname(document.fsPath), configuredPath);
+  const folder = import_vscode2.workspace.getWorkspaceFolder(document);
+  return path2.resolve(folder?.uri.fsPath ?? path2.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
   if (!statusItem) {

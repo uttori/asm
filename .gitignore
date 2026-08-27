@@ -79,3 +79,4 @@ fixtures/integration/TMNT-IV---Turtles-In-Time-SNES-Disassembly/**/*.bin
 fixtures/integration/TMNT-IV---Turtles-In-Time-SNES-Disassembly/**/*.brr
 Local Only/
 graphify-out/
+.uttori-asm/

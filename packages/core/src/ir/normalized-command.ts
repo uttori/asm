@@ -79,7 +79,7 @@ export function createCommandProvenance(
     normalized,
     span: createLineSpan(raw, line),
     normalizedSpan: createLineSpan(normalized, line),
-    tokenSpans: deriveTokenSpans(normalized, words, line),
+    tokenSpans: deriveTokenSpans(raw, words, line),
   };
 }
 
@@ -111,7 +111,7 @@ export type ParsedMacroInvocation = {
 };
 
 export type ParsedIncludeTarget = {
-  directive: "include" | "incsrc";
+  directive: "include" | "incsrc" | "incbin";
   target: string;
 };
 
@@ -249,7 +249,7 @@ export function setCommandWords(
       ...command.source,
       normalized: normalizedSource,
       normalizedSpan: createLineSpan(normalizedSource, command.source.line),
-      tokenSpans: deriveTokenSpans(normalizedSource, words, command.source.line),
+      tokenSpans: deriveTokenSpans(command.source.raw, words, command.source.line),
     };
   }
   command.labelName = deriveLabelName(command.keyword);
@@ -406,6 +406,10 @@ function deriveCommandSemantics(command: string, words: readonly string[]): Comm
         };
       }
     }
+    const includePath = extractIncludePath(incbinSource);
+    if (includePath) {
+      semantics.includeTarget = { directive: "incbin", target: includePath };
+    }
   }
 
   if (keyword.startsWith("%")) {
@@ -459,6 +463,25 @@ function deriveCommandSemantics(command: string, words: readonly string[]): Comm
 
   // void command;
   return semantics;
+}
+
+/**
+ * Extracts an include/incbin path, stripping quotes and an optional `:range` suffix.
+ * @param {string} raw The raw filename operand.
+ * @returns {string} The path token.
+ */
+function extractIncludePath(raw: string): string {
+  const trimmed = raw.trim();
+  const quote = trimmed[0];
+  if (quote === '"' || quote === "'" || quote === "`") {
+    const end = trimmed.indexOf(quote, 1);
+    if (end !== -1) {
+      return trimmed.slice(1, end);
+    }
+  }
+  const colonIndex = trimmed.indexOf(":");
+  const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
+  return pathToken.replace(/^["'`]+|["'`]+$/g, "");
 }
 
 /**

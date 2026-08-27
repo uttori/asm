@@ -17,6 +17,8 @@ export interface IncludeSourceHost {
     readonly programModelBuilder: ProgramModelBuilder;
     lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
     recordIncludeEdge(fromFile: string, toFile: string): void;
+    /** When false, include directives record an edge without parsing the target. */
+    readonly followIncludes: boolean;
 }
 /**
  * Owns source and binary include resolution and source execution orchestration.

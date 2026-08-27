@@ -6,6 +6,8 @@
 import * as path from "node:path";
 import {
   commands,
+  ConfigurationTarget,
+  ExtensionMode,
   StatusBarAlignment,
   Uri,
   window,
@@ -18,10 +20,12 @@ import {
 import {
   ExecuteCommandRequest,
   LanguageClient,
+  Trace,
   TransportKind,
   type LanguageClientOptions,
   type ServerOptions,
 } from "vscode-languageclient/node";
+import { ProjectPanelProvider } from "./panel.js";
 
 /**
  * The result of a build request returned by the language server.
@@ -34,6 +38,9 @@ type BuildResult = {
   bytes?: number;
   message?: string;
 };
+
+/** Language IDs the client and commands treat as Uttori Assembly source. */
+const ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"] as const;
 
 /**
  * Language client connected to the bundled server process.
@@ -93,21 +100,35 @@ function serverInitializationOptions(): Record<string, unknown> {
 export function activate(context: ExtensionContext): void {
   const serverModule = context.asAbsolutePath(path.join("server", "server.mjs"));
 
+  // Spawn Node on the ESM server bundle. The `module` ServerOptions form uses
+  // `cp.fork()`, which cannot load an ESM graph with top-level await.
   const serverOptions: ServerOptions = {
-    run: { module: serverModule, transport: TransportKind.stdio },
-    debug: { module: serverModule, transport: TransportKind.stdio },
+    run: { command: process.execPath, args: [serverModule], transport: TransportKind.stdio },
+    debug: {
+      command: process.execPath,
+      args: ["--nolazy", "--inspect=6009", serverModule],
+      transport: TransportKind.stdio,
+    },
   };
 
+  const outputChannel = window.createOutputChannel("Uttori Assembly Language Server", {
+    log: true,
+  });
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "uttori-asm" }],
+    documentSelector: ASSEMBLY_LANGUAGE_IDS.map((language) => ({
+      scheme: "file" as const,
+      language,
+    })),
     synchronize: {
       configurationSection: "asm",
       fileEvents: [
         workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
-        workspace.createFileSystemWatcher("**/asm.config.json"),
+        workspace.createFileSystemWatcher("**/uttori-asm.config.json"),
       ],
     },
     initializationOptions: serverInitializationOptions(),
+    outputChannel,
+    traceOutputChannel: outputChannel,
   };
 
   client = new LanguageClient(
@@ -122,10 +143,21 @@ export function activate(context: ExtensionContext): void {
   updateStatusItem();
   statusItem.show();
 
+  const panelProvider = new ProjectPanelProvider(
+    () => client,
+    () => initConfig(),
+  );
+
   context.subscriptions.push(
+    outputChannel,
     statusItem,
+    window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider),
     commands.registerCommand("asm.build", () => runBuild(activeDocumentUri())),
     commands.registerCommand("asm.toggleWatch", toggleWatch),
+    commands.registerCommand("asm.initConfig", () => initConfig()),
+    commands.registerCommand("asm.openPanel", () =>
+      commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`),
+    ),
     workspace.onDidGrantWorkspaceTrust(() => {
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
@@ -133,9 +165,21 @@ export function activate(context: ExtensionContext): void {
         },
       });
     }),
+    workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("asm")) {
+        void panelProvider.refresh();
+      }
+    }),
   );
 
-  void client.start();
+  void client.start().then(() => {
+    if (
+      context.extensionMode === ExtensionMode.Development ||
+      process.env.UTTORI_ASM_LSP_TRACE === "verbose"
+    ) {
+      void client?.setTrace(Trace.Verbose);
+    }
+  });
 }
 
 /**
@@ -248,7 +292,85 @@ function onDocumentSaved(document: TextDocument): void {
  * @see https://code.visualstudio.com/api/references/vscode-api#TextDocument
  */
 function isAssemblyDocument(document: TextDocument): boolean {
-  return document.languageId === "uttori-asm" || /\.(asm|src|s|inc)$/i.test(document.fileName);
+  return (
+    (ASSEMBLY_LANGUAGE_IDS as readonly string[]).includes(document.languageId) ||
+    /\.(asm|src|s|inc)$/i.test(document.fileName)
+  );
+}
+
+/**
+ * Writes `uttori-asm.config.json` from the current workspace settings and opens it.
+ */
+async function initConfig(): Promise<void> {
+  const folder = workspace.workspaceFolders?.[0];
+  if (!folder) {
+    void window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
+    return;
+  }
+  const configUri = Uri.joinPath(folder.uri, "uttori-asm.config.json");
+  const config = workspace.getConfiguration("asm");
+  let entryPoints = config.get<string[]>("entryPoints", []);
+  const active = window.activeTextEditor?.document;
+  if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
+    const relative = path.relative(folder.uri.fsPath, active.fileName);
+    entryPoints = [
+      relative && !relative.startsWith("..") ? relative : path.basename(active.fileName),
+    ];
+  }
+  const includePaths = config.get<string[]>("includePaths", []);
+
+  // Query the language server for the currently active plugins and target so
+  // the generated config is self-contained and immediately valid.
+  type ProjectMetadata = {
+    activeTarget?: string;
+    plugins?: { module: string; bundled?: boolean }[];
+  };
+  let metadata: ProjectMetadata = {};
+  try {
+    if (client) {
+      metadata = (await client.sendRequest<ProjectMetadata>("asm/projectMetadata")) ?? {};
+    }
+  } catch {
+    // Server may not be ready; proceed with defaults.
+  }
+
+  const configuredTarget = config.get<string>("target", "");
+  const target = configuredTarget || metadata.activeTarget;
+
+  // The plugins array must be present so the config is self-contained — without
+  // it the loader skips host defaults and no plugin (including the bundled SNES
+  // one) gets activated.
+  const plugins = metadata.plugins?.map((p) => ({ module: p.module })) ?? [
+    { module: "@uttori/asm-plugin-snes" },
+  ];
+
+  const body: Record<string, unknown> = {
+    plugins,
+    ...(target ? { target } : {}),
+    entryPoints,
+    includePaths: includePaths.length > 0 ? includePaths : ["./"],
+  };
+  const architecture = config.get<string>("architecture", "");
+  const buildOutput = config.get<string>("buildOutput", "");
+  const baseImage = config.get<string>("baseImage", "");
+  if (architecture) body.architecture = architecture;
+  if (buildOutput) body.buildOutput = buildOutput;
+  if (baseImage) body.baseImage = baseImage;
+
+  try {
+    await workspace.fs.stat(configUri);
+    const existing = await workspace.openTextDocument(configUri);
+    await window.showTextDocument(existing);
+    void window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
+    return;
+  } catch {
+    // File does not exist yet.
+  }
+
+  await workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}\n`));
+  await config.update("configFile", "uttori-asm.config.json", ConfigurationTarget.Workspace);
+  const document = await workspace.openTextDocument(configUri);
+  await window.showTextDocument(document);
 }
 
 /**

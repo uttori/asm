@@ -16,6 +16,9 @@ export interface ProjectConfiguration {
   readonly target?: string;
   readonly architecture?: string;
   readonly includePaths?: readonly string[];
+  readonly entryPoints?: readonly string[];
+  readonly buildOutput?: string;
+  readonly baseImage?: string;
 }
 
 export interface ProjectConfigurationDefaults {

@@ -130,6 +130,12 @@ export type AssemblerOptions = {
     /** Whether to collect source metadata. */
     collectSourceMetadata?: boolean;
 };
+export type ProgramAnalysisOptions = {
+    /** Assembly stages to run. Tooling defaults to definitions-only. */
+    stages?: readonly AssemblyStageName[];
+    /** When false, include directives record an edge without parsing the target. */
+    followIncludes?: boolean;
+};
 type ActiveLifecycle = {
     record: OwnedContribution<LifecycleContribution>;
     instance: SessionLifecycle;
@@ -242,6 +248,8 @@ export declare class Assembler {
     readonly symbolReferences: AssemblySymbolReference[];
     readonly includeEdges: AssemblyIncludeEdge[];
     readonly collectSourceMetadata: boolean;
+    /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
+    followIncludes: boolean;
     activeStageExecutionState: StageExecutionState | null;
     analysisErrorRecoveryEnabled: boolean;
     runtimePassthroughRewriteEnabled: boolean;
@@ -378,9 +386,13 @@ export declare class Assembler {
     /**
      * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
      * @param {ProgramModel} program The program model to analyze.
+     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
+     * @param {boolean} [options.followIncludes] Whether to follow includes.
+     * @param {Array<AssemblyStageName>} [options.stages] Optional stages to run.
+     * @param {boolean} [options.collectSourceMetadata] Whether to collect source metadata.
      * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
      */
-    collectProgramAnalysis(program: ProgramModel): AssemblyAnalysisResult;
+    collectProgramAnalysis(program: ProgramModel, options?: ProgramAnalysisOptions): AssemblyAnalysisResult;
     /**
      * Creates an isolated assembler session suitable for editor-style analysis.
      * This keeps batch assembly state and tooling state from leaking into each
@@ -405,21 +417,23 @@ export declare class Assembler {
      * @param {string} source The source to analyze.
      * @param {string} [sourceFile] Optional source file override.
      * @param {number} [startLine] Optional starting line number.
+     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
      * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
      */
-    analyzeSource(source: string, sourceFile?: string, startLine?: number): AssemblyAnalysisResult & {
+    analyzeSource(source: string, sourceFile?: string, startLine?: number, options?: ProgramAnalysisOptions): AssemblyAnalysisResult & {
         program: ProgramModel;
     };
     /**
      * Analyzes workspace.
      * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
+     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
      * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
      */
     analyzeWorkspace(documents: Array<{
         source: string;
         sourceFile: string;
         startLine?: number;
-    }>): Array<AssemblyAnalysisResult & {
+    }>, options?: ProgramAnalysisOptions): Array<AssemblyAnalysisResult & {
         program: ProgramModel;
         sourceFile: string;
     }>;

@@ -1,0 +1,7 @@
+{
+  "Subroutine": {
+    "prefix": "sub",
+    "body": ["${1:name}:", "\t$0", "\trts"],
+    "description": "Labeled subroutine ending in RTS"
+  }
+}

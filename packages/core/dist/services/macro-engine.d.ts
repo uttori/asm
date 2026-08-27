@@ -44,12 +44,15 @@ export interface MacroEngineHost {
     applyDefineAssignment(command: string): boolean;
     recordSymbolDefinition(kind: "macro", name: string, options?: {
         value?: number | string;
+        file?: string;
+        line?: number;
     }): void;
 }
 export declare class MacroEngine {
     host: MacroEngineHost;
     macroExpansionControlStack: MacroExpansionControlEntry[];
     pendingMacroSourceFile: string;
+    pendingMacroSourceLine: number;
     constructor(host: MacroEngineHost);
     /**
      * Checks whether the current macro expansion line is in an active branch.

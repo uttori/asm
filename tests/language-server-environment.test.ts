@@ -97,7 +97,7 @@ test("workspace trust gates project plugin configuration until trust is granted"
   const sourceFile = path.join(directory, "main.asm");
   const controller = createController();
   fs.writeFileSync(
-    path.join(directory, "asm.config.json"),
+    path.join(directory, "uttori-asm.config.json"),
     JSON.stringify({
       plugins: [{ module: "fixture-plugin", options: { byte: 0x44 } }],
       target: "fixture",

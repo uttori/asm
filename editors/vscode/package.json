@@ -18,8 +18,8 @@
   "main": "out/extension.js",
   "scripts": {
     "build": "node esbuild.mjs",
-    "fmt": "oxfmt --config ../../.oxfmtrc.json src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes/uttori-asm.tmLanguage.json",
-    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes/uttori-asm.tmLanguage.json",
+    "fmt": "oxfmt --config ../../.oxfmtrc.json src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
+    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
     "lint": "oxlint --config ../../.oxlintrc.json src",
     "lint:fix": "oxlint --config ../../.oxlintrc.json src --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -29,7 +29,7 @@
     "vscode-languageclient": "^10.1.0"
   },
   "devDependencies": {
-    "@types/vscode": "^1.134.0",
+    "@types/vscode": "^1.128.0",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.2"
   },
@@ -44,33 +44,47 @@
         "command": "asm.toggleWatch",
         "title": "Toggle Build on Save (Watch)",
         "category": "Assembly"
+      },
+      {
+        "command": "asm.initConfig",
+        "title": "Initialize uttori-asm.config.json",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.openPanel",
+        "title": "Open Project Panel",
+        "category": "Assembly"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "asm.build",
-          "when": "editorLangId == uttori-asm"
+          "command": "asm.build"
         },
         {
-          "command": "asm.toggleWatch",
-          "when": "editorLangId == uttori-asm"
+          "command": "asm.toggleWatch"
+        },
+        {
+          "command": "asm.initConfig"
+        },
+        {
+          "command": "asm.openPanel"
         }
       ],
       "editor/title/run": [
         {
           "command": "asm.build",
-          "when": "editorLangId == uttori-asm",
+          "when": "editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc",
           "group": "navigation"
         }
       ]
     },
     "languages": [
       {
-        "id": "uttori-asm",
+        "id": "uttori-snes",
         "aliases": [
-          "Uttori Assembly",
-          "uttori-asm"
+          "Uttori SNES",
+          "SNES Assembly"
         ],
         "extensions": [
           ".asm",
@@ -79,23 +93,69 @@
           ".s",
           ".inc"
         ],
+        "firstLine": "(?i)^\\s*(lorom|hirom|exlorom|exhirom|sa1rom|sfxrom|norom|fullsa1rom)\\b",
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "uttori-65xx",
+        "aliases": [
+          "Uttori 65xx",
+          "65xx Assembly"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "uttori-asm",
-        "scopeName": "source.uttori-asm",
-        "path": "./syntaxes/uttori-asm.tmLanguage.json"
+        "scopeName": "source.uttori-asm.base",
+        "path": "./syntaxes/uttori-asm-base.tmLanguage.json"
+      },
+      {
+        "language": "uttori-65xx",
+        "scopeName": "source.uttori-65xx",
+        "path": "./syntaxes/uttori-65xx.tmLanguage.json"
+      },
+      {
+        "language": "uttori-snes",
+        "scopeName": "source.uttori-snes",
+        "path": "./syntaxes/uttori-snes.tmLanguage.json"
       }
     ],
+    "snippets": [
+      {
+        "language": "uttori-snes",
+        "path": "./snippets/uttori-asm.json"
+      },
+      {
+        "language": "uttori-65xx",
+        "path": "./snippets/uttori-asm.json"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "uttori-asm",
+          "title": "Uttori Assembly",
+          "icon": "media/uttori-asm.svg"
+        }
+      ]
+    },
+    "views": {
+      "uttori-asm": [
+        {
+          "type": "webview",
+          "id": "uttori-asm.projectPanel",
+          "name": "Project"
+        }
+      ]
+    },
     "configuration": {
       "title": "Uttori Assembly",
       "properties": {
         "asm.configFile": {
           "type": "string",
           "default": "",
-          "description": "Path to asm.config.json relative to the workspace root. When empty, asm.config.json is discovered automatically."
+          "description": "Path to uttori-asm.config.json relative to the workspace root. When empty, uttori-asm.config.json is discovered automatically."
         },
         "asm.plugins": {
           "type": "array",
@@ -122,7 +182,7 @@
             ]
           },
           "default": [],
-          "description": "Plugin module specifiers appended to plugins from asm.config.json. Workspace Trust is required."
+          "description": "Plugin module specifiers appended to plugins from uttori-asm.config.json. Workspace Trust is required."
         },
         "asm.target": {
           "type": "string",
@@ -159,18 +219,29 @@
           "type": "string",
           "default": "",
           "description": "Optional base image file to patch when building."
+        },
+        "uttoriAsmLanguageServer.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the Uttori Assembly language server."
         }
       }
     }
   },
   "activationEvents": [],
   "engines": {
-    "vscode": "^1.134.0"
+    "vscode": "^1.128.0"
   },
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Built-in assembly support remains available, but workspace plugin modules and asm.config.json are disabled until the workspace is trusted.",
+      "description": "Built-in assembly support remains available, but workspace plugin modules and uttori-asm.config.json are disabled until the workspace is trusted.",
       "restrictedConfigurations": [
         "asm.configFile",
         "asm.plugins"

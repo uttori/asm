@@ -1,0 +1,129 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Uttori Assembly Base",
+  "scopeName": "source.uttori-asm.base",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#labels" },
+    { "include": "#numbers" },
+    { "include": "#mnemonics" },
+    { "include": "#pseudo-ops" },
+    { "include": "#directives" },
+    { "include": "#defines" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [{ "name": "comment.line.semicolon.uttori-asm", "match": ";.*$" }]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.uttori-asm",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [{ "name": "constant.character.escape.uttori-asm", "match": "\\\\." }]
+        },
+        {
+          "name": "string.quoted.single.uttori-asm",
+          "begin": "'",
+          "end": "'",
+          "patterns": [{ "name": "constant.character.escape.uttori-asm", "match": "\\\\." }]
+        }
+      ]
+    },
+    "mnemonics": {
+      "patterns": [
+        {
+          "name": "keyword.mnemonic.6502.uttori-asm",
+          "match": "\\b(?i:ADC|AND|ASL|BCC|BCS|BEQ|BIT|BMI|BNE|BPL|BRK|BVC|BVS|CLC|CLD|CLI|CLV|CMP|CPX|CPY|DEC|DEX|DEY|EOR|INC|INX|INY|JMP|JSR|LDA|LDX|LDY|LSR|NOP|ORA|PHA|PHP|PLA|PLP|ROL|ROR|RTI|RTS|SBC|SEC|SED|SEI|STA|STX|STY|TAX|TAY|TSX|TXA|TXS|TYA)\\b"
+        },
+        {
+          "name": "keyword.mnemonic.65c02.uttori-asm",
+          "match": "\\b(?i:BRA|PHX|PHY|PLX|PLY|STP|STZ|TRB|TSB|WAI)\\b"
+        },
+        {
+          "name": "keyword.mnemonic.65c02.uttori-asm",
+          "match": "\\b(?i:(BBR|BBS|RMB|SMB)[0-7])\\b"
+        },
+        {
+          "name": "keyword.mnemonic.65816.uttori-asm",
+          "match": "\\b(?i:BRL|COP|JML|JSL|MVN|MVP|PEA|PEI|PER|PHB|PHD|PHK|PLB|PLD|REP|RTL|SEP|TCD|TCS|TDC|TSC|TXY|TYX|WDM|XBA|XCE)\\b"
+        },
+        {
+          "name": "keyword.mnemonic.65816l.uttori-asm",
+          "match": "\\b(?i:ADCL|ANDL|CMPL|EORL|LDAL|ORAL|SBCL|STAL)\\b"
+        },
+        {
+          "name": "keyword.mnemonic.65816alt.uttori-asm",
+          "match": "\\b(?i:BGE|BLT|CPA|DEA|INA|SWA|TAD|TAS|TDA|TSA)\\b"
+        }
+      ]
+    },
+    "pseudo-ops": {
+      "patterns": [
+        {
+          "name": "support.function.pseudo.uttori-asm",
+          "match": "\\b(?i:db|dw|dl|dd|org|base|bank|skip|incbin|incsrc|include|arch|function)\\b"
+        },
+        {
+          "name": "keyword.control.conditional.uttori-asm",
+          "match": "\\b(?i:if|elseif|else|endif)\\b"
+        },
+        {
+          "name": "keyword.directive.macro.uttori-asm",
+          "match": "\\b(?i:macro|endmacro|namespace|struct|endstruct)\\b"
+        }
+      ]
+    },
+    "directives": {
+      "patterns": [
+        {
+          "name": "keyword.control.directive.uttori-asm",
+          "match": "(?i)(?<![A-Za-z0-9_])[.@][A-Za-z_][A-Za-z0-9_.]*(?![A-Za-z0-9_.:])"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.uttori-asm",
+          "match": "#?(\\$|0x)[0-9A-Fa-f]+"
+        },
+        {
+          "name": "constant.numeric.binary.uttori-asm",
+          "match": "#?(%|0b)[01]+"
+        },
+        {
+          "name": "constant.numeric.char.uttori-asm",
+          "match": "#'[^']'"
+        },
+        {
+          "name": "constant.numeric.decimal.uttori-asm",
+          "match": "#?(?<![A-Za-z0-9_.])[0-9]+"
+        }
+      ]
+    },
+    "labels": {
+      "patterns": [
+        {
+          "name": "entity.name.function.label.uttori-asm",
+          "match": "^\\s*[A-Za-z_.][A-Za-z0-9_.]*:"
+        },
+        { "name": "entity.name.function.label.local.uttori-asm", "match": "^\\s*[-+]+" }
+      ]
+    },
+    "defines": {
+      "patterns": [{ "name": "variable.other.define.uttori-asm", "match": "!\\w+" }]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.uttori-asm",
+          "match": "[-+/*^><|#\\[\\]()=.!&]"
+        }
+      ]
+    }
+  }
+}

@@ -4,6 +4,7 @@ import path from "node:path";
 import { Assembler, WorkspaceIndex, type AssemblerOptions } from "@uttori/asm-core";
 import {
   NodePluginLoader,
+  discoverProjectConfigurationPath,
   type LoadedProjectEnvironment,
   type PluginModuleRequest,
   type ProjectConfigurationDefaults,
@@ -73,10 +74,9 @@ export class ProjectEnvironmentController {
   ): Promise<ProjectEnvironmentState> {
     const cwd = path.resolve(settings.cwd);
     const pluginModules = configuredPluginModules(settings.plugins);
-    const configuredPath = settings.configFile
-      ? path.resolve(cwd, settings.configFile)
-      : path.join(cwd, "asm.config.json");
-    const hasWorkspaceConfiguration = Boolean(settings.configFile) || existsSync(configuredPath);
+    const configuredPath = discoverProjectConfigurationPath(cwd, settings.configFile);
+    const hasWorkspaceConfiguration =
+      Boolean(settings.configFile) || Boolean(configuredPath && existsSync(configuredPath));
     const workspacePluginsRequested = hasWorkspaceConfiguration || pluginModules.length > 0;
     const useHostDefaults =
       !settings.workspaceTrusted || (!hasWorkspaceConfiguration && pluginModules.length === 0);
@@ -87,8 +87,8 @@ export class ProjectEnvironmentController {
       const loaded = await loader.loadProjectEnvironment({
         cwd,
         allowProjectConfiguration: settings.workspaceTrusted,
-        ...(settings.workspaceTrusted && settings.configFile
-          ? { configFile: settings.configFile }
+        ...(settings.workspaceTrusted && (settings.configFile || configuredPath)
+          ? { configFile: settings.configFile ?? configuredPath }
           : {}),
         pluginModules: settings.workspaceTrusted ? pluginModules : [],
         bundledPlugins: this.options.bundledPlugins,
@@ -107,6 +107,8 @@ export class ProjectEnvironmentController {
         targetOptions: loaded.targetOptions,
         entryPoints: [...(settings.entryPoints ?? [])],
         includePaths: [...loaded.includePaths],
+        logger: this.options.logger,
+        cacheDir: path.join(cwd, ".uttori-asm", "cache"),
       });
       for (const [file, content] of overlays) index.updateDocument(file, content);
       if (overlays.size > 0 || (settings.entryPoints?.length ?? 0) > 0) index.reindex();

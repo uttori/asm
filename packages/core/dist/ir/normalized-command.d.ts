@@ -54,7 +54,7 @@ export type ParsedMacroInvocation = {
     args: string[];
 };
 export type ParsedIncludeTarget = {
-    directive: "include" | "incsrc";
+    directive: "include" | "incsrc" | "incbin";
     target: string;
 };
 export type ParsedLabelSplit = {

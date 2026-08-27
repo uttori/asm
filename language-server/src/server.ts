@@ -4,6 +4,11 @@ import path from "node:path";
 
 import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import {
+  discoverProjectConfigurationPath,
+  PROJECT_CONFIG_FILENAME,
+  validateProjectConfiguration,
+} from "@uttori/asm-plugin-loader-node";
+import {
   createConnection,
   Diagnostic,
   DiagnosticSeverity,
@@ -99,6 +104,14 @@ function resolveAgainstWorkspace(value: string): string {
   return path.isAbsolute(value) ? path.normalize(value) : path.resolve(workspaceRoot(), value);
 }
 
+function isProjectConfigFile(file: string): boolean {
+  const resolved = path.resolve(file);
+  if (settings.configFile && resolved === resolveAgainstWorkspace(settings.configFile)) {
+    return true;
+  }
+  return path.basename(file) === PROJECT_CONFIG_FILENAME;
+}
+
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
@@ -114,10 +127,10 @@ function pluginArray(value: unknown): readonly PluginModuleSetting[] | undefined
 }
 
 export function mergeServerSettings(previous: ServerSettings, value: unknown): ServerSettings {
-  if (!value || typeof value !== "object") return previous;
+  if (!value || typeof value !== "object") return applyConfigFileDefaults(previous);
   const next = value as Record<string, unknown>;
   const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(next, key);
-  return {
+  return applyConfigFileDefaults({
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
     plugins: pluginArray(next.plugins) ?? previous.plugins,
     target: has("target") ? stringValue(next.target) : previous.target,
@@ -130,6 +143,30 @@ export function mergeServerSettings(previous: ServerSettings, value: unknown): S
       typeof next.workspaceTrusted === "boolean"
         ? next.workspaceTrusted
         : previous.workspaceTrusted,
+  });
+}
+
+function applyConfigFileDefaults(next: ServerSettings): ServerSettings {
+  const discovered = discoverProjectConfigurationPath(workspaceRoot(), next.configFile);
+  if (!discovered || !fs.existsSync(discovered)) {
+    return next;
+  }
+  const relativeConfig = path.relative(workspaceRoot(), discovered) || path.basename(discovered);
+  let extras: ReturnType<typeof validateProjectConfiguration> = {};
+  try {
+    extras = validateProjectConfiguration(JSON.parse(fs.readFileSync(discovered, "utf8")));
+  } catch {
+    return { ...next, configFile: next.configFile ?? relativeConfig };
+  }
+  return {
+    ...next,
+    configFile: next.configFile ?? relativeConfig,
+    target: next.target ?? extras.target,
+    architecture: next.architecture ?? extras.architecture,
+    entryPoints: next.entryPoints.length > 0 ? next.entryPoints : (extras.entryPoints ?? []),
+    includePaths: next.includePaths.length > 0 ? next.includePaths : (extras.includePaths ?? []),
+    buildOutput: next.buildOutput ?? extras.buildOutput,
+    baseImage: next.baseImage ?? extras.baseImage,
   };
 }
 
@@ -151,7 +188,7 @@ function currentOverlays(): Map<string, string> {
 }
 
 function diagnosticUri(next: ServerSettings): string {
-  return pathToUri(resolveAgainstWorkspace(next.configFile ?? "asm.config.json"));
+  return pathToUri(resolveAgainstWorkspace(next.configFile ?? PROJECT_CONFIG_FILENAME));
 }
 
 function setConfigurationDiagnostic(
@@ -215,7 +252,14 @@ function scheduleReindex(): void {
   if (reindexTimer) clearTimeout(reindexTimer);
   reindexTimer = setTimeout(() => {
     reindexTimer = undefined;
+    connection.console.info("Full workspace reindex starting");
     index.reindex();
+    const status = index.getStatus();
+    connection.console.info(
+      `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms ` +
+        `(analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, ` +
+        `files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`,
+    );
     publishAllDiagnostics();
   }, 150);
 }
@@ -268,7 +312,9 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
       workspaceSymbolProvider: true,
       renameProvider: { prepareProvider: true },
       signatureHelpProvider: { triggerCharacters: [" ", ","] },
-      executeCommandProvider: { commands: ["asm.build"] },
+      // Do not advertise `asm.build` here. The VS Code client registers that
+      // command for the palette/UI; vscode-languageclient would also register
+      // advertised executeCommandProvider IDs and throw "already exists".
       semanticTokensProvider: { legend: semanticTokensLegend, full: true },
     },
   };
@@ -378,11 +424,42 @@ connection.onRequest("asm/projectMetadata", async () => {
   };
 });
 
+connection.onRequest("asm/status", async () => {
+  await configurationQueue;
+  if (!index) {
+    return {
+      fileCount: 0,
+      symbolCount: 0,
+      referenceCount: 0,
+      errorCount: 0,
+      entryPoints: settings.entryPoints,
+      includePaths: settings.includePaths,
+      lastReindexCachedRoots: 0,
+      lastReindexAnalyzedRoots: 0,
+      configFile: settings.configFile,
+      target: settings.target,
+      architecture: settings.architecture,
+      buildOutput: settings.buildOutput,
+      baseImage: settings.baseImage,
+    };
+  }
+  return {
+    ...index.getStatus(),
+    configFile: settings.configFile,
+    target: settings.target,
+    architecture: settings.architecture,
+    buildOutput: settings.buildOutput,
+    baseImage: settings.baseImage,
+    entryPoints: settings.entryPoints,
+    includePaths: settings.includePaths.length > 0 ? settings.includePaths : index.includePaths,
+  };
+});
+
 connection.onDidChangeWatchedFiles((params) => {
   let reload = false;
   for (const change of params.changes) {
     const file = uriToPath(change.uri);
-    if (path.resolve(file) === resolveAgainstWorkspace(settings.configFile ?? "asm.config.json")) {
+    if (isProjectConfigFile(file)) {
       reload = true;
     } else {
       index.invalidateFile(file);
@@ -393,8 +470,12 @@ connection.onDidChangeWatchedFiles((params) => {
 });
 
 documents.onDidOpen((event) => {
-  index.openDocument(uriToPath(event.document.uri), event.document.getText());
+  const file = uriToPath(event.document.uri);
+  index.openDocument(file, event.document.getText());
   publishAllDiagnostics();
+  if (index.isFileDirtyOrUncovered(file)) {
+    scheduleReindex();
+  }
 });
 
 documents.onDidChangeContent((event) => {

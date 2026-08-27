@@ -39,6 +39,21 @@
         "type": "string",
         "minLength": 1
       }
+    },
+    "entryPoints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "buildOutput": {
+      "type": "string",
+      "minLength": 1
+    },
+    "baseImage": {
+      "type": "string",
+      "minLength": 1
     }
   }
 }

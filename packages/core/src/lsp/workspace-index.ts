@@ -4,7 +4,6 @@ import type { AssemblerEnvironment } from "../plugin/environment.js";
 import type { ToolingCatalog } from "../plugin/contracts.js";
 import { ASAR_SYNTAX_PROFILE } from "../syntax-profile.js";
 import type {
-  AssemblyAnalysisResult,
   AssemblyDiagnostic,
   AssemblyIncludeEdge,
   AssemblySymbolDefinition,
@@ -12,6 +11,7 @@ import type {
 } from "../diagnostics.js";
 import { OverlayFileProvider } from "./overlay-file-provider.js";
 import type { DirectiveDescriptor } from "./directive-catalog.js";
+import { hashBytes, RootAnalysisCache, type CachedRootAnalysis } from "./root-analysis-cache.js";
 
 /**
  * The per-file slice of analysis artifacts produced for a single source file.
@@ -43,14 +43,30 @@ export type WorkspaceIndexOptions = {
   architecture?: string;
   /** Validated options for the selected target contribution. */
   targetOptions?: Readonly<Record<string, unknown>>;
+  /** Optional logger for analysis timing. */
+  logger?: { info(message: string): void };
+  /** Directory for persisted full-pass analysis artifacts. When omitted, caching is disabled. */
+  cacheDir?: string;
 };
 
 export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environment" | "target">;
 
-type RootAnalysis = Pick<
-  AssemblyAnalysisResult,
-  "diagnostics" | "symbols" | "references" | "includeEdges"
->;
+export type RootAnalysis = CachedRootAnalysis;
+
+/**
+ * Snapshot of workspace analysis used by the project panel and status bar.
+ */
+export type WorkspaceIndexStatus = {
+  fileCount: number;
+  symbolCount: number;
+  referenceCount: number;
+  errorCount: number;
+  entryPoints: string[];
+  includePaths: string[];
+  lastReindexDurationMs?: number;
+  lastReindexCachedRoots: number;
+  lastReindexAnalyzedRoots: number;
+};
 
 /**
  * Indexes one or more assembly projects for editor tooling.
@@ -95,6 +111,20 @@ export class WorkspaceIndex {
   readonly toolingCatalog: ToolingCatalog;
   readonly directiveCatalog: readonly DirectiveDescriptor[];
   readonly directivePrefixes: readonly string[];
+  readonly logger?: { info(message: string): void };
+  readonly cache?: RootAnalysisCache;
+
+  /** Duration of the most recent {@link reindex} call in milliseconds. */
+  lastReindexDurationMs?: number;
+
+  /** How many roots were served from disk cache during the last reindex. */
+  lastReindexCachedRoots = 0;
+
+  /** How many roots were freshly analysed during the last reindex. */
+  lastReindexAnalyzedRoots = 0;
+
+  /** Whether the most recent {@link analyzeRoot} call was a disk-cache hit. */
+  lastRootServedFromCache = false;
 
   /**
    * Creates a workspace index.
@@ -113,6 +143,8 @@ export class WorkspaceIndex {
     this.directivePrefixes =
       this.environment.getTarget(this.target)?.syntaxProfile?.directivePrefixes ??
       ASAR_SYNTAX_PROFILE.directivePrefixes;
+    this.logger = options.logger;
+    this.cache = options.cacheDir ? new RootAnalysisCache(options.cacheDir) : undefined;
   }
 
   /**
@@ -141,8 +173,20 @@ export class WorkspaceIndex {
   openDocument(file: string, content: string): void {
     const resolved = path.resolve(file);
     this.overlay.set(resolved, content);
-    this.dirtyFiles.add(resolved);
-    this.reindex();
+    const diskContent = this.readDiskRoot(resolved);
+    if (content !== diskContent) {
+      this.dirtyFiles.add(resolved);
+    }
+    // Keep a completed full-pass analysis. Overwriting it with a local pass
+    // would drop covering artifacts (and hover/outline) until the next reindex.
+    if (!this.isCoveredByFullPass(resolved)) {
+      const result = this.analyzeRoot(resolved, { followIncludes: false });
+      if (result) {
+        this.rootAnalyses.set(resolved, { ...result, diagnostics: [], followedIncludes: false });
+      }
+    }
+    const roots = this.resolveRoots();
+    this.rebuildMergedIndex(roots.includes(resolved) ? roots : [...roots, resolved]);
   }
 
   /**
@@ -279,11 +323,95 @@ export class WorkspaceIndex {
   }
 
   /**
+   * Returns whether a file still needs a full-pass reindex.
+   * True when the file is dirty, a full rebuild is pending, or no covering
+   * full-pass analysis exists yet.
+   * @param {string} file The absolute path of the file.
+   * @returns {boolean} Whether callers should schedule {@link reindex}.
+   */
+  isFileDirtyOrUncovered(file: string): boolean {
+    const resolved = path.resolve(file);
+    if (this.dirtyFiles.has(resolved) || this.fullReindexRequired) {
+      return true;
+    }
+    return !this.isCoveredByFullPass(resolved);
+  }
+
+  /**
+   * Returns a snapshot of index size and last-reindex timing for the project panel.
+   * @returns {WorkspaceIndexStatus} The current status snapshot.
+   */
+  getStatus(): WorkspaceIndexStatus {
+    let errorCount = 0;
+    for (const bucket of this.fileAnalysis.values()) {
+      errorCount += bucket.diagnostics.filter((entry) => entry.severity === "error").length;
+    }
+    return {
+      fileCount: this.fileAnalysis.size,
+      symbolCount: this.allSymbols.length,
+      referenceCount: this.allReferences.length,
+      errorCount,
+      entryPoints: [...this.entryPoints],
+      includePaths: [...this.includePaths],
+      ...(this.lastReindexDurationMs === undefined
+        ? {}
+        : { lastReindexDurationMs: this.lastReindexDurationMs }),
+      lastReindexCachedRoots: this.lastReindexCachedRoots,
+      lastReindexAnalyzedRoots: this.lastReindexAnalyzedRoots,
+    };
+  }
+
+  /**
+   * True when a followIncludes analysis already owns this file as a root or include.
+   * @param {string} file The absolute path of the file.
+   * @returns {boolean} Whether a covering full-pass analysis exists.
+   */
+  isCoveredByFullPass(file: string): boolean {
+    const resolved = path.resolve(file);
+    for (const [root, analysis] of this.rootAnalyses) {
+      if (!analysis.followedIncludes) {
+        continue;
+      }
+      if (root === resolved) {
+        return true;
+      }
+      if (
+        analysis.includeEdges.some((edge) => edge.fromFile === resolved || edge.toFile === resolved)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * True when a different full-pass root already includes this file.
+   * Used to avoid analysing included files as standalone roots.
+   * @param {string} file The absolute path of the file.
+   * @returns {boolean} Whether another covering full-pass root exists.
+   */
+  isCoveredByOtherFullPassRoot(file: string): boolean {
+    const resolved = path.resolve(file);
+    for (const [root, analysis] of this.rootAnalyses) {
+      if (!analysis.followedIncludes || root === resolved) {
+        continue;
+      }
+      if (
+        analysis.includeEdges.some((edge) => edge.fromFile === resolved || edge.toFile === resolved)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Re-runs analysis for every root and rebuilds all per-file buckets.
    * Roots are the configured entry points, or every open document when no
    * entry points are configured.
    */
   reindex(): void {
+    const started = Date.now();
     const roots = this.resolveRoots();
     const activeRoots = new Set(roots);
     for (const cachedRoot of this.rootAnalyses.keys()) {
@@ -292,7 +420,7 @@ export class WorkspaceIndex {
       }
     }
 
-    const analyzeAll = this.fullReindexRequired || this.dirtyFiles.size === 0;
+    const analyzeAll = this.fullReindexRequired;
     const dirtyFiles = [...this.dirtyFiles];
     const hasUnknownDependency = dirtyFiles.some(
       (file) => !roots.some((root) => this.rootDependsOnFile(root, file)),
@@ -306,10 +434,20 @@ export class WorkspaceIndex {
               dirtyFiles.some((file) => this.rootDependsOnFile(root, file)),
           );
 
+    let cachedRoots = 0;
+    let analyzedRoots = 0;
     for (const root of rootsToAnalyze) {
-      const result = this.analyzeRoot(root);
+      if (this.isCoveredByOtherFullPassRoot(root)) {
+        continue;
+      }
+      const result = this.analyzeRoot(root, { followIncludes: true });
       if (result) {
         this.rootAnalyses.set(root, result);
+        if (this.lastRootServedFromCache) {
+          cachedRoots += 1;
+        } else {
+          analyzedRoots += 1;
+        }
       } else {
         this.rootAnalyses.delete(root);
       }
@@ -317,6 +455,9 @@ export class WorkspaceIndex {
 
     this.dirtyFiles.clear();
     this.fullReindexRequired = false;
+    this.lastReindexDurationMs = Date.now() - started;
+    this.lastReindexCachedRoots = cachedRoots;
+    this.lastReindexAnalyzedRoots = analyzedRoots;
     this.rebuildMergedIndex(roots);
   }
 
@@ -340,14 +481,36 @@ export class WorkspaceIndex {
   /**
    * Analyses one root using the current overlay snapshot.
    * @param {string} root The root source file.
+   * @param {{ followIncludes?: boolean }} [options] Analysis options.
    * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
    */
-  analyzeRoot(root: string): RootAnalysis | undefined {
+  analyzeRoot(root: string, options: { followIncludes?: boolean } = {}): RootAnalysis | undefined {
     const content = this.overlay.get(root) ?? this.readDiskRoot(root);
     if (content === undefined) {
       return undefined;
     }
 
+    const followIncludes = options.followIncludes ?? true;
+    this.lastRootServedFromCache = false;
+    this.logger?.info(
+      `Analyzing ${path.basename(root)} (followIncludes=${followIncludes}, ${content.length} chars)…`,
+    );
+
+    if (followIncludes && this.cache) {
+      const cached = this.cache.read(root, this.cacheIdentity(), (file) => this.hashFile(file));
+      if (cached) {
+        this.lastRootServedFromCache = true;
+        this.logger?.info(
+          `Using cached analysis for ${path.basename(root)} ` +
+            `(followIncludes=true, symbols=${cached.symbols.length}, ` +
+            `refs=${cached.references.length}, edges=${cached.includeEdges.length}, ` +
+            `errors=${cached.diagnostics.length})`,
+        );
+        return cached;
+      }
+    }
+
+    const started = Date.now();
     const provider = new OverlayFileProvider(this.overlay);
     const assembler = new Assembler({
       environment: this.environment,
@@ -357,16 +520,35 @@ export class WorkspaceIndex {
       fileProvider: provider,
     });
     assembler.includePaths = this.deriveIncludePaths(root);
+    assembler.followIncludes = followIncludes;
 
     try {
-      const result = assembler.analyzeSource(content, root, 0);
-      return {
+      const result = assembler.analyzeSource(content, root, 0, { followIncludes });
+      const analysis: RootAnalysis = {
+        followedIncludes: followIncludes,
         diagnostics: result.diagnostics,
         symbols: result.symbols,
         references: result.references,
         includeEdges: result.includeEdges,
       };
-    } catch {
+      this.logger?.info(
+        `Analyzed ${path.basename(root)} in ${Date.now() - started}ms ` +
+          `(followIncludes=${followIncludes}, symbols=${result.symbols.length}, ` +
+          `refs=${result.references.length}, edges=${result.includeEdges.length}, ` +
+          `errors=${result.diagnostics.length})`,
+      );
+      if (followIncludes && this.cache) {
+        const fileHashes = this.collectFileHashes(root, result.includeEdges);
+        if (fileHashes) {
+          this.cache.write(root, this.cacheIdentity(), fileHashes, analysis);
+        }
+      }
+      return analysis;
+    } catch (error) {
+      this.logger?.info(
+        `Analysis failed for ${path.basename(root)} after ${Date.now() - started}ms: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
       // analyzeSource recovers internally; guard against unexpected throws so
       // one broken root never blanks out the whole workspace index.
       return undefined;
@@ -377,6 +559,17 @@ export class WorkspaceIndex {
 
   /**
    * Rebuilds workspace-wide buckets from cached per-root artifacts.
+   *
+   * Files that appear as include targets of a full-pass root analysis are
+   * considered "covered" — the covering root already has their correct
+   * symbols and diagnostics (assembled in proper parent context). When such
+   * a file also exists as a standalone root entry (e.g. because it was
+   * opened directly), its standalone artifacts are skipped so they cannot
+   * produce false "missing define" diagnostics or duplicate outline symbols.
+   *
+   * Include edges are always merged regardless of coverage (navigation must
+   * work even before the full reindex completes).
+   *
    * @param {string[]} roots The active roots in deterministic order.
    */
   rebuildMergedIndex(roots: string[]): void {
@@ -386,12 +579,27 @@ export class WorkspaceIndex {
     this.allReferences = [];
     const seenEdges = new Set<string>();
 
+    // Build the set of files whose artifacts should come from a covering root
+    // rather than from their own (potentially no-context) standalone analysis.
+    // Only full-pass analyses (followedIncludes: true) qualify as covering roots
+    // because a local pass does not descend into includes.
+    const coveredByFullPass = new Set<string>();
+    for (const root of roots) {
+      const result = this.rootAnalyses.get(root);
+      if (result?.followedIncludes) {
+        for (const edge of result.includeEdges) {
+          coveredByFullPass.add(edge.toFile);
+        }
+      }
+    }
+
     for (const root of roots) {
       const result = this.rootAnalyses.get(root);
       if (!result) {
         continue;
       }
-      this.ingestArtifacts(root, result.diagnostics, result.symbols, result.references);
+
+      // Always collect include edges for cross-file navigation.
       for (const edge of result.includeEdges) {
         const key = `${edge.fromFile}\u0000${edge.toFile}`;
         if (seenEdges.has(key)) {
@@ -400,6 +608,16 @@ export class WorkspaceIndex {
         seenEdges.add(key);
         this.includeEdges.push(edge);
       }
+
+      // If this root is already covered by a full-pass analysis of another root,
+      // skip ingesting its own artifacts — the covering root produced them in the
+      // correct assembly context (with parent defines, correct conditional branches,
+      // etc.), so the standalone view is redundant and may be wrong.
+      if (coveredByFullPass.has(root)) {
+        continue;
+      }
+
+      this.ingestArtifacts(root, result.diagnostics, result.symbols, result.references);
     }
   }
 
@@ -481,5 +699,66 @@ export class WorkspaceIndex {
   deriveIncludePaths(root: string): string[] {
     const directory = path.dirname(root);
     return [...new Set([directory, ...this.includePaths])];
+  }
+
+  /**
+   * Assembler identity stored alongside cached analysis so a target or include-path
+   * change cannot reuse stale artifacts.
+   * @returns {import("./root-analysis-cache.js").RootAnalysisCacheIdentity} The identity.
+   */
+  cacheIdentity(): { target: string; architecture: string; includePaths: readonly string[] } {
+    return {
+      target: this.target,
+      architecture: this.architecture,
+      includePaths: this.includePaths,
+    };
+  }
+
+  /**
+   * Hashes overlay or disk bytes for cache invalidation. Works for text and binary includes.
+   * @param {string} file Absolute path to hash.
+   * @returns {string | undefined} Hex digest, or undefined when unreadable.
+   */
+  hashFile(file: string): string | undefined {
+    try {
+      const overlay = this.overlay.get(file);
+      if (overlay !== undefined) {
+        return hashBytes(new Uint8Array(Buffer.from(overlay, "utf8")));
+      }
+      const provider = new OverlayFileProvider(this.overlay);
+      const stat = provider.stat(file);
+      if (!stat.exists || !stat.readable) {
+        return undefined;
+      }
+      return hashBytes(provider.readFile(file));
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Collects content hashes for a root and every file in its include graph.
+   * @param {string} root Absolute root path.
+   * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
+   * @returns {Record<string, string> | undefined} Path-to-hash map, or undefined when incomplete.
+   */
+  collectFileHashes(
+    root: string,
+    includeEdges: AssemblyIncludeEdge[],
+  ): Record<string, string> | undefined {
+    const files = new Set<string>([root]);
+    for (const edge of includeEdges) {
+      files.add(edge.fromFile);
+      files.add(edge.toFile);
+    }
+    const hashes: Record<string, string> = {};
+    for (const file of [...files].sort()) {
+      const hash = this.hashFile(file);
+      if (typeof hash !== "string") {
+        return undefined;
+      }
+      hashes[file] = hash;
+    }
+    return hashes;
   }
 }

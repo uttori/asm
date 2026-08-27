@@ -8,7 +8,11 @@ import {
   type PluginModuleActivationRequest,
 } from "@uttori/asm-core/plugin";
 
-import { readProjectConfiguration, type LoadedConfigurationFile } from "./configuration.js";
+import {
+  PROJECT_CONFIG_FILENAME,
+  readProjectConfiguration,
+  type LoadedConfigurationFile,
+} from "./configuration.js";
 import type {
   LoadedProjectEnvironment,
   LoadProjectEnvironmentOptions,
@@ -118,7 +122,7 @@ const resolveExternalModule = async (request: RequestedModule): Promise<string> 
     ) {
       return normalizeFileUrl(pathToFileURL(path.resolve(request.baseDirectory, request.module)));
     }
-    const parent = pathToFileURL(path.join(request.baseDirectory, "asm.config.json"));
+    const parent = pathToFileURL(path.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
     return await normalizeFileUrl(new URL(import.meta.resolve(request.module, parent.href)));
   } catch (error) {
     throw moduleLoadError(request, "module could not be resolved", undefined, error);

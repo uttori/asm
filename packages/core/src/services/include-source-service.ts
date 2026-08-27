@@ -20,6 +20,8 @@ export interface IncludeSourceHost {
   readonly programModelBuilder: ProgramModelBuilder;
   lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
   recordIncludeEdge(fromFile: string, toFile: string): void;
+  /** When false, include directives record an edge without parsing the target. */
+  readonly followIncludes: boolean;
 }
 
 /**
@@ -137,6 +139,14 @@ export class IncludeSourceService {
     const previousFile = this.host.currentFile;
     this.host.includeStack.push(previousFile);
     this.host.recordIncludeEdge(previousFile, resolvedPath);
+
+    // If followIncludes is false, we don't want to parse the included file.
+    // This is used for editor-style analysis where we don't want to parse the included file.
+    // We still record the include edge so that we can provide hover information for the include directive.
+    if (this.host.followIncludes === false) {
+      this.host.includeStack.pop();
+      return;
+    }
 
     try {
       const content = this.readTextFile(resolvedPath, "utf8");

@@ -924,6 +924,8 @@ test("analyzeSource accumulates multiple diagnostics and references", (t) => {
   const result = assembler.analyzeSource(
     ["db MissingOne", "db MissingTwo"].join("\n"),
     "analysis.asm",
+    0,
+    { stages: ["collectDefinitions", "resolveLayout", "emitProgram"] },
   );
 
   t.true(result.diagnostics.length >= 2);
@@ -969,10 +971,13 @@ test("lowered include executes nested conditional control flow", (t) => {
 
 test("analyzeWorkspace isolates documents into separate analysis sessions", (t) => {
   const assembler = new Assembler();
-  const results = assembler.analyzeWorkspace([
-    { source: "SharedLabel:\n  db $01", sourceFile: "a.asm" },
-    { source: "db SharedLabel", sourceFile: "b.asm" },
-  ]);
+  const results = assembler.analyzeWorkspace(
+    [
+      { source: "SharedLabel:\n  db $01", sourceFile: "a.asm" },
+      { source: "db SharedLabel", sourceFile: "b.asm" },
+    ],
+    { stages: ["collectDefinitions", "resolveLayout", "emitProgram"] },
+  );
 
   t.is(results.length, 2);
   t.true(

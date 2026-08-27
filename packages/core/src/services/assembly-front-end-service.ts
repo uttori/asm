@@ -2,7 +2,9 @@ import {
   preprocessBlockCommands as preprocessCommandBlock,
   removeInlineComment,
   splitInlineCommands,
+  splitSourcedInlineCommands,
   splitCommandIntoWords,
+  type SourcedCommand,
 } from "./command-text-service.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
 import { ProgramModelBuilder } from "./program-model-builder.js";
@@ -41,6 +43,10 @@ export class AssemblyFrontEndService {
       passProgramCache: this.host.passProgramCache,
       preprocessBlockCommands: (source: string) => this.preprocessBlockCommands(source),
       splitInlineCommands: (commands: string[]) => this.splitInlineCommands(commands),
+      preprocessSourcedBlockCommands: (source: string) =>
+        this.preprocessSourcedBlockCommands(source),
+      splitSourcedInlineCommands: (commands: SourcedCommand[]) =>
+        this.splitSourcedInlineCommands(commands),
       createLoopCommandNode: (command: string, sourceFile?: string, sourceLine?: number) =>
         this.createLoopCommandNode(command, sourceFile, sourceLine),
       shouldEndifCloseInnermostWhile: (
@@ -57,9 +63,18 @@ export class AssemblyFrontEndService {
    * @returns {string[]} The normalized commands.
    */
   preprocessBlockCommands(block: string): string[] {
+    return this.preprocessSourcedBlockCommands(block).map((command) => command.text);
+  }
+
+  /**
+   * Preprocesses raw source blocks, tagging each command with its original line.
+   * @param {string} block The raw source block.
+   * @returns {SourcedCommand[]} The normalized sourced commands.
+   */
+  preprocessSourcedBlockCommands(block: string): SourcedCommand[] {
     const processed = preprocessCommandBlock(block, this.commandBuffer, this.host.syntaxProfile);
     this.commandBuffer = processed.commandBuffer;
-    return processed.commands;
+    return processed.sourcedCommands;
   }
 
   /**
@@ -69,6 +84,15 @@ export class AssemblyFrontEndService {
    */
   splitInlineCommands(commands: string[]): string[] {
     return splitInlineCommands(commands, this.host.syntaxProfile);
+  }
+
+  /**
+   * Splits sourced statements according to the active target's source grammar.
+   * @param {SourcedCommand[]} commands Sourced commands to split.
+   * @returns {SourcedCommand[]} Profile-aware sourced command statements.
+   */
+  splitSourcedInlineCommands(commands: SourcedCommand[]): SourcedCommand[] {
+    return splitSourcedInlineCommands(commands, this.host.syntaxProfile);
   }
 
   /**

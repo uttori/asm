@@ -1,7 +1,8 @@
 import type { AssemblerEnvironment } from "../plugin/environment.js";
 import type { ToolingCatalog } from "../plugin/contracts.js";
-import type { AssemblyAnalysisResult, AssemblyDiagnostic, AssemblyIncludeEdge, AssemblySymbolDefinition, AssemblySymbolReference } from "../diagnostics.js";
+import type { AssemblyDiagnostic, AssemblyIncludeEdge, AssemblySymbolDefinition, AssemblySymbolReference } from "../diagnostics.js";
 import type { DirectiveDescriptor } from "./directive-catalog.js";
+import { RootAnalysisCache, type CachedRootAnalysis } from "./root-analysis-cache.js";
 /**
  * The per-file slice of analysis artifacts produced for a single source file.
  */
@@ -31,9 +32,29 @@ export type WorkspaceIndexOptions = {
     architecture?: string;
     /** Validated options for the selected target contribution. */
     targetOptions?: Readonly<Record<string, unknown>>;
+    /** Optional logger for analysis timing. */
+    logger?: {
+        info(message: string): void;
+    };
+    /** Directory for persisted full-pass analysis artifacts. When omitted, caching is disabled. */
+    cacheDir?: string;
 };
 export type WorkspaceIndexConfiguration = Omit<WorkspaceIndexOptions, "environment" | "target">;
-type RootAnalysis = Pick<AssemblyAnalysisResult, "diagnostics" | "symbols" | "references" | "includeEdges">;
+export type RootAnalysis = CachedRootAnalysis;
+/**
+ * Snapshot of workspace analysis used by the project panel and status bar.
+ */
+export type WorkspaceIndexStatus = {
+    fileCount: number;
+    symbolCount: number;
+    referenceCount: number;
+    errorCount: number;
+    entryPoints: string[];
+    includePaths: string[];
+    lastReindexDurationMs?: number;
+    lastReindexCachedRoots: number;
+    lastReindexAnalyzedRoots: number;
+};
 /**
  * Indexes one or more assembly projects for editor tooling.
  *
@@ -55,7 +76,7 @@ export declare class WorkspaceIndex {
     /** All symbol references across the workspace (for find-references). */
     allReferences: AssemblySymbolReference[];
     /** Cached complete analysis artifacts for each configured root. */
-    readonly rootAnalyses: Map<string, RootAnalysis>;
+    readonly rootAnalyses: Map<string, CachedRootAnalysis>;
     /** Files whose content changed since the last analysis. */
     readonly dirtyFiles: Set<string>;
     /** Whether configuration changes require every root to be rebuilt. */
@@ -69,6 +90,18 @@ export declare class WorkspaceIndex {
     readonly toolingCatalog: ToolingCatalog;
     readonly directiveCatalog: readonly DirectiveDescriptor[];
     readonly directivePrefixes: readonly string[];
+    readonly logger?: {
+        info(message: string): void;
+    };
+    readonly cache?: RootAnalysisCache;
+    /** Duration of the most recent {@link reindex} call in milliseconds. */
+    lastReindexDurationMs?: number;
+    /** How many roots were served from disk cache during the last reindex. */
+    lastReindexCachedRoots: number;
+    /** How many roots were freshly analysed during the last reindex. */
+    lastReindexAnalyzedRoots: number;
+    /** Whether the most recent {@link analyzeRoot} call was a disk-cache hit. */
+    lastRootServedFromCache: boolean;
     /**
      * Creates a workspace index.
      * @param {WorkspaceIndexOptions} [options] Initial index configuration.
@@ -161,6 +194,32 @@ export declare class WorkspaceIndex {
      */
     getAnalyzedFiles(): string[];
     /**
+     * Returns whether a file still needs a full-pass reindex.
+     * True when the file is dirty, a full rebuild is pending, or no covering
+     * full-pass analysis exists yet.
+     * @param {string} file The absolute path of the file.
+     * @returns {boolean} Whether callers should schedule {@link reindex}.
+     */
+    isFileDirtyOrUncovered(file: string): boolean;
+    /**
+     * Returns a snapshot of index size and last-reindex timing for the project panel.
+     * @returns {WorkspaceIndexStatus} The current status snapshot.
+     */
+    getStatus(): WorkspaceIndexStatus;
+    /**
+     * True when a followIncludes analysis already owns this file as a root or include.
+     * @param {string} file The absolute path of the file.
+     * @returns {boolean} Whether a covering full-pass analysis exists.
+     */
+    isCoveredByFullPass(file: string): boolean;
+    /**
+     * True when a different full-pass root already includes this file.
+     * Used to avoid analysing included files as standalone roots.
+     * @param {string} file The absolute path of the file.
+     * @returns {boolean} Whether another covering full-pass root exists.
+     */
+    isCoveredByOtherFullPassRoot(file: string): boolean;
+    /**
      * Re-runs analysis for every root and rebuilds all per-file buckets.
      * Roots are the configured entry points, or every open document when no
      * entry points are configured.
@@ -176,11 +235,25 @@ export declare class WorkspaceIndex {
     /**
      * Analyses one root using the current overlay snapshot.
      * @param {string} root The root source file.
+     * @param {{ followIncludes?: boolean }} [options] Analysis options.
      * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
      */
-    analyzeRoot(root: string): RootAnalysis | undefined;
+    analyzeRoot(root: string, options?: {
+        followIncludes?: boolean;
+    }): RootAnalysis | undefined;
     /**
      * Rebuilds workspace-wide buckets from cached per-root artifacts.
+     *
+     * Files that appear as include targets of a full-pass root analysis are
+     * considered "covered" — the covering root already has their correct
+     * symbols and diagnostics (assembled in proper parent context). When such
+     * a file also exists as a standalone root entry (e.g. because it was
+     * opened directly), its standalone artifacts are skipped so they cannot
+     * produce false "missing define" diagnostics or duplicate outline symbols.
+     *
+     * Include edges are always merged regardless of coverage (navigation must
+     * work even before the full reindex completes).
+     *
      * @param {string[]} roots The active roots in deterministic order.
      */
     rebuildMergedIndex(roots: string[]): void;
@@ -215,6 +288,28 @@ export declare class WorkspaceIndex {
      * @returns {string[]} The include paths to hand to the assembler.
      */
     deriveIncludePaths(root: string): string[];
+    /**
+     * Assembler identity stored alongside cached analysis so a target or include-path
+     * change cannot reuse stale artifacts.
+     * @returns {import("./root-analysis-cache.js").RootAnalysisCacheIdentity} The identity.
+     */
+    cacheIdentity(): {
+        target: string;
+        architecture: string;
+        includePaths: readonly string[];
+    };
+    /**
+     * Hashes overlay or disk bytes for cache invalidation. Works for text and binary includes.
+     * @param {string} file Absolute path to hash.
+     * @returns {string | undefined} Hex digest, or undefined when unreadable.
+     */
+    hashFile(file: string): string | undefined;
+    /**
+     * Collects content hashes for a root and every file in its include graph.
+     * @param {string} root Absolute root path.
+     * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
+     * @returns {Record<string, string> | undefined} Path-to-hash map, or undefined when incomplete.
+     */
+    collectFileHashes(root: string, includeEdges: AssemblyIncludeEdge[]): Record<string, string> | undefined;
 }
-export {};
 //# sourceMappingURL=workspace-index.d.ts.map

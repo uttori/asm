@@ -17,6 +17,8 @@ import {
   NodePluginLoader,
   loadProjectEnvironment,
   validateProjectConfiguration,
+  discoverProjectConfigurationPath,
+  readProjectConfiguration,
 } from "../src/index.js";
 
 const fixtures = fileURLToPath(new URL("./fixtures/", import.meta.url));
@@ -52,6 +54,37 @@ test("configuration validation rejects unknown keys and malformed plugin entries
     { instanceOf: PluginError },
   );
   t.regex(malformed.message, /plugins\[0\].*unknown field.*extra/i);
+});
+
+test("configuration accepts editor extra fields and discovers uttori-asm.config.json", async (t) => {
+  const parsed = validateProjectConfiguration({
+    target: "snes",
+    entryPoints: ["Chou.asm"],
+    includePaths: ["./"],
+    buildOutput: "Chou.sfc",
+    baseImage: "base.sfc",
+  });
+  t.deepEqual(parsed.entryPoints, ["Chou.asm"]);
+  t.is(parsed.buildOutput, "Chou.sfc");
+  t.is(parsed.baseImage, "base.sfc");
+
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-asm-config-discover-"));
+  try {
+    t.is(discoverProjectConfigurationPath(directory), undefined);
+    await fs.writeFile(
+      path.join(directory, "uttori-asm.config.json"),
+      JSON.stringify({ target: "snes", entryPoints: ["main.asm"] }),
+    );
+    t.is(
+      discoverProjectConfigurationPath(directory),
+      path.join(directory, "uttori-asm.config.json"),
+    );
+    const loaded = await readProjectConfiguration(directory);
+    t.is(loaded.path, path.join(directory, "uttori-asm.config.json"));
+    t.deepEqual(loaded.configuration.entryPoints, ["main.asm"]);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("generic CLI options parse repeatable plugins, includes, and namespaced values", (t) => {
@@ -356,7 +389,7 @@ test("duplicate resolved modules are rejected before activation", async (t) => {
   t.regex(error.message, /same module.*relative-plugin\.mjs/i);
 });
 
-test("a clean SNES project builds from asm.config.json through the generic CLI", async (t) => {
+test("a clean SNES project builds from uttori-asm.config.json through the generic CLI", async (t) => {
   const project = path.join(fixtures, "snes-project");
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-asm-loader-cli-"));
   const output = path.join(temporary, "main.sfc");
@@ -365,7 +398,7 @@ test("a clean SNES project builds from asm.config.json through the generic CLI",
       path.join(project, "main.asm"),
       output,
       "--config",
-      path.join(project, "asm.config.json"),
+      path.join(project, "uttori-asm.config.json"),
       "--verbose",
     ]);
     t.is(exitCode, 0);

@@ -60,7 +60,7 @@ npm install
 
 ### Zero-configuration CLI
 
-When no `asm.config.json` and no explicit `--plugin` are present, the repository CLI selects this bundled SNES target automatically:
+When no `uttori-asm.config.json` and no explicit `--plugin` are present, the repository CLI selects this bundled SNES target automatically:
 
 ```sh
 npm run cli -- main.asm main.sfc
@@ -82,7 +82,7 @@ Useful CLI options are:
 
 | Option | Meaning |
 | --- | --- |
-| `--config path` | Load a particular `asm.config.json` |
+| `--config path` | Load a particular `uttori-asm.config.json` |
 | `--plugin module` | Append a plugin module; repeatable |
 | `--target id` | Override the configured target |
 | `--architecture id` | Override the initial architecture |
@@ -96,7 +96,7 @@ Unlike Asar's CLI, this host does not currently provide `-D`, warning switches, 
 
 ### Project configuration
 
-For a repeatable build, place this in `asm.config.json`:
+For a repeatable build, place this in `uttori-asm.config.json`:
 
 ```json
 {

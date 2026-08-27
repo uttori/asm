@@ -47,13 +47,18 @@ export interface MacroEngineHost {
   resolvedefines(input: string): string;
   processCommand(command: string, preprocessed?: boolean): void;
   applyDefineAssignment(command: string): boolean;
-  recordSymbolDefinition(kind: "macro", name: string, options?: { value?: number | string }): void;
+  recordSymbolDefinition(
+    kind: "macro",
+    name: string,
+    options?: { value?: number | string; file?: string; line?: number },
+  ): void;
 }
 
 export class MacroEngine {
   host: MacroEngineHost;
   macroExpansionControlStack: MacroExpansionControlEntry[] = [];
   pendingMacroSourceFile = "";
+  pendingMacroSourceLine = 0;
 
   constructor(host: MacroEngineHost) {
     this.host = host;
@@ -211,7 +216,10 @@ export class MacroEngine {
           }
 
           this.host.macros.set(macroDef.name, macroDef);
-          this.host.recordSymbolDefinition("macro", macroDef.name);
+          this.host.recordSymbolDefinition("macro", macroDef.name, {
+            file: this.pendingMacroSourceFile || macroDef.sourceFile || this.host.currentFile,
+            line: this.pendingMacroSourceLine,
+          });
         }
 
         this.host.inMacroDefinition = false;
@@ -219,6 +227,7 @@ export class MacroEngine {
         this.host.currentMacroParams = [];
         this.host.currentMacroBody = [];
         this.pendingMacroSourceFile = "";
+        this.pendingMacroSourceLine = 0;
         setCommandKind(commandNode, "macroDefinitionOrInvoke");
         return true;
       }
@@ -244,6 +253,7 @@ export class MacroEngine {
       this.host.inMacroDefinition = true;
       this.host.currentMacroBody = [];
       this.pendingMacroSourceFile = commandNode.source.file || this.host.currentFile;
+      this.pendingMacroSourceLine = commandNode.source.line;
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }

@@ -9,6 +9,7 @@ import {
   incrementInternalCounter,
   recordInternalCounterPeak,
 } from "../internal-instrumentation.js";
+import type { SourcedCommand } from "./command-text-service.js";
 
 export type ProgramModel = {
   sourceFile: string;
@@ -37,6 +38,8 @@ export type ProgramModelBuilderHost = {
   passProgramCache: Map<string, ExecutableNode[]>;
   preprocessBlockCommands(source: string): string[];
   splitInlineCommands(commands: string[]): string[];
+  preprocessSourcedBlockCommands(source: string): SourcedCommand[];
+  splitSourcedInlineCommands(commands: SourcedCommand[]): SourcedCommand[];
   createLoopCommandNode(
     command: string,
     sourceFile?: string,
@@ -95,7 +98,9 @@ export class ProgramModelBuilder {
     sourceFile = this.host.currentFile,
     startLine = 0,
   ): ProgramModel {
-    const commands = this.host.splitInlineCommands(this.host.preprocessBlockCommands(source));
+    const commands = this.host.splitSourcedInlineCommands(
+      this.host.preprocessSourcedBlockCommands(source),
+    );
     return {
       sourceFile,
       startLine,
@@ -110,7 +115,9 @@ export class ProgramModelBuilder {
    * @returns {IncludeProgramNode} The include node.
    */
   createIncludeNode(file: string, source: string): IncludeProgramNode {
-    const commands = this.host.splitInlineCommands(this.host.preprocessBlockCommands(source));
+    const commands = this.host.splitSourcedInlineCommands(
+      this.host.preprocessSourcedBlockCommands(source),
+    );
     return {
       type: "include",
       file,
@@ -120,17 +127,17 @@ export class ProgramModelBuilder {
 
   /**
    * Returns cached executable nodes for a command stream.
-   * @param {string[]} commands The command stream.
+   * @param {Array<string | SourcedCommand>} commands The command stream.
    * @param {string} [sourceFile] Optional source file override.
    * @param {number} [startLine] Optional starting line number.
    * @returns {ExecutableNode[]} The cached or parsed nodes.
    */
   getOrBuildPassProgram(
-    commands: string[],
+    commands: Array<string | SourcedCommand>,
     sourceFile = this.host.currentFile,
     startLine = this.host.currentLine,
   ): ExecutableNode[] {
-    const cacheKey = `${sourceFile}::${startLine}::${commands.join("\n")}`;
+    const cacheKey = `${sourceFile}::${startLine}::${commandStreamKey(commands)}`;
     const cached = this.host.passProgramCache.get(cacheKey);
     if (cached) {
       incrementInternalCounter("passProgramCacheHits");
@@ -165,19 +172,22 @@ export class ProgramModelBuilder {
 
   /**
    * Parses a flat command stream into nested executable nodes.
-   * @param {string[]} commands The command stream.
+   * @param {Array<string | SourcedCommand>} commands The command stream.
    * @param {string} [sourceFile] Optional source file override.
    * @param {number} [startLine] Optional starting line number.
    * @returns {ExecutableNode[]} The executable nodes.
    */
   parseCommandStreamToNodes(
-    commands: string[],
+    commands: Array<string | SourcedCommand>,
     sourceFile = this.host.currentFile,
     startLine = this.host.currentLine,
   ): ExecutableNode[] {
     const state = this.createIncrementalParseState();
     for (let index = 0; index < commands.length; index++) {
-      this.consumeCommandIntoState(state, commands[index], sourceFile, startLine + index);
+      const command = commands[index];
+      const text = typeof command === "string" ? command : command.text;
+      const sourceLine = typeof command === "string" ? startLine + index : startLine + command.line;
+      this.consumeCommandIntoState(state, text, sourceFile, sourceLine);
     }
 
     return state.roots;
@@ -392,4 +402,15 @@ export class ProgramModelBuilder {
     state.roots = state.roots.slice(completedCount);
     return ready;
   }
+}
+
+/**
+ * Builds a cache key that distinguishes sourced commands from plain text streams.
+ * @param {Array<string | SourcedCommand>} commands The command stream.
+ * @returns {string} The cache key payload.
+ */
+function commandStreamKey(commands: Array<string | SourcedCommand>): string {
+  return commands
+    .map((command) => (typeof command === "string" ? command : `${command.line}:${command.text}`))
+    .join("\n");
 }

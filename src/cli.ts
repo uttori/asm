@@ -6,6 +6,7 @@ import { Assembler, PluginError } from "@uttori/asm-core";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 import {
   loadProjectEnvironment,
+  PROJECT_CONFIG_FILENAME,
   type PluginModuleRequest,
   type ProjectConfigurationOverrides,
 } from "@uttori/asm-plugin-loader-node";
@@ -28,7 +29,7 @@ export interface CliArguments {
 const usage = `Usage: asm <input> [output] [options]
 
 Options:
-  --config <asm.config.json>
+  --config <uttori-asm.config.json>
   --plugin <module>              Repeatable; appended after configured plugins
   --target <target-id>
   --architecture <architecture-id>
@@ -195,7 +196,7 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
   }
   const explicitConfig = parsed.configFile
     ? path.resolve(cwd, parsed.configFile)
-    : path.resolve(cwd, "asm.config.json");
+    : path.resolve(cwd, PROJECT_CONFIG_FILENAME);
   const hasProjectConfiguration = fs.existsSync(explicitConfig);
   const pluginModules: PluginModuleRequest[] = parsed.plugins.map((module) => ({ module }));
   const overrides: ProjectConfigurationOverrides = {

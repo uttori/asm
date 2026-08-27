@@ -13,6 +13,7 @@ const createHost = (
   files: Record<string, string | Uint8Array>,
   currentFile = "/proj/main.asm",
   currentMacroSourceFile?: string,
+  followIncludes = true,
 ): IncludeSourceHost & {
   edges: Array<[string, string]>;
   executedFiles: string[];
@@ -24,6 +25,7 @@ const createHost = (
     includePaths: ["/proj"],
     includeStack: [],
     includedFiles: new Map(),
+    followIncludes,
     fileProvider: new MemoryAssemblyFileProvider(files),
     edges: [] as Array<[string, string]>,
     executedFiles: [] as string[],
@@ -132,6 +134,27 @@ test("include source service enforces and resets include guards", (t) => {
   service.resetGuards();
   service.assembleFile("child.asm");
   t.deepEqual(host.executedFiles, ["/proj/child.asm"]);
+});
+
+test("include source service records an edge without parsing when followIncludes is false", (t) => {
+  const host = createHost(
+    {
+      "/proj/main.asm": "",
+      "/proj/child.asm": "db $01",
+    },
+    "/proj/main.asm",
+    undefined,
+    false,
+  );
+  const service = new IncludeSourceService(host);
+
+  service.assembleFile("child.asm");
+
+  t.deepEqual(host.edges, [["/proj/main.asm", "/proj/child.asm"]]);
+  t.deepEqual(host.executedFiles, []);
+  t.deepEqual(host.parsedSources, []);
+  t.is(host.currentFile, "/proj/main.asm");
+  t.deepEqual(host.includeStack, []);
 });
 
 test("include source service rejects cycles and excessive nesting", (t) => {

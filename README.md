@@ -7,7 +7,7 @@ The repository ships four production packages:
 | Package | Purpose |
 | --- | --- |
 | `@uttori/asm-core` | Generic assembler runtime, analysis APIs, and plugin contracts |
-| `@uttori/asm-plugin-loader-node` | Trusted Node.js plugin discovery and `asm.config.json` loading |
+| `@uttori/asm-plugin-loader-node` | Trusted Node.js plugin discovery and `uttori-asm.config.json` loading |
 | `@uttori/asm-plugin-snes` | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility |
 | `@uttori/asm-plugin-65xx` | NMOS, CMOS, Commodore, and MEGA65 65xx encoders with a configurable-origin flat raw target |
 
@@ -87,7 +87,7 @@ See the [SNES plugin reference](plugins/snes/README.md) for target aliases, arch
 
 ## Command line
 
-With no `asm.config.json` and no explicit plugin, the CLI product supplies the bundled SNES plugin as its host-level default. Core itself still has no default.
+With no `uttori-asm.config.json` and no explicit plugin, the CLI product supplies the bundled SNES plugin as its host-level default. Core itself still has no default.
 
 ```sh
 # SNES zero-configuration build
@@ -95,7 +95,7 @@ npm run cli -- path/to/main.asm path/to/main.sfc
 
 # Explicit project/plugin build
 npm run cli -- examples/plugin-author/main.asm build/main.bin \
-  --config examples/plugin-author/asm.config.json
+  --config examples/plugin-author/uttori-asm.config.json
 
 # Overrides
 npm run cli -- main.asm --plugin ./plugin.js --target custom.raw \
@@ -109,7 +109,7 @@ Resolution precedence is CLI/editor overrides, then project configuration, then 
 
 ## Project configuration
 
-`@uttori/asm-plugin-loader-node` discovers `asm.config.json` from the project directory or accepts an explicit file. The published schema is available as `@uttori/asm-plugin-loader-node/asm-config.schema.json`.
+`@uttori/asm-plugin-loader-node` discovers `uttori-asm.config.json` from the project directory or accepts an explicit file. The published schema is available as `@uttori/asm-plugin-loader-node/asm-config.schema.json`.
 
 ```json
 {
@@ -168,7 +168,7 @@ npm run lsp:smoke
 
 It supports incremental diagnostics, symbols, definitions, references, rename, hover, completion, signature help, semantic tokens, unsaved overlays, and target-filtered tooling catalogs.
 
-The extension in [editors/vscode](editors/vscode) registers the `uttori-asm` language for `.asm`, `.src`, `.SRC`, `.s`, and `.inc`. It bundles SNES for zero-configuration workspaces and propagates `asm.configFile`, `asm.plugins`, `asm.target`, `asm.architecture`, `asm.entryPoints`, `asm.includePaths`, `asm.buildOutput`, and `asm.baseImage` to the server. In restricted workspaces it refuses workspace plugin/configuration execution and publishes a warning.
+The extension in [editors/vscode](editors/vscode) auto-associates **Uttori SNES** (`uttori-snes`) with `.asm`, `.src`, `.SRC`, `.s`, and `.inc`. **Uttori 65xx** (`uttori-65xx`) is a manual language mode via **Change Language Mode**. It bundles SNES for zero-configuration workspaces and propagates `asm.configFile`, `asm.plugins`, `asm.target`, `asm.architecture`, `asm.entryPoints`, `asm.includePaths`, `asm.buildOutput`, and `asm.baseImage` to the server. In restricted workspaces it refuses workspace plugin/configuration execution and publishes a warning.
 
 ```sh
 npm run vscode:typecheck

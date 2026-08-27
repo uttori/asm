@@ -202,6 +202,15 @@ export type AssemblerOptions = {
   collectSourceMetadata?: boolean;
 };
 
+export type ProgramAnalysisOptions = {
+  /** Assembly stages to run. Tooling defaults to definitions-only. */
+  stages?: readonly AssemblyStageName[];
+  /** When false, include directives record an edge without parsing the target. */
+  followIncludes?: boolean;
+};
+
+const TOOLING_ANALYSIS_STAGES: readonly AssemblyStageName[] = ["collectDefinitions"];
+
 type ActiveLifecycle = {
   record: OwnedContribution<LifecycleContribution>;
   instance: SessionLifecycle;
@@ -334,6 +343,8 @@ export class Assembler {
   public readonly symbolReferences: AssemblySymbolReference[] = [];
   public readonly includeEdges: AssemblyIncludeEdge[] = [];
   public readonly collectSourceMetadata: boolean;
+  /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
+  public followIncludes = true;
   activeStageExecutionState: StageExecutionState | null = null;
   analysisErrorRecoveryEnabled = false;
   runtimePassthroughRewriteEnabled = false;
@@ -778,13 +789,26 @@ export class Assembler {
   /**
    * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
    * @param {ProgramModel} program The program model to analyze.
+   * @param {ProgramAnalysisOptions} [options] Optional analysis options.
+   * @param {boolean} [options.followIncludes] Whether to follow includes.
+   * @param {Array<AssemblyStageName>} [options.stages] Optional stages to run.
+   * @param {boolean} [options.collectSourceMetadata] Whether to collect source metadata.
    * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
    */
-  collectProgramAnalysis(program: ProgramModel): AssemblyAnalysisResult {
+  collectProgramAnalysis(
+    program: ProgramModel,
+    options: ProgramAnalysisOptions = {},
+  ): AssemblyAnalysisResult {
     this.clearAnalysisArtifacts();
     this.analysisErrorRecoveryEnabled = true;
+    const stages = options.stages ?? TOOLING_ANALYSIS_STAGES;
+    if (options.followIncludes !== undefined) {
+      this.followIncludes = options.followIncludes;
+    }
     try {
-      this.assembleProgram(program);
+      for (const stage of stages) {
+        this.runStage(stage, program);
+      }
     } catch (error) {
       this.reportErrorDiagnostic(error, undefined, this.activeStageExecutionState?.stage);
     } finally {
@@ -815,6 +839,7 @@ export class Assembler {
       fileProvider: this.fileProvider,
     });
     session.includePaths = [...this.includePaths];
+    session.followIncludes = this.followIncludes;
     session.pluginState.restore(this.pluginState.cloneSnapshot());
     session.outputFillByte = this.outputFillByte;
     session.padbyte = [...this.padbyte];
@@ -929,19 +954,24 @@ export class Assembler {
    * @param {string} source The source to analyze.
    * @param {string} [sourceFile] Optional source file override.
    * @param {number} [startLine] Optional starting line number.
+   * @param {ProgramAnalysisOptions} [options] Optional analysis options.
    * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
    */
   analyzeSource(
     source: string,
     sourceFile = this.currentFile,
     startLine = 0,
+    options: ProgramAnalysisOptions = {},
   ): AssemblyAnalysisResult & { program: ProgramModel } {
     const session = this.createToolingSession();
+    if (options.followIncludes !== undefined) {
+      session.followIncludes = options.followIncludes;
+    }
     try {
       const program = session.buildProgramModel(source, sourceFile, startLine);
       return {
         program,
-        ...session.collectProgramAnalysis(program),
+        ...session.collectProgramAnalysis(program, options),
       };
     } finally {
       session.dispose();
@@ -951,10 +981,12 @@ export class Assembler {
   /**
    * Analyzes workspace.
    * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
+   * @param {ProgramAnalysisOptions} [options] Optional analysis options.
    * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
    */
   analyzeWorkspace(
     documents: Array<{ source: string; sourceFile: string; startLine?: number }>,
+    options: ProgramAnalysisOptions = {},
   ): Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> {
     const results: Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }> =
       [];
@@ -966,7 +998,7 @@ export class Assembler {
           document.sourceFile,
           document.startLine ?? 0,
         );
-        const result = session.collectProgramAnalysis(program);
+        const result = session.collectProgramAnalysis(program, options);
         results.push({
           sourceFile: document.sourceFile,
           program,
@@ -2291,6 +2323,17 @@ export class Assembler {
         }
         workingState = rewrittenState;
       }
+    }
+
+    // Macro invocations are consumed in preprocess and never reach the
+    // post-dispatch reference collector. Record them first so rename / find
+    // references can see `%greet()` as a use of `greet`.
+    if (
+      this.collectSourceMetadata &&
+      !this.inMacroDefinition &&
+      workingState.parsed.macroInvocation?.name
+    ) {
+      this.collectCommandReferences(workingState);
     }
 
     const preprocessResult = this.preprocessNormalizedCommand(workingState);

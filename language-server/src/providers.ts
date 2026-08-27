@@ -1,5 +1,6 @@
 import { pathToFileURL, fileURLToPath } from "node:url";
 import path from "node:path";
+import fs from "node:fs";
 import {
   CompletionItem,
   CompletionItemKind,
@@ -9,6 +10,7 @@ import {
   DocumentSymbol,
   Hover,
   Location,
+  LocationLink,
   MarkupKind,
   Position,
   Range,
@@ -201,6 +203,61 @@ function preciseRange(
 }
 
 /**
+ * Like {@link preciseRange}, but prefers a define-sigil match (`!name`) so
+ * hover, find-references, and semantic tokens highlight the full `!version`
+ * token. Falls back to the bare name when the sigil is absent.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {string} file The absolute file path containing the token.
+ * @param {number} line The zero-based line number.
+ * @param {string} name The token text to locate.
+ * @param {Range} fallback The range to use when the token cannot be located.
+ * @returns {Range} The precise range.
+ */
+function preciseRangeWithSigil(
+  index: WorkspaceIndex,
+  file: string,
+  line: number,
+  name: string,
+  fallback: Range,
+): Range {
+  const text = index.getFileText(file);
+  if (!text) {
+    return fallback;
+  }
+  const rawLine = splitLines(text)[line];
+  if (rawLine === undefined) {
+    return fallback;
+  }
+  const sigilName = name.startsWith("!") ? name : `!${name}`;
+  const sigilColumn = findTokenColumn(rawLine, sigilName);
+  if (sigilColumn >= 0) {
+    return Range.create(line, sigilColumn, line, sigilColumn + sigilName.length);
+  }
+  return preciseRange(index, file, line, name, fallback);
+}
+
+/**
+ * Strips a leading define sigil so `!version` lookups match stored `version`.
+ * @param {string} word The word to lookup.
+ * @returns {string} The word without the sigil.
+ */
+function lookupNameFor(word: string): string {
+  return word.startsWith("!") ? word.slice(1) : word;
+}
+
+/**
+ * Returns whether a stored symbol/reference name matches a cursor word,
+ * accepting both `version` and `!version` for define tokens.
+ * @param {string} stored The stored symbol/reference name.
+ * @param {string} word The cursor word.
+ * @returns {boolean} Whether the names match.
+ */
+function namesMatch(stored: string, word: string): boolean {
+  const lookup = lookupNameFor(word);
+  return stored === lookup || stored === word;
+}
+
+/**
  * Finds the column of a token on a line, preferring whole-token matches that
  * are not inside a line comment.
  * @param {string} lineText The raw line text.
@@ -247,6 +304,14 @@ function wordAt(text: string, position: Position): string | undefined {
   if (line === undefined) {
     return undefined;
   }
+  const quoted = quotedStringAt(line, position.character);
+  if (quoted !== undefined) {
+    return quoted;
+  }
+  const unquotedPath = unquotedIncludePathAt(line, position.character);
+  if (unquotedPath !== undefined) {
+    return unquotedPath;
+  }
   const wordPattern = /[\w!.]+/g;
   let match: RegExpExecArray | null;
   while ((match = wordPattern.exec(line)) !== null) {
@@ -254,6 +319,103 @@ function wordAt(text: string, position: Position): string | undefined {
     const end = start + match[0].length;
     if (position.character >= start && position.character <= end) {
       return match[0];
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Returns the unquoted path argument of an include-like directive when the
+ * cursor falls within it. This handles filenames containing hyphens and other
+ * characters that the standard word-boundary pattern would break on.
+ * @param {string} line The line text.
+ * @param {number} character The 0-based column.
+ * @returns {string | undefined} The full path token, or undefined.
+ */
+function unquotedIncludePathAt(line: string, character: number): string | undefined {
+  const match = /^\s*(?:incsrc|incbin|include)\s+(\S+)/i.exec(line);
+  if (!match || /^["'`]/.test(match[1])) {
+    return undefined;
+  }
+  const argStart = match[0].length - match[1].length;
+  if (character >= argStart && character <= argStart + match[1].length) {
+    return match[1];
+  }
+  return undefined;
+}
+
+/**
+ * Computes the origin highlight range for an include path on the cursor line,
+ * covering the full unquoted filename (including hyphens) or quoted string.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {string} file The absolute file path.
+ * @param {Position} position The cursor position.
+ * @param {string} target The include target.
+ * @returns {Range | undefined} The origin highlight range, or undefined.
+ */
+function includeOriginRange(
+  index: WorkspaceIndex,
+  file: string,
+  position: Position,
+  target: string,
+): Range | undefined {
+  const text = index.getFileText(file);
+  if (!text) {
+    return undefined;
+  }
+  const line = splitLines(text)[position.line];
+  if (line === undefined) {
+    return undefined;
+  }
+  const unquoted = unquotedIncludePathAt(line, position.character);
+  if (unquoted) {
+    const start = line.indexOf(unquoted);
+    if (start >= 0) {
+      return Range.create(position.line, start, position.line, start + unquoted.length);
+    }
+  }
+  const trimmed = target.replace(/^["'`](.*)["'`]$/, "$1");
+  for (const quote of ['"', "'", "`"]) {
+    const quoted = `${quote}${trimmed}${quote}`;
+    const quotedStart = line.indexOf(quoted);
+    if (quotedStart >= 0) {
+      return Range.create(
+        position.line,
+        quotedStart + 1,
+        position.line,
+        quotedStart + 1 + trimmed.length,
+      );
+    }
+  }
+  const column = findTokenColumn(line, trimmed);
+  if (column >= 0) {
+    return Range.create(position.line, column, position.line, column + trimmed.length);
+  }
+  return undefined;
+}
+
+/**
+ * Returns the contents of a quoted string if the cursor is inside it.
+ * @param {string} line The line text.
+ * @param {number} character The 0-based column.
+ * @returns {string | undefined} The unquoted string, or undefined.
+ */
+function quotedStringAt(line: string, character: number): string | undefined {
+  for (const quote of ['"', "'", "`"]) {
+    let from = 0;
+    while (from < line.length) {
+      const start = line.indexOf(quote, from);
+      if (start < 0) {
+        break;
+      }
+      const end = line.indexOf(quote, start + 1);
+      if (end < 0) {
+        break;
+      }
+      if (character > start && character <= end) {
+        return line.slice(start + 1, end);
+      }
+      from = end + 1;
     }
   }
   return undefined;
@@ -298,8 +460,9 @@ function cursorReference(
   return (
     references.find(
       (reference) =>
-        reference.name === word && locationRange(reference.location)?.start.line === position.line,
-    ) ?? references.find((reference) => reference.name === word)
+        namesMatch(reference.name, word) &&
+        locationRange(reference.location)?.start.line === position.line,
+    ) ?? references.find((reference) => namesMatch(reference.name, word))
   );
 }
 
@@ -329,8 +492,9 @@ function cursorSymbol(
   return (
     symbols.find(
       (symbol) =>
-        symbol.name === word && locationRange(symbol.location)?.start.line === position.line,
-    ) ?? symbols.find((symbol) => symbol.name === word)
+        namesMatch(symbol.name, word) &&
+        locationRange(symbol.location)?.start.line === position.line,
+    ) ?? symbols.find((symbol) => namesMatch(symbol.name, word))
   );
 }
 
@@ -377,20 +541,34 @@ export function documentSymbolsFor(index: WorkspaceIndex, file: string): Documen
 
 /**
  * Resolves the definition locations for the symbol or reference at a position.
+ * Returns `LocationLink[]` for include references so VS Code highlights the
+ * full filename (including hyphens) rather than just the word at the cursor.
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @param {Position} position The cursor position.
- * @returns {Location[]} The definition locations.
+ * @returns {Location[] | LocationLink[]} The definition locations.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#go-to-definition-request-leftwards_arrow_with_hook
  */
-export function definitionFor(index: WorkspaceIndex, file: string, position: Position): Location[] {
+export function definitionFor(
+  index: WorkspaceIndex,
+  file: string,
+  position: Position,
+): Location[] | LocationLink[] {
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference) {
     if (reference.kind === "include") {
       const target = resolveIncludeTarget(index, file, reference.name);
       if (target) {
-        return [Location.create(pathToUri(target), Range.create(0, 0, 0, 0))];
+        const originRange =
+          includeOriginRange(index, file, position, reference.name) ??
+          locationRange(reference.location);
+        const targetUri = pathToUri(target);
+        const targetRange = Range.create(0, 0, 0, 0);
+        if (originRange) {
+          return [LocationLink.create(targetUri, targetRange, targetRange, originRange)];
+        }
+        return [Location.create(targetUri, targetRange)];
       }
     }
     const definitions = resolveDefinition(reference, index.getAllSymbols());
@@ -405,9 +583,24 @@ export function definitionFor(index: WorkspaceIndex, file: string, position: Pos
   }
 
   if (word) {
-    const byName = index.getAllSymbols().filter((entry) => entry.name === word);
+    // Strip the define sigil (`!`) before name-based lookups so `!version`
+    // resolves to the `version` symbol definition.
+    const lookupName = word.startsWith("!") ? word.slice(1) : word;
+    const byName = index
+      .getAllSymbols()
+      .filter((entry) => entry.name === lookupName || entry.name === word);
     if (byName.length > 0) {
       return byName.map((definition) => definitionToLocation(index, definition));
+    }
+    const includePath = resolveIncludeTarget(index, file, word);
+    if (includePath) {
+      const originRange = includeOriginRange(index, file, position, word);
+      const targetUri = pathToUri(includePath);
+      const targetRange = Range.create(0, 0, 0, 0);
+      if (originRange) {
+        return [LocationLink.create(targetUri, targetRange, targetRange, originRange)];
+      }
+      return [Location.create(targetUri, targetRange)];
     }
   }
   return [];
@@ -604,11 +797,11 @@ export function prepareRenameFor(
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference && isRenameableReference(reference)) {
-    return referenceRange(index, reference);
+    return bareReferenceRange(index, reference);
   }
   const symbol = cursorSymbol(index, file, position, word);
   if (symbol) {
-    return definitionRange(index, symbol);
+    return bareDefinitionRange(index, symbol);
   }
   return null;
 }
@@ -634,22 +827,25 @@ export function renameEditsFor(
     return null;
   }
 
+  const kind = target.symbol?.kind ?? target.reference?.kind;
+  const effectiveName = kind === "define" && newName.startsWith("!") ? newName.slice(1) : newName;
+
   const editsByUri = new Map<string, TextEdit[]>();
   const pushEdit = (uri: string, range: Range): void => {
     const edits = editsByUri.get(uri) ?? [];
-    edits.push(TextEdit.replace(range, newName));
+    edits.push(TextEdit.replace(range, effectiveName));
     editsByUri.set(uri, edits);
   };
 
   for (const symbol of index
     .getAllSymbols()
     .filter((entry) => symbolMatchesRenameTarget(entry, target))) {
-    pushEdit(pathToUri(symbol.location.file), definitionRange(index, symbol));
+    pushEdit(pathToUri(symbol.location.file), bareDefinitionRange(index, symbol));
   }
   for (const reference of index
     .getAllReferences()
     .filter((entry) => referenceMatchesRenameTarget(entry, target))) {
-    pushEdit(pathToUri(reference.location.file), referenceRange(index, reference));
+    pushEdit(pathToUri(reference.location.file), bareReferenceRange(index, reference));
   }
 
   if (editsByUri.size === 0) {
@@ -818,6 +1014,9 @@ function definitionRange(index: WorkspaceIndex, symbol: AssemblySymbolDefinition
   const fallbackRange = locationRange(symbol.location);
   const fallback = fallbackRange ? toRange(fallbackRange) : lineFallbackRange(symbol.location.line);
   const line = fallbackRange?.start.line ?? symbol.location.line;
+  if (symbol.kind === "define") {
+    return preciseRangeWithSigil(index, symbol.location.file, line, symbol.name, fallback);
+  }
   return preciseRange(index, symbol.location.file, line, symbol.name, fallback);
 }
 
@@ -833,7 +1032,45 @@ function referenceRange(index: WorkspaceIndex, reference: AssemblySymbolReferenc
     ? toRange(fallbackRange)
     : lineFallbackRange(reference.location.line);
   const line = fallbackRange?.start.line ?? reference.location.line;
+  if (reference.kind === "define") {
+    return preciseRangeWithSigil(index, reference.location.file, line, reference.name, fallback);
+  }
   return preciseRange(index, reference.location.file, line, reference.name, fallback);
+}
+
+/**
+ * Precise range covering only the bare identifier, never the define sigil.
+ * Used by rename so `!version` becomes `!newname` rather than replacing `!`.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {AssemblySymbolDefinition} symbol The symbol definition.
+ * @returns {Range} The precise range.
+ */
+function bareDefinitionRange(index: WorkspaceIndex, symbol: AssemblySymbolDefinition): Range {
+  const fallbackRange = locationRange(symbol.location);
+  const fallback = fallbackRange ? toRange(fallbackRange) : lineFallbackRange(symbol.location.line);
+  const line = fallbackRange?.start.line ?? symbol.location.line;
+  return preciseRange(index, symbol.location.file, line, lookupNameFor(symbol.name), fallback);
+}
+
+/**
+ * Precise range covering only the bare identifier of a reference.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {AssemblySymbolReference} reference The symbol reference.
+ * @returns {Range} The precise range.
+ */
+function bareReferenceRange(index: WorkspaceIndex, reference: AssemblySymbolReference): Range {
+  const fallbackRange = locationRange(reference.location);
+  const fallback = fallbackRange
+    ? toRange(fallbackRange)
+    : lineFallbackRange(reference.location.line);
+  const line = fallbackRange?.start.line ?? reference.location.line;
+  return preciseRange(
+    index,
+    reference.location.file,
+    line,
+    lookupNameFor(reference.name),
+    fallback,
+  );
 }
 
 /**
@@ -859,13 +1096,31 @@ function resolveIncludeTarget(
   file: string,
   target: string,
 ): string | undefined {
-  const normalizedTarget = target.replace(/\\/g, "/");
+  const trimmed = target.replace(/^["'`](.*)["'`]$/, "$1");
+  const normalizedTarget = trimmed.replace(/\\/g, "/");
   const base = path.basename(normalizedTarget);
   const edges = index.getIncludeEdges().filter((edge) => edge.fromFile === file);
   const match = edges.find(
-    (edge) => edge.toFile === normalizedTarget || path.basename(edge.toFile) === base,
+    (edge) =>
+      edge.toFile === normalizedTarget ||
+      edge.toFile.replace(/\\/g, "/") === normalizedTarget ||
+      path.basename(edge.toFile) === base,
   );
-  return match?.toFile;
+  if (match?.toFile) {
+    return match.toFile;
+  }
+
+  const searchRoots = [
+    path.dirname(file),
+    ...index.includePaths.map((entry) => path.resolve(path.dirname(file), entry)),
+  ];
+  for (const root of searchRoots) {
+    const candidate = path.isAbsolute(trimmed) ? trimmed : path.resolve(root, trimmed);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -890,7 +1145,8 @@ function identifierNameAt(
   if (symbol) {
     return symbol.name;
   }
-  return word;
+  // Strip the define sigil so `!version` resolves to the `version` reference set.
+  return word?.startsWith("!") ? word.slice(1) : word;
 }
 
 /**

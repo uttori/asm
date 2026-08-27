@@ -5456,16 +5456,16 @@ var init_main = __esm({
       }
       Location3.is = is;
     })(Location || (Location = {}));
-    (function(LocationLink2) {
+    (function(LocationLink3) {
       function create(targetUri, targetRange, targetSelectionRange, originSelectionRange) {
         return { targetUri, targetRange, targetSelectionRange, originSelectionRange };
       }
-      LocationLink2.create = create;
+      LocationLink3.create = create;
       function is(value) {
         const candidate = value;
         return Is.objectLiteral(candidate) && Range.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range.is(candidate.targetSelectionRange) && (Range.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
       }
-      LocationLink2.is = is;
+      LocationLink3.is = is;
     })(LocationLink || (LocationLink = {}));
     (function(Color2) {
       function create(red, green, blue, alpha) {
@@ -10857,8 +10857,8 @@ var require_files = __commonJS({
     exports.resolveGlobalYarnPath = resolveGlobalYarnPath;
     exports.resolveModulePath = resolveModulePath;
     var url = __importStar(__require("url"));
-    var path9 = __importStar(__require("path"));
-    var fs5 = __importStar(__require("fs"));
+    var path10 = __importStar(__require("path"));
+    var fs6 = __importStar(__require("fs"));
     var child_process_1 = __require("child_process");
     function uriToFilePath(uri) {
       const parsed = url.parse(uri);
@@ -10876,7 +10876,7 @@ var require_files = __commonJS({
           segments.shift();
         }
       }
-      return path9.normalize(segments.join("/"));
+      return path10.normalize(segments.join("/"));
     }
     function isWindows() {
       return process.platform === "win32";
@@ -10904,9 +10904,9 @@ var require_files = __commonJS({
         const env = process.env;
         const newEnv = /* @__PURE__ */ Object.create(null);
         Object.keys(env).forEach((key) => newEnv[key] = env[key]);
-        if (nodePath && fs5.existsSync(nodePath)) {
+        if (nodePath && fs6.existsSync(nodePath)) {
           if (newEnv[nodePathKey]) {
-            newEnv[nodePathKey] = nodePath + path9.delimiter + newEnv[nodePathKey];
+            newEnv[nodePathKey] = nodePath + path10.delimiter + newEnv[nodePathKey];
           } else {
             newEnv[nodePathKey] = nodePath;
           }
@@ -10978,9 +10978,9 @@ var require_files = __commonJS({
         }
         if (prefix.length > 0) {
           if (isWindows()) {
-            return path9.join(prefix, "node_modules");
+            return path10.join(prefix, "node_modules");
           } else {
-            return path9.join(prefix, "lib", "node_modules");
+            return path10.join(prefix, "lib", "node_modules");
           }
         }
         return void 0;
@@ -11019,7 +11019,7 @@ var require_files = __commonJS({
           try {
             const yarn = JSON.parse(line);
             if (yarn.type === "log") {
-              return path9.join(yarn.data, "node_modules");
+              return path10.join(yarn.data, "node_modules");
             }
           } catch (e) {
           }
@@ -11041,24 +11041,24 @@ var require_files = __commonJS({
         if (process.platform === "win32") {
           _isCaseSensitive = false;
         } else {
-          _isCaseSensitive = !fs5.existsSync(__filename.toUpperCase()) || !fs5.existsSync(__filename.toLowerCase());
+          _isCaseSensitive = !fs6.existsSync(__filename.toUpperCase()) || !fs6.existsSync(__filename.toLowerCase());
         }
         return _isCaseSensitive;
       }
       FileSystem2.isCaseSensitive = isCaseSensitive;
       function isParent(parent, child) {
         if (isCaseSensitive()) {
-          return path9.normalize(child).indexOf(path9.normalize(parent)) === 0;
+          return path10.normalize(child).indexOf(path10.normalize(parent)) === 0;
         } else {
-          return path9.normalize(child).toLowerCase().indexOf(path9.normalize(parent).toLowerCase()) === 0;
+          return path10.normalize(child).toLowerCase().indexOf(path10.normalize(parent).toLowerCase()) === 0;
         }
       }
       FileSystem2.isParent = isParent;
     })(FileSystem || (exports.FileSystem = FileSystem = {}));
     function resolveModulePath(workspaceRoot2, moduleName, nodePath, tracer) {
       if (nodePath) {
-        if (!path9.isAbsolute(nodePath)) {
-          nodePath = path9.join(workspaceRoot2, nodePath);
+        if (!path10.isAbsolute(nodePath)) {
+          nodePath = path10.join(workspaceRoot2, nodePath);
         }
         return resolve(moduleName, nodePath, nodePath, tracer).then((value) => {
           if (FileSystem.isParent(nodePath, value)) {
@@ -11291,9 +11291,9 @@ var require_main = __commonJS({
     exports.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path9 = __importStar(__require("path"));
+    var path10 = __importStar(__require("path"));
     var os = __importStar(__require("os"));
-    var fs5 = __importStar(__require("fs"));
+    var fs6 = __importStar(__require("fs"));
     var crypto_1 = __require("crypto");
     var net_1 = __require("net");
     var api_1 = require_api();
@@ -11434,7 +11434,7 @@ var require_main = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs5.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
+      const tmpDir = fs6.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -11443,7 +11443,7 @@ var require_main = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path9.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path10.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -11885,8 +11885,8 @@ ${stack}`);
 });
 
 // language-server/src/server.ts
-import fs4 from "node:fs";
-import path8 from "node:path";
+import fs5 from "node:fs";
+import path9 from "node:path";
 
 // packages/core/src/addressToLine.ts
 import * as fs from "fs";
@@ -12808,7 +12808,7 @@ function createCommandProvenance(raw, normalized, words, file, line, collectSour
     normalized,
     span: createLineSpan(raw, line),
     normalizedSpan: createLineSpan(normalized, line),
-    tokenSpans: deriveTokenSpans(normalized, words, line)
+    tokenSpans: deriveTokenSpans(raw, words, line)
   };
 }
 function createNormalizedCommand(raw, normalized, words, file, line, collectSourceMetadata = true) {
@@ -12846,7 +12846,7 @@ function setCommandWords(command, words, normalized) {
       ...command.source,
       normalized: normalizedSource,
       normalizedSpan: createLineSpan(normalizedSource, command.source.line),
-      tokenSpans: deriveTokenSpans(normalizedSource, words, command.source.line)
+      tokenSpans: deriveTokenSpans(command.source.raw, words, command.source.line)
     };
   }
   command.labelName = deriveLabelName(command.keyword);
@@ -12955,6 +12955,10 @@ function deriveCommandSemantics(command, words) {
         };
       }
     }
+    const includePath = extractIncludePath(incbinSource);
+    if (includePath) {
+      semantics.includeTarget = { directive: "incbin", target: includePath };
+    }
   }
   if (keyword.startsWith("%")) {
     const invocationText = command.trim().slice(1);
@@ -13001,6 +13005,19 @@ function deriveCommandSemantics(command, words) {
     }
   }
   return semantics;
+}
+function extractIncludePath(raw) {
+  const trimmed = raw.trim();
+  const quote = trimmed[0];
+  if (quote === '"' || quote === "'" || quote === "`") {
+    const end = trimmed.indexOf(quote, 1);
+    if (end !== -1) {
+      return trimmed.slice(1, end);
+    }
+  }
+  const colonIndex = trimmed.indexOf(":");
+  const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
+  return pathToken.replace(/^["'`]+|["'`]+$/g, "");
 }
 function extractIncbinRange(argument) {
   const colonIndex = argument.indexOf(":");
@@ -15286,28 +15303,41 @@ var removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
 };
 var preprocessBlockCommands = (block, commandBuffer = "", syntaxProfile = ASAR_SYNTAX_PROFILE) => {
   const lines = block.split("\n");
-  const processedLines = [];
+  const sourcedCommands = [];
   let nextCommandBuffer = commandBuffer;
-  for (let line of lines) {
+  let bufferStartLine;
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    let line = lines[lineIndex];
     line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
     if (!line.trim()) continue;
     if (line.trimStart().startsWith(";`+")) {
-      processedLines.push(line);
+      sourcedCommands.push({ text: line, line: lineIndex });
       continue;
     }
     line = removeInlineComment(line, syntaxProfile);
     if (!line.trim()) continue;
     if (line.endsWith("\\")) {
+      if (nextCommandBuffer === "") {
+        bufferStartLine = lineIndex;
+      }
       nextCommandBuffer += line.slice(0, -1);
     } else if (line.endsWith(",")) {
+      if (nextCommandBuffer === "") {
+        bufferStartLine = lineIndex;
+      }
       nextCommandBuffer += line;
     } else {
-      processedLines.push(nextCommandBuffer + line);
+      sourcedCommands.push({
+        text: nextCommandBuffer + line,
+        line: nextCommandBuffer === "" ? lineIndex : bufferStartLine ?? lineIndex
+      });
       nextCommandBuffer = "";
+      bufferStartLine = void 0;
     }
   }
   return {
-    commands: processedLines,
+    commands: sourcedCommands.map((command) => command.text),
+    sourcedCommands,
     commandBuffer: nextCommandBuffer
   };
 };
@@ -15359,6 +15389,15 @@ var splitInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
         continue;
       }
       output.push(entry);
+    }
+  }
+  return output;
+};
+var splitSourcedInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
+  const output = [];
+  for (const command of commands) {
+    for (const text of splitInlineCommands([command.text], syntaxProfile)) {
+      output.push({ text, line: command.line });
     }
   }
   return output;
@@ -16498,7 +16537,9 @@ var ProgramModelBuilder = class {
    * @returns {ProgramModel} The parsed program model.
    */
   buildProgramModel(source, sourceFile = this.host.currentFile, startLine = 0) {
-    const commands = this.host.splitInlineCommands(this.host.preprocessBlockCommands(source));
+    const commands = this.host.splitSourcedInlineCommands(
+      this.host.preprocessSourcedBlockCommands(source)
+    );
     return {
       sourceFile,
       startLine,
@@ -16512,7 +16553,9 @@ var ProgramModelBuilder = class {
    * @returns {IncludeProgramNode} The include node.
    */
   createIncludeNode(file, source) {
-    const commands = this.host.splitInlineCommands(this.host.preprocessBlockCommands(source));
+    const commands = this.host.splitSourcedInlineCommands(
+      this.host.preprocessSourcedBlockCommands(source)
+    );
     return {
       type: "include",
       file,
@@ -16521,13 +16564,13 @@ var ProgramModelBuilder = class {
   }
   /**
    * Returns cached executable nodes for a command stream.
-   * @param {string[]} commands The command stream.
+   * @param {Array<string | SourcedCommand>} commands The command stream.
    * @param {string} [sourceFile] Optional source file override.
    * @param {number} [startLine] Optional starting line number.
    * @returns {ExecutableNode[]} The cached or parsed nodes.
    */
   getOrBuildPassProgram(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine) {
-    const cacheKey = `${sourceFile}::${startLine}::${commands.join("\n")}`;
+    const cacheKey = `${sourceFile}::${startLine}::${commandStreamKey(commands)}`;
     const cached = this.host.passProgramCache.get(cacheKey);
     if (cached) {
       incrementInternalCounter("passProgramCacheHits");
@@ -16554,7 +16597,7 @@ var ProgramModelBuilder = class {
   }
   /**
    * Parses a flat command stream into nested executable nodes.
-   * @param {string[]} commands The command stream.
+   * @param {Array<string | SourcedCommand>} commands The command stream.
    * @param {string} [sourceFile] Optional source file override.
    * @param {number} [startLine] Optional starting line number.
    * @returns {ExecutableNode[]} The executable nodes.
@@ -16562,7 +16605,10 @@ var ProgramModelBuilder = class {
   parseCommandStreamToNodes(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine) {
     const state = this.createIncrementalParseState();
     for (let index2 = 0; index2 < commands.length; index2++) {
-      this.consumeCommandIntoState(state, commands[index2], sourceFile, startLine + index2);
+      const command = commands[index2];
+      const text = typeof command === "string" ? command : command.text;
+      const sourceLine = typeof command === "string" ? startLine + index2 : startLine + command.line;
+      this.consumeCommandIntoState(state, text, sourceFile, sourceLine);
     }
     return state.roots;
   }
@@ -16748,6 +16794,9 @@ var ProgramModelBuilder = class {
     return ready;
   }
 };
+function commandStreamKey(commands) {
+  return commands.map((command) => typeof command === "string" ? command : `${command.line}:${command.text}`).join("\n");
+}
 
 // packages/core/src/services/assembly-front-end-service.ts
 var AssemblyFrontEndService = class {
@@ -16759,6 +16808,8 @@ var AssemblyFrontEndService = class {
       passProgramCache: this.host.passProgramCache,
       preprocessBlockCommands: (source) => this.preprocessBlockCommands(source),
       splitInlineCommands: (commands) => this.splitInlineCommands(commands),
+      preprocessSourcedBlockCommands: (source) => this.preprocessSourcedBlockCommands(source),
+      splitSourcedInlineCommands: (commands) => this.splitSourcedInlineCommands(commands),
       createLoopCommandNode: (command, sourceFile, sourceLine) => this.createLoopCommandNode(command, sourceFile, sourceLine),
       shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.host.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
     });
@@ -16772,9 +16823,17 @@ var AssemblyFrontEndService = class {
    * @returns {string[]} The normalized commands.
    */
   preprocessBlockCommands(block) {
+    return this.preprocessSourcedBlockCommands(block).map((command) => command.text);
+  }
+  /**
+   * Preprocesses raw source blocks, tagging each command with its original line.
+   * @param {string} block The raw source block.
+   * @returns {SourcedCommand[]} The normalized sourced commands.
+   */
+  preprocessSourcedBlockCommands(block) {
     const processed = preprocessBlockCommands(block, this.commandBuffer, this.host.syntaxProfile);
     this.commandBuffer = processed.commandBuffer;
-    return processed.commands;
+    return processed.sourcedCommands;
   }
   /**
    * Splits statements according to the active target's source grammar.
@@ -16783,6 +16842,14 @@ var AssemblyFrontEndService = class {
    */
   splitInlineCommands(commands) {
     return splitInlineCommands(commands, this.host.syntaxProfile);
+  }
+  /**
+   * Splits sourced statements according to the active target's source grammar.
+   * @param {SourcedCommand[]} commands Sourced commands to split.
+   * @returns {SourcedCommand[]} Profile-aware sourced command statements.
+   */
+  splitSourcedInlineCommands(commands) {
+    return splitSourcedInlineCommands(commands, this.host.syntaxProfile);
   }
   /**
    * Builds a normalized command from raw source text.
@@ -16844,7 +16911,7 @@ var CommandLoweringService = class {
     const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
     if (this.host.directiveRegistry.has(keyword)) {
       let directiveWords = command.words;
-      if (command.parsed.includeTarget) {
+      if (command.parsed.includeTarget && command.parsed.includeTarget.directive !== "incbin") {
         directiveWords = [
           command.parsed.includeTarget.directive,
           command.parsed.includeTarget.target
@@ -17266,6 +17333,10 @@ var IncludeSourceService = class {
     const previousFile = this.host.currentFile;
     this.host.includeStack.push(previousFile);
     this.host.recordIncludeEdge(previousFile, resolvedPath);
+    if (this.host.followIncludes === false) {
+      this.host.includeStack.pop();
+      return;
+    }
     try {
       const content = this.readTextFile(resolvedPath, "utf8");
       this.host.currentFile = resolvedPath;
@@ -17347,6 +17418,7 @@ var MacroEngine = class {
   host;
   macroExpansionControlStack = [];
   pendingMacroSourceFile = "";
+  pendingMacroSourceLine = 0;
   constructor(host) {
     this.host = host;
   }
@@ -17484,13 +17556,17 @@ var MacroEngine = class {
             throw new Error(`Macro '${macroDef.name}' is already defined.`);
           }
           this.host.macros.set(macroDef.name, macroDef);
-          this.host.recordSymbolDefinition("macro", macroDef.name);
+          this.host.recordSymbolDefinition("macro", macroDef.name, {
+            file: this.pendingMacroSourceFile || macroDef.sourceFile || this.host.currentFile,
+            line: this.pendingMacroSourceLine
+          });
         }
         this.host.inMacroDefinition = false;
         this.host.currentMacroName = "";
         this.host.currentMacroParams = [];
         this.host.currentMacroBody = [];
         this.pendingMacroSourceFile = "";
+        this.pendingMacroSourceLine = 0;
         setCommandKind(commandNode, "macroDefinitionOrInvoke");
         return true;
       }
@@ -17511,6 +17587,7 @@ var MacroEngine = class {
       this.host.inMacroDefinition = true;
       this.host.currentMacroBody = [];
       this.pendingMacroSourceFile = commandNode.source.file || this.host.currentFile;
+      this.pendingMacroSourceLine = commandNode.source.line;
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }
@@ -20368,6 +20445,7 @@ try {
   debug4 = d("Assembler");
 } catch {
 }
+var TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
 var Assembler = class _Assembler {
   /** The current logical target address. */
   currentTargetAddress = 0;
@@ -20473,6 +20551,8 @@ var Assembler = class _Assembler {
   symbolReferences = [];
   includeEdges = [];
   collectSourceMetadata;
+  /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
+  followIncludes = true;
   activeStageExecutionState = null;
   analysisErrorRecoveryEnabled = false;
   runtimePassthroughRewriteEnabled = false;
@@ -20838,13 +20918,23 @@ var Assembler = class _Assembler {
   /**
    * Runs a staged analysis pass and captures the first diagnostic instead of throwing.
    * @param {ProgramModel} program The program model to analyze.
+   * @param {ProgramAnalysisOptions} [options] Optional analysis options.
+   * @param {boolean} [options.followIncludes] Whether to follow includes.
+   * @param {Array<AssemblyStageName>} [options.stages] Optional stages to run.
+   * @param {boolean} [options.collectSourceMetadata] Whether to collect source metadata.
    * @returns {AssemblyAnalysisResult} The accumulated diagnostics and symbols.
    */
-  collectProgramAnalysis(program) {
+  collectProgramAnalysis(program, options = {}) {
     this.clearAnalysisArtifacts();
     this.analysisErrorRecoveryEnabled = true;
+    const stages = options.stages ?? TOOLING_ANALYSIS_STAGES;
+    if (options.followIncludes !== void 0) {
+      this.followIncludes = options.followIncludes;
+    }
     try {
-      this.assembleProgram(program);
+      for (const stage of stages) {
+        this.runStage(stage, program);
+      }
     } catch (error) {
       this.reportErrorDiagnostic(error, void 0, this.activeStageExecutionState?.stage);
     } finally {
@@ -20873,6 +20963,7 @@ var Assembler = class _Assembler {
       fileProvider: this.fileProvider
     });
     session.includePaths = [...this.includePaths];
+    session.followIncludes = this.followIncludes;
     session.pluginState.restore(this.pluginState.cloneSnapshot());
     session.outputFillByte = this.outputFillByte;
     session.padbyte = [...this.padbyte];
@@ -20984,15 +21075,19 @@ var Assembler = class _Assembler {
    * @param {string} source The source to analyze.
    * @param {string} [sourceFile] Optional source file override.
    * @param {number} [startLine] Optional starting line number.
+   * @param {ProgramAnalysisOptions} [options] Optional analysis options.
    * @returns {AssemblyAnalysisResult & { program: ProgramModel }} The analysis result and program model.
    */
-  analyzeSource(source, sourceFile = this.currentFile, startLine = 0) {
+  analyzeSource(source, sourceFile = this.currentFile, startLine = 0, options = {}) {
     const session = this.createToolingSession();
+    if (options.followIncludes !== void 0) {
+      session.followIncludes = options.followIncludes;
+    }
     try {
       const program = session.buildProgramModel(source, sourceFile, startLine);
       return {
         program,
-        ...session.collectProgramAnalysis(program)
+        ...session.collectProgramAnalysis(program, options)
       };
     } finally {
       session.dispose();
@@ -21001,9 +21096,10 @@ var Assembler = class _Assembler {
   /**
    * Analyzes workspace.
    * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
+   * @param {ProgramAnalysisOptions} [options] Optional analysis options.
    * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
    */
-  analyzeWorkspace(documents2) {
+  analyzeWorkspace(documents2, options = {}) {
     const results = [];
     for (const document of documents2) {
       const session = this.createToolingSession();
@@ -21013,7 +21109,7 @@ var Assembler = class _Assembler {
           document.sourceFile,
           document.startLine ?? 0
         );
-        const result = session.collectProgramAnalysis(program);
+        const result = session.collectProgramAnalysis(program, options);
         results.push({
           sourceFile: document.sourceFile,
           program,
@@ -22169,6 +22265,9 @@ var Assembler = class _Assembler {
         }
         workingState = rewrittenState;
       }
+    }
+    if (this.collectSourceMetadata && !this.inMacroDefinition && workingState.parsed.macroInvocation?.name) {
+      this.collectCommandReferences(workingState);
     }
     const preprocessResult = this.preprocessNormalizedCommand(workingState);
     if (preprocessResult === "handled") {
@@ -23495,8 +23594,119 @@ var OverlayFileProvider = class {
   }
 };
 
-// packages/core/src/lsp/workspace-index.ts
+// packages/core/src/lsp/root-analysis-cache.ts
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync as readFileSync2, unlinkSync, writeFileSync } from "node:fs";
 import path3 from "node:path";
+var CACHE_VERSION = 1;
+var RootAnalysisCache = class {
+  cacheDir;
+  /**
+   * @param {string} cacheDir Absolute directory used to store cache JSON files.
+   */
+  constructor(cacheDir) {
+    this.cacheDir = path3.resolve(cacheDir);
+  }
+  /**
+   * Loads a cached analysis when every recorded file hash still matches.
+   * @param {string} root Absolute root source path.
+   * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
+   * @param {(file: string) => string | undefined} hashFile Content hasher.
+   * @returns {CachedRootAnalysis | undefined} The cached artifacts, or undefined on miss.
+   */
+  read(root, identity, hashFile) {
+    const file = this.entryPath(root);
+    if (!existsSync(file)) {
+      return void 0;
+    }
+    try {
+      const payload = JSON.parse(readFileSync2(file, "utf8"));
+      if (payload.version !== CACHE_VERSION || payload.root !== path3.resolve(root)) {
+        return void 0;
+      }
+      if (!identitiesMatch(payload.identity, identity)) {
+        return void 0;
+      }
+      const currentHashes = {};
+      for (const recorded of Object.keys(payload.fileHashes).sort()) {
+        const hash = hashFile(recorded);
+        if (hash === void 0 || hash !== payload.fileHashes[recorded]) {
+          return void 0;
+        }
+        currentHashes[recorded] = hash;
+      }
+      if (fingerprintFor(currentHashes) !== payload.fingerprint) {
+        return void 0;
+      }
+      return payload.analysis;
+    } catch {
+      return void 0;
+    }
+  }
+  /**
+   * Persists a full-pass analysis. Failures are ignored so a cache write can
+   * never block or break the language server.
+   * @param {string} root Absolute root source path.
+   * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
+   * @param {Record<string, string>} fileHashes Sorted path-to-hash map.
+   * @param {CachedRootAnalysis} analysis Artifacts to store.
+   */
+  write(root, identity, fileHashes, analysis) {
+    try {
+      mkdirSync(this.cacheDir, { recursive: true });
+      const payload = {
+        version: CACHE_VERSION,
+        root: path3.resolve(root),
+        fingerprint: fingerprintFor(fileHashes),
+        identity: {
+          target: identity.target,
+          architecture: identity.architecture,
+          includePaths: [...identity.includePaths]
+        },
+        fileHashes,
+        analysis
+      };
+      writeFileSync(this.entryPath(root), JSON.stringify(payload));
+    } catch {
+    }
+  }
+  /**
+   * Deletes the cache entry for a root, if present.
+   * @param {string} root Absolute root source path.
+   */
+  invalidate(root) {
+    try {
+      unlinkSync(this.entryPath(root));
+    } catch {
+    }
+  }
+  /**
+   * @param {string} root Absolute root source path.
+   * @returns {string} Cache JSON path for the root.
+   */
+  entryPath(root) {
+    const id = createHash("sha256").update(path3.resolve(root)).digest("hex").slice(0, 32);
+    return path3.join(this.cacheDir, `${id}.json`);
+  }
+};
+function fingerprintFor(fileHashes) {
+  const material = Object.entries(fileHashes).sort(([left], [right]) => left.localeCompare(right)).map(([file, hash]) => `${file}:${hash}`).join("\n");
+  return createHash("sha256").update(material).digest("hex");
+}
+function hashBytes(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+function identitiesMatch(stored, current) {
+  if (stored.target !== current.target || stored.architecture !== current.architecture) {
+    return false;
+  }
+  const left = [...stored.includePaths].sort();
+  const right = [...current.includePaths].sort();
+  return left.length === right.length && left.every((value, index2) => value === right[index2]);
+}
+
+// packages/core/src/lsp/workspace-index.ts
+import path4 from "node:path";
 var WorkspaceIndex = class {
   /** Open editor buffers keyed by absolute path. */
   overlay = /* @__PURE__ */ new Map();
@@ -23523,6 +23733,16 @@ var WorkspaceIndex = class {
   toolingCatalog;
   directiveCatalog;
   directivePrefixes;
+  logger;
+  cache;
+  /** Duration of the most recent {@link reindex} call in milliseconds. */
+  lastReindexDurationMs;
+  /** How many roots were served from disk cache during the last reindex. */
+  lastReindexCachedRoots = 0;
+  /** How many roots were freshly analysed during the last reindex. */
+  lastReindexAnalyzedRoots = 0;
+  /** Whether the most recent {@link analyzeRoot} call was a disk-cache hit. */
+  lastRootServedFromCache = false;
   /**
    * Creates a workspace index.
    * @param {WorkspaceIndexOptions} [options] Initial index configuration.
@@ -23531,12 +23751,14 @@ var WorkspaceIndex = class {
     this.environment = options.environment;
     this.target = options.target;
     this.toolingCatalog = this.environment.getToolingCatalog(this.target);
-    this.entryPoints = (options.entryPoints ?? []).map((entry) => path3.resolve(entry));
+    this.entryPoints = (options.entryPoints ?? []).map((entry) => path4.resolve(entry));
     this.includePaths = options.includePaths ?? ["./"];
     this.architecture = options.architecture ?? this.environment.getTarget(this.target)?.defaultArchitecture ?? "";
     this.targetOptions = Object.freeze({ ...options.targetOptions ?? {} });
     this.directiveCatalog = this.toolingCatalog.getDirectives();
     this.directivePrefixes = this.environment.getTarget(this.target)?.syntaxProfile?.directivePrefixes ?? ASAR_SYNTAX_PROFILE.directivePrefixes;
+    this.logger = options.logger;
+    this.cache = options.cacheDir ? new RootAnalysisCache(options.cacheDir) : void 0;
   }
   /**
    * Updates index configuration and re-analyses the workspace.
@@ -23544,7 +23766,7 @@ var WorkspaceIndex = class {
    */
   configure(options) {
     if (options.entryPoints) {
-      this.entryPoints = options.entryPoints.map((entry) => path3.resolve(entry));
+      this.entryPoints = options.entryPoints.map((entry) => path4.resolve(entry));
     }
     if (options.includePaths) {
       this.includePaths = options.includePaths;
@@ -23561,10 +23783,20 @@ var WorkspaceIndex = class {
    * @param {string} content The current document text.
    */
   openDocument(file, content) {
-    const resolved = path3.resolve(file);
+    const resolved = path4.resolve(file);
     this.overlay.set(resolved, content);
-    this.dirtyFiles.add(resolved);
-    this.reindex();
+    const diskContent = this.readDiskRoot(resolved);
+    if (content !== diskContent) {
+      this.dirtyFiles.add(resolved);
+    }
+    if (!this.isCoveredByFullPass(resolved)) {
+      const result = this.analyzeRoot(resolved, { followIncludes: false });
+      if (result) {
+        this.rootAnalyses.set(resolved, { ...result, diagnostics: [], followedIncludes: false });
+      }
+    }
+    const roots = this.resolveRoots();
+    this.rebuildMergedIndex(roots.includes(resolved) ? roots : [...roots, resolved]);
   }
   /**
    * Updates the content of an already-open document without re-analysing.
@@ -23573,7 +23805,7 @@ var WorkspaceIndex = class {
    * @param {string} content The new document text.
    */
   updateDocument(file, content) {
-    const resolved = path3.resolve(file);
+    const resolved = path4.resolve(file);
     this.overlay.set(resolved, content);
     this.dirtyFiles.add(resolved);
   }
@@ -23582,7 +23814,7 @@ var WorkspaceIndex = class {
    * @param {string} file The absolute path of the document.
    */
   closeDocument(file) {
-    const resolved = path3.resolve(file);
+    const resolved = path4.resolve(file);
     this.overlay.delete(resolved);
     this.dirtyFiles.add(resolved);
     this.reindex();
@@ -23592,7 +23824,7 @@ var WorkspaceIndex = class {
    * @param {string} file The changed absolute path.
    */
   invalidateFile(file) {
-    this.dirtyFiles.add(path3.resolve(file));
+    this.dirtyFiles.add(path4.resolve(file));
   }
   /**
    * Returns the current text for a file, preferring the open buffer.
@@ -23600,7 +23832,7 @@ var WorkspaceIndex = class {
    * @returns {string | undefined} The file text, or undefined when unavailable.
    */
   getText(file) {
-    return this.overlay.get(path3.resolve(file));
+    return this.overlay.get(path4.resolve(file));
   }
   /**
    * Returns the text for a file from the open buffer, falling back to disk.
@@ -23610,7 +23842,7 @@ var WorkspaceIndex = class {
    * @returns {string | undefined} The file text, or undefined when unreadable.
    */
   getFileText(file) {
-    const resolved = path3.resolve(file);
+    const resolved = path4.resolve(file);
     const open = this.overlay.get(resolved);
     if (open !== void 0) {
       return open;
@@ -23632,7 +23864,7 @@ var WorkspaceIndex = class {
    * @returns {FileAnalysis | undefined} The per-file analysis, or undefined.
    */
   getFileAnalysis(file) {
-    return this.fileAnalysis.get(path3.resolve(file));
+    return this.fileAnalysis.get(path4.resolve(file));
   }
   /**
    * Returns diagnostics for a file.
@@ -23687,11 +23919,85 @@ var WorkspaceIndex = class {
     return [...this.fileAnalysis.keys()];
   }
   /**
+   * Returns whether a file still needs a full-pass reindex.
+   * True when the file is dirty, a full rebuild is pending, or no covering
+   * full-pass analysis exists yet.
+   * @param {string} file The absolute path of the file.
+   * @returns {boolean} Whether callers should schedule {@link reindex}.
+   */
+  isFileDirtyOrUncovered(file) {
+    const resolved = path4.resolve(file);
+    if (this.dirtyFiles.has(resolved) || this.fullReindexRequired) {
+      return true;
+    }
+    return !this.isCoveredByFullPass(resolved);
+  }
+  /**
+   * Returns a snapshot of index size and last-reindex timing for the project panel.
+   * @returns {WorkspaceIndexStatus} The current status snapshot.
+   */
+  getStatus() {
+    let errorCount = 0;
+    for (const bucket of this.fileAnalysis.values()) {
+      errorCount += bucket.diagnostics.filter((entry) => entry.severity === "error").length;
+    }
+    return {
+      fileCount: this.fileAnalysis.size,
+      symbolCount: this.allSymbols.length,
+      referenceCount: this.allReferences.length,
+      errorCount,
+      entryPoints: [...this.entryPoints],
+      includePaths: [...this.includePaths],
+      ...this.lastReindexDurationMs === void 0 ? {} : { lastReindexDurationMs: this.lastReindexDurationMs },
+      lastReindexCachedRoots: this.lastReindexCachedRoots,
+      lastReindexAnalyzedRoots: this.lastReindexAnalyzedRoots
+    };
+  }
+  /**
+   * True when a followIncludes analysis already owns this file as a root or include.
+   * @param {string} file The absolute path of the file.
+   * @returns {boolean} Whether a covering full-pass analysis exists.
+   */
+  isCoveredByFullPass(file) {
+    const resolved = path4.resolve(file);
+    for (const [root, analysis] of this.rootAnalyses) {
+      if (!analysis.followedIncludes) {
+        continue;
+      }
+      if (root === resolved) {
+        return true;
+      }
+      if (analysis.includeEdges.some((edge) => edge.fromFile === resolved || edge.toFile === resolved)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  /**
+   * True when a different full-pass root already includes this file.
+   * Used to avoid analysing included files as standalone roots.
+   * @param {string} file The absolute path of the file.
+   * @returns {boolean} Whether another covering full-pass root exists.
+   */
+  isCoveredByOtherFullPassRoot(file) {
+    const resolved = path4.resolve(file);
+    for (const [root, analysis] of this.rootAnalyses) {
+      if (!analysis.followedIncludes || root === resolved) {
+        continue;
+      }
+      if (analysis.includeEdges.some((edge) => edge.fromFile === resolved || edge.toFile === resolved)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  /**
    * Re-runs analysis for every root and rebuilds all per-file buckets.
    * Roots are the configured entry points, or every open document when no
    * entry points are configured.
    */
   reindex() {
+    const started = Date.now();
     const roots = this.resolveRoots();
     const activeRoots = new Set(roots);
     for (const cachedRoot of this.rootAnalyses.keys()) {
@@ -23699,7 +24005,7 @@ var WorkspaceIndex = class {
         this.rootAnalyses.delete(cachedRoot);
       }
     }
-    const analyzeAll = this.fullReindexRequired || this.dirtyFiles.size === 0;
+    const analyzeAll = this.fullReindexRequired;
     const dirtyFiles = [...this.dirtyFiles];
     const hasUnknownDependency = dirtyFiles.some(
       (file) => !roots.some((root) => this.rootDependsOnFile(root, file))
@@ -23707,16 +24013,29 @@ var WorkspaceIndex = class {
     const rootsToAnalyze = analyzeAll || hasUnknownDependency ? roots : roots.filter(
       (root) => !this.rootAnalyses.has(root) || dirtyFiles.some((file) => this.rootDependsOnFile(root, file))
     );
+    let cachedRoots = 0;
+    let analyzedRoots = 0;
     for (const root of rootsToAnalyze) {
-      const result = this.analyzeRoot(root);
+      if (this.isCoveredByOtherFullPassRoot(root)) {
+        continue;
+      }
+      const result = this.analyzeRoot(root, { followIncludes: true });
       if (result) {
         this.rootAnalyses.set(root, result);
+        if (this.lastRootServedFromCache) {
+          cachedRoots += 1;
+        } else {
+          analyzedRoots += 1;
+        }
       } else {
         this.rootAnalyses.delete(root);
       }
     }
     this.dirtyFiles.clear();
     this.fullReindexRequired = false;
+    this.lastReindexDurationMs = Date.now() - started;
+    this.lastReindexCachedRoots = cachedRoots;
+    this.lastReindexAnalyzedRoots = analyzedRoots;
     this.rebuildMergedIndex(roots);
   }
   /**
@@ -23738,13 +24057,30 @@ var WorkspaceIndex = class {
   /**
    * Analyses one root using the current overlay snapshot.
    * @param {string} root The root source file.
+   * @param {{ followIncludes?: boolean }} [options] Analysis options.
    * @returns {RootAnalysis | undefined} The completed artifacts, or undefined when unavailable.
    */
-  analyzeRoot(root) {
+  analyzeRoot(root, options = {}) {
     const content = this.overlay.get(root) ?? this.readDiskRoot(root);
     if (content === void 0) {
       return void 0;
     }
+    const followIncludes = options.followIncludes ?? true;
+    this.lastRootServedFromCache = false;
+    this.logger?.info(
+      `Analyzing ${path4.basename(root)} (followIncludes=${followIncludes}, ${content.length} chars)\u2026`
+    );
+    if (followIncludes && this.cache) {
+      const cached = this.cache.read(root, this.cacheIdentity(), (file) => this.hashFile(file));
+      if (cached) {
+        this.lastRootServedFromCache = true;
+        this.logger?.info(
+          `Using cached analysis for ${path4.basename(root)} (followIncludes=true, symbols=${cached.symbols.length}, refs=${cached.references.length}, edges=${cached.includeEdges.length}, errors=${cached.diagnostics.length})`
+        );
+        return cached;
+      }
+    }
+    const started = Date.now();
     const provider = new OverlayFileProvider(this.overlay);
     const assembler = new Assembler({
       environment: this.environment,
@@ -23754,15 +24090,30 @@ var WorkspaceIndex = class {
       fileProvider: provider
     });
     assembler.includePaths = this.deriveIncludePaths(root);
+    assembler.followIncludes = followIncludes;
     try {
-      const result = assembler.analyzeSource(content, root, 0);
-      return {
+      const result = assembler.analyzeSource(content, root, 0, { followIncludes });
+      const analysis = {
+        followedIncludes: followIncludes,
         diagnostics: result.diagnostics,
         symbols: result.symbols,
         references: result.references,
         includeEdges: result.includeEdges
       };
-    } catch {
+      this.logger?.info(
+        `Analyzed ${path4.basename(root)} in ${Date.now() - started}ms (followIncludes=${followIncludes}, symbols=${result.symbols.length}, refs=${result.references.length}, edges=${result.includeEdges.length}, errors=${result.diagnostics.length})`
+      );
+      if (followIncludes && this.cache) {
+        const fileHashes = this.collectFileHashes(root, result.includeEdges);
+        if (fileHashes) {
+          this.cache.write(root, this.cacheIdentity(), fileHashes, analysis);
+        }
+      }
+      return analysis;
+    } catch (error) {
+      this.logger?.info(
+        `Analysis failed for ${path4.basename(root)} after ${Date.now() - started}ms: ${error instanceof Error ? error.message : String(error)}`
+      );
       return void 0;
     } finally {
       assembler.dispose();
@@ -23770,6 +24121,17 @@ var WorkspaceIndex = class {
   }
   /**
    * Rebuilds workspace-wide buckets from cached per-root artifacts.
+   *
+   * Files that appear as include targets of a full-pass root analysis are
+   * considered "covered" — the covering root already has their correct
+   * symbols and diagnostics (assembled in proper parent context). When such
+   * a file also exists as a standalone root entry (e.g. because it was
+   * opened directly), its standalone artifacts are skipped so they cannot
+   * produce false "missing define" diagnostics or duplicate outline symbols.
+   *
+   * Include edges are always merged regardless of coverage (navigation must
+   * work even before the full reindex completes).
+   *
    * @param {string[]} roots The active roots in deterministic order.
    */
   rebuildMergedIndex(roots) {
@@ -23778,12 +24140,20 @@ var WorkspaceIndex = class {
     this.allSymbols = [];
     this.allReferences = [];
     const seenEdges = /* @__PURE__ */ new Set();
+    const coveredByFullPass = /* @__PURE__ */ new Set();
+    for (const root of roots) {
+      const result = this.rootAnalyses.get(root);
+      if (result?.followedIncludes) {
+        for (const edge of result.includeEdges) {
+          coveredByFullPass.add(edge.toFile);
+        }
+      }
+    }
     for (const root of roots) {
       const result = this.rootAnalyses.get(root);
       if (!result) {
         continue;
       }
-      this.ingestArtifacts(root, result.diagnostics, result.symbols, result.references);
       for (const edge of result.includeEdges) {
         const key = `${edge.fromFile}\0${edge.toFile}`;
         if (seenEdges.has(key)) {
@@ -23792,6 +24162,10 @@ var WorkspaceIndex = class {
         seenEdges.add(key);
         this.includeEdges.push(edge);
       }
+      if (coveredByFullPass.has(root)) {
+        continue;
+      }
+      this.ingestArtifacts(root, result.diagnostics, result.symbols, result.references);
     }
   }
   /**
@@ -23820,7 +24194,7 @@ var WorkspaceIndex = class {
    * @returns {FileAnalysis} The mutable analysis bucket.
    */
   bucketFor(file) {
-    const resolved = path3.resolve(file);
+    const resolved = path4.resolve(file);
     let bucket = this.fileAnalysis.get(resolved);
     if (!bucket) {
       bucket = { file: resolved, diagnostics: [], symbols: [], references: [] };
@@ -23861,8 +24235,63 @@ var WorkspaceIndex = class {
    * @returns {string[]} The include paths to hand to the assembler.
    */
   deriveIncludePaths(root) {
-    const directory = path3.dirname(root);
+    const directory = path4.dirname(root);
     return [.../* @__PURE__ */ new Set([directory, ...this.includePaths])];
+  }
+  /**
+   * Assembler identity stored alongside cached analysis so a target or include-path
+   * change cannot reuse stale artifacts.
+   * @returns {import("./root-analysis-cache.js").RootAnalysisCacheIdentity} The identity.
+   */
+  cacheIdentity() {
+    return {
+      target: this.target,
+      architecture: this.architecture,
+      includePaths: this.includePaths
+    };
+  }
+  /**
+   * Hashes overlay or disk bytes for cache invalidation. Works for text and binary includes.
+   * @param {string} file Absolute path to hash.
+   * @returns {string | undefined} Hex digest, or undefined when unreadable.
+   */
+  hashFile(file) {
+    try {
+      const overlay = this.overlay.get(file);
+      if (overlay !== void 0) {
+        return hashBytes(new Uint8Array(Buffer.from(overlay, "utf8")));
+      }
+      const provider = new OverlayFileProvider(this.overlay);
+      const stat = provider.stat(file);
+      if (!stat.exists || !stat.readable) {
+        return void 0;
+      }
+      return hashBytes(provider.readFile(file));
+    } catch {
+      return void 0;
+    }
+  }
+  /**
+   * Collects content hashes for a root and every file in its include graph.
+   * @param {string} root Absolute root path.
+   * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
+   * @returns {Record<string, string> | undefined} Path-to-hash map, or undefined when incomplete.
+   */
+  collectFileHashes(root, includeEdges) {
+    const files = /* @__PURE__ */ new Set([root]);
+    for (const edge of includeEdges) {
+      files.add(edge.fromFile);
+      files.add(edge.toFile);
+    }
+    const hashes = {};
+    for (const file of [...files].sort()) {
+      const hash = this.hashFile(file);
+      if (typeof hash !== "string") {
+        return void 0;
+      }
+      hashes[file] = hash;
+    }
+    return hashes;
   }
 };
 
@@ -31174,6 +31603,433 @@ var plugin = definePlugin({
 });
 var src_default = plugin;
 
+// packages/plugin-loader-node/src/configuration.ts
+import { existsSync as existsSync2, promises as fs3 } from "node:fs";
+import path5 from "node:path";
+var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
+var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
+  "$schema",
+  "plugins",
+  "target",
+  "architecture",
+  "includePaths",
+  "entryPoints",
+  "buildOutput",
+  "baseImage"
+]);
+var PLUGIN_KEYS = /* @__PURE__ */ new Set(["module", "options"]);
+var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var configurationError = (message, cause) => new PluginError(message, {
+  code: "PLUGIN_CONFIGURATION_INVALID",
+  cause
+});
+var optionalText = (value, field) => {
+  if (value === void 0) return void 0;
+  if (typeof value !== "string" || value.trim() === "") {
+    throw configurationError(`Configuration field '${field}' must be a non-empty string.`);
+  }
+  return value;
+};
+var optionalStringArray = (value, field) => {
+  if (value === void 0) return void 0;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim() === "")) {
+    throw configurationError(`Configuration field '${field}' must be an array of strings.`);
+  }
+  return value;
+};
+var validatePluginEntry = (value, index2) => {
+  const entry = `plugins[${index2}]`;
+  if (!isRecord2(value)) {
+    throw configurationError(`Configuration entry '${entry}' must be an object.`);
+  }
+  const unknown = Object.keys(value).filter((key) => !PLUGIN_KEYS.has(key));
+  if (unknown.length > 0) {
+    throw configurationError(
+      `Configuration entry '${entry}' has unknown field(s): ${unknown.join(", ")}.`
+    );
+  }
+  if (typeof value.module !== "string" || value.module.trim() === "") {
+    throw configurationError(`Configuration entry '${entry}.module' must be a non-empty string.`);
+  }
+  if (value.options !== void 0 && !isRecord2(value.options)) {
+    throw configurationError(`Configuration entry '${entry}.options' must be an object.`);
+  }
+  return {
+    module: value.module,
+    ...value.options === void 0 ? {} : { options: value.options }
+  };
+};
+var validateProjectConfiguration = (value) => {
+  if (!isRecord2(value)) {
+    throw configurationError("Project configuration must be a JSON object.");
+  }
+  const unknown = Object.keys(value).filter((key) => !TOP_LEVEL_KEYS.has(key));
+  if (unknown.length > 0) {
+    throw configurationError(`Project configuration has unknown field(s): ${unknown.join(", ")}.`);
+  }
+  if (value.plugins !== void 0 && !Array.isArray(value.plugins)) {
+    throw configurationError("Configuration field 'plugins' must be an array.");
+  }
+  const schema = optionalText(value.$schema, "$schema");
+  const target = optionalText(value.target, "target");
+  const architecture = optionalText(value.architecture, "architecture");
+  const includePaths = optionalStringArray(value.includePaths, "includePaths");
+  const entryPoints = optionalStringArray(value.entryPoints, "entryPoints");
+  const buildOutput = optionalText(value.buildOutput, "buildOutput");
+  const baseImage = optionalText(value.baseImage, "baseImage");
+  return {
+    ...schema === void 0 ? {} : { $schema: schema },
+    ...value.plugins === void 0 ? {} : { plugins: value.plugins.map((entry, index2) => validatePluginEntry(entry, index2)) },
+    ...target === void 0 ? {} : { target },
+    ...architecture === void 0 ? {} : { architecture },
+    ...includePaths === void 0 ? {} : { includePaths },
+    ...entryPoints === void 0 ? {} : { entryPoints },
+    ...buildOutput === void 0 ? {} : { buildOutput },
+    ...baseImage === void 0 ? {} : { baseImage }
+  };
+};
+var discoverProjectConfigurationPath = (cwd, configuredPath) => {
+  if (configuredPath) {
+    return path5.resolve(cwd, configuredPath);
+  }
+  const candidate = path5.resolve(cwd, PROJECT_CONFIG_FILENAME);
+  return existsSync2(candidate) ? candidate : void 0;
+};
+var readProjectConfiguration = async (cwd, configuredPath) => {
+  const explicit = configuredPath !== void 0;
+  const candidates = explicit ? [path5.resolve(cwd, configuredPath)] : [path5.resolve(cwd, PROJECT_CONFIG_FILENAME)];
+  let lastError;
+  for (const configPath of candidates) {
+    let source;
+    try {
+      source = await fs3.readFile(configPath, "utf8");
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? error.code : void 0;
+      if (code === "ENOENT") {
+        lastError = error;
+        continue;
+      }
+      throw configurationError(`Unable to read project configuration '${configPath}'.`, error);
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(source);
+    } catch (error) {
+      throw configurationError(`Project configuration '${configPath}' is not valid JSON.`, error);
+    }
+    return {
+      path: configPath,
+      directory: path5.dirname(configPath),
+      configuration: validateProjectConfiguration(parsed)
+    };
+  }
+  if (!explicit) {
+    return { directory: path5.resolve(cwd), configuration: {} };
+  }
+  throw configurationError(`Unable to read project configuration '${candidates[0]}'.`, lastError);
+};
+
+// packages/plugin-loader-node/src/loader.ts
+import { realpath } from "node:fs/promises";
+import path6 from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var toOptionsRecord = (value, entry) => {
+  if (value === void 0) return {};
+  if (!isRecord3(value)) {
+    throw new PluginError(`Configuration entry '${entry}.options' must be an object.`, {
+      code: "PLUGIN_CONFIGURATION_INVALID"
+    });
+  }
+  return { ...value };
+};
+var pluginIdFromNamespace = (namespace) => {
+  if (!isRecord3(namespace) || !isRecord3(namespace.default) || !isRecord3(namespace.default.manifest)) {
+    return void 0;
+  }
+  return typeof namespace.default.manifest.id === "string" ? namespace.default.manifest.id : void 0;
+};
+var stableValue = (value) => {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (isRecord3(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, stableValue(value[key])])
+    );
+  }
+  return value;
+};
+var normalizeFileUrl = async (url) => {
+  try {
+    return pathToFileURL(await realpath(fileURLToPath(url))).href;
+  } catch {
+    return url.href;
+  }
+};
+var moduleLoadError = (request, message, resolvedModule, cause) => new PluginError(
+  `Configuration entry '${request.configEntry}' (${request.module})${resolvedModule ? ` resolved to '${resolvedModule}'` : ""}: ${message}`,
+  {
+    code: "PLUGIN_MODULE_NOT_FOUND",
+    pluginModule: resolvedModule ?? request.module,
+    cause
+  }
+);
+var resolveExternalModule = async (request) => {
+  try {
+    if (request.module.startsWith("file:")) {
+      return normalizeFileUrl(new URL(request.module));
+    }
+    if (path6.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
+      return normalizeFileUrl(pathToFileURL(path6.resolve(request.baseDirectory, request.module)));
+    }
+    const parent = pathToFileURL(path6.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
+    return await normalizeFileUrl(new URL(import.meta.resolve(request.module, parent.href)));
+  } catch (error) {
+    throw moduleLoadError(request, "module could not be resolved", void 0, error);
+  }
+};
+var wrapActivationError = (error, modules) => {
+  if (!(error instanceof PluginError)) {
+    return new PluginError("Plugin activation failed.", {
+      code: "PLUGIN_ACTIVATION_FAILED",
+      cause: error
+    });
+  }
+  const entry = modules.find(
+    (item) => item.resolvedModule === error.pluginModule || error.pluginId !== void 0 && item.pluginId === error.pluginId
+  );
+  if (!entry) return error;
+  return new PluginError(
+    `Configuration entry '${entry.configEntry}' resolved to '${entry.resolvedModule}': ${error.message}`,
+    {
+      code: error.code,
+      pluginId: error.pluginId ?? entry.pluginId,
+      pluginModule: error.pluginModule ?? entry.resolvedModule,
+      contributionId: error.contributionId,
+      targetId: error.targetId,
+      cause: error.cause ?? error
+    }
+  );
+};
+var NodePluginLoader = class {
+  #current;
+  async loadProjectEnvironment(options) {
+    const cwd = path6.resolve(options.cwd);
+    const loadedConfig = options.allowProjectConfiguration === false ? { directory: cwd, configuration: {} } : await readProjectConfiguration(cwd, options.configFile);
+    const configPlugins = loadedConfig.configuration.plugins ?? [];
+    const defaultPlugins = configPlugins.length === 0 ? options.defaults?.plugins ?? [] : [];
+    const requests = [
+      ...configPlugins.map((request, index2) => ({
+        ...request,
+        baseDirectory: loadedConfig.directory,
+        source: "configuration",
+        configEntry: `plugins[${index2}]`
+      })),
+      ...defaultPlugins.map((request, index2) => ({
+        ...request,
+        baseDirectory: cwd,
+        source: "host-default",
+        configEntry: `hostDefaults.plugins[${index2}]`
+      })),
+      ...(options.pluginModules ?? []).map((request, index2) => ({
+        ...request,
+        baseDirectory: cwd,
+        source: "override",
+        configEntry: `pluginModules[${index2}]`
+      }))
+    ];
+    const modules = [];
+    for (const request of requests) {
+      modules.push(await this.#resolveAndImport(request, options));
+    }
+    const duplicates = /* @__PURE__ */ new Map();
+    for (const item of modules) {
+      const previous = duplicates.get(item.resolvedModule);
+      if (previous) {
+        throw new PluginError(
+          `Configuration entries '${previous.configEntry}' and '${item.configEntry}' resolve to the same module '${item.resolvedModule}'.`,
+          {
+            code: "PLUGIN_CONFIGURATION_INVALID",
+            pluginId: item.pluginId || void 0,
+            pluginModule: item.resolvedModule
+          }
+        );
+      }
+      duplicates.set(item.resolvedModule, item);
+    }
+    this.#assertAllPluginOptionOverridesMatched(options, modules);
+    const targetInput = options.overrides?.target ?? loadedConfig.configuration.target ?? options.defaults?.target;
+    const architectureInput = options.overrides?.architecture ?? loadedConfig.configuration.architecture ?? options.defaults?.architecture;
+    const configuredIncludePaths = options.overrides?.includePaths ?? loadedConfig.configuration.includePaths ?? options.defaults?.includePaths ?? ["./"];
+    let includeBase = cwd;
+    if (options.overrides?.includePaths === void 0 && loadedConfig.configuration.includePaths !== void 0) {
+      includeBase = loadedConfig.directory;
+    }
+    const includePaths = [
+      ...new Set(configuredIncludePaths.map((entry) => path6.resolve(includeBase, entry)))
+    ];
+    const preliminarySnapshot = JSON.stringify(
+      stableValue({
+        configFile: loadedConfig.path,
+        modules: modules.map((item) => ({
+          module: item.module,
+          resolvedModule: item.resolvedModule,
+          pluginId: item.pluginId,
+          options: item.normalizedOptions,
+          source: item.source
+        })),
+        targetInput,
+        architectureInput,
+        includePaths
+      })
+    );
+    if (this.#current?.snapshot === preliminarySnapshot && !this.#current.disposed) {
+      return this.#current.loaded;
+    }
+    await this.#disposeCurrent();
+    const manager = new PluginManager({ logger: options.logger });
+    try {
+      const activationRequests = modules.map((item) => ({
+        module: item.namespace,
+        options: item.normalizedOptions,
+        pluginModule: item.resolvedModule
+      }));
+      await manager.activateModules(activationRequests);
+      const environment = manager.freeze();
+      const targets = environment.getTargetSummaries();
+      const targetCandidate = targetInput ?? (targets.length === 1 ? targets[0]?.id : void 0);
+      if (!targetCandidate) {
+        throw new PluginError(
+          targets.length === 0 ? "No target is configured and the active plugins provide no targets." : `No target is configured; choose one of: ${targets.map((target2) => target2.id).join(", ")}.`,
+          { code: "PLUGIN_TARGET_INVALID" }
+        );
+      }
+      const target = environment.resolveTargetId(targetCandidate);
+      if (!target) {
+        throw new PluginError(`Unknown configured target '${targetCandidate}'.`, {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId: targetCandidate
+        });
+      }
+      const targetContribution = environment.getTarget(target);
+      const architectureCandidate = architectureInput ?? targetContribution.defaultArchitecture;
+      const architecture = environment.resolveArchitectureId(target, architectureCandidate);
+      if (!architecture) {
+        throw new PluginError(
+          `Architecture '${architectureCandidate}' is not available for target '${target}'.`,
+          {
+            code: "PLUGIN_TARGET_INVALID",
+            targetId: target,
+            contributionId: architectureCandidate
+          }
+        );
+      }
+      const targetOwner = environment.getContributionOwner(target);
+      const configuredTargetOptions = modules.find((item) => item.pluginId === targetOwner)?.normalizedOptions ?? {};
+      const targetOptions2 = Object.freeze({
+        ...targetContribution.createOptions ? configuredTargetOptions : {}
+      });
+      const normalizedPlugins = Object.freeze(
+        modules.map(
+          (item) => Object.freeze({
+            module: item.module,
+            resolvedModule: item.resolvedModule,
+            pluginId: item.pluginId,
+            options: item.normalizedOptions,
+            source: item.source,
+            configEntry: item.configEntry,
+            bundled: item.bundled
+          })
+        )
+      );
+      const configuration = Object.freeze({
+        ...loadedConfig.path === void 0 ? {} : { configFile: loadedConfig.path },
+        projectRoot: loadedConfig.directory,
+        plugins: normalizedPlugins,
+        target,
+        architecture,
+        targetOptions: targetOptions2,
+        includePaths: Object.freeze(includePaths)
+      });
+      const current = {};
+      const loaded = Object.freeze({
+        environment,
+        target,
+        architecture,
+        targetOptions: targetOptions2,
+        includePaths: configuration.includePaths,
+        configuration,
+        diagnostics: Object.freeze([]),
+        dispose: async () => {
+          if (this.#current === current) this.#current = void 0;
+          await this.#disposeEntry(current);
+        }
+      });
+      Object.assign(current, {
+        snapshot: preliminarySnapshot,
+        manager,
+        loaded,
+        disposed: false
+      });
+      this.#current = current;
+      return loaded;
+    } catch (error) {
+      await manager.dispose();
+      throw wrapActivationError(error, modules);
+    }
+  }
+  async dispose() {
+    await this.#disposeCurrent();
+  }
+  async #resolveAndImport(request, options) {
+    const bundled = options.bundledPlugins?.get(request.module);
+    let resolvedModule;
+    let namespace;
+    if (bundled) {
+      resolvedModule = `bundled:${request.module}`;
+      namespace = { default: bundled };
+    } else {
+      resolvedModule = await resolveExternalModule(request);
+      try {
+        namespace = await import(resolvedModule);
+      } catch (error) {
+        throw moduleLoadError(request, "module could not be imported", resolvedModule, error);
+      }
+    }
+    const pluginId = pluginIdFromNamespace(namespace) ?? "";
+    const configuredOptions = toOptionsRecord(request.options, request.configEntry);
+    const moduleOverride = options.overrides?.pluginOptions?.[request.module] ?? {};
+    const idOverride = pluginId ? options.overrides?.pluginOptions?.[pluginId] ?? {} : {};
+    return {
+      ...request,
+      resolvedModule,
+      bundled: bundled !== void 0,
+      namespace,
+      pluginId,
+      normalizedOptions: Object.freeze({ ...configuredOptions, ...moduleOverride, ...idOverride })
+    };
+  }
+  #assertAllPluginOptionOverridesMatched(options, modules) {
+    for (const key of Object.keys(options.overrides?.pluginOptions ?? {})) {
+      if (!modules.some((item) => item.module === key || item.pluginId === key)) {
+        throw new PluginError(`Plugin option override '${key}' does not match a loaded plugin.`, {
+          code: "PLUGIN_CONFIGURATION_INVALID",
+          pluginId: key
+        });
+      }
+    }
+  }
+  async #disposeCurrent() {
+    const current = this.#current;
+    this.#current = void 0;
+    if (current) await this.#disposeEntry(current);
+  }
+  async #disposeEntry(current) {
+    if (current.disposed) return;
+    current.disposed = true;
+    await current.manager.dispose();
+  }
+};
+
 // language-server/src/server.ts
 var import_node = __toESM(require_main3(), 1);
 
@@ -31426,401 +32282,8 @@ function getWellformedEdit(textEdit) {
 }
 
 // language-server/src/project-environment.ts
-import { existsSync } from "node:fs";
-import path6 from "node:path";
-
-// packages/plugin-loader-node/src/configuration.ts
-import { promises as fs3 } from "node:fs";
-import path4 from "node:path";
-var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set(["$schema", "plugins", "target", "architecture", "includePaths"]);
-var PLUGIN_KEYS = /* @__PURE__ */ new Set(["module", "options"]);
-var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-var configurationError = (message, cause) => new PluginError(message, {
-  code: "PLUGIN_CONFIGURATION_INVALID",
-  cause
-});
-var optionalText = (value, field) => {
-  if (value === void 0) return void 0;
-  if (typeof value !== "string" || value.trim() === "") {
-    throw configurationError(`Configuration field '${field}' must be a non-empty string.`);
-  }
-  return value;
-};
-var validatePluginEntry = (value, index2) => {
-  const entry = `plugins[${index2}]`;
-  if (!isRecord2(value)) {
-    throw configurationError(`Configuration entry '${entry}' must be an object.`);
-  }
-  const unknown = Object.keys(value).filter((key) => !PLUGIN_KEYS.has(key));
-  if (unknown.length > 0) {
-    throw configurationError(
-      `Configuration entry '${entry}' has unknown field(s): ${unknown.join(", ")}.`
-    );
-  }
-  if (typeof value.module !== "string" || value.module.trim() === "") {
-    throw configurationError(`Configuration entry '${entry}.module' must be a non-empty string.`);
-  }
-  if (value.options !== void 0 && !isRecord2(value.options)) {
-    throw configurationError(`Configuration entry '${entry}.options' must be an object.`);
-  }
-  return {
-    module: value.module,
-    ...value.options === void 0 ? {} : { options: value.options }
-  };
-};
-var validateProjectConfiguration = (value) => {
-  if (!isRecord2(value)) {
-    throw configurationError("Project configuration must be a JSON object.");
-  }
-  const unknown = Object.keys(value).filter((key) => !TOP_LEVEL_KEYS.has(key));
-  if (unknown.length > 0) {
-    throw configurationError(`Project configuration has unknown field(s): ${unknown.join(", ")}.`);
-  }
-  if (value.plugins !== void 0 && !Array.isArray(value.plugins)) {
-    throw configurationError("Configuration field 'plugins' must be an array.");
-  }
-  if (value.includePaths !== void 0 && (!Array.isArray(value.includePaths) || value.includePaths.some((item) => typeof item !== "string" || item.trim() === ""))) {
-    throw configurationError("Configuration field 'includePaths' must be an array of strings.");
-  }
-  const schema = optionalText(value.$schema, "$schema");
-  const target = optionalText(value.target, "target");
-  const architecture = optionalText(value.architecture, "architecture");
-  return {
-    ...schema === void 0 ? {} : { $schema: schema },
-    ...value.plugins === void 0 ? {} : { plugins: value.plugins.map((entry, index2) => validatePluginEntry(entry, index2)) },
-    ...target === void 0 ? {} : { target },
-    ...architecture === void 0 ? {} : { architecture },
-    ...value.includePaths === void 0 ? {} : { includePaths: value.includePaths }
-  };
-};
-var readProjectConfiguration = async (cwd, configuredPath) => {
-  const explicit = configuredPath !== void 0;
-  const configPath = path4.resolve(cwd, configuredPath ?? "asm.config.json");
-  let source;
-  try {
-    source = await fs3.readFile(configPath, "utf8");
-  } catch (error) {
-    const code = typeof error === "object" && error !== null && "code" in error ? error.code : void 0;
-    if (!explicit && code === "ENOENT") {
-      return { directory: path4.resolve(cwd), configuration: {} };
-    }
-    throw configurationError(`Unable to read project configuration '${configPath}'.`, error);
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(source);
-  } catch (error) {
-    throw configurationError(`Project configuration '${configPath}' is not valid JSON.`, error);
-  }
-  return {
-    path: configPath,
-    directory: path4.dirname(configPath),
-    configuration: validateProjectConfiguration(parsed)
-  };
-};
-
-// packages/plugin-loader-node/src/loader.ts
-import { realpath } from "node:fs/promises";
-import path5 from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-var toOptionsRecord = (value, entry) => {
-  if (value === void 0) return {};
-  if (!isRecord3(value)) {
-    throw new PluginError(`Configuration entry '${entry}.options' must be an object.`, {
-      code: "PLUGIN_CONFIGURATION_INVALID"
-    });
-  }
-  return { ...value };
-};
-var pluginIdFromNamespace = (namespace) => {
-  if (!isRecord3(namespace) || !isRecord3(namespace.default) || !isRecord3(namespace.default.manifest)) {
-    return void 0;
-  }
-  return typeof namespace.default.manifest.id === "string" ? namespace.default.manifest.id : void 0;
-};
-var stableValue = (value) => {
-  if (Array.isArray(value)) return value.map(stableValue);
-  if (isRecord3(value)) {
-    return Object.fromEntries(
-      Object.keys(value).sort().map((key) => [key, stableValue(value[key])])
-    );
-  }
-  return value;
-};
-var normalizeFileUrl = async (url) => {
-  try {
-    return pathToFileURL(await realpath(fileURLToPath(url))).href;
-  } catch {
-    return url.href;
-  }
-};
-var moduleLoadError = (request, message, resolvedModule, cause) => new PluginError(
-  `Configuration entry '${request.configEntry}' (${request.module})${resolvedModule ? ` resolved to '${resolvedModule}'` : ""}: ${message}`,
-  {
-    code: "PLUGIN_MODULE_NOT_FOUND",
-    pluginModule: resolvedModule ?? request.module,
-    cause
-  }
-);
-var resolveExternalModule = async (request) => {
-  try {
-    if (request.module.startsWith("file:")) {
-      return normalizeFileUrl(new URL(request.module));
-    }
-    if (path5.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
-      return normalizeFileUrl(pathToFileURL(path5.resolve(request.baseDirectory, request.module)));
-    }
-    const parent = pathToFileURL(path5.join(request.baseDirectory, "asm.config.json"));
-    return await normalizeFileUrl(new URL(import.meta.resolve(request.module, parent.href)));
-  } catch (error) {
-    throw moduleLoadError(request, "module could not be resolved", void 0, error);
-  }
-};
-var wrapActivationError = (error, modules) => {
-  if (!(error instanceof PluginError)) {
-    return new PluginError("Plugin activation failed.", {
-      code: "PLUGIN_ACTIVATION_FAILED",
-      cause: error
-    });
-  }
-  const entry = modules.find(
-    (item) => item.resolvedModule === error.pluginModule || error.pluginId !== void 0 && item.pluginId === error.pluginId
-  );
-  if (!entry) return error;
-  return new PluginError(
-    `Configuration entry '${entry.configEntry}' resolved to '${entry.resolvedModule}': ${error.message}`,
-    {
-      code: error.code,
-      pluginId: error.pluginId ?? entry.pluginId,
-      pluginModule: error.pluginModule ?? entry.resolvedModule,
-      contributionId: error.contributionId,
-      targetId: error.targetId,
-      cause: error.cause ?? error
-    }
-  );
-};
-var NodePluginLoader = class {
-  #current;
-  async loadProjectEnvironment(options) {
-    const cwd = path5.resolve(options.cwd);
-    const loadedConfig = options.allowProjectConfiguration === false ? { directory: cwd, configuration: {} } : await readProjectConfiguration(cwd, options.configFile);
-    const configPlugins = loadedConfig.configuration.plugins ?? [];
-    const defaultPlugins = configPlugins.length === 0 ? options.defaults?.plugins ?? [] : [];
-    const requests = [
-      ...configPlugins.map((request, index2) => ({
-        ...request,
-        baseDirectory: loadedConfig.directory,
-        source: "configuration",
-        configEntry: `plugins[${index2}]`
-      })),
-      ...defaultPlugins.map((request, index2) => ({
-        ...request,
-        baseDirectory: cwd,
-        source: "host-default",
-        configEntry: `hostDefaults.plugins[${index2}]`
-      })),
-      ...(options.pluginModules ?? []).map((request, index2) => ({
-        ...request,
-        baseDirectory: cwd,
-        source: "override",
-        configEntry: `pluginModules[${index2}]`
-      }))
-    ];
-    const modules = [];
-    for (const request of requests) {
-      modules.push(await this.#resolveAndImport(request, options));
-    }
-    const duplicates = /* @__PURE__ */ new Map();
-    for (const item of modules) {
-      const previous = duplicates.get(item.resolvedModule);
-      if (previous) {
-        throw new PluginError(
-          `Configuration entries '${previous.configEntry}' and '${item.configEntry}' resolve to the same module '${item.resolvedModule}'.`,
-          {
-            code: "PLUGIN_CONFIGURATION_INVALID",
-            pluginId: item.pluginId || void 0,
-            pluginModule: item.resolvedModule
-          }
-        );
-      }
-      duplicates.set(item.resolvedModule, item);
-    }
-    this.#assertAllPluginOptionOverridesMatched(options, modules);
-    const targetInput = options.overrides?.target ?? loadedConfig.configuration.target ?? options.defaults?.target;
-    const architectureInput = options.overrides?.architecture ?? loadedConfig.configuration.architecture ?? options.defaults?.architecture;
-    const configuredIncludePaths = options.overrides?.includePaths ?? loadedConfig.configuration.includePaths ?? options.defaults?.includePaths ?? ["./"];
-    let includeBase = cwd;
-    if (options.overrides?.includePaths === void 0 && loadedConfig.configuration.includePaths !== void 0) {
-      includeBase = loadedConfig.directory;
-    }
-    const includePaths = [
-      ...new Set(configuredIncludePaths.map((entry) => path5.resolve(includeBase, entry)))
-    ];
-    const preliminarySnapshot = JSON.stringify(
-      stableValue({
-        configFile: loadedConfig.path,
-        modules: modules.map((item) => ({
-          module: item.module,
-          resolvedModule: item.resolvedModule,
-          pluginId: item.pluginId,
-          options: item.normalizedOptions,
-          source: item.source
-        })),
-        targetInput,
-        architectureInput,
-        includePaths
-      })
-    );
-    if (this.#current?.snapshot === preliminarySnapshot && !this.#current.disposed) {
-      return this.#current.loaded;
-    }
-    await this.#disposeCurrent();
-    const manager = new PluginManager({ logger: options.logger });
-    try {
-      const activationRequests = modules.map((item) => ({
-        module: item.namespace,
-        options: item.normalizedOptions,
-        pluginModule: item.resolvedModule
-      }));
-      await manager.activateModules(activationRequests);
-      const environment = manager.freeze();
-      const targets = environment.getTargetSummaries();
-      const targetCandidate = targetInput ?? (targets.length === 1 ? targets[0]?.id : void 0);
-      if (!targetCandidate) {
-        throw new PluginError(
-          targets.length === 0 ? "No target is configured and the active plugins provide no targets." : `No target is configured; choose one of: ${targets.map((target2) => target2.id).join(", ")}.`,
-          { code: "PLUGIN_TARGET_INVALID" }
-        );
-      }
-      const target = environment.resolveTargetId(targetCandidate);
-      if (!target) {
-        throw new PluginError(`Unknown configured target '${targetCandidate}'.`, {
-          code: "PLUGIN_TARGET_INVALID",
-          targetId: targetCandidate
-        });
-      }
-      const targetContribution = environment.getTarget(target);
-      const architectureCandidate = architectureInput ?? targetContribution.defaultArchitecture;
-      const architecture = environment.resolveArchitectureId(target, architectureCandidate);
-      if (!architecture) {
-        throw new PluginError(
-          `Architecture '${architectureCandidate}' is not available for target '${target}'.`,
-          {
-            code: "PLUGIN_TARGET_INVALID",
-            targetId: target,
-            contributionId: architectureCandidate
-          }
-        );
-      }
-      const targetOwner = environment.getContributionOwner(target);
-      const configuredTargetOptions = modules.find((item) => item.pluginId === targetOwner)?.normalizedOptions ?? {};
-      const targetOptions2 = Object.freeze({
-        ...targetContribution.createOptions ? configuredTargetOptions : {}
-      });
-      const normalizedPlugins = Object.freeze(
-        modules.map(
-          (item) => Object.freeze({
-            module: item.module,
-            resolvedModule: item.resolvedModule,
-            pluginId: item.pluginId,
-            options: item.normalizedOptions,
-            source: item.source,
-            configEntry: item.configEntry,
-            bundled: item.bundled
-          })
-        )
-      );
-      const configuration = Object.freeze({
-        ...loadedConfig.path === void 0 ? {} : { configFile: loadedConfig.path },
-        projectRoot: loadedConfig.directory,
-        plugins: normalizedPlugins,
-        target,
-        architecture,
-        targetOptions: targetOptions2,
-        includePaths: Object.freeze(includePaths)
-      });
-      const current = {};
-      const loaded = Object.freeze({
-        environment,
-        target,
-        architecture,
-        targetOptions: targetOptions2,
-        includePaths: configuration.includePaths,
-        configuration,
-        diagnostics: Object.freeze([]),
-        dispose: async () => {
-          if (this.#current === current) this.#current = void 0;
-          await this.#disposeEntry(current);
-        }
-      });
-      Object.assign(current, {
-        snapshot: preliminarySnapshot,
-        manager,
-        loaded,
-        disposed: false
-      });
-      this.#current = current;
-      return loaded;
-    } catch (error) {
-      await manager.dispose();
-      throw wrapActivationError(error, modules);
-    }
-  }
-  async dispose() {
-    await this.#disposeCurrent();
-  }
-  async #resolveAndImport(request, options) {
-    const bundled = options.bundledPlugins?.get(request.module);
-    let resolvedModule;
-    let namespace;
-    if (bundled) {
-      resolvedModule = `bundled:${request.module}`;
-      namespace = { default: bundled };
-    } else {
-      resolvedModule = await resolveExternalModule(request);
-      try {
-        namespace = await import(resolvedModule);
-      } catch (error) {
-        throw moduleLoadError(request, "module could not be imported", resolvedModule, error);
-      }
-    }
-    const pluginId = pluginIdFromNamespace(namespace) ?? "";
-    const configuredOptions = toOptionsRecord(request.options, request.configEntry);
-    const moduleOverride = options.overrides?.pluginOptions?.[request.module] ?? {};
-    const idOverride = pluginId ? options.overrides?.pluginOptions?.[pluginId] ?? {} : {};
-    return {
-      ...request,
-      resolvedModule,
-      bundled: bundled !== void 0,
-      namespace,
-      pluginId,
-      normalizedOptions: Object.freeze({ ...configuredOptions, ...moduleOverride, ...idOverride })
-    };
-  }
-  #assertAllPluginOptionOverridesMatched(options, modules) {
-    for (const key of Object.keys(options.overrides?.pluginOptions ?? {})) {
-      if (!modules.some((item) => item.module === key || item.pluginId === key)) {
-        throw new PluginError(`Plugin option override '${key}' does not match a loaded plugin.`, {
-          code: "PLUGIN_CONFIGURATION_INVALID",
-          pluginId: key
-        });
-      }
-    }
-  }
-  async #disposeCurrent() {
-    const current = this.#current;
-    this.#current = void 0;
-    if (current) await this.#disposeEntry(current);
-  }
-  async #disposeEntry(current) {
-    if (current.disposed) return;
-    current.disposed = true;
-    await current.manager.dispose();
-  }
-};
-
-// language-server/src/project-environment.ts
+import { existsSync as existsSync3 } from "node:fs";
+import path7 from "node:path";
 var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) => {
   if (typeof entry === "string") {
     if (!entry.trim()) throw new Error(`Plugin setting at index ${index2} must not be empty.`);
@@ -31845,10 +32308,10 @@ var ProjectEnvironmentController = class {
     return this.#state;
   }
   async replace(settings2, overlays = /* @__PURE__ */ new Map()) {
-    const cwd = path6.resolve(settings2.cwd);
+    const cwd = path7.resolve(settings2.cwd);
     const pluginModules = configuredPluginModules(settings2.plugins);
-    const configuredPath = settings2.configFile ? path6.resolve(cwd, settings2.configFile) : path6.join(cwd, "asm.config.json");
-    const hasWorkspaceConfiguration = Boolean(settings2.configFile) || existsSync(configuredPath);
+    const configuredPath = discoverProjectConfigurationPath(cwd, settings2.configFile);
+    const hasWorkspaceConfiguration = Boolean(settings2.configFile) || Boolean(configuredPath && existsSync3(configuredPath));
     const workspacePluginsRequested = hasWorkspaceConfiguration || pluginModules.length > 0;
     const useHostDefaults = !settings2.workspaceTrusted || !hasWorkspaceConfiguration && pluginModules.length === 0;
     const loader = new NodePluginLoader();
@@ -31857,7 +32320,7 @@ var ProjectEnvironmentController = class {
       const loaded = await loader.loadProjectEnvironment({
         cwd,
         allowProjectConfiguration: settings2.workspaceTrusted,
-        ...settings2.workspaceTrusted && settings2.configFile ? { configFile: settings2.configFile } : {},
+        ...settings2.workspaceTrusted && (settings2.configFile || configuredPath) ? { configFile: settings2.configFile ?? configuredPath } : {},
         pluginModules: settings2.workspaceTrusted ? pluginModules : [],
         bundledPlugins: this.options.bundledPlugins,
         ...useHostDefaults ? { defaults: this.options.defaults } : {},
@@ -31874,7 +32337,9 @@ var ProjectEnvironmentController = class {
         architecture: loaded.architecture,
         targetOptions: loaded.targetOptions,
         entryPoints: [...settings2.entryPoints ?? []],
-        includePaths: [...loaded.includePaths]
+        includePaths: [...loaded.includePaths],
+        logger: this.options.logger,
+        cacheDir: path7.join(cwd, ".uttori-asm", "cache")
       });
       for (const [file, content] of overlays) index2.updateDocument(file, content);
       if (overlays.size > 0 || (settings2.entryPoints?.length ?? 0) > 0) index2.reindex();
@@ -31920,7 +32385,8 @@ var ProjectEnvironmentController = class {
 // language-server/src/providers.ts
 var import_vscode_languageserver = __toESM(require_api3(), 1);
 import { pathToFileURL as pathToFileURL2, fileURLToPath as fileURLToPath2 } from "node:url";
-import path7 from "node:path";
+import path8 from "node:path";
+import fs4 from "node:fs";
 var semanticTokensLegend = {
   tokenTypes: [
     import_vscode_languageserver.SemanticTokenTypes.keyword,
@@ -31999,6 +32465,29 @@ function preciseRange(index2, file, line, name, fallback) {
   }
   return import_vscode_languageserver.Range.create(line, column, line, column + name.length);
 }
+function preciseRangeWithSigil(index2, file, line, name, fallback) {
+  const text = index2.getFileText(file);
+  if (!text) {
+    return fallback;
+  }
+  const rawLine = splitLines(text)[line];
+  if (rawLine === void 0) {
+    return fallback;
+  }
+  const sigilName = name.startsWith("!") ? name : `!${name}`;
+  const sigilColumn = findTokenColumn(rawLine, sigilName);
+  if (sigilColumn >= 0) {
+    return import_vscode_languageserver.Range.create(line, sigilColumn, line, sigilColumn + sigilName.length);
+  }
+  return preciseRange(index2, file, line, name, fallback);
+}
+function lookupNameFor(word) {
+  return word.startsWith("!") ? word.slice(1) : word;
+}
+function namesMatch(stored, word) {
+  const lookup = lookupNameFor(word);
+  return stored === lookup || stored === word;
+}
 function findTokenColumn(lineText, name) {
   if (!name) {
     return -1;
@@ -32031,6 +32520,14 @@ function wordAt(text, position) {
   if (line === void 0) {
     return void 0;
   }
+  const quoted = quotedStringAt(line, position.character);
+  if (quoted !== void 0) {
+    return quoted;
+  }
+  const unquotedPath = unquotedIncludePathAt(line, position.character);
+  if (unquotedPath !== void 0) {
+    return unquotedPath;
+  }
   const wordPattern = /[\w!.]+/g;
   let match;
   while ((match = wordPattern.exec(line)) !== null) {
@@ -32038,6 +32535,72 @@ function wordAt(text, position) {
     const end = start + match[0].length;
     if (position.character >= start && position.character <= end) {
       return match[0];
+    }
+  }
+  return void 0;
+}
+function unquotedIncludePathAt(line, character) {
+  const match = /^\s*(?:incsrc|incbin|include)\s+(\S+)/i.exec(line);
+  if (!match || /^["'`]/.test(match[1])) {
+    return void 0;
+  }
+  const argStart = match[0].length - match[1].length;
+  if (character >= argStart && character <= argStart + match[1].length) {
+    return match[1];
+  }
+  return void 0;
+}
+function includeOriginRange(index2, file, position, target) {
+  const text = index2.getFileText(file);
+  if (!text) {
+    return void 0;
+  }
+  const line = splitLines(text)[position.line];
+  if (line === void 0) {
+    return void 0;
+  }
+  const unquoted = unquotedIncludePathAt(line, position.character);
+  if (unquoted) {
+    const start = line.indexOf(unquoted);
+    if (start >= 0) {
+      return import_vscode_languageserver.Range.create(position.line, start, position.line, start + unquoted.length);
+    }
+  }
+  const trimmed = target.replace(/^["'`](.*)["'`]$/, "$1");
+  for (const quote of ['"', "'", "`"]) {
+    const quoted = `${quote}${trimmed}${quote}`;
+    const quotedStart = line.indexOf(quoted);
+    if (quotedStart >= 0) {
+      return import_vscode_languageserver.Range.create(
+        position.line,
+        quotedStart + 1,
+        position.line,
+        quotedStart + 1 + trimmed.length
+      );
+    }
+  }
+  const column = findTokenColumn(line, trimmed);
+  if (column >= 0) {
+    return import_vscode_languageserver.Range.create(position.line, column, position.line, column + trimmed.length);
+  }
+  return void 0;
+}
+function quotedStringAt(line, character) {
+  for (const quote of ['"', "'", "`"]) {
+    let from = 0;
+    while (from < line.length) {
+      const start = line.indexOf(quote, from);
+      if (start < 0) {
+        break;
+      }
+      const end = line.indexOf(quote, start + 1);
+      if (end < 0) {
+        break;
+      }
+      if (character > start && character <= end) {
+        return line.slice(start + 1, end);
+      }
+      from = end + 1;
     }
   }
   return void 0;
@@ -32056,8 +32619,8 @@ function cursorReference(index2, file, position, word) {
     return void 0;
   }
   return references.find(
-    (reference) => reference.name === word && locationRange(reference.location)?.start.line === position.line
-  ) ?? references.find((reference) => reference.name === word);
+    (reference) => namesMatch(reference.name, word) && locationRange(reference.location)?.start.line === position.line
+  ) ?? references.find((reference) => namesMatch(reference.name, word));
 }
 function cursorSymbol(index2, file, position, word) {
   const symbols = index2.getSymbols(file);
@@ -32069,8 +32632,8 @@ function cursorSymbol(index2, file, position, word) {
     return void 0;
   }
   return symbols.find(
-    (symbol) => symbol.name === word && locationRange(symbol.location)?.start.line === position.line
-  ) ?? symbols.find((symbol) => symbol.name === word);
+    (symbol) => namesMatch(symbol.name, word) && locationRange(symbol.location)?.start.line === position.line
+  ) ?? symbols.find((symbol) => namesMatch(symbol.name, word));
 }
 function diagnosticsFor(index2, file) {
   return index2.getDiagnostics(file).map((diagnostic) => {
@@ -32103,7 +32666,13 @@ function definitionFor(index2, file, position) {
     if (reference.kind === "include") {
       const target = resolveIncludeTarget2(index2, file, reference.name);
       if (target) {
-        return [import_vscode_languageserver.Location.create(pathToUri(target), import_vscode_languageserver.Range.create(0, 0, 0, 0))];
+        const originRange = includeOriginRange(index2, file, position, reference.name) ?? locationRange(reference.location);
+        const targetUri = pathToUri(target);
+        const targetRange = import_vscode_languageserver.Range.create(0, 0, 0, 0);
+        if (originRange) {
+          return [import_vscode_languageserver.LocationLink.create(targetUri, targetRange, targetRange, originRange)];
+        }
+        return [import_vscode_languageserver.Location.create(targetUri, targetRange)];
       }
     }
     const definitions = resolveDefinition(reference, index2.getAllSymbols());
@@ -32116,9 +32685,20 @@ function definitionFor(index2, file, position) {
     return [definitionToLocation(index2, symbol)];
   }
   if (word) {
-    const byName = index2.getAllSymbols().filter((entry) => entry.name === word);
+    const lookupName = word.startsWith("!") ? word.slice(1) : word;
+    const byName = index2.getAllSymbols().filter((entry) => entry.name === lookupName || entry.name === word);
     if (byName.length > 0) {
       return byName.map((definition) => definitionToLocation(index2, definition));
+    }
+    const includePath = resolveIncludeTarget2(index2, file, word);
+    if (includePath) {
+      const originRange = includeOriginRange(index2, file, position, word);
+      const targetUri = pathToUri(includePath);
+      const targetRange = import_vscode_languageserver.Range.create(0, 0, 0, 0);
+      if (originRange) {
+        return [import_vscode_languageserver.LocationLink.create(targetUri, targetRange, targetRange, originRange)];
+      }
+      return [import_vscode_languageserver.Location.create(targetUri, targetRange)];
     }
   }
   return [];
@@ -32245,11 +32825,11 @@ function prepareRenameFor(index2, file, position) {
   const word = cursorWord(index2, file, position);
   const reference = cursorReference(index2, file, position, word);
   if (reference && isRenameableReference(reference)) {
-    return referenceRange(index2, reference);
+    return bareReferenceRange(index2, reference);
   }
   const symbol = cursorSymbol(index2, file, position, word);
   if (symbol) {
-    return definitionRange(index2, symbol);
+    return bareDefinitionRange(index2, symbol);
   }
   return null;
 }
@@ -32258,17 +32838,19 @@ function renameEditsFor(index2, file, position, newName) {
   if (!target) {
     return null;
   }
+  const kind = target.symbol?.kind ?? target.reference?.kind;
+  const effectiveName = kind === "define" && newName.startsWith("!") ? newName.slice(1) : newName;
   const editsByUri = /* @__PURE__ */ new Map();
   const pushEdit = (uri, range) => {
     const edits = editsByUri.get(uri) ?? [];
-    edits.push(import_vscode_languageserver.TextEdit.replace(range, newName));
+    edits.push(import_vscode_languageserver.TextEdit.replace(range, effectiveName));
     editsByUri.set(uri, edits);
   };
   for (const symbol of index2.getAllSymbols().filter((entry) => symbolMatchesRenameTarget(entry, target))) {
-    pushEdit(pathToUri(symbol.location.file), definitionRange(index2, symbol));
+    pushEdit(pathToUri(symbol.location.file), bareDefinitionRange(index2, symbol));
   }
   for (const reference of index2.getAllReferences().filter((entry) => referenceMatchesRenameTarget(entry, target))) {
-    pushEdit(pathToUri(reference.location.file), referenceRange(index2, reference));
+    pushEdit(pathToUri(reference.location.file), bareReferenceRange(index2, reference));
   }
   if (editsByUri.size === 0) {
     return null;
@@ -32358,25 +32940,63 @@ function definitionRange(index2, symbol) {
   const fallbackRange = locationRange(symbol.location);
   const fallback = fallbackRange ? toRange(fallbackRange) : lineFallbackRange(symbol.location.line);
   const line = fallbackRange?.start.line ?? symbol.location.line;
+  if (symbol.kind === "define") {
+    return preciseRangeWithSigil(index2, symbol.location.file, line, symbol.name, fallback);
+  }
   return preciseRange(index2, symbol.location.file, line, symbol.name, fallback);
 }
 function referenceRange(index2, reference) {
   const fallbackRange = locationRange(reference.location);
   const fallback = fallbackRange ? toRange(fallbackRange) : lineFallbackRange(reference.location.line);
   const line = fallbackRange?.start.line ?? reference.location.line;
+  if (reference.kind === "define") {
+    return preciseRangeWithSigil(index2, reference.location.file, line, reference.name, fallback);
+  }
   return preciseRange(index2, reference.location.file, line, reference.name, fallback);
+}
+function bareDefinitionRange(index2, symbol) {
+  const fallbackRange = locationRange(symbol.location);
+  const fallback = fallbackRange ? toRange(fallbackRange) : lineFallbackRange(symbol.location.line);
+  const line = fallbackRange?.start.line ?? symbol.location.line;
+  return preciseRange(index2, symbol.location.file, line, lookupNameFor(symbol.name), fallback);
+}
+function bareReferenceRange(index2, reference) {
+  const fallbackRange = locationRange(reference.location);
+  const fallback = fallbackRange ? toRange(fallbackRange) : lineFallbackRange(reference.location.line);
+  const line = fallbackRange?.start.line ?? reference.location.line;
+  return preciseRange(
+    index2,
+    reference.location.file,
+    line,
+    lookupNameFor(reference.name),
+    fallback
+  );
 }
 function definitionToLocation(index2, symbol) {
   return import_vscode_languageserver.Location.create(pathToUri(symbol.location.file), definitionRange(index2, symbol));
 }
 function resolveIncludeTarget2(index2, file, target) {
-  const normalizedTarget = target.replace(/\\/g, "/");
-  const base = path7.basename(normalizedTarget);
+  const trimmed = target.replace(/^["'`](.*)["'`]$/, "$1");
+  const normalizedTarget = trimmed.replace(/\\/g, "/");
+  const base = path8.basename(normalizedTarget);
   const edges = index2.getIncludeEdges().filter((edge) => edge.fromFile === file);
   const match = edges.find(
-    (edge) => edge.toFile === normalizedTarget || path7.basename(edge.toFile) === base
+    (edge) => edge.toFile === normalizedTarget || edge.toFile.replace(/\\/g, "/") === normalizedTarget || path8.basename(edge.toFile) === base
   );
-  return match?.toFile;
+  if (match?.toFile) {
+    return match.toFile;
+  }
+  const searchRoots = [
+    path8.dirname(file),
+    ...index2.includePaths.map((entry) => path8.resolve(path8.dirname(file), entry))
+  ];
+  for (const root of searchRoots) {
+    const candidate = path8.isAbsolute(trimmed) ? trimmed : path8.resolve(root, trimmed);
+    if (fs4.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return void 0;
 }
 function identifierNameAt(index2, file, position) {
   const word = cursorWord(index2, file, position);
@@ -32388,7 +33008,7 @@ function identifierNameAt(index2, file, position) {
   if (symbol) {
     return symbol.name;
   }
-  return word;
+  return word?.startsWith("!") ? word.slice(1) : word;
 }
 function renderSymbolDocs(symbol) {
   const lines = [`**${symbol.name}** - ${symbol.kind}`];
@@ -32399,7 +33019,7 @@ function renderSymbolDocs(symbol) {
     const value = typeof symbol.value === "number" ? `$${symbol.value.toString(16).toUpperCase()}` : symbol.value;
     lines.push("", `Value: \`${value}\``);
   }
-  lines.push("", `Defined in \`${path7.basename(symbol.location.file)}\``);
+  lines.push("", `Defined in \`${path8.basename(symbol.location.file)}\``);
   return lines.join("\n");
 }
 function markdownHover(value) {
@@ -32492,7 +33112,14 @@ var configurationDiagnostic;
 var configurationQueue = Promise.resolve();
 var workspaceRoot = () => workspaceRoots[0] ?? process.cwd();
 function resolveAgainstWorkspace(value) {
-  return path8.isAbsolute(value) ? path8.normalize(value) : path8.resolve(workspaceRoot(), value);
+  return path9.isAbsolute(value) ? path9.normalize(value) : path9.resolve(workspaceRoot(), value);
+}
+function isProjectConfigFile(file) {
+  const resolved = path9.resolve(file);
+  if (settings.configFile && resolved === resolveAgainstWorkspace(settings.configFile)) {
+    return true;
+  }
+  return path9.basename(file) === PROJECT_CONFIG_FILENAME;
 }
 function stringValue(value) {
   return typeof value === "string" && value.trim() ? value : void 0;
@@ -32504,10 +33131,10 @@ function pluginArray(value) {
   return Array.isArray(value) ? value : void 0;
 }
 function mergeServerSettings(previous, value) {
-  if (!value || typeof value !== "object") return previous;
+  if (!value || typeof value !== "object") return applyConfigFileDefaults(previous);
   const next = value;
   const has = (key) => Object.prototype.hasOwnProperty.call(next, key);
-  return {
+  return applyConfigFileDefaults({
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
     plugins: pluginArray(next.plugins) ?? previous.plugins,
     target: has("target") ? stringValue(next.target) : previous.target,
@@ -32517,6 +33144,29 @@ function mergeServerSettings(previous, value) {
     buildOutput: has("buildOutput") ? stringValue(next.buildOutput) : previous.buildOutput,
     baseImage: has("baseImage") ? stringValue(next.baseImage) : previous.baseImage,
     workspaceTrusted: typeof next.workspaceTrusted === "boolean" ? next.workspaceTrusted : previous.workspaceTrusted
+  });
+}
+function applyConfigFileDefaults(next) {
+  const discovered = discoverProjectConfigurationPath(workspaceRoot(), next.configFile);
+  if (!discovered || !fs5.existsSync(discovered)) {
+    return next;
+  }
+  const relativeConfig = path9.relative(workspaceRoot(), discovered) || path9.basename(discovered);
+  let extras = {};
+  try {
+    extras = validateProjectConfiguration(JSON.parse(fs5.readFileSync(discovered, "utf8")));
+  } catch {
+    return { ...next, configFile: next.configFile ?? relativeConfig };
+  }
+  return {
+    ...next,
+    configFile: next.configFile ?? relativeConfig,
+    target: next.target ?? extras.target,
+    architecture: next.architecture ?? extras.architecture,
+    entryPoints: next.entryPoints.length > 0 ? next.entryPoints : extras.entryPoints ?? [],
+    includePaths: next.includePaths.length > 0 ? next.includePaths : extras.includePaths ?? [],
+    buildOutput: next.buildOutput ?? extras.buildOutput,
+    baseImage: next.baseImage ?? extras.baseImage
   };
 }
 function projectSettings(next) {
@@ -32535,7 +33185,7 @@ function currentOverlays() {
   return new Map(documents.all().map((document) => [uriToPath(document.uri), document.getText()]));
 }
 function diagnosticUri(next) {
-  return pathToUri(resolveAgainstWorkspace(next.configFile ?? "asm.config.json"));
+  return pathToUri(resolveAgainstWorkspace(next.configFile ?? PROJECT_CONFIG_FILENAME));
 }
 function setConfigurationDiagnostic(next, message, severity = import_node.DiagnosticSeverity.Error) {
   const previousUri = configurationDiagnostic?.uri;
@@ -32584,7 +33234,12 @@ function scheduleReindex() {
   if (reindexTimer) clearTimeout(reindexTimer);
   reindexTimer = setTimeout(() => {
     reindexTimer = void 0;
+    connection.console.info("Full workspace reindex starting");
     index.reindex();
+    const status = index.getStatus();
+    connection.console.info(
+      `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms (analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`
+    );
     publishAllDiagnostics();
   }, 150);
 }
@@ -32634,7 +33289,9 @@ connection.onInitialize(async (params) => {
       workspaceSymbolProvider: true,
       renameProvider: { prepareProvider: true },
       signatureHelpProvider: { triggerCharacters: [" ", ","] },
-      executeCommandProvider: { commands: ["asm.build"] },
+      // Do not advertise `asm.build` here. The VS Code client registers that
+      // command for the palette/UI; vscode-languageclient would also register
+      // advertised executeCommandProvider IDs and throw "already exists".
       semanticTokensProvider: { legend: semanticTokensLegend, full: true }
     }
   };
@@ -32665,38 +33322,38 @@ connection.onDidChangeConfiguration((params) => {
   enqueueProjectEnvironment(mergeServerSettings(settings, changed?.asm ?? changed));
 });
 function defaultOutputPath(file) {
-  const parsed = path8.parse(file);
+  const parsed = path9.parse(file);
   const { loaded } = environmentController.current;
   const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
-  return path8.join(
+  return path9.join(
     parsed.dir,
     `${parsed.name}${extension.startsWith(".") ? extension : `.${extension}`}`
   );
 }
 function resolveOptionalBuildPath(configured, file) {
   if (!configured) return void 0;
-  return path8.isAbsolute(configured) ? path8.normalize(configured) : path8.resolve(workspaceRoots[0] ?? path8.dirname(file), configured);
+  return path9.isAbsolute(configured) ? path9.normalize(configured) : path9.resolve(workspaceRoots[0] ?? path9.dirname(file), configured);
 }
 function buildBinary(file, output, baseImage) {
   try {
     const provider = new OverlayFileProvider(currentOverlays());
     const baseImagePath = resolveOptionalBuildPath(baseImage ?? settings.baseImage, file);
     const assembler = environmentController.createAssembler({
-      ...baseImagePath ? { baseImage: new Uint8Array(fs4.readFileSync(baseImagePath)) } : {},
+      ...baseImagePath ? { baseImage: new Uint8Array(fs5.readFileSync(baseImagePath)) } : {},
       fileProvider: provider,
       collectSourceMetadata: false
     });
     try {
       assembler.setIncludePaths([
-        .../* @__PURE__ */ new Set([path8.dirname(file), ...environmentController.current.loaded.includePaths])
+        .../* @__PURE__ */ new Set([path9.dirname(file), ...environmentController.current.loaded.includePaths])
       ]);
       assembler.setCurrentFile(file);
       const source = provider.readTextFile(file);
       assembler.assembleProgram(assembler.buildProgramModel(source, file, 0));
       const bytes = assembler.getBinaryOutput();
       const outputPath = resolveOptionalBuildPath(output ?? settings.buildOutput, file) ?? defaultOutputPath(file);
-      fs4.mkdirSync(path8.dirname(outputPath), { recursive: true });
-      fs4.writeFileSync(outputPath, Buffer.from(bytes));
+      fs5.mkdirSync(path9.dirname(outputPath), { recursive: true });
+      fs5.writeFileSync(outputPath, Buffer.from(bytes));
       return { ok: true, outputPath, bytes: bytes.length };
     } finally {
       assembler.dispose();
@@ -32730,11 +33387,41 @@ connection.onRequest("asm/projectMetadata", async () => {
     }))
   };
 });
+connection.onRequest("asm/status", async () => {
+  await configurationQueue;
+  if (!index) {
+    return {
+      fileCount: 0,
+      symbolCount: 0,
+      referenceCount: 0,
+      errorCount: 0,
+      entryPoints: settings.entryPoints,
+      includePaths: settings.includePaths,
+      lastReindexCachedRoots: 0,
+      lastReindexAnalyzedRoots: 0,
+      configFile: settings.configFile,
+      target: settings.target,
+      architecture: settings.architecture,
+      buildOutput: settings.buildOutput,
+      baseImage: settings.baseImage
+    };
+  }
+  return {
+    ...index.getStatus(),
+    configFile: settings.configFile,
+    target: settings.target,
+    architecture: settings.architecture,
+    buildOutput: settings.buildOutput,
+    baseImage: settings.baseImage,
+    entryPoints: settings.entryPoints,
+    includePaths: settings.includePaths.length > 0 ? settings.includePaths : index.includePaths
+  };
+});
 connection.onDidChangeWatchedFiles((params) => {
   let reload = false;
   for (const change of params.changes) {
     const file = uriToPath(change.uri);
-    if (path8.resolve(file) === resolveAgainstWorkspace(settings.configFile ?? "asm.config.json")) {
+    if (isProjectConfigFile(file)) {
       reload = true;
     } else {
       index.invalidateFile(file);
@@ -32744,8 +33431,12 @@ connection.onDidChangeWatchedFiles((params) => {
   else scheduleReindex();
 });
 documents.onDidOpen((event) => {
-  index.openDocument(uriToPath(event.document.uri), event.document.getText());
+  const file = uriToPath(event.document.uri);
+  index.openDocument(file, event.document.getText());
   publishAllDiagnostics();
+  if (index.isFileDirtyOrUncovered(file)) {
+    scheduleReindex();
+  }
 });
 documents.onDidChangeContent((event) => {
   index.updateDocument(uriToPath(event.document.uri), event.document.getText());

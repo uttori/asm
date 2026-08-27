@@ -1,5 +1,6 @@
 import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
+import type { SourcedCommand } from "./command-text-service.js";
 export type ProgramModel = {
     sourceFile: string;
     startLine: number;
@@ -24,6 +25,8 @@ export type ProgramModelBuilderHost = {
     passProgramCache: Map<string, ExecutableNode[]>;
     preprocessBlockCommands(source: string): string[];
     splitInlineCommands(commands: string[]): string[];
+    preprocessSourcedBlockCommands(source: string): SourcedCommand[];
+    splitSourcedInlineCommands(commands: SourcedCommand[]): SourcedCommand[];
     createLoopCommandNode(command: string, sourceFile?: string, sourceLine?: number): NormalizedCommand;
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
 };
@@ -60,12 +63,12 @@ export declare class ProgramModelBuilder {
     createIncludeNode(file: string, source: string): IncludeProgramNode;
     /**
      * Returns cached executable nodes for a command stream.
-     * @param {string[]} commands The command stream.
+     * @param {Array<string | SourcedCommand>} commands The command stream.
      * @param {string} [sourceFile] Optional source file override.
      * @param {number} [startLine] Optional starting line number.
      * @returns {ExecutableNode[]} The cached or parsed nodes.
      */
-    getOrBuildPassProgram(commands: string[], sourceFile?: string, startLine?: number): ExecutableNode[];
+    getOrBuildPassProgram(commands: Array<string | SourcedCommand>, sourceFile?: string, startLine?: number): ExecutableNode[];
     /**
      * Consumes one raw command into an incremental parse state and returns newly
      * completed top-level executable nodes.
@@ -78,12 +81,12 @@ export declare class ProgramModelBuilder {
     consumeIncrementalCommand(state: IncrementalProgramParseState, rawCommand: string, sourceFile?: string, sourceLine?: number): ExecutableNode[];
     /**
      * Parses a flat command stream into nested executable nodes.
-     * @param {string[]} commands The command stream.
+     * @param {Array<string | SourcedCommand>} commands The command stream.
      * @param {string} [sourceFile] Optional source file override.
      * @param {number} [startLine] Optional starting line number.
      * @returns {ExecutableNode[]} The executable nodes.
      */
-    parseCommandStreamToNodes(commands: string[], sourceFile?: string, startLine?: number): ExecutableNode[];
+    parseCommandStreamToNodes(commands: Array<string | SourcedCommand>, sourceFile?: string, startLine?: number): ExecutableNode[];
     /**
      * Pushes to current.
      * @param {IncrementalProgramParseState} state The state.

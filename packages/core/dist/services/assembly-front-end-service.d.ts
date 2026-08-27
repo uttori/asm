@@ -1,3 +1,4 @@
+import { type SourcedCommand } from "./command-text-service.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
 import { ProgramModelBuilder } from "./program-model-builder.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
@@ -29,11 +30,23 @@ export declare class AssemblyFrontEndService {
      */
     preprocessBlockCommands(block: string): string[];
     /**
+     * Preprocesses raw source blocks, tagging each command with its original line.
+     * @param {string} block The raw source block.
+     * @returns {SourcedCommand[]} The normalized sourced commands.
+     */
+    preprocessSourcedBlockCommands(block: string): SourcedCommand[];
+    /**
      * Splits statements according to the active target's source grammar.
      * @param {string[]} commands Commands to split.
      * @returns {string[]} Profile-aware command statements.
      */
     splitInlineCommands(commands: string[]): string[];
+    /**
+     * Splits sourced statements according to the active target's source grammar.
+     * @param {SourcedCommand[]} commands Sourced commands to split.
+     * @returns {SourcedCommand[]} Profile-aware sourced command statements.
+     */
+    splitSourcedInlineCommands(commands: SourcedCommand[]): SourcedCommand[];
     /**
      * Builds a normalized command from raw source text.
      * @param {string} command The raw command text.
