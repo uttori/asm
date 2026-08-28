@@ -65,6 +65,7 @@ export type WorkspaceIndexStatus = {
   entryPoints: string[];
   includePaths: string[];
   lastReindexDurationMs?: number;
+  lastReindexRootCount: number;
   lastReindexCachedRoots: number;
   lastReindexAnalyzedRoots: number;
 };
@@ -126,7 +127,10 @@ export class WorkspaceIndex {
   /** Duration of the most recent {@link reindex} call in milliseconds. */
   lastReindexDurationMs?: number;
 
-  /** How many roots were served from disk cache during the last reindex. */
+  /** How many roots were considered during the last reindex. */
+  lastReindexRootCount = 0;
+
+  /** How many roots were served from disk or in-memory cache during the last reindex. */
   lastReindexCachedRoots = 0;
 
   /** How many roots were freshly analysed during the last reindex. */
@@ -396,6 +400,7 @@ export class WorkspaceIndex {
       ...(this.lastReindexDurationMs === undefined
         ? {}
         : { lastReindexDurationMs: this.lastReindexDurationMs }),
+      lastReindexRootCount: this.lastReindexRootCount,
       lastReindexCachedRoots: this.lastReindexCachedRoots,
       lastReindexAnalyzedRoots: this.lastReindexAnalyzedRoots,
     };
@@ -458,10 +463,18 @@ export class WorkspaceIndex {
               dirtyFiles.some((file) => this.rootDependsOnFile(root, file)),
           );
 
+    const rootsToAnalyzeSet = new Set(rootsToAnalyze);
     let cachedRoots = 0;
     let analyzedRoots = 0;
-    for (const root of rootsToAnalyze) {
+    for (const root of roots) {
+      if (!rootsToAnalyzeSet.has(root)) {
+        if (this.rootAnalyses.has(root)) {
+          cachedRoots += 1;
+        }
+        continue;
+      }
       if (this.isCoveredByOtherFullPassRoot(root)) {
+        cachedRoots += 1;
         continue;
       }
       const result = this.analyzeRoot(root, { followIncludes: true });
@@ -487,6 +500,7 @@ export class WorkspaceIndex {
     this.dirtyFiles.clear();
     this.fullReindexRequired = false;
     this.lastReindexDurationMs = Date.now() - started;
+    this.lastReindexRootCount = roots.length;
     this.lastReindexCachedRoots = cachedRoots;
     this.lastReindexAnalyzedRoots = analyzedRoots;
     this.#rebuildCoverageIndex();
@@ -541,13 +555,17 @@ export class WorkspaceIndex {
     }
 
     const started = Date.now();
-    const assembler = measureInternalPhase("lspAssemblerConstruct", () => new Assembler({
-      environment: this.environment,
-      target: this.target,
-      architecture: this.architecture,
-      targetOptions: this.targetOptions,
-      fileProvider: this.#provider,
-    }));
+    const assembler = measureInternalPhase(
+      "lspAssemblerConstruct",
+      () =>
+        new Assembler({
+          environment: this.environment,
+          target: this.target,
+          architecture: this.architecture,
+          targetOptions: this.targetOptions,
+          fileProvider: this.#provider,
+        }),
+    );
     assembler.includePaths = this.deriveIncludePaths(root);
     assembler.followIncludes = followIncludes;
 

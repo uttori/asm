@@ -252,11 +252,19 @@ test("reindex does not re-analyse roots when nothing is dirty", (t) => {
   const index = new WorkspaceIndex(snesWorkspaceIndexOptions({ entryPoints: [file] }));
   index.openDocument(file, "org $8000\nStart:\n  nop\n");
   index.reindex();
+  t.is(index.getStatus().lastReindexRootCount, 1);
+  t.true(
+    index.getStatus().lastReindexAnalyzedRoots + index.getStatus().lastReindexCachedRoots >= 1,
+  );
 
   const analyzeSource = stub(Assembler.prototype, "analyzeSource").callThrough();
   try {
     index.reindex();
     t.is(analyzeSource.callCount, 0);
+    const status = index.getStatus();
+    t.is(status.lastReindexRootCount, 1);
+    t.is(status.lastReindexCachedRoots, 1);
+    t.is(status.lastReindexAnalyzedRoots, 0);
   } finally {
     analyzeSource.restore();
   }
@@ -320,6 +328,10 @@ test("disk cache reuses a full-pass analysis when file hashes match", (t) => {
       t.is(analyzeSource.callCount, 0);
       t.true(second.getSymbols(file).some((entry) => entry.name === "CachedLabel"));
       t.true(messages.some((message) => message.includes("Using cached analysis")));
+      const status = second.getStatus();
+      t.is(status.lastReindexRootCount, 1);
+      t.is(status.lastReindexCachedRoots, 1);
+      t.is(status.lastReindexAnalyzedRoots, 0);
     } finally {
       analyzeSource.restore();
     }

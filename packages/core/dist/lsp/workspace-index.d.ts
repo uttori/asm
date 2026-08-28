@@ -52,6 +52,7 @@ export type WorkspaceIndexStatus = {
     entryPoints: string[];
     includePaths: string[];
     lastReindexDurationMs?: number;
+    lastReindexRootCount: number;
     lastReindexCachedRoots: number;
     lastReindexAnalyzedRoots: number;
 };
@@ -97,7 +98,9 @@ export declare class WorkspaceIndex {
     readonly cache?: RootAnalysisCache;
     /** Duration of the most recent {@link reindex} call in milliseconds. */
     lastReindexDurationMs?: number;
-    /** How many roots were served from disk cache during the last reindex. */
+    /** How many roots were considered during the last reindex. */
+    lastReindexRootCount: number;
+    /** How many roots were served from disk or in-memory cache during the last reindex. */
     lastReindexCachedRoots: number;
     /** How many roots were freshly analysed during the last reindex. */
     lastReindexAnalyzedRoots: number;

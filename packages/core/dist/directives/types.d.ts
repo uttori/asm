@@ -36,6 +36,9 @@ export interface DirectiveNamespaceCapability {
     namespaceNestingPath: string[];
     namespaceNestingEnabled: boolean;
     currentNamespace: string;
+    recordSymbolDefinition(kind: "namespace", name: string, options?: {
+        containerName?: string;
+    }): void;
 }
 export interface DirectiveTableCapability {
     tableStack: Map<string, number>[];

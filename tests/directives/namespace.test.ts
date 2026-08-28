@@ -14,6 +14,7 @@ const createContext = () => ({
     namespaceNestingEnabled: false,
     currentNamespace: "",
     inTargetBlock: false,
+    recordSymbolDefinition() {},
   },
 });
 

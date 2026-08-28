@@ -6,7 +6,12 @@ export type DefineHost = {
   resolvedefines(input: string): string;
   mathCore: MathCore;
   processCommand(command: string): void;
-  recordSymbolDefinition(kind: "define", name: string, options?: { value?: number | string }): void;
+  currentNamespace: string;
+  recordSymbolDefinition(
+    kind: "define",
+    name: string,
+    options?: { value?: number | string; containerName?: string },
+  ): void;
 };
 
 export class DefineEngine {
@@ -404,7 +409,10 @@ export class DefineEngine {
     }
 
     this.host.defines.set(identifier, value);
-    this.host.recordSymbolDefinition("define", identifier, { value });
+    this.host.recordSymbolDefinition("define", identifier, {
+      value,
+      containerName: this.host.currentNamespace || undefined,
+    });
   }
 
   /**

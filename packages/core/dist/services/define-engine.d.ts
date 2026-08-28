@@ -5,8 +5,10 @@ export type DefineHost = {
     resolvedefines(input: string): string;
     mathCore: MathCore;
     processCommand(command: string): void;
+    currentNamespace: string;
     recordSymbolDefinition(kind: "define", name: string, options?: {
         value?: number | string;
+        containerName?: string;
     }): void;
 };
 export declare class DefineEngine {

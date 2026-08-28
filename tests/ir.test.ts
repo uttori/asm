@@ -323,6 +323,35 @@ test("expression nodes parse binary precedence and unary operators", (t) => {
   });
 });
 
+test("expression nodes strip immediate prefixes", (t) => {
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("#coord_offsets_arthur")), {
+    type: "identifier",
+    name: "coord_offsets_arthur",
+  });
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("#coord_offsets_arthur>>8")), {
+    type: "binary",
+    operator: ">>",
+    left: { type: "identifier", name: "coord_offsets_arthur" },
+    right: { type: "literal", value: "8" },
+  });
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("#!obj_arthur.base")), {
+    type: "member",
+    object: { type: "defineReference", name: "obj_arthur", braced: false },
+    property: { type: "identifier", name: "base" },
+  });
+});
+
+test("expression nodes parse leading-dot sublabels", (t) => {
+  t.deepEqual(stripExpressionSpans(parseExpressionNode(".8053")), {
+    type: "identifier",
+    name: ".8053",
+  });
+  t.deepEqual(stripExpressionSpans(parseExpressionNode("..ch8")), {
+    type: "identifier",
+    name: "..ch8",
+  });
+});
+
 test("typed for nodes preserve parsed range semantics", (t) => {
   const assembler = new Assembler();
   const [loop] = assembler.programModelBuilder.parseCommandStreamToNodes([

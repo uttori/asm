@@ -14,6 +14,7 @@ import {
   workspace,
   type Disposable,
   type ExtensionContext,
+  type LogOutputChannel,
   type StatusBarItem,
   type TextDocument,
 } from "vscode";
@@ -47,6 +48,8 @@ const ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"] as const;
  * @see https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#language-client
  */
 let client: LanguageClient | undefined;
+/** Shared log/output channel for language-server traffic and Build Binary. */
+let outputChannel: LogOutputChannel | undefined;
 
 /** Whether build-on-save watch mode is currently enabled. */
 let watchEnabled = false;
@@ -100,10 +103,16 @@ function serverInitializationOptions(): Record<string, unknown> {
 export function activate(context: ExtensionContext): void {
   const serverModule = context.asAbsolutePath(path.join("server", "server.mjs"));
 
-  // Spawn Node on the ESM server bundle. The `module` ServerOptions form uses
-  // `cp.fork()`, which cannot load an ESM graph with top-level await.
+  /**
+   * Spawn Node on the ESM server bundle. The `module` ServerOptions form uses `cp.fork()`,
+   * which cannot load an ESM graph with top-level await.
+   */
   const serverOptions: ServerOptions = {
-    run: { command: process.execPath, args: [serverModule], transport: TransportKind.stdio },
+    run: {
+      command: process.execPath,
+      args: [serverModule],
+      transport: TransportKind.stdio,
+    },
     debug: {
       command: process.execPath,
       args: ["--nolazy", "--inspect=6009", serverModule],
@@ -152,7 +161,7 @@ export function activate(context: ExtensionContext): void {
     outputChannel,
     statusItem,
     window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider),
-    commands.registerCommand("asm.build", () => runBuild(activeDocumentUri())),
+    commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
     commands.registerCommand("asm.toggleWatch", toggleWatch),
     commands.registerCommand("asm.initConfig", () => initConfig()),
     commands.registerCommand("asm.openPanel", () =>
@@ -252,6 +261,16 @@ function toggleWatch(): void {
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri.joinPath
  */
 function resolveWatchEntry(): string | undefined {
+  return resolveBuildEntryUri();
+}
+
+/**
+ * Resolves the document to assemble. Prefers the first configured entry point
+ * so Build Binary / watch rebuild the project root instead of the include
+ * currently in the editor.
+ * @returns {string | undefined} The entry document URI string.
+ */
+function resolveBuildEntryUri(): string | undefined {
   const activeUri = window.activeTextEditor?.document.uri;
   const entryPoints = workspace.getConfiguration("asm", activeUri).get<string[]>("entryPoints", []);
   const folder = activeUri
@@ -259,11 +278,19 @@ function resolveWatchEntry(): string | undefined {
     : workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    return path.isAbsolute(first)
+    const resolved = path.isAbsolute(first)
       ? Uri.file(first).toString()
       : Uri.joinPath(folder.uri, first).toString();
+    outputChannel?.info(
+      `Build entry from asm.entryPoints: ${first} → ${Uri.parse(resolved).fsPath}`,
+    );
+    return resolved;
   }
-  return activeDocumentUri();
+  const active = activeDocumentUri();
+  if (active) {
+    outputChannel?.info(`Build entry from active editor: ${Uri.parse(active).fsPath}`);
+  }
+  return active;
 }
 
 /**
@@ -386,11 +413,18 @@ async function initConfig(): Promise<void> {
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri.parse
  */
 async function runBuild(documentUri: string | undefined, transient = false): Promise<void> {
+  outputChannel?.show(true);
+  outputChannel?.info(transient ? "Watch rebuild requested" : "Build Binary requested");
   if (!client) {
+    const message = "Language server is not running.";
+    outputChannel?.error(message);
+    void window.showErrorMessage(`Assembly: ${message}`);
     return;
   }
   if (!documentUri) {
-    void window.showErrorMessage("Assembly: open a source file to build.");
+    const message = "Open a source file or set asm.entryPoints before building.";
+    outputChannel?.error(message);
+    void window.showErrorMessage(`Assembly: ${message}`);
     return;
   }
 
@@ -398,6 +432,10 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
   const config = workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get<string>("buildOutput", ""), document);
   const baseImage = resolveConfiguredPath(config.get<string>("baseImage", ""), document);
+  outputChannel?.info(`  file: ${document.fsPath}`);
+  outputChannel?.info(`  output: ${output ?? "(target default extension)"}`);
+  outputChannel?.info(`  baseImage: ${baseImage ?? "(none)"}`);
+  outputChannel?.info("  sending asm.build to language server");
 
   try {
     const result = (await client.sendRequest(ExecuteCommandRequest.type, {
@@ -407,20 +445,21 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
 
     if (result?.ok) {
       const message = `Assembly: built ${result.bytes ?? 0} bytes → ${result.outputPath ?? "output"}.`;
+      outputChannel?.info(message);
       if (transient) {
         window.setStatusBarMessage(message, 4000);
       } else {
         void window.showInformationMessage(message);
       }
     } else {
-      void window.showErrorMessage(
-        `Assembly: build failed - ${result?.message ?? "unknown error"}.`,
-      );
+      const detail = result?.message ?? "unknown error";
+      outputChannel?.error(`Build failed: ${detail}`);
+      void window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     }
   } catch (error) {
-    void window.showErrorMessage(
-      `Assembly: build failed - ${error instanceof Error ? error.message : String(error)}.`,
-    );
+    const detail = error instanceof Error ? error.message : String(error);
+    outputChannel?.error(`Build request failed: ${detail}`);
+    void window.showErrorMessage(`Assembly: build failed - ${detail}.`);
   }
 }
 

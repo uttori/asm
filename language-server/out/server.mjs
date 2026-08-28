@@ -10857,7 +10857,7 @@ var require_files = __commonJS({
     exports.resolveGlobalYarnPath = resolveGlobalYarnPath;
     exports.resolveModulePath = resolveModulePath;
     var url = __importStar(__require("url"));
-    var path10 = __importStar(__require("path"));
+    var path11 = __importStar(__require("path"));
     var fs6 = __importStar(__require("fs"));
     var child_process_1 = __require("child_process");
     function uriToFilePath(uri) {
@@ -10876,7 +10876,7 @@ var require_files = __commonJS({
           segments.shift();
         }
       }
-      return path10.normalize(segments.join("/"));
+      return path11.normalize(segments.join("/"));
     }
     function isWindows() {
       return process.platform === "win32";
@@ -10906,7 +10906,7 @@ var require_files = __commonJS({
         Object.keys(env).forEach((key) => newEnv[key] = env[key]);
         if (nodePath && fs6.existsSync(nodePath)) {
           if (newEnv[nodePathKey]) {
-            newEnv[nodePathKey] = nodePath + path10.delimiter + newEnv[nodePathKey];
+            newEnv[nodePathKey] = nodePath + path11.delimiter + newEnv[nodePathKey];
           } else {
             newEnv[nodePathKey] = nodePath;
           }
@@ -10978,9 +10978,9 @@ var require_files = __commonJS({
         }
         if (prefix.length > 0) {
           if (isWindows()) {
-            return path10.join(prefix, "node_modules");
+            return path11.join(prefix, "node_modules");
           } else {
-            return path10.join(prefix, "lib", "node_modules");
+            return path11.join(prefix, "lib", "node_modules");
           }
         }
         return void 0;
@@ -11019,7 +11019,7 @@ var require_files = __commonJS({
           try {
             const yarn = JSON.parse(line);
             if (yarn.type === "log") {
-              return path10.join(yarn.data, "node_modules");
+              return path11.join(yarn.data, "node_modules");
             }
           } catch (e) {
           }
@@ -11048,17 +11048,17 @@ var require_files = __commonJS({
       FileSystem2.isCaseSensitive = isCaseSensitive;
       function isParent(parent, child) {
         if (isCaseSensitive()) {
-          return path10.normalize(child).indexOf(path10.normalize(parent)) === 0;
+          return path11.normalize(child).indexOf(path11.normalize(parent)) === 0;
         } else {
-          return path10.normalize(child).toLowerCase().indexOf(path10.normalize(parent).toLowerCase()) === 0;
+          return path11.normalize(child).toLowerCase().indexOf(path11.normalize(parent).toLowerCase()) === 0;
         }
       }
       FileSystem2.isParent = isParent;
     })(FileSystem || (exports.FileSystem = FileSystem = {}));
     function resolveModulePath(workspaceRoot2, moduleName, nodePath, tracer) {
       if (nodePath) {
-        if (!path10.isAbsolute(nodePath)) {
-          nodePath = path10.join(workspaceRoot2, nodePath);
+        if (!path11.isAbsolute(nodePath)) {
+          nodePath = path11.join(workspaceRoot2, nodePath);
         }
         return resolve(moduleName, nodePath, nodePath, tracer).then((value) => {
           if (FileSystem.isParent(nodePath, value)) {
@@ -11291,7 +11291,7 @@ var require_main = __commonJS({
     exports.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path10 = __importStar(__require("path"));
+    var path11 = __importStar(__require("path"));
     var os = __importStar(__require("os"));
     var fs6 = __importStar(__require("fs"));
     var crypto_1 = __require("crypto");
@@ -11443,7 +11443,7 @@ var require_main = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path10.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path11.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -11886,7 +11886,7 @@ ${stack}`);
 
 // language-server/src/server.ts
 import fs5 from "node:fs";
-import path9 from "node:path";
+import path10 from "node:path";
 
 // packages/core/src/addressToLine.ts
 import * as fs from "fs";
@@ -12145,6 +12145,9 @@ function parseExpressionNode(input) {
   if (!trimmed) {
     return { type: "raw", value: "", span: createSourceSpan(0, 0) };
   }
+  if (trimmed.startsWith("#") && trimmed.length > 1) {
+    return parseExpressionNode(trimmed.slice(1));
+  }
   const rangeIndex = findTopLevelRange(trimmed);
   if (rangeIndex !== -1) {
     return attachRootSpan(
@@ -12267,6 +12270,9 @@ function findTopLevelRange(input) {
       continue;
     }
     if (depth === 0 && bracketDepth === 0 && input.slice(i, i + 2) === "..") {
+      if (i === 0) {
+        continue;
+      }
       return i;
     }
   }
@@ -12618,6 +12624,20 @@ var ExpressionParser = class {
    * @returns {ExpressionNode} The result.
    */
   parsePrimary() {
+    if (this.peek()?.type === "dot") {
+      let name = "";
+      while (this.match({ type: "dot" })) {
+        name += ".";
+      }
+      const token2 = this.consume();
+      if (token2?.type === "identifier") {
+        return { type: "identifier", name: name + token2.value };
+      }
+      if (token2?.type === "literal" && /^\d+$/.test(token2.value)) {
+        return { type: "identifier", name: name + token2.value };
+      }
+      throw new Error("Expected label name after '.'");
+    }
     const token = this.consume();
     if (!token) {
       throw new Error("Unexpected end of expression");
@@ -15751,12 +15771,7 @@ var handleNamespace = ({ session }, words) => {
     }
     return;
   } else if (params.length === 1) {
-    if (session.namespaceNestingEnabled) {
-      session.namespaceNestingPath.push(params[0]);
-      session.currentNamespace = session.namespaceNestingPath.join("_");
-    } else {
-      session.currentNamespace = params[0];
-    }
+    enterNamespace(session, params[0]);
     return;
   }
   const action = params[1].toLowerCase();
@@ -15768,14 +15783,21 @@ var handleNamespace = ({ session }, words) => {
       session.currentNamespace = "";
     }
   } else {
-    if (session.namespaceNestingEnabled) {
-      session.namespaceNestingPath.push(params[0]);
-      session.currentNamespace = session.namespaceNestingPath.join("_");
-    } else {
-      session.currentNamespace = params[0];
-    }
+    enterNamespace(session, params[0]);
   }
 };
+function enterNamespace(session, name) {
+  if (session.namespaceNestingEnabled) {
+    session.namespaceNestingPath.push(name);
+    session.currentNamespace = session.namespaceNestingPath.join("_");
+  } else {
+    session.currentNamespace = name;
+  }
+  const parent = session.namespaceNestingEnabled && session.namespaceNestingPath.length > 1 ? session.namespaceNestingPath.slice(0, -1).join("_") : void 0;
+  session.recordSymbolDefinition("namespace", session.currentNamespace, {
+    containerName: parent || void 0
+  });
+}
 var registerNamespaceDirectives = (registry, context) => {
   registry.registerLowered("namespace", context, handleNamespace);
   registry.registerLowered("pushns", context, handlePushNamespace);
@@ -16223,7 +16245,10 @@ var DefineEngine = class {
       }
     }
     this.host.defines.set(identifier, value);
-    this.host.recordSymbolDefinition("define", identifier, { value });
+    this.host.recordSymbolDefinition("define", identifier, {
+      value,
+      containerName: this.host.currentNamespace || void 0
+    });
   }
   /**
    * Applies an `undef` operation.
@@ -17181,9 +17206,13 @@ var FrontEndCommandService = class {
     let consumedCount = 0;
     while (remainingWords.length > 0 && this.host.isNamedLabelToken(keyword)) {
       const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+      const namespace = this.host.currentNamespace;
+      const dotCount = labelName.startsWith(".") ? labelName.match(/^\.*/)?.[0]?.length ?? 1 : 0;
+      const containerName = dotCount > 0 ? this.host.symbolScope.getScopedParentLabel(dotCount) || void 0 : namespace || void 0;
       this.host.symbolScope.handleLabelDefinition(labelName);
       this.host.recordSymbolDefinition("label", labelName, {
-        span: command.source.tokenSpans[consumedCount] ?? command.source.tokenSpans[0] ?? command.source.normalizedSpan
+        span: command.source.tokenSpans[consumedCount] ?? command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+        containerName
       });
       remainingWords.shift();
       consumedCount++;
@@ -17219,7 +17248,8 @@ var FrontEndCommandService = class {
     this.host.recordCurrentAddress();
     this.host.recordSymbolDefinition("label", assignedName, {
       span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
-      value
+      value,
+      containerName: this.host.currentNamespace || void 0
     });
     command.assignmentTarget = assignedName;
     setCommandKind(command, "staticAssignment");
@@ -18867,7 +18897,10 @@ var SymbolScopeService = class {
         macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
         modifiesHierarchy
       });
-      this.host.recordSymbolDefinition("label", fullLabel, { value: addr });
+      this.host.recordSymbolDefinition("label", fullLabel, {
+        value: addr,
+        containerName: this.symbolContainerName(fullLabel, isGlobal)
+      });
       if (directScopeLabel) {
         this.host.labelTable.set(directScopeLabel, {
           value: addr,
@@ -18903,7 +18936,10 @@ var SymbolScopeService = class {
       macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
       modifiesHierarchy
     });
-    this.host.recordSymbolDefinition("label", fullLabel, { value: addr });
+    this.host.recordSymbolDefinition("label", fullLabel, {
+      value: addr,
+      containerName: this.symbolContainerName(fullLabel, isGlobal)
+    });
     if (directScopeLabel) {
       this.host.labelTable.set(directScopeLabel, {
         value: addr,
@@ -19219,6 +19255,23 @@ var SymbolScopeService = class {
     return !def.parent ? def.size + def.extensionSize : def.size;
   }
   /**
+   * Returns the outline container for a stored label name.
+   * Sublabels nest under their parent; namespaced labels nest under the namespace.
+   * @param {string} fullLabel The stored label name.
+   * @param {boolean} isGlobal Whether the label is global.
+   * @returns {string | undefined} The container name, if any.
+   */
+  symbolContainerName(fullLabel, isGlobal) {
+    const parent = this.host.labelParents.get(fullLabel);
+    if (parent) {
+      return parent;
+    }
+    if (!isGlobal && this.host.currentNamespace && fullLabel.startsWith(`${this.host.currentNamespace}_`)) {
+      return this.host.currentNamespace;
+    }
+    return void 0;
+  }
+  /**
    * Handles a label definition.
    * @param {string} labelName The name of the label.
    */
@@ -19241,6 +19294,21 @@ var SymbolScopeService = class {
       const parentLabel = this.getScopedParentLabel(dotCount);
       const directScopeLabel = `${parentLabel}_${subLabelName}`;
       this.host.labelParents.set(directScopeLabel, parentLabel);
+      if (this.host.currentNamespace) {
+        const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
+        if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
+          const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
+          const qualifiedParent = `${namespacePrefix}_${parentLabel}`;
+          this.host.labelParents.set(namespacedLabel, qualifiedParent);
+          this.setLabel(directScopeLabel, void 0, false, false, false, modifiesHierarchy2);
+          if (modifiesHierarchy2) {
+            this.host.currentParentLabel = directScopeLabel;
+            this.host.currentParentIsGlobal = dotCount === 1;
+          }
+          this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy2);
+          return;
+        }
+      }
       this.setLabel(directScopeLabel, void 0, false, false, false, modifiesHierarchy2);
       if (modifiesHierarchy2) {
         this.host.currentParentLabel = directScopeLabel;
@@ -20822,26 +20890,26 @@ var Assembler = class _Assembler {
         if (expression.name || expression.content) {
           this.recordSymbolReference(
             "define",
-            expression.braced ? expression.content ?? "" : expression.name ?? "",
-            {
-              span: expression.span ?? fallbackSpan
-            }
+            expression.braced ? expression.content ?? "" : expression.name ?? ""
           );
         }
         return;
-      case "identifier":
-        this.recordSymbolReference("label", expression.name, {
-          span: expression.span ?? fallbackSpan
-        });
+      case "identifier": {
+        const segments = this.hierarchicalLabelReferences(expression.name);
+        if (segments) {
+          for (const segment of segments) {
+            this.recordSymbolReference("label", segment.name, {
+              containerName: segment.containerName
+            });
+          }
+          return;
+        }
+        this.recordSymbolReference("label", expression.name);
         return;
+      }
       case "member":
       case "index":
-        this.recordSymbolReference("label", renderReferenceExpressionNode(expression), {
-          span: expression.span ?? fallbackSpan
-        });
-        if (expression.type === "index") {
-          this.collectExpressionReferences(expression.index, fallbackSpan);
-        }
+        this.collectStructReferenceSegments(expression, fallbackSpan);
         return;
       case "call":
         this.recordSymbolReference("function", expression.callee.name, {
@@ -20865,6 +20933,134 @@ var Assembler = class _Assembler {
       default:
         return;
     }
+  }
+  /**
+   * Records one reference per struct-path segment so `obj.timer` can target
+   * the struct root and the field independently.
+   * @param {ReferenceExpressionNode} expression The struct-rooted reference.
+   * @param {SourceSpan} [fallbackSpan] The fallback span.
+   */
+  collectStructReferenceSegments(expression, fallbackSpan) {
+    switch (expression.type) {
+      case "identifier":
+        this.recordSymbolReference("label", expression.name);
+        return;
+      case "defineReference":
+        this.collectExpressionReferences(expression, fallbackSpan);
+        return;
+      case "member":
+        this.collectStructReferenceSegments(expression.object, fallbackSpan);
+        this.recordSymbolReference("label", expression.property.name, {
+          span: expression.property.span,
+          containerName: this.structSegmentContainerName(expression.object)
+        });
+        return;
+      case "index":
+        this.collectStructReferenceSegments(expression.object, fallbackSpan);
+        this.collectExpressionReferences(expression.index, fallbackSpan);
+        return;
+      default:
+        return;
+    }
+  }
+  /**
+   * Returns the immediate struct/extension name a member should nest under.
+   * Strips `[...]` so `obj[19].ext.index` yields `ext` for `index`.
+   * Define roots (`!obj_arthur.flags2`) resolve through the define value
+   * (`obj_start+obj[0]`) to the actual struct name.
+   * @param {ReferenceExpressionNode} object The object of a member access.
+   * @returns {string | undefined} The container name.
+   */
+  structSegmentContainerName(object) {
+    switch (object.type) {
+      case "identifier":
+        return object.name;
+      case "defineReference":
+        return this.structNameFromDefine(object.name ?? object.content) ?? object.name;
+      case "member":
+        return object.property.name;
+      case "index":
+        return this.structSegmentContainerName(object.object);
+      default:
+        return void 0;
+    }
+  }
+  /**
+   * Finds a known struct name in a define's expansion, walking nested defines.
+   * @param {string | undefined} name The define name.
+   * @param {Set<string>} [seen] Define names already visited.
+   * @returns {string | undefined} The struct name, if any.
+   */
+  structNameFromDefine(name, seen = /* @__PURE__ */ new Set()) {
+    if (!name || seen.has(name)) {
+      return void 0;
+    }
+    seen.add(name);
+    const value = this.defines.get(name);
+    if (value === void 0) {
+      return void 0;
+    }
+    return this.structNameFromExpression(parseExpressionNode(value), seen);
+  }
+  /**
+   * Walks an expression right-to-left looking for a known struct identifier.
+   * `obj_start+obj[0]` yields `obj`.
+   * @param {ExpressionNode} node The expression to search.
+   * @param {Set<string>} seen Define names already visited.
+   * @returns {string | undefined} The struct name, if any.
+   */
+  structNameFromExpression(node, seen) {
+    switch (node.type) {
+      case "identifier":
+        return this.structs.has(node.name) ? node.name : void 0;
+      case "defineReference":
+        return this.structNameFromDefine(node.name ?? node.content, seen);
+      case "member":
+        if (this.structs.has(node.property.name)) {
+          return node.property.name;
+        }
+        return this.structNameFromExpression(node.object, seen);
+      case "index":
+        return this.structNameFromExpression(node.object, seen);
+      case "binary":
+        return this.structNameFromExpression(node.right, seen) ?? this.structNameFromExpression(node.left, seen);
+      case "unary":
+        return this.structNameFromExpression(node.argument, seen);
+      default:
+        return void 0;
+    }
+  }
+  /**
+   * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
+   * segments so each part can be targeted independently.
+   * @param {string} name The identifier text.
+   * @returns {{ name: string; containerName?: string }[] | undefined} Segments, if this is a known sublabel.
+   */
+  hierarchicalLabelReferences(name) {
+    if (!name.includes("_") || !this.labelTable.has(name)) {
+      return void 0;
+    }
+    const chain = this.symbolScope.getHierarchyChain(name);
+    if (chain.length < 2 || chain[chain.length - 1] !== name) {
+      return void 0;
+    }
+    const segments = [];
+    for (let index2 = 0; index2 < chain.length; index2++) {
+      const full = chain[index2];
+      const parent = index2 > 0 ? chain[index2 - 1] : void 0;
+      if (!parent) {
+        segments.push({ name: full });
+        continue;
+      }
+      if (!full.startsWith(`${parent}_`)) {
+        return void 0;
+      }
+      segments.push({
+        name: `.${full.slice(parent.length + 1)}`,
+        containerName: parent
+      });
+    }
+    return segments;
   }
   /**
    * Collects command references.
@@ -21395,7 +21591,10 @@ var Assembler = class _Assembler {
       )
     );
     this.selectArchitecture(this.arch, this.arch);
-    measureInternalPhase("constructorActivateStage", () => this.activateStage("collectDefinitions"));
+    measureInternalPhase(
+      "constructorActivateStage",
+      () => this.activateStage("collectDefinitions")
+    );
     incrementInternalCounter("assemblerConstructions");
   }
   runLifecycleHook(hookName, invoke) {
@@ -23793,7 +23992,9 @@ var WorkspaceIndex = class {
   cache;
   /** Duration of the most recent {@link reindex} call in milliseconds. */
   lastReindexDurationMs;
-  /** How many roots were served from disk cache during the last reindex. */
+  /** How many roots were considered during the last reindex. */
+  lastReindexRootCount = 0;
+  /** How many roots were served from disk or in-memory cache during the last reindex. */
   lastReindexCachedRoots = 0;
   /** How many roots were freshly analysed during the last reindex. */
   lastReindexAnalyzedRoots = 0;
@@ -24032,6 +24233,7 @@ var WorkspaceIndex = class {
       entryPoints: [...this.entryPoints],
       includePaths: [...this.includePaths],
       ...this.lastReindexDurationMs === void 0 ? {} : { lastReindexDurationMs: this.lastReindexDurationMs },
+      lastReindexRootCount: this.lastReindexRootCount,
       lastReindexCachedRoots: this.lastReindexCachedRoots,
       lastReindexAnalyzedRoots: this.lastReindexAnalyzedRoots
     };
@@ -24084,10 +24286,18 @@ var WorkspaceIndex = class {
     const rootsToAnalyze = analyzeAll || hasUnknownDependency ? roots : roots.filter(
       (root) => !this.rootAnalyses.has(root) || dirtyFiles.some((file) => this.rootDependsOnFile(root, file))
     );
+    const rootsToAnalyzeSet = new Set(rootsToAnalyze);
     let cachedRoots = 0;
     let analyzedRoots = 0;
-    for (const root of rootsToAnalyze) {
+    for (const root of roots) {
+      if (!rootsToAnalyzeSet.has(root)) {
+        if (this.rootAnalyses.has(root)) {
+          cachedRoots += 1;
+        }
+        continue;
+      }
       if (this.isCoveredByOtherFullPassRoot(root)) {
+        cachedRoots += 1;
         continue;
       }
       const result = this.analyzeRoot(root, { followIncludes: true });
@@ -24112,6 +24322,7 @@ var WorkspaceIndex = class {
     this.dirtyFiles.clear();
     this.fullReindexRequired = false;
     this.lastReindexDurationMs = Date.now() - started;
+    this.lastReindexRootCount = roots.length;
     this.lastReindexCachedRoots = cachedRoots;
     this.lastReindexAnalyzedRoots = analyzedRoots;
     this.#rebuildCoverageIndex();
@@ -24157,13 +24368,16 @@ var WorkspaceIndex = class {
       }
     }
     const started = Date.now();
-    const assembler = measureInternalPhase("lspAssemblerConstruct", () => new Assembler({
-      environment: this.environment,
-      target: this.target,
-      architecture: this.architecture,
-      targetOptions: this.targetOptions,
-      fileProvider: this.#provider
-    }));
+    const assembler = measureInternalPhase(
+      "lspAssemblerConstruct",
+      () => new Assembler({
+        environment: this.environment,
+        target: this.target,
+        architecture: this.architecture,
+        targetOptions: this.targetOptions,
+        fileProvider: this.#provider
+      })
+    );
     assembler.includePaths = this.deriveIncludePaths(root);
     assembler.followIncludes = followIncludes;
     try {
@@ -32398,9 +32612,64 @@ function getWellformedEdit(textEdit) {
   return textEdit;
 }
 
+// language-server/src/build.ts
+import path7 from "node:path";
+function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
+  const resolvedEntries = [
+    ...new Set(
+      entryPoints.map(
+        (entry) => path7.isAbsolute(entry) ? path7.normalize(entry) : path7.resolve(workspaceRoot2, entry)
+      )
+    )
+  ];
+  if (requestedFile) {
+    const requested = path7.resolve(requestedFile);
+    if (resolvedEntries.some((entry) => entry === requested)) {
+      return {
+        file: requested,
+        reason: "active file is a project entry point",
+        usedEntryPoint: true,
+        requestedFile: requested
+      };
+    }
+    if (resolvedEntries.length > 0) {
+      return {
+        file: resolvedEntries[0],
+        reason: `active file ${path7.basename(requested)} is not a project entry point; using ${path7.basename(resolvedEntries[0])}`,
+        usedEntryPoint: true,
+        requestedFile: requested
+      };
+    }
+    return {
+      file: requested,
+      reason: "no project entry points configured; using active file",
+      usedEntryPoint: false,
+      requestedFile: requested
+    };
+  }
+  if (resolvedEntries.length > 0) {
+    return {
+      file: resolvedEntries[0],
+      reason: `no active editor; using first project entry point ${path7.basename(resolvedEntries[0])}`,
+      usedEntryPoint: true
+    };
+  }
+  throw new Error("Open a source file or set asm.entryPoints before building.");
+}
+function emptyOutputMessage(file, usedEntryPoint) {
+  const base = path7.basename(file);
+  if (usedEntryPoint) {
+    return `Assembly produced 0 bytes for ${base}. Writes to unmapped addresses are skipped; the root file likely never set a mapper/org, or every store landed outside ROM.`;
+  }
+  return `Assembly produced 0 bytes for ${base}. Include files assembled alone have no mapper/org, so ROM writes are dropped. Set asm.entryPoints to the project root (for example Chou.asm) and run Build Binary again.`;
+}
+function formatElapsed(startedAt) {
+  return `${Date.now() - startedAt}ms`;
+}
+
 // language-server/src/project-environment.ts
 import { existsSync as existsSync3 } from "node:fs";
-import path7 from "node:path";
+import path8 from "node:path";
 var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) => {
   if (typeof entry === "string") {
     if (!entry.trim()) throw new Error(`Plugin setting at index ${index2} must not be empty.`);
@@ -32425,7 +32694,7 @@ var ProjectEnvironmentController = class {
     return this.#state;
   }
   async replace(settings2, overlays = /* @__PURE__ */ new Map()) {
-    const cwd = path7.resolve(settings2.cwd);
+    const cwd = path8.resolve(settings2.cwd);
     const pluginModules = configuredPluginModules(settings2.plugins);
     const configuredPath = discoverProjectConfigurationPath(cwd, settings2.configFile);
     const hasWorkspaceConfiguration = Boolean(settings2.configFile) || Boolean(configuredPath && existsSync3(configuredPath));
@@ -32456,7 +32725,7 @@ var ProjectEnvironmentController = class {
         entryPoints: [...settings2.entryPoints ?? []],
         includePaths: [...loaded.includePaths],
         logger: this.options.logger,
-        cacheDir: path7.join(cwd, ".uttori-asm", "cache")
+        cacheDir: path8.join(cwd, ".uttori-asm", "cache")
       });
       for (const [file, content] of overlays) index2.updateDocument(file, content);
       if (overlays.size > 0 || (settings2.entryPoints?.length ?? 0) > 0) index2.reindex();
@@ -32502,7 +32771,7 @@ var ProjectEnvironmentController = class {
 // language-server/src/providers.ts
 var import_vscode_languageserver = __toESM(require_api3(), 1);
 import { pathToFileURL as pathToFileURL2, fileURLToPath as fileURLToPath2 } from "node:url";
-import path8 from "node:path";
+import path9 from "node:path";
 import fs4 from "node:fs";
 var semanticTokensLegend = {
   tokenTypes: [
@@ -32514,7 +32783,8 @@ var semanticTokensLegend = {
     import_vscode_languageserver.SemanticTokenTypes.namespace,
     import_vscode_languageserver.SemanticTokenTypes.number,
     import_vscode_languageserver.SemanticTokenTypes.string,
-    import_vscode_languageserver.SemanticTokenTypes.label
+    import_vscode_languageserver.SemanticTokenTypes.label,
+    import_vscode_languageserver.SemanticTokenTypes.struct
   ],
   tokenModifiers: [import_vscode_languageserver.SemanticTokenModifiers.definition]
 };
@@ -32522,7 +32792,7 @@ var tokenTypeIndex = new Map(
   semanticTokensLegend.tokenTypes.map((type, index2) => [type, index2])
 );
 var definitionTokenModifier = 1 << semanticTokensLegend.tokenModifiers.indexOf(import_vscode_languageserver.SemanticTokenModifiers.definition);
-var IDENTIFIER_CHAR = /[\w!.]/;
+var IDENTIFIER_CHAR = /[\w!]/;
 function pathToUri(filePath) {
   return pathToFileURL2(filePath).toString();
 }
@@ -32555,6 +32825,8 @@ function toSymbolKind(kind) {
       return import_vscode_languageserver.SymbolKind.Field;
     case "function":
       return import_vscode_languageserver.SymbolKind.Function;
+    case "namespace":
+      return import_vscode_languageserver.SymbolKind.Namespace;
     case "label":
     default:
       return import_vscode_languageserver.SymbolKind.Variable;
@@ -32576,7 +32848,22 @@ function preciseRange(index2, file, line, name, fallback) {
   if (rawLine === void 0) {
     return fallback;
   }
-  return rangeForTokenOnLine(rawLine, name, line, fallback);
+  const direct = rangeForTokenOnLine(rawLine, name, line, fallback);
+  if (direct !== fallback) {
+    return direct;
+  }
+  const lookup = lookupNameFor(name);
+  if (lookup !== name) {
+    const dotted = rangeForTokenOnLine(rawLine, `.${lookup}`, line, fallback);
+    if (dotted !== fallback) {
+      return dotted;
+    }
+  }
+  const suffixColumn = findCompoundSuffixColumn(rawLine, lookup);
+  if (suffixColumn >= 0) {
+    return import_vscode_languageserver.Range.create(line, suffixColumn, line, suffixColumn + lookup.length);
+  }
+  return fallback;
 }
 function preciseRangeWithSigil(index2, file, line, name, fallback) {
   const text = index2.getFileText(file);
@@ -32595,11 +32882,11 @@ function preciseRangeWithSigil(index2, file, line, name, fallback) {
   return preciseRange(index2, file, line, name, fallback);
 }
 function lookupNameFor(word) {
-  return word.startsWith("!") ? word.slice(1) : word;
+  const withoutSigil = word.startsWith("!") ? word.slice(1) : word;
+  return withoutSigil.replace(/^\.+/, "");
 }
 function namesMatch(stored, word) {
-  const lookup = lookupNameFor(word);
-  return stored === lookup || stored === word;
+  return lookupNameFor(stored) === lookupNameFor(word) || stored === word;
 }
 function rangeForTokenOnLine(rawLine, name, line, fallback) {
   const column = findTokenColumn(rawLine, name);
@@ -32607,8 +32894,15 @@ function rangeForTokenOnLine(rawLine, name, line, fallback) {
     return fallback;
   }
   let endColumn = column + name.length;
-  while (endColumn < rawLine.length && IDENTIFIER_CHAR.test(rawLine[endColumn] ?? "")) {
-    endColumn += 1;
+  const rest = rawLine.slice(endColumn);
+  if (rest.startsWith("__")) {
+    while (endColumn < rawLine.length && IDENTIFIER_CHAR.test(rawLine[endColumn] ?? "")) {
+      endColumn += 1;
+    }
+  } else {
+    while (endColumn < rawLine.length && IDENTIFIER_CHAR.test(rawLine[endColumn] ?? "") && rawLine[endColumn] !== "_") {
+      endColumn += 1;
+    }
   }
   return import_vscode_languageserver.Range.create(line, column, line, endColumn);
 }
@@ -32639,6 +32933,27 @@ function findTokenColumn(lineText, name) {
   }
   return looseMatch;
 }
+function findCompoundSuffixColumn(lineText, segment) {
+  if (!segment) {
+    return -1;
+  }
+  const needle = `_${segment}`;
+  const commentIndex = lineText.indexOf(";");
+  let from = 0;
+  for (; ; ) {
+    const index2 = lineText.indexOf(needle, from);
+    if (index2 < 0) {
+      break;
+    }
+    const inComment = commentIndex >= 0 && index2 > commentIndex;
+    const after = index2 + needle.length < lineText.length ? lineText[index2 + needle.length] : "";
+    if (!inComment && (after === "" || after === "_" || !IDENTIFIER_CHAR.test(after))) {
+      return index2 + 1;
+    }
+    from = index2 + 1;
+  }
+  return -1;
+}
 function wordAt(text, position) {
   const line = splitLines(text)[position.line];
   if (line === void 0) {
@@ -32652,7 +32967,7 @@ function wordAt(text, position) {
   if (unquotedPath !== void 0) {
     return unquotedPath;
   }
-  const wordPattern = /[\w!.]+/g;
+  const wordPattern = /!?\.?\w+/g;
   let match;
   while ((match = wordPattern.exec(line)) !== null) {
     const start = match.index;
@@ -32731,7 +33046,53 @@ function quotedStringAt(line, character) {
 }
 function cursorWord(index2, file, position) {
   const text = index2.getFileText(file);
-  return text ? wordAt(text, position) : void 0;
+  if (!text) {
+    return void 0;
+  }
+  const word = wordAt(text, position);
+  return hierarchicalSegmentAt(index2, file, position, word) ?? word;
+}
+function hierarchicalSegmentAt(index2, file, position, word) {
+  if (!word || !word.includes("_")) {
+    return void 0;
+  }
+  const chain = [];
+  const seen = /* @__PURE__ */ new Set();
+  let current = word;
+  const symbols = index2.getAllSymbols();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    chain.unshift(current);
+    current = symbols.find((symbol) => symbol.name === current)?.containerName;
+  }
+  if (chain.length < 2) {
+    return void 0;
+  }
+  const text = index2.getFileText(file);
+  if (!text) {
+    return void 0;
+  }
+  const line = splitLines(text)[position.line];
+  if (line === void 0) {
+    return void 0;
+  }
+  const start = findTokenColumn(line, word);
+  if (start < 0) {
+    return void 0;
+  }
+  const relative = position.character - start;
+  for (let index3 = 0; index3 < chain.length; index3++) {
+    const full = chain[index3];
+    const parent = index3 > 0 ? chain[index3 - 1] : void 0;
+    const segmentEnd = full.length;
+    if (relative < segmentEnd || index3 === chain.length - 1) {
+      if (!parent) {
+        return full;
+      }
+      return `.${full.slice(parent.length + 1)}`;
+    }
+  }
+  return void 0;
 }
 function cursorReference(index2, file, position, word) {
   const references = index2.getReferences(file);
@@ -32742,9 +33103,16 @@ function cursorReference(index2, file, position, word) {
   if (!word) {
     return void 0;
   }
-  return references.find(
-    (reference) => namesMatch(reference.name, word) && locationRange(reference.location)?.start.line === position.line
-  ) ?? references.find((reference) => namesMatch(reference.name, word));
+  const onLine = references.filter(
+    (reference) => namesMatch(reference.name, word) && (locationRange(reference.location)?.start.line ?? reference.location.line) === position.line
+  );
+  const containing = onLine.find(
+    (reference) => positionInRange(position, referenceRange(index2, reference))
+  );
+  if (containing) {
+    return containing;
+  }
+  return onLine[0] ?? references.find((reference) => namesMatch(reference.name, word));
 }
 function cursorSymbol(index2, file, position, word) {
   const symbols = index2.getSymbols(file);
@@ -32755,9 +33123,16 @@ function cursorSymbol(index2, file, position, word) {
   if (!word) {
     return void 0;
   }
-  return symbols.find(
-    (symbol) => namesMatch(symbol.name, word) && locationRange(symbol.location)?.start.line === position.line
-  ) ?? symbols.find((symbol) => namesMatch(symbol.name, word));
+  const onLine = symbols.filter(
+    (symbol) => namesMatch(symbol.name, word) && (locationRange(symbol.location)?.start.line ?? symbol.location.line) === position.line
+  );
+  const containing = onLine.find(
+    (symbol) => positionInRange(position, definitionRange(index2, symbol))
+  );
+  if (containing) {
+    return containing;
+  }
+  return onLine[0] ?? symbols.find((symbol) => namesMatch(symbol.name, word));
 }
 function diagnosticsFor(index2, file) {
   return index2.getDiagnostics(file).map((diagnostic) => {
@@ -32772,16 +33147,53 @@ function diagnosticsFor(index2, file) {
   });
 }
 function documentSymbolsFor(index2, file) {
-  return index2.getSymbols(file).map((symbol) => {
+  const nodes = index2.getSymbols(file).map((symbol) => {
     const lspRange = definitionRange(index2, symbol);
-    return import_vscode_languageserver.DocumentSymbol.create(
-      symbol.name,
-      symbol.containerName,
-      toSymbolKind(symbol.kind),
-      lspRange,
-      lspRange
-    );
+    return {
+      symbol,
+      lsp: import_vscode_languageserver.DocumentSymbol.create(
+        outlineDisplayName(symbol),
+        outlineDetail(symbol),
+        toSymbolKind(symbol.kind),
+        lspRange,
+        lspRange,
+        []
+      )
+    };
   });
+  const byName = /* @__PURE__ */ new Map();
+  for (const node of nodes) {
+    const list = byName.get(node.symbol.name) ?? [];
+    list.push(node);
+    byName.set(node.symbol.name, list);
+  }
+  const attached = /* @__PURE__ */ new Set();
+  for (const node of nodes) {
+    const container = node.symbol.containerName;
+    if (!container) {
+      continue;
+    }
+    const parents = byName.get(container);
+    if (!parents || parents.length === 0) {
+      continue;
+    }
+    const parent = parents.find((candidate) => candidate !== node) ?? parents[0];
+    if (parent === node) {
+      continue;
+    }
+    parent.lsp.children?.push(node.lsp);
+    attached.add(node);
+  }
+  for (const node of nodes) {
+    if (node.lsp.children && node.lsp.children.length > 0) {
+      node.lsp.children = dedupeOutlineChildren(node.lsp.children);
+    }
+  }
+  const roots = nodes.filter((node) => !attached.has(node)).map((node) => node.lsp);
+  for (const root of roots) {
+    expandRangeToChildren(root);
+  }
+  return roots;
 }
 function definitionFor(index2, file, position) {
   const word = cursorWord(index2, file, position);
@@ -32828,14 +33240,14 @@ function definitionFor(index2, file, position) {
   return [];
 }
 function referencesFor(index2, file, position, includeDeclaration) {
-  const name = identifierNameAt(index2, file, position);
-  if (!name) {
+  const target = identifierAt(index2, file, position);
+  if (!target) {
     return [];
   }
   const locations = [];
-  let matches = findReferences(name, index2.getAllReferences());
+  let matches = findReferences(target.name, index2.getAllReferences(), target.containerName);
   if (matches.length === 0) {
-    matches = findReferences(name, index2.getReferences(file));
+    matches = findReferences(target.name, index2.getReferences(file), target.containerName);
   }
   for (const reference of matches) {
     locations.push(
@@ -32843,7 +33255,9 @@ function referencesFor(index2, file, position, includeDeclaration) {
     );
   }
   if (includeDeclaration) {
-    for (const symbol of index2.getAllSymbols().filter((entry) => entry.name === name)) {
+    for (const symbol of index2.getAllSymbols().filter(
+      (entry) => entry.name === target.name && (target.containerName === void 0 || entry.containerName === target.containerName)
+    )) {
       locations.push(definitionToLocation(index2, symbol));
     }
   }
@@ -32851,7 +33265,7 @@ function referencesFor(index2, file, position, includeDeclaration) {
 }
 function hoverFor(index2, file, position, text) {
   const architecture = index2.architecture;
-  const word = wordAt(text, position);
+  const word = cursorWord(index2, file, position) ?? wordAt(text, position);
   const reference = cursorReference(index2, file, position, word);
   if (reference?.kind === "instruction") {
     const descriptor2 = findInstruction(reference.name, architecture, {
@@ -32864,12 +33278,12 @@ function hoverFor(index2, file, position, text) {
   if (reference) {
     const definitions = resolveDefinition(reference, index2.getAllSymbols());
     if (definitions.length > 0) {
-      return markdownHover(renderSymbolDocs(definitions[0]));
+      return markdownHover(renderSymbolDocs(index2, definitions[0]));
     }
   }
   const symbol = cursorSymbol(index2, file, position, word);
   if (symbol) {
-    return markdownHover(renderSymbolDocs(symbol));
+    return markdownHover(renderSymbolDocs(index2, symbol));
   }
   if (!word) {
     return null;
@@ -32889,6 +33303,11 @@ function hoverFor(index2, file, position, text) {
   );
   if (expressionFunction) {
     return markdownHover(renderExpressionFunctionDocs(expressionFunction));
+  }
+  const lookupName = lookupNameFor(word);
+  const byName = index2.getAllSymbols().filter((entry) => entry.name === lookupName || entry.name === word);
+  if (byName.length > 0) {
+    return markdownHover(renderSymbolDocs(index2, byName[0]));
   }
   return null;
 }
@@ -33050,7 +33469,7 @@ function semanticTokensFor(index2, file) {
     push(definitionRange(index2, symbol), symbolTokenType(symbol.kind), definitionTokenModifier);
   }
   for (const reference of index2.getReferences(file)) {
-    push(referenceRange(index2, reference), referenceTokenType(reference.kind));
+    push(referenceRange(index2, reference), resolvedReferenceTokenType(index2, reference));
   }
   tokens.sort((a, b) => a.line - b.line || a.char - b.char);
   const builder = new import_vscode_languageserver.SemanticTokensBuilder();
@@ -33070,6 +33489,13 @@ function definitionRange(index2, symbol) {
   const line = fallbackRange?.start.line ?? symbol.location.line;
   if (symbol.kind === "define") {
     return preciseRangeWithSigil(index2, symbol.location.file, line, symbol.name, fallback);
+  }
+  if (symbol.containerName && symbol.name.startsWith(`${symbol.containerName}_`)) {
+    const suffix = `.${symbol.name.slice(symbol.containerName.length + 1)}`;
+    const dotted = preciseRange(index2, symbol.location.file, line, suffix, fallback);
+    if (dotted !== fallback) {
+      return dotted;
+    }
   }
   return preciseRange(index2, symbol.location.file, line, symbol.name, fallback);
 }
@@ -33106,39 +33532,42 @@ function definitionToLocation(index2, symbol) {
 function resolveIncludeTarget2(index2, file, target) {
   const trimmed = target.replace(/^["'`](.*)["'`]$/, "$1");
   const normalizedTarget = trimmed.replace(/\\/g, "/");
-  const base = path8.basename(normalizedTarget);
+  const base = path9.basename(normalizedTarget);
   const edges = index2.getIncludeEdges().filter((edge) => edge.fromFile === file);
   const match = edges.find(
-    (edge) => edge.toFile === normalizedTarget || edge.toFile.replace(/\\/g, "/") === normalizedTarget || path8.basename(edge.toFile) === base
+    (edge) => edge.toFile === normalizedTarget || edge.toFile.replace(/\\/g, "/") === normalizedTarget || path9.basename(edge.toFile) === base
   );
   if (match?.toFile) {
     return match.toFile;
   }
   const searchRoots = [
-    path8.dirname(file),
-    ...index2.includePaths.map((entry) => path8.resolve(path8.dirname(file), entry))
+    path9.dirname(file),
+    ...index2.includePaths.map((entry) => path9.resolve(path9.dirname(file), entry))
   ];
   for (const root of searchRoots) {
-    const candidate = path8.isAbsolute(trimmed) ? trimmed : path8.resolve(root, trimmed);
+    const candidate = path9.isAbsolute(trimmed) ? trimmed : path9.resolve(root, trimmed);
     if (fs4.existsSync(candidate)) {
       return candidate;
     }
   }
   return void 0;
 }
-function identifierNameAt(index2, file, position) {
+function identifierAt(index2, file, position) {
   const word = cursorWord(index2, file, position);
   const reference = cursorReference(index2, file, position, word);
   if (reference) {
-    return reference.name;
+    return { name: reference.name, containerName: reference.containerName };
   }
   const symbol = cursorSymbol(index2, file, position, word);
   if (symbol) {
-    return symbol.name;
+    return { name: symbol.name, containerName: symbol.containerName };
   }
-  return word?.startsWith("!") ? word.slice(1) : word;
+  if (!word) {
+    return void 0;
+  }
+  return { name: word.startsWith("!") ? word.slice(1) : word };
 }
-function renderSymbolDocs(symbol) {
+function renderSymbolDocs(index2, symbol) {
   const lines = [`**${symbol.name}** - ${symbol.kind}`];
   if (symbol.containerName) {
     lines.push("", `In \`${symbol.containerName}\``);
@@ -33147,8 +33576,96 @@ function renderSymbolDocs(symbol) {
     const value = typeof symbol.value === "number" ? `$${symbol.value.toString(16).toUpperCase()}` : symbol.value;
     lines.push("", `Value: \`${value}\``);
   }
-  lines.push("", `Defined in \`${path8.basename(symbol.location.file)}\``);
+  const annotation = symbolAnnotation(index2, symbol);
+  if (annotation) {
+    lines.push("", annotation);
+  }
+  lines.push("", `Defined in \`${path9.basename(symbol.location.file)}\``);
   return lines.join("\n");
+}
+function symbolAnnotation(index2, symbol) {
+  const text = index2.getFileText(symbol.location.file);
+  if (!text) {
+    return void 0;
+  }
+  const lines = splitLines(text);
+  const line = locationRange(symbol.location)?.start.line ?? symbol.location.line;
+  const leading = [];
+  for (let previous = line - 1; previous >= 0; previous--) {
+    const sourceLine = lines[previous] ?? "";
+    if (sourceLine.trim() === "") {
+      break;
+    }
+    if (!/^\s*;/.test(sourceLine)) {
+      break;
+    }
+    leading.unshift(sourceLine.replace(/^\s*;\s?/, "").trimEnd());
+  }
+  const trailing = lineCommentText(lines[line] ?? "");
+  const parts = [...leading.filter((entry) => entry.length > 0)];
+  if (trailing) {
+    parts.push(trailing);
+  }
+  const joined = parts.join("\n").trim();
+  return joined || void 0;
+}
+function lineCommentText(line) {
+  let quote = "";
+  for (let index2 = 0; index2 < line.length; index2++) {
+    const char = line[index2];
+    if ((char === '"' || char === "'") && line[index2 - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
+      continue;
+    }
+    if (!quote && char === ";") {
+      const text = line.slice(index2 + 1).trim();
+      return text || void 0;
+    }
+  }
+  return void 0;
+}
+function outlineDisplayName(symbol) {
+  const container = symbol.containerName;
+  if (container && symbol.name.startsWith(`${container}_`)) {
+    return symbol.name.slice(container.length + 1);
+  }
+  if (symbol.kind === "label" && symbol.name.startsWith(".")) {
+    return symbol.name.replace(/^\.+/, "");
+  }
+  return symbol.name;
+}
+function outlineDetail(symbol) {
+  if (symbol.value === void 0) {
+    return symbol.kind;
+  }
+  const value = typeof symbol.value === "number" ? `$${symbol.value.toString(16).toUpperCase()}` : symbol.value;
+  return `${symbol.kind} ${value}`;
+}
+function dedupeOutlineChildren(children) {
+  const seen = /* @__PURE__ */ new Map();
+  for (const child of children) {
+    const key = `${child.name}\0${child.selectionRange.start.line}`;
+    const existing = seen.get(key);
+    const childCount = child.children?.length ?? 0;
+    const existingCount = existing?.children?.length ?? 0;
+    const childHasValue = child.detail?.includes("$") ?? false;
+    const existingHasValue = existing?.detail?.includes("$") ?? false;
+    if (!existing || childCount > existingCount || childCount === existingCount && childHasValue && !existingHasValue) {
+      seen.set(key, child);
+    }
+  }
+  return [...seen.values()];
+}
+function expandRangeToChildren(symbol) {
+  for (const child of symbol.children ?? []) {
+    expandRangeToChildren(child);
+    symbol.range = unionRange(symbol.range, child.range);
+  }
+}
+function unionRange(left, right) {
+  const start = left.start.line < right.start.line || left.start.line === right.start.line && left.start.character <= right.start.character ? left.start : right.start;
+  const end = left.end.line > right.end.line || left.end.line === right.end.line && left.end.character >= right.end.character ? left.end : right.end;
+  return import_vscode_languageserver.Range.create(start.line, start.character, end.line, end.character);
 }
 function markdownHover(value) {
   return { contents: { kind: import_vscode_languageserver.MarkupKind.Markdown, value } };
@@ -33160,6 +33677,8 @@ function symbolCompletionKind(kind) {
     case "macro":
     case "function":
       return import_vscode_languageserver.CompletionItemKind.Function;
+    case "namespace":
+      return import_vscode_languageserver.CompletionItemKind.Module;
     case "struct":
       return import_vscode_languageserver.CompletionItemKind.Struct;
     case "structMember":
@@ -33177,8 +33696,10 @@ function symbolTokenType(kind) {
       return tokenTypeIndex.get(import_vscode_languageserver.SemanticTokenTypes.macro) ?? 0;
     case "function":
       return tokenTypeIndex.get(import_vscode_languageserver.SemanticTokenTypes.function) ?? 0;
-    case "struct":
+    case "namespace":
       return tokenTypeIndex.get(import_vscode_languageserver.SemanticTokenTypes.namespace) ?? 0;
+    case "struct":
+      return tokenTypeIndex.get(import_vscode_languageserver.SemanticTokenTypes.struct) ?? 0;
     case "label":
       return tokenTypeIndex.get(import_vscode_languageserver.SemanticTokenTypes.label) ?? 0;
     case "structMember":
@@ -33186,6 +33707,19 @@ function symbolTokenType(kind) {
     default:
       return tokenTypeIndex.get(import_vscode_languageserver.SemanticTokenTypes.variable) ?? 0;
   }
+}
+function resolvedReferenceTokenType(index2, reference) {
+  if (reference.kind === "instruction" || reference.kind === "include" || reference.kind === "unknown") {
+    return referenceTokenType(reference.kind);
+  }
+  const definitions = resolveDefinition(reference, index2.getAllSymbols());
+  if (definitions.length > 0) {
+    const preferred = definitions.find(
+      (definition) => definition.kind === "struct" || definition.kind === "structMember" || definition.kind === "namespace"
+    ) ?? definitions[0];
+    return symbolTokenType(preferred.kind);
+  }
+  return referenceTokenType(reference.kind);
 }
 function referenceTokenType(kind) {
   switch (kind) {
@@ -33240,14 +33774,14 @@ var configurationDiagnostic;
 var configurationQueue = Promise.resolve();
 var workspaceRoot = () => workspaceRoots[0] ?? process.cwd();
 function resolveAgainstWorkspace(value) {
-  return path9.isAbsolute(value) ? path9.normalize(value) : path9.resolve(workspaceRoot(), value);
+  return path10.isAbsolute(value) ? path10.normalize(value) : path10.resolve(workspaceRoot(), value);
 }
 function isProjectConfigFile(file) {
-  const resolved = path9.resolve(file);
+  const resolved = path10.resolve(file);
   if (settings.configFile && resolved === resolveAgainstWorkspace(settings.configFile)) {
     return true;
   }
-  return path9.basename(file) === PROJECT_CONFIG_FILENAME;
+  return path10.basename(file) === PROJECT_CONFIG_FILENAME;
 }
 function stringValue(value) {
   return typeof value === "string" && value.trim() ? value : void 0;
@@ -33279,7 +33813,7 @@ function applyConfigFileDefaults(next) {
   if (!discovered || !fs5.existsSync(discovered)) {
     return next;
   }
-  const relativeConfig = path9.relative(workspaceRoot(), discovered) || path9.basename(discovered);
+  const relativeConfig = path10.relative(workspaceRoot(), discovered) || path10.basename(discovered);
   let extras = {};
   try {
     extras = validateProjectConfiguration(JSON.parse(fs5.readFileSync(discovered, "utf8")));
@@ -33366,7 +33900,7 @@ function scheduleReindex() {
     index.reindex();
     const status = index.getStatus();
     connection.console.info(
-      `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms (analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`
+      `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms (roots=${status.lastReindexRootCount}, analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`
     );
     connection.console.info(
       `Index contains ${status.referenceCount} references across ${status.fileCount} files`
@@ -33454,55 +33988,113 @@ connection.onDidChangeConfiguration((params) => {
   enqueueProjectEnvironment(mergeServerSettings(settings, changed?.asm ?? changed));
 });
 function defaultOutputPath(file) {
-  const parsed = path9.parse(file);
+  const parsed = path10.parse(file);
   const { loaded } = environmentController.current;
   const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
-  return path9.join(
+  return path10.join(
     parsed.dir,
     `${parsed.name}${extension.startsWith(".") ? extension : `.${extension}`}`
   );
 }
 function resolveOptionalBuildPath(configured, file) {
   if (!configured) return void 0;
-  return path9.isAbsolute(configured) ? path9.normalize(configured) : path9.resolve(workspaceRoots[0] ?? path9.dirname(file), configured);
+  return path10.isAbsolute(configured) ? path10.normalize(configured) : path10.resolve(workspaceRoots[0] ?? path10.dirname(file), configured);
 }
-function buildBinary(file, output, baseImage) {
+function buildBinary(requestedFile, output, baseImage) {
+  const startedAt = Date.now();
+  const log = connection.console;
   try {
+    const resolved = resolveBuildEntry(requestedFile, settings.entryPoints, workspaceRoot());
+    const file = resolved.file;
+    log.info("Build Binary starting");
+    log.info(`  requested: ${requestedFile ?? "(none)"}`);
+    log.info(`  assembling: ${file}`);
+    log.info(`  reason: ${resolved.reason}`);
+    log.info(`  workspace: ${workspaceRoot()}`);
+    log.info(`  target: ${environmentController.current.loaded.target}`);
+    log.info(
+      `  architecture: ${environmentController.current.loaded.architecture || "(target default)"}`
+    );
+    log.info(
+      `  includePaths: ${environmentController.current.loaded.includePaths.join(", ") || "(none)"}`
+    );
+    log.info(`  entryPoints: ${settings.entryPoints.join(", ") || "(none)"}`);
+    log.info(`  configFile: ${settings.configFile || "(none)"}`);
+    log.info(`  buildOutput setting: ${output ?? settings.buildOutput ?? "(default extension)"}`);
+    log.info(`  baseImage setting: ${baseImage ?? settings.baseImage ?? "(none)"}`);
+    if (!fs5.existsSync(file)) {
+      const message = `Entry file does not exist: ${file}`;
+      log.error(message);
+      return { ok: false, message };
+    }
     const provider = new OverlayFileProvider(currentOverlays());
     const baseImagePath = resolveOptionalBuildPath(baseImage ?? settings.baseImage, file);
+    if (baseImagePath) {
+      log.info(`  base image path: ${baseImagePath}`);
+      if (!fs5.existsSync(baseImagePath)) {
+        const message = `Base image does not exist: ${baseImagePath}`;
+        log.error(message);
+        return { ok: false, message };
+      }
+    }
     const assembler = environmentController.createAssembler({
       ...baseImagePath ? { baseImage: new Uint8Array(fs5.readFileSync(baseImagePath)) } : {},
       fileProvider: provider,
       collectSourceMetadata: false
     });
     try {
-      assembler.setIncludePaths([
-        .../* @__PURE__ */ new Set([path9.dirname(file), ...environmentController.current.loaded.includePaths])
-      ]);
+      const includePaths = [
+        .../* @__PURE__ */ new Set([path10.dirname(file), ...environmentController.current.loaded.includePaths])
+      ];
+      log.info(`  assembler includePaths: ${includePaths.join(", ")}`);
+      assembler.setIncludePaths(includePaths);
       assembler.setCurrentFile(file);
       const source = provider.readTextFile(file);
-      assembler.assembleProgram(assembler.buildProgramModel(source, file, 0));
+      log.info(
+        `  source: ${source.length} chars from ${provider.overlay.has(file) ? "editor buffer" : "disk"}`
+      );
+      const programStarted = Date.now();
+      const program = assembler.buildProgramModel(source, file, 0);
+      log.info(`  program model: ${program.nodes.length} nodes (${formatElapsed(programStarted)})`);
+      const assembleStarted = Date.now();
+      assembler.assembleProgram(program);
+      log.info(`  assembleProgram finished (${formatElapsed(assembleStarted)})`);
       const bytes = assembler.getBinaryOutput();
+      log.info(`  emitted ${bytes.length} bytes (output buffer ${assembler.outputBytes.length})`);
+      if (bytes.length === 0) {
+        const message = emptyOutputMessage(file, resolved.usedEntryPoint);
+        log.error(message);
+        return { ok: false, message };
+      }
       const outputPath = resolveOptionalBuildPath(output ?? settings.buildOutput, file) ?? defaultOutputPath(file);
-      fs5.mkdirSync(path9.dirname(outputPath), { recursive: true });
+      log.info(`  writing ${bytes.length} bytes \u2192 ${outputPath}`);
+      fs5.mkdirSync(path10.dirname(outputPath), { recursive: true });
       fs5.writeFileSync(outputPath, Buffer.from(bytes));
+      log.info(
+        `Build Binary succeeded in ${formatElapsed(startedAt)}: ${bytes.length} bytes \u2192 ${outputPath}`
+      );
       return { ok: true, outputPath, bytes: bytes.length };
     } finally {
       assembler.dispose();
     }
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : String(error) };
+    const message = error instanceof Error ? error.message : String(error);
+    log.error(`Build Binary failed in ${formatElapsed(startedAt)}: ${message}`);
+    if (error instanceof Error && error.stack) {
+      log.error(error.stack);
+    }
+    return { ok: false, message };
   }
 }
-connection.onExecuteCommand((params) => {
+function argumentPath(value) {
+  if (!value) return void 0;
+  return value.startsWith("file:") ? uriToPath(value) : value;
+}
+connection.onExecuteCommand(async (params) => {
   if (params.command !== "asm.build") return void 0;
+  await configurationQueue;
   const args = params.arguments ?? [];
-  const uriOrPath = args[0];
-  if (!uriOrPath) return { ok: false, message: "No file provided to build." };
-  const file = uriOrPath.startsWith("file:") ? uriToPath(uriOrPath) : uriOrPath;
-  const output = args[1]?.startsWith("file:") ? uriToPath(args[1]) : args[1];
-  const baseImage = args[2]?.startsWith("file:") ? uriToPath(args[2]) : args[2];
-  return buildBinary(file, output, baseImage);
+  return buildBinary(argumentPath(args[0]), argumentPath(args[1]), argumentPath(args[2]));
 });
 connection.onRequest("asm/projectMetadata", async () => {
   await configurationQueue;
@@ -33529,6 +34121,7 @@ connection.onRequest("asm/status", async () => {
       errorCount: 0,
       entryPoints: settings.entryPoints,
       includePaths: settings.includePaths,
+      lastReindexRootCount: 0,
       lastReindexCachedRoots: 0,
       lastReindexAnalyzedRoots: 0,
       configFile: settings.configFile,

@@ -43,7 +43,7 @@
       "patterns": [
         {
           "name": "support.function.pseudo.uttori-snes",
-          "match": "\\b(?i:lorom|hirom|exlorom|exhirom|sa1rom|sfxrom|norom|fullsa1rom|warnpc|pushpc|pullpc|pushbase|pullbase|asar)\\b"
+          "match": "\\b(?i:lorom|hirom|exlorom|exhirom|sa1rom|sfxrom|norom|fullsa1rom|fastrom|freecode|freedata|freespace|freespacebyte|prot|spcblock|endspcblock|startpos|check|optimize|dpbase|warnings|print|warn|autoclean|autoclear|includefrom|warnpc|pushpc|pullpc|pushbase|pullbase|asar)\\b"
         }
       ]
     }

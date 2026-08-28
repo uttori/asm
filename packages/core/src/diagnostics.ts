@@ -8,7 +8,8 @@ export type AssemblySymbolKind =
   | "macro"
   | "struct"
   | "structMember"
-  | "function";
+  | "function"
+  | "namespace";
 
 export type AssemblySourceLocation = {
   file: string;

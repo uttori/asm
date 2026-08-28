@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { CompletionItemKind } from "vscode-languageserver";
+import { CompletionItemKind, SymbolKind } from "vscode-languageserver";
 import { test } from "./ava-helper.js";
 import { WorkspaceIndex } from "../packages/core/src/lsp/workspace-index.js";
 import { snesWorkspaceIndexOptions } from "./test-assembler.js";
@@ -227,7 +227,10 @@ test("unquoted hyphenated incsrc paths highlight the full filename", (t) => {
     const link = result[0] as {
       targetUri?: string;
       uri?: string;
-      originSelectionRange?: { start: { line: number; character: number }; end: { character: number } };
+      originSelectionRange?: {
+        start: { line: number; character: number };
+        end: { character: number };
+      };
     };
     t.is(link.uri ?? link.targetUri, pathToUri(bank));
     t.truthy(link.originSelectionRange);
@@ -237,4 +240,460 @@ test("unquoted hyphenated incsrc paths highlight the full filename", (t) => {
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }
+});
+
+function decodeSemanticTokens(data: number[]): Array<{
+  line: number;
+  char: number;
+  length: number;
+  type: number;
+}> {
+  const decoded: Array<{ line: number; char: number; length: number; type: number }> = [];
+  let line = 0;
+  let char = 0;
+  for (let index = 0; index + 4 < data.length; index += 5) {
+    const deltaLine = data[index] ?? 0;
+    const deltaStart = data[index + 1] ?? 0;
+    line += deltaLine;
+    char = deltaLine === 0 ? char + deltaStart : deltaStart;
+    decoded.push({
+      line,
+      char,
+      length: data[index + 2] ?? 0,
+      type: data[index + 3] ?? 0,
+    });
+  }
+  return decoded;
+}
+
+function childNamed(
+  symbols: ReturnType<typeof documentSymbolsFor>,
+  name: string,
+): ReturnType<typeof documentSymbolsFor>[number] | undefined {
+  for (const symbol of symbols) {
+    if (symbol.name === name) {
+      return symbol;
+    }
+    const nested = childNamed(symbol.children ?? [], name);
+    if (nested) {
+      return nested;
+    }
+  }
+  return undefined;
+}
+
+function columnOf(line: string, token: string): number {
+  return line.indexOf(token);
+}
+
+test("struct members nest in the outline and are independently targetable", (t) => {
+  const structFile = path.resolve("/virtual/object_defines.asm");
+  const source = [
+    "lorom",
+    "org $008000",
+    "struct obj 0 ;65 bytes / obj",
+    "    .timer:      skip 1",
+    "    ; used as a state index",
+    "    ._13:        skip 2 ;physics pointer?",
+    "endstruct",
+    "cop:",
+    "    sta.b obj.timer",
+    "    sta.b obj._13",
+    "",
+  ].join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(structFile, source);
+
+  const outline = documentSymbolsFor(index, structFile);
+  const obj = outline.find((symbol) => symbol.name === "obj");
+  t.truthy(obj);
+  t.is(obj?.kind, SymbolKind.Struct);
+  t.true((obj?.children ?? []).some((child) => child.name === "timer"));
+  t.true((obj?.children ?? []).some((child) => child.name === "_13"));
+
+  const useLine = source.split("\n")[8];
+  const objColumn = columnOf(useLine, "obj");
+  const timerColumn = columnOf(useLine, "timer");
+
+  const objDefinition = definitionFor(index, structFile, { line: 8, character: objColumn + 1 });
+  t.is(objDefinition.length, 1);
+  t.is(objDefinition[0].range.start.line, 2);
+
+  const timerDefinition = definitionFor(index, structFile, {
+    line: 8,
+    character: timerColumn + 1,
+  });
+  t.is(timerDefinition.length, 1);
+  t.is(timerDefinition[0].range.start.line, 3);
+
+  const objHover = hoverFor(index, structFile, { line: 8, character: objColumn + 1 }, source);
+  t.regex(JSON.stringify(objHover), /struct/);
+  t.regex(JSON.stringify(objHover), /65 bytes \/ obj/);
+
+  const fieldHover = hoverFor(
+    index,
+    structFile,
+    { line: 9, character: columnOf(source.split("\n")[9], "_13") + 1 },
+    source,
+  );
+  t.regex(JSON.stringify(fieldHover), /physics pointer\?/);
+  t.regex(JSON.stringify(fieldHover), /used as a state index/);
+
+  const timerRefs = referencesFor(index, structFile, { line: 8, character: timerColumn + 1 }, true);
+  t.true(timerRefs.some((location) => location.range.start.line === 3));
+  t.true(timerRefs.some((location) => location.range.start.line === 8));
+  t.false(timerRefs.some((location) => location.range.start.line === 2));
+
+  const objRefs = referencesFor(index, structFile, { line: 8, character: objColumn + 1 }, true);
+  t.true(objRefs.some((location) => location.range.start.line === 2));
+  t.true(objRefs.some((location) => location.range.start.line === 8));
+
+  const edit = renameEditsFor(
+    index,
+    structFile,
+    { line: 8, character: timerColumn + 1 },
+    "elapsed",
+  );
+  const changes = edit?.changes?.[pathToUri(structFile)] ?? [];
+  t.true(changes.length >= 2);
+  t.true(changes.every((change) => change.newText === "elapsed"));
+  t.false(
+    changes.some((change) => {
+      const line = source.split("\n")[change.range.start.line];
+      return line.slice(change.range.start.character, change.range.end.character) === "obj";
+    }),
+  );
+
+  const structType = semanticTokensLegend.tokenTypes.indexOf("struct");
+  const propertyType = semanticTokensLegend.tokenTypes.indexOf("property");
+  t.true(structType >= 0);
+  t.true(propertyType >= 0);
+  const decoded = decodeSemanticTokens(semanticTokensFor(index, structFile).data);
+  t.true(
+    decoded.some(
+      (token) => token.line === 8 && token.type === structType && token.length === "obj".length,
+    ),
+    "obj.timer root is a struct token",
+  );
+  t.true(
+    decoded.some(
+      (token) => token.line === 8 && token.type === propertyType && token.length === "timer".length,
+    ),
+    "obj.timer field is a property token",
+  );
+});
+
+test("define-rooted struct members and immediate labels are targetable", (t) => {
+  const sourceFile = path.resolve("/virtual/object_aliases.asm");
+  const source = [
+    "lorom",
+    "org $008000",
+    "struct obj 0",
+    "    .flags2: skip 1",
+    "    ._13: skip 2",
+    "endstruct",
+    "obj_start:",
+    "!obj_arthur = obj_start+obj[0]",
+    "cop:",
+    "    lda.w !obj_arthur.flags2",
+    "    lda.b #coord_offsets_arthur : sta.w !obj_arthur._13",
+    "    lda.b #coord_offsets_arthur>>8 : sta.w !obj_arthur._13+1",
+    "coord_offsets_arthur:",
+    "    nop",
+    "",
+  ].join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(sourceFile, source);
+  const lines = source.split("\n");
+
+  const flagsLine = 9;
+  const defineColumn = columnOf(lines[flagsLine], "!obj_arthur");
+  const flagsColumn = columnOf(lines[flagsLine], "flags2");
+  const defineDefinition = definitionFor(index, sourceFile, {
+    line: flagsLine,
+    character: defineColumn + 2,
+  });
+  t.is(defineDefinition.length, 1);
+  t.is(defineDefinition[0].range.start.line, 7);
+
+  const flagsDefinition = definitionFor(index, sourceFile, {
+    line: flagsLine,
+    character: flagsColumn + 1,
+  });
+  t.is(flagsDefinition.length, 1);
+  t.is(flagsDefinition[0].range.start.line, 3);
+
+  const defineHover = hoverFor(
+    index,
+    sourceFile,
+    { line: flagsLine, character: defineColumn + 2 },
+    source,
+  );
+  t.regex(JSON.stringify(defineHover), /obj_arthur/);
+
+  const flagsHover = hoverFor(
+    index,
+    sourceFile,
+    { line: flagsLine, character: flagsColumn + 1 },
+    source,
+  );
+  t.regex(JSON.stringify(flagsHover), /flags2/);
+  t.regex(JSON.stringify(flagsHover), /In `obj`/);
+
+  const immediateLine = 10;
+  const labelColumn = columnOf(lines[immediateLine], "coord_offsets_arthur");
+  const memberColumn = columnOf(lines[immediateLine], "_13");
+  const labelDefinition = definitionFor(index, sourceFile, {
+    line: immediateLine,
+    character: labelColumn + 1,
+  });
+  t.is(labelDefinition.length, 1);
+  t.is(labelDefinition[0].range.start.line, 12);
+
+  const labelHover = hoverFor(
+    index,
+    sourceFile,
+    { line: immediateLine, character: labelColumn + 1 },
+    source,
+  );
+  t.regex(JSON.stringify(labelHover), /coord_offsets_arthur/);
+
+  const memberDefinition = definitionFor(index, sourceFile, {
+    line: immediateLine,
+    character: memberColumn + 1,
+  });
+  t.is(memberDefinition.length, 1);
+  t.is(memberDefinition[0].range.start.line, 4);
+
+  const shiftedLine = 11;
+  const shiftedLabelColumn = columnOf(lines[shiftedLine], "coord_offsets_arthur");
+  const shiftedHover = hoverFor(
+    index,
+    sourceFile,
+    { line: shiftedLine, character: shiftedLabelColumn + 1 },
+    source,
+  );
+  t.regex(JSON.stringify(shiftedHover), /coord_offsets_arthur/);
+
+  const propertyType = semanticTokensLegend.tokenTypes.indexOf("property");
+  const labelType = semanticTokensLegend.tokenTypes.indexOf("label");
+  const decoded = decodeSemanticTokens(semanticTokensFor(index, sourceFile).data);
+  t.true(
+    decoded.some(
+      (token) =>
+        token.line === flagsLine &&
+        token.char === flagsColumn &&
+        token.type === propertyType &&
+        token.length === "flags2".length,
+    ),
+    "flags2 is a property token",
+  );
+  t.true(
+    decoded.some(
+      (token) =>
+        token.line === flagsLine &&
+        token.char === defineColumn &&
+        token.length === "!obj_arthur".length,
+    ),
+    "!obj_arthur is highlighted as a define",
+  );
+  t.true(
+    decoded.some(
+      (token) =>
+        token.line === immediateLine &&
+        token.char === labelColumn &&
+        token.type === labelType &&
+        token.length === "coord_offsets_arthur".length,
+    ),
+    "#coord_offsets_arthur is a label token",
+  );
+});
+
+test("namespaces and nested labels appear as an outline tree", (t) => {
+  const nsFile = path.resolve("/virtual/namespaces.asm");
+  const source = [
+    "lorom",
+    "org $008000",
+    "namespace Audio",
+    "Upload:",
+    ".loop:",
+    "  rtl",
+    "namespace off",
+    "Parent:",
+    ".inner:",
+    "  nop",
+    "",
+  ].join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(nsFile, source);
+
+  const outline = documentSymbolsFor(index, nsFile);
+  const audio = outline.find((symbol) => symbol.name === "Audio");
+  t.truthy(audio);
+  t.is(audio?.kind, SymbolKind.Namespace);
+  t.true((audio?.children ?? []).some((child) => child.name === "Upload"));
+  const upload = (audio?.children ?? []).find((child) => child.name === "Upload");
+  t.true((upload?.children ?? []).some((child) => child.name === "loop"));
+
+  const parent = childNamed(outline, "Parent");
+  t.truthy(parent);
+  t.true((parent?.children ?? []).some((child) => child.name === "inner"));
+});
+
+test("sibling dot labels nest flat under their parent global label", (t) => {
+  // Regression: consumeNamedLabelDefinitions captured parentBefore = currentParentLabel
+  // AFTER each handleLabelDefinition call, so sibling .B51A got containerName
+  // "bars_create_B512" instead of "bars_create", causing cascading nesting in the outline.
+  const barsFile = path.resolve("/virtual/bars-outline.asm");
+  const source = [
+    "lorom",
+    "org $008000",
+    "namespace bars",
+    "{",
+    "create:",
+    "    nop",
+    "    bne .B512",
+    "    bra .B51A",
+    ".B512:",
+    "    nop",
+    ".B51A:",
+    "    nop",
+    ".B52A:",
+    "    nop",
+    ".B52C:",
+    "    nop",
+    "}",
+    "",
+  ].join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(barsFile, source);
+
+  const outline = documentSymbolsFor(index, barsFile);
+  const bars = outline.find((symbol) => symbol.name === "bars");
+  t.truthy(bars, "bars namespace present");
+
+  const create = (bars?.children ?? []).find((child) => child.name === "create");
+  t.truthy(create, "create label is a child of bars");
+
+  const childNames = (create?.children ?? []).map((child) => child.name);
+  // All sibling dot labels must be direct children of 'create' — not nested under each other.
+  t.true(childNames.includes("B512"), "B512 is a direct child of create");
+  t.true(childNames.includes("B51A"), "B51A is a direct child of create");
+  t.true(childNames.includes("B52A"), "B52A is a direct child of create");
+  t.true(childNames.includes("B52C"), "B52C is a direct child of create");
+
+  // No dot label should have another dot label as a child (the cascading nesting bug).
+  for (const child of create?.children ?? []) {
+    const grandchildren = child.children ?? [];
+    t.is(grandchildren.length, 0, `${child.name} should have no children, got: ${grandchildren.map((g) => g.name).join(", ")}`);
+  }
+
+  // The setLabel recording (which has the address value) should win the dedup.
+  const b512 = (create?.children ?? []).find((child) => child.name === "B512");
+  t.truthy(b512?.detail?.includes("$"), "B512 outline entry should carry its address value");
+});
+
+test("compound hierarchical labels are independently targetable", (t) => {
+  const sourceFile = path.resolve("/virtual/compound-labels.asm");
+  const source = [
+    "lorom",
+    "org $008000",
+    "_018049:",
+    "    lda #$F2",
+    "    bra .8053",
+    ".804D:",
+    "    lda #$F0",
+    "    bra .8053",
+    ".8053:",
+    "    rtl",
+    "caller:",
+    "    jsl _018049_8053",
+    "",
+  ].join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(sourceFile, source);
+  const lines = source.split("\n");
+
+  const localUseLine = 4;
+  const localColumn = columnOf(lines[localUseLine], ".8053");
+  const localDefinition = definitionFor(index, sourceFile, {
+    line: localUseLine,
+    character: localColumn + 2,
+  });
+  t.is(localDefinition.length, 1);
+  t.is(localDefinition[0].range.start.line, 8);
+
+  const localHover = hoverFor(
+    index,
+    sourceFile,
+    { line: localUseLine, character: localColumn + 2 },
+    source,
+  );
+  t.regex(JSON.stringify(localHover), /8053/);
+
+  const compoundLine = 11;
+  const parentColumn = columnOf(lines[compoundLine], "_018049");
+  const suffixColumn = columnOf(lines[compoundLine], "_8053") + 1;
+  const parentDefinition = definitionFor(index, sourceFile, {
+    line: compoundLine,
+    character: parentColumn + 1,
+  });
+  t.is(parentDefinition.length, 1);
+  t.is(parentDefinition[0].range.start.line, 2);
+
+  const suffixDefinition = definitionFor(index, sourceFile, {
+    line: compoundLine,
+    character: suffixColumn + 1,
+  });
+  t.is(suffixDefinition.length, 1);
+  t.is(suffixDefinition[0].range.start.line, 8);
+
+  const parentHover = hoverFor(
+    index,
+    sourceFile,
+    { line: compoundLine, character: parentColumn + 1 },
+    source,
+  );
+  t.regex(JSON.stringify(parentHover), /_018049/);
+  t.notRegex(JSON.stringify(parentHover), /_018049_8053/);
+
+  const suffixHover = hoverFor(
+    index,
+    sourceFile,
+    { line: compoundLine, character: suffixColumn + 1 },
+    source,
+  );
+  t.regex(JSON.stringify(suffixHover), /8053/);
+
+  const labelType = semanticTokensLegend.tokenTypes.indexOf("label");
+  const decoded = decodeSemanticTokens(semanticTokensFor(index, sourceFile).data);
+  t.true(
+    decoded.some(
+      (token) =>
+        token.line === compoundLine &&
+        token.char === parentColumn &&
+        token.type === labelType &&
+        token.length === "_018049".length,
+    ),
+    "parent segment of _018049_8053 is a label token",
+  );
+  t.true(
+    decoded.some(
+      (token) =>
+        token.line === compoundLine &&
+        token.char === suffixColumn &&
+        token.type === labelType &&
+        token.length === "8053".length,
+    ),
+    "sublabel segment of _018049_8053 is a label token",
+  );
+  t.true(
+    decoded.some(
+      (token) =>
+        token.line === localUseLine &&
+        token.char === localColumn &&
+        token.length === ".8053".length,
+    ),
+    "bra .8053 is highlighted",
+  );
 });

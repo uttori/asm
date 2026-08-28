@@ -8,6 +8,7 @@ export type FrontEndCommandHost = {
     currentParentLabel: string;
     currentParentIsGlobal: boolean;
     currentGlobalParentLabel: string;
+    currentNamespace: string;
     mathCore: MathCore;
     symbolScope: SymbolScopeService;
     parseFunctionDefinition(defLine: string): void;

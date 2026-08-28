@@ -83,8 +83,9 @@ export class RootAnalysisCache {
       return undefined;
     }
     try {
-      const payload = measureInternalPhase("cacheDeserialize", () =>
-        JSON.parse(readFileSync(file, "utf8")) as CachePayload,
+      const payload = measureInternalPhase(
+        "cacheDeserialize",
+        () => JSON.parse(readFileSync(file, "utf8")) as CachePayload,
       );
       if (payload.version !== CACHE_VERSION || payload.root !== path.resolve(root)) {
         return undefined;

@@ -42,9 +42,10 @@ test("language server replaces target tooling and preserves build/analysis parit
     t.true(fixtureCompletions.includes("FIX"));
     t.true(fixtureCompletions.includes("fixturebyte"));
     t.false(fixtureCompletions.includes("LDA"));
-    t.deepEqual(fixture.index.toolingCatalog.getTargets().map((target) => target.id), [
-      "fixture.raw-target",
-    ]);
+    t.deepEqual(
+      fixture.index.toolingCatalog.getTargets().map((target) => target.id),
+      ["fixture.raw-target"],
+    );
 
     const assembler = controller.createAssembler({ collectSourceMetadata: false });
     try {
@@ -86,6 +87,36 @@ test("language server replaces target tooling and preserves build/analysis parit
     );
     t.is(controller.current, stable);
     t.true(completionsFor(controller.current.index).some((entry) => entry.label === "LDA"));
+  } finally {
+    await controller.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("SNES include fragments without org emit 0 ROM bytes", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-lsp-empty-rom-"));
+  const sourceFile = path.join(directory, "bars.asm");
+  const controller = createController();
+  try {
+    await controller.replace(
+      {
+        cwd: directory,
+        workspaceTrusted: true,
+        plugins: ["@uttori/asm-plugin-snes"],
+        target: SNES_TARGET_ID,
+      },
+      new Map([[sourceFile, "org $008000\ncreate:\n"]]),
+    );
+    const assembler = controller.createAssembler({ collectSourceMetadata: false });
+    try {
+      assembler.setCurrentFile(sourceFile);
+      assembler.assembleProgram(
+        assembler.buildProgramModel("org $008000\ncreate:\n", sourceFile, 0),
+      );
+      t.is(assembler.getBinaryOutput().length, 0);
+    } finally {
+      assembler.dispose();
+    }
   } finally {
     await controller.dispose();
     fs.rmSync(directory, { recursive: true, force: true });

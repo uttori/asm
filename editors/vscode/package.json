@@ -121,6 +121,42 @@
         "path": "./syntaxes/uttori-snes.tmLanguage.json"
       }
     ],
+    "semanticTokenScopes": {
+      "uttori-snes": {
+        "struct": [
+          "entity.name.type.struct.uttori-asm"
+        ],
+        "property": [
+          "variable.other.member.uttori-asm"
+        ],
+        "label": [
+          "entity.name.function.label.uttori-asm"
+        ],
+        "namespace": [
+          "entity.name.namespace.uttori-asm"
+        ],
+        "macro": [
+          "entity.name.function.macro.uttori-asm"
+        ]
+      },
+      "uttori-65xx": {
+        "struct": [
+          "entity.name.type.struct.uttori-asm"
+        ],
+        "property": [
+          "variable.other.member.uttori-asm"
+        ],
+        "label": [
+          "entity.name.function.label.uttori-asm"
+        ],
+        "namespace": [
+          "entity.name.namespace.uttori-asm"
+        ],
+        "macro": [
+          "entity.name.function.macro.uttori-asm"
+        ]
+      }
+    },
     "snippets": [
       {
         "language": "uttori-snes",

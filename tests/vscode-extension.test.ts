@@ -129,9 +129,15 @@ test("65xx grammar covers CPU mnemonics and omits SNES coprocessors", (t) => {
       "#labels",
       "#numbers",
       "#mnemonics",
+      "#size-suffixes",
+      "#macros",
       "#pseudo-ops",
-      "#directives",
       "#defines",
+      "#struct-access",
+      "#immediate-labels",
+      "#local-label-refs",
+      "#directives",
+      "#functions",
       "#operators",
     ],
   );
@@ -139,6 +145,18 @@ test("65xx grammar covers CPU mnemonics and omits SNES coprocessors", (t) => {
   t.true(/\bLDA\b/.test(base.source));
   t.true(/\bXCE\b/.test(base.source));
   t.true(base.source.includes("if|elseif|else|endif"));
+  t.true(base.source.includes("entity.name.type.struct.uttori-asm"));
+  t.true(base.source.includes("variable.other.member.uttori-asm"));
+  t.true(base.source.includes("(?<=[\\\\w}\\\\]])\\\\."));
+  t.true(base.source.includes("#([A-Za-z_][A-Za-z0-9_]*)"));
+  t.true(base.source.includes("(?<![A-Za-z0-9_])"));
+  t.true(base.source.includes("entity.name.namespace.uttori-asm"));
+  t.true(base.source.includes("entity.name.label.local.uttori-asm"));
+  t.true(base.source.includes("storage.modifier.size.uttori-asm"));
+  t.true(base.source.includes("%[A-Za-z_]"));
+  t.true(/\bwhile\b/.test(base.source));
+  t.true(/\bpushns\b/.test(base.source));
+  t.true(/\bsizeof\b/.test(base.source));
   t.false(/\bADDW\b/.test(base.source));
   t.false(/\blorom\b/.test(base.source));
   t.false(/\bspc700\b/i.test(source));
@@ -157,6 +175,8 @@ test("SNES grammar adds SPC700, SuperFX, and mapper directives on top of 65xx", 
   t.true(/\bLMULT\b/.test(source));
   t.true(/\blorom\b/.test(source));
   t.true(/\bhirom\b/.test(source));
+  t.true(/\bfreecode\b/.test(source));
+  t.true(/\bspcblock\b/.test(source));
 });
 
 test("VS Code client propagates trust and every project environment setting", (t) => {
@@ -182,4 +202,7 @@ test("VS Code client propagates trust and every project environment setting", (t
   t.true(source.includes("uttori-asm.config.json"));
   t.true(source.includes("asm.initConfig"));
   t.true(source.includes("ProjectPanelProvider"));
+  t.true(source.includes("resolveBuildEntryUri"));
+  t.true(source.includes("outputChannel"));
+  t.true(source.includes("Build Binary requested"));
 });

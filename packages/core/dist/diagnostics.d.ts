@@ -1,6 +1,6 @@
 import { type SourceRange, type SourceSpan } from "./source-location.js";
 export type AssemblyDiagnosticSeverity = "error" | "warning" | "info";
-export type AssemblySymbolKind = "label" | "define" | "macro" | "struct" | "structMember" | "function";
+export type AssemblySymbolKind = "label" | "define" | "macro" | "struct" | "structMember" | "function" | "namespace";
 export type AssemblySourceLocation = {
     file: string;
     line: number;

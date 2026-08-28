@@ -679,25 +679,25 @@ export class Assembler {
           this.recordSymbolReference(
             "define",
             expression.braced ? (expression.content ?? "") : (expression.name ?? ""),
-            {
-              span: expression.span ?? fallbackSpan,
-            },
           );
         }
         return;
-      case "identifier":
-        this.recordSymbolReference("label", expression.name, {
-          span: expression.span ?? fallbackSpan,
-        });
+      case "identifier": {
+        const segments = this.hierarchicalLabelReferences(expression.name);
+        if (segments) {
+          for (const segment of segments) {
+            this.recordSymbolReference("label", segment.name, {
+              containerName: segment.containerName,
+            });
+          }
+          return;
+        }
+        this.recordSymbolReference("label", expression.name);
         return;
+      }
       case "member":
       case "index":
-        this.recordSymbolReference("label", renderReferenceExpressionNode(expression), {
-          span: expression.span ?? fallbackSpan,
-        });
-        if (expression.type === "index") {
-          this.collectExpressionReferences(expression.index, fallbackSpan);
-        }
+        this.collectStructReferenceSegments(expression, fallbackSpan);
         return;
       case "call":
         this.recordSymbolReference("function", expression.callee.name, {
@@ -721,6 +721,150 @@ export class Assembler {
       default:
         return;
     }
+  }
+
+  /**
+   * Records one reference per struct-path segment so `obj.timer` can target
+   * the struct root and the field independently.
+   * @param {ReferenceExpressionNode} expression The struct-rooted reference.
+   * @param {SourceSpan} [fallbackSpan] The fallback span.
+   */
+  collectStructReferenceSegments(
+    expression: ReferenceExpressionNode,
+    fallbackSpan?: SourceSpan,
+  ): void {
+    switch (expression.type) {
+      case "identifier":
+        this.recordSymbolReference("label", expression.name);
+        return;
+      case "defineReference":
+        this.collectExpressionReferences(expression, fallbackSpan);
+        return;
+      case "member":
+        this.collectStructReferenceSegments(expression.object, fallbackSpan);
+        this.recordSymbolReference("label", expression.property.name, {
+          span: expression.property.span,
+          containerName: this.structSegmentContainerName(expression.object),
+        });
+        return;
+      case "index":
+        this.collectStructReferenceSegments(expression.object, fallbackSpan);
+        this.collectExpressionReferences(expression.index, fallbackSpan);
+        return;
+      default:
+        return;
+    }
+  }
+
+  /**
+   * Returns the immediate struct/extension name a member should nest under.
+   * Strips `[...]` so `obj[19].ext.index` yields `ext` for `index`.
+   * Define roots (`!obj_arthur.flags2`) resolve through the define value
+   * (`obj_start+obj[0]`) to the actual struct name.
+   * @param {ReferenceExpressionNode} object The object of a member access.
+   * @returns {string | undefined} The container name.
+   */
+  private structSegmentContainerName(object: ReferenceExpressionNode): string | undefined {
+    switch (object.type) {
+      case "identifier":
+        return object.name;
+      case "defineReference":
+        return this.structNameFromDefine(object.name ?? object.content) ?? object.name;
+      case "member":
+        return object.property.name;
+      case "index":
+        return this.structSegmentContainerName(object.object);
+      default:
+        return undefined;
+    }
+  }
+
+  /**
+   * Finds a known struct name in a define's expansion, walking nested defines.
+   * @param {string | undefined} name The define name.
+   * @param {Set<string>} [seen] Define names already visited.
+   * @returns {string | undefined} The struct name, if any.
+   */
+  private structNameFromDefine(
+    name: string | undefined,
+    seen: Set<string> = new Set(),
+  ): string | undefined {
+    if (!name || seen.has(name)) {
+      return undefined;
+    }
+    seen.add(name);
+    const value = this.defines.get(name);
+    if (value === undefined) {
+      return undefined;
+    }
+    return this.structNameFromExpression(parseExpressionNode(value), seen);
+  }
+
+  /**
+   * Walks an expression right-to-left looking for a known struct identifier.
+   * `obj_start+obj[0]` yields `obj`.
+   * @param {ExpressionNode} node The expression to search.
+   * @param {Set<string>} seen Define names already visited.
+   * @returns {string | undefined} The struct name, if any.
+   */
+  private structNameFromExpression(node: ExpressionNode, seen: Set<string>): string | undefined {
+    switch (node.type) {
+      case "identifier":
+        return this.structs.has(node.name) ? node.name : undefined;
+      case "defineReference":
+        return this.structNameFromDefine(node.name ?? node.content, seen);
+      case "member":
+        if (this.structs.has(node.property.name)) {
+          return node.property.name;
+        }
+        return this.structNameFromExpression(node.object, seen);
+      case "index":
+        return this.structNameFromExpression(node.object, seen);
+      case "binary":
+        return (
+          this.structNameFromExpression(node.right, seen) ??
+          this.structNameFromExpression(node.left, seen)
+        );
+      case "unary":
+        return this.structNameFromExpression(node.argument, seen);
+      default:
+        return undefined;
+    }
+  }
+
+  /**
+   * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
+   * segments so each part can be targeted independently.
+   * @param {string} name The identifier text.
+   * @returns {{ name: string; containerName?: string }[] | undefined} Segments, if this is a known sublabel.
+   */
+  private hierarchicalLabelReferences(
+    name: string,
+  ): { name: string; containerName?: string }[] | undefined {
+    if (!name.includes("_") || !this.labelTable.has(name)) {
+      return undefined;
+    }
+    const chain = this.symbolScope.getHierarchyChain(name);
+    if (chain.length < 2 || chain[chain.length - 1] !== name) {
+      return undefined;
+    }
+    const segments: { name: string; containerName?: string }[] = [];
+    for (let index = 0; index < chain.length; index++) {
+      const full = chain[index];
+      const parent = index > 0 ? chain[index - 1] : undefined;
+      if (!parent) {
+        segments.push({ name: full });
+        continue;
+      }
+      if (!full.startsWith(`${parent}_`)) {
+        return undefined;
+      }
+      segments.push({
+        name: `.${full.slice(parent.length + 1)}`,
+        containerName: parent,
+      });
+    }
+    return segments;
   }
 
   /**
@@ -826,15 +970,17 @@ export class Assembler {
    * @returns {Assembler} A configured analysis session.
    */
   createToolingSession(): Assembler {
-    const session = measureInternalPhase("sessionConstruct", () =>
-      new Assembler({
-        environment: this.environment,
-        target: this.targetId,
-        architecture: this.arch,
-        targetOptions: this.targetOptions,
-        baseImage: this.baseImage,
-        fileProvider: this.fileProvider,
-      }),
+    const session = measureInternalPhase(
+      "sessionConstruct",
+      () =>
+        new Assembler({
+          environment: this.environment,
+          target: this.targetId,
+          architecture: this.arch,
+          targetOptions: this.targetOptions,
+          baseImage: this.baseImage,
+          fileProvider: this.fileProvider,
+        }),
     );
     session.includePaths = [...this.includePaths];
     session.followIncludes = this.followIncludes;
@@ -1102,11 +1248,13 @@ export class Assembler {
     }
     const normalizedTargetOptions = target.createOptions?.(configuredTargetOptions) ?? {};
     this.targetOptions = Object.freeze({ ...normalizedTargetOptions });
-    this.pluginState = measureInternalPhase("pluginStateCreate", () =>
-      new PluginSessionStateStore(this.environment.sessionStates, {
-        targetId,
-        targetOptions: this.targetOptions,
-      }),
+    this.pluginState = measureInternalPhase(
+      "pluginStateCreate",
+      () =>
+        new PluginSessionStateStore(this.environment.sessionStates, {
+          targetId,
+          targetOptions: this.targetOptions,
+        }),
     );
     const targetFactoryContext = {
       targetId,
@@ -1295,7 +1443,9 @@ export class Assembler {
       ),
     );
     this.selectArchitecture(this.arch, this.arch);
-    measureInternalPhase("constructorActivateStage", () => this.activateStage("collectDefinitions"));
+    measureInternalPhase("constructorActivateStage", () =>
+      this.activateStage("collectDefinitions"),
+    );
     incrementInternalCounter("assemblerConstructions");
   }
 

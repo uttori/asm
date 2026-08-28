@@ -46,6 +46,7 @@ export interface SymbolScopeHost {
     globalSymbols: Set<string>;
     recordSymbolDefinition(kind: "label", name: string, options?: {
         value?: number | string;
+        containerName?: string;
     }): void;
 }
 export declare class SymbolScopeService {
@@ -184,6 +185,14 @@ export declare class SymbolScopeService {
      * @throws {Error} If the struct or extension doesn't exist.
      */
     getObjectSize(identifier: string, baseOnly?: boolean): number;
+    /**
+     * Returns the outline container for a stored label name.
+     * Sublabels nest under their parent; namespaced labels nest under the namespace.
+     * @param {string} fullLabel The stored label name.
+     * @param {boolean} isGlobal Whether the label is global.
+     * @returns {string | undefined} The container name, if any.
+     */
+    symbolContainerName(fullLabel: string, isGlobal: boolean): string | undefined;
     /**
      * Handles a label definition.
      * @param {string} labelName The name of the label.

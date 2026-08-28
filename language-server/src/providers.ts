@@ -37,6 +37,7 @@ import {
   symbolAt,
   resolveDefinition,
   findReferences,
+  positionInRange,
 } from "./core.js";
 import type {
   AssemblyDiagnostic,
@@ -64,6 +65,7 @@ export const semanticTokensLegend: SemanticTokensLegend = {
     SemanticTokenTypes.number,
     SemanticTokenTypes.string,
     SemanticTokenTypes.label,
+    SemanticTokenTypes.struct,
   ],
   tokenModifiers: [SemanticTokenModifiers.definition],
 };
@@ -75,7 +77,7 @@ const definitionTokenModifier =
   1 << semanticTokensLegend.tokenModifiers.indexOf(SemanticTokenModifiers.definition);
 
 /** Characters that can appear inside an assembly identifier or define name. */
-const IDENTIFIER_CHAR = /[\w!.]/;
+const IDENTIFIER_CHAR = /[\w!]/;
 
 /**
  * Converts an absolute file path to a file URI string.
@@ -143,6 +145,8 @@ function toSymbolKind(kind: AssemblySymbolKind): SymbolKind {
       return SymbolKind.Field;
     case "function":
       return SymbolKind.Function;
+    case "namespace":
+      return SymbolKind.Namespace;
     case "label":
     default:
       return SymbolKind.Variable;
@@ -195,7 +199,22 @@ function preciseRange(
   if (rawLine === undefined) {
     return fallback;
   }
-  return rangeForTokenOnLine(rawLine, name, line, fallback);
+  const direct = rangeForTokenOnLine(rawLine, name, line, fallback);
+  if (direct !== fallback) {
+    return direct;
+  }
+  const lookup = lookupNameFor(name);
+  if (lookup !== name) {
+    const dotted = rangeForTokenOnLine(rawLine, `.${lookup}`, line, fallback);
+    if (dotted !== fallback) {
+      return dotted;
+    }
+  }
+  const suffixColumn = findCompoundSuffixColumn(rawLine, lookup);
+  if (suffixColumn >= 0) {
+    return Range.create(line, suffixColumn, line, suffixColumn + lookup.length);
+  }
+  return fallback;
 }
 
 /**
@@ -233,12 +252,14 @@ function preciseRangeWithSigil(
 }
 
 /**
- * Strips a leading define sigil so `!version` lookups match stored `version`.
+ * Strips a leading define sigil so `!version` lookups match stored `version`,
+ * and leading dots so `.timer` matches stored `timer`.
  * @param {string} word The word to lookup.
- * @returns {string} The word without the sigil.
+ * @returns {string} The word without the sigil or leading dots.
  */
 function lookupNameFor(word: string): string {
-  return word.startsWith("!") ? word.slice(1) : word;
+  const withoutSigil = word.startsWith("!") ? word.slice(1) : word;
+  return withoutSigil.replace(/^\.+/, "");
 }
 
 /**
@@ -249,8 +270,7 @@ function lookupNameFor(word: string): string {
  * @returns {boolean} Whether the names match.
  */
 function namesMatch(stored: string, word: string): boolean {
-  const lookup = lookupNameFor(word);
-  return stored === lookup || stored === word;
+  return lookupNameFor(stored) === lookupNameFor(word) || stored === word;
 }
 
 /**
@@ -269,8 +289,19 @@ function rangeForTokenOnLine(rawLine: string, name: string, line: number, fallba
     return fallback;
   }
   let endColumn = column + name.length;
-  while (endColumn < rawLine.length && IDENTIFIER_CHAR.test(rawLine[endColumn] ?? "")) {
-    endColumn += 1;
+  const rest = rawLine.slice(endColumn);
+  if (rest.startsWith("__")) {
+    while (endColumn < rawLine.length && IDENTIFIER_CHAR.test(rawLine[endColumn] ?? "")) {
+      endColumn += 1;
+    }
+  } else {
+    while (
+      endColumn < rawLine.length &&
+      IDENTIFIER_CHAR.test(rawLine[endColumn] ?? "") &&
+      rawLine[endColumn] !== "_"
+    ) {
+      endColumn += 1;
+    }
   }
   return Range.create(line, column, line, endColumn);
 }
@@ -311,6 +342,35 @@ function findTokenColumn(lineText: string, name: string): number {
 }
 
 /**
+ * Finds a compound-label suffix (`8053` in `_018049_8053`) so dotted
+ * references can highlight the undotted use-site segment.
+ * @param {string} lineText The raw line text.
+ * @param {string} segment The suffix without a leading dot or underscore.
+ * @returns {number} The zero-based column of the suffix, or -1.
+ */
+function findCompoundSuffixColumn(lineText: string, segment: string): number {
+  if (!segment) {
+    return -1;
+  }
+  const needle = `_${segment}`;
+  const commentIndex = lineText.indexOf(";");
+  let from = 0;
+  for (;;) {
+    const index = lineText.indexOf(needle, from);
+    if (index < 0) {
+      break;
+    }
+    const inComment = commentIndex >= 0 && index > commentIndex;
+    const after = index + needle.length < lineText.length ? lineText[index + needle.length] : "";
+    if (!inComment && (after === "" || after === "_" || !IDENTIFIER_CHAR.test(after))) {
+      return index + 1;
+    }
+    from = index + 1;
+  }
+  return -1;
+}
+
+/**
  * Extracts the identifier-like word at a position from document text.
  * @param {string} text The document text.
  * @param {Position} position The cursor position.
@@ -330,7 +390,7 @@ function wordAt(text: string, position: Position): string | undefined {
   if (unquotedPath !== undefined) {
     return unquotedPath;
   }
-  const wordPattern = /[\w!.]+/g;
+  const wordPattern = /!?\.?\w+/g;
   let match: RegExpExecArray | null;
   while ((match = wordPattern.exec(line)) !== null) {
     const start = match.index;
@@ -448,7 +508,68 @@ function quotedStringAt(line: string, character: number): string | undefined {
  */
 function cursorWord(index: WorkspaceIndex, file: string, position: Position): string | undefined {
   const text = index.getFileText(file);
-  return text ? wordAt(text, position) : undefined;
+  if (!text) {
+    return undefined;
+  }
+  const word = wordAt(text, position);
+  return hierarchicalSegmentAt(index, file, position, word) ?? word;
+}
+
+/**
+ * When the cursor is inside a compound label (`_018049_8053`), returns the
+ * parent or `.sublabel` segment under the cursor.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {string} file The absolute file path.
+ * @param {Position} position The cursor position.
+ * @param {string | undefined} word The full identifier under the cursor.
+ * @returns {string | undefined} The segment, or undefined when not compound.
+ */
+function hierarchicalSegmentAt(
+  index: WorkspaceIndex,
+  file: string,
+  position: Position,
+  word: string | undefined,
+): string | undefined {
+  if (!word || !word.includes("_")) {
+    return undefined;
+  }
+  const chain: string[] = [];
+  const seen = new Set<string>();
+  let current: string | undefined = word;
+  const symbols = index.getAllSymbols();
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    chain.unshift(current);
+    current = symbols.find((symbol) => symbol.name === current)?.containerName;
+  }
+  if (chain.length < 2) {
+    return undefined;
+  }
+  const text = index.getFileText(file);
+  if (!text) {
+    return undefined;
+  }
+  const line = splitLines(text)[position.line];
+  if (line === undefined) {
+    return undefined;
+  }
+  const start = findTokenColumn(line, word);
+  if (start < 0) {
+    return undefined;
+  }
+  const relative = position.character - start;
+  for (let index = 0; index < chain.length; index++) {
+    const full = chain[index];
+    const parent = index > 0 ? chain[index - 1] : undefined;
+    const segmentEnd = full.length;
+    if (relative < segmentEnd || index === chain.length - 1) {
+      if (!parent) {
+        return full;
+      }
+      return `.${full.slice(parent.length + 1)}`;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -475,13 +596,18 @@ function cursorReference(
   if (!word) {
     return undefined;
   }
-  return (
-    references.find(
-      (reference) =>
-        namesMatch(reference.name, word) &&
-        locationRange(reference.location)?.start.line === position.line,
-    ) ?? references.find((reference) => namesMatch(reference.name, word))
+  const onLine = references.filter(
+    (reference) =>
+      namesMatch(reference.name, word) &&
+      (locationRange(reference.location)?.start.line ?? reference.location.line) === position.line,
   );
+  const containing = onLine.find((reference) =>
+    positionInRange(position, referenceRange(index, reference)),
+  );
+  if (containing) {
+    return containing;
+  }
+  return onLine[0] ?? references.find((reference) => namesMatch(reference.name, word));
 }
 
 /**
@@ -507,13 +633,18 @@ function cursorSymbol(
   if (!word) {
     return undefined;
   }
-  return (
-    symbols.find(
-      (symbol) =>
-        namesMatch(symbol.name, word) &&
-        locationRange(symbol.location)?.start.line === position.line,
-    ) ?? symbols.find((symbol) => namesMatch(symbol.name, word))
+  const onLine = symbols.filter(
+    (symbol) =>
+      namesMatch(symbol.name, word) &&
+      (locationRange(symbol.location)?.start.line ?? symbol.location.line) === position.line,
   );
+  const containing = onLine.find((symbol) =>
+    positionInRange(position, definitionRange(index, symbol)),
+  );
+  if (containing) {
+    return containing;
+  }
+  return onLine[0] ?? symbols.find((symbol) => namesMatch(symbol.name, word));
 }
 
 /**
@@ -545,16 +676,57 @@ export function diagnosticsFor(index: WorkspaceIndex, file: string): Diagnostic[
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#document-symbols-request-leftwards_arrow_with_hook
  */
 export function documentSymbolsFor(index: WorkspaceIndex, file: string): DocumentSymbol[] {
-  return index.getSymbols(file).map((symbol: AssemblySymbolDefinition) => {
+  const nodes = index.getSymbols(file).map((symbol) => {
     const lspRange = definitionRange(index, symbol);
-    return DocumentSymbol.create(
-      symbol.name,
-      symbol.containerName,
-      toSymbolKind(symbol.kind),
-      lspRange,
-      lspRange,
-    );
+    return {
+      symbol,
+      lsp: DocumentSymbol.create(
+        outlineDisplayName(symbol),
+        outlineDetail(symbol),
+        toSymbolKind(symbol.kind),
+        lspRange,
+        lspRange,
+        [],
+      ),
+    };
   });
+
+  const byName = new Map<string, typeof nodes>();
+  for (const node of nodes) {
+    const list = byName.get(node.symbol.name) ?? [];
+    list.push(node);
+    byName.set(node.symbol.name, list);
+  }
+
+  const attached = new Set<(typeof nodes)[number]>();
+  for (const node of nodes) {
+    const container = node.symbol.containerName;
+    if (!container) {
+      continue;
+    }
+    const parents = byName.get(container);
+    if (!parents || parents.length === 0) {
+      continue;
+    }
+    const parent = parents.find((candidate) => candidate !== node) ?? parents[0];
+    if (parent === node) {
+      continue;
+    }
+    parent.lsp.children?.push(node.lsp);
+    attached.add(node);
+  }
+
+  for (const node of nodes) {
+    if (node.lsp.children && node.lsp.children.length > 0) {
+      node.lsp.children = dedupeOutlineChildren(node.lsp.children);
+    }
+  }
+
+  const roots = nodes.filter((node) => !attached.has(node)).map((node) => node.lsp);
+  for (const root of roots) {
+    expandRangeToChildren(root);
+  }
+  return roots;
 }
 
 /**
@@ -639,15 +811,15 @@ export function referencesFor(
   position: Position,
   includeDeclaration: boolean,
 ): Location[] {
-  const name = identifierNameAt(index, file, position);
-  if (!name) {
+  const target = identifierAt(index, file, position);
+  if (!target) {
     return [];
   }
 
   const locations: Location[] = [];
-  let matches = findReferences(name, index.getAllReferences());
+  let matches = findReferences(target.name, index.getAllReferences(), target.containerName);
   if (matches.length === 0) {
-    matches = findReferences(name, index.getReferences(file));
+    matches = findReferences(target.name, index.getReferences(file), target.containerName);
   }
   for (const reference of matches) {
     locations.push(
@@ -656,7 +828,13 @@ export function referencesFor(
   }
 
   if (includeDeclaration) {
-    for (const symbol of index.getAllSymbols().filter((entry) => entry.name === name)) {
+    for (const symbol of index
+      .getAllSymbols()
+      .filter(
+        (entry) =>
+          entry.name === target.name &&
+          (target.containerName === undefined || entry.containerName === target.containerName),
+      )) {
       locations.push(definitionToLocation(index, symbol));
     }
   }
@@ -679,7 +857,7 @@ export function hoverFor(
   text: string,
 ): Hover | null {
   const architecture = index.architecture;
-  const word = wordAt(text, position);
+  const word = cursorWord(index, file, position) ?? wordAt(text, position);
   const reference = cursorReference(index, file, position, word);
   if (reference?.kind === "instruction") {
     const descriptor = findInstruction(reference.name, architecture, {
@@ -693,13 +871,13 @@ export function hoverFor(
   if (reference) {
     const definitions = resolveDefinition(reference, index.getAllSymbols());
     if (definitions.length > 0) {
-      return markdownHover(renderSymbolDocs(definitions[0]));
+      return markdownHover(renderSymbolDocs(index, definitions[0]));
     }
   }
 
   const symbol = cursorSymbol(index, file, position, word);
   if (symbol) {
-    return markdownHover(renderSymbolDocs(symbol));
+    return markdownHover(renderSymbolDocs(index, symbol));
   }
 
   if (!word) {
@@ -724,6 +902,13 @@ export function hoverFor(
     );
   if (expressionFunction) {
     return markdownHover(renderExpressionFunctionDocs(expressionFunction));
+  }
+  const lookupName = lookupNameFor(word);
+  const byName = index
+    .getAllSymbols()
+    .filter((entry) => entry.name === lookupName || entry.name === word);
+  if (byName.length > 0) {
+    return markdownHover(renderSymbolDocs(index, byName[0]));
   }
   return null;
 }
@@ -1008,7 +1193,7 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
     push(definitionRange(index, symbol), symbolTokenType(symbol.kind), definitionTokenModifier);
   }
   for (const reference of index.getReferences(file)) {
-    push(referenceRange(index, reference), referenceTokenType(reference.kind));
+    push(referenceRange(index, reference), resolvedReferenceTokenType(index, reference));
   }
 
   tokens.sort((a, b) => a.line - b.line || a.char - b.char);
@@ -1038,6 +1223,13 @@ function definitionRange(index: WorkspaceIndex, symbol: AssemblySymbolDefinition
   const line = fallbackRange?.start.line ?? symbol.location.line;
   if (symbol.kind === "define") {
     return preciseRangeWithSigil(index, symbol.location.file, line, symbol.name, fallback);
+  }
+  if (symbol.containerName && symbol.name.startsWith(`${symbol.containerName}_`)) {
+    const suffix = `.${symbol.name.slice(symbol.containerName.length + 1)}`;
+    const dotted = preciseRange(index, symbol.location.file, line, suffix, fallback);
+    if (dotted !== fallback) {
+      return dotted;
+    }
   }
   return preciseRange(index, symbol.location.file, line, symbol.name, fallback);
 }
@@ -1146,37 +1338,41 @@ function resolveIncludeTarget(
 }
 
 /**
- * Returns the identifier name relevant to the position, preferring a matched
- * reference or symbol over a raw word extraction.
+ * Returns the identifier at a position, preferring a matched reference or
+ * symbol over a raw word extraction, including container scope.
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @param {Position} position The cursor position.
- * @returns {string | undefined} The identifier name.
+ * @returns {{ name: string; containerName?: string } | undefined} The identifier.
  */
-function identifierNameAt(
+function identifierAt(
   index: WorkspaceIndex,
   file: string,
   position: Position,
-): string | undefined {
+): { name: string; containerName?: string } | undefined {
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference) {
-    return reference.name;
+    return { name: reference.name, containerName: reference.containerName };
   }
   const symbol = cursorSymbol(index, file, position, word);
   if (symbol) {
-    return symbol.name;
+    return { name: symbol.name, containerName: symbol.containerName };
   }
-  // Strip the define sigil so `!version` resolves to the `version` reference set.
-  return word?.startsWith("!") ? word.slice(1) : word;
+  if (!word) {
+    return undefined;
+  }
+  return { name: word.startsWith("!") ? word.slice(1) : word };
 }
 
 /**
- * Renders Markdown documentation for a symbol definition.
+ * Renders Markdown documentation for a symbol definition, including comment
+ * annotations captured from the source.
+ * @param {WorkspaceIndex} index The workspace index.
  * @param {AssemblySymbolDefinition} symbol The symbol definition.
  * @returns {string} The Markdown documentation.
  */
-function renderSymbolDocs(symbol: AssemblySymbolDefinition): string {
+function renderSymbolDocs(index: WorkspaceIndex, symbol: AssemblySymbolDefinition): string {
   const lines = [`**${symbol.name}** - ${symbol.kind}`];
   if (symbol.containerName) {
     lines.push("", `In \`${symbol.containerName}\``);
@@ -1188,8 +1384,160 @@ function renderSymbolDocs(symbol: AssemblySymbolDefinition): string {
         : symbol.value;
     lines.push("", `Value: \`${value}\``);
   }
+  const annotation = symbolAnnotation(index, symbol);
+  if (annotation) {
+    lines.push("", annotation);
+  }
   lines.push("", `Defined in \`${path.basename(symbol.location.file)}\``);
   return lines.join("\n");
+}
+
+/**
+ * Collects leading full-line comments and a trailing same-line comment for a
+ * symbol definition, JSDoc-style.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {AssemblySymbolDefinition} symbol The symbol definition.
+ * @returns {string | undefined} The combined annotation, if any.
+ */
+function symbolAnnotation(
+  index: WorkspaceIndex,
+  symbol: AssemblySymbolDefinition,
+): string | undefined {
+  const text = index.getFileText(symbol.location.file);
+  if (!text) {
+    return undefined;
+  }
+  const lines = splitLines(text);
+  const line = locationRange(symbol.location)?.start.line ?? symbol.location.line;
+  const leading: string[] = [];
+  for (let previous = line - 1; previous >= 0; previous--) {
+    const sourceLine = lines[previous] ?? "";
+    if (sourceLine.trim() === "") {
+      break;
+    }
+    if (!/^\s*;/.test(sourceLine)) {
+      break;
+    }
+    leading.unshift(sourceLine.replace(/^\s*;\s?/, "").trimEnd());
+  }
+  const trailing = lineCommentText(lines[line] ?? "");
+  const parts = [...leading.filter((entry) => entry.length > 0)];
+  if (trailing) {
+    parts.push(trailing);
+  }
+  const joined = parts.join("\n").trim();
+  return joined || undefined;
+}
+
+/**
+ * Returns the trailing `;` comment on a source line, ignoring `;` inside quotes.
+ * @param {string} line The source line.
+ * @returns {string | undefined} The trimmed comment text.
+ */
+function lineCommentText(line: string): string | undefined {
+  let quote = "";
+  for (let index = 0; index < line.length; index++) {
+    const char = line[index];
+    if ((char === '"' || char === "'") && line[index - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
+      continue;
+    }
+    if (!quote && char === ";") {
+      const text = line.slice(index + 1).trim();
+      return text || undefined;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Display name for an outline node, stripping namespace/parent prefixes.
+ * @param {AssemblySymbolDefinition} symbol The symbol.
+ * @returns {string} The outline label.
+ */
+function outlineDisplayName(symbol: AssemblySymbolDefinition): string {
+  const container = symbol.containerName;
+  if (container && symbol.name.startsWith(`${container}_`)) {
+    return symbol.name.slice(container.length + 1);
+  }
+  if (symbol.kind === "label" && symbol.name.startsWith(".")) {
+    return symbol.name.replace(/^\.+/, "");
+  }
+  return symbol.name;
+}
+
+/**
+ * Detail text for an outline node.
+ * @param {AssemblySymbolDefinition} symbol The symbol.
+ * @returns {string} The detail string.
+ */
+function outlineDetail(symbol: AssemblySymbolDefinition): string {
+  if (symbol.value === undefined) {
+    return symbol.kind;
+  }
+  const value =
+    typeof symbol.value === "number" ? `$${symbol.value.toString(16).toUpperCase()}` : symbol.value;
+  return `${symbol.kind} ${value}`;
+}
+
+/**
+ * Keeps a single outline child per display name and definition line.
+ * Prefers the node with more nested children.
+ * @param {DocumentSymbol[]} children The child symbols.
+ * @returns {DocumentSymbol[]} The deduplicated children.
+ */
+function dedupeOutlineChildren(children: DocumentSymbol[]): DocumentSymbol[] {
+  const seen = new Map<string, DocumentSymbol>();
+  for (const child of children) {
+    const key = `${child.name}\0${child.selectionRange.start.line}`;
+    const existing = seen.get(key);
+    const childCount = child.children?.length ?? 0;
+    const existingCount = existing?.children?.length ?? 0;
+    // Prefer nodes with more children; when equal, prefer the node that carries
+    // an address value in its detail (the setLabel recording) over a bare "label"
+    // detail (the FEC raw-name recording which has no value).
+    const childHasValue = child.detail?.includes("$") ?? false;
+    const existingHasValue = existing?.detail?.includes("$") ?? false;
+    if (
+      !existing ||
+      childCount > existingCount ||
+      (childCount === existingCount && childHasValue && !existingHasValue)
+    ) {
+      seen.set(key, child);
+    }
+  }
+  return [...seen.values()];
+}
+
+/**
+ * Expands a parent outline range so it covers all nested children.
+ * @param {DocumentSymbol} symbol The outline node.
+ */
+function expandRangeToChildren(symbol: DocumentSymbol): void {
+  for (const child of symbol.children ?? []) {
+    expandRangeToChildren(child);
+    symbol.range = unionRange(symbol.range, child.range);
+  }
+}
+
+/**
+ * Returns a range covering both inputs.
+ * @param {Range} left The first range.
+ * @param {Range} right The second range.
+ * @returns {Range} The union range.
+ */
+function unionRange(left: Range, right: Range): Range {
+  const start =
+    left.start.line < right.start.line ||
+    (left.start.line === right.start.line && left.start.character <= right.start.character)
+      ? left.start
+      : right.start;
+  const end =
+    left.end.line > right.end.line ||
+    (left.end.line === right.end.line && left.end.character >= right.end.character)
+      ? left.end
+      : right.end;
+  return Range.create(start.line, start.character, end.line, end.character);
 }
 
 /**
@@ -1216,6 +1564,8 @@ function symbolCompletionKind(kind: AssemblySymbolKind): CompletionItemKind {
     case "macro":
     case "function":
       return CompletionItemKind.Function;
+    case "namespace":
+      return CompletionItemKind.Module;
     case "struct":
       return CompletionItemKind.Struct;
     case "structMember":
@@ -1240,8 +1590,10 @@ function symbolTokenType(kind: AssemblySymbolKind): number {
       return tokenTypeIndex.get(SemanticTokenTypes.macro) ?? 0;
     case "function":
       return tokenTypeIndex.get(SemanticTokenTypes.function) ?? 0;
-    case "struct":
+    case "namespace":
       return tokenTypeIndex.get(SemanticTokenTypes.namespace) ?? 0;
+    case "struct":
+      return tokenTypeIndex.get(SemanticTokenTypes.struct) ?? 0;
     case "label":
       return tokenTypeIndex.get(SemanticTokenTypes.label) ?? 0;
     case "structMember":
@@ -1249,6 +1601,38 @@ function symbolTokenType(kind: AssemblySymbolKind): number {
     default:
       return tokenTypeIndex.get(SemanticTokenTypes.variable) ?? 0;
   }
+}
+
+/**
+ * Resolves a reference to the most specific definition kind so `obj.timer`
+ * colors the root as a struct and the field as a property.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {AssemblySymbolReference} reference The reference to classify.
+ * @returns {number} The token type index.
+ */
+function resolvedReferenceTokenType(
+  index: WorkspaceIndex,
+  reference: AssemblySymbolReference,
+): number {
+  if (
+    reference.kind === "instruction" ||
+    reference.kind === "include" ||
+    reference.kind === "unknown"
+  ) {
+    return referenceTokenType(reference.kind);
+  }
+  const definitions = resolveDefinition(reference, index.getAllSymbols());
+  if (definitions.length > 0) {
+    const preferred =
+      definitions.find(
+        (definition) =>
+          definition.kind === "struct" ||
+          definition.kind === "structMember" ||
+          definition.kind === "namespace",
+      ) ?? definitions[0];
+    return symbolTokenType(preferred.kind);
+  }
+  return referenceTokenType(reference.kind);
 }
 
 /**

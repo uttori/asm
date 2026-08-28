@@ -18,6 +18,7 @@ type ProjectStatus = {
   referenceCount: number;
   errorCount: number;
   lastReindexDurationMs?: number;
+  lastReindexRootCount: number;
   lastReindexCachedRoots: number;
   lastReindexAnalyzedRoots: number;
   configFile?: string;
@@ -122,6 +123,7 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       symbolCount: 0,
       referenceCount: 0,
       errorCount: 0,
+      lastReindexRootCount: 0,
       lastReindexCachedRoots: 0,
       lastReindexAnalyzedRoots: 0,
       configFile: config.get<string>("configFile", ""),
@@ -277,12 +279,15 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       const { status, metadata } = event.data || {};
       if (!status) return;
       const duration = status.lastReindexDurationMs == null ? "—" : status.lastReindexDurationMs + "ms";
+      const roots = status.lastReindexRootCount || 0;
+      const cached = status.lastReindexCachedRoots || 0;
+      const analysed = status.lastReindexAnalyzedRoots || 0;
       $("status").innerHTML = [
         ["Files", status.fileCount],
         ["Symbols", status.symbolCount],
         ["Errors", status.errorCount],
         ["Last reindex", duration],
-        ["Cached / analysed roots", (status.lastReindexCachedRoots || 0) + " / " + (status.lastReindexAnalyzedRoots || 0)],
+        ["Roots", roots + " (" + cached + " cached, " + analysed + " analysed)"],
         ["Config", status.configFile || "—"]
       ].map(([label, value]) => '<div class="row"><span class="muted">' + label + '</span><span>' + value + '</span></div>').join("");
       fillList("entryPoints", status.entryPoints || [], "removeEntryPoint");

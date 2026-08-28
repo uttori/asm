@@ -34,7 +34,11 @@ export interface SymbolScopeHost {
   includeStack: string[];
   /** Names treated as session-global (ca65 `.export` / `.import`). */
   globalSymbols: Set<string>;
-  recordSymbolDefinition(kind: "label", name: string, options?: { value?: number | string }): void;
+  recordSymbolDefinition(
+    kind: "label",
+    name: string,
+    options?: { value?: number | string; containerName?: string },
+  ): void;
 }
 
 export class SymbolScopeService {
@@ -517,7 +521,10 @@ export class SymbolScopeService {
         macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
         modifiesHierarchy,
       });
-      this.host.recordSymbolDefinition("label", fullLabel, { value: addr });
+      this.host.recordSymbolDefinition("label", fullLabel, {
+        value: addr,
+        containerName: this.symbolContainerName(fullLabel, isGlobal),
+      });
 
       if (directScopeLabel) {
         this.host.labelTable.set(directScopeLabel, {
@@ -559,7 +566,10 @@ export class SymbolScopeService {
       macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
       modifiesHierarchy,
     });
-    this.host.recordSymbolDefinition("label", fullLabel, { value: addr });
+    this.host.recordSymbolDefinition("label", fullLabel, {
+      value: addr,
+      containerName: this.symbolContainerName(fullLabel, isGlobal),
+    });
 
     if (directScopeLabel) {
       this.host.labelTable.set(directScopeLabel, {
@@ -928,6 +938,28 @@ export class SymbolScopeService {
   }
 
   /**
+   * Returns the outline container for a stored label name.
+   * Sublabels nest under their parent; namespaced labels nest under the namespace.
+   * @param {string} fullLabel The stored label name.
+   * @param {boolean} isGlobal Whether the label is global.
+   * @returns {string | undefined} The container name, if any.
+   */
+  symbolContainerName(fullLabel: string, isGlobal: boolean): string | undefined {
+    const parent = this.host.labelParents.get(fullLabel);
+    if (parent) {
+      return parent;
+    }
+    if (
+      !isGlobal &&
+      this.host.currentNamespace &&
+      fullLabel.startsWith(`${this.host.currentNamespace}_`)
+    ) {
+      return this.host.currentNamespace;
+    }
+    return undefined;
+  }
+
+  /**
    * Handles a label definition.
    * @param {string} labelName The name of the label.
    */
@@ -953,6 +985,29 @@ export class SymbolScopeService {
       const parentLabel = this.getScopedParentLabel(dotCount);
       const directScopeLabel = `${parentLabel}_${subLabelName}`;
       this.host.labelParents.set(directScopeLabel, parentLabel);
+
+      if (this.host.currentNamespace) {
+        const namespacePrefix = this.host.namespaceNestingEnabled
+          ? this.host.namespaceNestingPath.join("_")
+          : this.host.currentNamespace;
+        if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
+          // Pre-populate labelParents for the namespace-qualified compound label so
+          // symbolContainerName resolves "bars_create" rather than falling back to
+          // the namespace root "bars". Must happen before setLabel is called so the
+          // containerName written into symbolDefinitions is correct from the first write.
+          const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
+          const qualifiedParent = `${namespacePrefix}_${parentLabel}`;
+          this.host.labelParents.set(namespacedLabel, qualifiedParent);
+          this.setLabel(directScopeLabel, undefined, false, false, false, modifiesHierarchy);
+          if (modifiesHierarchy) {
+            this.host.currentParentLabel = directScopeLabel;
+            this.host.currentParentIsGlobal = dotCount === 1;
+          }
+          this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
+          return;
+        }
+      }
+
       this.setLabel(directScopeLabel, undefined, false, false, false, modifiesHierarchy);
 
       if (modifiesHierarchy) {

@@ -136,6 +136,12 @@ export function parseExpressionNode(input: string): ExpressionNode {
     return { type: "raw", value: "", span: createSourceSpan(0, 0) };
   }
 
+  // Immediate addressing (`#label`, `#label>>8`) is not part of the
+  // expression language; strip it so the inner expression still parses.
+  if (trimmed.startsWith("#") && trimmed.length > 1) {
+    return parseExpressionNode(trimmed.slice(1));
+  }
+
   const rangeIndex = findTopLevelRange(trimmed);
   if (rangeIndex !== -1) {
     return attachRootSpan(
@@ -306,6 +312,10 @@ function findTopLevelRange(input: string): number {
       continue;
     }
     if (depth === 0 && bracketDepth === 0 && input.slice(i, i + 2) === "..") {
+      // Leading `..ch8` is a nested sublabel, not a `start..end` range.
+      if (i === 0) {
+        continue;
+      }
       return i;
     }
   }
@@ -756,6 +766,20 @@ class ExpressionParser {
    * @returns {ExpressionNode} The result.
    */
   parsePrimary(): ExpressionNode {
+    if (this.peek()?.type === "dot") {
+      let name = "";
+      while (this.match({ type: "dot" })) {
+        name += ".";
+      }
+      const token = this.consume();
+      if (token?.type === "identifier") {
+        return { type: "identifier", name: name + token.value };
+      }
+      if (token?.type === "literal" && /^\d+$/.test(token.value)) {
+        return { type: "identifier", name: name + token.value };
+      }
+      throw new Error("Expected label name after '.'");
+    }
     const token = this.consume();
     if (!token) {
       throw new Error("Unexpected end of expression");

@@ -22484,21 +22484,21 @@ var require_main3 = __commonJS({
             throw new Error("Process created without stdio streams");
           }
         }
-        function pipeStdoutToLogOutputChannel(input, outputChannel) {
+        function pipeStdoutToLogOutputChannel(input, outputChannel2) {
           readline.createInterface({
             input,
             crlfDelay: Infinity,
             terminal: false,
             historySize: 0
-          }).on("line", (data) => outputChannel.info(data));
+          }).on("line", (data) => outputChannel2.info(data));
         }
-        function pipeStderrToLogOutputChannel(input, outputChannel) {
+        function pipeStderrToLogOutputChannel(input, outputChannel2) {
           readline.createInterface({
             input,
             crlfDelay: Infinity,
             terminal: false,
             historySize: 0
-          }).on("line", (data) => outputChannel.error(data));
+          }).on("line", (data) => outputChannel2.error(data));
         }
         const server = this._serverOptions;
         if (Is2.func(server)) {
@@ -22919,6 +22919,7 @@ var ProjectPanelProvider = class {
       symbolCount: 0,
       referenceCount: 0,
       errorCount: 0,
+      lastReindexRootCount: 0,
       lastReindexCachedRoots: 0,
       lastReindexAnalyzedRoots: 0,
       configFile: config.get("configFile", ""),
@@ -23070,12 +23071,15 @@ var ProjectPanelProvider = class {
       const { status, metadata } = event.data || {};
       if (!status) return;
       const duration = status.lastReindexDurationMs == null ? "\u2014" : status.lastReindexDurationMs + "ms";
+      const roots = status.lastReindexRootCount || 0;
+      const cached = status.lastReindexCachedRoots || 0;
+      const analysed = status.lastReindexAnalyzedRoots || 0;
       $("status").innerHTML = [
         ["Files", status.fileCount],
         ["Symbols", status.symbolCount],
         ["Errors", status.errorCount],
         ["Last reindex", duration],
-        ["Cached / analysed roots", (status.lastReindexCachedRoots || 0) + " / " + (status.lastReindexAnalyzedRoots || 0)],
+        ["Roots", roots + " (" + cached + " cached, " + analysed + " analysed)"],
         ["Config", status.configFile || "\u2014"]
       ].map(([label, value]) => '<div class="row"><span class="muted">' + label + '</span><span>' + value + '</span></div>').join("");
       fillList("entryPoints", status.entryPoints || [], "removeEntryPoint");
@@ -23120,6 +23124,7 @@ function getNonce() {
 // editors/vscode/src/extension.ts
 var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var client;
+var outputChannel;
 var watchEnabled = false;
 var watchEntryUri;
 var saveListener;
@@ -23142,14 +23147,18 @@ function serverInitializationOptions() {
 function activate(context) {
   const serverModule = context.asAbsolutePath(path2.join("server", "server.mjs"));
   const serverOptions = {
-    run: { command: process.execPath, args: [serverModule], transport: import_node.TransportKind.stdio },
+    run: {
+      command: process.execPath,
+      args: [serverModule],
+      transport: import_node.TransportKind.stdio
+    },
     debug: {
       command: process.execPath,
       args: ["--nolazy", "--inspect=6009", serverModule],
       transport: import_node.TransportKind.stdio
     }
   };
-  const outputChannel = import_vscode2.window.createOutputChannel("Uttori Assembly Language Server", {
+  const outputChannel2 = import_vscode2.window.createOutputChannel("Uttori Assembly Language Server", {
     log: true
   });
   const clientOptions = {
@@ -23165,8 +23174,8 @@ function activate(context) {
       ]
     },
     initializationOptions: serverInitializationOptions(),
-    outputChannel,
-    traceOutputChannel: outputChannel
+    outputChannel: outputChannel2,
+    traceOutputChannel: outputChannel2
   };
   client = new import_node.LanguageClient(
     "uttoriAsmLanguageServer",
@@ -23183,10 +23192,10 @@ function activate(context) {
     () => initConfig()
   );
   context.subscriptions.push(
-    outputChannel,
+    outputChannel2,
     statusItem,
     import_vscode2.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider),
-    import_vscode2.commands.registerCommand("asm.build", () => runBuild(activeDocumentUri())),
+    import_vscode2.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
     import_vscode2.commands.registerCommand("asm.toggleWatch", toggleWatch),
     import_vscode2.commands.registerCommand("asm.initConfig", () => initConfig()),
     import_vscode2.commands.registerCommand(
@@ -23249,14 +23258,25 @@ function toggleWatch() {
   updateStatusItem();
 }
 function resolveWatchEntry() {
+  return resolveBuildEntryUri();
+}
+function resolveBuildEntryUri() {
   const activeUri = import_vscode2.window.activeTextEditor?.document.uri;
   const entryPoints = import_vscode2.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
   const folder = activeUri ? import_vscode2.workspace.getWorkspaceFolder(activeUri) : import_vscode2.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    return path2.isAbsolute(first) ? import_vscode2.Uri.file(first).toString() : import_vscode2.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path2.isAbsolute(first) ? import_vscode2.Uri.file(first).toString() : import_vscode2.Uri.joinPath(folder.uri, first).toString();
+    outputChannel?.info(
+      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode2.Uri.parse(resolved).fsPath}`
+    );
+    return resolved;
   }
-  return activeDocumentUri();
+  const active = activeDocumentUri();
+  if (active) {
+    outputChannel?.info(`Build entry from active editor: ${import_vscode2.Uri.parse(active).fsPath}`);
+  }
+  return active;
 }
 function onDocumentSaved(document) {
   if (!watchEnabled || !watchEntryUri || !isAssemblyDocument(document)) {
@@ -23329,17 +23349,28 @@ async function initConfig() {
   await import_vscode2.window.showTextDocument(document);
 }
 async function runBuild(documentUri, transient = false) {
+  outputChannel?.show(true);
+  outputChannel?.info(transient ? "Watch rebuild requested" : "Build Binary requested");
   if (!client) {
+    const message = "Language server is not running.";
+    outputChannel?.error(message);
+    void import_vscode2.window.showErrorMessage(`Assembly: ${message}`);
     return;
   }
   if (!documentUri) {
-    void import_vscode2.window.showErrorMessage("Assembly: open a source file to build.");
+    const message = "Open a source file or set asm.entryPoints before building.";
+    outputChannel?.error(message);
+    void import_vscode2.window.showErrorMessage(`Assembly: ${message}`);
     return;
   }
   const document = import_vscode2.Uri.parse(documentUri);
   const config = import_vscode2.workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get("buildOutput", ""), document);
   const baseImage = resolveConfiguredPath(config.get("baseImage", ""), document);
+  outputChannel?.info(`  file: ${document.fsPath}`);
+  outputChannel?.info(`  output: ${output ?? "(target default extension)"}`);
+  outputChannel?.info(`  baseImage: ${baseImage ?? "(none)"}`);
+  outputChannel?.info("  sending asm.build to language server");
   try {
     const result = await client.sendRequest(import_node.ExecuteCommandRequest.type, {
       command: "asm.build",
@@ -23347,20 +23378,21 @@ async function runBuild(documentUri, transient = false) {
     });
     if (result?.ok) {
       const message = `Assembly: built ${result.bytes ?? 0} bytes \u2192 ${result.outputPath ?? "output"}.`;
+      outputChannel?.info(message);
       if (transient) {
         import_vscode2.window.setStatusBarMessage(message, 4e3);
       } else {
         void import_vscode2.window.showInformationMessage(message);
       }
     } else {
-      void import_vscode2.window.showErrorMessage(
-        `Assembly: build failed - ${result?.message ?? "unknown error"}.`
-      );
+      const detail = result?.message ?? "unknown error";
+      outputChannel?.error(`Build failed: ${detail}`);
+      void import_vscode2.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     }
   } catch (error) {
-    void import_vscode2.window.showErrorMessage(
-      `Assembly: build failed - ${error instanceof Error ? error.message : String(error)}.`
-    );
+    const detail = error instanceof Error ? error.message : String(error);
+    outputChannel?.error(`Build request failed: ${detail}`);
+    void import_vscode2.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
   }
 }
 function resolveConfiguredPath(configuredPath, document) {

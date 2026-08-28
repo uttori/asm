@@ -87,12 +87,7 @@ export const handleNamespace = (
     return;
   } else if (params.length === 1) {
     // debug("handleNamespace enable", params[0]);
-    if (session.namespaceNestingEnabled) {
-      session.namespaceNestingPath.push(params[0]);
-      session.currentNamespace = session.namespaceNestingPath.join("_");
-    } else {
-      session.currentNamespace = params[0];
-    }
+    enterNamespace(session, params[0]);
     return;
   }
 
@@ -107,14 +102,31 @@ export const handleNamespace = (
     }
   } else {
     // debug("handleNamespace enable action", params[0]);
-    if (session.namespaceNestingEnabled) {
-      session.namespaceNestingPath.push(params[0]);
-      session.currentNamespace = session.namespaceNestingPath.join("_");
-    } else {
-      session.currentNamespace = params[0];
-    }
+    enterNamespace(session, params[0]);
   }
 };
+
+/**
+ * Enters a namespace and records it as an outline container.
+ * @param {NamespaceDirectiveContext["session"]} session The namespace session.
+ * @param {string} name The namespace identifier being entered.
+ */
+function enterNamespace(session: NamespaceDirectiveContext["session"], name: string): void {
+  if (session.namespaceNestingEnabled) {
+    session.namespaceNestingPath.push(name);
+    session.currentNamespace = session.namespaceNestingPath.join("_");
+  } else {
+    session.currentNamespace = name;
+  }
+
+  const parent =
+    session.namespaceNestingEnabled && session.namespaceNestingPath.length > 1
+      ? session.namespaceNestingPath.slice(0, -1).join("_")
+      : undefined;
+  session.recordSymbolDefinition("namespace", session.currentNamespace, {
+    containerName: parent || undefined,
+  });
+}
 
 export const registerNamespaceDirectives = (
   registry: DirectiveRegistry,

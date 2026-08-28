@@ -14,6 +14,7 @@ export type FrontEndCommandHost = {
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   currentGlobalParentLabel: string;
+  currentNamespace: string;
   mathCore: MathCore;
   symbolScope: SymbolScopeService;
   parseFunctionDefinition(defLine: string): void;
@@ -171,12 +172,24 @@ export class FrontEndCommandService {
     // keep consuming tokens until the command is exhausted.
     while (remainingWords.length > 0 && this.host.isNamedLabelToken(keyword)) {
       const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+      const namespace = this.host.currentNamespace;
+      // For dot labels, compute the correct scoped parent BEFORE handleLabelDefinition
+      // updates currentParentLabel. Without this, each successive sibling dot label
+      // captures the previous sibling's compound name as its container (e.g. .B51A gets
+      // containerName "bars_create_B512" instead of "bars_create"), causing cascading
+      // nesting in the document outline.
+      const dotCount = labelName.startsWith(".") ? (labelName.match(/^\.*/)?.[0]?.length ?? 1) : 0;
+      const containerName =
+        dotCount > 0
+          ? this.host.symbolScope.getScopedParentLabel(dotCount) || undefined
+          : namespace || undefined;
       this.host.symbolScope.handleLabelDefinition(labelName);
       this.host.recordSymbolDefinition("label", labelName, {
         span:
           command.source.tokenSpans[consumedCount] ??
           command.source.tokenSpans[0] ??
           command.source.normalizedSpan,
+        containerName,
       });
       remainingWords.shift();
       consumedCount++;
@@ -218,6 +231,7 @@ export class FrontEndCommandService {
     this.host.recordSymbolDefinition("label", assignedName, {
       span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
       value,
+      containerName: this.host.currentNamespace || undefined,
     });
     command.assignmentTarget = assignedName;
     setCommandKind(command, "staticAssignment");

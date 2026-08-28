@@ -380,6 +380,44 @@ export declare class Assembler {
      */
     collectExpressionReferences(expression: ExpressionNode | undefined, fallbackSpan?: SourceSpan): void;
     /**
+     * Records one reference per struct-path segment so `obj.timer` can target
+     * the struct root and the field independently.
+     * @param {ReferenceExpressionNode} expression The struct-rooted reference.
+     * @param {SourceSpan} [fallbackSpan] The fallback span.
+     */
+    collectStructReferenceSegments(expression: ReferenceExpressionNode, fallbackSpan?: SourceSpan): void;
+    /**
+     * Returns the immediate struct/extension name a member should nest under.
+     * Strips `[...]` so `obj[19].ext.index` yields `ext` for `index`.
+     * Define roots (`!obj_arthur.flags2`) resolve through the define value
+     * (`obj_start+obj[0]`) to the actual struct name.
+     * @param {ReferenceExpressionNode} object The object of a member access.
+     * @returns {string | undefined} The container name.
+     */
+    private structSegmentContainerName;
+    /**
+     * Finds a known struct name in a define's expansion, walking nested defines.
+     * @param {string | undefined} name The define name.
+     * @param {Set<string>} [seen] Define names already visited.
+     * @returns {string | undefined} The struct name, if any.
+     */
+    private structNameFromDefine;
+    /**
+     * Walks an expression right-to-left looking for a known struct identifier.
+     * `obj_start+obj[0]` yields `obj`.
+     * @param {ExpressionNode} node The expression to search.
+     * @param {Set<string>} seen Define names already visited.
+     * @returns {string | undefined} The struct name, if any.
+     */
+    private structNameFromExpression;
+    /**
+     * Splits a hierarchical label (`_018049_8053`) into parent + sublabel
+     * segments so each part can be targeted independently.
+     * @param {string} name The identifier text.
+     * @returns {{ name: string; containerName?: string }[] | undefined} Segments, if this is a known sublabel.
+     */
+    private hierarchicalLabelReferences;
+    /**
      * Collects command references.
      * @param {NormalizedCommand} command The command.
      */

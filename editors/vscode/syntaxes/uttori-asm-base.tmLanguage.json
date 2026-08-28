@@ -8,9 +8,15 @@
     { "include": "#labels" },
     { "include": "#numbers" },
     { "include": "#mnemonics" },
+    { "include": "#size-suffixes" },
+    { "include": "#macros" },
     { "include": "#pseudo-ops" },
-    { "include": "#directives" },
     { "include": "#defines" },
+    { "include": "#struct-access" },
+    { "include": "#immediate-labels" },
+    { "include": "#local-label-refs" },
+    { "include": "#directives" },
+    { "include": "#functions" },
     { "include": "#operators" }
   ],
   "repository": {
@@ -61,19 +67,53 @@
         }
       ]
     },
+    "size-suffixes": {
+      "patterns": [
+        {
+          "name": "storage.modifier.size.uttori-asm",
+          "match": "(?<=[A-Za-z0-9_])\\.(?i:b|w|l)\\b"
+        }
+      ]
+    },
     "pseudo-ops": {
       "patterns": [
         {
           "name": "support.function.pseudo.uttori-asm",
-          "match": "\\b(?i:db|dw|dl|dd|org|base|bank|skip|incbin|incsrc|include|arch|function)\\b"
+          "match": "\\b(?i:db|dw|dl|dd|dc\\.b|dc\\.w|dc\\.l|org|base|bank|skip|fillbyte|fillword|filllong|filldword|fill|padbyte|padword|padlong|paddword|pad|incbin|incsrc|include|includeonce|pushpc|pullpc|pushbase|pullbase|table|cleartable|pushtable|pulltable|arch|function|undef|global)\\b"
         },
         {
           "name": "keyword.control.conditional.uttori-asm",
-          "match": "\\b(?i:if|elseif|else|endif)\\b"
+          "match": "\\b(?i:if|elseif|else|endif|while|endwhile|for|endfor)\\b"
         },
         {
           "name": "keyword.directive.macro.uttori-asm",
-          "match": "\\b(?i:macro|endmacro|namespace|struct|endstruct)\\b"
+          "match": "\\b(?i:macro|endmacro)\\b"
+        },
+        {
+          "match": "\\b((?i:namespace))\\s+(?:(?i:nested)\\s+(?i:on|off)|(?i:off)|([A-Za-z_][A-Za-z0-9_]*))",
+          "captures": {
+            "1": { "name": "keyword.directive.namespace.uttori-asm" },
+            "2": { "name": "entity.name.namespace.uttori-asm" }
+          }
+        },
+        {
+          "name": "keyword.directive.namespace.uttori-asm",
+          "match": "\\b(?i:namespace|pushns|pullns)\\b"
+        },
+        {
+          "match": "\\b(?i:struct)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "0": { "name": "keyword.directive.struct.uttori-asm" },
+            "1": { "name": "entity.name.type.struct.uttori-asm" }
+          }
+        },
+        {
+          "name": "keyword.directive.struct.uttori-asm",
+          "match": "\\b(?i:struct|endstruct|extends|align)\\b"
+        },
+        {
+          "name": "keyword.control.diagnostic.uttori-asm",
+          "match": "\\b(?i:assert|error|warnpc|print|warn)\\b"
         }
       ]
     },
@@ -108,14 +148,102 @@
     "labels": {
       "patterns": [
         {
+          "match": "^\\s*(\\.{1,})([A-Za-z_][A-Za-z0-9_]*)\\s*:",
+          "captures": {
+            "1": { "name": "punctuation.definition.label.uttori-asm" },
+            "2": { "name": "entity.name.label.local.uttori-asm" }
+          }
+        },
+        {
           "name": "entity.name.function.label.uttori-asm",
-          "match": "^\\s*[A-Za-z_.][A-Za-z0-9_.]*:"
+          "match": "^\\s*[A-Za-z_][A-Za-z0-9_]*:"
         },
         { "name": "entity.name.function.label.local.uttori-asm", "match": "^\\s*[-+]+" }
       ]
     },
+    "macros": {
+      "patterns": [
+        {
+          "name": "entity.name.function.macro.uttori-asm",
+          "match": "%[A-Za-z_][A-Za-z0-9_]*"
+        }
+      ]
+    },
     "defines": {
-      "patterns": [{ "name": "variable.other.define.uttori-asm", "match": "!\\w+" }]
+      "patterns": [
+        {
+          "name": "variable.other.define.uttori-asm",
+          "match": "!\\{[A-Za-z0-9_]+\\}"
+        },
+        {
+          "name": "variable.other.define.uttori-asm",
+          "match": "!\\w+"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "support.function.expression.uttori-asm",
+          "match": "\\b(?i:sizeof|objectsize|datasize|defined|stringsequal|stringsequalnocase)\\b"
+        }
+      ]
+    },
+    "struct-access": {
+      "patterns": [
+        {
+          "name": "meta.struct-access.uttori-asm",
+          "begin": "\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\[|\\.(?!(?i:b|w|l|asm|inc|bin|src|s)\\b))",
+          "beginCaptures": {
+            "1": { "name": "entity.name.type.struct.uttori-asm" }
+          },
+          "end": "(?![.\\[A-Za-z0-9_])",
+          "patterns": [
+            {
+              "match": "\\[([^\\]]*)\\]",
+              "name": "meta.indexer.uttori-asm",
+              "captures": {
+                "1": {
+                  "patterns": [{ "include": "#numbers" }, { "include": "#defines" }]
+                }
+              }
+            },
+            {
+              "match": "\\.([A-Za-z_][A-Za-z0-9_]*)",
+              "captures": {
+                "1": { "name": "variable.other.member.uttori-asm" }
+              }
+            }
+          ]
+        },
+        {
+          "match": "(?<=[\\w}\\]])\\.((?!(?i:b|w|l)\\b)[A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "variable.other.member.uttori-asm" }
+          }
+        }
+      ]
+    },
+    "immediate-labels": {
+      "patterns": [
+        {
+          "match": "#([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "entity.name.function.label.uttori-asm" }
+          }
+        }
+      ]
+    },
+    "local-label-refs": {
+      "patterns": [
+        {
+          "match": "(?<![A-Za-z0-9_])(\\.{1,})([A-Za-z0-9_]+)",
+          "captures": {
+            "1": { "name": "punctuation.definition.label.uttori-asm" },
+            "2": { "name": "entity.name.label.local.uttori-asm" }
+          }
+        }
+      ]
     },
     "operators": {
       "patterns": [

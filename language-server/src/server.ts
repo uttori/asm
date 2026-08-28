@@ -25,6 +25,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { OverlayFileProvider, type WorkspaceIndex } from "./core.js";
+import { emptyOutputMessage, formatElapsed, resolveBuildEntry } from "./build.js";
 import {
   ProjectEnvironmentController,
   type PluginModuleSetting,
@@ -257,7 +258,7 @@ function scheduleReindex(): void {
     const status = index.getStatus();
     connection.console.info(
       `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms ` +
-        `(analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, ` +
+        `(roots=${status.lastReindexRootCount}, analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, ` +
         `files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`,
     );
     connection.console.info(
@@ -371,45 +372,115 @@ function resolveOptionalBuildPath(
     : path.resolve(workspaceRoots[0] ?? path.dirname(file), configured);
 }
 
-function buildBinary(file: string, output?: string, baseImage?: string): BuildResult {
+function buildBinary(
+  requestedFile: string | undefined,
+  output?: string,
+  baseImage?: string,
+): BuildResult {
+  const startedAt = Date.now();
+  const log = connection.console;
   try {
+    const resolved = resolveBuildEntry(requestedFile, settings.entryPoints, workspaceRoot());
+    const file = resolved.file;
+    log.info("Build Binary starting");
+    log.info(`  requested: ${requestedFile ?? "(none)"}`);
+    log.info(`  assembling: ${file}`);
+    log.info(`  reason: ${resolved.reason}`);
+    log.info(`  workspace: ${workspaceRoot()}`);
+    log.info(`  target: ${environmentController.current.loaded.target}`);
+    log.info(
+      `  architecture: ${environmentController.current.loaded.architecture || "(target default)"}`,
+    );
+    log.info(
+      `  includePaths: ${environmentController.current.loaded.includePaths.join(", ") || "(none)"}`,
+    );
+    log.info(`  entryPoints: ${settings.entryPoints.join(", ") || "(none)"}`);
+    log.info(`  configFile: ${settings.configFile || "(none)"}`);
+    log.info(`  buildOutput setting: ${output ?? settings.buildOutput ?? "(default extension)"}`);
+    log.info(`  baseImage setting: ${baseImage ?? settings.baseImage ?? "(none)"}`);
+
+    if (!fs.existsSync(file)) {
+      const message = `Entry file does not exist: ${file}`;
+      log.error(message);
+      return { ok: false, message };
+    }
+
     const provider = new OverlayFileProvider(currentOverlays());
     const baseImagePath = resolveOptionalBuildPath(baseImage ?? settings.baseImage, file);
+    if (baseImagePath) {
+      log.info(`  base image path: ${baseImagePath}`);
+      if (!fs.existsSync(baseImagePath)) {
+        const message = `Base image does not exist: ${baseImagePath}`;
+        log.error(message);
+        return { ok: false, message };
+      }
+    }
     const assembler = environmentController.createAssembler({
       ...(baseImagePath ? { baseImage: new Uint8Array(fs.readFileSync(baseImagePath)) } : {}),
       fileProvider: provider,
       collectSourceMetadata: false,
     });
     try {
-      assembler.setIncludePaths([
+      const includePaths = [
         ...new Set([path.dirname(file), ...environmentController.current.loaded.includePaths]),
-      ]);
+      ];
+      log.info(`  assembler includePaths: ${includePaths.join(", ")}`);
+      assembler.setIncludePaths(includePaths);
       assembler.setCurrentFile(file);
       const source = provider.readTextFile(file);
-      assembler.assembleProgram(assembler.buildProgramModel(source, file, 0));
+      log.info(
+        `  source: ${source.length} chars from ${provider.overlay.has(file) ? "editor buffer" : "disk"}`,
+      );
+      const programStarted = Date.now();
+      const program = assembler.buildProgramModel(source, file, 0);
+      log.info(`  program model: ${program.nodes.length} nodes (${formatElapsed(programStarted)})`);
+      const assembleStarted = Date.now();
+      assembler.assembleProgram(program);
+      log.info(`  assembleProgram finished (${formatElapsed(assembleStarted)})`);
       const bytes = assembler.getBinaryOutput();
+      log.info(`  emitted ${bytes.length} bytes (output buffer ${assembler.outputBytes.length})`);
+      if (bytes.length === 0) {
+        const message = emptyOutputMessage(file, resolved.usedEntryPoint);
+        log.error(message);
+        return { ok: false, message };
+      }
       const outputPath =
         resolveOptionalBuildPath(output ?? settings.buildOutput, file) ?? defaultOutputPath(file);
+      log.info(`  writing ${bytes.length} bytes → ${outputPath}`);
       fs.mkdirSync(path.dirname(outputPath), { recursive: true });
       fs.writeFileSync(outputPath, Buffer.from(bytes));
+      log.info(
+        `Build Binary succeeded in ${formatElapsed(startedAt)}: ${bytes.length} bytes → ${outputPath}`,
+      );
       return { ok: true, outputPath, bytes: bytes.length };
     } finally {
       assembler.dispose();
     }
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : String(error) };
+    const message = error instanceof Error ? error.message : String(error);
+    log.error(`Build Binary failed in ${formatElapsed(startedAt)}: ${message}`);
+    if (error instanceof Error && error.stack) {
+      log.error(error.stack);
+    }
+    return { ok: false, message };
   }
 }
 
-connection.onExecuteCommand((params) => {
+/**
+ * Converts an executeCommand argument to a filesystem path.
+ * @param {string | undefined} value URI or path from the client.
+ * @returns {string | undefined} A filesystem path, or undefined when omitted.
+ */
+function argumentPath(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return value.startsWith("file:") ? uriToPath(value) : value;
+}
+
+connection.onExecuteCommand(async (params) => {
   if (params.command !== "asm.build") return undefined;
+  await configurationQueue;
   const args = (params.arguments ?? []) as Array<string | undefined>;
-  const uriOrPath = args[0];
-  if (!uriOrPath) return { ok: false, message: "No file provided to build." } satisfies BuildResult;
-  const file = uriOrPath.startsWith("file:") ? uriToPath(uriOrPath) : uriOrPath;
-  const output = args[1]?.startsWith("file:") ? uriToPath(args[1]) : args[1];
-  const baseImage = args[2]?.startsWith("file:") ? uriToPath(args[2]) : args[2];
-  return buildBinary(file, output, baseImage);
+  return buildBinary(argumentPath(args[0]), argumentPath(args[1]), argumentPath(args[2]));
 });
 
 connection.onRequest("asm/projectMetadata", async () => {
@@ -438,6 +509,7 @@ connection.onRequest("asm/status", async () => {
       errorCount: 0,
       entryPoints: settings.entryPoints,
       includePaths: settings.includePaths,
+      lastReindexRootCount: 0,
       lastReindexCachedRoots: 0,
       lastReindexAnalyzedRoots: 0,
       configFile: settings.configFile,
