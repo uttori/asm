@@ -195,11 +195,7 @@ function preciseRange(
   if (rawLine === undefined) {
     return fallback;
   }
-  const column = findTokenColumn(rawLine, name);
-  if (column < 0) {
-    return fallback;
-  }
-  return Range.create(line, column, line, column + name.length);
+  return rangeForTokenOnLine(rawLine, name, line, fallback);
 }
 
 /**
@@ -229,9 +225,9 @@ function preciseRangeWithSigil(
     return fallback;
   }
   const sigilName = name.startsWith("!") ? name : `!${name}`;
-  const sigilColumn = findTokenColumn(rawLine, sigilName);
-  if (sigilColumn >= 0) {
-    return Range.create(line, sigilColumn, line, sigilColumn + sigilName.length);
+  const sigilRange = rangeForTokenOnLine(rawLine, sigilName, line, fallback);
+  if (sigilRange !== fallback) {
+    return sigilRange;
   }
   return preciseRange(index, file, line, name, fallback);
 }
@@ -255,6 +251,28 @@ function lookupNameFor(word: string): string {
 function namesMatch(stored: string, word: string): boolean {
   const lookup = lookupNameFor(word);
   return stored === lookup || stored === word;
+}
+
+/**
+ * Locates `name` on a source line and extends the end column through any
+ * trailing identifier characters. Used so a stale analysis of `unk1E` still
+ * highlights the full `unk1E__WE` token after an in-flight rename.
+ * @param {string} rawLine The raw source line.
+ * @param {string} name The stored token text to locate.
+ * @param {number} line The zero-based line number.
+ * @param {Range} fallback The range to use when the token cannot be located.
+ * @returns {Range} The precise range, extended to the identifier boundary.
+ */
+function rangeForTokenOnLine(rawLine: string, name: string, line: number, fallback: Range): Range {
+  const column = findTokenColumn(rawLine, name);
+  if (column < 0) {
+    return fallback;
+  }
+  let endColumn = column + name.length;
+  while (endColumn < rawLine.length && IDENTIFIER_CHAR.test(rawLine[endColumn] ?? "")) {
+    endColumn += 1;
+  }
+  return Range.create(line, column, line, endColumn);
 }
 
 /**
@@ -627,7 +645,11 @@ export function referencesFor(
   }
 
   const locations: Location[] = [];
-  for (const reference of findReferences(name, index.getAllReferences())) {
+  let matches = findReferences(name, index.getAllReferences());
+  if (matches.length === 0) {
+    matches = findReferences(name, index.getReferences(file));
+  }
+  for (const reference of matches) {
     locations.push(
       Location.create(pathToUri(reference.location.file), referenceRange(index, reference)),
     );

@@ -190,6 +190,28 @@ test("macro definitions can be renamed and found as references", (t) => {
   t.true(changes.every((change) => change.newText === "hello"));
 });
 
+test("semantic tokens extend stale prefix matches to the full identifier", (t) => {
+  const macroFile = path.resolve("/virtual/stale-rename.asm");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(macroFile, "macro unk1E()\n  nop\nendmacro\n");
+  index.updateDocument(macroFile, "macro unk1E__WE()\n  nop\nendmacro\n");
+
+  const tokens = semanticTokensFor(index, macroFile).data;
+  const decoded = Array.from({ length: tokens.length / 5 }, (_, i) =>
+    tokens.slice(i * 5, i * 5 + 5),
+  );
+  t.true(
+    decoded.some((token) => token[2] === "unk1E__WE".length),
+    "stale symbol name unk1E extends to cover unk1E__WE",
+  );
+});
+
+test("find-references returns no locations when the index is empty", (t) => {
+  const emptyFile = path.resolve("/virtual/empty.asm");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  t.deepEqual(referencesFor(index, emptyFile, { line: 0, character: 0 }, true), []);
+});
+
 test("unquoted hyphenated incsrc paths highlight the full filename", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-unquoted-inc-"));
   const bank = path.join(directory, "bank10-1D.asm");

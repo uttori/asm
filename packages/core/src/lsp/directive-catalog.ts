@@ -86,7 +86,12 @@ export const directiveCatalog: DirectiveDescriptor[] = [
   ),
 ];
 
+/** Pre-built keyword → descriptor index for O(1) lookup (keys are already lowercase). */
+const directiveCatalogMap = new Map<string, DirectiveDescriptor>(
+  directiveCatalog.map((entry) => [entry.keyword.toLowerCase(), entry]),
+);
+
 export function findDirective(keyword: string): DirectiveDescriptor | undefined {
   const normalized = keyword.toLowerCase().replace(/^@/, "");
-  return directiveCatalog.find((entry) => entry.keyword.toLowerCase() === normalized);
+  return directiveCatalogMap.get(normalized);
 }

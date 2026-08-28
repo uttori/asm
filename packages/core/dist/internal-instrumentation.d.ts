@@ -27,6 +27,12 @@ export type InternalInstrumentationSnapshot = {
         runtimeNodesLowered: number;
         referenceCollections: number;
         addressMappings: number;
+        /** Number of times the Assembler constructor completed (outer + session). */
+        assemblerConstructions: number;
+        /** Number of times createToolingSession() completed. */
+        sessionConstructions: number;
+        /** Total bytes written to cache JSON files. */
+        cacheWriteBytes: number;
     };
     phasesMs: Record<string, number>;
     peakRssBytes: number;

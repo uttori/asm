@@ -141,6 +141,7 @@ type ActiveLifecycle = {
     instance: SessionLifecycle;
 };
 export declare class Assembler {
+    #private;
     /** The current logical target address. */
     currentTargetAddress: number;
     /** The current logical target base address. */

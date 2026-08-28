@@ -72,7 +72,7 @@ class ResolvedToolingCatalog implements ToolingCatalog {
 
   getInstructions(architecture: string): readonly InstructionDescriptor[] {
     const id = this.architectureAliases.get(canonical(architecture)) ?? canonical(architecture);
-    if (!this.target.architectures.map(canonical).includes(id)) {
+    if (!this.target.architectures.some((arch) => canonical(arch) === id)) {
       return [];
     }
     return this.architectures.get(id)?.value.instructions ?? [];

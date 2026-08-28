@@ -65,6 +65,7 @@ export type WorkspaceIndexStatus = {
  * the include graph is preserved for cross-file navigation.
  */
 export declare class WorkspaceIndex {
+    #private;
     /** Open editor buffers keyed by absolute path. */
     readonly overlay: Map<string, string>;
     /** Per-file analysis buckets keyed by absolute path. */
@@ -208,6 +209,7 @@ export declare class WorkspaceIndex {
     getStatus(): WorkspaceIndexStatus;
     /**
      * True when a followIncludes analysis already owns this file as a root or include.
+     * O(1) — uses the pre-computed {@link #coveredByFullPass} set.
      * @param {string} file The absolute path of the file.
      * @returns {boolean} Whether a covering full-pass analysis exists.
      */
@@ -215,6 +217,7 @@ export declare class WorkspaceIndex {
     /**
      * True when a different full-pass root already includes this file.
      * Used to avoid analysing included files as standalone roots.
+     * O(1) — uses the per-root coverage sets in {@link #coverageByRoot}.
      * @param {string} file The absolute path of the file.
      * @returns {boolean} Whether another covering full-pass root exists.
      */
@@ -305,11 +308,15 @@ export declare class WorkspaceIndex {
      */
     hashFile(file: string): string | undefined;
     /**
-     * Collects content hashes for a root and every file in its include graph.
+     * Collects content hashes and mtimes for a root and every file in its include graph.
      * @param {string} root Absolute root path.
      * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
-     * @returns {Record<string, string> | undefined} Path-to-hash map, or undefined when incomplete.
+     * @returns {{ fileHashes: Record<string, string>; fileMtimes: Record<string, number> } | undefined}
+     *   Path-to-hash and path-to-mtime maps, or undefined when incomplete.
      */
-    collectFileHashes(root: string, includeEdges: AssemblyIncludeEdge[]): Record<string, string> | undefined;
+    collectFileHashes(root: string, includeEdges: AssemblyIncludeEdge[]): {
+        fileHashes: Record<string, string>;
+        fileMtimes: Record<string, number>;
+    } | undefined;
 }
 //# sourceMappingURL=workspace-index.d.ts.map

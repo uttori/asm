@@ -341,6 +341,12 @@ export class Assembler {
   public readonly diagnostics: AssemblyDiagnostic[] = [];
   public readonly symbolDefinitions: AssemblySymbolDefinition[] = [];
   public readonly symbolReferences: AssemblySymbolReference[] = [];
+  /** Deduplication index for {@link symbolDefinitions} — O(1) vs. the former O(n) `.some()` scan. */
+  readonly #symbolDefinitionKeys = new Set<string>();
+  /** Deduplication index for {@link symbolReferences} — O(1) vs. the former O(n) `.some()` scan. */
+  readonly #symbolReferenceKeys = new Set<string>();
+  /** Deduplication index for {@link includeEdges} — O(1) vs. O(n) `.some()` scan. */
+  readonly #includeEdgeKeys = new Set<string>();
   public readonly includeEdges: AssemblyIncludeEdge[] = [];
   public readonly collectSourceMetadata: boolean;
   /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
@@ -526,6 +532,9 @@ export class Assembler {
     this.symbolDefinitions.length = 0;
     this.symbolReferences.length = 0;
     this.includeEdges.length = 0;
+    this.#symbolDefinitionKeys.clear();
+    this.#symbolReferenceKeys.clear();
+    this.#includeEdgeKeys.clear();
   }
 
   /**
@@ -541,12 +550,11 @@ export class Assembler {
     if (!fromFile || !toFile) {
       return;
     }
-    const duplicate = this.includeEdges.some(
-      (edge) => edge.fromFile === fromFile && edge.toFile === toFile,
-    );
-    if (duplicate) {
+    const edgeKey = `${fromFile}\x00${toFile}`;
+    if (this.#includeEdgeKeys.has(edgeKey)) {
       return;
     }
+    this.#includeEdgeKeys.add(edgeKey);
     this.includeEdges.push({ fromFile, toFile });
   }
 
@@ -603,17 +611,11 @@ export class Assembler {
     }
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolDefinitions.some(
-      (entry) =>
-        entry.kind === kind &&
-        entry.name === name &&
-        entry.location.file === file &&
-        entry.location.line === line &&
-        entry.containerName === options.containerName,
-    );
-    if (duplicate) {
+    const dedupeKey = `${kind}\x00${name}\x00${file}\x00${line}\x00${options.containerName ?? ""}`;
+    if (this.#symbolDefinitionKeys.has(dedupeKey)) {
       return;
     }
+    this.#symbolDefinitionKeys.add(dedupeKey);
 
     this.symbolDefinitions.push({
       name,
@@ -644,17 +646,11 @@ export class Assembler {
     }
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolReferences.some(
-      (entry) =>
-        entry.kind === kind &&
-        entry.name === name &&
-        entry.location.file === file &&
-        entry.location.line === line &&
-        entry.containerName === options.containerName,
-    );
-    if (duplicate) {
+    const dedupeKey = `${kind}\x00${name}\x00${file}\x00${line}\x00${options.containerName ?? ""}`;
+    if (this.#symbolReferenceKeys.has(dedupeKey)) {
       return;
     }
+    this.#symbolReferenceKeys.add(dedupeKey);
 
     this.symbolReferences.push({
       name,
@@ -830,22 +826,27 @@ export class Assembler {
    * @returns {Assembler} A configured analysis session.
    */
   createToolingSession(): Assembler {
-    const session = new Assembler({
-      environment: this.environment,
-      target: this.targetId,
-      architecture: this.arch,
-      targetOptions: this.targetOptions,
-      baseImage: this.baseImage,
-      fileProvider: this.fileProvider,
-    });
+    const session = measureInternalPhase("sessionConstruct", () =>
+      new Assembler({
+        environment: this.environment,
+        target: this.targetId,
+        architecture: this.arch,
+        targetOptions: this.targetOptions,
+        baseImage: this.baseImage,
+        fileProvider: this.fileProvider,
+      }),
+    );
     session.includePaths = [...this.includePaths];
     session.followIncludes = this.followIncludes;
-    session.pluginState.restore(this.pluginState.cloneSnapshot());
+    measureInternalPhase("pluginStateClone", () =>
+      session.pluginState.restore(this.pluginState.cloneSnapshot()),
+    );
     session.outputFillByte = this.outputFillByte;
     session.padbyte = [...this.padbyte];
     session.fillbyte = [...this.fillbyte];
     session.padUnit = this.padUnit;
     session.arch = this.arch;
+    incrementInternalCounter("sessionConstructions");
     return session;
   }
 
@@ -1101,10 +1102,12 @@ export class Assembler {
     }
     const normalizedTargetOptions = target.createOptions?.(configuredTargetOptions) ?? {};
     this.targetOptions = Object.freeze({ ...normalizedTargetOptions });
-    this.pluginState = new PluginSessionStateStore(this.environment.sessionStates, {
-      targetId,
-      targetOptions: this.targetOptions,
-    });
+    this.pluginState = measureInternalPhase("pluginStateCreate", () =>
+      new PluginSessionStateStore(this.environment.sessionStates, {
+        targetId,
+        targetOptions: this.targetOptions,
+      }),
+    );
     const targetFactoryContext = {
       targetId,
       options: this.targetOptions,
@@ -1267,7 +1270,9 @@ export class Assembler {
         [...(contribution.aliases ?? [])],
       );
     }
-    this.directiveRegistry = this.cloneDirectiveRegistryForSession(this);
+    this.directiveRegistry = measureInternalPhase("directiveRegistryClone", () =>
+      this.cloneDirectiveRegistryForSession(this),
+    );
     this.commandLoweringService = new CommandLoweringService(this);
     this.services.frontEnd = this.frontEndService;
     this.services.lowering = this.commandLoweringService;
@@ -1284,11 +1289,14 @@ export class Assembler {
         });
       }
     });
-    this.runLifecycleHook("onSessionCreated", (lifecycle) =>
-      lifecycle.onSessionCreated?.({ state: this.pluginState, session: this }),
+    measureInternalPhase("onSessionCreated", () =>
+      this.runLifecycleHook("onSessionCreated", (lifecycle) =>
+        lifecycle.onSessionCreated?.({ state: this.pluginState, session: this }),
+      ),
     );
     this.selectArchitecture(this.arch, this.arch);
-    this.activateStage("collectDefinitions");
+    measureInternalPhase("constructorActivateStage", () => this.activateStage("collectDefinitions"));
+    incrementInternalCounter("assemblerConstructions");
   }
 
   runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void {

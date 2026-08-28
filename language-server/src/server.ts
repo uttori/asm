@@ -260,8 +260,12 @@ function scheduleReindex(): void {
         `(analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, ` +
         `files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`,
     );
+    connection.console.info(
+      `Index contains ${status.referenceCount} references across ${status.fileCount} files`,
+    );
     publishAllDiagnostics();
-  }, 150);
+    void connection.languages.semanticTokens.refresh();
+  }, 500);
 }
 
 function publishAllDiagnostics(): void {

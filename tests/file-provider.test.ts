@@ -121,7 +121,7 @@ test("NodeAssemblyFileProvider resolves, stats, and reads disk files", (t) => {
 
     const access = stub(fs, "accessSync").throws(new Error("EACCES"));
     try {
-      t.deepEqual(provider.stat(current), { exists: true, readable: false });
+      t.like(provider.stat(current), { exists: true, readable: false });
     } finally {
       access.restore();
     }

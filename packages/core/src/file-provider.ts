@@ -11,6 +11,8 @@ export type AssemblyFileStat = {
   exists: boolean;
   readable: boolean;
   size?: number;
+  /** Modification time in milliseconds since epoch (disk files only). */
+  mtimeMs?: number;
 };
 
 /**
@@ -71,25 +73,17 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
    * @returns {AssemblyFileStat} The result.
    */
   stat(filePath: string): AssemblyFileStat {
-    if (!fs.existsSync(filePath)) {
-      return {
-        exists: false,
-        readable: false,
-      };
+    let st: fs.Stats;
+    try {
+      st = fs.statSync(filePath);
+    } catch {
+      return { exists: false, readable: false };
     }
-
     try {
       fs.accessSync(filePath, fs.constants.R_OK);
-      return {
-        exists: true,
-        readable: true,
-        size: fs.statSync(filePath).size,
-      };
+      return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
     } catch {
-      return {
-        exists: true,
-        readable: false,
-      };
+      return { exists: true, readable: false, mtimeMs: st.mtimeMs };
     }
   }
 

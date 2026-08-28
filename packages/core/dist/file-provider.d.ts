@@ -7,6 +7,8 @@ export type AssemblyFileStat = {
     exists: boolean;
     readable: boolean;
     size?: number;
+    /** Modification time in milliseconds since epoch (disk files only). */
+    mtimeMs?: number;
 };
 /**
  * Abstracts file resolution and reads so tooling callers can provide in-memory

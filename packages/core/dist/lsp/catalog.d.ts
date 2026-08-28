@@ -1,5 +1,5 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
-import { type InstructionCatalogProvider } from "./instruction-catalog.js";
+import type { InstructionCatalogProvider } from "./instruction-catalog.js";
 import { type DirectiveDescriptor } from "./directive-catalog.js";
 import type { ExpressionFunctionDescriptor } from "../plugin/contracts.js";
 /**
@@ -21,14 +21,7 @@ export type CatalogEntry = {
  * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
  * @returns {InstructionDescriptor[]} The instruction descriptors.
  */
-export declare function getInstructionCatalog(architecture: string, provider?: InstructionCatalogProvider): InstructionDescriptor[];
-/**
- * Looks up an instruction descriptor by mnemonic (case-insensitive).
- * @param {string} mnemonic The mnemonic to find.
- * @param {string} architecture The active architecture name.
- * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
- * @returns {InstructionDescriptor | undefined} The descriptor, if known.
- */
+export declare function getInstructionCatalog(architecture: string, provider?: InstructionCatalogProvider): readonly InstructionDescriptor[];
 export declare function findInstruction(mnemonic: string, architecture: string, provider?: InstructionCatalogProvider): InstructionDescriptor | undefined;
 /**
  * Re-exports the directive lookup so providers depend on a single module.
@@ -36,13 +29,6 @@ export declare function findInstruction(mnemonic: string, architecture: string, 
  * @returns {DirectiveDescriptor | undefined} The descriptor, if known.
  */
 export declare function findDirectiveEntry(keyword: string): DirectiveDescriptor | undefined;
-/**
- * Finds a directive in an explicitly active descriptor catalog.
- * @param {string} keyword The directive keyword.
- * @param {readonly DirectiveDescriptor[]} directives Active directive descriptors.
- * @param {readonly string[]} [directivePrefixes] Prefixes accepted by the active syntax profile.
- * @returns {DirectiveDescriptor | undefined} The matching active directive.
- */
 export declare function findDirectiveInCatalog(keyword: string, directives?: readonly DirectiveDescriptor[], directivePrefixes?: readonly string[]): DirectiveDescriptor | undefined;
 /**
  * Renders an instruction descriptor as Markdown hover documentation.

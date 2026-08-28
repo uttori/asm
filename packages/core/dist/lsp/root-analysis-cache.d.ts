@@ -27,6 +27,16 @@ export declare class RootAnalysisCache {
     constructor(cacheDir: string);
     /**
      * Loads a cached analysis when every recorded file hash still matches.
+     *
+     * Uses a two-tier validation strategy:
+     * 1. For each file, check mtime first (cheap `statSync`). Files whose mtime
+     *    is unchanged are presumed unmodified and their stored hash is reused.
+     * 2. Only files whose mtime changed (or whose mtime is missing from the
+     *    payload) are re-read and SHA-256 hashed.
+     *
+     * This avoids reading and hashing every include file on every startup when
+     * the project has not changed — the common case for warm LSP restarts.
+     *
      * @param {string} root Absolute root source path.
      * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
      * @param {(file: string) => string | undefined} hashFile Content hasher.
@@ -39,9 +49,10 @@ export declare class RootAnalysisCache {
      * @param {string} root Absolute root source path.
      * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
      * @param {Record<string, string>} fileHashes Sorted path-to-hash map.
+     * @param {Record<string, number>} fileMtimes Sorted path-to-mtime map.
      * @param {CachedRootAnalysis} analysis Artifacts to store.
      */
-    write(root: string, identity: RootAnalysisCacheIdentity, fileHashes: Record<string, string>, analysis: CachedRootAnalysis): void;
+    write(root: string, identity: RootAnalysisCacheIdentity, fileHashes: Record<string, string>, fileMtimes: Record<string, number>, analysis: CachedRootAnalysis): void;
     /**
      * Deletes the cache entry for a root, if present.
      * @param {string} root Absolute root source path.

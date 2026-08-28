@@ -29,6 +29,12 @@ export type InternalInstrumentationSnapshot = {
     runtimeNodesLowered: number;
     referenceCollections: number;
     addressMappings: number;
+    /** Number of times the Assembler constructor completed (outer + session). */
+    assemblerConstructions: number;
+    /** Number of times createToolingSession() completed. */
+    sessionConstructions: number;
+    /** Total bytes written to cache JSON files. */
+    cacheWriteBytes: number;
   };
   phasesMs: Record<string, number>;
   peakRssBytes: number;
@@ -89,6 +95,9 @@ export function runWithInternalInstrumentation<T>(callback: () => T): {
       runtimeNodesLowered: 0,
       referenceCollections: 0,
       addressMappings: 0,
+      assemblerConstructions: 0,
+      sessionConstructions: 0,
+      cacheWriteBytes: 0,
     },
     phasesMs: {},
     peakRssBytes: 0,

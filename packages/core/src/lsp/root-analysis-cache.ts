@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type {
@@ -8,6 +8,7 @@ import type {
   AssemblySymbolDefinition,
   AssemblySymbolReference,
 } from "../diagnostics.js";
+import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
 
 /** Serialized per-root analysis artifacts persisted between sessions. */
 export type CachedRootAnalysis = {
@@ -33,6 +34,9 @@ type CachePayload = {
   fingerprint: string;
   identity: RootAnalysisCacheIdentity;
   fileHashes: Record<string, string>;
+  /** Per-file mtime (ms since epoch) recorded when the cache was written. Used
+   * as a cheap first-pass check before SHA-256 re-hashing on cache reads. */
+  fileMtimes: Record<string, number>;
   analysis: CachedRootAnalysis;
 };
 
@@ -54,6 +58,16 @@ export class RootAnalysisCache {
 
   /**
    * Loads a cached analysis when every recorded file hash still matches.
+   *
+   * Uses a two-tier validation strategy:
+   * 1. For each file, check mtime first (cheap `statSync`). Files whose mtime
+   *    is unchanged are presumed unmodified and their stored hash is reused.
+   * 2. Only files whose mtime changed (or whose mtime is missing from the
+   *    payload) are re-read and SHA-256 hashed.
+   *
+   * This avoids reading and hashing every include file on every startup when
+   * the project has not changed — the common case for warm LSP restarts.
+   *
    * @param {string} root Absolute root source path.
    * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
    * @param {(file: string) => string | undefined} hashFile Content hasher.
@@ -69,22 +83,44 @@ export class RootAnalysisCache {
       return undefined;
     }
     try {
-      const payload = JSON.parse(readFileSync(file, "utf8")) as CachePayload;
+      const payload = measureInternalPhase("cacheDeserialize", () =>
+        JSON.parse(readFileSync(file, "utf8")) as CachePayload,
+      );
       if (payload.version !== CACHE_VERSION || payload.root !== path.resolve(root)) {
         return undefined;
       }
       if (!identitiesMatch(payload.identity, identity)) {
         return undefined;
       }
+      const recordedFiles = Object.keys(payload.fileHashes).sort();
       const currentHashes: Record<string, string> = {};
-      for (const recorded of Object.keys(payload.fileHashes).sort()) {
+      for (const recorded of recordedFiles) {
+        const recordedHash = payload.fileHashes[recorded];
+        const recordedMtime = payload.fileMtimes?.[recorded];
+
+        // Fast-path: if the file's mtime matches the stored value, the file
+        // has not been modified. Reuse the stored hash without reading the file.
+        if (recordedMtime !== undefined) {
+          try {
+            const currentMtime = statSync(recorded).mtimeMs;
+            if (currentMtime === recordedMtime) {
+              currentHashes[recorded] = recordedHash;
+              continue;
+            }
+          } catch {
+            // File is missing or unreadable; fall through to hashFile which
+            // returns undefined and will cause a cache miss below.
+          }
+        }
+
+        // Slow-path: mtime changed or was not recorded — re-hash the file.
         const hash = hashFile(recorded);
-        if (hash === undefined || hash !== payload.fileHashes[recorded]) {
+        if (hash === undefined || hash !== recordedHash) {
           return undefined;
         }
         currentHashes[recorded] = hash;
       }
-      if (fingerprintFor(currentHashes) !== payload.fingerprint) {
+      if (fingerprintForSorted(currentHashes) !== payload.fingerprint) {
         return undefined;
       }
       return payload.analysis;
@@ -99,12 +135,14 @@ export class RootAnalysisCache {
    * @param {string} root Absolute root source path.
    * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
    * @param {Record<string, string>} fileHashes Sorted path-to-hash map.
+   * @param {Record<string, number>} fileMtimes Sorted path-to-mtime map.
    * @param {CachedRootAnalysis} analysis Artifacts to store.
    */
   write(
     root: string,
     identity: RootAnalysisCacheIdentity,
     fileHashes: Record<string, string>,
+    fileMtimes: Record<string, number>,
     analysis: CachedRootAnalysis,
   ): void {
     try {
@@ -112,16 +150,19 @@ export class RootAnalysisCache {
       const payload: CachePayload = {
         version: CACHE_VERSION,
         root: path.resolve(root),
-        fingerprint: fingerprintFor(fileHashes),
+        fingerprint: fingerprintForSorted(fileHashes),
         identity: {
           target: identity.target,
           architecture: identity.architecture,
           includePaths: [...identity.includePaths],
         },
         fileHashes,
+        fileMtimes,
         analysis,
       };
-      writeFileSync(this.entryPath(root), JSON.stringify(payload));
+      const json = measureInternalPhase("cacheSerialize", () => JSON.stringify(payload));
+      measureInternalPhase("cacheDiskWrite", () => writeFileSync(this.entryPath(root), json));
+      incrementInternalCounter("cacheWriteBytes", json.length);
     } catch {
       // Cache is a speed optimization; a write failure must not surface to the user.
     }
@@ -157,6 +198,19 @@ export class RootAnalysisCache {
 export function fingerprintFor(fileHashes: Record<string, string>): string {
   const material = Object.entries(fileHashes)
     .sort(([left], [right]) => left.localeCompare(right))
+    .map(([file, hash]) => `${file}:${hash}`)
+    .join("\n");
+  return createHash("sha256").update(material).digest("hex");
+}
+
+/**
+ * SHA-256 of already-sorted `path:hash` pairs. Skips the sort for callers
+ * that guarantee the input is already in ascending key order.
+ * @param {Record<string, string>} sortedFileHashes Sorted path-to-hash map.
+ * @returns {string} Hex digest.
+ */
+function fingerprintForSorted(sortedFileHashes: Record<string, string>): string {
+  const material = Object.entries(sortedFileHashes)
     .map(([file, hash]) => `${file}:${hash}`)
     .join("\n");
   return createHash("sha256").update(material).digest("hex");

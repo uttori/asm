@@ -19336,24 +19336,17 @@ var NodeAssemblyFileProvider = class {
    * @returns {AssemblyFileStat} The result.
    */
   stat(filePath) {
-    if (!fs2.existsSync(filePath)) {
-      return {
-        exists: false,
-        readable: false
-      };
+    let st;
+    try {
+      st = fs2.statSync(filePath);
+    } catch {
+      return { exists: false, readable: false };
     }
     try {
       fs2.accessSync(filePath, fs2.constants.R_OK);
-      return {
-        exists: true,
-        readable: true,
-        size: fs2.statSync(filePath).size
-      };
+      return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
     } catch {
-      return {
-        exists: true,
-        readable: false
-      };
+      return { exists: true, readable: false, mtimeMs: st.mtimeMs };
     }
   }
   /**
@@ -19480,6 +19473,9 @@ var directiveCatalog = [
     "diagnostic"
   )
 ];
+var directiveCatalogMap = new Map(
+  directiveCatalog.map((entry) => [entry.keyword.toLowerCase(), entry])
+);
 
 // packages/core/src/plugin/environment.ts
 var canonical = (value) => value.toLowerCase();
@@ -19509,7 +19505,7 @@ var ResolvedToolingCatalog = class {
   targets;
   getInstructions(architecture) {
     const id = this.architectureAliases.get(canonical(architecture)) ?? canonical(architecture);
-    if (!this.target.architectures.map(canonical).includes(id)) {
+    if (!this.target.architectures.some((arch) => canonical(arch) === id)) {
       return [];
     }
     return this.architectures.get(id)?.value.instructions ?? [];
@@ -20549,6 +20545,12 @@ var Assembler = class _Assembler {
   diagnostics = [];
   symbolDefinitions = [];
   symbolReferences = [];
+  /** Deduplication index for {@link symbolDefinitions} — O(1) vs. the former O(n) `.some()` scan. */
+  #symbolDefinitionKeys = /* @__PURE__ */ new Set();
+  /** Deduplication index for {@link symbolReferences} — O(1) vs. the former O(n) `.some()` scan. */
+  #symbolReferenceKeys = /* @__PURE__ */ new Set();
+  /** Deduplication index for {@link includeEdges} — O(1) vs. O(n) `.some()` scan. */
+  #includeEdgeKeys = /* @__PURE__ */ new Set();
   includeEdges = [];
   collectSourceMetadata;
   /** When false, `incsrc`/`include` record an edge but do not parse the included file. */
@@ -20704,6 +20706,9 @@ var Assembler = class _Assembler {
     this.symbolDefinitions.length = 0;
     this.symbolReferences.length = 0;
     this.includeEdges.length = 0;
+    this.#symbolDefinitionKeys.clear();
+    this.#symbolReferenceKeys.clear();
+    this.#includeEdgeKeys.clear();
   }
   /**
    * Records a directed include-graph edge if it has not already been recorded.
@@ -20718,12 +20723,11 @@ var Assembler = class _Assembler {
     if (!fromFile || !toFile) {
       return;
     }
-    const duplicate = this.includeEdges.some(
-      (edge) => edge.fromFile === fromFile && edge.toFile === toFile
-    );
-    if (duplicate) {
+    const edgeKey = `${fromFile}\0${toFile}`;
+    if (this.#includeEdgeKeys.has(edgeKey)) {
       return;
     }
+    this.#includeEdgeKeys.add(edgeKey);
     this.includeEdges.push({ fromFile, toFile });
   }
   /**
@@ -20763,12 +20767,11 @@ var Assembler = class _Assembler {
     }
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolDefinitions.some(
-      (entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName
-    );
-    if (duplicate) {
+    const dedupeKey = `${kind}\0${name}\0${file}\0${line}\0${options.containerName ?? ""}`;
+    if (this.#symbolDefinitionKeys.has(dedupeKey)) {
       return;
     }
+    this.#symbolDefinitionKeys.add(dedupeKey);
     this.symbolDefinitions.push({
       name,
       kind,
@@ -20793,12 +20796,11 @@ var Assembler = class _Assembler {
     }
     const file = options.file ?? this.currentFile;
     const line = options.line ?? this.currentLine;
-    const duplicate = this.symbolReferences.some(
-      (entry) => entry.kind === kind && entry.name === name && entry.location.file === file && entry.location.line === line && entry.containerName === options.containerName
-    );
-    if (duplicate) {
+    const dedupeKey = `${kind}\0${name}\0${file}\0${line}\0${options.containerName ?? ""}`;
+    if (this.#symbolReferenceKeys.has(dedupeKey)) {
       return;
     }
+    this.#symbolReferenceKeys.add(dedupeKey);
     this.symbolReferences.push({
       name,
       kind,
@@ -20954,22 +20956,29 @@ var Assembler = class _Assembler {
    * @returns {Assembler} A configured analysis session.
    */
   createToolingSession() {
-    const session = new _Assembler({
-      environment: this.environment,
-      target: this.targetId,
-      architecture: this.arch,
-      targetOptions: this.targetOptions,
-      baseImage: this.baseImage,
-      fileProvider: this.fileProvider
-    });
+    const session = measureInternalPhase(
+      "sessionConstruct",
+      () => new _Assembler({
+        environment: this.environment,
+        target: this.targetId,
+        architecture: this.arch,
+        targetOptions: this.targetOptions,
+        baseImage: this.baseImage,
+        fileProvider: this.fileProvider
+      })
+    );
     session.includePaths = [...this.includePaths];
     session.followIncludes = this.followIncludes;
-    session.pluginState.restore(this.pluginState.cloneSnapshot());
+    measureInternalPhase(
+      "pluginStateClone",
+      () => session.pluginState.restore(this.pluginState.cloneSnapshot())
+    );
     session.outputFillByte = this.outputFillByte;
     session.padbyte = [...this.padbyte];
     session.fillbyte = [...this.fillbyte];
     session.padUnit = this.padUnit;
     session.arch = this.arch;
+    incrementInternalCounter("sessionConstructions");
     return session;
   }
   /**
@@ -21202,10 +21211,13 @@ var Assembler = class _Assembler {
     }
     const normalizedTargetOptions = target.createOptions?.(configuredTargetOptions) ?? {};
     this.targetOptions = Object.freeze({ ...normalizedTargetOptions });
-    this.pluginState = new PluginSessionStateStore(this.environment.sessionStates, {
-      targetId,
-      targetOptions: this.targetOptions
-    });
+    this.pluginState = measureInternalPhase(
+      "pluginStateCreate",
+      () => new PluginSessionStateStore(this.environment.sessionStates, {
+        targetId,
+        targetOptions: this.targetOptions
+      })
+    );
     const targetFactoryContext = {
       targetId,
       options: this.targetOptions,
@@ -21355,7 +21367,10 @@ var Assembler = class _Assembler {
         [...contribution.aliases ?? []]
       );
     }
-    this.directiveRegistry = this.cloneDirectiveRegistryForSession(this);
+    this.directiveRegistry = measureInternalPhase(
+      "directiveRegistryClone",
+      () => this.cloneDirectiveRegistryForSession(this)
+    );
     this.commandLoweringService = new CommandLoweringService(this);
     this.services.frontEnd = this.frontEndService;
     this.services.lowering = this.commandLoweringService;
@@ -21372,12 +21387,16 @@ var Assembler = class _Assembler {
         });
       }
     });
-    this.runLifecycleHook(
+    measureInternalPhase(
       "onSessionCreated",
-      (lifecycle) => lifecycle.onSessionCreated?.({ state: this.pluginState, session: this })
+      () => this.runLifecycleHook(
+        "onSessionCreated",
+        (lifecycle) => lifecycle.onSessionCreated?.({ state: this.pluginState, session: this })
+      )
     );
     this.selectArchitecture(this.arch, this.arch);
-    this.activateStage("collectDefinitions");
+    measureInternalPhase("constructorActivateStage", () => this.activateStage("collectDefinitions"));
+    incrementInternalCounter("assemblerConstructions");
   }
   runLifecycleHook(hookName, invoke) {
     for (const { record, instance } of this.activeLifecycles) {
@@ -23596,7 +23615,7 @@ var OverlayFileProvider = class {
 
 // packages/core/src/lsp/root-analysis-cache.ts
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync as readFileSync2, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync as readFileSync2, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path3 from "node:path";
 var CACHE_VERSION = 1;
 var RootAnalysisCache = class {
@@ -23609,6 +23628,16 @@ var RootAnalysisCache = class {
   }
   /**
    * Loads a cached analysis when every recorded file hash still matches.
+   *
+   * Uses a two-tier validation strategy:
+   * 1. For each file, check mtime first (cheap `statSync`). Files whose mtime
+   *    is unchanged are presumed unmodified and their stored hash is reused.
+   * 2. Only files whose mtime changed (or whose mtime is missing from the
+   *    payload) are re-read and SHA-256 hashed.
+   *
+   * This avoids reading and hashing every include file on every startup when
+   * the project has not changed — the common case for warm LSP restarts.
+   *
    * @param {string} root Absolute root source path.
    * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
    * @param {(file: string) => string | undefined} hashFile Content hasher.
@@ -23620,22 +23649,38 @@ var RootAnalysisCache = class {
       return void 0;
     }
     try {
-      const payload = JSON.parse(readFileSync2(file, "utf8"));
+      const payload = measureInternalPhase(
+        "cacheDeserialize",
+        () => JSON.parse(readFileSync2(file, "utf8"))
+      );
       if (payload.version !== CACHE_VERSION || payload.root !== path3.resolve(root)) {
         return void 0;
       }
       if (!identitiesMatch(payload.identity, identity)) {
         return void 0;
       }
+      const recordedFiles = Object.keys(payload.fileHashes).sort();
       const currentHashes = {};
-      for (const recorded of Object.keys(payload.fileHashes).sort()) {
+      for (const recorded of recordedFiles) {
+        const recordedHash = payload.fileHashes[recorded];
+        const recordedMtime = payload.fileMtimes?.[recorded];
+        if (recordedMtime !== void 0) {
+          try {
+            const currentMtime = statSync(recorded).mtimeMs;
+            if (currentMtime === recordedMtime) {
+              currentHashes[recorded] = recordedHash;
+              continue;
+            }
+          } catch {
+          }
+        }
         const hash = hashFile(recorded);
-        if (hash === void 0 || hash !== payload.fileHashes[recorded]) {
+        if (hash === void 0 || hash !== recordedHash) {
           return void 0;
         }
         currentHashes[recorded] = hash;
       }
-      if (fingerprintFor(currentHashes) !== payload.fingerprint) {
+      if (fingerprintForSorted(currentHashes) !== payload.fingerprint) {
         return void 0;
       }
       return payload.analysis;
@@ -23649,24 +23694,28 @@ var RootAnalysisCache = class {
    * @param {string} root Absolute root source path.
    * @param {RootAnalysisCacheIdentity} identity Current assembler identity.
    * @param {Record<string, string>} fileHashes Sorted path-to-hash map.
+   * @param {Record<string, number>} fileMtimes Sorted path-to-mtime map.
    * @param {CachedRootAnalysis} analysis Artifacts to store.
    */
-  write(root, identity, fileHashes, analysis) {
+  write(root, identity, fileHashes, fileMtimes, analysis) {
     try {
       mkdirSync(this.cacheDir, { recursive: true });
       const payload = {
         version: CACHE_VERSION,
         root: path3.resolve(root),
-        fingerprint: fingerprintFor(fileHashes),
+        fingerprint: fingerprintForSorted(fileHashes),
         identity: {
           target: identity.target,
           architecture: identity.architecture,
           includePaths: [...identity.includePaths]
         },
         fileHashes,
+        fileMtimes,
         analysis
       };
-      writeFileSync(this.entryPath(root), JSON.stringify(payload));
+      const json = measureInternalPhase("cacheSerialize", () => JSON.stringify(payload));
+      measureInternalPhase("cacheDiskWrite", () => writeFileSync(this.entryPath(root), json));
+      incrementInternalCounter("cacheWriteBytes", json.length);
     } catch {
     }
   }
@@ -23689,8 +23738,8 @@ var RootAnalysisCache = class {
     return path3.join(this.cacheDir, `${id}.json`);
   }
 };
-function fingerprintFor(fileHashes) {
-  const material = Object.entries(fileHashes).sort(([left], [right]) => left.localeCompare(right)).map(([file, hash]) => `${file}:${hash}`).join("\n");
+function fingerprintForSorted(sortedFileHashes) {
+  const material = Object.entries(sortedFileHashes).map(([file, hash]) => `${file}:${hash}`).join("\n");
   return createHash("sha256").update(material).digest("hex");
 }
 function hashBytes(bytes) {
@@ -23720,6 +23769,13 @@ var WorkspaceIndex = class {
   allReferences = [];
   /** Cached complete analysis artifacts for each configured root. */
   rootAnalyses = /* @__PURE__ */ new Map();
+  /**
+   * Per-root set of all files involved in its include graph (both fromFile and
+   * toFile edges, plus the root itself). Maintained in sync with
+   * {@link rootAnalyses} so {@link rootDependsOnFile} is O(1) instead of the
+   * former O(edges) linear scan.
+   */
+  #rootFileSets = /* @__PURE__ */ new Map();
   /** Files whose content changed since the last analysis. */
   dirtyFiles = /* @__PURE__ */ new Set();
   /** Whether configuration changes require every root to be rebuilt. */
@@ -23743,6 +23799,33 @@ var WorkspaceIndex = class {
   lastReindexAnalyzedRoots = 0;
   /** Whether the most recent {@link analyzeRoot} call was a disk-cache hit. */
   lastRootServedFromCache = false;
+  /**
+   * Shared file-provider wrapping the overlay map. Created once and reused
+   * across all calls that need overlay-aware file access (stat, read, hash).
+   * Since {@link overlay} is mutated in place the provider always sees the
+   * current document state without needing to be recreated.
+   */
+  #provider = new OverlayFileProvider(this.overlay);
+  /**
+   * Files that appear as fromFile or toFile in any full-pass root's include
+   * edges, plus the roots themselves. Used by {@link isCoveredByFullPass} so
+   * it can answer in O(1) instead of O(roots × edges).
+   */
+  #coveredByFullPass = /* @__PURE__ */ new Set();
+  /**
+   * Files that appear as `toFile` in any full-pass root's include edges.
+   * Used by {@link rebuildMergedIndex} to skip ingesting a file's standalone
+   * artifacts when a covering full-pass root already produced them in the
+   * correct assembly context. Excludes fromFile entries so roots' own
+   * artifacts are never accidentally skipped.
+   */
+  #includeTargets = /* @__PURE__ */ new Set();
+  /**
+   * For each full-pass root, the set of files that appear in its include
+   * edges (both fromFile and toFile). Rebuilt alongside the other coverage
+   * sets so {@link isCoveredByOtherFullPassRoot} is also O(1).
+   */
+  #coverageByRoot = /* @__PURE__ */ new Map();
   /**
    * Creates a workspace index.
    * @param {WorkspaceIndexOptions} [options] Initial index configuration.
@@ -23793,6 +23876,7 @@ var WorkspaceIndex = class {
       const result = this.analyzeRoot(resolved, { followIncludes: false });
       if (result) {
         this.rootAnalyses.set(resolved, { ...result, diagnostics: [], followedIncludes: false });
+        this.#rebuildCoverageIndex();
       }
     }
     const roots = this.resolveRoots();
@@ -23848,12 +23932,11 @@ var WorkspaceIndex = class {
       return open;
     }
     try {
-      const provider = new OverlayFileProvider(this.overlay);
-      const stat = provider.stat(resolved);
+      const stat = this.#provider.stat(resolved);
       if (!stat.exists || !stat.readable) {
         return void 0;
       }
-      return provider.readTextFile(resolved);
+      return this.#provider.readTextFile(resolved);
     } catch {
       return void 0;
     }
@@ -23955,37 +24038,24 @@ var WorkspaceIndex = class {
   }
   /**
    * True when a followIncludes analysis already owns this file as a root or include.
+   * O(1) — uses the pre-computed {@link #coveredByFullPass} set.
    * @param {string} file The absolute path of the file.
    * @returns {boolean} Whether a covering full-pass analysis exists.
    */
   isCoveredByFullPass(file) {
-    const resolved = path4.resolve(file);
-    for (const [root, analysis] of this.rootAnalyses) {
-      if (!analysis.followedIncludes) {
-        continue;
-      }
-      if (root === resolved) {
-        return true;
-      }
-      if (analysis.includeEdges.some((edge) => edge.fromFile === resolved || edge.toFile === resolved)) {
-        return true;
-      }
-    }
-    return false;
+    return this.#coveredByFullPass.has(path4.resolve(file));
   }
   /**
    * True when a different full-pass root already includes this file.
    * Used to avoid analysing included files as standalone roots.
+   * O(1) — uses the per-root coverage sets in {@link #coverageByRoot}.
    * @param {string} file The absolute path of the file.
    * @returns {boolean} Whether another covering full-pass root exists.
    */
   isCoveredByOtherFullPassRoot(file) {
     const resolved = path4.resolve(file);
-    for (const [root, analysis] of this.rootAnalyses) {
-      if (!analysis.followedIncludes || root === resolved) {
-        continue;
-      }
-      if (analysis.includeEdges.some((edge) => edge.fromFile === resolved || edge.toFile === resolved)) {
+    for (const [root, covered] of this.#coverageByRoot) {
+      if (root !== resolved && covered.has(resolved)) {
         return true;
       }
     }
@@ -24003,6 +24073,7 @@ var WorkspaceIndex = class {
     for (const cachedRoot of this.rootAnalyses.keys()) {
       if (!activeRoots.has(cachedRoot)) {
         this.rootAnalyses.delete(cachedRoot);
+        this.#rootFileSets.delete(cachedRoot);
       }
     }
     const analyzeAll = this.fullReindexRequired;
@@ -24022,6 +24093,12 @@ var WorkspaceIndex = class {
       const result = this.analyzeRoot(root, { followIncludes: true });
       if (result) {
         this.rootAnalyses.set(root, result);
+        const fileSet = /* @__PURE__ */ new Set([root]);
+        for (const edge of result.includeEdges) {
+          fileSet.add(edge.fromFile);
+          fileSet.add(edge.toFile);
+        }
+        this.#rootFileSets.set(root, fileSet);
         if (this.lastRootServedFromCache) {
           cachedRoots += 1;
         } else {
@@ -24029,6 +24106,7 @@ var WorkspaceIndex = class {
         }
       } else {
         this.rootAnalyses.delete(root);
+        this.#rootFileSets.delete(root);
       }
     }
     this.dirtyFiles.clear();
@@ -24036,6 +24114,7 @@ var WorkspaceIndex = class {
     this.lastReindexDurationMs = Date.now() - started;
     this.lastReindexCachedRoots = cachedRoots;
     this.lastReindexAnalyzedRoots = analyzedRoots;
+    this.#rebuildCoverageIndex();
     this.rebuildMergedIndex(roots);
   }
   /**
@@ -24045,14 +24124,11 @@ var WorkspaceIndex = class {
    * @returns {boolean} Whether the root must be re-analysed.
    */
   rootDependsOnFile(root, file) {
-    if (root === file) {
+    const fileSet = this.#rootFileSets.get(root);
+    if (!fileSet) {
       return true;
     }
-    const analysis = this.rootAnalyses.get(root);
-    if (!analysis) {
-      return true;
-    }
-    return analysis.includeEdges.some((edge) => edge.fromFile === file || edge.toFile === file);
+    return fileSet.has(file);
   }
   /**
    * Analyses one root using the current overlay snapshot.
@@ -24081,18 +24157,20 @@ var WorkspaceIndex = class {
       }
     }
     const started = Date.now();
-    const provider = new OverlayFileProvider(this.overlay);
-    const assembler = new Assembler({
+    const assembler = measureInternalPhase("lspAssemblerConstruct", () => new Assembler({
       environment: this.environment,
       target: this.target,
       architecture: this.architecture,
       targetOptions: this.targetOptions,
-      fileProvider: provider
-    });
+      fileProvider: this.#provider
+    }));
     assembler.includePaths = this.deriveIncludePaths(root);
     assembler.followIncludes = followIncludes;
     try {
-      const result = assembler.analyzeSource(content, root, 0, { followIncludes });
+      const result = measureInternalPhase(
+        "lspAnalyzeSource",
+        () => assembler.analyzeSource(content, root, 0, { followIncludes })
+      );
       const analysis = {
         followedIncludes: followIncludes,
         diagnostics: result.diagnostics,
@@ -24104,9 +24182,16 @@ var WorkspaceIndex = class {
         `Analyzed ${path4.basename(root)} in ${Date.now() - started}ms (followIncludes=${followIncludes}, symbols=${result.symbols.length}, refs=${result.references.length}, edges=${result.includeEdges.length}, errors=${result.diagnostics.length})`
       );
       if (followIncludes && this.cache) {
-        const fileHashes = this.collectFileHashes(root, result.includeEdges);
-        if (fileHashes) {
-          this.cache.write(root, this.cacheIdentity(), fileHashes, analysis);
+        const collected = measureInternalPhase(
+          "lspCollectFileHashes",
+          () => this.collectFileHashes(root, result.includeEdges)
+        );
+        const { fileHashes, fileMtimes } = collected ?? {};
+        if (fileHashes && fileMtimes) {
+          measureInternalPhase(
+            "lspCacheWrite",
+            () => this.cache.write(root, this.cacheIdentity(), fileHashes, fileMtimes, analysis)
+          );
         }
       }
       return analysis;
@@ -24140,15 +24225,7 @@ var WorkspaceIndex = class {
     this.allSymbols = [];
     this.allReferences = [];
     const seenEdges = /* @__PURE__ */ new Set();
-    const coveredByFullPass = /* @__PURE__ */ new Set();
-    for (const root of roots) {
-      const result = this.rootAnalyses.get(root);
-      if (result?.followedIncludes) {
-        for (const edge of result.includeEdges) {
-          coveredByFullPass.add(edge.toFile);
-        }
-      }
-    }
+    const coveredByFullPass = this.#includeTargets;
     for (const root of roots) {
       const result = this.rootAnalyses.get(root);
       if (!result) {
@@ -24219,12 +24296,11 @@ var WorkspaceIndex = class {
    */
   readDiskRoot(root) {
     try {
-      const provider = new OverlayFileProvider(this.overlay);
-      const stat = provider.stat(root);
+      const stat = this.#provider.stat(root);
       if (!stat.exists || !stat.readable) {
         return void 0;
       }
-      return provider.readTextFile(root);
+      return this.#provider.readTextFile(root);
     } catch {
       return void 0;
     }
@@ -24261,21 +24337,21 @@ var WorkspaceIndex = class {
       if (overlay !== void 0) {
         return hashBytes(new Uint8Array(Buffer.from(overlay, "utf8")));
       }
-      const provider = new OverlayFileProvider(this.overlay);
-      const stat = provider.stat(file);
+      const stat = this.#provider.stat(file);
       if (!stat.exists || !stat.readable) {
         return void 0;
       }
-      return hashBytes(provider.readFile(file));
+      return hashBytes(this.#provider.readFile(file));
     } catch {
       return void 0;
     }
   }
   /**
-   * Collects content hashes for a root and every file in its include graph.
+   * Collects content hashes and mtimes for a root and every file in its include graph.
    * @param {string} root Absolute root path.
    * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
-   * @returns {Record<string, string> | undefined} Path-to-hash map, or undefined when incomplete.
+   * @returns {{ fileHashes: Record<string, string>; fileMtimes: Record<string, number> } | undefined}
+   *   Path-to-hash and path-to-mtime maps, or undefined when incomplete.
    */
   collectFileHashes(root, includeEdges) {
     const files = /* @__PURE__ */ new Set([root]);
@@ -24283,15 +24359,59 @@ var WorkspaceIndex = class {
       files.add(edge.fromFile);
       files.add(edge.toFile);
     }
-    const hashes = {};
+    const fileHashes = {};
+    const fileMtimes = {};
     for (const file of [...files].sort()) {
-      const hash = this.hashFile(file);
-      if (typeof hash !== "string") {
+      const overlayContent = this.overlay.get(file);
+      if (overlayContent !== void 0) {
+        fileHashes[file] = hashBytes(new Uint8Array(Buffer.from(overlayContent, "utf8")));
+        continue;
+      }
+      const stat = this.#provider.stat(file);
+      if (!stat.exists || !stat.readable) {
         return void 0;
       }
-      hashes[file] = hash;
+      fileHashes[file] = hashBytes(this.#provider.readFile(file));
+      if (stat.mtimeMs !== void 0) {
+        fileMtimes[file] = stat.mtimeMs;
+      }
     }
-    return hashes;
+    return { fileHashes, fileMtimes };
+  }
+  /**
+   * Rebuilds the three coverage indexes from the current {@link rootAnalyses} snapshot.
+   * Must be called after any modification to {@link rootAnalyses}.
+   *
+   * Three distinct sets are maintained because each consumer has different needs:
+   * - {@link #coveredByFullPass}: fromFile + toFile + roots themselves →
+   *   {@link isCoveredByFullPass} (does this file have full-pass coverage?)
+   * - {@link #includeTargets}: toFile only →
+   *   {@link rebuildMergedIndex} skip guard (never skip a root's own artifacts)
+   * - {@link #coverageByRoot}: fromFile + toFile per root →
+   *   {@link isCoveredByOtherFullPassRoot} (is this root already reached by another root?)
+   */
+  #rebuildCoverageIndex() {
+    const coveredByFullPass = /* @__PURE__ */ new Set();
+    const includeTargets = /* @__PURE__ */ new Set();
+    const coverageByRoot = /* @__PURE__ */ new Map();
+    for (const [root, analysis] of this.rootAnalyses) {
+      if (!analysis.followedIncludes) {
+        continue;
+      }
+      coveredByFullPass.add(root);
+      const edgeTouched = /* @__PURE__ */ new Set();
+      for (const edge of analysis.includeEdges) {
+        edgeTouched.add(edge.fromFile);
+        edgeTouched.add(edge.toFile);
+        coveredByFullPass.add(edge.fromFile);
+        coveredByFullPass.add(edge.toFile);
+        includeTargets.add(edge.toFile);
+      }
+      coverageByRoot.set(root, edgeTouched);
+    }
+    this.#coveredByFullPass = coveredByFullPass;
+    this.#includeTargets = includeTargets;
+    this.#coverageByRoot = coverageByRoot;
   }
 };
 
@@ -24383,34 +24503,31 @@ function rangeWidth(range) {
   return lineSpan * 1e6 + columnSpan;
 }
 
-// packages/core/src/lsp/instruction-catalog.ts
-var InstructionCatalogRegistry = class {
-  catalogs = /* @__PURE__ */ new Map();
-  aliases = /* @__PURE__ */ new Map();
-  register(architecture, catalog, aliases = []) {
-    const canonical2 = architecture.toLowerCase();
-    this.catalogs.set(canonical2, catalog);
-    this.aliases.set(canonical2, canonical2);
-    for (const alias of aliases) {
-      this.aliases.set(alias.toLowerCase(), canonical2);
-    }
-  }
-  getInstructionCatalog(architecture) {
-    const canonical2 = this.aliases.get(architecture.toLowerCase());
-    return canonical2 ? this.catalogs.get(canonical2) ?? [] : [];
-  }
-};
-var emptyCatalogs = new InstructionCatalogRegistry();
-function getCatalogForArchitecture(architecture, provider = emptyCatalogs) {
-  return [...provider.getInstructionCatalog(architecture)];
-}
-
 // packages/core/src/lsp/catalog.ts
+function getInstructionCatalog(architecture, provider) {
+  return provider?.getInstructionCatalog(architecture) ?? [];
+}
+var instructionCatalogMapCache = /* @__PURE__ */ new WeakMap();
+function getInstructionCatalogMap(catalog) {
+  let map = instructionCatalogMapCache.get(catalog);
+  if (!map) {
+    map = new Map(catalog.map((d) => [d.mnemonic, d]));
+    instructionCatalogMapCache.set(catalog, map);
+  }
+  return map;
+}
 function findInstruction(mnemonic, architecture, provider) {
   const upper = mnemonic.toUpperCase();
-  return getCatalogForArchitecture(architecture, provider).find(
-    (entry) => entry.mnemonic === upper
-  );
+  return getInstructionCatalogMap(getInstructionCatalog(architecture, provider)).get(upper);
+}
+var directiveCatalogMapCache = /* @__PURE__ */ new WeakMap();
+function getDirectiveCatalogMap(directives) {
+  let map = directiveCatalogMapCache.get(directives);
+  if (!map) {
+    map = new Map(directives.map((d) => [d.keyword.toLowerCase(), d]));
+    directiveCatalogMapCache.set(directives, map);
+  }
+  return map;
 }
 function findDirectiveInCatalog(keyword, directives = directiveCatalog, directivePrefixes = ["@"]) {
   let canonical2 = keyword.toLowerCase();
@@ -24420,7 +24537,7 @@ function findDirectiveInCatalog(keyword, directives = directiveCatalog, directiv
       break;
     }
   }
-  return directives.find((directive2) => directive2.keyword.toLowerCase() === canonical2);
+  return getDirectiveCatalogMap(directives).get(canonical2);
 }
 function renderInstructionDocs(descriptor2) {
   const lines = [];
@@ -24460,7 +24577,7 @@ function renderExpressionFunctionDocs(descriptor2) {
 }
 function buildCompletionEntries(architecture, provider, directives = directiveCatalog, expressionFunctions = []) {
   const entries = [];
-  for (const instruction2 of getCatalogForArchitecture(architecture, provider)) {
+  for (const instruction2 of getInstructionCatalog(architecture, provider)) {
     entries.push({
       label: instruction2.mnemonic,
       kind: "instruction",
@@ -32459,11 +32576,7 @@ function preciseRange(index2, file, line, name, fallback) {
   if (rawLine === void 0) {
     return fallback;
   }
-  const column = findTokenColumn(rawLine, name);
-  if (column < 0) {
-    return fallback;
-  }
-  return import_vscode_languageserver.Range.create(line, column, line, column + name.length);
+  return rangeForTokenOnLine(rawLine, name, line, fallback);
 }
 function preciseRangeWithSigil(index2, file, line, name, fallback) {
   const text = index2.getFileText(file);
@@ -32475,9 +32588,9 @@ function preciseRangeWithSigil(index2, file, line, name, fallback) {
     return fallback;
   }
   const sigilName = name.startsWith("!") ? name : `!${name}`;
-  const sigilColumn = findTokenColumn(rawLine, sigilName);
-  if (sigilColumn >= 0) {
-    return import_vscode_languageserver.Range.create(line, sigilColumn, line, sigilColumn + sigilName.length);
+  const sigilRange = rangeForTokenOnLine(rawLine, sigilName, line, fallback);
+  if (sigilRange !== fallback) {
+    return sigilRange;
   }
   return preciseRange(index2, file, line, name, fallback);
 }
@@ -32487,6 +32600,17 @@ function lookupNameFor(word) {
 function namesMatch(stored, word) {
   const lookup = lookupNameFor(word);
   return stored === lookup || stored === word;
+}
+function rangeForTokenOnLine(rawLine, name, line, fallback) {
+  const column = findTokenColumn(rawLine, name);
+  if (column < 0) {
+    return fallback;
+  }
+  let endColumn = column + name.length;
+  while (endColumn < rawLine.length && IDENTIFIER_CHAR.test(rawLine[endColumn] ?? "")) {
+    endColumn += 1;
+  }
+  return import_vscode_languageserver.Range.create(line, column, line, endColumn);
 }
 function findTokenColumn(lineText, name) {
   if (!name) {
@@ -32709,7 +32833,11 @@ function referencesFor(index2, file, position, includeDeclaration) {
     return [];
   }
   const locations = [];
-  for (const reference of findReferences(name, index2.getAllReferences())) {
+  let matches = findReferences(name, index2.getAllReferences());
+  if (matches.length === 0) {
+    matches = findReferences(name, index2.getReferences(file));
+  }
+  for (const reference of matches) {
     locations.push(
       import_vscode_languageserver.Location.create(pathToUri(reference.location.file), referenceRange(index2, reference))
     );
@@ -33240,8 +33368,12 @@ function scheduleReindex() {
     connection.console.info(
       `Full workspace reindex finished in ${status.lastReindexDurationMs ?? 0}ms (analyzed=${status.lastReindexAnalyzedRoots}, cached=${status.lastReindexCachedRoots}, files=${status.fileCount}, symbols=${status.symbolCount}, errors=${status.errorCount})`
     );
+    connection.console.info(
+      `Index contains ${status.referenceCount} references across ${status.fileCount} files`
+    );
     publishAllDiagnostics();
-  }, 150);
+    void connection.languages.semanticTokens.refresh();
+  }, 500);
 }
 function publishAllDiagnostics() {
   if (!index) return;

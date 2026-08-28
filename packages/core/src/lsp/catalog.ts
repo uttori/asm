@@ -1,8 +1,5 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
-import {
-  getCatalogForArchitecture,
-  type InstructionCatalogProvider,
-} from "./instruction-catalog.js";
+import type { InstructionCatalogProvider } from "./instruction-catalog.js";
 import { directiveCatalog, findDirective, type DirectiveDescriptor } from "./directive-catalog.js";
 import type { ExpressionFunctionDescriptor } from "../plugin/contracts.js";
 
@@ -29,8 +26,8 @@ export type CatalogEntry = {
 export function getInstructionCatalog(
   architecture: string,
   provider?: InstructionCatalogProvider,
-): InstructionDescriptor[] {
-  return getCatalogForArchitecture(architecture, provider);
+): readonly InstructionDescriptor[] {
+  return provider?.getInstructionCatalog(architecture) ?? [];
 }
 
 /**
@@ -40,15 +37,30 @@ export function getInstructionCatalog(
  * @param {InstructionCatalogProvider} [provider] Optional extension catalog provider.
  * @returns {InstructionDescriptor | undefined} The descriptor, if known.
  */
+/** WeakMap cache of pre-built mnemonic maps per instruction catalog array reference. */
+const instructionCatalogMapCache = new WeakMap<
+  readonly InstructionDescriptor[],
+  Map<string, InstructionDescriptor>
+>();
+
+function getInstructionCatalogMap(
+  catalog: readonly InstructionDescriptor[],
+): Map<string, InstructionDescriptor> {
+  let map = instructionCatalogMapCache.get(catalog);
+  if (!map) {
+    map = new Map(catalog.map((d) => [d.mnemonic, d]));
+    instructionCatalogMapCache.set(catalog, map);
+  }
+  return map;
+}
+
 export function findInstruction(
   mnemonic: string,
   architecture: string,
   provider?: InstructionCatalogProvider,
 ): InstructionDescriptor | undefined {
   const upper = mnemonic.toUpperCase();
-  return getCatalogForArchitecture(architecture, provider).find(
-    (entry) => entry.mnemonic === upper,
-  );
+  return getInstructionCatalogMap(getInstructionCatalog(architecture, provider)).get(upper);
 }
 
 /**
@@ -67,6 +79,23 @@ export function findDirectiveEntry(keyword: string): DirectiveDescriptor | undef
  * @param {readonly string[]} [directivePrefixes] Prefixes accepted by the active syntax profile.
  * @returns {DirectiveDescriptor | undefined} The matching active directive.
  */
+/** WeakMap cache of pre-built keyword maps per catalog array reference. */
+const directiveCatalogMapCache = new WeakMap<
+  readonly DirectiveDescriptor[],
+  Map<string, DirectiveDescriptor>
+>();
+
+function getDirectiveCatalogMap(
+  directives: readonly DirectiveDescriptor[],
+): Map<string, DirectiveDescriptor> {
+  let map = directiveCatalogMapCache.get(directives);
+  if (!map) {
+    map = new Map(directives.map((d) => [d.keyword.toLowerCase(), d]));
+    directiveCatalogMapCache.set(directives, map);
+  }
+  return map;
+}
+
 export function findDirectiveInCatalog(
   keyword: string,
   directives: readonly DirectiveDescriptor[] = directiveCatalog,
@@ -79,7 +108,7 @@ export function findDirectiveInCatalog(
       break;
     }
   }
-  return directives.find((directive) => directive.keyword.toLowerCase() === canonical);
+  return getDirectiveCatalogMap(directives).get(canonical);
 }
 
 /**
@@ -157,7 +186,7 @@ export function buildCompletionEntries(
 ): CatalogEntry[] {
   const entries: CatalogEntry[] = [];
 
-  for (const instruction of getCatalogForArchitecture(architecture, provider)) {
+  for (const instruction of getInstructionCatalog(architecture, provider)) {
     entries.push({
       label: instruction.mnemonic,
       kind: "instruction",
