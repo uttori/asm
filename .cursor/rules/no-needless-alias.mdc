@@ -1,0 +1,30 @@
+---
+description: Never alias a variable to itself just to satisfy TypeScript narrowing
+alwaysApply: true
+---
+
+# No needless variable reassignment
+
+Do not copy a binding into a same-value alias (`const foo = bar` where `foo` is only used to dodge `T | undefined` on a module-level `let`).
+
+Use the original name. If a closure can run after the binding changes, guard it:
+
+```ts
+// BAD — alias exists only because `client` is `LanguageClient | undefined`
+client = new LanguageClient(...);
+const languageClient = client;
+void languageClient.start().then(() => {
+  languageClient.onNotification(...);
+});
+
+// GOOD — same binding; guard where the value may have gone
+client = new LanguageClient(...);
+void client.start().then(() => {
+  if (!client) return;
+  client.onNotification(...);
+});
+```
+
+Also forbidden: `const self = this`, `const that = this`, `const value = x` when `value` is never transformed, renamed for clarity across a real abstraction, or capturing a snapshot that can diverge.
+
+Allowed: a new name that is a different concept (`const uri = document.uri`), a snapshot that must not see later writes, or destructuring that pulls fields out of an object.

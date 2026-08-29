@@ -1,3 +1,11 @@
+/** Nested keyword valid after a directive (`bankcross` after `check`). */
+export type DirectiveOperandDescriptor = {
+  keyword: string;
+  summary: string;
+  syntax: string;
+  operands?: readonly DirectiveOperandDescriptor[];
+};
+
 /**
  * A static description of an assembler directive or control-flow keyword for
  * editor tooling (hover, completion, signature help).
@@ -9,6 +17,8 @@ export type DirectiveDescriptor = {
   summary: string;
   /** Example syntax, e.g. "org $address". */
   syntax: string;
+  /** Nested keywords valid after this directive (`bankcross`, `title`). */
+  operands?: readonly DirectiveOperandDescriptor[];
   /** A coarse grouping used to organize completion. */
   group:
     | "data"
@@ -25,6 +35,18 @@ export type DirectiveDescriptor = {
     | "compat"
     | "label";
 };
+
+const op = (
+  keyword: string,
+  summary: string,
+  syntax: string,
+  operands?: readonly DirectiveOperandDescriptor[],
+): DirectiveOperandDescriptor => ({
+  keyword,
+  summary,
+  syntax,
+  ...(operands ? { operands } : {}),
+});
 
 /**
  * The directive catalog. Keywords mirror the registrations in
@@ -163,9 +185,10 @@ export const directiveCatalog: DirectiveDescriptor[] = [
 
   {
     keyword: "base",
-    summary: "Set the logical base address for emitted code.",
-    syntax: "base $address",
+    summary: "Set or restore the logical base address.",
+    syntax: "base address|off",
     group: "layout",
+    operands: [op("off", "Restore the saved physical/base address relationship.", "base off")],
   },
   {
     keyword: "org",
@@ -205,21 +228,101 @@ export const directiveCatalog: DirectiveDescriptor[] = [
   },
   {
     keyword: "check",
-    summary: "Assert an assembler condition (asar-compatible).",
-    syntax: "check ...",
+    summary: "Configure bank-cross checks or enable unguarded ROM reads.",
+    syntax: "check bankcross off|half|full|on | check title",
     group: "layout",
+    operands: [
+      {
+        keyword: "bankcross",
+        summary:
+          "Set whether multi-byte writes may cross a bank boundary. Default is full (64 KiB).",
+        syntax: "check bankcross off|half|full|on",
+        operands: [
+          {
+            keyword: "off",
+            summary: "Disable the bank-boundary check and enable mapper-specific PC wrapping.",
+            syntax: "check bankcross off",
+          },
+          {
+            keyword: "half",
+            summary: "Reject writes that cross a 32 KiB half-bank boundary.",
+            syntax: "check bankcross half",
+          },
+          {
+            keyword: "full",
+            summary: "Reject writes that cross a 64 KiB bank boundary (the default).",
+            syntax: "check bankcross full",
+          },
+          {
+            keyword: "on",
+            summary: "Alias of full: reject writes that cross a 64 KiB bank boundary.",
+            syntax: "check bankcross on",
+          },
+        ],
+      },
+      {
+        keyword: "title",
+        summary: "Enable read1…read4 without a default value. Does not inspect the ROM title.",
+        syntax: "check title",
+      },
+    ],
   },
   {
     keyword: "optimize",
-    summary: "Control optimization behavior (asar-compatible).",
-    syntax: "optimize ...",
+    summary: "Configure direct-page size optimization. Other Asar optimize families are no-ops.",
+    syntax: "optimize dp none|ram|always",
     group: "layout",
+    operands: [
+      op("dp", "Direct-page width inference for same-bank labels.", "optimize dp none|ram|always", [
+        op("none", "Disable direct-page optimization (the default).", "optimize dp none"),
+        op("ram", "Allow inferred DP width for same-bank RAM labels.", "optimize dp ram"),
+        op("always", "Allow inferred DP width whenever the address fits.", "optimize dp always"),
+      ]),
+      op(
+        "address",
+        "Asar address optimizer (accepted no-op in this assembler).",
+        "optimize address default|ram|mirrors|none",
+        [
+          op(
+            "default",
+            "Asar default address optimization (no-op here).",
+            "optimize address default",
+          ),
+          op(
+            "ram",
+            "Asar RAM-mirroring address optimization (no-op here).",
+            "optimize address ram",
+          ),
+          op(
+            "mirrors",
+            "Asar mirror-aware address optimization (no-op here).",
+            "optimize address mirrors",
+          ),
+          op("none", "Disable Asar address optimization (no-op here).", "optimize address none"),
+        ],
+      ),
+    ],
   },
   {
     keyword: "arch",
     summary: "Select the active CPU architecture.",
-    syntax: "arch 65816|spc700|superfx",
+    syntax: "arch 65816|spc700|spc700-raw|spc700-inline|superfx",
     group: "layout",
+    operands: [
+      op("65816", "Assemble 65C816 (main SNES CPU) instructions.", "arch 65816"),
+      op("spc700", "Assemble SPC700 instructions (typically inside spcblock).", "arch spc700"),
+      op(
+        "spc700-raw",
+        "Assemble a standalone SPC payload with 1:1 norom addressing.",
+        "arch spc700-raw",
+      ),
+      op(
+        "spc700-inline",
+        "Asar-compatible implicit SPC blocks: later org starts a block.",
+        "arch spc700-inline",
+      ),
+      op("superfx", "Assemble Super FX / GSU instructions.", "arch superfx"),
+    ],
   },
   { keyword: "lorom", summary: "Use the LoROM memory mapper.", syntax: "lorom", group: "layout" },
   { keyword: "hirom", summary: "Use the HiROM memory mapper.", syntax: "hirom", group: "layout" },
@@ -253,9 +356,20 @@ export const directiveCatalog: DirectiveDescriptor[] = [
 
   {
     keyword: "namespace",
-    summary: "Set the active label namespace.",
-    syntax: "namespace name",
+    summary: "Set, nest, or clear the active label namespace.",
+    syntax: "namespace [name|off|nested on|nested off]",
     group: "namespace",
+    operands: [
+      op("off", "Leave the current namespace (pop when nested, else clear).", "namespace off"),
+      op("nested", "Enable or disable nested namespace paths.", "namespace nested on|off", [
+        op(
+          "on",
+          "Build namespace paths from successive namespace directives.",
+          "namespace nested on",
+        ),
+        op("off", "Disable nested paths and clear the current namespace.", "namespace nested off"),
+      ]),
+    ],
   },
   {
     keyword: "pushns",
@@ -306,6 +420,10 @@ export const directiveCatalog: DirectiveDescriptor[] = [
     summary: "Load an asar character mapping table file (`char=hex` per line).",
     syntax: 'table "file"[,ltr|rtl]',
     group: "table",
+    operands: [
+      op("ltr", "Left-to-right table lines: character=hex.", 'table "file",ltr'),
+      op("rtl", "Right-to-left table lines: hex=character.", 'table "file",rtl'),
+    ],
   },
   {
     keyword: "cleartable",
@@ -329,27 +447,47 @@ export const directiveCatalog: DirectiveDescriptor[] = [
   {
     keyword: "spcblock",
     summary: "Begin an SPC700 code block.",
-    syntax: "spcblock ...",
+    syntax: "spcblock destination [nspc]",
     group: "spc",
+    operands: [
+      op(
+        "nspc",
+        "Nintendo-style transfer block with a 16-bit size placeholder.",
+        "spcblock dest nspc",
+      ),
+    ],
   },
   {
     keyword: "endspcblock",
     summary: "End an SPC700 code block.",
-    syntax: "endspcblock",
+    syntax: "endspcblock [execute address]",
     group: "spc",
+    operands: [
+      op(
+        "execute",
+        "Append a zero-size execute record at the given SPC address.",
+        "endspcblock execute address",
+      ),
+    ],
   },
 
   {
     keyword: "struct",
     summary: "Begin a structure definition.",
-    syntax: "struct name",
+    syntax: "struct name [extends parent]",
     group: "struct",
+    operands: [
+      op("extends", "Inherit members from an existing struct.", "struct name extends parent"),
+    ],
   },
   {
     keyword: "endstruct",
     summary: "End a structure definition.",
-    syntax: "endstruct",
+    syntax: "endstruct [align value]",
     group: "struct",
+    operands: [
+      op("align", "Round the struct size/stride up to an alignment.", "endstruct align value"),
+    ],
   },
 
   {
@@ -397,9 +535,15 @@ export const directiveCatalog: DirectiveDescriptor[] = [
   },
   {
     keyword: "warnings",
-    summary: "Control warnings (asar-compatible).",
-    syntax: "warnings ...",
+    summary: "Control warnings (asar-compatible no-op).",
+    syntax: "warnings push|pull|enable|disable",
     group: "compat",
+    operands: [
+      op("push", "Save the current warning state (no-op here).", "warnings push"),
+      op("pull", "Restore the last pushed warning state (no-op here).", "warnings pull"),
+      op("enable", "Enable a warning id (no-op here).", "warnings enable id"),
+      op("disable", "Disable a warning id (no-op here).", "warnings disable id"),
+    ],
   },
   {
     keyword: "print",
@@ -486,18 +630,30 @@ export const directiveCatalog: DirectiveDescriptor[] = [
     summary: "Set accumulator width hint (ca65 alias for .a8/.a16).",
     syntax: ".accu 8|16",
     group: "compat",
+    operands: [
+      op("8", "8-bit accumulator width hint.", ".accu 8"),
+      op("16", "16-bit accumulator width hint.", ".accu 16"),
+    ],
   },
   {
     keyword: ".index",
     summary: "Set index register width hint (ca65 alias for .i8/.i16).",
     syntax: ".index 8|16",
     group: "compat",
+    operands: [
+      op("8", "8-bit index width hint.", ".index 8"),
+      op("16", "16-bit index width hint.", ".index 16"),
+    ],
   },
   {
     keyword: ".smart",
     summary: "Enable/disable automatic M/X width tracking via SEP/REP (ca65 compatible).",
     syntax: ".smart [on|off]",
     group: "compat",
+    operands: [
+      op("on", "Track M/X width from SEP/REP.", ".smart on"),
+      op("off", "Stop automatic M/X width tracking.", ".smart off"),
+    ],
   },
   {
     keyword: ".setcpu",

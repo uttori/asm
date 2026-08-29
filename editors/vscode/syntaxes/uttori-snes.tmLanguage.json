@@ -42,6 +42,70 @@
     "pseudo-ops-snes": {
       "patterns": [
         {
+          "match": "\\b(?i:(optimize))\\s+(?i:(dp|address))\\s+(?i:(none|ram|always|default|mirrors))\\b",
+          "captures": {
+            "1": { "name": "support.function.pseudo.uttori-snes" },
+            "2": { "name": "keyword.directive.operand.uttori-snes" },
+            "3": { "name": "constant.language.uttori-snes" }
+          }
+        },
+        {
+          "match": "\\b(?i:spcblock)\\b[^;]*\\b(?i:(nspc))\\b",
+          "captures": {
+            "1": { "name": "keyword.directive.operand.uttori-snes" }
+          }
+        },
+        {
+          "match": "\\b(?i:(endspcblock))\\s+(?i:(execute))\\b",
+          "captures": {
+            "1": { "name": "support.function.pseudo.uttori-snes" },
+            "2": { "name": "keyword.directive.operand.uttori-snes" }
+          }
+        },
+        {
+          "match": "\\b(?i:(warnings))\\s+(?i:(push|pull|enable|disable))\\b",
+          "captures": {
+            "1": { "name": "support.function.pseudo.uttori-snes" },
+            "2": { "name": "keyword.directive.operand.uttori-snes" }
+          }
+        },
+        {
+          "match": "(?i)(\\.accu|\\.index)\\s+(8|16)\\b",
+          "captures": {
+            "1": { "name": "keyword.control.directive.uttori-asm" },
+            "2": { "name": "constant.numeric.decimal.uttori-asm" }
+          }
+        },
+        {
+          "match": "(?i)(\\.smart)\\s+(?i:(on|off))\\b",
+          "captures": {
+            "1": { "name": "keyword.control.directive.uttori-asm" },
+            "2": { "name": "constant.language.uttori-snes" }
+          }
+        },
+        {
+          "match": "\\b(?i:(check)\\s+(bankcross)\\s+(off|half|full|on))\\b",
+          "captures": {
+            "1": { "name": "support.function.pseudo.uttori-snes" },
+            "2": { "name": "keyword.directive.operand.uttori-snes" },
+            "3": { "name": "constant.language.uttori-snes" }
+          }
+        },
+        {
+          "match": "\\b(?i:(check)\\s+(bankcross))\\b",
+          "captures": {
+            "1": { "name": "support.function.pseudo.uttori-snes" },
+            "2": { "name": "keyword.directive.operand.uttori-snes" }
+          }
+        },
+        {
+          "match": "\\b(?i:(check)\\s+(title))\\b",
+          "captures": {
+            "1": { "name": "support.function.pseudo.uttori-snes" },
+            "2": { "name": "keyword.directive.operand.uttori-snes" }
+          }
+        },
+        {
           "name": "support.function.pseudo.uttori-snes",
           "match": "\\b(?i:lorom|hirom|exlorom|exhirom|sa1rom|sfxrom|norom|fullsa1rom|fastrom|freecode|freedata|freespace|freespacebyte|prot|spcblock|endspcblock|startpos|check|optimize|dpbase|warnings|print|warn|autoclean|autoclear|includefrom|warnpc|pushpc|pullpc|pushbase|pullbase|asar)\\b"
         }

@@ -41,7 +41,7 @@ export interface NormalizedPluginModuleRequest {
   readonly resolvedModule: string;
   readonly pluginId: string;
   readonly options: Readonly<Record<string, unknown>>;
-  readonly source: "configuration" | "host-default" | "override";
+  readonly source: "configuration" | "host-default" | "override" | "bundled";
   readonly configEntry: string;
   readonly bundled: boolean;
 }
@@ -75,6 +75,11 @@ export interface LoadProjectEnvironmentOptions {
   /** Explicit host/CLI modules, appended after configuration plugins. */
   readonly pluginModules?: readonly PluginModuleRequest[];
   readonly bundledPlugins?: ReadonlyMap<string, AssemblerPlugin>;
+  /**
+   * When true, activate every entry in {@link bundledPlugins} that is not already
+   * requested by configuration, host defaults, or {@link pluginModules}.
+   */
+  readonly activateBundledPlugins?: boolean;
   readonly overrides?: ProjectConfigurationOverrides;
   readonly defaults?: ProjectConfigurationDefaults;
   readonly logger?: PluginLogger;

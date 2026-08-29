@@ -78,6 +78,54 @@
     "pseudo-ops": {
       "patterns": [
         {
+          "match": "\\b(?i:(arch))\\s+(?i:(spc700-inline|spc700-raw|spc700|65816|superfx))\\b",
+          "captures": {
+            "1": { "name": "support.function.pseudo.uttori-asm" },
+            "2": { "name": "constant.language.uttori-asm" }
+          }
+        },
+        {
+          "match": "\\b(?i:(base))\\s+(?i:(off))\\b",
+          "captures": {
+            "1": { "name": "support.function.pseudo.uttori-asm" },
+            "2": { "name": "constant.language.uttori-asm" }
+          }
+        },
+        {
+          "match": "\\b(?i:table)\\b[^;]*\\b(?i:(ltr|rtl))\\b",
+          "captures": {
+            "1": { "name": "constant.language.uttori-asm" }
+          }
+        },
+        {
+          "match": "\\b(?i:(namespace))\\s+(?i:(nested))\\s+(?i:(on|off))\\b",
+          "captures": {
+            "1": { "name": "keyword.directive.namespace.uttori-asm" },
+            "2": { "name": "keyword.directive.operand.uttori-asm" },
+            "3": { "name": "constant.language.uttori-asm" }
+          }
+        },
+        {
+          "match": "\\b(?i:(namespace))\\s+(?i:(off))\\b",
+          "captures": {
+            "1": { "name": "keyword.directive.namespace.uttori-asm" },
+            "2": { "name": "constant.language.uttori-asm" }
+          }
+        },
+        {
+          "match": "\\b(?i:struct)\\s+[A-Za-z_][A-Za-z0-9_]*\\s+(?i:(extends))\\b",
+          "captures": {
+            "1": { "name": "keyword.directive.operand.uttori-asm" }
+          }
+        },
+        {
+          "match": "\\b(?i:(endstruct))\\s+(?i:(align))\\b",
+          "captures": {
+            "1": { "name": "keyword.directive.struct.uttori-asm" },
+            "2": { "name": "keyword.directive.operand.uttori-asm" }
+          }
+        },
+        {
           "name": "support.function.pseudo.uttori-asm",
           "match": "\\b(?i:db|dw|dl|dd|dc\\.b|dc\\.w|dc\\.l|org|base|bank|skip|fillbyte|fillword|filllong|filldword|fill|padbyte|padword|padlong|paddword|pad|incbin|incsrc|include|includeonce|pushpc|pullpc|pushbase|pullbase|table|cleartable|pushtable|pulltable|arch|function|undef|global)\\b"
         },

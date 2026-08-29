@@ -436,3 +436,29 @@ test("the top-level loader API builds a non-SNES fixture without activating SNES
   t.deepEqual([...assemble(loaded, "org 0\nfix")], [0x5a]);
   await loaded.dispose();
 });
+
+test("activateBundledPlugins unions unused bundled modules after configuration plugins", async (t) => {
+  const auxiliary = definePlugin({
+    manifest: {
+      id: "loader.auxiliary-plugin",
+      name: "Loader auxiliary plugin",
+      version: "1.0.0",
+      apiVersion: PLUGIN_API_VERSION,
+    },
+    activate: () => undefined,
+  });
+  const loader = new NodePluginLoader();
+  const loaded = await loader.loadProjectEnvironment({
+    cwd: path.join(fixtures, "relative-project"),
+    activateBundledPlugins: true,
+    bundledPlugins: new Map<string, AssemblerPlugin>([["bundled:auxiliary", auxiliary]]),
+  });
+  t.deepEqual(
+    loaded.configuration.plugins.map((plugin) => [plugin.pluginId, plugin.source]),
+    [
+      ["loader.fixture-plugin", "configuration"],
+      ["loader.auxiliary-plugin", "bundled"],
+    ],
+  );
+  await loaded.dispose();
+});

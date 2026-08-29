@@ -12,6 +12,7 @@ import {
   hoverFor,
   pathToUri,
   prepareRenameFor,
+  projectOutlineFor,
   referencesFor,
   renameEditsFor,
   semanticTokensFor,
@@ -585,7 +586,11 @@ test("sibling dot labels nest flat under their parent global label", (t) => {
   // No dot label should have another dot label as a child (the cascading nesting bug).
   for (const child of create?.children ?? []) {
     const grandchildren = child.children ?? [];
-    t.is(grandchildren.length, 0, `${child.name} should have no children, got: ${grandchildren.map((g) => g.name).join(", ")}`);
+    t.is(
+      grandchildren.length,
+      0,
+      `${child.name} should have no children, got: ${grandchildren.map((g) => g.name).join(", ")}`,
+    );
   }
 
   // The setLabel recording (which has the address value) should win the dedup.
@@ -696,4 +701,194 @@ test("compound hierarchical labels are independently targetable", (t) => {
     ),
     "bra .8053 is highlighted",
   );
+});
+
+test("dotted local compounds like .idx_beginner hover each segment", (t) => {
+  const sourceFile = path.resolve("/virtual/difficulty-tables.asm");
+  const source = [
+    "lorom",
+    "org $008000",
+    "Tables:",
+    ".difficulty_offset:",
+    "    dw .idx_beginner, .idx_normal",
+    ".idx:",
+    "..beginner:",
+    "    nop",
+    "..normal:",
+    "    nop",
+    "",
+  ].join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(sourceFile, source);
+  const lines = source.split("\n");
+  const useLine = 4;
+  const token = ".idx_beginner";
+  const tokenColumn = columnOf(lines[useLine], token);
+  const idxColumn = tokenColumn + 1;
+  const beginnerColumn = tokenColumn + token.indexOf("beginner");
+
+  const outline = documentSymbolsFor(index, sourceFile);
+  const tables = outline.find((symbol) => symbol.name === "Tables");
+  const idx = (tables?.children ?? []).find((child) => child.name === "idx");
+  t.truthy(idx, "outline shows .idx under Tables");
+  t.true(
+    (idx?.children ?? []).some((child) => child.name === "beginner"),
+    "outline nests ..beginner under .idx",
+  );
+
+  const idxHover = hoverFor(index, sourceFile, { line: useLine, character: idxColumn }, source);
+  t.truthy(idxHover, "hover on .idx in .idx_beginner");
+  t.regex(JSON.stringify(idxHover), /\*\*\.idx\*\*/);
+  t.notRegex(JSON.stringify(idxHover), /beginner/i);
+
+  const beginnerHover = hoverFor(
+    index,
+    sourceFile,
+    { line: useLine, character: beginnerColumn },
+    source,
+  );
+  t.truthy(beginnerHover, "hover on beginner in .idx_beginner");
+  t.regex(JSON.stringify(beginnerHover), /beginner/i);
+
+  const idxDefinition = definitionFor(index, sourceFile, {
+    line: useLine,
+    character: idxColumn,
+  });
+  t.is(idxDefinition.length, 1);
+  t.is(idxDefinition[0].range.start.line, 5);
+
+  const beginnerDefinition = definitionFor(index, sourceFile, {
+    line: useLine,
+    character: beginnerColumn,
+  });
+  t.is(beginnerDefinition.length, 1);
+  t.is(beginnerDefinition[0].range.start.line, 6);
+
+  const labelType = semanticTokensLegend.tokenTypes.indexOf("label");
+  const decoded = decodeSemanticTokens(semanticTokensFor(index, sourceFile).data);
+  t.true(
+    decoded.some(
+      (token) =>
+        token.line === useLine &&
+        token.char === tokenColumn &&
+        token.type === labelType &&
+        token.length === ".idx".length,
+    ),
+    "parent segment of .idx_beginner is a label token",
+  );
+  t.true(
+    decoded.some(
+      (token) =>
+        token.line === useLine &&
+        token.char === beginnerColumn &&
+        token.type === labelType &&
+        token.length === "beginner".length,
+    ),
+    "sublabel segment of .idx_beginner is a label token",
+  );
+  t.false(
+    decoded.some(
+      (entry) =>
+        entry.line === useLine &&
+        entry.char === tokenColumn &&
+        entry.length === ".idx_beginner".length,
+    ),
+    "compound .idx_beginner is not a single token",
+  );
+});
+
+test("asar directive operands have hover docs", (t) => {
+  const sourceFile = path.resolve("/virtual/directive-operands.asm");
+  const source = [
+    "lorom",
+    "org $008000",
+    "check bankcross full",
+    "optimize dp ram",
+    "arch spc700-inline",
+    "namespace nested on",
+    "base off",
+    'table "font.tbl",ltr',
+    "spcblock $5000 nspc",
+    "endspcblock execute Start",
+    "struct Enemy extends Actor",
+    "endstruct align $10",
+    "warnings disable Wmapper_already_set",
+    ".smart on",
+    "nop",
+    "",
+  ].join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(sourceFile, source);
+  const lines = source.split("\n");
+  const hoverWord = (line: number, token: string, pattern: RegExp): void => {
+    const column = columnOf(lines[line], token);
+    const hover = hoverFor(index, sourceFile, { line, character: column }, source);
+    t.regex(JSON.stringify(hover), pattern, `${token} on line ${line}`);
+  };
+
+  hoverWord(2, "bankcross", /bankcross/i);
+  hoverWord(2, "full", /\*\*full\*\*/);
+  hoverWord(3, "dp", /\*\*dp\*\*/);
+  hoverWord(3, "ram", /direct-page|DP/i);
+  hoverWord(4, "spc700-inline", /spc700-inline/);
+  hoverWord(5, "nested", /\*\*nested\*\*/);
+  hoverWord(5, "on", /nested/i);
+  hoverWord(6, "off", /base off/);
+  hoverWord(7, "ltr", /\*\*ltr\*\*/);
+  hoverWord(8, "nspc", /\*\*nspc\*\*/);
+  hoverWord(9, "execute", /\*\*execute\*\*/);
+  hoverWord(10, "extends", /\*\*extends\*\*/);
+  hoverWord(11, "align", /\*\*align\*\*/);
+  hoverWord(12, "disable", /\*\*disable\*\*/);
+  hoverWord(13, "on", /\.smart on/);
+});
+
+test("project outline groups the include DAG under entry points and lists orphans", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-project-outline-"));
+  const main = path.join(directory, "main.asm");
+  const child = path.join(directory, "child.asm");
+  const shared = path.join(directory, "shared.asm");
+  const other = path.join(directory, "other.asm");
+  const orphan = path.join(directory, "orphan.asm");
+  fs.writeFileSync(main, 'incsrc "child.asm"\nincsrc "shared.asm"\nMainLabel:\n  nop\n');
+  fs.writeFileSync(child, 'incsrc "shared.asm"\nChildLabel:\n  nop\n');
+  fs.writeFileSync(shared, "SharedLabel:\n  nop\n");
+  fs.writeFileSync(other, "OtherLabel:\n  nop\n");
+  fs.writeFileSync(orphan, "OrphanLabel:\n  nop\n");
+
+  try {
+    const index = new WorkspaceIndex(
+      snesWorkspaceIndexOptions({ entryPoints: [main, other], includePaths: [directory] }),
+    );
+    index.reindex();
+    index.openDocument(orphan, "OrphanLabel:\n  nop\n");
+
+    const outline = projectOutlineFor(index);
+    t.deepEqual(
+      outline.map((node) => node.kind),
+      ["entry", "entry", "orphanGroup"],
+    );
+    t.is(outline[0]?.label, "Entry: main.asm");
+    t.is(outline[1]?.label, "Entry: other.asm");
+    t.is(outline[2]?.label, "Orphans");
+
+    const mainFile = outline[0]?.children?.[0];
+    t.is(mainFile?.kind, "file");
+    t.is(mainFile?.label, "main.asm");
+    const included = mainFile?.children ?? [];
+    t.true(included.some((node) => node.label === "child.asm" && node.kind === "file"));
+    t.true(included.some((node) => node.label === "shared.asm" && node.kind === "include"));
+
+    const childNode = included.find((node) => node.label === "child.asm");
+    t.true(
+      (childNode?.children ?? []).some(
+        (node) => node.label === "shared.asm" && node.kind === "file",
+      ),
+    );
+
+    t.true((outline[2]?.children ?? []).some((node) => node.label === "orphan.asm"));
+    t.false(JSON.stringify(outline).includes("MainLabel"));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });

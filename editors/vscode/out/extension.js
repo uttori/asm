@@ -3434,7 +3434,7 @@ var init_main = __esm({
       }
       Position2.is = is;
     })(Position || (Position = {}));
-    (function(Range2) {
+    (function(Range3) {
       function create(one, two, three, four) {
         if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
           return { start: Position.create(one, two), end: Position.create(three, four) };
@@ -3444,12 +3444,12 @@ var init_main = __esm({
           throw new Error(`Range#create called with invalid arguments[${one}, ${two}, ${three}, ${four}]`);
         }
       }
-      Range2.create = create;
+      Range3.create = create;
       function is(value) {
         const candidate = value;
         return Is.objectLiteral(candidate) && Position.is(candidate.start) && Position.is(candidate.end);
       }
-      Range2.is = is;
+      Range3.is = is;
     })(Range || (Range = {}));
     (function(Location2) {
       function create(uri, range) {
@@ -4310,33 +4310,33 @@ var init_main = __esm({
       }
       DocumentHighlight2.create = create;
     })(DocumentHighlight || (DocumentHighlight = {}));
-    (function(SymbolKind2) {
-      SymbolKind2.File = 1;
-      SymbolKind2.Module = 2;
-      SymbolKind2.Namespace = 3;
-      SymbolKind2.Package = 4;
-      SymbolKind2.Class = 5;
-      SymbolKind2.Method = 6;
-      SymbolKind2.Property = 7;
-      SymbolKind2.Field = 8;
-      SymbolKind2.Constructor = 9;
-      SymbolKind2.Enum = 10;
-      SymbolKind2.Interface = 11;
-      SymbolKind2.Function = 12;
-      SymbolKind2.Variable = 13;
-      SymbolKind2.Constant = 14;
-      SymbolKind2.String = 15;
-      SymbolKind2.Number = 16;
-      SymbolKind2.Boolean = 17;
-      SymbolKind2.Array = 18;
-      SymbolKind2.Object = 19;
-      SymbolKind2.Key = 20;
-      SymbolKind2.Null = 21;
-      SymbolKind2.EnumMember = 22;
-      SymbolKind2.Struct = 23;
-      SymbolKind2.Event = 24;
-      SymbolKind2.Operator = 25;
-      SymbolKind2.TypeParameter = 26;
+    (function(SymbolKind3) {
+      SymbolKind3.File = 1;
+      SymbolKind3.Module = 2;
+      SymbolKind3.Namespace = 3;
+      SymbolKind3.Package = 4;
+      SymbolKind3.Class = 5;
+      SymbolKind3.Method = 6;
+      SymbolKind3.Property = 7;
+      SymbolKind3.Field = 8;
+      SymbolKind3.Constructor = 9;
+      SymbolKind3.Enum = 10;
+      SymbolKind3.Interface = 11;
+      SymbolKind3.Function = 12;
+      SymbolKind3.Variable = 13;
+      SymbolKind3.Constant = 14;
+      SymbolKind3.String = 15;
+      SymbolKind3.Number = 16;
+      SymbolKind3.Boolean = 17;
+      SymbolKind3.Array = 18;
+      SymbolKind3.Object = 19;
+      SymbolKind3.Key = 20;
+      SymbolKind3.Null = 21;
+      SymbolKind3.EnumMember = 22;
+      SymbolKind3.Struct = 23;
+      SymbolKind3.Event = 24;
+      SymbolKind3.Operator = 25;
+      SymbolKind3.TypeParameter = 26;
     })(SymbolKind || (SymbolKind = {}));
     (function(SymbolTag2) {
       SymbolTag2.Deprecated = 1;
@@ -21764,12 +21764,12 @@ var require_comparator = __commonJS({
           if (this.value === "") {
             return true;
           }
-          return new Range2(comp.value, options).test(this.value);
+          return new Range3(comp.value, options).test(this.value);
         } else if (comp.operator === "") {
           if (comp.value === "") {
             return true;
           }
-          return new Range2(this.value, options).test(comp.semver);
+          return new Range3(this.value, options).test(comp.semver);
         }
         options = parseOptions(options);
         if (options.includePrerelease && (this.value === "<0.0.0-0" || comp.value === "<0.0.0-0")) {
@@ -21802,7 +21802,7 @@ var require_comparator = __commonJS({
     var cmp = require_cmp();
     var debug = require_debug();
     var SemVer = require_semver();
-    var Range2 = require_range();
+    var Range3 = require_range();
   }
 });
 
@@ -21811,7 +21811,7 @@ var require_range = __commonJS({
   "node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
-    var Range2 = class _Range {
+    var Range3 = class _Range {
       constructor(range, options) {
         options = parseOptions(options);
         if (range instanceof _Range) {
@@ -21950,7 +21950,7 @@ var require_range = __commonJS({
         return false;
       }
     };
-    module2.exports = Range2;
+    module2.exports = Range3;
     var LRU = require_lrucache();
     var cache = new LRU();
     var parseOptions = require_parse_options();
@@ -22195,10 +22195,10 @@ var require_range = __commonJS({
 var require_satisfies = __commonJS({
   "node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
-    var Range2 = require_range();
+    var Range3 = require_range();
     var satisfies = (version, range, options) => {
       try {
-        range = new Range2(range, options);
+        range = new Range3(range, options);
       } catch (er) {
         return false;
       }
@@ -22834,29 +22834,181 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var path2 = __toESM(require("node:path"));
-var import_vscode2 = require("vscode");
+var import_vscode3 = require("vscode");
 var import_node = __toESM(require_main3());
+
+// editors/vscode/src/outline-tree.ts
+var import_vscode = require("vscode");
+var import_vscode_languageclient = __toESM(require_api3());
+var ProjectOutlineProvider = class {
+  constructor(getClient) {
+    this.getClient = getClient;
+  }
+  getClient;
+  static viewId = "uttori-asm.projectOutline";
+  #onDidChangeTreeData = new import_vscode.EventEmitter();
+  onDidChangeTreeData = this.#onDidChangeTreeData.event;
+  refresh() {
+    this.#onDidChangeTreeData.fire();
+  }
+  getTreeItem(element) {
+    const item = new import_vscode.TreeItem(
+      element.label,
+      element.collapsible ? import_vscode.TreeItemCollapsibleState.Collapsed : import_vscode.TreeItemCollapsibleState.None
+    );
+    item.id = element.id;
+    item.description = element.description;
+    item.tooltip = element.tooltip ?? element.label;
+    item.iconPath = element.icon;
+    item.contextValue = element.symbolUri ? "file" : "symbol";
+    if (element.uri) {
+      const uri = import_vscode.Uri.parse(element.uri);
+      item.resourceUri = uri;
+      item.command = {
+        command: "vscode.open",
+        title: "Open",
+        arguments: element.range ? [
+          uri,
+          {
+            selection: new import_vscode.Range(
+              element.range.start.line,
+              element.range.start.character,
+              element.range.end.line,
+              element.range.end.character
+            )
+          }
+        ] : [uri]
+      };
+    }
+    return item;
+  }
+  async getChildren(element) {
+    if (!element) {
+      return this.loadRoots();
+    }
+    if (element.symbolUri) {
+      const symbols = await this.loadSymbols(element.symbolUri, element.id);
+      const includes = (element.includeChildren ?? []).map((node) => this.toItem(node));
+      return [...symbols, ...includes];
+    }
+    return element.children ?? [];
+  }
+  async loadRoots() {
+    const client2 = this.getClient();
+    if (!client2) {
+      return [];
+    }
+    try {
+      const nodes = await client2.sendRequest("asm/projectOutline");
+      return (nodes ?? []).map((node) => this.toItem(node));
+    } catch {
+      return [];
+    }
+  }
+  toItem(node) {
+    const isFile = node.kind === "file";
+    return {
+      id: node.id,
+      label: node.label,
+      description: node.detail,
+      tooltip: node.uri ? `${node.label}${node.detail ? ` \u2014 ${node.detail}` : ""}` : node.label,
+      collapsible: node.kind === "entry" || node.kind === "orphanGroup" || isFile,
+      icon: iconForKind(node.kind),
+      uri: node.uri,
+      ...isFile ? { symbolUri: node.uri, includeChildren: node.children ?? [] } : { children: (node.children ?? []).map((child) => this.toItem(child)) }
+    };
+  }
+  async loadSymbols(uri, parentId) {
+    const client2 = this.getClient();
+    if (!client2) {
+      return [];
+    }
+    try {
+      const symbols = await client2.sendRequest("textDocument/documentSymbol", {
+        textDocument: { uri }
+      });
+      return (symbols ?? []).map(
+        (symbol, index) => symbolToItem(symbol, uri, `${parentId}:${index}`)
+      );
+    } catch {
+      return [];
+    }
+  }
+};
+function symbolToItem(symbol, uri, id) {
+  const range = symbol.selectionRange ?? symbol.range;
+  const children = (symbol.children ?? []).map(
+    (child, index) => symbolToItem(child, uri, `${id}:${index}`)
+  );
+  return {
+    id,
+    label: symbol.name,
+    description: symbol.detail,
+    collapsible: children.length > 0,
+    icon: iconForSymbolKind(symbol.kind),
+    uri,
+    range,
+    children
+  };
+}
+function iconForKind(kind) {
+  switch (kind) {
+    case "entry":
+      return new import_vscode.ThemeIcon("folder-library");
+    case "orphanGroup":
+      return new import_vscode.ThemeIcon("folder");
+    case "include":
+      return new import_vscode.ThemeIcon("link");
+    case "file":
+    default:
+      return new import_vscode.ThemeIcon("file");
+  }
+}
+function iconForSymbolKind(kind) {
+  switch (kind) {
+    case import_vscode_languageclient.SymbolKind.Namespace:
+      return new import_vscode.ThemeIcon("symbol-namespace");
+    case import_vscode_languageclient.SymbolKind.Function:
+      return new import_vscode.ThemeIcon("symbol-method");
+    case import_vscode_languageclient.SymbolKind.Constant:
+      return new import_vscode.ThemeIcon("symbol-constant");
+    case import_vscode_languageclient.SymbolKind.Struct:
+      return new import_vscode.ThemeIcon("symbol-struct");
+    case import_vscode_languageclient.SymbolKind.Field:
+      return new import_vscode.ThemeIcon("symbol-field");
+    case import_vscode_languageclient.SymbolKind.Variable:
+      return new import_vscode.ThemeIcon("symbol-variable");
+    default:
+      return new import_vscode.ThemeIcon("symbol-misc");
+  }
+}
 
 // editors/vscode/src/panel.ts
 var path = __toESM(require("node:path"));
-var import_vscode = require("vscode");
+var import_vscode2 = require("vscode");
 var ProjectPanelProvider = class {
-  constructor(getClient, initConfig2) {
+  constructor(extensionUri, getClient, initConfig2) {
+    this.extensionUri = extensionUri;
     this.getClient = getClient;
     this.initConfig = initConfig2;
   }
+  extensionUri;
   getClient;
   initConfig;
   static viewId = "uttori-asm.projectPanel";
   #view;
+  #metadata;
   /**
    * Called when the view becomes visible.
    * @param {WebviewView} webviewView The hosted webview.
    */
   resolveWebviewView(webviewView) {
     this.#view = webviewView;
-    webviewView.webview.options = { enableScripts: true };
-    webviewView.webview.html = this.renderHtml();
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [import_vscode2.Uri.joinPath(this.extensionUri, "media")]
+    };
+    webviewView.webview.html = this.renderHtml(webviewView.webview);
     webviewView.webview.onDidReceiveMessage((message) => {
       void this.onMessage(message);
     });
@@ -22875,6 +23027,7 @@ var ProjectPanelProvider = class {
       return;
     }
     const snapshot = await this.snapshot();
+    this.#metadata = snapshot.metadata;
     void this.#view.webview.postMessage({ type: "snapshot", ...snapshot });
   }
   async onMessage(message) {
@@ -22900,7 +23053,7 @@ var ProjectPanelProvider = class {
         await this.removePath("includePaths", asString(message.value));
         return;
       case "setTarget":
-        await this.updateSetting("target", asString(message.value));
+        await this.setTarget(asString(message.value));
         return;
       case "setArchitecture":
         await this.updateSetting("architecture", asString(message.value));
@@ -22913,7 +23066,7 @@ var ProjectPanelProvider = class {
     }
   }
   async snapshot() {
-    const config = import_vscode.workspace.getConfiguration("asm");
+    const config = import_vscode2.workspace.getConfiguration("asm");
     const fallback = {
       fileCount: 0,
       symbolCount: 0,
@@ -22945,7 +23098,7 @@ var ProjectPanelProvider = class {
     }
   }
   async addPath(key, folders) {
-    const picked = await import_vscode.window.showOpenDialog({
+    const picked = await import_vscode2.window.showOpenDialog({
       canSelectFiles: !folders,
       canSelectFolders: folders,
       canSelectMany: true,
@@ -22954,7 +23107,7 @@ var ProjectPanelProvider = class {
     if (!picked?.length) {
       return;
     }
-    const current = import_vscode.workspace.getConfiguration("asm").get(key, []);
+    const current = import_vscode2.workspace.getConfiguration("asm").get(key, []);
     const next = [...current];
     for (const uri of picked) {
       const relative3 = toWorkspaceRelative(uri.fsPath);
@@ -22965,52 +23118,60 @@ var ProjectPanelProvider = class {
     await this.updateSetting(key, next);
   }
   async removePath(key, value) {
-    const current = import_vscode.workspace.getConfiguration("asm").get(key, []);
+    const current = import_vscode2.workspace.getConfiguration("asm").get(key, []);
     await this.updateSetting(
       key,
       current.filter((entry) => entry !== value)
     );
   }
-  async updateSetting(key, value) {
-    await import_vscode.workspace.getConfiguration("asm").update(key, value, import_vscode.ConfigurationTarget.Workspace);
+  /**
+   * Writes the selected target and resets architecture (and output extension)
+   * so the previous target's values cannot fail validation.
+   * @param {string} targetId Canonical target contribution ID.
+   */
+  async setTarget(targetId) {
+    const config = import_vscode2.workspace.getConfiguration("asm");
+    const target = this.#metadata?.targets.find((entry) => entry.id === targetId);
+    await config.update("target", targetId, import_vscode2.ConfigurationTarget.Workspace);
+    if (target?.defaultArchitecture) {
+      await config.update(
+        "architecture",
+        target.defaultArchitecture,
+        import_vscode2.ConfigurationTarget.Workspace
+      );
+    }
+    if (target?.defaultOutputExtension) {
+      const current = config.get("buildOutput", "");
+      if (current) {
+        const next = replaceOutputExtension(current, target.defaultOutputExtension);
+        if (next !== current) {
+          await config.update("buildOutput", next, import_vscode2.ConfigurationTarget.Workspace);
+        }
+      }
+    }
     await this.refresh();
   }
-  renderHtml() {
+  async updateSetting(key, value) {
+    await import_vscode2.workspace.getConfiguration("asm").update(key, value, import_vscode2.ConfigurationTarget.Workspace);
+    await this.refresh();
+  }
+  /**
+   * Renders the themed project panel HTML.
+   * @param {Webview} webview The hosted webview used for CSP and asset URIs.
+   * @returns {string} The complete HTML document.
+   */
+  renderHtml(webview) {
     const nonce = getNonce();
+    const cssUri = webview.asWebviewUri(import_vscode2.Uri.joinPath(this.extensionUri, "media", "panel.css"));
+    const styleSrc = webview.cspSource;
+    const stylesheet = cssUri.toString();
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${styleSrc}; script-src 'nonce-${nonce}';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    :root { color-scheme: light dark; }
-    body {
-      font-family: var(--vscode-font-family);
-      font-size: var(--vscode-font-size);
-      color: var(--vscode-foreground);
-      margin: 0;
-      padding: 10px 12px 16px;
-    }
-    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8; margin: 16px 0 8px; }
-    .status, .list { display: grid; gap: 6px; }
-    .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-    .muted { opacity: 0.75; }
-    button, select, input {
-      font: inherit;
-      color: var(--vscode-foreground);
-      background: var(--vscode-input-background);
-      border: 1px solid var(--vscode-widget-border, var(--vscode-input-border));
-      border-radius: 2px;
-      padding: 3px 8px;
-    }
-    button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; }
-    button.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); width: 100%; }
-    .item { display: flex; gap: 6px; align-items: center; }
-    .item span { flex: 1; word-break: break-all; }
-    .actions { display: flex; gap: 6px; margin-top: 8px; }
-    select, input { width: 100%; }
-  </style>
+  <link rel="stylesheet" href="${stylesheet}" />
 </head>
 <body>
   <h2>Analysis</h2>
@@ -23022,11 +23183,11 @@ var ProjectPanelProvider = class {
   <div class="list" id="includePaths"></div>
   <div class="actions"><button data-cmd="addIncludePath">Add folder</button></div>
   <h2>Target</h2>
-  <select id="target"></select>
+  <div class="field"><select id="target"></select></div>
   <h2>Architecture</h2>
-  <select id="architecture"></select>
+  <div class="field"><select id="architecture"></select></div>
   <h2>Build output</h2>
-  <input id="buildOutput" placeholder="game.sfc" />
+  <div class="field"><input id="buildOutput" placeholder="game.sfc" /></div>
   <div class="actions">
     <button class="primary" data-cmd="initConfig">Initialize uttori-asm.config.json</button>
   </div>
@@ -23043,23 +23204,33 @@ var ProjectPanelProvider = class {
       for (const item of items) {
         const row = document.createElement("div");
         row.className = "item";
-        row.innerHTML = "<span></span>";
-        row.querySelector("span").textContent = item;
+        const label = document.createElement("span");
+        label.textContent = item;
         const button = document.createElement("button");
-        button.textContent = "Remove";
+        button.className = "icon";
+        button.type = "button";
+        button.textContent = "\xD7";
+        button.title = "Remove";
+        button.setAttribute("aria-label", "Remove " + item);
         button.addEventListener("click", () => vscode.postMessage({ type: removeType, value: item }));
-        row.appendChild(button);
+        row.append(label, button);
         root.appendChild(row);
       }
     };
     const fillSelect = (id, options, value) => {
       const select = $(id);
-      const ids = [...new Set(options.map((entry) => entry.id))];
-      select.innerHTML = ids.map((idValue) => {
-        const selected = idValue === value ? " selected" : "";
-        return "<option value=\\"" + idValue + "\\"" + selected + ">" + idValue + "</option>";
-      }).join("");
-      if (value && !ids.includes(value)) {
+      const seen = new Set();
+      select.innerHTML = "";
+      for (const entry of options) {
+        if (!entry || !entry.id || seen.has(entry.id)) continue;
+        seen.add(entry.id);
+        const option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = entry.displayName || entry.id;
+        if (entry.id === value) option.selected = true;
+        select.appendChild(option);
+      }
+      if (value && !seen.has(value)) {
         const option = document.createElement("option");
         option.value = value;
         option.selected = true;
@@ -23105,12 +23276,16 @@ function asString(value) {
   return typeof value === "string" ? value : "";
 }
 function toWorkspaceRelative(filePath) {
-  const folder = import_vscode.workspace.workspaceFolders?.[0];
+  const folder = import_vscode2.workspace.workspaceFolders?.[0];
   if (!folder) {
     return filePath;
   }
   const relative3 = path.relative(folder.uri.fsPath, filePath);
   return relative3 && !relative3.startsWith("..") ? relative3 : filePath;
+}
+function replaceOutputExtension(filePath, extension) {
+  const suffix = extension.startsWith(".") ? extension : `.${extension}`;
+  return filePath.replace(/\.[^.]+$/, suffix);
 }
 function getNonce() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -23131,7 +23306,7 @@ var saveListener;
 var watchTimer;
 var statusItem;
 function serverInitializationOptions() {
-  const config = import_vscode2.workspace.getConfiguration("asm");
+  const config = import_vscode3.workspace.getConfiguration("asm");
   return {
     configFile: config.get("configFile", ""),
     plugins: config.get("plugins", []),
@@ -23141,7 +23316,7 @@ function serverInitializationOptions() {
     architecture: config.get("architecture", ""),
     buildOutput: config.get("buildOutput", ""),
     baseImage: config.get("baseImage", ""),
-    workspaceTrusted: import_vscode2.workspace.isTrusted
+    workspaceTrusted: import_vscode3.workspace.isTrusted
   };
 }
 function activate(context) {
@@ -23158,7 +23333,7 @@ function activate(context) {
       transport: import_node.TransportKind.stdio
     }
   };
-  const outputChannel2 = import_vscode2.window.createOutputChannel("Uttori Assembly Language Server", {
+  outputChannel = import_vscode3.window.createOutputChannel("Uttori Assembly Language Server", {
     log: true
   });
   const clientOptions = {
@@ -23169,13 +23344,13 @@ function activate(context) {
     synchronize: {
       configurationSection: "asm",
       fileEvents: [
-        import_vscode2.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
-        import_vscode2.workspace.createFileSystemWatcher("**/uttori-asm.config.json")
+        import_vscode3.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
+        import_vscode3.workspace.createFileSystemWatcher("**/uttori-asm.config.json")
       ]
     },
     initializationOptions: serverInitializationOptions(),
-    outputChannel: outputChannel2,
-    traceOutputChannel: outputChannel2
+    outputChannel,
+    traceOutputChannel: outputChannel
   };
   client = new import_node.LanguageClient(
     "uttoriAsmLanguageServer",
@@ -23183,42 +23358,61 @@ function activate(context) {
     serverOptions,
     clientOptions
   );
-  statusItem = import_vscode2.window.createStatusBarItem(import_vscode2.StatusBarAlignment.Left, 0);
+  statusItem = import_vscode3.window.createStatusBarItem(import_vscode3.StatusBarAlignment.Left, 0);
   statusItem.command = "asm.toggleWatch";
   updateStatusItem();
   statusItem.show();
   const panelProvider = new ProjectPanelProvider(
+    context.extensionUri,
     () => client,
     () => initConfig()
   );
+  const outlineProvider = new ProjectOutlineProvider(() => client);
   context.subscriptions.push(
-    outputChannel2,
+    outputChannel,
     statusItem,
-    import_vscode2.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider),
-    import_vscode2.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
-    import_vscode2.commands.registerCommand("asm.toggleWatch", toggleWatch),
-    import_vscode2.commands.registerCommand("asm.initConfig", () => initConfig()),
-    import_vscode2.commands.registerCommand(
+    import_vscode3.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
+      webviewOptions: { retainContextWhenHidden: true }
+    }),
+    import_vscode3.window.createTreeView(ProjectOutlineProvider.viewId, {
+      treeDataProvider: outlineProvider,
+      showCollapseAll: true
+    }),
+    import_vscode3.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
+    import_vscode3.commands.registerCommand("asm.toggleWatch", toggleWatch),
+    import_vscode3.commands.registerCommand("asm.initConfig", () => initConfig()),
+    import_vscode3.commands.registerCommand(
       "asm.openPanel",
-      () => import_vscode2.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
+      () => import_vscode3.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
     ),
-    import_vscode2.workspace.onDidGrantWorkspaceTrust(() => {
+    import_vscode3.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
+    import_vscode3.workspace.onDidGrantWorkspaceTrust(() => {
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
           asm: serverInitializationOptions()
         }
       });
     }),
-    import_vscode2.workspace.onDidChangeConfiguration((event) => {
+    import_vscode3.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("asm")) {
         void panelProvider.refresh();
+        outlineProvider.refresh();
       }
     })
   );
   void client.start().then(() => {
-    if (context.extensionMode === import_vscode2.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
-      void client?.setTrace(import_node.Trace.Verbose);
+    if (!client) {
+      return;
     }
+    if (context.extensionMode === import_vscode3.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
+      void client.setTrace(import_node.Trace.Verbose);
+    }
+    context.subscriptions.push(
+      client.onNotification("asm/indexUpdated", () => {
+        void panelProvider.refresh();
+        outlineProvider.refresh();
+      })
+    );
   });
 }
 function deactivate() {
@@ -23229,7 +23423,7 @@ function deactivate() {
   return client?.stop();
 }
 function activeDocumentUri() {
-  return import_vscode2.window.activeTextEditor?.document.uri.toString();
+  return import_vscode3.window.activeTextEditor?.document.uri.toString();
 }
 function toggleWatch() {
   watchEnabled = !watchEnabled;
@@ -23237,14 +23431,14 @@ function toggleWatch() {
     watchEntryUri = resolveWatchEntry();
     if (!watchEntryUri) {
       watchEnabled = false;
-      void import_vscode2.window.showErrorMessage(
+      void import_vscode3.window.showErrorMessage(
         "Assembly: open a source file (or set asm.entryPoints) before watching."
       );
       return;
     }
-    saveListener = import_vscode2.workspace.onDidSaveTextDocument(onDocumentSaved);
-    void import_vscode2.window.showInformationMessage(
-      `Assembly: watching ${path2.basename(import_vscode2.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+    saveListener = import_vscode3.workspace.onDidSaveTextDocument(onDocumentSaved);
+    void import_vscode3.window.showInformationMessage(
+      `Assembly: watching ${path2.basename(import_vscode3.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   } else {
     saveListener?.dispose();
@@ -23261,20 +23455,20 @@ function resolveWatchEntry() {
   return resolveBuildEntryUri();
 }
 function resolveBuildEntryUri() {
-  const activeUri = import_vscode2.window.activeTextEditor?.document.uri;
-  const entryPoints = import_vscode2.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
-  const folder = activeUri ? import_vscode2.workspace.getWorkspaceFolder(activeUri) : import_vscode2.workspace.workspaceFolders?.[0];
+  const activeUri = import_vscode3.window.activeTextEditor?.document.uri;
+  const entryPoints = import_vscode3.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
+  const folder = activeUri ? import_vscode3.workspace.getWorkspaceFolder(activeUri) : import_vscode3.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    const resolved = path2.isAbsolute(first) ? import_vscode2.Uri.file(first).toString() : import_vscode2.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path2.isAbsolute(first) ? import_vscode3.Uri.file(first).toString() : import_vscode3.Uri.joinPath(folder.uri, first).toString();
     outputChannel?.info(
-      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode2.Uri.parse(resolved).fsPath}`
+      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode3.Uri.parse(resolved).fsPath}`
     );
     return resolved;
   }
   const active = activeDocumentUri();
   if (active) {
-    outputChannel?.info(`Build entry from active editor: ${import_vscode2.Uri.parse(active).fsPath}`);
+    outputChannel?.info(`Build entry from active editor: ${import_vscode3.Uri.parse(active).fsPath}`);
   }
   return active;
 }
@@ -23294,15 +23488,15 @@ function isAssemblyDocument(document) {
   return ASSEMBLY_LANGUAGE_IDS.includes(document.languageId) || /\.(asm|src|s|inc)$/i.test(document.fileName);
 }
 async function initConfig() {
-  const folder = import_vscode2.workspace.workspaceFolders?.[0];
+  const folder = import_vscode3.workspace.workspaceFolders?.[0];
   if (!folder) {
-    void import_vscode2.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
+    void import_vscode3.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
     return;
   }
-  const configUri = import_vscode2.Uri.joinPath(folder.uri, "uttori-asm.config.json");
-  const config = import_vscode2.workspace.getConfiguration("asm");
+  const configUri = import_vscode3.Uri.joinPath(folder.uri, "uttori-asm.config.json");
+  const config = import_vscode3.workspace.getConfiguration("asm");
   let entryPoints = config.get("entryPoints", []);
-  const active = import_vscode2.window.activeTextEditor?.document;
+  const active = import_vscode3.window.activeTextEditor?.document;
   if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
     const relative3 = path2.relative(folder.uri.fsPath, active.fileName);
     entryPoints = [
@@ -23335,18 +23529,18 @@ async function initConfig() {
   if (buildOutput) body.buildOutput = buildOutput;
   if (baseImage) body.baseImage = baseImage;
   try {
-    await import_vscode2.workspace.fs.stat(configUri);
-    const existing = await import_vscode2.workspace.openTextDocument(configUri);
-    await import_vscode2.window.showTextDocument(existing);
-    void import_vscode2.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
+    await import_vscode3.workspace.fs.stat(configUri);
+    const existing = await import_vscode3.workspace.openTextDocument(configUri);
+    await import_vscode3.window.showTextDocument(existing);
+    void import_vscode3.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
     return;
   } catch {
   }
-  await import_vscode2.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
+  await import_vscode3.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
 `));
-  await config.update("configFile", "uttori-asm.config.json", import_vscode2.ConfigurationTarget.Workspace);
-  const document = await import_vscode2.workspace.openTextDocument(configUri);
-  await import_vscode2.window.showTextDocument(document);
+  await config.update("configFile", "uttori-asm.config.json", import_vscode3.ConfigurationTarget.Workspace);
+  const document = await import_vscode3.workspace.openTextDocument(configUri);
+  await import_vscode3.window.showTextDocument(document);
 }
 async function runBuild(documentUri, transient = false) {
   outputChannel?.show(true);
@@ -23354,17 +23548,17 @@ async function runBuild(documentUri, transient = false) {
   if (!client) {
     const message = "Language server is not running.";
     outputChannel?.error(message);
-    void import_vscode2.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode3.window.showErrorMessage(`Assembly: ${message}`);
     return;
   }
   if (!documentUri) {
     const message = "Open a source file or set asm.entryPoints before building.";
     outputChannel?.error(message);
-    void import_vscode2.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode3.window.showErrorMessage(`Assembly: ${message}`);
     return;
   }
-  const document = import_vscode2.Uri.parse(documentUri);
-  const config = import_vscode2.workspace.getConfiguration("asm", document);
+  const document = import_vscode3.Uri.parse(documentUri);
+  const config = import_vscode3.workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get("buildOutput", ""), document);
   const baseImage = resolveConfiguredPath(config.get("baseImage", ""), document);
   outputChannel?.info(`  file: ${document.fsPath}`);
@@ -23380,19 +23574,19 @@ async function runBuild(documentUri, transient = false) {
       const message = `Assembly: built ${result.bytes ?? 0} bytes \u2192 ${result.outputPath ?? "output"}.`;
       outputChannel?.info(message);
       if (transient) {
-        import_vscode2.window.setStatusBarMessage(message, 4e3);
+        import_vscode3.window.setStatusBarMessage(message, 4e3);
       } else {
-        void import_vscode2.window.showInformationMessage(message);
+        void import_vscode3.window.showInformationMessage(message);
       }
     } else {
       const detail = result?.message ?? "unknown error";
       outputChannel?.error(`Build failed: ${detail}`);
-      void import_vscode2.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+      void import_vscode3.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     outputChannel?.error(`Build request failed: ${detail}`);
-    void import_vscode2.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+    void import_vscode3.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
   }
 }
 function resolveConfiguredPath(configuredPath, document) {
@@ -23402,7 +23596,7 @@ function resolveConfiguredPath(configuredPath, document) {
   if (path2.isAbsolute(configuredPath)) {
     return path2.normalize(configuredPath);
   }
-  const folder = import_vscode2.workspace.getWorkspaceFolder(document);
+  const folder = import_vscode3.workspace.getWorkspaceFolder(document);
   return path2.resolve(folder?.uri.fsPath ?? path2.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {

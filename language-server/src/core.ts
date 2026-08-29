@@ -6,6 +6,7 @@ export {
   findInstruction,
   findDirectiveEntry,
   findDirectiveInCatalog,
+  findDirectiveOperand,
   buildCompletionEntries,
   renderInstructionDocs,
   renderDirectiveDocs,

@@ -1,9 +1,18 @@
 /** Target-neutral directive metadata used by tooling contributions. */
-export type DirectiveDescriptor = {
+export type DirectiveDocs = {
   keyword: string;
   summary: string;
   syntax: string;
+};
+
+/** Nested keyword valid after a directive or another operand (`bankcross`, `full`). */
+export type DirectiveOperandDescriptor = DirectiveDocs & {
+  operands?: readonly DirectiveOperandDescriptor[];
+};
+
+export type DirectiveDescriptor = DirectiveDocs & {
   group: string;
+  operands?: readonly DirectiveOperandDescriptor[];
 };
 
 const descriptor = (
@@ -11,7 +20,14 @@ const descriptor = (
   summary: string,
   syntax: string,
   group: string,
-): DirectiveDescriptor => ({ keyword, summary, syntax, group });
+  operands?: readonly DirectiveOperandDescriptor[],
+): DirectiveDescriptor => ({
+  keyword,
+  summary,
+  syntax,
+  group,
+  ...(operands ? { operands } : {}),
+});
 
 /** Metadata for directives implemented by the architecture-neutral core. */
 export const directiveCatalog: DirectiveDescriptor[] = [
@@ -43,27 +59,81 @@ export const directiveCatalog: DirectiveDescriptor[] = [
     ["incbin", "Embed bytes from a binary file.", 'incbin "file.bin"[,start,length]'],
   ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "include")),
   ...[
-    ["base", "Set the logical base address.", "base address"],
     ["org", "Set the logical origin address.", "org address"],
     ["pushbase", "Push the current base address.", "pushbase"],
     ["pullbase", "Restore the most recently pushed base address.", "pullbase"],
     ["pushpc", "Push the current logical address.", "pushpc"],
     ["pullpc", "Restore the most recently pushed logical address.", "pullpc"],
-    ["arch", "Select the active architecture.", "arch architecture"],
   ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "layout")),
-  ...[
-    ["namespace", "Set the active label namespace.", "namespace name"],
-    ["pushns", "Push the current namespace.", "pushns"],
-    ["pullns", "Restore the most recently pushed namespace.", "pullns"],
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "namespace")),
-  ...[
-    ["table", "Load a character mapping table.", 'table "file"[,ltr|rtl]'],
-    ["cleartable", "Reset character mappings.", "cleartable"],
-    ["pushtable", "Push the current mapping table.", "pushtable"],
-    ["pulltable", "Restore the most recently pushed mapping table.", "pulltable"],
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "table")),
-  descriptor("struct", "Begin a structure definition.", "struct name", "struct"),
-  descriptor("endstruct", "End a structure definition.", "endstruct", "struct"),
+  descriptor("base", "Set or restore the logical base address.", "base address|off", "layout", [
+    {
+      keyword: "off",
+      summary: "Restore the saved physical/base address relationship.",
+      syntax: "base off",
+    },
+  ]),
+  descriptor("arch", "Select the active architecture.", "arch architecture", "layout"),
+  descriptor("pushns", "Push the current namespace.", "pushns", "namespace"),
+  descriptor("pullns", "Restore the most recently pushed namespace.", "pullns", "namespace"),
+  descriptor(
+    "namespace",
+    "Set, nest, or clear the active label namespace.",
+    "namespace [name|off|nested on|nested off]",
+    "namespace",
+    [
+      {
+        keyword: "off",
+        summary: "Leave the current namespace (pop when nested, else clear).",
+        syntax: "namespace off",
+      },
+      {
+        keyword: "nested",
+        summary: "Enable or disable nested namespace paths.",
+        syntax: "namespace nested on|off",
+        operands: [
+          {
+            keyword: "on",
+            summary: "Build namespace paths from successive namespace directives.",
+            syntax: "namespace nested on",
+          },
+          {
+            keyword: "off",
+            summary: "Disable nested paths and clear the current namespace.",
+            syntax: "namespace nested off",
+          },
+        ],
+      },
+    ],
+  ),
+  descriptor("cleartable", "Reset character mappings.", "cleartable", "table"),
+  descriptor("pushtable", "Push the current mapping table.", "pushtable", "table"),
+  descriptor("pulltable", "Restore the most recently pushed mapping table.", "pulltable", "table"),
+  descriptor("table", "Load a character mapping table.", 'table "file"[,ltr|rtl]', "table", [
+    {
+      keyword: "ltr",
+      summary: "Left-to-right table lines: character=hex.",
+      syntax: 'table "file",ltr',
+    },
+    {
+      keyword: "rtl",
+      summary: "Right-to-left table lines: hex=character.",
+      syntax: 'table "file",rtl',
+    },
+  ]),
+  descriptor("struct", "Begin a structure definition.", "struct name [extends parent]", "struct", [
+    {
+      keyword: "extends",
+      summary: "Inherit members from an existing struct.",
+      syntax: "struct name extends parent",
+    },
+  ]),
+  descriptor("endstruct", "End a structure definition.", "endstruct [align value]", "struct", [
+    {
+      keyword: "align",
+      summary: "Round the struct size/stride up to an alignment.",
+      syntax: "endstruct align value",
+    },
+  ]),
   ...[
     ["if", "Begin a conditional block.", "if expression"],
     ["elseif", "Begin an alternate conditional branch.", "elseif expression"],

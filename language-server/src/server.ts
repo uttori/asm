@@ -2,12 +2,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import plugin65xx from "@uttori/asm-plugin-65xx";
 import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import {
   discoverProjectConfigurationPath,
   PROJECT_CONFIG_FILENAME,
   validateProjectConfiguration,
 } from "@uttori/asm-plugin-loader-node";
+import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 import {
   createConnection,
   Diagnostic,
@@ -39,6 +41,7 @@ import {
   hoverFor,
   pathToUri,
   prepareRenameFor,
+  projectOutlineFor,
   referencesFor,
   renameEditsFor,
   semanticTokensFor,
@@ -50,7 +53,11 @@ import {
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 const environmentController = new ProjectEnvironmentController({
-  bundledPlugins: new Map([["@uttori/asm-plugin-snes", snesPlugin]]),
+  bundledPlugins: new Map<string, AssemblerPlugin>([
+    ["@uttori/asm-plugin-snes", snesPlugin],
+    ["@uttori/asm-plugin-65xx", plugin65xx],
+  ]),
+  activateBundledPlugins: true,
   defaults: {
     plugins: [{ module: "@uttori/asm-plugin-snes" }],
     target: SNES_TARGET_ID,
@@ -96,6 +103,7 @@ let workspaceRoots: string[] = [];
 let hasConfigurationCapability = false;
 let hasDidChangeConfigurationDynamicRegistration = false;
 let reindexTimer: NodeJS.Timeout | undefined;
+let clientInitialized = false;
 let configurationDiagnostic: { uri: string; diagnostic: Diagnostic; message: string } | undefined;
 let configurationQueue = Promise.resolve();
 
@@ -223,6 +231,7 @@ async function replaceProjectEnvironment(next: ServerSettings): Promise<void> {
     settings = next;
     setConfigurationDiagnostic(next, state.trustNotice, DiagnosticSeverity.Warning);
     publishAllDiagnostics();
+    notifyIndexUpdated();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     settings = next;
@@ -266,6 +275,7 @@ function scheduleReindex(): void {
     );
     publishAllDiagnostics();
     void connection.languages.semanticTokens.refresh();
+    notifyIndexUpdated();
   }, 500);
 }
 
@@ -284,6 +294,11 @@ function publishAllDiagnostics(): void {
       diagnostics: [configurationDiagnostic.diagnostic],
     });
   }
+}
+
+function notifyIndexUpdated(): void {
+  if (!index || !clientInitialized) return;
+  void connection.sendNotification("asm/indexUpdated", index.getStatus());
 }
 
 connection.onInitialize(async (params: InitializeParams): Promise<InitializeResult> => {
@@ -326,10 +341,12 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
 });
 
 connection.onInitialized(() => {
+  clientInitialized = true;
   if (hasDidChangeConfigurationDynamicRegistration) {
     connection.client.register(DidChangeConfigurationNotification.type, undefined).catch(() => {});
   }
   if (hasConfigurationCapability) void refreshConfiguration();
+  notifyIndexUpdated();
 });
 
 async function refreshConfiguration(): Promise<void> {
@@ -497,6 +514,11 @@ connection.onRequest("asm/projectMetadata", async () => {
       bundled: plugin.bundled,
     })),
   };
+});
+
+connection.onRequest("asm/projectOutline", async () => {
+  await configurationQueue;
+  return index ? projectOutlineFor(index) : [];
 });
 
 connection.onRequest("asm/status", async () => {

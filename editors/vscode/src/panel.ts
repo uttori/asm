@@ -5,8 +5,10 @@
 import * as path from "node:path";
 import {
   ConfigurationTarget,
+  Uri,
   window,
   workspace,
+  type Webview,
   type WebviewView,
   type WebviewViewProvider,
 } from "vscode";
@@ -30,11 +32,19 @@ type ProjectStatus = {
   includePaths: readonly string[];
 };
 
+type CatalogEntry = {
+  id: string;
+  displayName?: string;
+  aliases?: string[];
+  defaultArchitecture?: string;
+  defaultOutputExtension?: string;
+};
+
 type ProjectMetadata = {
   activeTarget: string;
   activeArchitecture: string;
-  targets: Array<{ id: string; aliases?: string[] }>;
-  architectures: Array<{ id: string; aliases?: string[] }>;
+  targets: CatalogEntry[];
+  architectures: CatalogEntry[];
 };
 
 /**
@@ -44,8 +54,10 @@ export class ProjectPanelProvider implements WebviewViewProvider {
   static readonly viewId = "uttori-asm.projectPanel";
 
   #view?: WebviewView;
+  #metadata?: ProjectMetadata;
 
   constructor(
+    private readonly extensionUri: Uri,
     private readonly getClient: () => LanguageClient | undefined,
     private readonly initConfig: () => Promise<void>,
   ) {}
@@ -56,8 +68,11 @@ export class ProjectPanelProvider implements WebviewViewProvider {
    */
   resolveWebviewView(webviewView: WebviewView): void {
     this.#view = webviewView;
-    webviewView.webview.options = { enableScripts: true };
-    webviewView.webview.html = this.renderHtml();
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [Uri.joinPath(this.extensionUri, "media")],
+    };
+    webviewView.webview.html = this.renderHtml(webviewView.webview);
     webviewView.webview.onDidReceiveMessage((message: { type?: string; value?: unknown }) => {
       void this.onMessage(message);
     });
@@ -77,6 +92,7 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       return;
     }
     const snapshot = await this.snapshot();
+    this.#metadata = snapshot.metadata;
     void this.#view.webview.postMessage({ type: "snapshot", ...snapshot });
   }
 
@@ -103,7 +119,7 @@ export class ProjectPanelProvider implements WebviewViewProvider {
         await this.removePath("includePaths", asString(message.value));
         return;
       case "setTarget":
-        await this.updateSetting("target", asString(message.value));
+        await this.setTarget(asString(message.value));
         return;
       case "setArchitecture":
         await this.updateSetting("architecture", asString(message.value));
@@ -178,47 +194,56 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     );
   }
 
+  /**
+   * Writes the selected target and resets architecture (and output extension)
+   * so the previous target's values cannot fail validation.
+   * @param {string} targetId Canonical target contribution ID.
+   */
+  async setTarget(targetId: string): Promise<void> {
+    const config = workspace.getConfiguration("asm");
+    const target = this.#metadata?.targets.find((entry) => entry.id === targetId);
+    await config.update("target", targetId, ConfigurationTarget.Workspace);
+    if (target?.defaultArchitecture) {
+      await config.update(
+        "architecture",
+        target.defaultArchitecture,
+        ConfigurationTarget.Workspace,
+      );
+    }
+    if (target?.defaultOutputExtension) {
+      const current = config.get<string>("buildOutput", "");
+      if (current) {
+        const next = replaceOutputExtension(current, target.defaultOutputExtension);
+        if (next !== current) {
+          await config.update("buildOutput", next, ConfigurationTarget.Workspace);
+        }
+      }
+    }
+    await this.refresh();
+  }
+
   async updateSetting(key: string, value: unknown): Promise<void> {
     await workspace.getConfiguration("asm").update(key, value, ConfigurationTarget.Workspace);
     await this.refresh();
   }
 
-  renderHtml(): string {
+  /**
+   * Renders the themed project panel HTML.
+   * @param {Webview} webview The hosted webview used for CSP and asset URIs.
+   * @returns {string} The complete HTML document.
+   */
+  renderHtml(webview: Webview): string {
     const nonce = getNonce();
+    const cssUri = webview.asWebviewUri(Uri.joinPath(this.extensionUri, "media", "panel.css"));
+    const styleSrc = webview.cspSource;
+    const stylesheet = cssUri.toString();
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${styleSrc}; script-src 'nonce-${nonce}';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    :root { color-scheme: light dark; }
-    body {
-      font-family: var(--vscode-font-family);
-      font-size: var(--vscode-font-size);
-      color: var(--vscode-foreground);
-      margin: 0;
-      padding: 10px 12px 16px;
-    }
-    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8; margin: 16px 0 8px; }
-    .status, .list { display: grid; gap: 6px; }
-    .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-    .muted { opacity: 0.75; }
-    button, select, input {
-      font: inherit;
-      color: var(--vscode-foreground);
-      background: var(--vscode-input-background);
-      border: 1px solid var(--vscode-widget-border, var(--vscode-input-border));
-      border-radius: 2px;
-      padding: 3px 8px;
-    }
-    button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); cursor: pointer; }
-    button.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); width: 100%; }
-    .item { display: flex; gap: 6px; align-items: center; }
-    .item span { flex: 1; word-break: break-all; }
-    .actions { display: flex; gap: 6px; margin-top: 8px; }
-    select, input { width: 100%; }
-  </style>
+  <link rel="stylesheet" href="${stylesheet}" />
 </head>
 <body>
   <h2>Analysis</h2>
@@ -230,11 +255,11 @@ export class ProjectPanelProvider implements WebviewViewProvider {
   <div class="list" id="includePaths"></div>
   <div class="actions"><button data-cmd="addIncludePath">Add folder</button></div>
   <h2>Target</h2>
-  <select id="target"></select>
+  <div class="field"><select id="target"></select></div>
   <h2>Architecture</h2>
-  <select id="architecture"></select>
+  <div class="field"><select id="architecture"></select></div>
   <h2>Build output</h2>
-  <input id="buildOutput" placeholder="game.sfc" />
+  <div class="field"><input id="buildOutput" placeholder="game.sfc" /></div>
   <div class="actions">
     <button class="primary" data-cmd="initConfig">Initialize uttori-asm.config.json</button>
   </div>
@@ -251,23 +276,33 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       for (const item of items) {
         const row = document.createElement("div");
         row.className = "item";
-        row.innerHTML = "<span></span>";
-        row.querySelector("span").textContent = item;
+        const label = document.createElement("span");
+        label.textContent = item;
         const button = document.createElement("button");
-        button.textContent = "Remove";
+        button.className = "icon";
+        button.type = "button";
+        button.textContent = "×";
+        button.title = "Remove";
+        button.setAttribute("aria-label", "Remove " + item);
         button.addEventListener("click", () => vscode.postMessage({ type: removeType, value: item }));
-        row.appendChild(button);
+        row.append(label, button);
         root.appendChild(row);
       }
     };
     const fillSelect = (id, options, value) => {
       const select = $(id);
-      const ids = [...new Set(options.map((entry) => entry.id))];
-      select.innerHTML = ids.map((idValue) => {
-        const selected = idValue === value ? " selected" : "";
-        return "<option value=\\"" + idValue + "\\"" + selected + ">" + idValue + "</option>";
-      }).join("");
-      if (value && !ids.includes(value)) {
+      const seen = new Set();
+      select.innerHTML = "";
+      for (const entry of options) {
+        if (!entry || !entry.id || seen.has(entry.id)) continue;
+        seen.add(entry.id);
+        const option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = entry.displayName || entry.id;
+        if (entry.id === value) option.selected = true;
+        select.appendChild(option);
+      }
+      if (value && !seen.has(value)) {
         const option = document.createElement("option");
         option.value = value;
         option.selected = true;
@@ -321,6 +356,11 @@ function toWorkspaceRelative(filePath: string): string {
   }
   const relative = path.relative(folder.uri.fsPath, filePath);
   return relative && !relative.startsWith("..") ? relative : filePath;
+}
+
+function replaceOutputExtension(filePath: string, extension: string): string {
+  const suffix = extension.startsWith(".") ? extension : `.${extension}`;
+  return filePath.replace(/\.[^.]+$/, suffix);
 }
 
 function getNonce(): string {

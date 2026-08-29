@@ -813,8 +813,8 @@ var require_cmp = __commonJS({
     var gte = require_gte();
     var lt = require_lt();
     var lte = require_lte();
-    var cmp = (a, op, b, loose) => {
-      switch (op) {
+    var cmp = (a, op2, b, loose) => {
+      switch (op2) {
         case "===":
           if (typeof a === "object") {
             a = a.version;
@@ -846,7 +846,7 @@ var require_cmp = __commonJS({
         case "<=":
           return lte(a, b, loose);
         default:
-          throw new TypeError(`Invalid operator: ${op}`);
+          throw new TypeError(`Invalid operator: ${op2}`);
       }
     };
     module.exports = cmp;
@@ -13660,17 +13660,17 @@ var MathCore = class {
       if (nextChar === "," || nextChar === ")" || nextChar === "]") {
         break;
       }
-      const op = this.peekNextOperator(this.operators, depth);
-      debug2("evalMath peekNextOperator =", op);
-      if (!op) break;
-      this.advance(op.length);
+      const op2 = this.peekNextOperator(this.operators, depth);
+      debug2("evalMath peekNextOperator =", op2);
+      if (!op2) break;
+      this.advance(op2.length);
       this.skipWhitespace();
-      const right = this.evalMath(this.operators[op].priority + 1, stopChar);
+      const right = this.evalMath(this.operators[op2].priority + 1, stopChar);
       if (right === void 0) {
-        throw new Error(`Missing right operand for operator '${op}'.`);
+        throw new Error(`Missing right operand for operator '${op2}'.`);
       }
-      debug2("evalMath right =", { right, op, left });
-      left = this.operators[op].operation(left, right);
+      debug2("evalMath right =", { right, op: op2, left });
+      left = this.operators[op2].operation(left, right);
     }
     if (this.math_round) {
       left = Math.trunc(left);
@@ -14666,14 +14666,14 @@ var OperandResolver = class {
   expandOperand(operand) {
     debug3("expandOperand", operand);
     const raw = operand.trim();
-    const syntax = parseOperandSyntax(raw);
+    const syntax2 = parseOperandSyntax(raw);
     if (!operand) {
-      return { raw, expanded: "", length: 2, syntax };
+      return { raw, expanded: "", length: 2, syntax: syntax2 };
     }
     let expanded = raw;
     let expectedLength = 2;
     if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-" || /^:(\++|-+)$/.test(expanded)) {
-      return { raw, expanded, length: 2, syntax };
+      return { raw, expanded, length: 2, syntax: syntax2 };
     }
     expanded = this.tryResolveLabelInOperand(expanded);
     try {
@@ -14732,7 +14732,7 @@ var OperandResolver = class {
         debug3("math evaluation skipped for expression", expanded, error);
       }
     }
-    return { raw, expanded, length: expectedLength, syntax };
+    return { raw, expanded, length: expectedLength, syntax: syntax2 };
   }
   /**
    * Lowers operand.
@@ -14743,16 +14743,16 @@ var OperandResolver = class {
     const raw = operand.trim();
     const expandedOperand = this.expandOperand(raw);
     const { expanded, length } = expandedOperand;
-    const syntax = expandedOperand.syntax ?? parseOperandSyntax(raw);
+    const syntax2 = expandedOperand.syntax ?? parseOperandSyntax(raw);
     return {
       mode: "unknown",
       baseExpression: expanded,
       raw,
       expanded,
       length,
-      indexRegister: syntax.indexRegister,
-      immediate: syntax.immediate,
-      indirect: syntax.indirect
+      indexRegister: syntax2.indexRegister,
+      immediate: syntax2.immediate,
+      indirect: syntax2.indirect
     };
   }
   /**
@@ -14773,11 +14773,11 @@ var ArchitectureRegistry = class {
    * @param {ArchitectureDefinition} definition The definition.
    * @param {string[]} [aliases] The aliases.
    */
-  register(definition, aliases = []) {
+  register(definition, aliases2 = []) {
     const canonical2 = definition.name.toLowerCase();
     this.definitions.set(canonical2, { ...definition, name: canonical2 });
     this.aliases.set(canonical2, canonical2);
-    for (const alias of aliases) {
+    for (const alias of aliases2) {
       this.aliases.set(alias.toLowerCase(), canonical2);
     }
   }
@@ -14940,10 +14940,10 @@ var expandIncludeFilename = (target, defineEngine) => {
   }
   return defineEngine.resolveRegularDefines(target);
 };
-var resolveIncludeTarget = (words, command, directive2, defineEngine) => {
+var resolveIncludeTarget = (words, command, directive3, defineEngine) => {
   const target = command?.parsed.includeTarget?.target ?? words[1];
   if (!target) {
-    throw new Error(`${directive2} requires exactly one filename parameter`);
+    throw new Error(`${directive3} requires exactly one filename parameter`);
   }
   return expandIncludeFilename(target, defineEngine);
 };
@@ -19444,8 +19444,8 @@ function stripWrappingQuotes(filename) {
 
 // packages/core/src/plugin/contracts.ts
 var PLUGIN_API_VERSION = 1;
-function definePlugin(plugin2) {
-  return plugin2;
+function definePlugin(plugin3) {
+  return plugin3;
 }
 
 // packages/core/src/plugin/diagnostics.ts
@@ -19469,7 +19469,13 @@ var PluginError = class extends Error {
 };
 
 // packages/core/src/lsp/directive-catalog.ts
-var descriptor = (keyword, summary, syntax, group) => ({ keyword, summary, syntax, group });
+var descriptor = (keyword, summary, syntax2, group, operands) => ({
+  keyword,
+  summary,
+  syntax: syntax2,
+  group,
+  ...operands ? { operands } : {}
+});
 var directiveCatalog = [
   ...[
     ["db", "Emit one or more bytes.", "db value[, value...]"],
@@ -19479,7 +19485,7 @@ var directiveCatalog = [
     ["dc.b", "Emit byte-sized data constants.", "dc.b value[, value...]"],
     ["dc.w", "Emit word-sized data constants.", "dc.w value[, value...]"],
     ["dc.l", "Emit long-sized data constants.", "dc.l value[, value...]"]
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "data")),
+  ].map(([keyword, summary, syntax2]) => descriptor(keyword, summary, syntax2, "data")),
   ...[
     ["fillbyte", "Set the byte used by fill.", "fillbyte value"],
     ["fillword", "Set the word used by fill.", "fillword value"],
@@ -19491,35 +19497,89 @@ var directiveCatalog = [
     ["padlong", "Set the long value used by pad.", "padlong value"],
     ["paddword", "Set the double word used by pad.", "paddword value"],
     ["pad", "Pad output up to an address.", "pad address"]
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "memory")),
+  ].map(([keyword, summary, syntax2]) => descriptor(keyword, summary, syntax2, "memory")),
   ...[
     ["incsrc", "Assemble another source file inline.", 'incsrc "file.asm"'],
     ["include", "Include and assemble another source file.", 'include "file.asm"'],
     ["includeonce", "Guard a file against repeated inclusion.", "includeonce"],
     ["incbin", "Embed bytes from a binary file.", 'incbin "file.bin"[,start,length]']
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "include")),
+  ].map(([keyword, summary, syntax2]) => descriptor(keyword, summary, syntax2, "include")),
   ...[
-    ["base", "Set the logical base address.", "base address"],
     ["org", "Set the logical origin address.", "org address"],
     ["pushbase", "Push the current base address.", "pushbase"],
     ["pullbase", "Restore the most recently pushed base address.", "pullbase"],
     ["pushpc", "Push the current logical address.", "pushpc"],
-    ["pullpc", "Restore the most recently pushed logical address.", "pullpc"],
-    ["arch", "Select the active architecture.", "arch architecture"]
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "layout")),
-  ...[
-    ["namespace", "Set the active label namespace.", "namespace name"],
-    ["pushns", "Push the current namespace.", "pushns"],
-    ["pullns", "Restore the most recently pushed namespace.", "pullns"]
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "namespace")),
-  ...[
-    ["table", "Load a character mapping table.", 'table "file"[,ltr|rtl]'],
-    ["cleartable", "Reset character mappings.", "cleartable"],
-    ["pushtable", "Push the current mapping table.", "pushtable"],
-    ["pulltable", "Restore the most recently pushed mapping table.", "pulltable"]
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "table")),
-  descriptor("struct", "Begin a structure definition.", "struct name", "struct"),
-  descriptor("endstruct", "End a structure definition.", "endstruct", "struct"),
+    ["pullpc", "Restore the most recently pushed logical address.", "pullpc"]
+  ].map(([keyword, summary, syntax2]) => descriptor(keyword, summary, syntax2, "layout")),
+  descriptor("base", "Set or restore the logical base address.", "base address|off", "layout", [
+    {
+      keyword: "off",
+      summary: "Restore the saved physical/base address relationship.",
+      syntax: "base off"
+    }
+  ]),
+  descriptor("arch", "Select the active architecture.", "arch architecture", "layout"),
+  descriptor("pushns", "Push the current namespace.", "pushns", "namespace"),
+  descriptor("pullns", "Restore the most recently pushed namespace.", "pullns", "namespace"),
+  descriptor(
+    "namespace",
+    "Set, nest, or clear the active label namespace.",
+    "namespace [name|off|nested on|nested off]",
+    "namespace",
+    [
+      {
+        keyword: "off",
+        summary: "Leave the current namespace (pop when nested, else clear).",
+        syntax: "namespace off"
+      },
+      {
+        keyword: "nested",
+        summary: "Enable or disable nested namespace paths.",
+        syntax: "namespace nested on|off",
+        operands: [
+          {
+            keyword: "on",
+            summary: "Build namespace paths from successive namespace directives.",
+            syntax: "namespace nested on"
+          },
+          {
+            keyword: "off",
+            summary: "Disable nested paths and clear the current namespace.",
+            syntax: "namespace nested off"
+          }
+        ]
+      }
+    ]
+  ),
+  descriptor("cleartable", "Reset character mappings.", "cleartable", "table"),
+  descriptor("pushtable", "Push the current mapping table.", "pushtable", "table"),
+  descriptor("pulltable", "Restore the most recently pushed mapping table.", "pulltable", "table"),
+  descriptor("table", "Load a character mapping table.", 'table "file"[,ltr|rtl]', "table", [
+    {
+      keyword: "ltr",
+      summary: "Left-to-right table lines: character=hex.",
+      syntax: 'table "file",ltr'
+    },
+    {
+      keyword: "rtl",
+      summary: "Right-to-left table lines: hex=character.",
+      syntax: 'table "file",rtl'
+    }
+  ]),
+  descriptor("struct", "Begin a structure definition.", "struct name [extends parent]", "struct", [
+    {
+      keyword: "extends",
+      summary: "Inherit members from an existing struct.",
+      syntax: "struct name extends parent"
+    }
+  ]),
+  descriptor("endstruct", "End a structure definition.", "endstruct [align value]", "struct", [
+    {
+      keyword: "align",
+      summary: "Round the struct size/stride up to an alignment.",
+      syntax: "endstruct align value"
+    }
+  ]),
   ...[
     ["if", "Begin a conditional block.", "if expression"],
     ["elseif", "Begin an alternate conditional branch.", "elseif expression"],
@@ -19529,7 +19589,7 @@ var directiveCatalog = [
     ["endwhile", "End a while loop.", "endwhile"],
     ["for", "Begin a counted loop.", "for var = start..end"],
     ["endfor", "End a counted loop.", "endfor"]
-  ].map(([keyword, summary, syntax]) => descriptor(keyword, summary, syntax, "control")),
+  ].map(([keyword, summary, syntax2]) => descriptor(keyword, summary, syntax2, "control")),
   descriptor("macro", "Begin a macro definition.", "macro name(args)", "macro"),
   descriptor("endmacro", "End a macro definition.", "endmacro", "macro"),
   descriptor("assert", "Fail when a condition is false.", "assert condition", "diagnostic"),
@@ -19582,14 +19642,14 @@ var ResolvedToolingCatalog = class {
     const enabledCoreGroups = new Set(
       this.target.coreDirectiveGroups ?? CORE_DIRECTIVE_GROUPS
     );
-    const core = directiveCatalog.filter((descriptor2) => enabledCoreGroups.has(descriptor2.group));
+    const core = directiveCatalog.filter((descriptor3) => enabledCoreGroups.has(descriptor3.group));
     const contributed = this.target.directiveSets.flatMap((id) => {
       const set = this.directiveSets.get(canonical(id))?.value;
       return set ? [...set.tooling ?? [], ...set.directives.flatMap((item) => item.tooling)] : [];
     });
     return Object.freeze([
       ...new Map(
-        [...core, ...contributed].map((descriptor2) => [canonical(descriptor2.keyword), descriptor2])
+        [...core, ...contributed].map((descriptor3) => [canonical(descriptor3.keyword), descriptor3])
       ).values()
     ]);
   }
@@ -19689,7 +19749,7 @@ var AssemblerEnvironment = class {
       targetInvalid(targetRecord, "defaultOutputExtension must begin with '.'.");
     }
     const architectureIds = new Set(target.architectures.map(canonical));
-    const aliases = /* @__PURE__ */ new Map();
+    const aliases2 = /* @__PURE__ */ new Map();
     for (const architectureId of architectureIds) {
       const record = this.#architectures.get(architectureId);
       if (!record) {
@@ -19697,7 +19757,7 @@ var AssemblerEnvironment = class {
       }
       for (const alias of [record.value.id, ...record.value.aliases ?? []]) {
         const key = canonical(alias);
-        const previous = aliases.get(key);
+        const previous = aliases2.get(key);
         if (previous && previous !== architectureId) {
           const previousOwner = this.#architectures.get(previous)?.pluginId;
           throw new PluginError(
@@ -19710,10 +19770,10 @@ var AssemblerEnvironment = class {
             }
           );
         }
-        aliases.set(key, architectureId);
+        aliases2.set(key, architectureId);
       }
     }
-    const defaultArchitecture = aliases.get(canonical(target.defaultArchitecture));
+    const defaultArchitecture = aliases2.get(canonical(target.defaultArchitecture));
     if (!defaultArchitecture || !architectureIds.has(defaultArchitecture)) {
       targetInvalid(
         targetRecord,
@@ -19726,17 +19786,17 @@ var AssemblerEnvironment = class {
       if (!set) {
         targetInvalid(targetRecord, `missing directive-set contribution '${setId}'.`);
       }
-      for (const directive2 of set.value.directives) {
-        for (const keyword of directive2.keywords) {
+      for (const directive3 of set.value.directives) {
+        for (const keyword of directive3.keywords) {
           const key = canonical(keyword);
           const previous = directiveKeywords.get(key);
           if (previous) {
             targetInvalid(
               targetRecord,
-              `directive keyword '${keyword}' is supplied by '${previous.id}' (${previous.pluginId}) and '${directive2.id}' (${set.pluginId}).`
+              `directive keyword '${keyword}' is supplied by '${previous.id}' (${previous.pluginId}) and '${directive3.id}' (${set.pluginId}).`
             );
           }
-          directiveKeywords.set(key, { id: directive2.id, pluginId: set.pluginId });
+          directiveKeywords.set(key, { id: directive3.id, pluginId: set.pluginId });
         }
       }
     }
@@ -19765,7 +19825,7 @@ var AssemblerEnvironment = class {
         targetInvalid(targetRecord, `missing lifecycle contribution '${lifecycleId}'.`);
       }
     }
-    return aliases;
+    return aliases2;
   }
   resolveTargetId(idOrAlias) {
     return this.#targetAliases.get(canonical(idOrAlias));
@@ -19987,11 +20047,11 @@ var validatePlugin = (value, pluginModule) => {
       pluginModule
     });
   }
-  const plugin2 = value;
+  const plugin3 = value;
   return {
     manifest,
-    ...plugin2.validateOptions ? { validateOptions: plugin2.validateOptions.bind(plugin2) } : {},
-    activate: plugin2.activate.bind(plugin2)
+    ...plugin3.validateOptions ? { validateOptions: plugin3.validateOptions.bind(plugin3) } : {},
+    activate: plugin3.activate.bind(plugin3)
   };
 };
 var validateContributionId = (id, pluginId) => {
@@ -20007,9 +20067,9 @@ var validateContributionId = (id, pluginId) => {
   }
   return id;
 };
-var validateAliases = (aliases, pluginId, contributionId) => {
-  if (aliases === void 0) return;
-  if (!Array.isArray(aliases) || aliases.some((alias) => typeof alias !== "string" || alias === "")) {
+var validateAliases = (aliases2, pluginId, contributionId) => {
+  if (aliases2 === void 0) return;
+  if (!Array.isArray(aliases2) || aliases2.some((alias) => typeof alias !== "string" || alias === "")) {
     throw new PluginError(`Contribution '${contributionId}' has invalid aliases.`, {
       code: "PLUGIN_CONFIGURATION_INVALID",
       pluginId,
@@ -20128,12 +20188,12 @@ var PluginManager = class {
     }
   }
   async #activateOne(request) {
-    const plugin2 = request.plugin;
-    const manifest = plugin2.manifest;
+    const plugin3 = request.plugin;
+    const manifest = plugin3.manifest;
     let options;
     try {
-      if (plugin2.validateOptions) {
-        options = plugin2.validateOptions(request.options);
+      if (plugin3.validateOptions) {
+        options = plugin3.validateOptions(request.options);
       } else if (isEmptyOptions(request.options)) {
         options = {};
       } else {
@@ -20157,7 +20217,7 @@ var PluginManager = class {
     const context = this.#createActivationContext(transaction, frozenOptions);
     let disposable;
     try {
-      disposable = await plugin2.activate(context, frozenOptions);
+      disposable = await plugin3.activate(context, frozenOptions);
       if (disposable !== void 0 && (!isRecord(disposable) || typeof disposable.dispose !== "function")) {
         throw new Error("activate() returned an invalid disposable.");
       }
@@ -20287,23 +20347,23 @@ var PluginManager = class {
       if (!isArray(record.value.directives) || record.value.tooling !== void 0 && !isArray(record.value.tooling)) {
         this.#malformed(transaction, record);
       }
-      for (const directive2 of record.value.directives) {
-        validateContributionId(directive2.id, transaction.manifest.id);
-        if (local.has(directive2.id.toLowerCase()) || this.#contributionOwners.has(directive2.id.toLowerCase())) {
-          throw new PluginError(`Duplicate directive contribution '${directive2.id}'.`, {
+      for (const directive3 of record.value.directives) {
+        validateContributionId(directive3.id, transaction.manifest.id);
+        if (local.has(directive3.id.toLowerCase()) || this.#contributionOwners.has(directive3.id.toLowerCase())) {
+          throw new PluginError(`Duplicate directive contribution '${directive3.id}'.`, {
             code: "PLUGIN_CONTRIBUTION_DUPLICATE",
             pluginId: transaction.manifest.id,
-            contributionId: directive2.id
+            contributionId: directive3.id
           });
         }
-        local.add(directive2.id.toLowerCase());
-        if (!isArray(directive2.keywords) || directive2.keywords.length === 0 || directive2.keywords.some(
+        local.add(directive3.id.toLowerCase());
+        if (!isArray(directive3.keywords) || directive3.keywords.length === 0 || directive3.keywords.some(
           (keyword) => typeof keyword !== "string" || keyword === ""
-        ) || typeof directive2.createHandler !== "function" || !isArray(directive2.tooling)) {
-          throw new PluginError(`Directive '${directive2.id}' is malformed.`, {
+        ) || typeof directive3.createHandler !== "function" || !isArray(directive3.tooling)) {
+          throw new PluginError(`Directive '${directive3.id}' is malformed.`, {
             code: "PLUGIN_CONFIGURATION_INVALID",
             pluginId: transaction.manifest.id,
-            contributionId: directive2.id
+            contributionId: directive3.id
           });
         }
       }
@@ -20356,8 +20416,8 @@ var PluginManager = class {
       }
     }
     for (const set of transaction.directiveSets) {
-      for (const directive2 of set.value.directives) {
-        this.#contributionOwners.set(directive2.id.toLowerCase(), set.pluginId);
+      for (const directive3 of set.value.directives) {
+        this.#contributionOwners.set(directive3.id.toLowerCase(), set.pluginId);
       }
     }
     this.#sessionStates.push(...transaction.sessionStates);
@@ -20394,9 +20454,9 @@ var PluginManager = class {
     if (this.#disposed) return;
     this.#disposed = true;
     const errors = [];
-    for (const plugin2 of [...this.#activated].reverse()) {
+    for (const plugin3 of [...this.#activated].reverse()) {
       try {
-        await plugin2.disposable?.dispose();
+        await plugin3.disposable?.dispose();
       } catch (error) {
         errors.push(error);
       }
@@ -21217,40 +21277,40 @@ var Assembler = class _Assembler {
       const set = session.environment.getDirectiveSet(setId);
       if (!set) continue;
       const pluginId = session.environment.getContributionOwner(setId);
-      for (const directive2 of set.directives) {
+      for (const directive3 of set.directives) {
         let handler;
         try {
-          handler = directive2.createHandler({
+          handler = directive3.createHandler({
             targetId: session.targetId,
             state: session.pluginState,
             session
           });
         } catch (cause) {
-          throw new PluginError(`Directive factory '${directive2.id}' failed.`, {
+          throw new PluginError(`Directive factory '${directive3.id}' failed.`, {
             code: "PLUGIN_ACTIVATION_FAILED",
             pluginId,
-            contributionId: directive2.id,
+            contributionId: directive3.id,
             targetId: session.targetId,
             cause
           });
         }
         registry.register(
-          [...directive2.keywords],
+          [...directive3.keywords],
           void 0,
           (_context, words, raw) => {
             try {
               handler({ state: session.pluginState }, words, raw);
             } catch (cause) {
-              throw new PluginError(`Directive '${directive2.id}' failed.`, {
+              throw new PluginError(`Directive '${directive3.id}' failed.`, {
                 code: "PLUGIN_HOOK_FAILED",
                 pluginId,
-                contributionId: directive2.id,
+                contributionId: directive3.id,
                 targetId: session.targetId,
                 cause
               });
             }
           },
-          directive2.phase
+          directive3.phase
         );
       }
     }
@@ -22033,9 +22093,9 @@ var Assembler = class _Assembler {
    * @returns {StageExecutionState} The result.
    */
   createEphemeralStageExecutionState(stage) {
-    const descriptor2 = this.getStageDescriptor(stage);
+    const descriptor3 = this.getStageDescriptor(stage);
     return {
-      ...descriptor2,
+      ...descriptor3,
       cursor: {
         currentTargetAddress: this.currentTargetAddress,
         currentTargetBaseAddress: this.currentTargetBaseAddress,
@@ -22069,13 +22129,13 @@ var Assembler = class _Assembler {
    * @param {AssemblyStageName} stage The stage.
    */
   syncActiveStageExecutionState(stage) {
-    const descriptor2 = this.getStageDescriptor(stage);
+    const descriptor3 = this.getStageDescriptor(stage);
     if (!this.activeStageExecutionState) {
       this.activeStageExecutionState = this.createEphemeralStageExecutionState(stage);
       return;
     }
-    this.activeStageExecutionState.stage = descriptor2.stage;
-    this.activeStageExecutionState.capabilities = descriptor2.capabilities;
+    this.activeStageExecutionState.stage = descriptor3.stage;
+    this.activeStageExecutionState.capabilities = descriptor3.capabilities;
   }
   /**
    * Gets active stage capabilities.
@@ -23158,7 +23218,7 @@ var Assembler = class _Assembler {
    * @returns {StageExecutionState} The result.
    */
   createStageExecutionState(stage) {
-    const descriptor2 = this.getStageDescriptor(stage);
+    const descriptor3 = this.getStageDescriptor(stage);
     let previousStage;
     if (stage === "resolveLayout") {
       previousStage = "collectDefinitions";
@@ -23191,7 +23251,7 @@ var Assembler = class _Assembler {
       macroLabelInstance: this.macroLabelInstance
     };
     return {
-      ...descriptor2,
+      ...descriptor3,
       cursor: { ...cursorSeed },
       symbols: {
         labelTable: new Map(
@@ -24753,40 +24813,70 @@ function findDirectiveInCatalog(keyword, directives = directiveCatalog, directiv
   }
   return getDirectiveCatalogMap(directives).get(canonical2);
 }
-function renderInstructionDocs(descriptor2) {
-  const lines = [];
-  lines.push(`**${descriptor2.mnemonic}** - instruction`);
-  if (descriptor2.summary) {
-    lines.push("", descriptor2.summary);
+function findDirectiveOperand(lineText, word, directives = directiveCatalog, directivePrefixes = ["@"]) {
+  const trimmed = (lineText.split(";")[0] ?? lineText).trim();
+  if (!trimmed) {
+    return void 0;
   }
-  if (descriptor2.modes.length > 0) {
+  const tokens = trimmed.split(/[\s,]+/).map((token) => token.replace(/^["'`]+|["'`]+$/g, "")).filter(Boolean);
+  if (tokens.length < 2) {
+    return void 0;
+  }
+  const directive3 = findDirectiveInCatalog(tokens[0], directives, directivePrefixes);
+  if (!directive3?.operands) {
+    return void 0;
+  }
+  const target = word.toLowerCase();
+  let current = directive3.operands;
+  for (let index2 = 1; index2 < tokens.length && current; index2++) {
+    const token = tokens[index2].toLowerCase();
+    const match = current.find(
+      (operand) => operand.keyword.toLowerCase() === token
+    );
+    if (!match) {
+      continue;
+    }
+    if (token === target) {
+      return match;
+    }
+    current = match.operands;
+  }
+  return void 0;
+}
+function renderInstructionDocs(descriptor3) {
+  const lines = [];
+  lines.push(`**${descriptor3.mnemonic}** - instruction`);
+  if (descriptor3.summary) {
+    lines.push("", descriptor3.summary);
+  }
+  if (descriptor3.modes.length > 0) {
     lines.push("", "Addressing modes:");
-    for (const mode of descriptor2.modes) {
+    for (const mode of descriptor3.modes) {
       const opcode = mode.opcode === void 0 ? "" : ` \`$${mode.opcode.toString(16).padStart(2, "0").toUpperCase()}\``;
       const size = mode.size === void 0 ? "" : ` (${mode.size} bytes)`;
-      const example = mode.syntax ? ` \`${descriptor2.mnemonic} ${mode.syntax}\`` : ` \`${descriptor2.mnemonic}\``;
+      const example = mode.syntax ? ` \`${descriptor3.mnemonic} ${mode.syntax}\`` : ` \`${descriptor3.mnemonic}\``;
       lines.push(`- ${mode.mode}:${example}${opcode}${size}`);
     }
   }
   return lines.join("\n");
 }
-function renderDirectiveDocs(descriptor2) {
+function renderDirectiveDocs(descriptor3) {
   return [
-    `**${descriptor2.keyword}** - directive`,
+    `**${descriptor3.keyword}** - directive`,
     "",
-    descriptor2.summary,
+    descriptor3.summary,
     "",
-    `\`${descriptor2.syntax}\``
+    `\`${descriptor3.syntax}\``
   ].join("\n");
 }
-function renderExpressionFunctionDocs(descriptor2) {
-  const parameters = descriptor2.signature.parameters.join(", ");
+function renderExpressionFunctionDocs(descriptor3) {
+  const parameters = descriptor3.signature.parameters.join(", ");
   return [
-    `**${descriptor2.name}** - expression function`,
+    `**${descriptor3.name}** - expression function`,
     "",
-    descriptor2.summary,
+    descriptor3.summary,
     "",
-    `\`${descriptor2.name}(${parameters})\``
+    `\`${descriptor3.name}(${parameters})\``
   ].join("\n");
 }
 function buildCompletionEntries(architecture, provider, directives = directiveCatalog, expressionFunctions = []) {
@@ -24799,12 +24889,12 @@ function buildCompletionEntries(architecture, provider, directives = directiveCa
       documentation: renderInstructionDocs(instruction2)
     });
   }
-  for (const directive2 of directives) {
+  for (const directive3 of directives) {
     entries.push({
-      label: directive2.keyword,
+      label: directive3.keyword,
       kind: "directive",
-      detail: directive2.summary,
-      documentation: renderDirectiveDocs(directive2)
+      detail: directive3.summary,
+      documentation: renderDirectiveDocs(directive3)
     });
   }
   for (const expressionFunction of expressionFunctions) {
@@ -24825,6 +24915,3087 @@ function buildCompletionEntries(architecture, provider, directives = directiveCa
   }
   return entries;
 }
+
+// plugins/65xx/src/instructions/catalog.ts
+var syntax = {
+  implied: "",
+  accumulator: "A",
+  immediate: "#value",
+  zeroPage: "zp",
+  zeroPageIndexedX: "zp,x",
+  zeroPageIndexedY: "zp,y",
+  absolute: "addr",
+  absoluteIndexedX: "addr,x",
+  absoluteIndexedY: "addr,y",
+  absoluteLongIndexedX: "long,x",
+  indirect: "(addr)",
+  zeroPageIndirect: "(zp)",
+  zeroPageIndirectLong: "[zp]",
+  indexedIndirectX: "(zp,x)",
+  indirectIndexedY: "(zp),y",
+  absoluteIndexedIndirect: "(addr,x)",
+  zeroPageIndirectIndexedZ: "(zp),z",
+  stackRelative: "offset,s",
+  stackRelativeIndirectIndexedY: "(offset,s),y",
+  relative: "target",
+  relative16: "target",
+  zeroPageRelative: "zp,target",
+  basePageIndirectIndexedZ: "[zp],z",
+  quadAccumulator: "Q"
+};
+var summaries = {
+  ADC: "Add memory to the accumulator with carry.",
+  AND: "Bitwise AND memory with the accumulator.",
+  ASL: "Shift left one bit.",
+  BCC: "Branch when carry is clear.",
+  BCS: "Branch when carry is set.",
+  BEQ: "Branch when equal (zero set).",
+  BIT: "Test accumulator bits without storing a result.",
+  BMI: "Branch when negative.",
+  BNE: "Branch when not equal (zero clear).",
+  BPL: "Branch when positive.",
+  BRK: "Trigger a software interrupt.",
+  BVC: "Branch when overflow is clear.",
+  BVS: "Branch when overflow is set.",
+  CMP: "Compare memory with the accumulator.",
+  CPX: "Compare memory with X.",
+  CPY: "Compare memory with Y.",
+  EOR: "Exclusive-OR memory with the accumulator.",
+  JMP: "Jump to an address.",
+  JSR: "Call a subroutine.",
+  LDA: "Load the accumulator.",
+  LDX: "Load X.",
+  LDY: "Load Y.",
+  NOP: "Perform no operation.",
+  ORA: "Bitwise OR memory with the accumulator.",
+  SBC: "Subtract memory and borrow from the accumulator.",
+  STA: "Store the accumulator.",
+  STX: "Store X.",
+  STY: "Store Y."
+};
+function buildInstructionCatalog(forms) {
+  const grouped = /* @__PURE__ */ new Map();
+  for (const form of forms) {
+    const entries = grouped.get(form.mnemonic) ?? [];
+    entries.push(form);
+    grouped.set(form.mnemonic, entries);
+  }
+  return [...grouped.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([mnemonic, entries]) => ({
+    mnemonic,
+    summary: summaries[mnemonic] ?? (entries.some((entry) => !entry.documented) ? "Undocumented NMOS 6502 instruction." : `${mnemonic} instruction.`),
+    modes: entries.map((form) => ({
+      mode: form.mode,
+      syntax: syntax[form.mode],
+      opcode: form.opcode,
+      size: form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0)
+    }))
+  }));
+}
+
+// plugins/65xx/src/instructions/schema.ts
+function matchesFeatures(expression, features) {
+  if (expression.allOf?.some((feature) => !features.has(feature))) return false;
+  if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) return false;
+  if (expression.noneOf?.some((feature) => features.has(feature))) return false;
+  return true;
+}
+function getOperandCodec(mode) {
+  switch (mode) {
+    case "implied":
+    case "accumulator":
+    case "quadAccumulator":
+      return "none";
+    case "absolute":
+    case "absoluteIndexedX":
+    case "absoluteIndexedY":
+    case "indirect":
+    case "absoluteIndexedIndirect":
+      return "unsigned16-le";
+    case "absoluteLongIndexedX":
+      return "unsigned24-le";
+    case "relative":
+      return "relative8";
+    case "relative16":
+      return "relative16";
+    case "zeroPageRelative":
+      return "zero-page-relative8";
+    default:
+      return "unsigned8";
+  }
+}
+function getOperandFields(codec) {
+  switch (codec) {
+    case "none":
+      return [];
+    case "unsigned16-le":
+      return [{ name: "address", width: 2 }];
+    case "unsigned24-le":
+      return [{ name: "address", width: 3 }];
+    case "relative8":
+      return [{ name: "target", width: 1, signed: true, relative: true }];
+    case "relative16":
+      return [{ name: "target", width: 2, signed: true, relative: true }];
+    case "zero-page-relative8":
+      return [
+        { name: "address", width: 1 },
+        { name: "target", width: 1, signed: true, relative: true }
+      ];
+    case "unsigned8":
+      return [{ name: "value", width: 1 }];
+  }
+  return [];
+}
+
+// plugins/65xx/src/instructions/variant-tables.generated.ts
+var ca65EaTable = [
+  [
+    0,
+    0,
+    5,
+    13,
+    15,
+    21,
+    29,
+    31,
+    0,
+    25,
+    18,
+    0,
+    7,
+    17,
+    23,
+    1,
+    0,
+    0,
+    0,
+    3,
+    19,
+    9,
+    0,
+    9,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0
+  ],
+  [
+    8,
+    8,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    20,
+    28,
+    0,
+    128,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    36,
+    44,
+    15,
+    52,
+    60,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    137,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    58,
+    58,
+    198,
+    206,
+    0,
+    214,
+    222,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    26,
+    26,
+    230,
+    238,
+    0,
+    246,
+    254,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    96,
+    152,
+    0,
+    112,
+    158,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    32,
+    0,
+    0,
+    0,
+    0,
+    48,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    144,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    220,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    64,
+    1,
+    65,
+    0,
+    9,
+    73,
+    0,
+    0,
+    0,
+    0,
+    81,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    64,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    16,
+    0,
+    32,
+    48,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    234,
+    0,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    8,
+    8,
+    4,
+    12,
+    0,
+    20,
+    28,
+    0,
+    20,
+    28,
+    0,
+    128,
+    0,
+    16,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    8,
+    0,
+    0,
+    128,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    0,
+    76,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    178,
+    108,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  [
+    0,
+    0,
+    5,
+    13,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0,
+    18,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    18,
+    0
+  ],
+  [
+    10,
+    10,
+    6,
+    14,
+    0,
+    22,
+    30,
+    0,
+    0,
+    0,
+    18,
+    0,
+    18,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    10
+  ],
+  [
+    3,
+    3,
+    4,
+    12,
+    0,
+    20,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3
+  ]
+];
+var ca65VariantTables = {
+  "4510": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 9479788, 160, 0, "Put4510"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["MAP", 1, 92, 0, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1091180, 128, 0, "Put4510"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  "6502DTV": [
+    ["ADC", 8430188, 96, 0, "PutAll"],
+    ["ALR", 8388608, 75, 0, "PutAll"],
+    ["ANC", 8388608, 11, 0, "PutAll"],
+    ["AND", 8430188, 32, 0, "PutAll"],
+    ["ANE", 8388608, 139, 0, "PutAll"],
+    ["ARR", 8388608, 107, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["AXS", 8388608, 203, 0, "PutAll"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 12, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 18, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8430188, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEC", 108, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8430188, 64, 0, "PutAll"],
+    ["INC", 108, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 2056, 76, 6, "PutJMP"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LAS", 512, 187, 0, "PutAll"],
+    ["LAX", 8430348, 163, 11, "PutAll"],
+    ["LDA", 8430188, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 8388717, 0, 10, "PutAll"],
+    ["ORA", 8430188, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["RLA", 41580, 35, 0, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RRA", 41580, 99, 0, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SAC", 8388608, 50, 1, "PutAll"],
+    ["SBC", 8430188, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SHA", 8704, 147, 1, "PutAll"],
+    ["SHX", 512, 158, 1, "PutAll"],
+    ["SHY", 64, 156, 1, "PutAll"],
+    ["SIR", 8388608, 66, 1, "PutAll"],
+    ["STA", 41580, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  "65SC02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  "65C02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  W65C02: [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STP", 1, 219, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["WAI", 1, 203, 0, "PutAll"]
+  ],
+  "65CE02": [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["AUG", 1, 92, 0, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 9479788, 160, 0, "Put4510"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1091180, 128, 0, "Put4510"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  "45GS02": [
+    ["ADC", 1082173036, 96, 0, "Put45GS02"],
+    ["ADCQ", 5132, 96, 13, "Put45GS02_Q"],
+    ["AND", 1082173036, 32, 0, "Put45GS02"],
+    ["ANDQ", 5132, 32, 13, "Put45GS02_Q"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["ASLQ", 2147483886, 0, 14, "Put45GS02_Q"],
+    ["ASR", 38, 67, 0, "Put4510"],
+    ["ASRQ", 2147483686, 64, 15, "Put45GS02_Q"],
+    ["ASW", 8, 203, 6, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BITQ", 12, 32, 15, "Put45GS02_Q"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 1, 0, 0, "PutAll"],
+    ["BSR", 262144, 99, 0, "PutPCRel4510"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLE", 1, 2, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 1082173036, 192, 0, "Put45GS02"],
+    ["CMPQ", 5132, 192, 13, "Put45GS02_Q"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CPZ", 8388620, 208, 1, "Put4510"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEQ", 2147483886, 192, 14, "Put45GS02_Q"],
+    ["DEW", 4, 195, 9, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["DEZ", 1, 59, 0, "PutAll"],
+    ["EOM", 1, 234, 0, "PutAll"],
+    ["EOR", 1082173036, 64, 0, "Put45GS02"],
+    ["EORQ", 5132, 64, 13, "Put45GS02_Q"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INQ", 2147483886, 224, 14, "Put45GS02_Q"],
+    ["INW", 4, 227, 9, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["INZ", 1, 27, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 67592, 32, 7, "Put4510"],
+    ["LBCC", 262144, 147, 0, "PutPCRel4510"],
+    ["LBCS", 262144, 179, 0, "PutPCRel4510"],
+    ["LBEQ", 262144, 243, 0, "PutPCRel4510"],
+    ["LBMI", 262144, 51, 0, "PutPCRel4510"],
+    ["LBNE", 262144, 211, 0, "PutPCRel4510"],
+    ["LBPL", 262144, 19, 0, "PutPCRel4510"],
+    ["LBRA", 262144, 131, 0, "PutPCRel4510"],
+    ["LBVC", 262144, 83, 0, "PutPCRel4510"],
+    ["LBVS", 262144, 115, 0, "PutPCRel4510"],
+    ["LDA", 1083221612, 160, 0, "Put45GS02"],
+    ["LDQ", 1073746956, 160, 13, "Put45GS02_Q"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LDZ", 8388680, 163, 1, "Put4510"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["LSRQ", 2147483886, 64, 14, "Put45GS02_Q"],
+    ["MAP", 1, 92, 0, "PutAll"],
+    ["NEG", 1, 66, 0, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 1082173036, 0, 0, "Put45GS02"],
+    ["ORQ", 5132, 0, 13, "Put45GS02_Q"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHD", 134217736, 244, 1, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHW", 134217736, 244, 1, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PHZ", 1, 219, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["PLZ", 1, 251, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROLQ", 2147483886, 32, 14, "Put45GS02_Q"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RORQ", 2147483886, 96, 14, "Put45GS02_Q"],
+    ["ROW", 8, 235, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTN", 8388608, 98, 1, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 1082173036, 224, 0, "Put45GS02"],
+    ["SBCQ", 5132, 224, 13, "Put45GS02_Q"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEE", 1, 3, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["STA", 1074833004, 128, 0, "Put45GS02"],
+    ["STQ", 5132, 128, 13, "Put45GS02_Q"],
+    ["STX", 780, 130, 1, "Put4510"],
+    ["STY", 108, 128, 1, "Put4510"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["TAB", 1, 91, 0, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TAZ", 1, 75, 0, "PutAll"],
+    ["TBA", 1, 123, 0, "PutAll"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TSY", 1, 11, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"],
+    ["TYS", 1, 43, 0, "PutAll"],
+    ["TZA", 1, 107, 0, "PutAll"]
+  ]
+};
+
+// plugins/65xx/src/instructions/variants.ts
+var commonModes = {
+  0: { mode: "implied" },
+  1: { mode: "accumulator" },
+  2: { mode: "zeroPage" },
+  3: { mode: "absolute" },
+  5: { mode: "zeroPageIndexedX" },
+  6: { mode: "absoluteIndexedX" },
+  7: { mode: "absoluteLongIndexedX", codec: "unsigned24-le" },
+  8: { mode: "zeroPageIndexedY" },
+  9: { mode: "absoluteIndexedY" },
+  11: { mode: "indirect" },
+  12: { mode: "zeroPageIndirectLong" },
+  13: { mode: "indirectIndexedY" },
+  15: { mode: "indexedIndirectX" },
+  16: { mode: "absoluteIndexedIndirect" },
+  17: { mode: "relative" },
+  18: { mode: "relative16" },
+  20: { mode: "stackRelativeIndirectIndexedY" },
+  21: { mode: "immediate" },
+  22: { mode: "immediate" },
+  23: { mode: "immediate" },
+  27: { mode: "immediate", codec: "unsigned16-le" },
+  30: { mode: "basePageIndirectIndexedZ" },
+  31: { mode: "quadAccumulator" }
+};
+var featureByTable = {
+  "6502DTV": "dtv",
+  "65SC02": "cmos",
+  "65C02": "rockwell",
+  W65C02: "wdc",
+  "65CE02": "ce02",
+  "4510": "4510",
+  "45GS02": "45gs02"
+};
+function opcodeFor(row, modeIndex) {
+  const [, , base, eaTable] = row;
+  const extension = ca65EaTable[eaTable]?.[modeIndex];
+  if (extension === void 0) throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
+  let opcode = base | extension;
+  if (row[4] === "Put4510" || row[4] === "Put45GS02") {
+    opcode = (/* @__PURE__ */ new Map([
+      [71, 68],
+      [87, 84],
+      [147, 130],
+      [156, 139],
+      [158, 155],
+      [175, 171],
+      [191, 187],
+      [179, 226],
+      [208, 194],
+      [252, 35]
+    ])).get(opcode) ?? opcode;
+  }
+  if (row[4] === "Put45GS02_Q") {
+    if (opcode === 234) opcode = 26;
+    else if (opcode === 202) opcode = 58;
+  }
+  return opcode;
+}
+function modeFor(table, modeIndex) {
+  if (modeIndex === 10) {
+    return table === "65SC02" || table === "65C02" || table === "W65C02" ? { mode: "zeroPageIndirect" } : { mode: "zeroPageIndirectIndexedZ" };
+  }
+  return commonModes[modeIndex];
+}
+function createForm(table, row, modeIndex, modeDefinition) {
+  const opcode = opcodeFor(row, modeIndex);
+  const codec = modeDefinition.codec ?? getOperandCodec(modeDefinition.mode);
+  const prefixes = [];
+  if (row[4] === "Put45GS02_Q") {
+    prefixes.push(66, 66);
+    if (modeIndex === 12 || modeIndex === 30) prefixes.push(234);
+  } else if (row[4] === "Put45GS02" && modeIndex === 30) {
+    prefixes.push(234);
+  }
+  return Object.freeze({
+    opcode,
+    mnemonic: row[0],
+    mode: modeDefinition.mode,
+    encoding: [...prefixes, opcode],
+    operands: getOperandFields(codec),
+    codec,
+    availableWhen: { allOf: [featureByTable[table]] },
+    canonical: true,
+    documented: true,
+    stability: "documented",
+    relativeBaseOffset: row[4] === "PutPCRel4510" ? 2 : void 0
+  });
+}
+function decodeTable(table) {
+  const forms = [];
+  for (const row of ca65VariantTables[table]) {
+    if (row[4] === "PutBitBranch") {
+      forms.push(
+        Object.freeze({
+          opcode: row[2],
+          mnemonic: row[0],
+          mode: "zeroPageRelative",
+          encoding: [row[2]],
+          operands: getOperandFields("zero-page-relative8"),
+          codec: "zero-page-relative8",
+          availableWhen: { allOf: [featureByTable[table]] },
+          canonical: true,
+          documented: true,
+          stability: "documented",
+          relativeBaseOffset: 3
+        })
+      );
+      continue;
+    }
+    if (row[4] === "PutPCRel8" || row[4] === "PutPCRel4510") {
+      const modeIndex = row[4] === "PutPCRel8" ? 17 : 18;
+      const modeDefinition = commonModes[modeIndex];
+      if (modeDefinition) forms.push(createForm(table, row, modeIndex, modeDefinition));
+      continue;
+    }
+    const seenModes = /* @__PURE__ */ new Set();
+    for (let modeIndex = 0; modeIndex < 32; modeIndex++) {
+      if ((row[1] & 2 ** modeIndex) === 0) continue;
+      if (modeIndex === 0 && (row[1] & 2) !== 0) continue;
+      const modeDefinition = modeFor(table, modeIndex);
+      if (!modeDefinition) {
+        throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
+      }
+      const key = `${modeDefinition.mode}:${modeDefinition.codec ?? ""}`;
+      if (seenModes.has(key)) continue;
+      seenModes.add(key);
+      forms.push(createForm(table, row, modeIndex, modeDefinition));
+    }
+  }
+  return Object.freeze(forms);
+}
+var mos6502DtvForms = decodeTable("6502DTV");
+var cmos65sc02Forms = decodeTable("65SC02");
+var cmos65c02Forms = decodeTable("65C02");
+var wdc65c02Forms = decodeTable("W65C02");
+var csg65ce02Forms = decodeTable("65CE02");
+var commodore4510Forms = decodeTable("4510");
+var mega65Gs02Forms = decodeTable("45GS02");
+var mos6502DtvCpu = Object.freeze({
+  id: "65xx.6502dtv",
+  displayName: "C64DTV 6502",
+  aliases: ["6502dtv", "dtv"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented", "dtv"])
+});
+var cmos65sc02Cpu = Object.freeze({
+  id: "65xx.65sc02",
+  displayName: "65SC02",
+  aliases: ["65sc02"],
+  features: /* @__PURE__ */ new Set(["cmos"])
+});
+var cmos65c02Cpu = Object.freeze({
+  id: "65xx.65c02",
+  displayName: "65C02 with Rockwell extensions",
+  aliases: ["65c02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell"])
+});
+var wdc65c02Cpu = Object.freeze({
+  id: "65xx.w65c02",
+  displayName: "WDC W65C02",
+  aliases: ["w65c02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "wdc"])
+});
+var csg65ce02Cpu = Object.freeze({
+  id: "65xx.65ce02",
+  displayName: "CSG 65CE02",
+  aliases: ["65ce02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02"])
+});
+var commodore4510Cpu = Object.freeze({
+  id: "65xx.4510",
+  displayName: "Commodore 4510",
+  aliases: ["4510"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02", "4510"])
+});
+var mega65Gs02Cpu = Object.freeze({
+  id: "65xx.45gs02",
+  displayName: "MEGA65 45GS02",
+  aliases: ["45gs02"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02", "4510", "45gs02"])
+});
+var variantCpus = Object.freeze([
+  mos6502DtvCpu,
+  cmos65sc02Cpu,
+  cmos65c02Cpu,
+  wdc65c02Cpu,
+  csg65ce02Cpu,
+  commodore4510Cpu,
+  mega65Gs02Cpu
+]);
+var variantFormsByCpuId = Object.freeze({
+  [mos6502DtvCpu.id]: mos6502DtvForms,
+  [cmos65sc02Cpu.id]: cmos65sc02Forms,
+  [cmos65c02Cpu.id]: cmos65c02Forms,
+  [wdc65c02Cpu.id]: wdc65c02Forms,
+  [csg65ce02Cpu.id]: csg65ce02Forms,
+  [commodore4510Cpu.id]: commodore4510Forms,
+  [mega65Gs02Cpu.id]: mega65Gs02Forms
+});
+
+// plugins/65xx/src/instructions/opcodes.ts
+var rows = [
+  "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
+  "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
+  "JSR:abs AND:inx JAM:imp RLA:inx BIT:zp AND:zp ROL:zp RLA:zp PLP:imp AND:imm ROL:acc ANC:imm BIT:abs AND:abs ROL:abs RLA:abs",
+  "BMI:rel AND:iny JAM:imp RLA:iny NOP:zpx AND:zpx ROL:zpx RLA:zpx SEC:imp AND:aby NOP:imp RLA:aby NOP:abx AND:abx ROL:abx RLA:abx",
+  "RTI:imp EOR:inx JAM:imp SRE:inx NOP:zp EOR:zp LSR:zp SRE:zp PHA:imp EOR:imm LSR:acc ALR:imm JMP:abs EOR:abs LSR:abs SRE:abs",
+  "BVC:rel EOR:iny JAM:imp SRE:iny NOP:zpx EOR:zpx LSR:zpx SRE:zpx CLI:imp EOR:aby NOP:imp SRE:aby NOP:abx EOR:abx LSR:abx SRE:abx",
+  "RTS:imp ADC:inx JAM:imp RRA:inx NOP:zp ADC:zp ROR:zp RRA:zp PLA:imp ADC:imm ROR:acc ARR:imm JMP:ind ADC:abs ROR:abs RRA:abs",
+  "BVS:rel ADC:iny JAM:imp RRA:iny NOP:zpx ADC:zpx ROR:zpx RRA:zpx SEI:imp ADC:aby NOP:imp RRA:aby NOP:abx ADC:abx ROR:abx RRA:abx",
+  "NOP:imm STA:inx NOP:imm SAX:inx STY:zp STA:zp STX:zp SAX:zp DEY:imp NOP:imm TXA:imp ANE:imm STY:abs STA:abs STX:abs SAX:abs",
+  "BCC:rel STA:iny JAM:imp SHA:iny STY:zpx STA:zpx STX:zpy SAX:zpy TYA:imp STA:aby TXS:imp TAS:aby SHY:abx STA:abx SHX:aby SHA:aby",
+  "LDY:imm LDA:inx LDX:imm LAX:inx LDY:zp LDA:zp LDX:zp LAX:zp TAY:imp LDA:imm TAX:imp LAX:imm LDY:abs LDA:abs LDX:abs LAX:abs",
+  "BCS:rel LDA:iny JAM:imp LAX:iny LDY:zpx LDA:zpx LDX:zpy LAX:zpy CLV:imp LDA:aby TSX:imp LAS:aby LDY:abx LDA:abx LDX:aby LAX:aby",
+  "CPY:imm CMP:inx NOP:imm DCP:inx CPY:zp CMP:zp DEC:zp DCP:zp INY:imp CMP:imm DEX:imp AXS:imm CPY:abs CMP:abs DEC:abs DCP:abs",
+  "BNE:rel CMP:iny JAM:imp DCP:iny NOP:zpx CMP:zpx DEC:zpx DCP:zpx CLD:imp CMP:aby NOP:imp DCP:aby NOP:abx CMP:abx DEC:abx DCP:abx",
+  "CPX:imm SBC:inx NOP:imm ISC:inx CPX:zp SBC:zp INC:zp ISC:zp INX:imp SBC:imm NOP:imp SBC:imm CPX:abs SBC:abs INC:abs ISC:abs",
+  "BEQ:rel SBC:iny JAM:imp ISC:iny NOP:zpx SBC:zpx INC:zpx ISC:zpx SED:imp SBC:aby NOP:imp ISC:aby NOP:abx SBC:abx INC:abx ISC:abx"
+];
+var modeNames = {
+  imp: "implied",
+  acc: "accumulator",
+  imm: "immediate",
+  zp: "zeroPage",
+  zpx: "zeroPageIndexedX",
+  zpy: "zeroPageIndexedY",
+  abs: "absolute",
+  abx: "absoluteIndexedX",
+  aby: "absoluteIndexedY",
+  ind: "indirect",
+  inx: "indexedIndirectX",
+  iny: "indirectIndexedY",
+  rel: "relative"
+};
+var legalOpcodes = /* @__PURE__ */ new Set([
+  0,
+  1,
+  5,
+  6,
+  8,
+  9,
+  10,
+  13,
+  14,
+  16,
+  17,
+  21,
+  22,
+  24,
+  25,
+  29,
+  30,
+  32,
+  33,
+  36,
+  37,
+  38,
+  40,
+  41,
+  42,
+  44,
+  45,
+  46,
+  48,
+  49,
+  53,
+  54,
+  56,
+  57,
+  61,
+  62,
+  64,
+  65,
+  69,
+  70,
+  72,
+  73,
+  74,
+  76,
+  77,
+  78,
+  80,
+  81,
+  85,
+  86,
+  88,
+  89,
+  93,
+  94,
+  96,
+  97,
+  101,
+  102,
+  104,
+  105,
+  106,
+  108,
+  109,
+  110,
+  112,
+  113,
+  117,
+  118,
+  120,
+  121,
+  125,
+  126,
+  129,
+  132,
+  133,
+  134,
+  136,
+  138,
+  140,
+  141,
+  142,
+  144,
+  145,
+  148,
+  149,
+  150,
+  152,
+  153,
+  154,
+  157,
+  160,
+  161,
+  162,
+  164,
+  165,
+  166,
+  168,
+  169,
+  170,
+  172,
+  173,
+  174,
+  176,
+  177,
+  180,
+  181,
+  182,
+  184,
+  185,
+  186,
+  188,
+  189,
+  190,
+  192,
+  193,
+  196,
+  197,
+  198,
+  200,
+  201,
+  202,
+  204,
+  205,
+  206,
+  208,
+  209,
+  213,
+  214,
+  216,
+  217,
+  221,
+  222,
+  224,
+  225,
+  228,
+  229,
+  230,
+  232,
+  233,
+  234,
+  236,
+  237,
+  238,
+  240,
+  241,
+  245,
+  246,
+  248,
+  249,
+  253,
+  254
+]);
+var aliases = {
+  ALR: ["ASR"],
+  ANC: ["AAC"],
+  ANE: ["XAA"],
+  AXS: ["SBX"],
+  DCP: ["DCM"],
+  ISC: ["ISB", "INS"],
+  JAM: ["KIL", "HLT"],
+  LAS: ["LAR"],
+  SAX: ["AAX"],
+  SHA: ["AHX"],
+  SHX: ["SXA"],
+  SHY: ["SYA"],
+  SRE: ["LSE"],
+  TAS: ["SHS"]
+};
+var unstable = /* @__PURE__ */ new Set([
+  "ANE:immediate",
+  "LAX:immediate",
+  "SHA:indirectIndexedY",
+  "SHA:absoluteIndexedY",
+  "SHX:absoluteIndexedY",
+  "SHY:absoluteIndexedX",
+  "TAS:absoluteIndexedY"
+]);
+var decoded = rows.flatMap((row) => row.split(" "));
+if (decoded.length !== 256)
+  throw new Error(`Expected 256 NMOS opcode entries, got ${decoded.length}.`);
+var mutableForms = decoded.map((entry, opcode) => {
+  const [mnemonic, shortMode] = entry.split(":");
+  const mode = modeNames[shortMode];
+  if (!mnemonic || !mode)
+    throw new Error(`Invalid opcode table entry '${entry}' at $${opcode.toString(16)}.`);
+  const documented = legalOpcodes.has(opcode);
+  const codec = getOperandCodec(mode);
+  const key = `${mnemonic}:${mode}`;
+  let stability = "stable-undocumented";
+  if (documented) stability = "documented";
+  else if (unstable.has(key)) stability = "unstable-undocumented";
+  let note;
+  if (unstable.has(key)) {
+    note = "Opcode semantics are unstable or chip-dependent; assembly emits the canonical ca65-compatible byte.";
+  } else if (opcode === 108) {
+    note = "NMOS hardware wraps the high-byte fetch within the same page when the indirect pointer ends in $FF.";
+  }
+  return {
+    opcode,
+    mnemonic,
+    aliases: aliases[mnemonic],
+    mode,
+    encoding: [opcode],
+    operands: getOperandFields(codec),
+    codec,
+    availableWhen: { allOf: documented ? ["nmos"] : ["nmos", "undocumented"] },
+    canonical: false,
+    documented,
+    stability,
+    note
+  };
+});
+var groups = /* @__PURE__ */ new Map();
+for (const form of mutableForms) {
+  const key = `${form.mnemonic}:${form.mode}`;
+  const group = groups.get(key) ?? [];
+  group.push(form);
+  groups.set(key, group);
+}
+for (const group of groups.values()) {
+  const preferred = group.find((form) => form.documented) ?? group[0];
+  if (preferred) preferred.canonical = true;
+}
+var nmos6502DecodeTable = Object.freeze(
+  mutableForms.map((form) => Object.freeze({ ...form }))
+);
+var brkSignatureForms = Object.freeze(
+  ["immediate", "zeroPage", "absolute"].map((mode) => ({
+    opcode: 0,
+    mnemonic: "BRK",
+    mode,
+    encoding: [0],
+    operands: [{ name: "signature", width: 1 }],
+    codec: "unsigned8",
+    availableWhen: { allOf: ["nmos"] },
+    canonical: true,
+    documented: true,
+    stability: "documented",
+    note: "Current ca65-guide BRK signature extension; pinned ca65 V2.19 rejects this form."
+  }))
+);
+var nmos6502Forms = Object.freeze([
+  ...nmos6502DecodeTable.filter((form) => form.documented && form.canonical),
+  ...brkSignatureForms
+]);
+var nmos6502xForms = Object.freeze([
+  ...nmos6502DecodeTable.filter((form) => form.canonical),
+  ...brkSignatureForms
+]);
+var nmos6502Cpu = Object.freeze({
+  id: "65xx.6502",
+  displayName: "NMOS 6502",
+  aliases: ["6502", "6510", "8502", "2a03", "2a07", "6507"],
+  features: /* @__PURE__ */ new Set(["nmos"])
+});
+var nmos6502xCpu = Object.freeze({
+  id: "65xx.6502x",
+  displayName: "NMOS 6502 with undocumented opcodes",
+  aliases: ["6502x"],
+  features: /* @__PURE__ */ new Set(["nmos", "undocumented"])
+});
+function getCpuAssemblyForms(cpu) {
+  const variantForms = variantFormsByCpuId[cpu.id];
+  if (variantForms) return variantForms;
+  return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
+}
+
+// plugins/65xx/src/architecture.ts
+var directToAbsolute = {
+  zeroPage: "absolute",
+  zeroPageIndexedX: "absoluteIndexedX",
+  zeroPageIndexedY: "absoluteIndexedY",
+  zeroPageIndirect: "indirect",
+  indexedIndirectX: "absoluteIndexedIndirect"
+};
+var absoluteToDirect = {
+  absolute: "zeroPage",
+  absoluteIndexedX: "zeroPageIndexedX",
+  absoluteIndexedY: "zeroPageIndexedY",
+  indirect: "zeroPageIndirect",
+  absoluteIndexedIndirect: "indexedIndirectX"
+};
+var aliasToMnemonic = /* @__PURE__ */ new Map();
+for (const form of nmos6502DecodeTable) {
+  for (const alias of form.aliases ?? []) aliasToMnemonic.set(alias, form.mnemonic);
+}
+function parseMnemonic(value) {
+  const match = value.trim().toUpperCase().match(/^([A-Z][\dA-Z]{2,4})(?:\.([BW]))?$/);
+  if (!match) return { mnemonic: value.trim().toUpperCase() };
+  let forcedWidth;
+  if (match[2] === "B") forcedWidth = 1;
+  else if (match[2] === "W") forcedWidth = 2;
+  return {
+    mnemonic: match[1],
+    forcedWidth
+  };
+}
+function modeSize(form) {
+  return form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
+}
+function unsignedOperandWidth(codec) {
+  if (codec === "unsigned8") return 1;
+  if (codec === "unsigned16-le") return 2;
+  if (codec === "unsigned24-le") return 3;
+  return 0;
+}
+function normalizeRelativeDelta(target, reference) {
+  return (target - reference + 32768 & 65535) - 32768;
+}
+function splitTopLevelOperands(value) {
+  const operands = [];
+  let depth = 0;
+  let start = 0;
+  for (let index2 = 0; index2 < value.length; index2++) {
+    const character = value[index2];
+    if (character === "(" || character === "[") depth++;
+    else if (character === ")" || character === "]") depth--;
+    else if (character === "," && depth === 0) {
+      operands.push(value.slice(start, index2).trim());
+      start = index2 + 1;
+    }
+  }
+  operands.push(value.slice(start).trim());
+  return operands.filter(Boolean);
+}
+var Arch65xx = class {
+  /**
+   * @param {ArchitectureEncoderContext} context Encoder host (operands, emission, diagnostics).
+   * @param {CpuDefinition} cpu CPU whose feature set filters {@link getCpuAssemblyForms}.
+   */
+  constructor(context, cpu) {
+    this.context = context;
+    this.cpu = cpu;
+    this.forms = getCpuAssemblyForms(cpu).filter(
+      (form) => matchesFeatures(form.availableWhen, cpu.features)
+    );
+    this.catalog = buildInstructionCatalog(this.forms);
+    const grouped = /* @__PURE__ */ new Map();
+    for (const form of this.forms) {
+      const entries = grouped.get(form.mnemonic) ?? [];
+      entries.push(form);
+      grouped.set(form.mnemonic, entries);
+    }
+    for (const [mnemonic, entries] of grouped) this.formsByMnemonic.set(mnemonic, entries);
+  }
+  context;
+  cpu;
+  forms;
+  catalog;
+  formsByMnemonic = /* @__PURE__ */ new Map();
+  getInstructionCatalog() {
+    return this.catalog;
+  }
+  /**
+   * Estimates size from tokenized words.
+   * @param {readonly string[]} words Mnemonic plus rest-of-line operand.
+   * @returns {number} Encoded size in bytes, or 0 if unknown.
+   */
+  estimateSize(words) {
+    if (words.length === 0) return 0;
+    const operand = words.slice(1).join(" ");
+    return this.estimateResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
+  }
+  /**
+   * Encodes tokenized words. Returns false when the mnemonic is unknown on this CPU.
+   * @param {readonly string[]} words Mnemonic plus rest-of-line operand.
+   * @returns {boolean} True if encoded.
+   */
+  encode(words) {
+    if (words.length === 0) return true;
+    const operand = words.slice(1).join(" ");
+    return this.encodeResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
+  }
+  estimateInstruction(instruction2) {
+    return this.estimateResolved(instruction2.mnemonic, instruction2.loweredOperand);
+  }
+  encodeInstruction(instruction2) {
+    return this.encodeResolved(instruction2.mnemonic, instruction2.loweredOperand);
+  }
+  estimateResolved(rawMnemonic, operand) {
+    const resolved = this.resolveForm(rawMnemonic, operand);
+    return resolved ? modeSize(resolved) : 0;
+  }
+  encodeResolved(rawMnemonic, operand) {
+    const resolved = this.resolveForm(rawMnemonic, operand);
+    if (!resolved) return false;
+    const form = resolved;
+    const relativeBaseOffset = form.relativeBaseOffset ?? modeSize(form);
+    let branchDelta = 0;
+    if (form.codec === "relative8" || form.codec === "relative16") {
+      const branchWidth = form.codec === "relative8" ? 1 : 2;
+      branchDelta = this.readBranchDelta(operand, relativeBaseOffset, branchWidth);
+    }
+    const compoundOperands = form.codec === "zero-page-relative8" ? splitTopLevelOperands(operand.expanded) : [];
+    if (form.codec === "zero-page-relative8" && compoundOperands.length !== 2) {
+      throw this.context.diagnostics.error(
+        `${form.mnemonic} expects a zero-page address and branch target.`
+      );
+    }
+    const compoundBranchDelta = form.codec === "zero-page-relative8" ? this.readBranchExpression(
+      compoundOperands[1] ?? "",
+      form.relativeBaseOffset ?? modeSize(form),
+      1
+    ) : 0;
+    const operandWidth = unsignedOperandWidth(form.codec);
+    const operandKind = operandWidth === 1 ? "operand" : "address";
+    let operandValue = 0;
+    if (operandWidth !== 0) {
+      operandValue = this.readValue(operand, operandWidth, `${form.mnemonic} ${operandKind}`);
+    }
+    const zpAddress = form.codec === "zero-page-relative8" ? this.readExpressionValue(compoundOperands[0] ?? "", 1, `${form.mnemonic} address`, false) : 0;
+    this.context.emission.writeBytes(form.encoding);
+    switch (form.codec) {
+      case "none":
+        return true;
+      case "unsigned8":
+        this.context.emission.writeByte(operandValue);
+        return true;
+      case "unsigned16-le":
+        this.context.emission.writeValue(operandValue, 2, "little");
+        return true;
+      case "unsigned24-le":
+        this.context.emission.writeValue(operandValue, 3, "little");
+        return true;
+      case "relative8":
+        this.context.emission.writeByte(branchDelta & 255);
+        return true;
+      case "relative16":
+        this.context.emission.writeValue(branchDelta & 65535, 2, "little");
+        return true;
+      case "zero-page-relative8": {
+        this.context.emission.writeByte(zpAddress);
+        this.context.emission.writeByte(compoundBranchDelta & 255);
+        return true;
+      }
+    }
+    return false;
+  }
+  resolveForm(rawMnemonic, operand) {
+    const parsed = parseMnemonic(rawMnemonic);
+    let mnemonic = parsed.mnemonic;
+    let forms = this.formsByMnemonic.get(mnemonic);
+    const variantArchitectures = Object.entries(variantFormsByCpuId).filter(([, entries]) => entries.some((entry) => entry.mnemonic === parsed.mnemonic)).map(([cpuId]) => cpuId);
+    if (!forms) {
+      const canonical2 = aliasToMnemonic.get(mnemonic);
+      const aliasedForms = canonical2 ? this.formsByMnemonic.get(canonical2) : void 0;
+      if (canonical2 && aliasedForms) {
+        mnemonic = canonical2;
+        forms = aliasedForms;
+      }
+    }
+    const { forcedWidth } = parsed;
+    if (!forms) {
+      if (variantArchitectures.length > 0) {
+        throw this.context.diagnostics.error(
+          `Instruction '${parsed.mnemonic}' is available on ${variantArchitectures.join(", ")}, not ${this.cpu.id}.`
+        );
+      }
+      const knownOnlyOn6502x = nmos6502DecodeTable.some(
+        (form2) => form2.mnemonic === mnemonic || form2.aliases?.includes(mnemonic)
+      );
+      if (knownOnlyOn6502x) {
+        throw this.context.diagnostics.error(
+          `Instruction '${mnemonic}' or this operand form requires architecture '65xx.6502x'.`
+        );
+      }
+      return void 0;
+    }
+    const hasOperand = operand.raw.trim() !== "";
+    if (mnemonic === "BRK" && forcedWidth === 2)
+      throw this.context.diagnostics.error("BRK accepts at most an 8-bit signature byte.");
+    let mode = operand.mode;
+    if (operand.raw.trim().toUpperCase() === "A") mode = "accumulator";
+    if (operand.raw.trim().toUpperCase() === "Q") mode = "quadAccumulator";
+    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) mode = "relative16";
+    else if (hasOperand && forms.some((entry) => entry.mode === "relative")) mode = "relative";
+    if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
+      if (forms.some((entry) => entry.mode === "accumulator")) mode = "accumulator";
+      else if (forms.some((entry) => entry.mode === "quadAccumulator")) mode = "quadAccumulator";
+    }
+    if (forcedWidth) {
+      const byteMode = mode ? absoluteToDirect[mode] : void 0;
+      const wordMode = mode ? directToAbsolute[mode] : void 0;
+      const alreadyRequestedWidth = forcedWidth === 1 && mode?.startsWith("zeroPage") || forcedWidth === 2 && (mode === "absolute" || mode === "indirect" || mode?.startsWith("absoluteIndexed"));
+      if (!byteMode && !wordMode && !alreadyRequestedWidth) {
+        throw this.context.diagnostics.error(
+          `Width suffix '.${forcedWidth === 1 ? "b" : "w"}' is not valid for ${mnemonic} ${mode}.`
+        );
+      }
+      mode = forcedWidth === 1 ? absoluteToDirect[mode] ?? mode : directToAbsolute[mode] ?? mode;
+    }
+    let form = forms.find((entry) => entry.mode === mode);
+    if (!form && mode && directToAbsolute[mode]) {
+      form = forms.find((entry) => entry.mode === directToAbsolute[mode]);
+    }
+    if (!form) {
+      const accepted = forms.map((entry) => entry.mode).join(", ");
+      throw this.context.diagnostics.error(
+        `${mnemonic} does not support addressing mode '${mode ?? "unknown"}' on ${this.cpu.id}; expected ${accepted}.`
+      );
+    }
+    return form;
+  }
+  readValue(operand, width, description) {
+    const expression = operand.baseExpression ?? operand.expanded;
+    return this.readExpressionValue(expression, width, description, operand.mode === "immediate");
+  }
+  readExpressionValue(expression, width, description, immediate) {
+    const value = this.context.operands.getnum(expression);
+    const minimum = width === 1 && immediate ? -128 : 0;
+    let maximum = 255;
+    if (width === 2) maximum = 65535;
+    else if (width === 3) maximum = 16777215;
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+      throw this.context.diagnostics.error(
+        `${description} ${value} is outside the ${width * 8}-bit range.`
+      );
+    }
+    return value & maximum;
+  }
+  readBranchDelta(operand, relativeBaseOffset, width) {
+    return this.readBranchExpression(
+      operand.baseExpression ?? operand.expanded,
+      relativeBaseOffset,
+      width
+    );
+  }
+  readBranchExpression(expression, relativeBaseOffset, width) {
+    if (!this.context.branches.enforceResolvedLabels()) return 0;
+    const reference = this.context.sizing.getCurrentAddress() + relativeBaseOffset & 65535;
+    let target;
+    if (/^\++$/.test(expression)) {
+      target = this.context.branches.findNextLabel(expression, reference);
+    } else if (/^-+$/.test(expression)) {
+      target = this.context.branches.findPreviousLabel(expression, reference);
+    } else {
+      target = this.context.operands.getnum(expression);
+    }
+    if (!Number.isInteger(target) || target < 0 || target > 65535) {
+      throw this.context.diagnostics.error(
+        `Branch target ${target} is outside the 16-bit address space.`
+      );
+    }
+    const delta = normalizeRelativeDelta(target, reference);
+    const minimum = width === 1 ? -128 : -32768;
+    const maximum = width === 1 ? 127 : 32767;
+    if (delta < minimum || delta > maximum) {
+      throw this.context.diagnostics.error(
+        `Branch target $${target.toString(16).toUpperCase()} is out of range from $${reference.toString(16).toUpperCase()} (${delta}).`
+      );
+    }
+    return delta;
+  }
+};
+
+// plugins/65xx/src/operands/classifier.ts
+function classify65xxOperand(resolver, operand) {
+  const raw = operand.trim();
+  const sizePrefix = parseCa65AddressSizePrefix(raw);
+  const { expanded, length: inferredLength } = resolver.expandOperand(sizePrefix.rest);
+  let length = inferredLength;
+  if (sizePrefix.force === 1) length = 1;
+  else if (sizePrefix.force === 2) length = Math.max(2, inferredLength);
+  else if (sizePrefix.force === 3) length = Math.max(3, inferredLength);
+  const normalized = expanded.trim();
+  const normalizedUpper = normalized.toUpperCase();
+  let mode = "unknown";
+  let baseExpression = normalized;
+  let registerName;
+  if (normalized === "") {
+    mode = "implied";
+  } else if (normalizedUpper === "A") {
+    mode = "accumulator";
+    registerName = "a";
+  } else if (normalizedUpper === "Q") {
+    mode = "quadAccumulator";
+    registerName = "q";
+  } else if (normalized.startsWith("#")) {
+    mode = "immediate";
+    baseExpression = normalized.slice(1).trim();
+  } else {
+    const indexedIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*x\s*\)$/i);
+    const stackRelativeIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i);
+    const indirectIndexed = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*y$/i);
+    const indirectIndexedZ = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*z$/i);
+    const indirect = normalized.match(/^\(\s*(.+?)\s*\)$/i);
+    const basePageIndirectZ = normalized.match(/^\[\s*(.+?)\s*]\s*,\s*z$/i);
+    const indirectLong = normalized.match(/^\[\s*(.+?)\s*]$/i);
+    const indexed = normalized.match(/^(.+?)\s*,\s*([sx-z])$/i);
+    const topLevelComma = findTopLevelComma(normalized);
+    if (stackRelativeIndirect) {
+      mode = "stackRelativeIndirectIndexedY";
+      baseExpression = stackRelativeIndirect[1].trim();
+    } else if (indexedIndirect) {
+      mode = resolver.expandOperand(indexedIndirect[1].trim()).length <= 1 ? "indexedIndirectX" : "absoluteIndexedIndirect";
+      baseExpression = indexedIndirect[1].trim();
+    } else if (indirectIndexed && !indirectIndexed[1].includes(",")) {
+      mode = "indirectIndexedY";
+      baseExpression = indirectIndexed[1].trim();
+    } else if (indirectIndexedZ && !indirectIndexedZ[1].includes(",")) {
+      mode = "zeroPageIndirectIndexedZ";
+      baseExpression = indirectIndexedZ[1].trim();
+    } else if (basePageIndirectZ) {
+      mode = "basePageIndirectIndexedZ";
+      baseExpression = basePageIndirectZ[1].trim();
+    } else if (indirectLong) {
+      mode = "zeroPageIndirectLong";
+      baseExpression = indirectLong[1].trim();
+    } else if (indirect) {
+      mode = resolver.expandOperand(indirect[1].trim()).length <= 1 ? "zeroPageIndirect" : "indirect";
+      baseExpression = indirect[1].trim();
+    } else if (indexed) {
+      const register = indexed[2].toLowerCase();
+      if (register === "s") mode = "stackRelative";
+      else if (register === "z") mode = "unknown";
+      else if (length > 2 && register === "x") mode = "absoluteLongIndexedX";
+      else mode = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register.toUpperCase()}`;
+      baseExpression = indexed[1].trim();
+    } else if (topLevelComma >= 0) {
+      mode = "zeroPageRelative";
+      baseExpression = normalized.slice(0, topLevelComma).trim();
+    } else {
+      mode = length <= 1 ? "zeroPage" : "absolute";
+    }
+  }
+  return {
+    // Unused
+    immediate: false,
+    // Unused
+    indirect: false,
+    mode,
+    baseExpression,
+    registerName,
+    raw,
+    expanded,
+    length,
+    // 24-bit values are not 6502-legal; encoder can still emit long-x on 4510.
+    metadata: length > 2 ? { addressOutOfRange: true } : void 0
+  };
+}
+function findTopLevelComma(value) {
+  let depth = 0;
+  for (let index2 = 0; index2 < value.length; index2++) {
+    const character = value[index2];
+    if (character === "(" || character === "[") depth++;
+    else if (character === ")" || character === "]") depth--;
+    else if (character === "," && depth === 0) return index2;
+  }
+  return -1;
+}
+function parseCa65AddressSizePrefix(operand) {
+  const match = operand.match(/^([afz]):(.*)$/i);
+  if (!match) {
+    return { rest: operand, force: void 0 };
+  }
+  const rest = match[2].trim();
+  const key = match[1].toLowerCase();
+  if (key === "z") return { rest, force: 1 };
+  if (key === "a") return { rest, force: 2 };
+  return { rest, force: 3 };
+}
+
+// plugins/65xx/src/directives/ca65.ts
+function unquote(token) {
+  if (token.length >= 2) {
+    const quote = token[0];
+    if ((quote === '"' || quote === "'") && token.endsWith(quote)) {
+      return token.slice(1, -1);
+    }
+  }
+  return token;
+}
+function parameterList(words) {
+  const joined = words.slice(1).join(" ");
+  const parts = [];
+  let current = "";
+  let parenDepth = 0;
+  let quote;
+  for (const char of joined) {
+    if (quote) {
+      current += char;
+      if (char === quote) quote = void 0;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === "(") parenDepth++;
+    else if (char === ")") parenDepth--;
+    if (char === "," && parenDepth === 0) {
+      const trimmed2 = current.trim();
+      if (trimmed2) parts.push(trimmed2);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed) parts.push(trimmed);
+  return parts;
+}
+function markGlobalSymbol(session, name) {
+  if (!name) return;
+  const localKey = session.symbolScope.qualifySymbolName(name);
+  session.globalSymbols.add(name);
+  if (localKey !== name) {
+    const existing = session.labelTable.get(localKey);
+    if (existing) {
+      session.symbolScope.setLabel(name, existing.value, existing.isStatic);
+    }
+  }
+}
+function closeActiveSegment(session, state) {
+  if (!state.currentSegment) return;
+  const segment = state.linker.segments.get(state.currentSegment);
+  if (!segment) {
+    state.currentSegment = null;
+    return;
+  }
+  const size = session.currentTargetBaseAddress - state.segmentLoadStart;
+  state.memoryCursors[segment.load] = session.currentTargetBaseAddress;
+  if (segment.define) {
+    const loadName = `__${segment.name}_LOAD__`;
+    const runName = `__${segment.name}_RUN__`;
+    const sizeName = `__${segment.name}_SIZE__`;
+    const runEndName = `__${segment.name}_RUN_END__`;
+    session.globalSymbols.add(loadName);
+    session.globalSymbols.add(runName);
+    session.globalSymbols.add(sizeName);
+    session.globalSymbols.add(runEndName);
+    session.symbolScope.setLabel(loadName, state.segmentLoadStart, true);
+    session.symbolScope.setLabel(runName, state.segmentRunStart, true);
+    session.symbolScope.setLabel(sizeName, size, true);
+    session.symbolScope.setLabel(runEndName, state.segmentRunStart + size, true);
+  }
+  state.currentSegment = null;
+  state.currentLoadMemory = null;
+}
+function applyLinkerSymbols(session, state) {
+  for (const symbol of state.linker.symbols) {
+    session.globalSymbols.add(symbol.name);
+    const value = session.operandResolver.getnum(symbol.valueExpr);
+    session.symbolScope.setLabel(symbol.name, value, true);
+  }
+}
+function openSegment(session, state, segment) {
+  const loadMemory = state.linker.memories.get(segment.load);
+  const runMemory = state.linker.memories.get(segment.run);
+  if (!loadMemory || !runMemory) {
+    throw new Error(`.segment "${segment.name}" references unknown MEMORY.`);
+  }
+  const loadStart = segment.start ?? state.memoryCursors[segment.load] ?? loadMemory.start;
+  session.setWritePosition(loadStart);
+  const runStart = segment.run === segment.load ? loadStart : runMemory.start;
+  if (runStart !== loadStart) {
+    session.currentTargetAddress = runStart;
+    session.currentTargetStartAddress = runStart;
+  }
+  state.currentSegment = segment.name;
+  state.currentLoadMemory = segment.load;
+  state.segmentLoadStart = loadStart;
+  state.segmentRunStart = runStart;
+}
+function handleSegment(session, state, words) {
+  const name = unquote(words[1] ?? "").trim();
+  if (!name) {
+    throw new Error(".segment requires a segment name.");
+  }
+  const segment = state.linker.segments.get(name);
+  if (!segment) {
+    throw new Error(`.segment "${name}" is not defined in the linker configuration.`);
+  }
+  closeActiveSegment(session, state);
+  openSegment(session, state, segment);
+}
+function markGlobalSymbols(session, words, keyword) {
+  const names = parameterList(words).map((entry) => unquote(entry).trim()).filter(Boolean);
+  if (names.length === 0) {
+    throw new Error(`${keyword} requires at least one identifier.`);
+  }
+  for (const name of names) {
+    markGlobalSymbol(session, name);
+  }
+}
+function handleExport(session, words) {
+  markGlobalSymbols(session, words, ".export");
+}
+function handleImport(session, words) {
+  markGlobalSymbols(session, words, ".import");
+}
+function handleByte(session, words) {
+  session.directiveRuntime.handleDataDirective("db", [...words.slice(1)]);
+}
+function handleAddr(session, words) {
+  session.directiveRuntime.handleDataDirective("dw", [...words.slice(1)]);
+}
+function emitMappedBytes(session, words, write, width) {
+  const params = parameterList(words);
+  if (params.length === 0) {
+    throw new Error(`${words[0]} requires at least one parameter.`);
+  }
+  if (session.isDefinitionCollectionStage) {
+    session.step(params.length * width);
+    return;
+  }
+  for (const param of params) {
+    write(session.operandResolver.getnum(param));
+  }
+}
+function handleLobytes(session, words) {
+  emitMappedBytes(session, words, (value) => session.write1(value & 255), 1);
+}
+function handleHibytes(session, words) {
+  emitMappedBytes(session, words, (value) => session.write1(value >> 8 & 255), 1);
+}
+function handleDbyt(session, words) {
+  emitMappedBytes(
+    session,
+    words,
+    (value) => {
+      session.write1(value >> 8 & 255);
+      session.write1(value & 255);
+    },
+    2
+  );
+}
+
+// plugins/65xx/src/session-state.ts
+var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
+var nes65xxSessionStateKey = {
+  id: NES_65XX_SESSION_STATE_ID
+};
+function cloneNes65xxSessionState(value) {
+  return {
+    ...value,
+    header: [...value.header],
+    memoryCursors: { ...value.memoryCursors }
+  };
+}
+function resetNes65xxStageState(state) {
+  state.memoryCursors = {};
+  for (const memory of state.linker.memories.values()) {
+    state.memoryCursors[memory.name] = memory.start;
+  }
+  state.currentSegment = null;
+  state.currentLoadMemory = null;
+  state.segmentLoadStart = 0;
+  state.segmentRunStart = 0;
+}
+
+// plugins/65xx/src/linker-config.ts
+var DEFAULT_LINKER_CONFIG = `MEMORY {
+    ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
+}
+SEGMENTS {
+    CODE: load = ROM, type = ro ;
+}
+`;
+function defaultLd65ConfigText() {
+  return DEFAULT_LINKER_CONFIG;
+}
+function parseLd65Config(source) {
+  const text = stripBlockComments(source);
+  const memories = /* @__PURE__ */ new Map();
+  const segments = /* @__PURE__ */ new Map();
+  const symbols = [];
+  let fileOffset = 0;
+  for (const statement of readBlockStatements(text, "MEMORY")) {
+    const parsed = parseNamedStatement(statement);
+    const start = requireNumber(parsed.attrs, "start", parsed.name);
+    const size = requireNumber(parsed.attrs, "size", parsed.name);
+    const file = parsed.attrs.file ?? "%O";
+    const isRam = file === '""' || file === "''" || file === "";
+    const region = {
+      name: parsed.name,
+      start,
+      size,
+      fileOffset: isRam ? -1 : fileOffset,
+      fill: parseYesNo(parsed.attrs.fill) ?? false,
+      fillval: parseNumberToken(parsed.attrs.fillval ?? "0") ?? 0
+    };
+    memories.set(region.name, region);
+    if (!isRam) {
+      fileOffset += size;
+    }
+  }
+  for (const statement of readBlockStatements(text, "SEGMENTS")) {
+    const parsed = parseNamedStatement(statement);
+    const load = parsed.attrs.load;
+    if (!load) {
+      throw new Error(`ld65 segment '${parsed.name}' is missing load = MEMORY.`);
+    }
+    if (!memories.has(load)) {
+      throw new Error(`ld65 segment '${parsed.name}' loads unknown memory '${load}'.`);
+    }
+    const run = parsed.attrs.run ?? load;
+    if (!memories.has(run)) {
+      throw new Error(`ld65 segment '${parsed.name}' runs in unknown memory '${run}'.`);
+    }
+    segments.set(parsed.name, {
+      name: parsed.name,
+      load,
+      run,
+      start: parseNumberToken(parsed.attrs.start),
+      define: parseYesNo(parsed.attrs.define) ?? false,
+      type: parsed.attrs.type ?? "ro"
+    });
+  }
+  for (const statement of readBlockStatements(text, "SYMBOLS")) {
+    const parsed = parseNamedStatement(statement);
+    const valueExpr = parsed.attrs.value;
+    if (!valueExpr) {
+      throw new Error(`ld65 symbol '${parsed.name}' is missing value = EXPR.`);
+    }
+    symbols.push({ name: parsed.name, valueExpr });
+  }
+  if (memories.size === 0) {
+    throw new Error("ld65 config MEMORY block is empty.");
+  }
+  return {
+    memories,
+    segments,
+    symbols,
+    imageSize: fileOffset
+  };
+}
+function linkerDefinedSymbolNames(config) {
+  const names = [];
+  for (const segment of config.segments.values()) {
+    if (!segment.define) continue;
+    names.push(
+      `__${segment.name}_LOAD__`,
+      `__${segment.name}_RUN__`,
+      `__${segment.name}_SIZE__`,
+      `__${segment.name}_RUN_END__`
+    );
+  }
+  for (const symbol of config.symbols) {
+    names.push(symbol.name);
+  }
+  return names;
+}
+function stripBlockComments(source) {
+  return source.replace(/\/\*[\S\s]*?\*\//g, " ");
+}
+var LD65_BLOCK_BODY = {
+  MEMORY: /memory\s*{([\S\s]*?)}/i,
+  SEGMENTS: /segments\s*{([\S\s]*?)}/i,
+  SYMBOLS: /symbols\s*{([\S\s]*?)}/i
+};
+function readBlockStatements(source, block) {
+  const match = source.match(LD65_BLOCK_BODY[block]);
+  if (!match) {
+    return [];
+  }
+  return match[1].split(";").map((entry) => entry.trim()).filter(Boolean);
+}
+function parseNamedStatement(statement) {
+  const colon = statement.indexOf(":");
+  if (colon <= 0) {
+    throw new Error(`Invalid ld65 statement: ${statement}`);
+  }
+  const name = statement.slice(0, colon).trim();
+  const attrs = {};
+  for (const part of splitTopLevelCommas(statement.slice(colon + 1))) {
+    const equals = part.indexOf("=");
+    if (equals <= 0) continue;
+    const key = part.slice(0, equals).trim().toLowerCase();
+    const value = part.slice(equals + 1).trim();
+    attrs[key] = value;
+  }
+  return { name, attrs };
+}
+function splitTopLevelCommas(input) {
+  const parts = [];
+  let current = "";
+  let quote;
+  for (const char of input) {
+    if (quote) {
+      current += char;
+      if (char === quote) quote = void 0;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ",") {
+      const trimmed2 = current.trim();
+      if (trimmed2) parts.push(trimmed2);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const trimmed = current.trim();
+  if (trimmed) parts.push(trimmed);
+  return parts;
+}
+function parseNumberToken(token) {
+  if (token === void 0 || token === "") return void 0;
+  if (token.startsWith("$")) {
+    const value = Number.parseInt(token.slice(1), 16);
+    return Number.isFinite(value) ? value : void 0;
+  }
+  if (/^-?\d+$/.test(token)) {
+    return Number.parseInt(token, 10);
+  }
+  return void 0;
+}
+function requireNumber(attrs, key, owner) {
+  const value = parseNumberToken(attrs[key]);
+  if (value === void 0) {
+    throw new Error(`ld65 '${owner}' is missing numeric ${key}.`);
+  }
+  return value;
+}
+function parseYesNo(raw) {
+  if (raw === void 0) return void 0;
+  const normalized = raw.toLowerCase();
+  if (normalized === "yes" || normalized === "true") return true;
+  if (normalized === "no" || normalized === "false") return false;
+  return void 0;
+}
+
+// plugins/65xx/src/target/nes.ts
+var NES_65XX_TARGET_ID = "65xx.nes";
+var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
+var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
+var NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
+var INES_MAGIC = [78, 69, 83, 26];
+function createNes65xxTargetOptions(configured) {
+  const value = typeof configured === "object" && configured !== null && !Array.isArray(configured) ? configured : {};
+  const linkerConfig = typeof value.linkerConfig === "string" && value.linkerConfig.trim() ? value.linkerConfig : defaultLd65ConfigText();
+  const linker = parseLd65Config(linkerConfig);
+  const fillByte = typeof value.fillByte === "number" && Number.isInteger(value.fillByte) ? value.fillByte & 255 : 255;
+  const header = normalizeHeader(value.header, linker.imageSize);
+  return { header, linkerConfig, fillByte, linker };
+}
+function createInitialNesState(context) {
+  const options = createNes65xxTargetOptions(context.targetOptions);
+  const state = {
+    header: options.header,
+    fillByte: options.fillByte,
+    linker: options.linker,
+    memoryCursors: {},
+    currentSegment: null,
+    currentLoadMemory: null,
+    segmentLoadStart: 0,
+    segmentRunStart: 0
+  };
+  resetNes65xxStageState(state);
+  return state;
+}
+function createNesAddressSpace({ state }) {
+  const validate = (address) => {
+    if (!Number.isInteger(address) || address < 0 || address > 65535) {
+      throw new Error(
+        `Address $${address.toString(16).toUpperCase()} is outside 16-bit NES space.`
+      );
+    }
+    return address;
+  };
+  return {
+    addressWidth: 16,
+    defaultOrigin: 0,
+    normalizeForWrite: validate,
+    advance(address, amount) {
+      return validate(address + amount & 65535);
+    },
+    toOutputOffset(address) {
+      const nes = state.get(nes65xxSessionStateKey);
+      if (!nes.currentLoadMemory) return -1;
+      const memory = nes.linker.memories.get(nes.currentLoadMemory);
+      if (!memory || memory.fileOffset < 0) return -1;
+      if (address < memory.start || address >= memory.start + memory.size) return -1;
+      return nes.header.length + memory.fileOffset + (address - memory.start);
+    },
+    fromOutputOffset(offset) {
+      const nes = state.get(nes65xxSessionStateKey);
+      const prgOffset = offset - nes.header.length;
+      if (prgOffset < 0) return -1;
+      for (const memory of nes.linker.memories.values()) {
+        if (memory.fileOffset < 0) continue;
+        if (prgOffset >= memory.fileOffset && prgOffset < memory.fileOffset + memory.size) {
+          return memory.start + (prgOffset - memory.fileOffset);
+        }
+      }
+      return -1;
+    },
+    validateWrite(address) {
+      validate(address);
+    }
+  };
+}
+function createNesOutputFormat() {
+  return {
+    finalize: () => void 0,
+    getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+  };
+}
+function createNesLifecycle({ state }) {
+  const prefill = (session) => {
+    const nes = state.get(nes65xxSessionStateKey);
+    resetNes65xxStageState(nes);
+    session.outputFillByte = nes.fillByte;
+    const total = nes.header.length + nes.linker.imageSize;
+    const image = new Array(total).fill(nes.fillByte);
+    for (let index2 = 0; index2 < nes.header.length; index2++) {
+      image[index2] = nes.header[index2] ?? 0;
+    }
+    session.outputBytes = image;
+    session.bytes = 0;
+    for (const name of linkerDefinedSymbolNames(nes.linker)) {
+      session.globalSymbols.add(name);
+    }
+  };
+  return {
+    onSessionCreated: ({ session }) => {
+      prefill(session);
+    },
+    onStageStart: ({ session }) => {
+      prefill(session);
+    },
+    onStageEnd: ({ session }) => {
+      const nes = state.get(nes65xxSessionStateKey);
+      closeActiveSegment(session, nes);
+      applyLinkerSymbols(session, nes);
+    }
+  };
+}
+function normalizeHeader(configured, imageSize) {
+  if (configured instanceof Uint8Array || Array.isArray(configured)) {
+    const bytes = [...configured].map((value) => Number(value) & 255);
+    if (bytes.length === 0) {
+      throw new Error("65xx NES target header must not be empty.");
+    }
+    return bytes;
+  }
+  if (configured !== void 0) {
+    throw new Error("65xx NES target header must be a byte array.");
+  }
+  const prgBanks = Math.max(1, Math.ceil(imageSize / 16384));
+  const header = new Array(16).fill(0);
+  header[0] = INES_MAGIC[0];
+  header[1] = INES_MAGIC[1];
+  header[2] = INES_MAGIC[2];
+  header[3] = INES_MAGIC[3];
+  header[4] = prgBanks & 255;
+  return header;
+}
+
+// plugins/65xx/src/index.ts
+var RAW_65XX_TARGET_ID = "65xx.raw";
+var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
+var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
+var RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
+var CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
+function createRaw65xxTargetOptions(configured) {
+  if (configured === void 0) return { origin: 0 };
+  if (typeof configured !== "object" || configured === null || Array.isArray(configured)) {
+    throw new Error("65xx raw target options must be an object with an optional numeric 'origin'.");
+  }
+  const keys = Object.keys(configured);
+  const unknown = keys.filter((key) => key !== "origin");
+  if (unknown.length > 0)
+    throw new Error(`Unknown 65xx raw target option(s): ${unknown.join(", ")}.`);
+  const value = "origin" in configured ? configured.origin : 0;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 65535) {
+    throw new Error("65xx raw target origin must be an integer from 0 through 65535.");
+  }
+  return { origin: value };
+}
+var descriptor2 = (keyword, summary, syntax2, group) => ({ keyword, summary, syntax: syntax2, group });
+var ca65Tooling = [
+  descriptor2("segment", "Switch to an ld65 segment.", '.segment "NAME"', "layout"),
+  descriptor2("export", "Export a symbol to other files.", ".export ident[, ident...]", "label"),
+  descriptor2(
+    "import",
+    "Import a symbol defined in another file.",
+    ".import ident[, ident...]",
+    "label"
+  ),
+  descriptor2("byte", "Emit one or more bytes.", ".byte value[, value...]", "data"),
+  descriptor2("byt", "Alias for .byte.", ".byt value[, value...]", "data"),
+  descriptor2("addr", "Emit 16-bit little-endian addresses.", ".addr value[, value...]", "data"),
+  descriptor2("word", "Alias for .addr.", ".word value[, value...]", "data"),
+  descriptor2(
+    "lobytes",
+    "Emit the low byte of each expression.",
+    ".lobytes expr[, expr...]",
+    "data"
+  ),
+  descriptor2(
+    "hibytes",
+    "Emit the high byte of each expression.",
+    ".hibytes expr[, expr...]",
+    "data"
+  ),
+  descriptor2("dbyt", "Emit 16-bit big-endian words.", ".dbyt value[, value...]", "data")
+];
+var toolingFor = (keywords) => {
+  const wanted = new Set(keywords);
+  return ca65Tooling.filter((entry) => wanted.has(entry.keyword));
+};
+var directive = (id, keywords, handler) => ({
+  id,
+  keywords,
+  phase: "lowered",
+  createHandler: handler,
+  tooling: toolingFor(keywords)
+});
+function createFlat65xxAddressSpace({ options }) {
+  const { origin } = createRaw65xxTargetOptions(options);
+  const validate = (address) => {
+    if (!Number.isInteger(address) || address < 0 || address > 65535) {
+      throw new Error(`Address $${address.toString(16).toUpperCase()} is outside flat16.`);
+    }
+    return address;
+  };
+  return {
+    addressWidth: 16,
+    defaultOrigin: origin,
+    normalizeForWrite: validate,
+    advance(address, amount) {
+      return validate(address + amount);
+    },
+    toOutputOffset(address) {
+      return Number.isInteger(address) && address >= origin && address <= 65535 ? address - origin : -1;
+    },
+    fromOutputOffset(offset) {
+      const address = origin + offset;
+      return Number.isInteger(offset) && offset >= 0 && address <= 65535 ? address : -1;
+    },
+    validateWrite(address, width) {
+      validate(address);
+      validate(address + width - 1);
+      if (address < origin) {
+        throw new Error(
+          `Address $${address.toString(16).toUpperCase()} precedes raw origin $${origin.toString(16).toUpperCase()}.`
+        );
+      }
+    }
+  };
+}
+function createRaw65xxOutputFormat() {
+  return {
+    finalize: () => void 0,
+    getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+  };
+}
+function register65xxContributions(context) {
+  for (const [cpu, forms] of [
+    [nmos6502Cpu, nmos6502Forms],
+    [nmos6502xCpu, nmos6502xForms],
+    ...variantCpus.map((cpu2) => [cpu2, variantFormsByCpuId[cpu2.id] ?? []])
+  ]) {
+    const catalog = buildInstructionCatalog(forms);
+    context.registerArchitecture({
+      id: cpu.id,
+      aliases: cpu.aliases,
+      displayName: cpu.displayName,
+      unknownInstructionBehavior: "throw",
+      // Same as 65816: `LDA $12,x` is one operand, not two.
+      splitOperands: (text) => text.trim() ? [text.trim()] : [],
+      classifyOperand: ({ operands }, operand) => classify65xxOperand(operands, operand),
+      createEncoder: (encoderContext) => new Arch65xx(encoderContext, cpu),
+      instructions: catalog
+    });
+  }
+  context.registerAddressSpace({
+    id: FLAT_65XX_ADDRESS_SPACE_ID,
+    create: createFlat65xxAddressSpace
+  });
+  context.registerOutputFormat({
+    id: RAW_65XX_OUTPUT_FORMAT_ID,
+    create: createRaw65xxOutputFormat
+  });
+  context.registerLifecycle({
+    id: RAW_65XX_LIFECYCLE_ID,
+    create: ({ options }) => {
+      const { origin } = createRaw65xxTargetOptions(options);
+      return {
+        onStageStart: ({ session }) => {
+          session.setWritePosition(origin);
+          session.bytes = 0;
+        }
+      };
+    }
+  });
+  context.registerTarget({
+    id: RAW_65XX_TARGET_ID,
+    aliases: ["65xx", "6502-raw"],
+    displayName: "65xx flat 16-bit raw binary",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+    addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
+    outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [],
+    expressionSets: [],
+    lifecycle: [RAW_65XX_LIFECYCLE_ID],
+    syntaxProfile: NATIVE_SYNTAX_PROFILE,
+    defaultOutputExtension: ".bin",
+    createOptions: createRaw65xxTargetOptions
+  });
+  context.registerSessionState({
+    id: NES_65XX_SESSION_STATE_ID,
+    create: createInitialNesState,
+    clone: cloneNes65xxSessionState,
+    resetForStage: resetNes65xxStageState
+  });
+  context.registerAddressSpace({
+    id: NES_65XX_ADDRESS_SPACE_ID,
+    create: createNesAddressSpace
+  });
+  context.registerOutputFormat({
+    id: NES_65XX_OUTPUT_FORMAT_ID,
+    create: createNesOutputFormat
+  });
+  context.registerLifecycle({
+    id: NES_65XX_LIFECYCLE_ID,
+    create: createNesLifecycle
+  });
+  context.registerDirectiveSet({
+    id: CA65_65XX_DIRECTIVE_SET_ID,
+    directives: [
+      directive(
+        "65xx.directive.segment",
+        ["segment"],
+        ({ session, state }) => (_ctx, words) => handleSegment(session, state.get(nes65xxSessionStateKey), words)
+      ),
+      directive(
+        "65xx.directive.export",
+        ["export"],
+        ({ session }) => (_ctx, words) => handleExport(session, words)
+      ),
+      directive(
+        "65xx.directive.import",
+        ["import"],
+        ({ session }) => (_ctx, words) => handleImport(session, words)
+      ),
+      directive(
+        "65xx.directive.byte",
+        ["byte", "byt"],
+        ({ session }) => (_ctx, words) => handleByte(session, words)
+      ),
+      directive(
+        "65xx.directive.addr",
+        ["addr", "word"],
+        ({ session }) => (_ctx, words) => handleAddr(session, words)
+      ),
+      directive(
+        "65xx.directive.lobytes",
+        ["lobytes"],
+        ({ session }) => (_ctx, words) => handleLobytes(session, words)
+      ),
+      directive(
+        "65xx.directive.hibytes",
+        ["hibytes"],
+        ({ session }) => (_ctx, words) => handleHibytes(session, words)
+      ),
+      directive(
+        "65xx.directive.dbyt",
+        ["dbyt"],
+        ({ session }) => (_ctx, words) => handleDbyt(session, words)
+      )
+    ],
+    tooling: ca65Tooling
+  });
+  context.registerTarget({
+    id: NES_65XX_TARGET_ID,
+    aliases: ["nes", "ines", "6502-nes"],
+    displayName: "NES iNES (ca65 / ld65 layout)",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+    addressSpace: NES_65XX_ADDRESS_SPACE_ID,
+    outputFormat: NES_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
+    expressionSets: [],
+    lifecycle: [NES_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_SYNTAX_PROFILE,
+    defaultOutputExtension: ".nes",
+    createOptions: createNes65xxTargetOptions
+  });
+}
+var plugin = definePlugin({
+  manifest: {
+    id: "uttori.asm-plugin-65xx",
+    name: "Uttori ASM 65xx",
+    version: "1.0.0",
+    apiVersion: PLUGIN_API_VERSION,
+    description: "65xx NMOS, CMOS, Commodore, and MEGA65 architectures with raw and NES iNES targets."
+  },
+  validateOptions: createRaw65xxTargetOptions,
+  activate: register65xxContributions
+});
+var src_default = plugin;
 
 // plugins/snes/src/tooling/instruction-catalog.ts
 function implied(mnemonic, summary, opcode, size = 1) {
@@ -25309,7 +28480,7 @@ function isExplicitDirectPageSpelling(raw, expanded, indexedX) {
 }
 function classifyGenericOperand(input) {
   const { raw, expanded, length } = input;
-  const syntax = parseOperandSyntax(raw);
+  const syntax2 = parseOperandSyntax(raw);
   const lowered = expanded.toLowerCase();
   const normalizedExpanded = expanded.trim();
   const normalizedUpper = normalizedExpanded.toUpperCase();
@@ -25419,9 +28590,9 @@ function classifyGenericOperand(input) {
     raw,
     expanded,
     length,
-    indexRegister: syntax.indexRegister,
-    immediate: syntax.immediate,
-    indirect: syntax.indirect
+    indexRegister: syntax2.indexRegister,
+    immediate: syntax2.immediate,
+    indirect: syntax2.indirect
   };
 }
 function classify65816Operand(resolver, operand) {
@@ -27599,35 +30770,35 @@ function isMovRegisterPair(left, right) {
   const combined = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
   return MOV_ONE_BYTE_PAIRS.has(combined);
 }
-function isAccumulator(op, lowered) {
+function isAccumulator(op2, lowered) {
   if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "A") {
     return true;
   }
-  return op.toUpperCase() === "A";
+  return op2.toUpperCase() === "A";
 }
-function isRegisterX(op, lowered) {
+function isRegisterX(op2, lowered) {
   if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "X") {
     return true;
   }
-  return op.toUpperCase() === "X";
+  return op2.toUpperCase() === "X";
 }
-function isRegisterY(op, lowered) {
+function isRegisterY(op2, lowered) {
   if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "Y") {
     return true;
   }
-  return op.toUpperCase() === "Y";
+  return op2.toUpperCase() === "Y";
 }
-function isParenX(op, lowered) {
+function isParenX(op2, lowered) {
   if (lowered?.mode === "registerIndirect" && lowered.registerName?.toUpperCase() === "X") {
     return true;
   }
-  return op.trim().toUpperCase() === "(X)";
+  return op2.trim().toUpperCase() === "(X)";
 }
-function isParenY(op, lowered) {
+function isParenY(op2, lowered) {
   if (lowered?.mode === "registerIndirect" && lowered.registerName?.toUpperCase() === "Y") {
     return true;
   }
-  return op.trim().toUpperCase() === "(Y)";
+  return op2.trim().toUpperCase() === "(Y)";
 }
 var memOpTables = {
   ADC: {
@@ -29345,11 +32516,11 @@ var ArchSPC700 = class {
       if (m) {
         const val = parseInt(m[1], 16) & 65535;
         const length = getAddressSize("$" + m[1]);
-        let op = p.opcodeAbs;
+        let op2 = p.opcodeAbs;
         if (length === 1) {
-          op = p.opcodeDp;
+          op2 = p.opcodeDp;
         }
-        this.assembler.write1(op);
+        this.assembler.write1(op2);
         this.writeDpOrAbs(val, length);
         return true;
       }
@@ -29384,11 +32555,11 @@ var ArchSPC700 = class {
       if (m) {
         const val = parseInt(m[1], 16) & 65535;
         const length = getAddressSize("$" + m[1]);
-        let op = p.opcodeAbs;
+        let op2 = p.opcodeAbs;
         if (length === 1) {
-          op = p.opcodeDp;
+          op2 = p.opcodeDp;
         }
-        this.assembler.write1(op);
+        this.assembler.write1(op2);
         this.writeDpOrAbs(val, length);
         return true;
       }
@@ -29431,11 +32602,11 @@ var ArchSPC700 = class {
       if (m) {
         const val = parseInt(m[1], 16) & 65535;
         const length = getAddressSize("$" + m[1]);
-        let op = p.opcodeAbs;
+        let op2 = p.opcodeAbs;
         if (length === 1) {
-          op = p.opcodeDp;
+          op2 = p.opcodeDp;
         }
-        this.assembler.write1(op);
+        this.assembler.write1(op2);
         this.writeDpOrAbs(val, length);
         return true;
       }
@@ -31011,6 +34182,12 @@ var snesRomAddressSpace = {
 };
 
 // plugins/snes/src/tooling/directive-catalog.ts
+var op = (keyword, summary, syntax2, operands) => ({
+  keyword,
+  summary,
+  syntax: syntax2,
+  ...operands ? { operands } : {}
+});
 var directiveCatalog2 = [
   {
     keyword: "db",
@@ -31140,9 +34317,10 @@ var directiveCatalog2 = [
   },
   {
     keyword: "base",
-    summary: "Set the logical base address for emitted code.",
-    syntax: "base $address",
-    group: "layout"
+    summary: "Set or restore the logical base address.",
+    syntax: "base address|off",
+    group: "layout",
+    operands: [op("off", "Restore the saved physical/base address relationship.", "base off")]
   },
   {
     keyword: "org",
@@ -31182,21 +34360,100 @@ var directiveCatalog2 = [
   },
   {
     keyword: "check",
-    summary: "Assert an assembler condition (asar-compatible).",
-    syntax: "check ...",
-    group: "layout"
+    summary: "Configure bank-cross checks or enable unguarded ROM reads.",
+    syntax: "check bankcross off|half|full|on | check title",
+    group: "layout",
+    operands: [
+      {
+        keyword: "bankcross",
+        summary: "Set whether multi-byte writes may cross a bank boundary. Default is full (64 KiB).",
+        syntax: "check bankcross off|half|full|on",
+        operands: [
+          {
+            keyword: "off",
+            summary: "Disable the bank-boundary check and enable mapper-specific PC wrapping.",
+            syntax: "check bankcross off"
+          },
+          {
+            keyword: "half",
+            summary: "Reject writes that cross a 32 KiB half-bank boundary.",
+            syntax: "check bankcross half"
+          },
+          {
+            keyword: "full",
+            summary: "Reject writes that cross a 64 KiB bank boundary (the default).",
+            syntax: "check bankcross full"
+          },
+          {
+            keyword: "on",
+            summary: "Alias of full: reject writes that cross a 64 KiB bank boundary.",
+            syntax: "check bankcross on"
+          }
+        ]
+      },
+      {
+        keyword: "title",
+        summary: "Enable read1\u2026read4 without a default value. Does not inspect the ROM title.",
+        syntax: "check title"
+      }
+    ]
   },
   {
     keyword: "optimize",
-    summary: "Control optimization behavior (asar-compatible).",
-    syntax: "optimize ...",
-    group: "layout"
+    summary: "Configure direct-page size optimization. Other Asar optimize families are no-ops.",
+    syntax: "optimize dp none|ram|always",
+    group: "layout",
+    operands: [
+      op("dp", "Direct-page width inference for same-bank labels.", "optimize dp none|ram|always", [
+        op("none", "Disable direct-page optimization (the default).", "optimize dp none"),
+        op("ram", "Allow inferred DP width for same-bank RAM labels.", "optimize dp ram"),
+        op("always", "Allow inferred DP width whenever the address fits.", "optimize dp always")
+      ]),
+      op(
+        "address",
+        "Asar address optimizer (accepted no-op in this assembler).",
+        "optimize address default|ram|mirrors|none",
+        [
+          op(
+            "default",
+            "Asar default address optimization (no-op here).",
+            "optimize address default"
+          ),
+          op(
+            "ram",
+            "Asar RAM-mirroring address optimization (no-op here).",
+            "optimize address ram"
+          ),
+          op(
+            "mirrors",
+            "Asar mirror-aware address optimization (no-op here).",
+            "optimize address mirrors"
+          ),
+          op("none", "Disable Asar address optimization (no-op here).", "optimize address none")
+        ]
+      )
+    ]
   },
   {
     keyword: "arch",
     summary: "Select the active CPU architecture.",
-    syntax: "arch 65816|spc700|superfx",
-    group: "layout"
+    syntax: "arch 65816|spc700|spc700-raw|spc700-inline|superfx",
+    group: "layout",
+    operands: [
+      op("65816", "Assemble 65C816 (main SNES CPU) instructions.", "arch 65816"),
+      op("spc700", "Assemble SPC700 instructions (typically inside spcblock).", "arch spc700"),
+      op(
+        "spc700-raw",
+        "Assemble a standalone SPC payload with 1:1 norom addressing.",
+        "arch spc700-raw"
+      ),
+      op(
+        "spc700-inline",
+        "Asar-compatible implicit SPC blocks: later org starts a block.",
+        "arch spc700-inline"
+      ),
+      op("superfx", "Assemble Super FX / GSU instructions.", "arch superfx")
+    ]
   },
   { keyword: "lorom", summary: "Use the LoROM memory mapper.", syntax: "lorom", group: "layout" },
   { keyword: "hirom", summary: "Use the HiROM memory mapper.", syntax: "hirom", group: "layout" },
@@ -31229,9 +34486,20 @@ var directiveCatalog2 = [
   },
   {
     keyword: "namespace",
-    summary: "Set the active label namespace.",
-    syntax: "namespace name",
-    group: "namespace"
+    summary: "Set, nest, or clear the active label namespace.",
+    syntax: "namespace [name|off|nested on|nested off]",
+    group: "namespace",
+    operands: [
+      op("off", "Leave the current namespace (pop when nested, else clear).", "namespace off"),
+      op("nested", "Enable or disable nested namespace paths.", "namespace nested on|off", [
+        op(
+          "on",
+          "Build namespace paths from successive namespace directives.",
+          "namespace nested on"
+        ),
+        op("off", "Disable nested paths and clear the current namespace.", "namespace nested off")
+      ])
+    ]
   },
   {
     keyword: "pushns",
@@ -31279,7 +34547,11 @@ var directiveCatalog2 = [
     keyword: "table",
     summary: "Load an asar character mapping table file (`char=hex` per line).",
     syntax: 'table "file"[,ltr|rtl]',
-    group: "table"
+    group: "table",
+    operands: [
+      op("ltr", "Left-to-right table lines: character=hex.", 'table "file",ltr'),
+      op("rtl", "Right-to-left table lines: hex=character.", 'table "file",rtl')
+    ]
   },
   {
     keyword: "cleartable",
@@ -31302,26 +34574,46 @@ var directiveCatalog2 = [
   {
     keyword: "spcblock",
     summary: "Begin an SPC700 code block.",
-    syntax: "spcblock ...",
-    group: "spc"
+    syntax: "spcblock destination [nspc]",
+    group: "spc",
+    operands: [
+      op(
+        "nspc",
+        "Nintendo-style transfer block with a 16-bit size placeholder.",
+        "spcblock dest nspc"
+      )
+    ]
   },
   {
     keyword: "endspcblock",
     summary: "End an SPC700 code block.",
-    syntax: "endspcblock",
-    group: "spc"
+    syntax: "endspcblock [execute address]",
+    group: "spc",
+    operands: [
+      op(
+        "execute",
+        "Append a zero-size execute record at the given SPC address.",
+        "endspcblock execute address"
+      )
+    ]
   },
   {
     keyword: "struct",
     summary: "Begin a structure definition.",
-    syntax: "struct name",
-    group: "struct"
+    syntax: "struct name [extends parent]",
+    group: "struct",
+    operands: [
+      op("extends", "Inherit members from an existing struct.", "struct name extends parent")
+    ]
   },
   {
     keyword: "endstruct",
     summary: "End a structure definition.",
-    syntax: "endstruct",
-    group: "struct"
+    syntax: "endstruct [align value]",
+    group: "struct",
+    operands: [
+      op("align", "Round the struct size/stride up to an alignment.", "endstruct align value")
+    ]
   },
   {
     keyword: "if",
@@ -31366,9 +34658,15 @@ var directiveCatalog2 = [
   },
   {
     keyword: "warnings",
-    summary: "Control warnings (asar-compatible).",
-    syntax: "warnings ...",
-    group: "compat"
+    summary: "Control warnings (asar-compatible no-op).",
+    syntax: "warnings push|pull|enable|disable",
+    group: "compat",
+    operands: [
+      op("push", "Save the current warning state (no-op here).", "warnings push"),
+      op("pull", "Restore the last pushed warning state (no-op here).", "warnings pull"),
+      op("enable", "Enable a warning id (no-op here).", "warnings enable id"),
+      op("disable", "Disable a warning id (no-op here).", "warnings disable id")
+    ]
   },
   {
     keyword: "print",
@@ -31453,19 +34751,31 @@ var directiveCatalog2 = [
     keyword: ".accu",
     summary: "Set accumulator width hint (ca65 alias for .a8/.a16).",
     syntax: ".accu 8|16",
-    group: "compat"
+    group: "compat",
+    operands: [
+      op("8", "8-bit accumulator width hint.", ".accu 8"),
+      op("16", "16-bit accumulator width hint.", ".accu 16")
+    ]
   },
   {
     keyword: ".index",
     summary: "Set index register width hint (ca65 alias for .i8/.i16).",
     syntax: ".index 8|16",
-    group: "compat"
+    group: "compat",
+    operands: [
+      op("8", "8-bit index width hint.", ".index 8"),
+      op("16", "16-bit index width hint.", ".index 16")
+    ]
   },
   {
     keyword: ".smart",
     summary: "Enable/disable automatic M/X width tracking via SEP/REP (ca65 compatible).",
     syntax: ".smart [on|off]",
-    group: "compat"
+    group: "compat",
+    operands: [
+      op("on", "Track M/X width from SEP/REP.", ".smart on"),
+      op("off", "Stop automatic M/X width tracking.", ".smart off")
+    ]
   },
   {
     keyword: ".setcpu",
@@ -31487,7 +34797,7 @@ var directiveCatalog2 = [
   }
 ];
 var directiveByKeyword = new Map(
-  directiveCatalog2.map((descriptor2) => [descriptor2.keyword.toLowerCase(), descriptor2])
+  directiveCatalog2.map((descriptor3) => [descriptor3.keyword.toLowerCase(), descriptor3])
 );
 
 // plugins/snes/src/index.ts
@@ -31511,16 +34821,16 @@ var splitTopLevelCommaOperands = (text) => {
   if (current.trim()) operands.push(current.trim());
   return operands;
 };
-var toolingFor = (keywords) => {
+var toolingFor2 = (keywords) => {
   const wanted = new Set(keywords);
-  return directiveCatalog2.filter((descriptor2) => wanted.has(descriptor2.keyword));
+  return directiveCatalog2.filter((descriptor3) => wanted.has(descriptor3.keyword));
 };
-var directive = (id, keywords, handler) => ({
+var directive2 = (id, keywords, handler) => ({
   id,
   keywords,
   phase: "lowered",
   createHandler: handler,
-  tooling: toolingFor(keywords)
+  tooling: toolingFor2(keywords)
 });
 var numericArgument = (functionName, args, index2) => {
   const value = args[index2];
@@ -31617,7 +34927,7 @@ var createInitialState = (context) => {
     cpuStack: []
   };
 };
-var plugin = definePlugin({
+var plugin2 = definePlugin({
   manifest: {
     id: "uttori.asm-plugin-snes",
     name: "Uttori ASM SNES Plugin",
@@ -31735,7 +35045,7 @@ var plugin = definePlugin({
     context.registerDirectiveSet({
       id: "snes.mapper-directives",
       directives: [
-        directive(
+        directive2(
           "snes.directive.mapper",
           MAPPER_KEYWORDS,
           ({ state }) => (_ctx, words) => handleMapper(state.get(snesSessionStateKey), words)
@@ -31744,69 +35054,70 @@ var plugin = definePlugin({
     });
     context.registerDirectiveSet({
       id: "snes.policy-directives",
+      tooling: toolingFor2(["arch"]),
       directives: [
-        directive(
+        directive2(
           "snes.directive.check",
           ["check"],
           ({ state }) => (_ctx, words) => handleCheck(state.get(snesSessionStateKey), words)
         ),
-        directive(
+        directive2(
           "snes.directive.optimize",
           ["optimize"],
           ({ state }) => (_ctx, words) => handleOptimize(state.get(snesSessionStateKey), words)
         ),
-        directive("snes.directive.asar-noops", ASAR_COMPAT_NO_OP_DIRECTIVES, () => () => void 0)
+        directive2("snes.directive.asar-noops", ASAR_COMPAT_NO_OP_DIRECTIVES, () => () => void 0)
       ]
     });
     context.registerDirectiveSet({
       id: "snes.ca65-compat-directives",
       directives: [
-        directive(
+        directive2(
           "snes.directive.ca65.a8",
           [".a8"],
           ({ session }) => () => handleA8(session)
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.a16",
           [".a16"],
           ({ session }) => () => handleA16(session)
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.i8",
           [".i8"],
           ({ session }) => () => handleI8(session)
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.i16",
           [".i16"],
           ({ session }) => () => handleI16(session)
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.accu",
           [".accu"],
           ({ session }) => (_ctx, words) => handleAccu(session, words)
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.index",
           [".index"],
           ({ session }) => (_ctx, words) => handleIndex(session, words)
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.smart",
           [".smart"],
           ({ session }) => (_ctx, words) => handleSmart(session, words)
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.setcpu",
           [".setcpu"],
           ({ session }) => (_ctx, words) => handleSetcpu(session, words)
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.pushcpu",
           [".pushcpu"],
           ({ session, state }) => () => handlePushcpu(session, state.get(snesSessionStateKey))
         ),
-        directive(
+        directive2(
           "snes.directive.ca65.popcpu",
           [".popcpu"],
           ({ session, state }) => () => handlePopcpu(session, state.get(snesSessionStateKey))
@@ -31816,17 +35127,17 @@ var plugin = definePlugin({
     context.registerDirectiveSet({
       id: "snes.memory-directives",
       directives: [
-        directive(
+        directive2(
           "snes.directive.freespace",
           ["freecode", "freespace", "freedata"],
           ({ session, state }) => (_ctx, words) => handleFreespace(session, state.get(snesSessionStateKey), words)
         ),
-        directive(
+        directive2(
           "snes.directive.freespacebyte",
           ["freespacebyte"],
           ({ session, state }) => (_ctx, words) => handleFreespaceByte(session, state.get(snesSessionStateKey), words)
         ),
-        directive(
+        directive2(
           "snes.directive.prot",
           ["prot"],
           ({ session }) => (_ctx, words) => handleProt(session, words)
@@ -31836,17 +35147,17 @@ var plugin = definePlugin({
     context.registerDirectiveSet({
       id: "snes.spc-directives",
       directives: [
-        directive(
+        directive2(
           "snes.directive.spcblock",
           ["spcblock"],
           ({ session, state }) => (_ctx, words) => createSpcRuntime(session, state.get(snesSessionStateKey)).handleSpcblock(words)
         ),
-        directive(
+        directive2(
           "snes.directive.endspcblock",
           ["endspcblock"],
           ({ session, state }) => (_ctx, words) => createSpcRuntime(session, state.get(snesSessionStateKey)).handleEndSpcblock(words)
         ),
-        directive(
+        directive2(
           "snes.directive.startpos",
           ["startpos"],
           ({ session, state }) => (_ctx, words) => handleStartpos(session, state.get(snesSessionStateKey), words)
@@ -31932,7 +35243,7 @@ var plugin = definePlugin({
     });
   }
 });
-var src_default = plugin;
+var src_default2 = plugin2;
 
 // packages/plugin-loader-node/src/configuration.ts
 import { existsSync as existsSync2, promises as fs3 } from "node:fs";
@@ -32168,6 +35479,19 @@ var NodePluginLoader = class {
         configEntry: `pluginModules[${index2}]`
       }))
     ];
+    if (options.activateBundledPlugins && options.bundledPlugins) {
+      const requested = new Set(requests.map((request) => request.module));
+      for (const module of options.bundledPlugins.keys()) {
+        if (requested.has(module)) continue;
+        requested.add(module);
+        requests.push({
+          module,
+          baseDirectory: cwd,
+          source: "bundled",
+          configEntry: `bundledPlugins[${module}]`
+        });
+      }
+    }
     const modules = [];
     for (const request of requests) {
       modules.push(await this.#resolveAndImport(request, options));
@@ -32709,6 +36033,7 @@ var ProjectEnvironmentController = class {
         ...settings2.workspaceTrusted && (settings2.configFile || configuredPath) ? { configFile: settings2.configFile ?? configuredPath } : {},
         pluginModules: settings2.workspaceTrusted ? pluginModules : [],
         bundledPlugins: this.options.bundledPlugins,
+        ...this.options.activateBundledPlugins ? { activateBundledPlugins: true } : {},
         ...useHostDefaults ? { defaults: this.options.defaults } : {},
         overrides: {
           ...settings2.target ? { target: settings2.target } : {},
@@ -32967,7 +36292,7 @@ function wordAt(text, position) {
   if (unquotedPath !== void 0) {
     return unquotedPath;
   }
-  const wordPattern = /!?\.?\w+/g;
+  const wordPattern = /!?\.?\w+(?:-\w+)*/g;
   let match;
   while ((match = wordPattern.exec(line)) !== null) {
     const start = match.index;
@@ -33052,20 +36377,115 @@ function cursorWord(index2, file, position) {
   const word = wordAt(text, position);
   return hierarchicalSegmentAt(index2, file, position, word) ?? word;
 }
-function hierarchicalSegmentAt(index2, file, position, word) {
-  if (!word || !word.includes("_")) {
-    return void 0;
+function splitHierarchicalSource(word) {
+  const prefixMatch = /^[._]+/.exec(word);
+  const prefix = prefixMatch?.[0] ?? "";
+  const rest = word.slice(prefix.length);
+  if (!rest.includes("_")) {
+    return [word];
   }
+  const parts = rest.split("_").filter(Boolean);
+  if (parts.length === 0) {
+    return [word];
+  }
+  parts[0] = `${prefix}${parts[0]}`;
+  return parts;
+}
+function compoundLeafCandidates(symbols, word, file) {
+  const lookup = lookupNameFor(word);
+  const exact = symbols.filter((symbol) => symbol.name === word || symbol.name === lookup);
+  const suffix = lookup ? `_${lookup}` : "";
+  const bySuffix = suffix ? symbols.filter(
+    (symbol) => symbol.name.endsWith(suffix) && !exact.some((entry) => entry === symbol)
+  ) : [];
+  const rank = (symbol) => {
+    const inFile = symbol.location.file === file ? 1 : 0;
+    return inFile * 1e6 + symbol.name.length;
+  };
+  return [...exact, ...bySuffix].sort((left, right) => rank(right) - rank(left));
+}
+function hierarchyChainForSymbol(symbols, leaf) {
   const chain = [];
   const seen = /* @__PURE__ */ new Set();
-  let current = word;
-  const symbols = index2.getAllSymbols();
+  let current = leaf.name;
   while (current && !seen.has(current)) {
     seen.add(current);
     chain.unshift(current);
     current = symbols.find((symbol) => symbol.name === current)?.containerName;
   }
-  if (chain.length < 2) {
+  return chain;
+}
+function hierarchyAligns(chain, parts, chainOffset) {
+  if (chainOffset < 0 || chainOffset + parts.length > chain.length) {
+    return false;
+  }
+  for (let index2 = 0; index2 < parts.length; index2++) {
+    const chainIndex = chainOffset + index2;
+    const full = chain[chainIndex];
+    const parent = chainIndex > 0 ? chain[chainIndex - 1] : void 0;
+    const lookup = lookupNameFor(parts[index2]);
+    if (!parent) {
+      if (full !== parts[index2] && lookupNameFor(full) !== lookup && !full.endsWith(`_${lookup}`)) {
+        return false;
+      }
+      continue;
+    }
+    if (!full.startsWith(`${parent}_`)) {
+      return false;
+    }
+    const suffix = full.slice(parent.length + 1);
+    if (suffix !== lookup && suffix !== parts[index2]) {
+      return false;
+    }
+  }
+  return true;
+}
+function alignedHierarchy(index2, file, word) {
+  if (!word || !word.includes("_")) {
+    return void 0;
+  }
+  const parts = splitHierarchicalSource(word);
+  if (parts.length < 2) {
+    return void 0;
+  }
+  const symbols = index2.getAllSymbols();
+  for (const leaf of compoundLeafCandidates(symbols, word, file)) {
+    const chain = hierarchyChainForSymbol(symbols, leaf);
+    const chainOffset = chain.length - parts.length;
+    if (hierarchyAligns(chain, parts, chainOffset)) {
+      return { parts, chain, chainOffset };
+    }
+  }
+  return void 0;
+}
+function compoundSegmentRanges(index2, file, line, word) {
+  const aligned = alignedHierarchy(index2, file, word);
+  if (!aligned) {
+    return void 0;
+  }
+  const text = index2.getFileText(file);
+  if (!text) {
+    return void 0;
+  }
+  const lineText = splitLines(text)[line];
+  if (lineText === void 0) {
+    return void 0;
+  }
+  const start = findTokenColumn(lineText, word);
+  if (start < 0) {
+    return void 0;
+  }
+  const ranges = [];
+  let consumed = 0;
+  for (const part of aligned.parts) {
+    ranges.push(import_vscode_languageserver.Range.create(line, start + consumed, line, start + consumed + part.length));
+    consumed += part.length + 1;
+  }
+  return ranges;
+}
+function hierarchicalSegmentAt(index2, file, position, word) {
+  const aligned = alignedHierarchy(index2, file, word);
+  if (!aligned || !word) {
     return void 0;
   }
   const text = index2.getFileText(file);
@@ -33081,23 +36501,26 @@ function hierarchicalSegmentAt(index2, file, position, word) {
     return void 0;
   }
   const relative = position.character - start;
-  for (let index3 = 0; index3 < chain.length; index3++) {
-    const full = chain[index3];
-    const parent = index3 > 0 ? chain[index3 - 1] : void 0;
-    const segmentEnd = full.length;
-    if (relative < segmentEnd || index3 === chain.length - 1) {
+  let consumed = 0;
+  for (let index3 = 0; index3 < aligned.parts.length; index3++) {
+    const partEnd = consumed + aligned.parts[index3].length;
+    if (relative < partEnd || index3 === aligned.parts.length - 1) {
+      const chainIndex = aligned.chainOffset + index3;
+      const full = aligned.chain[chainIndex];
+      const parent = chainIndex > 0 ? aligned.chain[chainIndex - 1] : void 0;
       if (!parent) {
         return full;
       }
       return `.${full.slice(parent.length + 1)}`;
     }
+    consumed = partEnd + 1;
   }
   return void 0;
 }
 function cursorReference(index2, file, position, word) {
   const references = index2.getReferences(file);
   const exact = referenceAt(references, position);
-  if (exact) {
+  if (exact && (!word || namesMatch(exact.name, word))) {
     return exact;
   }
   if (!word) {
@@ -33117,7 +36540,7 @@ function cursorReference(index2, file, position, word) {
 function cursorSymbol(index2, file, position, word) {
   const symbols = index2.getSymbols(file);
   const exact = symbolAt(symbols, position);
-  if (exact) {
+  if (exact && (!word || namesMatch(exact.name, word))) {
     return exact;
   }
   if (!word) {
@@ -33195,6 +36618,67 @@ function documentSymbolsFor(index2, file) {
   }
   return roots;
 }
+function projectOutlineFor(index2) {
+  const childrenByParent = /* @__PURE__ */ new Map();
+  for (const edge of index2.getIncludeEdges()) {
+    const from = path9.resolve(edge.fromFile);
+    const to = path9.resolve(edge.toFile);
+    const list = childrenByParent.get(from) ?? [];
+    if (!list.includes(to)) {
+      list.push(to);
+    }
+    childrenByParent.set(from, list);
+  }
+  const visited = /* @__PURE__ */ new Set();
+  const buildFile = (file) => {
+    const resolved = path9.resolve(file);
+    if (visited.has(resolved)) {
+      return {
+        id: `include:${resolved}:${visited.size}`,
+        label: path9.basename(resolved),
+        detail: "include",
+        kind: "include",
+        uri: pathToUri(resolved)
+      };
+    }
+    visited.add(resolved);
+    return {
+      id: `file:${resolved}`,
+      label: path9.basename(resolved),
+      kind: "file",
+      uri: pathToUri(resolved),
+      children: (childrenByParent.get(resolved) ?? []).map((child) => buildFile(child))
+    };
+  };
+  const entries = index2.resolveRoots().map((root) => path9.resolve(root));
+  const roots = entries.map((entry) => ({
+    id: `entry:${entry}`,
+    label: `Entry: ${path9.basename(entry)}`,
+    kind: "entry",
+    uri: pathToUri(entry),
+    children: [buildFile(entry)]
+  }));
+  const reachable = visited;
+  const analyzed = index2.getAnalyzedFiles().map((file) => path9.resolve(file));
+  const orphans = analyzed.filter((file) => !reachable.has(file));
+  if (orphans.length === 0) {
+    return roots;
+  }
+  return [
+    ...roots,
+    {
+      id: "orphans",
+      label: "Orphans",
+      kind: "orphanGroup",
+      children: orphans.map((file) => ({
+        id: `orphan:${file}`,
+        label: path9.basename(file),
+        kind: "file",
+        uri: pathToUri(file)
+      }))
+    }
+  ];
+}
 function definitionFor(index2, file, position) {
   const word = cursorWord(index2, file, position);
   const reference = cursorReference(index2, file, position, word);
@@ -33221,8 +36705,8 @@ function definitionFor(index2, file, position) {
     return [definitionToLocation(index2, symbol)];
   }
   if (word) {
-    const lookupName = word.startsWith("!") ? word.slice(1) : word;
-    const byName = index2.getAllSymbols().filter((entry) => entry.name === lookupName || entry.name === word);
+    const lookupName = lookupNameFor(word);
+    const byName = index2.getAllSymbols().filter((entry) => namesMatch(entry.name, lookupName) || namesMatch(entry.name, word));
     if (byName.length > 0) {
       return byName.map((definition) => definitionToLocation(index2, definition));
     }
@@ -33268,17 +36752,31 @@ function hoverFor(index2, file, position, text) {
   const word = cursorWord(index2, file, position) ?? wordAt(text, position);
   const reference = cursorReference(index2, file, position, word);
   if (reference?.kind === "instruction") {
-    const descriptor2 = findInstruction(reference.name, architecture, {
+    const descriptor3 = findInstruction(reference.name, architecture, {
       getInstructionCatalog: (name) => index2.toolingCatalog.getInstructions(name)
     });
-    if (descriptor2) {
-      return markdownHover(renderInstructionDocs(descriptor2));
+    if (descriptor3) {
+      return markdownHover(renderInstructionDocs(descriptor3));
     }
   }
   if (reference) {
     const definitions = resolveDefinition(reference, index2.getAllSymbols());
     if (definitions.length > 0) {
       return markdownHover(renderSymbolDocs(index2, definitions[0]));
+    }
+  }
+  if (word) {
+    const line = splitLines(text)[position.line];
+    if (line) {
+      const operand = findDirectiveOperand(
+        line,
+        word,
+        index2.directiveCatalog,
+        index2.directivePrefixes
+      );
+      if (operand) {
+        return markdownHover(renderDirectiveDocs(operand));
+      }
     }
   }
   const symbol = cursorSymbol(index2, file, position, word);
@@ -33294,18 +36792,18 @@ function hoverFor(index2, file, position, text) {
   if (instruction2) {
     return markdownHover(renderInstructionDocs(instruction2));
   }
-  const directive2 = findDirectiveInCatalog(word, index2.directiveCatalog, index2.directivePrefixes);
-  if (directive2) {
-    return markdownHover(renderDirectiveDocs(directive2));
+  const directive3 = findDirectiveInCatalog(word, index2.directiveCatalog, index2.directivePrefixes);
+  if (directive3) {
+    return markdownHover(renderDirectiveDocs(directive3));
   }
   const expressionFunction = index2.toolingCatalog.getExpressionFunctions().find(
-    (descriptor2) => descriptor2.name.toLowerCase() === word.toLowerCase() || descriptor2.aliases.some((alias) => alias.toLowerCase() === word.toLowerCase())
+    (descriptor3) => descriptor3.name.toLowerCase() === word.toLowerCase() || descriptor3.aliases.some((alias) => alias.toLowerCase() === word.toLowerCase())
   );
   if (expressionFunction) {
     return markdownHover(renderExpressionFunctionDocs(expressionFunction));
   }
   const lookupName = lookupNameFor(word);
-  const byName = index2.getAllSymbols().filter((entry) => entry.name === lookupName || entry.name === word);
+  const byName = index2.getAllSymbols().filter((entry) => namesMatch(entry.name, lookupName) || namesMatch(entry.name, word));
   if (byName.length > 0) {
     return markdownHover(renderSymbolDocs(index2, byName[0]));
   }
@@ -33355,14 +36853,14 @@ function signatureHelpFor(lineText, index2) {
     );
     return { signatures, activeSignature: 0 };
   }
-  const directive2 = findDirectiveInCatalog(
+  const directive3 = findDirectiveInCatalog(
     leading,
     index2.directiveCatalog,
     index2.directivePrefixes
   );
-  if (directive2) {
+  if (directive3) {
     return {
-      signatures: [import_vscode_languageserver.SignatureInformation.create(directive2.syntax, directive2.summary)],
+      signatures: [import_vscode_languageserver.SignatureInformation.create(directive3.syntax, directive3.summary)],
       activeSignature: 0
     };
   }
@@ -33469,7 +36967,16 @@ function semanticTokensFor(index2, file) {
     push(definitionRange(index2, symbol), symbolTokenType(symbol.kind), definitionTokenModifier);
   }
   for (const reference of index2.getReferences(file)) {
-    push(referenceRange(index2, reference), resolvedReferenceTokenType(index2, reference));
+    const type = resolvedReferenceTokenType(index2, reference);
+    const line = locationRange(reference.location)?.start.line ?? reference.location.line;
+    const segments = compoundSegmentRanges(index2, file, line, reference.name);
+    if (segments) {
+      for (const range of segments) {
+        push(range, type);
+      }
+      continue;
+    }
+    push(referenceRange(index2, reference), type);
   }
   tokens.sort((a, b) => a.line - b.line || a.char - b.char);
   const builder = new import_vscode_languageserver.SemanticTokensBuilder();
@@ -33745,7 +37252,11 @@ function referenceTokenType(kind) {
 var connection = (0, import_node.createConnection)(import_node.ProposedFeatures.all);
 var documents = new import_node.TextDocuments(TextDocument2);
 var environmentController = new ProjectEnvironmentController({
-  bundledPlugins: /* @__PURE__ */ new Map([["@uttori/asm-plugin-snes", src_default]]),
+  bundledPlugins: /* @__PURE__ */ new Map([
+    ["@uttori/asm-plugin-snes", src_default2],
+    ["@uttori/asm-plugin-65xx", src_default]
+  ]),
+  activateBundledPlugins: true,
   defaults: {
     plugins: [{ module: "@uttori/asm-plugin-snes" }],
     target: SNES_TARGET_ID,
@@ -33770,6 +37281,7 @@ var workspaceRoots = [];
 var hasConfigurationCapability = false;
 var hasDidChangeConfigurationDynamicRegistration = false;
 var reindexTimer;
+var clientInitialized = false;
 var configurationDiagnostic;
 var configurationQueue = Promise.resolve();
 var workspaceRoot = () => workspaceRoots[0] ?? process.cwd();
@@ -33873,6 +37385,7 @@ async function replaceProjectEnvironment(next) {
     settings = next;
     setConfigurationDiagnostic(next, state.trustNotice, import_node.DiagnosticSeverity.Warning);
     publishAllDiagnostics();
+    notifyIndexUpdated();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     settings = next;
@@ -33907,6 +37420,7 @@ function scheduleReindex() {
     );
     publishAllDiagnostics();
     void connection.languages.semanticTokens.refresh();
+    notifyIndexUpdated();
   }, 500);
 }
 function publishAllDiagnostics() {
@@ -33924,6 +37438,10 @@ function publishAllDiagnostics() {
       diagnostics: [configurationDiagnostic.diagnostic]
     });
   }
+}
+function notifyIndexUpdated() {
+  if (!index || !clientInitialized) return;
+  void connection.sendNotification("asm/indexUpdated", index.getStatus());
 }
 connection.onInitialize(async (params) => {
   hasConfigurationCapability = Boolean(params.capabilities.workspace?.configuration);
@@ -33963,11 +37481,13 @@ connection.onInitialize(async (params) => {
   };
 });
 connection.onInitialized(() => {
+  clientInitialized = true;
   if (hasDidChangeConfigurationDynamicRegistration) {
     connection.client.register(import_node.DidChangeConfigurationNotification.type, void 0).catch(() => {
     });
   }
   if (hasConfigurationCapability) void refreshConfiguration();
+  notifyIndexUpdated();
 });
 async function refreshConfiguration() {
   try {
@@ -34104,12 +37624,16 @@ connection.onRequest("asm/projectMetadata", async () => {
     activeArchitecture: loaded.architecture,
     targets: activeIndex.toolingCatalog.getTargets(),
     architectures: activeIndex.toolingCatalog.getArchitectures(),
-    plugins: loaded.configuration.plugins.map((plugin2) => ({
-      id: plugin2.pluginId,
-      module: plugin2.module,
-      bundled: plugin2.bundled
+    plugins: loaded.configuration.plugins.map((plugin3) => ({
+      id: plugin3.pluginId,
+      module: plugin3.module,
+      bundled: plugin3.bundled
     }))
   };
+});
+connection.onRequest("asm/projectOutline", async () => {
+  await configurationQueue;
+  return index ? projectOutlineFor(index) : [];
 });
 connection.onRequest("asm/status", async () => {
   await configurationQueue;

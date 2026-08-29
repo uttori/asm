@@ -28,6 +28,7 @@ import {
 import {
   findInstruction,
   findDirectiveInCatalog,
+  findDirectiveOperand,
   buildCompletionEntries,
   renderInstructionDocs,
   renderDirectiveDocs,
@@ -390,7 +391,8 @@ function wordAt(text: string, position: Position): string | undefined {
   if (unquotedPath !== undefined) {
     return unquotedPath;
   }
-  const wordPattern = /!?\.?\w+/g;
+  // oxlint-disable-next-line security/detect-unsafe-regex
+  const wordPattern = /!?\.?\w+(?:-\w+)*/g;
   let match: RegExpExecArray | null;
   while ((match = wordPattern.exec(line)) !== null) {
     const start = match.index;
@@ -516,8 +518,186 @@ function cursorWord(index: WorkspaceIndex, file: string, position: Position): st
 }
 
 /**
- * When the cursor is inside a compound label (`_018049_8053`), returns the
- * parent or `.sublabel` segment under the cursor.
+ * Splits a compound identifier on `_`, keeping a leading `.` / `_` on the first
+ * part. `.idx_beginner` → `[".idx", "beginner"]`; `_018049_8053` → `["_018049", "8053"]`.
+ * @param {string} word The identifier text.
+ * @returns {string[]} The source segments.
+ */
+function splitHierarchicalSource(word: string): string[] {
+  const prefixMatch = /^[._]+/.exec(word);
+  const prefix = prefixMatch?.[0] ?? "";
+  const rest = word.slice(prefix.length);
+  if (!rest.includes("_")) {
+    return [word];
+  }
+  const parts = rest.split("_").filter(Boolean);
+  if (parts.length === 0) {
+    return [word];
+  }
+  parts[0] = `${prefix}${parts[0]}`;
+  return parts;
+}
+
+/**
+ * Finds symbols that could be the leaf of a compound identifier. Dotted locals
+ * like `.idx_beginner` are stored as `Parent_idx_beginner`, not under the source
+ * spelling, so we also accept an FQ name that ends with `_${lookup}`.
+ * @param {AssemblySymbolDefinition[]} symbols Every known symbol.
+ * @param {string} word The compound identifier.
+ * @param {string} file The file containing the cursor.
+ * @returns {AssemblySymbolDefinition[]} Candidate leaves, longest first.
+ */
+function compoundLeafCandidates(
+  symbols: AssemblySymbolDefinition[],
+  word: string,
+  file: string,
+): AssemblySymbolDefinition[] {
+  const lookup = lookupNameFor(word);
+  const exact = symbols.filter((symbol) => symbol.name === word || symbol.name === lookup);
+  const suffix = lookup ? `_${lookup}` : "";
+  const bySuffix = suffix
+    ? symbols.filter(
+        (symbol) => symbol.name.endsWith(suffix) && !exact.some((entry) => entry === symbol),
+      )
+    : [];
+  const rank = (symbol: AssemblySymbolDefinition): number => {
+    const inFile = symbol.location.file === file ? 1 : 0;
+    return inFile * 1_000_000 + symbol.name.length;
+  };
+  return [...exact, ...bySuffix].sort((left, right) => rank(right) - rank(left));
+}
+
+/**
+ * Walks `containerName` from a leaf to the root.
+ * @param {AssemblySymbolDefinition[]} symbols Every known symbol.
+ * @param {AssemblySymbolDefinition} leaf The leaf symbol.
+ * @returns {string[]} Names from root to leaf.
+ */
+function hierarchyChainForSymbol(
+  symbols: AssemblySymbolDefinition[],
+  leaf: AssemblySymbolDefinition,
+): string[] {
+  const chain: string[] = [];
+  const seen = new Set<string>();
+  let current: string | undefined = leaf.name;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    chain.unshift(current);
+    current = symbols.find((symbol) => symbol.name === current)?.containerName;
+  }
+  return chain;
+}
+
+/**
+ * Returns whether `parts` match the tail of an FQ hierarchy. This rejects
+ * underscore-in-name labels such as `.difficulty_offset` that are not nested
+ * `..offset` children of `.difficulty`.
+ * @param {string[]} chain Root-to-leaf FQ names.
+ * @param {string[]} parts Source segments from {@link splitHierarchicalSource}.
+ * @param {number} chainOffset Index in `chain` aligned with `parts[0]`.
+ * @returns {boolean} Whether each source part is a real hierarchy step.
+ */
+function hierarchyAligns(chain: string[], parts: string[], chainOffset: number): boolean {
+  if (chainOffset < 0 || chainOffset + parts.length > chain.length) {
+    return false;
+  }
+  for (let index = 0; index < parts.length; index++) {
+    const chainIndex = chainOffset + index;
+    const full = chain[chainIndex];
+    const parent = chainIndex > 0 ? chain[chainIndex - 1] : undefined;
+    const lookup = lookupNameFor(parts[index]);
+    if (!parent) {
+      if (full !== parts[index] && lookupNameFor(full) !== lookup && !full.endsWith(`_${lookup}`)) {
+        return false;
+      }
+      continue;
+    }
+    if (!full.startsWith(`${parent}_`)) {
+      return false;
+    }
+    const suffix = full.slice(parent.length + 1);
+    if (suffix !== lookup && suffix !== parts[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Resolves a compound identifier to its source parts and aligned FQ chain, or
+ * undefined when the underscores are just part of a single label name.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {string} file The file containing the identifier.
+ * @param {string | undefined} word The identifier text.
+ * @returns {{ parts: string[]; chain: string[]; chainOffset: number } | undefined}
+ *   The alignment, if this is a real hierarchy.
+ */
+function alignedHierarchy(
+  index: WorkspaceIndex,
+  file: string,
+  word: string | undefined,
+): { parts: string[]; chain: string[]; chainOffset: number } | undefined {
+  if (!word || !word.includes("_")) {
+    return undefined;
+  }
+  const parts = splitHierarchicalSource(word);
+  if (parts.length < 2) {
+    return undefined;
+  }
+  const symbols = index.getAllSymbols();
+  for (const leaf of compoundLeafCandidates(symbols, word, file)) {
+    const chain = hierarchyChainForSymbol(symbols, leaf);
+    const chainOffset = chain.length - parts.length;
+    if (hierarchyAligns(chain, parts, chainOffset)) {
+      return { parts, chain, chainOffset };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Source ranges for each segment of a compound identifier on a line.
+ * `.idx_beginner` → `.idx` and `beginner`; `_018049_8053` → `_018049` and `8053`.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @param {string} file The absolute file path.
+ * @param {number} line The zero-based line number.
+ * @param {string} word The compound identifier.
+ * @returns {Range[] | undefined} Per-segment ranges, or undefined when not compound.
+ */
+function compoundSegmentRanges(
+  index: WorkspaceIndex,
+  file: string,
+  line: number,
+  word: string,
+): Range[] | undefined {
+  const aligned = alignedHierarchy(index, file, word);
+  if (!aligned) {
+    return undefined;
+  }
+  const text = index.getFileText(file);
+  if (!text) {
+    return undefined;
+  }
+  const lineText = splitLines(text)[line];
+  if (lineText === undefined) {
+    return undefined;
+  }
+  const start = findTokenColumn(lineText, word);
+  if (start < 0) {
+    return undefined;
+  }
+  const ranges: Range[] = [];
+  let consumed = 0;
+  for (const part of aligned.parts) {
+    ranges.push(Range.create(line, start + consumed, line, start + consumed + part.length));
+    consumed += part.length + 1;
+  }
+  return ranges;
+}
+
+/**
+ * When the cursor is inside a compound label (`_018049_8053` or `.idx_beginner`),
+ * returns the parent or `.sublabel` segment under the cursor.
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @param {Position} position The cursor position.
@@ -530,19 +710,8 @@ function hierarchicalSegmentAt(
   position: Position,
   word: string | undefined,
 ): string | undefined {
-  if (!word || !word.includes("_")) {
-    return undefined;
-  }
-  const chain: string[] = [];
-  const seen = new Set<string>();
-  let current: string | undefined = word;
-  const symbols = index.getAllSymbols();
-  while (current && !seen.has(current)) {
-    seen.add(current);
-    chain.unshift(current);
-    current = symbols.find((symbol) => symbol.name === current)?.containerName;
-  }
-  if (chain.length < 2) {
+  const aligned = alignedHierarchy(index, file, word);
+  if (!aligned || !word) {
     return undefined;
   }
   const text = index.getFileText(file);
@@ -558,16 +727,19 @@ function hierarchicalSegmentAt(
     return undefined;
   }
   const relative = position.character - start;
-  for (let index = 0; index < chain.length; index++) {
-    const full = chain[index];
-    const parent = index > 0 ? chain[index - 1] : undefined;
-    const segmentEnd = full.length;
-    if (relative < segmentEnd || index === chain.length - 1) {
+  let consumed = 0;
+  for (let index = 0; index < aligned.parts.length; index++) {
+    const partEnd = consumed + aligned.parts[index].length;
+    if (relative < partEnd || index === aligned.parts.length - 1) {
+      const chainIndex = aligned.chainOffset + index;
+      const full = aligned.chain[chainIndex];
+      const parent = chainIndex > 0 ? aligned.chain[chainIndex - 1] : undefined;
       if (!parent) {
         return full;
       }
       return `.${full.slice(parent.length + 1)}`;
     }
+    consumed = partEnd + 1;
   }
   return undefined;
 }
@@ -590,7 +762,7 @@ function cursorReference(
 ): AssemblySymbolReference | undefined {
   const references = index.getReferences(file);
   const exact = referenceAt(references, position);
-  if (exact) {
+  if (exact && (!word || namesMatch(exact.name, word))) {
     return exact;
   }
   if (!word) {
@@ -627,7 +799,7 @@ function cursorSymbol(
 ): AssemblySymbolDefinition | undefined {
   const symbols = index.getSymbols(file);
   const exact = symbolAt(symbols, position);
-  if (exact) {
+  if (exact && (!word || namesMatch(exact.name, word))) {
     return exact;
   }
   if (!word) {
@@ -729,6 +901,92 @@ export function documentSymbolsFor(index: WorkspaceIndex, file: string): Documen
   return roots;
 }
 
+/** Kind of a project-outline tree node. File nodes expand to document symbols on the client. */
+export type ProjectOutlineKind = "entry" | "file" | "include" | "orphanGroup";
+
+/**
+ * Serializable include-graph node for the VS Code project outline TreeView.
+ */
+export type ProjectOutlineNode = {
+  id: string;
+  label: string;
+  detail?: string;
+  kind: ProjectOutlineKind;
+  uri?: string;
+  children?: ProjectOutlineNode[];
+};
+
+/**
+ * Builds the workspace include DAG for the project outline TreeView.
+ * File nodes do not embed symbols; the client loads those via documentSymbol.
+ * @param {WorkspaceIndex} index The workspace index.
+ * @returns {ProjectOutlineNode[]} Root outline nodes (entries, then orphans).
+ */
+export function projectOutlineFor(index: WorkspaceIndex): ProjectOutlineNode[] {
+  const childrenByParent = new Map<string, string[]>();
+  for (const edge of index.getIncludeEdges()) {
+    const from = path.resolve(edge.fromFile);
+    const to = path.resolve(edge.toFile);
+    const list = childrenByParent.get(from) ?? [];
+    if (!list.includes(to)) {
+      list.push(to);
+    }
+    childrenByParent.set(from, list);
+  }
+
+  const visited = new Set<string>();
+  const buildFile = (file: string): ProjectOutlineNode => {
+    const resolved = path.resolve(file);
+    if (visited.has(resolved)) {
+      return {
+        id: `include:${resolved}:${visited.size}`,
+        label: path.basename(resolved),
+        detail: "include",
+        kind: "include",
+        uri: pathToUri(resolved),
+      };
+    }
+    visited.add(resolved);
+    return {
+      id: `file:${resolved}`,
+      label: path.basename(resolved),
+      kind: "file",
+      uri: pathToUri(resolved),
+      children: (childrenByParent.get(resolved) ?? []).map((child) => buildFile(child)),
+    };
+  };
+
+  const entries = index.resolveRoots().map((root) => path.resolve(root));
+  const roots = entries.map((entry) => ({
+    id: `entry:${entry}`,
+    label: `Entry: ${path.basename(entry)}`,
+    kind: "entry" as const,
+    uri: pathToUri(entry),
+    children: [buildFile(entry)],
+  }));
+
+  const reachable = visited;
+  const analyzed = index.getAnalyzedFiles().map((file) => path.resolve(file));
+  const orphans = analyzed.filter((file) => !reachable.has(file));
+  if (orphans.length === 0) {
+    return roots;
+  }
+  return [
+    ...roots,
+    {
+      id: "orphans",
+      label: "Orphans",
+      kind: "orphanGroup",
+      children: orphans.map((file) => ({
+        id: `orphan:${file}`,
+        label: path.basename(file),
+        kind: "file" as const,
+        uri: pathToUri(file),
+      })),
+    },
+  ];
+}
+
 /**
  * Resolves the definition locations for the symbol or reference at a position.
  * Returns `LocationLink[]` for include references so VS Code highlights the
@@ -775,10 +1033,10 @@ export function definitionFor(
   if (word) {
     // Strip the define sigil (`!`) before name-based lookups so `!version`
     // resolves to the `version` symbol definition.
-    const lookupName = word.startsWith("!") ? word.slice(1) : word;
+    const lookupName = lookupNameFor(word);
     const byName = index
       .getAllSymbols()
-      .filter((entry) => entry.name === lookupName || entry.name === word);
+      .filter((entry) => namesMatch(entry.name, lookupName) || namesMatch(entry.name, word));
     if (byName.length > 0) {
       return byName.map((definition) => definitionToLocation(index, definition));
     }
@@ -875,6 +1133,21 @@ export function hoverFor(
     }
   }
 
+  if (word) {
+    const line = splitLines(text)[position.line];
+    if (line) {
+      const operand = findDirectiveOperand(
+        line,
+        word,
+        index.directiveCatalog,
+        index.directivePrefixes,
+      );
+      if (operand) {
+        return markdownHover(renderDirectiveDocs(operand));
+      }
+    }
+  }
+
   const symbol = cursorSymbol(index, file, position, word);
   if (symbol) {
     return markdownHover(renderSymbolDocs(index, symbol));
@@ -906,7 +1179,7 @@ export function hoverFor(
   const lookupName = lookupNameFor(word);
   const byName = index
     .getAllSymbols()
-    .filter((entry) => entry.name === lookupName || entry.name === word);
+    .filter((entry) => namesMatch(entry.name, lookupName) || namesMatch(entry.name, word));
   if (byName.length > 0) {
     return markdownHover(renderSymbolDocs(index, byName[0]));
   }
@@ -1193,7 +1466,16 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
     push(definitionRange(index, symbol), symbolTokenType(symbol.kind), definitionTokenModifier);
   }
   for (const reference of index.getReferences(file)) {
-    push(referenceRange(index, reference), resolvedReferenceTokenType(index, reference));
+    const type = resolvedReferenceTokenType(index, reference);
+    const line = locationRange(reference.location)?.start.line ?? reference.location.line;
+    const segments = compoundSegmentRanges(index, file, line, reference.name);
+    if (segments) {
+      for (const range of segments) {
+        push(range, type);
+      }
+      continue;
+    }
+    push(referenceRange(index, reference), type);
   }
 
   tokens.sort((a, b) => a.line - b.line || a.char - b.char);

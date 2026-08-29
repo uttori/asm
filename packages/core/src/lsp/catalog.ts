@@ -1,6 +1,12 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
 import type { InstructionCatalogProvider } from "./instruction-catalog.js";
-import { directiveCatalog, findDirective, type DirectiveDescriptor } from "./directive-catalog.js";
+import {
+  directiveCatalog,
+  findDirective,
+  type DirectiveDescriptor,
+  type DirectiveDocs,
+  type DirectiveOperandDescriptor,
+} from "./directive-catalog.js";
 import type { ExpressionFunctionDescriptor } from "../plugin/contracts.js";
 
 /**
@@ -112,6 +118,55 @@ export function findDirectiveInCatalog(
 }
 
 /**
+ * Resolves a nested directive operand under the cursor (`bankcross` or `full`
+ * in `check bankcross full`). The first token must be a catalogued directive.
+ * @param {string} lineText The current source line.
+ * @param {string} word The identifier under the cursor.
+ * @param {readonly DirectiveDescriptor[]} directives Active directive descriptors.
+ * @param {readonly string[]} [directivePrefixes] Prefixes accepted by the active syntax profile.
+ * @returns {DirectiveDocs | undefined} The operand docs, if this token is a known operand.
+ */
+export function findDirectiveOperand(
+  lineText: string,
+  word: string,
+  directives: readonly DirectiveDescriptor[] = directiveCatalog,
+  directivePrefixes: readonly string[] = ["@"],
+): DirectiveDocs | undefined {
+  const trimmed = (lineText.split(";")[0] ?? lineText).trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const tokens = trimmed
+    .split(/[\s,]+/)
+    .map((token) => token.replace(/^["'`]+|["'`]+$/g, ""))
+    .filter(Boolean);
+  if (tokens.length < 2) {
+    return undefined;
+  }
+  const directive = findDirectiveInCatalog(tokens[0], directives, directivePrefixes);
+  if (!directive?.operands) {
+    return undefined;
+  }
+  const target = word.toLowerCase();
+  let current: readonly DirectiveOperandDescriptor[] | undefined = directive.operands;
+  for (let index = 1; index < tokens.length && current; index++) {
+    const token = tokens[index].toLowerCase();
+    const match: DirectiveOperandDescriptor | undefined = current.find(
+      (operand) => operand.keyword.toLowerCase() === token,
+    );
+    if (!match) {
+      continue;
+    }
+    // oxlint-disable-next-line security/detect-possible-timing-attacks
+    if (token === target) {
+      return match;
+    }
+    current = match.operands;
+  }
+  return undefined;
+}
+
+/**
  * Renders an instruction descriptor as Markdown hover documentation.
  * @param {InstructionDescriptor} descriptor The instruction descriptor.
  * @returns {string} The Markdown documentation.
@@ -141,10 +196,10 @@ export function renderInstructionDocs(descriptor: InstructionDescriptor): string
 
 /**
  * Renders a directive descriptor as Markdown hover documentation.
- * @param {DirectiveDescriptor} descriptor The directive descriptor.
+ * @param {DirectiveDocs} descriptor The directive or operand descriptor.
  * @returns {string} The Markdown documentation.
  */
-export function renderDirectiveDocs(descriptor: DirectiveDescriptor): string {
+export function renderDirectiveDocs(descriptor: DirectiveDocs): string {
   return [
     `**${descriptor.keyword}** - directive`,
     "",

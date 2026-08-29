@@ -425,6 +425,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
     });
     context.registerDirectiveSet({
       id: "snes.policy-directives",
+      tooling: toolingFor(["arch"]),
       directives: [
         directive(
           "snes.directive.check",

@@ -26,6 +26,7 @@ import {
   type LanguageClientOptions,
   type ServerOptions,
 } from "vscode-languageclient/node";
+import { ProjectOutlineProvider } from "./outline-tree.js";
 import { ProjectPanelProvider } from "./panel.js";
 
 /**
@@ -120,7 +121,7 @@ export function activate(context: ExtensionContext): void {
     },
   };
 
-  const outputChannel = window.createOutputChannel("Uttori Assembly Language Server", {
+  outputChannel = window.createOutputChannel("Uttori Assembly Language Server", {
     log: true,
   });
   const clientOptions: LanguageClientOptions = {
@@ -153,20 +154,29 @@ export function activate(context: ExtensionContext): void {
   statusItem.show();
 
   const panelProvider = new ProjectPanelProvider(
+    context.extensionUri,
     () => client,
     () => initConfig(),
   );
+  const outlineProvider = new ProjectOutlineProvider(() => client);
 
   context.subscriptions.push(
     outputChannel,
     statusItem,
-    window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider),
+    window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    window.createTreeView(ProjectOutlineProvider.viewId, {
+      treeDataProvider: outlineProvider,
+      showCollapseAll: true,
+    }),
     commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
     commands.registerCommand("asm.toggleWatch", toggleWatch),
     commands.registerCommand("asm.initConfig", () => initConfig()),
     commands.registerCommand("asm.openPanel", () =>
       commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`),
     ),
+    commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
     workspace.onDidGrantWorkspaceTrust(() => {
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
@@ -177,17 +187,27 @@ export function activate(context: ExtensionContext): void {
     workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("asm")) {
         void panelProvider.refresh();
+        outlineProvider.refresh();
       }
     }),
   );
 
   void client.start().then(() => {
+    if (!client) {
+      return;
+    }
     if (
       context.extensionMode === ExtensionMode.Development ||
       process.env.UTTORI_ASM_LSP_TRACE === "verbose"
     ) {
-      void client?.setTrace(Trace.Verbose);
+      void client.setTrace(Trace.Verbose);
     }
+    context.subscriptions.push(
+      client.onNotification("asm/indexUpdated", () => {
+        void panelProvider.refresh();
+        outlineProvider.refresh();
+      }),
+    );
   });
 }
 

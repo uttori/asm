@@ -34,6 +34,8 @@ export interface ProjectEnvironmentControllerOptions {
   readonly bundledPlugins: ReadonlyMap<string, AssemblerPlugin>;
   readonly defaults: ProjectConfigurationDefaults;
   readonly logger?: PluginLogger;
+  /** Forwarded to the loader so bundled plugins stay active even when a project config lists a subset. */
+  readonly activateBundledPlugins?: boolean;
 }
 
 const configuredPluginModules = (
@@ -92,6 +94,7 @@ export class ProjectEnvironmentController {
           : {}),
         pluginModules: settings.workspaceTrusted ? pluginModules : [],
         bundledPlugins: this.options.bundledPlugins,
+        ...(this.options.activateBundledPlugins ? { activateBundledPlugins: true } : {}),
         ...(useHostDefaults ? { defaults: this.options.defaults } : {}),
         overrides: {
           ...(settings.target ? { target: settings.target } : {}),

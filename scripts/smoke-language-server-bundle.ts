@@ -144,8 +144,13 @@ try {
   await initialize(fixtureClient, fixtureDirectory, { workspaceTrusted: false });
   const restrictedMetadata = (await fixtureClient.request("asm/projectMetadata", null)) as {
     activeTarget: string;
+    targets: Array<{ id: string }>;
   };
   assert.equal(restrictedMetadata.activeTarget, "snes.sfc");
+  const restrictedTargets = new Set(restrictedMetadata.targets.map((target) => target.id));
+  assert.equal(restrictedTargets.has("snes.sfc"), true);
+  assert.equal(restrictedTargets.has("65xx.raw"), true);
+  assert.equal(restrictedTargets.has("65xx.nes"), true);
 
   fs.writeFileSync(fixtureSource, "org 0\nFIX\n");
   fixtureClient.notify("workspace/didChangeConfiguration", {
@@ -159,10 +164,12 @@ try {
   };
   assert.equal(trustedMetadata.activeTarget, "loader.fixture-target");
   assert.equal(trustedMetadata.activeArchitecture, "loader.fixture-architecture");
-  assert.deepEqual(
-    trustedMetadata.targets.map((target) => target.id),
-    ["loader.fixture-target"],
-  );
+  assert.deepEqual([...trustedMetadata.targets.map((target) => target.id)].sort(), [
+    "65xx.nes",
+    "65xx.raw",
+    "loader.fixture-target",
+    "snes.sfc",
+  ]);
   assert.deepEqual(
     trustedMetadata.architectures.map((architecture) => architecture.id),
     ["loader.fixture-architecture"],

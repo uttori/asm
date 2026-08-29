@@ -31,8 +31,13 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
         "editor/title/run": Array<{ command: string; when?: string }>;
       };
       configuration: { properties: Record<string, Record<string, unknown>> };
+      semanticTokenScopes: Array<{
+        language: string;
+        scopes: Record<string, string[]>;
+      }>;
       viewsContainers: { activitybar: Array<{ id: string; title: string; icon: string }> };
       views: Record<string, Array<{ type: string; id: string; name: string }>>;
+      viewsWelcome: Array<{ view: string; contents: string }>;
     };
     capabilities: {
       untrustedWorkspaces: { supported: string; restrictedConfigurations: string[] };
@@ -41,7 +46,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
 
   t.deepEqual(
     manifest.contributes.commands.map((entry) => entry.command),
-    ["asm.build", "asm.toggleWatch", "asm.initConfig", "asm.openPanel"],
+    ["asm.build", "asm.toggleWatch", "asm.initConfig", "asm.openPanel", "asm.outline.refresh"],
   );
   t.true(manifest.contributes.commands.every((entry) => entry.category === "Assembly"));
   t.true(manifest.contributes.commands.some((entry) => entry.title === "Build Binary"));
@@ -65,6 +70,18 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
   t.is(
     manifest.contributes.menus["editor/title/run"][0]?.when,
     "editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc",
+  );
+  t.true(Array.isArray(manifest.contributes.semanticTokenScopes));
+  t.deepEqual(
+    manifest.contributes.semanticTokenScopes.map((entry) => entry.language),
+    ["uttori-snes", "uttori-65xx"],
+  );
+  t.true(
+    manifest.contributes.semanticTokenScopes.every(
+      (entry) =>
+        Array.isArray(entry.scopes.label) &&
+        entry.scopes.label.includes("entity.name.function.label.uttori-asm"),
+    ),
   );
   t.deepEqual(manifest.contributes.grammars, [
     {
@@ -112,6 +129,9 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
   t.is(manifest.contributes.viewsContainers.activitybar[0]?.id, "uttori-asm");
   t.is(manifest.contributes.views["uttori-asm"]?.[0]?.id, "uttori-asm.projectPanel");
   t.is(manifest.contributes.views["uttori-asm"]?.[0]?.type, "webview");
+  t.is(manifest.contributes.views["uttori-asm"]?.[1]?.id, "uttori-asm.projectOutline");
+  t.is(manifest.contributes.views["uttori-asm"]?.[1]?.type, "tree");
+  t.is(manifest.contributes.viewsWelcome?.[0]?.view, "uttori-asm.projectOutline");
 });
 
 test("65xx grammar covers CPU mnemonics and omits SNES coprocessors", (t) => {
@@ -157,6 +177,9 @@ test("65xx grammar covers CPU mnemonics and omits SNES coprocessors", (t) => {
   t.true(/\bwhile\b/.test(base.source));
   t.true(/\bpushns\b/.test(base.source));
   t.true(/\bsizeof\b/.test(base.source));
+  t.true(base.source.includes("spc700-inline"));
+  t.true(base.source.includes("keyword.directive.operand.uttori-asm"));
+  t.true(base.source.includes("endstruct"));
   t.false(/\bADDW\b/.test(base.source));
   t.false(/\blorom\b/.test(base.source));
   t.false(/\bspc700\b/i.test(source));
@@ -177,6 +200,14 @@ test("SNES grammar adds SPC700, SuperFX, and mapper directives on top of 65xx", 
   t.true(/\bhirom\b/.test(source));
   t.true(/\bfreecode\b/.test(source));
   t.true(/\bspcblock\b/.test(source));
+  t.true(source.includes("bankcross"));
+  t.true(source.includes("keyword.directive.operand.uttori-snes"));
+  t.true(source.includes("off|half|full|on"));
+  t.true(source.includes("(title)"));
+  t.true(source.includes("optimize"));
+  t.true(source.includes("nspc"));
+  t.true(source.includes("execute"));
+  t.true(source.includes("push|pull|enable|disable"));
 });
 
 test("VS Code client propagates trust and every project environment setting", (t) => {
@@ -202,7 +233,23 @@ test("VS Code client propagates trust and every project environment setting", (t
   t.true(source.includes("uttori-asm.config.json"));
   t.true(source.includes("asm.initConfig"));
   t.true(source.includes("ProjectPanelProvider"));
+  t.true(source.includes("ProjectOutlineProvider"));
+  t.true(source.includes("asm/indexUpdated"));
   t.true(source.includes("resolveBuildEntryUri"));
   t.true(source.includes("outputChannel"));
   t.true(source.includes("Build Binary requested"));
+});
+
+test("project panel CSS uses VS Code workbench tokens", (t) => {
+  const css = fs.readFileSync(path.join(root, "editors/vscode/media/panel.css"), "utf8");
+  const panel = fs.readFileSync(path.join(root, "editors/vscode/src/panel.ts"), "utf8");
+  t.true(css.includes("appearance: none"));
+  t.true(css.includes("--vscode-dropdown-background"));
+  t.true(css.includes("--vscode-focusBorder"));
+  t.true(css.includes("--vscode-list-hoverBackground"));
+  t.true(css.includes("--vscode-descriptionForeground"));
+  t.true(css.includes("--vscode-button-hoverBackground"));
+  t.true(panel.includes("displayName"));
+  t.true(panel.includes("defaultArchitecture"));
+  t.true(panel.includes("panel.css"));
 });

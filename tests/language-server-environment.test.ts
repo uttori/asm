@@ -157,3 +157,37 @@ test("workspace trust gates project plugin configuration until trust is granted"
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("activateBundledPlugins keeps unused bundled targets in the catalog", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-lsp-bundled-targets-"));
+  const sourceFile = path.join(directory, "main.asm");
+  const controller = new ProjectEnvironmentController({
+    bundledPlugins: new Map([
+      ["@uttori/asm-plugin-snes", snesPlugin],
+      ["fixture-plugin", createFixturePlugin()],
+    ]),
+    activateBundledPlugins: true,
+    defaults: {
+      plugins: [{ module: "@uttori/asm-plugin-snes" }],
+      target: SNES_TARGET_ID,
+      includePaths: ["./"],
+    },
+  });
+  try {
+    const snes = await controller.replace(
+      {
+        cwd: directory,
+        workspaceTrusted: true,
+        plugins: ["@uttori/asm-plugin-snes"],
+        target: SNES_TARGET_ID,
+      },
+      new Map([[sourceFile, "org $008000\nLDA #$01\n"]]),
+    );
+    const ids = snes.index.toolingCatalog.getTargets().map((target) => target.id);
+    t.true(ids.includes(SNES_TARGET_ID));
+    t.true(ids.includes("fixture.raw-target"));
+  } finally {
+    await controller.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});

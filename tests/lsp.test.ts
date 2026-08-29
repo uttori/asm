@@ -5,7 +5,7 @@ import { Assembler, snesWorkspaceIndexOptions } from "./test-assembler.js";
 import { MemoryAssemblyFileProvider } from "../packages/core/src/file-provider.js";
 import { OverlayFileProvider } from "../packages/core/src/lsp/overlay-file-provider.js";
 import { WorkspaceIndex } from "../packages/core/src/lsp/workspace-index.js";
-import { findInstruction, findDirectiveEntry, buildCompletionEntries } from "../packages/core/src/lsp/catalog.js";
+import { findInstruction, findDirectiveEntry, findDirectiveOperand, buildCompletionEntries } from "../packages/core/src/lsp/catalog.js";
 import {
   positionInRange,
   referenceAt,
@@ -63,6 +63,18 @@ test("instruction and directive catalogs expose documented entries", (t) => {
 
   t.truthy(findDirectiveEntry("org"));
   t.truthy(findDirectiveEntry("incsrc"));
+
+  const check = index.directiveCatalog.find((entry) => entry.keyword === "check");
+  t.is(findDirectiveOperand("check bankcross full", "bankcross", index.directiveCatalog)?.keyword, "bankcross");
+  t.is(findDirectiveOperand("check bankcross off", "off", index.directiveCatalog)?.keyword, "off");
+  t.is(findDirectiveOperand("check title", "title", index.directiveCatalog)?.keyword, "title");
+  t.is(findDirectiveOperand("optimize dp ram", "dp", index.directiveCatalog)?.keyword, "dp");
+  t.is(findDirectiveOperand("optimize dp always", "always", index.directiveCatalog)?.keyword, "always");
+  t.is(findDirectiveOperand("arch spc700-inline", "spc700-inline", index.directiveCatalog)?.keyword, "spc700-inline");
+  t.is(findDirectiveOperand("spcblock $5000 nspc", "nspc", index.directiveCatalog)?.keyword, "nspc");
+  t.is(findDirectiveOperand('table "font.tbl",ltr', "ltr", index.directiveCatalog)?.keyword, "ltr");
+  t.is(findDirectiveOperand("lda #$00", "full", index.directiveCatalog), undefined);
+  t.truthy(check?.operands?.some((operand) => operand.keyword === "bankcross"));
 
   const entries = buildCompletionEntries(
     "65816",

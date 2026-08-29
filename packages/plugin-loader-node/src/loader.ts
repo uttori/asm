@@ -189,6 +189,20 @@ export class NodePluginLoader {
       })),
     ];
 
+    if (options.activateBundledPlugins && options.bundledPlugins) {
+      const requested = new Set(requests.map((request) => request.module));
+      for (const module of options.bundledPlugins.keys()) {
+        if (requested.has(module)) continue;
+        requested.add(module);
+        requests.push({
+          module,
+          baseDirectory: cwd,
+          source: "bundled",
+          configEntry: `bundledPlugins[${module}]`,
+        });
+      }
+    }
+
     const modules: ResolvedModule[] = [];
     for (const request of requests) {
       modules.push(await this.#resolveAndImport(request, options));
