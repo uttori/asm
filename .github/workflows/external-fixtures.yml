@@ -1,0 +1,44 @@
+name: External Fixtures
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  portable:
+    name: Portable (Chou, Yoshi, Zelda)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: false
+      - name: Initialize portable submodules
+        run: git submodule update --init fixtures/external/chou fixtures/external/yoshi fixtures/external/zelda
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26"
+          cache: npm
+      - run: npm ci
+      - name: Chou and Yoshi correctness
+        env:
+          UTTORI_EXTERNAL_FIXTURES: chou,yoshi
+        run: npm run test:external
+
+  full:
+    name: Full (self-hosted)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: false
+      - name: Initialize all external submodules
+        run: git submodule update --init
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26"
+          cache: npm
+      - run: npm ci
+      - run: npm run ci:external

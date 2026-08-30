@@ -8,11 +8,12 @@ import { fileURLToPath } from "node:url";
 import { Assembler } from "@uttori/asm-core";
 import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import {
-  measureInternalPhase,
   runWithInternalInstrumentation,
   type InternalInstrumentationSnapshot,
 } from "../packages/core/src/internal-instrumentation.js";
 import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
+import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
+import { assembleExternalFixture } from "./external-fixtures.ts";
 
 const snesEnvironment = await createSnesAssemblerEnvironment();
 
@@ -28,11 +29,12 @@ type SingleSourceFixture = FixtureBase & {
   checksumMode: "asar" | "simple";
 };
 
-type SmrpgFixture = FixtureBase & {
-  kind: "smrpg";
+type ExternalProductionFixture = FixtureBase & {
+  kind: "external";
+  fixtureId: "chou" | "smrpg";
 };
 
-type Fixture = SingleSourceFixture | SmrpgFixture;
+type Fixture = SingleSourceFixture | ExternalProductionFixture;
 
 type Golden = {
   bytes: number;
@@ -86,21 +88,25 @@ const fixtures: Fixture[] = [
     target: "fixtures/asar/dummy_rom.sfc",
     checksumMode: "asar",
   },
+];
+const externalFixtures: Fixture[] = [
   {
     id: "chou",
     category: "production",
-    source: "fixtures/integration/chou/Chou.asm",
-    target: "fixtures/integration/chou/test.sfc",
-    checksumMode: "simple",
+    kind: "external",
+    fixtureId: "chou",
+    source: `${EXTERNAL_FIXTURES.chou.submodulePath}/${EXTERNAL_FIXTURES.chou.entrypoint}`,
   },
   {
     id: "smrpg",
     category: "production",
-    kind: "smrpg",
-    source: "fixtures/integration/Super-Mario-RPG-Disassembly/Global/AssembleFile.asm",
+    kind: "external",
+    fixtureId: "smrpg",
+    source: `${EXTERNAL_FIXTURES.smrpg.submodulePath}/${EXTERNAL_FIXTURES.smrpg.entrypoint}`,
   },
 ];
-const fixtureById = new Map(fixtures.map((fixture) => [fixture.id, fixture]));
+const allFixtures: Fixture[] = [...fixtures, ...externalFixtures];
+const fixtureById = new Map(allFixtures.map((fixture) => [fixture.id, fixture]));
 
 function sha256(data: Uint8Array): string {
   return createHash("sha256").update(data).digest("hex");
@@ -151,7 +157,7 @@ function parseOptions(args: string[]): BenchmarkOptions {
   for (const fixtureId of options.fixtureIds) {
     if (!fixtureById.has(fixtureId)) {
       throw new Error(
-        `Unknown fixture '${fixtureId}'. Available fixtures: ${fixtures.map((fixture) => fixture.id).join(", ")}.`,
+        `Unknown fixture '${fixtureId}'. Available fixtures: ${allFixtures.map((fixture) => fixture.id).join(", ")}.`,
       );
     }
   }
@@ -198,69 +204,9 @@ function emptyMetrics(): InternalInstrumentationSnapshot {
   };
 }
 
-function assembleSmrpgFixture(): Uint8Array {
-  const fixtureDir = path.join(root, "fixtures/integration/Super-Mario-RPG-Disassembly");
-  const globalDir = path.join(fixtureDir, "Global");
-  const gameDir = path.join(fixtureDir, "SMRPG");
-  const sourcePath = path.join(globalDir, "AssembleFile.asm");
-  const enginePath = path.join(gameDir, "SPC700/Engine.bin");
-  const source = fs.readFileSync(sourcePath, "utf8");
-  const includePaths = ["./", globalDir, gameDir];
-
-  const assembleProduct = (
-    fileType: number,
-    extraDefines: Readonly<Record<string, string>> | undefined,
-    baseImage: Uint8Array | undefined,
-  ): Uint8Array => {
-    const assembler = new Assembler({
-      environment: snesEnvironment,
-      target: SNES_TARGET_ID,
-      targetOptions: { checksumMode: "asar" },
-      baseImage,
-      collectSourceMetadata: false,
-    });
-    try {
-      if (baseImage && baseImage.length > 0) {
-        assembler.outputBytes = Array.from(baseImage);
-      }
-      assembler.setIncludePaths(includePaths);
-      assembler.setCurrentFile(sourcePath);
-      assembler.defines.set("GameID", "SMRPG");
-      assembler.defines.set("ROMID", "SMRPG_U");
-      assembler.defines.set("FileType", String(fileType));
-      if (extraDefines) {
-        for (const [name, value] of Object.entries(extraDefines)) {
-          assembler.defines.set(name, value);
-        }
-      }
-      const program = assembler.buildProgramModel(source, sourcePath, 0);
-      assembler.assembleProgram(program);
-      return assembler.getBinaryOutput();
-    } finally {
-      assembler.dispose();
-    }
-  };
-
-  const initialized = measureInternalPhase("smrpg.initialize", () =>
-    assembleProduct(0, undefined, undefined),
-  );
-  const engine = measureInternalPhase("smrpg.engine", () =>
-    assembleProduct(4, { PathToFile: "SPC700/Engine.asm" }, undefined),
-  );
-  fs.writeFileSync(enginePath, engine);
-  try {
-    const assembled = measureInternalPhase("smrpg.main", () =>
-      assembleProduct(1, undefined, initialized),
-    );
-    return measureInternalPhase("smrpg.finalize", () => assembleProduct(2, undefined, assembled));
-  } finally {
-    fs.rmSync(enginePath, { force: true });
-  }
-}
-
 function assembleFixture(fixture: Fixture): Uint8Array {
-  if (fixture.kind === "smrpg") {
-    return assembleSmrpgFixture();
+  if (fixture.kind === "external") {
+    return assembleExternalFixture(fixture.fixtureId);
   }
   const sourcePath = path.join(root, fixture.source);
   const targetPath = path.join(root, fixture.target);
@@ -400,9 +346,15 @@ function main(): void {
       throw new Error(`No measured output produced for ${fixture.id}.`);
     }
     updatedGoldens[fixture.id] = actual;
-    const expected = goldens[fixture.id];
+    const expected =
+      fixture.kind === "external"
+        ? {
+            bytes: EXTERNAL_FIXTURES[fixture.fixtureId].expectedBytes,
+            sha256: EXTERNAL_FIXTURES[fixture.fixtureId].expectedSha256,
+          }
+        : goldens[fixture.id];
     const valid =
-      options.updateGoldens ||
+      (fixture.kind !== "external" && options.updateGoldens) ||
       (expected !== undefined &&
         expected.bytes === actual.bytes &&
         expected.sha256 === actual.sha256);
@@ -426,7 +378,12 @@ function main(): void {
   }
 
   if (options.updateGoldens) {
-    fs.writeFileSync(goldenPath, `${JSON.stringify({ ...goldens, ...updatedGoldens }, null, 2)}\n`);
+    const nextGoldens = { ...goldens };
+    for (const [id, golden] of Object.entries(updatedGoldens)) {
+      if (fixtureById.get(id)?.kind === "external") continue;
+      nextGoldens[id] = golden;
+    }
+    fs.writeFileSync(goldenPath, `${JSON.stringify(nextGoldens, null, 2)}\n`);
   }
 
   const report = {

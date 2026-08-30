@@ -2,15 +2,16 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  EXTERNAL_FIXTURES,
+  LOCAL_ROM_DIR,
+  LOCAL_WORKTREE_DIR,
+} from "../fixtures/fixture-manifest.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const smrpgDir = path.resolve(root, "fixtures/integration/Super-Mario-RPG-Disassembly");
-const gameDir = path.resolve(smrpgDir, "SMRPG");
-const asarScriptsDir = path.resolve(gameDir, "AsarScripts");
-const pointerFile = path.resolve(asarScriptsDir, "AssetPointersAndFiles.asm");
-const defaultRomName = "Super Mario RPG - Legend of the Seven Stars (USA).sfc";
-const defaultRomPath = path.resolve(smrpgDir, defaultRomName);
+const defaultRomName = EXTERNAL_FIXTURES.smrpg.localRom?.filename ?? "";
+const defaultRomPath = path.resolve(root, LOCAL_ROM_DIR, defaultRomName);
 
 type PointerSection = {
   label: string;
@@ -34,9 +35,17 @@ type DumpJob = {
 
 /** Generate*.bat print-dumps. Animation's .asm is missing upstream. */
 const DUMP_JOBS: DumpJob[] = [
-  { bat: "GenerateBattleScript.bat", source: "SMRPGBattleScriptDis.asm", output: "BattleScripts.asm" },
+  {
+    bat: "GenerateBattleScript.bat",
+    source: "SMRPGBattleScriptDis.asm",
+    output: "BattleScripts.asm",
+  },
   { bat: "GenerateEventScript.bat", source: "SMRPGEventScriptDis.asm", output: "EventScripts.asm" },
-  { bat: "GenerateAnimationScript.bat", source: "SMRPGAnimationScriptDis.asm", output: "AnimationScripts.asm" },
+  {
+    bat: "GenerateAnimationScript.bat",
+    source: "SMRPGAnimationScriptDis.asm",
+    output: "AnimationScripts.asm",
+  },
 ];
 
 type AssetEntry = {
@@ -45,8 +54,12 @@ type AssetEntry = {
   filename: string;
 };
 
-type Options = {
+export type SmrpgExtractOptions = {
   rom: string;
+  destRoot: string;
+};
+
+type Options = SmrpgExtractOptions & {
   dumpScripts: boolean;
   help: boolean;
 };
@@ -59,6 +72,7 @@ type Options = {
 function parseArgs(argv: string[]): Options {
   const options: Options = {
     rom: defaultRomPath,
+    destRoot: path.resolve(root, LOCAL_WORKTREE_DIR, "smrpg"),
     dumpScripts: false,
     help: false,
   };
@@ -84,6 +98,19 @@ function parseArgs(argv: string[]): Options {
     }
     if (arg.startsWith("--rom=")) {
       options.rom = path.resolve(arg.slice("--rom=".length));
+      continue;
+    }
+    if (arg === "--dest") {
+      const value = argv[index + 1];
+      if (!value) {
+        throw new Error("--dest requires a path");
+      }
+      options.destRoot = path.resolve(value);
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith("--dest=")) {
+      options.destRoot = path.resolve(arg.slice("--dest=".length));
       continue;
     }
     throw new Error(`Unknown argument: ${arg}`);
@@ -148,7 +175,8 @@ function parsePointerSection(
   }
 
   const entries: AssetEntry[] = [];
-  const linePattern = /^\s*dl\s+\$([0-9A-Fa-f]+)\s*,\s*\$([0-9A-Fa-f]+)\s*,\s*([A-Za-z0-9_]+)\s*,/gm;
+  const linePattern =
+    /^\s*dl\s+\$([0-9A-Fa-f]+)\s*,\s*\$([0-9A-Fa-f]+)\s*,\s*([A-Za-z0-9_]+)\s*,/gm;
   let match: RegExpExecArray | null = linePattern.exec(block[1]);
   while (match) {
     const nameLabel = match[3];
@@ -183,7 +211,9 @@ function extractEntry(
   const start = hiromFileOffset(entry.start, headerSize);
   const end = hiromFileOffset(entry.end, headerSize);
   if (end < start) {
-    throw new Error(`${entry.filename}: end ${entry.end.toString(16)} < start ${entry.start.toString(16)}`);
+    throw new Error(
+      `${entry.filename}: end ${entry.end.toString(16)} < start ${entry.start.toString(16)}`,
+    );
   }
   if (end > rom.length) {
     throw new Error(`${entry.filename}: offset ${end} past ROM size ${rom.length}`);
@@ -196,32 +226,38 @@ function extractEntry(
 
 /**
  * ExtractAssets.bat (USA / ROMBit $0001).
- * @param {string} romPath Headerless or headered SMRPG (USA) ROM.
+ * @param {SmrpgExtractOptions} options ROM path and destination disassembly root.
  * @returns {void}
  */
-function extractAssets(romPath: string): void {
-  if (!fs.existsSync(romPath)) {
+export function extractSmrpgAssets(options: SmrpgExtractOptions): void {
+  const gameDir = path.resolve(options.destRoot, "SMRPG");
+  const pointerFile = path.resolve(gameDir, "AsarScripts/AssetPointersAndFiles.asm");
+  if (!fs.existsSync(options.rom)) {
     throw new Error(
-      `ROM not found: ${romPath}\nPlace "${defaultRomName}" in ${smrpgDir} or pass --rom`,
+      `ROM not found: ${options.rom}\nPlace "${defaultRomName}" in ${path.join(root, LOCAL_ROM_DIR)} or pass --rom`,
     );
   }
   if (!fs.existsSync(pointerFile)) {
     throw new Error(`Missing pointer table: ${pointerFile}`);
   }
 
-  const rom = new Uint8Array(fs.readFileSync(romPath));
+  const rom = new Uint8Array(fs.readFileSync(options.rom));
   const headerSize = detectHeaderSize(rom.length);
   const source = fs.readFileSync(pointerFile, "utf8");
   const filenames = parseFilenameTable(source);
 
-  console.log(`ExtractAssets (USA): ${path.basename(romPath)} (${rom.length} bytes, header ${headerSize})`);
+  console.log(
+    `ExtractAssets (USA): ${path.basename(options.rom)} (${rom.length} bytes, header ${headerSize})`,
+  );
 
   let files = 0;
   let bytes = 0;
   for (const section of POINTER_SECTIONS) {
     const entries = parsePointerSection(source, section.label, filenames);
     if (entries.length === 0) {
-      console.log(`  ${section.label}: skipped (empty / commented, PointerSet ${section.batPointerSet})`);
+      console.log(
+        `  ${section.label}: skipped (empty / commented, PointerSet ${section.batPointerSet})`,
+      );
       continue;
     }
     const destDir = path.join(gameDir, section.dest);
@@ -271,9 +307,11 @@ function findAlcaroAsar(): string | undefined {
 /**
  * GenerateBattle/Event/AnimationScript.bat via Alcaro asar `print` dumps.
  * @param {string} romPath SMRPG (USA) ROM.
+ * @param {string} destRoot Copied disassembly root.
  * @returns {void}
  */
-function dumpScripts(romPath: string): void {
+function dumpScripts(romPath: string, destRoot: string): void {
+  const asarScriptsDir = path.resolve(destRoot, "SMRPG/AsarScripts");
   const asar = findAlcaroAsar();
   if (!asar) {
     console.log(
@@ -320,10 +358,10 @@ Covers AsarScripts bats:
   GenerateAnimationScript.bat    AnimationScripts.asm (upstream .asm missing)
 
 Usage:
-  npm run fixture:smrpg:extract -- [--rom PATH] [--dump-scripts]
+  npm run fixture:smrpg:extract -- [--rom PATH] [--dest DIR] [--dump-scripts]
 
 Default ROM:
-  ${defaultRomName}
+  ${path.join(LOCAL_ROM_DIR, defaultRomName)}
 `);
 }
 
@@ -337,11 +375,16 @@ function main(): void {
     printHelp();
     return;
   }
-  extractAssets(options.rom);
+  extractSmrpgAssets(options);
   if (options.dumpScripts) {
     console.log("Generate*.bat dumps:");
-    dumpScripts(options.rom);
+    dumpScripts(options.rom, options.destRoot);
   }
 }
 
-main();
+const launchedDirectly =
+  process.argv[1] !== undefined &&
+  pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+if (launchedDirectly) {
+  main();
+}

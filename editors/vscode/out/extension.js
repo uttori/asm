@@ -12228,6 +12228,7 @@ var require_diagnostic = __commonJS({
       provider;
       diagnostics;
       openRequests;
+      pendingDocumentForgets;
       documentStates;
       workspaceErrorCounter;
       workspaceCancellation;
@@ -12241,6 +12242,7 @@ var require_diagnostic = __commonJS({
         this.provider = this.createProvider();
         this.diagnostics = this.createDiagnosticCollection();
         this.openRequests = /* @__PURE__ */ new Map();
+        this.pendingDocumentForgets = /* @__PURE__ */ new Map();
         this.documentStates = new DocumentPullStateTracker();
         this.workspaceErrorCounter = 0;
       }
@@ -12270,6 +12272,9 @@ var require_diagnostic = __commonJS({
       }
       forget(kind, document) {
         this.documentStates.unTrack(kind, document);
+      }
+      cancelPendingForget(document) {
+        this.pendingDocumentForgets.delete(DocumentOrUri.asKey(document));
       }
       pull(document, cb) {
         if (this.isDisposed) {
@@ -12355,8 +12360,13 @@ var require_diagnostic = __commonJS({
           if (request !== void 0) {
             this.openRequests.set(key, { state: RequestStateKind.reschedule, document });
           } else {
+            const pendingForget = /* @__PURE__ */ Symbol();
+            this.pendingDocumentForgets.set(key, pendingForget);
             this.pull(document, () => {
-              this.forget(PullState.document, document);
+              if (this.pendingDocumentForgets.get(key) === pendingForget) {
+                this.pendingDocumentForgets.delete(key);
+                this.forget(PullState.document, document);
+              }
             });
           }
           this.forget(PullState.workspace, document);
@@ -12720,10 +12730,11 @@ var require_diagnostic = __commonJS({
         const openFeature = client2.getFeature(vscode_languageserver_protocol_1.DidOpenTextDocumentNotification.method);
         disposables.push(openFeature.onNotificationSent((event) => {
           const textDocument = event.textDocument;
-          if (this.diagnosticRequestor.knowsSameVersion(PullState.document, textDocument)) {
-            return;
-          }
           if (matches(textDocument)) {
+            this.diagnosticRequestor.cancelPendingForget(textDocument);
+            if (this.diagnosticRequestor.knowsSameVersion(PullState.document, textDocument)) {
+              return;
+            }
             this.diagnosticRequestor.pull(textDocument, () => {
               addToBackgroundIfNeeded(textDocument);
             });
@@ -12733,6 +12744,7 @@ var require_diagnostic = __commonJS({
         disposables.push(notebookFeature.onOpenNotificationSent((event) => {
           for (const cell of event.getCells()) {
             if (matchesCell(cell)) {
+              this.diagnosticRequestor.cancelPendingForget(cell.document);
               this.diagnosticRequestor.pull(cell.document, () => {
                 addToBackgroundIfNeeded(cell.document);
               });
@@ -22350,6 +22362,7 @@ var require_main3 = __commonJS({
     })(ChildProcessInfo || (ChildProcessInfo = {}));
     var LanguageClient2 = class extends client_1.BaseLanguageClient {
       _serverOptions;
+      _stdioOptions;
       _forceDebug;
       _serverProcess;
       _isDetached;
@@ -22378,6 +22391,24 @@ var require_main3 = __commonJS({
         }
         super(id, name, clientOptions);
         this._serverOptions = serverOptions;
+        this._stdioOptions = clientOptions.stdioOptions ?? {
+          stdout: (input, outputChannel2) => {
+            readline.createInterface({
+              input,
+              crlfDelay: Infinity,
+              terminal: false,
+              historySize: 0
+            }).on("line", (data) => outputChannel2.info(data));
+          },
+          stderr: (input, outputChannel2) => {
+            readline.createInterface({
+              input,
+              crlfDelay: Infinity,
+              terminal: false,
+              historySize: 0
+            }).on("line", (data) => outputChannel2.error(data));
+          }
+        };
         this._forceDebug = forceDebug;
         this._isInDebugMode = forceDebug;
         try {
@@ -22484,22 +22515,8 @@ var require_main3 = __commonJS({
             throw new Error("Process created without stdio streams");
           }
         }
-        function pipeStdoutToLogOutputChannel(input, outputChannel2) {
-          readline.createInterface({
-            input,
-            crlfDelay: Infinity,
-            terminal: false,
-            historySize: 0
-          }).on("line", (data) => outputChannel2.info(data));
-        }
-        function pipeStderrToLogOutputChannel(input, outputChannel2) {
-          readline.createInterface({
-            input,
-            crlfDelay: Infinity,
-            terminal: false,
-            historySize: 0
-          }).on("line", (data) => outputChannel2.error(data));
-        }
+        const pipeStdout = this._stdioOptions.stdout;
+        const pipeStderr = this._stdioOptions.stderr;
         const server = this._serverOptions;
         if (Is2.func(server)) {
           return server().then((result) => {
@@ -22518,7 +22535,7 @@ var require_main3 = __commonJS({
                 cp2 = result;
                 this._isDetached = false;
               }
-              pipeStderrToLogOutputChannel(cp2.stderr, this.outputChannel);
+              pipeStderr(cp2.stderr, this.outputChannel);
               return { reader: new node_1.StreamMessageReader(cp2.stdout), writer: new node_1.StreamMessageWriter(cp2.stdin) };
             }
           });
@@ -22573,9 +22590,9 @@ var require_main3 = __commonJS({
                   return handleChildProcessStartError(serverProcess, `Launching server using runtime ${runtime} failed.`);
                 }
                 this._serverProcess = serverProcess;
-                pipeStderrToLogOutputChannel(serverProcess.stderr, this.outputChannel);
+                pipeStderr(serverProcess.stderr, this.outputChannel);
                 if (transport === TransportKind2.ipc) {
-                  pipeStdoutToLogOutputChannel(serverProcess.stdout, this.outputChannel);
+                  pipeStdout(serverProcess.stdout, this.outputChannel);
                   return Promise.resolve({ reader: new node_1.IPCMessageReader(serverProcess), writer: new node_1.IPCMessageWriter(serverProcess) });
                 } else {
                   return Promise.resolve({ reader: new node_1.StreamMessageReader(serverProcess.stdout), writer: new node_1.StreamMessageWriter(serverProcess.stdin) });
@@ -22587,8 +22604,8 @@ var require_main3 = __commonJS({
                     return handleChildProcessStartError(process2, `Launching server using runtime ${runtime} failed.`);
                   }
                   this._serverProcess = process2;
-                  pipeStderrToLogOutputChannel(process2.stderr, this.outputChannel);
-                  pipeStdoutToLogOutputChannel(process2.stdout, this.outputChannel);
+                  pipeStderr(process2.stderr, this.outputChannel);
+                  pipeStdout(process2.stdout, this.outputChannel);
                   return transport2.onConnected().then((protocol) => {
                     return { reader: protocol[0], writer: protocol[1] };
                   });
@@ -22600,8 +22617,8 @@ var require_main3 = __commonJS({
                     return handleChildProcessStartError(process2, `Launching server using runtime ${runtime} failed.`);
                   }
                   this._serverProcess = process2;
-                  pipeStderrToLogOutputChannel(process2.stderr, this.outputChannel);
-                  pipeStdoutToLogOutputChannel(process2.stdout, this.outputChannel);
+                  pipeStderr(process2.stderr, this.outputChannel);
+                  pipeStdout(process2.stdout, this.outputChannel);
                   return transport2.onConnected().then((protocol) => {
                     return { reader: protocol[0], writer: protocol[1] };
                   });
@@ -22631,9 +22648,9 @@ var require_main3 = __commonJS({
                   const sp = cp.fork(node.module, args || [], options);
                   assertStdio(sp);
                   this._serverProcess = sp;
-                  pipeStderrToLogOutputChannel(sp.stderr, this.outputChannel);
+                  pipeStderr(sp.stderr, this.outputChannel);
                   if (transport === TransportKind2.ipc) {
-                    pipeStdoutToLogOutputChannel(sp.stdout, this.outputChannel);
+                    pipeStdout(sp.stdout, this.outputChannel);
                     resolve2({ reader: new node_1.IPCMessageReader(this._serverProcess), writer: new node_1.IPCMessageWriter(this._serverProcess) });
                   } else {
                     resolve2({ reader: new node_1.StreamMessageReader(sp.stdout), writer: new node_1.StreamMessageWriter(sp.stdin) });
@@ -22643,8 +22660,8 @@ var require_main3 = __commonJS({
                     const sp = cp.fork(node.module, args || [], options);
                     assertStdio(sp);
                     this._serverProcess = sp;
-                    pipeStderrToLogOutputChannel(sp.stderr, this.outputChannel);
-                    pipeStdoutToLogOutputChannel(sp.stdout, this.outputChannel);
+                    pipeStderr(sp.stderr, this.outputChannel);
+                    pipeStdout(sp.stdout, this.outputChannel);
                     transport2.onConnected().then((protocol) => {
                       resolve2({ reader: protocol[0], writer: protocol[1] });
                     }, reject);
@@ -22654,8 +22671,8 @@ var require_main3 = __commonJS({
                     const sp = cp.fork(node.module, args || [], options);
                     assertStdio(sp);
                     this._serverProcess = sp;
-                    pipeStderrToLogOutputChannel(sp.stderr, this.outputChannel);
-                    pipeStdoutToLogOutputChannel(sp.stdout, this.outputChannel);
+                    pipeStderr(sp.stderr, this.outputChannel);
+                    pipeStdout(sp.stdout, this.outputChannel);
                     transport2.onConnected().then((protocol) => {
                       resolve2({ reader: protocol[0], writer: protocol[1] });
                     }, reject);
@@ -22685,7 +22702,7 @@ var require_main3 = __commonJS({
               if (!serverProcess || !serverProcess.pid) {
                 return handleChildProcessStartError(serverProcess, `Launching server using command ${command.command} failed.`);
               }
-              pipeStderrToLogOutputChannel(serverProcess.stderr, this.outputChannel);
+              pipeStderr(serverProcess.stderr, this.outputChannel);
               this._serverProcess = serverProcess;
               this._isDetached = !!options.detached;
               return Promise.resolve({ reader: new node_1.StreamMessageReader(serverProcess.stdout), writer: new node_1.StreamMessageWriter(serverProcess.stdin) });
@@ -22697,8 +22714,8 @@ var require_main3 = __commonJS({
                 }
                 this._serverProcess = serverProcess;
                 this._isDetached = !!options.detached;
-                pipeStderrToLogOutputChannel(serverProcess.stderr, this.outputChannel);
-                pipeStdoutToLogOutputChannel(serverProcess.stdout, this.outputChannel);
+                pipeStderr(serverProcess.stderr, this.outputChannel);
+                pipeStdout(serverProcess.stdout, this.outputChannel);
                 return transport2.onConnected().then((protocol) => {
                   return { reader: protocol[0], writer: protocol[1] };
                 });
@@ -22711,8 +22728,8 @@ var require_main3 = __commonJS({
                 }
                 this._serverProcess = serverProcess;
                 this._isDetached = !!options.detached;
-                pipeStderrToLogOutputChannel(serverProcess.stderr, this.outputChannel);
-                pipeStdoutToLogOutputChannel(serverProcess.stdout, this.outputChannel);
+                pipeStderr(serverProcess.stderr, this.outputChannel);
+                pipeStdout(serverProcess.stdout, this.outputChannel);
                 return transport2.onConnected().then((protocol) => {
                   return { reader: protocol[0], writer: protocol[1] };
                 });

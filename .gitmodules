@@ -1,0 +1,18 @@
+[submodule "fixtures/external/chou"]
+	path = fixtures/external/chou
+	url = https://github.com/FredYeye/Super-Ghouls-n-Ghosts-Disassembly.git
+[submodule "fixtures/external/smrpg"]
+	path = fixtures/external/smrpg
+	url = https://github.com/Yoshifanatic1/Super-Mario-RPG-Disassembly.git
+[submodule "fixtures/external/tmnt"]
+	path = fixtures/external/tmnt
+	url = https://github.com/Yoshifanatic1/TMNT-IV---Turtles-In-Time-SNES-Disassembly.git
+[submodule "fixtures/external/yoshi"]
+	path = fixtures/external/yoshi
+	url = https://github.com/brunovalads/yoshisisland-disassembly.git
+[submodule "fixtures/external/zelda"]
+	path = fixtures/external/zelda
+	url = https://github.com/aldonunez/zelda1-disassembly.git
+[submodule "fixtures/external/snes-rom-framework"]
+	path = fixtures/external/snes-rom-framework
+	url = https://github.com/Yoshifanatic1/SNES-ROM-Framework.git

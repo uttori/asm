@@ -56,31 +56,6 @@ const SLIDESHOW_TARGET_ROM_PATH = path.resolve(
   "fixtures/integration/snes-slideshow/test.sfc",
 );
 
-const CHOU_SRC_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/Chou.asm");
-const CHOU_EXPECTED_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/chou.sfc");
-const CHOU_TARGET_ROM_PATH = path.resolve(PROJECT_ROOT, "fixtures/integration/chou/test.sfc");
-
-const YOSHI_DIR = path.resolve(PROJECT_ROOT, "fixtures/integration/yoshisisland-disassembly");
-const YOSHI_SRC_PATH = path.resolve(YOSHI_DIR, "disassembly/assemble.asm");
-const YOSHI_EXPECTED_SHA256 = "9b4957466798bbdb5b43a450bbb60b2591ae81d95b891430f62d53ca62e8bc7b";
-
-const SMRPG_DIR = path.resolve(PROJECT_ROOT, "fixtures/integration/Super-Mario-RPG-Disassembly");
-const SMRPG_GLOBAL_DIR = path.resolve(SMRPG_DIR, "Global");
-const SMRPG_GAME_DIR = path.resolve(SMRPG_DIR, "SMRPG");
-const SMRPG_SRC_PATH = path.resolve(SMRPG_GLOBAL_DIR, "AssembleFile.asm");
-const SMRPG_ENGINE_BIN_PATH = path.resolve(SMRPG_GAME_DIR, "SPC700/Engine.bin");
-const SMRPG_EXPECTED_SHA256 = "740646f3535bfb365ca44e70d46ab433467b142bd84010393070bd0b141af853";
-
-const TMNT_DIR = path.resolve(
-  PROJECT_ROOT,
-  "fixtures/integration/TMNT-IV---Turtles-In-Time-SNES-Disassembly",
-);
-const TMNT_GLOBAL_DIR = path.resolve(TMNT_DIR, "Global");
-const TMNT_GAME_DIR = path.resolve(TMNT_DIR, "Teenage_Mutant_Ninja_Turtles_IV");
-const TMNT_SRC_PATH = path.resolve(TMNT_GLOBAL_DIR, "AssembleFile.asm");
-const TMNT_SPC_BIN_PATH = path.resolve(TMNT_GAME_DIR, "SPC700/SPC700DataBlocks_TMNTIV.bin");
-const TMNT_EXPECTED_SHA256 = "5b82cdd6f2da56f43680d6a5021faebe2e06036d30602c1a7917aa414cf8b5f4";
-
 const EMPTY_SHA256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
 
 const hashBuffer = (buffer: Buffer): string => createHash("sha256").update(buffer).digest("hex");
@@ -123,89 +98,6 @@ const assembleSourceStaged = (
   const program = assembler.buildProgramModel(source, sourcePath, 0);
   assembler.assembleProgram(program);
   return Buffer.from(assembler.getBinaryOutput());
-};
-
-/** Mirrors Assemble_SMRPG.bat for ROMID=SMRPG_U: FileType 0 → 4 (Engine.bin) → 1 → 2. */
-const assembleSmrpgU = (): Buffer => {
-  const source = fs.readFileSync(SMRPG_SRC_PATH, "utf8");
-  const includePaths = ["./", SMRPG_GLOBAL_DIR, SMRPG_GAME_DIR];
-  const runPass = (
-    fileType: number,
-    extraDefines: Record<string, string> | undefined,
-    baseRom: Uint8Array | undefined,
-  ): Buffer => {
-    const assembler = new Assembler(baseRom, { collectSourceMetadata: false });
-    // FileType 2 FinalizeROM writes almost nothing. Constructor keeps baseImage
-    // for reads only (spcblock tests pass a zero-filled buffer as targetRom).
-    if (baseRom && baseRom.length > 0) {
-      assembler.outputBytes = Array.from(baseRom);
-    }
-    assembler.setChecksumMode("asar");
-    assembler.setIncludePaths(includePaths);
-    assembler.setCurrentFile(SMRPG_SRC_PATH);
-    assembler.defines.set("GameID", "SMRPG");
-    assembler.defines.set("ROMID", "SMRPG_U");
-    assembler.defines.set("FileType", String(fileType));
-    if (extraDefines) {
-      for (const [name, value] of Object.entries(extraDefines)) {
-        assembler.defines.set(name, value);
-      }
-    }
-    const program = assembler.buildProgramModel(source, SMRPG_SRC_PATH, 0);
-    assembler.assembleProgram(program);
-    return Buffer.from(assembler.getBinaryOutput());
-  };
-
-  const initialized = runPass(0, undefined, undefined);
-  const engine = runPass(4, { PathToFile: "SPC700/Engine.asm" }, undefined);
-  fs.writeFileSync(SMRPG_ENGINE_BIN_PATH, engine);
-  try {
-    const assembled = runPass(1, undefined, initialized);
-    return runPass(2, undefined, assembled);
-  } finally {
-    fs.rmSync(SMRPG_ENGINE_BIN_PATH, { force: true });
-  }
-};
-
-/** Mirrors Assemble_TMNTIV.bat for ROMID=TMNTIV_U (TMNTIV_USA): FileType 0 → 4 → 1 → 2. */
-const assembleTmntivUsa = (): Buffer => {
-  const source = fs.readFileSync(TMNT_SRC_PATH, "utf8");
-  const includePaths = ["./", TMNT_GLOBAL_DIR, TMNT_GAME_DIR];
-  const runPass = (
-    fileType: number,
-    extraDefines: Record<string, string> | undefined,
-    baseRom: Uint8Array | undefined,
-  ): Buffer => {
-    const assembler = new Assembler(baseRom, { collectSourceMetadata: false });
-    if (baseRom && baseRom.length > 0) {
-      assembler.outputBytes = Array.from(baseRom);
-    }
-    assembler.setChecksumMode("asar");
-    assembler.setIncludePaths(includePaths);
-    assembler.setCurrentFile(TMNT_SRC_PATH);
-    assembler.defines.set("GameID", "TMNTIV");
-    assembler.defines.set("ROMID", "TMNTIV_U");
-    assembler.defines.set("MainFolder", "Teenage_Mutant_Ninja_Turtles_IV");
-    assembler.defines.set("FileType", String(fileType));
-    if (extraDefines) {
-      for (const [name, value] of Object.entries(extraDefines)) {
-        assembler.defines.set(name, value);
-      }
-    }
-    const program = assembler.buildProgramModel(source, TMNT_SRC_PATH, 0);
-    assembler.assembleProgram(program);
-    return Buffer.from(assembler.getBinaryOutput());
-  };
-
-  const initialized = runPass(0, undefined, undefined);
-  const engine = runPass(4, undefined, undefined);
-  fs.writeFileSync(TMNT_SPC_BIN_PATH, engine);
-  try {
-    const assembled = runPass(1, undefined, initialized);
-    return runPass(2, undefined, assembled);
-  } finally {
-    fs.rmSync(TMNT_SPC_BIN_PATH, { force: true });
-  }
 };
 
 const discoverTopLevelFixtures = (): string[] =>
@@ -302,32 +194,4 @@ test("integration SLIDESHOW regression keeps CLI-style include flow byte-identic
     : undefined;
   const output = assembleSourceStaged(source, SLIDESHOW_SRC_PATH, targetRom, "simple");
   t.is(hashBuffer(output), hashBuffer(expected));
-});
-
-test.serial("integration CHOU staged production path preserves include resolution", (t) => {
-  t.timeout(15 * 60_000);
-  const source = fs.readFileSync(CHOU_SRC_PATH, "utf8");
-  const expected = fs.readFileSync(CHOU_EXPECTED_PATH);
-  const targetRom = fs.existsSync(CHOU_TARGET_ROM_PATH)
-    ? new Uint8Array(fs.readFileSync(CHOU_TARGET_ROM_PATH))
-    : undefined;
-  const output = assembleSourceStaged(source, CHOU_SRC_PATH, targetRom, "simple");
-  t.is(hashBuffer(output), hashBuffer(expected));
-});
-
-test.serial("integration YOSHI staged production path preserves include resolution", (t) => {
-  t.timeout(30 * 60_000);
-  const source = fs.readFileSync(YOSHI_SRC_PATH, "utf8");
-  const output = assembleSourceStaged(source, YOSHI_SRC_PATH, undefined, "asar");
-  t.is(hashBuffer(output), YOSHI_EXPECTED_SHA256);
-});
-
-test.serial("integration SMRPG_U staged production path preserves include resolution", (t) => {
-  t.timeout(30 * 60_000);
-  t.is(hashBuffer(assembleSmrpgU()), SMRPG_EXPECTED_SHA256);
-});
-
-test.serial("integration TMNTIV_USA staged production path preserves include resolution", (t) => {
-  t.timeout(30 * 60_000);
-  t.is(hashBuffer(assembleTmntivUsa()), TMNT_EXPECTED_SHA256);
 });

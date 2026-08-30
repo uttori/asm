@@ -1,4 +1,4 @@
-# Plugin author example
+# Plugin Author Example
 
 This minimal plugin is a working copy of the test fixture pattern. It contributes a one-byte architecture, a flat address space, raw output, one directive, one session-state slot, and the `example.raw` target.
 

@@ -8,8 +8,13 @@ import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plug
 import { WorkspaceIndex } from "@uttori/asm-core";
 import { runWithInternalInstrumentation } from "../packages/core/src/internal-instrumentation.js";
 import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
+import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
+import { getFixtureStatus } from "./external-fixtures.ts";
 
 const root = process.cwd();
+const chouSpec = EXTERNAL_FIXTURES.chou;
+const chouDir = path.join(root, chouSpec.submodulePath);
+const chouEntryPoint = path.join(chouDir, chouSpec.entrypoint);
 
 type RunMode = "cold" | "warm" | "warm-validate";
 
@@ -29,9 +34,6 @@ type IndexingSample = BenchmarkSample & {
   symbolCount: number;
   referenceCount: number;
 };
-
-const chouDir = path.join(root, "fixtures/integration/chou");
-const chouEntryPoint = path.join(chouDir, "Chou.asm");
 
 /**
  * Creates a fresh WorkspaceIndex pointed at the Chou project with an isolated
@@ -295,7 +297,10 @@ function printPhaseTable(label: string, phasesMs: Record<string, number>): void 
 
   // Print any child phases that appeared but have no known parent (future-proofing).
   const orphans = entries
-    .filter(([name]) => CHILD_PHASES.has(name) && !topLevel.some(([p]) => (PHASE_CHILDREN[p] ?? []).includes(name)))
+    .filter(
+      ([name]) =>
+        CHILD_PHASES.has(name) && !topLevel.some(([p]) => (PHASE_CHILDREN[p] ?? []).includes(name)),
+    )
     .sort(([, a], [, b]) => b - a);
   for (const [name, ms] of orphans) {
     const msStr = `${ms.toFixed(1)} ms`;
@@ -304,8 +309,14 @@ function printPhaseTable(label: string, phasesMs: Record<string, number>): void 
 }
 
 async function main(): Promise<void> {
+  const status = getFixtureStatus("chou");
+  if (!status.ready) {
+    throw new Error(
+      `Chou LSP indexing requires the Chou submodule.\n${status.details.join("\n")}\n${status.setupInstructions}`,
+    );
+  }
   const options = parseOptions(process.argv.slice(2));
-  const cacheDir = path.join(root, "fixtures/integration/chou/.uttori-asm/cache");
+  const cacheDir = path.join(os.tmpdir(), "uttori-lsp-chou-cache");
 
   console.log(
     `LSP indexing benchmark: ${options.warmups} warmup(s), ${options.repetitions} rep(s), modes=[${options.modes.join(",")}]`,
@@ -318,8 +329,7 @@ async function main(): Promise<void> {
 
   // Always do one cold seeding pass before warm modes so cache is populated.
   const hasCold = options.modes.includes("cold");
-  const hasWarmModes =
-    options.modes.includes("warm") || options.modes.includes("warm-validate");
+  const hasWarmModes = options.modes.includes("warm") || options.modes.includes("warm-validate");
   if (!hasCold && hasWarmModes) {
     console.error("[chou] seeding cache with one cold pass before warm modes…");
     sharedIndex.fullReindexRequired = true;

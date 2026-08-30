@@ -1,14 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  EXTERNAL_FIXTURES,
+  LOCAL_ROM_DIR,
+  LOCAL_WORKTREE_DIR,
+} from "../fixtures/fixture-manifest.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const tmntDir = path.resolve(root, "fixtures/integration/TMNT-IV---Turtles-In-Time-SNES-Disassembly");
-const gameDir = path.resolve(tmntDir, "Teenage_Mutant_Ninja_Turtles_IV");
-const asarScriptsDir = path.resolve(gameDir, "AsarScripts");
-const pointerFile = path.resolve(asarScriptsDir, "AssetPointersAndFiles.asm");
-const defaultRomName = "Teenage Mutant Ninja Turtles IV - Turtles in Time (USA).sfc";
-const defaultRomPath = path.resolve(tmntDir, defaultRomName);
+const defaultRomName = EXTERNAL_FIXTURES.tmnt.localRom?.filename ?? "";
+const defaultRomPath = path.resolve(root, LOCAL_ROM_DIR, defaultRomName);
 
 type PointerSection = {
   label: string;
@@ -20,8 +21,16 @@ type PointerSection = {
 const POINTER_SECTIONS: PointerSection[] = [
   { label: "UncompressedGFXPointers", dest: "Graphics", batPointerSet: 6 },
   { label: "CompressedGFXPointers", dest: path.join("Graphics", "Compressed"), batPointerSet: 12 },
-  { label: "DynamicSpritesPointers", dest: path.join("Graphics", "DynamicSprites"), batPointerSet: 18 },
-  { label: "CompressedTilemapsPointers", dest: path.join("Tilemaps", "Compressed"), batPointerSet: 24 },
+  {
+    label: "DynamicSpritesPointers",
+    dest: path.join("Graphics", "DynamicSprites"),
+    batPointerSet: 18,
+  },
+  {
+    label: "CompressedTilemapsPointers",
+    dest: path.join("Tilemaps", "Compressed"),
+    batPointerSet: 24,
+  },
   { label: "Map32Pointers", dest: path.join("Tilemaps", "Compressed", "Map32"), batPointerSet: 30 },
   { label: "LevelDataPointers", dest: path.join("LevelData", "Compressed"), batPointerSet: 36 },
   { label: "PalettePointers", dest: "Palettes", batPointerSet: 42 },
@@ -37,8 +46,12 @@ type AssetEntry = {
   filename: string;
 };
 
-type Options = {
+export type TmntExtractOptions = {
   rom: string;
+  destRoot: string;
+};
+
+type Options = TmntExtractOptions & {
   help: boolean;
 };
 
@@ -50,6 +63,7 @@ type Options = {
 function parseArgs(argv: string[]): Options {
   const options: Options = {
     rom: defaultRomPath,
+    destRoot: path.resolve(root, LOCAL_WORKTREE_DIR, "tmnt"),
     help: false,
   };
 
@@ -70,6 +84,19 @@ function parseArgs(argv: string[]): Options {
     }
     if (arg.startsWith("--rom=")) {
       options.rom = path.resolve(arg.slice("--rom=".length));
+      continue;
+    }
+    if (arg === "--dest") {
+      const value = argv[index + 1];
+      if (!value) {
+        throw new Error("--dest requires a path");
+      }
+      options.destRoot = path.resolve(value);
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith("--dest=")) {
+      options.destRoot = path.resolve(arg.slice("--dest=".length));
       continue;
     }
     throw new Error(`Unknown argument: ${arg}`);
@@ -166,7 +193,8 @@ function parsePointerSection(
   }
 
   const entries: AssetEntry[] = [];
-  const linePattern = /^\s*dl\s+\$([0-9A-Fa-f]+)\s*,\s*\$([0-9A-Fa-f]+)\s*,\s*([A-Za-z0-9_]+)\s*,/gm;
+  const linePattern =
+    /^\s*dl\s+\$([0-9A-Fa-f]+)\s*,\s*\$([0-9A-Fa-f]+)\s*,\s*([A-Za-z0-9_]+)\s*,/gm;
   let match: RegExpExecArray | null = linePattern.exec(block[1]);
   while (match) {
     const nameLabel = match[3];
@@ -201,7 +229,9 @@ function extractEntry(
   const start = loromFileOffset(entry.start, headerSize);
   const end = loromFileOffset(entry.end, headerSize);
   if (end < start) {
-    throw new Error(`${entry.filename}: end ${entry.end.toString(16)} < start ${entry.start.toString(16)}`);
+    throw new Error(
+      `${entry.filename}: end ${entry.end.toString(16)} < start ${entry.start.toString(16)}`,
+    );
   }
   if (end > rom.length) {
     throw new Error(`${entry.filename}: offset ${end} past ROM size ${rom.length}`);
@@ -214,32 +244,39 @@ function extractEntry(
 
 /**
  * ExtractAssets.bat (USA / ROMBit $0001 / TMNTIV_USA.sfc).
- * @param {string} romPath Headerless or headered TMNTIV (USA) ROM.
+ * @param {TmntExtractOptions} options ROM path and destination disassembly root.
  * @returns {void}
  */
-function extractAssets(romPath: string): void {
-  if (!fs.existsSync(romPath)) {
+export function extractTmntAssets(options: TmntExtractOptions): void {
+  const gameDir = path.resolve(options.destRoot, "Teenage_Mutant_Ninja_Turtles_IV");
+  const asarScriptsDir = path.resolve(gameDir, "AsarScripts");
+  const pointerFile = path.resolve(asarScriptsDir, "AssetPointersAndFiles.asm");
+  if (!fs.existsSync(options.rom)) {
     throw new Error(
-      `ROM not found: ${romPath}\nPlace "${defaultRomName}" in ${tmntDir} or pass --rom`,
+      `ROM not found: ${options.rom}\nPlace "${defaultRomName}" in ${path.join(root, LOCAL_ROM_DIR)} or pass --rom`,
     );
   }
   if (!fs.existsSync(pointerFile)) {
     throw new Error(`Missing pointer table: ${pointerFile}`);
   }
 
-  const rom = new Uint8Array(fs.readFileSync(romPath));
+  const rom = new Uint8Array(fs.readFileSync(options.rom));
   const headerSize = detectHeaderSize(rom.length);
   const source = applyUsaRomVer(fs.readFileSync(pointerFile, "utf8"));
   const filenames = parseFilenameTable(source);
 
-  console.log(`ExtractAssets (TMNTIV_USA): ${path.basename(romPath)} (${rom.length} bytes, header ${headerSize})`);
+  console.log(
+    `ExtractAssets (TMNTIV_USA): ${path.basename(options.rom)} (${rom.length} bytes, header ${headerSize})`,
+  );
 
   let files = 0;
   let bytes = 0;
   for (const section of POINTER_SECTIONS) {
     const entries = parsePointerSection(source, section.label, filenames);
     if (entries.length === 0) {
-      console.log(`  ${section.label}: skipped (empty / commented, PointerSet ${section.batPointerSet})`);
+      console.log(
+        `  ${section.label}: skipped (empty / commented, PointerSet ${section.batPointerSet})`,
+      );
       continue;
     }
     const destDir = path.join(gameDir, section.dest);
@@ -273,10 +310,10 @@ Covers AsarScripts bats:
   ExtractAssets.bat              GFX, tilemaps, palettes, OAM, SPC, BRR (USA / ROMBit $0001)
 
 Usage:
-  npm run fixture:tmnt:extract -- [--rom PATH]
+  npm run fixture:tmnt:extract -- [--rom PATH] [--dest DIR]
 
 Default ROM:
-  ${defaultRomName}
+  ${path.join(LOCAL_ROM_DIR, defaultRomName)}
   (ExtractAssets.bat name: TMNTIV_USA.sfc)
 `);
 }
@@ -291,7 +328,12 @@ function main(): void {
     printHelp();
     return;
   }
-  extractAssets(options.rom);
+  extractTmntAssets(options);
 }
 
-main();
+const launchedDirectly =
+  process.argv[1] !== undefined &&
+  pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
+if (launchedDirectly) {
+  main();
+}

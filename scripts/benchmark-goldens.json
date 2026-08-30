@@ -1,8 +1,4 @@
 {
-  "chou": {
-    "bytes": 1048576,
-    "sha256": "514cfb608ef9107739795623973f18ff3aea48eb6c7509e63f957edd10e52378"
-  },
   "slideshow": {
     "bytes": 284838,
     "sha256": "b6fcff7df6408684b39f12530b43a72a16e43c11ed702ab8d961f2f91fc855da"
@@ -18,9 +14,5 @@
   "instruction-encoding": {
     "bytes": 614,
     "sha256": "1f76d7bd6d06ab30c090daa6a5f3555c4bdcc8c8084871880b4caa403326b730"
-  },
-  "smrpg": {
-    "bytes": 4194304,
-    "sha256": "740646f3535bfb365ca44e70d46ab433467b142bd84010393070bd0b141af853"
   }
 }

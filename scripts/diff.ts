@@ -3,11 +3,11 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { Assembler } from "@uttori/asm-core";
+import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import {
-  createSnesAssemblerEnvironment,
-  SNES_TARGET_ID,
-} from "@uttori/asm-plugin-snes";
-import { removeInlineComment, splitInlineCommands } from "../packages/core/src/services/command-text-service.ts";
+  removeInlineComment,
+  splitInlineCommands,
+} from "../packages/core/src/services/command-text-service.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const snesEnvironment = await createSnesAssemblerEnvironment();
@@ -23,19 +23,21 @@ type Fixture = {
   mapper: Mapper;
 };
 
+import { EXTERNAL_FIXTURES, LOCAL_ROM_DIR } from "../fixtures/fixture-manifest.ts";
+
 const FIXTURES: Fixture[] = [
   {
     id: "yoshi",
-    source: "fixtures/integration/yoshisisland-disassembly/disassembly/assemble.asm",
-    golden: "fixtures/integration/yoshisisland-disassembly/yi.sfc",
-    checksumMode: "asar",
+    source: `${EXTERNAL_FIXTURES.yoshi.submodulePath}/${EXTERNAL_FIXTURES.yoshi.entrypoint}`,
+    golden: `${LOCAL_ROM_DIR}/${EXTERNAL_FIXTURES.yoshi.optionalDiffRom?.filename ?? "yi.sfc"}`,
+    checksumMode: EXTERNAL_FIXTURES.yoshi.checksumMode,
     mapper: "lorom",
   },
   {
     id: "chou",
-    source: "fixtures/integration/chou/Chou.asm",
-    golden: "fixtures/integration/chou/chou.sfc",
-    checksumMode: "simple",
+    source: `${EXTERNAL_FIXTURES.chou.submodulePath}/${EXTERNAL_FIXTURES.chou.entrypoint}`,
+    golden: `${LOCAL_ROM_DIR}/Chou Makaimura (Japan).sfc`,
+    checksumMode: EXTERNAL_FIXTURES.chou.checksumMode,
     mapper: "lorom",
   },
   {
@@ -111,7 +113,11 @@ type DiffReport = {
   longestRun?: MismatchRun;
   shift?: ShiftGuess;
   shiftFromLongestRun?: ShiftGuess;
-  samples: { mismatch: ByteMismatch; hit?: EmitHit; window: { actual: string; official: string } }[];
+  samples: {
+    mismatch: ByteMismatch;
+    hit?: EmitHit;
+    window: { actual: string; official: string };
+  }[];
 };
 
 const USAGE = `Compare an assembled ROM against a golden .sfc.
@@ -295,7 +301,9 @@ function parseOptions(args: string[]): Options {
   if (!sawSource && !sawGolden && !options.actual) {
     const fixture = fixtureById.get(fixtureId);
     if (!fixture) {
-      throw new Error(`Unknown fixture '${fixtureId}'. Known: ${[...fixtureById.keys()].join(", ")}`);
+      throw new Error(
+        `Unknown fixture '${fixtureId}'. Known: ${[...fixtureById.keys()].join(", ")}`,
+      );
     }
     options.source = fixture.source;
     options.golden = fixture.golden;
@@ -722,7 +730,12 @@ function diffRoms(input: {
   const shift = guessShift(input.actual, input.official, shiftStart, input.shiftScan);
   let shiftFromLongestRun: ShiftGuess | undefined;
   if (longestRun) {
-    shiftFromLongestRun = guessShift(input.actual, input.official, longestRun.start, input.shiftScan);
+    shiftFromLongestRun = guessShift(
+      input.actual,
+      input.official,
+      longestRun.start,
+      input.shiftScan,
+    );
   }
 
   return {
@@ -800,7 +813,9 @@ function printReport(report: DiffReport, options: Options): void {
 
   const first = report.first;
   if (first) {
-    console.log(`mismatches ${report.mismatches} first 0x${hexPad(first.offset, 0)} $${hexPad(first.snes, 6)}`);
+    console.log(
+      `mismatches ${report.mismatches} first 0x${hexPad(first.offset, 0)} $${hexPad(first.snes, 6)}`,
+    );
   } else {
     console.log(`mismatches ${report.mismatches}`);
   }
@@ -868,6 +883,7 @@ function main(): number {
   const goldenPath = resolvePath(options.golden);
   if (!fs.existsSync(goldenPath)) {
     console.error(`Golden ROM not found: ${goldenPath}`);
+    console.error(`Pass --golden PATH or place the ROM under ${LOCAL_ROM_DIR}/.`);
     return 2;
   }
   const official = fs.readFileSync(goldenPath);
@@ -893,6 +909,7 @@ function main(): number {
     const sourcePath = resolvePath(options.source);
     if (!fs.existsSync(sourcePath)) {
       console.error(`Source not found: ${sourcePath}`);
+      console.error("Initialize the matching submodule (see npm run fixtures:status).");
       return 2;
     }
     if (!options.json) {

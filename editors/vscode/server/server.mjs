@@ -10703,6 +10703,9 @@ var require_server = __commonJS({
         onDocumentRangeFormatting: (handler) => connection2.onRequest(vscode_languageserver_protocol_1.DocumentRangeFormattingRequest.type, (params, cancel) => {
           return handler(params, cancel, (0, progress_1.attachWorkDone)(connection2, params), void 0);
         }),
+        onDocumentRangesFormatting: (handler) => connection2.onRequest(vscode_languageserver_protocol_1.DocumentRangesFormattingRequest.type, (params, cancel) => {
+          return handler(params, cancel, (0, progress_1.attachWorkDone)(connection2, params), void 0);
+        }),
         onDocumentOnTypeFormatting: (handler) => connection2.onRequest(vscode_languageserver_protocol_1.DocumentOnTypeFormattingRequest.type, (params, cancel) => {
           return handler(params, cancel);
         }),
@@ -16886,6 +16889,10 @@ var AssemblyFrontEndService = class {
    */
   createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
     let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
+    normalizedCommand = this.host.syntaxProfile.rewriteCommand?.(normalizedCommand, {
+      sourceFile,
+      sourceLine
+    }) ?? normalizedCommand;
     if (this.host.inMacroExpansion && !this.host.isDefinitionCollectionStage && (normalizedCommand.includes("...") || normalizedCommand.includes("\u2026"))) {
       normalizedCommand = this.host.resolveVariadicPlaceholders(normalizedCommand);
     }
@@ -17065,6 +17072,9 @@ var CommandLoweringService = class {
     }
     if (command.kind !== "unknown" && command.kind !== "opcodeCandidate" && command.kind !== "directive") {
       return command.kind;
+    }
+    if (this.host.syntaxProfile.bareMacroInvocations && command.kind === "opcodeCandidate") {
+      return "bareMacroCandidate";
     }
     if (this.host.directiveRegistry.has(keyword)) {
       if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
@@ -17634,6 +17644,12 @@ var MacroEngine = class {
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }
+    if (this.host.syntaxProfile.bareMacroInvocations && this.host.macros.has(keyword)) {
+      const argumentText = command.slice(keyword.length).trim();
+      this.callMacro(argumentText ? `${keyword}(${argumentText})` : keyword);
+      setCommandKind(commandNode, "macroDefinitionOrInvoke");
+      return true;
+    }
     return false;
   }
   /**
@@ -17945,6 +17961,14 @@ var MacroEngine = class {
       }
       return match;
     });
+    if (this.host.syntaxProfile.macroParameterPrefix === "\\") {
+      expanded = expanded.replace(/\\([A-Z_a-z]\w*)/g, (match, paramName) => {
+        if (fixedArgs.has(paramName)) {
+          return substituteParamValue(fixedArgs.get(paramName) ?? "");
+        }
+        return match;
+      });
+    }
     const currentCond = this.isMacroExpansionActive();
     if (!currentCond) {
       return expanded;
@@ -18545,6 +18569,21 @@ var SymbolScopeService = class {
     return unit ? `${unit}::${name}` : name;
   }
   /**
+   * Adds a namespace inside a file-local qualifier (`unit::Namespace_Label`).
+   * @param {string} namespacePrefix The flattened namespace prefix.
+   * @param {string} label The already-qualified or plain label.
+   * @returns {string} The namespace-qualified storage key.
+   */
+  qualifyNamespaceAlias(namespacePrefix, label) {
+    if (this.host.syntaxProfile.fileLocalSymbols) {
+      const separator = label.indexOf("::");
+      if (separator !== -1) {
+        return `${label.slice(0, separator + 2)}${namespacePrefix}_${label.slice(separator + 2)}`;
+      }
+    }
+    return `${namespacePrefix}_${label}`;
+  }
+  /**
    * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
    * @param {string} name The label token, without a trailing colon.
    * @returns {string} The rewritten name.
@@ -18649,7 +18688,8 @@ var SymbolScopeService = class {
    * @returns {boolean} `true` if the label is in scope, `false` otherwise.
    */
   hasLabelInScope(identifier) {
-    return this.host.labelTable.has(identifier) || (this.host.currentNamespace ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`) : false);
+    const qualified = this.qualifySymbolName(identifier);
+    return this.host.labelTable.has(identifier) || qualified !== identifier && this.host.labelTable.has(qualified) || (this.host.currentNamespace ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`) : false);
   }
   /**
    * Handles a relative label.
@@ -19297,8 +19337,8 @@ var SymbolScopeService = class {
       if (this.host.currentNamespace) {
         const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
         if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
-          const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
-          const qualifiedParent = `${namespacePrefix}_${parentLabel}`;
+          const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
+          const qualifiedParent = this.qualifyNamespaceAlias(namespacePrefix, parentLabel);
           this.host.labelParents.set(namespacedLabel, qualifiedParent);
           this.setLabel(directScopeLabel, void 0, false, false, false, modifiesHierarchy2);
           if (modifiesHierarchy2) {
@@ -19317,7 +19357,7 @@ var SymbolScopeService = class {
       if (this.host.currentNamespace) {
         const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
         if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
-          const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
+          const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
           this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy2);
         }
       }
@@ -19340,7 +19380,7 @@ var SymbolScopeService = class {
     if (this.host.currentNamespace) {
       const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
       if (!labelName.startsWith(`${namespacePrefix}_`)) {
-        const namespacedLabel = `${namespacePrefix}_${labelName}`;
+        const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, labelName);
         this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy);
       }
     }
@@ -20608,6 +20648,8 @@ var Assembler = class _Assembler {
   /** Active command contexts so nested byte writes inherit the right source line. */
   traceCommandStack = [];
   defines = /* @__PURE__ */ new Map();
+  /** Bare numeric values exposed only while executing typed `for` loops. */
+  activeLoopVariables = /* @__PURE__ */ new Map();
   // Character mapping support
   characterMappings = /* @__PURE__ */ new Map();
   currentTable = null;
@@ -21301,7 +21343,8 @@ var Assembler = class _Assembler {
             try {
               handler({ state: session.pluginState }, words, raw);
             } catch (cause) {
-              throw new PluginError(`Directive '${directive3.id}' failed.`, {
+              const detail = cause instanceof Error ? ` ${cause.message}` : "";
+              throw new PluginError(`Directive '${directive3.id}' failed.${detail}`, {
                 code: "PLUGIN_HOOK_FAILED",
                 pluginId,
                 contributionId: directive3.id,
@@ -21549,8 +21592,16 @@ var Assembler = class _Assembler {
       resolveDefines: (input) => this.resolvedefines(input),
       isStructReference: (input) => this.structEngine.hasStructReference(input),
       resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
-      tryResolveLabel: (input, requireStatic) => this.symbolScope.tryGetLabelValue(input, requireStatic),
-      resolveLabel: (input, requireStatic) => this.symbolScope.getLabelValue(input, requireStatic),
+      tryResolveLabel: (input, requireStatic) => {
+        const loopValue = this.activeLoopVariables.get(input.trim());
+        if (loopValue !== void 0) return loopValue;
+        return this.symbolScope.tryGetLabelValue(input, requireStatic);
+      },
+      resolveLabel: (input, requireStatic) => {
+        const loopValue = this.activeLoopVariables.get(input.trim());
+        if (loopValue !== void 0) return loopValue;
+        return this.symbolScope.getLabelValue(input, requireStatic);
+      },
       evaluateMath: (input) => this.mathCore.math(input),
       shouldDeferExpressionEvaluation: () => !this.getActiveStageCapabilities().enforceResolvedLabels,
       getCurrentAddress: () => this.currentTargetAddress,
@@ -21847,6 +21898,8 @@ var Assembler = class _Assembler {
    */
   resolveExpressionHostLabel(identifier) {
     const trimmed = identifier.trim();
+    const loopValue = this.activeLoopVariables.get(trimmed);
+    if (loopValue !== void 0) return loopValue;
     if (parseUnnamedLabelReference(trimmed)) {
       return this.symbolScope.getLabelValue(trimmed, this.requireStaticLabelLookup);
     }
@@ -23532,9 +23585,11 @@ var Assembler = class _Assembler {
       return;
     }
     const originalValue = this.defines.get(variable);
+    const originalLoopValue = this.activeLoopVariables.get(variable);
     if (start < end) {
       for (let i = start; i < end; i++) {
         this.defines.set(variable, i.toString());
+        this.activeLoopVariables.set(variable, i);
         executeBody();
       }
     }
@@ -23542,6 +23597,11 @@ var Assembler = class _Assembler {
       this.defines.set(variable, originalValue);
     } else {
       this.defines.delete(variable);
+    }
+    if (originalLoopValue !== void 0) {
+      this.activeLoopVariables.set(variable, originalLoopValue);
+    } else {
+      this.activeLoopVariables.delete(variable);
     }
   }
   /**
@@ -24940,6 +25000,14 @@ var syntax = {
   relative: "target",
   relative16: "target",
   zeroPageRelative: "zp,target",
+  accumulatorRelative: "A,target",
+  zeroPageImmediate: "zp,#value",
+  specialPage: "$FFnn",
+  blockTransfer: "source,destination,length",
+  immediateZeroPage: "#value,zp",
+  immediateZeroPageIndexedX: "#value,zp,x",
+  immediateAbsolute: "#value,addr",
+  immediateAbsoluteIndexedX: "#value,addr,x",
   basePageIndirectIndexedZ: "[zp],z",
   quadAccumulator: "Q"
 };
@@ -25019,6 +25087,20 @@ function getOperandCodec(mode) {
       return "relative16";
     case "zeroPageRelative":
       return "zero-page-relative8";
+    case "accumulatorRelative":
+      return "accumulator-relative8";
+    case "zeroPageImmediate":
+      return "zero-page-immediate8";
+    case "specialPage":
+      return "special-page";
+    case "blockTransfer":
+      return "three-unsigned16-le";
+    case "immediateZeroPage":
+    case "immediateZeroPageIndexedX":
+      return "immediate-unsigned8";
+    case "immediateAbsolute":
+    case "immediateAbsoluteIndexedX":
+      return "immediate-unsigned16";
     default:
       return "unsigned8";
   }
@@ -25039,6 +25121,31 @@ function getOperandFields(codec) {
       return [
         { name: "address", width: 1 },
         { name: "target", width: 1, signed: true, relative: true }
+      ];
+    case "accumulator-relative8":
+      return [{ name: "target", width: 1, signed: true, relative: true }];
+    case "zero-page-immediate8":
+      return [
+        { name: "address", width: 1 },
+        { name: "value", width: 1 }
+      ];
+    case "special-page":
+      return [{ name: "address", width: 1 }];
+    case "three-unsigned16-le":
+      return [
+        { name: "source", width: 2 },
+        { name: "destination", width: 2 },
+        { name: "length", width: 2 }
+      ];
+    case "immediate-unsigned8":
+      return [
+        { name: "value", width: 1 },
+        { name: "address", width: 1 }
+      ];
+    case "immediate-unsigned16":
+      return [
+        { name: "value", width: 1 },
+        { name: "address", width: 2 }
       ];
     case "unsigned8":
       return [{ name: "value", width: 1 }];
@@ -26357,6 +26464,251 @@ var ca65VariantTables = {
     ["TYA", 1, 152, 0, "PutAll"],
     ["TYS", 1, 43, 0, "PutAll"],
     ["TZA", 1, 107, 0, "PutAll"]
+  ],
+  HuC6280: [
+    ["ADC", 8431212, 96, 0, "PutAll"],
+    ["AND", 8431212, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBR0", 0, 15, 0, "PutBitBranch"],
+    ["BBR1", 0, 31, 0, "PutBitBranch"],
+    ["BBR2", 0, 47, 0, "PutBitBranch"],
+    ["BBR3", 0, 63, 0, "PutBitBranch"],
+    ["BBR4", 0, 79, 0, "PutBitBranch"],
+    ["BBR5", 0, 95, 0, "PutBitBranch"],
+    ["BBR6", 0, 111, 0, "PutBitBranch"],
+    ["BBR7", 0, 127, 0, "PutBitBranch"],
+    ["BBS0", 0, 143, 0, "PutBitBranch"],
+    ["BBS1", 0, 159, 0, "PutBitBranch"],
+    ["BBS2", 0, 175, 0, "PutBitBranch"],
+    ["BBS3", 0, 191, 0, "PutBitBranch"],
+    ["BBS4", 0, 207, 0, "PutBitBranch"],
+    ["BBS5", 0, 223, 0, "PutBitBranch"],
+    ["BBS6", 0, 239, 0, "PutBitBranch"],
+    ["BBS7", 0, 255, 0, "PutBitBranch"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 10485868, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 8388613, 0, 6, "PutAll"],
+    ["BSR", 131072, 68, 0, "PutPCRel8"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLA", 1, 98, 0, "PutAll"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CLX", 1, 130, 0, "PutAll"],
+    ["CLY", 1, 194, 0, "PutAll"],
+    ["CMP", 8431212, 192, 0, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["CSH", 1, 212, 0, "PutAll"],
+    ["CSL", 1, 84, 0, "PutAll"],
+    ["DEA", 1, 0, 3, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8431212, 64, 0, "PutAll"],
+    ["INA", 1, 0, 4, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 67592, 76, 6, "PutAll"],
+    ["JSR", 8, 32, 7, "PutAll"],
+    ["LDA", 8431212, 160, 0, "PutAll"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8431212, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PHX", 1, 218, 0, "PutAll"],
+    ["PHY", 1, 90, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["PLX", 1, 250, 0, "PutAll"],
+    ["PLY", 1, 122, 0, "PutAll"],
+    ["RMB0", 4, 7, 1, "PutAll"],
+    ["RMB1", 4, 23, 1, "PutAll"],
+    ["RMB2", 4, 39, 1, "PutAll"],
+    ["RMB3", 4, 55, 1, "PutAll"],
+    ["RMB4", 4, 71, 1, "PutAll"],
+    ["RMB5", 4, 87, 1, "PutAll"],
+    ["RMB6", 4, 103, 1, "PutAll"],
+    ["RMB7", 4, 119, 1, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SAX", 1, 34, 0, "PutAll"],
+    ["SAY", 1, 66, 0, "PutAll"],
+    ["SBC", 8431212, 224, 0, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SET", 1, 244, 0, "PutAll"],
+    ["SMB0", 4, 135, 1, "PutAll"],
+    ["SMB1", 4, 151, 1, "PutAll"],
+    ["SMB2", 4, 167, 1, "PutAll"],
+    ["SMB3", 4, 183, 1, "PutAll"],
+    ["SMB4", 4, 199, 1, "PutAll"],
+    ["SMB5", 4, 215, 1, "PutAll"],
+    ["SMB6", 4, 231, 1, "PutAll"],
+    ["SMB7", 4, 247, 1, "PutAll"],
+    ["ST0", 8388608, 3, 1, "PutAll"],
+    ["ST1", 8388608, 19, 1, "PutAll"],
+    ["ST2", 8388608, 35, 1, "PutAll"],
+    ["STA", 42604, 128, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["STZ", 108, 4, 5, "PutAll"],
+    ["SXY", 1, 2, 0, "PutAll"],
+    ["TAI", 33554432, 243, 0, "PutBlockTransfer"],
+    ["TAM", 8388608, 83, 1, "PutAll"],
+    ["TAM0", 1, 1, 0, "PutTAMn"],
+    ["TAM1", 1, 2, 0, "PutTAMn"],
+    ["TAM2", 1, 4, 0, "PutTAMn"],
+    ["TAM3", 1, 8, 0, "PutTAMn"],
+    ["TAM4", 1, 16, 0, "PutTAMn"],
+    ["TAM5", 1, 32, 0, "PutTAMn"],
+    ["TAM6", 1, 64, 0, "PutTAMn"],
+    ["TAM7", 1, 128, 0, "PutTAMn"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TDD", 33554432, 195, 0, "PutBlockTransfer"],
+    ["TIA", 33554432, 227, 0, "PutBlockTransfer"],
+    ["TII", 33554432, 115, 0, "PutBlockTransfer"],
+    ["TIN", 33554432, 211, 0, "PutBlockTransfer"],
+    ["TMA", 8388608, 67, 1, "PutTMA"],
+    ["TMA0", 1, 1, 0, "PutTMAn"],
+    ["TMA1", 1, 2, 0, "PutTMAn"],
+    ["TMA2", 1, 4, 0, "PutTMAn"],
+    ["TMA3", 1, 8, 0, "PutTMAn"],
+    ["TMA4", 1, 16, 0, "PutTMAn"],
+    ["TMA5", 1, 32, 0, "PutTMAn"],
+    ["TMA6", 1, 64, 0, "PutTMAn"],
+    ["TMA7", 1, 128, 0, "PutTMAn"],
+    ["TRB", 12, 16, 1, "PutAll"],
+    ["TSB", 12, 0, 1, "PutAll"],
+    ["TST", 108, 131, 9, "PutTST"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
+  ],
+  M740: [
+    ["ADC", 8430188, 96, 0, "PutAll"],
+    ["AND", 8430188, 32, 0, "PutAll"],
+    ["ASL", 110, 2, 1, "PutAll"],
+    ["BBC0", 268435458, 19, 10, "PutBitBranch_m740"],
+    ["BBC1", 268435458, 51, 10, "PutBitBranch_m740"],
+    ["BBC2", 268435458, 83, 10, "PutBitBranch_m740"],
+    ["BBC3", 268435458, 115, 10, "PutBitBranch_m740"],
+    ["BBC4", 268435458, 147, 10, "PutBitBranch_m740"],
+    ["BBC5", 268435458, 179, 10, "PutBitBranch_m740"],
+    ["BBC6", 268435458, 211, 10, "PutBitBranch_m740"],
+    ["BBC7", 268435458, 243, 10, "PutBitBranch_m740"],
+    ["BBS0", 268435458, 3, 10, "PutBitBranch_m740"],
+    ["BBS1", 268435458, 35, 10, "PutBitBranch_m740"],
+    ["BBS2", 268435458, 67, 10, "PutBitBranch_m740"],
+    ["BBS3", 268435458, 99, 10, "PutBitBranch_m740"],
+    ["BBS4", 268435458, 131, 10, "PutBitBranch_m740"],
+    ["BBS5", 268435458, 163, 10, "PutBitBranch_m740"],
+    ["BBS6", 268435458, 195, 10, "PutBitBranch_m740"],
+    ["BBS7", 268435458, 227, 10, "PutBitBranch_m740"],
+    ["BCC", 131072, 144, 0, "PutPCRel8"],
+    ["BCS", 131072, 176, 0, "PutPCRel8"],
+    ["BEQ", 131072, 240, 0, "PutPCRel8"],
+    ["BIT", 12, 0, 2, "PutAll"],
+    ["BMI", 131072, 48, 0, "PutPCRel8"],
+    ["BNE", 131072, 208, 0, "PutPCRel8"],
+    ["BPL", 131072, 16, 0, "PutPCRel8"],
+    ["BRA", 131072, 128, 0, "PutPCRel8"],
+    ["BRK", 1, 0, 0, "PutAll"],
+    ["BVC", 131072, 80, 0, "PutPCRel8"],
+    ["BVS", 131072, 112, 0, "PutPCRel8"],
+    ["CLB0", 6, 27, 10, "PutAll"],
+    ["CLB1", 6, 59, 10, "PutAll"],
+    ["CLB2", 6, 91, 10, "PutAll"],
+    ["CLB3", 6, 123, 10, "PutAll"],
+    ["CLB4", 6, 155, 10, "PutAll"],
+    ["CLB5", 6, 187, 10, "PutAll"],
+    ["CLB6", 6, 219, 10, "PutAll"],
+    ["CLB7", 6, 251, 10, "PutAll"],
+    ["CLC", 1, 24, 0, "PutAll"],
+    ["CLD", 1, 216, 0, "PutAll"],
+    ["CLI", 1, 88, 0, "PutAll"],
+    ["CLT", 1, 18, 0, "PutAll"],
+    ["CLV", 1, 184, 0, "PutAll"],
+    ["CMP", 8430188, 192, 0, "PutAll"],
+    ["COM", 4, 68, 1, "PutAll"],
+    ["CPX", 8388620, 224, 1, "PutAll"],
+    ["CPY", 8388620, 192, 1, "PutAll"],
+    ["DEC", 111, 0, 3, "PutAll"],
+    ["DEX", 1, 202, 0, "PutAll"],
+    ["DEY", 1, 136, 0, "PutAll"],
+    ["EOR", 8430188, 64, 0, "PutAll"],
+    ["FST", 1, 226, 0, "PutAll"],
+    ["INC", 111, 0, 4, "PutAll"],
+    ["INX", 1, 232, 0, "PutAll"],
+    ["INY", 1, 200, 0, "PutAll"],
+    ["JMP", 3080, 0, 12, "PutAll"],
+    ["JSR", 536871944, 0, 0, "PutJSR_m740"],
+    ["LDA", 8430188, 160, 0, "PutAll"],
+    ["LDM", 268435456, 60, 0, "PutLDM_m740"],
+    ["LDX", 8389388, 162, 1, "PutAll"],
+    ["LDY", 8388716, 160, 1, "PutAll"],
+    ["LSR", 111, 66, 1, "PutAll"],
+    ["NOP", 1, 234, 0, "PutAll"],
+    ["ORA", 8430188, 0, 0, "PutAll"],
+    ["PHA", 1, 72, 0, "PutAll"],
+    ["PHP", 1, 8, 0, "PutAll"],
+    ["PLA", 1, 104, 0, "PutAll"],
+    ["PLP", 1, 40, 0, "PutAll"],
+    ["RMB0", 6, 27, 10, "PutAll"],
+    ["RMB1", 6, 59, 10, "PutAll"],
+    ["RMB2", 6, 91, 10, "PutAll"],
+    ["RMB3", 6, 123, 10, "PutAll"],
+    ["RMB4", 6, 155, 10, "PutAll"],
+    ["RMB5", 6, 187, 10, "PutAll"],
+    ["RMB6", 6, 219, 10, "PutAll"],
+    ["RMB7", 6, 251, 10, "PutAll"],
+    ["ROL", 111, 34, 1, "PutAll"],
+    ["ROR", 111, 98, 1, "PutAll"],
+    ["RRF", 4, 130, 6, "PutAll"],
+    ["RTI", 1, 64, 0, "PutAll"],
+    ["RTS", 1, 96, 0, "PutAll"],
+    ["SBC", 8430188, 224, 0, "PutAll"],
+    ["SEB0", 6, 11, 10, "PutAll"],
+    ["SEB1", 6, 43, 10, "PutAll"],
+    ["SEB2", 6, 75, 10, "PutAll"],
+    ["SEB3", 6, 107, 10, "PutAll"],
+    ["SEB4", 6, 139, 10, "PutAll"],
+    ["SEB5", 6, 171, 10, "PutAll"],
+    ["SEB6", 6, 203, 10, "PutAll"],
+    ["SEB7", 6, 235, 10, "PutAll"],
+    ["SEC", 1, 56, 0, "PutAll"],
+    ["SED", 1, 248, 0, "PutAll"],
+    ["SEI", 1, 120, 0, "PutAll"],
+    ["SET", 1, 50, 0, "PutAll"],
+    ["SLW", 1, 194, 0, "PutAll"],
+    ["STA", 41580, 128, 0, "PutAll"],
+    ["STP", 1, 66, 0, "PutAll"],
+    ["STX", 268, 130, 1, "PutAll"],
+    ["STY", 44, 128, 1, "PutAll"],
+    ["TAX", 1, 170, 0, "PutAll"],
+    ["TAY", 1, 168, 0, "PutAll"],
+    ["TST", 4, 100, 1, "PutAll"],
+    ["TSX", 1, 186, 0, "PutAll"],
+    ["TXA", 1, 138, 0, "PutAll"],
+    ["TXS", 1, 154, 0, "PutAll"],
+    ["TYA", 1, 152, 0, "PutAll"]
   ]
 };
 
@@ -26393,9 +26745,20 @@ var featureByTable = {
   W65C02: "wdc",
   "65CE02": "ce02",
   "4510": "4510",
-  "45GS02": "45gs02"
+  "45GS02": "45gs02",
+  HuC6280: "huc6280",
+  M740: "m740"
 };
 function opcodeFor(row, modeIndex) {
+  if (row[4] === "PutJSR_m740") {
+    if (modeIndex === 10) return 2;
+    if (modeIndex === 29) return 34;
+    return 32;
+  }
+  if (row[4] === "PutBitBranch_m740") {
+    return modeIndex === 28 ? row[2] + 4 : row[2];
+  }
+  if (row[4] === "PutLDM_m740") return row[2];
   const [, , base, eaTable] = row;
   const extension = ca65EaTable[eaTable]?.[modeIndex];
   if (extension === void 0) throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
@@ -26420,21 +26783,53 @@ function opcodeFor(row, modeIndex) {
   }
   return opcode;
 }
-function modeFor(table, modeIndex) {
+function modeFor(table, row, modeIndex) {
+  if (row[4] === "PutBlockTransfer" && modeIndex === 25) {
+    return { mode: "blockTransfer", codec: "three-unsigned16-le" };
+  }
+  if (row[4] === "PutTST") {
+    if (modeIndex === 2) return { mode: "immediateZeroPage", codec: "immediate-unsigned8" };
+    if (modeIndex === 3) return { mode: "immediateAbsolute", codec: "immediate-unsigned16" };
+    if (modeIndex === 5) return { mode: "immediateZeroPageIndexedX", codec: "immediate-unsigned8" };
+    if (modeIndex === 6)
+      return { mode: "immediateAbsoluteIndexedX", codec: "immediate-unsigned16" };
+  }
+  if (row[4] === "PutBitBranch_m740") {
+    if (modeIndex === 1) return { mode: "accumulatorRelative", codec: "accumulator-relative8" };
+    if (modeIndex === 28) return { mode: "zeroPageRelative", codec: "zero-page-relative8" };
+  }
+  if (row[4] === "PutLDM_m740" && modeIndex === 28) {
+    return { mode: "zeroPageImmediate", codec: "zero-page-immediate8" };
+  }
+  if (row[4] === "PutJSR_m740" && modeIndex === 29) {
+    return { mode: "specialPage", codec: "special-page" };
+  }
   if (modeIndex === 10) {
-    return table === "65SC02" || table === "65C02" || table === "W65C02" ? { mode: "zeroPageIndirect" } : { mode: "zeroPageIndirectIndexedZ" };
+    return table === "65CE02" || table === "4510" || table === "45GS02" ? { mode: "zeroPageIndirectIndexedZ" } : { mode: "zeroPageIndirect" };
   }
   return commonModes[modeIndex];
 }
 function createForm(table, row, modeIndex, modeDefinition) {
-  const opcode = opcodeFor(row, modeIndex);
+  let opcode = opcodeFor(row, modeIndex);
   const codec = modeDefinition.codec ?? getOperandCodec(modeDefinition.mode);
   const prefixes = [];
-  if (row[4] === "Put45GS02_Q") {
+  if (row[4] === "PutTAMn") {
+    prefixes.push(83);
+    opcode = row[2];
+  } else if (row[4] === "PutTMAn") {
+    prefixes.push(67);
+    opcode = row[2];
+  } else if (row[4] === "Put45GS02_Q") {
     prefixes.push(66, 66);
     if (modeIndex === 12 || modeIndex === 30) prefixes.push(234);
   } else if (row[4] === "Put45GS02" && modeIndex === 30) {
     prefixes.push(234);
+  }
+  let relativeBaseOffset;
+  if (row[4] === "PutPCRel4510") {
+    relativeBaseOffset = 2;
+  } else if (row[4] === "PutBitBranch_m740") {
+    relativeBaseOffset = 3;
   }
   return Object.freeze({
     opcode,
@@ -26447,7 +26842,8 @@ function createForm(table, row, modeIndex, modeDefinition) {
     canonical: true,
     documented: true,
     stability: "documented",
-    relativeBaseOffset: row[4] === "PutPCRel4510" ? 2 : void 0
+    relativeBaseOffset,
+    operandConstraint: row[4] === "PutTMA" ? "power-of-two" : void 0
   });
 }
 function decodeTable(table) {
@@ -26481,7 +26877,7 @@ function decodeTable(table) {
     for (let modeIndex = 0; modeIndex < 32; modeIndex++) {
       if ((row[1] & 2 ** modeIndex) === 0) continue;
       if (modeIndex === 0 && (row[1] & 2) !== 0) continue;
-      const modeDefinition = modeFor(table, modeIndex);
+      const modeDefinition = modeFor(table, row, modeIndex);
       if (!modeDefinition) {
         throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
       }
@@ -26500,6 +26896,8 @@ var wdc65c02Forms = decodeTable("W65C02");
 var csg65ce02Forms = decodeTable("65CE02");
 var commodore4510Forms = decodeTable("4510");
 var mega65Gs02Forms = decodeTable("45GS02");
+var hudsonHuC6280Forms = decodeTable("HuC6280");
+var mitsubishiM740Forms = decodeTable("M740");
 var mos6502DtvCpu = Object.freeze({
   id: "65xx.6502dtv",
   displayName: "C64DTV 6502",
@@ -26542,6 +26940,18 @@ var mega65Gs02Cpu = Object.freeze({
   aliases: ["45gs02"],
   features: /* @__PURE__ */ new Set(["cmos", "rockwell", "ce02", "4510", "45gs02"])
 });
+var hudsonHuC6280Cpu = Object.freeze({
+  id: "65xx.huc6280",
+  displayName: "Hudson HuC6280",
+  aliases: ["huc6280", "6280"],
+  features: /* @__PURE__ */ new Set(["cmos", "rockwell", "huc6280"])
+});
+var mitsubishiM740Cpu = Object.freeze({
+  id: "65xx.m740",
+  displayName: "Mitsubishi M740",
+  aliases: ["m740", "740"],
+  features: /* @__PURE__ */ new Set(["m740"])
+});
 var variantCpus = Object.freeze([
   mos6502DtvCpu,
   cmos65sc02Cpu,
@@ -26549,7 +26959,9 @@ var variantCpus = Object.freeze([
   wdc65c02Cpu,
   csg65ce02Cpu,
   commodore4510Cpu,
-  mega65Gs02Cpu
+  mega65Gs02Cpu,
+  hudsonHuC6280Cpu,
+  mitsubishiM740Cpu
 ]);
 var variantFormsByCpuId = Object.freeze({
   [mos6502DtvCpu.id]: mos6502DtvForms,
@@ -26558,7 +26970,9 @@ var variantFormsByCpuId = Object.freeze({
   [wdc65c02Cpu.id]: wdc65c02Forms,
   [csg65ce02Cpu.id]: csg65ce02Forms,
   [commodore4510Cpu.id]: commodore4510Forms,
-  [mega65Gs02Cpu.id]: mega65Gs02Forms
+  [mega65Gs02Cpu.id]: mega65Gs02Forms,
+  [hudsonHuC6280Cpu.id]: hudsonHuC6280Forms,
+  [mitsubishiM740Cpu.id]: mitsubishiM740Forms
 });
 
 // plugins/65xx/src/instructions/opcodes.ts
@@ -26989,24 +27403,28 @@ var Arch65xx = class {
       const branchWidth = form.codec === "relative8" ? 1 : 2;
       branchDelta = this.readBranchDelta(operand, relativeBaseOffset, branchWidth);
     }
-    const compoundOperands = form.codec === "zero-page-relative8" ? splitTopLevelOperands(operand.expanded) : [];
-    if (form.codec === "zero-page-relative8" && compoundOperands.length !== 2) {
-      throw this.context.diagnostics.error(
-        `${form.mnemonic} expects a zero-page address and branch target.`
-      );
-    }
-    const compoundBranchDelta = form.codec === "zero-page-relative8" ? this.readBranchExpression(
-      compoundOperands[1] ?? "",
-      form.relativeBaseOffset ?? modeSize(form),
-      1
-    ) : 0;
+    const compoundOperands = form.codec === "zero-page-relative8" || form.codec === "accumulator-relative8" || form.codec === "zero-page-immediate8" || form.codec === "three-unsigned16-le" || form.codec === "immediate-unsigned8" || form.codec === "immediate-unsigned16" ? splitTopLevelOperands(operand.expanded) : [];
+    const compoundValues = this.readCompoundValues(form, compoundOperands);
     const operandWidth = unsignedOperandWidth(form.codec);
     const operandKind = operandWidth === 1 ? "operand" : "address";
     let operandValue = 0;
     if (operandWidth !== 0) {
       operandValue = this.readValue(operand, operandWidth, `${form.mnemonic} ${operandKind}`);
+      if (form.operandConstraint === "power-of-two" && (operandValue === 0 || (operandValue & operandValue - 1) !== 0)) {
+        throw this.context.diagnostics.error(`${form.mnemonic} operand must be a power of two.`);
+      }
     }
-    const zpAddress = form.codec === "zero-page-relative8" ? this.readExpressionValue(compoundOperands[0] ?? "", 1, `${form.mnemonic} address`, false) : 0;
+    const specialPageValue = form.codec === "special-page" ? this.readExpressionValue(
+      operand.baseExpression ?? operand.expanded,
+      2,
+      `${form.mnemonic} special-page address`,
+      false
+    ) : 0;
+    if (form.codec === "special-page" && (specialPageValue & 65280) !== 65280) {
+      throw this.context.diagnostics.error(
+        `${form.mnemonic} special-page address must be in $FF00-$FFFF.`
+      );
+    }
     this.context.emission.writeBytes(form.encoding);
     switch (form.codec) {
       case "none":
@@ -27027,12 +27445,117 @@ var Arch65xx = class {
         this.context.emission.writeValue(branchDelta & 65535, 2, "little");
         return true;
       case "zero-page-relative8": {
-        this.context.emission.writeByte(zpAddress);
-        this.context.emission.writeByte(compoundBranchDelta & 255);
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte((compoundValues[1] ?? 0) & 255);
         return true;
       }
+      case "accumulator-relative8":
+        this.context.emission.writeByte((compoundValues[0] ?? 0) & 255);
+        return true;
+      case "zero-page-immediate8":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte(compoundValues[1] ?? 0);
+        return true;
+      case "special-page":
+        this.context.emission.writeByte(specialPageValue & 255);
+        return true;
+      case "three-unsigned16-le":
+        for (const value of compoundValues) this.context.emission.writeValue(value, 2, "little");
+        return true;
+      case "immediate-unsigned8":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte(compoundValues[1] ?? 0);
+        return true;
+      case "immediate-unsigned16":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeValue(compoundValues[1] ?? 0, 2, "little");
+        return true;
     }
     return false;
+  }
+  readCompoundValues(form, operands) {
+    const expect = (count, description) => {
+      if (operands.length !== count) {
+        throw this.context.diagnostics.error(`${form.mnemonic} expects ${description}.`);
+      }
+    };
+    switch (form.codec) {
+      case "zero-page-relative8":
+        expect(2, "a zero-page address and branch target");
+        return [
+          this.readExpressionValue(operands[0] ?? "", 1, `${form.mnemonic} address`, false),
+          this.readBranchExpression(
+            operands[1] ?? "",
+            form.relativeBaseOffset ?? modeSize(form),
+            1
+          )
+        ];
+      case "accumulator-relative8":
+        expect(2, "A and a branch target");
+        if (operands[0]?.trim().toUpperCase() !== "A") {
+          throw this.context.diagnostics.error(`${form.mnemonic} accumulator branch must use A.`);
+        }
+        return [
+          this.readBranchExpression(
+            operands[1] ?? "",
+            form.relativeBaseOffset ?? modeSize(form),
+            1
+          )
+        ];
+      case "zero-page-immediate8":
+        expect(2, "a zero-page address and immediate value");
+        if (!operands[1]?.trim().startsWith("#")) {
+          throw this.context.diagnostics.error(
+            `${form.mnemonic} second operand must be immediate.`
+          );
+        }
+        return [
+          this.readExpressionValue(operands[0] ?? "", 1, `${form.mnemonic} address`, false),
+          this.readExpressionValue(
+            operands[1]?.trim().slice(1) ?? "",
+            1,
+            `${form.mnemonic} immediate`,
+            true
+          )
+        ];
+      case "three-unsigned16-le":
+        expect(3, "source, destination, and length operands");
+        return operands.map(
+          (expression, index2) => this.readExpressionValue(
+            expression,
+            2,
+            `${form.mnemonic} ${["source", "destination", "length"][index2]}`,
+            false
+          )
+        );
+      case "immediate-unsigned8":
+      case "immediate-unsigned16": {
+        const indexed = form.mode.endsWith("IndexedX");
+        expect(indexed ? 3 : 2, "an immediate value and address");
+        if (!operands[0]?.trim().startsWith("#")) {
+          throw this.context.diagnostics.error(`${form.mnemonic} first operand must be immediate.`);
+        }
+        if (indexed && operands[2]?.trim().toUpperCase() !== "X") {
+          throw this.context.diagnostics.error(`${form.mnemonic} indexed test operand must use X.`);
+        }
+        return [
+          this.readExpressionValue(
+            operands[0]?.trim().slice(1) ?? "",
+            1,
+            `${form.mnemonic} immediate`,
+            true
+          ),
+          this.readExpressionValue(
+            operands[1] ?? "",
+            form.codec === "immediate-unsigned8" ? 1 : 2,
+            `${form.mnemonic} address`,
+            false
+          )
+        ];
+      }
+      default:
+        return [];
+    }
   }
   resolveForm(rawMnemonic, operand) {
     const parsed = parseMnemonic(rawMnemonic);
@@ -27070,6 +27593,9 @@ var Arch65xx = class {
     let mode = operand.mode;
     if (operand.raw.trim().toUpperCase() === "A") mode = "accumulator";
     if (operand.raw.trim().toUpperCase() === "Q") mode = "quadAccumulator";
+    if (this.cpu.id === "65xx.m740" && mnemonic === "JSR" && mode === "absolute" && /^(?:\$ff[\da-f]{2}|0xff[\da-f]{2})$/i.test(operand.expanded.trim())) {
+      mode = "specialPage";
+    }
     if (hasOperand && forms.some((entry) => entry.mode === "relative16")) mode = "relative16";
     else if (hasOperand && forms.some((entry) => entry.mode === "relative")) mode = "relative";
     if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
@@ -27162,6 +27688,7 @@ function classify65xxOperand(resolver, operand) {
   else if (sizePrefix.force === 3) length = Math.max(3, inferredLength);
   const normalized = expanded.trim();
   const normalizedUpper = normalized.toUpperCase();
+  const compound = splitTopLevelOperands2(normalized);
   let mode = "unknown";
   let baseExpression = normalized;
   let registerName;
@@ -27173,6 +27700,12 @@ function classify65xxOperand(resolver, operand) {
   } else if (normalizedUpper === "Q") {
     mode = "quadAccumulator";
     registerName = "q";
+  } else if (compound.length >= 2 && compound[0]?.startsWith("#")) {
+    const indexedX = compound.length === 3 && compound[2]?.toUpperCase() === "X";
+    const address = compound[1] ?? "";
+    const addressLength = resolver.expandOperand(address).length;
+    mode = `${addressLength <= 1 ? "immediateZeroPage" : "immediateAbsolute"}${indexedX ? "IndexedX" : ""}`;
+    baseExpression = normalized;
   } else if (normalized.startsWith("#")) {
     mode = "immediate";
     baseExpression = normalized.slice(1).trim();
@@ -27215,8 +27748,16 @@ function classify65xxOperand(resolver, operand) {
       else mode = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register.toUpperCase()}`;
       baseExpression = indexed[1].trim();
     } else if (topLevelComma >= 0) {
-      mode = "zeroPageRelative";
-      baseExpression = normalized.slice(0, topLevelComma).trim();
+      if (compound.length === 3) {
+        mode = "blockTransfer";
+      } else if (compound[0]?.toUpperCase() === "A") {
+        mode = "accumulatorRelative";
+      } else if (compound[1]?.startsWith("#")) {
+        mode = "zeroPageImmediate";
+      } else {
+        mode = "zeroPageRelative";
+      }
+      baseExpression = normalized;
     } else {
       mode = length <= 1 ? "zeroPage" : "absolute";
     }
@@ -27235,6 +27776,22 @@ function classify65xxOperand(resolver, operand) {
     // 24-bit values are not 6502-legal; encoder can still emit long-x on 4510.
     metadata: length > 2 ? { addressOutOfRange: true } : void 0
   };
+}
+function splitTopLevelOperands2(value) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let index2 = 0; index2 < value.length; index2++) {
+    const character = value[index2];
+    if (character === "(" || character === "[") depth++;
+    else if (character === ")" || character === "]") depth--;
+    else if (character === "," && depth === 0) {
+      parts.push(value.slice(start, index2).trim());
+      start = index2 + 1;
+    }
+  }
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
 }
 function findTopLevelComma(value) {
   let depth = 0;
@@ -27257,6 +27814,167 @@ function parseCa65AddressSizePrefix(operand) {
   if (key === "a") return { rest, force: 2 };
   return { rest, force: 3 };
 }
+
+// plugins/65xx/src/ca65-profile.ts
+var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
+var ca65SessionStateKey = {
+  id: CA65_65XX_SESSION_STATE_ID
+};
+function createCa65SessionState() {
+  return {
+    defaultArchitecture: "65xx.6502",
+    currentArchitecture: "65xx.6502",
+    cpuStack: [],
+    scopeStack: [],
+    segmentStack: [],
+    currentFlatSegment: ""
+  };
+}
+function cloneCa65SessionState(state) {
+  return {
+    ...state,
+    cpuStack: [...state.cpuStack],
+    scopeStack: [...state.scopeStack],
+    segmentStack: [...state.segmentStack]
+  };
+}
+function resetCa65StageState(state) {
+  state.currentArchitecture = state.defaultArchitecture;
+  state.cpuStack = [];
+  state.scopeStack = [];
+  state.segmentStack = [];
+  state.currentFlatSegment = "";
+}
+var ca65CpuNames = Object.freeze({
+  "6502": "65xx.6502",
+  "6502x": "65xx.6502x",
+  "6502dtv": "65xx.6502dtv",
+  "65sc02": "65xx.65sc02",
+  "65c02": "65xx.65c02",
+  w65c02: "65xx.w65c02",
+  "65ce02": "65xx.65ce02",
+  "4510": "65xx.4510",
+  "45gs02": "65xx.45gs02",
+  huc6280: "65xx.huc6280",
+  m740: "65xx.m740"
+});
+function resolve65xxCpuName(name) {
+  return ca65CpuNames[name.trim().toLowerCase()];
+}
+var ca65CpuShorthands = Object.freeze({
+  p02: "6502",
+  p02x: "6502x",
+  pdtv: "6502dtv",
+  psc02: "65sc02",
+  pc02: "65c02",
+  pwc02: "w65c02",
+  pce02: "65ce02",
+  p4510: "4510",
+  p45gs02: "45gs02",
+  p6280: "huc6280",
+  pm740: "m740"
+});
+var cpuPredicateSymbols = Object.freeze({
+  ifp02: "__CA65_CPU_6502__",
+  ifp02x: "__CA65_CPU_6502X__",
+  ifpdtv: "__CA65_CPU_6502DTV__",
+  ifpsc02: "__CA65_CPU_65SC02__",
+  ifpc02: "__CA65_CPU_65C02__",
+  ifpwc02: "__CA65_CPU_W65C02__",
+  ifpce02: "__CA65_CPU_65CE02__",
+  ifp4510: "__CA65_CPU_4510__",
+  ifp45gs02: "__CA65_CPU_45GS02__",
+  ifp6280: "__CA65_CPU_HUC6280__",
+  ifpm740: "__CA65_CPU_M740__"
+});
+var ca65CpuPredicateByArchitecture = Object.freeze({
+  "65xx.6502": "__CA65_CPU_6502__",
+  "65xx.6502x": "__CA65_CPU_6502X__",
+  "65xx.6502dtv": "__CA65_CPU_6502DTV__",
+  "65xx.65sc02": "__CA65_CPU_65SC02__",
+  "65xx.65c02": "__CA65_CPU_65C02__",
+  "65xx.w65c02": "__CA65_CPU_W65C02__",
+  "65xx.65ce02": "__CA65_CPU_65CE02__",
+  "65xx.4510": "__CA65_CPU_4510__",
+  "65xx.45gs02": "__CA65_CPU_45GS02__",
+  "65xx.huc6280": "__CA65_CPU_HUC6280__",
+  "65xx.m740": "__CA65_CPU_M740__"
+});
+function splitArguments(value) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let index2 = 0; index2 < value.length; index2++) {
+    const character = value[index2];
+    if (character === "(") depth++;
+    else if (character === ")") depth--;
+    else if (character === "," && depth === 0) {
+      parts.push(value.slice(start, index2).trim());
+      start = index2 + 1;
+    }
+  }
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
+}
+function rewriteScopedNames(value) {
+  let result = "";
+  let quote = "";
+  for (let index2 = 0; index2 < value.length; index2++) {
+    const character = value[index2];
+    if ((character === '"' || character === "'") && value[index2 - 1] !== "\\") {
+      quote = quote === character ? "" : quote || character;
+    }
+    if (!quote && character === ":" && value[index2 + 1] === ":") {
+      result += "_";
+      index2++;
+    } else {
+      result += character;
+    }
+  }
+  return result;
+}
+function rewriteCa65Command(command, context) {
+  let rewritten = rewriteScopedNames(command);
+  rewritten = rewritten.replace(/\.(defined|lobyte|hibyte|bankbyte|loword|hiword)\s*\(/gi, "$1(");
+  rewritten = rewritten.replace(
+    /(^|[^\w@])@([0-7]+)\b/g,
+    (_match, prefix, digits) => `${prefix}${Number.parseInt(digits, 8)}`
+  );
+  rewritten = rewritten.replace(/<>/g, "!=");
+  const match = rewritten.match(/^(\s*)\.([\dA-Za-z]+)\b(.*)$/);
+  if (!match) return rewritten;
+  const [, indent, rawKeyword, rawRest] = match;
+  const keyword = rawKeyword.toLowerCase();
+  const rest = rawRest.trim();
+  const predicate = cpuPredicateSymbols[keyword];
+  if (predicate) return `${indent}if ${predicate}`;
+  if (["if", "elseif", "else", "endif"].includes(keyword)) {
+    return `${indent}${keyword}${rest ? ` ${rest}` : ""}`;
+  }
+  if (keyword === "ifdef") return `${indent}if defined(${rest})`;
+  if (keyword === "ifndef") return `${indent}if defined(${rest}) == 0`;
+  if (keyword === "macro") {
+    const header = rest.match(/^([A-Z_a-z]\w*)\s*(.*)$/);
+    if (!header) return rewritten;
+    const params = splitArguments(header[2] ?? "").join(",");
+    return `${indent}macro ${header[1]}(${params})`;
+  }
+  if (keyword === "endmacro") return `${indent}endmacro`;
+  if (keyword === "repeat") {
+    const [count = "0", variable = `__ca65_repeat_${context.sourceLine}`] = splitArguments(rest);
+    return `${indent}for ${variable} = 0..(${count})`;
+  }
+  if (keyword === "endrepeat") return `${indent}endfor`;
+  if (keyword === "undefine") return `${indent}undef ${rest}`;
+  return rewritten;
+}
+var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
+  ...CA65_SYNTAX_PROFILE,
+  id: "ca65-65xx",
+  rewriteCommand: rewriteCa65Command,
+  bareMacroInvocations: true,
+  macroParameterPrefix: "\\"
+});
 
 // plugins/65xx/src/directives/ca65.ts
 function unquote(token) {
@@ -27422,6 +28140,127 @@ function handleDbyt(session, words) {
       session.write1(value & 255);
     },
     2
+  );
+}
+function handleDword(session, words, width = 4) {
+  session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", [...words.slice(1)]);
+}
+function handleSetcpu(session, state, words) {
+  const name = unquote(words.slice(1).join(" ").trim());
+  if (!name) throw new Error(".setcpu requires a CPU name argument.");
+  const architecture = resolve65xxCpuName(name);
+  if (!architecture) {
+    throw new Error(
+      `.setcpu "${name}" is not a supported 65xx CPU. Supported names: ${Object.keys(ca65CpuNames).join(", ")}.`
+    );
+  }
+  session.selectArchitecture(architecture, name.toLowerCase());
+  state.currentArchitecture = architecture;
+}
+function handlePushcpu(session, state) {
+  state.cpuStack.push(session.resolveActiveArchitecture().name);
+}
+function handlePopcpu(session, state) {
+  const architecture = state.cpuStack.pop();
+  if (!architecture) throw new Error(".popcpu: CPU stack is empty.");
+  session.selectArchitecture(architecture, architecture);
+  state.currentArchitecture = architecture;
+}
+function handleCpuShorthand(session, state, words) {
+  const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
+  const cpu = ca65CpuShorthands[keyword];
+  if (!cpu) throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
+  handleSetcpu(session, state, ["setcpu", cpu]);
+}
+function handleRes(session, words) {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 2) {
+    throw new Error(".res expects count and an optional fill value.");
+  }
+  const count = session.operandResolver.getnum(params[0] ?? "");
+  const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  if (!Number.isInteger(count) || count < 0) throw new Error(".res count must be non-negative.");
+  if (session.isDefinitionCollectionStage) {
+    session.step(count);
+    return;
+  }
+  for (let index2 = 0; index2 < count; index2++) session.write1(fill & 255);
+}
+function handleAlign(session, words) {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 2) {
+    throw new Error(".align expects a boundary and optional fill value.");
+  }
+  const boundary = session.operandResolver.getnum(params[0] ?? "");
+  const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  if (!Number.isInteger(boundary) || boundary <= 0) {
+    throw new Error(".align boundary must be a positive integer.");
+  }
+  const count = (boundary - session.currentTargetAddress % boundary) % boundary;
+  if (session.isDefinitionCollectionStage) {
+    session.step(count);
+    return;
+  }
+  for (let index2 = 0; index2 < count; index2++) session.write1(fill & 255);
+}
+function handleCa65Incbin(session, words) {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 3) {
+    throw new Error(".incbin expects a filename, optional offset, and optional size.");
+  }
+  const filename = unquote(params[0] ?? "");
+  const data = session.includeSource.readFile(filename);
+  if (!(data instanceof Uint8Array)) throw new Error(`Failed to read binary include: ${filename}`);
+  const offset = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  const size = params[2] ? session.operandResolver.getnum(params[2]) : data.length - offset;
+  if (!Number.isInteger(offset) || !Number.isInteger(size) || offset < 0 || size < 0 || offset + size > data.length) {
+    throw new Error(
+      `.incbin range ${offset}+${size} is outside '${filename}' (${data.length} bytes).`
+    );
+  }
+  if (session.isDefinitionCollectionStage) {
+    session.step(size);
+    return;
+  }
+  for (const byte of data.subarray(offset, offset + size)) session.write1(byte);
+}
+function handleCa65Assert(session, words) {
+  const params = parameterList(words);
+  if (params.length === 0) throw new Error(".assert requires an expression.");
+  if (session.operandResolver.getnum(params[0] ?? "") !== 0) return;
+  const message = params.find((part) => /^["']/.test(part));
+  throw new Error(message ? unquote(message) : ".assert expression evaluated to false.");
+}
+function handleScope(session, state, words, procedure) {
+  const name = words[1]?.trim() || `__anonymous_scope_${session.currentLine}`;
+  if (procedure) {
+    session.symbolScope.setLabel(session.symbolScope.qualifySymbolName(name));
+  }
+  state.scopeStack.push(session.currentNamespace);
+  session.currentNamespace = session.currentNamespace ? `${session.currentNamespace}_${name}` : name;
+}
+function handleEndScope(session, state) {
+  const previous = state.scopeStack.pop();
+  if (previous === void 0) throw new Error("ca65 scope stack is empty.");
+  session.currentNamespace = previous;
+}
+function handleFlatSegment(state, words) {
+  const name = unquote(words[1] ?? "").trim();
+  if (!name) throw new Error(".segment requires a segment name.");
+  state.currentFlatSegment = name;
+}
+function handlePushseg(state) {
+  state.segmentStack.push(state.currentFlatSegment);
+}
+function handlePopseg(state) {
+  const segment = state.segmentStack.pop();
+  if (segment === void 0) throw new Error(".popseg: segment stack is empty.");
+  state.currentFlatSegment = segment;
+}
+function handleUnsupportedCa65(words) {
+  const keyword = words[0] ?? "<unknown>";
+  throw new Error(
+    `.${keyword.replace(/^\./, "")} requires relocatable ca65 object/linker semantics, which the flat-image compatibility profile does not implement.`
   );
 }
 
@@ -27756,7 +28595,10 @@ var RAW_65XX_TARGET_ID = "65xx.raw";
 var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
 var RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
+var CA65_RAW_65XX_TARGET_ID = "65xx.ca65-raw";
 var CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
+var CA65_65XX_EXPRESSION_SET_ID = "65xx.ca65-expressions";
+var CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
 function createRaw65xxTargetOptions(configured) {
   if (configured === void 0) return { origin: 0 };
   if (typeof configured !== "object" || configured === null || Array.isArray(configured)) {
@@ -27774,7 +28616,13 @@ function createRaw65xxTargetOptions(configured) {
 }
 var descriptor2 = (keyword, summary, syntax2, group) => ({ keyword, summary, syntax: syntax2, group });
 var ca65Tooling = [
+  descriptor2("setcpu", "Select a 65xx CPU.", '.setcpu "CPU"', "architecture"),
+  descriptor2("cpu", "Alias for .setcpu.", '.cpu "CPU"', "architecture"),
+  descriptor2("pushcpu", "Push the current CPU.", ".pushcpu", "architecture"),
+  descriptor2("popcpu", "Restore the pushed CPU.", ".popcpu", "architecture"),
   descriptor2("segment", "Switch to an ld65 segment.", '.segment "NAME"', "layout"),
+  descriptor2("pushseg", "Push the current flat segment.", ".pushseg", "layout"),
+  descriptor2("popseg", "Restore the pushed flat segment.", ".popseg", "layout"),
   descriptor2("export", "Export a symbol to other files.", ".export ident[, ident...]", "label"),
   descriptor2(
     "import",
@@ -27798,7 +28646,34 @@ var ca65Tooling = [
     ".hibytes expr[, expr...]",
     "data"
   ),
-  descriptor2("dbyt", "Emit 16-bit big-endian words.", ".dbyt value[, value...]", "data")
+  descriptor2("dbyt", "Emit 16-bit big-endian words.", ".dbyt value[, value...]", "data"),
+  descriptor2("dword", "Emit 32-bit little-endian values.", ".dword value[, value...]", "data"),
+  descriptor2(
+    "faraddr",
+    "Emit 24-bit little-endian addresses.",
+    ".faraddr value[, value...]",
+    "data"
+  ),
+  descriptor2("res", "Reserve bytes with an optional fill value.", ".res count[, fill]", "data"),
+  descriptor2("align", "Align the location counter.", ".align boundary[, fill]", "layout"),
+  descriptor2("incbin", "Include a binary range.", '.incbin "file"[, offset[, size]]', "include"),
+  descriptor2(
+    "assert",
+    "Require an expression to be true.",
+    '.assert expr[, error[, "message"]]',
+    "diagnostic"
+  ),
+  descriptor2("scope", "Enter a lexical scope.", ".scope [name]", "label"),
+  descriptor2("endscope", "Leave a lexical scope.", ".endscope", "label"),
+  descriptor2("proc", "Define and enter a procedure scope.", ".proc name", "label"),
+  descriptor2("endproc", "Leave a procedure scope.", ".endproc", "label")
+];
+var ca65ExpressionFunctions = [
+  ["lobyte", "Low byte of a value.", (value) => value & 255],
+  ["hibyte", "High byte of a value.", (value) => value >>> 8 & 255],
+  ["bankbyte", "Bank byte of a value.", (value) => value >>> 16 & 255],
+  ["loword", "Low word of a value.", (value) => value & 65535],
+  ["hiword", "High word of a value.", (value) => value >>> 16 & 65535]
 ];
 var toolingFor = (keywords) => {
   const wanted = new Set(keywords);
@@ -27905,6 +28780,68 @@ function register65xxContributions(context) {
     createOptions: createRaw65xxTargetOptions
   });
   context.registerSessionState({
+    id: CA65_65XX_SESSION_STATE_ID,
+    create: createCa65SessionState,
+    clone: cloneCa65SessionState,
+    resetForStage: resetCa65StageState
+  });
+  context.registerExpressionSet({
+    id: CA65_65XX_EXPRESSION_SET_ID,
+    functions: ca65ExpressionFunctions.map(([name, summary, transform]) => ({
+      name,
+      signature: { parameters: ["value"], minimumArguments: 1, maximumArguments: 1 },
+      summary,
+      evaluate: (_expressionContext, args) => {
+        const value = args[0];
+        if (typeof value !== "number") throw new Error(`${name}() expects a numeric argument.`);
+        return transform(value);
+      }
+    }))
+  });
+  context.registerLifecycle({
+    id: CA65_65XX_LIFECYCLE_ID,
+    create: () => {
+      const updatePredicates = (session, architecture) => {
+        for (const [cpu, symbol] of Object.entries(ca65CpuPredicateByArchitecture)) {
+          session.globalSymbols.add(symbol);
+          session.labelTable.set(symbol, { value: cpu === architecture ? 1 : 0, isStatic: true });
+        }
+      };
+      return {
+        onSessionCreated: ({ session, state }) => {
+          const profile = state.get(ca65SessionStateKey);
+          profile.defaultArchitecture = session.resolveActiveArchitecture().name;
+          profile.currentArchitecture = profile.defaultArchitecture;
+          updatePredicates(session, profile.defaultArchitecture);
+        },
+        onStageStart: ({ session, state }) => {
+          const profile = state.get(ca65SessionStateKey);
+          session.selectArchitecture(profile.defaultArchitecture, profile.defaultArchitecture);
+        },
+        onArchitectureSelected: ({ session, state, architecture }) => {
+          const profile = state.get(ca65SessionStateKey);
+          profile.currentArchitecture = architecture;
+          updatePredicates(session, architecture);
+        }
+      };
+    }
+  });
+  context.registerTarget({
+    id: CA65_RAW_65XX_TARGET_ID,
+    aliases: ["ca65-raw"],
+    displayName: "65xx ca65-compatible flat 16-bit raw binary",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+    addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
+    outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
+    expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
+    lifecycle: [RAW_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
+    defaultOutputExtension: ".bin",
+    createOptions: createRaw65xxTargetOptions
+  });
+  context.registerSessionState({
     id: NES_65XX_SESSION_STATE_ID,
     create: createInitialNesState,
     clone: cloneNes65xxSessionState,
@@ -27928,7 +28865,33 @@ function register65xxContributions(context) {
       directive(
         "65xx.directive.segment",
         ["segment"],
-        ({ session, state }) => (_ctx, words) => handleSegment(session, state.get(nes65xxSessionStateKey), words)
+        ({ targetId, session, state }) => (_ctx, words) => {
+          if (targetId === NES_65XX_TARGET_ID) {
+            handleSegment(session, state.get(nes65xxSessionStateKey), words);
+          } else {
+            handleFlatSegment(state.get(ca65SessionStateKey), words);
+          }
+        }
+      ),
+      directive(
+        "65xx.directive.setcpu",
+        ["setcpu", "cpu"],
+        ({ session, state }) => (_ctx, words) => handleSetcpu(session, state.get(ca65SessionStateKey), words)
+      ),
+      directive(
+        "65xx.directive.pushcpu",
+        ["pushcpu"],
+        ({ session, state }) => () => handlePushcpu(session, state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.popcpu",
+        ["popcpu"],
+        ({ session, state }) => () => handlePopcpu(session, state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.cpu-shorthand",
+        Object.keys(ca65CpuShorthands),
+        ({ session, state }) => (_ctx, words) => handleCpuShorthand(session, state.get(ca65SessionStateKey), words)
       ),
       directive(
         "65xx.directive.export",
@@ -27964,7 +28927,83 @@ function register65xxContributions(context) {
         "65xx.directive.dbyt",
         ["dbyt"],
         ({ session }) => (_ctx, words) => handleDbyt(session, words)
-      )
+      ),
+      directive(
+        "65xx.directive.dword",
+        ["dword"],
+        ({ session }) => (_ctx, words) => handleDword(session, words)
+      ),
+      directive(
+        "65xx.directive.faraddr",
+        ["faraddr"],
+        ({ session }) => (_ctx, words) => handleDword(session, words, 3)
+      ),
+      directive(
+        "65xx.directive.res",
+        ["res"],
+        ({ session }) => (_ctx, words) => handleRes(session, words)
+      ),
+      directive(
+        "65xx.directive.align",
+        ["align"],
+        ({ session }) => (_ctx, words) => handleAlign(session, words)
+      ),
+      directive(
+        "65xx.directive.incbin",
+        ["incbin"],
+        ({ session }) => (_ctx, words) => handleCa65Incbin(session, words)
+      ),
+      directive(
+        "65xx.directive.assert",
+        ["assert"],
+        ({ session }) => (_ctx, words) => handleCa65Assert(session, words)
+      ),
+      directive(
+        "65xx.directive.scope",
+        ["scope", "proc"],
+        ({ session, state }) => (_ctx, words) => handleScope(
+          session,
+          state.get(ca65SessionStateKey),
+          words,
+          (words[0] ?? "").replace(/^\./, "").toLowerCase() === "proc"
+        )
+      ),
+      directive(
+        "65xx.directive.endscope",
+        ["endscope", "endproc"],
+        ({ session, state }) => () => handleEndScope(session, state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.pushseg",
+        ["pushseg"],
+        ({ state }) => () => handlePushseg(state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.popseg",
+        ["popseg"],
+        ({ state }) => () => handlePopseg(state.get(ca65SessionStateKey))
+      ),
+      directive(
+        "65xx.directive.unsupported-object",
+        [
+          "autoimport",
+          "constructor",
+          "debuginfo",
+          "destructor",
+          "exportzp",
+          "forceimport",
+          "globalzp",
+          "importzp",
+          "interruptor",
+          "reloc"
+        ],
+        () => (_ctx, words) => handleUnsupportedCa65(words)
+      ),
+      directive("65xx.directive.unsupported-macro", ["exitmacro", "local"], () => (_ctx, words) => {
+        throw new Error(
+          `.${(words[0] ?? "").replace(/^\./, "")} is not yet supported by the ca65 macro compatibility slice.`
+        );
+      })
     ],
     tooling: ca65Tooling
   });
@@ -27977,9 +29016,9 @@ function register65xxContributions(context) {
     addressSpace: NES_65XX_ADDRESS_SPACE_ID,
     outputFormat: NES_65XX_OUTPUT_FORMAT_ID,
     directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
-    expressionSets: [],
-    lifecycle: [NES_65XX_LIFECYCLE_ID],
-    syntaxProfile: CA65_SYNTAX_PROFILE,
+    expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
+    lifecycle: [NES_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
     defaultOutputExtension: ".nes",
     createOptions: createNes65xxTargetOptions
   });
@@ -27990,7 +29029,7 @@ var plugin = definePlugin({
     name: "Uttori ASM 65xx",
     version: "1.0.0",
     apiVersion: PLUGIN_API_VERSION,
-    description: "65xx NMOS, CMOS, Commodore, and MEGA65 architectures with raw and NES iNES targets."
+    description: "65xx NMOS, CMOS, Commodore, MEGA65, Hudson, and Mitsubishi architectures with raw and NES iNES targets."
   },
   validateOptions: createRaw65xxTargetOptions,
   activate: register65xxContributions
@@ -33727,7 +34766,7 @@ function resolveSnesCpuName(name) {
       return void 0;
   }
 }
-function handleSetcpu(session, words) {
+function handleSetcpu2(session, words) {
   if (!words[1]) {
     throw new Error(".setcpu requires a CPU name argument.");
   }
@@ -33740,11 +34779,11 @@ function handleSetcpu(session, words) {
   }
   session.selectArchitecture(archId, raw.toLowerCase());
 }
-function handlePushcpu(session, state) {
+function handlePushcpu2(session, state) {
   const { name } = session.resolveActiveArchitecture();
   state.cpuStack.push(name);
 }
-function handlePopcpu(session, state) {
+function handlePopcpu2(session, state) {
   if (state.cpuStack.length === 0) {
     throw new Error(".popcpu: CPU stack is empty.");
   }
@@ -35110,17 +36149,17 @@ var plugin2 = definePlugin({
         directive2(
           "snes.directive.ca65.setcpu",
           [".setcpu"],
-          ({ session }) => (_ctx, words) => handleSetcpu(session, words)
+          ({ session }) => (_ctx, words) => handleSetcpu2(session, words)
         ),
         directive2(
           "snes.directive.ca65.pushcpu",
           [".pushcpu"],
-          ({ session, state }) => () => handlePushcpu(session, state.get(snesSessionStateKey))
+          ({ session, state }) => () => handlePushcpu2(session, state.get(snesSessionStateKey))
         ),
         directive2(
           "snes.directive.ca65.popcpu",
           [".popcpu"],
-          ({ session, state }) => () => handlePopcpu(session, state.get(snesSessionStateKey))
+          ({ session, state }) => () => handlePopcpu2(session, state.get(snesSessionStateKey))
         )
       ]
     });

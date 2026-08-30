@@ -33,5 +33,16 @@ for (const [workspace, requiredFiles] of requirements) {
   if (missing.length > 0) {
     throw new Error(`${workspace} package is missing required files: ${missing.join(", ")}`);
   }
+  const forbidden = [...files].filter(
+    (filePath) =>
+      filePath.includes("fixtures/external/") ||
+      filePath.includes("fixtures/integration/") ||
+      /\.(sfc|smc|nes)$/i.test(filePath),
+  );
+  if (forbidden.length > 0) {
+    throw new Error(
+      `${workspace} package tarball contains fixture or ROM files: ${forbidden.join(", ")}`,
+    );
+  }
   console.log(`${workspace}: ${packageResult.files.length} files, required runtime files present`);
 }

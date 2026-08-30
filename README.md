@@ -179,7 +179,7 @@ See the [extension README](editors/vscode/README.md) for the end-user command an
 
 ## SNES compatibility scope
 
-The first-party plugin targets practical Asar compatibility, including 65816, SPC700/inline SPC, Super FX, mapper and checksum behavior, freespace/RATS allocation, and selected compatibility no-ops. It is not a promise that every Asar feature is implemented. Focused fixtures live in `fixtures/asar/tests`; slideshow, Chou Makaimura, Yoshi’s Island, and disassembly projects provide byte-parity gates. Deferred syntax remains visible under `fixtures/asar/tests/Unsupported`.
+The first-party plugin targets practical Asar compatibility, including 65816, SPC700/inline SPC, Super FX, mapper and checksum behavior, freespace/RATS allocation, and selected compatibility no-ops. It is not a promise that every Asar feature is implemented. Focused fixtures live in `fixtures/asar/tests`; slideshow is the in-repo production gate. Optional Chou Makaimura, Yoshi’s Island, and disassembly projects provide extra byte-parity gates once their submodules are initialized. Deferred syntax remains visible under `fixtures/asar/tests/Unsupported`.
 
 Compatibility policy is isolated in `plugins/snes/src/asar/compatibility.ts`; no SNES target policy exists in core.
 
@@ -187,7 +187,7 @@ Compatibility policy is isolated in `plugins/snes/src/asar/compatibility.ts`; no
 
 | Command | Purpose |
 | --- | --- |
-| `npm test` | Run all AVA tests |
+| `npm test` | Run all AVA tests (excludes optional external fixtures) |
 | `npm run typecheck` | Type-check root, workspaces, scripts, and the author example |
 | `npm run check:boundaries` | Enforce core/plugin/LSP ownership boundaries |
 | `npm run test:coverage` | Run source coverage |
@@ -195,10 +195,14 @@ Compatibility policy is isolated in `plugins/snes/src/asar/compatibility.ts`; no
 | `npm run pack:check` | Assert required runtime files and the loader schema exist in package dry-runs |
 | `npm run fixture:asar` | Run the Asar fixture harness |
 | `npm run fixture:slideshow` | Run the slideshow integration fixture |
-| `npm run fixture:chou` | Run the Chou Makaimura integration fixture |
-| `npm run benchmark:smoke` | Run correctness-checked smoke benchmarks |
+| `npm run benchmark:smoke` | Run in-repo correctness-checked smoke benchmarks |
+| `npm run fixtures:status` | Report external submodule, ROM, and worktree readiness |
+| `npm run test:external` | Run Chou / Yoshi / SMRPG / TMNT / Zelda parity tests |
+| `npm run ci:external` | Strict preflight, serial external tests, clean-worktree check |
 
-The final migration gates are `npm run verify`, `npm run pack:check`, all three fixture commands above, and `npm run benchmark:smoke`.
+Core verification is `npm run verify`, `npm run pack:check`, `npm run fixture:asar`, `npm run fixture:slideshow`, and `npm run benchmark:smoke`. Those gates do not initialize submodules or require local ROMs.
+
+External-fixture verification is separate: initialize the needed submodule under `fixtures/external/`, put ROM-dependent inputs in `Local Only/fixtures/roms/`, then run `npm run fixtures:status` and `npm run test:external`. See [fixtures/external/README.md](fixtures/external/README.md). Explicit Chou and SMRPG benchmark commands still exist and fail with setup instructions when prerequisites are missing.
 
 ## Repository layout
 
