@@ -35,6 +35,7 @@ export type PassthroughReason =
   | "functionDefinition"
   | "labelDefinition"
   | "macroDefinitionOrInvoke"
+  | "bareMacroCandidate"
   | "macroPlaceholder"
   | "registeredPreprocessDirective"
   | "staticAssignment"
@@ -72,6 +73,7 @@ export type LoweredProgram = {
 };
 
 export type CommandLoweringHost = {
+  syntaxProfile: { readonly bareMacroInvocations?: boolean };
   directiveRegistry: {
     has(keyword: string): boolean;
     getPhase(keyword: string): "preprocess" | "lowered" | undefined;
@@ -255,6 +257,11 @@ export class CommandLoweringService {
       // Semantic front-end forms require the ordered preprocess chain. This also
       // keeps forms such as `FillByte = $EE` from colliding with directives.
       return command.kind;
+    }
+    if (this.host.syntaxProfile.bareMacroInvocations && command.kind === "opcodeCandidate") {
+      // Bare ca65 macro calls cannot be distinguished from opcodes until earlier
+      // definitions have executed in this stage. Preserve them for ordered preprocessing.
+      return "bareMacroCandidate";
     }
     if (this.host.directiveRegistry.has(keyword)) {
       if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {

@@ -1,0 +1,15 @@
+{
+  "plugins": [
+    {
+      "module": "@uttori/asm-plugin-snes"
+    }
+  ],
+  "target": "snes.sfc",
+  "entryPoints": [
+    "Chou.asm"
+  ],
+  "includePaths": [
+    "./"
+  ],
+  "buildOutput": "Chou.sfc"
+}

@@ -10,6 +10,12 @@ import type { Assembler } from "@uttori/asm-core";
 
 import type { Ld65Segment } from "../linker-config.js";
 import type { Nes65xxSessionState } from "../session-state.js";
+import {
+  ca65CpuNames,
+  ca65CpuShorthands,
+  resolve65xxCpuName,
+  type Ca65SessionState,
+} from "../ca65-profile.js";
 
 /**
  * Strips one layer of matching quotes from a token.
@@ -295,5 +301,234 @@ export function handleDbyt(session: Assembler, words: readonly string[]): void {
       session.write1(value & 0xff);
     },
     2,
+  );
+}
+
+/**
+ * Handles `.dword` / `.faraddr` (32-bit or 24-bit little-endian).
+ * @param {Assembler} session Host assembler session.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param {3 | 4} width Emitted value width.
+ */
+export function handleDword(session: Assembler, words: readonly string[], width: 3 | 4 = 4): void {
+  session.directiveRuntime.handleDataDirective(width === 3 ? "dl" : "dd", [...words.slice(1)]);
+}
+
+/**
+ * Selects one of the 65xx-owned ca65 CPUs.
+ * @param {Assembler} session Host assembler session.
+ * @param {Ca65SessionState} state ca65 session state.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ */
+export function handleSetcpu(
+  session: Assembler,
+  state: Ca65SessionState,
+  words: readonly string[],
+): void {
+  const name = unquote(words.slice(1).join(" ").trim());
+  if (!name) throw new Error(".setcpu requires a CPU name argument.");
+  const architecture = resolve65xxCpuName(name);
+  if (!architecture) {
+    throw new Error(
+      `.setcpu "${name}" is not a supported 65xx CPU. Supported names: ${Object.keys(ca65CpuNames).join(", ")}.`,
+    );
+  }
+  session.selectArchitecture(architecture, name.toLowerCase());
+  state.currentArchitecture = architecture;
+}
+
+/**
+ * Saves the current CPU for `.popcpu`.
+ * @param {Assembler} session Host assembler session.
+ * @param {Ca65SessionState} state ca65 session state.
+ */
+export function handlePushcpu(session: Assembler, state: Ca65SessionState): void {
+  state.cpuStack.push(session.resolveActiveArchitecture().name);
+}
+
+/**
+ * Restores the most recently pushed CPU.
+ * @param {Assembler} session Host assembler session.
+ * @param {Ca65SessionState} state ca65 session state.
+ */
+export function handlePopcpu(session: Assembler, state: Ca65SessionState): void {
+  const architecture = state.cpuStack.pop();
+  if (!architecture) throw new Error(".popcpu: CPU stack is empty.");
+  session.selectArchitecture(architecture, architecture);
+  state.currentArchitecture = architecture;
+}
+
+/**
+ * Handles `.p02`, `.p6280`, and the other ca65 CPU shorthand directives.
+ * @param {Assembler} session Host assembler session.
+ * @param {Ca65SessionState} state ca65 session state.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ */
+export function handleCpuShorthand(
+  session: Assembler,
+  state: Ca65SessionState,
+  words: readonly string[],
+): void {
+  const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
+  const cpu = ca65CpuShorthands[keyword];
+  if (!cpu) throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
+  handleSetcpu(session, state, ["setcpu", cpu]);
+}
+
+/**
+ * Emits `.res count[, fill]`.
+ * @param {Assembler} session Host assembler session.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ */
+export function handleRes(session: Assembler, words: readonly string[]): void {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 2) {
+    throw new Error(".res expects count and an optional fill value.");
+  }
+  const count = session.operandResolver.getnum(params[0] ?? "");
+  const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  if (!Number.isInteger(count) || count < 0) throw new Error(".res count must be non-negative.");
+  if (session.isDefinitionCollectionStage) {
+    session.step(count);
+    return;
+  }
+  for (let index = 0; index < count; index++) session.write1(fill & 0xff);
+}
+
+/**
+ * Pads to the next `.align boundary[, fill]`.
+ * @param {Assembler} session Host assembler session.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ */
+export function handleAlign(session: Assembler, words: readonly string[]): void {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 2) {
+    throw new Error(".align expects a boundary and optional fill value.");
+  }
+  const boundary = session.operandResolver.getnum(params[0] ?? "");
+  const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  if (!Number.isInteger(boundary) || boundary <= 0) {
+    throw new Error(".align boundary must be a positive integer.");
+  }
+  const count = (boundary - (session.currentTargetAddress % boundary)) % boundary;
+  if (session.isDefinitionCollectionStage) {
+    session.step(count);
+    return;
+  }
+  for (let index = 0; index < count; index++) session.write1(fill & 0xff);
+}
+
+/**
+ * Includes `.incbin "file"[, offset[, size]]` using ca65's offset/length convention.
+ * @param {Assembler} session Host assembler session.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ */
+export function handleCa65Incbin(session: Assembler, words: readonly string[]): void {
+  const params = parameterList(words);
+  if (params.length < 1 || params.length > 3) {
+    throw new Error(".incbin expects a filename, optional offset, and optional size.");
+  }
+  const filename = unquote(params[0] ?? "");
+  const data = session.includeSource.readFile(filename);
+  if (!(data instanceof Uint8Array)) throw new Error(`Failed to read binary include: ${filename}`);
+  const offset = params[1] ? session.operandResolver.getnum(params[1]) : 0;
+  const size = params[2] ? session.operandResolver.getnum(params[2]) : data.length - offset;
+  if (
+    !Number.isInteger(offset) ||
+    !Number.isInteger(size) ||
+    offset < 0 ||
+    size < 0 ||
+    offset + size > data.length
+  ) {
+    throw new Error(
+      `.incbin range ${offset}+${size} is outside '${filename}' (${data.length} bytes).`,
+    );
+  }
+  if (session.isDefinitionCollectionStage) {
+    session.step(size);
+    return;
+  }
+  for (const byte of data.subarray(offset, offset + size)) session.write1(byte);
+}
+
+/**
+ * Implements the flat-image subset of ca65 `.assert`.
+ * @param {Assembler} session Host assembler session.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ */
+export function handleCa65Assert(session: Assembler, words: readonly string[]): void {
+  const params = parameterList(words);
+  if (params.length === 0) throw new Error(".assert requires an expression.");
+  if (session.operandResolver.getnum(params[0] ?? "") !== 0) return;
+  const message = params.find((part) => /^["']/.test(part));
+  throw new Error(message ? unquote(message) : ".assert expression evaluated to false.");
+}
+
+/**
+ * Enters a ca65 `.scope` or `.proc` using the core namespace mechanism.
+ * @param {Assembler} session Host assembler session.
+ * @param {Ca65SessionState} state ca65 session state.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ * @param {boolean} procedure Whether the scope declares a procedure label.
+ */
+export function handleScope(
+  session: Assembler,
+  state: Ca65SessionState,
+  words: readonly string[],
+  procedure: boolean,
+): void {
+  const name = words[1]?.trim() || `__anonymous_scope_${session.currentLine}`;
+  if (procedure) {
+    session.symbolScope.setLabel(session.symbolScope.qualifySymbolName(name));
+  }
+  state.scopeStack.push(session.currentNamespace);
+  session.currentNamespace = session.currentNamespace
+    ? `${session.currentNamespace}_${name}`
+    : name;
+}
+
+/**
+ * Leaves the most recent ca65 `.scope` or `.proc`.
+ * @param {Assembler} session Host assembler session.
+ * @param {Ca65SessionState} state ca65 session state.
+ */
+export function handleEndScope(session: Assembler, state: Ca65SessionState): void {
+  const previous = state.scopeStack.pop();
+  if (previous === undefined) throw new Error("ca65 scope stack is empty.");
+  session.currentNamespace = previous;
+}
+
+/**
+ * Records flat-image `.segment` intent without pretending to create an object segment.
+ * @param {Ca65SessionState} state ca65 session state.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ */
+export function handleFlatSegment(state: Ca65SessionState, words: readonly string[]): void {
+  const name = unquote(words[1] ?? "").trim();
+  if (!name) throw new Error(".segment requires a segment name.");
+  state.currentFlatSegment = name;
+}
+
+/** @param {Ca65SessionState} state ca65 session state. */
+export function handlePushseg(state: Ca65SessionState): void {
+  state.segmentStack.push(state.currentFlatSegment);
+}
+
+/** @param {Ca65SessionState} state ca65 session state. */
+export function handlePopseg(state: Ca65SessionState): void {
+  const segment = state.segmentStack.pop();
+  if (segment === undefined) throw new Error(".popseg: segment stack is empty.");
+  state.currentFlatSegment = segment;
+}
+
+/**
+ * Rejects directives that require ca65 object/linker semantics.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ * @returns {never} This handler always throws.
+ */
+export function handleUnsupportedCa65(words: readonly string[]): never {
+  const keyword = words[0] ?? "<unknown>";
+  throw new Error(
+    `.${keyword.replace(/^\./, "")} requires relocatable ca65 object/linker semantics, which the flat-image compatibility profile does not implement.`,
   );
 }

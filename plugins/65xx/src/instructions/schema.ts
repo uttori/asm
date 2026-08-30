@@ -8,7 +8,9 @@ export type CpuFeature =
   | "wdc"
   | "ce02"
   | "4510"
-  | "45gs02";
+  | "45gs02"
+  | "huc6280"
+  | "m740";
 
 /** Addressing modes recognized by the 65xx classifier and encoder. */
 export type AddressingMode =
@@ -34,6 +36,14 @@ export type AddressingMode =
   | "relative"
   | "relative16"
   | "zeroPageRelative"
+  | "accumulatorRelative"
+  | "zeroPageImmediate"
+  | "specialPage"
+  | "blockTransfer"
+  | "immediateZeroPage"
+  | "immediateZeroPageIndexedX"
+  | "immediateAbsolute"
+  | "immediateAbsoluteIndexedX"
   | "basePageIndirectIndexedZ"
   | "quadAccumulator";
 
@@ -45,7 +55,13 @@ export type OperandCodecId =
   | "unsigned24-le"
   | "relative8"
   | "relative16"
-  | "zero-page-relative8";
+  | "zero-page-relative8"
+  | "accumulator-relative8"
+  | "zero-page-immediate8"
+  | "special-page"
+  | "three-unsigned16-le"
+  | "immediate-unsigned8"
+  | "immediate-unsigned16";
 
 /**
  * Boolean combination of {@link CpuFeature}s. Empty `anyOf` is treated as
@@ -82,6 +98,8 @@ export interface InstructionForm {
   readonly documented: boolean;
   readonly stability: "documented" | "stable-undocumented" | "unstable-undocumented";
   readonly note?: string;
+  /** Optional declarative validation for irregular immediate operands. */
+  readonly operandConstraint?: "power-of-two";
   /** Bytes from the opcode address to the relative reference point. Defaults to instruction size. */
   readonly relativeBaseOffset?: number;
 }
@@ -138,6 +156,20 @@ export function getOperandCodec(mode: AddressingMode): OperandCodecId {
       return "relative16";
     case "zeroPageRelative":
       return "zero-page-relative8";
+    case "accumulatorRelative":
+      return "accumulator-relative8";
+    case "zeroPageImmediate":
+      return "zero-page-immediate8";
+    case "specialPage":
+      return "special-page";
+    case "blockTransfer":
+      return "three-unsigned16-le";
+    case "immediateZeroPage":
+    case "immediateZeroPageIndexedX":
+      return "immediate-unsigned8";
+    case "immediateAbsolute":
+    case "immediateAbsoluteIndexedX":
+      return "immediate-unsigned16";
     default:
       return "unsigned8";
   }
@@ -165,6 +197,31 @@ export function getOperandFields(codec: OperandCodecId): readonly OperandField[]
       return [
         { name: "address", width: 1 },
         { name: "target", width: 1, signed: true, relative: true },
+      ];
+    case "accumulator-relative8":
+      return [{ name: "target", width: 1, signed: true, relative: true }];
+    case "zero-page-immediate8":
+      return [
+        { name: "address", width: 1 },
+        { name: "value", width: 1 },
+      ];
+    case "special-page":
+      return [{ name: "address", width: 1 }];
+    case "three-unsigned16-le":
+      return [
+        { name: "source", width: 2 },
+        { name: "destination", width: 2 },
+        { name: "length", width: 2 },
+      ];
+    case "immediate-unsigned8":
+      return [
+        { name: "value", width: 1 },
+        { name: "address", width: 1 },
+      ];
+    case "immediate-unsigned16":
+      return [
+        { name: "value", width: 1 },
+        { name: "address", width: 2 },
       ];
     case "unsigned8":
       return [{ name: "value", width: 1 }];

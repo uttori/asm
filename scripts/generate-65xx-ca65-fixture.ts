@@ -9,7 +9,9 @@ import {
   cmos65sc02Forms,
   commodore4510Forms,
   csg65ce02Forms,
+  hudsonHuC6280Forms,
   mega65Gs02Forms,
+  mitsubishiM740Forms,
   mos6502DtvForms,
   wdc65c02Forms,
 } from "../plugins/65xx/src/instructions/variants.js";
@@ -18,11 +20,14 @@ import type { InstructionForm } from "../plugins/65xx/src/instructions/schema.js
 const ca65 = process.argv[2];
 const ld65 = process.argv[3];
 const output = process.argv[4];
+const scope = process.argv[5] ?? "phase4-5";
 if (!ca65 || !ld65 || !output) {
-  throw new Error("Usage: generate-65xx-ca65-fixture.ts <ca65> <ld65> <output.json>");
+  throw new Error(
+    "Usage: generate-65xx-ca65-fixture.ts <ca65> <ld65> <output.json> [phase4-5|phase6]",
+  );
 }
 
-const variants = [
+const phase45Variants = [
   ["6502DTV", mos6502DtvForms],
   ["65SC02", cmos65sc02Forms],
   ["65C02", cmos65c02Forms],
@@ -31,6 +36,14 @@ const variants = [
   ["4510", commodore4510Forms],
   ["45GS02", mega65Gs02Forms],
 ] as const;
+const phase6Variants = [
+  ["HuC6280", hudsonHuC6280Forms],
+  ["M740", mitsubishiM740Forms],
+] as const;
+const variants = scope === "phase6" ? phase6Variants : phase45Variants;
+if (scope !== "phase4-5" && scope !== "phase6") {
+  throw new Error(`Unknown fixture scope '${scope}'.`);
+}
 
 function sourceFor(form: InstructionForm, endLabel: string): string {
   const operand = (() => {
@@ -42,7 +55,11 @@ function sourceFor(form: InstructionForm, endLabel: string): string {
       case "quadAccumulator":
         return "Q";
       case "immediate":
-        return form.codec === "unsigned16-le" ? "#$1234" : "#$12";
+        return form.codec === "unsigned16-le"
+          ? "#$1234"
+          : form.operandConstraint === "power-of-two"
+            ? "#$10"
+            : "#$12";
       case "zeroPage":
         return "$12";
       case "zeroPageIndexedX":
@@ -80,6 +97,22 @@ function sourceFor(form: InstructionForm, endLabel: string): string {
         return endLabel;
       case "zeroPageRelative":
         return `$12,${endLabel}`;
+      case "accumulatorRelative":
+        return `A,${endLabel}`;
+      case "zeroPageImmediate":
+        return "$12,#$34";
+      case "specialPage":
+        return "$FF12";
+      case "blockTransfer":
+        return "$1234,$5678,$0003";
+      case "immediateZeroPage":
+        return "#$12,$34";
+      case "immediateZeroPageIndexedX":
+        return "#$12,$34,x";
+      case "immediateAbsolute":
+        return "#$12,$3456";
+      case "immediateAbsoluteIndexedX":
+        return "#$12,$3456,x";
       case "basePageIndirectIndexedZ":
         return "[$12],z";
     }

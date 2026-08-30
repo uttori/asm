@@ -49,6 +49,13 @@ const variantDifferentialFixture = JSON.parse(
   ),
 ) as VariantDifferentialFixture;
 
+const phase6DifferentialFixture = JSON.parse(
+  fs.readFileSync(
+    new URL("./fixtures/ca65-e11fb5c-phase6-differential.json", import.meta.url),
+    "utf8",
+  ),
+) as VariantDifferentialFixture;
+
 function assemble(
   source: string,
   options: { architecture?: string; origin?: number; target?: string } = {},
@@ -223,6 +230,55 @@ test("45GS02 emits Q and 32-bit base-page compound prefixes declaratively", (t) 
   );
 });
 
+test("HuC6280 encodes memory-register, test, and block-transfer forms", (t) => {
+  t.deepEqual(
+    [
+      ...assemble("tma #$10\ntam3\ntma3\ntst #$12,$34\ntst #$12,$3456,x\ntii $1000,$2000,$0030", {
+        architecture: "huc6280",
+      }),
+    ],
+    [
+      0x43, 0x10, 0x53, 0x08, 0x43, 0x08, 0x83, 0x12, 0x34, 0xb3, 0x12, 0x56, 0x34, 0x73, 0x00,
+      0x10, 0x00, 0x20, 0x30, 0x00,
+    ],
+  );
+  t.throws(() => assemble("tma #$03", { architecture: "huc6280" }), {
+    message: /power of two/i,
+  });
+  t.throws(() => assemble("tii $1000,$2000", { architecture: "huc6280" }), {
+    message: /blockTransfer/i,
+  });
+});
+
+test("M740 keeps accumulator bits, zero-page bits, LDM, and special-page JSR distinct", (t) => {
+  t.deepEqual(
+    [
+      ...assemble(
+        [
+          "bbs0 a,next_a",
+          "nop",
+          "next_a:",
+          "bbc0 $12,next_zp",
+          "nop",
+          "next_zp:",
+          "ldm $12,#$34",
+          "jsr ($12)",
+          "jsr $ff34",
+          "jsr $1234",
+        ].join("\n"),
+        { architecture: "m740" },
+      ),
+    ],
+    [
+      0x03, 0x00, 0xea, 0x17, 0x12, 0x01, 0xea, 0x3c, 0x12, 0x34, 0x02, 0x12, 0x22, 0x34, 0x20,
+      0x34, 0x12,
+    ],
+  );
+  t.throws(() => assemble("wai", { architecture: "m740" }), {
+    message: /instruction.*wai/i,
+  });
+});
+
 test("every Phase 4 and 5 form matches the pinned ca65 byte fixture", (t) => {
   t.is(variantDifferentialFixture.oracle.release, "V2.19");
   t.is(variantDifferentialFixture.oracle.commit, "e11fb5c39371046ebe25485f984f644c5a0d65d3");
@@ -245,6 +301,28 @@ test("every Phase 4 and 5 form matches the pinned ca65 byte fixture", (t) => {
         );
       }
       t.deepEqual(actual, fixture.bytes, `${variant.cpu} ${fixture.mnemonic} ${fixture.mode}`);
+    }
+  }
+});
+
+test("every Phase 6 form matches the pinned ca65 byte fixture", (t) => {
+  t.is(phase6DifferentialFixture.oracle.release, "V2.19");
+  t.is(phase6DifferentialFixture.oracle.commit, "e11fb5c39371046ebe25485f984f644c5a0d65d3");
+  t.is(
+    phase6DifferentialFixture.oracle.instructionTableSha256,
+    "bcd36f022a3534355285346d6a4149563a21f17c72b614d91e381d19d68e5a9d",
+  );
+  t.is(
+    phase6DifferentialFixture.variants.reduce((count, variant) => count + variant.cases.length, 0),
+    500,
+  );
+  for (const variant of phase6DifferentialFixture.variants) {
+    for (const fixture of variant.cases) {
+      t.deepEqual(
+        [...assemble(fixture.source, { architecture: variant.cpu })],
+        fixture.bytes,
+        `${variant.cpu} ${fixture.mnemonic} ${fixture.mode}`,
+      );
     }
   }
 });

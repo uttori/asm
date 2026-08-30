@@ -17,7 +17,7 @@ export type LoweredPassthroughCommand = {
     source: NormalizedCommand["source"];
     passthroughReason: PassthroughReason;
 };
-export type PassthroughReason = "characterMapping" | "commentOrEmpty" | "dataDirective" | "defineCommand" | "functionDefinition" | "labelDefinition" | "macroDefinitionOrInvoke" | "macroPlaceholder" | "registeredPreprocessDirective" | "staticAssignment" | "structCommand" | "unknown";
+export type PassthroughReason = "characterMapping" | "commentOrEmpty" | "dataDirective" | "defineCommand" | "functionDefinition" | "labelDefinition" | "macroDefinitionOrInvoke" | "bareMacroCandidate" | "macroPlaceholder" | "registeredPreprocessDirective" | "staticAssignment" | "structCommand" | "unknown";
 export type LoweredLoopNode = Omit<LoopNode, "type" | "header" | "commands"> & {
     kind: "loop";
     loopType: LoopNode["type"];
@@ -40,6 +40,9 @@ export type LoweredProgram = {
     nodes: LoweredExecutableNode[];
 };
 export type CommandLoweringHost = {
+    syntaxProfile: {
+        readonly bareMacroInvocations?: boolean;
+    };
     directiveRegistry: {
         has(keyword: string): boolean;
         getPhase(keyword: string): "preprocess" | "lowered" | undefined;

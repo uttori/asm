@@ -41,6 +41,7 @@ export declare class Arch65xx implements ArchitectureEncoder {
     encodeInstruction(instruction: LoweredInstruction): boolean;
     private estimateResolved;
     private encodeResolved;
+    private readCompoundValues;
     private resolveForm;
     private readValue;
     private readExpressionValue;

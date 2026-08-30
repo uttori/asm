@@ -58,6 +58,8 @@ const featureByTable: Readonly<Record<keyof typeof ca65VariantTables, CpuFeature
   "65CE02": "ce02",
   "4510": "4510",
   "45GS02": "45gs02",
+  HuC6280: "huc6280",
+  M740: "m740",
 };
 
 /**
@@ -69,6 +71,15 @@ const featureByTable: Readonly<Record<keyof typeof ca65VariantTables, CpuFeature
  * @returns {number} The opcode.
  */
 function opcodeFor(row: Ca65InstructionRow, modeIndex: number): number {
+  if (row[4] === "PutJSR_m740") {
+    if (modeIndex === 10) return 0x02;
+    if (modeIndex === 29) return 0x22;
+    return 0x20;
+  }
+  if (row[4] === "PutBitBranch_m740") {
+    return modeIndex === 28 ? row[2] + 0x04 : row[2];
+  }
+  if (row[4] === "PutLDM_m740") return row[2];
   const [, , base, eaTable] = row;
   const extension = ca65EaTable[eaTable]?.[modeIndex];
   if (extension === undefined) throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
@@ -99,17 +110,39 @@ function opcodeFor(row: Ca65InstructionRow, modeIndex: number): number {
  * Resolves a ca65 mode bit. Mode 10 is the CMOS vs CE02 fork:
  * 65SC02/65C02/W65C02 → `(zp)`; 65CE02/4510/45GS02 → `(zp),z`.
  * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
+ * @param {Ca65InstructionRow} row The ca65 instruction row.
  * @param {number} modeIndex The mode index.
  * @returns {ModeDefinition | undefined} The mode definition.
  */
 function modeFor(
   table: keyof typeof ca65VariantTables,
+  row: Ca65InstructionRow,
   modeIndex: number,
 ): ModeDefinition | undefined {
+  if (row[4] === "PutBlockTransfer" && modeIndex === 25) {
+    return { mode: "blockTransfer", codec: "three-unsigned16-le" };
+  }
+  if (row[4] === "PutTST") {
+    if (modeIndex === 2) return { mode: "immediateZeroPage", codec: "immediate-unsigned8" };
+    if (modeIndex === 3) return { mode: "immediateAbsolute", codec: "immediate-unsigned16" };
+    if (modeIndex === 5) return { mode: "immediateZeroPageIndexedX", codec: "immediate-unsigned8" };
+    if (modeIndex === 6)
+      return { mode: "immediateAbsoluteIndexedX", codec: "immediate-unsigned16" };
+  }
+  if (row[4] === "PutBitBranch_m740") {
+    if (modeIndex === 1) return { mode: "accumulatorRelative", codec: "accumulator-relative8" };
+    if (modeIndex === 28) return { mode: "zeroPageRelative", codec: "zero-page-relative8" };
+  }
+  if (row[4] === "PutLDM_m740" && modeIndex === 28) {
+    return { mode: "zeroPageImmediate", codec: "zero-page-immediate8" };
+  }
+  if (row[4] === "PutJSR_m740" && modeIndex === 29) {
+    return { mode: "specialPage", codec: "special-page" };
+  }
   if (modeIndex === 10) {
-    return table === "65SC02" || table === "65C02" || table === "W65C02"
-      ? { mode: "zeroPageIndirect" }
-      : { mode: "zeroPageIndirectIndexedZ" };
+    return table === "65CE02" || table === "4510" || table === "45GS02"
+      ? { mode: "zeroPageIndirectIndexedZ" }
+      : { mode: "zeroPageIndirect" };
   }
   return commonModes[modeIndex];
 }
@@ -129,14 +162,26 @@ function createForm(
   modeIndex: number,
   modeDefinition: ModeDefinition,
 ): InstructionForm {
-  const opcode = opcodeFor(row, modeIndex);
+  let opcode = opcodeFor(row, modeIndex);
   const codec = modeDefinition.codec ?? getOperandCodec(modeDefinition.mode);
   const prefixes: number[] = [];
-  if (row[4] === "Put45GS02_Q") {
+  if (row[4] === "PutTAMn") {
+    prefixes.push(0x53);
+    opcode = row[2];
+  } else if (row[4] === "PutTMAn") {
+    prefixes.push(0x43);
+    opcode = row[2];
+  } else if (row[4] === "Put45GS02_Q") {
     prefixes.push(0x42, 0x42);
     if (modeIndex === 12 || modeIndex === 30) prefixes.push(0xea);
   } else if (row[4] === "Put45GS02" && modeIndex === 30) {
     prefixes.push(0xea);
+  }
+  let relativeBaseOffset: number | undefined;
+  if (row[4] === "PutPCRel4510") {
+    relativeBaseOffset = 2;
+  } else if (row[4] === "PutBitBranch_m740") {
+    relativeBaseOffset = 3;
   }
   return Object.freeze({
     opcode,
@@ -149,7 +194,8 @@ function createForm(
     canonical: true,
     documented: true,
     stability: "documented",
-    relativeBaseOffset: row[4] === "PutPCRel4510" ? 2 : undefined,
+    relativeBaseOffset,
+    operandConstraint: row[4] === "PutTMA" ? "power-of-two" : undefined,
   });
 }
 
@@ -194,7 +240,7 @@ function decodeTable(table: keyof typeof ca65VariantTables): readonly Instructio
       // ca65 sets both bits for accumulator instructions; the explicit accumulator
       // form also accepts an omitted A in our native syntax.
       if (modeIndex === 0 && (row[1] & 2) !== 0) continue;
-      const modeDefinition = modeFor(table, modeIndex);
+      const modeDefinition = modeFor(table, row, modeIndex);
       if (!modeDefinition) {
         throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
       }
@@ -214,6 +260,8 @@ export const wdc65c02Forms = decodeTable("W65C02");
 export const csg65ce02Forms = decodeTable("65CE02");
 export const commodore4510Forms = decodeTable("4510");
 export const mega65Gs02Forms = decodeTable("45GS02");
+export const hudsonHuC6280Forms = decodeTable("HuC6280");
+export const mitsubishiM740Forms = decodeTable("M740");
 
 export const mos6502DtvCpu: CpuDefinition = Object.freeze({
   id: "65xx.6502dtv",
@@ -264,6 +312,20 @@ export const mega65Gs02Cpu: CpuDefinition = Object.freeze({
   features: new Set<CpuFeature>(["cmos", "rockwell", "ce02", "4510", "45gs02"]),
 });
 
+export const hudsonHuC6280Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.huc6280",
+  displayName: "Hudson HuC6280",
+  aliases: ["huc6280", "6280"],
+  features: new Set<CpuFeature>(["cmos", "rockwell", "huc6280"]),
+});
+
+export const mitsubishiM740Cpu: CpuDefinition = Object.freeze({
+  id: "65xx.m740",
+  displayName: "Mitsubishi M740",
+  aliases: ["m740", "740"],
+  features: new Set<CpuFeature>(["m740"]),
+});
+
 export const variantCpus = Object.freeze([
   mos6502DtvCpu,
   cmos65sc02Cpu,
@@ -272,6 +334,8 @@ export const variantCpus = Object.freeze([
   csg65ce02Cpu,
   commodore4510Cpu,
   mega65Gs02Cpu,
+  hudsonHuC6280Cpu,
+  mitsubishiM740Cpu,
 ]);
 
 export const variantFormsByCpuId: Readonly<Record<string, readonly InstructionForm[]>> =
@@ -283,4 +347,6 @@ export const variantFormsByCpuId: Readonly<Record<string, readonly InstructionFo
     [csg65ce02Cpu.id]: csg65ce02Forms,
     [commodore4510Cpu.id]: commodore4510Forms,
     [mega65Gs02Cpu.id]: mega65Gs02Forms,
+    [hudsonHuC6280Cpu.id]: hudsonHuC6280Forms,
+    [mitsubishiM740Cpu.id]: mitsubishiM740Forms,
   });

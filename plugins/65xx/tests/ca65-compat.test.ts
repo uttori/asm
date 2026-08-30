@@ -5,11 +5,41 @@ import { test } from "../../../tests/ava-helper.js";
 
 import { Assembler } from "@uttori/asm-core";
 import {
+  CA65_RAW_65XX_TARGET_ID,
   create65xxAssemblerEnvironment,
   NES_65XX_TARGET_ID,
 } from "../src/index.js";
 
 const environment = await create65xxAssemblerEnvironment();
+
+function assembleCa65Raw(
+  source: string,
+  options: { architecture?: string; origin?: number; files?: Record<string, Uint8Array> } = {},
+): Uint8Array {
+  const assembler = new Assembler({
+    environment,
+    target: CA65_RAW_65XX_TARGET_ID,
+    architecture: options.architecture,
+    targetOptions: { origin: options.origin ?? 0 },
+    collectSourceMetadata: false,
+  });
+  let directory: string | undefined;
+  try {
+    if (options.files) {
+      directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-ca65-raw-"));
+      for (const [name, contents] of Object.entries(options.files)) {
+        fs.writeFileSync(path.join(directory, name), contents);
+      }
+      assembler.setIncludePaths([directory]);
+      assembler.setCurrentFile(path.join(directory, "fixture.asm"));
+    }
+    assembler.assembleSource(source, assembler.currentFile || "fixture.asm");
+    return assembler.getBinaryOutput();
+  } finally {
+    assembler.dispose();
+    if (directory) fs.rmSync(directory, { recursive: true, force: true });
+  }
+}
 
 const TINY_CFG = `MEMORY {
     ROM: start = $8000, size = $100, file = %O, fill = yes, fillval = $FF ;
@@ -65,16 +95,23 @@ test("NES target prefills header and $FF, then emits ca65 .byte / lda", (t) => {
 
 test("ca65 := assignment and unary < > encode as immediates", (t) => {
   const output = assembleNes(
-    ['.segment "CODE"', "CurLevel := $10", "Label := $1234", "lda #CurLevel", "lda #<Label", "lda #>Label"].join(
-      "\n",
-    ),
+    [
+      '.segment "CODE"',
+      "CurLevel := $10",
+      "Label := $1234",
+      "lda #CurLevel",
+      "lda #<Label",
+      "lda #>Label",
+    ].join("\n"),
   );
   t.deepEqual([...output.slice(16, 22)], [0xa9, 0x10, 0xa9, 0x34, 0xa9, 0x12]);
 });
 
 test("ca65 zp equates $00-$FF encode as zero-page not absolute", (t) => {
   const output = assembleNes(
-    ['.segment "CODE"', "Paused := $E0", "CurLevel := $10", "lda Paused", "lda CurLevel"].join("\n"),
+    ['.segment "CODE"', "Paused := $E0", "CurLevel := $10", "lda Paused", "lda CurLevel"].join(
+      "\n",
+    ),
   );
   t.deepEqual([...output.slice(16, 20)], [0xa5, 0xe0, 0xa5, 0x10]);
 });
@@ -187,7 +224,7 @@ test("file-local labels do not collide across included object files", (t) => {
   const output = assembleNes('.include "a.asm"\n.include "b.asm"', {
     files: {
       "a.asm": ['.segment "CODE"', ".export Shared", "Exit:", "nop", "Shared:", "rts"].join("\n"),
-      "b.asm": ['.import Shared', "Exit:", "jmp Shared"].join("\n"),
+      "b.asm": [".import Shared", "Exit:", "jmp Shared"].join("\n"),
     },
   });
   // a.asm: nop at $8000, rts at $8001; b.asm: jmp Shared ($8001)
@@ -211,8 +248,139 @@ test("overlay segment define symbols expose load/run/size", (t) => {
   // CODE nop at $8000; OVERLAY lda at load $8001 / run $0300; then CODE resumes at $8003
   t.is(output[16], 0xea);
   t.deepEqual([...output.slice(17, 19)], [0xa9, 0x01]);
-  t.deepEqual(
-    [...output.slice(19, 27)],
-    [0xa9, 0x01, 0xa9, 0x80, 0xa9, 0x00, 0xa9, 0x03],
+  t.deepEqual([...output.slice(19, 27)], [0xa9, 0x01, 0xa9, 0x80, 0xa9, 0x00, 0xa9, 0x03]);
+});
+
+test("ca65 CPU selection, shorthand predicates, and CPU stack compose", (t) => {
+  const output = assembleCa65Raw(
+    [
+      '.setcpu "65C02"',
+      "rmb0 $12",
+      ".pushcpu",
+      ".p6280",
+      "tma #$10",
+      ".ifp6280",
+      "cla",
+      ".else",
+      "nop",
+      ".endif",
+      ".popcpu",
+      "rmb1 $13",
+      ".ifpc02",
+      ".byte $42",
+      ".endif",
+    ].join("\n"),
   );
+  t.deepEqual([...output], [0x07, 0x12, 0x43, 0x10, 0x62, 0x17, 0x13, 0x42]);
+});
+
+test("ca65 names, shorthands, and CPU conditionals select every 65xx architecture", (t) => {
+  const cases = [
+    ["6502", "p02", "ifp02"],
+    ["6502X", "p02x", "ifp02x"],
+    ["6502DTV", "pdtv", "ifpdtv"],
+    ["65SC02", "psc02", "ifpsc02"],
+    ["65C02", "pc02", "ifpc02"],
+    ["W65C02", "pwc02", "ifpwc02"],
+    ["65CE02", "pce02", "ifpce02"],
+    ["4510", "p4510", "ifp4510"],
+    ["45GS02", "p45gs02", "ifp45gs02"],
+    ["HuC6280", "p6280", "ifp6280"],
+    ["M740", "pm740", "ifpm740"],
+  ] as const;
+
+  for (const [cpu, shorthand, conditional] of cases) {
+    const named = assembleCa65Raw(
+      [`.setcpu "${cpu}"`, `.${conditional}`, ".byte $5A", ".endif"].join("\n"),
+    );
+    const short = assembleCa65Raw(
+      [`.${shorthand}`, `.${conditional}`, ".byte $A5", ".endif"].join("\n"),
+    );
+    t.deepEqual([...named], [0x5a], cpu);
+    t.deepEqual([...short], [0xa5], shorthand);
+  }
+});
+
+test("ca65 expressions, data aliases, reserve, and alignment emit a flat image", (t) => {
+  const output = assembleCa65Raw(
+    [
+      ".byte @17, .lobyte($1234), .hibyte($1234), .bankbyte($123456)",
+      ".res 2, $AA",
+      ".align 8, $FF",
+      ".dword $12345678",
+      ".faraddr $123456",
+      ".word .loword($12345678), .hiword($12345678)",
+    ].join("\n"),
+  );
+  t.deepEqual(
+    [...output],
+    [
+      15, 0x34, 0x12, 0x12, 0xaa, 0xaa, 0xff, 0xff, 0x78, 0x56, 0x34, 0x12, 0x56, 0x34, 0x12, 0x78,
+      0x56, 0x34, 0x12,
+    ],
+  );
+});
+
+test("ca65 .incbin uses offset and size rather than Asar range syntax", (t) => {
+  const output = assembleCa65Raw('.incbin "data.bin", 2, 3', {
+    files: { "data.bin": Uint8Array.from([0, 1, 2, 3, 4, 5]) },
+  });
+  t.deepEqual([...output], [2, 3, 4]);
+});
+
+test("ca65 flat segments and the segment stack preserve source ordering", (t) => {
+  const output = assembleCa65Raw(
+    [
+      '.segment "CODE"',
+      ".byte $11",
+      ".pushseg",
+      '.segment "RODATA"',
+      ".byte $22",
+      ".popseg",
+      ".byte $33",
+    ].join("\n"),
+  );
+  t.deepEqual([...output], [0x11, 0x22, 0x33]);
+});
+
+test("ca65 dotted conditionals, scopes, procedures, macros, and repeats compose", (t) => {
+  const output = assembleCa65Raw(
+    [
+      "FLAG := 1",
+      ".ifdef FLAG",
+      ".scope Outer",
+      "Value:",
+      ".byte $11",
+      "lda a:Outer::Value",
+      ".endscope",
+      ".endif",
+      ".macro emit value",
+      ".byte \\value",
+      ".endmacro",
+      "emit $22",
+      ".repeat 3, I",
+      ".byte I",
+      ".endrepeat",
+      ".proc Sub",
+      "rts",
+      ".endproc",
+      "jsr Sub",
+    ].join("\n"),
+  );
+  t.deepEqual(
+    [...output],
+    [0x11, 0xad, 0x00, 0x00, 0x22, 0x00, 0x01, 0x02, 0x60, 0x20, 0x08, 0x00],
+  );
+});
+
+test("ca65 assertions and object-only directives fail precisely", (t) => {
+  t.throws(() => assembleCa65Raw('.assert 0, error, "bad layout"'), {
+    message: /bad layout/i,
+  });
+  t.throws(() => assembleCa65Raw(".importzp External"), {
+    message: /relocatable ca65 object\/linker semantics/i,
+  });
+  t.throws(() => assembleCa65Raw(".local Temporary"), {
+    message: /macro compatibility slice/i,
+  });
 });

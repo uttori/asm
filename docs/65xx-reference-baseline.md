@@ -29,10 +29,16 @@ recorded.
 | 6502js | `ab8662b06321dd6281b9f091ee02b57d7494172c` | GPL-3.0-only | Black-box behavioral oracle and independently authored byte fixtures only |
 | ca65 | release `V2.19`, commit `555282497c3ecf8b313d87d5973093af19c35bd5` | Zlib | Differential assembly oracle and independently authored byte fixtures |
 | ca65 Phase 4/5 snapshot | release `V2.19`, commit `e11fb5c39371046ebe25485f984f644c5a0d65d3`, `instr.c` SHA-256 `bcd36f022a3534355285346d6a4149563a21f17c72b614d91e381d19d68e5a9d` | Zlib | CMOS, Commodore, and MEGA65 declarative tables and 1,680-form differential fixture |
+| ca65 Phase 6 snapshot | release `V2.19`, commit `e11fb5c39371046ebe25485f984f644c5a0d65d3`, `instr.c` SHA-256 `bcd36f022a3534355285346d6a4149563a21f17c72b614d91e381d19d68e5a9d` | Zlib | HuC6280 and M740 declarative tables and 500-form differential fixture |
 
 The same values are recorded in
 `plugins/65xx/tests/fixtures/reference-manifest.json` so fixture generators
 and future differential tests can reject an unpinned tool.
+
+The Phase 6 fixture records 254 HuC6280 forms and 246 M740 forms. Its expected
+binary hashes are `22fa7b2e54c7625b457e2320802856eb2e3844a4878648948d1e8a8b3b03903a`
+and `556994727ab69e3b16aa0e24a1236004a50357d3d2194c9345a104a93e8324f9`
+respectively.
 
 The checked-out `6502js/` directory is reference material, not product source.
 Its assembler implementation must not be copied, translated, or linked into

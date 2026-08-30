@@ -1,7 +1,7 @@
 # 65xx implementation plan
 
-Status: Phases 0–5 and 7 implemented; Phase 6 deferred; Phases 8–9 planned
-Updated: 2026-08-26
+Status: Phases 0–8 implemented; Phase 9 planned
+Updated: 2026-08-29
 
 ## Outcome
 
@@ -335,6 +335,12 @@ availability tests, catalog parity, and pinned ca65 differential tests.
 
 ### Phase 6: HuC6280 and M740
 
+Implementation status: complete and verified. The generated HuC6280 and M740
+tables expose 254 and 246 forms respectively. Architecture-owned codecs cover
+HuC6280 block transfers, TST and register masks, plus M740 bit branches, LDM,
+and special-page JSR forms. All 500 forms match the pinned ca65 fixture, with
+targeted negative-availability and operand-classification coverage.
+
 - Add HuC6280 special registers, bit operations, test forms, and block-transfer
   operand layouts.
 - Add M740-specific instructions, bit forms, and addressing restrictions.
@@ -371,6 +377,15 @@ verification hash and diagnostic.
 
 ### Phase 8: ca65 source-compatibility profile
 
+Implementation status: complete for the documented flat-image source profile.
+Target `65xx.ca65-raw` layers ca65 command rewriting, expressions, directives,
+CPU selection, scopes, basic macros/repeats, and flat segment intent over the
+same architecture encoders. The existing `65xx.nes` target uses that profile
+with its selected ld65-shaped image model. The Zelda 1 integration fixture and
+focused compatibility suite pass byte-for-byte. Relocatable object and linker
+semantics remain explicitly outside this profile and fail with named
+diagnostics; see the [ca65 compatibility matrix](65xx-ca65-compatibility.md).
+
 Implement compatibility in vertical slices so real programs can be used early:
 
 1. `.setcpu`, `.pushcpu`, `.popcpu`, CPU shorthand directives, `.CPU`, and CPU
@@ -381,8 +396,8 @@ Implement compatibility in vertical slices so real programs can be used early:
 3. dotted directives, label forms, cheap/unnamed locals, scopes, and procedures.
 4. `.byte`/`.word`/`.dword` and aliases, `.res`, `.align`, `.org`, `.include`,
    `.incbin`, assertions, and conditional assembly.
-5. ca65 macro declaration, invocation, parameters, local symbols, repeat forms,
-   and common emulation features.
+5. ca65 macro declaration, invocation, parameters, and repeat forms. Advanced
+   token macros plus `.local`/`.exitmacro` remain explicitly unsupported.
 6. segment/address-size source semantics that can still emit a flat image.
 
 Relocatable cc65 object generation, imports/exports requiring linker resolution,

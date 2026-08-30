@@ -63,3 +63,13 @@ test("target-neutral operand syntax preserves unvalidated register names", (t) =
   t.is(lowered.mode, "unknown");
   t.is(lowered.indexRegister, "z");
 });
+
+test("65xx classifier keeps HuC6280 and M740 compound operands architecture-owned", (t) => {
+  const resolver = createResolver();
+
+  t.is(classify65xxOperand(resolver, "#$12,$34").mode, "immediateZeroPage");
+  t.is(classify65xxOperand(resolver, "#$12,$3456,x").mode, "immediateAbsoluteIndexedX");
+  t.is(classify65xxOperand(resolver, "$1000,$2000,$0030").mode, "blockTransfer");
+  t.is(classify65xxOperand(resolver, "A,target").mode, "accumulatorRelative");
+  t.is(classify65xxOperand(resolver, "$12,#$34").mode, "zeroPageImmediate");
+});

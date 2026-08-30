@@ -110,6 +110,11 @@ export class AssemblyFrontEndService {
     allowEmpty = false,
   ): NormalizedCommand | null {
     let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
+    normalizedCommand =
+      this.host.syntaxProfile.rewriteCommand?.(normalizedCommand, {
+        sourceFile,
+        sourceLine,
+      }) ?? normalizedCommand;
 
     if (
       this.host.inMacroExpansion &&

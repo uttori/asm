@@ -65,6 +65,13 @@ export declare class SymbolScopeService {
      */
     qualifySymbolName(name: string): string;
     /**
+     * Adds a namespace inside a file-local qualifier (`unit::Namespace_Label`).
+     * @param {string} namespacePrefix The flattened namespace prefix.
+     * @param {string} label The already-qualified or plain label.
+     * @returns {string} The namespace-qualified storage key.
+     */
+    qualifyNamespaceAlias(namespacePrefix: string, label: string): string;
+    /**
      * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
      * @param {string} name The label token, without a trailing colon.
      * @returns {string} The rewritten name.

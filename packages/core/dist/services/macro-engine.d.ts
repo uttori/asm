@@ -1,6 +1,7 @@
 import type { MathCore } from "../mathcore.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
 import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
+import type { SyntaxProfile } from "../syntax-profile.js";
 /** Represents a macro definition. */
 export type MacroDefinition = {
     /** The name of the macro. */
@@ -37,6 +38,7 @@ export interface MacroEngineHost {
     currentParentLabel: string;
     currentParentIsGlobal: boolean;
     isDefinitionCollectionStage: boolean;
+    syntaxProfile: SyntaxProfile;
     symbolScope: SymbolScopeService;
     evaluateExpression(input: string): boolean;
     resolvedefines(input: string): string;

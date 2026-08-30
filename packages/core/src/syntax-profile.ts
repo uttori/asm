@@ -1,3 +1,8 @@
+export interface SyntaxRewriteContext {
+  readonly sourceFile: string;
+  readonly sourceLine: number;
+}
+
 export interface SyntaxProfile {
   readonly id: string;
   /** Preserve leading whitespace so column-sensitive dialects can inspect it later. */
@@ -20,6 +25,12 @@ export interface SyntaxProfile {
    * separately compiled banks can share a session without colliding.
    */
   readonly fileLocalSymbols: boolean;
+  /** Optional dialect-owned rewrite before command tokenization and IR construction. */
+  readonly rewriteCommand?: (command: string, context: SyntaxRewriteContext) => string;
+  /** Allow invocation of a previously declared macro without an Asar `%` prefix. */
+  readonly bareMacroInvocations?: boolean;
+  /** Optional parameter marker used while expanding macro bodies (ca65 uses `\\`). */
+  readonly macroParameterPrefix?: string;
 }
 
 export const ASAR_SYNTAX_PROFILE: SyntaxProfile = Object.freeze({

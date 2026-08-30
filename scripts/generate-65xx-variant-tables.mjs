@@ -12,11 +12,21 @@ if (!sourcePath || !outputPath || !sourceCommit) {
 }
 
 const source = fs.readFileSync(sourcePath, "utf8");
-const tableNames = ["6502DTV", "65SC02", "65C02", "W65C02", "65CE02", "4510", "45GS02"];
+const tableNames = [
+  ["6502DTV", "6502DTV"],
+  ["65SC02", "65SC02"],
+  ["65C02", "65C02"],
+  ["W65C02", "W65C02"],
+  ["65CE02", "65CE02"],
+  ["4510", "4510"],
+  ["45GS02", "45GS02"],
+  ["HuC6280", "HuC6280"],
+  ["M740", "m740"],
+];
 
-function extractInstructionTable(name) {
-  const start = source.indexOf(`} InsTab${name} = {`);
-  if (start < 0) throw new Error(`Unable to find InsTab${name}.`);
+function extractInstructionTable(name, sourceName) {
+  const start = source.indexOf(`} InsTab${sourceName} = {`);
+  if (start < 0) throw new Error(`Unable to find InsTab${sourceName}.`);
   const end = source.indexOf("/* END SORTED.SH */", start);
   if (end < 0) throw new Error(`Unable to find the end of InsTab${name}.`);
   const rows = [];
@@ -40,7 +50,9 @@ for (const match of eaBody.matchAll(/\{([^{}]+)\}/g)) {
 }
 if (eaRows.length !== 16) throw new Error(`Expected 16 EATab rows, got ${eaRows.length}.`);
 
-const tables = Object.fromEntries(tableNames.map((name) => [name, extractInstructionTable(name)]));
+const tables = Object.fromEntries(
+  tableNames.map(([name, sourceName]) => [name, extractInstructionTable(name, sourceName)]),
+);
 const digest = crypto.createHash("sha256").update(source).digest("hex");
 const eaSource = `[\n${eaRows.map((row) => `  [${row.join(", ")}]`).join(",\n")}\n]`;
 const tableSource = `{\n${Object.entries(tables)
@@ -54,7 +66,7 @@ const generated =
   `// Source: https://github.com/cc65/cc65/blob/master/src/ca65/instr.c\n` +
   `// Commit: ${sourceCommit}\n` +
   `// Source SHA-256: ${digest}\n\n` +
-  `export type Ca65Handler = "PutAll" | "PutBitBranch" | "PutPCRel8" | "PutPCRel4510" | "Put4510" | "Put45GS02" | "Put45GS02_Q" | "PutJMP";\n` +
+  `export type Ca65Handler = "PutAll" | "PutBitBranch" | "PutBitBranch_m740" | "PutBlockTransfer" | "PutLDM_m740" | "PutPCRel8" | "PutPCRel4510" | "Put4510" | "Put45GS02" | "Put45GS02_Q" | "PutJMP" | "PutJSR_m740" | "PutTAMn" | "PutTMA" | "PutTMAn" | "PutTST";\n` +
   `export type Ca65InstructionRow = readonly [mnemonic: string, modes: number, base: number, eaTable: number, handler: Ca65Handler];\n\n` +
   `export const ca65EaTable: readonly (readonly number[])[] = ${eaSource};\n\n` +
   `export const ca65VariantTables = ${tableSource} as const satisfies Readonly<Record<string, readonly Ca65InstructionRow[]>>;\n`;

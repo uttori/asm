@@ -9,7 +9,7 @@ The repository ships four production packages:
 | `@uttori/asm-core` | Generic assembler runtime, analysis APIs, and plugin contracts |
 | `@uttori/asm-plugin-loader-node` | Trusted Node.js plugin discovery and `uttori-asm.config.json` loading |
 | `@uttori/asm-plugin-snes` | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility |
-| `@uttori/asm-plugin-65xx` | NMOS, CMOS, Commodore, and MEGA65 65xx encoders with a configurable-origin flat raw target |
+| `@uttori/asm-plugin-65xx` | NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 encoders with native and ca65-shaped raw targets |
 
 The language server and VS Code extension use the same loaded plugin environment as command-line builds, so diagnostics and editor catalogs match the selected target.
 

@@ -1,0 +1,4581 @@
+{
+  "oracle": {
+    "release": "V2.19",
+    "commit": "e11fb5c39371046ebe25485f984f644c5a0d65d3",
+    "instructionTableSha256": "bcd36f022a3534355285346d6a4149563a21f17c72b614d91e381d19d68e5a9d"
+  },
+  "variants": [
+    {
+      "cpu": "HuC6280",
+      "sha256": "22fa7b2e54c7625b457e2320802856eb2e3844a4878648948d1e8a8b3b03903a",
+      "cases": [
+        {
+          "mnemonic": "ADC",
+          "mode": "zeroPage",
+          "source": "ADC $12\ncase_0_end:",
+          "bytes": [
+            101,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "absolute",
+          "source": "ADC $1234\ncase_1_end:",
+          "bytes": [
+            109,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "zeroPageIndexedX",
+          "source": "ADC $12,x\ncase_2_end:",
+          "bytes": [
+            117,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "absoluteIndexedX",
+          "source": "ADC $1234,x\ncase_3_end:",
+          "bytes": [
+            125,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "absoluteIndexedY",
+          "source": "ADC $1234,y\ncase_4_end:",
+          "bytes": [
+            121,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "zeroPageIndirect",
+          "source": "ADC ($12)\ncase_5_end:",
+          "bytes": [
+            114,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "indirectIndexedY",
+          "source": "ADC ($12),y\ncase_6_end:",
+          "bytes": [
+            113,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "indexedIndirectX",
+          "source": "ADC ($12,x)\ncase_7_end:",
+          "bytes": [
+            97,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "immediate",
+          "source": "ADC #$12\ncase_8_end:",
+          "bytes": [
+            105,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "zeroPage",
+          "source": "AND $12\ncase_9_end:",
+          "bytes": [
+            37,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "absolute",
+          "source": "AND $1234\ncase_10_end:",
+          "bytes": [
+            45,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "zeroPageIndexedX",
+          "source": "AND $12,x\ncase_11_end:",
+          "bytes": [
+            53,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "absoluteIndexedX",
+          "source": "AND $1234,x\ncase_12_end:",
+          "bytes": [
+            61,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "absoluteIndexedY",
+          "source": "AND $1234,y\ncase_13_end:",
+          "bytes": [
+            57,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "zeroPageIndirect",
+          "source": "AND ($12)\ncase_14_end:",
+          "bytes": [
+            50,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "indirectIndexedY",
+          "source": "AND ($12),y\ncase_15_end:",
+          "bytes": [
+            49,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "indexedIndirectX",
+          "source": "AND ($12,x)\ncase_16_end:",
+          "bytes": [
+            33,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "immediate",
+          "source": "AND #$12\ncase_17_end:",
+          "bytes": [
+            41,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "accumulator",
+          "source": "ASL A\ncase_18_end:",
+          "bytes": [
+            10
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "zeroPage",
+          "source": "ASL $12\ncase_19_end:",
+          "bytes": [
+            6,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "absolute",
+          "source": "ASL $1234\ncase_20_end:",
+          "bytes": [
+            14,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "zeroPageIndexedX",
+          "source": "ASL $12,x\ncase_21_end:",
+          "bytes": [
+            22,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "absoluteIndexedX",
+          "source": "ASL $1234,x\ncase_22_end:",
+          "bytes": [
+            30,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BBR0",
+          "mode": "zeroPageRelative",
+          "source": "BBR0 $12,case_23_end\ncase_23_end:",
+          "bytes": [
+            15,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBR1",
+          "mode": "zeroPageRelative",
+          "source": "BBR1 $12,case_24_end\ncase_24_end:",
+          "bytes": [
+            31,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBR2",
+          "mode": "zeroPageRelative",
+          "source": "BBR2 $12,case_25_end\ncase_25_end:",
+          "bytes": [
+            47,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBR3",
+          "mode": "zeroPageRelative",
+          "source": "BBR3 $12,case_26_end\ncase_26_end:",
+          "bytes": [
+            63,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBR4",
+          "mode": "zeroPageRelative",
+          "source": "BBR4 $12,case_27_end\ncase_27_end:",
+          "bytes": [
+            79,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBR5",
+          "mode": "zeroPageRelative",
+          "source": "BBR5 $12,case_28_end\ncase_28_end:",
+          "bytes": [
+            95,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBR6",
+          "mode": "zeroPageRelative",
+          "source": "BBR6 $12,case_29_end\ncase_29_end:",
+          "bytes": [
+            111,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBR7",
+          "mode": "zeroPageRelative",
+          "source": "BBR7 $12,case_30_end\ncase_30_end:",
+          "bytes": [
+            127,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS0",
+          "mode": "zeroPageRelative",
+          "source": "BBS0 $12,case_31_end\ncase_31_end:",
+          "bytes": [
+            143,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS1",
+          "mode": "zeroPageRelative",
+          "source": "BBS1 $12,case_32_end\ncase_32_end:",
+          "bytes": [
+            159,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS2",
+          "mode": "zeroPageRelative",
+          "source": "BBS2 $12,case_33_end\ncase_33_end:",
+          "bytes": [
+            175,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS3",
+          "mode": "zeroPageRelative",
+          "source": "BBS3 $12,case_34_end\ncase_34_end:",
+          "bytes": [
+            191,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS4",
+          "mode": "zeroPageRelative",
+          "source": "BBS4 $12,case_35_end\ncase_35_end:",
+          "bytes": [
+            207,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS5",
+          "mode": "zeroPageRelative",
+          "source": "BBS5 $12,case_36_end\ncase_36_end:",
+          "bytes": [
+            223,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS6",
+          "mode": "zeroPageRelative",
+          "source": "BBS6 $12,case_37_end\ncase_37_end:",
+          "bytes": [
+            239,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS7",
+          "mode": "zeroPageRelative",
+          "source": "BBS7 $12,case_38_end\ncase_38_end:",
+          "bytes": [
+            255,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BCC",
+          "mode": "relative",
+          "source": "BCC case_39_end\ncase_39_end:",
+          "bytes": [
+            144,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BCS",
+          "mode": "relative",
+          "source": "BCS case_40_end\ncase_40_end:",
+          "bytes": [
+            176,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BEQ",
+          "mode": "relative",
+          "source": "BEQ case_41_end\ncase_41_end:",
+          "bytes": [
+            240,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BIT",
+          "mode": "zeroPage",
+          "source": "BIT $12\ncase_42_end:",
+          "bytes": [
+            36,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BIT",
+          "mode": "absolute",
+          "source": "BIT $1234\ncase_43_end:",
+          "bytes": [
+            44,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BIT",
+          "mode": "zeroPageIndexedX",
+          "source": "BIT $12,x\ncase_44_end:",
+          "bytes": [
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BIT",
+          "mode": "absoluteIndexedX",
+          "source": "BIT $1234,x\ncase_45_end:",
+          "bytes": [
+            60,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BIT",
+          "mode": "immediate",
+          "source": "BIT #$12\ncase_46_end:",
+          "bytes": [
+            137,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BMI",
+          "mode": "relative",
+          "source": "BMI case_47_end\ncase_47_end:",
+          "bytes": [
+            48,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BNE",
+          "mode": "relative",
+          "source": "BNE case_48_end\ncase_48_end:",
+          "bytes": [
+            208,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BPL",
+          "mode": "relative",
+          "source": "BPL case_49_end\ncase_49_end:",
+          "bytes": [
+            16,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BRA",
+          "mode": "relative",
+          "source": "BRA case_50_end\ncase_50_end:",
+          "bytes": [
+            128,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BRK",
+          "mode": "implied",
+          "source": "BRK\ncase_51_end:",
+          "bytes": [
+            0
+          ]
+        },
+        {
+          "mnemonic": "BRK",
+          "mode": "zeroPage",
+          "source": "BRK $12\ncase_52_end:",
+          "bytes": [
+            0,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BRK",
+          "mode": "immediate",
+          "source": "BRK #$12\ncase_53_end:",
+          "bytes": [
+            0,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BSR",
+          "mode": "relative",
+          "source": "BSR case_54_end\ncase_54_end:",
+          "bytes": [
+            68,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BVC",
+          "mode": "relative",
+          "source": "BVC case_55_end\ncase_55_end:",
+          "bytes": [
+            80,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BVS",
+          "mode": "relative",
+          "source": "BVS case_56_end\ncase_56_end:",
+          "bytes": [
+            112,
+            0
+          ]
+        },
+        {
+          "mnemonic": "CLA",
+          "mode": "implied",
+          "source": "CLA\ncase_57_end:",
+          "bytes": [
+            98
+          ]
+        },
+        {
+          "mnemonic": "CLC",
+          "mode": "implied",
+          "source": "CLC\ncase_58_end:",
+          "bytes": [
+            24
+          ]
+        },
+        {
+          "mnemonic": "CLD",
+          "mode": "implied",
+          "source": "CLD\ncase_59_end:",
+          "bytes": [
+            216
+          ]
+        },
+        {
+          "mnemonic": "CLI",
+          "mode": "implied",
+          "source": "CLI\ncase_60_end:",
+          "bytes": [
+            88
+          ]
+        },
+        {
+          "mnemonic": "CLV",
+          "mode": "implied",
+          "source": "CLV\ncase_61_end:",
+          "bytes": [
+            184
+          ]
+        },
+        {
+          "mnemonic": "CLX",
+          "mode": "implied",
+          "source": "CLX\ncase_62_end:",
+          "bytes": [
+            130
+          ]
+        },
+        {
+          "mnemonic": "CLY",
+          "mode": "implied",
+          "source": "CLY\ncase_63_end:",
+          "bytes": [
+            194
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "zeroPage",
+          "source": "CMP $12\ncase_64_end:",
+          "bytes": [
+            197,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "absolute",
+          "source": "CMP $1234\ncase_65_end:",
+          "bytes": [
+            205,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "zeroPageIndexedX",
+          "source": "CMP $12,x\ncase_66_end:",
+          "bytes": [
+            213,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "absoluteIndexedX",
+          "source": "CMP $1234,x\ncase_67_end:",
+          "bytes": [
+            221,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "absoluteIndexedY",
+          "source": "CMP $1234,y\ncase_68_end:",
+          "bytes": [
+            217,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "zeroPageIndirect",
+          "source": "CMP ($12)\ncase_69_end:",
+          "bytes": [
+            210,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "indirectIndexedY",
+          "source": "CMP ($12),y\ncase_70_end:",
+          "bytes": [
+            209,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "indexedIndirectX",
+          "source": "CMP ($12,x)\ncase_71_end:",
+          "bytes": [
+            193,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "immediate",
+          "source": "CMP #$12\ncase_72_end:",
+          "bytes": [
+            201,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPX",
+          "mode": "zeroPage",
+          "source": "CPX $12\ncase_73_end:",
+          "bytes": [
+            228,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPX",
+          "mode": "absolute",
+          "source": "CPX $1234\ncase_74_end:",
+          "bytes": [
+            236,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPX",
+          "mode": "immediate",
+          "source": "CPX #$12\ncase_75_end:",
+          "bytes": [
+            224,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPY",
+          "mode": "zeroPage",
+          "source": "CPY $12\ncase_76_end:",
+          "bytes": [
+            196,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPY",
+          "mode": "absolute",
+          "source": "CPY $1234\ncase_77_end:",
+          "bytes": [
+            204,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPY",
+          "mode": "immediate",
+          "source": "CPY #$12\ncase_78_end:",
+          "bytes": [
+            192,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CSH",
+          "mode": "implied",
+          "source": "CSH\ncase_79_end:",
+          "bytes": [
+            212
+          ]
+        },
+        {
+          "mnemonic": "CSL",
+          "mode": "implied",
+          "source": "CSL\ncase_80_end:",
+          "bytes": [
+            84
+          ]
+        },
+        {
+          "mnemonic": "DEA",
+          "mode": "implied",
+          "source": "DEA\ncase_81_end:",
+          "bytes": [
+            58
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "accumulator",
+          "source": "DEC A\ncase_82_end:",
+          "bytes": [
+            58
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "zeroPage",
+          "source": "DEC $12\ncase_83_end:",
+          "bytes": [
+            198,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "absolute",
+          "source": "DEC $1234\ncase_84_end:",
+          "bytes": [
+            206,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "zeroPageIndexedX",
+          "source": "DEC $12,x\ncase_85_end:",
+          "bytes": [
+            214,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "absoluteIndexedX",
+          "source": "DEC $1234,x\ncase_86_end:",
+          "bytes": [
+            222,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEX",
+          "mode": "implied",
+          "source": "DEX\ncase_87_end:",
+          "bytes": [
+            202
+          ]
+        },
+        {
+          "mnemonic": "DEY",
+          "mode": "implied",
+          "source": "DEY\ncase_88_end:",
+          "bytes": [
+            136
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "zeroPage",
+          "source": "EOR $12\ncase_89_end:",
+          "bytes": [
+            69,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "absolute",
+          "source": "EOR $1234\ncase_90_end:",
+          "bytes": [
+            77,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "zeroPageIndexedX",
+          "source": "EOR $12,x\ncase_91_end:",
+          "bytes": [
+            85,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "absoluteIndexedX",
+          "source": "EOR $1234,x\ncase_92_end:",
+          "bytes": [
+            93,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "absoluteIndexedY",
+          "source": "EOR $1234,y\ncase_93_end:",
+          "bytes": [
+            89,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "zeroPageIndirect",
+          "source": "EOR ($12)\ncase_94_end:",
+          "bytes": [
+            82,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "indirectIndexedY",
+          "source": "EOR ($12),y\ncase_95_end:",
+          "bytes": [
+            81,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "indexedIndirectX",
+          "source": "EOR ($12,x)\ncase_96_end:",
+          "bytes": [
+            65,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "immediate",
+          "source": "EOR #$12\ncase_97_end:",
+          "bytes": [
+            73,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INA",
+          "mode": "implied",
+          "source": "INA\ncase_98_end:",
+          "bytes": [
+            26
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "accumulator",
+          "source": "INC A\ncase_99_end:",
+          "bytes": [
+            26
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "zeroPage",
+          "source": "INC $12\ncase_100_end:",
+          "bytes": [
+            230,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "absolute",
+          "source": "INC $1234\ncase_101_end:",
+          "bytes": [
+            238,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "zeroPageIndexedX",
+          "source": "INC $12,x\ncase_102_end:",
+          "bytes": [
+            246,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "absoluteIndexedX",
+          "source": "INC $1234,x\ncase_103_end:",
+          "bytes": [
+            254,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INX",
+          "mode": "implied",
+          "source": "INX\ncase_104_end:",
+          "bytes": [
+            232
+          ]
+        },
+        {
+          "mnemonic": "INY",
+          "mode": "implied",
+          "source": "INY\ncase_105_end:",
+          "bytes": [
+            200
+          ]
+        },
+        {
+          "mnemonic": "JMP",
+          "mode": "absolute",
+          "source": "JMP $1234\ncase_106_end:",
+          "bytes": [
+            76,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "JMP",
+          "mode": "indirect",
+          "source": "JMP ($1234)\ncase_107_end:",
+          "bytes": [
+            108,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "JMP",
+          "mode": "absoluteIndexedIndirect",
+          "source": "JMP ($1234,x)\ncase_108_end:",
+          "bytes": [
+            124,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "JSR",
+          "mode": "absolute",
+          "source": "JSR $1234\ncase_109_end:",
+          "bytes": [
+            32,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "zeroPage",
+          "source": "LDA $12\ncase_110_end:",
+          "bytes": [
+            165,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "absolute",
+          "source": "LDA $1234\ncase_111_end:",
+          "bytes": [
+            173,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "zeroPageIndexedX",
+          "source": "LDA $12,x\ncase_112_end:",
+          "bytes": [
+            181,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "absoluteIndexedX",
+          "source": "LDA $1234,x\ncase_113_end:",
+          "bytes": [
+            189,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "absoluteIndexedY",
+          "source": "LDA $1234,y\ncase_114_end:",
+          "bytes": [
+            185,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "zeroPageIndirect",
+          "source": "LDA ($12)\ncase_115_end:",
+          "bytes": [
+            178,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "indirectIndexedY",
+          "source": "LDA ($12),y\ncase_116_end:",
+          "bytes": [
+            177,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "indexedIndirectX",
+          "source": "LDA ($12,x)\ncase_117_end:",
+          "bytes": [
+            161,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "immediate",
+          "source": "LDA #$12\ncase_118_end:",
+          "bytes": [
+            169,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "zeroPage",
+          "source": "LDX $12\ncase_119_end:",
+          "bytes": [
+            166,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "absolute",
+          "source": "LDX $1234\ncase_120_end:",
+          "bytes": [
+            174,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "zeroPageIndexedY",
+          "source": "LDX $12,y\ncase_121_end:",
+          "bytes": [
+            182,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "absoluteIndexedY",
+          "source": "LDX $1234,y\ncase_122_end:",
+          "bytes": [
+            190,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "immediate",
+          "source": "LDX #$12\ncase_123_end:",
+          "bytes": [
+            162,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "zeroPage",
+          "source": "LDY $12\ncase_124_end:",
+          "bytes": [
+            164,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "absolute",
+          "source": "LDY $1234\ncase_125_end:",
+          "bytes": [
+            172,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "zeroPageIndexedX",
+          "source": "LDY $12,x\ncase_126_end:",
+          "bytes": [
+            180,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "absoluteIndexedX",
+          "source": "LDY $1234,x\ncase_127_end:",
+          "bytes": [
+            188,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "immediate",
+          "source": "LDY #$12\ncase_128_end:",
+          "bytes": [
+            160,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "accumulator",
+          "source": "LSR A\ncase_129_end:",
+          "bytes": [
+            74
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "zeroPage",
+          "source": "LSR $12\ncase_130_end:",
+          "bytes": [
+            70,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "absolute",
+          "source": "LSR $1234\ncase_131_end:",
+          "bytes": [
+            78,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "zeroPageIndexedX",
+          "source": "LSR $12,x\ncase_132_end:",
+          "bytes": [
+            86,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "absoluteIndexedX",
+          "source": "LSR $1234,x\ncase_133_end:",
+          "bytes": [
+            94,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "NOP",
+          "mode": "implied",
+          "source": "NOP\ncase_134_end:",
+          "bytes": [
+            234
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "zeroPage",
+          "source": "ORA $12\ncase_135_end:",
+          "bytes": [
+            5,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "absolute",
+          "source": "ORA $1234\ncase_136_end:",
+          "bytes": [
+            13,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "zeroPageIndexedX",
+          "source": "ORA $12,x\ncase_137_end:",
+          "bytes": [
+            21,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "absoluteIndexedX",
+          "source": "ORA $1234,x\ncase_138_end:",
+          "bytes": [
+            29,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "absoluteIndexedY",
+          "source": "ORA $1234,y\ncase_139_end:",
+          "bytes": [
+            25,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "zeroPageIndirect",
+          "source": "ORA ($12)\ncase_140_end:",
+          "bytes": [
+            18,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "indirectIndexedY",
+          "source": "ORA ($12),y\ncase_141_end:",
+          "bytes": [
+            17,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "indexedIndirectX",
+          "source": "ORA ($12,x)\ncase_142_end:",
+          "bytes": [
+            1,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "immediate",
+          "source": "ORA #$12\ncase_143_end:",
+          "bytes": [
+            9,
+            18
+          ]
+        },
+        {
+          "mnemonic": "PHA",
+          "mode": "implied",
+          "source": "PHA\ncase_144_end:",
+          "bytes": [
+            72
+          ]
+        },
+        {
+          "mnemonic": "PHP",
+          "mode": "implied",
+          "source": "PHP\ncase_145_end:",
+          "bytes": [
+            8
+          ]
+        },
+        {
+          "mnemonic": "PHX",
+          "mode": "implied",
+          "source": "PHX\ncase_146_end:",
+          "bytes": [
+            218
+          ]
+        },
+        {
+          "mnemonic": "PHY",
+          "mode": "implied",
+          "source": "PHY\ncase_147_end:",
+          "bytes": [
+            90
+          ]
+        },
+        {
+          "mnemonic": "PLA",
+          "mode": "implied",
+          "source": "PLA\ncase_148_end:",
+          "bytes": [
+            104
+          ]
+        },
+        {
+          "mnemonic": "PLP",
+          "mode": "implied",
+          "source": "PLP\ncase_149_end:",
+          "bytes": [
+            40
+          ]
+        },
+        {
+          "mnemonic": "PLX",
+          "mode": "implied",
+          "source": "PLX\ncase_150_end:",
+          "bytes": [
+            250
+          ]
+        },
+        {
+          "mnemonic": "PLY",
+          "mode": "implied",
+          "source": "PLY\ncase_151_end:",
+          "bytes": [
+            122
+          ]
+        },
+        {
+          "mnemonic": "RMB0",
+          "mode": "zeroPage",
+          "source": "RMB0 $12\ncase_152_end:",
+          "bytes": [
+            7,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB1",
+          "mode": "zeroPage",
+          "source": "RMB1 $12\ncase_153_end:",
+          "bytes": [
+            23,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB2",
+          "mode": "zeroPage",
+          "source": "RMB2 $12\ncase_154_end:",
+          "bytes": [
+            39,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB3",
+          "mode": "zeroPage",
+          "source": "RMB3 $12\ncase_155_end:",
+          "bytes": [
+            55,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB4",
+          "mode": "zeroPage",
+          "source": "RMB4 $12\ncase_156_end:",
+          "bytes": [
+            71,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB5",
+          "mode": "zeroPage",
+          "source": "RMB5 $12\ncase_157_end:",
+          "bytes": [
+            87,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB6",
+          "mode": "zeroPage",
+          "source": "RMB6 $12\ncase_158_end:",
+          "bytes": [
+            103,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB7",
+          "mode": "zeroPage",
+          "source": "RMB7 $12\ncase_159_end:",
+          "bytes": [
+            119,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "accumulator",
+          "source": "ROL A\ncase_160_end:",
+          "bytes": [
+            42
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "zeroPage",
+          "source": "ROL $12\ncase_161_end:",
+          "bytes": [
+            38,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "absolute",
+          "source": "ROL $1234\ncase_162_end:",
+          "bytes": [
+            46,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "zeroPageIndexedX",
+          "source": "ROL $12,x\ncase_163_end:",
+          "bytes": [
+            54,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "absoluteIndexedX",
+          "source": "ROL $1234,x\ncase_164_end:",
+          "bytes": [
+            62,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "accumulator",
+          "source": "ROR A\ncase_165_end:",
+          "bytes": [
+            106
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "zeroPage",
+          "source": "ROR $12\ncase_166_end:",
+          "bytes": [
+            102,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "absolute",
+          "source": "ROR $1234\ncase_167_end:",
+          "bytes": [
+            110,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "zeroPageIndexedX",
+          "source": "ROR $12,x\ncase_168_end:",
+          "bytes": [
+            118,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "absoluteIndexedX",
+          "source": "ROR $1234,x\ncase_169_end:",
+          "bytes": [
+            126,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RTI",
+          "mode": "implied",
+          "source": "RTI\ncase_170_end:",
+          "bytes": [
+            64
+          ]
+        },
+        {
+          "mnemonic": "RTS",
+          "mode": "implied",
+          "source": "RTS\ncase_171_end:",
+          "bytes": [
+            96
+          ]
+        },
+        {
+          "mnemonic": "SAX",
+          "mode": "implied",
+          "source": "SAX\ncase_172_end:",
+          "bytes": [
+            34
+          ]
+        },
+        {
+          "mnemonic": "SAY",
+          "mode": "implied",
+          "source": "SAY\ncase_173_end:",
+          "bytes": [
+            66
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "zeroPage",
+          "source": "SBC $12\ncase_174_end:",
+          "bytes": [
+            229,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "absolute",
+          "source": "SBC $1234\ncase_175_end:",
+          "bytes": [
+            237,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "zeroPageIndexedX",
+          "source": "SBC $12,x\ncase_176_end:",
+          "bytes": [
+            245,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "absoluteIndexedX",
+          "source": "SBC $1234,x\ncase_177_end:",
+          "bytes": [
+            253,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "absoluteIndexedY",
+          "source": "SBC $1234,y\ncase_178_end:",
+          "bytes": [
+            249,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "zeroPageIndirect",
+          "source": "SBC ($12)\ncase_179_end:",
+          "bytes": [
+            242,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "indirectIndexedY",
+          "source": "SBC ($12),y\ncase_180_end:",
+          "bytes": [
+            241,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "indexedIndirectX",
+          "source": "SBC ($12,x)\ncase_181_end:",
+          "bytes": [
+            225,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "immediate",
+          "source": "SBC #$12\ncase_182_end:",
+          "bytes": [
+            233,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEC",
+          "mode": "implied",
+          "source": "SEC\ncase_183_end:",
+          "bytes": [
+            56
+          ]
+        },
+        {
+          "mnemonic": "SED",
+          "mode": "implied",
+          "source": "SED\ncase_184_end:",
+          "bytes": [
+            248
+          ]
+        },
+        {
+          "mnemonic": "SEI",
+          "mode": "implied",
+          "source": "SEI\ncase_185_end:",
+          "bytes": [
+            120
+          ]
+        },
+        {
+          "mnemonic": "SET",
+          "mode": "implied",
+          "source": "SET\ncase_186_end:",
+          "bytes": [
+            244
+          ]
+        },
+        {
+          "mnemonic": "SMB0",
+          "mode": "zeroPage",
+          "source": "SMB0 $12\ncase_187_end:",
+          "bytes": [
+            135,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SMB1",
+          "mode": "zeroPage",
+          "source": "SMB1 $12\ncase_188_end:",
+          "bytes": [
+            151,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SMB2",
+          "mode": "zeroPage",
+          "source": "SMB2 $12\ncase_189_end:",
+          "bytes": [
+            167,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SMB3",
+          "mode": "zeroPage",
+          "source": "SMB3 $12\ncase_190_end:",
+          "bytes": [
+            183,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SMB4",
+          "mode": "zeroPage",
+          "source": "SMB4 $12\ncase_191_end:",
+          "bytes": [
+            199,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SMB5",
+          "mode": "zeroPage",
+          "source": "SMB5 $12\ncase_192_end:",
+          "bytes": [
+            215,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SMB6",
+          "mode": "zeroPage",
+          "source": "SMB6 $12\ncase_193_end:",
+          "bytes": [
+            231,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SMB7",
+          "mode": "zeroPage",
+          "source": "SMB7 $12\ncase_194_end:",
+          "bytes": [
+            247,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ST0",
+          "mode": "immediate",
+          "source": "ST0 #$12\ncase_195_end:",
+          "bytes": [
+            3,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ST1",
+          "mode": "immediate",
+          "source": "ST1 #$12\ncase_196_end:",
+          "bytes": [
+            19,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ST2",
+          "mode": "immediate",
+          "source": "ST2 #$12\ncase_197_end:",
+          "bytes": [
+            35,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "zeroPage",
+          "source": "STA $12\ncase_198_end:",
+          "bytes": [
+            133,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "absolute",
+          "source": "STA $1234\ncase_199_end:",
+          "bytes": [
+            141,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "zeroPageIndexedX",
+          "source": "STA $12,x\ncase_200_end:",
+          "bytes": [
+            149,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "absoluteIndexedX",
+          "source": "STA $1234,x\ncase_201_end:",
+          "bytes": [
+            157,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "absoluteIndexedY",
+          "source": "STA $1234,y\ncase_202_end:",
+          "bytes": [
+            153,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "zeroPageIndirect",
+          "source": "STA ($12)\ncase_203_end:",
+          "bytes": [
+            146,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "indirectIndexedY",
+          "source": "STA ($12),y\ncase_204_end:",
+          "bytes": [
+            145,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "indexedIndirectX",
+          "source": "STA ($12,x)\ncase_205_end:",
+          "bytes": [
+            129,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STX",
+          "mode": "zeroPage",
+          "source": "STX $12\ncase_206_end:",
+          "bytes": [
+            134,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STX",
+          "mode": "absolute",
+          "source": "STX $1234\ncase_207_end:",
+          "bytes": [
+            142,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STX",
+          "mode": "zeroPageIndexedY",
+          "source": "STX $12,y\ncase_208_end:",
+          "bytes": [
+            150,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STY",
+          "mode": "zeroPage",
+          "source": "STY $12\ncase_209_end:",
+          "bytes": [
+            132,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STY",
+          "mode": "absolute",
+          "source": "STY $1234\ncase_210_end:",
+          "bytes": [
+            140,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STY",
+          "mode": "zeroPageIndexedX",
+          "source": "STY $12,x\ncase_211_end:",
+          "bytes": [
+            148,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STZ",
+          "mode": "zeroPage",
+          "source": "STZ $12\ncase_212_end:",
+          "bytes": [
+            100,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STZ",
+          "mode": "absolute",
+          "source": "STZ $1234\ncase_213_end:",
+          "bytes": [
+            156,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STZ",
+          "mode": "zeroPageIndexedX",
+          "source": "STZ $12,x\ncase_214_end:",
+          "bytes": [
+            116,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STZ",
+          "mode": "absoluteIndexedX",
+          "source": "STZ $1234,x\ncase_215_end:",
+          "bytes": [
+            158,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SXY",
+          "mode": "implied",
+          "source": "SXY\ncase_216_end:",
+          "bytes": [
+            2
+          ]
+        },
+        {
+          "mnemonic": "TAI",
+          "mode": "blockTransfer",
+          "source": "TAI $1234,$5678,$0003\ncase_217_end:",
+          "bytes": [
+            243,
+            52,
+            18,
+            120,
+            86,
+            3,
+            0
+          ]
+        },
+        {
+          "mnemonic": "TAM",
+          "mode": "immediate",
+          "source": "TAM #$12\ncase_218_end:",
+          "bytes": [
+            83,
+            18
+          ]
+        },
+        {
+          "mnemonic": "TAM0",
+          "mode": "implied",
+          "source": "TAM0\ncase_219_end:",
+          "bytes": [
+            83,
+            1
+          ]
+        },
+        {
+          "mnemonic": "TAM1",
+          "mode": "implied",
+          "source": "TAM1\ncase_220_end:",
+          "bytes": [
+            83,
+            2
+          ]
+        },
+        {
+          "mnemonic": "TAM2",
+          "mode": "implied",
+          "source": "TAM2\ncase_221_end:",
+          "bytes": [
+            83,
+            4
+          ]
+        },
+        {
+          "mnemonic": "TAM3",
+          "mode": "implied",
+          "source": "TAM3\ncase_222_end:",
+          "bytes": [
+            83,
+            8
+          ]
+        },
+        {
+          "mnemonic": "TAM4",
+          "mode": "implied",
+          "source": "TAM4\ncase_223_end:",
+          "bytes": [
+            83,
+            16
+          ]
+        },
+        {
+          "mnemonic": "TAM5",
+          "mode": "implied",
+          "source": "TAM5\ncase_224_end:",
+          "bytes": [
+            83,
+            32
+          ]
+        },
+        {
+          "mnemonic": "TAM6",
+          "mode": "implied",
+          "source": "TAM6\ncase_225_end:",
+          "bytes": [
+            83,
+            64
+          ]
+        },
+        {
+          "mnemonic": "TAM7",
+          "mode": "implied",
+          "source": "TAM7\ncase_226_end:",
+          "bytes": [
+            83,
+            128
+          ]
+        },
+        {
+          "mnemonic": "TAX",
+          "mode": "implied",
+          "source": "TAX\ncase_227_end:",
+          "bytes": [
+            170
+          ]
+        },
+        {
+          "mnemonic": "TAY",
+          "mode": "implied",
+          "source": "TAY\ncase_228_end:",
+          "bytes": [
+            168
+          ]
+        },
+        {
+          "mnemonic": "TDD",
+          "mode": "blockTransfer",
+          "source": "TDD $1234,$5678,$0003\ncase_229_end:",
+          "bytes": [
+            195,
+            52,
+            18,
+            120,
+            86,
+            3,
+            0
+          ]
+        },
+        {
+          "mnemonic": "TIA",
+          "mode": "blockTransfer",
+          "source": "TIA $1234,$5678,$0003\ncase_230_end:",
+          "bytes": [
+            227,
+            52,
+            18,
+            120,
+            86,
+            3,
+            0
+          ]
+        },
+        {
+          "mnemonic": "TII",
+          "mode": "blockTransfer",
+          "source": "TII $1234,$5678,$0003\ncase_231_end:",
+          "bytes": [
+            115,
+            52,
+            18,
+            120,
+            86,
+            3,
+            0
+          ]
+        },
+        {
+          "mnemonic": "TIN",
+          "mode": "blockTransfer",
+          "source": "TIN $1234,$5678,$0003\ncase_232_end:",
+          "bytes": [
+            211,
+            52,
+            18,
+            120,
+            86,
+            3,
+            0
+          ]
+        },
+        {
+          "mnemonic": "TMA",
+          "mode": "immediate",
+          "source": "TMA #$10\ncase_233_end:",
+          "bytes": [
+            67,
+            16
+          ]
+        },
+        {
+          "mnemonic": "TMA0",
+          "mode": "implied",
+          "source": "TMA0\ncase_234_end:",
+          "bytes": [
+            67,
+            1
+          ]
+        },
+        {
+          "mnemonic": "TMA1",
+          "mode": "implied",
+          "source": "TMA1\ncase_235_end:",
+          "bytes": [
+            67,
+            2
+          ]
+        },
+        {
+          "mnemonic": "TMA2",
+          "mode": "implied",
+          "source": "TMA2\ncase_236_end:",
+          "bytes": [
+            67,
+            4
+          ]
+        },
+        {
+          "mnemonic": "TMA3",
+          "mode": "implied",
+          "source": "TMA3\ncase_237_end:",
+          "bytes": [
+            67,
+            8
+          ]
+        },
+        {
+          "mnemonic": "TMA4",
+          "mode": "implied",
+          "source": "TMA4\ncase_238_end:",
+          "bytes": [
+            67,
+            16
+          ]
+        },
+        {
+          "mnemonic": "TMA5",
+          "mode": "implied",
+          "source": "TMA5\ncase_239_end:",
+          "bytes": [
+            67,
+            32
+          ]
+        },
+        {
+          "mnemonic": "TMA6",
+          "mode": "implied",
+          "source": "TMA6\ncase_240_end:",
+          "bytes": [
+            67,
+            64
+          ]
+        },
+        {
+          "mnemonic": "TMA7",
+          "mode": "implied",
+          "source": "TMA7\ncase_241_end:",
+          "bytes": [
+            67,
+            128
+          ]
+        },
+        {
+          "mnemonic": "TRB",
+          "mode": "zeroPage",
+          "source": "TRB $12\ncase_242_end:",
+          "bytes": [
+            20,
+            18
+          ]
+        },
+        {
+          "mnemonic": "TRB",
+          "mode": "absolute",
+          "source": "TRB $1234\ncase_243_end:",
+          "bytes": [
+            28,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "TSB",
+          "mode": "zeroPage",
+          "source": "TSB $12\ncase_244_end:",
+          "bytes": [
+            4,
+            18
+          ]
+        },
+        {
+          "mnemonic": "TSB",
+          "mode": "absolute",
+          "source": "TSB $1234\ncase_245_end:",
+          "bytes": [
+            12,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "TST",
+          "mode": "immediateZeroPage",
+          "source": "TST #$12,$34\ncase_246_end:",
+          "bytes": [
+            131,
+            18,
+            52
+          ]
+        },
+        {
+          "mnemonic": "TST",
+          "mode": "immediateAbsolute",
+          "source": "TST #$12,$3456\ncase_247_end:",
+          "bytes": [
+            147,
+            18,
+            86,
+            52
+          ]
+        },
+        {
+          "mnemonic": "TST",
+          "mode": "immediateZeroPageIndexedX",
+          "source": "TST #$12,$34,x\ncase_248_end:",
+          "bytes": [
+            163,
+            18,
+            52
+          ]
+        },
+        {
+          "mnemonic": "TST",
+          "mode": "immediateAbsoluteIndexedX",
+          "source": "TST #$12,$3456,x\ncase_249_end:",
+          "bytes": [
+            179,
+            18,
+            86,
+            52
+          ]
+        },
+        {
+          "mnemonic": "TSX",
+          "mode": "implied",
+          "source": "TSX\ncase_250_end:",
+          "bytes": [
+            186
+          ]
+        },
+        {
+          "mnemonic": "TXA",
+          "mode": "implied",
+          "source": "TXA\ncase_251_end:",
+          "bytes": [
+            138
+          ]
+        },
+        {
+          "mnemonic": "TXS",
+          "mode": "implied",
+          "source": "TXS\ncase_252_end:",
+          "bytes": [
+            154
+          ]
+        },
+        {
+          "mnemonic": "TYA",
+          "mode": "implied",
+          "source": "TYA\ncase_253_end:",
+          "bytes": [
+            152
+          ]
+        }
+      ]
+    },
+    {
+      "cpu": "M740",
+      "sha256": "556994727ab69e3b16aa0e24a1236004a50357d3d2194c9345a104a93e8324f9",
+      "cases": [
+        {
+          "mnemonic": "ADC",
+          "mode": "zeroPage",
+          "source": "ADC $12\ncase_0_end:",
+          "bytes": [
+            101,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "absolute",
+          "source": "ADC $1234\ncase_1_end:",
+          "bytes": [
+            109,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "zeroPageIndexedX",
+          "source": "ADC $12,x\ncase_2_end:",
+          "bytes": [
+            117,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "absoluteIndexedX",
+          "source": "ADC $1234,x\ncase_3_end:",
+          "bytes": [
+            125,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "absoluteIndexedY",
+          "source": "ADC $1234,y\ncase_4_end:",
+          "bytes": [
+            121,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "indirectIndexedY",
+          "source": "ADC ($12),y\ncase_5_end:",
+          "bytes": [
+            113,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "indexedIndirectX",
+          "source": "ADC ($12,x)\ncase_6_end:",
+          "bytes": [
+            97,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ADC",
+          "mode": "immediate",
+          "source": "ADC #$12\ncase_7_end:",
+          "bytes": [
+            105,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "zeroPage",
+          "source": "AND $12\ncase_8_end:",
+          "bytes": [
+            37,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "absolute",
+          "source": "AND $1234\ncase_9_end:",
+          "bytes": [
+            45,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "zeroPageIndexedX",
+          "source": "AND $12,x\ncase_10_end:",
+          "bytes": [
+            53,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "absoluteIndexedX",
+          "source": "AND $1234,x\ncase_11_end:",
+          "bytes": [
+            61,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "absoluteIndexedY",
+          "source": "AND $1234,y\ncase_12_end:",
+          "bytes": [
+            57,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "indirectIndexedY",
+          "source": "AND ($12),y\ncase_13_end:",
+          "bytes": [
+            49,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "indexedIndirectX",
+          "source": "AND ($12,x)\ncase_14_end:",
+          "bytes": [
+            33,
+            18
+          ]
+        },
+        {
+          "mnemonic": "AND",
+          "mode": "immediate",
+          "source": "AND #$12\ncase_15_end:",
+          "bytes": [
+            41,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "accumulator",
+          "source": "ASL A\ncase_16_end:",
+          "bytes": [
+            10
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "zeroPage",
+          "source": "ASL $12\ncase_17_end:",
+          "bytes": [
+            6,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "absolute",
+          "source": "ASL $1234\ncase_18_end:",
+          "bytes": [
+            14,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "zeroPageIndexedX",
+          "source": "ASL $12,x\ncase_19_end:",
+          "bytes": [
+            22,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ASL",
+          "mode": "absoluteIndexedX",
+          "source": "ASL $1234,x\ncase_20_end:",
+          "bytes": [
+            30,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BBC0",
+          "mode": "accumulatorRelative",
+          "source": "BBC0 A,case_21_end\ncase_21_end:",
+          "bytes": [
+            19,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBC0",
+          "mode": "zeroPageRelative",
+          "source": "BBC0 $12,case_22_end\ncase_22_end:",
+          "bytes": [
+            23,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBC1",
+          "mode": "accumulatorRelative",
+          "source": "BBC1 A,case_23_end\ncase_23_end:",
+          "bytes": [
+            51,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBC1",
+          "mode": "zeroPageRelative",
+          "source": "BBC1 $12,case_24_end\ncase_24_end:",
+          "bytes": [
+            55,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBC2",
+          "mode": "accumulatorRelative",
+          "source": "BBC2 A,case_25_end\ncase_25_end:",
+          "bytes": [
+            83,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBC2",
+          "mode": "zeroPageRelative",
+          "source": "BBC2 $12,case_26_end\ncase_26_end:",
+          "bytes": [
+            87,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBC3",
+          "mode": "accumulatorRelative",
+          "source": "BBC3 A,case_27_end\ncase_27_end:",
+          "bytes": [
+            115,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBC3",
+          "mode": "zeroPageRelative",
+          "source": "BBC3 $12,case_28_end\ncase_28_end:",
+          "bytes": [
+            119,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBC4",
+          "mode": "accumulatorRelative",
+          "source": "BBC4 A,case_29_end\ncase_29_end:",
+          "bytes": [
+            147,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBC4",
+          "mode": "zeroPageRelative",
+          "source": "BBC4 $12,case_30_end\ncase_30_end:",
+          "bytes": [
+            151,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBC5",
+          "mode": "accumulatorRelative",
+          "source": "BBC5 A,case_31_end\ncase_31_end:",
+          "bytes": [
+            179,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBC5",
+          "mode": "zeroPageRelative",
+          "source": "BBC5 $12,case_32_end\ncase_32_end:",
+          "bytes": [
+            183,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBC6",
+          "mode": "accumulatorRelative",
+          "source": "BBC6 A,case_33_end\ncase_33_end:",
+          "bytes": [
+            211,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBC6",
+          "mode": "zeroPageRelative",
+          "source": "BBC6 $12,case_34_end\ncase_34_end:",
+          "bytes": [
+            215,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBC7",
+          "mode": "accumulatorRelative",
+          "source": "BBC7 A,case_35_end\ncase_35_end:",
+          "bytes": [
+            243,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBC7",
+          "mode": "zeroPageRelative",
+          "source": "BBC7 $12,case_36_end\ncase_36_end:",
+          "bytes": [
+            247,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS0",
+          "mode": "accumulatorRelative",
+          "source": "BBS0 A,case_37_end\ncase_37_end:",
+          "bytes": [
+            3,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBS0",
+          "mode": "zeroPageRelative",
+          "source": "BBS0 $12,case_38_end\ncase_38_end:",
+          "bytes": [
+            7,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS1",
+          "mode": "accumulatorRelative",
+          "source": "BBS1 A,case_39_end\ncase_39_end:",
+          "bytes": [
+            35,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBS1",
+          "mode": "zeroPageRelative",
+          "source": "BBS1 $12,case_40_end\ncase_40_end:",
+          "bytes": [
+            39,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS2",
+          "mode": "accumulatorRelative",
+          "source": "BBS2 A,case_41_end\ncase_41_end:",
+          "bytes": [
+            67,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBS2",
+          "mode": "zeroPageRelative",
+          "source": "BBS2 $12,case_42_end\ncase_42_end:",
+          "bytes": [
+            71,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS3",
+          "mode": "accumulatorRelative",
+          "source": "BBS3 A,case_43_end\ncase_43_end:",
+          "bytes": [
+            99,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBS3",
+          "mode": "zeroPageRelative",
+          "source": "BBS3 $12,case_44_end\ncase_44_end:",
+          "bytes": [
+            103,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS4",
+          "mode": "accumulatorRelative",
+          "source": "BBS4 A,case_45_end\ncase_45_end:",
+          "bytes": [
+            131,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBS4",
+          "mode": "zeroPageRelative",
+          "source": "BBS4 $12,case_46_end\ncase_46_end:",
+          "bytes": [
+            135,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS5",
+          "mode": "accumulatorRelative",
+          "source": "BBS5 A,case_47_end\ncase_47_end:",
+          "bytes": [
+            163,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBS5",
+          "mode": "zeroPageRelative",
+          "source": "BBS5 $12,case_48_end\ncase_48_end:",
+          "bytes": [
+            167,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS6",
+          "mode": "accumulatorRelative",
+          "source": "BBS6 A,case_49_end\ncase_49_end:",
+          "bytes": [
+            195,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBS6",
+          "mode": "zeroPageRelative",
+          "source": "BBS6 $12,case_50_end\ncase_50_end:",
+          "bytes": [
+            199,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BBS7",
+          "mode": "accumulatorRelative",
+          "source": "BBS7 A,case_51_end\ncase_51_end:",
+          "bytes": [
+            227,
+            255
+          ]
+        },
+        {
+          "mnemonic": "BBS7",
+          "mode": "zeroPageRelative",
+          "source": "BBS7 $12,case_52_end\ncase_52_end:",
+          "bytes": [
+            231,
+            18,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BCC",
+          "mode": "relative",
+          "source": "BCC case_53_end\ncase_53_end:",
+          "bytes": [
+            144,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BCS",
+          "mode": "relative",
+          "source": "BCS case_54_end\ncase_54_end:",
+          "bytes": [
+            176,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BEQ",
+          "mode": "relative",
+          "source": "BEQ case_55_end\ncase_55_end:",
+          "bytes": [
+            240,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BIT",
+          "mode": "zeroPage",
+          "source": "BIT $12\ncase_56_end:",
+          "bytes": [
+            36,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BIT",
+          "mode": "absolute",
+          "source": "BIT $1234\ncase_57_end:",
+          "bytes": [
+            44,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "BMI",
+          "mode": "relative",
+          "source": "BMI case_58_end\ncase_58_end:",
+          "bytes": [
+            48,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BNE",
+          "mode": "relative",
+          "source": "BNE case_59_end\ncase_59_end:",
+          "bytes": [
+            208,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BPL",
+          "mode": "relative",
+          "source": "BPL case_60_end\ncase_60_end:",
+          "bytes": [
+            16,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BRA",
+          "mode": "relative",
+          "source": "BRA case_61_end\ncase_61_end:",
+          "bytes": [
+            128,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BRK",
+          "mode": "implied",
+          "source": "BRK\ncase_62_end:",
+          "bytes": [
+            0
+          ]
+        },
+        {
+          "mnemonic": "BVC",
+          "mode": "relative",
+          "source": "BVC case_63_end\ncase_63_end:",
+          "bytes": [
+            80,
+            0
+          ]
+        },
+        {
+          "mnemonic": "BVS",
+          "mode": "relative",
+          "source": "BVS case_64_end\ncase_64_end:",
+          "bytes": [
+            112,
+            0
+          ]
+        },
+        {
+          "mnemonic": "CLB0",
+          "mode": "accumulator",
+          "source": "CLB0 A\ncase_65_end:",
+          "bytes": [
+            27
+          ]
+        },
+        {
+          "mnemonic": "CLB0",
+          "mode": "zeroPage",
+          "source": "CLB0 $12\ncase_66_end:",
+          "bytes": [
+            31,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLB1",
+          "mode": "accumulator",
+          "source": "CLB1 A\ncase_67_end:",
+          "bytes": [
+            59
+          ]
+        },
+        {
+          "mnemonic": "CLB1",
+          "mode": "zeroPage",
+          "source": "CLB1 $12\ncase_68_end:",
+          "bytes": [
+            63,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLB2",
+          "mode": "accumulator",
+          "source": "CLB2 A\ncase_69_end:",
+          "bytes": [
+            91
+          ]
+        },
+        {
+          "mnemonic": "CLB2",
+          "mode": "zeroPage",
+          "source": "CLB2 $12\ncase_70_end:",
+          "bytes": [
+            95,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLB3",
+          "mode": "accumulator",
+          "source": "CLB3 A\ncase_71_end:",
+          "bytes": [
+            123
+          ]
+        },
+        {
+          "mnemonic": "CLB3",
+          "mode": "zeroPage",
+          "source": "CLB3 $12\ncase_72_end:",
+          "bytes": [
+            127,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLB4",
+          "mode": "accumulator",
+          "source": "CLB4 A\ncase_73_end:",
+          "bytes": [
+            155
+          ]
+        },
+        {
+          "mnemonic": "CLB4",
+          "mode": "zeroPage",
+          "source": "CLB4 $12\ncase_74_end:",
+          "bytes": [
+            159,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLB5",
+          "mode": "accumulator",
+          "source": "CLB5 A\ncase_75_end:",
+          "bytes": [
+            187
+          ]
+        },
+        {
+          "mnemonic": "CLB5",
+          "mode": "zeroPage",
+          "source": "CLB5 $12\ncase_76_end:",
+          "bytes": [
+            191,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLB6",
+          "mode": "accumulator",
+          "source": "CLB6 A\ncase_77_end:",
+          "bytes": [
+            219
+          ]
+        },
+        {
+          "mnemonic": "CLB6",
+          "mode": "zeroPage",
+          "source": "CLB6 $12\ncase_78_end:",
+          "bytes": [
+            223,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLB7",
+          "mode": "accumulator",
+          "source": "CLB7 A\ncase_79_end:",
+          "bytes": [
+            251
+          ]
+        },
+        {
+          "mnemonic": "CLB7",
+          "mode": "zeroPage",
+          "source": "CLB7 $12\ncase_80_end:",
+          "bytes": [
+            255,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLC",
+          "mode": "implied",
+          "source": "CLC\ncase_81_end:",
+          "bytes": [
+            24
+          ]
+        },
+        {
+          "mnemonic": "CLD",
+          "mode": "implied",
+          "source": "CLD\ncase_82_end:",
+          "bytes": [
+            216
+          ]
+        },
+        {
+          "mnemonic": "CLI",
+          "mode": "implied",
+          "source": "CLI\ncase_83_end:",
+          "bytes": [
+            88
+          ]
+        },
+        {
+          "mnemonic": "CLT",
+          "mode": "implied",
+          "source": "CLT\ncase_84_end:",
+          "bytes": [
+            18
+          ]
+        },
+        {
+          "mnemonic": "CLV",
+          "mode": "implied",
+          "source": "CLV\ncase_85_end:",
+          "bytes": [
+            184
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "zeroPage",
+          "source": "CMP $12\ncase_86_end:",
+          "bytes": [
+            197,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "absolute",
+          "source": "CMP $1234\ncase_87_end:",
+          "bytes": [
+            205,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "zeroPageIndexedX",
+          "source": "CMP $12,x\ncase_88_end:",
+          "bytes": [
+            213,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "absoluteIndexedX",
+          "source": "CMP $1234,x\ncase_89_end:",
+          "bytes": [
+            221,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "absoluteIndexedY",
+          "source": "CMP $1234,y\ncase_90_end:",
+          "bytes": [
+            217,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "indirectIndexedY",
+          "source": "CMP ($12),y\ncase_91_end:",
+          "bytes": [
+            209,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "indexedIndirectX",
+          "source": "CMP ($12,x)\ncase_92_end:",
+          "bytes": [
+            193,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CMP",
+          "mode": "immediate",
+          "source": "CMP #$12\ncase_93_end:",
+          "bytes": [
+            201,
+            18
+          ]
+        },
+        {
+          "mnemonic": "COM",
+          "mode": "zeroPage",
+          "source": "COM $12\ncase_94_end:",
+          "bytes": [
+            68,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPX",
+          "mode": "zeroPage",
+          "source": "CPX $12\ncase_95_end:",
+          "bytes": [
+            228,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPX",
+          "mode": "absolute",
+          "source": "CPX $1234\ncase_96_end:",
+          "bytes": [
+            236,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPX",
+          "mode": "immediate",
+          "source": "CPX #$12\ncase_97_end:",
+          "bytes": [
+            224,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPY",
+          "mode": "zeroPage",
+          "source": "CPY $12\ncase_98_end:",
+          "bytes": [
+            196,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPY",
+          "mode": "absolute",
+          "source": "CPY $1234\ncase_99_end:",
+          "bytes": [
+            204,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "CPY",
+          "mode": "immediate",
+          "source": "CPY #$12\ncase_100_end:",
+          "bytes": [
+            192,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "accumulator",
+          "source": "DEC A\ncase_101_end:",
+          "bytes": [
+            58
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "zeroPage",
+          "source": "DEC $12\ncase_102_end:",
+          "bytes": [
+            198,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "absolute",
+          "source": "DEC $1234\ncase_103_end:",
+          "bytes": [
+            206,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "zeroPageIndexedX",
+          "source": "DEC $12,x\ncase_104_end:",
+          "bytes": [
+            214,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEC",
+          "mode": "absoluteIndexedX",
+          "source": "DEC $1234,x\ncase_105_end:",
+          "bytes": [
+            222,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "DEX",
+          "mode": "implied",
+          "source": "DEX\ncase_106_end:",
+          "bytes": [
+            202
+          ]
+        },
+        {
+          "mnemonic": "DEY",
+          "mode": "implied",
+          "source": "DEY\ncase_107_end:",
+          "bytes": [
+            136
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "zeroPage",
+          "source": "EOR $12\ncase_108_end:",
+          "bytes": [
+            69,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "absolute",
+          "source": "EOR $1234\ncase_109_end:",
+          "bytes": [
+            77,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "zeroPageIndexedX",
+          "source": "EOR $12,x\ncase_110_end:",
+          "bytes": [
+            85,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "absoluteIndexedX",
+          "source": "EOR $1234,x\ncase_111_end:",
+          "bytes": [
+            93,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "absoluteIndexedY",
+          "source": "EOR $1234,y\ncase_112_end:",
+          "bytes": [
+            89,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "indirectIndexedY",
+          "source": "EOR ($12),y\ncase_113_end:",
+          "bytes": [
+            81,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "indexedIndirectX",
+          "source": "EOR ($12,x)\ncase_114_end:",
+          "bytes": [
+            65,
+            18
+          ]
+        },
+        {
+          "mnemonic": "EOR",
+          "mode": "immediate",
+          "source": "EOR #$12\ncase_115_end:",
+          "bytes": [
+            73,
+            18
+          ]
+        },
+        {
+          "mnemonic": "FST",
+          "mode": "implied",
+          "source": "FST\ncase_116_end:",
+          "bytes": [
+            226
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "accumulator",
+          "source": "INC A\ncase_117_end:",
+          "bytes": [
+            26
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "zeroPage",
+          "source": "INC $12\ncase_118_end:",
+          "bytes": [
+            230,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "absolute",
+          "source": "INC $1234\ncase_119_end:",
+          "bytes": [
+            238,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "zeroPageIndexedX",
+          "source": "INC $12,x\ncase_120_end:",
+          "bytes": [
+            246,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INC",
+          "mode": "absoluteIndexedX",
+          "source": "INC $1234,x\ncase_121_end:",
+          "bytes": [
+            254,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "INX",
+          "mode": "implied",
+          "source": "INX\ncase_122_end:",
+          "bytes": [
+            232
+          ]
+        },
+        {
+          "mnemonic": "INY",
+          "mode": "implied",
+          "source": "INY\ncase_123_end:",
+          "bytes": [
+            200
+          ]
+        },
+        {
+          "mnemonic": "JMP",
+          "mode": "absolute",
+          "source": "JMP $1234\ncase_124_end:",
+          "bytes": [
+            76,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "JMP",
+          "mode": "zeroPageIndirect",
+          "source": "JMP ($12)\ncase_125_end:",
+          "bytes": [
+            178,
+            18
+          ]
+        },
+        {
+          "mnemonic": "JMP",
+          "mode": "indirect",
+          "source": "JMP ($1234)\ncase_126_end:",
+          "bytes": [
+            108,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "JSR",
+          "mode": "absolute",
+          "source": "JSR $1234\ncase_127_end:",
+          "bytes": [
+            32,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "JSR",
+          "mode": "zeroPageIndirect",
+          "source": "JSR ($12)\ncase_128_end:",
+          "bytes": [
+            2,
+            18
+          ]
+        },
+        {
+          "mnemonic": "JSR",
+          "mode": "specialPage",
+          "source": "JSR $FF12\ncase_129_end:",
+          "bytes": [
+            34,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "zeroPage",
+          "source": "LDA $12\ncase_130_end:",
+          "bytes": [
+            165,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "absolute",
+          "source": "LDA $1234\ncase_131_end:",
+          "bytes": [
+            173,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "zeroPageIndexedX",
+          "source": "LDA $12,x\ncase_132_end:",
+          "bytes": [
+            181,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "absoluteIndexedX",
+          "source": "LDA $1234,x\ncase_133_end:",
+          "bytes": [
+            189,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "absoluteIndexedY",
+          "source": "LDA $1234,y\ncase_134_end:",
+          "bytes": [
+            185,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "indirectIndexedY",
+          "source": "LDA ($12),y\ncase_135_end:",
+          "bytes": [
+            177,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "indexedIndirectX",
+          "source": "LDA ($12,x)\ncase_136_end:",
+          "bytes": [
+            161,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDA",
+          "mode": "immediate",
+          "source": "LDA #$12\ncase_137_end:",
+          "bytes": [
+            169,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDM",
+          "mode": "zeroPageImmediate",
+          "source": "LDM $12,#$34\ncase_138_end:",
+          "bytes": [
+            60,
+            18,
+            52
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "zeroPage",
+          "source": "LDX $12\ncase_139_end:",
+          "bytes": [
+            166,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "absolute",
+          "source": "LDX $1234\ncase_140_end:",
+          "bytes": [
+            174,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "zeroPageIndexedY",
+          "source": "LDX $12,y\ncase_141_end:",
+          "bytes": [
+            182,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "absoluteIndexedY",
+          "source": "LDX $1234,y\ncase_142_end:",
+          "bytes": [
+            190,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDX",
+          "mode": "immediate",
+          "source": "LDX #$12\ncase_143_end:",
+          "bytes": [
+            162,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "zeroPage",
+          "source": "LDY $12\ncase_144_end:",
+          "bytes": [
+            164,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "absolute",
+          "source": "LDY $1234\ncase_145_end:",
+          "bytes": [
+            172,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "zeroPageIndexedX",
+          "source": "LDY $12,x\ncase_146_end:",
+          "bytes": [
+            180,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "absoluteIndexedX",
+          "source": "LDY $1234,x\ncase_147_end:",
+          "bytes": [
+            188,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LDY",
+          "mode": "immediate",
+          "source": "LDY #$12\ncase_148_end:",
+          "bytes": [
+            160,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "accumulator",
+          "source": "LSR A\ncase_149_end:",
+          "bytes": [
+            74
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "zeroPage",
+          "source": "LSR $12\ncase_150_end:",
+          "bytes": [
+            70,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "absolute",
+          "source": "LSR $1234\ncase_151_end:",
+          "bytes": [
+            78,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "zeroPageIndexedX",
+          "source": "LSR $12,x\ncase_152_end:",
+          "bytes": [
+            86,
+            18
+          ]
+        },
+        {
+          "mnemonic": "LSR",
+          "mode": "absoluteIndexedX",
+          "source": "LSR $1234,x\ncase_153_end:",
+          "bytes": [
+            94,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "NOP",
+          "mode": "implied",
+          "source": "NOP\ncase_154_end:",
+          "bytes": [
+            234
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "zeroPage",
+          "source": "ORA $12\ncase_155_end:",
+          "bytes": [
+            5,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "absolute",
+          "source": "ORA $1234\ncase_156_end:",
+          "bytes": [
+            13,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "zeroPageIndexedX",
+          "source": "ORA $12,x\ncase_157_end:",
+          "bytes": [
+            21,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "absoluteIndexedX",
+          "source": "ORA $1234,x\ncase_158_end:",
+          "bytes": [
+            29,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "absoluteIndexedY",
+          "source": "ORA $1234,y\ncase_159_end:",
+          "bytes": [
+            25,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "indirectIndexedY",
+          "source": "ORA ($12),y\ncase_160_end:",
+          "bytes": [
+            17,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "indexedIndirectX",
+          "source": "ORA ($12,x)\ncase_161_end:",
+          "bytes": [
+            1,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ORA",
+          "mode": "immediate",
+          "source": "ORA #$12\ncase_162_end:",
+          "bytes": [
+            9,
+            18
+          ]
+        },
+        {
+          "mnemonic": "PHA",
+          "mode": "implied",
+          "source": "PHA\ncase_163_end:",
+          "bytes": [
+            72
+          ]
+        },
+        {
+          "mnemonic": "PHP",
+          "mode": "implied",
+          "source": "PHP\ncase_164_end:",
+          "bytes": [
+            8
+          ]
+        },
+        {
+          "mnemonic": "PLA",
+          "mode": "implied",
+          "source": "PLA\ncase_165_end:",
+          "bytes": [
+            104
+          ]
+        },
+        {
+          "mnemonic": "PLP",
+          "mode": "implied",
+          "source": "PLP\ncase_166_end:",
+          "bytes": [
+            40
+          ]
+        },
+        {
+          "mnemonic": "RMB0",
+          "mode": "accumulator",
+          "source": "RMB0 A\ncase_167_end:",
+          "bytes": [
+            27
+          ]
+        },
+        {
+          "mnemonic": "RMB0",
+          "mode": "zeroPage",
+          "source": "RMB0 $12\ncase_168_end:",
+          "bytes": [
+            31,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB1",
+          "mode": "accumulator",
+          "source": "RMB1 A\ncase_169_end:",
+          "bytes": [
+            59
+          ]
+        },
+        {
+          "mnemonic": "RMB1",
+          "mode": "zeroPage",
+          "source": "RMB1 $12\ncase_170_end:",
+          "bytes": [
+            63,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB2",
+          "mode": "accumulator",
+          "source": "RMB2 A\ncase_171_end:",
+          "bytes": [
+            91
+          ]
+        },
+        {
+          "mnemonic": "RMB2",
+          "mode": "zeroPage",
+          "source": "RMB2 $12\ncase_172_end:",
+          "bytes": [
+            95,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB3",
+          "mode": "accumulator",
+          "source": "RMB3 A\ncase_173_end:",
+          "bytes": [
+            123
+          ]
+        },
+        {
+          "mnemonic": "RMB3",
+          "mode": "zeroPage",
+          "source": "RMB3 $12\ncase_174_end:",
+          "bytes": [
+            127,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB4",
+          "mode": "accumulator",
+          "source": "RMB4 A\ncase_175_end:",
+          "bytes": [
+            155
+          ]
+        },
+        {
+          "mnemonic": "RMB4",
+          "mode": "zeroPage",
+          "source": "RMB4 $12\ncase_176_end:",
+          "bytes": [
+            159,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB5",
+          "mode": "accumulator",
+          "source": "RMB5 A\ncase_177_end:",
+          "bytes": [
+            187
+          ]
+        },
+        {
+          "mnemonic": "RMB5",
+          "mode": "zeroPage",
+          "source": "RMB5 $12\ncase_178_end:",
+          "bytes": [
+            191,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB6",
+          "mode": "accumulator",
+          "source": "RMB6 A\ncase_179_end:",
+          "bytes": [
+            219
+          ]
+        },
+        {
+          "mnemonic": "RMB6",
+          "mode": "zeroPage",
+          "source": "RMB6 $12\ncase_180_end:",
+          "bytes": [
+            223,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RMB7",
+          "mode": "accumulator",
+          "source": "RMB7 A\ncase_181_end:",
+          "bytes": [
+            251
+          ]
+        },
+        {
+          "mnemonic": "RMB7",
+          "mode": "zeroPage",
+          "source": "RMB7 $12\ncase_182_end:",
+          "bytes": [
+            255,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "accumulator",
+          "source": "ROL A\ncase_183_end:",
+          "bytes": [
+            42
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "zeroPage",
+          "source": "ROL $12\ncase_184_end:",
+          "bytes": [
+            38,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "absolute",
+          "source": "ROL $1234\ncase_185_end:",
+          "bytes": [
+            46,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "zeroPageIndexedX",
+          "source": "ROL $12,x\ncase_186_end:",
+          "bytes": [
+            54,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROL",
+          "mode": "absoluteIndexedX",
+          "source": "ROL $1234,x\ncase_187_end:",
+          "bytes": [
+            62,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "accumulator",
+          "source": "ROR A\ncase_188_end:",
+          "bytes": [
+            106
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "zeroPage",
+          "source": "ROR $12\ncase_189_end:",
+          "bytes": [
+            102,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "absolute",
+          "source": "ROR $1234\ncase_190_end:",
+          "bytes": [
+            110,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "zeroPageIndexedX",
+          "source": "ROR $12,x\ncase_191_end:",
+          "bytes": [
+            118,
+            18
+          ]
+        },
+        {
+          "mnemonic": "ROR",
+          "mode": "absoluteIndexedX",
+          "source": "ROR $1234,x\ncase_192_end:",
+          "bytes": [
+            126,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RRF",
+          "mode": "zeroPage",
+          "source": "RRF $12\ncase_193_end:",
+          "bytes": [
+            130,
+            18
+          ]
+        },
+        {
+          "mnemonic": "RTI",
+          "mode": "implied",
+          "source": "RTI\ncase_194_end:",
+          "bytes": [
+            64
+          ]
+        },
+        {
+          "mnemonic": "RTS",
+          "mode": "implied",
+          "source": "RTS\ncase_195_end:",
+          "bytes": [
+            96
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "zeroPage",
+          "source": "SBC $12\ncase_196_end:",
+          "bytes": [
+            229,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "absolute",
+          "source": "SBC $1234\ncase_197_end:",
+          "bytes": [
+            237,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "zeroPageIndexedX",
+          "source": "SBC $12,x\ncase_198_end:",
+          "bytes": [
+            245,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "absoluteIndexedX",
+          "source": "SBC $1234,x\ncase_199_end:",
+          "bytes": [
+            253,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "absoluteIndexedY",
+          "source": "SBC $1234,y\ncase_200_end:",
+          "bytes": [
+            249,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "indirectIndexedY",
+          "source": "SBC ($12),y\ncase_201_end:",
+          "bytes": [
+            241,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "indexedIndirectX",
+          "source": "SBC ($12,x)\ncase_202_end:",
+          "bytes": [
+            225,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SBC",
+          "mode": "immediate",
+          "source": "SBC #$12\ncase_203_end:",
+          "bytes": [
+            233,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEB0",
+          "mode": "accumulator",
+          "source": "SEB0 A\ncase_204_end:",
+          "bytes": [
+            11
+          ]
+        },
+        {
+          "mnemonic": "SEB0",
+          "mode": "zeroPage",
+          "source": "SEB0 $12\ncase_205_end:",
+          "bytes": [
+            15,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEB1",
+          "mode": "accumulator",
+          "source": "SEB1 A\ncase_206_end:",
+          "bytes": [
+            43
+          ]
+        },
+        {
+          "mnemonic": "SEB1",
+          "mode": "zeroPage",
+          "source": "SEB1 $12\ncase_207_end:",
+          "bytes": [
+            47,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEB2",
+          "mode": "accumulator",
+          "source": "SEB2 A\ncase_208_end:",
+          "bytes": [
+            75
+          ]
+        },
+        {
+          "mnemonic": "SEB2",
+          "mode": "zeroPage",
+          "source": "SEB2 $12\ncase_209_end:",
+          "bytes": [
+            79,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEB3",
+          "mode": "accumulator",
+          "source": "SEB3 A\ncase_210_end:",
+          "bytes": [
+            107
+          ]
+        },
+        {
+          "mnemonic": "SEB3",
+          "mode": "zeroPage",
+          "source": "SEB3 $12\ncase_211_end:",
+          "bytes": [
+            111,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEB4",
+          "mode": "accumulator",
+          "source": "SEB4 A\ncase_212_end:",
+          "bytes": [
+            139
+          ]
+        },
+        {
+          "mnemonic": "SEB4",
+          "mode": "zeroPage",
+          "source": "SEB4 $12\ncase_213_end:",
+          "bytes": [
+            143,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEB5",
+          "mode": "accumulator",
+          "source": "SEB5 A\ncase_214_end:",
+          "bytes": [
+            171
+          ]
+        },
+        {
+          "mnemonic": "SEB5",
+          "mode": "zeroPage",
+          "source": "SEB5 $12\ncase_215_end:",
+          "bytes": [
+            175,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEB6",
+          "mode": "accumulator",
+          "source": "SEB6 A\ncase_216_end:",
+          "bytes": [
+            203
+          ]
+        },
+        {
+          "mnemonic": "SEB6",
+          "mode": "zeroPage",
+          "source": "SEB6 $12\ncase_217_end:",
+          "bytes": [
+            207,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEB7",
+          "mode": "accumulator",
+          "source": "SEB7 A\ncase_218_end:",
+          "bytes": [
+            235
+          ]
+        },
+        {
+          "mnemonic": "SEB7",
+          "mode": "zeroPage",
+          "source": "SEB7 $12\ncase_219_end:",
+          "bytes": [
+            239,
+            18
+          ]
+        },
+        {
+          "mnemonic": "SEC",
+          "mode": "implied",
+          "source": "SEC\ncase_220_end:",
+          "bytes": [
+            56
+          ]
+        },
+        {
+          "mnemonic": "SED",
+          "mode": "implied",
+          "source": "SED\ncase_221_end:",
+          "bytes": [
+            248
+          ]
+        },
+        {
+          "mnemonic": "SEI",
+          "mode": "implied",
+          "source": "SEI\ncase_222_end:",
+          "bytes": [
+            120
+          ]
+        },
+        {
+          "mnemonic": "SET",
+          "mode": "implied",
+          "source": "SET\ncase_223_end:",
+          "bytes": [
+            50
+          ]
+        },
+        {
+          "mnemonic": "SLW",
+          "mode": "implied",
+          "source": "SLW\ncase_224_end:",
+          "bytes": [
+            194
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "zeroPage",
+          "source": "STA $12\ncase_225_end:",
+          "bytes": [
+            133,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "absolute",
+          "source": "STA $1234\ncase_226_end:",
+          "bytes": [
+            141,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "zeroPageIndexedX",
+          "source": "STA $12,x\ncase_227_end:",
+          "bytes": [
+            149,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "absoluteIndexedX",
+          "source": "STA $1234,x\ncase_228_end:",
+          "bytes": [
+            157,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "absoluteIndexedY",
+          "source": "STA $1234,y\ncase_229_end:",
+          "bytes": [
+            153,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "indirectIndexedY",
+          "source": "STA ($12),y\ncase_230_end:",
+          "bytes": [
+            145,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STA",
+          "mode": "indexedIndirectX",
+          "source": "STA ($12,x)\ncase_231_end:",
+          "bytes": [
+            129,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STP",
+          "mode": "implied",
+          "source": "STP\ncase_232_end:",
+          "bytes": [
+            66
+          ]
+        },
+        {
+          "mnemonic": "STX",
+          "mode": "zeroPage",
+          "source": "STX $12\ncase_233_end:",
+          "bytes": [
+            134,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STX",
+          "mode": "absolute",
+          "source": "STX $1234\ncase_234_end:",
+          "bytes": [
+            142,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STX",
+          "mode": "zeroPageIndexedY",
+          "source": "STX $12,y\ncase_235_end:",
+          "bytes": [
+            150,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STY",
+          "mode": "zeroPage",
+          "source": "STY $12\ncase_236_end:",
+          "bytes": [
+            132,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STY",
+          "mode": "absolute",
+          "source": "STY $1234\ncase_237_end:",
+          "bytes": [
+            140,
+            52,
+            18
+          ]
+        },
+        {
+          "mnemonic": "STY",
+          "mode": "zeroPageIndexedX",
+          "source": "STY $12,x\ncase_238_end:",
+          "bytes": [
+            148,
+            18
+          ]
+        },
+        {
+          "mnemonic": "TAX",
+          "mode": "implied",
+          "source": "TAX\ncase_239_end:",
+          "bytes": [
+            170
+          ]
+        },
+        {
+          "mnemonic": "TAY",
+          "mode": "implied",
+          "source": "TAY\ncase_240_end:",
+          "bytes": [
+            168
+          ]
+        },
+        {
+          "mnemonic": "TST",
+          "mode": "zeroPage",
+          "source": "TST $12\ncase_241_end:",
+          "bytes": [
+            100,
+            18
+          ]
+        },
+        {
+          "mnemonic": "TSX",
+          "mode": "implied",
+          "source": "TSX\ncase_242_end:",
+          "bytes": [
+            186
+          ]
+        },
+        {
+          "mnemonic": "TXA",
+          "mode": "implied",
+          "source": "TXA\ncase_243_end:",
+          "bytes": [
+            138
+          ]
+        },
+        {
+          "mnemonic": "TXS",
+          "mode": "implied",
+          "source": "TXS\ncase_244_end:",
+          "bytes": [
+            154
+          ]
+        },
+        {
+          "mnemonic": "TYA",
+          "mode": "implied",
+          "source": "TYA\ncase_245_end:",
+          "bytes": [
+            152
+          ]
+        }
+      ]
+    }
+  ]
+}

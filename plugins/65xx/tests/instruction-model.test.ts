@@ -7,6 +7,7 @@ import {
   csg65ce02Forms,
   getOpcodeForm,
   getCpuDecodeTable,
+  hudsonHuC6280Forms,
   materializeOpcodeForm,
   nmos6502Cpu,
   nmos6502DecodeTable,
@@ -14,6 +15,7 @@ import {
   nmos6502xForms,
   nmos6502xCpu,
   mega65Gs02Forms,
+  mitsubishiM740Forms,
   mos6502DtvForms,
   wdc65c02Forms,
 } from "../src/index.js";
@@ -36,6 +38,31 @@ test("NMOS decode table covers every byte and identifies all 151 legal opcodes",
     t.is(encoded[0], opcode, `$${opcode.toString(16).padStart(2, "0")}`);
     t.is(encoded.length, form.encoding.length + operandBytes.length);
   }
+});
+
+test("Phase 6 tables expose complete and non-leaking HuC6280/M740 sets", (t) => {
+  t.is(hudsonHuC6280Forms.length, 254);
+  t.is(mitsubishiM740Forms.length, 246);
+  t.true(
+    hudsonHuC6280Forms.some((form) => form.mnemonic === "TII" && form.mode === "blockTransfer"),
+  );
+  t.true(
+    hudsonHuC6280Forms.some(
+      (form) => form.mnemonic === "TST" && form.mode === "immediateAbsoluteIndexedX",
+    ),
+  );
+  t.true(
+    mitsubishiM740Forms.some(
+      (form) => form.mnemonic === "BBS0" && form.mode === "accumulatorRelative",
+    ),
+  );
+  t.true(
+    mitsubishiM740Forms.some(
+      (form) => form.mnemonic === "LDM" && form.mode === "zeroPageImmediate",
+    ),
+  );
+  t.false(mitsubishiM740Forms.some((form) => form.mnemonic === "TII"));
+  t.false(hudsonHuC6280Forms.some((form) => form.mnemonic === "LDM"));
 });
 
 test("canonical 6502X forms preserve duplicate and unstable opcode policy", (t) => {

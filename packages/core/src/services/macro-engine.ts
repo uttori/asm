@@ -3,6 +3,7 @@ import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command
 import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
 import { removeInlineComment } from "./command-text-service.js";
 import { incrementInternalCounter } from "../internal-instrumentation.js";
+import type { SyntaxProfile } from "../syntax-profile.js";
 
 /** Represents a macro definition. */
 export type MacroDefinition = {
@@ -42,6 +43,7 @@ export interface MacroEngineHost {
   currentParentLabel: string;
   currentParentIsGlobal: boolean;
   isDefinitionCollectionStage: boolean;
+  syntaxProfile: SyntaxProfile;
   symbolScope: SymbolScopeService;
   evaluateExpression(input: string): boolean;
   resolvedefines(input: string): string;
@@ -268,6 +270,13 @@ export class MacroEngine {
         }
       }
       this.callMacro(invocation);
+      setCommandKind(commandNode, "macroDefinitionOrInvoke");
+      return true;
+    }
+
+    if (this.host.syntaxProfile.bareMacroInvocations && this.host.macros.has(keyword)) {
+      const argumentText = command.slice(keyword.length).trim();
+      this.callMacro(argumentText ? `${keyword}(${argumentText})` : keyword);
       setCommandKind(commandNode, "macroDefinitionOrInvoke");
       return true;
     }
@@ -658,6 +667,14 @@ export class MacroEngine {
       }
       return match;
     });
+    if (this.host.syntaxProfile.macroParameterPrefix === "\\") {
+      expanded = expanded.replace(/\\([A-Z_a-z]\w*)/g, (match: string, paramName: string) => {
+        if (fixedArgs.has(paramName)) {
+          return substituteParamValue(fixedArgs.get(paramName) ?? "");
+        }
+        return match;
+      });
+    }
 
     const currentCond = this.isMacroExpansionActive();
     if (!currentCond) {

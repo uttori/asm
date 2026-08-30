@@ -230,30 +230,41 @@ export class Arch65xx implements ArchitectureEncoder {
       branchDelta = this.readBranchDelta(operand, relativeBaseOffset, branchWidth);
     }
     const compoundOperands =
-      form.codec === "zero-page-relative8" ? splitTopLevelOperands(operand.expanded) : [];
-    if (form.codec === "zero-page-relative8" && compoundOperands.length !== 2) {
-      throw this.context.diagnostics.error(
-        `${form.mnemonic} expects a zero-page address and branch target.`,
-      );
-    }
-    const compoundBranchDelta =
-      form.codec === "zero-page-relative8"
-        ? this.readBranchExpression(
-            compoundOperands[1] ?? "",
-            form.relativeBaseOffset ?? modeSize(form),
-            1,
-          )
-        : 0;
+      form.codec === "zero-page-relative8" ||
+      form.codec === "accumulator-relative8" ||
+      form.codec === "zero-page-immediate8" ||
+      form.codec === "three-unsigned16-le" ||
+      form.codec === "immediate-unsigned8" ||
+      form.codec === "immediate-unsigned16"
+        ? splitTopLevelOperands(operand.expanded)
+        : [];
+    const compoundValues = this.readCompoundValues(form, compoundOperands);
     const operandWidth = unsignedOperandWidth(form.codec);
     const operandKind = operandWidth === 1 ? "operand" : "address";
     let operandValue = 0;
     if (operandWidth !== 0) {
       operandValue = this.readValue(operand, operandWidth, `${form.mnemonic} ${operandKind}`);
+      if (
+        form.operandConstraint === "power-of-two" &&
+        (operandValue === 0 || (operandValue & (operandValue - 1)) !== 0)
+      ) {
+        throw this.context.diagnostics.error(`${form.mnemonic} operand must be a power of two.`);
+      }
     }
-    const zpAddress =
-      form.codec === "zero-page-relative8"
-        ? this.readExpressionValue(compoundOperands[0] ?? "", 1, `${form.mnemonic} address`, false)
+    const specialPageValue =
+      form.codec === "special-page"
+        ? this.readExpressionValue(
+            operand.baseExpression ?? operand.expanded,
+            2,
+            `${form.mnemonic} special-page address`,
+            false,
+          )
         : 0;
+    if (form.codec === "special-page" && (specialPageValue & 0xff00) !== 0xff00) {
+      throw this.context.diagnostics.error(
+        `${form.mnemonic} special-page address must be in $FF00-$FFFF.`,
+      );
+    }
     this.context.emission.writeBytes(form.encoding);
     switch (form.codec) {
       case "none":
@@ -274,12 +285,121 @@ export class Arch65xx implements ArchitectureEncoder {
         this.context.emission.writeValue(branchDelta & 0xffff, 2, "little");
         return true;
       case "zero-page-relative8": {
-        this.context.emission.writeByte(zpAddress);
-        this.context.emission.writeByte(compoundBranchDelta & 0xff);
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte((compoundValues[1] ?? 0) & 0xff);
         return true;
       }
+      case "accumulator-relative8":
+        this.context.emission.writeByte((compoundValues[0] ?? 0) & 0xff);
+        return true;
+      case "zero-page-immediate8":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte(compoundValues[1] ?? 0);
+        return true;
+      case "special-page":
+        this.context.emission.writeByte(specialPageValue & 0xff);
+        return true;
+      case "three-unsigned16-le":
+        for (const value of compoundValues) this.context.emission.writeValue(value, 2, "little");
+        return true;
+      case "immediate-unsigned8":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeByte(compoundValues[1] ?? 0);
+        return true;
+      case "immediate-unsigned16":
+        this.context.emission.writeByte(compoundValues[0] ?? 0);
+        this.context.emission.writeValue(compoundValues[1] ?? 0, 2, "little");
+        return true;
     }
     return false;
+  }
+
+  private readCompoundValues(
+    form: InstructionForm,
+    operands: readonly string[],
+  ): readonly number[] {
+    const expect = (count: number, description: string): void => {
+      if (operands.length !== count) {
+        throw this.context.diagnostics.error(`${form.mnemonic} expects ${description}.`);
+      }
+    };
+    switch (form.codec) {
+      case "zero-page-relative8":
+        expect(2, "a zero-page address and branch target");
+        return [
+          this.readExpressionValue(operands[0] ?? "", 1, `${form.mnemonic} address`, false),
+          this.readBranchExpression(
+            operands[1] ?? "",
+            form.relativeBaseOffset ?? modeSize(form),
+            1,
+          ),
+        ];
+      case "accumulator-relative8":
+        expect(2, "A and a branch target");
+        if (operands[0]?.trim().toUpperCase() !== "A") {
+          throw this.context.diagnostics.error(`${form.mnemonic} accumulator branch must use A.`);
+        }
+        return [
+          this.readBranchExpression(
+            operands[1] ?? "",
+            form.relativeBaseOffset ?? modeSize(form),
+            1,
+          ),
+        ];
+      case "zero-page-immediate8":
+        expect(2, "a zero-page address and immediate value");
+        if (!operands[1]?.trim().startsWith("#")) {
+          throw this.context.diagnostics.error(
+            `${form.mnemonic} second operand must be immediate.`,
+          );
+        }
+        return [
+          this.readExpressionValue(operands[0] ?? "", 1, `${form.mnemonic} address`, false),
+          this.readExpressionValue(
+            operands[1]?.trim().slice(1) ?? "",
+            1,
+            `${form.mnemonic} immediate`,
+            true,
+          ),
+        ];
+      case "three-unsigned16-le":
+        expect(3, "source, destination, and length operands");
+        return operands.map((expression, index) =>
+          this.readExpressionValue(
+            expression,
+            2,
+            `${form.mnemonic} ${["source", "destination", "length"][index]}`,
+            false,
+          ),
+        );
+      case "immediate-unsigned8":
+      case "immediate-unsigned16": {
+        const indexed = form.mode.endsWith("IndexedX");
+        expect(indexed ? 3 : 2, "an immediate value and address");
+        if (!operands[0]?.trim().startsWith("#")) {
+          throw this.context.diagnostics.error(`${form.mnemonic} first operand must be immediate.`);
+        }
+        if (indexed && operands[2]?.trim().toUpperCase() !== "X") {
+          throw this.context.diagnostics.error(`${form.mnemonic} indexed test operand must use X.`);
+        }
+        return [
+          this.readExpressionValue(
+            operands[0]?.trim().slice(1) ?? "",
+            1,
+            `${form.mnemonic} immediate`,
+            true,
+          ),
+          this.readExpressionValue(
+            operands[1] ?? "",
+            form.codec === "immediate-unsigned8" ? 1 : 2,
+            `${form.mnemonic} address`,
+            false,
+          ),
+        ];
+      }
+      default:
+        return [];
+    }
   }
 
   private resolveForm(rawMnemonic: string, operand: LoweredOperand): InstructionForm | undefined {
@@ -324,6 +444,14 @@ export class Arch65xx implements ArchitectureEncoder {
     let mode = operand.mode as AddressingMode | undefined;
     if (operand.raw.trim().toUpperCase() === "A") mode = "accumulator";
     if (operand.raw.trim().toUpperCase() === "Q") mode = "quadAccumulator";
+    if (
+      this.cpu.id === "65xx.m740" &&
+      mnemonic === "JSR" &&
+      mode === "absolute" &&
+      /^(?:\$ff[\da-f]{2}|0xff[\da-f]{2})$/i.test(operand.expanded.trim())
+    ) {
+      mode = "specialPage";
+    }
     // Branches: any operand is a target; don't treat `$12` as zp.
     if (hasOperand && forms.some((entry) => entry.mode === "relative16")) mode = "relative16";
     else if (hasOperand && forms.some((entry) => entry.mode === "relative")) mode = "relative";

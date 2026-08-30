@@ -1,9 +1,9 @@
 /** Feature flags used by {@link FeatureExpression} to select instruction forms. */
-export type CpuFeature = "nmos" | "undocumented" | "dtv" | "cmos" | "rockwell" | "wdc" | "ce02" | "4510" | "45gs02";
+export type CpuFeature = "nmos" | "undocumented" | "dtv" | "cmos" | "rockwell" | "wdc" | "ce02" | "4510" | "45gs02" | "huc6280" | "m740";
 /** Addressing modes recognized by the 65xx classifier and encoder. */
-export type AddressingMode = "implied" | "accumulator" | "immediate" | "zeroPage" | "zeroPageIndexedX" | "zeroPageIndexedY" | "absolute" | "absoluteIndexedX" | "absoluteIndexedY" | "absoluteLongIndexedX" | "indirect" | "zeroPageIndirect" | "zeroPageIndirectLong" | "indexedIndirectX" | "indirectIndexedY" | "absoluteIndexedIndirect" | "zeroPageIndirectIndexedZ" | "stackRelative" | "stackRelativeIndirectIndexedY" | "relative" | "relative16" | "zeroPageRelative" | "basePageIndirectIndexedZ" | "quadAccumulator";
+export type AddressingMode = "implied" | "accumulator" | "immediate" | "zeroPage" | "zeroPageIndexedX" | "zeroPageIndexedY" | "absolute" | "absoluteIndexedX" | "absoluteIndexedY" | "absoluteLongIndexedX" | "indirect" | "zeroPageIndirect" | "zeroPageIndirectLong" | "indexedIndirectX" | "indirectIndexedY" | "absoluteIndexedIndirect" | "zeroPageIndirectIndexedZ" | "stackRelative" | "stackRelativeIndirectIndexedY" | "relative" | "relative16" | "zeroPageRelative" | "accumulatorRelative" | "zeroPageImmediate" | "specialPage" | "blockTransfer" | "immediateZeroPage" | "immediateZeroPageIndexedX" | "immediateAbsolute" | "immediateAbsoluteIndexedX" | "basePageIndirectIndexedZ" | "quadAccumulator";
 /** How operand bytes are written after the opcode (and any prefixes). */
-export type OperandCodecId = "none" | "unsigned8" | "unsigned16-le" | "unsigned24-le" | "relative8" | "relative16" | "zero-page-relative8";
+export type OperandCodecId = "none" | "unsigned8" | "unsigned16-le" | "unsigned24-le" | "relative8" | "relative16" | "zero-page-relative8" | "accumulator-relative8" | "zero-page-immediate8" | "special-page" | "three-unsigned16-le" | "immediate-unsigned8" | "immediate-unsigned16";
 /**
  * Boolean combination of {@link CpuFeature}s. Empty `anyOf` is treated as
  * "no restriction"; `allOf`/`noneOf` are vacuously true when omitted.
@@ -37,6 +37,8 @@ export interface InstructionForm {
     readonly documented: boolean;
     readonly stability: "documented" | "stable-undocumented" | "unstable-undocumented";
     readonly note?: string;
+    /** Optional declarative validation for irregular immediate operands. */
+    readonly operandConstraint?: "power-of-two";
     /** Bytes from the opcode address to the relative reference point. Defaults to instruction size. */
     readonly relativeBaseOffset?: number;
 }

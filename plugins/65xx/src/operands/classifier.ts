@@ -19,6 +19,7 @@ export function classify65xxOperand(
   else if (sizePrefix.force === 3) length = Math.max(3, inferredLength);
   const normalized = expanded.trim();
   const normalizedUpper = normalized.toUpperCase();
+  const compound = splitTopLevelOperands(normalized);
 
   let mode = "unknown";
   let baseExpression = normalized;
@@ -32,6 +33,12 @@ export function classify65xxOperand(
   } else if (normalizedUpper === "Q") {
     mode = "quadAccumulator";
     registerName = "q";
+  } else if (compound.length >= 2 && compound[0]?.startsWith("#")) {
+    const indexedX = compound.length === 3 && compound[2]?.toUpperCase() === "X";
+    const address = compound[1] ?? "";
+    const addressLength = resolver.expandOperand(address).length;
+    mode = `${addressLength <= 1 ? "immediateZeroPage" : "immediateAbsolute"}${indexedX ? "IndexedX" : ""}`;
+    baseExpression = normalized;
   } else if (normalized.startsWith("#")) {
     mode = "immediate";
     baseExpression = normalized.slice(1).trim();
@@ -80,8 +87,16 @@ export function classify65xxOperand(
       else mode = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register.toUpperCase()}`;
       baseExpression = indexed[1].trim();
     } else if (topLevelComma >= 0) {
-      mode = "zeroPageRelative";
-      baseExpression = normalized.slice(0, topLevelComma).trim();
+      if (compound.length === 3) {
+        mode = "blockTransfer";
+      } else if (compound[0]?.toUpperCase() === "A") {
+        mode = "accumulatorRelative";
+      } else if (compound[1]?.startsWith("#")) {
+        mode = "zeroPageImmediate";
+      } else {
+        mode = "zeroPageRelative";
+      }
+      baseExpression = normalized;
     } else {
       mode = length <= 1 ? "zeroPage" : "absolute";
     }
@@ -101,6 +116,28 @@ export function classify65xxOperand(
     // 24-bit values are not 6502-legal; encoder can still emit long-x on 4510.
     metadata: length > 2 ? { addressOutOfRange: true } : undefined,
   };
+}
+
+/**
+ * Splits commas outside parentheses/brackets for vendor compound operands.
+ * @param {string} value The operand text.
+ * @returns {string[]} Top-level operand components.
+ */
+function splitTopLevelOperands(value: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index];
+    if (character === "(" || character === "[") depth++;
+    else if (character === ")" || character === "]") depth--;
+    else if (character === "," && depth === 0) {
+      parts.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
 }
 
 /**

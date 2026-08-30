@@ -1,12 +1,14 @@
 # `@uttori/asm-plugin-65xx`
 
-This plugin provides a native-syntax, flat 16-bit raw target for 6502-derived
-NMOS, CMOS, Commodore, and MEGA65 processors. Select target `65xx.raw` and one
+This plugin provides native and ca65-shaped flat 16-bit targets for
+6502-derived NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 processors.
+Select target `65xx.raw` and one
 of these architectures:
 
 - `65xx.6502`, `65xx.6502x`, or `65xx.6502dtv`;
 - `65xx.65sc02`, `65xx.65c02`, or `65xx.w65c02`;
-- `65xx.65ce02`, `65xx.4510`, or `65xx.45gs02`.
+- `65xx.65ce02`, `65xx.4510`, or `65xx.45gs02`;
+- `65xx.huc6280` or `65xx.m740`.
 
 `65xx.6502` accepts the 151 documented NMOS opcodes. Encoding-equivalent chip
 names `6510`, `8502`, `2A03`, `2A07`, and `6507` are aliases of that instruction
@@ -33,9 +35,18 @@ PRG. Fill unused PRG with `$FF`. Native syntax remains the default for
 `65xx.raw`; the NES target selects the ca65 syntax profile (dotted directives,
 `:=`, cheap locals `@name`, unary `<`/`>`/`^`).
 
+Target `65xx.ca65-raw` (alias `ca65-raw`) provides the same ca65 source profile
+without an iNES or ld65 layout. It supports every plugin-owned CPU through
+`.setcpu`, CPU shorthands, and CPU conditionals, along with the common
+expression, scope, data, include, conditional, macro, repeat, assertion, and
+flat-segment forms listed in the
+[ca65 compatibility matrix](../../docs/65xx-ca65-compatibility.md). It emits a
+flat image and deliberately does not emulate relocatable cc65 object files or
+linker resolution.
+
 Native syntax supports conventional `$` hexadecimal and `%` binary literals,
 `#` immediates, `A`/`Q`, parentheses and brackets, `,x`/`,y`/`,z`/`,s`, bit
 branches, 8-bit and 16-bit relative branches, and `.b`/`.w` mnemonic suffixes
-for explicit zero-page/absolute selection. The 45GS02 compound forms emit their
-fixed `42 42` and `EA` prefixes from the same declarative instruction model.
-ca65's larger source-language profile is a later phase and is not claimed here.
+for explicit zero-page/absolute selection. The HuC6280 and M740 compound
+operand layouts, and the 45GS02 fixed `42 42` and `EA` prefixes, come from the
+same declarative instruction model.

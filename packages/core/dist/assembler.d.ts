@@ -178,6 +178,8 @@ export declare class Assembler {
     /** Active command contexts so nested byte writes inherit the right source line. */
     traceCommandStack: TraceCommandContext[];
     defines: Map<string, string>;
+    /** Bare numeric values exposed only while executing typed `for` loops. */
+    private readonly activeLoopVariables;
     characterMappings: Map<string, number>;
     currentTable: string | null;
     tableStack: Map<string, number>[];

@@ -263,6 +263,8 @@ export class Assembler {
   public traceCommandStack: TraceCommandContext[] = [];
 
   public defines: Map<string, string> = new Map();
+  /** Bare numeric values exposed only while executing typed `for` loops. */
+  private readonly activeLoopVariables: Map<string, number> = new Map();
 
   // Character mapping support
   public characterMappings: Map<string, number> = new Map();
@@ -1060,7 +1062,8 @@ export class Assembler {
             try {
               handler({ state: session.pluginState }, words, raw);
             } catch (cause) {
-              throw new PluginError(`Directive '${directive.id}' failed.`, {
+              const detail = cause instanceof Error ? ` ${cause.message}` : "";
+              throw new PluginError(`Directive '${directive.id}' failed.${detail}`, {
                 code: "PLUGIN_HOOK_FAILED",
                 pluginId,
                 contributionId: directive.id,
@@ -1336,9 +1339,16 @@ export class Assembler {
       resolveDefines: (input) => this.resolvedefines(input),
       isStructReference: (input) => this.structEngine.hasStructReference(input),
       resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
-      tryResolveLabel: (input, requireStatic) =>
-        this.symbolScope.tryGetLabelValue(input, requireStatic),
-      resolveLabel: (input, requireStatic) => this.symbolScope.getLabelValue(input, requireStatic),
+      tryResolveLabel: (input, requireStatic) => {
+        const loopValue = this.activeLoopVariables.get(input.trim());
+        if (loopValue !== undefined) return loopValue;
+        return this.symbolScope.tryGetLabelValue(input, requireStatic);
+      },
+      resolveLabel: (input, requireStatic) => {
+        const loopValue = this.activeLoopVariables.get(input.trim());
+        if (loopValue !== undefined) return loopValue;
+        return this.symbolScope.getLabelValue(input, requireStatic);
+      },
       evaluateMath: (input) => this.mathCore.math(input),
       shouldDeferExpressionEvaluation: () =>
         !this.getActiveStageCapabilities().enforceResolvedLabels,
@@ -1670,6 +1680,8 @@ export class Assembler {
    */
   resolveExpressionHostLabel(identifier: string): number | string {
     const trimmed = identifier.trim();
+    const loopValue = this.activeLoopVariables.get(trimmed);
+    if (loopValue !== undefined) return loopValue;
     if (parseUnnamedLabelReference(trimmed)) {
       return this.symbolScope.getLabelValue(trimmed, this.requireStaticLabelLookup);
     }
@@ -3619,6 +3631,7 @@ export class Assembler {
 
     // Save the original variable value before we modify it
     const originalValue = this.defines.get(variable);
+    const originalLoopValue = this.activeLoopVariables.get(variable);
 
     // Only process the loop if start < end
     if (start < end) {
@@ -3626,6 +3639,7 @@ export class Assembler {
       for (let i = start; i < end; i++) {
         // Set our loop counter directly in defines map
         this.defines.set(variable, i.toString());
+        this.activeLoopVariables.set(variable, i);
         executeBody();
       }
     }
@@ -3635,6 +3649,11 @@ export class Assembler {
       this.defines.set(variable, originalValue);
     } else {
       this.defines.delete(variable);
+    }
+    if (originalLoopValue !== undefined) {
+      this.activeLoopVariables.set(variable, originalLoopValue);
+    } else {
+      this.activeLoopVariables.delete(variable);
     }
   }
 

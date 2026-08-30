@@ -1,5 +1,4 @@
 import {
-  CA65_SYNTAX_PROFILE,
   definePlugin,
   NATIVE_SYNTAX_PROFILE,
   PLUGIN_API_VERSION,
@@ -26,15 +25,40 @@ import {
 import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
 import { classify65xxOperand } from "./operands/classifier.js";
 import {
+  handleAlign,
   handleAddr,
   handleByte,
+  handleCa65Assert,
+  handleCa65Incbin,
+  handleCpuShorthand,
   handleDbyt,
+  handleDword,
+  handleEndScope,
   handleExport,
+  handleFlatSegment,
   handleHibytes,
   handleImport,
   handleLobytes,
+  handlePopcpu,
+  handlePopseg,
+  handlePushcpu,
+  handlePushseg,
+  handleRes,
+  handleScope,
   handleSegment,
+  handleSetcpu,
+  handleUnsupportedCa65,
 } from "./directives/ca65.js";
+import {
+  CA65_65XX_SESSION_STATE_ID,
+  CA65_65XX_SYNTAX_PROFILE,
+  ca65CpuPredicateByArchitecture,
+  ca65CpuShorthands,
+  ca65SessionStateKey,
+  cloneCa65SessionState,
+  createCa65SessionState,
+  resetCa65StageState,
+} from "./ca65-profile.js";
 import {
   NES_65XX_SESSION_STATE_ID,
   cloneNes65xxSessionState,
@@ -60,8 +84,12 @@ export const FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 export const RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
 /** Resets PC to `origin` at the start of each assembly stage. */
 export const RAW_65XX_LIFECYCLE_ID = "65xx.raw-lifecycle";
-/** ca65 directive set used by the NES iNES target. */
+/** Headerless raw target using the ca65 source profile. */
+export const CA65_RAW_65XX_TARGET_ID = "65xx.ca65-raw";
+/** ca65 directive set used by ca65-profile targets. */
 export const CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
+export const CA65_65XX_EXPRESSION_SET_ID = "65xx.ca65-expressions";
+export const CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
 
 /**
  * Raw-target options. `origin` is both the initial PC and file offset 0
@@ -101,7 +129,13 @@ const descriptor = (
 ): DirectiveDescriptor => ({ keyword, summary, syntax, group });
 
 const ca65Tooling: readonly DirectiveDescriptor[] = [
+  descriptor("setcpu", "Select a 65xx CPU.", '.setcpu "CPU"', "architecture"),
+  descriptor("cpu", "Alias for .setcpu.", '.cpu "CPU"', "architecture"),
+  descriptor("pushcpu", "Push the current CPU.", ".pushcpu", "architecture"),
+  descriptor("popcpu", "Restore the pushed CPU.", ".popcpu", "architecture"),
   descriptor("segment", "Switch to an ld65 segment.", '.segment "NAME"', "layout"),
+  descriptor("pushseg", "Push the current flat segment.", ".pushseg", "layout"),
+  descriptor("popseg", "Restore the pushed flat segment.", ".popseg", "layout"),
   descriptor("export", "Export a symbol to other files.", ".export ident[, ident...]", "label"),
   descriptor(
     "import",
@@ -126,6 +160,34 @@ const ca65Tooling: readonly DirectiveDescriptor[] = [
     "data",
   ),
   descriptor("dbyt", "Emit 16-bit big-endian words.", ".dbyt value[, value...]", "data"),
+  descriptor("dword", "Emit 32-bit little-endian values.", ".dword value[, value...]", "data"),
+  descriptor(
+    "faraddr",
+    "Emit 24-bit little-endian addresses.",
+    ".faraddr value[, value...]",
+    "data",
+  ),
+  descriptor("res", "Reserve bytes with an optional fill value.", ".res count[, fill]", "data"),
+  descriptor("align", "Align the location counter.", ".align boundary[, fill]", "layout"),
+  descriptor("incbin", "Include a binary range.", '.incbin "file"[, offset[, size]]', "include"),
+  descriptor(
+    "assert",
+    "Require an expression to be true.",
+    '.assert expr[, error[, "message"]]',
+    "diagnostic",
+  ),
+  descriptor("scope", "Enter a lexical scope.", ".scope [name]", "label"),
+  descriptor("endscope", "Leave a lexical scope.", ".endscope", "label"),
+  descriptor("proc", "Define and enter a procedure scope.", ".proc name", "label"),
+  descriptor("endproc", "Leave a procedure scope.", ".endproc", "label"),
+];
+
+const ca65ExpressionFunctions: readonly [string, string, (value: number) => number][] = [
+  ["lobyte", "Low byte of a value.", (value) => value & 0xff],
+  ["hibyte", "High byte of a value.", (value) => (value >>> 8) & 0xff],
+  ["bankbyte", "Bank byte of a value.", (value) => (value >>> 16) & 0xff],
+  ["loword", "Low word of a value.", (value) => value & 0xffff],
+  ["hiword", "High word of a value.", (value) => (value >>> 16) & 0xffff],
 ];
 
 const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
@@ -205,7 +267,7 @@ function createRaw65xxOutputFormat(): TargetOutputFormat {
 }
 
 /**
- * Registers NMOS/CMOS/Commodore/MEGA65 architectures plus the flat raw target.
+ * Registers NMOS/CMOS/Commodore/MEGA65/Hudson/Mitsubishi architectures plus the flat raw target.
  * Used by the plugin `activate` hook and by tests that want contributions
  * without constructing a full plugin object.
  *
@@ -269,6 +331,73 @@ export function register65xxContributions(context: PluginActivationContext): voi
   });
 
   context.registerSessionState({
+    id: CA65_65XX_SESSION_STATE_ID,
+    create: createCa65SessionState,
+    clone: cloneCa65SessionState,
+    resetForStage: resetCa65StageState,
+  });
+  context.registerExpressionSet({
+    id: CA65_65XX_EXPRESSION_SET_ID,
+    functions: ca65ExpressionFunctions.map(([name, summary, transform]) => ({
+      name,
+      signature: { parameters: ["value"], minimumArguments: 1, maximumArguments: 1 },
+      summary,
+      evaluate: (_expressionContext, args) => {
+        const value = args[0];
+        if (typeof value !== "number") throw new Error(`${name}() expects a numeric argument.`);
+        return transform(value);
+      },
+    })),
+  });
+  context.registerLifecycle({
+    id: CA65_65XX_LIFECYCLE_ID,
+    create: () => {
+      const updatePredicates = (
+        session: import("@uttori/asm-core").Assembler,
+        architecture: string,
+      ) => {
+        for (const [cpu, symbol] of Object.entries(ca65CpuPredicateByArchitecture)) {
+          session.globalSymbols.add(symbol);
+          session.labelTable.set(symbol, { value: cpu === architecture ? 1 : 0, isStatic: true });
+        }
+      };
+      return {
+        onSessionCreated: ({ session, state }) => {
+          const profile = state.get(ca65SessionStateKey);
+          profile.defaultArchitecture = session.resolveActiveArchitecture().name;
+          profile.currentArchitecture = profile.defaultArchitecture;
+          updatePredicates(session, profile.defaultArchitecture);
+        },
+        onStageStart: ({ session, state }) => {
+          const profile = state.get(ca65SessionStateKey);
+          session.selectArchitecture(profile.defaultArchitecture, profile.defaultArchitecture);
+        },
+        onArchitectureSelected: ({ session, state, architecture }) => {
+          const profile = state.get(ca65SessionStateKey);
+          profile.currentArchitecture = architecture;
+          updatePredicates(session, architecture);
+        },
+      };
+    },
+  });
+
+  context.registerTarget({
+    id: CA65_RAW_65XX_TARGET_ID,
+    aliases: ["ca65-raw"],
+    displayName: "65xx ca65-compatible flat 16-bit raw binary",
+    defaultArchitecture: nmos6502Cpu.id,
+    architectures: [nmos6502Cpu.id, nmos6502xCpu.id, ...variantCpus.map((cpu) => cpu.id)],
+    addressSpace: FLAT_65XX_ADDRESS_SPACE_ID,
+    outputFormat: RAW_65XX_OUTPUT_FORMAT_ID,
+    directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
+    expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
+    lifecycle: [RAW_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
+    defaultOutputExtension: ".bin",
+    createOptions: createRaw65xxTargetOptions,
+  });
+
+  context.registerSessionState({
     id: NES_65XX_SESSION_STATE_ID,
     create: createInitialNesState,
     clone: cloneNes65xxSessionState,
@@ -292,9 +421,42 @@ export function register65xxContributions(context: PluginActivationContext): voi
       directive(
         "65xx.directive.segment",
         ["segment"],
+        ({ targetId, session, state }) =>
+          (_ctx, words) => {
+            if (targetId === NES_65XX_TARGET_ID) {
+              handleSegment(session, state.get(nes65xxSessionStateKey), words);
+            } else {
+              handleFlatSegment(state.get(ca65SessionStateKey), words);
+            }
+          },
+      ),
+      directive(
+        "65xx.directive.setcpu",
+        ["setcpu", "cpu"],
         ({ session, state }) =>
           (_ctx, words) =>
-            handleSegment(session, state.get(nes65xxSessionStateKey), words),
+            handleSetcpu(session, state.get(ca65SessionStateKey), words),
+      ),
+      directive(
+        "65xx.directive.pushcpu",
+        ["pushcpu"],
+        ({ session, state }) =>
+          () =>
+            handlePushcpu(session, state.get(ca65SessionStateKey)),
+      ),
+      directive(
+        "65xx.directive.popcpu",
+        ["popcpu"],
+        ({ session, state }) =>
+          () =>
+            handlePopcpu(session, state.get(ca65SessionStateKey)),
+      ),
+      directive(
+        "65xx.directive.cpu-shorthand",
+        Object.keys(ca65CpuShorthands),
+        ({ session, state }) =>
+          (_ctx, words) =>
+            handleCpuShorthand(session, state.get(ca65SessionStateKey), words),
       ),
       directive(
         "65xx.directive.export",
@@ -345,6 +507,102 @@ export function register65xxContributions(context: PluginActivationContext): voi
           (_ctx, words) =>
             handleDbyt(session, words),
       ),
+      directive(
+        "65xx.directive.dword",
+        ["dword"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleDword(session, words),
+      ),
+      directive(
+        "65xx.directive.faraddr",
+        ["faraddr"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleDword(session, words, 3),
+      ),
+      directive(
+        "65xx.directive.res",
+        ["res"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleRes(session, words),
+      ),
+      directive(
+        "65xx.directive.align",
+        ["align"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleAlign(session, words),
+      ),
+      directive(
+        "65xx.directive.incbin",
+        ["incbin"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleCa65Incbin(session, words),
+      ),
+      directive(
+        "65xx.directive.assert",
+        ["assert"],
+        ({ session }) =>
+          (_ctx, words) =>
+            handleCa65Assert(session, words),
+      ),
+      directive(
+        "65xx.directive.scope",
+        ["scope", "proc"],
+        ({ session, state }) =>
+          (_ctx, words) =>
+            handleScope(
+              session,
+              state.get(ca65SessionStateKey),
+              words,
+              (words[0] ?? "").replace(/^\./, "").toLowerCase() === "proc",
+            ),
+      ),
+      directive(
+        "65xx.directive.endscope",
+        ["endscope", "endproc"],
+        ({ session, state }) =>
+          () =>
+            handleEndScope(session, state.get(ca65SessionStateKey)),
+      ),
+      directive(
+        "65xx.directive.pushseg",
+        ["pushseg"],
+        ({ state }) =>
+          () =>
+            handlePushseg(state.get(ca65SessionStateKey)),
+      ),
+      directive(
+        "65xx.directive.popseg",
+        ["popseg"],
+        ({ state }) =>
+          () =>
+            handlePopseg(state.get(ca65SessionStateKey)),
+      ),
+      directive(
+        "65xx.directive.unsupported-object",
+        [
+          "autoimport",
+          "constructor",
+          "debuginfo",
+          "destructor",
+          "exportzp",
+          "forceimport",
+          "globalzp",
+          "importzp",
+          "interruptor",
+          "reloc",
+        ],
+        () => (_ctx, words) => handleUnsupportedCa65(words),
+      ),
+      directive("65xx.directive.unsupported-macro", ["exitmacro", "local"], () => (_ctx, words) => {
+        throw new Error(
+          `.${(words[0] ?? "").replace(/^\./, "")} is not yet supported by the ca65 macro compatibility slice.`,
+        );
+      }),
     ],
     tooling: ca65Tooling,
   });
@@ -357,9 +615,9 @@ export function register65xxContributions(context: PluginActivationContext): voi
     addressSpace: NES_65XX_ADDRESS_SPACE_ID,
     outputFormat: NES_65XX_OUTPUT_FORMAT_ID,
     directiveSets: [CA65_65XX_DIRECTIVE_SET_ID],
-    expressionSets: [],
-    lifecycle: [NES_65XX_LIFECYCLE_ID],
-    syntaxProfile: CA65_SYNTAX_PROFILE,
+    expressionSets: [CA65_65XX_EXPRESSION_SET_ID],
+    lifecycle: [NES_65XX_LIFECYCLE_ID, CA65_65XX_LIFECYCLE_ID],
+    syntaxProfile: CA65_65XX_SYNTAX_PROFILE,
     defaultOutputExtension: ".nes",
     createOptions: createNes65xxTargetOptions,
   });
@@ -372,7 +630,7 @@ const plugin: AssemblerPlugin<Raw65xxTargetOptions> = definePlugin<Raw65xxTarget
     version: "1.0.0",
     apiVersion: PLUGIN_API_VERSION,
     description:
-      "65xx NMOS, CMOS, Commodore, and MEGA65 architectures with raw and NES iNES targets.",
+      "65xx NMOS, CMOS, Commodore, MEGA65, Hudson, and Mitsubishi architectures with raw and NES iNES targets.",
   },
   validateOptions: createRaw65xxTargetOptions,
   activate: register65xxContributions,
@@ -414,6 +672,10 @@ export {
   csg65ce02Forms,
   mega65Gs02Cpu,
   mega65Gs02Forms,
+  hudsonHuC6280Cpu,
+  hudsonHuC6280Forms,
+  mitsubishiM740Cpu,
+  mitsubishiM740Forms,
   mos6502DtvCpu,
   mos6502DtvForms,
   variantCpus,
@@ -440,3 +702,12 @@ export {
 } from "./target/nes.js";
 export { NES_65XX_SESSION_STATE_ID, nes65xxSessionStateKey } from "./session-state.js";
 export { parseLd65Config, defaultLd65ConfigText } from "./linker-config.js";
+export {
+  CA65_65XX_SESSION_STATE_ID,
+  CA65_65XX_SYNTAX_PROFILE,
+  ca65CpuNames,
+  ca65CpuShorthands,
+  ca65SessionStateKey,
+  resolve65xxCpuName,
+  rewriteCa65Command,
+} from "./ca65-profile.js";

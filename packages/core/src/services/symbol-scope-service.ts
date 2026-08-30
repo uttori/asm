@@ -81,6 +81,22 @@ export class SymbolScopeService {
   }
 
   /**
+   * Adds a namespace inside a file-local qualifier (`unit::Namespace_Label`).
+   * @param {string} namespacePrefix The flattened namespace prefix.
+   * @param {string} label The already-qualified or plain label.
+   * @returns {string} The namespace-qualified storage key.
+   */
+  qualifyNamespaceAlias(namespacePrefix: string, label: string): string {
+    if (this.host.syntaxProfile.fileLocalSymbols) {
+      const separator = label.indexOf("::");
+      if (separator !== -1) {
+        return `${label.slice(0, separator + 2)}${namespacePrefix}_${label.slice(separator + 2)}`;
+      }
+    }
+    return `${namespacePrefix}_${label}`;
+  }
+
+  /**
    * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
    * @param {string} name The label token, without a trailing colon.
    * @returns {string} The rewritten name.
@@ -201,8 +217,10 @@ export class SymbolScopeService {
    * @returns {boolean} `true` if the label is in scope, `false` otherwise.
    */
   hasLabelInScope(identifier: string): boolean {
+    const qualified = this.qualifySymbolName(identifier);
     return (
       this.host.labelTable.has(identifier) ||
+      (qualified !== identifier && this.host.labelTable.has(qualified)) ||
       (this.host.currentNamespace
         ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`)
         : false)
@@ -995,8 +1013,8 @@ export class SymbolScopeService {
           // symbolContainerName resolves "bars_create" rather than falling back to
           // the namespace root "bars". Must happen before setLabel is called so the
           // containerName written into symbolDefinitions is correct from the first write.
-          const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
-          const qualifiedParent = `${namespacePrefix}_${parentLabel}`;
+          const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
+          const qualifiedParent = this.qualifyNamespaceAlias(namespacePrefix, parentLabel);
           this.host.labelParents.set(namespacedLabel, qualifiedParent);
           this.setLabel(directScopeLabel, undefined, false, false, false, modifiesHierarchy);
           if (modifiesHierarchy) {
@@ -1022,7 +1040,7 @@ export class SymbolScopeService {
           ? this.host.namespaceNestingPath.join("_")
           : this.host.currentNamespace;
         if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
-          const namespacedLabel = `${namespacePrefix}_${directScopeLabel}`;
+          const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
           this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
         }
       }
@@ -1053,7 +1071,7 @@ export class SymbolScopeService {
         ? this.host.namespaceNestingPath.join("_")
         : this.host.currentNamespace;
       if (!labelName.startsWith(`${namespacePrefix}_`)) {
-        const namespacedLabel = `${namespacePrefix}_${labelName}`;
+        const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, labelName);
         this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
       }
     }
