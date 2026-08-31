@@ -56,6 +56,43 @@ test("SNES PROT emits resolved and deferred address records", (t) => {
   ]);
 });
 
+test("SNES freespacebyte requires exactly one parameter", (t) => {
+  const assembler = new Assembler();
+  const state = assembler.targetState;
+
+  t.is(
+    t.throws(() => handleFreespaceByte(assembler, state, ["freespacebyte"])).message,
+    "FREESPACEBYTE requires exactly one parameter.",
+  );
+  t.is(
+    t.throws(() => handleFreespaceByte(assembler, state, ["freespacebyte", "$00", "$01"])).message,
+    "FREESPACEBYTE requires exactly one parameter.",
+  );
+});
+
+test("SNES freespace refuses an unmapped start offset", (t) => {
+  const assembler = new Assembler();
+  const state = assembler.targetState;
+  assembler.activateStage("emitProgram");
+  state.mapper = "sa1rom";
+  state.sa1Banks = [];
+
+  t.is(
+    t.throws(() => handleFreespace(assembler, state, ["freespace"])).message,
+    "Unable to map freespace start to a logical address.",
+  );
+});
+
+test("SNES freespace falls back to output length without a base image", (t) => {
+  const assembler = new Assembler();
+  const state = assembler.targetState;
+  assembler.activateStage("emitProgram");
+
+  handleFreespace(assembler, state, ["freespace"]);
+  t.is(state.activeFreespaceStartOffset, 0x80000);
+  t.is(state.activeFreespaceContentStartOffset, 0x80008);
+});
+
 test("SNES plugin registers every memory directive alias", (t) => {
   const assembler = new Assembler();
   for (const keyword of ["freecode", "freespace", "freedata", "freespacebyte", "prot"]) {

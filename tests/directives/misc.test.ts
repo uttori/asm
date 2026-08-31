@@ -109,6 +109,26 @@ test("warnpc fails when PC is past the bound", (t) => {
   });
 });
 
+test("warnpc rejects a missing address", (t) => {
+  const ctx = createDiagnosticContext(() => true);
+  t.throws(() => handleWarnpc(ctx, ["warnpc"], "warnpc"), {
+    message: "warnpc requires an address",
+  });
+});
+
+test("error strips @keyword and ignores a mismatched raw keyword", (t) => {
+  const ctx = createDiagnosticContext(() => true);
+  t.throws(() => handleError(ctx, ["error"], "@error"), {
+    message: "error command.",
+  });
+  t.throws(() => handleError(ctx, ["error"], "@e"), {
+    message: "error command.",
+  });
+  t.throws(() => handleError(ctx, ["error"], "assert 1"), {
+    message: "error command: assert 1",
+  });
+});
+
 test("table loads asar char=hex lines without stripping a leading space", (t) => {
   const mappings = new Map<string, number>();
   const ctx: TableDirectiveContext = {
@@ -150,6 +170,23 @@ test("table rtl reads hex=char lines", (t) => {
   t.is(mappings.get(" "), 0x20);
 });
 
+test("table ltr suffix is accepted and ignored as the default direction", (t) => {
+  const mappings = new Map<string, number>();
+  const ctx: TableDirectiveContext = {
+    session: {
+      tableStack: [],
+      characterMappings: mappings,
+      currentTable: null,
+      includeSource: {
+        readFile: () => "A=41\n",
+      },
+    },
+  };
+
+  handleTable(ctx, ["table", '"font.txt"', "ltr"], 'table "font.txt",ltr');
+  t.is(mappings.get("A"), 0x41);
+});
+
 test("table replaces prior mappings and rejects invalid lines", (t) => {
   const mappings = new Map<string, number>([["Z", 0x5a]]);
   const ctx: TableDirectiveContext = {
@@ -161,6 +198,9 @@ test("table replaces prior mappings and rejects invalid lines", (t) => {
         readFile: (filename) => {
           if (filename === "bad.txt") {
             return "A=4\n";
+          }
+          if (filename === "bytes.bin") {
+            return new Uint8Array([0x41]);
           }
           return "B=42\n";
         },
@@ -176,6 +216,66 @@ test("table replaces prior mappings and rejects invalid lines", (t) => {
     message: "table requires a filename",
   });
   t.throws(() => handleTable(ctx, ["table", '"bad.txt"'], 'table "bad.txt"'), {
+    message: "Invalid table file: line 1",
+  });
+  t.throws(() => handleTable(ctx, ["table", '"bytes.bin"'], 'table "bytes.bin"'), {
+    message: "Error reading file: bytes.bin",
+  });
+});
+
+test("table keeps CRLF mapped characters and rejects asar-invalid spellings", (t) => {
+  const mappings = new Map<string, number>();
+  const ctx: TableDirectiveContext = {
+    session: {
+      tableStack: [],
+      characterMappings: mappings,
+      currentTable: null,
+      includeSource: {
+        readFile: (filename) => {
+          if (filename === "crlf.txt") {
+            return "A=41\r\nB=42\r";
+          }
+          if (filename === "ltr-bad.txt") {
+            return "A-41\n";
+          }
+          if (filename === "ltr-hex.txt") {
+            return "A=4G\n";
+          }
+          if (filename === "ltr-x.txt") {
+            return "A=0x\n";
+          }
+          if (filename === "rtl-x.txt") {
+            return "0X41=A\n";
+          }
+          if (filename === "rtl-eq.txt") {
+            return "4=AB\n";
+          }
+          return "GG=A\n";
+        },
+      },
+    },
+  };
+
+  handleTable(ctx, ["table", '"crlf.txt"'], 'table "crlf.txt"');
+  t.is(mappings.get("A"), 0x41);
+  t.is(mappings.get("B"), 0x42);
+
+  t.throws(() => handleTable(ctx, ["table", '"ltr-bad.txt"'], 'table "ltr-bad.txt"'), {
+    message: "Invalid table file: line 1",
+  });
+  t.throws(() => handleTable(ctx, ["table", '"ltr-hex.txt"'], 'table "ltr-hex.txt"'), {
+    message: "Invalid table file: line 1",
+  });
+  t.throws(() => handleTable(ctx, ["table", '"ltr-x.txt"'], 'table "ltr-x.txt"'), {
+    message: "Invalid table file: line 1",
+  });
+  t.throws(() => handleTable(ctx, ["table", '"rtl-x.txt"', "rtl"], 'table "rtl-x.txt",rtl'), {
+    message: "Invalid table file: line 1",
+  });
+  t.throws(() => handleTable(ctx, ["table", '"rtl-eq.txt"', "rtl"], 'table "rtl-eq.txt",rtl'), {
+    message: "Invalid table file: line 1",
+  });
+  t.throws(() => handleTable(ctx, ["table", '"rtl-hex.txt"', "rtl"], 'table "rtl-hex.txt",rtl'), {
     message: "Invalid table file: line 1",
   });
 });

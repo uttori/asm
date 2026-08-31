@@ -47,6 +47,7 @@ test("Arch65816.estimateSize rejects a trailing opcode dot", t => {
 test("Arch65816.estimateSize uses architecture-aware sizing", t => {
   const { assembler, arch } = createArch65816();
 
+  t.is(arch.estimateSize([]), 0, "Empty input reserves no bytes");
   t.is(arch.estimateSize(["BRA", "$8005"]), 2, "Short branches reserve 2 bytes");
   t.is(arch.estimateSize(["BRL", "$8100"]), 3, "Long branches reserve 3 bytes");
   t.is(arch.estimateSize(["JSL", "$808000"]), 4, "Long jumps reserve 4 bytes");
@@ -75,6 +76,15 @@ test("Arch65816.encode uses abs,x for same-bank CMP table labels", t => {
 
   t.true(arch.encode(["CMP", "level_with_ski_ids,x"]));
   t.deepEqual(assembler.emitted, [0xdd, 0x31, 0xfa]);
+});
+
+test("Arch65816.applySepRep ignores operands that do not resolve", t => {
+  const { arch } = createArch65816();
+  arch.m16 = true;
+  arch.x16 = true;
+  arch.applySepRep("SEP", "!nope");
+  t.true(arch.m16);
+  t.true(arch.x16);
 });
 
 test("Arch65816.estimateSize uses M/X flags for immediates after SEP/REP", t => {

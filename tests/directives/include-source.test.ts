@@ -256,6 +256,26 @@ test("incbin rejects malformed and parenthesized hyphen ranges", (t) => {
     t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:(2+2)+(1+3)-($8000)"])).message,
     "Emismatched_parentheses: Mismatched parentheses.",
   );
+  t.is(
+    t.throws(() => handleIncbin(ctx, ["incbin", 'data.bin:(0+"(")-(4)'])).message,
+    "Emismatched_parentheses: Mismatched parentheses.",
+  );
+  t.is(
+    t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:(0+1-4)"])).message,
+    "Invalid range specification: (0+1-4)",
+  );
+  t.is(
+    t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:12x-4"])).message,
+    "Invalid range specification: 12x-4",
+  );
+  t.is(
+    t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:(0+1)-(4"])).message,
+    "Invalid range specification: (0+1)-(4",
+  );
+  t.is(
+    t.throws(() => handleIncbin(ctx, ["incbin", "data.bin:1-4x"])).message,
+    "Invalid range specification: 1-4x",
+  );
 });
 
 test("incbin rejects inverted and out-of-range slices", (t) => {
@@ -317,6 +337,14 @@ test("incsrc and include expand defines in quoted and unquoted paths", (t) => {
   ]);
 });
 
+test("incsrc and include fall back to identity defines when no engine is installed", (t) => {
+  const { ctx, includeCalls } = createContext();
+  ctx.defineEngine = undefined;
+  handleIncsrc(ctx, ["incsrc", "raw.asm"]);
+  handleInclude(ctx, ["include", "guarded.asm"]);
+  t.deepEqual(includeCalls, ["incsrc:raw.asm", "include:guarded.asm"]);
+});
+
 test("incbin expands defines in the filename", (t) => {
   const { ctx, written } = createContext({
     files: {
@@ -329,6 +357,13 @@ test("incbin expands defines in the filename", (t) => {
   };
   handleIncbin(ctx, ["incbin", '"!PathToFile"']);
   t.deepEqual(written, [0x11, 0x22]);
+});
+
+test("incbin falls back to identity defines when no engine is installed", (t) => {
+  const { ctx, written } = createContext();
+  ctx.defineEngine = undefined;
+  handleIncbin(ctx, ["incbin", "data.bin:0-2"]);
+  t.deepEqual(written, [0x10, 0x20]);
 });
 
 test("include source registration exposes all handlers", (t) => {

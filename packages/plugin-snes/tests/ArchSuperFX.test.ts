@@ -55,6 +55,7 @@ test("ArchSuperFX.estimateInstruction uses lowered operands", (t) => {
 test("ArchSuperFX.estimateSize matches encoded SuperFX widths", (t) => {
   const { arch } = createArchSuperFX();
 
+  t.is(arch.estimateSize([]), 0);
   t.is(arch.estimateSize(["NOP"]), 1);
   t.is(arch.estimateSize(["RPIX"]), 2);
   t.is(arch.estimateSize(["ADC", "R0"]), 2);

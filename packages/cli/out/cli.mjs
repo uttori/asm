@@ -5178,12 +5178,8 @@ var assertIncbinMathParensBalanced = (text) => {
   }
 };
 var parseIncbinUnprefixedHex = (text) => {
-  const match = text.match(/^([\dA-Fa-f]*)/);
-  const digits = match?.[1] ?? "";
-  let value = 0;
-  if (digits !== "") {
-    value = Number.parseInt(digits, 16);
-  }
+  const digits = text.match(/^[\dA-Fa-f]*/)[0];
+  const value = digits === "" ? 0 : Number.parseInt(digits, 16);
   return { value, rest: text.slice(digits.length) };
 };
 var parseDeprecatedHyphenIncbinRange = (rangeStr) => {
@@ -5343,9 +5339,6 @@ var handlePushBase = ({ session }) => {
   session.pushBaseStack.push(session.currentTargetAddress);
 };
 var handlePullBase = ({ session }) => {
-  if (session.pushBaseStack.length === 0) {
-    throw new Error("No base value to pull.");
-  }
   const baseAddress = session.pushBaseStack.pop();
   if (baseAddress === void 0) {
     throw new Error("No base value to pull.");
@@ -9808,6 +9801,12 @@ var ResolvedToolingCatalog = class {
   directiveSets;
   expressionSets;
   targets;
+  /**
+   * Instruction catalog for an architecture id or alias on this target.
+   * Unknown architectures, or ones not listed on the target, yield an empty list.
+   * @param {string} architecture Architecture contribution id or alias.
+   * @returns {readonly InstructionDescriptor[]} Instruction descriptors, possibly empty.
+   */
   getInstructions(architecture) {
     const id = this.architectureAliases.get(canonical(architecture)) ?? canonical(architecture);
     if (!this.target.architectures.some((arch) => canonical(arch) === id)) {
@@ -9815,6 +9814,11 @@ var ResolvedToolingCatalog = class {
     }
     return this.architectures.get(id)?.value.instructions ?? [];
   }
+  /**
+   * Core directive catalog (filtered by `coreDirectiveGroups`) plus this target's
+   * contributed tooling. Later keywords win when a plugin overrides a core name.
+   * @returns {readonly DirectiveDescriptor[]} Deduped directive descriptors.
+   */
   getDirectives() {
     const enabledCoreGroups = new Set(
       this.target.coreDirectiveGroups ?? CORE_DIRECTIVE_GROUPS
@@ -9830,6 +9834,10 @@ var ResolvedToolingCatalog = class {
       ).values()
     ]);
   }
+  /**
+   * Expression functions contributed by this target's expression sets.
+   * @returns {readonly ExpressionFunctionDescriptor[]} Name, aliases, signature, summary.
+   */
   getExpressionFunctions() {
     return this.target.expressionSets.flatMap(
       (id) => this.expressionSets.get(canonical(id))?.value.functions.map((item) => ({
@@ -9840,6 +9848,10 @@ var ResolvedToolingCatalog = class {
       })) ?? []
     );
   }
+  /**
+   * Architectures listed on this target. Missing contributions are skipped.
+   * @returns {readonly ArchitectureSummary[]} Id, aliases, and display name.
+   */
   getArchitectures() {
     return this.target.architectures.flatMap((id) => {
       const contribution = this.architectures.get(canonical(id))?.value;
@@ -9852,6 +9864,10 @@ var ResolvedToolingCatalog = class {
       ] : [];
     });
   }
+  /**
+   * Every target in the environment, not only the one this catalog was built for.
+   * @returns {readonly TargetSummary[]} Frozen-friendly summaries for UI/LSP.
+   */
   getTargets() {
     return this.targets.map(({ value }) => ({
       id: value.id,
@@ -9875,6 +9891,11 @@ var AssemblerEnvironment = class {
   #targetAliases;
   #architectureAliasesByTarget;
   #targetRecords;
+  /**
+   * Indexes contributions, checks target alias uniqueness, then validates every target.
+   * @param {EnvironmentContributions} contributions Manager-collected plugin graph.
+   * @throws {PluginError} On alias collisions or an invalid target graph.
+   */
   constructor(contributions) {
     this.manifests = contributions.manifests;
     this.sessionStates = contributions.sessionStates;
@@ -9914,6 +9935,13 @@ var AssemblerEnvironment = class {
     this.#architectureAliasesByTarget = aliasesByTarget;
     Object.freeze(this);
   }
+  /**
+   * Ensures a target's referenced contributions exist and that aliases, directive
+   * keywords, and expression names are unique within that target.
+   * @param {OwnedContribution<TargetContribution>} targetRecord The target to check.
+   * @returns {ReadonlyMap<string, string>} Canonical architecture alias → contribution id.
+   * @throws {PluginError} `PLUGIN_TARGET_INVALID` or `PLUGIN_ALIAS_DUPLICATE`.
+   */
   #validateTarget(targetRecord) {
     const target = targetRecord.value;
     if (!this.#addressSpaces.has(canonical(target.addressSpace))) {
@@ -10004,13 +10032,27 @@ var AssemblerEnvironment = class {
     }
     return aliases;
   }
+  /**
+   * Resolves a target contribution id or alias to the canonical target id.
+   * @param {string} idOrAlias Target id or alias (case-insensitive).
+   * @returns {string | undefined} Canonical target id, or `undefined` if unknown.
+   */
   resolveTargetId(idOrAlias) {
     return this.#targetAliases.get(canonical(idOrAlias));
   }
+  /**
+   * Looks up a target by id or alias.
+   * @param {string} idOrAlias Target id or alias (case-insensitive).
+   * @returns {Readonly<TargetContribution> | undefined} The target, if registered.
+   */
   getTarget(idOrAlias) {
     const id = this.resolveTargetId(idOrAlias);
     return id ? this.#targets.get(canonical(id))?.value : void 0;
   }
+  /**
+   * Frozen summaries of every registered target (for LSP/UI pickers).
+   * @returns {readonly TargetSummary[]} Id, aliases, display name, defaults.
+   */
   getTargetSummaries() {
     return Object.freeze(
       this.#targetRecords.map(
@@ -10024,32 +10066,79 @@ var AssemblerEnvironment = class {
       )
     );
   }
+  /**
+   * Resolves an architecture id or alias in the context of a target.
+   * @param {string} targetId Target id or alias.
+   * @param {string} idOrAlias Architecture contribution id or alias.
+   * @returns {string | undefined} Canonical architecture id, or `undefined`.
+   */
   resolveArchitectureId(targetId, idOrAlias) {
     const id = this.resolveTargetId(targetId);
     return id ? this.#architectureAliasesByTarget.get(id)?.get(canonical(idOrAlias)) : void 0;
   }
+  /**
+   * Looks up an architecture contribution by canonical id (not alias).
+   * @param {string} id Architecture contribution id.
+   * @returns {Readonly<ArchitectureContribution> | undefined} The architecture, if registered.
+   */
   getArchitecture(id) {
     return this.#architectures.get(canonical(id))?.value;
   }
+  /**
+   * Looks up an address-space contribution by id.
+   * @param {string} id Address-space contribution id.
+   * @returns {Readonly<AddressSpaceContribution> | undefined} The contribution, if registered.
+   */
   getAddressSpace(id) {
     return this.#addressSpaces.get(canonical(id))?.value;
   }
+  /**
+   * Looks up an output-format contribution by id.
+   * @param {string} id Output-format contribution id.
+   * @returns {Readonly<OutputFormatContribution> | undefined} The contribution, if registered.
+   */
   getOutputFormat(id) {
     return this.#outputFormats.get(canonical(id))?.value;
   }
+  /**
+   * Looks up a directive-set contribution by id.
+   * @param {string} id Directive-set contribution id.
+   * @returns {Readonly<DirectiveSetContribution> | undefined} The contribution, if registered.
+   */
   getDirectiveSet(id) {
     return this.#directiveSets.get(canonical(id))?.value;
   }
+  /**
+   * Looks up an expression-set contribution by id.
+   * @param {string} id Expression-set contribution id.
+   * @returns {Readonly<ExpressionSetContribution> | undefined} The contribution, if registered.
+   */
   getExpressionSet(id) {
     return this.#expressionSets.get(canonical(id))?.value;
   }
+  /**
+   * Looks up a lifecycle contribution by id.
+   * @param {string} id Lifecycle contribution id.
+   * @returns {Readonly<LifecycleContribution> | undefined} The contribution, if registered.
+   */
   getLifecycle(id) {
     return this.#lifecycles.get(canonical(id))?.value;
   }
+  /**
+   * Returns the plugin id that registered a contribution (any kind except session state).
+   * @param {string} id Contribution id (case-insensitive).
+   * @returns {string | undefined} Owning plugin id, or `undefined` if unknown.
+   */
   getContributionOwner(id) {
     const key = canonical(id);
     return this.#architectures.get(key)?.pluginId ?? this.#addressSpaces.get(key)?.pluginId ?? this.#outputFormats.get(key)?.pluginId ?? this.#directiveSets.get(key)?.pluginId ?? this.#expressionSets.get(key)?.pluginId ?? this.#lifecycles.get(key)?.pluginId ?? this.#targets.get(key)?.pluginId;
   }
+  /**
+   * Lifecycle contributions wired to a target, sorted by registration order.
+   * @param {string} targetId Target id or alias.
+   * @returns {readonly OwnedContribution<LifecycleContribution>[]} Frozen, ordered records.
+   * @throws {PluginError} If `targetId` does not resolve (`PLUGIN_TARGET_INVALID`).
+   */
   getTargetLifecycles(targetId) {
     const target = this.getTarget(targetId);
     if (!target) {
@@ -10065,6 +10154,12 @@ var AssemblerEnvironment = class {
       }).sort((left, right) => left.registrationOrder - right.registrationOrder)
     );
   }
+  /**
+   * Builds the LSP/editor catalog for a target (instructions, directives, expressions).
+   * @param {string} targetId Target id or alias.
+   * @returns {ToolingCatalog} Frozen per-target tooling view.
+   * @throws {PluginError} If `targetId` does not resolve (`PLUGIN_TARGET_INVALID`).
+   */
   getToolingCatalog(targetId) {
     const resolvedId = this.resolveTargetId(targetId);
     const target = resolvedId ? this.#targets.get(canonical(resolvedId))?.value : void 0;
@@ -10078,7 +10173,7 @@ var AssemblerEnvironment = class {
       new ResolvedToolingCatalog(
         target,
         this.#architectures,
-        this.#architectureAliasesByTarget.get(resolvedId) ?? /* @__PURE__ */ new Map(),
+        this.#architectureAliasesByTarget.get(resolvedId),
         this.#directiveSets,
         this.#expressionSets,
         this.#targetRecords
@@ -10649,6 +10744,12 @@ var PluginSessionStateStore = class {
   #contributions;
   #values;
   #disposed = false;
+  /**
+   * Creates every registered session-state slot for this session.
+   * @param {readonly OwnedContribution<SessionStateContribution<unknown>>[]} contributions Owned session-state factories, in registration order.
+   * @param {SessionCreationContext} context Target id and options passed to each `create`.
+   * @throws {PluginError} If a slot factory throws (`PLUGIN_ACTIVATION_FAILED`).
+   */
   constructor(contributions, context) {
     this.#contributions = contributions;
     this.#values = /* @__PURE__ */ new Map();
@@ -10669,6 +10770,12 @@ var PluginSessionStateStore = class {
       }
     }
   }
+  /**
+   * Returns the live value for a branded session-state slot.
+   * @param {SessionStateKey<T>} slot The slot key registered by the owning plugin.
+   * @returns {T} The current value for this session.
+   * @throws {PluginError} If the slot was not created for this session.
+   */
   get(slot) {
     if (!this.#values.has(slot.id)) {
       throw new PluginError(`Session state slot '${slot.id}' is not active.`, {
@@ -10678,6 +10785,13 @@ var PluginSessionStateStore = class {
     }
     return this.#values.get(slot.id);
   }
+  /**
+   * Deep-clones every slot via its plugin `clone` hook.
+   * Used to seed stage snapshots so later passes cannot mutate earlier ones.
+   * @param {ReadonlyMap<string, unknown>} [source] Values to clone. Defaults to the live store.
+   * @returns {PluginStateSnapshot} A new map of cloned slot values.
+   * @throws {PluginError} If `source` is missing a registered slot, or a `clone` hook throws.
+   */
   cloneSnapshot(source = this.#values) {
     const snapshot = /* @__PURE__ */ new Map();
     for (const record of this.#contributions) {
@@ -10701,9 +10815,19 @@ var PluginSessionStateStore = class {
     }
     return snapshot;
   }
+  /**
+   * Replaces the live slot map. Callers pass a snapshot from {@link cloneSnapshot}.
+   * @param {PluginStateSnapshot} snapshot Previously cloned slot values.
+   */
   restore(snapshot) {
     this.#values = snapshot;
   }
+  /**
+   * Runs each slot's optional `resetForStage` hook (stage entry / pass boundary).
+   * Slots without a hook are left unchanged.
+   * @param {AssemblyStageName} stage The stage that is about to run.
+   * @throws {PluginError} If a `resetForStage` hook throws (`PLUGIN_HOOK_FAILED`).
+   */
   resetForStage(stage) {
     for (const record of this.#contributions) {
       const reset = record.value.resetForStage;
@@ -10720,6 +10844,12 @@ var PluginSessionStateStore = class {
       }
     }
   }
+  /**
+   * Disposes every slot in reverse registration order, then clears the store.
+   * Idempotent: a second call is a no-op. Slot `dispose` errors are collected and
+   * rethrown as a single `AggregateError` after every slot has been attempted.
+   * @throws {AggregateError} If one or more slot `dispose` hooks throw.
+   */
   dispose() {
     if (this.#disposed) return;
     this.#disposed = true;
@@ -17119,6 +17249,27 @@ var Arch65816 = class {
   }
 };
 
+// packages/plugin-snes/src/architectures/split-operands.ts
+var splitSingleOperand = (text) => text ? [text] : [];
+var splitCommaOperands = (text) => text ? text.split(",").map((operand) => operand.trim()) : [];
+var splitTopLevelCommaOperands = (text) => {
+  const operands = [];
+  let level = 0;
+  let current = "";
+  for (const character of text) {
+    if (character === "(") level++;
+    if (character === ")") level--;
+    if (character === "," && level === 0) {
+      operands.push(current.trim());
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  if (current.trim()) operands.push(current.trim());
+  return operands;
+};
+
 // packages/plugin-snes/src/architectures/spc700.ts
 var lowerSpc700Operand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
@@ -17453,7 +17604,7 @@ var ArchSPC700 = class {
       return 0;
     }
     const rawOperand = words.slice(1).join(" ").trim();
-    const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
+    const parsedOperands = rawOperand ? splitTopLevelCommaOperands(rawOperand) : [];
     const loweredOperand = lowerSpc700Operand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = parsedOperands.map(
       (operand) => lowerSpc700Operand(this.assembler.operandResolver, operand)
@@ -17481,7 +17632,7 @@ var ArchSPC700 = class {
     if (loweredOperands.length > 0) {
       operands = loweredOperands.map((operand) => operand.expanded);
     } else if (operandText) {
-      operands = this.splitTopLevelComma(operandText);
+      operands = splitTopLevelCommaOperands(operandText);
     }
     operands = operands.filter((value) => value !== "");
     const left = operands[0] ?? "";
@@ -17649,7 +17800,7 @@ var ArchSPC700 = class {
     }
     const opcode = words[0];
     const rawOperand = words.slice(1).join(" ").trim();
-    const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
+    const parsedOperands = rawOperand ? splitTopLevelCommaOperands(rawOperand) : [];
     const loweredOperand = lowerSpc700Operand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = parsedOperands.map(
       (operand) => lowerSpc700Operand(this.assembler.operandResolver, operand)
@@ -17715,36 +17866,6 @@ var ArchSPC700 = class {
       );
     }
     return false;
-  }
-  /**
-   * Splits on commas outside parentheses. Does not track `[]` - SPC700 bit
-   * syntax uses `.n`, not 65816-style `[dp]`.
-   * @param {string} text The operand string.
-   * @returns {string[]} The array of operands.
-   */
-  splitTopLevelComma(text) {
-    const result = [];
-    let level = 0;
-    let current = "";
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (c === "(") {
-        level++;
-        current += c;
-      } else if (c === ")") {
-        level--;
-        current += c;
-      } else if (c === "," && level === 0) {
-        result.push(current.trim());
-        current = "";
-      } else {
-        current += c;
-      }
-    }
-    if (current.trim()) {
-      result.push(current.trim());
-    }
-    return result;
   }
   /**
    * Implied single-byte ops (NOP, BRK, RET, flag ops, SLEEP, STOP, XCN).
@@ -20344,7 +20465,6 @@ var SnesSpcRuntimeService = class {
       }
       throw new Error("Custom spcblock mode is not implemented.");
     }
-    if (type !== "nspc") throw new Error("Custom spcblock mode is not implemented.");
     const sizeAddress = this.session.currentTargetBaseAddress;
     this.session.write2(0);
     this.session.write2(destination);
@@ -20589,10 +20709,7 @@ var snesRomAddressSpace = {
       if ((address & 6291456) === 0) {
         return address << 1 & 4128768 | 32768 | address & 32767;
       }
-      if ((address & 6291456) === 2097152) {
-        return 8388608 | address << 1 & 4128768 | 32768 | address & 32767;
-      }
-      return -1;
+      return 8388608 | address << 1 & 4128768 | 32768 | address & 32767;
     }
     if (context.mapper === "sfxrom") {
       return address >= 2097152 ? -1 : address << 1 & 8323072 | address & 32767 | 32768;
@@ -21222,25 +21339,6 @@ var directiveByKeyword = new Map(
 
 // packages/plugin-snes/src/index.ts
 var SNES_TARGET_ID = "snes.sfc";
-var splitSingleOperand = (text) => text ? [text] : [];
-var splitCommaOperands = (text) => text ? text.split(",").map((operand) => operand.trim()) : [];
-var splitTopLevelCommaOperands = (text) => {
-  const operands = [];
-  let level = 0;
-  let current = "";
-  for (const character of text) {
-    if (character === "(") level++;
-    if (character === ")") level--;
-    if (character === "," && level === 0) {
-      operands.push(current.trim());
-      current = "";
-    } else {
-      current += character;
-    }
-  }
-  if (current.trim()) operands.push(current.trim());
-  return operands;
-};
 var toolingFor = (keywords) => {
   const wanted = new Set(keywords);
   return directiveCatalog2.filter((descriptor2) => wanted.has(descriptor2.keyword));

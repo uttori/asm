@@ -9,6 +9,7 @@ import {
 } from "@uttori/asm-core";
 import { spc700Catalog } from "../tooling/instruction-catalog.js";
 import { classifyGenericOperand } from "./operand-classifiers.js";
+import { splitTopLevelCommaOperands } from "./split-operands.js";
 
 /**
  * Core may already classify; unknown forms go through {@link classifyGenericOperand}.
@@ -531,7 +532,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return 0;
     }
     const rawOperand = words.slice(1).join(" ").trim();
-    const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
+    const parsedOperands = rawOperand ? splitTopLevelCommaOperands(rawOperand) : [];
     const loweredOperand = lowerSpc700Operand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = parsedOperands.map((operand) =>
       lowerSpc700Operand(this.assembler.operandResolver, operand),
@@ -566,7 +567,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     if (loweredOperands.length > 0) {
       operands = loweredOperands.map((operand) => operand.expanded);
     } else if (operandText) {
-      operands = this.splitTopLevelComma(operandText);
+      operands = splitTopLevelCommaOperands(operandText);
     }
     operands = operands.filter((value) => value !== "");
     const left = operands[0] ?? "";
@@ -748,7 +749,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
     const opcode = words[0];
     const rawOperand = words.slice(1).join(" ").trim();
-    const parsedOperands = rawOperand ? this.splitTopLevelComma(rawOperand) : [];
+    const parsedOperands = rawOperand ? splitTopLevelCommaOperands(rawOperand) : [];
     const loweredOperand = lowerSpc700Operand(this.assembler.operandResolver, rawOperand);
     const loweredOperands = parsedOperands.map((operand) =>
       lowerSpc700Operand(this.assembler.operandResolver, operand),
@@ -831,38 +832,6 @@ export class ArchSPC700 implements ArchitectureEncoder {
     }
 
     return false;
-  }
-
-  /**
-   * Splits on commas outside parentheses. Does not track `[]` - SPC700 bit
-   * syntax uses `.n`, not 65816-style `[dp]`.
-   * @param {string} text The operand string.
-   * @returns {string[]} The array of operands.
-   */
-  splitTopLevelComma(text: string): string[] {
-    const result: string[] = [];
-    let level = 0;
-    let current = "";
-
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (c === "(") {
-        level++;
-        current += c;
-      } else if (c === ")") {
-        level--;
-        current += c;
-      } else if (c === "," && level === 0) {
-        result.push(current.trim());
-        current = "";
-      } else {
-        current += c;
-      }
-    }
-    if (current.trim()) {
-      result.push(current.trim());
-    }
-    return result;
   }
 
   /**

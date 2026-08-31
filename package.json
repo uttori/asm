@@ -125,6 +125,8 @@
     "clean": true,
     "exclude": [
       "packages/cli/src/index.ts",
+      "packages/plugin-author/**",
+      "packages/core/src/directives/types.ts",
       "src/debug-tracing.ts"
     ],
     "include": [

@@ -14,6 +14,7 @@ export type SnesSpcBlockType = "nspc" | "custom";
 export type SnesSpcBlockData = {
     /** 16-bit SPC-700 destination written after the size word. */
     destination: number;
+    /** Header format. Only `nspc` is implemented. */
     type: SnesSpcBlockType;
     /** Logical address of the 16-bit size placeholder (written as `0` at open). */
     sizeAddress: number;

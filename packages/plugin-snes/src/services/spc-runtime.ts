@@ -63,7 +63,6 @@ export class SnesSpcRuntimeService {
       }
       throw new Error("Custom spcblock mode is not implemented.");
     }
-    if (type !== "nspc") throw new Error("Custom spcblock mode is not implemented.");
 
     const sizeAddress = this.session.currentTargetBaseAddress;
     this.session.write2(0);

@@ -33,6 +33,7 @@ test("ArchSPC700.estimateInstruction uses lowered operands", t => {
 
 test("ArchSPC700.estimateSize matches encoded widths for common forms", t => {
   const { arch } = createArchSPC700();
+  t.is(arch.estimateSize([]), 0);
   t.is(arch.estimateSize(["CLRP"]), 1);
   t.is(arch.estimateSize(["MOV", "X,#$cf"]), 2);
   t.is(arch.estimateSize(["MOV", "SP,X"]), 1);
@@ -126,11 +127,9 @@ test("ArchSPC700.handleBitSetClear honors dp.bit operands", t => {
 test("ArchSPC700.encodeInstruction routes one-operand lowered nodes", t => {
   const { assembler, arch } = createArchSPC700();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
-  const splitStub = sinon.stub(arch, "splitTopLevelComma");
   const oneOperandStub = sinon.stub(arch, "handleOneOperand").returns(true);
   t.teardown(() => {
     expandOperandStub.restore();
-    splitStub.restore();
     oneOperandStub.restore();
   });
 
@@ -154,17 +153,14 @@ test("ArchSPC700.encodeInstruction routes one-operand lowered nodes", t => {
   t.is(oneOperandStub.firstCall.args[2], null);
   t.is(oneOperandStub.firstCall.args[3], false);
   t.true(expandOperandStub.notCalled);
-  t.true(splitStub.notCalled);
 });
 
 test("ArchSPC700.encodeInstruction routes two-operand lowered nodes", t => {
   const { assembler, arch } = createArchSPC700();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
-  const splitStub = sinon.stub(arch, "splitTopLevelComma");
   const twoOperandStub = sinon.stub(arch, "handleTwoOperands").returns(true);
   t.teardown(() => {
     expandOperandStub.restore();
-    splitStub.restore();
     twoOperandStub.restore();
   });
 
@@ -192,7 +188,6 @@ test("ArchSPC700.encodeInstruction routes two-operand lowered nodes", t => {
   t.is(twoOperandStub.firstCall.args[3], null);
   t.is(twoOperandStub.firstCall.args[4], false);
   t.true(expandOperandStub.notCalled);
-  t.true(splitStub.notCalled);
 });
 
 test("ArchSPC700.handleMemoryInstruction consumes lowered indirect register modes", t => {

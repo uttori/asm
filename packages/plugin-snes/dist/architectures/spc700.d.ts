@@ -79,13 +79,6 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
-     * Splits on commas outside parentheses. Does not track `[]` - SPC700 bit
-     * syntax uses `.n`, not 65816-style `[dp]`.
-     * @param {string} text The operand string.
-     * @returns {string[]} The array of operands.
-     */
-    splitTopLevelComma(text: string): string[];
-    /**
      * Implied single-byte ops (NOP, BRK, RET, flag ops, SLEEP, STOP, XCN).
      * Returns false when the mnemonic is not in this set so other handlers can run.
      *

@@ -4,6 +4,7 @@ import type { AddressStackDirectiveContext, ArchitectureDirectiveContext } from 
 /**
  * Pushes the current target address onto the push base stack.
  * @param {AddressStackDirectiveContext} ctx The directive context.
+ * @returns {void}
  */
 export const handlePushBase = ({ session }: AddressStackDirectiveContext): void => {
   // debug("handlePushBase")
@@ -11,14 +12,13 @@ export const handlePushBase = ({ session }: AddressStackDirectiveContext): void 
 };
 
 /**
- * Pulls the current target address from the push base stack.
+ * Restores the target address saved by {@link handlePushBase}.
  * @param {AddressStackDirectiveContext} ctx The directive context.
+ * @returns {void}
+ * @throws {Error} If the base stack is empty.
  */
 export const handlePullBase = ({ session }: AddressStackDirectiveContext): void => {
   // debug("handlePullBase")
-  if (session.pushBaseStack.length === 0) {
-    throw new Error("No base value to pull.");
-  }
   const baseAddress = session.pushBaseStack.pop();
   if (baseAddress === undefined) {
     throw new Error("No base value to pull.");
@@ -27,10 +27,13 @@ export const handlePullBase = ({ session }: AddressStackDirectiveContext): void 
 };
 
 /**
- * Handles the ARCH command.
- * @param {ArchitectureDirectiveContext} ctx The directive context.
- * @param {string[]} words - The words from the ARCH command.
- * @throws {Error} If the ARCH command requires an architecture parameter.
+ * Selects the architecture named by `words[1]`.
+ * Prefers {@link DirectiveArchitectureCapability.selectArchitecture} when present;
+ * otherwise writes `session.arch` after checking `availableArchitectures`.
+ * @param {ArchitectureDirectiveContext} ctx The architecture-capable session.
+ * @param {readonly string[]} words Tokenized line, keyword first.
+ * @returns {void}
+ * @throws {Error} If the architecture name is missing, unknown, or not allowed on the target.
  */
 export const handleArch = (
   { session }: ArchitectureDirectiveContext,
@@ -65,6 +68,12 @@ export const handleArch = (
   }
 };
 
+/**
+ * Registers `base`, `org`, `pushbase`/`pullbase`, `pushpc`/`pullpc`, and `arch`.
+ * @param {DirectiveRegistry} registry The directive registry.
+ * @param {DirectiveRegistryContexts["layout"]} context Layout-capable sessions and runtime.
+ * @returns {void}
+ */
 export const registerGenericLayoutDirectives = (
   registry: DirectiveRegistry,
   context: DirectiveRegistryContexts["layout"],
@@ -113,6 +122,12 @@ export const registerGenericLayoutDirectives = (
   registry.registerLowered("arch", context.architecture, handleArch);
 };
 
+/**
+ * Registers the core layout directive group.
+ * @param {DirectiveRegistry} registry The directive registry.
+ * @param {DirectiveRegistryContexts["layout"]} context Layout-capable sessions and runtime.
+ * @returns {void}
+ */
 export const registerLayoutDirectives = (
   registry: DirectiveRegistry,
   context: DirectiveRegistryContexts["layout"],

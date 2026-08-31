@@ -22,6 +22,11 @@ import {
   classifySuperFxOperand,
 } from "./architectures/operand-classifiers.js";
 import {
+  splitCommaOperands,
+  splitSingleOperand,
+  splitTopLevelCommaOperands,
+} from "./architectures/split-operands.js";
+import {
   ASAR_COMPAT_NO_OP_DIRECTIVES,
   applyMapperSelection,
   calculateHeaderChecksum,
@@ -77,44 +82,10 @@ export interface SnesTargetOptions extends Record<string, unknown> {
 }
 
 /**
- * 65816 keeps the rest of the line as a single operand (`LDA $12,x` is one form,
- * not two arguments). Splitting on commas would break indexed modes.
- * @param {string} text The text to split.
- * @returns {string[]} The split text.
+ * Selects catalog entries whose keyword is in `keywords`.
+ * @param {readonly string[]} keywords Directive keywords to document.
+ * @returns {DirectiveDescriptor[]} Matching catalog descriptors.
  */
-const splitSingleOperand = (text: string): string[] => (text ? [text] : []);
-/**
- * Super FX `MOVE Rn, Rm` style: commas are always operand separators.
- * @param {string} text The text to split.
- * @returns {string[]} The split text.
- */
-const splitCommaOperands = (text: string): string[] =>
-  text ? text.split(",").map((operand) => operand.trim()) : [];
-
-/**
- * SPC700 `MOV A,($12+X)` - commas inside parentheses are addressing syntax,
- * not argument splits. Bracket forms are rare here; only `()` depth is tracked.
- * @param {string} text The text to split.
- * @returns {string[]} The split text.
- */
-const splitTopLevelCommaOperands = (text: string): string[] => {
-  const operands: string[] = [];
-  let level = 0;
-  let current = "";
-  for (const character of text) {
-    if (character === "(") level++;
-    if (character === ")") level--;
-    if (character === "," && level === 0) {
-      operands.push(current.trim());
-      current = "";
-    } else {
-      current += character;
-    }
-  }
-  if (current.trim()) operands.push(current.trim());
-  return operands;
-};
-
 const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
   const wanted = new Set(keywords);
   return directiveCatalog.filter((descriptor) => wanted.has(descriptor.keyword));
@@ -139,6 +110,14 @@ const directive = (
   tooling: toolingFor(keywords),
 });
 
+/**
+ * Reads a numeric expression-function argument.
+ * @param {string} functionName Built-in name used in the error message.
+ * @param {readonly (number | string)[]} args Evaluated arguments.
+ * @param {number} index Argument index.
+ * @returns {number} The numeric argument.
+ * @throws {Error} If the argument is not a number.
+ */
 const numericArgument = (
   functionName: string,
   args: readonly (number | string)[],

@@ -134,8 +134,18 @@ export const handleError = (
   throw new Error(`error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`);
 };
 
+/**
+ * Formats a logical address as 6-digit uppercase hex for asar `warnpc` messages.
+ * @param {number} value Address.
+ * @returns {string} Zero-padded hex without a `$` prefix.
+ */
 const hex6 = (value: number): string => (value >>> 0).toString(16).toUpperCase().padStart(6, "0");
 
+/**
+ * Asar-style table parse error for a 1-based source line.
+ * @param {number} lineNumber Table file line number.
+ * @returns {Error} `Invalid table file: line N`.
+ */
 const invalidTableLine = (lineNumber: number): Error =>
   new Error(`Invalid table file: line ${lineNumber}`);
 
@@ -271,6 +281,13 @@ export const handleWarnpc = (
   }
 };
 
+/**
+ * Registers table and diagnostic directives when those core groups are enabled.
+ * @param {DirectiveRegistry} registry The directive registry.
+ * @param {MiscDirectiveContexts} context Table and diagnostic sessions.
+ * @param {ReadonlySet<CoreDirectiveGroup>} [enabledGroups] Groups to register. Defaults to both.
+ * @returns {void}
+ */
 export const registerMiscDirectives = (
   registry: DirectiveRegistry,
   context: MiscDirectiveContexts,

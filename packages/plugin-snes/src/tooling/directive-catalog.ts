@@ -36,6 +36,14 @@ export type DirectiveDescriptor = {
     | "label";
 };
 
+/**
+ * Builds a nested directive-operand descriptor for hover/completion.
+ * @param {string} keyword Nested keyword (`title`, `bankcross`, ...).
+ * @param {string} summary Hover summary.
+ * @param {string} syntax Example syntax.
+ * @param {readonly DirectiveOperandDescriptor[]} [operands] Nested operands.
+ * @returns {DirectiveOperandDescriptor} Catalog operand entry.
+ */
 const op = (
   keyword: string,
   summary: string,
