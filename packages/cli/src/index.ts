@@ -26,7 +26,7 @@ export interface CliArguments {
   readonly help: boolean;
 }
 
-const usage = `Usage: asm <input> [output] [options]
+export const usage = `Usage: uttori-asm <input> [output] [options]
 
 Options:
   --config <uttori-asm.config.json>

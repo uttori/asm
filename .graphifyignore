@@ -1,8 +1,6 @@
 # Only index assembler and package source.
 # gitignore last-match-wins: deny the repo, then re-include the source trees.
 /*
-!/src/
-!/src/**
 !/packages/
 !/packages/**
 !/tests/

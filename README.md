@@ -2,10 +2,11 @@
 
 Uttori ASM is a pluggable assembler toolkit for TypeScript and Node.js. Its architecture-neutral core owns parsing, the three-stage assembly pipeline, symbols, macros, includes, diagnostics, output writing, and editor analysis. Plugins own targets, instruction encoders, address spaces, output formats, target directives, expression functions, lifecycle behavior, and per-session state.
 
-The repository ships four production packages:
+The repository ships five production packages:
 
 | Package                          | Purpose |
 | -------------------------------- | ------- |
+| `@uttori/asm-cli`                | Installable `uttori-asm` command and Node.js host defaults |
 | `@uttori/asm-core`               | Generic assembler runtime, analysis APIs, and plugin contracts |
 | `@uttori/asm-plugin-loader-node` | Trusted Node.js plugin discovery and `uttori-asm.config.json` loading |
 | `@uttori/asm-plugin-snes`        | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility |
@@ -15,8 +16,7 @@ The language server and VS Code extension use the same loaded plugin environment
 
 ## Requirements & Installation
 
-- Node.js v20 or newer for the assembler and bundled editor tools.
-- A Node.js release accepted by AVA 8 (`^22.20`, `^24.12`, or `>=26`) for the development suite.
+- Node.js v26 or newer for the assembler packages, CLI, bundled editor tools, and development suite.
 
 ```sh
 git clone https://github.com/uttori/asm.git
@@ -88,6 +88,8 @@ See the [SNES Plugin Reference](packages/plugin-snes/README.md) for target alias
 ### Command Line / Zero-Configuration CLI
 
 With no `uttori-asm.config.json` and no explicit plugin, the CLI product supplies the bundled SNES plugin as its host-level default. Core itself still has no default.
+
+The CLI is published as the [`@uttori/asm-cli` package](packages/cli/README.md). Its installed executable is `uttori-asm`; the repository-level `npm run cli` command delegates to that workspace.
 
 ```sh
 # SNES zero-configuration build
@@ -220,6 +222,8 @@ See the [65xx plugin README](packages/plugin-65xx/README.md) for extensive 65xx 
 | `npm run test:coverage` | Run source coverage |
 | `npm run verify` | Run formatting, lint, boundaries, types, declarations, coverage, LSP, and editor gates |
 | `npm run pack:check` | Assert required runtime files and the loader schema exist in package dry-runs |
+| `npm run cli:build` | Build the distributable `uttori-asm` executable |
+| `npm run cli:smoke` | Launch the bundled executable and verify its help path |
 | `npm run fixture:asar` | Run the Asar fixture harness |
 | `npm run fixture:slideshow` | Run the slideshow integration fixture |
 | `npm run benchmark:smoke` | Run in-repo correctness-checked smoke benchmarks |
@@ -237,6 +241,7 @@ There are explicit Chou and SMRPG benchmark commands, they will fail with setup 
 
 ```text
 fixtures/                     focused and production integration projects
+packages/cli/                 command-line host, executable bundle, and CLI tests
 packages/core/                architecture-neutral runtime and plugin API
 packages/language-server/     LSP transport and environment controller
 packages/plugin-65xx/         65xx-family instruction models, encoders, and fixtures
@@ -245,7 +250,6 @@ packages/plugin-loader-node/  Node discovery, config loader, and JSON schema
 packages/plugin-snes/         SNES implementation and parity tests
 packages/vscode-extension/    VS Code client and bundled artifacts
 scripts/                      boundary, package, fixture, smoke, and benchmark gates
-src/                          generic CLI host
 tests/                        core, loader, LSP, and cross-package tests
 ```
 

@@ -11,7 +11,6 @@ import {
   type AssemblerPlugin,
 } from "@uttori/asm-core";
 
-import { parseCliArguments, runCli } from "../../../src/cli.js";
 import { test } from "../../../tests/ava-helper.js";
 import {
   NodePluginLoader,
@@ -85,35 +84,6 @@ test("configuration accepts editor extra fields and discovers uttori-asm.config.
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }
-});
-
-test("generic CLI options parse repeatable plugins, includes, and namespaced values", (t) => {
-  const parsed = parseCliArguments([
-    "input.asm",
-    "--config=project.json",
-    "--plugin",
-    "first-plugin",
-    "--plugin=second-plugin",
-    "--target",
-    "fixture.target",
-    "--architecture=fixture.architecture",
-    "--base-image",
-    "base.bin",
-    "--include-path=one",
-    "--include-path",
-    "two",
-    "--plugin-option",
-    "fixture.plugin:byte=126",
-    "--verbose",
-  ]);
-  t.is(parsed.input, "input.asm");
-  t.deepEqual(parsed.plugins, ["first-plugin", "second-plugin"]);
-  t.deepEqual(parsed.includePaths, ["one", "two"]);
-  t.is(parsed.target, "fixture.target");
-  t.is(parsed.architecture, "fixture.architecture");
-  t.is(parsed.baseImage, "base.bin");
-  t.deepEqual(parsed.pluginOptions, { "fixture.plugin": { byte: 126 } });
-  t.true(parsed.verbose);
 });
 
 test("relative file plugins resolve from the configuration directory", async (t) => {
@@ -389,41 +359,6 @@ test("duplicate resolved modules are rejected before activation", async (t) => {
   );
   t.is(error.code, "PLUGIN_CONFIGURATION_INVALID");
   t.regex(error.message, /same module.*relative-plugin\.mjs/i);
-});
-
-test("a clean SNES project builds from uttori-asm.config.json through the generic CLI", async (t) => {
-  const project = path.join(fixtures, "snes-project");
-  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-asm-loader-cli-"));
-  const output = path.join(temporary, "main.sfc");
-  try {
-    const exitCode = await runCli([
-      path.join(project, "main.asm"),
-      output,
-      "--config",
-      path.join(project, "uttori-asm.config.json"),
-      "--verbose",
-    ]);
-    t.is(exitCode, 0);
-    const bytes = await fs.readFile(output);
-    t.is(bytes[0], 0x42);
-  } finally {
-    await fs.rm(temporary, { recursive: true, force: true });
-  }
-});
-
-test("the CLI host default uses the target output extension when output is omitted", async (t) => {
-  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-asm-loader-default-cli-"));
-  const input = path.join(temporary, "default.asm");
-  const output = path.join(temporary, "default.sfc");
-  try {
-    await fs.writeFile(input, "lorom\norg $008000\ndb $73\n");
-    const exitCode = await runCli([input]);
-    t.is(exitCode, 0);
-    const bytes = await fs.readFile(output);
-    t.is(bytes[0], 0x73);
-  } finally {
-    await fs.rm(temporary, { recursive: true, force: true });
-  }
 });
 
 test("the top-level loader API builds a non-SNES fixture without activating SNES", async (t) => {

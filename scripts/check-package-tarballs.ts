@@ -6,6 +6,10 @@ interface PackageDryRun {
 }
 
 const requirements = new Map<string, readonly string[]>([
+  [
+    "@uttori/asm-cli",
+    ["package.json", "src/index.ts", "dist/index.d.ts", "out/cli.mjs", "README.md"],
+  ],
   ["@uttori/asm-core", ["package.json", "src/index.ts", "dist/index.d.ts"]],
   [
     "@uttori/asm-plugin-loader-node",
