@@ -1,6 +1,6 @@
 # Uttori Assembly
 
-Assembly language support powered by [uttori-asm](https://github.com/MatthewCallis/uttori-asm), currently bundled with the first-party SNES target.
+Assembly language support powered by [uttori-asm](https://github.com/uttori/asm), currently bundled with the first-party SNES target and 65xx target.
 
 Requires VS Code 1.128 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
 

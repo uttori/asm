@@ -11,7 +11,7 @@
   "author": "Matthew Callis <matthew.callis@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MatthewCallis/uttori-asm.git",
+    "url": "https://github.com/uttori/asm.git",
     "directory": "editors/vscode"
   },
   "publisher": "matthewcallis",

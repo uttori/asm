@@ -128,7 +128,7 @@ function detectHeaderSize(size: number): number {
 }
 
 /**
- * USA ROMBit $0001: every `if !ROMVer&(…) != $00` in this file is false, so keep else.
+ * USA ROMBit $0001: every `if !ROMVer&(...) != $00` in this file is false, so keep else.
  * @param {string} source Pointer file text.
  * @returns {string} Source with PAL/AUS branches removed.
  */
@@ -166,7 +166,7 @@ function applyUsaRomVer(source: string): string {
  */
 function parseFilenameTable(source: string): Map<string, string> {
   const names = new Map<string, string>();
-  const pattern = /^([A-Za-z0-9_]+):\s*\r?\n\s*db\s+"([^"]+)"/gm;
+  const pattern = /^(\w+):\s*\r?\n\s*db\s+"([^"]+)"/gm;
   let match: RegExpExecArray | null = pattern.exec(source);
   while (match) {
     names.set(match[1], match[2]);
@@ -194,7 +194,7 @@ function parsePointerSection(
 
   const entries: AssetEntry[] = [];
   const linePattern =
-    /^\s*dl\s+\$([0-9A-Fa-f]+)\s*,\s*\$([0-9A-Fa-f]+)\s*,\s*([A-Za-z0-9_]+)\s*,/gm;
+    /^\s*dl\s+\$([\dA-Fa-f]+)\s*,\s*\$([\dA-Fa-f]+)\s*,\s*(\w+)\s*,/gm;
   let match: RegExpExecArray | null = linePattern.exec(block[1]);
   while (match) {
     const nameLabel = match[3];

@@ -19,7 +19,7 @@ export type SnesSpcBlockData = {
     sizeAddress: number;
     /** From `startpos`, used when `endspcblock` has no `execute` argument. */
     executeAddress: number | null;
-    /** Namespace to restore after the inner `:SPCBLOCK:_…` scope. */
+    /** Namespace to restore after the inner `:SPCBLOCK:_...` scope. */
     namespaceBackup: string;
 };
 /**
@@ -27,7 +27,7 @@ export type SnesSpcBlockData = {
  * also cleared in `resetForStage` so a later stage cannot inherit an open block.
  */
 export interface SnesSessionState {
-    /** Canonical mapper name (`lorom`, `hirom`, `sa1rom`, `norom`, …). */
+    /** Canonical mapper name (`lorom`, `hirom`, `sa1rom`, `norom`, ...). */
     mapper: string;
     /**
      * SA-1 LoROM bank bases in 1 MiB units (`index << 20`).

@@ -495,7 +495,7 @@ export class MathCore {
     argument: ExpressionNode,
   ): number | string {
     if (this.isStringArgument(functionName, argumentIndex)) {
-      // String slots (defined, sizeof, filesize, …) keep the source text, not a label value.
+      // String slots (defined, sizeof, filesize, ...) keep the source text, not a label value.
       switch (argument.type) {
         case "identifier":
           return argument.name;
@@ -756,7 +756,7 @@ export class MathCore {
     }
 
     // Try matching the next two characters first. If they form a known operator
-    // (`&&`, `||`, `==`, `**`, …), do not fall through to a one-character prefix
+    // (`&&`, `||`, `==`, `**`, ...), do not fall through to a one-character prefix
     // (`&` vs `&&`). When the two-character operator exists but is too weak for
     // this depth, return null rather than consuming `&` / `|` / `=`.
     const remaining = this.scanSource.length - this.scanIndex;

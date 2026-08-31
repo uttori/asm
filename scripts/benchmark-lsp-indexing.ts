@@ -132,7 +132,7 @@ async function benchmarkMode(
 ): Promise<IndexingSample[]> {
   for (let warmup = 0; warmup < options.warmups; warmup++) {
     const w = warmup + 1;
-    console.error(`[chou/${mode}] warmup ${w}/${options.warmups}…`);
+    console.error(`[chou/${mode}] warmup ${w}/${options.warmups}...`);
     const started = performance.now();
     await runMode(mode, cacheDir, sharedIndex);
     console.error(
@@ -143,7 +143,7 @@ async function benchmarkMode(
   const samples: IndexingSample[] = [];
   for (let rep = 0; rep < options.repetitions; rep++) {
     const r = rep + 1;
-    console.error(`[chou/${mode}] rep ${r}/${options.repetitions}…`);
+    console.error(`[chou/${mode}] rep ${r}/${options.repetitions}...`);
     const started = performance.now();
     const sample = await runMode(mode, cacheDir, sharedIndex);
     const elapsed = performance.now() - started;
@@ -331,7 +331,7 @@ async function main(): Promise<void> {
   const hasCold = options.modes.includes("cold");
   const hasWarmModes = options.modes.includes("warm") || options.modes.includes("warm-validate");
   if (!hasCold && hasWarmModes) {
-    console.error("[chou] seeding cache with one cold pass before warm modes…");
+    console.error("[chou] seeding cache with one cold pass before warm modes...");
     sharedIndex.fullReindexRequired = true;
     sharedIndex.rootAnalyses.clear();
     fs.rmSync(cacheDir, { recursive: true, force: true });

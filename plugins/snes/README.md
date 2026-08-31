@@ -2,55 +2,55 @@
 
 `@uttori/asm-plugin-snes` is the first-party Super Nintendo target for Uttori ASM. It brings the WDC 65C816, Sony SPC700, and Super FX under one roof; translates CPU addresses through the familiar SNES cartridge maps; writes `.sfc` images; updates checksums; and understands a practical, deliberately documented slice of Asar syntax.
 
-That is a lot of machinery for one cartridge-shaped package. This manual starts with a tiny working ROM and then opens the hood one system at a time. You can read it front to back, magazine-style, or jump straight to the command and instruction appendices when the linker gremlins are already circling.
+This manual starts with a tiny working ROM and then opens the hood one system at a time. You can read it front to back, magazine-style, or jump straight to the command and instruction appendices when the linker gremlins are already circling.
 
 > [!IMPORTANT]
-> This plugin aims for useful Asar compatibility, not mystical drop-in equivalence with every Asar release. Each feature below is marked by what the current code actually does. Accepted compatibility no-ops and known unsupported families are listed explicitly near the end.
+> This plugin aims for useful Asar compatibility, not drop-in equivalence with every Asar release. Each feature below is marked by what the current code actually does. Accepted compatibility no-ops and known unsupported families are listed explicitly near the end.
 
 The architecture and hardware links point to the [Super Famicom Development Wiki](https://wiki.superfamicom.org/). The manual's progression takes inspiration from the excellent [Asar Manual](https://r9.pm/asar-artifacts/build/293/docs/intro.html), but its explanations, examples, support notes, and opinions are grounded in this codebase.
 
 ## Contents
 
 - [What the plugin contributes](#what-the-plugin-contributes)
-- [Install and assemble](#install-and-assemble)
-- [Your first SNES image](#your-first-snes-image)
-- [How an assembly session works](#how-an-assembly-session-works)
-- [Source formatting and syntax](#source-formatting-and-syntax)
+- [Install & Assemble](#install--assemble)
+- [Hello World for the Super Nintendo (SNES) / Super Famicom (SFC)](#hello-world-for-the-super-nintendo-snes--super-famicom-sfc)
+- [How an Assembly Session Works](#how-an-assembly-session-works)
+- [Source Formatting & Syntax](#source-formatting--syntax)
 - [Architectures](#architectures)
-- [Memory maps and the program counter](#memory-maps-and-the-program-counter)
-- [Labels, namespaces, and structs](#labels-namespaces-and-structs)
-- [Defines, expressions, and functions](#defines-expressions-and-functions)
+- [Memory Maps & the Program Counter](#memory-maps--the-program-counter)
+- [Labels, Namespaces, & Structs](#labels-namespaces--structs)
+- [Defines, Expressions, & Functions](#defines-expressions--functions)
 - [Macros](#macros)
-- [Conditionals and loops](#conditionals-and-loops)
-- [Binary data and character tables](#binary-data-and-character-tables)
-- [Source and binary includes](#source-and-binary-includes)
+- [Conditionals & Loops](#conditionals--loops)
+- [Binary Data & Character Tables](#binary-data--character-tables)
+- [Source & Binary Includes](#source--binary-includes)
 - [Fill, pad, and freespace](#fill-pad-and-freespace)
-- [Diagnostics and checks](#diagnostics-and-checks)
-- [Output, checksums, and patching](#output-checksums-and-patching)
-- [Asar compatibility ledger](#asar-compatibility-ledger)
-- [Command index](#command-index)
+- [Diagnostics & Checks](#diagnostics--checks)
+- [Output, Checksums & Patching](#output-checksums--patching)
+- [Asar & ca65 Compatibility](#asar--ca65-compatibility)
+- [Command Index](#command-index)
 - [Troubleshooting](#troubleshooting)
-- [Code and fixture tour](#code-and-fixture-tour)
-- [Instruction catalogs](#instruction-catalogs)
+- [Code and Fixture Layout](#code-and-fixture-layout)
+- [Instruction Catalogs](#instruction-catalogs)
 
 ## What the plugin contributes
 
-Core Uttori ASM has no secret SNES mode hiding behind the curtains. The plugin must be activated, after which it contributes the following target-owned pieces:
+Core Uttori ASM has no default SNES mode. This plugin must be activated, after which it contributes the following target-owned pieces:
 
 | Contribution | ID or value | Notes |
-| --- | --- | --- |
-| Target | `snes.sfc` | Aliases: `snes`, `sfc`, `snes-65816` |
-| Default architecture | `snes.65816` | Alias: `65816` |
-| Audio architecture | `snes.spc700` | Aliases: `spc700`, `spc700-raw`, `spc700-inline` |
+| ------------ | ----------- | ---- |
+| Target                   | `snes.sfc` | Aliases: `snes`, `sfc`, `snes-65816` |
+| Default architecture     | `snes.65816` | Alias: `65816` |
+| Audio architecture       | `snes.spc700` | Aliases: `spc700`, `spc700-raw`, `spc700-inline` |
 | Coprocessor architecture | `snes.superfx` | Alias: `superfx` |
-| Address space | `snes.address-space` | 24-bit, mapper-aware CPU-to-ROM translation |
-| Output format | `snes.sfc-output` | Headerless `.sfc` bytes with optional checksum finalization |
-| Default mapper | `lorom` | Default logical origin is `$008000` |
-| Expression sets | SNES address and ROM-read functions | Installed only for this target |
+| Address space            | `snes.address-space` | 24-bit, mapper-aware CPU-to-ROM translation |
+| Output format            | `snes.sfc-output` | Headerless `.sfc` bytes with optional checksum finalization |
+| Default mapper           | `lorom` | Default logical origin is `$008000` |
+| Expression sets          | SNES address and ROM-read functions | Installed only for this target |
 
-The registration lives in [`src/index.ts`](./src/index.ts). Mapper formulas are isolated in [`src/target/address-space.ts`](./src/target/address-space.ts), while Asar-specific policy lives in [`src/asar/compatibility.ts`](./src/asar/compatibility.ts). That separation matters: the SNES does not leak into architecture-neutral core, and core does not quietly pretend every 24-bit address is LoROM.
+The registration lives in [`src/index.ts`](./src/index.ts). Mapper formulas are isolated in [`src/target/address-space.ts`](./src/target/address-space.ts), while Asar-specific policy lives in [`src/asar/compatibility.ts`](./src/asar/compatibility.ts).
 
-## Install and assemble
+## Install & Assemble
 
 The workspace requires Node.js 20 or newer. From a source checkout:
 
@@ -58,43 +58,7 @@ The workspace requires Node.js 20 or newer. From a source checkout:
 npm install
 ```
 
-### Zero-configuration CLI
-
-When no `uttori-asm.config.json` and no explicit `--plugin` are present, the repository CLI selects this bundled SNES target automatically:
-
-```sh
-npm run cli -- main.asm main.sfc
-```
-
-Leave off the output path and the target supplies `.sfc`:
-
-```sh
-npm run cli -- main.asm
-```
-
-Patch an existing ROM image instead of starting with an empty output buffer:
-
-```sh
-npm run cli -- patch.asm patched.sfc --base-image clean.sfc
-```
-
-Useful CLI options are:
-
-| Option | Meaning |
-| --- | --- |
-| `--config path` | Load a particular `uttori-asm.config.json` |
-| `--plugin module` | Append a plugin module; repeatable |
-| `--target id` | Override the configured target |
-| `--architecture id` | Override the initial architecture |
-| `--base-image path` | Read and patch an existing binary image |
-| `--include-path path` | Add a source/binary lookup directory; repeatable |
-| `--plugin-option plugin:key=value` | Override one plugin option; values are JSON-decoded when possible |
-| `--verbose` | Print resolved plugins, target, and architecture |
-| `--help` | Print CLI usage |
-
-Unlike Asar's CLI, this host does not currently provide `-D`, warning switches, symbol-file switches, pause modes, or title-check flags. Put source defines in the source, plugin choices in configuration, and do not assume an Asar command-line option has a look-alike here merely because the assembly language is familiar.
-
-### Project configuration
+### Project Configuration
 
 For a repeatable build, place this in `uttori-asm.config.json`:
 
@@ -119,7 +83,7 @@ For a repeatable build, place this in `uttori-asm.config.json`:
 
 Paths in `includePaths` are resolved from the configuration directory. The entry source's own directory is also searched by the CLI.
 
-### Programmatic use
+### Programmatic Use
 
 ```ts
 import fs from "node:fs";
@@ -148,13 +112,13 @@ try {
 }
 ```
 
-Environment and target are required. `new Assembler()` without them is not shorthand for SNES; it is an error. See the root [generic core usage](../../README.md#generic-core-usage) for custom hosts and staged analysis.
+Environment and target are required. See the root [generic core usage](../../README.md#generic-core-usage) for custom hosts and staged analysis.
 
-## Your first SNES image
+## Hello World for the Super Nintendo (SNES) / Super Famicom (SFC)
 
-Here is the smallest useful kind of Hello World: a self-contained LoROM that boots and puts `HELLO WORLD` on the television. It does not rely on a BIOS, operating system, text routine, DMA helper, or external font. The trade-off is rather charmingly SNES-shaped-we must supply eight tiny letter tiles and tell the PPU where every piece lives. There is no `printf` waiting behind the curtain.
+Here is the smallest useful kind of Hello World: a self-contained LoROM that boots and puts `HELLO WORLD` on the screen. It does not rely on a BIOS, operating system, text routine, DMA helper, or external font. In short, we must supply eight tiny letter tiles and tell the PPU where every piece lives. There is no `printf` waiting for us.
 
-Save the complete listing as `hello-world.asm`:
+Save the complete code block below as `hello-world.asm`:
 
 ```asm
 ; hello-world.asm
@@ -163,6 +127,7 @@ Save the complete listing as `hello-world.asm`:
 lorom                         ; Map CPU $00:8000-$00:FFFF to this ROM.
 
 org $008000                   ; The reset routine begins at CPU $00:8000.
+
 Reset:
   sei                         ; Mask IRQ while the machine is being prepared.
   cld                         ; Binary arithmetic, please-no decimal surprises.
@@ -205,6 +170,7 @@ Reset:
   rep #$20                    ; Make A 16-bit for paired $2118/$2119 writes.
   lda #$0000                  ; Every VRAM word receives zero.
   ldx #$8000                  ; 32,768 words make the SNES's 64 KiB VRAM.
+
 .clear_vram:
   sta $2118                   ; VMDATAL/VMDATAH: write one zero word.
   dex
@@ -227,6 +193,7 @@ Reset:
   lda #$10
   sta $2117                   ; VMADDH: high byte of tile-data address $1000.
   ldx #$0000                  ; X walks over the ROM-resident font bytes.
+
 .copy_font:
   lda FontTiles,x
   sta $2118                   ; Send the row's plane-0 byte to VMDATAL.
@@ -245,6 +212,7 @@ Reset:
   lda #$01
   sta $2117                   ; VMADDH: high byte of tilemap position $01AA.
   ldx #$0000                  ; Begin with the H in MessageTiles.
+
 .copy_message:
   lda MessageTiles,x
   sta $2118                   ; Tile number: H, E, L, L, O, space, and so on.
@@ -384,11 +352,18 @@ Assemble it from the repository root:
 npm run cli -- hello-world.asm hello-world.sfc
 ```
 
-The result is a headerless 32 KiB `.sfc` image. Open it in a SNES emulator and the letters should appear near the center of a black screen. The layout is intentionally plain enough to understand in one sitting: BG1's tilemap begins at VRAM word address `$0000`, the font begins at word address `$1000`, palette entries 0 and 1 provide black and white, and the message is merely eleven tile indices. Once this clicks, loading a larger font with `incbin` or DMA feels like an upgrade rather than sorcery.
+The result is a headerless 32 KiB `.sfc` image. Open it in a SNES emulator and the letters should appear near the center of a black screen. The layout is intentionally plain enough to understand in one sitting:
 
-For the hardware side, keep the wiki's [first SNES program](https://wiki.superfamicom.org/writing-your-first-snes-program), [background guide](https://wiki.superfamicom.org/backgrounds), [VRAM tile tutorial](https://wiki.superfamicom.org/working-with-vram-part-2-initializing-tiles-and-tile-maps), [palette notes](https://wiki.superfamicom.org/palettes), and [register reference](https://wiki.superfamicom.org/registers) nearby. The [header tutorial](https://wiki.superfamicom.org/writing-the-header) explains the final 64 bytes. The checksum writer needs the output to reach that internal header; a three-byte experiment assembles, but it gives the finalizer nowhere to put the checksum.
+- BG1's tilemap begins at VRAM word address `$0000`
+- the font begins at word address `$1000`
+- palette entries 0 and 1 provide black and white
+- the message is merely eleven tile indices.
 
-## How an assembly session works
+Once this clicks, loading a larger font with `incbin` or DMA feels like an upgrade rather than sorcery.
+
+For the hardware side, check the wiki's [first SNES program](https://wiki.superfamicom.org/writing-your-first-snes-program), [background guide](https://wiki.superfamicom.org/backgrounds), [VRAM tile tutorial](https://wiki.superfamicom.org/working-with-vram-part-2-initializing-tiles-and-tile-maps), [palette notes](https://wiki.superfamicom.org/palettes), and [register reference](https://wiki.superfamicom.org/registers) out. The [header tutorial](https://wiki.superfamicom.org/writing-the-header) explains the final 64 bytes. The checksum writer needs the output to reach that internal header; a three-byte experiment assembles, but it gives the finalizer nowhere to put the checksum.
+
+## How an Assembly Session Works
 
 Uttori ASM builds a typed program model and runs three stages:
 
@@ -400,26 +375,40 @@ The distinction is why forward labels work and why an instruction must estimate 
 
 For patches, `baseImage` becomes the initial output. Reads use it when present, and writes replace or extend it. For fresh builds, unwritten gaps are expanded with the active output fill byte, initially `$00`.
 
-## Source formatting and syntax
+## Source Formatting & Syntax
 
-### Encoding and case
+### Encoding & Case
 
-Source files are read as UTF-8. Mnemonics and directive keywords are case-insensitive; symbol spelling is preserved and should be treated as intentional. The fixtures favor lowercase directives and uppercase hardware mnemonics, which is pleasantly readable but not mandatory.
+Source files are read as UTF-8. Mnemonics and directive keywords are case-insensitive. Symbol spelling is preserved and should be treated as intentional. The fixtures favor lowercase directives and uppercase hardware mnemonics, which is pleasantly readable but not mandatory.
 
 ### Numbers
 
 | Form | Example | Meaning |
-| --- | --- | --- |
+| ---- | ------- | ------- |
 | Hexadecimal | `$80FF`, `0x80FF` | Base 16 |
-| Binary | `%10110000` | Base 2 |
-| Decimal | `33023`, `10.5` | Base 10; expressions may be fractional |
-| Immediate | `#$20` | Architecture syntax; `#` is removed before numeric evaluation |
+| Binary      | `%10110000`       | Base 2 |
+| Decimal     | `33023`, `10.5`   | Base 10; expressions may be fractional |
+| Immediate   | `#$20`            | Architecture syntax; `#` is removed before numeric evaluation |
 
 Negative and unary-plus values are accepted. `~value` and Asar-style `!value` perform bitwise NOT when `!` cannot begin a define name. `<:value` shifts a value right by 16 bits; it is retained for compatibility with sources that use the form.
 
-The 65C816 encoder also recognizes bank shorthand such as `$12:3456`; see [`bank_shorthand.asm`](../../fixtures/asar/tests/bank_shorthand.asm).
+The 65C816 encoder also recognizes bank shorthand such as `$12:3456`; see the Asar example [`bank_shorthand.asm`](../../fixtures/asar/tests/bank_shorthand.asm):
 
-### Comments, continuation, and inline commands
+```asm
+org $008000
+	main:
+		lda #<:main
+		lda #<:test_label
+		lda #bank(other_test)
+
+base $038000
+	test_label:
+
+base $028000
+	other_test:
+```
+
+### Comments, Continuation, & Inline Commands
 
 A semicolon begins a comment unless it appears inside a double-quoted string:
 
@@ -446,7 +435,7 @@ fillbyte $FF : fill $20
 
 Colons inside quoted strings are safe. A label colon directly attached to a name remains a label colon.
 
-### Quotes and directive prefixes
+### Quotes & Directive Prefixes
 
 Single and double quotes are accepted in several tokenized contexts. String data and expression string arguments should normally use double quotes. `@` may prefix a recognized directive, so `@org $008000` routes to `org`; it does not create a second directive family.
 
@@ -465,19 +454,19 @@ namespace off
 
 Switch architecture with `arch name`. The architecture selected by configuration is active before the first source line.
 
-| Source name | Canonical contribution | Purpose |
-| --- | --- | --- |
-| `65816` | `snes.65816` | Main SNES CPU; default |
-| `spc700` | `snes.spc700` | SPC code inside an explicit block |
-| `spc700-raw` | `snes.spc700` | Standalone, mapper-free SPC payload |
-| `spc700-inline` | `snes.spc700` | Asar-compatible implicit SPC block flow |
-| `superfx` | `snes.superfx` | GSU / Super FX code |
+| Source name | Canonical Contribution | Purpose |
+| ----------- | ---------------------- | ------- |
+| `65816`         | `snes.65816`   | Main SNES CPU; default |
+| `spc700`        | `snes.spc700`  | SPC code inside an explicit block |
+| `spc700-raw`    | `snes.spc700`  | Standalone, mapper-free SPC payload |
+| `spc700-inline` | `snes.spc700`  | Asar-compatible implicit SPC block flow |
+| `superfx`       | `snes.superfx` | GSU / Super FX code |
 
 Architecture changes are rejected while an explicit SPC block is active. The live editor-facing catalogs are in [`src/tooling/instruction-catalog.ts`](./src/tooling/instruction-catalog.ts); the complete mnemonic tables appear in [Instruction catalogs](#instruction-catalogs).
 
 ### WDC 65C816
 
-The default encoder supports the 92 instruction mnemonics exercised by the parity fixture and the standard 65C816 addressing families. Ninety are exposed through the editor catalog; `TSB` and `TRB` are also encoded and tested. The wiki's [65816 reference](https://wiki.superfamicom.org/65816-reference) is the recommended hardware companion, including registers, flags, cycles, and opcode behavior that an assembler manual should not badly cosplay.
+The default encoder supports the 92 instruction mnemonics (exercised by the parity fixtures) and the standard 65C816 addressing families. Ninety are exposed through the editor catalog; `TSB` and `TRB` are also encoded and tested. The wiki's [65816 reference](https://wiki.superfamicom.org/65816-reference) is the recommended hardware companion, including registers, flags, cycles, and opcode behavior.
 
 ```asm
 arch 65816
@@ -565,28 +554,28 @@ bra .again
 
 Super FX ALT variants are emitted automatically for mnemonics such as `ADC`, `BIC`, `UMULT`, `STB`, and `LDB`; explicit `ALT1`, `ALT2`, and `ALT3` remain available. Register constraints are checked-for example, jumps use `R8` through `R13`, while increment/decrement top out at `R14`.
 
-One compatibility wrinkle deserves a spotlight. Hardware encodes short `LMS`/`SMS` addresses as a word index (`address >> 1`). Asar writes the raw low byte. The plugin defaults to hardware-correct behavior. Set `asarSuperFxMoveShortAddress: true` only when reproducing Asar bytes is the actual goal, perhaps because a 1997 toolchain has become part of the archaeological site.
+One compatibility wrinkle deserves a spotlight. Hardware encodes short `LMS`/`SMS` addresses as a word index (`address >> 1`). Asar writes the raw low byte. The plugin defaults to hardware-correct behavior. Set `asarSuperFxMoveShortAddress: true` only when reproducing Asar bytes is the actual goal.
 
-## Memory maps and the program counter
+## Memory Maps & the Program Counter
 
 A SNES CPU address is not a file offset. The cartridge decoder maps portions of the 24-bit bus to ROM, often with mirrors. Read the wiki's [memory mapping overview](https://wiki.superfamicom.org/memory-mapping) for the hardware picture; read [`src/target/address-space.ts`](./src/target/address-space.ts) for the exact formulas used here.
 
-### Mapper directives
+### Mapper Directives
 
-| Directive | Internal mode | ROM capacity represented | Preferred CPU window | Header file offset |
-| --- | --- | --- | --- | --- |
-| `lorom` | `lorom` | Up to 4 MiB | Banks with `$8000-$FFFF` ROM windows | `$7FC0` |
-| `hirom` | `hirom` | Up to 4 MiB | Full high-bank windows | `$FFC0` |
-| `exlorom` | `exlorom` | Up to 8 MiB | Extended LoROM windows | `$FFC0` in current checksum policy |
-| `exhirom` | `exhirom` | Up to 8 MiB | Extended HiROM windows | `$FFC0` |
-| `sfxrom` | `sfxrom` | Super FX layout | GSU-compatible ROM windows | `$FFC0` |
-| `sa1rom` | `sa1rom` | Bank-selectable SA-1 layout | LoROM-like and C-F windows | `$7FC0` |
+| Directive | Internal Mode | ROM Capacity Represented | Preferred CPU Window | Header File Offset |
+| --------- | ------------- | ------------------------ | -------------------- | ------------------ |
+| `lorom`      | `lorom`     | Up to 4 MiB | Banks with `$8000-$FFFF` ROM windows | `$7FC0` |
+| `hirom`      | `hirom`     | Up to 4 MiB | Full high-bank windows | `$FFC0` |
+| `exlorom`    | `exlorom`   | Up to 8 MiB | Extended LoROM windows | `$FFC0` in current checksum policy |
+| `exhirom`    | `exhirom`   | Up to 8 MiB | Extended HiROM windows | `$FFC0` |
+| `sfxrom`     | `sfxrom`    | Super FX layout | GSU-compatible ROM windows | `$FFC0` |
+| `sa1rom`     | `sa1rom`    | Bank-selectable SA-1 layout | LoROM-like and C-F windows | `$7FC0` |
 | `fullsa1rom` | `bigsa1rom` | Full 8 MiB SA-1 layout | Mirrored half-bank plus C-F windows | `$7FC0` |
-| `norom` | `norom` | 16 MiB flat logical space | Address equals output offset | none |
+| `norom`      | `norom`     | 16 MiB flat logical space | Address equals output offset | none |
 
 The default is `lorom`. Mapper switches are allowed during a source file and are exercised by [`mappers.asm`](../../fixtures/asar/tests/mappers.asm), although real projects are usually easier to reason about with one map per output.
 
-`fastrom` is currently an accepted no-op. It does not alter mapping, the internal header byte, or any generated timing property. FastROM is a cartridge and CPU timing concern-see the wiki's [FastROM tutorial](https://wiki.superfamicom.org/programming-with-fast-roms-for-lorom-mapping)-so set the ROM header and runtime registers as your program requires.
+`fastrom` is currently an accepted no-op. It does not alter mapping, the internal header byte, or any generated timing property. FastROM is a cartridge and CPU timing concern, see the wiki's [FastROM tutorial](https://wiki.superfamicom.org/programming-with-fast-roms-for-lorom-mapping), set the ROM header and runtime registers as your program requires.
 
 `sa1rom` optionally accepts four decimal bank selectors:
 
@@ -596,7 +585,7 @@ sa1rom 0,1,2,3
 
 They configure the four one-megabyte Super MMC regions used by the mapper. Without arguments the same `0,1,2,3` arrangement is installed. The [SA-1 overview](https://wiki.superfamicom.org/sa-1) and [SA-1 registers](https://wiki.superfamicom.org/sa-1-registers) explain the coprocessor hardware; this directive only controls assembler-side ROM translation.
 
-### `org`, `base`, and address stacks
+### `org`, `base`, and Address Stacks
 
 `org address` moves the physical/logical write position:
 
@@ -621,20 +610,20 @@ base off
 
 `pushpc` / `pullpc` save and restore the full output cursor state. `pushbase` / `pullbase` save and restore the current logical base address. Pulling an empty stack is an error.
 
-### Bank crossing
+### Bank Crossing
 
 The default is `check bankcross full`, also spelled `on`. Multi-byte writes may not cross a 64 KiB bank boundary. Modes are:
 
-| Command | Boundary enforced |
-| --- | --- |
-| `check bankcross off` | No boundary check; mapper-specific PC wrapping is enabled |
+| Command | Boundary Enforced |
+| ------- | ----------------- |
+| `check bankcross off`  | No boundary check; mapper-specific PC wrapping is enabled |
 | `check bankcross half` | 32 KiB half-bank boundary |
 | `check bankcross full` | 64 KiB bank boundary |
-| `check bankcross on` | Alias of `full` |
+| `check bankcross on`   | Alias of `full` |
 
 This validation runs before multi-byte output. The exact edge cases are captured in [`bankcross.asm`](../../fixtures/asar/tests/bankcross.asm) and [`half_bank_check.asm`](../../fixtures/asar/tests/half_bank_check.asm).
 
-### Address conversion functions
+### Address Conversion Functions
 
 ```asm
 dl snestopc($808000) ; logical SNES address -> file offset
@@ -643,9 +632,9 @@ dl pctosnes($000000) ; file offset -> preferred logical mirror
 
 An unmapped conversion returns `-1`. The preferred address produced by `pctosnes()` is canonical for this implementation, not a promise that no mirrored CPU address reaches the same ROM byte.
 
-## Labels, namespaces, and structs
+## Labels, Namespaces, & Structs
 
-### Main, local, and static labels
+### Main, Local, and Static Labels
 
 A colon defines a normal label at the current logical PC:
 
@@ -672,7 +661,7 @@ ScreenWidth = 256
 
 Static labels can be used where a resolved numeric symbol is required. `global Label:` marks a label as global in namespace-sensitive source.
 
-### Relative labels
+### Relative Labels
 
 Runs of `+` and `-` create anonymous forward and backward targets. The number of signs is the depth:
 
@@ -761,7 +750,7 @@ endstruct
 
 The parent reserves enough stride for its largest extension, so `Actor[3].Enemy.health` lands in the correct record. `sizeof(name)` returns the defined struct size; `objectsize(name)` follows the expression host's object-size rules. The regression-rich examples are in [`structs.asm`](../../fixtures/asar/tests/structs.asm) and the implementation is [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts).
 
-## Defines, expressions, and functions
+## Defines, Expressions, & Functions
 
 ### Defines
 
@@ -778,8 +767,8 @@ db "!Message"
 Supported assignment operators are:
 
 | Operator | Behavior |
-| --- | --- |
-| `=` | Store the value; pure math-looking values may be folded |
+| ---- | --- |
+| `=`  | Store the value; pure math-looking values may be folded |
 | `+=` | Append text to the current value |
 | `:=` | Resolve referenced defines before storing |
 | `#=` | Resolve and evaluate as a math expression, then store decimal text |
@@ -803,38 +792,38 @@ Higher rows bind more tightly:
 
 | Precedence | Operators | Meaning |
 | --- | --- | --- |
-| 6 | `**` | exponentiation |
-| 5 | `*`, `/`, `%` | multiply, divide, modulo |
-| 4 | `+`, `-` | add, subtract |
-| 3 | `<<`, `>>`, `&`, `|`, `^` | shifts and bitwise operations |
-| 2 | `<`, `>`, `<=`, `>=`, `==`, `=`, `!=` | comparisons, returning `0` or `1` |
-| 1 | `&&` | logical AND |
-| 0 | `||` | logical OR |
+| 6   | `**`                                  | exponentiation |
+| 5   | `*`, `/`, `%`                         | multiply, divide, modulo |
+| 4   | `+`, `-`                              | add, subtract |
+| 3   | `<<`, `>>`, `&`, `|`, `^`             | shifts and bitwise operations |
+| 2   | `<`, `>`, `<=`, `>=`, `==`, `=`, `!=` | comparisons, returning `0` or `1` |
+| 1   | `&&`                                  | logical AND |
+| 0   | `||`                                  | logical OR |
 
 Operators at the same level are left-associative. Parentheses override precedence. Division or modulo by zero is an assembly error.
 
-### Core built-in functions
+### Core Built-In Functions
 
 | Family | Functions |
 | --- | --- |
-| Numeric | `sqrt`, `sin`, `cos`, `tan`, `asin`/`arcsin`, `acos`/`arccos`, `atan`/`arctan`, `log`, `log10`, `log2`, `ceil`, `floor`, `round` |
-| Selection | `min`, `max`, `clamp`, `safediv`, `select` |
-| Logical comparison | `not`, `equal`, `notequal`, `less`, `lessequal`, `greater`, `greaterequal`, `and`, `or`, `nand`, `nor`, `xor` |
-| Address helpers | `bank(value)`, `offset(from,to)`, `pc()`, `realbase()` |
+| Numeric             | `sqrt`, `sin`, `cos`, `tan`, `asin`/`arcsin`, `acos`/`arccos`, `atan`/`arctan`, `log`, `log10`, `log2`, `ceil`, `floor`, `round` |
+| Selection           | `min`, `max`, `clamp`, `safediv`, `select` |
+| Logical comparison  | `not`, `equal`, `notequal`, `less`, `lessequal`, `greater`, `greaterequal`, `and`, `or`, `nand`, `nor`, `xor` |
+| Address helpers     | `bank(value)`, `offset(from,to)`, `pc()`, `realbase()` |
 | Strings and symbols | `stringsequal`, `stringsequalnocase`, `defined`, `sizeof`, `objectsize`, `datasize` |
-| Files | `filesize`, `getfilestatus`, `canreadfile1`…`canreadfile4`, `canreadfile`, `readfile1`…`readfile4` |
+| Files               | `filesize`, `getfilestatus`, `canreadfile1`...`canreadfile4`, `canreadfile`, `readfile1`...`readfile4` |
 
 File reads are little-endian. `readfileN(filename, position[, default])` accepts a fallback for an unavailable range. `canreadfile(filename, position, size)` handles an arbitrary byte count. `getfilestatus()` returns the host's status code; the supported fixture treats `0` as present.
 
-### SNES expression functions
+### SNES Expression Functions
 
 | Function | Current behavior |
 | --- | --- |
-| `snestopc(address)` | Convert a mapped CPU address to a ROM offset |
-| `pctosnes(offset)` | Convert a ROM offset to a preferred mapped CPU address |
-| `canread1`…`canread4` | Test a fixed-size range against the base/output image length |
-| `canread(position,size)` | Test an arbitrary range against the base/output image length |
-| `read1`…`read4` | Map a logical SNES address and read a little-endian value |
+| `snestopc(address)`        | Convert a mapped CPU address to a ROM offset |
+| `pctosnes(offset)`         | Convert a ROM offset to a preferred mapped CPU address |
+| `canread1`...`canread4`    | Test a fixed-size range against the base/output image length |
+| `canread(position,size)`   | Test an arbitrary range against the base/output image length |
+| `read1`...`read4`          | Map a logical SNES address and read a little-endian value |
 
 `readN(position, default)` returns the fallback when the mapped range is unavailable. Without a fallback, reads are disabled until `check title` appears, matching the plugin's selected compatibility policy:
 
@@ -845,7 +834,7 @@ assert read1($00FFD5) == $20, "Expected LoROM header"
 
 When patching, these functions read `baseImage`; on a fresh build they read the current output buffer. The distinction between `canread*` range positions and mapped `read*` logical addresses is deliberate documentation of the current implementation-do not silently substitute one for the other.
 
-### User functions
+### User Functions
 
 ```asm
 function lowbyte(value) = value & $FF
@@ -889,7 +878,7 @@ endmacro
 
 Macro bodies can contain conditionals, `while`, `for`, define assignments, and macro-local labels. Duplicate macro definitions are rejected. See [`variadic_syntax.asm`](../../fixtures/asar/tests/variadic_syntax.asm), [`macrolabels.asm`](../../fixtures/asar/tests/macrolabels.asm), and [`macro-engine.ts`](../../packages/core/src/services/macro-engine.ts).
 
-## Conditionals and loops
+## Conditionals & Loops
 
 ### `if`, `elseif`, `else`, `endif`
 
@@ -937,13 +926,13 @@ endfor
 
 The loop variable is exposed through define resolution during the body and restored afterward. See [`forloop.asm`](../../fixtures/asar/tests/forloop.asm).
 
-## Binary data and character tables
+## Binary Data & Character Tables
 
-### Data directives
+### Data Directives
 
 | Directive | Width | Aliases |
-| --- | --- | --- |
-| `db` | 1 byte | `dc.b` |
+| --------- | ----- | ------- |
+| `db` | 1 byte                 | `dc.b` |
 | `dw` | 2 bytes, little-endian | `dc.w` |
 | `dl` | 3 bytes, little-endian | `dc.l` |
 | `dd` | 4 bytes, little-endian | none |
@@ -963,7 +952,7 @@ Values are truncated to the selected width. Strings emit one mapped value per Un
 dw !Palette
 ```
 
-### Character tables
+### Character Tables
 
 Assign one character directly:
 
@@ -984,7 +973,7 @@ LTR lines use `character=hex`; RTL lines use `hex=character`. A leading space ca
 
 `pushtable` saves a copy, `pulltable` restores it, and `cleartable` restores identity fallback. Pulling an empty table stack is an error. See [`data/table.asm`](../../fixtures/asar/tests/data/table.asm) and [`misc.ts`](../../packages/core/src/directives/misc.ts).
 
-## Source and binary includes
+## Source & Binary Includes
 
 ### `incsrc`, `include`, and `includeonce`
 
@@ -1032,7 +1021,7 @@ The target may be a label, hexadecimal address, or decimal address. Inverted ran
 
 ## Fill, pad, and freespace
 
-### Fill patterns
+### Fill Patterns
 
 ```asm
 fillbyte  $12 : fill 4   ; 12 12 12 12
@@ -1054,7 +1043,7 @@ pad $018000
 
 With no address, `pad` fills to the next 64 KiB boundary. A target at or behind the current output position is a no-op. An unmapped target is an error.
 
-### Freespace and RATS
+### Freespace & RATS
 
 ```asm
 freespacebyte $FF
@@ -1071,9 +1060,9 @@ This is deterministic append-style allocation, not a general scanner that hunts 
 
 `prot label[,label...]` emits an Asar-style `PROT` record containing 24-bit label addresses. Unresolved labels are temporarily encoded as zero during early stages and resolved during emission. `autoclean` and `autoclear` are accepted no-ops; they do not reclaim an earlier RATS block.
 
-## Diagnostics and checks
+## Diagnostics & Checks
 
-### Assertions and explicit errors
+### Assertions & Explicit Errors
 
 ```asm
 assert sizeof(DMA) == $10, "DMA layout changed"
@@ -1094,27 +1083,27 @@ check bankcross off|half|full|on
 check title
 ```
 
-`check title` enables `read1`…`read4` without a default value. It does not inspect or validate the ROM title. Any other `check` form is rejected.
+`check title` enables `read1`...`read4` without a default value. It does not inspect or validate the ROM title. Any other `check` form is rejected.
 
-### Warnings and text output
+### Warnings & Text Output
 
 `warnings`, `print`, and `warn` are currently accepted compatibility no-ops. They produce no user-visible message and do not maintain warning state. `dpbase`, `optimize address ...`, `asar version`, `fastrom`, and several legacy cleanup directives follow the same no-op policy described below.
 
 There is therefore no stable “all warnings” table equivalent to Asar's manual, and no promise that Asar warning identifiers map to Uttori diagnostics. Errors come from the typed parser, directive handlers, encoders, plugin hooks, and file services; preserve the complete error text when reporting a failure.
 
-## Output, checksums, and patching
+## Output, Checksums & Patching
 
-### Target options
+### Target Options
 
 | Option | Values | Default | Effect |
-| --- | --- | --- | --- |
-| `checksumMode` | `"asar"`, `"simple"` | `"asar"` | Choose mirrored-tail or direct byte summation |
-| `checksumEnabled` | boolean | `true` | Write checksum and complement when a header exists |
-| `asarSuperFxMoveShortAddress` | boolean | `false` | Reproduce Asar's Super FX short-MOVE operand quirk |
+| ------ | ------ | ------- | ------ |
+| `checksumMode`                | `"asar"`, `"simple"` | `"asar"` | Choose mirrored-tail or direct byte summation |
+| `checksumEnabled`             | boolean              | `true`   | Write checksum and complement when a header exists |
+| `asarSuperFxMoveShortAddress` | boolean              | `false`  | Reproduce Asar's Super FX short-MOVE operand quirk |
 
 Invalid `checksumMode` values fail during plugin activation. Non-boolean `checksumEnabled` values normalize to `false`; use real JSON booleans rather than strings.
 
-### Checksum finalization
+### Checksum Finalization
 
 For mapped ROM modes, the output finalizer locates the header according to the mapper, temporarily sets complement/checksum to `$FFFF/$0000`, computes the 16-bit sum, and writes `~checksum` plus `checksum` at header offsets `$1C` and `$1E`.
 
@@ -1122,7 +1111,7 @@ For mapped ROM modes, the output finalizer locates the header according to the m
 
 Selecting `norom` disables checksum output. If the image is too short to contain the chosen header plus its checksum fields, finalization leaves it alone.
 
-### Fresh output versus a patch
+### Fresh Output versus a Patch
 
 Without `--base-image`, output grows from an empty byte array and gaps use the current fill byte. With a base image, the assembler begins with a copy of those bytes. This makes the following a patch:
 
@@ -1141,11 +1130,21 @@ npm run cli -- patch.asm patched.sfc --base-image clean.sfc
 
 The CLI writes a new output path; it does not overwrite the base path unless you explicitly choose the same path. Keeping a pristine base ROM is still the civilized move.
 
-## Asar compatibility ledger
+## Asar & ca65 Compatibility
 
-“Accepted” is not the same thing as “implemented.” This ledger is the quick antidote to wishful parsing.
+The SNES plugin targets _practical_ Asar & ca65 compatibility, including 65816, SPC700/inline SPC, Super FX, mapper and checksum behavior, freespace/RATS allocation, and selected compatibility no-ops. Not every Asar feature is implemented, nor is it planned. Focused fixtures live in `fixtures/external`:
 
-### Implemented and parity-tested families
+- [Chou Makaimura](https://github.com/FredYeye/Super-Ghouls-n-Ghosts-Disassembly)
+- [Super Mario RPG](https://github.com/Yoshifanatic1/Super-Mario-RPG-Disassembly)
+- [Teenage Mutant Ninja Turtle](https://github.com/Yoshifanatic1/TMNT-IV---Turtles-In-Time-SNES-Disassembly)
+- [Yoshi's Island](https://github.com/Yoshifanatic1/Yoshi-s-Island-Disassembly)
+- [Zelda NES](https://github.com/aldonunez/zelda1-disassembly)
+
+These disassembly projects provide extra byte-parity gates once their submodules are initialized. Deferred syntax remains visible under `fixtures/asar/tests/Unsupported`.
+
+Compatibility policy is isolated in `plugins/snes/src/asar/compatibility.ts`.
+
+### Implemented & Parity-Tested Families
 
 - 65C816 instructions, size suffixes, M/X immediate tracking, branches, and major addressing modes.
 - SPC700 instructions, explicit NSPC blocks, raw SPC output, and inline SPC compatibility.
@@ -1159,24 +1158,24 @@ The CLI writes a new output path; it does not overwrite the base path unless you
 
 The top-level supported fixtures under [`fixtures/asar/tests`](../../fixtures/asar/tests) are a byte-parity contract. Production fixtures add slideshow, Chou Makaimura, Yoshi's Island, and large disassembly workloads.
 
-### Accepted compatibility no-ops
+### Accepted Compatibility no-ops
 
 | Keyword | What acceptance means today |
-| --- | --- |
-| `fastrom` | Does not alter mapping, speed, or header bytes |
-| `dpbase` | Does not change direct-page calculation |
-| `warnings` | Does not push, pull, enable, or disable warning state |
-| `print` | Produces no output |
-| `warn` | Produces no warning |
+| ------- | --- |
+| `fastrom`                | Does not alter mapping, speed, or header bytes |
+| `dpbase`                 | Does not change direct-page calculation |
+| `warnings`               | Does not push, pull, enable, or disable warning state |
+| `print`                  | Produces no output |
+| `warn`                   | Produces no warning |
 | `autoclean`, `autoclear` | Do not locate or erase old freespace |
-| `includefrom` | Does not validate the include parent |
-| `asar` | Does not enforce a version |
-| `reset` | Does not reset assembler or mapper state |
-| `{`, `}` | Visual grouping only |
+| `includefrom`            | Does not validate the include parent |
+| `asar`                   | Does not enforce a version |
+| `reset`                  | Does not reset assembler or mapper state |
+| `{`, `}`                 | Visual grouping only |
 
 These are centralized in [`src/asar/compatibility.ts`](./src/asar/compatibility.ts). They are intentionally few: silently swallowing an unknown command is worse than an honest error.
 
-### Known unsupported or partial families
+### Known Unsupported or Partial Families
 
 The files in [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsupported) are the living deferral list. Major themes include:
 
@@ -1188,79 +1187,77 @@ The files in [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsup
 - complete Asar warning controls, warning immediates, warning catalogs, and compatibility error wording;
 - `xkas` emulation, protection directives, and several malformed variadic/macro edge cases.
 
-If a deferred feature matters to a project, add a focused fixture and implement it rather than disguising it as a no-op. The unsupported filename is a signpost, not a dare.
-
-## Command index
+## Command Index
 
 The active SNES target combines core directives with plugin directives. “No-op” below means accepted for source compatibility without the Asar side effect.
 
-| Command | Syntax | Status and effect |
-| --- | --- | --- |
-| `db`, `dc.b` | `db value[,value...]` | Emit 8-bit values or mapped string characters |
-| `dw`, `dc.w` | `dw value[,value...]` | Emit little-endian 16-bit values |
-| `dl`, `dc.l` | `dl value[,value...]` | Emit little-endian 24-bit values |
-| `dd` | `dd value[,value...]` | Emit little-endian 32-bit values |
-| `fillbyte/word/long/dword` | `fillbyte value` | Set repeating fill pattern width/value |
-| `fill` | `fill count` | Emit bytes from the current fill pattern |
-| `padbyte/word/long/dword` | `padbyte value` | Set pad unit width/value |
-| `pad` | `pad [address]` | Pad to a mapped address or next 64 KiB boundary |
-| `incsrc` | `incsrc "file"` | Assemble a source file inline |
-| `include` | `include "file"` | Include a source file inline |
-| `includeonce` | `includeonce` | Guard the current file once per stage |
-| `incbin` | `incbin "file"[:range] [-> target]` | Embed binary bytes, optionally sliced or relocated |
-| `base` | `base address|off` | Change or restore logical base address |
-| `org` | `org address` | Set mapped write position |
-| `pushbase`, `pullbase` | no operands | Save/restore logical base address |
-| `pushpc`, `pullpc` | no operands | Save/restore the full PC state |
-| `arch` | `arch name` | Select 65816, SPC700 mode, or Super FX |
-| `lorom`, `hirom` | no operands | Select standard SNES ROM map |
-| `exlorom`, `exhirom` | no operands | Select extended SNES ROM map |
-| `sfxrom` | no operands | Select Super FX ROM map |
-| `norom` | no operands | Select flat 1:1 output; disables checksum/freespace |
-| `sa1rom` | `sa1rom [a,b,c,d]` | Select SA-1 map and optional decimal bank selectors |
-| `fullsa1rom` | no operands | Select full/big SA-1 map |
-| `fastrom` | no operands | Accepted no-op |
-| `namespace` | `namespace [name|off|nested on|nested off]` | Set or configure label namespace |
-| `pushns`, `pullns` | no operands | Save/restore namespace state |
-| `table` | `table "file"[,ltr|rtl]` | Replace character mappings from a table file |
-| `cleartable` | no operands | Restore identity fallback |
-| `pushtable`, `pulltable` | no operands | Save/restore character mapping |
+| Command | Syntax | Status & Effect |
+| ------- | ------ | --------------- |
+| `db`, `dc.b`                        | `db value[,value...]` | Emit 8-bit values or mapped string characters |
+| `dw`, `dc.w`                        | `dw value[,value...]` | Emit little-endian 16-bit values |
+| `dl`, `dc.l`                        | `dl value[,value...]` | Emit little-endian 24-bit values |
+| `dd`                                | `dd value[,value...]` | Emit little-endian 32-bit values |
+| `fillbyte/word/long/dword`          | `fillbyte value` | Set repeating fill pattern width/value |
+| `fill` | `fill count`               | Emit bytes from the current fill pattern |
+| `padbyte/word/long/dword`           | `padbyte value` | Set pad unit width/value |
+| `pad` | `pad [address]`             | Pad to a mapped address or next 64 KiB boundary |
+| `incsrc` | `incsrc "file"`          | Assemble a source file inline |
+| `include` | `include "file"`        | Include a source file inline |
+| `includeonce` | `includeonce`       | Guard the current file once per stage |
+| `incbin`                            | `incbin "file"[:range] [-> target]` | Embed binary bytes, optionally sliced or relocated |
+| `base`                              | `base address|off` | Change or restore logical base address |
+| `org`                               | `org address` | Set mapped write position |
+| `pushbase`, `pullbase`              | no operands | Save/restore logical base address |
+| `pushpc`, `pullpc`                  | no operands | Save/restore the full PC state |
+| `arch`                              | `arch name` | Select 65816, SPC700 mode, or Super FX |
+| `lorom`, `hirom`                    | no operands | Select standard SNES ROM map |
+| `exlorom`, `exhirom`                | no operands | Select extended SNES ROM map |
+| `sfxrom`                            | no operands | Select Super FX ROM map |
+| `norom`                             | no operands | Select flat 1:1 output; disables checksum/freespace |
+| `sa1rom`                            | `sa1rom [a,b,c,d]` | Select SA-1 map and optional decimal bank selectors |
+| `fullsa1rom`                        | no operands | Select full/big SA-1 map |
+| `fastrom`                           | no operands | Accepted no-op |
+| `namespace`                         | `namespace [name|off|nested on|nested off]` | Set or configure label namespace |
+| `pushns`, `pullns`                  | no operands | Save/restore namespace state |
+| `table`                             | `table "file"[,ltr|rtl]` | Replace character mappings from a table file |
+| `cleartable`                        | no operands | Restore identity fallback |
+| `pushtable`, `pulltable`            | no operands | Save/restore character mapping |
 | `freecode`, `freedata`, `freespace` | no operands | Append one RATS-protected allocation |
-| `freespacebyte` | `freespacebyte value` | Set freespace/output expansion byte |
-| `prot` | `prot label[,label...]` | Emit a RATS protection record |
-| `spcblock` | `spcblock destination [nspc]` | Begin ROM-embedded SPC block |
-| `endspcblock` | `endspcblock [execute address]` | Finish SPC block and optionally emit execute record |
-| `startpos` | `startpos address` | Save execute address for active SPC block |
-| `struct` | `struct name [base|extends parent]` | Begin non-emitting layout definition |
-| `skip` | `.member: skip size` | Advance current struct member offset |
-| `endstruct` | `endstruct [align value]` | Finalize struct size/stride |
-| `undef` | `undef [!]name` | Remove a textual define |
-| `global` | `global Label:` | Define a namespace-independent global label |
-| character assignment | `"A" = value` | Set one active character mapping |
-| `if`, `elseif`, `else`, `endif` | block syntax | Conditional assembly |
-| `while`, `endwhile` | block syntax | Conditional repeated assembly |
-| `for`, `endfor` | `for name = start..end` | Inclusive counted assembly loop |
-| `macro`, `endmacro` | `macro name(args)` | Define a command macro |
-| `function` | `function name(args) = expression` | Define a numeric expression function |
-| `assert` | `assert condition[,message...]` | Fail when condition is zero |
-| `error` | `error [message...]` | Always fail |
-| `warnpc` | `warnpc address` | Fail when PC exceeds address |
-| `check` | `check title` or `check bankcross mode` | Enable reads or configure bank boundary policy |
-| `optimize` | `optimize dp none|ram|always` | Configure direct-page size optimization; other forms ignored |
-| `dpbase` | any | Accepted no-op |
-| `warnings` | any | Accepted no-op |
-| `print` | any | Accepted no-op |
-| `warn` | any | Accepted no-op |
-| `autoclean`, `autoclear` | any | Accepted no-op |
-| `includefrom` | any | Accepted no-op |
-| `asar` | any | Accepted no-op |
-| `reset`, `{`, `}` | any | Accepted no-op |
+| `freespacebyte`                     | `freespacebyte value` | Set freespace/output expansion byte |
+| `prot`                              | `prot label[,label...]` | Emit a RATS protection record |
+| `spcblock`                          | `spcblock destination [nspc]` | Begin ROM-embedded SPC block |
+| `endspcblock`                       | `endspcblock [execute address]` | Finish SPC block and optionally emit execute record |
+| `startpos`                          | `startpos address` | Save execute address for active SPC block |
+| `struct`                            | `struct name [base|extends parent]` | Begin non-emitting layout definition |
+| `skip`                              | `.member: skip size` | Advance current struct member offset |
+| `endstruct`                         | `endstruct [align value]` | Finalize struct size/stride |
+| `undef`                             | `undef [!]name` | Remove a textual define |
+| `global`                            | `global Label:` | Define a namespace-independent global label |
+| character assignment                | `"A" = value` | Set one active character mapping |
+| `if`, `elseif`, `else`, `endif`     | block syntax | Conditional assembly |
+| `while`, `endwhile`                 | block syntax | Conditional repeated assembly |
+| `for`, `endfor`                     | `for name = start..end` | Inclusive counted assembly loop |
+| `macro`, `endmacro`                 | `macro name(args)` | Define a command macro |
+| `function`                          | `function name(args) = expression` | Define a numeric expression function |
+| `assert`                            | `assert condition[,message...]` | Fail when condition is zero |
+| `error`                             | `error [message...]` | Always fail |
+| `warnpc`                            | `warnpc address` | Fail when PC exceeds address |
+| `check`                             | `check title` or `check bankcross mode` | Enable reads or configure bank boundary policy |
+| `optimize`                          | `optimize dp none|ram|always` | Configure direct-page size optimization; other forms ignored |
+| `dpbase`                            | any | Accepted no-op |
+| `warnings`                          | any | Accepted no-op |
+| `print`                             | any | Accepted no-op |
+| `warn`                              | any | Accepted no-op |
+| `autoclean`, `autoclear`            | any | Accepted no-op |
+| `includefrom`                       | any | Accepted no-op |
+| `asar`                              | any | Accepted no-op |
+| `reset`, `{`, `}`                   | any | Accepted no-op |
 
 ## Troubleshooting
 
 ### “The output is empty at my `org` address”
 
-The logical address probably does not map to ROM in the current mapper. Check `snestopc(address)`, confirm the mapper was selected before `org`, and remember that WRAM banks `$7E-$7F` are not cartridge ROM.
+The logical address probably does not map to ROM in the current mapper. Check the `snestopc(address)` output, confirm the mapper was selected before `org`, and remember that WRAM banks `$7E-$7F` are not cartridge ROM.
 
 ### “My immediate instruction changed size between passes”
 
@@ -1272,7 +1269,7 @@ Supply `--base-image` for a patch, verify the CPU address maps under the selecte
 
 ### “My SPC bytes went nowhere”
 
-Use an explicit `spcblock` for ROM transfer data, `spc700-raw` for a standalone payload, or the deliberately compatible `spc700-inline` flow. Plain `arch spc700` does not make SNES ROM and SPC RAM share an address space by optimism alone.
+Use an explicit `spcblock` for ROM transfer data, `spc700-raw` for a standalone payload, or the deliberately compatible `spc700-inline` flow. Plain `arch spc700` does not make SNES ROM and SPC RAM share an address space.
 
 ### “`print`/`warn`/`warnings` did nothing”
 
@@ -1280,33 +1277,33 @@ Correct: they are accepted no-ops. Use `assert`, `error`, host diagnostics, or s
 
 ### “Freespace overwrote or ignored a hole”
 
-The allocator appends at or beyond 512 KiB; it does not scan arbitrary `$FF` runs. For complex patch allocation, manage explicit `org` locations or extend the allocator with a fixture-backed policy.
+The allocator appends at or beyond 512 KiB; it does not scan arbitrary `$FF` runs. For complex patch allocation, manage explicit `org` locations.
 
 ### “Asar accepts this file”
 
-That narrows the investigation but does not settle it. Check the compatibility ledger, look for a focused fixture with the same feature, and compare the exact expected bytes. Syntax acceptance, byte parity, warning parity, and cleanup semantics are four different claims.
+If you think it should be working here, and not in the mentioned compatibility above, please open an issue.
 
-## Code and fixture tour
+## Code and Fixture Layout
 
 | Topic | Implementation | Executable examples/tests |
 | --- | --- | --- |
-| Plugin registration and options | [`src/index.ts`](./src/index.ts) | [`assembler.integration.test.ts`](./tests/assembler.integration.test.ts) |
-| 65C816 encoder | [`src/architectures/65816.ts`](./src/architectures/65816.ts) | [`arch-65816.asm`](../../fixtures/asar/tests/arch-65816.asm), [`opcodesize.asm`](../../fixtures/asar/tests/opcodesize.asm) |
-| SPC700 encoder/runtime | [`src/architectures/spc700.ts`](./src/architectures/spc700.ts), [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`arch-spc700.asm`](../../fixtures/asar/tests/arch-spc700.asm), [`spcblock.asm`](../../fixtures/asar/tests/spcblock.asm) |
-| Super FX encoder | [`src/architectures/superfx.ts`](./src/architectures/superfx.ts) | [`arch-superfx.asm`](../../fixtures/asar/tests/arch-superfx.asm) |
-| Mapper and checksum policy | [`src/target/address-space.ts`](./src/target/address-space.ts), [`src/asar/compatibility.ts`](./src/asar/compatibility.ts) | [`mappers.asm`](../../fixtures/asar/tests/mappers.asm), [`compatibility-profile.test.ts`](./tests/compatibility-profile.test.ts) |
-| Freespace | [`src/directives/freespace.ts`](./src/directives/freespace.ts) | [`freespace.test.ts`](./tests/directives/freespace.test.ts) |
-| SPC directives | [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`spc.test.ts`](./tests/directives/spc.test.ts) |
-| Defines/macros/structs | [`define-engine.ts`](../../packages/core/src/services/define-engine.ts), [`macro-engine.ts`](../../packages/core/src/services/macro-engine.ts), [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts) | [`v140features.asm`](../../fixtures/asar/tests/v140features.asm), [`structs.asm`](../../fixtures/asar/tests/structs.asm) |
-| Includes and binary ranges | [`include-source.ts`](../../packages/core/src/directives/include-source.ts) | [`incbin.asm`](../../fixtures/asar/tests/incbin.asm), [`includeonce.asm`](../../fixtures/asar/tests/includeonce.asm) |
+| Plugin registration and options  | [`src/index.ts`](./src/index.ts) | [`assembler.integration.test.ts`](./tests/assembler.integration.test.ts) |
+| 65C816 encoder                   | [`src/architectures/65816.ts`](./src/architectures/65816.ts) | [`arch-65816.asm`](../../fixtures/asar/tests/arch-65816.asm), [`opcodesize.asm`](../../fixtures/asar/tests/opcodesize.asm) |
+| SPC700 encoder/runtime           | [`src/architectures/spc700.ts`](./src/architectures/spc700.ts), [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`arch-spc700.asm`](../../fixtures/asar/tests/arch-spc700.asm), [`spcblock.asm`](../../fixtures/asar/tests/spcblock.asm) |
+| Super FX encoder                 | [`src/architectures/superfx.ts`](./src/architectures/superfx.ts) | [`arch-superfx.asm`](../../fixtures/asar/tests/arch-superfx.asm) |
+| Mapper and checksum policy       | [`src/target/address-space.ts`](./src/target/address-space.ts), [`src/asar/compatibility.ts`](./src/asar/compatibility.ts) | [`mappers.asm`](../../fixtures/asar/tests/mappers.asm), [`compatibility-profile.test.ts`](./tests/compatibility-profile.test.ts) |
+| Freespace                        | [`src/directives/freespace.ts`](./src/directives/freespace.ts) | [`freespace.test.ts`](./tests/directives/freespace.test.ts) |
+| SPC directives                   | [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`spc.test.ts`](./tests/directives/spc.test.ts) |
+| Defines/macros/structs           | [`define-engine.ts`](../../packages/core/src/services/define-engine.ts), [`macro-engine.ts`](../../packages/core/src/services/macro-engine.ts), [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts) | [`v140features.asm`](../../fixtures/asar/tests/v140features.asm), [`structs.asm`](../../fixtures/asar/tests/structs.asm) |
+| Includes and binary ranges       | [`include-source.ts`](../../packages/core/src/directives/include-source.ts) | [`incbin.asm`](../../fixtures/asar/tests/incbin.asm), [`includeonce.asm`](../../fixtures/asar/tests/includeonce.asm) |
 | Character tables and diagnostics | [`misc.ts`](../../packages/core/src/directives/misc.ts) | [`misc.test.ts`](../../tests/directives/misc.test.ts) |
-| Deferred compatibility | [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsupported) | Each filename identifies an uncovered family |
+| Deferred compatibility           | [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsupported) | Each filename identifies an uncovered family |
 
-## Instruction catalogs
+## Instruction Catalogs
 
-These tables come from the same descriptors used by hover and completion. They list canonical accepted operand spellings; the encoders also recognize fixture-backed aliases and size-forced variants described above. For opcode bytes, processor flags, timing, and silicon behavior, use the linked hardware references-the assembler's catalog should not become a shaky photocopy of the data sheet.
+These tables come from the same descriptors used by hover and completion. They list canonical accepted operand spellings; the encoders also recognize fixture-backed aliases and size-forced variants described above. For opcode bytes, processor flags, timing, and silicon behavior, use the linked hardware references.
 
-### 65C816 instruction catalog
+### 65C816 Instruction Catalog
 
 | Mnemonic | What it does | Accepted operand forms |
 | --- | --- | --- |
@@ -1403,7 +1400,7 @@ These tables come from the same descriptors used by hover and completion. They l
 | `XBA` | Exchange the bytes of the accumulator. | `implied` |
 | `XCE` | Exchange carry and emulation flags. | `implied` |
 
-### SPC700 instruction catalog
+### SPC700 Instruction Catalog
 
 The compact catalog shows representative canonical forms. The encoder additionally covers the register, indexed, bit, carry, and branch variants in the [SPC700 parity fixture](../../fixtures/asar/tests/arch-spc700.asm).
 
@@ -1414,7 +1411,7 @@ The compact catalog shows representative canonical forms. The encoder additional
 | `SBC` | Subtract with borrow. | `A,#const`, `A,dp`, `A,!addr` |
 | `CMP` | Compare. | `A,#const`, `A,dp`, `A,!addr` |
 | `AND` | Bitwise AND. | `A,#const`, `A,dp` |
-| `OR` | Bitwise OR. | `A,#const`, `A,dp` |
+| `OR`  | Bitwise OR. | `A,#const`, `A,dp` |
 | `EOR` | Bitwise exclusive-OR. | `A,#const`, `A,dp` |
 | `INC` | Increment. | `A`, `dp` |
 | `DEC` | Decrement. | `A`, `dp` |
@@ -1426,14 +1423,14 @@ The compact catalog shows representative canonical forms. The encoder additional
 | `BVS`, `BVC`, `BMI`, `BPL` | Branch on the named condition. | `label` |
 | `CBNE` | Compare and branch if not equal. | `dp,label` |
 | `DBNZ` | Decrement and branch if not zero. | `dp,label` |
-| `JMP` | Jump. | `!addr`, `[!addr+X]` |
+| `JMP`  | Jump. | `!addr`, `[!addr+X]` |
 | `CALL` | Call subroutine. | `!addr` |
 | `RET`, `RETI`, `NOP` | Return or no operation. | `implied` |
 | `CLRC`, `SETC`, `CLRP`, `SETP` | Clear/set carry or direct-page flag. | `implied` |
 | `EI`, `DI`, `STOP` | Interrupt/processor control. | `implied` |
 | `PUSH`, `POP` | Transfer a register to/from the stack. | `A` (other fixture-backed registers are encoder-supported) |
 
-Numbered `BBS0`…`BBS7` and `BBC0`…`BBC7` bit branches are supported even though they are normalized by the encoder rather than stored as 16 separate catalog rows.
+Numbered `BBS0`...`BBS7` and `BBC0`...`BBC7` bit branches are supported even though they are normalized by the encoder rather than stored as 16 separate catalog rows.
 
 The complete fixture-backed SPC700 mnemonic set is:
 
@@ -1449,7 +1446,7 @@ DEC INC MOV OR1 AND1 EOR1 TCALL TSET TCLR CALL PCALL JMP PUSH POP NOP BRK
 RET RETI CLRP SETP CLRC SETC EI DI CLRV NOTC SLEEP STOP
 ```
 
-### Super FX instruction catalog
+### Super FX Instruction Catalog
 
 | Mnemonic group | What it does | Accepted operand forms |
 | --- | --- | --- |
@@ -1486,7 +1483,3 @@ GETBS BRA BGE BLT BNE BEQ BPL BMI BCC BCS BVC BVS TO WITH FROM ADD ADC SUB SBC
 CMP AND BIC OR XOR MULT UMULT JMP LJMP INC DEC LINK STW LDW STB LDB IBT IWT LM
 LMS SM SMS LEA MOVE MOVES MOVEB MOVEW
 ```
-
----
-
-This manual describes the current repository, not an abstract future release. When code and prose disagree, treat that as a documentation bug: open the linked implementation, add or update a fixture, and bring both sides back into tune.

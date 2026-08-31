@@ -4,11 +4,11 @@
   "private": true,
   "description": "A pluggable assembler toolkit for TypeScript and Node.js.",
   "keywords": [],
-  "homepage": "https://github.com/MatthewCallis/uttori-asm",
+  "homepage": "https://github.com/uttori/asm",
   "license": "MIT",
   "author": "Matthew Callis <matthew.callis@gmail.com>",
   "contributors": [],
-  "repository": "MatthewCallis/uttori-asm",
+  "repository": "uttori/asm",
   "workspaces": [
     "packages/*",
     "plugins/*",

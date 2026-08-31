@@ -38,7 +38,7 @@ declare const plugin: AssemblerPlugin<Raw65xxTargetOptions>;
 /**
  * Activates this plugin and freezes a reusable host environment.
  *
- * @param {unknown} options Raw-target options (`origin`, …).
+ * @param {unknown} options Raw-target options (`origin`, ...).
  * @returns {Promise<AssemblerEnvironment>} Frozen assembler environment.
  */
 export declare function create65xxAssemblerEnvironment(options?: unknown): Promise<import("@uttori/asm-core").AssemblerEnvironment>;

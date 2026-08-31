@@ -24475,7 +24475,7 @@ var WorkspaceIndex = class {
     const followIncludes = options.followIncludes ?? true;
     this.lastRootServedFromCache = false;
     this.logger?.info(
-      `Analyzing ${path4.basename(root)} (followIncludes=${followIncludes}, ${content.length} chars)\u2026`
+      `Analyzing ${path4.basename(root)} (followIncludes=${followIncludes}, ${content.length} chars)...`
     );
     if (followIncludes && this.cache) {
       const cached = this.cache.read(root, this.cacheIdentity(), (file) => this.hashFile(file));
@@ -32921,7 +32921,7 @@ var ArchSPC700 = class {
     return true;
   }
   /**
-   * Relative branches (BPL…BRA). Opcode is written first, so the displacement
+   * Relative branches (BPL...BRA). Opcode is written first, so the displacement
    * is `target - (pc + 1)` - equivalent to `target - (start + 2)` before the
    * write. `+`/`-` unnamed labels use that same post-opcode PC.
    *
@@ -34269,8 +34269,8 @@ var ArchSuperFX = class {
     return false;
   }
   /**
-   * Handles implied SuperFX opcodes with no operands (STOP, NOP, ALT1, …) and
-   * two-byte prefixed ops (PLOT, SWAP, …) from PREFIXED_OPCODES.
+   * Handles implied SuperFX opcodes with no operands (STOP, NOP, ALT1, ...) and
+   * two-byte prefixed ops (PLOT, SWAP, ...) from PREFIXED_OPCODES.
    * @param {string} opcode Uppercased mnemonic.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
@@ -35432,7 +35432,7 @@ var directiveCatalog2 = [
       },
       {
         keyword: "title",
-        summary: "Enable read1\u2026read4 without a default value. Does not inspect the ROM title.",
+        summary: "Enable read1...read4 without a default value. Does not inspect the ROM title.",
         syntax: "check title"
       }
     ]

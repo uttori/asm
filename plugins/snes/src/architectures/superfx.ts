@@ -511,8 +511,8 @@ export class ArchSuperFX implements ArchitectureEncoder {
   }
 
   /**
-   * Handles implied SuperFX opcodes with no operands (STOP, NOP, ALT1, …) and
-   * two-byte prefixed ops (PLOT, SWAP, …) from PREFIXED_OPCODES.
+   * Handles implied SuperFX opcodes with no operands (STOP, NOP, ALT1, ...) and
+   * two-byte prefixed ops (PLOT, SWAP, ...) from PREFIXED_OPCODES.
    * @param {string} opcode Uppercased mnemonic.
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */

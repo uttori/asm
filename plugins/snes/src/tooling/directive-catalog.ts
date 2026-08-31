@@ -262,7 +262,7 @@ export const directiveCatalog: DirectiveDescriptor[] = [
       },
       {
         keyword: "title",
-        summary: "Enable read1…read4 without a default value. Does not inspect the ROM title.",
+        summary: "Enable read1...read4 without a default value. Does not inspect the ROM title.",
         syntax: "check title",
       },
     ],

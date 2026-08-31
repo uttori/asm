@@ -32,14 +32,14 @@ export declare function applyLinkerSymbols(session: Assembler, state: Nes65xxSes
  */
 export declare function handleSegment(session: Assembler, state: Nes65xxSessionState, words: readonly string[]): void;
 /**
- * Handles `.export ident[, ident…]`.
+ * Handles `.export ident[, ident...]`.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}
  */
 export declare function handleExport(session: Assembler, words: readonly string[]): void;
 /**
- * Handles `.import ident[, ident…]`.
+ * Handles `.import ident[, ident...]`.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}
@@ -60,21 +60,21 @@ export declare function handleByte(session: Assembler, words: readonly string[])
  */
 export declare function handleAddr(session: Assembler, words: readonly string[]): void;
 /**
- * Handles `.lobytes expr[, expr…]`.
+ * Handles `.lobytes expr[, expr...]`.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}
  */
 export declare function handleLobytes(session: Assembler, words: readonly string[]): void;
 /**
- * Handles `.hibytes expr[, expr…]`.
+ * Handles `.hibytes expr[, expr...]`.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}
  */
 export declare function handleHibytes(session: Assembler, words: readonly string[]): void;
 /**
- * Handles `.dbyt expr[, expr…]` (16-bit big-endian).
+ * Handles `.dbyt expr[, expr...]` (16-bit big-endian).
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}

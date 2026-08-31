@@ -200,7 +200,7 @@ function markGlobalSymbols(session: Assembler, words: readonly string[], keyword
 }
 
 /**
- * Handles `.export ident[, ident…]`.
+ * Handles `.export ident[, ident...]`.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}
@@ -210,7 +210,7 @@ export function handleExport(session: Assembler, words: readonly string[]): void
 }
 
 /**
- * Handles `.import ident[, ident…]`.
+ * Handles `.import ident[, ident...]`.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}
@@ -267,7 +267,7 @@ function emitMappedBytes(
 }
 
 /**
- * Handles `.lobytes expr[, expr…]`.
+ * Handles `.lobytes expr[, expr...]`.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}
@@ -277,7 +277,7 @@ export function handleLobytes(session: Assembler, words: readonly string[]): voi
 }
 
 /**
- * Handles `.hibytes expr[, expr…]`.
+ * Handles `.hibytes expr[, expr...]`.
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}
@@ -287,7 +287,7 @@ export function handleHibytes(session: Assembler, words: readonly string[]): voi
 }
 
 /**
- * Handles `.dbyt expr[, expr…]` (16-bit big-endian).
+ * Handles `.dbyt expr[, expr...]` (16-bit big-endian).
  * @param {Assembler} session Host assembler session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}

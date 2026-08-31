@@ -128,7 +128,7 @@ export function materializeOpcodeForm(
 
 /**
  * Splits top-level operands in a string.
- * BBR/BBS `zp,target` - do not split on commas inside `(…)` or `[…]`.
+ * BBR/BBS `zp,target` - do not split on commas inside `(...)` or `[...]`.
  * @param {string} value The string to split.
  * @returns {string[]} The split operands.
  */

@@ -537,7 +537,7 @@ export class WorkspaceIndex {
     const followIncludes = options.followIncludes ?? true;
     this.lastRootServedFromCache = false;
     this.logger?.info(
-      `Analyzing ${path.basename(root)} (followIncludes=${followIncludes}, ${content.length} chars)…`,
+      `Analyzing ${path.basename(root)} (followIncludes=${followIncludes}, ${content.length} chars)...`,
     );
 
     if (followIncludes && this.cache) {

@@ -198,7 +198,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     handleBitSetClear(opcode: string, operand: string): boolean;
     /**
-     * Relative branches (BPL…BRA). Opcode is written first, so the displacement
+     * Relative branches (BPL...BRA). Opcode is written first, so the displacement
      * is `target - (pc + 1)` - equivalent to `target - (start + 2)` before the
      * write. `+`/`-` unnamed labels use that same post-opcode PC.
      *

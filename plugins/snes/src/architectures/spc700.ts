@@ -410,7 +410,7 @@ type NumberedBitOpcode = {
 const NUMBERED_BIT_OPCODE = /^(NOT|OR|AND|EOR|MOV)([0-7])$/;
 
 /**
- * Parses TASM/Asar numbered mem.bit mnemonics (`NOT2`, `OR1`, `MOV5`, …).
+ * Parses TASM/Asar numbered mem.bit mnemonics (`NOT2`, `OR1`, `MOV5`, ...).
  * Native hardware names are the `*1` forms; the digit is the default bit.
  * @param {string} opcode Instruction mnemonic.
  * @returns {NumberedBitOpcode | undefined} Family and mnemonic bit, if any.
@@ -1074,7 +1074,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return this.handleMovInstruction(left, right, forcedLen, explicitlen);
     }
 
-    // 5) MOV1/NOT1/OR1/AND1/EOR1 and numbered TASM forms (NOT2, MOV2, …)
+    // 5) MOV1/NOT1/OR1/AND1/EOR1 and numbered TASM forms (NOT2, MOV2, ...)
     if (this.handleBitManipulation(opcode, left, right)) {
       return true;
     }
@@ -1642,7 +1642,7 @@ export class ArchSPC700 implements ArchitectureEncoder {
   }
 
   /**
-   * Relative branches (BPL…BRA). Opcode is written first, so the displacement
+   * Relative branches (BPL...BRA). Opcode is written first, so the displacement
    * is `target - (pc + 1)` - equivalent to `target - (start + 2)` before the
    * write. `+`/`-` unnamed labels use that same post-opcode PC.
    *
