@@ -109,8 +109,8 @@ npm run cli -- patch.asm patched.sfc --base-image clean.sfc
 
 ```sh
 # Explicit project/plugin build
-npm run cli -- examples/plugin-author/main.asm build/main.bin \
-  --config examples/plugin-author/uttori-asm.config.json
+npm run cli -- packages/plugin-author/main.asm build/main.bin \
+  --config packages/plugin-author/uttori-asm.config.json
 
 # Overrides
 npm run cli -- main.asm --plugin ./plugin.js --target custom.raw \
@@ -177,7 +177,7 @@ A plugin is a default-exported `AssemblerPlugin` built with the documented `@utt
 
 `validateOptions()` normalizes configuration before `activate()` registers contributions. Version 1 supports session-state slots, architectures, address spaces, output formats, directive sets, expression sets, lifecycle hooks, and targets. Contribution IDs should be namespaced to the plugin. Duplicate IDs and user-facing aliases fail activation with owner-rich diagnostics; overrides are not supported.
 
-The [plugin author example](examples/plugin-author/README.md) is a runnable copy of the tiny fixture-plugin pattern. It contributes a raw target, one-byte encoder, flat address space, output format, directive metadata, and cloned per-session state. Production plugins must import only `@uttori/asm-core` or `@uttori/asm-core/plugin`, never internal source paths.
+The [plugin author example](packages/plugin-author/README.md) is a runnable copy of the tiny fixture-plugin pattern. It contributes a raw target, one-byte encoder, flat address space, output format, directive metadata, and cloned per-session state. Production plugins must import only `@uttori/asm-core` or `@uttori/asm-core/plugin`, never internal source paths.
 
 ### Trusted-Code Warning
 
@@ -236,11 +236,11 @@ There are explicit Chou and SMRPG benchmark commands, they will fail with setup 
 ## Repository Layout
 
 ```text
-examples/plugin-author/       runnable third-party plugin template
 fixtures/                     focused and production integration projects
 packages/core/                architecture-neutral runtime and plugin API
 packages/language-server/     LSP transport and environment controller
 packages/plugin-65xx/         65xx-family instruction models, encoders, and fixtures
+packages/plugin-author/       runnable third-party plugin template
 packages/plugin-loader-node/  Node discovery, config loader, and JSON schema
 packages/plugin-snes/         SNES implementation and parity tests
 packages/vscode-extension/    VS Code client and bundled artifacts
