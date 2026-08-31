@@ -193,8 +193,7 @@ function parsePointerSection(
   }
 
   const entries: AssetEntry[] = [];
-  const linePattern =
-    /^\s*dl\s+\$([\dA-Fa-f]+)\s*,\s*\$([\dA-Fa-f]+)\s*,\s*(\w+)\s*,/gm;
+  const linePattern = /^\s*dl\s+\$([\dA-Fa-f]+)\s*,\s*\$([\dA-Fa-f]+)\s*,\s*(\w+)\s*,/gm;
   let match: RegExpExecArray | null = linePattern.exec(block[1]);
   while (match) {
     const nameLabel = match[3];

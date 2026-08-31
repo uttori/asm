@@ -20,8 +20,8 @@ const boundaryFixture = (): string => {
     }),
   );
   write("packages/core/src/index.ts", "export const core = true;\n");
-  write("plugins/example/src/index.ts", 'import "@uttori/asm-core/plugin";\n');
-  write("language-server/src/providers.ts", 'import { core } from "@uttori/asm-core";\n');
+  write("packages/plugin-example/src/index.ts", 'import "@uttori/asm-core/plugin";\n');
+  write("packages/language-server/src/providers.ts", 'import { core } from "@uttori/asm-core";\n');
   return root;
 };
 
@@ -46,7 +46,7 @@ test("package boundary checker rejects private core imports from plugins", (t) =
   const root = boundaryFixture();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.writeFileSync(
-    path.join(root, "plugins/example/src/index.ts"),
+    path.join(root, "packages/plugin-example/src/index.ts"),
     'import { Assembler } from "@uttori/asm-core/assembler";\n',
   );
 
@@ -60,8 +60,8 @@ test("package boundary checker rejects static catalogs in LSP providers", (t) =>
   const root = boundaryFixture();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.writeFileSync(
-    path.join(root, "language-server/src/providers.ts"),
-    'import { cpu65816Catalog } from "../../../plugins/snes/src/tooling/instruction-catalog.js";\n',
+    path.join(root, "packages/language-server/src/providers.ts"),
+    'import { cpu65816Catalog } from "../../plugin-snes/src/tooling/instruction-catalog.js";\n',
   );
 
   t.deepEqual(

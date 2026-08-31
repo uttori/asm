@@ -4,8 +4,8 @@ import path from "node:path";
 import { test } from "./ava-helper.js";
 
 const root = path.resolve(import.meta.dirname, "..");
-const manifestPath = path.join(root, "editors/vscode/package.json");
-const syntaxDirectory = path.join(root, "editors/vscode/syntaxes");
+const manifestPath = path.join(root, "packages/vscode-extension/package.json");
+const syntaxDirectory = path.join(root, "packages/vscode-extension/syntaxes");
 
 type Grammar = {
   name: string;
@@ -211,7 +211,10 @@ test("SNES grammar adds SPC700, SuperFX, and mapper directives on top of 65xx", 
 });
 
 test("VS Code client propagates trust and every project environment setting", (t) => {
-  const source = fs.readFileSync(path.join(root, "editors/vscode/src/extension.ts"), "utf8");
+  const source = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/extension.ts"),
+    "utf8",
+  );
   for (const setting of [
     "configFile",
     "plugins",
@@ -241,8 +244,8 @@ test("VS Code client propagates trust and every project environment setting", (t
 });
 
 test("project panel CSS uses VS Code workbench tokens", (t) => {
-  const css = fs.readFileSync(path.join(root, "editors/vscode/media/panel.css"), "utf8");
-  const panel = fs.readFileSync(path.join(root, "editors/vscode/src/panel.ts"), "utf8");
+  const css = fs.readFileSync(path.join(root, "packages/vscode-extension/media/panel.css"), "utf8");
+  const panel = fs.readFileSync(path.join(root, "packages/vscode-extension/src/panel.ts"), "utf8");
   t.true(css.includes("appearance: none"));
   t.true(css.includes("--vscode-dropdown-background"));
   t.true(css.includes("--vscode-focusBorder"));

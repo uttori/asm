@@ -186,7 +186,7 @@ function readValidatedRom(spec: ExternalFixtureSpec): Buffer {
 
 function extractZeldaBins(rom: Buffer, xmlText: string, binRoot: string): void {
   const pattern =
-    /<Binary\s+Offset=['"](\d+)['"]\s+Length=['"](\d+)['"]\s+FileName=['"]([^'"]+)['"]\s*\/>/g;
+    /<Binary\s+Offset=["'](\d+)["']\s+Length=["'](\d+)["']\s+FileName=["']([^"']+)["']\s*\/>/g;
   for (const match of xmlText.matchAll(pattern)) {
     const offset = Number(match[1]) + 16;
     const length = Number(match[2]);

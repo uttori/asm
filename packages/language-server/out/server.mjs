@@ -11887,7 +11887,7 @@ ${stack}`);
   }
 });
 
-// language-server/src/server.ts
+// packages/language-server/src/server.ts
 import fs5 from "node:fs";
 import path10 from "node:path";
 
@@ -24976,7 +24976,7 @@ function buildCompletionEntries(architecture, provider, directives = directiveCa
   return entries;
 }
 
-// plugins/65xx/src/instructions/catalog.ts
+// packages/plugin-65xx/src/instructions/catalog.ts
 var syntax = {
   implied: "",
   accumulator: "A",
@@ -25060,7 +25060,7 @@ function buildInstructionCatalog(forms) {
   }));
 }
 
-// plugins/65xx/src/instructions/schema.ts
+// packages/plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
   if (expression.allOf?.some((feature) => !features.has(feature))) return false;
   if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) return false;
@@ -25153,7 +25153,7 @@ function getOperandFields(codec) {
   return [];
 }
 
-// plugins/65xx/src/instructions/variant-tables.generated.ts
+// packages/plugin-65xx/src/instructions/variant-tables.generated.ts
 var ca65EaTable = [
   [
     0,
@@ -26712,7 +26712,7 @@ var ca65VariantTables = {
   ]
 };
 
-// plugins/65xx/src/instructions/variants.ts
+// packages/plugin-65xx/src/instructions/variants.ts
 var commonModes = {
   0: { mode: "implied" },
   1: { mode: "accumulator" },
@@ -26975,7 +26975,7 @@ var variantFormsByCpuId = Object.freeze({
   [mitsubishiM740Cpu.id]: mitsubishiM740Forms
 });
 
-// plugins/65xx/src/instructions/opcodes.ts
+// packages/plugin-65xx/src/instructions/opcodes.ts
 var rows = [
   "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
   "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
@@ -27277,7 +27277,7 @@ function getCpuAssemblyForms(cpu) {
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 
-// plugins/65xx/src/architecture.ts
+// packages/plugin-65xx/src/architecture.ts
 var directToAbsolute = {
   zeroPage: "absolute",
   zeroPageIndexedX: "absoluteIndexedX",
@@ -27677,7 +27677,7 @@ var Arch65xx = class {
   }
 };
 
-// plugins/65xx/src/operands/classifier.ts
+// packages/plugin-65xx/src/operands/classifier.ts
 function classify65xxOperand(resolver, operand) {
   const raw = operand.trim();
   const sizePrefix = parseCa65AddressSizePrefix(raw);
@@ -27815,7 +27815,7 @@ function parseCa65AddressSizePrefix(operand) {
   return { rest, force: 3 };
 }
 
-// plugins/65xx/src/ca65-profile.ts
+// packages/plugin-65xx/src/ca65-profile.ts
 var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
 var ca65SessionStateKey = {
   id: CA65_65XX_SESSION_STATE_ID
@@ -27976,7 +27976,7 @@ var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
   macroParameterPrefix: "\\"
 });
 
-// plugins/65xx/src/directives/ca65.ts
+// packages/plugin-65xx/src/directives/ca65.ts
 function unquote(token) {
   if (token.length >= 2) {
     const quote = token[0];
@@ -28264,7 +28264,7 @@ function handleUnsupportedCa65(words) {
   );
 }
 
-// plugins/65xx/src/session-state.ts
+// packages/plugin-65xx/src/session-state.ts
 var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
 var nes65xxSessionStateKey = {
   id: NES_65XX_SESSION_STATE_ID
@@ -28287,7 +28287,7 @@ function resetNes65xxStageState(state) {
   state.segmentRunStart = 0;
 }
 
-// plugins/65xx/src/linker-config.ts
+// packages/plugin-65xx/src/linker-config.ts
 var DEFAULT_LINKER_CONFIG = `MEMORY {
     ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
 }
@@ -28463,7 +28463,7 @@ function parseYesNo(raw) {
   return void 0;
 }
 
-// plugins/65xx/src/target/nes.ts
+// packages/plugin-65xx/src/target/nes.ts
 var NES_65XX_TARGET_ID = "65xx.nes";
 var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
@@ -28590,7 +28590,7 @@ function normalizeHeader(configured, imageSize) {
   return header;
 }
 
-// plugins/65xx/src/index.ts
+// packages/plugin-65xx/src/index.ts
 var RAW_65XX_TARGET_ID = "65xx.raw";
 var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
@@ -29036,7 +29036,7 @@ var plugin = definePlugin({
 });
 var src_default = plugin;
 
-// plugins/snes/src/tooling/instruction-catalog.ts
+// packages/plugin-snes/src/tooling/instruction-catalog.ts
 function implied(mnemonic, summary, opcode, size = 1) {
   return { mnemonic, summary, modes: [{ mode: "implied", syntax: "", opcode, size }] };
 }
@@ -29453,7 +29453,7 @@ var superFxCatalog = [
   ])
 ];
 
-// plugins/snes/src/architectures/operand-classifiers.ts
+// packages/plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -29653,7 +29653,7 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 
-// plugins/snes/src/architectures/65816.ts
+// packages/plugin-snes/src/architectures/65816.ts
 var lower65816Operand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyExpanded65816Operand(resolver, lowered);
@@ -31738,7 +31738,7 @@ var Arch65816 = class {
   }
 };
 
-// plugins/snes/src/architectures/spc700.ts
+// packages/plugin-snes/src/architectures/spc700.ts
 var lowerSpc700Operand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
@@ -33840,7 +33840,7 @@ var ArchSPC700 = class {
   }
 };
 
-// plugins/snes/src/asar/compatibility.ts
+// packages/plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "fastrom",
   "dpbase",
@@ -33913,7 +33913,7 @@ var shouldUseNoromAddressing = (architecture) => architecture === "spc700-raw";
 var shouldAutoCloseSpcblock = (spcInlineCompatMode, inSpcblock) => spcInlineCompatMode && inSpcblock;
 var shouldEndifCloseInnermostWhile = (currentLoopType, currentLoopStartLine, currentIfStartLine) => currentLoopType === "while" && (currentIfStartLine === void 0 || (currentLoopStartLine ?? -1) >= currentIfStartLine);
 
-// plugins/snes/src/architectures/superfx.ts
+// packages/plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
@@ -34707,7 +34707,7 @@ var ArchSuperFX = class {
   }
 };
 
-// plugins/snes/src/directives/ca65-compat.ts
+// packages/plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -34791,7 +34791,7 @@ function handlePopcpu2(session, state) {
   session.selectArchitecture(archId, archId);
 }
 
-// plugins/snes/src/directives/freespace.ts
+// packages/plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -34847,7 +34847,7 @@ function handleProt(session, words) {
   }
 }
 
-// plugins/snes/src/directives/layout.ts
+// packages/plugin-snes/src/directives/layout.ts
 var MAPPER_KEYWORDS = [
   "lorom",
   "hirom",
@@ -34914,7 +34914,7 @@ function handleStartpos(session, state, words) {
   state.spcBlock.executeAddress = session.operandResolver.getnum(session.resolvedefines(words[1])) & 65535;
 }
 
-// plugins/snes/src/services/spc-runtime.ts
+// packages/plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService = class {
   constructor(session, state) {
     this.session = session;
@@ -35036,10 +35036,10 @@ var SnesSpcRuntimeService = class {
   }
 };
 
-// plugins/snes/src/directives/spc.ts
+// packages/plugin-snes/src/directives/spc.ts
 var createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
 
-// plugins/snes/src/session-state.ts
+// packages/plugin-snes/src/session-state.ts
 var SNES_SESSION_STATE_ID = "snes.session-state";
 var snesSessionStateKey = {
   id: SNES_SESSION_STATE_ID
@@ -35053,7 +35053,7 @@ function cloneSnesSessionState(value) {
   };
 }
 
-// plugins/snes/src/target/address-space.ts
+// packages/plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace = {
   name: "snes-rom",
   addressWidth: 24,
@@ -35220,7 +35220,7 @@ var snesRomAddressSpace = {
   }
 };
 
-// plugins/snes/src/tooling/directive-catalog.ts
+// packages/plugin-snes/src/tooling/directive-catalog.ts
 var op = (keyword, summary, syntax2, operands) => ({
   keyword,
   summary,
@@ -35839,7 +35839,7 @@ var directiveByKeyword = new Map(
   directiveCatalog2.map((descriptor3) => [descriptor3.keyword.toLowerCase(), descriptor3])
 );
 
-// plugins/snes/src/index.ts
+// packages/plugin-snes/src/index.ts
 var SNES_TARGET_ID = "snes.sfc";
 var splitSingleOperand = (text) => text ? [text] : [];
 var splitCommaOperands = (text) => text ? text.split(",").map((operand) => operand.trim()) : [];
@@ -36724,7 +36724,7 @@ var NodePluginLoader = class {
   }
 };
 
-// language-server/src/server.ts
+// packages/language-server/src/server.ts
 var import_node = __toESM(require_main3(), 1);
 
 // node_modules/vscode-languageserver-textdocument/lib/esm/main.js
@@ -36975,7 +36975,7 @@ function getWellformedEdit(textEdit) {
   return textEdit;
 }
 
-// language-server/src/build.ts
+// packages/language-server/src/build.ts
 import path7 from "node:path";
 function resolveBuildEntry(requestedFile, entryPoints, workspaceRoot2) {
   const resolvedEntries = [
@@ -37030,7 +37030,7 @@ function formatElapsed(startedAt) {
   return `${Date.now() - startedAt}ms`;
 }
 
-// language-server/src/project-environment.ts
+// packages/language-server/src/project-environment.ts
 import { existsSync as existsSync3 } from "node:fs";
 import path8 from "node:path";
 var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) => {
@@ -37132,7 +37132,7 @@ var ProjectEnvironmentController = class {
   }
 };
 
-// language-server/src/providers.ts
+// packages/language-server/src/providers.ts
 var import_vscode_languageserver = __toESM(require_api3(), 1);
 import { pathToFileURL as pathToFileURL2, fileURLToPath as fileURLToPath2 } from "node:url";
 import path9 from "node:path";
@@ -38287,7 +38287,7 @@ function referenceTokenType(kind) {
   }
 }
 
-// language-server/src/server.ts
+// packages/language-server/src/server.ts
 var connection = (0, import_node.createConnection)(import_node.ProposedFeatures.all);
 var documents = new import_node.TextDocuments(TextDocument2);
 var environmentController = new ProjectEnvironmentController({

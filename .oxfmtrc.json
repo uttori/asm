@@ -4,9 +4,9 @@
     "dist/**",
     "max/**",
     "src/generated/**",
-    "language-server/out/**",
-    "editors/vscode/out/**",
-    "editors/vscode/server/**"
+    "packages/language-server/out/**",
+    "packages/vscode-extension/out/**",
+    "packages/vscode-extension/server/**"
   ],
   "printWidth": 100,
   "tabWidth": 2,

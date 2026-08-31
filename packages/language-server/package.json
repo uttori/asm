@@ -12,10 +12,10 @@
   "main": "out/server.mjs",
   "scripts": {
     "build": "node esbuild.mjs",
-    "fmt": "oxfmt --config ../.oxfmtrc.json src esbuild.mjs package.json tsconfig.json",
-    "fmt:check": "oxfmt --config ../.oxfmtrc.json --check src esbuild.mjs package.json tsconfig.json",
-    "lint": "oxlint --config ../.oxlintrc.json src",
-    "lint:fix": "oxlint --config ../.oxlintrc.json src --fix",
+    "fmt": "oxfmt --config ../../.oxfmtrc.json src esbuild.mjs package.json tsconfig.json",
+    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src esbuild.mjs package.json tsconfig.json",
+    "lint": "oxlint --config ../../.oxlintrc.json src",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json src --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

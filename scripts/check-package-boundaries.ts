@@ -154,8 +154,12 @@ const coreExportSpecifiers = (root: string): Set<string> => {
 export function collectPackageBoundaryViolations(root = process.cwd()): PackageBoundaryViolation[] {
   const resolvedRoot = path.resolve(root);
   const coreSource = path.join(resolvedRoot, "packages/core/src");
-  const pluginsSource = path.join(resolvedRoot, "plugins");
-  const providersFile = path.join(resolvedRoot, "language-server/src/providers.ts");
+  const packagesDirectory = path.join(resolvedRoot, "packages");
+  const pluginSources = fs
+    .readdirSync(packagesDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith("plugin-"))
+    .map((entry) => path.join(packagesDirectory, entry.name, "src"));
+  const providersFile = path.join(resolvedRoot, "packages/language-server/src/providers.ts");
   const allowedCoreImports = coreExportSpecifiers(resolvedRoot);
   const violations: PackageBoundaryViolation[] = [];
 
@@ -167,7 +171,8 @@ export function collectPackageBoundaryViolations(root = process.cwd()): PackageB
         : undefined;
       if (
         imported.module.startsWith("@uttori/asm-plugin-") ||
-        (resolvedImport !== undefined && isWithin(resolvedImport, pluginsSource))
+        (resolvedImport !== undefined &&
+          pluginSources.some((pluginSource) => isWithin(resolvedImport, pluginSource)))
       ) {
         violations.push({
           code: "CORE_IMPORTS_PLUGIN",
@@ -200,9 +205,7 @@ export function collectPackageBoundaryViolations(root = process.cwd()): PackageB
     }
   }
 
-  for (const file of listTypeScriptFiles(pluginsSource).filter((entry) =>
-    entry.includes(`${path.sep}src${path.sep}`),
-  )) {
+  for (const file of pluginSources.flatMap((pluginSource) => listTypeScriptFiles(pluginSource))) {
     const sourceFile = sourceFileFor(file);
     for (const imported of importSpecifiers(sourceFile)) {
       const resolvedImport = imported.module.startsWith(".")
@@ -228,7 +231,7 @@ export function collectPackageBoundaryViolations(root = process.cwd()): PackageB
     for (const imported of importSpecifiers(sourceFile)) {
       if (
         /(?:instruction|directive)-catalog/i.test(imported.module) ||
-        imported.module.includes("/plugins/") ||
+        /(?:^|\/)plugin-[^/]+(?:\/|$)/.test(imported.module) ||
         imported.module.startsWith("@uttori/asm-plugin-") ||
         imported.names.some((name) => STATIC_CATALOG_IMPORTS.has(name))
       ) {

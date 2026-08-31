@@ -18,7 +18,7 @@ import {
   semanticTokensFor,
   semanticTokensLegend,
   signatureHelpFor,
-} from "../language-server/src/providers.js";
+} from "../packages/language-server/src/providers.js";
 
 const file = path.resolve("/virtual/providers.asm");
 const source = "org $008000\nTarget:\n  LDA Target\n";

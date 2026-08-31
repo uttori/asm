@@ -4,8 +4,8 @@ import path from "node:path";
 
 import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import { test } from "./ava-helper.js";
-import { ProjectEnvironmentController } from "../language-server/src/project-environment.js";
-import { completionsFor } from "../language-server/src/providers.js";
+import { ProjectEnvironmentController } from "../packages/language-server/src/project-environment.js";
+import { completionsFor } from "../packages/language-server/src/providers.js";
 import { createFixturePlugin } from "./plugin/fixture-plugin.js";
 
 const createController = (): ProjectEnvironmentController =>

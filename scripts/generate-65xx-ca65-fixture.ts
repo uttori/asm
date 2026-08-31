@@ -14,8 +14,8 @@ import {
   mitsubishiM740Forms,
   mos6502DtvForms,
   wdc65c02Forms,
-} from "../plugins/65xx/src/instructions/variants.js";
-import type { InstructionForm } from "../plugins/65xx/src/instructions/schema.js";
+} from "../packages/plugin-65xx/src/instructions/variants.js";
+import type { InstructionForm } from "../packages/plugin-65xx/src/instructions/schema.js";
 
 const ca65 = process.argv[2];
 const ld65 = process.argv[3];

@@ -53,7 +53,7 @@ Core Uttori ASM has no default 65xx mode. This plugin must be activated, after w
 
 The registration lives in [`src/index.ts`](./src/index.ts). CPU tables live in [`src/instructions/opcodes.ts`](./src/instructions/opcodes.ts) and [`src/instructions/variants.ts`](./src/instructions/variants.ts). NES layout lives in [`src/target/nes.ts`](./src/target/nes.ts) and [`src/linker-config.ts`](./src/linker-config.ts).
 
-65816-derived CPUs remain [SNES-plugin-owned](../snes/README.md). This plugin will not assemble `JSL` no matter how hopefully you type it.
+65816-derived CPUs remain [SNES-plugin-owned](../plugin-snes/README.md). This plugin will not assemble `JSL` no matter how hopefully you type it.
 
 ## Install & Assemble
 
@@ -775,7 +775,7 @@ On `65xx.raw`, defines are textual values prefixed by `!`:
 db !Lives
 ```
 
-Supported assignment operators are `=`, `+=`, `:=`, `#=`, and `?=`. `undef Name` removes a define. Nested names use `!{value!slot}`. See the [SNES defines section](../snes/README.md#defines) for the shared engine.
+Supported assignment operators are `=`, `+=`, `:=`, `#=`, and `?=`. `undef Name` removes a define. Nested names use `!{value!slot}`. See the [SNES defines section](../plugin-snes/README.md#defines) for the shared engine.
 
 ### ca65 Symbols
 
@@ -799,7 +799,7 @@ Operators at the same level are left-associative. Parentheses override precedenc
 
 ### Core Built-In Functions
 
-Native sources have the shared numeric, selection, logical, address, string, and file helpers documented in the [SNES expression section](../snes/README.md#core-built-in-functions): `sqrt`, `min`, `bank`, `defined`, `filesize`, `readfile1`, and so on.
+Native sources have the shared numeric, selection, logical, address, string, and file helpers documented in the [SNES expression section](../plugin-snes/README.md#core-built-in-functions): `sqrt`, `min`, `bank`, `defined`, `filesize`, `readfile1`, and so on.
 
 ### ca65 Expression Functions
 
@@ -847,7 +847,7 @@ ca65 macros use dotted headers, `\parameter` substitution, and bare invocation:
 emit $22
 ```
 
-Variadic native macros, `sizeof(...)`, and macro-local `?` labels follow the shared [SNES macro engine](../snes/README.md#macros). ca65 `.local` and `.exitmacro` are rejected with a macro-compatibility diagnostic. Token-list/string macros are not implemented.
+Variadic native macros, `sizeof(...)`, and macro-local `?` labels follow the shared [SNES macro engine](../plugin-snes/README.md#macros). ca65 `.local` and `.exitmacro` are rejected with a macro-compatibility diagnostic. Token-list/string macros are not implemented.
 
 ## Conditionals & Loops
 
@@ -920,7 +920,7 @@ That emits `$00 $01 $02`. The optional name is an ordinary expression during the
 
 ### Character Tables
 
-Native `table`, `cleartable`, `pushtable`, `pulltable`, and `"A" = $40` character assignment are core features on `65xx.raw`. See the [SNES character-table section](../snes/README.md#character-tables). ca65 `.charmap` / `.wchar` are not implemented.
+Native `table`, `cleartable`, `pushtable`, `pulltable`, and `"A" = $40` character assignment are core features on `65xx.raw`. See the [SNES character-table section](../plugin-snes/README.md#character-tables). ca65 `.charmap` / `.wchar` are not implemented.
 
 ## Source & Binary Includes
 
@@ -1092,7 +1092,7 @@ Status meanings:
 | `.local`, `.exitmacro`                                                   | Unsupported | Rejected with a macro-compatibility diagnostic. |
 | Token-list/string macros, `.match`, `.xmatch`, `.mid`, `.left`, `.right` | Unsupported | The advanced ca65 token macro language is not implemented. |
 
-The real-world integration gate assembles the selected Zelda 1 ca65 disassembly to its golden iNES image. Byte-level CPU differentials are in `plugins/65xx/tests/fixtures/`.
+The real-world integration gate assembles the selected Zelda 1 ca65 disassembly to its golden iNES image. Byte-level CPU differentials are in `packages/plugin-65xx/tests/fixtures/`.
 
 ## Command Index
 

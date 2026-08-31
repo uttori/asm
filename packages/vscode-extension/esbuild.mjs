@@ -19,7 +19,7 @@ await build({
 
 // Ship the language-server bundle alongside the extension so it can be launched
 // over stdio. Run `npm run lsp:build` first to produce this file.
-const serverBundle = path.resolve(here, "../../language-server/out/server.mjs");
+const serverBundle = path.resolve(here, "../language-server/out/server.mjs");
 const serverDestination = path.join(here, "server", "server.mjs");
 if (existsSync(serverBundle)) {
   mkdirSync(path.dirname(serverDestination), { recursive: true });

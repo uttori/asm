@@ -10,16 +10,13 @@
   "contributors": [],
   "repository": "uttori/asm",
   "workspaces": [
-    "packages/*",
-    "plugins/*",
-    "language-server",
-    "editors/vscode"
+    "packages/*"
   ],
   "type": "module",
   "sideEffects": false,
   "scripts": {
     "build": "npm run check:boundaries && npm run make-types && npm run lsp:build && npm run vscode:build",
-    "make-types": "rm -rf dist packages/core/dist packages/plugin-loader-node/dist plugins/snes/dist plugins/65xx/dist && tsc --project ./tsconfig.json && npm run make-types --workspaces --if-present && npm run example:typecheck",
+    "make-types": "rm -rf dist packages/core/dist packages/plugin-loader-node/dist packages/plugin-snes/dist packages/plugin-65xx/dist && tsc --project ./tsconfig.json && npm run make-types --workspaces --if-present && npm run example:typecheck",
     "typecheck": "tsc --project ./tsconfig.json --noEmit && npm run typecheck --workspaces --if-present && npm run scripts:typecheck && npm run example:typecheck",
     "scripts:typecheck": "tsc -p scripts/tsconfig.json --noEmit",
     "example:typecheck": "tsc -p examples/plugin-author/tsconfig.json --noEmit",
@@ -35,10 +32,10 @@
     "fixture:tmnt:extract": "tsx scripts/extract-tmnt-assets.ts",
     "fixture:tmnt:framework": "tsx scripts/place-snes-rom-framework.ts",
     "fixtures:status": "tsx scripts/fixtures-status.ts",
-    "fmt": "oxfmt ./src ./packages/core/src ./packages/plugin-loader-node/src ./packages/plugin-loader-node/tests ./packages/plugin-loader-node/package.json ./packages/plugin-loader-node/tsconfig.json ./packages/plugin-loader-node/asm-config.schema.json ./plugins/snes/src ./plugins/snes/package.json ./plugins/snes/tsconfig.json ./plugins/65xx/src ./plugins/65xx/package.json ./plugins/65xx/tsconfig.json ./scripts/run-asar-fixtures.ts ./scripts/run-slideshow.ts ./scripts/run-slideshow-legacy.ts ./scripts/run-chou.ts ./scripts/external-fixtures.ts ./scripts/fixtures-status.ts ./scripts/ci-external.ts ./scripts/extract-smrpg-assets.ts ./scripts/extract-tmnt-assets.ts ./scripts/place-snes-rom-framework.ts ./scripts/diff.ts ./fixtures/fixture-manifest.ts ./tests/external-fixture-manifest.test.ts ./scripts/smoke-language-server-bundle.ts ./scripts/check-package-boundaries.ts ./scripts/check-package-tarballs.ts ./examples/plugin-author ./tests/package-boundaries.test.ts ./language-server/src ./language-server/esbuild.mjs ./language-server/package.json ./language-server/tsconfig.json ./editors/vscode/src ./editors/vscode/esbuild.mjs ./editors/vscode/package.json ./editors/vscode/tsconfig.json ./editors/vscode/language-configuration.json ./editors/vscode/syntaxes ./editors/vscode/snippets/uttori-asm.json",
-    "fmt:check": "oxfmt --check ./src ./packages/core/src ./packages/plugin-loader-node/src ./packages/plugin-loader-node/tests ./packages/plugin-loader-node/package.json ./packages/plugin-loader-node/tsconfig.json ./packages/plugin-loader-node/asm-config.schema.json ./plugins/snes/src ./plugins/snes/package.json ./plugins/snes/tsconfig.json ./plugins/65xx/src ./plugins/65xx/package.json ./plugins/65xx/tsconfig.json ./scripts/run-asar-fixtures.ts ./scripts/run-slideshow.ts ./scripts/run-slideshow-legacy.ts ./scripts/run-chou.ts ./scripts/external-fixtures.ts ./scripts/fixtures-status.ts ./scripts/ci-external.ts ./scripts/extract-smrpg-assets.ts ./scripts/extract-tmnt-assets.ts ./scripts/place-snes-rom-framework.ts ./scripts/diff.ts ./fixtures/fixture-manifest.ts ./tests/external-fixture-manifest.test.ts ./scripts/smoke-language-server-bundle.ts ./scripts/check-package-boundaries.ts ./scripts/check-package-tarballs.ts ./examples/plugin-author ./tests/package-boundaries.test.ts ./language-server/src ./language-server/esbuild.mjs ./language-server/package.json ./language-server/tsconfig.json ./editors/vscode/src ./editors/vscode/esbuild.mjs ./editors/vscode/package.json ./editors/vscode/tsconfig.json ./editors/vscode/language-configuration.json ./editors/vscode/syntaxes ./editors/vscode/snippets/uttori-asm.json",
-    "lint": "oxlint ./src ./packages/core/src ./packages/plugin-loader-node/src ./plugins/snes/src ./plugins/65xx/src ./scripts/check-package-boundaries.ts ./scripts/check-package-tarballs.ts ./scripts/external-fixtures.ts ./scripts/fixtures-status.ts ./scripts/ci-external.ts ./scripts/place-snes-rom-framework.ts ./fixtures/fixture-manifest.ts ./examples/plugin-author/src ./language-server/src ./editors/vscode/src",
-    "lint:fix": "oxlint ./src ./packages/core/src ./packages/plugin-loader-node/src ./plugins/snes/src ./plugins/65xx/src ./scripts/check-package-boundaries.ts ./scripts/check-package-tarballs.ts ./scripts/external-fixtures.ts ./scripts/fixtures-status.ts ./scripts/ci-external.ts ./scripts/place-snes-rom-framework.ts ./fixtures/fixture-manifest.ts ./examples/plugin-author/src ./language-server/src ./editors/vscode/src --fix",
+    "fmt": "oxfmt ./src ./packages/core/src ./packages/plugin-loader-node/src ./packages/plugin-loader-node/tests ./packages/plugin-loader-node/package.json ./packages/plugin-loader-node/tsconfig.json ./packages/plugin-loader-node/asm-config.schema.json ./packages/plugin-snes/src ./packages/plugin-snes/package.json ./packages/plugin-snes/tsconfig.json ./packages/plugin-65xx/src ./packages/plugin-65xx/package.json ./packages/plugin-65xx/tsconfig.json ./scripts/run-asar-fixtures.ts ./scripts/run-slideshow.ts ./scripts/run-slideshow-legacy.ts ./scripts/run-chou.ts ./scripts/external-fixtures.ts ./scripts/fixtures-status.ts ./scripts/ci-external.ts ./scripts/extract-smrpg-assets.ts ./scripts/extract-tmnt-assets.ts ./scripts/place-snes-rom-framework.ts ./scripts/diff.ts ./fixtures/fixture-manifest.ts ./tests/external-fixture-manifest.test.ts ./scripts/smoke-language-server-bundle.ts ./scripts/check-package-boundaries.ts ./scripts/check-package-tarballs.ts ./examples/plugin-author ./tests/package-boundaries.test.ts ./packages/language-server/src ./packages/language-server/esbuild.mjs ./packages/language-server/package.json ./packages/language-server/tsconfig.json ./packages/vscode-extension/src ./packages/vscode-extension/esbuild.mjs ./packages/vscode-extension/package.json ./packages/vscode-extension/tsconfig.json ./packages/vscode-extension/language-configuration.json ./packages/vscode-extension/syntaxes ./packages/vscode-extension/snippets/uttori-asm.json",
+    "fmt:check": "oxfmt --check ./src ./packages/core/src ./packages/plugin-loader-node/src ./packages/plugin-loader-node/tests ./packages/plugin-loader-node/package.json ./packages/plugin-loader-node/tsconfig.json ./packages/plugin-loader-node/asm-config.schema.json ./packages/plugin-snes/src ./packages/plugin-snes/package.json ./packages/plugin-snes/tsconfig.json ./packages/plugin-65xx/src ./packages/plugin-65xx/package.json ./packages/plugin-65xx/tsconfig.json ./scripts/run-asar-fixtures.ts ./scripts/run-slideshow.ts ./scripts/run-slideshow-legacy.ts ./scripts/run-chou.ts ./scripts/external-fixtures.ts ./scripts/fixtures-status.ts ./scripts/ci-external.ts ./scripts/extract-smrpg-assets.ts ./scripts/extract-tmnt-assets.ts ./scripts/place-snes-rom-framework.ts ./scripts/diff.ts ./fixtures/fixture-manifest.ts ./tests/external-fixture-manifest.test.ts ./scripts/smoke-language-server-bundle.ts ./scripts/check-package-boundaries.ts ./scripts/check-package-tarballs.ts ./examples/plugin-author ./tests/package-boundaries.test.ts ./packages/language-server/src ./packages/language-server/esbuild.mjs ./packages/language-server/package.json ./packages/language-server/tsconfig.json ./packages/vscode-extension/src ./packages/vscode-extension/esbuild.mjs ./packages/vscode-extension/package.json ./packages/vscode-extension/tsconfig.json ./packages/vscode-extension/language-configuration.json ./packages/vscode-extension/syntaxes ./packages/vscode-extension/snippets/uttori-asm.json",
+    "lint": "oxlint ./src ./packages/core/src ./packages/plugin-loader-node/src ./packages/plugin-snes/src ./packages/plugin-65xx/src ./scripts/check-package-boundaries.ts ./scripts/check-package-tarballs.ts ./scripts/external-fixtures.ts ./scripts/fixtures-status.ts ./scripts/ci-external.ts ./scripts/place-snes-rom-framework.ts ./fixtures/fixture-manifest.ts ./examples/plugin-author/src ./packages/language-server/src ./packages/vscode-extension/src",
+    "lint:fix": "oxlint ./src ./packages/core/src ./packages/plugin-loader-node/src ./packages/plugin-snes/src ./packages/plugin-65xx/src ./scripts/check-package-boundaries.ts ./scripts/check-package-tarballs.ts ./scripts/external-fixtures.ts ./scripts/fixtures-status.ts ./scripts/ci-external.ts ./scripts/place-snes-rom-framework.ts ./fixtures/fixture-manifest.ts ./examples/plugin-author/src ./packages/language-server/src ./packages/vscode-extension/src --fix",
     "benchmark": "tsx scripts/run-production-benchmarks.ts",
     "benchmark:smoke": "tsx scripts/run-production-benchmarks.ts --fast",
     "benchmark:chou": "tsx scripts/run-production-benchmarks.ts --fast --fixture chou --isolate --no-instrumentation --max-median-ms 30000",
@@ -61,12 +58,12 @@
     "validate": "npm ls",
     "verify": "npm run fmt:check && npm run lint && npm run check:boundaries && npm run typecheck && npm run make-types && npm run coverage:verify && npm run lsp:typecheck && npm run vscode:typecheck",
     "pack:check": "node --import=tsx scripts/check-package-tarballs.ts",
-    "lsp:typecheck": "tsc -p language-server/tsconfig.json --noEmit",
-    "lsp:build": "node language-server/esbuild.mjs",
+    "lsp:typecheck": "tsc -p packages/language-server/tsconfig.json --noEmit",
+    "lsp:build": "node packages/language-server/esbuild.mjs",
     "lsp:smoke": "node --import=tsx scripts/smoke-language-server-bundle.ts",
-    "vscode:typecheck": "tsc -p editors/vscode/tsconfig.json --noEmit",
-    "vscode:build": "node editors/vscode/esbuild.mjs",
-    "vscode:package": "npm run lsp:build && npm run vscode:build && cd editors/vscode && vsce package --no-dependencies"
+    "vscode:typecheck": "tsc -p packages/vscode-extension/tsconfig.json --noEmit",
+    "vscode:build": "node packages/vscode-extension/esbuild.mjs",
+    "vscode:package": "npm run lsp:build && npm run vscode:build && npm run package --workspace uttori-asm-vscode"
   },
   "dependencies": {
     "@uttori/asm-core": "1.0.0",
@@ -109,7 +106,6 @@
     "files": [
       "tests/**/*.test.*",
       "packages/*/tests/**/*.test.*",
-      "plugins/*/tests/**/*.test.*",
       "!**/*.external.test.ts"
     ],
     "nodeArguments": [
@@ -131,7 +127,7 @@
     "include": [
       "packages/core/src/**/*.ts",
       "packages/plugin-loader-node/src/**/*.ts",
-      "plugins/*/src/**/*.ts"
+      "packages/{core,plugin-*}/src/**/*.ts"
     ],
     "per-file": false
   },

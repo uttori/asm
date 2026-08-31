@@ -82,7 +82,7 @@ try {
 }
 ```
 
-See the [SNES Plugin Reference](plugins/snes/README.md) for target aliases, architectures, mapper directives, expressions, checksum options, and output behavior.
+See the [SNES Plugin Reference](packages/plugin-snes/README.md) for target aliases, architectures, mapper directives, expressions, checksum options, and output behavior.
 
 
 ### Command Line / Zero-Configuration CLI
@@ -195,20 +195,20 @@ npm run lsp:smoke
 
 It supports incremental diagnostics, symbols, definitions, references, rename, hover, completion, signature help, semantic tokens, unsaved overlays, and target-filtered tooling catalogs.
 
-The extension in [editors/vscode](editors/vscode) auto-associates **Uttori SNES** (`uttori-snes`) with `.asm`, `.src`, `.SRC`, `.s`, and `.inc`. **Uttori 65xx** (`uttori-65xx`) is a manual language mode via **Change Language Mode**. It bundles SNES for zero-configuration workspaces and propagates `asm.configFile`, `asm.plugins`, `asm.target`, `asm.architecture`, `asm.entryPoints`, `asm.includePaths`, `asm.buildOutput`, and `asm.baseImage` to the server. In restricted workspaces it refuses workspace plugin/configuration execution and publishes a warning.
+The extension in [packages/vscode-extension](packages/vscode-extension) auto-associates **Uttori SNES** (`uttori-snes`) with `.asm`, `.src`, `.SRC`, `.s`, and `.inc`. **Uttori 65xx** (`uttori-65xx`) is a manual language mode via **Change Language Mode**. It bundles SNES for zero-configuration workspaces and propagates `asm.configFile`, `asm.plugins`, `asm.target`, `asm.architecture`, `asm.entryPoints`, `asm.includePaths`, `asm.buildOutput`, and `asm.baseImage` to the server. In restricted workspaces it refuses workspace plugin/configuration execution and publishes a warning.
 
 ```sh
 npm run vscode:typecheck
 npm run vscode:package
 ```
 
-See the [extension README](editors/vscode/README.md) for the end-user command and settings reference.
+See the [extension README](packages/vscode-extension/README.md) for the end-user command and settings reference.
 
 ## Compatibility Scope
 
-See the [SNES plugin README](plugins/snes/README.md) for extensive SNES Asar compatibility and new additions.
+See the [SNES plugin README](packages/plugin-snes/README.md) for extensive SNES Asar compatibility and new additions.
 
-See the [65xx plugin README](plugins/65xx/README.md) for extensive 65xx ca65 compatibility and new additions (including the Asar supported concept like structs, macros, ...).
+See the [65xx plugin README](packages/plugin-65xx/README.md) for extensive 65xx ca65 compatibility and new additions (including the Asar supported concept like structs, macros, ...).
 
 ## Development
 
@@ -236,14 +236,14 @@ There are explicit Chou and SMRPG benchmark commands, they will fail with setup 
 ## Repository Layout
 
 ```text
-editors/vscode/               VS Code client and bundled artifacts
 examples/plugin-author/       runnable third-party plugin template
 fixtures/                     focused and production integration projects
-language-server/              LSP transport and environment controller
 packages/core/                architecture-neutral runtime and plugin API
+packages/language-server/     LSP transport and environment controller
+packages/plugin-65xx/         65xx-family instruction models, encoders, and fixtures
 packages/plugin-loader-node/  Node discovery, config loader, and JSON schema
-plugins/65xx/                 65xx-family instruction models, encoders, and fixtures
-plugins/snes/                 SNES implementation and parity tests
+packages/plugin-snes/         SNES implementation and parity tests
+packages/vscode-extension/    VS Code client and bundled artifacts
 scripts/                      boundary, package, fixture, smoke, and benchmark gates
 src/                          generic CLI host
 tests/                        core, loader, LSP, and cross-package tests

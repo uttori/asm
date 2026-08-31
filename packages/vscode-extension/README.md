@@ -47,6 +47,6 @@ npm run lsp:build
 npm run vscode:build
 ```
 
-For debugging, open `editors/vscode` as the VS Code workspace and press F5. The
+For debugging, open `packages/vscode-extension` as the VS Code workspace and press F5. The
 included launch task builds both the language server and extension. Run
 `npm run vscode:package` from the repository root to produce a `.vsix`.

@@ -52,7 +52,9 @@ typings/
 
 # Output of 'npm pack'
 *.tgz
-editors/vscode/*.vsix
+packages/vscode-extension/*.vsix
+packages/vscode-extension/example/*.sfc
+packages/plugin-65xx/demo/*.nes
 
 # Yarn Integrity file
 .yarn-integrity
@@ -89,3 +91,6 @@ CLAUDE.md
 .cursor/
 .rtk/
 .vscode/
+!packages/vscode-extension/.vscode/
+!packages/vscode-extension/.vscode/launch.json
+!packages/vscode-extension/.vscode/tasks.json

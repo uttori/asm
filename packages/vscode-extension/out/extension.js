@@ -22843,7 +22843,7 @@ var require_main3 = __commonJS({
   }
 });
 
-// editors/vscode/src/extension.ts
+// packages/vscode-extension/src/extension.ts
 var extension_exports = {};
 __export(extension_exports, {
   activate: () => activate,
@@ -22854,7 +22854,7 @@ var path2 = __toESM(require("node:path"));
 var import_vscode3 = require("vscode");
 var import_node = __toESM(require_main3());
 
-// editors/vscode/src/outline-tree.ts
+// packages/vscode-extension/src/outline-tree.ts
 var import_vscode = require("vscode");
 var import_vscode_languageclient = __toESM(require_api3());
 var ProjectOutlineProvider = class {
@@ -23000,7 +23000,7 @@ function iconForSymbolKind(kind) {
   }
 }
 
-// editors/vscode/src/panel.ts
+// packages/vscode-extension/src/panel.ts
 var path = __toESM(require("node:path"));
 var import_vscode2 = require("vscode");
 var ProjectPanelProvider = class {
@@ -23313,7 +23313,7 @@ function getNonce() {
   return nonce;
 }
 
-// editors/vscode/src/extension.ts
+// packages/vscode-extension/src/extension.ts
 var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var client;
 var outputChannel;

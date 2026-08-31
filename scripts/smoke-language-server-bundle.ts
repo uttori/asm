@@ -104,10 +104,10 @@ const build = async (client: LspClient, source: string): Promise<string> => {
   return result.outputPath;
 };
 
-const server = path.resolve("language-server/out/server.mjs");
+const server = path.resolve("packages/language-server/out/server.mjs");
 assert.ok(
   fs.existsSync(server),
-  "Build language-server/out/server.mjs before running this smoke test.",
+  "Build packages/language-server/out/server.mjs before running this smoke test.",
 );
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-lsp-bundle-"));
@@ -150,6 +150,7 @@ try {
   const restrictedTargets = new Set(restrictedMetadata.targets.map((target) => target.id));
   assert.equal(restrictedTargets.has("snes.sfc"), true);
   assert.equal(restrictedTargets.has("65xx.raw"), true);
+  assert.equal(restrictedTargets.has("65xx.ca65-raw"), true);
   assert.equal(restrictedTargets.has("65xx.nes"), true);
 
   fs.writeFileSync(fixtureSource, "org 0\nFIX\n");
@@ -165,6 +166,7 @@ try {
   assert.equal(trustedMetadata.activeTarget, "loader.fixture-target");
   assert.equal(trustedMetadata.activeArchitecture, "loader.fixture-architecture");
   assert.deepEqual([...trustedMetadata.targets.map((target) => target.id)].sort(), [
+    "65xx.ca65-raw",
     "65xx.nes",
     "65xx.raw",
     "loader.fixture-target",

@@ -1142,7 +1142,7 @@ The SNES plugin targets _practical_ Asar & ca65 compatibility, including 65816, 
 
 These disassembly projects provide extra byte-parity gates once their submodules are initialized. Deferred syntax remains visible under `fixtures/asar/tests/Unsupported`.
 
-Compatibility policy is isolated in `plugins/snes/src/asar/compatibility.ts`.
+Compatibility policy is isolated in `packages/plugin-snes/src/asar/compatibility.ts`.
 
 ### Implemented & Parity-Tested Families
 

@@ -199,7 +199,9 @@ test("workspace 65xx package specifiers use Node ESM resolution", async (t) => {
     cwd: path.join(fixtures, "package-project"),
   });
   t.is(loaded.configuration.plugins[0]!.pluginId, "uttori.asm-plugin-65xx");
-  t.true(loaded.configuration.plugins[0]!.resolvedModule.endsWith("plugins/65xx/src/index.ts"));
+  t.true(
+    loaded.configuration.plugins[0]!.resolvedModule.endsWith("packages/plugin-65xx/src/index.ts"),
+  );
   t.deepEqual(
     [...assemble(loaded, "org $8000\nlda #$42\nsta $20\nnop")],
     [0xa9, 0x42, 0x85, 0x20, 0xea],
@@ -373,7 +375,7 @@ test("load failures name the configuration entry and resolved module", async (t)
   );
   t.is(invalidOptions.code, "PLUGIN_CONFIGURATION_INVALID");
   t.is(invalidOptions.pluginId, "uttori.asm-plugin-snes");
-  t.regex(invalidOptions.message, /pluginModules\[0\].*plugins\/snes\/src\/index\.ts/i);
+  t.regex(invalidOptions.message, /pluginModules\[0\].*packages\/plugin-snes\/src\/index\.ts/i);
 });
 
 test("duplicate resolved modules are rejected before activation", async (t) => {

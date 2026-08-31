@@ -6396,7 +6396,7 @@ test("handleArch - architecture switching", (t) => {
 
 test("processCommand - spcblock emits expected nspc stream", (t) => {
   const assembler = new Assembler(new Uint8Array(0x80000));
-  assembler.setCurrentFile("plugins/snes/tests/assembler.test.ts");
+  assembler.setCurrentFile("packages/plugin-snes/tests/assembler.test.ts");
 
   const lines = [
     "org $008000",
@@ -6435,7 +6435,7 @@ test("processCommand - spcblock emits expected nspc stream", (t) => {
 
 test("processCommand - spc700-inline auto-wraps in implicit spcblock", (t) => {
   const assembler = new Assembler(new Uint8Array(0x80000));
-  assembler.setCurrentFile("plugins/snes/tests/assembler.test.ts");
+  assembler.setCurrentFile("packages/plugin-snes/tests/assembler.test.ts");
 
   const lines = ["org $008000", "arch spc700-inline", "org $5000", "jmp lab", "lab:"];
 

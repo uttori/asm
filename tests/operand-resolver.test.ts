@@ -2,7 +2,7 @@ import sinon from "sinon";
 import { test } from "./ava-helper.js";
 
 import { OperandResolver } from "../packages/core/src/operand-resolver.js";
-import { classify65816Operand } from "../plugins/snes/src/architectures/operand-classifiers.js";
+import { classify65816Operand } from "../packages/plugin-snes/src/architectures/operand-classifiers.js";
 
 const createResolver = (
   overrides: Partial<ConstructorParameters<typeof OperandResolver>[0]> = {},

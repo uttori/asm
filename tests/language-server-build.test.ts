@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { test } from "./ava-helper.js";
-import { emptyOutputMessage, resolveBuildEntry } from "../language-server/src/build.js";
+import { emptyOutputMessage, resolveBuildEntry } from "../packages/language-server/src/build.js";
 
 function makeWorkspace(): string {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-build-entry-"));
