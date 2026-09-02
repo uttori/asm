@@ -1,3 +1,4 @@
+import type { DecodedInstruction } from "@uttori/asm-core";
 import { definePlugin, PLUGIN_API_VERSION, type AssemblerPlugin } from "@uttori/asm-core/plugin";
 
 interface ExampleOptions {
@@ -48,6 +49,57 @@ const plugin: AssemblerPlugin<ExampleOptions> = definePlugin({
           return true;
         },
       }),
+      createDecoder: () => ({
+        decode: ({ source, offset, logicalAddress }) => {
+          const byte = source.readByte(offset);
+          if (byte === undefined) {
+            return {
+              kind: "error",
+              code: "outOfBounds",
+              message: `Cannot read a byte at offset ${offset}.`,
+              offset,
+              requiredBytes: 1,
+              availableBytes: Math.max(0, source.length - offset),
+            };
+          }
+          if (byte !== context.options.byte) {
+            return {
+              kind: "error",
+              code: "invalidOpcode",
+              message: `Expected configured byte $${context.options.byte.toString(16).padStart(2, "0")}.`,
+              offset,
+            };
+          }
+          const instruction: DecodedInstruction = {
+            architecture: "example.byte",
+            specificationId: "example.byte.byte",
+            opcode: byte,
+            mnemonic: "BYTE",
+            mode: "implied",
+            offset,
+            logicalAddress,
+            bytes: Uint8Array.of(byte),
+            size: 1,
+            operands: [],
+            references: [],
+            flow: { kind: "fallthrough", fallthrough: true },
+            effects: [],
+          };
+          return { kind: "instruction", instruction };
+        },
+      }),
+      instructionSpecifications: [
+        {
+          id: "example.byte.byte",
+          architecture: "example.byte",
+          opcode: [context.options.byte],
+          mnemonic: "BYTE",
+          mode: "implied",
+          minimumSize: 1,
+          maximumSize: 1,
+          summary: "Recognize the byte configured for this plugin.",
+        },
+      ],
       instructions: [
         {
           mnemonic: "BYTE",

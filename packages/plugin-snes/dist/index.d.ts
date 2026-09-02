@@ -1,5 +1,21 @@
 import { type AssemblerEnvironment } from "@uttori/asm-core";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
+export * from "./disassembler/65816-analysis.js";
+export * from "./disassembler/65816-state.js";
+export * from "./disassembler/address-identities.js";
+export * from "./disassembler/dizraw-import.js";
+export * from "./disassembler/hardware-registers.js";
+export * from "./disassembler/rom-header.js";
+export * from "./disassembler/source-export.js";
+export * from "./disassembler/spc700-address-space.js";
+export * from "./disassembler/spc700-analysis.js";
+export * from "./disassembler/spc700-hardware-registers.js";
+export * from "./disassembler/spc700-state.js";
+export * from "./disassembler/spc700-upload.js";
+export * from "./disassembler/processor-source-export.js";
+export * from "./disassembler/superfx-address-space.js";
+export * from "./disassembler/superfx-analysis.js";
+export * from "./disassembler/superfx-state.js";
 /** Canonical SNES cartridge target id (`snes`, `sfc`, `snes-65816` are aliases). */
 export declare const SNES_TARGET_ID = "snes.sfc";
 /**
@@ -25,8 +41,14 @@ export default plugin;
  */
 export declare function createSnesAssemblerEnvironment(): Promise<AssemblerEnvironment>;
 export { Arch65816 } from "./architectures/65816.js";
+export * from "./architectures/65816-decoder.js";
+export * from "./architectures/65816-spec.js";
 export { ArchSPC700 } from "./architectures/spc700.js";
+export * from "./architectures/spc700-decoder.js";
+export * from "./architectures/spc700-spec.js";
 export { ArchSuperFX } from "./architectures/superfx.js";
+export * from "./architectures/superfx-decoder.js";
+export * from "./architectures/superfx-spec.js";
 export * from "./asar/compatibility.js";
 export * from "./directives/ca65-compat.js";
 export * from "./session-state.js";

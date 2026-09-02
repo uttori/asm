@@ -155,6 +155,19 @@ test("Asar @-prefixed directives map to the unprefixed handlers", (t) => {
   t.deepEqual(Array.from(assembler.getBinaryOutput()), [0x01]);
 });
 
+test("registered lowered dot directives take precedence over sublabel syntax", (t) => {
+  const assembler = new Assembler();
+  const calls: string[] = [];
+  assembler.directiveRegistry.registerLowered(".width", undefined, (_context, words) => {
+    calls.push(words.join(" "));
+  });
+  const program = assembler.buildProgramModel(".width 16", "dot-directive.asm");
+  const lowered = assembler.commandLoweringService.lowerProgram(program).nodes[0];
+  t.is(lowered?.kind, "directive");
+  if (lowered?.kind === "directive") assembler.dispatchLoweredNode(lowered);
+  t.deepEqual(calls, [".width 16"]);
+});
+
 test("instruction-looking macro body lines remain preprocessing passthrough", (t) => {
   const assembler = new Assembler();
   const program = assembler.buildProgramModel(

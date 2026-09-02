@@ -243,11 +243,21 @@ export class CommandLoweringService {
    */
   getPassthroughReason(command: NormalizedCommand): PassthroughReason | undefined {
     const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
-    if (/<[^>]+>/.test(command.command)) {
+    if (/<[^>]+>/.test(command.command) || /\\[A-Z_a-z]/.test(command.command)) {
       // Macro bodies use ASAR-style `<param>` placeholders that are resolved
-      // during normalized dispatch. Lowering them early would send placeholders
-      // like `<value>` straight into numeric evaluation.
+      // and ca65-style `\param` placeholders that are resolved during normalized
+      // dispatch. Lowering them early would send placeholders straight into
+      // numeric evaluation.
       return "macroPlaceholder";
+    }
+    if (command.keyword.startsWith(".") && this.host.directiveRegistry.has(keyword)) {
+      if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
+        return undefined;
+      }
+      if (command.parsed.dataDirective) {
+        return "dataDirective";
+      }
+      return "registeredPreprocessDirective";
     }
     if (
       command.kind !== "unknown" &&

@@ -535,6 +535,16 @@ Rules worth knowing:
 
 The encoder accepts the canonical forms listed in the appendix plus numbered bit operations such as `bbs0 dp,label`, `bbc7 dp,label`, and carry/bit spellings exercised by [`arch-spc700.asm`](../../fixtures/asar/tests/arch-spc700.asm).
 
+The disassembly API exports `Spc700Decoder`, `spc700Specifications`, `buildSpc700Catalog()`, and `formatSpc700Instruction()`. The fixed-width 256-opcode table is the shared authority for decoding and editor tooling. Decoding reports control flow, branch/call references, bit-address operands, direct-page-aware data references, and foundational PSW/stack effects. Formatting uses this project's native spellings, including `(X+)` for post-increment.
+
+Standalone static analysis uses `Spc700AramImage` and `analyzeSpc700Aram()`. `snes.spc700.aram` is a distinct 16-bit project address space; it is never treated as `rom.file` or the 65816 `snes.cpu` bus. The analyzer follows branches, direct calls, returns, BRK, and TCALL vectors available in the represented image, preserves unresolved indirect flow for target overrides, tracks PSW.P through joins and explicit `PUSH P` / `POP P`, identifies volatile `$00F0`–`$00FF` I/O, and emits project-shaped CFG, annotation, and evidence records. Standalone payloads require explicit or project-derived entry points because a payload is not assumed to be a reset-time 64 KiB memory snapshot.
+
+Embedded Nintendo-style/NSPC streams are parsed with `parseSpc700UploadStream(rom, startOffset)`. The start is always explicit; the parser does not scan for a guessed signature. It bounds every little-endian `{size, destination, payload}` record and requires the `{0, execute}` trailer. `materializeSpc700UploadBlock()` copies payloads into analyzable `Spc700AramImage` segments, splitting a 16-bit wrap at `$FFFF` while retaining source ROM offsets. `spc700UploadProjectRecords()` emits a nested ROM stream → block → payload hierarchy with cross-address-space ARAM projection children and hash-bound detector evidence, never ROM bytes.
+
+`npm run fixture:framework:spc700-oracle` optionally checks the external GPL SNES ROM Framework fixture without importing its implementation. It compares all 256 `SPC700ASMDis.asm` opcode macro mnemonics with the independent native table and validates a synthetic upload stream; when a genuine SNES Asar 1.x/2.x is installed, it also compares the fixture's emitted byte sequence.
+
+`renderSpc700AramSource()` emits byte-exact native source for a standalone ARAM payload using `arch spc700-raw`. `renderSpc700UploadSource()` recreates bounded Nintendo-style upload streams with `spcblock`/`endspcblock`, including the execute trailer. Both renderers preserve undecodable tails as `db` rather than guessing instructions.
+
 ### Super FX
 
 `arch superfx` selects the GSU encoder. The wiki's [Super FX opcode matrix](https://wiki.superfamicom.org/super-fx-opcode-matrix) is a convenient hardware-level grid, while [`arch-superfx.asm`](../../fixtures/asar/tests/arch-superfx.asm) is the byte-parity language tour.
@@ -554,11 +564,24 @@ bra .again
 
 Super FX ALT variants are emitted automatically for mnemonics such as `ADC`, `BIC`, `UMULT`, `STB`, and `LDB`; explicit `ALT1`, `ALT2`, and `ALT3` remain available. Register constraints are checked-for example, jumps use `R8` through `R13`, while increment/decrement top out at `R14`.
 
+The disassembly API exports `SuperFxDecoder`, `superFxOpcodeMatrix`, `superFxSpecifications`, `superFxFusedSpecifications`, `buildSuperFxCatalog()`, and `formatSuperFxInstruction()`. The decoder fuses canonical ALT and `WITH`/`TO`/`FROM` selector sequences, retains explicit ambiguity when incoming state is unknown, and identifies direct and indirect R15 control transfers. `SuperFxRomImage` and `analyzeSuperFxRom()` keep GSU addresses in the distinct `snes.superfx.rom` address space while using the shared CFG, evidence, annotations, and target-override contracts. `renderSuperFxRomSource()` emits byte-exact native source and preserves unsafe tails as data.
+
+`npm run fixture:framework:superfx-oracle` checks the GPL SNES ROM Framework fixture without copying its implementation. It compares all 256 `SuperFXASMDis.asm` macro mnemonics and, when a genuine SNES Asar is available, assembles a temporary fixture copy to verify representative base and ALT families.
+
 One compatibility wrinkle deserves a spotlight. Hardware encodes short `LMS`/`SMS` addresses as a word index (`address >> 1`). Asar writes the raw low byte. The plugin defaults to hardware-correct behavior. Set `asarSuperFxMoveShortAddress: true` only when reproducing Asar bytes is the actual goal.
 
 ## Memory Maps & the Program Counter
 
 A SNES CPU address is not a file offset. The cartridge decoder maps portions of the 24-bit bus to ROM, often with mirrors. Read the wiki's [memory mapping overview](https://wiki.superfamicom.org/memory-mapping) for the hardware picture; read [`src/target/address-space.ts`](./src/target/address-space.ts) for the exact formulas used here.
+
+## 65816 Source Export
+
+`exportSnes65816Source()` converts a validated analysis project and its hash-matching `RomImage`
+into mapper-bank native source. It re-decodes persisted CFG nodes from their recorded incoming
+state, emits only compatible non-conflicting boundaries as instructions, and preserves all other
+bytes in deterministic `incbin` assets. Native instructions carry explicit `.b`/`.w`/`.l` operand
+qualification and `.a8`/`.a16`/`.i8`/`.i16` state transitions. The CLI wraps this API with
+`uttori-asm export` and `uttori-asm verify-roundtrip`.
 
 ### Mapper Directives
 
@@ -1289,8 +1312,9 @@ If you think it should be working here, and not in the mentioned compatibility a
 | --- | --- | --- |
 | Plugin registration and options  | [`src/index.ts`](./src/index.ts) | [`assembler.integration.test.ts`](./tests/assembler.integration.test.ts) |
 | 65C816 encoder                   | [`src/architectures/65816.ts`](./src/architectures/65816.ts) | [`arch-65816.asm`](../../fixtures/asar/tests/arch-65816.asm), [`opcodesize.asm`](../../fixtures/asar/tests/opcodesize.asm) |
-| SPC700 encoder/runtime           | [`src/architectures/spc700.ts`](./src/architectures/spc700.ts), [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`arch-spc700.asm`](../../fixtures/asar/tests/arch-spc700.asm), [`spcblock.asm`](../../fixtures/asar/tests/spcblock.asm) |
-| Super FX encoder                 | [`src/architectures/superfx.ts`](./src/architectures/superfx.ts) | [`arch-superfx.asm`](../../fixtures/asar/tests/arch-superfx.asm) |
+| SPC700 specification/decoder/encoder/runtime | [`src/architectures/spc700-spec.ts`](./src/architectures/spc700-spec.ts), [`src/architectures/spc700-decoder.ts`](./src/architectures/spc700-decoder.ts), [`src/architectures/spc700.ts`](./src/architectures/spc700.ts), [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`spc700-decoder.test.ts`](./tests/spc700-decoder.test.ts), [`arch-spc700.asm`](../../fixtures/asar/tests/arch-spc700.asm), [`spcblock.asm`](../../fixtures/asar/tests/spcblock.asm) |
+| Super FX specification/decoder/encoder | [`src/architectures/superfx-spec.ts`](./src/architectures/superfx-spec.ts), [`src/architectures/superfx-decoder.ts`](./src/architectures/superfx-decoder.ts), [`src/architectures/superfx.ts`](./src/architectures/superfx.ts) | [`superfx-decoder.test.ts`](./tests/superfx-decoder.test.ts), [`superfx-analysis.test.ts`](./tests/superfx-analysis.test.ts), [`arch-superfx.asm`](../../fixtures/asar/tests/arch-superfx.asm) |
+| Processor source export          | [`src/disassembler/processor-source-export.ts`](./src/disassembler/processor-source-export.ts) | [`processor-source-export.test.ts`](./tests/processor-source-export.test.ts) |
 | Mapper and checksum policy       | [`src/target/address-space.ts`](./src/target/address-space.ts), [`src/asar/compatibility.ts`](./src/asar/compatibility.ts) | [`mappers.asm`](../../fixtures/asar/tests/mappers.asm), [`compatibility-profile.test.ts`](./tests/compatibility-profile.test.ts) |
 | Freespace                        | [`src/directives/freespace.ts`](./src/directives/freespace.ts) | [`freespace.test.ts`](./tests/directives/freespace.test.ts) |
 | SPC directives                   | [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`spc.test.ts`](./tests/directives/spc.test.ts) |
@@ -1402,7 +1426,7 @@ These tables come from the same descriptors used by hover and completion. They l
 
 ### SPC700 Instruction Catalog
 
-The compact catalog shows representative canonical forms. The encoder additionally covers the register, indexed, bit, carry, and branch variants in the [SPC700 parity fixture](../../fixtures/asar/tests/arch-spc700.asm).
+The generated catalog contains one machine-readable form for each opcode. The table below remains a compact reading guide; use the exported `spc700Specifications` for exact opcode, size, syntax, flow, and effect metadata.
 
 | Mnemonic | What it does | Accepted operand forms |
 | --- | --- | --- |
@@ -1430,7 +1454,7 @@ The compact catalog shows representative canonical forms. The encoder additional
 | `EI`, `DI`, `STOP` | Interrupt/processor control. | `implied` |
 | `PUSH`, `POP` | Transfer a register to/from the stack. | `A` (other fixture-backed registers are encoder-supported) |
 
-Numbered `BBS0`...`BBS7` and `BBC0`...`BBC7` bit branches are supported even though they are normalized by the encoder rather than stored as 16 separate catalog rows.
+Numbered `BBS0`...`BBS7` and `BBC0`...`BBC7` bit branches have distinct opcode rows in the generated catalog.
 
 The complete fixture-backed SPC700 mnemonic set is:
 

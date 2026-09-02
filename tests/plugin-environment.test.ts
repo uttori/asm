@@ -1,6 +1,7 @@
 import { test } from "./ava-helper.js";
 
 import { PluginError } from "../packages/core/src/plugin/diagnostics.js";
+import { Assembler } from "../packages/core/src/assembler.js";
 import {
   AssemblerEnvironment,
   type EnvironmentContributions,
@@ -15,6 +16,7 @@ import type {
   OutputFormatContribution,
   TargetContribution,
 } from "../packages/core/src/plugin/contracts.js";
+import { PLUGIN_API_VERSION } from "../packages/core/src/plugin/contracts.js";
 
 const errorCode = (error: unknown): string | undefined =>
   error instanceof PluginError ? error.code : undefined;
@@ -41,7 +43,13 @@ const architecture = (
   splitOperands: () => [],
   classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
   createEncoder: () => ({ estimateSize: () => 0, encode: () => true }),
-  instructions: [{ mnemonic: "NOP", summary: "No operation.", modes: [{ mode: "implied", syntax: "", size: 1 }] }],
+  instructions: [
+    {
+      mnemonic: "NOP",
+      summary: "No operation.",
+      modes: [{ mode: "implied", syntax: "", size: 1 }],
+    },
+  ],
   ...extras,
 });
 
@@ -71,7 +79,9 @@ const directiveSet: DirectiveSetContribution = {
       keywords: ["emitx"],
       phase: "lowered",
       createHandler: () => () => undefined,
-      tooling: [{ keyword: "emitx", summary: "Emit a fixture byte.", syntax: "emitx", group: "data" }],
+      tooling: [
+        { keyword: "emitx", summary: "Emit a fixture byte.", syntax: "emitx", group: "data" },
+      ],
     },
   ],
 };
@@ -128,7 +138,10 @@ const contributions = (
   outputFormats: [owned("out.raw", outputFormat)],
   directiveSets: [owned("dir.set", directiveSet)],
   expressionSets: [owned("expr.set", expressionSet)],
-  lifecycles: [owned("life.one", lifecycle), owned("life.two", { id: "life.two", create: () => ({}) }, 1)],
+  lifecycles: [
+    owned("life.one", lifecycle),
+    owned("life.two", { id: "life.two", create: () => ({}) }, 1),
+  ],
   targets: [owned("tgt.main", target(targetOverrides))],
   ...extras,
 });
@@ -188,18 +201,30 @@ test("AssemblerEnvironment resolves contributions, owners, summaries, and toolin
     environment.getTargetSummaries().map((item) => item.id),
     ["tgt.main"],
   );
-  t.deepEqual(catalog.getInstructions("cpu.one").map((item) => item.mnemonic), ["NOP"]);
+  t.deepEqual(
+    catalog.getInstructions("cpu.one").map((item) => item.mnemonic),
+    ["NOP"],
+  );
   t.deepEqual(catalog.getInstructions("cpu.extra"), []);
   t.deepEqual(catalog.getInstructions("unknown"), []);
   t.true(catalog.getDirectives().some((item) => item.keyword === "emitx"));
   t.true(catalog.getDirectives().some((item) => item.keyword === "barex"));
   t.true(catalog.getDirectives().some((item) => item.keyword === "setlevel"));
   t.true(catalog.getDirectives().some((item) => item.keyword === "org"));
-  t.deepEqual(catalog.getExpressionFunctions().map((item) => item.name), ["forty", "zero"]);
+  t.deepEqual(
+    catalog.getExpressionFunctions().map((item) => item.name),
+    ["forty", "zero"],
+  );
   t.deepEqual(catalog.getExpressionFunctions()[0].aliases, ["xl"]);
   t.deepEqual(catalog.getExpressionFunctions()[1].aliases, []);
-  t.deepEqual(catalog.getArchitectures().map((item) => item.id), ["cpu.one"]);
-  t.deepEqual(catalog.getTargets().map((item) => item.id), ["tgt.main"]);
+  t.deepEqual(
+    catalog.getArchitectures().map((item) => item.id),
+    ["cpu.one"],
+  );
+  t.deepEqual(
+    catalog.getTargets().map((item) => item.id),
+    ["tgt.main"],
+  );
   t.deepEqual(
     environment.getTargetLifecycles("tgt.main").map((item) => item.contributionId),
     ["life.one"],
@@ -226,6 +251,55 @@ test("AssemblerEnvironment resolves contributions, owners, summaries, and toolin
       .getInstructions("cpu.one"),
     [],
   );
+});
+
+test("ArchitectureContribution remains encoder-compatible and accepts decoder-only analysis", (t) => {
+  t.is(PLUGIN_API_VERSION, 1);
+  const encoderOnly = architecture("cpu.encoder");
+  t.truthy(encoderOnly.createEncoder);
+  t.is(encoderOnly.createDecoder, undefined);
+
+  const decoderOnly: ArchitectureContribution = {
+    id: "cpu.decode",
+    displayName: "Decoder only",
+    unknownInstructionBehavior: "throw",
+    splitOperands: () => [],
+    classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
+    createDecoder: () => ({
+      decode: ({ offset }) => ({
+        kind: "error",
+        code: "invalidOpcode",
+        message: "fixture",
+        offset,
+      }),
+    }),
+    instructionSpecifications: [],
+    instructions: [],
+  };
+  const environment = freeze(
+    { defaultArchitecture: "cpu.decode", architectures: ["cpu.decode"] },
+    { architectures: [owned("cpu.decode", decoderOnly)] },
+  );
+  t.truthy(environment.getArchitecture("cpu.decode")?.createDecoder);
+  const decoded = decoderOnly
+    .createDecoder?.({
+      targetId: "tgt.main",
+      options: {},
+      state: {
+        get: () => {
+          throw new Error("unused fixture state");
+        },
+      },
+    })
+    .decode({
+      source: { length: 0, readByte: () => undefined, readBytes: () => undefined },
+      offset: 0,
+      logicalAddress: 0,
+    });
+  t.like(decoded, { kind: "error", code: "invalidOpcode" });
+  const error = t.throws(() => new Assembler({ environment, target: "tgt.main" }));
+  t.is(errorCode(error), "PLUGIN_TARGET_INVALID");
+  t.true(error.message.includes("does not provide an encoder"));
 });
 
 test("AssemblerEnvironment rejects incomplete or colliding target graphs", (t) => {
@@ -262,8 +336,14 @@ test("AssemblerEnvironment tooling catalog skips dangling target references", (t
 
   const catalog = environment.getToolingCatalog("tgt.main");
   t.true(catalog.getDirectives().some((item) => item.keyword === "emitx"));
-  t.deepEqual(catalog.getExpressionFunctions().map((item) => item.name), ["forty", "zero"]);
-  t.deepEqual(catalog.getArchitectures().map((item) => item.id), ["cpu.one"]);
+  t.deepEqual(
+    catalog.getExpressionFunctions().map((item) => item.name),
+    ["forty", "zero"],
+  );
+  t.deepEqual(
+    catalog.getArchitectures().map((item) => item.id),
+    ["cpu.one"],
+  );
   t.deepEqual(
     environment.getTargetLifecycles("tgt.main").map((item) => item.contributionId),
     ["life.one"],
@@ -283,23 +363,29 @@ test("AssemblerEnvironment reports duplicate architecture aliases with both owne
     ),
   );
   t.is(errorCode(error), "PLUGIN_ALIAS_DUPLICATE");
-  t.true((error).message.includes("plugin.a"));
-  t.true((error).message.includes("plugin.b"));
+  t.true(error.message.includes("plugin.a"));
+  t.true(error.message.includes("plugin.b"));
 });
 
 test("AssemblerEnvironment rejects duplicate target aliases, directive keywords, and expression names", (t) => {
-  const aliasError = t.throws(() =>
-    new AssemblerEnvironment(
-      contributions(
-        { aliases: ["shared"] },
-        {
-          targets: [
-            owned("tgt.main", target({ aliases: ["shared"] })),
-            owned("tgt.other", target({ id: "tgt.other", aliases: ["shared"] }), 1, "plugin.other"),
-          ],
-        },
+  const aliasError = t.throws(
+    () =>
+      new AssemblerEnvironment(
+        contributions(
+          { aliases: ["shared"] },
+          {
+            targets: [
+              owned("tgt.main", target({ aliases: ["shared"] })),
+              owned(
+                "tgt.other",
+                target({ id: "tgt.other", aliases: ["shared"] }),
+                1,
+                "plugin.other",
+              ),
+            ],
+          },
+        ),
       ),
-    ),
   );
   t.is(errorCode(aliasError), "PLUGIN_ALIAS_DUPLICATE");
 
@@ -344,7 +430,10 @@ test("AssemblerEnvironment rejects duplicate target aliases, directive keywords,
         freeze(
           { expressionSets: ["expr.set", "expr.extra"] },
           {
-            expressionSets: [owned("expr.set", expressionSet), owned("expr.extra", extraExpressions)],
+            expressionSets: [
+              owned("expr.set", expressionSet),
+              owned("expr.extra", extraExpressions),
+            ],
           },
         ),
       ),

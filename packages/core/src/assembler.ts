@@ -1389,6 +1389,16 @@ export class Assembler {
           contributionId,
         });
       }
+      if (!contribution.createEncoder) {
+        throw new PluginError(
+          `Architecture contribution '${contributionId}' does not provide an encoder.`,
+          {
+            code: "PLUGIN_TARGET_INVALID",
+            targetId,
+            contributionId,
+          },
+        );
+      }
       let encoder: ArchitectureEncoder;
       try {
         const architectureOperands: OperandResolutionContext = {

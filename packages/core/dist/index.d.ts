@@ -5,6 +5,7 @@ export type { MacroDefinition } from "./services/macro-engine.js";
 export type { StructDefinition } from "./services/struct-engine.js";
 export type { LabelEntry } from "./services/symbol-scope-service.js";
 export * from "./architecture-types.js";
+export * from "./decoder-types.js";
 export * from "./architecture-registry.js";
 export * from "./address-width.js";
 export * from "./operand-syntax.js";

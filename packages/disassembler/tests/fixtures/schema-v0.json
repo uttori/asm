@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 0,
+  "target": "fixture.target",
+  "romHash": "1111111111111111111111111111111111111111111111111111111111111111",
+  "romSize": 32768,
+  "mapper": "fixture"
+}

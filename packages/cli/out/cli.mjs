@@ -2024,8 +2024,8 @@ var require_semver2 = __commonJS({
 });
 
 // packages/cli/src/index.ts
-import * as fs4 from "node:fs";
-import path4 from "node:path";
+import * as fs8 from "node:fs";
+import path7 from "node:path";
 import { pathToFileURL as pathToFileURL2 } from "node:url";
 
 // packages/core/src/addressToLine.ts
@@ -2139,12 +2139,12 @@ function maximumAddressForWidth(addressWidth) {
   }
   return 2 ** addressWidth - 1;
 }
-function normalizeAddressForWidth(address, addressWidth) {
+function normalizeAddressForWidth(address3, addressWidth) {
   const modulus = maximumAddressForWidth(addressWidth) + 1;
-  if (!Number.isFinite(address) || !Number.isInteger(address)) {
-    throw new Error(`Logical address must be a finite integer, got ${address}.`);
+  if (!Number.isFinite(address3) || !Number.isInteger(address3)) {
+    throw new Error(`Logical address must be a finite integer, got ${address3}.`);
   }
-  return (address % modulus + modulus) % modulus;
+  return (address3 % modulus + modulus) % modulus;
 }
 
 // packages/core/src/directive-groups.ts
@@ -5779,20 +5779,20 @@ var parseAsarTableLine = (line, rtl, lineNumber) => {
     if (eq < 1 || eq !== line.length - 2) {
       throw invalidTableLine(lineNumber);
     }
-    const hex2 = line.slice(0, eq);
-    if (!/^[\dA-Fa-f]+$/.test(hex2)) {
+    const hex4 = line.slice(0, eq);
+    if (!/^[\dA-Fa-f]+$/.test(hex4)) {
       throw invalidTableLine(lineNumber);
     }
-    return { char: line[eq + 1], value: Number.parseInt(hex2, 16) };
+    return { char: line[eq + 1], value: Number.parseInt(hex4, 16) };
   }
   if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
     throw invalidTableLine(lineNumber);
   }
-  const hex = line.slice(2);
-  if (!/^[\dA-Fa-f]+$/.test(hex)) {
+  const hex3 = line.slice(2);
+  if (!/^[\dA-Fa-f]+$/.test(hex3)) {
     throw invalidTableLine(lineNumber);
   }
-  return { char: line[0], value: Number.parseInt(hex, 16) };
+  return { char: line[0], value: Number.parseInt(hex3, 16) };
 };
 var handleClearTable = ({ session }) => {
   session.characterMappings.clear();
@@ -6856,7 +6856,7 @@ var ProgramModelBuilder = class {
       return;
     }
     if (keyword === "if") {
-      const branch2 = {
+      const branch = {
         kind: "if",
         header: command,
         conditionNode: command.parsed.condition?.expression,
@@ -6866,12 +6866,12 @@ var ProgramModelBuilder = class {
       const conditionalNode = {
         type: "if",
         header: command,
-        branches: [branch2],
+        branches: [branch],
         startLine: command.source.line
       };
       this.pushToCurrent(state, conditionalNode);
       state.ifStack.push(conditionalNode);
-      state.branchStack.push(branch2);
+      state.branchStack.push(branch);
       return;
     }
     if (keyword === "elseif" || keyword === "else") {
@@ -6886,15 +6886,15 @@ var ProgramModelBuilder = class {
           closedBranch.endLine = command.source.line;
         }
       }
-      const branch2 = {
+      const branch = {
         kind: keyword,
         header: command,
         conditionNode: keyword === "elseif" ? command.parsed.condition?.expression : void 0,
         commands: [],
         startLine: command.source.line
       };
-      currentIf.branches.push(branch2);
-      state.branchStack.push(branch2);
+      currentIf.branches.push(branch);
+      state.branchStack.push(branch);
       return;
     }
     if (keyword === "endif") {
@@ -7155,13 +7155,13 @@ var CommandLoweringService = class {
     return {
       kind: "conditional",
       header: conditionalNode.header,
-      branches: conditionalNode.branches.map((branch2) => ({
-        kind: branch2.kind,
-        header: branch2.header,
-        conditionNode: branch2.conditionNode,
-        commands: branch2.commands.map((command) => this.lowerExecutableNode(command)),
-        startLine: branch2.startLine,
-        endLine: branch2.endLine
+      branches: conditionalNode.branches.map((branch) => ({
+        kind: branch.kind,
+        header: branch.header,
+        conditionNode: branch.conditionNode,
+        commands: branch.commands.map((command) => this.lowerExecutableNode(command)),
+        startLine: branch.startLine,
+        endLine: branch.endLine
       })),
       startLine: conditionalNode.startLine,
       endLine: conditionalNode.endLine
@@ -7197,8 +7197,17 @@ var CommandLoweringService = class {
    */
   getPassthroughReason(command) {
     const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
-    if (/<[^>]+>/.test(command.command)) {
+    if (/<[^>]+>/.test(command.command) || /\\[A-Z_a-z]/.test(command.command)) {
       return "macroPlaceholder";
+    }
+    if (command.keyword.startsWith(".") && this.host.directiveRegistry.has(keyword)) {
+      if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
+        return void 0;
+      }
+      if (command.parsed.dataDirective) {
+        return "dataDirective";
+      }
+      return "registeredPreprocessDirective";
     }
     if (command.kind !== "unknown" && command.kind !== "opcodeCandidate" && command.kind !== "directive") {
       return command.kind;
@@ -11045,16 +11054,16 @@ var Assembler = class _Assembler {
    * Sets write position.
    * @param {number} address The address.
    */
-  setWritePosition(address) {
-    this.currentTargetAddress = address;
-    this.currentTargetBaseAddress = address;
-    this.currentTargetStartAddress = address;
-    this.currentTargetBaseStartAddress = address;
+  setWritePosition(address3) {
+    this.currentTargetAddress = address3;
+    this.currentTargetBaseAddress = address3;
+    this.currentTargetStartAddress = address3;
+    this.currentTargetBaseStartAddress = address3;
     if (this.activeStageExecutionState) {
-      this.activeStageExecutionState.cursor.currentTargetAddress = address;
-      this.activeStageExecutionState.cursor.currentTargetBaseAddress = address;
-      this.activeStageExecutionState.cursor.currentTargetStartAddress = address;
-      this.activeStageExecutionState.cursor.currentTargetBaseStartAddress = address;
+      this.activeStageExecutionState.cursor.currentTargetAddress = address3;
+      this.activeStageExecutionState.cursor.currentTargetBaseAddress = address3;
+      this.activeStageExecutionState.cursor.currentTargetStartAddress = address3;
+      this.activeStageExecutionState.cursor.currentTargetBaseStartAddress = address3;
     }
   }
   /**
@@ -11715,7 +11724,7 @@ var Assembler = class _Assembler {
   createCursorAddressFacade() {
     return {
       recordCurrentAddress: () => this.recordCurrentAddress(),
-      setWritePosition: (address) => this.setWritePosition(address),
+      setWritePosition: (address3) => this.setWritePosition(address3),
       syncWriteStarts: () => this.syncWriteStarts(),
       incrementBytesWritten: (num) => this.incrementBytesWritten(num)
     };
@@ -11904,6 +11913,16 @@ var Assembler = class _Assembler {
           targetId,
           contributionId
         });
+      }
+      if (!contribution.createEncoder) {
+        throw new PluginError(
+          `Architecture contribution '${contributionId}' does not provide an encoder.`,
+          {
+            code: "PLUGIN_TARGET_INVALID",
+            targetId,
+            contributionId
+          }
+        );
       }
       let encoder;
       try {
@@ -12321,7 +12340,7 @@ var Assembler = class _Assembler {
                   {
                     state: this.pluginState,
                     addresses: {
-                      toOutputOffset: (address) => this.outputWriter.toOutputOffset(address),
+                      toOutputOffset: (address3) => this.outputWriter.toOutputOffset(address3),
                       fromOutputOffset: (offset) => this.outputWriter.fromOutputOffset(offset)
                     },
                     output: {
@@ -12348,7 +12367,7 @@ var Assembler = class _Assembler {
   }
   expressionHost = {
     resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
-    convertLogicalToOutputOffset: (address) => this.outputWriter.toOutputOffset(address),
+    convertLogicalToOutputOffset: (address3) => this.outputWriter.toOutputOffset(address3),
     convertOutputOffsetToLogical: (offset) => this.outputWriter.fromOutputOffset(offset),
     getCurrentAddress: () => this.currentTargetAddress,
     getCurrentBaseAddress: () => this.currentTargetBaseAddress,
@@ -12960,14 +12979,14 @@ var Assembler = class _Assembler {
       }
       return;
     }
-    let instruction2 = lowered;
+    let instruction = lowered;
     if (lowered.command) {
       const refreshed = this.commandLoweringService.lowerCommand(lowered.command);
       if (refreshed.kind === "instruction") {
-        instruction2 = refreshed;
+        instruction = refreshed;
       }
     }
-    const wasOpcode = this.asblock_pick(instruction2);
+    const wasOpcode = this.asblock_pick(instruction);
     if (!wasOpcode) {
       debug4("\u{1F4A5} assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
     }
@@ -12991,12 +13010,12 @@ var Assembler = class _Assembler {
    * Adds a mapping of the current address to the source line number.
    * @param {number} address The logical address to add to the mapping.
    */
-  addAddressToLine(address) {
+  addAddressToLine(address3) {
     incrementInternalCounter("addressMappings");
     if (!this.collectSourceMetadata) {
       return;
     }
-    this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address);
+    this.addressToLineMapping.includeMapping(this.currentFile, this.currentLine + 1, address3);
   }
   /**
    * Evaluates a range expression and returns the result.
@@ -13527,8 +13546,8 @@ var Assembler = class _Assembler {
    */
   cloneRelativeLabels(source) {
     const clone = {};
-    for (const [depth, entries] of Object.entries(source)) {
-      clone[Number(depth)] = entries.map((entry) => ({ ...entry }));
+    for (const [depth, entries3] of Object.entries(source)) {
+      clone[Number(depth)] = entries3.map((entry) => ({ ...entry }));
     }
     return clone;
   }
@@ -14051,23 +14070,23 @@ var Assembler = class _Assembler {
    * @param {(commands: TCommand[]) => void} executeCommands The execute commands.
    */
   executeConditionalBranches(branches, executeCommands) {
-    for (const branch2 of branches) {
-      if (branch2.kind === "else") {
-        executeCommands(branch2.commands);
+    for (const branch of branches) {
+      if (branch.kind === "else") {
+        executeCommands(branch.commands);
         return;
       }
-      if (!branch2.conditionNode) {
+      if (!branch.conditionNode) {
         continue;
       }
       let branchConditionMatched = false;
       this.requireStaticLabelLookup = true;
       try {
-        branchConditionMatched = this.evaluateExpression(branch2.conditionNode);
+        branchConditionMatched = this.evaluateExpression(branch.conditionNode);
       } finally {
         this.requireStaticLabelLookup = false;
       }
       if (branchConditionMatched) {
-        executeCommands(branch2.commands);
+        executeCommands(branch.commands);
         return;
       }
     }
@@ -14096,9 +14115,880 @@ var createEncoderRuntime = (context) => ({
   diagnostics: context.diagnostics
 });
 
-// packages/plugin-loader-node/src/configuration.ts
-import { existsSync, promises as fs3 } from "node:fs";
+// packages/core/src/decoder-types.ts
+var Uint8ArrayDecoderSource = class {
+  #bytes;
+  constructor(bytes) {
+    this.#bytes = Uint8Array.from(bytes);
+  }
+  /**
+   * The length of the byte source.
+   * @returns {number} The length of the byte source.
+   */
+  get length() {
+    return this.#bytes.length;
+  }
+  /**
+   * Reads a byte from the byte source.
+   * @param {number} offset The offset to read from.
+   * @returns {number | undefined} The byte at the offset, or undefined if the offset is out of bounds.
+   */
+  readByte(offset) {
+    if (!Number.isInteger(offset) || offset < 0 || offset >= this.#bytes.length) return void 0;
+    return this.#bytes[offset];
+  }
+  /**
+   * Reads bytes from the byte source.
+   * @param {number} offset The offset to read from.
+   * @param {number} length The length to read.
+   * @returns {Uint8Array | undefined} The bytes at the offset and length, or undefined if the offset or length is out of bounds.
+   */
+  readBytes(offset, length) {
+    if (!Number.isInteger(offset) || !Number.isInteger(length) || offset < 0 || length < 0) {
+      return void 0;
+    }
+    const end = offset + length;
+    if (!Number.isSafeInteger(end) || end > this.#bytes.length) return void 0;
+    return this.#bytes.slice(offset, end);
+  }
+};
+
+// packages/disassembler/src/project-store.ts
+import { createHash } from "node:crypto";
+import * as fs3 from "node:fs";
 import path2 from "node:path";
+
+// packages/disassembler/src/project-types.ts
+var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
+var ANALYSIS_PROJECT_SCHEMA_VERSION = 2;
+var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
+
+// packages/disassembler/src/project-store.ts
+var SHARD_PATHS = Object.freeze({
+  analysis: "analysis/control-flow.json",
+  annotations: "analysis/annotations.json",
+  labels: "analysis/labels.json",
+  comments: "analysis/comments.json",
+  regions: "analysis/regions.json",
+  evidence: "analysis/evidence.json",
+  imports: "analysis/imports.json"
+});
+var sha256 = (value) => createHash("sha256").update(value).digest("hex");
+var canonicalize = (value) => {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalize(entry)])
+    );
+  }
+  return value;
+};
+var canonicalJson = (value) => `${JSON.stringify(canonicalize(value), void 0, 2)}
+`;
+var assertSafeRelativePath = (relative2) => {
+  if (relative2 === "" || path2.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === "..")) {
+    throw new Error(`Unsafe project shard path '${relative2}'.`);
+  }
+};
+var sortById = (records) => [...records].sort((left, right) => left.id.localeCompare(right.id));
+var normalizedShards = (shards) => ({
+  analysis: [...shards.analysis].sort(
+    (left, right) => ("address" in left ? left.address : Number.MAX_SAFE_INTEGER) - ("address" in right ? right.address : Number.MAX_SAFE_INTEGER) || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id)
+  ),
+  annotations: [...shards.annotations].sort(
+    (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.start - right.start || left.end - right.end || left.id.localeCompare(right.id)
+  ),
+  labels: [...shards.labels].sort(
+    (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
+  ),
+  comments: [...shards.comments].sort(
+    (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
+  ),
+  regions: [...shards.regions].sort(
+    (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.start - right.start || left.end - right.end || left.id.localeCompare(right.id)
+  ),
+  evidence: sortById(shards.evidence),
+  imports: sortById(shards.imports)
+});
+var validateManifest2 = (manifest) => {
+  if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
+    throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
+  }
+  if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
+    throw new Error(
+      `Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`
+    );
+  }
+  if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) throw new Error("Invalid ROM SHA-256.");
+  if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
+    throw new Error("Invalid ROM content SHA-256.");
+  }
+  const shardIds = /* @__PURE__ */ new Set();
+  const shardPaths = /* @__PURE__ */ new Set();
+  for (const shard of manifest.shards) {
+    assertSafeRelativePath(shard.path);
+    if (!(shard.kind in SHARD_PATHS))
+      throw new Error(`Unknown analysis shard kind '${shard.kind}'.`);
+    if (shardIds.has(shard.id)) throw new Error(`Duplicate analysis shard id '${shard.id}'.`);
+    if (shardPaths.has(shard.path))
+      throw new Error(`Duplicate analysis shard path '${shard.path}'.`);
+    shardIds.add(shard.id);
+    shardPaths.add(shard.path);
+  }
+};
+var FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
+var assertNoRomPayload = (value, location) => {
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index++) {
+      assertNoRomPayload(value[index], `${location}[${index}]`);
+    }
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, entry] of Object.entries(value)) {
+    if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key)) {
+      throw new Error(`ROM byte payload '${location}.${key}' is forbidden in analysis projects.`);
+    }
+    assertNoRomPayload(entry, `${location}.${key}`);
+  }
+};
+var validateLoadedShards = (shards) => {
+  const evidenceIds = new Set(shards.evidence.map((record) => record.id));
+  for (const [kind, records] of Object.entries(shards)) {
+    const ids = /* @__PURE__ */ new Set();
+    for (const record of records) {
+      if (!record || typeof record.id !== "string" || record.id === "") {
+        throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
+      }
+      if (ids.has(record.id)) {
+        throw new Error(`Analysis shard '${kind}' contains duplicate id '${record.id}'.`);
+      }
+      ids.add(record.id);
+      for (const evidence of record.evidence ?? []) {
+        if (!evidenceIds.has(evidence)) {
+          throw new Error(
+            `Analysis record '${record.id}' refers to missing evidence '${evidence}'.`
+          );
+        }
+      }
+    }
+  }
+  for (const interval of [...shards.annotations, ...shards.regions]) {
+    if (!Number.isSafeInteger(interval.start) || !Number.isSafeInteger(interval.end) || interval.start < 0 || interval.end <= interval.start) {
+      throw new Error(`Analysis interval '${interval.id}' has an invalid half-open range.`);
+    }
+  }
+  const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
+  for (const region of shards.regions) {
+    if (!region.parentRegion) continue;
+    const parent = regionsById.get(region.parentRegion);
+    if (!parent) {
+      throw new Error(
+        `Analysis region '${region.id}' refers to missing parent region '${region.parentRegion}'.`
+      );
+    }
+    if (parent.addressSpace === region.addressSpace && (region.start < parent.start || region.end > parent.end)) {
+      throw new Error(
+        `Analysis region '${region.id}' is not contained by parent region '${parent.id}'.`
+      );
+    }
+    const visited = /* @__PURE__ */ new Set([region.id]);
+    let ancestor = parent;
+    while (ancestor.parentRegion) {
+      if (visited.has(ancestor.id)) {
+        throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
+      }
+      visited.add(ancestor.id);
+      const next = regionsById.get(ancestor.parentRegion);
+      if (!next) break;
+      ancestor = next;
+    }
+    if (visited.has(ancestor.id)) {
+      throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
+    }
+  }
+  for (const addressed of [...shards.labels, ...shards.comments]) {
+    if (!Number.isSafeInteger(addressed.address) || addressed.address < 0) {
+      throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
+    }
+  }
+  assertNoRomPayload(shards, "shards");
+};
+var migrateManifest = (input) => {
+  if (!input || typeof input !== "object") throw new Error("Invalid analysis project manifest.");
+  const version = input.schemaVersion;
+  if (version === 0) {
+    const legacy = input;
+    const headerSize = legacy.headerSize ?? 0;
+    const migrated = {
+      format: ANALYSIS_PROJECT_FORMAT,
+      schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,
+      target: legacy.target,
+      rom: {
+        sha256: legacy.romHash,
+        contentSha256: legacy.romHash,
+        fileSize: legacy.romSize + headerSize,
+        contentSize: legacy.romSize,
+        headerSize
+      },
+      mapping: { mapper: legacy.mapper, source: "override", candidates: [] },
+      addressSpaces: [],
+      shards: []
+    };
+    validateManifest2(migrated);
+    return migrated;
+  }
+  if (version === 1) {
+    const migrated = {
+      ...input,
+      schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION
+    };
+    validateManifest2(migrated);
+    return migrated;
+  }
+  if (typeof version !== "number") throw new Error("Manifest schemaVersion is required.");
+  if (version > ANALYSIS_PROJECT_SCHEMA_VERSION) {
+    throw new Error(
+      `Analysis project schema ${version} is newer than supported schema ${ANALYSIS_PROJECT_SCHEMA_VERSION}; refusing to downgrade.`
+    );
+  }
+  if (version < 0 || version !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
+    throw new Error(`No migration exists for analysis project schema ${version}.`);
+  }
+  const manifest = input;
+  validateManifest2(manifest);
+  return manifest;
+};
+var writeAnalysisProject = (directory, project) => {
+  const shards = normalizedShards(project.shards);
+  validateLoadedShards(shards);
+  const descriptors = [];
+  for (const [kind, relative2] of Object.entries(SHARD_PATHS)) {
+    assertSafeRelativePath(relative2);
+    const records = shards[kind];
+    const text = canonicalJson(records);
+    const destination = path2.join(directory, relative2);
+    fs3.mkdirSync(path2.dirname(destination), { recursive: true });
+    fs3.writeFileSync(destination, text);
+    descriptors.push({
+      id: kind,
+      kind,
+      path: relative2,
+      sha256: sha256(text),
+      records: records.length
+    });
+  }
+  const manifest = {
+    ...project.manifest,
+    addressSpaces: [...project.manifest.addressSpaces].sort((a, b) => a.id.localeCompare(b.id)),
+    mapping: {
+      ...project.manifest.mapping,
+      candidates: [...project.manifest.mapping.candidates].sort(
+        (a, b) => b.score - a.score || a.mapper.localeCompare(b.mapper)
+      )
+    },
+    shards: descriptors.sort((a, b) => a.id.localeCompare(b.id))
+  };
+  validateManifest2(manifest);
+  fs3.mkdirSync(directory, { recursive: true });
+  fs3.writeFileSync(path2.join(directory, ANALYSIS_PROJECT_MANIFEST), canonicalJson(manifest));
+  return manifest;
+};
+var loadAnalysisProject = (directory) => {
+  const manifestFile = path2.join(directory, ANALYSIS_PROJECT_MANIFEST);
+  const manifest = migrateManifest(JSON.parse(fs3.readFileSync(manifestFile, "utf8")));
+  const loaded = {};
+  for (const descriptor2 of manifest.shards) {
+    assertSafeRelativePath(descriptor2.path);
+    const text = fs3.readFileSync(path2.join(directory, descriptor2.path), "utf8");
+    if (sha256(text) !== descriptor2.sha256) {
+      throw new Error(`Analysis shard '${descriptor2.path}' does not match its SHA-256.`);
+    }
+    const records = JSON.parse(text);
+    if (!Array.isArray(records) || records.length !== descriptor2.records) {
+      throw new Error(
+        `Analysis shard '${descriptor2.path}' record count does not match its manifest.`
+      );
+    }
+    if (loaded[descriptor2.kind] !== void 0) {
+      throw new Error(`Analysis project contains more than one '${descriptor2.kind}' shard.`);
+    }
+    loaded[descriptor2.kind] = records;
+  }
+  for (const kind of Object.keys(SHARD_PATHS)) {
+    loaded[kind] ??= [];
+  }
+  const shards = loaded;
+  validateLoadedShards(shards);
+  return { manifest, shards };
+};
+var validateProjectRom = (manifest, rom) => {
+  if (manifest.rom.sha256 !== rom.identity.sha256 || manifest.rom.contentSha256 !== rom.identity.contentSha256 || manifest.rom.headerSize !== rom.identity.headerSize) {
+    throw new Error(
+      `ROM identity mismatch: project expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`
+    );
+  }
+};
+var validateAnalysisProject = (directory, rom) => {
+  const project = loadAnalysisProject(directory);
+  if (rom) validateProjectRom(project.manifest, rom);
+  return project;
+};
+
+// packages/disassembler/src/rom-image.ts
+import { createHash as createHash2 } from "node:crypto";
+import * as fs4 from "node:fs";
+var sha2562 = (bytes) => createHash2("sha256").update(bytes).digest("hex");
+var detectCopierHeaderSize = (fileSize) => {
+  if (fileSize < 0) throw new Error("ROM size cannot be negative.");
+  const remainder = fileSize % 32768;
+  if (remainder === 0) return 0;
+  if (remainder === 512) return 512;
+  throw new Error(
+    `ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header; pass an explicit header override.`
+  );
+};
+var RomImage = class _RomImage {
+  /** File and content hashes, sizes, and detected or overridden header size. */
+  identity;
+  /** Path passed to `RomImage.load`, if the image came from disk. */
+  sourcePath;
+  #fileBytes;
+  #contentBytes;
+  /**
+   * @param {Uint8Array} bytes Complete file bytes; copied immediately.
+   * @param {RomLoadOptions & { readonly sourcePath?: string }} [options] Header override and optional origin path.
+   */
+  constructor(bytes, options = {}) {
+    this.#fileBytes = Uint8Array.from(bytes);
+    const headerSize = options.headerSize ?? detectCopierHeaderSize(this.#fileBytes.length);
+    if (headerSize > this.#fileBytes.length) {
+      throw new Error(`Header size ${headerSize} exceeds ROM size ${this.#fileBytes.length}.`);
+    }
+    this.#contentBytes = this.#fileBytes.slice(headerSize);
+    this.sourcePath = options.sourcePath;
+    this.identity = Object.freeze({
+      sha256: sha2562(this.#fileBytes),
+      contentSha256: sha2562(this.#contentBytes),
+      fileSize: this.#fileBytes.length,
+      contentSize: this.#contentBytes.length,
+      headerSize
+    });
+  }
+  /**
+   * Reads a ROM from disk and records `sourcePath`.
+   * @param {string} file Path to the ROM file.
+   * @param {RomLoadOptions} [options] Optional explicit copier-header size.
+   * @returns {RomImage} Loaded image.
+   */
+  static load(file, options = {}) {
+    return new _RomImage(fs4.readFileSync(file), { ...options, sourcePath: file });
+  }
+  /**
+   * Headerless cartridge length in bytes.
+   * @returns {number} The headerless cartridge length in bytes.
+   */
+  get length() {
+    return this.#contentBytes.length;
+  }
+  /**
+   * @param {number} offset Headerless file offset.
+   * @returns {number | undefined} Byte value, or `undefined` when out of range.
+   */
+  readByte(offset) {
+    return Number.isInteger(offset) && offset >= 0 && offset < this.length ? this.#contentBytes[offset] : void 0;
+  }
+  /**
+   * @param {number} offset Headerless file offset.
+   * @param {number} length Number of bytes to copy.
+   * @returns {Uint8Array | undefined} A copy of the slice, or `undefined` when out of range.
+   */
+  read(offset, length) {
+    if (!Number.isInteger(offset) || !Number.isInteger(length) || offset < 0 || length < 0 || offset + length > this.length) {
+      return void 0;
+    }
+    return this.#contentBytes.slice(offset, offset + length);
+  }
+  /**
+   * Returns a defensive copy; callers cannot mutate the loaded image.
+   * @returns {Uint8Array} The headerless ROM content.
+   */
+  bytes() {
+    return this.#contentBytes.slice();
+  }
+  /**
+   * Returns a defensive copy of the optional 512-byte copier header.
+   * @returns {Uint8Array} The copier header bytes.
+   */
+  copierHeaderBytes() {
+    return this.#fileBytes.slice(0, this.identity.headerSize);
+  }
+  /**
+   * Returns a defensive copy of the complete file, including any copier header.
+   * @returns {Uint8Array} The complete file bytes.
+   */
+  fileBytes() {
+    return this.#fileBytes.slice();
+  }
+};
+
+// packages/disassembler/src/source-export.ts
+import { createHash as createHash3 } from "node:crypto";
+import * as fs5 from "node:fs";
+import path3 from "node:path";
+var SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
+var SOURCE_EXPORT_SCHEMA_VERSION = 1;
+var SOURCE_EXPORT_MANIFEST = "generated-files.json";
+var sourceExportSha256 = (value) => createHash3("sha256").update(value).digest("hex");
+var canonicalize2 = (value) => {
+  if (Array.isArray(value)) return value.map(canonicalize2);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalize2(entry)])
+    );
+  }
+  return value;
+};
+var canonicalSourceExportJson = (value) => `${JSON.stringify(canonicalize2(value), null, 2)}
+`;
+var assertSafePath = (relative2) => {
+  if (relative2 === "" || path3.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === ".." || part === "")) {
+    throw new Error(`Unsafe generated-file path '${relative2}'.`);
+  }
+};
+var loadSourceExportManifest = (directory) => {
+  const manifest = JSON.parse(
+    fs5.readFileSync(path3.join(directory, SOURCE_EXPORT_MANIFEST), "utf8")
+  );
+  if (manifest.format !== SOURCE_EXPORT_FORMAT) throw new Error("Invalid source-export format.");
+  if (manifest.schemaVersion !== SOURCE_EXPORT_SCHEMA_VERSION) {
+    throw new Error(`Unsupported source-export schema ${String(manifest.schemaVersion)}.`);
+  }
+  const paths = /* @__PURE__ */ new Set();
+  for (const file of manifest.files) {
+    assertSafePath(file.path);
+    if (paths.has(file.path)) throw new Error(`Duplicate generated-file path '${file.path}'.`);
+    paths.add(file.path);
+  }
+  for (const span of manifest.spans) {
+    if (span.end <= span.start) throw new Error(`Invalid source span '${span.id}'.`);
+    if (!paths.has(span.file)) throw new Error(`Source span '${span.id}' names an unknown file.`);
+  }
+  const contentSpans = manifest.spans.filter((span) => span.role !== "copier-header").sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+  let cursor = 0;
+  for (const span of contentSpans) {
+    if (span.start !== cursor) {
+      throw new Error(
+        `Source spans do not own every content byte exactly once at offset ${cursor}.`
+      );
+    }
+    cursor = span.end;
+  }
+  if (cursor !== manifest.rom.contentSize) {
+    throw new Error(
+      `Source spans cover ${cursor} content bytes, expected ${manifest.rom.contentSize}.`
+    );
+  }
+  const copierSpans = manifest.spans.filter((span) => span.role === "copier-header");
+  if (manifest.rom.headerSize === 0 && copierSpans.length !== 0 || manifest.rom.headerSize === 512 && (copierSpans.length !== 1 || copierSpans[0].start !== 0 || copierSpans[0].end !== 512)) {
+    throw new Error("Source-export copier-header ownership does not match the ROM identity.");
+  }
+  return manifest;
+};
+var validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
+  for (const file of manifest.files) {
+    const absolute = path3.join(directory, file.path);
+    if (!fs5.existsSync(absolute)) throw new Error(`Generated file '${file.path}' is missing.`);
+    const bytes = fs5.readFileSync(absolute);
+    if (bytes.length !== file.size || sourceExportSha256(bytes) !== file.sha256) {
+      throw new Error(`Generated file '${file.path}' was modified after export.`);
+    }
+  }
+};
+var compareByteImages = (expected, actual) => {
+  const common = Math.min(expected.length, actual.length);
+  let firstDifference;
+  for (let index = 0; index < common; index++) {
+    if (expected[index] !== actual[index]) {
+      firstDifference = index;
+      break;
+    }
+  }
+  if (firstDifference === void 0 && expected.length !== actual.length) {
+    firstDifference = common;
+  }
+  return {
+    equal: firstDifference === void 0,
+    expectedLength: expected.length,
+    actualLength: actual.length,
+    expectedSha256: sourceExportSha256(expected),
+    actualSha256: sourceExportSha256(actual),
+    ...firstDifference === void 0 ? {} : { firstDifference }
+  };
+};
+
+// packages/disassembler/src/static-analysis.ts
+var hexAddress = (address3) => address3.toString(16).padStart(6, "0");
+var contextKey = (context) => context.map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`).join("/");
+var nodeIdFor = (address3, context) => `cfg:${hexAddress(address3)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
+var sortedUnique = (values) => [...new Set(values)].sort();
+var sortWork = (left, right) => left.address - right.address || contextKey(left.context).localeCompare(contextKey(right.context)) || left.entryPoint.localeCompare(right.entryPoint) || (left.predecessor ?? "").localeCompare(right.predecessor ?? "");
+var edgeIdFor = (from, kind, toAddress, override) => `edge:${from}:${kind}:${toAddress === void 0 ? "unresolved" : hexAddress(toAddress)}${override ? `:${override}` : ""}`;
+var conflictKindFor = (decoded) => {
+  if (decoded.kind === "ambiguous") return "state-ambiguity";
+  if (decoded.kind === "blocked") return "blocked";
+  return decoded.reason.includes("map") ? "invalid-mapping" : "decode";
+};
+var overriddenTargetKind = (flow) => {
+  if (flow === "call") return "call";
+  if (flow === "interrupt") return "interrupt";
+  if (flow === "conditionalBranch") return "branch";
+  return "jump";
+};
+var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
+  const maxWorkItems = options.maxWorkItems ?? 1e5;
+  const maxCallDepth = options.maxCallDepth ?? 8;
+  if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
+    throw new Error("maxWorkItems must be a positive safe integer.");
+  }
+  if (!Number.isSafeInteger(maxCallDepth) || maxCallDepth < 0) {
+    throw new Error("maxCallDepth must be a non-negative safe integer.");
+  }
+  const overrides = /* @__PURE__ */ new Map();
+  for (const override of [...options.targetOverrides ?? []].sort(
+    (left, right) => left.address - right.address || left.id.localeCompare(right.id)
+  )) {
+    if (overrides.has(override.address)) {
+      throw new Error(`More than one target override exists at $${hexAddress(override.address)}.`);
+    }
+    overrides.set(override.address, override);
+  }
+  const queue = [...seeds].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id)).map((seed) => ({
+    address: seed.address,
+    state: seed.state,
+    context: [],
+    entryPoint: seed.id,
+    evidence: sortedUnique(seed.evidence),
+    path: []
+  }));
+  const states = /* @__PURE__ */ new Map();
+  const nodes = /* @__PURE__ */ new Map();
+  const edges = /* @__PURE__ */ new Map();
+  const functions = /* @__PURE__ */ new Map();
+  const conflicts = /* @__PURE__ */ new Map();
+  const unresolved = /* @__PURE__ */ new Map();
+  const ownership = /* @__PURE__ */ new Map();
+  const ownedByNode = /* @__PURE__ */ new Map();
+  const incompleteReasons = /* @__PURE__ */ new Map();
+  let processedWorkItems = 0;
+  const addConflict = (conflict) => {
+    conflicts.set(conflict.id, conflict);
+  };
+  const addUnresolved = (flow) => {
+    unresolved.set(flow.id, flow);
+  };
+  const addIncomplete = (reason) => {
+    incompleteReasons.set(`${reason.kind}:${reason.address}:${reason.limit}`, reason);
+  };
+  const enqueue = (item) => {
+    queue.push(item);
+    queue.sort(sortWork);
+  };
+  for (const seed of seeds) {
+    functions.set(`function:${hexAddress(seed.address)}`, {
+      id: `function:${hexAddress(seed.address)}`,
+      address: seed.address,
+      source: seed.kind === "vector" ? "interrupt" : "entry",
+      evidence: sortedUnique(seed.evidence),
+      evidencePath: []
+    });
+  }
+  while (queue.length > 0) {
+    if (processedWorkItems >= maxWorkItems) {
+      const next = queue[0];
+      addIncomplete({
+        kind: "work-limit",
+        address: next.address,
+        limit: maxWorkItems,
+        message: `Static analysis stopped after ${maxWorkItems} work items.`
+      });
+      break;
+    }
+    const item = queue.shift();
+    processedWorkItems++;
+    const enteredState = adapter.enterAddress?.(item.state, item.address) ?? item.state;
+    const nodeId = nodeIdFor(item.address, item.context);
+    const previousState = states.get(nodeId);
+    const incomingState = previousState ? adapter.join(previousState, enteredState) : enteredState;
+    if (previousState && adapter.stateKey(previousState) === adapter.stateKey(incomingState)) {
+      if (item.predecessor && item.edgeKind) {
+        const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
+        edges.set(edgeId, {
+          id: edgeId,
+          from: item.predecessor,
+          fromAddress: nodes.get(item.predecessor)?.address ?? item.address,
+          to: nodeId,
+          toAddress: item.address,
+          kind: item.edgeKind,
+          indirect: item.indirect ?? false,
+          ...item.override ? { override: item.override } : {},
+          evidence: item.evidence,
+          ...item.explanation ? { explanation: item.explanation } : {}
+        });
+      }
+      continue;
+    }
+    states.set(nodeId, incomingState);
+    const previousOwned = ownedByNode.get(nodeId) ?? [];
+    for (const offset of previousOwned) {
+      const owners = ownership.get(offset);
+      owners?.delete(nodeId);
+      if (owners?.size === 0) ownership.delete(offset);
+    }
+    nodes.delete(nodeId);
+    const decoded = adapter.decode(item.address, incomingState);
+    if (decoded.kind !== "instruction") {
+      const conflictKind = conflictKindFor(decoded);
+      const evidence = sortedUnique([
+        ...item.evidence,
+        ...decoded.kind === "blocked" ? decoded.evidence : []
+      ]);
+      const message = decoded.kind === "ambiguous" ? `${decoded.reason} Required state: ${decoded.requiredState.join(", ")}.` : decoded.reason;
+      addConflict({
+        id: `conflict:${conflictKind}:${hexAddress(item.address)}:${nodeId}`,
+        kind: conflictKind,
+        address: item.address,
+        message,
+        nodes: [nodeId],
+        evidence
+      });
+      if (item.predecessor && item.edgeKind) {
+        const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
+        edges.set(edgeId, {
+          id: edgeId,
+          from: item.predecessor,
+          fromAddress: nodes.get(item.predecessor)?.address ?? item.address,
+          toAddress: item.address,
+          kind: item.edgeKind,
+          indirect: item.indirect ?? false,
+          ...item.override ? { override: item.override } : {},
+          evidence,
+          ...item.explanation ? { explanation: item.explanation } : {}
+        });
+      }
+      continue;
+    }
+    const instruction = decoded.instruction;
+    const nodeEvidence = sortedUnique([...item.evidence, ...instruction.evidence ?? []]);
+    const byteOffsets = Array.from(
+      { length: instruction.size },
+      (_, index) => instruction.fileOffset + index
+    );
+    const overlapping = /* @__PURE__ */ new Set();
+    for (const offset of byteOffsets) {
+      for (const owner of ownership.get(offset) ?? []) {
+        const existing = nodes.get(owner);
+        const compatibleBoundary = existing?.fileOffset === instruction.fileOffset && existing.size === instruction.size;
+        if (owner !== nodeId && !compatibleBoundary) overlapping.add(owner);
+      }
+    }
+    if (overlapping.size > 0) {
+      const related = [...overlapping, nodeId].sort();
+      addConflict({
+        id: `conflict:instruction-boundary:${hexAddress(item.address)}:${related.join("+")}`,
+        kind: "instruction-boundary",
+        address: item.address,
+        message: `Instruction at $${hexAddress(item.address)} overlaps an incompatible accepted instruction boundary.`,
+        nodes: related,
+        evidence: nodeEvidence
+      });
+    }
+    for (const offset of byteOffsets) {
+      const owners = ownership.get(offset) ?? /* @__PURE__ */ new Set();
+      owners.add(nodeId);
+      ownership.set(offset, owners);
+    }
+    ownedByNode.set(nodeId, byteOffsets);
+    const outgoingState = adapter.transfer(instruction, incomingState);
+    const path8 = [...item.path, nodeId];
+    nodes.set(nodeId, {
+      id: nodeId,
+      address: instruction.address,
+      fileOffset: instruction.fileOffset,
+      size: instruction.size,
+      opcode: instruction.opcode,
+      specificationId: instruction.specificationId,
+      mnemonic: instruction.mnemonic,
+      mode: instruction.mode,
+      context: item.context.map((frame) => frame.callSite),
+      incomingState,
+      outgoingState,
+      effectiveAddresses: instruction.effectiveAddresses ?? [],
+      entryPoint: item.entryPoint,
+      evidence: nodeEvidence,
+      evidencePath: path8
+    });
+    if (item.predecessor && item.edgeKind) {
+      const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
+      edges.set(edgeId, {
+        id: edgeId,
+        from: item.predecessor,
+        fromAddress: nodes.get(item.predecessor)?.address ?? item.address,
+        to: nodeId,
+        toAddress: item.address,
+        kind: item.edgeKind,
+        indirect: item.indirect ?? false,
+        ...item.override ? { override: item.override } : {},
+        evidence: nodeEvidence,
+        ...item.explanation ? { explanation: item.explanation } : {}
+      });
+    }
+    const fallthroughAddress = instruction.address & 16711680 | instruction.address + instruction.size & 65535;
+    const override = overrides.get(instruction.address);
+    const controlTargets = override ? override.targets.map((address3) => ({
+      kind: overriddenTargetKind(instruction.flow.kind),
+      address: address3,
+      indirect: true,
+      explanation: `Resolved by target override '${override.id}'.`
+    })) : instruction.targets;
+    const scheduleTarget = (target, context) => {
+      const kind = target.kind;
+      if (target.address === void 0) {
+        const edgeId = edgeIdFor(nodeId, "unresolved", void 0, override?.id);
+        edges.set(edgeId, {
+          id: edgeId,
+          from: nodeId,
+          fromAddress: instruction.address,
+          kind: "unresolved",
+          indirect: target.indirect ?? false,
+          ...override ? { override: override.id } : {},
+          evidence: sortedUnique([...nodeEvidence, ...override?.evidence ?? []]),
+          ...target.explanation ? { explanation: target.explanation } : {}
+        });
+        addUnresolved({
+          id: `unresolved:${hexAddress(instruction.address)}:${target.kind}`,
+          address: instruction.address,
+          kind,
+          indirect: target.indirect ?? false,
+          reason: target.explanation ?? "The control-flow target is unresolved.",
+          evidence: nodeEvidence
+        });
+        return;
+      }
+      const targetEvidence = sortedUnique([...nodeEvidence, ...override?.evidence ?? []]);
+      enqueue({
+        address: target.address,
+        state: outgoingState,
+        context,
+        entryPoint: item.entryPoint,
+        evidence: targetEvidence,
+        path: path8,
+        edgeKind: kind,
+        predecessor: nodeId,
+        indirect: target.indirect,
+        override: override?.id,
+        explanation: target.explanation
+      });
+      if (kind === "call" || kind === "interrupt") {
+        const functionId = `function:${hexAddress(target.address)}`;
+        if (!functions.has(functionId)) {
+          functions.set(functionId, {
+            id: functionId,
+            address: target.address,
+            source: kind === "call" ? "call" : "interrupt",
+            evidence: targetEvidence,
+            evidencePath: path8
+          });
+        }
+      }
+    };
+    for (const target of controlTargets) {
+      if (target.kind === "call") {
+        const nextContext = [
+          ...item.context,
+          { callSite: instruction.address, returnAddress: fallthroughAddress }
+        ];
+        if (nextContext.length > maxCallDepth) {
+          addIncomplete({
+            kind: "call-context-limit",
+            address: instruction.address,
+            limit: maxCallDepth,
+            message: `Call context at $${hexAddress(instruction.address)} exceeds depth ${maxCallDepth}.`
+          });
+          scheduleTarget(target, maxCallDepth === 0 ? [] : nextContext.slice(-maxCallDepth));
+        } else {
+          scheduleTarget(target, nextContext);
+        }
+      } else {
+        scheduleTarget(target, item.context);
+      }
+    }
+    if (instruction.flow.kind === "return") {
+      const frame = item.context.at(-1);
+      if (frame) {
+        enqueue({
+          address: frame.returnAddress,
+          state: outgoingState,
+          context: item.context.slice(0, -1),
+          entryPoint: item.entryPoint,
+          evidence: nodeEvidence,
+          path: path8,
+          edgeKind: "return",
+          predecessor: nodeId
+        });
+      }
+    } else if (instruction.flow.fallthrough) {
+      enqueue({
+        address: fallthroughAddress,
+        state: outgoingState,
+        context: item.context,
+        entryPoint: item.entryPoint,
+        evidence: nodeEvidence,
+        path: path8,
+        edgeKind: "fallthrough",
+        predecessor: nodeId
+      });
+    }
+  }
+  const reachedOffsets = /* @__PURE__ */ new Set();
+  for (const offsets of ownedByNode.values())
+    for (const offset of offsets) reachedOffsets.add(offset);
+  const sortedNodes = [...nodes.values()].sort(
+    (left, right) => left.address - right.address || left.id.localeCompare(right.id)
+  );
+  const sortedFunctions = [...functions.values()].sort(
+    (left, right) => left.address - right.address || left.id.localeCompare(right.id)
+  );
+  return {
+    status: incompleteReasons.size === 0 ? "complete" : "incomplete",
+    nodes: sortedNodes,
+    edges: [...edges.values()].sort(
+      (left, right) => left.fromAddress - right.fromAddress || left.id.localeCompare(right.id)
+    ),
+    functions: sortedFunctions,
+    conflicts: [...conflicts.values()].sort(
+      (left, right) => left.address - right.address || left.id.localeCompare(right.id)
+    ),
+    unresolved: [...unresolved.values()].sort(
+      (left, right) => left.address - right.address || left.id.localeCompare(right.id)
+    ),
+    coverage: {
+      instructionCount: sortedNodes.length,
+      functionCount: sortedFunctions.length,
+      reachedBytes: reachedOffsets.size,
+      totalBytes: adapter.backingSize,
+      reachedPercent: adapter.backingSize === 0 ? 0 : Number((reachedOffsets.size / adapter.backingSize * 100).toFixed(6))
+    },
+    incompleteReasons: [...incompleteReasons.values()].sort(
+      (left, right) => left.address - right.address || left.kind.localeCompare(right.kind)
+    ),
+    processedWorkItems
+  };
+};
+
+// packages/plugin-loader-node/src/configuration.ts
+import { existsSync as existsSync2, promises as fs6 } from "node:fs";
+import path4 from "node:path";
 var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
 var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
   "$schema",
@@ -14135,10 +15025,10 @@ var validatePluginEntry = (value, index) => {
   if (!isRecord2(value)) {
     throw configurationError(`Configuration entry '${entry}' must be an object.`);
   }
-  const unknown = Object.keys(value).filter((key) => !PLUGIN_KEYS.has(key));
-  if (unknown.length > 0) {
+  const unknown2 = Object.keys(value).filter((key) => !PLUGIN_KEYS.has(key));
+  if (unknown2.length > 0) {
     throw configurationError(
-      `Configuration entry '${entry}' has unknown field(s): ${unknown.join(", ")}.`
+      `Configuration entry '${entry}' has unknown field(s): ${unknown2.join(", ")}.`
     );
   }
   if (typeof value.module !== "string" || value.module.trim() === "") {
@@ -14156,9 +15046,9 @@ var validateProjectConfiguration = (value) => {
   if (!isRecord2(value)) {
     throw configurationError("Project configuration must be a JSON object.");
   }
-  const unknown = Object.keys(value).filter((key) => !TOP_LEVEL_KEYS.has(key));
-  if (unknown.length > 0) {
-    throw configurationError(`Project configuration has unknown field(s): ${unknown.join(", ")}.`);
+  const unknown2 = Object.keys(value).filter((key) => !TOP_LEVEL_KEYS.has(key));
+  if (unknown2.length > 0) {
+    throw configurationError(`Project configuration has unknown field(s): ${unknown2.join(", ")}.`);
   }
   if (value.plugins !== void 0 && !Array.isArray(value.plugins)) {
     throw configurationError("Configuration field 'plugins' must be an array.");
@@ -14183,12 +15073,12 @@ var validateProjectConfiguration = (value) => {
 };
 var readProjectConfiguration = async (cwd, configuredPath) => {
   const explicit = configuredPath !== void 0;
-  const candidates = explicit ? [path2.resolve(cwd, configuredPath)] : [path2.resolve(cwd, PROJECT_CONFIG_FILENAME)];
+  const candidates = explicit ? [path4.resolve(cwd, configuredPath)] : [path4.resolve(cwd, PROJECT_CONFIG_FILENAME)];
   let lastError;
   for (const configPath of candidates) {
     let source;
     try {
-      source = await fs3.readFile(configPath, "utf8");
+      source = await fs6.readFile(configPath, "utf8");
     } catch (error) {
       const code = typeof error === "object" && error !== null && "code" in error ? error.code : void 0;
       if (code === "ENOENT") {
@@ -14205,19 +15095,19 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
     }
     return {
       path: configPath,
-      directory: path2.dirname(configPath),
+      directory: path4.dirname(configPath),
       configuration: validateProjectConfiguration(parsed)
     };
   }
   if (!explicit) {
-    return { directory: path2.resolve(cwd), configuration: {} };
+    return { directory: path4.resolve(cwd), configuration: {} };
   }
   throw configurationError(`Unable to read project configuration '${candidates[0]}'.`, lastError);
 };
 
 // packages/plugin-loader-node/src/loader.ts
 import { realpath } from "node:fs/promises";
-import path3 from "node:path";
+import path5 from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var toOptionsRecord = (value, entry) => {
@@ -14264,10 +15154,10 @@ var resolveExternalModule = async (request) => {
     if (request.module.startsWith("file:")) {
       return normalizeFileUrl(new URL(request.module));
     }
-    if (path3.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
-      return normalizeFileUrl(pathToFileURL(path3.resolve(request.baseDirectory, request.module)));
+    if (path5.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
+      return normalizeFileUrl(pathToFileURL(path5.resolve(request.baseDirectory, request.module)));
     }
-    const parent = pathToFileURL(path3.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
+    const parent = pathToFileURL(path5.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
     return await normalizeFileUrl(new URL(import.meta.resolve(request.module, parent.href)));
   } catch (error) {
     throw moduleLoadError(request, "module could not be resolved", void 0, error);
@@ -14299,7 +15189,7 @@ var wrapActivationError = (error, modules) => {
 var NodePluginLoader = class {
   #current;
   async loadProjectEnvironment(options) {
-    const cwd = path3.resolve(options.cwd);
+    const cwd = path5.resolve(options.cwd);
     const loadedConfig = options.allowProjectConfiguration === false ? { directory: cwd, configuration: {} } : await readProjectConfiguration(cwd, options.configFile);
     const configPlugins = loadedConfig.configuration.plugins ?? [];
     const defaultPlugins = configPlugins.length === 0 ? options.defaults?.plugins ?? [] : [];
@@ -14364,7 +15254,7 @@ var NodePluginLoader = class {
       includeBase = loadedConfig.directory;
     }
     const includePaths = [
-      ...new Set(configuredIncludePaths.map((entry) => path3.resolve(includeBase, entry)))
+      ...new Set(configuredIncludePaths.map((entry) => path5.resolve(includeBase, entry)))
     ];
     const preliminarySnapshot = JSON.stringify(
       stableValue({
@@ -14530,7 +15420,7 @@ var NodePluginLoader = class {
 };
 var defaultLoaders = /* @__PURE__ */ new Map();
 var loadProjectEnvironment = async (options) => {
-  const key = path3.resolve(options.cwd);
+  const key = path5.resolve(options.cwd);
   let loader = defaultLoaders.get(key);
   if (!loader) {
     loader = new NodePluginLoader();
@@ -14547,422 +15437,986 @@ var loadProjectEnvironment = async (options) => {
   });
 };
 
-// packages/plugin-snes/src/tooling/instruction-catalog.ts
-function implied(mnemonic, summary, opcode, size = 1) {
-  return { mnemonic, summary, modes: [{ mode: "implied", syntax: "", opcode, size }] };
-}
-function branch(mnemonic, summary, opcode, size = 2) {
-  return { mnemonic, summary, modes: [{ mode: "relative", syntax: "label", opcode, size }] };
-}
-function instruction(mnemonic, summary, modes) {
-  return { mnemonic, summary, modes };
-}
-var aluModes = [
-  { mode: "immediate", syntax: "#const" },
-  { mode: "direct", syntax: "dp" },
-  { mode: "directIndexedX", syntax: "dp,x" },
-  { mode: "directIndirect", syntax: "(dp)" },
-  { mode: "directIndirectLong", syntax: "[dp]" },
-  { mode: "directIndexedXIndirect", syntax: "(dp,x)" },
-  { mode: "directIndirectIndexedY", syntax: "(dp),y" },
-  { mode: "directIndirectLongIndexedY", syntax: "[dp],y" },
-  { mode: "absolute", syntax: "addr" },
-  { mode: "absoluteIndexedX", syntax: "addr,x" },
-  { mode: "absoluteIndexedY", syntax: "addr,y" },
-  { mode: "absoluteLong", syntax: "long" },
-  { mode: "absoluteLongIndexedX", syntax: "long,x" },
-  { mode: "stackRelative", syntax: "sr,s" },
-  { mode: "stackRelativeIndirectIndexedY", syntax: "(sr,s),y" }
+// packages/plugin-snes/src/architectures/65816-spec.ts
+var mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
+  id,
+  syntax,
+  minimumSize,
+  maximumSize,
+  ...widthFlag ? { widthFlag } : {}
+});
+var cpu65816Modes = Object.freeze({
+  imp: mode("implied", "", 1),
+  acc: mode("accumulator", "", 1),
+  sig: mode("signature", "#const", 2),
+  immM: mode("immediate", "#const", 2, 3, "m"),
+  immX: mode("immediate", "#const", 2, 3, "x"),
+  imm16: mode("immediate16", "addr", 3),
+  dp: mode("direct", "dp", 2),
+  dpx: mode("directIndexedX", "dp,x", 2),
+  dpy: mode("directIndexedY", "dp,y", 2),
+  dpi: mode("directIndirect", "(dp)", 2),
+  dil: mode("directIndirectLong", "[dp]", 2),
+  dix: mode("directIndexedXIndirect", "(dp,x)", 2),
+  diy: mode("directIndirectIndexedY", "(dp),y", 2),
+  dily: mode("directIndirectLongIndexedY", "[dp],y", 2),
+  sr: mode("stackRelative", "sr,s", 2),
+  sriy: mode("stackRelativeIndirectIndexedY", "(sr,s),y", 2),
+  abs: mode("absolute", "addr", 3),
+  abx: mode("absoluteIndexedX", "addr,x", 3),
+  aby: mode("absoluteIndexedY", "addr,y", 3),
+  long: mode("absoluteLong", "long", 4),
+  longx: mode("absoluteLongIndexedX", "long,x", 4),
+  rel8: mode("relative", "label", 2),
+  rel16: mode("relativeLong", "label", 3),
+  ind: mode("absoluteIndirect", "(addr)", 3),
+  indx: mode("absoluteIndexedXIndirect", "(addr,x)", 3),
+  indlong: mode("absoluteIndirectLong", "[addr]", 3),
+  block: mode("blockMove", "srcBank,destBank", 3)
+});
+var opcodeRows = [
+  "BRK:sig ORA:dix COP:sig ORA:sr TSB:dp ORA:dp ASL:dp ORA:dil PHP:imp ORA:immM ASL:acc PHD:imp TSB:abs ORA:abs ASL:abs ORA:long",
+  "BPL:rel8 ORA:diy ORA:dpi ORA:sriy TRB:dp ORA:dpx ASL:dpx ORA:dily CLC:imp ORA:aby INC:acc TCS:imp TRB:abs ORA:abx ASL:abx ORA:longx",
+  "JSR:abs AND:dix JSL:long AND:sr BIT:dp AND:dp ROL:dp AND:dil PLP:imp AND:immM ROL:acc PLD:imp BIT:abs AND:abs ROL:abs AND:long",
+  "BMI:rel8 AND:diy AND:dpi AND:sriy BIT:dpx AND:dpx ROL:dpx AND:dily SEC:imp AND:aby DEC:acc TSC:imp BIT:abx AND:abx ROL:abx AND:longx",
+  "RTI:imp EOR:dix WDM:sig EOR:sr MVP:block EOR:dp LSR:dp EOR:dil PHA:imp EOR:immM LSR:acc PHK:imp JMP:abs EOR:abs LSR:abs EOR:long",
+  "BVC:rel8 EOR:diy EOR:dpi EOR:sriy MVN:block EOR:dpx LSR:dpx EOR:dily CLI:imp EOR:aby PHY:imp TCD:imp JML:long EOR:abx LSR:abx EOR:longx",
+  "RTS:imp ADC:dix PER:rel16 ADC:sr STZ:dp ADC:dp ROR:dp ADC:dil PLA:imp ADC:immM ROR:acc RTL:imp JMP:ind ADC:abs ROR:abs ADC:long",
+  "BVS:rel8 ADC:diy ADC:dpi ADC:sriy STZ:dpx ADC:dpx ROR:dpx ADC:dily SEI:imp ADC:aby PLY:imp TDC:imp JMP:indx ADC:abx ROR:abx ADC:longx",
+  "BRA:rel8 STA:dix BRL:rel16 STA:sr STY:dp STA:dp STX:dp STA:dil DEY:imp BIT:immM TXA:imp PHB:imp STY:abs STA:abs STX:abs STA:long",
+  "BCC:rel8 STA:diy STA:dpi STA:sriy STY:dpx STA:dpx STX:dpy STA:dily TYA:imp STA:aby TXS:imp TXY:imp STZ:abs STA:abx STZ:abx STA:longx",
+  "LDY:immX LDA:dix LDX:immX LDA:sr LDY:dp LDA:dp LDX:dp LDA:dil TAY:imp LDA:immM TAX:imp PLB:imp LDY:abs LDA:abs LDX:abs LDA:long",
+  "BCS:rel8 LDA:diy LDA:dpi LDA:sriy LDY:dpx LDA:dpx LDX:dpy LDA:dily CLV:imp LDA:aby TSX:imp TYX:imp LDY:abx LDA:abx LDX:aby LDA:longx",
+  "CPY:immX CMP:dix REP:sig CMP:sr CPY:dp CMP:dp DEC:dp CMP:dil INY:imp CMP:immM DEX:imp WAI:imp CPY:abs CMP:abs DEC:abs CMP:long",
+  "BNE:rel8 CMP:diy CMP:dpi CMP:sriy PEI:dpi CMP:dpx DEC:dpx CMP:dily CLD:imp CMP:aby PHX:imp STP:imp JML:indlong CMP:abx DEC:abx CMP:longx",
+  "CPX:immX SBC:dix SEP:sig SBC:sr CPX:dp SBC:dp INC:dp SBC:dil INX:imp SBC:immM NOP:imp XBA:imp CPX:abs SBC:abs INC:abs SBC:long",
+  "BEQ:rel8 SBC:diy SBC:dpi SBC:sriy PEA:imm16 SBC:dpx INC:dpx SBC:dily SED:imp SBC:aby PLX:imp XCE:imp JSR:indx SBC:abx INC:abx SBC:longx"
 ];
-var shiftModes = [
-  { mode: "accumulator", syntax: "a", size: 1 },
-  { mode: "direct", syntax: "dp" },
-  { mode: "directIndexedX", syntax: "dp,x" },
-  { mode: "absolute", syntax: "addr" },
-  { mode: "absoluteIndexedX", syntax: "addr,x" }
+var summaries = {
+  ADC: "Add with carry to the accumulator.",
+  AND: "Bitwise AND with the accumulator.",
+  ASL: "Arithmetic shift left.",
+  BCC: "Branch if carry clear.",
+  BCS: "Branch if carry set.",
+  BEQ: "Branch if equal (zero set).",
+  BIT: "Test bits against the accumulator.",
+  BMI: "Branch if minus (negative set).",
+  BNE: "Branch if not equal (zero clear).",
+  BPL: "Branch if plus (negative clear).",
+  BRA: "Branch always.",
+  BRK: "Software break / interrupt.",
+  BRL: "Branch always long (16-bit relative).",
+  BVC: "Branch if overflow clear.",
+  BVS: "Branch if overflow set.",
+  CLC: "Clear carry flag.",
+  CLD: "Clear decimal flag.",
+  CLI: "Clear interrupt-disable flag.",
+  CLV: "Clear overflow flag.",
+  CMP: "Compare with the accumulator.",
+  COP: "Coprocessor enable interrupt.",
+  CPX: "Compare with the X register.",
+  CPY: "Compare with the Y register.",
+  DEC: "Decrement memory or the accumulator.",
+  DEX: "Decrement the X register.",
+  DEY: "Decrement the Y register.",
+  EOR: "Bitwise exclusive-OR with the accumulator.",
+  INC: "Increment memory or the accumulator.",
+  INX: "Increment the X register.",
+  INY: "Increment the Y register.",
+  JML: "Jump long (24-bit).",
+  JMP: "Jump.",
+  JSL: "Jump to subroutine long.",
+  JSR: "Jump to subroutine.",
+  LDA: "Load the accumulator.",
+  LDX: "Load the X register.",
+  LDY: "Load the Y register.",
+  LSR: "Logical shift right.",
+  MVN: "Block move next (ascending).",
+  MVP: "Block move previous (descending).",
+  NOP: "No operation.",
+  ORA: "Bitwise OR with the accumulator.",
+  PEA: "Push effective absolute address.",
+  PEI: "Push effective indirect address.",
+  PER: "Push effective PC-relative address.",
+  PHA: "Push the accumulator.",
+  PHB: "Push the data bank register.",
+  PHD: "Push the direct page register.",
+  PHK: "Push the program bank register.",
+  PHP: "Push the processor status register.",
+  PHX: "Push the X register.",
+  PHY: "Push the Y register.",
+  PLA: "Pull the accumulator.",
+  PLB: "Pull the data bank register.",
+  PLD: "Pull the direct page register.",
+  PLP: "Pull the processor status register.",
+  PLX: "Pull the X register.",
+  PLY: "Pull the Y register.",
+  REP: "Reset status bits.",
+  ROL: "Rotate left through carry.",
+  ROR: "Rotate right through carry.",
+  RTI: "Return from interrupt.",
+  RTL: "Return from subroutine long.",
+  RTS: "Return from subroutine.",
+  SBC: "Subtract with borrow from the accumulator.",
+  SEC: "Set carry flag.",
+  SED: "Set decimal flag.",
+  SEI: "Set interrupt-disable flag.",
+  SEP: "Set status bits.",
+  STA: "Store the accumulator.",
+  STP: "Stop the processor.",
+  STX: "Store the X register.",
+  STY: "Store the Y register.",
+  STZ: "Store zero to memory.",
+  TAX: "Transfer accumulator to X.",
+  TAY: "Transfer accumulator to Y.",
+  TCD: "Transfer accumulator to direct page register.",
+  TCS: "Transfer accumulator to stack pointer.",
+  TDC: "Transfer direct page register to accumulator.",
+  TRB: "Test and reset bits.",
+  TSB: "Test and set bits.",
+  TSC: "Transfer stack pointer to accumulator.",
+  TSX: "Transfer stack pointer to X.",
+  TXA: "Transfer X to accumulator.",
+  TXS: "Transfer X to stack pointer.",
+  TXY: "Transfer X to Y.",
+  TYA: "Transfer Y to accumulator.",
+  TYX: "Transfer Y to X.",
+  WAI: "Wait for interrupt.",
+  WDM: "Reserved (William D. Mensch) opcode.",
+  XBA: "Exchange the bytes of the accumulator.",
+  XCE: "Exchange carry and emulation flags."
+};
+var conditionalBranches = /* @__PURE__ */ new Set([
+  "BCC",
+  "BCS",
+  "BEQ",
+  "BMI",
+  "BNE",
+  "BPL",
+  "BVC",
+  "BVS"
+]);
+var flowFor = (mnemonic, addressingMode) => {
+  if (conditionalBranches.has(mnemonic)) return { kind: "conditionalBranch", fallthrough: true };
+  if (mnemonic === "BRA" || mnemonic === "BRL") return { kind: "jump", fallthrough: false };
+  if (mnemonic === "JMP" || mnemonic === "JML") {
+    return {
+      kind: "jump",
+      fallthrough: false,
+      ...addressingMode.includes("Indirect") ? { indirect: true } : {}
+    };
+  }
+  if (mnemonic === "JSR" || mnemonic === "JSL") {
+    return {
+      kind: "call",
+      fallthrough: true,
+      ...addressingMode.includes("Indirect") ? { indirect: true } : {}
+    };
+  }
+  if (mnemonic === "RTI" || mnemonic === "RTL" || mnemonic === "RTS") {
+    return { kind: "return", fallthrough: false };
+  }
+  if (mnemonic === "BRK" || mnemonic === "COP") {
+    return { kind: "interrupt", fallthrough: false };
+  }
+  if (mnemonic === "WAI") return { kind: "wait", fallthrough: false };
+  if (mnemonic === "STP") return { kind: "stop", fallthrough: false };
+  return { kind: "fallthrough", fallthrough: true };
+};
+var effects = {
+  CLC: [{ kind: "clearBits", target: "p", mask: 1 }],
+  SEC: [{ kind: "setBits", target: "p", mask: 1 }],
+  CLI: [{ kind: "clearBits", target: "p", mask: 4 }],
+  SEI: [{ kind: "setBits", target: "p", mask: 4 }],
+  CLD: [{ kind: "clearBits", target: "p", mask: 8 }],
+  SED: [{ kind: "setBits", target: "p", mask: 8 }],
+  CLV: [{ kind: "clearBits", target: "p", mask: 64 }],
+  PHA: [{ kind: "push", source: "a" }],
+  PHB: [{ kind: "push", source: "dbr" }],
+  PHD: [{ kind: "push", source: "d" }],
+  PHK: [{ kind: "push", source: "pbr" }],
+  PHP: [{ kind: "push", source: "p" }],
+  PHX: [{ kind: "push", source: "x" }],
+  PHY: [{ kind: "push", source: "y" }],
+  PLA: [{ kind: "pull", target: "a" }],
+  PLB: [{ kind: "pull", target: "dbr" }],
+  PLD: [{ kind: "pull", target: "d" }],
+  PLP: [{ kind: "pull", target: "p" }],
+  PLX: [{ kind: "pull", target: "x" }],
+  PLY: [{ kind: "pull", target: "y" }],
+  TAX: [{ kind: "copy", from: "a", to: "x" }],
+  TAY: [{ kind: "copy", from: "a", to: "y" }],
+  TCD: [{ kind: "copy", from: "a", to: "d" }],
+  TCS: [{ kind: "copy", from: "a", to: "s" }],
+  TDC: [{ kind: "copy", from: "d", to: "a" }],
+  TSC: [{ kind: "copy", from: "s", to: "a" }],
+  TSX: [{ kind: "copy", from: "s", to: "x" }],
+  TXA: [{ kind: "copy", from: "x", to: "a" }],
+  TXS: [{ kind: "copy", from: "x", to: "s" }],
+  TXY: [{ kind: "copy", from: "x", to: "y" }],
+  TYA: [{ kind: "copy", from: "y", to: "a" }],
+  TYX: [{ kind: "copy", from: "y", to: "x" }],
+  XBA: [{ kind: "custom", name: "exchange-accumulator-bytes" }],
+  XCE: [
+    { kind: "exchange", left: "c", right: "e" },
+    { kind: "custom", name: "normalize-emulation-widths" }
+  ],
+  RTI: [
+    { kind: "pull", target: "p" },
+    { kind: "pull", target: "pc" },
+    { kind: "pull", target: "pbr" }
+  ],
+  RTS: [{ kind: "pull", target: "pc" }],
+  RTL: [
+    { kind: "pull", target: "pc" },
+    { kind: "pull", target: "pbr" }
+  ]
+};
+var entries = opcodeRows.flatMap((row) => row.split(" "));
+if (entries.length !== 256) throw new Error(`65816 opcode table has ${entries.length} entries.`);
+var cpu65816Specifications = Object.freeze(
+  entries.map((entry, opcode) => {
+    const [mnemonic, modeKeyText] = entry.split(":");
+    const modeKey = modeKeyText;
+    const definition = cpu65816Modes[modeKey];
+    if (!mnemonic || !definition) throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
+    let operandStatusEffect;
+    if (mnemonic === "REP") operandStatusEffect = "clearBits";
+    else if (mnemonic === "SEP") operandStatusEffect = "setBits";
+    return Object.freeze({
+      id: `snes.65816.${opcode.toString(16).padStart(2, "0")}`,
+      architecture: "snes.65816",
+      opcode: [opcode],
+      mnemonic,
+      mode: definition.id,
+      syntax: mnemonic === "PEI" ? "dp" : definition.syntax,
+      minimumSize: definition.minimumSize,
+      maximumSize: definition.maximumSize,
+      summary: summaries[mnemonic] ?? `${mnemonic} instruction.`,
+      flow: flowFor(mnemonic, definition.id),
+      effects: effects[mnemonic] ?? [],
+      ...definition.widthFlag ? { widthFlag: definition.widthFlag } : {},
+      ...operandStatusEffect ? { operandStatusEffect } : {}
+    });
+  })
+);
+function buildCpu65816Catalog() {
+  const grouped = /* @__PURE__ */ new Map();
+  for (const specification2 of cpu65816Specifications) {
+    const addressingMode = {
+      mode: specification2.mode,
+      syntax: specification2.syntax,
+      opcode: specification2.opcode[0],
+      ...specification2.minimumSize === specification2.maximumSize ? { size: specification2.minimumSize } : {}
+    };
+    const descriptor2 = grouped.get(specification2.mnemonic);
+    if (descriptor2) descriptor2.modes.push(addressingMode);
+    else {
+      grouped.set(specification2.mnemonic, {
+        mnemonic: specification2.mnemonic,
+        summary: specification2.summary,
+        modes: [addressingMode]
+      });
+    }
+  }
+  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+}
+
+// packages/plugin-snes/src/architectures/spc700-spec.ts
+var mode2 = (id, syntax, size) => ({
+  id,
+  syntax,
+  size
+});
+var spc700Modes = Object.freeze({
+  imp: mode2("implied", "", 1),
+  tc: mode2("tableCall", "n", 1),
+  dpBit: mode2("directBit", "dp", 2),
+  dpBitRel: mode2("directBitRelative", "dp,label", 3),
+  aDp: mode2("accumulatorDirect", "A,dp", 2),
+  aAbs: mode2("accumulatorAbsolute", "A,addr", 3),
+  aIndX: mode2("accumulatorIndirectX", "A,(X)", 1),
+  aDpxi: mode2("accumulatorDirectIndexedXIndirect", "A,(dp+X)", 2),
+  aImm: mode2("accumulatorImmediate", "A,#const", 2),
+  dpDp: mode2("directDirect", "dp,dp", 3),
+  cBit: mode2("carryMemoryBit", "C,addr.bit", 3),
+  cBitInv: mode2("carryInvertedMemoryBit", "C,/addr.bit", 3),
+  bitC: mode2("memoryBitCarry", "addr.bit,C", 3),
+  bit: mode2("memoryBit", "addr.bit", 3),
+  dp: mode2("direct", "dp", 2),
+  dpx: mode2("directIndexedX", "dp+X", 2),
+  abs: mode2("absolute", "addr", 3),
+  rel: mode2("relative", "label", 2),
+  absA: mode2("absoluteAccumulator", "addr,A", 3),
+  aDpx: mode2("accumulatorDirectIndexedX", "A,dp+X", 2),
+  aAbx: mode2("accumulatorAbsoluteIndexedX", "A,addr+X", 3),
+  aAby: mode2("accumulatorAbsoluteIndexedY", "A,addr+Y", 3),
+  aDpiy: mode2("accumulatorDirectIndirectIndexedY", "A,(dp)+Y", 2),
+  dpImm: mode2("directImmediate", "dp,#const", 3),
+  xy: mode2("indirectXY", "(X),(Y)", 1),
+  dpWord: mode2("directWord", "dp", 2),
+  regA: mode2("registerA", "A", 1),
+  regX: mode2("registerX", "X", 1),
+  regY: mode2("registerY", "Y", 1),
+  regP: mode2("registerP", "P", 1),
+  regYA: mode2("registerYA", "YA", 1),
+  regYAX: mode2("registerYAX", "YA,X", 1),
+  regXA: mode2("registerXA", "X,A", 1),
+  regAX: mode2("registerAX", "A,X", 1),
+  regXSP: mode2("registerXSP", "X,SP", 1),
+  regSPX: mode2("registerSPX", "SP,X", 1),
+  regAY: mode2("registerAY", "A,Y", 1),
+  regYA2: mode2("registerYA2", "Y,A", 1),
+  regPostXA: mode2("registerPostIncrementXA", "(X+),A", 1),
+  regAPostX: mode2("registerAPostIncrementX", "A,(X+)", 1),
+  regIndXA: mode2("registerIndirectXA", "(X),A", 1),
+  regAIndX: mode2("registerAIndirectX", "A,(X)", 1),
+  xAbs: mode2("registerXAbsolute", "X,addr", 3),
+  xDp: mode2("registerXDirect", "X,dp", 2),
+  xDpy: mode2("registerXDirectIndexedY", "X,dp+Y", 2),
+  yAbs: mode2("registerYAbsolute", "Y,addr", 3),
+  yDp: mode2("registerYDirect", "Y,dp", 2),
+  yDpx: mode2("registerYDirectIndexedX", "Y,dp+X", 2),
+  xImm: mode2("registerXImmediate", "X,#const", 2),
+  yImm: mode2("registerYImmediate", "Y,#const", 2),
+  jmpAbx: mode2("absoluteIndexedXIndirect", "(addr+X)", 3),
+  dpRel: mode2("directRelative", "dp,label", 3),
+  dpxRel: mode2("directIndexedXRelative", "dp+X,label", 3),
+  yRel: mode2("registerYRelative", "Y,label", 2),
+  yaDp: mode2("registerYADirect", "YA,dp", 2),
+  dpYa: mode2("directRegisterYA", "dp,YA", 2),
+  pcall: mode2("upperPageCall", "upage", 2),
+  dpA: mode2("directRegisterA", "dp,A", 2),
+  absRegA: mode2("absoluteRegisterA", "addr,A", 3),
+  indXA: mode2("indirectXRegisterA", "(X),A", 1),
+  dpxiA: mode2("directIndexedXIndirectRegisterA", "(dp+X),A", 2),
+  dpxA: mode2("directIndexedXRegisterA", "dp+X,A", 2),
+  abxA: mode2("absoluteIndexedXRegisterA", "addr+X,A", 3),
+  abyA: mode2("absoluteIndexedYRegisterA", "addr+Y,A", 3),
+  dpiyA: mode2("directIndirectIndexedYRegisterA", "(dp)+Y,A", 2),
+  dpX: mode2("directRegisterX", "dp,X", 2),
+  dpyX: mode2("directIndexedYRegisterX", "dp+Y,X", 2),
+  absX: mode2("absoluteRegisterX", "addr,X", 3),
+  dpY: mode2("directRegisterY", "dp,Y", 2),
+  dpxY: mode2("directIndexedXRegisterY", "dp+X,Y", 2),
+  absY: mode2("absoluteRegisterY", "addr,Y", 3)
+});
+var opcodeRows2 = [
+  "NOP:imp TCALL:tc SET0:dpBit BBS0:dpBitRel OR:aDp OR:aAbs OR:aIndX OR:aDpxi OR:aImm OR:dpDp OR1:cBit ASL:dp ASL:abs PUSH:regP TSET:absA BRK:imp",
+  "BPL:rel TCALL:tc CLR0:dpBit BBC0:dpBitRel OR:aDpx OR:aAbx OR:aAby OR:aDpiy OR:dpImm OR:xy DECW:dpWord ASL:dpx ASL:regA DEC:regX CMP:xAbs JMP:jmpAbx",
+  "CLRP:imp TCALL:tc SET1:dpBit BBS1:dpBitRel AND:aDp AND:aAbs AND:aIndX AND:aDpxi AND:aImm AND:dpDp OR1:cBitInv ROL:dp ROL:abs PUSH:regA CBNE:dpRel BRA:rel",
+  "BMI:rel TCALL:tc CLR1:dpBit BBC1:dpBitRel AND:aDpx AND:aAbx AND:aAby AND:aDpiy AND:dpImm AND:xy INCW:dpWord ROL:dpx ROL:regA INC:regX CMP:xDp CALL:abs",
+  "SETP:imp TCALL:tc SET2:dpBit BBS2:dpBitRel EOR:aDp EOR:aAbs EOR:aIndX EOR:aDpxi EOR:aImm EOR:dpDp AND1:cBit LSR:dp LSR:abs PUSH:regX TCLR:absA PCALL:pcall",
+  "BVC:rel TCALL:tc CLR2:dpBit BBC2:dpBitRel EOR:aDpx EOR:aAbx EOR:aAby EOR:aDpiy EOR:dpImm EOR:xy CMPW:yaDp LSR:dpx LSR:regA MOV:regXA CMP:yAbs JMP:abs",
+  "CLRC:imp TCALL:tc SET3:dpBit BBS3:dpBitRel CMP:aDp CMP:aAbs CMP:aIndX CMP:aDpxi CMP:aImm CMP:dpDp AND1:cBitInv ROR:dp ROR:abs PUSH:regY DBNZ:dpRel RET:imp",
+  "BVS:rel TCALL:tc CLR3:dpBit BBC3:dpBitRel CMP:aDpx CMP:aAbx CMP:aAby CMP:aDpiy CMP:dpImm CMP:xy ADDW:yaDp ROR:dpx ROR:regA MOV:regAX CMP:yDp RETI:imp",
+  "SETC:imp TCALL:tc SET4:dpBit BBS4:dpBitRel ADC:aDp ADC:aAbs ADC:aIndX ADC:aDpxi ADC:aImm ADC:dpDp EOR1:cBit DEC:dp DEC:abs MOV:yImm POP:regP MOV:dpImm",
+  "BCC:rel TCALL:tc CLR4:dpBit BBC4:dpBitRel ADC:aDpx ADC:aAbx ADC:aAby ADC:aDpiy ADC:dpImm ADC:xy SUBW:yaDp DEC:dpx DEC:regA MOV:regXSP DIV:regYAX XCN:regA",
+  "EI:imp TCALL:tc SET5:dpBit BBS5:dpBitRel SBC:aDp SBC:aAbs SBC:aIndX SBC:aDpxi SBC:aImm SBC:dpDp MOV1:cBit INC:dp INC:abs CMP:yImm POP:regA MOV:regPostXA",
+  "BCS:rel TCALL:tc CLR5:dpBit BBC5:dpBitRel SBC:aDpx SBC:aAbx SBC:aAby SBC:aDpiy SBC:dpImm SBC:xy MOVW:yaDp INC:dpx INC:regA MOV:regSPX DAS:regA MOV:regAPostX",
+  "DI:imp TCALL:tc SET6:dpBit BBS6:dpBitRel MOV:dpA MOV:absRegA MOV:indXA MOV:dpxiA CMP:xImm MOV:absX MOV1:bitC MOV:dpY MOV:absY MOV:xImm POP:regX MUL:regYA",
+  "BNE:rel TCALL:tc CLR6:dpBit BBC6:dpBitRel MOV:dpxA MOV:abxA MOV:abyA MOV:dpiyA MOV:dpX MOV:dpyX MOVW:dpYa MOV:dpxY DEC:regY MOV:regAY CBNE:dpxRel DAA:regA",
+  "CLRV:imp TCALL:tc SET7:dpBit BBS7:dpBitRel MOV:aDp MOV:aAbs MOV:regAIndX MOV:aDpxi MOV:aImm MOV:xAbs NOT1:bit MOV:yDp MOV:yAbs NOTC:imp POP:regY SLEEP:imp",
+  "BEQ:rel TCALL:tc CLR7:dpBit BBC7:dpBitRel MOV:aDpx MOV:aAbx MOV:aAby MOV:aDpiy MOV:xDp MOV:xDpy MOV:dpDp MOV:yDpx INC:regY MOV:regYA2 DBNZ:yRel STOP:imp"
 ];
-var cpu65816Catalog = [
-  instruction("ADC", "Add with carry to the accumulator.", aluModes),
-  instruction("AND", "Bitwise AND with the accumulator.", aluModes),
-  instruction("ASL", "Arithmetic shift left.", shiftModes),
-  branch("BCC", "Branch if carry clear.", 144),
-  branch("BCS", "Branch if carry set.", 176),
-  branch("BEQ", "Branch if equal (zero set).", 240),
-  instruction("BIT", "Test bits against the accumulator.", [
-    { mode: "immediate", syntax: "#const" },
-    { mode: "direct", syntax: "dp" },
-    { mode: "directIndexedX", syntax: "dp,x" },
-    { mode: "absolute", syntax: "addr" },
-    { mode: "absoluteIndexedX", syntax: "addr,x" }
-  ]),
-  branch("BMI", "Branch if minus (negative set).", 48),
-  branch("BNE", "Branch if not equal (zero clear).", 208),
-  branch("BPL", "Branch if plus (negative clear).", 16),
-  branch("BRA", "Branch always.", 128),
-  instruction("BRK", "Software break / interrupt.", [
-    { mode: "stack", syntax: "", opcode: 0, size: 2 }
-  ]),
-  branch("BRL", "Branch always long (16-bit relative).", 130, 3),
-  branch("BVC", "Branch if overflow clear.", 80),
-  branch("BVS", "Branch if overflow set.", 112),
-  implied("CLC", "Clear carry flag.", 24),
-  implied("CLD", "Clear decimal flag.", 216),
-  implied("CLI", "Clear interrupt-disable flag.", 88),
-  implied("CLV", "Clear overflow flag.", 184),
-  instruction("CMP", "Compare with the accumulator.", aluModes),
-  instruction("COP", "Coprocessor enable interrupt.", [
-    { mode: "stack", syntax: "#const", opcode: 2, size: 2 }
-  ]),
-  instruction("CPX", "Compare with the X register.", [
-    { mode: "immediate", syntax: "#const" },
-    { mode: "direct", syntax: "dp" },
-    { mode: "absolute", syntax: "addr" }
-  ]),
-  instruction("CPY", "Compare with the Y register.", [
-    { mode: "immediate", syntax: "#const" },
-    { mode: "direct", syntax: "dp" },
-    { mode: "absolute", syntax: "addr" }
-  ]),
-  instruction("DEC", "Decrement memory or the accumulator.", shiftModes),
-  implied("DEX", "Decrement the X register.", 202),
-  implied("DEY", "Decrement the Y register.", 136),
-  instruction("EOR", "Bitwise exclusive-OR with the accumulator.", aluModes),
-  instruction("INC", "Increment memory or the accumulator.", shiftModes),
-  implied("INX", "Increment the X register.", 232),
-  implied("INY", "Increment the Y register.", 200),
-  instruction("JML", "Jump long (24-bit).", [
-    { mode: "absoluteLong", syntax: "long", opcode: 92, size: 4 },
-    { mode: "absoluteIndirectLong", syntax: "[addr]", opcode: 220, size: 3 }
-  ]),
-  instruction("JMP", "Jump.", [
-    { mode: "absolute", syntax: "addr", opcode: 76, size: 3 },
-    { mode: "absoluteIndirect", syntax: "(addr)", opcode: 108, size: 3 },
-    { mode: "absoluteIndexedXIndirect", syntax: "(addr,x)", opcode: 124, size: 3 }
-  ]),
-  instruction("JSL", "Jump to subroutine long.", [
-    { mode: "absoluteLong", syntax: "long", opcode: 34, size: 4 }
-  ]),
-  instruction("JSR", "Jump to subroutine.", [
-    { mode: "absolute", syntax: "addr", opcode: 32, size: 3 },
-    { mode: "absoluteIndexedXIndirect", syntax: "(addr,x)", opcode: 252, size: 3 }
-  ]),
-  instruction("LDA", "Load the accumulator.", aluModes),
-  instruction("LDX", "Load the X register.", [
-    { mode: "immediate", syntax: "#const" },
-    { mode: "direct", syntax: "dp" },
-    { mode: "directIndexedY", syntax: "dp,y" },
-    { mode: "absolute", syntax: "addr" },
-    { mode: "absoluteIndexedY", syntax: "addr,y" }
-  ]),
-  instruction("LDY", "Load the Y register.", [
-    { mode: "immediate", syntax: "#const" },
-    { mode: "direct", syntax: "dp" },
-    { mode: "directIndexedX", syntax: "dp,x" },
-    { mode: "absolute", syntax: "addr" },
-    { mode: "absoluteIndexedX", syntax: "addr,x" }
-  ]),
-  instruction("LSR", "Logical shift right.", shiftModes),
-  instruction("MVN", "Block move next (ascending).", [
-    // Hover syntax is WDC dest,src; the encoder writes operands in source order
-    // (Asar). See Arch65816.handleBlockMove.
-    { mode: "blockMove", syntax: "destBank,srcBank", opcode: 84, size: 3 }
-  ]),
-  instruction("MVP", "Block move previous (descending).", [
-    { mode: "blockMove", syntax: "destBank,srcBank", opcode: 68, size: 3 }
-  ]),
-  implied("NOP", "No operation.", 234),
-  instruction("ORA", "Bitwise OR with the accumulator.", aluModes),
-  instruction("PEA", "Push effective absolute address.", [
-    { mode: "stack", syntax: "addr", opcode: 244, size: 3 }
-  ]),
-  instruction("PEI", "Push effective indirect address.", [
-    { mode: "stack", syntax: "(dp)", opcode: 212, size: 2 }
-  ]),
-  instruction("PER", "Push effective PC-relative address.", [
-    { mode: "stack", syntax: "label", opcode: 98, size: 3 }
-  ]),
-  implied("PHA", "Push the accumulator.", 72),
-  implied("PHB", "Push the data bank register.", 139),
-  implied("PHD", "Push the direct page register.", 11),
-  implied("PHK", "Push the program bank register.", 75),
-  implied("PHP", "Push the processor status register.", 8),
-  implied("PHX", "Push the X register.", 218),
-  implied("PHY", "Push the Y register.", 90),
-  implied("PLA", "Pull the accumulator.", 104),
-  implied("PLB", "Pull the data bank register.", 171),
-  implied("PLD", "Pull the direct page register.", 43),
-  implied("PLP", "Pull the processor status register.", 40),
-  implied("PLX", "Pull the X register.", 250),
-  implied("PLY", "Pull the Y register.", 122),
-  instruction("REP", "Reset status bits.", [
-    { mode: "immediate", syntax: "#const", opcode: 194, size: 2 }
-  ]),
-  instruction("ROL", "Rotate left through carry.", shiftModes),
-  instruction("ROR", "Rotate right through carry.", shiftModes),
-  implied("RTI", "Return from interrupt.", 64),
-  implied("RTL", "Return from subroutine long.", 107),
-  implied("RTS", "Return from subroutine.", 96),
-  instruction("SBC", "Subtract with borrow from the accumulator.", aluModes),
-  implied("SEC", "Set carry flag.", 56),
-  implied("SED", "Set decimal flag.", 248),
-  implied("SEI", "Set interrupt-disable flag.", 120),
-  instruction("SEP", "Set status bits.", [
-    { mode: "immediate", syntax: "#const", opcode: 226, size: 2 }
-  ]),
-  instruction(
-    "STA",
-    "Store the accumulator.",
-    aluModes.filter((mode) => mode.mode !== "immediate")
+var summaries2 = {
+  ADC: "Add with carry.",
+  ADDW: "Add a direct-page word to YA.",
+  AND: "Bitwise AND.",
+  AND1: "AND carry with a memory bit.",
+  ASL: "Arithmetic shift left.",
+  BBC0: "Branch if direct-page bit 0 is clear.",
+  BBS0: "Branch if direct-page bit 0 is set.",
+  BRA: "Branch always.",
+  BRK: "Software interrupt.",
+  CALL: "Call an absolute subroutine.",
+  CBNE: "Compare accumulator and branch if not equal.",
+  CLR0: "Clear direct-page bit 0.",
+  CLRC: "Clear carry.",
+  CLRP: "Select direct page zero.",
+  CLRV: "Clear overflow and half-carry.",
+  CMP: "Compare values.",
+  CMPW: "Compare YA with a direct-page word.",
+  DAA: "Decimal-adjust accumulator after addition.",
+  DAS: "Decimal-adjust accumulator after subtraction.",
+  DBNZ: "Decrement and branch if not zero.",
+  DEC: "Decrement.",
+  DECW: "Decrement a direct-page word.",
+  DI: "Disable interrupts.",
+  DIV: "Divide YA by X.",
+  EI: "Enable interrupts.",
+  EOR: "Bitwise exclusive OR.",
+  EOR1: "Exclusive-OR carry with a memory bit.",
+  INC: "Increment.",
+  INCW: "Increment a direct-page word.",
+  JMP: "Jump.",
+  LSR: "Logical shift right.",
+  MOV: "Move data between registers and memory.",
+  MOV1: "Move a memory bit to or from carry.",
+  MOVW: "Move a direct-page word to or from YA.",
+  MUL: "Multiply Y by A into YA.",
+  NOP: "No operation.",
+  NOT1: "Invert a memory bit.",
+  NOTC: "Invert carry.",
+  OR: "Bitwise OR.",
+  OR1: "OR carry with a memory bit.",
+  PCALL: "Call within the upper page.",
+  POP: "Pop a register from the stack.",
+  PUSH: "Push a register onto the stack.",
+  RET: "Return from subroutine.",
+  RETI: "Return from interrupt.",
+  ROL: "Rotate left through carry.",
+  ROR: "Rotate right through carry.",
+  SBC: "Subtract with borrow.",
+  SET0: "Set direct-page bit 0.",
+  SETC: "Set carry.",
+  SETP: "Select direct page one.",
+  SLEEP: "Wait for an interrupt.",
+  STOP: "Stop the processor.",
+  SUBW: "Subtract a direct-page word from YA.",
+  TCALL: "Call through a fixed vector table entry.",
+  TCLR: "Test and clear accumulator bits in memory.",
+  TSET: "Test and set accumulator bits in memory.",
+  XCN: "Exchange accumulator nibbles."
+};
+var spc700ConditionalBranches = /* @__PURE__ */ new Set([
+  "BCC",
+  "BCS",
+  "BEQ",
+  "BMI",
+  "BNE",
+  "BPL",
+  "BVC",
+  "BVS",
+  "CBNE",
+  "DBNZ"
+]);
+var flowFor2 = (mnemonic, addressingMode) => {
+  if (spc700ConditionalBranches.has(mnemonic) || mnemonic.startsWith("BBS") || mnemonic.startsWith("BBC")) {
+    return { kind: "conditionalBranch", fallthrough: true };
+  }
+  if (mnemonic === "BRA") return { kind: "jump", fallthrough: false };
+  if (mnemonic === "JMP") {
+    return {
+      kind: "jump",
+      fallthrough: false,
+      ...addressingMode === "absoluteIndexedXIndirect" ? { indirect: true } : {}
+    };
+  }
+  if (mnemonic === "CALL" || mnemonic === "PCALL" || mnemonic === "TCALL") {
+    return {
+      kind: "call",
+      fallthrough: true,
+      ...mnemonic === "TCALL" ? { indirect: true } : {}
+    };
+  }
+  if (mnemonic === "RET" || mnemonic === "RETI") {
+    return { kind: "return", fallthrough: false };
+  }
+  if (mnemonic === "BRK") return { kind: "interrupt", fallthrough: false };
+  if (mnemonic === "SLEEP") return { kind: "wait", fallthrough: false };
+  if (mnemonic === "STOP") return { kind: "stop", fallthrough: false };
+  return { kind: "fallthrough", fallthrough: true };
+};
+var effects2 = {
+  CLRC: [{ kind: "clearBits", target: "p", mask: 1 }],
+  SETC: [{ kind: "setBits", target: "p", mask: 1 }],
+  DI: [{ kind: "clearBits", target: "p", mask: 4 }],
+  EI: [{ kind: "setBits", target: "p", mask: 4 }],
+  CLRP: [{ kind: "clearBits", target: "p", mask: 32 }],
+  SETP: [{ kind: "setBits", target: "p", mask: 32 }],
+  CLRV: [{ kind: "clearBits", target: "p", mask: 72 }],
+  NOTC: [{ kind: "custom", name: "invert-status-bit", details: { target: "p", mask: 1 } }],
+  PUSH: [{ kind: "push", source: "operand-register" }],
+  POP: [{ kind: "pull", target: "operand-register" }],
+  RET: [{ kind: "pull", target: "pc" }],
+  RETI: [
+    { kind: "pull", target: "p" },
+    { kind: "pull", target: "pc" }
+  ]
+};
+var entries2 = opcodeRows2.flatMap((row) => row.split(" "));
+if (entries2.length !== 256) throw new Error(`SPC700 opcode table has ${entries2.length} entries.`);
+var spc700Specifications = Object.freeze(
+  entries2.map((entry, opcode) => {
+    const [mnemonic, modeKeyText] = entry.split(":");
+    const definition = spc700Modes[modeKeyText];
+    if (!mnemonic || !definition) throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
+    const summaryKey = mnemonic.replace(/[0-7]$/, "0");
+    return Object.freeze({
+      id: `snes.spc700.${opcode.toString(16).padStart(2, "0")}`,
+      architecture: "snes.spc700",
+      opcode: [opcode],
+      mnemonic,
+      mode: definition.id,
+      syntax: definition.syntax,
+      minimumSize: definition.size,
+      maximumSize: definition.size,
+      summary: summaries2[mnemonic] ?? summaries2[summaryKey] ?? `${mnemonic} instruction.`,
+      flow: flowFor2(mnemonic, definition.id),
+      effects: effects2[mnemonic] ?? []
+    });
+  })
+);
+function buildSpc700Catalog() {
+  const grouped = /* @__PURE__ */ new Map();
+  for (const specification2 of spc700Specifications) {
+    const addressingMode = {
+      mode: specification2.mode,
+      syntax: specification2.syntax,
+      opcode: specification2.opcode[0],
+      size: specification2.minimumSize
+    };
+    const descriptor2 = grouped.get(specification2.mnemonic);
+    if (descriptor2) descriptor2.modes.push(addressingMode);
+    else {
+      grouped.set(specification2.mnemonic, {
+        mnemonic: specification2.mnemonic,
+        summary: specification2.summary,
+        modes: [addressingMode]
+      });
+    }
+  }
+  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+}
+
+// packages/plugin-snes/src/architectures/superfx-spec.ts
+var syntaxFor = (encoding) => {
+  switch (encoding) {
+    case "implied":
+      return "";
+    case "relative":
+      return "label";
+    case "register":
+      return "Rn";
+    case "registerIndirect":
+      return "(Rn)";
+    case "immediateNibble":
+      return "#n";
+    case "registerImmediate8":
+    case "registerImmediate16":
+      return "Rn,#imm";
+    case "registerRamShort":
+      return "Rn,(addr)";
+    case "ramShortRegister":
+      return "(addr),Rn";
+    case "registerRamAbsolute":
+      return "Rn,(addr)";
+    case "ramAbsoluteRegister":
+      return "(addr),Rn";
+  }
+  throw new Error("Unsupported SuperFX operand encoding.");
+};
+var implied = (mnemonic, writesDestination = false) => ({
+  mnemonic,
+  encoding: "implied",
+  size: 1,
+  ...writesDestination ? { writesDestination: true } : {}
+});
+var register = (mnemonic, value, writesDestination = false) => ({
+  mnemonic,
+  encoding: "register",
+  size: 1,
+  register: value,
+  ...writesDestination ? { writesDestination: true } : {}
+});
+var registerIndirect = (mnemonic, value, writesDestination = false) => ({
+  mnemonic,
+  encoding: "registerIndirect",
+  size: 1,
+  register: value,
+  ...writesDestination ? { writesDestination: true } : {}
+});
+var nibble = (mnemonic, value, writesDestination = false) => ({
+  mnemonic,
+  encoding: "immediateNibble",
+  size: 1,
+  register: value,
+  ...writesDestination ? { writesDestination: true } : {}
+});
+var baseDefinition = (opcode) => {
+  if (opcode === 0) return implied("STOP");
+  if (opcode === 1) return implied("NOP");
+  if (opcode === 2) return implied("CACHE");
+  if (opcode === 3) return implied("LSR", true);
+  if (opcode === 4) return implied("ROL", true);
+  const branches = ["BRA", "BGE", "BLT", "BNE", "BEQ", "BPL", "BMI", "BCC", "BCS", "BVC", "BVS"];
+  if (opcode >= 5 && opcode <= 15) {
+    return { mnemonic: branches[opcode - 5], encoding: "relative", size: 2 };
+  }
+  if (opcode >= 16 && opcode <= 31) return register("TO", opcode & 15);
+  if (opcode >= 32 && opcode <= 47) return register("WITH", opcode & 15);
+  if (opcode >= 48 && opcode <= 59) return registerIndirect("STW", opcode & 15);
+  if (opcode === 60) return implied("LOOP");
+  if (opcode === 61) return implied("ALT1");
+  if (opcode === 62) return implied("ALT2");
+  if (opcode === 63) return implied("ALT3");
+  if (opcode >= 64 && opcode <= 75) return registerIndirect("LDW", opcode & 15, true);
+  if (opcode === 76) return implied("PLOT");
+  if (opcode === 77) return implied("SWAP", true);
+  if (opcode === 78) return implied("COLOR");
+  if (opcode === 79) return implied("NOT", true);
+  if (opcode >= 80 && opcode <= 95) return register("ADD", opcode & 15, true);
+  if (opcode >= 96 && opcode <= 111) return register("SUB", opcode & 15, true);
+  if (opcode === 112) return implied("MERGE", true);
+  if (opcode >= 113 && opcode <= 127) return register("AND", opcode & 15, true);
+  if (opcode >= 128 && opcode <= 143) return register("MULT", opcode & 15, true);
+  if (opcode === 144) return implied("SBK");
+  if (opcode >= 145 && opcode <= 148) return nibble("LINK", opcode & 15);
+  if (opcode === 149) return implied("SEX", true);
+  if (opcode === 150) return implied("ASR", true);
+  if (opcode === 151) return implied("ROR", true);
+  if (opcode >= 152 && opcode <= 157) return register("JMP", opcode & 15);
+  if (opcode === 158) return implied("LOB", true);
+  if (opcode === 159) return implied("FMULT", true);
+  if (opcode >= 160 && opcode <= 175) {
+    return {
+      mnemonic: "IBT",
+      encoding: "registerImmediate8",
+      size: 2,
+      register: opcode & 15
+    };
+  }
+  if (opcode >= 176 && opcode <= 191) return register("FROM", opcode & 15);
+  if (opcode === 192) return implied("HIB", true);
+  if (opcode >= 193 && opcode <= 207) return register("OR", opcode & 15, true);
+  if (opcode >= 208 && opcode <= 222) return register("INC", opcode & 15);
+  if (opcode === 223) return implied("GETC");
+  if (opcode >= 224 && opcode <= 238) return register("DEC", opcode & 15);
+  if (opcode === 239) return implied("GETB", true);
+  return {
+    mnemonic: "IWT",
+    encoding: "registerImmediate16",
+    size: 3,
+    register: opcode & 15
+  };
+};
+var altDefinition = (alt, opcode) => {
+  if (alt === 0) return baseDefinition(opcode);
+  const low = opcode & 15;
+  if (alt === 1) {
+    if (opcode >= 48 && opcode <= 59) return registerIndirect("STB", low);
+    if (opcode >= 64 && opcode <= 75) return registerIndirect("LDB", low, true);
+    if (opcode === 76) return implied("RPIX", true);
+    if (opcode === 78) return implied("CMODE");
+    if (opcode >= 80 && opcode <= 95) return register("ADC", low, true);
+    if (opcode >= 96 && opcode <= 111) return register("SBC", low, true);
+    if (opcode >= 113 && opcode <= 127) return register("BIC", low, true);
+    if (opcode >= 128 && opcode <= 143) return register("UMULT", low, true);
+    if (opcode === 150) return implied("DIV2", true);
+    if (opcode >= 152 && opcode <= 157) return register("LJMP", low);
+    if (opcode === 159) return implied("LMULT", true);
+    if (opcode >= 160 && opcode <= 175) {
+      return {
+        mnemonic: "LMS",
+        encoding: "registerRamShort",
+        size: 2,
+        register: low
+      };
+    }
+    if (opcode >= 193 && opcode <= 207) return register("XOR", low, true);
+    if (opcode === 239) return implied("GETBH", true);
+    if (opcode >= 240) {
+      return {
+        mnemonic: "LM",
+        encoding: "registerRamAbsolute",
+        size: 3,
+        register: low
+      };
+    }
+  }
+  if (alt === 2) {
+    if (opcode >= 80 && opcode <= 95) return nibble("ADD", low, true);
+    if (opcode >= 96 && opcode <= 111) return nibble("SUB", low, true);
+    if (opcode >= 113 && opcode <= 127) return nibble("AND", low, true);
+    if (opcode >= 128 && opcode <= 143) return nibble("MULT", low, true);
+    if (opcode >= 160 && opcode <= 175) {
+      return {
+        mnemonic: "SMS",
+        encoding: "ramShortRegister",
+        size: 2,
+        register: low
+      };
+    }
+    if (opcode >= 193 && opcode <= 207) return nibble("OR", low, true);
+    if (opcode === 223) return implied("RAMB");
+    if (opcode === 239) return implied("GETBL", true);
+    if (opcode >= 240) {
+      return {
+        mnemonic: "SM",
+        encoding: "ramAbsoluteRegister",
+        size: 3,
+        register: low
+      };
+    }
+  }
+  if (alt === 3) {
+    if (opcode >= 80 && opcode <= 95) return nibble("ADC", low, true);
+    if (opcode >= 96 && opcode <= 111) return register("CMP", low);
+    if (opcode >= 113 && opcode <= 127) return nibble("BIC", low, true);
+    if (opcode >= 128 && opcode <= 143) return nibble("UMULT", low, true);
+    if (opcode >= 193 && opcode <= 207) return nibble("XOR", low, true);
+    if (opcode === 223) return implied("ROMB");
+    if (opcode === 239) return implied("GETBS", true);
+  }
+  return baseDefinition(opcode);
+};
+var flowFor3 = (definition, opcode) => {
+  if (definition.mnemonic === "STOP") return { kind: "stop", fallthrough: false };
+  if (definition.mnemonic === "BRA") return { kind: "jump", fallthrough: false };
+  if (opcode >= 6 && opcode <= 15) return { kind: "conditionalBranch", fallthrough: true };
+  if (definition.mnemonic === "LOOP")
+    return { kind: "conditionalBranch", fallthrough: true, indirect: true };
+  if (definition.mnemonic === "JMP" || definition.mnemonic === "LJMP")
+    return { kind: "jump", fallthrough: false, indirect: true };
+  return { kind: "fallthrough", fallthrough: true };
+};
+var effectsFor = (definition) => {
+  if (definition.mnemonic === "ALT1" || definition.mnemonic === "ALT2" || definition.mnemonic === "ALT3") {
+    return [
+      {
+        kind: "custom",
+        name: "set-superfx-alt",
+        details: { alt: Number(definition.mnemonic.at(-1)) }
+      }
+    ];
+  }
+  if (definition.mnemonic === "TO") {
+    return [
+      {
+        kind: "custom",
+        name: "select-superfx-destination",
+        details: { register: definition.register }
+      }
+    ];
+  }
+  if (definition.mnemonic === "WITH") {
+    return [
+      {
+        kind: "custom",
+        name: "select-superfx-source-destination",
+        details: { register: definition.register }
+      }
+    ];
+  }
+  if (definition.mnemonic === "FROM") {
+    return [
+      { kind: "custom", name: "select-superfx-source", details: { register: definition.register } }
+    ];
+  }
+  return [];
+};
+var summaryFor = (mnemonic) => {
+  const summaries3 = {
+    STOP: "Stop the GSU.",
+    NOP: "No operation.",
+    CACHE: "Set the cache base register.",
+    BRA: "Branch always.",
+    BGE: "Branch if greater or equal.",
+    BLT: "Branch if less than.",
+    BNE: "Branch if not equal.",
+    BEQ: "Branch if equal.",
+    BPL: "Branch if plus.",
+    BMI: "Branch if minus.",
+    BCC: "Branch if carry clear.",
+    BCS: "Branch if carry set.",
+    BVC: "Branch if overflow clear.",
+    BVS: "Branch if overflow set.",
+    JMP: "Jump through a register.",
+    LJMP: "Long jump through a register.",
+    IWT: "Load a register with a word.",
+    IBT: "Load a register with a signed byte.",
+    LM: "Load a register from RAM.",
+    LMS: "Load a register from short RAM.",
+    SM: "Store a register to RAM.",
+    SMS: "Store a register to short RAM."
+  };
+  return summaries3[mnemonic] ?? `${mnemonic} instruction.`;
+};
+var specification = (alt, opcode) => {
+  const definition = altDefinition(alt, opcode);
+  const base = baseDefinition(opcode);
+  const alteredByAlt = alt !== 0 && (definition.mnemonic !== base.mnemonic || definition.encoding !== base.encoding);
+  return Object.freeze({
+    id: `snes.superfx.alt${alt}.${opcode.toString(16).padStart(2, "0")}`,
+    architecture: "snes.superfx",
+    opcode: [opcode],
+    mnemonic: definition.mnemonic,
+    mode: definition.encoding,
+    syntax: syntaxFor(definition.encoding),
+    operandEncoding: definition.encoding,
+    minimumSize: definition.size,
+    maximumSize: definition.size,
+    alt,
+    ...definition.register === void 0 ? {} : { register: definition.register },
+    summary: summaryFor(definition.mnemonic),
+    flow: flowFor3(definition, opcode),
+    effects: effectsFor(definition),
+    ...definition.writesDestination ? { writesDestination: true } : {},
+    alteredByAlt
+  });
+};
+var superFxOpcodeMatrix = Object.freeze(
+  [0, 1, 2, 3].map(
+    (alt) => Object.freeze(Array.from({ length: 256 }, (_, opcode) => specification(alt, opcode)))
+  )
+);
+var superFxBaseSpecifications = superFxOpcodeMatrix[0];
+var superFxSpecifications = Object.freeze([
+  ...superFxBaseSpecifications,
+  ...superFxOpcodeMatrix.slice(1).flatMap((row) => row.filter((entry) => entry.alteredByAlt))
+]);
+var fusedFlow = (destinationRegister) => destinationRegister === 15 ? { kind: "jump", fallthrough: false, indirect: true } : { kind: "fallthrough", fallthrough: true };
+var fusedSyntax = (mode3) => {
+  if (mode3 === "registerRegister") return "Rn,Rm";
+  if (mode3 === "registerRegisterIndirect") return "Rn,(Rm)";
+  return "(Rn),Rm";
+};
+var fused = (mnemonic, opcode, mode3, destinationRegister, sourceRegister, pointerRegister) => Object.freeze({
+  id: `snes.superfx.fused.${opcode.map((value) => value.toString(16).padStart(2, "0")).join("-")}`,
+  architecture: "snes.superfx",
+  opcode,
+  mnemonic,
+  mode: mode3,
+  syntax: fusedSyntax(mode3),
+  minimumSize: opcode.length,
+  maximumSize: opcode.length,
+  destinationRegister,
+  ...sourceRegister === void 0 ? {} : { sourceRegister },
+  ...pointerRegister === void 0 ? {} : { pointerRegister },
+  summary: `${mnemonic} fused selector form.`,
+  flow: fusedFlow(destinationRegister),
+  effects: []
+});
+var superFxFusedSpecifications = Object.freeze([
+  ...Array.from(
+    { length: 16 },
+    (_, source) => Array.from(
+      { length: 16 },
+      (_2, destination) => fused("MOVE", [32 + source, 16 + destination], "registerRegister", destination, source)
+    )
+  ).flat(),
+  ...Array.from(
+    { length: 16 },
+    (_, destination) => Array.from(
+      { length: 16 },
+      (_2, source) => fused(
+        "MOVES",
+        [32 + destination, 176 + source],
+        "registerRegister",
+        destination,
+        source
+      )
+    )
+  ).flat(),
+  ...Array.from({ length: 15 }, (_, index) => index + 1).flatMap(
+    (destination) => Array.from({ length: 12 }, (_, pointer) => [
+      fused(
+        "MOVEW",
+        [16 + destination, 64 + pointer],
+        "registerRegisterIndirect",
+        destination,
+        void 0,
+        pointer
+      ),
+      fused(
+        "MOVEB",
+        [16 + destination, 61, 64 + pointer],
+        "registerRegisterIndirect",
+        destination,
+        void 0,
+        pointer
+      )
+    ]).flat()
   ),
-  implied("STP", "Stop the processor.", 219),
-  instruction("STX", "Store the X register.", [
-    { mode: "direct", syntax: "dp" },
-    { mode: "directIndexedY", syntax: "dp,y" },
-    { mode: "absolute", syntax: "addr" }
-  ]),
-  instruction("STY", "Store the Y register.", [
-    { mode: "direct", syntax: "dp" },
-    { mode: "directIndexedX", syntax: "dp,x" },
-    { mode: "absolute", syntax: "addr" }
-  ]),
-  instruction("STZ", "Store zero to memory.", [
-    { mode: "direct", syntax: "dp" },
-    { mode: "directIndexedX", syntax: "dp,x" },
-    { mode: "absolute", syntax: "addr" },
-    { mode: "absoluteIndexedX", syntax: "addr,x" }
-  ]),
-  implied("TAX", "Transfer accumulator to X.", 170),
-  implied("TAY", "Transfer accumulator to Y.", 168),
-  implied("TCD", "Transfer accumulator to direct page register.", 91),
-  implied("TCS", "Transfer accumulator to stack pointer.", 27),
-  implied("TDC", "Transfer direct page register to accumulator.", 123),
-  implied("TSC", "Transfer stack pointer to accumulator.", 59),
-  implied("TSX", "Transfer stack pointer to X.", 186),
-  implied("TXA", "Transfer X to accumulator.", 138),
-  implied("TXS", "Transfer X to stack pointer.", 154),
-  implied("TXY", "Transfer X to Y.", 155),
-  implied("TYA", "Transfer Y to accumulator.", 152),
-  implied("TYX", "Transfer Y to X.", 187),
-  implied("WAI", "Wait for interrupt.", 203),
-  instruction("WDM", "Reserved (William D. Mensch) opcode.", [
-    { mode: "immediate", syntax: "#const", opcode: 66, size: 2 }
-  ]),
-  implied("XBA", "Exchange the bytes of the accumulator.", 235),
-  implied("XCE", "Exchange carry and emulation flags.", 251)
-];
-var spc700Catalog = [
-  instruction("MOV", "Move data between registers and memory.", [
-    { mode: "registerImmediate", syntax: "A,#const" },
-    { mode: "registerDirect", syntax: "A,dp" },
-    { mode: "registerAbsolute", syntax: "A,!addr" },
-    { mode: "directRegister", syntax: "dp,A" },
-    { mode: "absoluteRegister", syntax: "!addr,A" },
-    { mode: "registerIndirect", syntax: "A,(X)" },
-    { mode: "directDirect", syntax: "dp,dp" },
-    { mode: "directImmediate", syntax: "dp,#const" }
-  ]),
-  instruction("ADC", "Add with carry.", [
-    { mode: "registerImmediate", syntax: "A,#const" },
-    { mode: "registerDirect", syntax: "A,dp" },
-    { mode: "registerAbsolute", syntax: "A,!addr" },
-    { mode: "directDirect", syntax: "dp,dp" }
-  ]),
-  instruction("SBC", "Subtract with borrow.", [
-    { mode: "registerImmediate", syntax: "A,#const" },
-    { mode: "registerDirect", syntax: "A,dp" },
-    { mode: "registerAbsolute", syntax: "A,!addr" }
-  ]),
-  instruction("CMP", "Compare.", [
-    { mode: "registerImmediate", syntax: "A,#const" },
-    { mode: "registerDirect", syntax: "A,dp" },
-    { mode: "registerAbsolute", syntax: "A,!addr" }
-  ]),
-  instruction("AND", "Bitwise AND.", [
-    { mode: "registerImmediate", syntax: "A,#const" },
-    { mode: "registerDirect", syntax: "A,dp" }
-  ]),
-  instruction("OR", "Bitwise OR.", [
-    { mode: "registerImmediate", syntax: "A,#const" },
-    { mode: "registerDirect", syntax: "A,dp" }
-  ]),
-  instruction("EOR", "Bitwise exclusive-OR.", [
-    { mode: "registerImmediate", syntax: "A,#const" },
-    { mode: "registerDirect", syntax: "A,dp" }
-  ]),
-  instruction("INC", "Increment.", [
-    { mode: "register", syntax: "A" },
-    { mode: "direct", syntax: "dp" }
-  ]),
-  instruction("DEC", "Decrement.", [
-    { mode: "register", syntax: "A" },
-    { mode: "direct", syntax: "dp" }
-  ]),
-  instruction("ASL", "Arithmetic shift left.", [
-    { mode: "register", syntax: "A" },
-    { mode: "direct", syntax: "dp" }
-  ]),
-  instruction("LSR", "Logical shift right.", [
-    { mode: "register", syntax: "A" },
-    { mode: "direct", syntax: "dp" }
-  ]),
-  instruction("ROL", "Rotate left.", [
-    { mode: "register", syntax: "A" },
-    { mode: "direct", syntax: "dp" }
-  ]),
-  instruction("ROR", "Rotate right.", [
-    { mode: "register", syntax: "A" },
-    { mode: "direct", syntax: "dp" }
-  ]),
-  branch("BRA", "Branch always.", 47),
-  branch("BEQ", "Branch if equal.", 240),
-  branch("BNE", "Branch if not equal.", 208),
-  branch("BCS", "Branch if carry set.", 176),
-  branch("BCC", "Branch if carry clear.", 144),
-  branch("BVS", "Branch if overflow set.", 112),
-  branch("BVC", "Branch if overflow clear.", 80),
-  branch("BMI", "Branch if minus.", 48),
-  branch("BPL", "Branch if plus.", 16),
-  instruction("CBNE", "Compare and branch if not equal.", [
-    { mode: "directRelative", syntax: "dp,label" }
-  ]),
-  instruction("DBNZ", "Decrement and branch if not zero.", [
-    { mode: "directRelative", syntax: "dp,label" }
-  ]),
-  instruction("JMP", "Jump.", [
-    { mode: "absolute", syntax: "!addr" },
-    { mode: "absoluteIndexedXIndirect", syntax: "[!addr+X]" }
-  ]),
-  instruction("CALL", "Call subroutine.", [
-    { mode: "absolute", syntax: "!addr", opcode: 63, size: 3 }
-  ]),
-  implied("RET", "Return from subroutine.", 111),
-  implied("RETI", "Return from interrupt.", 127),
-  implied("NOP", "No operation.", 0),
-  implied("CLRC", "Clear carry.", 96),
-  implied("SETC", "Set carry.", 128),
-  implied("CLRP", "Clear direct page flag.", 32),
-  implied("SETP", "Set direct page flag.", 64),
-  implied("EI", "Enable interrupts.", 160),
-  implied("DI", "Disable interrupts.", 192),
-  implied("STOP", "Stop the processor.", 255),
-  instruction("PUSH", "Push a register to the stack.", [{ mode: "register", syntax: "A" }]),
-  instruction("POP", "Pop a register from the stack.", [{ mode: "register", syntax: "A" }])
-];
-var superFxRegister = { mode: "register", syntax: "Rn", size: 1 };
-var superFxRegisterAlt = { mode: "register", syntax: "Rn", size: 2 };
-var superFxImmediateAlt = { mode: "immediate", syntax: "#n", size: 2 };
-var superFxIndirect = { mode: "registerIndirect", syntax: "(Rn)", size: 1 };
-var superFxIndirectAlt = { mode: "registerIndirect", syntax: "(Rn)", size: 2 };
-var superFxCatalog = [
-  implied("STOP", "Stop the GSU.", 0),
-  implied("NOP", "No operation.", 1),
-  implied("CACHE", "Set the cache base register.", 2),
-  implied("LSR", "Logical shift right.", 3),
-  implied("ROL", "Rotate left.", 4),
-  implied("LOOP", "Decrement R13 and branch if non-zero.", 60),
-  implied("ALT1", "Set ALT1 prefix.", 61),
-  implied("ALT2", "Set ALT2 prefix.", 62),
-  implied("ALT3", "Set ALT1 and ALT2 prefixes.", 63),
-  implied("PLOT", "Plot a pixel.", 76),
-  implied("SWAP", "Swap high and low bytes of SReg.", 77),
-  implied("COLOR", "Set the plot color from SReg.", 78),
-  implied("NOT", "Bitwise NOT of SReg.", 79),
-  implied("MERGE", "Merge high bytes of R7 and R8.", 112),
-  implied("SBK", "Store SReg back to the last RAM address.", 144),
-  implied("SEX", "Sign-extend the low byte of SReg.", 149),
-  implied("ASR", "Arithmetic shift right of SReg.", 150),
-  implied("ROR", "Rotate SReg right through carry.", 151),
-  implied("LOB", "Keep the low byte of SReg.", 158),
-  implied("FMULT", "Fractional signed multiply.", 159),
-  implied("HIB", "Keep the high byte of SReg.", 192),
-  implied("GETC", "Get byte from ROM into the plot color.", 223),
-  implied("GETB", "Get byte from ROM into SReg.", 239),
-  implied("RPIX", "Read pixel.", 61, 2),
-  implied("CMODE", "Set plot color mode.", 61, 2),
-  implied("DIV2", "Arithmetic shift right and clear the least bit.", 61, 2),
-  implied("LMULT", "Signed 16\xD716 multiply.", 61, 2),
-  implied("GETBH", "Get ROM byte into the high byte of SReg.", 61, 2),
-  implied("RAMB", "Set the RAM bank from SReg.", 62, 2),
-  implied("GETBL", "Get ROM byte into the low byte of SReg.", 62, 2),
-  implied("ROMB", "Set the ROM bank from SReg.", 63, 2),
-  implied("GETBS", "Get ROM byte sign-extended into SReg.", 63, 2),
-  branch("BRA", "Branch always.", 5),
-  branch("BGE", "Branch if greater or equal.", 6),
-  branch("BLT", "Branch if less than.", 7),
-  branch("BNE", "Branch if not equal.", 8),
-  branch("BEQ", "Branch if equal.", 9),
-  branch("BPL", "Branch if plus.", 10),
-  branch("BMI", "Branch if minus.", 11),
-  branch("BCC", "Branch if carry clear.", 12),
-  branch("BCS", "Branch if carry set.", 13),
-  branch("BVC", "Branch if overflow clear.", 14),
-  branch("BVS", "Branch if overflow set.", 15),
-  instruction("TO", "Set the destination register.", [{ ...superFxRegister, opcode: 16 }]),
-  instruction("WITH", "Set source and destination register.", [
-    { ...superFxRegister, opcode: 32 }
-  ]),
-  instruction("FROM", "Set the source register.", [{ ...superFxRegister, opcode: 176 }]),
-  instruction("ADD", "Add to SReg.", [superFxRegister, superFxImmediateAlt]),
-  instruction("ADC", "Add to SReg with carry.", [superFxRegisterAlt, superFxImmediateAlt]),
-  instruction("SUB", "Subtract from SReg.", [superFxRegister, superFxImmediateAlt]),
-  instruction("SBC", "Subtract from SReg with borrow.", [superFxRegisterAlt]),
-  instruction("CMP", "Compare SReg with Rn.", [superFxRegisterAlt]),
-  instruction("AND", "Bitwise AND with SReg.", [superFxRegister, superFxImmediateAlt]),
-  instruction("BIC", "Bit clear SReg.", [superFxRegisterAlt, superFxImmediateAlt]),
-  instruction("OR", "Bitwise OR with SReg.", [superFxRegister, superFxImmediateAlt]),
-  instruction("XOR", "Bitwise exclusive-OR with SReg.", [superFxRegisterAlt, superFxImmediateAlt]),
-  instruction("MULT", "Signed 8-bit multiply.", [superFxRegister, superFxImmediateAlt]),
-  instruction("UMULT", "Unsigned 8-bit multiply.", [superFxRegisterAlt, superFxImmediateAlt]),
-  instruction("JMP", "Jump to address in Rn (R8-R13).", [superFxRegister]),
-  instruction("LJMP", "Long jump via Rn (R8-R13).", [superFxRegisterAlt]),
-  instruction("INC", "Increment Rn (R0-R14).", [superFxRegister]),
-  instruction("DEC", "Decrement Rn (R0-R14).", [superFxRegister]),
-  instruction("LINK", "Set R11 to PBR:PC+n.", [
-    { mode: "immediate", syntax: "#n", opcode: 144, size: 1 }
-  ]),
-  instruction("STW", "Store word at (Rn).", [superFxIndirect]),
-  instruction("LDW", "Load word from (Rn).", [superFxIndirect]),
-  instruction("STB", "Store byte at (Rn).", [superFxIndirectAlt]),
-  instruction("LDB", "Load byte from (Rn).", [superFxIndirectAlt]),
-  instruction("IBT", "Load Rn with a signed byte.", [
-    { mode: "registerImmediate", syntax: "Rn,#imm", opcode: 160, size: 2 }
-  ]),
-  instruction("IWT", "Load Rn with a word.", [
-    { mode: "registerImmediate", syntax: "Rn,#imm", opcode: 240, size: 3 }
-  ]),
-  instruction("LM", "Load Rn from RAM.", [
-    { mode: "registerIndirectAbsolute", syntax: "Rn,(addr)", size: 4 }
-  ]),
-  instruction("LMS", "Load Rn from short RAM.", [
-    { mode: "registerIndirectShort", syntax: "Rn,(xx)", size: 3 }
-  ]),
-  instruction("SM", "Store Rn to RAM.", [
-    { mode: "indirectAbsoluteRegister", syntax: "(addr),Rn", size: 4 }
-  ]),
-  instruction("SMS", "Store Rn to short RAM.", [
-    { mode: "indirectShortRegister", syntax: "(xx),Rn", size: 3 }
-  ]),
-  instruction("LEA", "Load Rn with the effective address.", [
-    { mode: "registerAbsolute", syntax: "Rn,addr", opcode: 240, size: 3 }
-  ]),
-  instruction("MOVE", "Move register, immediate, or RAM data.", [
-    { mode: "registerRegister", syntax: "Rn,Rm", size: 2 },
-    { mode: "registerImmediate", syntax: "Rn,#imm" },
-    { mode: "registerIndirectAbsolute", syntax: "Rn,(addr)" },
-    { mode: "indirectAbsoluteRegister", syntax: "(addr),Rn" }
-  ]),
-  instruction("MOVES", "Move Rm to Rn and update flags.", [
-    { mode: "registerRegister", syntax: "Rn,Rm", size: 2 }
-  ]),
-  instruction("MOVEB", "Move a byte through (Rn).", [
-    { mode: "indirectRegister", syntax: "(Rn),Rm" },
-    { mode: "registerIndirect", syntax: "Rn,(Rm)" }
-  ]),
-  instruction("MOVEW", "Move a word through (Rn).", [
-    { mode: "indirectRegister", syntax: "(Rn),Rm" },
-    { mode: "registerIndirect", syntax: "Rn,(Rm)" }
-  ])
-];
+  ...Array.from({ length: 15 }, (_, index) => index + 1).flatMap(
+    (source) => Array.from({ length: 12 }, (_, pointer) => [
+      fused(
+        "MOVEW",
+        [176 + source, 48 + pointer],
+        "registerIndirectRegister",
+        0,
+        source,
+        pointer
+      ),
+      fused(
+        "MOVEB",
+        [176 + source, 61, 48 + pointer],
+        "registerIndirectRegister",
+        0,
+        source,
+        pointer
+      )
+    ]).flat()
+  )
+]);
+function buildSuperFxCatalog() {
+  const grouped = /* @__PURE__ */ new Map();
+  for (const entry of superFxSpecifications) {
+    const mode3 = {
+      mode: entry.mode,
+      syntax: entry.syntax,
+      opcode: entry.opcode[0],
+      size: entry.minimumSize + (entry.alt === 0 ? 0 : 1)
+    };
+    const existing = grouped.get(entry.mnemonic);
+    if (existing) {
+      if (!existing.modes.some((value) => JSON.stringify(value) === JSON.stringify(mode3)))
+        existing.modes.push(mode3);
+    } else {
+      grouped.set(entry.mnemonic, {
+        mnemonic: entry.mnemonic,
+        summary: entry.summary ?? `${entry.mnemonic} instruction.`,
+        modes: [mode3]
+      });
+    }
+  }
+  const conveniences = [
+    {
+      mnemonic: "LEA",
+      summary: "Load a register with an effective address.",
+      modes: [{ mode: "registerAbsolute", syntax: "Rn,addr", size: 3 }]
+    },
+    {
+      mnemonic: "MOVE",
+      summary: "Move register, immediate, or RAM data.",
+      modes: [
+        { mode: "registerRegister", syntax: "Rn,Rm", size: 2 },
+        { mode: "registerImmediate", syntax: "Rn,#imm" },
+        { mode: "registerRam", syntax: "Rn,(addr)" },
+        { mode: "ramRegister", syntax: "(addr),Rn" }
+      ]
+    },
+    {
+      mnemonic: "MOVES",
+      summary: "Move a register and update flags.",
+      modes: [{ mode: "registerRegister", syntax: "Rn,Rm", size: 2 }]
+    },
+    {
+      mnemonic: "MOVEB",
+      summary: "Move a byte through a register pointer.",
+      modes: [
+        { mode: "registerIndirect", syntax: "Rn,(Rm)" },
+        { mode: "indirectRegister", syntax: "(Rn),Rm" }
+      ]
+    },
+    {
+      mnemonic: "MOVEW",
+      summary: "Move a word through a register pointer.",
+      modes: [
+        { mode: "registerIndirect", syntax: "Rn,(Rm)" },
+        { mode: "indirectRegister", syntax: "(Rn),Rm" }
+      ]
+    }
+  ];
+  for (const entry of conveniences) grouped.set(entry.mnemonic, entry);
+  return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
+}
+
+// packages/plugin-snes/src/tooling/instruction-catalog.ts
+var cpu65816Catalog = buildCpu65816Catalog();
+var spc700Catalog = buildSpc700Catalog();
+var superFxCatalog = buildSuperFxCatalog();
 
 // packages/plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
@@ -15036,7 +16490,7 @@ function classifyGenericOperand(input) {
   const normalizedUpper = normalizedExpanded.toUpperCase();
   const explicitDirectPage = isExplicitDirectPageSpelling(raw, normalizedExpanded, false);
   const explicitDirectPageIndexedX = isExplicitDirectPageSpelling(raw, normalizedExpanded, true);
-  let mode = "unknown";
+  let mode3 = "unknown";
   let baseExpression = expanded;
   let registerName;
   const rawUpper = raw.trim().toUpperCase();
@@ -15049,90 +16503,90 @@ function classifyGenericOperand(input) {
   const directPageIndirectIndexedYMatch = normalizedExpanded.match(/^\(\s*(.+?)\s*\)\s*\+\s*y$/i);
   const bitAddressMatch = normalizedExpanded.match(/^(\$[\da-f]+)\.([0-7])$/i);
   if (registerOperandMatch) {
-    mode = "register";
+    mode3 = "register";
     registerName = registerOperandMatch[1].toLowerCase();
     baseExpression = normalizedExpanded;
   } else if (registerIndirectAutoIncrementMatch) {
-    mode = "registerIndirectAutoIncrement";
+    mode3 = "registerIndirectAutoIncrement";
     registerName = registerIndirectAutoIncrementMatch[1].toLowerCase();
     baseExpression = registerIndirectAutoIncrementMatch[1];
   } else if (registerIndirectMatch) {
-    mode = "registerIndirect";
+    mode3 = "registerIndirect";
     registerName = registerIndirectMatch[1].toLowerCase();
     baseExpression = registerIndirectMatch[1];
   } else if (directPageIndexedXIndirectMatch) {
-    mode = "directPageIndexedXIndirect";
+    mode3 = "directPageIndexedXIndirect";
     baseExpression = directPageIndexedXIndirectMatch[1].trim();
   } else if (directPageIndirectIndexedYMatch) {
-    mode = "directPageIndirectIndexedY";
+    mode3 = "directPageIndirectIndexedY";
     baseExpression = directPageIndirectIndexedYMatch[1].trim();
   } else if (bitAddressMatch) {
-    mode = bitAddressMatch[1].length <= 3 ? "directPageBit" : "absoluteBit";
+    mode3 = bitAddressMatch[1].length <= 3 ? "directPageBit" : "absoluteBit";
     baseExpression = bitAddressMatch[1].toUpperCase();
   }
-  if (mode === "unknown" && expanded.startsWith("#")) {
-    mode = "immediate";
+  if (mode3 === "unknown" && expanded.startsWith("#")) {
+    mode3 = "immediate";
     baseExpression = expanded.slice(1).trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{6}\s*,\s*x$/i.test(expanded)) {
+  } else if (mode3 === "unknown" && /^\$[\da-f]{6}\s*,\s*x$/i.test(expanded)) {
     if (length >= 3) {
-      mode = "absoluteLongIndexedX";
+      mode3 = "absoluteLongIndexedX";
     } else {
-      mode = "absoluteIndexedX";
+      mode3 = "absoluteIndexedX";
     }
     baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*x$/i.test(expanded)) {
+  } else if (mode3 === "unknown" && /^\$[\da-f]{4}\s*,\s*x$/i.test(expanded)) {
     if (length >= 3) {
-      mode = "absoluteLongIndexedX";
+      mode3 = "absoluteLongIndexedX";
     } else {
-      mode = "absoluteIndexedX";
+      mode3 = "absoluteIndexedX";
     }
     baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
-  } else if (mode === "unknown" && /^\$[\da-f]{4}\s*,\s*y$/i.test(expanded)) {
-    mode = "absoluteIndexedY";
+  } else if (mode3 === "unknown" && /^\$[\da-f]{4}\s*,\s*y$/i.test(expanded)) {
+    mode3 = "absoluteIndexedY";
     baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*x\s*\)$/i.test(normalizedExpanded)) {
-    mode = "indexedIndirectX";
+  } else if (mode3 === "unknown" && /^\(\s*(.+?)\s*,\s*x\s*\)$/i.test(normalizedExpanded)) {
+    mode3 = "indexedIndirectX";
     baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*x\s*\)$/i, "").trim();
-  } else if (mode === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
-    mode = "directPageIndirect";
+  } else if (mode3 === "unknown" && lowered.startsWith("(") && lowered.endsWith(")")) {
+    mode3 = "directPageIndirect";
     baseExpression = expanded.slice(1, -1).trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "stackRelativeIndexedIndirectY";
+  } else if (mode3 === "unknown" && /^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode3 = "stackRelativeIndexedIndirectY";
     baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*,\s*s\s*\)\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*s$/i.test(lowered)) {
-    mode = "stackRelative";
+  } else if (mode3 === "unknown" && /,\s*s$/i.test(lowered)) {
+    mode3 = "stackRelative";
     baseExpression = expanded.replace(/\s*,\s*s$/i, "").trim();
-  } else if (mode === "unknown" && /^\[\s*(.+?)\s*]\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "indirectLongIndexedY";
+  } else if (mode3 === "unknown" && /^\[\s*(.+?)\s*]\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode3 = "indirectLongIndexedY";
     baseExpression = normalizedExpanded.replace(/^\[\s*/, "").replace(/\s*]\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
-    mode = "indirectLong";
+  } else if (mode3 === "unknown" && lowered.startsWith("[") && lowered.endsWith("]")) {
+    mode3 = "indirectLong";
     baseExpression = expanded.slice(1, -1).trim();
-  } else if (mode === "unknown" && /^\(\s*(.+?)\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
-    mode = "indirectIndexedY";
+  } else if (mode3 === "unknown" && /^\(\s*(.+?)\s*\)\s*,\s*y$/i.test(normalizedExpanded)) {
+    mode3 = "indirectIndexedY";
     baseExpression = normalizedExpanded.replace(/^\(\s*/, "").replace(/\s*\)\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*y$/i.test(lowered)) {
-    mode = "absoluteIndexedY";
+  } else if (mode3 === "unknown" && /,\s*y$/i.test(lowered)) {
+    mode3 = "absoluteIndexedY";
     baseExpression = expanded.replace(/\s*,\s*y$/i, "").trim();
-  } else if (mode === "unknown" && /,\s*x$/i.test(lowered)) {
+  } else if (mode3 === "unknown" && /,\s*x$/i.test(lowered)) {
     baseExpression = expanded.replace(/\s*,\s*x$/i, "").trim();
     if (length >= 3) {
-      mode = "absoluteLongIndexedX";
+      mode3 = "absoluteLongIndexedX";
     } else if (length === 2) {
-      mode = "absoluteIndexedX";
+      mode3 = "absoluteIndexedX";
     } else {
-      mode = "directPageIndexedX";
+      mode3 = "directPageIndexedX";
     }
-  } else if (mode === "unknown" && /^\$[\da-f]+$/i.test(expanded)) {
+  } else if (mode3 === "unknown" && /^\$[\da-f]+$/i.test(expanded)) {
     if (length >= 3) {
-      mode = "absoluteLong";
+      mode3 = "absoluteLong";
     } else if (length === 2) {
-      mode = "absolute";
+      mode3 = "absolute";
     }
     baseExpression = expanded;
   }
   return {
-    mode,
+    mode: mode3,
     baseExpression,
     registerName,
     explicitDirectPage,
@@ -15176,16 +16630,16 @@ try {
   debug5 = d("Arch65816");
 } catch {
 }
-var keepsFixedWidthAddressingMode = (mode, explicitLength) => {
-  if (mode === "indirectLong" || mode === "indirectLongIndexedY" || mode === "indirectIndexedY" || mode === "indexedIndirectX" || mode === "stackRelative" || mode === "stackRelativeIndexedIndirectY") {
+var keepsFixedWidthAddressingMode = (mode3, explicitLength) => {
+  if (mode3 === "indirectLong" || mode3 === "indirectLongIndexedY" || mode3 === "indirectIndexedY" || mode3 === "indexedIndirectX" || mode3 === "stackRelative" || mode3 === "stackRelativeIndexedIndirectY") {
     return true;
   }
-  if (mode === "directPageIndirect" && explicitLength === 1) {
+  if (mode3 === "directPageIndirect" && explicitLength === 1) {
     return true;
   }
   return false;
 };
-var isIndexedMemory = (operand, register) => operand.indexRegister === register && !keepsFixedWidthAddressingMode(operand.mode, 1);
+var isIndexedMemory = (operand, register4) => operand.indexRegister === register4 && !keepsFixedWidthAddressingMode(operand.mode, 1);
 var Arch65816 = class {
   constructor(context, optimizeDirectPage = () => false) {
     this.optimizeDirectPage = optimizeDirectPage;
@@ -15332,12 +16786,12 @@ var Arch65816 = class {
    * @param {LoweredInstruction} instruction The instruction.
    * @returns {number} Encoded size in bytes, or 0 if not a 65816 op.
    */
-  estimateInstruction(instruction2) {
+  estimateInstruction(instruction) {
     return this.estimateResolvedInstruction(
-      instruction2.mnemonic,
-      instruction2.operandText,
-      instruction2.loweredOperand.expanded,
-      instruction2.loweredOperand.length
+      instruction.mnemonic,
+      instruction.operandText,
+      instruction.loweredOperand.expanded,
+      instruction.loweredOperand.length
     );
   }
   /**
@@ -15345,12 +16799,12 @@ var Arch65816 = class {
    * @param {LoweredInstruction} instruction The instruction.
    * @returns {boolean} True if encoded.
    */
-  encodeInstruction(instruction2) {
+  encodeInstruction(instruction) {
     return this.encodeResolvedInstruction(
-      instruction2.mnemonic,
-      instruction2.operandText,
-      instruction2.loweredOperand.expanded,
-      instruction2.loweredOperand.length
+      instruction.mnemonic,
+      instruction.operandText,
+      instruction.loweredOperand.expanded,
+      instruction.loweredOperand.length
     );
   }
   /**
@@ -16101,18 +17555,18 @@ var Arch65816 = class {
     const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const resolvedOperand = loweredOperand.expanded;
     const baseOperand = loweredOperand.baseExpression ?? resolvedOperand;
-    let address = 0;
-    let mode;
+    let address3 = 0;
+    let mode3;
     if (loweredOperand.immediate) {
       debug5("handleLogicAndCompareOperations Immediate Mode", opcode, resolvedOperand);
-      mode = "immediate";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "immediate";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
       this.assembler.write1(opcodes[logicOpcode].immediate);
       const width = this.immediateBytes(opcode, len, explicitlen, rawOperand);
       if (width === 1) {
-        this.assembler.write1(address);
+        this.assembler.write1(address3);
       } else {
-        this.assembler.write2(address);
+        this.assembler.write2(address3);
       }
       return true;
     }
@@ -16178,70 +17632,70 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "absoluteIndexedX" && opcodes[logicOpcode].absoluteX) {
-      mode = "absoluteX";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "absoluteX";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "absoluteIndexedY" && opcodes[logicOpcode].absoluteY) {
-      mode = "absoluteY";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "absoluteY";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "absoluteLong") {
-      mode = "absoluteLong";
-      address = this.assembler.operandResolver.getnum(resolvedOperand);
+      mode3 = "absoluteLong";
+      address3 = this.assembler.operandResolver.getnum(resolvedOperand);
     } else if (loweredOperand.mode === "absoluteLongIndexedX" && opcodes[logicOpcode].absoluteLongX) {
-      mode = "absoluteLongX";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "absoluteLongX";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "stackRelative" && opcodes[logicOpcode].stackRelative) {
-      mode = "stackRelative";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "stackRelative";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "stackRelativeIndexedIndirectY" && opcodes[logicOpcode].stackRelativeIndirectY) {
-      mode = "stackRelativeIndirectY";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "stackRelativeIndirectY";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (/^\$[\dA-Fa-f]{2}$/.test(resolvedOperand)) {
-      mode = "direct";
-      address = this.assembler.operandResolver.getnum(resolvedOperand);
+      mode3 = "direct";
+      address3 = this.assembler.operandResolver.getnum(resolvedOperand);
     } else if (loweredOperand.mode === "directPageIndexedX" && opcodes[logicOpcode].directX) {
-      mode = "directX";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "directX";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indexedIndirectX") {
-      mode = "indirectX";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "indirectX";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indirectIndexedY") {
-      mode = "indirectY";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "indirectY";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "directPageIndirect") {
-      mode = "indirect";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "indirect";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indirectLong" && opcodes[logicOpcode].directIndirectLong) {
-      mode = "directIndirectLong";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "directIndirectLong";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indirectLongIndexedY" && opcodes[logicOpcode].directIndirectLongY) {
-      mode = "directIndirectLongY";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "directIndirectLongY";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indirectLong") {
-      mode = "indirectLong";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "indirectLong";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "indirectLongIndexedY") {
-      mode = "indirectLongY";
-      address = this.assembler.operandResolver.getnum(baseOperand);
+      mode3 = "indirectLongY";
+      address3 = this.assembler.operandResolver.getnum(baseOperand);
     } else if (loweredOperand.mode === "absolute") {
-      mode = "absolute";
-      address = this.assembler.operandResolver.getnum(resolvedOperand);
+      mode3 = "absolute";
+      address3 = this.assembler.operandResolver.getnum(resolvedOperand);
     } else {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
     }
-    debug5("handleLogicAndCompareOperations mode", mode, operand);
-    const opcodeByte = opcodes[logicOpcode][mode];
+    debug5("handleLogicAndCompareOperations mode", mode3, operand);
+    const opcodeByte = opcodes[logicOpcode][mode3];
     if (!opcodeByte) {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
     }
     this.assembler.write1(opcodeByte);
-    if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode === "directIndirectLong") {
-      this.assembler.write1(address);
-    } else if (["absolute", "absoluteX", "absoluteY", "directIndirectLong"].includes(mode)) {
-      this.assembler.write2(address);
-    } else if (["absoluteLong", "absoluteLongX", "indirectLong", "indirectLongY"].includes(mode)) {
-      this.assembler.write3(address);
+    if ((opcode === "AND" || opcode === "ORA" || opcode === "EOR" || opcode === "CPY" || opcode === "CPX" || opcode === "CMP") && mode3 === "directIndirectLong") {
+      this.assembler.write1(address3);
+    } else if (["absolute", "absoluteX", "absoluteY", "directIndirectLong"].includes(mode3)) {
+      this.assembler.write2(address3);
+    } else if (["absoluteLong", "absoluteLongX", "indirectLong", "indirectLongY"].includes(mode3)) {
+      this.assembler.write3(address3);
     } else {
-      this.assembler.write1(address);
+      this.assembler.write1(address3);
     }
     return true;
   }
@@ -16499,7 +17953,7 @@ var Arch65816 = class {
     }
     const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     let opcodeByte = 0;
-    let address = 0;
+    let address3 = 0;
     const isLDX = opcode === "LDX";
     const isLDY = opcode === "LDY";
     if (operand.startsWith("#")) {
@@ -16508,13 +17962,13 @@ var Arch65816 = class {
       } else if (isLDY) {
         opcodeByte = 160;
       }
-      address = this.assembler.operandResolver.getnum(operand.slice(1));
+      address3 = this.assembler.operandResolver.getnum(operand.slice(1));
       this.assembler.write1(opcodeByte);
       const width = this.immediateBytes(opcode, len, explicitlen, operand);
       if (width === 1) {
-        this.assembler.write1(address);
+        this.assembler.write1(address3);
       } else {
-        this.assembler.write2(address);
+        this.assembler.write2(address3);
       }
       return true;
     }
@@ -16543,12 +17997,12 @@ var Arch65816 = class {
           opcodeByte = forcedLDYX[len] ?? 188;
         }
       }
-      address = this.assembler.operandResolver.getnum(operand);
+      address3 = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(opcodeByte);
       if (len === 1) {
-        this.assembler.write1(address);
+        this.assembler.write1(address3);
       } else if (len === 2) {
-        this.assembler.write2(address);
+        this.assembler.write2(address3);
       } else {
         throw new Error(`Forced length ${len} not supported for ${opcode}`);
       }
@@ -16556,50 +18010,50 @@ var Arch65816 = class {
     }
     if (isLDX) {
       if (!isIndexed) {
-        address = this.assembler.operandResolver.getnum(operand);
-        if (loweredOperand.mode === "absolute" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address > 255) {
+        address3 = this.assembler.operandResolver.getnum(operand);
+        if (loweredOperand.mode === "absolute" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address3 > 255) {
           opcodeByte = 174;
           this.assembler.write1(opcodeByte);
-          this.assembler.write2(address);
+          this.assembler.write2(address3);
         } else {
           opcodeByte = 166;
           this.assembler.write1(opcodeByte);
-          this.assembler.write1(address);
+          this.assembler.write1(address3);
         }
       } else {
-        address = this.assembler.operandResolver.getnum(operand);
-        if (loweredOperand.mode === "absoluteIndexedY" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address > 255) {
+        address3 = this.assembler.operandResolver.getnum(operand);
+        if (loweredOperand.mode === "absoluteIndexedY" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address3 > 255) {
           opcodeByte = 190;
           this.assembler.write1(opcodeByte);
-          this.assembler.write2(address);
+          this.assembler.write2(address3);
         } else {
           opcodeByte = 182;
           this.assembler.write1(opcodeByte);
-          this.assembler.write1(address);
+          this.assembler.write1(address3);
         }
       }
     } else if (isLDY) {
       if (!isIndexed) {
-        address = this.assembler.operandResolver.getnum(operand);
-        if (loweredOperand.mode === "absolute" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address > 255) {
+        address3 = this.assembler.operandResolver.getnum(operand);
+        if (loweredOperand.mode === "absolute" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address3 > 255) {
           opcodeByte = 172;
           this.assembler.write1(opcodeByte);
-          this.assembler.write2(address);
+          this.assembler.write2(address3);
         } else {
           opcodeByte = 164;
           this.assembler.write1(opcodeByte);
-          this.assembler.write1(address);
+          this.assembler.write1(address3);
         }
       } else {
-        address = this.assembler.operandResolver.getnum(operand);
-        if (loweredOperand.mode === "absoluteIndexedX" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address > 255) {
+        address3 = this.assembler.operandResolver.getnum(operand);
+        if (loweredOperand.mode === "absoluteIndexedX" && !isDirectPageLiteral || isAbsoluteLiteral || inferredAbsoluteWidth || address3 > 255) {
           opcodeByte = 188;
           this.assembler.write1(opcodeByte);
-          this.assembler.write2(address);
+          this.assembler.write2(address3);
         } else {
           opcodeByte = 180;
           this.assembler.write1(opcodeByte);
-          this.assembler.write1(address);
+          this.assembler.write1(address3);
         }
       }
     }
@@ -16639,8 +18093,8 @@ var Arch65816 = class {
       JSR_INDEXED_INDIRECT: 252
       // JSR (Absolute Indexed Indirect,X)
     };
-    let address = 0;
-    let mode;
+    let address3 = 0;
+    let mode3;
     const hintedBank = (() => {
       const simpleBankedLabel = symbolicOperand.startsWith("_") && symbolicOperand.length >= 7 && /^[\da-f]{6}$/i.test(symbolicOperand.slice(1, 7));
       if (!simpleBankedLabel) {
@@ -16673,56 +18127,56 @@ var Arch65816 = class {
       return { mode: shortMode(currentOpcode), address: resolvedAddress };
     };
     if (/^\d+$/.test(operand)) {
-      ({ mode, address } = selectDirectJumpMode(
+      ({ mode: mode3, address: address3 } = selectDirectJumpMode(
         opcode,
         this.assembler.operandResolver.getnum(operand)
       ));
-      debug5("handleJump mode", mode);
+      debug5("handleJump mode", mode3);
     } else if (/^\$[\dA-Fa-f]{1,6}$/.test(operand)) {
-      ({ mode, address } = selectDirectJumpMode(
+      ({ mode: mode3, address: address3 } = selectDirectJumpMode(
         opcode,
         this.assembler.operandResolver.getnum(operand)
       ));
-      debug5("handleJump mode", mode);
+      debug5("handleJump mode", mode3);
     } else if (loweredOperand.mode === "indirectLong") {
-      mode = "JMP_INDIRECT_LONG";
-      debug5("handleJump mode", mode);
-      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+      mode3 = "JMP_INDIRECT_LONG";
+      debug5("handleJump mode", mode3);
+      address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
     } else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX") {
-      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
-      mode = "JSR_INDEXED_INDIRECT";
-      debug5("handleJump mode", mode);
+      address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+      mode3 = "JSR_INDEXED_INDIRECT";
+      debug5("handleJump mode", mode3);
     } else if (loweredOperand.mode === "indexedIndirectX") {
-      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
-      mode = "JMP_INDEXED_INDIRECT";
-      debug5("handleJump mode", mode);
+      address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+      mode3 = "JMP_INDEXED_INDIRECT";
+      debug5("handleJump mode", mode3);
     } else if (loweredOperand.mode === "directPageIndirect") {
-      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
-      mode = "JMP_INDIRECT";
-      debug5("handleJump mode", mode);
+      address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+      mode3 = "JMP_INDIRECT";
+      debug5("handleJump mode", mode3);
     } else {
       try {
-        ({ mode, address } = selectDirectJumpMode(
+        ({ mode: mode3, address: address3 } = selectDirectJumpMode(
           opcode,
           this.assembler.operandResolver.getnum(baseOperand)
         ));
-        debug5("handleJump mode", mode);
+        debug5("handleJump mode", mode3);
       } catch {
         debug5("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`);
         throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
       }
     }
-    debug5("handleJump address", address?.toString(16));
-    if (mode in jumpOpcodes) {
-      this.assembler.write1(jumpOpcodes[mode]);
-      if (mode === "JSL" || mode === "JML") {
-        this.assembler.write3(address);
+    debug5("handleJump address", address3?.toString(16));
+    if (mode3 in jumpOpcodes) {
+      this.assembler.write1(jumpOpcodes[mode3]);
+      if (mode3 === "JSL" || mode3 === "JML") {
+        this.assembler.write3(address3);
       } else {
-        this.assembler.write2(address);
+        this.assembler.write2(address3);
       }
-    } else if (mode in jumpIndirectOpcodes) {
-      this.assembler.write1(jumpIndirectOpcodes[mode]);
-      this.assembler.write2(address);
+    } else if (mode3 in jumpIndirectOpcodes) {
+      this.assembler.write1(jumpIndirectOpcodes[mode3]);
+      this.assembler.write2(address3);
     }
     return true;
   }
@@ -16739,9 +18193,9 @@ var Arch65816 = class {
       throw new Error("Error: PER requires an operand.");
     }
     const offset = this.assembler.operandResolver.getnum(operand);
-    const address = offset;
+    const address3 = offset;
     this.assembler.write1(98);
-    this.assembler.write2(address);
+    this.assembler.write2(address3);
     return true;
   }
   /**
@@ -16775,8 +18229,8 @@ var Arch65816 = class {
       const forced = map[len];
       return forced ?? fallback;
     };
-    let address = 0;
-    let mode;
+    let address3 = 0;
+    let mode3;
     const isIndexed = storeOpcode === "STX" && isIndexedMemory(loweredOperand, "y") || storeOpcode === "STY" && isIndexedMemory(loweredOperand, "x") || storeOpcode === "STZ" && isIndexedMemory(loweredOperand, "x");
     if (isIndexed) {
       operand = rawOperand.slice(0, -2).trim();
@@ -16805,79 +18259,79 @@ var Arch65816 = class {
           this.assembler.write1(getForcedOpcode(forcedSTZ, 156));
         }
       }
-      address = this.assembler.operandResolver.getnum(operand);
+      address3 = this.assembler.operandResolver.getnum(operand);
       if (len === 1) {
-        this.assembler.write1(address);
+        this.assembler.write1(address3);
       } else if (len === 2) {
-        this.assembler.write2(address);
+        this.assembler.write2(address3);
       } else {
         throw new Error(`Forced length ${len} not supported for ${opcode}`);
       }
       return true;
     }
     if (loweredOperand.mode === "directPageIndexedX" && storeModeMap.directX && /^\$[\da-f]{2}$/i.test(operand)) {
-      mode = "directX";
-      address = this.assembler.operandResolver.getnum(operand);
+      mode3 = "directX";
+      address3 = this.assembler.operandResolver.getnum(operand);
     } else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect && storeModeMap.directY) {
-      mode = "directY";
-      address = this.assembler.operandResolver.getnum(operand);
+      mode3 = "directY";
+      address3 = this.assembler.operandResolver.getnum(operand);
     } else if (loweredOperand.mode === "absoluteIndexedX" && storeModeMap.absoluteX) {
-      mode = "absoluteX";
-      address = this.assembler.operandResolver.getnum(operand);
+      mode3 = "absoluteX";
+      address3 = this.assembler.operandResolver.getnum(operand);
     }
     if (!isIndexed && (loweredOperand.mode === "absolute" || /^\$[\dA-Fa-f]{3,4}$/.test(operand))) {
-      mode = "absolute";
-      address = this.assembler.operandResolver.getnum(operand);
+      mode3 = "absolute";
+      address3 = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].absolute);
-      this.assembler.write2(address);
-      debug5("handleStoreOperations mode", mode);
+      this.assembler.write2(address3);
+      debug5("handleStoreOperations mode", mode3);
       return true;
     } else if (!isIndexed && /^\$[\dA-Fa-f]{2}$/.test(operand)) {
-      mode = "direct";
-      address = this.assembler.operandResolver.getnum(operand);
+      mode3 = "direct";
+      address3 = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].direct);
-      this.assembler.write1(address);
-      debug5("handleStoreOperations mode", mode);
+      this.assembler.write1(address3);
+      debug5("handleStoreOperations mode", mode3);
       return true;
     } else if (isIndexed) {
       if (storeOpcode === "STX") {
-        address = this.assembler.operandResolver.getnum(operand);
+        address3 = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{3,4}$/i.test(operand)) {
-          mode = "absolute";
+          mode3 = "absolute";
           this.assembler.write1(storeOpcodes[storeOpcode].absolute);
-          this.assembler.write2(address);
+          this.assembler.write2(address3);
         } else {
-          mode = "directY";
+          mode3 = "directY";
           this.assembler.write1(storeOpcodes[storeOpcode].directY);
-          this.assembler.write1(address);
+          this.assembler.write1(address3);
         }
-        debug5("handleStoreOperations mode", mode);
+        debug5("handleStoreOperations mode", mode3);
         return true;
       } else if (storeOpcode === "STY") {
-        address = this.assembler.operandResolver.getnum(operand);
+        address3 = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{3,4}$/i.test(operand)) {
-          mode = "absolute";
+          mode3 = "absolute";
           this.assembler.write1(storeOpcodes[storeOpcode].absolute);
-          this.assembler.write2(address);
+          this.assembler.write2(address3);
         } else {
-          mode = "directX";
+          mode3 = "directX";
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
-          this.assembler.write1(address);
+          this.assembler.write1(address3);
         }
-        debug5("handleStoreOperations mode", mode);
+        debug5("handleStoreOperations mode", mode3);
         return true;
       } else if (storeOpcode === "STZ") {
-        address = this.assembler.operandResolver.getnum(operand);
+        address3 = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{3,4}$/i.test(operand) && storeOpcodes[storeOpcode].absoluteX) {
-          mode = "absoluteX";
+          mode3 = "absoluteX";
           this.assembler.write1(storeOpcodes[storeOpcode].absoluteX);
-          this.assembler.write2(address);
+          this.assembler.write2(address3);
         } else {
-          mode = "directX";
+          mode3 = "directX";
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
-          this.assembler.write1(address);
+          this.assembler.write1(address3);
         }
-        debug5("handleStoreOperations mode", mode);
+        debug5("handleStoreOperations mode", mode3);
         return true;
       }
     }
@@ -16950,7 +18404,7 @@ var Arch65816 = class {
       const forced = map[len];
       return forced ?? fallback;
     };
-    let address = 0;
+    let address3 = 0;
     let outLength = 0;
     if (operand.startsWith("#")) {
       debug5("handleBitTestOperations immediate", {
@@ -16958,25 +18412,25 @@ var Arch65816 = class {
         operand,
         value: forcedMaps[bitOpcode].immediate?.toString(16)
       });
-      address = this.assembler.operandResolver.getnum(operand.slice(1));
+      address3 = this.assembler.operandResolver.getnum(operand.slice(1));
       if (explicitlen) {
-        const immediate = forcedMaps[bitOpcode].immediate;
-        if (immediate === void 0) {
+        const immediate3 = forcedMaps[bitOpcode].immediate;
+        if (immediate3 === void 0) {
           throw new Error(`Opcode ${opcode} does not support immediate mode.`);
         }
-        this.assembler.write1(immediate);
+        this.assembler.write1(immediate3);
         outLength = len === 1 ? 1 : 2;
       } else {
-        const immediate = opcodes[bitOpcode].immediate;
-        if (immediate === void 0) {
+        const immediate3 = opcodes[bitOpcode].immediate;
+        if (immediate3 === void 0) {
           throw new Error(`Opcode ${opcode} does not support immediate mode.`);
         }
-        this.assembler.write1(immediate);
+        this.assembler.write1(immediate3);
         outLength = operand.length === 6 ? 2 : 1;
       }
     } else {
       const isIndexed = isIndexedMemory(loweredOperand, "x");
-      address = this.assembler.operandResolver.getnum(normalizedOperand);
+      address3 = this.assembler.operandResolver.getnum(normalizedOperand);
       if (explicitlen) {
         if (isIndexed) {
           if (!forcedMaps[bitOpcode].directX) {
@@ -17018,9 +18472,9 @@ var Arch65816 = class {
       }
     }
     if (outLength === 1) {
-      this.assembler.write1(address);
+      this.assembler.write1(address3);
     } else if (outLength === 2) {
-      this.assembler.write2(address);
+      this.assembler.write2(address3);
     }
     return true;
   }
@@ -17164,12 +18618,12 @@ var Arch65816 = class {
           `Error: Branch target out of range (${relativeAddress}) for ${opcode} ${operand} at $${this.assembler.currentTargetAddress.toString(16)}.`
         );
       }
-      let signedByte = (relativeAddress & 255) >>> 0;
+      let signedByte3 = (relativeAddress & 255) >>> 0;
       if (relativeAddress < 0) {
-        signedByte |= 256;
+        signedByte3 |= 256;
       }
       this.assembler.write1(branchOpcodes2[opcode]);
-      this.assembler.write1(signedByte);
+      this.assembler.write1(signedByte3);
       return true;
     }
   }
@@ -17190,13 +18644,13 @@ var Arch65816 = class {
       TRB: { direct: 20, absolute: 28 }
     };
     if (opcode in memoryBitOpcodes) {
-      const address = this.assembler.operandResolver.getnum(operand);
+      const address3 = this.assembler.operandResolver.getnum(operand);
       const opcodeByte = loweredOperand.mode === "absolute" || operand.length === 5 ? memoryBitOpcodes[opcode].absolute : memoryBitOpcodes[opcode].direct;
       this.assembler.write1(opcodeByte);
       if (opcodeByte === memoryBitOpcodes[opcode].absolute) {
-        this.assembler.write2(address);
+        this.assembler.write2(address3);
       } else {
-        this.assembler.write1(address);
+        this.assembler.write1(address3);
       }
       return true;
     }
@@ -17248,6 +18702,370 @@ var Arch65816 = class {
     }
   }
 };
+
+// packages/plugin-snes/src/architectures/65816-decoder.ts
+var flagValue = (value) => {
+  if (value === true || value === 1) return 1;
+  if (value === false || value === 0) return 0;
+  return "unknown";
+};
+var resolvedWidthFlag = (state, flag) => {
+  const emulation = flagValue(state.e);
+  if (emulation === 1) return 1;
+  const width = flagValue(state[flag]);
+  if (width === 1) return 1;
+  if (width === 0 && emulation === 0) return 0;
+  return "unknown";
+};
+var readLittleEndian = (bytes, offset, width) => {
+  let value = 0;
+  for (let index = 0; index < width; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
+  return value >>> 0;
+};
+var signed = (value, width) => {
+  const signBit = 1 << width * 8 - 1;
+  const modulus = 2 ** (width * 8);
+  return value & signBit ? value - modulus : value;
+};
+var bankLocalTarget = (logicalAddress, size, displacement) => logicalAddress & 16711680 | logicalAddress + size + displacement & 65535;
+var addressOperand = (value, width) => ({
+  kind: "address",
+  value,
+  width
+});
+var operandsFor = (specification2, bytes, logicalAddress) => {
+  const value8 = bytes[1] ?? 0;
+  const value16 = readLittleEndian(bytes, 1, 2);
+  const value24 = readLittleEndian(bytes, 1, 3);
+  switch (specification2.mode) {
+    case "implied":
+      return [];
+    case "accumulator":
+      return [{ kind: "accumulator", register: "a" }];
+    case "signature":
+      return [{ kind: "signature", value: value8, width: 1 }];
+    case "immediate":
+      return [
+        {
+          kind: "immediate",
+          value: bytes.length === 2 ? value8 : value16,
+          width: bytes.length - 1
+        }
+      ];
+    case "immediate16":
+      return [{ kind: "immediate", value: value16, width: 2 }];
+    case "direct":
+    case "directIndexedX":
+    case "directIndexedY":
+    case "directIndirect":
+    case "directIndirectLong":
+    case "directIndexedXIndirect":
+    case "directIndirectIndexedY":
+    case "directIndirectLongIndexedY":
+    case "stackRelative":
+    case "stackRelativeIndirectIndexedY":
+      return [addressOperand(value8, 1)];
+    case "absolute":
+    case "absoluteIndexedX":
+    case "absoluteIndexedY":
+    case "absoluteIndirect":
+    case "absoluteIndexedXIndirect":
+    case "absoluteIndirectLong":
+      return [addressOperand(value16, 2)];
+    case "absoluteLong":
+    case "absoluteLongIndexedX":
+      return [addressOperand(value24, 3)];
+    case "relative": {
+      const displacement = signed(value8, 1);
+      return [
+        {
+          kind: "displacement",
+          value: displacement,
+          width: 1,
+          signed: true,
+          targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
+        }
+      ];
+    }
+    case "relativeLong": {
+      const displacement = signed(value16, 2);
+      return [
+        {
+          kind: "displacement",
+          value: displacement,
+          width: 2,
+          signed: true,
+          targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
+        }
+      ];
+    }
+    case "blockMove":
+      return [
+        { kind: "bank", value: value8, width: 1 },
+        { kind: "bank", value: bytes[2] ?? 0, width: 1 }
+      ];
+    default:
+      return [];
+  }
+};
+var targetFor = (specification2, operands, state, logicalAddress) => {
+  const operand = operands[0];
+  if (!operand) return void 0;
+  if (operand.targetAddress !== void 0) return operand.targetAddress;
+  if (operand.value === void 0) return void 0;
+  if (specification2.mode === "absoluteLong") return operand.value;
+  if (specification2.mode === "absolute") {
+    const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
+    return bank << 16 | operand.value;
+  }
+  return void 0;
+};
+var referencesFor = (specification2, operands, state, logicalAddress) => {
+  const { mnemonic, mode: mode3 } = specification2;
+  const isBranch = conditionalBranches.has(mnemonic) || mnemonic === "BRA" || mnemonic === "BRL";
+  const isCall = mnemonic === "JSR" || mnemonic === "JSL";
+  const isJump = mnemonic === "JMP" || mnemonic === "JML";
+  if (isBranch || isCall || isJump) {
+    const target = targetFor(specification2, operands, state, logicalAddress);
+    let kind = "jump";
+    if (isBranch) kind = "branch";
+    else if (isCall) kind = "call";
+    return [
+      {
+        kind,
+        operandIndex: 0,
+        ...target === void 0 ? {} : { address: target },
+        ...mode3.includes("Indirect") ? { indirect: true } : {}
+      }
+    ];
+  }
+  if (mode3.includes("Indirect")) {
+    const value = operands[0]?.value;
+    return [
+      {
+        kind: "pointer",
+        operandIndex: 0,
+        ...value === void 0 ? {} : { address: value },
+        indirect: true
+      }
+    ];
+  }
+  const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
+  if (!memoryMode || operands[0]?.value === void 0) return [];
+  if (mode3.startsWith("direct")) {
+    return [
+      {
+        kind: "data",
+        operandIndex: 0,
+        ...state.directPage === void 0 ? {} : { address: state.directPage + operands[0].value & 65535 }
+      }
+    ];
+  }
+  if (!mode3.startsWith("absoluteLong") && mode3.startsWith("absolute")) {
+    return [
+      {
+        kind: "data",
+        operandIndex: 0,
+        ...state.dataBank === void 0 ? {} : { address: (state.dataBank & 255) << 16 | operands[0].value }
+      }
+    ];
+  }
+  return [{ kind: "data", operandIndex: 0, address: operands[0].value }];
+};
+var effectsFor2 = (specification2, operands) => {
+  const mask = operands[0]?.value;
+  if (specification2.operandStatusEffect && mask !== void 0) {
+    return [{ kind: specification2.operandStatusEffect, target: "p", mask }];
+  }
+  return specification2.effects;
+};
+var buildInstruction = (specification2, bytes, context, state) => {
+  const operands = operandsFor(specification2, bytes, context.logicalAddress);
+  return {
+    architecture: "snes.65816",
+    specificationId: specification2.id,
+    opcode: specification2.opcode[0],
+    mnemonic: specification2.mnemonic,
+    mode: specification2.mode,
+    offset: context.offset,
+    logicalAddress: context.logicalAddress & 16777215,
+    bytes,
+    size: bytes.length,
+    operands,
+    references: referencesFor(specification2, operands, state, context.logicalAddress),
+    flow: specification2.flow,
+    effects: effectsFor2(specification2, operands)
+  };
+};
+var Cpu65816Decoder = class {
+  /**
+   * Decodes a 65816 instruction.
+   * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
+   * @returns {ArchitectureDecodeResult} The decode result.
+   */
+  decode(context) {
+    const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+    const opcode = context.source.readByte(context.offset);
+    if (opcode === void 0) {
+      return {
+        kind: "error",
+        code: "outOfBounds",
+        message: `Cannot read a 65816 opcode at offset ${context.offset}.`,
+        offset: context.offset,
+        requiredBytes: 1,
+        availableBytes
+      };
+    }
+    const specification2 = cpu65816Specifications[opcode];
+    if (!specification2) {
+      return {
+        kind: "error",
+        code: "invalidOpcode",
+        message: `Unknown 65816 opcode $${opcode.toString(16).padStart(2, "0")}.`,
+        offset: context.offset
+      };
+    }
+    const state = context.state ?? {};
+    let sizes = [specification2.minimumSize];
+    if (specification2.widthFlag) {
+      const width = resolvedWidthFlag(state, specification2.widthFlag);
+      sizes = width === "unknown" ? [2, 3] : [width === 1 ? 2 : 3];
+    }
+    const minimumSize = Math.min(...sizes);
+    const maximumSize = Math.max(...sizes);
+    if (availableBytes < minimumSize) {
+      return {
+        kind: "error",
+        code: "truncated",
+        message: `Truncated ${specification2.mnemonic}: requires at least ${minimumSize} byte(s), ${availableBytes} available.`,
+        offset: context.offset,
+        requiredBytes: minimumSize,
+        availableBytes
+      };
+    }
+    if (sizes.length === 1 && availableBytes < maximumSize) {
+      return {
+        kind: "error",
+        code: "truncated",
+        message: `Truncated ${specification2.mnemonic}: requires ${maximumSize} byte(s), ${availableBytes} available.`,
+        offset: context.offset,
+        requiredBytes: maximumSize,
+        availableBytes
+      };
+    }
+    const availableSizes = sizes.filter((size) => size <= availableBytes);
+    const alternatives = availableSizes.map((size) => {
+      const bytes = context.source.readBytes(context.offset, size);
+      if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+      return buildInstruction(specification2, bytes, context, state);
+    });
+    if (sizes.length === 2) {
+      return {
+        kind: "ambiguous",
+        reason: `The 65816 ${specification2.widthFlag?.toUpperCase()} flag is unknown.`,
+        requiredState: [specification2.widthFlag ?? "m"],
+        alternatives,
+        ...availableSizes.length === sizes.length ? {} : {
+          unavailableAlternatives: sizes.filter((size) => size > availableBytes).map((size) => ({ code: "truncated", size, availableBytes }))
+        },
+        minimumSize: 2,
+        maximumSize: 3
+      };
+    }
+    return { kind: "instruction", instruction: alternatives[0] };
+  }
+};
+var hex = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
+function formatCpu65816Instruction(instruction) {
+  if (instruction.architecture !== "snes.65816") {
+    throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
+  }
+  const operand = instruction.operands[0];
+  const value = operand?.value ?? 0;
+  let text = "";
+  switch (instruction.mode) {
+    case "implied":
+      break;
+    // The project encoder's native accumulator spelling omits the operand.
+    case "accumulator":
+      break;
+    case "signature":
+      text = `#${hex(value, 1)}`;
+      break;
+    case "immediate":
+      text = `#${hex(value, operand?.width ?? 1)}`;
+      break;
+    case "immediate16":
+      text = hex(value, 2);
+      break;
+    case "direct":
+      text = hex(value, 1);
+      break;
+    case "directIndexedX":
+      text = `${hex(value, 1)},x`;
+      break;
+    case "directIndexedY":
+      text = `${hex(value, 1)},y`;
+      break;
+    case "directIndirect":
+      text = instruction.mnemonic === "PEI" ? hex(value, 1) : `(${hex(value, 1)})`;
+      break;
+    case "directIndirectLong":
+      text = `[${hex(value, 1)}]`;
+      break;
+    case "directIndexedXIndirect":
+      text = `(${hex(value, 1)},x)`;
+      break;
+    case "directIndirectIndexedY":
+      text = `(${hex(value, 1)}),y`;
+      break;
+    case "directIndirectLongIndexedY":
+      text = `[${hex(value, 1)}],y`;
+      break;
+    case "stackRelative":
+      text = `${hex(value, 1)},s`;
+      break;
+    case "stackRelativeIndirectIndexedY":
+      text = `(${hex(value, 1)},s),y`;
+      break;
+    case "absolute":
+      text = hex(value, 2);
+      break;
+    case "absoluteIndexedX":
+      text = `${hex(value, 2)},x`;
+      break;
+    case "absoluteIndexedY":
+      text = `${hex(value, 2)},y`;
+      break;
+    case "absoluteLong":
+      text = hex(value, 3);
+      break;
+    case "absoluteLongIndexedX":
+      text = `${hex(value, 3)},x`;
+      break;
+    case "absoluteIndirect":
+      text = `(${hex(value, 2)})`;
+      break;
+    case "absoluteIndexedXIndirect":
+      text = `(${hex(value, 2)},x)`;
+      break;
+    case "absoluteIndirectLong":
+      text = `[${hex(value, 2)}]`;
+      break;
+    case "relative":
+      text = hex(operand?.targetAddress ?? 0, 3);
+      break;
+    case "relativeLong":
+      text = instruction.mnemonic === "PER" ? hex(value, 2) : hex(operand?.targetAddress ?? 0, 3);
+      break;
+    case "blockMove":
+      text = `${hex(instruction.operands[0]?.value ?? 0, 1)},${hex(instruction.operands[1]?.value ?? 0, 1)}`;
+      break;
+    default:
+      throw new Error(`Unsupported 65816 formatter mode '${instruction.mode}'.`);
+  }
+  return text ? `${instruction.mnemonic} ${text}` : instruction.mnemonic;
+}
 
 // packages/plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand = (text) => text ? [text] : [];
@@ -17497,11 +19315,11 @@ function parseBitBranchOpcode(opcode) {
   }
   return { family: match[1], mnemonicBit: Number(match[2]) };
 }
-function bitBranchOpcodeByte(family, bit) {
+function bitBranchOpcodeByte(family, bit2) {
   if (family === "BBS") {
-    return bit << 5 | 3;
+    return bit2 << 5 | 3;
   }
-  return bit << 5 | 19;
+  return bit2 << 5 | 19;
 }
 var wordOpsWithYaLeft = {
   CMPW: 90,
@@ -17571,12 +19389,12 @@ var ArchSPC700 = class {
    * @param {LoweredInstruction} instruction The instruction.
    * @returns {number} Encoded size in bytes.
    */
-  estimateInstruction(instruction2) {
-    const loweredOperands = instruction2.loweredOperands ?? [];
+  estimateInstruction(instruction) {
+    const loweredOperands = instruction.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
-      instruction2.mnemonic,
-      instruction2.operandText,
-      instruction2.loweredOperand,
+      instruction.mnemonic,
+      instruction.operandText,
+      instruction.loweredOperand,
       loweredOperands
     );
   }
@@ -17585,12 +19403,12 @@ var ArchSPC700 = class {
    * @param {LoweredInstruction} instruction The instruction.
    * @returns {boolean} True if encoded.
    */
-  encodeInstruction(instruction2) {
-    const loweredOperands = instruction2.loweredOperands ?? [];
+  encodeInstruction(instruction) {
+    const loweredOperands = instruction.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
-      instruction2.mnemonic,
-      instruction2.operands,
-      instruction2.loweredOperand,
+      instruction.mnemonic,
+      instruction.operands,
+      instruction.loweredOperand,
       loweredOperands
     );
   }
@@ -17738,12 +19556,12 @@ var ArchSPC700 = class {
     if (/\(\s*\$/.test(left) || /\(\s*\$/.test(right)) {
       return 2;
     }
-    const addressOperand = /\$/.test(left) ? left : right;
-    if (/\$/.test(addressOperand)) {
-      const plusIndex = addressOperand.search(/\+[xy]$/i);
-      let base = addressOperand;
+    const addressOperand2 = /\$/.test(left) ? left : right;
+    if (/\$/.test(addressOperand2)) {
+      const plusIndex = addressOperand2.search(/\+[xy]$/i);
+      let base = addressOperand2;
       if (plusIndex >= 0) {
-        base = addressOperand.slice(0, plusIndex);
+        base = addressOperand2.slice(0, plusIndex);
       }
       return spcOpcodePlusAddressSize(base);
     }
@@ -17777,11 +19595,11 @@ var ArchSPC700 = class {
       return 3;
     }
     if (isAccumulator(left, leftLowered)) {
-      const mode = this.classifySpc700Addressing(right, rightLowered).mode;
-      if (mode === "indirectX") {
+      const mode3 = this.classifySpc700Addressing(right, rightLowered).mode;
+      if (mode3 === "indirectX") {
         return 1;
       }
-      if (mode === "abs" || mode === "absX" || mode === "absY") {
+      if (mode3 === "abs" || mode3 === "absX" || mode3 === "absY") {
         return 3;
       }
       return 2;
@@ -18062,9 +19880,9 @@ var ArchSPC700 = class {
       debug6("handleMemoryInstruction left is A", { opcode, left, right });
       const modeInfo = this.classifySpc700Addressing(right, rightLowered);
       const addr = modeInfo.val;
-      const mode = modeInfo.mode;
+      const mode3 = modeInfo.mode;
       if (explicitlen && forcedLen !== null) {
-        if (mode === "dp" || mode === "abs") {
+        if (mode3 === "dp" || mode3 === "abs") {
           this.assembler.write1(forcedLen === 1 ? table.a_dp : table.a_abs);
           if (forcedLen === 1) {
             this.assembler.write1(addr & 255);
@@ -18073,7 +19891,7 @@ var ArchSPC700 = class {
           }
           return true;
         }
-        if (mode === "dpX" || mode === "absX") {
+        if (mode3 === "dpX" || mode3 === "absX") {
           this.assembler.write1(forcedLen === 1 ? table.a_dpX : table.a_absX);
           if (forcedLen === 1) {
             this.assembler.write1(addr & 255);
@@ -18083,7 +19901,7 @@ var ArchSPC700 = class {
           return true;
         }
       }
-      switch (mode) {
+      switch (mode3) {
         case "indirectX":
           this.assembler.write1(table.a_indirectX);
           return true;
@@ -18409,12 +20227,12 @@ var ArchSPC700 = class {
     let dp;
     if (dotted) {
       dp = parseInt(dotted[1], 16) & 255;
-      const bit = parseInt(dotted[2], 10);
+      const bit2 = parseInt(dotted[2], 10);
       let lowNibble = 18;
       if (normalizedOpcode.startsWith("SET")) {
         lowNibble = 2;
       }
-      opcodeByte = bit << 5 | lowNibble;
+      opcodeByte = bit2 << 5 | lowNibble;
     } else {
       dp = parseInt(trimmed.replace(/\$/g, ""), 16) & 255;
     }
@@ -18480,17 +20298,17 @@ var ArchSPC700 = class {
     const trimmed = left.trim();
     const dotted = trimmed.match(/^\$([\da-f]+)\.([0-7])$/i);
     let dpVal;
-    let bit = parsed.mnemonicBit;
+    let bit2 = parsed.mnemonicBit;
     if (dotted) {
       dpVal = Number.parseInt(dotted[1], 16) & 255;
-      bit = Number(dotted[2]);
+      bit2 = Number(dotted[2]);
     } else {
       dpVal = Number.parseInt(trimmed.replace(/\$/g, ""), 16) & 255;
     }
-    if (bit === void 0) {
+    if (bit2 === void 0) {
       return false;
     }
-    const opcodeByte = bitBranchOpcodeByte(parsed.family, bit);
+    const opcodeByte = bitBranchOpcodeByte(parsed.family, bit2);
     debug6("handleTwoOperandsBitBranch =", opcodeByte.toString(16));
     this.assembler.write1(opcodeByte);
     debug6("handleTwoOperandsBitBranch =", dpVal.toString(16));
@@ -18835,12 +20653,12 @@ var ArchSPC700 = class {
       const match = /\$([^+]+)/.exec(operandWithAddr);
       if (!match) return false;
       const val = parseInt(match[1], 16);
-      const mode = memoryMoves[key];
+      const mode3 = memoryMoves[key];
       const inferredLength = getAddressSize(`$${match[1]}`);
       const selectedLength = explicitlen ? forcedLen : inferredLength;
-      const opcode = selectedLength === 1 ? mode.byte : mode.word;
+      const opcode = selectedLength === 1 ? mode3.byte : mode3.word;
       this.assembler.write1(opcode);
-      if (opcode === mode.word) {
+      if (opcode === mode3.word) {
         this.assembler.write2(val);
       } else {
         this.assembler.write1(val & 255);
@@ -18862,8 +20680,8 @@ var ArchSPC700 = class {
     if (hasOwn(movAbsByDest, rightUp) && !hasOwn(movAbsByDest, leftUp) && !left.includes("(") && !left.includes("+")) {
       const val = this.assembler.operandResolver.getnum(left);
       const length = /^\$[\da-f]{1,2}$/i.test(left.trim()) ? 1 : 2;
-      const mode = movAbsByDest[rightUp];
-      this.assembler.write1(length === 1 ? mode.byte : mode.word);
+      const mode3 = movAbsByDest[rightUp];
+      this.assembler.write1(length === 1 ? mode3.byte : mode3.word);
       if (length === 1) {
         this.assembler.write1(val & 255);
       } else {
@@ -18874,8 +20692,8 @@ var ArchSPC700 = class {
     if (hasOwn(movAbsBySrc, leftUp) && !right.trim().startsWith("#") && !hasOwn(movAbsBySrc, rightUp) && !right.includes("(") && !right.includes("+")) {
       const val = this.assembler.operandResolver.getnum(right);
       const length = /^\$[\da-f]{1,2}$/i.test(right.trim()) ? 1 : 2;
-      const mode = movAbsBySrc[leftUp];
-      this.assembler.write1(length === 1 ? mode.byte : mode.word);
+      const mode3 = movAbsBySrc[leftUp];
+      this.assembler.write1(length === 1 ? mode3.byte : mode3.word);
       if (length === 1) {
         this.assembler.write1(val & 255);
       } else {
@@ -19224,12 +21042,12 @@ var ArchSPC700 = class {
     if (!mem) {
       return false;
     }
-    let bit = parsed.mnemonicBit;
+    let bit2 = parsed.mnemonicBit;
     if (mem.bit !== void 0) {
-      bit = mem.bit;
+      bit2 = mem.bit;
     }
     if (bitFromOperand !== void 0) {
-      bit = bitFromOperand;
+      bit2 = bitFromOperand;
     }
     let opcodeByte = 234;
     if (parsed.family === "OR") {
@@ -19250,16 +21068,16 @@ var ArchSPC700 = class {
         opcodeByte = 202;
       }
     }
-    const hex = mem.addressText.match(/^\$([\da-f]+)$/i);
+    const hex3 = mem.addressText.match(/^\$([\da-f]+)$/i);
     let addr;
-    if (hex) {
-      addr = Number.parseInt(hex[1], 16) & 65535;
+    if (hex3) {
+      addr = Number.parseInt(hex3[1], 16) & 65535;
     } else {
       addr = this.assembler.operandResolver.getnum(mem.addressText) & 65535;
     }
     this.assembler.write1(opcodeByte);
     this.assembler.write1(addr & 255);
-    this.assembler.write1(addr >> 8 & 255 | (bit & 7) << 5);
+    this.assembler.write1(addr >> 8 & 255 | (bit2 & 7) << 5);
     return true;
   }
   /**
@@ -19342,6 +21160,266 @@ var ArchSPC700 = class {
   }
 };
 
+// packages/plugin-snes/src/architectures/spc700-decoder.ts
+var readLittleEndian2 = (bytes, offset, width) => {
+  let value = 0;
+  for (let index = 0; index < width; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
+  return value >>> 0;
+};
+var signedByte = (value) => value & 128 ? value - 256 : value;
+var register2 = (name) => ({ kind: "register", register: name });
+var address = (value, width) => ({
+  kind: "address",
+  value,
+  width
+});
+var immediate = (value) => ({ kind: "immediate", value, width: 1 });
+var bit = (value) => ({ kind: "bit", value, width: 1 });
+var relative = (value, logicalAddress, size) => ({
+  kind: "displacement",
+  value: signedByte(value),
+  width: 1,
+  signed: true,
+  targetAddress: logicalAddress + size + signedByte(value) & 65535
+});
+var bitAddress = (bytes) => {
+  const encoded = readLittleEndian2(bytes, 1, 2);
+  return [address(encoded & 8191, 2), bit(encoded >>> 13)];
+};
+var fixedRegisters = {
+  registerA: ["A"],
+  registerX: ["X"],
+  registerY: ["Y"],
+  registerP: ["P"],
+  registerYA: ["YA"],
+  registerYAX: ["YA", "X"],
+  registerXA: ["X", "A"],
+  registerAX: ["A", "X"],
+  registerXSP: ["X", "SP"],
+  registerSPX: ["SP", "X"],
+  registerAY: ["A", "Y"],
+  registerYA2: ["Y", "A"],
+  registerPostIncrementXA: ["X", "A"],
+  registerAPostIncrementX: ["A", "X"],
+  registerIndirectXA: ["X", "A"],
+  registerAIndirectX: ["A", "X"],
+  indirectXY: ["X", "Y"]
+};
+var operandsFor2 = (specification2, bytes, logicalAddress) => {
+  const byte = bytes[1] ?? 0;
+  const word2 = readLittleEndian2(bytes, 1, 2);
+  const fixed = fixedRegisters[specification2.mode];
+  if (fixed) return fixed.map(register2);
+  switch (specification2.mode) {
+    case "implied":
+      return [];
+    case "tableCall":
+      return [immediate(specification2.opcode[0] >>> 4)];
+    case "directBit":
+      return [address(byte, 1), bit(Number(specification2.mnemonic.at(-1)))];
+    case "directBitRelative":
+      return [
+        address(byte, 1),
+        bit(Number(specification2.mnemonic.at(-1))),
+        relative(bytes[2] ?? 0, logicalAddress, bytes.length)
+      ];
+    case "accumulatorDirect":
+    case "accumulatorDirectIndexedX":
+    case "accumulatorDirectIndexedXIndirect":
+    case "accumulatorDirectIndirectIndexedY":
+      return [register2("A"), address(byte, 1)];
+    case "accumulatorAbsolute":
+    case "accumulatorAbsoluteIndexedX":
+    case "accumulatorAbsoluteIndexedY":
+      return [register2("A"), address(word2, 2)];
+    case "accumulatorIndirectX":
+      return [register2("A"), register2("X")];
+    case "accumulatorImmediate":
+      return [register2("A"), immediate(byte)];
+    case "directDirect":
+      return [address(bytes[2] ?? 0, 1), address(byte, 1)];
+    case "carryMemoryBit":
+    case "carryInvertedMemoryBit": {
+      const [memory, bit2] = bitAddress(bytes);
+      return [register2("C"), memory, bit2];
+    }
+    case "memoryBitCarry": {
+      const [memory, bit2] = bitAddress(bytes);
+      return [memory, bit2, register2("C")];
+    }
+    case "memoryBit":
+      return bitAddress(bytes);
+    case "direct":
+    case "directIndexedX":
+    case "directWord":
+      return [address(byte, 1)];
+    case "absolute":
+    case "absoluteIndexedXIndirect":
+      return [address(word2, 2)];
+    case "relative":
+      return [relative(byte, logicalAddress, bytes.length)];
+    case "absoluteAccumulator":
+      return [address(word2, 2), register2("A")];
+    case "directImmediate":
+      return [address(bytes[2] ?? 0, 1), immediate(byte)];
+    case "registerXAbsolute":
+      return [register2("X"), address(word2, 2)];
+    case "registerXDirect":
+    case "registerXDirectIndexedY":
+      return [register2("X"), address(byte, 1)];
+    case "registerYAbsolute":
+      return [register2("Y"), address(word2, 2)];
+    case "registerYDirect":
+    case "registerYDirectIndexedX":
+      return [register2("Y"), address(byte, 1)];
+    case "registerXImmediate":
+      return [register2("X"), immediate(byte)];
+    case "registerYImmediate":
+      return [register2("Y"), immediate(byte)];
+    case "directRelative":
+    case "directIndexedXRelative":
+      return [address(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
+    case "registerYRelative":
+      return [register2("Y"), relative(byte, logicalAddress, bytes.length)];
+    case "registerYADirect":
+      return [register2("YA"), address(byte, 1)];
+    case "directRegisterYA":
+      return [address(byte, 1), register2("YA")];
+    case "upperPageCall":
+      return [address(65280 | byte, 2)];
+    case "directRegisterA":
+    case "directIndexedXRegisterA":
+    case "directIndirectIndexedYRegisterA":
+    case "directIndexedXIndirectRegisterA":
+      return [address(byte, 1), register2("A")];
+    case "absoluteRegisterA":
+    case "absoluteIndexedXRegisterA":
+    case "absoluteIndexedYRegisterA":
+      return [address(word2, 2), register2("A")];
+    case "indirectXRegisterA":
+      return [register2("X"), register2("A")];
+    case "directRegisterX":
+    case "directIndexedYRegisterX":
+      return [address(byte, 1), register2("X")];
+    case "absoluteRegisterX":
+      return [address(word2, 2), register2("X")];
+    case "directRegisterY":
+    case "directIndexedXRegisterY":
+      return [address(byte, 1), register2("Y")];
+    case "absoluteRegisterY":
+      return [address(word2, 2), register2("Y")];
+    default:
+      throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
+  }
+};
+var referencesFor2 = (specification2, operands, state) => {
+  const references = [];
+  const branchIndex = operands.findIndex((operand) => operand.targetAddress !== void 0);
+  if (branchIndex >= 0) {
+    references.push({
+      kind: "branch",
+      operandIndex: branchIndex,
+      address: operands[branchIndex].targetAddress
+    });
+  } else if (specification2.mnemonic === "TCALL") {
+    const vector = 65502 - (specification2.opcode[0] >>> 4) * 2;
+    references.push({ kind: "call", operandIndex: 0, indirect: true });
+    references.push({ kind: "pointer", operandIndex: 0, address: vector, indirect: true });
+  } else if (specification2.mnemonic === "PCALL") {
+    references.push({ kind: "call", operandIndex: 0, address: operands[0]?.value });
+  } else if (specification2.mnemonic === "CALL" || specification2.mnemonic === "JMP") {
+    if (specification2.flow.indirect) {
+      references.push({ kind: "jump", operandIndex: 0, indirect: true });
+      references.push({
+        kind: "pointer",
+        operandIndex: 0,
+        address: operands[0]?.value,
+        indirect: true
+      });
+    } else {
+      references.push({
+        kind: specification2.mnemonic === "CALL" ? "call" : "jump",
+        operandIndex: 0,
+        address: operands[0]?.value
+      });
+    }
+  }
+  for (let index = 0; index < operands.length; index++) {
+    const operand = operands[index];
+    if (operand.kind !== "address" || operand.value === void 0) continue;
+    if (references.some((reference) => reference.operandIndex === index)) continue;
+    const isDirect = operand.width === 1;
+    let resolved = operand.value;
+    if (isDirect) {
+      resolved = state.directPage === void 0 || state.directPage === "unknown" ? void 0 : state.directPage + operand.value & 65535;
+    }
+    references.push({
+      kind: specification2.mode.includes("Indirect") ? "pointer" : "data",
+      operandIndex: index,
+      ...resolved === void 0 ? {} : { address: resolved },
+      ...specification2.mode.includes("Indirect") ? { indirect: true } : {}
+    });
+  }
+  return references;
+};
+var buildInstruction2 = (specification2, bytes, context) => {
+  const operands = operandsFor2(specification2, bytes, context.logicalAddress);
+  return {
+    architecture: "snes.spc700",
+    specificationId: specification2.id,
+    opcode: specification2.opcode[0],
+    mnemonic: specification2.mnemonic,
+    mode: specification2.mode,
+    offset: context.offset,
+    logicalAddress: context.logicalAddress & 65535,
+    bytes,
+    size: bytes.length,
+    operands,
+    references: referencesFor2(specification2, operands, context.state ?? {}),
+    flow: specification2.flow,
+    effects: specification2.effects
+  };
+};
+var Spc700Decoder = class {
+  decode(context) {
+    const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+    const opcode = context.source.readByte(context.offset);
+    if (opcode === void 0) {
+      return {
+        kind: "error",
+        code: "outOfBounds",
+        message: `Cannot read an SPC700 opcode at offset ${context.offset}.`,
+        offset: context.offset,
+        requiredBytes: 1,
+        availableBytes
+      };
+    }
+    const specification2 = spc700Specifications[opcode];
+    if (!specification2) {
+      return {
+        kind: "error",
+        code: "invalidOpcode",
+        message: `Unknown SPC700 opcode $${opcode.toString(16).padStart(2, "0")}.`,
+        offset: context.offset
+      };
+    }
+    const size = specification2.minimumSize;
+    if (availableBytes < size) {
+      return {
+        kind: "error",
+        code: "truncated",
+        message: `Truncated ${specification2.mnemonic}: requires ${size} byte(s), ${availableBytes} available.`,
+        offset: context.offset,
+        requiredBytes: size,
+        availableBytes
+      };
+    }
+    const bytes = context.source.readBytes(context.offset, size);
+    if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+    return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
+  }
+};
+
 // packages/plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES = [
   "fastrom",
@@ -19369,8 +21447,8 @@ var applyMapperSelection = (state, mapper) => {
   }
 };
 var isFreespaceAvailable = (mapper) => mapper !== "norom";
-var encodeSuperFxMoveShortAddress = (addrVal, mode = "hardware") => {
-  if (mode === "asar") {
+var encodeSuperFxMoveShortAddress = (addrVal, mode3 = "hardware") => {
+  if (mode3 === "asar") {
     return addrVal & 255;
   }
   return addrVal >> 1 & 255;
@@ -19381,13 +21459,13 @@ var getChecksumHeaderOffset = (mapper) => {
   }
   return 65472;
 };
-var calculateHeaderChecksum = (romdata, mode) => {
+var calculateHeaderChecksum = (romdata, mode3) => {
   const romLength = romdata.length;
   if (romLength === 0) {
     return 0;
   }
   let checksum = 0;
-  if (mode === "simple" || (romLength & romLength - 1) === 0) {
+  if (mode3 === "simple" || (romLength & romLength - 1) === 0) {
     for (let i = 0; i < romLength; i++) {
       checksum += romdata[i] & 255;
     }
@@ -19554,12 +21632,12 @@ var ArchSuperFX = class {
    * @param {LoweredInstruction} instruction The instruction.
    * @returns {number} Encoded size in bytes.
    */
-  estimateInstruction(instruction2) {
-    const loweredOperands = instruction2.loweredOperands ?? [];
+  estimateInstruction(instruction) {
+    const loweredOperands = instruction.loweredOperands ?? [];
     return this.estimateResolvedInstruction(
-      instruction2.mnemonic,
-      instruction2.operands,
-      instruction2.loweredOperand,
+      instruction.mnemonic,
+      instruction.operands,
+      instruction.loweredOperand,
       loweredOperands
     );
   }
@@ -19568,12 +21646,12 @@ var ArchSuperFX = class {
    * @param {LoweredInstruction} instruction The instruction.
    * @returns {boolean} True if the instruction was encoded.
    */
-  encodeInstruction(instruction2) {
-    const loweredOperands = instruction2.loweredOperands ?? [];
+  encodeInstruction(instruction) {
+    const loweredOperands = instruction.loweredOperands ?? [];
     return this.encodeResolvedInstruction(
-      instruction2.mnemonic,
-      instruction2.operands,
-      instruction2.loweredOperand,
+      instruction.mnemonic,
+      instruction.operands,
+      instruction.loweredOperand,
       loweredOperands
     );
   }
@@ -20169,14 +22247,14 @@ var ArchSuperFX = class {
    * @param {number} register Register number 0–15.
    * @returns {void}
    */
-  writeRegisterOp(encoding, register) {
+  writeRegisterOp(encoding, register4) {
     if (encoding.min !== void 0 && encoding.max !== void 0) {
-      this.rangeCheck(encoding.min, register, encoding.max);
+      this.rangeCheck(encoding.min, register4, encoding.max);
     }
     if (encoding.prefix !== void 0) {
       this.assembler.write1(encoding.prefix);
     }
-    this.assembler.write1(encoding.base + register);
+    this.assembler.write1(encoding.base + register4);
   }
   /**
    * Encodes the short-RAM operand byte for **auto-MOVE** only (`MOVE Rn,(addr)` /
@@ -20185,11 +22263,11 @@ var ArchSuperFX = class {
    * @returns {number} Hardware word index, or Asar's raw byte when compat is enabled.
    */
   moveShortAddressByte(addrVal) {
-    let mode = "hardware";
+    let mode3 = "hardware";
     if (this.asarMoveShortAddress()) {
-      mode = "asar";
+      mode3 = "asar";
     }
-    return encodeSuperFxMoveShortAddress(addrVal, mode);
+    return encodeSuperFxMoveShortAddress(addrVal, mode3);
   }
   /**
    * Resolves a numeric operand for sizing without failing layout on forward refs.
@@ -20206,6 +22284,290 @@ var ArchSuperFX = class {
     } catch {
       return void 0;
     }
+  }
+};
+
+// packages/plugin-snes/src/architectures/superfx-decoder.ts
+var signedByte2 = (value) => value & 128 ? value - 256 : value;
+var word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
+var register3 = (value) => ({ kind: "register", register: `R${value}` });
+var immediate2 = (value, width, signed2 = false) => ({
+  kind: "immediate",
+  value,
+  width,
+  ...signed2 ? { signed: true } : {}
+});
+var address2 = (value, width) => ({
+  kind: "address",
+  value,
+  width
+});
+var operandsFor3 = (specification2, bytes, prefixLength, logicalAddress) => {
+  const operandOffset = prefixLength + 1;
+  const registerNumber = specification2.register ?? 0;
+  switch (specification2.operandEncoding) {
+    case "implied":
+      return [];
+    case "relative": {
+      const raw = bytes[operandOffset] ?? 0;
+      const displacement = signedByte2(raw);
+      return [
+        {
+          kind: "displacement",
+          value: displacement,
+          width: 1,
+          signed: true,
+          targetAddress: logicalAddress & 16711680 | logicalAddress + bytes.length + displacement & 65535
+        }
+      ];
+    }
+    case "register":
+    case "registerIndirect":
+      return [register3(registerNumber)];
+    case "immediateNibble":
+      return [immediate2(registerNumber, 1)];
+    case "registerImmediate8":
+      return [register3(registerNumber), immediate2(bytes[operandOffset] ?? 0, 1, true)];
+    case "registerImmediate16":
+      return [register3(registerNumber), immediate2(word(bytes, operandOffset), 2)];
+    case "registerRamShort":
+      return [register3(registerNumber), address2((bytes[operandOffset] ?? 0) << 1, 2)];
+    case "ramShortRegister":
+      return [address2((bytes[operandOffset] ?? 0) << 1, 2), register3(registerNumber)];
+    case "registerRamAbsolute":
+      return [register3(registerNumber), address2(word(bytes, operandOffset), 2)];
+    case "ramAbsoluteRegister":
+      return [address2(word(bytes, operandOffset), 2), register3(registerNumber)];
+  }
+  throw new Error("Unsupported SuperFX operand encoding.");
+};
+var r15Target = (specification2, operands, state, logicalAddress) => {
+  if (specification2.register === 15) {
+    if (specification2.mnemonic === "IWT") {
+      return (((state.programBank === "unknown" ? logicalAddress >>> 16 : state.programBank) ?? logicalAddress >>> 16) & 255) << 16 | (operands[1]?.value ?? 0);
+    }
+    if (specification2.mnemonic === "IBT") {
+      const raw = operands[1]?.value ?? 0;
+      const target = raw & 128 ? 65280 | raw : raw;
+      const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
+      return (bank & 255) << 16 | target;
+    }
+    if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
+  }
+  if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
+  return void 0;
+};
+var controlsFor = (specification2, operands, state, logicalAddress) => {
+  const r15 = r15Target(specification2, operands, state, logicalAddress);
+  if (typeof r15 === "number") {
+    return {
+      flow: { kind: "jump", fallthrough: false },
+      references: [{ kind: "jump", operandIndex: 1, address: r15 }]
+    };
+  }
+  if (r15 === "indirect") {
+    return {
+      flow: { kind: "jump", fallthrough: false, indirect: true },
+      references: [{ kind: "jump", indirect: true }]
+    };
+  }
+  if (specification2.mnemonic === "BRA" || specification2.mnemonic.startsWith("B") && specification2.operandEncoding === "relative") {
+    return {
+      flow: specification2.flow,
+      references: [{ kind: "branch", operandIndex: 0, address: operands[0]?.targetAddress }]
+    };
+  }
+  if (specification2.mnemonic === "LOOP") {
+    return {
+      flow: specification2.flow,
+      references: [{ kind: "branch", indirect: true }]
+    };
+  }
+  if (specification2.mnemonic === "JMP" || specification2.mnemonic === "LJMP") {
+    return {
+      flow: specification2.flow,
+      references: [{ kind: "jump", operandIndex: 0, indirect: true }]
+    };
+  }
+  let memoryIndex;
+  if (specification2.operandEncoding === "registerRamShort" || specification2.operandEncoding === "registerRamAbsolute") {
+    memoryIndex = 1;
+  } else if (specification2.operandEncoding === "ramShortRegister" || specification2.operandEncoding === "ramAbsoluteRegister") {
+    memoryIndex = 0;
+  }
+  if (memoryIndex !== void 0) {
+    return {
+      flow: specification2.flow,
+      references: [
+        { kind: "data", operandIndex: memoryIndex, address: operands[memoryIndex]?.value }
+      ]
+    };
+  }
+  if (specification2.operandEncoding === "registerIndirect") {
+    return {
+      flow: specification2.flow,
+      references: [{ kind: "pointer", operandIndex: 0, indirect: true }]
+    };
+  }
+  return { flow: specification2.flow, references: [] };
+};
+var buildInstruction3 = (specification2, bytes, context, state, prefixLength) => {
+  const operands = operandsFor3(specification2, bytes, prefixLength, context.logicalAddress);
+  const controls = controlsFor(specification2, operands, state, context.logicalAddress);
+  return {
+    architecture: "snes.superfx",
+    specificationId: specification2.id,
+    opcode: specification2.opcode[0],
+    mnemonic: specification2.mnemonic,
+    mode: specification2.mode,
+    offset: context.offset,
+    logicalAddress: context.logicalAddress & 16777215,
+    bytes,
+    size: bytes.length,
+    operands,
+    references: controls.references,
+    flow: controls.flow,
+    effects: specification2.effects
+  };
+};
+var buildFusedInstruction = (specification2, bytes, context) => {
+  let operands;
+  if (specification2.mode === "registerRegister") {
+    operands = [
+      register3(specification2.destinationRegister),
+      register3(specification2.sourceRegister ?? 0)
+    ];
+  } else if (specification2.mode === "registerRegisterIndirect") {
+    operands = [
+      register3(specification2.destinationRegister),
+      register3(specification2.pointerRegister ?? 0)
+    ];
+  } else {
+    operands = [
+      register3(specification2.sourceRegister ?? 0),
+      register3(specification2.pointerRegister ?? 0)
+    ];
+  }
+  return {
+    architecture: "snes.superfx",
+    specificationId: specification2.id,
+    opcode: specification2.opcode.at(-1) ?? specification2.opcode[0],
+    mnemonic: specification2.mnemonic,
+    mode: specification2.mode,
+    offset: context.offset,
+    logicalAddress: context.logicalAddress & 16777215,
+    bytes,
+    size: bytes.length,
+    operands,
+    references: specification2.flow.kind === "jump" ? [{ kind: "jump", indirect: true }] : [],
+    flow: specification2.flow,
+    effects: specification2.effects
+  };
+};
+var matchFused = (context) => superFxFusedSpecifications.find(
+  (entry) => entry.opcode.every((value, index) => context.source.readByte(context.offset + index) === value)
+);
+var availableAt = (context) => Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+var truncated = (context, requiredBytes) => ({
+  kind: "error",
+  code: "truncated",
+  message: `SuperFX instruction at offset ${context.offset} needs ${requiredBytes} byte(s).`,
+  offset: context.offset,
+  requiredBytes,
+  availableBytes: availableAt(context)
+});
+var prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
+var SuperFxDecoder = class {
+  decode(context) {
+    const opcode = context.source.readByte(context.offset);
+    if (opcode === void 0) {
+      return {
+        kind: "error",
+        code: "outOfBounds",
+        message: `No SuperFX opcode exists at offset ${context.offset}.`,
+        offset: context.offset,
+        availableBytes: availableAt(context)
+      };
+    }
+    const state = context.state ?? {};
+    const requestedAlt = state.alt ?? 0;
+    if (requestedAlt !== "unknown" && ![0, 1, 2, 3].includes(requestedAlt)) {
+      return {
+        kind: "error",
+        code: "invalidState",
+        message: `Invalid SuperFX ALT state '${requestedAlt}'.`,
+        offset: context.offset,
+        availableBytes: availableAt(context)
+      };
+    }
+    if (requestedAlt === 0 && (state.destinationRegister === void 0 || state.destinationRegister === 0) && (state.sourceRegister === void 0 || state.sourceRegister === 0)) {
+      const fused2 = matchFused(context);
+      if (fused2) {
+        const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
+        if (!bytes2) return truncated(context, fused2.minimumSize);
+        return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
+      }
+    }
+    const prefix = prefixAlt(opcode);
+    if (prefix !== void 0) {
+      const next = context.source.readByte(context.offset + 1);
+      const canFuse = requestedAlt === 0 || requestedAlt === "unknown";
+      if (next !== void 0 && canFuse && prefixAlt(next) === void 0) {
+        const effective = superFxOpcodeMatrix[prefix][next];
+        if (effective.alteredByAlt) {
+          const required = effective.minimumSize + 1;
+          const bytes3 = context.source.readBytes(context.offset, required);
+          if (!bytes3) return truncated(context, required);
+          return {
+            kind: "instruction",
+            instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
+          };
+        }
+      }
+      const specification3 = superFxOpcodeMatrix[0][opcode];
+      const bytes2 = context.source.readBytes(context.offset, 1);
+      return {
+        kind: "instruction",
+        instruction: buildInstruction3(specification3, bytes2, context, state, 0)
+      };
+    }
+    if (requestedAlt === "unknown") {
+      const candidates = [0, 1, 2, 3].map((alt2) => superFxOpcodeMatrix[alt2][opcode]);
+      const unique = [
+        ...new Map(candidates.map((entry) => [`${entry.mnemonic}:${entry.mode}`, entry])).values()
+      ];
+      if (unique.length > 1) {
+        const alternatives = unique.flatMap((entry) => {
+          const bytes2 = context.source.readBytes(context.offset, entry.minimumSize);
+          return bytes2 ? [buildInstruction3(entry, bytes2, context, { ...state, alt: entry.alt }, 0)] : [];
+        });
+        return {
+          kind: "ambiguous",
+          reason: `SuperFX opcode $${opcode.toString(16).toUpperCase().padStart(2, "0")} depends on ALT state.`,
+          requiredState: ["alt"],
+          alternatives,
+          minimumSize: Math.min(...unique.map((entry) => entry.minimumSize)),
+          maximumSize: Math.max(...unique.map((entry) => entry.maximumSize)),
+          ...alternatives.length === unique.length ? {} : {
+            unavailableAlternatives: unique.filter(
+              (entry) => context.source.readBytes(context.offset, entry.minimumSize) === void 0
+            ).map((entry) => ({
+              code: "truncated",
+              size: entry.minimumSize,
+              availableBytes: availableAt(context)
+            }))
+          }
+        };
+      }
+    }
+    const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
+    const specification2 = superFxOpcodeMatrix[alt][opcode];
+    const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
+    if (!bytes) return truncated(context, specification2.minimumSize);
+    return {
+      kind: "instruction",
+      instruction: buildInstruction3(specification2, bytes, context, state, 0)
+    };
   }
 };
 
@@ -20336,13 +22698,13 @@ function handleProt(session, words) {
     session.write1(value);
   }
   for (const label of labels) {
-    let address = 0;
+    let address3 = 0;
     try {
-      address = session.symbolScope.getLabelValue(label, false) & 16777215;
+      address3 = session.symbolScope.getLabelValue(label, false) & 16777215;
     } catch {
-      address = 0;
+      address3 = 0;
     }
-    session.write3(address);
+    session.write3(address3);
   }
   for (const value of [83, 84, 79, 80, 0]) {
     session.write1(value);
@@ -20394,17 +22756,17 @@ function handleCheck(state, words) {
   if (words.length < 3 || words[1].toLowerCase() !== "bankcross") {
     throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
   }
-  const mode = words[2].toLowerCase();
-  if (mode === "off") state.bankCrossMode = "off";
-  else if (mode === "half") state.bankCrossMode = "half";
-  else if (mode === "full" || mode === "on") state.bankCrossMode = "full";
+  const mode3 = words[2].toLowerCase();
+  if (mode3 === "off") state.bankCrossMode = "off";
+  else if (mode3 === "half") state.bankCrossMode = "half";
+  else if (mode3 === "full" || mode3 === "on") state.bankCrossMode = "full";
   else throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
 }
 function handleOptimize(state, words) {
   if (words.length < 3 || words[1].toLowerCase() !== "dp") return;
-  const mode = words[2].toLowerCase();
-  if (mode === "none") state.optimizeDirectPage = false;
-  else if (mode === "ram" || mode === "always") state.optimizeDirectPage = true;
+  const mode3 = words[2].toLowerCase();
+  if (mode3 === "none") state.optimizeDirectPage = false;
+  else if (mode3 === "ram" || mode3 === "always") state.optimizeDirectPage = true;
 }
 function handleStartpos(session, state, words) {
   if (!state.inSpcBlock || !state.spcBlock) {
@@ -20560,12 +22922,12 @@ var snesRomAddressSpace = {
   addressWidth: 24,
   defaultOrigin: 32768,
   unmappedWriteBehavior: "allow",
-  normalizeForWrite(address) {
-    return address | 0;
+  normalizeForWrite(address3) {
+    return address3 | 0;
   },
-  advance(address, amount, context) {
-    const prefix = address & 4278190080;
-    const logicalAddress = address & 16777215;
+  advance(address3, amount, context) {
+    const prefix = address3 & 4278190080;
+    const logicalAddress = address3 & 16777215;
     const newAddress = logicalAddress + amount;
     if ((logicalAddress & 16711680) !== (newAddress & 16711680)) {
       const wrapOnBankCross = context.bankCrossCheckMode !== "full" && context.bankCrossCheckMode !== "half";
@@ -20608,59 +22970,59 @@ var snesRomAddressSpace = {
    * @param {AddressSpaceContext} context The address space context.
    * @returns {number} The output offset.
    */
-  toOutputOffset(address, context) {
-    if (address < 0 || address > 16777215) return -1;
+  toOutputOffset(address3, context) {
+    if (address3 < 0 || address3 > 16777215) return -1;
     if (context.mapper === "lorom") {
-      if ((address & 16646144) === 8257536 || (address & 4227072) === 0 || (address & 7372800) === 7340032) {
+      if ((address3 & 16646144) === 8257536 || (address3 & 4227072) === 0 || (address3 & 7372800) === 7340032) {
         return -1;
       }
-      return (address & 8323072) >> 1 | address & 32767;
+      return (address3 & 8323072) >> 1 | address3 & 32767;
     }
     if (context.mapper === "hirom") {
-      if ((address & 16646144) === 8257536 || (address & 4227072) === 0) {
+      if ((address3 & 16646144) === 8257536 || (address3 & 4227072) === 0) {
         return -1;
       }
-      return address & 4194303;
+      return address3 & 4194303;
     }
     if (context.mapper === "exlorom") {
-      if ((address & 15728640) === 7340032 || (address & 4227072) === 0) {
+      if ((address3 & 15728640) === 7340032 || (address3 & 4227072) === 0) {
         return -1;
       }
-      const mapped = (address & 8323072) >> 1 | address & 32767;
-      return address & 8388608 ? mapped : mapped + 4194304;
+      const mapped = (address3 & 8323072) >> 1 | address3 & 32767;
+      return address3 & 8388608 ? mapped : mapped + 4194304;
     }
     if (context.mapper === "exhirom") {
-      if ((address & 16646144) === 8257536 || (address & 4227072) === 0) {
+      if ((address3 & 16646144) === 8257536 || (address3 & 4227072) === 0) {
         return -1;
       }
-      return (address & 8388608) === 0 ? address & 4194303 | 4194304 : address & 4194303;
+      return (address3 & 8388608) === 0 ? address3 & 4194303 | 4194304 : address3 & 4194303;
     }
     if (context.mapper === "sfxrom") {
-      if ((address & 6291456) === 6291456 || (address & 4227072) === 0 || (address & 8388608) === 8388608) {
+      if ((address3 & 6291456) === 6291456 || (address3 & 4227072) === 0 || (address3 & 8388608) === 8388608) {
         return -1;
       }
-      return address & 4194304 ? address & 4194303 : (address & 8323072) >> 1 | address & 32767;
+      return address3 & 4194304 ? address3 & 4194303 : (address3 & 8323072) >> 1 | address3 & 32767;
     }
     if (context.mapper === "sa1rom") {
-      if ((address & 4227072) === 32768) {
-        return context.sa1banks[(address & 14680064) >> 21] | (address & 2031616) >> 1 | address & 32767;
+      if ((address3 & 4227072) === 32768) {
+        return context.sa1banks[(address3 & 14680064) >> 21] | (address3 & 2031616) >> 1 | address3 & 32767;
       }
-      if ((address & 12582912) === 12582912) {
-        return context.sa1banks[(address & 1048576) >> 20 | (address & 2097152) >> 19] | address & 1048575;
+      if ((address3 & 12582912) === 12582912) {
+        return context.sa1banks[(address3 & 1048576) >> 20 | (address3 & 2097152) >> 19] | address3 & 1048575;
       }
       return -1;
     }
     if (context.mapper === "bigsa1rom") {
-      if ((address & 12582912) === 12582912) {
-        return address & 4194303 | 4194304;
+      if ((address3 & 12582912) === 12582912) {
+        return address3 & 4194303 | 4194304;
       }
-      if ((address & 12582912) === 0 || (address & 12582912) === 8388608) {
-        if ((address & 32768) === 0) return -1;
-        return (address & 8388608) >> 2 | (address & 4128768) >> 1 | address & 32767;
+      if ((address3 & 12582912) === 0 || (address3 & 12582912) === 8388608) {
+        if ((address3 & 32768) === 0) return -1;
+        return (address3 & 8388608) >> 2 | (address3 & 4128768) >> 1 | address3 & 32767;
       }
       return -1;
     }
-    return context.mapper === "norom" ? address : -1;
+    return context.mapper === "norom" ? address3 : -1;
   },
   /**
    * Inverse of {@link snesRomAddressSpace.toOutputOffset}: file offset → a
@@ -20672,49 +23034,49 @@ var snesRomAddressSpace = {
    */
   fromOutputOffset(offset, context) {
     if (offset < 0) return -1;
-    let address = offset;
+    let address3 = offset;
     if (context.mapper === "lorom") {
-      if (address >= 4194304) return -1;
-      address = address << 1 & 8323072 | address & 32767 | 32768;
-      return address | 8388608;
+      if (address3 >= 4194304) return -1;
+      address3 = address3 << 1 & 8323072 | address3 & 32767 | 32768;
+      return address3 | 8388608;
     }
     if (context.mapper === "hirom") {
-      return address >= 4194304 ? -1 : address | 12582912;
+      return address3 >= 4194304 ? -1 : address3 | 12582912;
     }
     if (context.mapper === "exlorom") {
-      if (address >= 8388608) return -1;
-      if (address & 4194304) {
-        address -= 4194304;
-        return address << 1 & 8323072 | address & 32767 | 32768;
+      if (address3 >= 8388608) return -1;
+      if (address3 & 4194304) {
+        address3 -= 4194304;
+        return address3 << 1 & 8323072 | address3 & 32767 | 32768;
       }
-      address = address << 1 & 8323072 | address & 32767 | 32768;
-      return address | 8388608;
+      address3 = address3 << 1 & 8323072 | address3 & 32767 | 32768;
+      return address3 | 8388608;
     }
     if (context.mapper === "exhirom") {
-      if (address >= 8388608) return -1;
-      return address & 4194304 ? address : address | 12582912;
+      if (address3 >= 8388608) return -1;
+      return address3 & 4194304 ? address3 : address3 | 12582912;
     }
     if (context.mapper === "sa1rom") {
-      if (address >= 8388608) return -1;
+      if (address3 >= 8388608) return -1;
       for (let index = 0; index < 8; index++) {
-        if (context.sa1banks[index] === (address & 7340032)) {
-          return 32768 | index << 21 | (address & 1015808) << 1 | address & 32767;
+        if (context.sa1banks[index] === (address3 & 7340032)) {
+          return 32768 | index << 21 | (address3 & 1015808) << 1 | address3 & 32767;
         }
       }
       return -1;
     }
     if (context.mapper === "bigsa1rom") {
-      if (address >= 8388608) return -1;
-      if ((address & 4194304) === 4194304) return address | 12582912;
-      if ((address & 6291456) === 0) {
-        return address << 1 & 4128768 | 32768 | address & 32767;
+      if (address3 >= 8388608) return -1;
+      if ((address3 & 4194304) === 4194304) return address3 | 12582912;
+      if ((address3 & 6291456) === 0) {
+        return address3 << 1 & 4128768 | 32768 | address3 & 32767;
       }
-      return 8388608 | address << 1 & 4128768 | 32768 | address & 32767;
+      return 8388608 | address3 << 1 & 4128768 | 32768 | address3 & 32767;
     }
     if (context.mapper === "sfxrom") {
-      return address >= 2097152 ? -1 : address << 1 & 8323072 | address & 32767 | 32768;
+      return address3 >= 2097152 ? -1 : address3 << 1 & 8323072 | address3 & 32767 | 32768;
     }
-    return context.mapper === "norom" ? address : -1;
+    return context.mapper === "norom" ? address3 : -1;
   }
 };
 
@@ -21337,6 +23699,1841 @@ var directiveByKeyword = new Map(
   directiveCatalog2.map((descriptor2) => [descriptor2.keyword.toLowerCase(), descriptor2])
 );
 
+// packages/plugin-snes/src/disassembler/65816-state.ts
+var unknown = () => ({ kind: "unknown" });
+var known = (value) => ({ kind: "known", value });
+var joinValue = (left, right) => {
+  if (left.kind === "unknown" || right.kind === "unknown") return unknown();
+  if (left.kind === "known" && right.kind === "known") {
+    return left.value === right.value ? left : { kind: "conflicting", values: [left.value, right.value].sort((a, b) => a - b) };
+  }
+  const values = /* @__PURE__ */ new Set([
+    ...left.kind === "known" ? [left.value] : left.values,
+    ...right.kind === "known" ? [right.value] : right.values
+  ]);
+  return { kind: "conflicting", values: [...values].sort((a, b) => a - b) };
+};
+var sameEntry = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+var joinStack = (left, right) => {
+  if (left.kind === "unknown" || right.kind === "unknown") return { kind: "unknown" };
+  if (left.kind === "conflicting" || right.kind === "conflicting") {
+    return { kind: "conflicting" };
+  }
+  if (left.entries.length !== right.entries.length) return { kind: "conflicting" };
+  return left.entries.every((entry, index) => sameEntry(entry, right.entries[index])) ? left : { kind: "conflicting" };
+};
+var normalize = (state) => state.e.kind === "known" && state.e.value === 1 ? { ...state, m: known(1), x: known(1) } : state;
+var unknownCpu65816State = () => ({
+  e: unknown(),
+  m: unknown(),
+  x: unknown(),
+  carry: unknown(),
+  pbr: unknown(),
+  dbr: unknown(),
+  d: unknown(),
+  s: unknown(),
+  stack: { kind: "unknown" }
+});
+var resetCpu65816State = () => ({
+  e: known(1),
+  m: known(1),
+  x: known(1),
+  carry: unknown(),
+  pbr: known(0),
+  dbr: known(0),
+  d: known(0),
+  s: known(511),
+  stack: { kind: "known", entries: [] }
+});
+var nativeVectorCpu65816State = () => ({
+  ...unknownCpu65816State(),
+  e: known(0),
+  pbr: known(0)
+});
+var emulationVectorCpu65816State = () => ({
+  ...unknownCpu65816State(),
+  e: known(1),
+  m: known(1),
+  x: known(1),
+  pbr: known(0)
+});
+var joinCpu65816States = (left, right) => normalize({
+  e: joinValue(left.e, right.e),
+  m: joinValue(left.m, right.m),
+  x: joinValue(left.x, right.x),
+  carry: joinValue(left.carry, right.carry),
+  pbr: joinValue(left.pbr, right.pbr),
+  dbr: joinValue(left.dbr, right.dbr),
+  d: joinValue(left.d, right.d),
+  s: joinValue(left.s, right.s),
+  stack: joinStack(left.stack, right.stack)
+});
+var flagOverride = (value) => value === void 0 ? void 0 : known(value === true || value === 1 ? 1 : 0);
+var applyCpu65816StateOverride = (state, override) => normalize({
+  ...state,
+  ...flagOverride(override.e) ? { e: flagOverride(override.e) } : {},
+  ...flagOverride(override.m) ? { m: flagOverride(override.m) } : {},
+  ...flagOverride(override.x) ? { x: flagOverride(override.x) } : {},
+  ...flagOverride(override.carry) ? { carry: flagOverride(override.carry) } : {},
+  ...override.programBank === void 0 ? {} : { pbr: known(override.programBank & 255) },
+  ...override.dataBank === void 0 ? {} : { dbr: known(override.dataBank & 255) },
+  ...override.directPage === void 0 ? {} : { d: known(override.directPage & 65535) },
+  ...override.stackPointer === void 0 ? {} : { s: known(override.stackPointer & 65535) }
+});
+var enterCpu65816Address = (state, address3) => ({ ...state, pbr: known(address3 >>> 16 & 255) });
+var decoderFlag = (value) => value.kind === "known" && (value.value === 0 || value.value === 1) ? value.value : "unknown";
+var cpu65816DecodeState = (state) => ({
+  e: decoderFlag(state.e),
+  m: decoderFlag(state.m),
+  x: decoderFlag(state.x),
+  ...state.pbr.kind === "known" ? { programBank: state.pbr.value } : {},
+  ...state.dbr.kind === "known" ? { dataBank: state.dbr.value } : {},
+  ...state.d.kind === "known" ? { directPage: state.d.value } : {}
+});
+var adjustStackPointer = (state, delta) => {
+  if (state.s.kind !== "known") return state.s.kind === "conflicting" ? state.s : unknown();
+  let value = state.s.value + delta & 65535;
+  if (state.e.kind === "known" && state.e.value === 1) value = 256 | value & 255;
+  return known(value);
+};
+var push = (state, entry) => {
+  const bytes = entry.kind === "status" ? 1 : entry.bytes;
+  const stack = state.stack.kind === "known" ? { kind: "known", entries: [entry, ...state.stack.entries].slice(0, 16) } : state.stack;
+  return { ...state, s: adjustStackPointer(state, -bytes), stack };
+};
+var pull = (state, bytes) => {
+  if (state.stack.kind !== "known") {
+    return [{ ...state, s: adjustStackPointer(state, bytes) }, void 0];
+  }
+  const entry = state.stack.entries[0];
+  return [
+    {
+      ...state,
+      s: adjustStackPointer(state, bytes),
+      stack: { kind: "known", entries: state.stack.entries.slice(1) }
+    },
+    entry
+  ];
+};
+var pushedBytes = (mnemonic, state) => {
+  if (mnemonic === "PHA") {
+    const flag = decoderFlag(state.m);
+    if (flag === "unknown") return void 0;
+    return flag === 0 ? 2 : 1;
+  }
+  if (mnemonic === "PHX" || mnemonic === "PHY") {
+    const flag = decoderFlag(state.x);
+    if (flag === "unknown") return void 0;
+    return flag === 0 ? 2 : 1;
+  }
+  return mnemonic === "PHD" || mnemonic === "PEA" || mnemonic === "PEI" || mnemonic === "PER" ? 2 : 1;
+};
+var pulledBytes = (target, state) => {
+  if (target === "a") {
+    const flag = decoderFlag(state.m);
+    if (flag === "unknown") return void 0;
+    return flag === 0 ? 2 : 1;
+  }
+  if (target === "x" || target === "y") {
+    const flag = decoderFlag(state.x);
+    if (flag === "unknown") return void 0;
+    return flag === 0 ? 2 : 1;
+  }
+  return target === "d" || target === "pc" ? 2 : 1;
+};
+var loseStackPrecision = (state) => ({
+  ...state,
+  s: unknown(),
+  stack: { kind: "unknown" }
+});
+var sourceValue = (source, state) => {
+  if (source === "pbr") return state.pbr;
+  if (source === "dbr") return state.dbr;
+  if (source === "d") return state.d;
+  return unknown();
+};
+var CARRY_UNKNOWN_MNEMONICS = /* @__PURE__ */ new Set([
+  "ADC",
+  "ASL",
+  "CMP",
+  "CPX",
+  "CPY",
+  "LSR",
+  "ROL",
+  "ROR",
+  "SBC"
+]);
+var transferCpu65816State = (instruction, input) => {
+  let state = input;
+  for (const effect of instruction.effects) {
+    if ((effect.kind === "clearBits" || effect.kind === "setBits") && effect.target === "p") {
+      const value = effect.kind === "setBits" ? 1 : 0;
+      state = {
+        ...state,
+        ...effect.mask & 1 ? { carry: known(value) } : {},
+        ...effect.mask & 16 ? { x: known(value) } : {},
+        ...effect.mask & 32 ? { m: known(value) } : {}
+      };
+    } else if (effect.kind === "push") {
+      if (effect.source === "p") {
+        state = push(state, {
+          kind: "status",
+          e: state.e,
+          m: state.m,
+          x: state.x,
+          carry: state.carry
+        });
+      } else {
+        const bytes = pushedBytes(instruction.mnemonic, state);
+        if (bytes === void 0) {
+          state = loseStackPrecision(state);
+          continue;
+        }
+        state = push(state, {
+          kind: "value",
+          source: effect.source,
+          bytes,
+          value: sourceValue(effect.source, state)
+        });
+      }
+    } else if (effect.kind === "pull") {
+      const bytes = pulledBytes(effect.target, state);
+      if (bytes === void 0) {
+        state = loseStackPrecision(state);
+        continue;
+      }
+      const [pulledState, entry] = pull(state, bytes);
+      state = pulledState;
+      if (effect.target === "p") {
+        state = entry?.kind === "status" ? {
+          ...state,
+          e: entry.e,
+          m: entry.m,
+          x: entry.x,
+          carry: entry.carry
+        } : { ...state, m: unknown(), x: unknown(), carry: unknown() };
+      } else if (effect.target === "dbr") {
+        state = {
+          ...state,
+          dbr: entry?.kind === "value" && entry.value.kind === "known" ? known(entry.value.value & 255) : unknown()
+        };
+      } else if (effect.target === "d") {
+        state = {
+          ...state,
+          d: entry?.kind === "value" ? entry.value : unknown()
+        };
+      }
+    } else if (effect.kind === "exchange" && effect.left === "c" && effect.right === "e") {
+      state = { ...state, carry: state.e, e: state.carry };
+    } else if (effect.kind === "copy" && effect.to === "d") {
+      state = { ...state, d: unknown() };
+    } else if (effect.kind === "copy" && effect.to === "s") {
+      state = { ...state, s: unknown(), stack: { kind: "unknown" } };
+    }
+  }
+  if (CARRY_UNKNOWN_MNEMONICS.has(instruction.mnemonic)) state = { ...state, carry: unknown() };
+  if (["BRK", "COP", "JSL", "JSR"].includes(instruction.mnemonic)) {
+    state = loseStackPrecision(state);
+  }
+  if (instruction.mnemonic === "RTI") {
+    state = { ...state, pbr: unknown(), stack: { kind: "unknown" } };
+  }
+  return normalize(state);
+};
+var cpu65816StateKey = (state) => JSON.stringify(state);
+
+// packages/plugin-snes/src/disassembler/address-identities.ts
+var SNES_FILE_ADDRESS_SPACE = "rom.file";
+var SNES_CPU_ADDRESS_SPACE = "snes.cpu";
+var createSnesAddressContext = (mapper, sa1banks = [
+  0,
+  1048576,
+  2097152,
+  3145728,
+  4194304,
+  5242880,
+  6291456,
+  7340032
+]) => ({ mapper, sa1banks });
+var mirrorsForOffset = (fileOffset, context, canonical2) => {
+  const lowWords = /* @__PURE__ */ new Set([
+    canonical2 & 65535,
+    fileOffset & 65535,
+    fileOffset & 32767 | 32768
+  ]);
+  const mirrors = /* @__PURE__ */ new Set();
+  for (let bank = 0; bank <= 255; bank++) {
+    for (const lowWord of lowWords) {
+      const candidate = bank << 16 | lowWord;
+      if (snesRomAddressSpace.toOutputOffset(candidate, context) === fileOffset) {
+        mirrors.add(candidate);
+      }
+    }
+  }
+  mirrors.add(canonical2);
+  return [...mirrors].sort((left, right) => left - right);
+};
+var identifySnesFileOffset = (fileOffset, context, romSize) => {
+  if (!Number.isInteger(fileOffset) || fileOffset < 0 || fileOffset >= romSize) return void 0;
+  const canonicalCpuAddress = snesRomAddressSpace.fromOutputOffset(fileOffset, context);
+  if (canonicalCpuAddress < 0) return void 0;
+  return {
+    addressSpace: SNES_CPU_ADDRESS_SPACE,
+    address: canonicalCpuAddress,
+    fileAddressSpace: SNES_FILE_ADDRESS_SPACE,
+    fileOffset,
+    canonicalCpuAddress,
+    mirrored: false,
+    mirrors: mirrorsForOffset(fileOffset, context, canonicalCpuAddress)
+  };
+};
+var identifySnesCpuAddress = (address3, context, romSize) => {
+  const fileOffset = snesRomAddressSpace.toOutputOffset(address3, context);
+  if (fileOffset < 0 || fileOffset >= romSize) return void 0;
+  const canonicalCpuAddress = snesRomAddressSpace.fromOutputOffset(fileOffset, context);
+  if (canonicalCpuAddress < 0) return void 0;
+  return {
+    addressSpace: SNES_CPU_ADDRESS_SPACE,
+    address: address3,
+    fileAddressSpace: SNES_FILE_ADDRESS_SPACE,
+    fileOffset,
+    canonicalCpuAddress,
+    mirrored: address3 !== canonicalCpuAddress,
+    mirrors: mirrorsForOffset(fileOffset, context, canonicalCpuAddress)
+  };
+};
+
+// packages/plugin-snes/src/disassembler/hardware-registers.ts
+var FIXED_REGISTERS = Object.freeze({
+  8448: "INIDISP",
+  8449: "OBSEL",
+  8450: "OAMADDL",
+  8451: "OAMADDH",
+  8452: "OAMDATA",
+  8453: "BGMODE",
+  8454: "MOSAIC",
+  8455: "BG1SC",
+  8456: "BG2SC",
+  8457: "BG3SC",
+  8458: "BG4SC",
+  8459: "BG12NBA",
+  8460: "BG34NBA",
+  8461: "BG1HOFS",
+  8462: "BG1VOFS",
+  8469: "VMAIN",
+  8470: "VMADDL",
+  8471: "VMADDH",
+  8472: "VMDATAL",
+  8473: "VMDATAH",
+  8481: "CGADD",
+  8482: "CGDATA",
+  8500: "MPYL",
+  8503: "SLHV",
+  8504: "OAMDATAREAD",
+  8505: "VMDATALREAD",
+  8506: "VMDATAHREAD",
+  8507: "CGDATAREAD",
+  8508: "OPHCT",
+  8509: "OPVCT",
+  8510: "STAT77",
+  8511: "STAT78",
+  8512: "APUIO0",
+  8513: "APUIO1",
+  8514: "APUIO2",
+  8515: "APUIO3",
+  8576: "WMDATA",
+  8577: "WMADDL",
+  8578: "WMADDM",
+  8579: "WMADDH",
+  16406: "JOYSER0",
+  16407: "JOYSER1",
+  16896: "NMITIMEN",
+  16897: "WRIO",
+  16898: "WRMPYA",
+  16899: "WRMPYB",
+  16900: "WRDIVL",
+  16901: "WRDIVH",
+  16902: "WRDIVB",
+  16903: "HTIMEL",
+  16904: "HTIMEH",
+  16905: "VTIMEL",
+  16906: "VTIMEH",
+  16907: "MDMAEN",
+  16908: "HDMAEN",
+  16909: "MEMSEL",
+  16912: "RDNMI",
+  16913: "TIMEUP",
+  16914: "HVBJOY",
+  16915: "RDIO",
+  16916: "RDDIVL",
+  16917: "RDDIVH",
+  16918: "RDMPYL",
+  16919: "RDMPYH",
+  16920: "JOY1L",
+  16921: "JOY1H",
+  16922: "JOY2L",
+  16923: "JOY2H",
+  16924: "JOY3L",
+  16925: "JOY3H",
+  16926: "JOY4L",
+  16927: "JOY4H"
+});
+var DMA_REGISTER_NAMES = [
+  "DMAP",
+  "BBAD",
+  "A1TL",
+  "A1TH",
+  "A1B",
+  "DASL",
+  "DASH",
+  "DASB",
+  "A2AL",
+  "A2AH",
+  "NTRL"
+];
+var identifySnesHardwareRegister = (address3) => {
+  const bank = address3 >>> 16 & 255;
+  if (!(bank <= 63 || bank >= 128 && bank <= 191)) return void 0;
+  const low = address3 & 65535;
+  const fixed = FIXED_REGISTERS[low];
+  if (fixed) return { address: address3, symbol: fixed, volatile: true };
+  if (low >= 17152 && low <= 17279) {
+    const channel = low - 17152 >>> 4;
+    const register4 = low - 17152 & 15;
+    const name = DMA_REGISTER_NAMES[register4];
+    if (name) return { address: address3, symbol: `${name}${channel}`, volatile: true };
+  }
+  return void 0;
+};
+var snesHardwareRegisterSymbols = Object.freeze({ ...FIXED_REGISTERS });
+
+// packages/plugin-snes/src/disassembler/65816-analysis.ts
+var VECTOR_DEFINITIONS = [
+  { name: "native-cop", pointer: 65508, state: "native" },
+  { name: "native-brk", pointer: 65510, state: "native" },
+  { name: "native-abort", pointer: 65512, state: "native" },
+  { name: "native-nmi", pointer: 65514, state: "native" },
+  { name: "native-irq", pointer: 65518, state: "native" },
+  { name: "emulation-cop", pointer: 65524, state: "emulation" },
+  { name: "emulation-abort", pointer: 65528, state: "emulation" },
+  { name: "emulation-nmi", pointer: 65530, state: "emulation" },
+  { name: "reset", pointer: 65532, state: "reset" },
+  { name: "emulation-irq-brk", pointer: 65534, state: "emulation" }
+];
+var DATA_CLASSIFICATIONS = /* @__PURE__ */ new Set([
+  "data8",
+  "data16",
+  "data24",
+  "data32",
+  "pointer16",
+  "pointer24",
+  "pointer32",
+  "graphics",
+  "music",
+  "empty",
+  "text",
+  "operand"
+]);
+var EVIDENCE_RANK = {
+  detector: 0,
+  static: 1,
+  import: 2,
+  runtime: 3,
+  manual: 4
+};
+var vectorState = (kind) => {
+  if (kind === "reset") return resetCpu65816State();
+  return kind === "native" ? nativeVectorCpu65816State() : emulationVectorCpu65816State();
+};
+var readVector = (rom, mapper, pointer) => {
+  const identity = identifySnesCpuAddress(pointer, createSnesAddressContext(mapper), rom.length);
+  if (!identity) return void 0;
+  const low = rom.readByte(identity.fileOffset);
+  const high = rom.readByte(identity.fileOffset + 1);
+  if (low === void 0 || high === void 0) return void 0;
+  const target = low | high << 8;
+  return target === 0 || target === 65535 ? void 0 : target;
+};
+var intervalContains = (annotation, offset) => annotation.addressSpace === SNES_FILE_ADDRESS_SPACE && annotation.start <= offset && offset < annotation.end;
+var stateOverrideFor = (annotation) => {
+  if (!annotation.state) return void 0;
+  return {
+    ...annotation.state.e === void 0 ? {} : { e: annotation.state.e },
+    ...annotation.state.m === void 0 ? {} : { m: annotation.state.m },
+    ...annotation.state.x === void 0 ? {} : { x: annotation.state.x },
+    ...annotation.state.carry === void 0 ? {} : { carry: annotation.state.carry },
+    ...annotation.state.programBank === void 0 ? {} : { programBank: annotation.state.programBank },
+    ...annotation.state.dataBank === void 0 ? {} : { dataBank: annotation.state.dataBank },
+    ...annotation.state.directPage === void 0 ? {} : { directPage: annotation.state.directPage },
+    ...annotation.state.stackPointer === void 0 ? {} : { stackPointer: annotation.state.stackPointer }
+  };
+};
+var controlTargetKind = (kind) => {
+  if (kind === "branch") return "branch";
+  if (kind === "call") return "call";
+  return "jump";
+};
+var controlsFor2 = (instruction, interruptTargets) => {
+  const controls = instruction.references.filter(
+    (reference) => reference.kind === "branch" || reference.kind === "call" || reference.kind === "jump"
+  ).map((reference) => ({
+    kind: controlTargetKind(reference.kind),
+    ...reference.address === void 0 ? {} : { address: reference.address },
+    ...reference.indirect ? { indirect: true } : {},
+    ...reference.address === void 0 ? { explanation: "The decoded indirect target is not known statically." } : {}
+  }));
+  if (instruction.flow.kind !== "interrupt") return controls;
+  return interruptTargets.map((address3) => ({
+    kind: "interrupt",
+    address: address3,
+    explanation: "Resolved from the applicable SNES interrupt vector."
+  }));
+};
+var isIndexedOrIndirect = (mode3) => mode3.includes("Indexed") || mode3.includes("Indirect") || mode3.startsWith("stackRelative");
+var unresolvedAddressExplanation = (mode3) => {
+  if (mode3.startsWith("direct")) {
+    return "Effective address is unresolved because direct page D is unknown.";
+  }
+  if (mode3.startsWith("absolute")) {
+    return "Effective address is unresolved because DBR or an indirect target is unknown.";
+  }
+  return "Effective address is unresolved.";
+};
+var mappedAddressExplanation = (indexed, identity) => {
+  if (indexed) {
+    return "The encoded address is only a base; an index register or indirection prevents a static effective address.";
+  }
+  if (identity) {
+    return `CPU address maps to ROM file offset $${identity.fileOffset.toString(16).padStart(6, "0")}.`;
+  }
+  return "CPU address does not map to the loaded ROM.";
+};
+var effectiveAddressesFor = (instruction, mapper, romSize) => instruction.references.filter((reference) => reference.kind === "data" || reference.kind === "pointer").map((reference) => {
+  const operandIndex = reference.operandIndex ?? 0;
+  if (reference.address === void 0) {
+    return {
+      operandIndex,
+      volatile: false,
+      explanation: unresolvedAddressExplanation(instruction.mode)
+    };
+  }
+  const indexed = isIndexedOrIndirect(instruction.mode);
+  const hardware = identifySnesHardwareRegister(reference.address);
+  if (hardware) {
+    return {
+      operandIndex,
+      ...indexed ? { baseAddress: reference.address } : { address: reference.address },
+      symbol: hardware.symbol,
+      volatile: true,
+      explanation: indexed ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access; the final address is unresolved.` : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`
+    };
+  }
+  const identity = indexed ? void 0 : identifySnesCpuAddress(reference.address, createSnesAddressContext(mapper), romSize);
+  return {
+    operandIndex,
+    ...indexed ? { baseAddress: reference.address } : { address: reference.address },
+    volatile: false,
+    ...identity ? { romOffset: identity.fileOffset } : {},
+    explanation: mappedAddressExplanation(indexed, identity)
+  };
+});
+var knownBoolean = (value) => value.kind === "known" && (value.value === 0 || value.value === 1) ? value.value === 1 : void 0;
+var knownNumber = (value) => value.kind === "known" ? value.value : void 0;
+var annotationState = (state) => ({
+  ...knownBoolean(state.e) === void 0 ? {} : { e: knownBoolean(state.e) },
+  ...knownBoolean(state.m) === void 0 ? {} : { m: knownBoolean(state.m) },
+  ...knownBoolean(state.x) === void 0 ? {} : { x: knownBoolean(state.x) },
+  ...knownBoolean(state.carry) === void 0 ? {} : { carry: knownBoolean(state.carry) },
+  ...knownNumber(state.pbr) === void 0 ? {} : { programBank: knownNumber(state.pbr) },
+  ...knownNumber(state.dbr) === void 0 ? {} : { dataBank: knownNumber(state.dbr) },
+  ...knownNumber(state.d) === void 0 ? {} : { directPage: knownNumber(state.d) },
+  ...knownNumber(state.s) === void 0 ? {} : { stackPointer: knownNumber(state.s) }
+});
+var recordsFor = (result, runEvidence) => [
+  ...result.nodes.map((node) => ({
+    id: `static:${node.id}`,
+    kind: "cfg-node",
+    addressSpace: SNES_CPU_ADDRESS_SPACE,
+    address: node.address,
+    fileOffset: node.fileOffset,
+    size: node.size,
+    opcode: node.opcode,
+    specificationId: node.specificationId,
+    mnemonic: node.mnemonic,
+    mode: node.mode,
+    context: node.context,
+    incomingState: node.incomingState,
+    outgoingState: node.outgoingState,
+    effectiveAddresses: node.effectiveAddresses,
+    entryPoint: node.entryPoint,
+    evidencePath: node.evidencePath.map((id) => `static:${id}`),
+    evidence: [.../* @__PURE__ */ new Set([...node.evidence, runEvidence])].sort()
+  })),
+  ...result.edges.map((edge) => ({
+    id: `static:${edge.id}`,
+    kind: "cfg-edge",
+    addressSpace: SNES_CPU_ADDRESS_SPACE,
+    from: `static:${edge.from}`,
+    fromAddress: edge.fromAddress,
+    ...edge.to ? { to: `static:${edge.to}` } : {},
+    ...edge.toAddress === void 0 ? {} : { toAddress: edge.toAddress },
+    edgeKind: edge.kind,
+    indirect: edge.indirect,
+    ...edge.override ? { override: edge.override } : {},
+    ...edge.explanation ? { explanation: edge.explanation } : {},
+    evidence: [.../* @__PURE__ */ new Set([...edge.evidence, runEvidence])].sort()
+  })),
+  ...result.functions.map((fn) => ({
+    id: `static:${fn.id}`,
+    kind: "function",
+    addressSpace: SNES_CPU_ADDRESS_SPACE,
+    address: fn.address,
+    source: fn.source,
+    evidencePath: fn.evidencePath.map((id) => `static:${id}`),
+    evidence: [.../* @__PURE__ */ new Set([...fn.evidence, runEvidence])].sort()
+  })),
+  ...result.conflicts.map((conflict) => ({
+    id: `static:${conflict.id}`,
+    kind: "conflict",
+    addressSpace: SNES_CPU_ADDRESS_SPACE,
+    address: conflict.address,
+    conflictKind: conflict.kind,
+    message: conflict.message,
+    nodes: conflict.nodes.map((id) => `static:${id}`),
+    evidence: [.../* @__PURE__ */ new Set([...conflict.evidence, runEvidence])].sort()
+  })),
+  ...result.unresolved.map((flow) => ({
+    id: `static:${flow.id}`,
+    kind: "unresolved",
+    addressSpace: SNES_CPU_ADDRESS_SPACE,
+    address: flow.address,
+    flowKind: flow.kind,
+    indirect: flow.indirect,
+    reason: flow.reason,
+    evidence: [.../* @__PURE__ */ new Set([...flow.evidence, runEvidence])].sort()
+  })),
+  {
+    id: "static:65816:summary",
+    kind: "summary",
+    architecture: "snes.65816",
+    status: result.status,
+    coverage: result.coverage,
+    processedWorkItems: result.processedWorkItems,
+    incompleteReasons: result.incompleteReasons,
+    evidence: [runEvidence]
+  }
+];
+var annotationsFor = (result, runEvidence) => {
+  const output = /* @__PURE__ */ new Map();
+  const stateByOffset = /* @__PURE__ */ new Map();
+  for (const node of result.nodes) {
+    const previous = stateByOffset.get(node.fileOffset);
+    stateByOffset.set(
+      node.fileOffset,
+      previous ? joinCpu65816States(previous, node.incomingState) : node.incomingState
+    );
+  }
+  for (const node of result.nodes) {
+    const evidence = [.../* @__PURE__ */ new Set([...node.evidence, runEvidence])].sort();
+    const state = annotationState(stateByOffset.get(node.fileOffset) ?? node.incomingState);
+    const opcodeId = `static:65816:opcode:${node.fileOffset.toString(16).padStart(6, "0")}`;
+    const priorOpcode = output.get(opcodeId);
+    output.set(opcodeId, {
+      id: opcodeId,
+      addressSpace: SNES_FILE_ADDRESS_SPACE,
+      start: node.fileOffset,
+      end: node.fileOffset + 1,
+      classification: "opcode",
+      architecture: "snes.65816",
+      ...Object.keys(state).length === 0 ? {} : { state },
+      evidence: [.../* @__PURE__ */ new Set([...priorOpcode?.evidence ?? [], ...evidence])].sort()
+    });
+    if (node.size > 1) {
+      const operandId = `static:65816:operand:${node.fileOffset.toString(16).padStart(6, "0")}`;
+      const priorOperand = output.get(operandId);
+      output.set(operandId, {
+        id: operandId,
+        addressSpace: SNES_FILE_ADDRESS_SPACE,
+        start: node.fileOffset + 1,
+        end: node.fileOffset + node.size,
+        classification: "operand",
+        architecture: "snes.65816",
+        evidence: [.../* @__PURE__ */ new Set([...priorOperand?.evidence ?? [], ...evidence])].sort()
+      });
+    }
+  }
+  return [...output.values()].sort(
+    (left, right) => left.start - right.start || left.id.localeCompare(right.id)
+  );
+};
+var analyzeSnes65816 = (rom, mapper, options = {}) => {
+  const context = createSnesAddressContext(mapper);
+  const decoder = new Cpu65816Decoder();
+  const source = new Uint8ArrayDecoderSource(rom.bytes());
+  const evidenceById = new Map((options.evidence ?? []).map((record) => [record.id, record]));
+  const annotations = (options.annotations ?? []).filter(
+    (annotation) => !annotation.id.startsWith("static:65816:")
+  );
+  const runEvidence = `static:65816:${rom.identity.contentSha256}`;
+  const explicitStateOverrides = /* @__PURE__ */ new Map();
+  const conflictingExplicitStateOverrides = /* @__PURE__ */ new Set();
+  for (const entry of options.entryPoints ?? []) {
+    if (!entry.state || conflictingExplicitStateOverrides.has(entry.address)) continue;
+    const existing = explicitStateOverrides.get(entry.address);
+    if (!existing) explicitStateOverrides.set(entry.address, entry.state);
+    else if (JSON.stringify(existing) !== JSON.stringify(entry.state)) {
+      explicitStateOverrides.delete(entry.address);
+      conflictingExplicitStateOverrides.add(entry.address);
+    }
+  }
+  const evidenceRecords = /* @__PURE__ */ new Map();
+  evidenceRecords.set(runEvidence, {
+    id: runEvidence,
+    source: "static",
+    sourceId: "snes.65816.static-v1",
+    confidence: "high",
+    detail: `Conservative 65816 analysis of ${rom.identity.contentSha256}`
+  });
+  const seeds = [];
+  for (const vector of VECTOR_DEFINITIONS) {
+    const target = readVector(rom, mapper, vector.pointer);
+    if (target === void 0) continue;
+    const evidenceId = `detector:vector:${vector.name}`;
+    evidenceRecords.set(evidenceId, {
+      id: evidenceId,
+      source: "detector",
+      sourceId: `snes-vector-$${vector.pointer.toString(16).padStart(6, "0")}`,
+      confidence: "certain",
+      detail: `${vector.name} vector points to $${target.toString(16).padStart(6, "0")}.`
+    });
+    seeds.push({
+      id: `vector:${vector.name}`,
+      address: target,
+      kind: "vector",
+      state: vectorState(vector.state),
+      evidence: [evidenceId],
+      detail: vector.name
+    });
+  }
+  const stateAtAddress = (base, address3) => {
+    const identity = identifySnesCpuAddress(address3, context, rom.length);
+    if (!identity) return { state: base, evidence: [] };
+    const matching = annotations.filter((annotation) => intervalContains(annotation, identity.fileOffset) && annotation.state).map((annotation) => ({
+      annotation,
+      rank: Math.max(
+        0,
+        ...annotation.evidence.map(
+          (id) => EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"]
+        )
+      )
+    })).sort(
+      (left, right) => left.rank - right.rank || left.annotation.id.localeCompare(right.annotation.id)
+    );
+    let state = base;
+    const consumed = [];
+    for (const { annotation } of matching) {
+      const override = stateOverrideFor(annotation);
+      if (override) state = applyCpu65816StateOverride(state, override);
+      consumed.push(...annotation.evidence);
+    }
+    return { state, evidence: [...new Set(consumed)].sort() };
+  };
+  const projectAddress = (addressSpace, address3) => {
+    if (addressSpace === SNES_CPU_ADDRESS_SPACE) return address3;
+    if (addressSpace === SNES_FILE_ADDRESS_SPACE) {
+      return identifySnesFileOffset(address3, context, rom.length)?.address;
+    }
+    return void 0;
+  };
+  for (const label of options.labels ?? []) {
+    const address3 = projectAddress(label.addressSpace, label.address);
+    if (address3 === void 0) continue;
+    const seeded = stateAtAddress(unknownCpu65816State(), address3);
+    seeds.push({
+      id: `label:${label.id}`,
+      address: address3,
+      kind: "imported-label",
+      state: seeded.state,
+      evidence: [.../* @__PURE__ */ new Set([...label.evidence, ...seeded.evidence])].sort(),
+      detail: label.name
+    });
+  }
+  for (const annotation of annotations) {
+    if (!annotation.points?.includes("in")) continue;
+    const address3 = projectAddress(annotation.addressSpace, annotation.start);
+    if (address3 === void 0) continue;
+    const seeded = stateAtAddress(unknownCpu65816State(), address3);
+    seeds.push({
+      id: `point:${annotation.id}`,
+      address: address3,
+      kind: "manual",
+      state: seeded.state,
+      evidence: [.../* @__PURE__ */ new Set([...annotation.evidence, ...seeded.evidence])].sort()
+    });
+  }
+  for (const entry of options.entryPoints ?? []) {
+    const evidenceId = entry.evidence?.[0] ?? `manual:entry:${entry.id}`;
+    if (!evidenceById.has(evidenceId)) {
+      evidenceRecords.set(evidenceId, {
+        id: evidenceId,
+        source: "manual",
+        sourceId: entry.id,
+        confidence: "certain",
+        detail: `Configured entry point $${entry.address.toString(16).padStart(6, "0")}.`
+      });
+    }
+    const seeded = stateAtAddress(unknownCpu65816State(), entry.address);
+    seeds.push({
+      id: `entry:${entry.id}`,
+      address: entry.address,
+      kind: "configured",
+      state: applyCpu65816StateOverride(seeded.state, entry.state ?? {}),
+      evidence: [.../* @__PURE__ */ new Set([...entry.evidence ?? [evidenceId], ...seeded.evidence])].sort()
+    });
+  }
+  for (const targetSet of options.targetSets ?? []) {
+    for (const address3 of targetSet.targets) {
+      const seeded = stateAtAddress(unknownCpu65816State(), address3);
+      seeds.push({
+        id: `target-set:${targetSet.id}:${address3.toString(16)}`,
+        address: address3,
+        kind: "target-set",
+        state: seeded.state,
+        evidence: [.../* @__PURE__ */ new Set([...targetSet.evidence, ...seeded.evidence])].sort()
+      });
+    }
+  }
+  const targetOverrides = (options.targetOverrides ?? []).map(
+    (override) => ({
+      id: override.id,
+      address: override.address,
+      targets: [...override.targets].sort((left, right) => left - right),
+      evidence: override.evidence
+    })
+  );
+  const interruptTargetsFor = (instruction, state) => {
+    if (instruction.flow.kind !== "interrupt") return [];
+    const mnemonic = instruction.mnemonic;
+    const possiblePointers = [];
+    if (state.e.kind !== "known" || state.e.value === 0) {
+      possiblePointers.push(mnemonic === "COP" ? 65508 : 65510);
+    }
+    if (state.e.kind !== "known" || state.e.value === 1) {
+      possiblePointers.push(mnemonic === "COP" ? 65524 : 65534);
+    }
+    return possiblePointers.map((pointer) => readVector(rom, mapper, pointer)).filter((target) => target !== void 0);
+  };
+  const result = analyzeStaticControlFlow(
+    {
+      backingSize: rom.length,
+      enterAddress: (state, address3) => {
+        const annotated = stateAtAddress(enterCpu65816Address(state, address3), address3).state;
+        const explicit = explicitStateOverrides.get(address3);
+        return explicit ? applyCpu65816StateOverride(annotated, explicit) : annotated;
+      },
+      join: joinCpu65816States,
+      stateKey: cpu65816StateKey,
+      transfer: transferCpu65816State,
+      decode: (address3, state) => {
+        const identity = identifySnesCpuAddress(address3, context, rom.length);
+        if (!identity) return { kind: "error", reason: "Address does not map into the ROM." };
+        const blocked = annotations.find(
+          (annotation) => intervalContains(annotation, identity.fileOffset) && DATA_CLASSIFICATIONS.has(annotation.classification)
+        );
+        if (blocked) {
+          return {
+            kind: "blocked",
+            reason: `Analysis reached '${blocked.classification}' region '${blocked.id}'.`,
+            evidence: blocked.evidence
+          };
+        }
+        const decoded = decoder.decode({
+          source,
+          offset: identity.fileOffset,
+          logicalAddress: address3,
+          state: cpu65816DecodeState(state)
+        });
+        if (decoded.kind === "ambiguous") {
+          return {
+            kind: "ambiguous",
+            reason: decoded.reason,
+            requiredState: decoded.requiredState
+          };
+        }
+        if (decoded.kind === "error") return { kind: "error", reason: decoded.message };
+        const instruction = decoded.instruction;
+        const crossing = annotations.find(
+          (annotation) => DATA_CLASSIFICATIONS.has(annotation.classification) && Array.from(
+            { length: instruction.size },
+            (_, index) => identity.fileOffset + index
+          ).some((offset) => intervalContains(annotation, offset))
+        );
+        if (crossing) {
+          return {
+            kind: "blocked",
+            reason: `Instruction crosses '${crossing.classification}' region '${crossing.id}'.`,
+            evidence: crossing.evidence
+          };
+        }
+        const overrideEvidence = stateAtAddress(state, address3).evidence;
+        const normalized = {
+          specificationId: instruction.specificationId,
+          address: address3,
+          fileOffset: identity.fileOffset,
+          size: instruction.size,
+          opcode: instruction.opcode,
+          mnemonic: instruction.mnemonic,
+          mode: instruction.mode,
+          effects: instruction.effects,
+          evidence: overrideEvidence,
+          flow: instruction.flow,
+          targets: controlsFor2(instruction, interruptTargetsFor(instruction, state)),
+          effectiveAddresses: effectiveAddressesFor(instruction, mapper, rom.length)
+        };
+        return { kind: "instruction", instruction: normalized };
+      }
+    },
+    seeds,
+    {
+      ...options.maxWorkItems === void 0 ? {} : { maxWorkItems: options.maxWorkItems },
+      ...options.maxCallDepth === void 0 ? {} : { maxCallDepth: options.maxCallDepth },
+      targetOverrides
+    }
+  );
+  return {
+    ...result,
+    records: recordsFor(result, runEvidence),
+    annotations: annotationsFor(result, runEvidence),
+    evidenceRecords: [...evidenceRecords.values()].sort(
+      (left, right) => left.id.localeCompare(right.id)
+    )
+  };
+};
+
+// packages/plugin-snes/src/disassembler/dizraw-import.ts
+import { createHash as createHash4 } from "node:crypto";
+var SUBSTITUTIONS = [
+  ["0001E", "ZQ"],
+  ["B0001", "Zq"],
+  ["C0001", "ZX"],
+  ["B7E", "Zx"],
+  ["07F01", "ZY"],
+  ["0001D", "Zy"],
+  ["C7E", "ZZ"],
+  ["07E", "Zz"],
+  ["00001", "ZS"],
+  ["0001", "Zs"]
+];
+var CLASSIFICATIONS = {
+  U: "unreached",
+  "+": "opcode",
+  ".": "operand",
+  A: "data8",
+  B: "data16",
+  C: "data24",
+  D: "data32",
+  E: "pointer16",
+  F: "pointer24",
+  H: "pointer32",
+  G: "graphics",
+  M: "music",
+  X: "empty",
+  T: "text"
+};
+var ARCHITECTURES = ["snes.65816", "snes.spc700", "snes.superfx"];
+var xmlDecode = (value) => value.replace(/&(?:#(x[\da-f]+|\d+)|amp|lt|gt|quot|apos);/gi, (entity, numeric) => {
+  if (numeric) {
+    const radix = numeric[0].toLowerCase() === "x" ? 16 : 10;
+    return String.fromCodePoint(
+      Number.parseInt(radix === 16 ? numeric.slice(1) : numeric, radix)
+    );
+  }
+  return { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&apos;": "'" }[entity.toLowerCase()] ?? entity;
+});
+var attributes = (source) => Object.fromEntries(
+  [...source.matchAll(/([\w:-]+)="([^"]*)"/g)].map((match) => [match[1], xmlDecode(match[2])])
+);
+var ELEMENT_PATTERNS = {
+  Data: /<Data\b([^>]*)>([\S\s]*?)<\/Data>/,
+  RomBytes: /<RomBytes\b([^>]*)>([\S\s]*?)<\/RomBytes>/,
+  Labels: /<Labels\b([^>]*)>([\S\s]*?)<\/Labels>/,
+  Comments: /<Comments\b([^>]*)>([\S\s]*?)<\/Comments>/,
+  Regions: /<Regions\b([^>]*)>([\S\s]*?)<\/Regions>/
+};
+var element = (xml, name) => {
+  const match = ELEMENT_PATTERNS[name].exec(xml);
+  return match ? { opening: match[1], body: match[2] } : void 0;
+};
+var fake64 = (character) => {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  if (character === "0") return 0;
+  if (character === "A") return 52 << 2;
+  const index = alphabet.indexOf(character);
+  if (index < 0) throw new Error(`Invalid .dizraw flag character '${character}'.`);
+  return index << 2;
+};
+var decodeMetadata = (line) => {
+  const padded = line.padEnd(9, "0").slice(0, 9);
+  const classification = CLASSIFICATIONS[padded[0]];
+  if (!classification) throw new Error(`Unknown .dizraw classification '${padded[0]}'.`);
+  const flags = fake64(padded[1]);
+  const pointValue = flags >> 4 & 15;
+  const architectureValue = Number.parseInt(padded[8], 16) & 3;
+  const architecture = ARCHITECTURES[architectureValue];
+  if (!architecture) throw new Error(`Unknown .dizraw architecture '${padded[8]}'.`);
+  const points = [];
+  if (pointValue & 1) points.push("in");
+  if (pointValue & 2) points.push("out");
+  if (pointValue & 4) points.push("end");
+  if (pointValue & 8) points.push("read");
+  return {
+    classification,
+    architecture,
+    x: (flags >> 2 & 1) !== 0,
+    m: (flags >> 3 & 1) !== 0,
+    dataBank: Number.parseInt(padded.slice(2, 4), 16),
+    directPage: Number.parseInt(padded.slice(4, 8), 16),
+    points
+  };
+};
+var sameMetadata = (left, right) => left.classification === right.classification && left.architecture === right.architecture && left.m === right.m && left.x === right.x && left.dataBank === right.dataBank && left.directPage === right.directPage && left.points.join(",") === right.points.join(",");
+var decodeRomByteLines = (body, maximumBytes) => {
+  const normalized = xmlDecode(body).replaceAll("\r", "").trim();
+  const [header, ...encodedLines] = normalized.split("\n");
+  if (!header) throw new Error(".dizraw RomBytes section is missing its format header.");
+  const options = header.split(",");
+  const version = options.find((option) => option.startsWith("version:"));
+  if (version !== "version:200" && version !== "version:201") {
+    throw new Error(`Unsupported .dizraw RomBytes format '${version ?? "missing version"}'.`);
+  }
+  let lines = encodedLines;
+  if (options.includes("compress_table_1")) {
+    lines = lines.map((line) => {
+      let decoded2 = line;
+      for (const [longText, shortText] of [...SUBSTITUTIONS].reverse()) {
+        decoded2 = decoded2.replaceAll(shortText, longText);
+      }
+      return decoded2;
+    });
+  }
+  if (options.includes("compress_groupblocks")) {
+    const expanded = [];
+    for (const line of lines) {
+      if (!line.startsWith("r")) {
+        expanded.push(line);
+        continue;
+      }
+      const match = /^r (\d+) (.+)$/.exec(line);
+      if (!match) throw new Error(`Invalid .dizraw repeater command '${line}'.`);
+      const count = Number(match[1]);
+      if (!Number.isSafeInteger(count) || count < 0 || expanded.length + count > maximumBytes) {
+        throw new Error(
+          `.dizraw RomBytes expansion exceeds the ${maximumBytes}-byte safety limit.`
+        );
+      }
+      for (let index = 0; index < count; index++) expanded.push(match[2]);
+    }
+    lines = expanded;
+  }
+  const decoded = lines.map((line) => line.slice(0, line.indexOf(";") < 0 ? void 0 : line.indexOf(";")).trimEnd()).filter((line) => line.length > 0);
+  if (decoded.length > maximumBytes) {
+    throw new Error(`.dizraw RomBytes section exceeds the ${maximumBytes}-byte safety limit.`);
+  }
+  return decoded;
+};
+var metadataIntervals = (lines, evidenceId) => {
+  if (lines.length === 0) return [];
+  const output = [];
+  let start = 0;
+  let active = decodeMetadata(lines[0]);
+  const push2 = (end) => {
+    output.push({
+      id: `dizraw:metadata:${start.toString(16).padStart(6, "0")}-${end.toString(16).padStart(6, "0")}`,
+      addressSpace: "rom.file",
+      start,
+      end,
+      classification: active.classification,
+      architecture: active.architecture,
+      state: {
+        m: active.m,
+        x: active.x,
+        dataBank: active.dataBank,
+        directPage: active.directPage
+      },
+      ...active.points.length === 0 ? {} : { points: active.points },
+      evidence: [evidenceId]
+    });
+  };
+  for (let index = 1; index < lines.length; index++) {
+    const decoded = decodeMetadata(lines[index]);
+    if (!sameMetadata(active, decoded)) {
+      push2(index);
+      start = index;
+      active = decoded;
+    }
+  }
+  push2(lines.length);
+  return output;
+};
+var DIZ_MAPPERS = {
+  LoRom: "lorom",
+  HiRom: "hirom",
+  ExLoRom: "exlorom",
+  ExHiRom: "exhirom",
+  Sa1Rom: "sa1rom",
+  ExSa1Rom: "bigsa1rom",
+  SuperFx: "sfxrom"
+};
+var DIZ_SPEEDS = {
+  SlowRom: "slow",
+  FastRom: "fast",
+  Unknown: "unknown"
+};
+var importDizRaw = (xml, options = {}) => {
+  if (!xml.trimStart().startsWith("<?xml") && !xml.trimStart().startsWith("<ProjectXmlSerializer-Root")) {
+    throw new Error(
+      "Only uncompressed XML .dizraw input is supported; compressed .diz input is not supported."
+    );
+  }
+  const rootMatch = /<ProjectXmlSerializer-Root\b([^>]*)>/.exec(xml);
+  const projectMatch = /<Project\b([^>]*)>/.exec(xml);
+  const data = element(xml, "Data");
+  const romBytes = element(xml, "RomBytes");
+  if (!rootMatch || !projectMatch || !data || !romBytes) {
+    throw new Error(
+      "Invalid .dizraw project: required root, Project, Data, or RomBytes element missing."
+    );
+  }
+  const rootAttributes = attributes(rootMatch[1]);
+  const projectAttributes = attributes(projectMatch[1]);
+  const dataAttributes = attributes(data.opening);
+  const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
+  if (!mapper) throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
+  const sourceSha256 = createHash4("sha256").update(xml).digest("hex");
+  const sourceName = options.sourceName ?? "import.dizraw";
+  const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
+  const labelsElement = element(data.body, "Labels");
+  const labels = [];
+  if (labelsElement) {
+    for (const match of labelsElement.body.matchAll(/<sys:Item\b([^>]*)>([\S\s]*?)<\/sys:Item>/g)) {
+      const itemAttributes = attributes(match[1]);
+      const valueMatch = /<Value\b([^>]*)\/?\s*>/.exec(match[2]);
+      if (!valueMatch) continue;
+      const valueAttributes = attributes(valueMatch[1]);
+      const address3 = Number(itemAttributes.Key);
+      if (!Number.isSafeInteger(address3) || address3 < 0) {
+        throw new Error(`Invalid .dizraw label address '${itemAttributes.Key}'.`);
+      }
+      labels.push({
+        id: `dizraw:label:${address3.toString(16).padStart(6, "0")}:${labels.length}`,
+        addressSpace: "snes.cpu",
+        address: address3,
+        name: valueAttributes.Name ?? "",
+        ...valueAttributes.Comment ? { comment: valueAttributes.Comment } : {},
+        ...valueAttributes.Author ? { author: valueAttributes.Author } : {},
+        ...valueAttributes.Confidence ? { confidence: valueAttributes.Confidence } : {},
+        evidence: [evidenceId]
+      });
+    }
+  }
+  const comments = [];
+  const commentsElement = element(data.body, "Comments");
+  if (commentsElement) {
+    for (const match of commentsElement.body.matchAll(
+      /<sys:Item\b([^>]*)>([\S\s]*?)<\/sys:Item>/g
+    )) {
+      const itemAttributes = attributes(match[1]);
+      const valueStart = match[2].indexOf("<Value");
+      const valueOpeningEnd = match[2].indexOf(">", valueStart);
+      const valueEnd = match[2].indexOf("</Value>", valueOpeningEnd);
+      if (valueStart < 0 || valueOpeningEnd < 0 || valueEnd < 0) continue;
+      const address3 = Number(itemAttributes.Key);
+      if (!Number.isSafeInteger(address3) || address3 < 0) {
+        throw new Error(`Invalid .dizraw comment address '${itemAttributes.Key}'.`);
+      }
+      comments.push({
+        id: `dizraw:comment:${address3.toString(16).padStart(6, "0")}:${comments.length}`,
+        addressSpace: "snes.cpu",
+        address: address3,
+        text: xmlDecode(match[2].slice(valueOpeningEnd + 1, valueEnd)),
+        evidence: [evidenceId]
+      });
+    }
+  }
+  const regions = [];
+  const regionsElement = element(data.body, "Regions");
+  if (regionsElement) {
+    for (const match of regionsElement.body.matchAll(/<[^>]*Region\b([^>]*)\/?\s*>/g)) {
+      const value = attributes(match[1]);
+      const start = Number(value.StartSnesAddress);
+      const end = Number(value.EndSnesAddress) + 1;
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
+        throw new Error(
+          `Invalid .dizraw region range '${value.StartSnesAddress}'\u2013'${value.EndSnesAddress}'.`
+        );
+      }
+      regions.push({
+        id: `dizraw:region:${start.toString(16).padStart(6, "0")}-${end.toString(16).padStart(6, "0")}:${regions.length}`,
+        addressSpace: "snes.cpu",
+        start,
+        end,
+        name: value.RegionName ?? "",
+        ...value.ContextToApply ? { context: value.ContextToApply } : {},
+        ...value.Priority === void 0 ? {} : { priority: Number(value.Priority) },
+        attributes: {
+          ...value.ExportSeparateFile === void 0 ? {} : { exportSeparateFile: value.ExportSeparateFile === "true" },
+          ...value.ExportType === void 0 ? {} : { exportType: value.ExportType },
+          ...value.AssetType === void 0 ? {} : { assetType: value.AssetType },
+          ...value.AssetVersion === void 0 ? {} : { assetVersion: value.AssetVersion },
+          ...value.AssetName === void 0 ? {} : { assetName: value.AssetName },
+          ...value.AssetOptions === void 0 ? {} : { assetOptions: value.AssetOptions }
+        },
+        evidence: [evidenceId]
+      });
+    }
+  }
+  const maximumMetadataBytes = options.maximumMetadataBytes ?? 16777216;
+  if (!Number.isSafeInteger(maximumMetadataBytes) || maximumMetadataBytes <= 0) {
+    throw new Error("maximumMetadataBytes must be a positive safe integer.");
+  }
+  const metadataLines2 = decodeRomByteLines(romBytes.body, maximumMetadataBytes);
+  if (options.expectedRomSize !== void 0 && metadataLines2.length !== options.expectedRomSize) {
+    throw new Error(
+      `.dizraw metadata covers ${metadataLines2.length} bytes, but the ROM contains ${options.expectedRomSize} content bytes.`
+    );
+  }
+  const annotations = metadataIntervals(metadataLines2, evidenceId);
+  const unsupported = [];
+  const recordUnsupported = (field, present, reason) => {
+    if (present) unsupported.push({ field, count: 1, reason });
+  };
+  recordUnsupported(
+    "Project.LogWriterSettings",
+    /<LogWriterSettings\b/.test(xml),
+    "assembly export formatting is not analysis data"
+  );
+  recordUnsupported(
+    "Project.ProjectSettings",
+    /<ProjectSettings\b/.test(xml),
+    "DiztinGUIsh UI and serializer preferences are not portable analysis data"
+  );
+  recordUnsupported(
+    "Project.InternalRomGameName",
+    projectAttributes.InternalRomGameName !== void 0,
+    "the native project identifies the ROM by SHA-256 instead"
+  );
+  recordUnsupported(
+    "Project.InternalCheckSum",
+    projectAttributes.InternalCheckSum !== void 0,
+    "the native project identifies the ROM by SHA-256 instead"
+  );
+  const contextMappings = (labelsElement?.body.match(/<ContextMappings\b/g) ?? []).length;
+  if (contextMappings > 0) {
+    unsupported.push({
+      field: "Data.Labels.ContextMappings",
+      count: contextMappings,
+      reason: "context-specific alternate label names are not represented in the native schema"
+    });
+  }
+  const report = {
+    id: evidenceId,
+    format: "dizraw",
+    sourceName,
+    sourceSha256,
+    ...rootAttributes.SaveVersion ? { sourceVersion: rootAttributes.SaveVersion } : {},
+    imported: {
+      mapper: 1,
+      speed: dataAttributes.RomSpeed ? 1 : 0,
+      metadataBytes: metadataLines2.length,
+      annotationIntervals: annotations.length,
+      labels: labels.length,
+      comments: comments.length,
+      regions: regions.length
+    },
+    unsupported,
+    warnings: []
+  };
+  return {
+    mapping: {
+      mapper,
+      ...dataAttributes.RomSpeed ? { speed: DIZ_SPEEDS[dataAttributes.RomSpeed] ?? dataAttributes.RomSpeed } : {},
+      source: "import",
+      candidates: []
+    },
+    metadataBytes: metadataLines2.length,
+    report,
+    shards: {
+      analysis: [],
+      annotations,
+      labels,
+      comments,
+      regions,
+      evidence: [
+        {
+          id: evidenceId,
+          source: "import",
+          sourceId: sourceSha256,
+          confidence: "certain",
+          detail: `Imported from ${sourceName}`
+        }
+      ],
+      imports: [report]
+    }
+  };
+};
+
+// packages/plugin-snes/src/disassembler/rom-header.ts
+var SNES_MAPPERS = [
+  "lorom",
+  "hirom",
+  "exlorom",
+  "exhirom",
+  "sfxrom",
+  "sa1rom",
+  "bigsa1rom",
+  "norom"
+];
+var HEADER_SPECS = [
+  { mapper: "lorom", offset: 32704, mode: 0 },
+  { mapper: "hirom", offset: 65472, mode: 1 },
+  { mapper: "exlorom", offset: 4227008, mode: 2 },
+  { mapper: "exhirom", offset: 4259776, mode: 5 },
+  { mapper: "sfxrom", offset: 32704, mode: 0 },
+  { mapper: "sa1rom", offset: 32704, mode: 3 }
+];
+var defaultAddressContext = (mapper) => ({
+  mapper,
+  sa1banks: [0, 1048576, 2097152, 3145728, 4194304, 5242880, 6291456, 7340032]
+});
+var scoreCandidate = (rom, spec) => {
+  const header = rom.read(spec.offset, 64);
+  if (!header) return void 0;
+  const evidence = [];
+  const add = (kind, score, detail) => {
+    evidence.push({ kind, score, detail });
+  };
+  const mapMode = header[21];
+  const mapNibble = mapMode & 15;
+  add(
+    "map-mode",
+    mapNibble === spec.mode ? 8 : -6,
+    `header map-mode $${mapMode.toString(16).padStart(2, "0")} ${mapNibble === spec.mode ? "matches" : "does not match"} ${spec.mapper}`
+  );
+  const cartridgeType = header[22];
+  if (spec.mapper === "sa1rom") {
+    add(
+      "enhancement-chip",
+      cartridgeType === 52 || cartridgeType === 53 ? 5 : -3,
+      `cartridge type $${cartridgeType.toString(16).padStart(2, "0")}`
+    );
+  } else if (spec.mapper === "sfxrom") {
+    const isSuperFx = [19, 20, 21, 26].includes(cartridgeType);
+    add(
+      "enhancement-chip",
+      isSuperFx ? 5 : -3,
+      `cartridge type $${cartridgeType.toString(16).padStart(2, "0")}`
+    );
+  }
+  const checksumComplement = header[28] | header[29] << 8;
+  const checksum = header[30] | header[31] << 8;
+  const checksumValid = (checksum ^ checksumComplement) === 65535 && checksum !== 0;
+  add(
+    "checksum-complement",
+    checksumValid ? 4 : -1,
+    checksumValid ? "checksum and complement agree" : "checksum and complement do not agree"
+  );
+  const sizeCode = header[23];
+  const declaredSize = sizeCode < 32 ? 1024 * 2 ** sizeCode : 0;
+  const sizePlausible = declaredSize > 0 && rom.length <= declaredSize && declaredSize <= Math.max(rom.length * 2, rom.length);
+  add(
+    "declared-size",
+    sizePlausible ? 3 : -1,
+    `declared ${declaredSize || "invalid"} bytes; loaded ${rom.length} bytes`
+  );
+  const title = header.slice(0, 21);
+  const printable = [...title].filter(
+    (byte) => byte === 0 || byte === 32 || byte >= 33 && byte <= 126
+  ).length;
+  add("title", printable >= 18 ? 1 : -1, `${printable}/21 title bytes are printable`);
+  const resetVector = header[60] | header[61] << 8;
+  add(
+    "reset-vector",
+    resetVector >= 32768 && resetVector !== 65535 ? 3 : -4,
+    `emulation RESET vector is $${resetVector.toString(16).padStart(4, "0")}`
+  );
+  if (resetVector >= 32768 && resetVector !== 65535) {
+    const resetOffset = snesRomAddressSpace.toOutputOffset(
+      resetVector,
+      defaultAddressContext(spec.mapper)
+    );
+    const opcode = rom.readByte(resetOffset);
+    const plausible = opcode !== void 0 && opcode !== 0 && opcode !== 255;
+    add(
+      "reset-code",
+      plausible ? 2 : -2,
+      opcode === void 0 ? "RESET target is not mapped into the loaded ROM" : `RESET target begins with opcode $${opcode.toString(16).padStart(2, "0")}`
+    );
+  }
+  return {
+    mapper: spec.mapper,
+    headerOffset: spec.offset,
+    score: evidence.reduce((sum, item) => sum + item.score, 0),
+    evidence
+  };
+};
+var detectSnesRom = (rom, options = {}) => {
+  if (options.headerSize !== void 0 && options.headerSize !== rom.identity.headerSize) {
+    throw new Error(
+      `Header override ${options.headerSize} does not match the loaded ROM view (${rom.identity.headerSize}).`
+    );
+  }
+  const candidates = HEADER_SPECS.map((spec) => scoreCandidate(rom, spec)).filter((candidate) => candidate !== void 0).sort((left, right) => right.score - left.score || left.mapper.localeCompare(right.mapper));
+  if (options.mapper) {
+    const selected = candidates.find((candidate) => candidate.mapper === options.mapper);
+    return {
+      status: "override",
+      mapper: options.mapper,
+      ...selected === void 0 ? {} : {
+        speed: ((rom.readByte(selected.headerOffset + 21) ?? 0) & 16) === 0 ? "slow" : "fast"
+      },
+      headerOffset: selected?.headerOffset,
+      candidates,
+      ...selected ? {} : { message: `Mapper '${options.mapper}' has no standard in-range header candidate.` }
+    };
+  }
+  const first = candidates[0];
+  const second = candidates[1];
+  if (first && first.score >= 8 && (!second || first.score - second.score >= 3)) {
+    return {
+      status: "detected",
+      mapper: first.mapper,
+      speed: ((rom.readByte(first.headerOffset + 21) ?? 0) & 16) === 0 ? "slow" : "fast",
+      headerOffset: first.headerOffset,
+      candidates
+    };
+  }
+  return {
+    status: "ambiguous",
+    candidates,
+    message: "SNES mapper/header detection is ambiguous; provide an explicit --mapper override before creating the project."
+  };
+};
+
+// packages/plugin-snes/src/disassembler/source-export.ts
+import * as fs7 from "node:fs";
+import path6 from "node:path";
+var hex2 = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+var known2 = (value) => {
+  if (!value || typeof value !== "object") return void 0;
+  const entry = value;
+  return entry.kind === "known" && typeof entry.value === "number" ? entry.value : void 0;
+};
+var decodeState = (record) => ({
+  ...known2(record.e) === void 0 ? {} : { e: known2(record.e) === 0 ? 0 : 1 },
+  ...known2(record.m) === void 0 ? {} : { m: known2(record.m) === 0 ? 0 : 1 },
+  ...known2(record.x) === void 0 ? {} : { x: known2(record.x) === 0 ? 0 : 1 },
+  ...known2(record.pbr) === void 0 ? {} : { programBank: known2(record.pbr) & 255 },
+  ...known2(record.dbr) === void 0 ? {} : { dataBank: known2(record.dbr) & 255 },
+  ...known2(record.d) === void 0 ? {} : { directPage: known2(record.d) & 65535 }
+});
+var formatSnes65816SourceInstruction = (instruction) => {
+  const formatted = formatCpu65816Instruction(instruction);
+  const space = formatted.indexOf(" ");
+  const mnemonic = space < 0 ? formatted : formatted.slice(0, space);
+  const operand = space < 0 ? "" : formatted.slice(space);
+  let suffix = "";
+  if (instruction.mode === "immediate") {
+    suffix = instruction.operands[0]?.width === 2 ? ".w" : ".b";
+  } else if (instruction.mode === "direct" || instruction.mode === "directIndexedX" || instruction.mode === "directIndexedY") {
+    suffix = ".b";
+  } else if (instruction.mode === "absolute" || instruction.mode === "absoluteIndexedX" || instruction.mode === "absoluteIndexedY") {
+    suffix = ".w";
+  } else if (instruction.mode === "absoluteLong" || instruction.mode === "absoluteLongIndexedX") {
+    suffix = ".l";
+  }
+  return `${mnemonic}${suffix}${operand}`;
+};
+var mapperDirective = (mapper) => mapper === "bigsa1rom" ? "fullsa1rom" : mapper;
+var roleAt = (start, end, mapper, shards) => {
+  const headerBase = {
+    lorom: 32704,
+    sfxrom: 32704,
+    sa1rom: 32704,
+    bigsa1rom: 32704,
+    hirom: 65472,
+    exlorom: 4227008,
+    exhirom: 4259776
+  };
+  const base = headerBase[mapper];
+  if (base !== void 0 && start >= base && end <= base + 32) return "snes-header";
+  if (base !== void 0 && start >= base + 32 && end <= base + 64) return "vectors";
+  if (shards.annotations.some(
+    (entry) => entry.addressSpace === SNES_FILE_ADDRESS_SPACE && entry.classification === "empty" && entry.start <= start && end <= entry.end
+  )) {
+    return "padding";
+  }
+  return "raw";
+};
+var toFileOffset = (addressSpace, address3, mapper, romSize) => {
+  if (addressSpace === SNES_FILE_ADDRESS_SPACE) return address3 < romSize ? address3 : void 0;
+  if (addressSpace !== SNES_CPU_ADDRESS_SPACE) return void 0;
+  const offset = snesRomAddressSpace.toOutputOffset(address3, createSnesAddressContext(mapper));
+  return offset >= 0 && offset < romSize ? offset : void 0;
+};
+var sanitizedLabel = (name) => {
+  const body = name.replaceAll(/\W/g, "_").replaceAll(/_+/g, "_");
+  return `L_${body || "unnamed"}`;
+};
+var metadataLines = (shards, mapper, romSize) => {
+  const values = /* @__PURE__ */ new Map();
+  const append = (offset, line) => {
+    if (offset === void 0) return;
+    values.set(offset, [...values.get(offset) ?? [], line]);
+  };
+  const used = /* @__PURE__ */ new Map();
+  for (const label of [...shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
+    let name = sanitizedLabel(label.name);
+    const count = used.get(name) ?? 0;
+    used.set(name, count + 1);
+    if (count > 0) name = `${name}_${count + 1}`;
+    append(toFileOffset(label.addressSpace, label.address, mapper, romSize), {
+      name,
+      ...label.comment ? { comment: label.comment } : {}
+    });
+  }
+  for (const fn of shards.analysis.filter((record) => record.kind === "function")) {
+    const offset = toFileOffset(fn.addressSpace, fn.address, mapper, romSize);
+    if (offset === void 0 || values.get(offset)?.some((line) => line.name)) continue;
+    append(offset, { name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}` });
+  }
+  for (const region of [...shards.regions].sort((a, b) => a.id.localeCompare(b.id))) {
+    append(toFileOffset(region.addressSpace, region.start, mapper, romSize), {
+      comment: `Region: ${region.name}${region.context ? ` (${region.context})` : ""}`
+    });
+  }
+  for (const comment of [...shards.comments].sort((a, b) => a.id.localeCompare(b.id))) {
+    append(toFileOffset(comment.addressSpace, comment.address, mapper, romSize), {
+      comment: comment.text
+    });
+  }
+  return values;
+};
+var renderedMetadata = (lines) => {
+  if (!lines) return [];
+  const output = [];
+  for (const line of lines) {
+    if (line.comment) {
+      for (const text of line.comment.split(/\r?\n/)) output.push(`; ${text.replaceAll("\r", "")}`);
+    }
+    if (line.name) output.push(`${line.name}:`);
+  }
+  return output;
+};
+var rejectedByAnnotation = (node, shards) => {
+  const rawClassifications = /* @__PURE__ */ new Set([
+    "unreached",
+    "data8",
+    "data16",
+    "data24",
+    "data32",
+    "pointer16",
+    "pointer24",
+    "pointer32",
+    "graphics",
+    "music",
+    "empty",
+    "text"
+  ]);
+  return shards.annotations.some(
+    (entry) => entry.addressSpace === SNES_FILE_ADDRESS_SPACE && rawClassifications.has(entry.classification) && entry.start < node.fileOffset + node.size && node.fileOffset < entry.end
+  );
+};
+var planInstructions = (rom, mapper, shards, metadata) => {
+  const decoder = new Cpu65816Decoder();
+  const source = new Uint8ArrayDecoderSource(rom.bytes());
+  const conflictNodes = new Set(
+    shards.analysis.filter((record) => record.kind === "conflict").flatMap((record) => record.nodes)
+  );
+  const metadataOffsets = [...metadata.keys()].sort((left, right) => left - right);
+  const hasInteriorMetadata = (start, end) => {
+    let low = 0;
+    let high = metadataOffsets.length;
+    while (low < high) {
+      const middle = low + high >>> 1;
+      if (metadataOffsets[middle] <= start) low = middle + 1;
+      else high = middle;
+    }
+    return low < metadataOffsets.length && metadataOffsets[low] < end;
+  };
+  const groups = /* @__PURE__ */ new Map();
+  for (const record of shards.analysis) {
+    if (record.kind !== "cfg-node" || record.fileOffset < 0 || record.fileOffset + record.size > rom.length || conflictNodes.has(record.id) || rejectedByAnnotation(record, shards)) {
+      continue;
+    }
+    if (hasInteriorMetadata(record.fileOffset, record.fileOffset + record.size)) {
+      continue;
+    }
+    groups.set(record.fileOffset, [...groups.get(record.fileOffset) ?? [], record]);
+  }
+  const candidates = /* @__PURE__ */ new Map();
+  for (const [offset, records] of [...groups].sort(([left], [right]) => left - right)) {
+    const variants = records.sort((left, right) => left.id.localeCompare(right.id)).map((record) => {
+      const state = decodeState(record.incomingState);
+      const result = decoder.decode({ source, offset, logicalAddress: record.address, state });
+      if (result.kind !== "instruction" || result.instruction.size !== record.size || result.instruction.opcode !== record.opcode || result.instruction.specificationId !== record.specificationId) {
+        return void 0;
+      }
+      return { record, state, source: formatSnes65816SourceInstruction(result.instruction) };
+    });
+    if (variants.some((entry) => entry === void 0)) continue;
+    const resolved = variants;
+    if (resolved.some(
+      (entry) => entry.record.size !== resolved[0].record.size || entry.source !== resolved[0].source
+    )) {
+      continue;
+    }
+    const first = resolved[0];
+    candidates.set(offset, {
+      start: offset,
+      end: offset + first.record.size,
+      source: first.source,
+      state: first.state,
+      nodeIds: resolved.map((entry) => entry.record.id)
+    });
+  }
+  const owners = /* @__PURE__ */ new Map();
+  for (const instruction of candidates.values()) {
+    for (let offset = instruction.start; offset < instruction.end; offset++) {
+      owners.set(offset, [...owners.get(offset) ?? [], instruction.start]);
+    }
+  }
+  for (const [start, instruction] of [...candidates]) {
+    if ([...Array(instruction.end - instruction.start).keys()].some(
+      (index) => (owners.get(start + index)?.length ?? 0) !== 1
+    )) {
+      candidates.delete(start);
+      continue;
+    }
+    const context = createSnesAddressContext(mapper);
+    const firstAddress = snesRomAddressSpace.fromOutputOffset(start, context);
+    const lastAddress = snesRomAddressSpace.fromOutputOffset(instruction.end - 1, context);
+    if (firstAddress < 0 || lastAddress !== firstAddress + instruction.end - start - 1) {
+      candidates.delete(start);
+    }
+  }
+  return candidates;
+};
+var headerCuts = (mapper) => {
+  const base = {
+    lorom: 32704,
+    sfxrom: 32704,
+    sa1rom: 32704,
+    hirom: 65472,
+    exlorom: 4227008,
+    exhirom: 4259776
+  };
+  const value = base[mapper];
+  return value === void 0 ? [] : [value, value + 32, value + 64];
+};
+var planSpans = (rom, mapper, shards, instructions, metadata) => {
+  const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
+  const cuts = /* @__PURE__ */ new Set([0, rom.length]);
+  for (let offset = bankSize; offset < rom.length; offset += bankSize) cuts.add(offset);
+  for (const offset of headerCuts(mapper)) if (offset > 0 && offset < rom.length) cuts.add(offset);
+  for (const [offset, instruction] of instructions) {
+    cuts.add(offset);
+    cuts.add(instruction.end);
+  }
+  for (const offset of metadata.keys()) cuts.add(offset);
+  for (const entry of shards.annotations) {
+    if (entry.addressSpace !== SNES_FILE_ADDRESS_SPACE) continue;
+    if (entry.classification === "opcode" || entry.classification === "operand") continue;
+    if (entry.start > 0 && entry.start < rom.length) cuts.add(entry.start);
+    if (entry.end > 0 && entry.end < rom.length) cuts.add(entry.end);
+  }
+  for (const region of shards.regions) {
+    const start = toFileOffset(region.addressSpace, region.start, mapper, rom.length);
+    const last = toFileOffset(region.addressSpace, region.end - 1, mapper, rom.length);
+    if (start !== void 0) cuts.add(start);
+    if (last !== void 0 && last + 1 < rom.length) cuts.add(last + 1);
+  }
+  const sorted = [...cuts].sort((left, right) => left - right);
+  return sorted.slice(0, -1).map((start, index) => {
+    const end = sorted[index + 1];
+    const instruction = instructions.get(start);
+    return instruction?.end === end ? { start, end, role: "code", instruction } : { start, end, role: roleAt(start, end, mapper, shards) };
+  });
+};
+var preflight = (directory, force) => {
+  if (!fs7.existsSync(directory)) return void 0;
+  const manifestFile = path6.join(directory, SOURCE_EXPORT_MANIFEST);
+  if (!fs7.existsSync(manifestFile)) {
+    if (!force && fs7.readdirSync(directory).length > 0) {
+      throw new Error(
+        `Export directory '${directory}' is not empty; pass --force to write into it.`
+      );
+    }
+    return void 0;
+  }
+  const manifest = loadSourceExportManifest(directory);
+  if (!force) validateSourceExportFiles(directory, manifest);
+  return manifest;
+};
+var writeFile = (root, relative2, bytes, kind, files) => {
+  const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
+  const destination = path6.join(root, relative2);
+  fs7.mkdirSync(path6.dirname(destination), { recursive: true });
+  fs7.writeFileSync(destination, value);
+  files.push({ path: relative2, kind, size: value.length, sha256: sourceExportSha256(value) });
+};
+var widthDirective = (flag, sixteen, eight) => {
+  if (flag === 0) return [sixteen];
+  if (flag === 1) return [eight];
+  return [];
+};
+var stateDirectives = (state) => [
+  ...widthDirective(state.m, ".a16", ".a8"),
+  ...widthDirective(state.x, ".i16", ".i8")
+];
+var regionIdsFor = (start, end, shards, mapper, romSize) => shards.regions.filter((region) => {
+  const regionStart = toFileOffset(region.addressSpace, region.start, mapper, romSize);
+  const regionLast = toFileOffset(region.addressSpace, region.end - 1, mapper, romSize);
+  return regionStart !== void 0 && regionLast !== void 0 && regionStart < end && start < regionLast + 1;
+}).map((region) => region.id).sort();
+var exportSnes65816Source = (project, rom, directory, options) => {
+  const mapper = project.manifest.mapping.mapper;
+  const context = createSnesAddressContext(mapper);
+  const previousManifest = preflight(directory, options.force ?? false);
+  const metadata = metadataLines(project.shards, mapper, rom.length);
+  const instructions = planInstructions(rom, mapper, project.shards, metadata);
+  const planned = planSpans(rom, mapper, project.shards, instructions, metadata);
+  const files = [];
+  const spans = [];
+  const banks = /* @__PURE__ */ new Map();
+  const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
+  for (const span of planned) {
+    const bank = Math.floor(span.start / bankSize);
+    banks.set(bank, [...banks.get(bank) ?? [], span]);
+  }
+  const bankSources = [];
+  for (const [bank, bankSpans] of [...banks].sort(([left], [right]) => left - right)) {
+    const bankPath = `banks/bank-${bank.toString(16).padStart(3, "0")}.asm`;
+    bankSources.push(bankPath);
+    const lines = [`; Generated bank ${bank.toString(16).toUpperCase().padStart(3, "0")}.`];
+    for (const span of bankSpans) {
+      const address3 = snesRomAddressSpace.fromOutputOffset(span.start, context);
+      if (address3 < 0)
+        throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex2(span.start)}.`);
+      lines.push("", `org ${hex2(address3)}`, ...renderedMetadata(metadata.get(span.start)));
+      if (span.instruction) {
+        lines.push(...stateDirectives(span.instruction.state), span.instruction.source);
+        spans.push({
+          id: `code:${span.start.toString(16).padStart(6, "0")}`,
+          source: "analysis",
+          addressSpace: SNES_FILE_ADDRESS_SPACE,
+          start: span.start,
+          end: span.end,
+          role: "code",
+          file: bankPath,
+          nodeIds: span.instruction.nodeIds,
+          regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
+        });
+      } else {
+        const assetPath = `assets/${span.role}-${span.start.toString(16).padStart(6, "0")}-${span.end.toString(16).padStart(6, "0")}.bin`;
+        const bytes = rom.read(span.start, span.end - span.start);
+        writeFile(directory, assetPath, bytes, "asset", files);
+        lines.push(`incbin "../${assetPath}"`);
+        spans.push({
+          id: `${span.role}:${span.start.toString(16).padStart(6, "0")}`,
+          source: "rom",
+          addressSpace: SNES_FILE_ADDRESS_SPACE,
+          start: span.start,
+          end: span.end,
+          role: span.role,
+          file: assetPath,
+          regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
+        });
+      }
+    }
+    writeFile(directory, bankPath, `${lines.join("\n")}
+`, "source", files);
+  }
+  if (rom.identity.headerSize === 512) {
+    const copier = "assets/copier-header.bin";
+    writeFile(directory, copier, rom.copierHeaderBytes(), "asset", files);
+    spans.push({
+      id: "copier-header:000000",
+      source: "rom",
+      addressSpace: "rom.file-with-header",
+      start: 0,
+      end: 512,
+      role: "copier-header",
+      file: copier
+    });
+  }
+  const main = [
+    "; Deterministic native source generated by Uttori ASM.",
+    mapperDirective(mapper),
+    "arch 65816",
+    ".smart off",
+    "",
+    ...bankSources.map((source) => `incsrc "${source}"`),
+    ""
+  ].join("\n");
+  writeFile(directory, "main.asm", main, "source", files);
+  const configuration = canonicalSourceExportJson({
+    $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
+    plugins: [
+      {
+        module: "@uttori/asm-plugin-snes",
+        options: { checksumEnabled: false, checksumMode: "asar" }
+      }
+    ],
+    target: "snes.sfc",
+    architecture: "snes.65816",
+    includePaths: ["./"],
+    buildOutput: "build/rebuilt-content.sfc"
+  });
+  writeFile(directory, "uttori-asm.config.json", configuration, "configuration", files);
+  const manifest = {
+    format: SOURCE_EXPORT_FORMAT,
+    schemaVersion: SOURCE_EXPORT_SCHEMA_VERSION,
+    target: project.manifest.target,
+    architecture: "snes.65816",
+    mapper,
+    sourceProjectSha256: options.sourceProjectSha256,
+    rom: rom.identity,
+    entrySource: "main.asm",
+    buildConfiguration: "uttori-asm.config.json",
+    contentOutput: "build/rebuilt-content.sfc",
+    finalOutput: "build/rebuilt.sfc",
+    checksumPolicy: "preserve",
+    files: files.sort((left, right) => left.path.localeCompare(right.path)),
+    spans: spans.sort((left, right) => left.start - right.start || left.id.localeCompare(right.id))
+  };
+  const currentPaths = new Set(manifest.files.map((file) => file.path));
+  for (const stale of previousManifest?.files ?? []) {
+    if (currentPaths.has(stale.path)) continue;
+    const staleFile = path6.join(directory, stale.path);
+    if (fs7.existsSync(staleFile) && fs7.statSync(staleFile).isFile()) fs7.unlinkSync(staleFile);
+  }
+  fs7.mkdirSync(directory, { recursive: true });
+  fs7.writeFileSync(
+    path6.join(directory, SOURCE_EXPORT_MANIFEST),
+    canonicalSourceExportJson(manifest)
+  );
+  return manifest;
+};
+
+// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+var SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
+var SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
+  id: SPC700_ARAM_ADDRESS_SPACE,
+  name: "SPC700 ARAM",
+  addressBits: 16,
+  kind: "memory"
+});
+
 // packages/plugin-snes/src/index.ts
 var SNES_TARGET_ID = "snes.sfc";
 var toolingFor = (keywords) => {
@@ -21477,6 +25674,8 @@ var plugin = definePlugin({
       splitOperands: splitSingleOperand,
       classifyOperand: ({ operands }, operand) => classify65816Operand(operands, operand),
       createEncoder: (factory) => new Arch65816(factory, () => factory.state.get(snesSessionStateKey).optimizeDirectPage),
+      createDecoder: () => new Cpu65816Decoder(),
+      instructionSpecifications: cpu65816Specifications,
       instructions: cpu65816Catalog
     });
     context.registerArchitecture({
@@ -21487,6 +25686,8 @@ var plugin = definePlugin({
       splitOperands: splitTopLevelCommaOperands,
       classifyOperand: ({ operands }, operand) => classifySpc700Operand(operands, operand),
       createEncoder: (factory) => new ArchSPC700(factory),
+      createDecoder: () => new Spc700Decoder(),
+      instructionSpecifications: spc700Specifications,
       instructions: spc700Catalog
     });
     context.registerArchitecture({
@@ -21500,6 +25701,8 @@ var plugin = definePlugin({
         factory,
         () => factory.state.get(snesSessionStateKey).asarSuperFxMoveShortAddress
       ),
+      createDecoder: () => new SuperFxDecoder(),
+      instructionSpecifications: superFxSpecifications,
       instructions: superFxCatalog
     });
     context.registerAddressSpace({
@@ -21516,16 +25719,16 @@ var plugin = definePlugin({
         return {
           addressWidth: snesRomAddressSpace.addressWidth,
           defaultOrigin: snesRomAddressSpace.defaultOrigin,
-          normalizeForWrite: (address) => snesRomAddressSpace.normalizeForWrite(address, mappingContext()),
-          advance: (address, amount) => snesRomAddressSpace.advance(address, amount, mappingContext()),
-          toOutputOffset: (address) => snesRomAddressSpace.toOutputOffset(address, mappingContext()),
+          normalizeForWrite: (address3) => snesRomAddressSpace.normalizeForWrite(address3, mappingContext()),
+          advance: (address3, amount) => snesRomAddressSpace.advance(address3, amount, mappingContext()),
+          toOutputOffset: (address3) => snesRomAddressSpace.toOutputOffset(address3, mappingContext()),
           fromOutputOffset: (offset) => snesRomAddressSpace.fromOutputOffset(offset, mappingContext()),
-          validateWrite: (address, width) => {
+          validateWrite: (address3, width) => {
             const targetState = state.get(snesSessionStateKey);
-            const normalized = snesRomAddressSpace.normalizeForWrite(address, mappingContext());
+            const normalized = snesRomAddressSpace.normalizeForWrite(address3, mappingContext());
             if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) return;
             if (targetState.bankCrossMode === "off" || width <= 1) return;
-            const start = address & 16777215;
+            const start = address3 & 16777215;
             const end = start + width - 1 & 16777215;
             const bankMask = targetState.bankCrossMode === "half" ? 2147450880 : 2147418112;
             if (((start ^ end) & bankMask) !== 0) {
@@ -21764,15 +25967,31 @@ var plugin = definePlugin({
 var src_default = plugin;
 
 // packages/cli/src/index.ts
-var usage = `Usage: uttori-asm <input> [output] [options]
+var usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
+  uttori-asm assemble <input.asm> [output] [assemble-options]
+  uttori-asm disassemble <rom> [project-directory] [project-options]
+  uttori-asm analyze <project-directory> --rom <rom> [analysis-options]
+  uttori-asm export <project-directory> [source-directory] --rom <rom> [--force]
+  uttori-asm verify-roundtrip <source-directory> --rom <rom>
+  uttori-asm project-validate <project-directory> [--rom <rom>]
 
-Options:
+Project options:
+  --mapper <${SNES_MAPPERS.join("|")}>
+  --header-size <0|512>
+  --dizraw <path>              Import uncompressed DiztinGUIsh XML
+  --rom <path>                 ROM to hash-check during project validation
+  --entry <address>            Repeatable 65816 CPU entry point ($/0x/decimal)
+  --max-work-items <count>     Deterministic analysis work limit
+  --max-call-depth <count>     Bounded call-context depth
+  --force                      Replace modified generated files during export
+
+Assemble options:
   --config <uttori-asm.config.json>
-  --plugin <module>              Repeatable; appended after configured plugins
+  --plugin <module>            Repeatable; appended after configured plugins
   --target <target-id>
   --architecture <architecture-id>
   --base-image <path>
-  --include-path <path>          Repeatable
+  --include-path <path>        Repeatable
   --plugin-option <plugin:key=value>
   --verbose
   --help`;
@@ -21792,11 +26011,25 @@ var parseCliArguments = (argv) => {
   const plugins = [];
   const includePaths = [];
   const pluginOptions = {};
+  let command = "assemble";
+  let startIndex = 0;
+  if (argv[0] === "analyze" || argv[0] === "assemble" || argv[0] === "disassemble" || argv[0] === "export" || argv[0] === "project-validate" || argv[0] === "verify-roundtrip") {
+    command = argv[0];
+    startIndex = 1;
+  }
   let configFile;
   let target;
   let architecture;
   let baseImage;
+  let mapper;
+  let headerSize;
+  let dizraw;
+  let rom;
+  const entryPoints = [];
+  let maxWorkItems;
+  let maxCallDepth;
   let verbose = false;
+  let force = false;
   let help = false;
   const requireValue = (flag, inlineValue, index) => {
     const value = inlineValue ?? argv[index + 1];
@@ -21805,7 +26038,7 @@ var parseCliArguments = (argv) => {
     }
     return [value, inlineValue === void 0 ? index + 1 : index];
   };
-  for (let index = 0; index < argv.length; index++) {
+  for (let index = startIndex; index < argv.length; index++) {
     const argument = argv[index];
     if (!argument.startsWith("--")) {
       positional.push(argument);
@@ -21818,6 +26051,10 @@ var parseCliArguments = (argv) => {
     }
     if (flag === "--verbose") {
       verbose = true;
+      continue;
+    }
+    if (flag === "--force") {
+      force = true;
       continue;
     }
     const [value, consumedIndex] = requireValue(flag, inlineValue, index);
@@ -21841,6 +26078,45 @@ var parseCliArguments = (argv) => {
       case "--include-path":
         includePaths.push(value);
         break;
+      case "--mapper":
+        if (!SNES_MAPPERS.includes(value)) {
+          throw new Error(`--mapper must be one of: ${SNES_MAPPERS.join(", ")}.`);
+        }
+        mapper = value;
+        break;
+      case "--header-size":
+        if (value !== "0" && value !== "512") {
+          throw new Error("--header-size must be 0 or 512.");
+        }
+        headerSize = Number(value);
+        break;
+      case "--dizraw":
+        dizraw = value;
+        break;
+      case "--rom":
+        rom = value;
+        break;
+      case "--entry": {
+        const normalized = value.startsWith("$") ? `0x${value.slice(1)}` : value;
+        const address3 = Number(normalized);
+        if (!Number.isSafeInteger(address3) || address3 < 0 || address3 > 16777215) {
+          throw new Error("--entry must be a 24-bit $hex, 0xhex, or decimal address.");
+        }
+        entryPoints.push(address3);
+        break;
+      }
+      case "--max-work-items":
+        maxWorkItems = Number(value);
+        if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems <= 0) {
+          throw new Error("--max-work-items must be a positive integer.");
+        }
+        break;
+      case "--max-call-depth":
+        maxCallDepth = Number(value);
+        if (!Number.isSafeInteger(maxCallDepth) || maxCallDepth < 0) {
+          throw new Error("--max-call-depth must be a non-negative integer.");
+        }
+        break;
       case "--plugin-option": {
         const colon = value.indexOf(":");
         const equals = value.indexOf("=", colon + 1);
@@ -21863,6 +26139,7 @@ var parseCliArguments = (argv) => {
     throw new Error(`Unexpected positional argument '${positional[2]}'.`);
   }
   return {
+    command,
     input: positional[0],
     output: positional[1],
     configFile,
@@ -21872,13 +26149,21 @@ var parseCliArguments = (argv) => {
     baseImage,
     includePaths: Object.freeze(includePaths),
     pluginOptions: Object.freeze(pluginOptions),
+    mapper,
+    headerSize,
+    dizraw,
+    rom,
+    entryPoints: Object.freeze(entryPoints),
+    maxWorkItems,
+    maxCallDepth,
     verbose,
+    force,
     help
   };
 };
 var defaultOutputPath = (inputFile, extension) => {
-  const parsed = path4.parse(inputFile);
-  return path4.join(parsed.dir, `${parsed.name}${extension}`);
+  const parsed = path7.parse(inputFile);
+  return path7.join(parsed.dir, `${parsed.name}${extension}`);
 };
 var formatFailure = (error) => {
   if (error instanceof PluginError) {
@@ -21891,32 +26176,234 @@ var formatFailure = (error) => {
   }
   return error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
 };
-var runCli = async (argv = process.argv.slice(2)) => {
-  let parsed;
+var emptyShards = () => ({
+  analysis: [],
+  annotations: [],
+  labels: [],
+  comments: [],
+  regions: [],
+  evidence: [],
+  imports: []
+});
+var createAnalysisProject = (parsed, cwd) => {
+  const inputFile = path7.resolve(cwd, parsed.input);
+  if (!fs8.existsSync(inputFile)) {
+    console.error(`Error: ROM file '${inputFile}' not found.`);
+    return 1;
+  }
+  const outputDirectory = parsed.output ? path7.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, ".analysis");
+  if (fs8.existsSync(path7.join(outputDirectory, ANALYSIS_PROJECT_MANIFEST))) {
+    console.error(
+      `Project creation failed: '${outputDirectory}' already contains an analysis project.`
+    );
+    return 1;
+  }
   try {
-    parsed = parseCliArguments(argv);
-  } catch (error) {
-    console.error(`Error: ${formatFailure(error)}
-
-${usage}`);
-    return 1;
-  }
-  if (parsed.help) {
-    console.log(usage);
+    const rom = RomImage.load(inputFile, {
+      ...parsed.headerSize === void 0 ? {} : { headerSize: parsed.headerSize }
+    });
+    const detection = detectSnesRom(rom, {
+      ...parsed.mapper === void 0 ? {} : { mapper: parsed.mapper },
+      ...parsed.headerSize === void 0 ? {} : { headerSize: parsed.headerSize }
+    });
+    if (detection.status === "ambiguous" || detection.mapper === void 0) {
+      throw new Error(detection.message ?? "SNES mapper detection is ambiguous.");
+    }
+    let shards = emptyShards();
+    let importedMapping;
+    if (parsed.dizraw) {
+      const dizrawFile = path7.resolve(cwd, parsed.dizraw);
+      if (path7.extname(dizrawFile).toLowerCase() !== ".dizraw") {
+        throw new Error(
+          "Only uncompressed .dizraw imports are supported; .diz is intentionally unsupported."
+        );
+      }
+      const imported = importDizRaw(fs8.readFileSync(dizrawFile, "utf8"), {
+        sourceName: path7.basename(dizrawFile),
+        expectedRomSize: rom.length
+      });
+      if (parsed.mapper === void 0 && imported.mapping.mapper !== detection.mapper) {
+        throw new Error(
+          `.dizraw mapper '${imported.mapping.mapper}' conflicts with detected mapper '${detection.mapper}'; pass --mapper to resolve it explicitly.`
+        );
+      }
+      const mapperWarnings = parsed.mapper && parsed.mapper !== imported.mapping.mapper ? [
+        ...imported.report.warnings,
+        `Explicit mapper '${parsed.mapper}' overrides imported mapper '${imported.mapping.mapper}'.`
+      ] : imported.report.warnings;
+      const report = { ...imported.report, warnings: mapperWarnings };
+      shards = { ...imported.shards, imports: [report] };
+      importedMapping = imported.mapping;
+    }
+    const mapper = parsed.mapper ?? detection.mapper;
+    let mappingSource = "detected";
+    if (parsed.mapper) mappingSource = "override";
+    else if (importedMapping) mappingSource = "import";
+    const mappingSpeed = importedMapping?.speed ?? detection.speed;
+    const mapping = {
+      mapper,
+      ...mappingSpeed ? { speed: mappingSpeed } : {},
+      ...detection.headerOffset === void 0 ? {} : { headerOffset: detection.headerOffset },
+      source: mappingSource,
+      candidates: detection.candidates
+    };
+    const project = {
+      manifest: {
+        format: ANALYSIS_PROJECT_FORMAT,
+        schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,
+        target: SNES_TARGET_ID,
+        rom: rom.identity,
+        mapping,
+        addressSpaces: [
+          { id: SNES_FILE_ADDRESS_SPACE, name: "ROM file offset", addressBits: 24, kind: "file" },
+          { id: SNES_CPU_ADDRESS_SPACE, name: "SNES CPU bus", addressBits: 24, kind: "cpu" },
+          SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR
+        ]
+      },
+      shards
+    };
+    writeAnalysisProject(outputDirectory, project);
+    console.log(`Success: Analysis project written to '${outputDirectory}'.`);
+    if (shards.imports[0]) {
+      console.log(
+        `Import: ${shards.imports[0].imported.metadataBytes ?? 0} metadata bytes; ${shards.imports[0].unsupported.length} unsupported field group(s).`
+      );
+    }
     return 0;
-  }
-  if (!parsed.input) {
-    console.error(usage);
+  } catch (error) {
+    console.error(`Project creation failed: ${formatFailure(error)}`);
     return 1;
   }
-  const cwd = process.cwd();
-  const inputFile = path4.resolve(cwd, parsed.input);
-  if (!fs4.existsSync(inputFile)) {
+};
+var validateProject = (parsed, cwd) => {
+  const directory = path7.resolve(cwd, parsed.input);
+  try {
+    const loaded = loadAnalysisProject(directory);
+    const rom = parsed.rom ? RomImage.load(path7.resolve(cwd, parsed.rom), { headerSize: loaded.manifest.rom.headerSize }) : void 0;
+    validateAnalysisProject(directory, rom);
+    console.log(
+      `Success: Analysis project '${directory}' is valid${rom ? " and its ROM identity matches" : ""}.`
+    );
+    return 0;
+  } catch (error) {
+    console.error(`Project validation failed: ${formatFailure(error)}`);
+    return 1;
+  }
+};
+var analyzeProject = (parsed, cwd) => {
+  const directory = path7.resolve(cwd, parsed.input);
+  if (!parsed.rom) {
+    console.error("Analysis failed: --rom is required so project identity can be verified.");
+    return 1;
+  }
+  try {
+    const loaded = loadAnalysisProject(directory);
+    const rom = RomImage.load(path7.resolve(cwd, parsed.rom), {
+      headerSize: loaded.manifest.rom.headerSize
+    });
+    validateAnalysisProject(directory, rom);
+    if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
+      throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+    }
+    const editableRecords = loaded.shards.analysis.filter(
+      (record) => record.kind === "target-override" || record.kind === "target-set"
+    );
+    const targetOverrides = editableRecords.filter(
+      (record) => record.kind === "target-override"
+    );
+    const targetSets = editableRecords.filter(
+      (record) => record.kind === "target-set"
+    );
+    const result = analyzeSnes65816(rom, loaded.manifest.mapping.mapper, {
+      annotations: loaded.shards.annotations,
+      labels: loaded.shards.labels,
+      evidence: loaded.shards.evidence,
+      entryPoints: parsed.entryPoints.map((address3) => ({
+        id: `cli-${address3.toString(16).padStart(6, "0")}`,
+        address: address3
+      })),
+      targetOverrides,
+      targetSets,
+      ...parsed.maxWorkItems === void 0 ? {} : { maxWorkItems: parsed.maxWorkItems },
+      ...parsed.maxCallDepth === void 0 ? {} : { maxCallDepth: parsed.maxCallDepth }
+    });
+    const annotations = [
+      ...loaded.shards.annotations.filter(
+        (annotation) => !annotation.id.startsWith("static:65816:")
+      ),
+      ...result.annotations
+    ];
+    const evidence = [
+      ...loaded.shards.evidence.filter(
+        (record) => record.sourceId !== "snes.65816.static-v1" && !record.id.startsWith("detector:vector:")
+      ),
+      ...result.evidenceRecords
+    ];
+    const { shards: ignoredShards, ...manifest } = loaded.manifest;
+    void ignoredShards;
+    writeAnalysisProject(directory, {
+      manifest,
+      shards: {
+        ...loaded.shards,
+        analysis: [...editableRecords, ...result.records],
+        annotations,
+        evidence
+      }
+    });
+    console.log(
+      `Success: ${result.status} 65816 analysis wrote ${result.nodes.length} instruction(s), ${result.functions.length} function candidate(s), ${result.conflicts.length} conflict(s), and ${result.unresolved.length} unresolved flow(s).`
+    );
+    if (result.status === "incomplete") {
+      console.log(
+        `Incomplete: ${result.incompleteReasons.map((reason) => reason.message).join(" ")}`
+      );
+    }
+    return 0;
+  } catch (error) {
+    console.error(`Analysis failed: ${formatFailure(error)}`);
+    return 1;
+  }
+};
+var exportProjectSource = (parsed, cwd) => {
+  const projectDirectory = path7.resolve(cwd, parsed.input);
+  if (!parsed.rom) {
+    console.error("Export failed: --rom is required so project identity can be verified.");
+    return 1;
+  }
+  try {
+    const loaded = loadAnalysisProject(projectDirectory);
+    const rom = RomImage.load(path7.resolve(cwd, parsed.rom), {
+      headerSize: loaded.manifest.rom.headerSize
+    });
+    validateAnalysisProject(projectDirectory, rom);
+    if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
+      throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+    }
+    const outputDirectory = parsed.output ? path7.resolve(cwd, parsed.output) : defaultOutputPath(projectDirectory, ".source");
+    const projectManifest = fs8.readFileSync(path7.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
+    const manifest = exportSnes65816Source(loaded, rom, outputDirectory, {
+      force: parsed.force,
+      sourceProjectSha256: sourceExportSha256(projectManifest)
+    });
+    const codeBytes = manifest.spans.filter((span) => span.role === "code").reduce((total, span) => total + span.end - span.start, 0);
+    console.log(
+      `Success: Exported ${manifest.files.length} generated file(s) covering ${rom.length} content byte(s); ${codeBytes} byte(s) emitted as native 65816 source.`
+    );
+    console.log(`Manifest: '${path7.join(outputDirectory, SOURCE_EXPORT_MANIFEST)}'.`);
+    return 0;
+  } catch (error) {
+    console.error(`Export failed: ${formatFailure(error)}`);
+    return 1;
+  }
+};
+var assemble = async (parsed, cwd) => {
+  const inputFile = path7.resolve(cwd, parsed.input);
+  if (!fs8.existsSync(inputFile)) {
     console.error(`Error: Input file '${inputFile}' not found.`);
     return 1;
   }
-  const explicitConfig = parsed.configFile ? path4.resolve(cwd, parsed.configFile) : path4.resolve(cwd, PROJECT_CONFIG_FILENAME);
-  const hasProjectConfiguration = fs4.existsSync(explicitConfig);
+  const explicitConfig = parsed.configFile ? path7.resolve(cwd, parsed.configFile) : path7.resolve(cwd, PROJECT_CONFIG_FILENAME);
+  const hasProjectConfiguration = fs8.existsSync(explicitConfig);
   const pluginModules = parsed.plugins.map((module) => ({ module }));
   const overrides = {
     ...parsed.target === void 0 ? {} : { target: parsed.target },
@@ -21945,7 +26432,7 @@ ${usage}`);
         }
       } : {}
     });
-    const baseImage = parsed.baseImage ? new Uint8Array(fs4.readFileSync(path4.resolve(cwd, parsed.baseImage))) : void 0;
+    const baseImage = parsed.baseImage ? new Uint8Array(fs8.readFileSync(path7.resolve(cwd, parsed.baseImage))) : void 0;
     assembler = new Assembler({
       environment: loaded.environment,
       target: loaded.target,
@@ -21954,7 +26441,7 @@ ${usage}`);
       baseImage,
       collectSourceMetadata: false
     });
-    assembler.setIncludePaths([.../* @__PURE__ */ new Set([path4.dirname(inputFile), ...loaded.includePaths])]);
+    assembler.setIncludePaths([.../* @__PURE__ */ new Set([path7.dirname(inputFile), ...loaded.includePaths])]);
     assembler.setCurrentFile(inputFile);
     if (parsed.verbose) {
       console.log(
@@ -21963,11 +26450,11 @@ ${usage}`);
       console.log(`Target: ${loaded.target}`);
       console.log(`Architecture: ${loaded.architecture}`);
     }
-    const source = fs4.readFileSync(inputFile, "utf8");
+    const source = fs8.readFileSync(inputFile, "utf8");
     assembler.assembleProgram(assembler.buildProgramModel(source, inputFile, 0));
     const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
-    const outputFile = parsed.output ? path4.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, extension);
-    fs4.writeFileSync(outputFile, Buffer.from(assembler.getBinaryOutput()));
+    const outputFile = parsed.output ? path7.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, extension);
+    fs8.writeFileSync(outputFile, Buffer.from(assembler.getBinaryOutput()));
     console.log(`Success: Output written to '${outputFile}'.`);
     return 0;
   } catch (error) {
@@ -21978,7 +26465,96 @@ ${usage}`);
     await loaded?.dispose();
   }
 };
-var entryPoint = process.argv[1] ? pathToFileURL2(path4.resolve(process.argv[1])).href : void 0;
+var verifyRoundTrip = async (parsed, cwd) => {
+  const directory = path7.resolve(cwd, parsed.input);
+  if (!parsed.rom) {
+    console.error("Round-trip verification failed: --rom is required.");
+    return 1;
+  }
+  try {
+    const manifest = loadSourceExportManifest(directory);
+    validateSourceExportFiles(directory, manifest);
+    const rom = RomImage.load(path7.resolve(cwd, parsed.rom), {
+      headerSize: manifest.rom.headerSize
+    });
+    if (rom.identity.sha256 !== manifest.rom.sha256 || rom.identity.contentSha256 !== manifest.rom.contentSha256) {
+      throw new Error(
+        `ROM identity mismatch: export expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`
+      );
+    }
+    const contentOutput = path7.join(directory, manifest.contentOutput);
+    const finalOutput = path7.join(directory, manifest.finalOutput);
+    fs8.mkdirSync(path7.dirname(contentOutput), { recursive: true });
+    const exitCode = await runCli([
+      "assemble",
+      path7.join(directory, manifest.entrySource),
+      contentOutput,
+      "--config",
+      path7.join(directory, manifest.buildConfiguration)
+    ]);
+    if (exitCode !== 0) throw new Error("Generated native source did not assemble successfully.");
+    const content = fs8.readFileSync(contentOutput);
+    const final = manifest.rom.headerSize === 0 ? content : Buffer.concat([
+      fs8.readFileSync(
+        path7.join(
+          directory,
+          manifest.spans.find((span) => span.role === "copier-header").file
+        )
+      ),
+      content
+    ]);
+    fs8.writeFileSync(finalOutput, final);
+    const comparison = compareByteImages(rom.fileBytes(), final);
+    if (!comparison.equal) {
+      const difference = comparison.firstDifference ?? 0;
+      const contentOffset = difference - manifest.rom.headerSize;
+      const identity = contentOffset < 0 ? void 0 : identifySnesFileOffset(
+        contentOffset,
+        createSnesAddressContext(manifest.mapper),
+        manifest.rom.contentSize
+      );
+      const addressDetail = contentOffset < 0 ? "copier header" : `content offset $${contentOffset.toString(16).toUpperCase().padStart(6, "0")}${identity ? ` / CPU $${identity.canonicalCpuAddress.toString(16).toUpperCase().padStart(6, "0")}` : ""}`;
+      console.error(
+        `Round-trip mismatch: expected ${comparison.expectedLength} byte(s) / ${comparison.expectedSha256}, received ${comparison.actualLength} byte(s) / ${comparison.actualSha256}; first difference at file offset $${difference.toString(16).toUpperCase().padStart(6, "0")} (${addressDetail}).`
+      );
+      return 1;
+    }
+    console.log(
+      `Success: Round trip is byte-identical (${comparison.actualLength} byte(s), SHA-256 ${comparison.actualSha256}).`
+    );
+    return 0;
+  } catch (error) {
+    console.error(`Round-trip verification failed: ${formatFailure(error)}`);
+    return 1;
+  }
+};
+var runCli = async (argv = process.argv.slice(2)) => {
+  let parsed;
+  try {
+    parsed = parseCliArguments(argv);
+  } catch (error) {
+    console.error(`Error: ${formatFailure(error)}
+
+${usage}`);
+    return 1;
+  }
+  if (parsed.help) {
+    console.log(usage);
+    return 0;
+  }
+  if (!parsed.input) {
+    console.error(usage);
+    return 1;
+  }
+  const cwd = process.cwd();
+  if (parsed.command === "disassemble") return createAnalysisProject(parsed, cwd);
+  if (parsed.command === "analyze") return analyzeProject(parsed, cwd);
+  if (parsed.command === "export") return exportProjectSource(parsed, cwd);
+  if (parsed.command === "project-validate") return validateProject(parsed, cwd);
+  if (parsed.command === "verify-roundtrip") return verifyRoundTrip(parsed, cwd);
+  return assemble(parsed, cwd);
+};
+var entryPoint = process.argv[1] ? pathToFileURL2(path7.resolve(process.argv[1])).href : void 0;
 if (entryPoint === import.meta.url) {
   process.exitCode = await runCli();
 }

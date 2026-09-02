@@ -1,0 +1,28 @@
+{
+  "name": "@uttori/asm-disassembler",
+  "version": "1.0.0",
+  "description": "ROM identity and persistent analysis-project primitives for Uttori ASM.",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "module": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "make-types": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "pack:check": "npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=26"
+  }
+}

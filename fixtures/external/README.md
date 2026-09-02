@@ -1,7 +1,6 @@
 # External fixtures
 
-Optional production disassemblies used for byte-parity gates. They are **not**
-initialized by `npm install` and are excluded from `npm test`.
+Optional production disassemblies used for byte-parity gates. They are **not** initialized by `npm install` and are excluded from `npm test`.
 
 | Fixture | Path | Pin | ROM required |
 | --- | --- | --- | ---: |
@@ -27,8 +26,7 @@ git submodule update --init fixtures/external/zelda
 
 ## Local ROMs
 
-ROM-dependent fixtures read only from `Local Only/fixtures/roms/` (gitignored).
-Place these filenames there; hashes are checked before extraction:
+ROM-dependent fixtures read only from `Local Only/fixtures/roms/` (gitignored). Place these filenames there; hashes are checked before extraction:
 
 - `Super Mario RPG - Legend of the Seven Stars (USA).sfc`
 - `Teenage Mutant Ninja Turtles IV - Turtles in Time (USA).sfc`
@@ -47,15 +45,15 @@ UTTORI_EXTERNAL_FIXTURES=chou,yoshi npm run test:external
 npm run test:external
 npm run ci:external
 UTTORI_FIXTURE_KEEP_WORKTREE=1 npm run test:external
+npm run fixture:framework:65816-oracle
+npm run fixture:framework:spc700-oracle
+npm run fixture:framework:superfx-oracle
 ```
 
-`ci:external` runs a strict preflight, the requested tests serially, and a
-clean-worktree check. Prepared trees are copied into `os.tmpdir()` (or
-`Local Only/fixtures/worktrees/` when keep-worktree is set). Submodule
-checkouts stay read-only.
+`ci:external` runs a strict preflight, the requested tests serially, and a clean-worktree check. Prepared trees are copied into `os.tmpdir()` (or `Local Only/fixtures/worktrees/` when keep-worktree is set). Submodule checkouts stay read-only.
 
-TMNT copies tracked `Global/` sources from the SNES ROM Framework submodule
-into a temporary workspace via `npm run fixture:tmnt:framework` (used
-automatically by the fixture runner). The framework stays under its upstream
-GPL-3.0 license; binaries, extras, and sample ROMs are not copied. Chou's
-local debug config is `fixtures/configs/chou/uttori-asm.config.json`.
+The Framework oracle commands inspect GPL fixture sources without copying their implementation into the project. The SPC700 oracle always compares all 256 source macro mnemonics and validates a bounded synthetic NSPC stream with the native parser. The SuperFX oracle compares all 256 source macro mnemonics and exercises representative base and ALT families. If a genuine SNES Asar 1.x/2.x executable is available as `asar`, or through `ASAR_PATH`, the oracles assemble temporary patched fixture copies and check emitted bytes. For this workspace, use `ASAR_PATH="Local Only/asar-1.91/asar/bin/asar"`. An unrelated executable named `asar` is detected and skipped.
+
+TMNT copies tracked `Global/` sources from the SNES ROM Framework submodule into a temporary workspace via `npm run fixture:tmnt:framework` (used automatically by the fixture runner). The framework stays under its upstream GPL-3.0 license; binaries, extras, and sample ROMs are not copied.
+
+Chou's local debug config is `fixtures/configs/chou/uttori-asm.config.json`.

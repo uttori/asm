@@ -1,0 +1,15 @@
+{
+  "format": "uttori-asm-analysis",
+  "schemaVersion": 2,
+  "target": "fixture.target",
+  "rom": {
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "contentSha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "fileSize": 32768,
+    "contentSize": 32768,
+    "headerSize": 0
+  },
+  "mapping": { "mapper": "fixture", "source": "override", "candidates": [] },
+  "addressSpaces": [],
+  "shards": []
+}

@@ -1,4 +1,7 @@
+import { type SnesMapper } from "@uttori/asm-plugin-snes";
+export type CliCommand = "analyze" | "assemble" | "disassemble" | "export" | "project-validate" | "verify-roundtrip";
 export interface CliArguments {
+    readonly command: CliCommand;
     readonly input?: string;
     readonly output?: string;
     readonly configFile?: string;
@@ -8,10 +11,28 @@ export interface CliArguments {
     readonly baseImage?: string;
     readonly includePaths: readonly string[];
     readonly pluginOptions: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+    readonly mapper?: SnesMapper;
+    readonly headerSize?: 0 | 512;
+    readonly dizraw?: string;
+    readonly rom?: string;
+    readonly entryPoints: readonly number[];
+    readonly maxWorkItems?: number;
+    readonly maxCallDepth?: number;
     readonly verbose: boolean;
+    readonly force: boolean;
     readonly help: boolean;
 }
-export declare const usage = "Usage: uttori-asm <input> [output] [options]\n\nOptions:\n  --config <uttori-asm.config.json>\n  --plugin <module>              Repeatable; appended after configured plugins\n  --target <target-id>\n  --architecture <architecture-id>\n  --base-image <path>\n  --include-path <path>          Repeatable\n  --plugin-option <plugin:key=value>\n  --verbose\n  --help";
+export declare const usage: string;
+/**
+ * Parses the CLI arguments and returns a CliArguments object.
+ * @param {readonly string[]} argv The CLI arguments.
+ * @returns {CliArguments} The parsed CLI arguments.
+ */
 export declare const parseCliArguments: (argv: readonly string[]) => CliArguments;
+/**
+ * Runs the CLI.
+ * @param {readonly string[]} argv The CLI arguments.
+ * @returns {Promise<number>} The exit code.
+ */
 export declare const runCli: (argv?: readonly string[]) => Promise<number>;
 //# sourceMappingURL=index.d.ts.map

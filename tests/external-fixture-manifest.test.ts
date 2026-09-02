@@ -3,6 +3,7 @@ import {
   EXTERNAL_FIXTURE_IDS,
   EXTERNAL_FIXTURES,
   LOCAL_ROM_DIR,
+  SECRET_OF_MANA_ANALYSIS_FIXTURE,
   SNES_ROM_FRAMEWORK,
 } from "../fixtures/fixture-manifest.ts";
 
@@ -33,4 +34,6 @@ test("external fixture manifest pins paths, hashes, and setup independently of R
   t.is(EXTERNAL_FIXTURES.tmnt.frameworkPath, SNES_ROM_FRAMEWORK.submodulePath);
   t.is(SNES_ROM_FRAMEWORK.commit, "ad99620d2695e59b6bc31923a6d05bbaf3f695ca");
   t.is(SNES_ROM_FRAMEWORK.submoduleUrl, "https://github.com/Yoshifanatic1/SNES-ROM-Framework.git");
+  t.is(SECRET_OF_MANA_ANALYSIS_FIXTURE.bytes, 2_097_152);
+  t.is(SECRET_OF_MANA_ANALYSIS_FIXTURE.sha256.length, 64);
 });

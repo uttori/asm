@@ -20,6 +20,7 @@ const boundaryFixture = (): string => {
     }),
   );
   write("packages/core/src/index.ts", "export const core = true;\n");
+  write("packages/disassembler/src/index.ts", "export const disassembler = true;\n");
   write("packages/plugin-example/src/index.ts", 'import "@uttori/asm-core/plugin";\n');
   write("packages/language-server/src/providers.ts", 'import { core } from "@uttori/asm-core";\n');
   return root;
@@ -53,6 +54,20 @@ test("package boundary checker rejects private core imports from plugins", (t) =
   t.deepEqual(
     collectPackageBoundaryViolations(root).map((violation) => violation.code),
     ["PLUGIN_IMPORTS_CORE_INTERNAL"],
+  );
+});
+
+test("package boundary checker keeps the generic disassembler independent of target plugins", (t) => {
+  const root = boundaryFixture();
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.writeFileSync(
+    path.join(root, "packages/disassembler/src/index.ts"),
+    'import snes from "@uttori/asm-plugin-snes";\n',
+  );
+
+  t.deepEqual(
+    collectPackageBoundaryViolations(root).map((violation) => violation.code),
+    ["DISASSEMBLER_IMPORTS_PLUGIN"],
   );
 });
 

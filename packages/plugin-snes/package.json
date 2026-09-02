@@ -23,7 +23,8 @@
     "pack:check": "npm pack --dry-run"
   },
   "dependencies": {
-    "@uttori/asm-core": "1.0.0"
+    "@uttori/asm-core": "1.0.0",
+    "@uttori/asm-disassembler": "1.0.0"
   },
   "optionalDependencies": {
     "debug": "^4.4.3"

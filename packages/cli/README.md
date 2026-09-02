@@ -34,7 +34,75 @@ uttori-asm main.asm
 
 Project configuration takes precedence over the host default. Command-line overrides take precedence over project configuration.
 
-## Options
+## Analysis Projects
+
+Create a native analysis project from a user-supplied ROM:
+
+```sh
+uttori-asm disassemble game.sfc game.analysis
+```
+
+Mapper detection is conservative. If the scored header candidates are inconclusive, creation stops until `--mapper` is supplied. `--header-size 0|512` overrides copier-header detection. All supported mapper names are shown by `--help`.
+
+An uncompressed DiztinGUIsh project can be imported while creating the project:
+
+```sh
+uttori-asm disassemble game.sfc game.analysis --dizraw game.dizraw --mapper hirom
+```
+
+The importer stores its deterministic loss report in `analysis/imports.json`. Compressed `.diz` input and `.dizraw` export are unsupported.
+
+Validate shard hashes and schema compatibility, optionally checking the exact ROM identity:
+
+```sh
+uttori-asm project-validate game.analysis --rom game.sfc
+```
+
+Run conservative 65816 control-flow analysis and persist its CFG, state, evidence, conflicts, and coverage back into the project:
+
+```sh
+uttori-asm analyze game.analysis --rom game.sfc
+```
+
+Additional entry points can be supplied with repeatable `--entry` options using `$`, `0x`, or decimal notation. `--max-work-items` and `--max-call-depth` bound hostile or recursive control flow; hitting either bound writes an explicit incomplete result rather than silently truncating it.
+
+Editable `target-set` and `target-override` records in `analysis/control-flow.json` are retained on subsequent runs and take precedence over unresolved static targets.
+
+ROM bytes are never copied into the project.
+
+## Native Source Export
+
+Export analyzed bytes as deterministic native 65816 source, with conservative raw assets for
+everything the analysis has not justified as code:
+
+```sh
+uttori-asm export game.analysis game.source --rom game.sfc
+uttori-asm verify-roundtrip game.source --rom game.sfc
+```
+
+The export contains `main.asm`, mapper-bank sources under `banks/`, raw bytes under `assets/`, a
+checksum-preserving `uttori-asm.config.json`, and a versioned `generated-files.json`. The manifest
+assigns every content byte to exactly one code, raw, padding, SNES-header, or vector span. A copier
+header is preserved as its own asset when present.
+
+`verify-roundtrip` first rejects modified generated files, assembles `main.asm` through the normal
+CLI project environment, restores any copier header, and compares the complete file length and
+SHA-256. A mismatch reports its first differing file and content offset. Re-export refuses local
+changes unless `--force` is explicit.
+
+The opt-in local Secret of Mana gate validates the private ROM hash before using it and removes all
+temporary analysis/source output afterward:
+
+```sh
+npm run fixture:som:roundtrip
+# or: npm run fixture:som:roundtrip -- /path/to/Secret\ of\ Mana\ \(USA\).sfc
+```
+
+By default the gate reads `Local Only/Secret of Mana (USA).sfc`. A byte-identical result verifies
+the conservative export/rebuild path, not the semantic completeness of imported Diz metadata:
+unsupported, ambiguous, conflicting, and unreached bytes remain lossless raw assets.
+
+## Assemble Options
 
 | Option                             | Meaning                                                           |
 | ---------------------------------- | ----------------------------------------------------------------- |

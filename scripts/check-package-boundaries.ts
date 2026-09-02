@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 
 export type PackageBoundaryViolationCode =
   | "CORE_IMPORTS_PLUGIN"
+  | "DISASSEMBLER_IMPORTS_PLUGIN"
   | "PLUGIN_IMPORTS_CORE_INTERNAL"
   | "CORE_CONTAINS_SNES_IDENTIFIER"
   | "LSP_PROVIDER_IMPORTS_STATIC_CATALOG";
@@ -154,6 +155,7 @@ const coreExportSpecifiers = (root: string): Set<string> => {
 export function collectPackageBoundaryViolations(root = process.cwd()): PackageBoundaryViolation[] {
   const resolvedRoot = path.resolve(root);
   const coreSource = path.join(resolvedRoot, "packages/core/src");
+  const disassemblerSource = path.join(resolvedRoot, "packages/disassembler/src");
   const packagesDirectory = path.join(resolvedRoot, "packages");
   const pluginSources = fs
     .readdirSync(packagesDirectory, { withFileTypes: true })
@@ -201,6 +203,27 @@ export function collectPackageBoundaryViolations(root = process.cwd()): PackageB
     for (const match of sourceFile.text.matchAll(/[$A-Z_a-z][\w$]*|\b\d+\b/g)) {
       for (const part of splitIdentifier(match[0])) {
         addIdentifierViolation(part, match.index ?? 0);
+      }
+    }
+  }
+
+  for (const file of listTypeScriptFiles(disassemblerSource)) {
+    const sourceFile = sourceFileFor(file);
+    for (const imported of importSpecifiers(sourceFile)) {
+      const resolvedImport = imported.module.startsWith(".")
+        ? path.resolve(path.dirname(file), imported.module)
+        : undefined;
+      if (
+        imported.module.startsWith("@uttori/asm-plugin-") ||
+        (resolvedImport !== undefined &&
+          pluginSources.some((pluginSource) => isWithin(resolvedImport, pluginSource)))
+      ) {
+        violations.push({
+          code: "DISASSEMBLER_IMPORTS_PLUGIN",
+          file: path.relative(resolvedRoot, file),
+          line: lineFor(sourceFile, imported.position),
+          message: `disassembler imports plugin implementation '${imported.module}'`,
+        });
       }
     }
   }

@@ -7,6 +7,7 @@ const root = process.cwd();
 const packageDirectories = [
   "cli",
   "core",
+  "disassembler",
   "language-server",
   "plugin-65xx",
   "plugin-author",
@@ -52,6 +53,7 @@ test("the CLI workspace owns the executable and root development command", (t) =
   t.is(cliManifest.bin["uttori-asm"], "out/cli.mjs");
   t.deepEqual(Object.keys(cliManifest.dependencies).sort(), [
     "@uttori/asm-core",
+    "@uttori/asm-disassembler",
     "@uttori/asm-plugin-loader-node",
     "@uttori/asm-plugin-snes",
   ]);

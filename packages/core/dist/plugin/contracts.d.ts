@@ -3,6 +3,7 @@ import type { Assembler } from "../assembler.js";
 import type { DirectiveDescriptor } from "../lsp/directive-catalog.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
 import type { CoreDirectiveGroup } from "../directive-groups.js";
+import type { ArchitectureDecoder, ArchitectureInstructionSpecification } from "../decoder-types.js";
 export declare const PLUGIN_API_VERSION: 1;
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
 export interface AssemblerPluginManifest {
@@ -60,10 +61,20 @@ export interface ArchitectureContribution {
     unknownInstructionBehavior: "throw" | "returnFalse";
     splitOperands(text: string): string[];
     classifyOperand(context: OperandClassificationContext, operand: string): LoweredOperand;
-    createEncoder(context: ArchitectureFactoryContext): ArchitectureEncoder;
+    /** Optional so analysis-only plugins do not need to provide an assembler. */
+    createEncoder?(context: ArchitectureFactoryContext): ArchitectureEncoder;
+    /** Optional architecture-owned decoder; formatting remains a separate concern. */
+    createDecoder?(context: ArchitectureDecoderFactoryContext): ArchitectureDecoder;
+    /** Machine-readable forms used by decoders, editor tooling, and conformance tests. */
+    instructionSpecifications?: readonly ArchitectureInstructionSpecification[];
     instructions: readonly InstructionDescriptor[];
 }
 export interface ArchitectureFactoryContext extends ArchitectureEncoderContext {
+    readonly targetId: string;
+    readonly options: Readonly<Record<string, unknown>>;
+    readonly state: SessionStateStore;
+}
+export interface ArchitectureDecoderFactoryContext {
     readonly targetId: string;
     readonly options: Readonly<Record<string, unknown>>;
     readonly state: SessionStateStore;

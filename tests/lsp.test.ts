@@ -1,3 +1,5 @@
+import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { test } from "./ava-helper.js";
 
@@ -5,7 +7,12 @@ import { Assembler, snesWorkspaceIndexOptions } from "./test-assembler.js";
 import { MemoryAssemblyFileProvider } from "../packages/core/src/file-provider.js";
 import { OverlayFileProvider } from "../packages/core/src/lsp/overlay-file-provider.js";
 import { WorkspaceIndex } from "../packages/core/src/lsp/workspace-index.js";
-import { findInstruction, findDirectiveEntry, findDirectiveOperand, buildCompletionEntries } from "../packages/core/src/lsp/catalog.js";
+import {
+  findInstruction,
+  findDirectiveEntry,
+  findDirectiveOperand,
+  buildCompletionEntries,
+} from "../packages/core/src/lsp/catalog.js";
 import {
   positionInRange,
   referenceAt,
@@ -13,7 +20,10 @@ import {
   resolveDefinition,
   findReferences,
 } from "../packages/core/src/lsp/position-lookup.js";
-import type { AssemblySymbolDefinition, AssemblySymbolReference } from "../packages/core/src/diagnostics.js";
+import type {
+  AssemblySymbolDefinition,
+  AssemblySymbolReference,
+} from "../packages/core/src/diagnostics.js";
 
 const slideRoot = path.resolve(process.cwd(), "fixtures/integration/snes-slideshow/SLIDE.SRC");
 
@@ -65,13 +75,25 @@ test("instruction and directive catalogs expose documented entries", (t) => {
   t.truthy(findDirectiveEntry("incsrc"));
 
   const check = index.directiveCatalog.find((entry) => entry.keyword === "check");
-  t.is(findDirectiveOperand("check bankcross full", "bankcross", index.directiveCatalog)?.keyword, "bankcross");
+  t.is(
+    findDirectiveOperand("check bankcross full", "bankcross", index.directiveCatalog)?.keyword,
+    "bankcross",
+  );
   t.is(findDirectiveOperand("check bankcross off", "off", index.directiveCatalog)?.keyword, "off");
   t.is(findDirectiveOperand("check title", "title", index.directiveCatalog)?.keyword, "title");
   t.is(findDirectiveOperand("optimize dp ram", "dp", index.directiveCatalog)?.keyword, "dp");
-  t.is(findDirectiveOperand("optimize dp always", "always", index.directiveCatalog)?.keyword, "always");
-  t.is(findDirectiveOperand("arch spc700-inline", "spc700-inline", index.directiveCatalog)?.keyword, "spc700-inline");
-  t.is(findDirectiveOperand("spcblock $5000 nspc", "nspc", index.directiveCatalog)?.keyword, "nspc");
+  t.is(
+    findDirectiveOperand("optimize dp always", "always", index.directiveCatalog)?.keyword,
+    "always",
+  );
+  t.is(
+    findDirectiveOperand("arch spc700-inline", "spc700-inline", index.directiveCatalog)?.keyword,
+    "spc700-inline",
+  );
+  t.is(
+    findDirectiveOperand("spcblock $5000 nspc", "nspc", index.directiveCatalog)?.keyword,
+    "nspc",
+  );
   t.is(findDirectiveOperand('table "font.tbl",ltr', "ltr", index.directiveCatalog)?.keyword, "ltr");
   t.is(findDirectiveOperand("lda #$00", "full", index.directiveCatalog), undefined);
   t.truthy(check?.operands?.some((operand) => operand.keyword === "bankcross"));
@@ -177,4 +199,43 @@ test("workspace index serves open buffers and updates on change", (t) => {
 
   index.closeDocument(file);
   t.is(index.getSymbols(file).length, 0);
+});
+
+test("workspace index utility paths handle disk, overlay, fallback locations, and unreadable files", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-workspace-index-"));
+  const file = path.join(directory, "main.asm");
+  const missing = path.join(directory, "missing.asm");
+  const messages: string[] = [];
+  try {
+    const source = "org $8000\nentry:\n  nop\n";
+    await fs.writeFile(file, source);
+    const index = new WorkspaceIndex(
+      snesWorkspaceIndexOptions({ logger: { info: (message) => messages.push(message) } }),
+    );
+
+    t.is(index.getStatus().lastReindexDurationMs, undefined);
+    t.is(index.getFileText("\0unreadable"), undefined);
+    t.is(index.readDiskRoot("\0unreadable"), undefined);
+    t.is(index.hashFile(missing), undefined);
+    t.truthy(index.hashFile(file));
+
+    index.openDocument(file, source);
+    t.false(index.dirtyFiles.has(file));
+    t.truthy(index.hashFile(file));
+    t.truthy(index.analyzeRoot(file));
+    t.true(messages.some((message) => message.startsWith("Analyzing main.asm")));
+
+    index.ingestArtifacts(
+      file,
+      [{ code: "fixture", message: "fixture", severity: "info", location: { file: "", line: 0 } }],
+      [{ name: "fixture", kind: "label", location: { file: "", line: 0 } }],
+      [{ name: "fixture", kind: "label", location: { file: "", line: 0 } }],
+    );
+    t.is(index.getDiagnostics(file).length, 1);
+    t.true(index.getSymbols(file).some((symbol) => symbol.name === "fixture"));
+    t.true(index.getReferences(file).some((reference) => reference.name === "fixture"));
+    t.is(index.collectFileHashes(file, [{ fromFile: file, toFile: missing }]), undefined);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
 });
