@@ -88,8 +88,8 @@ var require_is = __commonJS({
       if (value instanceof Promise) {
         return value;
       } else if (thenable(value)) {
-        return new Promise((resolve2, reject) => {
-          value.then((resolved) => resolve2(resolved), (error2) => reject(error2));
+        return new Promise((resolve3, reject) => {
+          value.then((resolved) => resolve3(resolved), (error2) => reject(error2));
         });
       } else {
         return Promise.resolve(value);
@@ -1314,8 +1314,8 @@ var require_semaphore = __commonJS({
         this._waiting = [];
       }
       lock(thunk) {
-        return new Promise((resolve2, reject) => {
-          this._waiting.push({ thunk, resolve: resolve2, reject });
+        return new Promise((resolve3, reject) => {
+          this._waiting.push({ thunk, resolve: resolve3, reject });
           this.runNext();
         });
       }
@@ -2940,9 +2940,9 @@ ${JSON.stringify(message, null, 4)}`);
           if (typeof cancellationStrategy.sender.enableCancellation === "function") {
             cancellationStrategy.sender.enableCancellation(requestMessage);
           }
-          return new Promise(async (resolve2, reject) => {
+          return new Promise(async (resolve3, reject) => {
             const resolveWithCleanup = (r) => {
-              resolve2(r);
+              resolve3(r);
               cancellationStrategy.sender.cleanup(id);
               disposable?.dispose();
             };
@@ -6636,8 +6636,8 @@ var require_async = __commonJS({
           this.cancelTimeout();
         }
         if (!this.completionPromise) {
-          this.completionPromise = new Promise((resolve2) => {
-            this.onSuccess = resolve2;
+          this.completionPromise = new Promise((resolve3) => {
+            this.onSuccess = resolve3;
           }).then(() => {
             this.completionPromise = void 0;
             this.onSuccess = void 0;
@@ -6693,8 +6693,8 @@ var require_async = __commonJS({
         this._waiting = [];
       }
       lock(thunk) {
-        return new Promise((resolve2, reject) => {
-          this._waiting.push({ thunk, resolve: resolve2, reject });
+        return new Promise((resolve3, reject) => {
+          this._waiting.push({ thunk, resolve: resolve3, reject });
           this.runNext();
         });
       }
@@ -6812,12 +6812,12 @@ var require_async = __commonJS({
         if (token !== void 0 && token.isCancellationRequested) {
           break;
         }
-        index = await new Promise((resolve2) => {
+        index = await new Promise((resolve3) => {
           (0, vscode_languageserver_protocol_1.RAL)().timer.setImmediate(() => {
             if (token !== void 0 && token.isCancellationRequested) {
-              resolve2(-1);
+              resolve3(-1);
             } else {
-              resolve2(convertBatch(index));
+              resolve3(convertBatch(index));
             }
           });
         });
@@ -6846,12 +6846,12 @@ var require_async = __commonJS({
         if (token !== void 0 && token.isCancellationRequested) {
           break;
         }
-        index = await new Promise((resolve2) => {
+        index = await new Promise((resolve3) => {
           (0, vscode_languageserver_protocol_1.RAL)().timer.setImmediate(() => {
             if (token !== void 0 && token.isCancellationRequested) {
-              resolve2(-1);
+              resolve3(-1);
             } else {
-              resolve2(convertBatch(index));
+              resolve3(convertBatch(index));
             }
           });
         });
@@ -6879,12 +6879,12 @@ var require_async = __commonJS({
         if (token !== void 0 && token.isCancellationRequested) {
           break;
         }
-        index = await new Promise((resolve2) => {
+        index = await new Promise((resolve3) => {
           (0, vscode_languageserver_protocol_1.RAL)().timer.setImmediate(() => {
             if (token !== void 0 && token.isCancellationRequested) {
-              resolve2(-1);
+              resolve3(-1);
             } else {
-              resolve2(runBatch(index));
+              resolve3(runBatch(index));
             }
           });
         });
@@ -9692,8 +9692,8 @@ var require_progressPart = __commonJS({
             this._client.sendNotification(vscode_languageserver_protocol_1.WorkDoneProgressCancelNotification.type, { token: this._token });
           });
           this.report(params);
-          return new Promise((resolve2, reject) => {
-            this._resolve = resolve2;
+          return new Promise((resolve3, reject) => {
+            this._resolve = resolve3;
             this._reject = reject;
           });
         });
@@ -10182,7 +10182,7 @@ var require_commonjs2 = __commonJS({
     var periodPattern = /\\\./g;
     exports2.EXPANSION_MAX = 1e5;
     exports2.EXPANSION_MAX_LENGTH = 4e6;
-    function numeric(str) {
+    function numeric2(str) {
       return !isNaN(str) ? parseInt(str, 10) : str.charCodeAt(0);
     }
     function escapeBraces(str) {
@@ -10258,10 +10258,10 @@ var require_commonjs2 = __commonJS({
       if (n[0] === void 0 || n[1] === void 0) {
         return N;
       }
-      const x = numeric(n[0]);
-      const y = numeric(n[1]);
+      const x = numeric2(n[0]);
+      const y = numeric2(n[1]);
       const width = Math.max(n[0].length, n[1].length);
-      let incr = n.length === 3 && n[2] !== void 0 ? Math.max(Math.abs(numeric(n[2])), 1) : 1;
+      let incr = n.length === 3 && n[2] !== void 0 ? Math.max(Math.abs(numeric2(n[2])), 1) : 1;
       let test = lte;
       const reverse = y < x;
       if (reverse) {
@@ -11271,11 +11271,11 @@ var require_commonjs3 = __commonJS({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    var path3 = {
+    var path6 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    exports2.sep = defaultPlatform === "win32" ? path3.win32.sep : path3.posix.sep;
+    exports2.sep = defaultPlatform === "win32" ? path6.win32.sep : path6.posix.sep;
     exports2.minimatch.sep = exports2.sep;
     exports2.GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     exports2.minimatch.GLOBSTAR = exports2.GLOBSTAR;
@@ -14122,13 +14122,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path3) {
+        function ensurePath(config, path6) {
           let current = config;
-          for (let i = 0; i < path3.length - 1; i++) {
-            let obj = current[path3[i]];
+          for (let i = 0; i < path6.length - 1; i++) {
+            let obj = current[path6[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path3[i]] = obj;
+              current[path6[i]] = obj;
             }
             current = obj;
           }
@@ -14146,8 +14146,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key);
           }
           if (config) {
-            const path3 = keys[i].split(".");
-            ensurePath(result, path3)[path3[path3.length - 1]] = toJSONObject(config);
+            const path6 = keys[i].split(".");
+            ensurePath(result, path6)[path6[path6.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -18122,13 +18122,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path3 = uri.fsPath.replace(/\\/g, "/");
+          const path6 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path3)) {
+              if (filter.matcher.match(path6)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -18142,7 +18142,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path3}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path6}/`)) {
                   return true;
                 }
               }
@@ -19543,7 +19543,7 @@ ${this.data2String(data)}` : message;
         if (this._onStart !== void 0) {
           return this._onStart;
         }
-        const [promise, resolve2, reject] = this.createOnStartPromise();
+        const [promise, resolve3, reject] = this.createOnStartPromise();
         this._onStart = promise;
         this._diagnostics = void 0;
         for (const [method, handler] of this._notificationHandlers) {
@@ -19651,7 +19651,7 @@ ${this.data2String(data)}` : message;
           });
           connection.listen();
           await this.initialize(connection);
-          resolve2();
+          resolve3();
         } catch (error) {
           this.$state = ClientState.StartFailed;
           this.error(`${this._name} client: couldn't create connection to server.`, error, "force");
@@ -19660,13 +19660,13 @@ ${this.data2String(data)}` : message;
         return this._onStart;
       }
       createOnStartPromise() {
-        let resolve2;
+        let resolve3;
         let reject;
         const promise = new Promise((_resolve, _reject) => {
-          resolve2 = _resolve;
+          resolve3 = _resolve;
           reject = _reject;
         });
-        return [promise, resolve2, reject];
+        return [promise, resolve3, reject];
       }
       async initialize(connection) {
         this.refreshTrace(connection, false);
@@ -20651,10 +20651,10 @@ var require_ril = __commonJS({
         return api_1.Disposable.create(() => this.stream.off("end", listener));
       }
       write(data, encoding) {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve3, reject) => {
           const callback = (error) => {
             if (error === void 0 || error === null) {
-              resolve2();
+              resolve3();
             } else {
               reject(error);
             }
@@ -20790,9 +20790,9 @@ var require_main = __commonJS({
     exports2.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path3 = __importStar(require("path"));
+    var path6 = __importStar(require("path"));
     var os = __importStar(require("os"));
-    var fs = __importStar(require("fs"));
+    var fs2 = __importStar(require("fs"));
     var crypto_1 = require("crypto");
     var net_1 = require("net");
     var api_1 = require_api();
@@ -20933,7 +20933,7 @@ var require_main = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
+      const tmpDir = fs2.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -20942,14 +20942,14 @@ var require_main = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path3.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path6.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
-      const connected = new Promise((resolve2, _reject) => {
-        connectResolve = resolve2;
+      const connected = new Promise((resolve3, _reject) => {
+        connectResolve = resolve3;
       });
-      return new Promise((resolve2, reject) => {
+      return new Promise((resolve3, reject) => {
         const server = (0, net_1.createServer)((socket) => {
           server.close();
           connectResolve([
@@ -20960,7 +20960,7 @@ var require_main = __commonJS({
         server.on("error", reject);
         server.listen(pipeName, () => {
           server.removeListener("error", reject);
-          resolve2({
+          resolve3({
             onConnected: () => {
               return connected;
             }
@@ -20977,10 +20977,10 @@ var require_main = __commonJS({
     }
     function createClientSocketTransport(port, encoding = "utf-8") {
       let connectResolve;
-      const connected = new Promise((resolve2, _reject) => {
-        connectResolve = resolve2;
+      const connected = new Promise((resolve3, _reject) => {
+        connectResolve = resolve3;
       });
-      return new Promise((resolve2, reject) => {
+      return new Promise((resolve3, reject) => {
         const server = (0, net_1.createServer)((socket) => {
           server.close();
           connectResolve([
@@ -20991,7 +20991,7 @@ var require_main = __commonJS({
         server.on("error", reject);
         server.listen(port, "127.0.0.1", () => {
           server.removeListener("error", reject);
-          resolve2({
+          resolve3({
             onConnected: () => {
               return connected;
             }
@@ -21063,9 +21063,9 @@ var require_main2 = __commonJS({
 var require_debug = __commonJS({
   "node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
-    var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
+    var debug2 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
-    module2.exports = debug;
+    module2.exports = debug2;
   }
 });
 
@@ -21110,7 +21110,7 @@ var require_re = __commonJS({
       MAX_SAFE_BUILD_LENGTH,
       MAX_LENGTH
     } = require_constants();
-    var debug = require_debug();
+    var debug2 = require_debug();
     exports2 = module2.exports = {};
     var re = exports2.re = [];
     var safeRe = exports2.safeRe = [];
@@ -21133,7 +21133,7 @@ var require_re = __commonJS({
     var createToken = (name, value, isGlobal) => {
       const safe = makeSafeRegex(value);
       const index = R++;
-      debug(name, index, value);
+      debug2(name, index, value);
       t[name] = index;
       src[index] = value;
       safeSrc[index] = safe;
@@ -21212,13 +21212,13 @@ var require_parse_options = __commonJS({
 var require_identifiers = __commonJS({
   "node_modules/semver/internal/identifiers.js"(exports2, module2) {
     "use strict";
-    var numeric = /^[0-9]+$/;
+    var numeric2 = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
       if (typeof a === "number" && typeof b === "number") {
         return a === b ? 0 : a < b ? -1 : 1;
       }
-      const anum = numeric.test(a);
-      const bnum = numeric.test(b);
+      const anum = numeric2.test(a);
+      const bnum = numeric2.test(b);
       if (anum && bnum) {
         a = +a;
         b = +b;
@@ -21237,7 +21237,7 @@ var require_identifiers = __commonJS({
 var require_semver = __commonJS({
   "node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
-    var debug = require_debug();
+    var debug2 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
     var { safeRe: re, t } = require_re();
     var parseOptions = require_parse_options();
@@ -21271,7 +21271,7 @@ var require_semver = __commonJS({
             `version is longer than ${MAX_LENGTH} characters`
           );
         }
-        debug("SemVer", version, options);
+        debug2("SemVer", version, options);
         this.options = options;
         this.loose = !!options.loose;
         this.includePrerelease = !!options.includePrerelease;
@@ -21319,7 +21319,7 @@ var require_semver = __commonJS({
         return this.version;
       }
       compare(other) {
-        debug("SemVer.compare", this.version, this.options, other);
+        debug2("SemVer.compare", this.version, this.options, other);
         if (!(other instanceof _SemVer)) {
           if (typeof other === "string" && other === this.version) {
             return 0;
@@ -21370,7 +21370,7 @@ var require_semver = __commonJS({
         do {
           const a = this.prerelease[i];
           const b = other.prerelease[i];
-          debug("prerelease compare", i, a, b);
+          debug2("prerelease compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -21392,7 +21392,7 @@ var require_semver = __commonJS({
         do {
           const a = this.build[i];
           const b = other.build[i];
-          debug("build compare", i, a, b);
+          debug2("build compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -21724,7 +21724,7 @@ var require_comparator = __commonJS({
           }
         }
         comp = comp.trim().split(/\s+/).join(" ");
-        debug("comparator", comp, options);
+        debug2("comparator", comp, options);
         this.options = options;
         this.loose = !!options.loose;
         this.parse(comp);
@@ -21733,7 +21733,7 @@ var require_comparator = __commonJS({
         } else {
           this.value = this.operator + this.semver.version;
         }
-        debug("comp", this);
+        debug2("comp", this);
       }
       parse(comp) {
         const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
@@ -21755,7 +21755,7 @@ var require_comparator = __commonJS({
         return this.value;
       }
       test(version) {
-        debug("Comparator.test", version, this.options.loose);
+        debug2("Comparator.test", version, this.options.loose);
         if (this.semver === ANY || version === ANY) {
           return true;
         }
@@ -21812,7 +21812,7 @@ var require_comparator = __commonJS({
     var parseOptions = require_parse_options();
     var { safeRe: re, t } = require_re();
     var cmp = require_cmp();
-    var debug = require_debug();
+    var debug2 = require_debug();
     var SemVer = require_semver();
     var Range3 = require_range();
   }
@@ -21898,21 +21898,21 @@ var require_range = __commonJS({
         const loose = this.options.loose;
         const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
         range = range.replace(hr, hyphenReplace(this.options.includePrerelease));
-        debug("hyphen replace", range);
+        debug2("hyphen replace", range);
         range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
-        debug("comparator trim", range);
+        debug2("comparator trim", range);
         range = range.replace(re[t.TILDETRIM], tildeTrimReplace);
-        debug("tilde trim", range);
+        debug2("tilde trim", range);
         range = range.replace(re[t.CARETTRIM], caretTrimReplace);
-        debug("caret trim", range);
+        debug2("caret trim", range);
         let rangeList = range.split(" ").map((comp) => parseComparator(comp, this.options)).join(" ").split(/\s+/).map((comp) => replaceGTE0(comp, this.options));
         if (loose) {
           rangeList = rangeList.filter((comp) => {
-            debug("loose invalid filter", comp, this.options);
+            debug2("loose invalid filter", comp, this.options);
             return !!comp.match(re[t.COMPARATORLOOSE]);
           });
         }
-        debug("range list", rangeList);
+        debug2("range list", rangeList);
         const rangeMap = /* @__PURE__ */ new Map();
         const comparators = rangeList.map((comp) => new Comparator(comp, this.options));
         for (const comp of comparators) {
@@ -21967,7 +21967,7 @@ var require_range = __commonJS({
     var cache = new LRU();
     var parseOptions = require_parse_options();
     var Comparator = require_comparator();
-    var debug = require_debug();
+    var debug2 = require_debug();
     var SemVer = require_semver();
     var {
       safeRe: re,
@@ -21995,15 +21995,15 @@ var require_range = __commonJS({
     };
     var parseComparator = (comp, options) => {
       comp = comp.replace(re[t.BUILD], "");
-      debug("comp", comp, options);
+      debug2("comp", comp, options);
       comp = replaceCarets(comp, options);
-      debug("caret", comp);
+      debug2("caret", comp);
       comp = replaceTildes(comp, options);
-      debug("tildes", comp);
+      debug2("tildes", comp);
       comp = replaceXRanges(comp, options);
-      debug("xrange", comp);
+      debug2("xrange", comp);
       comp = replaceStars(comp, options);
-      debug("stars", comp);
+      debug2("stars", comp);
       return comp;
     };
     var isX = (id) => !id || id.toLowerCase() === "x" || id === "*";
@@ -22015,7 +22015,7 @@ var require_range = __commonJS({
       const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug("tilde", comp, _, M, m, p, pr);
+        debug2("tilde", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -22024,12 +22024,12 @@ var require_range = __commonJS({
         } else if (isX(p)) {
           ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
         } else if (pr) {
-          debug("replaceTilde pr", pr);
+          debug2("replaceTilde pr", pr);
           ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
         } else {
           ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
         }
-        debug("tilde return", ret);
+        debug2("tilde return", ret);
         return ret;
       });
     };
@@ -22037,11 +22037,11 @@ var require_range = __commonJS({
       return comp.trim().split(/\s+/).map((c) => replaceCaret(c, options)).join(" ");
     };
     var replaceCaret = (comp, options) => {
-      debug("caret", comp, options);
+      debug2("caret", comp, options);
       const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug("caret", comp, _, M, m, p, pr);
+        debug2("caret", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -22054,7 +22054,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
           }
         } else if (pr) {
-          debug("replaceCaret pr", pr);
+          debug2("replaceCaret pr", pr);
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p}-${pr} <${M}.${m}.${+p + 1}-0`;
@@ -22065,7 +22065,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p}-${pr} <${+M + 1}.0.0-0`;
           }
         } else {
-          debug("no pr");
+          debug2("no pr");
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p} <${M}.${m}.${+p + 1}-0`;
@@ -22076,19 +22076,19 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p} <${+M + 1}.0.0-0`;
           }
         }
-        debug("caret return", ret);
+        debug2("caret return", ret);
         return ret;
       });
     };
     var replaceXRanges = (comp, options) => {
-      debug("replaceXRanges", comp, options);
+      debug2("replaceXRanges", comp, options);
       return comp.split(/\s+/).map((c) => replaceXRange(c, options)).join(" ");
     };
     var replaceXRange = (comp, options) => {
       comp = comp.trim();
       const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
       return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
-        debug("xRange", comp, ret, gtlt, M, m, p, pr);
+        debug2("xRange", comp, ret, gtlt, M, m, p, pr);
         if (invalidXRangeOrder(M, m, p)) {
           return comp;
         }
@@ -22138,16 +22138,16 @@ var require_range = __commonJS({
         } else if (xp) {
           ret = `>=${M}.${m}.0${pr} <${M}.${+m + 1}.0-0`;
         }
-        debug("xRange return", ret);
+        debug2("xRange return", ret);
         return ret;
       });
     };
     var replaceStars = (comp, options) => {
-      debug("replaceStars", comp, options);
+      debug2("replaceStars", comp, options);
       return comp.trim().replace(re[t.STAR], "");
     };
     var replaceGTE0 = (comp, options) => {
-      debug("replaceGTE0", comp, options);
+      debug2("replaceGTE0", comp, options);
       return comp.trim().replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], "");
     };
     var hyphenReplace = (incPr) => ($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr) => {
@@ -22185,7 +22185,7 @@ var require_range = __commonJS({
       }
       if (version.prerelease.length && !options.includePrerelease) {
         for (let i = 0; i < set.length; i++) {
-          debug(set[i].semver);
+          debug2(set[i].semver);
           if (set[i].semver === Comparator.ANY) {
             continue;
           }
@@ -22302,8 +22302,8 @@ var require_main3 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = __importStar(require("child_process"));
-    var fs = __importStar(require("fs"));
-    var path3 = __importStar(require("path"));
+    var fs2 = __importStar(require("fs"));
+    var path6 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
     var Is2 = __importStar(require_is());
@@ -22441,7 +22441,7 @@ var require_main3 = __commonJS({
       async restart() {
         await this.stop();
         if (this.isInDebugMode) {
-          await new Promise((resolve2) => setTimeout(resolve2, 1e3));
+          await new Promise((resolve3) => setTimeout(resolve3, 1e3));
           await this.start();
         } else {
           await this.start();
@@ -22626,7 +22626,7 @@ var require_main3 = __commonJS({
               }
             } else {
               let pipeName = void 0;
-              return new Promise((resolve2, reject) => {
+              return new Promise((resolve3, reject) => {
                 const args = (node.args && node.args.slice()) ?? [];
                 if (transport === TransportKind2.ipc) {
                   args.push("--node-ipc");
@@ -22651,9 +22651,9 @@ var require_main3 = __commonJS({
                   pipeStderr(sp.stderr, this.outputChannel);
                   if (transport === TransportKind2.ipc) {
                     pipeStdout(sp.stdout, this.outputChannel);
-                    resolve2({ reader: new node_1.IPCMessageReader(this._serverProcess), writer: new node_1.IPCMessageWriter(this._serverProcess) });
+                    resolve3({ reader: new node_1.IPCMessageReader(this._serverProcess), writer: new node_1.IPCMessageWriter(this._serverProcess) });
                   } else {
-                    resolve2({ reader: new node_1.StreamMessageReader(sp.stdout), writer: new node_1.StreamMessageWriter(sp.stdin) });
+                    resolve3({ reader: new node_1.StreamMessageReader(sp.stdout), writer: new node_1.StreamMessageWriter(sp.stdin) });
                   }
                 } else if (transport === TransportKind2.pipe) {
                   (0, node_1.createClientPipeTransport)(pipeName).then((transport2) => {
@@ -22663,7 +22663,7 @@ var require_main3 = __commonJS({
                     pipeStderr(sp.stderr, this.outputChannel);
                     pipeStdout(sp.stdout, this.outputChannel);
                     transport2.onConnected().then((protocol) => {
-                      resolve2({ reader: protocol[0], writer: protocol[1] });
+                      resolve3({ reader: protocol[0], writer: protocol[1] });
                     }, reject);
                   }, reject);
                 } else if (Transport.isSocket(transport)) {
@@ -22674,7 +22674,7 @@ var require_main3 = __commonJS({
                     pipeStderr(sp.stderr, this.outputChannel);
                     pipeStdout(sp.stdout, this.outputChannel);
                     transport2.onConnected().then((protocol) => {
-                      resolve2({ reader: protocol[0], writer: protocol[1] });
+                      resolve3({ reader: protocol[0], writer: protocol[1] });
                     }, reject);
                   }, reject);
                 }
@@ -22753,19 +22753,19 @@ var require_main3 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path3.isAbsolute(runtime)) {
+        if (path6.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path3.join(mainRootPath, runtime);
-          if (fs.existsSync(result)) {
+          const result = path6.join(mainRootPath, runtime);
+          if (fs2.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path3.join(serverWorkingDirectory, runtime);
-          if (fs.existsSync(result)) {
+          const result = path6.join(serverWorkingDirectory, runtime);
+          if (fs2.existsSync(result)) {
             return result;
           }
         }
@@ -22789,7 +22789,7 @@ var require_main3 = __commonJS({
         }
         if (cwd) {
           return new Promise((s) => {
-            fs.lstat(cwd, (err, stats) => {
+            fs2.lstat(cwd, (err, stats) => {
               s(!err && stats.isDirectory() ? cwd : void 0);
             });
           });
@@ -22850,8 +22850,8 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path2 = __toESM(require("node:path"));
-var import_vscode3 = require("vscode");
+var path5 = __toESM(require("node:path"));
+var import_vscode4 = require("vscode");
 var import_node = __toESM(require_main3());
 
 // packages/vscode-extension/src/outline-tree.ts
@@ -23313,6 +23313,837 @@ function getNonce() {
   return nonce;
 }
 
+// packages/vscode-extension/src/debug.ts
+var fs = __toESM(require("node:fs"));
+var path4 = __toESM(require("node:path"));
+
+// packages/debug-adapter/src/contracts.ts
+var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
+
+// packages/debug-adapter/src/dap.ts
+var import_node_path2 = __toESM(require("node:path"), 1);
+
+// packages/core/src/debug-map.ts
+var import_node_crypto = require("node:crypto");
+var import_node_path = __toESM(require("node:path"), 1);
+var DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
+var DEBUG_MAP_SCHEMA_VERSION = 1;
+var canonicalValue = (value) => {
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalValue(entry)])
+    );
+  }
+  return value;
+};
+var canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue(value), null, 2)}
+`;
+var sha256 = (value) => (0, import_node_crypto.createHash)("sha256").update(value).digest("hex");
+var validateDebugMap = (map, output) => {
+  const { fingerprint, ...payload } = map;
+  const issues = [];
+  if (map.format !== DEBUG_MAP_FORMAT)
+    issues.push(`Unsupported debug-map format '${String(map.format)}'.`);
+  if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION)
+    issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);
+  const actualFingerprint = sha256(canonicalDebugMapJson(payload));
+  if (fingerprint.algorithm !== "sha256" || fingerprint.value !== actualFingerprint)
+    issues.push("Debug-map fingerprint mismatch.");
+  if (output) {
+    if (output.length !== map.output.size) issues.push("Debug-map output size mismatch.");
+    if (sha256(output) !== map.output.sha256) issues.push("Debug-map output SHA-256 mismatch.");
+  }
+  return issues;
+};
+var debugMapRangesForAddress = (map, addressSpace, address, options = {}) => map.ranges.filter(
+  (range) => (options.architecture === void 0 || range.architecture === options.architecture) && (range.addressSpace === addressSpace && range.start <= address && address < range.end || options.outputOffset !== void 0 && range.outputStart !== void 0 && range.outputEnd !== void 0 && range.outputStart <= options.outputOffset && options.outputOffset < range.outputEnd)
+);
+var debugMapRangesForSource = (map, sourcePath, line, architecture) => {
+  const normalized = sourcePath.split(import_node_path.default.sep).join("/");
+  const sourceIds = new Set(
+    map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
+  );
+  return map.ranges.filter(
+    (range) => sourceIds.has(range.sourceId) && range.line === line && (architecture === void 0 || range.architecture === architecture)
+  );
+};
+
+// packages/debug-adapter/src/dap.ts
+var numeric = (value, fallback = 0) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
+var records = (value) => Array.isArray(value) ? value.filter(
+  (entry) => entry !== null && typeof entry === "object"
+) : [];
+var formatDebugAddress = (address) => `${address.architecture}|${address.addressSpace}|0x${address.address.toString(16)}${address.outputOffset === void 0 ? "" : `|0x${address.outputOffset.toString(16)}`}`;
+var parseDebugAddress = (reference) => {
+  const [architecture, addressSpace, rawAddress, rawOutputOffset, extra] = reference.split("|");
+  if (!architecture || !addressSpace || !rawAddress || extra !== void 0) return void 0;
+  const address = Number(rawAddress);
+  if (!Number.isSafeInteger(address) || address < 0) return void 0;
+  const outputOffset = rawOutputOffset === void 0 ? void 0 : Number(rawOutputOffset);
+  if (outputOffset !== void 0 && (!Number.isSafeInteger(outputOffset) || outputOffset < 0))
+    return void 0;
+  return {
+    architecture,
+    addressSpace,
+    address,
+    ...outputOffset === void 0 ? {} : { outputOffset }
+  };
+};
+var backendEvent = (event) => {
+  switch (event.type) {
+    case "stopped":
+      return {
+        type: "event",
+        event: "stopped",
+        body: { reason: event.reason, threadId: event.threadId, allThreadsStopped: true }
+      };
+    case "continued":
+      return {
+        type: "event",
+        event: "continued",
+        body: { threadId: event.threadId, allThreadsContinued: event.allThreads }
+      };
+    case "terminated":
+      return { type: "event", event: "terminated", body: { restart: event.restart } };
+    case "breakpoint":
+      return {
+        type: "event",
+        event: "breakpoint",
+        body: { reason: "changed", breakpoint: dapBreakpoint(event.breakpoint) }
+      };
+    case "output":
+      return {
+        type: "event",
+        event: "output",
+        body: { category: event.category, output: event.text }
+      };
+  }
+  throw new Error("Unsupported backend event.");
+};
+var dapBreakpoint = (breakpoint) => ({
+  id: breakpoint.id,
+  verified: breakpoint.verified,
+  instructionReference: formatDebugAddress(breakpoint.address),
+  ...breakpoint.message ? { message: breakpoint.message } : {}
+});
+var bytesText = (instruction) => instruction.bytes.map((value) => value.toString(16).padStart(2, "0")).join(" ");
+var DebugAdapterSession = class {
+  #backend;
+  #map;
+  #sourceRoot;
+  #onMessage;
+  #mapIssues;
+  #sourceBreakpoints = /* @__PURE__ */ new Map();
+  #instructionBreakpoints = /* @__PURE__ */ new Map();
+  #variableFrames = /* @__PURE__ */ new Map();
+  #virtualSources = /* @__PURE__ */ new Map();
+  #virtualReferences = /* @__PURE__ */ new Map();
+  #subscription;
+  #nextSequence = 1;
+  #nextVariableReference = 1;
+  #nextSourceReference = 1;
+  #pendingEvents;
+  /**
+   * Creates a DAP session around one backend.
+   * @param {DebugAdapterSessionOptions} options Backend, map, and host callbacks.
+   */
+  constructor(options) {
+    this.#backend = options.backend;
+    this.#map = options.debugMap;
+    this.#sourceRoot = import_node_path2.default.resolve(options.sourceRoot ?? process.cwd());
+    this.#onMessage = options.onMessage;
+    this.#mapIssues = options.debugMap ? validateDebugMap(options.debugMap, options.output) : [];
+    this.#subscription = this.#backend.onEvent((event) => this.#emitBackendEvent(event));
+  }
+  /** Releases the backend event subscription. */
+  dispose() {
+    this.#subscription.dispose();
+  }
+  /**
+   * Handles one request and returns all deterministically ordered response/events.
+   * @param {DapRequest} request Incoming request.
+   * @returns {Promise<readonly DapProtocolMessage[]>} Response followed by queued events.
+   */
+  async dispatch(request) {
+    const pending = [];
+    this.#pendingEvents = pending;
+    let response;
+    try {
+      const body = await this.#route(request.command, request.arguments ?? {});
+      response = {
+        seq: this.#nextSequence++,
+        type: "response",
+        request_seq: request.seq,
+        success: true,
+        command: request.command,
+        ...body === void 0 ? {} : { body }
+      };
+    } catch (error) {
+      response = {
+        seq: this.#nextSequence++,
+        type: "response",
+        request_seq: request.seq,
+        success: false,
+        command: request.command,
+        message: error instanceof Error ? error.message : String(error)
+      };
+    } finally {
+      this.#pendingEvents = void 0;
+    }
+    if (request.command === "initialize" && response.success) {
+      pending.unshift({ type: "event", event: "initialized" });
+    }
+    const messages = [
+      response,
+      ...pending.map((event) => ({ ...event, seq: this.#nextSequence++ }))
+    ];
+    for (const message of messages) this.#onMessage?.(message);
+    return messages;
+  }
+  async #route(command, args) {
+    switch (command) {
+      case "initialize":
+        return this.#capabilities();
+      case "launch":
+        if (this.#mapIssues.length > 0) throw new Error(this.#mapIssues.join(" "));
+        await this.#backend.connect({ reset: true });
+        return {};
+      case "attach":
+        if (this.#mapIssues.length > 0) throw new Error(this.#mapIssues.join(" "));
+        await this.#backend.connect({ reset: false });
+        return {};
+      case "configurationDone":
+        return {};
+      case "threads":
+        return { threads: await this.#backend.threads() };
+      case "stackTrace":
+        return this.#stackTrace(numeric(args.threadId));
+      case "scopes":
+        return this.#scopes(numeric(args.frameId));
+      case "variables":
+        return this.#variables(numeric(args.variablesReference));
+      case "readMemory":
+        return this.#readMemory(args);
+      case "setBreakpoints":
+        return this.#setSourceBreakpoints(args);
+      case "setInstructionBreakpoints":
+        return this.#setInstructionBreakpoints(args);
+      case "pause":
+        await this.#backend.pause(numeric(args.threadId));
+        return {};
+      case "continue":
+        await this.#backend.continue(numeric(args.threadId));
+        return { allThreadsContinued: true };
+      case "next":
+        await this.#backend.step(numeric(args.threadId), "over");
+        return {};
+      case "stepIn":
+        await this.#backend.step(numeric(args.threadId), "in");
+        return {};
+      case "stepOut":
+        await this.#backend.step(numeric(args.threadId), "out");
+        return {};
+      case "disassemble":
+        return this.#disassemble(args);
+      case "source":
+        return this.#source(numeric(args.sourceReference));
+      case "disconnect":
+        await this.#backend.disconnect({ terminate: args.terminateDebuggee !== false });
+        return {};
+      default:
+        throw new Error(`Unsupported DAP request '${command}'.`);
+    }
+  }
+  #capabilities() {
+    return {
+      supportsConfigurationDoneRequest: true,
+      supportsReadMemoryRequest: this.#backend.capabilities.memory,
+      supportsDisassembleRequest: this.#backend.capabilities.disassemble,
+      supportsInstructionBreakpoints: this.#backend.capabilities.breakpoints,
+      supportsSteppingGranularity: this.#backend.capabilities.step,
+      supportsTerminateDebuggee: true
+    };
+  }
+  async #stackTrace(threadId) {
+    const frames = await this.#backend.stackFrames(threadId);
+    return {
+      stackFrames: frames.map((frame) => {
+        const range = this.#rangeForAddress(frame.pc);
+        if (range && this.#map) {
+          const source = this.#map.sources.find((candidate) => candidate.id === range.sourceId);
+          if (source) {
+            const sourcePath = import_node_path2.default.isAbsolute(source.path) ? source.path : import_node_path2.default.resolve(this.#sourceRoot, source.path);
+            return {
+              id: frame.id,
+              name: frame.name,
+              line: range.line,
+              column: 1,
+              source: { name: import_node_path2.default.basename(sourcePath), path: sourcePath },
+              instructionPointerReference: formatDebugAddress(frame.pc)
+            };
+          }
+        }
+        const sourceReference = this.#virtualSourceReference(frame.pc);
+        return {
+          id: frame.id,
+          name: frame.name,
+          line: 1,
+          column: 1,
+          source: {
+            name: `${frame.pc.architecture} disassembly`,
+            sourceReference,
+            presentationHint: "deemphasize"
+          },
+          instructionPointerReference: formatDebugAddress(frame.pc)
+        };
+      }),
+      totalFrames: frames.length
+    };
+  }
+  #scopes(frameId) {
+    const variablesReference = this.#nextVariableReference++;
+    this.#variableFrames.set(variablesReference, frameId);
+    return { scopes: [{ name: "Registers", variablesReference, expensive: false }] };
+  }
+  async #variables(variablesReference) {
+    const frameId = this.#variableFrames.get(variablesReference);
+    if (frameId === void 0) throw new Error("Unknown variables reference.");
+    const registers = await this.#backend.registers(frameId);
+    return {
+      variables: registers.map((register) => ({
+        name: register.name,
+        value: `0x${register.value}`,
+        type: `uint${register.bits}`,
+        variablesReference: 0
+      }))
+    };
+  }
+  async #readMemory(args) {
+    const reference = typeof args.memoryReference === "string" ? args.memoryReference : "";
+    const address = parseDebugAddress(reference);
+    if (!address) throw new Error("Invalid memoryReference.");
+    const offset = numeric(args.offset);
+    const count = numeric(args.count);
+    const result = await this.#backend.readMemory(
+      { ...address, address: address.address + offset },
+      count
+    );
+    return {
+      address: formatDebugAddress(result.address),
+      data: Buffer.from(result.bytes).toString("base64"),
+      unreadableBytes: result.unreadableBytes
+    };
+  }
+  async #setSourceBreakpoints(args) {
+    if (!this.#map) throw new Error("Source breakpoints require a debug map.");
+    const source = args.source;
+    const sourcePath = typeof source?.path === "string" ? source.path : "";
+    if (!sourcePath) throw new Error("Source breakpoint request requires source.path.");
+    const requested = records(args.breakpoints);
+    const addresses = [];
+    const resolved = [];
+    for (const breakpoint of requested) {
+      const line = numeric(breakpoint.line);
+      const range = debugMapRangesForSource(this.#map, sourcePath, line)[0];
+      const address = range ? this.#addressForRange(range) : void 0;
+      if (address) addresses.push(address);
+      resolved.push({ line, address });
+    }
+    this.#sourceBreakpoints.set(sourcePath, addresses);
+    const applied = await this.#applyBreakpoints();
+    return {
+      breakpoints: resolved.map(({ line, address }) => {
+        const match = address ? applied.get(formatDebugAddress(address)) : void 0;
+        return {
+          ...match ? dapBreakpoint(match) : { verified: false, message: "No executable range." },
+          line
+        };
+      })
+    };
+  }
+  async #setInstructionBreakpoints(args) {
+    this.#instructionBreakpoints.clear();
+    const requested = records(args.breakpoints);
+    const parsed = requested.map((breakpoint) => {
+      const reference = typeof breakpoint.instructionReference === "string" ? breakpoint.instructionReference : "";
+      const address = parseDebugAddress(reference);
+      if (address) {
+        const offset = numeric(breakpoint.offset);
+        const adjusted = { ...address, address: address.address + offset };
+        this.#instructionBreakpoints.set(formatDebugAddress(adjusted), adjusted);
+        return adjusted;
+      }
+      return void 0;
+    });
+    const applied = await this.#applyBreakpoints();
+    return {
+      breakpoints: parsed.map((address) => {
+        const match = address ? applied.get(formatDebugAddress(address)) : void 0;
+        return match ? dapBreakpoint(match) : { verified: false, message: "Invalid address." };
+      })
+    };
+  }
+  async #applyBreakpoints() {
+    const source = [...this.#sourceBreakpoints.values()].flat();
+    const instruction = [...this.#instructionBreakpoints.values()];
+    const unique = new Map(
+      [...source, ...instruction].map((address) => [formatDebugAddress(address), address])
+    );
+    const breakpoints = await this.#backend.setBreakpoints([...unique.values()]);
+    return new Map(
+      breakpoints.map((breakpoint) => [formatDebugAddress(breakpoint.address), breakpoint])
+    );
+  }
+  async #disassemble(args) {
+    const reference = typeof args.memoryReference === "string" ? args.memoryReference : "";
+    const address = parseDebugAddress(reference);
+    if (!address) throw new Error("Invalid memoryReference.");
+    const instructions = await this.#backend.disassemble(
+      { ...address, address: address.address + numeric(args.instructionOffset) },
+      numeric(args.instructionCount)
+    );
+    return {
+      instructions: instructions.map((instruction) => ({
+        address: formatDebugAddress(instruction.address),
+        instructionBytes: bytesText(instruction),
+        instruction: instruction.text,
+        ...instruction.symbol ? { symbol: instruction.symbol } : {}
+      }))
+    };
+  }
+  async #source(sourceReference) {
+    const address = this.#virtualSources.get(sourceReference);
+    if (!address) throw new Error("Unknown source reference.");
+    const instructions = await this.#backend.disassemble(address, 32);
+    const content = instructions.map(
+      (instruction) => `${formatDebugAddress(instruction.address)}  ${bytesText(instruction).padEnd(12)}  ${instruction.text}`
+    ).join("\n");
+    return { content: `${content}
+`, mimeType: "text/x-uttori-asm" };
+  }
+  #rangeForAddress(address) {
+    return this.#map ? debugMapRangesForAddress(this.#map, address.addressSpace, address.address, {
+      architecture: address.architecture,
+      outputOffset: address.outputOffset
+    })[0] : void 0;
+  }
+  #addressForRange(range) {
+    return {
+      architecture: range.architecture,
+      addressSpace: range.addressSpace,
+      address: range.start,
+      ...range.outputStart === void 0 ? {} : { outputOffset: range.outputStart }
+    };
+  }
+  #virtualSourceReference(address) {
+    const key = formatDebugAddress(address);
+    const existing = this.#virtualReferences.get(key);
+    if (existing !== void 0) return existing;
+    const reference = this.#nextSourceReference++;
+    this.#virtualReferences.set(key, reference);
+    this.#virtualSources.set(reference, address);
+    return reference;
+  }
+  #emitBackendEvent(event) {
+    const translated = backendEvent(event);
+    if (this.#pendingEvents) {
+      this.#pendingEvents.push(translated);
+      return;
+    }
+    this.#onMessage?.({ ...translated, seq: this.#nextSequence++ });
+  }
+};
+
+// packages/debug-adapter/src/mock-script.ts
+var addressFor = (range) => ({
+  architecture: range.architecture,
+  addressSpace: range.addressSpace,
+  address: range.start,
+  ...range.outputStart === void 0 ? {} : { outputOffset: range.outputStart }
+});
+var instructionFor = (range, output) => {
+  const bytes = range.outputStart === void 0 || range.outputEnd === void 0 ? [] : [...output.subarray(range.outputStart, range.outputEnd)];
+  return {
+    address: addressFor(range),
+    bytes,
+    text: `.db ${bytes.map((byte) => `$${byte.toString(16).padStart(2, "0")}`).join(", ")}`
+  };
+};
+var createDebugMapReplayScript = (map, output) => {
+  const issues = validateDebugMap(map, output);
+  if (issues.length > 0) throw new Error(issues.join(" "));
+  if (map.ranges.length === 0) throw new Error("Debug map contains no executable source ranges.");
+  const architectures = [...new Set(map.ranges.map((range) => range.architecture))].sort();
+  const threads = architectures.map((architecture, index) => ({
+    id: index + 1,
+    name: architecture,
+    architecture
+  }));
+  const firstRange = new Map(
+    architectures.map((architecture) => [
+      architecture,
+      map.ranges.find((range) => range.architecture === architecture)
+    ])
+  );
+  const currentRange = new Map(firstRange);
+  const ordered = [...map.ranges].sort(
+    (left, right) => (left.outputStart ?? Number.MAX_SAFE_INTEGER) - (right.outputStart ?? Number.MAX_SAFE_INTEGER) || left.architecture.localeCompare(right.architecture) || left.start - right.start
+  );
+  const instructions = ordered.map((range) => instructionFor(range, output));
+  const snapshots = ordered.map((range) => {
+    currentRange.set(range.architecture, range);
+    const frames = threads.map((thread) => {
+      const active = currentRange.get(thread.architecture);
+      return {
+        id: thread.id * 100,
+        threadId: thread.id,
+        name: thread.name,
+        pc: addressFor(active)
+      };
+    });
+    const registers = Object.fromEntries(
+      frames.map((frame) => [
+        frame.id,
+        [
+          {
+            name: "PC",
+            value: frame.pc.address.toString(16),
+            bits: Math.max(8, Math.ceil(Math.log2(frame.pc.address + 1) / 8) * 8)
+          }
+        ]
+      ])
+    );
+    const memory = ordered.flatMap(
+      (candidate) => candidate.outputStart === void 0 || candidate.outputEnd === void 0 ? [] : [
+        {
+          addressSpace: candidate.addressSpace,
+          start: candidate.start,
+          bytes: [...output.subarray(candidate.outputStart, candidate.outputEnd)]
+        }
+      ]
+    );
+    return { threads, frames, registers, memory, instructions };
+  });
+  return { snapshots };
+};
+
+// packages/debug-adapter/src/replay-backend.ts
+var addressKey = (address) => `${address.architecture}\0${address.addressSpace}\0${address.outputOffset === void 0 ? `logical:${address.address}` : `output:${address.outputOffset}`}`;
+var addressesEqual = (left, right) => left.architecture === right.architecture && left.addressSpace === right.addressSpace && (left.address === right.address || left.outputOffset !== void 0 && left.outputOffset === right.outputOffset);
+var assertCount = (count) => {
+  if (!Number.isSafeInteger(count) || count < 0)
+    throw new Error("Count must be a non-negative integer.");
+};
+var ReplayDebugBackend = class {
+  protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
+  capabilities = Object.freeze({
+    pause: true,
+    step: true,
+    registers: true,
+    memory: true,
+    stackFrames: true,
+    breakpoints: true,
+    disassemble: true,
+    reconnect: true
+  });
+  #script;
+  #listeners = /* @__PURE__ */ new Set();
+  #breakpoints = /* @__PURE__ */ new Map();
+  #index = 0;
+  #connected = false;
+  #nextBreakpointId = 1;
+  /**
+   * Creates a replay backend from at least one complete snapshot.
+   * @param {ReplayScript} script Replay timeline.
+   */
+  constructor(script) {
+    if (script.snapshots.length === 0)
+      throw new Error("Replay script requires at least one snapshot.");
+    this.#script = script;
+  }
+  /** @returns {number} Current zero-based replay position, exposed for deterministic tests. */
+  get position() {
+    return this.#index;
+  }
+  /**
+   * Connects and optionally resets the replay cursor.
+   * @param {DebugBackendConnectOptions} options Reset behavior.
+   * @returns {Promise<void>} A resolved promise after the entry event is emitted.
+   */
+  connect(options = {}) {
+    if (options.reset ?? true) this.#index = 0;
+    this.#connected = true;
+    const threadId = this.#snapshot.threads[0]?.id ?? 0;
+    this.#emit({ type: "stopped", reason: "entry", threadId });
+    return Promise.resolve();
+  }
+  /**
+   * Disconnects while preserving cursor and breakpoints for an optional reconnect.
+   * @param {{ readonly terminate?: boolean }} options Termination event behavior.
+   * @returns {Promise<void>} A resolved promise after disconnection.
+   */
+  disconnect(options = {}) {
+    this.#requireConnected();
+    this.#connected = false;
+    if (options.terminate ?? true) this.#emit({ type: "terminated", restart: false });
+    return Promise.resolve();
+  }
+  /**
+   * Emits a pause event at the current cursor.
+   * @param {number} threadId Thread to report as stopped.
+   * @returns {Promise<void>} A resolved promise after the event.
+   */
+  pause(threadId = this.#snapshot.threads[0]?.id ?? 0) {
+    this.#requireConnected();
+    this.#emit({ type: "stopped", reason: "pause", threadId });
+    return Promise.resolve();
+  }
+  /**
+   * Runs until the next configured breakpoint or terminates at the end of the script.
+   * @param {number} threadId Thread to continue.
+   * @returns {Promise<void>} A resolved promise after the next stop or termination.
+   */
+  continue(threadId = this.#snapshot.threads[0]?.id ?? 0) {
+    this.#requireConnected();
+    this.#emit({ type: "continued", threadId, allThreads: true });
+    while (this.#index + 1 < this.#script.snapshots.length) {
+      this.#index++;
+      const frame = this.#snapshot.frames.find((candidate) => candidate.threadId === threadId);
+      if (frame && [...this.#breakpoints.values()].some(
+        (breakpoint) => addressesEqual(breakpoint.address, frame.pc)
+      )) {
+        this.#emit({ type: "stopped", reason: "breakpoint", threadId });
+        return Promise.resolve();
+      }
+    }
+    this.#emit({ type: "terminated", restart: false });
+    return Promise.resolve();
+  }
+  /**
+   * Advances exactly one scripted state or terminates when no state remains.
+   * @param {number} threadId Thread to step.
+   * @param {DebugStepKind} _kind Requested step granularity.
+   * @returns {Promise<void>} A resolved promise after the next stop or termination.
+   */
+  step(threadId, _kind) {
+    this.#requireConnected();
+    this.#emit({ type: "continued", threadId, allThreads: false });
+    if (this.#index + 1 >= this.#script.snapshots.length) {
+      this.#emit({ type: "terminated", restart: false });
+      return Promise.resolve();
+    }
+    this.#index++;
+    this.#emit({ type: "stopped", reason: "step", threadId });
+    return Promise.resolve();
+  }
+  /** @returns {Promise<readonly DebugThread[]>} Processors/threads in stable script order. */
+  threads() {
+    this.#requireConnected();
+    return Promise.resolve(this.#snapshot.threads.map((thread) => ({ ...thread })));
+  }
+  /**
+   * Lists stack frames for one thread.
+   * @param {number} threadId Thread to inspect.
+   * @returns {Promise<readonly DebugStackFrame[]>} Stable frame copies.
+   */
+  stackFrames(threadId) {
+    this.#requireConnected();
+    return Promise.resolve(
+      this.#snapshot.frames.filter((frame) => frame.threadId === threadId).map((frame) => ({ ...frame, pc: { ...frame.pc } }))
+    );
+  }
+  /**
+   * Lists registers associated with a frame.
+   * @param {number} frameId Frame to inspect.
+   * @returns {Promise<readonly DebugRegister[]>} Stable register copies.
+   */
+  registers(frameId) {
+    this.#requireConnected();
+    return Promise.resolve(
+      (this.#snapshot.registers[frameId] ?? []).map((register) => ({ ...register }))
+    );
+  }
+  /**
+   * Reads available bytes from the current snapshot without crossing address spaces.
+   * @param {DebugAddress} address First logical address.
+   * @param {number} count Number of bytes.
+   * @returns {Promise<DebugMemoryRead>} Bytes and an unreadable-byte count.
+   */
+  readMemory(address, count) {
+    this.#requireConnected();
+    assertCount(count);
+    const bytes = new Uint8Array(count);
+    let readable = 0;
+    for (let offset = 0; offset < count; offset++) {
+      const current = address.address + offset;
+      const region = this.#snapshot.memory.find(
+        (candidate) => candidate.addressSpace === address.addressSpace && candidate.start <= current && current < candidate.start + candidate.bytes.length
+      );
+      if (!region) continue;
+      bytes[offset] = region.bytes[current - region.start] ?? 0;
+      readable++;
+    }
+    return Promise.resolve({ address: { ...address }, bytes, unreadableBytes: count - readable });
+  }
+  /**
+   * Replaces all instruction breakpoints with stable ids sorted by qualified address.
+   * @param {readonly DebugAddress[]} addresses New qualified addresses.
+   * @returns {Promise<readonly DebugBreakpoint[]>} Breakpoint verification results.
+   */
+  setBreakpoints(addresses) {
+    this.#requireConnected();
+    this.#breakpoints.clear();
+    const sorted = [...addresses].sort(
+      (left, right) => left.architecture.localeCompare(right.architecture) || left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address
+    );
+    for (const address of sorted) {
+      const key = addressKey(address);
+      const breakpoint = {
+        id: this.#nextBreakpointId++,
+        address: { ...address },
+        verified: this.#script.snapshots.some(
+          (snapshot) => snapshot.frames.some((frame) => addressesEqual(frame.pc, address))
+        )
+      };
+      this.#breakpoints.set(key, breakpoint);
+      this.#emit({ type: "breakpoint", breakpoint });
+    }
+    return Promise.resolve([...this.#breakpoints.values()]);
+  }
+  /**
+   * Returns scripted instructions starting at or after an address.
+   * @param {DebugAddress} address First logical address.
+   * @param {number} count Maximum instruction count.
+   * @returns {Promise<readonly DebugInstruction[]>} Stable instruction copies.
+   */
+  disassemble(address, count) {
+    this.#requireConnected();
+    assertCount(count);
+    return Promise.resolve(
+      (this.#snapshot.instructions ?? []).filter(
+        (instruction) => instruction.address.architecture === address.architecture && instruction.address.addressSpace === address.addressSpace && instruction.address.address >= address.address
+      ).sort((left, right) => left.address.address - right.address.address).slice(0, count).map((instruction) => ({
+        ...instruction,
+        address: { ...instruction.address },
+        bytes: [...instruction.bytes]
+      }))
+    );
+  }
+  /**
+   * Subscribes to synchronously ordered backend events.
+   * @param {(event: DebugBackendEvent) => void} listener Event consumer.
+   * @returns {DebugSubscription} Disposable subscription.
+   */
+  onEvent(listener) {
+    this.#listeners.add(listener);
+    return { dispose: () => this.#listeners.delete(listener) };
+  }
+  get #snapshot() {
+    return this.#script.snapshots[this.#index];
+  }
+  #requireConnected() {
+    if (!this.#connected) throw new Error("Debug backend is not connected.");
+  }
+  #emit(event) {
+    for (const listener of this.#listeners) listener(event);
+  }
+};
+
+// packages/vscode-extension/src/debug.ts
+var import_vscode3 = require("vscode");
+var UTTORI_ASM_DEBUG_TYPE = "uttori-asm";
+var resolvedPath = (value, folder) => path4.isAbsolute(value) ? value : path4.resolve(folder?.uri.fsPath ?? process.cwd(), value);
+var loadConfiguration = (session) => {
+  const configuration = session.configuration;
+  if (!configuration.program || !configuration.debugMap) {
+    throw new Error("Uttori ASM debugging requires 'program' and 'debugMap'.");
+  }
+  const folder = session.workspaceFolder;
+  const program = resolvedPath(configuration.program, folder);
+  const mapFile = resolvedPath(configuration.debugMap, folder);
+  const output = new Uint8Array(fs.readFileSync(program));
+  const map = JSON.parse(fs.readFileSync(mapFile, "utf8"));
+  const script = configuration.replay ? JSON.parse(
+    fs.readFileSync(resolvedPath(configuration.replay, folder), "utf8")
+  ) : createDebugMapReplayScript(map, output);
+  return {
+    backend: new ReplayDebugBackend(script),
+    map,
+    output,
+    sourceRoot: resolvedPath(configuration.sourceRoot ?? ".", folder)
+  };
+};
+var InlineDebugAdapter = class {
+  #emitter = new import_vscode3.EventEmitter();
+  #session;
+  onDidSendMessage = this.#emitter.event;
+  constructor(session) {
+    const loaded = loadConfiguration(session);
+    this.#session = new DebugAdapterSession({
+      backend: loaded.backend,
+      debugMap: loaded.map,
+      output: loaded.output,
+      sourceRoot: loaded.sourceRoot,
+      onMessage: (message) => this.#emitter.fire(message)
+    });
+  }
+  /** @param {DapRequest} message DAP request from VS Code. */
+  handleMessage(message) {
+    void this.#session.dispatch(message);
+  }
+  /** Releases protocol and event resources. */
+  dispose() {
+    this.#session.dispose();
+    this.#emitter.dispose();
+  }
+};
+var UttoriDebugConfigurationProvider = class {
+  /**
+   * Supplies a usable map-backed replay launch when `launch.json` is initially empty.
+   * @param {WorkspaceFolder | undefined} folder Selected workspace folder.
+   * @param {DebugConfiguration} configuration Partial configuration.
+   * @returns {DebugConfiguration} Completed launch configuration.
+   */
+  resolveDebugConfiguration(folder, configuration) {
+    const root = folder?.uri.fsPath ?? "${workspaceFolder}";
+    const configuredProgram = typeof configuration.program === "string" ? configuration.program : void 0;
+    const configuredMap = typeof configuration.debugMap === "string" ? configuration.debugMap : void 0;
+    const configuredSourceRoot = typeof configuration.sourceRoot === "string" ? configuration.sourceRoot : void 0;
+    const program = configuredProgram ?? path4.join(root, "build", "rebuilt-content.sfc");
+    return {
+      ...configuration,
+      type: typeof configuration.type === "string" ? configuration.type : UTTORI_ASM_DEBUG_TYPE,
+      request: typeof configuration.request === "string" ? configuration.request : "launch",
+      name: typeof configuration.name === "string" ? configuration.name : "Debug Uttori ASM (Replay)",
+      program,
+      debugMap: configuredMap ?? `${program}.debug.json`,
+      sourceRoot: configuredSourceRoot ?? root
+    };
+  }
+};
+var UttoriDebugAdapterFactory = class {
+  /**
+   * Hosts the adapter inside the extension process.
+   * @param {DebugSession} session VS Code debug session.
+   * @param {DebugAdapterExecutable | undefined} _executable Ignored external adapter descriptor.
+   * @returns {ProviderResult<DebugAdapterDescriptor>} Inline adapter descriptor.
+   */
+  createDebugAdapterDescriptor(session, _executable) {
+    return new import_vscode3.DebugAdapterInlineImplementation(new InlineDebugAdapter(session));
+  }
+};
+var registerDebugging = () => [
+  import_vscode3.debug.registerDebugConfigurationProvider(
+    UTTORI_ASM_DEBUG_TYPE,
+    new UttoriDebugConfigurationProvider()
+  ),
+  import_vscode3.debug.registerDebugAdapterDescriptorFactory(
+    UTTORI_ASM_DEBUG_TYPE,
+    new UttoriDebugAdapterFactory()
+  )
+];
+
 // packages/vscode-extension/src/extension.ts
 var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var client;
@@ -23323,7 +24154,7 @@ var saveListener;
 var watchTimer;
 var statusItem;
 function serverInitializationOptions() {
-  const config = import_vscode3.workspace.getConfiguration("asm");
+  const config = import_vscode4.workspace.getConfiguration("asm");
   return {
     configFile: config.get("configFile", ""),
     plugins: config.get("plugins", []),
@@ -23333,11 +24164,11 @@ function serverInitializationOptions() {
     architecture: config.get("architecture", ""),
     buildOutput: config.get("buildOutput", ""),
     baseImage: config.get("baseImage", ""),
-    workspaceTrusted: import_vscode3.workspace.isTrusted
+    workspaceTrusted: import_vscode4.workspace.isTrusted
   };
 }
 function activate(context) {
-  const serverModule = context.asAbsolutePath(path2.join("server", "server.mjs"));
+  const serverModule = context.asAbsolutePath(path5.join("server", "server.mjs"));
   const serverOptions = {
     run: {
       command: process.execPath,
@@ -23350,7 +24181,7 @@ function activate(context) {
       transport: import_node.TransportKind.stdio
     }
   };
-  outputChannel = import_vscode3.window.createOutputChannel("Uttori Assembly Language Server", {
+  outputChannel = import_vscode4.window.createOutputChannel("Uttori Assembly Language Server", {
     log: true
   });
   const clientOptions = {
@@ -23361,8 +24192,8 @@ function activate(context) {
     synchronize: {
       configurationSection: "asm",
       fileEvents: [
-        import_vscode3.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
-        import_vscode3.workspace.createFileSystemWatcher("**/uttori-asm.config.json")
+        import_vscode4.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
+        import_vscode4.workspace.createFileSystemWatcher("**/uttori-asm.config.json")
       ]
     },
     initializationOptions: serverInitializationOptions(),
@@ -23375,7 +24206,7 @@ function activate(context) {
     serverOptions,
     clientOptions
   );
-  statusItem = import_vscode3.window.createStatusBarItem(import_vscode3.StatusBarAlignment.Left, 0);
+  statusItem = import_vscode4.window.createStatusBarItem(import_vscode4.StatusBarAlignment.Left, 0);
   statusItem.command = "asm.toggleWatch";
   updateStatusItem();
   statusItem.show();
@@ -23386,31 +24217,32 @@ function activate(context) {
   );
   const outlineProvider = new ProjectOutlineProvider(() => client);
   context.subscriptions.push(
+    ...registerDebugging(),
     outputChannel,
     statusItem,
-    import_vscode3.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
+    import_vscode4.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
       webviewOptions: { retainContextWhenHidden: true }
     }),
-    import_vscode3.window.createTreeView(ProjectOutlineProvider.viewId, {
+    import_vscode4.window.createTreeView(ProjectOutlineProvider.viewId, {
       treeDataProvider: outlineProvider,
       showCollapseAll: true
     }),
-    import_vscode3.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
-    import_vscode3.commands.registerCommand("asm.toggleWatch", toggleWatch),
-    import_vscode3.commands.registerCommand("asm.initConfig", () => initConfig()),
-    import_vscode3.commands.registerCommand(
+    import_vscode4.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
+    import_vscode4.commands.registerCommand("asm.toggleWatch", toggleWatch),
+    import_vscode4.commands.registerCommand("asm.initConfig", () => initConfig()),
+    import_vscode4.commands.registerCommand(
       "asm.openPanel",
-      () => import_vscode3.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
+      () => import_vscode4.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
     ),
-    import_vscode3.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
-    import_vscode3.workspace.onDidGrantWorkspaceTrust(() => {
+    import_vscode4.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
+    import_vscode4.workspace.onDidGrantWorkspaceTrust(() => {
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
           asm: serverInitializationOptions()
         }
       });
     }),
-    import_vscode3.workspace.onDidChangeConfiguration((event) => {
+    import_vscode4.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("asm")) {
         void panelProvider.refresh();
         outlineProvider.refresh();
@@ -23421,7 +24253,7 @@ function activate(context) {
     if (!client) {
       return;
     }
-    if (context.extensionMode === import_vscode3.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
+    if (context.extensionMode === import_vscode4.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
       void client.setTrace(import_node.Trace.Verbose);
     }
     context.subscriptions.push(
@@ -23440,7 +24272,7 @@ function deactivate() {
   return client?.stop();
 }
 function activeDocumentUri() {
-  return import_vscode3.window.activeTextEditor?.document.uri.toString();
+  return import_vscode4.window.activeTextEditor?.document.uri.toString();
 }
 function toggleWatch() {
   watchEnabled = !watchEnabled;
@@ -23448,14 +24280,14 @@ function toggleWatch() {
     watchEntryUri = resolveWatchEntry();
     if (!watchEntryUri) {
       watchEnabled = false;
-      void import_vscode3.window.showErrorMessage(
+      void import_vscode4.window.showErrorMessage(
         "Assembly: open a source file (or set asm.entryPoints) before watching."
       );
       return;
     }
-    saveListener = import_vscode3.workspace.onDidSaveTextDocument(onDocumentSaved);
-    void import_vscode3.window.showInformationMessage(
-      `Assembly: watching ${path2.basename(import_vscode3.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+    saveListener = import_vscode4.workspace.onDidSaveTextDocument(onDocumentSaved);
+    void import_vscode4.window.showInformationMessage(
+      `Assembly: watching ${path5.basename(import_vscode4.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   } else {
     saveListener?.dispose();
@@ -23472,20 +24304,20 @@ function resolveWatchEntry() {
   return resolveBuildEntryUri();
 }
 function resolveBuildEntryUri() {
-  const activeUri = import_vscode3.window.activeTextEditor?.document.uri;
-  const entryPoints = import_vscode3.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
-  const folder = activeUri ? import_vscode3.workspace.getWorkspaceFolder(activeUri) : import_vscode3.workspace.workspaceFolders?.[0];
+  const activeUri = import_vscode4.window.activeTextEditor?.document.uri;
+  const entryPoints = import_vscode4.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
+  const folder = activeUri ? import_vscode4.workspace.getWorkspaceFolder(activeUri) : import_vscode4.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    const resolved = path2.isAbsolute(first) ? import_vscode3.Uri.file(first).toString() : import_vscode3.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path5.isAbsolute(first) ? import_vscode4.Uri.file(first).toString() : import_vscode4.Uri.joinPath(folder.uri, first).toString();
     outputChannel?.info(
-      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode3.Uri.parse(resolved).fsPath}`
+      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode4.Uri.parse(resolved).fsPath}`
     );
     return resolved;
   }
   const active = activeDocumentUri();
   if (active) {
-    outputChannel?.info(`Build entry from active editor: ${import_vscode3.Uri.parse(active).fsPath}`);
+    outputChannel?.info(`Build entry from active editor: ${import_vscode4.Uri.parse(active).fsPath}`);
   }
   return active;
 }
@@ -23505,19 +24337,19 @@ function isAssemblyDocument(document) {
   return ASSEMBLY_LANGUAGE_IDS.includes(document.languageId) || /\.(asm|src|s|inc)$/i.test(document.fileName);
 }
 async function initConfig() {
-  const folder = import_vscode3.workspace.workspaceFolders?.[0];
+  const folder = import_vscode4.workspace.workspaceFolders?.[0];
   if (!folder) {
-    void import_vscode3.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
+    void import_vscode4.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
     return;
   }
-  const configUri = import_vscode3.Uri.joinPath(folder.uri, "uttori-asm.config.json");
-  const config = import_vscode3.workspace.getConfiguration("asm");
+  const configUri = import_vscode4.Uri.joinPath(folder.uri, "uttori-asm.config.json");
+  const config = import_vscode4.workspace.getConfiguration("asm");
   let entryPoints = config.get("entryPoints", []);
-  const active = import_vscode3.window.activeTextEditor?.document;
+  const active = import_vscode4.window.activeTextEditor?.document;
   if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
-    const relative3 = path2.relative(folder.uri.fsPath, active.fileName);
+    const relative3 = path5.relative(folder.uri.fsPath, active.fileName);
     entryPoints = [
-      relative3 && !relative3.startsWith("..") ? relative3 : path2.basename(active.fileName)
+      relative3 && !relative3.startsWith("..") ? relative3 : path5.basename(active.fileName)
     ];
   }
   const includePaths = config.get("includePaths", []);
@@ -23546,18 +24378,18 @@ async function initConfig() {
   if (buildOutput) body.buildOutput = buildOutput;
   if (baseImage) body.baseImage = baseImage;
   try {
-    await import_vscode3.workspace.fs.stat(configUri);
-    const existing = await import_vscode3.workspace.openTextDocument(configUri);
-    await import_vscode3.window.showTextDocument(existing);
-    void import_vscode3.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
+    await import_vscode4.workspace.fs.stat(configUri);
+    const existing = await import_vscode4.workspace.openTextDocument(configUri);
+    await import_vscode4.window.showTextDocument(existing);
+    void import_vscode4.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
     return;
   } catch {
   }
-  await import_vscode3.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
+  await import_vscode4.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
 `));
-  await config.update("configFile", "uttori-asm.config.json", import_vscode3.ConfigurationTarget.Workspace);
-  const document = await import_vscode3.workspace.openTextDocument(configUri);
-  await import_vscode3.window.showTextDocument(document);
+  await config.update("configFile", "uttori-asm.config.json", import_vscode4.ConfigurationTarget.Workspace);
+  const document = await import_vscode4.workspace.openTextDocument(configUri);
+  await import_vscode4.window.showTextDocument(document);
 }
 async function runBuild(documentUri, transient = false) {
   outputChannel?.show(true);
@@ -23565,17 +24397,17 @@ async function runBuild(documentUri, transient = false) {
   if (!client) {
     const message = "Language server is not running.";
     outputChannel?.error(message);
-    void import_vscode3.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode4.window.showErrorMessage(`Assembly: ${message}`);
     return;
   }
   if (!documentUri) {
     const message = "Open a source file or set asm.entryPoints before building.";
     outputChannel?.error(message);
-    void import_vscode3.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode4.window.showErrorMessage(`Assembly: ${message}`);
     return;
   }
-  const document = import_vscode3.Uri.parse(documentUri);
-  const config = import_vscode3.workspace.getConfiguration("asm", document);
+  const document = import_vscode4.Uri.parse(documentUri);
+  const config = import_vscode4.workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get("buildOutput", ""), document);
   const baseImage = resolveConfiguredPath(config.get("baseImage", ""), document);
   outputChannel?.info(`  file: ${document.fsPath}`);
@@ -23591,30 +24423,30 @@ async function runBuild(documentUri, transient = false) {
       const message = `Assembly: built ${result.bytes ?? 0} bytes \u2192 ${result.outputPath ?? "output"}.`;
       outputChannel?.info(message);
       if (transient) {
-        import_vscode3.window.setStatusBarMessage(message, 4e3);
+        import_vscode4.window.setStatusBarMessage(message, 4e3);
       } else {
-        void import_vscode3.window.showInformationMessage(message);
+        void import_vscode4.window.showInformationMessage(message);
       }
     } else {
       const detail = result?.message ?? "unknown error";
       outputChannel?.error(`Build failed: ${detail}`);
-      void import_vscode3.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+      void import_vscode4.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     outputChannel?.error(`Build request failed: ${detail}`);
-    void import_vscode3.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+    void import_vscode4.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
   }
 }
 function resolveConfiguredPath(configuredPath, document) {
   if (!configuredPath) {
     return void 0;
   }
-  if (path2.isAbsolute(configuredPath)) {
-    return path2.normalize(configuredPath);
+  if (path5.isAbsolute(configuredPath)) {
+    return path5.normalize(configuredPath);
   }
-  const folder = import_vscode3.workspace.getWorkspaceFolder(document);
-  return path2.resolve(folder?.uri.fsPath ?? path2.dirname(document.fsPath), configuredPath);
+  const folder = import_vscode4.workspace.getWorkspaceFolder(document);
+  return path5.resolve(folder?.uri.fsPath ?? path5.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
   if (!statusItem) {

@@ -4,9 +4,14 @@
  * the adapters; this package does not know 65816 or SNES.
  * @module @uttori/asm-disassembler
  */
+export * from "./asset-codec.js";
+export * from "./asset-codecs/index.js";
+export * from "./asset-preview.js";
+export * from "./compression-codec.js";
 export * from "./project-store.js";
 export * from "./project-types.js";
 export * from "./rom-image.js";
+export * from "./runtime-evidence.js";
 export * from "./source-export.js";
 export * from "./static-analysis.js";
 //# sourceMappingURL=index.d.ts.map

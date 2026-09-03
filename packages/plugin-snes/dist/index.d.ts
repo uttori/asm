@@ -5,6 +5,9 @@ export * from "./disassembler/65816-state.js";
 export * from "./disassembler/address-identities.js";
 export * from "./disassembler/dizraw-import.js";
 export * from "./disassembler/hardware-registers.js";
+export * from "./disassembler/mesen-runtime.js";
+export * from "./disassembler/mesen-labels.js";
+export * from "./disassembler/framework-asset-helpers.js";
 export * from "./disassembler/rom-header.js";
 export * from "./disassembler/source-export.js";
 export * from "./disassembler/spc700-address-space.js";
@@ -16,6 +19,7 @@ export * from "./disassembler/processor-source-export.js";
 export * from "./disassembler/superfx-address-space.js";
 export * from "./disassembler/superfx-analysis.js";
 export * from "./disassembler/superfx-state.js";
+export * from "./assets/index.js";
 /** Canonical SNES cartridge target id (`snes`, `sfc`, `snes-65816` are aliases). */
 export declare const SNES_TARGET_ID = "snes.sfc";
 /**

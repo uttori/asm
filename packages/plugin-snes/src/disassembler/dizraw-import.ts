@@ -457,6 +457,7 @@ export const importDizRaw = (
       labels,
       comments,
       regions,
+      runtime: [],
       evidence: [
         {
           id: evidenceId,

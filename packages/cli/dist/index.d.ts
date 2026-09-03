@@ -1,5 +1,5 @@
 import { type SnesMapper } from "@uttori/asm-plugin-snes";
-export type CliCommand = "analyze" | "assemble" | "disassemble" | "export" | "project-validate" | "verify-roundtrip";
+export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "mesen-labels-export" | "project-validate" | "verify-roundtrip";
 export interface CliArguments {
     readonly command: CliCommand;
     readonly input?: string;
@@ -9,12 +9,18 @@ export interface CliArguments {
     readonly target?: string;
     readonly architecture?: string;
     readonly baseImage?: string;
+    readonly debug: boolean;
+    readonly debugMap?: string;
     readonly includePaths: readonly string[];
     readonly pluginOptions: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
     readonly mapper?: SnesMapper;
     readonly headerSize?: 0 | 512;
     readonly dizraw?: string;
     readonly rom?: string;
+    readonly mesenCdl?: string;
+    readonly mesenTrace?: string;
+    readonly traceMetadata?: string;
+    readonly mesenLabels?: string;
     readonly entryPoints: readonly number[];
     readonly maxWorkItems?: number;
     readonly maxCallDepth?: number;

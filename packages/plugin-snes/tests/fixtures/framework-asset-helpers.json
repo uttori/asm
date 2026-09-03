@@ -1,0 +1,39 @@
+{
+  "assetTable": {
+    "headerSize": 4,
+    "pointerBytes": [0, 16, 0, 8, 16, 0, 20, 16, 0],
+    "ranges": [
+      { "index": 0, "sourceEnd": 4104, "sourceStart": 4100 },
+      { "index": 1, "sourceEnd": 4116, "sourceStart": 4108 }
+    ]
+  },
+  "relativePointerTable": {
+    "bytes": [4, 0, 32, 0, 0, 1],
+    "tableAddress": 16646144,
+    "targets": [16646148, 16646176, 16646400]
+  },
+  "sampleBank": {
+    "aramDataBase": 20710,
+    "pointerBytes": [
+      0, 0, 0, 0, 230, 80, 233, 80, 230, 80, 233, 80, 248, 80, 248, 80, 255, 255, 255, 255
+    ],
+    "ranges": [
+      {
+        "id": 0,
+        "pointerIndexes": [1, 2],
+        "sourceEnd": 8689954,
+        "sourceStart": 8689936,
+        "startAddress": 20710
+      },
+      {
+        "id": 1,
+        "pointerIndexes": [3],
+        "sourceEnd": 8690016,
+        "sourceStart": 8689954,
+        "startAddress": 20728
+      }
+    ],
+    "sourceDataEnd": 8690016,
+    "sourceDataStart": 8689936
+  }
+}

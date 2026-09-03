@@ -28,6 +28,7 @@ import {
 } from "vscode-languageclient/node";
 import { ProjectOutlineProvider } from "./outline-tree.js";
 import { ProjectPanelProvider } from "./panel.js";
+import { registerDebugging } from "./debug.js";
 
 /**
  * The result of a build request returned by the language server.
@@ -161,6 +162,7 @@ export function activate(context: ExtensionContext): void {
   const outlineProvider = new ProjectOutlineProvider(() => client);
 
   context.subscriptions.push(
+    ...registerDebugging(),
     outputChannel,
     statusItem,
     window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {

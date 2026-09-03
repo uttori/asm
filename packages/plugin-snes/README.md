@@ -12,6 +12,7 @@ The architecture and hardware links point to the [Super Famicom Development Wiki
 ## Contents
 
 - [What the plugin contributes](#what-the-plugin-contributes)
+- [SNES asset codecs](#snes-asset-codecs)
 - [Install & Assemble](#install--assemble)
 - [Hello World for the Super Nintendo (SNES) / Super Famicom (SFC)](#hello-world-for-the-super-nintendo-snes--super-famicom-sfc)
 - [How an Assembly Session Works](#how-an-assembly-session-works)
@@ -37,18 +38,58 @@ The architecture and hardware links point to the [Super Famicom Development Wiki
 
 Core Uttori ASM has no default SNES mode. This plugin must be activated, after which it contributes the following target-owned pieces:
 
-| Contribution | ID or value | Notes |
-| ------------ | ----------- | ---- |
-| Target                   | `snes.sfc` | Aliases: `snes`, `sfc`, `snes-65816` |
-| Default architecture     | `snes.65816` | Alias: `65816` |
-| Audio architecture       | `snes.spc700` | Aliases: `spc700`, `spc700-raw`, `spc700-inline` |
-| Coprocessor architecture | `snes.superfx` | Alias: `superfx` |
-| Address space            | `snes.address-space` | 24-bit, mapper-aware CPU-to-ROM translation |
-| Output format            | `snes.sfc-output` | Headerless `.sfc` bytes with optional checksum finalization |
-| Default mapper           | `lorom` | Default logical origin is `$008000` |
-| Expression sets          | SNES address and ROM-read functions | Installed only for this target |
+| Contribution             | ID or value                         | Notes                                                       |
+| ------------------------ | ----------------------------------- | ----------------------------------------------------------- |
+| Target                   | `snes.sfc`                          | Aliases: `snes`, `sfc`, `snes-65816`                        |
+| Default architecture     | `snes.65816`                        | Alias: `65816`                                              |
+| Audio architecture       | `snes.spc700`                       | Aliases: `spc700`, `spc700-raw`, `spc700-inline`            |
+| Coprocessor architecture | `snes.superfx`                      | Alias: `superfx`                                            |
+| Address space            | `snes.address-space`                | 24-bit, mapper-aware CPU-to-ROM translation                 |
+| Output format            | `snes.sfc-output`                   | Headerless `.sfc` bytes with optional checksum finalization |
+| Default mapper           | `lorom`                             | Default logical origin is `$008000`                         |
+| Expression sets          | SNES address and ROM-read functions | Installed only for this target                              |
 
 The registration lives in [`src/index.ts`](./src/index.ts). Mapper formulas are isolated in [`src/target/address-space.ts`](./src/target/address-space.ts), while Asar-specific policy lives in [`src/asar/compatibility.ts`](./src/asar/compatibility.ts).
+
+## SNES asset codecs
+
+The plugin supplies stable, versioned codecs for native SNES graphics and audio formats. They compose with the target-neutral registry from `@uttori/asm-disassembler`:
+
+```ts
+import { createBuiltinAssetCodecRegistry } from "@uttori/asm-disassembler";
+import { registerSnesAssetCodecs } from "@uttori/asm-plugin-snes";
+
+const codecs = registerSnesAssetCodecs(createBuiltinAssetCodecRegistry());
+```
+
+| Codec id                    | Native unit                      | Editable model                                                    |
+| --------------------------- | -------------------------------- | ----------------------------------------------------------------- |
+| `snes.asset.tile.2bpp`      | 16-byte 8×8 tile                 | Pixel indexes 0–3                                                 |
+| `snes.asset.tile.3bpp`      | 24-byte 8×8 tile                 | Pixel indexes 0–7                                                 |
+| `snes.asset.tile.4bpp`      | 32-byte 8×8 tile                 | Pixel indexes 0–15                                                |
+| `snes.asset.tile.8bpp`      | 64-byte 8×8 tile                 | Pixel indexes 0–255                                               |
+| `snes.asset.tile.mode7`     | 64-byte linear 8×8 tile          | Row-major pixel indexes 0–255                                     |
+| `snes.asset.palette.bgr555` | 2-byte little-endian CGRAM color | Five-bit red, green, blue, and unused bit 15                      |
+| `snes.asset.tilemap.bg`     | 16-bit little-endian BG entry    | 10-bit tile, palette, priority, H-flip, and V-flip                |
+| `snes.asset.tilemap.mode7`  | 1-byte Mode 7 entry              | Tile indexes, optionally with grid dimensions                     |
+| `snes.asset.brr`            | 9-byte S-DSP block               | Range, filter, loop/end flags, and sixteen signed encoded nibbles |
+
+Tile, palette, and tilemap requests accept an exact `length` or a `count`. Tilemaps can instead use `width` and `height`, which are validated against the byte extent. Mode 7 tiles and maps are represented as their separate logical linear streams; games that store a custom interleaved or compressed ROM representation can supply a nested game-specific codec later without changing these hardware-format codecs.
+
+BRR requests accept an exact multiple-of-nine length. If the length is unknown, `maxBlocks` permits a bounded search for the first block with the end flag. The decoded model deliberately exposes lossless encoded nibbles rather than pretending PCM-to-BRR editing is exact. The original `.brr` stream and deterministic JSON metadata are extracted.
+
+After `verifyAssetPlan()` succeeds, `registerSnesAssetPreviewRenderers()` adds the
+`snes.preview.svg` renderer. It produces deterministic, bounded SVG tile sheets, palette swatches,
+tile-index maps, and BRR encoded-nibble diagnostics. Preview rendering is structurally unable to run
+against an unverified or changed source range. The BRR view is intentionally an encoded-data
+diagnostic, not a claim of PCM playback fidelity.
+
+The exported Framework helper readers independently model the behavior exercised by
+`SetupRelativePointerTable.asm`, `SetupAssetExtractionTable.asm`, and `SetupSampleBankTable.asm`:
+table-base-relative words, adjacent 24-bit asset boundaries with a skipped header, and ordered SNES
+sample-directory `(start, loop)` pairs projected from ARAM into ROM ranges. Synthetic fixtures cover
+terminal pointers, duplicate sample starts, loop offsets, null slots, and the final configured bound;
+the GPL Extras remain test oracles rather than implementation source.
 
 ## Install & Assemble
 
@@ -88,10 +129,7 @@ Paths in `includePaths` are resolved from the configuration directory. The entry
 ```ts
 import fs from "node:fs";
 import { Assembler } from "@uttori/asm-core";
-import {
-  createSnesAssemblerEnvironment,
-  SNES_TARGET_ID,
-} from "@uttori/asm-plugin-snes";
+import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 
 const environment = await createSnesAssemblerEnvironment();
 const assembler = new Assembler({
@@ -383,11 +421,11 @@ Source files are read as UTF-8. Mnemonics and directive keywords are case-insens
 
 ### Numbers
 
-| Form | Example | Meaning |
-| ---- | ------- | ------- |
-| Hexadecimal | `$80FF`, `0x80FF` | Base 16 |
-| Binary      | `%10110000`       | Base 2 |
-| Decimal     | `33023`, `10.5`   | Base 10; expressions may be fractional |
+| Form        | Example           | Meaning                                                       |
+| ----------- | ----------------- | ------------------------------------------------------------- |
+| Hexadecimal | `$80FF`, `0x80FF` | Base 16                                                       |
+| Binary      | `%10110000`       | Base 2                                                        |
+| Decimal     | `33023`, `10.5`   | Base 10; expressions may be fractional                        |
 | Immediate   | `#$20`            | Architecture syntax; `#` is removed before numeric evaluation |
 
 Negative and unary-plus values are accepted. `~value` and Asar-style `!value` perform bitwise NOT when `!` cannot begin a define name. `<:value` shifts a value right by 16 bits; it is retained for compatibility with sources that use the form.
@@ -454,13 +492,13 @@ namespace off
 
 Switch architecture with `arch name`. The architecture selected by configuration is active before the first source line.
 
-| Source name | Canonical Contribution | Purpose |
-| ----------- | ---------------------- | ------- |
-| `65816`         | `snes.65816`   | Main SNES CPU; default |
-| `spc700`        | `snes.spc700`  | SPC code inside an explicit block |
-| `spc700-raw`    | `snes.spc700`  | Standalone, mapper-free SPC payload |
-| `spc700-inline` | `snes.spc700`  | Asar-compatible implicit SPC block flow |
-| `superfx`       | `snes.superfx` | GSU / Super FX code |
+| Source name     | Canonical Contribution | Purpose                                 |
+| --------------- | ---------------------- | --------------------------------------- |
+| `65816`         | `snes.65816`           | Main SNES CPU; default                  |
+| `spc700`        | `snes.spc700`          | SPC code inside an explicit block       |
+| `spc700-raw`    | `snes.spc700`          | Standalone, mapper-free SPC payload     |
+| `spc700-inline` | `snes.spc700`          | Asar-compatible implicit SPC block flow |
+| `superfx`       | `snes.superfx`         | GSU / Super FX code                     |
 
 Architecture changes are rejected while an explicit SPC block is active. The live editor-facing catalogs are in [`src/tooling/instruction-catalog.ts`](./src/tooling/instruction-catalog.ts); the complete mnemonic tables appear in [Instruction catalogs](#instruction-catalogs).
 
@@ -583,18 +621,28 @@ bytes in deterministic `incbin` assets. Native instructions carry explicit `.b`/
 qualification and `.a8`/`.a16`/`.i8`/`.i16` state transitions. The CLI wraps this API with
 `uttori-asm export` and `uttori-asm verify-roundtrip`.
 
+## MesenCE Offline Evidence
+
+The plugin imports stock MesenCE artifacts without embedding or forking the emulator. The currently tested format revision is `af2342818ca81a93b346146802047760400fc7b1`.
+
+- `importMesenSnesCdl()` accepts only `CDLv2`, checks the exact headerless ROM length and embedded CRC32, then derives executed/read coverage, 65816 opcode/operand boundaries where decoding is justified, and M/X/E observations. Headerless legacy CDL is refused because it cannot be tied safely to a ROM.
+- `importMesen65816Trace()` parses MesenCE's default six-digit-PC 65816 text rows, aggregates execution/state/memory/control-flow observations, and resolves indirect targets. Because trace text has no ROM identity, the caller must supply schema-1 capture metadata containing the ROM content SHA-256, mapper, and architecture.
+- `importMesenLabels()` and `exportMesenLabels()` interchange PRG ROM, WRAM, SRAM, and SPC RAM labels/comments. Modern names and legacy `PRG`, `WORK`, `SAVE`, and `SPCRAM` aliases import; ranged labels use Mesen's inclusive end and become native half-open regions.
+
+These adapters produce target-neutral runtime/project records plus deterministic import-loss reports. Mesen-specific types do not cross the plugin boundary.
+
 ### Mapper Directives
 
-| Directive | Internal Mode | ROM Capacity Represented | Preferred CPU Window | Header File Offset |
-| --------- | ------------- | ------------------------ | -------------------- | ------------------ |
-| `lorom`      | `lorom`     | Up to 4 MiB | Banks with `$8000-$FFFF` ROM windows | `$7FC0` |
-| `hirom`      | `hirom`     | Up to 4 MiB | Full high-bank windows | `$FFC0` |
-| `exlorom`    | `exlorom`   | Up to 8 MiB | Extended LoROM windows | `$FFC0` in current checksum policy |
-| `exhirom`    | `exhirom`   | Up to 8 MiB | Extended HiROM windows | `$FFC0` |
-| `sfxrom`     | `sfxrom`    | Super FX layout | GSU-compatible ROM windows | `$FFC0` |
-| `sa1rom`     | `sa1rom`    | Bank-selectable SA-1 layout | LoROM-like and C-F windows | `$7FC0` |
-| `fullsa1rom` | `bigsa1rom` | Full 8 MiB SA-1 layout | Mirrored half-bank plus C-F windows | `$7FC0` |
-| `norom`      | `norom`     | 16 MiB flat logical space | Address equals output offset | none |
+| Directive    | Internal Mode | ROM Capacity Represented    | Preferred CPU Window                 | Header File Offset                 |
+| ------------ | ------------- | --------------------------- | ------------------------------------ | ---------------------------------- |
+| `lorom`      | `lorom`       | Up to 4 MiB                 | Banks with `$8000-$FFFF` ROM windows | `$7FC0`                            |
+| `hirom`      | `hirom`       | Up to 4 MiB                 | Full high-bank windows               | `$FFC0`                            |
+| `exlorom`    | `exlorom`     | Up to 8 MiB                 | Extended LoROM windows               | `$FFC0` in current checksum policy |
+| `exhirom`    | `exhirom`     | Up to 8 MiB                 | Extended HiROM windows               | `$FFC0`                            |
+| `sfxrom`     | `sfxrom`      | Super FX layout             | GSU-compatible ROM windows           | `$FFC0`                            |
+| `sa1rom`     | `sa1rom`      | Bank-selectable SA-1 layout | LoROM-like and C-F windows           | `$7FC0`                            |
+| `fullsa1rom` | `bigsa1rom`   | Full 8 MiB SA-1 layout      | Mirrored half-bank plus C-F windows  | `$7FC0`                            |
+| `norom`      | `norom`       | 16 MiB flat logical space   | Address equals output offset         | none                               |
 
 The default is `lorom`. Mapper switches are allowed during a source file and are exercised by [`mappers.asm`](../../fixtures/asar/tests/mappers.asm), although real projects are usually easier to reason about with one map per output.
 
@@ -637,12 +685,12 @@ base off
 
 The default is `check bankcross full`, also spelled `on`. Multi-byte writes may not cross a 64 KiB bank boundary. Modes are:
 
-| Command | Boundary Enforced |
-| ------- | ----------------- |
+| Command                | Boundary Enforced                                         |
+| ---------------------- | --------------------------------------------------------- |
 | `check bankcross off`  | No boundary check; mapper-specific PC wrapping is enabled |
-| `check bankcross half` | 32 KiB half-bank boundary |
-| `check bankcross full` | 64 KiB bank boundary |
-| `check bankcross on`   | Alias of `full` |
+| `check bankcross half` | 32 KiB half-bank boundary                                 |
+| `check bankcross full` | 64 KiB bank boundary                                      |
+| `check bankcross on`   | Alias of `full`                                           |
 
 This validation runs before multi-byte output. The exact edge cases are captured in [`bankcross.asm`](../../fixtures/asar/tests/bankcross.asm) and [`half_bank_check.asm`](../../fixtures/asar/tests/half_bank_check.asm).
 
@@ -789,13 +837,13 @@ db "!Message"
 
 Supported assignment operators are:
 
-| Operator | Behavior |
-| ---- | --- |
-| `=`  | Store the value; pure math-looking values may be folded |
-| `+=` | Append text to the current value |
-| `:=` | Resolve referenced defines before storing |
-| `#=` | Resolve and evaluate as a math expression, then store decimal text |
-| `?=` | Assign only if the define does not already exist |
+| Operator | Behavior                                                           |
+| -------- | ------------------------------------------------------------------ |
+| `=`      | Store the value; pure math-looking values may be folded            |
+| `+=`     | Append text to the current value                                   |
+| `:=`     | Resolve referenced defines before storing                          |
+| `#=`     | Resolve and evaluate as a math expression, then store decimal text |
+| `?=`     | Assign only if the define does not already exist                   |
 
 Remove a define with `undef Name`, `undef !Name`, or `undef "Name"`.
 
@@ -813,40 +861,40 @@ In string data, `\!Name` emits a literal `!Name`, while `\\` emits one backslash
 
 Higher rows bind more tightly:
 
-| Precedence | Operators | Meaning |
-| --- | --- | --- |
-| 6   | `**`                                  | exponentiation |
-| 5   | `*`, `/`, `%`                         | multiply, divide, modulo |
-| 4   | `+`, `-`                              | add, subtract |
-| 3   | `<<`, `>>`, `&`, `|`, `^`             | shifts and bitwise operations |
-| 2   | `<`, `>`, `<=`, `>=`, `==`, `=`, `!=` | comparisons, returning `0` or `1` |
-| 1   | `&&`                                  | logical AND |
-| 0   | `||`                                  | logical OR |
+| Precedence | Operators                             | Meaning                           |
+| ---------- | ------------------------------------- | --------------------------------- |
+| 6          | `**`                                  | exponentiation                    |
+| 5          | `*`, `/`, `%`                         | multiply, divide, modulo          |
+| 4          | `+`, `-`                              | add, subtract                     |
+| 3          | `<<`, `>>`, `&`, `                    | `, `^`                            | shifts and bitwise operations |
+| 2          | `<`, `>`, `<=`, `>=`, `==`, `=`, `!=` | comparisons, returning `0` or `1` |
+| 1          | `&&`                                  | logical AND                       |
+| 0          | `                                     |                                   | `                             | logical OR |
 
 Operators at the same level are left-associative. Parentheses override precedence. Division or modulo by zero is an assembly error.
 
 ### Core Built-In Functions
 
-| Family | Functions |
-| --- | --- |
+| Family              | Functions                                                                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Numeric             | `sqrt`, `sin`, `cos`, `tan`, `asin`/`arcsin`, `acos`/`arccos`, `atan`/`arctan`, `log`, `log10`, `log2`, `ceil`, `floor`, `round` |
-| Selection           | `min`, `max`, `clamp`, `safediv`, `select` |
-| Logical comparison  | `not`, `equal`, `notequal`, `less`, `lessequal`, `greater`, `greaterequal`, `and`, `or`, `nand`, `nor`, `xor` |
-| Address helpers     | `bank(value)`, `offset(from,to)`, `pc()`, `realbase()` |
-| Strings and symbols | `stringsequal`, `stringsequalnocase`, `defined`, `sizeof`, `objectsize`, `datasize` |
-| Files               | `filesize`, `getfilestatus`, `canreadfile1`...`canreadfile4`, `canreadfile`, `readfile1`...`readfile4` |
+| Selection           | `min`, `max`, `clamp`, `safediv`, `select`                                                                                       |
+| Logical comparison  | `not`, `equal`, `notequal`, `less`, `lessequal`, `greater`, `greaterequal`, `and`, `or`, `nand`, `nor`, `xor`                    |
+| Address helpers     | `bank(value)`, `offset(from,to)`, `pc()`, `realbase()`                                                                           |
+| Strings and symbols | `stringsequal`, `stringsequalnocase`, `defined`, `sizeof`, `objectsize`, `datasize`                                              |
+| Files               | `filesize`, `getfilestatus`, `canreadfile1`...`canreadfile4`, `canreadfile`, `readfile1`...`readfile4`                           |
 
 File reads are little-endian. `readfileN(filename, position[, default])` accepts a fallback for an unavailable range. `canreadfile(filename, position, size)` handles an arbitrary byte count. `getfilestatus()` returns the host's status code; the supported fixture treats `0` as present.
 
 ### SNES Expression Functions
 
-| Function | Current behavior |
-| --- | --- |
-| `snestopc(address)`        | Convert a mapped CPU address to a ROM offset |
-| `pctosnes(offset)`         | Convert a ROM offset to a preferred mapped CPU address |
-| `canread1`...`canread4`    | Test a fixed-size range against the base/output image length |
-| `canread(position,size)`   | Test an arbitrary range against the base/output image length |
-| `read1`...`read4`          | Map a logical SNES address and read a little-endian value |
+| Function                 | Current behavior                                             |
+| ------------------------ | ------------------------------------------------------------ |
+| `snestopc(address)`      | Convert a mapped CPU address to a ROM offset                 |
+| `pctosnes(offset)`       | Convert a ROM offset to a preferred mapped CPU address       |
+| `canread1`...`canread4`  | Test a fixed-size range against the base/output image length |
+| `canread(position,size)` | Test an arbitrary range against the base/output image length |
+| `read1`...`read4`        | Map a logical SNES address and read a little-endian value    |
 
 `readN(position, default)` returns the fallback when the mapped range is unavailable. Without a fallback, reads are disabled until `check title` appears, matching the plugin's selected compatibility policy:
 
@@ -953,12 +1001,12 @@ The loop variable is exposed through define resolution during the body and resto
 
 ### Data Directives
 
-| Directive | Width | Aliases |
-| --------- | ----- | ------- |
-| `db` | 1 byte                 | `dc.b` |
-| `dw` | 2 bytes, little-endian | `dc.w` |
-| `dl` | 3 bytes, little-endian | `dc.l` |
-| `dd` | 4 bytes, little-endian | none |
+| Directive | Width                  | Aliases |
+| --------- | ---------------------- | ------- |
+| `db`      | 1 byte                 | `dc.b`  |
+| `dw`      | 2 bytes, little-endian | `dc.w`  |
+| `dl`      | 3 bytes, little-endian | `dc.l`  |
+| `dd`      | 4 bytes, little-endian | none    |
 
 ```asm
 db $12, $34
@@ -1118,9 +1166,9 @@ There is therefore no stable “all warnings” table equivalent to Asar's manua
 
 ### Target Options
 
-| Option | Values | Default | Effect |
-| ------ | ------ | ------- | ------ |
-| `checksumMode`                | `"asar"`, `"simple"` | `"asar"` | Choose mirrored-tail or direct byte summation |
+| Option                        | Values               | Default  | Effect                                             |
+| ----------------------------- | -------------------- | -------- | -------------------------------------------------- |
+| `checksumMode`                | `"asar"`, `"simple"` | `"asar"` | Choose mirrored-tail or direct byte summation      |
 | `checksumEnabled`             | boolean              | `true`   | Write checksum and complement when a header exists |
 | `asarSuperFxMoveShortAddress` | boolean              | `false`  | Reproduce Asar's Super FX short-MOVE operand quirk |
 
@@ -1183,18 +1231,18 @@ The top-level supported fixtures under [`fixtures/asar/tests`](../../fixtures/as
 
 ### Accepted Compatibility no-ops
 
-| Keyword | What acceptance means today |
-| ------- | --- |
-| `fastrom`                | Does not alter mapping, speed, or header bytes |
-| `dpbase`                 | Does not change direct-page calculation |
+| Keyword                  | What acceptance means today                           |
+| ------------------------ | ----------------------------------------------------- |
+| `fastrom`                | Does not alter mapping, speed, or header bytes        |
+| `dpbase`                 | Does not change direct-page calculation               |
 | `warnings`               | Does not push, pull, enable, or disable warning state |
-| `print`                  | Produces no output |
-| `warn`                   | Produces no warning |
-| `autoclean`, `autoclear` | Do not locate or erase old freespace |
-| `includefrom`            | Does not validate the include parent |
-| `asar`                   | Does not enforce a version |
-| `reset`                  | Does not reset assembler or mapper state |
-| `{`, `}`                 | Visual grouping only |
+| `print`                  | Produces no output                                    |
+| `warn`                   | Produces no warning                                   |
+| `autoclean`, `autoclear` | Do not locate or erase old freespace                  |
+| `includefrom`            | Does not validate the include parent                  |
+| `asar`                   | Does not enforce a version                            |
+| `reset`                  | Does not reset assembler or mapper state              |
+| `{`, `}`                 | Visual grouping only                                  |
 
 These are centralized in [`src/asar/compatibility.ts`](./src/asar/compatibility.ts). They are intentionally few: silently swallowing an unknown command is worse than an honest error.
 
@@ -1214,67 +1262,67 @@ The files in [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsup
 
 The active SNES target combines core directives with plugin directives. “No-op” below means accepted for source compatibility without the Asar side effect.
 
-| Command | Syntax | Status & Effect |
-| ------- | ------ | --------------- |
-| `db`, `dc.b`                        | `db value[,value...]` | Emit 8-bit values or mapped string characters |
-| `dw`, `dc.w`                        | `dw value[,value...]` | Emit little-endian 16-bit values |
-| `dl`, `dc.l`                        | `dl value[,value...]` | Emit little-endian 24-bit values |
-| `dd`                                | `dd value[,value...]` | Emit little-endian 32-bit values |
-| `fillbyte/word/long/dword`          | `fillbyte value` | Set repeating fill pattern width/value |
-| `fill` | `fill count`               | Emit bytes from the current fill pattern |
-| `padbyte/word/long/dword`           | `padbyte value` | Set pad unit width/value |
-| `pad` | `pad [address]`             | Pad to a mapped address or next 64 KiB boundary |
-| `incsrc` | `incsrc "file"`          | Assemble a source file inline |
-| `include` | `include "file"`        | Include a source file inline |
-| `includeonce` | `includeonce`       | Guard the current file once per stage |
-| `incbin`                            | `incbin "file"[:range] [-> target]` | Embed binary bytes, optionally sliced or relocated |
-| `base`                              | `base address|off` | Change or restore logical base address |
-| `org`                               | `org address` | Set mapped write position |
-| `pushbase`, `pullbase`              | no operands | Save/restore logical base address |
-| `pushpc`, `pullpc`                  | no operands | Save/restore the full PC state |
-| `arch`                              | `arch name` | Select 65816, SPC700 mode, or Super FX |
-| `lorom`, `hirom`                    | no operands | Select standard SNES ROM map |
-| `exlorom`, `exhirom`                | no operands | Select extended SNES ROM map |
-| `sfxrom`                            | no operands | Select Super FX ROM map |
-| `norom`                             | no operands | Select flat 1:1 output; disables checksum/freespace |
-| `sa1rom`                            | `sa1rom [a,b,c,d]` | Select SA-1 map and optional decimal bank selectors |
-| `fullsa1rom`                        | no operands | Select full/big SA-1 map |
-| `fastrom`                           | no operands | Accepted no-op |
-| `namespace`                         | `namespace [name|off|nested on|nested off]` | Set or configure label namespace |
-| `pushns`, `pullns`                  | no operands | Save/restore namespace state |
-| `table`                             | `table "file"[,ltr|rtl]` | Replace character mappings from a table file |
-| `cleartable`                        | no operands | Restore identity fallback |
-| `pushtable`, `pulltable`            | no operands | Save/restore character mapping |
-| `freecode`, `freedata`, `freespace` | no operands | Append one RATS-protected allocation |
-| `freespacebyte`                     | `freespacebyte value` | Set freespace/output expansion byte |
-| `prot`                              | `prot label[,label...]` | Emit a RATS protection record |
-| `spcblock`                          | `spcblock destination [nspc]` | Begin ROM-embedded SPC block |
-| `endspcblock`                       | `endspcblock [execute address]` | Finish SPC block and optionally emit execute record |
-| `startpos`                          | `startpos address` | Save execute address for active SPC block |
-| `struct`                            | `struct name [base|extends parent]` | Begin non-emitting layout definition |
-| `skip`                              | `.member: skip size` | Advance current struct member offset |
-| `endstruct`                         | `endstruct [align value]` | Finalize struct size/stride |
-| `undef`                             | `undef [!]name` | Remove a textual define |
-| `global`                            | `global Label:` | Define a namespace-independent global label |
-| character assignment                | `"A" = value` | Set one active character mapping |
-| `if`, `elseif`, `else`, `endif`     | block syntax | Conditional assembly |
-| `while`, `endwhile`                 | block syntax | Conditional repeated assembly |
-| `for`, `endfor`                     | `for name = start..end` | Inclusive counted assembly loop |
-| `macro`, `endmacro`                 | `macro name(args)` | Define a command macro |
-| `function`                          | `function name(args) = expression` | Define a numeric expression function |
-| `assert`                            | `assert condition[,message...]` | Fail when condition is zero |
-| `error`                             | `error [message...]` | Always fail |
-| `warnpc`                            | `warnpc address` | Fail when PC exceeds address |
-| `check`                             | `check title` or `check bankcross mode` | Enable reads or configure bank boundary policy |
-| `optimize`                          | `optimize dp none|ram|always` | Configure direct-page size optimization; other forms ignored |
-| `dpbase`                            | any | Accepted no-op |
-| `warnings`                          | any | Accepted no-op |
-| `print`                             | any | Accepted no-op |
-| `warn`                              | any | Accepted no-op |
-| `autoclean`, `autoclear`            | any | Accepted no-op |
-| `includefrom`                       | any | Accepted no-op |
-| `asar`                              | any | Accepted no-op |
-| `reset`, `{`, `}`                   | any | Accepted no-op |
+| Command                             | Syntax                                  | Status & Effect                                     |
+| ----------------------------------- | --------------------------------------- | --------------------------------------------------- |
+| `db`, `dc.b`                        | `db value[,value...]`                   | Emit 8-bit values or mapped string characters       |
+| `dw`, `dc.w`                        | `dw value[,value...]`                   | Emit little-endian 16-bit values                    |
+| `dl`, `dc.l`                        | `dl value[,value...]`                   | Emit little-endian 24-bit values                    |
+| `dd`                                | `dd value[,value...]`                   | Emit little-endian 32-bit values                    |
+| `fillbyte/word/long/dword`          | `fillbyte value`                        | Set repeating fill pattern width/value              |
+| `fill`                              | `fill count`                            | Emit bytes from the current fill pattern            |
+| `padbyte/word/long/dword`           | `padbyte value`                         | Set pad unit width/value                            |
+| `pad`                               | `pad [address]`                         | Pad to a mapped address or next 64 KiB boundary     |
+| `incsrc`                            | `incsrc "file"`                         | Assemble a source file inline                       |
+| `include`                           | `include "file"`                        | Include a source file inline                        |
+| `includeonce`                       | `includeonce`                           | Guard the current file once per stage               |
+| `incbin`                            | `incbin "file"[:range] [-> target]`     | Embed binary bytes, optionally sliced or relocated  |
+| `base`                              | `base address                           | off`                                                | Change or restore logical base address       |
+| `org`                               | `org address`                           | Set mapped write position                           |
+| `pushbase`, `pullbase`              | no operands                             | Save/restore logical base address                   |
+| `pushpc`, `pullpc`                  | no operands                             | Save/restore the full PC state                      |
+| `arch`                              | `arch name`                             | Select 65816, SPC700 mode, or Super FX              |
+| `lorom`, `hirom`                    | no operands                             | Select standard SNES ROM map                        |
+| `exlorom`, `exhirom`                | no operands                             | Select extended SNES ROM map                        |
+| `sfxrom`                            | no operands                             | Select Super FX ROM map                             |
+| `norom`                             | no operands                             | Select flat 1:1 output; disables checksum/freespace |
+| `sa1rom`                            | `sa1rom [a,b,c,d]`                      | Select SA-1 map and optional decimal bank selectors |
+| `fullsa1rom`                        | no operands                             | Select full/big SA-1 map                            |
+| `fastrom`                           | no operands                             | Accepted no-op                                      |
+| `namespace`                         | `namespace [name                        | off                                                 | nested on                                    | nested off]`                                                 | Set or configure label namespace |
+| `pushns`, `pullns`                  | no operands                             | Save/restore namespace state                        |
+| `table`                             | `table "file"[,ltr                      | rtl]`                                               | Replace character mappings from a table file |
+| `cleartable`                        | no operands                             | Restore identity fallback                           |
+| `pushtable`, `pulltable`            | no operands                             | Save/restore character mapping                      |
+| `freecode`, `freedata`, `freespace` | no operands                             | Append one RATS-protected allocation                |
+| `freespacebyte`                     | `freespacebyte value`                   | Set freespace/output expansion byte                 |
+| `prot`                              | `prot label[,label...]`                 | Emit a RATS protection record                       |
+| `spcblock`                          | `spcblock destination [nspc]`           | Begin ROM-embedded SPC block                        |
+| `endspcblock`                       | `endspcblock [execute address]`         | Finish SPC block and optionally emit execute record |
+| `startpos`                          | `startpos address`                      | Save execute address for active SPC block           |
+| `struct`                            | `struct name [base                      | extends parent]`                                    | Begin non-emitting layout definition         |
+| `skip`                              | `.member: skip size`                    | Advance current struct member offset                |
+| `endstruct`                         | `endstruct [align value]`               | Finalize struct size/stride                         |
+| `undef`                             | `undef [!]name`                         | Remove a textual define                             |
+| `global`                            | `global Label:`                         | Define a namespace-independent global label         |
+| character assignment                | `"A" = value`                           | Set one active character mapping                    |
+| `if`, `elseif`, `else`, `endif`     | block syntax                            | Conditional assembly                                |
+| `while`, `endwhile`                 | block syntax                            | Conditional repeated assembly                       |
+| `for`, `endfor`                     | `for name = start..end`                 | Inclusive counted assembly loop                     |
+| `macro`, `endmacro`                 | `macro name(args)`                      | Define a command macro                              |
+| `function`                          | `function name(args) = expression`      | Define a numeric expression function                |
+| `assert`                            | `assert condition[,message...]`         | Fail when condition is zero                         |
+| `error`                             | `error [message...]`                    | Always fail                                         |
+| `warnpc`                            | `warnpc address`                        | Fail when PC exceeds address                        |
+| `check`                             | `check title` or `check bankcross mode` | Enable reads or configure bank boundary policy      |
+| `optimize`                          | `optimize dp none                       | ram                                                 | always`                                      | Configure direct-page size optimization; other forms ignored |
+| `dpbase`                            | any                                     | Accepted no-op                                      |
+| `warnings`                          | any                                     | Accepted no-op                                      |
+| `print`                             | any                                     | Accepted no-op                                      |
+| `warn`                              | any                                     | Accepted no-op                                      |
+| `autoclean`, `autoclear`            | any                                     | Accepted no-op                                      |
+| `includefrom`                       | any                                     | Accepted no-op                                      |
+| `asar`                              | any                                     | Accepted no-op                                      |
+| `reset`, `{`, `}`                   | any                                     | Accepted no-op                                      |
 
 ## Troubleshooting
 
@@ -1308,20 +1356,20 @@ If you think it should be working here, and not in the mentioned compatibility a
 
 ## Code and Fixture Layout
 
-| Topic | Implementation | Executable examples/tests |
-| --- | --- | --- |
-| Plugin registration and options  | [`src/index.ts`](./src/index.ts) | [`assembler.integration.test.ts`](./tests/assembler.integration.test.ts) |
-| 65C816 encoder                   | [`src/architectures/65816.ts`](./src/architectures/65816.ts) | [`arch-65816.asm`](../../fixtures/asar/tests/arch-65816.asm), [`opcodesize.asm`](../../fixtures/asar/tests/opcodesize.asm) |
-| SPC700 specification/decoder/encoder/runtime | [`src/architectures/spc700-spec.ts`](./src/architectures/spc700-spec.ts), [`src/architectures/spc700-decoder.ts`](./src/architectures/spc700-decoder.ts), [`src/architectures/spc700.ts`](./src/architectures/spc700.ts), [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`spc700-decoder.test.ts`](./tests/spc700-decoder.test.ts), [`arch-spc700.asm`](../../fixtures/asar/tests/arch-spc700.asm), [`spcblock.asm`](../../fixtures/asar/tests/spcblock.asm) |
-| Super FX specification/decoder/encoder | [`src/architectures/superfx-spec.ts`](./src/architectures/superfx-spec.ts), [`src/architectures/superfx-decoder.ts`](./src/architectures/superfx-decoder.ts), [`src/architectures/superfx.ts`](./src/architectures/superfx.ts) | [`superfx-decoder.test.ts`](./tests/superfx-decoder.test.ts), [`superfx-analysis.test.ts`](./tests/superfx-analysis.test.ts), [`arch-superfx.asm`](../../fixtures/asar/tests/arch-superfx.asm) |
-| Processor source export          | [`src/disassembler/processor-source-export.ts`](./src/disassembler/processor-source-export.ts) | [`processor-source-export.test.ts`](./tests/processor-source-export.test.ts) |
-| Mapper and checksum policy       | [`src/target/address-space.ts`](./src/target/address-space.ts), [`src/asar/compatibility.ts`](./src/asar/compatibility.ts) | [`mappers.asm`](../../fixtures/asar/tests/mappers.asm), [`compatibility-profile.test.ts`](./tests/compatibility-profile.test.ts) |
-| Freespace                        | [`src/directives/freespace.ts`](./src/directives/freespace.ts) | [`freespace.test.ts`](./tests/directives/freespace.test.ts) |
-| SPC directives                   | [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`spc.test.ts`](./tests/directives/spc.test.ts) |
-| Defines/macros/structs           | [`define-engine.ts`](../../packages/core/src/services/define-engine.ts), [`macro-engine.ts`](../../packages/core/src/services/macro-engine.ts), [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts) | [`v140features.asm`](../../fixtures/asar/tests/v140features.asm), [`structs.asm`](../../fixtures/asar/tests/structs.asm) |
-| Includes and binary ranges       | [`include-source.ts`](../../packages/core/src/directives/include-source.ts) | [`incbin.asm`](../../fixtures/asar/tests/incbin.asm), [`includeonce.asm`](../../fixtures/asar/tests/includeonce.asm) |
-| Character tables and diagnostics | [`misc.ts`](../../packages/core/src/directives/misc.ts) | [`misc.test.ts`](../../tests/directives/misc.test.ts) |
-| Deferred compatibility           | [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsupported) | Each filename identifies an uncovered family |
+| Topic                                        | Implementation                                                                                                                                                                                                                                                                           | Executable examples/tests                                                                                                                                                                      |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plugin registration and options              | [`src/index.ts`](./src/index.ts)                                                                                                                                                                                                                                                         | [`assembler.integration.test.ts`](./tests/assembler.integration.test.ts)                                                                                                                       |
+| 65C816 encoder                               | [`src/architectures/65816.ts`](./src/architectures/65816.ts)                                                                                                                                                                                                                             | [`arch-65816.asm`](../../fixtures/asar/tests/arch-65816.asm), [`opcodesize.asm`](../../fixtures/asar/tests/opcodesize.asm)                                                                     |
+| SPC700 specification/decoder/encoder/runtime | [`src/architectures/spc700-spec.ts`](./src/architectures/spc700-spec.ts), [`src/architectures/spc700-decoder.ts`](./src/architectures/spc700-decoder.ts), [`src/architectures/spc700.ts`](./src/architectures/spc700.ts), [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts) | [`spc700-decoder.test.ts`](./tests/spc700-decoder.test.ts), [`arch-spc700.asm`](../../fixtures/asar/tests/arch-spc700.asm), [`spcblock.asm`](../../fixtures/asar/tests/spcblock.asm)           |
+| Super FX specification/decoder/encoder       | [`src/architectures/superfx-spec.ts`](./src/architectures/superfx-spec.ts), [`src/architectures/superfx-decoder.ts`](./src/architectures/superfx-decoder.ts), [`src/architectures/superfx.ts`](./src/architectures/superfx.ts)                                                           | [`superfx-decoder.test.ts`](./tests/superfx-decoder.test.ts), [`superfx-analysis.test.ts`](./tests/superfx-analysis.test.ts), [`arch-superfx.asm`](../../fixtures/asar/tests/arch-superfx.asm) |
+| Processor source export                      | [`src/disassembler/processor-source-export.ts`](./src/disassembler/processor-source-export.ts)                                                                                                                                                                                           | [`processor-source-export.test.ts`](./tests/processor-source-export.test.ts)                                                                                                                   |
+| Mapper and checksum policy                   | [`src/target/address-space.ts`](./src/target/address-space.ts), [`src/asar/compatibility.ts`](./src/asar/compatibility.ts)                                                                                                                                                               | [`mappers.asm`](../../fixtures/asar/tests/mappers.asm), [`compatibility-profile.test.ts`](./tests/compatibility-profile.test.ts)                                                               |
+| Freespace                                    | [`src/directives/freespace.ts`](./src/directives/freespace.ts)                                                                                                                                                                                                                           | [`freespace.test.ts`](./tests/directives/freespace.test.ts)                                                                                                                                    |
+| SPC directives                               | [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts)                                                                                                                                                                                                                           | [`spc.test.ts`](./tests/directives/spc.test.ts)                                                                                                                                                |
+| Defines/macros/structs                       | [`define-engine.ts`](../../packages/core/src/services/define-engine.ts), [`macro-engine.ts`](../../packages/core/src/services/macro-engine.ts), [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts)                                                                  | [`v140features.asm`](../../fixtures/asar/tests/v140features.asm), [`structs.asm`](../../fixtures/asar/tests/structs.asm)                                                                       |
+| Includes and binary ranges                   | [`include-source.ts`](../../packages/core/src/directives/include-source.ts)                                                                                                                                                                                                              | [`incbin.asm`](../../fixtures/asar/tests/incbin.asm), [`includeonce.asm`](../../fixtures/asar/tests/includeonce.asm)                                                                           |
+| Character tables and diagnostics             | [`misc.ts`](../../packages/core/src/directives/misc.ts)                                                                                                                                                                                                                                  | [`misc.test.ts`](../../tests/directives/misc.test.ts)                                                                                                                                          |
+| Deferred compatibility                       | [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsupported)                                                                                                                                                                                                               | Each filename identifies an uncovered family                                                                                                                                                   |
 
 ## Instruction Catalogs
 
@@ -1329,130 +1377,130 @@ These tables come from the same descriptors used by hover and completion. They l
 
 ### 65C816 Instruction Catalog
 
-| Mnemonic | What it does | Accepted operand forms |
-| --- | --- | --- |
-| `ADC` | Add with carry to the accumulator. | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
-| `AND` | Bitwise AND with the accumulator. | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
-| `ASL` | Arithmetic shift left. | `a`, `dp`, `dp,x`, `addr`, `addr,x` |
-| `BCC` | Branch if carry clear. | `label` |
-| `BCS` | Branch if carry set. | `label` |
-| `BEQ` | Branch if equal (zero set). | `label` |
-| `BIT` | Test bits against the accumulator. | `#const`, `dp`, `dp,x`, `addr`, `addr,x` |
-| `BMI` | Branch if minus (negative set). | `label` |
-| `BNE` | Branch if not equal (zero clear). | `label` |
-| `BPL` | Branch if plus (negative clear). | `label` |
-| `BRA` | Branch always. | `label` |
-| `BRK` | Software break / interrupt. | `implied` |
-| `BRL` | Branch always long (16-bit relative). | `label` |
-| `BVC` | Branch if overflow clear. | `label` |
-| `BVS` | Branch if overflow set. | `label` |
-| `CLC` | Clear carry flag. | `implied` |
-| `CLD` | Clear decimal flag. | `implied` |
-| `CLI` | Clear interrupt-disable flag. | `implied` |
-| `CLV` | Clear overflow flag. | `implied` |
-| `CMP` | Compare with the accumulator. | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
-| `COP` | Coprocessor enable interrupt. | `#const` |
-| `CPX` | Compare with the X register. | `#const`, `dp`, `addr` |
-| `CPY` | Compare with the Y register. | `#const`, `dp`, `addr` |
-| `DEC` | Decrement memory or the accumulator. | `a`, `dp`, `dp,x`, `addr`, `addr,x` |
-| `DEX` | Decrement the X register. | `implied` |
-| `DEY` | Decrement the Y register. | `implied` |
-| `EOR` | Bitwise exclusive-OR with the accumulator. | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
-| `INC` | Increment memory or the accumulator. | `a`, `dp`, `dp,x`, `addr`, `addr,x` |
-| `INX` | Increment the X register. | `implied` |
-| `INY` | Increment the Y register. | `implied` |
-| `JML` | Jump long (24-bit). | `long`, `[addr]` |
-| `JMP` | Jump. | `addr`, `(addr)`, `(addr,x)` |
-| `JSL` | Jump to subroutine long. | `long` |
-| `JSR` | Jump to subroutine. | `addr`, `(addr,x)` |
-| `LDA` | Load the accumulator. | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
-| `LDX` | Load the X register. | `#const`, `dp`, `dp,y`, `addr`, `addr,y` |
-| `LDY` | Load the Y register. | `#const`, `dp`, `dp,x`, `addr`, `addr,x` |
-| `LSR` | Logical shift right. | `a`, `dp`, `dp,x`, `addr`, `addr,x` |
-| `MVN` | Block move next (ascending). | `destBank,srcBank` |
-| `MVP` | Block move previous (descending). | `destBank,srcBank` |
-| `NOP` | No operation. | `implied` |
-| `ORA` | Bitwise OR with the accumulator. | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
-| `PEA` | Push effective absolute address. | `addr` |
-| `PEI` | Push effective indirect address. | `(dp)` |
-| `PER` | Push effective PC-relative address. | `label` |
-| `PHA` | Push the accumulator. | `implied` |
-| `PHB` | Push the data bank register. | `implied` |
-| `PHD` | Push the direct page register. | `implied` |
-| `PHK` | Push the program bank register. | `implied` |
-| `PHP` | Push the processor status register. | `implied` |
-| `PHX` | Push the X register. | `implied` |
-| `PHY` | Push the Y register. | `implied` |
-| `PLA` | Pull the accumulator. | `implied` |
-| `PLB` | Pull the data bank register. | `implied` |
-| `PLD` | Pull the direct page register. | `implied` |
-| `PLP` | Pull the processor status register. | `implied` |
-| `PLX` | Pull the X register. | `implied` |
-| `PLY` | Pull the Y register. | `implied` |
-| `REP` | Reset status bits. | `#const` |
-| `ROL` | Rotate left through carry. | `a`, `dp`, `dp,x`, `addr`, `addr,x` |
-| `ROR` | Rotate right through carry. | `a`, `dp`, `dp,x`, `addr`, `addr,x` |
-| `RTI` | Return from interrupt. | `implied` |
-| `RTL` | Return from subroutine long. | `implied` |
-| `RTS` | Return from subroutine. | `implied` |
-| `SBC` | Subtract with borrow from the accumulator. | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
-| `SEC` | Set carry flag. | `implied` |
-| `SED` | Set decimal flag. | `implied` |
-| `SEI` | Set interrupt-disable flag. | `implied` |
-| `SEP` | Set status bits. | `#const` |
-| `STA` | Store the accumulator. | `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
-| `STP` | Stop the processor. | `implied` |
-| `STX` | Store the X register. | `dp`, `dp,y`, `addr` |
-| `STY` | Store the Y register. | `dp`, `dp,x`, `addr` |
-| `STZ` | Store zero to memory. | `dp`, `dp,x`, `addr`, `addr,x` |
-| `TRB` | Test accumulator bits and reset them in memory. | `dp`, `addr` |
-| `TSB` | Test accumulator bits and set them in memory. | `dp`, `addr` |
-| `TAX` | Transfer accumulator to X. | `implied` |
-| `TAY` | Transfer accumulator to Y. | `implied` |
-| `TCD` | Transfer accumulator to direct page register. | `implied` |
-| `TCS` | Transfer accumulator to stack pointer. | `implied` |
-| `TDC` | Transfer direct page register to accumulator. | `implied` |
-| `TSC` | Transfer stack pointer to accumulator. | `implied` |
-| `TSX` | Transfer stack pointer to X. | `implied` |
-| `TXA` | Transfer X to accumulator. | `implied` |
-| `TXS` | Transfer X to stack pointer. | `implied` |
-| `TXY` | Transfer X to Y. | `implied` |
-| `TYA` | Transfer Y to accumulator. | `implied` |
-| `TYX` | Transfer Y to X. | `implied` |
-| `WAI` | Wait for interrupt. | `implied` |
-| `WDM` | Reserved (William D. Mensch) opcode. | `#const` |
-| `XBA` | Exchange the bytes of the accumulator. | `implied` |
-| `XCE` | Exchange carry and emulation flags. | `implied` |
+| Mnemonic | What it does                                    | Accepted operand forms                                                                                                                 |
+| -------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADC`    | Add with carry to the accumulator.              | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
+| `AND`    | Bitwise AND with the accumulator.               | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
+| `ASL`    | Arithmetic shift left.                          | `a`, `dp`, `dp,x`, `addr`, `addr,x`                                                                                                    |
+| `BCC`    | Branch if carry clear.                          | `label`                                                                                                                                |
+| `BCS`    | Branch if carry set.                            | `label`                                                                                                                                |
+| `BEQ`    | Branch if equal (zero set).                     | `label`                                                                                                                                |
+| `BIT`    | Test bits against the accumulator.              | `#const`, `dp`, `dp,x`, `addr`, `addr,x`                                                                                               |
+| `BMI`    | Branch if minus (negative set).                 | `label`                                                                                                                                |
+| `BNE`    | Branch if not equal (zero clear).               | `label`                                                                                                                                |
+| `BPL`    | Branch if plus (negative clear).                | `label`                                                                                                                                |
+| `BRA`    | Branch always.                                  | `label`                                                                                                                                |
+| `BRK`    | Software break / interrupt.                     | `implied`                                                                                                                              |
+| `BRL`    | Branch always long (16-bit relative).           | `label`                                                                                                                                |
+| `BVC`    | Branch if overflow clear.                       | `label`                                                                                                                                |
+| `BVS`    | Branch if overflow set.                         | `label`                                                                                                                                |
+| `CLC`    | Clear carry flag.                               | `implied`                                                                                                                              |
+| `CLD`    | Clear decimal flag.                             | `implied`                                                                                                                              |
+| `CLI`    | Clear interrupt-disable flag.                   | `implied`                                                                                                                              |
+| `CLV`    | Clear overflow flag.                            | `implied`                                                                                                                              |
+| `CMP`    | Compare with the accumulator.                   | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
+| `COP`    | Coprocessor enable interrupt.                   | `#const`                                                                                                                               |
+| `CPX`    | Compare with the X register.                    | `#const`, `dp`, `addr`                                                                                                                 |
+| `CPY`    | Compare with the Y register.                    | `#const`, `dp`, `addr`                                                                                                                 |
+| `DEC`    | Decrement memory or the accumulator.            | `a`, `dp`, `dp,x`, `addr`, `addr,x`                                                                                                    |
+| `DEX`    | Decrement the X register.                       | `implied`                                                                                                                              |
+| `DEY`    | Decrement the Y register.                       | `implied`                                                                                                                              |
+| `EOR`    | Bitwise exclusive-OR with the accumulator.      | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
+| `INC`    | Increment memory or the accumulator.            | `a`, `dp`, `dp,x`, `addr`, `addr,x`                                                                                                    |
+| `INX`    | Increment the X register.                       | `implied`                                                                                                                              |
+| `INY`    | Increment the Y register.                       | `implied`                                                                                                                              |
+| `JML`    | Jump long (24-bit).                             | `long`, `[addr]`                                                                                                                       |
+| `JMP`    | Jump.                                           | `addr`, `(addr)`, `(addr,x)`                                                                                                           |
+| `JSL`    | Jump to subroutine long.                        | `long`                                                                                                                                 |
+| `JSR`    | Jump to subroutine.                             | `addr`, `(addr,x)`                                                                                                                     |
+| `LDA`    | Load the accumulator.                           | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
+| `LDX`    | Load the X register.                            | `#const`, `dp`, `dp,y`, `addr`, `addr,y`                                                                                               |
+| `LDY`    | Load the Y register.                            | `#const`, `dp`, `dp,x`, `addr`, `addr,x`                                                                                               |
+| `LSR`    | Logical shift right.                            | `a`, `dp`, `dp,x`, `addr`, `addr,x`                                                                                                    |
+| `MVN`    | Block move next (ascending).                    | `destBank,srcBank`                                                                                                                     |
+| `MVP`    | Block move previous (descending).               | `destBank,srcBank`                                                                                                                     |
+| `NOP`    | No operation.                                   | `implied`                                                                                                                              |
+| `ORA`    | Bitwise OR with the accumulator.                | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
+| `PEA`    | Push effective absolute address.                | `addr`                                                                                                                                 |
+| `PEI`    | Push effective indirect address.                | `(dp)`                                                                                                                                 |
+| `PER`    | Push effective PC-relative address.             | `label`                                                                                                                                |
+| `PHA`    | Push the accumulator.                           | `implied`                                                                                                                              |
+| `PHB`    | Push the data bank register.                    | `implied`                                                                                                                              |
+| `PHD`    | Push the direct page register.                  | `implied`                                                                                                                              |
+| `PHK`    | Push the program bank register.                 | `implied`                                                                                                                              |
+| `PHP`    | Push the processor status register.             | `implied`                                                                                                                              |
+| `PHX`    | Push the X register.                            | `implied`                                                                                                                              |
+| `PHY`    | Push the Y register.                            | `implied`                                                                                                                              |
+| `PLA`    | Pull the accumulator.                           | `implied`                                                                                                                              |
+| `PLB`    | Pull the data bank register.                    | `implied`                                                                                                                              |
+| `PLD`    | Pull the direct page register.                  | `implied`                                                                                                                              |
+| `PLP`    | Pull the processor status register.             | `implied`                                                                                                                              |
+| `PLX`    | Pull the X register.                            | `implied`                                                                                                                              |
+| `PLY`    | Pull the Y register.                            | `implied`                                                                                                                              |
+| `REP`    | Reset status bits.                              | `#const`                                                                                                                               |
+| `ROL`    | Rotate left through carry.                      | `a`, `dp`, `dp,x`, `addr`, `addr,x`                                                                                                    |
+| `ROR`    | Rotate right through carry.                     | `a`, `dp`, `dp,x`, `addr`, `addr,x`                                                                                                    |
+| `RTI`    | Return from interrupt.                          | `implied`                                                                                                                              |
+| `RTL`    | Return from subroutine long.                    | `implied`                                                                                                                              |
+| `RTS`    | Return from subroutine.                         | `implied`                                                                                                                              |
+| `SBC`    | Subtract with borrow from the accumulator.      | `#const`, `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y` |
+| `SEC`    | Set carry flag.                                 | `implied`                                                                                                                              |
+| `SED`    | Set decimal flag.                               | `implied`                                                                                                                              |
+| `SEI`    | Set interrupt-disable flag.                     | `implied`                                                                                                                              |
+| `SEP`    | Set status bits.                                | `#const`                                                                                                                               |
+| `STA`    | Store the accumulator.                          | `dp`, `dp,x`, `(dp)`, `[dp]`, `(dp,x)`, `(dp),y`, `[dp],y`, `addr`, `addr,x`, `addr,y`, `long`, `long,x`, `sr,s`, `(sr,s),y`           |
+| `STP`    | Stop the processor.                             | `implied`                                                                                                                              |
+| `STX`    | Store the X register.                           | `dp`, `dp,y`, `addr`                                                                                                                   |
+| `STY`    | Store the Y register.                           | `dp`, `dp,x`, `addr`                                                                                                                   |
+| `STZ`    | Store zero to memory.                           | `dp`, `dp,x`, `addr`, `addr,x`                                                                                                         |
+| `TRB`    | Test accumulator bits and reset them in memory. | `dp`, `addr`                                                                                                                           |
+| `TSB`    | Test accumulator bits and set them in memory.   | `dp`, `addr`                                                                                                                           |
+| `TAX`    | Transfer accumulator to X.                      | `implied`                                                                                                                              |
+| `TAY`    | Transfer accumulator to Y.                      | `implied`                                                                                                                              |
+| `TCD`    | Transfer accumulator to direct page register.   | `implied`                                                                                                                              |
+| `TCS`    | Transfer accumulator to stack pointer.          | `implied`                                                                                                                              |
+| `TDC`    | Transfer direct page register to accumulator.   | `implied`                                                                                                                              |
+| `TSC`    | Transfer stack pointer to accumulator.          | `implied`                                                                                                                              |
+| `TSX`    | Transfer stack pointer to X.                    | `implied`                                                                                                                              |
+| `TXA`    | Transfer X to accumulator.                      | `implied`                                                                                                                              |
+| `TXS`    | Transfer X to stack pointer.                    | `implied`                                                                                                                              |
+| `TXY`    | Transfer X to Y.                                | `implied`                                                                                                                              |
+| `TYA`    | Transfer Y to accumulator.                      | `implied`                                                                                                                              |
+| `TYX`    | Transfer Y to X.                                | `implied`                                                                                                                              |
+| `WAI`    | Wait for interrupt.                             | `implied`                                                                                                                              |
+| `WDM`    | Reserved (William D. Mensch) opcode.            | `#const`                                                                                                                               |
+| `XBA`    | Exchange the bytes of the accumulator.          | `implied`                                                                                                                              |
+| `XCE`    | Exchange carry and emulation flags.             | `implied`                                                                                                                              |
 
 ### SPC700 Instruction Catalog
 
 The generated catalog contains one machine-readable form for each opcode. The table below remains a compact reading guide; use the exported `spc700Specifications` for exact opcode, size, syntax, flow, and effect metadata.
 
-| Mnemonic | What it does | Accepted operand forms |
-| --- | --- | --- |
-| `MOV` | Move data between registers and memory. | `A,#const`, `A,dp`, `A,!addr`, `dp,A`, `!addr,A`, `A,(X)`, `dp,dp`, `dp,#const` |
-| `ADC` | Add with carry. | `A,#const`, `A,dp`, `A,!addr`, `dp,dp` |
-| `SBC` | Subtract with borrow. | `A,#const`, `A,dp`, `A,!addr` |
-| `CMP` | Compare. | `A,#const`, `A,dp`, `A,!addr` |
-| `AND` | Bitwise AND. | `A,#const`, `A,dp` |
-| `OR`  | Bitwise OR. | `A,#const`, `A,dp` |
-| `EOR` | Bitwise exclusive-OR. | `A,#const`, `A,dp` |
-| `INC` | Increment. | `A`, `dp` |
-| `DEC` | Decrement. | `A`, `dp` |
-| `ASL` | Arithmetic shift left. | `A`, `dp` |
-| `LSR` | Logical shift right. | `A`, `dp` |
-| `ROL` | Rotate left. | `A`, `dp` |
-| `ROR` | Rotate right. | `A`, `dp` |
-| `BRA`, `BEQ`, `BNE`, `BCS`, `BCC` | Branch on the named condition. | `label` |
-| `BVS`, `BVC`, `BMI`, `BPL` | Branch on the named condition. | `label` |
-| `CBNE` | Compare and branch if not equal. | `dp,label` |
-| `DBNZ` | Decrement and branch if not zero. | `dp,label` |
-| `JMP`  | Jump. | `!addr`, `[!addr+X]` |
-| `CALL` | Call subroutine. | `!addr` |
-| `RET`, `RETI`, `NOP` | Return or no operation. | `implied` |
-| `CLRC`, `SETC`, `CLRP`, `SETP` | Clear/set carry or direct-page flag. | `implied` |
-| `EI`, `DI`, `STOP` | Interrupt/processor control. | `implied` |
-| `PUSH`, `POP` | Transfer a register to/from the stack. | `A` (other fixture-backed registers are encoder-supported) |
+| Mnemonic                          | What it does                            | Accepted operand forms                                                          |
+| --------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------- |
+| `MOV`                             | Move data between registers and memory. | `A,#const`, `A,dp`, `A,!addr`, `dp,A`, `!addr,A`, `A,(X)`, `dp,dp`, `dp,#const` |
+| `ADC`                             | Add with carry.                         | `A,#const`, `A,dp`, `A,!addr`, `dp,dp`                                          |
+| `SBC`                             | Subtract with borrow.                   | `A,#const`, `A,dp`, `A,!addr`                                                   |
+| `CMP`                             | Compare.                                | `A,#const`, `A,dp`, `A,!addr`                                                   |
+| `AND`                             | Bitwise AND.                            | `A,#const`, `A,dp`                                                              |
+| `OR`                              | Bitwise OR.                             | `A,#const`, `A,dp`                                                              |
+| `EOR`                             | Bitwise exclusive-OR.                   | `A,#const`, `A,dp`                                                              |
+| `INC`                             | Increment.                              | `A`, `dp`                                                                       |
+| `DEC`                             | Decrement.                              | `A`, `dp`                                                                       |
+| `ASL`                             | Arithmetic shift left.                  | `A`, `dp`                                                                       |
+| `LSR`                             | Logical shift right.                    | `A`, `dp`                                                                       |
+| `ROL`                             | Rotate left.                            | `A`, `dp`                                                                       |
+| `ROR`                             | Rotate right.                           | `A`, `dp`                                                                       |
+| `BRA`, `BEQ`, `BNE`, `BCS`, `BCC` | Branch on the named condition.          | `label`                                                                         |
+| `BVS`, `BVC`, `BMI`, `BPL`        | Branch on the named condition.          | `label`                                                                         |
+| `CBNE`                            | Compare and branch if not equal.        | `dp,label`                                                                      |
+| `DBNZ`                            | Decrement and branch if not zero.       | `dp,label`                                                                      |
+| `JMP`                             | Jump.                                   | `!addr`, `[!addr+X]`                                                            |
+| `CALL`                            | Call subroutine.                        | `!addr`                                                                         |
+| `RET`, `RETI`, `NOP`              | Return or no operation.                 | `implied`                                                                       |
+| `CLRC`, `SETC`, `CLRP`, `SETP`    | Clear/set carry or direct-page flag.    | `implied`                                                                       |
+| `EI`, `DI`, `STOP`                | Interrupt/processor control.            | `implied`                                                                       |
+| `PUSH`, `POP`                     | Transfer a register to/from the stack.  | `A` (other fixture-backed registers are encoder-supported)                      |
 
 Numbered `BBS0`...`BBS7` and `BBC0`...`BBC7` bit branches have distinct opcode rows in the generated catalog.
 
@@ -1472,31 +1520,31 @@ RET RETI CLRP SETP CLRC SETC EI DI CLRV NOTC SLEEP STOP
 
 ### Super FX Instruction Catalog
 
-| Mnemonic group | What it does | Accepted operand forms |
-| --- | --- | --- |
-| `STOP`, `NOP`, `CACHE`, `LSR`, `ROL`, `LOOP` | Core implied operations | `implied` |
-| `ALT1`, `ALT2`, `ALT3` | Select alternate opcode family | `implied` |
-| `PLOT`, `SWAP`, `COLOR`, `NOT`, `MERGE`, `SBK` | Pixel/data operations | `implied` |
-| `SEX`, `ASR`, `ROR`, `LOB`, `FMULT`, `HIB` | Arithmetic/byte operations | `implied` |
-| `GETC`, `GETB`, `RPIX`, `CMODE`, `DIV2`, `LMULT` | ROM/pixel/arithmetic operations | `implied` |
-| `GETBH`, `RAMB`, `GETBL`, `ROMB`, `GETBS` | ROM/RAM bank and byte operations | `implied` |
-| `BRA`, `BGE`, `BLT`, `BNE`, `BEQ`, `BPL`, `BMI`, `BCC`, `BCS`, `BVC`, `BVS` | Relative branches | `label` |
-| `TO`, `WITH`, `FROM` | Select source/destination register | `Rn` |
-| `ADD`, `ADC`, `SUB` | Arithmetic on SReg | `Rn`, `#n` |
-| `SBC`, `CMP` | Arithmetic/compare on SReg | `Rn` |
-| `AND`, `BIC`, `OR`, `XOR`, `MULT`, `UMULT` | Logic and multiply | `Rn`, `#n` |
-| `JMP`, `LJMP` | Jump through register | `Rn` (`R8`-`R13`) |
-| `INC`, `DEC` | Change register | `Rn` (`R0`-`R14`) |
-| `LINK` | Set `R11` to `PBR:PC+n` | `#n` |
-| `STW`, `LDW`, `STB`, `LDB` | Word/byte RAM transfer | `(Rn)` |
-| `IBT` | Load signed byte | `Rn,#imm` |
-| `IWT` | Load word | `Rn,#imm` |
-| `LM`, `LMS` | Load register from RAM | `Rn,(addr)`, `Rn,(xx)` |
-| `SM`, `SMS` | Store register to RAM | `(addr),Rn`, `(xx),Rn` |
-| `LEA` | Load effective address | `Rn,addr` |
-| `MOVE` | Move register, immediate, or RAM value | `Rn,Rm`, `Rn,#imm`, `Rn,(addr)`, `(addr),Rn` |
-| `MOVES` | Move register and update flags | `Rn,Rm` |
-| `MOVEB`, `MOVEW` | Byte/word move through register pointer | `(Rn),Rm`, `Rn,(Rm)` |
+| Mnemonic group                                                              | What it does                            | Accepted operand forms                       |
+| --------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------- |
+| `STOP`, `NOP`, `CACHE`, `LSR`, `ROL`, `LOOP`                                | Core implied operations                 | `implied`                                    |
+| `ALT1`, `ALT2`, `ALT3`                                                      | Select alternate opcode family          | `implied`                                    |
+| `PLOT`, `SWAP`, `COLOR`, `NOT`, `MERGE`, `SBK`                              | Pixel/data operations                   | `implied`                                    |
+| `SEX`, `ASR`, `ROR`, `LOB`, `FMULT`, `HIB`                                  | Arithmetic/byte operations              | `implied`                                    |
+| `GETC`, `GETB`, `RPIX`, `CMODE`, `DIV2`, `LMULT`                            | ROM/pixel/arithmetic operations         | `implied`                                    |
+| `GETBH`, `RAMB`, `GETBL`, `ROMB`, `GETBS`                                   | ROM/RAM bank and byte operations        | `implied`                                    |
+| `BRA`, `BGE`, `BLT`, `BNE`, `BEQ`, `BPL`, `BMI`, `BCC`, `BCS`, `BVC`, `BVS` | Relative branches                       | `label`                                      |
+| `TO`, `WITH`, `FROM`                                                        | Select source/destination register      | `Rn`                                         |
+| `ADD`, `ADC`, `SUB`                                                         | Arithmetic on SReg                      | `Rn`, `#n`                                   |
+| `SBC`, `CMP`                                                                | Arithmetic/compare on SReg              | `Rn`                                         |
+| `AND`, `BIC`, `OR`, `XOR`, `MULT`, `UMULT`                                  | Logic and multiply                      | `Rn`, `#n`                                   |
+| `JMP`, `LJMP`                                                               | Jump through register                   | `Rn` (`R8`-`R13`)                            |
+| `INC`, `DEC`                                                                | Change register                         | `Rn` (`R0`-`R14`)                            |
+| `LINK`                                                                      | Set `R11` to `PBR:PC+n`                 | `#n`                                         |
+| `STW`, `LDW`, `STB`, `LDB`                                                  | Word/byte RAM transfer                  | `(Rn)`                                       |
+| `IBT`                                                                       | Load signed byte                        | `Rn,#imm`                                    |
+| `IWT`                                                                       | Load word                               | `Rn,#imm`                                    |
+| `LM`, `LMS`                                                                 | Load register from RAM                  | `Rn,(addr)`, `Rn,(xx)`                       |
+| `SM`, `SMS`                                                                 | Store register to RAM                   | `(addr),Rn`, `(xx),Rn`                       |
+| `LEA`                                                                       | Load effective address                  | `Rn,addr`                                    |
+| `MOVE`                                                                      | Move register, immediate, or RAM value  | `Rn,Rm`, `Rn,#imm`, `Rn,(addr)`, `(addr),Rn` |
+| `MOVES`                                                                     | Move register and update flags          | `Rn,Rm`                                      |
+| `MOVEB`, `MOVEW`                                                            | Byte/word move through register pointer | `(Rn),Rm`, `Rn,(Rm)`                         |
 
 The full 77-mnemonic list is:
 

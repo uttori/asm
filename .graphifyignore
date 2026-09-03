@@ -12,3 +12,17 @@ packages/vscode-extension/server/
 packages/vscode-extension/.vscode/
 packages/vscode-extension/*.vsix
 packages/language-server/out/
+
+# General Ignore
+node_modules/
+graphify-out/
+.pnpm-store/
+coverage/
+*.min.js
+*.min.css
+*.map
+pnpm-lock.yaml
+yarn.lock
+*.lock
+*.log
+.env*

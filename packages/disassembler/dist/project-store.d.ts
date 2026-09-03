@@ -8,7 +8,8 @@ import type { RomImage } from "./rom-image.js";
 export declare const canonicalJson: (value: unknown) => string;
 /**
  * Applies explicit one-way manifest migrations. Newer schema versions are refused.
- * v0 promotes `romHash`/`romSize` into `RomIdentity`; v1 only bumps `schemaVersion`.
+ * v0 promotes `romHash`/`romSize` into `RomIdentity`; v1 bumps `schemaVersion`.
+ * Missing current-schema shards are materialized as empty arrays while loading.
  * @param {unknown} input Parsed `analysis.json`.
  * @returns {AnalysisProjectManifest} Current-schema manifest.
  */

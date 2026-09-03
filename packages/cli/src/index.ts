@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { Assembler, PluginError } from "@uttori/asm-core";
+import { Assembler, PluginError, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 import {
   ANALYSIS_PROJECT_FORMAT,
@@ -10,10 +10,13 @@ import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   SOURCE_EXPORT_MANIFEST,
   RomImage,
+  canonicalJson,
   compareByteImages,
+  inspectRuntimeEvidence,
   loadAnalysisProject,
   loadSourceExportManifest,
   sourceExportSha256,
+  mergeRuntimeEvidence,
   validateAnalysisProject,
   validateSourceExportFiles,
   writeAnalysisProject,
@@ -31,16 +34,24 @@ import {
 } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, {
   SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR,
+  SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR,
   SNES_CPU_ADDRESS_SPACE,
   SNES_FILE_ADDRESS_SPACE,
   SNES_MAPPERS,
+  SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR,
   SNES_TARGET_ID,
+  SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR,
   analyzeSnes65816,
   createSnesAddressContext,
   detectSnesRom,
   exportSnes65816Source,
+  exportMesenLabels,
   identifySnesFileOffset,
   importDizRaw,
+  importMesen65816Trace,
+  importMesenLabels,
+  importMesenSnesCdl,
+  type MesenTraceCaptureMetadata,
   type SnesMapper,
 } from "@uttori/asm-plugin-snes";
 
@@ -48,7 +59,10 @@ export type CliCommand =
   | "analyze"
   | "assemble"
   | "disassemble"
+  | "evidence-import"
+  | "evidence-report"
   | "export"
+  | "mesen-labels-export"
   | "project-validate"
   | "verify-roundtrip";
 
@@ -61,12 +75,18 @@ export interface CliArguments {
   readonly target?: string;
   readonly architecture?: string;
   readonly baseImage?: string;
+  readonly debug: boolean;
+  readonly debugMap?: string;
   readonly includePaths: readonly string[];
   readonly pluginOptions: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly mapper?: SnesMapper;
   readonly headerSize?: 0 | 512;
   readonly dizraw?: string;
   readonly rom?: string;
+  readonly mesenCdl?: string;
+  readonly mesenTrace?: string;
+  readonly traceMetadata?: string;
+  readonly mesenLabels?: string;
   readonly entryPoints: readonly number[];
   readonly maxWorkItems?: number;
   readonly maxCallDepth?: number;
@@ -79,7 +99,10 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm assemble <input.asm> [output] [assemble-options]
   uttori-asm disassemble <rom> [project-directory] [project-options]
   uttori-asm analyze <project-directory> --rom <rom> [analysis-options]
+  uttori-asm evidence-import <project-directory> --rom <rom> [evidence-options]
+  uttori-asm evidence-report <project-directory> [report.json]
   uttori-asm export <project-directory> [source-directory] --rom <rom> [--force]
+  uttori-asm mesen-labels-export <project-directory> [labels.mlb] --rom <rom>
   uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
 
@@ -88,6 +111,10 @@ Project options:
   --header-size <0|512>
   --dizraw <path>              Import uncompressed DiztinGUIsh XML
   --rom <path>                 ROM to hash-check during project validation
+  --mesen-cdl <path>           Import verified MesenCE CDLv2 coverage
+  --mesen-trace <path>         Import MesenCE default 65816 text trace
+  --trace-metadata <path>      Required JSON identity sidecar for --mesen-trace
+  --mesen-labels <path>        Import MesenCE label text
   --entry <address>            Repeatable 65816 CPU entry point ($/0x/decimal)
   --max-work-items <count>     Deterministic analysis work limit
   --max-call-depth <count>     Bounded call-context depth
@@ -99,6 +126,8 @@ Assemble options:
   --target <target-id>
   --architecture <architecture-id>
   --base-image <path>
+  --debug                      Collect metadata and write <output>.debug.json
+  --debug-map <path>           Collect metadata and write the map at this path
   --include-path <path>        Repeatable
   --plugin-option <plugin:key=value>
   --verbose
@@ -140,7 +169,10 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     argv[0] === "analyze" ||
     argv[0] === "assemble" ||
     argv[0] === "disassemble" ||
+    argv[0] === "evidence-import" ||
+    argv[0] === "evidence-report" ||
     argv[0] === "export" ||
+    argv[0] === "mesen-labels-export" ||
     argv[0] === "project-validate" ||
     argv[0] === "verify-roundtrip"
   ) {
@@ -151,10 +183,16 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let target: string | undefined;
   let architecture: string | undefined;
   let baseImage: string | undefined;
+  let debugBuild = false;
+  let debugMap: string | undefined;
   let mapper: SnesMapper | undefined;
   let headerSize: 0 | 512 | undefined;
   let dizraw: string | undefined;
   let rom: string | undefined;
+  let mesenCdl: string | undefined;
+  let mesenTrace: string | undefined;
+  let traceMetadata: string | undefined;
+  let mesenLabels: string | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
   let maxCallDepth: number | undefined;
@@ -197,6 +235,10 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
       force = true;
       continue;
     }
+    if (flag === "--debug") {
+      debugBuild = true;
+      continue;
+    }
     const [value, consumedIndex] = requireValue(flag, inlineValue, index);
     index = consumedIndex;
     switch (flag) {
@@ -214,6 +256,10 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
         break;
       case "--base-image":
         baseImage = value;
+        break;
+      case "--debug-map":
+        debugBuild = true;
+        debugMap = value;
         break;
       case "--include-path":
         includePaths.push(value);
@@ -235,6 +281,18 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
         break;
       case "--rom":
         rom = value;
+        break;
+      case "--mesen-cdl":
+        mesenCdl = value;
+        break;
+      case "--mesen-trace":
+        mesenTrace = value;
+        break;
+      case "--trace-metadata":
+        traceMetadata = value;
+        break;
+      case "--mesen-labels":
+        mesenLabels = value;
         break;
       case "--entry": {
         const normalized = value.startsWith("$") ? `0x${value.slice(1)}` : value;
@@ -287,12 +345,18 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     target,
     architecture,
     baseImage,
+    debug: debugBuild,
+    debugMap,
     includePaths: Object.freeze(includePaths),
     pluginOptions: Object.freeze(pluginOptions),
     mapper,
     headerSize,
     dizraw,
     rom,
+    mesenCdl,
+    mesenTrace,
+    traceMetadata,
+    mesenLabels,
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
     maxCallDepth,
@@ -340,6 +404,7 @@ const emptyShards = (): AnalysisProjectShards => ({
   labels: [],
   comments: [],
   regions: [],
+  runtime: [],
   evidence: [],
   imports: [],
 });
@@ -429,7 +494,10 @@ const createAnalysisProject = (parsed: CliArguments, cwd: string): number => {
         addressSpaces: [
           { id: SNES_FILE_ADDRESS_SPACE, name: "ROM file offset", addressBits: 24, kind: "file" },
           { id: SNES_CPU_ADDRESS_SPACE, name: "SNES CPU bus", addressBits: 24, kind: "cpu" },
+          SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR,
+          SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR,
           SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR,
+          SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR,
         ],
       },
       shards,
@@ -468,6 +536,185 @@ const validateProject = (parsed: CliArguments, cwd: string): number => {
     return 0;
   } catch (error) {
     console.error(`Project validation failed: ${formatFailure(error)}`);
+    return 1;
+  }
+};
+
+/**
+ * Imports one or more offline MesenCE evidence artifacts into a verified native project.
+ * @param {CliArguments} parsed Parsed command-line arguments.
+ * @param {string} cwd Current working directory.
+ * @returns {number} Process exit code.
+ */
+const importProjectEvidence = (parsed: CliArguments, cwd: string): number => {
+  const directory = path.resolve(cwd, parsed.input!);
+  if (!parsed.rom) {
+    console.error("Evidence import failed: --rom is required so project identity can be verified.");
+    return 1;
+  }
+  if (!parsed.mesenCdl && !parsed.mesenTrace && !parsed.mesenLabels) {
+    console.error("Evidence import failed: provide --mesen-cdl, --mesen-trace, or --mesen-labels.");
+    return 1;
+  }
+  if (parsed.mesenTrace && !parsed.traceMetadata) {
+    console.error("Evidence import failed: --trace-metadata is required with --mesen-trace.");
+    return 1;
+  }
+  try {
+    const loaded = loadAnalysisProject(directory);
+    const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
+      headerSize: loaded.manifest.rom.headerSize,
+    });
+    validateAnalysisProject(directory, rom);
+    if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper as SnesMapper)) {
+      throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+    }
+    const mapper = loaded.manifest.mapping.mapper as SnesMapper;
+    let shards = loaded.shards;
+    let changed = false;
+    let conflictCount = 0;
+    let explanationCount = 0;
+    const reports: string[] = [];
+    const merge = (result: ReturnType<typeof importMesenSnesCdl>): void => {
+      const merged = mergeRuntimeEvidence(shards, result.batch);
+      shards = merged.shards;
+      changed ||= merged.changed;
+      conflictCount = merged.conflicts.length;
+      explanationCount = merged.explanations.length;
+      reports.push(
+        `${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported`,
+      );
+    };
+    const projectContext = (sourceName: string) => ({
+      sourceName,
+      projectRomContentSha256: loaded.manifest.rom.contentSha256,
+      projectMapper: mapper,
+    });
+    if (parsed.mesenCdl) {
+      const filename = path.resolve(cwd, parsed.mesenCdl);
+      merge(
+        importMesenSnesCdl(
+          fs.readFileSync(filename),
+          rom,
+          mapper,
+          projectContext(path.basename(filename)),
+        ),
+      );
+    }
+    if (parsed.mesenTrace) {
+      const filename = path.resolve(cwd, parsed.mesenTrace);
+      const metadata = JSON.parse(
+        fs.readFileSync(path.resolve(cwd, parsed.traceMetadata!), "utf8"),
+      ) as MesenTraceCaptureMetadata;
+      merge(
+        importMesen65816Trace(
+          fs.readFileSync(filename, "utf8"),
+          metadata,
+          rom,
+          mapper,
+          projectContext(path.basename(filename)),
+        ),
+      );
+    }
+    if (parsed.mesenLabels) {
+      const filename = path.resolve(cwd, parsed.mesenLabels);
+      merge(
+        importMesenLabels(
+          fs.readFileSync(filename, "utf8"),
+          rom,
+          mapper,
+          projectContext(path.basename(filename)),
+        ),
+      );
+    }
+    if (changed) {
+      const { shards: ignoredShards, ...manifest } = loaded.manifest;
+      void ignoredShards;
+      writeAnalysisProject(directory, { manifest, shards });
+    }
+    console.log(
+      `Success: ${changed ? "updated" : "no-op reimport for"} '${directory}'; ${conflictCount} conflict(s), ${explanationCount} explanation(s).`,
+    );
+    for (const report of reports) console.log(`Import: ${report}.`);
+    return 0;
+  } catch (error) {
+    console.error(`Evidence import failed: ${formatFailure(error)}`);
+    return 1;
+  }
+};
+
+/**
+ * Prints or writes deterministic runtime conflict and explanation diagnostics.
+ * @param {CliArguments} parsed Parsed command-line arguments.
+ * @param {string} cwd Current working directory.
+ * @returns {number} Process exit code.
+ */
+const reportProjectEvidence = (parsed: CliArguments, cwd: string): number => {
+  const directory = path.resolve(cwd, parsed.input!);
+  try {
+    const loaded = loadAnalysisProject(directory);
+    const inspection = inspectRuntimeEvidence(loaded.shards);
+    const text = canonicalJson({
+      runtimeRecords: loaded.shards.runtime.length,
+      conflicts: inspection.conflicts,
+      explanations: inspection.explanations,
+    });
+    if (parsed.output) {
+      const output = path.resolve(cwd, parsed.output);
+      fs.mkdirSync(path.dirname(output), { recursive: true });
+      fs.writeFileSync(output, text);
+      console.log(`Success: Evidence report written to '${output}'.`);
+    } else {
+      console.log(text.trimEnd());
+    }
+    return 0;
+  } catch (error) {
+    console.error(`Evidence report failed: ${formatFailure(error)}`);
+    return 1;
+  }
+};
+
+/**
+ * Exports native project labels and comments in MesenCE label-file syntax.
+ * @param {CliArguments} parsed Parsed command-line arguments.
+ * @param {string} cwd Current working directory.
+ * @returns {number} Process exit code.
+ */
+const exportProjectMesenLabels = (parsed: CliArguments, cwd: string): number => {
+  const directory = path.resolve(cwd, parsed.input!);
+  if (!parsed.rom) {
+    console.error(
+      "Mesen label export failed: --rom is required so project identity can be verified.",
+    );
+    return 1;
+  }
+  try {
+    const loaded = loadAnalysisProject(directory);
+    const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
+      headerSize: loaded.manifest.rom.headerSize,
+    });
+    validateAnalysisProject(directory, rom);
+    if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper as SnesMapper)) {
+      throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+    }
+    const output = parsed.output
+      ? path.resolve(cwd, parsed.output)
+      : defaultOutputPath(directory, ".mlb");
+    const result = exportMesenLabels(
+      loaded.shards.labels,
+      loaded.shards.comments,
+      rom,
+      loaded.manifest.mapping.mapper as SnesMapper,
+      path.basename(output),
+    );
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, result.text);
+    console.log(
+      `Success: Exported ${result.report.imported.labels ?? 0} MesenCE label row(s) to '${output}'; ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} loss item(s).`,
+    );
+    return 0;
+  } catch (error) {
+    console.error(`Mesen label export failed: ${formatFailure(error)}`);
     return 1;
   }
 };
@@ -656,7 +903,7 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
       architecture: loaded.architecture,
       targetOptions: loaded.targetOptions,
       baseImage,
-      collectSourceMetadata: false,
+      collectSourceMetadata: parsed.debug,
     });
     assembler.setIncludePaths([...new Set([path.dirname(inputFile), ...loaded.includePaths])]);
     assembler.setCurrentFile(inputFile);
@@ -675,8 +922,22 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
     const outputFile = parsed.output
       ? path.resolve(cwd, parsed.output)
       : defaultOutputPath(inputFile, extension);
-    fs.writeFileSync(outputFile, Buffer.from(assembler.getBinaryOutput()));
+    const output = assembler.getBinaryOutput();
+    fs.writeFileSync(outputFile, Buffer.from(output));
     console.log(`Success: Output written to '${outputFile}'.`);
+    if (parsed.debug) {
+      const debugMapFile = parsed.debugMap
+        ? path.resolve(cwd, parsed.debugMap)
+        : `${outputFile}.debug.json`;
+      const debugMap = createDebugMap({
+        target: loaded.target,
+        output,
+        mapping: assembler.addressToLineMapping,
+        sourceRoot: path.dirname(inputFile),
+      });
+      fs.writeFileSync(debugMapFile, canonicalDebugMapJson(debugMap));
+      console.log(`Debug map: '${debugMapFile}'.`);
+    }
     return 0;
   } catch (error) {
     console.error(`Compilation failed: ${formatFailure(error)}`);
@@ -792,8 +1053,11 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
   }
   const cwd = process.cwd();
   if (parsed.command === "disassemble") return createAnalysisProject(parsed, cwd);
+  if (parsed.command === "evidence-import") return importProjectEvidence(parsed, cwd);
+  if (parsed.command === "evidence-report") return reportProjectEvidence(parsed, cwd);
   if (parsed.command === "analyze") return analyzeProject(parsed, cwd);
   if (parsed.command === "export") return exportProjectSource(parsed, cwd);
+  if (parsed.command === "mesen-labels-export") return exportProjectMesenLabels(parsed, cwd);
   if (parsed.command === "project-validate") return validateProject(parsed, cwd);
   if (parsed.command === "verify-roundtrip") return verifyRoundTrip(parsed, cwd);
   return assemble(parsed, cwd);

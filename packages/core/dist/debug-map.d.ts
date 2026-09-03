@@ -1,0 +1,76 @@
+import type { AddressToLineMapping, SerializableAddressRange } from "./addressToLine.js";
+export declare const DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
+export declare const DEBUG_MAP_SCHEMA_VERSION = 1;
+export interface DebugMapSource {
+    readonly id: number;
+    readonly path: string;
+    readonly size: number;
+    readonly crc32: number;
+    readonly sha256: string;
+}
+export interface DebugMapRange extends Omit<SerializableAddressRange, "source"> {
+    readonly sourceId: number;
+}
+export interface DebugMap {
+    readonly format: typeof DEBUG_MAP_FORMAT;
+    readonly schemaVersion: typeof DEBUG_MAP_SCHEMA_VERSION;
+    readonly fingerprint: {
+        readonly algorithm: "sha256";
+        readonly value: string;
+    };
+    readonly target: string;
+    readonly output: {
+        readonly size: number;
+        readonly sha256: string;
+    };
+    readonly sources: readonly DebugMapSource[];
+    readonly ranges: readonly DebugMapRange[];
+}
+export interface CreateDebugMapOptions {
+    readonly target: string;
+    readonly output: Uint8Array;
+    readonly mapping: AddressToLineMapping;
+    /** Base directory used to make source paths portable. Defaults to the process cwd. */
+    readonly sourceRoot?: string;
+}
+/**
+ * Serializes a value with recursively sorted object keys.
+ * @param {unknown} value JSON-compatible value.
+ * @returns {string} Canonical newline-terminated JSON.
+ */
+export declare const canonicalDebugMapJson: (value: unknown) => string;
+/**
+ * Creates a deterministic debug map whose fingerprint covers every field except itself.
+ * @param {CreateDebugMapOptions} options Output and mapping inputs.
+ * @returns {DebugMap} Fingerprinted debug map.
+ */
+export declare const createDebugMap: (options: CreateDebugMapOptions) => DebugMap;
+/**
+ * Recomputes the content fingerprint and output hash for stale-map detection.
+ * @param {DebugMap} map Debug map to validate.
+ * @param {Uint8Array} output Optional exact output bytes.
+ * @returns {readonly string[]} Validation issues.
+ */
+export declare const validateDebugMap: (map: DebugMap, output?: Uint8Array) => readonly string[];
+/**
+ * Resolves a logical runtime address, falling back to an output offset for mirrors.
+ * @param {DebugMap} map Debug map.
+ * @param {string} addressSpace Address-space id.
+ * @param {number} address Logical address.
+ * @param {{ readonly architecture?: string; readonly outputOffset?: number }} options Filters and mirror identity.
+ * @returns {readonly DebugMapRange[]} Matching ranges.
+ */
+export declare const debugMapRangesForAddress: (map: DebugMap, addressSpace: string, address: number, options?: {
+    readonly architecture?: string;
+    readonly outputOffset?: number;
+}) => readonly DebugMapRange[];
+/**
+ * Resolves one-based source lines to all matching logical ranges.
+ * @param {DebugMap} map Debug map.
+ * @param {string} sourcePath Source path.
+ * @param {number} line One-based line.
+ * @param {string} architecture Optional architecture filter.
+ * @returns {readonly DebugMapRange[]} Matching logical ranges.
+ */
+export declare const debugMapRangesForSource: (map: DebugMap, sourcePath: string, line: number, architecture?: string) => readonly DebugMapRange[];
+//# sourceMappingURL=debug-map.d.ts.map

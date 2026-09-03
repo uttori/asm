@@ -24,6 +24,8 @@ export interface OutputWriterHost {
   syncWriteStarts(): void;
   incrementBytesWritten(num: number): void;
   beforeWrite?(logicalAddress: number, width: number): void;
+  /** Records one source-owned emitted byte for debug-map generation. */
+  recordSourceWrite?(logicalAddress: number, outputOffset: number): void;
   /** Whether structured tracing is active for this assembly session. */
   readonly isTracing: boolean;
   /** Optional structured trace hook invoked once per emitted byte. */
@@ -76,6 +78,9 @@ export class OutputWriterService {
     );
     this.host.beforeWrite?.(logicalAddress, 1);
     const outputOffset = this.toOutputOffset(logicalAddress);
+    if (this.host.canEmitBytes) {
+      this.host.recordSourceWrite?.(logicalAddress, outputOffset);
+    }
 
     // Emit tracing before the position advances so listeners see the exact byte
     // address that will be written for this stage.

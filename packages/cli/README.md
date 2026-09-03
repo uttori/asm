@@ -70,6 +70,38 @@ Editable `target-set` and `target-override` records in `analysis/control-flow.js
 
 ROM bytes are never copied into the project.
 
+## Offline Runtime Evidence
+
+Import stock MesenCE CDL, default 65816 trace text, and labels into an existing project:
+
+```sh
+uttori-asm evidence-import game.analysis --rom game.sfc --mesen-cdl game.cdl
+uttori-asm evidence-import game.analysis --rom game.sfc \
+  --mesen-trace game.trace --trace-metadata game.trace.json
+uttori-asm evidence-import game.analysis --rom game.sfc --mesen-labels game.mlb
+```
+
+Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. An identical reimport does not rewrite the project.
+
+MesenCE trace text has no embedded ROM fingerprint, so its required identity sidecar is explicit:
+
+```json
+{
+  "schemaVersion": 1,
+  "architecture": "snes.65816",
+  "romContentSha256": "<64 lowercase hex characters>",
+  "mapper": "lorom",
+  "mesenRevision": "<optional source revision>"
+}
+```
+
+Inspect retained contradictions and runtime-derived explanations, or export native labels for MesenCE:
+
+```sh
+uttori-asm evidence-report game.analysis evidence-report.json
+uttori-asm mesen-labels-export game.analysis game.mlb --rom game.sfc
+```
+
 ## Native Source Export
 
 Export analyzed bytes as deterministic native 65816 source, with conservative raw assets for
@@ -111,6 +143,8 @@ unsupported, ambiguous, conflicting, and unreached bytes remain lossless raw ass
 | `--target id`                      | Override the configured target                                    |
 | `--architecture id`                | Override the initial architecture                                 |
 | `--base-image path`                | Read and patch an existing binary image                           |
+| `--debug`                          | Collect source metadata and write `<output>.debug.json`           |
+| `--debug-map path`                 | Collect source metadata and write the debug map at `path`         |
 | `--include-path path`              | Add a source or binary lookup directory; repeatable               |
 | `--plugin-option plugin:key=value` | Override one plugin option; values are JSON-decoded when possible |
 | `--verbose`                        | Print the resolved plugins, target, and architecture              |
@@ -120,6 +154,8 @@ Examples:
 
 ```sh
 uttori-asm patch.asm patched.sfc --base-image clean.sfc
+
+uttori-asm main.asm build/main.sfc --debug-map build/main.debug.json
 
 uttori-asm packages/plugin-author/main.asm build/main.bin \
   --config packages/plugin-author/uttori-asm.config.json

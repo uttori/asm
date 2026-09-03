@@ -33,8 +33,23 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
         addressSpace: "rom.file",
         start: 0,
         end: 2,
-        classification: "data16",
+        classification: "asset",
         architecture: "fixture.architecture",
+        asset: {
+          codecId: "fixture.game.asset",
+          codecVersion: "2.1.0",
+          provider: { pluginId: "fixture.game-plugin", pluginVersion: "3.0.0" },
+          options: { count: 1 },
+          compression: {
+            codecId: "fixture.game.rle",
+            codecVersion: "1.0.0",
+            provider: { pluginId: "fixture.game-plugin", pluginVersion: "3.0.0" },
+            maximumSize: 2,
+            bankStart: 0,
+            bankEnd: 0x8000,
+            fillByte: 0xff,
+          },
+        },
         evidence: ["manual-1"],
       },
     ],
@@ -59,6 +74,7 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
         evidence: ["manual-1"],
       },
     ],
+    runtime: [],
     evidence: [
       {
         id: "manual-1",
@@ -107,6 +123,7 @@ test("analysis projects are deterministic shards without ROM bytes", async (t) =
       loaded.shards.regions.find((region) => region.id === "region-child")?.parentRegion,
       "region-parent",
     );
+    t.is(loaded.shards.annotations[0].asset?.codecId, "fixture.game.asset");
     t.throws(() => validateAnalysisProject(temporary, new RomImage(new Uint8Array(0x8000))), {
       message: /ROM identity mismatch/,
     });
@@ -121,6 +138,154 @@ test("analysis projects are deterministic shards without ROM bytes", async (t) =
     t.throws(() => writeAnalysisProject(temporary, forbidden), {
       message: /ROM byte payload/,
     });
+  } finally {
+    await fs.rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("analysis projects validate versioned plugin codec annotations", (t) => {
+  const rom = new RomImage(new Uint8Array(0x8000));
+  const base = projectFor(rom);
+  const withAnnotation = (annotation: AnalysisProject["shards"]["annotations"][number]) => ({
+    ...base,
+    shards: { ...base.shards, annotations: [annotation] },
+  });
+  t.throws(
+    () =>
+      writeAnalysisProject(
+        "/tmp/uttori-analysis-invalid-codec-id",
+        withAnnotation({
+          ...base.shards.annotations[0],
+          asset: { codecId: "bad id", codecVersion: "1" },
+        }),
+      ),
+    { message: /invalid codec id/ },
+  );
+  t.throws(
+    () =>
+      writeAnalysisProject(
+        "/tmp/uttori-analysis-invalid-codec-classification",
+        withAnnotation({ ...base.shards.annotations[0], classification: "data16" }),
+      ),
+    { message: /cannot attach an asset codec/ },
+  );
+  t.throws(
+    () =>
+      writeAnalysisProject(
+        "/tmp/uttori-analysis-invalid-compression-capacity",
+        withAnnotation({
+          ...base.shards.annotations[0],
+          asset: {
+            ...base.shards.annotations[0].asset!,
+            compression: {
+              codecId: "fixture.game.rle",
+              codecVersion: "1",
+              maximumSize: 3,
+            },
+          },
+        }),
+      ),
+    { message: /maximumSize must be within its range/ },
+  );
+  t.throws(
+    () =>
+      writeAnalysisProject(
+        "/tmp/uttori-analysis-invalid-codec-options",
+        withAnnotation({
+          ...base.shards.annotations[0],
+          asset: { ...base.shards.annotations[0].asset!, options: { invalid: Number.NaN } },
+        }),
+      ),
+    { message: /not a JSON-safe codec option/ },
+  );
+});
+
+test("analysis projects validate normalized runtime records and artifact identity", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-runtime-"));
+  try {
+    const rom = new RomImage(new Uint8Array(0x8000));
+    const base = projectFor(rom);
+    const evidence = {
+      id: "runtime-fixture",
+      source: "runtime" as const,
+      sourceId: "fixture",
+      confidence: "certain" as const,
+      artifact: {
+        format: "fixture",
+        sha256: "a".repeat(64),
+        romContentSha256: rom.identity.contentSha256,
+        mapper: "fixture",
+      },
+    };
+    const runtime = {
+      id: "runtime-execution",
+      kind: "runtime-execution" as const,
+      architecture: "fixture.architecture",
+      addressSpace: "rom.file",
+      address: 0,
+      fileOffset: 0,
+      size: 1,
+      opcode: 0xea,
+      count: 1,
+      evidence: [evidence.id],
+    };
+    const valid: AnalysisProject = {
+      ...base,
+      shards: {
+        ...base.shards,
+        runtime: [runtime],
+        evidence: [...base.shards.evidence, evidence],
+      },
+    };
+    writeAnalysisProject(temporary, valid);
+    t.is(loadAnalysisProject(temporary).shards.runtime.length, 1);
+    t.throws(
+      () =>
+        writeAnalysisProject(temporary, {
+          ...valid,
+          shards: { ...valid.shards, runtime: [{ ...runtime, count: 0 }] },
+        }),
+      { message: /observation count/ },
+    );
+    t.throws(
+      () =>
+        writeAnalysisProject(temporary, {
+          ...valid,
+          shards: { ...valid.shards, runtime: [{ ...runtime, fileOffset: rom.length }] },
+        }),
+      { message: /ROM file offset/ },
+    );
+    t.throws(
+      () =>
+        writeAnalysisProject(temporary, {
+          ...valid,
+          shards: {
+            ...valid.shards,
+            evidence: [
+              ...base.shards.evidence,
+              {
+                ...evidence,
+                artifact: { ...evidence.artifact, romContentSha256: "b".repeat(64) },
+              },
+            ],
+          },
+        }),
+      { message: /different ROM/ },
+    );
+    t.throws(
+      () =>
+        writeAnalysisProject(temporary, {
+          ...valid,
+          shards: {
+            ...valid.shards,
+            evidence: [
+              ...base.shards.evidence,
+              { ...evidence, artifact: { ...evidence.artifact, mapper: "other-mapper" } },
+            ],
+          },
+        }),
+      { message: /different mapper/ },
+    );
   } finally {
     await fs.rm(temporary, { recursive: true, force: true });
   }
@@ -160,6 +325,83 @@ test("analysis projects reject missing, cyclic, and non-containing region parent
       ),
     { message: /not contained/ },
   );
+});
+
+test("mixed-architecture records retain distinct validated address-space identities", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-address-spaces-"));
+  try {
+    const rom = new RomImage(new Uint8Array(0x8000));
+    const base = projectFor(rom);
+    const mixed: AnalysisProject = {
+      ...base,
+      manifest: {
+        ...base.manifest,
+        addressSpaces: [
+          ...base.manifest.addressSpaces,
+          { id: "snes.cpu", name: "SNES CPU", addressBits: 24, kind: "cpu" },
+          { id: "snes.spc700.aram", name: "SPC700 ARAM", addressBits: 16, kind: "memory" },
+          { id: "snes.superfx.rom", name: "SuperFX ROM", addressBits: 24, kind: "memory" },
+        ],
+      },
+      shards: {
+        ...base.shards,
+        labels: [
+          {
+            id: "label-cpu",
+            addressSpace: "snes.cpu",
+            address: 0x8000,
+            name: "CpuCode",
+            evidence: ["manual-1"],
+          },
+          {
+            id: "label-spc",
+            addressSpace: "snes.spc700.aram",
+            address: 0x8000,
+            name: "SpcCode",
+            evidence: ["manual-1"],
+          },
+          {
+            id: "label-superfx",
+            addressSpace: "snes.superfx.rom",
+            address: 0x8000,
+            name: "SuperFxCode",
+            evidence: ["manual-1"],
+          },
+        ],
+      },
+    };
+    writeAnalysisProject(temporary, mixed);
+    const loaded = loadAnalysisProject(temporary);
+    t.deepEqual(
+      loaded.shards.labels.map((label) => `${label.addressSpace}:${label.address}`),
+      ["snes.cpu:32768", "snes.spc700.aram:32768", "snes.superfx.rom:32768"],
+    );
+
+    t.throws(
+      () =>
+        writeAnalysisProject(temporary, {
+          ...mixed,
+          shards: {
+            ...mixed.shards,
+            labels: [{ ...mixed.shards.labels[0], addressSpace: "missing.space" }],
+          },
+        }),
+      { message: /unknown address space/ },
+    );
+    t.throws(
+      () =>
+        writeAnalysisProject(temporary, {
+          ...mixed,
+          manifest: {
+            ...mixed.manifest,
+            addressSpaces: [...mixed.manifest.addressSpaces, mixed.manifest.addressSpaces[0]],
+          },
+        }),
+      { message: /Duplicate analysis address-space/ },
+    );
+  } finally {
+    await fs.rm(temporary, { recursive: true, force: true });
+  }
 });
 
 test("manifest migrations are explicit and never downgrade newer schemas", async (t) => {

@@ -505,6 +505,12 @@ export declare class Assembler {
     shouldEndifCloseInnermostWhile(loopType?: "for" | "while", loopStartLine?: number, ifStartLine?: number): boolean;
     selectArchitecture(architecture: string, sourceAlias?: string): void;
     beforeWrite(logicalAddress: number, width: number): void;
+    /**
+     * Records one emitted byte against the active command source.
+     * @param {number} logicalAddress Logical byte address.
+     * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
+     */
+    recordSourceWrite(logicalAddress: number, outputOffset: number): void;
     dispose(): void;
     /**
      * Reads little endian.

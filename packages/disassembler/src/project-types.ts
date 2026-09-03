@@ -1,3 +1,4 @@
+import type { AssetValue } from "./asset-codec.js";
 import type { RomIdentity } from "./rom-image.js";
 
 /** Manifest `format` field for a native analysis project. */
@@ -50,6 +51,7 @@ export type ShardKind =
   | "labels"
   | "comments"
   | "regions"
+  | "runtime"
   | "evidence"
   | "imports";
 
@@ -86,6 +88,14 @@ export interface EvidenceRecord {
   readonly sourceId: string;
   readonly confidence: "certain" | "high" | "medium" | "low" | "unknown";
   readonly detail?: string;
+  /** Immutable identity of an imported evidence artifact and the ROM context it describes. */
+  readonly artifact?: {
+    readonly format: string;
+    readonly formatVersion?: string;
+    readonly sha256: string;
+    readonly romContentSha256: string;
+    readonly mapper?: string;
+  };
 }
 
 /**
@@ -111,6 +121,8 @@ export interface IntervalAnnotation {
     | "pointer32"
     | "graphics"
     | "music"
+    | "compressed"
+    | "asset"
     | "empty"
     | "text";
   readonly architecture: string;
@@ -133,7 +145,39 @@ export interface IntervalAnnotation {
    * `in` seeds analysis at `start`.
    */
   readonly points?: readonly ("in" | "out" | "end" | "read")[];
+  /** Version-pinned semantic codec supplied by core, a target, or a game plugin. */
+  readonly asset?: ProjectAssetCodecAnnotation;
   readonly evidence: readonly string[];
+}
+
+/** Stable plugin provenance for a codec implementation used by this project. */
+export interface ProjectCodecProvider {
+  readonly pluginId: string;
+  readonly pluginVersion: string;
+}
+
+/** Versioned codec reference stored without extracted or ROM byte payloads. */
+export interface ProjectCodecReference {
+  readonly codecId: string;
+  readonly codecVersion: string;
+  readonly provider?: ProjectCodecProvider;
+  readonly options?: AssetValue;
+}
+
+/** Optional recompression layer associated with a semantic asset annotation. */
+export interface ProjectCompressionReference extends ProjectCodecReference {
+  /** Maximum encoded bytes in the owning annotation range. */
+  readonly maximumSize?: number;
+  /** Optional half-open logical bank bounds; both must be present together. */
+  readonly bankStart?: number;
+  readonly bankEnd?: number;
+  /** Optional byte used to fill unused bytes after a shorter recompression. */
+  readonly fillByte?: number;
+}
+
+/** Persistent, merge-friendly declaration of an asset and optional compressor. */
+export interface ProjectAssetCodecAnnotation extends ProjectCodecReference {
+  readonly compression?: ProjectCompressionReference;
 }
 
 /** Named label at a single address. */
@@ -309,6 +353,75 @@ export type AnalysisRecord =
   | AnalysisTargetOverrideRecord
   | AnalysisTargetSetRecord;
 
+/** A scalar register or mode value captured from a runtime source. */
+export type RuntimeStateValue = string | number | boolean;
+
+interface RuntimeRecordBase {
+  readonly id: string;
+  readonly architecture: string;
+  /** Number of observations aggregated into this deterministic record. */
+  readonly count: number;
+  readonly evidence: readonly string[];
+}
+
+/** Aggregated observation that an instruction began execution at an address. */
+export interface RuntimeExecutionRecord extends RuntimeRecordBase {
+  readonly kind: "runtime-execution";
+  readonly addressSpace: string;
+  readonly address: number;
+  readonly fileOffset?: number;
+  readonly size?: number;
+  readonly opcode?: number;
+}
+
+/** Aggregated read or write performed by one instruction. */
+export interface RuntimeMemoryAccessRecord extends RuntimeRecordBase {
+  readonly kind: "runtime-memory-access";
+  readonly instructionAddressSpace: string;
+  readonly instructionAddress: number;
+  readonly accessedAddressSpace: string;
+  readonly accessedAddress: number;
+  readonly access: "read" | "write" | "read-write" | "unknown";
+  readonly width: number;
+  readonly value?: number;
+}
+
+/** Register and mode values observed immediately before an instruction executes. */
+export interface RuntimeCpuStateRecord extends RuntimeRecordBase {
+  readonly kind: "runtime-cpu-state";
+  readonly addressSpace: string;
+  readonly address: number;
+  readonly state: Readonly<Record<string, RuntimeStateValue>>;
+}
+
+/** Half-open aggregate coverage projected into a named project address space. */
+export interface RuntimeCoverageRecord extends RuntimeRecordBase {
+  readonly kind: "runtime-coverage";
+  readonly addressSpace: string;
+  readonly start: number;
+  readonly end: number;
+  readonly coverage: "executed" | "operand" | "read" | "written";
+}
+
+/** Observed control-flow destination, including a resolved indirect target. */
+export interface RuntimeControlTargetRecord extends RuntimeRecordBase {
+  readonly kind: "runtime-control-target";
+  readonly fromAddressSpace: string;
+  readonly fromAddress: number;
+  readonly toAddressSpace: string;
+  readonly toAddress: number;
+  readonly flowKind: string;
+  readonly indirect: boolean;
+}
+
+/** Normalized, emulator-neutral runtime fact stored independently from regenerated CFG output. */
+export type RuntimeEvidenceRecord =
+  | RuntimeExecutionRecord
+  | RuntimeMemoryAccessRecord
+  | RuntimeCpuStateRecord
+  | RuntimeCoverageRecord
+  | RuntimeControlTargetRecord;
+
 /** In-memory shard payload matching the on-disk `analysis/*.json` files. */
 export interface AnalysisProjectShards {
   readonly analysis: readonly AnalysisRecord[];
@@ -316,6 +429,7 @@ export interface AnalysisProjectShards {
   readonly labels: readonly ProjectLabel[];
   readonly comments: readonly ProjectComment[];
   readonly regions: readonly ProjectRegion[];
+  readonly runtime: readonly RuntimeEvidenceRecord[];
   readonly evidence: readonly EvidenceRecord[];
   readonly imports: readonly ImportReport[];
 }

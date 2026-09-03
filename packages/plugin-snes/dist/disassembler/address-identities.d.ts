@@ -1,9 +1,18 @@
+import type { AddressSpaceDescriptor } from "@uttori/asm-disassembler";
 import { type AddressSpaceContext } from "../target/address-space.js";
 import type { SnesMapper } from "./rom-header.js";
 /** Address space id for headerless ROM file offsets (`RomImage` content bytes). */
 export declare const SNES_FILE_ADDRESS_SPACE = "rom.file";
 /** Address space id for the 24-bit SNES CPU bus. */
 export declare const SNES_CPU_ADDRESS_SPACE = "snes.cpu";
+/** Address space id for Mesen-compatible physical 128 KiB SNES work RAM offsets. */
+export declare const SNES_WRAM_ADDRESS_SPACE = "snes.wram";
+/** Address space id for physical cartridge save-RAM offsets. */
+export declare const SNES_SRAM_ADDRESS_SPACE = "snes.sram";
+/** Native-project descriptor for the physical SNES work-RAM image. */
+export declare const SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR: AddressSpaceDescriptor;
+/** Native-project descriptor for physical cartridge save-RAM offsets. */
+export declare const SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR: AddressSpaceDescriptor;
 /**
  * Bidirectional identity of one ROM byte on the SNES CPU bus.
  * `address` is the queried CPU address; `canonicalCpuAddress` is the mapper's

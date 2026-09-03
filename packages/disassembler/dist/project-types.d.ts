@@ -1,3 +1,4 @@
+import type { AssetValue } from "./asset-codec.js";
 import type { RomIdentity } from "./rom-image.js";
 /** Manifest `format` field for a native analysis project. */
 export declare const ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
@@ -38,7 +39,7 @@ export interface ProjectMapping {
     readonly candidates: readonly MappingCandidate[];
 }
 /** On-disk shard filename kind matching `analysis/*.json`. */
-export type ShardKind = "analysis" | "annotations" | "labels" | "comments" | "regions" | "evidence" | "imports";
+export type ShardKind = "analysis" | "annotations" | "labels" | "comments" | "regions" | "runtime" | "evidence" | "imports";
 /** Manifest descriptor for one canonical JSON shard. */
 export interface ProjectShardDescriptor {
     readonly id: string;
@@ -70,6 +71,14 @@ export interface EvidenceRecord {
     readonly sourceId: string;
     readonly confidence: "certain" | "high" | "medium" | "low" | "unknown";
     readonly detail?: string;
+    /** Immutable identity of an imported evidence artifact and the ROM context it describes. */
+    readonly artifact?: {
+        readonly format: string;
+        readonly formatVersion?: string;
+        readonly sha256: string;
+        readonly romContentSha256: string;
+        readonly mapper?: string;
+    };
 }
 /**
  * Half-open classified interval. Data classifications block static decode;
@@ -81,7 +90,7 @@ export interface IntervalAnnotation {
     readonly start: number;
     /** Exclusive end. */
     readonly end: number;
-    readonly classification: "unreached" | "opcode" | "operand" | "data8" | "data16" | "data24" | "data32" | "pointer16" | "pointer24" | "pointer32" | "graphics" | "music" | "empty" | "text";
+    readonly classification: "unreached" | "opcode" | "operand" | "data8" | "data16" | "data24" | "data32" | "pointer16" | "pointer24" | "pointer32" | "graphics" | "music" | "compressed" | "asset" | "empty" | "text";
     readonly architecture: string;
     /**
      * Optional known CPU state overlay at this interval.
@@ -102,7 +111,35 @@ export interface IntervalAnnotation {
      * `in` seeds analysis at `start`.
      */
     readonly points?: readonly ("in" | "out" | "end" | "read")[];
+    /** Version-pinned semantic codec supplied by core, a target, or a game plugin. */
+    readonly asset?: ProjectAssetCodecAnnotation;
     readonly evidence: readonly string[];
+}
+/** Stable plugin provenance for a codec implementation used by this project. */
+export interface ProjectCodecProvider {
+    readonly pluginId: string;
+    readonly pluginVersion: string;
+}
+/** Versioned codec reference stored without extracted or ROM byte payloads. */
+export interface ProjectCodecReference {
+    readonly codecId: string;
+    readonly codecVersion: string;
+    readonly provider?: ProjectCodecProvider;
+    readonly options?: AssetValue;
+}
+/** Optional recompression layer associated with a semantic asset annotation. */
+export interface ProjectCompressionReference extends ProjectCodecReference {
+    /** Maximum encoded bytes in the owning annotation range. */
+    readonly maximumSize?: number;
+    /** Optional half-open logical bank bounds; both must be present together. */
+    readonly bankStart?: number;
+    readonly bankEnd?: number;
+    /** Optional byte used to fill unused bytes after a shorter recompression. */
+    readonly fillByte?: number;
+}
+/** Persistent, merge-friendly declaration of an asset and optional compressor. */
+export interface ProjectAssetCodecAnnotation extends ProjectCodecReference {
+    readonly compression?: ProjectCompressionReference;
 }
 /** Named label at a single address. */
 export interface ProjectLabel {
@@ -255,6 +292,62 @@ export interface AnalysisTargetSetRecord {
 }
 /** Discriminated analysis-shard record. */
 export type AnalysisRecord = AnalysisControlFlowNodeRecord | AnalysisControlFlowEdgeRecord | AnalysisFunctionRecord | AnalysisConflictRecord | AnalysisUnresolvedRecord | AnalysisSummaryRecord | AnalysisTargetOverrideRecord | AnalysisTargetSetRecord;
+/** A scalar register or mode value captured from a runtime source. */
+export type RuntimeStateValue = string | number | boolean;
+interface RuntimeRecordBase {
+    readonly id: string;
+    readonly architecture: string;
+    /** Number of observations aggregated into this deterministic record. */
+    readonly count: number;
+    readonly evidence: readonly string[];
+}
+/** Aggregated observation that an instruction began execution at an address. */
+export interface RuntimeExecutionRecord extends RuntimeRecordBase {
+    readonly kind: "runtime-execution";
+    readonly addressSpace: string;
+    readonly address: number;
+    readonly fileOffset?: number;
+    readonly size?: number;
+    readonly opcode?: number;
+}
+/** Aggregated read or write performed by one instruction. */
+export interface RuntimeMemoryAccessRecord extends RuntimeRecordBase {
+    readonly kind: "runtime-memory-access";
+    readonly instructionAddressSpace: string;
+    readonly instructionAddress: number;
+    readonly accessedAddressSpace: string;
+    readonly accessedAddress: number;
+    readonly access: "read" | "write" | "read-write" | "unknown";
+    readonly width: number;
+    readonly value?: number;
+}
+/** Register and mode values observed immediately before an instruction executes. */
+export interface RuntimeCpuStateRecord extends RuntimeRecordBase {
+    readonly kind: "runtime-cpu-state";
+    readonly addressSpace: string;
+    readonly address: number;
+    readonly state: Readonly<Record<string, RuntimeStateValue>>;
+}
+/** Half-open aggregate coverage projected into a named project address space. */
+export interface RuntimeCoverageRecord extends RuntimeRecordBase {
+    readonly kind: "runtime-coverage";
+    readonly addressSpace: string;
+    readonly start: number;
+    readonly end: number;
+    readonly coverage: "executed" | "operand" | "read" | "written";
+}
+/** Observed control-flow destination, including a resolved indirect target. */
+export interface RuntimeControlTargetRecord extends RuntimeRecordBase {
+    readonly kind: "runtime-control-target";
+    readonly fromAddressSpace: string;
+    readonly fromAddress: number;
+    readonly toAddressSpace: string;
+    readonly toAddress: number;
+    readonly flowKind: string;
+    readonly indirect: boolean;
+}
+/** Normalized, emulator-neutral runtime fact stored independently from regenerated CFG output. */
+export type RuntimeEvidenceRecord = RuntimeExecutionRecord | RuntimeMemoryAccessRecord | RuntimeCpuStateRecord | RuntimeCoverageRecord | RuntimeControlTargetRecord;
 /** In-memory shard payload matching the on-disk `analysis/*.json` files. */
 export interface AnalysisProjectShards {
     readonly analysis: readonly AnalysisRecord[];
@@ -262,6 +355,7 @@ export interface AnalysisProjectShards {
     readonly labels: readonly ProjectLabel[];
     readonly comments: readonly ProjectComment[];
     readonly regions: readonly ProjectRegion[];
+    readonly runtime: readonly RuntimeEvidenceRecord[];
     readonly evidence: readonly EvidenceRecord[];
     readonly imports: readonly ImportReport[];
 }
@@ -270,4 +364,5 @@ export interface AnalysisProject {
     readonly manifest: Omit<AnalysisProjectManifest, "shards">;
     readonly shards: AnalysisProjectShards;
 }
+export {};
 //# sourceMappingURL=project-types.d.ts.map

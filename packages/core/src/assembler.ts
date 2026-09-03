@@ -1573,6 +1573,25 @@ export class Assembler {
     );
   }
 
+  /**
+   * Records one emitted byte against the active command source.
+   * @param {number} logicalAddress Logical byte address.
+   * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
+   */
+  recordSourceWrite(logicalAddress: number, outputOffset: number): void {
+    if (!this.collectSourceMetadata) return;
+    const command = this.traceCommandStack.at(-1);
+    const target = this.environment.getTarget(this.targetId);
+    this.addressToLineMapping.includeByte(
+      command?.file ?? this.currentFile,
+      (command?.line ?? this.currentLine) + 1,
+      this.arch,
+      target?.addressSpace ?? "target.logical",
+      logicalAddress,
+      outputOffset,
+    );
+  }
+
   dispose(): void {
     if (this.sessionDisposed) return;
     this.sessionDisposed = true;
@@ -2533,17 +2552,13 @@ export class Assembler {
     }
 
     const traceListener = this.traceListener;
-    if (!traceListener) {
-      const lowered = this.commandLoweringService.lowerCommand(workingState);
-      this.dispatchLoweredNode(lowered);
-    } else {
-      const traceContext: TraceCommandContext = {
-        file: workingState.source.file,
-        line: workingState.source.line,
-        raw: workingState.source.raw,
-        normalized: workingState.command,
-      };
-
+    const traceContext: TraceCommandContext = {
+      file: workingState.source.file,
+      line: workingState.source.line,
+      raw: workingState.source.raw,
+      normalized: workingState.command,
+    };
+    if (traceListener) {
       traceListener({
         type: "command-start",
         stage: this.traceStage,
@@ -2553,17 +2568,19 @@ export class Assembler {
         addressWidth: this.addressWidth,
         outputOffset: this.outputWriter.toOutputOffset(startPC),
       });
+    }
 
-      // Nested directives can emit additional writes while this command is still
-      // active, so keep the current source context on a stack until dispatch ends.
-      this.traceCommandStack.push(traceContext);
-      try {
-        const lowered = this.commandLoweringService.lowerCommand(workingState);
-        this.dispatchLoweredNode(lowered);
-      } finally {
-        this.traceCommandStack.pop();
-      }
+    // Nested directives can emit additional writes while this command is still
+    // active, so keep the current source context on a stack until dispatch ends.
+    this.traceCommandStack.push(traceContext);
+    try {
+      const lowered = this.commandLoweringService.lowerCommand(workingState);
+      this.dispatchLoweredNode(lowered);
+    } finally {
+      this.traceCommandStack.pop();
+    }
 
+    if (traceListener) {
       const endPC = normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth);
       traceListener({
         type: "command-end",

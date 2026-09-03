@@ -12,6 +12,34 @@ Requires VS Code 1.128 or newer and implements the [Language Server Protocol 3.1
 - Target-filtered hover and completion from the active plugins, including bundled 65816 / SPC700 / Super FX support.
 - Signature help, semantic tokens, and cross-file rename for user-defined symbols.
 - **Uttori SNES** and **Uttori 65xx** language modes (status bar / Change Language Mode). SNES is the default for `.asm` and includes SPC700, Super FX, and mapper directives; 65xx is CPU-only.
+- Inline **Uttori ASM Replay Debugger** with source/instruction breakpoints, stepping, threads,
+  stack frames, registers, memory, and virtual disassembly source.
+
+## Replay Debugging
+
+Build an exact binary and debug map first:
+
+```sh
+uttori-asm main.asm build/rebuilt-content.sfc --debug
+```
+
+Then choose **Uttori ASM: Replay Debug** or add this launch configuration:
+
+```json
+{
+  "type": "uttori-asm",
+  "request": "launch",
+  "name": "Debug Uttori ASM (Replay)",
+  "program": "${workspaceFolder}/build/rebuilt-content.sfc",
+  "debugMap": "${workspaceFolder}/build/rebuilt-content.sfc.debug.json",
+  "sourceRoot": "${workspaceFolder}"
+}
+```
+
+The extension rejects stale maps whose binary identity does not match. Without a `replay` path it
+synthesizes a deterministic timeline from the mapped source ranges; optionally set `replay` to a
+versioned snapshot JSON file when testing a specific execution trace. The adapter runs inline in the
+extension host and has no emulator dependency.
 
 ## Commands
 

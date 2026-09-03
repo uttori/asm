@@ -11,6 +11,7 @@ const requirements = new Map<string, readonly string[]>([
     ["package.json", "src/index.ts", "dist/index.d.ts", "out/cli.mjs", "README.md"],
   ],
   ["@uttori/asm-core", ["package.json", "src/index.ts", "dist/index.d.ts"]],
+  ["@uttori/asm-debug-adapter", ["package.json", "src/index.ts", "dist/index.d.ts"]],
   ["@uttori/asm-disassembler", ["package.json", "src/index.ts", "dist/index.d.ts"]],
   [
     "@uttori/asm-plugin-loader-node",

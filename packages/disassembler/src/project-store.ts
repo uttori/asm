@@ -10,6 +10,7 @@ import {
   type AnalysisProjectManifest,
   type AnalysisProjectShards,
   type ProjectShardDescriptor,
+  type RuntimeEvidenceRecord,
 } from "./project-types.js";
 import type { RomImage } from "./rom-image.js";
 
@@ -19,6 +20,7 @@ const SHARD_PATHS: Readonly<Record<keyof AnalysisProjectShards, string>> = Objec
   labels: "analysis/labels.json",
   comments: "analysis/comments.json",
   regions: "analysis/regions.json",
+  runtime: "analysis/runtime.json",
   evidence: "analysis/evidence.json",
   imports: "analysis/imports.json",
 });
@@ -59,6 +61,19 @@ const assertSafeRelativePath = (relative: string): void => {
 const sortById = <T extends { readonly id: string }>(records: readonly T[]): readonly T[] =>
   [...records].sort((left, right) => left.id.localeCompare(right.id));
 
+const runtimeSortSpace = (record: RuntimeEvidenceRecord): string => {
+  if ("addressSpace" in record) return record.addressSpace;
+  if (record.kind === "runtime-memory-access") return record.instructionAddressSpace;
+  return record.fromAddressSpace;
+};
+
+const runtimeSortAddress = (record: RuntimeEvidenceRecord): number => {
+  if ("address" in record) return record.address;
+  if (record.kind === "runtime-coverage") return record.start;
+  if (record.kind === "runtime-memory-access") return record.instructionAddress;
+  return record.fromAddress;
+};
+
 const normalizedShards = (shards: AnalysisProjectShards): AnalysisProjectShards => ({
   analysis: [...shards.analysis].sort(
     (left, right) =>
@@ -93,6 +108,14 @@ const normalizedShards = (shards: AnalysisProjectShards): AnalysisProjectShards 
       left.end - right.end ||
       left.id.localeCompare(right.id),
   ),
+  runtime: [...shards.runtime].sort((left, right) => {
+    return (
+      runtimeSortSpace(left).localeCompare(runtimeSortSpace(right)) ||
+      runtimeSortAddress(left) - runtimeSortAddress(right) ||
+      left.kind.localeCompare(right.kind) ||
+      left.id.localeCompare(right.id)
+    );
+  }),
   evidence: sortById(shards.evidence),
   imports: sortById(shards.imports),
 });
@@ -109,6 +132,23 @@ const validateManifest = (manifest: AnalysisProjectManifest): void => {
   if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) throw new Error("Invalid ROM SHA-256.");
   if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
     throw new Error("Invalid ROM content SHA-256.");
+  }
+  const addressSpaceIds = new Set<string>();
+  for (const addressSpace of manifest.addressSpaces) {
+    if (addressSpace.id === "" || addressSpace.name === "") {
+      throw new Error("Analysis address spaces require non-empty ids and names.");
+    }
+    if (addressSpaceIds.has(addressSpace.id)) {
+      throw new Error(`Duplicate analysis address-space id '${addressSpace.id}'.`);
+    }
+    if (
+      !Number.isSafeInteger(addressSpace.addressBits) ||
+      addressSpace.addressBits <= 0 ||
+      addressSpace.addressBits > 53
+    ) {
+      throw new Error(`Analysis address space '${addressSpace.id}' has invalid address bits.`);
+    }
+    addressSpaceIds.add(addressSpace.id);
   }
   const shardIds = new Set<string>();
   const shardPaths = new Set<string>();
@@ -142,7 +182,79 @@ const assertNoRomPayload = (value: unknown, location: string): void => {
   }
 };
 
-const validateLoadedShards = (shards: AnalysisProjectShards): void => {
+const isStableId = (id: string): boolean => {
+  const isAlphaNumeric = (character: string): boolean => {
+    const code = character.charCodeAt(0);
+    return (
+      (code >= 0x30 && code <= 0x39) ||
+      (code >= 0x41 && code <= 0x5a) ||
+      (code >= 0x61 && code <= 0x7a)
+    );
+  };
+  if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1)!)) return false;
+  for (let index = 0; index < id.length; index++) {
+    const character = id[index];
+    if (!isAlphaNumeric(character) && !"._:/-".includes(character)) return false;
+  }
+  return true;
+};
+
+const assertCodecReference = (
+  reference: {
+    readonly codecId: string;
+    readonly codecVersion: string;
+    readonly provider?: { readonly pluginId: string; readonly pluginVersion: string };
+    readonly options?: unknown;
+  },
+  location: string,
+): void => {
+  if (typeof reference.codecId !== "string" || !isStableId(reference.codecId)) {
+    throw new Error(`${location} has an invalid codec id.`);
+  }
+  if (typeof reference.codecVersion !== "string" || reference.codecVersion.trim() === "") {
+    throw new Error(`${location} has no codec version.`);
+  }
+  if (reference.provider) {
+    if (
+      typeof reference.provider.pluginId !== "string" ||
+      !isStableId(reference.provider.pluginId)
+    ) {
+      throw new Error(`${location} has an invalid provider plugin id.`);
+    }
+    if (
+      typeof reference.provider.pluginVersion !== "string" ||
+      reference.provider.pluginVersion.trim() === ""
+    ) {
+      throw new Error(`${location} has no provider plugin version.`);
+    }
+  }
+  const visitJson = (value: unknown, current: string): void => {
+    if (
+      value === null ||
+      typeof value === "string" ||
+      typeof value === "boolean" ||
+      (typeof value === "number" && Number.isFinite(value))
+    ) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry, index) => visitJson(entry, `${current}[${index}]`));
+      return;
+    }
+    if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+      Object.entries(value).forEach(([key, entry]) => visitJson(entry, `${current}.${key}`));
+      return;
+    }
+    throw new Error(`${current} is not a JSON-safe codec option.`);
+  };
+  if (reference.options !== undefined) visitJson(reference.options, `${location} options`);
+};
+
+const validateLoadedShards = (
+  shards: AnalysisProjectShards,
+  project: Pick<AnalysisProjectManifest, "addressSpaces" | "mapping" | "rom">,
+): void => {
+  const { addressSpaces } = project;
   const evidenceIds = new Set(shards.evidence.map((record) => record.id));
   for (const [kind, records] of Object.entries(shards) as Array<
     [
@@ -168,6 +280,22 @@ const validateLoadedShards = (shards: AnalysisProjectShards): void => {
       }
     }
   }
+  for (const evidence of shards.evidence) {
+    if (!evidence.artifact) continue;
+    if (
+      evidence.artifact.format === "" ||
+      !/^[\da-f]{64}$/.test(evidence.artifact.sha256) ||
+      !/^[\da-f]{64}$/.test(evidence.artifact.romContentSha256)
+    ) {
+      throw new Error(`Evidence '${evidence.id}' has an invalid artifact identity.`);
+    }
+    if (evidence.artifact.romContentSha256 !== project.rom.contentSha256) {
+      throw new Error(`Evidence '${evidence.id}' belongs to a different ROM.`);
+    }
+    if (evidence.artifact.mapper && evidence.artifact.mapper !== project.mapping.mapper) {
+      throw new Error(`Evidence '${evidence.id}' belongs to a different mapper.`);
+    }
+  }
   for (const interval of [...shards.annotations, ...shards.regions]) {
     if (
       !Number.isSafeInteger(interval.start) ||
@@ -176,6 +304,112 @@ const validateLoadedShards = (shards: AnalysisProjectShards): void => {
       interval.end <= interval.start
     ) {
       throw new Error(`Analysis interval '${interval.id}' has an invalid half-open range.`);
+    }
+  }
+  for (const record of shards.runtime) {
+    if (!Number.isSafeInteger(record.count) || record.count <= 0) {
+      throw new Error(`Runtime record '${record.id}' has an invalid observation count.`);
+    }
+    if (record.kind === "runtime-coverage") {
+      if (
+        !Number.isSafeInteger(record.start) ||
+        !Number.isSafeInteger(record.end) ||
+        record.start < 0 ||
+        record.end <= record.start
+      ) {
+        throw new Error(`Runtime coverage '${record.id}' has an invalid half-open range.`);
+      }
+    }
+    if (record.kind === "runtime-memory-access") {
+      if (!Number.isSafeInteger(record.width) || record.width <= 0) {
+        throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
+      }
+      if (record.value !== undefined && (!Number.isSafeInteger(record.value) || record.value < 0)) {
+        throw new Error(`Runtime memory access '${record.id}' has an invalid value.`);
+      }
+    }
+    if (record.kind === "runtime-execution") {
+      if (record.size !== undefined && (!Number.isSafeInteger(record.size) || record.size <= 0)) {
+        throw new Error(`Runtime execution '${record.id}' has an invalid instruction size.`);
+      }
+      if (
+        record.opcode !== undefined &&
+        (!Number.isInteger(record.opcode) || record.opcode < 0 || record.opcode > 0xff)
+      ) {
+        throw new Error(`Runtime execution '${record.id}' has an invalid opcode.`);
+      }
+      if (
+        record.fileOffset !== undefined &&
+        (!Number.isSafeInteger(record.fileOffset) ||
+          record.fileOffset < 0 ||
+          record.fileOffset >= project.rom.contentSize)
+      ) {
+        throw new Error(`Runtime execution '${record.id}' has an invalid ROM file offset.`);
+      }
+    }
+    if (record.kind === "runtime-cpu-state") {
+      for (const [name, value] of Object.entries(record.state)) {
+        if (
+          name === "" ||
+          !["string", "boolean", "number"].includes(typeof value) ||
+          (typeof value === "number" && !Number.isFinite(value))
+        ) {
+          throw new Error(`Runtime CPU state '${record.id}' has invalid field '${name}'.`);
+        }
+      }
+    }
+  }
+  for (const annotation of shards.annotations) {
+    if (!annotation.asset) continue;
+    if (!["asset", "compressed", "graphics", "music", "text"].includes(annotation.classification)) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' cannot attach an asset codec to '${annotation.classification}'.`,
+      );
+    }
+    assertCodecReference(annotation.asset, `Analysis annotation '${annotation.id}' asset codec`);
+    const compression = annotation.asset.compression;
+    if (!compression) continue;
+    assertCodecReference(compression, `Analysis annotation '${annotation.id}' compression codec`);
+    const rangeSize = annotation.end - annotation.start;
+    const maximumSize = compression.maximumSize ?? rangeSize;
+    if (!Number.isSafeInteger(maximumSize) || maximumSize <= 0 || maximumSize > rangeSize) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' compression maximumSize must be within its range.`,
+      );
+    }
+    const hasBankStart = compression.bankStart !== undefined;
+    const hasBankEnd = compression.bankEnd !== undefined;
+    if (hasBankStart !== hasBankEnd) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' compression bank bounds must be supplied together.`,
+      );
+    }
+    const bankStart = compression.bankStart;
+    const bankEnd = compression.bankEnd;
+    if (
+      hasBankStart &&
+      (typeof bankStart !== "number" ||
+        typeof bankEnd !== "number" ||
+        !Number.isSafeInteger(bankStart) ||
+        !Number.isSafeInteger(bankEnd) ||
+        bankStart < 0 ||
+        bankEnd <= bankStart ||
+        annotation.start < bankStart ||
+        annotation.end > bankEnd)
+    ) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' has invalid compression bank bounds.`,
+      );
+    }
+    if (
+      compression.fillByte !== undefined &&
+      (!Number.isInteger(compression.fillByte) ||
+        compression.fillByte < 0 ||
+        compression.fillByte > 0xff)
+    ) {
+      throw new Error(
+        `Analysis annotation '${annotation.id}' has an invalid compression fillByte.`,
+      );
     }
   }
   const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
@@ -215,6 +449,80 @@ const validateLoadedShards = (shards: AnalysisProjectShards): void => {
       throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
     }
   }
+  const addressSpaceById = new Map(
+    addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace]),
+  );
+  const addressedRecords = [
+    ...shards.annotations,
+    ...shards.labels,
+    ...shards.comments,
+    ...shards.regions,
+    ...shards.runtime.filter(
+      (record): record is (typeof shards.runtime)[number] & { readonly addressSpace: string } =>
+        "addressSpace" in record,
+    ),
+    ...shards.analysis.filter(
+      (record): record is (typeof shards.analysis)[number] & { readonly addressSpace: string } =>
+        "addressSpace" in record,
+    ),
+  ];
+  for (const record of addressedRecords) {
+    const addressSpace = addressSpaceById.get(record.addressSpace);
+    if (!addressSpace) {
+      throw new Error(
+        `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`,
+      );
+    }
+    const maximum = 2 ** addressSpace.addressBits;
+    const addresses: number[] = [];
+    if ("start" in record) {
+      addresses.push(record.start, record.end - 1);
+    } else if ("address" in record) {
+      addresses.push(record.address);
+    } else {
+      if ("fromAddress" in record) addresses.push(record.fromAddress);
+      if ("toAddress" in record && record.toAddress !== undefined) addresses.push(record.toAddress);
+      if ("targets" in record) addresses.push(...record.targets);
+    }
+    if (
+      addresses.some(
+        (address) => !Number.isSafeInteger(address) || address < 0 || address >= maximum,
+      )
+    ) {
+      throw new Error(
+        `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`,
+      );
+    }
+  }
+  for (const record of shards.runtime) {
+    let addresses: ReadonlyArray<readonly [string, number]> = [];
+    if (record.kind === "runtime-memory-access") {
+      addresses = [
+        [record.instructionAddressSpace, record.instructionAddress],
+        [record.accessedAddressSpace, record.accessedAddress],
+      ];
+    } else if (record.kind === "runtime-control-target") {
+      addresses = [
+        [record.fromAddressSpace, record.fromAddress],
+        [record.toAddressSpace, record.toAddress],
+      ];
+    }
+    for (const [spaceId, address] of addresses) {
+      const addressSpace = addressSpaceById.get(spaceId);
+      if (!addressSpace) {
+        throw new Error(
+          `Runtime record '${record.id}' refers to unknown address space '${spaceId}'.`,
+        );
+      }
+      if (
+        !Number.isSafeInteger(address) ||
+        address < 0 ||
+        address >= 2 ** addressSpace.addressBits
+      ) {
+        throw new Error(`Runtime record '${record.id}' exceeds address space '${spaceId}'.`);
+      }
+    }
+  }
   assertNoRomPayload(shards, "shards");
 };
 
@@ -233,7 +541,8 @@ interface LegacyManifestV1 extends Omit<AnalysisProjectManifest, "schemaVersion"
 
 /**
  * Applies explicit one-way manifest migrations. Newer schema versions are refused.
- * v0 promotes `romHash`/`romSize` into `RomIdentity`; v1 only bumps `schemaVersion`.
+ * v0 promotes `romHash`/`romSize` into `RomIdentity`; v1 bumps `schemaVersion`.
+ * Missing current-schema shards are materialized as empty arrays while loading.
  * @param {unknown} input Parsed `analysis.json`.
  * @returns {AnalysisProjectManifest} Current-schema manifest.
  */
@@ -301,7 +610,7 @@ export const writeAnalysisProject = (
   project: AnalysisProject,
 ): AnalysisProjectManifest => {
   const shards = normalizedShards(project.shards);
-  validateLoadedShards(shards);
+  validateLoadedShards(shards, project.manifest);
   const descriptors: ProjectShardDescriptor[] = [];
   for (const [kind, relative] of Object.entries(SHARD_PATHS) as Array<
     [keyof AnalysisProjectShards, string]
@@ -367,7 +676,7 @@ export const loadAnalysisProject = (directory: string): LoadedAnalysisProject =>
     loaded[kind] ??= [];
   }
   const shards = loaded as unknown as AnalysisProjectShards;
-  validateLoadedShards(shards);
+  validateLoadedShards(shards, manifest);
   return { manifest, shards };
 };
 

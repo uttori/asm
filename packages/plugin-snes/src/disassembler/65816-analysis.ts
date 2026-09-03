@@ -71,9 +71,10 @@ const DATA_CLASSIFICATIONS = new Set<IntervalAnnotation["classification"]>([
   "pointer32",
   "graphics",
   "music",
+  "compressed",
+  "asset",
   "empty",
   "text",
-  "operand",
 ]);
 
 const EVIDENCE_RANK: Readonly<Record<EvidenceRecord["source"], number>> = {
@@ -507,10 +508,19 @@ export const analyzeSnes65816 = (
       );
     let state = base;
     const consumed: string[] = [];
-    for (const { annotation } of matching) {
-      const override = stateOverrideFor(annotation);
-      if (override) state = applyCpu65816StateOverride(state, override);
-      consumed.push(...annotation.evidence);
+    const ranks = [...new Set(matching.map((entry) => entry.rank))].sort((a, b) => a - b);
+    for (const rank of ranks) {
+      const ranked = matching.filter((entry) => entry.rank === rank);
+      const candidates = ranked
+        .map(({ annotation }) => {
+          const override = stateOverrideFor(annotation);
+          return override ? applyCpu65816StateOverride(state, override) : undefined;
+        })
+        .filter((candidate): candidate is Cpu65816AbstractState => candidate !== undefined);
+      if (candidates.length > 0) {
+        state = candidates.reduce((left, right) => joinCpu65816States(left, right));
+      }
+      consumed.push(...ranked.flatMap(({ annotation }) => annotation.evidence));
     }
     return { state, evidence: [...new Set(consumed)].sort() };
   };

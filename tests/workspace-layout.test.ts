@@ -7,6 +7,7 @@ const root = process.cwd();
 const packageDirectories = [
   "cli",
   "core",
+  "debug-adapter",
   "disassembler",
   "language-server",
   "plugin-65xx",

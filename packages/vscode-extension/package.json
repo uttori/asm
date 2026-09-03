@@ -26,6 +26,8 @@
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
+    "@uttori/asm-core": "1.0.0",
+    "@uttori/asm-debug-adapter": "1.0.0",
     "vscode-languageclient": "^10.1.0"
   },
   "devDependencies": {
@@ -119,6 +121,66 @@
           "65xx Assembly"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "uttori-asm",
+        "label": "Uttori ASM Replay Debugger",
+        "languages": [
+          "uttori-snes",
+          "uttori-65xx"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program",
+              "debugMap"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Exact binary fingerprinted by the debug map."
+              },
+              "debugMap": {
+                "type": "string",
+                "description": "Versioned Uttori ASM debug-map JSON file."
+              },
+              "sourceRoot": {
+                "type": "string",
+                "description": "Base directory for relative source paths in the debug map."
+              },
+              "replay": {
+                "type": "string",
+                "description": "Optional replay snapshot JSON. When omitted, a deterministic timeline is synthesized from the debug map."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "uttori-asm",
+            "request": "launch",
+            "name": "Debug Uttori ASM (Replay)",
+            "program": "${workspaceFolder}/build/rebuilt-content.sfc",
+            "debugMap": "${workspaceFolder}/build/rebuilt-content.sfc.debug.json",
+            "sourceRoot": "${workspaceFolder}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Uttori ASM: Replay Debug",
+            "description": "Debug a fingerprinted binary with the deterministic in-memory backend.",
+            "body": {
+              "type": "uttori-asm",
+              "request": "launch",
+              "name": "Debug Uttori ASM (Replay)",
+              "program": "^\"${workspaceFolder}/build/rebuilt-content.sfc\"",
+              "debugMap": "^\"${workspaceFolder}/build/rebuilt-content.sfc.debug.json\"",
+              "sourceRoot": "^\"${workspaceFolder}\""
+            }
+          }
+        ]
       }
     ],
     "grammars": [

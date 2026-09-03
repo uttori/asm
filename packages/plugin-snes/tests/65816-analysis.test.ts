@@ -169,6 +169,50 @@ test("manual state evidence outranks contradictory imported width metadata", (t)
   t.true(result.nodes[0]?.evidence.includes("manual:state"));
 });
 
+test("same-rank contradictory runtime width observations stay ambiguous", (t) => {
+  const result = analyzeSnes65816(loRom([0xa9, 0x34, 0x12, 0xdb], 0), "lorom", {
+    entryPoints: [{ id: "runtime-ranked", address: 0x008000, state: { e: 0 } }],
+    annotations: [
+      {
+        id: "runtime:m16",
+        addressSpace: "rom.file",
+        start: 0,
+        end: 1,
+        classification: "opcode",
+        architecture: "snes.65816",
+        state: { m: false },
+        evidence: ["runtime:state-a"],
+      },
+      {
+        id: "runtime:m8",
+        addressSpace: "rom.file",
+        start: 0,
+        end: 1,
+        classification: "opcode",
+        architecture: "snes.65816",
+        state: { m: true },
+        evidence: ["runtime:state-b"],
+      },
+    ],
+    evidence: [
+      {
+        id: "runtime:state-a",
+        source: "runtime",
+        sourceId: "fixture-a",
+        confidence: "certain",
+      },
+      {
+        id: "runtime:state-b",
+        source: "runtime",
+        sourceId: "fixture-b",
+        confidence: "certain",
+      },
+    ],
+  });
+  t.false(result.nodes.some((node) => node.address === 0x008000));
+  t.true(result.conflicts.some((conflict) => conflict.kind === "state-ambiguity"));
+});
+
 test("65816 abstract state distinguishes unknown and conflicting joins and tracks PHK/PLB", (t) => {
   const unknownState = unknownCpu65816State();
   const m8 = applyCpu65816StateOverride(unknownState, { e: 0, m: 1 });
