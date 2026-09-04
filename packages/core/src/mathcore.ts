@@ -19,13 +19,6 @@ import {
   measureInternalPhase,
 } from "./internal-instrumentation.js";
 
-let debug = (..._: unknown[]) => {};
-/* c8 ignore next 4 */
-try {
-  const { default: d } = await import("debug");
-  debug = d("MathCore");
-} catch {}
-
 type UserFunction = {
   readonly args: readonly string[];
   readonly content: string;
@@ -246,7 +239,6 @@ export class MathCore {
    * Initialize the math core.
    */
   reset(): void {
-    debug("reset");
     this.math_round = false;
     this.userFunctions.clear();
     this.clearExpressionCaches();
@@ -416,7 +408,6 @@ export class MathCore {
    * @returns {number} The result of the expression.
    */
   evaluateStringExpression(expression: string): number {
-    debug("math", expression);
     this.str = expression.trim();
 
     const rval = this.evalMath(0);
@@ -434,7 +425,6 @@ export class MathCore {
       throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
     }
 
-    debug(`math: ${expression} = ${rval}`);
     return rval;
   }
 
@@ -668,8 +658,6 @@ export class MathCore {
    * `undefined` when an inline function definition consumes the expression.
    */
   evalMath(depth: number = 0, stopChar?: string): number | undefined {
-    debug("evalMath", { depth, stopChar, scanIndex: this.scanIndex });
-
     let left: number | undefined;
 
     // If there's a function definition inline, parse and skip it.
@@ -687,7 +675,6 @@ export class MathCore {
     if (Number.isNaN(left)) {
       throw new Error(`Invalid number: ${left}`);
     }
-    debug("evalMath after getnum", left);
 
     // Skip whitespace after getnum instead of reallocating a trimmed remainder.
     this.skipWhitespace();
@@ -710,7 +697,6 @@ export class MathCore {
 
       // Peek for the next operator allowed at this precedence depth
       const op = this.peekNextOperator(this.operators, depth);
-      debug("evalMath peekNextOperator =", op);
 
       // No valid operator at this level => done with this level
       if (!op) break;
@@ -724,7 +710,6 @@ export class MathCore {
       if (right === undefined) {
         throw new Error(`Missing right operand for operator '${op}'.`);
       }
-      debug("evalMath right =", { right, op, left });
 
       // Apply the operation
       left = this.operators[op].operation(left, right);
@@ -737,7 +722,6 @@ export class MathCore {
     if (Number.isNaN(left)) {
       throw new Error(`Invalid number: ${left}`);
     }
-    debug("evalMath =", left);
     return left;
   }
 
@@ -751,7 +735,6 @@ export class MathCore {
     // Skip whitespace so operator matching is not confused by padding.
     this.skipWhitespace();
     if (this.scanIndex >= this.scanSource.length) {
-      debug("peekNextOperator = null");
       return null;
     }
 
@@ -765,10 +748,8 @@ export class MathCore {
       const twoOp = getOperator(operators, twoChars);
       if (twoOp) {
         if (twoOp.priority >= depth) {
-          debug("peekNextOperator twoChars", twoChars);
           return twoChars as BinaryOperator;
         }
-        debug("peekNextOperator = null");
         return null;
       }
     }
@@ -777,12 +758,10 @@ export class MathCore {
     const oneChar = this.scanSource[this.scanIndex];
     const oneOp = getOperator(operators, oneChar);
     if (oneOp && oneOp.priority >= depth) {
-      debug("peekNextOperator oneChar", oneChar);
       return oneChar as BinaryOperator;
     }
 
     // No operator matched
-    debug("peekNextOperator = null");
     return null;
   }
 
@@ -792,7 +771,6 @@ export class MathCore {
    * @returns {string} The substring of the string that matches the regular expression.
    */
   consumeWhile(regex: RegExp): string {
-    debug("consumeWhile", regex);
     const source = this.scanSource;
     const start = this.scanIndex;
     let index = start;
@@ -810,7 +788,6 @@ export class MathCore {
    * @returns {number} The number from the string.
    */
   getnum = (): number => {
-    debug("getnum:", this.scanIndex);
     this.skipWhitespace();
 
     // Process prefix operators FIRST - before any function call processing
@@ -883,7 +860,6 @@ export class MathCore {
     // If the next token is a function call: e.g. myFunc(1234)
     const fnName = this.scanFunctionCallName();
     if (fnName !== undefined) {
-      debug("getnum function:", fnName);
       const args: (number | string)[] = [];
       // scanFunctionCallName leaves the cursor on '('
       if (this.scanSource[this.scanIndex] === "(") {
@@ -898,7 +874,6 @@ export class MathCore {
               this.advance(1);
               this.skipWhitespace();
             }
-            debug("getnum while 1", this.scanIndex);
             if (this.remainingStartsWith(")")) {
               break;
             }
@@ -918,7 +893,6 @@ export class MathCore {
             }
 
             this.skipWhitespace();
-            debug("getnum while 2", this.scanIndex);
             if (this.remainingStartsWith(")")) {
               break;
             }
@@ -938,13 +912,11 @@ export class MathCore {
 
         // Now calculate the function result
         const result = this.callFunction(fnName, args);
-        debug("getnum result =", result);
 
         // Restore everything AFTER the function call
         this.scanSource = outerSource;
         this.scanIndex = afterCall;
         this.skipWhitespace();
-        debug("getnum leftover index =", this.scanIndex);
 
         // Apply sign and bitshift
         let value = sign * result;
@@ -966,7 +938,6 @@ export class MathCore {
         throw new Error("Empty parenthesized expression.");
       }
       value = nestedValue;
-      debug("getnum after paren", this.scanIndex);
       if (!this.remainingStartsWith(")")) {
         throw new Error("Mismatched parentheses.");
       }
@@ -1074,7 +1045,6 @@ export class MathCore {
    * @returns {string} The parsed string literal.
    */
   parseStringLiteral = (): string => {
-    debug("parseStringLiteral");
     // We know the cursor is on a double-quote; no escape sequences.
     const source = this.scanSource;
     const start = this.scanIndex + 1; // skip leading "
@@ -1132,7 +1102,6 @@ export class MathCore {
    * @returns {number} The result of the function call.
    */
   callFunction = (name: string, args: (number | string)[]): number => {
-    debug("callFunction", { name, args });
     // 1) Check user-defined
     if (this.userFunctions.has(name)) {
       return this.callUserFunction(name, args);
@@ -1167,8 +1136,6 @@ export class MathCore {
    * @returns {number} The result of the function call.
    */
   callUserFunction = (name: string, args: (number | string)[]): number => {
-    debug("callUserFunction", { name, args });
-
     // Get the function definition
     const func = this.userFunctions.get(name);
     if (!func) {
@@ -1197,12 +1164,9 @@ export class MathCore {
       content = content.replace(regex, replacement);
     }
 
-    debug("callUserFunction content =", content);
-
     // Parse the replaced content
     const result = this.math(content);
 
-    debug("callUserFunction =", result);
     return result;
   };
 
@@ -1213,7 +1177,6 @@ export class MathCore {
    * @returns {number} The result of the function call.
    */
   callBuiltInFunction = (name: string, args: (number | string)[]): number => {
-    debug("callBuiltInFunction", { name, args });
     switch (name) {
       // --- Trigonometric & Logarithmic functions ---
       case "sqrt":
@@ -1467,7 +1430,6 @@ export class MathCore {
    * Parses a function definition.
    */
   parseFunctionDefinition = (): void => {
-    debug("parseFunctionDefinition", this.str);
     // Remove line continuations (backslash-newline)
     const cleanDef = this.str.replace(/\\\s*\n/g, "");
     // Regex: function <name>([param1, param2, ...]) = <expression>
@@ -1492,7 +1454,6 @@ export class MathCore {
 
     // Store the user-defined function, overwriting any existing function of the same name
     this.userFunctions.set(name, { args: params, content });
-    debug("parseFunctionDefinition =", { args: params, content });
   };
 
   /**

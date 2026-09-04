@@ -83,7 +83,7 @@ uttori-asm evidence-import game.analysis --rom game.sfc \
   --instruction-trace instruction-trace.json
 ```
 
-Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. Native instruction traces preserve ordered pull chunks and producer-loss metadata; the CLI explicitly maps the debugger CPU-bus identity `snes.address-space` to the analysis project's `snes.cpu` identity without changing the source artifact hash. An identical reimport does not rewrite the project.
+Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. Native instruction traces preserve ordered pull chunks and producer-loss metadata and use the same `snes.cpu` CPU-bus identity as native analysis projects. An identical reimport does not rewrite the project.
 
 MesenCE trace text has no embedded ROM fingerprint, so its required identity sidecar is explicit:
 

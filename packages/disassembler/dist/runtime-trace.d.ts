@@ -31,8 +31,6 @@ export interface RuntimeInstructionTraceArtifact {
 export interface RuntimeInstructionTraceImportContext {
     readonly projectRomContentSha256: string;
     readonly sourceName: string;
-    /** Explicit recorder-to-project address-space renames applied only to normalized records. */
-    readonly addressSpaceAliases?: Readonly<Record<string, string>>;
 }
 /** Native evidence plus deterministic diagnostics produced without mutating a project. */
 export interface RuntimeInstructionTraceImportResult {

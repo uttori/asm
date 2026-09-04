@@ -16,7 +16,28 @@ The repository contains nine publishable packages:
 | `@uttori/asm-plugin-snes`           | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility                                   |
 | `@uttori/asm-plugin-65xx`           | NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 encoders with native and ca65-shaped raw targets |
 
-The private language-server, VS Code, and plugin-author workspaces compose those packages. The language server and extension use the same loaded plugin environment as command-line builds, so diagnostics and editor catalogs match the selected target.
+Three private application/example workspaces compose those packages:
+
+| Workspace                   | Purpose                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `packages/language-server`  | LSP 3.18 server using the same project environment and tooling catalogs as builds         |
+| `packages/vscode-extension` | VS Code client, analysis views, inline annotations, build commands, and debugger frontend |
+| `packages/plugin-author`    | Runnable third-party plugin example and configuration                                     |
+
+The current toolchain can:
+
+- assemble SNES and 65xx-family source with project-loaded or programmatic plugins;
+- create hash-verified native ROM-analysis projects without storing ROM bytes;
+- run bounded 65816 control-flow/state analysis and preserve conflicts instead of guessing;
+- import MesenCE CDL, trace, labels, and native debugger trace evidence;
+- edit classifications, entry/state facts, indirect targets, and labels with undo/redo-safe
+  project transactions;
+- inspect SNES BRR, tile, palette, and tilemap assets through reversible codecs;
+- export deterministic native source and verify a complete byte-identical rebuild;
+- provide cross-file language features, project outline, coverage, call-graph, and annotations in
+  VS Code; and
+- debug with deterministic replay or separately installed, manifest-verified ares and MesenCE
+  runtimes.
 
 ## Requirements & Installation
 
@@ -85,12 +106,13 @@ try {
 
 See the [SNES Plugin Reference](packages/plugin-snes/README.md) for target aliases, architectures, mapper directives, expressions, checksum options, and output behavior.
 
-## SNES Disassembly Quick Start
+## SNES Disassembly, Analysis, and Evidence
 
 Create and analyze a native, versioned project without copying ROM bytes into it:
 
 ```sh
 npm run cli -- disassemble game.sfc game.analysis
+npm run cli -- project-validate game.analysis --rom game.sfc
 npm run cli -- analyze game.analysis --rom game.sfc
 npm run cli -- export game.analysis game.source --rom game.sfc
 npm run cli -- verify-roundtrip game.source --rom game.sfc
@@ -98,7 +120,26 @@ npm run cli -- verify-roundtrip game.source --rom game.sfc
 
 Mapper detection stops for an explicit override when evidence is inconclusive. `.dizraw` can be
 imported during project creation, but native syntax/project output is the goal and Diz export is not
-supported. See the [CLI analysis workflow](packages/cli/README.md#analysis-projects),
+supported. Projects store a ROM identity plus independently hashed JSON shards for analysis,
+annotations, labels, comments, regions, runtime observations, evidence, and import reports; they do
+not copy the ROM.
+
+Import verified runtime evidence separately from static analysis:
+
+```sh
+npm run cli -- evidence-import game.analysis --rom game.sfc --mesen-cdl game.cdl
+npm run cli -- evidence-import game.analysis --rom game.sfc \
+  --mesen-trace game.trace --trace-metadata game.trace.json
+npm run cli -- evidence-import game.analysis --rom game.sfc --mesen-labels game.mlb
+npm run cli -- evidence-import game.analysis --rom game.sfc \
+  --instruction-trace instruction-trace.json
+npm run cli -- evidence-report game.analysis evidence-report.json
+```
+
+Every imported artifact is identity-checked before it can contribute facts. Static and observed
+facts remain separately attributed, contradictions remain visible, and source export falls back to
+lossless raw assets for bytes that analysis has not justified as code. See the
+[CLI analysis workflow](packages/cli/README.md#analysis-projects),
 [disassembler package](packages/disassembler/README.md), and
 [system architecture](docs/disassembler-architecture.md).
 
@@ -223,6 +264,71 @@ npm run vscode:package
 
 See the [extension README](packages/vscode-extension/README.md) for the end-user command and settings reference.
 
+## Debugging and Emulator Setup
+
+First produce a binary and its fingerprinted source map:
+
+```sh
+npm run cli -- main.asm build/main.sfc --debug
+```
+
+The generated `build/main.sfc.debug.json` records exact target, binary, source, architecture, and
+address-space identities. The debugger rejects stale binaries or edited mapped sources rather than
+guessing.
+
+Replay debugging needs no emulator. Install/build the VS Code extension, choose **Uttori ASM: Replay
+Debug**, and point `program` and `debugMap` at those two files:
+
+```json
+{
+  "type": "uttori-asm",
+  "request": "launch",
+  "name": "Debug Uttori ASM (Replay)",
+  "backend": "replay",
+  "program": "${workspaceFolder}/build/main.sfc",
+  "debugMap": "${workspaceFolder}/build/main.sfc.debug.json",
+  "sourceRoot": "${workspaceFolder}"
+}
+```
+
+Live debugging requires more than a stock emulator installation. Use a separately maintained build
+that implements the sidecar's bounded debugger hooks, keep its executable and required resources in
+one portable runtime directory, and supply the matching versioned manifest. Emulator code,
+runtimes, manifests, and ROMs are intentionally not bundled with the MIT packages or VSIX.
+
+For ares, select **Uttori ASM: Live ares Debug** and configure:
+
+```json
+{
+  "type": "uttori-asm",
+  "request": "launch",
+  "name": "Debug Uttori ASM (ares)",
+  "backend": "ares",
+  "program": "${workspaceFolder}/build/main.sfc",
+  "debugMap": "${workspaceFolder}/build/main.sfc.debug.json",
+  "sourceRoot": "${workspaceFolder}",
+  "runtimeManifest": "${workspaceFolder}/.debug/ares/ares-runtime-manifest.json",
+  "emulator": "${workspaceFolder}/.debug/ares/bin/ares-headless",
+  "runtimeDirectory": "${workspaceFolder}/.debug/ares"
+}
+```
+
+For MesenCE, use the same fields with `"backend": "mesence"`, its manifest, its patched `Mesen`
+executable, and its portable runtime directory. Live launches require a trusted workspace and an
+exact program/debug-map match. The runtime manifest hash-checks the emulator and every declared
+resource before launch.
+
+The ares backend currently exposes live 65816 control and bounded instruction tracing; MesenCE
+exposes negotiated 65816, SPC700, and Super FX threads and state, with unsupported operations left
+explicit. Use **Assembly: Start Runtime Trace Recording** and **Stop Runtime Trace Recording** to
+write a native trace artifact, then import it with the `--instruction-trace` command above.
+
+For configuration details and current capability limits, read the
+[VS Code debugger guide](packages/vscode-extension/README.md#live-debugging),
+[ares sidecar guide](packages/debug-sidecar-ares/README.md),
+[MesenCE sidecar guide](packages/debug-sidecar-mesence/README.md), and
+[ares runtime inventory](docs/ares-native-runtime-distribution.md).
+
 ## Compatibility Scope
 
 See the [SNES plugin README](packages/plugin-snes/README.md) for extensive SNES Asar compatibility and new additions.
@@ -261,6 +367,7 @@ There are explicit Chou and SMRPG benchmark commands, they will fail with setup 
 
 ```text
 fixtures/                     focused and production integration projects
+docs/                         architecture, performance, testing, and native-runtime guidance
 packages/cli/                 command-line host, executable bundle, and CLI tests
 packages/core/                architecture-neutral runtime and plugin API
 packages/debug-adapter/       emulator-neutral backend, framing, replay, conformance, and DAP
@@ -275,6 +382,7 @@ packages/plugin-snes/         SNES implementation and parity tests
 packages/vscode-extension/    VS Code client and bundled artifacts
 scripts/                      boundary, package, fixture, smoke, and benchmark gates
 tests/                        core, loader, LSP, and cross-package tests
+.github/workflows/            portable, external-fixture, and release-candidate CI gates
 ```
 
 ## Contributing
@@ -284,9 +392,6 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md), then read the
 [testing/release guide](docs/testing-and-release.md) for the part you are changing. The contributor
 guide includes a beginner glossary, package ownership, change recipes, security/license boundaries,
 performance-comment requirements, private-fixture rules, troubleshooting, and a review checklist.
-
-`DISASSEMBLER_ROADMAP_V2.md` is the progress source of truth for disassembler work and must be
-updated after every completed implementation step.
 
 ## License
 

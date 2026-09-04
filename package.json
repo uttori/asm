@@ -70,8 +70,7 @@
     "ci:external": "tsx scripts/ci-external.ts",
     "test:coverage": "cross-env NODE_ENV=test c8 ava",
     "test:serial": "cross-env NODE_ENV=test c8 ava --serial --concurrency=1",
-    "test:debug": "cross-env NODE_ENV=test DEBUG=Uttori* c8 ava --serial --concurrency=1",
-    "test:watch": "cross-env NODE_ENV=test DEBUG=Assembler,MathCore ava --watch",
+    "test:watch": "cross-env NODE_ENV=test ava --watch",
     "coverage:check": "c8 report --check-coverage --statements 92 --branches 88 --functions 93",
     "coverage:stable": "c8 report --check-coverage --per-file --statements 95 --branches 90 --functions 95 --include=packages/core/src/directives/namespace.ts --include=packages/core/src/services/macro-engine.ts --include=packages/core/src/lsp/position-lookup.ts --include=packages/core/src/lsp/workspace-index.ts",
     "coverage:verify": "npm run test:serial && npm run coverage:check && npm run coverage:stable",
@@ -99,7 +98,6 @@
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.10.0",
-    "@types/debug": "^4.1.13",
     "@types/node": "^26.4.1",
     "@types/semver": "^7.8.0",
     "@types/sinon": "^22.0.0",
@@ -117,9 +115,6 @@
     "sinon": "^22.1.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
-  },
-  "optionalDependencies": {
-    "debug": "^4.4.3"
   },
   "overrides": {
     "typescript": "^7.0.2",

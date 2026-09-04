@@ -28,12 +28,6 @@ const lowerSuperFxOperand = (
   return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
 };
 
-let debug = (..._: unknown[]) => {};
-try {
-  const { default: d } = await import("debug");
-  debug = d("ArchSuperFX");
-} catch {}
-
 const hasOwn = <T extends object>(obj: T, key: PropertyKey): key is keyof T =>
   Object.hasOwn(obj, key);
 
@@ -448,7 +442,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   public encode(words: string[]): boolean {
-    debug("asblock_superfx", words);
     if (words.length === 0) {
       return false;
     }
@@ -483,8 +476,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
     const secondLowered = loweredOperands[1];
     const operand = firstLowered?.expanded ?? "";
     const operandLength = firstLowered?.length ?? this.getOperandLength(operand);
-    debug("asblock_superfx opcode", opcode);
-    debug("asblock_superfx operand", operand);
 
     if (hasOwn(IMPLIED_OPCODES, opcode) || hasOwn(PREFIXED_OPCODES, opcode)) {
       if (operands.length !== 0) {
@@ -517,8 +508,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleSingleWordOpcode(opcode: string): boolean {
-    debug("handleSingleWordOpcode", opcode);
-
     if (hasOwn(IMPLIED_OPCODES, opcode)) {
       this.assembler.write1(IMPLIED_OPCODES[opcode]);
       return true;
@@ -549,8 +538,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
     operandLength: number,
     loweredOperand?: LoweredOperand,
   ): boolean {
-    debug("handleOneOperandOpcode", opcode, operand, operandLength);
-
     if (hasOwn(SHORT_BRANCH_OPCODES, opcode)) {
       const branchOpcode = SHORT_BRANCH_OPCODES[opcode];
       const sourceSpelling = (loweredOperand?.raw ?? operand).trim();
@@ -618,13 +605,10 @@ export class ArchSuperFX implements ArchitectureEncoder {
     leftLowered?: LoweredOperand,
     rightLowered?: LoweredOperand,
   ): boolean {
-    debug("handleTwoOperandOpcode", { opcode, leftOp, rightOp });
-
     const reg1r = this.resolveRegister(leftOp, leftLowered, "r");
     const reg1parr = this.resolveRegister(leftOp, leftLowered, "parr");
     const reg2r = this.resolveRegister(rightOp, rightLowered, "r");
     const reg2parr = this.resolveRegister(rightOp, rightLowered, "parr");
-    debug("handleTwoOperandOpcode", { reg1r, reg1parr, reg2r, reg2parr });
 
     if (reg1r !== null && reg2r !== null) {
       switch (opcode) {
@@ -890,7 +874,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
       }
       const regnum = this.assembler.operandResolver.getnum(str.slice(1));
       if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
-        debug("Invalid register number", str, regnum);
         return null;
       }
       return regnum;
@@ -938,7 +921,6 @@ export class ArchSuperFX implements ArchitectureEncoder {
    * @throws {Error} If the address is odd or outside the short-RAM window.
    */
   checkShortAddr(num: number): boolean {
-    debug("checkShortAddr", num);
     if (num % 2 !== 0 || num < 0 || num > 0x1fe) {
       throw this.assembler.diagnostics.error(
         `Invalid short address ${num}. Must be even and in range 0..0x1FE`,

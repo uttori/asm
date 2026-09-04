@@ -14,7 +14,7 @@ const artifact = (): RuntimeInstructionTraceArtifact => ({
   format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
   schemaVersion: RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
   architecture: "snes.65816",
-  addressSpace: "snes.address-space",
+  addressSpace: "snes.cpu",
   romContentSha256,
   producer: { id: "ares", revision: "runtime-trace-fixture" },
   chunks: [
@@ -65,11 +65,10 @@ test("runtime trace import aggregates execution only after an explicit merge", (
   t.false(mergeRuntimeEvidence(merged.shards, imported.batch).changed);
 });
 
-test("runtime trace import explicitly aliases recorder and project address spaces", (t) => {
+test("runtime trace import preserves the recorder address space", (t) => {
   const imported = importRuntimeInstructionTrace(artifact(), {
     projectRomContentSha256: romContentSha256,
     sourceName: "fixture.trace.json",
-    addressSpaceAliases: { "snes.address-space": "snes.cpu" },
   });
   t.true(imported.batch.runtime.length > 0);
   t.true(imported.batch.runtime.every(({ addressSpace }) => addressSpace === "snes.cpu"));

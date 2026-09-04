@@ -2,7 +2,7 @@ import type { DebugBackendConformanceFixture, ReplayScript } from "../../src/ind
 
 export const conformanceAddress = (value: number) => ({
   architecture: "snes.65816",
-  addressSpace: "snes.address-space",
+  addressSpace: "snes.cpu",
   address: value,
 });
 
@@ -28,7 +28,7 @@ const snapshot = (pc: number, accumulator: string) => ({
     20: [{ name: "A", value: "00", bits: 8 }],
   },
   memory: [
-    { addressSpace: "snes.address-space", start: 0x808000, bytes: [0xea, 0xea, 0xdb] },
+    { addressSpace: "snes.cpu", start: 0x808000, bytes: [0xea, 0xea, 0xdb] },
     { addressSpace: "spc.aram", start: 0x200, bytes: [0x00] },
   ],
   instructions: [
@@ -50,10 +50,10 @@ export const debugConformanceScript: ReplayScript = {
   architectures: [
     {
       architecture: "snes.65816",
-      addressSpaces: ["snes.address-space"],
-      memorySpaces: [{ addressSpace: "snes.address-space", sideEffectFree: true }],
+      addressSpaces: ["snes.cpu"],
+      memorySpaces: [{ addressSpace: "snes.cpu", sideEffectFree: true }],
       trace: {
-        addressSpaces: ["snes.address-space"],
+        addressSpaces: ["snes.cpu"],
         maxBufferedEvents: 65_536,
         maxBatchEvents: 4_096,
       },
@@ -105,8 +105,8 @@ export const debugConformanceFixture: DebugBackendConformanceFixture = {
   architectures: [
     {
       architecture: "snes.65816",
-      addressSpaces: ["snes.address-space"],
-      memorySpaces: [{ addressSpace: "snes.address-space", sideEffectFree: true }],
+      addressSpaces: ["snes.cpu"],
+      memorySpaces: [{ addressSpace: "snes.cpu", sideEffectFree: true }],
       capabilities: { step: true, registers: true, memory: true, breakpoints: true },
     },
     {
@@ -126,7 +126,7 @@ export const debugConformanceFixture: DebugBackendConformanceFixture = {
     },
   ],
   primaryArchitecture: "snes.65816",
-  primaryAddressSpace: "snes.address-space",
+  primaryAddressSpace: "snes.cpu",
   initialAddress: conformanceAddress(0x808000),
   steppedAddress: conformanceAddress(0x808001),
   breakpointAddress: conformanceAddress(0x808002),

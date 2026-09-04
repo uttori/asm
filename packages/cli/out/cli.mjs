@@ -65,9 +65,9 @@ var require_constants = __commonJS({
 var require_debug = __commonJS({
   "node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
-    var debug8 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
+    var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
-    module.exports = debug8;
+    module.exports = debug;
   }
 });
 
@@ -80,7 +80,7 @@ var require_re = __commonJS({
       MAX_SAFE_BUILD_LENGTH,
       MAX_LENGTH
     } = require_constants();
-    var debug8 = require_debug();
+    var debug = require_debug();
     exports = module.exports = {};
     var re = exports.re = [];
     var safeRe = exports.safeRe = [];
@@ -103,7 +103,7 @@ var require_re = __commonJS({
     var createToken = (name, value, isGlobal) => {
       const safe = makeSafeRegex(value);
       const index = R++;
-      debug8(name, index, value);
+      debug(name, index, value);
       t[name] = index;
       src[index] = value;
       safeSrc[index] = safe;
@@ -207,7 +207,7 @@ var require_identifiers = __commonJS({
 var require_semver = __commonJS({
   "node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
-    var debug8 = require_debug();
+    var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
     var { safeRe: re, t } = require_re();
     var parseOptions = require_parse_options();
@@ -241,7 +241,7 @@ var require_semver = __commonJS({
             `version is longer than ${MAX_LENGTH} characters`
           );
         }
-        debug8("SemVer", version, options);
+        debug("SemVer", version, options);
         this.options = options;
         this.loose = !!options.loose;
         this.includePrerelease = !!options.includePrerelease;
@@ -289,7 +289,7 @@ var require_semver = __commonJS({
         return this.version;
       }
       compare(other) {
-        debug8("SemVer.compare", this.version, this.options, other);
+        debug("SemVer.compare", this.version, this.options, other);
         if (!(other instanceof _SemVer)) {
           if (typeof other === "string" && other === this.version) {
             return 0;
@@ -340,7 +340,7 @@ var require_semver = __commonJS({
         do {
           const a = this.prerelease[i];
           const b = other.prerelease[i];
-          debug8("prerelease compare", i, a, b);
+          debug("prerelease compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -362,7 +362,7 @@ var require_semver = __commonJS({
         do {
           const a = this.build[i];
           const b = other.build[i];
-          debug8("build compare", i, a, b);
+          debug("build compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -1033,21 +1033,21 @@ var require_range = __commonJS({
         const loose = this.options.loose;
         const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
         range = range.replace(hr, hyphenReplace(this.options.includePrerelease));
-        debug8("hyphen replace", range);
+        debug("hyphen replace", range);
         range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
-        debug8("comparator trim", range);
+        debug("comparator trim", range);
         range = range.replace(re[t.TILDETRIM], tildeTrimReplace);
-        debug8("tilde trim", range);
+        debug("tilde trim", range);
         range = range.replace(re[t.CARETTRIM], caretTrimReplace);
-        debug8("caret trim", range);
+        debug("caret trim", range);
         let rangeList = range.split(" ").map((comp) => parseComparator(comp, this.options)).join(" ").split(/\s+/).map((comp) => replaceGTE0(comp, this.options));
         if (loose) {
           rangeList = rangeList.filter((comp) => {
-            debug8("loose invalid filter", comp, this.options);
+            debug("loose invalid filter", comp, this.options);
             return !!comp.match(re[t.COMPARATORLOOSE]);
           });
         }
-        debug8("range list", rangeList);
+        debug("range list", rangeList);
         const rangeMap = /* @__PURE__ */ new Map();
         const comparators = rangeList.map((comp) => new Comparator(comp, this.options));
         for (const comp of comparators) {
@@ -1102,7 +1102,7 @@ var require_range = __commonJS({
     var cache = new LRU();
     var parseOptions = require_parse_options();
     var Comparator = require_comparator();
-    var debug8 = require_debug();
+    var debug = require_debug();
     var SemVer = require_semver();
     var {
       safeRe: re,
@@ -1130,15 +1130,15 @@ var require_range = __commonJS({
     };
     var parseComparator = (comp, options) => {
       comp = comp.replace(re[t.BUILD], "");
-      debug8("comp", comp, options);
+      debug("comp", comp, options);
       comp = replaceCarets(comp, options);
-      debug8("caret", comp);
+      debug("caret", comp);
       comp = replaceTildes(comp, options);
-      debug8("tildes", comp);
+      debug("tildes", comp);
       comp = replaceXRanges(comp, options);
-      debug8("xrange", comp);
+      debug("xrange", comp);
       comp = replaceStars(comp, options);
-      debug8("stars", comp);
+      debug("stars", comp);
       return comp;
     };
     var isX = (id) => !id || id.toLowerCase() === "x" || id === "*";
@@ -1150,7 +1150,7 @@ var require_range = __commonJS({
       const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug8("tilde", comp, _, M, m, p, pr);
+        debug("tilde", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -1159,12 +1159,12 @@ var require_range = __commonJS({
         } else if (isX(p)) {
           ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
         } else if (pr) {
-          debug8("replaceTilde pr", pr);
+          debug("replaceTilde pr", pr);
           ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
         } else {
           ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
         }
-        debug8("tilde return", ret);
+        debug("tilde return", ret);
         return ret;
       });
     };
@@ -1172,11 +1172,11 @@ var require_range = __commonJS({
       return comp.trim().split(/\s+/).map((c) => replaceCaret(c, options)).join(" ");
     };
     var replaceCaret = (comp, options) => {
-      debug8("caret", comp, options);
+      debug("caret", comp, options);
       const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug8("caret", comp, _, M, m, p, pr);
+        debug("caret", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -1189,7 +1189,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
           }
         } else if (pr) {
-          debug8("replaceCaret pr", pr);
+          debug("replaceCaret pr", pr);
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p}-${pr} <${M}.${m}.${+p + 1}-0`;
@@ -1200,7 +1200,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p}-${pr} <${+M + 1}.0.0-0`;
           }
         } else {
-          debug8("no pr");
+          debug("no pr");
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p} <${M}.${m}.${+p + 1}-0`;
@@ -1211,19 +1211,19 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p} <${+M + 1}.0.0-0`;
           }
         }
-        debug8("caret return", ret);
+        debug("caret return", ret);
         return ret;
       });
     };
     var replaceXRanges = (comp, options) => {
-      debug8("replaceXRanges", comp, options);
+      debug("replaceXRanges", comp, options);
       return comp.split(/\s+/).map((c) => replaceXRange(c, options)).join(" ");
     };
     var replaceXRange = (comp, options) => {
       comp = comp.trim();
       const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
       return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
-        debug8("xRange", comp, ret, gtlt, M, m, p, pr);
+        debug("xRange", comp, ret, gtlt, M, m, p, pr);
         if (invalidXRangeOrder(M, m, p)) {
           return comp;
         }
@@ -1273,16 +1273,16 @@ var require_range = __commonJS({
         } else if (xp) {
           ret = `>=${M}.${m}.0${pr} <${M}.${+m + 1}.0-0`;
         }
-        debug8("xRange return", ret);
+        debug("xRange return", ret);
         return ret;
       });
     };
     var replaceStars = (comp, options) => {
-      debug8("replaceStars", comp, options);
+      debug("replaceStars", comp, options);
       return comp.trim().replace(re[t.STAR], "");
     };
     var replaceGTE0 = (comp, options) => {
-      debug8("replaceGTE0", comp, options);
+      debug("replaceGTE0", comp, options);
       return comp.trim().replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], "");
     };
     var hyphenReplace = (incPr) => ($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr) => {
@@ -1320,7 +1320,7 @@ var require_range = __commonJS({
       }
       if (version.prerelease.length && !options.includePrerelease) {
         for (let i = 0; i < set.length; i++) {
-          debug8(set[i].semver);
+          debug(set[i].semver);
           if (set[i].semver === Comparator.ANY) {
             continue;
           }
@@ -1357,7 +1357,7 @@ var require_comparator = __commonJS({
           }
         }
         comp = comp.trim().split(/\s+/).join(" ");
-        debug8("comparator", comp, options);
+        debug("comparator", comp, options);
         this.options = options;
         this.loose = !!options.loose;
         this.parse(comp);
@@ -1366,7 +1366,7 @@ var require_comparator = __commonJS({
         } else {
           this.value = this.operator + this.semver.version;
         }
-        debug8("comp", this);
+        debug("comp", this);
       }
       parse(comp) {
         const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
@@ -1388,7 +1388,7 @@ var require_comparator = __commonJS({
         return this.value;
       }
       test(version) {
-        debug8("Comparator.test", version, this.options.loose);
+        debug("Comparator.test", version, this.options.loose);
         if (this.semver === ANY || version === ANY) {
           return true;
         }
@@ -1445,7 +1445,7 @@ var require_comparator = __commonJS({
     var parseOptions = require_parse_options();
     var { safeRe: re, t } = require_re();
     var cmp = require_cmp();
-    var debug8 = require_debug();
+    var debug = require_debug();
     var SemVer = require_semver();
     var Range = require_range();
   }
@@ -2066,13 +2066,6 @@ var CRC32 = class _CRC32 {
 };
 
 // packages/core/src/addressToLine.ts
-var debug = (..._args) => {
-};
-try {
-  const { default: d } = await import("debug");
-  debug = d("AddressToLine");
-} catch {
-}
 var sourceIdentity = (filename) => {
   try {
     const data = fs.readFileSync(filename);
@@ -2081,8 +2074,7 @@ var sourceIdentity = (filename) => {
       size: data.length,
       sha256: createHash("sha256").update(data).digest("hex")
     };
-  } catch (error) {
-    debug(`Error reading file ${filename}:`, error);
+  } catch {
     return { crc: 0, size: 0, sha256: "" };
   }
 };
@@ -3297,13 +3289,6 @@ function splitCommaArguments(input) {
 }
 
 // packages/core/src/mathcore.ts
-var debug2 = (..._) => {
-};
-try {
-  const { default: d } = await import("debug");
-  debug2 = d("MathCore");
-} catch {
-}
 function escapeRegExp(value) {
   return value.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
 }
@@ -3457,7 +3442,6 @@ var MathCore = class {
    * Initialize the math core.
    */
   reset() {
-    debug2("reset");
     this.math_round = false;
     this.userFunctions.clear();
     this.clearExpressionCaches();
@@ -3605,7 +3589,6 @@ var MathCore = class {
    * @returns {number} The result of the expression.
    */
   evaluateStringExpression(expression) {
-    debug2("math", expression);
     this.str = expression.trim();
     const rval = this.evalMath(0);
     if (rval === void 0) {
@@ -3618,7 +3601,6 @@ var MathCore = class {
       }
       throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
     }
-    debug2(`math: ${expression} = ${rval}`);
     return rval;
   }
   /**
@@ -3828,7 +3810,6 @@ var MathCore = class {
    * `undefined` when an inline function definition consumes the expression.
    */
   evalMath(depth = 0, stopChar) {
-    debug2("evalMath", { depth, stopChar, scanIndex: this.scanIndex });
     let left;
     if (this.remainingStartsWith("function")) {
       this.parseFunctionDefinition();
@@ -3842,7 +3823,6 @@ var MathCore = class {
     if (Number.isNaN(left)) {
       throw new Error(`Invalid number: ${left}`);
     }
-    debug2("evalMath after getnum", left);
     this.skipWhitespace();
     while (this.scanIndex < this.scanSource.length) {
       this.skipWhitespace();
@@ -3854,7 +3834,6 @@ var MathCore = class {
         break;
       }
       const op2 = this.peekNextOperator(this.operators, depth);
-      debug2("evalMath peekNextOperator =", op2);
       if (!op2) break;
       this.advance(op2.length);
       this.skipWhitespace();
@@ -3862,7 +3841,6 @@ var MathCore = class {
       if (right === void 0) {
         throw new Error(`Missing right operand for operator '${op2}'.`);
       }
-      debug2("evalMath right =", { right, op: op2, left });
       left = this.operators[op2].operation(left, right);
     }
     if (this.math_round) {
@@ -3871,7 +3849,6 @@ var MathCore = class {
     if (Number.isNaN(left)) {
       throw new Error(`Invalid number: ${left}`);
     }
-    debug2("evalMath =", left);
     return left;
   }
   /**
@@ -3883,7 +3860,6 @@ var MathCore = class {
   peekNextOperator(operators, depth) {
     this.skipWhitespace();
     if (this.scanIndex >= this.scanSource.length) {
-      debug2("peekNextOperator = null");
       return null;
     }
     const remaining = this.scanSource.length - this.scanIndex;
@@ -3892,20 +3868,16 @@ var MathCore = class {
       const twoOp = getOperator(operators, twoChars);
       if (twoOp) {
         if (twoOp.priority >= depth) {
-          debug2("peekNextOperator twoChars", twoChars);
           return twoChars;
         }
-        debug2("peekNextOperator = null");
         return null;
       }
     }
     const oneChar = this.scanSource[this.scanIndex];
     const oneOp = getOperator(operators, oneChar);
     if (oneOp && oneOp.priority >= depth) {
-      debug2("peekNextOperator oneChar", oneChar);
       return oneChar;
     }
-    debug2("peekNextOperator = null");
     return null;
   }
   /**
@@ -3914,7 +3886,6 @@ var MathCore = class {
    * @returns {string} The substring of the string that matches the regular expression.
    */
   consumeWhile(regex) {
-    debug2("consumeWhile", regex);
     const source = this.scanSource;
     const start = this.scanIndex;
     let index = start;
@@ -3931,7 +3902,6 @@ var MathCore = class {
    * @returns {number} The number from the string.
    */
   getnum = () => {
-    debug2("getnum:", this.scanIndex);
     this.skipWhitespace();
     let applyBitshift = false;
     let sign = 1;
@@ -3984,7 +3954,6 @@ var MathCore = class {
     }
     const fnName = this.scanFunctionCallName();
     if (fnName !== void 0) {
-      debug2("getnum function:", fnName);
       const args = [];
       if (this.scanSource[this.scanIndex] === "(") {
         this.advance(1);
@@ -3996,7 +3965,6 @@ var MathCore = class {
               this.advance(1);
               this.skipWhitespace();
             }
-            debug2("getnum while 1", this.scanIndex);
             if (this.remainingStartsWith(")")) {
               break;
             }
@@ -4012,7 +3980,6 @@ var MathCore = class {
               args.push(val);
             }
             this.skipWhitespace();
-            debug2("getnum while 2", this.scanIndex);
             if (this.remainingStartsWith(")")) {
               break;
             }
@@ -4027,11 +3994,9 @@ var MathCore = class {
         const outerSource = this.scanSource;
         const afterCall = this.scanIndex + 1;
         const result = this.callFunction(fnName, args);
-        debug2("getnum result =", result);
         this.scanSource = outerSource;
         this.scanIndex = afterCall;
         this.skipWhitespace();
-        debug2("getnum leftover index =", this.scanIndex);
         let value2 = sign * result;
         if (applyBitshift) {
           value2 = value2 >>> 16;
@@ -4048,7 +4013,6 @@ var MathCore = class {
         throw new Error("Empty parenthesized expression.");
       }
       value = nestedValue;
-      debug2("getnum after paren", this.scanIndex);
       if (!this.remainingStartsWith(")")) {
         throw new Error("Mismatched parentheses.");
       }
@@ -4147,7 +4111,6 @@ var MathCore = class {
    * @returns {string} The parsed string literal.
    */
   parseStringLiteral = () => {
-    debug2("parseStringLiteral");
     const source = this.scanSource;
     const start = this.scanIndex + 1;
     let index = start;
@@ -4202,7 +4165,6 @@ var MathCore = class {
    * @returns {number} The result of the function call.
    */
   callFunction = (name, args) => {
-    debug2("callFunction", { name, args });
     if (this.userFunctions.has(name)) {
       return this.callUserFunction(name, args);
     }
@@ -4227,7 +4189,6 @@ var MathCore = class {
    * @returns {number} The result of the function call.
    */
   callUserFunction = (name, args) => {
-    debug2("callUserFunction", { name, args });
     const func = this.userFunctions.get(name);
     if (!func) {
       throw new Error(`User function '${name}' not found.`);
@@ -4243,9 +4204,7 @@ var MathCore = class {
       const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
       content = content.replace(regex, replacement);
     }
-    debug2("callUserFunction content =", content);
     const result = this.math(content);
-    debug2("callUserFunction =", result);
     return result;
   };
   /**
@@ -4255,7 +4214,6 @@ var MathCore = class {
    * @returns {number} The result of the function call.
    */
   callBuiltInFunction = (name, args) => {
-    debug2("callBuiltInFunction", { name, args });
     switch (name) {
       // --- Trigonometric & Logarithmic functions ---
       case "sqrt":
@@ -4499,7 +4457,6 @@ var MathCore = class {
    * Parses a function definition.
    */
   parseFunctionDefinition = () => {
-    debug2("parseFunctionDefinition", this.str);
     const cleanDef = this.str.replace(/\\\s*\n/g, "");
     const regex = /^function\s+(\w+)(?:\(([\s\w,]*)\))?\s*=\s*(.+)$/;
     const match = cleanDef.match(regex);
@@ -4512,7 +4469,6 @@ var MathCore = class {
     const params = paramsStr ? paramsStr.split(",").map((p) => p.trim()).filter((p) => p.length > 0) : [];
     this.str = this.str.substring(match[0].length).trim();
     this.userFunctions.set(name, { args: params, content });
-    debug2("parseFunctionDefinition =", { args: params, content });
   };
   /**
    * Gets host.
@@ -4549,13 +4505,6 @@ function parseOperandSyntax(operand) {
 }
 
 // packages/core/src/operand-resolver.ts
-var debug3 = (..._) => {
-};
-try {
-  const { default: d } = await import("debug");
-  debug3 = d("OperandResolver");
-} catch {
-}
 var OperandResolver = class {
   constructor(deps) {
     this.deps = deps;
@@ -4650,7 +4599,6 @@ var OperandResolver = class {
    * @returns {number} The result.
    */
   determineValueLength(value) {
-    debug3("determineValueLength", value);
     if (typeof value !== "string" && typeof value !== "number") {
       throw new Error(`Invalid value type for length determination: ${typeof value}`);
     }
@@ -4690,7 +4638,6 @@ var OperandResolver = class {
    * @returns {string} The result.
    */
   tryResolveLabelInOperand(operand) {
-    debug3("tryResolveLabelInOperand", operand);
     if (operand.startsWith("#")) {
       const inner = operand.substring(1).trim();
       if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
@@ -4737,7 +4684,6 @@ var OperandResolver = class {
    * @returns {number} The result.
    */
   getnum(operand) {
-    debug3("getnum", operand);
     if (typeof operand !== "string") {
       return this.getnumFromNode(operand);
     }
@@ -4762,7 +4708,6 @@ var OperandResolver = class {
         return this.deps.evaluateMath(operand);
       } catch (error) {
         if (this.deps.shouldDeferExpressionEvaluation()) {
-          debug3("function expression deferred until final pass", { operand, error });
           return 0;
         }
         throw error;
@@ -4792,8 +4737,6 @@ var OperandResolver = class {
       return this.deps.evaluateMath(operand);
     } catch (error) {
       if (this.deps.shouldDeferExpressionEvaluation()) {
-        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-        debug3("expression deferred until final pass", { operand, error: errorMessage });
         return 0;
       }
       throw error;
@@ -4824,8 +4767,6 @@ var OperandResolver = class {
           return this.deps.evaluateMath(operand);
         } catch (error) {
           if (this.deps.shouldDeferExpressionEvaluation()) {
-            const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-            debug3("expression node deferred until final pass", { operand, error: errorMessage });
             return 0;
           }
           throw error;
@@ -4857,7 +4798,6 @@ var OperandResolver = class {
    * @returns {ExpandedOperand} The result.
    */
   expandOperand(operand) {
-    debug3("expandOperand", operand);
     const raw = operand.trim();
     const syntax = parseOperandSyntax(raw);
     if (!operand) {
@@ -4872,7 +4812,6 @@ var OperandResolver = class {
     try {
       expanded = this.deps.resolveDefines(expanded);
     } catch (error) {
-      debug3("expandOperand not a define", error);
     }
     if (this.deps.isStructReference(expanded)) {
       expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
@@ -4886,7 +4825,6 @@ var OperandResolver = class {
           expectedLength = this.determineValueLength(value);
           expanded = "#$" + value.toString(16).toUpperCase();
         } catch (error) {
-          debug3("failed to evaluate immediate expression", inner, error);
         }
       } else if (inner.startsWith("$")) {
         expectedLength = this.determineValueLength(inner.substring(1));
@@ -4896,7 +4834,6 @@ var OperandResolver = class {
           expectedLength = this.determineValueLength(value);
           expanded = "#$" + value.toString(16).toUpperCase();
         } catch (error) {
-          debug3("failed to evaluate immediate expression", inner, error);
         }
       }
     } else if (expanded.includes(",")) {
@@ -4922,7 +4859,6 @@ var OperandResolver = class {
           expectedLength = this.determineValueLength(result);
         }
       } catch (error) {
-        debug3("math evaluation skipped for expression", expanded, error);
       }
     }
     return { raw, expanded, length: expectedLength, syntax };
@@ -10934,13 +10870,6 @@ var PluginSessionStateStore = class {
 };
 
 // packages/core/src/assembler.ts
-var debug4 = (..._args) => {
-};
-try {
-  const { default: d } = await import("debug");
-  debug4 = d("Assembler");
-} catch {
-}
 var TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
 var Assembler = class _Assembler {
   /** The current logical target address. */
@@ -12495,7 +12424,6 @@ var Assembler = class _Assembler {
    * @param {number} length The length of the section to fill.
    */
   fillOutputBytes(start, value, length) {
-    debug4("fillOutputBytes", start, value, length);
     for (let i = 0; i < length; i++) {
       this.outputBytes[start + i] = value & 255;
     }
@@ -12610,8 +12538,6 @@ var Assembler = class _Assembler {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   asblock_pick(input) {
-    debug4("asblock_pick", Array.isArray(input) ? input : input.words);
-    debug4("asblock_pick arch", this.arch);
     const words = Array.isArray(input) ? input : input.words;
     const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
     if (!this.inMacroDefinition && this.tryHandleCharacterMapping(raw)) {
@@ -12815,7 +12741,6 @@ var Assembler = class _Assembler {
     }
     if (!this.inMacroDefinition && state.words.length === 3 && state.words[1] === "=" && (state.words[0].startsWith("'") || state.words[0].startsWith('"'))) {
       setCommandKind(state, "characterMapping");
-      debug4("handleCharacterMapping", state.words);
       this.directiveRuntime.handleCharacterMapping(state.words);
       return "handled";
     }
@@ -12869,14 +12794,6 @@ var Assembler = class _Assembler {
    * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
    */
   processCommand(command, preprocessed = false) {
-    debug4(
-      "processCommand",
-      { command },
-      this.currentTargetAddress,
-      "/",
-      this.currentTargetAddress.toString(16),
-      `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`
-    );
     if (command.trim() === "") {
       return;
     }
@@ -13011,8 +12928,6 @@ var Assembler = class _Assembler {
         bytesWritten: endPC - startPC
       });
     }
-    const commandSize = normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth) - startPC;
-    debug4("processCommand bytes written", commandSize);
     if (this.collectSourceMetadata) {
       this.addAddressToLine(
         normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth)
@@ -13041,15 +12956,12 @@ var Assembler = class _Assembler {
   dispatchLoweredNode(lowered) {
     if (lowered.kind === "directive") {
       const loweredCommand = lowered.command;
-      const handledDirective = this.directiveRegistry.dispatch(
+      this.directiveRegistry.dispatch(
         lowered.keyword,
         lowered.words,
         lowered.source.raw,
         loweredCommand
       );
-      if (!handledDirective && lowered.keyword) {
-        debug4("\u{1F4A5} assembler dispatchLoweredNode unknown directive", lowered.keyword);
-      }
       return;
     }
     let instruction = lowered;
@@ -13059,10 +12971,7 @@ var Assembler = class _Assembler {
         instruction = refreshed;
       }
     }
-    const wasOpcode = this.asblock_pick(instruction);
-    if (!wasOpcode) {
-      debug4("\u{1F4A5} assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
-    }
+    this.asblock_pick(instruction);
   }
   /**
    * Parses a function definition of the form:
@@ -13071,7 +12980,6 @@ var Assembler = class _Assembler {
    * @param {string} defLine - The function definition line.
    */
   parseFunctionDefinition(defLine) {
-    debug4("parseFunctionDefinition", defLine);
     this.mathCore.str = defLine;
     this.mathCore.parseFunctionDefinition();
     const functionName = defLine.match(/^function\s+([_a-z]\w*)\s*\(/i)?.[1];
@@ -13096,7 +13004,6 @@ var Assembler = class _Assembler {
    * @returns {number} The result of the expression.
    */
   evaluateRangeExpression(expr) {
-    debug4("assemlber evaluateRangeExpression", expr);
     const resolvedExpr = this.resolveExpressionInput(expr);
     if (isReferenceExpressionNode(resolvedExpr)) {
       return this.evaluateReferenceExpressionNode(resolvedExpr, true);
@@ -13123,12 +13030,10 @@ var Assembler = class _Assembler {
    * @returns {boolean} True if the expression is true, false otherwise.
    */
   evaluateExpression(expression) {
-    debug4("evaluateExpression", expression);
     let resolvedExpr;
     let result;
     try {
       resolvedExpr = this.resolveExpressionInput(expression);
-      debug4("evaluateExpression resolvedExpr", resolvedExpr);
       result = isReferenceExpressionNode(resolvedExpr) ? this.evaluateReferenceExpressionNode(resolvedExpr) : this.mathCore.math(resolvedExpr);
     } catch (e) {
       const originalExpr = typeof expression === "string" ? expression : renderExpressionNode(expression);
@@ -13137,7 +13042,6 @@ var Assembler = class _Assembler {
         `Error evaluating expression "${originalExpr}" (resolved to "${resolvedText}"): ${e instanceof Error ? e.message : JSON.stringify(e)}`
       );
     }
-    debug4("evaluateExpression result", result, "=>", result !== 0);
     return result !== 0;
   }
   /**
@@ -13338,7 +13242,6 @@ var Assembler = class _Assembler {
     if (input !== "+" && input !== "-" && input !== "?+" && input !== "?-") {
       return void 0;
     }
-    debug4(`resolvedefines handling relative label: ${input}`);
     try {
       switch (input) {
         case "+":
@@ -13354,12 +13257,8 @@ var Assembler = class _Assembler {
       }
     } catch (error) {
       if (!this.enforceResolvedLabels) {
-        debug4("resolvedefines stage does not enforce labels, returning placeholder");
         return "$0000";
       }
-      debug4(
-        `resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`
-      );
       throw error;
     }
   }
@@ -13372,7 +13271,6 @@ var Assembler = class _Assembler {
     if (!input.startsWith("!") || input.includes(" ") || input.includes("=") || input.includes("{")) {
       return void 0;
     }
-    debug4("resolvedefines direct variable reference", input);
     const varName = input.substring(1);
     return this.lookupDefineValue(varName);
   }
@@ -13386,9 +13284,7 @@ var Assembler = class _Assembler {
     if (!prefixMatch) {
       return void 0;
     }
-    const prefix = prefixMatch[1];
     const labelName = prefixMatch[2];
-    debug4("resolvedefines macro label found with prefix", { prefix, labelName });
     return this.symbolScope.getLabelValue(labelName, false).toString();
   }
   /**
@@ -13401,16 +13297,13 @@ var Assembler = class _Assembler {
     if (!isBareLabelReference(input)) {
       return void 0;
     }
-    debug4("resolvedefines checking if input is a label reference", input);
     const labelValue = this.symbolScope.tryGetLabelValue(input, false);
     if (labelValue === void 0) {
       if (this.isDefinitionCollectionStage) {
         return "0";
       }
-      debug4("resolvedefines not a label, continuing");
       return void 0;
     }
-    debug4("resolvedefines labelValue", labelValue);
     return labelValue.toString();
   }
   /**
@@ -13419,9 +13312,7 @@ var Assembler = class _Assembler {
    * @returns {string} The string with defines resolved.
    */
   resolvedefines(input) {
-    debug4("resolvedefines", { input });
     if (!input) {
-      debug4("resolvedefines input is empty, returning empty string");
       return "";
     }
     let result = "";
@@ -13431,13 +13322,11 @@ var Assembler = class _Assembler {
       return resolvedRelativeLabel;
     }
     if (input.includes("!=")) {
-      debug4("resolvedefines != operator found in", input);
       const parts = input.split("!=");
       const resolvedParts = parts.map((part) => this.resolvedefines(part.trim()));
       return resolvedParts.join("!=");
     }
     if ((input.startsWith("sizeof(") || input.startsWith("objectsize(")) && input.endsWith(")")) {
-      debug4("resolvedefines sizeof found, skipping", input);
       return input;
     }
     const resolvedDirectDefine = this.tryResolveDirectDefineReference(input);
@@ -13455,15 +13344,12 @@ var Assembler = class _Assembler {
     while (index < input.length) {
       const char = input[index];
       if (char === "\\" && input[index + 1] === "\\") {
-        debug4("resolvedefines double slash", input);
         result += "\\";
         index += 2;
       } else if (char === "\\" && input[index + 1] === "!") {
-        debug4("resolvedefines \\!define", input);
         result += "!";
         index += 2;
       } else if (char === "!") {
-        debug4("resolvedefines !define", input);
         let defineName = "";
         index++;
         if (input[index] === "{") {
@@ -13479,12 +13365,10 @@ var Assembler = class _Assembler {
           if (braces !== 0) throw new Error("Error: Mismatched braces in define name.");
           index++;
           defineName = this.resolvedefines(unprocessedName);
-          debug4("resolvedefines !define defineName", defineName);
         } else {
           while (index < input.length && /\w/.test(input[index])) {
             defineName += input[index++];
           }
-          debug4("resolvedefines !define defineName", defineName);
         }
         if (defineName === "") {
           result += "!";
@@ -13501,7 +13385,6 @@ var Assembler = class _Assembler {
         index++;
       }
     }
-    debug4("resolvedefines result =", { result });
     return result;
   }
   /**
@@ -13509,7 +13392,6 @@ var Assembler = class _Assembler {
    * @param {AssemblyStageName} stage The stage.
    */
   activateStage(stage) {
-    debug4("\u{1F3C1} activateStage", stage);
     this.syncActiveStageExecutionState(stage);
     if (stage === "resolveLayout") {
       this.forwardLabels = {};
@@ -13559,7 +13441,6 @@ var Assembler = class _Assembler {
    * @param {string} filename - The filename to set.
    */
   setCurrentFile(filename) {
-    debug4("setCurrentFile", filename);
     this.currentFile = filename;
     this.currentLine = 0;
     this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
@@ -13832,28 +13713,12 @@ var Assembler = class _Assembler {
    * @param {number} [length] The length of the block to write.
    */
   writeOutputBytes(start, value, length = 1) {
-    debug4("writeOutputBytes", { start, value, length });
     if (typeof start !== "number" || typeof value !== "number" || typeof length !== "number") {
       throw new Error("writeOutputBytes requires a number for start, value, and length");
     }
-    if (value > 255) {
-      debug4("writeOutputBytes \u{1F4A5} value must be less than 0xFF", value);
-    }
-    debug4(
-      "writeOutputBytes before this.outputBytes.length",
-      this.outputBytes.length,
-      "/",
-      this.outputBytes.length.toString(16)
-    );
     for (let i = 0; i < length; i++) {
       this.outputBytes[start + i] = value & 255;
     }
-    debug4(
-      "writeOutputBytes after this.outputBytes.length",
-      this.outputBytes.length,
-      "/",
-      this.outputBytes.length.toString(16)
-    );
   }
   /**
    * Expands the output buffer and fills it with a specified byte.
@@ -13861,14 +13726,11 @@ var Assembler = class _Assembler {
    * @param {number} fillByte The byte used for the new range.
    */
   expandOutput(newSize, fillByte) {
-    debug4("expandOutput", { newSize, fillByte });
     if (typeof newSize !== "number" || typeof fillByte !== "number") {
       throw new Error("expandOutput requires a number for newSize and fillByte");
     }
     if (newSize > this.outputBytes.length) {
       this.writeOutputBytes(this.outputBytes.length, fillByte, newSize - this.outputBytes.length);
-    } else {
-      debug4("expandOutput newSize <= this.outputBytes.length, no expansion needed");
     }
   }
   /** Runs the active output-format finalizer. */
@@ -13940,7 +13802,6 @@ var Assembler = class _Assembler {
   executeForLoopIterations(forBlock, executeBody) {
     const { variable, start, end } = this.resolveForLoopBounds(forBlock);
     if (!variable || start === void 0 || end === void 0) {
-      debug4("executeForLoopIterations missing loop semantics:", forBlock);
       return;
     }
     const originalValue = this.defines.get(variable);
@@ -13968,7 +13829,6 @@ var Assembler = class _Assembler {
    * @param {LoweredLoopNode} loopBlock The loop block.
    */
   executeLoweredLoop(loopBlock) {
-    debug4("executeLoweredLoop", loopBlock);
     if (loopBlock.loopType === "for") {
       this.executeLoweredForLoop(loopBlock);
     } else if (loopBlock.loopType === "while") {
@@ -13980,7 +13840,6 @@ var Assembler = class _Assembler {
    * @param {LoweredLoopNode} forBlock The for block.
    */
   executeLoweredForLoop(forBlock) {
-    debug4("executeLoweredForLoop", forBlock);
     this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
   }
   /**
@@ -13993,7 +13852,6 @@ var Assembler = class _Assembler {
   executeWhileLoopCommands(whileBlock, commands, getDefineTarget, executeCommand) {
     const conditionNode = whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
     if (!conditionNode) {
-      debug4("executeWhileLoopCommands missing condition expression", whileBlock);
       return;
     }
     let iteration = 0;
@@ -14011,17 +13869,10 @@ var Assembler = class _Assembler {
       }
       iteration++;
     }
-    if (iteration >= MAX_ITERATIONS) {
-      debug4(
-        "executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected."
-      );
-    }
     for (const [varName, value] of originalValues.entries()) {
       if (value !== void 0) {
-        debug4(`executeWhileLoopCommands setting ${varName} to ${value}`);
         this.defines.set(varName, value);
       } else {
-        debug4(`executeWhileLoopCommands delete entry for ${varName}`);
         this.defines.delete(varName);
       }
     }
@@ -14031,7 +13882,6 @@ var Assembler = class _Assembler {
    * @param {LoweredLoopNode} whileBlock The while block.
    */
   executeLoweredWhileLoop(whileBlock) {
-    debug4("executeLoweredWhileLoop", whileBlock);
     this.executeWhileLoopCommands(
       whileBlock,
       whileBlock.commands,
@@ -15306,10 +15156,7 @@ var importRuntimeInstructionTrace = (value, context) => {
       `ROM/project mismatch: project expects ${projectRomContentSha256}, trace describes ${artifact.romContentSha256}.`
     );
   const sourceName = string(context.sourceName, "Instruction trace source name");
-  const addressSpace = string(
-    context.addressSpaceAliases?.[artifact.addressSpace] ?? artifact.addressSpace,
-    "Instruction trace project address space"
-  );
+  const addressSpace = string(artifact.addressSpace, "Instruction trace project address space");
   const sourceSha256 = sha2564(canonicalJson(artifact));
   const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
   const counts = /* @__PURE__ */ new Map();
@@ -17508,13 +17355,6 @@ var lower65816Operand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyExpanded65816Operand(resolver, lowered);
 };
-var debug5 = (..._args) => {
-};
-try {
-  const { default: d } = await import("debug");
-  debug5 = d("Arch65816");
-} catch {
-}
 var keepsFixedWidthAddressingMode = (mode3, explicitLength) => {
   if (mode3 === "indirectLong" || mode3 === "indirectLongIndexedY" || mode3 === "indirectIndexedY" || mode3 === "indexedIndirectX" || mode3 === "stackRelative" || mode3 === "stackRelativeIndexedIndirectY") {
     return true;
@@ -17865,7 +17705,6 @@ var Arch65816 = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   encode(words) {
-    debug5("asblock_65816", words);
     if (words.length === 0) {
       return false;
     }
@@ -17890,7 +17729,6 @@ var Arch65816 = class {
    */
   encodeResolvedInstruction(mnemonic, rawOperand, operand, operandLength) {
     let opcode = mnemonic.toUpperCase();
-    debug5("asblock_65816 operand expanded", operand, "expected length:", operandLength);
     let len = 0;
     let explicitlen = false;
     const sizedOpcode = this.readMnemonicLength(opcode);
@@ -17902,8 +17740,6 @@ var Arch65816 = class {
       len = operandLength;
     }
     this.applySepRep(opcode, rawOperand);
-    debug5("asblock_65816 opcode", opcode);
-    debug5("asblock_65816 operand", operand);
     if (["ASL", "LSR", "ROL", "ROR", "INC", "DEC"].includes(opcode)) {
       let arithmeticOperand = operand;
       if (/^a$/i.test(rawOperand.trim())) {
@@ -17939,13 +17775,11 @@ var Arch65816 = class {
       return this.handleStoreOperations(opcode, operand, len, explicitlen);
     }
     if (this.handleBranchInstructions(opcode, operand)) return true;
-    let hexconstant = false;
     let num = 0;
     if (operand) {
       num = this.assembler.operandResolver.getnum(operand);
-      hexconstant = /^[$%]/.test(operand);
     }
-    return this.handleGenericOpcode(opcode, num, len, explicitlen, hexconstant);
+    return this.handleGenericOpcode(opcode, num, len);
   }
   /**
    * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
@@ -17963,7 +17797,6 @@ var Arch65816 = class {
    * @returns {boolean} True if this family handled the opcode.
    */
   handleMemoryOperations(opcode, operand, len, explicitlen, rawOperand = operand) {
-    debug5("handleMemoryOperations", { opcode, operand, len, explicitlen });
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
@@ -17973,7 +17806,6 @@ var Arch65816 = class {
     const isExplicitDirectPage = loweredOperand.explicitDirectPage ?? false;
     const isExplicitDirectPageIndexedX = loweredOperand.explicitDirectPageIndexedX ?? false;
     if (loweredOperand.immediate) {
-      debug5("handleMemoryOperations Immediate Mode (#$XX)", opcode, resolvedOperand);
       const immediateOpcodes = {
         ADC: 105,
         LDA: 169,
@@ -18048,7 +17880,6 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "absoluteIndexedX") {
-      debug5("handleMemoryOperations Absolute Indexed,X", opcode, resolvedOperand);
       const absoluteIndexedXOpcodes = {
         ADC: 125,
         STA: 157,
@@ -18056,18 +17887,12 @@ var Arch65816 = class {
         SBC: 253
       };
       if (opcode in absoluteIndexedXOpcodes) {
-        debug5("handleMemoryOperations =", absoluteIndexedXOpcodes[opcode].toString(16));
         this.assembler.write1(absoluteIndexedXOpcodes[opcode]);
-        debug5(
-          "handleMemoryOperations =",
-          this.assembler.operandResolver.getnum(baseOperand).toString(16)
-        );
         this.assembler.write2(this.assembler.operandResolver.getnum(baseOperand));
         return true;
       }
     }
     if (loweredOperand.mode === "absoluteLongIndexedX") {
-      debug5("handleMemoryOperations Absolute Long Indexed,X", opcode, resolvedOperand);
       const absoluteLongIndexedXOpcodes = {
         ADC: 127,
         STA: 159,
@@ -18081,7 +17906,6 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "indexedIndirectX") {
-      debug5("handleMemoryOperations Indexed Indirect (X)", opcode, resolvedOperand);
       const indexedIndirectOpcodes = {
         ADC: 97,
         STA: 129,
@@ -18095,7 +17919,6 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "directPageIndirect") {
-      debug5("handleMemoryOperations Direct Page Indirect", opcode, resolvedOperand);
       const indirectDPIndirect = {
         ADC: 114,
         STA: 146,
@@ -18109,7 +17932,6 @@ var Arch65816 = class {
       }
     }
     if ((this.optimizeDirectPage() || isExplicitDirectPageIndexedX) && loweredOperand.indexRegister === "x" && !loweredOperand.indirect) {
-      debug5("handleMemoryOperations DP Indexed,X", opcode, resolvedOperand);
       const dpIndexedXOpcodes = {
         ADC: 117,
         STA: 149,
@@ -18117,17 +17939,13 @@ var Arch65816 = class {
         SBC: 245
       };
       if (opcode in dpIndexedXOpcodes) {
-        debug5("handleMemoryOperations = 1", dpIndexedXOpcodes[opcode].toString(16));
         this.assembler.write1(dpIndexedXOpcodes[opcode]);
-        debug5("handleMemoryOperations = 1.5", baseOperand);
         const dpAddress = this.assembler.operandResolver.getnum(baseOperand);
-        debug5("handleMemoryOperations = 2", dpAddress.toString(16));
         this.assembler.write1(dpAddress);
         return true;
       }
     }
     if (loweredOperand.mode === "stackRelative") {
-      debug5("handleMemoryOperations Indexed Indirect (sr,S)", opcode, resolvedOperand);
       const stackRelativeOpcodes = {
         ADC: 99,
         STA: 131,
@@ -18141,11 +17959,6 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "stackRelativeIndexedIndirectY") {
-      debug5(
-        "handleMemoryOperations Stack Relative Indexed Indirect (sr,S),Y",
-        opcode,
-        resolvedOperand
-      );
       const stackIndexedOpcodes = {
         ADC: 115,
         STA: 147,
@@ -18185,7 +17998,6 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "indirectIndexedY") {
-      debug5("handleMemoryOperations Indirect Indexed (Y)", opcode, resolvedOperand);
       const indirectIndexedOpcodes = {
         ADC: 113,
         STA: 145,
@@ -18199,7 +18011,6 @@ var Arch65816 = class {
       }
     }
     if (isIndexedMemory(loweredOperand, "x")) {
-      debug5("handleMemoryOperations Absolute Indexed (X)", opcode, resolvedOperand);
       const absoluteXOpcodes = {
         ADC: 125,
         STA: 157,
@@ -18213,7 +18024,6 @@ var Arch65816 = class {
       }
     }
     if (isIndexedMemory(loweredOperand, "y")) {
-      debug5("handleMemoryOperations Absolute Indexed (Y)", opcode, resolvedOperand);
       const absoluteYOpcodes = {
         ADC: 121,
         STA: 153,
@@ -18227,7 +18037,6 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "absoluteLong") {
-      debug5("handleMemoryOperations Absolute Long ($000000)", opcode, resolvedOperand);
       const longOpcodes = {
         ADC: 111,
         STA: 143,
@@ -18241,7 +18050,6 @@ var Arch65816 = class {
       }
     }
     if (loweredOperand.mode === "absolute") {
-      debug5("handleMemoryOperations Absolute", opcode, resolvedOperand);
       const absoluteOpcodes = {
         ADC: 109,
         STA: 141,
@@ -18255,7 +18063,6 @@ var Arch65816 = class {
       }
     }
     if (this.optimizeDirectPage() || isExplicitDirectPage) {
-      debug5("handleMemoryOperations Direct Page", opcode, operand);
       const directPageOpcodes = {
         ADC: 101,
         STA: 133,
@@ -18268,11 +18075,6 @@ var Arch65816 = class {
         return true;
       }
     } else {
-      debug5(
-        "handleMemoryOperations Direct Page optimization disabled; using absolute",
-        opcode,
-        operand
-      );
       const absoluteOpcodes = {
         ADC: 109,
         STA: 141,
@@ -18309,7 +18111,6 @@ var Arch65816 = class {
    * @returns {boolean} True if this family handled the opcode.
    */
   handleLogicAndCompareOperations(opcode, operand, len, explicitlen, rawOperand = operand) {
-    debug5("handleLogicAndCompareOperations", { opcode, operand, len, explicitlen });
     const opcodes = {
       ORA: {
         immediate: 9,
@@ -18443,7 +18244,6 @@ var Arch65816 = class {
     let address3 = 0;
     let mode3;
     if (loweredOperand.immediate) {
-      debug5("handleLogicAndCompareOperations Immediate Mode", opcode, resolvedOperand);
       mode3 = "immediate";
       address3 = this.assembler.operandResolver.getnum(baseOperand);
       this.assembler.write1(opcodes[logicOpcode].immediate);
@@ -18567,7 +18367,6 @@ var Arch65816 = class {
     } else {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
     }
-    debug5("handleLogicAndCompareOperations mode", mode3, operand);
     const opcodeByte = opcodes[logicOpcode][mode3];
     if (!opcodeByte) {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
@@ -18642,20 +18441,13 @@ var Arch65816 = class {
     if (!(opcode in stackOpcodes)) {
       return false;
     }
-    debug5("handleNoOperandOperations", {
-      opcode,
-      operand,
-      value: stackOpcodes[opcode].toString(16)
-    });
     let count = 1;
     if (operand && operand.startsWith("#")) {
       let repStr = operand.substring(1);
       if (repStr.startsWith("$")) {
         repStr = repStr.substring(1);
-        debug5("handleNoOperandOperations removed $ prefix", repStr);
       }
       count = Number.parseInt(repStr, 10);
-      debug5("handleNoOperandOperations count", count);
       if (Number.isNaN(count)) {
         throw new Error(`Invalid repeat count in pseudo opcode: ${operand}`);
       }
@@ -18679,7 +18471,6 @@ var Arch65816 = class {
    * @returns {boolean} True if this family handled the opcode.
    */
   handleArithmeticOperations(opcode, operand, len, explicitlen) {
-    debug5("handleArithmeticOperations", opcode, operand);
     const operandText = operand?.trim() || "A";
     const accumulatorOpcodes = {
       ASL: 10,
@@ -18760,7 +18551,6 @@ var Arch65816 = class {
       }
     }
     if (/^\$[\da-f]{2}$/i.test(normalizedOperand) && loweredOperand.mode === "directPageIndexedX") {
-      debug5("handleArithmeticOperations DP Indexed,X", opcode, rawOperand);
       const dpIndexedXOpcodes = {
         ASL: 22,
         ROL: 54,
@@ -18832,7 +18622,6 @@ var Arch65816 = class {
    * @returns {boolean} True if LDX/LDY was encoded.
    */
   handleLoadRegister(opcode, operand, len, explicitlen) {
-    debug5("handleLoadRegister", { opcode, operand, len, explicitlen });
     if (!operand) {
       throw new Error(`Error: ${opcode} requires an operand.`);
     }
@@ -18954,7 +18743,6 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode and operand were handled successfully, false otherwise.
    */
   handleJump(opcode, operand, rawOperand = operand) {
-    debug5("handleJump", { opcode, operand, rawOperand });
     const loweredOperand = lower65816Operand(this.assembler.operandResolver, rawOperand);
     const baseOperand = loweredOperand.baseExpression ?? rawOperand;
     const symbolicOperand = rawOperand.trim();
@@ -19016,42 +18804,33 @@ var Arch65816 = class {
         opcode,
         this.assembler.operandResolver.getnum(operand)
       ));
-      debug5("handleJump mode", mode3);
     } else if (/^\$[\dA-Fa-f]{1,6}$/.test(operand)) {
       ({ mode: mode3, address: address3 } = selectDirectJumpMode(
         opcode,
         this.assembler.operandResolver.getnum(operand)
       ));
-      debug5("handleJump mode", mode3);
     } else if (loweredOperand.mode === "indirectLong") {
       mode3 = "JMP_INDIRECT_LONG";
-      debug5("handleJump mode", mode3);
       address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
     } else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX") {
       address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode3 = "JSR_INDEXED_INDIRECT";
-      debug5("handleJump mode", mode3);
     } else if (loweredOperand.mode === "indexedIndirectX") {
       address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode3 = "JMP_INDEXED_INDIRECT";
-      debug5("handleJump mode", mode3);
     } else if (loweredOperand.mode === "directPageIndirect") {
       address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
       mode3 = "JMP_INDIRECT";
-      debug5("handleJump mode", mode3);
     } else {
       try {
         ({ mode: mode3, address: address3 } = selectDirectJumpMode(
           opcode,
           this.assembler.operandResolver.getnum(baseOperand)
         ));
-        debug5("handleJump mode", mode3);
       } catch {
-        debug5("handleJump", `Error: Invalid operand format for ${opcode}: ${operand}`);
         throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
       }
     }
-    debug5("handleJump address", address3?.toString(16));
     if (mode3 in jumpOpcodes) {
       this.assembler.write1(jumpOpcodes[mode3]);
       if (mode3 === "JSL" || mode3 === "JML") {
@@ -19073,7 +18852,6 @@ var Arch65816 = class {
    * @returns {boolean} true if the instruction was handled, false otherwise
    */
   handlePER(operand) {
-    debug5("handlePER", operand);
     if (!operand) {
       throw new Error("Error: PER requires an operand.");
     }
@@ -19094,7 +18872,6 @@ var Arch65816 = class {
    * @returns {boolean} True if this family handled the opcode.
    */
   handleStoreOperations(opcode, operand, len, explicitlen) {
-    debug5("handleStoreOperations", { opcode, operand, len, explicitlen });
     const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const rawOperand = operand;
     const storeOpcodes = {
@@ -19115,7 +18892,6 @@ var Arch65816 = class {
       return forced ?? fallback;
     };
     let address3 = 0;
-    let mode3;
     const isIndexed = storeOpcode === "STX" && isIndexedMemory(loweredOperand, "y") || storeOpcode === "STY" && isIndexedMemory(loweredOperand, "x") || storeOpcode === "STZ" && isIndexedMemory(loweredOperand, "x");
     if (isIndexed) {
       operand = rawOperand.slice(0, -2).trim();
@@ -19155,68 +18931,52 @@ var Arch65816 = class {
       return true;
     }
     if (loweredOperand.mode === "directPageIndexedX" && storeModeMap.directX && /^\$[\da-f]{2}$/i.test(operand)) {
-      mode3 = "directX";
       address3 = this.assembler.operandResolver.getnum(operand);
     } else if (loweredOperand.indexRegister === "y" && !loweredOperand.indirect && storeModeMap.directY) {
-      mode3 = "directY";
       address3 = this.assembler.operandResolver.getnum(operand);
     } else if (loweredOperand.mode === "absoluteIndexedX" && storeModeMap.absoluteX) {
-      mode3 = "absoluteX";
       address3 = this.assembler.operandResolver.getnum(operand);
     }
     if (!isIndexed && (loweredOperand.mode === "absolute" || /^\$[\dA-Fa-f]{3,4}$/.test(operand))) {
-      mode3 = "absolute";
       address3 = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].absolute);
       this.assembler.write2(address3);
-      debug5("handleStoreOperations mode", mode3);
       return true;
     } else if (!isIndexed && /^\$[\dA-Fa-f]{2}$/.test(operand)) {
-      mode3 = "direct";
       address3 = this.assembler.operandResolver.getnum(operand);
       this.assembler.write1(storeOpcodes[storeOpcode].direct);
       this.assembler.write1(address3);
-      debug5("handleStoreOperations mode", mode3);
       return true;
     } else if (isIndexed) {
       if (storeOpcode === "STX") {
         address3 = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{3,4}$/i.test(operand)) {
-          mode3 = "absolute";
           this.assembler.write1(storeOpcodes[storeOpcode].absolute);
           this.assembler.write2(address3);
         } else {
-          mode3 = "directY";
           this.assembler.write1(storeOpcodes[storeOpcode].directY);
           this.assembler.write1(address3);
         }
-        debug5("handleStoreOperations mode", mode3);
         return true;
       } else if (storeOpcode === "STY") {
         address3 = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{3,4}$/i.test(operand)) {
-          mode3 = "absolute";
           this.assembler.write1(storeOpcodes[storeOpcode].absolute);
           this.assembler.write2(address3);
         } else {
-          mode3 = "directX";
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
           this.assembler.write1(address3);
         }
-        debug5("handleStoreOperations mode", mode3);
         return true;
       } else if (storeOpcode === "STZ") {
         address3 = this.assembler.operandResolver.getnum(operand);
         if (/^\$[\da-f]{3,4}$/i.test(operand) && storeOpcodes[storeOpcode].absoluteX) {
-          mode3 = "absoluteX";
           this.assembler.write1(storeOpcodes[storeOpcode].absoluteX);
           this.assembler.write2(address3);
         } else {
-          mode3 = "directX";
           this.assembler.write1(storeOpcodes[storeOpcode].directX);
           this.assembler.write1(address3);
         }
-        debug5("handleStoreOperations mode", mode3);
         return true;
       }
     }
@@ -19234,7 +18994,6 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleBlockMove(opcode, operand) {
-    debug5("handleBlockMove", opcode, operand);
     const params = operand.split(",").map((p) => p.trim());
     if (params.length !== 2) {
       throw new Error(`Error: ${opcode} requires two parameters (source, destination).`);
@@ -19258,7 +19017,6 @@ var Arch65816 = class {
    * @returns {boolean} True if this family handled the opcode.
    */
   handleBitTestOperations(opcode, operand, len, explicitlen) {
-    debug5("handleBitTestOperations", { opcode, operand });
     opcode = opcode.toUpperCase();
     const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const rawOperand = operand;
@@ -19292,11 +19050,6 @@ var Arch65816 = class {
     let address3 = 0;
     let outLength = 0;
     if (operand.startsWith("#")) {
-      debug5("handleBitTestOperations immediate", {
-        opcode,
-        operand,
-        value: forcedMaps[bitOpcode].immediate?.toString(16)
-      });
       address3 = this.assembler.operandResolver.getnum(operand.slice(1));
       if (explicitlen) {
         const immediate3 = forcedMaps[bitOpcode].immediate;
@@ -19366,17 +19119,12 @@ var Arch65816 = class {
   /**
    * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
    * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
-   * `hexconstant` is diagnostic-only (non-hex immediates log "assuming 8-bit").
-   *
    * @param {string} opcode Candidate mnemonic.
    * @param {number} num Already-evaluated operand value.
    * @param {number} len Inferred width (REP/SEP range check).
-   * @param {boolean} explicitlen Whether a suffix forced the width.
-   * @param {boolean} hexconstant True when the operand spelling starts with `$` or `%`.
    * @returns {boolean} True if this family handled the opcode.
    */
-  handleGenericOpcode(opcode, num, len, explicitlen, hexconstant) {
-    debug5("handleGenericOpcode", { opcode, num, len, explicitlen, hexconstant });
+  handleGenericOpcode(opcode, num, len) {
     const opcodeMap = {
       BRK: 0,
       COP: 2,
@@ -19391,9 +19139,6 @@ var Arch65816 = class {
       const opcodeByte = opcodeMap[genericOpcode];
       if ((opcode === "REP" || opcode === "SEP") && (len !== 1 || num < 0 || num > 255)) {
         throw new Error("Error: invalid_number");
-      }
-      if (!explicitlen && !hexconstant) {
-        debug5(`arch65816 handleGenericOpcode: ${opcode} assuming 8-bit mode.`);
       }
       this.assembler.write1(opcodeByte);
       if (opcode === "PEA") {
@@ -19414,7 +19159,6 @@ var Arch65816 = class {
    * @returns {boolean} True if the opcode was handled, false otherwise.
    */
   handleBranchInstructions(opcode, operand) {
-    debug5("handleBranchInstructions", opcode, operand);
     const branchOpcodes2 = {
       BPL: 16,
       BMI: 48,
@@ -19451,25 +19195,6 @@ var Arch65816 = class {
       targetAddress = this.assembler.operandResolver.getnum(operand);
       relativeAddress = targetAddress - branchReferenceAddress;
     }
-    const currentAddress = branchReferenceAddress;
-    debug5(
-      "handleBranchInstructions targetAddress:",
-      targetAddress,
-      "/",
-      targetAddress.toString(16)
-    );
-    debug5(
-      "handleBranchInstructions currentAddress:",
-      currentAddress,
-      "/",
-      currentAddress.toString(16)
-    );
-    debug5(
-      "handleBranchInstructions relativeAddress:",
-      relativeAddress,
-      "/",
-      relativeAddress.toString(16)
-    );
     if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(branchOpcodes2[opcode]);
       if (opcode === "BRL") {
@@ -19482,12 +19207,6 @@ var Arch65816 = class {
     if (Number.isNaN(relativeAddress)) {
       throw this.assembler.diagnostics.error("Error: relativeAddress is NaN.");
     }
-    debug5(
-      "handleBranchInstructions relativeAddress",
-      relativeAddress,
-      "/",
-      relativeAddress.toString(16)
-    );
     if (opcode === "BRL") {
       if (relativeAddress < -32768 || relativeAddress > 32767) {
         throw this.assembler.diagnostics.error(
@@ -19522,7 +19241,6 @@ var Arch65816 = class {
    * @returns {boolean} True if TSB/TRB was encoded.
    */
   handleMemoryBitInstructions(opcode, operand) {
-    debug5("handleMemoryBitInstructions", opcode, operand);
     const loweredOperand = lower65816Operand(this.assembler.operandResolver, operand);
     const memoryBitOpcodes = {
       TSB: { direct: 4, absolute: 12 },
@@ -19568,7 +19286,6 @@ var Arch65816 = class {
    * @throws {Error} If the opcode length is invalid.
    */
   getlenfromchar(c) {
-    debug5("getlenfromchar", c);
     if (!c) {
       throw new Error("Error: Invalid opcode length.");
     }
@@ -19580,7 +19297,6 @@ var Arch65816 = class {
       case "l":
         return 3;
       case "d":
-        debug5("Warning: .d opcode suffix is deprecated.");
         return 4;
       default:
         throw new Error("Error: Invalid opcode length.");
@@ -19978,13 +19694,6 @@ var lowerSpc700Operand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
 };
-var debug6 = (..._) => {
-};
-try {
-  const { default: d } = await import("debug");
-  debug6 = d("ArchSPC700");
-} catch {
-}
 var hasOwn = (obj, key) => Object.hasOwn(obj, key);
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
@@ -20497,7 +20206,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   encode(words) {
-    debug6("asblock_spc700", words);
     if (words.length === 0) {
       return false;
     }
@@ -20517,13 +20225,12 @@ var ArchSPC700 = class {
    *
    * @param {string} mnemonic Raw mnemonic, possibly with a length suffix.
    * @param {string[]} operands Split operands (already expanded when possible).
-   * @param {LoweredOperand} [loweredOperand] Combined rest-of-line operand.
+   * @param {LoweredOperand} [_loweredOperand] Combined rest-of-line operand (unused after lowering).
    * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
    * @returns {boolean} True if encoded.
    */
-  encodeResolvedInstruction(mnemonic, operands, loweredOperand, loweredOperands = []) {
+  encodeResolvedInstruction(mnemonic, operands, _loweredOperand, loweredOperands = []) {
     let opcode = mnemonic;
-    const operand = loweredOperand?.expanded ?? "";
     const normalizedOperands = operands.map((operandText, index) => loweredOperands[index]?.expanded ?? operandText).filter((value) => value !== "");
     let forcedLen = null;
     let explicitlen = false;
@@ -20534,7 +20241,6 @@ var ArchSPC700 = class {
       opcode = opcode.substring(0, dotIndex);
     }
     opcode = opcode.toUpperCase().trim();
-    debug6("asblock_spc700", { opcode, operand, forcedLen, explicitlen });
     if (this.handleSingleNoOperand(opcode)) {
       return true;
     }
@@ -20578,7 +20284,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if a 1-byte opcode was written.
    */
   handleSingleNoOperand(opcode) {
-    debug6("handleSingleNoOperand", opcode);
     const singleByte = {
       NOP: 0,
       BRK: 15,
@@ -20614,7 +20319,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleOneOperand(opcode, operand, forcedLen, explicitlen, loweredOperand) {
-    debug6("handleOneOperand", { opcode, operand, forcedLen, explicitlen });
     if (this.handleShiftIncDec(opcode, operand, forcedLen, explicitlen)) {
       return true;
     }
@@ -20661,7 +20365,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleTwoOperands(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered) {
-    debug6("handleTwoOperands", { opcode, left, right, forcedLen, explicitlen });
     if (parseBitBranchOpcode(opcode)) {
       if (this.handleTwoOperandsBitBranch(opcode, left, right)) {
         return true;
@@ -20720,7 +20423,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleWordOpsTwoOperands(opcode, left, right) {
-    debug6("handleWordOpsTwoOperands", { opcode, left, right });
     const upOp = opcode.toUpperCase();
     const leftUp = left.trim().toUpperCase();
     const rightUp = right.trim().toUpperCase();
@@ -20754,15 +20456,12 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleMemoryInstruction(opcode, left, right, forcedLen, explicitlen, leftLowered, rightLowered) {
-    debug6("handleMemoryInstruction", { opcode, left, right });
     const opName = opcode.toUpperCase();
     if (!hasOwn(memOpTables, opName)) {
-      debug6("handleMemoryInstruction not in table", { opcode, left, right });
       return false;
     }
     const table = memOpTables[opName];
     if (isAccumulator(left, leftLowered)) {
-      debug6("handleMemoryInstruction left is A", { opcode, left, right });
       const modeInfo = this.classifySpc700Addressing(right, rightLowered);
       const addr = modeInfo.val;
       const mode3 = modeInfo.mode;
@@ -20864,7 +20563,6 @@ var ArchSPC700 = class {
    * @returns {void}
    */
   writeDpOrAbs(value, length) {
-    debug6("writeDpOrAbs", { value, length });
     this.assembler.write1(value & 255);
     if (length <= 1) {
       return;
@@ -20881,7 +20579,6 @@ var ArchSPC700 = class {
    * @returns {{ mode: string; val: number }} Addressing mode and numeric payload.
    */
   classifySpc700Addressing(operand, loweredOperand) {
-    debug6("classifySpc700Addressing", operand);
     const resolveValue = (value) => {
       try {
         return this.assembler.operandResolver.getnum(value) & 65535;
@@ -20962,7 +20659,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True when the operand is a dp/abs hex address.
    */
   isDpOrAbs(operand) {
-    debug6("isDpOrAbs", operand);
     const trimmed = operand.trim();
     if (/^(a|x|y|ya|sp)$/i.test(trimmed)) {
       return false;
@@ -20985,7 +20681,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleShiftIncDec(opcode, operand, forcedLen, explicitlen) {
-    debug6("handleShiftIncDec", { opcode, operand, forcedLen, explicitlen });
     const table = {
       ASL: { a: 28, dpX: 27, dp: 11, abs: 12 },
       DEC: { a: 156, dpX: 155, dp: 139, abs: 140 },
@@ -21019,27 +20714,14 @@ var ArchSPC700 = class {
       }
     }
     if (isAccumulator(operand)) {
-      debug6("handleShiftIncDec operand is A", {
-        opcode,
-        operand,
-        write: table[upper].a.toString(16)
-      });
       this.assembler.write1(table[upper].a);
       return true;
     }
     const plusX = operand.toUpperCase().endsWith("+X");
     if (plusX) {
-      debug6("handleShiftIncDec operand ends with +X", {
-        opcode,
-        operand,
-        write: table[upper].dpX.toString(16)
-      });
       const baseStr = operand.replace(/\+x$/i, "").trim();
-      debug6("handleShiftIncDec baseStr", baseStr);
       const val2 = parseInt(baseStr.replace(/\$/g, ""), 16) & 65535;
-      debug6("handleShiftIncDec val", val2);
       if (explicitlen) {
-        debug6("handleShiftIncDec explicitlen", { opcode, operand, forcedLen, explicitlen });
         if (forcedLen === 1) {
           this.assembler.write1(table[upper].dpX);
           this.assembler.write1(val2 & 255);
@@ -21050,23 +20732,9 @@ var ArchSPC700 = class {
         return true;
       }
       if (val2 <= 255) {
-        debug6("handleShiftIncDec val <= 0xff", {
-          opcode,
-          operand,
-          forcedLen,
-          explicitlen,
-          write: table[upper].dpX.toString(16)
-        });
         this.assembler.write1(table[upper].dpX);
         this.assembler.write1(val2 & 255);
       } else {
-        debug6("handleShiftIncDec val > 0xff", {
-          opcode,
-          operand,
-          forcedLen,
-          explicitlen,
-          write: table[upper].abs.toString(16)
-        });
         this.assembler.write1(table[upper].abs);
         this.assembler.write2(val2);
       }
@@ -21101,7 +20769,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleBitSetClear(opcode, operand) {
-    debug6("handleBitSetClear", { opcode, operand });
     const normalizedOpcode = opcode.toUpperCase();
     if (!hasOwn(bitSetClearOpcodes, normalizedOpcode)) {
       return false;
@@ -21135,7 +20802,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleBranch(opcode, operand) {
-    debug6("handleBranch", { opcode, operand });
     if (!hasOwn(branchOpcodes, opcode)) {
       return false;
     }
@@ -21150,16 +20816,12 @@ var ArchSPC700 = class {
     } else {
       targetAddr = this.assembler.operandResolver.getnum(operand);
     }
-    debug6("handleBranch targetAddr", targetAddr);
     const currentAddr = this.assembler.currentTargetAddress;
-    debug6("handleBranch currentAddr", currentAddr);
     const offset = targetAddr - (currentAddr + 1);
-    debug6("handleBranch offset", offset);
     if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(255);
     } else {
       const unsignedOffset = offset < 0 ? 256 + offset : offset;
-      debug6("handleBranch unsignedOffset", unsignedOffset);
       this.assembler.write1(unsignedOffset & 255);
     }
     return true;
@@ -21174,10 +20836,8 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleTwoOperandsBitBranch(opcode, left, right) {
-    debug6("handleTwoOperandsBitBranch", { opcode, left, right });
     const parsed = parseBitBranchOpcode(opcode);
     if (!parsed) {
-      debug6("handleTwoOperandsBitBranch no match", { opcode, left, right });
       return false;
     }
     const trimmed = left.trim();
@@ -21194,11 +20854,8 @@ var ArchSPC700 = class {
       return false;
     }
     const opcodeByte = bitBranchOpcodeByte(parsed.family, bit2);
-    debug6("handleTwoOperandsBitBranch =", opcodeByte.toString(16));
     this.assembler.write1(opcodeByte);
-    debug6("handleTwoOperandsBitBranch =", dpVal.toString(16));
     this.assembler.write1(dpVal);
-    debug6("handleTwoOperandsBitBranch right", right);
     if (!this.assembler.enforceResolvedLabels) {
       this.assembler.write1(255);
     } else {
@@ -21208,7 +20865,6 @@ var ArchSPC700 = class {
       const relativeOffset = target - (pc + 1);
       offset = relativeOffset < 0 ? 256 + relativeOffset : relativeOffset;
       offset &= 255;
-      debug6("handleTwoOperandsBitBranch =", offset.toString(16));
       this.assembler.write1(offset);
     }
     return true;
@@ -21225,7 +20881,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
-    debug6("handleDbnzCbne", { opcode, left, right });
     const isYForm = opcode.toUpperCase() === "DBNZ" && isRegisterY(left, leftLowered);
     let instructionSize = 3;
     if (isYForm) {
@@ -21233,7 +20888,6 @@ var ArchSPC700 = class {
     }
     const target = this.assembler.operandResolver.getnum(right);
     const offset = target - (this.assembler.currentTargetAddress + instructionSize);
-    debug6("handleDbnzCbne offset", offset);
     if (this.assembler.enforceResolvedLabels && (offset < -128 || offset > 127)) {
       throw this.assembler.diagnostics.error(`Branch target out of range (${offset})`);
     }
@@ -21277,7 +20931,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handlePushPop(opcode, operand, loweredOperand) {
-    debug6("handlePushPop", { opcode, operand });
     const pushMap = {
       P: 13,
       A: 45,
@@ -21316,7 +20969,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleCallJump(opcode, operand, loweredOperand) {
-    debug6("handleCallJump", { opcode, operand });
     const upper = opcode.toUpperCase();
     const resolveOperand = (value) => {
       try {
@@ -21339,7 +20991,6 @@ var ArchSPC700 = class {
     }
     if (upper === "JMP") {
       const trimmed = operand.trim().toUpperCase();
-      debug6("handleCallJump JMP trimmed", trimmed);
       if (loweredOperand?.mode === "directPageIndexedXIndirect" || trimmed.startsWith("(") && trimmed.endsWith("+X)")) {
         this.assembler.write1(31);
         const inner = loweredOperand?.baseExpression ?? operand.trim().slice(1, operand.trim().length - 3).trim();
@@ -21368,7 +21019,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleCmpXyOrMovXy(opcode, operand, forcedLen, explicitlen, leftLowered, rightLowered) {
-    debug6("handleCmpXyOrMovXy", { opcode, operand, forcedLen, explicitlen });
     const upper = opcode.toUpperCase();
     if (upper === "CMP") {
       const upOp = operand.toUpperCase();
@@ -21466,7 +21116,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleTsetTclr(opcode, left, right, rightLowered) {
-    debug6("handleTsetTclr", { opcode, left, right });
     const up = opcode.toUpperCase();
     if (up !== "TSET" && up !== "TCLR") {
       return false;
@@ -21493,7 +21142,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleMovInstruction(left, right, forcedLen, explicitlen) {
-    debug6("handleMovInstruction", { left, right, forcedLen, explicitlen });
     const tableMoves = [
       { pattern: /^x\s*,\s*a$/i, opcode: 93 },
       { pattern: /^a\s*,\s*x$/i, opcode: 125 },
@@ -21627,9 +21275,7 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleMovMemoryCombo(left, right) {
-    debug6("handleMovMemoryCombo", { left, right });
     const combined = `${left.trim()},${right.trim()}`.toUpperCase();
-    debug6("handleMovMemoryCombo combined", combined);
     let m = combined.match(/^\(?\$([\dA-F]+)\+X?\),A$/);
     if (m) {
       const dpVal = parseInt(m[1], 16) & 255;
@@ -21670,7 +21316,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleMovMemoryCombo2(left, right) {
-    debug6("handleMovMemoryCombo2", { left, right });
     const combined = `${left.trim()},${right.trim()}`.toUpperCase();
     const resolveIndexedExpression = (operand) => {
       if (operand.includes("(") || operand.includes(")")) {
@@ -21871,7 +21516,6 @@ var ArchSPC700 = class {
    * @returns {boolean} true if the combo was handled, false otherwise
    */
   handleBitManipulation(opcode, left, right, explicitBitText = "") {
-    debug6("handleBitManipulation", { opcode, left, right, explicitBitText });
     const parsed = parseNumberedBitOpcode(opcode);
     if (!parsed) {
       return false;
@@ -21974,7 +21618,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleSingleOperandSpecial(opcode, operand) {
-    debug6("handleSingleOperandSpecial", { opcode, operand });
     const upOpcode = opcode.toUpperCase();
     const upOperand = operand.toUpperCase();
     if ((upOpcode === "DAA" || upOpcode === "DAS") && upOperand === "A") {
@@ -22010,7 +21653,6 @@ var ArchSPC700 = class {
    * @returns {boolean} True if encoded.
    */
   handleWordOps(opcode, operand) {
-    debug6("handleWordOps", { opcode, operand });
     const up = opcode.toUpperCase();
     if (hasOwn(singleWordOps, up)) {
       const val = parseInt(operand.replace(/\$/g, ""), 16) & 255;
@@ -22028,7 +21670,6 @@ var ArchSPC700 = class {
    * @returns {number} Operand width in bytes.
    */
   getlenfromchar(c) {
-    debug6("getlenfromchar", c);
     switch (c.toLowerCase()) {
       case "b":
         return 1;
@@ -22037,7 +21678,6 @@ var ArchSPC700 = class {
       case "l":
         return 3;
       case "d":
-        debug6("Warning: .d opcode suffix is deprecated.");
         return 4;
       default:
         throw new Error("Error: Invalid opcode length.");
@@ -22383,13 +22023,6 @@ var lowerSuperFxOperand = (resolver, operand) => {
   const lowered = resolver.lowerOperand(operand);
   return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
 };
-var debug7 = (..._) => {
-};
-try {
-  const { default: d } = await import("debug");
-  debug7 = d("ArchSuperFX");
-} catch {
-}
 var hasOwn2 = (obj, key) => Object.hasOwn(obj, key);
 var ALT1 = 61;
 var ALT2 = 62;
@@ -22683,7 +22316,6 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   encode(words) {
-    debug7("asblock_superfx", words);
     if (words.length === 0) {
       return false;
     }
@@ -22711,8 +22343,6 @@ var ArchSuperFX = class {
     const secondLowered = loweredOperands[1];
     const operand = firstLowered?.expanded ?? "";
     const operandLength = firstLowered?.length ?? this.getOperandLength(operand);
-    debug7("asblock_superfx opcode", opcode);
-    debug7("asblock_superfx operand", operand);
     if (hasOwn2(IMPLIED_OPCODES, opcode) || hasOwn2(PREFIXED_OPCODES, opcode)) {
       if (operands.length !== 0) {
         throw this.assembler.diagnostics.error(`${opcode} does not take operands`);
@@ -22740,7 +22370,6 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleSingleWordOpcode(opcode) {
-    debug7("handleSingleWordOpcode", opcode);
     if (hasOwn2(IMPLIED_OPCODES, opcode)) {
       this.assembler.write1(IMPLIED_OPCODES[opcode]);
       return true;
@@ -22763,7 +22392,6 @@ var ArchSuperFX = class {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   handleOneOperandOpcode(opcode, operand, operandLength, loweredOperand) {
-    debug7("handleOneOperandOpcode", opcode, operand, operandLength);
     if (hasOwn2(SHORT_BRANCH_OPCODES, opcode)) {
       const branchOpcode = SHORT_BRANCH_OPCODES[opcode];
       const sourceSpelling = (loweredOperand?.raw ?? operand).trim();
@@ -22815,12 +22443,10 @@ var ArchSuperFX = class {
    * @returns {boolean} True if encoded.
    */
   handleTwoOperandOpcode(opcode, leftOp, rightOp, leftLowered, rightLowered) {
-    debug7("handleTwoOperandOpcode", { opcode, leftOp, rightOp });
     const reg1r = this.resolveRegister(leftOp, leftLowered, "r");
     const reg1parr = this.resolveRegister(leftOp, leftLowered, "parr");
     const reg2r = this.resolveRegister(rightOp, rightLowered, "r");
     const reg2parr = this.resolveRegister(rightOp, rightLowered, "parr");
-    debug7("handleTwoOperandOpcode", { reg1r, reg1parr, reg2r, reg2parr });
     if (reg1r !== null && reg2r !== null) {
       switch (opcode) {
         case "MOVE":
@@ -23040,7 +22666,6 @@ var ArchSuperFX = class {
       }
       const regnum = this.assembler.operandResolver.getnum(str.slice(1));
       if (Number.isNaN(regnum) || regnum < 0 || regnum > 15) {
-        debug7("Invalid register number", str, regnum);
         return null;
       }
       return regnum;
@@ -23084,7 +22709,6 @@ var ArchSuperFX = class {
    * @throws {Error} If the address is odd or outside the short-RAM window.
    */
   checkShortAddr(num) {
-    debug7("checkShortAddr", num);
     if (num % 2 !== 0 || num < 0 || num > 510) {
       throw this.assembler.diagnostics.error(
         `Invalid short address ${num}. Must be even and in range 0..0x1FE`
@@ -27542,7 +27166,7 @@ var plugin = definePlugin({
       instructions: superFxCatalog
     });
     context.registerAddressSpace({
-      id: "snes.address-space",
+      id: "snes.cpu",
       create: ({ state }) => {
         const mappingContext = () => {
           const targetState = state.get(snesSessionStateKey);
@@ -27783,7 +27407,7 @@ var plugin = definePlugin({
       displayName: "SNES",
       defaultArchitecture: "snes.65816",
       architectures: ["snes.65816", "snes.spc700", "snes.superfx"],
-      addressSpace: "snes.address-space",
+      addressSpace: "snes.cpu",
       outputFormat: "snes.sfc-output",
       directiveSets: [
         "snes.mapper-directives",
@@ -28267,8 +27891,7 @@ var importProjectEvidence = (parsed, cwd) => {
           JSON.parse(fs8.readFileSync(filename, "utf8")),
           {
             projectRomContentSha256: loaded.manifest.rom.contentSha256,
-            sourceName: path8.basename(filename),
-            addressSpaceAliases: { "snes.address-space": SNES_CPU_ADDRESS_SPACE }
+            sourceName: path8.basename(filename)
           }
         )
       );

@@ -7,7 +7,6 @@ import type { AddressStackDirectiveContext, ArchitectureDirectiveContext } from 
  * @returns {void}
  */
 export const handlePushBase = ({ session }: AddressStackDirectiveContext): void => {
-  // debug("handlePushBase")
   session.pushBaseStack.push(session.currentTargetAddress);
 };
 
@@ -18,7 +17,6 @@ export const handlePushBase = ({ session }: AddressStackDirectiveContext): void 
  * @throws {Error} If the base stack is empty.
  */
 export const handlePullBase = ({ session }: AddressStackDirectiveContext): void => {
-  // debug("handlePullBase")
   const baseAddress = session.pushBaseStack.pop();
   if (baseAddress === undefined) {
     throw new Error("No base value to pull.");
@@ -39,7 +37,6 @@ export const handleArch = (
   { session }: ArchitectureDirectiveContext,
   words: readonly string[],
 ): void => {
-  // debug("handleArch", words)
   if (!words[1]) {
     throw new Error("ARCH command requires an architecture parameter.");
   }

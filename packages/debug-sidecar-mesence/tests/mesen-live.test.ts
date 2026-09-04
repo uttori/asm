@@ -40,7 +40,7 @@ const conformanceFixture: DebugBackendConformanceFixture = {
   architectures: [
     {
       architecture: "snes.65816",
-      addressSpaces: ["snes.address-space", "snes.wram", "snes.cartridge-rom"],
+      addressSpaces: ["snes.cpu", "snes.wram", "snes.cartridge-rom"],
       memorySpaces: [
         { addressSpace: "snes.wram", sideEffectFree: true },
         { addressSpace: "snes.cartridge-rom", sideEffectFree: true },
@@ -88,20 +88,20 @@ const conformanceFixture: DebugBackendConformanceFixture = {
     },
   ],
   primaryArchitecture: "snes.65816",
-  primaryAddressSpace: "snes.address-space",
+  primaryAddressSpace: "snes.cpu",
   initialAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: 0x00_8004,
   },
   steppedAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: 0x00_8005,
   },
   breakpointAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: 0x00_8008,
   },
   memoryAddress: {
@@ -113,7 +113,7 @@ const conformanceFixture: DebugBackendConformanceFixture = {
   requiredRegisters: ["A", "X", "Y", "S", "D", "DB", "PB", "PC", "P", "E", "Cycle"],
   disassemblyAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: 0x00_8004,
   },
   disassemblyText: "CLC",

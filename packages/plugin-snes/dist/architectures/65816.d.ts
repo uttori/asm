@@ -255,16 +255,12 @@ export declare class Arch65816 implements ArchitectureEncoder {
     /**
      * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
      * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
-     * `hexconstant` is diagnostic-only (non-hex immediates log "assuming 8-bit").
-     *
      * @param {string} opcode Candidate mnemonic.
      * @param {number} num Already-evaluated operand value.
      * @param {number} len Inferred width (REP/SEP range check).
-     * @param {boolean} explicitlen Whether a suffix forced the width.
-     * @param {boolean} hexconstant True when the operand spelling starts with `$` or `%`.
      * @returns {boolean} True if this family handled the opcode.
      */
-    handleGenericOpcode(opcode: string, num: number, len: number, explicitlen: boolean, hexconstant: boolean): boolean;
+    handleGenericOpcode(opcode: string, num: number, len: number): boolean;
     /**
      * Relative branches. `$xx` (1–2 hex digits) is a raw displacement, not a
      * target - same Asar rule as Super FX. `+`/`-` unnamed labels resolve from

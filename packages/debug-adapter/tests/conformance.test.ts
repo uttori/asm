@@ -39,7 +39,7 @@ test("conformance failures are deterministic and identify the scenario", async (
         id: "exact-instruction-step",
         status: "fail",
         error:
-          "Stepped PC: expected snes.65816/snes.address-space/8080ff, received snes.65816/snes.address-space/808001.",
+          "Stepped PC: expected snes.65816/snes.cpu/8080ff, received snes.65816/snes.cpu/808001.",
       },
     ],
   );

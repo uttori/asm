@@ -16,14 +16,11 @@ const createArch65816 = () => {
 
 test("Arch65816.getlenfromchar resolves supported suffixes", t => {
   const { arch } = createArch65816();
-  // const warnStub = sinon.stub(console, "warn");
-  // t.teardown(() => warnStub.restore());
 
   t.is(arch.getlenfromchar("b"), 1, "Should resolve byte suffixes");
   t.is(arch.getlenfromchar("W"), 2, "Should resolve word suffixes case-insensitively");
   t.is(arch.getlenfromchar("l"), 3, "Should resolve long suffixes");
   t.is(arch.getlenfromchar("d"), 4, "Should resolve deprecated double-word suffixes");
-  // t.true(warnStub.calledOnceWithExactly("Warning: .d opcode suffix is deprecated."));
 });
 
 test("Arch65816.getlenfromchar throws for invalid suffixes", t => {
@@ -538,17 +535,14 @@ test("Arch65816.handleBlockMove throws when operand count is invalid", t => {
 
 test("Arch65816.handleGenericOpcode encodes PEA with a 16-bit operand", t => {
   const { assembler, arch } = createArch65816();
-  // const warnStub = sinon.stub(console, "warn");
   const write1Stub = sinon.stub(assembler, "write1");
   const write2Stub = sinon.stub(assembler, "write2");
   t.teardown(() => {
-    // warnStub.restore();
     write1Stub.restore();
     write2Stub.restore();
   });
 
-  t.true(arch.handleGenericOpcode("PEA", 0x1234, 2, false, false));
-  // t.true(warnStub.calledOnceWithExactly("arch65816 handleGenericOpcode: PEA assuming 8-bit mode."));
+  t.true(arch.handleGenericOpcode("PEA", 0x1234, 2));
   t.true(write1Stub.calledOnceWithExactly(0xF4));
   t.true(write2Stub.calledOnceWithExactly(0x1234));
 });
@@ -564,7 +558,7 @@ test("Arch65816.handleGenericOpcode encodes fixed-width single-byte operand opco
     write2Stub.restore();
   });
 
-  t.true(arch.handleGenericOpcode("WDM", 0xAB, 1, true, true));
+  t.true(arch.handleGenericOpcode("WDM", 0xAB, 1));
   t.deepEqual(write1Stub.getCalls().map((call) => call.args[0]), [0x42, 0xAB]);
   t.true(write2Stub.notCalled);
   t.true(warnStub.notCalled);
@@ -580,11 +574,11 @@ test("Arch65816.handleGenericOpcode validates REP and SEP operand range", t => {
   });
 
   t.throws(() => {
-    arch.handleGenericOpcode("REP", 0x100, 1, true, true);
+    arch.handleGenericOpcode("REP", 0x100, 1);
   }, { message: "Error: invalid_number" });
 
   t.throws(() => {
-    arch.handleGenericOpcode("SEP", 0x12, 2, true, true);
+    arch.handleGenericOpcode("SEP", 0x12, 2);
   }, { message: "Error: invalid_number" });
 
   t.true(write1Stub.notCalled);
@@ -600,7 +594,7 @@ test("Arch65816.handleGenericOpcode returns false for unmapped opcodes", t => {
     write2Stub.restore();
   });
 
-  t.false(arch.handleGenericOpcode("LDA", 0x12, 1, false, false));
+  t.false(arch.handleGenericOpcode("LDA", 0x12, 1));
   t.true(write1Stub.notCalled);
   t.true(write2Stub.notCalled);
 });
@@ -2386,10 +2380,10 @@ test("Arch65816.encode routes branch helpers before generic fallback", t => {
 
   t.true(arch.encode(["bra", "$1234"]));
   t.true(branchStub.calledOnceWithExactly("BRA", "$1234"));
-  t.true(genericStub.calledOnceWithExactly("BRA", 0x1234, 2, false, true));
+  t.true(genericStub.calledOnceWithExactly("BRA", 0x1234, 2));
 });
 
-test("Arch65816.encode falls back to generic opcode handling with resolved num and hexconstant", t => {
+test("Arch65816.encode falls back to generic opcode handling with a resolved operand", t => {
   const { assembler, arch } = createArch65816();
   const expandOperandStub = sinon.stub(assembler.operandResolver, "expandOperand");
   expandOperandStub.withArgs("$12").returns({ expanded: "$12", length: 1 });
@@ -2407,7 +2401,7 @@ test("Arch65816.encode falls back to generic opcode handling with resolved num a
   });
 
   t.true(arch.encode(["wdm", "$12"]));
-  t.true(genericStub.calledOnceWithExactly("WDM", 0x12, 1, false, true));
+  t.true(genericStub.calledOnceWithExactly("WDM", 0x12, 1));
 });
 
 test("Arch65816.encode routes bit-test opcodes without falling through to memory-bit helper", t => {

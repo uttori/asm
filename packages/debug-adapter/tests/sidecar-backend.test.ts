@@ -148,13 +148,13 @@ test("stdio sidecar carries explicit bounded trace pulls without asynchronous tr
   await backend.connect({ reset: true });
   await backend.startTrace({
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
   });
   await backend.step(1, "instruction");
   await backend.stopTrace();
   t.deepEqual(await backend.readTrace(4), {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     sequenceStart: 1,
     addresses: [0x808000, 0x808001],
     droppedEvents: 0,
@@ -172,10 +172,9 @@ test("stdio sidecar carries explicit bounded trace pulls without asynchronous tr
     backend.startTrace({ architecture: "unknown", addressSpace: "unknown.code" }),
     { message: /is not supported/ },
   );
-  await t.throwsAsync(
-    backend.startTrace({ architecture: "", addressSpace: "snes.address-space" }),
-    { message: /Trace architecture must be a non-empty string/ },
-  );
+  await t.throwsAsync(backend.startTrace({ architecture: "", addressSpace: "snes.cpu" }), {
+    message: /Trace architecture must be a non-empty string/,
+  });
   await t.throwsAsync(backend.startTrace({ architecture: "snes.65816", addressSpace: "" }), {
     message: /Trace address space must be a non-empty string/,
   });

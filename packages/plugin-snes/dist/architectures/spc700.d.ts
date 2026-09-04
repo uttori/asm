@@ -73,11 +73,11 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      *
      * @param {string} mnemonic Raw mnemonic, possibly with a length suffix.
      * @param {string[]} operands Split operands (already expanded when possible).
-     * @param {LoweredOperand} [loweredOperand] Combined rest-of-line operand.
+     * @param {LoweredOperand} [_loweredOperand] Combined rest-of-line operand (unused after lowering).
      * @param {LoweredOperand[]} [loweredOperands] Per-operand lowered metadata.
      * @returns {boolean} True if encoded.
      */
-    encodeResolvedInstruction(mnemonic: string, operands: string[], loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
+    encodeResolvedInstruction(mnemonic: string, operands: string[], _loweredOperand?: LoweredOperand, loweredOperands?: LoweredOperand[]): boolean;
     /**
      * Implied single-byte ops (NOP, BRK, RET, flag ops, SLEEP, STOP, XCN).
      * Returns false when the mnemonic is not in this set so other handlers can run.

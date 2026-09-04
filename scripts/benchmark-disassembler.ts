@@ -429,7 +429,7 @@ const traceArtifact = (
     format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
     schemaVersion: RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
     architecture: "snes.65816",
-    addressSpace: "benchmark.snes.cpu",
+    addressSpace: SNES_CPU_ADDRESS_SPACE,
     romContentSha256: rom.identity.contentSha256,
     producer: { id: "uttori.benchmark", revision: "synthetic-v1" },
     chunks,
@@ -621,7 +621,6 @@ const prepareOperation = (
       const imported = importRuntimeInstructionTrace(artifact, {
         projectRomContentSha256: rom.identity.contentSha256,
         sourceName: "benchmark.trace.json",
-        addressSpaceAliases: { "benchmark.snes.cpu": SNES_CPU_ADDRESS_SPACE },
       });
       const merged = mergeRuntimeEvidence(project.shards, imported.batch);
       if (!merged.changed || imported.observedEvents === 0) {

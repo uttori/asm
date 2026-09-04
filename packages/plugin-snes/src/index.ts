@@ -355,7 +355,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
     });
 
     context.registerAddressSpace({
-      id: "snes.address-space",
+      id: "snes.cpu",
       create: ({ state }: TargetFactoryContext) => {
         const mappingContext = () => {
           const targetState = state.get(snesSessionStateKey);
@@ -651,7 +651,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
       displayName: "SNES",
       defaultArchitecture: "snes.65816",
       architectures: ["snes.65816", "snes.spc700", "snes.superfx"],
-      addressSpace: "snes.address-space",
+      addressSpace: "snes.cpu",
       outputFormat: "snes.sfc-output",
       directiveSets: [
         "snes.mapper-directives",

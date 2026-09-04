@@ -2,7 +2,7 @@ import type { DebugBackendCapabilities } from "@uttori/asm-debug-adapter";
 
 export const ARES_RSP_BACKEND_ID = "ares-rsp" as const;
 export const ARES_65816_ARCHITECTURE = "snes.65816" as const;
-export const ARES_65816_ADDRESS_SPACE = "snes.address-space" as const;
+export const ARES_65816_ADDRESS_SPACE = "snes.cpu" as const;
 export const ARES_65816_WRAM_ADDRESS_SPACE = "snes.wram" as const;
 export const ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE = "snes.cartridge-rom" as const;
 export const ARES_65816_THREAD_ID = 1 as const;

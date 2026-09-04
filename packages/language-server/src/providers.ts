@@ -46,6 +46,7 @@ import type {
   AssemblySymbolDefinition,
   AssemblySymbolKind,
   AssemblySymbolReference,
+  ProjectOutlineNode,
   SourceRange,
   WorkspaceIndex,
 } from "@uttori/asm-core";
@@ -900,21 +901,6 @@ export function documentSymbolsFor(index: WorkspaceIndex, file: string): Documen
   }
   return roots;
 }
-
-/** Kind of a project-outline tree node. File nodes expand to document symbols on the client. */
-export type ProjectOutlineKind = "entry" | "file" | "include" | "orphanGroup";
-
-/**
- * Serializable include-graph node for the VS Code project outline TreeView.
- */
-export type ProjectOutlineNode = {
-  id: string;
-  label: string;
-  detail?: string;
-  kind: ProjectOutlineKind;
-  uri?: string;
-  children?: ProjectOutlineNode[];
-};
 
 /**
  * Builds the workspace include DAG for the project outline TreeView.

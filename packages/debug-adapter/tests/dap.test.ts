@@ -39,7 +39,7 @@ const snapshot = (cpuAddress: number): ReplaySnapshot => ({
       name: "65816",
       pc: {
         architecture: "snes.65816",
-        addressSpace: "snes.address-space",
+        addressSpace: "snes.cpu",
         address: cpuAddress,
         outputOffset: cpuAddress & 0x7fff,
       },
@@ -52,7 +52,7 @@ const snapshot = (cpuAddress: number): ReplaySnapshot => ({
     },
   ],
   registers: { 10: [{ name: "A", value: "1234", bits: 16 }] },
-  memory: [{ addressSpace: "snes.address-space", start: 0x008000, bytes: [0xea, 0xdb] }],
+  memory: [{ addressSpace: "snes.cpu", start: 0x008000, bytes: [0xea, 0xdb] }],
   instructions: [
     {
       address: { architecture: "snes.spc700", addressSpace: "spc.aram", address: 0x200 },
@@ -67,8 +67,8 @@ const setup = () => {
   const source = path.join(directory, "main.asm");
   fs.writeFileSync(source, "org $808000\nnop\nstp\n");
   const mapping = new AddressToLineMapping();
-  mapping.includeByte(source, 2, "snes.65816", "snes.address-space", 0x808000, 0);
-  mapping.includeByte(source, 3, "snes.65816", "snes.address-space", 0x808001, 1);
+  mapping.includeByte(source, 2, "snes.65816", "snes.cpu", 0x808000, 0);
+  mapping.includeByte(source, 3, "snes.65816", "snes.cpu", 0x808001, 1);
   const output = Uint8Array.from([0xea, 0xdb]);
   const map = createDebugMap({ target: "snes.sfc", output, mapping, sourceRoot: directory });
   const backend = new ReplayDebugBackend({
@@ -173,7 +173,7 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
           {
             instructionReference: formatDebugAddress({
               architecture: "snes.65816",
-              addressSpace: "snes.address-space",
+              addressSpace: "snes.cpu",
               address: 0x008001,
               outputOffset: 1,
             }),
@@ -189,7 +189,7 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
       request(11, "readMemory", {
         memoryReference: formatDebugAddress({
           architecture: "snes.65816",
-          addressSpace: "snes.address-space",
+          addressSpace: "snes.cpu",
           address: 0x008000,
         }),
         count: 2,
@@ -340,7 +340,7 @@ test("DAP exposes explicit bounded trace recording only through custom requests"
   t.true(
     capabilities.traces.some(
       ({ architecture, addressSpace }) =>
-        architecture === "snes.65816" && addressSpace === "snes.address-space",
+        architecture === "snes.65816" && addressSpace === "snes.cpu",
     ),
   );
   t.true(
@@ -348,7 +348,7 @@ test("DAP exposes explicit bounded trace recording only through custom requests"
       await fixture.session.dispatch(
         request(3, "uttori/startTrace", {
           architecture: "snes.65816",
-          addressSpace: "snes.address-space",
+          addressSpace: "snes.cpu",
         }),
       ),
     ).success,
@@ -386,9 +386,9 @@ test("DAP rejects stale maps and parses fragmented transport frames deterministi
   t.is(
     formatDebugAddress({
       architecture: "snes.65816",
-      addressSpace: "snes.address-space",
+      addressSpace: "snes.cpu",
       address: 0x808000,
     }),
-    "snes.65816|snes.address-space|0x808000",
+    "snes.65816|snes.cpu|0x808000",
   );
 });

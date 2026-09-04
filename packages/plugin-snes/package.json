@@ -26,9 +26,6 @@
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0"
   },
-  "optionalDependencies": {
-    "debug": "^4.4.3"
-  },
   "engines": {
     "node": ">=26"
   }

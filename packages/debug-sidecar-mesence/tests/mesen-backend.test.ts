@@ -183,7 +183,7 @@ const fixture: DebugBackendConformanceFixture = {
   architectures: [
     {
       architecture: "snes.65816",
-      addressSpaces: ["snes.address-space", "snes.wram", "snes.cartridge-rom"],
+      addressSpaces: ["snes.cpu", "snes.wram", "snes.cartridge-rom"],
       memorySpaces: [
         { addressSpace: "snes.wram", sideEffectFree: true },
         { addressSpace: "snes.cartridge-rom", sideEffectFree: true },
@@ -231,20 +231,20 @@ const fixture: DebugBackendConformanceFixture = {
     },
   ],
   primaryArchitecture: "snes.65816",
-  primaryAddressSpace: "snes.address-space",
+  primaryAddressSpace: "snes.cpu",
   initialAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: INITIAL_PC,
   },
   steppedAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: INITIAL_PC + 1,
   },
   breakpointAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: INITIAL_PC + 2,
   },
   memoryAddress: {
@@ -256,7 +256,7 @@ const fixture: DebugBackendConformanceFixture = {
   requiredRegisters: ["A", "PC"],
   disassemblyAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: INITIAL_PC,
   },
   disassemblyText: "NOP",
@@ -416,7 +416,7 @@ test("Mesen translator validates stopped state, addresses, and native responses"
 
   await backend.pause();
   await t.throwsAsync(
-    backend.startTrace({ architecture: "snes.65816", addressSpace: "snes.address-space" }),
+    backend.startTrace({ architecture: "snes.65816", addressSpace: "snes.cpu" }),
     { message: /not implemented/ },
   );
   await t.throwsAsync(backend.readTrace(1), { message: /not implemented/ });
@@ -433,10 +433,7 @@ test("Mesen translator validates stopped state, addresses, and native responses"
     0,
   );
   await t.throwsAsync(
-    backend.readMemory(
-      { architecture: "snes.65816", addressSpace: "snes.address-space", address: 0 },
-      1,
-    ),
+    backend.readMemory({ architecture: "snes.65816", addressSpace: "snes.cpu", address: 0 }, 1),
     { message: /reserved for disassembly/ },
   );
   await t.throwsAsync(

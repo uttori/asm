@@ -22,7 +22,7 @@ test("VS Code recorder streams, drains, and closes an importable native trace", 
       first = false;
       return {
         architecture: "snes.65816",
-        addressSpace: "snes.address-space",
+        addressSpace: "snes.cpu",
         sequenceStart: 1,
         addresses: [0x808000, 0x808001],
         droppedEvents: 0,
@@ -33,7 +33,7 @@ test("VS Code recorder streams, drains, and closes an importable native trace", 
       stoppedBatch = false;
       return {
         architecture: "snes.65816",
-        addressSpace: "snes.address-space",
+        addressSpace: "snes.cpu",
         sequenceStart: 3,
         addresses: [0x808002],
         droppedEvents: 0,
@@ -42,7 +42,7 @@ test("VS Code recorder streams, drains, and closes an importable native trace", 
     }
     return {
       architecture: "snes.65816",
-      addressSpace: "snes.address-space",
+      addressSpace: "snes.cpu",
       sequenceStart: active ? 3 : 4,
       addresses: [],
       droppedEvents: 0,
@@ -53,7 +53,7 @@ test("VS Code recorder streams, drains, and closes an importable native trace", 
     const recorder = await RuntimeTraceFileRecorder.create({
       file,
       architecture: "snes.65816",
-      addressSpace: "snes.address-space",
+      addressSpace: "snes.cpu",
       romContentSha256,
       producer: { id: "ares", revision: "fixture" },
       maxBatchEvents: 240,
@@ -75,7 +75,6 @@ test("VS Code recorder streams, drains, and closes an importable native trace", 
     const imported = importRuntimeInstructionTrace(artifact, {
       projectRomContentSha256: romContentSha256,
       sourceName: path.basename(file),
-      addressSpaceAliases: { "snes.address-space": "snes.cpu" },
     });
     t.is(imported.observedEvents, 3);
     t.is(imported.droppedEvents, 0);
@@ -97,7 +96,7 @@ test("VS Code recorder validates identity before replacing a destination", async
       RuntimeTraceFileRecorder.create({
         file,
         architecture: "snes.65816",
-        addressSpace: "snes.address-space",
+        addressSpace: "snes.cpu",
         romContentSha256: "invalid",
         producer: { id: "ares", revision: "fixture" },
         maxBatchEvents: 240,

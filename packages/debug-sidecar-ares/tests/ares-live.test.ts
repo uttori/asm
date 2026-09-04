@@ -62,13 +62,13 @@ const conformanceFixture: DebugBackendConformanceFixture = {
   architectures: [
     {
       architecture: "snes.65816",
-      addressSpaces: ["snes.address-space", "snes.wram", "snes.cartridge-rom"],
+      addressSpaces: ["snes.cpu", "snes.wram", "snes.cartridge-rom"],
       memorySpaces: [
         { addressSpace: "snes.wram", sideEffectFree: true },
         { addressSpace: "snes.cartridge-rom", sideEffectFree: true },
       ],
       trace: {
-        addressSpaces: ["snes.address-space"],
+        addressSpaces: ["snes.cpu"],
         maxBufferedEvents: 65_536,
         maxBatchEvents: 240,
       },
@@ -98,20 +98,20 @@ const conformanceFixture: DebugBackendConformanceFixture = {
     },
   ],
   primaryArchitecture: "snes.65816",
-  primaryAddressSpace: "snes.address-space",
+  primaryAddressSpace: "snes.cpu",
   initialAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: 0x00_8004,
   },
   steppedAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: 0x00_8005,
   },
   breakpointAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: 0x00_8005,
   },
   memoryAddress: {
@@ -123,7 +123,7 @@ const conformanceFixture: DebugBackendConformanceFixture = {
   requiredRegisters: ["A", "X", "Y", "S", "D", "DB", "PB", "PC", "P", "E"],
   disassemblyAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: 0x00_8004,
   },
   disassemblyText: "CLC",
@@ -402,8 +402,8 @@ liveTest(
     await writeFile(source, "CLC\nXCE\n", "utf8");
     const output = readFileSync(liveRom);
     const mapping = new AddressToLineMapping();
-    mapping.includeByte(source, 1, "snes.65816", "snes.address-space", 0x00_8004, 4);
-    mapping.includeByte(source, 2, "snes.65816", "snes.address-space", 0x00_8005, 5);
+    mapping.includeByte(source, 1, "snes.65816", "snes.cpu", 0x00_8004, 4);
+    mapping.includeByte(source, 2, "snes.65816", "snes.cpu", 0x00_8005, 5);
     const debugMap = createDebugMap({
       target: path.basename(liveRom),
       output,
@@ -508,7 +508,7 @@ liveTest(
         await session.dispatch(
           dapRequest(6, "uttori/startTrace", {
             architecture: "snes.65816",
-            addressSpace: "snes.address-space",
+            addressSpace: "snes.cpu",
           }),
         ),
       );
@@ -565,13 +565,13 @@ liveTest("built ares sidecar sustains ordered bounded 65816 trace pulls", async 
       ({ architecture }) => architecture === "snes.65816",
     )?.trace;
     t.deepEqual(traceCapabilities, {
-      addressSpaces: ["snes.address-space"],
+      addressSpaces: ["snes.cpu"],
       maxBufferedEvents: 65_536,
       maxBatchEvents: 240,
     });
     await backend.startTrace({
       architecture: "snes.65816",
-      addressSpace: "snes.address-space",
+      addressSpace: "snes.cpu",
     });
     const started = performance.now();
     await backend.continue(1);
@@ -581,7 +581,7 @@ liveTest("built ares sidecar sustains ordered bounded 65816 trace pulls", async 
     for (let index = 0; index < 32; index++) {
       const batch = await backend.readTrace(240);
       t.is(batch.architecture, "snes.65816");
-      t.is(batch.addressSpace, "snes.address-space");
+      t.is(batch.addressSpace, "snes.cpu");
       t.true(batch.active);
       t.true(batch.addresses.length <= 240);
       t.true(batch.addresses.every((address) => address >= 0 && address <= 0xff_ffff));

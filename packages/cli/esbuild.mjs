@@ -13,9 +13,6 @@ await build({
   platform: "node",
   format: "esm",
   target: "node20",
-  // `debug` is optional in the core and SNES packages. Leave it external so
-  // the executable behaves the same with or without debug logging installed.
-  external: ["debug"],
   banner: { js: "#!/usr/bin/env node" },
   logLevel: "info",
 });

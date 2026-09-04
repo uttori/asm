@@ -19,13 +19,6 @@ export type OperandResolverDependencies = {
   requireStaticLabelLookup(): boolean;
 };
 
-let debug = (..._: unknown[]) => {};
-/* c8 ignore next */
-try {
-  const { default: d } = await import("debug");
-  debug = d("OperandResolver");
-} catch {}
-
 export class OperandResolver {
   constructor(readonly deps: OperandResolverDependencies) {}
 
@@ -132,7 +125,6 @@ export class OperandResolver {
    * @returns {number} The result.
    */
   determineValueLength(value: string | number): number {
-    debug("determineValueLength", value);
     if (typeof value !== "string" && typeof value !== "number") {
       throw new Error(`Invalid value type for length determination: ${typeof value}`);
     }
@@ -185,8 +177,6 @@ export class OperandResolver {
    * @returns {string} The result.
    */
   tryResolveLabelInOperand(operand: string): string {
-    debug("tryResolveLabelInOperand", operand);
-
     if (operand.startsWith("#")) {
       const inner = operand.substring(1).trim();
       if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
@@ -239,7 +229,6 @@ export class OperandResolver {
    * @returns {number} The result.
    */
   getnum(operand: string | ExpressionNode): number {
-    debug("getnum", operand);
     if (typeof operand !== "string") {
       return this.getnumFromNode(operand);
     }
@@ -269,7 +258,6 @@ export class OperandResolver {
         return this.deps.evaluateMath(operand);
       } catch (error) {
         if (this.deps.shouldDeferExpressionEvaluation()) {
-          debug("function expression deferred until final pass", { operand, error });
           return 0;
         }
         throw error;
@@ -306,8 +294,6 @@ export class OperandResolver {
       return this.deps.evaluateMath(operand);
     } catch (error: unknown) {
       if (this.deps.shouldDeferExpressionEvaluation()) {
-        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-        debug("expression deferred until final pass", { operand, error: errorMessage });
         return 0;
       }
       throw error;
@@ -340,8 +326,6 @@ export class OperandResolver {
           return this.deps.evaluateMath(operand);
         } catch (error: unknown) {
           if (this.deps.shouldDeferExpressionEvaluation()) {
-            const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-            debug("expression node deferred until final pass", { operand, error: errorMessage });
             return 0;
           }
           throw error;
@@ -375,7 +359,6 @@ export class OperandResolver {
    * @returns {ExpandedOperand} The result.
    */
   expandOperand(operand: string): ExpandedOperand {
-    debug("expandOperand", operand);
     const raw = operand.trim();
     const syntax = parseOperandSyntax(raw);
     if (!operand) {
@@ -399,9 +382,7 @@ export class OperandResolver {
 
     try {
       expanded = this.deps.resolveDefines(expanded);
-    } catch (error) {
-      debug("expandOperand not a define", error);
-    }
+    } catch (error) {}
 
     if (this.deps.isStructReference(expanded)) {
       expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
@@ -416,9 +397,7 @@ export class OperandResolver {
           const value = this.getnum(inner);
           expectedLength = this.determineValueLength(value);
           expanded = "#$" + value.toString(16).toUpperCase();
-        } catch (error) {
-          debug("failed to evaluate immediate expression", inner, error);
-        }
+        } catch (error) {}
       } else if (inner.startsWith("$")) {
         expectedLength = this.determineValueLength(inner.substring(1));
       } else {
@@ -426,9 +405,7 @@ export class OperandResolver {
           const value = this.getnum(inner);
           expectedLength = this.determineValueLength(value);
           expanded = "#$" + value.toString(16).toUpperCase();
-        } catch (error) {
-          debug("failed to evaluate immediate expression", inner, error);
-        }
+        } catch (error) {}
       }
     } else if (expanded.includes(",")) {
       if (expanded.startsWith("$")) {
@@ -454,9 +431,7 @@ export class OperandResolver {
           expanded = "$" + result.toString(16).toUpperCase() + suffix;
           expectedLength = this.determineValueLength(result);
         }
-      } catch (error) {
-        debug("math evaluation skipped for expression", expanded, error);
-      }
+      } catch (error) {}
     }
 
     return { raw, expanded, length: expectedLength, syntax };

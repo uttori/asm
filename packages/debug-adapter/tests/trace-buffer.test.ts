@@ -4,7 +4,7 @@ import { test } from "../../../tests/ava-helper.js";
 test("DebugTraceBuffer bounds producer memory and exposes ordered oldest-first loss", (t) => {
   const trace = new DebugTraceBuffer({
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     capacity: 3,
   });
   trace.start();
@@ -12,7 +12,7 @@ test("DebugTraceBuffer bounds producer memory and exposes ordered oldest-first l
   t.is(trace.bufferedEvents, 3);
   t.deepEqual(trace.read(2), {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     sequenceStart: 3,
     addresses: [0x808002, 0x808003],
     droppedEvents: 2,
@@ -22,7 +22,7 @@ test("DebugTraceBuffer bounds producer memory and exposes ordered oldest-first l
   trace.append(0xffffff);
   t.deepEqual(trace.read(4), {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     sequenceStart: 5,
     addresses: [0x808004],
     droppedEvents: 2,

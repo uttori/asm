@@ -3,13 +3,6 @@ import * as fs from "node:fs";
 
 import { CRC32 } from "./crc32.js";
 
-let debug = (..._args: unknown[]): void => {};
-/* c8 ignore next */
-try {
-  const { default: d } = await import("debug");
-  debug = d("AddressToLine");
-} catch {}
-
 /** Information mapping a logical address to a source file and line number. */
 export interface AddrToLineInfo {
   readonly fileIdx: number;
@@ -54,8 +47,7 @@ const sourceIdentity = (
       size: data.length,
       sha256: createHash("sha256").update(data).digest("hex"),
     };
-  } catch (error) {
-    debug(`Error reading file ${filename}:`, error);
+  } catch {
     return { crc: 0, size: 0, sha256: "" };
   }
 };

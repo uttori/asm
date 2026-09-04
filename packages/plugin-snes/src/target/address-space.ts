@@ -13,7 +13,7 @@ export interface AddressSpaceContext {
  * logical program counter. CPU encoders do not need to know which address
  * space is active.
  */
-export interface TargetAddressSpace {
+export interface SnesRomAddressSpace {
   readonly name: string;
   readonly addressWidth: number;
   readonly defaultOrigin: number;
@@ -50,7 +50,7 @@ export interface TargetAddressSpace {
 }
 
 /** Existing SNES mapper behavior expressed through the target contract. */
-export const snesRomAddressSpace: TargetAddressSpace = {
+export const snesRomAddressSpace: SnesRomAddressSpace = {
   name: "snes-rom",
   addressWidth: 24,
   defaultOrigin: 0x008000,

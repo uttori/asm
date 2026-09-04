@@ -39,8 +39,6 @@ export interface RuntimeInstructionTraceArtifact {
 export interface RuntimeInstructionTraceImportContext {
   readonly projectRomContentSha256: string;
   readonly sourceName: string;
-  /** Explicit recorder-to-project address-space renames applied only to normalized records. */
-  readonly addressSpaceAliases?: Readonly<Record<string, string>>;
 }
 
 /** Native evidence plus deterministic diagnostics produced without mutating a project. */
@@ -169,10 +167,7 @@ export const importRuntimeInstructionTrace = (
       `ROM/project mismatch: project expects ${projectRomContentSha256}, trace describes ${artifact.romContentSha256}.`,
     );
   const sourceName = string(context.sourceName, "Instruction trace source name");
-  const addressSpace = string(
-    context.addressSpaceAliases?.[artifact.addressSpace] ?? artifact.addressSpace,
-    "Instruction trace project address space",
-  );
+  const addressSpace = string(artifact.addressSpace, "Instruction trace project address space");
   const sourceSha256 = sha256(canonicalJson(artifact));
   const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
   const counts = new Map<number, number>();

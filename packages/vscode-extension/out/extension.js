@@ -29666,7 +29666,7 @@ var path12 = __toESM(require("node:path"));
 // packages/debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
-var ARES_65816_ADDRESS_SPACE = "snes.address-space";
+var ARES_65816_ADDRESS_SPACE = "snes.cpu";
 var ARES_65816_WRAM_ADDRESS_SPACE = "snes.wram";
 var ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE = "snes.cartridge-rom";
 var ARES_TRACE_BUFFER_EVENTS = 65536;
@@ -29745,7 +29745,7 @@ var MESEN_BACKEND_ID = "mesence-debug-server";
 var MESEN_65816_ARCHITECTURE = "snes.65816";
 var MESEN_SPC700_ARCHITECTURE = "snes.spc700";
 var MESEN_SUPERFX_ARCHITECTURE = "snes.superfx";
-var MESEN_65816_ADDRESS_SPACE = "snes.address-space";
+var MESEN_65816_ADDRESS_SPACE = "snes.cpu";
 var MESEN_65816_WRAM_ADDRESS_SPACE = "snes.wram";
 var MESEN_65816_ROM_ADDRESS_SPACE = "snes.cartridge-rom";
 var MESEN_SPC700_ADDRESS_SPACE = "spc.aram";

@@ -267,13 +267,13 @@ const fixture: DebugBackendConformanceFixture = {
   architectures: [
     {
       architecture: "snes.65816",
-      addressSpaces: ["snes.address-space", "snes.wram", "snes.cartridge-rom"],
+      addressSpaces: ["snes.cpu", "snes.wram", "snes.cartridge-rom"],
       memorySpaces: [
         { addressSpace: "snes.wram", sideEffectFree: true },
         { addressSpace: "snes.cartridge-rom", sideEffectFree: true },
       ],
       trace: {
-        addressSpaces: ["snes.address-space"],
+        addressSpaces: ["snes.cpu"],
         maxBufferedEvents: 65_536,
         maxBatchEvents: 240,
       },
@@ -303,20 +303,20 @@ const fixture: DebugBackendConformanceFixture = {
     },
   ],
   primaryArchitecture: "snes.65816",
-  primaryAddressSpace: "snes.address-space",
+  primaryAddressSpace: "snes.cpu",
   initialAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: INITIAL_PC,
   },
   steppedAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: INITIAL_PC + 1,
   },
   breakpointAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: INITIAL_PC + 2,
   },
   memoryAddress: {
@@ -328,7 +328,7 @@ const fixture: DebugBackendConformanceFixture = {
   requiredRegisters: ["A", "PC"],
   disassemblyAddress: {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     address: INITIAL_PC,
   },
   disassemblyText: "NOP",
@@ -404,12 +404,12 @@ test("ares RSP backend pulls ordered bounded instruction traces with explicit st
   await backend.connect({ reset: true });
   await backend.startTrace({
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
   });
   await backend.step(1, "instruction");
   t.deepEqual(await backend.readTrace(1), {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     sequenceStart: 1,
     addresses: [INITIAL_PC],
     droppedEvents: 0,
@@ -418,7 +418,7 @@ test("ares RSP backend pulls ordered bounded instruction traces with explicit st
   await backend.stopTrace();
   t.deepEqual(await backend.readTrace(240), {
     architecture: "snes.65816",
-    addressSpace: "snes.address-space",
+    addressSpace: "snes.cpu",
     sequenceStart: 2,
     addresses: [INITIAL_PC + 1],
     droppedEvents: 0,

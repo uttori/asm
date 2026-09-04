@@ -6,7 +6,6 @@ import type { NamespaceDirectiveContext } from "./types.js";
  * @param {NamespaceDirectiveContext} ctx The directive context.
  */
 export const handlePushNamespace = ({ session }: NamespaceDirectiveContext): void => {
-  // debug("handlePushNamespace")
   session.namespaceStack.push(session.currentNamespace);
   if (session.namespaceNestingEnabled) {
     // Also save the nesting path
@@ -19,7 +18,6 @@ export const handlePushNamespace = ({ session }: NamespaceDirectiveContext): voi
  * @param {NamespaceDirectiveContext} ctx The directive context.
  */
 export const handlePullNamespace = ({ session }: NamespaceDirectiveContext): void => {
-  // debug("handlePullNamespace");
   if (session.namespaceStack.length === 0) {
     throw new Error("pullns without pushns");
   }
@@ -49,7 +47,6 @@ export const handleNamespace = (
   words: readonly string[],
 ): void => {
   const params = words.slice(1);
-  // debug("handleNamespace", params);
 
   // Handle namespace nesting directive
   if (params.length >= 2 && params[0].toLowerCase() === "nested") {
@@ -66,7 +63,6 @@ export const handleNamespace = (
   }
 
   if (params.length === 0) {
-    // debug("handleNamespace empty, resetting namespace");
     if (session.namespaceNestingEnabled) {
       session.namespaceNestingPath = [];
     }
@@ -75,7 +71,6 @@ export const handleNamespace = (
   }
 
   if (params.length === 1 && params[0].toLowerCase() === "off") {
-    // debug("handleNamespace disable", session.currentNamespace);
     if (session.namespaceNestingEnabled) {
       // Pop the last namespace from the path
       session.namespaceNestingPath.pop();
@@ -86,14 +81,12 @@ export const handleNamespace = (
     }
     return;
   } else if (params.length === 1) {
-    // debug("handleNamespace enable", params[0]);
     enterNamespace(session, params[0]);
     return;
   }
 
   const action = params[1].toLowerCase();
   if (action === "off") {
-    // debug("handleNamespace disable action", params[0]);
     if (session.namespaceNestingEnabled) {
       session.namespaceNestingPath.pop();
       session.currentNamespace = session.namespaceNestingPath.join("_");
@@ -101,7 +94,6 @@ export const handleNamespace = (
       session.currentNamespace = "";
     }
   } else {
-    // debug("handleNamespace enable action", params[0]);
     enterNamespace(session, params[0]);
   }
 };

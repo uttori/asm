@@ -650,7 +650,6 @@ const importProjectEvidence = (parsed: CliArguments, cwd: string): number => {
           {
             projectRomContentSha256: loaded.manifest.rom.contentSha256,
             sourceName: path.basename(filename),
-            addressSpaceAliases: { "snes.address-space": SNES_CPU_ADDRESS_SPACE },
           },
         ),
       );

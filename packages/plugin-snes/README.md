@@ -44,7 +44,7 @@ Core Uttori ASM has no default SNES mode. This plugin must be activated, after w
 | Default architecture     | `snes.65816`                        | Alias: `65816`                                              |
 | Audio architecture       | `snes.spc700`                       | Aliases: `spc700`, `spc700-raw`, `spc700-inline`            |
 | Coprocessor architecture | `snes.superfx`                      | Alias: `superfx`                                            |
-| Address space            | `snes.address-space`                | 24-bit, mapper-aware CPU-to-ROM translation                 |
+| Address space            | `snes.cpu`                          | 24-bit, mapper-aware CPU-to-ROM translation                 |
 | Output format            | `snes.sfc-output`                   | Headerless `.sfc` bytes with optional checksum finalization |
 | Default mapper           | `lorom`                             | Default logical origin is `$008000`                         |
 | Expression sets          | SNES address and ROM-read functions | Installed only for this target                              |

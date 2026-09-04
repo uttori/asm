@@ -12,19 +12,9 @@ import {
   type Event,
   type TreeDataProvider,
 } from "vscode";
+import type { ProjectOutlineKind, ProjectOutlineNode } from "@uttori/asm-core";
 import type { DocumentSymbol, LanguageClient } from "vscode-languageclient/node";
 import { SymbolKind } from "vscode-languageclient";
-
-export type ProjectOutlineKind = "entry" | "file" | "include" | "orphanGroup";
-
-export type ProjectOutlineNode = {
-  id: string;
-  label: string;
-  detail?: string;
-  kind: ProjectOutlineKind;
-  uri?: string;
-  children?: ProjectOutlineNode[];
-};
 
 type OutlineItem = {
   id: string;

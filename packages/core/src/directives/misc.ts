@@ -15,7 +15,6 @@ export type MiscDirectiveContexts = {
  * @throws {Error} If `pulltable` is called without `pushtable`.
  */
 export const handlePullTable = ({ session }: TableDirectiveContext): void => {
-  // debug("handlePullTable");
   if (session.tableStack.length === 0) {
     throw new Error("pulltable without pushtable");
   }
@@ -28,7 +27,6 @@ export const handlePullTable = ({ session }: TableDirectiveContext): void => {
  * @param {DirectiveTableCapability} ctx.session The table-capable assembly session.
  */
 export const handlePushTable = ({ session }: TableDirectiveContext): void => {
-  // debug("handlePushTable");
   session.tableStack.push(new Map(session.characterMappings));
 };
 

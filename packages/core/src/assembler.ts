@@ -94,15 +94,6 @@ import {
 } from "./plugin/index.js";
 import type { AssemblyStageName } from "./plugin/contracts.js";
 
-let debug = (..._args: unknown[]): void => {};
-/* c8 ignore next */
-// if (process.env.UTTORI_DATA_DEBUG || true) {
-try {
-  const { default: d } = await import("debug");
-  debug = d("Assembler");
-} catch {}
-// }
-
 type RuntimeConditionalNode = ConditionalBranchNode;
 type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;
 type StageExecutionMode = "layout" | "emit";
@@ -1976,7 +1967,6 @@ export class Assembler {
    * @param {number} length The length of the section to fill.
    */
   fillOutputBytes(start: number, value: number, length: number): void {
-    debug("fillOutputBytes", start, value, length);
     for (let i = 0; i < length; i++) {
       this.outputBytes[start + i] = value & 0xff;
     }
@@ -2105,8 +2095,6 @@ export class Assembler {
    * @returns {boolean} True if the instruction was handled, false otherwise.
    */
   asblock_pick(input: string[] | LoweredInstruction): boolean {
-    debug("asblock_pick", Array.isArray(input) ? input : input.words);
-    debug("asblock_pick arch", this.arch);
     const words = Array.isArray(input) ? input : input.words;
     const raw = Array.isArray(input) ? words.join(" ") : input.sourceRaw;
     if (!this.inMacroDefinition && this.tryHandleCharacterMapping(raw)) {
@@ -2349,7 +2337,6 @@ export class Assembler {
       (state.words[0].startsWith("'") || state.words[0].startsWith('"'))
     ) {
       setCommandKind(state, "characterMapping");
-      debug("handleCharacterMapping", state.words);
       this.directiveRuntime.handleCharacterMapping(state.words);
       return "handled";
     }
@@ -2416,14 +2403,6 @@ export class Assembler {
    * @param {boolean} [preprocessed] Whether comments and continuations were already normalized.
    */
   processCommand(command: string, preprocessed = false): void {
-    debug(
-      "processCommand",
-      { command },
-      this.currentTargetAddress,
-      "/",
-      this.currentTargetAddress.toString(16),
-      `stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`,
-    );
     if (command.trim() === "") {
       return;
     }
@@ -2596,11 +2575,6 @@ export class Assembler {
       });
     }
 
-    // Determine how many bytes were written in this command.
-    const commandSize =
-      normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth) - startPC;
-    debug("processCommand bytes written", commandSize);
-
     if (this.collectSourceMetadata) {
       this.addAddressToLine(
         normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth),
@@ -2633,15 +2607,12 @@ export class Assembler {
   dispatchLoweredNode(lowered: LoweredCommand): void {
     if (lowered.kind === "directive") {
       const loweredCommand = (lowered as LoweredCommand & { command?: NormalizedCommand }).command;
-      const handledDirective = this.directiveRegistry.dispatch(
+      this.directiveRegistry.dispatch(
         lowered.keyword,
         lowered.words,
         lowered.source.raw,
         loweredCommand,
       );
-      if (!handledDirective && lowered.keyword) {
-        debug("💥 assembler dispatchLoweredNode unknown directive", lowered.keyword);
-      }
       return;
     }
 
@@ -2652,10 +2623,7 @@ export class Assembler {
         instruction = refreshed;
       }
     }
-    const wasOpcode = this.asblock_pick(instruction);
-    if (!wasOpcode) {
-      debug("💥 assembler dispatchLoweredNode unknown operation", lowered.mnemonic);
-    }
+    this.asblock_pick(instruction);
   }
 
   /**
@@ -2665,7 +2633,6 @@ export class Assembler {
    * @param {string} defLine - The function definition line.
    */
   parseFunctionDefinition(defLine: string): void {
-    debug("parseFunctionDefinition", defLine);
     // Set the string to parse in mathCore
     this.mathCore.str = defLine;
     // Call the parseFunctionDefinition method without arguments
@@ -2694,7 +2661,6 @@ export class Assembler {
    * @returns {number} The result of the expression.
    */
   evaluateRangeExpression(expr: string | ExpressionNode): number {
-    debug("assemlber evaluateRangeExpression", expr);
     const resolvedExpr = this.resolveExpressionInput(expr);
     if (isReferenceExpressionNode(resolvedExpr)) {
       return this.evaluateReferenceExpressionNode(resolvedExpr, true);
@@ -2728,14 +2694,12 @@ export class Assembler {
    * @returns {boolean} True if the expression is true, false otherwise.
    */
   evaluateExpression(expression: string | ExpressionNode): boolean {
-    debug("evaluateExpression", expression);
     let resolvedExpr: ExpressionNode | undefined;
     let result: number;
     try {
       // Resolve inside the guarded block so failures from define/label/static checks
       // are reported with the same contextual wrapper as math failures.
       resolvedExpr = this.resolveExpressionInput(expression);
-      debug("evaluateExpression resolvedExpr", resolvedExpr);
       result = isReferenceExpressionNode(resolvedExpr)
         ? this.evaluateReferenceExpressionNode(resolvedExpr)
         : this.mathCore.math(resolvedExpr);
@@ -2748,7 +2712,6 @@ export class Assembler {
       );
     }
     // In our assembler, a condition is true if the result is nonzero.
-    debug("evaluateExpression result", result, "=>", result !== 0);
     return result !== 0;
   }
 
@@ -2975,7 +2938,6 @@ export class Assembler {
       return undefined;
     }
 
-    debug(`resolvedefines handling relative label: ${input}`);
     try {
       switch (input) {
         case "+":
@@ -2991,12 +2953,8 @@ export class Assembler {
       }
     } catch (error) {
       if (!this.enforceResolvedLabels) {
-        debug("resolvedefines stage does not enforce labels, returning placeholder");
         return "$0000";
       }
-      debug(
-        `resolvedefines failed to resolve relative label ${input}: ${error instanceof Error ? error.message : ""} during stage ${this.activeStageExecutionState?.stage ?? "collectDefinitions"}`,
-      );
       throw error;
     }
   }
@@ -3016,7 +2974,6 @@ export class Assembler {
       return undefined;
     }
 
-    debug("resolvedefines direct variable reference", input);
     const varName = input.substring(1);
     return this.lookupDefineValue(varName);
   }
@@ -3032,9 +2989,7 @@ export class Assembler {
       return undefined;
     }
 
-    const prefix = prefixMatch[1];
     const labelName = prefixMatch[2];
-    debug("resolvedefines macro label found with prefix", { prefix, labelName });
     return this.symbolScope.getLabelValue(labelName, false).toString();
   }
 
@@ -3051,7 +3006,6 @@ export class Assembler {
 
     // Expressions like `.zone_n-.zone_max` must stay intact so later arithmetic
     // can evaluate both sides instead of collapsing to the first local label.
-    debug("resolvedefines checking if input is a label reference", input);
     const labelValue = this.symbolScope.tryGetLabelValue(input, false);
     if (labelValue === undefined) {
       // Preserve legacy definition-pass behavior: unresolved bare candidates,
@@ -3059,10 +3013,8 @@ export class Assembler {
       if (this.isDefinitionCollectionStage) {
         return "0";
       }
-      debug("resolvedefines not a label, continuing");
       return undefined;
     }
-    debug("resolvedefines labelValue", labelValue);
     return labelValue.toString();
   }
 
@@ -3072,12 +3024,9 @@ export class Assembler {
    * @returns {string} The string with defines resolved.
    */
   resolvedefines(input: string): string {
-    debug("resolvedefines", { input });
     if (!input) {
-      debug("resolvedefines input is empty, returning empty string");
       return "";
     }
-    // debug("resolvedefines defines", this.defines);
     let result = "";
     let index = 0;
 
@@ -3089,7 +3038,6 @@ export class Assembler {
     // Special case for expressions with != operator
     // This prevents issues with != being misinterpreted as a define
     if (input.includes("!=")) {
-      debug("resolvedefines != operator found in", input);
       // Process each part of the expression separately
       const parts = input.split("!=");
       const resolvedParts = parts.map((part) => this.resolvedefines(part.trim()));
@@ -3097,7 +3045,6 @@ export class Assembler {
     }
 
     if ((input.startsWith("sizeof(") || input.startsWith("objectsize(")) && input.endsWith(")")) {
-      debug("resolvedefines sizeof found, skipping", input);
       return input;
     }
 
@@ -3121,15 +3068,12 @@ export class Assembler {
       const char = input[index];
 
       if (char === "\\" && input[index + 1] === "\\") {
-        debug("resolvedefines double slash", input);
         result += "\\";
         index += 2;
       } else if (char === "\\" && input[index + 1] === "!") {
-        debug("resolvedefines \\!define", input);
         result += "!";
         index += 2;
       } else if (char === "!") {
-        debug("resolvedefines !define", input);
         let defineName = "";
         index++; // skip the !
         if (input[index] === "{") {
@@ -3145,13 +3089,11 @@ export class Assembler {
           if (braces !== 0) throw new Error("Error: Mismatched braces in define name.");
           index++; // skip the closing }
           defineName = this.resolvedefines(unprocessedName);
-          debug("resolvedefines !define defineName", defineName);
         } else {
           // Handle regular define (no braces)
           while (index < input.length && /\w/.test(input[index])) {
             defineName += input[index++];
           }
-          debug("resolvedefines !define defineName", defineName);
         }
 
         // `!$00` / `!(1+2)` are bitwise NOT for mathcore, not `Define ''`.
@@ -3174,7 +3116,6 @@ export class Assembler {
       }
     }
 
-    debug("resolvedefines result =", { result });
     return result;
   }
 
@@ -3183,7 +3124,6 @@ export class Assembler {
    * @param {AssemblyStageName} stage The stage.
    */
   activateStage(stage: AssemblyStageName): void {
-    debug("🏁 activateStage", stage);
     this.syncActiveStageExecutionState(stage);
     if (stage === "resolveLayout") {
       // Rebuild relative-label tables from layout sizing only.
@@ -3240,7 +3180,6 @@ export class Assembler {
    * @param {string} filename - The filename to set.
    */
   setCurrentFile(filename: string): void {
-    debug("setCurrentFile", filename);
     this.currentFile = filename;
     this.currentLine = 0;
     this.programModelBuilder.resetIncrementalParseState(this.incrementalProgramParseState);
@@ -3251,7 +3190,6 @@ export class Assembler {
    * @param {number} line - The line number to set.
    */
   setCurrentLine(line: number): void {
-    // debug('setCurrentLine', line);
     this.currentLine = line;
   }
 
@@ -3529,28 +3467,12 @@ export class Assembler {
    * @param {number} [length] The length of the block to write.
    */
   writeOutputBytes(start: number, value: number, length: number = 1): void {
-    debug("writeOutputBytes", { start, value, length });
     if (typeof start !== "number" || typeof value !== "number" || typeof length !== "number") {
       throw new Error("writeOutputBytes requires a number for start, value, and length");
     }
-    if (value > 0xff) {
-      debug("writeOutputBytes 💥 value must be less than 0xFF", value);
-    }
-    debug(
-      "writeOutputBytes before this.outputBytes.length",
-      this.outputBytes.length,
-      "/",
-      this.outputBytes.length.toString(16),
-    );
     for (let i = 0; i < length; i++) {
       this.outputBytes[start + i] = value & 0xff;
     }
-    debug(
-      "writeOutputBytes after this.outputBytes.length",
-      this.outputBytes.length,
-      "/",
-      this.outputBytes.length.toString(16),
-    );
   }
 
   /**
@@ -3559,14 +3481,11 @@ export class Assembler {
    * @param {number} fillByte The byte used for the new range.
    */
   expandOutput(newSize: number, fillByte: number): void {
-    debug("expandOutput", { newSize, fillByte });
     if (typeof newSize !== "number" || typeof fillByte !== "number") {
       throw new Error("expandOutput requires a number for newSize and fillByte");
     }
     if (newSize > this.outputBytes.length) {
       this.writeOutputBytes(this.outputBytes.length, fillByte, newSize - this.outputBytes.length);
-    } else {
-      debug("expandOutput newSize <= this.outputBytes.length, no expansion needed");
     }
   }
 
@@ -3652,7 +3571,6 @@ export class Assembler {
     const { variable, start, end } = this.resolveForLoopBounds(forBlock);
 
     if (!variable || start === undefined || end === undefined) {
-      debug("executeForLoopIterations missing loop semantics:", forBlock);
       return;
     }
 
@@ -3689,7 +3607,6 @@ export class Assembler {
    * @param {LoweredLoopNode} loopBlock The loop block.
    */
   executeLoweredLoop(loopBlock: LoweredLoopNode): void {
-    debug("executeLoweredLoop", loopBlock);
     if (loopBlock.loopType === "for") {
       this.executeLoweredForLoop(loopBlock);
     } else if (loopBlock.loopType === "while") {
@@ -3702,7 +3619,6 @@ export class Assembler {
    * @param {LoweredLoopNode} forBlock The for block.
    */
   executeLoweredForLoop(forBlock: LoweredLoopNode): void {
-    debug("executeLoweredForLoop", forBlock);
     this.executeForLoopIterations(forBlock, () => this.executeLoweredNodeStream(forBlock.commands));
   }
 
@@ -3722,7 +3638,6 @@ export class Assembler {
     const conditionNode =
       whileBlock.conditionNode ?? whileBlock.header?.parsed.condition?.expression;
     if (!conditionNode) {
-      debug("executeWhileLoopCommands missing condition expression", whileBlock);
       return;
     }
 
@@ -3745,19 +3660,11 @@ export class Assembler {
       iteration++;
     }
 
-    if (iteration >= MAX_ITERATIONS) {
-      debug(
-        "executeWhileLoopCommands while loop exceeded maximum iteration limit. Possible infinite loop detected.",
-      );
-    }
-
     // Restore original variable values
     for (const [varName, value] of originalValues.entries()) {
       if (value !== undefined) {
-        debug(`executeWhileLoopCommands setting ${varName} to ${value}`);
         this.defines.set(varName, value);
       } else {
-        debug(`executeWhileLoopCommands delete entry for ${varName}`);
         this.defines.delete(varName);
       }
     }
@@ -3768,7 +3675,6 @@ export class Assembler {
    * @param {LoweredLoopNode} whileBlock The while block.
    */
   executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void {
-    debug("executeLoweredWhileLoop", whileBlock);
     this.executeWhileLoopCommands(
       whileBlock,
       whileBlock.commands,

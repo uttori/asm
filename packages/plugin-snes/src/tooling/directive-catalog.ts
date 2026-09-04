@@ -1,40 +1,4 @@
-/** Nested keyword valid after a directive (`bankcross` after `check`). */
-export type DirectiveOperandDescriptor = {
-  keyword: string;
-  summary: string;
-  syntax: string;
-  operands?: readonly DirectiveOperandDescriptor[];
-};
-
-/**
- * A static description of an assembler directive or control-flow keyword for
- * editor tooling (hover, completion, signature help).
- */
-export type DirectiveDescriptor = {
-  /** The directive keyword as written in source, e.g. "org", "incsrc". */
-  keyword: string;
-  /** A short human-readable summary suitable for hover documentation. */
-  summary: string;
-  /** Example syntax, e.g. "org $address". */
-  syntax: string;
-  /** Nested keywords valid after this directive (`bankcross`, `title`). */
-  operands?: readonly DirectiveOperandDescriptor[];
-  /** A coarse grouping used to organize completion. */
-  group:
-    | "data"
-    | "layout"
-    | "include"
-    | "memory"
-    | "namespace"
-    | "table"
-    | "spc"
-    | "struct"
-    | "control"
-    | "define"
-    | "macro"
-    | "compat"
-    | "label";
-};
+import type { DirectiveDescriptor, DirectiveOperandDescriptor } from "@uttori/asm-core";
 
 /**
  * Builds a nested directive-operand descriptor for hover/completion.

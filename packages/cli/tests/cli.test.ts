@@ -209,7 +209,7 @@ test("CLI imports, reports, reimports, and exports MesenCE offline evidence", as
         format: "uttori-asm-instruction-trace",
         schemaVersion: 1,
         architecture: "snes.65816",
-        addressSpace: "snes.address-space",
+        addressSpace: "snes.cpu",
         romContentSha256: created.manifest.rom.contentSha256,
         producer: { id: "cli-test", revision: "fixture" },
         chunks: [

@@ -1979,7 +1979,7 @@ function formatCpu65816Instruction(instruction) {
 // packages/debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
-var ARES_65816_ADDRESS_SPACE = "snes.address-space";
+var ARES_65816_ADDRESS_SPACE = "snes.cpu";
 var ARES_65816_WRAM_ADDRESS_SPACE = "snes.wram";
 var ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE = "snes.cartridge-rom";
 var ARES_65816_THREAD_ID = 1;
