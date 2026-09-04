@@ -50,7 +50,9 @@ try {
     const exitCode = await runCli(command);
     if (exitCode !== 0) throw new Error(`Command failed: uttori-asm ${command.join(" ")}`);
   }
-  console.log(`Success: ${SECRET_OF_MANA_ANALYSIS_FIXTURE.displayName} passed the Phase 5 gate.`);
+  console.log(
+    `Success: ${SECRET_OF_MANA_ANALYSIS_FIXTURE.displayName} passed the native-source round-trip gate.`,
+  );
 } finally {
   fs.rmSync(temporary, { recursive: true, force: true });
 }

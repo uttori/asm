@@ -17,7 +17,7 @@
       "roles": ["differential-oracle", "fixture-source"],
       "implementationReuse": false
     },
-    "ca65-phase4-5": {
+    "ca65-cmos-vendor": {
       "repository": "https://github.com/cc65/cc65",
       "release": "V2.19",
       "commit": "e11fb5c39371046ebe25485f984f644c5a0d65d3",
@@ -27,7 +27,7 @@
       "implementationReuse": false,
       "declarativeMetadataReuse": true
     },
-    "ca65-phase6": {
+    "ca65-huc6280-m740": {
       "repository": "https://github.com/cc65/cc65",
       "release": "V2.19",
       "commit": "e11fb5c39371046ebe25485f984f644c5a0d65d3",

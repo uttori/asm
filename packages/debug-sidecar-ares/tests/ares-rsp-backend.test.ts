@@ -1,0 +1,532 @@
+import {
+  DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
+  runDebugBackendConformance,
+  type DebugBackendConformanceFixture,
+  type DebugSubscription,
+} from "@uttori/asm-debug-adapter";
+
+import {
+  ARES_TRACE_BUFFER_EVENTS,
+  AresRspDebugBackend,
+  type AresGdbRspClient,
+  type GdbRspStop,
+} from "../src/index.js";
+import { test } from "../../../tests/ava-helper.js";
+
+const INITIAL_PC = 0x80_8000;
+
+interface FakeAresState {
+  a: number;
+  x: number;
+  y: number;
+  s: number;
+  d: number;
+  db: number;
+  pb: number;
+  pc: number;
+  p: number;
+  e: number;
+  readonly memory: Map<number, number>;
+  readonly cartridgeRom: Map<number, number>;
+  readonly breakpoints: Set<number>;
+}
+
+const resetState = (state: FakeAresState): void => {
+  state.a = 0;
+  state.x = 0;
+  state.y = 0;
+  state.s = 0x01ff;
+  state.d = 0;
+  state.db = 0x7e;
+  state.pb = INITIAL_PC >>> 16;
+  state.pc = INITIAL_PC & 0xffff;
+  state.p = 0x34;
+  state.e = 1;
+  state.breakpoints.clear();
+};
+
+const fakeState = (): FakeAresState => {
+  const state: FakeAresState = {
+    a: 0,
+    x: 0,
+    y: 0,
+    s: 0,
+    d: 0,
+    db: 0,
+    pb: 0,
+    pc: 0,
+    p: 0,
+    e: 0,
+    memory: new Map([
+      [INITIAL_PC, 0xea],
+      [INITIAL_PC + 1, 0xea],
+      [INITIAL_PC + 2, 0xdb],
+    ]),
+    cartridgeRom: new Map([
+      [0x8000, 0xea],
+      [0x8001, 0xea],
+      [0x8002, 0xdb],
+    ]),
+    breakpoints: new Set(),
+  };
+  resetState(state);
+  return state;
+};
+
+const littleEndian = (value: number, bytes: number): string =>
+  Array.from({ length: bytes }, (_, index) =>
+    ((value >>> (index * 8)) & 0xff).toString(16).padStart(2, "0"),
+  ).join("");
+
+const registerPayload = (state: FakeAresState): string =>
+  [
+    littleEndian(state.a, 2),
+    littleEndian(state.x, 2),
+    littleEndian(state.y, 2),
+    littleEndian(state.s, 2),
+    littleEndian(state.d, 2),
+    littleEndian(state.db, 1),
+    littleEndian(state.pb, 1),
+    littleEndian(state.pc, 2),
+    littleEndian(state.p, 1),
+    littleEndian(state.e, 1),
+  ].join("");
+
+const targetXml =
+  '<target version="1.0"><feature name="org.uttori.wdc65816.core">' +
+  ["a", "x", "y", "s", "d", "db", "pb", "pc", "p", "e"]
+    .map((name) => `<reg name="${name}"/>`)
+    .join("") +
+  "</feature></target>";
+
+class FakeAresRspClient implements AresGdbRspClient {
+  readonly #state: FakeAresState;
+  readonly #targetXml: string;
+  readonly #supported: string;
+  readonly #namedMemoryResponse:
+    | ((addressSpace: string, address: number, count: number) => string)
+    | undefined;
+  readonly #stopListeners = new Set<(event: GdbRspStop) => void>();
+  readonly #closeListeners = new Set<(error: Error) => void>();
+  readonly commands: string[] = [];
+  #started = false;
+  #traceActive = false;
+  #traceAddresses: number[] = [];
+  #traceNextSequence = 1;
+  #traceDroppedEvents = 0;
+  closed = false;
+
+  constructor(
+    state: FakeAresState,
+    target = targetXml,
+    supported = "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+",
+    namedMemoryResponse?: (addressSpace: string, address: number, count: number) => string,
+  ) {
+    this.#state = state;
+    this.#targetXml = target;
+    this.#supported = supported;
+    this.#namedMemoryResponse = namedMemoryResponse;
+  }
+
+  async start(): Promise<void> {
+    this.#started = true;
+  }
+
+  async request(command: string): Promise<string> {
+    if (!this.#started || this.closed) throw new Error("fake RSP client is unavailable");
+    this.commands.push(command);
+    if (command === "qSupported") return this.#supported;
+    if (command.startsWith("qXfer:features:read:target.xml:")) return `l${this.#targetXml}`;
+    if (command === "g") return registerPayload(this.#state);
+    if (command === "D") return "OK";
+    if (command === "QUttoriTrace:1") {
+      this.#traceActive = true;
+      this.#traceAddresses = [];
+      this.#traceNextSequence = 1;
+      this.#traceDroppedEvents = 0;
+      this.#recordTrace();
+      return "OK";
+    }
+    if (command === "QUttoriTrace:0") {
+      this.#traceActive = false;
+      return "OK";
+    }
+    const traceRead = /^qUttoriTraceRead:([\dA-Fa-f]+)$/.exec(command);
+    if (traceRead) {
+      const count = Number.parseInt(traceRead[1], 16);
+      const sequenceStart = this.#traceNextSequence - this.#traceAddresses.length;
+      const addresses = this.#traceAddresses.splice(0, count);
+      return `${this.#traceActive ? 1 : 0}:${sequenceStart.toString(16)}:${this.#traceDroppedEvents.toString(16)}:${addresses.map((address) => address.toString(16).padStart(16, "0")).join("")}`;
+    }
+
+    const memory = /^m([\dA-Fa-f]+),([\dA-Fa-f]+)$/.exec(command);
+    if (memory) {
+      const address = Number.parseInt(memory[1], 16);
+      const count = Number.parseInt(memory[2], 16);
+      return Array.from({ length: count }, (_, index) =>
+        (this.#state.memory.get(address + index) ?? 0).toString(16).padStart(2, "0"),
+      ).join("");
+    }
+
+    const namedMemory =
+      /^qUttoriMemoryRead:(snes\.wram|snes\.cartridge-rom):([\dA-Fa-f]+),([\dA-Fa-f]+)$/.exec(
+        command,
+      );
+    if (namedMemory) {
+      const address = Number.parseInt(namedMemory[2], 16);
+      const count = Number.parseInt(namedMemory[3], 16);
+      if (this.#namedMemoryResponse)
+        return this.#namedMemoryResponse(namedMemory[1], address, count);
+      const source = namedMemory[1] === "snes.cartridge-rom" ? this.#state.cartridgeRom : new Map();
+      return Array.from({ length: count }, (_, index) =>
+        (source.get(address + index) ?? 0).toString(16).padStart(2, "0"),
+      ).join("");
+    }
+
+    const breakpoint = /^([Zz])0,([\dA-Fa-f]+),1$/.exec(command);
+    if (breakpoint) {
+      const address = Number.parseInt(breakpoint[2], 16);
+      if (breakpoint[1] === "Z") this.#state.breakpoints.add(address);
+      else this.#state.breakpoints.delete(address);
+      return "OK";
+    }
+    throw new Error(`Unexpected fake RSP command '${command}'.`);
+  }
+
+  async requestStop(command: string): Promise<string> {
+    if (command !== "?") throw new Error(`Unexpected fake stop command '${command}'.`);
+    await this.#emitStop();
+    return "T05";
+  }
+
+  async continue(): Promise<void> {
+    const breakpoint = [...this.#state.breakpoints][0];
+    if (breakpoint !== undefined) {
+      this.#state.pb = breakpoint >>> 16;
+      this.#state.pc = breakpoint & 0xffff;
+    }
+    this.#recordTrace();
+    await this.#emitStop();
+  }
+
+  async step(): Promise<void> {
+    const logicalPc = (this.#state.pb << 16) | this.#state.pc;
+    this.#state.pc = (this.#state.pc + 1) & 0xffff;
+    this.#state.a++;
+    if ((logicalPc & 0xffff) === 0xffff) this.#state.pb = (this.#state.pb + 1) & 0xff;
+    this.#recordTrace();
+    await this.#emitStop();
+  }
+
+  async interrupt(): Promise<void> {
+    await this.#emitStop();
+  }
+
+  async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
+    for (const listener of this.#closeListeners) listener(new Error("fake RSP client closed"));
+  }
+
+  onStop(listener: (event: GdbRspStop) => void): DebugSubscription {
+    this.#stopListeners.add(listener);
+    return { dispose: () => this.#stopListeners.delete(listener) };
+  }
+
+  onClose(listener: (error: Error) => void): DebugSubscription {
+    this.#closeListeners.add(listener);
+    return { dispose: () => this.#closeListeners.delete(listener) };
+  }
+
+  fail(error: Error): void {
+    this.closed = true;
+    for (const listener of this.#closeListeners) listener(error);
+  }
+
+  async #emitStop(): Promise<void> {
+    await new Promise<void>((resolve) => {
+      queueMicrotask(() => {
+        for (const listener of this.#stopListeners) listener({ signal: 5, payload: "S05" });
+        resolve();
+      });
+    });
+  }
+
+  #recordTrace(): void {
+    if (!this.#traceActive) return;
+    if (this.#traceAddresses.length === ARES_TRACE_BUFFER_EVENTS) {
+      this.#traceAddresses.shift();
+      this.#traceDroppedEvents++;
+    }
+    this.#traceAddresses.push((this.#state.pb << 16) | this.#state.pc);
+    this.#traceNextSequence++;
+  }
+}
+
+const fixture: DebugBackendConformanceFixture = {
+  architectures: [
+    {
+      architecture: "snes.65816",
+      addressSpaces: ["snes.address-space", "snes.wram", "snes.cartridge-rom"],
+      memorySpaces: [
+        { addressSpace: "snes.wram", sideEffectFree: true },
+        { addressSpace: "snes.cartridge-rom", sideEffectFree: true },
+      ],
+      trace: {
+        addressSpaces: ["snes.address-space"],
+        maxBufferedEvents: 65_536,
+        maxBatchEvents: 240,
+      },
+      capabilities: {
+        pause: true,
+        step: true,
+        registers: true,
+        memory: true,
+        stackFrames: true,
+        breakpoints: true,
+        disassemble: true,
+      },
+    },
+    {
+      architecture: "snes.spc700",
+      addressSpaces: ["spc.aram"],
+      memorySpaces: [],
+      trace: null,
+      capabilities: { pause: false, step: false, registers: false, memory: false },
+    },
+    {
+      architecture: "snes.superfx",
+      addressSpaces: ["superfx.ram", "superfx.rom"],
+      memorySpaces: [],
+      trace: null,
+      capabilities: { pause: false, step: false, registers: false, memory: false },
+    },
+  ],
+  primaryArchitecture: "snes.65816",
+  primaryAddressSpace: "snes.address-space",
+  initialAddress: {
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+    address: INITIAL_PC,
+  },
+  steppedAddress: {
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+    address: INITIAL_PC + 1,
+  },
+  breakpointAddress: {
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+    address: INITIAL_PC + 2,
+  },
+  memoryAddress: {
+    architecture: "snes.65816",
+    addressSpace: "snes.cartridge-rom",
+    address: 0x8000,
+  },
+  memoryBytes: [0xea, 0xea, 0xdb],
+  requiredRegisters: ["A", "PC"],
+  disassemblyAddress: {
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+    address: INITIAL_PC,
+  },
+  disassemblyText: "NOP",
+};
+
+const createBackend = (): AresRspDebugBackend => {
+  const state = fakeState();
+  return new AresRspDebugBackend({
+    createClient: ({ reset }) => {
+      if (reset) resetState(state);
+      return new FakeAresRspClient(state);
+    },
+  });
+};
+
+test("ares RSP backend passes the frozen conformance semantics with reduced coprocessor capabilities", async (t) => {
+  const report = await runDebugBackendConformance({
+    backend: "ares-rsp-scripted",
+    createBackend,
+    fixture,
+  });
+  t.true(report.passed, JSON.stringify(report.scenarios, undefined, 2));
+  t.deepEqual(
+    report.scenarios.map(({ id, status }) => ({ id, status })),
+    DEBUG_BACKEND_CONFORMANCE_SCENARIOS.map((id) => ({ id, status: "pass" })),
+  );
+});
+
+test("ares RSP backend rejects an incomplete target description", async (t) => {
+  const backend = new AresRspDebugBackend({
+    createClient: () => new FakeAresRspClient(fakeState(), '<target><reg name="pc"/></target>'),
+  });
+  const error = await t.throwsAsync(backend.connect());
+  t.regex(error?.message ?? "", /missing register 'a'/);
+});
+
+test("ares RSP backend requires the maintained fork's named-memory extension", async (t) => {
+  const backend = new AresRspDebugBackend({
+    createClient: () =>
+      new FakeAresRspClient(
+        fakeState(),
+        targetXml,
+        "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriInstructionTrace+",
+      ),
+  });
+  const error = await t.throwsAsync(backend.connect());
+  t.regex(error?.message ?? "", /required debugger extensions/);
+});
+
+test("ares RSP backend preserves the stopped RSP session across logical reconnect", async (t) => {
+  const state = fakeState();
+  let clients = 0;
+  const backend = new AresRspDebugBackend({
+    createClient: ({ reset }) => {
+      clients++;
+      if (reset) resetState(state);
+      return new FakeAresRspClient(state);
+    },
+  });
+  await backend.connect({ reset: true });
+  await backend.step(1, "instruction");
+  const [before] = await backend.stackFrames(1);
+  await backend.disconnect({ terminate: false });
+  await backend.connect({ reset: false });
+  const [after] = await backend.stackFrames(1);
+  t.is(clients, 1);
+  t.deepEqual(after?.pc, before?.pc);
+  await backend.disconnect({ terminate: true });
+});
+
+test("ares RSP backend pulls ordered bounded instruction traces with explicit stop", async (t) => {
+  const backend = createBackend();
+  await backend.connect({ reset: true });
+  await backend.startTrace({
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+  });
+  await backend.step(1, "instruction");
+  t.deepEqual(await backend.readTrace(1), {
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+    sequenceStart: 1,
+    addresses: [INITIAL_PC],
+    droppedEvents: 0,
+    active: true,
+  });
+  await backend.stopTrace();
+  t.deepEqual(await backend.readTrace(240), {
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+    sequenceStart: 2,
+    addresses: [INITIAL_PC + 1],
+    droppedEvents: 0,
+    active: false,
+  });
+  await t.throwsAsync(backend.readTrace(241), { message: /Trace batch size/ });
+  await t.throwsAsync(
+    backend.startTrace({ architecture: "snes.spc700", addressSpace: "spc.aram" }),
+    { message: /is not supported/ },
+  );
+  await backend.disconnect({ terminate: true });
+});
+
+test("ares RSP backend reports an unexpected emulator-channel failure as restartable", async (t) => {
+  const state = fakeState();
+  let client: FakeAresRspClient | undefined;
+  const backend = new AresRspDebugBackend({
+    createClient: () => (client = new FakeAresRspClient(state)),
+  });
+  const events: string[] = [];
+  backend.onEvent((event) => events.push(event.type));
+  await backend.connect();
+  client?.fail(new Error("ares crashed"));
+  t.deepEqual(events.slice(-2), ["output", "terminated"]);
+  t.throws(() => backend.threads(), { message: "ares RSP backend is not connected." });
+});
+
+test("ares RSP backend enforces stopped-state identities and request bounds", async (t) => {
+  const backend = createBackend();
+  t.throws(() => backend.threads(), { message: /not connected/ });
+  await backend.connect({ reset: true });
+  await t.throwsAsync(backend.connect({ reset: true }), { message: /already connected/ });
+  await backend.pause();
+  await t.throwsAsync(backend.pause(2), { message: /Unknown ares thread/ });
+  await t.throwsAsync(backend.step(2, "instruction"), { message: /Unknown ares thread/ });
+  await t.throwsAsync(backend.registers(2), { message: /Unknown ares frame/ });
+  await t.throwsAsync(
+    backend.readMemory({ architecture: "snes.spc700", addressSpace: "spc.aram", address: 0 }, 1),
+    { message: /unsupported architecture/ },
+  );
+  await t.throwsAsync(
+    backend.readMemory({ architecture: "snes.65816", addressSpace: "snes.rom", address: 0 }, 1),
+    { message: /unsupported memory address space/ },
+  );
+  await t.throwsAsync(backend.readMemory(fixture.initialAddress, 1), {
+    message: /unsupported memory address space/,
+  });
+  await t.throwsAsync(backend.readMemory(fixture.memoryAddress, -1), {
+    message: /Memory count must be an integer/,
+  });
+  const empty = await backend.readMemory(fixture.memoryAddress, 0);
+  t.deepEqual([...empty.bytes], []);
+  t.is(empty.unreadableBytes, 0);
+  await t.throwsAsync(backend.setBreakpoints([fixture.initialAddress, fixture.initialAddress]), {
+    message: /Duplicate/,
+  });
+  const [first] = await backend.setBreakpoints([fixture.initialAddress]);
+  const [same] = await backend.setBreakpoints([fixture.initialAddress]);
+  t.deepEqual(same, first);
+  t.deepEqual(await backend.disassemble(fixture.initialAddress, 0), []);
+  await t.throwsAsync(backend.disassemble(fixture.initialAddress, -1), {
+    message: /Disassembly count must be an integer/,
+  });
+  await backend.disconnect({ terminate: true });
+});
+
+test("ares RSP backend reads only advertised named storage and chunks bounded packets", async (t) => {
+  const client = new FakeAresRspClient(fakeState());
+  const backend = new AresRspDebugBackend({ createClient: () => client });
+  await backend.connect({ reset: true });
+  const memory = await backend.readMemory(
+    { architecture: "snes.65816", addressSpace: "snes.wram", address: 0 },
+    0x1001,
+  );
+  t.is(memory.unreadableBytes, 0);
+  t.is(memory.bytes.length, 0x1001);
+  t.deepEqual(
+    client.commands.filter((command) => command.startsWith("qUttoriMemoryRead:")),
+    ["qUttoriMemoryRead:snes.wram:0,1000", "qUttoriMemoryRead:snes.wram:1000,1"],
+  );
+  await backend.disconnect({ terminate: true });
+});
+
+test("ares RSP backend rejects failed or malformed named-memory replies and reports short reads", async (t) => {
+  const backendFor = (response: string) =>
+    new AresRspDebugBackend({
+      createClient: () => new FakeAresRspClient(fakeState(), targetXml, undefined, () => response),
+    });
+  const address = {
+    architecture: "snes.65816",
+    addressSpace: "snes.wram",
+    address: 0,
+  } as const;
+
+  const failed = backendFor("E01");
+  await failed.connect({ reset: true });
+  await t.throwsAsync(failed.readMemory(address, 2), { message: /read failed/ });
+  await failed.disconnect({ terminate: true });
+
+  const malformed = backendFor("0");
+  await malformed.connect({ reset: true });
+  await t.throwsAsync(malformed.readMemory(address, 2), { message: /response is malformed/ });
+  await malformed.disconnect({ terminate: true });
+
+  const short = backendFor("aa");
+  await short.connect({ reset: true });
+  const result = await short.readMemory(address, 2);
+  t.deepEqual([...result.bytes], [0xaa, 0]);
+  t.is(result.unreadableBytes, 1);
+  await short.disconnect({ terminate: true });
+});

@@ -79,9 +79,11 @@ uttori-asm evidence-import game.analysis --rom game.sfc --mesen-cdl game.cdl
 uttori-asm evidence-import game.analysis --rom game.sfc \
   --mesen-trace game.trace --trace-metadata game.trace.json
 uttori-asm evidence-import game.analysis --rom game.sfc --mesen-labels game.mlb
+uttori-asm evidence-import game.analysis --rom game.sfc \
+  --instruction-trace instruction-trace.json
 ```
 
-Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. An identical reimport does not rewrite the project.
+Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. Native instruction traces preserve ordered pull chunks and producer-loss metadata; the CLI explicitly maps the debugger CPU-bus identity `snes.address-space` to the analysis project's `snes.cpu` identity without changing the source artifact hash. An identical reimport does not rewrite the project.
 
 MesenCE trace text has no embedded ROM fingerprint, so its required identity sidecar is explicit:
 
@@ -188,3 +190,6 @@ npm run smoke --workspace @uttori/asm-cli
 ```
 
 The distributable executable is generated at `out/cli.mjs`; declarations are generated under `dist/`.
+
+Contributor setup, ownership, tests, and release expectations are in the repository
+[contributor guide](../../CONTRIBUTING.md) and [testing guide](../../docs/testing-and-release.md).

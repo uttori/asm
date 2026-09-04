@@ -2,10 +2,18 @@ import { type AnalysisProject, type AnalysisProjectManifest, type AnalysisProjec
 import type { RomImage } from "./rom-image.js";
 /**
  * Deterministic JSON: sorted object keys, dropped `undefined`, trailing newline.
+ * Use this for manifests and bounded values. Large shard arrays must go through the streaming
+ * writer so canonicalization does not retain a second complete project-sized object graph.
  * @param {unknown} value Manifest or shard payload.
  * @returns {string} Canonical JSON text used for SHA-256 and on-disk writes.
  */
 export declare const canonicalJson: (value: unknown) => string;
+/**
+ * Validates the current native manifest contract without reading its shard files.
+ * @param {AnalysisProjectManifest} manifest Manifest to validate.
+ * @returns {void}
+ */
+export declare const validateAnalysisProjectManifest: (manifest: AnalysisProjectManifest) => void;
 /**
  * Applies explicit one-way manifest migrations. Newer schema versions are refused.
  * v0 promotes `romHash`/`romSize` into `RomIdentity`; v1 bumps `schemaVersion`.
@@ -21,7 +29,9 @@ export interface LoadedAnalysisProject {
 }
 /**
  * Writes canonical `analysis.json` and `analysis/*.json` shards.
- * Records are sorted, ROM byte payloads are forbidden, and shard SHA-256s are recorded.
+ * Records are sorted, ROM byte payloads are forbidden, and shard SHA-256s are recorded. Shards use
+ * bounded streaming canonicalization: this is an allocation invariant, not a format change, and
+ * must remain byte-compatible with `canonicalJson()` for the same normalized record array.
  * @param {string} directory Destination project directory.
  * @param {AnalysisProject} project Manifest fields plus in-memory shards.
  * @returns {AnalysisProjectManifest} Written manifest including shard descriptors.

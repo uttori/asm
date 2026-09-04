@@ -26,7 +26,17 @@ const SHARD_PATHS: Readonly<Record<keyof AnalysisProjectShards, string>> = Objec
 });
 
 const sha256 = (value: string): string => createHash("sha256").update(value).digest("hex");
+// Performance invariant: bound the temporary canonical object graph while keeping batches large
+// enough for native JSON.stringify throughput. Re-benchmark both time and boundary RSS if changed.
+const CANONICAL_JSON_RECORD_BATCH = 64;
 
+/**
+ * Recursively copies a JSON-compatible value with lexicographically ordered object keys.
+ * This deliberately creates a new object graph, so project-sized arrays must be passed in bounded
+ * slices by `writeCanonicalJsonArrayFile()` rather than canonicalized all at once.
+ * @param {unknown} value JSON-compatible value to canonicalize.
+ * @returns {unknown} Canonical copy suitable for deterministic JSON serialization.
+ */
 const canonicalize = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === "object") {
@@ -41,7 +51,65 @@ const canonicalize = (value: unknown): unknown => {
 };
 
 /**
+ * Streams one canonical top-level record array to disk while computing its SHA-256.
+ *
+ * Calling `canonicalJson(values)` for a large shard retains three large representations at once:
+ * the source records, a recursively cloned canonical graph, and the complete JSON string. This
+ * writer canonicalizes only 64 records at a time and preserves the exact two-space-indented bytes
+ * produced by `canonicalJson()`. File bytes and hash bytes are fed from the same fragments so the
+ * manifest can never describe a different serialization. This helper intentionally accepts only a
+ * top-level array; manifests and other small values continue to use `canonicalJson()`.
+ * @param {string} destination Shard file to create or replace.
+ * @param {readonly unknown[]} values Records already sorted into canonical shard order.
+ * @returns {string} Lowercase SHA-256 of the exact bytes written.
+ */
+const writeCanonicalJsonArrayFile = (destination: string, values: readonly unknown[]): string => {
+  const hash = createHash("sha256");
+  const descriptor = fs.openSync(destination, "w");
+  let pending = "";
+  const append = (fragment: string): void => {
+    pending += fragment;
+    // Coalesce small punctuation/batch fragments to avoid a system call per record while still
+    // bounding the pending string independently of total shard size.
+    if (pending.length >= 64 * 1_024) flush();
+  };
+  const flush = (): void => {
+    if (pending.length === 0) return;
+    fs.writeSync(descriptor, pending);
+    hash.update(pending);
+    pending = "";
+  };
+  try {
+    if (values.length === 0) {
+      append("[]\n");
+    } else {
+      append("[\n");
+      for (let start = 0; start < values.length; start += CANONICAL_JSON_RECORD_BATCH) {
+        // Performance invariant: canonicalize only this bounded slice. Expanding the slice to the
+        // entire shard recreates the multi-gigabyte transient working set this path replaced.
+        const encoded = JSON.stringify(
+          canonicalize(values.slice(start, start + CANONICAL_JSON_RECORD_BATCH)),
+          undefined,
+          2,
+        );
+        // A batch serializes as "[\n...\n]". Removing only that wrapper and inserting separators
+        // reproduces canonicalJson(values) byte-for-byte, including indentation and final newline.
+        const records = encoded.slice(2, -2);
+        append(`${start === 0 ? "" : ",\n"}${records}`);
+      }
+      append("\n]\n");
+    }
+    flush();
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  return hash.digest("hex");
+};
+
+/**
  * Deterministic JSON: sorted object keys, dropped `undefined`, trailing newline.
+ * Use this for manifests and bounded values. Large shard arrays must go through the streaming
+ * writer so canonicalization does not retain a second complete project-sized object graph.
  * @param {unknown} value Manifest or shard payload.
  * @returns {string} Canonical JSON text used for SHA-256 and on-disk writes.
  */
@@ -74,6 +142,14 @@ const runtimeSortAddress = (record: RuntimeEvidenceRecord): number => {
   return record.fromAddress;
 };
 
+/**
+ * Produces canonical record ordering without mutating caller-owned shard arrays.
+ * Only the lightweight arrays are copied here; record objects remain shared until bounded
+ * canonicalization during writing. Deep-cloning this complete structure recreates the prior
+ * project-sized working-set regression.
+ * @param {AnalysisProjectShards} shards Caller-owned validated shard records.
+ * @returns {AnalysisProjectShards} New arrays in their canonical on-disk order.
+ */
 const normalizedShards = (shards: AnalysisProjectShards): AnalysisProjectShards => ({
   analysis: [...shards.analysis].sort(
     (left, right) =>
@@ -120,7 +196,12 @@ const normalizedShards = (shards: AnalysisProjectShards): AnalysisProjectShards 
   imports: sortById(shards.imports),
 });
 
-const validateManifest = (manifest: AnalysisProjectManifest): void => {
+/**
+ * Validates the current native manifest contract without reading its shard files.
+ * @param {AnalysisProjectManifest} manifest Manifest to validate.
+ * @returns {void}
+ */
+export const validateAnalysisProjectManifest = (manifest: AnalysisProjectManifest): void => {
   if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
     throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
   }
@@ -156,6 +237,12 @@ const validateManifest = (manifest: AnalysisProjectManifest): void => {
     assertSafeRelativePath(shard.path);
     if (!(shard.kind in SHARD_PATHS))
       throw new Error(`Unknown analysis shard kind '${shard.kind}'.`);
+    if (!/^[\da-f]{64}$/.test(shard.sha256)) {
+      throw new Error(`Analysis shard '${shard.id}' has an invalid SHA-256.`);
+    }
+    if (!Number.isSafeInteger(shard.records) || shard.records < 0) {
+      throw new Error(`Analysis shard '${shard.id}' has an invalid record count.`);
+    }
     if (shardIds.has(shard.id)) throw new Error(`Duplicate analysis shard id '${shard.id}'.`);
     if (shardPaths.has(shard.path))
       throw new Error(`Duplicate analysis shard path '${shard.path}'.`);
@@ -412,6 +499,12 @@ const validateLoadedShards = (
       );
     }
   }
+  for (const conflict of shards.analysis) {
+    if (conflict.kind !== "conflict" || conflict.end === undefined) continue;
+    if (!Number.isSafeInteger(conflict.end) || conflict.end <= conflict.address) {
+      throw new Error(`Analysis conflict '${conflict.id}' has an invalid half-open range.`);
+    }
+  }
   const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
   for (const region of shards.regions) {
     if (!region.parentRegion) continue;
@@ -479,6 +572,9 @@ const validateLoadedShards = (
       addresses.push(record.start, record.end - 1);
     } else if ("address" in record) {
       addresses.push(record.address);
+      if ("kind" in record && record.kind === "conflict" && record.end !== undefined) {
+        addresses.push(record.end - 1);
+      }
     } else {
       if ("fromAddress" in record) addresses.push(record.fromAddress);
       if ("toAddress" in record && record.toAddress !== undefined) addresses.push(record.toAddress);
@@ -567,7 +663,7 @@ export const migrateManifest = (input: unknown): AnalysisProjectManifest => {
       addressSpaces: [],
       shards: [],
     };
-    validateManifest(migrated);
+    validateAnalysisProjectManifest(migrated);
     return migrated;
   }
   if (version === 1) {
@@ -575,7 +671,7 @@ export const migrateManifest = (input: unknown): AnalysisProjectManifest => {
       ...(input as LegacyManifestV1),
       schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,
     };
-    validateManifest(migrated);
+    validateAnalysisProjectManifest(migrated);
     return migrated;
   }
   if (typeof version !== "number") throw new Error("Manifest schemaVersion is required.");
@@ -588,7 +684,7 @@ export const migrateManifest = (input: unknown): AnalysisProjectManifest => {
     throw new Error(`No migration exists for analysis project schema ${version}.`);
   }
   const manifest = input as AnalysisProjectManifest;
-  validateManifest(manifest);
+  validateAnalysisProjectManifest(manifest);
   return manifest;
 };
 
@@ -600,7 +696,9 @@ export interface LoadedAnalysisProject {
 
 /**
  * Writes canonical `analysis.json` and `analysis/*.json` shards.
- * Records are sorted, ROM byte payloads are forbidden, and shard SHA-256s are recorded.
+ * Records are sorted, ROM byte payloads are forbidden, and shard SHA-256s are recorded. Shards use
+ * bounded streaming canonicalization: this is an allocation invariant, not a format change, and
+ * must remain byte-compatible with `canonicalJson()` for the same normalized record array.
  * @param {string} directory Destination project directory.
  * @param {AnalysisProject} project Manifest fields plus in-memory shards.
  * @returns {AnalysisProjectManifest} Written manifest including shard descriptors.
@@ -617,15 +715,14 @@ export const writeAnalysisProject = (
   >) {
     assertSafeRelativePath(relative);
     const records = shards[kind];
-    const text = canonicalJson(records);
     const destination = path.join(directory, relative);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
-    fs.writeFileSync(destination, text);
+    const shardHash = writeCanonicalJsonArrayFile(destination, records);
     descriptors.push({
       id: kind,
       kind,
       path: relative,
-      sha256: sha256(text),
+      sha256: shardHash,
       records: records.length,
     });
   }
@@ -640,7 +737,7 @@ export const writeAnalysisProject = (
     },
     shards: descriptors.sort((a, b) => a.id.localeCompare(b.id)),
   };
-  validateManifest(manifest);
+  validateAnalysisProjectManifest(manifest);
   fs.mkdirSync(directory, { recursive: true });
   fs.writeFileSync(path.join(directory, ANALYSIS_PROJECT_MANIFEST), canonicalJson(manifest));
   return manifest;

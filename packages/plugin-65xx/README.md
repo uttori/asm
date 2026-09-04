@@ -1,6 +1,6 @@
 # The Uttori ASM 65xx Manual
 
-`@uttori/asm-plugin-65xx` is the first-party 6502-family target for Uttori ASM. It encodes NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 processors from one declarative instruction model; writes headerless raw binaries or iNES images; and understands a practical, deliberately documented slice of ca65 syntax.
+`@uttori/asm-plugin-65xx` is the first-party 6502-family target for Uttori ASM. It encodes NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 processors from one declarative instruction model; writes headerless raw binaries or iNES images; and understands a practical, deliberately documented subset of ca65 syntax.
 
 This manual starts with a tiny raw program and a complete NES Hello World, then opens the hood one system at a time. You can read it front to back, magazine-style, or jump straight to the command and instruction appendices when the addressing-mode gremlins are already circling.
 
@@ -38,18 +38,18 @@ The CPU tables are pinned to ca65 commit [`e11fb5c39371046ebe25485f984f644c5a0d6
 
 Core Uttori ASM has no default 65xx mode. This plugin must be activated, after which it contributes the following target-owned pieces:
 
-| Contribution | ID or value | Notes |
-| ------------ | ----------- | ---- |
-| Raw target                 | `65xx.raw` | Aliases: `65xx`, `6502-raw`. Native syntax. Default output `.bin` |
-| ca65 raw target            | `65xx.ca65-raw` | Alias: `ca65-raw`. Same flat image, ca65 source profile |
-| NES target                 | `65xx.nes` | Aliases: `nes`, `ines`, `6502-nes`. iNES image, ca65 source profile. Default output `.nes` |
-| Default architecture       | `65xx.6502` | Aliases: `6502`, `6510`, `8502`, `2a03`, `2a07`, `6507` |
-| Address space (raw)       | `65xx.flat16` | 16-bit identity map: file offset = address − `origin` |
-| Address space (NES)       | `65xx.ines-address-space` | Maps through the current ld65 `MEMORY` load region |
-| Output format (raw)       | `65xx.raw-output` | Headerless dump of the output buffer |
-| Output format (NES)       | `65xx.ines-output` | 16-byte header plus filled PRG |
-| Expression set (ca65)      | `65xx.ca65-expressions` | `lobyte`, `hibyte`, `bankbyte`, `loword`, `hiword` |
-| Directive set (ca65)      | `65xx.ca65-directives` | Installed only on `65xx.ca65-raw` and `65xx.nes` |
+| Contribution          | ID or value               | Notes                                                                                      |
+| --------------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
+| Raw target            | `65xx.raw`                | Aliases: `65xx`, `6502-raw`. Native syntax. Default output `.bin`                          |
+| ca65 raw target       | `65xx.ca65-raw`           | Alias: `ca65-raw`. Same flat image, ca65 source profile                                    |
+| NES target            | `65xx.nes`                | Aliases: `nes`, `ines`, `6502-nes`. iNES image, ca65 source profile. Default output `.nes` |
+| Default architecture  | `65xx.6502`               | Aliases: `6502`, `6510`, `8502`, `2a03`, `2a07`, `6507`                                    |
+| Address space (raw)   | `65xx.flat16`             | 16-bit identity map: file offset = address − `origin`                                      |
+| Address space (NES)   | `65xx.ines-address-space` | Maps through the current ld65 `MEMORY` load region                                         |
+| Output format (raw)   | `65xx.raw-output`         | Headerless dump of the output buffer                                                       |
+| Output format (NES)   | `65xx.ines-output`        | 16-byte header plus filled PRG                                                             |
+| Expression set (ca65) | `65xx.ca65-expressions`   | `lobyte`, `hibyte`, `bankbyte`, `loword`, `hiword`                                         |
+| Directive set (ca65)  | `65xx.ca65-directives`    | Installed only on `65xx.ca65-raw` and `65xx.nes`                                           |
 
 The registration lives in [`src/index.ts`](./src/index.ts). CPU tables live in [`src/instructions/opcodes.ts`](./src/instructions/opcodes.ts) and [`src/instructions/variants.ts`](./src/instructions/variants.ts). NES layout lives in [`src/target/nes.ts`](./src/target/nes.ts) and [`src/linker-config.ts`](./src/linker-config.ts).
 
@@ -113,10 +113,7 @@ Raw target:
 ```ts
 import fs from "node:fs";
 import { Assembler } from "@uttori/asm-core";
-import {
-  create65xxAssemblerEnvironment,
-  RAW_65XX_TARGET_ID,
-} from "@uttori/asm-plugin-65xx";
+import { create65xxAssemblerEnvironment, RAW_65XX_TARGET_ID } from "@uttori/asm-plugin-65xx";
 
 const environment = await create65xxAssemblerEnvironment();
 const assembler = new Assembler({
@@ -139,10 +136,7 @@ NES target:
 ```ts
 import fs from "node:fs";
 import { Assembler } from "@uttori/asm-core";
-import {
-  create65xxAssemblerEnvironment,
-  NES_65XX_TARGET_ID,
-} from "@uttori/asm-plugin-65xx";
+import { create65xxAssemblerEnvironment, NES_65XX_TARGET_ID } from "@uttori/asm-plugin-65xx";
 
 const environment = await create65xxAssemblerEnvironment();
 const assembler = new Assembler({
@@ -404,18 +398,18 @@ For patches, `baseImage` becomes the initial output. Reads use it when present, 
 
 The plugin owns two dialects. `65xx.raw` uses the core native profile. `65xx.ca65-raw` and `65xx.nes` use the ca65 profile.
 
-| Behavior | Native (`65xx.raw`) | ca65 (`65xx.ca65-raw`, `65xx.nes`) |
-| -------- | ------------------- | ---------------------------------- |
-| Directive prefix | none; `org $8000` | `.` ; `.org $8000` |
-| Cheap locals | no | `@name` attached to the current global |
-| File-local symbols | no | non-exported labels are per include file |
-| Macro call | `%Name(args)` | bare `Name args` after `.macro` |
-| Macro parameter | `<arg>` | `\parameter` |
-| Assignment | `Name = value` | `Name := value` also accepted |
-| Unnamed labels | `+:` / `-:` and `bne +` | `:`, `:+`, `:++`, `:-`, `:--` |
-| Octal | no | `@17` (ca65) |
-| Address-size prefix | `.b` / `.w` on the mnemonic | `z:`, `a:`, `f:` on the operand |
-| Statement chaining | no ` : ` split | no ` : ` split |
+| Behavior            | Native (`65xx.raw`)         | ca65 (`65xx.ca65-raw`, `65xx.nes`)       |
+| ------------------- | --------------------------- | ---------------------------------------- |
+| Directive prefix    | none; `org $8000`           | `.` ; `.org $8000`                       |
+| Cheap locals        | no                          | `@name` attached to the current global   |
+| File-local symbols  | no                          | non-exported labels are per include file |
+| Macro call          | `%Name(args)`               | bare `Name args` after `.macro`          |
+| Macro parameter     | `<arg>`                     | `\parameter`                             |
+| Assignment          | `Name = value`              | `Name := value` also accepted            |
+| Unnamed labels      | `+:` / `-:` and `bne +`     | `:`, `:+`, `:++`, `:-`, `:--`            |
+| Octal               | no                          | `@17` (ca65)                             |
+| Address-size prefix | `.b` / `.w` on the mnemonic | `z:`, `a:`, `f:` on the operand          |
+| Statement chaining  | no `:` split                | no `:` split                             |
 
 ### Encoding & Case
 
@@ -423,12 +417,12 @@ Source files are read as UTF-8. Mnemonics and directive keywords are case-insens
 
 ### Numbers
 
-| Form | Example | Meaning |
-| ---- | ------- | ------- |
-| Hexadecimal | `$80FF`, `0x80FF` | Base 16 |
-| Binary      | `%10110000`       | Base 2 |
-| Decimal     | `33023`, `10.5`   | Base 10; expressions may be fractional |
-| Octal       | `@17`             | ca65 only; rewritten to decimal `15` |
+| Form        | Example           | Meaning                                                       |
+| ----------- | ----------------- | ------------------------------------------------------------- |
+| Hexadecimal | `$80FF`, `0x80FF` | Base 16                                                       |
+| Binary      | `%10110000`       | Base 2                                                        |
+| Decimal     | `33023`, `10.5`   | Base 10; expressions may be fractional                        |
+| Octal       | `@17`             | ca65 only; rewritten to decimal `15`                          |
 | Immediate   | `#$20`            | Architecture syntax; `#` is removed before numeric evaluation |
 
 Negative and unary-plus values are accepted. Immediate `#-1` is legal for an 8-bit immediate (signed); addresses stay unsigned.
@@ -450,19 +444,19 @@ End a line with `\` or `,` to continue the command on the next physical line. St
 
 Switch architecture with `arch name` on the native target, or `.setcpu "NAME"` / `.p02` and friends on ca65 targets. The architecture selected by configuration is active before the first source line.
 
-| Source name | Canonical contribution | Purpose |
-| ----------- | ---------------------- | ------- |
-| `6502`, `6510`, `8502`, `2a03`, `2a07`, `6507` | `65xx.6502` | Documented NMOS 6502; default |
-| `6502x` | `65xx.6502x` | NMOS plus unofficial opcodes |
-| `6502dtv`, `dtv` | `65xx.6502dtv` | C64DTV |
-| `65sc02` | `65xx.65sc02` | 65SC02 CMOS |
-| `65c02` | `65xx.65c02` | 65C02 with Rockwell bit ops |
-| `w65c02` | `65xx.w65c02` | WDC W65C02 (`WAI`, `STP`) |
-| `65ce02` | `65xx.65ce02` | CSG 65CE02 (`AUG`, Z, stack, long branches) |
-| `4510` | `65xx.4510` | Commodore 4510 (`MAP` instead of `AUG`) |
-| `45gs02` | `65xx.45gs02` | MEGA65 45GS02 (Q prefix `42 42`) |
-| `huc6280`, `6280` | `65xx.huc6280` | Hudson HuC6280 |
-| `m740`, `740` | `65xx.m740` | Mitsubishi M740 |
+| Source name                                    | Canonical contribution | Purpose                                     |
+| ---------------------------------------------- | ---------------------- | ------------------------------------------- |
+| `6502`, `6510`, `8502`, `2a03`, `2a07`, `6507` | `65xx.6502`            | Documented NMOS 6502; default               |
+| `6502x`                                        | `65xx.6502x`           | NMOS plus unofficial opcodes                |
+| `6502dtv`, `dtv`                               | `65xx.6502dtv`         | C64DTV                                      |
+| `65sc02`                                       | `65xx.65sc02`          | 65SC02 CMOS                                 |
+| `65c02`                                        | `65xx.65c02`           | 65C02 with Rockwell bit ops                 |
+| `w65c02`                                       | `65xx.w65c02`          | WDC W65C02 (`WAI`, `STP`)                   |
+| `65ce02`                                       | `65xx.65ce02`          | CSG 65CE02 (`AUG`, Z, stack, long branches) |
+| `4510`                                         | `65xx.4510`            | Commodore 4510 (`MAP` instead of `AUG`)     |
+| `45gs02`                                       | `65xx.45gs02`          | MEGA65 45GS02 (Q prefix `42 42`)            |
+| `huc6280`, `6280`                              | `65xx.huc6280`         | Hudson HuC6280                              |
+| `m740`, `740`                                  | `65xx.m740`            | Mitsubishi M740                             |
 
 Encoding-equivalent chip names `6510`, `8502`, `2A03`, `2A07`, and `6507` are aliases of the documented NMOS set. Their electrical, decimal-mode, and memory-map differences do not change the emitted instruction bytes.
 
@@ -748,7 +742,7 @@ Scope type declarations, address-size annotations, and object visibility metadat
 
 ### Structs
 
-Native structs define addressable layouts without emitting bytes, using the core struct engine. ca65 `.struct` / `.union` / `.tag` are not part of the documented ca65 slice.
+Native structs define addressable layouts without emitting bytes, using the core struct engine. ca65 `.struct` / `.union` / `.tag` are not part of the documented ca65 subset.
 
 ```asm
 struct Actor $200
@@ -785,15 +779,15 @@ ca65 targets use `:=` / `=` symbol assignment rather than `!` defines for ordina
 
 Higher rows bind more tightly:
 
-| Precedence | Operators | Meaning |
-| --- | --- | --- |
-| 6   | `**`                                  | exponentiation |
-| 5   | `*`, `/`, `%`                         | multiply, divide, modulo |
-| 4   | `+`, `-`                              | add, subtract |
-| 3   | `<<`, `>>`, `&`, `|`, `^`             | shifts and bitwise operations |
-| 2   | `<`, `>`, `<=`, `>=`, `==`, `=`, `!=`, `<>` | comparisons, returning `0` or `1`; `<>` is ca65 inequality |
-| 1   | `&&`                                  | logical AND |
-| 0   | `||`                                  | logical OR |
+| Precedence | Operators                                   | Meaning                                                    |
+| ---------- | ------------------------------------------- | ---------------------------------------------------------- |
+| 6          | `**`                                        | exponentiation                                             |
+| 5          | `*`, `/`, `%`                               | multiply, divide, modulo                                   |
+| 4          | `+`, `-`                                    | add, subtract                                              |
+| 3          | `<<`, `>>`, `&`, `                          | `, `^`                                                     | shifts and bitwise operations |
+| 2          | `<`, `>`, `<=`, `>=`, `==`, `=`, `!=`, `<>` | comparisons, returning `0` or `1`; `<>` is ca65 inequality |
+| 1          | `&&`                                        | logical AND                                                |
+| 0          | `                                           |                                                            | `                             | logical OR |
 
 Operators at the same level are left-associative. Parentheses override precedence. Division or modulo by zero is an assembly error.
 
@@ -805,14 +799,14 @@ Native sources have the shared numeric, selection, logical, address, string, and
 
 Installed only on ca65-profile targets:
 
-| Function | Current behavior |
-| --- | --- |
-| `lobyte(value)` / `.lobyte(value)` | `value & $FF` |
-| `hibyte(value)` / `.hibyte(value)` | `(value >> 8) & $FF` |
-| `bankbyte(value)` / `.bankbyte(value)` | `(value >> 16) & $FF` |
-| `loword(value)` / `.loword(value)` | `value & $FFFF` |
-| `hiword(value)` / `.hiword(value)` | `(value >> 16) & $FFFF` |
-| `.defined(name)` | rewritten to `defined(name)` |
+| Function                               | Current behavior             |
+| -------------------------------------- | ---------------------------- |
+| `lobyte(value)` / `.lobyte(value)`     | `value & $FF`                |
+| `hibyte(value)` / `.hibyte(value)`     | `(value >> 8) & $FF`         |
+| `bankbyte(value)` / `.bankbyte(value)` | `(value >> 16) & $FF`        |
+| `loword(value)` / `.loword(value)`     | `value & $FFFF`              |
+| `hiword(value)` / `.hiword(value)`     | `(value >> 16) & $FFFF`      |
+| `.defined(name)`                       | rewritten to `defined(name)` |
 
 ```asm
 .byte @17, .lobyte($1234), .hibyte($1234), .bankbyte($123456)
@@ -890,24 +884,24 @@ That emits `$00 $01 $02`. The optional name is an ordinary expression during the
 
 ### Native Data Directives
 
-| Directive | Width | Aliases |
-| --------- | ----- | ------- |
-| `db` | 1 byte                 | `dc.b` |
-| `dw` | 2 bytes, little-endian | `dc.w` |
-| `dl` | 3 bytes, little-endian | `dc.l` |
-| `dd` | 4 bytes, little-endian | none |
+| Directive | Width                  | Aliases |
+| --------- | ---------------------- | ------- |
+| `db`      | 1 byte                 | `dc.b`  |
+| `dw`      | 2 bytes, little-endian | `dc.w`  |
+| `dl`      | 3 bytes, little-endian | `dc.l`  |
+| `dd`      | 4 bytes, little-endian | none    |
 
 ### ca65 Data Directives
 
-| Directive | Width | Notes |
-| --------- | ----- | ----- |
-| `.byte`, `.byt` | 1 byte | Same emission as `db` |
-| `.addr`, `.word` | 2 bytes, little-endian | Same emission as `dw` |
-| `.dbyt` | 2 bytes, big-endian | High byte first |
-| `.faraddr` | 3 bytes, little-endian | |
-| `.dword` | 4 bytes, little-endian | |
-| `.lobytes` | 1 byte per expr | Low byte of each expression |
-| `.hibytes` | 1 byte per expr | High byte of each expression |
+| Directive        | Width                  | Notes                        |
+| ---------------- | ---------------------- | ---------------------------- |
+| `.byte`, `.byt`  | 1 byte                 | Same emission as `db`        |
+| `.addr`, `.word` | 2 bytes, little-endian | Same emission as `dw`        |
+| `.dbyt`          | 2 bytes, big-endian    | High byte first              |
+| `.faraddr`       | 3 bytes, little-endian |                              |
+| `.dword`         | 4 bytes, little-endian |                              |
+| `.lobytes`       | 1 byte per expr        | Low byte of each expression  |
+| `.hibytes`       | 1 byte per expr        | High byte of each expression |
 
 ```asm
 .addr Target          ; 34 12
@@ -1001,19 +995,19 @@ Object-only ca65 directives (`.importzp`, `.exportzp`, `.globalzp`, `.forceimpor
 
 ### Raw Target Options
 
-| Option | Values | Default | Effect |
-| ------ | ------ | ------- | ------ |
-| `origin` | integer `0`–`65535` | `0` | Initial PC and file offset 0 |
+| Option   | Values              | Default | Effect                       |
+| -------- | ------------------- | ------- | ---------------------------- |
+| `origin` | integer `0`–`65535` | `0`     | Initial PC and file offset 0 |
 
 Unknown keys fail during plugin activation. Non-integer origins fail. There is no checksum: `getOutput` is a headerless copy of the buffer.
 
 ### NES Target Options
 
-| Option | Values | Default | Effect |
-| ------ | ------ | ------- | ------ |
-| `linkerConfig` | ld65 MEMORY/SEGMENTS/SYMBOLS text | 32 KiB `$8000` ROM + `CODE` | Layout |
-| `header` | byte array | synthesized 16-byte iNES | Written at the front of the image |
-| `fillByte` | integer | `$FF` | PRG prefill and output fill |
+| Option         | Values                            | Default                     | Effect                            |
+| -------------- | --------------------------------- | --------------------------- | --------------------------------- |
+| `linkerConfig` | ld65 MEMORY/SEGMENTS/SYMBOLS text | 32 KiB `$8000` ROM + `CODE` | Layout                            |
+| `header`       | byte array                        | synthesized 16-byte iNES    | Written at the front of the image |
+| `fillByte`     | integer                           | `$FF`                       | PRG prefill and output fill       |
 
 An empty `header` array is an error. Non-array `header` values fail. Omitted `header` synthesizes `NES\x1A` plus PRG bank count from `ceil(imageSize / 0x4000)`.
 
@@ -1046,51 +1040,51 @@ Status meanings:
 
 ### CPUs & Instructions
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| `.setcpu` / `.cpu`, `.pushcpu`, `.popcpu`    | Supported | Selects and stacks the active encoder during assembly. |
-| CPU shorthand directives                     | Supported | `.p02`, `.p02x`, `.pdtv`, `.psc02`, `.pc02`, `.pwc02`, `.pce02`, `.p4510`, `.p45gs02`, `.p6280`, and `.pm740`. |
-| CPU conditionals                             | Supported | Matching `.ifp*` forms for every plugin-owned CPU. |
+| Feature                                      | Status    | Notes                                                                                                                                                    |
+| -------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.setcpu` / `.cpu`, `.pushcpu`, `.popcpu`    | Supported | Selects and stacks the active encoder during assembly.                                                                                                   |
+| CPU shorthand directives                     | Supported | `.p02`, `.p02x`, `.pdtv`, `.psc02`, `.pc02`, `.pwc02`, `.pce02`, `.p4510`, `.p45gs02`, `.p6280`, and `.pm740`.                                           |
+| CPU conditionals                             | Supported | Matching `.ifp*` forms for every plugin-owned CPU.                                                                                                       |
 | CPU names                                    | Supported | `6502`, `6502X`, `6502DTV`, `65SC02`, `65C02`, `W65C02`, `65CE02`, `4510`, `45GS02`, `HuC6280`, and `M740`. 65816-derived CPUs remain SNES-plugin-owned. |
-| Legal, undocumented, and vendor instructions | Supported | Includes 6502X, HuC6280, M740, 65CE02/4510, and 45GS02 forms represented by the declarative catalogs. |
+| Legal, undocumented, and vendor instructions | Supported | Includes 6502X, HuC6280, M740, 65CE02/4510, and 45GS02 forms represented by the declarative catalogs.                                                    |
 
 ### Expressions & Symbols
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| Hex, binary, decimal, and octal literals                             | Supported   | `$`, `%`, decimal, and ca65 `@` octal syntax. |
-| Low/high/bank operators                                              | Supported   | Unary `<`, `>`, and `^`. |
-| Pseudo-functions                                                     | Supported   | `.defined`, `.lobyte`, `.hibyte`, `.bankbyte`, `.loword`, and `.hiword`. |
-| Inequality and symbol assignment                                     | Supported   | `<>`, `=`, and `:=` source forms. |
-| Address-size forcing                                                 | Supported   | `z:`, `a:`, and `f:` are carried into architecture-owned operand classification. |
-| Global, cheap-local, and unnamed labels                              | Supported   | Includes `@name`, `:`, `:+`, `:++`, `:-`, and `:--`; file-local symbols remain isolated across included assembly units. |
+| Feature                                                              | Status      | Notes                                                                                                                                     |
+| -------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Hex, binary, decimal, and octal literals                             | Supported   | `$`, `%`, decimal, and ca65 `@` octal syntax.                                                                                             |
+| Low/high/bank operators                                              | Supported   | Unary `<`, `>`, and `^`.                                                                                                                  |
+| Pseudo-functions                                                     | Supported   | `.defined`, `.lobyte`, `.hibyte`, `.bankbyte`, `.loword`, and `.hiword`.                                                                  |
+| Inequality and symbol assignment                                     | Supported   | `<>`, `=`, and `:=` source forms.                                                                                                         |
+| Address-size forcing                                                 | Supported   | `z:`, `a:`, and `f:` are carried into architecture-owned operand classification.                                                          |
+| Global, cheap-local, and unnamed labels                              | Supported   | Includes `@name`, `:`, `:+`, `:++`, `:-`, and `:--`; file-local symbols remain isolated across included assembly units.                   |
 | `.scope` / `.endscope`, `.proc` / `.endproc`, `Scope::Name`          | Partial     | Flattened into file-local symbol keys. Scope type declarations, address-size annotations, and object visibility metadata are not modeled. |
-| `.export` / `.import`                                                | Partial     | Resolves symbols across source files assembled in one session. No relocatable external symbol records are emitted. |
-| `.exportzp`, `.importzp`, `.globalzp`, `.forceimport`, `.autoimport` | Unsupported | These require relocatable object/linker semantics and produce an explicit diagnostic. |
+| `.export` / `.import`                                                | Partial     | Resolves symbols across source files assembled in one session. No relocatable external symbol records are emitted.                        |
+| `.exportzp`, `.importzp`, `.globalzp`, `.forceimport`, `.autoimport` | Unsupported | These require relocatable object/linker semantics and produce an explicit diagnostic.                                                     |
 
 ### Directives & Control Flow
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| `.byte` / `.byt`, `.word` / `.addr`, `.dbyt`                          | Supported   | Includes ca65 byte ordering. |
-| `.dword`, `.faraddr`, `.lobytes`, `.hibytes`                          | Supported   | Emits 32-bit, 24-bit, or selected-byte values respectively. |
-| `.res`, `.align`, `.org`                                              | Supported   | Operates directly on the selected flat or iNES image. |
-| `.include`, `.incbin`                                                 | Supported   | `.incbin` uses ca65 `file, offset, size` arguments. |
-| `.if`, `.elseif`, `.else`, `.endif`, `.ifdef`, `.ifndef`              | Supported   | Dotted forms lower to the shared conditional engine. |
-| `.assert`                                                             | Partial     | A false assertion stops assembly with its message. ca65 warning/link-time assertion actions are not reproduced. |
-| `.undefine`                                                           | Supported   | Removes a symbol definition through the shared symbol engine. |
-| `.segment`, `.pushseg`, `.popseg` on `65xx.ca65-raw`                  | Partial     | Segment names and stack intent are accepted while bytes remain in source order in one flat image. |
+| Feature                                                               | Status      | Notes                                                                                                                             |
+| --------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `.byte` / `.byt`, `.word` / `.addr`, `.dbyt`                          | Supported   | Includes ca65 byte ordering.                                                                                                      |
+| `.dword`, `.faraddr`, `.lobytes`, `.hibytes`                          | Supported   | Emits 32-bit, 24-bit, or selected-byte values respectively.                                                                       |
+| `.res`, `.align`, `.org`                                              | Supported   | Operates directly on the selected flat or iNES image.                                                                             |
+| `.include`, `.incbin`                                                 | Supported   | `.incbin` uses ca65 `file, offset, size` arguments.                                                                               |
+| `.if`, `.elseif`, `.else`, `.endif`, `.ifdef`, `.ifndef`              | Supported   | Dotted forms lower to the shared conditional engine.                                                                              |
+| `.assert`                                                             | Partial     | A false assertion stops assembly with its message. ca65 warning/link-time assertion actions are not reproduced.                   |
+| `.undefine`                                                           | Supported   | Removes a symbol definition through the shared symbol engine.                                                                     |
+| `.segment`, `.pushseg`, `.popseg` on `65xx.ca65-raw`                  | Partial     | Segment names and stack intent are accepted while bytes remain in source order in one flat image.                                 |
 | `.segment` on `65xx.nes`                                              | Partial     | Implements the selected MEMORY/SEGMENTS load/run/fill model used by the NES integration fixture; it is not a general ld65 linker. |
-| `.constructor`, `.destructor`, `.interruptor`, `.reloc`, `.debuginfo` | Unsupported | Object/linker/debug directives produce an explicit diagnostic. |
+| `.constructor`, `.destructor`, `.interruptor`, `.reloc`, `.debuginfo` | Unsupported | Object/linker/debug directives produce an explicit diagnostic.                                                                    |
 
 ### Macros & Repetition
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| `.macro` / `.endmacro` and bare invocation                               | Supported | Comma-separated parameters and ca65 `\parameter` substitution are supported. |
-| `.repeat` / `.endrepeat`                                                 | Supported | Optional named repeat counters are available as ordinary expressions. |
-| `.local`, `.exitmacro`                                                   | Unsupported | Rejected with a macro-compatibility diagnostic. |
-| Token-list/string macros, `.match`, `.xmatch`, `.mid`, `.left`, `.right` | Unsupported | The advanced ca65 token macro language is not implemented. |
+| Feature                                                                  | Status      | Notes                                                                        |
+| ------------------------------------------------------------------------ | ----------- | ---------------------------------------------------------------------------- |
+| `.macro` / `.endmacro` and bare invocation                               | Supported   | Comma-separated parameters and ca65 `\parameter` substitution are supported. |
+| `.repeat` / `.endrepeat`                                                 | Supported   | Optional named repeat counters are available as ordinary expressions.        |
+| `.local`, `.exitmacro`                                                   | Unsupported | Rejected with a macro-compatibility diagnostic.                              |
+| Token-list/string macros, `.match`, `.xmatch`, `.mid`, `.left`, `.right` | Unsupported | The advanced ca65 token macro language is not implemented.                   |
 
 The real-world integration gate assembles the selected Zelda 1 ca65 disassembly to its golden iNES image. Byte-level CPU differentials are in `packages/plugin-65xx/tests/fixtures/`.
 
@@ -1098,56 +1092,56 @@ The real-world integration gate assembles the selected Zelda 1 ca65 disassembly 
 
 The active 65xx target combines core directives with plugin directives. Native keywords apply to `65xx.raw`. Dotted forms below are the ca65-profile spelling; the leading `.` is the directive prefix.
 
-| Command | Syntax | Status & Effect |
-| ------- | ------ | --------------- |
-| `db`, `dc.b` | `db value[,value...]` | Native 8-bit data |
-| `dw`, `dc.w` | `dw value[,value...]` | Native little-endian 16-bit |
-| `dl`, `dc.l` | `dl value[,value...]` | Native little-endian 24-bit |
-| `dd` | `dd value[,value...]` | Native little-endian 32-bit |
-| `.byte`, `.byt` | `.byte value[,value...]` | ca65 8-bit data |
-| `.addr`, `.word` | `.word value[,value...]` | ca65 little-endian 16-bit |
-| `.dbyt` | `.dbyt value[,value...]` | ca65 big-endian 16-bit |
-| `.faraddr` | `.faraddr value[,value...]` | 24-bit little-endian |
-| `.dword` | `.dword value[,value...]` | 32-bit little-endian |
-| `.lobytes`, `.hibytes` | `.lobytes expr[,value...]` | Selected byte of each expression |
-| `.res` | `.res count[, fill]` | Reserve/fill bytes |
-| `.align` | `.align boundary[, fill]` | Pad to alignment |
-| `fillbyte/word/long/dword`, `fill` | `fill count` | Native fill pattern |
-| `padbyte/word/long/dword`, `pad` | `pad [address]` | Native pad |
-| `incsrc`, `include`, `.include` | `include "file"` | Assemble a source file inline |
-| `includeonce` | `includeonce` | Guard the current file once per stage |
-| `incbin` | `incbin "file"[:range]` | Native/Asar binary include |
-| `.incbin` | `.incbin "file"[, offset[, size]]` | ca65 binary include |
-| `org`, `.org` | `org address` | Set write position |
-| `base` | `base address\|off` | Change or restore logical base |
-| `pushbase`, `pullbase`, `pushpc`, `pullpc` | no operands | Save/restore PC or base |
-| `arch` | `arch name` | Native CPU switch |
-| `.setcpu`, `.cpu` | `.setcpu "CPU"` | ca65 CPU switch |
-| `.pushcpu`, `.popcpu` | no operands | Save/restore CPU |
-| `.p02` … `.pm740` | no operands | CPU shorthand |
-| `.ifp02` … `.ifpm740` | block syntax | CPU predicate |
-| `.segment` | `.segment "NAME"` | NES: open ld65 segment. ca65-raw: record name |
-| `.pushseg`, `.popseg` | no operands | Save/restore flat segment name |
-| `namespace`, `pushns`, `pullns` | native namespace | Native label prefixing |
-| `.scope` / `.endscope`, `.proc` / `.endproc` | `.proc name` | Flattened lexical scope |
-| `.export`, `.import` | `.export ident[, ident...]` | Session-global symbol |
-| `table`, `cleartable`, `pushtable`, `pulltable` | native | Character mapping |
-| `struct`, `skip`, `endstruct` | native | Non-emitting layout |
-| `undef`, `.undefine` | `undef name` | Remove a define/symbol |
-| `if`, `elseif`, `else`, `endif` | block syntax | Conditional assembly |
-| `.if`, `.ifdef`, `.ifndef` | block syntax | ca65 conditionals |
-| `while`, `endwhile` | block syntax | Native conditional repeat |
-| `for`, `endfor` | `for name = start..end` | Inclusive counted loop |
-| `.repeat`, `.endrepeat` | `.repeat count[, ident]` | ca65 counted repeat |
-| `macro`, `endmacro` | `macro name(args)` | Native command macro |
-| `.macro`, `.endmacro` | `.macro name args` | ca65 command macro |
-| `function` | `function name(args) = expression` | Native numeric function |
-| `assert`, `.assert` | `assert condition[, message]` | Fail when condition is zero |
-| `error` | `error [message...]` | Always fail |
-| `warnpc` | `warnpc address` | Fail when PC exceeds address |
-| `.local`, `.exitmacro` | any | Rejected |
-| `.importzp`, `.exportzp`, `.globalzp`, `.forceimport`, `.autoimport` | any | Rejected (object/linker) |
-| `.constructor`, `.destructor`, `.interruptor`, `.reloc`, `.debuginfo` | any | Rejected (object/linker) |
+| Command                                                               | Syntax                             | Status & Effect                               |
+| --------------------------------------------------------------------- | ---------------------------------- | --------------------------------------------- |
+| `db`, `dc.b`                                                          | `db value[,value...]`              | Native 8-bit data                             |
+| `dw`, `dc.w`                                                          | `dw value[,value...]`              | Native little-endian 16-bit                   |
+| `dl`, `dc.l`                                                          | `dl value[,value...]`              | Native little-endian 24-bit                   |
+| `dd`                                                                  | `dd value[,value...]`              | Native little-endian 32-bit                   |
+| `.byte`, `.byt`                                                       | `.byte value[,value...]`           | ca65 8-bit data                               |
+| `.addr`, `.word`                                                      | `.word value[,value...]`           | ca65 little-endian 16-bit                     |
+| `.dbyt`                                                               | `.dbyt value[,value...]`           | ca65 big-endian 16-bit                        |
+| `.faraddr`                                                            | `.faraddr value[,value...]`        | 24-bit little-endian                          |
+| `.dword`                                                              | `.dword value[,value...]`          | 32-bit little-endian                          |
+| `.lobytes`, `.hibytes`                                                | `.lobytes expr[,value...]`         | Selected byte of each expression              |
+| `.res`                                                                | `.res count[, fill]`               | Reserve/fill bytes                            |
+| `.align`                                                              | `.align boundary[, fill]`          | Pad to alignment                              |
+| `fillbyte/word/long/dword`, `fill`                                    | `fill count`                       | Native fill pattern                           |
+| `padbyte/word/long/dword`, `pad`                                      | `pad [address]`                    | Native pad                                    |
+| `incsrc`, `include`, `.include`                                       | `include "file"`                   | Assemble a source file inline                 |
+| `includeonce`                                                         | `includeonce`                      | Guard the current file once per stage         |
+| `incbin`                                                              | `incbin "file"[:range]`            | Native/Asar binary include                    |
+| `.incbin`                                                             | `.incbin "file"[, offset[, size]]` | ca65 binary include                           |
+| `org`, `.org`                                                         | `org address`                      | Set write position                            |
+| `base`                                                                | `base address\|off`                | Change or restore logical base                |
+| `pushbase`, `pullbase`, `pushpc`, `pullpc`                            | no operands                        | Save/restore PC or base                       |
+| `arch`                                                                | `arch name`                        | Native CPU switch                             |
+| `.setcpu`, `.cpu`                                                     | `.setcpu "CPU"`                    | ca65 CPU switch                               |
+| `.pushcpu`, `.popcpu`                                                 | no operands                        | Save/restore CPU                              |
+| `.p02` … `.pm740`                                                     | no operands                        | CPU shorthand                                 |
+| `.ifp02` … `.ifpm740`                                                 | block syntax                       | CPU predicate                                 |
+| `.segment`                                                            | `.segment "NAME"`                  | NES: open ld65 segment. ca65-raw: record name |
+| `.pushseg`, `.popseg`                                                 | no operands                        | Save/restore flat segment name                |
+| `namespace`, `pushns`, `pullns`                                       | native namespace                   | Native label prefixing                        |
+| `.scope` / `.endscope`, `.proc` / `.endproc`                          | `.proc name`                       | Flattened lexical scope                       |
+| `.export`, `.import`                                                  | `.export ident[, ident...]`        | Session-global symbol                         |
+| `table`, `cleartable`, `pushtable`, `pulltable`                       | native                             | Character mapping                             |
+| `struct`, `skip`, `endstruct`                                         | native                             | Non-emitting layout                           |
+| `undef`, `.undefine`                                                  | `undef name`                       | Remove a define/symbol                        |
+| `if`, `elseif`, `else`, `endif`                                       | block syntax                       | Conditional assembly                          |
+| `.if`, `.ifdef`, `.ifndef`                                            | block syntax                       | ca65 conditionals                             |
+| `while`, `endwhile`                                                   | block syntax                       | Native conditional repeat                     |
+| `for`, `endfor`                                                       | `for name = start..end`            | Inclusive counted loop                        |
+| `.repeat`, `.endrepeat`                                               | `.repeat count[, ident]`           | ca65 counted repeat                           |
+| `macro`, `endmacro`                                                   | `macro name(args)`                 | Native command macro                          |
+| `.macro`, `.endmacro`                                                 | `.macro name args`                 | ca65 command macro                            |
+| `function`                                                            | `function name(args) = expression` | Native numeric function                       |
+| `assert`, `.assert`                                                   | `assert condition[, message]`      | Fail when condition is zero                   |
+| `error`                                                               | `error [message...]`               | Always fail                                   |
+| `warnpc`                                                              | `warnpc address`                   | Fail when PC exceeds address                  |
+| `.local`, `.exitmacro`                                                | any                                | Rejected                                      |
+| `.importzp`, `.exportzp`, `.globalzp`, `.forceimport`, `.autoimport`  | any                                | Rejected (object/linker)                      |
+| `.constructor`, `.destructor`, `.interruptor`, `.reloc`, `.debuginfo` | any                                | Rejected (object/linker)                      |
 
 ## Troubleshooting
 
@@ -1195,20 +1189,20 @@ If you think it should be working here, and it is not in the compatibility ledge
 
 ## Code and Fixture Layout
 
-| Topic | Implementation | Executable examples/tests |
-| --- | --- | --- |
-| Plugin registration and options | [`src/index.ts`](./src/index.ts) | [`assembler.test.ts`](./tests/assembler.test.ts) |
-| NMOS encoder and 256-entry decode table | [`src/instructions/opcodes.ts`](./src/instructions/opcodes.ts) | [`ca65-v2.19-nmos-differential.json`](./tests/fixtures/ca65-v2.19-nmos-differential.json) |
-| CMOS / vendor tables | [`src/instructions/variants.ts`](./src/instructions/variants.ts), [`variant-tables.generated.ts`](./src/instructions/variant-tables.generated.ts) | [`ca65-e11fb5c-phase4-5-differential.json`](./tests/fixtures/ca65-e11fb5c-phase4-5-differential.json), [`ca65-e11fb5c-phase6-differential.json`](./tests/fixtures/ca65-e11fb5c-phase6-differential.json) |
-| Operand classification | [`src/operands/classifier.ts`](./src/operands/classifier.ts) | [`operand-classifier.test.ts`](./tests/operand-classifier.test.ts) |
-| Encoder | [`src/architecture.ts`](./src/architecture.ts) | [`assembler.test.ts`](./tests/assembler.test.ts), [`instruction-model.test.ts`](./tests/instruction-model.test.ts) |
-| ca65 rewrite, CPU names, shorthands | [`src/ca65-profile.ts`](./src/ca65-profile.ts) | [`ca65-compat.test.ts`](./tests/ca65-compat.test.ts) |
-| ca65 directives | [`src/directives/ca65.ts`](./src/directives/ca65.ts) | [`ca65-compat.test.ts`](./tests/ca65-compat.test.ts) |
-| NES target, header, lifecycle | [`src/target/nes.ts`](./src/target/nes.ts) | [`ca65-compat.test.ts`](./tests/ca65-compat.test.ts) |
-| ld65 MEMORY/SEGMENTS parser | [`src/linker-config.ts`](./src/linker-config.ts) | [`linker-config.test.ts`](./tests/linker-config.test.ts) |
-| Oracle pins | [`tests/fixtures/reference-manifest.json`](./tests/fixtures/reference-manifest.json) | ca65 V2.19 and `e11fb5c` |
-| Third-party table notices | [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) | cc65 zlib license for extracted metadata |
-| Zelda 1 iNES gate | external fixture harness | `npm run test:external` |
+| Topic                                   | Implementation                                                                                                                                    | Executable examples/tests                                                                                                                                                                                                  |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plugin registration and options         | [`src/index.ts`](./src/index.ts)                                                                                                                  | [`assembler.test.ts`](./tests/assembler.test.ts)                                                                                                                                                                           |
+| NMOS encoder and 256-entry decode table | [`src/instructions/opcodes.ts`](./src/instructions/opcodes.ts)                                                                                    | [`ca65-v2.19-nmos-differential.json`](./tests/fixtures/ca65-v2.19-nmos-differential.json)                                                                                                                                  |
+| CMOS / vendor tables                    | [`src/instructions/variants.ts`](./src/instructions/variants.ts), [`variant-tables.generated.ts`](./src/instructions/variant-tables.generated.ts) | [`ca65-e11fb5c-cmos-vendor-differential.json`](./tests/fixtures/ca65-e11fb5c-cmos-vendor-differential.json), [`ca65-e11fb5c-huc6280-m740-differential.json`](./tests/fixtures/ca65-e11fb5c-huc6280-m740-differential.json) |
+| Operand classification                  | [`src/operands/classifier.ts`](./src/operands/classifier.ts)                                                                                      | [`operand-classifier.test.ts`](./tests/operand-classifier.test.ts)                                                                                                                                                         |
+| Encoder                                 | [`src/architecture.ts`](./src/architecture.ts)                                                                                                    | [`assembler.test.ts`](./tests/assembler.test.ts), [`instruction-model.test.ts`](./tests/instruction-model.test.ts)                                                                                                         |
+| ca65 rewrite, CPU names, shorthands     | [`src/ca65-profile.ts`](./src/ca65-profile.ts)                                                                                                    | [`ca65-compat.test.ts`](./tests/ca65-compat.test.ts)                                                                                                                                                                       |
+| ca65 directives                         | [`src/directives/ca65.ts`](./src/directives/ca65.ts)                                                                                              | [`ca65-compat.test.ts`](./tests/ca65-compat.test.ts)                                                                                                                                                                       |
+| NES target, header, lifecycle           | [`src/target/nes.ts`](./src/target/nes.ts)                                                                                                        | [`ca65-compat.test.ts`](./tests/ca65-compat.test.ts)                                                                                                                                                                       |
+| ld65 MEMORY/SEGMENTS parser             | [`src/linker-config.ts`](./src/linker-config.ts)                                                                                                  | [`linker-config.test.ts`](./tests/linker-config.test.ts)                                                                                                                                                                   |
+| Oracle pins                             | [`tests/fixtures/reference-manifest.json`](./tests/fixtures/reference-manifest.json)                                                              | ca65 V2.19 and `e11fb5c`                                                                                                                                                                                                   |
+| Third-party table notices               | [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)                                                                                              | cc65 zlib license for extracted metadata                                                                                                                                                                                   |
+| Zelda 1 iNES gate                       | external fixture harness                                                                                                                          | `npm run test:external`                                                                                                                                                                                                    |
 
 ## Instruction Catalogs
 
@@ -1220,90 +1214,90 @@ Operand-form abbreviations match the editor catalog: `#value`, `zp`, `zp,x`, `zp
 
 56 mnemonics, 154 assembly forms. 151 documented opcodes plus `BRK` signature extensions.
 
-| Mnemonic | What it does | Accepted operand forms |
-| --- | --- | --- |
-| `ADC` | Add memory to the accumulator with carry. | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `AND` | Bitwise AND memory with the accumulator. | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `ASL` | Shift left one bit. | `A`, `zp`, `zp,x`, `addr`, `addr,x` |
-| `BCC` | Branch when carry is clear. | `target` |
-| `BCS` | Branch when carry is set. | `target` |
-| `BEQ` | Branch when equal (zero set). | `target` |
-| `BIT` | Test accumulator bits without storing a result. | `zp`, `addr` |
-| `BMI` | Branch when negative. | `target` |
-| `BNE` | Branch when not equal (zero clear). | `target` |
-| `BPL` | Branch when positive. | `target` |
-| `BRK` | Trigger a software interrupt. | implied, `#value`, `zp`, `addr` |
-| `BVC` | Branch when overflow is clear. | `target` |
-| `BVS` | Branch when overflow is set. | `target` |
-| `CLC` | Clear carry. | implied |
-| `CLD` | Clear decimal. | implied |
-| `CLI` | Clear interrupt-disable. | implied |
-| `CLV` | Clear overflow. | implied |
-| `CMP` | Compare memory with the accumulator. | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `CPX` | Compare memory with X. | `#value`, `zp`, `addr` |
-| `CPY` | Compare memory with Y. | `#value`, `zp`, `addr` |
-| `DEC` | Decrement memory. | `zp`, `zp,x`, `addr`, `addr,x` |
-| `DEX` | Decrement X. | implied |
-| `DEY` | Decrement Y. | implied |
-| `EOR` | Exclusive-OR memory with the accumulator. | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `INC` | Increment memory. | `zp`, `zp,x`, `addr`, `addr,x` |
-| `INX` | Increment X. | implied |
-| `INY` | Increment Y. | implied |
-| `JMP` | Jump to an address. | `addr`, `(addr)` |
-| `JSR` | Call a subroutine. | `addr` |
-| `LDA` | Load the accumulator. | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `LDX` | Load X. | `#value`, `zp`, `zp,y`, `addr`, `addr,y` |
-| `LDY` | Load Y. | `#value`, `zp`, `zp,x`, `addr`, `addr,x` |
-| `LSR` | Logical shift right. | `A`, `zp`, `zp,x`, `addr`, `addr,x` |
-| `NOP` | Perform no operation. | implied |
-| `ORA` | Bitwise OR memory with the accumulator. | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `PHA` | Push the accumulator. | implied |
-| `PHP` | Push the processor status. | implied |
-| `PLA` | Pull the accumulator. | implied |
-| `PLP` | Pull the processor status. | implied |
-| `ROL` | Rotate left through carry. | `A`, `zp`, `zp,x`, `addr`, `addr,x` |
-| `ROR` | Rotate right through carry. | `A`, `zp`, `zp,x`, `addr`, `addr,x` |
-| `RTI` | Return from interrupt. | implied |
-| `RTS` | Return from subroutine. | implied |
-| `SBC` | Subtract memory and borrow from the accumulator. | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `SEC` | Set carry. | implied |
-| `SED` | Set decimal. | implied |
-| `SEI` | Set interrupt-disable. | implied |
-| `STA` | Store the accumulator. | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `STX` | Store X. | `zp`, `zp,y`, `addr` |
-| `STY` | Store Y. | `zp`, `zp,x`, `addr` |
-| `TAX` | Transfer accumulator to X. | implied |
-| `TAY` | Transfer accumulator to Y. | implied |
-| `TSX` | Transfer stack pointer to X. | implied |
-| `TXA` | Transfer X to accumulator. | implied |
-| `TXS` | Transfer X to stack pointer. | implied |
-| `TYA` | Transfer Y to accumulator. | implied |
+| Mnemonic | What it does                                     | Accepted operand forms                                                 |
+| -------- | ------------------------------------------------ | ---------------------------------------------------------------------- |
+| `ADC`    | Add memory to the accumulator with carry.        | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `AND`    | Bitwise AND memory with the accumulator.         | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `ASL`    | Shift left one bit.                              | `A`, `zp`, `zp,x`, `addr`, `addr,x`                                    |
+| `BCC`    | Branch when carry is clear.                      | `target`                                                               |
+| `BCS`    | Branch when carry is set.                        | `target`                                                               |
+| `BEQ`    | Branch when equal (zero set).                    | `target`                                                               |
+| `BIT`    | Test accumulator bits without storing a result.  | `zp`, `addr`                                                           |
+| `BMI`    | Branch when negative.                            | `target`                                                               |
+| `BNE`    | Branch when not equal (zero clear).              | `target`                                                               |
+| `BPL`    | Branch when positive.                            | `target`                                                               |
+| `BRK`    | Trigger a software interrupt.                    | implied, `#value`, `zp`, `addr`                                        |
+| `BVC`    | Branch when overflow is clear.                   | `target`                                                               |
+| `BVS`    | Branch when overflow is set.                     | `target`                                                               |
+| `CLC`    | Clear carry.                                     | implied                                                                |
+| `CLD`    | Clear decimal.                                   | implied                                                                |
+| `CLI`    | Clear interrupt-disable.                         | implied                                                                |
+| `CLV`    | Clear overflow.                                  | implied                                                                |
+| `CMP`    | Compare memory with the accumulator.             | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `CPX`    | Compare memory with X.                           | `#value`, `zp`, `addr`                                                 |
+| `CPY`    | Compare memory with Y.                           | `#value`, `zp`, `addr`                                                 |
+| `DEC`    | Decrement memory.                                | `zp`, `zp,x`, `addr`, `addr,x`                                         |
+| `DEX`    | Decrement X.                                     | implied                                                                |
+| `DEY`    | Decrement Y.                                     | implied                                                                |
+| `EOR`    | Exclusive-OR memory with the accumulator.        | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `INC`    | Increment memory.                                | `zp`, `zp,x`, `addr`, `addr,x`                                         |
+| `INX`    | Increment X.                                     | implied                                                                |
+| `INY`    | Increment Y.                                     | implied                                                                |
+| `JMP`    | Jump to an address.                              | `addr`, `(addr)`                                                       |
+| `JSR`    | Call a subroutine.                               | `addr`                                                                 |
+| `LDA`    | Load the accumulator.                            | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `LDX`    | Load X.                                          | `#value`, `zp`, `zp,y`, `addr`, `addr,y`                               |
+| `LDY`    | Load Y.                                          | `#value`, `zp`, `zp,x`, `addr`, `addr,x`                               |
+| `LSR`    | Logical shift right.                             | `A`, `zp`, `zp,x`, `addr`, `addr,x`                                    |
+| `NOP`    | Perform no operation.                            | implied                                                                |
+| `ORA`    | Bitwise OR memory with the accumulator.          | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `PHA`    | Push the accumulator.                            | implied                                                                |
+| `PHP`    | Push the processor status.                       | implied                                                                |
+| `PLA`    | Pull the accumulator.                            | implied                                                                |
+| `PLP`    | Pull the processor status.                       | implied                                                                |
+| `ROL`    | Rotate left through carry.                       | `A`, `zp`, `zp,x`, `addr`, `addr,x`                                    |
+| `ROR`    | Rotate right through carry.                      | `A`, `zp`, `zp,x`, `addr`, `addr,x`                                    |
+| `RTI`    | Return from interrupt.                           | implied                                                                |
+| `RTS`    | Return from subroutine.                          | implied                                                                |
+| `SBC`    | Subtract memory and borrow from the accumulator. | `#value`, `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `SEC`    | Set carry.                                       | implied                                                                |
+| `SED`    | Set decimal.                                     | implied                                                                |
+| `SEI`    | Set interrupt-disable.                           | implied                                                                |
+| `STA`    | Store the accumulator.                           | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y`           |
+| `STX`    | Store X.                                         | `zp`, `zp,y`, `addr`                                                   |
+| `STY`    | Store Y.                                         | `zp`, `zp,x`, `addr`                                                   |
+| `TAX`    | Transfer accumulator to X.                       | implied                                                                |
+| `TAY`    | Transfer accumulator to Y.                       | implied                                                                |
+| `TSX`    | Transfer stack pointer to X.                     | implied                                                                |
+| `TXA`    | Transfer X to accumulator.                       | implied                                                                |
+| `TXS`    | Transfer X to stack pointer.                     | implied                                                                |
+| `TYA`    | Transfer Y to accumulator.                       | implied                                                                |
 
 ### 6502X Undocumented Catalog
 
 `65xx.6502x` adds these unofficial mnemonics on top of the documented set. `NOP` also gains extra operand forms. Aliases in parentheses are accepted spellings of the same canonical name.
 
-| Mnemonic | What it does | Accepted operand forms |
-| --- | --- | --- |
-| `ALR` (`ASR`) | AND then LSR. | `#value` |
-| `ANC` (`AAC`) | AND; copy N into C. | `#value` |
-| `ANE` (`XAA`) | Unstable A AND X AND immediate. | `#value` |
-| `ARR` | AND then ROR. | `#value` |
-| `AXS` (`SBX`) | X = (A AND X) − immediate. | `#value` |
-| `DCP` (`DCM`) | DEC then CMP. | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `ISC` (`ISB`, `INS`) | INC then SBC. | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `JAM` (`KIL`, `HLT`) | Halt the processor. | implied |
-| `LAS` (`LAR`) | A, X, S = memory AND S. | `addr,y` |
-| `LAX` | Load A and X. Immediate form is unstable. | `#value`, `zp`, `zp,y`, `addr`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `RLA` | ROL then AND. | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `RRA` | ROR then ADC. | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `SAX` (`AAX`) | Store A AND X. | `zp`, `zp,y`, `addr`, `(zp,x)` |
-| `SHA` (`AHX`) | Unstable store of A AND X AND (H+1). | `addr,y`, `(zp),y` |
-| `SHX` (`SXA`) | Unstable store of X AND (H+1). | `addr,y` |
-| `SHY` (`SYA`) | Unstable store of Y AND (H+1). | `addr,x` |
-| `SLO` | ASL then ORA. | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `SRE` (`LSE`) | LSR then EOR. | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `TAS` (`SHS`) | Unstable S = A AND X; store S AND (H+1). | `addr,y` |
+| Mnemonic             | What it does                              | Accepted operand forms                                       |
+| -------------------- | ----------------------------------------- | ------------------------------------------------------------ |
+| `ALR` (`ASR`)        | AND then LSR.                             | `#value`                                                     |
+| `ANC` (`AAC`)        | AND; copy N into C.                       | `#value`                                                     |
+| `ANE` (`XAA`)        | Unstable A AND X AND immediate.           | `#value`                                                     |
+| `ARR`                | AND then ROR.                             | `#value`                                                     |
+| `AXS` (`SBX`)        | X = (A AND X) − immediate.                | `#value`                                                     |
+| `DCP` (`DCM`)        | DEC then CMP.                             | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `ISC` (`ISB`, `INS`) | INC then SBC.                             | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `JAM` (`KIL`, `HLT`) | Halt the processor.                       | implied                                                      |
+| `LAS` (`LAR`)        | A, X, S = memory AND S.                   | `addr,y`                                                     |
+| `LAX`                | Load A and X. Immediate form is unstable. | `#value`, `zp`, `zp,y`, `addr`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `RLA`                | ROL then AND.                             | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `RRA`                | ROR then ADC.                             | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `SAX` (`AAX`)        | Store A AND X.                            | `zp`, `zp,y`, `addr`, `(zp,x)`                               |
+| `SHA` (`AHX`)        | Unstable store of A AND X AND (H+1).      | `addr,y`, `(zp),y`                                           |
+| `SHX` (`SXA`)        | Unstable store of X AND (H+1).            | `addr,y`                                                     |
+| `SHY` (`SYA`)        | Unstable store of Y AND (H+1).            | `addr,x`                                                     |
+| `SLO`                | ASL then ORA.                             | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `SRE` (`LSE`)        | LSR then EOR.                             | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
+| `TAS` (`SHS`)        | Unstable S = A AND X; store S AND (H+1).  | `addr,y`                                                     |
 
 Unstable forms emit a ca65-compatible byte and make no silicon-stability promise.
 
@@ -1311,11 +1305,11 @@ Unstable forms emit a ca65-compatible byte and make no silicon-stability promise
 
 On top of NMOS, 65SC02 (66 mnemonics) adds:
 
-| Group | Mnemonics / forms |
-| --- | --- |
-| Control | `BRA target` |
-| Implied | `INA`, `DEA`, `PHX`, `PHY`, `PLX`, `PLY` |
-| Memory | `STZ zp\|addr\|zp,x\|addr,x`, `TRB zp\|addr`, `TSB zp\|addr` |
+| Group      | Mnemonics / forms                                                                       |
+| ---------- | --------------------------------------------------------------------------------------- |
+| Control    | `BRA target`                                                                            |
+| Implied    | `INA`, `DEA`, `PHX`, `PHY`, `PLX`, `PLY`                                                |
+| Memory     | `STZ zp\|addr\|zp,x\|addr,x`, `TRB zp\|addr`, `TSB zp\|addr`                            |
 | Addressing | `(zp)` on ALU/load/store; `BIT` `#value\|zp,x\|addr,x`; `INC`/`DEC` `A`; `JMP (addr,x)` |
 
 65C02 (98 mnemonics) adds Rockwell bit ops: `RMB0`–`RMB7 zp`, `SMB0`–`SMB7 zp`, `BBR0`–`BBR7 zp,target`, `BBS0`–`BBS7 zp,target`.
@@ -1330,15 +1324,15 @@ W65C02 (100 mnemonics) adds `WAI` and `STP`.
 
 133 mnemonics each. Distinctive forms:
 
-| Group | Mnemonics / forms |
-| --- | --- |
-| Z register | `LDZ`, `STZ` (extended), `CPZ`, `DEZ`, `INZ`, `TAZ`, `TZA`, `PHZ`, `PLZ` |
-| Stack | `(offset,s),y` on `LDA`/`STA` |
-| Word | `ASW`, `DEW`, `INW`, `ROW`, `PHW`, `PHD`, `RTN #value` |
-| Long relative | `BSR`, `LBRA`, `LBCC`, `LBCS`, `LBEQ`, `LBNE`, `LBMI`, `LBPL`, `LBVC`, `LBVS` |
-| Other | `ASR`, `NEG`, `CLE`, `SEE`, `TAB`, `TBA`, `TSY`, `TYS`, `EOM`, `JSR (addr)` / `(addr,x)` |
-| 65CE02 only | `AUG` |
-| 4510 only | `MAP` (same opcode as `AUG`) |
+| Group         | Mnemonics / forms                                                                        |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| Z register    | `LDZ`, `STZ` (extended), `CPZ`, `DEZ`, `INZ`, `TAZ`, `TZA`, `PHZ`, `PLZ`                 |
+| Stack         | `(offset,s),y` on `LDA`/`STA`                                                            |
+| Word          | `ASW`, `DEW`, `INW`, `ROW`, `PHW`, `PHD`, `RTN #value`                                   |
+| Long relative | `BSR`, `LBRA`, `LBCC`, `LBCS`, `LBEQ`, `LBNE`, `LBMI`, `LBPL`, `LBVC`, `LBVS`            |
+| Other         | `ASR`, `NEG`, `CLE`, `SEE`, `TAB`, `TBA`, `TSY`, `TYS`, `EOM`, `JSR (addr)` / `(addr,x)` |
+| 65CE02 only   | `AUG`                                                                                    |
+| 4510 only     | `MAP` (same opcode as `AUG`)                                                             |
 
 ### 45GS02 Additions
 
@@ -1354,27 +1348,30 @@ Plus 32-bit `[zp],z` on the 8-bit ALU/load/store set.
 
 135 mnemonics. Distinctive forms:
 
-| Group | Mnemonics / forms |
-| --- | --- |
-| Clears / swaps | `CLA`, `CLX`, `CLY`, `SAX`, `SAY`, `SXY` |
-| Speed | `CSH`, `CSL` |
-| VDC | `ST0 #value`, `ST1 #value`, `ST2 #value`, `SET` |
-| MPR | `TMA #value` (power of two), `TAM #value`, `TMA0`–`TMA7`, `TAM0`–`TAM7` |
-| Test | `TST #value,zp`, `#value,addr`, `#value,zp,x`, `#value,addr,x` |
-| Block | `TII`, `TDD`, `TIN`, `TIA`, `TAI` as `source,destination,length` |
-| Relative | `BSR`, `BRA`, plus Rockwell `RMB`/`SMB`/`BBR`/`BBS` |
+| Group          | Mnemonics / forms                                                       |
+| -------------- | ----------------------------------------------------------------------- |
+| Clears / swaps | `CLA`, `CLX`, `CLY`, `SAX`, `SAY`, `SXY`                                |
+| Speed          | `CSH`, `CSL`                                                            |
+| VDC            | `ST0 #value`, `ST1 #value`, `ST2 #value`, `SET`                         |
+| MPR            | `TMA #value` (power of two), `TAM #value`, `TMA0`–`TMA7`, `TAM0`–`TAM7` |
+| Test           | `TST #value,zp`, `#value,addr`, `#value,zp,x`, `#value,addr,x`          |
+| Block          | `TII`, `TDD`, `TIN`, `TIA`, `TAI` as `source,destination,length`        |
+| Relative       | `BSR`, `BRA`, plus Rockwell `RMB`/`SMB`/`BBR`/`BBS`                     |
 
 ### M740 Additions
 
 106 mnemonics. Distinctive forms:
 
-| Group | Mnemonics / forms |
-| --- | --- |
-| Accumulator bit branch | `BBS0`–`BBS7 A,target`, `BBC0`–`BBC7 A,target` |
-| Zero-page bit branch | `BBS0`–`BBS7 zp,target`, `BBC0`–`BBC7 zp,target` |
-| Bit set/clear | `SEB0`–`SEB7`, `CLB0`–`CLB7`, `RMB0`–`RMB7` on `A` or `zp` |
-| Immediate store | `LDM zp,#value` |
-| Special-page JSR | `JSR $FFnn` (opcode `$22`), `JSR (zp)` (opcode `$02`) |
-| Other | `BRA`, `COM zp`, `RRF zp`, `TST zp`, `CLT`, `SET`, `FST`, `SLW`, `STP` |
+| Group                  | Mnemonics / forms                                                      |
+| ---------------------- | ---------------------------------------------------------------------- |
+| Accumulator bit branch | `BBS0`–`BBS7 A,target`, `BBC0`–`BBC7 A,target`                         |
+| Zero-page bit branch   | `BBS0`–`BBS7 zp,target`, `BBC0`–`BBC7 zp,target`                       |
+| Bit set/clear          | `SEB0`–`SEB7`, `CLB0`–`CLB7`, `RMB0`–`RMB7` on `A` or `zp`             |
+| Immediate store        | `LDM zp,#value`                                                        |
+| Special-page JSR       | `JSR $FFnn` (opcode `$22`), `JSR (zp)` (opcode `$02`)                  |
+| Other                  | `BRA`, `COM zp`, `RRF zp`, `TST zp`, `CLT`, `SET`, `FST`, `SLW`, `STP` |
 
 The complete fixture-backed mnemonic sets are the catalogs dumped from `buildInstructionCatalog` for each CPU in [`src/instructions/catalog.ts`](./src/instructions/catalog.ts).
+
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for target ownership, instruction-specification,
+fixture, formatting, and release-gate requirements.

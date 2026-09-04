@@ -1,6 +1,6 @@
 # The Uttori ASM SNES Manual
 
-`@uttori/asm-plugin-snes` is the first-party Super Nintendo target for Uttori ASM. It brings the WDC 65C816, Sony SPC700, and Super FX under one roof; translates CPU addresses through the familiar SNES cartridge maps; writes `.sfc` images; updates checksums; and understands a practical, deliberately documented slice of Asar syntax.
+`@uttori/asm-plugin-snes` is the first-party Super Nintendo target for Uttori ASM. It brings the WDC 65C816, Sony SPC700, and Super FX under one roof; translates CPU addresses through the familiar SNES cartridge maps; writes `.sfc` images; updates checksums; and understands a practical, deliberately documented subset of Asar syntax.
 
 This manual starts with a tiny working ROM and then opens the hood one system at a time. You can read it front to back, magazine-style, or jump straight to the command and instruction appendices when the linker gremlins are already circling.
 
@@ -1555,3 +1555,6 @@ GETBS BRA BGE BLT BNE BEQ BPL BMI BCC BCS BVC BVS TO WITH FROM ADD ADC SUB SBC
 CMP AND BIC OR XOR MULT UMULT JMP LJMP INC DEC LINK STW LDW STB LDB IBT IWT LM
 LMS SM SMS LEA MOVE MOVES MOVEB MOVEW
 ```
+
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for the reversible-instruction, mapper, importer,
+performance-comment, fixture, and native-source test requirements.

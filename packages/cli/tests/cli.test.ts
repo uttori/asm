@@ -141,12 +141,14 @@ test("CLI parses analysis project commands and validates mapper/header options",
     "--mesen-trace=game.trace",
     "--trace-metadata=game.trace.json",
     "--mesen-labels=game.mlb",
+    "--instruction-trace=game.uttori-trace.json",
   ]);
   t.is(evidence.command, "evidence-import");
   t.is(evidence.mesenCdl, "game.cdl");
   t.is(evidence.mesenTrace, "game.trace");
   t.is(evidence.traceMetadata, "game.trace.json");
   t.is(evidence.mesenLabels, "game.mlb");
+  t.is(evidence.instructionTrace, "game.uttori-trace.json");
   t.is(parseCliArguments(["evidence-report", "game.analysis"]).command, "evidence-report");
   t.is(
     parseCliArguments(["mesen-labels-export", "game.analysis", "game.mlb"]).command,
@@ -168,6 +170,7 @@ test("CLI imports, reports, reimports, and exports MesenCE offline evidence", as
   const traceFile = path.join(temporary, "fixture.trace");
   const metadataFile = path.join(temporary, "fixture.trace.json");
   const labelsFile = path.join(temporary, "fixture.mlb");
+  const instructionTraceFile = path.join(temporary, "fixture.uttori-trace.json");
   const exportedLabels = path.join(temporary, "exported.mlb");
   const reportFile = path.join(temporary, "evidence.json");
   try {
@@ -200,6 +203,25 @@ test("CLI imports, reports, reimports, and exports MesenCE offline evidence", as
       }),
     );
     await fs.writeFile(labelsFile, "SnesPrgRom:0000:TraceEntry:Imported\\nlabel\n");
+    await fs.writeFile(
+      instructionTraceFile,
+      JSON.stringify({
+        format: "uttori-asm-instruction-trace",
+        schemaVersion: 1,
+        architecture: "snes.65816",
+        addressSpace: "snes.address-space",
+        romContentSha256: created.manifest.rom.contentSha256,
+        producer: { id: "cli-test", revision: "fixture" },
+        chunks: [
+          {
+            sequenceStart: 1,
+            addresses: [0x808000, 0x808003],
+            droppedEvents: 0,
+            active: false,
+          },
+        ],
+      }),
+    );
 
     const importArguments = [
       "evidence-import",
@@ -214,6 +236,8 @@ test("CLI imports, reports, reimports, and exports MesenCE offline evidence", as
       metadataFile,
       "--mesen-labels",
       labelsFile,
+      "--instruction-trace",
+      instructionTraceFile,
     ];
     t.is(await runCli(importArguments), 0);
     const imported = loadAnalysisProject(project);

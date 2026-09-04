@@ -47,7 +47,7 @@ export const SNES_ROM_FRAMEWORK = {
 export const LOCAL_ROM_DIR = "Local Only/fixtures/roms";
 export const LOCAL_WORKTREE_DIR = "Local Only/fixtures/worktrees";
 
-/** Private ROM identity used only by the opt-in Phase 5 disassembly round-trip gate. */
+/** Private ROM identity used only by the opt-in native-source round-trip gate. */
 export const SECRET_OF_MANA_ANALYSIS_FIXTURE = {
   displayName: "Secret of Mana (USA)",
   filename: "Secret of Mana (USA).sfc",

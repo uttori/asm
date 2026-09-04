@@ -44,14 +44,14 @@ interface VariantDifferentialFixture {
 
 const variantDifferentialFixture = JSON.parse(
   fs.readFileSync(
-    new URL("./fixtures/ca65-e11fb5c-phase4-5-differential.json", import.meta.url),
+    new URL("./fixtures/ca65-e11fb5c-cmos-vendor-differential.json", import.meta.url),
     "utf8",
   ),
 ) as VariantDifferentialFixture;
 
-const phase6DifferentialFixture = JSON.parse(
+const huc6280M740DifferentialFixture = JSON.parse(
   fs.readFileSync(
-    new URL("./fixtures/ca65-e11fb5c-phase6-differential.json", import.meta.url),
+    new URL("./fixtures/ca65-e11fb5c-huc6280-m740-differential.json", import.meta.url),
     "utf8",
   ),
 ) as VariantDifferentialFixture;
@@ -279,7 +279,7 @@ test("M740 keeps accumulator bits, zero-page bits, LDM, and special-page JSR dis
   });
 });
 
-test("every Phase 4 and 5 form matches the pinned ca65 byte fixture", (t) => {
+test("every CMOS and vendor-extension form matches the pinned ca65 byte fixture", (t) => {
   t.is(variantDifferentialFixture.oracle.release, "V2.19");
   t.is(variantDifferentialFixture.oracle.commit, "e11fb5c39371046ebe25485f984f644c5a0d65d3");
   t.is(
@@ -305,18 +305,21 @@ test("every Phase 4 and 5 form matches the pinned ca65 byte fixture", (t) => {
   }
 });
 
-test("every Phase 6 form matches the pinned ca65 byte fixture", (t) => {
-  t.is(phase6DifferentialFixture.oracle.release, "V2.19");
-  t.is(phase6DifferentialFixture.oracle.commit, "e11fb5c39371046ebe25485f984f644c5a0d65d3");
+test("every HuC6280 and M740 form matches the pinned ca65 byte fixture", (t) => {
+  t.is(huc6280M740DifferentialFixture.oracle.release, "V2.19");
+  t.is(huc6280M740DifferentialFixture.oracle.commit, "e11fb5c39371046ebe25485f984f644c5a0d65d3");
   t.is(
-    phase6DifferentialFixture.oracle.instructionTableSha256,
+    huc6280M740DifferentialFixture.oracle.instructionTableSha256,
     "bcd36f022a3534355285346d6a4149563a21f17c72b614d91e381d19d68e5a9d",
   );
   t.is(
-    phase6DifferentialFixture.variants.reduce((count, variant) => count + variant.cases.length, 0),
+    huc6280M740DifferentialFixture.variants.reduce(
+      (count, variant) => count + variant.cases.length,
+      0,
+    ),
     500,
   );
-  for (const variant of phase6DifferentialFixture.variants) {
+  for (const variant of huc6280M740DifferentialFixture.variants) {
     for (const fixture of variant.cases) {
       t.deepEqual(
         [...assemble(fixture.source, { architecture: variant.cpu })],

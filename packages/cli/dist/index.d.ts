@@ -21,6 +21,7 @@ export interface CliArguments {
     readonly mesenTrace?: string;
     readonly traceMetadata?: string;
     readonly mesenLabels?: string;
+    readonly instructionTrace?: string;
     readonly entryPoints: readonly number[];
     readonly maxWorkItems?: number;
     readonly maxCallDepth?: number;

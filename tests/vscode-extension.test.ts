@@ -46,7 +46,25 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
 
   t.deepEqual(
     manifest.contributes.commands.map((entry) => entry.command),
-    ["asm.build", "asm.toggleWatch", "asm.initConfig", "asm.openPanel", "asm.outline.refresh"],
+    [
+      "asm.build",
+      "asm.toggleWatch",
+      "asm.initConfig",
+      "asm.openPanel",
+      "asm.outline.refresh",
+      "asm.coverage.refresh",
+      "asm.analysisGraph.refresh",
+      "asm.analysis.navigate",
+      "asm.coverage.classifyRange",
+      "asm.coverage.setStateEntryPoint",
+      "asm.coverage.resolveTarget",
+      "asm.coverage.renameLabel",
+      "asm.coverage.explainEvidence",
+      "asm.coverage.undo",
+      "asm.coverage.redo",
+      "asm.trace.start",
+      "asm.trace.stop",
+    ],
   );
   t.true(manifest.contributes.commands.every((entry) => entry.category === "Assembly"));
   t.true(manifest.contributes.commands.some((entry) => entry.title === "Build Binary"));
@@ -66,7 +84,17 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
     "(?i)^\\s*(lorom|hirom|exlorom|exhirom|sa1rom|sfxrom|norom|fullsa1rom)\\b",
   );
   t.is(manifest.contributes.languages[1]?.extensions, undefined);
-  t.true(manifest.contributes.menus.commandPalette.every((entry) => entry.when === undefined));
+  t.is(
+    manifest.contributes.menus.commandPalette.find(
+      ({ command }) => command === "asm.analysis.navigate",
+    )?.when,
+    "false",
+  );
+  t.true(
+    manifest.contributes.menus.commandPalette
+      .filter(({ command }) => command !== "asm.analysis.navigate")
+      .every((entry) => entry.when === undefined),
+  );
   t.is(
     manifest.contributes.menus["editor/title/run"][0]?.when,
     "editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc",
@@ -105,6 +133,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
     Object.keys(properties).sort(),
     [
       "asm.architecture",
+      "asm.analysisProject",
       "asm.baseImage",
       "asm.buildOutput",
       "asm.configFile",
@@ -131,7 +160,13 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
   t.is(manifest.contributes.views["uttori-asm"]?.[0]?.type, "webview");
   t.is(manifest.contributes.views["uttori-asm"]?.[1]?.id, "uttori-asm.projectOutline");
   t.is(manifest.contributes.views["uttori-asm"]?.[1]?.type, "tree");
+  t.is(manifest.contributes.views["uttori-asm"]?.[2]?.id, "uttori-asm.analysisCoverage");
+  t.is(manifest.contributes.views["uttori-asm"]?.[2]?.type, "tree");
+  t.is(manifest.contributes.views["uttori-asm"]?.[3]?.id, "uttori-asm.analysisGraph");
+  t.is(manifest.contributes.views["uttori-asm"]?.[3]?.type, "tree");
   t.is(manifest.contributes.viewsWelcome?.[0]?.view, "uttori-asm.projectOutline");
+  t.is(manifest.contributes.viewsWelcome?.[1]?.view, "uttori-asm.analysisCoverage");
+  t.is(manifest.contributes.viewsWelcome?.[2]?.view, "uttori-asm.analysisGraph");
 });
 
 test("65xx grammar covers CPU mnemonics and omits SNES coprocessors", (t) => {
@@ -237,10 +272,114 @@ test("VS Code client propagates trust and every project environment setting", (t
   t.true(source.includes("asm.initConfig"));
   t.true(source.includes("ProjectPanelProvider"));
   t.true(source.includes("ProjectOutlineProvider"));
+  t.true(source.includes("AnalysisCoverageProvider"));
+  t.true(source.includes("AnalysisGraphProvider"));
+  t.true(source.includes("AnalysisProjectEditor"));
+  t.true(source.includes("asm.coverage.refresh"));
+  t.true(source.includes("asm.analysisGraph.refresh"));
+  t.true(source.includes("asm.analysis.navigate"));
+  t.true(source.includes("navigateToAnalysisLocation"));
+  t.true(source.includes("asm.coverage.classifyRange"));
+  t.true(source.includes("asm.coverage.setStateEntryPoint"));
+  t.true(source.includes("asm.coverage.resolveTarget"));
+  t.true(source.includes("asm.coverage.renameLabel"));
+  t.true(source.includes("asm.coverage.explainEvidence"));
+  t.true(source.includes("asm.coverage.undo"));
+  t.true(source.includes("asm.coverage.redo"));
+  t.true(source.includes("**/analysis.json"));
+  t.true(source.includes("**/analysis/**/*.json"));
   t.true(source.includes("asm/indexUpdated"));
   t.true(source.includes("resolveBuildEntryUri"));
   t.true(source.includes("outputChannel"));
   t.true(source.includes("Build Binary requested"));
+});
+
+test("analysis graph preserves identity and navigates source-first", (t) => {
+  const tree = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/analysis-graph-tree.ts"),
+    "utf8",
+  );
+  const navigation = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/analysis-navigation.ts"),
+    "utf8",
+  );
+  const maps = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/analysis-debug-maps.ts"),
+    "utf8",
+  );
+  t.true(tree.includes("buildAnalysisCallGraph"));
+  t.true(tree.includes("loadAnalysisProject"));
+  t.true(tree.includes("const PAGE_SIZE = 200"));
+  t.true(tree.includes("romContentSha256"));
+  t.true(tree.includes("addressSpace"));
+  t.true(maps.includes("validateDebugMap"));
+  t.true(maps.includes("map.output.sha256 === candidate.romContentSha256"));
+  t.true(maps.includes("map.output.size === candidate.romContentSize"));
+  t.true(maps.includes("analysisSourceSha256(file) === source.sha256"));
+  t.true(navigation.includes('customRequest("disassemble"'));
+  t.true(navigation.includes("Persisted analysis disassembly (read-only)"));
+  t.true(navigation.includes("unknown operand bytes remain ??"));
+});
+
+test("analysis annotations remain hash-gated and presentation-only", (t) => {
+  const extension = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/extension.ts"),
+    "utf8",
+  );
+  const controller = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/analysis-annotation-controller.ts"),
+    "utf8",
+  );
+  const debugAnnotations = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/debug-analysis-annotations.ts"),
+    "utf8",
+  );
+  const debugging = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/debug.ts"),
+    "utf8",
+  );
+  const navigation = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/analysis-navigation.ts"),
+    "utf8",
+  );
+
+  t.true(extension.includes("AnalysisAnnotationController"));
+  t.true(extension.includes("onDidChangeTextDocument"));
+  t.true(extension.includes("onDidSaveTextDocument"));
+  t.true(controller.includes("buildInstructionAnalysisAnnotations"));
+  t.true(controller.includes("createTextEditorDecorationType"));
+  t.true(controller.includes("currentAnalysisSourcePath"));
+  t.true(controller.includes("instructionAnnotationsForDebugRange"));
+  t.true(debugAnnotations.includes("project.manifest.target !== map.target"));
+  t.true(debugAnnotations.includes("project.manifest.rom.contentSha256 !== map.output.sha256"));
+  t.true(debugAnnotations.includes("project.manifest.rom.contentSize !== map.output.size"));
+  t.true(debugAnnotations.includes("byAddress.get"));
+  t.true(debugAnnotations.includes("byOutputOffset.get"));
+  t.true(debugging.includes("createDebugInstructionAnnotation"));
+  t.true(debugging.includes("must never prevent debugger startup"));
+  t.true(navigation.includes("buildInstructionAnalysisAnnotations"));
+  t.true(navigation.includes("formatInstructionAnnotationSummary"));
+});
+
+test("analysis coverage editing is trusted, transactional, and reversible", (t) => {
+  const source = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/analysis-project-editor.ts"),
+    "utf8",
+  );
+  t.true(source.includes("workspace.isTrusted"));
+  t.true(source.includes("loadAnalysisProjectSnapshot"));
+  t.true(source.includes("commitAnalysisProjectTransaction"));
+  t.true(source.includes("applyRangeClassificationEdit"));
+  t.true(source.includes("revertRangeClassificationEdit"));
+  t.true(source.includes("applyStateEntryPointEdit"));
+  t.true(source.includes("revertStateEntryPointEdit"));
+  t.true(source.includes("applyTargetResolutionEdit"));
+  t.true(source.includes("revertTargetResolutionEdit"));
+  t.true(source.includes("applyLabelRenameEdit"));
+  t.true(source.includes("revertLabelRenameEdit"));
+  t.true(source.includes("explainProjectEvidence"));
+  t.true(source.includes("asm.coverage.canUndo"));
+  t.true(source.includes("asm.coverage.canRedo"));
 });
 
 test("project panel CSS uses VS Code workbench tokens", (t) => {

@@ -1,4 +1,4 @@
-import { type DebugAddress, type DebugBackend, type DebugBackendCapabilities, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread } from "./contracts.js";
+import { type DebugAddress, type DebugArchitectureCapabilities, type DebugBackend, type DebugBackendCapabilities, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread, type DebugTraceBatch, type DebugTraceStartOptions } from "./contracts.js";
 /** Contiguous bytes visible in one replay snapshot. */
 export interface ReplayMemoryRegion {
     readonly addressSpace: string;
@@ -16,6 +16,8 @@ export interface ReplaySnapshot {
 /** Immutable script consumed by `ReplayDebugBackend`. */
 export interface ReplayScript {
     readonly snapshots: readonly ReplaySnapshot[];
+    /** Optional explicit declarations, including architectures with reduced live-debug support. */
+    readonly architectures?: readonly DebugArchitectureCapabilities[];
 }
 /** Deterministic in-memory backend used to prove protocol behavior without an emulator. */
 export declare class ReplayDebugBackend implements DebugBackend {
@@ -96,6 +98,12 @@ export declare class ReplayDebugBackend implements DebugBackend {
      * @returns {Promise<readonly DebugInstruction[]>} Stable instruction copies.
      */
     disassemble(address: DebugAddress, count: number): Promise<readonly DebugInstruction[]>;
+    /** @inheritdoc */
+    startTrace(options: DebugTraceStartOptions): Promise<void>;
+    /** @inheritdoc */
+    readTrace(maxEvents: number): Promise<DebugTraceBatch>;
+    /** @inheritdoc */
+    stopTrace(): Promise<void>;
     /**
      * Subscribes to synchronously ordered backend events.
      * @param {(event: DebugBackendEvent) => void} listener Event consumer.

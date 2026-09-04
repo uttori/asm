@@ -3,6 +3,7 @@ import {
   SOURCE_EXPORT_FORMAT,
   SOURCE_EXPORT_MANIFEST,
   SOURCE_EXPORT_SCHEMA_VERSION,
+  HalfOpenIntervalIndex,
   canonicalSourceExportJson,
   loadSourceExportManifest,
   sourceExportSha256,
@@ -10,6 +11,7 @@ import {
   type AnalysisControlFlowNodeRecord,
   type AnalysisProjectManifest,
   type AnalysisProjectShards,
+  type IntervalAnnotation,
   type RomImage,
   type SourceExportFile,
   type SourceExportManifest,
@@ -115,11 +117,19 @@ export const formatSnes65816SourceInstruction = (instruction: DecodedInstruction
 const mapperDirective = (mapper: SnesMapper): string =>
   mapper === "bigsa1rom" ? "fullsa1rom" : mapper;
 
+/**
+ * Classifies one already-cut export span without rescanning every project annotation.
+ * @param {number} start Inclusive ROM file offset.
+ * @param {number} end Exclusive ROM file offset.
+ * @param {SnesMapper} mapper Mapper controlling header/vector locations.
+ * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations File-space annotation index shared by the export.
+ * @returns {SourceExportSpanRole} Stable source-emission role for the complete span.
+ */
 const roleAt = (
   start: number,
   end: number,
   mapper: SnesMapper,
-  shards: AnalysisProjectShards,
+  annotations: HalfOpenIntervalIndex<IntervalAnnotation>,
 ): SourceExportSpanRole => {
   const headerBase: Partial<Record<SnesMapper, number>> = {
     lorom: 0x7fc0,
@@ -133,14 +143,12 @@ const roleAt = (
   const base = headerBase[mapper];
   if (base !== undefined && start >= base && end <= base + 0x20) return "snes-header";
   if (base !== undefined && start >= base + 0x20 && end <= base + 0x40) return "vectors";
+  // planSpans cuts at annotation boundaries, so an indexed point lookup plus containment check is
+  // sufficient here. A full-array scan at every span made large imported projects quadratic.
   if (
-    shards.annotations.some(
-      (entry) =>
-        entry.addressSpace === SNES_FILE_ADDRESS_SPACE &&
-        entry.classification === "empty" &&
-        entry.start <= start &&
-        end <= entry.end,
-    )
+    annotations
+      .at(start)
+      .some((entry) => entry.classification === "empty" && entry.start <= start && end <= entry.end)
   ) {
     return "padding";
   }
@@ -215,9 +223,15 @@ const renderedMetadata = (lines: readonly NamedLine[] | undefined): string[] => 
   return output;
 };
 
+/**
+ * Reports whether project evidence requires one CFG instruction to remain raw bytes.
+ * @param {AnalysisControlFlowNodeRecord} node Candidate instruction and its ROM extent.
+ * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations File-space annotation index shared by the export.
+ * @returns {boolean} `true` when any non-code classification overlaps the instruction.
+ */
 const rejectedByAnnotation = (
   node: AnalysisControlFlowNodeRecord,
-  shards: AnalysisProjectShards,
+  annotations: HalfOpenIntervalIndex<IntervalAnnotation>,
 ): boolean => {
   const rawClassifications = new Set([
     "unreached",
@@ -233,20 +247,33 @@ const rejectedByAnnotation = (
     "empty",
     "text",
   ]);
-  return shards.annotations.some(
-    (entry) =>
-      entry.addressSpace === SNES_FILE_ADDRESS_SPACE &&
-      rawClassifications.has(entry.classification) &&
-      entry.start < node.fileOffset + node.size &&
-      node.fileOffset < entry.end,
+  return (
+    annotations
+      // Performance invariant: use one range query; do not scan every annotation for every CFG node.
+      .overlapping(node.fileOffset, node.fileOffset + node.size)
+      .some((entry) => rawClassifications.has(entry.classification))
   );
 };
 
+/**
+ * Selects deterministic, conflict-free CFG nodes that can be emitted as native 65816 source.
+ *
+ * Annotation and metadata indexes are constructed by the caller and reused for every candidate.
+ * The function still re-decodes and checks each instruction against its recorded specification so
+ * an optimization cannot turn uncertain/conflicting bytes into source text.
+ * @param {RomImage} rom Immutable headerless ROM content.
+ * @param {SnesMapper} mapper Selected mapper used for continuity checks.
+ * @param {AnalysisProjectShards} shards Validated project evidence.
+ * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Metadata keyed by ROM file offset.
+ * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations Reusable file-space annotation index.
+ * @returns {ReadonlyMap<number, PlannedInstruction>} Safe instructions keyed by start offset.
+ */
 const planInstructions = (
   rom: RomImage,
   mapper: SnesMapper,
   shards: AnalysisProjectShards,
   metadata: ReadonlyMap<number, readonly NamedLine[]>,
+  annotations: HalfOpenIntervalIndex<IntervalAnnotation>,
 ): ReadonlyMap<number, PlannedInstruction> => {
   const decoder = new Cpu65816Decoder();
   const source = new Uint8ArrayDecoderSource(rom.bytes());
@@ -257,6 +284,8 @@ const planInstructions = (
   );
   const metadataOffsets = [...metadata.keys()].sort((left, right) => left - right);
   const hasInteriorMetadata = (start: number, end: number): boolean => {
+    // Binary search the first metadata offset after start; a linear scan here would multiply label,
+    // comment, and region counts by every CFG candidate.
     let low = 0;
     let high = metadataOffsets.length;
     while (low < high) {
@@ -273,7 +302,7 @@ const planInstructions = (
       record.fileOffset < 0 ||
       record.fileOffset + record.size > rom.length ||
       conflictNodes.has(record.id) ||
-      rejectedByAnnotation(record, shards)
+      rejectedByAnnotation(record, annotations)
     ) {
       continue;
     }
@@ -358,12 +387,27 @@ const headerCuts = (mapper: SnesMapper): readonly number[] => {
   return value === undefined ? [] : [value, value + 0x20, value + 0x40];
 };
 
+/**
+ * Partitions the complete ROM into deterministic source-emission spans.
+ *
+ * All instruction, metadata, annotation, region, bank, header, and vector boundaries become cuts
+ * before roles are assigned. Because spans cannot cross those boundaries, `roleAt()` can use an
+ * indexed point lookup rather than repeatedly scanning the complete annotation shard.
+ * @param {RomImage} rom Immutable headerless ROM content.
+ * @param {SnesMapper} mapper Selected mapper and bank layout.
+ * @param {AnalysisProjectShards} shards Validated project evidence supplying cuts.
+ * @param {ReadonlyMap<number, PlannedInstruction>} instructions Safe native-source instructions.
+ * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Metadata keyed by file offset.
+ * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations Reusable file-space annotation index.
+ * @returns {readonly PlannedSpan[]} Complete, ordered, non-overlapping export plan.
+ */
 const planSpans = (
   rom: RomImage,
   mapper: SnesMapper,
   shards: AnalysisProjectShards,
   instructions: ReadonlyMap<number, PlannedInstruction>,
   metadata: ReadonlyMap<number, readonly NamedLine[]>,
+  annotations: HalfOpenIntervalIndex<IntervalAnnotation>,
 ): readonly PlannedSpan[] => {
   const bankSize =
     mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
@@ -393,7 +437,7 @@ const planSpans = (
     const instruction = instructions.get(start);
     return instruction?.end === end
       ? { start, end, role: "code", instruction }
-      : { start, end, role: roleAt(start, end, mapper, shards) };
+      : { start, end, role: roleAt(start, end, mapper, annotations) };
   });
 };
 
@@ -484,8 +528,16 @@ export const exportSnes65816Source = (
   const context = createSnesAddressContext(mapper);
   const previousManifest = preflight(directory, options.force ?? false);
   const metadata = metadataLines(project.shards, mapper, rom.length);
-  const instructions = planInstructions(rom, mapper, project.shards, metadata);
-  const planned = planSpans(rom, mapper, project.shards, instructions, metadata);
+  // Build one immutable index for both instruction rejection and raw/padding span roles. Keeping a
+  // single instance is essential: these consumers collectively issue a query for most CFG nodes
+  // and planned spans in a production ROM.
+  const annotations = new HalfOpenIntervalIndex(
+    project.shards.annotations.filter(
+      ({ addressSpace }) => addressSpace === SNES_FILE_ADDRESS_SPACE,
+    ),
+  );
+  const instructions = planInstructions(rom, mapper, project.shards, metadata, annotations);
+  const planned = planSpans(rom, mapper, project.shards, instructions, metadata, annotations);
   const files: SourceExportFile[] = [];
   const spans: SourceExportSpan[] = [];
   const banks = new Map<number, PlannedSpan[]>();

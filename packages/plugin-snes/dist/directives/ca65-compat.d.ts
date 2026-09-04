@@ -1,8 +1,7 @@
 /**
  * ca65-compatible directives for the SNES plugin.
  *
- * These handlers implement the ca65 65816/SNES source-compatibility slice
- * defined in Phase 7 of the 65xx implementation plan:
+ * These handlers implement the supported ca65 65816/SNES source-compatibility surface:
  *
  *  - `.a8` / `.a16`            – explicit accumulator width hint
  *  - `.i8` / `.i16`            – explicit index register width hint

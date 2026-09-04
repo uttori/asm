@@ -10,6 +10,7 @@ import {
   ExtensionMode,
   StatusBarAlignment,
   Uri,
+  debug as vscodeDebug,
   window,
   workspace,
   type Disposable,
@@ -26,6 +27,11 @@ import {
   type LanguageClientOptions,
   type ServerOptions,
 } from "vscode-languageclient/node";
+import { AnalysisAnnotationController } from "./analysis-annotation-controller.js";
+import { AnalysisProjectEditor } from "./analysis-project-editor.js";
+import { AnalysisGraphProvider } from "./analysis-graph-tree.js";
+import { navigateToAnalysisLocation } from "./analysis-navigation.js";
+import { AnalysisCoverageProvider } from "./coverage-tree.js";
 import { ProjectOutlineProvider } from "./outline-tree.js";
 import { ProjectPanelProvider } from "./panel.js";
 import { registerDebugging } from "./debug.js";
@@ -160,11 +166,23 @@ export function activate(context: ExtensionContext): void {
     () => initConfig(),
   );
   const outlineProvider = new ProjectOutlineProvider(() => client);
+  const coverageProvider = new AnalysisCoverageProvider();
+  const analysisGraphProvider = new AnalysisGraphProvider();
+  const analysisAnnotationController = new AnalysisAnnotationController();
+  const refreshAnalysisViews = (): void => {
+    coverageProvider.refresh();
+    analysisGraphProvider.refresh();
+    analysisAnnotationController.refresh();
+  };
+  const analysisProjectEditor = new AnalysisProjectEditor(refreshAnalysisViews);
+  const analysisManifestWatcher = workspace.createFileSystemWatcher("**/analysis.json");
+  const analysisShardWatcher = workspace.createFileSystemWatcher("**/analysis/**/*.json");
 
   context.subscriptions.push(
-    ...registerDebugging(),
+    ...registerDebugging(context.extensionPath),
     outputChannel,
     statusItem,
+    analysisAnnotationController,
     window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
@@ -172,6 +190,29 @@ export function activate(context: ExtensionContext): void {
       treeDataProvider: outlineProvider,
       showCollapseAll: true,
     }),
+    window.createTreeView(AnalysisCoverageProvider.viewId, {
+      treeDataProvider: coverageProvider,
+      showCollapseAll: true,
+    }),
+    window.createTreeView(AnalysisGraphProvider.viewId, {
+      treeDataProvider: analysisGraphProvider,
+      showCollapseAll: true,
+    }),
+    analysisManifestWatcher,
+    analysisShardWatcher,
+    analysisManifestWatcher.onDidCreate(refreshAnalysisViews),
+    analysisManifestWatcher.onDidChange(refreshAnalysisViews),
+    analysisManifestWatcher.onDidDelete(refreshAnalysisViews),
+    analysisShardWatcher.onDidCreate(refreshAnalysisViews),
+    analysisShardWatcher.onDidChange(refreshAnalysisViews),
+    analysisShardWatcher.onDidDelete(refreshAnalysisViews),
+    window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
+    workspace.onDidChangeTextDocument(({ document }) =>
+      analysisAnnotationController.documentChanged(document),
+    ),
+    workspace.onDidSaveTextDocument(() => analysisAnnotationController.refresh()),
+    vscodeDebug.onDidStartDebugSession(() => analysisAnnotationController.refresh()),
+    vscodeDebug.onDidTerminateDebugSession(() => analysisAnnotationController.refresh()),
     commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
     commands.registerCommand("asm.toggleWatch", toggleWatch),
     commands.registerCommand("asm.initConfig", () => initConfig()),
@@ -179,6 +220,29 @@ export function activate(context: ExtensionContext): void {
       commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`),
     ),
     commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
+    commands.registerCommand("asm.coverage.refresh", () => coverageProvider.refresh()),
+    commands.registerCommand("asm.analysisGraph.refresh", () => analysisGraphProvider.refresh()),
+    commands.registerCommand("asm.analysis.navigate", (element?: unknown) => {
+      const target = analysisGraphProvider.navigationTarget(element);
+      if (target) void navigateToAnalysisLocation(target);
+    }),
+    commands.registerCommand("asm.coverage.classifyRange", (element?: unknown) =>
+      analysisProjectEditor.classifyRange(coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.coverage.setStateEntryPoint", (element?: unknown) =>
+      analysisProjectEditor.setStateEntryPoint(coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.coverage.resolveTarget", (element?: unknown) =>
+      analysisProjectEditor.resolveTarget(coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.coverage.renameLabel", (element?: unknown) =>
+      analysisProjectEditor.renameLabel(coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.coverage.explainEvidence", (element?: unknown) =>
+      analysisProjectEditor.explainEvidence(coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.coverage.undo", () => analysisProjectEditor.undo()),
+    commands.registerCommand("asm.coverage.redo", () => analysisProjectEditor.redo()),
     workspace.onDidGrantWorkspaceTrust(() => {
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
@@ -190,9 +254,12 @@ export function activate(context: ExtensionContext): void {
       if (event.affectsConfiguration("asm")) {
         void panelProvider.refresh();
         outlineProvider.refresh();
+        refreshAnalysisViews();
       }
     }),
   );
+
+  analysisAnnotationController.refresh();
 
   void client.start().then(() => {
     if (!client) {

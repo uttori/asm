@@ -292,6 +292,8 @@ export interface AnalysisConflictRecord {
   readonly kind: "conflict";
   readonly addressSpace: string;
   readonly address: number;
+  /** Optional exclusive end for a conflict spanning more than one address. */
+  readonly end?: number;
   readonly conflictKind: string;
   readonly message: string;
   readonly nodes: readonly string[];

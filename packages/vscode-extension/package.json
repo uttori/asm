@@ -18,16 +18,19 @@
   "main": "out/extension.js",
   "scripts": {
     "build": "node esbuild.mjs",
-    "fmt": "oxfmt --config ../../.oxfmtrc.json src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
-    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
-    "lint": "oxlint --config ../../.oxlintrc.json src",
-    "lint:fix": "oxlint --config ../../.oxlintrc.json src --fix",
+    "fmt": "oxfmt --config ../../.oxfmtrc.json src tests-host/index.ts esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
+    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src tests-host/index.ts esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
+    "lint": "oxlint --config ../../.oxlintrc.json src tests-host/index.ts",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json src tests-host/index.ts --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-debug-adapter": "1.0.0",
+    "@uttori/asm-debug-sidecar-ares": "1.0.0",
+    "@uttori/asm-debug-sidecar-mesence": "1.0.0",
+    "@uttori/asm-disassembler": "1.0.0",
     "vscode-languageclient": "^10.1.0"
   },
   "devDependencies": {
@@ -62,6 +65,82 @@
         "title": "Refresh Project Outline",
         "icon": "$(refresh)",
         "category": "Assembly"
+      },
+      {
+        "command": "asm.coverage.refresh",
+        "title": "Refresh Analysis Coverage",
+        "icon": "$(refresh)",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.analysisGraph.refresh",
+        "title": "Refresh Functions & Calls",
+        "icon": "$(refresh)",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.analysis.navigate",
+        "title": "Open Analysis Source or Disassembly",
+        "icon": "$(go-to-file)",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.coverage.classifyRange",
+        "title": "Classify Analysis Range",
+        "icon": "$(edit)",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.coverage.setStateEntryPoint",
+        "title": "Set Analysis State / Entry Point",
+        "icon": "$(symbol-variable)",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.coverage.resolveTarget",
+        "title": "Resolve Indirect Target",
+        "icon": "$(references)",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.coverage.renameLabel",
+        "title": "Rename Analysis Label",
+        "icon": "$(symbol-key)",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.coverage.explainEvidence",
+        "title": "Explain Analysis Evidence",
+        "icon": "$(inspect)",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.coverage.undo",
+        "title": "Undo Last Analysis Edit",
+        "icon": "$(discard)",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted && asm.coverage.canUndo"
+      },
+      {
+        "command": "asm.coverage.redo",
+        "title": "Redo Last Analysis Edit",
+        "icon": "$(redo)",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted && asm.coverage.canRedo"
+      },
+      {
+        "command": "asm.trace.start",
+        "title": "Start Runtime Trace Recording",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.trace.stop",
+        "title": "Stop Runtime Trace Recording",
+        "category": "Assembly"
       }
     ],
     "menus": {
@@ -80,6 +159,43 @@
         },
         {
           "command": "asm.outline.refresh"
+        },
+        {
+          "command": "asm.coverage.refresh"
+        },
+        {
+          "command": "asm.analysisGraph.refresh"
+        },
+        {
+          "command": "asm.analysis.navigate",
+          "when": "false"
+        },
+        {
+          "command": "asm.coverage.classifyRange"
+        },
+        {
+          "command": "asm.coverage.setStateEntryPoint"
+        },
+        {
+          "command": "asm.coverage.resolveTarget"
+        },
+        {
+          "command": "asm.coverage.renameLabel"
+        },
+        {
+          "command": "asm.coverage.explainEvidence"
+        },
+        {
+          "command": "asm.coverage.undo"
+        },
+        {
+          "command": "asm.coverage.redo"
+        },
+        {
+          "command": "asm.trace.start"
+        },
+        {
+          "command": "asm.trace.stop"
         }
       ],
       "view/title": [
@@ -87,6 +203,58 @@
           "command": "asm.outline.refresh",
           "when": "view == uttori-asm.projectOutline",
           "group": "navigation"
+        },
+        {
+          "command": "asm.coverage.refresh",
+          "when": "view == uttori-asm.analysisCoverage",
+          "group": "navigation"
+        },
+        {
+          "command": "asm.analysisGraph.refresh",
+          "when": "view == uttori-asm.analysisGraph",
+          "group": "navigation"
+        },
+        {
+          "command": "asm.coverage.undo",
+          "when": "view == uttori-asm.analysisCoverage && asm.coverage.canUndo",
+          "group": "navigation@2"
+        },
+        {
+          "command": "asm.coverage.redo",
+          "when": "view == uttori-asm.analysisCoverage && asm.coverage.canRedo",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "asm.analysis.navigate",
+          "when": "view == uttori-asm.analysisGraph && viewItem == analysisGraphLocation",
+          "group": "inline"
+        },
+        {
+          "command": "asm.coverage.classifyRange",
+          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
+          "group": "inline"
+        },
+        {
+          "command": "asm.coverage.explainEvidence",
+          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment",
+          "group": "inline@2"
+        },
+        {
+          "command": "asm.coverage.setStateEntryPoint",
+          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
+          "group": "analysis@1"
+        },
+        {
+          "command": "asm.coverage.resolveTarget",
+          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
+          "group": "analysis@2"
+        },
+        {
+          "command": "asm.coverage.renameLabel",
+          "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
+          "group": "analysis@3"
         }
       ],
       "editor/title/run": [
@@ -126,7 +294,7 @@
     "debuggers": [
       {
         "type": "uttori-asm",
-        "label": "Uttori ASM Replay Debugger",
+        "label": "Uttori ASM Debugger",
         "languages": [
           "uttori-snes",
           "uttori-65xx"
@@ -153,6 +321,41 @@
               "replay": {
                 "type": "string",
                 "description": "Optional replay snapshot JSON. When omitted, a deterministic timeline is synthesized from the debug map."
+              },
+              "backend": {
+                "type": "string",
+                "enum": [
+                  "replay",
+                  "ares",
+                  "mesence"
+                ],
+                "default": "replay",
+                "description": "Debug backend. Live backends require a trusted workspace and separately managed emulator runtime."
+              },
+              "runtimeManifest": {
+                "type": "string",
+                "description": "Versioned emulator runtime manifest required by live backends."
+              },
+              "emulator": {
+                "type": "string",
+                "description": "Separately installed emulator executable required by live backends."
+              },
+              "runtimeDirectory": {
+                "type": "string",
+                "description": "Portable emulator runtime root required by live backends."
+              },
+              "sidecar": {
+                "type": "string",
+                "description": "Optional development override for the bundled MIT sidecar module."
+              },
+              "aresSystem": {
+                "type": "string",
+                "description": "Optional ares system name; defaults to Super Famicom."
+              },
+              "fastBoot": {
+                "type": "boolean",
+                "default": true,
+                "description": "Use ares fast boot; ignored by other backends."
               }
             }
           }
@@ -162,6 +365,7 @@
             "type": "uttori-asm",
             "request": "launch",
             "name": "Debug Uttori ASM (Replay)",
+            "backend": "replay",
             "program": "${workspaceFolder}/build/rebuilt-content.sfc",
             "debugMap": "${workspaceFolder}/build/rebuilt-content.sfc.debug.json",
             "sourceRoot": "${workspaceFolder}"
@@ -175,9 +379,42 @@
               "type": "uttori-asm",
               "request": "launch",
               "name": "Debug Uttori ASM (Replay)",
+              "backend": "replay",
               "program": "^\"${workspaceFolder}/build/rebuilt-content.sfc\"",
               "debugMap": "^\"${workspaceFolder}/build/rebuilt-content.sfc.debug.json\"",
               "sourceRoot": "^\"${workspaceFolder}\""
+            }
+          },
+          {
+            "label": "Uttori ASM: Live ares Debug",
+            "description": "Debug a fingerprinted SNES ROM with a manifest-verified ares runtime.",
+            "body": {
+              "type": "uttori-asm",
+              "request": "launch",
+              "name": "Debug Uttori ASM (ares)",
+              "backend": "ares",
+              "program": "^\"${workspaceFolder}/build/rebuilt-content.sfc\"",
+              "debugMap": "^\"${workspaceFolder}/build/rebuilt-content.sfc.debug.json\"",
+              "sourceRoot": "^\"${workspaceFolder}\"",
+              "runtimeManifest": "^\"${workspaceFolder}/.debug/ares-runtime-manifest.json\"",
+              "emulator": "^\"${workspaceFolder}/.debug/ares/bin/ares-headless\"",
+              "runtimeDirectory": "^\"${workspaceFolder}/.debug/ares\""
+            }
+          },
+          {
+            "label": "Uttori ASM: Live MesenCE Debug",
+            "description": "Debug a fingerprinted SNES ROM with a manifest-verified MesenCE runtime.",
+            "body": {
+              "type": "uttori-asm",
+              "request": "launch",
+              "name": "Debug Uttori ASM (MesenCE)",
+              "backend": "mesence",
+              "program": "^\"${workspaceFolder}/build/rebuilt-content.sfc\"",
+              "debugMap": "^\"${workspaceFolder}/build/rebuilt-content.sfc.debug.json\"",
+              "sourceRoot": "^\"${workspaceFolder}\"",
+              "runtimeManifest": "^\"${workspaceFolder}/.debug/mesence-runtime-manifest.json\"",
+              "emulator": "^\"${workspaceFolder}/.debug/Mesen\"",
+              "runtimeDirectory": "^\"${workspaceFolder}/.debug/mesence\""
             }
           }
         ]
@@ -271,6 +508,16 @@
           "type": "tree",
           "id": "uttori-asm.projectOutline",
           "name": "Outline"
+        },
+        {
+          "type": "tree",
+          "id": "uttori-asm.analysisCoverage",
+          "name": "Analysis Coverage"
+        },
+        {
+          "type": "tree",
+          "id": "uttori-asm.analysisGraph",
+          "name": "Functions & Calls"
         }
       ]
     },
@@ -278,6 +525,14 @@
       {
         "view": "uttori-asm.projectOutline",
         "contents": "No analysed assembly files yet.\n[Initialize uttori-asm.config.json](command:asm.initConfig)"
+      },
+      {
+        "view": "uttori-asm.analysisCoverage",
+        "contents": "No native analysis project found. Set `asm.analysisProject` or create an `analysis.json` project with the CLI."
+      },
+      {
+        "view": "uttori-asm.analysisGraph",
+        "contents": "No native analysis graph found. Run analysis with control-flow enabled, then refresh this view."
       }
     ],
     "configuration": {
@@ -350,6 +605,11 @@
           "type": "string",
           "default": "",
           "description": "Optional base image file to patch when building."
+        },
+        "asm.analysisProject": {
+          "type": "string",
+          "default": "",
+          "description": "Native analysis-project directory or analysis.json path, absolute or relative to each workspace folder. When empty, up to 32 workspace analysis projects are discovered automatically."
         },
         "uttoriAsmLanguageServer.trace.server": {
           "scope": "window",

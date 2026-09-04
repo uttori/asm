@@ -1,18 +1,22 @@
 # Uttori ASM
 
-Uttori ASM is a pluggable assembler toolkit for TypeScript and Node.js. Its architecture-neutral core owns parsing, the three-stage assembly pipeline, symbols, macros, includes, diagnostics, output writing, and editor analysis. Plugins own targets, instruction encoders, address spaces, output formats, target directives, expression functions, lifecycle behavior, and per-session state.
+Uttori ASM is a pluggable assembler, disassembler, and debugger toolkit for TypeScript and Node.js. Its architecture-neutral core owns parsing, the three-stage assembly pipeline, symbols, macros, includes, diagnostics, output writing, and editor analysis. Target-neutral packages add versioned analysis projects, conservative control-flow traversal, evidence, reversible source export, and an emulator-neutral debug contract. Plugins own targets, reversible instruction specifications, address spaces, output formats, mapper behavior, target directives, expression functions, lifecycle behavior, and per-session state.
 
-The repository ships five production packages:
+The repository contains nine publishable packages:
 
-| Package                          | Purpose |
-| -------------------------------- | ------- |
-| `@uttori/asm-cli`                | Installable `uttori-asm` command and Node.js host defaults |
-| `@uttori/asm-core`               | Generic assembler runtime, analysis APIs, and plugin contracts |
-| `@uttori/asm-plugin-loader-node` | Trusted Node.js plugin discovery and `uttori-asm.config.json` loading |
-| `@uttori/asm-plugin-snes`        | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility |
-| `@uttori/asm-plugin-65xx`        | NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 encoders with native and ca65-shaped raw targets |
+| Package                             | Purpose                                                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `@uttori/asm-cli`                   | Installable `uttori-asm` command and Node.js host defaults                                             |
+| `@uttori/asm-core`                  | Generic assembler runtime, analysis APIs, and plugin contracts                                         |
+| `@uttori/asm-debug-adapter`         | Emulator-neutral backend, replay/conformance harness, sidecar protocol, and DAP bridge                 |
+| `@uttori/asm-debug-sidecar-ares`    | Clean-room MIT translator/process host for a separately maintained ares runtime                        |
+| `@uttori/asm-debug-sidecar-mesence` | Clean-room MIT translator/process host for a separately maintained MesenCE runtime                     |
+| `@uttori/asm-disassembler`          | Native analysis projects, evidence, conservative traversal, transactions, assets, and export contracts |
+| `@uttori/asm-plugin-loader-node`    | Trusted Node.js plugin discovery and `uttori-asm.config.json` loading                                  |
+| `@uttori/asm-plugin-snes`           | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility                                   |
+| `@uttori/asm-plugin-65xx`           | NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 encoders with native and ca65-shaped raw targets |
 
-The language server and VS Code extension use the same loaded plugin environment as command-line builds, so diagnostics and editor catalogs match the selected target.
+The private language-server, VS Code, and plugin-author workspaces compose those packages. The language server and extension use the same loaded plugin environment as command-line builds, so diagnostics and editor catalogs match the selected target.
 
 ## Requirements & Installation
 
@@ -62,10 +66,7 @@ The SNES package exposes an explicit environment factory and target ID:
 ```ts
 import fs from "node:fs";
 import { Assembler } from "@uttori/asm-core";
-import {
-  createSnesAssemblerEnvironment,
-  SNES_TARGET_ID,
-} from "@uttori/asm-plugin-snes";
+import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 
 const environment = await createSnesAssemblerEnvironment();
 const assembler = new Assembler({
@@ -84,6 +85,22 @@ try {
 
 See the [SNES Plugin Reference](packages/plugin-snes/README.md) for target aliases, architectures, mapper directives, expressions, checksum options, and output behavior.
 
+## SNES Disassembly Quick Start
+
+Create and analyze a native, versioned project without copying ROM bytes into it:
+
+```sh
+npm run cli -- disassemble game.sfc game.analysis
+npm run cli -- analyze game.analysis --rom game.sfc
+npm run cli -- export game.analysis game.source --rom game.sfc
+npm run cli -- verify-roundtrip game.source --rom game.sfc
+```
+
+Mapper detection stops for an explicit override when evidence is inconclusive. `.dizraw` can be
+imported during project creation, but native syntax/project output is the goal and Diz export is not
+supported. See the [CLI analysis workflow](packages/cli/README.md#analysis-projects),
+[disassembler package](packages/disassembler/README.md), and
+[system architecture](docs/disassembler-architecture.md).
 
 ### Command Line / Zero-Configuration CLI
 
@@ -122,17 +139,17 @@ npm run cli -- main.asm --plugin ./plugin.js --target custom.raw \
 
 Useful CLI options are:
 
-| Option | Meaning |
-| ------ | ------- |
-| `--config path`                    | Load a particular `uttori-asm.config.json` |
-| `--plugin module`                  | Append a plugin module; repeatable |
-| `--target id`                      | Override the configured target |
-| `--architecture id`                | Override the initial architecture |
-| `--base-image path`                | Read and patch an existing binary image |
-| `--include-path path`              | Add a source/binary lookup directory; repeatable |
+| Option                             | Meaning                                                           |
+| ---------------------------------- | ----------------------------------------------------------------- |
+| `--config path`                    | Load a particular `uttori-asm.config.json`                        |
+| `--plugin module`                  | Append a plugin module; repeatable                                |
+| `--target id`                      | Override the configured target                                    |
+| `--architecture id`                | Override the initial architecture                                 |
+| `--base-image path`                | Read and patch an existing binary image                           |
+| `--include-path path`              | Add a source/binary lookup directory; repeatable                  |
 | `--plugin-option plugin:key=value` | Override one plugin option; values are JSON-decoded when possible |
-| `--verbose`                        | Print resolved plugins, target, and architecture |
-| `--help`                           | Print CLI usage |
+| `--verbose`                        | Print resolved plugins, target, and architecture                  |
+| `--help`                           | Print CLI usage                                                   |
 
 Resolution precedence is CLI/editor overrides, then project configuration, then host defaults. Configured plugins retain declaration order; explicit `--plugin` entries append without reordering.
 
@@ -159,13 +176,13 @@ Resolution precedence is CLI/editor overrides, then project configuration, then 
 }
 ```
 
-| Field          | Meaning |
-| -------------- | --- |
-| `$schema`      | Optional editor/schema URI |
+| Field          | Meaning                                                    |
+| -------------- | ---------------------------------------------------------- |
+| `$schema`      | Optional editor/schema URI                                 |
 | `plugins`      | Ordered plugin modules and package-specific option objects |
-| `target`       | Target contribution ID or alias |
+| `target`       | Target contribution ID or alias                            |
 | `architecture` | Architecture contribution ID or alias valid for the target |
-| `includePaths` | Paths resolved relative to the configuration file |
+| `includePaths` | Paths resolved relative to the configuration file          |
 
 Package names resolve like normal ESM imports. Relative and absolute paths resolve from the configuration directory. The loader validates plugin options before activation, rejects duplicate modules and ownership collisions, freezes successful environments, and disposes replaced environments in reverse activation order.
 
@@ -214,24 +231,27 @@ See the [65xx plugin README](packages/plugin-65xx/README.md) for extensive 65xx 
 
 ## Development
 
-| Command | Purpose |
-| --- | --- |
-| `npm test` | Run all AVA tests (excludes optional external fixtures) |
-| `npm run typecheck` | Type-check root, workspaces, scripts, and the author example |
-| `npm run check:boundaries` | Enforce core/plugin/LSP ownership boundaries |
-| `npm run test:coverage` | Run source coverage |
-| `npm run verify` | Run formatting, lint, boundaries, types, declarations, coverage, LSP, and editor gates |
-| `npm run pack:check` | Assert required runtime files and the loader schema exist in package dry-runs |
-| `npm run cli:build` | Build the distributable `uttori-asm` executable |
-| `npm run cli:smoke` | Launch the bundled executable and verify its help path |
-| `npm run fixture:asar` | Run the Asar fixture harness |
-| `npm run fixture:slideshow` | Run the slideshow integration fixture |
-| `npm run benchmark:smoke` | Run in-repo correctness-checked smoke benchmarks |
-| `npm run fixtures:status` | Report external submodule, ROM, and worktree readiness |
-| `npm run test:external` | Run Chou / Yoshi / SMRPG / TMNT / Zelda parity tests |
-| `npm run ci:external` | Strict preflight, serial external tests, clean-worktree check |
+| Command                     | Purpose                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `npm test`                  | Run all AVA tests (excludes optional external fixtures)                                |
+| `npm run typecheck`         | Type-check root, workspaces, scripts, and the author example                           |
+| `npm run check:boundaries`  | Enforce core/plugin/LSP ownership boundaries                                           |
+| `npm run test:coverage`     | Run source coverage                                                                    |
+| `npm run test:fuzz`         | Run deterministic hostile-input decoder/project/trace/protocol fuzzing                 |
+| `npm run test:roundtrip`    | Run native decoder, source-export, CLI, and byte-rebuild round trips                   |
+| `npm run verify`            | Run formatting, lint, boundaries, types, declarations, coverage, LSP, and editor gates |
+| `npm run pack:check`        | Assert required runtime files and the loader schema exist in package dry-runs          |
+| `npm run cli:build`         | Build the distributable `uttori-asm` executable                                        |
+| `npm run cli:smoke`         | Launch the bundled executable and verify its help path                                 |
+| `npm run fixture:asar`      | Run the Asar fixture harness                                                           |
+| `npm run fixture:slideshow` | Run the slideshow integration fixture                                                  |
+| `npm run benchmark:smoke`   | Run in-repo correctness-checked smoke benchmarks                                       |
+| `npm run vscode:smoke`      | Launch VS Code 1.128.0 and exercise real extension activation, LSP, views, and build   |
+| `npm run fixtures:status`   | Report external submodule, ROM, and worktree readiness                                 |
+| `npm run test:external`     | Run Chou / Yoshi / SMRPG / TMNT / Zelda parity tests                                   |
+| `npm run ci:external`       | Strict preflight, serial external tests, clean-worktree check                          |
 
-Core verification is `npm run verify`, `npm run pack:check`, `npm run fixture:asar`, `npm run fixture:slideshow`, and `npm run benchmark:smoke`. Those gates do not initialize submodules or require local ROMs.
+Core verification is `npm run verify`, `npm run pack:check`, `npm run test:roundtrip`, `npm run fixture:asar`, `npm run fixture:slideshow`, and `npm run benchmark:smoke`. Those gates do not initialize submodules or require local ROMs. The Extension Host smoke downloads a pinned VS Code build but still uses only a temporary synthetic workspace.
 
 External-fixture verification is separate: initialize the needed submodule under `fixtures/external/`, put ROM-dependent inputs in `Local Only/fixtures/roms/`, then run `npm run fixtures:status` and `npm run test:external`. See [fixtures/external/README.md](fixtures/external/README.md).
 
@@ -243,6 +263,10 @@ There are explicit Chou and SMRPG benchmark commands, they will fail with setup 
 fixtures/                     focused and production integration projects
 packages/cli/                 command-line host, executable bundle, and CLI tests
 packages/core/                architecture-neutral runtime and plugin API
+packages/debug-adapter/       emulator-neutral backend, framing, replay, conformance, and DAP
+packages/debug-sidecar-ares/  MIT ares translator and separately managed process host
+packages/debug-sidecar-mesence/ MIT MesenCE translator and separately managed process host
+packages/disassembler/        native project, evidence, analysis, edit, asset, and export primitives
 packages/language-server/     LSP transport and environment controller
 packages/plugin-65xx/         65xx-family instruction models, encoders, and fixtures
 packages/plugin-author/       runnable third-party plugin template
@@ -252,6 +276,17 @@ packages/vscode-extension/    VS Code client and bundled artifacts
 scripts/                      boundary, package, fixture, smoke, and benchmark gates
 tests/                        core, loader, LSP, and cross-package tests
 ```
+
+## Contributing
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md), then read the
+[disassembler architecture](docs/disassembler-architecture.md) and
+[testing/release guide](docs/testing-and-release.md) for the part you are changing. The contributor
+guide includes a beginner glossary, package ownership, change recipes, security/license boundaries,
+performance-comment requirements, private-fixture rules, troubleshooting, and a review checklist.
+
+`DISASSEMBLER_ROADMAP_V2.md` is the progress source of truth for disassembler work and must be
+updated after every completed implementation step.
 
 ## License
 

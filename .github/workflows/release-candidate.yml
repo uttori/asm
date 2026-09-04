@@ -1,0 +1,59 @@
+name: Release Candidate Gates
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-candidate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable-release-candidate:
+    name: Core, round trip, package, and editor (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26"
+          cache: npm
+      - run: npm ci
+
+      - name: Core repository verification
+        run: npm run verify
+      - name: Reproducible hostile-input fuzzing
+        run: npm run test:fuzz
+      - name: Native decoder, source-export, CLI, and rebuild round trips
+        run: npm run test:roundtrip
+      - name: Publish-surface audit
+        run: npm run pack:check
+      - name: Redistributable Asar fixtures
+        run: npm run fixture:asar
+      - name: Redistributable slideshow fixture
+        run: npm run fixture:slideshow
+      - name: Bundled language-server smoke
+        run: npm run lsp:build && npm run lsp:smoke
+      - name: Build the unreleased VS Code package
+        run: npm run vscode:package
+
+      # Linux GitHub runners have no display server; Electron still needs a virtual X display even
+      # though this smoke never shows UI or starts an emulator.
+      - name: Real VS Code Extension Host smoke (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run vscode:smoke
+      - name: Real VS Code Extension Host smoke (macOS and Windows)
+        if: runner.os != 'Linux'
+        run: npm run vscode:smoke

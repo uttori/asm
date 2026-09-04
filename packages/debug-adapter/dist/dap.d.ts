@@ -32,6 +32,8 @@ export interface DebugAdapterSessionOptions {
     readonly debugMap?: DebugMap;
     readonly output?: Uint8Array;
     readonly sourceRoot?: string;
+    /** Optional presentation-only suffix for DAP and virtual-source disassembly rows. */
+    readonly instructionAnnotation?: (address: DebugAddress) => string | undefined;
     readonly onMessage?: (message: DapProtocolMessage) => void;
 }
 /**

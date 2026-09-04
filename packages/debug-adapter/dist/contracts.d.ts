@@ -8,8 +8,8 @@ export interface DebugAddress {
     /** Physical output offset when the logical address is a mirror of ROM content. */
     readonly outputOffset?: number;
 }
-/** Backend capabilities negotiated independently of DAP capabilities. */
-export interface DebugBackendCapabilities {
+/** Operations that may be supported globally or for one architecture. */
+export interface DebugExecutionCapabilities {
     readonly pause: boolean;
     readonly step: boolean;
     readonly registers: boolean;
@@ -17,7 +17,34 @@ export interface DebugBackendCapabilities {
     readonly stackFrames: boolean;
     readonly breakpoints: boolean;
     readonly disassemble: boolean;
+}
+/** One address space accepted by `readMemory`, including its observable-read guarantee. */
+export interface DebugMemorySpaceCapabilities {
+    readonly addressSpace: string;
+    readonly sideEffectFree: boolean;
+}
+/** Bounded pull-based instruction tracing available for one architecture. */
+export interface DebugTraceCapabilities {
+    /** Address spaces whose instruction PCs may be captured. */
+    readonly addressSpaces: readonly string[];
+    /** Maximum instruction addresses retained by the producer before oldest-first loss. */
+    readonly maxBufferedEvents: number;
+    /** Maximum instruction addresses returned by one pull. */
+    readonly maxBatchEvents: number;
+}
+/** Explicit operations and address spaces available for one emulated processor architecture. */
+export interface DebugArchitectureCapabilities extends DebugExecutionCapabilities {
+    readonly architecture: string;
+    readonly addressSpaces: readonly string[];
+    /** Readable spaces; address spaces omitted here must be rejected by `readMemory`. */
+    readonly memorySpaces: readonly DebugMemorySpaceCapabilities[];
+    /** `null` explicitly reports that this architecture cannot capture instruction traces. */
+    readonly trace: DebugTraceCapabilities | null;
+}
+/** Backend capabilities negotiated independently of DAP capabilities. */
+export interface DebugBackendCapabilities extends DebugExecutionCapabilities {
     readonly reconnect: boolean;
+    readonly architectures: readonly DebugArchitectureCapabilities[];
 }
 /** One emulated execution thread or processor. */
 export interface DebugThread {
@@ -58,6 +85,26 @@ export interface DebugInstruction {
     readonly bytes: readonly number[];
     readonly text: string;
     readonly symbol?: string;
+}
+/** Selects one architecture-qualified instruction stream for an explicit recording session. */
+export interface DebugTraceStartOptions {
+    readonly architecture: string;
+    readonly addressSpace: string;
+}
+/**
+ * One destructive pull from a bounded instruction-trace buffer.
+ * Sequence numbers include producer-side losses, making gaps and ordering independently visible.
+ */
+export interface DebugTraceBatch {
+    readonly architecture: string;
+    readonly addressSpace: string;
+    /** Sequence of the first returned address, or the next producer sequence when empty. */
+    readonly sequenceStart: number;
+    readonly addresses: readonly number[];
+    /** Cumulative oldest-first events discarded by the producer during this recording. */
+    readonly droppedEvents: number;
+    /** Whether the producer is still recording after this pull. */
+    readonly active: boolean;
 }
 /** Why execution stopped at a replay or live backend boundary. */
 export type DebugStopReason = "entry" | "pause" | "step" | "breakpoint" | "exception";
@@ -112,6 +159,12 @@ export interface DebugBackend {
     readMemory(address: DebugAddress, count: number): Promise<DebugMemoryRead>;
     setBreakpoints(addresses: readonly DebugAddress[]): Promise<readonly DebugBreakpoint[]>;
     disassemble(address: DebugAddress, count: number): Promise<readonly DebugInstruction[]>;
+    /** Starts a new explicit trace recording and discards any prior buffered trace. */
+    startTrace(options: DebugTraceStartOptions): Promise<void>;
+    /** Destructively pulls at most `maxEvents` ordered instruction addresses. */
+    readTrace(maxEvents: number): Promise<DebugTraceBatch>;
+    /** Stops capture without discarding events that have not yet been pulled. */
+    stopTrace(): Promise<void>;
     onEvent(listener: (event: DebugBackendEvent) => void): DebugSubscription;
 }
 //# sourceMappingURL=contracts.d.ts.map

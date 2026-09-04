@@ -1,0 +1,46 @@
+{
+  "name": "@uttori/asm-debug-sidecar-mesence",
+  "version": "1.0.0",
+  "description": "MesenCE debugger protocol translator for Uttori ASM.",
+  "license": "MIT",
+  "bin": {
+    "uttori-asm-debug-sidecar-mesence": "out/sidecar.mjs"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "module": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts"
+    },
+    "./profile": {
+      "types": "./dist/profile.d.ts",
+      "import": "./src/profile.ts"
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "make-types": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "pack:check": "npm pack --dry-run",
+    "smoke": "node out/sidecar.mjs --help"
+  },
+  "dependencies": {
+    "@uttori/asm-core": "1.0.0",
+    "@uttori/asm-debug-adapter": "1.0.0",
+    "@uttori/asm-plugin-snes": "1.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "engines": {
+    "node": ">=26"
+  }
+}

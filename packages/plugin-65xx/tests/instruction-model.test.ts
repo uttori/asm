@@ -40,7 +40,7 @@ test("NMOS decode table covers every byte and identifies all 151 legal opcodes",
   }
 });
 
-test("Phase 6 tables expose complete and non-leaking HuC6280/M740 sets", (t) => {
+test("HuC6280 and M740 tables are complete and do not leak into each other", (t) => {
   t.is(hudsonHuC6280Forms.length, 254);
   t.is(mitsubishiM740Forms.length, 246);
   t.true(
@@ -92,7 +92,7 @@ test("opcode form materialization validates raw operand bytes", (t) => {
   t.throws(() => getOpcodeForm(0x100), { instanceOf: RangeError });
 });
 
-test("Phase 4 and 5 tables expose complete and distinct ca65 architecture sets", (t) => {
+test("CMOS and vendor-extension tables expose complete and distinct ca65 architecture sets", (t) => {
   t.is(mos6502DtvForms.length, 192);
   t.is(cmos65sc02Forms.length, 182);
   t.is(cmos65c02Forms.length, 214);

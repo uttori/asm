@@ -54,6 +54,7 @@ typings/
 *.tgz
 packages/vscode-extension/*.vsix
 packages/vscode-extension/example/*.sfc
+packages/vscode-extension/tests-host/out/
 packages/plugin-65xx/demo/*.nes
 
 # Yarn Integrity file
@@ -63,6 +64,7 @@ packages/plugin-65xx/demo/*.nes
 .env
 
 .tsimp/
+.vscode-test/
 
 # Parity check output
 parity-result.txt

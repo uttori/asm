@@ -420,4 +420,13 @@ test("manifest migrations are explicit and never downgrade newer schemas", async
   t.is(migrateManifest(current).schemaVersion, ANALYSIS_PROJECT_SCHEMA_VERSION);
   t.throws(() => migrateManifest(future), { message: /refusing to downgrade/ });
   t.is(canonicalJson({ z: 1, a: 2 }), '{\n  "a": 2,\n  "z": 1\n}\n');
+  t.is(
+    canonicalJson({
+      z: 1,
+      skipped: undefined,
+      n: Number.NaN,
+      a: [true, undefined, { z: "x", a: null }],
+    }),
+    '{\n  "a": [\n    true,\n    null,\n    {\n      "a": null,\n      "z": "x"\n    }\n  ],\n  "n": null,\n  "z": 1\n}\n',
+  );
 });

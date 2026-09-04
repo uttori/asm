@@ -5,7 +5,14 @@ import {
   recordInternalCounterPeak,
   runWithInternalInstrumentation,
 } from "../packages/core/src/internal-instrumentation.js";
-import { aggregateSamples, percentile, type BenchmarkSample } from "../scripts/benchmark-report.js";
+import {
+  aggregateOperationSamples,
+  aggregateSamples,
+  benchmarkStatistics,
+  percentile,
+  type BenchmarkSample,
+  type OperationBenchmarkSample,
+} from "../scripts/benchmark-report.js";
 
 test("internal instrumentation is opt-in and run-scoped", (t) => {
   incrementInternalCounter("includeReads");
@@ -95,4 +102,39 @@ test("benchmark aggregation reports nearest-rank percentiles and memory peaks", 
     max: 4,
     medianAbsoluteDeviation: 1,
   });
+});
+
+test("operation aggregation keeps boundary memory and signed deltas explicit", (t) => {
+  const sample = (
+    wallMs: number,
+    baselineRssBytes: number,
+    endRssBytes: number,
+  ): OperationBenchmarkSample => ({
+    wallMs,
+    baselineRssBytes,
+    baselineHeapUsedBytes: baselineRssBytes / 2,
+    endRssBytes,
+    endHeapUsedBytes: endRssBytes / 2,
+    boundaryMaxRssBytes: Math.max(baselineRssBytes, endRssBytes),
+    boundaryMaxHeapUsedBytes: Math.max(baselineRssBytes, endRssBytes) / 2,
+    rssDeltaBytes: endRssBytes - baselineRssBytes,
+    heapUsedDeltaBytes: (endRssBytes - baselineRssBytes) / 2,
+  });
+  const aggregate = aggregateOperationSamples([
+    sample(30, 100, 140),
+    sample(10, 120, 110),
+    sample(20, 110, 130),
+  ]);
+
+  t.deepEqual(benchmarkStatistics([]), {
+    min: 0,
+    median: 0,
+    p95: 0,
+    max: 0,
+    medianAbsoluteDeviation: 0,
+  });
+  t.is(aggregate.wallMs.median, 20);
+  t.is(aggregate.boundaryMaxRssBytes.max, 140);
+  t.is(aggregate.rssDeltaBytes.min, -10);
+  t.is(aggregate.rssDeltaBytes.median, 20);
 });

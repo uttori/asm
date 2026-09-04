@@ -5832,20 +5832,20 @@ var parseAsarTableLine = (line, rtl, lineNumber) => {
     if (eq < 1 || eq !== line.length - 2) {
       throw invalidTableLine(lineNumber);
     }
-    const hex5 = line.slice(0, eq);
-    if (!/^[\dA-Fa-f]+$/.test(hex5)) {
+    const hex7 = line.slice(0, eq);
+    if (!/^[\dA-Fa-f]+$/.test(hex7)) {
       throw invalidTableLine(lineNumber);
     }
-    return { char: line[eq + 1], value: Number.parseInt(hex5, 16) };
+    return { char: line[eq + 1], value: Number.parseInt(hex7, 16) };
   }
   if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
     throw invalidTableLine(lineNumber);
   }
-  const hex4 = line.slice(2);
-  if (!/^[\dA-Fa-f]+$/.test(hex4)) {
+  const hex5 = line.slice(2);
+  if (!/^[\dA-Fa-f]+$/.test(hex5)) {
     throw invalidTableLine(lineNumber);
   }
-  return { char: line[0], value: Number.parseInt(hex4, 16) };
+  return { char: line[0], value: Number.parseInt(hex5, 16) };
 };
 var handleClearTable = ({ session }) => {
   session.characterMappings.clear();
@@ -9842,7 +9842,7 @@ var directiveCatalogMap = new Map(
 
 // packages/core/src/plugin/environment.ts
 var canonical = (value) => value.toLowerCase();
-var toMap = (records) => new Map(records.map((record) => [canonical(record.contributionId), record]));
+var toMap = (records) => new Map(records.map((record2) => [canonical(record2.contributionId), record2]));
 var targetInvalid = (target, message) => {
   throw new PluginError(`Invalid target '${target.contributionId}': ${message}`, {
     code: "PLUGIN_TARGET_INVALID",
@@ -10021,21 +10021,21 @@ var AssemblerEnvironment = class {
     const architectureIds = new Set(target.architectures.map(canonical));
     const aliases = /* @__PURE__ */ new Map();
     for (const architectureId of architectureIds) {
-      const record = this.#architectures.get(architectureId);
-      if (!record) {
+      const record2 = this.#architectures.get(architectureId);
+      if (!record2) {
         targetInvalid(targetRecord, `missing architecture contribution '${architectureId}'.`);
       }
-      for (const alias of [record.value.id, ...record.value.aliases ?? []]) {
+      for (const alias of [record2.value.id, ...record2.value.aliases ?? []]) {
         const key = canonical(alias);
         const previous = aliases.get(key);
         if (previous && previous !== architectureId) {
           const previousOwner = this.#architectures.get(previous)?.pluginId;
           throw new PluginError(
-            `Architecture alias '${alias}' in target '${target.id}' is owned by both '${previousOwner}' and '${record.pluginId}'.`,
+            `Architecture alias '${alias}' in target '${target.id}' is owned by both '${previousOwner}' and '${record2.pluginId}'.`,
             {
               code: "PLUGIN_ALIAS_DUPLICATE",
-              pluginId: record.pluginId,
-              contributionId: record.contributionId,
+              pluginId: record2.pluginId,
+              contributionId: record2.contributionId,
               targetId: target.id
             }
           );
@@ -10643,48 +10643,48 @@ var PluginManager = class {
       ...transaction.lifecycles,
       ...transaction.targets
     ];
-    for (const record of all) {
-      const id = record.contributionId.toLowerCase();
+    for (const record2 of all) {
+      const id = record2.contributionId.toLowerCase();
       const existingOwner = this.#contributionOwners.get(id);
       if (existingOwner || local.has(id)) {
         throw new PluginError(
-          `Contribution '${record.contributionId}' from '${transaction.manifest.id}' conflicts with owner '${existingOwner ?? transaction.manifest.id}'.`,
+          `Contribution '${record2.contributionId}' from '${transaction.manifest.id}' conflicts with owner '${existingOwner ?? transaction.manifest.id}'.`,
           {
             code: "PLUGIN_CONTRIBUTION_DUPLICATE",
             pluginId: transaction.manifest.id,
             pluginModule: transaction.module,
-            contributionId: record.contributionId
+            contributionId: record2.contributionId
           }
         );
       }
       local.add(id);
     }
-    for (const record of transaction.architectures) {
-      validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
-      if (typeof record.value.displayName !== "string" || typeof record.value.createEncoder !== "function" || typeof record.value.classifyOperand !== "function" || typeof record.value.splitOperands !== "function" || !isArray(record.value.instructions)) {
-        throw new PluginError(`Architecture '${record.contributionId}' is malformed.`, {
+    for (const record2 of transaction.architectures) {
+      validateAliases(record2.value.aliases, transaction.manifest.id, record2.contributionId);
+      if (typeof record2.value.displayName !== "string" || typeof record2.value.createEncoder !== "function" || typeof record2.value.classifyOperand !== "function" || typeof record2.value.splitOperands !== "function" || !isArray(record2.value.instructions)) {
+        throw new PluginError(`Architecture '${record2.contributionId}' is malformed.`, {
           code: "PLUGIN_CONFIGURATION_INVALID",
           pluginId: transaction.manifest.id,
-          contributionId: record.contributionId
+          contributionId: record2.contributionId
         });
       }
     }
-    for (const record of transaction.addressSpaces) {
-      if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+    for (const record2 of transaction.addressSpaces) {
+      if (typeof record2.value.create !== "function") this.#malformed(transaction, record2);
     }
-    for (const record of transaction.outputFormats) {
-      if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+    for (const record2 of transaction.outputFormats) {
+      if (typeof record2.value.create !== "function") this.#malformed(transaction, record2);
     }
-    for (const record of transaction.sessionStates) {
-      if (typeof record.value.create !== "function" || typeof record.value.clone !== "function") {
-        this.#malformed(transaction, record);
+    for (const record2 of transaction.sessionStates) {
+      if (typeof record2.value.create !== "function" || typeof record2.value.clone !== "function") {
+        this.#malformed(transaction, record2);
       }
     }
-    for (const record of transaction.directiveSets) {
-      if (!isArray(record.value.directives) || record.value.tooling !== void 0 && !isArray(record.value.tooling)) {
-        this.#malformed(transaction, record);
+    for (const record2 of transaction.directiveSets) {
+      if (!isArray(record2.value.directives) || record2.value.tooling !== void 0 && !isArray(record2.value.tooling)) {
+        this.#malformed(transaction, record2);
       }
-      for (const directive2 of record.value.directives) {
+      for (const directive2 of record2.value.directives) {
         validateContributionId(directive2.id, transaction.manifest.id);
         if (local.has(directive2.id.toLowerCase()) || this.#contributionOwners.has(directive2.id.toLowerCase())) {
           throw new PluginError(`Duplicate directive contribution '${directive2.id}'.`, {
@@ -10705,33 +10705,33 @@ var PluginManager = class {
         }
       }
     }
-    for (const record of transaction.expressionSets) {
-      if (!isArray(record.value.functions)) this.#malformed(transaction, record);
-      for (const expression of record.value.functions) {
-        validateAliases(expression.aliases, transaction.manifest.id, record.contributionId);
+    for (const record2 of transaction.expressionSets) {
+      if (!isArray(record2.value.functions)) this.#malformed(transaction, record2);
+      for (const expression of record2.value.functions) {
+        validateAliases(expression.aliases, transaction.manifest.id, record2.contributionId);
         if (typeof expression.name !== "string" || expression.name === "" || typeof expression.evaluate !== "function" || typeof expression.summary !== "string" || !isRecord(expression.signature)) {
-          this.#malformed(transaction, record);
+          this.#malformed(transaction, record2);
         }
       }
     }
-    for (const record of transaction.lifecycles) {
-      if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+    for (const record2 of transaction.lifecycles) {
+      if (typeof record2.value.create !== "function") this.#malformed(transaction, record2);
     }
-    for (const record of transaction.targets) {
-      validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
-      if (typeof record.value.displayName !== "string" || typeof record.value.defaultArchitecture !== "string" || !isArray(record.value.architectures) || typeof record.value.addressSpace !== "string" || typeof record.value.outputFormat !== "string" || !isArray(record.value.directiveSets) || record.value.coreDirectiveGroups !== void 0 && (!isArray(record.value.coreDirectiveGroups) || record.value.coreDirectiveGroups.some(
+    for (const record2 of transaction.targets) {
+      validateAliases(record2.value.aliases, transaction.manifest.id, record2.contributionId);
+      if (typeof record2.value.displayName !== "string" || typeof record2.value.defaultArchitecture !== "string" || !isArray(record2.value.architectures) || typeof record2.value.addressSpace !== "string" || typeof record2.value.outputFormat !== "string" || !isArray(record2.value.directiveSets) || record2.value.coreDirectiveGroups !== void 0 && (!isArray(record2.value.coreDirectiveGroups) || record2.value.coreDirectiveGroups.some(
         (group) => typeof group !== "string" || !CORE_DIRECTIVE_GROUPS.includes(group)
-      )) || !isArray(record.value.expressionSets) || !isArray(record.value.lifecycle) || record.value.syntaxProfile !== void 0 && (typeof record.value.syntaxProfile.id !== "string" || typeof record.value.syntaxProfile.preserveLeadingWhitespace !== "boolean" || typeof record.value.syntaxProfile.splitColonStatements !== "boolean" || typeof record.value.syntaxProfile.splitRelativeLabelStatements !== "boolean" || typeof record.value.syntaxProfile.leadingDotLabels !== "boolean" || !isArray(record.value.syntaxProfile.directivePrefixes)) || typeof record.value.defaultOutputExtension !== "string") {
-        this.#malformed(transaction, record);
+      )) || !isArray(record2.value.expressionSets) || !isArray(record2.value.lifecycle) || record2.value.syntaxProfile !== void 0 && (typeof record2.value.syntaxProfile.id !== "string" || typeof record2.value.syntaxProfile.preserveLeadingWhitespace !== "boolean" || typeof record2.value.syntaxProfile.splitColonStatements !== "boolean" || typeof record2.value.syntaxProfile.splitRelativeLabelStatements !== "boolean" || typeof record2.value.syntaxProfile.leadingDotLabels !== "boolean" || !isArray(record2.value.syntaxProfile.directivePrefixes)) || typeof record2.value.defaultOutputExtension !== "string") {
+        this.#malformed(transaction, record2);
       }
     }
   }
-  #malformed(transaction, record) {
-    throw new PluginError(`Contribution '${record.contributionId}' is malformed.`, {
+  #malformed(transaction, record2) {
+    throw new PluginError(`Contribution '${record2.contributionId}' is malformed.`, {
       code: "PLUGIN_CONFIGURATION_INVALID",
       pluginId: transaction.manifest.id,
       pluginModule: transaction.module,
-      contributionId: record.contributionId
+      contributionId: record2.contributionId
     });
   }
   #commit(transaction) {
@@ -10746,10 +10746,10 @@ var PluginManager = class {
       transaction.targets
     ];
     for (const list of lists) {
-      for (const record of list) {
-        this.#contributionOwners.set(record.contributionId.toLowerCase(), record.pluginId);
-        deepFreeze(record.value);
-        Object.freeze(record);
+      for (const record2 of list) {
+        this.#contributionOwners.set(record2.contributionId.toLowerCase(), record2.pluginId);
+        deepFreeze(record2.value);
+        Object.freeze(record2);
       }
     }
     for (const set of transaction.directiveSets) {
@@ -10818,16 +10818,16 @@ var PluginSessionStateStore = class {
   constructor(contributions, context) {
     this.#contributions = contributions;
     this.#values = /* @__PURE__ */ new Map();
-    for (const record of contributions) {
+    for (const record2 of contributions) {
       try {
-        this.#values.set(record.contributionId, record.value.create(context));
+        this.#values.set(record2.contributionId, record2.value.create(context));
       } catch (cause) {
         throw new PluginError(
-          `Session state factory '${record.contributionId}' from '${record.pluginId}' failed.`,
+          `Session state factory '${record2.contributionId}' from '${record2.pluginId}' failed.`,
           {
             code: "PLUGIN_ACTIVATION_FAILED",
-            pluginId: record.pluginId,
-            contributionId: record.contributionId,
+            pluginId: record2.pluginId,
+            contributionId: record2.contributionId,
             targetId: context.targetId,
             cause
           }
@@ -10859,21 +10859,21 @@ var PluginSessionStateStore = class {
    */
   cloneSnapshot(source = this.#values) {
     const snapshot = /* @__PURE__ */ new Map();
-    for (const record of this.#contributions) {
-      if (!source.has(record.contributionId)) {
-        throw new PluginError(`Session state snapshot is missing '${record.contributionId}'.`, {
+    for (const record2 of this.#contributions) {
+      if (!source.has(record2.contributionId)) {
+        throw new PluginError(`Session state snapshot is missing '${record2.contributionId}'.`, {
           code: "PLUGIN_CONFIGURATION_INVALID",
-          pluginId: record.pluginId,
-          contributionId: record.contributionId
+          pluginId: record2.pluginId,
+          contributionId: record2.contributionId
         });
       }
       try {
-        snapshot.set(record.contributionId, record.value.clone(source.get(record.contributionId)));
+        snapshot.set(record2.contributionId, record2.value.clone(source.get(record2.contributionId)));
       } catch (cause) {
-        throw new PluginError(`Session state clone '${record.contributionId}' failed.`, {
+        throw new PluginError(`Session state clone '${record2.contributionId}' failed.`, {
           code: "PLUGIN_HOOK_FAILED",
-          pluginId: record.pluginId,
-          contributionId: record.contributionId,
+          pluginId: record2.pluginId,
+          contributionId: record2.contributionId,
           cause
         });
       }
@@ -10894,16 +10894,16 @@ var PluginSessionStateStore = class {
    * @throws {PluginError} If a `resetForStage` hook throws (`PLUGIN_HOOK_FAILED`).
    */
   resetForStage(stage) {
-    for (const record of this.#contributions) {
-      const reset = record.value.resetForStage;
+    for (const record2 of this.#contributions) {
+      const reset = record2.value.resetForStage;
       if (!reset) continue;
       try {
-        reset(this.#values.get(record.contributionId), stage);
+        reset(this.#values.get(record2.contributionId), stage);
       } catch (cause) {
-        throw new PluginError(`Session state reset '${record.contributionId}' failed.`, {
+        throw new PluginError(`Session state reset '${record2.contributionId}' failed.`, {
           code: "PLUGIN_HOOK_FAILED",
-          pluginId: record.pluginId,
-          contributionId: record.contributionId,
+          pluginId: record2.pluginId,
+          contributionId: record2.contributionId,
           cause
         });
       }
@@ -10919,9 +10919,9 @@ var PluginSessionStateStore = class {
     if (this.#disposed) return;
     this.#disposed = true;
     const errors = [];
-    for (const record of [...this.#contributions].reverse()) {
+    for (const record2 of [...this.#contributions].reverse()) {
       try {
-        record.value.dispose?.(this.#values.get(record.contributionId));
+        record2.value.dispose?.(this.#values.get(record2.contributionId));
       } catch (error) {
         errors.push(error);
       }
@@ -12023,14 +12023,14 @@ var Assembler = class _Assembler {
     this.commandLoweringService = new CommandLoweringService(this);
     this.services.frontEnd = this.frontEndService;
     this.services.lowering = this.commandLoweringService;
-    this.activeLifecycles = this.environment.getTargetLifecycles(targetId).map((record) => {
+    this.activeLifecycles = this.environment.getTargetLifecycles(targetId).map((record2) => {
       try {
-        return { record, instance: record.value.create(targetFactoryContext) };
+        return { record: record2, instance: record2.value.create(targetFactoryContext) };
       } catch (cause) {
-        throw new PluginError(`Lifecycle factory '${record.contributionId}' failed.`, {
+        throw new PluginError(`Lifecycle factory '${record2.contributionId}' failed.`, {
           code: "PLUGIN_ACTIVATION_FAILED",
-          pluginId: record.pluginId,
-          contributionId: record.contributionId,
+          pluginId: record2.pluginId,
+          contributionId: record2.contributionId,
           targetId,
           cause
         });
@@ -12051,14 +12051,14 @@ var Assembler = class _Assembler {
     incrementInternalCounter("assemblerConstructions");
   }
   runLifecycleHook(hookName, invoke) {
-    for (const { record, instance } of this.activeLifecycles) {
+    for (const { record: record2, instance } of this.activeLifecycles) {
       try {
         invoke(instance);
       } catch (cause) {
         throw new PluginError(`Lifecycle hook '${hookName}' failed.`, {
           code: "PLUGIN_HOOK_FAILED",
-          pluginId: record.pluginId,
-          contributionId: record.contributionId,
+          pluginId: record2.pluginId,
+          contributionId: record2.contributionId,
           targetId: this.targetId,
           cause
         });
@@ -12162,15 +12162,15 @@ var Assembler = class _Assembler {
     if (this.sessionDisposed) return;
     this.sessionDisposed = true;
     const errors = [];
-    for (const { record, instance } of [...this.activeLifecycles].reverse()) {
+    for (const { record: record2, instance } of [...this.activeLifecycles].reverse()) {
       try {
         instance.onSessionDispose?.({ state: this.pluginState, session: this });
       } catch (cause) {
         errors.push(
           new PluginError("Lifecycle hook 'onSessionDispose' failed.", {
             code: "PLUGIN_HOOK_FAILED",
-            pluginId: record.pluginId,
-            contributionId: record.contributionId,
+            pluginId: record2.pluginId,
+            contributionId: record2.contributionId,
             targetId: this.targetId,
             cause
           })
@@ -14276,6 +14276,72 @@ var createDebugMap = (options) => {
   };
 };
 
+// packages/disassembler/src/interval-index.ts
+var HalfOpenIntervalIndex = class {
+  #entries;
+  #prefixMaximumEnd;
+  /**
+   * Builds an immutable search index from already-owned interval values.
+   * @param {readonly Value[]} values Non-negative safe half-open intervals in semantic input order.
+   * @throws {Error} When an interval is empty, reversed, negative, or outside safe integers.
+   */
+  constructor(values) {
+    for (const value of values) {
+      if (!Number.isSafeInteger(value.start) || !Number.isSafeInteger(value.end) || value.start < 0 || value.end <= value.start) {
+        throw new Error("Interval index entries must be non-negative safe half-open ranges.");
+      }
+    }
+    this.#entries = values.map((value, inputIndex) => ({ value, inputIndex })).sort(
+      (left, right) => left.value.start - right.value.start || left.value.end - right.value.end || left.inputIndex - right.inputIndex
+    );
+    const prefixMaximumEnd = [];
+    let maximumEnd = -1;
+    for (const [index, entry] of this.#entries.entries()) {
+      maximumEnd = Math.max(maximumEnd, entry.value.end);
+      prefixMaximumEnd[index] = maximumEnd;
+    }
+    this.#prefixMaximumEnd = prefixMaximumEnd;
+  }
+  /**
+   * Returns every interval containing one safe non-negative point, in input order.
+   * @param {number} point Safe non-negative point to query.
+   * @returns {readonly Value[]} Matching intervals in their original input order.
+   */
+  at(point) {
+    if (!Number.isSafeInteger(point) || point < 0) {
+      throw new Error("Interval index points must be non-negative safe integers.");
+    }
+    return this.#matching(point, point + 1);
+  }
+  /**
+   * Returns every interval intersecting a valid half-open query, in input order.
+   * @param {number} start Inclusive safe non-negative query start.
+   * @param {number} end Exclusive safe query end greater than `start`.
+   * @returns {readonly Value[]} Matching intervals in their original input order.
+   */
+  overlapping(start, end) {
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
+      throw new Error("Interval index queries must be non-negative safe half-open ranges.");
+    }
+    return this.#matching(start, end);
+  }
+  #matching(start, end) {
+    let low = 0;
+    let high = this.#entries.length;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if (this.#entries[middle].value.start < end) low = middle + 1;
+      else high = middle;
+    }
+    const matches = [];
+    for (let index = low - 1; index >= 0 && this.#prefixMaximumEnd[index] > start; index--) {
+      const entry = this.#entries[index];
+      if (entry.value.end > start) matches.push(entry);
+    }
+    return matches.sort((left, right) => left.inputIndex - right.inputIndex).map(({ value }) => value);
+  }
+};
+
 // packages/disassembler/src/project-store.ts
 import { createHash as createHash3 } from "node:crypto";
 import * as fs3 from "node:fs";
@@ -14298,6 +14364,7 @@ var SHARD_PATHS = Object.freeze({
   imports: "analysis/imports.json"
 });
 var sha2562 = (value) => createHash3("sha256").update(value).digest("hex");
+var CANONICAL_JSON_RECORD_BATCH = 64;
 var canonicalize = (value) => {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === "object") {
@@ -14307,6 +14374,42 @@ var canonicalize = (value) => {
   }
   return value;
 };
+var writeCanonicalJsonArrayFile = (destination, values) => {
+  const hash = createHash3("sha256");
+  const descriptor2 = fs3.openSync(destination, "w");
+  let pending = "";
+  const append = (fragment) => {
+    pending += fragment;
+    if (pending.length >= 64 * 1024) flush();
+  };
+  const flush = () => {
+    if (pending.length === 0) return;
+    fs3.writeSync(descriptor2, pending);
+    hash.update(pending);
+    pending = "";
+  };
+  try {
+    if (values.length === 0) {
+      append("[]\n");
+    } else {
+      append("[\n");
+      for (let start = 0; start < values.length; start += CANONICAL_JSON_RECORD_BATCH) {
+        const encoded = JSON.stringify(
+          canonicalize(values.slice(start, start + CANONICAL_JSON_RECORD_BATCH)),
+          void 0,
+          2
+        );
+        const records = encoded.slice(2, -2);
+        append(`${start === 0 ? "" : ",\n"}${records}`);
+      }
+      append("\n]\n");
+    }
+    flush();
+  } finally {
+    fs3.closeSync(descriptor2);
+  }
+  return hash.digest("hex");
+};
 var canonicalJson = (value) => `${JSON.stringify(canonicalize(value), void 0, 2)}
 `;
 var assertSafeRelativePath = (relative2) => {
@@ -14315,16 +14418,16 @@ var assertSafeRelativePath = (relative2) => {
   }
 };
 var sortById = (records) => [...records].sort((left, right) => left.id.localeCompare(right.id));
-var runtimeSortSpace = (record) => {
-  if ("addressSpace" in record) return record.addressSpace;
-  if (record.kind === "runtime-memory-access") return record.instructionAddressSpace;
-  return record.fromAddressSpace;
+var runtimeSortSpace = (record2) => {
+  if ("addressSpace" in record2) return record2.addressSpace;
+  if (record2.kind === "runtime-memory-access") return record2.instructionAddressSpace;
+  return record2.fromAddressSpace;
 };
-var runtimeSortAddress = (record) => {
-  if ("address" in record) return record.address;
-  if (record.kind === "runtime-coverage") return record.start;
-  if (record.kind === "runtime-memory-access") return record.instructionAddress;
-  return record.fromAddress;
+var runtimeSortAddress = (record2) => {
+  if ("address" in record2) return record2.address;
+  if (record2.kind === "runtime-coverage") return record2.start;
+  if (record2.kind === "runtime-memory-access") return record2.instructionAddress;
+  return record2.fromAddress;
 };
 var normalizedShards = (shards) => ({
   analysis: [...shards.analysis].sort(
@@ -14348,7 +14451,7 @@ var normalizedShards = (shards) => ({
   evidence: sortById(shards.evidence),
   imports: sortById(shards.imports)
 });
-var validateManifest2 = (manifest) => {
+var validateAnalysisProjectManifest = (manifest) => {
   if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
     throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
   }
@@ -14380,6 +14483,12 @@ var validateManifest2 = (manifest) => {
     assertSafeRelativePath(shard.path);
     if (!(shard.kind in SHARD_PATHS))
       throw new Error(`Unknown analysis shard kind '${shard.kind}'.`);
+    if (!/^[\da-f]{64}$/.test(shard.sha256)) {
+      throw new Error(`Analysis shard '${shard.id}' has an invalid SHA-256.`);
+    }
+    if (!Number.isSafeInteger(shard.records) || shard.records < 0) {
+      throw new Error(`Analysis shard '${shard.id}' has an invalid record count.`);
+    }
     if (shardIds.has(shard.id)) throw new Error(`Duplicate analysis shard id '${shard.id}'.`);
     if (shardPaths.has(shard.path))
       throw new Error(`Duplicate analysis shard path '${shard.path}'.`);
@@ -14448,21 +14557,21 @@ var assertCodecReference = (reference, location) => {
 };
 var validateLoadedShards = (shards, project) => {
   const { addressSpaces } = project;
-  const evidenceIds = new Set(shards.evidence.map((record) => record.id));
+  const evidenceIds = new Set(shards.evidence.map((record2) => record2.id));
   for (const [kind, records] of Object.entries(shards)) {
     const ids = /* @__PURE__ */ new Set();
-    for (const record of records) {
-      if (!record || typeof record.id !== "string" || record.id === "") {
+    for (const record2 of records) {
+      if (!record2 || typeof record2.id !== "string" || record2.id === "") {
         throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
       }
-      if (ids.has(record.id)) {
-        throw new Error(`Analysis shard '${kind}' contains duplicate id '${record.id}'.`);
+      if (ids.has(record2.id)) {
+        throw new Error(`Analysis shard '${kind}' contains duplicate id '${record2.id}'.`);
       }
-      ids.add(record.id);
-      for (const evidence of record.evidence ?? []) {
+      ids.add(record2.id);
+      for (const evidence of record2.evidence ?? []) {
         if (!evidenceIds.has(evidence)) {
           throw new Error(
-            `Analysis record '${record.id}' refers to missing evidence '${evidence}'.`
+            `Analysis record '${record2.id}' refers to missing evidence '${evidence}'.`
           );
         }
       }
@@ -14485,38 +14594,38 @@ var validateLoadedShards = (shards, project) => {
       throw new Error(`Analysis interval '${interval.id}' has an invalid half-open range.`);
     }
   }
-  for (const record of shards.runtime) {
-    if (!Number.isSafeInteger(record.count) || record.count <= 0) {
-      throw new Error(`Runtime record '${record.id}' has an invalid observation count.`);
+  for (const record2 of shards.runtime) {
+    if (!Number.isSafeInteger(record2.count) || record2.count <= 0) {
+      throw new Error(`Runtime record '${record2.id}' has an invalid observation count.`);
     }
-    if (record.kind === "runtime-coverage") {
-      if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
-        throw new Error(`Runtime coverage '${record.id}' has an invalid half-open range.`);
-      }
-    }
-    if (record.kind === "runtime-memory-access") {
-      if (!Number.isSafeInteger(record.width) || record.width <= 0) {
-        throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
-      }
-      if (record.value !== void 0 && (!Number.isSafeInteger(record.value) || record.value < 0)) {
-        throw new Error(`Runtime memory access '${record.id}' has an invalid value.`);
+    if (record2.kind === "runtime-coverage") {
+      if (!Number.isSafeInteger(record2.start) || !Number.isSafeInteger(record2.end) || record2.start < 0 || record2.end <= record2.start) {
+        throw new Error(`Runtime coverage '${record2.id}' has an invalid half-open range.`);
       }
     }
-    if (record.kind === "runtime-execution") {
-      if (record.size !== void 0 && (!Number.isSafeInteger(record.size) || record.size <= 0)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid instruction size.`);
+    if (record2.kind === "runtime-memory-access") {
+      if (!Number.isSafeInteger(record2.width) || record2.width <= 0) {
+        throw new Error(`Runtime memory access '${record2.id}' has an invalid width.`);
       }
-      if (record.opcode !== void 0 && (!Number.isInteger(record.opcode) || record.opcode < 0 || record.opcode > 255)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid opcode.`);
-      }
-      if (record.fileOffset !== void 0 && (!Number.isSafeInteger(record.fileOffset) || record.fileOffset < 0 || record.fileOffset >= project.rom.contentSize)) {
-        throw new Error(`Runtime execution '${record.id}' has an invalid ROM file offset.`);
+      if (record2.value !== void 0 && (!Number.isSafeInteger(record2.value) || record2.value < 0)) {
+        throw new Error(`Runtime memory access '${record2.id}' has an invalid value.`);
       }
     }
-    if (record.kind === "runtime-cpu-state") {
-      for (const [name, value] of Object.entries(record.state)) {
+    if (record2.kind === "runtime-execution") {
+      if (record2.size !== void 0 && (!Number.isSafeInteger(record2.size) || record2.size <= 0)) {
+        throw new Error(`Runtime execution '${record2.id}' has an invalid instruction size.`);
+      }
+      if (record2.opcode !== void 0 && (!Number.isInteger(record2.opcode) || record2.opcode < 0 || record2.opcode > 255)) {
+        throw new Error(`Runtime execution '${record2.id}' has an invalid opcode.`);
+      }
+      if (record2.fileOffset !== void 0 && (!Number.isSafeInteger(record2.fileOffset) || record2.fileOffset < 0 || record2.fileOffset >= project.rom.contentSize)) {
+        throw new Error(`Runtime execution '${record2.id}' has an invalid ROM file offset.`);
+      }
+    }
+    if (record2.kind === "runtime-cpu-state") {
+      for (const [name, value] of Object.entries(record2.state)) {
         if (name === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
-          throw new Error(`Runtime CPU state '${record.id}' has invalid field '${name}'.`);
+          throw new Error(`Runtime CPU state '${record2.id}' has invalid field '${name}'.`);
         }
       }
     }
@@ -14557,6 +14666,12 @@ var validateLoadedShards = (shards, project) => {
       throw new Error(
         `Analysis annotation '${annotation.id}' has an invalid compression fillByte.`
       );
+    }
+  }
+  for (const conflict of shards.analysis) {
+    if (conflict.kind !== "conflict" || conflict.end === void 0) continue;
+    if (!Number.isSafeInteger(conflict.end) || conflict.end <= conflict.address) {
+      throw new Error(`Analysis conflict '${conflict.id}' has an invalid half-open range.`);
     }
   }
   const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
@@ -14602,60 +14717,63 @@ var validateLoadedShards = (shards, project) => {
     ...shards.comments,
     ...shards.regions,
     ...shards.runtime.filter(
-      (record) => "addressSpace" in record
+      (record2) => "addressSpace" in record2
     ),
     ...shards.analysis.filter(
-      (record) => "addressSpace" in record
+      (record2) => "addressSpace" in record2
     )
   ];
-  for (const record of addressedRecords) {
-    const addressSpace = addressSpaceById.get(record.addressSpace);
+  for (const record2 of addressedRecords) {
+    const addressSpace = addressSpaceById.get(record2.addressSpace);
     if (!addressSpace) {
       throw new Error(
-        `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
+        `Analysis record '${record2.id}' refers to unknown address space '${record2.addressSpace}'.`
       );
     }
     const maximum = 2 ** addressSpace.addressBits;
     const addresses = [];
-    if ("start" in record) {
-      addresses.push(record.start, record.end - 1);
-    } else if ("address" in record) {
-      addresses.push(record.address);
+    if ("start" in record2) {
+      addresses.push(record2.start, record2.end - 1);
+    } else if ("address" in record2) {
+      addresses.push(record2.address);
+      if ("kind" in record2 && record2.kind === "conflict" && record2.end !== void 0) {
+        addresses.push(record2.end - 1);
+      }
     } else {
-      if ("fromAddress" in record) addresses.push(record.fromAddress);
-      if ("toAddress" in record && record.toAddress !== void 0) addresses.push(record.toAddress);
-      if ("targets" in record) addresses.push(...record.targets);
+      if ("fromAddress" in record2) addresses.push(record2.fromAddress);
+      if ("toAddress" in record2 && record2.toAddress !== void 0) addresses.push(record2.toAddress);
+      if ("targets" in record2) addresses.push(...record2.targets);
     }
     if (addresses.some(
       (address3) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= maximum
     )) {
       throw new Error(
-        `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
+        `Analysis record '${record2.id}' exceeds address space '${record2.addressSpace}'.`
       );
     }
   }
-  for (const record of shards.runtime) {
+  for (const record2 of shards.runtime) {
     let addresses = [];
-    if (record.kind === "runtime-memory-access") {
+    if (record2.kind === "runtime-memory-access") {
       addresses = [
-        [record.instructionAddressSpace, record.instructionAddress],
-        [record.accessedAddressSpace, record.accessedAddress]
+        [record2.instructionAddressSpace, record2.instructionAddress],
+        [record2.accessedAddressSpace, record2.accessedAddress]
       ];
-    } else if (record.kind === "runtime-control-target") {
+    } else if (record2.kind === "runtime-control-target") {
       addresses = [
-        [record.fromAddressSpace, record.fromAddress],
-        [record.toAddressSpace, record.toAddress]
+        [record2.fromAddressSpace, record2.fromAddress],
+        [record2.toAddressSpace, record2.toAddress]
       ];
     }
     for (const [spaceId, address3] of addresses) {
       const addressSpace = addressSpaceById.get(spaceId);
       if (!addressSpace) {
         throw new Error(
-          `Runtime record '${record.id}' refers to unknown address space '${spaceId}'.`
+          `Runtime record '${record2.id}' refers to unknown address space '${spaceId}'.`
         );
       }
       if (!Number.isSafeInteger(address3) || address3 < 0 || address3 >= 2 ** addressSpace.addressBits) {
-        throw new Error(`Runtime record '${record.id}' exceeds address space '${spaceId}'.`);
+        throw new Error(`Runtime record '${record2.id}' exceeds address space '${spaceId}'.`);
       }
     }
   }
@@ -14682,7 +14800,7 @@ var migrateManifest = (input) => {
       addressSpaces: [],
       shards: []
     };
-    validateManifest2(migrated);
+    validateAnalysisProjectManifest(migrated);
     return migrated;
   }
   if (version === 1) {
@@ -14690,7 +14808,7 @@ var migrateManifest = (input) => {
       ...input,
       schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION
     };
-    validateManifest2(migrated);
+    validateAnalysisProjectManifest(migrated);
     return migrated;
   }
   if (typeof version !== "number") throw new Error("Manifest schemaVersion is required.");
@@ -14703,7 +14821,7 @@ var migrateManifest = (input) => {
     throw new Error(`No migration exists for analysis project schema ${version}.`);
   }
   const manifest = input;
-  validateManifest2(manifest);
+  validateAnalysisProjectManifest(manifest);
   return manifest;
 };
 var writeAnalysisProject = (directory, project) => {
@@ -14713,15 +14831,14 @@ var writeAnalysisProject = (directory, project) => {
   for (const [kind, relative2] of Object.entries(SHARD_PATHS)) {
     assertSafeRelativePath(relative2);
     const records = shards[kind];
-    const text = canonicalJson(records);
     const destination = path3.join(directory, relative2);
     fs3.mkdirSync(path3.dirname(destination), { recursive: true });
-    fs3.writeFileSync(destination, text);
+    const shardHash = writeCanonicalJsonArrayFile(destination, records);
     descriptors.push({
       id: kind,
       kind,
       path: relative2,
-      sha256: sha2562(text),
+      sha256: shardHash,
       records: records.length
     });
   }
@@ -14736,7 +14853,7 @@ var writeAnalysisProject = (directory, project) => {
     },
     shards: descriptors.sort((a, b) => a.id.localeCompare(b.id))
   };
-  validateManifest2(manifest);
+  validateAnalysisProjectManifest(manifest);
   fs3.mkdirSync(directory, { recursive: true });
   fs3.writeFileSync(path3.join(directory, ANALYSIS_PROJECT_MANIFEST), canonicalJson(manifest));
   return manifest;
@@ -14899,40 +15016,40 @@ var conflictKindFor = (field) => {
 };
 var conflictReport = (runtime) => {
   const observations = [];
-  for (const record of runtime) {
-    if (record.kind === "runtime-cpu-state") {
-      for (const [field, value] of Object.entries(record.state)) {
+  for (const record2 of runtime) {
+    if (record2.kind === "runtime-cpu-state") {
+      for (const [field, value] of Object.entries(record2.state)) {
         observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
+          architecture: record2.architecture,
+          addressSpace: record2.addressSpace,
+          address: record2.address,
           field,
           value,
-          record: record.id,
-          evidence: record.evidence
+          record: record2.id,
+          evidence: record2.evidence
         });
       }
-    } else if (record.kind === "runtime-execution") {
-      if (record.size !== void 0) {
+    } else if (record2.kind === "runtime-execution") {
+      if (record2.size !== void 0) {
         observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
+          architecture: record2.architecture,
+          addressSpace: record2.addressSpace,
+          address: record2.address,
           field: "instruction-size",
-          value: record.size,
-          record: record.id,
-          evidence: record.evidence
+          value: record2.size,
+          record: record2.id,
+          evidence: record2.evidence
         });
       }
-      if (record.opcode !== void 0) {
+      if (record2.opcode !== void 0) {
         observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
+          architecture: record2.architecture,
+          addressSpace: record2.addressSpace,
+          address: record2.address,
           field: "opcode",
-          value: record.opcode,
-          record: record.id,
-          evidence: record.evidence
+          value: record2.opcode,
+          record: record2.id,
+          evidence: record2.evidence
         });
       }
     }
@@ -14974,7 +15091,7 @@ var conflictReport = (runtime) => {
 };
 var explanationReport = (shards) => {
   const runtimeEvidence = new Set(
-    shards.evidence.filter((record) => record.source === "runtime").map((record) => record.id)
+    shards.evidence.filter((record2) => record2.source === "runtime").map((record2) => record2.id)
   );
   const explanations = [];
   for (const annotation of shards.annotations) {
@@ -14987,32 +15104,32 @@ var explanationReport = (shards) => {
       evidence: sortedUnique(evidence)
     });
   }
-  for (const record of shards.analysis) {
-    if (record.kind !== "target-override") continue;
-    const evidence = record.evidence.filter((id) => runtimeEvidence.has(id));
+  for (const record2 of shards.analysis) {
+    if (record2.kind !== "target-override") continue;
+    const evidence = record2.evidence.filter((id) => runtimeEvidence.has(id));
     if (evidence.length === 0) continue;
     explanations.push({
-      recordId: record.id,
-      detail: `Runtime observation resolves control flow to ${record.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
+      recordId: record2.id,
+      detail: `Runtime observation resolves control flow to ${record2.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
       evidence: sortedUnique(evidence)
     });
   }
   return explanations.sort((left, right) => left.recordId.localeCompare(right.recordId));
 };
 var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
-  const records = new Map(prior.map((record) => [record.id, record]));
-  for (const record of incoming) {
-    const current = records.get(record.id);
+  const records = new Map(prior.map((record2) => [record2.id, record2]));
+  for (const record2 of incoming) {
+    const current = records.get(record2.id);
     if (!current) {
-      records.set(record.id, record);
+      records.set(record2.id, record2);
       added[kind]++;
-    } else if (canonicalJson(current) === canonicalJson(record)) {
+    } else if (canonicalJson(current) === canonicalJson(record2)) {
       existing[kind]++;
-    } else if (kind === "analysis" && "kind" in current && "kind" in record && current.kind === "target-override" && record.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
+    } else if (kind === "analysis" && "kind" in current && "kind" in record2 && current.kind === "target-override" && record2.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
       const left = current;
-      const right = record;
+      const right = record2;
       if (left.addressSpace !== right.addressSpace || left.address !== right.address) {
-        throw new Error(`Runtime target override '${record.id}' changed its control-flow site.`);
+        throw new Error(`Runtime target override '${record2.id}' changed its control-flow site.`);
       }
       const merged = {
         ...left,
@@ -15021,12 +15138,12 @@ var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
       };
       if (canonicalJson(current) === canonicalJson(merged)) existing[kind]++;
       else {
-        records.set(record.id, merged);
+        records.set(record2.id, merged);
         updated[kind]++;
       }
     } else {
       throw new Error(
-        `Runtime evidence id '${record.id}' in '${kind}' changed content; use a content-derived id.`
+        `Runtime evidence id '${record2.id}' in '${kind}' changed content; use a content-derived id.`
       );
     }
   }
@@ -15089,14 +15206,177 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// packages/disassembler/src/source-export.ts
+// packages/disassembler/src/runtime-trace.ts
 import { createHash as createHash5 } from "node:crypto";
+var RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
+var RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
+var record = (value, context) => {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${context} must be an object.`);
+  return value;
+};
+var string = (value, context) => {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${context} must be a non-empty string.`);
+  return value;
+};
+var integer = (value, context, minimum = 0) => {
+  if (!Number.isSafeInteger(value) || value < minimum)
+    throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+  return value;
+};
+var sha2564 = (value) => createHash5("sha256").update(value).digest("hex");
+var sha256Identity = (value, context) => {
+  const identity = string(value, context);
+  if (!/^[\da-f]{64}$/.test(identity))
+    throw new Error(`${context} must be a lowercase SHA-256 identity.`);
+  return identity;
+};
+var hex = (value) => value.toString(16).toUpperCase().padStart(6, "0");
+var validateArtifact = (value) => {
+  const artifact = record(value, "Instruction trace artifact");
+  if (artifact.format !== RUNTIME_INSTRUCTION_TRACE_FORMAT)
+    throw new Error(`Unsupported instruction trace format '${String(artifact.format)}'.`);
+  if (artifact.schemaVersion !== RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION)
+    throw new Error(
+      `Unsupported instruction trace schema version '${String(artifact.schemaVersion)}'.`
+    );
+  const producer = record(artifact.producer, "Instruction trace producer");
+  if (!Array.isArray(artifact.chunks))
+    throw new Error("Instruction trace chunks must be an array.");
+  const chunks = artifact.chunks.map((value2, index) => {
+    const chunk = record(value2, `Instruction trace chunk ${index}`);
+    if (!Array.isArray(chunk.addresses))
+      throw new Error(`Instruction trace chunk ${index} addresses must be an array.`);
+    if (typeof chunk.active !== "boolean")
+      throw new Error(`Instruction trace chunk ${index} active must be boolean.`);
+    return {
+      sequenceStart: integer(
+        chunk.sequenceStart,
+        `Instruction trace chunk ${index} sequenceStart`,
+        1
+      ),
+      addresses: chunk.addresses.map(
+        (address3, addressIndex) => integer(address3, `Instruction trace chunk ${index} address ${addressIndex}`)
+      ),
+      droppedEvents: integer(chunk.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
+      active: chunk.active
+    };
+  });
+  let expectedSequence = 1;
+  let previousDropped = 0;
+  let stopped = false;
+  for (const [index, chunk] of chunks.entries()) {
+    if (stopped && chunk.active)
+      throw new Error(`Instruction trace chunk ${index} resumes after capture stopped.`);
+    if (chunk.sequenceStart < expectedSequence)
+      throw new Error(`Instruction trace chunk ${index} overlaps or reorders prior events.`);
+    const sequenceGap = chunk.sequenceStart - expectedSequence;
+    const lossDelta = chunk.droppedEvents - previousDropped;
+    if (lossDelta < 0 || sequenceGap !== lossDelta)
+      throw new Error(`Instruction trace chunk ${index} has inconsistent producer loss metadata.`);
+    expectedSequence = chunk.sequenceStart + chunk.addresses.length;
+    previousDropped = chunk.droppedEvents;
+    stopped ||= !chunk.active;
+  }
+  return {
+    format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
+    schemaVersion: RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
+    architecture: string(artifact.architecture, "Instruction trace architecture"),
+    addressSpace: string(artifact.addressSpace, "Instruction trace address space"),
+    romContentSha256: sha256Identity(
+      artifact.romContentSha256,
+      "Instruction trace ROM content identity"
+    ),
+    producer: {
+      id: string(producer.id, "Instruction trace producer id"),
+      revision: string(producer.revision, "Instruction trace producer revision")
+    },
+    chunks
+  };
+};
+var importRuntimeInstructionTrace = (value, context) => {
+  const artifact = validateArtifact(value);
+  const projectRomContentSha256 = sha256Identity(
+    context.projectRomContentSha256,
+    "Project ROM content identity"
+  );
+  if (artifact.romContentSha256 !== projectRomContentSha256)
+    throw new Error(
+      `ROM/project mismatch: project expects ${projectRomContentSha256}, trace describes ${artifact.romContentSha256}.`
+    );
+  const sourceName = string(context.sourceName, "Instruction trace source name");
+  const addressSpace = string(
+    context.addressSpaceAliases?.[artifact.addressSpace] ?? artifact.addressSpace,
+    "Instruction trace project address space"
+  );
+  const sourceSha256 = sha2564(canonicalJson(artifact));
+  const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
+  const counts = /* @__PURE__ */ new Map();
+  let observedEvents = 0;
+  for (const chunk of artifact.chunks) {
+    for (const address3 of chunk.addresses) {
+      counts.set(address3, (counts.get(address3) ?? 0) + 1);
+      observedEvents++;
+    }
+  }
+  const droppedEvents = artifact.chunks.at(-1)?.droppedEvents ?? 0;
+  const complete = artifact.chunks.length > 0 && artifact.chunks.at(-1)?.active === false;
+  const runtime = [...counts].sort(([left], [right]) => left - right).map(([address3, count]) => ({
+    id: `runtime:instruction-trace:${sourceSha256}:${hex(address3)}`,
+    kind: "runtime-execution",
+    architecture: artifact.architecture,
+    addressSpace,
+    address: address3,
+    count,
+    evidence: [evidenceId]
+  }));
+  const evidence = {
+    id: evidenceId,
+    source: "runtime",
+    sourceId: `${artifact.producer.id}:${artifact.producer.revision}`,
+    confidence: droppedEvents === 0 && complete ? "certain" : "high",
+    detail: `${observedEvents} instruction event(s) observed; ${droppedEvents} producer event(s) dropped.`,
+    artifact: {
+      format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
+      formatVersion: String(RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION),
+      sha256: sourceSha256,
+      romContentSha256: artifact.romContentSha256
+    }
+  };
+  const report = {
+    id: `import:instruction-trace:${sourceSha256}`,
+    format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
+    sourceName,
+    sourceSha256,
+    sourceVersion: `v${RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION}@${artifact.producer.id}:${artifact.producer.revision}`,
+    imported: { executionRecords: runtime.length, executionEvents: observedEvents },
+    unsupported: droppedEvents === 0 ? [] : [
+      {
+        field: "instruction-addresses",
+        count: droppedEvents,
+        reason: "Producer buffer overflow occurred before these events could be pulled."
+      }
+    ],
+    warnings: complete ? [] : ["Trace artifact ended while capture was still active."]
+  };
+  return {
+    batch: { runtime, evidence: [evidence], imports: [report] },
+    report,
+    sourceSha256,
+    observedEvents,
+    droppedEvents
+  };
+};
+
+// packages/disassembler/src/source-export.ts
+import { createHash as createHash6 } from "node:crypto";
 import * as fs5 from "node:fs";
 import path4 from "node:path";
 var SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
 var SOURCE_EXPORT_SCHEMA_VERSION = 1;
 var SOURCE_EXPORT_MANIFEST = "generated-files.json";
-var sourceExportSha256 = (value) => createHash5("sha256").update(value).digest("hex");
+var sourceExportSha256 = (value) => createHash6("sha256").update(value).digest("hex");
 var canonicalize2 = (value) => {
   if (Array.isArray(value)) return value.map(canonicalize2);
   if (value && typeof value === "object") {
@@ -15190,6 +15470,53 @@ var contextKey = (context) => context.map((frame) => `${hexAddress(frame.callSit
 var nodeIdFor = (address3, context) => `cfg:${hexAddress(address3)}${context.length === 0 ? "" : `:${contextKey(context)}`}`;
 var sortedUnique2 = (values) => [...new Set(values)].sort();
 var sortWork = (left, right) => left.address - right.address || contextKey(left.context).localeCompare(contextKey(right.context)) || left.entryPoint.localeCompare(right.entryPoint) || (left.predecessor ?? "").localeCompare(right.predecessor ?? "");
+var StaticWorkQueue = class {
+  #values = [];
+  #nextSequence = 0;
+  constructor(items) {
+    for (const item of items) this.push(item);
+  }
+  get length() {
+    return this.#values.length;
+  }
+  peek() {
+    return this.#values[0]?.item;
+  }
+  push(item) {
+    const queued = { item, sequence: this.#nextSequence++ };
+    this.#values.push(queued);
+    let index = this.#values.length - 1;
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this.#compare(this.#values[parent], queued) <= 0) break;
+      this.#values[index] = this.#values[parent];
+      index = parent;
+    }
+    this.#values[index] = queued;
+  }
+  shift() {
+    const first = this.#values[0];
+    const last = this.#values.pop();
+    if (!first || !last) return void 0;
+    if (this.#values.length > 0) {
+      let index = 0;
+      while (true) {
+        const left = index * 2 + 1;
+        if (left >= this.#values.length) break;
+        const right = left + 1;
+        const child = right < this.#values.length && this.#compare(this.#values[right], this.#values[left]) < 0 ? right : left;
+        if (this.#compare(last, this.#values[child]) <= 0) break;
+        this.#values[index] = this.#values[child];
+        index = child;
+      }
+      this.#values[index] = last;
+    }
+    return first.item;
+  }
+  #compare(left, right) {
+    return sortWork(left.item, right.item) || left.sequence - right.sequence;
+  }
+};
 var edgeIdFor = (from, kind, toAddress, override) => `edge:${from}:${kind}:${toAddress === void 0 ? "unresolved" : hexAddress(toAddress)}${override ? `:${override}` : ""}`;
 var conflictKindFor2 = (decoded) => {
   if (decoded.kind === "ambiguous") return "state-ambiguity";
@@ -15220,14 +15547,16 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
     }
     overrides.set(override.address, override);
   }
-  const queue = [...seeds].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id)).map((seed) => ({
-    address: seed.address,
-    state: seed.state,
-    context: [],
-    entryPoint: seed.id,
-    evidence: sortedUnique2(seed.evidence),
-    path: []
-  }));
+  const queue = new StaticWorkQueue(
+    [...seeds].sort((left, right) => left.address - right.address || left.id.localeCompare(right.id)).map((seed) => ({
+      address: seed.address,
+      state: seed.state,
+      context: [],
+      entryPoint: seed.id,
+      evidence: sortedUnique2(seed.evidence),
+      path: []
+    }))
+  );
   const states = /* @__PURE__ */ new Map();
   const nodes = /* @__PURE__ */ new Map();
   const edges = /* @__PURE__ */ new Map();
@@ -15249,7 +15578,6 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
   };
   const enqueue = (item) => {
     queue.push(item);
-    queue.sort(sortWork);
   };
   for (const seed of seeds) {
     functions.set(`function:${hexAddress(seed.address)}`, {
@@ -15262,7 +15590,7 @@ var analyzeStaticControlFlow = (adapter, seeds, options = {}) => {
   }
   while (queue.length > 0) {
     if (processedWorkItems >= maxWorkItems) {
-      const next = queue[0];
+      const next = queue.peek();
       addIncomplete({
         kind: "work-limit",
         address: next.address,
@@ -19532,7 +19860,7 @@ var Cpu65816Decoder = class {
     return { kind: "instruction", instruction: alternatives[0] };
   }
 };
-var hex = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
+var hex2 = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
 function formatCpu65816Instruction(instruction) {
   if (instruction.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
@@ -19547,76 +19875,76 @@ function formatCpu65816Instruction(instruction) {
     case "accumulator":
       break;
     case "signature":
-      text = `#${hex(value, 1)}`;
+      text = `#${hex2(value, 1)}`;
       break;
     case "immediate":
-      text = `#${hex(value, operand?.width ?? 1)}`;
+      text = `#${hex2(value, operand?.width ?? 1)}`;
       break;
     case "immediate16":
-      text = hex(value, 2);
+      text = hex2(value, 2);
       break;
     case "direct":
-      text = hex(value, 1);
+      text = hex2(value, 1);
       break;
     case "directIndexedX":
-      text = `${hex(value, 1)},x`;
+      text = `${hex2(value, 1)},x`;
       break;
     case "directIndexedY":
-      text = `${hex(value, 1)},y`;
+      text = `${hex2(value, 1)},y`;
       break;
     case "directIndirect":
-      text = instruction.mnemonic === "PEI" ? hex(value, 1) : `(${hex(value, 1)})`;
+      text = instruction.mnemonic === "PEI" ? hex2(value, 1) : `(${hex2(value, 1)})`;
       break;
     case "directIndirectLong":
-      text = `[${hex(value, 1)}]`;
+      text = `[${hex2(value, 1)}]`;
       break;
     case "directIndexedXIndirect":
-      text = `(${hex(value, 1)},x)`;
+      text = `(${hex2(value, 1)},x)`;
       break;
     case "directIndirectIndexedY":
-      text = `(${hex(value, 1)}),y`;
+      text = `(${hex2(value, 1)}),y`;
       break;
     case "directIndirectLongIndexedY":
-      text = `[${hex(value, 1)}],y`;
+      text = `[${hex2(value, 1)}],y`;
       break;
     case "stackRelative":
-      text = `${hex(value, 1)},s`;
+      text = `${hex2(value, 1)},s`;
       break;
     case "stackRelativeIndirectIndexedY":
-      text = `(${hex(value, 1)},s),y`;
+      text = `(${hex2(value, 1)},s),y`;
       break;
     case "absolute":
-      text = hex(value, 2);
+      text = hex2(value, 2);
       break;
     case "absoluteIndexedX":
-      text = `${hex(value, 2)},x`;
+      text = `${hex2(value, 2)},x`;
       break;
     case "absoluteIndexedY":
-      text = `${hex(value, 2)},y`;
+      text = `${hex2(value, 2)},y`;
       break;
     case "absoluteLong":
-      text = hex(value, 3);
+      text = hex2(value, 3);
       break;
     case "absoluteLongIndexedX":
-      text = `${hex(value, 3)},x`;
+      text = `${hex2(value, 3)},x`;
       break;
     case "absoluteIndirect":
-      text = `(${hex(value, 2)})`;
+      text = `(${hex2(value, 2)})`;
       break;
     case "absoluteIndexedXIndirect":
-      text = `(${hex(value, 2)},x)`;
+      text = `(${hex2(value, 2)},x)`;
       break;
     case "absoluteIndirectLong":
-      text = `[${hex(value, 2)}]`;
+      text = `[${hex2(value, 2)}]`;
       break;
     case "relative":
-      text = hex(operand?.targetAddress ?? 0, 3);
+      text = hex2(operand?.targetAddress ?? 0, 3);
       break;
     case "relativeLong":
-      text = instruction.mnemonic === "PER" ? hex(value, 2) : hex(operand?.targetAddress ?? 0, 3);
+      text = instruction.mnemonic === "PER" ? hex2(value, 2) : hex2(operand?.targetAddress ?? 0, 3);
       break;
     case "blockMove":
-      text = `${hex(instruction.operands[0]?.value ?? 0, 1)},${hex(instruction.operands[1]?.value ?? 0, 1)}`;
+      text = `${hex2(instruction.operands[0]?.value ?? 0, 1)},${hex2(instruction.operands[1]?.value ?? 0, 1)}`;
       break;
     default:
       throw new Error(`Unsupported 65816 formatter mode '${instruction.mode}'.`);
@@ -21625,10 +21953,10 @@ var ArchSPC700 = class {
         opcodeByte = 202;
       }
     }
-    const hex4 = mem.addressText.match(/^\$([\da-f]+)$/i);
+    const hex5 = mem.addressText.match(/^\$([\da-f]+)$/i);
     let addr;
-    if (hex4) {
-      addr = Number.parseInt(hex4[1], 16) & 65535;
+    if (hex5) {
+      addr = Number.parseInt(hex5[1], 16) & 65535;
     } else {
       addr = this.assembler.operandResolver.getnum(mem.addressText) & 65535;
     }
@@ -24726,7 +25054,6 @@ var readVector = (rom, mapper, pointer) => {
   const target = low | high << 8;
   return target === 0 || target === 65535 ? void 0 : target;
 };
-var intervalContains = (annotation, offset) => annotation.addressSpace === SNES_FILE_ADDRESS_SPACE && annotation.start <= offset && offset < annotation.end;
 var stateOverrideFor = (annotation) => {
   if (!annotation.state) return void 0;
   return {
@@ -24780,7 +25107,12 @@ var mappedAddressExplanation = (indexed, identity) => {
   }
   return "CPU address does not map to the loaded ROM.";
 };
-var effectiveAddressesFor = (instruction, mapper, romSize) => instruction.references.filter((reference) => reference.kind === "data" || reference.kind === "pointer").map((reference) => {
+var mappedRomOffset = (address3, context, romSize) => {
+  const fileOffset = snesRomAddressSpace.toOutputOffset(address3, context);
+  if (fileOffset < 0 || fileOffset >= romSize) return void 0;
+  return snesRomAddressSpace.fromOutputOffset(fileOffset, context) < 0 ? void 0 : { fileOffset };
+};
+var effectiveAddressesFor = (instruction, context, romSize) => instruction.references.filter((reference) => reference.kind === "data" || reference.kind === "pointer").map((reference) => {
   const operandIndex = reference.operandIndex ?? 0;
   if (reference.address === void 0) {
     return {
@@ -24800,7 +25132,7 @@ var effectiveAddressesFor = (instruction, mapper, romSize) => instruction.refere
       explanation: indexed ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access; the final address is unresolved.` : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`
     };
   }
-  const identity = indexed ? void 0 : identifySnesCpuAddress(reference.address, createSnesAddressContext(mapper), romSize);
+  const identity = indexed ? void 0 : mappedRomOffset(reference.address, context, romSize);
   return {
     operandIndex,
     ...indexed ? { baseAddress: reference.address } : { address: reference.address },
@@ -24942,9 +25274,12 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
   const context = createSnesAddressContext(mapper);
   const decoder = new Cpu65816Decoder();
   const source = new Uint8ArrayDecoderSource(rom.bytes());
-  const evidenceById = new Map((options.evidence ?? []).map((record) => [record.id, record]));
+  const evidenceById = new Map((options.evidence ?? []).map((record2) => [record2.id, record2]));
   const annotations = (options.annotations ?? []).filter(
     (annotation) => !annotation.id.startsWith("static:65816:")
+  );
+  const annotationIndex = new HalfOpenIntervalIndex(
+    annotations.filter(({ addressSpace }) => addressSpace === SNES_FILE_ADDRESS_SPACE)
   );
   const runEvidence = `static:65816:${rom.identity.contentSha256}`;
   const explicitStateOverrides = /* @__PURE__ */ new Map();
@@ -24988,9 +25323,9 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
     });
   }
   const stateAtAddress = (base, address3) => {
-    const identity = identifySnesCpuAddress(address3, context, rom.length);
+    const identity = mappedRomOffset(address3, context, rom.length);
     if (!identity) return { state: base, evidence: [] };
-    const matching = annotations.filter((annotation) => intervalContains(annotation, identity.fileOffset) && annotation.state).map((annotation) => ({
+    const matching = annotationIndex.at(identity.fileOffset).filter((annotation) => annotation.state).map((annotation) => ({
       annotation,
       rank: Math.max(
         0,
@@ -25020,7 +25355,9 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
   const projectAddress = (addressSpace, address3) => {
     if (addressSpace === SNES_CPU_ADDRESS_SPACE) return address3;
     if (addressSpace === SNES_FILE_ADDRESS_SPACE) {
-      return identifySnesFileOffset(address3, context, rom.length)?.address;
+      if (address3 < 0 || address3 >= rom.length) return void 0;
+      const mapped = snesRomAddressSpace.fromOutputOffset(address3, context);
+      return mapped < 0 ? void 0 : mapped;
     }
     return void 0;
   };
@@ -25114,11 +25451,9 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
       stateKey: cpu65816StateKey,
       transfer: transferCpu65816State,
       decode: (address3, state) => {
-        const identity = identifySnesCpuAddress(address3, context, rom.length);
+        const identity = mappedRomOffset(address3, context, rom.length);
         if (!identity) return { kind: "error", reason: "Address does not map into the ROM." };
-        const blocked = annotations.find(
-          (annotation) => intervalContains(annotation, identity.fileOffset) && DATA_CLASSIFICATIONS.has(annotation.classification)
-        );
+        const blocked = annotationIndex.at(identity.fileOffset).find((annotation) => DATA_CLASSIFICATIONS.has(annotation.classification));
         if (blocked) {
           return {
             kind: "blocked",
@@ -25141,12 +25476,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
         }
         if (decoded.kind === "error") return { kind: "error", reason: decoded.message };
         const instruction = decoded.instruction;
-        const crossing = annotations.find(
-          (annotation) => DATA_CLASSIFICATIONS.has(annotation.classification) && Array.from(
-            { length: instruction.size },
-            (_, index) => identity.fileOffset + index
-          ).some((offset) => intervalContains(annotation, offset))
-        );
+        const crossing = annotationIndex.overlapping(identity.fileOffset, identity.fileOffset + instruction.size).find((annotation) => DATA_CLASSIFICATIONS.has(annotation.classification));
         if (crossing) {
           return {
             kind: "blocked",
@@ -25167,7 +25497,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
           evidence: overrideEvidence,
           flow: instruction.flow,
           targets: controlsFor2(instruction, interruptTargetsFor(instruction, state)),
-          effectiveAddresses: effectiveAddressesFor(instruction, mapper, rom.length)
+          effectiveAddresses: effectiveAddressesFor(instruction, context, rom.length)
         };
         return { kind: "instruction", instruction: normalized };
       }
@@ -25190,7 +25520,7 @@ var analyzeSnes65816 = (rom, mapper, options = {}) => {
 };
 
 // packages/plugin-snes/src/disassembler/dizraw-import.ts
-import { createHash as createHash6 } from "node:crypto";
+import { createHash as createHash7 } from "node:crypto";
 var SUBSTITUTIONS = [
   ["0001E", "ZQ"],
   ["B0001", "Zq"],
@@ -25388,7 +25718,7 @@ var importDizRaw = (xml, options = {}) => {
   const dataAttributes = attributes(data.opening);
   const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
   if (!mapper) throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
-  const sourceSha256 = createHash6("sha256").update(xml).digest("hex");
+  const sourceSha256 = createHash7("sha256").update(xml).digest("hex");
   const sourceName = options.sourceName ?? "import.dizraw";
   const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
   const labelsElement = element(data.body, "Labels");
@@ -25563,7 +25893,7 @@ var importDizRaw = (xml, options = {}) => {
 };
 
 // packages/plugin-snes/src/disassembler/mesen-runtime.ts
-import { createHash as createHash7 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 var MESEN_CE_EVIDENCE_REVISION = "af2342818ca81a93b346146802047760400fc7b1";
 var CDL_HEADER = new TextEncoder().encode("CDLv2");
 var CDL_HEADER_SIZE = 9;
@@ -25575,9 +25905,9 @@ var CDL_INDEX_8 = 16;
 var CDL_MEMORY_8 = 32;
 var CDL_GSU = 64;
 var CDL_CX4 = 128;
-var sha2564 = (value) => createHash7("sha256").update(value).digest("hex");
-var stableSuffix = (value) => sha2564(canonicalJson(value)).slice(0, 16);
-var hex2 = (value, width) => value.toString(16).toUpperCase().padStart(width, "0");
+var sha2565 = (value) => createHash8("sha256").update(value).digest("hex");
+var stableSuffix = (value) => sha2565(canonicalJson(value)).slice(0, 16);
+var hex3 = (value, width) => value.toString(16).toUpperCase().padStart(width, "0");
 var assertContext = (rom, mapper, context) => {
   if (context.projectRomContentSha256 !== rom.identity.contentSha256) {
     throw new Error(
@@ -25599,7 +25929,7 @@ var rangeRecords = (flags, mask, coverage, evidenceId, sourceSha256) => {
     if (matches && start < 0) start = offset;
     if (!matches && start >= 0) {
       records.push({
-        id: `runtime:mesence-cdl:${sourceSha256}:${coverage}:${hex2(start, 6)}-${hex2(offset, 6)}`,
+        id: `runtime:mesence-cdl:${sourceSha256}:${coverage}:${hex3(start, 6)}-${hex3(offset, 6)}`,
         kind: "runtime-coverage",
         architecture: "snes.65816",
         addressSpace: SNES_FILE_ADDRESS_SPACE,
@@ -25615,7 +25945,7 @@ var rangeRecords = (flags, mask, coverage, evidenceId, sourceSha256) => {
   return records;
 };
 var annotationForInstruction = (fileOffset, size, state, evidenceId, sourceSha256) => {
-  const suffix = `${sourceSha256}:${hex2(fileOffset, 6)}:${stableSuffix(state)}`;
+  const suffix = `${sourceSha256}:${hex3(fileOffset, 6)}:${stableSuffix(state)}`;
   const normalizedState = {
     ...typeof state.e === "boolean" ? { e: state.e } : {},
     ...typeof state.m === "boolean" ? { m: state.m } : {},
@@ -25687,10 +26017,10 @@ var importMesenSnesCdl = (bytes, rom, mapper, context) => {
   const actualCrc = CRC32.compute(rom.bytes());
   if (expectedCrc !== actualCrc) {
     throw new Error(
-      `MesenCE CDL ROM CRC mismatch: CDL expects $${hex2(expectedCrc, 8)}, loaded ROM is $${hex2(actualCrc, 8)}.`
+      `MesenCE CDL ROM CRC mismatch: CDL expects $${hex3(expectedCrc, 8)}, loaded ROM is $${hex3(actualCrc, 8)}.`
     );
   }
-  const sourceSha256 = sha2564(bytes);
+  const sourceSha256 = sha2565(bytes);
   const evidenceId = `runtime:mesence-cdl:${sourceSha256}`;
   const flags = bytes.slice(CDL_HEADER_SIZE);
   const source = new Uint8ArrayDecoderSource(rom.bytes());
@@ -25741,7 +26071,7 @@ var importMesenSnesCdl = (bytes, rom, mapper, context) => {
       continue;
     }
     const instruction = decoded.instruction;
-    const recordSuffix = `${sourceSha256}:${hex2(fileOffset, 6)}:${instruction.size}`;
+    const recordSuffix = `${sourceSha256}:${hex3(fileOffset, 6)}:${instruction.size}`;
     runtime.push({
       id: `runtime:mesence-cdl:execution:${recordSuffix}`,
       kind: "runtime-execution",
@@ -25775,10 +26105,10 @@ var importMesenSnesCdl = (bytes, rom, mapper, context) => {
     fileOffset += instruction.size;
   }
   const executedRanges = runtime.filter(
-    (record) => record.kind === "runtime-coverage" && record.coverage === "executed"
+    (record2) => record2.kind === "runtime-coverage" && record2.coverage === "executed"
   ).length;
   const readRanges = runtime.filter(
-    (record) => record.kind === "runtime-coverage" && record.coverage === "read"
+    (record2) => record2.kind === "runtime-coverage" && record2.coverage === "read"
   ).length;
   const report = importReport(
     "cdl",
@@ -25811,7 +26141,7 @@ var importMesenSnesCdl = (bytes, rom, mapper, context) => {
     sourceSha256,
     rom,
     mapper,
-    `MesenCE CDLv2 with verified ROM CRC $${hex2(actualCrc, 8)}.`
+    `MesenCE CDLv2 with verified ROM CRC $${hex3(actualCrc, 8)}.`
   );
   return {
     report,
@@ -25852,9 +26182,9 @@ var memoryWidthFor = (instruction, state) => {
   }
   return state.m ? 1 : 2;
 };
-var incrementRecord = (records, record) => {
-  const current = records.get(record.id);
-  records.set(record.id, current ? { ...current, count: current.count + 1 } : record);
+var incrementRecord = (records, record2) => {
+  const current = records.get(record2.id);
+  records.set(record2.id, current ? { ...current, count: current.count + 1 } : record2);
 };
 var importMesen65816Trace = (text, metadata, rom, mapper, context) => {
   assertContext(rom, mapper, context);
@@ -25871,7 +26201,7 @@ var importMesen65816Trace = (text, metadata, rom, mapper, context) => {
       `Trace mapper mismatch: trace expects '${metadata.mapper}', loaded project uses '${mapper}'.`
     );
   }
-  const sourceSha256 = sha2564(text);
+  const sourceSha256 = sha2565(text);
   const evidenceId = `runtime:mesence-trace:${sourceSha256}`;
   const decoder = new Cpu65816Decoder();
   const source = new Uint8ArrayDecoderSource(rom.bytes());
@@ -25996,8 +26326,8 @@ var importMesen65816Trace = (text, metadata, rom, mapper, context) => {
         }
       ] : []
     ]) {
-      const record = {
-        id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverage.kind}:${hex2(coverage.start, 6)}-${hex2(coverage.end, 6)}`,
+      const record2 = {
+        id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverage.kind}:${hex3(coverage.start, 6)}-${hex3(coverage.end, 6)}`,
         kind: "runtime-coverage",
         architecture: "snes.65816",
         addressSpace: SNES_FILE_ADDRESS_SPACE,
@@ -26007,7 +26337,7 @@ var importMesen65816Trace = (text, metadata, rom, mapper, context) => {
         count: 1,
         evidence: [evidenceId]
       };
-      incrementRecord(runtimeById, record);
+      incrementRecord(runtimeById, record2);
     }
     for (const annotation of annotationForInstruction(
       event.fileOffset,
@@ -26053,7 +26383,7 @@ var importMesen65816Trace = (text, metadata, rom, mapper, context) => {
         const mapped = identifySnesCpuAddress(event.effectiveAddress, addressContext, rom.length);
         if (!mapped) continue;
         const coverage = {
-          id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverageKind}:${hex2(mapped.fileOffset, 6)}-${hex2(mapped.fileOffset + width, 6)}`,
+          id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverageKind}:${hex3(mapped.fileOffset, 6)}-${hex3(mapped.fileOffset + width, 6)}`,
           kind: "runtime-coverage",
           architecture: "snes.65816",
           addressSpace: SNES_FILE_ADDRESS_SPACE,
@@ -26104,7 +26434,7 @@ var importMesen65816Trace = (text, metadata, rom, mapper, context) => {
   }
   const analysis = [...targetOverrides.entries()].map(
     ([address3, observation]) => ({
-      id: `runtime:target-override:snes.cpu:${hex2(address3, 6)}`,
+      id: `runtime:target-override:snes.cpu:${hex3(address3, 6)}`,
       kind: "target-override",
       addressSpace: SNES_CPU_ADDRESS_SPACE,
       address: address3,
@@ -26120,10 +26450,10 @@ var importMesen65816Trace = (text, metadata, rom, mapper, context) => {
     sourceSha256,
     {
       traceLines: parsed.length,
-      executions: runtime.filter((record) => record.kind === "runtime-execution").length,
-      cpuStates: runtime.filter((record) => record.kind === "runtime-cpu-state").length,
-      memoryAccesses: runtime.filter((record) => record.kind === "runtime-memory-access").length,
-      controlTargets: runtime.filter((record) => record.kind === "runtime-control-target").length,
+      executions: runtime.filter((record2) => record2.kind === "runtime-execution").length,
+      cpuStates: runtime.filter((record2) => record2.kind === "runtime-cpu-state").length,
+      memoryAccesses: runtime.filter((record2) => record2.kind === "runtime-memory-access").length,
+      controlTargets: runtime.filter((record2) => record2.kind === "runtime-control-target").length,
       targetOverrides: analysis.length,
       annotations: annotations.length
     },
@@ -26184,7 +26514,7 @@ var importMesen65816Trace = (text, metadata, rom, mapper, context) => {
 };
 
 // packages/plugin-snes/src/disassembler/mesen-labels.ts
-import { createHash as createHash8 } from "node:crypto";
+import { createHash as createHash9 } from "node:crypto";
 
 // packages/plugin-snes/src/disassembler/spc700-address-space.ts
 var SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
@@ -26239,7 +26569,7 @@ var MEMORY_TYPES = {
     maximum: 65536
   }
 };
-var sha2565 = (value) => createHash8("sha256").update(value).digest("hex");
+var sha2566 = (value) => createHash9("sha256").update(value).digest("hex");
 var reportFor = (operation, sourceName, sourceSha256, imported, unsupported, warnings) => ({
   id: `${operation}:mesence-labels:${sourceSha256}`,
   format: "mesence-labels",
@@ -26273,7 +26603,7 @@ var importMesenLabels = (text, rom, mapper, context) => {
       `Mapper/project mismatch: project expects '${context.projectMapper}', importer received '${mapper}'.`
     );
   }
-  const sourceSha256 = sha2565(text);
+  const sourceSha256 = sha2566(text);
   const evidenceId = `import:mesence-labels:${sourceSha256}`;
   const labels = [];
   const comments = [];
@@ -26480,7 +26810,7 @@ var exportMesenLabels = (labels, comments, rom, mapper, sourceName = "project.ml
   );
   const text = rows.length === 0 ? "" : `${rows.join("\n")}
 `;
-  const outputSha256 = sha2565(text);
+  const outputSha256 = sha2566(text);
   return {
     text,
     report: reportFor("export", sourceName, outputSha256, { labels: rows.length }, unsupported, [])
@@ -26627,19 +26957,19 @@ var detectSnesRom = (rom, options = {}) => {
 // packages/plugin-snes/src/disassembler/source-export.ts
 import * as fs7 from "node:fs";
 import path7 from "node:path";
-var hex3 = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
+var hex4 = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 var known2 = (value) => {
   if (!value || typeof value !== "object") return void 0;
   const entry = value;
   return entry.kind === "known" && typeof entry.value === "number" ? entry.value : void 0;
 };
-var decodeState = (record) => ({
-  ...known2(record.e) === void 0 ? {} : { e: known2(record.e) === 0 ? 0 : 1 },
-  ...known2(record.m) === void 0 ? {} : { m: known2(record.m) === 0 ? 0 : 1 },
-  ...known2(record.x) === void 0 ? {} : { x: known2(record.x) === 0 ? 0 : 1 },
-  ...known2(record.pbr) === void 0 ? {} : { programBank: known2(record.pbr) & 255 },
-  ...known2(record.dbr) === void 0 ? {} : { dataBank: known2(record.dbr) & 255 },
-  ...known2(record.d) === void 0 ? {} : { directPage: known2(record.d) & 65535 }
+var decodeState = (record2) => ({
+  ...known2(record2.e) === void 0 ? {} : { e: known2(record2.e) === 0 ? 0 : 1 },
+  ...known2(record2.m) === void 0 ? {} : { m: known2(record2.m) === 0 ? 0 : 1 },
+  ...known2(record2.x) === void 0 ? {} : { x: known2(record2.x) === 0 ? 0 : 1 },
+  ...known2(record2.pbr) === void 0 ? {} : { programBank: known2(record2.pbr) & 255 },
+  ...known2(record2.dbr) === void 0 ? {} : { dataBank: known2(record2.dbr) & 255 },
+  ...known2(record2.d) === void 0 ? {} : { directPage: known2(record2.d) & 65535 }
 });
 var formatSnes65816SourceInstruction = (instruction) => {
   const formatted = formatCpu65816Instruction(instruction);
@@ -26659,7 +26989,7 @@ var formatSnes65816SourceInstruction = (instruction) => {
   return `${mnemonic}${suffix}${operand}`;
 };
 var mapperDirective = (mapper) => mapper === "bigsa1rom" ? "fullsa1rom" : mapper;
-var roleAt = (start, end, mapper, shards) => {
+var roleAt = (start, end, mapper, annotations) => {
   const headerBase = {
     lorom: 32704,
     sfxrom: 32704,
@@ -26672,9 +27002,7 @@ var roleAt = (start, end, mapper, shards) => {
   const base = headerBase[mapper];
   if (base !== void 0 && start >= base && end <= base + 32) return "snes-header";
   if (base !== void 0 && start >= base + 32 && end <= base + 64) return "vectors";
-  if (shards.annotations.some(
-    (entry) => entry.addressSpace === SNES_FILE_ADDRESS_SPACE && entry.classification === "empty" && entry.start <= start && end <= entry.end
-  )) {
+  if (annotations.at(start).some((entry) => entry.classification === "empty" && entry.start <= start && end <= entry.end)) {
     return "padding";
   }
   return "raw";
@@ -26706,7 +27034,7 @@ var metadataLines = (shards, mapper, romSize) => {
       ...label.comment ? { comment: label.comment } : {}
     });
   }
-  for (const fn of shards.analysis.filter((record) => record.kind === "function")) {
+  for (const fn of shards.analysis.filter((record2) => record2.kind === "function")) {
     const offset = toFileOffset(fn.addressSpace, fn.address, mapper, romSize);
     if (offset === void 0 || values.get(offset)?.some((line) => line.name)) continue;
     append(offset, { name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}` });
@@ -26734,7 +27062,7 @@ var renderedMetadata = (lines) => {
   }
   return output;
 };
-var rejectedByAnnotation = (node, shards) => {
+var rejectedByAnnotation = (node, annotations) => {
   const rawClassifications = /* @__PURE__ */ new Set([
     "unreached",
     "data8",
@@ -26749,15 +27077,13 @@ var rejectedByAnnotation = (node, shards) => {
     "empty",
     "text"
   ]);
-  return shards.annotations.some(
-    (entry) => entry.addressSpace === SNES_FILE_ADDRESS_SPACE && rawClassifications.has(entry.classification) && entry.start < node.fileOffset + node.size && node.fileOffset < entry.end
-  );
+  return annotations.overlapping(node.fileOffset, node.fileOffset + node.size).some((entry) => rawClassifications.has(entry.classification));
 };
-var planInstructions = (rom, mapper, shards, metadata) => {
+var planInstructions = (rom, mapper, shards, metadata, annotations) => {
   const decoder = new Cpu65816Decoder();
   const source = new Uint8ArrayDecoderSource(rom.bytes());
   const conflictNodes = new Set(
-    shards.analysis.filter((record) => record.kind === "conflict").flatMap((record) => record.nodes)
+    shards.analysis.filter((record2) => record2.kind === "conflict").flatMap((record2) => record2.nodes)
   );
   const metadataOffsets = [...metadata.keys()].sort((left, right) => left - right);
   const hasInteriorMetadata = (start, end) => {
@@ -26771,24 +27097,24 @@ var planInstructions = (rom, mapper, shards, metadata) => {
     return low < metadataOffsets.length && metadataOffsets[low] < end;
   };
   const groups = /* @__PURE__ */ new Map();
-  for (const record of shards.analysis) {
-    if (record.kind !== "cfg-node" || record.fileOffset < 0 || record.fileOffset + record.size > rom.length || conflictNodes.has(record.id) || rejectedByAnnotation(record, shards)) {
+  for (const record2 of shards.analysis) {
+    if (record2.kind !== "cfg-node" || record2.fileOffset < 0 || record2.fileOffset + record2.size > rom.length || conflictNodes.has(record2.id) || rejectedByAnnotation(record2, annotations)) {
       continue;
     }
-    if (hasInteriorMetadata(record.fileOffset, record.fileOffset + record.size)) {
+    if (hasInteriorMetadata(record2.fileOffset, record2.fileOffset + record2.size)) {
       continue;
     }
-    groups.set(record.fileOffset, [...groups.get(record.fileOffset) ?? [], record]);
+    groups.set(record2.fileOffset, [...groups.get(record2.fileOffset) ?? [], record2]);
   }
   const candidates = /* @__PURE__ */ new Map();
   for (const [offset, records] of [...groups].sort(([left], [right]) => left - right)) {
-    const variants = records.sort((left, right) => left.id.localeCompare(right.id)).map((record) => {
-      const state = decodeState(record.incomingState);
-      const result = decoder.decode({ source, offset, logicalAddress: record.address, state });
-      if (result.kind !== "instruction" || result.instruction.size !== record.size || result.instruction.opcode !== record.opcode || result.instruction.specificationId !== record.specificationId) {
+    const variants = records.sort((left, right) => left.id.localeCompare(right.id)).map((record2) => {
+      const state = decodeState(record2.incomingState);
+      const result = decoder.decode({ source, offset, logicalAddress: record2.address, state });
+      if (result.kind !== "instruction" || result.instruction.size !== record2.size || result.instruction.opcode !== record2.opcode || result.instruction.specificationId !== record2.specificationId) {
         return void 0;
       }
-      return { record, state, source: formatSnes65816SourceInstruction(result.instruction) };
+      return { record: record2, state, source: formatSnes65816SourceInstruction(result.instruction) };
     });
     if (variants.some((entry) => entry === void 0)) continue;
     const resolved = variants;
@@ -26840,7 +27166,7 @@ var headerCuts = (mapper) => {
   const value = base[mapper];
   return value === void 0 ? [] : [value, value + 32, value + 64];
 };
-var planSpans = (rom, mapper, shards, instructions, metadata) => {
+var planSpans = (rom, mapper, shards, instructions, metadata, annotations) => {
   const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
   const cuts = /* @__PURE__ */ new Set([0, rom.length]);
   for (let offset = bankSize; offset < rom.length; offset += bankSize) cuts.add(offset);
@@ -26866,7 +27192,7 @@ var planSpans = (rom, mapper, shards, instructions, metadata) => {
   return sorted.slice(0, -1).map((start, index) => {
     const end = sorted[index + 1];
     const instruction = instructions.get(start);
-    return instruction?.end === end ? { start, end, role: "code", instruction } : { start, end, role: roleAt(start, end, mapper, shards) };
+    return instruction?.end === end ? { start, end, role: "code", instruction } : { start, end, role: roleAt(start, end, mapper, annotations) };
   });
 };
 var preflight = (directory, force) => {
@@ -26910,8 +27236,13 @@ var exportSnes65816Source = (project, rom, directory, options) => {
   const context = createSnesAddressContext(mapper);
   const previousManifest = preflight(directory, options.force ?? false);
   const metadata = metadataLines(project.shards, mapper, rom.length);
-  const instructions = planInstructions(rom, mapper, project.shards, metadata);
-  const planned = planSpans(rom, mapper, project.shards, instructions, metadata);
+  const annotations = new HalfOpenIntervalIndex(
+    project.shards.annotations.filter(
+      ({ addressSpace }) => addressSpace === SNES_FILE_ADDRESS_SPACE
+    )
+  );
+  const instructions = planInstructions(rom, mapper, project.shards, metadata, annotations);
+  const planned = planSpans(rom, mapper, project.shards, instructions, metadata, annotations);
   const files = [];
   const spans = [];
   const banks = /* @__PURE__ */ new Map();
@@ -26928,8 +27259,8 @@ var exportSnes65816Source = (project, rom, directory, options) => {
     for (const span of bankSpans) {
       const address3 = snesRomAddressSpace.fromOutputOffset(span.start, context);
       if (address3 < 0)
-        throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex3(span.start)}.`);
-      lines.push("", `org ${hex3(address3)}`, ...renderedMetadata(metadata.get(span.start)));
+        throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex4(span.start)}.`);
+      lines.push("", `org ${hex4(address3)}`, ...renderedMetadata(metadata.get(span.start)));
       if (span.instruction) {
         lines.push(...stateDirectives(span.instruction.state), span.instruction.source);
         spans.push({
@@ -27492,6 +27823,7 @@ Project options:
   --mesen-trace <path>         Import MesenCE default 65816 text trace
   --trace-metadata <path>      Required JSON identity sidecar for --mesen-trace
   --mesen-labels <path>        Import MesenCE label text
+  --instruction-trace <path>   Import a native explicit instruction recording
   --entry <address>            Repeatable 65816 CPU entry point ($/0x/decimal)
   --max-work-items <count>     Deterministic analysis work limit
   --max-call-depth <count>     Bounded call-context depth
@@ -27545,6 +27877,7 @@ var parseCliArguments = (argv) => {
   let mesenTrace;
   let traceMetadata;
   let mesenLabels;
+  let instructionTrace;
   const entryPoints = [];
   let maxWorkItems;
   let maxCallDepth;
@@ -27636,6 +27969,9 @@ var parseCliArguments = (argv) => {
       case "--mesen-labels":
         mesenLabels = value;
         break;
+      case "--instruction-trace":
+        instructionTrace = value;
+        break;
       case "--entry": {
         const normalized = value.startsWith("$") ? `0x${value.slice(1)}` : value;
         const address3 = Number(normalized);
@@ -27699,6 +28035,7 @@ var parseCliArguments = (argv) => {
     mesenTrace,
     traceMetadata,
     mesenLabels,
+    instructionTrace,
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
     maxCallDepth,
@@ -27846,8 +28183,10 @@ var importProjectEvidence = (parsed, cwd) => {
     console.error("Evidence import failed: --rom is required so project identity can be verified.");
     return 1;
   }
-  if (!parsed.mesenCdl && !parsed.mesenTrace && !parsed.mesenLabels) {
-    console.error("Evidence import failed: provide --mesen-cdl, --mesen-trace, or --mesen-labels.");
+  if (!parsed.mesenCdl && !parsed.mesenTrace && !parsed.mesenLabels && !parsed.instructionTrace) {
+    console.error(
+      "Evidence import failed: provide --mesen-cdl, --mesen-trace, --mesen-labels, or --instruction-trace."
+    );
     return 1;
   }
   if (parsed.mesenTrace && !parsed.traceMetadata) {
@@ -27918,6 +28257,19 @@ var importProjectEvidence = (parsed, cwd) => {
           rom,
           mapper,
           projectContext(path8.basename(filename))
+        )
+      );
+    }
+    if (parsed.instructionTrace) {
+      const filename = path8.resolve(cwd, parsed.instructionTrace);
+      merge(
+        importRuntimeInstructionTrace(
+          JSON.parse(fs8.readFileSync(filename, "utf8")),
+          {
+            projectRomContentSha256: loaded.manifest.rom.contentSha256,
+            sourceName: path8.basename(filename),
+            addressSpaceAliases: { "snes.address-space": SNES_CPU_ADDRESS_SPACE }
+          }
         )
       );
     }
@@ -28012,13 +28364,13 @@ var analyzeProject = (parsed, cwd) => {
       throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
     }
     const editableRecords = loaded.shards.analysis.filter(
-      (record) => record.kind === "target-override" || record.kind === "target-set"
+      (record2) => record2.kind === "target-override" || record2.kind === "target-set"
     );
     const targetOverrides = editableRecords.filter(
-      (record) => record.kind === "target-override"
+      (record2) => record2.kind === "target-override"
     );
     const targetSets = editableRecords.filter(
-      (record) => record.kind === "target-set"
+      (record2) => record2.kind === "target-set"
     );
     const result = analyzeSnes65816(rom, loaded.manifest.mapping.mapper, {
       annotations: loaded.shards.annotations,
@@ -28041,7 +28393,7 @@ var analyzeProject = (parsed, cwd) => {
     ];
     const evidence = [
       ...loaded.shards.evidence.filter(
-        (record) => record.sourceId !== "snes.65816.static-v1" && !record.id.startsWith("detector:vector:")
+        (record2) => record2.sourceId !== "snes.65816.static-v1" && !record2.id.startsWith("detector:vector:")
       ),
       ...result.evidenceRecords
     ];

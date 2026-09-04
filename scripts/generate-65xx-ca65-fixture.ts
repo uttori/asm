@@ -20,14 +20,14 @@ import type { InstructionForm } from "../packages/plugin-65xx/src/instructions/s
 const ca65 = process.argv[2];
 const ld65 = process.argv[3];
 const output = process.argv[4];
-const scope = process.argv[5] ?? "phase4-5";
+const scope = process.argv[5] ?? "cmos-vendor";
 if (!ca65 || !ld65 || !output) {
   throw new Error(
-    "Usage: generate-65xx-ca65-fixture.ts <ca65> <ld65> <output.json> [phase4-5|phase6]",
+    "Usage: generate-65xx-ca65-fixture.ts <ca65> <ld65> <output.json> [cmos-vendor|huc6280-m740]",
   );
 }
 
-const phase45Variants = [
+const cmosVendorVariants = [
   ["6502DTV", mos6502DtvForms],
   ["65SC02", cmos65sc02Forms],
   ["65C02", cmos65c02Forms],
@@ -36,12 +36,12 @@ const phase45Variants = [
   ["4510", commodore4510Forms],
   ["45GS02", mega65Gs02Forms],
 ] as const;
-const phase6Variants = [
+const huc6280M740Variants = [
   ["HuC6280", hudsonHuC6280Forms],
   ["M740", mitsubishiM740Forms],
 ] as const;
-const variants = scope === "phase6" ? phase6Variants : phase45Variants;
-if (scope !== "phase4-5" && scope !== "phase6") {
+const variants = scope === "huc6280-m740" ? huc6280M740Variants : cmosVendorVariants;
+if (scope !== "cmos-vendor" && scope !== "huc6280-m740") {
   throw new Error(`Unknown fixture scope '${scope}'.`);
 }
 

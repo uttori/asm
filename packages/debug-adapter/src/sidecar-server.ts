@@ -1,0 +1,353 @@
+import {
+  DEBUG_BACKEND_PROTOCOL_VERSION,
+  type DebugAddress,
+  type DebugBackend,
+  type DebugBackendEvent,
+  type DebugStepKind,
+  type DebugSubscription,
+} from "./contracts.js";
+import {
+  DEFAULT_DEBUG_SIDECAR_LIMITS,
+  DEBUG_SIDECAR_PROTOCOL,
+  DEBUG_SIDECAR_PROTOCOL_VERSION,
+  DebugSidecarMessageParser,
+  DebugSidecarMessageQueue,
+  assertDebugSidecarSessionToken,
+  type DebugSidecarMessage,
+  type DebugSidecarProtocolLimits,
+  type DebugSidecarRequest,
+} from "./sidecar-protocol.js";
+
+/** Construction options for one authenticated sidecar server connection. */
+export interface DebugSidecarServerOptions {
+  readonly backend: string;
+  readonly implementation: DebugBackend;
+  readonly session: string;
+  readonly write: (data: Uint8Array) => Promise<void>;
+  readonly close?: (error?: Error) => Promise<void>;
+  readonly limits?: DebugSidecarProtocolLimits;
+}
+
+type UnknownRecord = Record<string, unknown>;
+type WithoutEnvelope<Message> = Message extends DebugSidecarMessage
+  ? Omit<Message, "protocol" | "version" | "session" | "sequence">
+  : never;
+type BareSidecarMessage = WithoutEnvelope<DebugSidecarMessage>;
+
+const stepKinds = new Set<DebugStepKind>(["instruction", "over", "in", "out"]);
+
+const record = (value: unknown, context: string): UnknownRecord => {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${context} must be an object.`);
+  return value as UnknownRecord;
+};
+
+const integer = (value: unknown, context: string, minimum = 0): number => {
+  if (!Number.isSafeInteger(value) || (value as number) < minimum)
+    throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+  return value as number;
+};
+
+const positiveInteger = (value: unknown, context: string): number => integer(value, context, 1);
+
+const string = (value: unknown, context: string): string => {
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${context} must be a non-empty string.`);
+  return value;
+};
+
+const optionalPositiveInteger = (value: unknown, context: string): number | undefined =>
+  value === undefined ? undefined : positiveInteger(value, context);
+
+const boolean = (value: unknown, context: string, defaultValue: boolean): boolean => {
+  if (value === undefined) return defaultValue;
+  if (typeof value !== "boolean") throw new Error(`${context} must be boolean.`);
+  return value;
+};
+
+const address = (value: unknown, context: string): DebugAddress => {
+  const candidate = record(value, context);
+  if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0)
+    throw new Error(`${context}.architecture must be a non-empty string.`);
+  if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0)
+    throw new Error(`${context}.addressSpace must be a non-empty string.`);
+  const outputOffset =
+    candidate.outputOffset === undefined
+      ? undefined
+      : integer(candidate.outputOffset, `${context}.outputOffset`);
+  return {
+    architecture: candidate.architecture,
+    addressSpace: candidate.addressSpace,
+    address: integer(candidate.address, `${context}.address`),
+    ...(outputOffset === undefined ? {} : { outputOffset }),
+  };
+};
+
+const addresses = (value: unknown, context: string): DebugAddress[] => {
+  if (!Array.isArray(value)) throw new Error(`${context} must be an array.`);
+  return value.map((entry, index) => address(entry, `${context}[${index}]`));
+};
+
+const asError = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
+
+/** Authenticated, ordered server that exposes any `DebugBackend` over the neutral wire protocol. */
+export class DebugSidecarServer {
+  readonly #backendName: string;
+  readonly #implementation: DebugBackend;
+  readonly #session: string;
+  readonly #write: (data: Uint8Array) => Promise<void>;
+  readonly #closeTransport: (error?: Error) => Promise<void>;
+  readonly #parser: DebugSidecarMessageParser;
+  readonly #outgoing: DebugSidecarMessageQueue;
+  readonly #eventSubscription: DebugSubscription;
+  #serverSequence = 1;
+  #capturedEvents: DebugBackendEvent[] | undefined;
+  #receiveTail: Promise<void> = Promise.resolve();
+  #writeTail: Promise<void> = Promise.resolve();
+  #closed = false;
+
+  /**
+   * Creates a server around an emulator-neutral backend implementation.
+   * @param {DebugSidecarServerOptions} options Identity, backend, transport, and safety bounds.
+   */
+  constructor(options: DebugSidecarServerOptions) {
+    if (typeof options.backend !== "string" || options.backend.length === 0)
+      throw new Error("Sidecar backend name must be a non-empty string.");
+    assertDebugSidecarSessionToken(options.session);
+    this.#backendName = options.backend;
+    this.#implementation = options.implementation;
+    this.#session = options.session;
+    this.#write = options.write;
+    this.#closeTransport = options.close ?? (() => Promise.resolve());
+    const limits = options.limits ?? DEFAULT_DEBUG_SIDECAR_LIMITS;
+    this.#parser = new DebugSidecarMessageParser(limits);
+    this.#outgoing = new DebugSidecarMessageQueue(limits);
+    this.#eventSubscription = this.#implementation.onEvent((event) => this.#backendEvent(event));
+  }
+
+  /** @returns {boolean} Whether the server has permanently closed. */
+  get closed(): boolean {
+    return this.#closed;
+  }
+
+  /**
+   * Accepts the next transport chunk. Calls are serialized even when the stream producer overlaps them.
+   * @param {Uint8Array} data Framed protocol bytes from the client.
+   * @returns {Promise<void>} Completion after every request in this chunk has been dispatched.
+   */
+  receive(data: Uint8Array): Promise<void> {
+    if (this.#closed) return Promise.reject(new Error("Sidecar server is closed."));
+    const receive = this.#receiveTail.then(() => this.#receive(data));
+    this.#receiveTail = receive.catch(() => undefined);
+    return receive.catch(async (error: unknown) => {
+      await this.close(asError(error));
+      throw error;
+    });
+  }
+
+  /**
+   * Flushes queued output and closes the server transport exactly once.
+   * @param {Error} error Optional terminal protocol or transport failure.
+   * @returns {Promise<void>} Completion of transport cleanup.
+   */
+  async close(error?: Error): Promise<void> {
+    if (this.#closed) return;
+    this.#closed = true;
+    this.#eventSubscription.dispose();
+    await this.#writeTail.catch(() => undefined);
+    await this.#closeTransport(error);
+  }
+
+  async #receive(data: Uint8Array): Promise<void> {
+    for (const message of this.#parser.push(data)) {
+      if (message.session !== this.#session)
+        throw new Error("Sidecar request session does not match this connection.");
+      if (message.type !== "request")
+        throw new Error("Sidecar client sent a non-request message on a server-only channel.");
+      await this.#handle(message);
+    }
+  }
+
+  async #handle(request: DebugSidecarRequest): Promise<void> {
+    const events: DebugBackendEvent[] = [];
+    this.#capturedEvents = events;
+    let result: unknown;
+    let failure: Error | undefined;
+    try {
+      result = await this.#dispatch(request);
+    } catch (error) {
+      failure = asError(error);
+    } finally {
+      this.#capturedEvents = undefined;
+    }
+
+    await this.#send(
+      this.#envelope({
+        type: "response",
+        requestSequence: request.sequence,
+        success: failure === undefined,
+        ...(failure ? { error: failure.message } : { result }),
+      }),
+    );
+    for (const event of events) await this.#send(this.#eventEnvelope(event));
+    if (request.command === "shutdown" && !failure) await this.close();
+  }
+
+  async #dispatch(request: DebugSidecarRequest): Promise<unknown> {
+    const args = record(request.arguments ?? {}, "Sidecar request arguments");
+    if (request.command === "initialize") {
+      if (args.backend !== this.#backendName) throw new Error("Unexpected backend identity.");
+      if (args.backendProtocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION)
+        throw new Error("Unsupported backend protocol version.");
+      return {
+        backend: this.#backendName,
+        backendProtocolVersion: DEBUG_BACKEND_PROTOCOL_VERSION,
+        capabilities: this.#implementation.capabilities,
+      };
+    }
+    if (request.command === "connect") {
+      await this.#implementation.connect({
+        reset: boolean(args.reset, "Connect reset", true),
+      });
+      return {};
+    }
+    if (request.command === "disconnect") {
+      await this.#implementation.disconnect({
+        terminate: boolean(args.terminate, "Disconnect terminate", true),
+      });
+      return {};
+    }
+    if (request.command === "pause") {
+      await this.#implementation.pause(optionalPositiveInteger(args.threadId, "Pause threadId"));
+      return {};
+    }
+    if (request.command === "continue") {
+      await this.#implementation.continue(
+        optionalPositiveInteger(args.threadId, "Continue threadId"),
+      );
+      return {};
+    }
+    if (request.command === "step") {
+      if (!stepKinds.has(args.kind as DebugStepKind))
+        throw new Error(`Unsupported step kind '${String(args.kind)}'.`);
+      await this.#implementation.step(
+        positiveInteger(args.threadId, "Step threadId"),
+        args.kind as DebugStepKind,
+      );
+      return {};
+    }
+    if (request.command === "threads") return this.#implementation.threads();
+    if (request.command === "stackFrames")
+      return this.#implementation.stackFrames(
+        positiveInteger(args.threadId, "Stack frames threadId"),
+      );
+    if (request.command === "registers")
+      return this.#implementation.registers(positiveInteger(args.frameId, "Registers frameId"));
+    if (request.command === "readMemory") {
+      const memory = await this.#implementation.readMemory(
+        address(args.address, "Memory address"),
+        integer(args.count, "Memory count"),
+      );
+      return {
+        address: memory.address,
+        data: Buffer.from(memory.bytes).toString("base64"),
+        unreadableBytes: memory.unreadableBytes,
+      };
+    }
+    if (request.command === "setBreakpoints")
+      return this.#implementation.setBreakpoints(
+        addresses(args.breakpoints, "Breakpoint addresses"),
+      );
+    if (request.command === "disassemble")
+      return this.#implementation.disassemble(
+        address(args.address, "Disassembly address"),
+        integer(args.count, "Disassembly count"),
+      );
+    if (request.command === "startTrace") {
+      await this.#implementation.startTrace({
+        architecture: string(args.architecture, "Trace architecture"),
+        addressSpace: string(args.addressSpace, "Trace address space"),
+      });
+      return {};
+    }
+    if (request.command === "readTrace")
+      return this.#implementation.readTrace(positiveInteger(args.maxEvents, "Trace batch size"));
+    if (request.command === "stopTrace") {
+      await this.#implementation.stopTrace();
+      return {};
+    }
+    if (request.command === "ping") return { pong: true };
+    if (request.command === "shutdown") return {};
+    throw new Error(`Unsupported command '${String(request.command)}'.`);
+  }
+
+  #backendEvent(event: DebugBackendEvent): void {
+    if (this.#closed) return;
+    if (this.#capturedEvents) {
+      this.#capturedEvents.push(event);
+      return;
+    }
+    void this.#send(this.#eventEnvelope(event)).catch((error: unknown) =>
+      this.close(asError(error)),
+    );
+  }
+
+  #eventEnvelope(event: DebugBackendEvent): DebugSidecarMessage {
+    if (event.type === "stopped")
+      return this.#envelope({
+        type: "event",
+        event: "stopped",
+        body: { reason: event.reason, threadId: event.threadId },
+      });
+    if (event.type === "continued")
+      return this.#envelope({
+        type: "event",
+        event: "continued",
+        body: { threadId: event.threadId, allThreads: event.allThreads },
+      });
+    if (event.type === "terminated")
+      return this.#envelope({
+        type: "event",
+        event: "terminated",
+        body: { restart: event.restart },
+      });
+    if (event.type === "breakpoint")
+      return this.#envelope({
+        type: "event",
+        event: "breakpoint",
+        body: { breakpoint: event.breakpoint },
+      });
+    return this.#envelope({
+      type: "event",
+      event: "output",
+      body: { category: event.category, text: event.text },
+    });
+  }
+
+  #envelope(message: BareSidecarMessage): DebugSidecarMessage {
+    if (!Number.isSafeInteger(this.#serverSequence) || this.#serverSequence <= 0)
+      throw new Error("Sidecar server sequence exhausted.");
+    return {
+      protocol: DEBUG_SIDECAR_PROTOCOL,
+      version: DEBUG_SIDECAR_PROTOCOL_VERSION,
+      session: this.#session,
+      sequence: this.#serverSequence++,
+      ...message,
+    };
+  }
+
+  #send(message: DebugSidecarMessage): Promise<void> {
+    if (this.#closed) return Promise.reject(new Error("Sidecar server is closed."));
+    this.#outgoing.enqueue(message);
+    const write = this.#writeTail.then(async () => {
+      let frame = this.#outgoing.dequeue();
+      while (frame) {
+        await this.#write(frame);
+        frame = this.#outgoing.dequeue();
+      }
+    });
+    this.#writeTail = write.catch(() => undefined);
+    return write;
+  }
+}

@@ -12,6 +12,30 @@ const requirements = new Map<string, readonly string[]>([
   ],
   ["@uttori/asm-core", ["package.json", "src/index.ts", "dist/index.d.ts"]],
   ["@uttori/asm-debug-adapter", ["package.json", "src/index.ts", "dist/index.d.ts"]],
+  [
+    "@uttori/asm-debug-sidecar-ares",
+    [
+      "package.json",
+      "src/index.ts",
+      "src/profile.ts",
+      "dist/index.d.ts",
+      "dist/profile.d.ts",
+      "out/sidecar.mjs",
+      "README.md",
+    ],
+  ],
+  [
+    "@uttori/asm-debug-sidecar-mesence",
+    [
+      "package.json",
+      "src/index.ts",
+      "src/profile.ts",
+      "dist/index.d.ts",
+      "dist/profile.d.ts",
+      "out/sidecar.mjs",
+      "README.md",
+    ],
+  ],
   ["@uttori/asm-disassembler", ["package.json", "src/index.ts", "dist/index.d.ts"]],
   [
     "@uttori/asm-plugin-loader-node",
@@ -23,11 +47,14 @@ const requirements = new Map<string, readonly string[]>([
     ["package.json", "src/index.ts", "dist/index.d.ts", "THIRD_PARTY_NOTICES.md"],
   ],
 ]);
+const npmExecutable = process.platform === "win32" ? "npm.cmd" : "npm";
 
 for (const [workspace, requiredFiles] of requirements) {
-  const result = spawnSync("npm", ["pack", "--dry-run", "--json", "--workspace", workspace], {
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    npmExecutable,
+    ["pack", "--dry-run", "--json", "--workspace", workspace],
+    { encoding: "utf8" },
+  );
   if (result.status !== 0) {
     throw new Error(`Package dry run failed for ${workspace}:\n${result.stderr || result.stdout}`);
   }

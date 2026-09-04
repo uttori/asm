@@ -15,6 +15,7 @@ import type {
   DebugBreakpoint,
   DebugInstruction,
 } from "./contracts.js";
+import { evaluateDebugExpression, formatDebugExpressionValue } from "./debug-expression.js";
 
 /** Minimal DAP request shape accepted by the adapter. */
 export interface DapRequest {
@@ -52,6 +53,8 @@ export interface DebugAdapterSessionOptions {
   readonly debugMap?: DebugMap;
   readonly output?: Uint8Array;
   readonly sourceRoot?: string;
+  /** Optional presentation-only suffix for DAP and virtual-source disassembly rows. */
+  readonly instructionAnnotation?: (address: DebugAddress) => string | undefined;
   readonly onMessage?: (message: DapProtocolMessage) => void;
 }
 
@@ -146,6 +149,7 @@ export class DebugAdapterSession {
   readonly #backend: DebugBackend;
   readonly #map?: DebugMap;
   readonly #sourceRoot: string;
+  readonly #instructionAnnotation?: (address: DebugAddress) => string | undefined;
   readonly #onMessage?: (message: DapProtocolMessage) => void;
   readonly #mapIssues: readonly string[];
   readonly #sourceBreakpoints = new Map<string, DebugAddress[]>();
@@ -167,6 +171,7 @@ export class DebugAdapterSession {
     this.#backend = options.backend;
     this.#map = options.debugMap;
     this.#sourceRoot = path.resolve(options.sourceRoot ?? process.cwd());
+    this.#instructionAnnotation = options.instructionAnnotation;
     this.#onMessage = options.onMessage;
     this.#mapIssues = options.debugMap ? validateDebugMap(options.debugMap, options.output) : [];
     this.#subscription = this.#backend.onEvent((event) => this.#emitBackendEvent(event));
@@ -241,6 +246,8 @@ export class DebugAdapterSession {
         return this.#scopes(numeric(args.frameId));
       case "variables":
         return this.#variables(numeric(args.variablesReference));
+      case "evaluate":
+        return this.#evaluate(args);
       case "readMemory":
         return this.#readMemory(args);
       case "setBreakpoints":
@@ -266,6 +273,19 @@ export class DebugAdapterSession {
         return this.#disassemble(args);
       case "source":
         return this.#source(numeric(args.sourceReference));
+      case "uttori/traceCapabilities":
+        return this.#traceCapabilities();
+      case "uttori/startTrace":
+        await this.#backend.startTrace({
+          architecture: typeof args.architecture === "string" ? args.architecture : "",
+          addressSpace: typeof args.addressSpace === "string" ? args.addressSpace : "",
+        });
+        return {};
+      case "uttori/readTrace":
+        return this.#backend.readTrace(numeric(args.maxEvents));
+      case "uttori/stopTrace":
+        await this.#backend.stopTrace();
+        return {};
       case "disconnect":
         await this.#backend.disconnect({ terminate: args.terminateDebuggee !== false });
         return {};
@@ -282,7 +302,24 @@ export class DebugAdapterSession {
       supportsInstructionBreakpoints: this.#backend.capabilities.breakpoints,
       supportsSteppingGranularity: this.#backend.capabilities.step,
       supportsTerminateDebuggee: true,
+      supportsEvaluateForHovers: this.#backend.capabilities.registers,
     };
+  }
+
+  #traceCapabilities(): Record<string, unknown> {
+    const traces: Array<Record<string, unknown>> = [];
+    for (const architecture of this.#backend.capabilities.architectures) {
+      const trace = architecture.trace;
+      if (!trace) continue;
+      for (const addressSpace of trace.addressSpaces)
+        traces.push({
+          architecture: architecture.architecture,
+          addressSpace,
+          maxBufferedEvents: trace.maxBufferedEvents,
+          maxBatchEvents: trace.maxBatchEvents,
+        });
+    }
+    return { traces };
   }
 
   async #stackTrace(threadId: number): Promise<Record<string, unknown>> {
@@ -341,6 +378,20 @@ export class DebugAdapterSession {
         type: `uint${register.bits}`,
         variablesReference: 0,
       })),
+    };
+  }
+
+  async #evaluate(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (!this.#backend.capabilities.registers)
+      throw new Error("Debugger expression evaluation requires register support.");
+    const expression = typeof args.expression === "string" ? args.expression : "";
+    const frameId = numeric(args.frameId, -1);
+    if (frameId < 1) throw new Error("Debugger expression evaluation requires a stack frame.");
+    const result = evaluateDebugExpression(expression, await this.#backend.registers(frameId));
+    return {
+      result: formatDebugExpressionValue(result.value),
+      type: result.bits === undefined ? "integer" : `uint${result.bits}`,
+      variablesReference: 0,
     };
   }
 
@@ -439,7 +490,7 @@ export class DebugAdapterSession {
       instructions: instructions.map((instruction) => ({
         address: formatDebugAddress(instruction.address),
         instructionBytes: bytesText(instruction),
-        instruction: instruction.text,
+        instruction: this.#annotatedInstructionText(instruction),
         ...(instruction.symbol ? { symbol: instruction.symbol } : {}),
       })),
     };
@@ -452,7 +503,7 @@ export class DebugAdapterSession {
     const content = instructions
       .map(
         (instruction) =>
-          `${formatDebugAddress(instruction.address)}  ${bytesText(instruction).padEnd(12)}  ${instruction.text}`,
+          `${formatDebugAddress(instruction.address)}  ${bytesText(instruction).padEnd(12)}  ${this.#annotatedInstructionText(instruction)}`,
       )
       .join("\n");
     return { content: `${content}\n`, mimeType: "text/x-uttori-asm" };
@@ -465,6 +516,16 @@ export class DebugAdapterSession {
           outputOffset: address.outputOffset,
         })[0]
       : undefined;
+  }
+
+  #annotatedInstructionText(instruction: DebugInstruction): string {
+    let annotation: string | undefined;
+    try {
+      annotation = this.#instructionAnnotation?.(instruction.address);
+    } catch {
+      // Presentation metadata must never break debugger control or disassembly.
+    }
+    return annotation ? `${instruction.text} ; ${annotation}` : instruction.text;
   }
 
   #addressForRange(range: DebugMapRange): DebugAddress {

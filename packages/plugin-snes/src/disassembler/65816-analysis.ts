@@ -1,6 +1,7 @@
 import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
 import {
   analyzeStaticControlFlow,
+  HalfOpenIntervalIndex,
   type AnalysisRecord,
   type AnalysisTargetOverrideRecord,
   type AnalysisTargetSetRecord,
@@ -18,6 +19,7 @@ import {
 } from "@uttori/asm-disassembler";
 
 import { Cpu65816Decoder } from "../architectures/65816-decoder.js";
+import { snesRomAddressSpace, type AddressSpaceContext } from "../target/address-space.js";
 import {
   applyCpu65816StateOverride,
   cpu65816DecodeState,
@@ -35,7 +37,6 @@ import {
 import {
   createSnesAddressContext,
   identifySnesCpuAddress,
-  identifySnesFileOffset,
   SNES_CPU_ADDRESS_SPACE,
   SNES_FILE_ADDRESS_SPACE,
 } from "./address-identities.js";
@@ -142,11 +143,6 @@ const readVector = (rom: RomImage, mapper: SnesMapper, pointer: number): number 
   return target === 0 || target === 0xffff ? undefined : target;
 };
 
-const intervalContains = (annotation: IntervalAnnotation, offset: number): boolean =>
-  annotation.addressSpace === SNES_FILE_ADDRESS_SPACE &&
-  annotation.start <= offset &&
-  offset < annotation.end;
-
 const stateOverrideFor = (annotation: IntervalAnnotation): Cpu65816StateOverride | undefined => {
   if (!annotation.state) return undefined;
   return {
@@ -215,7 +211,7 @@ const unresolvedAddressExplanation = (mode: string): string => {
 
 const mappedAddressExplanation = (
   indexed: boolean,
-  identity: ReturnType<typeof identifySnesCpuAddress>,
+  identity: { readonly fileOffset: number } | undefined,
 ): string => {
   if (indexed) {
     return "The encoded address is only a base; an index register or indirection prevents a static effective address.";
@@ -226,9 +222,33 @@ const mappedAddressExplanation = (
   return "CPU address does not map to the loaded ROM.";
 };
 
+/**
+ * Maps one 65816 CPU address directly to its validated ROM file offset.
+ *
+ * Hot analysis paths need only the canonical file offset, not every mirrored CPU identity returned
+ * by the richer address-identity helper. Using the target address-space conversion here avoids
+ * allocating up to 256 mirror records for every decoded instruction. The reverse check preserves
+ * the former guarantee that the candidate offset is representable for the selected mapper.
+ * @param {number} address Logical 65816 address to map.
+ * @param {AddressSpaceContext} context Precomputed mapper context shared by the analysis run.
+ * @param {number} romSize Headerless ROM size used to reject out-of-bounds offsets.
+ * @returns {{ readonly fileOffset: number } | undefined} Canonical in-ROM file identity, if mapped.
+ */
+const mappedRomOffset = (
+  address: number,
+  context: AddressSpaceContext,
+  romSize: number,
+): { readonly fileOffset: number } | undefined => {
+  // Performance invariant: do not replace this with identifySnesCpuAddress() in the decode loop;
+  // that API intentionally enumerates mirrors for UI/evidence use and is much more expensive.
+  const fileOffset = snesRomAddressSpace.toOutputOffset(address, context);
+  if (fileOffset < 0 || fileOffset >= romSize) return undefined;
+  return snesRomAddressSpace.fromOutputOffset(fileOffset, context) < 0 ? undefined : { fileOffset };
+};
+
 const effectiveAddressesFor = (
   instruction: DecodedInstruction,
-  mapper: SnesMapper,
+  context: AddressSpaceContext,
   romSize: number,
 ): readonly StaticEffectiveAddress[] =>
   instruction.references
@@ -255,9 +275,7 @@ const effectiveAddressesFor = (
             : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`,
         };
       }
-      const identity = indexed
-        ? undefined
-        : identifySnesCpuAddress(reference.address, createSnesAddressContext(mapper), romSize);
+      const identity = indexed ? undefined : mappedRomOffset(reference.address, context, romSize);
       return {
         operandIndex,
         ...(indexed ? { baseAddress: reference.address } : { address: reference.address }),
@@ -439,6 +457,11 @@ export const analyzeSnes65816 = (
   const annotations = (options.annotations ?? []).filter(
     (annotation) => !annotation.id.startsWith("static:65816:"),
   );
+  // Build once per analysis run. State lookup and every decode decision query this index, so
+  // reverting these sites to Array.filter/find multiplies the full annotation count by work items.
+  const annotationIndex = new HalfOpenIntervalIndex(
+    annotations.filter(({ addressSpace }) => addressSpace === SNES_FILE_ADDRESS_SPACE),
+  );
   const runEvidence = `static:65816:${rom.identity.contentSha256}`;
   const explicitStateOverrides = new Map<number, Cpu65816StateOverride>();
   const conflictingExplicitStateOverrides = new Set<number>();
@@ -489,10 +512,11 @@ export const analyzeSnes65816 = (
     readonly state: Cpu65816AbstractState;
     readonly evidence: readonly string[];
   } => {
-    const identity = identifySnesCpuAddress(address, context, rom.length);
+    const identity = mappedRomOffset(address, context, rom.length);
     if (!identity) return { state: base, evidence: [] };
-    const matching = annotations
-      .filter((annotation) => intervalContains(annotation, identity.fileOffset) && annotation.state)
+    const matching = annotationIndex
+      .at(identity.fileOffset)
+      .filter((annotation) => annotation.state)
       .map((annotation) => ({
         annotation,
         rank: Math.max(
@@ -528,7 +552,11 @@ export const analyzeSnes65816 = (
   const projectAddress = (addressSpace: string, address: number): number | undefined => {
     if (addressSpace === SNES_CPU_ADDRESS_SPACE) return address;
     if (addressSpace === SNES_FILE_ADDRESS_SPACE) {
-      return identifySnesFileOffset(address, context, rom.length)?.address;
+      if (address < 0 || address >= rom.length) return undefined;
+      // Only one canonical CPU address is needed for a seed. Enumerating every mirror would retain
+      // large temporary identity arrays while adding no analysis evidence.
+      const mapped = snesRomAddressSpace.fromOutputOffset(address, context);
+      return mapped < 0 ? undefined : mapped;
     }
     return undefined;
   };
@@ -634,13 +662,11 @@ export const analyzeSnes65816 = (
       stateKey: cpu65816StateKey,
       transfer: transferCpu65816State,
       decode: (address, state) => {
-        const identity = identifySnesCpuAddress(address, context, rom.length);
+        const identity = mappedRomOffset(address, context, rom.length);
         if (!identity) return { kind: "error", reason: "Address does not map into the ROM." };
-        const blocked = annotations.find(
-          (annotation) =>
-            intervalContains(annotation, identity.fileOffset) &&
-            DATA_CLASSIFICATIONS.has(annotation.classification),
-        );
+        const blocked = annotationIndex
+          .at(identity.fileOffset)
+          .find((annotation) => DATA_CLASSIFICATIONS.has(annotation.classification));
         if (blocked) {
           return {
             kind: "blocked",
@@ -663,14 +689,11 @@ export const analyzeSnes65816 = (
         }
         if (decoded.kind === "error") return { kind: "error", reason: decoded.message };
         const instruction = decoded.instruction;
-        const crossing = annotations.find(
-          (annotation) =>
-            DATA_CLASSIFICATIONS.has(annotation.classification) &&
-            Array.from(
-              { length: instruction.size },
-              (_, index) => identity.fileOffset + index,
-            ).some((offset) => intervalContains(annotation, offset)),
-        );
+        // Query the whole instruction range once. Materializing each byte and scanning all project
+        // annotations was both allocation-heavy and quadratic on imported per-byte metadata.
+        const crossing = annotationIndex
+          .overlapping(identity.fileOffset, identity.fileOffset + instruction.size)
+          .find((annotation) => DATA_CLASSIFICATIONS.has(annotation.classification));
         if (crossing) {
           return {
             kind: "blocked",
@@ -691,7 +714,7 @@ export const analyzeSnes65816 = (
           evidence: overrideEvidence,
           flow: instruction.flow,
           targets: controlsFor(instruction, interruptTargetsFor(instruction, state)),
-          effectiveAddresses: effectiveAddressesFor(instruction, mapper, rom.length),
+          effectiveAddresses: effectiveAddressesFor(instruction, context, rom.length),
         };
         return { kind: "instruction", instruction: normalized };
       },

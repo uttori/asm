@@ -8,6 +8,8 @@ const packageDirectories = [
   "cli",
   "core",
   "debug-adapter",
+  "debug-sidecar-ares",
+  "debug-sidecar-mesence",
   "disassembler",
   "language-server",
   "plugin-65xx",

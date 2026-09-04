@@ -1,0 +1,40 @@
+name: Debug Sidecar Portability
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  neutral-sidecars:
+    name: Neutral sidecars (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26"
+          cache: npm
+      - run: npm ci
+      - name: Type-check workspaces and scripts
+        run: npm run typecheck
+      - name: Generate declarations without shell-specific cleanup
+        run: npm run make-types --workspaces --if-present
+      - name: Build and smoke-test sidecars
+        run: npm run sidecar:build && npm run sidecar:smoke
+      - name: Run neutral protocol and backend tests
+        run: npm run test:debug-sidecars
+        env:
+          NODE_ENV: test
+      - name: Check package boundaries and tarballs
+        run: npm run check:boundaries && npm run pack:check

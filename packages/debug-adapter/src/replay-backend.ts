@@ -1,11 +1,13 @@
 import {
   DEBUG_BACKEND_PROTOCOL_VERSION,
   type DebugAddress,
+  type DebugArchitectureCapabilities,
   type DebugBackend,
   type DebugBackendCapabilities,
   type DebugBackendConnectOptions,
   type DebugBackendEvent,
   type DebugBreakpoint,
+  type DebugExecutionCapabilities,
   type DebugInstruction,
   type DebugMemoryRead,
   type DebugRegister,
@@ -13,7 +15,13 @@ import {
   type DebugStepKind,
   type DebugSubscription,
   type DebugThread,
+  type DebugTraceBatch,
+  type DebugTraceStartOptions,
 } from "./contracts.js";
+import { DebugTraceBuffer } from "./trace-buffer.js";
+
+const REPLAY_TRACE_BUFFER_EVENTS = 65_536;
+const REPLAY_TRACE_BATCH_EVENTS = 4_096;
 
 /** Contiguous bytes visible in one replay snapshot. */
 export interface ReplayMemoryRegion {
@@ -34,7 +42,64 @@ export interface ReplaySnapshot {
 /** Immutable script consumed by `ReplayDebugBackend`. */
 export interface ReplayScript {
   readonly snapshots: readonly ReplaySnapshot[];
+  /** Optional explicit declarations, including architectures with reduced live-debug support. */
+  readonly architectures?: readonly DebugArchitectureCapabilities[];
 }
+
+const replayArchitectureCapabilities = (script: ReplayScript): DebugArchitectureCapabilities[] => {
+  const architectureNames = new Set<string>();
+  for (const snapshot of script.snapshots) {
+    for (const thread of snapshot.threads) architectureNames.add(thread.architecture);
+    for (const frame of snapshot.frames) architectureNames.add(frame.pc.architecture);
+    for (const instruction of snapshot.instructions ?? [])
+      architectureNames.add(instruction.address.architecture);
+  }
+  return [...architectureNames].sort().map((architecture): DebugArchitectureCapabilities => {
+    const addressSpaces = new Set<string>();
+    let registers = false;
+    let disassemble = false;
+    for (const snapshot of script.snapshots) {
+      for (const frame of snapshot.frames) {
+        if (frame.pc.architecture !== architecture) continue;
+        addressSpaces.add(frame.pc.addressSpace);
+        registers ||= (snapshot.registers[frame.id]?.length ?? 0) > 0;
+      }
+      for (const instruction of snapshot.instructions ?? []) {
+        if (instruction.address.architecture !== architecture) continue;
+        addressSpaces.add(instruction.address.addressSpace);
+        disassemble = true;
+      }
+    }
+    const memorySpaces = [...addressSpaces]
+      .filter((addressSpace) =>
+        script.snapshots.some((snapshot) =>
+          snapshot.memory.some((region) => region.addressSpace === addressSpace),
+        ),
+      )
+      .sort()
+      .map((addressSpace) => ({ addressSpace, sideEffectFree: true }));
+    return {
+      architecture,
+      addressSpaces: [...addressSpaces].sort(),
+      memorySpaces,
+      trace:
+        addressSpaces.size === 0
+          ? null
+          : {
+              addressSpaces: [...addressSpaces].sort(),
+              maxBufferedEvents: REPLAY_TRACE_BUFFER_EVENTS,
+              maxBatchEvents: REPLAY_TRACE_BATCH_EVENTS,
+            },
+      pause: true,
+      step: true,
+      registers,
+      memory: memorySpaces.length > 0,
+      stackFrames: true,
+      breakpoints: true,
+      disassemble,
+    };
+  });
+};
 
 const addressKey = (address: DebugAddress): string =>
   `${address.architecture}\u0000${address.addressSpace}\u0000${
@@ -57,16 +122,7 @@ const assertCount = (count: number): void => {
 /** Deterministic in-memory backend used to prove protocol behavior without an emulator. */
 export class ReplayDebugBackend implements DebugBackend {
   readonly protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
-  readonly capabilities: DebugBackendCapabilities = Object.freeze({
-    pause: true,
-    step: true,
-    registers: true,
-    memory: true,
-    stackFrames: true,
-    breakpoints: true,
-    disassemble: true,
-    reconnect: true,
-  });
+  readonly capabilities: DebugBackendCapabilities;
 
   readonly #script: ReplayScript;
   readonly #listeners = new Set<(event: DebugBackendEvent) => void>();
@@ -74,6 +130,7 @@ export class ReplayDebugBackend implements DebugBackend {
   #index = 0;
   #connected = false;
   #nextBreakpointId = 1;
+  #trace: DebugTraceBuffer | undefined;
 
   /**
    * Creates a replay backend from at least one complete snapshot.
@@ -83,6 +140,34 @@ export class ReplayDebugBackend implements DebugBackend {
     if (script.snapshots.length === 0)
       throw new Error("Replay script requires at least one snapshot.");
     this.#script = script;
+    const architectures = script.architectures
+      ? script.architectures.map((capability) => ({
+          ...capability,
+          addressSpaces: [...capability.addressSpaces].sort(),
+          memorySpaces: [...capability.memorySpaces]
+            .sort((left, right) => left.addressSpace.localeCompare(right.addressSpace))
+            .map((memorySpace) => Object.freeze({ ...memorySpace })),
+          trace: capability.trace
+            ? {
+                ...capability.trace,
+                addressSpaces: [...capability.trace.addressSpaces].sort(),
+              }
+            : null,
+        }))
+      : replayArchitectureCapabilities(script);
+    const supports = (key: keyof DebugExecutionCapabilities): boolean =>
+      architectures.some((capability) => capability[key]);
+    this.capabilities = Object.freeze({
+      pause: supports("pause"),
+      step: supports("step"),
+      registers: supports("registers"),
+      memory: supports("memory"),
+      stackFrames: supports("stackFrames"),
+      breakpoints: supports("breakpoints"),
+      disassemble: supports("disassemble"),
+      reconnect: true,
+      architectures: Object.freeze(architectures.map((capability) => Object.freeze(capability))),
+    });
   }
 
   /** @returns {number} Current zero-based replay position, exposed for deterministic tests. */
@@ -96,7 +181,10 @@ export class ReplayDebugBackend implements DebugBackend {
    * @returns {Promise<void>} A resolved promise after the entry event is emitted.
    */
   connect(options: DebugBackendConnectOptions = {}): Promise<void> {
-    if (options.reset ?? true) this.#index = 0;
+    if (options.reset ?? true) {
+      this.#index = 0;
+      this.#trace = undefined;
+    }
     this.#connected = true;
     const threadId = this.#snapshot.threads[0]?.id ?? 0;
     this.#emit({ type: "stopped", reason: "entry", threadId });
@@ -110,6 +198,7 @@ export class ReplayDebugBackend implements DebugBackend {
    */
   disconnect(options: { readonly terminate?: boolean } = {}): Promise<void> {
     this.#requireConnected();
+    this.#trace?.stop();
     this.#connected = false;
     if (options.terminate ?? true) this.#emit({ type: "terminated", restart: false });
     return Promise.resolve();
@@ -136,6 +225,7 @@ export class ReplayDebugBackend implements DebugBackend {
     this.#emit({ type: "continued", threadId, allThreads: true });
     while (this.#index + 1 < this.#script.snapshots.length) {
       this.#index++;
+      this.#recordTraceAddress(threadId);
       const frame = this.#snapshot.frames.find((candidate) => candidate.threadId === threadId);
       if (
         frame &&
@@ -165,6 +255,7 @@ export class ReplayDebugBackend implements DebugBackend {
       return Promise.resolve();
     }
     this.#index++;
+    this.#recordTraceAddress(threadId);
     this.#emit({ type: "stopped", reason: "step", threadId });
     return Promise.resolve();
   }
@@ -210,6 +301,13 @@ export class ReplayDebugBackend implements DebugBackend {
   readMemory(address: DebugAddress, count: number): Promise<DebugMemoryRead> {
     this.#requireConnected();
     assertCount(count);
+    const spaceReadable = this.capabilities.architectures
+      .find(({ architecture }) => architecture === address.architecture)
+      ?.memorySpaces.some((memorySpace) => memorySpace.addressSpace === address.addressSpace);
+    if (!spaceReadable)
+      throw new Error(
+        `Memory address space '${address.architecture}/${address.addressSpace}' is not readable.`,
+      );
     const bytes = new Uint8Array(count);
     let readable = 0;
     for (let offset = 0; offset < count; offset++) {
@@ -283,6 +381,56 @@ export class ReplayDebugBackend implements DebugBackend {
     );
   }
 
+  /** @inheritdoc */
+  startTrace(options: DebugTraceStartOptions): Promise<void> {
+    this.#requireConnected();
+    const architecture = this.capabilities.architectures.find(
+      (candidate) => candidate.architecture === options.architecture,
+    );
+    if (!architecture?.trace?.addressSpaces.includes(options.addressSpace))
+      throw new Error(
+        `Instruction trace '${options.architecture}/${options.addressSpace}' is not supported.`,
+      );
+    const frame = this.#snapshot.frames.find(
+      (candidate) =>
+        candidate.pc.architecture === options.architecture &&
+        candidate.pc.addressSpace === options.addressSpace,
+    );
+    if (!frame) throw new Error("Current replay snapshot has no matching trace frame.");
+    this.#trace = new DebugTraceBuffer({
+      architecture: options.architecture,
+      addressSpace: options.addressSpace,
+      capacity: architecture.trace.maxBufferedEvents,
+    });
+    this.#trace.start();
+    this.#trace.append(frame.pc.address);
+    return Promise.resolve();
+  }
+
+  /** @inheritdoc */
+  readTrace(maxEvents: number): Promise<DebugTraceBatch> {
+    this.#requireConnected();
+    const trace = this.#trace;
+    if (!trace) throw new Error("No replay instruction trace has been started.");
+    const capabilities = this.capabilities.architectures.find(
+      ({ architecture }) => architecture === trace.architecture,
+    )?.trace;
+    assertCount(maxEvents);
+    if (maxEvents === 0 || !capabilities || maxEvents > capabilities.maxBatchEvents)
+      throw new Error(
+        `Trace batch size must be between 1 and ${capabilities?.maxBatchEvents ?? 0}.`,
+      );
+    return Promise.resolve(trace.read(maxEvents));
+  }
+
+  /** @inheritdoc */
+  stopTrace(): Promise<void> {
+    this.#requireConnected();
+    if (!this.#trace) throw new Error("No replay instruction trace has been started.");
+    this.#trace.stop();
+    return Promise.resolve();
+  }
+
   /**
    * Subscribes to synchronously ordered backend events.
    * @param {(event: DebugBackendEvent) => void} listener Event consumer.
@@ -299,6 +447,18 @@ export class ReplayDebugBackend implements DebugBackend {
 
   #requireConnected(): void {
     if (!this.#connected) throw new Error("Debug backend is not connected.");
+  }
+
+  #recordTraceAddress(threadId: number): void {
+    const trace = this.#trace;
+    if (!trace?.active) return;
+    const frame = this.#snapshot.frames.find(
+      (candidate) =>
+        candidate.threadId === threadId &&
+        candidate.pc.architecture === trace.architecture &&
+        candidate.pc.addressSpace === trace.addressSpace,
+    );
+    if (frame) trace.append(frame.pc.address);
   }
 
   #emit(event: DebugBackendEvent): void {

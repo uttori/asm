@@ -150,9 +150,25 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
     { name: "A", value: "0x1234", type: "uint16", variablesReference: 0 },
   ]);
 
+  const registerWatch = response(
+    await fixture.session.dispatch(request(7, "evaluate", { expression: "a", frameId: 10 })),
+  ).body as { result: string; type: string; variablesReference: number };
+  t.deepEqual(registerWatch, { result: "0x1234", type: "uint16", variablesReference: 0 });
+  const expressionWatch = response(
+    await fixture.session.dispatch(
+      request(8, "evaluate", { expression: "($10 + A) & $FFFF", frameId: 10 }),
+    ),
+  ).body as { result: string; type: string; variablesReference: number };
+  t.deepEqual(expressionWatch, { result: "0x1244", type: "integer", variablesReference: 0 });
+  const invalidWatch = response(
+    await fixture.session.dispatch(request(9, "evaluate", { expression: "missing", frameId: 10 })),
+  );
+  t.false(invalidWatch.success);
+  t.regex(invalidWatch.message ?? "", /Unknown register 'missing'/);
+
   const instructionBreakpoints = response(
     await fixture.session.dispatch(
-      request(7, "setInstructionBreakpoints", {
+      request(10, "setInstructionBreakpoints", {
         breakpoints: [
           {
             instructionReference: formatDebugAddress({
@@ -170,7 +186,7 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
 
   const memory = response(
     await fixture.session.dispatch(
-      request(8, "readMemory", {
+      request(11, "readMemory", {
         memoryReference: formatDebugAddress({
           architecture: "snes.65816",
           addressSpace: "snes.address-space",
@@ -185,7 +201,7 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
 
   const disassembly = response(
     await fixture.session.dispatch(
-      request(9, "disassemble", {
+      request(12, "disassemble", {
         memoryReference: formatDebugAddress({
           architecture: "snes.spc700",
           addressSpace: "spc.aram",
@@ -197,17 +213,17 @@ test("DAP transcript negotiates capabilities and preserves response/event order"
   ).body as { instructions: Array<{ instruction: string }> };
   t.is(disassembly.instructions[0]?.instruction, "nop");
 
-  const step = await fixture.session.dispatch(request(10, "next", { threadId: 1 }));
+  const step = await fixture.session.dispatch(request(13, "next", { threadId: 1 }));
   t.deepEqual(
     step.map((message) => ("event" in message ? message.event : message.command)),
     ["next", "continued", "stopped"],
   );
   const advanced = response(
-    await fixture.session.dispatch(request(11, "stackTrace", { threadId: 1 })),
+    await fixture.session.dispatch(request(14, "stackTrace", { threadId: 1 })),
   ).body as { stackFrames: Array<{ line: number }> };
   t.is(advanced.stackFrames[0]?.line, 3);
 
-  const disconnect = await fixture.session.dispatch(request(12, "disconnect"));
+  const disconnect = await fixture.session.dispatch(request(15, "disconnect"));
   t.deepEqual(
     disconnect.map((message) => ("event" in message ? message.event : message.command)),
     ["disconnect", "terminated"],
@@ -238,6 +254,48 @@ test("DAP resolves mirrored PCs and supplies virtual disassembly sources", async
   t.regex(virtual.content, /snes\.spc700\|spc\.aram\|0x200.*nop/);
 });
 
+test("DAP adds host annotations to disassembly without changing backend instructions", async (t) => {
+  const fixture = setup();
+  const session = new DebugAdapterSession({
+    backend: new ReplayDebugBackend({ snapshots: [snapshot(0x008000)] }),
+    debugMap: fixture.map,
+    output: fixture.output,
+    sourceRoot: fixture.directory,
+    instructionAnnotation: ({ architecture, address }) =>
+      architecture === "snes.spc700" && address === 0x200 ? "▶ 3× · state p=$20" : undefined,
+  });
+  t.teardown(() => {
+    fixture.session.dispose();
+    session.dispose();
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
+  });
+  await session.dispatch(request(1, "launch"));
+  const disassembly = response(
+    await session.dispatch(
+      request(2, "disassemble", {
+        memoryReference: formatDebugAddress({
+          architecture: "snes.spc700",
+          addressSpace: "spc.aram",
+          address: 0x200,
+        }),
+        instructionCount: 1,
+      }),
+    ),
+  ).body as { instructions: Array<{ instruction: string }> };
+  t.is(disassembly.instructions[0]?.instruction, "nop ; ▶ 3× · state p=$20");
+
+  const stack = response(await session.dispatch(request(3, "stackTrace", { threadId: 2 })))
+    .body as {
+    stackFrames: Array<{ source: { sourceReference: number } }>;
+  };
+  const source = response(
+    await session.dispatch(
+      request(4, "source", { sourceReference: stack.stackFrames[0]?.source.sourceReference }),
+    ),
+  ).body as { content: string };
+  t.regex(source.content, /nop ; ▶ 3× · state p=\$20/);
+});
+
 test("debug-map replay stepping advances the highlighted native source line", async (t) => {
   const fixture = setup();
   const replay = new ReplayDebugBackend(createDebugMapReplayScript(fixture.map, fixture.output));
@@ -260,6 +318,48 @@ test("debug-map replay stepping advances the highlighted native source line", as
   const after = response(await session.dispatch(request(4, "stackTrace", { threadId: 1 })))
     .body as { stackFrames: Array<{ line: number }> };
   t.is(after.stackFrames[0]?.line, 3);
+});
+
+test("DAP exposes explicit bounded trace recording only through custom requests", async (t) => {
+  const fixture = setup();
+  t.teardown(() => {
+    fixture.session.dispose();
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
+  });
+  await fixture.session.dispatch(request(1, "launch"));
+  const capabilities = response(
+    await fixture.session.dispatch(request(2, "uttori/traceCapabilities")),
+  ).body as {
+    traces: Array<{
+      architecture: string;
+      addressSpace: string;
+      maxBufferedEvents: number;
+      maxBatchEvents: number;
+    }>;
+  };
+  t.true(
+    capabilities.traces.some(
+      ({ architecture, addressSpace }) =>
+        architecture === "snes.65816" && addressSpace === "snes.address-space",
+    ),
+  );
+  t.true(
+    response(
+      await fixture.session.dispatch(
+        request(3, "uttori/startTrace", {
+          architecture: "snes.65816",
+          addressSpace: "snes.address-space",
+        }),
+      ),
+    ).success,
+  );
+  await fixture.session.dispatch(request(4, "next", { threadId: 1 }));
+  t.true(response(await fixture.session.dispatch(request(5, "uttori/stopTrace"))).success);
+  const batch = response(
+    await fixture.session.dispatch(request(6, "uttori/readTrace", { maxEvents: 16 })),
+  ).body as { addresses: number[]; active: boolean };
+  t.deepEqual(batch.addresses, [0x008000, 0x008001]);
+  t.false(batch.active);
 });
 
 test("DAP rejects stale maps and parses fragmented transport frames deterministically", async (t) => {

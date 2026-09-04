@@ -13,6 +13,7 @@ import {
   canonicalJson,
   compareByteImages,
   inspectRuntimeEvidence,
+  importRuntimeInstructionTrace,
   loadAnalysisProject,
   loadSourceExportManifest,
   sourceExportSha256,
@@ -25,6 +26,7 @@ import {
   type AnalysisTargetOverrideRecord,
   type AnalysisTargetSetRecord,
   type ProjectMapping,
+  type RuntimeInstructionTraceArtifact,
 } from "@uttori/asm-disassembler";
 import {
   loadProjectEnvironment,
@@ -87,6 +89,7 @@ export interface CliArguments {
   readonly mesenTrace?: string;
   readonly traceMetadata?: string;
   readonly mesenLabels?: string;
+  readonly instructionTrace?: string;
   readonly entryPoints: readonly number[];
   readonly maxWorkItems?: number;
   readonly maxCallDepth?: number;
@@ -115,6 +118,7 @@ Project options:
   --mesen-trace <path>         Import MesenCE default 65816 text trace
   --trace-metadata <path>      Required JSON identity sidecar for --mesen-trace
   --mesen-labels <path>        Import MesenCE label text
+  --instruction-trace <path>   Import a native explicit instruction recording
   --entry <address>            Repeatable 65816 CPU entry point ($/0x/decimal)
   --max-work-items <count>     Deterministic analysis work limit
   --max-call-depth <count>     Bounded call-context depth
@@ -193,6 +197,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let mesenTrace: string | undefined;
   let traceMetadata: string | undefined;
   let mesenLabels: string | undefined;
+  let instructionTrace: string | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
   let maxCallDepth: number | undefined;
@@ -294,6 +299,9 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
       case "--mesen-labels":
         mesenLabels = value;
         break;
+      case "--instruction-trace":
+        instructionTrace = value;
+        break;
       case "--entry": {
         const normalized = value.startsWith("$") ? `0x${value.slice(1)}` : value;
         const address = Number(normalized);
@@ -357,6 +365,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     mesenTrace,
     traceMetadata,
     mesenLabels,
+    instructionTrace,
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
     maxCallDepth,
@@ -552,8 +561,10 @@ const importProjectEvidence = (parsed: CliArguments, cwd: string): number => {
     console.error("Evidence import failed: --rom is required so project identity can be verified.");
     return 1;
   }
-  if (!parsed.mesenCdl && !parsed.mesenTrace && !parsed.mesenLabels) {
-    console.error("Evidence import failed: provide --mesen-cdl, --mesen-trace, or --mesen-labels.");
+  if (!parsed.mesenCdl && !parsed.mesenTrace && !parsed.mesenLabels && !parsed.instructionTrace) {
+    console.error(
+      "Evidence import failed: provide --mesen-cdl, --mesen-trace, --mesen-labels, or --instruction-trace.",
+    );
     return 1;
   }
   if (parsed.mesenTrace && !parsed.traceMetadata) {
@@ -575,7 +586,11 @@ const importProjectEvidence = (parsed: CliArguments, cwd: string): number => {
     let conflictCount = 0;
     let explanationCount = 0;
     const reports: string[] = [];
-    const merge = (result: ReturnType<typeof importMesenSnesCdl>): void => {
+    const merge = (
+      result:
+        | ReturnType<typeof importMesenSnesCdl>
+        | ReturnType<typeof importRuntimeInstructionTrace>,
+    ): void => {
       const merged = mergeRuntimeEvidence(shards, result.batch);
       shards = merged.shards;
       changed ||= merged.changed;
@@ -624,6 +639,19 @@ const importProjectEvidence = (parsed: CliArguments, cwd: string): number => {
           rom,
           mapper,
           projectContext(path.basename(filename)),
+        ),
+      );
+    }
+    if (parsed.instructionTrace) {
+      const filename = path.resolve(cwd, parsed.instructionTrace);
+      merge(
+        importRuntimeInstructionTrace(
+          JSON.parse(fs.readFileSync(filename, "utf8")) as RuntimeInstructionTraceArtifact,
+          {
+            projectRomContentSha256: loaded.manifest.rom.contentSha256,
+            sourceName: path.basename(filename),
+            addressSpaceAliases: { "snes.address-space": SNES_CPU_ADDRESS_SPACE },
+          },
         ),
       );
     }

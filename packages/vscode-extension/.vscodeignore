@@ -5,3 +5,4 @@ esbuild.mjs
 .vscode/**
 **/*.map
 node_modules/**
+tests-host/**

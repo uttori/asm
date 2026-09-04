@@ -57,6 +57,22 @@ test("ReplayDebugBackend covers threads, frames, registers, memory, and disassem
 
   t.is(backend.protocolVersion, DEBUG_BACKEND_PROTOCOL_VERSION);
   t.true(Object.values(backend.capabilities).every(Boolean));
+  t.deepEqual(
+    backend.capabilities.architectures.map(({ architecture, memorySpaces }) => ({
+      architecture,
+      memorySpaces,
+    })),
+    [
+      {
+        architecture: "snes.65816",
+        memorySpaces: [{ addressSpace: "snes.address-space", sideEffectFree: true }],
+      },
+      {
+        architecture: "snes.spc700",
+        memorySpaces: [{ addressSpace: "spc.aram", sideEffectFree: true }],
+      },
+    ],
+  );
   await backend.connect();
   t.deepEqual(
     (await backend.threads()).map(({ architecture }) => architecture),
@@ -74,6 +90,14 @@ test("ReplayDebugBackend covers threads, frames, registers, memory, and disassem
   t.deepEqual([...memory.bytes], [0xa9, 0x01, 0, 0]);
   t.is(memory.unreadableBytes, 2);
   t.is((await backend.disassemble({ ...address, address: 0x808000 }, 1))[0]?.text, "nop");
+  t.throws(
+    () =>
+      backend.readMemory(
+        { architecture: "snes.65816", addressSpace: "snes.unavailable", address: 0 },
+        1,
+      ),
+    { message: /is not readable/ },
+  );
   t.deepEqual(events, [{ type: "stopped", reason: "entry", threadId: 1 }]);
 });
 
@@ -109,6 +133,38 @@ test("ReplayDebugBackend steps, pauses, stops on breakpoints, and reconnects", a
     { type: "continued", threadId: 1, allThreads: false },
     { type: "terminated", restart: false },
   ]);
+});
+
+test("ReplayDebugBackend records explicit pull-based instruction traces", async (t) => {
+  const backend = new ReplayDebugBackend(script);
+  await backend.connect();
+  await backend.startTrace({
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+  });
+  await backend.step(1, "instruction");
+  t.deepEqual(await backend.readTrace(1), {
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+    sequenceStart: 1,
+    addresses: [0x808000],
+    droppedEvents: 0,
+    active: true,
+  });
+  await backend.stopTrace();
+  t.deepEqual(await backend.readTrace(4), {
+    architecture: "snes.65816",
+    addressSpace: "snes.address-space",
+    sequenceStart: 2,
+    addresses: [0x808001],
+    droppedEvents: 0,
+    active: false,
+  });
+  t.throws(
+    () => backend.startTrace({ architecture: "snes.superfx", addressSpace: "superfx.rom" }),
+    { message: /is not supported/ },
+  );
+  t.throws(() => backend.readTrace(0), { message: /between 1 and/ });
 });
 
 test("ReplayDebugBackend verifies only scripted addresses and replaces breakpoint sets", async (t) => {

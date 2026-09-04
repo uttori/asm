@@ -282,11 +282,95 @@ const nodeIdFor = (address: number, context: readonly CallFrame[]): string =>
 
 const sortedUnique = (values: readonly string[]): readonly string[] => [...new Set(values)].sort();
 
+/**
+ * Semantic priority shared by the work heap and historical deterministic traversal.
+ * Do not add insertion order here: the heap supplies it only as a final stability tie-breaker, so
+ * addresses, call contexts, entry points, and predecessors retain their documented precedence.
+ * @param {WorkItem<State>} left Left queued work item.
+ * @param {WorkItem<State>} right Right queued work item.
+ * @returns {number} Negative, zero, or positive semantic priority comparison.
+ */
 const sortWork = <State>(left: WorkItem<State>, right: WorkItem<State>): number =>
   left.address - right.address ||
   contextKey(left.context).localeCompare(contextKey(right.context)) ||
   left.entryPoint.localeCompare(right.entryPoint) ||
   (left.predecessor ?? "").localeCompare(right.predecessor ?? "");
+
+type QueuedWork<State> = {
+  readonly item: WorkItem<State>;
+  /** Monotonic insertion order used only when every semantic sort field ties. */
+  readonly sequence: number;
+};
+
+/**
+ * Stable binary min-heap for deterministic static-analysis work scheduling.
+ *
+ * The analyzer previously appended every item and sorted the complete queue after every enqueue.
+ * That made large control-flow traversals approach quadratic work. This heap keeps insertion and
+ * removal at O(log n), while `sequence` preserves the stable-order behavior of the former array
+ * sort whenever `sortWork()` considers two items equal. Do not remove that tie-breaker or replace
+ * this with an unordered queue: traversal order affects limit diagnostics and serialized evidence.
+ */
+class StaticWorkQueue<State> {
+  readonly #values: QueuedWork<State>[] = [];
+  #nextSequence = 0;
+
+  constructor(items: readonly WorkItem<State>[]) {
+    for (const item of items) this.push(item);
+  }
+
+  get length(): number {
+    return this.#values.length;
+  }
+
+  peek(): WorkItem<State> | undefined {
+    return this.#values[0]?.item;
+  }
+
+  push(item: WorkItem<State>): void {
+    const queued = { item, sequence: this.#nextSequence++ };
+    this.#values.push(queued);
+    // Performance invariant: sift up only the appended item; sorting #values here reintroduces
+    // the full-queue O(n log n) cost that dominated large ROM analysis.
+    let index = this.#values.length - 1;
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this.#compare(this.#values[parent], queued) <= 0) break;
+      this.#values[index] = this.#values[parent];
+      index = parent;
+    }
+    this.#values[index] = queued;
+  }
+
+  shift(): WorkItem<State> | undefined {
+    const first = this.#values[0];
+    const last = this.#values.pop();
+    if (!first || !last) return undefined;
+    if (this.#values.length > 0) {
+      // Restore the heap by sifting the former tail down. Assigning parents/children in place also
+      // avoids allocating a replacement queue on every processed CFG edge.
+      let index = 0;
+      while (true) {
+        const left = index * 2 + 1;
+        if (left >= this.#values.length) break;
+        const right = left + 1;
+        const child =
+          right < this.#values.length && this.#compare(this.#values[right], this.#values[left]) < 0
+            ? right
+            : left;
+        if (this.#compare(last, this.#values[child]) <= 0) break;
+        this.#values[index] = this.#values[child];
+        index = child;
+      }
+      this.#values[index] = last;
+    }
+    return first.item;
+  }
+
+  #compare(left: QueuedWork<State>, right: QueuedWork<State>): number {
+    return sortWork(left.item, right.item) || left.sequence - right.sequence;
+  }
+}
 
 const edgeIdFor = (
   from: string,
@@ -346,16 +430,20 @@ export const analyzeStaticControlFlow = <State>(
     overrides.set(override.address, override);
   }
 
-  const queue: WorkItem<State>[] = [...seeds]
-    .sort((left, right) => left.address - right.address || left.id.localeCompare(right.id))
-    .map((seed) => ({
-      address: seed.address,
-      state: seed.state,
-      context: [],
-      entryPoint: seed.id,
-      evidence: sortedUnique(seed.evidence),
-      path: [],
-    }));
+  // Sort seeds once to retain the historical entry-point order. Every later insertion is ordered
+  // incrementally by StaticWorkQueue instead of repeatedly sorting the complete pending worklist.
+  const queue = new StaticWorkQueue(
+    [...seeds]
+      .sort((left, right) => left.address - right.address || left.id.localeCompare(right.id))
+      .map((seed) => ({
+        address: seed.address,
+        state: seed.state,
+        context: [],
+        entryPoint: seed.id,
+        evidence: sortedUnique(seed.evidence),
+        path: [],
+      })),
+  );
   const states = new Map<string, State>();
   const nodes = new Map<string, StaticAnalysisNode<State>>();
   const edges = new Map<string, StaticAnalysisEdge>();
@@ -377,8 +465,9 @@ export const analyzeStaticControlFlow = <State>(
     incompleteReasons.set(`${reason.kind}:${reason.address}:${reason.limit}`, reason);
   };
   const enqueue = (item: WorkItem<State>): void => {
+    // Keep this wrapper: successors must enter through the stable heap so maxWorkItems observes the
+    // same deterministic next item regardless of which adapter emitted them.
     queue.push(item);
-    queue.sort(sortWork);
   };
 
   for (const seed of seeds) {
@@ -393,7 +482,7 @@ export const analyzeStaticControlFlow = <State>(
 
   while (queue.length > 0) {
     if (processedWorkItems >= maxWorkItems) {
-      const next = queue[0];
+      const next = queue.peek()!;
       addIncomplete({
         kind: "work-limit",
         address: next.address,
