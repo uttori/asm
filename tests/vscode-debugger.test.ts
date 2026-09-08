@@ -49,7 +49,7 @@ test("VS Code contributes and activates the inline Uttori ASM debugger", (t) => 
     path.join(root, "packages/vscode-extension/src/extension.ts"),
     "utf8",
   );
-  t.regex(extension, /registerDebugging\(context\.extensionPath\)/);
+  t.regex(extension, /registerDebugging\(context\.extensionPath, refreshAnalysisViews\)/);
 });
 
 test("emulator implementation names do not cross the debug-adapter source boundary", (t) => {

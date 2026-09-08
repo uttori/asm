@@ -47,8 +47,14 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
   t.deepEqual(
     manifest.contributes.commands.map((entry) => entry.command),
     [
+      "asm.createDisassemblyProject",
+      "asm.importDizProject",
       "asm.build",
       "asm.toggleWatch",
+      "asm.runEmulator",
+      "asm.debugEmulator",
+      "asm.runAndWatch",
+      "asm.configureEmulatorRuntime",
       "asm.initConfig",
       "asm.openPanel",
       "asm.outline.refresh",
@@ -59,15 +65,35 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.coverage.setStateEntryPoint",
       "asm.coverage.resolveTarget",
       "asm.coverage.renameLabel",
+      "asm.disassembly.editAnnotation",
       "asm.coverage.explainEvidence",
       "asm.coverage.undo",
       "asm.coverage.redo",
+      "asm.capture.idle",
+      "asm.capture.guide",
+      "asm.capture.demo",
+      "asm.capture.behavior",
+      "asm.capture.stop",
+      "asm.capture.review",
       "asm.trace.start",
       "asm.trace.stop",
+      "asm.trace.stopAnalyze",
+      "asm.trace.importRegenerate",
+      "asm.ramMap.open",
+      "asm.disassembly.status",
+      "asm.disassembly.regenerate",
     ],
   );
   t.true(manifest.contributes.commands.every((entry) => entry.category === "Assembly"));
   t.true(manifest.contributes.commands.some((entry) => entry.title === "Build Binary"));
+  t.true(
+    manifest.contributes.commands.some(
+      (entry) => entry.title === "Create Disassembly Project from ROM",
+    ),
+  );
+  t.true(
+    manifest.contributes.commands.some((entry) => entry.title === "Import Diz Disassembly Project"),
+  );
   t.deepEqual(
     manifest.contributes.languages.map((entry) => entry.id),
     ["uttori-snes", "uttori-65xx"],
@@ -137,6 +163,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.baseImage",
       "asm.buildOutput",
       "asm.configFile",
+      "asm.debug.traceDetail",
       "asm.entryPoints",
       "asm.includePaths",
       "asm.plugins",
@@ -294,6 +321,59 @@ test("VS Code client propagates trust and every project environment setting", (t
   t.true(source.includes("Build Binary requested"));
 });
 
+test("VS Code disassembly wizard probes, initializes, verifies, and opens an isolated project", (t) => {
+  const extension = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/extension.ts"),
+    "utf8",
+  );
+  const wizard = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/project-wizard.ts"),
+    "utf8",
+  );
+  const bindings = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/snes-rom-bindings.ts"),
+    "utf8",
+  );
+  t.true(extension.includes("registerProjectWizards"));
+  t.true(wizard.includes("probeSnesProject"));
+  t.true(wizard.includes("initializeSnesDisassemblyWorkspace"));
+  t.true(wizard.includes("mapperSelectionRequired"));
+  t.true(wizard.includes("the selected output directory must be empty"));
+  t.true(wizard.includes('path: ".vscode/settings.json"'));
+  t.true(wizard.includes('path: ".vscode/launch.json"'));
+  t.true(wizard.includes('"asm.analysisProject": "analysis"'));
+  t.true(wizard.includes("roundTrip.comparison.actualSha256"));
+  t.true(wizard.includes('commands.executeCommand("vscode.openFolder"'));
+  t.true(wizard.includes("rememberSnesRom"));
+  t.true(bindings.includes("context.globalState.update"));
+  t.false(wizard.includes('"asm.romPath"'));
+});
+
+test("VS Code disassembly maintenance makes trace-to-source changes explicit and measurable", (t) => {
+  const source = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/disassembly-maintenance.ts"),
+    "utf8",
+  );
+  const panel = fs.readFileSync(path.join(root, "packages/vscode-extension/src/panel.ts"), "utf8");
+  t.true(source.includes("importRuntimeInstructionTrace"));
+  t.true(source.includes("mergeRuntimeEvidence"));
+  t.true(source.includes("analyzeSnesProject"));
+  t.true(source.includes("exportSnesProject"));
+  t.true(source.includes("verifySnesProjectRoundTrip"));
+  t.true(source.includes("Source status:"));
+  t.true(source.includes("Source emitted as code:"));
+  t.true(source.includes("validateSourceExportInputs"));
+  t.true(source.includes("RAM-map variables:"));
+  t.true(source.includes("A positive code-byte delta"));
+  t.true(panel.includes("Open RAM map"));
+  t.true(panel.includes("Import trace / update"));
+  t.true(panel.includes("Analyze / regenerate"));
+  t.true(panel.includes("Stop / show routines"));
+  t.true(source.includes("summarizeExecutionWindow"));
+  t.true(source.includes("Executed routines (function candidates)"));
+  t.true(source.includes("The routine attribution available from the current analysis"));
+});
+
 test("analysis graph preserves identity and navigates source-first", (t) => {
   const tree = fs.readFileSync(
     path.join(root, "packages/vscode-extension/src/analysis-graph-tree.ts"),
@@ -307,8 +387,9 @@ test("analysis graph preserves identity and navigates source-first", (t) => {
     path.join(root, "packages/vscode-extension/src/analysis-debug-maps.ts"),
     "utf8",
   );
-  t.true(tree.includes("buildAnalysisCallGraph"));
-  t.true(tree.includes("loadAnalysisProject"));
+  t.true(tree.includes('analysisWorker().request<GraphProjection>(directory, "graph")'));
+  t.false(tree.includes("loadAnalysisProject"));
+  t.true(tree.includes("loadChildren"));
   t.true(tree.includes("const PAGE_SIZE = 200"));
   t.true(tree.includes("romContentSha256"));
   t.true(tree.includes("addressSpace"));
@@ -346,13 +427,14 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
   t.true(extension.includes("AnalysisAnnotationController"));
   t.true(extension.includes("onDidChangeTextDocument"));
   t.true(extension.includes("onDidSaveTextDocument"));
-  t.true(controller.includes("buildInstructionAnalysisAnnotations"));
+  t.false(controller.includes("loadAnalysisProject"));
+  t.true(controller.includes('"annotations"'));
   t.true(controller.includes("createTextEditorDecorationType"));
   t.true(controller.includes("currentAnalysisSourcePath"));
-  t.true(controller.includes("instructionAnnotationsForDebugRange"));
-  t.true(debugAnnotations.includes("project.manifest.target !== map.target"));
-  t.true(debugAnnotations.includes("project.manifest.rom.contentSha256 !== map.output.sha256"));
-  t.true(debugAnnotations.includes("project.manifest.rom.contentSize !== map.output.size"));
+  t.true(controller.includes("editor.visibleRanges"));
+  t.true(debugAnnotations.includes("manifest.target !== map.target"));
+  t.true(debugAnnotations.includes("manifest.rom.contentSha256 !== map.output.sha256"));
+  t.true(debugAnnotations.includes("manifest.rom.contentSize !== map.output.size"));
   t.true(debugAnnotations.includes("byAddress.get"));
   t.true(debugAnnotations.includes("byOutputOffset.get"));
   t.true(debugging.includes("createDebugInstructionAnnotation"));

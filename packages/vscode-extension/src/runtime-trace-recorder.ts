@@ -1,3 +1,4 @@
+import type { RuntimeInstructionDetail } from "@uttori/asm-disassembler";
 import { open, type FileHandle } from "node:fs/promises";
 
 /** One trace batch returned by the debugger's bounded pull protocol. */
@@ -6,6 +7,8 @@ export interface EditorTraceBatch {
   readonly addressSpace: string;
   readonly sequenceStart: number;
   readonly addresses: readonly number[];
+  readonly details?: readonly RuntimeInstructionDetail[];
+  readonly unattributedMemoryAccesses?: number;
   readonly droppedEvents: number;
   readonly active: boolean;
 }
@@ -54,6 +57,9 @@ export class RuntimeTraceFileRecorder {
   #chunks = 0;
   #observedEvents = 0;
   #droppedEvents = 0;
+  #expectedSequence = 1;
+  #unattributed = 0;
+  #producerStopped = false;
   #complete = false;
 
   private constructor(options: RuntimeTraceFileRecorderOptions, handle: FileHandle) {
@@ -129,8 +135,11 @@ export class RuntimeTraceFileRecorder {
 
   async #pump(): Promise<RuntimeTraceFileSummary> {
     try {
+      const { validateRuntimeInstructionDetails } = await import("@uttori/asm-disassembler");
       while (!this.#cancelled) {
         const batch = await this.#options.readTrace(this.#options.maxBatchEvents);
+        if (batch.details !== undefined)
+          validateRuntimeInstructionDetails(batch.details, batch.addresses.length);
         this.#assertBatch(batch);
         if (
           batch.addresses.length > 0 ||
@@ -152,6 +161,8 @@ export class RuntimeTraceFileRecorder {
   }
 
   #assertBatch(batch: EditorTraceBatch): void {
+    if (!Array.isArray(batch.addresses) || typeof batch.active !== "boolean")
+      throw new Error("Invalid trace batch shape.");
     if (
       batch.architecture !== this.#options.architecture ||
       batch.addressSpace !== this.#options.addressSpace
@@ -163,6 +174,15 @@ export class RuntimeTraceFileRecorder {
       throw new Error("Trace batch sequence must be a positive safe integer.");
     if (!Number.isSafeInteger(batch.droppedEvents) || batch.droppedEvents < this.#droppedEvents)
       throw new Error("Trace batch loss counter is invalid or decreased.");
+    if (batch.sequenceStart - this.#expectedSequence !== batch.droppedEvents - this.#droppedEvents)
+      throw new Error("Trace sequence gap disagrees with producer loss.");
+    if (this.#producerStopped && batch.active) throw new Error("Trace resumed after stopping.");
+    if (
+      batch.unattributedMemoryAccesses !== undefined &&
+      (!Number.isSafeInteger(batch.unattributedMemoryAccesses) ||
+        batch.unattributedMemoryAccesses < this.#unattributed)
+    )
+      throw new Error("Invalid unattributed memory counter.");
     if (
       batch.addresses.some(
         (address) => !Number.isSafeInteger(address) || address < 0 || address > 0xff_ffff,
@@ -177,6 +197,10 @@ export class RuntimeTraceFileRecorder {
       {
         sequenceStart: batch.sequenceStart,
         addresses: batch.addresses,
+        ...(batch.details === undefined ? {} : { details: batch.details }),
+        ...(batch.unattributedMemoryAccesses === undefined
+          ? {}
+          : { unattributedMemoryAccesses: batch.unattributedMemoryAccesses }),
         droppedEvents: batch.droppedEvents,
         active: batch.active,
       },
@@ -191,6 +215,9 @@ export class RuntimeTraceFileRecorder {
     this.#chunks++;
     this.#observedEvents += batch.addresses.length;
     this.#droppedEvents = batch.droppedEvents;
+    this.#expectedSequence = batch.sequenceStart + batch.addresses.length;
+    this.#unattributed = batch.unattributedMemoryAccesses ?? this.#unattributed;
+    this.#producerStopped ||= !batch.active;
   }
 
   async #finish(): Promise<RuntimeTraceFileSummary> {

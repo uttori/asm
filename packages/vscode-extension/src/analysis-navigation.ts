@@ -197,9 +197,11 @@ const openPersistedDisassembly = async (
   const start = Math.max(0, index - 4);
   const visible = nodes.slice(start, start + 32);
   const lines = visible.map((node) => {
-    const bytes = [node.opcode.toString(16).toUpperCase().padStart(2, "0")]
-      .concat(Array.from({ length: Math.max(0, node.size - 1) }, () => "??"))
-      .join(" ");
+    const bytes = node.bytes
+      ? node.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")
+      : [node.opcode.toString(16).toUpperCase().padStart(2, "0")]
+          .concat(Array.from({ length: Math.max(0, node.size - 1) }, () => "??"))
+          .join(" ");
     const context =
       node.context.length > 0
         ? ` context=${node.context.map((value) => `0x${value.toString(16)}`).join("/")}`
@@ -261,6 +263,20 @@ export const navigateToAnalysisLocation = async (
     const projection = buildInstructionAnalysisAnnotations(project.manifest, project.shards);
     const search = await findDebugMapSources(target);
     if (await openSourceLocation(search.locations)) return;
+    // Captured RAM may have changed since recording. Show its saved variants before live memory.
+    if (
+      project.shards.analysis.some(
+        (record) =>
+          record.kind === "cfg-node" &&
+          record.fileOffset === undefined &&
+          record.bytes &&
+          record.addressSpace === target.addressSpace &&
+          record.address === target.address,
+      )
+    ) {
+      await openPersistedDisassembly(target, project, projection);
+      return;
+    }
     if (await openLiveDisassembly(target, search.architectures)) return;
     if (search.staleSources > 0) {
       await window.showWarningMessage(

@@ -5,6 +5,7 @@
 import * as path from "node:path";
 import {
   ConfigurationTarget,
+  commands,
   Uri,
   window,
   workspace,
@@ -102,10 +103,52 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       case "refresh":
         await this.refresh();
         return;
+      case "captureGuide":
+      case "captureDemo":
+      case "captureIdle":
+      case "captureBehavior":
+      case "captureStop":
+      case "captureReview": {
+        const command = {
+          captureGuide: "guide",
+          captureDemo: "demo",
+          captureIdle: "idle",
+          captureBehavior: "behavior",
+          captureStop: "stop",
+          captureReview: "review",
+        }[message.type];
+        await commands.executeCommand(`asm.capture.${command}`);
+        return;
+      }
+      case "disassemblyStatus":
+        await commands.executeCommand("asm.disassembly.status");
+        return;
+      case "regenerateDisassembly":
+        await commands.executeCommand("asm.disassembly.regenerate");
+        return;
+      case "openRamMap":
+        await commands.executeCommand("asm.ramMap.open");
+        return;
+      case "importRuntimeTrace":
+        await commands.executeCommand("asm.trace.importRegenerate");
+        return;
+      case "startExecutionCapture":
+        await commands.executeCommand("asm.trace.start");
+        return;
+      case "stopExecutionCapture":
+        await commands.executeCommand("asm.trace.stopAnalyze");
+        return;
       case "initConfig":
         await this.initConfig();
         await this.refresh();
         return;
+      case "openConfig": {
+        const { status } = await this.snapshot();
+        const root = workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (root && status.configFile)
+          await window.showTextDocument(Uri.file(path.resolve(root, status.configFile)));
+        return;
+      }
       case "addEntryPoint":
         await this.addPath("entryPoints", false);
         return;
@@ -246,6 +289,19 @@ export class ProjectPanelProvider implements WebviewViewProvider {
   <link rel="stylesheet" href="${stylesheet}" />
 </head>
 <body>
+  <h2>Execution Window</h2>
+  <p class="muted">Record from an explicit start to stop point, then rebuild and list every identified routine that ran.</p>
+  <div class="actions"><button data-cmd="startExecutionCapture">Start capture</button><button data-cmd="stopExecutionCapture">Stop / show routines</button></div>
+  <h2>Behavior Capture</h2>
+  <p class="muted">Compare running idle code with an action. Start with the guide or a safe synthetic demo.</p>
+  <div class="actions"><button data-cmd="captureGuide">Guide</button><button data-cmd="captureDemo">Idle demo</button></div>
+  <div class="actions"><button data-cmd="captureIdle">1. Capture idle</button><button data-cmd="captureBehavior">2. Capture behavior</button></div>
+  <div class="actions"><button data-cmd="captureStop">Stop capture</button><button data-cmd="captureReview">3. Review / apply</button></div>
+  <h2>Disassembly</h2>
+  <p class="muted">Edit the persistent RAM map, check whether source reflects current metadata/evidence, or explicitly import a trace and rebuild.</p>
+  <div class="actions"><button data-cmd="openRamMap">Open RAM map</button><button data-cmd="disassemblyStatus">Status</button></div>
+  <div class="actions"><button data-cmd="regenerateDisassembly">Analyze / regenerate</button></div>
+  <div class="actions"><button data-cmd="importRuntimeTrace">Import trace / update</button></div>
   <h2>Analysis</h2>
   <div class="status" id="status"></div>
   <h2>Entry points</h2>
@@ -261,7 +317,7 @@ export class ProjectPanelProvider implements WebviewViewProvider {
   <h2>Build output</h2>
   <div class="field"><input id="buildOutput" placeholder="game.sfc" /></div>
   <div class="actions">
-    <button class="primary" data-cmd="initConfig">Initialize uttori-asm.config.json</button>
+    <button class="primary" id="configAction" data-cmd="initConfig">Initialize uttori-asm.config.json</button>
   </div>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
@@ -313,6 +369,8 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     window.addEventListener("message", (event) => {
       const { status, metadata } = event.data || {};
       if (!status) return;
+      $("configAction").textContent = status.configFile ? "Open project configuration" : "Initialize uttori-asm.config.json";
+      $("configAction").setAttribute("data-cmd", status.configFile ? "openConfig" : "initConfig");
       const duration = status.lastReindexDurationMs == null ? "—" : status.lastReindexDurationMs + "ms";
       const roots = status.lastReindexRootCount || 0;
       const cached = status.lastReindexCachedRoots || 0;

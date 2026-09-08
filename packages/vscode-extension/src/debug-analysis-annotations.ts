@@ -1,18 +1,24 @@
 /** Native analysis annotations supplied to the target-neutral inline DAP session. */
 import type { DebugMap } from "@uttori/asm-core/debug-map";
 import type { DebugAddress } from "@uttori/asm-debug-adapter";
-import {
-  buildInstructionAnalysisAnnotations,
-  loadAnalysisProject,
-  type InstructionAnalysisAnnotation,
-} from "@uttori/asm-disassembler";
-import { formatInstructionAnnotationSummary } from "./analysis-annotation-format.js";
+import { type AnalysisProjectManifest } from "@uttori/asm-disassembler";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
+import { analysisWorker } from "./analysis-worker-client.js";
+
+interface DebugAnnotation {
+  readonly addressSpace: string;
+  readonly address: number;
+  readonly outputOffsets: readonly number[];
+  readonly architectures: readonly string[];
+  readonly text: string;
+}
 
 const locationKey = (addressSpace: string, address: number): string => `${addressSpace}:${address}`;
 
 const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
-  map.set(key, [...(map.get(key) ?? []), value]);
+  const entries = map.get(key);
+  if (entries) entries.push(value);
+  else map.set(key, [value]);
 };
 
 /**
@@ -24,20 +30,26 @@ const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): voi
 export const createDebugInstructionAnnotation = async (
   map: DebugMap,
 ): Promise<((address: DebugAddress) => string | undefined) | undefined> => {
-  const byAddress = new Map<string, InstructionAnalysisAnnotation[]>();
-  const byOutputOffset = new Map<number, InstructionAnalysisAnnotation[]>();
+  const byAddress = new Map<string, DebugAnnotation[]>();
+  const byOutputOffset = new Map<number, DebugAnnotation[]>();
   for (const directory of await findAnalysisProjectDirectories()) {
     try {
-      const project = loadAnalysisProject(directory);
+      const manifest = await analysisWorker().request<AnalysisProjectManifest>(
+        directory,
+        "manifest",
+      );
       if (
-        project.manifest.target !== map.target ||
-        project.manifest.rom.contentSha256 !== map.output.sha256 ||
-        project.manifest.rom.contentSize !== map.output.size
+        manifest.target !== map.target ||
+        manifest.rom.contentSha256 !== map.output.sha256 ||
+        manifest.rom.contentSize !== map.output.size
       ) {
         continue;
       }
-      const projection = buildInstructionAnalysisAnnotations(project.manifest, project.shards);
-      for (const annotation of projection.instructions) {
+      const annotations = await analysisWorker().request<DebugAnnotation[]>(
+        directory,
+        "debugAnnotations",
+      );
+      for (const annotation of annotations) {
         append(byAddress, locationKey(annotation.addressSpace, annotation.address), annotation);
         for (const offset of annotation.outputOffsets) {
           append(byOutputOffset, offset, annotation);
@@ -63,7 +75,7 @@ export const createDebugInstructionAnnotation = async (
               annotation.architectures.length === 0 ||
               annotation.architectures.includes(address.architecture),
           )
-          .map((annotation) => formatInstructionAnnotationSummary(annotation))
+          .map((annotation) => annotation.text)
           .filter(Boolean),
       ),
     ];

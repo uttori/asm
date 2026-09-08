@@ -4,6 +4,18 @@ import { cpSync, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+mkdirSync(path.join(here, "schemas"), { recursive: true });
+cpSync(path.resolve(here, "../plugin-snes/heuristics.schema.json"), path.join(here, "schemas/snes-heuristics.schema.json"));
+
+await build({
+  entryPoints: [path.join(here, "src/analysis-worker.ts")],
+  outfile: path.join(here, "out/analysis-worker.cjs"),
+  bundle: true,
+  platform: "node",
+  format: "cjs",
+  target: "node20",
+  logLevel: "info",
+});
 
 await build({
   entryPoints: [path.join(here, "src/extension.ts")],

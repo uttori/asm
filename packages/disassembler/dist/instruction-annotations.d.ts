@@ -1,4 +1,4 @@
-import type { AnalysisProjectManifest, AnalysisProjectShards, RuntimeCoverageRecord, RuntimeMemoryAccessRecord } from "./project-types.js";
+import type { AnalysisProjectManifest, AnalysisProjectShards, ProjectComment, RuntimeCoverageRecord, RuntimeMemoryAccessRecord } from "./project-types.js";
 /** One normalized static effective-address explanation at an instruction. */
 export interface InstructionEffectiveAddressAnnotation {
     readonly operandIndex: number;
@@ -37,6 +37,8 @@ export interface InstructionRuntimeCoverageAnnotation {
 }
 /** Aggregated runtime memory access attributed to this instruction. */
 export interface InstructionMemoryAccessAnnotation {
+    readonly actor?: RuntimeMemoryAccessRecord["actor"];
+    readonly channel?: number;
     readonly accessedAddressSpace: string;
     readonly accessedAddress: number;
     readonly access: RuntimeMemoryAccessRecord["access"];
@@ -48,6 +50,7 @@ export interface InstructionMemoryAccessAnnotation {
 }
 /** Target-neutral annotations for one qualified instruction location. */
 export interface InstructionAnalysisAnnotation {
+    readonly comments?: readonly ProjectComment[];
     readonly id: string;
     readonly addressSpace: string;
     readonly address: number;

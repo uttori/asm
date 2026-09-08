@@ -123,6 +123,59 @@ try {
   assert.ok(fs.statSync(snesOutput).size > 0);
   await snesClient.close();
 
+  const nestedRoot = path.join(directory, "nested");
+  const nestedProject = path.join(nestedRoot, "disassembly");
+  fs.mkdirSync(path.join(nestedProject, "include"), { recursive: true });
+  const nestedSource = path.join(nestedProject, "main.asm");
+  fs.writeFileSync(nestedSource, 'lorom\norg $008000\nincsrc "body.asm"\n');
+  fs.writeFileSync(path.join(nestedProject, "include", "body.asm"), "NOP\n");
+  fs.writeFileSync(
+    path.join(nestedProject, "uttori-asm.config.json"),
+    JSON.stringify({
+      target: "snes.sfc",
+      architecture: "snes.65816",
+      entryPoints: ["main.asm"],
+      includePaths: ["include"],
+      buildOutput: "build/nested.sfc",
+    }),
+  );
+  const nestedClient = new LspClient(server);
+  await initialize(nestedClient, nestedRoot, {
+    workspaceTrusted: true,
+    configFile: "disassembly/uttori-asm.config.json",
+  });
+  const nestedOutput = await build(nestedClient, nestedSource);
+  assert.equal(nestedOutput, path.join(nestedProject, "build", "nested.sfc"));
+  assert.equal(fs.readFileSync(nestedOutput)[0], 0xea);
+  const alternateSource = path.join(nestedProject, "alternate.asm");
+  fs.writeFileSync(alternateSource, "lorom\norg $008000\nSTP\n");
+  const nestedConfig = path.join(nestedProject, "uttori-asm.config.json");
+  fs.writeFileSync(
+    nestedConfig,
+    JSON.stringify({
+      target: "snes.sfc",
+      architecture: "snes.65816",
+      entryPoints: ["alternate.asm"],
+      includePaths: ["include"],
+      buildOutput: "build/alternate.sfc",
+    }),
+  );
+  nestedClient.notify("workspace/didChangeWatchedFiles", {
+    changes: [{ uri: pathToFileURL(nestedConfig).href, type: 2 }],
+  });
+  const changedStatus = (await nestedClient.request("asm/status", null)) as {
+    entryPoints: string[];
+  };
+  assert.deepEqual(
+    changedStatus.entryPoints,
+    [alternateSource],
+    "config edits must not retain previously resolved defaults",
+  );
+  const alternateOutput = await build(nestedClient, nestedSource);
+  assert.equal(alternateOutput, path.join(nestedProject, "build", "alternate.sfc"));
+  assert.equal(fs.readFileSync(alternateOutput)[0], 0xdb);
+  await nestedClient.close();
+
   const fixtureDirectory = path.join(directory, "fixture");
   fs.mkdirSync(fixtureDirectory);
   const fixturePlugin = path.join(fixtureDirectory, "fixture-plugin.mjs");
@@ -181,8 +234,45 @@ try {
   assert.deepEqual([...fs.readFileSync(fixtureOutput)], [0x5a]);
   await fixtureClient.close();
 
+  // Opt-in local integration gate: never requires or distributes a copyrighted ROM fixture.
+  if (process.env.UTTORI_LSP_WORKSPACE) {
+    const localRoot = path.resolve(process.env.UTTORI_LSP_WORKSPACE);
+    const localSettings = JSON.parse(
+      fs.readFileSync(path.join(localRoot, ".vscode/settings.json"), "utf8"),
+    ) as Record<string, unknown>;
+    const initializationOptions = Object.fromEntries(
+      Object.entries(localSettings)
+        .filter(([key]) => key.startsWith("asm."))
+        .map(([key, value]) => [key.slice(4), value]),
+    );
+    const localClient = new LspClient(server);
+    const start = performance.now();
+    await initialize(localClient, localRoot, { ...initializationOptions, workspaceTrusted: true });
+    const status = (await localClient.request("asm/status", null)) as {
+      configFile?: string;
+      entryPoints: string[];
+      fileCount: number;
+      symbolCount: number;
+      errorCount: number;
+    };
+    assert.ok(status.configFile, "Existing workspace must be initialized.");
+    assert.equal(status.entryPoints.length, 1, "Generated workspace must have one include root.");
+    const indexMs = Math.round(performance.now() - start);
+    const output = await build(localClient, path.resolve(localRoot, status.entryPoints[0]));
+    console.log(
+      JSON.stringify({
+        localWorkspace: localRoot,
+        status,
+        indexMs,
+        totalMs: Math.round(performance.now() - start),
+        output,
+      }),
+    );
+    await localClient.close();
+  }
+
   console.log(
-    "Language-server bundle smoke test passed for bundled SNES, trust reload, metadata, and workspace plugin targets.",
+    "Language-server bundle smoke test passed for bundled SNES, nested config paths, trust reload, metadata, and workspace plugin targets.",
   );
 } finally {
   fs.rmSync(directory, { recursive: true, force: true });

@@ -108,7 +108,7 @@ export type StaticDecodeResult = {
 export interface StaticAnalysisSeed<State> {
     readonly id: string;
     readonly address: number;
-    readonly kind: "configured" | "imported-label" | "manual" | "target-set" | "vector";
+    readonly kind: "configured" | "imported-label" | "manual" | "observation" | "target-set" | "vector";
     readonly state: State;
     readonly evidence: readonly string[];
     readonly detail?: string;

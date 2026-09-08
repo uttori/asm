@@ -3,7 +3,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { test } from "./ava-helper.js";
-import { emptyOutputMessage, resolveBuildEntry } from "../packages/language-server/src/build.js";
+import {
+  commitBuildArtifactPair,
+  emptyOutputMessage,
+  resolveBuildEntry,
+} from "../packages/language-server/src/build.js";
 
 function makeWorkspace(): string {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-build-entry-"));
@@ -88,6 +92,30 @@ test("Build Binary refuses to write a 0-byte image from an include fragment", (t
     fs.writeFileSync(output, Buffer.alloc(4, 0xff));
     t.true(fs.statSync(output).size > 0);
     t.true(emptyOutputMessage("fragment.asm", false).includes("0 bytes"));
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("commitBuildArtifactPair publishes matching artifacts and reports unchanged rebuilds", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-artifact-pair-"));
+  try {
+    const output = path.join(directory, "build", "game.sfc");
+    const bytes = Uint8Array.from([0xea, 0xdb]);
+    const map = `${JSON.stringify({ output: { size: bytes.length }, fingerprint: "test" })}\n`;
+    const first = commitBuildArtifactPair(output, bytes, map);
+    t.true(first.outputChanged);
+    t.true(first.debugMapChanged);
+    t.deepEqual(fs.readFileSync(first.outputPath), Buffer.from(bytes));
+    t.is(fs.readFileSync(first.debugMapPath, "utf8"), map);
+
+    const second = commitBuildArtifactPair(output, bytes, map);
+    t.false(second.outputChanged);
+    t.false(second.debugMapChanged);
+    t.deepEqual(
+      fs.readdirSync(path.dirname(output)).filter((entry) => entry.endsWith(".tmp")),
+      [],
+    );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

@@ -1,4 +1,5 @@
 import { canonicalJson, type LoadedAnalysisProject } from "./project-store.js";
+import { projectSourceLabelNames, validateSourceLabelName } from "./project-labels.js";
 import type {
   AnalysisConflictRecord,
   AnalysisProject,
@@ -136,6 +137,35 @@ export interface LabelRenameInverse {
 export interface AppliedLabelRenameEdit {
   readonly project: AnalysisProject;
   readonly inverse: LabelRenameInverse;
+}
+
+/** One address-based label/comment edit. Empty comment strings clear only the selected fields. */
+export interface DisassemblyAnnotationEditRequest {
+  readonly addressSpace: string;
+  readonly address: number;
+  readonly labelId?: string;
+  readonly name?: string;
+  readonly comment?: string;
+  readonly inlineComment?: string;
+  readonly instructionCommentId?: string;
+  readonly instructionComment?: string;
+  readonly evidenceId: string;
+  readonly sourceId: string;
+}
+
+/** Exact records touched by one annotation edit, including creations and comment removal. */
+export interface DisassemblyAnnotationInverse {
+  readonly kind: "restore-disassembly-annotation";
+  readonly labelBefore?: ProjectLabel;
+  readonly labelAfter?: ProjectLabel;
+  readonly commentBefore?: ProjectComment;
+  readonly commentAfter?: ProjectComment;
+  readonly evidence: EvidenceRecord;
+}
+
+export interface AppliedDisassemblyAnnotationEdit {
+  readonly project: AnalysisProject;
+  readonly inverse: DisassemblyAnnotationInverse;
 }
 
 /** Any persisted record addressable by shard and stable id. */
@@ -716,8 +746,12 @@ export const applyLabelRenameEdit = (
   const after: ProjectLabel = {
     ...before,
     name,
+    ...(before.sourceName !== undefined ? { sourceName: name } : {}),
     evidence: sortedUnique([...before.evidence, evidence.id]),
   };
+  projectSourceLabelNames(
+    project.shards.labels.map((label) => (label.id === before.id ? after : label)),
+  );
   return {
     project: {
       manifest: manifestWithoutShards(project.manifest),
@@ -764,6 +798,200 @@ export const revertLabelRenameEdit = (
       labels: project.shards.labels.map((label) =>
         label.id === inverse.after.id ? inverse.before : label,
       ),
+      evidence: project.shards.evidence.filter(({ id }) => id !== inverse.evidence.id),
+    },
+  };
+};
+
+/**
+ * Save a friendly name and comments without changing code classifications or earlier evidence.
+ * @param {LoadedAnalysisProject} project Validated snapshot to edit.
+ * @param {DisassemblyAnnotationEditRequest} request Address, text, and stable record identities.
+ * @returns {AppliedDisassemblyAnnotationEdit} Replacement project and exact inverse records.
+ */
+export const applyDisassemblyAnnotationEdit = (
+  project: LoadedAnalysisProject,
+  request: DisassemblyAnnotationEditRequest,
+): AppliedDisassemblyAnnotationEdit => {
+  assertManualEvidenceRequest(project, request.evidenceId, request.sourceId);
+  const maximum = addressSpaceMaximum(project, request.addressSpace);
+  if (!Number.isSafeInteger(request.address) || request.address < 0 || request.address >= maximum)
+    throw new Error("The annotation address is outside the selected address space.");
+  for (const text of [request.comment, request.inlineComment, request.instructionComment]) {
+    if (text === undefined) continue;
+    if (typeof text !== "string") throw new Error("Comments must contain plain text.");
+    for (const character of text) {
+      const code = character.codePointAt(0)!;
+      if ((code < 32 && ![9, 10, 13].includes(code)) || code === 0x2028 || code === 0x2029)
+        throw new Error("Comments must contain plain text without control characters.");
+    }
+  }
+  for (const text of [request.inlineComment, request.instructionComment]) {
+    if (text !== undefined && /[\n\r]/.test(text))
+      throw new Error("Inline comments must fit on one line.");
+  }
+  const atAddress = (record: { addressSpace: string; address: number }): boolean =>
+    record.addressSpace === request.addressSpace && record.address === request.address;
+  const fileAddress = project.manifest.addressSpaces.some(
+    (space) => space.id === request.addressSpace && space.kind === "file",
+  );
+  const labelBefore =
+    request.labelId === undefined
+      ? undefined
+      : project.shards.labels.find(({ id }) => id === request.labelId);
+  if (labelBefore && !atAddress(labelBefore))
+    throw new Error("The label id belongs to a different address.");
+  let labelAfter: ProjectLabel | undefined;
+  if (request.name !== undefined) {
+    if (!request.labelId) throw new Error("A stable label id is required.");
+    assertStableId(request.labelId, "Label id");
+    const name = request.name.trim();
+    validateSourceLabelName(name);
+    labelAfter = {
+      ...(labelBefore ?? {
+        id: request.labelId,
+        addressSpace: request.addressSpace,
+        address: request.address,
+        analysisEntryPoint: false,
+      }),
+      name,
+      sourceName: name,
+      ...(request.comment !== undefined
+        ? { comment: request.comment.replaceAll("\r\n", "\n").replaceAll("\r", "\n") }
+        : {}),
+      ...(request.inlineComment !== undefined ? { inlineComment: request.inlineComment } : {}),
+      evidence: sortedUnique([...(labelBefore?.evidence ?? []), request.evidenceId]),
+    };
+  } else if (request.comment || request.inlineComment || request.labelId) {
+    throw new Error("A label name is required for comments attached to a label.");
+  }
+  const labels = labelAfter
+    ? [...project.shards.labels.filter(({ id }) => id !== labelAfter.id), labelAfter]
+    : project.shards.labels;
+  projectSourceLabelNames(labels);
+  const commentBefore =
+    request.instructionCommentId === undefined || request.instructionComment === undefined
+      ? undefined
+      : project.shards.comments.find(({ id }) => id === request.instructionCommentId);
+  if (
+    commentBefore &&
+    (!atAddress(commentBefore) || commentBefore.placement !== "inline-instruction")
+  )
+    throw new Error("The comment id belongs to a different address or placement.");
+  let commentAfter: ProjectComment | undefined;
+  if (request.instructionComment !== undefined) {
+    if (!request.instructionCommentId)
+      throw new Error("A stable instruction-comment id is required.");
+    assertStableId(request.instructionCommentId, "Comment id");
+    if (request.instructionComment) {
+      if (
+        request.instructionComment !== commentBefore?.text &&
+        !project.shards.analysis.some(
+          (record) =>
+            record.kind === "cfg-node" &&
+            (atAddress(record) || (fileAddress && record.fileOffset === request.address)),
+        )
+      )
+        throw new Error("An inline instruction comment requires an accepted instruction boundary.");
+      commentAfter = {
+        id: request.instructionCommentId,
+        addressSpace: request.addressSpace,
+        address: request.address,
+        placement: "inline-instruction",
+        text: request.instructionComment,
+        evidence: sortedUnique([...(commentBefore?.evidence ?? []), request.evidenceId]),
+      };
+    }
+  }
+  const withoutEvidence = (record: ProjectLabel | ProjectComment | undefined): unknown => {
+    if (!record) return undefined;
+    const { evidence: ignored, ...value } = record;
+    void ignored;
+    return value;
+  };
+  if (
+    recordMatches(withoutEvidence(labelBefore), withoutEvidence(labelAfter)) &&
+    recordMatches(withoutEvidence(commentBefore), withoutEvidence(commentAfter))
+  )
+    throw new Error("The annotation has no changes to save.");
+  const evidence = manualEvidence(
+    request.evidenceId,
+    request.sourceId,
+    `Edited disassembly annotation at ${request.addressSpace}:$${request.address.toString(16).toUpperCase()}.`,
+  );
+  return {
+    project: {
+      manifest: manifestWithoutShards(project.manifest),
+      shards: {
+        ...project.shards,
+        labels,
+        comments:
+          request.instructionComment === undefined
+            ? project.shards.comments
+            : [
+                ...project.shards.comments.filter(({ id }) => id !== request.instructionCommentId),
+                ...(commentAfter ? [commentAfter] : []),
+              ],
+        evidence: [...project.shards.evidence, evidence],
+      },
+    },
+    inverse: {
+      kind: "restore-disassembly-annotation",
+      labelBefore,
+      labelAfter,
+      commentBefore,
+      commentAfter,
+      evidence,
+    },
+  };
+};
+
+/**
+ * Undo only if every touched record and its new provenance are still exactly as saved.
+ * @param {ProjectLike} project Current native project.
+ * @param {DisassemblyAnnotationInverse} inverse Records retained when saving.
+ * @returns {AnalysisProject} Restored project with unrelated records preserved.
+ */
+export const revertDisassemblyAnnotationEdit = (
+  project: ProjectLike,
+  inverse: DisassemblyAnnotationInverse,
+): AnalysisProject => {
+  const labelId = inverse.labelAfter?.id ?? inverse.labelBefore?.id;
+  const commentId = inverse.commentAfter?.id ?? inverse.commentBefore?.id;
+  if (
+    !recordMatches(
+      project.shards.labels.find(({ id }) => id === labelId),
+      inverse.labelAfter,
+    ) ||
+    !recordMatches(
+      project.shards.comments.find(({ id }) => id === commentId),
+      inverse.commentAfter,
+    ) ||
+    !recordMatches(
+      project.shards.evidence.find(({ id }) => id === inverse.evidence.id),
+      inverse.evidence,
+    )
+  )
+    throw new Error("Cannot undo an annotation whose records changed after saving.");
+  const allowed = new Set([`labels:${labelId}`, `comments:${commentId}`]);
+  if (
+    evidenceReferences(project.shards, inverse.evidence.id).some(
+      (reference) => !allowed.has(reference),
+    )
+  )
+    throw new Error("Cannot undo annotation evidence referenced by another record.");
+  return {
+    manifest: manifestWithoutShards(project.manifest),
+    shards: {
+      ...project.shards,
+      labels: [
+        ...project.shards.labels.filter(({ id }) => id !== labelId),
+        ...(inverse.labelBefore ? [inverse.labelBefore] : []),
+      ],
+      comments: [
+        ...project.shards.comments.filter(({ id }) => id !== commentId),
+        ...(inverse.commentBefore ? [inverse.commentBefore] : []),
+      ],
       evidence: project.shards.evidence.filter(({ id }) => id !== inverse.evidence.id),
     },
   };

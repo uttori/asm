@@ -10,6 +10,7 @@ import {
 } from "../src/architectures/65816-decoder.js";
 import { buildCpu65816Catalog, cpu65816Specifications } from "../src/architectures/65816-spec.js";
 import { formatSnes65816SourceInstruction } from "../src/disassembler/source-export.js";
+import { indexSnesRamMap, validateSnesRamMap } from "../src/disassembler/ram-map.js";
 
 const decoder = new Cpu65816Decoder();
 const logicalAddress = 0x808000;
@@ -86,16 +87,12 @@ test("65816 decoder reports fixed-width instructions, flow, references, and effe
   const unknownDirectPage = decode([0xa5, 0x20], { e: 1 });
   t.is(unknownDirectPage.kind, "instruction");
   if (unknownDirectPage.kind === "instruction") {
-    t.deepEqual(unknownDirectPage.instruction.references, [
-      { kind: "data", operandIndex: 0 },
-    ]);
+    t.deepEqual(unknownDirectPage.instruction.references, [{ kind: "data", operandIndex: 0 }]);
   }
   const unknownDataBank = decode([0xad, 0x00, 0x21], { e: 1 });
   t.is(unknownDataBank.kind, "instruction");
   if (unknownDataBank.kind === "instruction") {
-    t.deepEqual(unknownDataBank.instruction.references, [
-      { kind: "data", operandIndex: 0 },
-    ]);
+    t.deepEqual(unknownDataBank.instruction.references, [{ kind: "data", operandIndex: 0 }]);
   }
 });
 
@@ -249,6 +246,98 @@ test("65816 decode-format-encode round trips all 256 opcodes in every width", (t
       }
     }
   }
+});
+
+test("source formatter names CPU-visible SNES hardware registers without changing width", (t) => {
+  const absolute = decode([0x8d, 0x00, 0x21], { e: 0, m: 1, x: 1, dataBank: 0 });
+  t.is(absolute.kind, "instruction");
+  if (absolute.kind === "instruction")
+    t.is(formatSnes65816SourceInstruction(absolute.instruction), "STA.w INIDISP");
+
+  const indexed = decode([0x9d, 0x00, 0x43], { e: 0, m: 1, x: 1, dataBank: 0 });
+  t.is(indexed.kind, "instruction");
+  if (indexed.kind === "instruction")
+    t.is(formatSnes65816SourceInstruction(indexed.instruction), "STA.w DMAP0,x");
+  for (const [bytes, state, expected] of [
+    [[0x20, 0x03, 0x42], { dataBank: 0 }, "JSR.w $4203"],
+    [[0x8d, 0x00, 0x21], { dataBank: 0x7e }, "STA.w $2100"],
+    [[0x8d, 0x00, 0x21], {}, "STA.w $2100"],
+  ] as const) {
+    const decoded = decode(bytes, state);
+    t.is(decoded.kind, "instruction");
+    if (decoded.kind === "instruction")
+      t.is(formatSnes65816SourceInstruction(decoded.instruction), expected);
+  }
+});
+
+test("source formatter maps known WRAM references without changing operand width", (t) => {
+  const variables = indexSnesRamMap(
+    validateSnesRamMap({
+      format: "uttori-asm-snes-ram-map",
+      schemaVersion: 1,
+      variables: [
+        {
+          name: "RAM_RING_MENU_MODE",
+          address: "$7E1847",
+          description: "Selects the active ring-menu mode.",
+        },
+        {
+          name: "RAM_GAME_HOURS",
+          address: "$7E00F4",
+          size: 2,
+          description: "Total elapsed whole hours.",
+        },
+        {
+          name: "RAM_CHARACTER_NAME",
+          address: "$7ECC00",
+          size: 12,
+          description: "Character name storage.",
+        },
+      ],
+    }),
+  );
+
+  const long = decode([0xaf, 0x47, 0x18, 0x7e]);
+  t.is(long.kind, "instruction");
+  if (long.kind === "instruction")
+    t.is(formatSnes65816SourceInstruction(long.instruction, variables), "LDA.l RAM_RING_MENU_MODE");
+
+  const absolute = decode([0xad, 0x47, 0x18], { dataBank: 0x7e });
+  t.is(absolute.kind, "instruction");
+  if (absolute.kind === "instruction")
+    t.is(
+      formatSnes65816SourceInstruction(absolute.instruction, variables),
+      "LDA.w RAM_RING_MENU_MODE & $FFFF",
+    );
+
+  const direct = decode([0xa5, 0xf4], { directPage: 0 });
+  t.is(direct.kind, "instruction");
+  if (direct.kind === "instruction")
+    t.is(
+      formatSnes65816SourceInstruction(direct.instruction, variables),
+      "LDA.b RAM_GAME_HOURS & $FF",
+    );
+
+  const rangeOffset = decode([0xaf, 0x01, 0xcc, 0x7e]);
+  t.is(rangeOffset.kind, "instruction");
+  if (rangeOffset.kind === "instruction")
+    t.is(
+      formatSnes65816SourceInstruction(rangeOffset.instruction, variables),
+      "LDA.l (RAM_CHARACTER_NAME + $01)",
+    );
+});
+
+test("source formatter rebases relative targets from a ROM mirror to the generated source bank", (t) => {
+  const mirrored = decoder.decode({
+    source: new Uint8ArrayDecoderSource([0xd0, 0xf9]),
+    offset: 0,
+    logicalAddress: 0x4ffe7a,
+    state: { programBank: 0x4f },
+  });
+  t.is(mirrored.kind, "instruction");
+  if (mirrored.kind !== "instruction") return;
+  t.is(formatCpu65816Instruction(mirrored.instruction), "BNE $4FFE75");
+  t.is(formatSnes65816SourceInstruction(mirrored.instruction, undefined, 0xcffe7a), "BNE $CFFE75");
 });
 
 test("65816 decoder reports an out-of-bounds starting offset", (t) => {

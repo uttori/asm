@@ -114,15 +114,21 @@ uttori-asm export game.analysis game.source --rom game.sfc
 uttori-asm verify-roundtrip game.source --rom game.sfc
 ```
 
-The export contains `main.asm`, mapper-bank sources under `banks/`, raw bytes under `assets/`, a
-checksum-preserving `uttori-asm.config.json`, and a versioned `generated-files.json`. The manifest
-assigns every content byte to exactly one code, raw, padding, SNES-header, or vector span. A copier
-header is preserved as its own asset when present.
+The export contains `main.asm`, mapper-bank sources under `banks/`, raw bytes under `assets/`,
+documented hardware definitions in `snes-defines.asm`, a checksum-preserving
+`uttori-asm.config.json`, and a versioned `generated-files.json`. It also creates a user-owned
+`ram-map.json`, its local `ram-map.schema.json`, and generated `ram-defines.asm`. Edit
+`ram-map.json` and run `export` again to regenerate definitions and substitute exact known WRAM
+operands in the bank source. The manifest hashes this input separately, so `verify-roundtrip`
+reports a stale map until source has been regenerated. The manifest assigns every content byte to
+exactly one code, raw, padding, SNES-header, or vector span. A copier header is preserved as its own
+asset when present.
 
-`verify-roundtrip` first rejects modified generated files, assembles `main.asm` through the normal
-CLI project environment, restores any copier header, and compares the complete file length and
-SHA-256. A mismatch reports its first differing file and content offset. Re-export refuses local
-changes unless `--force` is explicit.
+`verify-roundtrip` first rejects modified generated files and stale user inputs, assembles
+`main.asm` through the normal CLI project environment, restores any copier header, and compares the
+complete file length and SHA-256. A mismatch reports its first differing file and content offset.
+Re-export refuses local changes to generated files unless `--force` is explicit; changing
+`ram-map.json` is the normal regeneration workflow and does not require `--force`.
 
 The opt-in local Secret of Mana gate validates the private ROM hash before using it and removes all
 temporary analysis/source output afterward:

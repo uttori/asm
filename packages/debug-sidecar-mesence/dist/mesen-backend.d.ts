@@ -31,7 +31,7 @@ export declare class MesenDebugBackend implements DebugBackend {
     /** @inheritdoc */
     continue(threadId?: number): Promise<void>;
     /** @inheritdoc */
-    step(threadId: number, _kind: DebugStepKind): Promise<void>;
+    step(threadId: number, kind: DebugStepKind): Promise<void>;
     /** @inheritdoc */
     threads(): Promise<readonly DebugThread[]>;
     /** @inheritdoc */

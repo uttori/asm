@@ -12,6 +12,7 @@ import {
   loadSourceExportManifest,
   sourceExportSha256,
   validateSourceExportFiles,
+  validateSourceExportInputs,
   type SourceExportManifest,
 } from "../src/index.js";
 
@@ -19,7 +20,9 @@ test("source export manifests validate generated hashes and byte differences", (
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-source-export-"));
   try {
     fs.writeFileSync(path.join(directory, "main.asm"), "db $42\n");
+    fs.writeFileSync(path.join(directory, "ram-map.json"), "{}\n");
     const text = fs.readFileSync(path.join(directory, "main.asm"));
+    const input = fs.readFileSync(path.join(directory, "ram-map.json"));
     const manifest: SourceExportManifest = {
       format: SOURCE_EXPORT_FORMAT,
       schemaVersion: SOURCE_EXPORT_SCHEMA_VERSION,
@@ -39,6 +42,14 @@ test("source export manifests validate generated hashes and byte differences", (
       contentOutput: "build/content.bin",
       finalOutput: "build/final.bin",
       checksumPolicy: "preserve",
+      inputs: [
+        {
+          path: "ram-map.json",
+          kind: "metadata",
+          size: input.length,
+          sha256: sourceExportSha256(input),
+        },
+      ],
       files: [
         { path: "main.asm", kind: "source", size: text.length, sha256: sourceExportSha256(text) },
       ],
@@ -60,6 +71,9 @@ test("source export manifests validate generated hashes and byte differences", (
     );
     t.is(loadSourceExportManifest(directory).entrySource, "main.asm");
     t.notThrows(() => validateSourceExportFiles(directory));
+    t.notThrows(() => validateSourceExportInputs(directory));
+    fs.writeFileSync(path.join(directory, "ram-map.json"), '{"changed":true}\n');
+    t.throws(() => validateSourceExportInputs(directory), { message: /changed/ });
     fs.writeFileSync(path.join(directory, "main.asm"), "db $43\n");
     t.throws(() => validateSourceExportFiles(directory), { message: /modified/ });
     t.like(compareByteImages(new Uint8Array([1, 2]), new Uint8Array([1, 3])), {

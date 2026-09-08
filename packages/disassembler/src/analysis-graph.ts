@@ -79,7 +79,7 @@ const outputOffsetsFor = (
   sortedUniqueNumbers(
     nodeIds.flatMap((id) => {
       const node = nodesById.get(id);
-      return node ? [node.fileOffset] : [];
+      return node?.fileOffset === undefined ? [] : [node.fileOffset];
     }),
   );
 
@@ -104,15 +104,23 @@ export const buildAnalysisCallGraph = (shards: AnalysisProjectShards): AnalysisC
     functionsByAddress.set(key, [...(functionsByAddress.get(key) ?? []), fn]);
   }
 
+  const ownersByNode = new Map<string, readonly string[]>();
   const ownerFunctionIds = (node: AnalysisControlFlowNodeRecord | undefined): readonly string[] => {
     if (!node) return [];
+    const cached = ownersByNode.get(node.id);
+    if (cached) return cached;
     const path = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
-    for (const nodeId of [...path].reverse()) {
-      const candidate = nodesById.get(nodeId);
+    for (let index = path.length - 1; index >= 0; index--) {
+      const candidate = nodesById.get(path[index]);
       if (!candidate) continue;
       const matches = functionsByAddress.get(addressKey(candidate.addressSpace, candidate.address));
-      if (matches) return sortedUnique(matches.map(({ id }) => id));
+      if (matches) {
+        const owners = sortedUnique(matches.map(({ id }) => id));
+        ownersByNode.set(node.id, owners);
+        return owners;
+      }
     }
+    ownersByNode.set(node.id, []);
     return [];
   };
 
@@ -183,9 +191,24 @@ export const buildAnalysisCallGraph = (shards: AnalysisProjectShards): AnalysisC
   });
 
   const nodeIdsByFunction = new Map<string, string[]>();
+  const append = (map: Map<string, string[]>, key: string, id: string): void => {
+    const entries = map.get(key);
+    if (entries) entries.push(id);
+    else map.set(key, [id]);
+  };
+  const incoming = new Map<string, string[]>();
+  const outgoing = new Map<string, string[]>();
+  const unresolvedByOwner = new Map<string, string[]>();
+  for (const call of calls) {
+    for (const id of call.calleeFunctionIds) append(incoming, id, call.id);
+    for (const id of call.callerFunctionIds) append(outgoing, id, call.id);
+  }
+  for (const record of unresolved) {
+    for (const id of record.ownerFunctionIds) append(unresolvedByOwner, id, record.id);
+  }
   for (const node of nodes) {
     for (const owner of ownerFunctionIds(node)) {
-      nodeIdsByFunction.set(owner, [...(nodeIdsByFunction.get(owner) ?? []), node.id]);
+      append(nodeIdsByFunction, owner, node.id);
     }
   }
   const functions: AnalysisCallGraphFunction[] = functionRecords.map((fn) => {
@@ -204,21 +227,9 @@ export const buildAnalysisCallGraph = (shards: AnalysisProjectShards): AnalysisC
         nodeIds.filter((id) => nodesById.get(id)?.address === fn.address),
         nodesById,
       ),
-      incomingCallIds: sortedUnique(
-        calls
-          .filter(({ calleeFunctionIds }) => calleeFunctionIds.includes(fn.id))
-          .map(({ id }) => id),
-      ),
-      outgoingCallIds: sortedUnique(
-        calls
-          .filter(({ callerFunctionIds }) => callerFunctionIds.includes(fn.id))
-          .map(({ id }) => id),
-      ),
-      unresolvedIds: sortedUnique(
-        unresolved
-          .filter(({ ownerFunctionIds: owners }) => owners.includes(fn.id))
-          .map(({ id }) => id),
-      ),
+      incomingCallIds: sortedUnique(incoming.get(fn.id) ?? []),
+      outgoingCallIds: sortedUnique(outgoing.get(fn.id) ?? []),
+      unresolvedIds: sortedUnique(unresolvedByOwner.get(fn.id) ?? []),
       evidence: fn.evidence,
     };
   });

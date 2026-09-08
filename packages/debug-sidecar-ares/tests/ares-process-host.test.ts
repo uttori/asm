@@ -9,6 +9,7 @@ import { DEBUG_SIDECAR_SESSION_ENV, type DebugSubscription } from "@uttori/asm-d
 import {
   ARES_RUNTIME_MANIFEST_VERSION,
   AresProcessHost,
+  parseAresRuntimeManifest,
   type AresProcessExit,
   type AresProcessHandle,
   type AresProcessLaunch,
@@ -209,6 +210,33 @@ test("ares process host verifies identity, isolates launch arguments, and reconn
   await host.terminate();
   t.deepEqual(fixture.runtime.processes[0]?.signals, ["SIGTERM"]);
   t.is(host.pid, undefined);
+});
+
+test("desktop ares uses GUI settings, awaits entry, and keeps execution running when VS Code has focus", async (t) => {
+  const fixture = await setup(t);
+  const host = new AresProcessHost({
+    ...fixture,
+    manifest: { ...manifest(), frontend: "desktop" },
+  });
+  const client = await host.createClient({ reset: true });
+  t.is(host.manifest.frontend, "desktop");
+  const args = fixture.runtime.launches[0]!.args;
+  for (const setting of [
+    "Boot/AwaitGDBClient=true",
+    "Developer/DebugServerEnabled=true",
+    "Developer/DebugServerUseIPv4=true",
+    "Input/Defocus=Allow",
+    "General/RunAhead=false",
+    "General/Rewind=false",
+  ])
+    t.true(args.includes(setting));
+  for (const flag of ["--quiet", "--gdb-port", "--gdb-ipv4", "--wait-on-gdb", "--fast-boot"])
+    t.false(args.includes(flag));
+  await client.close();
+  await host.terminate();
+  t.throws(() => parseAresRuntimeManifest({ ...manifest(), frontend: "typo" }), {
+    message: /frontend/,
+  });
 });
 
 test("ares process host fails before launch on a manifest/hash mismatch", async (t) => {

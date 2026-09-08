@@ -5,9 +5,7 @@ import { pathToFileURL } from "node:url";
 import { Assembler, PluginError, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 import {
-  ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_MANIFEST,
-  ANALYSIS_PROJECT_SCHEMA_VERSION,
   SOURCE_EXPORT_MANIFEST,
   RomImage,
   canonicalJson,
@@ -16,16 +14,10 @@ import {
   importRuntimeInstructionTrace,
   loadAnalysisProject,
   loadSourceExportManifest,
-  sourceExportSha256,
   mergeRuntimeEvidence,
   validateAnalysisProject,
   validateSourceExportFiles,
   writeAnalysisProject,
-  type AnalysisProject,
-  type AnalysisProjectShards,
-  type AnalysisTargetOverrideRecord,
-  type AnalysisTargetSetRecord,
-  type ProjectMapping,
   type RuntimeInstructionTraceArtifact,
 } from "@uttori/asm-disassembler";
 import {
@@ -35,21 +27,14 @@ import {
   type ProjectConfigurationOverrides,
 } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, {
-  SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR,
-  SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR,
-  SNES_CPU_ADDRESS_SPACE,
-  SNES_FILE_ADDRESS_SPACE,
   SNES_MAPPERS,
-  SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR,
   SNES_TARGET_ID,
-  SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR,
-  analyzeSnes65816,
+  analyzeSnesProject,
+  createSnesAnalysisProject,
   createSnesAddressContext,
-  detectSnesRom,
-  exportSnes65816Source,
+  exportSnesProject,
   exportMesenLabels,
   identifySnesFileOffset,
-  importDizRaw,
   importMesen65816Trace,
   importMesenLabels,
   importMesenSnesCdl,
@@ -404,21 +389,6 @@ const formatFailure = (error: unknown): string => {
 };
 
 /**
- * Returns an empty set of analysis project shards.
- * @returns {AnalysisProjectShards} The empty set of analysis project shards.
- */
-const emptyShards = (): AnalysisProjectShards => ({
-  analysis: [],
-  annotations: [],
-  labels: [],
-  comments: [],
-  regions: [],
-  runtime: [],
-  evidence: [],
-  imports: [],
-});
-
-/**
  * Creates an analysis project from a ROM file.
  * @param {CliArguments} parsed The parsed CLI arguments.
  * @param {string} cwd The current working directory.
@@ -440,82 +410,17 @@ const createAnalysisProject = (parsed: CliArguments, cwd: string): number => {
     return 1;
   }
   try {
-    const rom = RomImage.load(inputFile, {
-      ...(parsed.headerSize === undefined ? {} : { headerSize: parsed.headerSize }),
-    });
-    const detection = detectSnesRom(rom, {
+    const result = createSnesAnalysisProject({
+      romFile: inputFile,
+      projectDirectory: outputDirectory,
       ...(parsed.mapper === undefined ? {} : { mapper: parsed.mapper }),
       ...(parsed.headerSize === undefined ? {} : { headerSize: parsed.headerSize }),
+      ...(parsed.dizraw === undefined ? {} : { dizRawFile: path.resolve(cwd, parsed.dizraw) }),
     });
-    if (detection.status === "ambiguous" || detection.mapper === undefined) {
-      throw new Error(detection.message ?? "SNES mapper detection is ambiguous.");
-    }
-
-    let shards = emptyShards();
-    let importedMapping: ProjectMapping | undefined;
-    if (parsed.dizraw) {
-      const dizrawFile = path.resolve(cwd, parsed.dizraw);
-      if (path.extname(dizrawFile).toLowerCase() !== ".dizraw") {
-        throw new Error(
-          "Only uncompressed .dizraw imports are supported; .diz is intentionally unsupported.",
-        );
-      }
-      const imported = importDizRaw(fs.readFileSync(dizrawFile, "utf8"), {
-        sourceName: path.basename(dizrawFile),
-        expectedRomSize: rom.length,
-      });
-      if (parsed.mapper === undefined && imported.mapping.mapper !== detection.mapper) {
-        throw new Error(
-          `.dizraw mapper '${imported.mapping.mapper}' conflicts with detected mapper '${detection.mapper}'; pass --mapper to resolve it explicitly.`,
-        );
-      }
-      const mapperWarnings =
-        parsed.mapper && parsed.mapper !== imported.mapping.mapper
-          ? [
-              ...imported.report.warnings,
-              `Explicit mapper '${parsed.mapper}' overrides imported mapper '${imported.mapping.mapper}'.`,
-            ]
-          : imported.report.warnings;
-      const report = { ...imported.report, warnings: mapperWarnings };
-      shards = { ...imported.shards, imports: [report] };
-      importedMapping = imported.mapping;
-    }
-
-    const mapper = parsed.mapper ?? detection.mapper;
-    let mappingSource: ProjectMapping["source"] = "detected";
-    if (parsed.mapper) mappingSource = "override";
-    else if (importedMapping) mappingSource = "import";
-    const mappingSpeed = importedMapping?.speed ?? detection.speed;
-    const mapping: ProjectMapping = {
-      mapper,
-      ...(mappingSpeed ? { speed: mappingSpeed } : {}),
-      ...(detection.headerOffset === undefined ? {} : { headerOffset: detection.headerOffset }),
-      source: mappingSource,
-      candidates: detection.candidates,
-    };
-    const project: AnalysisProject = {
-      manifest: {
-        format: ANALYSIS_PROJECT_FORMAT,
-        schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,
-        target: SNES_TARGET_ID,
-        rom: rom.identity,
-        mapping,
-        addressSpaces: [
-          { id: SNES_FILE_ADDRESS_SPACE, name: "ROM file offset", addressBits: 24, kind: "file" },
-          { id: SNES_CPU_ADDRESS_SPACE, name: "SNES CPU bus", addressBits: 24, kind: "cpu" },
-          SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR,
-          SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR,
-          SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR,
-          SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR,
-        ],
-      },
-      shards,
-    };
-    writeAnalysisProject(outputDirectory, project);
     console.log(`Success: Analysis project written to '${outputDirectory}'.`);
-    if (shards.imports[0]) {
+    if (result.importReport) {
       console.log(
-        `Import: ${shards.imports[0].imported.metadataBytes ?? 0} metadata bytes; ${shards.imports[0].unsupported.length} unsupported field group(s).`,
+        `Import: ${result.importReport.imported.metadataBytes ?? 0} metadata bytes; ${result.importReport.unsupported.length} unsupported field group(s).`,
       );
     }
     return 0;
@@ -759,63 +664,21 @@ const analyzeProject = (parsed: CliArguments, cwd: string): number => {
     return 1;
   }
   try {
-    const loaded = loadAnalysisProject(directory);
-    const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
-      headerSize: loaded.manifest.rom.headerSize,
-    });
-    validateAnalysisProject(directory, rom);
-    if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper as SnesMapper)) {
-      throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
-    }
-    const editableRecords = loaded.shards.analysis.filter(
-      (record): record is AnalysisTargetOverrideRecord | AnalysisTargetSetRecord =>
-        record.kind === "target-override" || record.kind === "target-set",
-    );
-    const targetOverrides = editableRecords.filter(
-      (record): record is AnalysisTargetOverrideRecord => record.kind === "target-override",
-    );
-    const targetSets = editableRecords.filter(
-      (record): record is AnalysisTargetSetRecord => record.kind === "target-set",
-    );
-    const result = analyzeSnes65816(rom, loaded.manifest.mapping.mapper as SnesMapper, {
-      annotations: loaded.shards.annotations,
-      labels: loaded.shards.labels,
-      evidence: loaded.shards.evidence,
+    const result = analyzeSnesProject({
+      projectDirectory: directory,
+      romFile: path.resolve(cwd, parsed.rom),
       entryPoints: parsed.entryPoints.map((address) => ({
         id: `cli-${address.toString(16).padStart(6, "0")}`,
         address,
       })),
-      targetOverrides,
-      targetSets,
       ...(parsed.maxWorkItems === undefined ? {} : { maxWorkItems: parsed.maxWorkItems }),
       ...(parsed.maxCallDepth === undefined ? {} : { maxCallDepth: parsed.maxCallDepth }),
     });
-    const annotations = [
-      ...loaded.shards.annotations.filter(
-        (annotation) => !annotation.id.startsWith("static:65816:"),
-      ),
-      ...result.annotations,
-    ];
-    const evidence = [
-      ...loaded.shards.evidence.filter(
-        (record) =>
-          record.sourceId !== "snes.65816.static-v1" && !record.id.startsWith("detector:vector:"),
-      ),
-      ...result.evidenceRecords,
-    ];
-    const { shards: ignoredShards, ...manifest } = loaded.manifest;
-    void ignoredShards;
-    writeAnalysisProject(directory, {
-      manifest,
-      shards: {
-        ...loaded.shards,
-        analysis: [...editableRecords, ...result.records],
-        annotations,
-        evidence,
-      },
-    });
     console.log(
-      `Success: ${result.status} 65816 analysis wrote ${result.nodes.length} instruction(s), ${result.functions.length} function candidate(s), ${result.conflicts.length} conflict(s), and ${result.unresolved.length} unresolved flow(s).`,
+      `Success: ${result.status} 65816 analysis wrote ${result.instructions} instruction(s), ${result.functions} function candidate(s), ${result.conflicts} conflict(s), and ${result.unresolved} unresolved flow(s).`,
+    );
+    console.log(
+      `Runtime evidence: ${result.runtimeSeeds} observed PC(s) seeded as code; ${result.omittedRuntimeSeeds} omitted by the safety bound. Captured instruction variants: ${result.capturedInstructions}; observed PCs without code: ${result.runtimePcsWithoutCode}; heuristic findings: ${result.heuristicRoles}.`,
     );
     if (result.status === "incomplete") {
       console.log(
@@ -842,27 +705,20 @@ const exportProjectSource = (parsed: CliArguments, cwd: string): number => {
     return 1;
   }
   try {
-    const loaded = loadAnalysisProject(projectDirectory);
-    const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
-      headerSize: loaded.manifest.rom.headerSize,
-    });
-    validateAnalysisProject(projectDirectory, rom);
-    if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper as SnesMapper)) {
-      throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
-    }
     const outputDirectory = parsed.output
       ? path.resolve(cwd, parsed.output)
       : defaultOutputPath(projectDirectory, ".source");
-    const projectManifest = fs.readFileSync(path.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
-    const manifest = exportSnes65816Source(loaded, rom, outputDirectory, {
+    const result = exportSnesProject({
+      projectDirectory,
+      romFile: path.resolve(cwd, parsed.rom),
+      sourceDirectory: outputDirectory,
       force: parsed.force,
-      sourceProjectSha256: sourceExportSha256(projectManifest),
     });
-    const codeBytes = manifest.spans
-      .filter((span) => span.role === "code")
-      .reduce((total, span) => total + span.end - span.start, 0);
     console.log(
-      `Success: Exported ${manifest.files.length} generated file(s) covering ${rom.length} content byte(s); ${codeBytes} byte(s) emitted as native 65816 source.`,
+      `Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s); ${result.codeBytes} byte(s) emitted as native 65816 source.`,
+    );
+    console.log(
+      `RAM map: ${result.manifest.inputs?.find((input) => input.path === "ram-map.json")?.records ?? 0} variable(s) applied from '${path.join(outputDirectory, "ram-map.json")}'.`,
     );
     console.log(`Manifest: '${path.join(outputDirectory, SOURCE_EXPORT_MANIFEST)}'.`);
     return 0;

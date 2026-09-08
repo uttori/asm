@@ -10,7 +10,7 @@ export interface SidecarDebugBackendOptions {
 export declare class SidecarDebugBackend implements DebugBackend {
     #private;
     readonly protocolVersion: 1;
-    readonly capabilities: DebugBackendCapabilities;
+    get capabilities(): DebugBackendCapabilities;
     /**
      * Creates a backend with capabilities declared before DAP initialization and verified on connect.
      * @param {SidecarDebugBackendOptions} options Sidecar identity, capability manifest, and factory.

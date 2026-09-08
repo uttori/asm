@@ -1,12 +1,14 @@
 import { type AnalysisRecord, type AnalysisTargetOverrideRecord, type AnalysisTargetSetRecord, type EvidenceRecord, type IntervalAnnotation, type ProjectLabel, type RomImage, type StaticAnalysisLimits, type StaticAnalysisResult } from "@uttori/asm-disassembler";
 import { type Cpu65816AbstractState, type Cpu65816StateOverride } from "./65816-state.js";
-import type { SnesMapper } from "./rom-header.js";
+import { type SnesMapper } from "./rom-header.js";
 /** Extra analysis seed beyond hardware vectors, labels, and `points: ["in"]` annotations. */
 export interface Snes65816EntryPoint {
     /** Stable project id; used as `entry:<id>` in the worklist and evidence. */
     readonly id: string;
     /** 24-bit SNES CPU address. */
     readonly address: number;
+    /** Runtime observations seed reachability without inventing a function boundary. */
+    readonly kind?: "configured" | "observation";
     /** Optional known E/M/X/banks/D/S overlay applied after annotation state. */
     readonly state?: Cpu65816StateOverride;
     /** Evidence ids to attach; a synthetic `manual:entry:<id>` is created if omitted. */

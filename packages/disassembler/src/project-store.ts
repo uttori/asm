@@ -1,6 +1,8 @@
+import { validateRuntimeInstructionDetails } from "./trace-detail.js";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import path from "node:path";
+import { readObjectArrayFile } from "./json-array-file.js";
 
 import {
   ANALYSIS_PROJECT_FORMAT,
@@ -408,6 +410,15 @@ const validateLoadedShards = (
       }
     }
     if (record.kind === "runtime-memory-access") {
+      if (
+        (record.actor !== undefined && !["cpu", "dma", "hdma"].includes(record.actor)) ||
+        (record.channel !== undefined &&
+          (!Number.isInteger(record.channel) ||
+            record.channel < 0 ||
+            record.channel > 7 ||
+            !["dma", "hdma"].includes(record.actor ?? "cpu")))
+      )
+        throw new Error(`Runtime memory access '${record.id}' has an invalid actor/channel.`);
       if (!Number.isSafeInteger(record.width) || record.width <= 0) {
         throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
       }
@@ -433,6 +444,9 @@ const validateLoadedShards = (
       ) {
         throw new Error(`Runtime execution '${record.id}' has an invalid ROM file offset.`);
       }
+    }
+    if (record.kind === "runtime-instruction") {
+      validateRuntimeInstructionDetails([{ bytes: record.bytes, state: record.state }], 1);
     }
     if (record.kind === "runtime-cpu-state") {
       for (const [name, value] of Object.entries(record.state)) {
@@ -541,6 +555,32 @@ const validateLoadedShards = (
     if (!Number.isSafeInteger(addressed.address) || addressed.address < 0) {
       throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
     }
+  }
+  for (const label of shards.labels) {
+    if (
+      label.sourceName !== undefined &&
+      (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName))
+    )
+      throw new Error(`Analysis label '${label.id}' has an invalid source name.`);
+    if (
+      label.inlineComment !== undefined &&
+      (typeof label.inlineComment !== "string" || /[\n\r\u2028\u2029]/.test(label.inlineComment))
+    )
+      throw new Error(`Analysis label '${label.id}' requires a single-line inline comment.`);
+    if (label.analysisEntryPoint !== undefined && typeof label.analysisEntryPoint !== "boolean")
+      throw new Error(`Analysis label '${label.id}' has an invalid analysisEntryPoint.`);
+  }
+  for (const comment of shards.comments) {
+    if (
+      comment.placement !== undefined &&
+      !["before", "inline-instruction"].includes(comment.placement)
+    )
+      throw new Error(`Analysis comment '${comment.id}' has an invalid placement.`);
+    if (
+      comment.placement === "inline-instruction" &&
+      (typeof comment.text !== "string" || /[\n\r\u2028\u2029]/.test(comment.text))
+    )
+      throw new Error(`Analysis comment '${comment.id}' requires a single-line inline comment.`);
   }
   const addressSpaceById = new Map(
     addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace]),
@@ -754,11 +794,16 @@ export const loadAnalysisProject = (directory: string): LoadedAnalysisProject =>
   const loaded = {} as Record<keyof AnalysisProjectShards, unknown>;
   for (const descriptor of manifest.shards) {
     assertSafeRelativePath(descriptor.path);
-    const text = fs.readFileSync(path.join(directory, descriptor.path), "utf8");
-    if (sha256(text) !== descriptor.sha256) {
-      throw new Error(`Analysis shard '${descriptor.path}' does not match its SHA-256.`);
-    }
-    const records = JSON.parse(text) as unknown[];
+    const file = path.join(directory, descriptor.path);
+    const records: unknown =
+      fs.statSync(file).size > 8 * 1024 * 1024
+        ? readObjectArrayFile(file, descriptor.sha256)
+        : (() => {
+            const text = fs.readFileSync(file, "utf8");
+            if (sha256(text) !== descriptor.sha256)
+              throw new Error(`Analysis shard '${descriptor.path}' does not match its SHA-256.`);
+            return JSON.parse(text) as unknown;
+          })();
     if (!Array.isArray(records) || records.length !== descriptor.records) {
       throw new Error(
         `Analysis shard '${descriptor.path}' record count does not match its manifest.`,

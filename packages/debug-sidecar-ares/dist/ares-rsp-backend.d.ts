@@ -1,5 +1,6 @@
 import { type DebugAddress, type DebugBackend, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread, type DebugTraceBatch, type DebugTraceStartOptions } from "@uttori/asm-debug-adapter";
 import type { GdbRspClient, GdbRspStop } from "./gdb-rsp-client.js";
+import { ARES_RSP_CAPABILITIES } from "./profile.js";
 export * from "./profile.js";
 /** RSP operations consumed by the ares backend, abstracted for deterministic tests. */
 export interface AresGdbRspClient {
@@ -24,7 +25,7 @@ export interface AresRspBackendOptions {
 export declare class AresRspDebugBackend implements DebugBackend {
     #private;
     readonly protocolVersion: 1;
-    readonly capabilities: Readonly<import("@uttori/asm-debug-adapter").DebugBackendCapabilities>;
+    get capabilities(): typeof ARES_RSP_CAPABILITIES;
     /** @param {AresRspBackendOptions} options RSP client/process lifecycle hooks. */
     constructor(options: AresRspBackendOptions);
     /** @inheritdoc */
@@ -38,7 +39,7 @@ export declare class AresRspDebugBackend implements DebugBackend {
     /** @inheritdoc */
     continue(threadId?: number): Promise<void>;
     /** @inheritdoc */
-    step(threadId: number, _kind: DebugStepKind): Promise<void>;
+    step(threadId: number, kind: DebugStepKind): Promise<void>;
     /** @inheritdoc */
     threads(): Promise<readonly DebugThread[]>;
     /** @inheritdoc */

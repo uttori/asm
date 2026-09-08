@@ -210,7 +210,7 @@ export class DebugSidecarServer {
       await this.#implementation.connect({
         reset: boolean(args.reset, "Connect reset", true),
       });
-      return {};
+      return { capabilities: this.#implementation.capabilities };
     }
     if (request.command === "disconnect") {
       await this.#implementation.disconnect({
@@ -265,9 +265,12 @@ export class DebugSidecarServer {
         integer(args.count, "Disassembly count"),
       );
     if (request.command === "startTrace") {
+      if (args.detail !== undefined && args.detail !== "pc" && args.detail !== "full")
+        throw new Error("Trace detail must be pc or full.");
       await this.#implementation.startTrace({
         architecture: string(args.architecture, "Trace architecture"),
         addressSpace: string(args.addressSpace, "Trace address space"),
+        ...(args.detail === undefined ? {} : { detail: args.detail }),
       });
       return {};
     }

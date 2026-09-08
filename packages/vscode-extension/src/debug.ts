@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import type { DebugMap } from "@uttori/asm-core/debug-map";
+import { validateDebugMap, type DebugMap } from "@uttori/asm-core/debug-map";
 import {
   DebugSidecarClient,
   DebugAdapterSession,
@@ -16,7 +16,9 @@ import {
   type DapRequest,
   type ReplayScript,
 } from "@uttori/asm-debug-adapter";
+import { parseAresRuntimeManifest } from "@uttori/asm-debug-sidecar-ares/runtime-manifest";
 import { ARES_RSP_BACKEND_ID, ARES_RSP_CAPABILITIES } from "@uttori/asm-debug-sidecar-ares/profile";
+import { parseMesenRuntimeManifest } from "@uttori/asm-debug-sidecar-mesence/runtime-manifest";
 import { MESEN_BACKEND_ID, MESEN_CAPABILITIES } from "@uttori/asm-debug-sidecar-mesence/profile";
 import {
   DebugAdapterInlineImplementation,
@@ -35,9 +37,15 @@ import {
   type DebugSession,
   type Disposable,
   type Event,
+  type ExtensionContext,
   type WorkspaceFolder,
+  type OutputChannel,
 } from "vscode";
 import { createDebugInstructionAnnotation } from "./debug-analysis-annotations.js";
+import { resolveDebugSourceRoot } from "./debug-source-root.js";
+import { registerBehaviorCaptures, type BehaviorSessionContext } from "./behavior-capture.js";
+import { acquireTraceLease } from "./trace-lease.js";
+import { runtimeBindingFromLaunch } from "./runtime-binding.js";
 import {
   RuntimeTraceFileRecorder,
   type EditorTraceBatch,
@@ -48,6 +56,171 @@ import {
 export const UTTORI_ASM_DEBUG_TYPE = "uttori-asm";
 export const UTTORI_TRACE_START_COMMAND = "asm.trace.start";
 export const UTTORI_TRACE_STOP_COMMAND = "asm.trace.stop";
+export const UTTORI_TRACE_STOP_ANALYZE_COMMAND = "asm.trace.stopAnalyze";
+const IMPORT_TRACE_AND_REGENERATE_COMMAND = "asm.trace.importRegenerate";
+
+export interface BuiltDebugArtifacts {
+  readonly outputPath: string;
+  readonly debugMapPath: string;
+  readonly outputSha256?: string;
+  readonly debugMapFingerprint?: string;
+}
+
+export interface EmulatorRuntimeBinding {
+  readonly backend: "ares" | "mesence";
+  readonly runtimeManifest: string;
+  readonly emulator: string;
+  readonly runtimeDirectory: string;
+  readonly aresSystem?: string;
+  readonly fastBoot?: boolean;
+}
+
+const EMULATOR_RUNTIME_BINDINGS_KEY = "uttoriAsm.emulatorRuntimeBindings.v1";
+
+type EmulatorRuntimeBindings = Record<string, EmulatorRuntimeBinding>;
+
+const runtimeWorkspace = (resource?: Uri): WorkspaceFolder | undefined =>
+  (resource ? workspace.getWorkspaceFolder(resource) : undefined) ??
+  workspace.workspaceFolders?.[0];
+
+const runtimeWorkspaceKey = (folder: WorkspaceFolder): string => folder.uri.toString();
+
+export const configuredEmulatorRuntime = (
+  context: ExtensionContext,
+  resource?: Uri,
+): EmulatorRuntimeBinding | undefined => {
+  const folder = runtimeWorkspace(resource);
+  if (!folder) return undefined;
+  const saved = context.globalState.get<EmulatorRuntimeBindings>(EMULATOR_RUNTIME_BINDINGS_KEY, {})[
+    runtimeWorkspaceKey(folder)
+  ];
+  return (
+    saved ??
+    runtimeBindingFromLaunch(
+      workspace.getConfiguration("launch", folder.uri).get<unknown[]>("configurations", []),
+      folder.uri.fsPath,
+    )
+  );
+};
+
+const chooseLocalPath = async (
+  title: string,
+  options: {
+    readonly files: boolean;
+    readonly folders: boolean;
+    readonly filters?: Record<string, string[]>;
+  },
+): Promise<string | undefined> => {
+  const selected = await window.showOpenDialog({
+    title,
+    canSelectMany: false,
+    canSelectFiles: options.files,
+    canSelectFolders: options.folders,
+    ...(options.filters ? { filters: options.filters } : {}),
+  });
+  const uri = selected?.[0];
+  if (!uri) return undefined;
+  if (uri.scheme !== "file") throw new Error(`${title} must be on the local filesystem.`);
+  return uri.fsPath;
+};
+
+/**
+ * Selects and validates the external runtime used by the bundled debug sidecar.
+ * @param {ExtensionContext} context Extension storage host.
+ * @param {Uri | undefined} resource Resource used to select a workspace binding.
+ * @returns {Promise<EmulatorRuntimeBinding | undefined>} Saved binding, or undefined on cancel.
+ */
+export const configureEmulatorRuntime = async (
+  context: ExtensionContext,
+  resource?: Uri,
+): Promise<EmulatorRuntimeBinding | undefined> => {
+  if (!workspace.isTrusted)
+    throw new Error("Configuring an emulator runtime requires a trusted workspace.");
+  const folder = runtimeWorkspace(resource);
+  if (!folder) throw new Error("Open a workspace folder before configuring an emulator runtime.");
+  const selectedBackend = await window.showQuickPick(
+    [
+      {
+        label: "ares",
+        description:
+          "65816 debugging and behavior capture; select a desktop manifest for a game window.",
+        backend: "ares" as const,
+      },
+      {
+        label: "MesenCE",
+        description: "65816, SPC700, and Super FX inspection; no instruction capture stream yet.",
+        backend: "mesence" as const,
+      },
+    ],
+    { placeHolder: "Select the live emulator backend" },
+  );
+  if (!selectedBackend) return undefined;
+  const runtimeManifest = await chooseLocalPath("Select the emulator runtime manifest", {
+    files: true,
+    folders: false,
+    filters: { "Runtime manifest": ["json"] },
+  });
+  if (!runtimeManifest) return undefined;
+  const emulator = await chooseLocalPath("Select the emulator executable", {
+    files: true,
+    folders: true,
+  });
+  if (!emulator) return undefined;
+  const runtimeDirectory = await chooseLocalPath("Select the emulator runtime directory", {
+    files: false,
+    folders: true,
+  });
+  if (!runtimeDirectory) return undefined;
+
+  const manifest = JSON.parse(fs.readFileSync(runtimeManifest, "utf8")) as unknown;
+  if (selectedBackend.backend === "ares") parseAresRuntimeManifest(manifest);
+  else parseMesenRuntimeManifest(manifest);
+  const binding: EmulatorRuntimeBinding = {
+    backend: selectedBackend.backend,
+    runtimeManifest,
+    emulator,
+    runtimeDirectory,
+    ...(selectedBackend.backend === "ares" ? { aresSystem: "Super Famicom", fastBoot: true } : {}),
+  };
+  const bindings = context.globalState.get<EmulatorRuntimeBindings>(
+    EMULATOR_RUNTIME_BINDINGS_KEY,
+    {},
+  );
+  await context.globalState.update(EMULATOR_RUNTIME_BINDINGS_KEY, {
+    ...bindings,
+    [runtimeWorkspaceKey(folder)]: binding,
+  });
+  void window.showInformationMessage(
+    `Assembly: ${selectedBackend.label} runtime configured for ${folder.name}.`,
+  );
+  return binding;
+};
+
+/**
+ * Creates a live launch that names the exact successful build artifact pair.
+ * @param {EmulatorRuntimeBinding} binding Machine-local live runtime.
+ * @param {BuiltDebugArtifacts} artifacts Exact successful build artifacts.
+ * @param {WorkspaceFolder | undefined} folder Workspace owning the build.
+ * @returns {DebugConfiguration} Direct live launch configuration.
+ */
+export const liveDebugConfiguration = (
+  binding: EmulatorRuntimeBinding,
+  artifacts: BuiltDebugArtifacts,
+  folder: WorkspaceFolder | undefined,
+): DebugConfiguration => ({
+  type: UTTORI_ASM_DEBUG_TYPE,
+  request: "launch",
+  name: `Debug Uttori ASM (${binding.backend === "mesence" ? "MesenCE" : "ares"})`,
+  backend: binding.backend,
+  program: artifacts.outputPath,
+  debugMap: artifacts.debugMapPath,
+  sourceRoot: folder?.uri.fsPath ?? path.dirname(artifacts.outputPath),
+  runtimeManifest: binding.runtimeManifest,
+  emulator: binding.emulator,
+  runtimeDirectory: binding.runtimeDirectory,
+  ...(binding.aresSystem ? { aresSystem: binding.aresSystem } : {}),
+  ...(binding.fastBoot === undefined ? {} : { fastBoot: binding.fastBoot }),
+});
 
 interface UttoriDebugConfiguration extends DebugConfiguration {
   readonly program: string;
@@ -64,6 +237,7 @@ interface UttoriDebugConfiguration extends DebugConfiguration {
 }
 
 interface TraceCapability {
+  readonly instructionDetails?: boolean;
   readonly architecture: string;
   readonly addressSpace: string;
   readonly maxBufferedEvents: number;
@@ -76,6 +250,8 @@ interface ActiveTraceRecording {
 }
 
 let activeTraceRecording: ActiveTraceRecording | undefined;
+const sessionContexts = new Map<string, BehaviorSessionContext>();
+const annotationRefreshers = new Map<string, () => Promise<void>>();
 
 const resolvedPath = (value: string, folder: WorkspaceFolder | undefined): string =>
   path.isAbsolute(value) ? value : path.resolve(folder?.uri.fsPath ?? process.cwd(), value);
@@ -96,22 +272,23 @@ const stringField = (value: unknown, name: string): string => {
 };
 
 const traceMetadata = (session: DebugSession, trace: TraceCapability): EditorTraceMetadata => {
-  const configuration = session.configuration as UttoriDebugConfiguration;
-  const folder = session.workspaceFolder;
-  const mapFile = requiredLivePath(configuration.debugMap, "debugMap", folder);
-  const map = JSON.parse(fs.readFileSync(mapFile, "utf8")) as DebugMap;
+  const loaded = sessionContexts.get(session.id);
+  if (!loaded) throw new Error("No loaded debug-session identity is available.");
+  const map = loaded.map;
   const romContentSha256 = stringField(map.output?.sha256, "debugMap.output.sha256").toLowerCase();
   if (!/^[\da-f]{64}$/.test(romContentSha256))
     throw new Error("Trace ROM content identity must be a lowercase SHA-256 value.");
+  return { ...trace, romContentSha256, producer: loaded.producer };
+};
+
+const traceProducer = (session: DebugSession, map: DebugMap): EditorTraceMetadata["producer"] => {
+  const configuration = session.configuration as UttoriDebugConfiguration;
+  const folder = session.workspaceFolder;
   const kind = configuration.backend ?? "replay";
   if (kind === "replay")
     return {
-      ...trace,
-      romContentSha256,
-      producer: {
-        id: "debug-map-replay",
-        revision: stringField(map.fingerprint?.value, "debugMap.fingerprint.value"),
-      },
+      id: "debug-map-replay",
+      revision: stringField(map.fingerprint?.value, "debugMap.fingerprint.value"),
     };
   const manifestFile = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
   const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as Record<string, unknown>;
@@ -120,11 +297,7 @@ const traceMetadata = (session: DebugSession, trace: TraceCapability): EditorTra
     kind === "ares"
       ? stringField(manifest.forkRevision, "runtimeManifest.forkRevision")
       : stringField(manifest.upstreamRevision, "runtimeManifest.upstreamRevision");
-  return {
-    ...trace,
-    romContentSha256,
-    producer: { id: kind, revision: `${revision}:${patch}` },
-  };
+  return { id: kind, revision: `${revision}:${patch}` };
 };
 
 const chooseTrace = async (session: DebugSession): Promise<TraceCapability | undefined> => {
@@ -152,7 +325,7 @@ const defaultTraceUri = (session: DebugSession): Uri | undefined => {
   return Uri.file(path.join(root, `instruction-trace-${timestamp}.json`));
 };
 
-const startRuntimeTrace = async (): Promise<void> => {
+const startRuntimeTraceWithLease = async (): Promise<void> => {
   if (activeTraceRecording) throw new Error("An instruction trace recording is already active.");
   const session = debug.activeDebugSession;
   if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE)
@@ -169,6 +342,11 @@ const startRuntimeTrace = async (): Promise<void> => {
     throw new Error("Live instruction traces must be written to a local file.");
   const metadata = traceMetadata(session, trace);
   await session.customRequest("uttori/startTrace", {
+    detail:
+      trace.instructionDetails &&
+      workspace.getConfiguration("asm").get("debug.traceDetail", "full") === "full"
+        ? "full"
+        : "pc",
     architecture: trace.architecture,
     addressSpace: trace.addressSpace,
   });
@@ -203,14 +381,39 @@ const startRuntimeTrace = async (): Promise<void> => {
   void window.showInformationMessage(`Assembly: recording ${trace.architecture} instructions.`);
 };
 
-const stopRuntimeTrace = async (): Promise<void> => {
+const startRuntimeTrace = async (): Promise<void> => {
+  const release = acquireTraceLease();
+  try {
+    await startRuntimeTraceWithLease();
+    if (activeTraceRecording) {
+      void activeTraceRecording.recorder.completion.then(release, release);
+      return;
+    }
+  } catch (error) {
+    release();
+    throw error;
+  }
+  release();
+};
+
+const stopRuntimeTrace = async (analyze = false): Promise<void> => {
   const active = activeTraceRecording;
   if (!active) throw new Error("No Uttori ASM instruction trace recording is active.");
   activeTraceRecording = undefined;
   const summary = await active.recorder.stop();
-  void window.showInformationMessage(
+  if (analyze) {
+    void window.showInformationMessage(
+      `Assembly: captured ${summary.observedEvents} instruction event(s); updating the disassembly and identifying routines…`,
+    );
+    await commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, Uri.file(summary.file));
+    return;
+  }
+  const action = await window.showInformationMessage(
     `Assembly: wrote ${summary.observedEvents} instruction event(s) to ${summary.file}; ${summary.droppedEvents} producer event(s) dropped.`,
+    "Import Trace and Update Disassembly",
   );
+  if (action === "Import Trace and Update Disassembly")
+    await commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, Uri.file(summary.file));
 };
 
 const runTraceCommand = (command: () => Promise<void>): void => {
@@ -222,6 +425,8 @@ const runTraceCommand = (command: () => Promise<void>): void => {
 };
 
 const debugSessionTerminated = (session: DebugSession): void => {
+  sessionContexts.delete(session.id);
+  annotationRefreshers.delete(session.id);
   const active = activeTraceRecording;
   if (!active || active.session.id !== session.id) return;
   activeTraceRecording = undefined;
@@ -244,6 +449,7 @@ const createLiveBackend = (
   folder: WorkspaceFolder | undefined,
   extensionRoot: string,
   program: string,
+  log: (message: string) => void,
 ): DebugBackend => {
   if (!workspace.isTrusted)
     throw new Error("Live Uttori ASM debugging requires a trusted workspace.");
@@ -294,6 +500,7 @@ const createLiveBackend = (
         env: { ELECTRON_RUN_AS_NODE: "1" },
         session,
         shutdownTimeoutMs: 3_000,
+        onStderr: (text) => log(text.trimEnd()),
       });
       return new DebugSidecarClient({ transport, session, requestTimeoutMs: 15_000 });
     },
@@ -303,6 +510,7 @@ const createLiveBackend = (
 const loadConfiguration = (
   session: DebugSession,
   extensionRoot: string,
+  log: (message: string) => void,
 ): {
   readonly backend: DebugBackend;
   readonly map: DebugMap;
@@ -318,9 +526,12 @@ const loadConfiguration = (
   const mapFile = resolvedPath(configuration.debugMap, folder);
   const output = new Uint8Array(fs.readFileSync(program));
   const map = JSON.parse(fs.readFileSync(mapFile, "utf8")) as DebugMap;
+  const issues = validateDebugMap(map, output);
+  if (issues.length) throw new Error(issues.join(" "));
   const kind = configuration.backend ?? "replay";
   const backend = (() => {
-    if (kind !== "replay") return createLiveBackend(configuration, folder, extensionRoot, program);
+    if (kind !== "replay")
+      return createLiveBackend(configuration, folder, extensionRoot, program, log);
     const script: ReplayScript = configuration.replay
       ? (JSON.parse(
           fs.readFileSync(resolvedPath(configuration.replay, folder), "utf8"),
@@ -328,30 +539,60 @@ const loadConfiguration = (
       : createDebugMapReplayScript(map, output);
     return new ReplayDebugBackend(script);
   })();
+  const configuredSourceRoot = resolvedPath(configuration.sourceRoot ?? ".", folder);
+  // Debug maps store portable paths that may be rooted beside the generated ROM rather
+  // than at the opened workspace. Resolve that layout before DAP maps PCs back to files.
+  const sourceRoot = resolveDebugSourceRoot({
+    map,
+    configuredRoot: configuredSourceRoot,
+    debugMapFile: mapFile,
+    programFile: program,
+    ...(folder ? { workspaceRoot: folder.uri.fsPath } : {}),
+  });
+  if (sourceRoot !== configuredSourceRoot)
+    log(`Resolved debug-map source root ${configuredSourceRoot} → ${sourceRoot}.`);
   return {
     backend,
     map,
     output,
-    sourceRoot: resolvedPath(configuration.sourceRoot ?? ".", folder),
+    sourceRoot,
   };
 };
 
 class InlineDebugAdapter implements DebugAdapter {
   readonly #emitter = new EventEmitter<DapProtocolMessage>();
   readonly #session: DebugAdapterSession;
+  readonly #backend: DebugBackend;
   readonly onDidSendMessage: Event<DapProtocolMessage> = this.#emitter.event;
 
   constructor(
     loaded: ReturnType<typeof loadConfiguration>,
     instructionAnnotation?: DebugAdapterSessionOptions["instructionAnnotation"],
+    log: (message: string) => void = () => {},
   ) {
+    this.#backend = loaded.backend;
     this.#session = new DebugAdapterSession({
       backend: loaded.backend,
       debugMap: loaded.map,
       output: loaded.output,
       sourceRoot: loaded.sourceRoot,
       ...(instructionAnnotation ? { instructionAnnotation } : {}),
-      onMessage: (message) => this.#emitter.fire(message),
+      configurationHandshake: true,
+      onMessage: (message) => {
+        if (message.type === "response" && !message.success) {
+          log(`${message.command} failed: ${message.message}`);
+          if (message.command === "launch" || message.command === "attach")
+            void window.showErrorMessage(`Assembly debugger: ${message.message}`);
+        } else if (message.type === "event" && message.event === "stopped") {
+          log(
+            "Paused. Inspect CALL STACK and VARIABLES in Run and Debug; use Step Into (F11) or Continue (F5). Capture commands observe execution only while it runs.",
+          );
+        } else if (message.type === "event" && message.event === "continued")
+          log("Emulator running.");
+        else if (message.type === "event" && message.event === "terminated")
+          log("Debug session ended.");
+        this.#emitter.fire(message);
+      },
     });
   }
 
@@ -363,6 +604,11 @@ class InlineDebugAdapter implements DebugAdapter {
   /** Releases protocol and event resources. */
   dispose(): void {
     this.#session.dispose();
+    // Some backends reject synchronously before returning a promise. Starting a promise
+    // chain first contains both that throw and an asynchronous transport rejection.
+    void Promise.resolve()
+      .then(() => this.#backend.disconnect({ terminate: true }))
+      .catch(() => undefined);
     this.#emitter.dispose();
   }
 }
@@ -402,7 +648,10 @@ class UttoriDebugConfigurationProvider implements DebugConfigurationProvider {
 class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
   readonly #extensionRoot: string;
 
-  constructor(extensionRoot: string) {
+  constructor(
+    extensionRoot: string,
+    readonly output: OutputChannel,
+  ) {
     this.#extensionRoot = extensionRoot;
   }
 
@@ -410,21 +659,65 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
    * Hosts the adapter inside the extension process.
    * @param {DebugSession} session VS Code debug session.
    * @param {DebugAdapterExecutable | undefined} _executable Ignored external adapter descriptor.
-   * @returns {Promise<DebugAdapterDescriptor>} Inline adapter descriptor.
+   * @returns {DebugAdapterDescriptor} Inline adapter descriptor.
    */
-  async createDebugAdapterDescriptor(
+  createDebugAdapterDescriptor(
     session: DebugSession,
     _executable: DebugAdapterExecutable | undefined,
-  ): Promise<DebugAdapterDescriptor> {
-    const loaded = loadConfiguration(session, this.#extensionRoot);
-    let instructionAnnotation: DebugAdapterSessionOptions["instructionAnnotation"];
+  ): DebugAdapterDescriptor {
+    this.output.show(true);
+    const log = (message: string): void => this.output.appendLine(`[${session.name}] ${message}`);
+    log("Reading and validating ROM/debug map…");
+    let loaded: ReturnType<typeof loadConfiguration>;
     try {
-      instructionAnnotation = await createDebugInstructionAnnotation(loaded.map);
-    } catch {
-      // Analysis presentation is optional and must never prevent debugger startup.
+      if (session.configuration.backend === "ares") {
+        const manifest = parseAresRuntimeManifest(
+          JSON.parse(
+            fs.readFileSync(
+              requiredLivePath(
+                (session.configuration as UttoriDebugConfiguration).runtimeManifest,
+                "runtimeManifest",
+                session.workspaceFolder,
+              ),
+              "utf8",
+            ),
+          ),
+        );
+        log(
+          manifest.frontend === "desktop"
+            ? "ares desktop: a game window will open with video, audio, and controller input. Launch pauses at entry; Continue (F5) starts the game. Configure controls in ares Settings → Input."
+            : "ares headless: no game window, video, or controller input. Choose a desktop runtime manifest for interactive play.",
+        );
+        log(
+          "Capture help: Assembly: Open Behavior Capture Guide. No-ROM test: Assembly: Run Idle Capture Demo.",
+        );
+      }
+      loaded = loadConfiguration(session, this.#extensionRoot, log);
+    } catch (error) {
+      log(`Launch failed: ${String(error)}`);
+      void window.showErrorMessage(
+        `Assembly debugger: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
     }
+    sessionContexts.set(session.id, {
+      map: loaded.map,
+      sourceRoot: loaded.sourceRoot,
+      producer: traceProducer(session, loaded.map),
+    });
+    let instructionAnnotation: DebugAdapterSessionOptions["instructionAnnotation"];
+    // Analysis presentation is optional and must never prevent debugger startup.
+    const updateAnnotations = async (): Promise<void> => {
+      const annotation = await createDebugInstructionAnnotation(loaded.map);
+      if (sessionContexts.has(session.id)) instructionAnnotation = annotation;
+    };
+    annotationRefreshers.set(session.id, updateAnnotations);
+    void updateAnnotations().catch((error) =>
+      log(`Optional annotations unavailable: ${String(error)}`),
+    );
+    log("Artifacts valid. Connecting debugger; it will stop at entry…");
     return new DebugAdapterInlineImplementation(
-      new InlineDebugAdapter(loaded, instructionAnnotation),
+      new InlineDebugAdapter(loaded, (address) => instructionAnnotation?.(address), log),
     );
   }
 }
@@ -432,18 +725,38 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
 /**
  * Registers the Uttori ASM debug configuration and inline adapter factories.
  * @param {string} extensionRoot Absolute installed extension root containing bundled sidecars.
+ * @param {() => void} refresh Refreshes native analysis views after applying a capture.
  * @returns {readonly Disposable[]} Extension subscriptions.
  */
-export const registerDebugging = (extensionRoot: string): readonly Disposable[] => [
-  debug.registerDebugConfigurationProvider(
-    UTTORI_ASM_DEBUG_TYPE,
-    new UttoriDebugConfigurationProvider(),
-  ),
-  debug.registerDebugAdapterDescriptorFactory(
-    UTTORI_ASM_DEBUG_TYPE,
-    new UttoriDebugAdapterFactory(extensionRoot),
-  ),
-  commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
-  commands.registerCommand(UTTORI_TRACE_STOP_COMMAND, () => runTraceCommand(stopRuntimeTrace)),
-  debug.onDidTerminateDebugSession(debugSessionTerminated),
-];
+export const registerDebugging = (
+  extensionRoot: string,
+  refresh: () => void = () => {},
+): readonly Disposable[] => {
+  const output = window.createOutputChannel("Uttori Emulator");
+  return [
+    output,
+    ...registerBehaviorCaptures({
+      context: (session) => sessionContexts.get(session.id),
+      refresh: () => {
+        refresh();
+        for (const update of annotationRefreshers.values()) void update().catch(() => undefined);
+      },
+    }),
+    debug.registerDebugConfigurationProvider(
+      UTTORI_ASM_DEBUG_TYPE,
+      new UttoriDebugConfigurationProvider(),
+    ),
+    debug.registerDebugAdapterDescriptorFactory(
+      UTTORI_ASM_DEBUG_TYPE,
+      new UttoriDebugAdapterFactory(extensionRoot, output),
+    ),
+    commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
+    commands.registerCommand(UTTORI_TRACE_STOP_COMMAND, () =>
+      runTraceCommand(() => stopRuntimeTrace(false)),
+    ),
+    commands.registerCommand(UTTORI_TRACE_STOP_ANALYZE_COMMAND, () =>
+      runTraceCommand(() => stopRuntimeTrace(true)),
+    ),
+    debug.onDidTerminateDebugSession(debugSessionTerminated),
+  ];
+};

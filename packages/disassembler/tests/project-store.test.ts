@@ -89,6 +89,19 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
 
 const schemaFixtures = fileURLToPath(new URL("./fixtures/", import.meta.url));
 
+test("large analysis shards take the streaming path without changing validation", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-large-shard-"));
+  try {
+    const project = projectFor(new RomImage(new Uint8Array(0x8000)));
+    const evidence = [{ ...project.shards.evidence[0], note: "x".repeat(9 * 1024 * 1024) }];
+    writeAnalysisProject(temporary, { ...project, shards: { ...project.shards, evidence } });
+    const loaded = loadAnalysisProject(temporary);
+    t.deepEqual(loaded.shards.evidence, evidence);
+  } finally {
+    await fs.rm(temporary, { recursive: true, force: true });
+  }
+});
+
 const readTree = async (directory: string): Promise<Record<string, string>> => {
   const result: Record<string, string> = {};
   const visit = async (current: string): Promise<void> => {

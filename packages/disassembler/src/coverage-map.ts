@@ -240,6 +240,10 @@ export const buildRomCoverageMap = (
   for (const record of shards.analysis) {
     if (record.kind !== "cfg-node") continue;
     controlFlowNodes.set(record.id, record);
+    if (record.fileOffset === undefined) {
+      unprojected.push({ kind: "analysis", id: record.id, addressSpace: record.addressSpace, reason: "missing-file-offset" });
+      continue;
+    }
     addOverlay(
       { classification: "opcode", analysisId: record.id },
       record.fileOffset,
@@ -268,7 +272,7 @@ export const buildRomCoverageMap = (
     let projected = false;
     for (const nodeId of record.nodes) {
       const node = controlFlowNodes.get(nodeId);
-      if (!node) continue;
+      if (!node || node.fileOffset === undefined) continue;
       projected =
         addOverlay(
           { conflictId: record.id, analysisId: node.id },

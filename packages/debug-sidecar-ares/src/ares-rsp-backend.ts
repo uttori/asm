@@ -1,3 +1,4 @@
+import { parseAresTraceDetails } from "./trace-details.js";
 import {
   DEBUG_BACKEND_PROTOCOL_VERSION,
   type DebugAddress,
@@ -177,7 +178,33 @@ const safeHexInteger = (value: string, context: string): number => {
 /** 65816 `DebugBackend` implemented over the maintained ares fork's private RSP channel. */
 export class AresRspDebugBackend implements DebugBackend {
   readonly protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
-  readonly capabilities = ARES_RSP_CAPABILITIES;
+  #richTrace = false;
+  get capabilities(): typeof ARES_RSP_CAPABILITIES {
+    if (!this.#richTrace) return ARES_RSP_CAPABILITIES;
+    return {
+      ...ARES_RSP_CAPABILITIES,
+      architectures: ARES_RSP_CAPABILITIES.architectures.map((architecture) => {
+        if (architecture.architecture === "snes.65816")
+          return {
+            ...architecture,
+            addressSpaces: [...architecture.addressSpaces, "snes.sram"],
+            memorySpaces: [
+              ...architecture.memorySpaces,
+              { addressSpace: "snes.sram", sideEffectFree: true },
+            ],
+            trace: { ...architecture.trace!, instructionDetails: true },
+          };
+        if (architecture.architecture === "snes.spc700")
+          return {
+            ...architecture,
+            memory: true,
+            addressSpaces: [...architecture.addressSpaces, "snes.spc700.aram"],
+            memorySpaces: [{ addressSpace: "snes.spc700.aram", sideEffectFree: true }],
+          };
+        return architecture;
+      }),
+    };
+  }
 
   readonly #createClient: AresRspBackendOptions["createClient"];
   readonly #terminate: () => Promise<void>;
@@ -194,7 +221,12 @@ export class AresRspDebugBackend implements DebugBackend {
   #instructionBoundaryStop = false;
   #nextBreakpointId = 1;
   #trace:
-    | { readonly architecture: string; readonly addressSpace: string; active: boolean }
+    | {
+        readonly architecture: string;
+        readonly addressSpace: string;
+        readonly detail?: "pc" | "full";
+        active: boolean;
+      }
     | undefined;
 
   /** @param {AresRspBackendOptions} options RSP client/process lifecycle hooks. */
@@ -223,6 +255,7 @@ export class AresRspDebugBackend implements DebugBackend {
       await existing.close().catch(() => undefined);
       this.#releaseClient(existing);
     }
+    this.#richTrace = false;
     const client = await this.#createClient({ reset: options.reset ?? true });
     if (client.closed) throw new Error("ares RSP client factory returned a closed client.");
     this.#client = client;
@@ -245,6 +278,10 @@ export class AresRspDebugBackend implements DebugBackend {
         if (!target.includes(`name="${register}"`))
           throw new Error(`ares RSP target description is missing register '${register}'.`);
       }
+      this.#richTrace =
+        supported.includes("uttoriInstructionDetails+") &&
+        supported.includes("uttoriSramMemory+") &&
+        supported.includes("uttoriAramMemory+");
       this.#instructionBoundaryStop = supported.includes("uttoriInstructionBoundaryStop+");
       await this.#handshakeStop(client, this.#instructionBoundaryStop);
       this.#connected = true;
@@ -308,8 +345,10 @@ export class AresRspDebugBackend implements DebugBackend {
   }
 
   /** @inheritdoc */
-  async step(threadId: number, _kind: DebugStepKind): Promise<void> {
+  async step(threadId: number, kind: DebugStepKind): Promise<void> {
     this.#assertThread(threadId);
+    if (kind !== "instruction" && kind !== "in")
+      throw new Error(`ares does not support ${kind} stepping.`);
     const client = this.#requireStopped();
     this.#stopped = false;
     this.#pendingStopReason = "step";
@@ -335,6 +374,7 @@ export class AresRspDebugBackend implements DebugBackend {
         threadId: ARES_65816_THREAD_ID,
         name: "65816",
         pc: this.#address(logicalPc(registers)),
+        currentOnly: true,
       },
     ];
   }
@@ -359,7 +399,12 @@ export class AresRspDebugBackend implements DebugBackend {
 
   /** @inheritdoc */
   async readMemory(address: DebugAddress, count: number): Promise<DebugMemoryRead> {
-    const checked = checkedMemoryAddress(address, "Memory request");
+    const extra =
+      this.#richTrace &&
+      ((address.architecture === "snes.65816" && address.addressSpace === "snes.sram") ||
+        (address.architecture === "snes.spc700" && address.addressSpace === "snes.spc700.aram"));
+    const checked = extra ? { ...address } : checkedMemoryAddress(address, "Memory request");
+    checkedInteger(checked.address, "Memory address", 0xffffff);
     checkedInteger(count, "Memory count", 1_048_576);
     if (count === 0) return { address: checked, bytes: new Uint8Array(), unreadableBytes: 0 };
     const bytes = new Uint8Array(count);
@@ -465,7 +510,14 @@ export class AresRspDebugBackend implements DebugBackend {
         `Instruction trace '${options.architecture}/${options.addressSpace}' is not supported.`,
       );
     const client = this.#requireStopped();
-    expectOkay(await client.request("QUttoriTrace:1"), "Start instruction trace");
+    if (options.detail === "full" && !this.#richTrace)
+      throw new Error(
+        "This runtime supports PC-only traces; rebuild the maintained runtime for captured bytes/state and bus accesses.",
+      );
+    expectOkay(
+      await client.request(options.detail === "full" ? "QUttoriTrace:2" : "QUttoriTrace:1"),
+      "Start instruction trace",
+    );
     this.#trace = { ...options, active: true };
   }
 
@@ -476,6 +528,14 @@ export class AresRspDebugBackend implements DebugBackend {
       throw new Error(`Trace batch size must be between 1 and ${ARES_TRACE_BATCH_EVENTS}.`);
     const trace = this.#trace;
     if (!trace) throw new Error("No ares instruction trace has been started.");
+    if (trace.detail === "full") {
+      const result = parseAresTraceDetails(
+        await this.#requireConnected().request(`qUttoriTraceDetailRead:${maxEvents.toString(16)}`),
+        maxEvents,
+      );
+      trace.active = result.active;
+      return result;
+    }
     const response = await this.#requireConnected().request(
       `qUttoriTraceRead:${maxEvents.toString(16)}`,
     );

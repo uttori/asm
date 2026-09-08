@@ -18,6 +18,353 @@ export const SNES_MAPPERS = [
 /** Cartridge mapper id matching `SNES_MAPPERS`. */
 export type SnesMapper = (typeof SNES_MAPPERS)[number];
 
+/** One 16-bit vector slot in the bank-$00 SNES CPU vector table. */
+export interface SnesCpuVectorDefinition {
+  /** Stable analysis/evidence id. */
+  readonly id: string;
+  /** Stable generated-source label. */
+  readonly symbol: string;
+  /** Human-readable vector purpose. */
+  readonly name: string;
+  /** CPU address of the little-endian vector word. */
+  readonly pointer: number;
+  /** CPU execution mode selecting this half of the table. */
+  readonly mode: "native" | "emulation";
+  /** Abstract-state preset for vectors that can seed code analysis. */
+  readonly state?: "native" | "emulation" | "reset";
+}
+
+/**
+ * Complete 32-byte 65C816 vector layout at `$FFE0–$FFFF`.
+ * Reserved words are retained so source export accounts for every byte while
+ * analysis seeds only architecturally meaningful handler slots.
+ */
+export const SNES_CPU_VECTOR_DEFINITIONS: readonly SnesCpuVectorDefinition[] = [
+  {
+    id: "native-reserved-0",
+    symbol: "SNES_VECTOR_NATIVE_RESERVED_0",
+    name: "Reserved",
+    pointer: 0x00ffe0,
+    mode: "native",
+  },
+  {
+    id: "native-reserved-1",
+    symbol: "SNES_VECTOR_NATIVE_RESERVED_1",
+    name: "Reserved",
+    pointer: 0x00ffe2,
+    mode: "native",
+  },
+  {
+    id: "native-cop",
+    symbol: "SNES_VECTOR_NATIVE_COP",
+    name: "COP",
+    pointer: 0x00ffe4,
+    mode: "native",
+    state: "native",
+  },
+  {
+    id: "native-brk",
+    symbol: "SNES_VECTOR_NATIVE_BRK",
+    name: "BRK",
+    pointer: 0x00ffe6,
+    mode: "native",
+    state: "native",
+  },
+  {
+    id: "native-abort",
+    symbol: "SNES_VECTOR_NATIVE_ABORT",
+    name: "ABORT",
+    pointer: 0x00ffe8,
+    mode: "native",
+    state: "native",
+  },
+  {
+    id: "native-nmi",
+    symbol: "SNES_VECTOR_NATIVE_NMI",
+    name: "NMI",
+    pointer: 0x00ffea,
+    mode: "native",
+    state: "native",
+  },
+  {
+    id: "native-reserved-2",
+    symbol: "SNES_VECTOR_NATIVE_RESERVED_2",
+    name: "Reserved",
+    pointer: 0x00ffec,
+    mode: "native",
+  },
+  {
+    id: "native-irq",
+    symbol: "SNES_VECTOR_NATIVE_IRQ",
+    name: "IRQ",
+    pointer: 0x00ffee,
+    mode: "native",
+    state: "native",
+  },
+  {
+    id: "emulation-reserved-0",
+    symbol: "SNES_VECTOR_EMULATION_RESERVED_0",
+    name: "Reserved",
+    pointer: 0x00fff0,
+    mode: "emulation",
+  },
+  {
+    id: "emulation-reserved-1",
+    symbol: "SNES_VECTOR_EMULATION_RESERVED_1",
+    name: "Reserved",
+    pointer: 0x00fff2,
+    mode: "emulation",
+  },
+  {
+    id: "emulation-cop",
+    symbol: "SNES_VECTOR_EMULATION_COP",
+    name: "COP",
+    pointer: 0x00fff4,
+    mode: "emulation",
+    state: "emulation",
+  },
+  {
+    id: "emulation-reserved-2",
+    symbol: "SNES_VECTOR_EMULATION_RESERVED_2",
+    name: "Reserved",
+    pointer: 0x00fff6,
+    mode: "emulation",
+  },
+  {
+    id: "emulation-abort",
+    symbol: "SNES_VECTOR_EMULATION_ABORT",
+    name: "ABORT",
+    pointer: 0x00fff8,
+    mode: "emulation",
+    state: "emulation",
+  },
+  {
+    id: "emulation-nmi",
+    symbol: "SNES_VECTOR_EMULATION_NMI",
+    name: "NMI",
+    pointer: 0x00fffa,
+    mode: "emulation",
+    state: "emulation",
+  },
+  {
+    id: "reset",
+    symbol: "SNES_VECTOR_EMULATION_RESET",
+    name: "RESET",
+    pointer: 0x00fffc,
+    mode: "emulation",
+    state: "reset",
+  },
+  {
+    id: "emulation-irq-brk",
+    symbol: "SNES_VECTOR_EMULATION_IRQ_BRK",
+    name: "IRQ/BRK",
+    pointer: 0x00fffe,
+    mode: "emulation",
+    state: "emulation",
+  },
+];
+
+/** Parsed optional 16-byte expanded cartridge header at `$FFB0–$FFBF`. */
+export interface SnesExpandedRomHeader {
+  readonly offset: number;
+  readonly makerCode: string;
+  readonly gameCode: string;
+  readonly reserved: Uint8Array;
+  readonly expansionFlashSizeCode: number;
+  readonly expansionRamSizeCode: number;
+  readonly specialVersion: number;
+  readonly chipsetSubtype: number;
+}
+
+/** One parsed vector word and its optional executable target in bank `$00`. */
+export interface SnesCpuVector extends SnesCpuVectorDefinition {
+  readonly fileOffset: number;
+  readonly value: number;
+  readonly targetAddress?: number;
+}
+
+/** Fully decoded SNES internal cartridge header and vector table. */
+export interface SnesInternalRomHeader {
+  readonly offset: number;
+  readonly title: string;
+  readonly titleBytes: Uint8Array;
+  readonly mapMode: number;
+  readonly mapModeName: string;
+  readonly speed: "slow" | "fast";
+  readonly chipset: number;
+  readonly chipsetDescription: string;
+  readonly romSizeCode: number;
+  readonly romSizeBytes?: number;
+  readonly ramSizeCode: number;
+  readonly ramSizeBytes?: number;
+  readonly regionCode: number;
+  readonly region: string;
+  readonly developerId: number;
+  readonly version: number;
+  readonly checksumComplement: number;
+  readonly checksum: number;
+  readonly checksumValid: boolean;
+  readonly expanded?: SnesExpandedRomHeader;
+  readonly vectors: readonly SnesCpuVector[];
+}
+
+const HEADER_OFFSETS: Readonly<Partial<Record<SnesMapper, number>>> = {
+  lorom: 0x7fc0,
+  sfxrom: 0x7fc0,
+  sa1rom: 0x7fc0,
+  bigsa1rom: 0x7fc0,
+  hirom: 0xffc0,
+  exlorom: 0x407fc0,
+  exhirom: 0x40ffc0,
+};
+
+/**
+ * Returns the standard headerless-ROM offset for one mapper.
+ * @param {SnesMapper} mapper Cartridge mapping family.
+ * @returns {number | undefined} Header offset, or undefined for an unmapped image.
+ */
+export const snesInternalHeaderOffset = (mapper: SnesMapper): number | undefined =>
+  HEADER_OFFSETS[mapper];
+
+const asciiField = (bytes: Uint8Array): string =>
+  [...bytes]
+    .map((byte) =>
+      byte >= 0x20 && byte <= 0x7e
+        ? String.fromCharCode(byte)
+        : `\\x${byte.toString(16).toUpperCase().padStart(2, "0")}`,
+    )
+    .join("")
+    .replaceAll(/(?: |\\x00)+$/g, "");
+
+const sizeBytes = (code: number, zeroMeansNone: boolean): number | undefined => {
+  if (zeroMeansNone && code === 0) return 0;
+  return code < 0x20 ? 1024 * 2 ** code : undefined;
+};
+
+const mapModeName = (value: number): string =>
+  ({ 0x0: "LoROM", 0x1: "HiROM", 0x2: "S-DD1", 0x3: "SA-1", 0x5: "ExHiROM", 0xa: "SPC7110" })[
+    value & 0x0f
+  ] ?? "Unknown";
+
+const regionName = (code: number): string =>
+  ({
+    0x00: "Japan",
+    0x01: "North America",
+    0x02: "Europe",
+    0x03: "Scandinavia",
+    0x04: "Finland",
+    0x05: "Denmark",
+    0x06: "Europe (French)",
+    0x07: "Netherlands",
+    0x08: "Spain",
+    0x09: "Germany/Austria/Switzerland",
+    0x0a: "Italy",
+    0x0b: "China/Hong Kong",
+    0x0c: "Indonesia",
+    0x0d: "South Korea",
+    0x0e: "Common",
+    0x0f: "Canada",
+    0x10: "Brazil/Nintendo Gateway",
+    0x11: "Australia",
+    0x12: "Other variation X",
+    0x13: "Other variation Y",
+    0x14: "Other variation Z",
+  })[code] ?? "Unknown";
+
+const chipsetDescription = (value: number): string => {
+  const contents =
+    {
+      0x0: "ROM only",
+      0x1: "ROM + RAM",
+      0x2: "ROM + RAM + battery",
+      0x3: "ROM + coprocessor",
+      0x4: "ROM + coprocessor + RAM",
+      0x5: "ROM + coprocessor + RAM + battery",
+      0x6: "ROM + coprocessor + battery",
+    }[value & 0x0f] ?? "Unknown cartridge contents";
+  if ((value & 0x0f) < 3) return contents;
+  const coprocessor =
+    {
+      0x0: "DSP",
+      0x1: "GSU/Super FX",
+      0x2: "OBC1",
+      0x3: "SA-1",
+      0x4: "S-DD1",
+      0x5: "S-RTC",
+      0xe: "Other",
+      0xf: "Custom",
+    }[value >>> 4] ?? "Unknown coprocessor";
+  return `${contents} (${coprocessor})`;
+};
+
+/**
+ * Parses the mapper-selected internal header, optional expanded header, and all
+ * 16 vector words. The ROM view must already exclude a 512-byte copier header.
+ * @param {RomImage} rom Immutable headerless ROM view.
+ * @param {SnesMapper} mapper Selected cartridge mapping family.
+ * @returns {SnesInternalRomHeader | undefined} Parsed structure when in range.
+ */
+export const parseSnesInternalRomHeader = (
+  rom: RomImage,
+  mapper: SnesMapper,
+): SnesInternalRomHeader | undefined => {
+  const offset = snesInternalHeaderOffset(mapper);
+  if (offset === undefined) return undefined;
+  const bytes = rom.read(offset, 0x40);
+  if (!bytes) return undefined;
+  const developerId = bytes[0x1a];
+  const expandedBytes =
+    developerId === 0x33 && offset >= 0x10 ? rom.read(offset - 0x10, 0x10) : undefined;
+  const checksumComplement = bytes[0x1c] | (bytes[0x1d] << 8);
+  const checksum = bytes[0x1e] | (bytes[0x1f] << 8);
+  const vectors = SNES_CPU_VECTOR_DEFINITIONS.map((definition): SnesCpuVector => {
+    const fileOffset = offset + definition.pointer - 0x00ffc0;
+    const value = rom.readByte(fileOffset)! | (rom.readByte(fileOffset + 1)! << 8);
+    return {
+      ...definition,
+      fileOffset,
+      value,
+      ...(definition.state && value !== 0 && value !== 0xffff ? { targetAddress: value } : {}),
+    };
+  });
+  return {
+    offset,
+    title: asciiField(bytes.slice(0, 0x15)),
+    titleBytes: bytes.slice(0, 0x15),
+    mapMode: bytes[0x15],
+    mapModeName: mapModeName(bytes[0x15]),
+    speed: (bytes[0x15] & 0x10) === 0 ? "slow" : "fast",
+    chipset: bytes[0x16],
+    chipsetDescription: chipsetDescription(bytes[0x16]),
+    romSizeCode: bytes[0x17],
+    romSizeBytes: sizeBytes(bytes[0x17], false),
+    ramSizeCode: bytes[0x18],
+    ramSizeBytes: sizeBytes(bytes[0x18], true),
+    regionCode: bytes[0x19],
+    region: regionName(bytes[0x19]),
+    developerId,
+    version: bytes[0x1b],
+    checksumComplement,
+    checksum,
+    checksumValid: (checksum ^ checksumComplement) === 0xffff && checksum !== 0,
+    ...(expandedBytes
+      ? {
+          expanded: {
+            offset: offset - 0x10,
+            makerCode: asciiField(expandedBytes.slice(0, 2)),
+            gameCode: asciiField(expandedBytes.slice(2, 6)),
+            reserved: expandedBytes.slice(6, 12),
+            expansionFlashSizeCode: expandedBytes[0x0c],
+            expansionRamSizeCode: expandedBytes[0x0d],
+            specialVersion: expandedBytes[0x0e],
+            chipsetSubtype: expandedBytes[0x0f],
+          },
+        }
+      : {}),
+    vectors,
+  };
+};
+
 /** Optional detection overrides. `headerSize` must already match the loaded `RomImage`. */
 export interface SnesRomDetectionOptions {
   /** Force this mapper instead of scoring internal headers. */
@@ -39,6 +386,8 @@ export interface SnesRomDetection {
   readonly speed?: "slow" | "fast";
   /** File offset of the 64-byte internal cartridge header. */
   readonly headerOffset?: number;
+  /** Fully parsed selected header and vector table when a standard header is available. */
+  readonly header?: SnesInternalRomHeader;
   /** All in-range candidates, highest score first. */
   readonly candidates: readonly MappingCandidate[];
   /** Human-readable reason when detection is ambiguous or the override has no header. */
@@ -178,6 +527,7 @@ export const detectSnesRom = (
 
   if (options.mapper) {
     const selected = candidates.find((candidate) => candidate.mapper === options.mapper);
+    const parsed = parseSnesInternalRomHeader(rom, options.mapper);
     return {
       status: "override",
       mapper: options.mapper,
@@ -188,6 +538,7 @@ export const detectSnesRom = (
               ((rom.readByte(selected.headerOffset + 0x15) ?? 0) & 0x10) === 0 ? "slow" : "fast",
           }),
       headerOffset: selected?.headerOffset,
+      ...(parsed ? { header: parsed } : {}),
       candidates,
       ...(selected
         ? {}
@@ -198,11 +549,13 @@ export const detectSnesRom = (
   const first = candidates[0];
   const second = candidates[1];
   if (first && first.score >= 8 && (!second || first.score - second.score >= 3)) {
+    const mapper = first.mapper as SnesMapper;
     return {
       status: "detected",
-      mapper: first.mapper as SnesMapper,
+      mapper,
       speed: ((rom.readByte(first.headerOffset + 0x15) ?? 0) & 0x10) === 0 ? "slow" : "fast",
       headerOffset: first.headerOffset,
+      header: parseSnesInternalRomHeader(rom, mapper),
       candidates,
     };
   }

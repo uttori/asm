@@ -617,9 +617,14 @@ A SNES CPU address is not a file offset. The cartridge decoder maps portions of 
 `exportSnes65816Source()` converts a validated analysis project and its hash-matching `RomImage`
 into mapper-bank native source. It re-decodes persisted CFG nodes from their recorded incoming
 state, emits only compatible non-conflicting boundaries as instructions, and preserves all other
-bytes in deterministic `incbin` assets. Native instructions carry explicit `.b`/`.w`/`.l` operand
-qualification and `.a8`/`.a16`/`.i8`/`.i16` state transitions. The CLI wraps this API with
-`uttori-asm export` and `uttori-asm verify-roundtrip`.
+bytes in deterministic `incbin` assets. The selected internal header, an optional expanded header,
+and all 16 native/emulation vector words are emitted as named, decoded `db`/`dw` source following
+the [SNESdev ROM-header](https://snes.nesdev.org/wiki/ROM_header) and
+[CPU-vector](https://snes.nesdev.org/wiki/CPU_vectors) layouts. Native instructions carry explicit
+`.b`/`.w`/`.l` operand qualification and `.a8`/`.a16`/`.i8`/`.i16` state transitions.
+`snes-defines.asm` covers the SNESdev PPU, MMIO, and DMA/HDMA tables with a hover comment on every
+register and compatibility aliases for older names. The CLI wraps this API with `uttori-asm export`
+and `uttori-asm verify-roundtrip`.
 
 ## MesenCE Offline Evidence
 
@@ -1558,3 +1563,5 @@ LMS SM SMS LEA MOVE MOVES MOVEB MOVEW
 
 See [CONTRIBUTING.md](../../CONTRIBUTING.md) for the reversible-instruction, mapper, importer,
 performance-comment, fixture, and native-source test requirements.
+
+Configurable function-role heuristics and captured WRAM/SRAM instruction analysis are described in [the SNES analysis guide](../../docs/snes-function-heuristics-and-runtime-code.md).

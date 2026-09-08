@@ -10,6 +10,8 @@ export interface AresRuntimeResource {
 export interface AresRuntimeManifest {
     readonly schemaVersion: typeof ARES_RUNTIME_MANIFEST_VERSION;
     readonly emulator: "ares";
+    /** Omitted by legacy manifests, which launch the headless frontend. */
+    readonly frontend?: "headless" | "desktop";
     readonly upstreamRevision: string;
     readonly headlessBaseRevision: string;
     readonly forkRevision: string;

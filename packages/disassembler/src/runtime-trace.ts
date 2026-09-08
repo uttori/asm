@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 
-import type { EvidenceRecord, ImportReport, RuntimeExecutionRecord } from "./project-types.js";
+import type { EvidenceRecord, ImportReport, RuntimeEvidenceRecord } from "./project-types.js";
+import {
+  validateRuntimeInstructionDetails,
+  type RuntimeInstructionDetail,
+} from "./trace-detail.js";
 import { canonicalJson } from "./project-store.js";
 import type { RuntimeEvidenceBatch } from "./runtime-evidence.js";
 
@@ -14,6 +18,10 @@ export const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1 as const;
 export interface RuntimeInstructionTraceChunk {
   readonly sequenceStart: number;
   readonly addresses: readonly number[];
+  /** Optional execution-time detail; legacy PC-only chunks remain valid. */
+  readonly details?: readonly RuntimeInstructionDetail[];
+  /** Cumulative bus operations outside a captured CPU instruction (interrupt/wait periods). */
+  readonly unattributedMemoryAccesses?: number;
   readonly droppedEvents: number;
   readonly active: boolean;
 }
@@ -81,8 +89,13 @@ const sha256Identity = (value: unknown, context: string): string => {
 
 const hex = (value: number): string => value.toString(16).toUpperCase().padStart(6, "0");
 
-const validateArtifact = (
-  value: RuntimeInstructionTraceArtifact,
+/**
+ * Validates untrusted trace data without importing project facts.
+ * @param {unknown} value Untrusted trace.
+ * @returns {RuntimeInstructionTraceArtifact} Normalized trace.
+ */
+export const validateRuntimeInstructionTrace = (
+  value: unknown,
 ): RuntimeInstructionTraceArtifact => {
   const artifact = record(value, "Instruction trace artifact");
   if (artifact.format !== RUNTIME_INSTRUCTION_TRACE_FORMAT)
@@ -109,6 +122,17 @@ const validateArtifact = (
       addresses: chunk.addresses.map((address, addressIndex) =>
         integer(address, `Instruction trace chunk ${index} address ${addressIndex}`),
       ),
+      ...(chunk.details === undefined
+        ? {}
+        : { details: validateRuntimeInstructionDetails(chunk.details, chunk.addresses.length) }),
+      ...(chunk.unattributedMemoryAccesses === undefined
+        ? {}
+        : {
+            unattributedMemoryAccesses: integer(
+              chunk.unattributedMemoryAccesses,
+              "Unattributed trace memory accesses",
+            ),
+          }),
       droppedEvents: integer(chunk.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
       active: chunk.active,
     };
@@ -116,7 +140,11 @@ const validateArtifact = (
   let expectedSequence = 1;
   let previousDropped = 0;
   let stopped = false;
+  let previousUnattributed = 0;
   for (const [index, chunk] of chunks.entries()) {
+    if ((chunk.unattributedMemoryAccesses ?? previousUnattributed) < previousUnattributed)
+      throw new Error("Unattributed trace memory count decreased.");
+    previousUnattributed = chunk.unattributedMemoryAccesses ?? previousUnattributed;
     if (stopped && chunk.active)
       throw new Error(`Instruction trace chunk ${index} resumes after capture stopped.`);
     if (chunk.sequenceStart < expectedSequence)
@@ -157,7 +185,7 @@ export const importRuntimeInstructionTrace = (
   value: RuntimeInstructionTraceArtifact,
   context: RuntimeInstructionTraceImportContext,
 ): RuntimeInstructionTraceImportResult => {
-  const artifact = validateArtifact(value);
+  const artifact = validateRuntimeInstructionTrace(value);
   const projectRomContentSha256 = sha256Identity(
     context.projectRomContentSha256,
     "Project ROM content identity",
@@ -180,7 +208,7 @@ export const importRuntimeInstructionTrace = (
   }
   const droppedEvents = artifact.chunks.at(-1)?.droppedEvents ?? 0;
   const complete = artifact.chunks.length > 0 && artifact.chunks.at(-1)?.active === false;
-  const runtime: RuntimeExecutionRecord[] = [...counts]
+  const runtime: RuntimeEvidenceRecord[] = [...counts]
     .sort(([left], [right]) => left - right)
     .map(([address, count]) => ({
       id: `runtime:instruction-trace:${sourceSha256}:${hex(address)}`,
@@ -191,11 +219,70 @@ export const importRuntimeInstructionTrace = (
       count,
       evidence: [evidenceId],
     }));
+  const observations = new Map<string, RuntimeEvidenceRecord>();
+  const unattributed = artifact.chunks.reduce(
+    (max, chunk) => Math.max(max, chunk.unattributedMemoryAccesses ?? 0),
+    0,
+  );
+  let detailedEvents = 0;
+  let memoryLoss = 0;
+  const add = (record: RuntimeEvidenceRecord): void => {
+    const previous = observations.get(record.id);
+    observations.set(record.id, { ...record, count: (previous?.count ?? 0) + 1 });
+  };
+  for (const chunk of artifact.chunks) {
+    for (const [index, detail] of (chunk.details ?? []).entries()) {
+      detailedEvents++;
+      memoryLoss += detail.droppedMemoryAccesses ?? 0;
+      const address = chunk.addresses[index]!;
+      const base = { architecture: artifact.architecture, count: 1, evidence: [evidenceId] };
+      const identity = sha256(canonicalJson({ address, bytes: detail.bytes, state: detail.state }));
+      add({
+        ...base,
+        id: `${evidenceId}:code:${identity}`,
+        kind: "runtime-instruction",
+        addressSpace,
+        address,
+        bytes: detail.bytes,
+        state: detail.state,
+      });
+      add({
+        ...base,
+        id: `${evidenceId}:state:${identity}`,
+        kind: "runtime-cpu-state",
+        addressSpace,
+        address,
+        state: detail.state,
+      });
+      for (const access of detail.memoryAccesses ?? []) {
+        if (access.access === "fetch") continue;
+        const accessIdentity = sha256(canonicalJson({ instructionAddress: address, ...access }));
+        add({
+          ...base,
+          id: `${evidenceId}:memory:${accessIdentity}`,
+          kind: "runtime-memory-access",
+          instructionAddressSpace: addressSpace,
+          instructionAddress: address,
+          accessedAddressSpace: access.addressSpace,
+          accessedAddress: access.address,
+          access: access.access,
+          width: access.width,
+          ...(access.value === undefined ? {} : { value: access.value }),
+          ...(access.actor === undefined ? {} : { actor: access.actor }),
+          ...(access.channel === undefined ? {} : { channel: access.channel }),
+        });
+      }
+    }
+  }
+  runtime.push(...[...observations.values()].sort((a, b) => a.id.localeCompare(b.id)));
   const evidence: EvidenceRecord = {
     id: evidenceId,
     source: "runtime",
     sourceId: `${artifact.producer.id}:${artifact.producer.revision}`,
-    confidence: droppedEvents === 0 && complete ? "certain" : "high",
+    confidence:
+      droppedEvents === 0 && memoryLoss === 0 && unattributed === 0 && complete
+        ? "certain"
+        : "high",
     detail: `${observedEvents} instruction event(s) observed; ${droppedEvents} producer event(s) dropped.`,
     artifact: {
       format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
@@ -210,7 +297,14 @@ export const importRuntimeInstructionTrace = (
     sourceName,
     sourceSha256,
     sourceVersion: `v${RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION}@${artifact.producer.id}:${artifact.producer.revision}`,
-    imported: { executionRecords: runtime.length, executionEvents: observedEvents },
+    imported: {
+      executionRecords: counts.size,
+      executionEvents: observedEvents,
+      detailedEvents,
+      memoryRecords: [...observations.values()].filter(
+        (entry) => entry.kind === "runtime-memory-access",
+      ).length,
+    },
     unsupported:
       droppedEvents === 0
         ? []
@@ -221,7 +315,22 @@ export const importRuntimeInstructionTrace = (
               reason: "Producer buffer overflow occurred before these events could be pulled.",
             },
           ],
-    warnings: complete ? [] : ["Trace artifact ended while capture was still active."],
+    warnings: [
+      ...(!complete ? ["Trace artifact ended while capture was still active."] : []),
+      ...(detailedEvents < observedEvents
+        ? [
+            `${observedEvents - detailedEvents} instruction observations have no captured bytes/state; RAM code cannot be recovered from PCs alone.`,
+          ]
+        : []),
+      ...(memoryLoss
+        ? [`${memoryLoss} memory operations were omitted by the producer detail limit.`]
+        : []),
+      ...(unattributed
+        ? [
+            `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods); they have no saved address/value detail.`,
+          ]
+        : []),
+    ],
   };
   return {
     batch: { runtime, evidence: [evidence], imports: [report] },

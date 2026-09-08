@@ -1,4 +1,5 @@
 import type { ImportReport } from "./project-types.js";
+import { type RuntimeInstructionDetail } from "./trace-detail.js";
 import type { RuntimeEvidenceBatch } from "./runtime-evidence.js";
 /** Native, emulator-neutral on-disk identity for an explicitly recorded instruction trace. */
 export declare const RUNTIME_INSTRUCTION_TRACE_FORMAT: "uttori-asm-instruction-trace";
@@ -8,6 +9,10 @@ export declare const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION: 1;
 export interface RuntimeInstructionTraceChunk {
     readonly sequenceStart: number;
     readonly addresses: readonly number[];
+    /** Optional execution-time detail; legacy PC-only chunks remain valid. */
+    readonly details?: readonly RuntimeInstructionDetail[];
+    /** Cumulative bus operations outside a captured CPU instruction (interrupt/wait periods). */
+    readonly unattributedMemoryAccesses?: number;
     readonly droppedEvents: number;
     readonly active: boolean;
 }
@@ -40,6 +45,12 @@ export interface RuntimeInstructionTraceImportResult {
     readonly observedEvents: number;
     readonly droppedEvents: number;
 }
+/**
+ * Validates untrusted trace data without importing project facts.
+ * @param {unknown} value Untrusted trace.
+ * @returns {RuntimeInstructionTraceArtifact} Normalized trace.
+ */
+export declare const validateRuntimeInstructionTrace: (value: unknown) => RuntimeInstructionTraceArtifact;
 /**
  * Converts one explicitly supplied native trace artifact into merge-ready runtime evidence.
  * This function is pure: callers must separately invoke `mergeRuntimeEvidence` and persist the project.

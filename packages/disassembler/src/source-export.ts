@@ -35,6 +35,18 @@ export interface SourceExportFile {
   readonly sha256: string;
 }
 
+/** User-owned input consumed while generating the source tree. */
+export interface SourceExportInput {
+  /** Path relative to the export directory; must not contain `..`. */
+  readonly path: string;
+  readonly kind: "metadata" | "configuration";
+  readonly size: number;
+  /** Optional logical record count for status/reporting. */
+  readonly records?: number;
+  /** SHA-256 of the exact input bytes consumed by the export. */
+  readonly sha256: string;
+}
+
 /** Half-open ROM interval mapped to a generated source or asset file. */
 export interface SourceExportSpan {
   readonly id: string;
@@ -73,6 +85,8 @@ export interface SourceExportManifest {
   readonly finalOutput: string;
   /** Rebuilds must keep the original checksum bytes; they are never recomputed. */
   readonly checksumPolicy: "preserve";
+  /** User-owned inputs whose drift makes generated source stale without blocking regeneration. */
+  readonly inputs?: readonly SourceExportInput[];
   readonly files: readonly SourceExportFile[];
   readonly spans: readonly SourceExportSpan[];
 }
@@ -140,6 +154,13 @@ export const loadSourceExportManifest = (directory: string): SourceExportManifes
     if (paths.has(file.path)) throw new Error(`Duplicate generated-file path '${file.path}'.`);
     paths.add(file.path);
   }
+  const inputPaths = new Set<string>();
+  for (const input of manifest.inputs ?? []) {
+    assertSafePath(input.path);
+    if (paths.has(input.path) || inputPaths.has(input.path))
+      throw new Error(`Duplicate source-export input path '${input.path}'.`);
+    inputPaths.add(input.path);
+  }
   for (const span of manifest.spans) {
     if (span.end <= span.start) throw new Error(`Invalid source span '${span.id}'.`);
     if (!paths.has(span.file)) throw new Error(`Source span '${span.id}' names an unknown file.`);
@@ -189,6 +210,28 @@ export const validateSourceExportFiles = (
     const bytes = fs.readFileSync(absolute);
     if (bytes.length !== file.size || sourceExportSha256(bytes) !== file.sha256) {
       throw new Error(`Generated file '${file.path}' was modified after export.`);
+    }
+  }
+};
+
+/**
+ * Verifies every user-owned export input still matches the bytes consumed by the last generation.
+ * Input drift is expected and should trigger regeneration; unlike generated-file drift it does not
+ * prevent source export from proceeding.
+ * @param {string} directory Export directory.
+ * @param {SourceExportManifest} [manifest] Loaded manifest; defaults to reading the directory.
+ * @returns {void}
+ */
+export const validateSourceExportInputs = (
+  directory: string,
+  manifest = loadSourceExportManifest(directory),
+): void => {
+  for (const input of manifest.inputs ?? []) {
+    const absolute = path.join(directory, input.path);
+    if (!fs.existsSync(absolute)) throw new Error(`Source input '${input.path}' is missing.`);
+    const bytes = fs.readFileSync(absolute);
+    if (bytes.length !== input.size || sourceExportSha256(bytes) !== input.sha256) {
+      throw new Error(`Source input '${input.path}' changed after the last export.`);
     }
   }
 };

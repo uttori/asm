@@ -61,7 +61,7 @@ const accessText = (access: InstructionMemoryAccessAnnotation): string => {
   if (access.access === "read") mode = "R";
   else if (access.access === "write") mode = "W";
   else if (access.access === "read-write") mode = "RW";
-  return `${mode} ${access.accessedAddressSpace}:${hexadecimal(access.accessedAddress)}${access.value === undefined ? "" : `=${hexadecimal(access.value)}`} ${access.width}B ×${access.count}`;
+  return `${access.actor ? `${access.actor}${access.channel === undefined ? "" : ` channel ${access.channel}`} ` : ""}${mode} ${access.accessedAddressSpace}:${hexadecimal(access.accessedAddress)}${access.value === undefined ? "" : `=${hexadecimal(access.value)}`} ${access.width}B ×${access.count}`;
 };
 
 const clipped = (value: string, maximum: number): string =>
@@ -78,6 +78,7 @@ export const formatInstructionAnnotationSummary = (
   maximumLength = 220,
 ): string => {
   const parts: string[] = [];
+  parts.push(...(annotation.comments ?? []).slice(0, 2).map(({ text }) => text));
   if (annotation.executionCount > 0) parts.push(`▶ ${annotation.executionCount}×`);
   const coverage = annotation.runtimeCoverage.map(({ coverage }) => coverage);
   if (coverage.length > 0) parts.push(`coverage ${coverage.join("/")}`);
@@ -105,6 +106,9 @@ export const formatInstructionAnnotationDetails = (
       : "Output offsets: none persisted",
     `Architectures: ${annotation.architectures.join(", ") || "none persisted"}`,
     `Execution observations: ${annotation.executionCount}`,
+    ...(annotation.comments ?? []).map(
+      ({ text, evidence }) => `Comment: ${text}\nEvidence: ${evidence.join(", ")}`,
+    ),
   ];
   if (annotation.runtimeCoverage.length > 0) {
     lines.push(

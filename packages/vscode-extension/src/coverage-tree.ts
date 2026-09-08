@@ -5,8 +5,7 @@
 import * as path from "node:path";
 import {
   ANALYSIS_PROJECT_MANIFEST,
-  buildRomCoverageMap,
-  loadAnalysisProject,
+  type AnalysisProjectManifest,
   type RomCoverageMap,
   type RomCoverageSegment,
 } from "@uttori/asm-disassembler";
@@ -20,6 +19,7 @@ import {
   type Event,
   type TreeDataProvider,
 } from "vscode";
+import { analysisWorker } from "./analysis-worker-client.js";
 
 const PAGE_SIZE = 200;
 const ANALYSIS_PROJECT_EXCLUDE = "**/{node_modules,.git,Local Only}/**";
@@ -33,6 +33,12 @@ type CoverageDetail = {
 };
 
 type CoverageTreeNode = {
+  readonly loadProject?: boolean;
+  readonly remotePage?: {
+    readonly operation: "segments" | "details";
+    readonly offset: number;
+    readonly count: number;
+  };
   readonly id: string;
   readonly label: string;
   readonly description?: string;
@@ -41,8 +47,6 @@ type CoverageTreeNode = {
   readonly state: TreeItemCollapsibleState;
   readonly resourceUri?: Uri;
   readonly children?: readonly CoverageTreeNode[];
-  readonly segments?: readonly RomCoverageSegment[];
-  readonly details?: readonly CoverageDetail[];
   readonly contentSize?: number;
   readonly projectDirectory?: string;
   readonly editTarget?: AnalysisCoverageEditTarget;
@@ -113,7 +117,7 @@ const summaryNode = (
 const mapChildren = (
   projectId: string,
   projectDirectory: string,
-  map: RomCoverageMap,
+  map: RomCoverageMap & { readonly detailCount: number },
 ): readonly CoverageTreeNode[] => {
   const { summary } = map;
   const summaryChildren = [
@@ -146,22 +150,6 @@ const mapChildren = (
       coverage === "executed" ? "debug-alt" : "pulse",
     ),
   );
-  const projectionDetails: CoverageDetail[] = [
-    ...map.unprojected.map((record) => ({
-      id: `${projectId}:unprojected:${record.kind}:${record.id}:${record.reason}`,
-      label: record.id,
-      description: record.reason,
-      tooltip: `${record.kind} record${record.addressSpace ? ` in ${record.addressSpace}` : ""} was not projected into ROM offsets: ${record.reason}.`,
-      icon: "debug-disconnect",
-    })),
-    ...map.diagnostics.map((diagnostic, index) => ({
-      id: `${projectId}:diagnostic:${diagnostic.recordId}:${index}`,
-      label: diagnostic.recordId,
-      description: "clipped",
-      tooltip: diagnostic.message,
-      icon: "warning",
-    })),
-  ];
 
   return [
     group(
@@ -193,7 +181,7 @@ const mapChildren = (
         "Half-open ROM-content intervals. Expand a page to inspect at most 200 segments at a time.",
       icon: "list-tree",
       state: TreeItemCollapsibleState.Collapsed,
-      segments: map.segments,
+      remotePage: { operation: "segments", offset: 0, count: map.summary.segmentCount },
       contentSize: map.contentSize,
       projectDirectory,
     },
@@ -201,17 +189,16 @@ const mapChildren = (
       id: `${projectId}:projection`,
       label: "Projection diagnostics",
       description:
-        projectionDetails.length === 0
+        map.detailCount === 0
           ? "all map-relevant records projected"
-          : `${projectionDetails.length.toLocaleString("en-US")} item(s)`,
+          : `${map.detailCount.toLocaleString("en-US")} item(s)`,
       tooltip:
         "CPU and RAM addresses are never guessed into ROM offsets. Records without explicit file identities remain visible here.",
-      icon: projectionDetails.length === 0 ? "pass" : "warning",
+      icon: map.detailCount === 0 ? "pass" : "warning",
       state:
-        projectionDetails.length === 0
-          ? TreeItemCollapsibleState.None
-          : TreeItemCollapsibleState.Collapsed,
-      details: projectionDetails,
+        map.detailCount === 0 ? TreeItemCollapsibleState.None : TreeItemCollapsibleState.Collapsed,
+      remotePage: { operation: "details", offset: 0, count: map.detailCount },
+      projectDirectory,
     },
   ];
 };
@@ -330,8 +317,59 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
 
   async getChildren(element?: CoverageTreeNode): Promise<CoverageTreeNode[]> {
     if (!element) return this.loadProjects();
-    if (element.segments) return this.segmentPages(element);
-    if (element.details) return this.detailPages(element);
+    if (element.loadProject) {
+      try {
+        const map = await analysisWorker().request<RomCoverageMap & { detailCount: number }>(
+          element.projectDirectory!,
+          "coverage",
+        );
+        return [...mapChildren(element.id, element.projectDirectory!, map)];
+      } catch (error) {
+        return [leaf(`${element.id}:error`, "Could not load coverage", String(error), "error")];
+      }
+    }
+    if (element.remotePage) {
+      const { operation, offset, count } = element.remotePage;
+      if (count <= PAGE_SIZE) {
+        try {
+          if (operation === "segments") {
+            const segments = await analysisWorker().request<RomCoverageSegment[]>(
+              element.projectDirectory!,
+              operation,
+              { offset },
+            );
+            return segments
+              .slice(0, count)
+              .map((segment) =>
+                segmentNode(element.id, segment, element.contentSize!, element.projectDirectory!),
+              );
+          }
+          return (
+            await analysisWorker().request<CoverageDetail[]>(element.projectDirectory!, operation, {
+              offset,
+            })
+          )
+            .slice(0, count)
+            .map((detail) => this.detailNode({ ...detail, id: `${element.id}:${detail.id}` }));
+        } catch (error) {
+          return [leaf(`${element.id}:error`, "Could not load page", String(error), "error")];
+        }
+      }
+      let stride = PAGE_SIZE;
+      while (Math.ceil(count / stride) > PAGE_SIZE) stride *= PAGE_SIZE;
+      const pages: CoverageTreeNode[] = [];
+      for (let index = 0; index < count; index += stride)
+        pages.push({
+          id: `${element.id}:page:${offset + index}`,
+          label: `Items ${offset + index + 1}–${offset + Math.min(index + stride, count)}`,
+          icon: "list-selection",
+          state: TreeItemCollapsibleState.Collapsed,
+          projectDirectory: element.projectDirectory,
+          contentSize: element.contentSize,
+          remotePage: { operation, offset: offset + index, count: Math.min(stride, count - index) },
+        });
+      return pages;
+    }
     return [...(element.children ?? [])];
   }
 
@@ -351,17 +389,20 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
       const manifestUri = Uri.file(path.join(directory, ANALYSIS_PROJECT_MANIFEST));
       const projectId = `analysis:${directory}`;
       try {
-        const project = loadAnalysisProject(directory);
-        const map = buildRomCoverageMap(project.manifest, project.shards);
+        const manifest = await analysisWorker().request<AnalysisProjectManifest>(
+          directory,
+          "manifest",
+        );
         result.push({
           id: projectId,
           label: path.basename(directory),
-          description: `${project.manifest.target} · ${project.manifest.mapping.mapper} · ${project.manifest.rom.contentSha256.slice(0, 12)}`,
-          tooltip: `${directory}\n${formatBytes(map.contentSize)} ROM content\n${map.fileAddressSpaces.join(", ") || "No file address space"}`,
+          description: `${manifest.target} · ${manifest.mapping.mapper} · ${manifest.rom.contentSha256.slice(0, 12)}`,
+          tooltip: `${directory}\n${formatBytes(manifest.rom.contentSize)} ROM content`,
           icon: "database",
-          state: TreeItemCollapsibleState.Expanded,
+          state: TreeItemCollapsibleState.Collapsed,
           resourceUri: manifestUri,
-          children: mapChildren(projectId, directory, map),
+          loadProject: true,
+          projectDirectory: directory,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -377,50 +418,6 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
       }
     }
     return result;
-  }
-
-  private segmentPages(element: CoverageTreeNode): CoverageTreeNode[] {
-    const segments = element.segments ?? [];
-    const contentSize = element.contentSize ?? 0;
-    if (segments.length <= PAGE_SIZE) {
-      return segments.map((segment) =>
-        segmentNode(element.id, segment, contentSize, element.projectDirectory!),
-      );
-    }
-    const width = Math.max(6, Math.max(0, contentSize - 1).toString(16).length);
-    const pages: CoverageTreeNode[] = [];
-    for (let index = 0; index < segments.length; index += PAGE_SIZE) {
-      const slice = segments.slice(index, index + PAGE_SIZE);
-      pages.push({
-        id: `${element.id}:page:${index / PAGE_SIZE}`,
-        label: pageLabel(slice[0].start, slice.at(-1)!.end, width),
-        description: `${slice.length} segment(s)`,
-        icon: "list-selection",
-        state: TreeItemCollapsibleState.Collapsed,
-        segments: slice,
-        contentSize,
-        projectDirectory: element.projectDirectory,
-      });
-    }
-    return pages;
-  }
-
-  private detailPages(element: CoverageTreeNode): CoverageTreeNode[] {
-    const details = element.details ?? [];
-    if (details.length <= PAGE_SIZE) return details.map((detail) => this.detailNode(detail));
-    const pages: CoverageTreeNode[] = [];
-    for (let index = 0; index < details.length; index += PAGE_SIZE) {
-      const slice = details.slice(index, index + PAGE_SIZE);
-      pages.push({
-        id: `${element.id}:page:${index / PAGE_SIZE}`,
-        label: `Items ${index + 1}–${index + slice.length}`,
-        description: `${slice.length} item(s)`,
-        icon: "list-selection",
-        state: TreeItemCollapsibleState.Collapsed,
-        details: slice,
-      });
-    }
-    return pages;
   }
 
   private detailNode(detail: CoverageDetail): CoverageTreeNode {

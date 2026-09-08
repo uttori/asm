@@ -1,4 +1,4 @@
-import type { DebugBackendCapabilities } from "@uttori/asm-debug-adapter";
+import type { DebugBackendCapabilities, DebugStepKind } from "@uttori/asm-debug-adapter";
 
 export const MESEN_BACKEND_ID = "mesence-debug-server" as const;
 export const MESEN_NATIVE_PROTOCOL_VERSION = 1 as const;
@@ -12,11 +12,13 @@ export const MESEN_SPC700_ADDRESS_SPACE = "spc.aram" as const;
 export const MESEN_SUPERFX_ROM_ADDRESS_SPACE = "superfx.rom" as const;
 export const MESEN_SUPERFX_RAM_ADDRESS_SPACE = "superfx.ram" as const;
 export const MESEN_NATIVE_MAX_MEMORY_READ = 4_096;
+const MESEN_STEP_KINDS = Object.freeze<readonly DebugStepKind[]>(["instruction", "in"]);
 
 /** Immutable editor/sidecar negotiation profile for the maintained MesenCE seam. */
 export const MESEN_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
   pause: true,
   step: true,
+  stepKinds: MESEN_STEP_KINDS,
   registers: true,
   memory: true,
   stackFrames: true,
@@ -38,6 +40,7 @@ export const MESEN_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
       trace: null,
       pause: true,
       step: true,
+      stepKinds: MESEN_STEP_KINDS,
       registers: true,
       memory: true,
       stackFrames: true,
@@ -53,6 +56,7 @@ export const MESEN_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
       trace: null,
       pause: true,
       step: true,
+      stepKinds: MESEN_STEP_KINDS,
       registers: true,
       memory: true,
       stackFrames: true,
@@ -72,6 +76,7 @@ export const MESEN_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
       trace: null,
       pause: true,
       step: true,
+      stepKinds: MESEN_STEP_KINDS,
       registers: true,
       memory: true,
       stackFrames: true,

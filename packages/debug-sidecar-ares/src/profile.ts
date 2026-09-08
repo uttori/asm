@@ -1,4 +1,4 @@
-import type { DebugBackendCapabilities } from "@uttori/asm-debug-adapter";
+import type { DebugBackendCapabilities, DebugStepKind } from "@uttori/asm-debug-adapter";
 
 export const ARES_RSP_BACKEND_ID = "ares-rsp" as const;
 export const ARES_65816_ARCHITECTURE = "snes.65816" as const;
@@ -9,11 +9,14 @@ export const ARES_65816_THREAD_ID = 1 as const;
 export const ARES_65816_FRAME_ID = 1 as const;
 export const ARES_TRACE_BUFFER_EVENTS = 65_536;
 export const ARES_TRACE_BATCH_EVENTS = 240;
+const ARES_STEP_KINDS = Object.freeze<readonly DebugStepKind[]>(["instruction", "in"]);
+const NO_STEP_KINDS = Object.freeze<readonly DebugStepKind[]>([]);
 
 /** Immutable editor/sidecar negotiation profile for the maintained ares RSP seam. */
 export const ARES_RSP_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
   pause: true,
   step: true,
+  stepKinds: ARES_STEP_KINDS,
   registers: true,
   memory: true,
   stackFrames: true,
@@ -45,6 +48,7 @@ export const ARES_RSP_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
       }),
       pause: true,
       step: true,
+      stepKinds: ARES_STEP_KINDS,
       registers: true,
       memory: true,
       stackFrames: true,
@@ -58,6 +62,7 @@ export const ARES_RSP_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
       trace: null,
       pause: false,
       step: false,
+      stepKinds: NO_STEP_KINDS,
       registers: false,
       memory: false,
       stackFrames: false,
@@ -71,6 +76,7 @@ export const ARES_RSP_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
       trace: null,
       pause: false,
       step: false,
+      stepKinds: NO_STEP_KINDS,
       registers: false,
       memory: false,
       stackFrames: false,

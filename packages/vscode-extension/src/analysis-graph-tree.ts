@@ -2,14 +2,11 @@
 import * as path from "node:path";
 import {
   ANALYSIS_PROJECT_MANIFEST,
-  buildAnalysisCallGraph,
-  loadAnalysisProject,
   type AnalysisCallGraph,
   type AnalysisCallGraphEdge,
   type AnalysisCallGraphFunction,
   type AnalysisCallGraphUnresolved,
   type AnalysisProjectManifest,
-  type AnalysisProjectShards,
 } from "@uttori/asm-disassembler";
 import {
   EventEmitter,
@@ -21,6 +18,7 @@ import {
   type TreeDataProvider,
 } from "vscode";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
+import { analysisWorker } from "./analysis-worker-client.js";
 
 const PAGE_SIZE = 200;
 
@@ -73,7 +71,10 @@ type AnalysisGraphTreeNode = {
   readonly icon: string;
   readonly state: TreeItemCollapsibleState;
   readonly children?: readonly AnalysisGraphTreeNode[];
-  readonly pageEntries?: readonly AnalysisGraphTreeNode[];
+  readonly pageEntries?: readonly (() => AnalysisGraphTreeNode)[];
+  readonly loadChildren?: () =>
+    | readonly AnalysisGraphTreeNode[]
+    | Promise<readonly AnalysisGraphTreeNode[]>;
   readonly resourceUri?: Uri;
   readonly navigationTarget?: AnalysisGraphNavigationTarget;
 };
@@ -84,49 +85,37 @@ const hexadecimal = (value: number): string =>
 const sortedUnique = (values: readonly string[]): readonly string[] =>
   [...new Set(values)].sort((left, right) => left.localeCompare(right));
 
-const architectureHints = (
-  manifest: AnalysisProjectManifest,
-  shards: AnalysisProjectShards,
-  addressSpace: string,
-  address: number,
-  outputOffsets: readonly number[],
-): readonly string[] => {
-  const fileSpaces = new Set(
-    manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id),
-  );
-  const hints = shards.annotations
-    .filter(
-      (annotation) =>
-        (annotation.addressSpace === addressSpace &&
-          annotation.start <= address &&
-          address < annotation.end) ||
-        (fileSpaces.has(annotation.addressSpace) &&
-          outputOffsets.some((offset) => annotation.start <= offset && offset < annotation.end)),
-    )
-    .map(({ architecture }) => architecture);
-  for (const record of shards.runtime) {
-    if (
-      "addressSpace" in record &&
-      record.addressSpace === addressSpace &&
-      (("address" in record && record.address === address) ||
-        (record.kind === "runtime-coverage" && record.start <= address && address < record.end))
-    ) {
-      hints.push(record.architecture);
-    }
+type ArchitectureHints = Readonly<Record<string, readonly string[]>>;
+interface GraphProjection {
+  readonly manifest: AnalysisProjectManifest;
+  readonly graph: AnalysisCallGraph;
+  readonly hints: ArchitectureHints;
+}
+const graphIndexes = new WeakMap<
+  AnalysisCallGraph,
+  {
+    functions: Map<string, AnalysisCallGraphFunction>;
+    calls: Map<string, AnalysisCallGraphEdge>;
+    unresolved: Map<string, AnalysisCallGraphUnresolved>;
   }
-  if (hints.length === 0) {
-    const summaries = shards.analysis
-      .filter((record) => record.kind === "summary")
-      .map(({ architecture }) => architecture);
-    if (new Set(summaries).size === 1) hints.push(...summaries);
+>();
+const indexesFor = (graph: AnalysisCallGraph) => {
+  let indexes = graphIndexes.get(graph);
+  if (!indexes) {
+    indexes = {
+      functions: new Map(graph.functions.map((fn) => [fn.id, fn])),
+      calls: new Map(graph.calls.map((call) => [call.id, call])),
+      unresolved: new Map(graph.unresolved.map((record) => [record.id, record])),
+    };
+    graphIndexes.set(graph, indexes);
   }
-  return sortedUnique(hints);
+  return indexes;
 };
 
 const navigationTarget = (
   projectDirectory: string,
   manifest: AnalysisProjectManifest,
-  shards: AnalysisProjectShards,
+  shards: ArchitectureHints,
   location: {
     readonly addressSpace: string;
     readonly address: number;
@@ -141,13 +130,7 @@ const navigationTarget = (
   addressSpace: location.addressSpace,
   address: location.address,
   outputOffsets: location.outputOffsets,
-  architectureHints: architectureHints(
-    manifest,
-    shards,
-    location.addressSpace,
-    location.address,
-    location.outputOffsets,
-  ),
+  architectureHints: shards[`${location.addressSpace}:${location.address}`] ?? [],
   recordIds: sortedUnique(recordIds),
 });
 
@@ -173,7 +156,7 @@ const pagedGroup = (
   label: string,
   description: string,
   icon: string,
-  entries: readonly AnalysisGraphTreeNode[],
+  entries: readonly (() => AnalysisGraphTreeNode)[],
 ): AnalysisGraphTreeNode => ({
   id,
   label,
@@ -190,12 +173,12 @@ const callNode = (
   projectId: string,
   projectDirectory: string,
   manifest: AnalysisProjectManifest,
-  shards: AnalysisProjectShards,
+  shards: ArchitectureHints,
   graph: AnalysisCallGraph,
   call: AnalysisCallGraphEdge,
   direction: "all" | "incoming" | "outgoing",
 ): AnalysisGraphTreeNode => {
-  const functions = new Map(graph.functions.map((fn) => [fn.id, fn]));
+  const { functions } = indexesFor(graph);
   const callers = call.callerFunctionIds.map((id) => functionName(functions.get(id)!));
   const callees = call.calleeFunctionIds.map((id) => functionName(functions.get(id)!));
   const caller = callers.length > 0 ? callers.join(" / ") : "unowned call site";
@@ -236,7 +219,7 @@ const unresolvedNode = (
   projectId: string,
   projectDirectory: string,
   manifest: AnalysisProjectManifest,
-  shards: AnalysisProjectShards,
+  shards: ArchitectureHints,
   unresolved: AnalysisCallGraphUnresolved,
 ): AnalysisGraphTreeNode =>
   leaf(
@@ -261,20 +244,28 @@ const functionNode = (
   projectId: string,
   projectDirectory: string,
   manifest: AnalysisProjectManifest,
-  shards: AnalysisProjectShards,
+  shards: ArchitectureHints,
   graph: AnalysisCallGraph,
   fn: AnalysisCallGraphFunction,
 ): AnalysisGraphTreeNode => {
-  const calls = new Map(graph.calls.map((call) => [call.id, call]));
-  const unresolved = new Map(graph.unresolved.map((record) => [record.id, record]));
-  const children = [
+  const { calls, unresolved } = indexesFor(graph);
+  const loadChildren = () => [
     pagedGroup(
       `${projectId}:function:${fn.id}:incoming`,
       "Incoming calls",
       `${fn.incomingCallIds.length}`,
       "call-incoming",
-      fn.incomingCallIds.map((id) =>
-        callNode(projectId, projectDirectory, manifest, shards, graph, calls.get(id)!, "incoming"),
+      fn.incomingCallIds.map(
+        (id) => () =>
+          callNode(
+            projectId,
+            projectDirectory,
+            manifest,
+            shards,
+            graph,
+            calls.get(id)!,
+            "incoming",
+          ),
       ),
     ),
     pagedGroup(
@@ -282,8 +273,17 @@ const functionNode = (
       "Outgoing calls",
       `${fn.outgoingCallIds.length}`,
       "call-outgoing",
-      fn.outgoingCallIds.map((id) =>
-        callNode(projectId, projectDirectory, manifest, shards, graph, calls.get(id)!, "outgoing"),
+      fn.outgoingCallIds.map(
+        (id) => () =>
+          callNode(
+            projectId,
+            projectDirectory,
+            manifest,
+            shards,
+            graph,
+            calls.get(id)!,
+            "outgoing",
+          ),
       ),
     ),
     pagedGroup(
@@ -291,8 +291,9 @@ const functionNode = (
       "Unresolved flow",
       `${fn.unresolvedIds.length}`,
       "debug-disconnect",
-      fn.unresolvedIds.map((id) =>
-        unresolvedNode(projectId, projectDirectory, manifest, shards, unresolved.get(id)!),
+      fn.unresolvedIds.map(
+        (id) => () =>
+          unresolvedNode(projectId, projectDirectory, manifest, shards, unresolved.get(id)!),
       ),
     ),
   ];
@@ -310,7 +311,7 @@ const functionNode = (
     ].join("\n"),
     icon: fn.source === "interrupt" ? "zap" : "symbol-function",
     state: TreeItemCollapsibleState.Collapsed,
-    children,
+    loadChildren,
     navigationTarget: navigationTarget(projectDirectory, manifest, shards, fn, [
       fn.id,
       ...fn.nodeIds,
@@ -322,17 +323,17 @@ const projectChildren = (
   projectId: string,
   projectDirectory: string,
   manifest: AnalysisProjectManifest,
-  shards: AnalysisProjectShards,
+  shards: ArchitectureHints,
   graph: AnalysisCallGraph,
 ): readonly AnalysisGraphTreeNode[] => {
-  const functions = graph.functions.map((fn) =>
-    functionNode(projectId, projectDirectory, manifest, shards, graph, fn),
+  const functions = graph.functions.map(
+    (fn) => () => functionNode(projectId, projectDirectory, manifest, shards, graph, fn),
   );
-  const calls = graph.calls.map((call) =>
-    callNode(projectId, projectDirectory, manifest, shards, graph, call, "all"),
+  const calls = graph.calls.map(
+    (call) => () => callNode(projectId, projectDirectory, manifest, shards, graph, call, "all"),
   );
-  const unresolved = graph.unresolved.map((record) =>
-    unresolvedNode(projectId, projectDirectory, manifest, shards, record),
+  const unresolved = graph.unresolved.map(
+    (record) => () => unresolvedNode(projectId, projectDirectory, manifest, shards, record),
   );
   const orphanIds = sortedUnique([...graph.orphanCallIds, ...graph.orphanUnresolvedIds]);
   return [
@@ -362,14 +363,15 @@ const projectChildren = (
       "Ownership diagnostics",
       orphanIds.length === 0 ? "all records linked" : `${orphanIds.length} orphan(s)`,
       orphanIds.length === 0 ? "pass" : "warning",
-      orphanIds.map((id) =>
-        leaf(
-          `${projectId}:orphan:${id}`,
-          id,
-          "No persisted caller, callee, or owner function",
-          "warning",
-          "The graph retains this record without inventing function ownership.",
-        ),
+      orphanIds.map(
+        (id) => () =>
+          leaf(
+            `${projectId}:orphan:${id}`,
+            id,
+            "No persisted caller, callee, or owner function",
+            "warning",
+            "The graph retains this record without inventing function ownership.",
+          ),
       ),
     ),
   ];
@@ -378,6 +380,7 @@ const projectChildren = (
 /** Read-only native analysis function/call graph tree provider. */
 export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTreeNode> {
   static readonly viewId = "uttori-asm.analysisGraph";
+  readonly #projects = new Map<string, Promise<GraphProjection>>();
 
   readonly #onDidChangeTreeData = new EventEmitter<
     AnalysisGraphTreeNode | undefined | null | void
@@ -386,6 +389,7 @@ export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTree
     this.#onDidChangeTreeData.event;
 
   refresh(): void {
+    this.#projects.clear();
     this.#onDidChangeTreeData.fire();
   }
 
@@ -415,6 +419,7 @@ export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTree
 
   async getChildren(element?: AnalysisGraphTreeNode): Promise<AnalysisGraphTreeNode[]> {
     if (!element) return this.loadProjects();
+    if (element.loadChildren) return [...(await element.loadChildren())];
     if (element.pageEntries) return this.pagedChildren(element);
     return [...(element.children ?? [])];
   }
@@ -432,17 +437,34 @@ export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTree
       const projectId = `analysis-graph:${directory}`;
       const manifestUri = Uri.file(path.join(directory, ANALYSIS_PROJECT_MANIFEST));
       try {
-        const project = loadAnalysisProject(directory);
-        const graph = buildAnalysisCallGraph(project.shards);
+        const manifest = await analysisWorker().request<AnalysisProjectManifest>(
+          directory,
+          "manifest",
+        );
         result.push({
           id: projectId,
           label: path.basename(directory),
-          description: `${graph.functions.length} function(s) · ${graph.calls.length} call(s) · ${graph.unresolved.length} unresolved`,
-          tooltip: `${directory}\n${project.manifest.target} · ${project.manifest.mapping.mapper}\n${project.manifest.rom.contentSha256}`,
+          description: `${manifest.target} · ${manifest.mapping.mapper}`,
+          tooltip: `${directory}\n${manifest.rom.contentSha256}`,
           icon: "type-hierarchy",
-          state: TreeItemCollapsibleState.Expanded,
+          state: TreeItemCollapsibleState.Collapsed,
           resourceUri: manifestUri,
-          children: projectChildren(projectId, directory, project.manifest, project.shards, graph),
+          loadChildren: async () => {
+            try {
+              let projection = this.#projects.get(directory);
+              if (!projection) {
+                projection = analysisWorker().request<GraphProjection>(directory, "graph");
+                this.#projects.set(directory, projection);
+              }
+              const { graph, hints } = await projection;
+              return projectChildren(projectId, directory, manifest, hints, graph);
+            } catch (error) {
+              this.#projects.delete(directory);
+              return [
+                leaf(`${projectId}:error`, "Could not load graph", "", "error", String(error)),
+              ];
+            }
+          },
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -462,17 +484,19 @@ export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTree
 
   private pagedChildren(element: AnalysisGraphTreeNode): AnalysisGraphTreeNode[] {
     const entries = element.pageEntries ?? [];
-    if (entries.length <= PAGE_SIZE) return [...entries];
+    if (entries.length <= PAGE_SIZE) return entries.map((create) => create());
+    let stride = PAGE_SIZE;
+    while (Math.ceil(entries.length / stride) > PAGE_SIZE) stride *= PAGE_SIZE;
     const pages: AnalysisGraphTreeNode[] = [];
-    for (let index = 0; index < entries.length; index += PAGE_SIZE) {
-      const slice = entries.slice(index, index + PAGE_SIZE);
+    for (let index = 0; index < entries.length; index += stride) {
+      const slice = entries.slice(index, index + stride);
       pages.push({
         id: `${element.id}:page:${index / PAGE_SIZE}`,
-        label: `${(index + 1).toLocaleString("en-US")}–${Math.min(index + PAGE_SIZE, entries.length).toLocaleString("en-US")}`,
+        label: `${(index + 1).toLocaleString("en-US")}–${Math.min(index + stride, entries.length).toLocaleString("en-US")}`,
         description: `${slice.length} item(s)`,
         icon: "list-selection",
         state: TreeItemCollapsibleState.Collapsed,
-        children: slice,
+        pageEntries: slice,
       });
     }
     return pages;

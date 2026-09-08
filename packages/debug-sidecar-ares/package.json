@@ -24,6 +24,10 @@
     "./profile": {
       "types": "./dist/profile.d.ts",
       "import": "./src/profile.ts"
+    },
+    "./runtime-manifest": {
+      "types": "./dist/ares-process-host.d.ts",
+      "import": "./src/ares-process-host.ts"
     }
   },
   "scripts": {

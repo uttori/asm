@@ -54,7 +54,7 @@ export const SECRET_OF_MANA_ANALYSIS_FIXTURE = {
   bytes: 2_097_152,
   sha256: "4c15013131351e694e05f22e38bb1b3e4031dedac77ec75abecebe8520d82d5f",
   mapper: "hirom",
-  dizraw: "Secret of Mana (USA).dizraw",
+  dizraw: "secret-of-mana/Secret of Mana (USA).dizraw",
 } as const;
 
 export const EXTERNAL_FIXTURES: Record<ExternalFixtureId, ExternalFixtureSpec> = {

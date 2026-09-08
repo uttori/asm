@@ -24,7 +24,7 @@ const usage = `Usage: uttori-asm-debug-sidecar-ares [options]
 
 Required:
   --manifest path       Versioned ares runtime manifest JSON
-  --ares path           Separately installed ares-headless executable
+  --ares path           Separately installed ares executable (manifest selects frontend)
   --rom path            SNES ROM whose SHA-256 matches the manifest
   --runtime-dir path    Portable root containing bin, resources, settings, and saves
 

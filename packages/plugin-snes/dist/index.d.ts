@@ -16,6 +16,8 @@ export * from "./disassembler/spc700-hardware-registers.js";
 export * from "./disassembler/spc700-state.js";
 export * from "./disassembler/spc700-upload.js";
 export * from "./disassembler/processor-source-export.js";
+export * from "./disassembler/project-initializer.js";
+export * from "./disassembler/ram-map.js";
 export * from "./disassembler/superfx-address-space.js";
 export * from "./disassembler/superfx-analysis.js";
 export * from "./disassembler/superfx-state.js";
@@ -59,4 +61,6 @@ export * from "./session-state.js";
 export * from "./directives/spc.js";
 export * from "./target/address-space.js";
 export * from "./tooling/instruction-catalog.js";
+export * from "./disassembler/function-heuristics.js";
+export * from "./disassembler/runtime-code.js";
 //# sourceMappingURL=index.d.ts.map

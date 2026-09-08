@@ -1,4 +1,5 @@
 /** Shared Build Binary helpers used by the language server and its tests. */
+import fs from "node:fs";
 import path from "node:path";
 
 export type BuildLogger = {
@@ -13,6 +14,89 @@ export type ResolvedBuildEntry = {
   usedEntryPoint: boolean;
   requestedFile?: string;
 };
+
+export interface BuildArtifactPairResult {
+  readonly outputPath: string;
+  readonly debugMapPath: string;
+  readonly outputChanged: boolean;
+  readonly debugMapChanged: boolean;
+}
+
+let temporaryArtifactSequence = 0;
+
+const sameFileContent = (file: string, content: Uint8Array): boolean => {
+  try {
+    return Buffer.from(content).equals(fs.readFileSync(file));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+};
+
+const temporarySibling = (file: string): string => {
+  temporaryArtifactSequence += 1;
+  return path.join(
+    path.dirname(file),
+    `.${path.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`,
+  );
+};
+
+const stageArtifact = (file: string, content: Uint8Array): string => {
+  const staged = temporarySibling(file);
+  fs.writeFileSync(staged, content, { flag: "wx" });
+  return staged;
+};
+
+/**
+ * Commits the binary and its identity-bearing debug map only after both are fully staged.
+ * Each rename is atomic; readers that race the two renames see either a valid pair or an
+ * identity mismatch that the debugger rejects. A failed second rename restores the prior pair.
+ * @param {string} outputPath Destination binary.
+ * @param {Uint8Array} output Exact binary bytes.
+ * @param {string} debugMapJson Canonical debug-map JSON fingerprinting `output`.
+ * @returns {BuildArtifactPairResult} Paths and content-change state.
+ */
+export function commitBuildArtifactPair(
+  outputPath: string,
+  output: Uint8Array,
+  debugMapJson: string,
+): BuildArtifactPairResult {
+  const resolvedOutput = path.resolve(outputPath);
+  const debugMapPath = `${resolvedOutput}.debug.json`;
+  const mapBytes = Buffer.from(debugMapJson, "utf8");
+  fs.mkdirSync(path.dirname(resolvedOutput), { recursive: true });
+
+  const outputChanged = !sameFileContent(resolvedOutput, output);
+  const debugMapChanged = !sameFileContent(debugMapPath, mapBytes);
+  if (!outputChanged && !debugMapChanged)
+    return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
+
+  const oldOutput = fs.existsSync(resolvedOutput) ? fs.readFileSync(resolvedOutput) : undefined;
+  const stagedOutput = stageArtifact(resolvedOutput, output);
+  let stagedMap: string | undefined;
+  let outputCommitted = false;
+  try {
+    stagedMap = stageArtifact(debugMapPath, mapBytes);
+    fs.renameSync(stagedOutput, resolvedOutput);
+    outputCommitted = true;
+    fs.renameSync(stagedMap, debugMapPath);
+    stagedMap = undefined;
+  } catch (error) {
+    if (outputCommitted) {
+      if (oldOutput) {
+        const rollback = stageArtifact(resolvedOutput, oldOutput);
+        fs.renameSync(rollback, resolvedOutput);
+      } else if (fs.existsSync(resolvedOutput)) {
+        fs.unlinkSync(resolvedOutput);
+      }
+    }
+    throw error;
+  } finally {
+    if (fs.existsSync(stagedOutput)) fs.unlinkSync(stagedOutput);
+    if (stagedMap && fs.existsSync(stagedMap)) fs.unlinkSync(stagedMap);
+  }
+  return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
+}
 
 /**
  * Chooses the source file to assemble. Project entry points win over the

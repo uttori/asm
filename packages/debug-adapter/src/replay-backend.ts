@@ -22,6 +22,7 @@ import { DebugTraceBuffer } from "./trace-buffer.js";
 
 const REPLAY_TRACE_BUFFER_EVENTS = 65_536;
 const REPLAY_TRACE_BATCH_EVENTS = 4_096;
+const REPLAY_STEP_KINDS: readonly DebugStepKind[] = ["instruction", "over", "in", "out"];
 
 /** Contiguous bytes visible in one replay snapshot. */
 export interface ReplayMemoryRegion {
@@ -92,6 +93,7 @@ const replayArchitectureCapabilities = (script: ReplayScript): DebugArchitecture
             },
       pause: true,
       step: true,
+      stepKinds: REPLAY_STEP_KINDS,
       registers,
       memory: memorySpaces.length > 0,
       stackFrames: true,
@@ -143,6 +145,7 @@ export class ReplayDebugBackend implements DebugBackend {
     const architectures = script.architectures
       ? script.architectures.map((capability) => ({
           ...capability,
+          ...(capability.stepKinds ? { stepKinds: [...capability.stepKinds] } : {}),
           addressSpaces: [...capability.addressSpaces].sort(),
           memorySpaces: [...capability.memorySpaces]
             .sort((left, right) => left.addressSpace.localeCompare(right.addressSpace))
@@ -155,11 +158,16 @@ export class ReplayDebugBackend implements DebugBackend {
             : null,
         }))
       : replayArchitectureCapabilities(script);
-    const supports = (key: keyof DebugExecutionCapabilities): boolean =>
+    const supports = (key: Exclude<keyof DebugExecutionCapabilities, "stepKinds">): boolean =>
       architectures.some((capability) => capability[key]);
     this.capabilities = Object.freeze({
       pause: supports("pause"),
       step: supports("step"),
+      stepKinds: [
+        ...new Set(
+          architectures.flatMap((capability) => capability.stepKinds ?? REPLAY_STEP_KINDS),
+        ),
+      ],
       registers: supports("registers"),
       memory: supports("memory"),
       stackFrames: supports("stackFrames"),
@@ -384,6 +392,7 @@ export class ReplayDebugBackend implements DebugBackend {
   /** @inheritdoc */
   startTrace(options: DebugTraceStartOptions): Promise<void> {
     this.#requireConnected();
+    if (options.detail === "full") throw new Error("Replay supports PC-only instruction traces.");
     const architecture = this.capabilities.architectures.find(
       (candidate) => candidate.architecture === options.architecture,
     );

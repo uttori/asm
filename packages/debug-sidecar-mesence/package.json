@@ -23,6 +23,10 @@
     "./profile": {
       "types": "./dist/profile.d.ts",
       "import": "./src/profile.ts"
+    },
+    "./runtime-manifest": {
+      "types": "./dist/mesen-process-host.d.ts",
+      "import": "./src/mesen-process-host.ts"
     }
   },
   "scripts": {

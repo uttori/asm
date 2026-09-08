@@ -65,13 +65,16 @@ const sourcePaths = (
  * Resolves a portable map source only when its current bytes still match the map.
  * @param {DebugMapSource} source Portable debug-map source identity.
  * @param {AnalysisDebugMapCandidate} candidate Map and candidate source roots.
+ * @param {string} [expectedFile] Only resolve this editor's source, avoiding unrelated file reads.
  * @returns {string | undefined} Exact current source path, when one exists.
  */
 export const currentAnalysisSourcePath = (
   source: DebugMapSource,
   candidate: AnalysisDebugMapCandidate,
+  expectedFile?: string,
 ): string | undefined =>
   sourcePaths(source, candidate).find((file) => {
+    if (expectedFile !== undefined && path.resolve(file) !== expectedFile) return false;
     try {
       return fs.statSync(file).isFile() && analysisSourceSha256(file) === source.sha256;
     } catch {
@@ -123,12 +126,23 @@ export const findAnalysisDebugMapCandidates = async (
         continue;
       }
       const containingWorkspace = workspace.getWorkspaceFolder(Uri.file(file));
+      const ancestors: string[] = [];
+      if (containingWorkspace) {
+        const root = containingWorkspace.uri.fsPath;
+        for (
+          let directory = path.dirname(file);
+          directory !== root && directory.startsWith(`${root}${path.sep}`);
+          directory = path.dirname(directory)
+        )
+          ancestors.push(directory);
+      }
       candidates.push({
         file,
         map,
         sourceRoots: sortedUnique([
           ...(file === configuredMap && configuredRoot ? [configuredRoot] : []),
           ...(containingWorkspace ? [containingWorkspace.uri.fsPath] : []),
+          ...ancestors,
         ]),
       });
     } catch {

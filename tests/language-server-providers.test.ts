@@ -4,6 +4,10 @@ import path from "node:path";
 import { CompletionItemKind, SymbolKind } from "vscode-languageserver";
 import { test } from "./ava-helper.js";
 import { WorkspaceIndex } from "../packages/core/src/lsp/workspace-index.js";
+import {
+  renderSnesHardwareDefines,
+  snesHardwareDefineRecords,
+} from "../packages/plugin-snes/src/disassembler/hardware-registers.js";
 import { snesWorkspaceIndexOptions } from "./test-assembler.js";
 import {
   completionsFor,
@@ -67,6 +71,25 @@ test("language-server providers expose navigation, docs, completion, and tokens"
       semanticTokenData.slice(index * 5, index * 5 + 5),
     ).some((token) => token[3] === tokenTypeIndex && token[4] === 1),
   );
+});
+
+test("every generated SNES hardware register provides hover documentation", (t) => {
+  const definesFile = path.resolve("/virtual/snes-defines.asm");
+  const sourceFile = path.resolve("/virtual/register-users.asm");
+  const definitions = snesHardwareDefineRecords();
+  const registerUses = definitions.map(({ symbol }) => `  dw ${symbol}`).join("\n");
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  index.openDocument(definesFile, renderSnesHardwareDefines());
+  index.openDocument(sourceFile, registerUses);
+
+  const lines = registerUses.split("\n");
+  for (const [line, definition] of definitions.entries()) {
+    const character = (lines[line] ?? "").indexOf(definition.symbol) + 1;
+    const hover = hoverFor(index, sourceFile, { line, character }, registerUses);
+    const rendered = JSON.stringify(hover);
+    t.regex(rendered, new RegExp(`\\*\\*${definition.symbol}\\*\\*`), definition.symbol);
+    t.true(rendered.includes(definition.description), definition.symbol);
+  }
 });
 
 test("rename edits user symbols but rejects instruction mnemonics", (t) => {

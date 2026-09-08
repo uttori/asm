@@ -25,6 +25,8 @@ export interface AresRuntimeResource {
 export interface AresRuntimeManifest {
   readonly schemaVersion: typeof ARES_RUNTIME_MANIFEST_VERSION;
   readonly emulator: "ares";
+  /** Omitted by legacy manifests, which launch the headless frontend. */
+  readonly frontend?: "headless" | "desktop";
   readonly upstreamRevision: string;
   readonly headlessBaseRevision: string;
   readonly forkRevision: string;
@@ -254,6 +256,12 @@ export const parseAresRuntimeManifest = (value: unknown): AresRuntimeManifest =>
   if (manifest.schemaVersion !== ARES_RUNTIME_MANIFEST_VERSION)
     throw new Error(`Unsupported ares runtime manifest version ${String(manifest.schemaVersion)}.`);
   if (manifest.emulator !== "ares") throw new Error("Runtime manifest is not for ares.");
+  if (
+    manifest.frontend !== undefined &&
+    manifest.frontend !== "headless" &&
+    manifest.frontend !== "desktop"
+  )
+    throw new Error("Ares runtime frontend must be 'headless' or 'desktop'.");
   const buildConfiguration = manifestString(
     manifest.buildConfiguration,
     "Ares build configuration",
@@ -280,6 +288,7 @@ export const parseAresRuntimeManifest = (value: unknown): AresRuntimeManifest =>
   return Object.freeze({
     schemaVersion: ARES_RUNTIME_MANIFEST_VERSION,
     emulator: "ares",
+    ...(manifest.frontend === undefined ? {} : { frontend: manifest.frontend }),
     upstreamRevision: checkedRevision(
       manifestString(manifest.upstreamRevision, "Ares upstream revision"),
       "Ares upstream revision",
@@ -426,12 +435,28 @@ export class AresProcessHost {
       path.join(this.#runtimeDirectory, "settings.bml"),
       "--setting",
       `Paths/Saves=${path.join(this.#runtimeDirectory, "saves")}`,
-      "--gdb-port",
-      String(port),
-      "--gdb-ipv4",
-      "--wait-on-gdb",
-      "--quiet",
-      ...(this.#fastBoot ? ["--fast-boot"] : []),
+      ...(this.#manifest.frontend === "desktop"
+        ? [
+            `Developer/DebugServerPort=${port}`,
+            "Developer/DebugServerEnabled=true",
+            "Developer/DebugServerUseIPv4=true",
+            "Boot/AwaitGDBClient=true",
+            "Boot/Debugger=false",
+            `Boot/Fast=${this.#fastBoot}`,
+            // Switching focus to VS Code must not silently freeze capture or execution.
+            "Input/Defocus=Allow",
+            // Speculative/replayed frames would contaminate an executed-instruction trace.
+            "General/RunAhead=false",
+            "General/Rewind=false",
+          ].flatMap((setting) => ["--setting", setting])
+        : [
+            "--gdb-port",
+            String(port),
+            "--gdb-ipv4",
+            "--wait-on-gdb",
+            "--quiet",
+            ...(this.#fastBoot ? ["--fast-boot"] : []),
+          ]),
       this.#rom,
     ];
     this.#output = Buffer.alloc(0);

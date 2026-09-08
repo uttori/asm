@@ -394,7 +394,8 @@ test("CLI exports deterministic native source and verifies a complete copier-hea
     const bank = await fs.readFile(path.join(source, "banks/bank-000.asm"), "utf8");
     t.regex(main, /lorom\narch 65816\n\.smart off/);
     t.regex(bank, /; Synthetic reset entry\nL_Entry_Point_:/);
-    t.regex(bank, /\.a8\n\.i8\nLDA\.b #\$42/);
+    t.regex(bank, /\.a8\n\.i8\n  LDA\.b #\$42/);
+    t.is((bank.match(/^org /gm) ?? []).length, 1);
     t.regex(bank, /; Stop after loading the fixture value\./);
     t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);
     const rebuilt = await fs.readFile(path.join(source, "build/rebuilt.sfc"));

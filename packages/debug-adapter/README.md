@@ -21,6 +21,21 @@ catches callback failures so optional analysis cannot interrupt debugging.
 
 Architecture capabilities are explicit. A backend may declare reduced SPC700 or SuperFX support, but it must preserve their architecture and address-space identities rather than folding them into the 65816 view. Each readable memory space is declared separately with a `sideEffectFree` guarantee; `readMemory` rejects address spaces omitted from that list even when they remain valid for program counters, breakpoints, or disassembly.
 
+Step semantics are explicit as well. `stepKinds` distinguishes exact instruction, in, over, and out
+support so an adapter never substitutes single-instruction execution for an unavailable operation.
+The DAP bridge includes missing operations in the processor thread label and rejects unsupported
+requests. Register scopes retain backend groups, 65816 status flags are decoded beside raw values,
+safe memory spaces expose qualified memory references, and 65816/SPC700 stack scopes read a bounded
+32-byte window. Backends that cannot unwind mark frames `currentOnly`; the bridge presents that
+limitation rather than manufacturing callers.
+
+The DAP bridge advertises mapped executable breakpoint locations and moves a source breakpoint on a
+label, comment, or directive to the next executable line. Live protocols may require a stopped CPU
+to change execute breakpoints. When the editor changes a breakpoint while execution is running, the
+bridge serializes the update, briefly pauses the matching breakpoint-capable thread, installs the
+complete replacement set, and resumes it. Those maintenance stop/continue events stay internal so
+the editor observes only a later real breakpoint stop.
+
 Instruction tracing is explicit and pull-based. `startTrace()` selects one negotiated architecture/address space, `readTrace()` destructively returns a bounded batch with sequence and cumulative producer-loss metadata, and `stopTrace()` retains unread events. `DebugTraceBuffer` defines the fixed-capacity oldest-first-loss reference behavior. Trace data is never emitted as an unbounded asynchronous event stream and this package does not write analysis projects.
 
 ## Native sidecar protocol

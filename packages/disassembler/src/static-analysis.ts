@@ -100,7 +100,13 @@ export type StaticDecodeResult =
 export interface StaticAnalysisSeed<State> {
   readonly id: string;
   readonly address: number;
-  readonly kind: "configured" | "imported-label" | "manual" | "target-set" | "vector";
+  readonly kind:
+    | "configured"
+    | "imported-label"
+    | "manual"
+    | "observation"
+    | "target-set"
+    | "vector";
   readonly state: State;
   readonly evidence: readonly string[];
   readonly detail?: string;
@@ -471,6 +477,9 @@ export const analyzeStaticControlFlow = <State>(
   };
 
   for (const seed of seeds) {
+    // A runtime PC proves that an instruction executed, not that it begins a function. Calls,
+    // interrupts, and deliberate entry-point metadata remain the sources of function ownership.
+    if (seed.kind === "observation") continue;
     functions.set(`function:${hexAddress(seed.address)}`, {
       id: `function:${hexAddress(seed.address)}`,
       address: seed.address,

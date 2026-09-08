@@ -3,6 +3,7 @@ import {
   RUNTIME_INSTRUCTION_TRACE_FORMAT,
   RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
   importRuntimeInstructionTrace,
+  validateRuntimeInstructionTrace,
   mergeRuntimeEvidence,
   type AnalysisProjectShards,
   type RuntimeInstructionTraceArtifact,
@@ -32,6 +33,71 @@ const emptyShards = (): AnalysisProjectShards => ({
   runtime: [],
   evidence: [],
   imports: [],
+});
+
+test("rich traces retain byte variants, state, bus actors and explicit loss without double counting PCs", (t) => {
+  const base = artifact();
+  const access = {
+    addressSpace: "snes.cpu",
+    address: 0x2118,
+    access: "write" as const,
+    width: 1,
+    value: 7,
+    actor: "dma" as const,
+    channel: 7,
+  };
+  const detail = {
+    bytes: [0xea],
+    state: { e: 0, p: 0x30 },
+    memoryAccesses: [
+      access,
+      { ...access, access: "fetch" as const, actor: "cpu" as const, channel: undefined },
+    ],
+    droppedMemoryAccesses: 10,
+  };
+  const trace = {
+    ...base,
+    chunks: [
+      {
+        sequenceStart: 1,
+        addresses: [0x7e2000, 0x7e2000],
+        details: [detail, { ...detail, bytes: [0x60] }],
+        droppedEvents: 0,
+        unattributedMemoryAccesses: 3,
+        active: false,
+      },
+    ],
+  };
+  const imported = importRuntimeInstructionTrace(trace, {
+    projectRomContentSha256: romContentSha256,
+    sourceName: "rich.json",
+  });
+  const runtime = imported.batch.runtime;
+  t.is(runtime.filter((record) => record.kind === "runtime-execution")[0]?.count, 2);
+  t.is(runtime.filter((record) => record.kind === "runtime-instruction").length, 2);
+  t.is(runtime.filter((record) => record.kind === "runtime-cpu-state").length, 2);
+  const memory = runtime.filter((record) => record.kind === "runtime-memory-access");
+  t.is(memory.length, 1);
+  t.is(memory[0]?.count, 2);
+  t.is(memory[0]?.actor, "dma");
+  t.is(memory[0]?.channel, 7);
+  t.true(imported.report.warnings.some((warning) => warning.includes("20 memory operations")));
+  t.true(imported.report.warnings.some((warning) => warning.includes("3 bus operations")));
+  const merged = mergeRuntimeEvidence(emptyShards(), imported.batch);
+  t.false(mergeRuntimeEvidence(merged.shards, imported.batch).changed);
+  for (const details of [
+    [],
+    [{ ...detail, bytes: [256] }],
+    [{ ...detail, state: { p: NaN } }],
+    [{ ...detail, memoryAccesses: [{ ...access, channel: 8 }] }],
+  ]) {
+    t.throws(() =>
+      validateRuntimeInstructionTrace({
+        ...trace,
+        chunks: [{ ...trace.chunks[0], addresses: [0x7e2000], details }],
+      }),
+    );
+  }
 });
 
 test("runtime trace import aggregates execution only after an explicit merge", (t) => {
@@ -114,7 +180,7 @@ test("runtime trace import preserves incomplete capture as an explicit warning",
     projectRomContentSha256: romContentSha256,
     sourceName: "incomplete.trace.json",
   });
-  t.deepEqual(imported.report.warnings, ["Trace artifact ended while capture was still active."]);
+  t.true(imported.report.warnings.includes("Trace artifact ended while capture was still active."));
   t.is(imported.batch.evidence?.[0]?.confidence, "high");
 });
 
@@ -186,7 +252,7 @@ test("runtime trace import marks a complete lossless recording certain", (t) => 
   });
   t.is(imported.batch.evidence?.[0]?.confidence, "certain");
   t.deepEqual(imported.report.unsupported, []);
-  t.deepEqual(imported.report.warnings, []);
+  t.true(imported.report.warnings.some((warning) => warning.includes("no captured bytes/state")));
 
   const empty = structuredClone(artifact());
   empty.chunks = [];

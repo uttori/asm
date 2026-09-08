@@ -12,6 +12,8 @@ export interface DebugAddress {
 export interface DebugExecutionCapabilities {
     readonly pause: boolean;
     readonly step: boolean;
+    /** Exact step semantics; omitted by protocol-v1 peers means all legacy kinds. */
+    readonly stepKinds?: readonly DebugStepKind[];
     readonly registers: boolean;
     readonly memory: boolean;
     readonly stackFrames: boolean;
@@ -31,6 +33,8 @@ export interface DebugTraceCapabilities {
     readonly maxBufferedEvents: number;
     /** Maximum instruction addresses returned by one pull. */
     readonly maxBatchEvents: number;
+    /** Optional execution-time bytes/state and bus accesses; absent means PC-only. */
+    readonly instructionDetails?: boolean;
 }
 /** Explicit operations and address spaces available for one emulated processor architecture. */
 export interface DebugArchitectureCapabilities extends DebugExecutionCapabilities {
@@ -58,6 +62,8 @@ export interface DebugStackFrame {
     readonly threadId: number;
     readonly name: string;
     readonly pc: DebugAddress;
+    /** True when the backend can expose only the current PC, not an unwound call stack. */
+    readonly currentOnly?: boolean;
 }
 /** Register value represented losslessly as an unsigned hexadecimal string. */
 export interface DebugRegister {
@@ -88,6 +94,7 @@ export interface DebugInstruction {
 }
 /** Selects one architecture-qualified instruction stream for an explicit recording session. */
 export interface DebugTraceStartOptions {
+    readonly detail?: "pc" | "full";
     readonly architecture: string;
     readonly addressSpace: string;
 }
@@ -95,7 +102,23 @@ export interface DebugTraceStartOptions {
  * One destructive pull from a bounded instruction-trace buffer.
  * Sequence numbers include producer-side losses, making gaps and ordering independently visible.
  */
+export interface DebugTraceInstructionDetail {
+    readonly bytes: readonly number[];
+    readonly state: Readonly<Record<string, string | number | boolean>>;
+    readonly droppedMemoryAccesses?: number;
+    readonly memoryAccesses?: readonly {
+        readonly addressSpace: string;
+        readonly address: number;
+        readonly access: "read" | "write" | "fetch";
+        readonly width: number;
+        readonly value?: number;
+        readonly actor?: "cpu" | "dma" | "hdma";
+        readonly channel?: number;
+    }[];
+}
 export interface DebugTraceBatch {
+    readonly details?: readonly DebugTraceInstructionDetail[];
+    readonly unattributedMemoryAccesses?: number;
     readonly architecture: string;
     readonly addressSpace: string;
     /** Sequence of the first returned address, or the next producer sequence when empty. */

@@ -21,6 +21,17 @@ export interface SourceExportFile {
     /** SHA-256 of the file bytes as written; used to detect post-export edits. */
     readonly sha256: string;
 }
+/** User-owned input consumed while generating the source tree. */
+export interface SourceExportInput {
+    /** Path relative to the export directory; must not contain `..`. */
+    readonly path: string;
+    readonly kind: "metadata" | "configuration";
+    readonly size: number;
+    /** Optional logical record count for status/reporting. */
+    readonly records?: number;
+    /** SHA-256 of the exact input bytes consumed by the export. */
+    readonly sha256: string;
+}
 /** Half-open ROM interval mapped to a generated source or asset file. */
 export interface SourceExportSpan {
     readonly id: string;
@@ -58,6 +69,8 @@ export interface SourceExportManifest {
     readonly finalOutput: string;
     /** Rebuilds must keep the original checksum bytes; they are never recomputed. */
     readonly checksumPolicy: "preserve";
+    /** User-owned inputs whose drift makes generated source stale without blocking regeneration. */
+    readonly inputs?: readonly SourceExportInput[];
     readonly files: readonly SourceExportFile[];
     readonly spans: readonly SourceExportSpan[];
 }
@@ -87,6 +100,15 @@ export declare const loadSourceExportManifest: (directory: string) => SourceExpo
  * @returns {void}
  */
 export declare const validateSourceExportFiles: (directory: string, manifest?: SourceExportManifest) => void;
+/**
+ * Verifies every user-owned export input still matches the bytes consumed by the last generation.
+ * Input drift is expected and should trigger regeneration; unlike generated-file drift it does not
+ * prevent source export from proceeding.
+ * @param {string} directory Export directory.
+ * @param {SourceExportManifest} [manifest] Loaded manifest; defaults to reading the directory.
+ * @returns {void}
+ */
+export declare const validateSourceExportInputs: (directory: string, manifest?: SourceExportManifest) => void;
 /** Byte-level comparison of a rebuilt image against the source ROM content. */
 export interface ByteComparison {
     /** True when lengths and every byte match. */

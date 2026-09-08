@@ -31,7 +31,8 @@
     "@uttori/asm-debug-sidecar-ares": "1.0.0",
     "@uttori/asm-debug-sidecar-mesence": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
-    "vscode-languageclient": "^10.1.0"
+    "@uttori/asm-plugin-snes": "1.0.0",
+    "vscode-languageclient": "^10.1.1"
   },
   "devDependencies": {
     "@types/vscode": "^1.128.0",
@@ -41,6 +42,18 @@
   "contributes": {
     "commands": [
       {
+        "command": "asm.createDisassemblyProject",
+        "title": "Create Disassembly Project from ROM",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.importDizProject",
+        "title": "Import Diz Disassembly Project",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.build",
         "title": "Build Binary",
         "category": "Assembly"
@@ -49,6 +62,30 @@
         "command": "asm.toggleWatch",
         "title": "Toggle Build on Save (Watch)",
         "category": "Assembly"
+      },
+      {
+        "command": "asm.runEmulator",
+        "title": "Run in Emulator",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.debugEmulator",
+        "title": "Debug in Emulator",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.runAndWatch",
+        "title": "Run and Watch",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.configureEmulatorRuntime",
+        "title": "Configure Emulator Runtime",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
       },
       {
         "command": "asm.initConfig",
@@ -113,6 +150,12 @@
         "enablement": "isWorkspaceTrusted"
       },
       {
+        "command": "asm.disassembly.editAnnotation",
+        "title": "Edit Disassembly Annotation",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.coverage.explainEvidence",
         "title": "Explain Analysis Evidence",
         "icon": "$(inspect)",
@@ -133,6 +176,38 @@
         "enablement": "isWorkspaceTrusted && asm.coverage.canRedo"
       },
       {
+        "command": "asm.capture.idle",
+        "title": "Capture Idle Baseline",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.capture.guide",
+        "title": "Open Behavior Capture Guide",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.capture.demo",
+        "title": "Run Idle Capture Demo",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.capture.behavior",
+        "title": "Capture Behavior",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.capture.stop",
+        "title": "Stop Behavior Capture",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.capture.review",
+        "title": "Review and Apply Capture",
+        "category": "Assembly"
+      },
+      {
         "command": "asm.trace.start",
         "title": "Start Runtime Trace Recording",
         "category": "Assembly"
@@ -141,15 +216,62 @@
         "command": "asm.trace.stop",
         "title": "Stop Runtime Trace Recording",
         "category": "Assembly"
+      },
+      {
+        "command": "asm.trace.stopAnalyze",
+        "title": "Stop Execution Capture and Show Routines",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.trace.importRegenerate",
+        "title": "Import Runtime Trace and Update Disassembly",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.ramMap.open",
+        "title": "Open Disassembly RAM Map",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.disassembly.status",
+        "title": "Show Disassembly Update Status",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.disassembly.regenerate",
+        "title": "Analyze and Regenerate Disassembly",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
       }
     ],
     "menus": {
       "commandPalette": [
         {
+          "command": "asm.createDisassemblyProject"
+        },
+        {
+          "command": "asm.importDizProject"
+        },
+        {
           "command": "asm.build"
         },
         {
           "command": "asm.toggleWatch"
+        },
+        {
+          "command": "asm.runEmulator"
+        },
+        {
+          "command": "asm.debugEmulator"
+        },
+        {
+          "command": "asm.runAndWatch"
+        },
+        {
+          "command": "asm.configureEmulatorRuntime"
         },
         {
           "command": "asm.initConfig"
@@ -183,6 +305,9 @@
           "command": "asm.coverage.renameLabel"
         },
         {
+          "command": "asm.disassembly.editAnnotation"
+        },
+        {
           "command": "asm.coverage.explainEvidence"
         },
         {
@@ -196,6 +321,21 @@
         },
         {
           "command": "asm.trace.stop"
+        },
+        {
+          "command": "asm.trace.stopAnalyze"
+        },
+        {
+          "command": "asm.trace.importRegenerate"
+        },
+        {
+          "command": "asm.ramMap.open"
+        },
+        {
+          "command": "asm.disassembly.status"
+        },
+        {
+          "command": "asm.disassembly.regenerate"
         }
       ],
       "view/title": [
@@ -223,6 +363,21 @@
           "command": "asm.coverage.redo",
           "when": "view == uttori-asm.analysisCoverage && asm.coverage.canRedo",
           "group": "navigation@3"
+        },
+        {
+          "command": "asm.ramMap.open",
+          "when": "view == uttori-asm.analysisCoverage && isWorkspaceTrusted",
+          "group": "navigation@4"
+        },
+        {
+          "command": "asm.disassembly.status",
+          "when": "view == uttori-asm.analysisCoverage",
+          "group": "navigation@5"
+        },
+        {
+          "command": "asm.disassembly.regenerate",
+          "when": "view == uttori-asm.analysisCoverage && isWorkspaceTrusted",
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [
@@ -262,6 +417,23 @@
           "command": "asm.build",
           "when": "editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc",
           "group": "navigation"
+        },
+        {
+          "command": "asm.runEmulator",
+          "when": "isWorkspaceTrusted && (editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc)",
+          "group": "navigation@2"
+        },
+        {
+          "command": "asm.debugEmulator",
+          "when": "isWorkspaceTrusted && (editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc)",
+          "group": "navigation@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "asm.disassembly.editAnnotation",
+          "when": "isWorkspaceTrusted && (editorLangId == uttori-snes || editorLangId == uttori-65xx)",
+          "group": "assembly@1"
         }
       ]
     },
@@ -524,7 +696,7 @@
     "viewsWelcome": [
       {
         "view": "uttori-asm.projectOutline",
-        "contents": "No analysed assembly files yet.\n[Initialize uttori-asm.config.json](command:asm.initConfig)"
+        "contents": "No analysed assembly files yet.\n[Open project settings](command:asm.openPanel)"
       },
       {
         "view": "uttori-asm.analysisCoverage",
@@ -621,9 +793,32 @@
           ],
           "default": "off",
           "description": "Traces the communication between VS Code and the Uttori Assembly language server."
+        },
+        "asm.debug.traceDetail": {
+          "type": "string",
+          "enum": [
+            "full",
+            "pc"
+          ],
+          "default": "full",
+          "description": "Record execution-time instruction bytes, registers and bus accesses when supported. PC mode reduces capture size and overhead."
         }
       }
-    }
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": "**/analysis/heuristics.json",
+        "url": "./schemas/snes-heuristics.schema.json"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "asm.disassembly.editAnnotation",
+        "key": "ctrl+alt+a",
+        "mac": "cmd+alt+a",
+        "when": "editorTextFocus && isWorkspaceTrusted && (editorLangId == uttori-snes || editorLangId == uttori-65xx)"
+      }
+    ]
   },
   "activationEvents": [],
   "engines": {

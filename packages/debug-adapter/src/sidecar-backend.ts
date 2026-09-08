@@ -18,6 +18,7 @@ import {
   type DebugTraceStartOptions,
 } from "./contracts.js";
 import { DebugSidecarClient } from "./sidecar-client.js";
+import { validateDebugTraceDetails } from "./trace-detail-validation.js";
 import type { DebugSidecarEvent } from "./sidecar-protocol.js";
 
 /** Construction settings for one typed sidecar-backed debugger. */
@@ -134,7 +135,26 @@ const architectureCapabilities = (
     const maxBatchEvents = positiveInteger(value.maxBatchEvents, `${context}.trace.maxBatchEvents`);
     if (maxBatchEvents > maxBufferedEvents)
       throw new Error(`${context}.trace.maxBatchEvents must not exceed maxBufferedEvents.`);
-    return { addressSpaces: traceAddressSpaces, maxBufferedEvents, maxBatchEvents };
+    return {
+      addressSpaces: traceAddressSpaces,
+      maxBufferedEvents,
+      maxBatchEvents,
+      ...(value.instructionDetails === undefined
+        ? {}
+        : { instructionDetails: boolean(value.instructionDetails, "Trace instructionDetails") }),
+    };
+  })();
+  const stepKinds = (() => {
+    if (candidate.stepKinds === undefined) return undefined;
+    const values = array(candidate.stepKinds, `${context}.stepKinds`).map((entry, index) =>
+      string(entry, `${context}.stepKinds[${index}]`),
+    );
+    const allowed = new Set(["instruction", "over", "in", "out"]);
+    if (values.some((entry) => !allowed.has(entry)))
+      throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
+    if (new Set(values).size !== values.length)
+      throw new Error(`${context}.stepKinds must be unique.`);
+    return values as DebugArchitectureCapabilities["stepKinds"];
   })();
   return {
     architecture: string(candidate.architecture, `${context}.architecture`),
@@ -143,6 +163,7 @@ const architectureCapabilities = (
     trace,
     pause: boolean(candidate.pause, `${context}.pause`),
     step: boolean(candidate.step, `${context}.step`),
+    ...(stepKinds === undefined ? {} : { stepKinds }),
     registers: boolean(candidate.registers, `${context}.registers`),
     memory,
     stackFrames: boolean(candidate.stackFrames, `${context}.stackFrames`),
@@ -158,9 +179,22 @@ const backendCapabilities = (value: unknown, context: string): DebugBackendCapab
     .sort((left, right) => left.architecture.localeCompare(right.architecture));
   if (new Set(architectures.map(({ architecture }) => architecture)).size !== architectures.length)
     throw new Error(`${context}.architectures must use unique architecture identifiers.`);
+  const stepKinds = (() => {
+    if (candidate.stepKinds === undefined) return undefined;
+    const values = array(candidate.stepKinds, `${context}.stepKinds`).map((entry, index) =>
+      string(entry, `${context}.stepKinds[${index}]`),
+    );
+    const allowed = new Set(["instruction", "over", "in", "out"]);
+    if (values.some((entry) => !allowed.has(entry)))
+      throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
+    if (new Set(values).size !== values.length)
+      throw new Error(`${context}.stepKinds must be unique.`);
+    return values as DebugBackendCapabilities["stepKinds"];
+  })();
   return Object.freeze({
     pause: boolean(candidate.pause, `${context}.pause`),
     step: boolean(candidate.step, `${context}.step`),
+    ...(stepKinds === undefined ? {} : { stepKinds: Object.freeze(stepKinds) }),
     registers: boolean(candidate.registers, `${context}.registers`),
     memory: boolean(candidate.memory, `${context}.memory`),
     stackFrames: boolean(candidate.stackFrames, `${context}.stackFrames`),
@@ -171,6 +205,7 @@ const backendCapabilities = (value: unknown, context: string): DebugBackendCapab
       architectures.map((entry) =>
         Object.freeze({
           ...entry,
+          ...(entry.stepKinds ? { stepKinds: Object.freeze(entry.stepKinds) } : {}),
           addressSpaces: Object.freeze(entry.addressSpaces),
           memorySpaces: Object.freeze(
             entry.memorySpaces.map((memorySpace) => Object.freeze(memorySpace)),
@@ -201,11 +236,16 @@ const thread = (value: unknown, context: string): DebugThread => {
 
 const stackFrame = (value: unknown, context: string): DebugStackFrame => {
   const candidate = record(value, context);
+  const currentOnly =
+    candidate.currentOnly === undefined
+      ? undefined
+      : boolean(candidate.currentOnly, `${context}.currentOnly`);
   return {
     id: positiveInteger(candidate.id, `${context}.id`),
     threadId: positiveInteger(candidate.threadId, `${context}.threadId`),
     name: string(candidate.name, `${context}.name`),
     pc: address(candidate.pc, `${context}.pc`),
+    ...(currentOnly === undefined ? {} : { currentOnly }),
   };
 };
 
@@ -255,13 +295,25 @@ const instruction = (value: unknown, context: string): DebugInstruction => {
 
 const traceBatch = (value: unknown, context: string): DebugTraceBatch => {
   const candidate = record(value, context);
+  const addresses = array(candidate.addresses, `${context}.addresses`).map((entry, index) =>
+    integer(entry, `${context}.addresses[${index}]`),
+  );
   return {
     architecture: string(candidate.architecture, `${context}.architecture`),
     addressSpace: string(candidate.addressSpace, `${context}.addressSpace`),
     sequenceStart: positiveInteger(candidate.sequenceStart, `${context}.sequenceStart`),
-    addresses: array(candidate.addresses, `${context}.addresses`).map((entry, index) =>
-      integer(entry, `${context}.addresses[${index}]`),
-    ),
+    addresses,
+    ...(candidate.details === undefined
+      ? {}
+      : { details: validateDebugTraceDetails(candidate.details, addresses.length) }),
+    ...(candidate.unattributedMemoryAccesses === undefined
+      ? {}
+      : {
+          unattributedMemoryAccesses: integer(
+            candidate.unattributedMemoryAccesses,
+            "Trace unattributed memory accesses",
+          ),
+        }),
     droppedEvents: integer(candidate.droppedEvents, `${context}.droppedEvents`),
     active: boolean(candidate.active, `${context}.active`),
   };
@@ -319,7 +371,11 @@ const backendEvent = (message: DebugSidecarEvent): DebugBackendEvent => {
 /** Typed `DebugBackend` implementation over the authenticated sidecar client. */
 export class SidecarDebugBackend implements DebugBackend {
   readonly protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
-  readonly capabilities: DebugBackendCapabilities;
+  #capabilities: DebugBackendCapabilities;
+  readonly #configuredCapabilities: DebugBackendCapabilities;
+  get capabilities(): DebugBackendCapabilities {
+    return this.#capabilities;
+  }
 
   readonly #backend: string;
   readonly #createClient: () => DebugSidecarClient | Promise<DebugSidecarClient>;
@@ -336,7 +392,8 @@ export class SidecarDebugBackend implements DebugBackend {
    */
   constructor(options: SidecarDebugBackendOptions) {
     this.#backend = string(options.backend, "Sidecar backend name");
-    this.capabilities = backendCapabilities(options.capabilities, "Configured capabilities");
+    this.#capabilities = backendCapabilities(options.capabilities, "Configured capabilities");
+    this.#configuredCapabilities = this.#capabilities;
     this.#createClient = options.createClient;
   }
 
@@ -344,7 +401,15 @@ export class SidecarDebugBackend implements DebugBackend {
   async connect(options: DebugBackendConnectOptions = {}): Promise<void> {
     if (this.#connected) throw new Error("Debug backend is already connected.");
     const client = await this.#ensureClient();
-    await client.request("connect", { reset: options.reset ?? true });
+    const response = record(
+      await client.request("connect", { reset: options.reset ?? true }),
+      "Sidecar connect response",
+    );
+    if (response.capabilities !== undefined)
+      this.#capabilities = backendCapabilities(
+        response.capabilities,
+        "Connected runtime capabilities",
+      );
     this.#connected = true;
   }
 
@@ -507,7 +572,13 @@ export class SidecarDebugBackend implements DebugBackend {
       ?.trace?.addressSpaces.includes(addressSpace);
     if (!supported)
       throw new Error(`Instruction trace '${architecture}/${addressSpace}' is not supported.`);
-    await this.#requireConnected().request("startTrace", { architecture, addressSpace });
+    if (options.detail !== undefined && !["pc", "full"].includes(options.detail))
+      throw new Error("Invalid trace detail mode.");
+    await this.#requireConnected().request("startTrace", {
+      architecture,
+      addressSpace,
+      ...(options.detail === undefined ? {} : { detail: options.detail }),
+    });
   }
 
   /** @inheritdoc */
@@ -584,7 +655,7 @@ export class SidecarDebugBackend implements DebugBackend {
       result.capabilities,
       "Sidecar initialize capabilities",
     );
-    if (capabilityIdentity(capabilities) !== capabilityIdentity(this.capabilities))
+    if (capabilityIdentity(capabilities) !== capabilityIdentity(this.#configuredCapabilities))
       throw new Error("Sidecar capabilities do not match the configured revision manifest.");
     this.#initialized = true;
   }

@@ -35,6 +35,8 @@ export interface DebugAdapterSessionOptions {
     /** Optional presentation-only suffix for DAP and virtual-source disassembly rows. */
     readonly instructionAnnotation?: (address: DebugAddress) => string | undefined;
     readonly onMessage?: (message: DapProtocolMessage) => void;
+    /** Live DAP hosts configure breakpoints after connection and before launch completes. */
+    readonly configurationHandshake?: boolean;
 }
 /**
  * Formats a qualified address for DAP memory/instruction references.

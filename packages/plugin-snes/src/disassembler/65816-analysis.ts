@@ -41,26 +41,11 @@ import {
   SNES_FILE_ADDRESS_SPACE,
 } from "./address-identities.js";
 import { identifySnesHardwareRegister } from "./hardware-registers.js";
-import type { SnesMapper } from "./rom-header.js";
-
-interface VectorDefinition {
-  readonly name: string;
-  readonly pointer: number;
-  readonly state: "emulation" | "native" | "reset";
-}
-
-const VECTOR_DEFINITIONS: readonly VectorDefinition[] = [
-  { name: "native-cop", pointer: 0x00ffe4, state: "native" },
-  { name: "native-brk", pointer: 0x00ffe6, state: "native" },
-  { name: "native-abort", pointer: 0x00ffe8, state: "native" },
-  { name: "native-nmi", pointer: 0x00ffea, state: "native" },
-  { name: "native-irq", pointer: 0x00ffee, state: "native" },
-  { name: "emulation-cop", pointer: 0x00fff4, state: "emulation" },
-  { name: "emulation-abort", pointer: 0x00fff8, state: "emulation" },
-  { name: "emulation-nmi", pointer: 0x00fffa, state: "emulation" },
-  { name: "reset", pointer: 0x00fffc, state: "reset" },
-  { name: "emulation-irq-brk", pointer: 0x00fffe, state: "emulation" },
-];
+import {
+  SNES_CPU_VECTOR_DEFINITIONS,
+  type SnesCpuVectorDefinition,
+  type SnesMapper,
+} from "./rom-header.js";
 
 const DATA_CLASSIFICATIONS = new Set<IntervalAnnotation["classification"]>([
   "data8",
@@ -92,6 +77,8 @@ export interface Snes65816EntryPoint {
   readonly id: string;
   /** 24-bit SNES CPU address. */
   readonly address: number;
+  /** Runtime observations seed reachability without inventing a function boundary. */
+  readonly kind?: "configured" | "observation";
   /** Optional known E/M/X/banks/D/S overlay applied after annotation state. */
   readonly state?: Cpu65816StateOverride;
   /** Evidence ids to attach; a synthetic `manual:entry:<id>` is created if omitted. */
@@ -128,7 +115,9 @@ export interface Snes65816AnalysisResult extends StaticAnalysisResult<Cpu65816Ab
   readonly evidenceRecords: readonly EvidenceRecord[];
 }
 
-const vectorState = (kind: VectorDefinition["state"]): Cpu65816AbstractState => {
+const vectorState = (
+  kind: NonNullable<SnesCpuVectorDefinition["state"]>,
+): Cpu65816AbstractState => {
   if (kind === "reset") return resetCpu65816State();
   return kind === "native" ? nativeVectorCpu65816State() : emulationVectorCpu65816State();
 };
@@ -484,24 +473,25 @@ export const analyzeSnes65816 = (
   });
 
   const seeds: StaticAnalysisSeed<Cpu65816AbstractState>[] = [];
-  for (const vector of VECTOR_DEFINITIONS) {
+  for (const vector of SNES_CPU_VECTOR_DEFINITIONS) {
+    if (!vector.state) continue;
     const target = readVector(rom, mapper, vector.pointer);
     if (target === undefined) continue;
-    const evidenceId = `detector:vector:${vector.name}`;
+    const evidenceId = `detector:vector:${vector.id}`;
     evidenceRecords.set(evidenceId, {
       id: evidenceId,
       source: "detector",
       sourceId: `snes-vector-$${vector.pointer.toString(16).padStart(6, "0")}`,
       confidence: "certain",
-      detail: `${vector.name} vector points to $${target.toString(16).padStart(6, "0")}.`,
+      detail: `${vector.id} vector points to $${target.toString(16).padStart(6, "0")}.`,
     });
     seeds.push({
-      id: `vector:${vector.name}`,
+      id: `vector:${vector.id}`,
       address: target,
       kind: "vector",
       state: vectorState(vector.state),
       evidence: [evidenceId],
-      detail: vector.name,
+      detail: vector.id,
     });
   }
 
@@ -561,7 +551,31 @@ export const analyzeSnes65816 = (
     return undefined;
   };
 
+  // Keep explicit runtime/configured entries separate from legacy label seeds so their provenance,
+  // observation semantics, and optional machine state survive deterministic seed normalization.
+  for (const entry of options.entryPoints ?? []) {
+    const evidenceId = entry.evidence?.[0] ?? `manual:entry:${entry.id}`;
+    if (!evidenceById.has(evidenceId)) {
+      evidenceRecords.set(evidenceId, {
+        id: evidenceId,
+        source: "manual",
+        sourceId: entry.id,
+        confidence: "certain",
+        detail: `Configured entry point $${entry.address.toString(16).padStart(6, "0")}.`,
+      });
+    }
+    const seeded = stateAtAddress(unknownCpu65816State(), entry.address);
+    seeds.push({
+      id: `entry:${entry.id}`,
+      address: entry.address,
+      kind: entry.kind ?? "configured",
+      state: applyCpu65816StateOverride(seeded.state, entry.state ?? {}),
+      evidence: [...new Set([...(entry.evidence ?? [evidenceId]), ...seeded.evidence])].sort(),
+    });
+  }
+
   for (const label of options.labels ?? []) {
+    if (label.analysisEntryPoint === false) continue;
     const address = projectAddress(label.addressSpace, label.address);
     if (address === undefined) continue;
     const seeded = stateAtAddress(unknownCpu65816State(), address);
@@ -586,27 +600,6 @@ export const analyzeSnes65816 = (
       kind: "manual",
       state: seeded.state,
       evidence: [...new Set([...annotation.evidence, ...seeded.evidence])].sort(),
-    });
-  }
-
-  for (const entry of options.entryPoints ?? []) {
-    const evidenceId = entry.evidence?.[0] ?? `manual:entry:${entry.id}`;
-    if (!evidenceById.has(evidenceId)) {
-      evidenceRecords.set(evidenceId, {
-        id: evidenceId,
-        source: "manual",
-        sourceId: entry.id,
-        confidence: "certain",
-        detail: `Configured entry point $${entry.address.toString(16).padStart(6, "0")}.`,
-      });
-    }
-    const seeded = stateAtAddress(unknownCpu65816State(), entry.address);
-    seeds.push({
-      id: `entry:${entry.id}`,
-      address: entry.address,
-      kind: "configured",
-      state: applyCpu65816StateOverride(seeded.state, entry.state ?? {}),
-      evidence: [...new Set([...(entry.evidence ?? [evidenceId]), ...seeded.evidence])].sort(),
     });
   }
 

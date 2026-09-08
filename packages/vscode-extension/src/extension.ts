@@ -28,13 +28,22 @@ import {
   type ServerOptions,
 } from "vscode-languageclient/node";
 import { AnalysisAnnotationController } from "./analysis-annotation-controller.js";
+import { initializeAnalysisWorker } from "./analysis-worker-client.js";
 import { AnalysisProjectEditor } from "./analysis-project-editor.js";
 import { AnalysisGraphProvider } from "./analysis-graph-tree.js";
 import { navigateToAnalysisLocation } from "./analysis-navigation.js";
 import { AnalysisCoverageProvider } from "./coverage-tree.js";
 import { ProjectOutlineProvider } from "./outline-tree.js";
 import { ProjectPanelProvider } from "./panel.js";
-import { registerDebugging } from "./debug.js";
+import {
+  configureEmulatorRuntime,
+  configuredEmulatorRuntime,
+  liveDebugConfiguration,
+  registerDebugging,
+  type BuiltDebugArtifacts,
+} from "./debug.js";
+import { registerProjectWizards } from "./project-wizard.js";
+import { registerDisassemblyMaintenance } from "./disassembly-maintenance.js";
 
 /**
  * The result of a build request returned by the language server.
@@ -45,6 +54,14 @@ type BuildResult = {
   ok: boolean;
   outputPath?: string;
   bytes?: number;
+  outputSize?: number;
+  outputSha256?: string;
+  debugMapPath?: string;
+  debugMapFingerprint?: string;
+  target?: string;
+  architecture?: string;
+  outputChanged?: boolean;
+  debugMapChanged?: boolean;
   message?: string;
 };
 
@@ -58,9 +75,15 @@ const ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"] as const;
 let client: LanguageClient | undefined;
 /** Shared log/output channel for language-server traffic and Build Binary. */
 let outputChannel: LogOutputChannel | undefined;
+/** Active host context used by debounced Run and Watch rebuilds. */
+let extensionContext: ExtensionContext | undefined;
 
 /** Whether build-on-save watch mode is currently enabled. */
 let watchEnabled = false;
+/** Whether watch mode only builds or also performs a deterministic emulator reload. */
+let watchMode: "build" | "emulator" = "build";
+/** Live session owned by Run and Watch, if it has started. */
+let watchedDebugSession: import("vscode").DebugSession | undefined;
 /**
  * The entry document URI rebuilt on save while watching.
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri
@@ -109,6 +132,9 @@ function serverInitializationOptions(): Record<string, unknown> {
  * @see https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#language-client
  */
 export function activate(context: ExtensionContext): void {
+  extensionContext = context;
+  const worker = initializeAnalysisWorker(context.extensionPath);
+  context.subscriptions.push(worker);
   const serverModule = context.asAbsolutePath(path.join("server", "server.mjs"));
 
   /**
@@ -169,17 +195,26 @@ export function activate(context: ExtensionContext): void {
   const coverageProvider = new AnalysisCoverageProvider();
   const analysisGraphProvider = new AnalysisGraphProvider();
   const analysisAnnotationController = new AnalysisAnnotationController();
+  let analysisRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+  context.subscriptions.push({ dispose: () => clearTimeout(analysisRefreshTimer) });
   const refreshAnalysisViews = (): void => {
-    coverageProvider.refresh();
-    analysisGraphProvider.refresh();
-    analysisAnnotationController.refresh();
+    clearTimeout(analysisRefreshTimer);
+    analysisRefreshTimer = setTimeout(() => {
+      worker.invalidate();
+      coverageProvider.refresh();
+      analysisGraphProvider.refresh();
+      analysisAnnotationController.refresh();
+    }, 150);
   };
   const analysisProjectEditor = new AnalysisProjectEditor(refreshAnalysisViews);
+  context.subscriptions.push(analysisProjectEditor);
   const analysisManifestWatcher = workspace.createFileSystemWatcher("**/analysis.json");
   const analysisShardWatcher = workspace.createFileSystemWatcher("**/analysis/**/*.json");
 
   context.subscriptions.push(
-    ...registerDebugging(context.extensionPath),
+    ...registerDebugging(context.extensionPath, refreshAnalysisViews),
+    ...registerProjectWizards(context, outputChannel),
+    ...registerDisassemblyMaintenance(context, refreshAnalysisViews, outputChannel),
     outputChannel,
     statusItem,
     analysisAnnotationController,
@@ -207,21 +242,36 @@ export function activate(context: ExtensionContext): void {
     analysisShardWatcher.onDidChange(refreshAnalysisViews),
     analysisShardWatcher.onDidDelete(refreshAnalysisViews),
     window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
+    window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
+      if (textEditor === window.activeTextEditor) analysisAnnotationController.refresh(textEditor);
+    }),
     workspace.onDidChangeTextDocument(({ document }) =>
       analysisAnnotationController.documentChanged(document),
     ),
     workspace.onDidSaveTextDocument(() => analysisAnnotationController.refresh()),
-    vscodeDebug.onDidStartDebugSession(() => analysisAnnotationController.refresh()),
-    vscodeDebug.onDidTerminateDebugSession(() => analysisAnnotationController.refresh()),
+    vscodeDebug.onDidStartDebugSession((session) => {
+      if (session.configuration.uttoriRunAndWatch === true) watchedDebugSession = session;
+      analysisAnnotationController.refresh();
+    }),
+    vscodeDebug.onDidTerminateDebugSession((session) => {
+      if (watchedDebugSession?.id === session.id) watchedDebugSession = undefined;
+      analysisAnnotationController.refresh();
+    }),
     commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
     commands.registerCommand("asm.toggleWatch", toggleWatch),
+    commands.registerCommand("asm.runEmulator", () => buildAndLaunch(context, true)),
+    commands.registerCommand("asm.debugEmulator", () => buildAndLaunch(context, false)),
+    commands.registerCommand("asm.runAndWatch", () => runAndWatch(context)),
+    commands.registerCommand("asm.configureEmulatorRuntime", () =>
+      configureEmulatorRuntime(context, window.activeTextEditor?.document.uri),
+    ),
     commands.registerCommand("asm.initConfig", () => initConfig()),
     commands.registerCommand("asm.openPanel", () =>
       commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`),
     ),
     commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
-    commands.registerCommand("asm.coverage.refresh", () => coverageProvider.refresh()),
-    commands.registerCommand("asm.analysisGraph.refresh", () => analysisGraphProvider.refresh()),
+    commands.registerCommand("asm.coverage.refresh", refreshAnalysisViews),
+    commands.registerCommand("asm.analysisGraph.refresh", refreshAnalysisViews),
     commands.registerCommand("asm.analysis.navigate", (element?: unknown) => {
       const target = analysisGraphProvider.navigationTarget(element);
       if (target) void navigateToAnalysisLocation(target);
@@ -237,6 +287,9 @@ export function activate(context: ExtensionContext): void {
     ),
     commands.registerCommand("asm.coverage.renameLabel", (element?: unknown) =>
       analysisProjectEditor.renameLabel(coverageProvider.editTarget(element)),
+    ),
+    commands.registerCommand("asm.disassembly.editAnnotation", () =>
+      analysisProjectEditor.editAnnotation(),
     ),
     commands.registerCommand("asm.coverage.explainEvidence", (element?: unknown) =>
       analysisProjectEditor.explainEvidence(coverageProvider.editTarget(element)),
@@ -291,6 +344,7 @@ export function deactivate(): Thenable<void> | undefined {
   if (watchTimer) {
     clearTimeout(watchTimer);
   }
+  extensionContext = undefined;
   return client?.stop();
 }
 
@@ -313,11 +367,14 @@ function activeDocumentUri(): string | undefined {
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri.parse
  */
 function toggleWatch(): void {
-  watchEnabled = !watchEnabled;
   if (watchEnabled) {
+    stopWatch();
+  } else {
+    watchEnabled = true;
+    watchMode = "build";
     watchEntryUri = resolveWatchEntry();
     if (!watchEntryUri) {
-      watchEnabled = false;
+      stopWatch();
       void window.showErrorMessage(
         "Assembly: open a source file (or set asm.entryPoints) before watching.",
       );
@@ -327,16 +384,86 @@ function toggleWatch(): void {
     void window.showInformationMessage(
       `Assembly: watching ${path.basename(Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`,
     );
-  } else {
-    saveListener?.dispose();
-    saveListener = undefined;
-    watchEntryUri = undefined;
-    if (watchTimer) {
-      clearTimeout(watchTimer);
-      watchTimer = undefined;
-    }
   }
   updateStatusItem();
+}
+
+function stopWatch(): void {
+  watchEnabled = false;
+  watchMode = "build";
+  saveListener?.dispose();
+  saveListener = undefined;
+  watchEntryUri = undefined;
+  if (watchTimer) clearTimeout(watchTimer);
+  watchTimer = undefined;
+  updateStatusItem();
+}
+
+const completeArtifacts = (result: BuildResult): BuiltDebugArtifacts | undefined =>
+  result.ok && result.outputPath && result.debugMapPath
+    ? {
+        outputPath: result.outputPath,
+        debugMapPath: result.debugMapPath,
+        outputSha256: result.outputSha256,
+        debugMapFingerprint: result.debugMapFingerprint,
+      }
+    : undefined;
+
+async function launchLiveBuild(
+  context: ExtensionContext,
+  result: BuildResult,
+  noDebug: boolean,
+  watched: boolean,
+): Promise<boolean> {
+  const artifacts = completeArtifacts(result);
+  if (!artifacts) {
+    void window.showErrorMessage(
+      "Assembly: successful build did not return a debug artifact pair.",
+    );
+    return false;
+  }
+  const resource = Uri.file(artifacts.outputPath);
+  const folder = workspace.getWorkspaceFolder(resource) ?? workspace.workspaceFolders?.[0];
+  const binding =
+    configuredEmulatorRuntime(context, resource) ??
+    (await configureEmulatorRuntime(context, resource));
+  if (!binding) return false;
+  if (watched && watchedDebugSession) await vscodeDebug.stopDebugging(watchedDebugSession);
+  const configuration = {
+    ...liveDebugConfiguration(binding, artifacts, folder),
+    ...(watched ? { uttoriRunAndWatch: true } : {}),
+  };
+  return vscodeDebug.startDebugging(folder, configuration, { noDebug });
+}
+
+async function buildAndLaunch(context: ExtensionContext, noDebug: boolean): Promise<void> {
+  const result = await runBuild(resolveBuildEntryUri());
+  if (!result?.ok) return;
+  await launchLiveBuild(context, result, noDebug, false);
+}
+
+async function runAndWatch(context: ExtensionContext): Promise<void> {
+  if (watchEnabled) stopWatch();
+  const entry = resolveWatchEntry();
+  if (!entry) {
+    void window.showErrorMessage(
+      "Assembly: open a source file (or set asm.entryPoints) before running and watching.",
+    );
+    return;
+  }
+  watchEnabled = true;
+  watchMode = "emulator";
+  watchEntryUri = entry;
+  saveListener = workspace.onDidSaveTextDocument(onDocumentSaved);
+  updateStatusItem();
+  const result = await runBuild(entry);
+  if (!result?.ok) {
+    void window.showWarningMessage(
+      "Assembly: Run and Watch is active; fix the build error and save to launch the emulator.",
+    );
+    return;
+  }
+  if (!(await launchLiveBuild(context, result, false, true))) stopWatch();
 }
 
 /**
@@ -397,7 +524,13 @@ function onDocumentSaved(document: TextDocument): void {
   }
   watchTimer = setTimeout(() => {
     watchTimer = undefined;
-    void runBuild(watchEntryUri, true);
+    const entry = watchEntryUri;
+    void runBuild(entry, true).then(async (result) => {
+      if (!result?.ok || watchMode !== "emulator") return;
+      if (result.outputChanged === false && result.debugMapChanged === false) return;
+      const context = extensionContext;
+      if (context) await launchLiveBuild(context, result, false, true);
+    });
   }, 250);
 }
 
@@ -493,7 +626,7 @@ async function initConfig(): Promise<void> {
  * Asks the language server to assemble a document and reports the result.
  * @param {string | undefined} documentUri The entry document URI string.
  * @param {boolean} [transient] When true, report success transiently (watch mode).
- * @returns {Promise<void>} A promise that settles after the build result is reported.
+ * @returns {Promise<BuildResult | undefined>} The result used to gate emulator launch/reload.
  * @see https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#language-client
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getConfiguration
  * @see https://code.visualstudio.com/api/references/vscode-api#window.showInformationMessage
@@ -501,20 +634,23 @@ async function initConfig(): Promise<void> {
  * @see https://code.visualstudio.com/api/references/vscode-api#window.setStatusBarMessage
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri.parse
  */
-async function runBuild(documentUri: string | undefined, transient = false): Promise<void> {
+async function runBuild(
+  documentUri: string | undefined,
+  transient = false,
+): Promise<BuildResult | undefined> {
   outputChannel?.show(true);
   outputChannel?.info(transient ? "Watch rebuild requested" : "Build Binary requested");
   if (!client) {
     const message = "Language server is not running.";
     outputChannel?.error(message);
     void window.showErrorMessage(`Assembly: ${message}`);
-    return;
+    return undefined;
   }
   if (!documentUri) {
     const message = "Open a source file or set asm.entryPoints before building.";
     outputChannel?.error(message);
     void window.showErrorMessage(`Assembly: ${message}`);
-    return;
+    return undefined;
   }
 
   const document = Uri.parse(documentUri);
@@ -533,7 +669,9 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
     })) as BuildResult | undefined;
 
     if (result?.ok) {
-      const message = `Assembly: built ${result.bytes ?? 0} bytes → ${result.outputPath ?? "output"}.`;
+      const changed =
+        result.outputChanged === false && result.debugMapChanged === false ? " (unchanged)" : "";
+      const message = `Assembly: built ${result.bytes ?? 0} bytes + debug map → ${result.outputPath ?? "output"}${changed}.`;
       outputChannel?.info(message);
       if (transient) {
         window.setStatusBarMessage(message, 4000);
@@ -545,10 +683,12 @@ async function runBuild(documentUri: string | undefined, transient = false): Pro
       outputChannel?.error(`Build failed: ${detail}`);
       void window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     }
+    return result;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     outputChannel?.error(`Build request failed: ${detail}`);
     void window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+    return undefined;
   }
 }
 
@@ -581,10 +721,15 @@ function updateStatusItem(): void {
   if (!statusItem) {
     return;
   }
-  statusItem.text = watchEnabled
-    ? "$(eye) Assembly Watch: On"
-    : "$(eye-closed) Assembly Watch: Off";
-  statusItem.tooltip = watchEnabled
-    ? "Assembly is rebuilding on save. Click to stop."
-    : "Click to rebuild the binary on every save.";
+  if (!watchEnabled) {
+    statusItem.text = "$(eye-closed) Assembly Watch: Off";
+    statusItem.tooltip = "Click to rebuild the binary on every save.";
+  } else if (watchMode === "emulator") {
+    statusItem.text = "$(debug-rerun) Assembly Run & Watch";
+    statusItem.tooltip =
+      "Assembly is rebuilding and fully reloading the emulator on successful changes. Click to stop watching.";
+  } else {
+    statusItem.text = "$(eye) Assembly Watch: On";
+    statusItem.tooltip = "Assembly is rebuilding on save. Click to stop.";
+  }
 }

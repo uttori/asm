@@ -396,8 +396,10 @@ export class MesenDebugBackend implements DebugBackend {
   }
 
   /** @inheritdoc */
-  async step(threadId: number, _kind: DebugStepKind): Promise<void> {
+  async step(threadId: number, kind: DebugStepKind): Promise<void> {
     const descriptor = this.#thread(threadId);
+    if (kind !== "instruction" && kind !== "in")
+      throw new Error(`Mesen does not support ${kind} stepping for ${descriptor.name}.`);
     this.#requireStopped();
     this.#stopped = false;
     const epoch = ++this.#executionEpoch;
@@ -430,6 +432,7 @@ export class MesenDebugBackend implements DebugBackend {
         threadId: descriptor.id,
         name: descriptor.name,
         pc: this.#executionAddress(descriptor.processor, status.programCounter),
+        currentOnly: true,
       },
     ];
   }

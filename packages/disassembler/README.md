@@ -68,6 +68,15 @@ record or share its provenance. It is read-only and target-neutral: it does not 
 project CPU/RAM addresses into ROM offsets, or claim that a shared evidence id proves more than its
 stored record says.
 
+`applyDisassemblyAnnotationEdit()` creates or updates a label at a qualified address and edits its
+above-label and inline comments plus an independently identified inline instruction comment.
+`ProjectLabel.sourceName` is the exact validated assembly symbol, `inlineComment` belongs beside
+the label, and `ProjectComment.placement: "inline-instruction"` belongs beside an accepted instruction.
+New presentation labels have `analysisEntryPoint: false`, keeping naming separate from code discovery.
+Existing field omissions retain their prior behavior. The edit retains earlier evidence and returns
+an exact inverse for `revertDisassemblyAnnotationEdit()`; commit it through the normal optimistic
+transaction API. No ROM bytes or generated-source line numbers are used as annotation identities.
+
 The generic static-analysis engine accepts target-provided decode, state-transfer, join, and address-entry callbacks. It deterministically emits CFG nodes and edges, function candidates, coverage, unresolved control flow, boundary conflicts, evidence paths, and explicit incomplete results when a work or call-context limit is reached. It never guesses through an ambiguous decode.
 
 ## Function and Call Graph
@@ -107,9 +116,11 @@ Runtime `EvidenceRecord` entries can pin an artifact's format/version, SHA-256, 
 
 The package also owns the architecture-neutral `uttori-asm-source-export` manifest contract. It
 records generated file hashes, source/asset roles, half-open byte-ownership spans, source-project
-and ROM identities, build entry points, outputs, and checksum policy. Helpers load and validate
-generated trees and compare rebuilds by length, SHA-256, and first differing offset; target plugins
-remain responsible for rendering their native source syntax.
+and ROM identities, build entry points, outputs, and checksum policy. It separately records hashes
+for user-owned metadata inputs, allowing status and verification to detect that regenerated output
+is stale without treating an intentional metadata edit as damaged generated source. Helpers load
+and validate generated trees and compare rebuilds by length, SHA-256, and first differing offset;
+target plugins remain responsible for rendering their native source syntax.
 
 ## ROM Coverage Map
 
@@ -166,3 +177,5 @@ so a preview can never conceal or weaken the binary correctness gate.
 For implementation ownership, schema-change steps, transaction invariants, importer rules, and test
 gates, read the [architecture guide](../../docs/disassembler-architecture.md) and repository
 [contributor guide](../../CONTRIBUTING.md).
+
+Instruction trace artifacts can retain execution-time bytes/state and CPU/DMA/HDMA bus observations. See [captured RAM code and trace limits](../../docs/snes-function-heuristics-and-runtime-code.md).

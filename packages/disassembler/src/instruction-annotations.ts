@@ -3,6 +3,7 @@ import type {
   AnalysisProjectManifest,
   AnalysisProjectShards,
   IntervalAnnotation,
+  ProjectComment,
   RuntimeCoverageRecord,
   RuntimeCpuStateRecord,
   RuntimeMemoryAccessRecord,
@@ -51,6 +52,8 @@ export interface InstructionRuntimeCoverageAnnotation {
 
 /** Aggregated runtime memory access attributed to this instruction. */
 export interface InstructionMemoryAccessAnnotation {
+  readonly actor?: RuntimeMemoryAccessRecord["actor"];
+  readonly channel?: number;
   readonly accessedAddressSpace: string;
   readonly accessedAddress: number;
   readonly access: RuntimeMemoryAccessRecord["access"];
@@ -63,6 +66,7 @@ export interface InstructionMemoryAccessAnnotation {
 
 /** Target-neutral annotations for one qualified instruction location. */
 export interface InstructionAnalysisAnnotation {
+  readonly comments?: readonly ProjectComment[];
   readonly id: string;
   readonly addressSpace: string;
   readonly address: number;
@@ -122,6 +126,7 @@ type MemoryMutable = {
 };
 
 type InstructionMutable = {
+  comments?: ProjectComment[];
   addressSpace: string;
   address: number;
   // Evidence collections are deliberately lazy. Most instructions have none of these annotations;
@@ -301,7 +306,8 @@ export const buildInstructionAnalysisAnnotations = (
   const addNode = (node: AnalysisControlFlowNodeRecord): void => {
     const instruction = ensure(node.addressSpace, node.address);
     instruction.nodeIds = addValue(instruction.nodeIds, node.id);
-    instruction.outputOffsets = addValue(instruction.outputOffsets, node.fileOffset);
+    if (node.fileOffset !== undefined)
+      instruction.outputOffsets = addValue(instruction.outputOffsets, node.fileOffset);
     instruction.evidence = addAll(instruction.evidence, node.evidence);
     for (const raw of node.effectiveAddresses) {
       const value = effectiveAddress(raw);
@@ -390,6 +396,8 @@ export const buildInstructionAnalysisAnnotations = (
         accessedAddress: record.accessedAddress,
         access: record.access,
         width: record.width,
+        ...(record.actor === undefined ? {} : { actor: record.actor }),
+        ...(record.channel === undefined ? {} : { channel: record.channel }),
         ...(record.value === undefined ? {} : { value: record.value }),
       };
       const key = JSON.stringify(canonicalValue(value));
@@ -406,6 +414,11 @@ export const buildInstructionAnalysisAnnotations = (
     }
   }
 
+  for (const comment of shards.comments) {
+    const instruction = ensure(comment.addressSpace, comment.address);
+    (instruction.comments ??= []).push(comment);
+    for (const evidence of comment.evidence) (instruction.evidence ??= new Set()).add(evidence);
+  }
   const mutable = [...instructions.values()];
   const directIndex = new Map<string, InstructionMutable[]>();
   const outputIndex: Array<{ readonly offset: number; readonly instruction: InstructionMutable }> =
@@ -594,6 +607,9 @@ export const buildInstructionAnalysisAnnotations = (
             ),
         ),
       executionCount: instruction.executionCount,
+      ...(instruction.comments
+        ? { comments: [...instruction.comments].sort((a, b) => a.id.localeCompare(b.id)) }
+        : {}),
       executionRecordIds: sortedStrings(instruction.executionRecordIds),
       runtimeCoverage: [...coverage.values()].sort((left, right) =>
         left.coverage.localeCompare(right.coverage),

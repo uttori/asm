@@ -1,4 +1,5 @@
 /** Generic assembly language-server transport and LSP 3.18 request routing. */
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -9,7 +10,9 @@ import {
   PROJECT_CONFIG_FILENAME,
   validateProjectConfiguration,
 } from "@uttori/asm-plugin-loader-node";
+import { CRC32 } from "@uttori/asm-core";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
+import { canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core/debug-map";
 import {
   createConnection,
   Diagnostic,
@@ -27,7 +30,12 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { OverlayFileProvider, type WorkspaceIndex } from "./core.js";
-import { emptyOutputMessage, formatElapsed, resolveBuildEntry } from "./build.js";
+import {
+  commitBuildArtifactPair,
+  emptyOutputMessage,
+  formatElapsed,
+  resolveBuildEntry,
+} from "./build.js";
 import {
   ProjectEnvironmentController,
   type PluginModuleSetting,
@@ -94,10 +102,20 @@ type BuildResult = {
   ok: boolean;
   outputPath?: string;
   bytes?: number;
+  outputSize?: number;
+  outputSha256?: string;
+  debugMapPath?: string;
+  debugMapFingerprint?: string;
+  target?: string;
+  architecture?: string;
+  outputChanged?: boolean;
+  debugMapChanged?: boolean;
   message?: string;
 };
 
 let settings: ServerSettings = defaultSettings;
+// Keep editor overrides separate from resolved file defaults so config edits can replace defaults.
+let editorSettings: ServerSettings = defaultSettings;
 let index: WorkspaceIndex;
 let workspaceRoots: string[] = [];
 let hasConfigurationCapability = false;
@@ -136,10 +154,10 @@ function pluginArray(value: unknown): readonly PluginModuleSetting[] | undefined
 }
 
 export function mergeServerSettings(previous: ServerSettings, value: unknown): ServerSettings {
-  if (!value || typeof value !== "object") return applyConfigFileDefaults(previous);
+  if (!value || typeof value !== "object") return previous;
   const next = value as Record<string, unknown>;
   const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(next, key);
-  return applyConfigFileDefaults({
+  return {
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
     plugins: pluginArray(next.plugins) ?? previous.plugins,
     target: has("target") ? stringValue(next.target) : previous.target,
@@ -152,7 +170,7 @@ export function mergeServerSettings(previous: ServerSettings, value: unknown): S
       typeof next.workspaceTrusted === "boolean"
         ? next.workspaceTrusted
         : previous.workspaceTrusted,
-  });
+  };
 }
 
 function applyConfigFileDefaults(next: ServerSettings): ServerSettings {
@@ -161,6 +179,7 @@ function applyConfigFileDefaults(next: ServerSettings): ServerSettings {
     return next;
   }
   const relativeConfig = path.relative(workspaceRoot(), discovered) || path.basename(discovered);
+  const relativeToConfig = (value: string): string => path.resolve(path.dirname(discovered), value);
   let extras: ReturnType<typeof validateProjectConfiguration> = {};
   try {
     extras = validateProjectConfiguration(JSON.parse(fs.readFileSync(discovered, "utf8")));
@@ -172,10 +191,18 @@ function applyConfigFileDefaults(next: ServerSettings): ServerSettings {
     configFile: next.configFile ?? relativeConfig,
     target: next.target ?? extras.target,
     architecture: next.architecture ?? extras.architecture,
-    entryPoints: next.entryPoints.length > 0 ? next.entryPoints : (extras.entryPoints ?? []),
-    includePaths: next.includePaths.length > 0 ? next.includePaths : (extras.includePaths ?? []),
-    buildOutput: next.buildOutput ?? extras.buildOutput,
-    baseImage: next.baseImage ?? extras.baseImage,
+    entryPoints:
+      next.entryPoints.length > 0
+        ? next.entryPoints
+        : (extras.entryPoints ?? []).map(relativeToConfig),
+    includePaths:
+      next.includePaths.length > 0
+        ? next.includePaths
+        : (extras.includePaths ?? []).map(relativeToConfig),
+    buildOutput:
+      next.buildOutput ?? (extras.buildOutput ? relativeToConfig(extras.buildOutput) : undefined),
+    baseImage:
+      next.baseImage ?? (extras.baseImage ? relativeToConfig(extras.baseImage) : undefined),
   };
 }
 
@@ -308,7 +335,8 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
   );
   workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
   if (workspaceRoots.length === 0 && params.rootUri) workspaceRoots = [uriToPath(params.rootUri)];
-  const requested = mergeServerSettings(defaultSettings, params.initializationOptions);
+  editorSettings = mergeServerSettings(defaultSettings, params.initializationOptions);
+  const requested = applyConfigFileDefaults(editorSettings);
   try {
     await replaceProjectEnvironment(requested);
   } catch {
@@ -352,7 +380,8 @@ connection.onInitialized(() => {
 async function refreshConfiguration(): Promise<void> {
   try {
     const config: unknown = await connection.workspace.getConfiguration("asm");
-    enqueueProjectEnvironment(mergeServerSettings(settings, config));
+    editorSettings = mergeServerSettings(editorSettings, config);
+    enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
   } catch (error) {
     connection.console.warn(
       `Unable to read Assembly configuration: ${error instanceof Error ? error.message : String(error)}`,
@@ -366,7 +395,8 @@ connection.onDidChangeConfiguration((params) => {
     return;
   }
   const changed = params.settings as { asm?: unknown } | undefined;
-  enqueueProjectEnvironment(mergeServerSettings(settings, changed?.asm ?? changed));
+  editorSettings = mergeServerSettings(editorSettings, changed?.asm ?? changed);
+  enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
 });
 
 function defaultOutputPath(file: string): string {
@@ -435,7 +465,7 @@ function buildBinary(
     const assembler = environmentController.createAssembler({
       ...(baseImagePath ? { baseImage: new Uint8Array(fs.readFileSync(baseImagePath)) } : {}),
       fileProvider: provider,
-      collectSourceMetadata: false,
+      collectSourceMetadata: true,
     });
     try {
       const includePaths = [
@@ -463,13 +493,45 @@ function buildBinary(
       }
       const outputPath =
         resolveOptionalBuildPath(output ?? settings.buildOutput, file) ?? defaultOutputPath(file);
-      log.info(`  writing ${bytes.length} bytes → ${outputPath}`);
-      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-      fs.writeFileSync(outputPath, Buffer.from(bytes));
-      log.info(
-        `Build Binary succeeded in ${formatElapsed(startedAt)}: ${bytes.length} bytes → ${outputPath}`,
+      const { loaded } = environmentController.current;
+      // AddressToLineMapping records disk identities by default. Editor builds may use unsaved
+      // overlays, so replace those identities with the exact bytes the assembler consumed.
+      assembler.addressToLineMapping.fileList = assembler.addressToLineMapping.fileList.map(
+        (entry) => {
+          const sourceBytes = provider.readFile(entry.name);
+          return {
+            name: entry.name,
+            size: sourceBytes.length,
+            crc: CRC32.compute(sourceBytes),
+            sha256: createHash("sha256").update(sourceBytes).digest("hex"),
+          };
+        },
       );
-      return { ok: true, outputPath, bytes: bytes.length };
+      const debugMap = createDebugMap({
+        target: loaded.target,
+        output: bytes,
+        mapping: assembler.addressToLineMapping,
+        sourceRoot: workspaceRoot(),
+      });
+      const committed = commitBuildArtifactPair(outputPath, bytes, canonicalDebugMapJson(debugMap));
+      log.info(`  writing ${bytes.length} bytes → ${committed.outputPath}`);
+      log.info(`  debug map → ${committed.debugMapPath}`);
+      log.info(
+        `Build Binary succeeded in ${formatElapsed(startedAt)}: ${bytes.length} bytes → ${committed.outputPath}`,
+      );
+      return {
+        ok: true,
+        outputPath: committed.outputPath,
+        bytes: bytes.length,
+        outputSize: bytes.length,
+        outputSha256: debugMap.output.sha256,
+        debugMapPath: committed.debugMapPath,
+        debugMapFingerprint: debugMap.fingerprint.value,
+        target: debugMap.target,
+        architecture: loaded.architecture,
+        outputChanged: committed.outputChanged,
+        debugMapChanged: committed.debugMapChanged,
+      };
     } finally {
       assembler.dispose();
     }
@@ -563,7 +625,7 @@ connection.onDidChangeWatchedFiles((params) => {
       index.invalidateFile(file);
     }
   }
-  if (reload) enqueueProjectEnvironment(settings);
+  if (reload) enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
   else scheduleReindex();
 });
 

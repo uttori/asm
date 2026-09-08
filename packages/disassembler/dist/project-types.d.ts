@@ -148,6 +148,12 @@ export interface ProjectLabel {
     readonly address: number;
     readonly name: string;
     readonly comment?: string;
+    /** Explicit global assembly name; legacy names keep their export sanitization. */
+    readonly sourceName?: string;
+    /** Single-line comment emitted beside the label definition. */
+    readonly inlineComment?: string;
+    /** False for presentation-only labels, which must not seed new code analysis. */
+    readonly analysisEntryPoint?: boolean;
     readonly author?: string;
     readonly confidence?: string;
     readonly evidence: readonly string[];
@@ -158,6 +164,8 @@ export interface ProjectComment {
     readonly addressSpace: string;
     readonly address: number;
     readonly text: string;
+    /** Omission retains the legacy standalone comment rendering. */
+    readonly placement?: "before" | "inline-instruction";
     readonly evidence: readonly string[];
 }
 /** Named region, optionally used as an export or overlay grouping. */
@@ -198,7 +206,9 @@ export interface AnalysisControlFlowNodeRecord {
     readonly kind: "cfg-node";
     readonly addressSpace: string;
     readonly address: number;
-    readonly fileOffset: number;
+    /** Absent for captured RAM code; never synthesize a ROM offset. */
+    readonly fileOffset?: number;
+    readonly bytes?: readonly number[];
     readonly size: number;
     readonly opcode: number;
     readonly specificationId: string;
@@ -312,13 +322,23 @@ export interface RuntimeExecutionRecord extends RuntimeRecordBase {
     readonly size?: number;
     readonly opcode?: number;
 }
-/** Aggregated read or write performed by one instruction. */
+/** Execution-time instruction image; separate variants preserve mutable RAM code. */
+export interface RuntimeInstructionRecord extends RuntimeRecordBase {
+    readonly kind: "runtime-instruction";
+    readonly addressSpace: string;
+    readonly address: number;
+    readonly bytes: readonly number[];
+    readonly state: Readonly<Record<string, RuntimeStateValue>>;
+}
+/** Aggregated read or write observed while an instruction executes. */
 export interface RuntimeMemoryAccessRecord extends RuntimeRecordBase {
     readonly kind: "runtime-memory-access";
     readonly instructionAddressSpace: string;
     readonly instructionAddress: number;
     readonly accessedAddressSpace: string;
     readonly accessedAddress: number;
+    readonly actor?: "cpu" | "dma" | "hdma";
+    readonly channel?: number;
     readonly access: "read" | "write" | "read-write" | "unknown";
     readonly width: number;
     readonly value?: number;
@@ -349,7 +369,7 @@ export interface RuntimeControlTargetRecord extends RuntimeRecordBase {
     readonly indirect: boolean;
 }
 /** Normalized, emulator-neutral runtime fact stored independently from regenerated CFG output. */
-export type RuntimeEvidenceRecord = RuntimeExecutionRecord | RuntimeMemoryAccessRecord | RuntimeCpuStateRecord | RuntimeCoverageRecord | RuntimeControlTargetRecord;
+export type RuntimeEvidenceRecord = RuntimeInstructionRecord | RuntimeExecutionRecord | RuntimeMemoryAccessRecord | RuntimeCpuStateRecord | RuntimeCoverageRecord | RuntimeControlTargetRecord;
 /** In-memory shard payload matching the on-disk `analysis/*.json` files. */
 export interface AnalysisProjectShards {
     readonly analysis: readonly AnalysisRecord[];

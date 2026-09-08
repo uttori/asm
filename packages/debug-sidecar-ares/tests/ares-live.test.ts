@@ -39,7 +39,8 @@ const liveRuntimeDirectory =
   path.join(workspace, "Local Only/ares-phase10-live-runtime");
 const liveExecutable =
   process.env.UTTORI_ARES_LIVE_EXECUTABLE ?? path.join(liveRuntimeDirectory, "bin/ares-headless");
-const liveRom = path.join(workspace, "Local Only/Secret of Mana (USA).sfc");
+const liveRom =
+  process.env.UTTORI_ARES_LIVE_ROM ?? path.join(workspace, "Local Only/Secret of Mana (USA).sfc");
 const liveManifestFile =
   process.env.UTTORI_ARES_LIVE_MANIFEST ??
   path.join(liveRuntimeDirectory, "ares-runtime-manifest.json");
@@ -399,11 +400,12 @@ liveTest(
   async (t) => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "uttori-ares-dap-live-"));
     const source = path.join(directory, "reset.asm");
-    await writeFile(source, "CLC\nXCE\n", "utf8");
+    await writeFile(source, "CLC\nXCE\nJSL $C300C6\n", "utf8");
     const output = readFileSync(liveRom);
     const mapping = new AddressToLineMapping();
     mapping.includeByte(source, 1, "snes.65816", "snes.cpu", 0x00_8004, 4);
     mapping.includeByte(source, 2, "snes.65816", "snes.cpu", 0x00_8005, 5);
+    mapping.includeByte(source, 3, "snes.65816", "snes.cpu", 0xc3_00c6, 0x03_00c6);
     const debugMap = createDebugMap({
       target: path.basename(liveRom),
       output,
@@ -541,6 +543,55 @@ liveTest(
       t.true(traced.length > 0);
       t.true(
         asynchronous.some((message) => message.type === "event" && message.event === "continued"),
+      );
+
+      const dynamicStop = new Promise<DapEvent>((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("Timed out waiting for a running source breakpoint.")),
+          15_000,
+        );
+        resolveStop = (event) => {
+          clearTimeout(timer);
+          resolve(event);
+        };
+      });
+      await session.dispatch(dapRequest(18, "continue", { threadId: 1 }));
+      const dynamicStart = asynchronous.length;
+      // Line 3 executes later in the boot loop, giving the adapter time to perform its
+      // required pause/install/resume cycle while the real emulator is already running.
+      const dynamicSet = dapResponse(
+        await session.dispatch(
+          dapRequest(19, "setBreakpoints", {
+            source: { path: source },
+            breakpoints: [{ line: 3 }],
+          }),
+        ),
+      );
+      t.true(dynamicSet.success, dynamicSet.message);
+      t.false(
+        asynchronous
+          .slice(dynamicStart)
+          .some(
+            (message) =>
+              message.type === "event" &&
+              message.event === "stopped" &&
+              (message.body as { reason?: string } | undefined)?.reason === "pause",
+          ),
+        "The adapter must hide its breakpoint-maintenance pause.",
+      );
+      const runningBreakpoint = await dynamicStop;
+      t.is((runningBreakpoint.body as { reason?: string }).reason, "breakpoint");
+      const runningStack = dapResponse(
+        await session.dispatch(dapRequest(20, "stackTrace", { threadId: 1 })),
+      ).body as {
+        stackFrames: Array<{ line: number; source: { path: string } }>;
+      };
+      t.deepEqual(
+        {
+          line: runningStack.stackFrames[0]?.line,
+          source: runningStack.stackFrames[0]?.source.path,
+        },
+        { line: 3, source },
       );
     } finally {
       session.dispose();

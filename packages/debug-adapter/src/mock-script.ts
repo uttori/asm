@@ -63,6 +63,7 @@ export const createDebugMapReplayScript = (map: DebugMap, output: Uint8Array): R
         threadId: thread.id,
         name: thread.name,
         pc: addressFor(active),
+        currentOnly: true,
       };
     });
     const registers = Object.fromEntries(

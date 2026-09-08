@@ -92,6 +92,32 @@ export interface AppliedLabelRenameEdit {
     readonly project: AnalysisProject;
     readonly inverse: LabelRenameInverse;
 }
+/** One address-based label/comment edit. Empty comment strings clear only the selected fields. */
+export interface DisassemblyAnnotationEditRequest {
+    readonly addressSpace: string;
+    readonly address: number;
+    readonly labelId?: string;
+    readonly name?: string;
+    readonly comment?: string;
+    readonly inlineComment?: string;
+    readonly instructionCommentId?: string;
+    readonly instructionComment?: string;
+    readonly evidenceId: string;
+    readonly sourceId: string;
+}
+/** Exact records touched by one annotation edit, including creations and comment removal. */
+export interface DisassemblyAnnotationInverse {
+    readonly kind: "restore-disassembly-annotation";
+    readonly labelBefore?: ProjectLabel;
+    readonly labelAfter?: ProjectLabel;
+    readonly commentBefore?: ProjectComment;
+    readonly commentAfter?: ProjectComment;
+    readonly evidence: EvidenceRecord;
+}
+export interface AppliedDisassemblyAnnotationEdit {
+    readonly project: AnalysisProject;
+    readonly inverse: DisassemblyAnnotationInverse;
+}
 /** Any persisted record addressable by shard and stable id. */
 export type AnalysisProjectShardRecord = AnalysisRecord | IntervalAnnotation | ProjectLabel | ProjectComment | ProjectRegion | RuntimeEvidenceRecord | EvidenceRecord | ImportReport;
 /** Provenance and conflict links for one persisted project record. */
@@ -166,6 +192,20 @@ export declare const applyLabelRenameEdit: (project: LoadedAnalysisProject, requ
  * @returns {AnalysisProject} Replacement project with the previous label restored.
  */
 export declare const revertLabelRenameEdit: (project: ProjectLike, inverse: LabelRenameInverse) => AnalysisProject;
+/**
+ * Save a friendly name and comments without changing code classifications or earlier evidence.
+ * @param {LoadedAnalysisProject} project Validated snapshot to edit.
+ * @param {DisassemblyAnnotationEditRequest} request Address, text, and stable record identities.
+ * @returns {AppliedDisassemblyAnnotationEdit} Replacement project and exact inverse records.
+ */
+export declare const applyDisassemblyAnnotationEdit: (project: LoadedAnalysisProject, request: DisassemblyAnnotationEditRequest) => AppliedDisassemblyAnnotationEdit;
+/**
+ * Undo only if every touched record and its new provenance are still exactly as saved.
+ * @param {ProjectLike} project Current native project.
+ * @param {DisassemblyAnnotationInverse} inverse Records retained when saving.
+ * @returns {AnalysisProject} Restored project with unrelated records preserved.
+ */
+export declare const revertDisassemblyAnnotationEdit: (project: ProjectLike, inverse: DisassemblyAnnotationInverse) => AnalysisProject;
 /**
  * Resolves complete evidence records, reverse references, and related persisted conflicts for one
  * stable project record. This is target-neutral and performs no mapper/address inference.

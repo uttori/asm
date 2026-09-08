@@ -1,8 +1,7 @@
 /** Hash-gated inline source annotations derived from native analysis projects. */
 import * as path from "node:path";
 import {
-  buildInstructionAnalysisAnnotations,
-  loadAnalysisProject,
+  type AnalysisProjectManifest,
   type InstructionAnalysisAnnotation,
 } from "@uttori/asm-disassembler";
 import {
@@ -16,11 +15,7 @@ import {
   type TextEditor,
   type TextEditorDecorationType,
 } from "vscode";
-import {
-  createInstructionAnnotationIndex,
-  instructionAnnotationsForDebugRange,
-  type InstructionAnnotationIndex,
-} from "./analysis-annotation-index.js";
+import { analysisWorker } from "./analysis-worker-client.js";
 import {
   currentAnalysisSourcePath,
   findAnalysisDebugMapCandidates,
@@ -40,11 +35,12 @@ interface MappedAnnotation {
 interface LoadedAnnotations {
   readonly directory: string;
   readonly identity: AnalysisDebugMapIdentity;
-  readonly index: InstructionAnnotationIndex;
 }
 
 const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
-  map.set(key, [...(map.get(key) ?? []), value]);
+  const entries = map.get(key);
+  if (entries) entries.push(value);
+  else map.set(key, [value]);
 };
 
 /** Maintains analysis suffixes on the active, byte-current mapped source editor. */
@@ -96,27 +92,22 @@ export class AnalysisAnnotationController implements Disposable {
     const byLine = new Map<number, MappedAnnotation[]>();
     const loaded: LoadedAnnotations[] = [];
     for (const directory of await findAnalysisProjectDirectories()) {
-      let project: ReturnType<typeof loadAnalysisProject>;
+      let manifest: AnalysisProjectManifest;
       try {
-        project = loadAnalysisProject(directory);
+        manifest = await analysisWorker().request<AnalysisProjectManifest>(directory, "manifest");
       } catch {
         continue;
       }
       const identity = {
-        target: project.manifest.target,
-        romContentSha256: project.manifest.rom.contentSha256,
-        romContentSize: project.manifest.rom.contentSize,
+        target: manifest.target,
+        romContentSha256: manifest.rom.contentSha256,
+        romContentSize: manifest.rom.contentSize,
       };
-      const projection = buildInstructionAnalysisAnnotations(project.manifest, project.shards);
-      loaded.push({
-        directory,
-        identity,
-        index: createInstructionAnnotationIndex(projection.instructions),
-      });
+      loaded.push({ directory, identity });
     }
-    if (loaded.length === 0) return;
+    if (loaded.length === 0 || generation !== this.#generation) return;
     const candidates = await findAnalysisDebugMapCandidates(loaded.map(({ identity }) => identity));
-    for (const { directory, identity, index } of loaded) {
+    for (const { directory, identity } of loaded) {
       for (const candidate of candidates) {
         if (
           candidate.map.target !== identity.target ||
@@ -128,17 +119,29 @@ export class AnalysisAnnotationController implements Disposable {
         const sourceIds = new Set(
           candidate.map.sources
             .filter((source) => {
-              const resolved = currentAnalysisSourcePath(source, candidate);
+              const resolved = currentAnalysisSourcePath(source, candidate, currentFile);
               return resolved !== undefined && path.resolve(resolved) === currentFile;
             })
             .map(({ id }) => id),
         );
         if (sourceIds.size === 0) continue;
-        for (const range of candidate.map.ranges) {
-          if (!sourceIds.has(range.sourceId)) continue;
-          for (const annotation of instructionAnnotationsForDebugRange(index, range)) {
-            append(byLine, range.line, { project: path.basename(directory), annotation });
-          }
+        if (generation !== this.#generation) return;
+        const ranges = candidate.map.ranges
+          .filter(
+            (range) =>
+              sourceIds.has(range.sourceId) &&
+              editor.visibleRanges.some(
+                (visible) =>
+                  range.line >= visible.start.line + 1 && range.line <= visible.end.line + 1,
+              ),
+          )
+          .slice(0, 2000);
+        if (ranges.length === 0) continue;
+        const rows = await analysisWorker().request<
+          { line: number; annotation: InstructionAnalysisAnnotation }[]
+        >(directory, "annotations", { ranges });
+        for (const { line, annotation } of rows) {
+          append(byLine, line, { project: path.basename(directory), annotation });
         }
       }
     }
