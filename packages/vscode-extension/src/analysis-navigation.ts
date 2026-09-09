@@ -1,19 +1,15 @@
 /** Source-first navigation for persisted analysis locations with conservative disassembly fallback. */
 import * as path from "node:path";
 import { formatDebugAddress } from "@uttori/asm-debug-adapter";
-import {
-  buildInstructionAnalysisAnnotations,
-  loadAnalysisProject,
-  type AnalysisControlFlowNodeRecord,
-  type InstructionAnalysisAnnotations,
-} from "@uttori/asm-disassembler";
+import { type AnalysisProjectManifest } from "@uttori/asm-disassembler";
 import { Position, Selection, TextEditorRevealType, Uri, debug, window, workspace } from "vscode";
 import {
   analysisDebugMapRanges,
   currentAnalysisSourcePath,
   findAnalysisDebugMapCandidates,
 } from "./analysis-debug-maps.js";
-import { formatInstructionAnnotationSummary } from "./analysis-annotation-format.js";
+import { analysisWorker } from "./analysis-worker-client.js";
+import type { AnalysisNavigationProjection } from "./analysis-navigation-data.js";
 import type { AnalysisGraphNavigationTarget } from "./analysis-graph-tree.js";
 
 interface CurrentSourceLocation {
@@ -118,29 +114,6 @@ const chooseArchitecture = async (
   });
 };
 
-const annotationSummaries = (
-  projection: InstructionAnalysisAnnotations,
-  addressSpace: string,
-  address: number,
-  outputOffset?: number,
-  architecture?: string,
-): string =>
-  [
-    ...new Set(
-      projection.instructions
-        .filter(
-          (annotation) =>
-            ((annotation.addressSpace === addressSpace && annotation.address === address) ||
-              (outputOffset !== undefined && annotation.outputOffsets.includes(outputOffset))) &&
-            (architecture === undefined ||
-              annotation.architectures.length === 0 ||
-              annotation.architectures.includes(architecture)),
-        )
-        .map((annotation) => formatInstructionAnnotationSummary(annotation))
-        .filter(Boolean),
-    ),
-  ].join(" | ");
-
 const openLiveDisassembly = async (
   target: AnalysisGraphNavigationTarget,
   architectures: readonly string[],
@@ -183,52 +156,14 @@ const openLiveDisassembly = async (
 
 const openPersistedDisassembly = async (
   target: AnalysisGraphNavigationTarget,
-  project: ReturnType<typeof loadAnalysisProject>,
-  projection: InstructionAnalysisAnnotations,
+  projection: AnalysisNavigationProjection,
 ): Promise<void> => {
-  const nodes = project.shards.analysis
-    .filter(
-      (record): record is AnalysisControlFlowNodeRecord =>
-        record.kind === "cfg-node" && record.addressSpace === target.addressSpace,
-    )
-    .sort((left, right) => left.address - right.address || left.id.localeCompare(right.id));
-  let index = nodes.findIndex(({ address }) => address >= target.address);
-  if (index < 0) index = Math.max(0, nodes.length - 1);
-  const start = Math.max(0, index - 4);
-  const visible = nodes.slice(start, start + 32);
-  const lines = visible.map((node) => {
-    const bytes = node.bytes
-      ? node.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")
-      : [node.opcode.toString(16).toUpperCase().padStart(2, "0")]
-          .concat(Array.from({ length: Math.max(0, node.size - 1) }, () => "??"))
-          .join(" ");
-    const context =
-      node.context.length > 0
-        ? ` context=${node.context.map((value) => `0x${value.toString(16)}`).join("/")}`
-        : "";
-    const annotations = annotationSummaries(
-      projection,
-      node.addressSpace,
-      node.address,
-      node.fileOffset,
-    );
-    return `${node.addressSpace}|0x${node.address.toString(16)}  ${bytes.padEnd(16)}  ${node.mnemonic} <${node.mode}> ; ${node.id}${context}${annotations ? ` ; ${annotations}` : ""}`;
-  });
-  const related = project.shards.analysis.filter(
-    (record) =>
-      "address" in record &&
-      record.addressSpace === target.addressSpace &&
-      record.address === target.address &&
-      target.recordIds.includes(record.id),
-  );
+  const lines = projection.lines;
   const header = [
     "; Persisted analysis disassembly (read-only)",
     "; This view renders accepted CFG records; unknown operand bytes remain ?? and are not decoded again.",
     `; Location: ${target.addressSpace}|0x${target.address.toString(16)}`,
     `; Records: ${target.recordIds.join(", ")}`,
-    ...(related.length > 0
-      ? related.map((record) => `; ${record.kind}: ${JSON.stringify(record)}`)
-      : []),
   ];
   const content = `${header.join("\n")}\n${lines.length > 0 ? lines.join("\n") : "; No accepted CFG node exists near this address."}\n`;
   const document = await workspace.openTextDocument({ language: "uttori-snes", content });
@@ -252,29 +187,27 @@ export const navigateToAnalysisLocation = async (
   target: AnalysisGraphNavigationTarget,
 ): Promise<void> => {
   try {
-    const project = loadAnalysisProject(target.projectDirectory);
+    const manifest = await analysisWorker().request<AnalysisProjectManifest>(
+      target.projectDirectory,
+      "manifest",
+    );
     if (
-      project.manifest.target !== target.target ||
-      project.manifest.rom.contentSha256 !== target.romContentSha256 ||
-      project.manifest.rom.contentSize !== target.romContentSize
+      manifest.target !== target.target ||
+      manifest.rom.contentSha256 !== target.romContentSha256 ||
+      manifest.rom.contentSize !== target.romContentSize
     ) {
       throw new Error("Navigation target no longer matches the current native analysis project.");
     }
-    const projection = buildInstructionAnalysisAnnotations(project.manifest, project.shards);
     const search = await findDebugMapSources(target);
     if (await openSourceLocation(search.locations)) return;
+    const projection = await analysisWorker().request<AnalysisNavigationProjection>(
+      target.projectDirectory,
+      "navigation",
+      { navigationTarget: target },
+    );
     // Captured RAM may have changed since recording. Show its saved variants before live memory.
-    if (
-      project.shards.analysis.some(
-        (record) =>
-          record.kind === "cfg-node" &&
-          record.fileOffset === undefined &&
-          record.bytes &&
-          record.addressSpace === target.addressSpace &&
-          record.address === target.address,
-      )
-    ) {
-      await openPersistedDisassembly(target, project, projection);
+    if (projection.capturedRam) {
+      await openPersistedDisassembly(target, projection);
       return;
     }
     if (await openLiveDisassembly(target, search.architectures)) return;
@@ -283,7 +216,7 @@ export const navigateToAnalysisLocation = async (
         `Found ${search.staleSources} stale source mapping(s); opening persisted analysis disassembly instead.`,
       );
     }
-    await openPersistedDisassembly(target, project, projection);
+    await openPersistedDisassembly(target, projection);
   } catch (error) {
     await window.showErrorMessage(
       `Could not open analysis location: ${error instanceof Error ? error.message : String(error)}`,

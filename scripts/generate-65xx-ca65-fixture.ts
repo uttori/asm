@@ -120,10 +120,6 @@ function sourceFor(form: InstructionForm, endLabel: string): string {
   return `  ${form.mnemonic}${operand ? ` ${operand}` : ""}`;
 }
 
-function sizeOf(form: InstructionForm): number {
-  return form.encoding.length + form.operands.reduce((sum, operand) => sum + operand.width, 0);
-}
-
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-65xx-ca65-"));
 const fixtureVariants = [];
 try {
@@ -143,7 +139,8 @@ try {
     const cases = [];
     let offset = 0;
     for (const [index, form] of forms.entries()) {
-      const size = sizeOf(form);
+      const size =
+        form.encoding.length + form.operands.reduce((sum, operand) => sum + operand.width, 0);
       const bytes = [...binary.subarray(offset, offset + size)];
       if (bytes.length !== size) throw new Error(`${cpu} fixture ended during case ${index}.`);
       cases.push({

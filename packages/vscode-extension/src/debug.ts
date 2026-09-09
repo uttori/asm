@@ -48,6 +48,7 @@ import { acquireTraceLease } from "./trace-lease.js";
 import { runtimeBindingFromLaunch } from "./runtime-binding.js";
 import {
   RuntimeTraceFileRecorder,
+  resolveEditorTraceDetail,
   type EditorTraceBatch,
   type EditorTraceMetadata,
 } from "./runtime-trace-recorder.js";
@@ -297,7 +298,8 @@ const traceProducer = (session: DebugSession, map: DebugMap): EditorTraceMetadat
     kind === "ares"
       ? stringField(manifest.forkRevision, "runtimeManifest.forkRevision")
       : stringField(manifest.upstreamRevision, "runtimeManifest.upstreamRevision");
-  return { id: kind, revision: `${revision}:${patch}` };
+  const executable = stringField(manifest.executableSha256, "runtimeManifest.executableSha256");
+  return { id: kind, revision: `${revision}:${patch}:${executable}` };
 };
 
 const chooseTrace = async (session: DebugSession): Promise<TraceCapability | undefined> => {
@@ -332,6 +334,12 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
     throw new Error("Start an Uttori ASM debug session before recording a trace.");
   const trace = await chooseTrace(session);
   if (!trace) return;
+  const detail = resolveEditorTraceDetail(
+    workspace
+      .getConfiguration("asm", session.workspaceFolder?.uri)
+      .get("debug.traceDetail", "full"),
+    trace.instructionDetails,
+  );
   const destination = await window.showSaveDialog({
     defaultUri: defaultTraceUri(session),
     filters: { "Uttori ASM instruction trace": ["json"] },
@@ -342,11 +350,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
     throw new Error("Live instruction traces must be written to a local file.");
   const metadata = traceMetadata(session, trace);
   await session.customRequest("uttori/startTrace", {
-    detail:
-      trace.instructionDetails &&
-      workspace.getConfiguration("asm").get("debug.traceDetail", "full") === "full"
-        ? "full"
-        : "pc",
+    detail,
     architecture: trace.architecture,
     addressSpace: trace.addressSpace,
   });
@@ -378,7 +382,9 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
       `Assembly trace recording failed: ${error instanceof Error ? error.message : String(error)}`,
     );
   });
-  void window.showInformationMessage(`Assembly: recording ${trace.architecture} instructions.`);
+  void window.showInformationMessage(
+    `Assembly: recording ${trace.architecture} instructions (${detail === "full" ? "full execution details" : "PC-only"}).`,
+  );
 };
 
 const startRuntimeTrace = async (): Promise<void> => {
@@ -401,15 +407,17 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
   if (!active) throw new Error("No Uttori ASM instruction trace recording is active.");
   activeTraceRecording = undefined;
   const summary = await active.recorder.stop();
+  const total = summary.observedEvents + summary.droppedEvents;
+  const counts = `${summary.observedEvents.toLocaleString()} instruction event(s) retained; ${summary.droppedEvents.toLocaleString()} dropped${total > 0 ? ` (${((summary.droppedEvents / total) * 100).toFixed(1)}%)` : ""}`;
+  const notify =
+    summary.droppedEvents > 0 ? window.showWarningMessage : window.showInformationMessage;
   if (analyze) {
-    void window.showInformationMessage(
-      `Assembly: captured ${summary.observedEvents} instruction event(s); updating the disassembly and identifying routines…`,
-    );
+    void notify(`Assembly: ${counts}; updating the disassembly and identifying routines…`);
     await commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, Uri.file(summary.file));
     return;
   }
-  const action = await window.showInformationMessage(
-    `Assembly: wrote ${summary.observedEvents} instruction event(s) to ${summary.file}; ${summary.droppedEvents} producer event(s) dropped.`,
+  const action = await notify(
+    `Assembly: ${counts}. Wrote ${summary.file}.`,
     "Import Trace and Update Disassembly",
   );
   if (action === "Import Trace and Update Disassembly")

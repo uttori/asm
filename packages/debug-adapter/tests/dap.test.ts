@@ -522,6 +522,7 @@ test("DAP resolves mirrored PCs and supplies virtual disassembly sources", async
   const spc = response(await fixture.session.dispatch(request(4, "stackTrace", { threadId: 2 })))
     .body as {
     stackFrames: Array<{
+      line: number;
       source: { sourceReference: number; path: string; presentationHint: string };
     }>;
   };
@@ -532,7 +533,13 @@ test("DAP resolves mirrored PCs and supplies virtual disassembly sources", async
   const virtual = response(
     await fixture.session.dispatch(request(5, "source", { sourceReference })),
   ).body as { content: string };
-  t.regex(virtual.content, /snes\.spc700\|spc\.aram\|0x200.*nop/);
+  t.true(virtual.content.startsWith("; Debugger disassembly (temporary, read-only view)\n"));
+  t.regex(virtual.content, /; Shown because the current instruction has no matching source line/);
+  // The execution highlight must point at the instruction, below the explanation.
+  t.regex(
+    virtual.content.split("\n")[spc.stackFrames[0]!.line - 1]!,
+    /^snes\.spc700\|spc\.aram\|0x200.*nop/,
+  );
 
   await fixture.session.dispatch(request(6, "next", { threadId: 2 }));
   const refreshed = response(

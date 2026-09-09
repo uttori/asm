@@ -84,7 +84,10 @@ test("friendly function names and all comment placements survive reanalysis and 
       ],
     },
   });
-  t.is(await runCli(["export", project, source, "--rom", rom]), 0);
+  // This scenario intentionally deletes a decoded instruction. Keep the code
+  // preservation guard covered before opting in to test the comment fallback.
+  t.is(await runCli(["export", project, source, "--rom", rom]), 1);
+  t.is(await runCli(["export", project, source, "--rom", rom, "--allow-code-regression"]), 0);
   t.regex(
     fs.readFileSync(bankFile, "utf8"),
     /; \[Instruction comment; instruction unavailable\] Save the data bank/,

@@ -236,8 +236,14 @@ export const analyzeSnesRuntimeCode = (
       evidencePath: ownership.get(node.id)?.length ? ownership.get(node.id)! : [node.id],
     });
   records.push(...edges);
-  for (const [address, variants] of byAddress)
-    if (variants.length > 1)
+  for (const [address, variants] of byAddress) {
+    // CPU state can legitimately differ between executions of the same instruction. Preserve
+    // every state/evidence variant, but only incompatible instruction encodings are code conflicts.
+    // For example, changing X width does not change an accumulator-immediate LDA instruction.
+    const encodings = new Set(
+      variants.map((node) => `${node.specificationId}:${node.size}:${node.bytes?.join(",")}`),
+    );
+    if (encodings.size > 1)
       records.push({
         id: `runtime:code:variants:${address.toString(16)}`,
         kind: "conflict",
@@ -245,9 +251,10 @@ export const analyzeSnesRuntimeCode = (
         address,
         conflictKind: "runtime-code-variants",
         message:
-          "Multiple captured byte or decode-state variants exist at this address; no variant is silently selected.",
+          "Captured executions disagree on instruction bytes or decoding; all variants and their trace evidence are retained.",
         nodes: variants.map((node) => node.id),
         evidence: [...new Set(variants.flatMap((node) => node.evidence))].sort(),
       });
+  }
   return records.sort((a, b) => a.id.localeCompare(b.id));
 };

@@ -1,6 +1,12 @@
 {
   "extends": "../tsconfig.base.json",
-  "include": ["./ava-helper.ts", "./disassembler-fuzz.test.ts", "./fuzz-helpers.ts"],
+  "include": [
+    "./ava-helper.ts",
+    "./disassembler-fuzz.test.ts",
+    "./fuzz-helpers.ts",
+    "./directives/data-struct.test.ts",
+    "../packages/plugin-snes/tests/struct-map.test.ts"
+  ],
   "compilerOptions": {
     "declaration": false,
     "declarationMap": false,

@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -66,6 +67,63 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
     ],
     imports: [],
   },
+});
+
+test("prepared transaction validation rejects correctly hashed malformed JSON and wrong counts before publication", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-forged-"));
+  try {
+    const project = projectFor(new RomImage(new Uint8Array(0x8000)));
+    writeAnalysisProject(directory, project);
+    const snapshot = loadAnalysisProjectSnapshot(directory);
+    const active = await fs.readFile(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8");
+    const prepared = prepareAnalysisProjectTransaction(directory, project);
+    const sha256 = (value: string): string => createHash("sha256").update(value).digest("hex");
+    for (const [text, count, expectedError] of [
+      ['[{"id":"bad",}]', 1, { instanceOf: SyntaxError }],
+      ['[{"id":"valid"}]', 2, { message: /wrong record count/ }],
+      ["[null]", 1, { message: /not a valid JSON object-record array/ }],
+    ] as const) {
+      const descriptors = prepared.manifest.shards.map((descriptor) =>
+        descriptor.kind === "labels"
+          ? { ...descriptor, sha256: sha256(text), records: count }
+          : descriptor,
+      );
+      const generation = sha256(
+        canonicalJson(
+          descriptors.map(({ id, kind, sha256, records }) => ({ id, kind, sha256, records })),
+        ),
+      );
+      const folder = `analysis/generations/${generation}`;
+      await fs.mkdir(path.join(directory, folder), { recursive: true });
+      const shards = [];
+      for (const descriptor of descriptors) {
+        const destination = `${folder}/${path.basename(descriptor.path)}`;
+        if (descriptor.kind === "labels")
+          await fs.writeFile(path.join(directory, destination), text);
+        else
+          await fs.copyFile(
+            path.join(directory, descriptor.path),
+            path.join(directory, destination),
+          );
+        shards.push({ ...descriptor, path: destination });
+      }
+      t.throws(
+        () =>
+          commitPreparedAnalysisProjectTransaction(directory, snapshot.revision, {
+            ...prepared,
+            generation,
+            manifest: { ...prepared.manifest, shards },
+          }),
+        expectedError,
+      );
+      t.is(await fs.readFile(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"), active);
+      await t.throwsAsync(fs.stat(path.join(directory, ANALYSIS_PROJECT_LOCK_DIRECTORY)), {
+        code: "ENOENT",
+      });
+    }
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("project transactions prepare immutable generations and publish only the manifest", async (t) => {

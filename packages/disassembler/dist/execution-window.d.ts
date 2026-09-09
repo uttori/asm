@@ -1,5 +1,5 @@
 import type { AnalysisProjectShards } from "./project-types.js";
-import { type RuntimeInstructionTraceArtifact } from "./runtime-trace.js";
+import { type RuntimeInstructionTraceArtifact, type RuntimeInstructionTraceMetadata, type RuntimeInstructionTraceChunk } from "./runtime-trace.js";
 /** One statically evidenced routine observed during an explicit trace window. */
 export interface ExecutedRoutineSummary {
     readonly functionId: string;
@@ -39,4 +39,16 @@ export interface ExecutionWindowSummary {
  * @returns {ExecutionWindowSummary} Ordered routine coverage and unattributed-PC diagnostics.
  */
 export declare const summarizeExecutionWindow: (value: RuntimeInstructionTraceArtifact, shards: AnalysisProjectShards) => ExecutionWindowSummary;
+/** Ordered routine attribution without retaining the event stream. */
+export interface ExecutionWindowAccumulator {
+    push(chunk: RuntimeInstructionTraceChunk): void;
+    finish(): ExecutionWindowSummary;
+}
+/**
+ * Prepare routine attribution for incrementally supplied, validated trace chunks.
+ * @param {RuntimeInstructionTraceMetadata} trace Recording identity.
+ * @param {AnalysisProjectShards} shards Saved analysis.
+ * @returns {ExecutionWindowAccumulator} Chunk consumer and final report.
+ */
+export declare const createExecutionWindowAccumulator: (trace: RuntimeInstructionTraceMetadata, shards: AnalysisProjectShards) => ExecutionWindowAccumulator;
 //# sourceMappingURL=execution-window.d.ts.map

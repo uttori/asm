@@ -130,18 +130,6 @@ function hiromFileOffset(address: number, headerSize: number): number {
 }
 
 /**
- * Detects a 512-byte copier header.
- * @param {number} size ROM file size in bytes.
- * @returns {number} Header size.
- */
-function detectHeaderSize(size: number): number {
-  if (size % 1024 === 512) {
-    return 512;
-  }
-  return 0;
-}
-
-/**
  * Builds label → quoted `db` filename from AssetPointersAndFiles.asm.
  * @param {string} source Pointer file text.
  * @returns {Map<string, string>} Filename map.
@@ -242,7 +230,8 @@ export function extractSmrpgAssets(options: SmrpgExtractOptions): void {
   }
 
   const rom = new Uint8Array(fs.readFileSync(options.rom));
-  const headerSize = detectHeaderSize(rom.length);
+  // A 512-byte remainder identifies the optional copier header.
+  const headerSize = rom.length % 1024 === 512 ? 512 : 0;
   const source = fs.readFileSync(pointerFile, "utf8");
   const filenames = parseFilenameTable(source);
 

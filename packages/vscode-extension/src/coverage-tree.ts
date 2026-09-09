@@ -350,7 +350,11 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
             })
           )
             .slice(0, count)
-            .map((detail) => this.detailNode({ ...detail, id: `${element.id}:${detail.id}` }));
+            .map((detail) => ({
+              ...detail,
+              id: `${element.id}:${detail.id}`,
+              state: TreeItemCollapsibleState.None,
+            }));
         } catch (error) {
           return [leaf(`${element.id}:error`, "Could not load page", String(error), "error")];
         }
@@ -378,12 +382,8 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
     return (element as CoverageTreeNode).editTarget;
   }
 
-  private async projectDirectories(): Promise<string[]> {
-    return findAnalysisProjectDirectories();
-  }
-
   private async loadProjects(): Promise<CoverageTreeNode[]> {
-    const directories = await this.projectDirectories();
+    const directories = await findAnalysisProjectDirectories();
     const result: CoverageTreeNode[] = [];
     for (const directory of directories) {
       const manifestUri = Uri.file(path.join(directory, ANALYSIS_PROJECT_MANIFEST));
@@ -418,12 +418,5 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
       }
     }
     return result;
-  }
-
-  private detailNode(detail: CoverageDetail): CoverageTreeNode {
-    return {
-      ...detail,
-      state: TreeItemCollapsibleState.None,
-    };
   }
 }

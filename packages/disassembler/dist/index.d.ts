@@ -23,7 +23,9 @@ export * from "./project-types.js";
 export * from "./rom-image.js";
 export * from "./runtime-evidence.js";
 export * from "./runtime-trace.js";
+export * from "./runtime-trace-file.js";
 export * from "./source-export.js";
 export * from "./static-analysis.js";
 export * from "./trace-detail.js";
+export * from "./analysis-sources.js";
 //# sourceMappingURL=index.d.ts.map

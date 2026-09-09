@@ -103,10 +103,6 @@ const positiveInteger = (value: unknown): value is number =>
 const nonNegativeInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 
-const assertLimit = (name: string, value: number): void => {
-  if (!positiveInteger(value)) throw new Error(`${name} must be a positive safe integer.`);
-};
-
 const sessionPattern = /^[\w-]{32,128}$/;
 
 /**
@@ -198,8 +194,9 @@ export function assertDebugSidecarMessage(
 }
 
 const validateLimits = (limits: DebugSidecarProtocolLimits): void => {
-  for (const [name, value] of Object.entries(limits) as Array<[string, number]>)
-    assertLimit(name, value);
+  for (const [name, value] of Object.entries(limits) as Array<[string, number]>) {
+    if (!positiveInteger(value)) throw new Error(`${name} must be a positive safe integer.`);
+  }
   if (limits.maxBufferedBytes < limits.maxFrameBytes + 4)
     throw new Error("maxBufferedBytes must hold at least one complete framed message.");
 };

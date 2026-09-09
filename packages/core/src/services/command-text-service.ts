@@ -1,3 +1,5 @@
+import { isOpenStructInitializer } from "./struct-initializer.js";
+
 /** A preprocessed command tagged with its original 0-based source line. */
 export type SourcedCommand = {
   /** Normalized command text. */
@@ -69,7 +71,10 @@ export const preprocessBlockCommands = (
     line = removeInlineComment(line, syntaxProfile);
     if (!line.trim()) continue;
 
-    if (line.endsWith("\\")) {
+    if (isOpenStructInitializer(nextCommandBuffer + line)) {
+      if (nextCommandBuffer === "") bufferStartLine = lineIndex;
+      nextCommandBuffer += `${line} `;
+    } else if (line.endsWith("\\")) {
       if (nextCommandBuffer === "") {
         bufferStartLine = lineIndex;
       }

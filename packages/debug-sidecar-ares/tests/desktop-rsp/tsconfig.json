@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
     "allowJs": true,
+    "allowImportingTsExtensions": true,
     "checkJs": true,
     "module": "NodeNext",
+    "resolveJsonModule": true,
     "noEmit": true,
     "strict": true,
     "target": "ES2022",
     "types": ["node"]
   },
-  "include": ["gdb-polling.mjs"]
+  "include": ["*.mjs"]
 }

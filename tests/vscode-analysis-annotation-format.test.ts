@@ -8,6 +8,11 @@ import {
   instructionAnnotationsForDebugRange,
 } from "../packages/vscode-extension/src/analysis-annotation-index.js";
 import { test } from "./ava-helper.js";
+import {
+  annotationOverlayColumn,
+  annotationOverlayColor,
+  annotationSourceColumns,
+} from "../packages/vscode-extension/src/analysis-annotation-layout.js";
 
 const annotation: InstructionAnalysisAnnotation = {
   id: "cpu:$808000",
@@ -126,5 +131,42 @@ test("source annotation indexes cover complete half-open logical and output span
   t.deepEqual(
     matches.map(({ id }) => id),
     ["explicit-mirror", "first", "second"],
+  );
+});
+
+test("analysis overlays share a column for short, long and tab-indented source", (t) => {
+  for (const tabSize of [2, 4, 8]) {
+    const lines = ["nop", "\tlda\t#$10", `    jsr ${"LongRoutineName".repeat(6)}`];
+    const column = annotationOverlayColumn(lines, tabSize);
+    t.true(column >= 80);
+    for (const line of lines) {
+      const width = annotationSourceColumns(line, tabSize);
+      const padding = column - width;
+      t.true(padding >= 3);
+      t.is(width + padding, column);
+    }
+    t.is(annotationSourceColumns("\tx\t", tabSize), tabSize * 2);
+  }
+  t.is(annotationOverlayColumn(["nop"], 4, 100), 100);
+});
+
+test("overlay colors distinguish state transitions, runtime observations and project state", (t) => {
+  t.is(annotationOverlayColor([annotation]), "editorWarning.foreground");
+  t.is(
+    annotationOverlayColor([{ ...annotation, stateTransitions: [] }]),
+    "debugIcon.startForeground",
+  );
+  t.is(
+    annotationOverlayColor([
+      {
+        ...annotation,
+        stateTransitions: [],
+        stateObservations: [],
+        executionCount: 0,
+        runtimeCoverage: [],
+        memoryAccesses: [],
+      },
+    ]),
+    "editorInfo.foreground",
   );
 });

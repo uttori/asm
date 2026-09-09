@@ -6,10 +6,12 @@ import {
 } from "@uttori/asm-disassembler";
 import {
   DecorationRangeBehavior,
+  ConfigurationTarget,
   MarkdownString,
   Range,
   ThemeColor,
   window,
+  workspace,
   type Disposable,
   type TextDocument,
   type TextEditor,
@@ -26,6 +28,14 @@ import {
   formatInstructionAnnotationSummary,
 } from "./analysis-annotation-format.js";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
+import {
+  annotationOverlayColumn,
+  annotationOverlayColor,
+  annotationSourceColumns,
+} from "./analysis-annotation-layout.js";
+
+/** Editor toolbar command for showing or hiding project-state overlays. */
+export const TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotations";
 
 interface MappedAnnotation {
   readonly project: string;
@@ -52,7 +62,6 @@ export class AnalysisAnnotationController implements Disposable {
     this.#decoration = window.createTextEditorDecorationType({
       after: {
         color: new ThemeColor("editorCodeLens.foreground"),
-        margin: "0 0 0 2em",
       },
       rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
@@ -64,11 +73,41 @@ export class AnalysisAnnotationController implements Disposable {
    */
   refresh(editor: TextEditor | undefined = window.activeTextEditor): void {
     const generation = ++this.#generation;
+    for (const visible of window.visibleTextEditors) {
+      if (
+        !workspace
+          .getConfiguration("asm", visible.document.uri)
+          .get("analysis.showAnnotations", true)
+      )
+        visible.setDecorations(this.#decoration, []);
+    }
     if (!editor || editor.document.uri.scheme !== "file") return;
     editor.setDecorations(this.#decoration, []);
+    if (
+      !workspace.getConfiguration("asm", editor.document.uri).get("analysis.showAnnotations", true)
+    )
+      return;
     void this.#decorations(editor, generation).catch(() => {
       if (generation === this.#generation) editor.setDecorations(this.#decoration, []);
     });
+  }
+
+  /** Toggle the active project's overlays, immediately invalidating pending decoration work. */
+  async toggle(): Promise<void> {
+    ++this.#generation;
+    const resource = window.activeTextEditor?.document.uri;
+    const configuration = workspace.getConfiguration("asm", resource);
+    const enabled = configuration.get("analysis.showAnnotations", true);
+    if (enabled)
+      for (const editor of window.visibleTextEditors) editor.setDecorations(this.#decoration, []);
+    await configuration.update(
+      "analysis.showAnnotations",
+      !enabled,
+      resource && workspace.getWorkspaceFolder(resource)
+        ? ConfigurationTarget.WorkspaceFolder
+        : ConfigurationTarget.Global,
+    );
+    this.refresh();
   }
 
   /**
@@ -146,9 +185,19 @@ export class AnalysisAnnotationController implements Disposable {
       }
     }
     if (generation !== this.#generation || window.activeTextEditor !== editor) return;
-    const decorations = [...byLine]
+    const lines = [...byLine]
       .filter(([line]) => line >= 1 && line <= editor.document.lineCount)
-      .sort(([left], [right]) => left - right)
+      .sort(([left], [right]) => left - right);
+    const tabSize = typeof editor.options.tabSize === "number" ? editor.options.tabSize : 4;
+    const preferredColumn = workspace
+      .getConfiguration("asm", editor.document.uri)
+      .get<number>("analysis.annotationColumn", 80);
+    const column = annotationOverlayColumn(
+      lines.map(([line]) => editor.document.lineAt(line - 1).text),
+      tabSize,
+      Number.isSafeInteger(preferredColumn) && preferredColumn >= 0 ? preferredColumn : 80,
+    );
+    const decorations = lines
       .map(([line, entries]) => {
         const unique = new Map(
           entries.map((entry) => [`${entry.project}:${entry.annotation.id}`, entry]),
@@ -164,6 +213,9 @@ export class AnalysisAnnotationController implements Disposable {
         const summaryText = summaries.join(" | ");
         const hover = new MarkdownString();
         hover.appendMarkdown("**Uttori analysis**\n\n");
+        hover.appendMarkdown(
+          "Overlay colors: blue = project state, green = runtime observations, amber = state changes.\n\n",
+        );
         for (const { project, annotation } of values) {
           hover.appendText(project);
           hover.appendMarkdown("\n\n");
@@ -175,9 +227,13 @@ export class AnalysisAnnotationController implements Disposable {
           hoverMessage: hover,
           renderOptions: {
             after: {
+              margin: `0 0 0 ${column - annotationSourceColumns(targetLine.text, tabSize)}ch`,
+              color: new ThemeColor(
+                annotationOverlayColor(values.map(({ annotation }) => annotation)),
+              ),
               contentText:
                 summaries.length > 0
-                  ? ` ; ${summaryText.slice(0, 319)}${summaryText.length > 319 ? "…" : ""}`
+                  ? `│ ${summaryText.slice(0, 319)}${summaryText.length > 319 ? "…" : ""}`
                   : "",
             },
           },

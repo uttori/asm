@@ -74,12 +74,46 @@ const main = async (): Promise<void> => {
           evidencePath: [],
           evidence: ["smoke"],
         })),
-        evidence: [{ id: "smoke", source: "manual", sourceId: "smoke", confidence: "certain" }],
+        evidence: [
+          { id: "smoke", source: "manual", sourceId: "smoke", confidence: "certain" },
+          ...["a", "b"].map((id) => ({
+            id,
+            source: "runtime" as const,
+            sourceId: "smoke-trace",
+            confidence: "certain" as const,
+            artifact: {
+              format: "trace",
+              sha256: id.repeat(64),
+              romContentSha256: new RomImage(new Uint8Array(0x8000)).identity.contentSha256,
+            },
+          })),
+        ],
         labels: [],
         comments: [],
         regions: [],
-        runtime: [],
-        imports: [],
+        runtime: [
+          ...["a", "b"].flatMap((source) =>
+            Array.from({ length: source === "a" ? 500 : 100 }, (_, index) => ({
+              id: `pc:${source}:${index}`,
+              kind: "runtime-execution" as const,
+              architecture: "snes.65816",
+              addressSpace: "snes.cpu",
+              address: 0x808000 + index,
+              size: 1,
+              count: 1,
+              evidence: [source],
+            })),
+          ),
+        ],
+        imports: ["a", "b"].map((id) => ({
+          id: `import:${id}`,
+          format: "trace",
+          sourceName: id === "a" ? "chest.json" : "idle.json",
+          sourceSha256: id.repeat(64),
+          imported: { instructions: id === "a" ? 500 : 100 },
+          warnings: [],
+          unsupported: [],
+        })),
       },
     });
     await runTests({

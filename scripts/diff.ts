@@ -428,19 +428,6 @@ function processedIndexToFileLines(filePath: string): number[] {
 }
 
 /**
- * @param {string} filePath Source path.
- * @param {number} commandIndex 0-based preprocessed command index.
- * @returns {number} 1-based file line, or commandIndex+1 when unmapped.
- */
-function fileLineForCommand(filePath: string, commandIndex: number): number {
-  const mapped = processedIndexToFileLines(filePath)[commandIndex];
-  if (mapped === undefined) {
-    return commandIndex + 1;
-  }
-  return mapped;
-}
-
-/**
  * @param {Uint8Array} bytes ROM slice.
  * @param {number} center Inclusive center offset.
  * @param {number} window Bytes on each side.
@@ -497,7 +484,7 @@ function assembleSource(input: {
         pc: start,
         romOffset: snesToRom(input.mapper, start),
         file,
-        line: fileLineForCommand(file, commandIndex),
+        line: processedIndexToFileLines(file)[commandIndex] ?? commandIndex + 1,
         commandIndex,
         words: words.join(" "),
         size: assembler.currentTargetAddress - start,
@@ -654,13 +641,6 @@ function diffRoms(input: {
   let first: ByteMismatch | undefined;
   let runStart = -1;
 
-  const inBankFilter = (snes: number): boolean => {
-    if (input.bank === undefined) {
-      return true;
-    }
-    return snes >>> 16 === input.bank;
-  };
-
   const closeRun = (end: number) => {
     if (runStart < 0) {
       return;
@@ -679,7 +659,7 @@ function diffRoms(input: {
 
   for (let offset = fromOffset; offset < toOffset; offset += 1) {
     const snes = romToSnes(input.mapper, offset);
-    if (!inBankFilter(snes)) {
+    if (input.bank !== undefined && snes >>> 16 !== input.bank) {
       closeRun(offset);
       continue;
     }

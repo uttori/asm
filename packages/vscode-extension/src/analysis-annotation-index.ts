@@ -21,7 +21,9 @@ export interface InstructionAnnotationIndex {
 }
 
 const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
-  map.set(key, [...(map.get(key) ?? []), value]);
+  const entries = map.get(key);
+  if (entries) entries.push(value);
+  else map.set(key, [value]);
 };
 
 const lowerBound = <Value>(

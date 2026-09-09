@@ -1,0 +1,343 @@
+From f167edfc62b72101c873b6175855171ac5b093f8 Mon Sep 17 00:00:00 2001
+From: Matthew Callis <matthew.callis@gmail.com>
+Date: Tue, 8 Sep 2026 23:21:15 -0700
+Subject: [PATCH] sfc: synchronize save states while halted in GDB
+
+---
+ ares/sfc/cpu/cpu.cpp              |   7 +-
+ ares/sfc/cpu/memory.cpp           |   6 +-
+ ares/sfc/system/serialization.cpp |   5 ++
+ tests/gdb/CMakeLists.txt          |  15 +++-
+ tests/gdb/README.md               |  11 ++-
+ tests/gdb/gdb-boundaries.cpp      |   2 +
+ tests/gdb/gdb-memory-packets.cpp  |   2 +
+ tests/gdb/gdb-registers.cpp       |   2 +
+ tests/gdb/gdb-states.cpp          | 140 ++++++++++++++++++++++++++++++
+ tests/gdb/gdb-storage.cpp         |   2 +
+ tests/gdb/run-tests.sh            |   2 +-
+ 11 files changed, 187 insertions(+), 7 deletions(-)
+ create mode 100644 tests/gdb/gdb-states.cpp
+
+diff --git a/ares/sfc/cpu/cpu.cpp b/ares/sfc/cpu/cpu.cpp
+index 68e04412b..f73411e9f 100644
+--- a/ares/sfc/cpu/cpu.cpp
++++ b/ares/sfc/cpu/cpu.cpp
+@@ -33,7 +33,12 @@ auto CPU::main() -> void {
+ 
+   if(!status.interruptPending) {
+     // Yield to the desktop worker while halted so its UI/quit guard remains live.
+-    while(!nall::GDB::server.reportPC(r.pc.d)) scheduler.exit(Event::Step);
++    while(!nall::GDB::server.reportPC(r.pc.d)) {
++      scheduler.exit(Event::Step);
++      // A save (including the undo snapshot before loading) may resume us here.
++      // This instruction boundary is safe to serialize without advancing the CPU.
++      scheduler.synchronize();
++    }
+     debugger.instruction();
+     return instruction();
+   }
+diff --git a/ares/sfc/cpu/memory.cpp b/ares/sfc/cpu/memory.cpp
+index bdbd6fb0c..25f02f3c2 100644
+--- a/ares/sfc/cpu/memory.cpp
++++ b/ares/sfc/cpu/memory.cpp
+@@ -2,7 +2,11 @@ auto CPU::idle() -> void {
+   // WAI/STP loop inside the processor core and may never return to CPU::main.
+   // Stop at an idle boundary without treating the following PC as executed.
+   if(r.wai || r.stp) {
+-    while(!nall::GDB::server.reportPC(r.pc.d, false)) scheduler.exit(Event::Step);
++    while(!nall::GDB::server.reportPC(r.pc.d, false)) {
++      scheduler.exit(Event::Step);
++      // WAI/STP state can be restored at this idle boundary, before any bus work.
++      scheduler.synchronize();
++    }
+   }
+   status.clockCount = 6;
+   dmaEdge();
+diff --git a/ares/sfc/system/serialization.cpp b/ares/sfc/system/serialization.cpp
+index 2eee447ac..633b488e8 100644
+--- a/ares/sfc/system/serialization.cpp
++++ b/ares/sfc/system/serialization.cpp
+@@ -38,6 +38,11 @@ auto System::unserialize(serializer& s) -> bool {
+ 
+   if(synchronize) power(/* reset = */ false);
+   serialize(s, synchronize);
++  // Keep the acknowledged stop at the restored boundary. Otherwise stepping
++  // from a loaded breakpoint compares against the PC from before the load.
++  if(synchronize && nall::GDB::server.isHalted()) {
++    nall::GDB::server.reportPC(cpu.r.pc.d, !cpu.r.wai && !cpu.r.stp);
++  }
+   return true;
+ }
+ 
+diff --git a/tests/gdb/CMakeLists.txt b/tests/gdb/CMakeLists.txt
+index a3d2a3a93..18ee4d9e7 100644
+--- a/tests/gdb/CMakeLists.txt
++++ b/tests/gdb/CMakeLists.txt
+@@ -3,13 +3,13 @@ if(NOT sfc IN_LIST ARES_CORES)
+   return()
+ endif()
+ 
+-set(gdb_targets gdb-registers gdb-memory-packets gdb-storage gdb-boundaries)
++set(gdb_targets gdb-registers gdb-memory-packets gdb-storage gdb-boundaries gdb-states)
+ foreach(target IN LISTS gdb_targets)
+   add_executable(${target} ${target}.cpp)
+   target_include_directories(${target} PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/ares)
+   target_link_libraries(${target} PRIVATE ares::nall)
+-  # Inspect protocol state only in the test translation unit. Keep assertions in release builds.
+-  target_compile_options(${target} PRIVATE -fno-access-control -UNDEBUG)
++  # Inspect protocol state only in the test translation unit.
++  target_compile_options(${target} PRIVATE -fno-access-control)
+   set_target_properties(${target} PROPERTIES FOLDER tests PREFIX "")
+   set(CONSOLE TRUE)
+   ares_configure_executable(${target})
+@@ -19,6 +19,15 @@ foreach(target IN LISTS gdb_targets)
+ endforeach()
+ 
+ target_link_libraries(gdb-storage PRIVATE ares::ares)
++target_link_libraries(gdb-states PRIVATE ares::ares)
++foreach(mode IN ITEMS wai stp)
++  add_test(NAME gdb-states-${mode} COMMAND gdb-states ${mode})
++  set_tests_properties(gdb-states-${mode} PROPERTIES TIMEOUT 10)
++endforeach()
++foreach(mode IN ITEMS instruction wai stp)
++  add_test(NAME gdb-states-${mode}-accurate COMMAND gdb-states ${mode} accurate)
++  set_tests_properties(gdb-states-${mode}-accurate PROPERTIES TIMEOUT 10)
++endforeach()
+ add_custom_target(gdb-tests DEPENDS ${gdb_targets})
+ target_sources(gdb-tests PRIVATE run-tests.sh README.md)
+ target_enable_subproject(gdb-tests "GDB register, storage, and lifecycle tests")
+diff --git a/tests/gdb/README.md b/tests/gdb/README.md
+index 6a0bcd0c6..a6d481e90 100644
+--- a/tests/gdb/README.md
++++ b/tests/gdb/README.md
+@@ -23,9 +23,18 @@ paths, platform libraries, and the core profile come from the normal ares build.
+   exclusion, cartridge RAM offsets, remap/unmap, and physical storage bounds.
+ - `gdb-boundaries` checks deferred stop/reset responses, stepping off breakpoints,
+   quiescent stops, disconnect/reconnect, and legacy-core behavior.
++- `gdb-states` links the real SFC core and exercises synchronized save, the undo
++  snapshot taken before loading, load, undo load, and stepping from a restored
++  breakpoint. Instruction, WAI, and STP stops run with both PPU implementations.
++  Save/load callbacks run on a separate thread while the emulation thread is
++  idle, matching the desktop's guarded handoff. CPU clocks and registers must
++  remain unchanged during each snapshot, and no duplicate stop packet is sent.
++  A bounded scheduler-event guard makes the original hang fail immediately;
++  CTest also imposes a ten-second timeout.
+ 
+ Only the test translation units use `-fno-access-control` to inspect protocol
+-state; assertions remain enabled in release builds with `-UNDEBUG`. The ares
++state. Each test undefines `NDEBUG` after including nall and before `<cassert>`:
++nall's build-mode header otherwise redefines it despite `-UNDEBUG`. The ares
+ Clang/GCC toolchains are supported. This preparation was run on macOS arm64;
+ Linux/Windows execution remains before runtime promotion.
+ 
+diff --git a/tests/gdb/gdb-boundaries.cpp b/tests/gdb/gdb-boundaries.cpp
+index d907ea945..910da5c16 100644
+--- a/tests/gdb/gdb-boundaries.cpp
++++ b/tests/gdb/gdb-boundaries.cpp
+@@ -1,6 +1,8 @@
+ #include <nall/nall.hpp>
+ #include <nall/main.hpp>
+ #include <nall/gdb/server.cpp>
++// nall defines NDEBUG from BUILD_RELEASE even when the compiler uses -UNDEBUG.
++#undef NDEBUG
+ #include <cassert>
+ #include <iostream>
+ using namespace nall;
+diff --git a/tests/gdb/gdb-memory-packets.cpp b/tests/gdb/gdb-memory-packets.cpp
+index 86f5f4ea4..e275c4e1a 100644
+--- a/tests/gdb/gdb-memory-packets.cpp
++++ b/tests/gdb/gdb-memory-packets.cpp
+@@ -1,6 +1,8 @@
+ #include <nall/nall.hpp>
+ #include <nall/main.hpp>
+ #include <nall/gdb/server.cpp>
++// nall defines NDEBUG from BUILD_RELEASE even when the compiler uses -UNDEBUG.
++#undef NDEBUG
+ #include <cassert>
+ #include <iostream>
+ using namespace nall;
+diff --git a/tests/gdb/gdb-registers.cpp b/tests/gdb/gdb-registers.cpp
+index c99883115..e4101ab07 100644
+--- a/tests/gdb/gdb-registers.cpp
++++ b/tests/gdb/gdb-registers.cpp
+@@ -4,6 +4,8 @@
+ using namespace nall;
+ #include <ares/types.hpp>
+ #include <component/processor/wdc65816/wdc65816.hpp>
++// nall defines NDEBUG from BUILD_RELEASE even when the compiler uses -UNDEBUG.
++#undef NDEBUG
+ #include <cassert>
+ #include <iostream>
+ using namespace nall;
+diff --git a/tests/gdb/gdb-states.cpp b/tests/gdb/gdb-states.cpp
+new file mode 100644
+index 000000000..7fb10e783
+--- /dev/null
++++ b/tests/gdb/gdb-states.cpp
+@@ -0,0 +1,140 @@
++#include <sfc/sfc.hpp>
++#include <nall/gdb/server.hpp>
++#include <nall/main.hpp>
++// nall defines NDEBUG from BUILD_RELEASE even when the compiler uses -UNDEBUG.
++#undef NDEBUG
++#include <cassert>
++#include <cstdlib>
++#include <iostream>
++#include <thread>
++using namespace ares;
++using namespace ares::SuperFamicom;
++using nall::GDB::server;
++
++struct TestPlatform : ares::Platform {
++  unsigned steps = 0;
++  const char* operation = "attach";
++
++  auto pak(Node::Object) -> std::shared_ptr<vfs::directory> override {
++    return std::make_shared<vfs::directory>();
++  }
++
++  auto event(Event event) -> void override {
++    // Fail deterministically if serialization keeps yielding the same GDB stop.
++    if(event == Event::Step && ++steps > 8) {
++      std::cerr << "FAIL: GDB pause loop blocked " << operation << '\n';
++      std::_Exit(EXIT_FAILURE);
++    }
++  }
++
++  auto begin(const char* name) -> void {
++    operation = name;
++    steps = 0;
++  }
++};
++
++auto command(const string& packet) -> string {
++  bool reply = true;
++  return server.processCommand(packet, reply);
++}
++
++auto runToStop(TestPlatform& host) -> void {
++  host.begin("run to stop");
++  for(unsigned frames = 0; frames < 4; ++frames) {
++    SuperFamicom::system.run();
++    if(server.isHalted()) return;
++  }
++  assert(false && "core did not stop");
++}
++
++auto snapshot(Node::System root, TestPlatform& host) -> serializer {
++  host.begin("synchronized save/undo snapshot");
++  auto pc = cpu.r.pc.d;
++  auto clocks = cpu.counter.cpu;
++  auto registers = command("g");
++  server.sendBuffer.clear();
++  // The desktop transfers control from its guarded worker to the UI thread.
++  serializer state;
++  std::thread([&] { state = root->serialize(); }).join();
++  assert(state && server.isHalted());
++  assert(cpu.r.pc.d == pc && cpu.counter.cpu == clocks);
++  assert(command("g") == registers && server.sendBuffer.empty());
++  return state;
++}
++
++auto restore(Node::System root, serializer& state) -> void {
++  state.setReading();
++  std::thread([&] { assert(root->unserialize(state)); }).join();
++  assert(server.isHalted() && server.sendBuffer.empty());
++  assert(command("?") == "T05");
++}
++
++auto nall::main(Arguments arguments) -> void {
++  TestPlatform host;
++  platform = &host;
++  ppu.setAccurate(arguments.find("accurate"));
++  option("Deterministic Entropy", "true");
++  Node::System root;
++  assert(load(root, "[Nintendo] Super Famicom (NTSC)"));
++
++  // Tiny in-memory program: INX; INX; BRA back. No ROM or firmware files.
++  u8 rom[0x8000]{};
++  rom[0] = 0xe8; rom[1] = 0xe8; rom[2] = 0x80; rom[3] = 0xfc;
++  rom[0x7ffd] = 0x80;
++  bool wai = arguments.find("wai"), stp = arguments.find("stp");
++  if(wai || stp) rom[0] = wai ? 0xcb : 0xdb;
++  bus.map([&](n24 address, n8) -> n8 { return rom[address & 0x7fff]; },
++    [](n24, n8) {}, "00:8000-ffff");
++  root->power(false);
++  server.onConnect();
++  command("?");
++  runToStop(host);
++  assert(cpu.r.pc.d == 0x8000);
++  if(wai || stp) {
++    command("s");
++    runToStop(host);
++    assert(cpu.r.pc.d == 0x8001 && cpu.r.wai == wai && cpu.r.stp == stp);
++  }
++
++  cpu.wram[0] = 0x12;
++  auto savedPC = cpu.r.pc.d;
++  auto savedX = cpu.r.x.w;
++  auto saved = snapshot(root, host);
++  // Repeated save must work even when the scheduler last synchronized an auxiliary thread.
++  snapshot(root, host);
++  if(!wai && !stp) {
++    command("s");
++    runToStop(host);
++    assert(cpu.r.pc.d == 0x8001 && cpu.r.x.w == savedX + 1);
++  }
++  cpu.wram[0] = 0x34;
++  auto undoPC = cpu.r.pc.d;
++  auto undoX = cpu.r.x.w;
++  auto undo = snapshot(root, host); // Program::stateLoad saves this before loading.
++  assert(command({"Z0,", hex(savedPC), ",1"}) == "OK");
++  restore(root, saved);
++  assert(cpu.r.pc.d == savedPC && cpu.r.x.w == savedX && cpu.wram[0] == 0x12);
++  assert(cpu.r.wai == wai && cpu.r.stp == stp);
++  snapshot(root, host);
++  restore(root, undo); // Program::undoStateLoad uses the same unserialize callback.
++  assert(cpu.r.pc.d == undoPC && cpu.r.x.w == undoX && cpu.wram[0] == 0x34);
++  restore(root, saved);
++
++  command("s");
++  runToStop(host);
++  if(wai || stp) {
++    assert(cpu.r.pc.d == savedPC && cpu.r.x.w == savedX);
++    assert(cpu.r.wai == wai && cpu.r.stp == stp);
++  } else {
++    // The restored breakpoint is skipped once, so one INX actually executes.
++    assert(cpu.r.pc.d == savedPC + 1 && cpu.r.x.w == savedX + 1);
++    command("c");
++    runToStop(host);
++    assert(cpu.r.pc.d == savedPC); // breakpoint still fires on the next loop
++  }
++
++  server.onDisconnect();
++  server.reset();
++  root->unload();
++  std::cout << "PASS: paused save/load/undo, stable registers and CPU clocks, restored breakpoint and step\n";
++}
+diff --git a/tests/gdb/gdb-storage.cpp b/tests/gdb/gdb-storage.cpp
+index 5ae00b9bd..f57ba55a4 100644
+--- a/tests/gdb/gdb-storage.cpp
++++ b/tests/gdb/gdb-storage.cpp
+@@ -1,6 +1,8 @@
+ #include <sfc/sfc.hpp>
+ #include <nall/gdb/server.hpp>
+ #include <nall/main.hpp>
++// nall defines NDEBUG from BUILD_RELEASE even when the compiler uses -UNDEBUG.
++#undef NDEBUG
+ #include <cassert>
+ #include <iostream>
+ using namespace ares;
+diff --git a/tests/gdb/run-tests.sh b/tests/gdb/run-tests.sh
+index 0f61b7dca..1d373dd08 100755
+--- a/tests/gdb/run-tests.sh
++++ b/tests/gdb/run-tests.sh
+@@ -6,4 +6,4 @@ build_dir=${1:-../../build}
+ if [ "$#" -gt 0 ]; then shift; fi
+ configuration=${CONFIGURATION:-Release}
+ cmake --build "$build_dir" --config "$configuration" --target gdb-tests
+-ctest --test-dir "$build_dir" -C "$configuration" --output-on-failure -R '^gdb-(registers|memory-packets|storage|boundaries)$' "$@"
++ctest --test-dir "$build_dir" -C "$configuration" --output-on-failure -R '^gdb-(registers|memory-packets|storage|boundaries|states.*)$' "$@"
+-- 
+2.55.0
+

@@ -2,7 +2,7 @@ export * from "./assembler.js";
 export type { AssemblyStageName } from "./plugin/contracts.js";
 export type { PushPcStackEntry } from "./services/directive-runtime-service.js";
 export type { MacroDefinition } from "./services/macro-engine.js";
-export type { StructDefinition } from "./services/struct-engine.js";
+export type { StructDefinition, StructField } from "./services/struct-engine.js";
 export type { LabelEntry } from "./services/symbol-scope-service.js";
 export * from "./architecture-types.js";
 export * from "./decoder-types.js";

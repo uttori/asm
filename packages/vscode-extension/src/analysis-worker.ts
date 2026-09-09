@@ -1,14 +1,21 @@
+import { createHash } from "node:crypto";
+import {
+  analyzeSnesFunctionRoles,
+  validateSnesHeuristicConfiguration,
+} from "@uttori/asm-plugin-snes";
 import { parentPort } from "node:worker_threads";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
-  loadAnalysisProject,
+  loadAnalysisProjectSnapshot,
+  AnalysisSourceIndex,
+  type AnalysisSourceGroup,
   migrateManifest,
   buildRomCoverageMap,
   buildAnalysisCallGraph,
   buildInstructionAnalysisAnnotations,
   HalfOpenIntervalIndex,
-  type LoadedAnalysisProject,
+  type AnalysisProjectSnapshot,
   type RomCoverageMap,
   type InstructionAnalysisAnnotation,
 } from "@uttori/asm-disassembler";
@@ -20,12 +27,26 @@ import {
 } from "./analysis-annotation-index.js";
 import { formatInstructionAnnotationSummary } from "./analysis-annotation-format.js";
 
+import {
+  annotationFileSignature,
+  lookupDisassemblyAnnotation,
+  saveDisassemblyAnnotation,
+  type AnnotationLookup,
+  type AnnotationSave,
+} from "./disassembly-annotation-data.js";
+
+import { projectAnalysisNavigation } from "./analysis-navigation-data.js";
+import type { AnalysisGraphNavigationTarget } from "./analysis-graph-tree.js";
+import { readAnalysisSourceCatalog } from "./analysis-sources-data.js";
+
 let current:
   | {
       directory: string;
       revision: string;
-      project: LoadedAnalysisProject;
+      project: AnalysisProjectSnapshot;
+      shardSignature: string;
       coverage?: RomCoverageMap;
+      sources?: AnalysisSourceIndex;
       instructions?: readonly InstructionAnalysisAnnotation[];
       index?: InstructionAnnotationIndex;
     }
@@ -42,7 +63,20 @@ export interface AnalysisWorkerRequest {
     | "details"
     | "graph"
     | "annotations"
-    | "debugAnnotations";
+    | "debugAnnotations"
+    | "annotationLookup"
+    | "annotationSave"
+    | "heuristics"
+    | "navigation"
+    | "sources"
+    | "sourceSummary"
+    | "sourceEntries";
+  readonly navigationTarget?: AnalysisGraphNavigationTarget;
+  readonly sourceId?: string;
+  readonly baselineIds?: readonly string[];
+  readonly sourceGroup?: AnalysisSourceGroup;
+  readonly annotationLookup?: AnnotationLookup;
+  readonly annotationSave?: AnnotationSave;
   readonly offset?: number;
   readonly ranges?: readonly DebugMapRange[];
 }
@@ -54,18 +88,101 @@ export interface AnalysisWorkerRequest {
  */
 const request = (message: AnalysisWorkerRequest): unknown => {
   if (message.operation === "clear") {
-    current = undefined;
+    // Refresh derived views, but keep validated shards until their files actually change.
+    if (current) {
+      current.coverage = undefined;
+      current.sources = undefined;
+      current.instructions = undefined;
+      current.index = undefined;
+    }
     return undefined;
   }
+  if (message.operation === "sources") return readAnalysisSourceCatalog(message.directory);
   const revision = fs.readFileSync(path.join(message.directory, "analysis.json"), "utf8");
   if (message.operation === "manifest") return migrateManifest(JSON.parse(revision));
-  if (!current || current.directory !== message.directory || current.revision !== revision)
+  const shardSignature = (): string =>
+    current!.project.manifest.shards
+      .map(({ path: file }) => annotationFileSignature(path.join(message.directory, file)))
+      .join("|");
+  if (
+    !current ||
+    current.directory !== message.directory ||
+    current.revision !== revision ||
+    current.shardSignature !== shardSignature()
+  ) {
+    // Release the previous project and projections before loading a new multi-gigabyte revision.
+    current = undefined;
     current = {
       directory: message.directory,
       revision,
-      project: loadAnalysisProject(message.directory),
+      project: loadAnalysisProjectSnapshot(message.directory),
+      shardSignature: "",
     };
+    current.shardSignature = shardSignature();
+  }
   const { project } = current;
+  if (message.operation === "navigation") {
+    if (!message.navigationTarget) throw new Error("Choose an analysis location.");
+    return projectAnalysisNavigation(project, message.navigationTarget);
+  }
+  if (message.operation === "sourceSummary" || message.operation === "sourceEntries") {
+    if (!message.sourceId) throw new Error("Choose a source to inspect.");
+    current.sources ??= new AnalysisSourceIndex(project.manifest, project.shards);
+    if (message.operation === "sourceSummary")
+      return {
+        manifest: project.manifest,
+        comparison: current.sources.compare(message.sourceId, message.baselineIds),
+      };
+    if (!message.sourceGroup) throw new Error("Choose a source contribution group.");
+    return current.sources.page(
+      message.sourceId,
+      message.sourceGroup,
+      message.offset,
+      message.baselineIds,
+    );
+  }
+  if (message.operation === "annotationLookup") {
+    if (!message.annotationLookup) throw new Error("Missing annotation lookup.");
+    return lookupDisassemblyAnnotation(project, message.annotationLookup);
+  }
+  if (message.operation === "annotationSave") {
+    if (!message.annotationSave) throw new Error("Missing annotation edit.");
+    const saved = saveDisassemblyAnnotation(message.directory, project, message.annotationSave);
+    try {
+      const published = fs.readFileSync(path.join(message.directory, "analysis.json"), "utf8");
+      // A subsequent writer may publish before we observe the manifest again.
+      if (
+        createHash("sha256").update(published).digest("hex") ===
+        saved.snapshot.revision.manifestSha256
+      ) {
+        current = {
+          directory: message.directory,
+          revision: published,
+          project: saved.snapshot,
+          shardSignature: "",
+        };
+        current.shardSignature = shardSignature();
+      } else current = undefined;
+    } catch {
+      // Publication succeeded; an optional cache refresh must not report the save as failed.
+      current = undefined;
+    }
+    return saved.inverse;
+  }
+  if (message.operation === "heuristics") {
+    if (project.manifest.target !== "snes.sfc")
+      throw new Error("Function heuristics require a SNES analysis project.");
+    const file = path.join(message.directory, "heuristics.json");
+    const config = validateSnesHeuristicConfiguration(
+      fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {},
+    );
+    const result = analyzeSnesFunctionRoles(project.shards, config);
+    return {
+      enabled: config.enabled !== false,
+      total: result.roles.length,
+      roles: result.roles.slice(0, 500),
+    };
+  }
   if (["coverage", "segments", "details"].includes(message.operation)) {
     const map = (current.coverage ??= buildRomCoverageMap(project.manifest, project.shards));
     if (message.operation === "coverage")
@@ -193,13 +310,24 @@ const request = (message: AnalysisWorkerRequest): unknown => {
   return output;
 };
 
-parentPort?.on("message", (message: AnalysisWorkerRequest) => {
+const handleMessage = (message: AnalysisWorkerRequest): void => {
+  const send = (response: unknown): void => {
+    if (parentPort) parentPort.postMessage(response);
+    else process.send?.(response as Parameters<NonNullable<typeof process.send>>[0]);
+  };
   try {
-    parentPort!.postMessage({ id: message.id, value: request(message) });
+    send({ id: message.id, value: request(message) });
   } catch (error) {
-    parentPort!.postMessage({
+    send({
       id: message.id,
       error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
     });
   }
-});
+};
+
+if (parentPort) parentPort.on("message", handleMessage);
+else {
+  process.on("message", handleMessage);
+  process.on("disconnect", () => process.exit(0));
+}

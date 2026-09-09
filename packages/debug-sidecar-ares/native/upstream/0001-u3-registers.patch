@@ -1,0 +1,417 @@
+From 7c8a322f8d6bb9e3ea4c054abd7441a9573ac242 Mon Sep 17 00:00:00 2001
+From: Matthew Callis <matthew.callis@gmail.com>
+Date: Tue, 8 Sep 2026 09:39:19 -0700
+Subject: [PATCH] sfc: describe and read or write 65816 registers over RSP
+
+---
+ CMakeLists.txt              |  2 +
+ ares/sfc/CMakeLists.txt     |  1 +
+ ares/sfc/system/gdb.cpp     | 94 +++++++++++++++++++++++++++++++++++++
+ ares/sfc/system/system.cpp  |  3 ++
+ nall/nall/gdb/server.cpp    | 42 +++++++++++++++--
+ nall/nall/gdb/server.hpp    |  1 +
+ tests/gdb/CMakeLists.txt    | 23 +++++++++
+ tests/gdb/README.md         | 27 +++++++++++
+ tests/gdb/gdb-registers.cpp | 67 ++++++++++++++++++++++++++
+ tests/gdb/run-tests.sh      |  9 ++++
+ 10 files changed, 265 insertions(+), 4 deletions(-)
+ create mode 100644 ares/sfc/system/gdb.cpp
+ create mode 100644 tests/gdb/CMakeLists.txt
+ create mode 100644 tests/gdb/README.md
+ create mode 100644 tests/gdb/gdb-registers.cpp
+ create mode 100755 tests/gdb/run-tests.sh
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 0cb69e935..2984f04c1 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -35,6 +35,7 @@ if(ARES_BUILD_OPTIONAL_TARGETS)
+   add_subdirectory(tests/armv6m)
+   add_subdirectory(tests/i8080)
+   add_subdirectory(tests/m68000)
++  add_subdirectory(tests/gdb)
+   if(HIRO_BACKEND STREQUAL "GTK3")
+     add_subdirectory(tools/genius)
+   else()
+@@ -46,6 +47,7 @@ else()
+   target_disable_subproject(armv6m "armv6m processor test harness")
+   target_disable_subproject(i8080 "i8080 processor test harness")
+   target_disable_subproject(m68000 "m68000 processor test harness")
++  target_disable_subproject(gdb-tests "GDB register, storage, and lifecycle tests")
+   target_disable_subproject(mame2bml "mame2bml (MAME manifest converter)")
+   target_disable_subproject(genius "genius (database editor)")
+ endif()
+diff --git a/ares/sfc/CMakeLists.txt b/ares/sfc/CMakeLists.txt
+index e154b017c..62c321781 100644
+--- a/ares/sfc/CMakeLists.txt
++++ b/ares/sfc/CMakeLists.txt
+@@ -288,6 +288,7 @@ ares_add_sources(
+   CORE #
+     sfc
+   INCLUDED #
++    system/gdb.cpp
+     system/controls.cpp
+     system/serialization.cpp
+     system/system.hpp
+diff --git a/ares/sfc/system/gdb.cpp b/ares/sfc/system/gdb.cpp
+new file mode 100644
+index 000000000..b5ef63c2e
+--- /dev/null
++++ b/ares/sfc/system/gdb.cpp
+@@ -0,0 +1,94 @@
++// The register description is for 65816-aware RSP consumers. Stock GDB has no
++// current 65816 target backend; XML does not add a disassembler or an ABI.
++namespace {
++auto gdbRegisterBytes(u64 value, u32 size) -> string {
++  string result;
++  for(u32 byte : range(size)) result.append(hex(value >> (byte * 8) & 0xff, 2, '0'));
++  return result;
++}
++
++auto normalizeGdbRegisters() -> void {
++  if(cpu.r.e) {
++    cpu.r.p.m = 1;
++    cpu.r.p.x = 1;
++    cpu.r.s.h = 1;
++  }
++  if(cpu.r.p.x) {
++    cpu.r.x.h = 0;
++    cpu.r.y.h = 0;
++  }
++}
++
++auto installGdbHooks() -> void {
++  using nall::GDB::server;
++  server.hooks.registersLittleEndian = true;
++  server.hooks.targetXML = []() -> string {
++    return "<target version=\"1.0\">"
++      "<feature name=\"dev.ares.wdc65816.core\">"
++        "<reg name=\"a\" bitsize=\"16\" regnum=\"0\" group=\"general\"/>"
++        "<reg name=\"x\" bitsize=\"16\" regnum=\"1\" group=\"general\"/>"
++        "<reg name=\"y\" bitsize=\"16\" regnum=\"2\" group=\"general\"/>"
++        "<reg name=\"s\" bitsize=\"16\" regnum=\"3\" group=\"general\"/>"
++        "<reg name=\"d\" bitsize=\"16\" regnum=\"4\" group=\"general\"/>"
++        "<reg name=\"db\" bitsize=\"8\" regnum=\"5\" group=\"general\"/>"
++        "<reg name=\"pb\" bitsize=\"8\" regnum=\"6\" group=\"general\"/>"
++        "<reg name=\"pc\" bitsize=\"16\" regnum=\"7\" group=\"general\"/>"
++        "<reg name=\"p\" bitsize=\"8\" regnum=\"8\" group=\"general\"/>"
++        "<reg name=\"e\" bitsize=\"8\" regnum=\"9\" group=\"general\"/>"
++      "</feature>"
++    "</target>";
++  };
++  server.hooks.regRead = [](u32 index) -> string {
++    switch(index) {
++      case 0: return gdbRegisterBytes(cpu.r.a.w, 2);
++      case 1: return gdbRegisterBytes(cpu.r.x.w, 2);
++      case 2: return gdbRegisterBytes(cpu.r.y.w, 2);
++      case 3: return gdbRegisterBytes(cpu.r.s.w, 2);
++      case 4: return gdbRegisterBytes(cpu.r.d.w, 2);
++      case 5: return gdbRegisterBytes(cpu.r.b, 1);
++      case 6: return gdbRegisterBytes(cpu.r.pc.b, 1);
++      case 7: return gdbRegisterBytes(cpu.r.pc.w, 2);
++      case 8: return gdbRegisterBytes(cpu.r.p, 1);
++      case 9: return gdbRegisterBytes(cpu.r.e, 1);
++    }
++    return {};
++  };
++  server.hooks.regReadGeneral = []() -> string {
++    string result;
++    for(u32 index : range(10)) result.append(server.hooks.regRead(index));
++    return result;
++  };
++  server.hooks.regWrite = [](u32 index, u64 value) -> bool {
++    switch(index) {
++      case 0: cpu.r.a.w = value; break;
++      case 1: cpu.r.x.w = value; break;
++      case 2: cpu.r.y.w = value; break;
++      case 3: cpu.r.s.w = value; break;
++      case 4: cpu.r.d.w = value; break;
++      case 5: cpu.r.b = value; break;
++      case 6: cpu.r.pc.b = value; break;
++      case 7: cpu.r.pc.w = value; break;
++      case 8: cpu.r.p = value; break;
++      case 9: cpu.r.e = value & 1; break;
++      default: return false;
++    }
++    normalizeGdbRegisters();
++    return true;
++  };
++  server.hooks.regWriteGeneral = [](const string& data) -> void {
++    // Decode the whole validated packet first: E/P determine the final widths.
++    u64 values[10]{};
++    u32 offset = 0;
++    for(u32 index : range(10)) {
++      u32 size = index < 5 || index == 7 ? 2 : 1;
++      for(u32 byte : range(size)) values[index] |= data.slice(offset + byte * 2, 2).hex() << (byte * 8);
++      offset += size * 2;
++    }
++    cpu.r.a.w = values[0]; cpu.r.x.w = values[1]; cpu.r.y.w = values[2];
++    cpu.r.s.w = values[3]; cpu.r.d.w = values[4]; cpu.r.b = values[5];
++    cpu.r.pc.b = values[6]; cpu.r.pc.w = values[7];
++    cpu.r.p = values[8]; cpu.r.e = values[9] & 1;
++    normalizeGdbRegisters();
++  };
++}
++}
+diff --git a/ares/sfc/system/system.cpp b/ares/sfc/system/system.cpp
+index f8d12a37d..8fa1b9357 100644
+--- a/ares/sfc/system/system.cpp
++++ b/ares/sfc/system/system.cpp
+@@ -1,4 +1,5 @@
+ #include <sfc/sfc.hpp>
++#include <nall/gdb/server.hpp>
+ #include <algorithm>
+ 
+ namespace ares::SuperFamicom {
+@@ -27,6 +28,7 @@ Scheduler scheduler;
+ System system;
+ #include "controls.cpp"
+ #include "serialization.cpp"
++#include "gdb.cpp"
+ 
+ auto System::game() -> string {
+   #if defined(CORE_GB)
+@@ -97,6 +99,7 @@ auto System::load(Node::System& root, string name) -> bool {
+   bus.reset();
+   controls.load(node);
+   cpu.load(node);
++  installGdbHooks();
+   smp.load(node);
+   dsp.load(node);
+   ppu.load(node);
+diff --git a/nall/nall/gdb/server.cpp b/nall/nall/gdb/server.cpp
+index 9e718685a..348a35a9f 100644
+--- a/nall/nall/gdb/server.cpp
++++ b/nall/nall/gdb/server.cpp
+@@ -161,7 +161,12 @@ namespace nall::GDB {
+ 
+       case 'G': // set all general registers
+         if(hooks.regWriteGeneral) {
+-          hooks.regWriteGeneral(cmd.slice(1));
++          auto data = cmd.slice(1);
++          if(hooks.registersLittleEndian) {
++            if(!hooks.regReadGeneral || data.size() != hooks.regReadGeneral().size()) return "E00";
++            for(char c : data) if(!std::isxdigit(static_cast<unsigned char>(c))) return "E00";
++          }
++          hooks.regWriteGeneral(data);
+           return "OK";
+         }
+       break;
+@@ -231,8 +236,23 @@ namespace nall::GDB {
+           auto sepIdxMaybe = cmdName.find("=");
+           u32 sepIdx = sepIdxMaybe ? sepIdxMaybe.get() : 1;
+           
+-          u32 regIdx = static_cast<u32>(cmdName.slice(1, sepIdx-1).hex());
+-          u64 regValue = cmdName.slice(sepIdx+1).hex();
++          auto index = cmdName.slice(1, sepIdx-1);
++          if(hooks.registersLittleEndian) {
++            if(!sepIdxMaybe || !index || index.size() > 8) return "E00";
++            for(char c : index) if(!std::isxdigit(static_cast<unsigned char>(c))) return "E00";
++          }
++          u32 regIdx = static_cast<u32>(index.hex());
++          auto data = cmdName.slice(sepIdx+1);
++          u64 regValue = data.hex();
++          if(hooks.registersLittleEndian) {
++            if(!sepIdxMaybe || !hooks.regRead || data.size() == 0 || data.size() > 16
++            || data.size() % 2 || data.size() != hooks.regRead(regIdx).size()) return "E00";
++            for(char c : data) if(!std::isxdigit(static_cast<unsigned char>(c))) return "E00";
++            regValue = 0;
++            for(u32 byte : range(data.size() / 2)) {
++              regValue |= data.slice(byte * 2, 2).hex() << (byte * 8);
++            }
++          }
+ 
+           return hooks.regWrite(regIdx, regValue) ? "OK" : "E00";
+         }
+@@ -267,7 +287,20 @@ namespace nall::GDB {
+           if(cmdParts[1] == "features" && cmdParts[2] == "read") {
+             // informs the client about arch/registers (https://sourceware.org/gdb/onlinedocs/gdb/Target-Description-Format.html#Target-Description-Format)
+             if(cmdParts[3] == "target.xml") {
+-              return hooks.targetXML ? string{"l", hooks.targetXML()} : string{""};
++              if(!hooks.targetXML) return "";
++              auto bounds = nall::split(cmdParts[4], ",");
++              if(bounds.size() != 2) return "E00";
++              for(auto& bound : bounds) {
++                if(!bound || bound.size() > 16) return "E00";
++                for(char c : bound) if(!std::isxdigit(static_cast<unsigned char>(c))) return "E00";
++              }
++              auto offset = bounds[0].hex();
++              auto length = bounds[1].hex();
++              if(!length) return "E00";
++              auto xml = hooks.targetXML();
++              if(offset >= xml.size()) return "l";
++              length = min<u64>(length, min<u64>(xml.size() - offset, MAX_PACKET_SIZE - 1));
++              return {offset + length < xml.size() ? "m" : "l", xml.slice(offset, length)};
+             }
+           }
+         }
+@@ -544,6 +577,7 @@ namespace nall::GDB {
+     hooks.read = nullptr;
+     hooks.write = nullptr;
+     hooks.normalizeAddress = nullptr;
++    hooks.registersLittleEndian = false;
+     hooks.regReadGeneral = nullptr;
+     hooks.regWriteGeneral = nullptr;
+     hooks.regRead = nullptr;
+diff --git a/nall/nall/gdb/server.hpp b/nall/nall/gdb/server.hpp
+index 37798f10c..57f27f410 100644
+--- a/nall/nall/gdb/server.hpp
++++ b/nall/nall/gdb/server.hpp
+@@ -73,6 +73,7 @@ class Server : public nall::TCPText::Server {
+       std::function<u64(u64 address)> normalizeAddress{};
+ 
+       // Registers
++      bool registersLittleEndian = false;
+       std::function<string()> regReadGeneral{};
+       std::function<void(const string &regData)> regWriteGeneral{};
+       std::function<string(u32 regIdx)> regRead{};
+diff --git a/tests/gdb/CMakeLists.txt b/tests/gdb/CMakeLists.txt
+new file mode 100644
+index 000000000..3fa212b44
+--- /dev/null
++++ b/tests/gdb/CMakeLists.txt
+@@ -0,0 +1,23 @@
++if(NOT sfc IN_LIST ARES_CORES)
++  target_disable_subproject(gdb-tests "GDB register, storage, and lifecycle tests")
++  return()
++endif()
++
++set(gdb_targets gdb-registers)
++foreach(target IN LISTS gdb_targets)
++  add_executable(${target} ${target}.cpp)
++  target_include_directories(${target} PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/ares)
++  target_link_libraries(${target} PRIVATE ares::nall)
++  # Inspect protocol state only in the test translation unit. Keep assertions in release builds.
++  target_compile_options(${target} PRIVATE -fno-access-control -UNDEBUG)
++  set_target_properties(${target} PROPERTIES FOLDER tests PREFIX "")
++  set(CONSOLE TRUE)
++  ares_configure_executable(${target})
++  add_test(NAME ${target} COMMAND ${target})
++  set_tests_properties(${target} PROPERTIES TIMEOUT 10)
++  source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${target}.cpp)
++endforeach()
++
++add_custom_target(gdb-tests DEPENDS ${gdb_targets})
++target_sources(gdb-tests PRIVATE run-tests.sh README.md)
++target_enable_subproject(gdb-tests "GDB register, storage, and lifecycle tests")
+diff --git a/tests/gdb/README.md b/tests/gdb/README.md
+new file mode 100644
+index 000000000..7e46d912a
+--- /dev/null
++++ b/tests/gdb/README.md
+@@ -0,0 +1,27 @@
++# Native GDB regression checks
++
++The C++ checks compile actual server/core sources, use the ares CMake build,
++and run through CTest. No Node.js, private trace packets, or commercial ROMs
++are needed. Enable `ARES_BUILD_OPTIONAL_TARGETS` with `sfc` in `ARES_CORES`:
++
++```sh
++cmake -S . -B build -DARES_BUILD_OPTIONAL_TARGETS=ON -DARES_CORES=sfc
++tests/gdb/run-tests.sh /absolute/path/to/build
++```
++
++The shell launcher builds `gdb-tests` and runs the matching CTest cases. Additional
++CTest arguments follow the build-directory argument, for example `--verbose`.
++For multi-configuration generators, `CONFIGURATION=Debug` selects the same build
++and test configuration (default: Release). Compiler selection, include
++paths, platform libraries, and the core profile come from the normal ares build.
++
++- `gdb-registers` checks 65816 register layout and normalization with actual
++  WDC65816 register types and a register-only CPU fixture.
++
++Only the test translation units use `-fno-access-control` to inspect protocol
++state; assertions remain enabled in release builds with `-UNDEBUG`. The ares
++Clang/GCC toolchains are supported. This preparation was run on macOS arm64;
++Linux/Windows execution remains before runtime promotion.
++
++The register contract targets 65816-aware RSP clients. Stock GDB has no 65816
++architecture backend, and XML alone does not add one.
+diff --git a/tests/gdb/gdb-registers.cpp b/tests/gdb/gdb-registers.cpp
+new file mode 100644
+index 000000000..c99883115
+--- /dev/null
++++ b/tests/gdb/gdb-registers.cpp
+@@ -0,0 +1,67 @@
++#include <nall/nall.hpp>
++#include <nall/main.hpp>
++#include <nall/gdb/server.cpp>
++using namespace nall;
++#include <ares/types.hpp>
++#include <component/processor/wdc65816/wdc65816.hpp>
++#include <cassert>
++#include <iostream>
++using namespace nall;
++namespace ares::SuperFamicom {
++struct { WDC65816::Registers r; } cpu;
++struct { auto power(bool) -> void {} } system;
++#include <sfc/system/gdb.cpp>
++}
++using namespace ares::SuperFamicom;
++auto command(const string& packet) -> string {
++  bool reply = true;
++  return nall::GDB::server.processCommand(packet, reply);
++}
++auto nall::main(Arguments) -> void {
++  using nall::GDB::server;
++  installGdbHooks();
++  cpu.r.p = 0; cpu.r.e = 0;
++  assert(command("P0=3412") == "OK" && cpu.r.a.w == 0x1234);
++  assert(command("p0") == "3412");
++  assert(command("P5=ab") == "OK" && cpu.r.b == 0xab);
++  assert(command("P6=7e") == "OK");
++  assert(command("P7=0080") == "OK" && cpu.r.pc.d == 0x7e8000);
++  for(auto invalid : {"P0=12", "P0=zzzz", "P0=123456", "P0", "Pa=0000", "Pz=3412", "P100000000=3412"}) assert(command(invalid) == "E00");
++  assert(cpu.r.a.w == 0x1234);
++  assert(command("P1=cdab") == "OK");
++  assert(command("P2=efbe") == "OK");
++  assert(command("P3=4523") == "OK");
++  assert(command("P9=01") == "OK");
++  assert(cpu.r.p.m && cpu.r.p.x && cpu.r.s.w == 0x0145);
++  assert(cpu.r.x.w == 0xcd && cpu.r.y.w == 0xef);
++  assert(cpu.r.a.w == 0x1234); // 8-bit accumulator mode preserves B.
++  auto original = command("g");
++  assert(original.size() == 32);
++  assert(command("G00") == "E00" && command("g") == original);
++  assert(command("Gzzzz0000000000000000000000000000") == "E00" && command("g") == original);
++  assert(command("G3412cdabefbe45236745017e00800000") == "OK");
++  assert(cpu.r.x.w == 0xabcd && cpu.r.y.w == 0xbeef && cpu.r.s.w == 0x2345 && !cpu.r.e);
++  assert(command("g") == "3412cdabefbe45236745017e00800000");
++  assert(command("G3412cdabefbe45236745017e00800001") == "OK");
++  assert(cpu.r.x.w == 0xcd && cpu.r.y.w == 0xef && cpu.r.s.w == 0x145 && cpu.r.e);
++  auto xml = server.hooks.targetXML();
++  string combined;
++  for(u32 offset = 0; offset < xml.size(); offset += 7) {
++    auto part = command({"qXfer:features:read:target.xml:", hex(offset), ",7"});
++    assert(part.size() <= 8);
++    assert(part(0) == (offset + 7 < xml.size() ? 'm' : 'l'));
++    combined.append(part.slice(1));
++  }
++  assert(combined == xml && !xml.find("uttori"));
++  assert(command("qXfer:features:read:target.xml:ffffffffffffffff,7") == "l");
++  assert(command("qXfer:features:read:target.xml:0,0") == "E00");
++  assert(command("qXfer:features:read:target.xml:no,7") == "E00");
++  assert(command("qXfer:features:read:missing.xml:0,7") == "");
++  server.reset();
++  assert(!server.hooks.registersLittleEndian && !server.hooks.regRead);
++  // The existing big-endian numeric write callback contract remains intact.
++  u64 seen = 0;
++  server.hooks.regWrite = [&](u32, u64 value) { seen = value; return true; };
++  assert(command("P0=12345678") == "OK" && seen == 0x12345678);
++  std::cout << "PASS U3: little-endian p/P/g/G, banked PC, E/M/X invariants, atomic validation, chunked XML, reset, big-endian compatibility\n";
++}
+diff --git a/tests/gdb/run-tests.sh b/tests/gdb/run-tests.sh
+new file mode 100755
+index 000000000..0f61b7dca
+--- /dev/null
++++ b/tests/gdb/run-tests.sh
+@@ -0,0 +1,9 @@
++#!/usr/bin/env sh
++set -eu
++
++cd "$(dirname "$0")"
++build_dir=${1:-../../build}
++if [ "$#" -gt 0 ]; then shift; fi
++configuration=${CONFIGURATION:-Release}
++cmake --build "$build_dir" --config "$configuration" --target gdb-tests
++ctest --test-dir "$build_dir" -C "$configuration" --output-on-failure -R '^gdb-(registers|memory-packets|storage|boundaries)$' "$@"

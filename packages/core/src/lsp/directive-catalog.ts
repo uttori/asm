@@ -120,20 +120,60 @@ export const directiveCatalog: DirectiveDescriptor[] = [
       syntax: 'table "file",rtl',
     },
   ]),
-  descriptor("struct", "Begin a structure definition.", "struct name [extends parent]", "struct", [
-    {
-      keyword: "extends",
-      summary: "Inherit members from an existing struct.",
-      syntax: "struct name extends parent",
-    },
-  ]),
-  descriptor("endstruct", "End a structure definition.", "endstruct [align value]", "struct", [
-    {
-      keyword: "align",
-      summary: "Round the struct size/stride up to an alignment.",
-      syntax: "endstruct align value",
-    },
-  ]),
+  descriptor(
+    "struct",
+    "Define a non-emitting layout with .field: skip N or typed db/dw/dl/dd fields.",
+    "struct name [base | extends parent]",
+    "struct",
+    [
+      {
+        keyword: "extends",
+        summary: "Inherit members from an existing struct.",
+        syntax: "struct name extends parent",
+      },
+    ],
+  ),
+  descriptor(
+    "endstruct",
+    "End a structure definition.",
+    "endstruct [align value] [count value] [firstindex value]",
+    "struct",
+    [
+      {
+        keyword: "align",
+        summary: "Round the struct size/stride up to an alignment.",
+        syntax: "endstruct align value",
+      },
+      {
+        keyword: "count",
+        summary: "Number of records valid for named initialization.",
+        syntax: "endstruct count value [firstindex value]",
+      },
+      {
+        keyword: "firstindex",
+        summary: "First valid logical index (default zero); requires count.",
+        syntax: "endstruct count value firstindex value",
+      },
+    ],
+  ),
+  descriptor(
+    "datastruct",
+    "Emit one complete named record at its struct address; checks fields, widths and pc().",
+    "dataStruct Record[index], { field = value, bytes = [value, ...] }",
+    "struct",
+  ),
+  descriptor(
+    "datastructs",
+    "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+    "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
+    "struct",
+  ),
+  descriptor(
+    "enddatastructs",
+    "End a non-empty table of named records.",
+    "endDataStructs",
+    "struct",
+  ),
   ...[
     ["if", "Begin a conditional block.", "if expression"],
     ["elseif", "Begin an alternate conditional branch.", "elseif expression"],

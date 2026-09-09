@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "upstreamRepository": "https://github.com/ares-emulator/ares",
+  "upstreamRevision": "af4cbb04f067682a8a3cf42695ff78bed634b38d",
+  "integrationBranch": "codex/ares-desktop-u6",
+  "integrationRevision": "8534f66acf88d7a1abe1478c71b1c9645d10dad4",
+  "layers": [
+    {
+      "id": "U3",
+      "base": "af4cbb04f067682a8a3cf42695ff78bed634b38d",
+      "head": "7bc252a16f06f8ea0b19ad374fcef2e6a8e20e17",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0001-u3-registers.patch",
+      "sha256": "bf14e9151d5f33e81b3012efa7fedcd0185dc12f0cb262a85d3c8fc4fbec0e1a",
+      "files": [
+        {
+          "path": "ares/sfc/CMakeLists.txt",
+          "sha256": "669e94e7c3f0f4b13e9d1261ea7e957862cf66d45b400d75722fd63f14ac5235"
+        },
+        {
+          "path": "ares/sfc/system/gdb.cpp",
+          "sha256": "6989c2fd5353792bc2e2ac9575eefa10ac64d6bd02538869f5c1370023ee67be"
+        },
+        {
+          "path": "ares/sfc/system/system.cpp",
+          "sha256": "88b1439ca49435640b276ba07937cc47ae454580909c421aaff9a2faba173b44"
+        },
+        {
+          "path": "nall/nall/gdb/server.cpp",
+          "sha256": "67d2705106d4b1f8a60b57e112c83dadd8f6aef18174bc78837f539eb7a544cb"
+        },
+        {
+          "path": "nall/nall/gdb/server.hpp",
+          "sha256": "afe10bfb7db49960af511ab3e6afd18b0f11a38d18646cbbda1da738d8d33fec"
+        },
+        {
+          "path": "tests/gdb/README.md",
+          "sha256": "8a05ee952d8526af4c56b486247ba91b350a7351b04e912f5d8e9ee944e74728"
+        },
+        {
+          "path": "tests/gdb/gdb-registers.cpp",
+          "sha256": "743e5aaddfe815a8363a5ab09d31eefbcb35c2d32015d653323bf2b71d45d63a"
+        },
+        {
+          "path": "tests/gdb/run.mjs",
+          "sha256": "aa2ee29702eff0b6e096b5bada7afdff21fb3b91aa6dcba08e44d16e0f81dfb7"
+        }
+      ]
+    },
+    {
+      "id": "U4",
+      "base": "7bc252a16f06f8ea0b19ad374fcef2e6a8e20e17",
+      "head": "e476ef9a19c0a0a5ec5004c0a74a206bd95f28ec",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0002-u4-safe-memory.patch",
+      "sha256": "df335a91cad5c0b3d2c048f136ce5793ec01b3e420c6887d430dfa2f5e46920d",
+      "files": [
+        {
+          "path": "ares/ares/node/debugger/memory.hpp",
+          "sha256": "f338d0bac882d74f305f5a0e40f0819df9f43de472c1ddd323a1b77d9ed2ae72"
+        },
+        {
+          "path": "ares/sfc/CMakeLists.txt",
+          "sha256": "23240847945ef4ea42f0c7ca1cf486bbc1cb743ad4646deaa562c6fa0a0feb57"
+        },
+        {
+          "path": "ares/sfc/cartridge/load.cpp",
+          "sha256": "156ff8190f9b878ec4f3e364257b1943f6634a1201d9654137b137b2f5595042"
+        },
+        {
+          "path": "ares/sfc/cpu/cpu.cpp",
+          "sha256": "7e86d662e06afc6027e2bb1e95b1af07a8df507bbf4351954ffc72aa7a4d5397"
+        },
+        {
+          "path": "ares/sfc/memory/memory.cpp",
+          "sha256": "44f0342e5f17f4111f5140c06cec1a366440a9f73eccf718f77ebce7b59e916e"
+        },
+        {
+          "path": "ares/sfc/memory/memory.hpp",
+          "sha256": "b3543131e66714aa537f63a20df607d61e896601bd65eff5abb551e0ca9e545c"
+        },
+        {
+          "path": "ares/sfc/system/gdb-memory.cpp",
+          "sha256": "9849fbf6a8f5fda9aac6800f42baf3fd61f0f33f880db959d4eb666da302b4b8"
+        },
+        {
+          "path": "ares/sfc/system/system.cpp",
+          "sha256": "87b2ce96d2cba6f1cf50487f9c8962360cf8cc55a40613607e9ab84514b453d1"
+        },
+        {
+          "path": "nall/nall/gdb/server.cpp",
+          "sha256": "830424d24c88ddee0da2cdca95ebb0c1179c0277bf41eae4386b7a3480cfdfe8"
+        },
+        {
+          "path": "tests/gdb/README.md",
+          "sha256": "46aef358e5312162a37b47433668f84e61979b15c71afcf4fb9753c2ea319b5f"
+        },
+        {
+          "path": "tests/gdb/gdb-memory-packets.cpp",
+          "sha256": "3d7ac9544b71942e5a47bc6d99e4450a58392e27b4c104b6ba76ba5b76c96ecf"
+        },
+        {
+          "path": "tests/gdb/gdb-storage.cpp",
+          "sha256": "13e4959aa3fb92591e85ae6c0fcf601c53ee53fab8123d7a472a506cb4de1139"
+        }
+      ]
+    },
+    {
+      "id": "U5",
+      "base": "e476ef9a19c0a0a5ec5004c0a74a206bd95f28ec",
+      "head": "7db00eab665dbbec7c09cbf4b34975822ca2214f",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0003-u5-boundaries.patch",
+      "sha256": "f8e5996a1055c8d22cfe53be3a0f2984809584a167aba9ecae23d08c6297c704",
+      "files": [
+        {
+          "path": "ares/sfc/cpu/cpu.cpp",
+          "sha256": "15d0c8b39ae6386198328050f2ca06bef4700489f93964a42d33f38ccc07d25d"
+        },
+        {
+          "path": "ares/sfc/cpu/memory.cpp",
+          "sha256": "368f5cedaa4ae1a2938ea6ca8a53e7863163493aeb9d69abebcd7be857601494"
+        },
+        {
+          "path": "ares/sfc/system/gdb.cpp",
+          "sha256": "d224b9cd5495ffd20b935d5baff6ce47e83af3d483d327db2bef2f314454ed16"
+        },
+        {
+          "path": "desktop-ui/program/load.cpp",
+          "sha256": "8920e7ec0d979b61ea66f5907062e834f28a046c8b28472251d2751d828d9046"
+        },
+        {
+          "path": "desktop-ui/program/program.cpp",
+          "sha256": "308b0e7cf1f43a6d871293ed313ca788eed957ec44ec10f6729fbccf41249f10"
+        },
+        {
+          "path": "desktop-ui/program/program.hpp",
+          "sha256": "dd948245b47a4d5c428cec12011dac0b05eefbf195846fb85350ce840bf418bb"
+        },
+        {
+          "path": "nall/nall/gdb/server.cpp",
+          "sha256": "7b972872067981278367898a3c1877b11c18cbcea89bc2a8ad5c80716c2d5b7d"
+        },
+        {
+          "path": "nall/nall/gdb/server.hpp",
+          "sha256": "7e7bef9e4c6f317fcf87f4155b3ca1d1135e948892fddece817d741fbfa80761"
+        },
+        {
+          "path": "tests/gdb/README.md",
+          "sha256": "a97b2633461974788d1fdac58884484a5ada90a21e4af49c1f8422a3fa723b2c"
+        },
+        {
+          "path": "tests/gdb/gdb-boundaries.cpp",
+          "sha256": "42d865e50dd3befc58e9688aa91035de550e73e83042b2d7846ff92949405e18"
+        }
+      ]
+    },
+    {
+      "id": "U1",
+      "base": "7db00eab665dbbec7c09cbf4b34975822ca2214f",
+      "head": "cdb4692bbcb9a56a658ec14193af13b03d9d36c9",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0004-u1-sdk-fallback.patch",
+      "sha256": "4a9c5a3b498d458ef5b860da0b29242ab1a091973b0a676c1fedc1c533dd9221",
+      "files": [
+        {
+          "path": "cmake/macos/compilerconfig.cmake",
+          "sha256": "a19096e5dc47166be3a9c110c3d9fbcd9690815385a2e463c733dd381777ebcb"
+        }
+      ]
+    },
+    {
+      "id": "U2",
+      "base": "cdb4692bbcb9a56a658ec14193af13b03d9d36c9",
+      "head": "8534f66acf88d7a1abe1478c71b1c9645d10dad4",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0005-u2-polling.patch",
+      "sha256": "17941e802a6d73dfa9b788fc8e1d927e796d8968197e6249ab351cbab4c1548e",
+      "files": [
+        {
+          "path": "nall/nall/gdb/server.cpp",
+          "sha256": "6f6ac359985903af78f3426e8f4cc4bb7a94efc1f3413876a074153de94243a6"
+        }
+      ]
+    }
+  ],
+  "excludedTargets": [
+    "headless/",
+    "alternate CLI/runtime executable targets"
+  ],
+  "runtimePromoted": false
+}

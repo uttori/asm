@@ -39,7 +39,7 @@ machine-local extension storage and associated with the ROM's content identity.
 
 ## Analysis Coverage
 
-The **Analysis Coverage** view discovers up to 32 native `analysis.json` projects in the workspace, or reads the project selected by `asm.analysisProject`. Discovery reads only manifests. Expanding a project validates shard hashes and builds projections in a shared, memory-bounded worker instead of the extension UI thread. Large shards are parsed record-by-record; summaries and at most 200 rows per page cross back to the UI. Functions and calls are also expanded lazily, and inline annotations request only visible source lines. A failed worker reports an error and can be retried by refreshing the view. Summary groups report exclusive classified/unknown/conflict totals, overlapping opcode/operand/data/asset classifications, and executed/operand/read/written runtime overlays.
+The **Analysis Coverage** view discovers up to 32 native `analysis.json` projects in the workspace, or reads the project selected by `asm.analysisProject`. Discovery reads only manifests. Expanding a project validates shard hashes and builds projections in a shared, separate Node process using the project's `asm.analysis.maxMemoryMiB` budget (default 4096 MiB). A fatal heap error is isolated from the extension host. Large shards are parsed record-by-record; summaries and at most 200 rows per page cross back to the UI. Functions and calls are also expanded lazily, and inline annotations request only visible source lines. Requests run one at a time; each has a 60-second execution timeout, excluding time queued behind another view. A failed process reports the operation and memory budget and can be retried by refreshing the view. Summary groups report exclusive classified/unknown/conflict totals, overlapping opcode/operand/data/asset classifications, and executed/operand/read/written runtime overlays.
 
 The ROM map is a coalesced list of half-open file-offset segments, paged at 200 rows so expanding a large ROM cannot enqueue the entire map in VS Code at once. CPU and RAM addresses are never guessed into ROM offsets: records without an explicit file address or file offset remain visible under **Projection diagnostics**.
 
@@ -67,9 +67,15 @@ mappings are reported rather than trusted.
 
 ## Analysis Annotations
 
-The active source editor shows compact instruction suffixes for execution counts, runtime coverage,
-static effective addresses, attributed memory reads/writes, and static or observed state. Hover a
-suffix for the complete target-neutral detail, including native record ids and evidence. Live/replay
+The active source editor shows instruction overlays aligned in a shared column for execution counts,
+runtime coverage, static effective addresses, attributed memory reads/writes, and static or observed
+state. Theme colors distinguish project state (blue), runtime observations (green), and state changes
+(amber); the text and hover retain the meaning without relying on color. Hover an overlay for the
+complete detail, including native record ids and evidence. The **eye button beside Build Binary**
+toggles these source overlays immediately and saves the choice for the project. Use
+`asm.analysis.showAnnotations` to configure visibility and `asm.analysis.annotationColumn` to adjust
+the preferred column (default 80). Longer annotated lines move the shared column to keep code clear;
+tab alignment follows the editor's tab size. Live/replay
 DAP disassembly, virtual disassembly source, and persisted CFG fallback rows use the same compact
 formatter, so the facts remain recognizable when source is unavailable.
 
@@ -235,7 +241,49 @@ step-out are labeled unavailable and rejected instead of being approximated.
 - **Assembly: Undo Last Analysis Edit** (`asm.coverage.undo`) - removes or restores only the exact unchanged records from the last session edit. Undo refuses if another process changed the result or started using its new evidence.
 - **Assembly: Redo Last Analysis Edit** (`asm.coverage.redo`) - reapplies the last undone classification, state/entry overlay, target resolution, label rename, or disassembly annotation against a newly loaded project revision.
 
+### Compare imported sources
+
+**Sources**, beside Outline, Analysis Coverage and Functions & Calls, lists imported artifacts by
+content identity. Expand a trace such as `chest.json` to inspect:
+
+- **Unique instructions**: instruction addresses captured here but absent from the comparison captures.
+- **Code at unique instructions**: merged known instruction extents, with byte and range counts.
+- **Functions containing unique instructions**: candidates containing the new PCs; other parts of a function can be shared.
+- **Unique memory access sites**: instruction/target/access combinations absent from the comparison, ignoring changing values.
+- **Shared instructions**, **Attributed metadata**, and **Capture notes & interpretation**.
+
+Click an address or function to open its current generated source or a saved disassembly preview.
+Hover an instruction to see its captured bytes and the sources that observed it. Manual edits and
+analysis producers live under **Other evidence**; labels, comments and classifications show their
+attribution without claiming they are unique execution.
+
+By default, a trace is compared with **all other captures**. Use its inline **Compare Source With…**
+action, or the **Compared with** row, to select an idle/earlier trace or several baselines. Selecting
+none shows every recorded instruction. **Compare Source With All Other Captures** restores the
+automatic comparison. Selections last for the editor session and do not change project files.
+
+“Unique” is relative to the chosen captures, not proof that an instruction implements only that
+behavior. A later trace may also execute chest logic; missing or dropped events can make shared
+code appear unique. Review the capture notes. PCs remain qualified by architecture and address
+space, and static propagation from a trace seed does not count as captured execution. Byte totals
+cover instruction extents at unique starts, not a ROM-file byte delta or unique byte values. PC-only
+captures use a size only when the current compatible CFG nodes agree; these entries say **(analysis)**.
+Unknown sizes are excluded from the byte total.
+
+The catalog reads only the small, hash-checked import/evidence metadata. Expanding a source validates
+the project in the separate analysis process and caches the comparison; result pages contain at most
+200 items. The view refreshes after project imports and edits. **Assembly: Refresh Sources**
+(`asm.sources.refresh`) also refreshes it manually. Very large projects can take several seconds on
+the first expansion while validation completes.
+
 ### Names and comments that survive regeneration
+
+Regeneration preserves the saved analysis when an incomplete run would lose known ROM code.
+Source export also checks each existing code range before writing and refuses code-to-raw
+regressions, including when new code elsewhere would hide the loss in the total byte count.
+Imported trace evidence remains available after a rejected update. Resolve the reported analysis
+limit or conflict and retry; intentional code-to-data changes require the CLI export option
+`--allow-code-regression`. An exact ROM round trip verifies bytes, not retained disassembly.
 
 Open generated 65816 source and place the cursor on `Fn_C3002C`, an instruction, or a symbolic
 reference to the routine. Run **Assembly: Edit Disassembly Annotation** (or use its context menu
@@ -305,6 +353,9 @@ instruction-trace stream.
 - `asm.buildOutput` - output path (defaults to the target's output extension).
 - `asm.baseImage` - optional base image to patch when building.
 - `asm.analysisProject` - native analysis-project directory or `analysis.json` path, absolute or relative to each workspace folder. When empty, projects are discovered automatically.
+- `asm.analysis.maxWorkItems` - static-analysis budget when regenerating disassembly (default 100,000). This counts CPU-state and call-path exploration, not imported trace events. Larger values consume more time and memory; incomplete analysis still cannot discard known code.
+- `asm.analysis.maxMemoryMiB` - JavaScript heap budget for the separate analysis-view process and each maintenance process (default 4096 MiB). Increase this in project settings for unusually large analyses. Analysis views reuse a validated project cache; changing the budget restarts that process on its next request. Import, analysis, export, verification, and reports run outside the editor process; each maintenance phase exits before the next starts, releasing its loaded project. A process failure reports its operation and budget. Cancellation stops async trace reading promptly; synchronous maintenance phases finish their current safe step before later phases are cancelled. Total process memory can exceed the heap budget.
+- `asm.trace.maxImportSizeMiB` - native trace import file-size limit (default 2048 MiB / 2 GiB). Set it in the project's `.vscode/settings.json`, for example `"asm.trace.maxImportSizeMiB": 4096` for a 4 GiB capture. Both import and routine reports read chunks incrementally, with progress and cancellation, instead of loading the entire recording into a JavaScript string. Memory still grows with distinct execution observations. This setting is separate from the static-analysis budget.
 
 Workspace plugin configuration is disabled in restricted workspaces. Trust the workspace to activate `uttori-asm.config.json` or `asm.plugins`; the bundled SNES target remains available before trust is granted.
 
@@ -372,4 +423,33 @@ MesenCE has no instruction trace stream yet and is explicitly unsupported for ca
 replay exercises the workflow but is not real-game evidence. Source-only projects (including
 SLIDESHOW) can capture/review; applying annotations requires a native analysis project.
 
-`asm.debug.traceDetail` selects full execution details (default, when supported) or PC-only recording. Per-project `analysis/heuristics.json` configures evidence-backed role comments. Captured RAM instructions open from the analysis graph using their saved bytes. See [configuration, workflow, and remaining trace limits](../../docs/snes-function-heuristics-and-runtime-code.md).
+`asm.debug.traceDetail` selects full execution details (default) or explicit PC-only recording. Full capture rejects runtimes without instruction-detail support; check the active workspace's `launch.json` runtime paths and restart debugging with a rich-trace build. Capture notifications show the selected mode and report dropped events, including when stopping to analyze. Both modes still use bounded buffers: a longer recording can lose events and does not guarantee more unique code coverage. New trace producer identities include the executable SHA-256 so supplemental runtime builds can be distinguished. Per-project `analysis/heuristics.json` configures evidence-backed role comments. Captured RAM instructions open from the analysis graph using their saved bytes. See [configuration, workflow, and remaining trace limits](../../docs/snes-function-heuristics-and-runtime-code.md).
+
+The **Project** view keeps disassembly actions at the top. **Runtime capture**, **Project settings**,
+and **Index details** expand when needed and remember their state. The other analysis views keep
+their existing layout.
+
+Under **Heuristics**, **Edit rules** opens the project's `heuristics.json` (creating defaults only
+when the file does not exist). VS Code provides completion and validation using the existing
+heuristic configuration definition. Save the file, then choose **Run preview** to review role,
+confidence, and evidence findings from the current analysis. Preview runs in the analysis worker
+and does not change project files. **Analyze and regenerate** applies saved rules to source and
+verifies the ROM round trip. The same actions are available as **Assembly: Configure SNES Heuristic
+Rules** and **Assembly: Preview SNES Heuristic Findings** in the Command Palette.
+
+Annotation forms open immediately with a loading message. The shared analysis worker validates
+and caches native shards, verifies source maps, and returns only the selected label/comment data.
+Repeat opens reuse that snapshot; project revisions and shard changes invalidate it. Saving retains
+source-hash checks and optimistic transaction checks, and also runs in the worker.
+
+### Editing the webviews
+
+The Project and annotation interfaces live in `media/panel.html` and `media/annotation.html`, each
+with a matching `.css` and `.js` file. Edit those files directly; there is no HTML or JavaScript
+embedded in TypeScript template strings. `src/webview-template.ts` loads the packaged HTML and
+substitutes only CSP/resource placeholders. Dynamic project and annotation values arrive through
+messages and render as text or input values.
+
+The assets ship unchanged in the VSIX. Use VS Code's webview developer tools to inspect markup,
+styles, and the original JavaScript files. Reopen the annotation panel or reload the extension
+window after changing assets. `npm run vscode:build` rebuilds host/worker code when those files change.

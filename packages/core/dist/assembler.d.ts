@@ -483,11 +483,6 @@ export declare class Assembler {
      */
     seedOutputFromBaseImage(): void;
     /**
-     * Creates cursor address facade.
-     * @returns {CursorAddressFacade} The result.
-     */
-    private createCursorAddressFacade;
-    /**
      * Creates services.
      * @returns {AssemblerServiceBag} The result.
      */

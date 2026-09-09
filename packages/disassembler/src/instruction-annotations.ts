@@ -103,6 +103,8 @@ type EffectiveMutable = {
 
 type TransitionMutable = {
   field: string;
+  beforeKey: string;
+  afterKey: string;
   before?: unknown;
   after?: unknown;
   nodeIds: Set<string>;
@@ -113,6 +115,7 @@ type StateMutable = {
   source: InstructionStateObservationAnnotation["source"];
   architecture: string;
   state: Readonly<Record<string, unknown>>;
+  stateKey: string;
   count?: number;
   recordIds: Set<string>;
   evidence: Set<string>;
@@ -282,7 +285,8 @@ export const buildInstructionAnalysisAnnotations = (
     evidence: readonly string[],
     count?: number,
   ): void => {
-    const key = `${source}:${architecture}:${JSON.stringify(canonicalValue(state))}`;
+    const stateKey = JSON.stringify(canonicalValue(state));
+    const key = `${source}:${architecture}:${stateKey}`;
     const observations = (instruction.stateObservations ??= new Map<string, StateMutable>());
     let observation = observations.get(key);
     if (!observation) {
@@ -290,6 +294,7 @@ export const buildInstructionAnalysisAnnotations = (
         source,
         architecture,
         state,
+        stateKey,
         ...(count === undefined ? {} : { count: 0 }),
         recordIds: new Set(),
         evidence: new Set(),
@@ -336,13 +341,17 @@ export const buildInstructionAnalysisAnnotations = (
       const hasAfter = Object.hasOwn(after, field);
       const beforeValue = before[field];
       const afterValue = after[field];
-      if (valueKey(beforeValue, hasBefore) === valueKey(afterValue, hasAfter)) continue;
-      const key = `${field}:${valueKey(beforeValue, hasBefore)}:${valueKey(afterValue, hasAfter)}`;
+      const beforeKey = valueKey(beforeValue, hasBefore);
+      const afterKey = valueKey(afterValue, hasAfter);
+      if (beforeKey === afterKey) continue;
+      const key = `${field}:${beforeKey}:${afterKey}`;
       const transitions = (instruction.stateTransitions ??= new Map<string, TransitionMutable>());
       let transition = transitions.get(key);
       if (!transition) {
         transition = {
           field,
+          beforeKey,
+          afterKey,
           ...(hasBefore ? { before: beforeValue } : {}),
           ...(hasAfter ? { after: afterValue } : {}),
           nodeIds: new Set(),
@@ -572,24 +581,28 @@ export const buildInstructionAnalysisAnnotations = (
             left.explanation.localeCompare(right.explanation),
         ),
       stateTransitions: [...(instruction.stateTransitions?.values() ?? [])]
+        // Reuse canonical keys from aggregation. Serializing states inside the comparator repeats
+        // that work O(n log n) times and creates substantial garbage on full runtime captures.
+        .sort(
+          (left, right) =>
+            left.field.localeCompare(right.field) ||
+            left.beforeKey.localeCompare(right.beforeKey) ||
+            left.afterKey.localeCompare(right.afterKey),
+        )
         .map(({ field, before, after, nodeIds, evidence }) => ({
           field,
           ...(before === undefined ? {} : { before }),
           ...(after === undefined ? {} : { after }),
           nodeIds: sortedStrings(nodeIds),
           evidence: sortedStrings(evidence),
-        }))
+        })),
+      stateObservations: [...(instruction.stateObservations?.values() ?? [])]
         .sort(
           (left, right) =>
-            left.field.localeCompare(right.field) ||
-            valueKey(left.before, "before" in left).localeCompare(
-              valueKey(right.before, "before" in right),
-            ) ||
-            valueKey(left.after, "after" in left).localeCompare(
-              valueKey(right.after, "after" in right),
-            ),
-        ),
-      stateObservations: [...(instruction.stateObservations?.values() ?? [])]
+            left.source.localeCompare(right.source) ||
+            left.architecture.localeCompare(right.architecture) ||
+            left.stateKey.localeCompare(right.stateKey),
+        )
         .map(({ source, architecture, state, count, recordIds, evidence }) => ({
           source,
           architecture,
@@ -597,15 +610,7 @@ export const buildInstructionAnalysisAnnotations = (
           ...(count === undefined ? {} : { count }),
           recordIds: sortedStrings(recordIds),
           evidence: sortedStrings(evidence),
-        }))
-        .sort(
-          (left, right) =>
-            left.source.localeCompare(right.source) ||
-            left.architecture.localeCompare(right.architecture) ||
-            JSON.stringify(canonicalValue(left.state)).localeCompare(
-              JSON.stringify(canonicalValue(right.state)),
-            ),
-        ),
+        })),
       executionCount: instruction.executionCount,
       ...(instruction.comments
         ? { comments: [...instruction.comments].sort((a, b) => a.id.localeCompare(b.id)) }

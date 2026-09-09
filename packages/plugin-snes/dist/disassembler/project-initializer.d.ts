@@ -87,6 +87,8 @@ export interface ExportSnesProjectOptions extends SnesProjectOperationOptions {
     readonly romFile: string;
     readonly sourceDirectory: string;
     readonly force?: boolean;
+    /** Explicitly permit previously emitted instructions to become raw bytes. */
+    readonly allowCodeRegression?: boolean;
 }
 /** Structured source-export result. */
 export interface ExportSnesProjectResult {

@@ -26,9 +26,9 @@ var __export = (target, all) => {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    for (let key2 of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key2) && key2 !== except)
+        __defProp(to, key2, { get: () => from[key2], enumerable: !(desc = __getOwnPropDesc(from, key2)) || desc.enumerable });
   }
   return to;
 };
@@ -566,19 +566,19 @@ var require_linkedMap = __commonJS({
       get last() {
         return this._tail?.value;
       }
-      before(key) {
-        const item = this._map.get(key);
+      before(key2) {
+        const item = this._map.get(key2);
         return item ? item.previous?.value : void 0;
       }
-      after(key) {
-        const item = this._map.get(key);
+      after(key2) {
+        const item = this._map.get(key2);
         return item ? item.next?.value : void 0;
       }
-      has(key) {
-        return this._map.has(key);
+      has(key2) {
+        return this._map.has(key2);
       }
-      get(key, touch = Touch.None) {
-        const item = this._map.get(key);
+      get(key2, touch = Touch.None) {
+        const item = this._map.get(key2);
         if (!item) {
           return void 0;
         }
@@ -587,15 +587,15 @@ var require_linkedMap = __commonJS({
         }
         return item.value;
       }
-      set(key, value, touch = Touch.None) {
-        let item = this._map.get(key);
+      set(key2, value, touch = Touch.None) {
+        let item = this._map.get(key2);
         if (item) {
           item.value = value;
           if (touch !== Touch.None) {
             this.touch(item, touch);
           }
         } else {
-          item = { key, value, next: void 0, previous: void 0 };
+          item = { key: key2, value, next: void 0, previous: void 0 };
           switch (touch) {
             case Touch.None:
               this.addItemLast(item);
@@ -610,20 +610,20 @@ var require_linkedMap = __commonJS({
               this.addItemLast(item);
               break;
           }
-          this._map.set(key, item);
+          this._map.set(key2, item);
           this._size++;
         }
         return this;
       }
-      delete(key) {
-        return !!this.remove(key);
+      delete(key2) {
+        return !!this.remove(key2);
       }
-      remove(key) {
-        const item = this._map.get(key);
+      remove(key2) {
+        const item = this._map.get(key2);
         if (!item) {
           return void 0;
         }
-        this._map.delete(key);
+        this._map.delete(key2);
         this.removeItem(item);
         this._size--;
         return item.value;
@@ -847,15 +847,15 @@ var require_linkedMap = __commonJS({
       }
       toJSON() {
         const data = [];
-        this.forEach((value, key) => {
-          data.push([key, value]);
+        this.forEach((value, key2) => {
+          data.push([key2, value]);
         });
         return data;
       }
       fromJSON(data) {
         this.clear();
-        for (const [key, value] of data) {
-          this.set(key, value);
+        for (const [key2, value] of data) {
+          this.set(key2, value);
         }
       }
     };
@@ -882,14 +882,14 @@ var require_linkedMap = __commonJS({
         this._ratio = Math.min(Math.max(0, ratio), 1);
         this.checkTrim();
       }
-      get(key, touch = Touch.AsNew) {
-        return super.get(key, touch);
+      get(key2, touch = Touch.AsNew) {
+        return super.get(key2, touch);
       }
-      peek(key) {
-        return super.get(key, Touch.None);
+      peek(key2) {
+        return super.get(key2, Touch.None);
       }
-      set(key, value) {
-        super.set(key, value, Touch.Last);
+      set(key2, value) {
+        super.set(key2, value, Touch.Last);
         this.checkTrim();
         return this;
       }
@@ -1681,8 +1681,8 @@ var require_messageWriter = __commonJS({
       get onError() {
         return this.errorEmitter.event;
       }
-      fireError(error, message, count) {
-        this.errorEmitter.fire([this.asError(error), message, count]);
+      fireError(error, message, count2) {
+        this.errorEmitter.fire([this.asError(error), message, count2]);
       }
       get onClose() {
         return this.closeEmitter.event;
@@ -1854,9 +1854,9 @@ var require_messageBuffer = __commonJS({
             throw new Error(`Message header must separate key and value using ':'
 ${header}`);
           }
-          const key = header.substr(0, index);
+          const key2 = header.substr(0, index);
           const value = header.substr(index + 1).trim();
-          result.set(lowerCaseKeys ? key.toLowerCase() : key, value);
+          result.set(lowerCaseKeys ? key2.toLowerCase() : key2, value);
         }
         return result;
       }
@@ -2333,13 +2333,13 @@ var require_connection = __commonJS({
         try {
           if (messages_1.Message.isNotification(message) && message.method === CancelNotification.type.method) {
             const cancelId = message.params.id;
-            const key = createRequestQueueKey(cancelId);
-            const toCancel = messageQueue.get(key);
+            const key2 = createRequestQueueKey(cancelId);
+            const toCancel = messageQueue.get(key2);
             if (messages_1.Message.isRequest(toCancel)) {
               const strategy = options?.connectionStrategy;
               const response = strategy && strategy.cancelUndispatched ? strategy.cancelUndispatched(toCancel, cancelUndispatched) : cancelUndispatched(toCancel);
               if (response && (response.error !== void 0 || response.result !== void 0)) {
-                messageQueue.delete(key);
+                messageQueue.delete(key2);
                 requestTokens.delete(cancelId);
                 response.id = toCancel.id;
                 traceSendingResponse(response, message.method, Date.now());
@@ -2456,11 +2456,11 @@ ${JSON.stringify(responseMessage.error, void 0, 4)}`);
             logger.error(`Received response message without id. No further error information provided.`);
           }
         } else {
-          const key = responseMessage.id;
-          const responsePromise = responsePromises.get(key);
+          const key2 = responseMessage.id;
+          const responsePromise = responsePromises.get(key2);
           traceReceivedResponse(responseMessage, responsePromise);
           if (responsePromise !== void 0) {
-            responsePromises.delete(key);
+            responsePromises.delete(key2);
             try {
               if (responseMessage.error) {
                 const error = responseMessage.error;
@@ -2553,8 +2553,8 @@ ${JSON.stringify(responseMessage.error, void 0, 4)}`);
 ${JSON.stringify(message, null, 4)}`);
         const responseMessage = message;
         if (Is2.string(responseMessage.id) || Is2.number(responseMessage.id)) {
-          const key = responseMessage.id;
-          const responseHandler = responsePromises.get(key);
+          const key2 = responseMessage.id;
+          const responseHandler = responsePromises.get(key2);
           if (responseHandler) {
             responseHandler.reject(new Error("The received response has neither a result nor an error property."));
           }
@@ -3401,13 +3401,13 @@ var init_main = __esm({
       }
       URI2.is = is;
     })(URI || (URI = {}));
-    (function(integer5) {
-      integer5.MIN_VALUE = -2147483648;
-      integer5.MAX_VALUE = 2147483647;
+    (function(integer6) {
+      integer6.MIN_VALUE = -2147483648;
+      integer6.MAX_VALUE = 2147483647;
       function is(value) {
-        return typeof value === "number" && integer5.MIN_VALUE <= value && value <= integer5.MAX_VALUE;
+        return typeof value === "number" && integer6.MIN_VALUE <= value && value <= integer6.MAX_VALUE;
       }
-      integer5.is = is;
+      integer6.is = is;
     })(integer || (integer = {}));
     (function(uinteger2) {
       uinteger2.MIN_VALUE = 0;
@@ -3917,9 +3917,9 @@ var init_main = __esm({
               }
             });
           } else if (workspaceEdit.changes) {
-            Object.keys(workspaceEdit.changes).forEach((key) => {
-              const textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
-              this._textEditChanges[key] = textEditChange;
+            Object.keys(workspaceEdit.changes).forEach((key2) => {
+              const textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key2]);
+              this._textEditChanges[key2] = textEditChange;
             });
           }
         } else {
@@ -3941,13 +3941,13 @@ var init_main = __esm({
         }
         return this._workspaceEdit;
       }
-      getTextEditChange(key) {
-        if (OptionalVersionedTextDocumentIdentifier.is(key)) {
+      getTextEditChange(key2) {
+        if (OptionalVersionedTextDocumentIdentifier.is(key2)) {
           this.initDocumentChanges();
           if (this._workspaceEdit.documentChanges === void 0) {
             throw new Error("Workspace edit is not configured for document changes.");
           }
-          const textDocument = { uri: key.uri, version: key.version };
+          const textDocument = { uri: key2.uri, version: key2.version };
           let result = this._textEditChanges[textDocument.uri];
           if (!result) {
             const edits = [];
@@ -3965,12 +3965,12 @@ var init_main = __esm({
           if (this._workspaceEdit.changes === void 0) {
             throw new Error("Workspace edit is not configured for normal text edit changes.");
           }
-          let result = this._textEditChanges[key];
+          let result = this._textEditChanges[key2];
           if (!result) {
             const edits = [];
-            this._workspaceEdit.changes[key] = edits;
+            this._workspaceEdit.changes[key2] = edits;
             result = new TextEditChangeImpl(edits);
-            this._textEditChanges[key] = result;
+            this._textEditChanges[key2] = result;
           }
           return result;
         }
@@ -4841,10 +4841,10 @@ var init_main = __esm({
         return toString.call(value) === "[object Number]" && min <= value && value <= max;
       }
       Is2.numberRange = numberRange;
-      function integer5(value) {
+      function integer6(value) {
         return toString.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
       }
-      Is2.integer = integer5;
+      Is2.integer = integer6;
       function uinteger2(value) {
         return toString.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
       }
@@ -8724,9 +8724,9 @@ var require_protocolConverter = __commonJS({
             ...defaultData
           };
           if (item.data) {
-            Object.entries(item.data).forEach(([key, value]) => {
+            Object.entries(item.data).forEach(([key2, value]) => {
               if (value !== void 0 && value !== null) {
-                data[key] = value;
+                data[key2] = value;
               }
             });
           }
@@ -9109,9 +9109,9 @@ var require_protocolConverter = __commonJS({
         const sharedMetadata = /* @__PURE__ */ new Map();
         if (item.changeAnnotations !== void 0) {
           const changeAnnotations = item.changeAnnotations;
-          await async.forEach(Object.keys(changeAnnotations), (key) => {
-            const metaData = asWorkspaceEditEntryMetadata(changeAnnotations[key]);
-            sharedMetadata.set(key, metaData);
+          await async.forEach(Object.keys(changeAnnotations), (key2) => {
+            const metaData = asWorkspaceEditEntryMetadata(changeAnnotations[key2]);
+            sharedMetadata.set(key2, metaData);
           }, token);
         }
         const asMetadata = (annotation) => {
@@ -9151,8 +9151,8 @@ ${JSON.stringify(change, void 0, 4)}`);
           }, token);
         } else if (item.changes) {
           const changes = item.changes;
-          await async.forEach(Object.keys(changes), (key) => {
-            result.set(_uriConverter(key), asTextEditsSync(changes[key]));
+          await async.forEach(Object.keys(changes), (key2) => {
+            result.set(_uriConverter(key2), asTextEditsSync(changes[key2]));
           }, token);
         }
         return result;
@@ -9797,11 +9797,11 @@ var require_features = __commonJS({
       }
     };
     exports2.LSPCancellationError = LSPCancellationError;
-    function ensure(target, key) {
-      if (target[key] === void 0) {
-        target[key] = {};
+    function ensure(target, key2) {
+      if (target[key2] === void 0) {
+        target[key2] = {};
       }
-      return target[key];
+      return target[key2];
     }
     var StaticFeature;
     (function(StaticFeature2) {
@@ -9829,16 +9829,16 @@ var require_features = __commonJS({
        */
       getState() {
         const selectors = this.getDocumentSelectors();
-        let count = 0;
+        let count2 = 0;
         for (const selector of selectors) {
-          count++;
+          count2++;
           for (const document of vscode_1.workspace.textDocuments) {
             if (vscode_1.languages.match(selector, document) > 0) {
               return { kind: "document", id: this.registrationType.method, registrations: true, matches: true };
             }
           }
         }
-        const registrations = count > 0;
+        const registrations = count2 > 0;
         return { kind: "document", id: this.registrationType.method, registrations, matches: false };
       }
     };
@@ -11191,13 +11191,13 @@ var require_escape = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.escape = void 0;
-    var escape2 = (s, { windowsPathsNoEscape = false, magicalBraces = false } = {}) => {
+    var escape = (s, { windowsPathsNoEscape = false, magicalBraces = false } = {}) => {
       if (magicalBraces) {
         return windowsPathsNoEscape ? s.replace(/[?*()[\]{}]/g, "[$&]") : s.replace(/[?*()[\]\\{}]/g, "\\$&");
       }
       return windowsPathsNoEscape ? s.replace(/[?*()[\]]/g, "[$&]") : s.replace(/[?*()[\]\\]/g, "\\$&");
     };
-    exports2.escape = escape2;
+    exports2.escape = escape;
   }
 });
 
@@ -11271,11 +11271,11 @@ var require_commonjs3 = __commonJS({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    var path28 = {
+    var path30 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    exports2.sep = defaultPlatform === "win32" ? path28.win32.sep : path28.posix.sep;
+    exports2.sep = defaultPlatform === "win32" ? path30.win32.sep : path30.posix.sep;
     exports2.minimatch.sep = exports2.sep;
     exports2.GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     exports2.minimatch.GLOBSTAR = exports2.GLOBSTAR;
@@ -12118,11 +12118,11 @@ var require_diagnostic = __commonJS({
     var uuid_1 = require_uuid();
     var globPattern_1 = require_globPattern();
     var features_1 = require_features();
-    function ensure(target, key) {
-      if (target[key] === void 0) {
-        target[key] = {};
+    function ensure(target, key2) {
+      if (target[key2] === void 0) {
+        target[key2] = {};
       }
-      return target[key];
+      return target[key2];
     }
     var vsdiag;
     (function(vsdiag2) {
@@ -12165,46 +12165,46 @@ var require_diagnostic = __commonJS({
       }
       track(kind, document, arg1) {
         const states = kind === PullState.document ? this.documentPullStates : this.workspacePullStates;
-        const [key, uri, version] = document instanceof vscode_1.Uri ? [document.toString(), document, arg1] : [document.uri.toString(), document.uri, document.version];
-        let state = states.get(key);
+        const [key2, uri, version] = document instanceof vscode_1.Uri ? [document.toString(), document, arg1] : [document.uri.toString(), document.uri, document.version];
+        let state = states.get(key2);
         if (state === void 0) {
           state = { document: uri, pulledVersion: version, resultId: void 0 };
-          states.set(key, state);
+          states.set(key2, state);
         }
         return state;
       }
       update(kind, document, arg1, arg2) {
         const states = kind === PullState.document ? this.documentPullStates : this.workspacePullStates;
-        const [key, uri, version, resultId] = document instanceof vscode_1.Uri ? [document.toString(), document, arg1, arg2] : [document.uri.toString(), document.uri, document.version, arg1];
-        let state = states.get(key);
+        const [key2, uri, version, resultId] = document instanceof vscode_1.Uri ? [document.toString(), document, arg1, arg2] : [document.uri.toString(), document.uri, document.version, arg1];
+        let state = states.get(key2);
         if (state === void 0) {
           state = { document: uri, pulledVersion: version, resultId };
-          states.set(key, state);
+          states.set(key2, state);
         } else {
           state.pulledVersion = version;
           state.resultId = resultId;
         }
       }
       unTrack(kind, document) {
-        const key = DocumentOrUri.asKey(document);
+        const key2 = DocumentOrUri.asKey(document);
         const states = kind === PullState.document ? this.documentPullStates : this.workspacePullStates;
-        states.delete(key);
+        states.delete(key2);
       }
       tracks(kind, document) {
-        const key = DocumentOrUri.asKey(document);
+        const key2 = DocumentOrUri.asKey(document);
         const states = kind === PullState.document ? this.documentPullStates : this.workspacePullStates;
-        return states.has(key);
+        return states.has(key2);
       }
       tracksSameVersion(kind, document) {
-        const key = document.uri.toString();
+        const key2 = document.uri.toString();
         const states = kind === PullState.document ? this.documentPullStates : this.workspacePullStates;
-        const state = states.get(key);
+        const state = states.get(key2);
         return state !== void 0 && state.pulledVersion === document.version;
       }
       getResultId(kind, document) {
-        const key = DocumentOrUri.asKey(document);
+        const key2 = DocumentOrUri.asKey(document);
         const states = kind === PullState.document ? this.documentPullStates : this.workspacePullStates;
-        return states.get(key)?.resultId;
+        return states.get(key2)?.resultId;
       }
       getAllResultIds() {
         const result = [];
@@ -12295,13 +12295,13 @@ var require_diagnostic = __commonJS({
         }
         const isUri = document instanceof vscode_1.Uri;
         const uri = isUri ? document : document.uri;
-        const key = uri.toString();
+        const key2 = uri.toString();
         version = isUri ? version : document.version;
-        const currentRequestState = this.openRequests.get(key);
+        const currentRequestState = this.openRequests.get(key2);
         const documentState = isUri ? this.documentStates.track(PullState.document, document, version) : this.documentStates.track(PullState.document, document);
         if (currentRequestState === void 0) {
           const tokenSource = new vscode_1.CancellationTokenSource();
-          this.openRequests.set(key, { state: RequestStateKind.active, document, version, tokenSource });
+          this.openRequests.set(key2, { state: RequestStateKind.active, document, version, tokenSource });
           let report2;
           let afterState;
           try {
@@ -12316,13 +12316,13 @@ var require_diagnostic = __commonJS({
               throw error;
             }
           }
-          afterState = afterState ?? this.openRequests.get(key);
+          afterState = afterState ?? this.openRequests.get(key2);
           if (afterState === void 0) {
-            this.client.error(`Lost request state in diagnostic pull model. Clearing diagnostics for ${key}`);
+            this.client.error(`Lost request state in diagnostic pull model. Clearing diagnostics for ${key2}`);
             this.diagnostics.delete(uri);
             return;
           }
-          this.openRequests.delete(key);
+          this.openRequests.delete(key2);
           if (!this.visibleDocuments.isVisible(document)) {
             this.documentStates.unTrack(PullState.document, document);
             return;
@@ -12343,9 +12343,9 @@ var require_diagnostic = __commonJS({
         } else {
           if (currentRequestState.state === RequestStateKind.active) {
             currentRequestState.tokenSource.cancel();
-            this.openRequests.set(key, { state: RequestStateKind.reschedule, document: currentRequestState.document });
+            this.openRequests.set(key2, { state: RequestStateKind.reschedule, document: currentRequestState.document });
           } else if (currentRequestState.state === RequestStateKind.outDated) {
-            this.openRequests.set(key, { state: RequestStateKind.reschedule, document: currentRequestState.document });
+            this.openRequests.set(key2, { state: RequestStateKind.reschedule, document: currentRequestState.document });
           }
         }
       }
@@ -12354,17 +12354,17 @@ var require_diagnostic = __commonJS({
           return;
         }
         const uri = document instanceof vscode_1.Uri ? document : document.uri;
-        const key = uri.toString();
-        const request = this.openRequests.get(key);
+        const key2 = uri.toString();
+        const request = this.openRequests.get(key2);
         if (this.options.workspaceDiagnostics && uri.scheme !== "untitled") {
           if (request !== void 0) {
-            this.openRequests.set(key, { state: RequestStateKind.reschedule, document });
+            this.openRequests.set(key2, { state: RequestStateKind.reschedule, document });
           } else {
             const pendingForget = /* @__PURE__ */ Symbol();
-            this.pendingDocumentForgets.set(key, pendingForget);
+            this.pendingDocumentForgets.set(key2, pendingForget);
             this.pull(document, () => {
-              if (this.pendingDocumentForgets.get(key) === pendingForget) {
-                this.pendingDocumentForgets.delete(key);
+              if (this.pendingDocumentForgets.get(key2) === pendingForget) {
+                this.pendingDocumentForgets.delete(key2);
                 this.forget(PullState.document, document);
               }
             });
@@ -12375,7 +12375,7 @@ var require_diagnostic = __commonJS({
             if (request.state === RequestStateKind.active) {
               request.tokenSource.cancel();
             }
-            this.openRequests.set(key, { state: RequestStateKind.outDated, document });
+            this.openRequests.set(key2, { state: RequestStateKind.outDated, document });
           }
           this.diagnostics.delete(uri);
           this.forget(PullState.document, document);
@@ -12548,11 +12548,11 @@ var require_diagnostic = __commonJS({
         this.isDisposed = true;
         this.workspaceCancellation?.cancel();
         this.workspaceTimeout?.dispose();
-        for (const [key, request] of this.openRequests) {
+        for (const [key2, request] of this.openRequests) {
           if (request.state === RequestStateKind.active) {
             request.tokenSource.cancel();
           }
-          this.openRequests.set(key, { state: RequestStateKind.outDated, document: request.document });
+          this.openRequests.set(key2, { state: RequestStateKind.outDated, document: request.document });
         }
         if (this.client.clientOptions.diagnosticCollectionProvider !== void 0) {
           this.client.clientOptions.diagnosticCollectionProvider.dispose(this.diagnostics, features_1.DiagnosticCollectionSource.pull);
@@ -12582,21 +12582,21 @@ var require_diagnostic = __commonJS({
         if (this.isDisposed === true) {
           return;
         }
-        const key = DocumentOrUri.asKey(document);
-        if (this.documents.has(key)) {
+        const key2 = DocumentOrUri.asKey(document);
+        if (this.documents.has(key2)) {
           return;
         }
-        this.documents.set(key, document, vscode_languageserver_protocol_1.Touch.Last);
+        this.documents.set(key2, document, vscode_languageserver_protocol_1.Touch.Last);
         this.lastDocumentToPull = document;
       }
       remove(document) {
-        const key = DocumentOrUri.asKey(document);
-        this.documents.delete(key);
+        const key2 = DocumentOrUri.asKey(document);
+        this.documents.delete(key2);
         if (this.documents.size === 0) {
           this.stop();
           return;
-        } else if (key === this.lastDocumentToPullKey()) {
-          const before = this.documents.before(key);
+        } else if (key2 === this.lastDocumentToPullKey()) {
+          const before = this.documents.before(key2);
           if (before === void 0) {
             this.stop();
           } else {
@@ -12627,13 +12627,13 @@ var require_diagnostic = __commonJS({
           if (document === void 0) {
             return;
           }
-          const key = DocumentOrUri.asKey(document);
+          const key2 = DocumentOrUri.asKey(document);
           this.diagnosticRequestor.pullAsync(document).catch((error) => {
-            this.client.error(`Document pull failed for text document ${key}`, error, false);
+            this.client.error(`Document pull failed for text document ${key2}`, error, false);
           }).finally(() => {
             this.timeoutHandle = void 0;
-            this.documents.set(key, document, vscode_languageserver_protocol_1.Touch.Last);
-            if (key !== this.lastDocumentToPullKey()) {
+            this.documents.set(key2, document, vscode_languageserver_protocol_1.Touch.Last);
+            if (key2 !== this.lastDocumentToPullKey()) {
               this.runLoop();
             }
           });
@@ -12984,11 +12984,11 @@ var require_notebook = __commonJS({
     var UUID = __importStar(require_uuid());
     var Is2 = __importStar(require_is());
     var globPattern_1 = require_globPattern();
-    function ensure(target, key) {
-      if (target[key] === void 0) {
-        target[key] = {};
+    function ensure(target, key2) {
+      if (target[key2] === void 0) {
+        target[key2] = {};
       }
-      return target[key];
+      return target[key2];
     }
     var Converter;
     (function(Converter2) {
@@ -13330,9 +13330,9 @@ var require_notebook = __commonJS({
         if (vscode.languages.match(this.selector, textDocument) > 0) {
           return true;
         }
-        const key = textDocument.uri.toString();
+        const key2 = textDocument.uri.toString();
         for (const syncInfo of this.notebookSyncInfo.values()) {
-          if (syncInfo.uris.has(key)) {
+          if (syncInfo.uris.has(key2)) {
             return true;
           }
         }
@@ -13615,10 +13615,10 @@ var require_notebook = __commonJS({
           if (diff !== void 0) {
             addedCells = diff.cells === void 0 ? /* @__PURE__ */ new Map() : new Map(diff.cells.map((cell) => [cell.document.uri.toString(), cell]));
             removedCells = diff.deleteCount === 0 ? /* @__PURE__ */ new Map() : new Map(oldCells.slice(diff.start, diff.start + diff.deleteCount).map((cell) => [cell.document.uri.toString(), cell]));
-            for (const key of Array.from(removedCells.keys())) {
-              if (addedCells.has(key)) {
-                removedCells.delete(key);
-                addedCells.delete(key);
+            for (const key2 of Array.from(removedCells.keys())) {
+              if (addedCells.has(key2)) {
+                removedCells.delete(key2);
+                addedCells.delete(key2);
               }
             }
             result.cells = result.cells ?? {};
@@ -14009,9 +14009,9 @@ var require_configuration = __commonJS({
         } else {
           const config = vscode_1.workspace.getConfiguration(void 0, resource);
           result = {};
-          for (const key of Object.keys(config)) {
-            if (config.has(key)) {
-              result[key] = toJSONObject(config.get(key));
+          for (const key2 of Object.keys(config)) {
+            if (config.has(key2)) {
+              result[key2] = toJSONObject(config.get(key2));
             }
           }
         }
@@ -14030,9 +14030,9 @@ var require_configuration = __commonJS({
           return obj.map(toJSONObject);
         } else if (typeof obj === "object") {
           const res = /* @__PURE__ */ Object.create(null);
-          for (const key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-              res[key] = toJSONObject(obj[key]);
+          for (const key2 in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key2)) {
+              res[key2] = toJSONObject(obj[key2]);
             }
           }
           return res;
@@ -14122,13 +14122,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path28) {
+        function ensurePath(config, path30) {
           let current = config;
-          for (let i = 0; i < path28.length - 1; i++) {
-            let obj = current[path28[i]];
+          for (let i = 0; i < path30.length - 1; i++) {
+            let obj = current[path30[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path28[i]] = obj;
+              current[path30[i]] = obj;
             }
             current = obj;
           }
@@ -14137,17 +14137,17 @@ var require_configuration = __commonJS({
         const resource = this._client.clientOptions.workspaceFolder ? this._client.clientOptions.workspaceFolder.uri : void 0;
         const result = /* @__PURE__ */ Object.create(null);
         for (let i = 0; i < keys.length; i++) {
-          const key = keys[i];
-          const index = key.indexOf(".");
+          const key2 = keys[i];
+          const index = key2.indexOf(".");
           let config = null;
           if (index >= 0) {
-            config = vscode_1.workspace.getConfiguration(key.substr(0, index), resource).get(key.substr(index + 1));
+            config = vscode_1.workspace.getConfiguration(key2.substr(0, index), resource).get(key2.substr(index + 1));
           } else {
-            config = vscode_1.workspace.getConfiguration(void 0, resource).get(key);
+            config = vscode_1.workspace.getConfiguration(void 0, resource).get(key2);
           }
           if (config) {
-            const path28 = keys[i].split(".");
-            ensurePath(result, path28)[path28[path28.length - 1]] = toJSONObject(config);
+            const path30 = keys[i].split(".");
+            ensurePath(result, path30)[path30[path30.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -14716,7 +14716,7 @@ var require_textSynchronization = __commonJS({
         }
         const uri = event.document.uri;
         const version = event.document.version;
-        const promises2 = [];
+        const promises4 = [];
         for (const changeData of this._changeData.values()) {
           if (vscode_1.languages.match(changeData.documentSelector, event.document) > 0 && !this._client.hasDedicatedTextSynchronizationFeature(event.document)) {
             const middleware = this._client.middleware;
@@ -14727,18 +14727,18 @@ var require_textSynchronization = __commonJS({
                 await this._client.sendNotification(vscode_languageserver_protocol_1.DidChangeTextDocumentNotification.type, params);
                 this.notificationSent(event2.document, vscode_languageserver_protocol_1.DidChangeTextDocumentNotification.type, params);
               };
-              promises2.push(middleware.didChange ? middleware.didChange(event, (event2) => didChange(event2)) : didChange(event));
+              promises4.push(middleware.didChange ? middleware.didChange(event, (event2) => didChange(event2)) : didChange(event));
             } else if (changeData.syncKind === vscode_languageserver_protocol_1.TextDocumentSyncKind.Full) {
               const didChange = async (event2) => {
                 const eventUri = event2.document.uri.toString();
                 this._pendingTextDocumentChanges.set(eventUri, event2.document);
                 this._onPendingChangeAdded.fire();
               };
-              promises2.push(middleware.didChange ? middleware.didChange(event, (event2) => didChange(event2)) : didChange(event));
+              promises4.push(middleware.didChange ? middleware.didChange(event, (event2) => didChange(event2)) : didChange(event));
             }
           }
         }
-        return Promise.all(promises2).then(void 0, (error) => {
+        return Promise.all(promises4).then(void 0, (error) => {
           this._client.error(`Sending document notification ${vscode_languageserver_protocol_1.DidChangeTextDocumentNotification.type.method} failed`, error);
           throw error;
         });
@@ -17849,11 +17849,11 @@ var require_workspaceFolder = __commonJS({
     var UUID = __importStar(require_uuid());
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    function access(target, key) {
+    function access(target, key2) {
       if (target === void 0 || target === null) {
         return void 0;
       }
-      return target[key];
+      return target[key2];
     }
     function arrayDiff(left, right) {
       return left.filter((element2) => right.indexOf(element2) < 0);
@@ -18031,17 +18031,17 @@ var require_fileOperations = __commonJS({
     var minimatch = __importStar(require_commonjs3());
     var proto = __importStar(require_api2());
     var UUID = __importStar(require_uuid());
-    function ensure(target, key) {
-      if (target[key] === void 0) {
-        target[key] = {};
+    function ensure(target, key2) {
+      if (target[key2] === void 0) {
+        target[key2] = {};
       }
-      return target[key];
+      return target[key2];
     }
-    function access(target, key) {
-      return target[key];
+    function access(target, key2) {
+      return target[key2];
     }
-    function assign(target, key, value) {
-      target[key] = value;
+    function assign(target, key2, value) {
+      target[key2] = value;
     }
     var FileOperationFeature = class _FileOperationFeature {
       _client;
@@ -18122,13 +18122,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path28 = uri.fsPath.replace(/\\/g, "/");
+          const path30 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path28)) {
+              if (filter.matcher.match(path30)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -18142,7 +18142,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path28}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path30}/`)) {
                   return true;
                 }
               }
@@ -18678,11 +18678,11 @@ var require_progress = __commonJS({
     exports2.ProgressFeature = void 0;
     var vscode_languageserver_protocol_1 = require_api2();
     var progressPart_1 = require_progressPart();
-    function ensure(target, key) {
-      if (target[key] === void 0) {
-        target[key] = /* @__PURE__ */ Object.create(null);
+    function ensure(target, key2) {
+      if (target[key2] === void 0) {
+        target[key2] = /* @__PURE__ */ Object.create(null);
       }
-      return target[key];
+      return target[key2];
     }
     var ProgressFeature = class {
       _client;
@@ -18858,8 +18858,8 @@ var require_client = __commonJS({
         this.maxRestartCount = maxRestartCount;
         this.restarts = [];
       }
-      error(_error, _message, count) {
-        if (count && count <= 3) {
+      error(_error, _message, count2) {
+        if (count2 && count2 <= 3) {
           return { action: ErrorAction.Continue };
         }
         return { action: ErrorAction.Shutdown };
@@ -19937,8 +19937,8 @@ ${this.data2String(data)}` : message;
         if (this._diagnostics === null) {
           return;
         }
-        const key = params.uri;
-        if (this._diagnosticQueueState.state === "busy" && this._diagnosticQueueState.document === key) {
+        const key2 = params.uri;
+        if (this._diagnosticQueueState.state === "busy" && this._diagnosticQueueState.document === key2) {
           this._diagnosticQueueState.tokenSource.cancel();
         }
         this._diagnosticQueue.set(params.uri, params.diagnostics);
@@ -20002,8 +20002,8 @@ ${this.data2String(data)}` : message;
         return connection;
       }
       async createConnection() {
-        const errorHandler = (error, message, count) => {
-          this.handleConnectionError(error, message, count).catch((error2) => this.error(`Handling connection error failed`, error2));
+        const errorHandler = (error, message, count2) => {
+          this.handleConnectionError(error, message, count2).catch((error2) => this.error(`Handling connection error failed`, error2));
         };
         const closeHandler = () => {
           this.handleConnectionClosed().catch((error) => this.error(`Handling connection close failed`, error));
@@ -20049,8 +20049,8 @@ ${this.data2String(data)}` : message;
           this.start().catch((error) => this.error(`Restarting server failed`, error, "force"));
         }
       }
-      async handleConnectionError(error, message, count) {
-        const handlerResult = await this._clientOptions.errorHandler.error(error, message, count);
+      async handleConnectionError(error, message, count2) {
+        const handlerResult = await this._clientOptions.errorHandler.error(error, message, count2);
         if (handlerResult.action === ErrorAction.Shutdown) {
           this.error(handlerResult.message ?? `Client ${this._name}: connection to server is erroring.
 ${error.message}
@@ -20790,9 +20790,9 @@ var require_main = __commonJS({
     exports2.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path28 = __importStar(require("path"));
+    var path30 = __importStar(require("path"));
     var os = __importStar(require("os"));
-    var fs18 = __importStar(require("fs"));
+    var fs19 = __importStar(require("fs"));
     var crypto_1 = require("crypto");
     var net_1 = require("net");
     var api_1 = require_api();
@@ -20933,7 +20933,7 @@ var require_main = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs18.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
+      const tmpDir = fs19.realpathSync(XDG_RUNTIME_DIR ?? os.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -20942,7 +20942,7 @@ var require_main = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path28.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path30.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -21242,8 +21242,8 @@ var require_semver = __commonJS({
     var { safeRe: re, t } = require_re();
     var parseOptions = require_parse_options();
     var { compareIdentifiers } = require_identifiers();
-    var isPrereleaseIdentifier = (prerelease, identifier) => {
-      const identifiers = identifier.split(".");
+    var isPrereleaseIdentifier = (prerelease, identifier2) => {
+      const identifiers = identifier2.split(".");
       if (identifiers.length > prerelease.length) {
         return false;
       }
@@ -21408,15 +21408,15 @@ var require_semver = __commonJS({
       }
       // preminor will bump the version up to the next minor release, and immediately
       // down to pre-release. premajor and prepatch work the same way.
-      inc(release, identifier, identifierBase) {
+      inc(release, identifier2, identifierBase) {
         if (release.startsWith("pre")) {
-          if (!identifier && identifierBase === false) {
+          if (!identifier2 && identifierBase === false) {
             throw new Error("invalid increment argument: identifier is empty");
           }
-          if (identifier) {
-            const match = `-${identifier}`.match(this.options.loose ? re[t.PRERELEASELOOSE] : re[t.PRERELEASE]);
-            if (!match || match[1] !== identifier) {
-              throw new Error(`invalid identifier: ${identifier}`);
+          if (identifier2) {
+            const match = `-${identifier2}`.match(this.options.loose ? re[t.PRERELEASELOOSE] : re[t.PRERELEASE]);
+            if (!match || match[1] !== identifier2) {
+              throw new Error(`invalid identifier: ${identifier2}`);
             }
           }
         }
@@ -21426,26 +21426,26 @@ var require_semver = __commonJS({
             this.patch = 0;
             this.minor = 0;
             this.major++;
-            this.inc("pre", identifier, identifierBase);
+            this.inc("pre", identifier2, identifierBase);
             break;
           case "preminor":
             this.prerelease.length = 0;
             this.patch = 0;
             this.minor++;
-            this.inc("pre", identifier, identifierBase);
+            this.inc("pre", identifier2, identifierBase);
             break;
           case "prepatch":
             this.prerelease.length = 0;
-            this.inc("patch", identifier, identifierBase);
-            this.inc("pre", identifier, identifierBase);
+            this.inc("patch", identifier2, identifierBase);
+            this.inc("pre", identifier2, identifierBase);
             break;
           // If the input is a non-prerelease version, this acts the same as
           // prepatch.
           case "prerelease":
             if (this.prerelease.length === 0) {
-              this.inc("patch", identifier, identifierBase);
+              this.inc("patch", identifier2, identifierBase);
             }
-            this.inc("pre", identifier, identifierBase);
+            this.inc("pre", identifier2, identifierBase);
             break;
           case "release":
             if (this.prerelease.length === 0) {
@@ -21489,19 +21489,19 @@ var require_semver = __commonJS({
                 }
               }
               if (i === -1) {
-                if (identifier === this.prerelease.join(".") && identifierBase === false) {
+                if (identifier2 === this.prerelease.join(".") && identifierBase === false) {
                   throw new Error("invalid increment argument: identifier already exists");
                 }
                 this.prerelease.push(base);
               }
             }
-            if (identifier) {
-              let prerelease = [identifier, base];
+            if (identifier2) {
+              let prerelease = [identifier2, base];
               if (identifierBase === false) {
-                prerelease = [identifier];
+                prerelease = [identifier2];
               }
-              if (isPrereleaseIdentifier(this.prerelease, identifier)) {
-                const prereleaseBase = this.prerelease[identifier.split(".").length];
+              if (isPrereleaseIdentifier(this.prerelease, identifier2)) {
+                const prereleaseBase = this.prerelease[identifier2.split(".").length];
                 if (isNaN(prereleaseBase)) {
                   this.prerelease = prerelease;
                 }
@@ -21556,27 +21556,27 @@ var require_lrucache = __commonJS({
         this.max = 1e3;
         this.map = /* @__PURE__ */ new Map();
       }
-      get(key) {
-        const value = this.map.get(key);
+      get(key2) {
+        const value = this.map.get(key2);
         if (value === void 0) {
           return void 0;
         } else {
-          this.map.delete(key);
-          this.map.set(key, value);
+          this.map.delete(key2);
+          this.map.set(key2, value);
           return value;
         }
       }
-      delete(key) {
-        return this.map.delete(key);
+      delete(key2) {
+        return this.map.delete(key2);
       }
-      set(key, value) {
-        const deleted = this.delete(key);
+      set(key2, value) {
+        const deleted = this.delete(key2);
         if (!deleted && value !== void 0) {
           if (this.map.size >= this.max) {
             const firstKey = this.map.keys().next().value;
             this.delete(firstKey);
           }
-          this.map.set(key, value);
+          this.map.set(key2, value);
         }
         return this;
       }
@@ -22302,8 +22302,8 @@ var require_main3 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = __importStar(require("child_process"));
-    var fs18 = __importStar(require("fs"));
-    var path28 = __importStar(require("path"));
+    var fs19 = __importStar(require("fs"));
+    var path30 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
     var Is2 = __importStar(require_is());
@@ -22484,18 +22484,18 @@ var require_main3 = __commonJS({
         }
       }
       createMessageTransports(_encoding) {
-        function getEnvironment(env, fork) {
-          if (!env && !fork) {
+        function getEnvironment(env, fork3) {
+          if (!env && !fork3) {
             return void 0;
           }
           const result = /* @__PURE__ */ Object.create(null);
-          Object.keys(process.env).forEach((key) => result[key] = process.env[key]);
-          if (fork) {
+          Object.keys(process.env).forEach((key2) => result[key2] = process.env[key2]);
+          if (fork3) {
             result["ELECTRON_RUN_AS_NODE"] = "1";
             result["ELECTRON_NO_ASAR"] = "1";
           }
           if (env) {
-            Object.keys(env).forEach((key) => result[key] = env[key]);
+            Object.keys(env).forEach((key2) => result[key2] = env[key2]);
           }
           return result;
         }
@@ -22753,19 +22753,19 @@ var require_main3 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path28.isAbsolute(runtime)) {
+        if (path30.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path28.join(mainRootPath, runtime);
-          if (fs18.existsSync(result)) {
+          const result = path30.join(mainRootPath, runtime);
+          if (fs19.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path28.join(serverWorkingDirectory, runtime);
-          if (fs18.existsSync(result)) {
+          const result = path30.join(serverWorkingDirectory, runtime);
+          if (fs19.existsSync(result)) {
             return result;
           }
         }
@@ -22789,7 +22789,7 @@ var require_main3 = __commonJS({
         }
         if (cwd) {
           return new Promise((s) => {
-            fs18.lstat(cwd, (err, stats) => {
+            fs19.lstat(cwd, (err, stats) => {
               s(!err && stats.isDirectory() ? cwd : void 0);
             });
           });
@@ -22844,7 +22844,7 @@ var require_main3 = __commonJS({
 });
 
 // packages/core/src/debug-map.ts
-var import_node_crypto, import_node_path, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, portablePath, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
+var import_node_crypto, import_node_path, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
 var init_debug_map = __esm({
   "packages/core/src/debug-map.ts"() {
     "use strict";
@@ -22856,7 +22856,7 @@ var init_debug_map = __esm({
       if (Array.isArray(value)) return value.map(canonicalValue);
       if (value !== null && typeof value === "object") {
         return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalValue(entry)])
+          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue(entry)])
         );
       }
       return value;
@@ -22864,17 +22864,14 @@ var init_debug_map = __esm({
     canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue(value), null, 2)}
 `;
     sha256 = (value) => (0, import_node_crypto.createHash)("sha256").update(value).digest("hex");
-    portablePath = (filename, root) => {
-      const relative6 = import_node_path.default.relative(root, import_node_path.default.resolve(filename));
-      return relative6 && !relative6.startsWith("..") && !import_node_path.default.isAbsolute(relative6) ? relative6.split(import_node_path.default.sep).join("/") : import_node_path.default.resolve(filename).split(import_node_path.default.sep).join("/");
-    };
     createDebugMap = (options) => {
       const sourceRoot = import_node_path.default.resolve(options.sourceRoot ?? process.cwd());
-      const entries3 = options.mapping.fileList.map((entry, originalId) => ({
-        entry,
-        originalId,
-        portable: portablePath(entry.name, sourceRoot)
-      })).sort((left, right) => left.portable.localeCompare(right.portable));
+      const entries3 = options.mapping.fileList.map((entry, originalId) => {
+        const absolute = import_node_path.default.resolve(entry.name);
+        const relative6 = import_node_path.default.relative(sourceRoot, absolute);
+        const portable = relative6 && !relative6.startsWith("..") && !import_node_path.default.isAbsolute(relative6) ? relative6 : absolute;
+        return { entry, originalId, portable: portable.split(import_node_path.default.sep).join("/") };
+      }).sort((left, right) => left.portable.localeCompare(right.portable));
       const sourceIdByOriginal = /* @__PURE__ */ new Map();
       const sources = entries3.map(({ entry, originalId, portable }, id) => {
         sourceIdByOriginal.set(originalId, id);
@@ -22970,7 +22967,7 @@ var init_asset_codec = __esm({
         throw new Error(`${location} must contain only plain JSON objects.`);
       }
       return Object.fromEntries(
-        Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalizeAssetValue(entry, `${location}.${key}`)])
+        Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalizeAssetValue(entry, `${location}.${key2}`)])
       );
     };
     stableText = (value) => JSON.stringify(canonicalizeAssetValue(value, "asset"));
@@ -23117,13 +23114,13 @@ var init_asset_codec = __esm({
        * @returns {AssetCodec} Registered codec.
        */
       resolve(id) {
-        const visit = (current, path28) => {
+        const visit = (current, path30) => {
           const codec = this.#codecs.get(current);
           if (!codec) throw new Error(`Unknown asset codec '${current}'.`);
-          if (path28.includes(current)) {
-            throw new Error(`Asset codec dependency cycle: ${[...path28, current].join(" -> ")}.`);
+          if (path30.includes(current)) {
+            throw new Error(`Asset codec dependency cycle: ${[...path30, current].join(" -> ")}.`);
           }
-          for (const dependency of codec.dependencies ?? []) visit(dependency, [...path28, current]);
+          for (const dependency of codec.dependencies ?? []) visit(dependency, [...path30, current]);
           return codec;
         };
         return visit(id, []);
@@ -23388,23 +23385,23 @@ var init_common = __esm({
       return value;
     };
     optionsFor = (context) => objectValue(context.request.options, `Asset '${context.request.id}' options`);
-    stringOption = (options, key, fallback) => {
-      const value = options[key];
+    stringOption = (options, key2, fallback) => {
+      const value = options[key2];
       if (value === void 0) return fallback;
-      if (typeof value !== "string") throw new Error(`Asset option '${key}' must be a string.`);
+      if (typeof value !== "string") throw new Error(`Asset option '${key2}' must be a string.`);
       return value;
     };
-    booleanOption = (options, key, fallback = false) => {
-      const value = options[key];
+    booleanOption = (options, key2, fallback = false) => {
+      const value = options[key2];
       if (value === void 0) return fallback;
-      if (typeof value !== "boolean") throw new Error(`Asset option '${key}' must be boolean.`);
+      if (typeof value !== "boolean") throw new Error(`Asset option '${key2}' must be boolean.`);
       return value;
     };
-    integerOption = (options, key, settings6 = {}) => {
-      const value = options[key] ?? settings6.fallback;
+    integerOption = (options, key2, settings6 = {}) => {
+      const value = options[key2] ?? settings6.fallback;
       if (value === void 0) return void 0;
       if (typeof value !== "number" || !Number.isSafeInteger(value) || settings6.minimum !== void 0 && value < settings6.minimum || settings6.maximum !== void 0 && value > settings6.maximum) {
-        throw new Error(`Asset option '${key}' is outside its integer bounds.`);
+        throw new Error(`Asset option '${key2}' is outside its integer bounds.`);
       }
       return value;
     };
@@ -23437,16 +23434,16 @@ var init_common = __esm({
           `Asset '${context.request.id}' length ${requestedLength} is not divisible by ${unitSize}.`
         );
       }
-      const count = configuredCount ?? requestedLength / unitSize;
-      const size = count * unitSize;
+      const count2 = configuredCount ?? requestedLength / unitSize;
+      const size = count2 * unitSize;
       if (!Number.isSafeInteger(size))
         throw new Error(`Asset '${context.request.id}' size overflowed.`);
       if (requestedLength !== void 0 && requestedLength !== size) {
         throw new Error(
-          `Asset '${context.request.id}' count ${count} requires ${size} bytes, not ${requestedLength}.`
+          `Asset '${context.request.id}' count ${count2} requires ${size} bytes, not ${requestedLength}.`
         );
       }
-      return { count, size };
+      return { count: count2, size };
     };
     readInteger = (bytes, offset, width2, endian, signed3 = false) => {
       let value = 0;
@@ -23491,8 +23488,8 @@ var init_common = __esm({
       return values;
     };
     defaultAssetPath = (assetId, extension) => `assets/${encodeURIComponent(assetId)}.${extension}`;
-    jsonFile = (path28, value) => ({
-      path: path28,
+    jsonFile = (path30, value) => ({
+      path: path30,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -23516,7 +23513,7 @@ var init_index_table = __esm({
         minimum: 0,
         maximum: 2 ** (width2 * 8) - 1
       });
-      const { count, size } = resolveCountAndSize(context, width2, options);
+      const { count: count2, size } = resolveCountAndSize(context, width2, options);
       if (!Array.isArray(options.targets)) {
         throw new Error("Index-table option 'targets' must be an array.");
       }
@@ -23534,7 +23531,7 @@ var init_index_table = __esm({
         indexes.add(index);
         return { index, id, addressSpace: addressSpace2, address: address4 };
       });
-      return { options, width: width2, endian, baseIndex, nullValue, count, size, targets };
+      return { options, width: width2, endian, baseIndex, nullValue, count: count2, size, targets };
     };
     indexesFor = (context) => {
       const resolved = settings(context);
@@ -23586,12 +23583,12 @@ var init_index_table = __esm({
       decode: (context) => {
         const entries3 = indexesFor(context);
         const value = { kind: "index-table", indexes: entries3.indexes };
-        const path28 = stringOption(
+        const path30 = stringOption(
           entries3.settings.options,
           "path",
           defaultAssetPath(context.request.id, "json")
         );
-        return { value, files: [jsonFile(path28, value)] };
+        return { value, files: [jsonFile(path30, value)] };
       },
       encode: (context) => {
         const resolved = settings(context);
@@ -23640,11 +23637,11 @@ var init_pointer_table = __esm({
       });
       const addressSpace2 = stringOption(options, "addressSpace", context.request.addressSpace);
       if (addressSpace2 === "") throw new Error("Pointer target address space cannot be empty.");
-      const { count, size } = resolveCountAndSize(context, width2, options);
+      const { count: count2, size } = resolveCountAndSize(context, width2, options);
       const targetIdsValue = options.targetAssetIds;
       let targetAssetIds = [];
       if (targetIdsValue !== void 0) {
-        if (!Array.isArray(targetIdsValue) || targetIdsValue.length !== count) {
+        if (!Array.isArray(targetIdsValue) || targetIdsValue.length !== count2) {
           throw new Error("Pointer option 'targetAssetIds' must match the pointer count.");
         }
         targetAssetIds = targetIdsValue.map((value) => {
@@ -23662,7 +23659,7 @@ var init_pointer_table = __esm({
         scale,
         nullValue,
         addressSpace: addressSpace2,
-        count,
+        count: count2,
         size,
         targetAssetIds
       };
@@ -23722,12 +23719,12 @@ var init_pointer_table = __esm({
           addresses: entries3.addresses,
           rawValues: entries3.rawValues
         };
-        const path28 = stringOption(
+        const path30 = stringOption(
           entries3.settings.options,
           "path",
           defaultAssetPath(context.request.id, "json")
         );
-        return { value, files: [jsonFile(path28, value)] };
+        return { value, files: [jsonFile(path30, value)] };
       },
       encode: (context) => {
         const resolved = settings2(context);
@@ -23786,7 +23783,7 @@ var init_raw = __esm({
       decode: (context) => {
         const bytes = readExactAssetBytes(context);
         const options = optionsFor(context);
-        const path28 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
+        const path30 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
         const mediaType = stringOption(options, "mediaType", "application/octet-stream");
         return {
           value: {
@@ -23794,7 +23791,7 @@ var init_raw = __esm({
             bytes: [...bytes],
             sha256: (0, import_node_crypto4.createHash)("sha256").update(bytes).digest("hex")
           },
-          files: [{ path: path28, mediaType, bytes }]
+          files: [{ path: path30, mediaType, bytes }]
         };
       },
       encode: ({ decoded, request }) => {
@@ -23817,34 +23814,34 @@ var init_scalar_array = __esm({
       const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 1 });
       const endian = byteOrderOption(options);
       const signed3 = booleanOption(options, "signed");
-      const { count, size } = resolveCountAndSize(context, width2, options);
-      return { options, width: width2, endian, signed: signed3, count, size };
+      const { count: count2, size } = resolveCountAndSize(context, width2, options);
+      return { options, width: width2, endian, signed: signed3, count: count2, size };
     };
     scalarArrayAssetCodec = Object.freeze({
       id: SCALAR_ARRAY_ASSET_CODEC_ID,
       version: "1.0.0",
       sizeBounds: { minimum: 1 },
       inspect: (context) => {
-        const { width: width2, endian, signed: signed3, count, size } = settings3(context);
-        return { size, metadata: { width: width2, endian, signed: signed3, count } };
+        const { width: width2, endian, signed: signed3, count: count2, size } = settings3(context);
+        return { size, metadata: { width: width2, endian, signed: signed3, count: count2 } };
       },
       decode: (context) => {
-        const { options, width: width2, endian, signed: signed3, count } = settings3(context);
+        const { options, width: width2, endian, signed: signed3, count: count2 } = settings3(context);
         const bytes = readExactAssetBytes(context);
         const values = Array.from(
-          { length: count },
+          { length: count2 },
           (_, index) => readInteger(bytes, index * width2, width2, endian, signed3)
         );
         const value = { kind: "scalar-array", width: width2, endian, signed: signed3, values };
-        const path28 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path28, value)] };
+        const path30 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path30, value)] };
       },
       encode: (context) => {
-        const { width: width2, endian, signed: signed3, count, size } = settings3(context);
+        const { width: width2, endian, signed: signed3, count: count2, size } = settings3(context);
         const value = decodedObject(context.decoded.value, context.request.id);
         const values = numberArray(value.values, `Scalar asset '${context.request.id}' values`);
-        if (values.length !== count) {
-          throw new Error(`Scalar asset '${context.request.id}' requires exactly ${count} values.`);
+        if (values.length !== count2) {
+          throw new Error(`Scalar asset '${context.request.id}' requires exactly ${count2} values.`);
         }
         const bytes = new Uint8Array(size);
         values.forEach(
@@ -23923,8 +23920,8 @@ var init_struct_array = __esm({
     settings4 = (context) => {
       const options = optionsFor(context);
       const { fields, stride } = parseFields(options);
-      const { count, size } = resolveCountAndSize(context, stride, options);
-      return { options, fields, stride, count, size };
+      const { count: count2, size } = resolveCountAndSize(context, stride, options);
+      return { options, fields, stride, count: count2, size };
     };
     readBits = (bytes, base, field) => {
       let value = 0;
@@ -23957,11 +23954,11 @@ var init_struct_array = __esm({
       version: "1.0.0",
       sizeBounds: { minimum: 1 },
       inspect: (context) => {
-        const { fields, stride, count, size } = settings4(context);
+        const { fields, stride, count: count2, size } = settings4(context);
         return {
           size,
           metadata: {
-            count,
+            count: count2,
             stride,
             bitOrder: "lsb0",
             fields: fields.map((field) => ({ ...field }))
@@ -23969,9 +23966,9 @@ var init_struct_array = __esm({
         };
       },
       decode: (context) => {
-        const { options, fields, stride, count } = settings4(context);
+        const { options, fields, stride, count: count2 } = settings4(context);
         const bytes = readExactAssetBytes(context);
-        const records2 = Array.from({ length: count }, (_, recordIndex) => {
+        const records2 = Array.from({ length: count2 }, (_, recordIndex) => {
           const base = recordIndex * stride;
           return Object.fromEntries(
             fields.map((field) => [
@@ -23985,11 +23982,11 @@ var init_struct_array = __esm({
           raw: [...bytes],
           records: records2
         };
-        const path28 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path28, value)] };
+        const path30 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path30, value)] };
       },
       encode: (context) => {
-        const { fields, stride, count, size } = settings4(context);
+        const { fields, stride, count: count2, size } = settings4(context);
         const value = decodedObject(context.decoded.value, context.request.id);
         const raw = byteArray(value.raw, `Struct asset '${context.request.id}' raw bytes`);
         if (raw.length !== size) {
@@ -23997,8 +23994,8 @@ var init_struct_array = __esm({
             `Struct asset '${context.request.id}' raw backing must remain ${size} bytes.`
           );
         }
-        if (!Array.isArray(value.records) || value.records.length !== count) {
-          throw new Error(`Struct asset '${context.request.id}' requires exactly ${count} records.`);
+        if (!Array.isArray(value.records) || value.records.length !== count2) {
+          throw new Error(`Struct asset '${context.request.id}' requires exactly ${count2} records.`);
         }
         const bytes = Uint8Array.from(raw);
         value.records.forEach((recordValue, recordIndex) => {
@@ -24036,8 +24033,8 @@ var init_text = __esm({
     "use strict";
     init_common();
     TEXT_ASSET_CODEC_ID = "uttori.asset.text";
-    parseByteKey = (key) => {
-      const normalized = key.startsWith("$") ? `0x${key.slice(1)}` : key;
+    parseByteKey = (key2) => {
+      const normalized = key2.startsWith("$") ? `0x${key2.slice(1)}` : key2;
       let value = Number.NaN;
       if (/^0x[\da-f]+$/i.test(normalized)) {
         value = Number.parseInt(normalized.slice(2), 16);
@@ -24045,7 +24042,7 @@ var init_text = __esm({
         value = Number.parseInt(normalized, 10);
       }
       if (!Number.isSafeInteger(value) || value < 0 || value > 255) {
-        throw new Error(`Text table byte '${key}' must be in the range 0..255.`);
+        throw new Error(`Text table byte '${key2}' must be in the range 0..255.`);
       }
       return value;
     };
@@ -24061,11 +24058,11 @@ var init_text = __esm({
         }
       }
       const table = objectValue(options.table, "Text asset option 'table'");
-      for (const [key, tokenValue] of Object.entries(table)) {
+      for (const [key2, tokenValue] of Object.entries(table)) {
         if (typeof tokenValue !== "string" || tokenValue.length === 0 || tokenValue.includes("\\")) {
-          throw new Error(`Text table entry '${key}' must be a non-empty string without backslashes.`);
+          throw new Error(`Text table entry '${key2}' must be a non-empty string without backslashes.`);
         }
-        byteToToken.set(parseByteKey(key), tokenValue);
+        byteToToken.set(parseByteKey(key2), tokenValue);
       }
       const tokenToByte = [...byteToToken.entries()].map(([byte2, token]) => [token, byte2]);
       const tokens = /* @__PURE__ */ new Set();
@@ -24147,7 +24144,7 @@ var init_text = __esm({
         const terminated = resolved.terminator !== void 0 && bytes.at(-1) === resolved.terminator;
         const payload = terminated ? bytes.subarray(0, -1) : bytes;
         const value = { kind: "text", text: textValue(payload, resolved), terminated };
-        const path28 = stringOption(
+        const path30 = stringOption(
           resolved.options,
           "path",
           defaultAssetPath(context.request.id, "txt")
@@ -24156,7 +24153,7 @@ var init_text = __esm({
           value,
           files: [
             {
-              path: path28,
+              path: path30,
               mediaType: "text/plain; charset=utf-8",
               bytes: new TextEncoder().encode(value.text)
             }
@@ -24357,17 +24354,17 @@ var init_analysis_graph = __esm({
       );
       const functionsByAddress = /* @__PURE__ */ new Map();
       for (const fn of functionRecords) {
-        const key = addressKey(fn.addressSpace, fn.address);
-        functionsByAddress.set(key, [...functionsByAddress.get(key) ?? [], fn]);
+        const key2 = addressKey(fn.addressSpace, fn.address);
+        functionsByAddress.set(key2, [...functionsByAddress.get(key2) ?? [], fn]);
       }
       const ownersByNode = /* @__PURE__ */ new Map();
       const ownerFunctionIds = (node) => {
         if (!node) return [];
         const cached = ownersByNode.get(node.id);
         if (cached) return cached;
-        const path28 = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
-        for (let index = path28.length - 1; index >= 0; index--) {
-          const candidate = nodesById.get(path28[index]);
+        const path30 = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
+        for (let index = path30.length - 1; index >= 0; index--) {
+          const candidate = nodesById.get(path30[index]);
           if (!candidate) continue;
           const matches = functionsByAddress.get(addressKey(candidate.addressSpace, candidate.address));
           if (matches) {
@@ -24437,10 +24434,10 @@ var init_analysis_graph = __esm({
         };
       });
       const nodeIdsByFunction = /* @__PURE__ */ new Map();
-      const append3 = (map, key, id) => {
-        const entries3 = map.get(key);
+      const append3 = (map, key2, id) => {
+        const entries3 = map.get(key2);
         if (entries3) entries3.push(id);
-        else map.set(key, [id]);
+        else map.set(key2, [id]);
       };
       const incoming = /* @__PURE__ */ new Map();
       const outgoing = /* @__PURE__ */ new Map();
@@ -24546,7 +24543,7 @@ var init_compression_codec = __esm({
         throw new Error(`${location} must contain only plain JSON objects.`);
       }
       return Object.fromEntries(
-        Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, normalizeOptions(entry, `${location}.${key}`)])
+        Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, normalizeOptions(entry, `${location}.${key2}`)])
       );
     };
     validateConstraints = (constraints, existingLength) => {
@@ -25021,14 +25018,14 @@ var init_trace_detail = __esm({
   "packages/disassembler/src/trace-detail.ts"() {
     "use strict";
     isArray = (value) => Array.isArray(value);
-    validateRuntimeInstructionDetails = (value, count) => {
-      if (!Array.isArray(value) || value.length !== count)
+    validateRuntimeInstructionDetails = (value, count2) => {
+      if (!Array.isArray(value) || value.length !== count2)
         throw new Error("Trace details must align one-to-one with instruction addresses.");
       return value.map((detail) => {
         if (!detail || !isArray(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255))
           throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
         if (!detail.state || typeof detail.state !== "object" || isArray(detail.state) || Object.entries(detail.state).some(
-          ([key, entry]) => !key || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
+          ([key2, entry]) => !key2 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
         ))
           throw new Error("Trace instruction state contains an invalid register value.");
         if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0))
@@ -25052,19 +25049,19 @@ var init_trace_detail = __esm({
 });
 
 // packages/disassembler/src/json-array-file.ts
-var fs2, import_node_crypto7, import_node_string_decoder, readObjectArrayFile;
+var fs2, import_node_crypto7, import_node_string_decoder, scanObjectArrayFile, readObjectArrayFile, validateObjectArrayFile;
 var init_json_array_file = __esm({
   "packages/disassembler/src/json-array-file.ts"() {
     "use strict";
     fs2 = __toESM(require("node:fs"), 1);
     import_node_crypto7 = require("node:crypto");
     import_node_string_decoder = require("node:string_decoder");
-    readObjectArrayFile = (file, expectedSha256) => {
+    scanObjectArrayFile = (file, expectedSha256, onRecord) => {
       const descriptor2 = fs2.openSync(file, "r");
       const buffer = Buffer.allocUnsafe(64 * 1024);
       const decoder = new import_node_string_decoder.StringDecoder("utf8");
       const hash2 = (0, import_node_crypto7.createHash)("sha256");
-      const records2 = [];
+      let records2 = 0;
       let mode3 = "start";
       let allowEnd = true;
       let depth = 0;
@@ -25094,7 +25091,9 @@ var init_json_array_file = __esm({
                 if (recordLength > 32 * 1024 * 1024)
                   throw new Error("Analysis shard record exceeds the 32 MiB limit.");
                 parts.push(tail);
-                records2.push(JSON.parse(parts.join("")));
+                const record3 = JSON.parse(parts.join(""));
+                onRecord?.(record3);
+                records2++;
                 parts = [];
                 recordLength = 0;
                 recordStart = -1;
@@ -25139,9 +25138,9 @@ var init_json_array_file = __esm({
         }
       };
       try {
-        let count;
-        while ((count = fs2.readSync(descriptor2, buffer, 0, buffer.length, null)) > 0) {
-          const bytes = buffer.subarray(0, count);
+        let count2;
+        while ((count2 = fs2.readSync(descriptor2, buffer, 0, buffer.length, null)) > 0) {
+          const bytes = buffer.subarray(0, count2);
           hash2.update(bytes);
           consume(decoder.write(bytes));
         }
@@ -25154,6 +25153,12 @@ var init_json_array_file = __esm({
         fs2.closeSync(descriptor2);
       }
     };
+    readObjectArrayFile = (file, expectedSha256) => {
+      const records2 = [];
+      scanObjectArrayFile(file, expectedSha256, (record3) => records2.push(record3));
+      return records2;
+    };
+    validateObjectArrayFile = (file, expectedSha256) => scanObjectArrayFile(file, expectedSha256);
   }
 });
 
@@ -25195,7 +25200,7 @@ var init_project_store = __esm({
       if (Array.isArray(value)) return value.map(canonicalize);
       if (value && typeof value === "object") {
         return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalize(entry)])
+          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalize(entry)])
         );
       }
       return value;
@@ -25331,11 +25336,11 @@ var init_project_store = __esm({
         return;
       }
       if (!value || typeof value !== "object") return;
-      for (const [key, entry] of Object.entries(value)) {
-        if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key)) {
-          throw new Error(`ROM byte payload '${location}.${key}' is forbidden in analysis projects.`);
+      for (const [key2, entry] of Object.entries(value)) {
+        if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key2)) {
+          throw new Error(`ROM byte payload '${location}.${key2}' is forbidden in analysis projects.`);
         }
-        assertNoRomPayload(entry, `${location}.${key}`);
+        assertNoRomPayload(entry, `${location}.${key2}`);
       }
     };
     isStableId4 = (id) => {
@@ -25374,7 +25379,7 @@ var init_project_store = __esm({
           return;
         }
         if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-          Object.entries(value).forEach(([key, entry]) => visitJson(entry, `${current}.${key}`));
+          Object.entries(value).forEach(([key2, entry]) => visitJson(entry, `${current}.${key2}`));
           return;
         }
         throw new Error(`${current} is not a JSON-safe codec option.`);
@@ -25547,11 +25552,11 @@ var init_project_store = __esm({
         if (label.analysisEntryPoint !== void 0 && typeof label.analysisEntryPoint !== "boolean")
           throw new Error(`Analysis label '${label.id}' has an invalid analysisEntryPoint.`);
       }
-      for (const comment of shards.comments) {
-        if (comment.placement !== void 0 && !["before", "inline-instruction"].includes(comment.placement))
-          throw new Error(`Analysis comment '${comment.id}' has an invalid placement.`);
-        if (comment.placement === "inline-instruction" && (typeof comment.text !== "string" || /[\n\r\u2028\u2029]/.test(comment.text)))
-          throw new Error(`Analysis comment '${comment.id}' requires a single-line inline comment.`);
+      for (const comment2 of shards.comments) {
+        if (comment2.placement !== void 0 && !["before", "inline-instruction"].includes(comment2.placement))
+          throw new Error(`Analysis comment '${comment2.id}' has an invalid placement.`);
+        if (comment2.placement === "inline-instruction" && (typeof comment2.text !== "string" || /[\n\r\u2028\u2029]/.test(comment2.text)))
+          throw new Error(`Analysis comment '${comment2.id}' requires a single-line inline comment.`);
       }
       const addressSpaceById = new Map(
         addressSpaces.map((addressSpace2) => [addressSpace2.id, addressSpace2])
@@ -25749,7 +25754,7 @@ var init_project_store = __esm({
 });
 
 // packages/disassembler/src/runtime-trace.ts
-var import_node_crypto9, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, record, string, integer2, sha2566, sha256Identity, hex, validateRuntimeInstructionTrace, importRuntimeInstructionTrace;
+var import_node_crypto9, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, record, string, integer2, sha2566, sha256Identity, hex, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
   "packages/disassembler/src/runtime-trace.ts"() {
     "use strict";
@@ -25781,7 +25786,7 @@ var init_runtime_trace = __esm({
       return identity2;
     };
     hex = (value) => value.toString(16).toUpperCase().padStart(6, "0");
-    validateRuntimeInstructionTrace = (value) => {
+    validateRuntimeInstructionTraceMetadata = (value) => {
       const artifact = record(value, "Instruction trace artifact");
       if (artifact.format !== RUNTIME_INSTRUCTION_TRACE_FORMAT)
         throw new Error(`Unsupported instruction trace format '${String(artifact.format)}'.`);
@@ -25790,39 +25795,52 @@ var init_runtime_trace = __esm({
           `Unsupported instruction trace schema version '${String(artifact.schemaVersion)}'.`
         );
       const producer = record(artifact.producer, "Instruction trace producer");
-      if (!Array.isArray(artifact.chunks))
-        throw new Error("Instruction trace chunks must be an array.");
-      const chunks = artifact.chunks.map((value2, index) => {
-        const chunk = record(value2, `Instruction trace chunk ${index}`);
-        if (!Array.isArray(chunk.addresses))
-          throw new Error(`Instruction trace chunk ${index} addresses must be an array.`);
-        if (typeof chunk.active !== "boolean")
-          throw new Error(`Instruction trace chunk ${index} active must be boolean.`);
-        return {
-          sequenceStart: integer2(
-            chunk.sequenceStart,
-            `Instruction trace chunk ${index} sequenceStart`,
-            1
-          ),
-          addresses: chunk.addresses.map(
-            (address4, addressIndex) => integer2(address4, `Instruction trace chunk ${index} address ${addressIndex}`)
-          ),
-          ...chunk.details === void 0 ? {} : { details: validateRuntimeInstructionDetails(chunk.details, chunk.addresses.length) },
-          ...chunk.unattributedMemoryAccesses === void 0 ? {} : {
-            unattributedMemoryAccesses: integer2(
-              chunk.unattributedMemoryAccesses,
-              "Unattributed trace memory accesses"
-            )
-          },
-          droppedEvents: integer2(chunk.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
-          active: chunk.active
-        };
-      });
+      return {
+        format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
+        schemaVersion: RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
+        architecture: string(artifact.architecture, "Instruction trace architecture"),
+        addressSpace: string(artifact.addressSpace, "Instruction trace address space"),
+        romContentSha256: sha256Identity(
+          artifact.romContentSha256,
+          "Instruction trace ROM content identity"
+        ),
+        producer: {
+          id: string(producer.id, "Instruction trace producer id"),
+          revision: string(producer.revision, "Instruction trace producer revision")
+        }
+      };
+    };
+    createRuntimeTraceChunkValidator = () => {
+      let index = 0;
       let expectedSequence = 1;
       let previousDropped = 0;
       let stopped = false;
       let previousUnattributed = 0;
-      for (const [index, chunk] of chunks.entries()) {
+      return (value) => {
+        const input = record(value, `Instruction trace chunk ${index}`);
+        if (!Array.isArray(input.addresses))
+          throw new Error(`Instruction trace chunk ${index} addresses must be an array.`);
+        if (typeof input.active !== "boolean")
+          throw new Error(`Instruction trace chunk ${index} active must be boolean.`);
+        const chunk = {
+          sequenceStart: integer2(
+            input.sequenceStart,
+            `Instruction trace chunk ${index} sequenceStart`,
+            1
+          ),
+          addresses: input.addresses.map(
+            (address4, addressIndex) => integer2(address4, `Instruction trace chunk ${index} address ${addressIndex}`)
+          ),
+          ...input.details === void 0 ? {} : { details: validateRuntimeInstructionDetails(input.details, input.addresses.length) },
+          ...input.unattributedMemoryAccesses === void 0 ? {} : {
+            unattributedMemoryAccesses: integer2(
+              input.unattributedMemoryAccesses,
+              "Unattributed trace memory accesses"
+            )
+          },
+          droppedEvents: integer2(input.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
+          active: input.active
+        };
         if ((chunk.unattributedMemoryAccesses ?? previousUnattributed) < previousUnattributed)
           throw new Error("Unattributed trace memory count decreased.");
         previousUnattributed = chunk.unattributedMemoryAccesses ?? previousUnattributed;
@@ -25837,25 +25855,29 @@ var init_runtime_trace = __esm({
         expectedSequence = chunk.sequenceStart + chunk.addresses.length;
         previousDropped = chunk.droppedEvents;
         stopped ||= !chunk.active;
-      }
-      return {
-        format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
-        schemaVersion: RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
-        architecture: string(artifact.architecture, "Instruction trace architecture"),
-        addressSpace: string(artifact.addressSpace, "Instruction trace address space"),
-        romContentSha256: sha256Identity(
-          artifact.romContentSha256,
-          "Instruction trace ROM content identity"
-        ),
-        producer: {
-          id: string(producer.id, "Instruction trace producer id"),
-          revision: string(producer.revision, "Instruction trace producer revision")
-        },
-        chunks
+        index++;
+        return chunk;
       };
     };
+    validateRuntimeInstructionTrace = (value) => {
+      const metadata = validateRuntimeInstructionTraceMetadata(value);
+      const input = record(value, "Instruction trace artifact");
+      if (!Array.isArray(input.chunks)) throw new Error("Instruction trace chunks must be an array.");
+      return { ...metadata, chunks: input.chunks.map(createRuntimeTraceChunkValidator()) };
+    };
     importRuntimeInstructionTrace = (value, context) => {
-      const artifact = validateRuntimeInstructionTrace(value);
+      const artifact = record(value, "Instruction trace artifact");
+      if (!Array.isArray(artifact.chunks))
+        throw new Error("Instruction trace chunks must be an array.");
+      const importer = createRuntimeInstructionTraceImporter(
+        validateRuntimeInstructionTraceMetadata(value),
+        context
+      );
+      for (const chunk of artifact.chunks) importer.push(chunk);
+      return importer.finish();
+    };
+    createRuntimeInstructionTraceImporter = (value, context) => {
+      const artifact = validateRuntimeInstructionTraceMetadata(value);
       const projectRomContentSha256 = sha256Identity(
         context.projectRomContentSha256,
         "Project ROM content identity"
@@ -25866,48 +25888,48 @@ var init_runtime_trace = __esm({
         );
       const sourceName = string(context.sourceName, "Instruction trace source name");
       const addressSpace2 = string(artifact.addressSpace, "Instruction trace project address space");
-      const sourceSha256 = sha2566(canonicalJson(artifact));
-      const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
+      const envelope = canonicalJson({ ...artifact, chunks: [] });
+      const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
+      const hash2 = (0, import_node_crypto9.createHash)("sha256").update(envelope.slice(0, split));
+      const suffix = envelope.slice(split + 2);
+      const validateChunk = createRuntimeTraceChunkValidator();
       const counts = /* @__PURE__ */ new Map();
-      let observedEvents = 0;
-      for (const chunk of artifact.chunks) {
-        for (const address4 of chunk.addresses) {
-          counts.set(address4, (counts.get(address4) ?? 0) + 1);
-          observedEvents++;
-        }
-      }
-      const droppedEvents = artifact.chunks.at(-1)?.droppedEvents ?? 0;
-      const complete = artifact.chunks.length > 0 && artifact.chunks.at(-1)?.active === false;
-      const runtime = [...counts].sort(([left], [right]) => left - right).map(([address4, count]) => ({
-        id: `runtime:instruction-trace:${sourceSha256}:${hex(address4)}`,
-        kind: "runtime-execution",
-        architecture: artifact.architecture,
-        addressSpace: addressSpace2,
-        address: address4,
-        count,
-        evidence: [evidenceId]
-      }));
       const observations = /* @__PURE__ */ new Map();
-      const unattributed = artifact.chunks.reduce(
-        (max, chunk) => Math.max(max, chunk.unattributedMemoryAccesses ?? 0),
-        0
-      );
+      let observedEvents = 0;
+      let droppedEvents = 0;
+      let complete = false;
+      let chunks = 0;
+      let unattributed = 0;
+      let finished = false;
       let detailedEvents = 0;
       let memoryLoss = 0;
       const add = (record3) => {
         const previous = observations.get(record3.id);
         observations.set(record3.id, { ...record3, count: (previous?.count ?? 0) + 1 });
       };
-      for (const chunk of artifact.chunks) {
+      const push3 = (value2) => {
+        if (finished) throw new Error("Instruction trace import already finished.");
+        const chunk = validateChunk(value2);
+        hash2.update(chunks++ === 0 ? "[\n" : ",\n");
+        hash2.update(
+          canonicalJson(chunk).trimEnd().split("\n").map((line) => `    ${line}`).join("\n")
+        );
+        droppedEvents = chunk.droppedEvents;
+        complete = !chunk.active;
+        unattributed = chunk.unattributedMemoryAccesses ?? unattributed;
+        for (const address4 of chunk.addresses) {
+          counts.set(address4, (counts.get(address4) ?? 0) + 1);
+          observedEvents++;
+        }
         for (const [index, detail] of (chunk.details ?? []).entries()) {
           detailedEvents++;
           memoryLoss += detail.droppedMemoryAccesses ?? 0;
           const address4 = chunk.addresses[index];
-          const base = { architecture: artifact.architecture, count: 1, evidence: [evidenceId] };
+          const base = { architecture: artifact.architecture, count: 1, evidence: [] };
           const identity2 = sha2566(canonicalJson({ address: address4, bytes: detail.bytes, state: detail.state }));
           add({
             ...base,
-            id: `${evidenceId}:code:${identity2}`,
+            id: `code:${identity2}`,
             kind: "runtime-instruction",
             addressSpace: addressSpace2,
             address: address4,
@@ -25916,7 +25938,7 @@ var init_runtime_trace = __esm({
           });
           add({
             ...base,
-            id: `${evidenceId}:state:${identity2}`,
+            id: `state:${identity2}`,
             kind: "runtime-cpu-state",
             addressSpace: addressSpace2,
             address: address4,
@@ -25927,7 +25949,7 @@ var init_runtime_trace = __esm({
             const accessIdentity = sha2566(canonicalJson({ instructionAddress: address4, ...access }));
             add({
               ...base,
-              id: `${evidenceId}:memory:${accessIdentity}`,
+              id: `memory:${accessIdentity}`,
               kind: "runtime-memory-access",
               instructionAddressSpace: addressSpace2,
               instructionAddress: address4,
@@ -25941,66 +25963,87 @@ var init_runtime_trace = __esm({
             });
           }
         }
-      }
-      runtime.push(...[...observations.values()].sort((a, b) => a.id.localeCompare(b.id)));
-      const evidence = {
-        id: evidenceId,
-        source: "runtime",
-        sourceId: `${artifact.producer.id}:${artifact.producer.revision}`,
-        confidence: droppedEvents === 0 && memoryLoss === 0 && unattributed === 0 && complete ? "certain" : "high",
-        detail: `${observedEvents} instruction event(s) observed; ${droppedEvents} producer event(s) dropped.`,
-        artifact: {
-          format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
-          formatVersion: String(RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION),
-          sha256: sourceSha256,
-          romContentSha256: artifact.romContentSha256
-        }
       };
-      const report2 = {
-        id: `import:instruction-trace:${sourceSha256}`,
-        format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
-        sourceName,
-        sourceSha256,
-        sourceVersion: `v${RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION}@${artifact.producer.id}:${artifact.producer.revision}`,
-        imported: {
-          executionRecords: counts.size,
-          executionEvents: observedEvents,
-          detailedEvents,
-          memoryRecords: [...observations.values()].filter(
-            (entry) => entry.kind === "runtime-memory-access"
-          ).length
-        },
-        unsupported: droppedEvents === 0 ? [] : [
-          {
-            field: "instruction-addresses",
-            count: droppedEvents,
-            reason: "Producer buffer overflow occurred before these events could be pulled."
+      const finish = () => {
+        if (finished) throw new Error("Instruction trace import already finished.");
+        finished = true;
+        const sourceSha256 = hash2.update(chunks ? "\n  ]" : "[]").update(suffix).digest("hex");
+        const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
+        const evidenceIds = [evidenceId];
+        const runtime = [...counts].sort(([left], [right]) => left - right).map(([address4, count2]) => ({
+          id: `${evidenceId}:${hex(address4)}`,
+          kind: "runtime-execution",
+          architecture: artifact.architecture,
+          addressSpace: addressSpace2,
+          address: address4,
+          count: count2,
+          evidence: evidenceIds
+        }));
+        for (const observation of [...observations.values()].sort((a, b) => a.id.localeCompare(b.id)))
+          runtime.push({
+            ...observation,
+            id: `${evidenceId}:${observation.id}`,
+            evidence: evidenceIds
+          });
+        observations.clear();
+        const evidence = {
+          id: evidenceId,
+          source: "runtime",
+          sourceId: `${artifact.producer.id}:${artifact.producer.revision}`,
+          confidence: droppedEvents === 0 && memoryLoss === 0 && unattributed === 0 && complete ? "certain" : "high",
+          detail: `${observedEvents} instruction event(s) observed; ${droppedEvents} producer event(s) dropped.`,
+          artifact: {
+            format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
+            formatVersion: String(RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION),
+            sha256: sourceSha256,
+            romContentSha256: artifact.romContentSha256
           }
-        ],
-        warnings: [
-          ...!complete ? ["Trace artifact ended while capture was still active."] : [],
-          ...detailedEvents < observedEvents ? [
-            `${observedEvents - detailedEvents} instruction observations have no captured bytes/state; RAM code cannot be recovered from PCs alone.`
-          ] : [],
-          ...memoryLoss ? [`${memoryLoss} memory operations were omitted by the producer detail limit.`] : [],
-          ...unattributed ? [
-            `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods); they have no saved address/value detail.`
-          ] : []
-        ]
+        };
+        const report2 = {
+          id: `import:instruction-trace:${sourceSha256}`,
+          format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
+          sourceName,
+          sourceSha256,
+          sourceVersion: `v${RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION}@${artifact.producer.id}:${artifact.producer.revision}`,
+          imported: {
+            executionRecords: counts.size,
+            executionEvents: observedEvents,
+            detailedEvents,
+            memoryRecords: runtime.filter((entry) => entry.kind === "runtime-memory-access").length
+          },
+          unsupported: droppedEvents === 0 ? [] : [
+            {
+              field: "instruction-addresses",
+              count: droppedEvents,
+              reason: "Producer buffer overflow occurred before these events could be pulled."
+            }
+          ],
+          warnings: [
+            ...!complete ? ["Trace artifact ended while capture was still active."] : [],
+            ...detailedEvents < observedEvents ? [
+              `${observedEvents - detailedEvents} instruction observations have no captured bytes/state; RAM code cannot be recovered from PCs alone.`
+            ] : [],
+            ...memoryLoss ? [`${memoryLoss} memory operations were omitted by the producer detail limit.`] : [],
+            ...unattributed ? [
+              `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods); they have no saved address/value detail.`
+            ] : []
+          ]
+        };
+        return {
+          batch: { runtime, evidence: [evidence], imports: [report2] },
+          report: report2,
+          sourceSha256,
+          observedEvents,
+          droppedEvents
+        };
       };
-      return {
-        batch: { runtime, evidence: [evidence], imports: [report2] },
-        report: report2,
-        sourceSha256,
-        observedEvents,
-        droppedEvents
-      };
+      return { push: push3, finish };
     };
   }
 });
 
 // packages/disassembler/src/execution-window.ts
-var addressKey2, summarizeExecutionWindow;
+var addressKey2, summarizeExecutionWindow, createExecutionWindowAccumulator;
 var init_execution_window = __esm({
   "packages/disassembler/src/execution-window.ts"() {
     "use strict";
@@ -26009,6 +26052,11 @@ var init_execution_window = __esm({
     addressKey2 = (addressSpace2, address4) => `${addressSpace2}:${address4}`;
     summarizeExecutionWindow = (value, shards) => {
       const trace = validateRuntimeInstructionTrace(value);
+      const accumulator = createExecutionWindowAccumulator(trace, shards);
+      for (const chunk of trace.chunks) accumulator.push(chunk);
+      return accumulator.finish();
+    };
+    createExecutionWindowAccumulator = (trace, shards) => {
       const graph = buildAnalysisCallGraph(shards);
       const nodes = shards.analysis.filter(
         (record3) => record3.kind === "cfg-node"
@@ -26020,10 +26068,10 @@ var init_execution_window = __esm({
         for (const nodeId of fn.nodeIds) {
           const node = nodesById.get(nodeId);
           if (!node) continue;
-          const key = addressKey2(node.addressSpace, node.address);
-          const owners = ownerIdsByAddress.get(key) ?? /* @__PURE__ */ new Set();
+          const key2 = addressKey2(node.addressSpace, node.address);
+          const owners = ownerIdsByAddress.get(key2) ?? /* @__PURE__ */ new Set();
           owners.add(fn.id);
-          ownerIdsByAddress.set(key, owners);
+          ownerIdsByAddress.set(key2, owners);
         }
       }
       const observedAddresses = /* @__PURE__ */ new Set();
@@ -26035,7 +26083,11 @@ var init_execution_window = __esm({
       let unownedEvents = 0;
       let ambiguousEvents = 0;
       let priorOwner;
-      for (const chunk of trace.chunks) {
+      let complete = false;
+      let droppedEvents = 0;
+      const push3 = (chunk) => {
+        complete = !chunk.active;
+        droppedEvents = chunk.droppedEvents;
         for (const [index, address4] of chunk.addresses.entries()) {
           const sequence = chunk.sequenceStart + index;
           observedEvents++;
@@ -26080,39 +26132,42 @@ var init_execution_window = __esm({
           priorOwner = functionId;
           attributedEvents++;
         }
-      }
-      const routines = [...observedRoutines.values()].map((summary) => {
-        const labels = summary.fn.labels.map(({ name }) => name);
-        return {
-          functionId: summary.fn.id,
-          addressSpace: summary.fn.addressSpace,
-          address: summary.fn.address,
-          name: labels[0] ?? summary.fn.id,
-          labels,
-          source: summary.fn.source,
-          firstSequence: summary.firstSequence,
-          lastSequence: summary.lastSequence,
-          instructionEvents: summary.instructionEvents,
-          uniqueInstructionAddresses: summary.addresses.size,
-          executionSpans: summary.executionSpans
-        };
-      }).sort(
-        (left, right) => left.firstSequence - right.firstSequence || left.address - right.address || left.functionId.localeCompare(right.functionId)
-      );
-      return {
-        architecture: trace.architecture,
-        addressSpace: trace.addressSpace,
-        complete: trace.chunks.length > 0 && trace.chunks.at(-1)?.active === false,
-        observedEvents,
-        droppedEvents: trace.chunks.at(-1)?.droppedEvents ?? 0,
-        uniqueInstructionAddresses: observedAddresses.size,
-        attributedEvents,
-        unownedEvents,
-        ambiguousEvents,
-        unownedAddresses: [...unownedAddresses].sort((left, right) => left - right),
-        ambiguousAddresses: [...ambiguousAddresses].sort((left, right) => left - right),
-        routines
       };
+      const finish = () => {
+        const routines = [...observedRoutines.values()].map((summary) => {
+          const labels = summary.fn.labels.map(({ name }) => name);
+          return {
+            functionId: summary.fn.id,
+            addressSpace: summary.fn.addressSpace,
+            address: summary.fn.address,
+            name: labels[0] ?? summary.fn.id,
+            labels,
+            source: summary.fn.source,
+            firstSequence: summary.firstSequence,
+            lastSequence: summary.lastSequence,
+            instructionEvents: summary.instructionEvents,
+            uniqueInstructionAddresses: summary.addresses.size,
+            executionSpans: summary.executionSpans
+          };
+        }).sort(
+          (left, right) => left.firstSequence - right.firstSequence || left.address - right.address || left.functionId.localeCompare(right.functionId)
+        );
+        return {
+          architecture: trace.architecture,
+          addressSpace: trace.addressSpace,
+          complete,
+          observedEvents,
+          droppedEvents,
+          uniqueInstructionAddresses: observedAddresses.size,
+          attributedEvents,
+          unownedEvents,
+          ambiguousEvents,
+          unownedAddresses: [...unownedAddresses].sort((left, right) => left - right),
+          ambiguousAddresses: [...ambiguousAddresses].sort((left, right) => left - right),
+          routines
+        };
+      };
+      return { push: push3, finish };
     };
   }
 });
@@ -26128,7 +26183,7 @@ var init_instruction_annotations = __esm({
       if (Array.isArray(value)) return value.map(canonicalValue3);
       if (value !== null && typeof value === "object") {
         return Object.fromEntries(
-          Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalValue3(entry)])
+          Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue3(entry)])
         );
       }
       return value;
@@ -26178,34 +26233,36 @@ var init_instruction_annotations = __esm({
       const instructions = /* @__PURE__ */ new Map();
       const diagnostics = [];
       const ensure = (addressSpace2, address4) => {
-        const key = locationKey(addressSpace2, address4);
-        let instruction2 = instructions.get(key);
+        const key2 = locationKey(addressSpace2, address4);
+        let instruction2 = instructions.get(key2);
         if (!instruction2) {
           instruction2 = {
             addressSpace: addressSpace2,
             address: address4,
             executionCount: 0
           };
-          instructions.set(key, instruction2);
+          instructions.set(key2, instruction2);
         }
         return instruction2;
       };
-      const addStateObservation = (instruction2, source, architecture2, state, recordId, evidence, count) => {
-        const key = `${source}:${architecture2}:${JSON.stringify(canonicalValue3(state))}`;
+      const addStateObservation = (instruction2, source, architecture2, state, recordId, evidence, count2) => {
+        const stateKey = JSON.stringify(canonicalValue3(state));
+        const key2 = `${source}:${architecture2}:${stateKey}`;
         const observations = instruction2.stateObservations ??= /* @__PURE__ */ new Map();
-        let observation = observations.get(key);
+        let observation = observations.get(key2);
         if (!observation) {
           observation = {
             source,
             architecture: architecture2,
             state,
-            ...count === void 0 ? {} : { count: 0 },
+            stateKey,
+            ...count2 === void 0 ? {} : { count: 0 },
             recordIds: /* @__PURE__ */ new Set(),
             evidence: /* @__PURE__ */ new Set()
           };
-          observations.set(key, observation);
+          observations.set(key2, observation);
         }
-        if (count !== void 0) observation.count = (observation.count ?? 0) + count;
+        if (count2 !== void 0) observation.count = (observation.count ?? 0) + count2;
         observation.recordIds.add(recordId);
         addAll(observation.evidence, evidence);
         instruction2.architectures = addValue(instruction2.architectures, architecture2);
@@ -26226,12 +26283,12 @@ var init_instruction_annotations = __esm({
             });
             continue;
           }
-          const key = JSON.stringify(canonicalValue3(value));
+          const key2 = JSON.stringify(canonicalValue3(value));
           const addresses2 = instruction2.effectiveAddresses ??= /* @__PURE__ */ new Map();
-          let entry = addresses2.get(key);
+          let entry = addresses2.get(key2);
           if (!entry) {
             entry = { value, nodeIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
-            addresses2.set(key, entry);
+            addresses2.set(key2, entry);
           }
           entry.nodeIds.add(node.id);
           addAll(entry.evidence, node.evidence);
@@ -26243,19 +26300,23 @@ var init_instruction_annotations = __esm({
           const hasAfter = Object.hasOwn(after, field);
           const beforeValue = before[field];
           const afterValue = after[field];
-          if (valueKey(beforeValue, hasBefore) === valueKey(afterValue, hasAfter)) continue;
-          const key = `${field}:${valueKey(beforeValue, hasBefore)}:${valueKey(afterValue, hasAfter)}`;
+          const beforeKey = valueKey(beforeValue, hasBefore);
+          const afterKey = valueKey(afterValue, hasAfter);
+          if (beforeKey === afterKey) continue;
+          const key2 = `${field}:${beforeKey}:${afterKey}`;
           const transitions = instruction2.stateTransitions ??= /* @__PURE__ */ new Map();
-          let transition = transitions.get(key);
+          let transition = transitions.get(key2);
           if (!transition) {
             transition = {
               field,
+              beforeKey,
+              afterKey,
               ...hasBefore ? { before: beforeValue } : {},
               ...hasAfter ? { after: afterValue } : {},
               nodeIds: /* @__PURE__ */ new Set(),
               evidence: /* @__PURE__ */ new Set()
             };
-            transitions.set(key, transition);
+            transitions.set(key2, transition);
           }
           transition.nodeIds.add(node.id);
           addAll(transition.evidence, node.evidence);
@@ -26304,12 +26365,12 @@ var init_instruction_annotations = __esm({
             ...record3.channel === void 0 ? {} : { channel: record3.channel },
             ...record3.value === void 0 ? {} : { value: record3.value }
           };
-          const key = JSON.stringify(canonicalValue3(value));
+          const key2 = JSON.stringify(canonicalValue3(value));
           const accesses = instruction2.memoryAccesses ??= /* @__PURE__ */ new Map();
-          let access = accesses.get(key);
+          let access = accesses.get(key2);
           if (!access) {
             access = { value, count: 0, recordIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
-            accesses.set(key, access);
+            accesses.set(key2, access);
           }
           access.count += record3.count;
           access.recordIds.add(record3.id);
@@ -26317,10 +26378,10 @@ var init_instruction_annotations = __esm({
           instruction2.evidence = addAll(instruction2.evidence, record3.evidence);
         }
       }
-      for (const comment of shards.comments) {
-        const instruction2 = ensure(comment.addressSpace, comment.address);
-        (instruction2.comments ??= []).push(comment);
-        for (const evidence of comment.evidence) (instruction2.evidence ??= /* @__PURE__ */ new Set()).add(evidence);
+      for (const comment2 of shards.comments) {
+        const instruction2 = ensure(comment2.addressSpace, comment2.address);
+        (instruction2.comments ??= []).push(comment2);
+        for (const evidence of comment2.evidence) (instruction2.evidence ??= /* @__PURE__ */ new Set()).add(evidence);
       }
       const mutable = [...instructions.values()];
       const directIndex = /* @__PURE__ */ new Map();
@@ -26422,40 +26483,34 @@ var init_instruction_annotations = __esm({
           })).sort(
             (left, right) => left.operandIndex - right.operandIndex || (left.address ?? left.baseAddress ?? -1) - (right.address ?? right.baseAddress ?? -1) || left.explanation.localeCompare(right.explanation)
           ),
-          stateTransitions: [...instruction2.stateTransitions?.values() ?? []].map(({ field, before, after, nodeIds, evidence }) => ({
+          stateTransitions: [...instruction2.stateTransitions?.values() ?? []].sort(
+            (left, right) => left.field.localeCompare(right.field) || left.beforeKey.localeCompare(right.beforeKey) || left.afterKey.localeCompare(right.afterKey)
+          ).map(({ field, before, after, nodeIds, evidence }) => ({
             field,
             ...before === void 0 ? {} : { before },
             ...after === void 0 ? {} : { after },
             nodeIds: sortedStrings(nodeIds),
             evidence: sortedStrings(evidence)
-          })).sort(
-            (left, right) => left.field.localeCompare(right.field) || valueKey(left.before, "before" in left).localeCompare(
-              valueKey(right.before, "before" in right)
-            ) || valueKey(left.after, "after" in left).localeCompare(
-              valueKey(right.after, "after" in right)
-            )
-          ),
-          stateObservations: [...instruction2.stateObservations?.values() ?? []].map(({ source, architecture: architecture2, state, count, recordIds, evidence }) => ({
+          })),
+          stateObservations: [...instruction2.stateObservations?.values() ?? []].sort(
+            (left, right) => left.source.localeCompare(right.source) || left.architecture.localeCompare(right.architecture) || left.stateKey.localeCompare(right.stateKey)
+          ).map(({ source, architecture: architecture2, state, count: count2, recordIds, evidence }) => ({
             source,
             architecture: architecture2,
             state,
-            ...count === void 0 ? {} : { count },
+            ...count2 === void 0 ? {} : { count: count2 },
             recordIds: sortedStrings(recordIds),
             evidence: sortedStrings(evidence)
-          })).sort(
-            (left, right) => left.source.localeCompare(right.source) || left.architecture.localeCompare(right.architecture) || JSON.stringify(canonicalValue3(left.state)).localeCompare(
-              JSON.stringify(canonicalValue3(right.state))
-            )
-          ),
+          })),
           executionCount: instruction2.executionCount,
           ...instruction2.comments ? { comments: [...instruction2.comments].sort((a, b) => a.id.localeCompare(b.id)) } : {},
           executionRecordIds: sortedStrings(instruction2.executionRecordIds),
           runtimeCoverage: [...coverage.values()].sort(
             (left, right) => left.coverage.localeCompare(right.coverage)
           ),
-          memoryAccesses: [...instruction2.memoryAccesses?.values() ?? []].map(({ value, count, recordIds, evidence }) => ({
+          memoryAccesses: [...instruction2.memoryAccesses?.values() ?? []].map(({ value, count: count2, recordIds, evidence }) => ({
             ...value,
-            count,
+            count: count2,
             recordIds: sortedStrings(recordIds),
             evidence: sortedStrings(evidence)
           })).sort(
@@ -26477,7 +26532,7 @@ var init_instruction_annotations = __esm({
 });
 
 // packages/disassembler/src/runtime-evidence.ts
-var emptyCounts, sortedUnique3, stateValueKey, conflictKindFor, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
+var emptyCounts, sortedUnique3, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
 var init_runtime_evidence = __esm({
   "packages/disassembler/src/runtime-evidence.ts"() {
     "use strict";
@@ -26494,11 +26549,6 @@ var init_runtime_evidence = __esm({
     });
     sortedUnique3 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
     stateValueKey = (value) => `${typeof value}:${String(value)}`;
-    conflictKindFor = (field) => {
-      if (field === "instruction-size") return "instruction-size";
-      if (field === "opcode") return "opcode";
-      return "cpu-state";
-    };
     conflictReport = (runtime) => {
       const observations = [];
       for (const record3 of runtime) {
@@ -26541,26 +26591,30 @@ var init_runtime_evidence = __esm({
       }
       const groups = /* @__PURE__ */ new Map();
       for (const observation of observations) {
-        const key = [
+        const key2 = [
           observation.architecture,
           observation.addressSpace,
           observation.address,
           observation.field
         ].join(":");
-        groups.set(key, [...groups.get(key) ?? [], observation]);
+        const group2 = groups.get(key2);
+        if (group2) group2.push(observation);
+        else groups.set(key2, [observation]);
       }
       const conflicts = [];
-      for (const [key, group2] of groups) {
+      for (const [key2, group2] of groups) {
         const byValue = /* @__PURE__ */ new Map();
         for (const observation of group2) {
           const valueKey2 = stateValueKey(observation.value);
-          byValue.set(valueKey2, [...byValue.get(valueKey2) ?? [], observation]);
+          const entries3 = byValue.get(valueKey2);
+          if (entries3) entries3.push(observation);
+          else byValue.set(valueKey2, [observation]);
         }
         if (byValue.size < 2) continue;
         const first = group2[0];
         conflicts.push({
-          id: `runtime-conflict:${key}`,
-          kind: conflictKindFor(first.field),
+          id: `runtime-conflict:${key2}`,
+          kind: first.field === "instruction-size" || first.field === "opcode" ? first.field : "cpu-state",
           architecture: first.architecture,
           addressSpace: first.addressSpace,
           address: first.address,
@@ -26678,7 +26732,7 @@ var init_runtime_evidence = __esm({
       };
       return {
         shards: merged,
-        changed: Object.values(added).some((count) => count > 0) || Object.values(updated).some((count) => count > 0),
+        changed: Object.values(added).some((count2) => count2 > 0) || Object.values(updated).some((count2) => count2 > 0),
         added,
         updated,
         existing,
@@ -26753,13 +26807,13 @@ var init_behavior_capture = __esm({
         throw new Error("Capture requires 1\u20139 windows (at most eight baselines and one action).");
       let totalCaptureEvents = 0;
       const windows = root.windows.map((raw) => {
-        const window11 = object(raw);
-        if (window11.role !== "baseline" && window11.role !== "action")
+        const window12 = object(raw);
+        if (window12.role !== "baseline" && window12.role !== "action")
           throw new Error("Invalid capture window role.");
-        const limits = object(window11.limits);
+        const limits = object(window12.limits);
         const maxEvents = integer3(limits.maxEvents, 1, MAX_CAPTURE_EVENTS);
         const maxMilliseconds = integer3(limits.maxMilliseconds, 1, MAX_CAPTURE_MILLISECONDS);
-        const stop = object(window11.stop);
+        const stop = object(window12.stop);
         const kinds = ["manual", "breakpoint", "elapsed", "instruction-limit", "address"];
         if (!kinds.includes(String(stop.kind))) throw new Error("Invalid capture stop condition.");
         const parsedStop = stop.kind === "address" ? {
@@ -26773,9 +26827,9 @@ var init_behavior_capture = __esm({
             ].sort((a, b) => a - b);
           })()
         } : { kind: stop.kind };
-        if (![...kinds, "session-ended", "producer-stopped", "error"].includes(String(window11.stopReason)))
+        if (![...kinds, "session-ended", "producer-stopped", "error"].includes(String(window12.stopReason)))
           throw new Error("Invalid capture stop reason.");
-        const traceRaw = object(window11.trace);
+        const traceRaw = object(window12.trace);
         if (!Array.isArray(traceRaw.chunks) || traceRaw.chunks.length > maxEvents + 1)
           throw new Error("Capture has too many trace chunks.");
         let total = 0;
@@ -26792,50 +26846,50 @@ var init_behavior_capture = __esm({
         const trace = validateRuntimeInstructionTrace(traceRaw);
         if (trace.romContentSha256 !== identity2.binarySha256)
           throw new Error("Capture trace/build mismatch.");
-        const startedAt = text(window11.startedAt);
+        const startedAt = text(window12.startedAt);
         if (!Number.isFinite(Date.parse(startedAt)))
           throw new Error("Invalid capture start timestamp.");
         return {
-          role: window11.role,
-          label: text(window11.label),
+          role: window12.role,
+          label: text(window12.label),
           startedAt,
-          elapsedMilliseconds: integer3(window11.elapsedMilliseconds, 0, Number.MAX_SAFE_INTEGER),
+          elapsedMilliseconds: integer3(window12.elapsedMilliseconds, 0, Number.MAX_SAFE_INTEGER),
           limits: { maxEvents, maxMilliseconds },
           stop: parsedStop,
-          stopReason: window11.stopReason,
-          excludedPolledEvents: integer3(window11.excludedPolledEvents, 0, Number.MAX_SAFE_INTEGER),
+          stopReason: window12.stopReason,
+          excludedPolledEvents: integer3(window12.excludedPolledEvents, 0, Number.MAX_SAFE_INTEGER),
           trace
         };
       });
       const actions = windows.filter(({ role }) => role === "action");
       if (actions.length > 1 || windows.filter(({ role }) => role === "baseline").length > 8)
         throw new Error("Capture supports at most eight baselines and one action.");
-      const streamIdentity = (window11) => canonicalJson({
-        architecture: window11.trace.architecture,
-        addressSpace: window11.trace.addressSpace,
-        producer: window11.trace.producer
+      const streamIdentity = (window12) => canonicalJson({
+        architecture: window12.trace.architecture,
+        addressSpace: window12.trace.addressSpace,
+        producer: window12.trace.producer
       });
-      if (windows.some((window11) => streamIdentity(window11) !== streamIdentity(windows[0])))
+      if (windows.some((window12) => streamIdentity(window12) !== streamIdentity(windows[0])))
         throw new Error("Capture windows describe different processors or emulator revisions.");
       if (new Set(windows.map(digest)).size !== windows.length)
         throw new Error("Duplicate capture windows are not independent baselines.");
       return { format: BEHAVIOR_CAPTURE_FORMAT, schemaVersion: 1, identity: identity2, windows };
     };
-    profile = (window11) => {
+    profile = (window12) => {
       const counts = /* @__PURE__ */ new Map();
       const transitions = /* @__PURE__ */ new Map();
       let previous;
       let nextSequence = 1;
       let total = 0;
-      for (const chunk of window11.trace.chunks) {
+      for (const chunk of window12.trace.chunks) {
         if (chunk.sequenceStart !== nextSequence) previous = void 0;
         for (const address4 of chunk.addresses) {
           counts.set(address4, (counts.get(address4) ?? 0) + 1);
           if (previous !== void 0) {
-            const key = `${previous}:${address4}`;
-            const entry = transitions.get(key) ?? { from: previous, to: address4, count: 0 };
+            const key2 = `${previous}:${address4}`;
+            const entry = transitions.get(key2) ?? { from: previous, to: address4, count: 0 };
             entry.count++;
-            transitions.set(key, entry);
+            transitions.set(key2, entry);
           }
           previous = address4;
           total++;
@@ -26854,9 +26908,9 @@ var init_behavior_capture = __esm({
       const idle2 = baselines.map(profile);
       if (!active.total || idle2.some(({ total }) => !total))
         throw new Error("Action and all baseline windows must contain instruction events.");
-      const transitions = [...active.transitions.entries()].map(([key, edge]) => ({
+      const transitions = [...active.transitions.entries()].map(([key2, edge]) => ({
         ...edge,
-        baselineCount: idle2.reduce((sum, base) => sum + (base.transitions.get(key)?.count ?? 0), 0)
+        baselineCount: idle2.reduce((sum, base) => sum + (base.transitions.get(key2)?.count ?? 0), 0)
       })).sort((a, b) => a.from - b.from || a.to - b.to);
       const incoming = /* @__PURE__ */ new Map();
       for (const edge of transitions)
@@ -26928,7 +26982,7 @@ var init_behavior_capture = __esm({
         }
       }
       const droppedEvents = capture.windows.reduce(
-        (sum, window11) => sum + (window11.trace.chunks.at(-1)?.droppedEvents ?? 0),
+        (sum, window12) => sum + (window12.trace.chunks.at(-1)?.droppedEvents ?? 0),
         0
       );
       const warnings = [
@@ -26939,7 +26993,7 @@ var init_behavior_capture = __esm({
           `${droppedEvents} producer events lost: absence and frequency scores may be biased; transitions across gaps were excluded.`
         );
       if (capture.windows.some(
-        (window11) => window11.trace.chunks.at(-1)?.active !== false || ["error", "session-ended"].includes(window11.stopReason)
+        (window12) => window12.trace.chunks.at(-1)?.active !== false || ["error", "session-ended"].includes(window12.stopReason)
       ))
         warnings.push(
           "At least one window is incomplete; recapture before drawing strong conclusions."
@@ -26958,7 +27012,7 @@ var init_behavior_capture = __esm({
         functions: groups.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id)),
         warnings,
         observedEvents: capture.windows.reduce(
-          (sum, window11) => sum + window11.trace.chunks.reduce((count, chunk) => count + chunk.addresses.length, 0),
+          (sum, window12) => sum + window12.trace.chunks.reduce((count2, chunk) => count2 + chunk.addresses.length, 0),
           0
         ),
         droppedEvents
@@ -26980,30 +27034,30 @@ var init_behavior_capture = __esm({
       if (!selected.length || selected.some((address4) => !byAddress2.has(address4)))
         throw new Error("Select at least one observed action instruction to annotate.");
       const evidenceId = `runtime:behavior:${review.captureSha256}`;
-      const windows = capture.windows.map((window11) => ({
-        window: window11,
-        sha256: digest(window11),
-        profile: profile(window11)
+      const windows = capture.windows.map((window12) => ({
+        window: window12,
+        sha256: digest(window12),
+        profile: profile(window12)
       }));
       return mergeRuntimeEvidence(project.shards, {
         runtime: windows.flatMap(
-          ({ window: window11, sha256: sha25611, profile: observed }) => [...observed.counts].map(([address4, count]) => ({
+          ({ window: window12, sha256: sha25611, profile: observed }) => [...observed.counts].map(([address4, count2]) => ({
             id: `runtime:behavior-window:${sha25611}:${address4}`,
             kind: "runtime-execution",
-            architecture: window11.trace.architecture,
-            addressSpace: window11.trace.addressSpace,
+            architecture: window12.trace.architecture,
+            addressSpace: window12.trace.addressSpace,
             address: address4,
-            count,
+            count: count2,
             evidence: [`runtime:behavior-window:${sha25611}`]
           }))
         ),
         evidence: [
-          ...windows.map(({ window: window11, sha256: sha25611, profile: observed }) => ({
+          ...windows.map(({ window: window12, sha256: sha25611, profile: observed }) => ({
             id: `runtime:behavior-window:${sha25611}`,
             source: "runtime",
-            sourceId: `${window11.trace.producer.id}:${window11.trace.producer.revision}`,
+            sourceId: `${window12.trace.producer.id}:${window12.trace.producer.revision}`,
             confidence: "high",
-            detail: `${window11.role}: ${observed.total} observed; ${window11.trace.chunks.at(-1)?.droppedEvents ?? 0} dropped; stop=${window11.stopReason}.`,
+            detail: `${window12.role}: ${observed.total} observed; ${window12.trace.chunks.at(-1)?.droppedEvents ?? 0} dropped; stop=${window12.stopReason}.`,
             artifact: {
               format: "uttori-asm-behavior-window",
               formatVersion: "1",
@@ -27104,29 +27158,29 @@ var init_behavior_capture_recorder = __esm({
               (address4) => !Number.isSafeInteger(address4) || address4 < 0 || address4 > 16777215
             ))
               throw new Error("Invalid behavior trace identity, sequence, loss, or event batch.");
-            let count = Math.min(batch.addresses.length, this.#options.limits.maxEvents - observed);
+            let count2 = Math.min(batch.addresses.length, this.#options.limits.maxEvents - observed);
             const stop = this.#options.stop;
             if (stop.kind === "address") {
-              const match = batch.addresses.slice(0, count).findIndex((address4) => stop.addresses.includes(address4));
+              const match = batch.addresses.slice(0, count2).findIndex((address4) => stop.addresses.includes(address4));
               if (match >= 0) {
-                count = match + 1;
+                count2 = match + 1;
                 this.requestStop("address");
               }
             }
-            if (count)
+            if (count2)
               chunks.push({
                 sequenceStart: batch.sequenceStart,
-                addresses: batch.addresses.slice(0, count),
-                ...batch.details === void 0 ? {} : { details: batch.details.slice(0, count) },
+                addresses: batch.addresses.slice(0, count2),
+                ...batch.details === void 0 ? {} : { details: batch.details.slice(0, count2) },
                 ...batch.unattributedMemoryAccesses === void 0 ? {} : { unattributedMemoryAccesses: batch.unattributedMemoryAccesses },
                 droppedEvents: batch.droppedEvents,
                 active: true
               });
-            observed += count;
+            observed += count2;
             dropped = batch.droppedEvents;
             unattributed = batch.unattributedMemoryAccesses ?? unattributed;
-            expectedSequence = batch.sequenceStart + count;
-            excludedPolledEvents += batch.addresses.length - count;
+            expectedSequence = batch.sequenceStart + count2;
+            excludedPolledEvents += batch.addresses.length - count2;
             if (observed >= this.#options.limits.maxEvents) this.requestStop("instruction-limit");
             if (!batch.active && !batch.addresses.length) this.requestStop("producer-stopped");
             if (!this.#reason && !batch.addresses.length)
@@ -27256,6 +27310,7 @@ var init_project_transaction = __esm({
     import_node_crypto11 = require("node:crypto");
     fs4 = __toESM(require("node:fs"), 1);
     import_node_path3 = __toESM(require("node:path"), 1);
+    init_json_array_file();
     init_project_types();
     init_project_store();
     ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
@@ -27439,12 +27494,8 @@ var init_project_transaction = __esm({
     verifyPreparedShards = (directory, descriptors) => {
       for (const descriptor2 of descriptors) {
         const shardPath = import_node_path3.default.join(directory, descriptor2.path);
-        const text2 = fs4.readFileSync(shardPath, "utf8");
-        if (sha2567(text2) !== descriptor2.sha256) {
-          throw new Error(`Prepared analysis shard '${descriptor2.path}' does not match its SHA-256.`);
-        }
-        const records2 = JSON.parse(text2);
-        if (!Array.isArray(records2) || records2.length !== descriptor2.records) {
+        const records2 = validateObjectArrayFile(shardPath, descriptor2.sha256);
+        if (records2 !== descriptor2.records) {
           throw new Error(`Prepared analysis shard '${descriptor2.path}' has the wrong record count.`);
         }
       }
@@ -27481,8 +27532,8 @@ var init_project_transaction = __esm({
       }
       const prefix = `${GENERATIONS_DIRECTORY}/${prepared.generation}/`;
       for (const descriptor2 of prepared.manifest.shards) {
-        const basename9 = descriptor2.path.slice(prefix.length);
-        if (!descriptor2.path.startsWith(prefix) || basename9 === "" || basename9.includes("/") || basename9.includes("\\")) {
+        const basename10 = descriptor2.path.slice(prefix.length);
+        if (!descriptor2.path.startsWith(prefix) || basename10 === "" || basename10.includes("/") || basename10.includes("\\")) {
           throw new Error(`Prepared analysis shard '${descriptor2.id}' is outside its generation.`);
         }
       }
@@ -27622,8 +27673,8 @@ var init_project_labels = __esm({
     projectSourceLabelNames = (labels, reserved = []) => {
       const names = /* @__PURE__ */ new Map();
       const used = new Set([...reserved].map((name) => name.toLowerCase()));
-      const sorted = [...labels].sort((a, b) => a.id.localeCompare(b.id));
-      for (const label of sorted.filter((label2) => label2.sourceName === void 0)) {
+      const sorted2 = [...labels].sort((a, b) => a.id.localeCompare(b.id));
+      for (const label of sorted2.filter((label2) => label2.sourceName === void 0)) {
         const base = legacySourceLabelName(label.name);
         let name = base;
         let suffix = 2;
@@ -27631,7 +27682,7 @@ var init_project_labels = __esm({
         used.add(name.toLowerCase());
         names.set(label.id, name);
       }
-      for (const label of sorted.filter((label2) => label2.sourceName !== void 0)) {
+      for (const label of sorted2.filter((label2) => label2.sourceName !== void 0)) {
         const name = label.sourceName;
         validateSourceLabelName(name);
         if (used.has(name.toLowerCase()))
@@ -27868,8 +27919,8 @@ var init_project_edit = __esm({
       return fields.sort();
     };
     stateConflictFields = (manual, existing) => Object.keys(manual).filter((field) => {
-      const key = field;
-      return existing?.[key] !== void 0 && existing[key] !== manual[key];
+      const key2 = field;
+      return existing?.[key2] !== void 0 && existing[key2] !== manual[key2];
     }).sort();
     applyStateEntryPointEdit = (project, request) => {
       assertStableId2(request.annotationId, "Annotation id");
@@ -28380,6 +28431,230 @@ var init_rom_image = __esm({
   }
 });
 
+// packages/disassembler/src/runtime-trace-file.ts
+async function* traceEntries(file, options) {
+  const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1)
+    throw new Error("Trace import maximum bytes must be a positive safe integer.");
+  options.signal?.throwIfAborted();
+  const before = await (0, import_promises.stat)(file);
+  const checkSize = (size) => {
+    if (size > maxBytes)
+      throw new Error(
+        `Instruction trace is ${(size / 1024 / 1024).toFixed(1)} MiB; import limit is ${(maxBytes / 1024 / 1024).toFixed(1)} MiB. Increase asm.trace.maxImportSizeMiB in the project settings to import this capture.`
+      );
+  };
+  checkSize(before.size);
+  let mode3 = "start";
+  let tokenKind = "key";
+  let key2 = "";
+  const keys = /* @__PURE__ */ new Set();
+  let allowEnd = true;
+  let inString = false;
+  let escaped = false;
+  let depth = 0;
+  let primitive = false;
+  let parts = [];
+  let length = 0;
+  const fail = () => {
+    throw new Error(`Instruction trace '${file}' is not a valid JSON object with a chunks array.`);
+  };
+  const append3 = (text2) => {
+    length += text2.length;
+    if (length > MAX_VALUE_CHARACTERS)
+      throw new Error("Instruction trace chunk or metadata value exceeds the 32 MiB text limit.");
+    parts.push(text2);
+  };
+  const decoder = new import_node_string_decoder2.StringDecoder("utf8");
+  const stream = (0, import_node_fs.createReadStream)(file, { highWaterMark: 64 * 1024 });
+  let bytesRead = 0;
+  try {
+    for await (const bytes of stream) {
+      options.signal?.throwIfAborted();
+      bytesRead += bytes.length;
+      checkSize(bytesRead);
+      const text2 = decoder.write(bytes);
+      let tokenStart = mode3 === "token" ? 0 : -1;
+      for (let index = 0; index < text2.length; index++) {
+        const char = text2[index];
+        if (mode3 === "token") {
+          let done = false;
+          let delimiter = false;
+          if (inString) {
+            if (escaped) escaped = false;
+            else if (char === "\\") escaped = true;
+            else if (char === '"') {
+              inString = false;
+              done = depth === 0;
+            }
+          } else if (primitive) {
+            if (char === "," || char === "}" || char === "]" || /\s/.test(char)) {
+              done = true;
+              delimiter = true;
+            }
+          } else if (char === '"') inString = true;
+          else if (char === "{" || char === "[") depth++;
+          else if (char === "}" || char === "]") {
+            depth--;
+            done = depth === 0;
+          }
+          if (!done) continue;
+          append3(text2.slice(tokenStart, delimiter ? index : index + 1));
+          const value = JSON.parse(parts.join(""));
+          parts = [];
+          length = 0;
+          tokenStart = -1;
+          if (tokenKind === "key") {
+            if (typeof value !== "string" || keys.has(value)) fail();
+            key2 = value;
+            keys.add(key2);
+            mode3 = "colon";
+          } else if (tokenKind === "chunk") {
+            mode3 = "chunk-end";
+            yield { kind: "chunk", value };
+          } else {
+            mode3 = "property-end";
+            yield { kind: "property", key: key2, value };
+          }
+          if (delimiter) index--;
+          continue;
+        }
+        if (char === " " || char === "\n" || char === "\r" || char === "	") continue;
+        if (mode3 === "start" && char === "{") {
+          mode3 = "key";
+          allowEnd = true;
+          continue;
+        }
+        if (mode3 === "key" && char === "}" && allowEnd) {
+          mode3 = "end";
+          continue;
+        }
+        if (mode3 === "colon" && char === ":") {
+          mode3 = "value";
+          continue;
+        }
+        if (mode3 === "property-end") {
+          if (char === "}") {
+            mode3 = "end";
+            continue;
+          }
+          if (char === ",") {
+            mode3 = "key";
+            allowEnd = false;
+            continue;
+          }
+        }
+        if (mode3 === "chunk-end") {
+          if (char === "]") {
+            mode3 = "property-end";
+            continue;
+          }
+          if (char === ",") {
+            mode3 = "chunk";
+            allowEnd = false;
+            continue;
+          }
+        }
+        if (mode3 === "chunk" && char === "]" && allowEnd) {
+          mode3 = "property-end";
+          continue;
+        }
+        if (mode3 === "value" && key2 === "chunks") {
+          if (char !== "[") fail();
+          mode3 = "chunk";
+          allowEnd = true;
+          continue;
+        }
+        if (mode3 !== "key" && mode3 !== "value" && mode3 !== "chunk" || mode3 === "key" && char !== '"' || char === "]" || char === "}" || char === ",")
+          fail();
+        tokenKind = "property";
+        if (mode3 === "key") tokenKind = "key";
+        else if (mode3 === "chunk") tokenKind = "chunk";
+        mode3 = "token";
+        tokenStart = index;
+        inString = char === '"';
+        escaped = false;
+        depth = char === "{" || char === "[" ? 1 : 0;
+        primitive = !inString && depth === 0;
+      }
+      if (tokenStart >= 0) append3(text2.slice(tokenStart));
+      options.onProgress?.(bytesRead, before.size);
+    }
+    if (decoder.end() || String(mode3) !== "end" || !keys.has("chunks")) fail();
+    const after = await (0, import_promises.stat)(file);
+    if (bytesRead !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs)
+      throw new Error(
+        "Instruction trace changed while it was being read; stop recording before importing."
+      );
+  } finally {
+    stream.destroy();
+  }
+}
+async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
+  const properties = {};
+  const validateChunk = createRuntimeTraceChunkValidator();
+  for await (const entry of traceEntries(file, options)) {
+    if (entry.kind === "chunk") yield validateChunk(entry.value);
+    else
+      Object.defineProperty(properties, entry.key, {
+        value: entry.value,
+        enumerable: true,
+        configurable: true
+      });
+  }
+  if (canonicalJson(validateRuntimeInstructionTraceMetadata(properties)) !== canonicalJson(metadata))
+    throw new Error("Instruction trace identity changed while importing.");
+}
+var import_node_fs, import_promises, import_node_string_decoder2, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, importRuntimeInstructionTraceFile, summarizeExecutionWindowFile;
+var init_runtime_trace_file = __esm({
+  "packages/disassembler/src/runtime-trace-file.ts"() {
+    "use strict";
+    import_node_fs = require("node:fs");
+    import_promises = require("node:fs/promises");
+    import_node_string_decoder2 = require("node:string_decoder");
+    init_project_store();
+    init_execution_window();
+    init_runtime_trace();
+    DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+    MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
+    readRuntimeTraceFileMetadata = async (file, options = {}) => {
+      const metadata = {};
+      for await (const entry of traceEntries(file, options)) {
+        if (entry.kind !== "property") continue;
+        Object.defineProperty(metadata, entry.key, {
+          value: entry.value,
+          enumerable: true,
+          configurable: true
+        });
+        if ([
+          "format",
+          "schemaVersion",
+          "architecture",
+          "addressSpace",
+          "romContentSha256",
+          "producer"
+        ].every((key2) => Object.hasOwn(metadata, key2)))
+          return validateRuntimeInstructionTraceMetadata(metadata);
+      }
+      return validateRuntimeInstructionTraceMetadata(metadata);
+    };
+    importRuntimeInstructionTraceFile = async (file, context, options = {}) => {
+      const metadata = await readRuntimeTraceFileMetadata(file, options);
+      const importer = createRuntimeInstructionTraceImporter(metadata, context);
+      for await (const chunk of readRuntimeTraceFileChunks(file, metadata, options))
+        importer.push(chunk);
+      return importer.finish();
+    };
+    summarizeExecutionWindowFile = async (file, shards, options = {}) => {
+      const metadata = await readRuntimeTraceFileMetadata(file, options);
+      const summary = createExecutionWindowAccumulator(metadata, shards);
+      for await (const chunk of readRuntimeTraceFileChunks(file, metadata, options))
+        summary.push(chunk);
+      return summary.finish();
+    };
+  }
+});
+
 // packages/disassembler/src/source-export.ts
 var import_node_crypto13, fs6, import_node_path4, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalize2, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
@@ -28396,7 +28671,7 @@ var init_source_export = __esm({
       if (Array.isArray(value)) return value.map(canonicalize2);
       if (value && typeof value === "object") {
         return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalize2(entry)])
+          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalize2(entry)])
         );
       }
       return value;
@@ -28499,7 +28774,7 @@ var init_source_export = __esm({
 });
 
 // packages/disassembler/src/static-analysis.ts
-var hexAddress, contextKey, nodeIdFor, sortedUnique5, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor2, overriddenTargetKind, analyzeStaticControlFlow;
+var hexAddress, contextKey, nodeIdFor, sortedUnique5, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
 var init_static_analysis = __esm({
   "packages/disassembler/src/static-analysis.ts"() {
     "use strict";
@@ -28556,7 +28831,7 @@ var init_static_analysis = __esm({
       }
     };
     edgeIdFor = (from, kind, toAddress, override) => `edge:${from}:${kind}:${toAddress === void 0 ? "unresolved" : hexAddress(toAddress)}${override ? `:${override}` : ""}`;
-    conflictKindFor2 = (decoded) => {
+    conflictKindFor = (decoded) => {
       if (decoded.kind === "ambiguous") return "state-ambiguity";
       if (decoded.kind === "blocked") return "blocked";
       return decoded.reason.includes("map") ? "invalid-mapping" : "decode";
@@ -28607,9 +28882,6 @@ var init_static_analysis = __esm({
       let processedWorkItems = 0;
       const addConflict = (conflict) => {
         conflicts.set(conflict.id, conflict);
-      };
-      const addUnresolved = (flow) => {
-        unresolved.set(flow.id, flow);
       };
       const addIncomplete = (reason) => {
         incompleteReasons.set(`${reason.kind}:${reason.address}:${reason.limit}`, reason);
@@ -28672,7 +28944,7 @@ var init_static_analysis = __esm({
         nodes.delete(nodeId);
         const decoded = adapter.decode(item.address, incomingState);
         if (decoded.kind !== "instruction") {
-          const conflictKind = conflictKindFor2(decoded);
+          const conflictKind = conflictKindFor(decoded);
           const evidence = sortedUnique5([
             ...item.evidence,
             ...decoded.kind === "blocked" ? decoded.evidence : []
@@ -28734,7 +29006,7 @@ var init_static_analysis = __esm({
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction2, incomingState);
-        const path28 = [...item.path, nodeId];
+        const path30 = [...item.path, nodeId];
         nodes.set(nodeId, {
           id: nodeId,
           address: instruction2.address,
@@ -28750,7 +29022,7 @@ var init_static_analysis = __esm({
           effectiveAddresses: instruction2.effectiveAddresses ?? [],
           entryPoint: item.entryPoint,
           evidence: nodeEvidence,
-          evidencePath: path28
+          evidencePath: path30
         });
         if (item.predecessor && item.edgeKind) {
           const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
@@ -28789,8 +29061,9 @@ var init_static_analysis = __esm({
               evidence: sortedUnique5([...nodeEvidence, ...override?.evidence ?? []]),
               ...target.explanation ? { explanation: target.explanation } : {}
             });
-            addUnresolved({
-              id: `unresolved:${hexAddress(instruction2.address)}:${target.kind}`,
+            const unresolvedId = `unresolved:${hexAddress(instruction2.address)}:${target.kind}`;
+            unresolved.set(unresolvedId, {
+              id: unresolvedId,
               address: instruction2.address,
               kind,
               indirect: target.indirect ?? false,
@@ -28806,7 +29079,7 @@ var init_static_analysis = __esm({
             context,
             entryPoint: item.entryPoint,
             evidence: targetEvidence,
-            path: path28,
+            path: path30,
             edgeKind: kind,
             predecessor: nodeId,
             indirect: target.indirect,
@@ -28821,7 +29094,7 @@ var init_static_analysis = __esm({
                 address: target.address,
                 source: kind === "call" ? "call" : "interrupt",
                 evidence: targetEvidence,
-                evidencePath: path28
+                evidencePath: path30
               });
             }
           }
@@ -28856,7 +29129,7 @@ var init_static_analysis = __esm({
               context: item.context.slice(0, -1),
               entryPoint: item.entryPoint,
               evidence: nodeEvidence,
-              path: path28,
+              path: path30,
               edgeKind: "return",
               predecessor: nodeId
             });
@@ -28868,7 +29141,7 @@ var init_static_analysis = __esm({
             context: item.context,
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            path: path28,
+            path: path30,
             edgeKind: "fallthrough",
             predecessor: nodeId
           });
@@ -28912,6 +29185,469 @@ var init_static_analysis = __esm({
   }
 });
 
+// packages/disassembler/src/analysis-sources.ts
+var sorted, key, addressKey3, hex2, buildAnalysisSourceCatalog, AnalysisSourceIndex, compareLocations;
+var init_analysis_sources = __esm({
+  "packages/disassembler/src/analysis-sources.ts"() {
+    "use strict";
+    init_interval_index();
+    init_project_labels();
+    sorted = (values) => [...new Set(values)].sort();
+    key = (...values) => JSON.stringify(values);
+    addressKey3 = (space, address4) => key(space, address4);
+    hex2 = (address4) => `$${address4.toString(16).toUpperCase().padStart(6, "0")}`;
+    buildAnalysisSourceCatalog = (shards) => {
+      const sources = /* @__PURE__ */ new Map();
+      const ensure = (id, name, format, sha25611) => {
+        let source = sources.get(id);
+        if (!source) {
+          source = {
+            id,
+            names: /* @__PURE__ */ new Set(),
+            kinds: /* @__PURE__ */ new Set(),
+            format,
+            sha256: sha25611,
+            evidenceIds: [],
+            reports: []
+          };
+          sources.set(id, source);
+        }
+        source.names.add(name);
+        return source;
+      };
+      const reportSources = /* @__PURE__ */ new Map();
+      for (const report2 of shards.imports) {
+        const id = key("artifact", report2.format, report2.sourceSha256);
+        ensure(id, report2.sourceName, report2.format, report2.sourceSha256).reports.push(report2);
+        reportSources.set(report2.id, id);
+      }
+      for (const evidence of shards.evidence) {
+        const artifact = evidence.artifact;
+        const legacy = !artifact ? shards.imports.filter(
+          (report2) => report2.id === evidence.id || report2.sourceSha256 === evidence.sourceId
+        ) : [];
+        let id = key("producer", evidence.source, evidence.sourceId);
+        if (artifact) id = key("artifact", artifact.format, artifact.sha256);
+        else if (legacy.length === 1) id = reportSources.get(legacy[0].id);
+        const source = sources.get(id) ?? ensure(id, evidence.sourceId, artifact?.format, artifact?.sha256);
+        source.kinds.add(evidence.source);
+        source.evidenceIds.push(evidence.id);
+      }
+      return [...sources.values()].map((source) => ({
+        ...source,
+        names: sorted(source.names),
+        name: sorted(source.names).join(" / "),
+        kinds: [...source.kinds].sort(),
+        evidenceIds: sorted(source.evidenceIds),
+        reports: source.reports.sort((a, b) => a.id.localeCompare(b.id))
+      })).sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+    };
+    AnalysisSourceIndex = class {
+      sources;
+      #sourceById;
+      #owners = /* @__PURE__ */ new Map();
+      #observations = /* @__PURE__ */ new Map();
+      #coverage = /* @__PURE__ */ new Map();
+      #memory = /* @__PURE__ */ new Map();
+      #nodes = /* @__PURE__ */ new Map();
+      #nodesAt = /* @__PURE__ */ new Map();
+      #functionsAt = /* @__PURE__ */ new Map();
+      #labelsAt = /* @__PURE__ */ new Map();
+      #contributions = /* @__PURE__ */ new Map();
+      #sourceInstructions = /* @__PURE__ */ new Map();
+      #runtimeSources = /* @__PURE__ */ new Set();
+      #comparisons = /* @__PURE__ */ new Map();
+      #manifest;
+      constructor(manifest, shards) {
+        this.#manifest = manifest;
+        this.sources = buildAnalysisSourceCatalog(shards);
+        this.#sourceById = new Map(this.sources.map((source) => [source.id, source]));
+        const sourceOfEvidence = new Map(
+          this.sources.flatMap((source) => source.evidenceIds.map((id) => [id, source.id]))
+        );
+        const sourceSets = /* @__PURE__ */ new Map();
+        const sourceIds = (evidence) => {
+          const token = JSON.stringify(evidence);
+          let ids = sourceSets.get(token);
+          if (!ids) {
+            ids = sorted(
+              evidence.flatMap((id) => sourceOfEvidence.has(id) ? [sourceOfEvidence.get(id)] : [])
+            );
+            sourceSets.set(token, ids);
+          }
+          return ids;
+        };
+        for (const node of shards.analysis) {
+          if (node.kind === "cfg-node") {
+            this.#nodes.set(node.id, node);
+            const location = addressKey3(node.addressSpace, node.address);
+            const nodes = this.#nodesAt.get(location) ?? [];
+            nodes.push(node);
+            this.#nodesAt.set(location, nodes);
+          } else if (node.kind === "function") {
+            const location = addressKey3(node.addressSpace, node.address);
+            const functions = this.#functionsAt.get(location) ?? [];
+            functions.push(node);
+            this.#functionsAt.set(location, functions);
+          }
+        }
+        const names = projectSourceLabelNames(shards.labels);
+        for (const label of shards.labels) {
+          const location = addressKey3(label.addressSpace, label.address);
+          this.#labelsAt.set(location, [
+            ...this.#labelsAt.get(location) ?? [],
+            names.get(label.id) ?? label.name
+          ]);
+        }
+        const coverage = /* @__PURE__ */ new Map();
+        for (const record3 of shards.runtime) {
+          const ids = sourceIds(record3.evidence);
+          for (const id of ids) this.#runtimeSources.add(id);
+          if (record3.kind === "runtime-execution" || record3.kind === "runtime-instruction") {
+            const location = key(record3.architecture, record3.addressSpace, record3.address);
+            let observation = this.#observations.get(location);
+            if (!observation) {
+              observation = {
+                architecture: record3.architecture,
+                addressSpace: record3.addressSpace,
+                address: record3.address,
+                sources: /* @__PURE__ */ new Set(),
+                sizes: /* @__PURE__ */ new Map(),
+                bytes: /* @__PURE__ */ new Map(),
+                mixedBytes: /* @__PURE__ */ new Set()
+              };
+              this.#observations.set(location, observation);
+            }
+            for (const id of ids) {
+              observation.sources.add(id);
+              const size = record3.kind === "runtime-instruction" ? record3.bytes.length : record3.size ?? 0;
+              observation.sizes.set(id, Math.max(size, observation.sizes.get(id) ?? 0));
+            }
+            if (record3.kind === "runtime-instruction")
+              for (const id of ids) {
+                const prior = observation.bytes.get(id);
+                if (!prior) observation.bytes.set(id, record3.bytes);
+                else if (prior.join(",") !== record3.bytes.join(",")) observation.mixedBytes.add(id);
+              }
+          } else if (record3.kind === "runtime-coverage" && record3.coverage === "executed") {
+            const location = key(record3.architecture, record3.addressSpace);
+            const list = coverage.get(location) ?? [];
+            list.push({ start: record3.start, end: record3.end, sources: ids });
+            coverage.set(location, list);
+          } else if (record3.kind === "runtime-memory-access") {
+            const identity2 = key(
+              record3.architecture,
+              record3.instructionAddressSpace,
+              record3.instructionAddress,
+              record3.accessedAddressSpace,
+              record3.accessedAddress,
+              record3.access,
+              record3.width,
+              record3.actor,
+              record3.channel
+            );
+            let site = this.#memory.get(identity2);
+            if (!site) {
+              const description = `${record3.access} ${record3.accessedAddressSpace} ${hex2(record3.accessedAddress)} \xB7 ${record3.width} byte(s) \xB7 ${record3.actor ?? "unknown actor"}${record3.channel === void 0 ? "" : ` ${record3.channel}`}`;
+              site = {
+                sources: /* @__PURE__ */ new Set(),
+                entry: {
+                  id: identity2,
+                  label: hex2(record3.instructionAddress),
+                  description,
+                  detail: description,
+                  addressSpace: record3.instructionAddressSpace,
+                  address: record3.instructionAddress,
+                  architecture: record3.architecture,
+                  outputOffsets: [],
+                  recordIds: []
+                }
+              };
+              this.#memory.set(identity2, site);
+            }
+            for (const id of ids) site.sources.add(id);
+          }
+        }
+        for (const [id, ranges] of coverage) this.#coverage.set(id, new HalfOpenIntervalIndex(ranges));
+        for (const observation of this.#observations.values())
+          for (const id of observation.sources) {
+            const list = this.#sourceInstructions.get(id) ?? [];
+            list.push(observation);
+            this.#sourceInstructions.set(id, list);
+          }
+        for (const list of this.#sourceInstructions.values()) list.sort(compareLocations);
+        const addContribution = (record3, entry) => {
+          for (const id of sourceIds(record3.evidence)) {
+            const list = this.#contributions.get(id) ?? [];
+            list.push(entry);
+            this.#contributions.set(id, list);
+          }
+        };
+        for (const record3 of shards.labels)
+          addContribution(record3, {
+            id: record3.id,
+            label: names.get(record3.id) ?? record3.name,
+            description: `Label \xB7 ${record3.addressSpace} ${hex2(record3.address)}`,
+            detail: [record3.comment, record3.inlineComment].filter(Boolean).join("\n"),
+            addressSpace: record3.addressSpace,
+            address: record3.address,
+            outputOffsets: [],
+            recordIds: [record3.id]
+          });
+        for (const record3 of shards.comments)
+          addContribution(record3, {
+            id: record3.id,
+            label: record3.text.split(/\r?\n/)[0],
+            description: `Comment \xB7 ${record3.addressSpace} ${hex2(record3.address)}`,
+            detail: record3.text,
+            addressSpace: record3.addressSpace,
+            address: record3.address,
+            outputOffsets: [],
+            recordIds: [record3.id]
+          });
+        for (const record3 of shards.annotations)
+          addContribution(record3, {
+            id: record3.id,
+            label: `${hex2(record3.start)}\u2013${hex2(record3.end - 1)}`,
+            description: `${record3.classification} \xB7 ${record3.addressSpace} \xB7 ${record3.end - record3.start} bytes`,
+            detail: `Classified interval from ${hex2(record3.start)} through ${hex2(record3.end - 1)}. This is attributed metadata, not proof of execution in this capture.`,
+            addressSpace: record3.addressSpace,
+            address: record3.start,
+            architecture: record3.architecture,
+            outputOffsets: [],
+            recordIds: [record3.id]
+          });
+      }
+      /**
+       * Sources with recorded runtime facts; static/imported classifications are not capture baselines.
+       * @returns {readonly AnalysisEvidenceSource[]} Sources contributing direct runtime facts.
+       */
+      runtimeSources() {
+        return this.sources.filter((source) => this.#runtimeSources.has(source.id));
+      }
+      /**
+       * Compare direct observations against all other captures or an explicit baseline selection.
+       * @param {string} sourceId Selected catalog identity.
+       * @param {readonly string[]} [baselineIds] Explicit baseline identities; undefined means all other runtime sources.
+       * @returns {AnalysisSourceComparison} Compact counts and interpretation notes.
+       */
+      compare(sourceId, baselineIds) {
+        return this.#comparison(sourceId, baselineIds).summary;
+      }
+      /**
+       * Materialize only a bounded page for an editor tree.
+       * @param {string} sourceId Selected source identity.
+       * @param {AnalysisSourceGroup} group Contribution group.
+       * @param {number} offset Zero-based page start.
+       * @param {readonly string[]} [baselineIds] Optional comparison captures.
+       * @returns {readonly AnalysisSourceEntry[]} Up to 200 navigable entries.
+       */
+      page(sourceId, group2, offset = 0, baselineIds) {
+        if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("Invalid source page offset.");
+        const data = this.#comparison(sourceId, baselineIds);
+        const slice = (entries3) => entries3.slice(offset, offset + 200);
+        switch (group2) {
+          case "uniqueInstructions":
+            return slice(data.unique).map((entry) => this.#instructionEntry(entry, sourceId));
+          case "sharedInstructions":
+            return slice(data.shared).map((entry) => this.#instructionEntry(entry, sourceId));
+          case "codeRanges":
+            return slice(data.ranges).map((range) => ({
+              id: key(range.architecture, range.addressSpace, range.start),
+              label: `${hex2(range.start)}\u2013${hex2(range.end - 1)}`,
+              description: `${range.end - range.start} bytes \xB7 ${range.addressSpace}`,
+              detail: "Known code extent at instruction addresses absent from the selected comparison captures. Addresses remain qualified by architecture and address space; this is not a ROM-file byte total.",
+              addressSpace: range.addressSpace,
+              address: range.start,
+              architecture: range.architecture,
+              outputOffsets: [],
+              recordIds: []
+            }));
+          case "functions":
+            return slice(data.functions);
+          case "memory":
+            return slice(data.memory);
+          case "contributions":
+            return slice(this.#contributions.get(sourceId) ?? []);
+          default:
+            throw new Error("Unknown source contribution group.");
+        }
+      }
+      #matchingNodes(observation) {
+        return (this.#nodesAt.get(addressKey3(observation.addressSpace, observation.address)) ?? []).filter(
+          (node) => node.specificationId === observation.architecture || node.specificationId.startsWith(`${observation.architecture}.`)
+        );
+      }
+      #size(observation, sourceId) {
+        const captured = observation.sizes.get(sourceId) ?? 0;
+        if (captured) return { size: captured, inferred: false };
+        const sizes = new Set(this.#matchingNodes(observation).map(({ size }) => size));
+        return sizes.size === 1 ? { size: [...sizes][0], inferred: true } : { size: 0, inferred: false };
+      }
+      #instructionEntry(observation, sourceId) {
+        const nodes = this.#matchingNodes(observation);
+        const { size, inferred } = this.#size(observation, sourceId);
+        const labels = this.#labelsAt.get(addressKey3(observation.addressSpace, observation.address));
+        const mnemonic = sorted(nodes.map(({ mnemonic: mnemonic2 }) => mnemonic2)).join(" / ");
+        const bytes = observation.bytes.get(sourceId);
+        const name = labels?.length ? labels.join(" / ") : mnemonic;
+        return {
+          id: key(observation.architecture, observation.addressSpace, observation.address),
+          label: `${hex2(observation.address)}${name ? ` ${name}` : ""}`,
+          description: `${observation.addressSpace} \xB7 ${size ? `${size} byte(s)${inferred ? " (analysis)" : ""}` : "size unknown"}`,
+          detail: [
+            `${observation.architecture} \xB7 ${observation.addressSpace} ${hex2(observation.address)}`,
+            `Observed in: ${sorted(observation.sources).map((id) => this.#sourceById.get(id)?.name ?? id).join(", ")}`,
+            bytes ? `Captured bytes${observation.mixedBytes.has(sourceId) ? " (one of multiple variants)" : ""}: ${bytes.map((byte2) => byte2.toString(16).toUpperCase().padStart(2, "0")).join(" ")}` : "No execution-time bytes were saved.",
+            inferred ? "Byte extent uses the single agreed instruction size in the current analysis." : ""
+          ].filter(Boolean).join("\n"),
+          addressSpace: observation.addressSpace,
+          address: observation.address,
+          architecture: observation.architecture,
+          outputOffsets: [
+            ...new Set(
+              nodes.flatMap((node) => node.fileOffset === void 0 ? [] : [node.fileOffset])
+            )
+          ],
+          recordIds: nodes.slice(0, 32).map(({ id }) => id)
+        };
+      }
+      #ownerIds(node) {
+        const cached = this.#owners.get(node.id);
+        if (cached) return cached;
+        const path30 = node.evidencePath.length ? node.evidencePath : [node.id];
+        for (let index = path30.length - 1; index >= 0; index--) {
+          const parent = this.#nodes.get(path30[index]);
+          if (!parent) continue;
+          const owners = this.#functionsAt.get(addressKey3(parent.addressSpace, parent.address));
+          if (owners?.length) {
+            const ids = sorted(owners.map(({ id }) => id));
+            this.#owners.set(node.id, ids);
+            return ids;
+          }
+        }
+        this.#owners.set(node.id, []);
+        return [];
+      }
+      #comparison(sourceId, baselineIds) {
+        const source = this.#sourceById.get(sourceId);
+        if (!source)
+          throw new Error("This source no longer exists. Refresh Sources and select it again.");
+        const ids = sorted(baselineIds ?? [...this.#runtimeSources].filter((id) => id !== sourceId));
+        if (ids.some((id) => id === sourceId || !this.#sourceById.has(id)))
+          throw new Error("Invalid source comparison selection.");
+        const token = key(sourceId, JSON.stringify(ids));
+        const cached = this.#comparisons.get(token);
+        if (cached) return cached;
+        const baseline = new Set(ids);
+        const observations = this.#sourceInstructions.get(sourceId) ?? [];
+        const unique = [], shared2 = [];
+        for (const observation of observations) {
+          const aggregate = this.#coverage.get(key(observation.architecture, observation.addressSpace))?.at(observation.address) ?? [];
+          const present = ids.some((id) => observation.sources.has(id)) || aggregate.some((range) => range.sources.some((id) => baseline.has(id)));
+          (present ? shared2 : unique).push(observation);
+        }
+        const ranges = [];
+        const functions = /* @__PURE__ */ new Map();
+        const functionById = new Map([...this.#functionsAt.values()].flat().map((fn) => [fn.id, fn]));
+        let unknownSizeInstructions = 0, unownedInstructions = 0, ambiguousInstructions = 0, inferred = 0;
+        for (const observation of unique) {
+          const size = this.#size(observation, sourceId);
+          if (size.inferred) inferred++;
+          const maximum = this.#manifest.addressSpaces.find(
+            ({ id }) => id === observation.addressSpace
+          );
+          let limit = maximum ? 2 ** maximum.addressBits : 0;
+          if (maximum?.kind === "file") limit = this.#manifest.rom.contentSize;
+          if (size.size && observation.address + size.size <= limit) {
+            const prior = ranges.at(-1);
+            if (prior && prior.architecture === observation.architecture && prior.addressSpace === observation.addressSpace && prior.end >= observation.address)
+              prior.end = Math.max(prior.end, observation.address + size.size);
+            else
+              ranges.push({
+                architecture: observation.architecture,
+                addressSpace: observation.addressSpace,
+                start: observation.address,
+                end: observation.address + size.size
+              });
+          } else unknownSizeInstructions++;
+          const nodes = this.#matchingNodes(observation);
+          const owners = sorted(nodes.flatMap((node) => this.#ownerIds(node)));
+          if (!owners.length) unownedInstructions++;
+          else if (owners.length !== 1 || nodes.some((node) => !this.#ownerIds(node).length))
+            ambiguousInstructions++;
+          else {
+            const fn = functionById.get(owners[0]);
+            const prior = functions.get(fn.id);
+            functions.set(fn.id, {
+              fn,
+              count: (prior?.count ?? 0) + 1,
+              architecture: observation.architecture
+            });
+          }
+        }
+        const functionEntries = [...functions.values()].sort(
+          (a, b) => b.count - a.count || a.fn.address - b.fn.address || a.fn.id.localeCompare(b.fn.id)
+        ).map(({ fn, count: count2, architecture: architecture2 }) => ({
+          id: fn.id,
+          label: this.#labelsAt.get(addressKey3(fn.addressSpace, fn.address))?.join(" / ") ?? `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`,
+          description: `${count2} unique instruction(s) \xB7 ${hex2(fn.address)}`,
+          detail: "Contains instruction addresses observed only in the selected source relative to the chosen baseline. Other parts of this function may be shared.",
+          addressSpace: fn.addressSpace,
+          address: fn.address,
+          architecture: architecture2,
+          outputOffsets: [],
+          recordIds: [fn.id]
+        }));
+        const memory = [...this.#memory.values()].filter(
+          (site) => site.sources.has(sourceId) && ![...site.sources].some((id) => baseline.has(id))
+        ).map(({ entry }) => entry).sort((a, b) => a.address - b.address || a.id.localeCompare(b.id));
+        const summary = {
+          source,
+          baseline: ids.map((id) => this.#sourceById.get(id)),
+          instructionCount: observations.length,
+          uniqueInstructionCount: unique.length,
+          sharedInstructionCount: shared2.length,
+          knownCodeBytes: ranges.reduce((sum, range) => sum + range.end - range.start, 0),
+          unknownSizeInstructions,
+          functionCount: functionEntries.length,
+          unownedInstructions,
+          ambiguousInstructions,
+          uniqueMemoryCount: memory.length,
+          contributionCount: this.#contributions.get(sourceId)?.length ?? 0,
+          codeRangeCount: ranges.length,
+          notes: [
+            "Unique means an instruction start was recorded here and absent from execution observations/coverage in the selected comparison captures. It does not prove behavior-exclusive logic.",
+            "Code byte totals merge known extents at unique instruction starts within each architecture/address space. They are not a delta of ROM file bytes or byte values; mirrored addresses stay separate.",
+            "Static analysis and imported byte classifications do not count as captured execution. Labels, comments and classifications below show attribution, not exclusivity.",
+            ...inferred ? [
+              `${inferred} unique instruction(s) use an agreed analysis size because their capture saved only PCs.`
+            ] : [],
+            ...unknownSizeInstructions ? [
+              `${unknownSizeInstructions} unique instruction(s) have an unknown or unprojectable size and are excluded from the byte total.`
+            ] : [],
+            ...!ids.length ? ["No comparison captures selected; all observed instruction addresses are shown."] : [],
+            ...[source, ...ids.map((id) => this.#sourceById.get(id))].flatMap(
+              (entry) => entry.reports.flatMap((report2) => [
+                ...report2.warnings.map((warning) => `${entry.name}: ${warning}`),
+                ...report2.unsupported.map(
+                  (loss) => `${entry.name}: ${loss.count} ${loss.field} omitted. ${loss.reason}`
+                )
+              ])
+            )
+          ]
+        };
+        const data = { summary, unique, shared: shared2, ranges, functions: functionEntries, memory };
+        if (this.#comparisons.size >= 4)
+          this.#comparisons.delete(this.#comparisons.keys().next().value);
+        this.#comparisons.set(token, data);
+        return data;
+      }
+    };
+    compareLocations = (a, b) => a.architecture.localeCompare(b.architecture) || a.addressSpace.localeCompare(b.addressSpace) || a.address - b.address;
+  }
+});
+
 // packages/disassembler/src/index.ts
 var src_exports = {};
 __export(src_exports, {
@@ -28923,12 +29659,14 @@ __export(src_exports, {
   ANALYSIS_PROJECT_SCHEMA_VERSION: () => ANALYSIS_PROJECT_SCHEMA_VERSION,
   AnalysisProjectLockedError: () => AnalysisProjectLockedError,
   AnalysisProjectStaleError: () => AnalysisProjectStaleError,
+  AnalysisSourceIndex: () => AnalysisSourceIndex,
   AssetCodecRegistry: () => AssetCodecRegistry,
   AssetPreviewRegistry: () => AssetPreviewRegistry,
   BEHAVIOR_CAPTURE_FORMAT: () => BEHAVIOR_CAPTURE_FORMAT,
   BehaviorCaptureRecorder: () => BehaviorCaptureRecorder,
   CompressionCodecRegistry: () => CompressionCodecRegistry,
   DEFAULT_ANALYSIS_PROJECT_LOCK_STALE_MS: () => DEFAULT_ANALYSIS_PROJECT_LOCK_STALE_MS,
+  DEFAULT_RUNTIME_TRACE_MAX_BYTES: () => DEFAULT_RUNTIME_TRACE_MAX_BYTES,
   HalfOpenIntervalIndex: () => HalfOpenIntervalIndex,
   INDEX_TABLE_ASSET_CODEC_ID: () => INDEX_TABLE_ASSET_CODEC_ID,
   MAX_CAPTURE_EVENTS: () => MAX_CAPTURE_EVENTS,
@@ -28956,6 +29694,7 @@ __export(src_exports, {
   applyStateEntryPointEdit: () => applyStateEntryPointEdit,
   applyTargetResolutionEdit: () => applyTargetResolutionEdit,
   buildAnalysisCallGraph: () => buildAnalysisCallGraph,
+  buildAnalysisSourceCatalog: () => buildAnalysisSourceCatalog,
   buildInstructionAnalysisAnnotations: () => buildInstructionAnalysisAnnotations,
   buildRomCoverageMap: () => buildRomCoverageMap,
   builtinAssetCodecs: () => builtinAssetCodecs,
@@ -28965,11 +29704,15 @@ __export(src_exports, {
   commitPreparedAnalysisProjectTransaction: () => commitPreparedAnalysisProjectTransaction,
   compareByteImages: () => compareByteImages,
   createBuiltinAssetCodecRegistry: () => createBuiltinAssetCodecRegistry,
+  createExecutionWindowAccumulator: () => createExecutionWindowAccumulator,
+  createRuntimeInstructionTraceImporter: () => createRuntimeInstructionTraceImporter,
+  createRuntimeTraceChunkValidator: () => createRuntimeTraceChunkValidator,
   decodePlannedAsset: () => decodePlannedAsset,
   detectCopierHeaderSize: () => detectCopierHeaderSize,
   encodePlannedAsset: () => encodePlannedAsset,
   explainProjectEvidence: () => explainProjectEvidence,
   importRuntimeInstructionTrace: () => importRuntimeInstructionTrace,
+  importRuntimeInstructionTraceFile: () => importRuntimeInstructionTraceFile,
   indexTableAssetCodec: () => indexTableAssetCodec,
   inspectRuntimeEvidence: () => inspectRuntimeEvidence,
   legacySourceLabelName: () => legacySourceLabelName,
@@ -28983,6 +29726,8 @@ __export(src_exports, {
   prepareAnalysisProjectTransaction: () => prepareAnalysisProjectTransaction,
   projectSourceLabelNames: () => projectSourceLabelNames,
   rawAssetCodec: () => rawAssetCodec,
+  readRuntimeTraceFileChunks: () => readRuntimeTraceFileChunks,
+  readRuntimeTraceFileMetadata: () => readRuntimeTraceFileMetadata,
   reencodeCompressedRange: () => reencodeCompressedRange,
   renderVerifiedAssetPreview: () => renderVerifiedAssetPreview,
   revertDisassemblyAnnotationEdit: () => revertDisassemblyAnnotationEdit,
@@ -28995,6 +29740,7 @@ __export(src_exports, {
   sourceExportSha256: () => sourceExportSha256,
   structArrayAssetCodec: () => structArrayAssetCodec,
   summarizeExecutionWindow: () => summarizeExecutionWindow,
+  summarizeExecutionWindowFile: () => summarizeExecutionWindowFile,
   textAssetCodec: () => textAssetCodec,
   validateAnalysisProject: () => validateAnalysisProject,
   validateAnalysisProjectManifest: () => validateAnalysisProjectManifest,
@@ -29002,6 +29748,7 @@ __export(src_exports, {
   validateProjectRom: () => validateProjectRom,
   validateRuntimeInstructionDetails: () => validateRuntimeInstructionDetails,
   validateRuntimeInstructionTrace: () => validateRuntimeInstructionTrace,
+  validateRuntimeInstructionTraceMetadata: () => validateRuntimeInstructionTraceMetadata,
   validateSourceExportFiles: () => validateSourceExportFiles,
   validateSourceExportInputs: () => validateSourceExportInputs,
   validateSourceLabelName: () => validateSourceLabelName,
@@ -29031,9 +29778,11 @@ var init_src = __esm({
     init_rom_image();
     init_runtime_evidence();
     init_runtime_trace();
+    init_runtime_trace_file();
     init_source_export();
     init_static_analysis();
     init_trace_detail();
+    init_analysis_sources();
   }
 });
 
@@ -29077,20 +29826,20 @@ var init_crc32 = __esm({
 });
 
 // packages/core/src/addressToLine.ts
-var import_node_crypto14, fs7, sourceIdentity, AddressToLineMapping;
+var import_node_crypto18, fs8, sourceIdentity, AddressToLineMapping;
 var init_addressToLine = __esm({
   "packages/core/src/addressToLine.ts"() {
     "use strict";
-    import_node_crypto14 = require("node:crypto");
-    fs7 = __toESM(require("node:fs"), 1);
+    import_node_crypto18 = require("node:crypto");
+    fs8 = __toESM(require("node:fs"), 1);
     init_crc32();
     sourceIdentity = (filename) => {
       try {
-        const data = fs7.readFileSync(filename);
+        const data = fs8.readFileSync(filename);
         return {
           crc: CRC32.compute(data),
           size: data.length,
-          sha256: (0, import_node_crypto14.createHash)("sha256").update(data).digest("hex")
+          sha256: (0, import_node_crypto18.createHash)("sha256").update(data).digest("hex")
         };
       } catch {
         return { crc: 0, size: 0, sha256: "" };
@@ -29743,14 +30492,14 @@ function readDefineReference(input, start) {
   };
 }
 function isBinaryOperator(value) {
-  return value in binaryPrecedence;
+  return value in binaryPrecedence2;
 }
-var binaryPrecedence, unaryOperators, binaryOperators, ExpressionParser;
+var binaryPrecedence2, unaryOperators, binaryOperators, ExpressionParser;
 var init_expression_node = __esm({
   "packages/core/src/ir/expression-node.ts"() {
     "use strict";
     init_source_location();
-    binaryPrecedence = {
+    binaryPrecedence2 = {
       "||": 0,
       "&&": 1,
       "==": 2,
@@ -29813,7 +30562,7 @@ var init_expression_node = __esm({
           if (!token || token.type !== "operator" || !isBinaryOperator(token.value)) {
             break;
           }
-          const precedence = binaryPrecedence[token.value];
+          const precedence = binaryPrecedence2[token.value];
           if (precedence < minPrecedence) {
             break;
           }
@@ -30135,7 +30884,7 @@ function classifyCommand(command, words) {
   if (keyword === "undef") {
     return "defineCommand";
   }
-  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip") {
+  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip" || keyword === "datastruct" || keyword === "datastructs" || keyword === "enddatastructs" || /^\[[^\]]+]\s*=/.test(trimmed)) {
     return "structCommand";
   }
   if (keyword === "function") {
@@ -30202,7 +30951,8 @@ function deriveCommandSemantics(command, words) {
   }
   if (bareKeyword === "incbin" && words.length >= 2) {
     const incbinSource = command.slice((words[0] ?? "").length).split(/\s+->\s+/u, 1)[0].trim();
-    const rangeCandidate = extractIncbinRange(incbinSource);
+    const colonIndex = incbinSource.indexOf(":");
+    const rangeCandidate = colonIndex === -1 ? void 0 : incbinSource.slice(colonIndex + 1);
     if (rangeCandidate) {
       const parsedRange = parseExpressionNode(rangeCandidate);
       if (parsedRange.type === "range") {
@@ -30277,13 +31027,6 @@ function extractIncludePath(raw) {
   const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
   return pathToken.replace(/^["'`]+|["'`]+$/g, "");
 }
-function extractIncbinRange(argument) {
-  const colonIndex = argument.indexOf(":");
-  if (colonIndex === -1) {
-    return void 0;
-  }
-  return argument.slice(colonIndex + 1);
-}
 function extractLabelSplit(command) {
   const trimmed = command.trim();
   const labelMatch = trimmed.match(/^([$.?A-Z_a-z][\w$.?]*):\s*(.*)$/);
@@ -30353,9 +31096,6 @@ var init_normalized_command = __esm({
 });
 
 // packages/core/src/mathcore.ts
-function escapeRegExp(value) {
-  return value.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
-}
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
@@ -30506,8 +31246,8 @@ var init_mathcore = __esm({
        * Consumes a fixed number of characters from the scan cursor.
        * @param {number} count The number of characters to consume.
        */
-      advance(count) {
-        this.scanIndex += count;
+      advance(count2) {
+        this.scanIndex += count2;
       }
       /**
        * Initialize the math core.
@@ -30796,12 +31536,12 @@ var init_mathcore = __esm({
        * @param {string} identifier The identifier.
        * @returns {number | string} The result.
        */
-      resolveNumericIdentifierArgument(identifier) {
+      resolveNumericIdentifierArgument(identifier2) {
         try {
-          const resolved = this.getHost().resolveLabel(identifier);
-          return typeof resolved === "number" ? resolved : identifier;
+          const resolved = this.getHost().resolveLabel(identifier2);
+          return typeof resolved === "number" ? resolved : identifier2;
         } catch {
-          return identifier;
+          return identifier2;
         }
       }
       /**
@@ -31271,7 +32011,8 @@ var init_mathcore = __esm({
         for (let i = 0; i < func.args.length; i++) {
           const paramName = func.args[i];
           const argValue = args[i];
-          const regex = new RegExp(`\\b${escapeRegExp(paramName)}\\b`, "g");
+          const escapedParamName = paramName.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
+          const regex = new RegExp(`\\b${escapedParamName}\\b`, "g");
           const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
           content = content.replace(regex, replacement);
         }
@@ -32099,8 +32840,8 @@ var init_fill_pad = __esm({
       if (words.length !== 2) {
         throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
       }
-      const count = operandResolver.getnum(session.resolvedefines(words[1]));
-      for (let i = 0; i < count; i++) {
+      const count2 = operandResolver.getnum(session.resolvedefines(words[1]));
+      for (let i = 0; i < count2; i++) {
         session.write1(session.fillbyte[i % FILL_PATTERN_SIZE]);
       }
     };
@@ -32520,6 +33261,76 @@ var init_layout = __esm({
   }
 });
 
+// packages/core/src/services/struct-initializer.ts
+function splitInitializerList(text2) {
+  const entries3 = [];
+  const stack = [];
+  let quote = "";
+  let start = 0;
+  for (let index = 0; index < text2.length; index++) {
+    const char = text2[index];
+    if (quote) {
+      if (char === quote && text2[index - 1] !== "\\") quote = "";
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if ("([{".includes(char)) stack.push(char);
+    else if (")]}".includes(char)) {
+      const expected = { ")": "(", "]": "[", "}": "{" }[char];
+      if (stack.pop() !== expected) throw new Error("Mismatched initializer delimiters.");
+    } else if (char === "," && stack.length === 0) {
+      const entry = text2.slice(start, index).trim();
+      if (!entry) throw new Error("Empty initializer item.");
+      entries3.push(entry);
+      start = index + 1;
+    }
+  }
+  if (quote || stack.length) throw new Error("Unclosed initializer delimiter.");
+  const last = text2.slice(start).trim();
+  if (last) entries3.push(last);
+  return entries3;
+}
+function parseStructInitializer(text2) {
+  const trimmed = text2.trim();
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+    throw new Error("dataStruct requires a named initializer: { field = value }.");
+  }
+  const fields = /* @__PURE__ */ new Map();
+  for (const entry of splitInitializerList(trimmed.slice(1, -1))) {
+    const match = entry.match(/^([A-Z_a-z][\w.]*)\s*=\s*(.+)$/s);
+    if (!match) throw new Error(`Expected 'field = value' in initializer: ${entry}`);
+    const [, name, value] = match;
+    if (fields.has(name)) throw new Error(`Duplicate initializer field '${name}'.`);
+    if (value.startsWith("[")) {
+      if (!value.endsWith("]")) throw new Error(`Unclosed array initializer '${name}'.`);
+      fields.set(name, splitInitializerList(value.slice(1, -1)));
+    } else fields.set(name, value);
+  }
+  return fields;
+}
+function isOpenStructInitializer(text2) {
+  if (!/^(?:datastruct\b|\[)/i.test(text2.trimStart())) return false;
+  let depth = 0;
+  let quote = "";
+  for (let index = 0; index < text2.length; index++) {
+    const char = text2[index];
+    if (quote) {
+      if (char === quote && text2[index - 1] !== "\\") quote = "";
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === "{") depth++;
+    else if (char === "}") depth--;
+  }
+  return depth > 0;
+}
+var init_struct_initializer = __esm({
+  "packages/core/src/services/struct-initializer.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
@@ -32633,6 +33444,7 @@ var removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparato
 var init_command_text_service = __esm({
   "packages/core/src/services/command-text-service.ts"() {
     "use strict";
+    init_struct_initializer();
     init_syntax_profile();
     removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
       let inQuote = false;
@@ -32662,7 +33474,10 @@ var init_command_text_service = __esm({
         }
         line = removeInlineComment(line, syntaxProfile);
         if (!line.trim()) continue;
-        if (line.endsWith("\\")) {
+        if (isOpenStructInitializer(nextCommandBuffer + line)) {
+          if (nextCommandBuffer === "") bufferStartLine = lineIndex;
+          nextCommandBuffer += `${line} `;
+        } else if (line.endsWith("\\")) {
           if (nextCommandBuffer === "") {
             bufferStartLine = lineIndex;
           }
@@ -32909,20 +33724,20 @@ var init_misc = __esm({
         if (eq < 1 || eq !== line.length - 2) {
           throw invalidTableLine(lineNumber);
         }
-        const hex13 = line.slice(0, eq);
-        if (!/^[\dA-Fa-f]+$/.test(hex13)) {
+        const hex15 = line.slice(0, eq);
+        if (!/^[\dA-Fa-f]+$/.test(hex15)) {
           throw invalidTableLine(lineNumber);
         }
-        return { char: line[eq + 1], value: Number.parseInt(hex13, 16) };
+        return { char: line[eq + 1], value: Number.parseInt(hex15, 16) };
       }
       if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
         throw invalidTableLine(lineNumber);
       }
-      const hex12 = line.slice(2);
-      if (!/^[\dA-Fa-f]+$/.test(hex12)) {
+      const hex14 = line.slice(2);
+      if (!/^[\dA-Fa-f]+$/.test(hex14)) {
         throw invalidTableLine(lineNumber);
       }
-      return { char: line[0], value: Number.parseInt(hex12, 16) };
+      return { char: line[0], value: Number.parseInt(hex14, 16) };
     };
     handleClearTable = ({ session }) => {
       session.characterMappings.clear();
@@ -33086,6 +33901,15 @@ var init_struct_binary = __esm({
       });
       registry.register("endstruct", context, ({ session }, words) => {
         session.structEngine.handleEndStruct(words);
+      });
+      registry.register("datastruct", context, ({ session }, words) => {
+        session.structEngine.data.emit(words);
+      });
+      registry.register("datastructs", context, ({ session }, words) => {
+        session.structEngine.data.begin(words);
+      });
+      registry.register("enddatastructs", context, ({ session }, words) => {
+        session.structEngine.data.end(words);
       });
     };
   }
@@ -33500,7 +34324,7 @@ var init_define_engine = __esm({
        * @param {string} operator The operator to apply.
        * @param {string} initialValue The initial value to apply the operation to.
        */
-      applyDefineOperation(identifier, operator, initialValue) {
+      applyDefineOperation(identifier2, operator, initialValue) {
         let value = initialValue;
         if (value.includes("!{")) {
           if (!value.includes("FF") && !value.includes("$")) {
@@ -33523,11 +34347,11 @@ var init_define_engine = __esm({
           }
           value = result.toString();
         }
-        if (operator === "?=" && this.host.defines.has(identifier)) {
+        if (operator === "?=" && this.host.defines.has(identifier2)) {
           return;
         }
         if (operator === "+=") {
-          value = (this.host.defines.get(identifier) || "") + value;
+          value = (this.host.defines.get(identifier2) || "") + value;
         }
         if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") || value.includes("&") || value.includes("|") || value.includes("^") || value.includes("<<") || value.includes(">>") || value.includes("("))) {
           try {
@@ -33541,8 +34365,8 @@ var init_define_engine = __esm({
           } catch {
           }
         }
-        this.host.defines.set(identifier, value);
-        this.host.recordSymbolDefinition("define", identifier, {
+        this.host.defines.set(identifier2, value);
+        this.host.recordSymbolDefinition("define", identifier2, {
           value,
           containerName: this.host.currentNamespace || void 0
         });
@@ -33558,11 +34382,11 @@ var init_define_engine = __esm({
         }
         const raw = match[1].trim();
         const unquoted = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
-        const identifier = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
-        if (!identifier) {
+        const identifier2 = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
+        if (!identifier2) {
           throw new Error("undef requires a non-empty identifier");
         }
-        this.host.defines.delete(identifier);
+        this.host.defines.delete(identifier2);
       }
     };
   }
@@ -33830,9 +34654,6 @@ var init_directive_runtime_service = __esm({
 });
 
 // packages/core/src/services/program-model-builder.ts
-function commandStreamKey(commands8) {
-  return commands8.map((command) => typeof command === "string" ? command : `${command.line}:${command.text}`).join("\n");
-}
 var ProgramModelBuilder;
 var init_program_model_builder = __esm({
   "packages/core/src/services/program-model-builder.ts"() {
@@ -33869,6 +34690,7 @@ var init_program_model_builder = __esm({
         state.branchStack.length = 0;
         state.inMacroDefinition = false;
         state.inFunctionDefinition = false;
+        state.inDataStructs = false;
       }
       /**
        * Builds a program model from raw source text.
@@ -33911,7 +34733,8 @@ var init_program_model_builder = __esm({
        * @returns {ExecutableNode[]} The cached or parsed nodes.
        */
       getOrBuildPassProgram(commands8, sourceFile = this.host.currentFile, startLine = this.host.currentLine) {
-        const cacheKey = `${sourceFile}::${startLine}::${commandStreamKey(commands8)}`;
+        const commandStream = commands8.map((command) => typeof command === "string" ? command : `${command.line}:${command.text}`).join("\n");
+        const cacheKey = `${sourceFile}::${startLine}::${commandStream}`;
         const cached = this.host.passProgramCache.get(cacheKey);
         if (cached) {
           incrementInternalCounter("passProgramCacheHits");
@@ -34000,6 +34823,12 @@ var init_program_model_builder = __esm({
           if (keyword === "endmacro") {
             state.inMacroDefinition = false;
           }
+          return;
+        }
+        if (state.inDataStructs || keyword === "datastructs") {
+          state.inDataStructs = keyword !== "enddatastructs";
+          setCommandKind(command, "structCommand");
+          this.pushToCurrent(state, command);
           return;
         }
         if (state.inFunctionDefinition) {
@@ -34146,6 +34975,7 @@ var init_assembly_front_end_service = __esm({
     init_command_text_service();
     init_program_model_builder();
     init_normalized_command();
+    init_struct_initializer();
     AssemblyFrontEndService = class {
       constructor(host) {
         this.host = host;
@@ -34163,6 +34993,8 @@ var init_assembly_front_end_service = __esm({
       }
       host;
       commandBuffer = "";
+      /** Opening physical line when processCommand receives a record one line at a time. */
+      structBufferStart;
       programModelBuilder;
       /**
        * Preprocesses raw source blocks while preserving continued-line buffering.
@@ -34178,8 +35010,25 @@ var init_assembly_front_end_service = __esm({
        * @returns {SourcedCommand[]} The normalized sourced commands.
        */
       preprocessSourcedBlockCommands(block) {
+        const opening = this.structBufferStart;
+        if (opening && opening.file !== this.host.currentFile) {
+          throw new Error(`Unclosed dataStruct initializer in '${opening.file}'.`);
+        }
         const processed = preprocessBlockCommands(block, this.commandBuffer, this.host.syntaxProfile);
+        if (opening && processed.sourcedCommands.length > 0) {
+          processed.sourcedCommands[0].line = opening.line - this.host.currentLine;
+        }
         this.commandBuffer = processed.commandBuffer;
+        if (isOpenStructInitializer(this.commandBuffer)) {
+          if (!opening || processed.sourcedCommands.length > 0) {
+            const lines = block.split("\n");
+            const start = lines.findLastIndex((line) => /^(?:datastruct\b|\[)/i.test(line.trimStart()));
+            this.structBufferStart = {
+              file: this.host.currentFile,
+              line: this.host.currentLine + Math.max(0, start)
+            };
+          }
+        } else this.structBufferStart = void 0;
         return processed.sourcedCommands;
       }
       /**
@@ -34762,20 +35611,20 @@ var init_include_source_service = __esm({
        */
       resolvePath(filePath) {
         const options = this.resolutionOptions;
-        const key = [
+        const key2 = [
           options.currentFile,
           options.macroSourceFile ?? "",
           options.includePaths.join("\0"),
           filePath
         ].join("");
-        const cached = this.resolvedPathCache.get(key);
+        const cached = this.resolvedPathCache.get(key2);
         if (cached !== void 0) {
           incrementInternalCounter("includeResolutionCacheHits");
           return cached;
         }
         const resolved = this.host.fileProvider.resolvePath(filePath, options);
         if (resolved !== void 0) {
-          this.resolvedPathCache.set(key, resolved);
+          this.resolvedPathCache.set(key2, resolved);
         }
         return resolved;
       }
@@ -34786,8 +35635,8 @@ var init_include_source_service = __esm({
        * @returns {string} The cached or newly read text.
        */
       readTextFile(resolvedPath2, encoding) {
-        const key = `${encoding}\0${resolvedPath2}`;
-        const cached = this.textCache.get(key);
+        const key2 = `${encoding}\0${resolvedPath2}`;
+        const cached = this.textCache.get(key2);
         if (cached !== void 0) {
           incrementInternalCounter("includeTextCacheHits");
           return cached;
@@ -34798,7 +35647,7 @@ var init_include_source_service = __esm({
           () => this.host.fileProvider.readTextFile(resolvedPath2, encoding)
         );
         incrementInternalCounter("includeBytesRead", content.length);
-        this.textCache.set(key, content);
+        this.textCache.set(key2, content);
         return content;
       }
     };
@@ -35027,8 +35876,8 @@ var init_macro_engine = __esm({
             const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
             let nextAddr = null;
             if (!modifiedCommand.trim().startsWith("?+:")) {
-              for (const [key, info] of this.host.labelTable.entries()) {
-                if (key.startsWith(macroLabelPrefix) && (key === `${macroLabelPrefix}+` || key.endsWith("_+") || key === `:pos_${currentMacroInstance}_1`) && info.value > this.host.currentTargetAddress) {
+              for (const [key2, info] of this.host.labelTable.entries()) {
+                if (key2.startsWith(macroLabelPrefix) && (key2 === `${macroLabelPrefix}+` || key2.endsWith("_+") || key2 === `:pos_${currentMacroInstance}_1`) && info.value > this.host.currentTargetAddress) {
                   if (nextAddr === null || info.value < nextAddr) {
                     nextAddr = info.value;
                   }
@@ -35045,8 +35894,8 @@ var init_macro_engine = __esm({
             const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
             let prevAddr = null;
             if (!modifiedCommand.trim().startsWith("?-:")) {
-              for (const [key, info] of this.host.labelTable.entries()) {
-                if (key.startsWith(macroLabelPrefix) && (key === `${macroLabelPrefix}-` || key.endsWith("_-") || key === `:neg_${currentMacroInstance}_1`) && info.value < this.host.currentTargetAddress) {
+              for (const [key2, info] of this.host.labelTable.entries()) {
+                if (key2.startsWith(macroLabelPrefix) && (key2 === `${macroLabelPrefix}-` || key2.endsWith("_-") || key2 === `:neg_${currentMacroInstance}_1`) && info.value < this.host.currentTargetAddress) {
                   if (prevAddr === null || info.value > prevAddr) {
                     prevAddr = info.value;
                   }
@@ -35643,6 +36492,171 @@ var init_output_writer_service = __esm({
   }
 });
 
+// packages/core/src/services/data-struct-engine.ts
+var DataStructEngine;
+var init_data_struct_engine = __esm({
+  "packages/core/src/services/data-struct-engine.ts"() {
+    "use strict";
+    init_normalized_command();
+    init_command_text_service();
+    init_struct_initializer();
+    DataStructEngine = class {
+      constructor(host, structs) {
+        this.host = host;
+        this.structs = structs;
+      }
+      host;
+      structs;
+      table;
+      get inTable() {
+        return this.table !== void 0;
+      }
+      reset() {
+        this.table = void 0;
+      }
+      finish() {
+        if (this.table) throw new Error(`Missing endDataStructs for '${this.table.name}'.`);
+      }
+      /**
+       * Rewrite a row into a normal directive so it retains source/trace ownership.
+       * @param {NormalizedCommand} command Per-dispatch mutable command, never the cached node.
+       */
+      prepareRow(command) {
+        const text2 = command.command.trim();
+        if (/^enddatastructs\b/i.test(text2)) return;
+        const match = text2.match(/^\[([^\]]+)]\s*=\s*({.*})$/s);
+        if (!this.table || !match) {
+          throw new Error("dataStructs accepts only indexed records: [index] = { field = value }.");
+        }
+        const rewritten = `dataStruct ${this.table.name}[${match[1]}], ${match[2]}`;
+        setCommandWords(command, splitCommandIntoWords(rewritten), rewritten);
+      }
+      begin(words) {
+        if (this.table) throw new Error("Nested dataStructs blocks are not supported.");
+        if (words.length !== 2 || !this.host.structs.has(words[1])) {
+          throw new Error("dataStructs requires one previously defined struct name.");
+        }
+        this.table = { name: words[1], rows: 0 };
+      }
+      end(words) {
+        if (!this.table) throw new Error("endDataStructs without dataStructs.");
+        if (words.length !== 1) throw new Error("endDataStructs takes no arguments.");
+        if (this.table.rows === 0) throw new Error("dataStructs must contain at least one record.");
+        this.table = void 0;
+      }
+      /**
+       * Resolve an addressed record, keeping the established Asar index/stride rules.
+       * @param {string} reference Previously declared name with an optional logical index.
+       * @returns {{ definition: StructDefinition; index: number }} Layout and checked index.
+       */
+      resolveRecord(reference) {
+        const match = reference.match(/^([A-Z_a-z][\w.]*)(?:\[([^\]]+)])?$/);
+        const definition = match && this.host.structs.get(match[1]);
+        if (!match || !definition) throw new Error(`Unknown dataStruct record '${reference}'.`);
+        const index = match[2] === void 0 ? 0 : this.host.operandResolver.getnum(match[2]);
+        if (!Number.isSafeInteger(index) || index < 0)
+          throw new Error(`Invalid record index '${reference}'.`);
+        if (definition.indexRange) {
+          const { first, count: count2 } = definition.indexRange;
+          if (index < first || index >= first + count2)
+            throw new Error(`Record index out of bounds: '${reference}'.`);
+        }
+        return { definition, index };
+      }
+      fieldsFor(definition) {
+        if (definition.parent || definition.extensionSize > 0) {
+          throw new Error(
+            `dataStruct does not initialize extended layouts ('${definition.name}'); use raw data directives.`
+          );
+        }
+        const fields = [...definition.fields?.values() ?? []].sort((a, b) => a.offset - b.offset);
+        let end = 0;
+        for (const field of fields) {
+          if (field.offset !== end)
+            throw new Error(
+              `Layout '${definition.name}' has overlapping or unnamed bytes; name every byte before initialization.`
+            );
+          end += field.width * field.count;
+        }
+        if (definition.align && end === definition.offset && end < definition.size) {
+          if (definition.labels.has("__padding"))
+            throw new Error("The alignment padding name '__padding' is reserved.");
+          fields.push({
+            name: "__padding",
+            offset: end,
+            width: 1,
+            count: definition.size - end,
+            array: true
+          });
+          end = definition.size;
+        }
+        if (end !== definition.size || end < 1 || end > 65536) {
+          throw new Error(
+            `Layout '${definition.name}' must describe every byte and be between 1 and 65536 bytes.`
+          );
+        }
+        return fields;
+      }
+      emit(words) {
+        const args = splitInitializerList(words.slice(1).join(" "));
+        if (args.length !== 2)
+          throw new Error("dataStruct syntax: dataStruct Record[index], { field = value }.");
+        const [reference, literal] = args;
+        const { definition, index } = this.resolveRecord(reference);
+        if (this.table?.next !== void 0 && index !== this.table.next) {
+          throw new Error(
+            `Non-contiguous dataStructs index: expected ${this.table.next}, received ${index}.`
+          );
+        }
+        const layout = this.fieldsFor(definition);
+        const values = parseStructInitializer(literal);
+        const names = new Set(layout.map((field) => field.name));
+        for (const name of values.keys()) {
+          if (!names.has(name))
+            throw new Error(`Unknown initializer field '${definition.name}.${name}'.`);
+        }
+        const bytes = [];
+        for (const field of layout) {
+          const value = values.get(field.name);
+          const name = `${reference}.${field.name}`;
+          if (value === void 0) throw new Error(`Missing initializer field '${name}'.`);
+          if (field.array !== Array.isArray(value))
+            throw new Error(`Field '${name}' requires ${field.array ? "an array" : "a scalar"}.`);
+          const items = typeof value === "string" ? [value] : value;
+          if (items.length !== field.count)
+            throw new Error(
+              `Field '${name}' requires ${field.count} value(s), received ${items.length}.`
+            );
+          if (!this.host.canEmitBytes) continue;
+          for (const expression of items) {
+            const number = this.host.operandResolver.getnum(expression);
+            if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
+              throw new Error(
+                `Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`
+              );
+            }
+            for (let byte2 = 0; byte2 < field.width; byte2++)
+              bytes.push(Math.floor(number / 2 ** (8 * byte2)) & 255);
+          }
+        }
+        if (this.host.canEmitBytes) {
+          const expected = this.structs.resolveStructLabel(reference);
+          if (this.host.currentTargetBaseAddress !== expected) {
+            throw new Error(
+              `dataStruct '${reference}' requires pc() == $${expected.toString(16).toUpperCase()}, received $${this.host.currentTargetBaseAddress.toString(16).toUpperCase()}.`
+            );
+          }
+          this.host.outputWriter.writeBytes(bytes);
+        } else this.host.outputWriter.step(definition.size);
+        if (this.table) {
+          this.table.next = index + 1;
+          this.table.rows++;
+        }
+      }
+    };
+  }
+});
+
 // packages/core/src/services/struct-engine.ts
 var StructEngine;
 var init_struct_engine = __esm({
@@ -35650,11 +36664,14 @@ var init_struct_engine = __esm({
     "use strict";
     init_normalized_command();
     init_address_width();
+    init_data_struct_engine();
     StructEngine = class {
       constructor(host) {
         this.host = host;
+        this.data = new DataStructEngine(host, this);
       }
       host;
+      data;
       /**
        * Handles a struct mode command.
        * @param {NormalizedCommand} command The command to handle.
@@ -35670,18 +36687,51 @@ var init_struct_engine = __esm({
         if (keyword.startsWith(".")) {
           const hasColon = keyword.endsWith(":");
           const labelName = keyword.replace(/:$/, "").substring(1);
+          const declaration = words.slice(1).join(" ");
+          const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
+          if (typed) {
+            const width2 = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
+            const count2 = typed[2] === void 0 ? 1 : this.host.operandResolver.getnum(typed[2]);
+            if (!Number.isSafeInteger(count2) || count2 < 1 || count2 * width2 > 65536) {
+              throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
+            }
+            if (currentStruct.labels.has(labelName)) {
+              throw new Error(`Duplicate typed field '${currentStruct.name}.${labelName}'.`);
+            }
+            (currentStruct.fields ??= /* @__PURE__ */ new Map()).set(labelName, {
+              name: labelName,
+              offset: currentStruct.offset,
+              width: width2,
+              count: count2,
+              array: typed[2] !== void 0
+            });
+          } else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
+            throw new Error(`Invalid typed field '${currentStruct.name}.${labelName}': ${declaration}`);
+          }
           currentStruct.labels.set(labelName, currentStruct.offset);
           this.host.recordSymbolDefinition("structMember", labelName, {
             value: currentStruct.offset,
             containerName: currentStruct.name
           });
-          if (words[1]?.toLowerCase() === "skip") {
+          if (typed) {
+            const field = currentStruct.fields.get(labelName);
+            currentStruct.offset += field.width * field.count;
+          } else if (words[1]?.toLowerCase() === "skip") {
             if (words.length !== 3) {
               throw new Error(
                 `skip directive in struct requires exactly one parameter: ${words.length}`
               );
             }
             const skipAmount = this.host.operandResolver.getnum(words[2]);
+            if (Number.isSafeInteger(skipAmount) && skipAmount > 0) {
+              currentStruct.fields?.set(labelName, {
+                name: labelName,
+                offset: currentStruct.offset,
+                width: 1,
+                count: skipAmount,
+                array: true
+              });
+            }
             currentStruct.offset += skipAmount;
           }
           void hasColon;
@@ -35732,6 +36782,7 @@ var init_struct_engine = __esm({
           offset: 0,
           size: 0,
           labels: /* @__PURE__ */ new Map(),
+          fields: /* @__PURE__ */ new Map(),
           parent,
           extensionSize: 0
         };
@@ -35747,14 +36798,33 @@ var init_struct_engine = __esm({
           throw new Error("endstruct encountered but not inside a struct definition.");
         }
         let align;
-        if (words.length >= 2 && words[1].toLowerCase() === "align") {
-          if (words.length !== 3) {
-            throw new Error("endstruct align requires a single alignment parameter.");
+        let count2;
+        let first = 0;
+        const seen = /* @__PURE__ */ new Set();
+        for (let index = 1; index < words.length; index += 2) {
+          const option = words[index].toLowerCase();
+          if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || words[index + 1] === void 0) {
+            if (words[1]?.toLowerCase() === "align")
+              throw new Error("endstruct align requires a single alignment parameter.");
+            throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
           }
-          align = this.host.operandResolver.getnum(words[2]);
-          if (align < 1) {
-            throw new Error("Alignment must be at least 1.");
+          seen.add(option);
+          const value = this.host.operandResolver.getnum(words[index + 1]);
+          if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
+            throw new Error(
+              option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`
+            );
           }
+          if (option === "align") align = value;
+          else if (option === "count") count2 = value;
+          else first = value;
+        }
+        if (seen.has("firstindex") && count2 === void 0)
+          throw new Error("endstruct firstindex requires count.");
+        if (count2 !== void 0) {
+          if (!Number.isSafeInteger(first + count2))
+            throw new Error("Struct index range exceeds integer precision.");
+          currentStruct.indexRange = { first, count: count2 };
         }
         let finalSize = currentStruct.offset;
         if (align !== void 0) {
@@ -36087,9 +37157,9 @@ var init_symbol_scope_service = __esm({
        * @param {string} identifier The label to check.
        * @returns {boolean} `true` if the label is in scope, `false` otherwise.
        */
-      hasLabelInScope(identifier) {
-        const qualified = this.qualifySymbolName(identifier);
-        return this.host.labelTable.has(identifier) || qualified !== identifier && this.host.labelTable.has(qualified) || (this.host.currentNamespace ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`) : false);
+      hasLabelInScope(identifier2) {
+        const qualified = this.qualifySymbolName(identifier2);
+        return this.host.labelTable.has(identifier2) || qualified !== identifier2 && this.host.labelTable.has(qualified) || (this.host.currentNamespace ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier2}`) : false);
       }
       /**
        * Handles a relative label.
@@ -36261,9 +37331,9 @@ var init_symbol_scope_service = __esm({
           if (prefix === "?") {
             if (labelName.startsWith(".")) {
               let recentMainLabel = "";
-              for (const [key, entry] of this.host.labelTable.entries()) {
-                if (entry.isMacroLabel && key.startsWith(`:macro_${this.host.macroLabelInstance}_`) && !key.includes("_SubLabel_")) {
-                  const labelPart = key.substring(`:macro_${this.host.macroLabelInstance}_`.length);
+              for (const [key2, entry] of this.host.labelTable.entries()) {
+                if (entry.isMacroLabel && key2.startsWith(`:macro_${this.host.macroLabelInstance}_`) && !key2.includes("_SubLabel_")) {
+                  const labelPart = key2.substring(`:macro_${this.host.macroLabelInstance}_`.length);
                   if (!labelPart.startsWith(".")) {
                     recentMainLabel = labelPart;
                   }
@@ -36654,8 +37724,8 @@ var init_symbol_scope_service = __esm({
        * @returns {number} The size of the struct or extension.
        * @throws {Error} If the struct or extension doesn't exist.
        */
-      getObjectSize(identifier, baseOnly = false) {
-        let workingIdentifier = identifier;
+      getObjectSize(identifier2, baseOnly = false) {
+        let workingIdentifier = identifier2;
         if (workingIdentifier.startsWith('"') && workingIdentifier.endsWith('"')) {
           workingIdentifier = workingIdentifier.substring(1, workingIdentifier.length - 1);
         }
@@ -36796,12 +37866,12 @@ function stripWrappingQuotes(filename) {
   }
   return filename;
 }
-var import_node_fs, import_node_path5, NodeAssemblyFileProvider;
+var import_node_fs4, import_node_path7, NodeAssemblyFileProvider;
 var init_file_provider = __esm({
   "packages/core/src/file-provider.ts"() {
     "use strict";
-    import_node_fs = __toESM(require("node:fs"), 1);
-    import_node_path5 = __toESM(require("node:path"), 1);
+    import_node_fs4 = __toESM(require("node:fs"), 1);
+    import_node_path7 = __toESM(require("node:path"), 1);
     NodeAssemblyFileProvider = class {
       /**
        * Resolves path.
@@ -36814,21 +37884,21 @@ var init_file_provider = __esm({
           return void 0;
         }
         const normalized = stripWrappingQuotes(filename);
-        if (import_node_path5.default.isAbsolute(normalized)) {
-          return import_node_fs.default.existsSync(normalized) ? normalized : void 0;
+        if (import_node_path7.default.isAbsolute(normalized)) {
+          return import_node_fs4.default.existsSync(normalized) ? normalized : void 0;
         }
         const candidates = /* @__PURE__ */ new Set();
         const baseDirectories = [
-          options.macroSourceFile ? import_node_path5.default.dirname(options.macroSourceFile) : void 0,
-          options.currentFile ? import_node_path5.default.dirname(options.currentFile) : void 0,
+          options.macroSourceFile ? import_node_path7.default.dirname(options.macroSourceFile) : void 0,
+          options.currentFile ? import_node_path7.default.dirname(options.currentFile) : void 0,
           ...options.includePaths ?? [],
           process.cwd()
         ].filter((entry) => Boolean(entry));
         for (const baseDirectory of baseDirectories) {
-          candidates.add(import_node_path5.default.resolve(baseDirectory, normalized));
+          candidates.add(import_node_path7.default.resolve(baseDirectory, normalized));
         }
         for (const candidate of candidates) {
-          if (import_node_fs.default.existsSync(candidate)) {
+          if (import_node_fs4.default.existsSync(candidate)) {
             return candidate;
           }
         }
@@ -36842,12 +37912,12 @@ var init_file_provider = __esm({
       stat(filePath) {
         let st;
         try {
-          st = import_node_fs.default.statSync(filePath);
+          st = import_node_fs4.default.statSync(filePath);
         } catch {
           return { exists: false, readable: false };
         }
         try {
-          import_node_fs.default.accessSync(filePath, import_node_fs.default.constants.R_OK);
+          import_node_fs4.default.accessSync(filePath, import_node_fs4.default.constants.R_OK);
           return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
         } catch {
           return { exists: true, readable: false, mtimeMs: st.mtimeMs };
@@ -36859,7 +37929,7 @@ var init_file_provider = __esm({
        * @returns {Uint8Array} The result.
        */
       readFile(filePath) {
-        return new Uint8Array(import_node_fs.default.readFileSync(filePath));
+        return new Uint8Array(import_node_fs4.default.readFileSync(filePath));
       }
       /**
        * Reads text file.
@@ -36868,7 +37938,7 @@ var init_file_provider = __esm({
        * @returns {string} The result.
        */
       readTextFile(filePath, encoding = "utf8") {
-        return import_node_fs.default.readFileSync(filePath, encoding);
+        return import_node_fs4.default.readFileSync(filePath, encoding);
       }
     };
   }
@@ -37014,20 +38084,60 @@ var init_directive_catalog = __esm({
           syntax: 'table "file",rtl'
         }
       ]),
-      descriptor("struct", "Begin a structure definition.", "struct name [extends parent]", "struct", [
-        {
-          keyword: "extends",
-          summary: "Inherit members from an existing struct.",
-          syntax: "struct name extends parent"
-        }
-      ]),
-      descriptor("endstruct", "End a structure definition.", "endstruct [align value]", "struct", [
-        {
-          keyword: "align",
-          summary: "Round the struct size/stride up to an alignment.",
-          syntax: "endstruct align value"
-        }
-      ]),
+      descriptor(
+        "struct",
+        "Define a non-emitting layout with .field: skip N or typed db/dw/dl/dd fields.",
+        "struct name [base | extends parent]",
+        "struct",
+        [
+          {
+            keyword: "extends",
+            summary: "Inherit members from an existing struct.",
+            syntax: "struct name extends parent"
+          }
+        ]
+      ),
+      descriptor(
+        "endstruct",
+        "End a structure definition.",
+        "endstruct [align value] [count value] [firstindex value]",
+        "struct",
+        [
+          {
+            keyword: "align",
+            summary: "Round the struct size/stride up to an alignment.",
+            syntax: "endstruct align value"
+          },
+          {
+            keyword: "count",
+            summary: "Number of records valid for named initialization.",
+            syntax: "endstruct count value [firstindex value]"
+          },
+          {
+            keyword: "firstindex",
+            summary: "First valid logical index (default zero); requires count.",
+            syntax: "endstruct count value firstindex value"
+          }
+        ]
+      ),
+      descriptor(
+        "datastruct",
+        "Emit one complete named record at its struct address; checks fields, widths and pc().",
+        "dataStruct Record[index], { field = value, bytes = [value, ...] }",
+        "struct"
+      ),
+      descriptor(
+        "datastructs",
+        "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+        "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
+        "struct"
+      ),
+      descriptor(
+        "enddatastructs",
+        "End a non-empty table of named records.",
+        "endDataStructs",
+        "struct"
+      ),
       ...[
         ["if", "Begin a conditional block.", "if expression"],
         ["elseif", "Begin an alternate conditional branch.", "elseif expression"],
@@ -37197,8 +38307,8 @@ var init_environment = __esm({
         const targetAliases = /* @__PURE__ */ new Map();
         for (const target of contributions.targets) {
           for (const alias of [target.contributionId, ...target.value.aliases ?? []]) {
-            const key = canonical(alias);
-            const previous = targetAliases.get(key);
+            const key2 = canonical(alias);
+            const previous = targetAliases.get(key2);
             if (previous && previous !== target.contributionId) {
               const previousOwner = this.#targets.get(canonical(previous))?.pluginId;
               throw new PluginError(
@@ -37211,7 +38321,7 @@ var init_environment = __esm({
                 }
               );
             }
-            targetAliases.set(key, target.contributionId);
+            targetAliases.set(key2, target.contributionId);
           }
         }
         this.#targetAliases = targetAliases;
@@ -37248,8 +38358,8 @@ var init_environment = __esm({
             targetInvalid(targetRecord, `missing architecture contribution '${architectureId}'.`);
           }
           for (const alias of [record3.value.id, ...record3.value.aliases ?? []]) {
-            const key = canonical(alias);
-            const previous = aliases.get(key);
+            const key2 = canonical(alias);
+            const previous = aliases.get(key2);
             if (previous && previous !== architectureId) {
               const previousOwner = this.#architectures.get(previous)?.pluginId;
               throw new PluginError(
@@ -37262,7 +38372,7 @@ var init_environment = __esm({
                 }
               );
             }
-            aliases.set(key, architectureId);
+            aliases.set(key2, architectureId);
           }
         }
         const defaultArchitecture = aliases.get(canonical(target.defaultArchitecture));
@@ -37280,15 +38390,15 @@ var init_environment = __esm({
           }
           for (const directive2 of set.value.directives) {
             for (const keyword of directive2.keywords) {
-              const key = canonical(keyword);
-              const previous = directiveKeywords.get(key);
+              const key2 = canonical(keyword);
+              const previous = directiveKeywords.get(key2);
               if (previous) {
                 targetInvalid(
                   targetRecord,
                   `directive keyword '${keyword}' is supplied by '${previous.id}' (${previous.pluginId}) and '${directive2.id}' (${set.pluginId}).`
                 );
               }
-              directiveKeywords.set(key, { id: directive2.id, pluginId: set.pluginId });
+              directiveKeywords.set(key2, { id: directive2.id, pluginId: set.pluginId });
             }
           }
         }
@@ -37300,15 +38410,15 @@ var init_environment = __esm({
           }
           for (const expression of set.value.functions) {
             for (const name of [expression.name, ...expression.aliases ?? []]) {
-              const key = canonical(name);
-              const previous = expressionNames.get(key);
+              const key2 = canonical(name);
+              const previous = expressionNames.get(key2);
               if (previous) {
                 targetInvalid(
                   targetRecord,
                   `expression function '${name}' is supplied by '${previous.name}' (${previous.pluginId}) and '${expression.name}' (${set.pluginId}).`
                 );
               }
-              expressionNames.set(key, { name: expression.name, pluginId: set.pluginId });
+              expressionNames.set(key2, { name: expression.name, pluginId: set.pluginId });
             }
           }
         }
@@ -37417,8 +38527,8 @@ var init_environment = __esm({
        * @returns {string | undefined} Owning plugin id, or `undefined` if unknown.
        */
       getContributionOwner(id) {
-        const key = canonical(id);
-        return this.#architectures.get(key)?.pluginId ?? this.#addressSpaces.get(key)?.pluginId ?? this.#outputFormats.get(key)?.pluginId ?? this.#directiveSets.get(key)?.pluginId ?? this.#expressionSets.get(key)?.pluginId ?? this.#lifecycles.get(key)?.pluginId ?? this.#targets.get(key)?.pluginId;
+        const key2 = canonical(id);
+        return this.#architectures.get(key2)?.pluginId ?? this.#addressSpaces.get(key2)?.pluginId ?? this.#outputFormats.get(key2)?.pluginId ?? this.#directiveSets.get(key2)?.pluginId ?? this.#expressionSets.get(key2)?.pluginId ?? this.#lifecycles.get(key2)?.pluginId ?? this.#targets.get(key2)?.pluginId;
       }
       /**
        * Lifecycle contributions wired to a target, sorted by registration order.
@@ -37502,17 +38612,17 @@ var require_inc = __commonJS({
   "node_modules/semver/functions/inc.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
-    var inc = (version, release, options, identifier, identifierBase) => {
+    var inc = (version, release, options, identifier2, identifierBase) => {
       if (typeof options === "string") {
-        identifierBase = identifier;
-        identifier = options;
+        identifierBase = identifier2;
+        identifier2 = options;
         options = void 0;
       }
       try {
         return new SemVer(
           version instanceof SemVer ? version.version : version,
           options
-        ).inc(release, identifier, identifierBase).version;
+        ).inc(release, identifier2, identifierBase).version;
       } catch (er) {
         return null;
       }
@@ -38305,7 +39415,7 @@ var require_semver2 = __commonJS({
 });
 
 // packages/core/src/plugin/manager.ts
-var import_semver, noopLogger, isLowerAlphaNumeric, isValidId, isValidContributionId, isRecord, isArray2, isEmptyOptions, deepFreeze, validateText, validateManifest, validatePlugin, validateContributionId, validateAliases, PluginManager;
+var import_semver, noopLogger, isLowerAlphaNumeric, isValidId, isValidContributionId, isRecord2, isArray3, isEmptyOptions, deepFreeze, validateText, validateManifest, validatePlugin, validateContributionId, validateAliases, PluginManager;
 var init_manager = __esm({
   "packages/core/src/plugin/manager.ts"() {
     "use strict";
@@ -38335,9 +39445,9 @@ var init_manager = __esm({
       return !previousWasSeparator;
     };
     isValidContributionId = (value) => value.includes(".") && isValidId(value, true);
-    isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-    isArray2 = (value) => Array.isArray(value);
-    isEmptyOptions = (value) => value === void 0 || isRecord(value) && Object.keys(value).length === 0;
+    isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    isArray3 = (value) => Array.isArray(value);
+    isEmptyOptions = (value) => value === void 0 || isRecord2(value) && Object.keys(value).length === 0;
     deepFreeze = (value, seen = /* @__PURE__ */ new Set()) => {
       if (typeof value !== "object" && typeof value !== "function" || value === null || seen.has(value)) {
         return value;
@@ -38360,7 +39470,7 @@ var init_manager = __esm({
       return value;
     };
     validateManifest = (manifest, pluginModule) => {
-      if (!isRecord(manifest)) {
+      if (!isRecord2(manifest)) {
         throw new PluginError("Plugin manifest must be an object.", {
           code: "PLUGIN_INVALID_MANIFEST",
           pluginModule
@@ -38404,7 +39514,7 @@ var init_manager = __esm({
         });
       }
       const requires = (manifest.requires ?? []).map((dependency) => {
-        if (!isRecord(dependency)) {
+        if (!isRecord2(dependency)) {
           throw new PluginError(`Plugin '${id}' has a malformed dependency.`, {
             code: "PLUGIN_INVALID_MANIFEST",
             pluginId: id,
@@ -38432,7 +39542,7 @@ var init_manager = __esm({
       });
     };
     validatePlugin = (value, pluginModule) => {
-      if (!isRecord(value) || typeof value.activate !== "function") {
+      if (!isRecord2(value) || typeof value.activate !== "function") {
         throw new PluginError(
           `Module '${pluginModule ?? "<programmatic>"}' has no valid default plugin export.`,
           {
@@ -38503,7 +39613,7 @@ var init_manager = __esm({
       }
       async activateModules(requests) {
         const normalized = requests.map((request) => {
-          if (!isRecord(request.module) || !("default" in request.module)) {
+          if (!isRecord2(request.module) || !("default" in request.module)) {
             throw new PluginError(`Module '${request.pluginModule}' has no default export.`, {
               code: "PLUGIN_INVALID_EXPORT",
               pluginModule: request.pluginModule
@@ -38620,7 +39730,7 @@ var init_manager = __esm({
         let disposable;
         try {
           disposable = await plugin2.activate(context, frozenOptions);
-          if (disposable !== void 0 && (!isRecord(disposable) || typeof disposable.dispose !== "function")) {
+          if (disposable !== void 0 && (!isRecord2(disposable) || typeof disposable.dispose !== "function")) {
             throw new Error("activate() returned an invalid disposable.");
           }
           this.#validateTransaction(transaction);
@@ -38726,7 +39836,7 @@ var init_manager = __esm({
         }
         for (const record3 of transaction.architectures) {
           validateAliases(record3.value.aliases, transaction.manifest.id, record3.contributionId);
-          if (typeof record3.value.displayName !== "string" || typeof record3.value.createEncoder !== "function" || typeof record3.value.classifyOperand !== "function" || typeof record3.value.splitOperands !== "function" || !isArray2(record3.value.instructions)) {
+          if (typeof record3.value.displayName !== "string" || typeof record3.value.createEncoder !== "function" || typeof record3.value.classifyOperand !== "function" || typeof record3.value.splitOperands !== "function" || !isArray3(record3.value.instructions)) {
             throw new PluginError(`Architecture '${record3.contributionId}' is malformed.`, {
               code: "PLUGIN_CONFIGURATION_INVALID",
               pluginId: transaction.manifest.id,
@@ -38746,7 +39856,7 @@ var init_manager = __esm({
           }
         }
         for (const record3 of transaction.directiveSets) {
-          if (!isArray2(record3.value.directives) || record3.value.tooling !== void 0 && !isArray2(record3.value.tooling)) {
+          if (!isArray3(record3.value.directives) || record3.value.tooling !== void 0 && !isArray3(record3.value.tooling)) {
             this.#malformed(transaction, record3);
           }
           for (const directive2 of record3.value.directives) {
@@ -38759,9 +39869,9 @@ var init_manager = __esm({
               });
             }
             local.add(directive2.id.toLowerCase());
-            if (!isArray2(directive2.keywords) || directive2.keywords.length === 0 || directive2.keywords.some(
+            if (!isArray3(directive2.keywords) || directive2.keywords.length === 0 || directive2.keywords.some(
               (keyword) => typeof keyword !== "string" || keyword === ""
-            ) || typeof directive2.createHandler !== "function" || !isArray2(directive2.tooling)) {
+            ) || typeof directive2.createHandler !== "function" || !isArray3(directive2.tooling)) {
               throw new PluginError(`Directive '${directive2.id}' is malformed.`, {
                 code: "PLUGIN_CONFIGURATION_INVALID",
                 pluginId: transaction.manifest.id,
@@ -38771,10 +39881,10 @@ var init_manager = __esm({
           }
         }
         for (const record3 of transaction.expressionSets) {
-          if (!isArray2(record3.value.functions)) this.#malformed(transaction, record3);
+          if (!isArray3(record3.value.functions)) this.#malformed(transaction, record3);
           for (const expression of record3.value.functions) {
             validateAliases(expression.aliases, transaction.manifest.id, record3.contributionId);
-            if (typeof expression.name !== "string" || expression.name === "" || typeof expression.evaluate !== "function" || typeof expression.summary !== "string" || !isRecord(expression.signature)) {
+            if (typeof expression.name !== "string" || expression.name === "" || typeof expression.evaluate !== "function" || typeof expression.summary !== "string" || !isRecord2(expression.signature)) {
               this.#malformed(transaction, record3);
             }
           }
@@ -38784,9 +39894,9 @@ var init_manager = __esm({
         }
         for (const record3 of transaction.targets) {
           validateAliases(record3.value.aliases, transaction.manifest.id, record3.contributionId);
-          if (typeof record3.value.displayName !== "string" || typeof record3.value.defaultArchitecture !== "string" || !isArray2(record3.value.architectures) || typeof record3.value.addressSpace !== "string" || typeof record3.value.outputFormat !== "string" || !isArray2(record3.value.directiveSets) || record3.value.coreDirectiveGroups !== void 0 && (!isArray2(record3.value.coreDirectiveGroups) || record3.value.coreDirectiveGroups.some(
+          if (typeof record3.value.displayName !== "string" || typeof record3.value.defaultArchitecture !== "string" || !isArray3(record3.value.architectures) || typeof record3.value.addressSpace !== "string" || typeof record3.value.outputFormat !== "string" || !isArray3(record3.value.directiveSets) || record3.value.coreDirectiveGroups !== void 0 && (!isArray3(record3.value.coreDirectiveGroups) || record3.value.coreDirectiveGroups.some(
             (group2) => typeof group2 !== "string" || !CORE_DIRECTIVE_GROUPS.includes(group2)
-          )) || !isArray2(record3.value.expressionSets) || !isArray2(record3.value.lifecycle) || record3.value.syntaxProfile !== void 0 && (typeof record3.value.syntaxProfile.id !== "string" || typeof record3.value.syntaxProfile.preserveLeadingWhitespace !== "boolean" || typeof record3.value.syntaxProfile.splitColonStatements !== "boolean" || typeof record3.value.syntaxProfile.splitRelativeLabelStatements !== "boolean" || typeof record3.value.syntaxProfile.leadingDotLabels !== "boolean" || !isArray2(record3.value.syntaxProfile.directivePrefixes)) || typeof record3.value.defaultOutputExtension !== "string") {
+          )) || !isArray3(record3.value.expressionSets) || !isArray3(record3.value.lifecycle) || record3.value.syntaxProfile !== void 0 && (typeof record3.value.syntaxProfile.id !== "string" || typeof record3.value.syntaxProfile.preserveLeadingWhitespace !== "boolean" || typeof record3.value.syntaxProfile.splitColonStatements !== "boolean" || typeof record3.value.syntaxProfile.splitRelativeLabelStatements !== "boolean" || typeof record3.value.syntaxProfile.leadingDotLabels !== "boolean" || !isArray3(record3.value.syntaxProfile.directivePrefixes)) || typeof record3.value.defaultOutputExtension !== "string") {
             this.#malformed(transaction, record3);
           }
         }
@@ -39043,6 +40153,7 @@ var init_assembler = __esm({
     init_macro_engine();
     init_output_writer_service();
     init_struct_engine();
+    init_struct_initializer();
     init_symbol_scope_service();
     init_command_text_service();
     init_syntax_profile();
@@ -39513,16 +40624,16 @@ var init_assembler = __esm({
        * @param {ReferenceExpressionNode} object The object of a member access.
        * @returns {string | undefined} The container name.
        */
-      structSegmentContainerName(object2) {
-        switch (object2.type) {
+      structSegmentContainerName(object3) {
+        switch (object3.type) {
           case "identifier":
-            return object2.name;
+            return object3.name;
           case "defineReference":
-            return this.structNameFromDefine(object2.name ?? object2.content) ?? object2.name;
+            return this.structNameFromDefine(object3.name ?? object3.content) ?? object3.name;
           case "member":
-            return object2.property.name;
+            return object3.property.name;
           case "index":
-            return this.structSegmentContainerName(object2.object);
+            return this.structSegmentContainerName(object3.object);
           default:
             return void 0;
         }
@@ -39615,6 +40726,30 @@ var init_assembler = __esm({
         }
         const fallbackSpan = command.source.normalizedSpan;
         const parsed = command.parsed;
+        if (command.keyword.toLowerCase() === "datastruct") {
+          const args = splitInitializerList(command.words.slice(1).join(" "));
+          if (args.length !== 2) return;
+          const reference = args[0];
+          const containerName = reference.replace(/\[[^\]]+]$/, "");
+          if (!command.source.raw.trimStart().startsWith("[")) {
+            this.collectExpressionReferences(parseExpressionNode(reference), fallbackSpan);
+          } else {
+            const index = reference.match(/\[([^\]]+)]$/)?.[1];
+            if (index) this.collectExpressionReferences(parseExpressionNode(index), fallbackSpan);
+          }
+          for (const [field, value] of parseStructInitializer(args[1])) {
+            this.recordSymbolReference("label", field, { containerName });
+            for (const expression of typeof value === "string" ? [value] : value) {
+              this.collectExpressionReferences(parseExpressionNode(expression), fallbackSpan);
+            }
+          }
+          return;
+        }
+        if (command.keyword.toLowerCase() === "datastructs") {
+          if (command.words[1])
+            this.collectExpressionReferences(parseExpressionNode(command.words[1]), fallbackSpan);
+          return;
+        }
         this.collectExpressionReferences(parsed.assignment?.expression, fallbackSpan);
         this.collectExpressionReferences(parsed.condition?.expression, fallbackSpan);
         this.collectExpressionReferences(parsed.forLoop?.range, fallbackSpan);
@@ -39882,18 +41017,6 @@ var init_assembler = __esm({
         }
       }
       /**
-       * Creates cursor address facade.
-       * @returns {CursorAddressFacade} The result.
-       */
-      createCursorAddressFacade() {
-        return {
-          recordCurrentAddress: () => this.recordCurrentAddress(),
-          setWritePosition: (address4) => this.setWritePosition(address4),
-          syncWriteStarts: () => this.syncWriteStarts(),
-          incrementBytesWritten: (num) => this.incrementBytesWritten(num)
-        };
-      }
-      /**
        * Creates services.
        * @returns {AssemblerServiceBag} The result.
        */
@@ -40008,7 +41131,12 @@ var init_assembler = __esm({
         this.baseImage = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
         this.fileProvider = options.fileProvider ?? new NodeAssemblyFileProvider();
         this.collectSourceMetadata = options.collectSourceMetadata ?? true;
-        this.cursorAddress = this.createCursorAddressFacade();
+        this.cursorAddress = {
+          recordCurrentAddress: () => this.recordCurrentAddress(),
+          setWritePosition: (address4) => this.setWritePosition(address4),
+          syncWriteStarts: () => this.syncWriteStarts(),
+          incrementBytesWritten: (num) => this.incrementBytesWritten(num)
+        };
         this.mathCore = new MathCore();
         this.mathCore.host = this.expressionHost;
         this.installExpressionFunctions(target.expressionSets);
@@ -40364,8 +41492,8 @@ var init_assembler = __esm({
        * @param {string} identifier The identifier.
        * @returns {number | string} The result.
        */
-      resolveExpressionHostLabel(identifier) {
-        const trimmed = identifier.trim();
+      resolveExpressionHostLabel(identifier2) {
+        const trimmed = identifier2.trim();
         const loopValue = this.activeLoopVariables.get(trimmed);
         if (loopValue !== void 0) return loopValue;
         if (parseUnnamedLabelReference(trimmed)) {
@@ -40375,7 +41503,7 @@ var init_assembler = __esm({
         if (isReferenceExpressionNode(parsed)) {
           return this.resolveReferenceLabelValue(parsed, this.requireStaticLabelLookup);
         }
-        return this.symbolScope.getLabelValue(identifier, this.requireStaticLabelLookup);
+        return this.symbolScope.getLabelValue(identifier2, this.requireStaticLabelLookup);
       }
       /**
        * Gets expression object size.
@@ -40383,8 +41511,8 @@ var init_assembler = __esm({
        * @param {boolean} [baseOnly] Whether to return only the base object size.
        * @returns {number} The result.
        */
-      getExpressionObjectSize(identifier, baseOnly = false) {
-        if (baseOnly && (identifier === "..." || identifier === "\u2026")) {
+      getExpressionObjectSize(identifier2, baseOnly = false) {
+        if (baseOnly && (identifier2 === "..." || identifier2 === "\u2026")) {
           if (this.inMacroExpansion && this.currentVariadicCount !== void 0) {
             return this.currentVariadicCount;
           }
@@ -40393,7 +41521,7 @@ var init_assembler = __esm({
           }
           return 0;
         }
-        return this.symbolScope.getObjectSize(identifier, baseOnly);
+        return this.symbolScope.getObjectSize(identifier2, baseOnly);
       }
       /**
        * Looks up define value.
@@ -40548,27 +41676,27 @@ var init_assembler = __esm({
         }
       }
       expressionHost = {
-        resolveLabel: (identifier) => this.resolveExpressionHostLabel(identifier),
+        resolveLabel: (identifier2) => this.resolveExpressionHostLabel(identifier2),
         convertLogicalToOutputOffset: (address4) => this.outputWriter.toOutputOffset(address4),
         convertOutputOffsetToLogical: (offset) => this.outputWriter.fromOutputOffset(offset),
         getCurrentAddress: () => this.currentTargetAddress,
         getCurrentBaseAddress: () => this.currentTargetBaseAddress,
-        isDefined: (identifier) => {
-          if (this.defines.has(identifier)) return 1;
-          if (this.structs.has(identifier)) return 1;
-          return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
+        isDefined: (identifier2) => {
+          if (this.defines.has(identifier2)) return 1;
+          if (this.structs.has(identifier2)) return 1;
+          return this.symbolScope.hasLabelInScope(identifier2) ? 1 : 0;
         },
-        getExpressionObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
+        getExpressionObjectSize: (identifier2, baseOnly) => this.getExpressionObjectSize(identifier2, baseOnly),
         getFileSize: (filename) => {
           const resolvedPath2 = this.resolveReadablePath(filename);
           if (!resolvedPath2) {
             throw new Error(`Could not get filesize for '${filename}'`);
           }
-          const stat = this.fileProvider.stat(resolvedPath2);
-          if (stat.size === void 0) {
+          const stat2 = this.fileProvider.stat(resolvedPath2);
+          if (stat2.size === void 0) {
             throw new Error(`Could not get filesize for '${filename}'`);
           }
-          return stat.size;
+          return stat2.size;
         },
         getFileStatus: (filename) => {
           const resolvedPath2 = this.resolveReadablePath(filename);
@@ -40914,6 +42042,10 @@ var init_assembler = __esm({
        * @returns {CommandPreprocessResult} The result.
        */
       preprocessNormalizedCommand(state) {
+        if (this.structEngine.data.inTable && !this.inMacroDefinition) {
+          this.structEngine.data.prepareRow(state);
+          return "continue";
+        }
         if (!this.inMacroDefinition && this.tryHandleCharacterMapping(state.command)) {
           setCommandKind(state, "characterMapping");
           return "handled";
@@ -41003,14 +42135,16 @@ var init_assembler = __esm({
             this.lowerAndExecuteRuntimeNodes(nodes);
           }
         } else {
-          const processedCommands = this.frontEndService.preprocessBlockCommands(command);
-          const splitCommands = this.frontEndService.splitInlineCommands(processedCommands);
+          const sourceFile = this.currentFile;
+          const sourceLine = this.currentLine;
+          const processedCommands = this.frontEndService.preprocessSourcedBlockCommands(command);
+          const splitCommands = this.frontEndService.splitSourcedInlineCommands(processedCommands);
           for (const splitCommand of splitCommands) {
             const nodes = this.programModelBuilder.consumeIncrementalCommand(
               this.incrementalProgramParseState,
-              splitCommand.trim(),
-              this.currentFile,
-              this.currentLine
+              splitCommand.text.trim(),
+              sourceFile,
+              sourceLine + splitCommand.line
             );
             this.lowerAndExecuteRuntimeNodes(nodes);
           }
@@ -41293,38 +42427,38 @@ var init_assembler = __esm({
             return this.resolveExpressionInput(value);
           }
           case "member": {
-            const object2 = this.resolveReferenceExpressionNode(expression.object);
-            if (!isReferenceExpressionNode(object2)) {
+            const object3 = this.resolveReferenceExpressionNode(expression.object);
+            if (!isReferenceExpressionNode(object3)) {
               const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
               if (expandedReference) {
                 return expandedReference;
               }
               return {
                 type: "raw",
-                value: `${renderExpressionNode(object2)}.${expression.property.name}`
+                value: `${renderExpressionNode(object3)}.${expression.property.name}`
               };
             }
             return {
               ...expression,
-              object: object2
+              object: object3
             };
           }
           case "index": {
-            const object2 = this.resolveReferenceExpressionNode(expression.object);
+            const object3 = this.resolveReferenceExpressionNode(expression.object);
             const index = this.resolveExpressionNode(expression.index);
-            if (!isReferenceExpressionNode(object2)) {
+            if (!isReferenceExpressionNode(object3)) {
               const expandedReference = this.tryResolveExpandedReferenceExpression(expression);
               if (expandedReference) {
                 return expandedReference;
               }
               return {
                 type: "raw",
-                value: `${renderExpressionNode(object2)}[${renderExpressionNode(index)}]`
+                value: `${renderExpressionNode(object3)}[${renderExpressionNode(index)}]`
               };
             }
             return {
               ...expression,
-              object: object2,
+              object: object3,
               index
             };
           }
@@ -41572,6 +42706,7 @@ var init_assembler = __esm({
        */
       activateStage(stage) {
         this.syncActiveStageExecutionState(stage);
+        this.structEngine.data.reset();
         if (stage === "resolveLayout") {
           this.forwardLabels = {};
           this.backwardLabels = {};
@@ -41593,6 +42728,10 @@ var init_assembler = __esm({
        * Completes the current pass, performing any necessary cleanup.
        */
       finishPass() {
+        this.structEngine.data.finish();
+        if (/^(?:datastruct\b|\[)/i.test(this.frontEndService.commandBuffer.trimStart())) {
+          throw new Error("Unclosed dataStruct initializer at end of source.");
+        }
         const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
         this.runLifecycleHook(
           "onStageEnd",
@@ -41727,7 +42866,7 @@ var init_assembler = __esm({
           cursor: { ...cursorSeed },
           symbols: {
             labelTable: new Map(
-              Array.from(symbolSeed.labelTable.entries()).map(([key, value]) => [key, { ...value }])
+              Array.from(symbolSeed.labelTable.entries()).map(([key2, value]) => [key2, { ...value }])
             ),
             forwardLabels: this.cloneRelativeLabels(symbolSeed.forwardLabels),
             backwardLabels: this.cloneRelativeLabels(symbolSeed.backwardLabels),
@@ -42987,7 +44126,7 @@ function buildSuperFxCatalog() {
   for (const entry of conveniences) grouped.set(entry.mnemonic, entry);
   return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
-var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
+var syntaxFor, implied, register2, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
   "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
@@ -43023,7 +44162,7 @@ var init_superfx_spec = __esm({
       size: 1,
       ...writesDestination ? { writesDestination: true } : {}
     });
-    register = (mnemonic, value, writesDestination = false) => ({
+    register2 = (mnemonic, value, writesDestination = false) => ({
       mnemonic,
       encoding: "register",
       size: 1,
@@ -43054,8 +44193,8 @@ var init_superfx_spec = __esm({
       if (opcode >= 5 && opcode <= 15) {
         return { mnemonic: branches[opcode - 5], encoding: "relative", size: 2 };
       }
-      if (opcode >= 16 && opcode <= 31) return register("TO", opcode & 15);
-      if (opcode >= 32 && opcode <= 47) return register("WITH", opcode & 15);
+      if (opcode >= 16 && opcode <= 31) return register2("TO", opcode & 15);
+      if (opcode >= 32 && opcode <= 47) return register2("WITH", opcode & 15);
       if (opcode >= 48 && opcode <= 59) return registerIndirect("STW", opcode & 15);
       if (opcode === 60) return implied("LOOP");
       if (opcode === 61) return implied("ALT1");
@@ -43066,17 +44205,17 @@ var init_superfx_spec = __esm({
       if (opcode === 77) return implied("SWAP", true);
       if (opcode === 78) return implied("COLOR");
       if (opcode === 79) return implied("NOT", true);
-      if (opcode >= 80 && opcode <= 95) return register("ADD", opcode & 15, true);
-      if (opcode >= 96 && opcode <= 111) return register("SUB", opcode & 15, true);
+      if (opcode >= 80 && opcode <= 95) return register2("ADD", opcode & 15, true);
+      if (opcode >= 96 && opcode <= 111) return register2("SUB", opcode & 15, true);
       if (opcode === 112) return implied("MERGE", true);
-      if (opcode >= 113 && opcode <= 127) return register("AND", opcode & 15, true);
-      if (opcode >= 128 && opcode <= 143) return register("MULT", opcode & 15, true);
+      if (opcode >= 113 && opcode <= 127) return register2("AND", opcode & 15, true);
+      if (opcode >= 128 && opcode <= 143) return register2("MULT", opcode & 15, true);
       if (opcode === 144) return implied("SBK");
       if (opcode >= 145 && opcode <= 148) return nibble("LINK", opcode & 15);
       if (opcode === 149) return implied("SEX", true);
       if (opcode === 150) return implied("ASR", true);
       if (opcode === 151) return implied("ROR", true);
-      if (opcode >= 152 && opcode <= 157) return register("JMP", opcode & 15);
+      if (opcode >= 152 && opcode <= 157) return register2("JMP", opcode & 15);
       if (opcode === 158) return implied("LOB", true);
       if (opcode === 159) return implied("FMULT", true);
       if (opcode >= 160 && opcode <= 175) {
@@ -43087,12 +44226,12 @@ var init_superfx_spec = __esm({
           register: opcode & 15
         };
       }
-      if (opcode >= 176 && opcode <= 191) return register("FROM", opcode & 15);
+      if (opcode >= 176 && opcode <= 191) return register2("FROM", opcode & 15);
       if (opcode === 192) return implied("HIB", true);
-      if (opcode >= 193 && opcode <= 207) return register("OR", opcode & 15, true);
-      if (opcode >= 208 && opcode <= 222) return register("INC", opcode & 15);
+      if (opcode >= 193 && opcode <= 207) return register2("OR", opcode & 15, true);
+      if (opcode >= 208 && opcode <= 222) return register2("INC", opcode & 15);
       if (opcode === 223) return implied("GETC");
-      if (opcode >= 224 && opcode <= 238) return register("DEC", opcode & 15);
+      if (opcode >= 224 && opcode <= 238) return register2("DEC", opcode & 15);
       if (opcode === 239) return implied("GETB", true);
       return {
         mnemonic: "IWT",
@@ -43109,12 +44248,12 @@ var init_superfx_spec = __esm({
         if (opcode >= 64 && opcode <= 75) return registerIndirect("LDB", low, true);
         if (opcode === 76) return implied("RPIX", true);
         if (opcode === 78) return implied("CMODE");
-        if (opcode >= 80 && opcode <= 95) return register("ADC", low, true);
-        if (opcode >= 96 && opcode <= 111) return register("SBC", low, true);
-        if (opcode >= 113 && opcode <= 127) return register("BIC", low, true);
-        if (opcode >= 128 && opcode <= 143) return register("UMULT", low, true);
+        if (opcode >= 80 && opcode <= 95) return register2("ADC", low, true);
+        if (opcode >= 96 && opcode <= 111) return register2("SBC", low, true);
+        if (opcode >= 113 && opcode <= 127) return register2("BIC", low, true);
+        if (opcode >= 128 && opcode <= 143) return register2("UMULT", low, true);
         if (opcode === 150) return implied("DIV2", true);
-        if (opcode >= 152 && opcode <= 157) return register("LJMP", low);
+        if (opcode >= 152 && opcode <= 157) return register2("LJMP", low);
         if (opcode === 159) return implied("LMULT", true);
         if (opcode >= 160 && opcode <= 175) {
           return {
@@ -43124,7 +44263,7 @@ var init_superfx_spec = __esm({
             register: low
           };
         }
-        if (opcode >= 193 && opcode <= 207) return register("XOR", low, true);
+        if (opcode >= 193 && opcode <= 207) return register2("XOR", low, true);
         if (opcode === 239) return implied("GETBH", true);
         if (opcode >= 240) {
           return {
@@ -43162,7 +44301,7 @@ var init_superfx_spec = __esm({
       }
       if (alt === 3) {
         if (opcode >= 80 && opcode <= 95) return nibble("ADC", low, true);
-        if (opcode >= 96 && opcode <= 111) return register("CMP", low);
+        if (opcode >= 96 && opcode <= 111) return register2("CMP", low);
         if (opcode >= 113 && opcode <= 127) return nibble("BIC", low, true);
         if (opcode >= 128 && opcode <= 143) return nibble("UMULT", low, true);
         if (opcode >= 193 && opcode <= 207) return nibble("XOR", low, true);
@@ -44681,19 +45820,19 @@ var init__ = __esm({
         if (!(opcode in stackOpcodes)) {
           return false;
         }
-        let count = 1;
+        let count2 = 1;
         if (operand && operand.startsWith("#")) {
           let repStr = operand.substring(1);
           if (repStr.startsWith("$")) {
             repStr = repStr.substring(1);
           }
-          count = Number.parseInt(repStr, 10);
-          if (Number.isNaN(count)) {
+          count2 = Number.parseInt(repStr, 10);
+          if (Number.isNaN(count2)) {
             throw new Error(`Invalid repeat count in pseudo opcode: ${operand}`);
           }
         }
-        if (count > 0) {
-          for (let i = 0; i < count; i++) {
+        if (count2 > 0) {
+          for (let i = 0; i < count2; i++) {
             this.assembler.write1(stackOpcodes[opcode]);
           }
         }
@@ -45015,13 +46154,6 @@ var init__ = __esm({
           }
           return Number.parseInt(symbolicOperand.slice(1, 3), 16);
         })();
-        const longMode = (currentOpcode) => {
-          if (currentOpcode === "JMP") return "JML";
-          if (currentOpcode === "JSR") return "JSL";
-          return currentOpcode;
-        };
-        const shortMode = (currentOpcode) => currentOpcode;
-        const absolutePointer = (value) => value & 65535;
         const selectDirectJumpMode = (currentOpcode, resolvedAddress) => {
           if (currentOpcode === "JML" || currentOpcode === "JSL") {
             return { mode: currentOpcode, address: resolvedAddress };
@@ -45030,14 +46162,17 @@ var init__ = __esm({
             const currentBank = this.assembler.currentTargetAddress >>> 16 & 255;
             const targetBank = resolvedAddress >>> 16 & 255;
             if ((currentOpcode === "JMP" || currentOpcode === "JSR") && targetBank === currentBank) {
-              return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+              return { mode: currentOpcode, address: resolvedAddress & 65535 };
             }
             if ((currentOpcode === "JMP" || currentOpcode === "JSR") && hintedBank === currentBank) {
-              return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+              return { mode: currentOpcode, address: resolvedAddress & 65535 };
             }
-            return { mode: longMode(currentOpcode), address: resolvedAddress };
+            let mode4 = currentOpcode;
+            if (currentOpcode === "JMP") mode4 = "JML";
+            else if (currentOpcode === "JSR") mode4 = "JSL";
+            return { mode: mode4, address: resolvedAddress };
           }
-          return { mode: shortMode(currentOpcode), address: resolvedAddress };
+          return { mode: currentOpcode, address: resolvedAddress };
         };
         if (/^\d+$/.test(operand)) {
           ({ mode: mode3, address: address4 } = selectDirectJumpMode(
@@ -45051,15 +46186,15 @@ var init__ = __esm({
           ));
         } else if (loweredOperand.mode === "indirectLong") {
           mode3 = "JMP_INDIRECT_LONG";
-          address4 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address4 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
         } else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX") {
-          address4 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address4 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JSR_INDEXED_INDIRECT";
         } else if (loweredOperand.mode === "indexedIndirectX") {
-          address4 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address4 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JMP_INDEXED_INDIRECT";
         } else if (loweredOperand.mode === "directPageIndirect") {
-          address4 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address4 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JMP_INDIRECT";
         } else {
           try {
@@ -45462,12 +46597,12 @@ var init__ = __esm({
               `Error: Branch target out of range (${relativeAddress}) for ${opcode} ${operand} at $${this.assembler.currentTargetAddress.toString(16)}.`
             );
           }
-          let signedByte3 = (relativeAddress & 255) >>> 0;
+          let signedByte2 = (relativeAddress & 255) >>> 0;
           if (relativeAddress < 0) {
-            signedByte3 |= 256;
+            signedByte2 |= 256;
           }
           this.assembler.write1(branchOpcodes2[opcode]);
-          this.assembler.write1(signedByte3);
+          this.assembler.write1(signedByte2);
           return true;
         }
       }
@@ -45561,83 +46696,83 @@ function formatCpu65816Instruction(instruction2) {
     case "accumulator":
       break;
     case "signature":
-      text2 = `#${hex2(value, 1)}`;
+      text2 = `#${hex3(value, 1)}`;
       break;
     case "immediate":
-      text2 = `#${hex2(value, operand?.width ?? 1)}`;
+      text2 = `#${hex3(value, operand?.width ?? 1)}`;
       break;
     case "immediate16":
-      text2 = hex2(value, 2);
+      text2 = hex3(value, 2);
       break;
     case "direct":
-      text2 = hex2(value, 1);
+      text2 = hex3(value, 1);
       break;
     case "directIndexedX":
-      text2 = `${hex2(value, 1)},x`;
+      text2 = `${hex3(value, 1)},x`;
       break;
     case "directIndexedY":
-      text2 = `${hex2(value, 1)},y`;
+      text2 = `${hex3(value, 1)},y`;
       break;
     case "directIndirect":
-      text2 = instruction2.mnemonic === "PEI" ? hex2(value, 1) : `(${hex2(value, 1)})`;
+      text2 = instruction2.mnemonic === "PEI" ? hex3(value, 1) : `(${hex3(value, 1)})`;
       break;
     case "directIndirectLong":
-      text2 = `[${hex2(value, 1)}]`;
+      text2 = `[${hex3(value, 1)}]`;
       break;
     case "directIndexedXIndirect":
-      text2 = `(${hex2(value, 1)},x)`;
+      text2 = `(${hex3(value, 1)},x)`;
       break;
     case "directIndirectIndexedY":
-      text2 = `(${hex2(value, 1)}),y`;
+      text2 = `(${hex3(value, 1)}),y`;
       break;
     case "directIndirectLongIndexedY":
-      text2 = `[${hex2(value, 1)}],y`;
+      text2 = `[${hex3(value, 1)}],y`;
       break;
     case "stackRelative":
-      text2 = `${hex2(value, 1)},s`;
+      text2 = `${hex3(value, 1)},s`;
       break;
     case "stackRelativeIndirectIndexedY":
-      text2 = `(${hex2(value, 1)},s),y`;
+      text2 = `(${hex3(value, 1)},s),y`;
       break;
     case "absolute":
-      text2 = hex2(value, 2);
+      text2 = hex3(value, 2);
       break;
     case "absoluteIndexedX":
-      text2 = `${hex2(value, 2)},x`;
+      text2 = `${hex3(value, 2)},x`;
       break;
     case "absoluteIndexedY":
-      text2 = `${hex2(value, 2)},y`;
+      text2 = `${hex3(value, 2)},y`;
       break;
     case "absoluteLong":
-      text2 = hex2(value, 3);
+      text2 = hex3(value, 3);
       break;
     case "absoluteLongIndexedX":
-      text2 = `${hex2(value, 3)},x`;
+      text2 = `${hex3(value, 3)},x`;
       break;
     case "absoluteIndirect":
-      text2 = `(${hex2(value, 2)})`;
+      text2 = `(${hex3(value, 2)})`;
       break;
     case "absoluteIndexedXIndirect":
-      text2 = `(${hex2(value, 2)},x)`;
+      text2 = `(${hex3(value, 2)},x)`;
       break;
     case "absoluteIndirectLong":
-      text2 = `[${hex2(value, 2)}]`;
+      text2 = `[${hex3(value, 2)}]`;
       break;
     case "relative":
-      text2 = hex2(operand?.targetAddress ?? 0, 3);
+      text2 = hex3(operand?.targetAddress ?? 0, 3);
       break;
     case "relativeLong":
-      text2 = instruction2.mnemonic === "PER" ? hex2(value, 2) : hex2(operand?.targetAddress ?? 0, 3);
+      text2 = instruction2.mnemonic === "PER" ? hex3(value, 2) : hex3(operand?.targetAddress ?? 0, 3);
       break;
     case "blockMove":
-      text2 = `${hex2(instruction2.operands[0]?.value ?? 0, 1)},${hex2(instruction2.operands[1]?.value ?? 0, 1)}`;
+      text2 = `${hex3(instruction2.operands[0]?.value ?? 0, 1)},${hex3(instruction2.operands[1]?.value ?? 0, 1)}`;
       break;
     default:
       throw new Error(`Unsupported 65816 formatter mode '${instruction2.mode}'.`);
   }
   return text2 ? `${instruction2.mnemonic} ${text2}` : instruction2.mnemonic;
 }
-var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor3, effectsFor2, buildInstruction, Cpu65816Decoder, hex2;
+var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor3, effectsFor2, buildInstruction, Cpu65816Decoder, hex3;
 var init_decoder = __esm({
   "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
@@ -45913,7 +47048,7 @@ var init_decoder = __esm({
         return { kind: "instruction", instruction: alternatives[0] };
       }
     };
-    hex2 = (value, width2) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width2 * 2, "0").slice(-width2 * 2)}`;
+    hex3 = (value, width2) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width2 * 2, "0").slice(-width2 * 2)}`;
   }
 });
 
@@ -45962,10 +47097,6 @@ function spcOpcodePlusAddressSize(operand) {
   }
   return 3;
 }
-function isMovRegisterPair(left, right) {
-  const combined = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
-  return MOV_ONE_BYTE_PAIRS.has(combined);
-}
 function isAccumulator(op2, lowered) {
   if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "A") {
     return true;
@@ -46005,12 +47136,6 @@ function parseBitBranchOpcode(opcode) {
     return { family: match[1] };
   }
   return { family: match[1], mnemonicBit: Number(match[2]) };
-}
-function bitBranchOpcodeByte(family, bit2) {
-  if (family === "BBS") {
-    return bit2 << 5 | 3;
-  }
-  return bit2 << 5 | 19;
 }
 function parseNumberedBitOpcode(opcode) {
   const match = opcode.toUpperCase().match(NUMBERED_BIT_OPCODE);
@@ -46061,7 +47186,7 @@ var init_spc700 = __esm({
       const lowered = resolver.lowerOperand(operand);
       return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
     };
-    hasOwn = (obj, key) => Object.hasOwn(obj, key);
+    hasOwn = (obj, key2) => Object.hasOwn(obj, key2);
     IMPLIED_SPC_OPCODES = {
       NOP: true,
       BRK: true,
@@ -46388,7 +47513,8 @@ var init_spc700 = __esm({
        * @returns {number} Encoded size in bytes.
        */
       estimateMovSize(left, right, leftLowered, rightLowered) {
-        if (isMovRegisterPair(left, right)) {
+        const registerPair = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
+        if (MOV_ONE_BYTE_PAIRS.has(registerPair)) {
           return 1;
         }
         const rightImmediate = rightLowered?.immediate ?? right.trim().startsWith("#");
@@ -47116,7 +48242,7 @@ var init_spc700 = __esm({
         if (bit2 === void 0) {
           return false;
         }
-        const opcodeByte = bitBranchOpcodeByte(parsed.family, bit2);
+        const opcodeByte = bit2 << 5 | (parsed.family === "BBS" ? 3 : 19);
         this.assembler.write1(opcodeByte);
         this.assembler.write1(dpVal);
         if (!this.assembler.enforceResolvedLabels) {
@@ -47207,16 +48333,16 @@ var init_spc700 = __esm({
           Y: 238
         };
         if (opcode.toUpperCase() === "PUSH") {
-          const key = (loweredOperand?.registerName ?? operand).toUpperCase();
-          if (hasOwn(pushMap, key)) {
-            this.assembler.write1(pushMap[key]);
+          const key2 = (loweredOperand?.registerName ?? operand).toUpperCase();
+          if (hasOwn(pushMap, key2)) {
+            this.assembler.write1(pushMap[key2]);
             return true;
           }
         }
         if (opcode.toUpperCase() === "POP") {
-          const key = (loweredOperand?.registerName ?? operand).toUpperCase();
-          if (hasOwn(popMap, key)) {
-            this.assembler.write1(popMap[key]);
+          const key2 = (loweredOperand?.registerName ?? operand).toUpperCase();
+          if (hasOwn(popMap, key2)) {
+            this.assembler.write1(popMap[key2]);
             return true;
           }
         }
@@ -47434,22 +48560,22 @@ var init_spc700 = __esm({
           "$,X": { byte: 216, word: 201 },
           "$,Y": { byte: 203, word: 204 }
         };
-        let key = null;
+        let key2 = null;
         if (/^\$[\da-f]+$/i.test(left)) {
-          key = `$,${right.toUpperCase()}`;
+          key2 = `$,${right.toUpperCase()}`;
         } else if (/^\$[\da-f]+\+x$/i.test(left)) {
-          key = `$+X,${right.toUpperCase()}`;
+          key2 = `$+X,${right.toUpperCase()}`;
         } else if (/^\$[\da-f]+$/i.test(right)) {
-          key = `${left.toUpperCase()},$`;
+          key2 = `${left.toUpperCase()},$`;
         } else if (/^\$[\da-f]+\+x$/i.test(right)) {
-          key = `${left.toUpperCase()},$+X`;
+          key2 = `${left.toUpperCase()},$+X`;
         }
-        if (key && hasOwn(memoryMoves, key)) {
+        if (key2 && hasOwn(memoryMoves, key2)) {
           const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
           const match = /\$([^+]+)/.exec(operandWithAddr);
           if (!match) return false;
           const val = parseInt(match[1], 16);
-          const mode3 = memoryMoves[key];
+          const mode3 = memoryMoves[key2];
           const inferredLength = getAddressSize(`$${match[1]}`);
           const selectedLength = explicitlen ? forcedLen : inferredLength;
           const opcode = selectedLength === 1 ? mode3.byte : mode3.word;
@@ -47860,10 +48986,10 @@ var init_spc700 = __esm({
             opcodeByte = 202;
           }
         }
-        const hex12 = mem.addressText.match(/^\$([\da-f]+)$/i);
+        const hex14 = mem.addressText.match(/^\$([\da-f]+)$/i);
         let addr;
-        if (hex12) {
-          addr = Number.parseInt(hex12[1], 16) & 65535;
+        if (hex14) {
+          addr = Number.parseInt(hex14[1], 16) & 65535;
         } else {
           addr = this.assembler.operandResolver.getnum(mem.addressText) & 65535;
         }
@@ -47958,7 +49084,7 @@ function formatSpc700Instruction(instruction2) {
   const operands = formatOperands(instruction2);
   return operands === "" ? instruction2.mnemonic : `${instruction2.mnemonic} ${operands}`;
 }
-var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor4, buildInstruction2, Spc700Decoder, hex3, formatOperands;
+var readLittleEndian2, signedByte, register3, address2, immediate, bit, relative2, bitAddress, fixedRegisters, operandsFor2, referencesFor4, buildInstruction2, Spc700Decoder, hex4, formatOperands;
 var init_spc700_decoder = __esm({
   "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
@@ -47969,15 +49095,15 @@ var init_spc700_decoder = __esm({
       return value >>> 0;
     };
     signedByte = (value) => value & 128 ? value - 256 : value;
-    register2 = (name) => ({ kind: "register", register: name });
-    address = (value, width2) => ({
+    register3 = (name) => ({ kind: "register", register: name });
+    address2 = (value, width2) => ({
       kind: "address",
       value,
       width: width2
     });
     immediate = (value) => ({ kind: "immediate", value, width: 1 });
     bit = (value) => ({ kind: "bit", value, width: 1 });
-    relative = (value, logicalAddress, size) => ({
+    relative2 = (value, logicalAddress, size) => ({
       kind: "displacement",
       value: signedByte(value),
       width: 1,
@@ -47986,7 +49112,7 @@ var init_spc700_decoder = __esm({
     });
     bitAddress = (bytes) => {
       const encoded = readLittleEndian2(bytes, 1, 2);
-      return [address(encoded & 8191, 2), bit(encoded >>> 13)];
+      return [address2(encoded & 8191, 2), bit(encoded >>> 13)];
     };
     fixedRegisters = {
       registerA: ["A"],
@@ -48011,105 +49137,105 @@ var init_spc700_decoder = __esm({
       const byte2 = bytes[1] ?? 0;
       const word2 = readLittleEndian2(bytes, 1, 2);
       const fixed = fixedRegisters[specification2.mode];
-      if (fixed) return fixed.map(register2);
+      if (fixed) return fixed.map(register3);
       switch (specification2.mode) {
         case "implied":
           return [];
         case "tableCall":
           return [immediate(specification2.opcode[0] >>> 4)];
         case "directBit":
-          return [address(byte2, 1), bit(Number(specification2.mnemonic.at(-1)))];
+          return [address2(byte2, 1), bit(Number(specification2.mnemonic.at(-1)))];
         case "directBitRelative":
           return [
-            address(byte2, 1),
+            address2(byte2, 1),
             bit(Number(specification2.mnemonic.at(-1))),
-            relative(bytes[2] ?? 0, logicalAddress, bytes.length)
+            relative2(bytes[2] ?? 0, logicalAddress, bytes.length)
           ];
         case "accumulatorDirect":
         case "accumulatorDirectIndexedX":
         case "accumulatorDirectIndexedXIndirect":
         case "accumulatorDirectIndirectIndexedY":
-          return [register2("A"), address(byte2, 1)];
+          return [register3("A"), address2(byte2, 1)];
         case "accumulatorAbsolute":
         case "accumulatorAbsoluteIndexedX":
         case "accumulatorAbsoluteIndexedY":
-          return [register2("A"), address(word2, 2)];
+          return [register3("A"), address2(word2, 2)];
         case "accumulatorIndirectX":
-          return [register2("A"), register2("X")];
+          return [register3("A"), register3("X")];
         case "accumulatorImmediate":
-          return [register2("A"), immediate(byte2)];
+          return [register3("A"), immediate(byte2)];
         case "directDirect":
-          return [address(bytes[2] ?? 0, 1), address(byte2, 1)];
+          return [address2(bytes[2] ?? 0, 1), address2(byte2, 1)];
         case "carryMemoryBit":
         case "carryInvertedMemoryBit": {
           const [memory, bit2] = bitAddress(bytes);
-          return [register2("C"), memory, bit2];
+          return [register3("C"), memory, bit2];
         }
         case "memoryBitCarry": {
           const [memory, bit2] = bitAddress(bytes);
-          return [memory, bit2, register2("C")];
+          return [memory, bit2, register3("C")];
         }
         case "memoryBit":
           return bitAddress(bytes);
         case "direct":
         case "directIndexedX":
         case "directWord":
-          return [address(byte2, 1)];
+          return [address2(byte2, 1)];
         case "absolute":
         case "absoluteIndexedXIndirect":
-          return [address(word2, 2)];
+          return [address2(word2, 2)];
         case "relative":
-          return [relative(byte2, logicalAddress, bytes.length)];
+          return [relative2(byte2, logicalAddress, bytes.length)];
         case "absoluteAccumulator":
-          return [address(word2, 2), register2("A")];
+          return [address2(word2, 2), register3("A")];
         case "directImmediate":
-          return [address(bytes[2] ?? 0, 1), immediate(byte2)];
+          return [address2(bytes[2] ?? 0, 1), immediate(byte2)];
         case "registerXAbsolute":
-          return [register2("X"), address(word2, 2)];
+          return [register3("X"), address2(word2, 2)];
         case "registerXDirect":
         case "registerXDirectIndexedY":
-          return [register2("X"), address(byte2, 1)];
+          return [register3("X"), address2(byte2, 1)];
         case "registerYAbsolute":
-          return [register2("Y"), address(word2, 2)];
+          return [register3("Y"), address2(word2, 2)];
         case "registerYDirect":
         case "registerYDirectIndexedX":
-          return [register2("Y"), address(byte2, 1)];
+          return [register3("Y"), address2(byte2, 1)];
         case "registerXImmediate":
-          return [register2("X"), immediate(byte2)];
+          return [register3("X"), immediate(byte2)];
         case "registerYImmediate":
-          return [register2("Y"), immediate(byte2)];
+          return [register3("Y"), immediate(byte2)];
         case "directRelative":
         case "directIndexedXRelative":
-          return [address(byte2, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
+          return [address2(byte2, 1), relative2(bytes[2] ?? 0, logicalAddress, bytes.length)];
         case "registerYRelative":
-          return [register2("Y"), relative(byte2, logicalAddress, bytes.length)];
+          return [register3("Y"), relative2(byte2, logicalAddress, bytes.length)];
         case "registerYADirect":
-          return [register2("YA"), address(byte2, 1)];
+          return [register3("YA"), address2(byte2, 1)];
         case "directRegisterYA":
-          return [address(byte2, 1), register2("YA")];
+          return [address2(byte2, 1), register3("YA")];
         case "upperPageCall":
-          return [address(65280 | byte2, 2)];
+          return [address2(65280 | byte2, 2)];
         case "directRegisterA":
         case "directIndexedXRegisterA":
         case "directIndirectIndexedYRegisterA":
         case "directIndexedXIndirectRegisterA":
-          return [address(byte2, 1), register2("A")];
+          return [address2(byte2, 1), register3("A")];
         case "absoluteRegisterA":
         case "absoluteIndexedXRegisterA":
         case "absoluteIndexedYRegisterA":
-          return [address(word2, 2), register2("A")];
+          return [address2(word2, 2), register3("A")];
         case "indirectXRegisterA":
-          return [register2("X"), register2("A")];
+          return [register3("X"), register3("A")];
         case "directRegisterX":
         case "directIndexedYRegisterX":
-          return [address(byte2, 1), register2("X")];
+          return [address2(byte2, 1), register3("X")];
         case "absoluteRegisterX":
-          return [address(word2, 2), register2("X")];
+          return [address2(word2, 2), register3("X")];
         case "directRegisterY":
         case "directIndexedXRegisterY":
-          return [address(byte2, 1), register2("Y")];
+          return [address2(byte2, 1), register3("Y")];
         case "absoluteRegisterY":
-          return [address(word2, 2), register2("Y")];
+          return [address2(word2, 2), register3("Y")];
         default:
           throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
       }
@@ -48221,16 +49347,16 @@ var init_spc700_decoder = __esm({
         return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
       }
     };
-    hex3 = (value, width2) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width2 * 2, "0").slice(-width2 * 2)}`;
+    hex4 = (value, width2) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width2 * 2, "0").slice(-width2 * 2)}`;
     formatOperands = (instruction2) => {
       const values = instruction2.operands.map((operand) => operand.value ?? 0);
       const target = instruction2.operands.find(
         (operand) => operand.targetAddress !== void 0
       )?.targetAddress;
-      const dp = () => hex3(values.find((_, index) => instruction2.operands[index].kind === "address") ?? 0, 1);
-      const abs = () => hex3(values.find((_, index) => instruction2.operands[index].kind === "address") ?? 0, 2);
+      const dp = () => hex4(values.find((_, index) => instruction2.operands[index].kind === "address") ?? 0, 1);
+      const abs = () => hex4(values.find((_, index) => instruction2.operands[index].kind === "address") ?? 0, 2);
       const bit2 = () => values.find((_, index) => instruction2.operands[index].kind === "bit") ?? 0;
-      const relativeTarget = () => hex3(target ?? 0, 2);
+      const relativeTarget = () => hex4(target ?? 0, 2);
       switch (instruction2.mode) {
         case "implied":
           return "";
@@ -48250,9 +49376,9 @@ var init_spc700_decoder = __esm({
         case "accumulatorDirectIndexedXIndirect":
           return `A,(${dp()}+X)`;
         case "accumulatorImmediate":
-          return `A,#${hex3(values[1], 1)}`;
+          return `A,#${hex4(values[1], 1)}`;
         case "directDirect":
-          return `${hex3(values[0], 1)},${hex3(values[1], 1)}`;
+          return `${hex4(values[0], 1)},${hex4(values[1], 1)}`;
         case "carryMemoryBit":
           return `C,${abs()}.${bit2()}`;
         case "carryInvertedMemoryBit":
@@ -48281,7 +49407,7 @@ var init_spc700_decoder = __esm({
         case "accumulatorDirectIndirectIndexedY":
           return `A,(${dp()})+Y`;
         case "directImmediate":
-          return `${hex3(values[0], 1)},#${hex3(values[1], 1)}`;
+          return `${hex4(values[0], 1)},#${hex4(values[1], 1)}`;
         case "indirectXY":
           return "(X),(Y)";
         case "registerXAbsolute":
@@ -48297,15 +49423,15 @@ var init_spc700_decoder = __esm({
         case "registerYDirectIndexedX":
           return `Y,${dp()}+X`;
         case "registerXImmediate":
-          return `X,#${hex3(values[1], 1)}`;
+          return `X,#${hex4(values[1], 1)}`;
         case "registerYImmediate":
-          return `Y,#${hex3(values[1], 1)}`;
+          return `Y,#${hex4(values[1], 1)}`;
         case "absoluteIndexedXIndirect":
           return `(${abs()}+X)`;
         case "directRelative":
-          return `${hex3(values[0], 1)},${relativeTarget()}`;
+          return `${hex4(values[0], 1)},${relativeTarget()}`;
         case "directIndexedXRelative":
-          return `${hex3(values[0], 1)}+X,${relativeTarget()}`;
+          return `${hex4(values[0], 1)}+X,${relativeTarget()}`;
         case "registerYRelative":
           return `Y,${relativeTarget()}`;
         case "registerYADirect":
@@ -48313,7 +49439,7 @@ var init_spc700_decoder = __esm({
         case "directRegisterYA":
           return `${dp()},YA`;
         case "upperPageCall":
-          return hex3(values[0] & 255, 1);
+          return hex4(values[0] & 255, 1);
         case "directRegisterA":
           return `${dp()},A`;
         case "absoluteRegisterA":
@@ -48441,7 +49567,7 @@ var init_superfx = __esm({
       const lowered = resolver.lowerOperand(operand);
       return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
     };
-    hasOwn2 = (obj, key) => Object.hasOwn(obj, key);
+    hasOwn2 = (obj, key2) => Object.hasOwn(obj, key2);
     ALT1 = 61;
     ALT2 = 62;
     ALT3 = 63;
@@ -49226,7 +50352,7 @@ function formatSuperFxInstruction(instruction2) {
   let operands = "";
   switch (instruction2.mode) {
     case "relative":
-      operands = hex4(instruction2.operands[0]?.targetAddress ?? 0, 3);
+      operands = hex5(instruction2.operands[0]?.targetAddress ?? 0, 3);
       break;
     case "register":
       operands = registers2[0];
@@ -49238,10 +50364,10 @@ function formatSuperFxInstruction(instruction2) {
       operands = `#${values[0]}`;
       break;
     case "registerImmediate8":
-      operands = `${registers2[0]},#${hex4(values[1], 1)}`;
+      operands = `${registers2[0]},#${hex5(values[1], 1)}`;
       break;
     case "registerImmediate16":
-      operands = `${registers2[0]},#${hex4(values[1], 2)}`;
+      operands = `${registers2[0]},#${hex5(values[1], 2)}`;
       break;
     case "registerRegister":
       operands = `${registers2[0]},${registers2[1]}`;
@@ -49254,30 +50380,29 @@ function formatSuperFxInstruction(instruction2) {
       break;
     case "registerRamShort":
     case "registerRamAbsolute":
-      operands = `${registers2[0]},(${hex4(values[1], 2)})`;
+      operands = `${registers2[0]},(${hex5(values[1], 2)})`;
       break;
     case "ramShortRegister":
     case "ramAbsoluteRegister":
-      operands = `(${hex4(values[0], 2)}),${registers2[1]}`;
+      operands = `(${hex5(values[0], 2)}),${registers2[1]}`;
       break;
   }
   return operands ? `${instruction2.mnemonic} ${operands}` : instruction2.mnemonic;
 }
-var signedByte2, word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex4;
+var word, register4, immediate2, address3, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex5;
 var init_superfx_decoder = __esm({
   "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
-    signedByte2 = (value) => value & 128 ? value - 256 : value;
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
-    register3 = (value) => ({ kind: "register", register: `R${value}` });
+    register4 = (value) => ({ kind: "register", register: `R${value}` });
     immediate2 = (value, width2, signed3 = false) => ({
       kind: "immediate",
       value,
       width: width2,
       ...signed3 ? { signed: true } : {}
     });
-    address2 = (value, width2) => ({
+    address3 = (value, width2) => ({
       kind: "address",
       value,
       width: width2
@@ -49290,7 +50415,7 @@ var init_superfx_decoder = __esm({
           return [];
         case "relative": {
           const raw = bytes[operandOffset] ?? 0;
-          const displacement = signedByte2(raw);
+          const displacement = raw & 128 ? raw - 256 : raw;
           return [
             {
               kind: "displacement",
@@ -49303,21 +50428,21 @@ var init_superfx_decoder = __esm({
         }
         case "register":
         case "registerIndirect":
-          return [register3(registerNumber2)];
+          return [register4(registerNumber2)];
         case "immediateNibble":
           return [immediate2(registerNumber2, 1)];
         case "registerImmediate8":
-          return [register3(registerNumber2), immediate2(bytes[operandOffset] ?? 0, 1, true)];
+          return [register4(registerNumber2), immediate2(bytes[operandOffset] ?? 0, 1, true)];
         case "registerImmediate16":
-          return [register3(registerNumber2), immediate2(word(bytes, operandOffset), 2)];
+          return [register4(registerNumber2), immediate2(word(bytes, operandOffset), 2)];
         case "registerRamShort":
-          return [register3(registerNumber2), address2((bytes[operandOffset] ?? 0) << 1, 2)];
+          return [register4(registerNumber2), address3((bytes[operandOffset] ?? 0) << 1, 2)];
         case "ramShortRegister":
-          return [address2((bytes[operandOffset] ?? 0) << 1, 2), register3(registerNumber2)];
+          return [address3((bytes[operandOffset] ?? 0) << 1, 2), register4(registerNumber2)];
         case "registerRamAbsolute":
-          return [register3(registerNumber2), address2(word(bytes, operandOffset), 2)];
+          return [register4(registerNumber2), address3(word(bytes, operandOffset), 2)];
         case "ramAbsoluteRegister":
-          return [address2(word(bytes, operandOffset), 2), register3(registerNumber2)];
+          return [address3(word(bytes, operandOffset), 2), register4(registerNumber2)];
       }
       throw new Error("Unsupported SuperFX operand encoding.");
     };
@@ -49414,18 +50539,18 @@ var init_superfx_decoder = __esm({
       let operands;
       if (specification2.mode === "registerRegister") {
         operands = [
-          register3(specification2.destinationRegister),
-          register3(specification2.sourceRegister ?? 0)
+          register4(specification2.destinationRegister),
+          register4(specification2.sourceRegister ?? 0)
         ];
       } else if (specification2.mode === "registerRegisterIndirect") {
         operands = [
-          register3(specification2.destinationRegister),
-          register3(specification2.pointerRegister ?? 0)
+          register4(specification2.destinationRegister),
+          register4(specification2.pointerRegister ?? 0)
         ];
       } else {
         operands = [
-          register3(specification2.sourceRegister ?? 0),
-          register3(specification2.pointerRegister ?? 0)
+          register4(specification2.sourceRegister ?? 0),
+          register4(specification2.pointerRegister ?? 0)
         ];
       }
       return {
@@ -49550,7 +50675,7 @@ var init_superfx_decoder = __esm({
         };
       }
     };
-    hex4 = (value, width2) => `$${value.toString(16).toUpperCase().padStart(width2 * 2, "0")}`;
+    hex5 = (value, width2) => `$${value.toString(16).toUpperCase().padStart(width2 * 2, "0")}`;
   }
 });
 
@@ -51066,7 +52191,7 @@ var init_address_identities = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/hardware-registers.ts
-var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTER_ALIASES, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, identifySnesHardwareRegister, snesHardwareRegisterSymbols, hex5, SNES_HARDWARE_DEFINES_SOURCE, snesHardwareDefineRecords, snesHardwareDefines, CONTROLLER_MASKS, INTERRUPT_STATUS_MASKS, renderConstants, renderSnesHardwareDefines;
+var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTER_ALIASES, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, identifySnesHardwareRegister, snesHardwareRegisterSymbols, hex7, SNES_HARDWARE_DEFINES_SOURCE, snesHardwareDefineRecords, snesHardwareDefines, CONTROLLER_MASKS, INTERRUPT_STATUS_MASKS, renderConstants, renderSnesHardwareDefines;
 var init_hardware_registers = __esm({
   "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
@@ -51461,7 +52586,7 @@ var init_hardware_registers = __esm({
     snesHardwareRegisterSymbols = Object.freeze(
       Object.fromEntries(FIXED_REGISTER_DEFINITIONS.map(({ address: address4, symbol }) => [address4, symbol]))
     );
-    hex5 = (value, width2) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
+    hex7 = (value, width2) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
     SNES_HARDWARE_DEFINES_SOURCE = "snes-defines.asm";
     snesHardwareDefineRecords = () => {
       const values = [...FIXED_REGISTER_DEFINITIONS, ...FIXED_REGISTER_ALIASES];
@@ -51515,7 +52640,7 @@ var init_hardware_registers = __esm({
       }
     ];
     renderConstants = (constants, width2) => constants.map(
-      ({ symbol, value, description }) => `${symbol} = ${hex5(value, width2)} ; ${description}`
+      ({ symbol, value, description }) => `${symbol} = ${hex7(value, width2)} ; ${description}`
     );
     renderSnesHardwareDefines = () => {
       const lines = [
@@ -51524,7 +52649,7 @@ var init_hardware_registers = __esm({
         "",
         "; PPU, APU, WRAM, controller, and CPU registers.",
         ...snesHardwareDefineRecords().map(
-          ({ symbol, address: address4, description }) => `${symbol} = ${hex5(address4, 4)} ; ${description}`
+          ({ symbol, address: address4, description }) => `${symbol} = ${hex7(address4, 4)} ; ${description}`
         ),
         "",
         "; Common controller masks (16-bit auto-joypad result).",
@@ -51536,7 +52661,7 @@ var init_hardware_registers = __esm({
         "; MDMAEN/HDMAEN channel masks.",
         ...Array.from(
           { length: 8 },
-          (_, channel) => `DMA_CHANNEL_${channel} = ${hex5(1 << channel, 2)} ; Select DMA/HDMA channel ${channel}.`
+          (_, channel) => `DMA_CHANNEL_${channel} = ${hex7(1 << channel, 2)} ; Select DMA/HDMA channel ${channel}.`
         ),
         ""
       ];
@@ -52454,11 +53579,11 @@ var init_analysis = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/dizraw-import.ts
-var import_node_crypto15, SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
+var import_node_crypto19, SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
 var init_dizraw_import = __esm({
   "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
-    import_node_crypto15 = require("node:crypto");
+    import_node_crypto19 = require("node:crypto");
     SUBSTITUTIONS = [
       ["0001E", "ZQ"],
       ["B0001", "Zq"],
@@ -52572,13 +53697,13 @@ var init_dizraw_import = __esm({
           }
           const match = /^r (\d+) (.+)$/.exec(line);
           if (!match) throw new Error(`Invalid .dizraw repeater command '${line}'.`);
-          const count = Number(match[1]);
-          if (!Number.isSafeInteger(count) || count < 0 || expanded.length + count > maximumBytes) {
+          const count2 = Number(match[1]);
+          if (!Number.isSafeInteger(count2) || count2 < 0 || expanded.length + count2 > maximumBytes) {
             throw new Error(
               `.dizraw RomBytes expansion exceeds the ${maximumBytes}-byte safety limit.`
             );
           }
-          for (let index = 0; index < count; index++) expanded.push(match[2]);
+          for (let index = 0; index < count2; index++) expanded.push(match[2]);
         }
         lines = expanded;
       }
@@ -52656,7 +53781,7 @@ var init_dizraw_import = __esm({
       const dataAttributes = attributes(data.opening);
       const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
       if (!mapper) throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
-      const sourceSha256 = (0, import_node_crypto15.createHash)("sha256").update(xml).digest("hex");
+      const sourceSha256 = (0, import_node_crypto19.createHash)("sha256").update(xml).digest("hex");
       const sourceName = options.sourceName ?? "import.dizraw";
       const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
       const labelsElement = element(data.body, "Labels");
@@ -52833,11 +53958,11 @@ var init_dizraw_import = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/mesen-runtime.ts
-var import_node_crypto16, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2569, stableSuffix, hex7, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
+var import_node_crypto20, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2569, stableSuffix, hex8, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
 var init_mesen_runtime = __esm({
   "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
-    import_node_crypto16 = require("node:crypto");
+    import_node_crypto20 = require("node:crypto");
     init_src2();
     init_src();
     init_decoder();
@@ -52853,9 +53978,9 @@ var init_mesen_runtime = __esm({
     CDL_MEMORY_8 = 32;
     CDL_GSU = 64;
     CDL_CX4 = 128;
-    sha2569 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
+    sha2569 = (value) => (0, import_node_crypto20.createHash)("sha256").update(value).digest("hex");
     stableSuffix = (value) => sha2569(canonicalJson(value)).slice(0, 16);
-    hex7 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
+    hex8 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
     assertContext = (rom, mapper, context) => {
       if (context.projectRomContentSha256 !== rom.identity.contentSha256) {
         throw new Error(
@@ -52877,7 +54002,7 @@ var init_mesen_runtime = __esm({
         if (matches && start < 0) start = offset;
         if (!matches && start >= 0) {
           records2.push({
-            id: `runtime:mesence-cdl:${sourceSha256}:${coverage}:${hex7(start, 6)}-${hex7(offset, 6)}`,
+            id: `runtime:mesence-cdl:${sourceSha256}:${coverage}:${hex8(start, 6)}-${hex8(offset, 6)}`,
             kind: "runtime-coverage",
             architecture: "snes.65816",
             addressSpace: SNES_FILE_ADDRESS_SPACE,
@@ -52893,7 +54018,7 @@ var init_mesen_runtime = __esm({
       return records2;
     };
     annotationForInstruction = (fileOffset, size, state, evidenceId, sourceSha256) => {
-      const suffix = `${sourceSha256}:${hex7(fileOffset, 6)}:${stableSuffix(state)}`;
+      const suffix = `${sourceSha256}:${hex8(fileOffset, 6)}:${stableSuffix(state)}`;
       const normalizedState = {
         ...typeof state.e === "boolean" ? { e: state.e } : {},
         ...typeof state.m === "boolean" ? { m: state.m } : {},
@@ -52965,7 +54090,7 @@ var init_mesen_runtime = __esm({
       const actualCrc = CRC32.compute(rom.bytes());
       if (expectedCrc !== actualCrc) {
         throw new Error(
-          `MesenCE CDL ROM CRC mismatch: CDL expects $${hex7(expectedCrc, 8)}, loaded ROM is $${hex7(actualCrc, 8)}.`
+          `MesenCE CDL ROM CRC mismatch: CDL expects $${hex8(expectedCrc, 8)}, loaded ROM is $${hex8(actualCrc, 8)}.`
         );
       }
       const sourceSha256 = sha2569(bytes);
@@ -53019,7 +54144,7 @@ var init_mesen_runtime = __esm({
           continue;
         }
         const instruction2 = decoded.instruction;
-        const recordSuffix = `${sourceSha256}:${hex7(fileOffset, 6)}:${instruction2.size}`;
+        const recordSuffix = `${sourceSha256}:${hex8(fileOffset, 6)}:${instruction2.size}`;
         runtime.push({
           id: `runtime:mesence-cdl:execution:${recordSuffix}`,
           kind: "runtime-execution",
@@ -53089,7 +54214,7 @@ var init_mesen_runtime = __esm({
         sourceSha256,
         rom,
         mapper,
-        `MesenCE CDLv2 with verified ROM CRC $${hex7(actualCrc, 8)}.`
+        `MesenCE CDLv2 with verified ROM CRC $${hex8(actualCrc, 8)}.`
       );
       return {
         report: report2,
@@ -53275,7 +54400,7 @@ var init_mesen_runtime = __esm({
           ] : []
         ]) {
           const record3 = {
-            id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverage.kind}:${hex7(coverage.start, 6)}-${hex7(coverage.end, 6)}`,
+            id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverage.kind}:${hex8(coverage.start, 6)}-${hex8(coverage.end, 6)}`,
             kind: "runtime-coverage",
             architecture: "snes.65816",
             addressSpace: SNES_FILE_ADDRESS_SPACE,
@@ -53331,7 +54456,7 @@ var init_mesen_runtime = __esm({
             const mapped = identifySnesCpuAddress(event.effectiveAddress, addressContext, rom.length);
             if (!mapped) continue;
             const coverage = {
-              id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverageKind}:${hex7(mapped.fileOffset, 6)}-${hex7(mapped.fileOffset + width2, 6)}`,
+              id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverageKind}:${hex8(mapped.fileOffset, 6)}-${hex8(mapped.fileOffset + width2, 6)}`,
               kind: "runtime-coverage",
               architecture: "snes.65816",
               addressSpace: SNES_FILE_ADDRESS_SPACE,
@@ -53382,7 +54507,7 @@ var init_mesen_runtime = __esm({
       }
       const analysis = [...targetOverrides.entries()].map(
         ([address4, observation]) => ({
-          id: `runtime:target-override:snes.cpu:${hex7(address4, 6)}`,
+          id: `runtime:target-override:snes.cpu:${hex8(address4, 6)}`,
           kind: "target-override",
           addressSpace: SNES_CPU_ADDRESS_SPACE,
           address: address4,
@@ -53464,11 +54589,11 @@ var init_mesen_runtime = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/spc700-address-space.ts
-var import_node_crypto17, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
+var import_node_crypto21, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
 var init_spc700_address_space = __esm({
   "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
-    import_node_crypto17 = require("node:crypto");
+    import_node_crypto21 = require("node:crypto");
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
     SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
       id: SPC700_ARAM_ADDRESS_SPACE,
@@ -53493,7 +54618,7 @@ var init_spc700_address_space = __esm({
         }
         this.#bytes = Uint8Array.from(bytes);
         this.loadAddress = loadAddress;
-        this.contentSha256 = (0, import_node_crypto17.createHash)("sha256").update(this.#bytes).digest("hex");
+        this.contentSha256 = (0, import_node_crypto21.createHash)("sha256").update(this.#bytes).digest("hex");
       }
       /**
        * Number of represented ARAM bytes.
@@ -53549,11 +54674,11 @@ var init_spc700_address_space = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/mesen-labels.ts
-var import_node_crypto18, LABEL_PATTERN, MEMORY_TYPES, sha25610, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
+var import_node_crypto22, LABEL_PATTERN, MEMORY_TYPES, sha25610, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
 var init_mesen_labels = __esm({
   "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
-    import_node_crypto18 = require("node:crypto");
+    import_node_crypto22 = require("node:crypto");
     init_address_identities();
     init_mesen_runtime();
     init_spc700_address_space();
@@ -53600,7 +54725,7 @@ var init_mesen_labels = __esm({
         maximum: 65536
       }
     };
-    sha25610 = (value) => (0, import_node_crypto18.createHash)("sha256").update(value).digest("hex");
+    sha25610 = (value) => (0, import_node_crypto22.createHash)("sha256").update(value).digest("hex");
     reportFor = (operation, sourceName, sourceSha256, imported, unsupported, warnings) => ({
       id: `${operation}:mesence-labels:${sourceSha256}`,
       format: "mesence-labels",
@@ -53667,7 +54792,7 @@ var init_mesen_labels = __esm({
           invalidLines++;
           continue;
         }
-        const comment = (fields[3] ?? "").replaceAll("\\n", "\n");
+        const comment2 = (fields[3] ?? "").replaceAll("\\n", "\n");
         const suffix = `${sourceSha256}:${lineIndex + 1}`;
         if (name !== "") {
           labels.push({
@@ -53675,15 +54800,15 @@ var init_mesen_labels = __esm({
             addressSpace: memory.addressSpace,
             address: start,
             name,
-            ...comment === "" ? {} : { comment },
+            ...comment2 === "" ? {} : { comment: comment2 },
             evidence: [evidenceId]
           });
-        } else if (comment !== "") {
+        } else if (comment2 !== "") {
           comments.push({
             id: `mesence:comment:${suffix}`,
             addressSpace: memory.addressSpace,
             address: start,
-            text: comment,
+            text: comment2,
             evidence: [evidenceId]
           });
         }
@@ -53777,13 +54902,13 @@ var init_mesen_labels = __esm({
           sourceId: label.id
         });
       }
-      for (const comment of comments) {
-        const mapped = exportAddress(comment.addressSpace, comment.address, rom, mapper);
+      for (const comment2 of comments) {
+        const mapped = exportAddress(comment2.addressSpace, comment2.address, rom, mapper);
         if (!mapped) {
           unsupportedAddresses++;
           continue;
         }
-        entries3.push({ ...mapped, name: "", comment: comment.text, sourceId: comment.id });
+        entries3.push({ ...mapped, name: "", comment: comment2.text, sourceId: comment2.id });
       }
       if (invalidNames > 0) {
         unsupported.push({
@@ -53802,20 +54927,20 @@ var init_mesen_labels = __esm({
       const byAddress2 = /* @__PURE__ */ new Map();
       let collisions = 0;
       for (const entry of entries3.sort((left, right) => left.sourceId.localeCompare(right.sourceId))) {
-        const key = `${entry.memoryType}:${entry.address}`;
-        const current = byAddress2.get(key);
+        const key2 = `${entry.memoryType}:${entry.address}`;
+        const current = byAddress2.get(key2);
         if (!current) {
-          byAddress2.set(key, entry);
+          byAddress2.set(key2, entry);
           continue;
         }
         collisions++;
         if (current.name === "" && entry.name !== "") {
-          byAddress2.set(key, {
+          byAddress2.set(key2, {
             ...entry,
             comment: [entry.comment, current.comment].filter(Boolean).join("\n")
           });
         } else if (entry.comment) {
-          byAddress2.set(key, {
+          byAddress2.set(key2, {
             ...current,
             comment: [current.comment, entry.comment].filter(Boolean).join("\n")
           });
@@ -53984,25 +55109,25 @@ var init_framework_asset_helpers = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/ram-map.ts
-var fs9, import_node_path6, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex8, cleanText, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, renderSnesRamDefines, renderSnesRamMapSchema;
+var fs10, import_node_path8, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, parseAddress2, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
   "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
     init_src();
-    fs9 = __toESM(require("node:fs"), 1);
-    import_node_path6 = __toESM(require("node:path"), 1);
+    fs10 = __toESM(require("node:fs"), 1);
+    import_node_path8 = __toESM(require("node:path"), 1);
     SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
     SNES_RAM_MAP_SCHEMA_VERSION = 1;
     SNES_RAM_MAP_SOURCE = "ram-map.json";
     SNES_RAM_MAP_SCHEMA_SOURCE = "ram-map.schema.json";
     SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
-    hex8 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
+    hex9 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
     cleanText = (value, field) => {
       const cleaned = value.replaceAll(/\s+/g, " ").trim();
       if (!cleaned) throw new Error(`RAM-map ${field} must not be empty.`);
       return cleaned;
     };
-    parseAddress = (value) => {
+    parseAddress2 = (value) => {
       let address4;
       if (typeof value === "number") address4 = value;
       else {
@@ -54040,9 +55165,9 @@ var init_ram_map = __esm({
         names.add(nameKey);
         if (typeof record3.address !== "string" && typeof record3.address !== "number")
           throw new Error(`RAM-map variable '${name}' must have a string or integer address.`);
-        const address4 = parseAddress(record3.address);
+        const address4 = parseAddress2(record3.address);
         if (addresses2.has(address4))
-          throw new Error(`Duplicate RAM-map address '${hex8(address4)}'; combine aliases in one entry.`);
+          throw new Error(`Duplicate RAM-map address '${hex9(address4)}'; combine aliases in one entry.`);
         addresses2.add(address4);
         const size = record3.size ?? 1;
         if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 1 || address4 + size > 8388608)
@@ -54055,25 +55180,25 @@ var init_ram_map = __esm({
         const description = cleanText(record3.description, `${name} description`);
         if (record3.notes !== void 0 && !Array.isArray(record3.notes))
           throw new Error(`RAM-map notes for '${name}' must be an array.`);
-        const notes = (record3.notes ?? []).map((note) => {
+        const notes2 = (record3.notes ?? []).map((note) => {
           if (typeof note !== "string") throw new Error(`RAM-map notes for '${name}' must be strings.`);
           return cleanText(note, `${name} note`);
         });
-        return { name, address: address4, size, ...category ? { category } : {}, description, notes };
+        return { name, address: address4, size, ...category ? { category } : {}, description, notes: notes2 };
       });
-      const sorted = variables.sort(
+      const sorted2 = variables.sort(
         (left, right) => left.address - right.address || left.name.localeCompare(right.name)
       );
-      for (let index = 1; index < sorted.length; index++) {
-        const previous = sorted[index - 1];
-        const current = sorted[index];
+      for (let index = 1; index < sorted2.length; index++) {
+        const previous = sorted2[index - 1];
+        const current = sorted2[index];
         if (current.address < previous.address + previous.size) {
           throw new Error(
-            `RAM-map variables '${previous.name}' and '${current.name}' overlap at ${hex8(current.address)}.`
+            `RAM-map variables '${previous.name}' and '${current.name}' overlap at ${hex9(current.address)}.`
           );
         }
       }
-      return sorted;
+      return sorted2;
     };
     emptySnesRamMap = () => ({
       $schema: `./${SNES_RAM_MAP_SCHEMA_SOURCE}`,
@@ -54082,12 +55207,12 @@ var init_ram_map = __esm({
       variables: []
     });
     loadSnesRamMap = (directory) => {
-      const file = import_node_path6.default.join(directory, SNES_RAM_MAP_SOURCE);
-      if (!fs9.existsSync(file)) {
-        fs9.mkdirSync(directory, { recursive: true });
-        fs9.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+      const file = import_node_path8.default.join(directory, SNES_RAM_MAP_SOURCE);
+      if (!fs10.existsSync(file)) {
+        fs10.mkdirSync(directory, { recursive: true });
+        fs10.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
       }
-      const sourceBytes = fs9.readFileSync(file);
+      const sourceBytes = fs10.readFileSync(file);
       let parsed;
       try {
         parsed = JSON.parse(sourceBytes.toString("utf8"));
@@ -54127,10 +55252,10 @@ var init_ram_map = __esm({
             ...variable.notes
           ].filter((entry) => Boolean(entry));
           const categorySeparator = variable.category ? " \u2014 " : "";
-          const comment = variable.category ? `${details[0]}${categorySeparator}${details.slice(1).join(" ")}` : details.join(" ");
+          const comment2 = variable.category ? `${details[0]}${categorySeparator}${details.slice(1).join(" ")}` : details.join(" ");
           return [
             ...index > 0 && variables[index - 1]?.category !== variable.category ? [""] : [],
-            `${variable.name} = ${hex8(variable.address)} ; ${comment}`
+            `${variable.name} = ${hex9(variable.address)} ; ${comment2}`
           ];
         }),
         ""
@@ -54175,23 +55300,358 @@ var init_ram_map = __esm({
   }
 });
 
+// packages/plugin-snes/src/disassembler/code-preservation.ts
+var union, lostCodeRanges;
+var init_code_preservation = __esm({
+  "packages/plugin-snes/src/disassembler/code-preservation.ts"() {
+    "use strict";
+    union = (ranges) => {
+      const merged = [];
+      for (const range of [...ranges].sort((left, right) => left.start - right.start)) {
+        const previous = merged.at(-1);
+        if (previous && range.start <= previous.end) {
+          merged[merged.length - 1] = {
+            start: previous.start,
+            end: Math.max(previous.end, range.end)
+          };
+        } else merged.push(range);
+      }
+      return merged;
+    };
+    lostCodeRanges = (previous, next) => {
+      const retained = union(next);
+      const lost = [];
+      let index = 0;
+      for (const range of union(previous)) {
+        let cursor = range.start;
+        while (index < retained.length && retained[index].end <= cursor) index++;
+        for (let candidate = index; candidate < retained.length; candidate++) {
+          const covered = retained[candidate];
+          if (covered.start >= range.end) break;
+          if (covered.start > cursor) lost.push({ start: cursor, end: covered.start });
+          cursor = Math.max(cursor, Math.min(range.end, covered.end));
+          if (cursor === range.end) break;
+        }
+        if (cursor < range.end) lost.push({ start: cursor, end: range.end });
+      }
+      return lost;
+    };
+  }
+});
+
+// packages/plugin-snes/src/disassembler/struct-map.ts
+var fs11, import_node_path9, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex10, comment, object2, integer5, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
+var init_struct_map = __esm({
+  "packages/plugin-snes/src/disassembler/struct-map.ts"() {
+    "use strict";
+    fs11 = __toESM(require("node:fs"), 1);
+    import_node_path9 = __toESM(require("node:path"), 1);
+    init_ram_map();
+    SNES_STRUCT_MAP_SOURCE = "struct-map.json";
+    SNES_STRUCT_DEFINES_SOURCE = "structs.asm";
+    widths = { db: 1, dw: 2, dl: 3, dd: 4 };
+    fieldType = (field) => field.type ?? (["", "db", "dw", "dl", "dd"][field.size] || `db[${field.size}]`);
+    hex10 = (value) => `$${value.toString(16).toUpperCase()}`;
+    comment = (value) => value.replaceAll(/\s+/g, " ").trim();
+    object2 = (value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value))
+        throw new Error("Struct-map records must be objects.");
+      return value;
+    };
+    integer5 = (value, minimum = 0, maximum = 16777215) => {
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum || value > maximum)
+        throw new Error(`Invalid struct-map integer '${String(value)}'.`);
+      return value;
+    };
+    identifier = (value) => {
+      if (typeof value !== "string" || !/^[A-Z_a-z]\w*$/.test(value) || /^__gap_|^snes_/i.test(value))
+        throw new Error(`Invalid or reserved struct-map identifier '${String(value)}'.`);
+      return value;
+    };
+    notes = (value) => {
+      if (value === void 0) return [];
+      if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string"))
+        throw new Error("Struct-map notes must be an array of strings.");
+      return value.map(comment);
+    };
+    validateSnesStructMap = (value) => {
+      const file = object2(value);
+      if (file.format !== "uttori-asm-snes-struct-map" || file.schemaVersion !== 1)
+        throw new Error("Unsupported SNES struct-map format or schema.");
+      if (!Array.isArray(file.structures) || !Array.isArray(file.bindings))
+        throw new Error("Struct map requires structures and bindings arrays.");
+      const names = /* @__PURE__ */ new Set();
+      const uniqueName = (value2) => {
+        const name = identifier(value2);
+        if (names.has(name.toLowerCase())) throw new Error(`Duplicate struct-map name '${name}'.`);
+        names.add(name.toLowerCase());
+        return name;
+      };
+      const structures = file.structures.map((input) => {
+        const entry = object2(input);
+        const id = uniqueName(entry.id);
+        const size = integer5(entry.size, 1, 65536);
+        if (entry.byteOrder !== void 0 && entry.byteOrder !== "little")
+          throw new Error(`Struct '${id}' must use little-endian fields.`);
+        if (!Array.isArray(entry.fields)) throw new Error(`Struct '${id}' requires a fields array.`);
+        const fieldNames = /* @__PURE__ */ new Set();
+        const fields = entry.fields.map((inputField) => {
+          const field = object2(inputField);
+          const name = identifier(field.name);
+          if (fieldNames.has(name.toLowerCase()))
+            throw new Error(`Duplicate struct field '${id}.${name}'.`);
+          fieldNames.add(name.toLowerCase());
+          if (field.description !== void 0 && typeof field.description !== "string")
+            throw new Error(`Invalid description for '${id}.${name}'.`);
+          const fieldSize = integer5(field.size, 1, size);
+          let type;
+          if (field.type !== void 0) {
+            if (typeof field.type !== "string")
+              throw new Error(`Invalid field type '${id}.${name}'.`);
+            const match = field.type.match(/^(db|dw|dl|dd)(?:\[([1-9]\d*)])?$/i);
+            if (!match || widths[match[1].toLowerCase()] * Number(match[2] ?? 1) !== fieldSize)
+              throw new Error(`Field type '${id}.${name}' must match its size (${fieldSize} bytes).`);
+            type = field.type.toLowerCase();
+          }
+          return {
+            name,
+            offset: integer5(field.offset, 0, size - 1),
+            size: fieldSize,
+            ...type === void 0 ? {} : { type },
+            ...field.description === void 0 ? {} : { description: comment(field.description) }
+          };
+        }).sort((a, b) => a.offset - b.offset);
+        let end = 0;
+        for (const field of fields) {
+          if (field.offset < end || field.offset + field.size > size)
+            throw new Error(`Struct field '${id}.${field.name}' overlaps or exceeds the layout.`);
+          end = field.offset + field.size;
+        }
+        return { id, size, fields, notes: notes(entry.notes) };
+      });
+      const byName = new Map(structures.map((structure) => [structure.id, structure]));
+      const bindings = file.bindings.map((input) => {
+        const entry = object2(input);
+        const name = uniqueName(entry.name);
+        const structure = byName.get(String(entry.structure));
+        if (!structure) throw new Error(`Unknown layout '${String(entry.structure)}' for '${name}'.`);
+        const address4 = integer5(entry.address);
+        const count2 = integer5(entry.count, 1);
+        const firstIndex = integer5(entry.firstIndex ?? 0);
+        if (address4 - firstIndex * structure.size < 0)
+          throw new Error(`Struct binding '${name}' has an invalid first index.`);
+        const length = count2 * structure.size;
+        if (address4 + length > 16777216)
+          throw new Error(`Struct binding '${name}' exceeds CPU memory.`);
+        const fileOffset = entry.fileOffset === void 0 ? void 0 : integer5(entry.fileOffset);
+        if (fileOffset === void 0 && (address4 < 8257536 || address4 + length > 8388608))
+          throw new Error(`RAM struct '${name}' must be bound inside canonical WRAM.`);
+        return {
+          name,
+          structure,
+          address: address4,
+          count: count2,
+          firstIndex,
+          ...fileOffset === void 0 ? {} : { fileOffset },
+          notes: notes(entry.notes)
+        };
+      }).sort((a, b) => a.address - b.address);
+      for (let index = 1; index < bindings.length; index++) {
+        const previous = bindings[index - 1];
+        if (bindings[index].address < previous.address + previous.structure.size * previous.count)
+          throw new Error(`Struct bindings '${previous.name}' and '${bindings[index].name}' overlap.`);
+      }
+      const romBindings = bindings.filter((binding) => binding.fileOffset !== void 0).sort((a, b) => a.fileOffset - b.fileOffset);
+      for (let index = 1; index < romBindings.length; index++) {
+        const previous = romBindings[index - 1];
+        if (romBindings[index].fileOffset < previous.fileOffset + previous.structure.size * previous.count)
+          throw new Error(
+            `ROM struct bindings '${previous.name}' and '${romBindings[index].name}' overlap.`
+          );
+      }
+      return { structures, bindings };
+    };
+    loadSnesStructMap = (directory) => {
+      const filename = import_node_path9.default.join(directory, SNES_STRUCT_MAP_SOURCE);
+      if (!fs11.existsSync(filename)) return void 0;
+      const sourceBytes = fs11.readFileSync(filename);
+      return { ...validateSnesStructMap(JSON.parse(sourceBytes.toString("utf8"))), sourceBytes };
+    };
+    completeFields = (structure) => {
+      const fields = [];
+      let offset = 0;
+      const gap = (end) => {
+        if (end > offset)
+          fields.push({
+            name: `__gap_${offset.toString(16)}`,
+            offset,
+            size: end - offset,
+            type: `db[${end - offset}]`
+          });
+      };
+      for (const field of structure.fields) {
+        gap(field.offset);
+        fields.push(field);
+        offset = field.offset + field.size;
+      }
+      gap(structure.size);
+      return fields;
+    };
+    renderSnesStructDefines = (map) => {
+      const lines = [
+        "; Generated from struct-map.json. Edit that input and export again.",
+        "; Layouts have base zero; bindings use CPU addresses. Indexed fields use sizeof(struct).",
+        ""
+      ];
+      const render = (name, base, structure, detail, binding) => {
+        lines.push(
+          `; ${name}: ${hex10(structure.size)} bytes per record.`,
+          ...detail.map((note) => `; ${note}`),
+          `struct ${name} ${hex10(base)}`
+        );
+        for (const field of completeFields(structure))
+          lines.push(
+            `  .${field.name}: ${fieldType(field)} ; +${hex10(field.offset)}${field.description ? ` ${field.description}` : ""}`
+          );
+        lines.push(
+          binding ? `endstruct count ${binding.count} firstindex ${binding.firstIndex}` : "endstruct",
+          ""
+        );
+      };
+      for (const structure of map.structures) render(structure.id, 0, structure, structure.notes);
+      for (const binding of map.bindings)
+        render(
+          binding.name,
+          binding.address - binding.firstIndex * binding.structure.size,
+          binding.structure,
+          [
+            `${binding.structure.id}; ${binding.count} mapped record(s), indexes ${binding.firstIndex} through ${binding.firstIndex + binding.count - 1}.`,
+            ...binding.notes
+          ],
+          binding
+        );
+      return `${lines.join("\n")}
+`;
+    };
+    fieldExpression = (binding, index, field) => `${binding.name}${index + binding.firstIndex === 0 ? "" : `[${index + binding.firstIndex}]`}.${field.name}`;
+    indexSnesStructFields = (map, indexed = false) => {
+      const result = /* @__PURE__ */ new Map();
+      for (const binding of map?.bindings ?? []) {
+        for (let index = 0; index < binding.count; index++) {
+          for (const field of binding.structure.fields) {
+            const expression = fieldExpression(binding, index, field);
+            for (let offset = 0; offset < field.size; offset++) {
+              const address4 = binding.address + index * binding.structure.size + field.offset + offset;
+              result.set(address4, offset === 0 ? expression : `(${expression} + ${hex10(offset)})`);
+            }
+          }
+        }
+      }
+      if (indexed) {
+        for (const binding of map?.bindings ?? []) {
+          if (binding.firstIndex === 0) continue;
+          const base = binding.address - binding.firstIndex * binding.structure.size;
+          for (const field of binding.structure.fields) {
+            for (let offset = 0; offset < field.size; offset++) {
+              const expression = `${binding.name}.${field.name}`;
+              result.set(
+                base + field.offset + offset,
+                offset === 0 ? expression : `(${expression} + ${hex10(offset)})`
+              );
+            }
+          }
+        }
+      }
+      return result;
+    };
+    planSnesStructRomFields = (map, romSize, cpuAddress) => {
+      const fields = [];
+      for (const binding of map?.bindings ?? []) {
+        if (binding.fileOffset === void 0) continue;
+        const length = binding.structure.size * binding.count;
+        if (binding.fileOffset + length > romSize || canonicalSnesWramAddress(binding.address) !== void 0)
+          throw new Error(`ROM struct '${binding.name}' lies outside the ROM.`);
+        for (let offset = 0; offset < length; offset++) {
+          if (cpuAddress(binding.fileOffset + offset) !== binding.address + offset)
+            throw new Error(`ROM struct '${binding.name}' has inconsistent CPU/file mapping.`);
+        }
+        for (let index = 0; index < binding.count; index++) {
+          const record3 = {
+            start: binding.fileOffset + index * binding.structure.size,
+            end: binding.fileOffset + (index + 1) * binding.structure.size,
+            binding,
+            index: index + binding.firstIndex
+          };
+          for (const field of completeFields(binding.structure)) {
+            const start = binding.fileOffset + index * binding.structure.size + field.offset;
+            fields.push({
+              start,
+              end: start + field.size,
+              expression: fieldExpression(binding, index, field),
+              record: record3
+            });
+          }
+        }
+      }
+      return fields.sort((a, b) => a.start - b.start);
+    };
+    renderSnesStructInitializer = (record3, bytes) => {
+      if (bytes.length !== record3.end - record3.start)
+        throw new Error("Struct initializer requires a complete record.");
+      const assignments = completeFields(record3.binding.structure).map((field) => {
+        const type = fieldType(field);
+        const width2 = widths[type.slice(0, 2)];
+        const values = [];
+        for (let offset = field.offset; offset < field.offset + field.size; offset += width2) {
+          let value = 0;
+          for (let byte2 = 0; byte2 < width2; byte2++) value += bytes[offset + byte2] * 2 ** (8 * byte2);
+          values.push(
+            `$${value.toString(16).toUpperCase().padStart(width2 * 2, "0")}`
+          );
+        }
+        return `${field.name} = ${type.includes("[") ? `[${values.join(", ")}]` : values[0]}`;
+      });
+      return `{ ${assignments.join(", ")} }`;
+    };
+    renderSnesStructData = (field, start, bytes) => {
+      const offset = start - field.start;
+      const expression = offset === 0 ? field.expression : `${field.expression} + ${hex10(offset)}`;
+      const width2 = offset === 0 && bytes.length === field.end - field.start && bytes.length <= 4 ? bytes.length : 1;
+      const values = [];
+      for (let index = 0; index < bytes.length; index += width2) {
+        let value = 0;
+        for (let byte2 = 0; byte2 < width2; byte2++) value += bytes[index + byte2] * 2 ** (8 * byte2);
+        values.push(
+          `$${value.toString(16).toUpperCase().padStart(width2 * 2, "0")}`
+        );
+      }
+      return [
+        `  assert pc() == ${expression}`,
+        `  ${["", "db", "dw", "dl", "dd"][width2]} ${values.join(", ")} ; ${expression}`
+      ];
+    };
+  }
+});
+
 // packages/plugin-snes/src/disassembler/source-export.ts
-var fs10, import_node_path7, hex9, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rejectedByAnnotation, planInstructions, planSpans, preflight, writeFile, widthDirective, regionIdsFor, exportSnes65816Source;
+var fs12, import_node_path10, hex11, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, widthDirective, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
     init_src2();
     init_src();
-    fs10 = __toESM(require("node:fs"), 1);
-    import_node_path7 = __toESM(require("node:path"), 1);
+    fs12 = __toESM(require("node:fs"), 1);
+    import_node_path10 = __toESM(require("node:path"), 1);
     init_decoder();
     init_address_space();
     init_address_identities();
     init_hardware_registers();
     init_ram_map();
     init_rom_header();
-    hex9 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
-    byteList = (bytes) => [...bytes].map((byte2) => hex9(byte2, 2)).join(", ");
+    init_code_preservation();
+    init_struct_map();
+    hex11 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
+    byteList = (bytes) => [...bytes].map((byte2) => hex11(byte2, 2)).join(", ");
     asciiString = (bytes) => {
       if (![...bytes].every((byte2) => byte2 >= 32 && byte2 <= 126)) return void 0;
       const value = String.fromCharCode(...bytes).replaceAll("\\", "\\\\").replaceAll("!", "\\!").replaceAll('"', '\\"');
@@ -54204,21 +55664,21 @@ var init_source_export2 = __esm({
       if (bytes >= 1024 && bytes % 1024 === 0) return `${bytes / 1024} KiB`;
       return `${bytes} bytes`;
     };
-    bytesField = (start, bytes, symbol, comment, preferAscii = false) => ({
+    bytesField = (start, bytes, symbol, comment2, preferAscii = false) => ({
       start,
       end: start + bytes.length,
       role: "snes-header",
       lines: [
         `${symbol}:`,
-        `  db ${(preferAscii ? asciiString(bytes) : void 0) ?? byteList(bytes)} ; ${comment}`
+        `  db ${(preferAscii ? asciiString(bytes) : void 0) ?? byteList(bytes)} ; ${comment2}`
       ]
     });
-    byteField = (start, value, symbol, comment) => bytesField(start, Uint8Array.of(value), symbol, comment);
-    wordField = (start, value, symbol, comment, role = "snes-header") => ({
+    byteField = (start, value, symbol, comment2) => bytesField(start, Uint8Array.of(value), symbol, comment2);
+    wordField = (start, value, symbol, comment2, role = "snes-header") => ({
       start,
       end: start + 2,
       role,
-      lines: [`${symbol}:`, `  dw ${hex9(value, 4)} ; ${comment}`]
+      lines: [`${symbol}:`, `  dw ${hex11(value, 4)} ; ${comment2}`]
     });
     asciiComment = (value) => `"${value.replaceAll('"', '\\"')}"`;
     structuredRomLayout = (rom, mapper) => {
@@ -54337,21 +55797,21 @@ var init_source_export2 = __esm({
       );
       for (const vector of header.vectors) {
         const mode3 = vector.mode === "native" ? "Native-mode" : "Emulation-mode";
-        let comment = `${mode3} reserved vector word.`;
+        let comment2 = `${mode3} reserved vector word.`;
         if (vector.state && vector.targetAddress === void 0) {
-          comment = `${mode3} ${vector.name} vector is unpopulated.`;
+          comment2 = `${mode3} ${vector.name} vector is unpopulated.`;
         } else if (vector.state) {
-          comment = `${mode3} ${vector.name} handler; target bank is forced to $00 -> ${hex9(vector.targetAddress, 6)}.`;
+          comment2 = `${mode3} ${vector.name} handler; target bank is forced to $00 -> ${hex11(vector.targetAddress, 6)}.`;
         }
-        fields.push(wordField(vector.fileOffset, vector.value, vector.symbol, comment, "vectors"));
+        fields.push(wordField(vector.fileOffset, vector.value, vector.symbol, comment2, "vectors"));
       }
-      const sorted = fields.sort((left, right) => left.start - right.start);
+      const sorted2 = fields.sort((left, right) => left.start - right.start);
       return {
-        start: sorted[0].start,
-        end: sorted.at(-1).end,
+        start: sorted2[0].start,
+        end: sorted2.at(-1).end,
         headerOffset: header.offset,
-        fields: sorted,
-        byStart: new Map(sorted.map((field) => [field.start, field]))
+        fields: sorted2,
+        byStart: new Map(sorted2.map((field) => [field.start, field]))
       };
     };
     known2 = (value) => {
@@ -54367,7 +55827,7 @@ var init_source_export2 = __esm({
       ...known2(record3.dbr) === void 0 ? {} : { dataBank: known2(record3.dbr) & 255 },
       ...known2(record3.d) === void 0 ? {} : { directPage: known2(record3.d) & 65535 }
     });
-    formatSnes65816SourceInstruction = (instruction2, ramVariables, sourceAddress, sourceLabels) => {
+    formatSnes65816SourceInstruction = (instruction2, ramVariables, sourceAddress, sourceLabels, structFields, indexedStructFields) => {
       const decodedOperand = instruction2.operands[0];
       const rebaseRelative = sourceAddress !== void 0 && (instruction2.mode === "relative" || instruction2.mode === "relativeLong" && instruction2.mnemonic !== "PER") && decodedOperand?.value !== void 0;
       const formatted = formatCpu65816Instruction(
@@ -54402,12 +55862,28 @@ var init_source_export2 = __esm({
       )?.address;
       const canonicalRamAddress = dataAddress === void 0 ? void 0 : canonicalSnesWramAddress(dataAddress);
       const ramVariable = canonicalRamAddress === void 0 ? void 0 : ramVariables?.get(canonicalRamAddress);
-      if (ramVariable && rawValue !== void 0) {
+      const namedAddress = canonicalRamAddress ?? dataAddress;
+      const indexed = [
+        "absoluteLongIndexedX",
+        "absoluteIndexedX",
+        "absoluteIndexedY",
+        "directIndexedX",
+        "directIndexedY"
+      ].includes(instruction2.mode);
+      const structField = namedAddress === void 0 ? void 0 : (indexed ? indexedStructFields ?? structFields : structFields)?.get(namedAddress);
+      if ((structField || ramVariable) && rawValue !== void 0) {
         const rawWidth = instruction2.operands[0]?.width ?? 1;
         const encoded = `$${rawValue.toString(16).toUpperCase().padStart(rawWidth * 2, "0")}`;
-        const variableOffset = canonicalRamAddress - ramVariable.address;
-        const variableExpression = variableOffset === 0 ? ramVariable.name : `(${ramVariable.name} + $${variableOffset.toString(16).toUpperCase().padStart(2, "0")})`;
-        const symbolic = rawWidth === 3 ? variableExpression : `${variableExpression} & ${rawWidth === 1 ? "$FF" : "$FFFF"}`;
+        const variableOffset = ramVariable ? canonicalRamAddress - ramVariable.address : 0;
+        const variableExpression = structField ?? (variableOffset === 0 ? ramVariable.name : `(${ramVariable.name} + $${variableOffset.toString(16).toUpperCase().padStart(2, "0")})`);
+        let symbolic = variableExpression;
+        if (rawWidth === 3 && rawValue !== namedAddress) {
+          symbolic = `(${variableExpression} & $FFFF)`;
+          const encodedBank = rawValue & 16711680;
+          if (encodedBank !== 0) symbolic += ` | ${hex11(encodedBank, 6)}`;
+        } else if (rawWidth !== 3) {
+          symbolic = `${variableExpression} & ${rawWidth === 1 ? "$FF" : "$FFFF"}`;
+        }
         renderedOperand = operandText.replace(encoded, symbolic);
       } else if (instruction2.mode === "absolute" || instruction2.mode === "absoluteIndexedX" || instruction2.mode === "absoluteIndexedY") {
         const value = instruction2.operands[0]?.value;
@@ -54496,9 +55972,9 @@ var init_source_export2 = __esm({
           comment: `Region: ${region.name}${region.context ? ` (${region.context})` : ""}`
         });
       }
-      for (const comment of [...shards.comments].sort((a, b) => a.id.localeCompare(b.id))) {
-        append3(toFileOffset(comment.addressSpace, comment.address, mapper, romSize), {
-          ...comment.placement === "inline-instruction" ? { instructionComment: comment.text } : { comment: comment.text }
+      for (const comment2 of [...shards.comments].sort((a, b) => a.id.localeCompare(b.id))) {
+        append3(toFileOffset(comment2.addressSpace, comment2.address, mapper, romSize), {
+          ...comment2.placement === "inline-instruction" ? { instructionComment: comment2.text } : { comment: comment2.text }
         });
       }
       return values;
@@ -54534,7 +56010,7 @@ var init_source_export2 = __esm({
       ]);
       return node.fileOffset === void 0 || annotations.overlapping(node.fileOffset, node.fileOffset + node.size).some((entry) => rawClassifications.has(entry.classification));
     };
-    planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables, structure, sourceLabels) => {
+    planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables, structure, sourceLabels, structFields, indexedStructFields) => {
       const decoder = new Cpu65816Decoder();
       const source = new Uint8ArrayDecoderSource(rom.bytes());
       const conflictNodes = new Set(
@@ -54579,7 +56055,9 @@ var init_source_export2 = __esm({
               result.instruction,
               ramVariables,
               sourceAddress,
-              sourceLabels
+              sourceLabels,
+              structFields,
+              indexedStructFields
             )
           };
         });
@@ -54620,7 +56098,7 @@ var init_source_export2 = __esm({
       }
       return candidates;
     };
-    planSpans = (rom, mapper, shards, instructions, metadata, annotations, structure) => {
+    planSpans = (rom, mapper, shards, instructions, metadata, annotations, structure, structFields) => {
       const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
       const cuts = /* @__PURE__ */ new Set([0, rom.length]);
       const addExternalCut = (offset) => {
@@ -54633,7 +56111,18 @@ var init_source_export2 = __esm({
         cuts.add(field.start);
         cuts.add(field.end);
       }
+      const structIndex = new HalfOpenIntervalIndex(structFields);
+      for (const field of structFields) {
+        if (structure && field.start < structure.end && structure.start < field.end)
+          throw new Error(`Struct field '${field.expression}' overlaps the cartridge header/vectors.`);
+        cuts.add(field.start);
+        cuts.add(field.end);
+      }
       for (const [offset, instruction2] of instructions) {
+        if (structIndex.overlapping(offset, instruction2.end).length > 0)
+          throw new Error(
+            `ROM struct overlaps decoded code at ${hex11(offset)}. Resolve the conflicting evidence before export.`
+          );
         cuts.add(offset);
         cuts.add(instruction2.end);
       }
@@ -54641,8 +56130,10 @@ var init_source_export2 = __esm({
       for (const entry of shards.annotations) {
         if (entry.addressSpace !== SNES_FILE_ADDRESS_SPACE) continue;
         if (entry.classification === "opcode" || entry.classification === "operand") continue;
-        addExternalCut(entry.start);
-        addExternalCut(entry.end);
+        for (const offset of [entry.start, entry.end]) {
+          const field = structIndex.overlapping(offset, offset + 1)[0];
+          if (!field || offset === field.start) addExternalCut(offset);
+        }
       }
       for (const region of shards.regions) {
         const start = toFileOffset(region.addressSpace, region.start, mapper, rom.length);
@@ -54650,21 +56141,52 @@ var init_source_export2 = __esm({
         if (start !== void 0) addExternalCut(start);
         if (last !== void 0) addExternalCut(last + 1);
       }
-      const sorted = [...cuts].sort((left, right) => left - right);
-      return sorted.slice(0, -1).map((start, index) => {
-        const end = sorted[index + 1];
+      const sorted2 = [...cuts].sort((left, right) => left - right);
+      return sorted2.slice(0, -1).map((start, index) => {
+        const end = sorted2[index + 1];
         const instruction2 = instructions.get(start);
         const structured = structure?.byStart.get(start);
+        const structField = structIndex.overlapping(start, end)[0];
         if (instruction2?.end === end) return { start, end, role: "code", instruction: instruction2 };
         if (structured?.end === end) return { start, end, role: structured.role, structured };
+        if (structField) return { start, end, role: "raw", structField };
         return { start, end, role: roleAt(start, end, annotations) };
       });
     };
+    groupStructRecords = (spans, metadata, shards, mapper, romSize) => {
+      const protectedCuts = new Set(metadata.keys());
+      const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
+      for (let offset = bankSize; offset < romSize; offset += bankSize) protectedCuts.add(offset);
+      for (const region of shards.regions) {
+        const start = toFileOffset(region.addressSpace, region.start, mapper, romSize);
+        const last = toFileOffset(region.addressSpace, region.end - 1, mapper, romSize);
+        if (start !== void 0) protectedCuts.add(start);
+        if (last !== void 0) protectedCuts.add(last + 1);
+      }
+      const grouped = [];
+      for (let index = 0; index < spans.length; ) {
+        const first = spans[index];
+        const record3 = first.structField?.record;
+        let next = index;
+        if (record3 && first.start === record3.start) {
+          while (next < spans.length && spans[next].structField?.record === record3 && (next === index || !protectedCuts.has(spans[next].start)))
+            next++;
+        }
+        if (record3 && next > index && spans[next - 1].end === record3.end) {
+          grouped.push({ start: record3.start, end: record3.end, role: "raw", structRecord: record3 });
+          index = next;
+        } else {
+          grouped.push(first);
+          index++;
+        }
+      }
+      return grouped;
+    };
     preflight = (directory, force) => {
-      if (!fs10.existsSync(directory)) return void 0;
-      const manifestFile = import_node_path7.default.join(directory, SOURCE_EXPORT_MANIFEST);
-      if (!fs10.existsSync(manifestFile)) {
-        const unexpected = fs10.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE);
+      if (!fs12.existsSync(directory)) return void 0;
+      const manifestFile = import_node_path10.default.join(directory, SOURCE_EXPORT_MANIFEST);
+      if (!fs12.existsSync(manifestFile)) {
+        const unexpected = fs12.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
         if (!force && unexpected.length > 0) {
           throw new Error(
             `Export directory '${directory}' is not empty; pass --force to write into it.`
@@ -54678,9 +56200,9 @@ var init_source_export2 = __esm({
     };
     writeFile = (root, relative6, bytes, kind, files) => {
       const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
-      const destination = import_node_path7.default.join(root, relative6);
-      fs10.mkdirSync(import_node_path7.default.dirname(destination), { recursive: true });
-      fs10.writeFileSync(destination, value);
+      const destination = import_node_path10.default.join(root, relative6);
+      fs12.mkdirSync(import_node_path10.default.dirname(destination), { recursive: true });
+      fs12.writeFileSync(destination, value);
       files.push({ path: relative6, kind, size: value.length, sha256: sourceExportSha256(value) });
     };
     widthDirective = (flag, sixteen, eight) => {
@@ -54700,12 +56222,27 @@ var init_source_export2 = __esm({
       const previousManifest = preflight(directory, options.force ?? false);
       const ramMap = loadSnesRamMap(directory);
       const ramVariables = indexSnesRamMap(ramMap.variables);
-      const names = snesSourceLabelNames(
-        project.shards,
-        mapper,
+      const structMap = loadSnesStructMap(directory);
+      const structRomFields = planSnesStructRomFields(
+        structMap,
         rom.length,
-        ramMap.variables.map(({ name }) => name)
+        (offset) => snesRomAddressSpace.fromOutputOffset(offset, context)
       );
+      const structFields = indexSnesStructFields(structMap);
+      const indexedStructFields = indexSnesStructFields(structMap, true);
+      const structNames = [
+        ...structMap?.structures.map(({ id }) => id) ?? [],
+        ...structMap?.bindings.map(({ name }) => name) ?? []
+      ];
+      const ramNames = new Set(ramMap.variables.map(({ name }) => name.toLowerCase()));
+      for (const name of structNames) {
+        if (ramNames.has(name.toLowerCase()))
+          throw new Error(`Struct-map name '${name}' conflicts with a RAM variable.`);
+      }
+      const names = snesSourceLabelNames(project.shards, mapper, rom.length, [
+        ...ramMap.variables.map(({ name }) => name),
+        ...structNames
+      ]);
       const metadata = metadataLines(project.shards, mapper, rom.length, names);
       const sourceLabels = /* @__PURE__ */ new Map();
       for (const label of [...project.shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -54729,17 +56266,37 @@ var init_source_export2 = __esm({
         annotations,
         ramVariables,
         structure,
-        sourceLabels
+        sourceLabels,
+        structFields,
+        indexedStructFields
       );
-      const planned = planSpans(
+      const fieldPlan = planSpans(
         rom,
         mapper,
         project.shards,
         instructions,
         metadata,
         annotations,
-        structure
+        structure,
+        structRomFields
       );
+      const planned = groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length);
+      if (previousManifest && !options.allowCodeRegression) {
+        const previousCode = previousManifest.spans.filter((span) => span.role === "code");
+        const proposedCode = planned.filter((span) => span.role === "code");
+        const lost = lostCodeRanges(previousCode, proposedCode);
+        if (lost.length > 0) {
+          const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);
+          const added = lostCodeRanges(proposedCode, previousCode).reduce(
+            (total, range) => total + range.end - range.start,
+            0
+          );
+          const net5 = added - bytes;
+          throw new Error(
+            `Source export would replace ${bytes} previously emitted code byte(s) with non-code spans, starting at ROM offset ${hex11(lost[0].start, 6)}. Generated source was preserved. The proposal also adds ${added} new code byte(s), for a net change of ${net5 >= 0 ? "+" : ""}${net5} byte(s). Code absent from a capture is not evidence that it stopped being code. Resolve the analysis gaps or explicitly pass --allow-code-regression after reviewing the change.`
+          );
+        }
+      }
       const files = [];
       const spans = [];
       const banks = /* @__PURE__ */ new Map();
@@ -54757,15 +56314,20 @@ var init_source_export2 = __esm({
         const lines = [`; Generated bank ${bank.toString(16).toUpperCase().padStart(3, "0")}.`];
         let nextAddress;
         let previousState;
-        for (const span of bankSpans) {
+        let table;
+        for (const [spanIndex, span] of bankSpans.entries()) {
           const address4 = snesRomAddressSpace.fromOutputOffset(span.start, context);
           if (address4 < 0)
-            throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex9(span.start)}.`);
+            throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex11(span.start)}.`);
+          const named = span.structured ? [] : renderedMetadata(metadata.get(span.start), Boolean(span.instruction));
+          if (table && (span.structRecord?.binding.name !== table.name || span.structRecord?.index !== table.nextIndex || named.length > 0 || nextAddress !== address4)) {
+            lines.push("  endDataStructs");
+            table = void 0;
+          }
           if (nextAddress !== address4) {
-            lines.push("", `org ${hex9(address4)}`);
+            lines.push("", `org ${hex11(address4)}`);
             previousState = void 0;
           }
-          const named = span.structured ? [] : renderedMetadata(metadata.get(span.start), Boolean(span.instruction));
           if (named.length) lines.push("", ...named);
           if (span.instruction) {
             const state = span.instruction.state;
@@ -54811,6 +56373,52 @@ var init_source_export2 = __esm({
               file: bankPath,
               regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
             });
+          } else if (span.structRecord) {
+            const record3 = span.structRecord;
+            const next = bankSpans[spanIndex + 1]?.structRecord;
+            if (!table && next?.binding === record3.binding && next.start === record3.end && next.index === record3.index + 1 && !metadata.has(next.start)) {
+              table = { name: record3.binding.name, nextIndex: record3.index };
+              lines.push(`  dataStructs ${record3.binding.name}`);
+            }
+            const literal = renderSnesStructInitializer(
+              record3,
+              rom.read(record3.start, record3.end - record3.start)
+            );
+            if (table) {
+              lines.push(`    [${record3.index}] = ${literal}`);
+              table.nextIndex = record3.index + 1;
+            } else {
+              const reference = record3.binding.count === 1 && record3.index === 0 ? record3.binding.name : `${record3.binding.name}[${record3.index}]`;
+              lines.push(`  dataStruct ${reference}, ${literal}`);
+            }
+            spans.push({
+              id: `struct:${span.start.toString(16).padStart(6, "0")}`,
+              source: SNES_STRUCT_MAP_SOURCE,
+              addressSpace: SNES_FILE_ADDRESS_SPACE,
+              start: span.start,
+              end: span.end,
+              role: "raw",
+              file: bankPath,
+              regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
+            });
+          } else if (span.structField) {
+            lines.push(
+              ...renderSnesStructData(
+                span.structField,
+                span.start,
+                rom.read(span.start, span.end - span.start)
+              )
+            );
+            spans.push({
+              id: `struct:${span.start.toString(16).padStart(6, "0")}`,
+              source: SNES_STRUCT_MAP_SOURCE,
+              addressSpace: SNES_FILE_ADDRESS_SPACE,
+              start: span.start,
+              end: span.end,
+              role: "raw",
+              file: bankPath,
+              regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
+            });
           } else {
             const assetPath = `assets/${span.role}-${span.start.toString(16).padStart(6, "0")}-${span.end.toString(16).padStart(6, "0")}.bin`;
             const bytes = rom.read(span.start, span.end - span.start);
@@ -54829,6 +56437,7 @@ var init_source_export2 = __esm({
           }
           nextAddress = address4 + span.end - span.start;
         }
+        if (table) lines.push("  endDataStructs");
         writeFile(directory, bankPath, `${lines.join("\n")}
 `, "source", files);
       }
@@ -54854,6 +56463,7 @@ var init_source_export2 = __esm({
         "",
         `incsrc "${SNES_HARDWARE_DEFINES_SOURCE}"`,
         `incsrc "${SNES_RAM_DEFINES_SOURCE}"`,
+        ...structMap ? [`incsrc "${SNES_STRUCT_DEFINES_SOURCE}"`] : [],
         "",
         ...bankSources.map((source) => `incsrc "${source}"`),
         ""
@@ -54874,6 +56484,14 @@ var init_source_export2 = __esm({
         files
       );
       writeFile(directory, "main.asm", main, "source", files);
+      if (structMap)
+        writeFile(
+          directory,
+          SNES_STRUCT_DEFINES_SOURCE,
+          renderSnesStructDefines(structMap),
+          "source",
+          files
+        );
       const annotationIssues = [...project.shards.labels, ...project.shards.comments].flatMap((record3) => {
         const offset = toFileOffset(record3.addressSpace, record3.address, mapper, rom.length);
         let reason;
@@ -54921,6 +56539,15 @@ var init_source_export2 = __esm({
         finalOutput: "build/rebuilt.sfc",
         checksumPolicy: "preserve",
         inputs: [
+          ...structMap ? [
+            {
+              path: SNES_STRUCT_MAP_SOURCE,
+              kind: "metadata",
+              size: structMap.sourceBytes.length,
+              records: structMap.structures.length + structMap.bindings.length,
+              sha256: sourceExportSha256(structMap.sourceBytes)
+            }
+          ] : [],
           {
             path: SNES_RAM_MAP_SOURCE,
             kind: "metadata",
@@ -54935,12 +56562,12 @@ var init_source_export2 = __esm({
       const currentPaths = new Set(manifest.files.map((file) => file.path));
       for (const stale of previousManifest?.files ?? []) {
         if (currentPaths.has(stale.path)) continue;
-        const staleFile = import_node_path7.default.join(directory, stale.path);
-        if (fs10.existsSync(staleFile) && fs10.statSync(staleFile).isFile()) fs10.unlinkSync(staleFile);
+        const staleFile = import_node_path10.default.join(directory, stale.path);
+        if (fs12.existsSync(staleFile) && fs12.statSync(staleFile).isFile()) fs12.unlinkSync(staleFile);
       }
-      fs10.mkdirSync(directory, { recursive: true });
-      fs10.writeFileSync(
-        import_node_path7.default.join(directory, SOURCE_EXPORT_MANIFEST),
+      fs12.mkdirSync(directory, { recursive: true });
+      fs12.writeFileSync(
+        import_node_path10.default.join(directory, SOURCE_EXPORT_MANIFEST),
         canonicalSourceExportJson(manifest)
       );
       return manifest;
@@ -55483,7 +57110,7 @@ var init_spc700_analysis = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/spc700-upload.ts
-var wordAt, validatePositiveLimit, parseSpc700UploadStream, hex10, materializeSpc700UploadBlock, spc700UploadProjectRecords;
+var wordAt, validatePositiveLimit, parseSpc700UploadStream, hex12, materializeSpc700UploadBlock, spc700UploadProjectRecords;
 var init_spc700_upload = __esm({
   "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
@@ -55511,7 +57138,7 @@ var init_spc700_upload = __esm({
       let offset = startOffset;
       while (true) {
         if (offset + 4 > rom.length) {
-          throw new Error(`Truncated SPC700 upload record header at ROM offset $${hex10(offset, 6)}.`);
+          throw new Error(`Truncated SPC700 upload record header at ROM offset $${hex12(offset, 6)}.`);
         }
         if (offset - startOffset + 4 > maxBytes) {
           throw new Error(`SPC700 upload stream exceeds the ${maxBytes}-byte parsing limit.`);
@@ -55537,7 +57164,7 @@ var init_spc700_upload = __esm({
         const endOffset = payloadOffset + size;
         if (endOffset > rom.length) {
           throw new Error(
-            `Truncated SPC700 upload payload at ROM offset $${hex10(payloadOffset, 6)}: expected ${size} byte(s).`
+            `Truncated SPC700 upload payload at ROM offset $${hex12(payloadOffset, 6)}: expected ${size} byte(s).`
           );
         }
         if (endOffset - startOffset > maxBytes) {
@@ -55555,7 +57182,7 @@ var init_spc700_upload = __esm({
         offset = endOffset;
       }
     };
-    hex10 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
+    hex12 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
     materializeSpc700UploadBlock = (rom, block) => {
       const payload = rom.read(block.payloadOffset, block.size);
       if (!payload) {
@@ -55577,7 +57204,7 @@ var init_spc700_upload = __esm({
         ]
       ];
       return parts.map((part, index) => ({
-        id: `spc-upload:${hex10(block.headerOffset, 6)}:segment:${index}`,
+        id: `spc-upload:${hex12(block.headerOffset, 6)}:segment:${index}`,
         blockIndex: block.index,
         segmentIndex: index,
         sourceAddressSpace: SNES_FILE_ADDRESS_SPACE,
@@ -55587,7 +57214,7 @@ var init_spc700_upload = __esm({
       }));
     };
     spc700UploadProjectRecords = (rom, stream) => {
-      const streamId = `spc-upload:${hex10(stream.startOffset, 6)}`;
+      const streamId = `spc-upload:${hex12(stream.startOffset, 6)}`;
       const evidenceId = `detector:${streamId}:${rom.identity.contentSha256}`;
       const regions = [
         {
@@ -55595,7 +57222,7 @@ var init_spc700_upload = __esm({
           addressSpace: SNES_FILE_ADDRESS_SPACE,
           start: stream.startOffset,
           end: stream.endOffset,
-          name: `SPC upload stream $${hex10(stream.startOffset, 6)}`,
+          name: `SPC upload stream $${hex12(stream.startOffset, 6)}`,
           context: "snes.spc700.upload-stream",
           attributes: {
             format: stream.format,
@@ -55668,7 +57295,7 @@ var init_spc700_upload = __esm({
             source: "detector",
             sourceId: "snes.spc700.nspc-v1",
             confidence: "certain",
-            detail: `Explicit NSPC stream at ROM offset $${hex10(stream.startOffset, 6)} contains ${stream.blocks.length} block(s) and executes at $${hex10(stream.executeAddress, 4)}.`
+            detail: `Explicit NSPC stream at ROM offset $${hex12(stream.startOffset, 6)} contains ${stream.blocks.length} block(s) and executes at $${hex12(stream.executeAddress, 4)}.`
           }
         ]
       };
@@ -55748,7 +57375,7 @@ var init_superfx_state = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/processor-source-export.ts
-var hex11, dataLine, spc700Lines, renderSpc700AramSource, renderSpc700UploadSource, renderSuperFxRomSource;
+var hex13, dataLine, spc700Lines, renderSpc700AramSource, renderSpc700UploadSource, renderSuperFxRomSource;
 var init_processor_source_export = __esm({
   "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
@@ -55756,8 +57383,8 @@ var init_processor_source_export = __esm({
     init_spc700_decoder();
     init_superfx_decoder();
     init_superfx_state();
-    hex11 = (value, width2) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
-    dataLine = (bytes) => `db ${[...bytes].map((value) => hex11(value, 2)).join(",")}`;
+    hex13 = (value, width2) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
+    dataLine = (bytes) => `db ${[...bytes].map((value) => hex13(value, 2)).join(",")}`;
     spc700Lines = (bytes, loadAddress) => {
       const decoder = new Spc700Decoder();
       const source = new Uint8ArrayDecoderSource(bytes);
@@ -55784,23 +57411,23 @@ var init_processor_source_export = __esm({
       "; Generated standalone SPC700 payload.",
       "arch spc700-raw",
       "org $000000",
-      `base ${hex11(image.loadAddress, 4)}`,
+      `base ${hex13(image.loadAddress, 4)}`,
       ...spc700Lines(image.bytes(), image.loadAddress),
       ""
     ].join("\n");
     renderSpc700UploadSource = (rom, stream) => {
       const lines = ["; Generated Nintendo-style SPC700 upload stream.", "lorom", "org $008000"];
       if (stream.blocks.length === 0) {
-        lines.push(`dw $0000,${hex11(stream.executeAddress, 4)}`, "");
+        lines.push(`dw $0000,${hex13(stream.executeAddress, 4)}`, "");
         return lines.join("\n");
       }
       for (const block of stream.blocks) {
         const bytes = rom.read(block.payloadOffset, block.size);
         if (!bytes) throw new Error(`SPC700 upload block ${block.index} is outside the ROM image.`);
-        lines.push("", `spcblock ${hex11(block.destination, 4)} nspc`);
+        lines.push("", `spcblock ${hex13(block.destination, 4)} nspc`);
         lines.push(...spc700Lines(bytes, block.destination));
         lines.push(
-          block.index === stream.blocks.length - 1 ? `endspcblock execute ${hex11(stream.executeAddress, 4)}` : "endspcblock"
+          block.index === stream.blocks.length - 1 ? `endspcblock execute ${hex13(stream.executeAddress, 4)}` : "endspcblock"
         );
       }
       lines.push("");
@@ -55816,7 +57443,7 @@ var init_processor_source_export = __esm({
         "; Generated standalone SuperFX payload.",
         "norom",
         "org $000000",
-        `base ${hex11(image.loadAddress, 6)}`,
+        `base ${hex13(image.loadAddress, 6)}`,
         "arch superfx"
       ];
       while (offset < bytes.length) {
@@ -55844,11 +57471,11 @@ var init_processor_source_export = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/runtime-code.ts
-var import_node_crypto19, analyzeSnesRuntimeCode;
+var import_node_crypto23, analyzeSnesRuntimeCode;
 var init_runtime_code = __esm({
   "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
-    import_node_crypto19 = require("node:crypto");
+    import_node_crypto23 = require("node:crypto");
     init_src2();
     init_src();
     init_decoder();
@@ -55865,23 +57492,23 @@ var init_runtime_code = __esm({
       for (const sample of shards.runtime) {
         if (sample.kind !== "runtime-instruction" || sample.architecture !== "snes.65816" || sample.addressSpace !== "snes.cpu")
           continue;
-        const value = (key, max) => {
-          const entry = sample.state[key] ?? sample.state[key.toUpperCase()];
+        const value = (key2, max) => {
+          const entry = sample.state[key2] ?? sample.state[key2.toUpperCase()];
           return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max ? entry : void 0;
         };
         const p = value("p", 255);
         const e = value("e", 1);
-        let widths = {};
-        if (p !== void 0) widths = { m: p >> 5 & 1, x: p >> 4 & 1 };
-        if (e === 1) widths = { m: 1, x: 1 };
+        let widths2 = {};
+        if (p !== void 0) widths2 = { m: p >> 5 & 1, x: p >> 4 & 1 };
+        if (e === 1) widths2 = { m: 1, x: 1 };
         const state = {
           ...e === void 0 ? {} : { e },
-          ...widths,
+          ...widths2,
           programBank: sample.address >>> 16,
           ...value("db", 255) === void 0 ? {} : { dataBank: value("db", 255) },
           ...value("d", 65535) === void 0 ? {} : { directPage: value("d", 65535) }
         };
-        const variant = (0, import_node_crypto19.createHash)("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
+        const variant = (0, import_node_crypto23.createHash)("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
         const id = `runtime:code:${variant}`;
         const duplicate = nodes.get(id);
         if (duplicate) {
@@ -56033,32 +57660,36 @@ var init_runtime_code = __esm({
           evidencePath: ownership.get(node.id)?.length ? ownership.get(node.id) : [node.id]
         });
       records2.push(...edges);
-      for (const [address4, variants] of byAddress2)
-        if (variants.length > 1)
+      for (const [address4, variants] of byAddress2) {
+        const encodings = new Set(
+          variants.map((node) => `${node.specificationId}:${node.size}:${node.bytes?.join(",")}`)
+        );
+        if (encodings.size > 1)
           records2.push({
             id: `runtime:code:variants:${address4.toString(16)}`,
             kind: "conflict",
             addressSpace: "snes.cpu",
             address: address4,
             conflictKind: "runtime-code-variants",
-            message: "Multiple captured byte or decode-state variants exist at this address; no variant is silently selected.",
+            message: "Captured executions disagree on instruction bytes or decoding; all variants and their trace evidence are retained.",
             nodes: variants.map((node) => node.id),
             evidence: [...new Set(variants.flatMap((node) => node.evidence))].sort()
           });
+      }
       return records2.sort((a, b) => a.id.localeCompare(b.id));
     };
   }
 });
 
 // packages/plugin-snes/src/disassembler/function-heuristics.ts
-var import_node_crypto20, isArray3, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
+var import_node_crypto24, isArray4, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
   "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
-    import_node_crypto20 = require("node:crypto");
+    import_node_crypto24 = require("node:crypto");
     init_src();
     init_hardware_registers();
-    isArray3 = (value) => Array.isArray(value);
+    isArray4 = (value) => Array.isArray(value);
     rank = { low: 0, medium: 1, high: 2 };
     writes = /* @__PURE__ */ new Set(["STA", "STX", "STY", "STZ"]);
     reads = /* @__PURE__ */ new Set([
@@ -56132,7 +57763,7 @@ var init_function_heuristics = __esm({
       "wrapper"
     ];
     validateSnesHeuristicConfiguration = (value) => {
-      if (!value || typeof value !== "object" || isArray3(value))
+      if (!value || typeof value !== "object" || isArray4(value))
         throw new Error("SNES heuristics must be an object.");
       const config = value;
       const allowed = /* @__PURE__ */ new Set([
@@ -56142,25 +57773,25 @@ var init_function_heuristics = __esm({
         "disabledRules",
         "registerRules"
       ]);
-      for (const key of Object.keys(config))
-        if (!allowed.has(key)) throw new Error(`Unknown SNES heuristic option '${key}'.`);
+      for (const key2 of Object.keys(config))
+        if (!allowed.has(key2)) throw new Error(`Unknown SNES heuristic option '${key2}'.`);
       if (config.enabled !== void 0 && typeof config.enabled !== "boolean")
         throw new Error("Heuristic enabled must be boolean.");
       if (config.minimumConfidence !== void 0 && !Object.hasOwn(rank, config.minimumConfidence))
         throw new Error("Invalid heuristic confidence.");
       if (config.maxWindowInstructions !== void 0 && (!Number.isInteger(config.maxWindowInstructions) || config.maxWindowInstructions < 2 || config.maxWindowInstructions > 256))
         throw new Error("Heuristic window must be between 2 and 256 instructions.");
-      if (config.registerRules !== void 0 && (!isArray3(config.registerRules) || config.registerRules.length > 128))
+      if (config.registerRules !== void 0 && (!isArray4(config.registerRules) || config.registerRules.length > 128))
         throw new Error("At most 128 register rules are allowed.");
       const ids = new Set(SNES_HEURISTIC_RULE_IDS);
       for (const rule of config.registerRules ?? []) {
-        if (!rule || typeof rule.id !== "string" || !/^[a-z][\d.a-z-]*$/.test(rule.id) || ids.has(rule.id) || typeof rule.role !== "string" || !/^[a-z][\d.a-z-]*$/.test(rule.role) || !["read", "write"].includes(rule.access) || !Object.hasOwn(rank, rule.confidence) || !isArray3(rule.addresses) || !rule.addresses.length || rule.addresses.length > 256 || rule.addresses.some(
+        if (!rule || typeof rule.id !== "string" || !/^[a-z][\d.a-z-]*$/.test(rule.id) || ids.has(rule.id) || typeof rule.role !== "string" || !/^[a-z][\d.a-z-]*$/.test(rule.role) || !["read", "write"].includes(rule.access) || !Object.hasOwn(rank, rule.confidence) || !isArray4(rule.addresses) || !rule.addresses.length || rule.addresses.length > 256 || rule.addresses.some(
           (address4) => !Number.isInteger(address4) || !identifySnesHardwareRegister(address4)
         ))
           throw new Error("Invalid or duplicate SNES register role rule.");
         ids.add(rule.id);
       }
-      if (config.disabledRules !== void 0 && (!isArray3(config.disabledRules) || config.disabledRules.some((id) => !ids.has(id))))
+      if (config.disabledRules !== void 0 && (!isArray4(config.disabledRules) || config.disabledRules.some((id) => !ids.has(id))))
         throw new Error("Unknown disabled heuristic rule.");
       return config;
     };
@@ -56196,7 +57827,7 @@ var init_function_heuristics = __esm({
           list.push(edge);
           incoming.set(edge.to, list);
         }
-      const window11 = (end) => {
+      const window12 = (end) => {
         const result = [end];
         const seen = /* @__PURE__ */ new Set([end.id]);
         while (result.length < limit) {
@@ -56212,10 +57843,10 @@ var init_function_heuristics = __esm({
       const found = /* @__PURE__ */ new Map();
       const emit = (node, rule, role, confidence, evidenceNodes, explanation, relationship = "direct") => {
         if (disabled.has(rule) || rank[confidence] < rank[config.minimumConfidence ?? "medium"]) return;
-        const key = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
-        const prior = found.get(key);
-        found.set(key, {
-          id: `heuristic:snes:${(0, import_node_crypto20.createHash)("sha256").update(key).digest("hex").slice(0, 24)}`,
+        const key2 = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
+        const prior = found.get(key2);
+        found.set(key2, {
+          id: `heuristic:snes:${(0, import_node_crypto24.createHash)("sha256").update(key2).digest("hex").slice(0, 24)}`,
           rule,
           role,
           addressSpace: node.addressSpace,
@@ -56262,7 +57893,7 @@ var init_function_heuristics = __esm({
             [node],
             "Block move instruction; payload purpose requires destination provenance."
           );
-        const trail = window11(node);
+        const trail = window12(node);
         if (node.mnemonic === "STA" && ports.includes(16907)) {
           const values = /* @__PURE__ */ new Map();
           const registers2 = /* @__PURE__ */ new Map();
@@ -56332,7 +57963,7 @@ var init_function_heuristics = __esm({
           continue;
         const end = nodes.get(edge.from);
         if (!end) continue;
-        const trail = window11(end);
+        const trail = window12(end);
         const startIndex = trail.findIndex((node) => node.address === edge.toAddress);
         if (startIndex < 0) continue;
         const loop = trail.slice(startIndex);
@@ -56371,12 +58002,12 @@ var init_function_heuristics = __esm({
       }
       const contextNodes = /* @__PURE__ */ new Map();
       for (const node of nodes.values()) {
-        const key = canonicalJson(node.context);
-        const indexed = contextNodes.get(key) ?? /* @__PURE__ */ new Map();
+        const key2 = canonicalJson(node.context);
+        const indexed = contextNodes.get(key2) ?? /* @__PURE__ */ new Map();
         const choices = indexed.get(node.address) ?? [];
         choices.push(node);
         indexed.set(node.address, choices);
-        contextNodes.set(key, indexed);
+        contextNodes.set(key2, indexed);
       }
       const handshakeAddresses = new Set(
         [...found.values()].filter((role) => role.rule === "apu-handshake").map((role) => role.address)
@@ -56502,7 +58133,7 @@ var init_function_heuristics = __esm({
       const roles = [...found.values()].sort(
         (a, b) => a.address - b.address || a.id.localeCompare(b.id)
       );
-      const signature = (0, import_node_crypto20.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
+      const signature = (0, import_node_crypto24.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
       const evidence = roles.map((role) => ({
         id: `${role.id}:evidence`,
         source: "detector",
@@ -56526,11 +58157,11 @@ var init_function_heuristics = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/superfx-address-space.ts
-var import_node_crypto21, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
+var import_node_crypto25, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
 var init_superfx_address_space = __esm({
   "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
-    import_node_crypto21 = require("node:crypto");
+    import_node_crypto25 = require("node:crypto");
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
       id: SUPERFX_ROM_ADDRESS_SPACE,
@@ -56551,7 +58182,7 @@ var init_superfx_address_space = __esm({
         }
         this.#bytes = Uint8Array.from(bytes);
         this.loadAddress = loadAddress;
-        this.contentSha256 = (0, import_node_crypto21.createHash)("sha256").update(this.#bytes).digest("hex");
+        this.contentSha256 = (0, import_node_crypto25.createHash)("sha256").update(this.#bytes).digest("hex");
       }
       get length() {
         return this.#bytes.length;
@@ -56586,19 +58217,19 @@ var init_superfx_address_space = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/project-initializer.ts
-var fs11, import_node_path8, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace, SNES_SOURCE_EXPORT_MANIFEST;
+var fs13, import_node_path11, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace, SNES_SOURCE_EXPORT_MANIFEST;
 var init_project_initializer = __esm({
   "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
-    init_address_identities();
     init_runtime_code();
     init_function_heuristics();
     init_address_space();
     init_src2();
     init_src();
-    fs11 = __toESM(require("node:fs"), 1);
-    import_node_path8 = __toESM(require("node:path"), 1);
+    fs13 = __toESM(require("node:fs"), 1);
+    import_node_path11 = __toESM(require("node:path"), 1);
     init_analysis();
+    init_code_preservation();
     init_address_identities();
     init_dizraw_import();
     init_rom_header();
@@ -56629,7 +58260,7 @@ var init_project_initializer = __esm({
       if (signal?.aborted) throw new SnesProjectInitializationCancelledError();
     };
     assertDizRawFile = (file) => {
-      if (import_node_path8.default.extname(file).toLowerCase() !== ".dizraw") {
+      if (import_node_path11.default.extname(file).toLowerCase() !== ".dizraw") {
         throw new Error(
           "Only uncompressed .dizraw imports are supported; compressed .diz input is not supported."
         );
@@ -56637,55 +58268,55 @@ var init_project_initializer = __esm({
     };
     importDizRawFile = (file, rom) => {
       assertDizRawFile(file);
-      return importDizRaw(fs11.readFileSync(file, "utf8"), {
-        sourceName: import_node_path8.default.basename(file),
+      return importDizRaw(fs13.readFileSync(file, "utf8"), {
+        sourceName: import_node_path11.default.basename(file),
         expectedRomSize: rom.length
       });
     };
     ensureWritableDestination = (directory) => {
-      if (!fs11.existsSync(directory)) return;
-      const stat = fs11.statSync(directory);
-      if (!stat.isDirectory()) throw new Error(`Destination '${directory}' is not a directory.`);
-      if (fs11.readdirSync(directory).length > 0) {
+      if (!fs13.existsSync(directory)) return;
+      const stat2 = fs13.statSync(directory);
+      if (!stat2.isDirectory()) throw new Error(`Destination '${directory}' is not a directory.`);
+      if (fs13.readdirSync(directory).length > 0) {
         throw new Error(`Destination '${directory}' must be empty.`);
       }
     };
     safeWorkspacePath = (relative6) => {
-      if (relative6 === "" || import_node_path8.default.isAbsolute(relative6) || relative6.split(/[/\\]/).some((part) => part === "" || part === "..")) {
+      if (relative6 === "" || import_node_path11.default.isAbsolute(relative6) || relative6.split(/[/\\]/).some((part) => part === "" || part === "..")) {
         throw new Error(`Unsafe workspace file path '${relative6}'.`);
       }
       return relative6;
     };
     temporarySibling = (destination, suffix) => {
-      const resolved = import_node_path8.default.resolve(destination);
-      const parent = import_node_path8.default.dirname(resolved);
-      fs11.mkdirSync(parent, { recursive: true });
-      return fs11.mkdtempSync(import_node_path8.default.join(parent, `.${import_node_path8.default.basename(resolved)}.${suffix}-`));
+      const resolved = import_node_path11.default.resolve(destination);
+      const parent = import_node_path11.default.dirname(resolved);
+      fs13.mkdirSync(parent, { recursive: true });
+      return fs13.mkdtempSync(import_node_path11.default.join(parent, `.${import_node_path11.default.basename(resolved)}.${suffix}-`));
     };
     removeDirectory = (directory) => {
-      fs11.rmSync(directory, { recursive: true, force: true });
+      fs13.rmSync(directory, { recursive: true, force: true });
     };
     commitStagedDirectory = (staging, destination) => {
-      const resolved = import_node_path8.default.resolve(destination);
+      const resolved = import_node_path11.default.resolve(destination);
       ensureWritableDestination(resolved);
-      if (!fs11.existsSync(resolved)) {
-        fs11.renameSync(staging, resolved);
+      if (!fs13.existsSync(resolved)) {
+        fs13.renameSync(staging, resolved);
         return;
       }
-      const backup = `${resolved}.empty-${import_node_path8.default.basename(staging)}`;
-      fs11.renameSync(resolved, backup);
+      const backup = `${resolved}.empty-${import_node_path11.default.basename(staging)}`;
+      fs13.renameSync(resolved, backup);
       try {
-        fs11.renameSync(staging, resolved);
-        fs11.rmdirSync(backup);
+        fs13.renameSync(staging, resolved);
+        fs13.rmdirSync(backup);
       } catch (error) {
-        if (!fs11.existsSync(resolved) && fs11.existsSync(backup)) fs11.renameSync(backup, resolved);
+        if (!fs13.existsSync(resolved) && fs13.existsSync(backup)) fs13.renameSync(backup, resolved);
         throw error;
       }
     };
     probeSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "probe", "Reading ROM and detecting the SNES cartridge mapping.");
-      const rom = RomImage.load(import_node_path8.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
       });
       const detection = detectSnesRom(rom, {
@@ -56693,7 +58324,7 @@ var init_project_initializer = __esm({
         ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
       });
       throwIfCancelled(options.signal);
-      const imported = options.dizRawFile ? importDizRawFile(import_node_path8.default.resolve(options.dizRawFile), rom) : void 0;
+      const imported = options.dizRawFile ? importDizRawFile(import_node_path11.default.resolve(options.dizRawFile), rom) : void 0;
       const detectedMapper = detection.mapper;
       const importedMapper = imported?.mapping.mapper;
       const conflict = options.mapper === void 0 && detectedMapper !== void 0 && importedMapper !== void 0 && detectedMapper !== importedMapper;
@@ -56721,7 +58352,7 @@ var init_project_initializer = __esm({
       };
     };
     createSnesAnalysisProject = (options) => {
-      const projectDirectory = import_node_path8.default.resolve(options.projectDirectory);
+      const projectDirectory = import_node_path11.default.resolve(options.projectDirectory);
       ensureWritableDestination(projectDirectory);
       const probe = probeSnesProject(options);
       if (probe.mapperSelectionRequired || probe.detection.mapper === void 0) {
@@ -56731,10 +58362,10 @@ var init_project_initializer = __esm({
       }
       throwIfCancelled(options.signal);
       report(options, "create", "Creating the native analysis project.");
-      const rom = RomImage.load(import_node_path8.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         headerSize: probe.rom.headerSize
       });
-      const imported = options.dizRawFile ? importDizRawFile(import_node_path8.default.resolve(options.dizRawFile), rom) : void 0;
+      const imported = options.dizRawFile ? importDizRawFile(import_node_path11.default.resolve(options.dizRawFile), rom) : void 0;
       const mapper = options.mapper ?? probe.detection.mapper;
       const importWarnings = imported && options.mapper && options.mapper !== imported.mapping.mapper ? [
         ...imported.report.warnings,
@@ -56789,18 +58420,18 @@ var init_project_initializer = __esm({
     analyzeSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "analyze", "Running bounded conservative 65816 analysis.");
-      const projectDirectory = import_node_path8.default.resolve(options.projectDirectory);
-      const loaded = loadAnalysisProject(projectDirectory);
-      const rom = RomImage.load(import_node_path8.default.resolve(options.romFile), {
+      const projectDirectory = import_node_path11.default.resolve(options.projectDirectory);
+      const loaded = loadAnalysisProjectSnapshot(projectDirectory);
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         headerSize: loaded.manifest.rom.headerSize
       });
       validateProjectRom(loaded.manifest, rom);
       if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
         throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
       }
-      const heuristicFile = import_node_path8.default.join(projectDirectory, "heuristics.json");
+      const heuristicFile = import_node_path11.default.join(projectDirectory, "heuristics.json");
       const heuristicConfig = validateSnesHeuristicConfiguration(
-        options.heuristics ?? (fs11.existsSync(heuristicFile) ? JSON.parse(fs11.readFileSync(heuristicFile, "utf8")) : {})
+        options.heuristics ?? (fs13.existsSync(heuristicFile) ? JSON.parse(fs13.readFileSync(heuristicFile, "utf8")) : {})
       );
       const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
       const editableRecords = loaded.shards.analysis.filter(
@@ -56892,6 +58523,18 @@ var init_project_initializer = __esm({
         ),
         ...capturedRecords
       ];
+      if (result.status === "incomplete") {
+        const codeRanges = (records2) => records2.flatMap(
+          (record3) => record3.kind === "cfg-node" && record3.fileOffset !== void 0 ? [{ start: record3.fileOffset, end: record3.fileOffset + record3.size }] : []
+        );
+        const lost = lostCodeRanges(codeRanges(loaded.shards.analysis), codeRanges(analysisRecords));
+        if (lost.length > 0) {
+          const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);
+          throw new Error(
+            `Incomplete analysis would discard ${bytes} known code byte(s), starting at ROM offset $${lost[0].start.toString(16).toUpperCase().padStart(6, "0")}. The previous analysis was preserved. ${result.incompleteReasons.map(({ message }) => message).join(" ")} Increase the analysis limits or narrow the entry points before regenerating source.`
+          );
+        }
+      }
       const heuristicResult = analyzeSnesFunctionRoles(
         { ...loaded.shards, analysis: analysisRecords },
         heuristicConfig
@@ -56909,19 +58552,21 @@ var init_project_initializer = __esm({
       ];
       const { shards: ignoredShards, ...manifest } = loaded.manifest;
       void ignoredShards;
-      const written = writeAnalysisProject(projectDirectory, {
+      report(options, "commit", "Publishing analysis after checking for concurrent edits.");
+      throwIfCancelled(options.signal);
+      const written = commitAnalysisProjectTransaction(projectDirectory, loaded.revision, {
         manifest,
         shards: {
           ...loaded.shards,
           analysis: analysisRecords,
           comments: [
-            ...loaded.shards.comments.filter((comment) => !comment.id.startsWith("heuristic:snes:")),
+            ...loaded.shards.comments.filter((comment2) => !comment2.id.startsWith("heuristic:snes:")),
             ...heuristicResult.comments
           ],
           annotations,
           evidence
         }
-      });
+      }).manifest;
       return {
         projectDirectory,
         manifest: written,
@@ -56949,19 +58594,20 @@ var init_project_initializer = __esm({
     exportSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "export", "Exporting deterministic native 65816 source.");
-      const projectDirectory = import_node_path8.default.resolve(options.projectDirectory);
-      const sourceDirectory = import_node_path8.default.resolve(options.sourceDirectory);
+      const projectDirectory = import_node_path11.default.resolve(options.projectDirectory);
+      const sourceDirectory = import_node_path11.default.resolve(options.sourceDirectory);
       const loaded = loadAnalysisProject(projectDirectory);
-      const rom = RomImage.load(import_node_path8.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         headerSize: loaded.manifest.rom.headerSize
       });
       validateProjectRom(loaded.manifest, rom);
       if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
         throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
       }
-      const projectManifest = fs11.readFileSync(import_node_path8.default.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
+      const projectManifest = fs13.readFileSync(import_node_path11.default.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
       const manifest = exportSnes65816Source(loaded, rom, sourceDirectory, {
         force: options.force,
+        allowCodeRegression: options.allowCodeRegression,
         sourceProjectSha256: sourceExportSha256(projectManifest)
       });
       throwIfCancelled(options.signal);
@@ -56974,11 +58620,11 @@ var init_project_initializer = __esm({
     verifySnesProjectRoundTrip = async (options) => {
       throwIfCancelled(options.signal);
       report(options, "verify", "Rebuilding and verifying the exported source byte-for-byte.");
-      const sourceDirectory = import_node_path8.default.resolve(options.sourceDirectory);
+      const sourceDirectory = import_node_path11.default.resolve(options.sourceDirectory);
       const manifest = loadSourceExportManifest(sourceDirectory);
       validateSourceExportFiles(sourceDirectory, manifest);
       validateSourceExportInputs(sourceDirectory, manifest);
-      const rom = RomImage.load(import_node_path8.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         headerSize: manifest.rom.headerSize
       });
       if (rom.identity.sha256 !== manifest.rom.sha256 || rom.identity.contentSha256 !== manifest.rom.contentSha256) {
@@ -56989,7 +58635,7 @@ var init_project_initializer = __esm({
       const { createSnesAssemblerEnvironment: createSnesAssemblerEnvironment2 } = await Promise.resolve().then(() => (init_src3(), src_exports2));
       throwIfCancelled(options.signal);
       const environment = await createSnesAssemblerEnvironment2();
-      const entrySource = import_node_path8.default.join(sourceDirectory, manifest.entrySource);
+      const entrySource = import_node_path11.default.join(sourceDirectory, manifest.entrySource);
       const assembler = new Assembler({
         environment,
         target: TARGET_ID,
@@ -57000,25 +58646,25 @@ var init_project_initializer = __esm({
       try {
         assembler.setIncludePaths([sourceDirectory]);
         assembler.setCurrentFile(entrySource);
-        const source = fs11.readFileSync(entrySource, "utf8");
+        const source = fs13.readFileSync(entrySource, "utf8");
         assembler.assembleProgram(assembler.buildProgramModel(source, entrySource, 0));
         throwIfCancelled(options.signal);
         const content = Buffer.from(assembler.getBinaryOutput());
-        const contentOutput = import_node_path8.default.join(sourceDirectory, manifest.contentOutput);
-        const finalOutput = import_node_path8.default.join(sourceDirectory, manifest.finalOutput);
-        fs11.mkdirSync(import_node_path8.default.dirname(contentOutput), { recursive: true });
-        fs11.writeFileSync(contentOutput, content);
+        const contentOutput = import_node_path11.default.join(sourceDirectory, manifest.contentOutput);
+        const finalOutput = import_node_path11.default.join(sourceDirectory, manifest.finalOutput);
+        fs13.mkdirSync(import_node_path11.default.dirname(contentOutput), { recursive: true });
+        fs13.writeFileSync(contentOutput, content);
         const final = manifest.rom.headerSize === 0 ? content : Buffer.concat([
-          fs11.readFileSync(
-            import_node_path8.default.join(
+          fs13.readFileSync(
+            import_node_path11.default.join(
               sourceDirectory,
               manifest.spans.find((span) => span.role === "copier-header").file
             )
           ),
           content
         ]);
-        fs11.mkdirSync(import_node_path8.default.dirname(finalOutput), { recursive: true });
-        fs11.writeFileSync(finalOutput, final);
+        fs13.mkdirSync(import_node_path11.default.dirname(finalOutput), { recursive: true });
+        fs13.writeFileSync(finalOutput, final);
         const comparison = compareByteImages(rom.fileBytes(), final);
         if (!comparison.equal) {
           throw new Error(
@@ -57028,7 +58674,7 @@ var init_project_initializer = __esm({
         let debugMap;
         if (options.emitDebugMap ?? true) {
           debugMap = `${contentOutput}.debug.json`;
-          fs11.writeFileSync(
+          fs13.writeFileSync(
             debugMap,
             canonicalDebugMapJson(
               createDebugMap({
@@ -57052,7 +58698,7 @@ var init_project_initializer = __esm({
       }
     };
     initializeSnesDisassemblyWorkspace = async (options) => {
-      const outputDirectory = import_node_path8.default.resolve(options.outputDirectory);
+      const outputDirectory = import_node_path11.default.resolve(options.outputDirectory);
       ensureWritableDestination(outputDirectory);
       const staging = temporarySibling(outputDirectory, "workspace");
       const analysisTemporary = temporarySibling(outputDirectory, "workspace-analysis-destination");
@@ -57088,27 +58734,27 @@ var init_project_initializer = __esm({
         });
         throwIfCancelled(options.signal);
         report(options, "configure", "Writing workspace configuration.");
-        fs11.renameSync(analysisTemporary, import_node_path8.default.join(staging, "analysis"));
+        fs13.renameSync(analysisTemporary, import_node_path11.default.join(staging, "analysis"));
         for (const file of options.workspaceFiles ?? []) {
           const relative6 = safeWorkspacePath(file.path);
-          const destination = import_node_path8.default.join(staging, relative6);
-          fs11.mkdirSync(import_node_path8.default.dirname(destination), { recursive: true });
-          fs11.writeFileSync(destination, file.contents);
+          const destination = import_node_path11.default.join(staging, relative6);
+          fs13.mkdirSync(import_node_path11.default.dirname(destination), { recursive: true });
+          fs13.writeFileSync(destination, file.contents);
         }
         throwIfCancelled(options.signal);
         report(options, "commit", "Committing the completed workspace.");
         commitStagedDirectory(staging, outputDirectory);
-        const remap = (value) => import_node_path8.default.join(outputDirectory, import_node_path8.default.relative(staging, value));
+        const remap = (value) => import_node_path11.default.join(outputDirectory, import_node_path11.default.relative(staging, value));
         return {
           outputDirectory,
           probe: project.probe,
           project: {
             ...project,
-            projectDirectory: import_node_path8.default.join(outputDirectory, "analysis")
+            projectDirectory: import_node_path11.default.join(outputDirectory, "analysis")
           },
           analysis: {
             ...analysis,
-            projectDirectory: import_node_path8.default.join(outputDirectory, "analysis")
+            projectDirectory: import_node_path11.default.join(outputDirectory, "analysis")
           },
           source: { ...source, sourceDirectory: outputDirectory },
           roundTrip: {
@@ -57433,18 +59079,18 @@ var init_common2 = __esm({
       return value;
     };
     optionsFor2 = (context) => objectValue2(context.request.options, `Asset '${context.request.id}' options`);
-    integerOption2 = (options, key, bounds = {}) => {
-      const value = options[key] ?? bounds.fallback;
+    integerOption2 = (options, key2, bounds = {}) => {
+      const value = options[key2] ?? bounds.fallback;
       if (value === void 0 || typeof value !== "number" || !Number.isSafeInteger(value) || bounds.minimum !== void 0 && value < bounds.minimum || bounds.maximum !== void 0 && value > bounds.maximum) {
         if (value === void 0) return void 0;
-        throw new Error(`Asset option '${key}' is outside its integer bounds.`);
+        throw new Error(`Asset option '${key2}' is outside its integer bounds.`);
       }
       return value;
     };
-    stringOption2 = (options, key, fallback) => {
-      const value = options[key] ?? fallback;
+    stringOption2 = (options, key2, fallback) => {
+      const value = options[key2] ?? fallback;
       if (typeof value !== "string" || value === "") {
-        throw new Error(`Asset option '${key}' must be a non-empty string.`);
+        throw new Error(`Asset option '${key2}' must be a non-empty string.`);
       }
       return value;
     };
@@ -57464,16 +59110,16 @@ var init_common2 = __esm({
           `SNES asset '${context.request.id}' length ${length} is not divisible by ${unitSize}.`
         );
       }
-      const count = configured ?? length / unitSize;
-      const size = count * unitSize;
+      const count2 = configured ?? length / unitSize;
+      const size = count2 * unitSize;
       if (!Number.isSafeInteger(size))
         throw new Error(`SNES asset '${context.request.id}' overflowed.`);
       if (length !== void 0 && length !== size) {
         throw new Error(
-          `SNES asset '${context.request.id}' count ${count} requires ${size} bytes, not ${length}.`
+          `SNES asset '${context.request.id}' count ${count2} requires ${size} bytes, not ${length}.`
         );
       }
-      return { count, size };
+      return { count: count2, size };
     };
     resolveGrid = (context, unitSize) => {
       const options = optionsFor2(context);
@@ -57511,8 +59157,8 @@ var init_common2 = __esm({
       return value;
     };
     defaultPath = (assetId, suffix) => `assets/${encodeURIComponent(assetId)}.${suffix}`;
-    jsonFile2 = (path28, value) => ({
-      path: path28,
+    jsonFile2 = (path30, value) => ({
+      path: path30,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -57521,7 +59167,7 @@ var init_common2 = __esm({
 });
 
 // packages/plugin-snes/src/assets/brr.ts
-var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, signedNibble, snesBrrAssetCodec;
+var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
   "packages/plugin-snes/src/assets/brr.ts"() {
     "use strict";
@@ -57546,7 +59192,6 @@ var init_brr = __esm({
       }
       throw new Error(`BRR asset '${context.request.id}' has no end block within ${maxBlocks} blocks.`);
     };
-    signedNibble = (value) => value >= 8 ? value - 16 : value;
     snesBrrAssetCodec = Object.freeze({
       id: SNES_BRR_ASSET_CODEC_ID,
       version: "1.0.0",
@@ -57572,7 +59217,8 @@ var init_brr = __esm({
           const header = bytes[offset];
           const nibbles = Array.from({ length: 16 }, (_2, sampleIndex) => {
             const byte2 = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
-            return signedNibble(sampleIndex % 2 === 0 ? byte2 >> 4 : byte2 & 15);
+            const nibble2 = sampleIndex % 2 === 0 ? byte2 >> 4 : byte2 & 15;
+            return nibble2 >= 8 ? nibble2 - 16 : nibble2;
           });
           return {
             range: header >> 4,
@@ -57583,7 +59229,7 @@ var init_brr = __esm({
           };
         });
         const value = { kind: "snes-brr", blocks };
-        const path28 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
+        const path30 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
         const metadataPath = stringOption2(
           options,
           "metadataPath",
@@ -57591,7 +59237,7 @@ var init_brr = __esm({
         );
         return {
           value,
-          files: [{ path: path28, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
+          files: [{ path: path30, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
         };
       },
       encode: (context) => {
@@ -57648,14 +59294,14 @@ var init_palette = __esm({
       version: "1.0.0",
       sizeBounds: { minimum: 2 },
       inspect: (context) => {
-        const { count, size } = resolveCount(context, 2);
-        return { size, metadata: { format: "snes-cgram-bgr555", count } };
+        const { count: count2, size } = resolveCount(context, 2);
+        return { size, metadata: { format: "snes-cgram-bgr555", count: count2 } };
       },
       decode: (context) => {
         const options = optionsFor2(context);
-        const { count, size } = resolveCount(context, 2, options);
+        const { count: count2, size } = resolveCount(context, 2, options);
         const bytes = readBytes(context.source, context.request.sourceOffset, size, context.request.id);
-        const colors = Array.from({ length: count }, (_, index) => {
+        const colors = Array.from({ length: count2 }, (_, index) => {
           const word2 = bytes[index * 2] | bytes[index * 2 + 1] << 8;
           return {
             red: word2 & 31,
@@ -57665,15 +59311,15 @@ var init_palette = __esm({
           };
         });
         const value = { kind: "snes-palette-bgr555", colors };
-        const path28 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
-        return { value, files: [jsonFile2(path28, value)] };
+        const path30 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
+        return { value, files: [jsonFile2(path30, value)] };
       },
       encode: (context) => {
-        const { count, size } = resolveCount(context, 2);
+        const { count: count2, size } = resolveCount(context, 2);
         const value = decodedObject2(context.decoded.value, context.request.id);
         const colors = arrayValue(value.colors, `SNES palette '${context.request.id}' colors`);
-        if (colors.length !== count) {
-          throw new Error(`SNES palette '${context.request.id}' requires exactly ${count} colors.`);
+        if (colors.length !== count2) {
+          throw new Error(`SNES palette '${context.request.id}' requires exactly ${count2} colors.`);
         }
         const bytes = new Uint8Array(size);
         colors.forEach((colorValue, index) => {
@@ -57743,8 +59389,8 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           entries: entries3
         };
-        const path28 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
-        return { value, files: [jsonFile2(path28, value)] };
+        const path30 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
+        return { value, files: [jsonFile2(path30, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 2);
@@ -57803,12 +59449,12 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           indexes: [...bytes]
         };
-        const path28 = stringOption2(
+        const path30 = stringOption2(
           options,
           "path",
           defaultPath(context.request.id, "mode7-tilemap.json")
         );
-        return { value, files: [jsonFile2(path28, value)] };
+        return { value, files: [jsonFile2(path30, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 1);
@@ -57878,15 +59524,15 @@ var init_tiles = __esm({
         version: "1.0.0",
         sizeBounds: { minimum: bytesPerTile, alignment: 1 },
         inspect: (context) => {
-          const { count, size } = resolveCount(context, bytesPerTile);
+          const { count: count2, size } = resolveCount(context, bytesPerTile);
           return {
             size,
-            metadata: { format: "snes-planar", bitsPerPixel, tileWidth: 8, tileHeight: 8, count }
+            metadata: { format: "snes-planar", bitsPerPixel, tileWidth: 8, tileHeight: 8, count: count2 }
           };
         },
         decode: (context) => {
           const options = optionsFor2(context);
-          const { count, size } = resolveCount(context, bytesPerTile, options);
+          const { count: count2, size } = resolveCount(context, bytesPerTile, options);
           const bytes = readBytes(
             context.source,
             context.request.sourceOffset,
@@ -57894,7 +59540,7 @@ var init_tiles = __esm({
             context.request.id
           );
           const tiles = Array.from(
-            { length: count },
+            { length: count2 },
             (_, index) => decodePlanarTile(bytes, index * bytesPerTile, bitsPerPixel)
           );
           const value = {
@@ -57904,19 +59550,19 @@ var init_tiles = __esm({
             tileHeight: 8,
             tiles
           };
-          const path28 = stringOption2(
+          const path30 = stringOption2(
             options,
             "path",
             defaultPath(context.request.id, `${bitsPerPixel}bpp.json`)
           );
-          return { value, files: [jsonFile2(path28, value)] };
+          return { value, files: [jsonFile2(path30, value)] };
         },
         encode: (context) => {
-          const { count, size } = resolveCount(context, bytesPerTile);
+          const { count: count2, size } = resolveCount(context, bytesPerTile);
           const value = decodedObject2(context.decoded.value, context.request.id);
           const tiles = arrayValue(value.tiles, `SNES tile asset '${context.request.id}' tiles`);
-          if (tiles.length !== count) {
-            throw new Error(`SNES tile asset '${context.request.id}' requires exactly ${count} tiles.`);
+          if (tiles.length !== count2) {
+            throw new Error(`SNES tile asset '${context.request.id}' requires exactly ${count2} tiles.`);
           }
           const bytes = new Uint8Array(size);
           tiles.forEach((tile, tileIndex) => {
@@ -57942,7 +59588,7 @@ var init_tiles = __esm({
       version: "1.0.0",
       sizeBounds: { minimum: 64 },
       inspect: (context) => {
-        const { count, size } = resolveCount(context, 64);
+        const { count: count2, size } = resolveCount(context, 64);
         return {
           size,
           metadata: {
@@ -57950,16 +59596,16 @@ var init_tiles = __esm({
             bitsPerPixel: 8,
             tileWidth: 8,
             tileHeight: 8,
-            count
+            count: count2
           }
         };
       },
       decode: (context) => {
         const options = optionsFor2(context);
-        const { count, size } = resolveCount(context, 64, options);
+        const { count: count2, size } = resolveCount(context, 64, options);
         const bytes = readBytes(context.source, context.request.sourceOffset, size, context.request.id);
         const tiles = Array.from(
-          { length: count },
+          { length: count2 },
           (_, tileIndex) => Array.from(
             { length: 8 },
             (_2, row) => Array.from({ length: 8 }, (_3, column) => bytes[tileIndex * 64 + row * 8 + column])
@@ -57972,15 +59618,15 @@ var init_tiles = __esm({
           tileHeight: 8,
           tiles
         };
-        const path28 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
-        return { value, files: [jsonFile2(path28, value)] };
+        const path30 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
+        return { value, files: [jsonFile2(path30, value)] };
       },
       encode: (context) => {
-        const { count, size } = resolveCount(context, 64);
+        const { count: count2, size } = resolveCount(context, 64);
         const value = decodedObject2(context.decoded.value, context.request.id);
         const tiles = arrayValue(value.tiles, `SNES Mode 7 asset '${context.request.id}' tiles`);
-        if (tiles.length !== count) {
-          throw new Error(`SNES Mode 7 asset '${context.request.id}' requires exactly ${count} tiles.`);
+        if (tiles.length !== count2) {
+          throw new Error(`SNES Mode 7 asset '${context.request.id}' requires exactly ${count2} tiles.`);
         }
         const bytes = new Uint8Array(size);
         tiles.forEach((tile, tileIndex) => {
@@ -58860,8 +60506,8 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path27 = __toESM(require("node:path"));
-var import_vscode14 = require("vscode");
+var path29 = __toESM(require("node:path"));
+var import_vscode16 = require("vscode");
 var import_node = __toESM(require_main3());
 
 // packages/vscode-extension/src/analysis-annotation-controller.ts
@@ -58870,60 +60516,111 @@ var import_vscode3 = require("vscode");
 
 // packages/vscode-extension/src/analysis-worker-client.ts
 var path = __toESM(require("node:path"));
-var import_node_worker_threads = require("node:worker_threads");
+var import_node_child_process = require("node:child_process");
 var AnalysisWorkerClient = class {
-  constructor(workerFile) {
+  constructor(workerFile, options = {}) {
     this.workerFile = workerFile;
+    this.options = options;
   }
   workerFile;
+  options;
   #worker;
+  #memoryMiB = 0;
   #nextId = 0;
-  #pending = /* @__PURE__ */ new Map();
+  #active;
+  #queue = [];
   #inflight = /* @__PURE__ */ new Map();
   request(directory, operation, options = {}) {
-    const key = JSON.stringify({ directory, operation, ...options });
-    const previous = this.#inflight.get(key);
+    const key2 = JSON.stringify({ directory, operation, ...options });
+    const previous = this.#inflight.get(key2);
     if (previous) return previous;
-    if (!this.#worker) {
-      const worker = new import_node_worker_threads.Worker(this.workerFile, {
-        execArgv: [],
-        resourceLimits: { maxOldGenerationSizeMb: 1536 }
-      });
-      this.#worker = worker;
-      worker.on("message", (message) => {
-        const pending = this.#pending.get(message.id);
-        if (!pending) return;
-        clearTimeout(pending.timer);
-        this.#pending.delete(message.id);
-        if (message.error) pending.reject(new Error(message.error));
-        else pending.resolve(message.value);
-      });
-      worker.on("error", (error) => {
-        if (this.#worker === worker)
-          this.#fail(error instanceof Error ? error : new Error(String(error)));
-      });
-      worker.on("exit", (code) => {
-        if (this.#worker === worker)
-          this.#fail(new Error(`Analysis worker exited (${code}). Expand the view to retry.`));
-      });
-    }
     const id = ++this.#nextId;
     const promise = new Promise((resolve11, reject) => {
-      const timer = setTimeout(
-        () => this.#fail(
-          new Error("Analysis worker exceeded 60 seconds. No project files were changed.")
-        ),
-        6e4
-      );
-      this.#pending.set(id, { resolve: (value) => resolve11(value), reject, timer });
-      this.#worker.postMessage({ id, directory, operation, ...options });
+      this.#queue.push({
+        message: { id, directory, operation, ...options },
+        resolve: (value) => resolve11(value),
+        reject
+      });
     });
-    this.#inflight.set(key, promise);
+    this.#inflight.set(key2, promise);
     const forget = () => {
-      if (this.#inflight.get(key) === promise) this.#inflight.delete(key);
+      if (this.#inflight.get(key2) === promise) this.#inflight.delete(key2);
     };
     void promise.then(forget, forget);
+    this.#dispatch();
     return promise;
+  }
+  #dispatch() {
+    if (this.#active) return;
+    const pending = this.#queue.shift();
+    if (!pending) return;
+    this.#active = pending;
+    try {
+      const maxMemoryMiB = pending.message.operation === "clear" ? this.#memoryMiB : this.options.maxMemoryMiB?.(pending.message.directory) ?? 4096;
+      if (!Number.isSafeInteger(maxMemoryMiB) || maxMemoryMiB < 128)
+        throw new Error("asm.analysis.maxMemoryMiB must be a safe integer of at least 128.");
+      if (this.#worker && this.#memoryMiB !== maxMemoryMiB) {
+        const previous = this.#worker;
+        this.#worker = void 0;
+        previous.kill();
+      }
+      if (!this.#worker) this.#start(maxMemoryMiB);
+      const timeoutMs = this.options.timeoutMs ?? 6e4;
+      pending.timer = setTimeout(
+        () => this.#fail(
+          new Error(
+            `Analysis ${pending.message.operation} process exceeded ${timeoutMs / 1e3} seconds. Memory budget: ${maxMemoryMiB} MiB (asm.analysis.maxMemoryMiB). Check project status before retrying an edit.`
+          )
+        ),
+        timeoutMs
+      );
+      this.#worker.send(pending.message, (error) => {
+        if (error && this.#active === pending) this.#fail(error);
+      });
+    } catch (error) {
+      this.#fail(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+  #start(maxMemoryMiB) {
+    const worker = (0, import_node_child_process.fork)(this.workerFile, [], {
+      execArgv: [`--max-old-space-size=${maxMemoryMiB}`],
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      stdio: ["ignore", "ignore", "pipe", "ipc"],
+      serialization: "advanced"
+    });
+    this.#worker = worker;
+    this.#memoryMiB = maxMemoryMiB;
+    let stderr = "";
+    worker.stderr?.on("data", (chunk) => {
+      stderr = (stderr + chunk.toString()).slice(-8192);
+    });
+    worker.on(
+      "message",
+      (message) => {
+        const pending = this.#active;
+        if (this.#worker !== worker || pending?.message.id !== message.id) return;
+        clearTimeout(pending.timer);
+        this.#active = void 0;
+        if (message.error) {
+          const error = new Error(message.error);
+          if (message.stack) error.stack = message.stack;
+          pending.reject(error);
+        } else pending.resolve(message.value);
+        this.#dispatch();
+      }
+    );
+    worker.on("error", (error) => {
+      if (this.#worker === worker) this.#fail(error);
+    });
+    worker.on("exit", (code, signal) => {
+      if (this.#worker === worker)
+        this.#fail(
+          new Error(
+            `Analysis ${this.#active?.message.operation ?? "view"} process exited (${signal ?? code}). Memory budget: ${maxMemoryMiB} MiB (asm.analysis.maxMemoryMiB). Expand the view to retry.${stderr ? `
+${stderr}` : ""}`
+          )
+        );
+    });
   }
   invalidate() {
     this.#inflight.clear();
@@ -58935,17 +60632,22 @@ var AnalysisWorkerClient = class {
   #fail(error) {
     const worker = this.#worker;
     this.#worker = void 0;
-    if (worker) void worker.terminate();
-    for (const pending of this.#pending.values()) {
+    if (worker) worker.kill();
+    const pendingRequests = this.#active ? [this.#active, ...this.#queue] : this.#queue;
+    this.#active = void 0;
+    for (const pending of pendingRequests) {
       clearTimeout(pending.timer);
       pending.reject(error);
     }
-    this.#pending.clear();
+    this.#queue.length = 0;
     this.#inflight.clear();
   }
 };
 var client;
-var initializeAnalysisWorker = (extensionRoot) => client ??= new AnalysisWorkerClient(path.join(extensionRoot, "out", "analysis-worker.cjs"));
+var initializeAnalysisWorker = (extensionRoot, options) => client ??= new AnalysisWorkerClient(
+  path.join(extensionRoot, "out", "analysis-worker.cjs"),
+  options
+);
 var analysisWorker = () => {
   if (!client) throw new Error("Analysis worker has not been initialized.");
   return client;
@@ -58979,6 +60681,21 @@ var currentAnalysisSourcePath = (source, candidate, expectedFile) => sourcePaths
 });
 var findAnalysisDebugMapCandidates = async (identity2) => {
   const identities = Array.isArray(identity2) ? identity2 : [identity2];
+  const candidates = [];
+  for (const descriptor2 of await discoverAnalysisDebugMapFiles()) {
+    try {
+      const map = JSON.parse(fs.readFileSync(descriptor2.file, "utf8"));
+      if (validateDebugMap(map).length > 0 || !identities.some(
+        (candidate) => map.target === candidate.target && map.output.sha256 === candidate.romContentSha256 && map.output.size === candidate.romContentSize
+      ))
+        continue;
+      candidates.push({ ...descriptor2, map });
+    } catch {
+    }
+  }
+  return candidates;
+};
+var discoverAnalysisDebugMapFiles = async () => {
   const active = import_vscode.debug.activeDebugSession;
   const configuredMap = active?.type === "uttori-asm" && typeof active.configuration.debugMap === "string" ? resolvedConfigurationPath(active.configuration.debugMap, active.workspaceFolder?.uri.fsPath) : void 0;
   const configuredRoot = active?.type === "uttori-asm" && typeof active.configuration.sourceRoot === "string" ? resolvedConfigurationPath(
@@ -58990,35 +60707,23 @@ var findAnalysisDebugMapCandidates = async (identity2) => {
     ...configuredMap ? [configuredMap] : [],
     ...discovered.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => fsPath)
   ]);
-  const candidates = [];
-  for (const file of files) {
-    try {
-      const map = JSON.parse(fs.readFileSync(file, "utf8"));
-      if (validateDebugMap(map).length > 0 || !identities.some(
-        (candidate) => map.target === candidate.target && map.output.sha256 === candidate.romContentSha256 && map.output.size === candidate.romContentSize
-      )) {
-        continue;
-      }
-      const containingWorkspace = import_vscode.workspace.getWorkspaceFolder(import_vscode.Uri.file(file));
-      const ancestors = [];
-      if (containingWorkspace) {
-        const root = containingWorkspace.uri.fsPath;
-        for (let directory = path3.dirname(file); directory !== root && directory.startsWith(`${root}${path3.sep}`); directory = path3.dirname(directory))
-          ancestors.push(directory);
-      }
-      candidates.push({
-        file,
-        map,
-        sourceRoots: sortedUnique([
-          ...file === configuredMap && configuredRoot ? [configuredRoot] : [],
-          ...containingWorkspace ? [containingWorkspace.uri.fsPath] : [],
-          ...ancestors
-        ])
-      });
-    } catch {
+  return files.map((file) => {
+    const containingWorkspace = import_vscode.workspace.getWorkspaceFolder(import_vscode.Uri.file(file));
+    const ancestors = [];
+    if (containingWorkspace) {
+      const root = containingWorkspace.uri.fsPath;
+      for (let directory = path3.dirname(file); directory !== root && directory.startsWith(`${root}${path3.sep}`); directory = path3.dirname(directory))
+        ancestors.push(directory);
     }
-  }
-  return candidates;
+    return {
+      file,
+      sourceRoots: sortedUnique([
+        ...file === configuredMap && configuredRoot ? [configuredRoot] : [],
+        ...(import_vscode.workspace.workspaceFolders ?? []).map(({ uri }) => uri.fsPath),
+        ...ancestors
+      ])
+    };
+  });
 };
 var analysisDebugMapRanges = (map, location) => {
   const ranges = [
@@ -59051,7 +60756,7 @@ var canonicalValue2 = (value) => {
   if (Array.isArray(value)) return value.map(canonicalValue2);
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalValue2(entry)])
+      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue2(entry)])
     );
   }
   return value;
@@ -59117,7 +60822,7 @@ Evidence: ${evidence.join(", ")}`
     lines.push(
       "Runtime coverage:",
       ...annotation.runtimeCoverage.map(
-        ({ coverage, count, recordIds }) => `  ${coverage} \xD7${count} (${recordIds.join(", ")})`
+        ({ coverage, count: count2, recordIds }) => `  ${coverage} \xD7${count2} (${recordIds.join(", ")})`
       )
     );
   }
@@ -59358,8 +61063,8 @@ var AnalysisCoverageProvider = class {
       }
     }
     if (element2.remotePage) {
-      const { operation, offset, count } = element2.remotePage;
-      if (count <= PAGE_SIZE) {
+      const { operation, offset, count: count2 } = element2.remotePage;
+      if (count2 <= PAGE_SIZE) {
         try {
           if (operation === "segments") {
             const segments = await analysisWorker().request(
@@ -59367,29 +61072,33 @@ var AnalysisCoverageProvider = class {
               operation,
               { offset }
             );
-            return segments.slice(0, count).map(
+            return segments.slice(0, count2).map(
               (segment) => segmentNode(element2.id, segment, element2.contentSize, element2.projectDirectory)
             );
           }
           return (await analysisWorker().request(element2.projectDirectory, operation, {
             offset
-          })).slice(0, count).map((detail) => this.detailNode({ ...detail, id: `${element2.id}:${detail.id}` }));
+          })).slice(0, count2).map((detail) => ({
+            ...detail,
+            id: `${element2.id}:${detail.id}`,
+            state: import_vscode2.TreeItemCollapsibleState.None
+          }));
         } catch (error) {
           return [leaf(`${element2.id}:error`, "Could not load page", String(error), "error")];
         }
       }
       let stride = PAGE_SIZE;
-      while (Math.ceil(count / stride) > PAGE_SIZE) stride *= PAGE_SIZE;
+      while (Math.ceil(count2 / stride) > PAGE_SIZE) stride *= PAGE_SIZE;
       const pages = [];
-      for (let index = 0; index < count; index += stride)
+      for (let index = 0; index < count2; index += stride)
         pages.push({
           id: `${element2.id}:page:${offset + index}`,
-          label: `Items ${offset + index + 1}\u2013${offset + Math.min(index + stride, count)}`,
+          label: `Items ${offset + index + 1}\u2013${offset + Math.min(index + stride, count2)}`,
           icon: "list-selection",
           state: import_vscode2.TreeItemCollapsibleState.Collapsed,
           projectDirectory: element2.projectDirectory,
           contentSize: element2.contentSize,
-          remotePage: { operation, offset: offset + index, count: Math.min(stride, count - index) }
+          remotePage: { operation, offset: offset + index, count: Math.min(stride, count2 - index) }
         });
       return pages;
     }
@@ -59399,11 +61108,8 @@ var AnalysisCoverageProvider = class {
     if (!element2 || typeof element2 !== "object" || !("editTarget" in element2)) return void 0;
     return element2.editTarget;
   }
-  async projectDirectories() {
-    return findAnalysisProjectDirectories();
-  }
   async loadProjects() {
-    const directories = await this.projectDirectories();
+    const directories = await findAnalysisProjectDirectories();
     const result = [];
     for (const directory of directories) {
       const manifestUri = import_vscode2.Uri.file(path7.join(directory, ANALYSIS_PROJECT_MANIFEST));
@@ -59441,19 +61147,35 @@ ${message}`,
     }
     return result;
   }
-  detailNode(detail) {
-    return {
-      ...detail,
-      state: import_vscode2.TreeItemCollapsibleState.None
-    };
-  }
+};
+
+// packages/vscode-extension/src/analysis-annotation-layout.ts
+var annotationSourceColumns = (text2, tabSize) => {
+  const width2 = Number.isSafeInteger(tabSize) && tabSize > 0 ? tabSize : 4;
+  let columns = 0;
+  for (const character of text2) columns += character === "	" ? width2 - columns % width2 : 1;
+  return columns;
+};
+var annotationOverlayColumn = (lines, tabSize, minimumColumn = 80) => lines.reduce(
+  (column, text2) => Math.max(column, annotationSourceColumns(text2, tabSize) + 3),
+  minimumColumn
+);
+var annotationOverlayColor = (annotations) => {
+  if (annotations.some((annotation) => annotation.stateTransitions.length > 0))
+    return "editorWarning.foreground";
+  if (annotations.some(
+    (annotation) => annotation.executionCount > 0 || annotation.runtimeCoverage.length > 0 || annotation.memoryAccesses.length > 0 || annotation.stateObservations.some(({ source }) => source === "runtime")
+  ))
+    return "debugIcon.startForeground";
+  return "editorInfo.foreground";
 };
 
 // packages/vscode-extension/src/analysis-annotation-controller.ts
-var append = (map, key, value) => {
-  const entries3 = map.get(key);
+var TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotations";
+var append = (map, key2, value) => {
+  const entries3 = map.get(key2);
   if (entries3) entries3.push(value);
-  else map.set(key, [value]);
+  else map.set(key2, [value]);
 };
 var AnalysisAnnotationController = class {
   #decoration;
@@ -59461,8 +61183,7 @@ var AnalysisAnnotationController = class {
   constructor() {
     this.#decoration = import_vscode3.window.createTextEditorDecorationType({
       after: {
-        color: new import_vscode3.ThemeColor("editorCodeLens.foreground"),
-        margin: "0 0 0 2em"
+        color: new import_vscode3.ThemeColor("editorCodeLens.foreground")
       },
       rangeBehavior: import_vscode3.DecorationRangeBehavior.ClosedClosed
     });
@@ -59473,11 +61194,32 @@ var AnalysisAnnotationController = class {
    */
   refresh(editor = import_vscode3.window.activeTextEditor) {
     const generation = ++this.#generation;
+    for (const visible of import_vscode3.window.visibleTextEditors) {
+      if (!import_vscode3.workspace.getConfiguration("asm", visible.document.uri).get("analysis.showAnnotations", true))
+        visible.setDecorations(this.#decoration, []);
+    }
     if (!editor || editor.document.uri.scheme !== "file") return;
     editor.setDecorations(this.#decoration, []);
+    if (!import_vscode3.workspace.getConfiguration("asm", editor.document.uri).get("analysis.showAnnotations", true))
+      return;
     void this.#decorations(editor, generation).catch(() => {
       if (generation === this.#generation) editor.setDecorations(this.#decoration, []);
     });
+  }
+  /** Toggle the active project's overlays, immediately invalidating pending decoration work. */
+  async toggle() {
+    ++this.#generation;
+    const resource = import_vscode3.window.activeTextEditor?.document.uri;
+    const configuration = import_vscode3.workspace.getConfiguration("asm", resource);
+    const enabled = configuration.get("analysis.showAnnotations", true);
+    if (enabled)
+      for (const editor of import_vscode3.window.visibleTextEditors) editor.setDecorations(this.#decoration, []);
+    await configuration.update(
+      "analysis.showAnnotations",
+      !enabled,
+      resource && import_vscode3.workspace.getWorkspaceFolder(resource) ? import_vscode3.ConfigurationTarget.WorkspaceFolder : import_vscode3.ConfigurationTarget.Global
+    );
+    this.refresh();
   }
   /**
    * Clears annotations immediately when source bytes change; save triggers a fresh hash check.
@@ -59539,7 +61281,15 @@ var AnalysisAnnotationController = class {
       }
     }
     if (generation !== this.#generation || import_vscode3.window.activeTextEditor !== editor) return;
-    const decorations = [...byLine].filter(([line]) => line >= 1 && line <= editor.document.lineCount).sort(([left], [right]) => left - right).map(([line, entries3]) => {
+    const lines = [...byLine].filter(([line]) => line >= 1 && line <= editor.document.lineCount).sort(([left], [right]) => left - right);
+    const tabSize = typeof editor.options.tabSize === "number" ? editor.options.tabSize : 4;
+    const preferredColumn = import_vscode3.workspace.getConfiguration("asm", editor.document.uri).get("analysis.annotationColumn", 80);
+    const column = annotationOverlayColumn(
+      lines.map(([line]) => editor.document.lineAt(line - 1).text),
+      tabSize,
+      Number.isSafeInteger(preferredColumn) && preferredColumn >= 0 ? preferredColumn : 80
+    );
+    const decorations = lines.map(([line, entries3]) => {
       const unique = new Map(
         entries3.map((entry) => [`${entry.project}:${entry.annotation.id}`, entry])
       );
@@ -59552,6 +61302,9 @@ var AnalysisAnnotationController = class {
       const summaryText = summaries3.join(" | ");
       const hover = new import_vscode3.MarkdownString();
       hover.appendMarkdown("**Uttori analysis**\n\n");
+      hover.appendMarkdown(
+        "Overlay colors: blue = project state, green = runtime observations, amber = state changes.\n\n"
+      );
       for (const { project, annotation } of values) {
         hover.appendText(project);
         hover.appendMarkdown("\n\n");
@@ -59563,7 +61316,11 @@ var AnalysisAnnotationController = class {
         hoverMessage: hover,
         renderOptions: {
           after: {
-            contentText: summaries3.length > 0 ? ` ; ${summaryText.slice(0, 319)}${summaryText.length > 319 ? "\u2026" : ""}` : ""
+            margin: `0 0 0 ${column - annotationSourceColumns(targetLine.text, tabSize)}ch`,
+            color: new import_vscode3.ThemeColor(
+              annotationOverlayColor(values.map(({ annotation }) => annotation))
+            ),
+            contentText: summaries3.length > 0 ? `\u2502 ${summaryText.slice(0, 319)}${summaryText.length > 319 ? "\u2026" : ""}` : ""
           }
         }
       };
@@ -59573,116 +61330,37 @@ var AnalysisAnnotationController = class {
 };
 
 // packages/vscode-extension/src/analysis-project-editor.ts
-var import_node_crypto23 = require("node:crypto");
-var fs12 = __toESM(require("node:fs"));
-var path13 = __toESM(require("node:path"));
+var import_node_crypto15 = require("node:crypto");
+var fs7 = __toESM(require("node:fs"));
+var path9 = __toESM(require("node:path"));
 init_src();
-var import_vscode5 = require("vscode");
-init_src3();
+var import_vscode6 = require("vscode");
 
-// packages/vscode-extension/src/disassembly-annotation-location.ts
-init_src();
-var annotationReferenceAt = (text2, line, column) => {
-  const code = (text2.split(/\r?\n/)[line - 1] ?? "").split(";")[0];
-  if (/^\s*[A-Z_a-z]\w*\s*:/.test(code)) return void 0;
-  const token = [...code.matchAll(/[A-Z_a-z]\w*/g)].find(
-    (match) => match.index <= column && column <= match.index + match[0].length
-  );
-  if (!token || /[\d$]/.test(code[token.index - 1] ?? "") || token.index <= code.search(/\S/) + (code.trimStart().match(/^\S+/)?.[0].length ?? 0))
-    return void 0;
-  return token[0];
-};
-var namedAnnotationLocations = (shards) => {
-  const names = projectSourceLabelNames(shards.labels);
-  const locations = shards.labels.map((label) => ({
-    addressSpace: label.addressSpace,
-    address: label.address,
-    labelId: label.id,
-    name: names.get(label.id)
-  }));
-  const addressed = new Set(
-    locations.map((location) => `${location.addressSpace}:${location.address}`)
-  );
-  for (const record3 of shards.analysis) {
-    if (record3.kind !== "function" || addressed.has(`${record3.addressSpace}:${record3.address}`))
-      continue;
-    locations.push({
-      addressSpace: record3.addressSpace,
-      address: record3.address,
-      name: `Fn_${record3.address.toString(16).toUpperCase().padStart(6, "0")}`
-    });
-    addressed.add(`${record3.addressSpace}:${record3.address}`);
-  }
-  return locations;
-};
-var annotationLocationsForSource = (map, sourceId, text2, line, column, shards, sources = /* @__PURE__ */ new Map([[sourceId, text2]]), fileAddressSpaces = []) => {
-  const lines = text2.split(/\r?\n/);
-  const named = namedAnnotationLocations(shards);
-  const reference = annotationReferenceAt(text2, line, column);
-  if (reference) {
-    const locations2 = [];
-    for (const [id, source] of sources) {
-      source.split(/\r?\n/).forEach((value, index) => {
-        if (value.match(/^\s*([A-Z_a-z]\w*)\s*:/)?.[1] === reference)
-          locations2.push(
-            ...annotationLocationsForSource(
-              map,
-              id,
-              source,
-              index + 1,
-              0,
-              shards,
-              sources,
-              fileAddressSpaces
-            )
-          );
-      });
-    }
-    return locations2;
-  }
-  let mappedLine = line;
-  const metadata = (value) => {
-    const body = value.split(";")[0].trim();
-    return body === "" || /^[A-Z_a-z]\w*\s*:$/.test(body) || /^\.[ai](8|16)$/.test(body);
+// packages/vscode-extension/src/disassembly-annotation-form.ts
+var import_vscode5 = require("vscode");
+
+// packages/vscode-extension/src/webview-template.ts
+var import_node_crypto14 = require("node:crypto");
+var import_node_fs2 = require("node:fs");
+var import_vscode4 = require("vscode");
+var renderWebviewTemplate = (webview, extensionUri, name) => {
+  const asset = (file) => import_vscode4.Uri.joinPath(extensionUri, "media", file);
+  const values = {
+    cspSource: webview.cspSource,
+    nonce: (0, import_node_crypto14.randomBytes)(18).toString("base64"),
+    styleUri: webview.asWebviewUri(asset(`${name}.css`)).toString(),
+    scriptUri: webview.asWebviewUri(asset(`${name}.js`)).toString()
   };
-  while (mappedLine <= lines.length && metadata(lines[mappedLine - 1])) mappedLine++;
-  const ranges = map.ranges.filter(
-    (range) => range.sourceId === sourceId && range.line === mappedLine
+  return (0, import_node_fs2.readFileSync)(asset(`${name}.html`).fsPath, "utf8").replace(
+    /{{(\w+)}}/g,
+    (_match, key2) => {
+      if (!(key2 in values)) throw new Error(`Unknown webview template field '${key2}'.`);
+      return values[key2].replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+    }
   );
-  const locations = /* @__PURE__ */ new Map();
-  const definitionName = lines[line - 1]?.match(/^\s*([A-Z_a-z]\w*)\s*:/)?.[1];
-  for (const range of ranges) {
-    const fileLabels = named.filter(
-      (entry) => entry.labelId && fileAddressSpaces.includes(entry.addressSpace) && entry.address === range.outputStart
-    );
-    const native = shards.analysis.filter(
-      (record3) => record3.kind === "cfg-node" && (record3.addressSpace === range.addressSpace && record3.address === range.start || range.outputStart !== void 0 && record3.fileOffset === range.outputStart)
-    );
-    const matches = native.length ? native.map((record3) => ({ addressSpace: record3.addressSpace, address: record3.address })) : [{ addressSpace: range.addressSpace, address: range.start }];
-    let candidates = [
-      ...fileLabels,
-      ...named.filter(
-        (entry) => matches.some(
-          (match) => entry.addressSpace === match.addressSpace && entry.address === match.address
-        )
-      )
-    ];
-    const labels = candidates.filter((entry) => entry.labelId);
-    if (labels.length) candidates = labels;
-    const selectedDefinition = candidates.filter((entry) => entry.name === definitionName);
-    if (selectedDefinition.length) candidates = selectedDefinition;
-    for (const location of candidates.length ? candidates : matches)
-      locations.set(
-        `${location.addressSpace}:${location.address}:${"labelId" in location ? location.labelId ?? "" : ""}`,
-        location
-      );
-  }
-  return [...locations.values()];
 };
 
 // packages/vscode-extension/src/disassembly-annotation-form.ts
-var import_node_crypto22 = require("node:crypto");
-var import_vscode4 = require("vscode");
 var parseDisassemblyAnnotationFields = (value) => {
   if (!value || typeof value !== "object") throw new Error("Invalid annotation form.");
   const input = value;
@@ -59695,51 +61373,44 @@ var parseDisassemblyAnnotationFields = (value) => {
     fields.map((field) => [field, input[field]])
   );
 };
-var escape = (value) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
-var openDisassemblyAnnotationForm = (location, initial, hasInstruction, save, regenerate2) => {
-  const panel = import_vscode4.window.createWebviewPanel(
+var openDisassemblyAnnotationForm = (extensionUri) => {
+  const panel = import_vscode5.window.createWebviewPanel(
     "uttori.disassemblyAnnotation",
     "Edit Disassembly Annotation",
-    import_vscode4.ViewColumn.Beside,
-    { enableScripts: true, localResourceRoots: [] }
+    import_vscode5.ViewColumn.Beside,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      localResourceRoots: [import_vscode5.Uri.joinPath(extensionUri, "media")]
+    }
   );
-  const nonce = (0, import_node_crypto22.randomBytes)(18).toString("base64");
-  panel.webview.html = `<!doctype html><html><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
-<style nonce="${nonce}">
-body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);background:var(--vscode-editor-background);padding:20px;max-width:760px}
-label{display:block;margin:20px 0 6px}input,textarea{box-sizing:border-box;width:100%;padding:8px;color:var(--vscode-input-foreground);background:var(--vscode-input-background);border:1px solid var(--vscode-input-border,transparent);font:var(--vscode-editor-font-size) var(--vscode-editor-font-family)}
-textarea{resize:vertical}button{margin:20px 8px 0 0;padding:8px 12px;background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:0;cursor:pointer}button:disabled{opacity:.6;cursor:default}
-small{display:block;color:var(--vscode-descriptionForeground);margin-top:6px}pre{white-space:pre-wrap;padding:12px;background:var(--vscode-textCodeBlock-background)}#error{white-space:pre-wrap;color:var(--vscode-errorForeground)}
-</style></head><body><h2>Edit Disassembly Annotation</h2><p>${escape(location)}</p>
-<form id="annotation"><label for="name">Label name</label><input id="name" value="${escape(initial.name)}" maxlength="256" autocomplete="off">
-<small>Leave empty for an instruction comment only. Names and comments survive regeneration.</small>
-<label for="comment">Comment above the label</label><textarea id="comment" rows="6">${escape(initial.comment)}</textarea>
-<label for="inlineComment">Comment beside the label</label><input id="inlineComment" value="${escape(initial.inlineComment)}">
-<label for="instructionComment">Comment beside the instruction</label><input id="instructionComment" value="${escape(initial.instructionComment)}" ${hasInstruction ? "" : "disabled"}>
-${hasInstruction ? "" : "<small>No accepted instruction starts here. Label comments are still available.</small>"}
-<label>Preview</label><pre id="preview"></pre><p id="error" role="alert"></p>
-<button type="submit">Save Annotation</button><button type="button" id="regenerate">Save and Regenerate</button><button type="button" id="cancel">Cancel</button></form>
-<script nonce="${nonce}">
-const vscode=acquireVsCodeApi();const ids=['name','comment','inlineComment','instructionComment'];
-const fields=()=>Object.fromEntries(ids.map(id=>[id,document.getElementById(id).value]));
-function preview(){const f=fields();document.getElementById('preview').textContent=[...f.comment.split(/\\r?\\n/).filter((v,i,a)=>v||a.length>1).map(v=>'; '+v),...(f.name?[f.name+':'+(f.inlineComment?' ; '+f.inlineComment:'')]:[]),...(f.instructionComment?['  <instruction> ; '+f.instructionComment]:[])].join('\\n');}
-ids.forEach(id=>document.getElementById(id).addEventListener('input',preview));preview();
-function submit(regenerate){document.querySelectorAll('button').forEach(b=>b.disabled=true);document.getElementById('error').textContent='';vscode.postMessage({type:'save',fields:fields(),regenerate});}
-document.getElementById('annotation').addEventListener('submit',e=>{e.preventDefault();submit(false)});
-document.getElementById('regenerate').addEventListener('click',()=>submit(true));
-document.getElementById('cancel').addEventListener('click',()=>vscode.postMessage({type:'cancel'}));
-window.addEventListener('message',e=>{if(e.data.type==='error'){document.getElementById('error').textContent=e.data.message;document.querySelectorAll('button').forEach(b=>b.disabled=false)}});
-</script></body></html>`;
+  let disposed = false;
+  let ready = false;
+  let state;
+  let save;
+  let regenerate2;
   let saving = false;
+  const publish = () => {
+    if (ready && !disposed && state) void panel.webview.postMessage(state);
+  };
+  const fail = (error) => {
+    state = { type: "error", message: error instanceof Error ? error.message : String(error) };
+    publish();
+  };
   const listener = panel.webview.onDidReceiveMessage(async (message) => {
-    if (!message || typeof message !== "object" || saving) return;
+    if (!message || typeof message !== "object" || disposed) return;
     const input = message;
+    if (input.type === "ready") {
+      ready = true;
+      publish();
+      return;
+    }
+    if (saving) return;
     if (input.type === "cancel") {
       panel.dispose();
       return;
     }
-    if (input.type !== "save") return;
+    if (input.type !== "save" || !save || !regenerate2) return;
     saving = true;
     try {
       const fields = parseDisassemblyAnnotationFields(input.fields);
@@ -59747,10 +61418,7 @@ window.addEventListener('message',e=>{if(e.data.type==='error'){document.getElem
       await save(fields);
       panel.dispose();
     } catch (error) {
-      await panel.webview.postMessage({
-        type: "error",
-        message: error instanceof Error ? error.message : String(error)
-      });
+      fail(error);
       saving = false;
       return;
     }
@@ -59758,16 +61426,30 @@ window.addEventListener('message',e=>{if(e.data.type==='error'){document.getElem
       try {
         await regenerate2();
       } catch (error) {
-        await import_vscode4.window.showErrorMessage(
+        await import_vscode5.window.showErrorMessage(
           `Annotation saved, but regeneration failed: ${error instanceof Error ? error.message : String(error)}`
         );
       }
     }
   });
   panel.onDidDispose(() => {
+    disposed = true;
     listener.dispose();
   });
-  return panel;
+  panel.webview.html = renderWebviewTemplate(panel.webview, extensionUri, "annotation");
+  return {
+    panel,
+    get disposed() {
+      return disposed;
+    },
+    initialize(data, onSave, onRegenerate) {
+      save = onSave;
+      regenerate2 = onRegenerate;
+      state = { type: "initialize", ...data };
+      publish();
+    },
+    fail
+  };
 };
 
 // packages/vscode-extension/src/analysis-project-editor.ts
@@ -59786,7 +61468,7 @@ var STATE_FIELD_ALIASES = {
   stackpointer: "stackPointer",
   s: "stackPointer"
 };
-var parseAddress2 = (input) => {
+var parseAddress = (input) => {
   const value = input.trim();
   let parsed;
   if (/^\$[\da-f]+$/i.test(value)) parsed = Number.parseInt(value.slice(1), 16);
@@ -59797,7 +61479,7 @@ var parseAddress2 = (input) => {
 };
 var hexadecimal2 = (value) => `$${value.toString(16).toUpperCase().padStart(6, "0")}`;
 var isLocalWorkspaceProject = (directory) => {
-  const folder = import_vscode5.workspace.getWorkspaceFolder(import_vscode5.Uri.file(directory));
+  const folder = import_vscode6.workspace.getWorkspaceFolder(import_vscode6.Uri.file(directory));
   return folder?.uri.scheme === "file";
 };
 var parseStateEntrySelection = (input) => {
@@ -59816,29 +61498,29 @@ var parseStateEntrySelection = (input) => {
     if (separator < 1) throw new Error(`State directive '${directive2}' needs '='.`);
     const rawKey = directive2.slice(0, separator).trim().toLowerCase();
     const rawValue = directive2.slice(separator + 1).trim().toLowerCase();
-    const key = STATE_FIELD_ALIASES[rawKey];
-    if (!key) throw new Error(`Unknown state field '${rawKey}'.`);
-    if (seen.has(key)) throw new Error(`State field '${key}' was specified more than once.`);
-    seen.add(key);
-    if (key === "e") {
+    const key2 = STATE_FIELD_ALIASES[rawKey];
+    if (!key2) throw new Error(`Unknown state field '${rawKey}'.`);
+    if (seen.has(key2)) throw new Error(`State field '${key2}' was specified more than once.`);
+    seen.add(key2);
+    if (key2 === "e") {
       if (!["emulation", "native", "true", "false", "1", "0"].includes(rawValue)) {
         throw new Error("E must be emulation/native or true/false.");
       }
       state.e = ["emulation", "true", "1"].includes(rawValue);
-    } else if (key === "m" || key === "x") {
+    } else if (key2 === "m" || key2 === "x") {
       if (!["8", "16", "true", "false"].includes(rawValue)) {
-        throw new Error(`${key.toUpperCase()} must be 8/16 or true/false.`);
+        throw new Error(`${key2.toUpperCase()} must be 8/16 or true/false.`);
       }
-      state[key] = ["8", "true"].includes(rawValue);
-    } else if (key === "carry") {
+      state[key2] = ["8", "true"].includes(rawValue);
+    } else if (key2 === "carry") {
       if (!["set", "clear", "true", "false", "1", "0"].includes(rawValue)) {
         throw new Error("Carry must be set/clear or true/false.");
       }
       state.carry = ["set", "true", "1"].includes(rawValue);
     } else {
-      const value = parseAddress2(rawValue);
-      if (value === void 0) throw new Error(`State field '${key}' needs an integer value.`);
-      state[key] = value;
+      const value = parseAddress(rawValue);
+      if (value === void 0) throw new Error(`State field '${key2}' needs an integer value.`);
+      state[key2] = value;
     }
   }
   if (!entryPoint && Object.keys(state).length === 0) {
@@ -59850,25 +61532,27 @@ var parseStateEntrySelection = (input) => {
   };
 };
 var parseTargetList = (input) => {
-  const values = input.split(",").map((value) => value.trim()).filter(Boolean).map(parseAddress2);
+  const values = input.split(",").map((value) => value.trim()).filter(Boolean).map(parseAddress);
   if (values.length === 0 || values.some((value) => value === void 0)) {
     throw new Error("Enter one or more comma-separated addresses.");
   }
   return [...new Set(values)].sort((left, right) => left - right);
 };
 var AnalysisProjectEditor = class {
+  constructor(refresh, extensionUri) {
+    this.extensionUri = extensionUri;
+    this.#refresh = refresh;
+    void this.updateContexts();
+  }
+  extensionUri;
   #annotationPanels = /* @__PURE__ */ new Set();
   #refresh;
   #undo = [];
   #redo = [];
-  constructor(refresh) {
-    this.#refresh = refresh;
-    void this.updateContexts();
-  }
   async classifyRange(target) {
     try {
-      if (!import_vscode5.workspace.isTrusted) {
-        await import_vscode5.window.showErrorMessage(
+      if (!import_vscode6.workspace.isTrusted) {
+        await import_vscode6.window.showErrorMessage(
           "Analysis project edits require a trusted local workspace. The coverage view remains read-only."
         );
         return;
@@ -59880,7 +61564,7 @@ var AnalysisProjectEditor = class {
       if (!projectDirectory) return;
       const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
       if (snapshot.manifest.rom.contentSize === 0) {
-        await import_vscode5.window.showErrorMessage(
+        await import_vscode6.window.showErrorMessage(
           "The selected analysis project has no ROM content to classify."
         );
         return;
@@ -59888,7 +61572,7 @@ var AnalysisProjectEditor = class {
       const fileAddressSpaces = snapshot.manifest.addressSpaces.filter(
         ({ kind }) => kind === "file"
       );
-      const addressSpace2 = fileAddressSpaces.length === 1 ? fileAddressSpaces[0] : (await import_vscode5.window.showQuickPick(
+      const addressSpace2 = fileAddressSpaces.length === 1 ? fileAddressSpaces[0] : (await import_vscode6.window.showQuickPick(
         fileAddressSpaces.map((candidate) => ({
           label: candidate.name,
           description: candidate.id,
@@ -59901,7 +61585,7 @@ var AnalysisProjectEditor = class {
       ))?.addressSpace;
       if (!addressSpace2) {
         if (fileAddressSpaces.length === 0) {
-          await import_vscode5.window.showErrorMessage(
+          await import_vscode6.window.showErrorMessage(
             "The selected analysis project does not declare a ROM file address space."
           );
         }
@@ -59909,30 +61593,30 @@ var AnalysisProjectEditor = class {
       }
       const maximum = snapshot.manifest.rom.contentSize;
       const suggestedStart = target?.start ?? 0;
-      const startInput = await import_vscode5.window.showInputBox({
+      const startInput = await import_vscode6.window.showInputBox({
         title: "Classify Analysis Range",
         prompt: "Start address (inclusive; use $ or 0x for hexadecimal, otherwise decimal)",
         value: hexadecimal2(suggestedStart),
         validateInput: (value) => {
-          const parsed = parseAddress2(value);
+          const parsed = parseAddress(value);
           return parsed === void 0 || parsed < 0 || parsed >= maximum ? `Enter an address from 0 through ${hexadecimal2(maximum - 1)}.` : void 0;
         }
       });
       if (startInput === void 0) return;
-      const start = parseAddress2(startInput);
+      const start = parseAddress(startInput);
       const suggestedEnd = target?.end ?? Math.min(start + 1, maximum);
-      const endInput = await import_vscode5.window.showInputBox({
+      const endInput = await import_vscode6.window.showInputBox({
         title: "Classify Analysis Range",
         prompt: "End address (exclusive; use $ or 0x for hexadecimal, otherwise decimal)",
         value: hexadecimal2(suggestedEnd),
         validateInput: (value) => {
-          const parsed = parseAddress2(value);
+          const parsed = parseAddress(value);
           return parsed === void 0 || parsed <= start || parsed > maximum ? `Enter an address greater than ${hexadecimal2(start)} and no greater than ${hexadecimal2(maximum)}.` : void 0;
         }
       });
       if (endInput === void 0) return;
-      const end = parseAddress2(endInput);
-      const classificationChoice = await import_vscode5.window.showQuickPick(
+      const end = parseAddress(endInput);
+      const classificationChoice = await import_vscode6.window.showQuickPick(
         RANGE_CLASSIFICATIONS.map((classification2) => ({ label: classification2, classification: classification2 })),
         {
           title: "Classify Analysis Range",
@@ -59941,7 +61625,7 @@ var AnalysisProjectEditor = class {
       );
       if (!classificationChoice) return;
       const { classification } = classificationChoice;
-      const configuredArchitecture = import_vscode5.workspace.getConfiguration("asm").get("architecture", "").trim();
+      const configuredArchitecture = import_vscode6.workspace.getConfiguration("asm").get("architecture", "").trim();
       const overlappingArchitectures = [
         ...new Set(
           snapshot.shards.annotations.filter(
@@ -59949,20 +61633,20 @@ var AnalysisProjectEditor = class {
           ).map(({ architecture: architecture3 }) => architecture3)
         )
       ];
-      const architectureInput = await import_vscode5.window.showInputBox({
+      const architectureInput = await import_vscode6.window.showInputBox({
         title: "Classify Analysis Range",
         prompt: "Architecture id to attach to this annotation",
         value: configuredArchitecture || (overlappingArchitectures.length === 1 ? overlappingArchitectures[0] : ""),
         validateInput: (value) => value.trim() === "" ? "Enter an architecture id." : void 0
       });
       if (architectureInput === void 0) return;
-      const detail = await import_vscode5.window.showInputBox({
+      const detail = await import_vscode6.window.showInputBox({
         title: "Classify Analysis Range",
         prompt: "Optional manual-evidence note (leave empty for none)"
       });
       if (detail === void 0) return;
       const architecture2 = architectureInput.trim();
-      const suffix = (0, import_node_crypto23.createHash)("sha256").update(
+      const suffix = (0, import_node_crypto15.createHash)("sha256").update(
         canonicalJson({
           revision: snapshot.revision.manifestSha256,
           addressSpace: addressSpace2.id,
@@ -59990,7 +61674,7 @@ var AnalysisProjectEditor = class {
       await this.updateContexts();
       this.#refresh();
       const conflictCount = applied.inverse.conflicts.length;
-      await import_vscode5.window.showInformationMessage(
+      await import_vscode6.window.showInformationMessage(
         `Classified [${hexadecimal2(start)}, ${hexadecimal2(end)}) as ${classification}.${conflictCount === 0 ? "" : ` Preserved ${conflictCount} contradictory overlap${conflictCount === 1 ? "" : "s"} as conflict records.`}`
       );
     } catch (error) {
@@ -59999,8 +61683,8 @@ var AnalysisProjectEditor = class {
   }
   async setStateEntryPoint(target) {
     try {
-      if (!import_vscode5.workspace.isTrusted) {
-        await import_vscode5.window.showErrorMessage(
+      if (!import_vscode6.workspace.isTrusted) {
+        await import_vscode6.window.showErrorMessage(
           "Analysis project edits require a trusted local workspace. The coverage view remains read-only."
         );
         return;
@@ -60016,12 +61700,12 @@ var AnalysisProjectEditor = class {
         (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.start - right.start || left.id.localeCompare(right.id)
       );
       if (candidates.length === 0) {
-        await import_vscode5.window.showErrorMessage(
+        await import_vscode6.window.showErrorMessage(
           target ? "This ROM-map segment has no classified annotation. Classify it before adding state or an entry point." : "The selected project has no annotation to carry state or an entry point."
         );
         return;
       }
-      const selected = await import_vscode5.window.showQuickPick(
+      const selected = await import_vscode6.window.showQuickPick(
         candidates.map((annotation) => ({
           label: annotation.id,
           description: `${annotation.addressSpace} [${hexadecimal2(annotation.start)}, ${hexadecimal2(annotation.end)}) \xB7 ${annotation.classification} \xB7 ${annotation.architecture}`,
@@ -60033,7 +61717,7 @@ var AnalysisProjectEditor = class {
         }
       );
       if (!selected) return;
-      const directiveInput = await import_vscode5.window.showInputBox({
+      const directiveInput = await import_vscode6.window.showInputBox({
         title: "Set Analysis State / Entry Point",
         prompt: "Comma-separated: entry, e=native|emulation, m=8|16, x=8|16, carry=set|clear, pbr=, dbr=, d=, s=",
         value: "entry",
@@ -60048,7 +61732,7 @@ var AnalysisProjectEditor = class {
       });
       if (directiveInput === void 0) return;
       const selection = parseStateEntrySelection(directiveInput);
-      const detail = await import_vscode5.window.showInputBox({
+      const detail = await import_vscode6.window.showInputBox({
         title: "Set Analysis State / Entry Point",
         prompt: "Optional manual-evidence note (leave empty for none)"
       });
@@ -60078,7 +61762,7 @@ var AnalysisProjectEditor = class {
       this.#redo.length = 0;
       await this.updateContexts();
       this.#refresh();
-      await import_vscode5.window.showInformationMessage(
+      await import_vscode6.window.showInformationMessage(
         `Added manual ${selection.entryPoint ? "entry point and " : ""}state overlay to '${selected.annotation.id}'${applied.inverse.conflicts.length === 0 ? "." : `; preserved ${applied.inverse.conflicts.length} contradictory state record(s) as conflicts.`}`
       );
     } catch (error) {
@@ -60087,8 +61771,8 @@ var AnalysisProjectEditor = class {
   }
   async resolveTarget(target) {
     try {
-      if (!import_vscode5.workspace.isTrusted) {
-        await import_vscode5.window.showErrorMessage(
+      if (!import_vscode6.workspace.isTrusted) {
+        await import_vscode6.window.showErrorMessage(
           "Analysis project edits require a trusted local workspace. The coverage view remains read-only."
         );
         return;
@@ -60102,8 +61786,8 @@ var AnalysisProjectEditor = class {
       const sites = /* @__PURE__ */ new Map();
       for (const record3 of snapshot.shards.analysis) {
         if (record3.kind !== "unresolved" && record3.kind !== "target-override") continue;
-        const key = `${record3.addressSpace}:${record3.address}`;
-        const site = sites.get(key) ?? {
+        const key2 = `${record3.addressSpace}:${record3.address}`;
+        const site = sites.get(key2) ?? {
           addressSpace: record3.addressSpace,
           address: record3.address,
           descriptions: []
@@ -60111,15 +61795,15 @@ var AnalysisProjectEditor = class {
         site.descriptions.push(
           record3.kind === "unresolved" ? `${record3.flowKind}: ${record3.reason}` : `existing targets: ${record3.targets.map(hexadecimal2).join(", ")}`
         );
-        sites.set(key, site);
+        sites.set(key2, site);
       }
       if (sites.size === 0) {
-        await import_vscode5.window.showErrorMessage(
+        await import_vscode6.window.showErrorMessage(
           "The selected project has no unresolved or previously overridden control-flow site."
         );
         return;
       }
-      const selected = await import_vscode5.window.showQuickPick(
+      const selected = await import_vscode6.window.showQuickPick(
         [...sites.values()].sort(
           (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address
         ).map((site) => ({
@@ -60136,8 +61820,13 @@ var AnalysisProjectEditor = class {
       const prior = snapshot.shards.analysis.find(
         (record3) => record3.kind === "target-override" && record3.addressSpace === selected.site.addressSpace && record3.address === selected.site.address
       );
-      const maximum = this.addressSpaceMaximum(snapshot, selected.site.addressSpace);
-      const targetInput = await import_vscode5.window.showInputBox({
+      const addressSpace2 = snapshot.manifest.addressSpaces.find(
+        ({ id }) => id === selected.site.addressSpace
+      );
+      if (!addressSpace2)
+        throw new Error(`Unknown analysis address space '${selected.site.addressSpace}'.`);
+      const maximum = addressSpace2.kind === "file" ? snapshot.manifest.rom.contentSize : 2 ** addressSpace2.addressBits;
+      const targetInput = await import_vscode6.window.showInputBox({
         title: "Resolve Indirect Target",
         prompt: `Comma-separated targets in '${selected.site.addressSpace}' (use $ or 0x for hexadecimal)`,
         value: prior?.kind === "target-override" ? prior.targets.map(hexadecimal2).join(", ") : "",
@@ -60152,7 +61841,7 @@ var AnalysisProjectEditor = class {
       });
       if (targetInput === void 0) return;
       const targets = parseTargetList(targetInput);
-      const detail = await import_vscode5.window.showInputBox({
+      const detail = await import_vscode6.window.showInputBox({
         title: "Resolve Indirect Target",
         prompt: "Optional manual-evidence note (leave empty for none)"
       });
@@ -60178,7 +61867,7 @@ var AnalysisProjectEditor = class {
       this.#redo.length = 0;
       await this.updateContexts();
       this.#refresh();
-      await import_vscode5.window.showInformationMessage(
+      await import_vscode6.window.showInformationMessage(
         `Resolved ${selected.label} to ${applied.inverse.after.targets.map(hexadecimal2).join(", ")}; prior targets and evidence were retained.`
       );
     } catch (error) {
@@ -60190,116 +61879,72 @@ var AnalysisProjectEditor = class {
     this.#annotationPanels.clear();
   }
   async editAnnotation() {
+    let form;
     try {
-      if (!import_vscode5.workspace.isTrusted)
+      if (!import_vscode6.workspace.isTrusted)
         throw new Error("Analysis project edits require a trusted local workspace.");
-      const editor = import_vscode5.window.activeTextEditor;
-      const projectDirectory = await this.chooseProject(void 0, "Edit Disassembly Annotation");
-      if (!projectDirectory) return;
-      const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
-      let locations;
-      let sourceFile;
-      let sourceHash;
-      let sourceDirectory;
-      if (editor && ["uttori-snes", "uttori-65xx"].includes(editor.document.languageId)) {
-        if (editor.document.uri.scheme !== "file" || editor.document.isDirty)
-          throw new Error(
-            "Use a saved, unchanged generated source file. Regenerate source if it was edited."
-          );
-        sourceFile = path13.resolve(editor.document.uri.fsPath);
-        const found = [];
-        for (const candidate of await findAnalysisDebugMapCandidates({
-          target: snapshot.manifest.target,
-          romContentSha256: snapshot.manifest.rom.contentSha256,
-          romContentSize: snapshot.manifest.rom.contentSize
-        })) {
-          for (const source of candidate.map.sources) {
-            if (!currentAnalysisSourcePath(source, candidate, sourceFile)) continue;
-            sourceHash = source.sha256;
-            const sourceTexts = /* @__PURE__ */ new Map([[source.id, editor.document.getText()]]);
-            if (annotationReferenceAt(
-              editor.document.getText(),
-              editor.selection.active.line + 1,
-              editor.selection.active.character
-            )) {
-              for (const other of candidate.map.sources) {
-                if (other.id === source.id) continue;
-                const file = currentAnalysisSourcePath(other, candidate);
-                if (file) sourceTexts.set(other.id, fs12.readFileSync(file, "utf8"));
-              }
-            }
-            found.push(
-              ...annotationLocationsForSource(
-                candidate.map,
-                source.id,
-                editor.document.getText(),
-                editor.selection.active.line + 1,
-                editor.selection.active.character,
-                snapshot.shards,
-                sourceTexts,
-                snapshot.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id)
-              )
-            );
-          }
-        }
-        const unique = new Map(
-          found.map((location2) => [
-            `${location2.addressSpace}:${location2.address}:${location2.labelId ?? ""}`,
-            location2
-          ])
-        );
-        locations = [...unique.values()];
-        if (!sourceHash || locations.length === 0)
-          throw new Error(
-            "No exact current ROM/source mapping exists at the cursor. Run Analyze and Regenerate Disassembly, then select a label or instruction."
-          );
-        for (let directory = path13.dirname(sourceFile); ; directory = path13.dirname(directory)) {
-          if (fs12.existsSync(path13.join(directory, "generated-files.json"))) {
-            sourceDirectory = directory;
-            break;
-          }
-          if (path13.dirname(directory) === directory) break;
-        }
-      } else {
-        locations = namedAnnotationLocations(snapshot.shards);
-      }
-      if (locations.length === 0)
+      const editor = import_vscode6.window.activeTextEditor;
+      const sourceEditor = editor && ["uttori-snes", "uttori-65xx"].includes(editor.document.languageId) ? editor : void 0;
+      if (sourceEditor && (sourceEditor.document.uri.scheme !== "file" || sourceEditor.document.isDirty))
         throw new Error(
-          "No native labels or function candidates exist. Open generated source to annotate an instruction."
+          "Use a saved, unchanged generated source file. Regenerate source if it was edited."
         );
-      const location = locations.length === 1 ? locations[0] : (await import_vscode5.window.showQuickPick(
-        locations.map((entry) => ({
-          label: entry.name ?? hexadecimal2(entry.address),
-          description: `${entry.addressSpace} ${hexadecimal2(entry.address)}`,
-          location: entry
+      const source = sourceEditor ? {
+        file: path9.resolve(sourceEditor.document.uri.fsPath),
+        sha256: (0, import_node_crypto15.createHash)("sha256").update(sourceEditor.document.getText()).digest("hex"),
+        line: sourceEditor.selection.active.line + 1,
+        column: sourceEditor.selection.active.character
+      } : void 0;
+      form = openDisassemblyAnnotationForm(this.extensionUri);
+      const { panel } = form;
+      this.#annotationPanels.add(panel);
+      panel.onDidDispose(() => this.#annotationPanels.delete(panel));
+      const projectDirectory = await this.chooseProject(void 0, "Edit Disassembly Annotation");
+      if (!projectDirectory) {
+        panel.dispose();
+        return;
+      }
+      if (form.disposed) return;
+      const resolved = await analysisWorker().request(
+        projectDirectory,
+        "annotationLookup",
+        {
+          annotationLookup: { maps: source ? await discoverAnalysisDebugMapFiles() : [], source }
+        }
+      );
+      if (form.disposed) return;
+      const selected = resolved.choices.length === 1 ? resolved.choices[0] : (await import_vscode6.window.showQuickPick(
+        resolved.choices.map((choice) => ({
+          label: choice.location.name ?? hexadecimal2(choice.location.address),
+          description: `${choice.location.addressSpace} ${hexadecimal2(choice.location.address)}`,
+          choice
         })),
         {
           title: "Edit Disassembly Annotation",
           placeHolder: "Choose the exact label or address to annotate"
         }
-      ))?.location;
-      if (!location) return;
-      const label = snapshot.shards.labels.find(({ id }) => id === location.labelId);
-      const inlineComments = snapshot.shards.comments.filter(
-        (comment) => comment.placement === "inline-instruction" && comment.addressSpace === location.addressSpace && comment.address === location.address
-      );
-      const inline = inlineComments.length < 2 ? inlineComments[0] : (await import_vscode5.window.showQuickPick(
-        inlineComments.map((comment) => ({
-          label: comment.text,
-          description: comment.id,
-          comment
+      ))?.choice;
+      if (!selected) {
+        panel.dispose();
+        return;
+      }
+      const { location, label, inlineComments, hasInstruction } = selected;
+      const inline = inlineComments.length < 2 ? inlineComments[0] : (await import_vscode6.window.showQuickPick(
+        inlineComments.map((comment2) => ({
+          label: comment2.text,
+          description: comment2.id,
+          comment: comment2
         })),
         {
           title: "Edit Instruction Comment",
           placeHolder: "Choose the comment to edit; other comments are preserved"
         }
       ))?.comment;
-      if (inlineComments.length > 1 && !inline) return;
-      const hasInstruction = snapshot.shards.analysis.some(
-        (record3) => record3.kind === "cfg-node" && (record3.addressSpace === location.addressSpace && record3.address === location.address || snapshot.manifest.addressSpaces.some(
-          (space) => space.id === location.addressSpace && space.kind === "file"
-        ) && record3.fileOffset === location.address)
-      );
+      if (inlineComments.length > 1 && !inline) {
+        panel.dispose();
+        return;
+      }
+      if (form.disposed) return;
       const identity2 = `${location.addressSpace}.${location.address.toString(16)}`;
       const initialFields = {
         name: label?.sourceName ?? location.name ?? "",
@@ -60307,13 +61952,15 @@ var AnalysisProjectEditor = class {
         inlineComment: label?.inlineComment ?? "",
         instructionComment: inline?.text ?? ""
       };
-      const panel = openDisassemblyAnnotationForm(
-        `${path13.basename(projectDirectory)} \xB7 ${location.addressSpace} ${hexadecimal2(location.address)}`,
-        initialFields,
-        hasInstruction || Boolean(inline),
+      form.initialize(
+        {
+          location: `${path9.basename(projectDirectory)} \xB7 ${location.addressSpace} ${hexadecimal2(location.address)}`,
+          fields: initialFields,
+          hasInstruction: hasInstruction || Boolean(inline)
+        },
         async (fields) => {
           this.assertTrustedProject(projectDirectory);
-          if (sourceFile && (analysisSourceSha256(sourceFile) !== sourceHash || editor?.document.isDirty))
+          if (source && ((0, import_node_crypto15.createHash)("sha256").update(await fs7.promises.readFile(source.file)).digest("hex") !== resolved.sourceHash || sourceEditor?.document.isDirty))
             throw new Error(
               "The source changed while this form was open. Reopen the annotation from current generated source."
             );
@@ -60333,48 +61980,46 @@ var AnalysisProjectEditor = class {
             } : { comment: fields.comment, inlineComment: fields.inlineComment },
             instructionCommentId: inline?.id ?? `manual.comment.instruction.${identity2}`,
             instructionComment: fields.instructionComment,
-            evidenceId: `manual.evidence.annotation.${this.editSuffix(snapshot, { ...location, ...fields })}`,
+            evidenceId: `manual.evidence.annotation.${this.editSuffix(resolved, { ...location, ...fields })}`,
             sourceId: "vscode.disassembly-annotation"
           };
-          const applied = applyDisassemblyAnnotationEdit(snapshot, request);
-          if (snapshot.manifest.target === "snes.sfc")
-            snesSourceLabelNames(
-              applied.project.shards,
-              snapshot.manifest.mapping.mapper,
-              snapshot.manifest.rom.contentSize,
-              sourceDirectory ? loadSnesRamMap(sourceDirectory).variables.map(({ name }) => name) : []
-            );
-          commitAnalysisProjectTransaction(projectDirectory, snapshot.revision, applied.project);
-          this.#undo.push({
-            kind: "annotation",
+          const inverse = await analysisWorker().request(
             projectDirectory,
-            request,
-            inverse: applied.inverse
-          });
+            "annotationSave",
+            {
+              annotationSave: {
+                revision: resolved.revision,
+                request,
+                sourceFile: resolved.sourceFile,
+                sourceHash: resolved.sourceHash,
+                sourceDirectory: resolved.sourceDirectory
+              }
+            }
+          );
+          this.#undo.push({ kind: "annotation", projectDirectory, request, inverse });
           this.#redo.length = 0;
           await this.updateContexts();
           this.#refresh();
-          void import_vscode5.window.showInformationMessage(
+          void import_vscode6.window.showInformationMessage(
             `Saved annotation at ${location.addressSpace} ${hexadecimal2(location.address)}. Regenerate disassembly to apply it to source.`
           );
         },
         async () => {
-          await import_vscode5.commands.executeCommand("asm.disassembly.regenerate", {
+          await import_vscode6.commands.executeCommand("asm.disassembly.regenerate", {
             projectDirectory,
-            ...sourceDirectory ? { sourceDirectory } : {}
+            ...resolved.sourceDirectory ? { sourceDirectory: resolved.sourceDirectory } : {}
           });
         }
       );
-      this.#annotationPanels.add(panel);
-      panel.onDidDispose(() => this.#annotationPanels.delete(panel));
     } catch (error) {
-      await this.showFailure("Could not edit the disassembly annotation", error);
+      if (form) form.fail(error);
+      else await this.showFailure("Could not edit the disassembly annotation", error);
     }
   }
   async renameLabel(target) {
     try {
-      if (!import_vscode5.workspace.isTrusted) {
-        await import_vscode5.window.showErrorMessage(
+      if (!import_vscode6.workspace.isTrusted) {
+        await import_vscode6.window.showErrorMessage(
           "Analysis project edits require a trusted local workspace. The coverage view remains read-only."
         );
         return;
@@ -60386,10 +62031,10 @@ var AnalysisProjectEditor = class {
       if (!projectDirectory) return;
       const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
       if (snapshot.shards.labels.length === 0) {
-        await import_vscode5.window.showErrorMessage("The selected project has no label to rename.");
+        await import_vscode6.window.showErrorMessage("The selected project has no label to rename.");
         return;
       }
-      const selected = await import_vscode5.window.showQuickPick(
+      const selected = await import_vscode6.window.showQuickPick(
         [...snapshot.shards.labels].sort(
           (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
         ).map((label) => ({
@@ -60400,7 +62045,7 @@ var AnalysisProjectEditor = class {
         { title: "Rename Analysis Label", placeHolder: "Choose a stable native label record" }
       );
       if (!selected) return;
-      const name = await import_vscode5.window.showInputBox({
+      const name = await import_vscode6.window.showInputBox({
         title: "Rename Analysis Label",
         prompt: `New native name for '${selected.projectLabel.id}'`,
         value: selected.projectLabel.name,
@@ -60411,7 +62056,7 @@ var AnalysisProjectEditor = class {
         }
       });
       if (name === void 0) return;
-      const detail = await import_vscode5.window.showInputBox({
+      const detail = await import_vscode6.window.showInputBox({
         title: "Rename Analysis Label",
         prompt: "Optional manual-evidence note (leave empty for the generated rename explanation)"
       });
@@ -60434,12 +62079,12 @@ var AnalysisProjectEditor = class {
       this.#redo.length = 0;
       await this.updateContexts();
       this.#refresh();
-      const action = await import_vscode5.window.showInformationMessage(
+      const action = await import_vscode6.window.showInformationMessage(
         `Renamed '${applied.inverse.before.name}' to '${applied.inverse.after.name}' with manual provenance.`,
         "Analyze and Regenerate"
       );
       if (action === "Analyze and Regenerate")
-        await import_vscode5.commands.executeCommand("asm.disassembly.regenerate", { projectDirectory });
+        await import_vscode6.commands.executeCommand("asm.disassembly.regenerate", { projectDirectory });
     } catch (error) {
       await this.showFailure("Could not rename the analysis label", error);
     }
@@ -60461,15 +62106,15 @@ var AnalysisProjectEditor = class {
         ...target?.regionIds.map((id) => `regions:${id}`) ?? []
       ]);
       const choices = this.evidenceChoices(snapshot.shards).filter(
-        ({ key }) => preferred.size === 0 || preferred.has(key)
+        ({ key: key2 }) => preferred.size === 0 || preferred.has(key2)
       );
       if (choices.length === 0) {
-        await import_vscode5.window.showInformationMessage(
+        await import_vscode6.window.showInformationMessage(
           target ? "This ROM-map segment has no persisted record with explainable evidence." : "The selected project has no persisted record to explain."
         );
         return;
       }
-      const selected = await import_vscode5.window.showQuickPick(choices, {
+      const selected = await import_vscode6.window.showQuickPick(choices, {
         title: "Explain Analysis Evidence",
         placeHolder: "Choose a persisted record to trace back to its evidence"
       });
@@ -60480,8 +62125,8 @@ var AnalysisProjectEditor = class {
         selected.recordId
       );
       const content = this.renderEvidenceExplanation(projectDirectory, explanation);
-      const document = await import_vscode5.workspace.openTextDocument({ language: "markdown", content });
-      await import_vscode5.window.showTextDocument(document, { preview: true });
+      const document = await import_vscode6.workspace.openTextDocument({ language: "markdown", content });
+      await import_vscode6.window.showTextDocument(document, { preview: true });
     } catch (error) {
       await this.showFailure("Could not explain analysis evidence", error);
     }
@@ -60489,7 +62134,7 @@ var AnalysisProjectEditor = class {
   async undo() {
     const entry = this.#undo.at(-1);
     if (!entry) {
-      await import_vscode5.window.showInformationMessage("There is no analysis-project edit to undo.");
+      await import_vscode6.window.showInformationMessage("There is no analysis-project edit to undo.");
       return;
     }
     try {
@@ -60501,7 +62146,7 @@ var AnalysisProjectEditor = class {
       this.#redo.push(entry);
       await this.updateContexts();
       this.#refresh();
-      await import_vscode5.window.showInformationMessage(`Undid ${this.editDescription(entry)}.`);
+      await import_vscode6.window.showInformationMessage(`Undid ${this.editDescription(entry)}.`);
     } catch (error) {
       await this.showFailure("Could not undo the analysis-project edit", error);
     }
@@ -60509,7 +62154,7 @@ var AnalysisProjectEditor = class {
   async redo() {
     const entry = this.#redo.at(-1);
     if (!entry) {
-      await import_vscode5.window.showInformationMessage("There is no analysis-project edit to redo.");
+      await import_vscode6.window.showInformationMessage("There is no analysis-project edit to redo.");
       return;
     }
     try {
@@ -60525,7 +62170,7 @@ var AnalysisProjectEditor = class {
       this.#undo.push(reapplied.history);
       await this.updateContexts();
       this.#refresh();
-      await import_vscode5.window.showInformationMessage(`Redid ${this.editDescription(entry)}.`);
+      await import_vscode6.window.showInformationMessage(`Redid ${this.editDescription(entry)}.`);
     } catch (error) {
       await this.showFailure("Could not redo the analysis-project edit", error);
     }
@@ -60538,15 +62183,15 @@ var AnalysisProjectEditor = class {
     const found = await findAnalysisProjectDirectories();
     const directories = requiresTrust ? found.filter(isLocalWorkspaceProject) : found;
     if (directories.length === 0) {
-      await import_vscode5.window.showErrorMessage(
+      await import_vscode6.window.showErrorMessage(
         requiresTrust ? "No native analysis project was found inside this trusted local workspace." : "No native analysis project was found."
       );
       return void 0;
     }
     if (directories.length === 1) return directories[0];
-    const selected = await import_vscode5.window.showQuickPick(
+    const selected = await import_vscode6.window.showQuickPick(
       directories.map((directory) => ({
-        label: path13.basename(directory),
+        label: path9.basename(directory),
         description: directory,
         directory
       })),
@@ -60558,12 +62203,7 @@ var AnalysisProjectEditor = class {
     return selected?.directory;
   }
   editSuffix(snapshot, input) {
-    return (0, import_node_crypto23.createHash)("sha256").update(canonicalJson({ revision: snapshot.revision.manifestSha256, ...input })).digest("hex").slice(0, 20);
-  }
-  addressSpaceMaximum(snapshot, addressSpaceId) {
-    const addressSpace2 = snapshot.manifest.addressSpaces.find(({ id }) => id === addressSpaceId);
-    if (!addressSpace2) throw new Error(`Unknown analysis address space '${addressSpaceId}'.`);
-    return addressSpace2.kind === "file" ? snapshot.manifest.rom.contentSize : 2 ** addressSpace2.addressBits;
+    return (0, import_node_crypto15.createHash)("sha256").update(canonicalJson({ revision: snapshot.revision.manifestSha256, ...input })).digest("hex").slice(0, 20);
   }
   revertEdit(snapshot, entry) {
     switch (entry.kind) {
@@ -60670,26 +62310,26 @@ var AnalysisProjectEditor = class {
     return sections.join("\n");
   }
   assertTrustedProject(directory) {
-    if (!import_vscode5.workspace.isTrusted || !isLocalWorkspaceProject(directory)) {
+    if (!import_vscode6.workspace.isTrusted || !isLocalWorkspaceProject(directory)) {
       throw new Error("Analysis project edits require a trusted local workspace project.");
     }
   }
   async updateContexts() {
     await Promise.all([
-      import_vscode5.commands.executeCommand("setContext", "asm.coverage.canUndo", this.#undo.length > 0),
-      import_vscode5.commands.executeCommand("setContext", "asm.coverage.canRedo", this.#redo.length > 0)
+      import_vscode6.commands.executeCommand("setContext", "asm.coverage.canUndo", this.#undo.length > 0),
+      import_vscode6.commands.executeCommand("setContext", "asm.coverage.canRedo", this.#redo.length > 0)
     ]);
   }
   async showFailure(prefix, error) {
     const message = error instanceof Error ? error.message : String(error);
-    await import_vscode5.window.showErrorMessage(`${prefix}: ${message}`);
+    await import_vscode6.window.showErrorMessage(`${prefix}: ${message}`);
   }
 };
 
 // packages/vscode-extension/src/analysis-graph-tree.ts
-var path14 = __toESM(require("node:path"));
+var path10 = __toESM(require("node:path"));
 init_src();
-var import_vscode6 = require("vscode");
+var import_vscode7 = require("vscode");
 var PAGE_SIZE2 = 200;
 var isStringArray = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
 var isAnalysisGraphNavigationTarget = (value) => {
@@ -60729,7 +62369,7 @@ var leaf2 = (id, label, description, icon, tooltip, target) => ({
   description,
   tooltip,
   icon,
-  state: import_vscode6.TreeItemCollapsibleState.None,
+  state: import_vscode7.TreeItemCollapsibleState.None,
   ...target ? { navigationTarget: target } : {}
 });
 var pagedGroup = (id, label, description, icon, entries3) => ({
@@ -60737,7 +62377,7 @@ var pagedGroup = (id, label, description, icon, entries3) => ({
   label,
   description,
   icon,
-  state: entries3.length === 0 ? import_vscode6.TreeItemCollapsibleState.None : import_vscode6.TreeItemCollapsibleState.Collapsed,
+  state: entries3.length === 0 ? import_vscode7.TreeItemCollapsibleState.None : import_vscode7.TreeItemCollapsibleState.Collapsed,
   pageEntries: entries3
 });
 var functionName = (fn) => fn.labels.length > 0 ? fn.labels.map(({ name }) => name).join(" / ") : fn.id;
@@ -60853,7 +62493,7 @@ var functionNode = (projectId, projectDirectory, manifest, shards, graph, fn) =>
       `Unresolved flow: ${fn.unresolvedIds.length}`
     ].join("\n"),
     icon: fn.source === "interrupt" ? "zap" : "symbol-function",
-    state: import_vscode6.TreeItemCollapsibleState.Collapsed,
+    state: import_vscode7.TreeItemCollapsibleState.Collapsed,
     loadChildren,
     navigationTarget: navigationTarget(projectDirectory, manifest, shards, fn, [
       fn.id,
@@ -60914,18 +62554,18 @@ var projectChildren = (projectId, projectDirectory, manifest, shards, graph) => 
 var AnalysisGraphProvider = class {
   static viewId = "uttori-asm.analysisGraph";
   #projects = /* @__PURE__ */ new Map();
-  #onDidChangeTreeData = new import_vscode6.EventEmitter();
+  #onDidChangeTreeData = new import_vscode7.EventEmitter();
   onDidChangeTreeData = this.#onDidChangeTreeData.event;
   refresh() {
     this.#projects.clear();
     this.#onDidChangeTreeData.fire();
   }
   getTreeItem(element2) {
-    const item = new import_vscode6.TreeItem(element2.label, element2.state);
+    const item = new import_vscode7.TreeItem(element2.label, element2.state);
     item.id = element2.id;
     item.description = element2.description;
     item.tooltip = element2.tooltip ?? element2.label;
-    item.iconPath = new import_vscode6.ThemeIcon(element2.icon);
+    item.iconPath = new import_vscode7.ThemeIcon(element2.icon);
     item.contextValue = element2.navigationTarget ? "analysisGraphLocation" : "analysisGraph";
     if (element2.resourceUri) {
       item.resourceUri = element2.resourceUri;
@@ -60959,7 +62599,7 @@ var AnalysisGraphProvider = class {
     const result = [];
     for (const directory of directories) {
       const projectId = `analysis-graph:${directory}`;
-      const manifestUri = import_vscode6.Uri.file(path14.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const manifestUri = import_vscode7.Uri.file(path10.join(directory, ANALYSIS_PROJECT_MANIFEST));
       try {
         const manifest = await analysisWorker().request(
           directory,
@@ -60967,12 +62607,12 @@ var AnalysisGraphProvider = class {
         );
         result.push({
           id: projectId,
-          label: path14.basename(directory),
+          label: path10.basename(directory),
           description: `${manifest.target} \xB7 ${manifest.mapping.mapper}`,
           tooltip: `${directory}
 ${manifest.rom.contentSha256}`,
           icon: "type-hierarchy",
-          state: import_vscode6.TreeItemCollapsibleState.Collapsed,
+          state: import_vscode7.TreeItemCollapsibleState.Collapsed,
           resourceUri: manifestUri,
           loadChildren: async () => {
             try {
@@ -60995,12 +62635,12 @@ ${manifest.rom.contentSha256}`,
         const message = error instanceof Error ? error.message : String(error);
         result.push({
           id: `${projectId}:error`,
-          label: path14.basename(directory),
+          label: path10.basename(directory),
           description: "invalid analysis project",
           tooltip: `${directory}
 ${message}`,
           icon: "error",
-          state: import_vscode6.TreeItemCollapsibleState.None,
+          state: import_vscode7.TreeItemCollapsibleState.None,
           resourceUri: manifestUri
         });
       }
@@ -61020,7 +62660,7 @@ ${message}`,
         label: `${(index + 1).toLocaleString("en-US")}\u2013${Math.min(index + stride, entries3.length).toLocaleString("en-US")}`,
         description: `${slice.length} item(s)`,
         icon: "list-selection",
-        state: import_vscode6.TreeItemCollapsibleState.Collapsed,
+        state: import_vscode7.TreeItemCollapsibleState.Collapsed,
         pageEntries: slice
       });
     }
@@ -61028,8 +62668,382 @@ ${message}`,
   }
 };
 
+// packages/vscode-extension/src/analysis-sources-tree.ts
+var path11 = __toESM(require("node:path"));
+var import_vscode8 = require("vscode");
+var count = (value) => value.toLocaleString("en-US");
+var PAGE_SIZE3 = 200;
+var AnalysisSourcesProvider = class {
+  static viewId = "uttori-asm.sources";
+  #changed = new import_vscode8.EventEmitter();
+  onDidChangeTreeData = this.#changed.event;
+  #catalogs = /* @__PURE__ */ new Map();
+  #children = /* @__PURE__ */ new Map();
+  #baselines = /* @__PURE__ */ new Map();
+  #epoch = 0;
+  dispose() {
+    this.#changed.dispose();
+  }
+  refresh() {
+    this.#epoch++;
+    this.#catalogs.clear();
+    this.#children.clear();
+    this.#changed.fire();
+  }
+  getTreeItem(element2) {
+    const item = new import_vscode8.TreeItem(
+      element2.label,
+      element2.load ? import_vscode8.TreeItemCollapsibleState.Collapsed : import_vscode8.TreeItemCollapsibleState.None
+    );
+    item.id = element2.id;
+    item.description = element2.description;
+    item.tooltip = element2.tooltip ?? element2.label;
+    item.iconPath = new import_vscode8.ThemeIcon(element2.icon);
+    item.contextValue = element2.sourceTarget ? "analysisSource" : "analysisSourceEntry";
+    item.command = element2.command;
+    return item;
+  }
+  async getChildren(element2) {
+    const id = element2?.id ?? "root";
+    let pending = this.#children.get(id);
+    if (!pending) {
+      const epoch = this.#epoch;
+      pending = Promise.resolve().then(() => element2 ? element2.load?.() ?? [] : this.#roots()).then(
+        (children) => epoch === this.#epoch ? children : [],
+        (error) => {
+          this.#children.delete(id);
+          return epoch === this.#epoch ? [
+            {
+              id: `${id}:error`,
+              label: "Could not load sources \u2014 expand to retry",
+              icon: "error",
+              tooltip: String(error)
+            }
+          ] : [];
+        }
+      );
+      this.#children.set(id, pending);
+    }
+    return pending;
+  }
+  async compare(element2) {
+    try {
+      const target = await this.#selectSource(element2);
+      if (!target) return;
+      const catalog = this.#catalogs.get(target.directory);
+      const selected = this.#baselines.get(this.#sourceKey(target));
+      const choices = catalog.sources.filter(
+        (source) => source.id !== target.source.id && source.kinds.includes("runtime")
+      );
+      if (!choices.length) {
+        await import_vscode8.window.showInformationMessage(
+          "Import another runtime capture to compare against this source."
+        );
+        return;
+      }
+      const picked = await import_vscode8.window.showQuickPick(
+        choices.map((source) => ({
+          label: source.name,
+          description: source.sha256?.slice(0, 12),
+          detail: source.format,
+          picked: selected === void 0 || selected.includes(source.id),
+          sourceId: source.id
+        })),
+        {
+          title: `Compare ${target.source.name}`,
+          placeHolder: "Subtract instructions seen in these captures. Select none to see all instructions.",
+          canPickMany: true
+        }
+      );
+      if (!picked) return;
+      this.#baselines.set(
+        this.#sourceKey(target),
+        picked.map(({ sourceId }) => sourceId)
+      );
+      this.refresh();
+    } catch (error) {
+      await import_vscode8.window.showErrorMessage(`Could not compare sources: ${String(error)}`);
+    }
+  }
+  async resetComparison(element2) {
+    const target = await this.#selectSource(element2);
+    if (!target) return;
+    this.#baselines.delete(this.#sourceKey(target));
+    this.refresh();
+  }
+  #sourceKey(target) {
+    return JSON.stringify([target.directory, target.source.id]);
+  }
+  async #selectSource(element2) {
+    if (!this.#catalogs.size) await this.getChildren();
+    const candidate = element2 && typeof element2 === "object" && "sourceTarget" in element2 ? element2.sourceTarget : void 0;
+    const targets = [...this.#catalogs].flatMap(
+      ([directory, catalog]) => catalog.sources.map((source) => ({ directory, source }))
+    );
+    if (candidate)
+      return targets.find(
+        (target) => target.directory === candidate.directory && target.source.id === candidate.source?.id
+      );
+    const selected = await import_vscode8.window.showQuickPick(
+      targets.filter(({ source }) => source.kinds.includes("runtime")).map((target) => ({
+        label: target.source.name,
+        description: target.directory,
+        target
+      })),
+      { title: "Choose Source", placeHolder: "Choose the capture to inspect" }
+    );
+    return selected?.target;
+  }
+  async #roots() {
+    const epoch = this.#epoch;
+    const directories = await findAnalysisProjectDirectories();
+    const groups = await Promise.all(
+      directories.map(async (directory) => {
+        try {
+          const catalog = await analysisWorker().request(
+            directory,
+            "sources"
+          );
+          if (epoch === this.#epoch) this.#catalogs.set(directory, catalog);
+          return {
+            id: directory,
+            label: path11.basename(directory),
+            description: `${count(catalog.sources.length)} sources`,
+            tooltip: directory,
+            icon: "database",
+            load: () => this.#sourceNodes(directory, catalog)
+          };
+        } catch (error) {
+          return {
+            id: `${directory}:error`,
+            label: path11.basename(directory),
+            description: "could not read sources",
+            icon: "error",
+            tooltip: `${directory}
+${String(error)}`
+          };
+        }
+      })
+    );
+    return groups.length === 1 && groups[0].load ? groups[0].load() : groups;
+  }
+  #sourceNodes(directory, catalog) {
+    const artifacts = catalog.sources.filter((source) => source.sha256);
+    const producers = catalog.sources.filter((source) => !source.sha256);
+    const nameCounts = /* @__PURE__ */ new Map();
+    for (const source of catalog.sources)
+      nameCounts.set(source.name, (nameCounts.get(source.name) ?? 0) + 1);
+    const node = (source) => {
+      const target = { directory, source };
+      const custom = this.#baselines.has(this.#sourceKey(target));
+      const warnings = source.reports.some(
+        (report2) => report2.warnings.length || report2.unsupported.length
+      );
+      let icon = source.sha256 ? "file" : "symbol-event";
+      if (source.kinds.includes("runtime")) icon = "pulse";
+      return {
+        id: this.#sourceKey(target),
+        label: source.name,
+        description: [
+          source.kinds.includes("runtime") ? "trace" : source.kinds.join(" / ") || "import",
+          (nameCounts.get(source.name) ?? 0) > 1 ? source.sha256?.slice(0, 12) : "",
+          custom ? "custom comparison" : "",
+          warnings ? "capture notes" : ""
+        ].filter(Boolean).join(" \xB7 "),
+        tooltip: [source.name, source.format, source.sha256, directory].filter(Boolean).join("\n"),
+        icon,
+        sourceTarget: target,
+        load: () => this.#sourceChildren(target)
+      };
+    };
+    const roots = this.#localPages(`${directory}:artifacts`, artifacts.map(node));
+    if (producers.length)
+      roots.push({
+        id: `${directory}:producers`,
+        label: "Other evidence",
+        description: `${count(producers.length)} producers`,
+        tooltip: "Manual edits, detectors and static-analysis producers",
+        icon: "symbol-event",
+        load: () => this.#localPages(`${directory}:producers`, producers.map(node))
+      });
+    if (!roots.length)
+      roots.push({ id: `${directory}:empty`, label: "No imported sources yet", icon: "info" });
+    return roots;
+  }
+  #localPages(id, entries3) {
+    if (entries3.length <= PAGE_SIZE3) return entries3;
+    let stride = PAGE_SIZE3;
+    while (Math.ceil(entries3.length / stride) > PAGE_SIZE3) stride *= PAGE_SIZE3;
+    const pages = [];
+    for (let start = 0; start < entries3.length; start += stride) {
+      const slice = entries3.slice(start, start + stride);
+      const pageId = `${id}:${start}`;
+      pages.push({
+        id: pageId,
+        label: `${count(start + 1)}\u2013${count(start + slice.length)}`,
+        icon: "list-selection",
+        load: () => this.#localPages(pageId, slice)
+      });
+    }
+    return pages;
+  }
+  async #sourceChildren(target) {
+    const id = this.#sourceKey(target);
+    const baselineIds = this.#baselines.get(id);
+    const { manifest, comparison: summary } = await analysisWorker().request(target.directory, "sourceSummary", { sourceId: target.source.id, baselineIds });
+    const children = [
+      {
+        id: `${id}:comparison`,
+        label: "Compared with",
+        description: baselineIds === void 0 ? `${count(summary.baseline.length)} other captures` : `${count(summary.baseline.length)} selected captures`,
+        tooltip: summary.baseline.map(({ name }) => name).join("\n") || "No baseline selected; all observed instructions are shown.",
+        icon: "git-compare",
+        command: {
+          command: "asm.sources.compare",
+          title: "Choose comparison captures",
+          arguments: [{ sourceTarget: target }]
+        }
+      },
+      {
+        id: `${id}:total`,
+        label: "Observed instructions",
+        description: count(summary.instructionCount),
+        tooltip: "Distinct captured instruction addresses, qualified by architecture and address space. Execution counts and CPU-state variants do not inflate this total.",
+        icon: "list-flat"
+      }
+    ];
+    const group2 = (name, label, total, icon, description = count(total), tooltip) => {
+      children.push({
+        id: `${id}:${name}`,
+        label,
+        description,
+        tooltip,
+        icon,
+        ...total ? { load: () => this.#pages(target, manifest, baselineIds, name, 0, total) } : {}
+      });
+    };
+    group2(
+      "uniqueInstructions",
+      "Unique instructions",
+      summary.uniqueInstructionCount,
+      "diff-added",
+      count(summary.uniqueInstructionCount),
+      "Instruction starts captured here and absent from the selected comparison captures."
+    );
+    group2(
+      "codeRanges",
+      "Code at unique instructions",
+      summary.codeRangeCount,
+      "symbol-numeric",
+      `${count(summary.knownCodeBytes)} known bytes \xB7 ${count(summary.codeRangeCount)} ranges`,
+      "Merged known instruction extents in each architecture/address space. This is not a ROM-file byte delta. Unknown sizes are excluded."
+    );
+    group2(
+      "functions",
+      "Functions containing unique instructions",
+      summary.functionCount,
+      "symbol-function",
+      count(summary.functionCount),
+      `${count(summary.unownedInstructions)} unique instructions have no known owner; ${count(summary.ambiguousInstructions)} have ambiguous ownership. Other parts of these functions may be shared.`
+    );
+    group2(
+      "memory",
+      "Unique memory access sites",
+      summary.uniqueMemoryCount,
+      "references",
+      count(summary.uniqueMemoryCount),
+      "Instruction + target address, access type, width, actor and channel absent from the baseline. Changing values do not create new sites."
+    );
+    group2("sharedInstructions", "Shared instructions", summary.sharedInstructionCount, "layers");
+    group2(
+      "contributions",
+      "Attributed metadata",
+      summary.contributionCount,
+      "note",
+      count(summary.contributionCount),
+      "Labels, comments and classifications carrying this source's evidence. Attribution does not imply exclusivity."
+    );
+    const details = [
+      ...summary.source.reports.flatMap(
+        (report2) => Object.entries(report2.imported).map(
+          ([field, value]) => `${report2.sourceName}: ${count(value)} ${field} imported`
+        )
+      ),
+      ...summary.notes
+    ];
+    children.push({
+      id: `${id}:notes`,
+      label: "Capture notes & interpretation",
+      description: count(details.length),
+      icon: "info",
+      load: () => this.#localPages(
+        `${id}:notes`,
+        details.map((text2, index) => ({
+          id: `${id}:note:${index}`,
+          label: text2,
+          tooltip: text2,
+          icon: "info"
+        }))
+      )
+    });
+    return children;
+  }
+  async #pages(target, manifest, baselineIds, group2, start, total) {
+    const id = `${this.#sourceKey(target)}:${group2}`;
+    if (total <= PAGE_SIZE3) {
+      const entries3 = await analysisWorker().request(
+        target.directory,
+        "sourceEntries",
+        { sourceId: target.source.id, baselineIds, sourceGroup: group2, offset: start }
+      );
+      return entries3.map((entry) => {
+        const navigation = entry.address !== void 0 && entry.addressSpace ? {
+          projectDirectory: target.directory,
+          target: manifest.target,
+          romContentSha256: manifest.rom.contentSha256,
+          romContentSize: manifest.rom.contentSize,
+          addressSpace: entry.addressSpace,
+          address: entry.address,
+          outputOffsets: entry.outputOffsets,
+          architectureHints: entry.architecture ? [entry.architecture] : [],
+          recordIds: entry.recordIds
+        } : void 0;
+        return {
+          id: `${id}:${entry.id}`,
+          label: entry.label,
+          description: entry.description,
+          tooltip: entry.detail,
+          icon: group2 === "functions" ? "symbol-function" : "location",
+          ...navigation ? {
+            command: {
+              command: "asm.analysis.navigate",
+              title: "Open source or disassembly",
+              arguments: [navigation]
+            }
+          } : {}
+        };
+      });
+    }
+    let stride = PAGE_SIZE3;
+    while (Math.ceil(total / stride) > PAGE_SIZE3) stride *= PAGE_SIZE3;
+    const pages = [];
+    for (let offset = 0; offset < total; offset += stride) {
+      const from = start + offset;
+      const size = Math.min(stride, total - offset);
+      pages.push({
+        id: `${id}:page:${from}`,
+        label: `${count(from + 1)}\u2013${count(from + size)}`,
+        description: `${count(size)} items`,
+        icon: "list-selection",
+        load: () => this.#pages(target, manifest, baselineIds, group2, from, size)
+      });
+    }
+    return pages;
+  }
+};
+
 // packages/vscode-extension/src/analysis-navigation.ts
-var path16 = __toESM(require("node:path"));
+var path13 = __toESM(require("node:path"));
 
 // packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
@@ -61040,7 +63054,7 @@ var MAX_EXPRESSION_DEPTH = 32;
 var MAX_SHIFT = 255n;
 var MAX_EXPONENT = 255n;
 var MAX_MAGNITUDE = (1n << 256n) - 1n;
-var binaryPrecedence2 = Object.freeze({
+var binaryPrecedence = Object.freeze({
   "||": 0,
   "&&": 1,
   "=": 2,
@@ -61168,7 +63182,7 @@ var DebugExpressionParser = class {
     while (true) {
       const token = this.#peek();
       if (token.type !== "operator") break;
-      const precedence = binaryPrecedence2[token.value];
+      const precedence = binaryPrecedence[token.value];
       if (precedence === void 0 || precedence < minimumPrecedence) break;
       this.#index++;
       const rightAssociative = token.value === "**";
@@ -61287,13 +63301,20 @@ var evaluateDebugExpression = (expression, registers2) => new DebugExpressionPar
 var formatDebugExpressionValue = (value) => value < 0n ? `-0x${(-value).toString(16)}` : `0x${value.toString(16)}`;
 
 // packages/debug-adapter/src/dap.ts
-var import_node_path9 = __toESM(require("node:path"), 1);
+var import_node_path5 = __toESM(require("node:path"), 1);
 var import_node_async_hooks = require("node:async_hooks");
 init_debug_map();
 var numeric = (value, fallback = 0) => typeof value === "number" && Number.isSafeInteger(value) ? value : fallback;
 var records = (value) => Array.isArray(value) ? value.filter(
   (entry) => entry !== null && typeof entry === "object"
 ) : [];
+var VIRTUAL_DISASSEMBLY_HEADER = [
+  "; Debugger disassembly (temporary, read-only view)",
+  "; Shown because the current instruction has no matching source line in this project.",
+  "; Instructions are decoded from the debug session; edit project source files to change code.",
+  "; Columns: address, instruction bytes, assembly instruction.",
+  ""
+];
 var formatDebugAddress = (address4) => `${address4.architecture}|${address4.addressSpace}|0x${address4.address.toString(16)}${address4.outputOffset === void 0 ? "" : `|0x${address4.outputOffset.toString(16)}`}`;
 var parseDebugAddress = (reference) => {
   const [architecture2, addressSpace2, rawAddress, rawOutputOffset, extra] = reference.split("|");
@@ -61402,7 +63423,7 @@ var DebugAdapterSession = class {
   constructor(options) {
     this.#backend = options.backend;
     this.#map = options.debugMap;
-    this.#sourceRoot = import_node_path9.default.resolve(options.sourceRoot ?? process.cwd());
+    this.#sourceRoot = import_node_path5.default.resolve(options.sourceRoot ?? process.cwd());
     this.#instructionAnnotation = options.instructionAnnotation;
     this.#onMessage = options.onMessage;
     this.#configurationHandshake = options.configurationHandshake ?? false;
@@ -61560,7 +63581,8 @@ var DebugAdapterSession = class {
       case "uttori/traceCapabilities":
         return this.#traceCapabilities();
       case "uttori/startTrace":
-        if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full") throw new Error("Unsupported trace detail mode.");
+        if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full")
+          throw new Error("Unsupported trace detail mode.");
         await this.#backend.startTrace({
           ...args.detail === void 0 ? {} : { detail: args.detail },
           architecture: typeof args.architecture === "string" ? args.architecture : "",
@@ -61663,13 +63685,13 @@ var DebugAdapterSession = class {
         if (range && this.#map) {
           const source = this.#map.sources.find((candidate) => candidate.id === range.sourceId);
           if (source) {
-            const sourcePath = import_node_path9.default.isAbsolute(source.path) ? source.path : import_node_path9.default.resolve(this.#sourceRoot, source.path);
+            const sourcePath = import_node_path5.default.isAbsolute(source.path) ? source.path : import_node_path5.default.resolve(this.#sourceRoot, source.path);
             return {
               id: frame.id,
               name: frame.currentOnly ? `${frame.name} (current frame only)` : frame.name,
               line: range.line,
               column: 1,
-              source: { name: import_node_path9.default.basename(sourcePath), path: sourcePath },
+              source: { name: import_node_path5.default.basename(sourcePath), path: sourcePath },
               instructionPointerReference: formatDebugAddress(frame.pc)
             };
           }
@@ -61678,7 +63700,7 @@ var DebugAdapterSession = class {
         return {
           id: frame.id,
           name: frame.currentOnly ? `${frame.name} (current frame only)` : frame.name,
-          line: 1,
+          line: VIRTUAL_DISASSEMBLY_HEADER.length + 1,
           column: 1,
           source: {
             name: `${frame.pc.architecture} disassembly`,
@@ -61879,10 +63901,10 @@ var DebugAdapterSession = class {
         `Memory space '${address4.addressSpace}' is unavailable or not guaranteed side-effect-free.`
       );
     const offset = numeric(args.offset);
-    const count = numeric(args.count);
+    const count2 = numeric(args.count);
     const result = await this.#backend.readMemory(
       { ...address4, address: address4.address + offset },
-      count
+      count2
     );
     return {
       address: formatDebugAddress(result.address),
@@ -62007,7 +64029,7 @@ var DebugAdapterSession = class {
    */
   #sourceRanges(sourcePath) {
     if (!this.#map) return [];
-    const normalized = sourcePath.split(import_node_path9.default.sep).join("/");
+    const normalized = sourcePath.split(import_node_path5.default.sep).join("/");
     const sourceIds = new Set(
       this.#map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
     );
@@ -62126,9 +64148,12 @@ var DebugAdapterSession = class {
     const address4 = this.#virtualSources.get(sourceReference);
     if (!address4) throw new Error("Unknown source reference.");
     const instructions = await this.#backend.disassemble(address4, 32);
-    const content = instructions.map(
-      (instruction2) => `${formatDebugAddress(instruction2.address)}  ${bytesText(instruction2).padEnd(12)}  ${this.#annotatedInstructionText(instruction2)}`
-    ).join("\n");
+    const content = [
+      ...VIRTUAL_DISASSEMBLY_HEADER,
+      ...instructions.map(
+        (instruction2) => `${formatDebugAddress(instruction2.address)}  ${bytesText(instruction2).padEnd(12)}  ${this.#annotatedInstructionText(instruction2)}`
+      )
+    ].join("\n");
     return { content: `${content}
 `, mimeType: "text/x-uttori-asm" };
   }
@@ -62155,11 +64180,11 @@ var DebugAdapterSession = class {
     };
   }
   #virtualSourceReference(address4) {
-    const key = formatDebugAddress(address4);
-    const existing = this.#virtualReferences.get(key);
+    const key2 = formatDebugAddress(address4);
+    const existing = this.#virtualReferences.get(key2);
     if (existing !== void 0) return existing;
     const reference = this.#nextSourceReference++;
-    this.#virtualReferences.set(key, reference);
+    this.#virtualReferences.set(key2, reference);
     this.#virtualSources.set(reference, address4);
     return reference;
   }
@@ -62275,10 +64300,10 @@ var createDebugMapReplayScript = (map, output) => {
 };
 
 // packages/debug-adapter/src/node-stdio-transport.ts
-var import_node_child_process = require("node:child_process");
+var import_node_child_process2 = require("node:child_process");
 
 // packages/debug-adapter/src/sidecar-protocol.ts
-var import_node_crypto24 = require("node:crypto");
+var import_node_crypto16 = require("node:crypto");
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
 var DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -62317,29 +64342,26 @@ var DEFAULT_DEBUG_SIDECAR_LIMITS = Object.freeze({
   maxQueuedMessages: 1024,
   maxQueuedBytes: 8388608
 });
-var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 var nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-var assertLimit = (name, value) => {
-  if (!positiveInteger(value)) throw new Error(`${name} must be a positive safe integer.`);
-};
 var sessionPattern = /^[\w-]{32,128}$/;
-var createDebugSidecarSessionToken = () => (0, import_node_crypto24.randomBytes)(32).toString("base64url");
+var createDebugSidecarSessionToken = () => (0, import_node_crypto16.randomBytes)(32).toString("base64url");
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value))
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
 }
 var assertRequestBounds = (message, limits) => {
   const args = message.arguments ?? {};
-  if (!isRecord2(args)) throw new Error("Sidecar request arguments must be an object.");
+  if (!isRecord(args)) throw new Error("Sidecar request arguments must be an object.");
   if (message.command === "readMemory") {
-    const count = args.count;
-    if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes)
+    const count2 = args.count;
+    if (!nonNegativeInteger(count2) || count2 > limits.maxMemoryReadBytes)
       throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
   }
   if (message.command === "disassemble") {
-    const count = args.count;
-    if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions)
+    const count2 = args.count;
+    if (!nonNegativeInteger(count2) || count2 > limits.maxDisassemblyInstructions)
       throw new Error(
         `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
       );
@@ -62356,7 +64378,7 @@ var assertRequestBounds = (message, limits) => {
   }
 };
 function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-  if (!isRecord2(value)) throw new Error("Sidecar message must be an object.");
+  if (!isRecord(value)) throw new Error("Sidecar message must be an object.");
   if (value.protocol !== DEBUG_SIDECAR_PROTOCOL)
     throw new Error(`Unsupported sidecar protocol '${String(value.protocol)}'.`);
   if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION)
@@ -62382,14 +64404,15 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
   if (value.type === "event") {
     if (!DEBUG_SIDECAR_EVENTS.includes(value.event))
       throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
-    if (!isRecord2(value.body)) throw new Error("Sidecar event body must be an object.");
+    if (!isRecord(value.body)) throw new Error("Sidecar event body must be an object.");
     return;
   }
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
 var validateLimits = (limits) => {
-  for (const [name, value] of Object.entries(limits))
-    assertLimit(name, value);
+  for (const [name, value] of Object.entries(limits)) {
+    if (!positiveInteger(value)) throw new Error(`${name} must be a positive safe integer.`);
+  }
   if (limits.maxBufferedBytes < limits.maxFrameBytes + 4)
     throw new Error("maxBufferedBytes must hold at least one complete framed message.");
 };
@@ -62489,7 +64512,7 @@ var NodeStdioSidecarTransport = class {
     this.#exit = new Promise((resolve11) => {
       this.#resolveExit = resolve11;
     });
-    this.#child = (0, import_node_child_process.spawn)(options.command, [...options.args ?? []], {
+    this.#child = (0, import_node_child_process2.spawn)(options.command, [...options.args ?? []], {
       cwd: options.cwd,
       env: {
         ...process.env,
@@ -62679,15 +64702,15 @@ var DebugTraceBuffer = class {
    */
   read(maxEvents) {
     positiveInteger3(maxEvents, "Trace batch size");
-    const count = Math.min(maxEvents, this.#length);
+    const count2 = Math.min(maxEvents, this.#length);
     const sequenceStart = this.#nextSequence - this.#length;
-    const addresses2 = Array.from({ length: count }, (_, index) => {
+    const addresses2 = Array.from({ length: count2 }, (_, index) => {
       const address4 = this.#addresses[(this.#head + index) % this.capacity];
       if (address4 === void 0) throw new Error("Trace ring contains an uninitialized entry.");
       return address4;
     });
-    this.#head = (this.#head + count) % this.capacity;
-    this.#length -= count;
+    this.#head = (this.#head + count2) % this.capacity;
+    this.#length -= count2;
     return {
       architecture: this.architecture,
       addressSpace: this.addressSpace,
@@ -62752,10 +64775,10 @@ var replayArchitectureCapabilities = (script) => {
     };
   });
 };
-var addressKey3 = (address4) => `${address4.architecture}\0${address4.addressSpace}\0${address4.outputOffset === void 0 ? `logical:${address4.address}` : `output:${address4.outputOffset}`}`;
+var addressKey4 = (address4) => `${address4.architecture}\0${address4.addressSpace}\0${address4.outputOffset === void 0 ? `logical:${address4.address}` : `output:${address4.outputOffset}`}`;
 var addressesEqual = (left, right) => left.architecture === right.architecture && left.addressSpace === right.addressSpace && (left.address === right.address || left.outputOffset !== void 0 && left.outputOffset === right.outputOffset);
-var assertCount = (count) => {
-  if (!Number.isSafeInteger(count) || count < 0)
+var assertCount = (count2) => {
+  if (!Number.isSafeInteger(count2) || count2 < 0)
     throw new Error("Count must be a non-negative integer.");
 };
 var ReplayDebugBackend = class {
@@ -62786,7 +64809,7 @@ var ReplayDebugBackend = class {
         addressSpaces: [...capability.trace.addressSpaces].sort()
       } : null
     })) : replayArchitectureCapabilities(script);
-    const supports = (key) => architectures.some((capability) => capability[key]);
+    const supports = (key2) => architectures.some((capability) => capability[key2]);
     this.capabilities = Object.freeze({
       pause: supports("pause"),
       step: supports("step"),
@@ -62918,17 +64941,17 @@ var ReplayDebugBackend = class {
    * @param {number} count Number of bytes.
    * @returns {Promise<DebugMemoryRead>} Bytes and an unreadable-byte count.
    */
-  readMemory(address4, count) {
+  readMemory(address4, count2) {
     this.#requireConnected();
-    assertCount(count);
+    assertCount(count2);
     const spaceReadable = this.capabilities.architectures.find(({ architecture: architecture2 }) => architecture2 === address4.architecture)?.memorySpaces.some((memorySpace) => memorySpace.addressSpace === address4.addressSpace);
     if (!spaceReadable)
       throw new Error(
         `Memory address space '${address4.architecture}/${address4.addressSpace}' is not readable.`
       );
-    const bytes = new Uint8Array(count);
+    const bytes = new Uint8Array(count2);
     let readable = 0;
-    for (let offset = 0; offset < count; offset++) {
+    for (let offset = 0; offset < count2; offset++) {
       const current = address4.address + offset;
       const region = this.#snapshot.memory.find(
         (candidate) => candidate.addressSpace === address4.addressSpace && candidate.start <= current && current < candidate.start + candidate.bytes.length
@@ -62937,7 +64960,7 @@ var ReplayDebugBackend = class {
       bytes[offset] = region.bytes[current - region.start] ?? 0;
       readable++;
     }
-    return Promise.resolve({ address: { ...address4 }, bytes, unreadableBytes: count - readable });
+    return Promise.resolve({ address: { ...address4 }, bytes, unreadableBytes: count2 - readable });
   }
   /**
    * Replaces all instruction breakpoints with stable ids sorted by qualified address.
@@ -62947,11 +64970,11 @@ var ReplayDebugBackend = class {
   setBreakpoints(addresses2) {
     this.#requireConnected();
     this.#breakpoints.clear();
-    const sorted = [...addresses2].sort(
+    const sorted2 = [...addresses2].sort(
       (left, right) => left.architecture.localeCompare(right.architecture) || left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address
     );
-    for (const address4 of sorted) {
-      const key = addressKey3(address4);
+    for (const address4 of sorted2) {
+      const key2 = addressKey4(address4);
       const breakpoint2 = {
         id: this.#nextBreakpointId++,
         address: { ...address4 },
@@ -62959,7 +64982,7 @@ var ReplayDebugBackend = class {
           (snapshot) => snapshot.frames.some((frame) => addressesEqual(frame.pc, address4))
         )
       };
-      this.#breakpoints.set(key, breakpoint2);
+      this.#breakpoints.set(key2, breakpoint2);
       this.#emit({ type: "breakpoint", breakpoint: breakpoint2 });
     }
     return Promise.resolve([...this.#breakpoints.values()]);
@@ -62970,13 +64993,13 @@ var ReplayDebugBackend = class {
    * @param {number} count Maximum instruction count.
    * @returns {Promise<readonly DebugInstruction[]>} Stable instruction copies.
    */
-  disassemble(address4, count) {
+  disassemble(address4, count2) {
     this.#requireConnected();
-    assertCount(count);
+    assertCount(count2);
     return Promise.resolve(
       (this.#snapshot.instructions ?? []).filter(
         (instruction2) => instruction2.address.architecture === address4.architecture && instruction2.address.addressSpace === address4.addressSpace && instruction2.address.address >= address4.address
-      ).sort((left, right) => left.address.address - right.address.address).slice(0, count).map((instruction2) => ({
+      ).sort((left, right) => left.address.address - right.address.address).slice(0, count2).map((instruction2) => ({
         ...instruction2,
         address: { ...instruction2.address },
         bytes: [...instruction2.bytes]
@@ -63058,20 +65081,20 @@ var ReplayDebugBackend = class {
 };
 
 // packages/debug-adapter/src/trace-detail-validation.ts
-var isArray4 = (value) => Array.isArray(value);
-var validateDebugTraceDetails = (value, count) => {
-  if (!Array.isArray(value) || value.length !== count)
+var isArray2 = (value) => Array.isArray(value);
+var validateDebugTraceDetails = (value, count2) => {
+  if (!Array.isArray(value) || value.length !== count2)
     throw new Error("Trace details must align with instruction addresses.");
   for (const detail of value) {
-    if (!detail || !isArray4(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255))
+    if (!detail || !isArray2(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255))
       throw new Error("Invalid trace instruction bytes.");
-    if (!detail.state || typeof detail.state !== "object" || isArray4(detail.state) || Object.entries(detail.state).some(
-      ([key, entry]) => !key || !["number", "boolean", "string"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
+    if (!detail.state || typeof detail.state !== "object" || isArray2(detail.state) || Object.entries(detail.state).some(
+      ([key2, entry]) => !key2 || !["number", "boolean", "string"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
     ))
       throw new Error("Invalid trace instruction state.");
     if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0))
       throw new Error("Invalid trace memory loss.");
-    if (detail.memoryAccesses !== void 0 && (!isArray4(detail.memoryAccesses) || detail.memoryAccesses.length > 256))
+    if (detail.memoryAccesses !== void 0 && (!isArray2(detail.memoryAccesses) || detail.memoryAccesses.length > 256))
       throw new Error("Invalid trace memory access bound.");
     for (const access of detail.memoryAccesses ?? []) {
       if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu")))
@@ -63108,7 +65131,7 @@ var integer4 = (value, context, minimum = 0) => {
   return value;
 };
 var positiveInteger4 = (value, context) => integer4(value, context, 1);
-var address3 = (value, context) => {
+var address = (value, context) => {
   const candidate = record2(value, context);
   const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer4(candidate.outputOffset, `${context}.outputOffset`);
   return {
@@ -63259,11 +65282,11 @@ var stackFrame = (value, context) => {
     id: positiveInteger4(candidate.id, `${context}.id`),
     threadId: positiveInteger4(candidate.threadId, `${context}.threadId`),
     name: string2(candidate.name, `${context}.name`),
-    pc: address3(candidate.pc, `${context}.pc`),
+    pc: address(candidate.pc, `${context}.pc`),
     ...currentOnly === void 0 ? {} : { currentOnly }
   };
 };
-var register4 = (value, context) => {
+var register = (value, context) => {
   const candidate = record2(value, context);
   const group2 = candidate.group === void 0 ? void 0 : string2(candidate.group, `${context}.group`);
   return {
@@ -63278,7 +65301,7 @@ var breakpoint = (value, context) => {
   const message = candidate.message === void 0 ? void 0 : string2(candidate.message, `${context}.message`);
   return {
     id: positiveInteger4(candidate.id, `${context}.id`),
-    address: address3(candidate.address, `${context}.address`),
+    address: address(candidate.address, `${context}.address`),
     verified: boolean(candidate.verified, `${context}.verified`),
     ...message === void 0 ? {} : { message }
   };
@@ -63292,7 +65315,7 @@ var instruction = (value, context) => {
   const candidate = record2(value, context);
   const symbol = candidate.symbol === void 0 ? void 0 : string2(candidate.symbol, `${context}.symbol`);
   return {
-    address: address3(candidate.address, `${context}.address`),
+    address: address(candidate.address, `${context}.address`),
     bytes: array(candidate.bytes, `${context}.bytes`).map(
       (entry, index) => byte(entry, `${context}.bytes[${index}]`)
     ),
@@ -63474,12 +65497,12 @@ var SidecarDebugBackend = class {
       }),
       "Registers response"
     );
-    return result.map((entry, index) => register4(entry, `Registers response[${index}]`));
+    return result.map((entry, index) => register(entry, `Registers response[${index}]`));
   }
   /** @inheritdoc */
-  async readMemory(requestedAddress, count) {
-    const checkedAddress = address3(requestedAddress, "Memory address");
-    const checkedCount = integer4(count, "Memory count");
+  async readMemory(requestedAddress, count2) {
+    const checkedAddress = address(requestedAddress, "Memory address");
+    const checkedCount = integer4(count2, "Memory count");
     const readable = this.capabilities.architectures.find(({ architecture: architecture2 }) => architecture2 === checkedAddress.architecture)?.memorySpaces.some(
       (memorySpace) => memorySpace.addressSpace === checkedAddress.addressSpace
     );
@@ -63494,7 +65517,7 @@ var SidecarDebugBackend = class {
       }),
       "Memory response"
     );
-    const returnedAddress = address3(result.address, "Memory response.address");
+    const returnedAddress = address(result.address, "Memory response.address");
     if (!addressesEqual2(returnedAddress, checkedAddress))
       throw new Error("Memory response address does not match the request.");
     const bytes = base64Bytes(result.data, "Memory response.data");
@@ -63509,7 +65532,7 @@ var SidecarDebugBackend = class {
   }
   /** @inheritdoc */
   async setBreakpoints(addresses2) {
-    const checked2 = addresses2.map((entry, index) => address3(entry, `Breakpoints[${index}]`));
+    const checked2 = addresses2.map((entry, index) => address(entry, `Breakpoints[${index}]`));
     const result = array(
       await this.#requireConnected().request("setBreakpoints", { breakpoints: checked2 }),
       "Breakpoints response"
@@ -63523,9 +65546,9 @@ var SidecarDebugBackend = class {
     return breakpoints;
   }
   /** @inheritdoc */
-  async disassemble(requestedAddress, count) {
-    const checkedAddress = address3(requestedAddress, "Disassembly address");
-    const checkedCount = integer4(count, "Disassembly count");
+  async disassemble(requestedAddress, count2) {
+    const checkedAddress = address(requestedAddress, "Disassembly address");
+    const checkedCount = integer4(count2, "Disassembly count");
     const result = array(
       await this.#requireConnected().request("disassemble", {
         address: checkedAddress,
@@ -63814,8 +65837,7 @@ var DebugSidecarClient = class {
 };
 
 // packages/vscode-extension/src/analysis-navigation.ts
-init_src();
-var import_vscode7 = require("vscode");
+var import_vscode9 = require("vscode");
 var sortedUnique7 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
 var findDebugMapSources = async (target) => {
   const locations = [];
@@ -63857,9 +65879,9 @@ var findDebugMapSources = async (target) => {
 };
 var openSourceLocation = async (locations) => {
   if (locations.length === 0) return false;
-  const selected = locations.length === 1 ? locations[0] : (await import_vscode7.window.showQuickPick(
+  const selected = locations.length === 1 ? locations[0] : (await import_vscode9.window.showQuickPick(
     locations.map((location) => ({
-      label: `${path16.basename(location.file)}:${location.line}`,
+      label: `${path13.basename(location.file)}:${location.line}`,
       description: `${location.architecture} \xB7 ${location.addressSpace} \xB7 ${location.mapFile}`,
       location
     })),
@@ -63869,30 +65891,23 @@ var openSourceLocation = async (locations) => {
     }
   ))?.location;
   if (!selected) return true;
-  const document = await import_vscode7.workspace.openTextDocument(import_vscode7.Uri.file(selected.file));
-  const editor = await import_vscode7.window.showTextDocument(document, { preview: true });
-  const position = new import_vscode7.Position(Math.max(0, selected.line - 1), 0);
-  editor.selection = new import_vscode7.Selection(position, position);
-  editor.revealRange(editor.selection, import_vscode7.TextEditorRevealType.InCenterIfOutsideViewport);
+  const document = await import_vscode9.workspace.openTextDocument(import_vscode9.Uri.file(selected.file));
+  const editor = await import_vscode9.window.showTextDocument(document, { preview: true });
+  const position = new import_vscode9.Position(Math.max(0, selected.line - 1), 0);
+  editor.selection = new import_vscode9.Selection(position, position);
+  editor.revealRange(editor.selection, import_vscode9.TextEditorRevealType.InCenterIfOutsideViewport);
   return true;
 };
 var chooseArchitecture = async (architectures) => {
   if (architectures.length === 0) return void 0;
   if (architectures.length === 1) return architectures[0];
-  return import_vscode7.window.showQuickPick(architectures, {
+  return import_vscode9.window.showQuickPick(architectures, {
     title: "Open Virtual Disassembly",
     placeHolder: "Choose the persisted architecture identity"
   });
 };
-var annotationSummaries = (projection, addressSpace2, address4, outputOffset, architecture2) => [
-  ...new Set(
-    projection.instructions.filter(
-      (annotation) => (annotation.addressSpace === addressSpace2 && annotation.address === address4 || outputOffset !== void 0 && annotation.outputOffsets.includes(outputOffset)) && (architecture2 === void 0 || annotation.architectures.length === 0 || annotation.architectures.includes(architecture2))
-    ).map((annotation) => formatInstructionAnnotationSummary(annotation)).filter(Boolean)
-  )
-].join(" | ");
 var openLiveDisassembly = async (target, architectures) => {
-  const session = import_vscode7.debug.activeDebugSession;
+  const session = import_vscode9.debug.activeDebugSession;
   if (!session || session.type !== "uttori-asm") return false;
   const architecture2 = await chooseArchitecture(architectures);
   if (!architecture2) return false;
@@ -63916,92 +65931,76 @@ var openLiveDisassembly = async (target, architectures) => {
       const symbol = typeof instruction2.symbol === "string" ? ` ; ${instruction2.symbol}` : "";
       return `${address4.padEnd(42)} ${bytes.padEnd(16)} ${text2}${symbol}`;
     });
-    const document = await import_vscode7.workspace.openTextDocument({
+    const document = await import_vscode9.workspace.openTextDocument({
       language: "uttori-snes",
       content: `; Live virtual disassembly from the active Uttori ASM debug backend
 ${lines.join("\n")}
 `
     });
-    await import_vscode7.window.showTextDocument(document, { preview: true });
+    await import_vscode9.window.showTextDocument(document, { preview: true });
     return true;
   } catch {
     return false;
   }
 };
-var openPersistedDisassembly = async (target, project, projection) => {
-  const nodes = project.shards.analysis.filter(
-    (record3) => record3.kind === "cfg-node" && record3.addressSpace === target.addressSpace
-  ).sort((left, right) => left.address - right.address || left.id.localeCompare(right.id));
-  let index = nodes.findIndex(({ address: address4 }) => address4 >= target.address);
-  if (index < 0) index = Math.max(0, nodes.length - 1);
-  const start = Math.max(0, index - 4);
-  const visible = nodes.slice(start, start + 32);
-  const lines = visible.map((node) => {
-    const bytes = node.bytes ? node.bytes.map((byte2) => byte2.toString(16).toUpperCase().padStart(2, "0")).join(" ") : [node.opcode.toString(16).toUpperCase().padStart(2, "0")].concat(Array.from({ length: Math.max(0, node.size - 1) }, () => "??")).join(" ");
-    const context = node.context.length > 0 ? ` context=${node.context.map((value) => `0x${value.toString(16)}`).join("/")}` : "";
-    const annotations = annotationSummaries(
-      projection,
-      node.addressSpace,
-      node.address,
-      node.fileOffset
-    );
-    return `${node.addressSpace}|0x${node.address.toString(16)}  ${bytes.padEnd(16)}  ${node.mnemonic} <${node.mode}> ; ${node.id}${context}${annotations ? ` ; ${annotations}` : ""}`;
-  });
-  const related = project.shards.analysis.filter(
-    (record3) => "address" in record3 && record3.addressSpace === target.addressSpace && record3.address === target.address && target.recordIds.includes(record3.id)
-  );
+var openPersistedDisassembly = async (target, projection) => {
+  const lines = projection.lines;
   const header = [
     "; Persisted analysis disassembly (read-only)",
     "; This view renders accepted CFG records; unknown operand bytes remain ?? and are not decoded again.",
     `; Location: ${target.addressSpace}|0x${target.address.toString(16)}`,
-    `; Records: ${target.recordIds.join(", ")}`,
-    ...related.length > 0 ? related.map((record3) => `; ${record3.kind}: ${JSON.stringify(record3)}`) : []
+    `; Records: ${target.recordIds.join(", ")}`
   ];
   const content = `${header.join("\n")}
 ${lines.length > 0 ? lines.join("\n") : "; No accepted CFG node exists near this address."}
 `;
-  const document = await import_vscode7.workspace.openTextDocument({ language: "uttori-snes", content });
-  const editor = await import_vscode7.window.showTextDocument(document, { preview: true });
+  const document = await import_vscode9.workspace.openTextDocument({ language: "uttori-snes", content });
+  const editor = await import_vscode9.window.showTextDocument(document, { preview: true });
   const matchingLine = lines.findIndex(
     (line) => line.startsWith(`${target.addressSpace}|0x${target.address.toString(16)} `)
   );
   if (matchingLine >= 0) {
-    const position = new import_vscode7.Position(header.length + matchingLine, 0);
-    editor.selection = new import_vscode7.Selection(position, position);
-    editor.revealRange(editor.selection, import_vscode7.TextEditorRevealType.InCenterIfOutsideViewport);
+    const position = new import_vscode9.Position(header.length + matchingLine, 0);
+    editor.selection = new import_vscode9.Selection(position, position);
+    editor.revealRange(editor.selection, import_vscode9.TextEditorRevealType.InCenterIfOutsideViewport);
   }
 };
 var navigateToAnalysisLocation = async (target) => {
   try {
-    const project = loadAnalysisProject(target.projectDirectory);
-    if (project.manifest.target !== target.target || project.manifest.rom.contentSha256 !== target.romContentSha256 || project.manifest.rom.contentSize !== target.romContentSize) {
+    const manifest = await analysisWorker().request(
+      target.projectDirectory,
+      "manifest"
+    );
+    if (manifest.target !== target.target || manifest.rom.contentSha256 !== target.romContentSha256 || manifest.rom.contentSize !== target.romContentSize) {
       throw new Error("Navigation target no longer matches the current native analysis project.");
     }
-    const projection = buildInstructionAnalysisAnnotations(project.manifest, project.shards);
     const search = await findDebugMapSources(target);
     if (await openSourceLocation(search.locations)) return;
-    if (project.shards.analysis.some(
-      (record3) => record3.kind === "cfg-node" && record3.fileOffset === void 0 && record3.bytes && record3.addressSpace === target.addressSpace && record3.address === target.address
-    )) {
-      await openPersistedDisassembly(target, project, projection);
+    const projection = await analysisWorker().request(
+      target.projectDirectory,
+      "navigation",
+      { navigationTarget: target }
+    );
+    if (projection.capturedRam) {
+      await openPersistedDisassembly(target, projection);
       return;
     }
     if (await openLiveDisassembly(target, search.architectures)) return;
     if (search.staleSources > 0) {
-      await import_vscode7.window.showWarningMessage(
+      await import_vscode9.window.showWarningMessage(
         `Found ${search.staleSources} stale source mapping(s); opening persisted analysis disassembly instead.`
       );
     }
-    await openPersistedDisassembly(target, project, projection);
+    await openPersistedDisassembly(target, projection);
   } catch (error) {
-    await import_vscode7.window.showErrorMessage(
+    await import_vscode9.window.showErrorMessage(
       `Could not open analysis location: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 };
 
 // packages/vscode-extension/src/outline-tree.ts
-var import_vscode8 = require("vscode");
+var import_vscode10 = require("vscode");
 var import_vscode_languageclient = __toESM(require_api3());
 var ProjectOutlineProvider = class {
   constructor(getClient) {
@@ -64009,15 +66008,15 @@ var ProjectOutlineProvider = class {
   }
   getClient;
   static viewId = "uttori-asm.projectOutline";
-  #onDidChangeTreeData = new import_vscode8.EventEmitter();
+  #onDidChangeTreeData = new import_vscode10.EventEmitter();
   onDidChangeTreeData = this.#onDidChangeTreeData.event;
   refresh() {
     this.#onDidChangeTreeData.fire();
   }
   getTreeItem(element2) {
-    const item = new import_vscode8.TreeItem(
+    const item = new import_vscode10.TreeItem(
       element2.label,
-      element2.collapsible ? import_vscode8.TreeItemCollapsibleState.Collapsed : import_vscode8.TreeItemCollapsibleState.None
+      element2.collapsible ? import_vscode10.TreeItemCollapsibleState.Collapsed : import_vscode10.TreeItemCollapsibleState.None
     );
     item.id = element2.id;
     item.description = element2.description;
@@ -64025,7 +66024,7 @@ var ProjectOutlineProvider = class {
     item.iconPath = element2.icon;
     item.contextValue = element2.symbolUri ? "file" : "symbol";
     if (element2.uri) {
-      const uri = import_vscode8.Uri.parse(element2.uri);
+      const uri = import_vscode10.Uri.parse(element2.uri);
       item.resourceUri = uri;
       item.command = {
         command: "vscode.open",
@@ -64033,7 +66032,7 @@ var ProjectOutlineProvider = class {
         arguments: element2.range ? [
           uri,
           {
-            selection: new import_vscode8.Range(
+            selection: new import_vscode10.Range(
               element2.range.start.line,
               element2.range.start.character,
               element2.range.end.line,
@@ -64117,38 +66116,38 @@ function symbolToItem(symbol, uri, id) {
 function iconForKind(kind) {
   switch (kind) {
     case "entry":
-      return new import_vscode8.ThemeIcon("folder-library");
+      return new import_vscode10.ThemeIcon("folder-library");
     case "orphanGroup":
-      return new import_vscode8.ThemeIcon("folder");
+      return new import_vscode10.ThemeIcon("folder");
     case "include":
-      return new import_vscode8.ThemeIcon("link");
+      return new import_vscode10.ThemeIcon("link");
     case "file":
     default:
-      return new import_vscode8.ThemeIcon("file");
+      return new import_vscode10.ThemeIcon("file");
   }
 }
 function iconForSymbolKind(kind) {
   switch (kind) {
     case import_vscode_languageclient.SymbolKind.Namespace:
-      return new import_vscode8.ThemeIcon("symbol-namespace");
+      return new import_vscode10.ThemeIcon("symbol-namespace");
     case import_vscode_languageclient.SymbolKind.Function:
-      return new import_vscode8.ThemeIcon("symbol-method");
+      return new import_vscode10.ThemeIcon("symbol-method");
     case import_vscode_languageclient.SymbolKind.Constant:
-      return new import_vscode8.ThemeIcon("symbol-constant");
+      return new import_vscode10.ThemeIcon("symbol-constant");
     case import_vscode_languageclient.SymbolKind.Struct:
-      return new import_vscode8.ThemeIcon("symbol-struct");
+      return new import_vscode10.ThemeIcon("symbol-struct");
     case import_vscode_languageclient.SymbolKind.Field:
-      return new import_vscode8.ThemeIcon("symbol-field");
+      return new import_vscode10.ThemeIcon("symbol-field");
     case import_vscode_languageclient.SymbolKind.Variable:
-      return new import_vscode8.ThemeIcon("symbol-variable");
+      return new import_vscode10.ThemeIcon("symbol-variable");
     default:
-      return new import_vscode8.ThemeIcon("symbol-misc");
+      return new import_vscode10.ThemeIcon("symbol-misc");
   }
 }
 
 // packages/vscode-extension/src/panel.ts
-var path17 = __toESM(require("node:path"));
-var import_vscode9 = require("vscode");
+var path14 = __toESM(require("node:path"));
+var import_vscode11 = require("vscode");
 var ProjectPanelProvider = class {
   constructor(extensionUri, getClient, initConfig2) {
     this.extensionUri = extensionUri;
@@ -64161,6 +66160,8 @@ var ProjectPanelProvider = class {
   static viewId = "uttori-asm.projectPanel";
   #view;
   #metadata;
+  #snapshotRequest = 0;
+  #pending = /* @__PURE__ */ new Set();
   /**
    * Called when the view becomes visible.
    * @param {WebviewView} webviewView The hosted webview.
@@ -64169,9 +66170,13 @@ var ProjectPanelProvider = class {
     this.#view = webviewView;
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [import_vscode9.Uri.joinPath(this.extensionUri, "media")]
+      localResourceRoots: [import_vscode11.Uri.joinPath(this.extensionUri, "media")]
     };
-    webviewView.webview.html = this.renderHtml(webviewView.webview);
+    webviewView.webview.html = renderWebviewTemplate(
+      webviewView.webview,
+      this.extensionUri,
+      "panel"
+    );
     webviewView.webview.onDidReceiveMessage((message) => {
       void this.onMessage(message);
     });
@@ -64189,11 +66194,47 @@ var ProjectPanelProvider = class {
     if (!this.#view) {
       return;
     }
+    const request = ++this.#snapshotRequest;
     const snapshot = await this.snapshot();
+    if (request !== this.#snapshotRequest) return;
     this.#metadata = snapshot.metadata;
-    void this.#view.webview.postMessage({ type: "snapshot", ...snapshot });
+    void this.#view.webview.postMessage({
+      type: "snapshot",
+      ...snapshot,
+      trusted: import_vscode11.workspace.isTrusted,
+      projectName: import_vscode11.workspace.name
+    });
   }
+  /**
+   * Handles messages from the webview.
+   * @param {Object} message The message object.
+   * @param {string} message.type The type of message.
+   * @param {unknown} message.value The value of the message.
+   */
   async onMessage(message) {
+    if (!message || typeof message.type !== "string" || this.#pending.has(message.type)) return;
+    this.#pending.add(message.type);
+    let error;
+    try {
+      await this.executeMessage(message);
+    } catch (failure) {
+      error = failure instanceof Error ? failure.message : String(failure);
+    } finally {
+      this.#pending.delete(message.type);
+      void this.#view?.webview.postMessage({
+        type: "actionComplete",
+        command: message.type,
+        error
+      });
+    }
+  }
+  /**
+   * Executes a message.
+   * @param {Object} message The message object.
+   * @param {string} message.type The type of message.
+   * @param {unknown} message.value The value of the message.
+   */
+  async executeMessage(message) {
     switch (message.type) {
       case "ready":
       case "refresh":
@@ -64213,26 +66254,35 @@ var ProjectPanelProvider = class {
           captureStop: "stop",
           captureReview: "review"
         }[message.type];
-        await import_vscode9.commands.executeCommand(`asm.capture.${command}`);
+        await import_vscode11.commands.executeCommand(`asm.capture.${command}`);
         return;
       }
+      case "editAnnotation":
+        await import_vscode11.commands.executeCommand("asm.disassembly.editAnnotation");
+        return;
+      case "configureHeuristics":
+        await import_vscode11.commands.executeCommand("asm.heuristics.configure");
+        return;
+      case "previewHeuristics":
+        await import_vscode11.commands.executeCommand("asm.heuristics.preview");
+        return;
       case "disassemblyStatus":
-        await import_vscode9.commands.executeCommand("asm.disassembly.status");
+        await import_vscode11.commands.executeCommand("asm.disassembly.status");
         return;
       case "regenerateDisassembly":
-        await import_vscode9.commands.executeCommand("asm.disassembly.regenerate");
+        await import_vscode11.commands.executeCommand("asm.disassembly.regenerate");
         return;
       case "openRamMap":
-        await import_vscode9.commands.executeCommand("asm.ramMap.open");
+        await import_vscode11.commands.executeCommand("asm.ramMap.open");
         return;
       case "importRuntimeTrace":
-        await import_vscode9.commands.executeCommand("asm.trace.importRegenerate");
+        await import_vscode11.commands.executeCommand("asm.trace.importRegenerate");
         return;
       case "startExecutionCapture":
-        await import_vscode9.commands.executeCommand("asm.trace.start");
+        await import_vscode11.commands.executeCommand("asm.trace.start");
         return;
       case "stopExecutionCapture":
-        await import_vscode9.commands.executeCommand("asm.trace.stopAnalyze");
+        await import_vscode11.commands.executeCommand("asm.trace.stopAnalyze");
         return;
       case "initConfig":
         await this.initConfig();
@@ -64240,9 +66290,9 @@ var ProjectPanelProvider = class {
         return;
       case "openConfig": {
         const { status } = await this.snapshot();
-        const root = import_vscode9.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const root = import_vscode11.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (root && status.configFile)
-          await import_vscode9.window.showTextDocument(import_vscode9.Uri.file(path17.resolve(root, status.configFile)));
+          await import_vscode11.window.showTextDocument(import_vscode11.Uri.file(path14.resolve(root, status.configFile)));
         return;
       }
       case "addEntryPoint":
@@ -64270,8 +66320,12 @@ var ProjectPanelProvider = class {
         return;
     }
   }
+  /**
+   * Takes a snapshot of the project status and metadata.
+   * @returns {Promise<{ status: ProjectStatus; metadata?: ProjectMetadata; indexReady: boolean }>} A promise that resolves with the snapshot.
+   */
   async snapshot() {
-    const config = import_vscode9.workspace.getConfiguration("asm");
+    const config = import_vscode11.workspace.getConfiguration("asm");
     const fallback = {
       fileCount: 0,
       symbolCount: 0,
@@ -64290,20 +66344,25 @@ var ProjectPanelProvider = class {
     };
     const client3 = this.getClient();
     if (!client3) {
-      return { status: fallback };
+      return { status: fallback, indexReady: false };
     }
     try {
       const [status, metadata] = await Promise.all([
         client3.sendRequest("asm/status"),
         client3.sendRequest("asm/projectMetadata")
       ]);
-      return { status: { ...fallback, ...status }, metadata };
+      return { status: { ...fallback, ...status }, metadata, indexReady: true };
     } catch {
-      return { status: fallback };
+      return { status: fallback, indexReady: false };
     }
   }
-  async addPath(key, folders) {
-    const picked = await import_vscode9.window.showOpenDialog({
+  /**
+   * Adds a path to the project.
+   * @param {string} key The key of the path to add.
+   * @param {boolean} folders Whether to add folders.
+   */
+  async addPath(key2, folders) {
+    const picked = await import_vscode11.window.showOpenDialog({
       canSelectFiles: !folders,
       canSelectFolders: folders,
       canSelectMany: true,
@@ -64312,20 +66371,27 @@ var ProjectPanelProvider = class {
     if (!picked?.length) {
       return;
     }
-    const current = import_vscode9.workspace.getConfiguration("asm").get(key, []);
+    const current = import_vscode11.workspace.getConfiguration("asm").get(key2, []);
     const next = [...current];
     for (const uri of picked) {
-      const relative6 = toWorkspaceRelative(uri.fsPath);
-      if (!next.includes(relative6)) {
-        next.push(relative6);
+      const folder = import_vscode11.workspace.workspaceFolders?.[0];
+      const relative6 = folder ? path14.relative(folder.uri.fsPath, uri.fsPath) : void 0;
+      const value = relative6 && !relative6.startsWith("..") ? relative6 : uri.fsPath;
+      if (!next.includes(value)) {
+        next.push(value);
       }
     }
-    await this.updateSetting(key, next);
+    await this.updateSetting(key2, next);
   }
-  async removePath(key, value) {
-    const current = import_vscode9.workspace.getConfiguration("asm").get(key, []);
+  /**
+   * Removes a path from the project.
+   * @param {string} key The key of the path to remove.
+   * @param {string} value The value of the path to remove.
+   */
+  async removePath(key2, value) {
+    const current = import_vscode11.workspace.getConfiguration("asm").get(key2, []);
     await this.updateSetting(
-      key,
+      key2,
       current.filter((entry) => entry !== value)
     );
   }
@@ -64335,198 +66401,53 @@ var ProjectPanelProvider = class {
    * @param {string} targetId Canonical target contribution ID.
    */
   async setTarget(targetId) {
-    const config = import_vscode9.workspace.getConfiguration("asm");
+    const config = import_vscode11.workspace.getConfiguration("asm");
     const target = this.#metadata?.targets.find((entry) => entry.id === targetId);
-    await config.update("target", targetId, import_vscode9.ConfigurationTarget.Workspace);
+    await config.update("target", targetId, import_vscode11.ConfigurationTarget.Workspace);
     if (target?.defaultArchitecture) {
       await config.update(
         "architecture",
         target.defaultArchitecture,
-        import_vscode9.ConfigurationTarget.Workspace
+        import_vscode11.ConfigurationTarget.Workspace
       );
     }
     if (target?.defaultOutputExtension) {
       const current = config.get("buildOutput", "");
       if (current) {
-        const next = replaceOutputExtension(current, target.defaultOutputExtension);
+        const suffix = target.defaultOutputExtension.startsWith(".") ? target.defaultOutputExtension : `.${target.defaultOutputExtension}`;
+        const next = current.replace(/\.[^.]+$/, suffix);
         if (next !== current) {
-          await config.update("buildOutput", next, import_vscode9.ConfigurationTarget.Workspace);
+          await config.update("buildOutput", next, import_vscode11.ConfigurationTarget.Workspace);
         }
       }
     }
     await this.refresh();
   }
-  async updateSetting(key, value) {
-    await import_vscode9.workspace.getConfiguration("asm").update(key, value, import_vscode9.ConfigurationTarget.Workspace);
-    await this.refresh();
-  }
   /**
-   * Renders the themed project panel HTML.
-   * @param {Webview} webview The hosted webview used for CSP and asset URIs.
-   * @returns {string} The complete HTML document.
+   * Updates a setting in the project.
+   * @param {string} key The key of the setting to update.
+   * @param {unknown} value The value of the setting to update.
    */
-  renderHtml(webview) {
-    const nonce = getNonce();
-    const cssUri = webview.asWebviewUri(import_vscode9.Uri.joinPath(this.extensionUri, "media", "panel.css"));
-    const styleSrc = webview.cspSource;
-    const stylesheet = cssUri.toString();
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${styleSrc}; script-src 'nonce-${nonce}';" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="${stylesheet}" />
-</head>
-<body>
-  <h2>Execution Window</h2>
-  <p class="muted">Record from an explicit start to stop point, then rebuild and list every identified routine that ran.</p>
-  <div class="actions"><button data-cmd="startExecutionCapture">Start capture</button><button data-cmd="stopExecutionCapture">Stop / show routines</button></div>
-  <h2>Behavior Capture</h2>
-  <p class="muted">Compare running idle code with an action. Start with the guide or a safe synthetic demo.</p>
-  <div class="actions"><button data-cmd="captureGuide">Guide</button><button data-cmd="captureDemo">Idle demo</button></div>
-  <div class="actions"><button data-cmd="captureIdle">1. Capture idle</button><button data-cmd="captureBehavior">2. Capture behavior</button></div>
-  <div class="actions"><button data-cmd="captureStop">Stop capture</button><button data-cmd="captureReview">3. Review / apply</button></div>
-  <h2>Disassembly</h2>
-  <p class="muted">Edit the persistent RAM map, check whether source reflects current metadata/evidence, or explicitly import a trace and rebuild.</p>
-  <div class="actions"><button data-cmd="openRamMap">Open RAM map</button><button data-cmd="disassemblyStatus">Status</button></div>
-  <div class="actions"><button data-cmd="regenerateDisassembly">Analyze / regenerate</button></div>
-  <div class="actions"><button data-cmd="importRuntimeTrace">Import trace / update</button></div>
-  <h2>Analysis</h2>
-  <div class="status" id="status"></div>
-  <h2>Entry points</h2>
-  <div class="list" id="entryPoints"></div>
-  <div class="actions"><button data-cmd="addEntryPoint">Add file</button></div>
-  <h2>Include paths</h2>
-  <div class="list" id="includePaths"></div>
-  <div class="actions"><button data-cmd="addIncludePath">Add folder</button></div>
-  <h2>Target</h2>
-  <div class="field"><select id="target"></select></div>
-  <h2>Architecture</h2>
-  <div class="field"><select id="architecture"></select></div>
-  <h2>Build output</h2>
-  <div class="field"><input id="buildOutput" placeholder="game.sfc" /></div>
-  <div class="actions">
-    <button class="primary" id="configAction" data-cmd="initConfig">Initialize uttori-asm.config.json</button>
-  </div>
-  <script nonce="${nonce}">
-    const vscode = acquireVsCodeApi();
-    const $ = (id) => document.getElementById(id);
-    const fillList = (id, items, removeType) => {
-      const root = $(id);
-      root.innerHTML = "";
-      if (!items.length) {
-        root.innerHTML = '<div class="muted">None</div>';
-        return;
-      }
-      for (const item of items) {
-        const row = document.createElement("div");
-        row.className = "item";
-        const label = document.createElement("span");
-        label.textContent = item;
-        const button = document.createElement("button");
-        button.className = "icon";
-        button.type = "button";
-        button.textContent = "\xD7";
-        button.title = "Remove";
-        button.setAttribute("aria-label", "Remove " + item);
-        button.addEventListener("click", () => vscode.postMessage({ type: removeType, value: item }));
-        row.append(label, button);
-        root.appendChild(row);
-      }
-    };
-    const fillSelect = (id, options, value) => {
-      const select = $(id);
-      const seen = new Set();
-      select.innerHTML = "";
-      for (const entry of options) {
-        if (!entry || !entry.id || seen.has(entry.id)) continue;
-        seen.add(entry.id);
-        const option = document.createElement("option");
-        option.value = entry.id;
-        option.textContent = entry.displayName || entry.id;
-        if (entry.id === value) option.selected = true;
-        select.appendChild(option);
-      }
-      if (value && !seen.has(value)) {
-        const option = document.createElement("option");
-        option.value = value;
-        option.selected = true;
-        option.textContent = value;
-        select.prepend(option);
-      }
-    };
-    window.addEventListener("message", (event) => {
-      const { status, metadata } = event.data || {};
-      if (!status) return;
-      $("configAction").textContent = status.configFile ? "Open project configuration" : "Initialize uttori-asm.config.json";
-      $("configAction").setAttribute("data-cmd", status.configFile ? "openConfig" : "initConfig");
-      const duration = status.lastReindexDurationMs == null ? "\u2014" : status.lastReindexDurationMs + "ms";
-      const roots = status.lastReindexRootCount || 0;
-      const cached = status.lastReindexCachedRoots || 0;
-      const analysed = status.lastReindexAnalyzedRoots || 0;
-      $("status").innerHTML = [
-        ["Files", status.fileCount],
-        ["Symbols", status.symbolCount],
-        ["Errors", status.errorCount],
-        ["Last reindex", duration],
-        ["Roots", roots + " (" + cached + " cached, " + analysed + " analysed)"],
-        ["Config", status.configFile || "\u2014"]
-      ].map(([label, value]) => '<div class="row"><span class="muted">' + label + '</span><span>' + value + '</span></div>').join("");
-      fillList("entryPoints", status.entryPoints || [], "removeEntryPoint");
-      fillList("includePaths", status.includePaths || [], "removeIncludePath");
-      fillSelect("target", metadata?.targets || [], status.target || metadata?.activeTarget || "");
-      fillSelect("architecture", metadata?.architectures || [], status.architecture || metadata?.activeArchitecture || "");
-      $("buildOutput").value = status.buildOutput || "";
-    });
-    document.addEventListener("click", (event) => {
-      const cmd = event.target && event.target.getAttribute && event.target.getAttribute("data-cmd");
-      if (cmd) vscode.postMessage({ type: cmd });
-    });
-    $("target").addEventListener("change", (event) => vscode.postMessage({ type: "setTarget", value: event.target.value }));
-    $("architecture").addEventListener("change", (event) => vscode.postMessage({ type: "setArchitecture", value: event.target.value }));
-    $("buildOutput").addEventListener("change", (event) => vscode.postMessage({ type: "setBuildOutput", value: event.target.value }));
-    vscode.postMessage({ type: "ready" });
-  </script>
-</body>
-</html>`;
+  async updateSetting(key2, value) {
+    await import_vscode11.workspace.getConfiguration("asm").update(key2, value, import_vscode11.ConfigurationTarget.Workspace);
+    await this.refresh();
   }
 };
 function asString(value) {
   return typeof value === "string" ? value : "";
 }
-function toWorkspaceRelative(filePath) {
-  const folder = import_vscode9.workspace.workspaceFolders?.[0];
-  if (!folder) {
-    return filePath;
-  }
-  const relative6 = path17.relative(folder.uri.fsPath, filePath);
-  return relative6 && !relative6.startsWith("..") ? relative6 : filePath;
-}
-function replaceOutputExtension(filePath, extension) {
-  const suffix = extension.startsWith(".") ? extension : `.${extension}`;
-  return filePath.replace(/\.[^.]+$/, suffix);
-}
-function getNonce() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let nonce = "";
-  for (let index = 0; index < 32; index += 1) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return nonce;
-}
 
 // packages/vscode-extension/src/debug.ts
-var fs16 = __toESM(require("node:fs"));
-var path25 = __toESM(require("node:path"));
+var fs17 = __toESM(require("node:fs"));
+var path27 = __toESM(require("node:path"));
 init_debug_map();
 
 // packages/debug-sidecar-ares/src/ares-process-host.ts
-var import_node_child_process2 = require("node:child_process");
-var import_node_crypto25 = require("node:crypto");
-var import_node_fs2 = require("node:fs");
+var import_node_child_process3 = require("node:child_process");
+var import_node_crypto17 = require("node:crypto");
+var import_node_fs3 = require("node:fs");
 var import_node_net2 = __toESM(require("node:net"), 1);
-var import_node_path10 = __toESM(require("node:path"), 1);
+var import_node_path6 = __toESM(require("node:path"), 1);
 
 // packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 var import_node_net = __toESM(require("node:net"), 1);
@@ -64665,7 +66586,7 @@ var checkedRevision = (value, name) => {
   return value.toLowerCase();
 };
 var checkedResourcePath = (value) => {
-  if (value === "." || value.includes("\\") || import_node_path10.default.posix.isAbsolute(value) || import_node_path10.default.posix.normalize(value) !== value || value.split("/").includes(".."))
+  if (value === "." || value.includes("\\") || import_node_path6.default.posix.isAbsolute(value) || import_node_path6.default.posix.normalize(value) !== value || value.split("/").includes(".."))
     throw new Error(`Ares resource path '${value}' must be normalized and relative.`);
   return value;
 };
@@ -64675,7 +66596,7 @@ var NodeAresProcessHandle = class {
   #exited = false;
   constructor(options) {
     let spawnError;
-    this.#child = (0, import_node_child_process2.spawn)(options.command, [...options.args], {
+    this.#child = (0, import_node_child_process3.spawn)(options.command, [...options.args], {
       cwd: options.cwd,
       env: { ...process.env, ...options.env },
       shell: false,
@@ -64708,8 +66629,8 @@ var NodeAresProcessHandle = class {
   }
 };
 var nodeSha256 = async (file) => {
-  const digest2 = (0, import_node_crypto25.createHash)("sha256");
-  for await (const chunk of (0, import_node_fs2.createReadStream)(file)) digest2.update(chunk);
+  const digest2 = (0, import_node_crypto17.createHash)("sha256");
+  for await (const chunk of (0, import_node_fs3.createReadStream)(file)) digest2.update(chunk);
   return digest2.digest("hex");
 };
 var reserveLoopbackPort = async () => {
@@ -64907,11 +66828,11 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
 });
 
 // packages/debug-sidecar-mesence/src/mesen-process-host.ts
-var import_node_child_process3 = require("node:child_process");
+var import_node_child_process4 = require("node:child_process");
 var import_node_crypto26 = require("node:crypto");
-var import_node_fs3 = require("node:fs");
+var import_node_fs5 = require("node:fs");
 var import_node_net4 = __toESM(require("node:net"), 1);
-var import_node_path11 = __toESM(require("node:path"), 1);
+var import_node_path12 = __toESM(require("node:path"), 1);
 
 // packages/debug-sidecar-mesence/src/profile.ts
 var MESEN_BACKEND_ID = "mesence-debug-server";
@@ -65134,7 +67055,7 @@ var checkedRevision2 = (value) => {
   return value.toLowerCase();
 };
 var checkedResourcePath2 = (value) => {
-  if (value === "." || value.includes("\\") || import_node_path11.default.posix.isAbsolute(value) || import_node_path11.default.posix.normalize(value) !== value || value.split("/").includes(".."))
+  if (value === "." || value.includes("\\") || import_node_path12.default.posix.isAbsolute(value) || import_node_path12.default.posix.normalize(value) !== value || value.split("/").includes(".."))
     throw new Error(`Mesen resource path '${value}' must be normalized and relative.`);
   return value;
 };
@@ -65144,7 +67065,7 @@ var NodeMesenProcessHandle = class {
   #exited = false;
   constructor(options) {
     let spawnError;
-    this.#child = (0, import_node_child_process3.spawn)(options.command, [...options.args], {
+    this.#child = (0, import_node_child_process4.spawn)(options.command, [...options.args], {
       cwd: options.cwd,
       env: { ...process.env, ...options.env },
       shell: false,
@@ -65178,7 +67099,7 @@ var NodeMesenProcessHandle = class {
 };
 var nodeSha2562 = async (file) => {
   const digest2 = (0, import_node_crypto26.createHash)("sha256");
-  for await (const chunk of (0, import_node_fs3.createReadStream)(file)) digest2.update(chunk);
+  for await (const chunk of (0, import_node_fs5.createReadStream)(file)) digest2.update(chunk);
   return digest2.digest("hex");
 };
 var reserveLoopbackPort2 = async () => {
@@ -65276,14 +67197,14 @@ var parseMesenRuntimeManifest = (value) => {
 };
 
 // packages/vscode-extension/src/debug.ts
-var import_vscode12 = require("vscode");
+var import_vscode14 = require("vscode");
 
 // packages/vscode-extension/src/debug-analysis-annotations.ts
 var locationKey2 = (addressSpace2, address4) => `${addressSpace2}:${address4}`;
-var append2 = (map, key, value) => {
-  const entries3 = map.get(key);
+var append2 = (map, key2, value) => {
+  const entries3 = map.get(key2);
   if (entries3) entries3.push(value);
-  else map.set(key, [value]);
+  else map.set(key2, [value]);
 };
 var createDebugInstructionAnnotation = async (map) => {
   const byAddress2 = /* @__PURE__ */ new Map();
@@ -65328,33 +67249,33 @@ var createDebugInstructionAnnotation = async (map) => {
 };
 
 // packages/vscode-extension/src/debug-source-root.ts
-var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path12 = __toESM(require("node:path"));
+var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_path13 = __toESM(require("node:path"));
 var sourceMatches = (root, source) => {
-  if (import_node_path12.default.isAbsolute(source.path)) return false;
-  const resolved = import_node_path12.default.resolve(root, source.path);
-  const relative6 = import_node_path12.default.relative(root, resolved);
-  if (!relative6 || relative6.startsWith(`..${import_node_path12.default.sep}`) || import_node_path12.default.isAbsolute(relative6)) return false;
+  if (import_node_path13.default.isAbsolute(source.path)) return false;
+  const resolved = import_node_path13.default.resolve(root, source.path);
+  const relative6 = import_node_path13.default.relative(root, resolved);
+  if (!relative6 || relative6.startsWith(`..${import_node_path13.default.sep}`) || import_node_path13.default.isAbsolute(relative6)) return false;
   try {
-    const stat = import_node_fs4.default.statSync(resolved);
-    return stat.isFile() && stat.size === source.size;
+    const stat2 = import_node_fs6.default.statSync(resolved);
+    return stat2.isFile() && stat2.size === source.size;
   } catch {
     return false;
   }
 };
 var resolveDebugSourceRoot = (options) => {
-  const configuredRoot = import_node_path12.default.resolve(options.configuredRoot);
+  const configuredRoot = import_node_path13.default.resolve(options.configuredRoot);
   const candidates = [
     configuredRoot,
-    ...options.workspaceRoot ? [import_node_path12.default.resolve(options.workspaceRoot)] : [],
-    import_node_path12.default.dirname(import_node_path12.default.resolve(options.debugMapFile)),
+    ...options.workspaceRoot ? [import_node_path13.default.resolve(options.workspaceRoot)] : [],
+    import_node_path13.default.dirname(import_node_path13.default.resolve(options.debugMapFile)),
     // Generated ROMs/maps commonly live in build/, with mapped sources in its parent.
-    import_node_path12.default.dirname(import_node_path12.default.dirname(import_node_path12.default.resolve(options.debugMapFile))),
-    import_node_path12.default.dirname(import_node_path12.default.resolve(options.programFile)),
-    import_node_path12.default.dirname(import_node_path12.default.dirname(import_node_path12.default.resolve(options.programFile)))
+    import_node_path13.default.dirname(import_node_path13.default.dirname(import_node_path13.default.resolve(options.debugMapFile))),
+    import_node_path13.default.dirname(import_node_path13.default.resolve(options.programFile)),
+    import_node_path13.default.dirname(import_node_path13.default.dirname(import_node_path13.default.resolve(options.programFile)))
   ];
   const unique = [...new Set(candidates)];
-  const relativeSources = options.map.sources.filter((source) => !import_node_path12.default.isAbsolute(source.path)).slice(0, 128);
+  const relativeSources = options.map.sources.filter((source) => !import_node_path13.default.isAbsolute(source.path)).slice(0, 128);
   if (relativeSources.length === 0) return configuredRoot;
   let bestRoot = configuredRoot;
   let bestMatches = relativeSources.filter(
@@ -65371,11 +67292,11 @@ var resolveDebugSourceRoot = (options) => {
 };
 
 // packages/vscode-extension/src/behavior-capture.ts
-var fs15 = __toESM(require("node:fs"));
-var path23 = __toESM(require("node:path"));
+var fs16 = __toESM(require("node:fs"));
+var path25 = __toESM(require("node:path"));
 var import_node_crypto28 = require("node:crypto");
 init_src();
-var import_vscode11 = require("vscode");
+var import_vscode13 = require("vscode");
 
 // packages/vscode-extension/src/trace-lease.ts
 var owner;
@@ -65547,14 +67468,121 @@ Check the saved event count and dropped-event warnings. Zero events usually mean
 `;
 
 // packages/vscode-extension/src/disassembly-maintenance.ts
-var fs14 = __toESM(require("node:fs"));
-var path22 = __toESM(require("node:path"));
+var fs15 = __toESM(require("node:fs"));
+var path24 = __toESM(require("node:path"));
 init_src();
 init_src3();
-var import_vscode10 = require("vscode");
+var import_vscode12 = require("vscode");
+
+// packages/vscode-extension/src/disassembly-maintenance-client.ts
+var import_node_child_process5 = require("node:child_process");
+var cancelled = (message) => Object.assign(new Error(message), { name: "AbortError" });
+var DisassemblyMaintenanceClient = class {
+  constructor(processFile) {
+    this.processFile = processFile;
+  }
+  processFile;
+  #children = /* @__PURE__ */ new Set();
+  #disposed = false;
+  run(operation, input, options) {
+    if (this.#disposed)
+      return Promise.reject(new Error("Disassembly maintenance client disposed."));
+    if (options.signal?.aborted)
+      return Promise.reject(cancelled("Disassembly maintenance cancelled."));
+    if (!Number.isSafeInteger(options.maxMemoryMiB) || options.maxMemoryMiB < 128)
+      return Promise.reject(
+        new Error("asm.analysis.maxMemoryMiB must be a safe integer of at least 128.")
+      );
+    return new Promise((resolve11, reject) => {
+      const child = (0, import_node_child_process5.fork)(this.processFile, [], {
+        execArgv: [`--max-old-space-size=${options.maxMemoryMiB}`],
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+        stdio: ["ignore", "ignore", "pipe", "ipc"]
+      });
+      this.#children.add(child);
+      let settled = false;
+      let response;
+      let stderr = "";
+      child.stderr?.on("data", (chunk) => {
+        stderr = (stderr + chunk.toString()).slice(-8192);
+      });
+      const finish = (error, value) => {
+        if (settled) return;
+        settled = true;
+        options.signal?.removeEventListener("abort", cancel);
+        if (error) reject(error);
+        else if (options.signal?.aborted)
+          reject(
+            cancelled(
+              "Disassembly maintenance cancelled after finishing the current step. Check disassembly status before retrying."
+            )
+          );
+        else resolve11(value);
+      };
+      const cancel = () => {
+        options.onProgress?.({
+          message: "Cancellation requested; finishing the current safe step\u2026"
+        });
+        if (child.connected)
+          child.send({ type: "cancel" }, (error) => {
+            if (error) finish(error);
+          });
+      };
+      options.signal?.addEventListener("abort", cancel, { once: true });
+      child.on(
+        "message",
+        (message) => {
+          if (message.type === "progress" && message.progress && !options.signal?.aborted)
+            options.onProgress?.(message.progress);
+          else if (message.type === "error") {
+            const error = new Error(message.error?.message ?? "Disassembly maintenance failed.");
+            if (message.error?.stack) error.stack = message.error.stack;
+            if (message.error?.name) error.name = message.error.name;
+            response = { error };
+          } else if (message.type === "result")
+            response = { value: message.value };
+        }
+      );
+      child.on("error", (error) => finish(error));
+      child.on("exit", (code, signal) => {
+        this.#children.delete(child);
+        if (code === 0 && response) {
+          if ("error" in response) finish(response.error);
+          else finish(void 0, response.value);
+          return;
+        }
+        finish(
+          new Error(
+            `Disassembly ${operation} process exited (${signal ?? code}) before returning a result. The editor is still running. Memory budget: ${options.maxMemoryMiB} MiB (asm.analysis.maxMemoryMiB).${stderr ? `
+${stderr}` : ""}`
+          )
+        );
+      });
+      child.send({ type: "run", job: { operation, input } }, (error) => {
+        if (error) finish(error);
+      });
+    });
+  }
+  dispose() {
+    this.#disposed = true;
+    for (const child of this.#children) child.kill();
+    this.#children.clear();
+  }
+};
+
+// packages/vscode-extension/src/disassembly-maintenance-data.ts
+var fileChanges = (before, after) => {
+  const prior = new Map(before.files.map((file) => [file.path, file.sha256]));
+  const next = new Map(after.files.map((file) => [file.path, file.sha256]));
+  return {
+    addedFiles: [...next.keys()].filter((file) => !prior.has(file)).sort(),
+    changedFiles: [...next].flatMap(([file, sha]) => prior.has(file) && prior.get(file) !== sha ? [file] : []).sort(),
+    removedFiles: [...prior.keys()].filter((file) => !next.has(file)).sort()
+  };
+};
 
 // packages/vscode-extension/src/snes-rom-bindings.ts
-var path21 = __toESM(require("node:path"));
+var path23 = __toESM(require("node:path"));
 var ROM_BINDINGS_KEY = "snesProjectRomBindings.v1";
 var MAX_ROM_BINDINGS = 32;
 var rememberedSnesRom = (context, contentSha256) => context.globalState.get(ROM_BINDINGS_KEY, {})[contentSha256]?.path;
@@ -65563,7 +67591,7 @@ var rememberSnesRom = async (context, identity2, romFile) => {
   const next = {
     ...previous,
     [identity2.contentSha256]: {
-      path: path21.resolve(romFile),
+      path: path23.resolve(romFile),
       fileSha256: identity2.sha256,
       contentSha256: identity2.contentSha256,
       headerSize: identity2.headerSize,
@@ -65581,25 +67609,14 @@ var REGENERATE_DISASSEMBLY_COMMAND = "asm.disassembly.regenerate";
 var DISASSEMBLY_STATUS_COMMAND = "asm.disassembly.status";
 var IMPORT_TRACE_AND_REGENERATE_COMMAND = "asm.trace.importRegenerate";
 var OPEN_RAM_MAP_COMMAND = "asm.ramMap.open";
-var MAX_TRACE_FILE_BYTES = 128 * 1024 * 1024;
-var MAX_RUNTIME_ENTRY_SEEDS = 1e5;
+var CONFIGURE_HEURISTICS_COMMAND = "asm.heuristics.configure";
+var PREVIEW_HEURISTICS_COMMAND = "asm.heuristics.preview";
 var formatBytes2 = (bytes) => {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
   return `${bytes} bytes`;
 };
 var signed2 = (value) => `${value >= 0 ? "+" : ""}${value}`;
-var coverageFor = (shards, manifestSha256, source) => ({
-  manifestSha256,
-  instructions: shards.analysis.filter((record3) => record3.kind === "cfg-node").length,
-  functions: shards.analysis.filter((record3) => record3.kind === "function").length,
-  runtimeRecords: shards.runtime.filter((record3) => record3.kind === "runtime-execution").length,
-  runtimeEvents: shards.runtime.filter((record3) => record3.kind === "runtime-execution").reduce((total, record3) => total + record3.count, 0),
-  traceImports: shards.imports.filter((record3) => record3.format === "uttori-asm-instruction-trace").length,
-  behaviorComments: shards.comments.filter((record3) => record3.id.startsWith("behavior-comment:")).length,
-  codeBytes: source.spans.filter((span) => span.role === "code").reduce((total, span) => total + span.end - span.start, 0),
-  contentBytes: source.rom.contentSize
-});
 var percent = (part, total) => total === 0 ? "0.00%" : `${(part / total * 100).toFixed(2)}%`;
 var hexAddress2 = (address4) => `$${address4.toString(16).toUpperCase().padStart(6, "0")}`;
 var markdownCell = (value) => value.replaceAll("|", "\\|").replaceAll("\n", " ");
@@ -65681,24 +67698,24 @@ var renderDisassemblyRegenerationReport = (summary) => {
 `;
 };
 var showMarkdown = async (content) => {
-  await import_vscode10.window.showTextDocument(
-    await import_vscode10.workspace.openTextDocument({ language: "markdown", content }),
+  await import_vscode12.window.showTextDocument(
+    await import_vscode12.workspace.openTextDocument({ language: "markdown", content }),
     { preview: false }
   );
 };
 var insideWorkspace = (directory) => {
-  const absolute = path22.resolve(directory);
-  return (import_vscode10.workspace.workspaceFolders ?? []).some((folder) => {
+  const absolute = path24.resolve(directory);
+  return (import_vscode12.workspace.workspaceFolders ?? []).some((folder) => {
     if (folder.uri.scheme !== "file") return false;
-    const relative6 = path22.relative(path22.resolve(folder.uri.fsPath), absolute);
-    return relative6 === "" || relative6 !== ".." && !relative6.startsWith(`..${path22.sep}`) && !path22.isAbsolute(relative6);
+    const relative6 = path24.relative(path24.resolve(folder.uri.fsPath), absolute);
+    return relative6 === "" || relative6 !== ".." && !relative6.startsWith(`..${path24.sep}`) && !path24.isAbsolute(relative6);
   });
 };
 var readProjectChoice = (directory) => {
   const manifest = migrateManifest(
-    JSON.parse(fs14.readFileSync(path22.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+    JSON.parse(fs15.readFileSync(path24.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
   );
-  return { directory: path22.resolve(directory), manifest };
+  return { directory: path24.resolve(directory), manifest };
 };
 var chooseProject = async (preferred, romContentSha256) => {
   if (preferred) {
@@ -65719,9 +67736,9 @@ var chooseProject = async (preferred, romContentSha256) => {
   });
   if (choices.length === 0) return void 0;
   if (choices.length === 1) return choices[0];
-  return (await import_vscode10.window.showQuickPick(
+  return (await import_vscode12.window.showQuickPick(
     choices.map((choice) => ({
-      label: path22.basename(choice.directory),
+      label: path24.basename(choice.directory),
       description: choice.directory,
       choice
     })),
@@ -65740,29 +67757,29 @@ var chooseSource = async (project, preferred) => {
   if (preferred) {
     if (!insideWorkspace(preferred))
       throw new Error("Generated source must be inside the trusted workspace.");
-    const manifest = sourceMatches2(path22.resolve(preferred), project);
+    const manifest = sourceMatches2(path24.resolve(preferred), project);
     if (!manifest)
       throw new Error("The selected source export does not match this analysis project.");
-    return { directory: path22.resolve(preferred), manifest };
+    return { directory: path24.resolve(preferred), manifest };
   }
-  const nearby = path22.dirname(project.directory);
+  const nearby = path24.dirname(project.directory);
   const nearManifest = sourceMatches2(nearby, project);
   if (nearManifest) return { directory: nearby, manifest: nearManifest };
-  const files = await import_vscode10.workspace.findFiles(
+  const files = await import_vscode12.workspace.findFiles(
     `**/${SOURCE_EXPORT_MANIFEST}`,
     "**/{node_modules,.git}/**",
     64
   );
   const matches = files.flatMap((file) => {
-    const directory = path22.dirname(file.fsPath);
+    const directory = path24.dirname(file.fsPath);
     const manifest = insideWorkspace(directory) ? sourceMatches2(directory, project) : void 0;
     return manifest ? [{ directory, manifest }] : [];
   });
   if (matches.length === 0) return void 0;
   if (matches.length === 1) return matches[0];
-  return (await import_vscode10.window.showQuickPick(
+  return (await import_vscode12.window.showQuickPick(
     matches.map((match) => ({
-      label: path22.basename(match.directory),
+      label: path24.basename(match.directory),
       description: match.directory,
       match
     })),
@@ -65780,16 +67797,16 @@ var exactRom = (file, manifest) => {
 var chooseRom = async (context, project, sourceDirectory, source) => {
   const candidates = [
     rememberedSnesRom(context, project.manifest.rom.contentSha256),
-    path22.join(sourceDirectory, source.finalOutput),
-    ...project.manifest.rom.headerSize === 0 ? [path22.join(sourceDirectory, source.contentOutput)] : []
+    path24.join(sourceDirectory, source.finalOutput),
+    ...project.manifest.rom.headerSize === 0 ? [path24.join(sourceDirectory, source.contentOutput)] : []
   ].filter((value) => Boolean(value));
   for (const file2 of candidates) {
-    if (fs14.existsSync(file2) && exactRom(file2, project.manifest)) {
+    if (fs15.existsSync(file2) && exactRom(file2, project.manifest)) {
       await rememberSnesRom(context, project.manifest.rom, file2);
       return file2;
     }
   }
-  const selected = await import_vscode10.window.showOpenDialog({
+  const selected = await import_vscode12.window.showOpenDialog({
     title: "Select the original ROM for analysis and exact verification",
     canSelectFiles: true,
     canSelectFolders: false,
@@ -65809,12 +67826,12 @@ var chooseRom = async (context, project, sourceDirectory, source) => {
 var resolveProjectSource = async (target = {}, expectedRom) => {
   const project = await chooseProject(target.projectDirectory, expectedRom);
   if (!project) {
-    void import_vscode10.window.showErrorMessage("Assembly: no matching native analysis project was found.");
+    void import_vscode12.window.showErrorMessage("Assembly: no matching native analysis project was found.");
     return void 0;
   }
   const source = await chooseSource(project, target.sourceDirectory);
   if (!source) {
-    void import_vscode10.window.showErrorMessage("Assembly: no matching generated disassembly was found.");
+    void import_vscode12.window.showErrorMessage("Assembly: no matching generated disassembly was found.");
     return void 0;
   }
   return {
@@ -65835,108 +67852,64 @@ var resolveTarget = async (context, target = {}, expectedRom) => {
   );
   return romFile ? { ...resolved, romFile } : void 0;
 };
-var abortController = (token) => {
-  const controller = new AbortController();
-  token.onCancellationRequested(() => controller.abort());
-  return controller;
-};
-var normalizedSeeds = (value, snapshot) => {
-  if (!value?.length) return [];
-  const evidence = new Set(snapshot.shards.evidence.map((record3) => record3.id));
-  const unique = /* @__PURE__ */ new Map();
-  for (const seed of value) {
-    if (!Number.isSafeInteger(seed.address) || seed.address < 0 || seed.address > 16777215)
-      throw new Error("Runtime code seeds must be 24-bit integer CPU addresses.");
-    const accepted = (seed.evidence ?? []).filter((id) => evidence.has(id));
-    const prior = unique.get(seed.address) ?? /* @__PURE__ */ new Set();
-    for (const id of accepted) prior.add(id);
-    unique.set(seed.address, prior);
-  }
-  if (unique.size > MAX_RUNTIME_ENTRY_SEEDS)
-    throw new Error(
-      `Trace contains ${unique.size} unique PCs; capture a narrower window (limit ${MAX_RUNTIME_ENTRY_SEEDS}).`
-    );
-  return [...unique].sort(([left], [right]) => left - right).map(([address4, ids]) => ({
-    id: `runtime-${address4.toString(16).padStart(6, "0")}`,
-    address: address4,
-    kind: "observation",
-    ...ids.size ? { evidence: [...ids].sort() } : {}
-  }));
-};
-var fileChanges = (before, after) => {
-  const prior = new Map(before.files.map((file) => [file.path, file.sha256]));
-  const next = new Map(after.files.map((file) => [file.path, file.sha256]));
-  return {
-    addedFiles: [...next.keys()].filter((file) => !prior.has(file)).sort(),
-    changedFiles: [...next].flatMap(([file, sha]) => prior.has(file) && prior.get(file) !== sha ? [file] : []).sort(),
-    removedFiles: [...prior.keys()].filter((file) => !next.has(file)).sort()
-  };
-};
-var regenerate = async (resolved, seeds) => {
-  const beforeProject = loadAnalysisProjectSnapshot(resolved.projectDirectory);
-  validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest);
-  const entryPoints = normalizedSeeds(seeds, beforeProject);
-  return import_vscode10.window.withProgress(
-    {
-      location: import_vscode10.ProgressLocation.Notification,
-      title: "Assembly: analyzing and regenerating disassembly",
-      cancellable: true
-    },
-    async (progress, token) => {
-      const cancellation = abortController(token);
-      progress.report({ message: `Analyzing from ${entryPoints.length} runtime code seed(s)\u2026` });
-      const analysis = analyzeSnesProject({
-        projectDirectory: resolved.projectDirectory,
-        romFile: resolved.romFile,
-        entryPoints,
-        signal: cancellation.signal
+var regenerate = async (client3, resolved, seeds) => {
+  const maxWorkItems = import_vscode12.workspace.getConfiguration("asm", import_vscode12.Uri.file(resolved.sourceDirectory)).get("analysis.maxWorkItems", 1e5);
+  if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems < 1)
+    throw new Error("asm.analysis.maxWorkItems must be a positive safe integer.");
+  return withMaintenanceProgress(
+    "Assembly: analyzing and regenerating disassembly",
+    async (options) => {
+      const { before, entryPoints } = await client3.run(
+        "prepare",
+        { target: resolved, seeds },
+        options
+      );
+      options.onProgress?.({
+        message: `Analyzing from ${entryPoints.length} runtime code seed(s)\u2026`
       });
-      progress.report({ message: "Writing generated source\u2026" });
-      const exported = exportSnesProject({
-        projectDirectory: resolved.projectDirectory,
-        romFile: resolved.romFile,
-        sourceDirectory: resolved.sourceDirectory,
-        signal: cancellation.signal
-      });
-      progress.report({ message: "Rebuilding and checking every ROM byte\u2026" });
-      const roundTrip = await verifySnesProjectRoundTrip({
-        sourceDirectory: resolved.sourceDirectory,
-        romFile: resolved.romFile,
-        signal: cancellation.signal
-      });
+      const analysis = await client3.run(
+        "analyze",
+        { target: resolved, entryPoints, maxWorkItems },
+        options
+      );
+      options.onProgress?.({ message: "Writing generated source\u2026" });
+      const exported = await client3.run("export", resolved, options);
+      options.onProgress?.({ message: "Rebuilding and checking every ROM byte\u2026" });
+      const roundTrip = await client3.run("verify", resolved, options);
       if (!roundTrip.comparison.equal)
         throw new Error(
           `Generated source differed at ROM offset ${roundTrip.comparison.firstDifference}.`
         );
-      const afterProject = loadAnalysisProjectSnapshot(resolved.projectDirectory);
+      options.onProgress?.({ message: "Summarizing updated analysis\u2026" });
+      const after = await client3.run(
+        "coverage",
+        { ...resolved, sourceManifest: exported.manifest },
+        options
+      );
+      if (after.manifestSha256 !== exported.manifest.sourceProjectSha256)
+        throw new Error(
+          "Analysis changed while source was being regenerated. Run regeneration again to use the latest edits."
+        );
       return {
         projectDirectory: resolved.projectDirectory,
         sourceDirectory: resolved.sourceDirectory,
-        before: coverageFor(
-          beforeProject.shards,
-          beforeProject.revision.manifestSha256,
-          resolved.sourceManifest
-        ),
-        after: coverageFor(
-          afterProject.shards,
-          afterProject.revision.manifestSha256,
-          exported.manifest
-        ),
+        before,
+        after,
         analysis,
         entrySeeds: entryPoints.length,
         ramVariables: exported.manifest.inputs?.find((input) => input.path === "ram-map.json")?.records ?? 0,
         ...fileChanges(resolved.sourceManifest, exported.manifest),
         roundTripSha256: roundTrip.comparison.actualSha256
       };
-    }
+    },
+    resolved.sourceDirectory
   );
 };
-var statusReport = (resolved) => {
-  const project = loadAnalysisProjectSnapshot(resolved.projectDirectory);
-  const coverage = coverageFor(
-    project.shards,
-    project.revision.manifestSha256,
-    resolved.sourceManifest
+var statusReport = async (client3, resolved) => {
+  const coverage = await withMaintenanceProgress(
+    "Assembly: checking disassembly status",
+    (options) => client3.run("coverage", resolved, options),
+    resolved.sourceDirectory
   );
   let integrity = "all generated files match their recorded hashes";
   let generatedCurrent = true;
@@ -65988,10 +67961,10 @@ var statusReport = (resolved) => {
 `;
 };
 var traceFileFrom = async (argument) => {
-  if (argument instanceof import_vscode10.Uri && argument.scheme === "file") return argument.fsPath;
+  if (argument instanceof import_vscode12.Uri && argument.scheme === "file") return argument.fsPath;
   if (argument && typeof argument === "object" && typeof argument.fsPath === "string")
     return argument.fsPath;
-  const selected = await import_vscode10.window.showOpenDialog({
+  const selected = await import_vscode12.window.showOpenDialog({
     title: "Select an Uttori ASM instruction trace",
     canSelectFiles: true,
     canSelectFolders: false,
@@ -66000,92 +67973,231 @@ var traceFileFrom = async (argument) => {
   });
   return selected?.[0]?.fsPath;
 };
-var readTrace = (file) => {
-  const stat = fs14.statSync(file);
-  if (stat.size > MAX_TRACE_FILE_BYTES)
-    throw new Error("Instruction trace exceeds the 128 MiB import limit.");
-  return validateRuntimeInstructionTrace(JSON.parse(fs14.readFileSync(file, "utf8")));
+var traceImportMaxBytes = (sourceDirectory) => {
+  const mib = import_vscode12.workspace.getConfiguration("asm", import_vscode12.Uri.file(sourceDirectory)).get("trace.maxImportSizeMiB", 2048);
+  const bytes = mib * 1024 * 1024;
+  if (!Number.isSafeInteger(mib) || mib < 1 || !Number.isSafeInteger(bytes))
+    throw new Error(
+      "asm.trace.maxImportSizeMiB must be a positive integer representing a safe byte limit."
+    );
+  return bytes;
 };
+var withMaintenanceProgress = async (title, action, sourceDirectory) => import_vscode12.window.withProgress(
+  { location: import_vscode12.ProgressLocation.Notification, title, cancellable: true },
+  async (progress, token) => {
+    const cancellation = new AbortController();
+    const subscription = token.onCancellationRequested(() => cancellation.abort());
+    let lastPercent = -1;
+    try {
+      return await action({
+        maxMemoryMiB: import_vscode12.workspace.getConfiguration("asm", import_vscode12.Uri.file(sourceDirectory)).get("analysis.maxMemoryMiB", 4096),
+        signal: cancellation.signal,
+        onProgress: ({ message, bytesRead: read = 0, totalBytes: total = 0 }) => {
+          if (message) {
+            progress.report({ message });
+            return;
+          }
+          const percent2 = total ? Math.floor(read / total * 100) : 100;
+          if (percent2 !== lastPercent) {
+            progress.report({
+              message: `${formatBytes2(read)} / ${formatBytes2(total)} (${percent2}%)`
+            });
+            lastPercent = percent2;
+          }
+        }
+      });
+    } finally {
+      subscription.dispose();
+    }
+  }
+);
 var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
-  const run = (operation) => operation().catch((error) => {
-    const message = error instanceof Error ? error.message : String(error);
-    outputChannel2?.error(`Disassembly maintenance failed: ${message}`);
-    void import_vscode10.window.showErrorMessage(`Assembly disassembly update: ${message}`);
-  });
+  const client3 = new DisassemblyMaintenanceClient(
+    path24.join(context.extensionUri.fsPath, "out", "disassembly-maintenance-process.cjs")
+  );
+  let busy = false;
+  const run = async (operation) => {
+    if (busy) {
+      void import_vscode12.window.showInformationMessage("A disassembly maintenance operation is already running.");
+      return;
+    }
+    busy = true;
+    await operation().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      const details = error instanceof Error ? error.stack ?? message : message;
+      outputChannel2?.error(`Disassembly maintenance failed: ${details}`);
+      void import_vscode12.window.showErrorMessage(`Assembly disassembly update: ${message}`);
+    }).finally(() => {
+      busy = false;
+    });
+  };
   return [
-    import_vscode10.commands.registerCommand(
+    client3,
+    import_vscode12.commands.registerCommand(
       REGENERATE_DISASSEMBLY_COMMAND,
       (target) => run(async () => {
-        if (!import_vscode10.workspace.isTrusted)
+        if (!import_vscode12.workspace.isTrusted)
           throw new Error("Analysis and source regeneration require a trusted workspace.");
         const resolved = await resolveTarget(context, target);
         if (!resolved) return;
-        const summary = await regenerate(resolved, target?.entrySeeds);
+        const summary = await regenerate(client3, resolved, target?.entrySeeds);
         refresh();
         outputChannel2?.info(
           `Disassembly updated: ${summary.before.codeBytes} -> ${summary.after.codeBytes} code bytes; ${summary.changedFiles.length} file(s) changed.`
         );
         await showMarkdown(renderDisassemblyRegenerationReport(summary));
-        void import_vscode10.window.showInformationMessage(
+        void import_vscode12.window.showInformationMessage(
           `Assembly: disassembly is current; ${formatBytes2(summary.after.codeBytes)} code (${signed2(summary.after.codeBytes - summary.before.codeBytes)} bytes), exact round trip verified.`
         );
       })
     ),
-    import_vscode10.commands.registerCommand(
+    import_vscode12.commands.registerCommand(
+      CONFIGURE_HEURISTICS_COMMAND,
+      (target) => run(async () => {
+        if (!import_vscode12.workspace.isTrusted)
+          throw new Error("Editing heuristic rules requires a trusted workspace.");
+        const selected = await chooseProject(target?.projectDirectory);
+        if (!selected) throw new Error("No native analysis project was found in the workspace.");
+        if (selected.manifest.target !== "snes.sfc")
+          throw new Error("Function heuristics require a SNES analysis project.");
+        const file = path24.join(selected.directory, "heuristics.json");
+        try {
+          await fs15.promises.writeFile(
+            file,
+            JSON.stringify(
+              {
+                enabled: true,
+                minimumConfidence: "medium",
+                disabledRules: [],
+                registerRules: []
+              },
+              null,
+              2
+            ) + "\n",
+            { flag: "wx" }
+          );
+        } catch (error) {
+          if (error.code !== "EEXIST") throw error;
+        }
+        await import_vscode12.window.showTextDocument(import_vscode12.Uri.file(file), { preview: false });
+      })
+    ),
+    import_vscode12.commands.registerCommand(
+      PREVIEW_HEURISTICS_COMMAND,
+      (target) => run(async () => {
+        const selected = await chooseProject(target?.projectDirectory);
+        if (!selected) throw new Error("No native analysis project was found in the workspace.");
+        const file = path24.join(selected.directory, "heuristics.json");
+        if (import_vscode12.workspace.textDocuments.some(
+          (document) => document.uri.fsPath === file && document.isDirty
+        ))
+          throw new Error("Save heuristics.json before previewing its rules.");
+        const result = await import_vscode12.window.withProgress(
+          {
+            location: import_vscode12.ProgressLocation.Notification,
+            title: "Running SNES heuristics",
+            cancellable: false
+          },
+          () => analysisWorker().request(selected.directory, "heuristics")
+        );
+        await showMarkdown(
+          [
+            "# Heuristic findings",
+            "",
+            `Project: ${markdownCell(selected.directory)}`,
+            "",
+            result.enabled ? `${result.total} findings from the current saved analysis and heuristic rules.` : "Heuristics are disabled in heuristics.json.",
+            "",
+            "This preview leaves project files unchanged. Run **Analyze and Regenerate Disassembly** to apply the saved rules and include their comments in generated source.",
+            "",
+            "| Address | Role | Confidence | Evidence |",
+            "| --- | --- | --- | --- |",
+            ...result.roles.map(
+              (role) => `| ${role.addressSpace} ${hexAddress2(role.address)} | ${markdownCell(role.role)}${role.relationship === "delegated" ? " (via call)" : ""} | ${role.confidence} | ${markdownCell(role.explanation)} |`
+            ),
+            ...result.total > result.roles.length ? [
+              "",
+              `Showing the first ${result.roles.length} of ${result.total} findings. Raise minimumConfidence or disable rules to narrow the preview.`
+            ] : [],
+            ...!result.total && result.enabled ? [
+              "",
+              "No rules matched. Analyze the project or import a runtime trace to provide more instruction evidence."
+            ] : []
+          ].join("\n")
+        );
+      })
+    ),
+    import_vscode12.commands.registerCommand(
       OPEN_RAM_MAP_COMMAND,
       (target) => run(async () => {
-        if (!import_vscode10.workspace.isTrusted)
+        if (!import_vscode12.workspace.isTrusted)
           throw new Error("Opening a RAM map requires a trusted workspace.");
         const resolved = await resolveProjectSource(target);
         if (!resolved) return;
         loadSnesRamMap(resolved.sourceDirectory);
-        await import_vscode10.window.showTextDocument(
-          import_vscode10.Uri.file(path22.join(resolved.sourceDirectory, SNES_RAM_MAP_SOURCE)),
+        await import_vscode12.window.showTextDocument(
+          import_vscode12.Uri.file(path24.join(resolved.sourceDirectory, SNES_RAM_MAP_SOURCE)),
           { preview: false }
         );
       })
     ),
-    import_vscode10.commands.registerCommand(
+    import_vscode12.commands.registerCommand(
       DISASSEMBLY_STATUS_COMMAND,
       (target) => run(async () => {
         const resolved = await resolveProjectSource(target);
-        if (resolved) await showMarkdown(statusReport(resolved));
+        if (resolved) await showMarkdown(await statusReport(client3, resolved));
       })
     ),
-    import_vscode10.commands.registerCommand(
+    import_vscode12.commands.registerCommand(
       IMPORT_TRACE_AND_REGENERATE_COMMAND,
       (argument) => run(async () => {
-        if (!import_vscode10.workspace.isTrusted)
+        if (!import_vscode12.workspace.isTrusted)
           throw new Error("Trace import and source regeneration require a trusted workspace.");
         const traceFile = await traceFileFrom(argument);
         if (!traceFile) return;
-        const trace = readTrace(traceFile);
+        const trace = await readRuntimeTraceFileMetadata(traceFile, {
+          maxBytes: Number.MAX_SAFE_INTEGER
+        });
         const resolved = await resolveTarget(context, {}, trace.romContentSha256);
         if (!resolved) return;
         validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest);
-        const snapshot = loadAnalysisProjectSnapshot(resolved.projectDirectory);
-        const imported = importRuntimeInstructionTrace(trace, {
-          projectRomContentSha256: snapshot.manifest.rom.contentSha256,
-          sourceName: path22.basename(traceFile)
-        });
-        const merged = mergeRuntimeEvidence(snapshot.shards, imported.batch);
-        if (merged.changed)
-          commitAnalysisProjectTransaction(resolved.projectDirectory, snapshot.revision, {
-            manifest: snapshot.manifest,
-            shards: merged.shards
-          });
-        const seeds = trace.architecture === "snes.65816" && trace.addressSpace === SNES_CPU_ADDRESS_SPACE ? imported.batch.runtime?.flatMap(
-          (record3) => record3.kind === "runtime-execution" ? [{ address: record3.address, evidence: record3.evidence }] : []
-        ) ?? [] : [];
+        const maxBytes = traceImportMaxBytes(resolved.sourceDirectory);
+        const imported = await withMaintenanceProgress(
+          "Assembly: importing runtime trace",
+          (options) => client3.run(
+            "import",
+            {
+              target: resolved,
+              traceFile,
+              maxBytes,
+              architecture: trace.architecture,
+              addressSpace: trace.addressSpace
+            },
+            options
+          ),
+          resolved.sourceDirectory
+        );
+        const seeds = imported.seeds;
         let summary;
         try {
-          summary = await regenerate(resolved, seeds);
+          summary = await regenerate(client3, resolved, seeds);
         } catch (error) {
-          const execution2 = summarizeExecutionWindow(
-            trace,
-            loadAnalysisProjectSnapshot(resolved.projectDirectory).shards
-          );
           refresh();
+          if (error instanceof Error && error.name === "AbortError") throw error;
+          outputChannel2?.error(
+            `Disassembly regeneration failed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`
+          );
+          const executionReport = await withMaintenanceProgress(
+            "Assembly: summarizing execution capture",
+            (options) => client3.run(
+              "execution",
+              { projectDirectory: resolved.projectDirectory, traceFile, maxBytes },
+              options
+            ),
+            resolved.sourceDirectory
+          ).then(renderExecutionWindowReport).catch(
+            (reportError) => `Routine report unavailable: ${reportError instanceof Error ? reportError.message : String(reportError)}`
+          );
           const message = error instanceof Error ? error.message : String(error);
           await showMarkdown(
             `${[
@@ -66095,27 +68207,32 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
               "",
               message,
               "",
-              "The trace evidence was imported, but generated source may be incomplete or unverified. The routine attribution available from the current analysis is preserved below.",
+              "The trace evidence was imported. Analysis and export guards preserve previous results when an update would discard known code; other failures may leave source unverified. The error above identifies the failed step. Routine attribution from the saved analysis is preserved below.",
               "",
-              renderExecutionWindowReport(execution2)
+              executionReport
             ].join("\n")}
 `
           );
           throw error;
         }
-        const execution = summarizeExecutionWindow(
-          trace,
-          loadAnalysisProjectSnapshot(resolved.projectDirectory).shards
+        const execution = await withMaintenanceProgress(
+          "Assembly: summarizing execution capture",
+          (options) => client3.run(
+            "execution",
+            { projectDirectory: resolved.projectDirectory, traceFile, maxBytes },
+            options
+          ),
+          resolved.sourceDirectory
         );
         refresh();
-        const mergeDetail = merged.changed ? `${merged.added.runtime} runtime address(es) and ${merged.added.evidence} evidence record(s) added` : "the identical trace evidence was already present";
+        const mergeDetail = imported.changed ? `${imported.added.runtime} runtime address(es) and ${imported.added.evidence} evidence record(s) added` : "the identical trace evidence was already present";
         const report2 = `${renderDisassemblyRegenerationReport(summary).replace(
           "## Result\n\n",
           `## Trace import
 
 - File: ${traceFile}
 - Observed events: ${imported.observedEvents}
-- Unique observed PCs: ${imported.report.imported.executionRecords ?? 0}
+- Unique observed PCs: ${imported.executionRecords}
 - Producer-dropped events: ${imported.droppedEvents}
 - Merge: ${mergeDetail}
 
@@ -66128,7 +68245,7 @@ ${renderExecutionWindowReport(execution)}`;
           `Trace imported: ${imported.observedEvents} event(s), ${execution.routines.length} routine candidate(s), ${seeds.length} code seed(s), ${summary.after.codeBytes - summary.before.codeBytes} code-byte delta.`
         );
         await showMarkdown(report2);
-        void import_vscode10.window.showInformationMessage(
+        void import_vscode12.window.showInformationMessage(
           `Assembly: trace imported and disassembly rebuilt; ${execution.routines.length} routine candidate(s), ${seeds.length} unique code seed(s), ${signed2(summary.after.codeBytes - summary.before.codeBytes)} emitted code bytes.`
         );
       })
@@ -66149,17 +68266,17 @@ var behaviorEntrySeeds = (shards, addresses2) => {
 
 // packages/vscode-extension/src/behavior-capture.ts
 var isLocalWorkspaceProject2 = (directory) => {
-  const real = fs15.realpathSync(directory);
-  return (import_vscode11.workspace.workspaceFolders ?? []).some((folder) => {
+  const real = fs16.realpathSync(directory);
+  return (import_vscode13.workspace.workspaceFolders ?? []).some((folder) => {
     if (folder.uri.scheme !== "file") return false;
-    const relative6 = path23.relative(fs15.realpathSync(folder.uri.fsPath), real);
-    return relative6 === "" || !relative6.startsWith(`..${path23.sep}`) && relative6 !== ".." && !path23.isAbsolute(relative6);
+    const relative6 = path25.relative(fs16.realpathSync(folder.uri.fsPath), real);
+    return relative6 === "" || !relative6.startsWith(`..${path25.sep}`) && relative6 !== ".." && !path25.isAbsolute(relative6);
   });
 };
 var readCapture = (file) => {
-  if (fs15.statSync(file).size > MAX_CAPTURE_FILE_BYTES)
+  if (fs16.statSync(file).size > MAX_CAPTURE_FILE_BYTES)
     throw new Error("Capture file exceeds the 128 MiB safety limit.");
-  return validateBehaviorCapture(JSON.parse(fs15.readFileSync(file, "utf8")));
+  return validateBehaviorCapture(JSON.parse(fs16.readFileSync(file, "utf8")));
 };
 var hexadecimal4 = (address4) => `$${address4.toString(16).toUpperCase().padStart(6, "0")}`;
 var plain = (value) => value.split("").map((char) => "\\`*{}[]<>&|!#\r\n".includes(char) ? "_" : char).join("");
@@ -66167,7 +68284,7 @@ var selectProject = async (binarySha256, target) => {
   const matches = (await Promise.all(
     (await findAnalysisProjectDirectories()).filter(isLocalWorkspaceProject2).map(async (directory) => {
       try {
-        const bytes = await fs15.promises.readFile(path23.join(directory, "analysis.json"));
+        const bytes = await fs16.promises.readFile(path25.join(directory, "analysis.json"));
         const manifest = migrateManifest(JSON.parse(bytes.toString("utf8")));
         return manifest.rom.contentSha256 === binarySha256 && manifest.target === target ? [
           {
@@ -66182,9 +68299,9 @@ var selectProject = async (binarySha256, target) => {
     })
   )).flat();
   if (matches.length < 2) return matches[0];
-  return (await import_vscode11.window.showQuickPick(
+  return (await import_vscode13.window.showQuickPick(
     matches.map((project) => ({
-      label: path23.basename(project.directory),
+      label: path25.basename(project.directory),
       description: project.directory,
       project
     })),
@@ -66192,7 +68309,7 @@ var selectProject = async (binarySha256, target) => {
   ))?.project;
 };
 var numberInput = async (title, value, max) => {
-  const input = await import_vscode11.window.showInputBox({
+  const input = await import_vscode13.window.showInputBox({
     title,
     value: String(value),
     validateInput: (raw) => /^\d+$/.test(raw) && Number(raw) >= 1 && Number(raw) <= max ? void 0 : `Enter an integer from 1 to ${max}.`
@@ -66200,7 +68317,7 @@ var numberInput = async (title, value, max) => {
   return input === void 0 ? void 0 : Number(input);
 };
 var chooseStop = async (context, trace, projectDirectory) => {
-  const kind = await import_vscode11.window.showQuickPick(
+  const kind = await import_vscode13.window.showQuickPick(
     [
       { label: "Manual stop", stopKind: "manual" },
       { label: "Elapsed time", stopKind: "elapsed" },
@@ -66225,7 +68342,7 @@ var chooseStop = async (context, trace, projectDirectory) => {
       throw new Error(
         "No labels in this trace address space. Use an instruction address or source line."
       );
-    const selected = await import_vscode11.window.showQuickPick(
+    const selected = await import_vscode13.window.showQuickPick(
       labels.map((label) => ({
         label: label.name,
         description: hexadecimal4(label.address),
@@ -66236,7 +68353,7 @@ var chooseStop = async (context, trace, projectDirectory) => {
     return selected ? { kind: "address", addresses: [selected.address], description: `Label ${selected.label}` } : void 0;
   }
   if (kind.stopKind === "source") {
-    const source = await import_vscode11.window.showQuickPick(
+    const source = await import_vscode13.window.showQuickPick(
       context.map.sources.map((entry) => ({ label: entry.path, entry })),
       { title: "Stop at mapped source line" }
     );
@@ -66254,7 +68371,7 @@ var chooseStop = async (context, trace, projectDirectory) => {
       description: `${source.entry.path}:${line}`
     };
   }
-  const input = await import_vscode11.window.showInputBox({
+  const input = await import_vscode13.window.showInputBox({
     title: "Stop at instruction address (hexadecimal)",
     placeHolder: "$C08000",
     validateInput: (raw) => /^(?:\$|0x)?[\da-f]{1,6}$/i.test(raw) ? void 0 : "Enter a 24-bit hexadecimal instruction address."
@@ -66367,13 +68484,13 @@ var registerBehaviorCaptures = (host) => {
   let active;
   const stoppedThreads = /* @__PURE__ */ new Map();
   const start = async (role) => {
-    if (!import_vscode11.workspace.isTrusted)
+    if (!import_vscode13.workspace.isTrusted)
       throw new Error("Behavior capture requires a trusted local workspace.");
     const release = acquireTraceLease();
     let session;
     let started = false;
     try {
-      session = import_vscode11.debug.activeDebugSession;
+      session = import_vscode13.debug.activeDebugSession;
       const context = session && host.context(session);
       if (!session || !context || session.type !== "uttori-asm")
         throw new Error("Start an Uttori ASM debug session before capturing behavior.");
@@ -66382,7 +68499,7 @@ var registerBehaviorCaptures = (host) => {
         throw new Error(
           "This backend has no instruction trace stream. Use the trace-enabled ares runtime; replay is for workflow tests only. MesenCE trace capture is not yet supported."
         );
-      const trace = traces.length === 1 ? traces[0] : (await import_vscode11.window.showQuickPick(
+      const trace = traces.length === 1 ? traces[0] : (await import_vscode13.window.showQuickPick(
         traces.map((entry) => ({
           label: `${entry.architecture} / ${entry.addressSpace}`,
           entry
@@ -66403,7 +68520,7 @@ var registerBehaviorCaptures = (host) => {
       };
       const baselines = [];
       if (role === "action") {
-        const files = await import_vscode11.window.showOpenDialog({
+        const files = await import_vscode13.window.showOpenDialog({
           title: "Select one to eight idle baseline captures",
           canSelectMany: true,
           filters: { "Behavior captures": ["json"] }
@@ -66432,7 +68549,7 @@ var registerBehaviorCaptures = (host) => {
         ))
           throw new Error("Baseline processor/emulator revision differs from the active session.");
       }
-      const label = await import_vscode11.window.showInputBox({
+      const label = await import_vscode13.window.showInputBox({
         title: role === "baseline" ? "Idle baseline label" : "Behavior label",
         value: role === "baseline" ? "Standing idle" : "Open Menu",
         validateInput: (raw) => raw.trim() && raw.length <= 512 && !raw.split("").some((char) => char.charCodeAt(0) < 32 || char === "\u2028" || char === "\u2029") ? void 0 : "Enter a single-line label (1\u2013512 characters)."
@@ -66463,10 +68580,10 @@ var registerBehaviorCaptures = (host) => {
         eventBudget
       );
       if (maxEvents === void 0) return;
-      const destination = await import_vscode11.window.showSaveDialog({
+      const destination = await import_vscode13.window.showSaveDialog({
         title: "Save capture",
-        defaultUri: import_vscode11.Uri.file(
-          path23.join(
+        defaultUri: import_vscode13.Uri.file(
+          path25.join(
             session.workspaceFolder?.uri.fsPath ?? context.sourceRoot,
             `${role}-${(0, import_node_crypto28.randomUUID)()}.capture.json`
           )
@@ -66478,20 +68595,20 @@ var registerBehaviorCaptures = (host) => {
       if (destination.scheme !== "file") throw new Error("Capture destination must be local.");
       let resumeThread;
       if (stoppedThreads.has(session.id)) {
-        const choice = await import_vscode11.window.showQuickPick(["Start and Continue", "Start Paused"], {
+        const choice = await import_vscode13.window.showQuickPick(["Start and Continue", "Start Paused"], {
           title: "The CPU is paused",
           placeHolder: "Capture records running instructions. Start Paused requires stepping or continuing before the time limit expires."
         });
         if (!choice) return;
         if (choice === "Start and Continue") resumeThread = stoppedThreads.get(session.id);
       }
-      const descriptor2 = fs15.openSync(destination.fsPath, "wx");
+      const descriptor2 = fs16.openSync(destination.fsPath, "wx");
       const recordingSession = session;
       try {
         await recordingSession.customRequest("uttori/startTrace", {
           architecture: trace.architecture,
           addressSpace: trace.addressSpace,
-          detail: trace.instructionDetails && import_vscode11.workspace.getConfiguration("asm").get("debug.traceDetail", "full") === "full" ? "full" : "pc"
+          detail: trace.instructionDetails && import_vscode13.workspace.getConfiguration("asm").get("debug.traceDetail", "full") === "full" ? "full" : "pc"
         });
         started = true;
         const recorder = new BehaviorCaptureRecorder({
@@ -66525,7 +68642,7 @@ var registerBehaviorCaptures = (host) => {
             throw error;
           }
         }
-        void import_vscode11.window.showInformationMessage(
+        void import_vscode13.window.showInformationMessage(
           `Assembly: ${role} capture started. Resume the emulator if paused; ${role === "action" ? "perform the behavior" : "remain idle"}. Use Assembly: Stop Behavior Capture to end early.`
         );
         const captured = await recorder.completion;
@@ -66536,22 +68653,22 @@ var registerBehaviorCaptures = (host) => {
           identity: identity2,
           windows: [...baselines, captured]
         });
-        fs15.writeFileSync(descriptor2, canonicalJson(artifact));
-        fs15.fsyncSync(descriptor2);
+        fs16.writeFileSync(descriptor2, canonicalJson(artifact));
+        fs16.fsyncSync(descriptor2);
         const events = captured.trace.chunks.reduce(
           (sum, chunk) => sum + chunk.addresses.length,
           0
         );
         const message = `Assembly: saved ${events} ${role} events; stop=${captured.stopReason}, dropped=${captured.trace.chunks.at(-1)?.droppedEvents ?? 0}. ${destination.fsPath}`;
         if (events === 0)
-          void import_vscode11.window.showWarningMessage(
+          void import_vscode13.window.showWarningMessage(
             `${message} No instructions were observed. A paused CPU is not an idle baseline; use Start and Continue or step while capturing.`
           );
         else if (["error", "session-ended"].includes(captured.stopReason))
-          void import_vscode11.window.showWarningMessage(message);
-        else void import_vscode11.window.showInformationMessage(message);
+          void import_vscode13.window.showWarningMessage(message);
+        else void import_vscode13.window.showInformationMessage(message);
       } finally {
-        fs15.closeSync(descriptor2);
+        fs16.closeSync(descriptor2);
       }
     } finally {
       if (started && session)
@@ -66561,7 +68678,7 @@ var registerBehaviorCaptures = (host) => {
     }
   };
   const reviewAndApply = async () => {
-    const files = await import_vscode11.window.showOpenDialog({
+    const files = await import_vscode13.window.showOpenDialog({
       title: "Review behavior capture",
       canSelectMany: false,
       filters: { "Behavior capture": ["json"] }
@@ -66576,23 +68693,23 @@ var registerBehaviorCaptures = (host) => {
     );
     const project = selectedProject ? { ...selectedProject, snapshot: loadAnalysisProjectSnapshot(selectedProject.directory) } : void 0;
     const review = reviewBehaviorCapture(capture, project?.snapshot.shards);
-    const context = import_vscode11.debug.activeDebugSession && host.context(import_vscode11.debug.activeDebugSession);
+    const context = import_vscode13.debug.activeDebugSession && host.context(import_vscode13.debug.activeDebugSession);
     const map = context?.map.fingerprint.value === capture.identity.debugMapFingerprint ? context.map : void 0;
     const content = renderBehaviorReview(review, capture, map);
-    await import_vscode11.window.showTextDocument(
-      await import_vscode11.workspace.openTextDocument({ language: "markdown", content }),
+    await import_vscode13.window.showTextDocument(
+      await import_vscode13.workspace.openTextDocument({ language: "markdown", content }),
       { preview: false }
     );
     if (!project || !capture.identity.project) {
-      void import_vscode11.window.showInformationMessage(
+      void import_vscode13.window.showInformationMessage(
         "Review available. Applying comments requires the matching native analysis project; source-only captures remain read-only."
       );
       return;
     }
-    if (!import_vscode11.workspace.isTrusted)
+    if (!import_vscode13.workspace.isTrusted)
       throw new Error("Applying capture comments requires a trusted workspace.");
     if (capture.identity.project.manifestSha256 !== project.snapshot.revision.manifestSha256)
-      void import_vscode11.window.showWarningMessage(
+      void import_vscode13.window.showWarningMessage(
         "Analysis changed since capture. Review uses the current project; existing facts are preserved and concurrent edits will abort apply."
       );
     const choices = review.candidates.map((candidate) => ({
@@ -66602,13 +68719,13 @@ var registerBehaviorCaptures = (host) => {
       address: candidate.address,
       picked: candidate.classification !== "shared"
     }));
-    const selected = await import_vscode11.window.showQuickPick(choices, {
+    const selected = await import_vscode13.window.showQuickPick(choices, {
       title: "Select reviewed instructions to annotate",
       canPickMany: true,
       placeHolder: "Shared code is retained and may be selected explicitly. Cancel leaves the project unchanged."
     });
     if (!selected?.length) return;
-    if (await import_vscode11.window.showWarningMessage(
+    if (await import_vscode13.window.showWarningMessage(
       `Add ${selected.length} candidate-association comments for \u201C${review.label}\u201D and import execution evidence? Existing comments, labels, source, and control targets will not be replaced.`,
       { modal: true },
       "Apply Capture"
@@ -66626,12 +68743,12 @@ var registerBehaviorCaptures = (host) => {
       });
     host.refresh();
     const selectedAddresses = selected.map(({ address: address4 }) => address4);
-    const action = await import_vscode11.window.showInformationMessage(
+    const action = await import_vscode13.window.showInformationMessage(
       merged.changed ? `Assembly: applied capture: ${merged.added.runtime} runtime fact(s), ${merged.added.comments} comment(s), ${merged.added.evidence} evidence record(s) added; ${merged.updated.runtime + merged.updated.comments} record(s) updated; ${merged.conflicts.length} runtime conflict(s) retained. Generated source is now stale until it is analyzed and regenerated.` : "Assembly: this capture selection was already applied; no evidence changed. You can still analyze and regenerate source.",
       "Analyze and Regenerate"
     );
     if (action === "Analyze and Regenerate")
-      await import_vscode11.commands.executeCommand(REGENERATE_DISASSEMBLY_COMMAND, {
+      await import_vscode13.commands.executeCommand(REGENERATE_DISASSEMBLY_COMMAND, {
         projectDirectory: project.directory,
         entrySeeds: behaviorEntrySeeds(merged.shards, selectedAddresses)
       });
@@ -66640,17 +68757,17 @@ var registerBehaviorCaptures = (host) => {
     try {
       await operation();
     } catch (error) {
-      await import_vscode11.window.showErrorMessage(
+      await import_vscode13.window.showErrorMessage(
         `Assembly behavior capture: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   };
   return [
-    import_vscode11.commands.registerCommand(
+    import_vscode13.commands.registerCommand(
       "asm.capture.guide",
       run(async () => {
-        await import_vscode11.window.showTextDocument(
-          await import_vscode11.workspace.openTextDocument({
+        await import_vscode13.window.showTextDocument(
+          await import_vscode13.workspace.openTextDocument({
             language: "markdown",
             content: BEHAVIOR_CAPTURE_GUIDE
           }),
@@ -66658,7 +68775,7 @@ var registerBehaviorCaptures = (host) => {
         );
       })
     ),
-    import_vscode11.commands.registerCommand(
+    import_vscode13.commands.registerCommand(
       "asm.capture.demo",
       run(async () => {
         const demo = await runBehaviorCaptureDemo();
@@ -66674,35 +68791,35 @@ var registerBehaviorCaptures = (host) => {
           "## In-memory comment preview",
           "",
           ...demo.comments.map(
-            (comment) => `- ${hexadecimal4(comment.address)}: ${plain(comment.text)}`
+            (comment2) => `- ${hexadecimal4(comment2.address)}: ${plain(comment2.text)}`
           ),
           "",
           renderBehaviorReview(demo.review, demo.capture)
         ].join("\n");
-        await import_vscode11.window.showTextDocument(
-          await import_vscode11.workspace.openTextDocument({ language: "markdown", content }),
+        await import_vscode13.window.showTextDocument(
+          await import_vscode13.workspace.openTextDocument({ language: "markdown", content }),
           { preview: false }
         );
       })
     ),
-    import_vscode11.commands.registerCommand(
+    import_vscode13.commands.registerCommand(
       "asm.capture.idle",
       run(() => start("baseline"))
     ),
-    import_vscode11.commands.registerCommand(
+    import_vscode13.commands.registerCommand(
       "asm.capture.behavior",
       run(() => start("action"))
     ),
-    import_vscode11.commands.registerCommand("asm.capture.review", run(reviewAndApply)),
-    import_vscode11.commands.registerCommand("asm.capture.stop", () => {
+    import_vscode13.commands.registerCommand("asm.capture.review", run(reviewAndApply)),
+    import_vscode13.commands.registerCommand("asm.capture.stop", () => {
       if (active) active.recorder.requestStop();
-      else void import_vscode11.window.showInformationMessage("No behavior capture is active.");
+      else void import_vscode13.window.showInformationMessage("No behavior capture is active.");
     }),
-    import_vscode11.debug.onDidTerminateDebugSession((session) => {
+    import_vscode13.debug.onDidTerminateDebugSession((session) => {
       stoppedThreads.delete(session.id);
       if (active?.session.id === session.id) active.recorder.requestStop("session-ended");
     }),
-    import_vscode11.debug.registerDebugAdapterTrackerFactory("uttori-asm", {
+    import_vscode13.debug.registerDebugAdapterTrackerFactory("uttori-asm", {
       createDebugAdapterTracker: (session) => ({
         onDidSendMessage: (raw) => {
           if (!raw || typeof raw !== "object") return;
@@ -66723,7 +68840,7 @@ var registerBehaviorCaptures = (host) => {
 };
 
 // packages/vscode-extension/src/runtime-binding.ts
-var path24 = __toESM(require("node:path"));
+var path26 = __toESM(require("node:path"));
 var runtimeBindingFromLaunch = (configurations, root) => {
   const bindings = /* @__PURE__ */ new Map();
   for (const configuration of configurations) {
@@ -66734,7 +68851,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
     const resolve11 = (value) => {
       if (typeof value !== "string" || !value.trim()) return void 0;
       const expanded = value.replaceAll("${workspaceFolder}", root);
-      return expanded.includes("${") ? void 0 : path24.resolve(root, expanded);
+      return expanded.includes("${") ? void 0 : path26.resolve(root, expanded);
     };
     const runtimeManifest = resolve11(config.runtimeManifest);
     const emulator = resolve11(config.emulator);
@@ -66754,7 +68871,14 @@ var runtimeBindingFromLaunch = (configurations, root) => {
 };
 
 // packages/vscode-extension/src/runtime-trace-recorder.ts
-var import_promises = require("node:fs/promises");
+var import_promises2 = require("node:fs/promises");
+var resolveEditorTraceDetail = (requested, instructionDetails) => {
+  if (requested === "full" && !instructionDetails)
+    throw new Error(
+      "Full instruction capture requires a runtime that supplies instruction bytes and CPU state. The active runtime only supports PC-only capture. Check runtimeManifest and emulator in the active launch configuration, then restart debugging with a rich-trace runtime, or explicitly set asm.debug.traceDetail to pc."
+    );
+  return requested;
+};
 var delay = (milliseconds) => new Promise((resolve11) => setTimeout(resolve11, milliseconds));
 var assertIdentity = (value, name) => {
   if (!value) throw new Error(`${name} must not be empty.`);
@@ -66797,7 +68921,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
       throw new Error("Trace ROM content identity must be a lowercase SHA-256 value.");
     if (!Number.isSafeInteger(options.maxBatchEvents) || options.maxBatchEvents < 1)
       throw new Error("Trace batch maximum must be a positive safe integer.");
-    const handle = await (0, import_promises.open)(options.file, "w");
+    const handle = await (0, import_promises2.open)(options.file, "w");
     const header = {
       format: "uttori-asm-instruction-trace",
       schemaVersion: 1,
@@ -66932,19 +69056,19 @@ var UTTORI_TRACE_STOP_COMMAND = "asm.trace.stop";
 var UTTORI_TRACE_STOP_ANALYZE_COMMAND = "asm.trace.stopAnalyze";
 var IMPORT_TRACE_AND_REGENERATE_COMMAND2 = "asm.trace.importRegenerate";
 var EMULATOR_RUNTIME_BINDINGS_KEY = "uttoriAsm.emulatorRuntimeBindings.v1";
-var runtimeWorkspace = (resource) => (resource ? import_vscode12.workspace.getWorkspaceFolder(resource) : void 0) ?? import_vscode12.workspace.workspaceFolders?.[0];
+var runtimeWorkspace = (resource) => (resource ? import_vscode14.workspace.getWorkspaceFolder(resource) : void 0) ?? import_vscode14.workspace.workspaceFolders?.[0];
 var runtimeWorkspaceKey = (folder) => folder.uri.toString();
 var configuredEmulatorRuntime = (context, resource) => {
   const folder = runtimeWorkspace(resource);
   if (!folder) return void 0;
   const saved = context.globalState.get(EMULATOR_RUNTIME_BINDINGS_KEY, {})[runtimeWorkspaceKey(folder)];
   return saved ?? runtimeBindingFromLaunch(
-    import_vscode12.workspace.getConfiguration("launch", folder.uri).get("configurations", []),
+    import_vscode14.workspace.getConfiguration("launch", folder.uri).get("configurations", []),
     folder.uri.fsPath
   );
 };
 var chooseLocalPath = async (title, options) => {
-  const selected = await import_vscode12.window.showOpenDialog({
+  const selected = await import_vscode14.window.showOpenDialog({
     title,
     canSelectMany: false,
     canSelectFiles: options.files,
@@ -66957,11 +69081,11 @@ var chooseLocalPath = async (title, options) => {
   return uri.fsPath;
 };
 var configureEmulatorRuntime = async (context, resource) => {
-  if (!import_vscode12.workspace.isTrusted)
+  if (!import_vscode14.workspace.isTrusted)
     throw new Error("Configuring an emulator runtime requires a trusted workspace.");
   const folder = runtimeWorkspace(resource);
   if (!folder) throw new Error("Open a workspace folder before configuring an emulator runtime.");
-  const selectedBackend = await import_vscode12.window.showQuickPick(
+  const selectedBackend = await import_vscode14.window.showQuickPick(
     [
       {
         label: "ares",
@@ -66993,7 +69117,7 @@ var configureEmulatorRuntime = async (context, resource) => {
     folders: true
   });
   if (!runtimeDirectory) return void 0;
-  const manifest = JSON.parse(fs16.readFileSync(runtimeManifest, "utf8"));
+  const manifest = JSON.parse(fs17.readFileSync(runtimeManifest, "utf8"));
   if (selectedBackend.backend === "ares") parseAresRuntimeManifest(manifest);
   else parseMesenRuntimeManifest(manifest);
   const binding = {
@@ -67011,7 +69135,7 @@ var configureEmulatorRuntime = async (context, resource) => {
     ...bindings,
     [runtimeWorkspaceKey(folder)]: binding
   });
-  void import_vscode12.window.showInformationMessage(
+  void import_vscode14.window.showInformationMessage(
     `Assembly: ${selectedBackend.label} runtime configured for ${folder.name}.`
   );
   return binding;
@@ -67023,7 +69147,7 @@ var liveDebugConfiguration = (binding, artifacts, folder) => ({
   backend: binding.backend,
   program: artifacts.outputPath,
   debugMap: artifacts.debugMapPath,
-  sourceRoot: folder?.uri.fsPath ?? path25.dirname(artifacts.outputPath),
+  sourceRoot: folder?.uri.fsPath ?? path27.dirname(artifacts.outputPath),
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
   runtimeDirectory: binding.runtimeDirectory,
@@ -67033,7 +69157,7 @@ var liveDebugConfiguration = (binding, artifacts, folder) => ({
 var activeTraceRecording;
 var sessionContexts = /* @__PURE__ */ new Map();
 var annotationRefreshers = /* @__PURE__ */ new Map();
-var resolvedPath = (value, folder) => path25.isAbsolute(value) ? value : path25.resolve(folder?.uri.fsPath ?? process.cwd(), value);
+var resolvedPath = (value, folder) => path27.isAbsolute(value) ? value : path27.resolve(folder?.uri.fsPath ?? process.cwd(), value);
 var requiredLivePath = (value, name, folder) => {
   if (!value) throw new Error(`Live Uttori ASM debugging requires '${name}'.`);
   return resolvedPath(value, folder);
@@ -67062,17 +69186,18 @@ var traceProducer = (session, map) => {
       revision: stringField(map.fingerprint?.value, "debugMap.fingerprint.value")
     };
   const manifestFile = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
-  const manifest = JSON.parse(fs16.readFileSync(manifestFile, "utf8"));
+  const manifest = JSON.parse(fs17.readFileSync(manifestFile, "utf8"));
   const patch = stringField(manifest.patchSha256, "runtimeManifest.patchSha256");
   const revision = kind === "ares" ? stringField(manifest.forkRevision, "runtimeManifest.forkRevision") : stringField(manifest.upstreamRevision, "runtimeManifest.upstreamRevision");
-  return { id: kind, revision: `${revision}:${patch}` };
+  const executable = stringField(manifest.executableSha256, "runtimeManifest.executableSha256");
+  return { id: kind, revision: `${revision}:${patch}:${executable}` };
 };
 var chooseTrace = async (session) => {
   const result = await session.customRequest("uttori/traceCapabilities");
   const traces = result.traces ?? [];
   if (traces.length === 0) throw new Error("The active backend has no instruction trace stream.");
   if (traces.length === 1) return traces[0];
-  const selected = await import_vscode12.window.showQuickPick(
+  const selected = await import_vscode14.window.showQuickPick(
     traces.map((trace) => ({
       label: `${trace.architecture} / ${trace.addressSpace}`,
       description: `${trace.maxBufferedEvents} buffered, ${trace.maxBatchEvents} per pull`,
@@ -67083,19 +69208,23 @@ var chooseTrace = async (session) => {
   return selected?.trace;
 };
 var defaultTraceUri = (session) => {
-  const root = session.workspaceFolder?.uri.fsPath ?? import_vscode12.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  const root = session.workspaceFolder?.uri.fsPath ?? import_vscode14.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!root) return void 0;
   const timestamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(":", "-");
-  return import_vscode12.Uri.file(path25.join(root, `instruction-trace-${timestamp}.json`));
+  return import_vscode14.Uri.file(path27.join(root, `instruction-trace-${timestamp}.json`));
 };
 var startRuntimeTraceWithLease = async () => {
   if (activeTraceRecording) throw new Error("An instruction trace recording is already active.");
-  const session = import_vscode12.debug.activeDebugSession;
+  const session = import_vscode14.debug.activeDebugSession;
   if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE)
     throw new Error("Start an Uttori ASM debug session before recording a trace.");
   const trace = await chooseTrace(session);
   if (!trace) return;
-  const destination = await import_vscode12.window.showSaveDialog({
+  const detail = resolveEditorTraceDetail(
+    import_vscode14.workspace.getConfiguration("asm", session.workspaceFolder?.uri).get("debug.traceDetail", "full"),
+    trace.instructionDetails
+  );
+  const destination = await import_vscode14.window.showSaveDialog({
     defaultUri: defaultTraceUri(session),
     filters: { "Uttori ASM instruction trace": ["json"] },
     saveLabel: "Start Recording"
@@ -67105,7 +69234,7 @@ var startRuntimeTraceWithLease = async () => {
     throw new Error("Live instruction traces must be written to a local file.");
   const metadata = traceMetadata(session, trace);
   await session.customRequest("uttori/startTrace", {
-    detail: trace.instructionDetails && import_vscode12.workspace.getConfiguration("asm").get("debug.traceDetail", "full") === "full" ? "full" : "pc",
+    detail,
     architecture: trace.architecture,
     addressSpace: trace.addressSpace
   });
@@ -67131,11 +69260,13 @@ var startRuntimeTraceWithLease = async () => {
   void recorder.completion.catch((error) => {
     if (activeTraceRecording?.recorder !== recorder) return;
     activeTraceRecording = void 0;
-    void import_vscode12.window.showErrorMessage(
+    void import_vscode14.window.showErrorMessage(
       `Assembly trace recording failed: ${error instanceof Error ? error.message : String(error)}`
     );
   });
-  void import_vscode12.window.showInformationMessage(`Assembly: recording ${trace.architecture} instructions.`);
+  void import_vscode14.window.showInformationMessage(
+    `Assembly: recording ${trace.architecture} instructions (${detail === "full" ? "full execution details" : "PC-only"}).`
+  );
 };
 var startRuntimeTrace = async () => {
   const release = acquireTraceLease();
@@ -67156,23 +69287,24 @@ var stopRuntimeTrace = async (analyze = false) => {
   if (!active) throw new Error("No Uttori ASM instruction trace recording is active.");
   activeTraceRecording = void 0;
   const summary = await active.recorder.stop();
+  const total = summary.observedEvents + summary.droppedEvents;
+  const counts = `${summary.observedEvents.toLocaleString()} instruction event(s) retained; ${summary.droppedEvents.toLocaleString()} dropped${total > 0 ? ` (${(summary.droppedEvents / total * 100).toFixed(1)}%)` : ""}`;
+  const notify = summary.droppedEvents > 0 ? import_vscode14.window.showWarningMessage : import_vscode14.window.showInformationMessage;
   if (analyze) {
-    void import_vscode12.window.showInformationMessage(
-      `Assembly: captured ${summary.observedEvents} instruction event(s); updating the disassembly and identifying routines\u2026`
-    );
-    await import_vscode12.commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND2, import_vscode12.Uri.file(summary.file));
+    void notify(`Assembly: ${counts}; updating the disassembly and identifying routines\u2026`);
+    await import_vscode14.commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND2, import_vscode14.Uri.file(summary.file));
     return;
   }
-  const action = await import_vscode12.window.showInformationMessage(
-    `Assembly: wrote ${summary.observedEvents} instruction event(s) to ${summary.file}; ${summary.droppedEvents} producer event(s) dropped.`,
+  const action = await notify(
+    `Assembly: ${counts}. Wrote ${summary.file}.`,
     "Import Trace and Update Disassembly"
   );
   if (action === "Import Trace and Update Disassembly")
-    await import_vscode12.commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND2, import_vscode12.Uri.file(summary.file));
+    await import_vscode14.commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND2, import_vscode14.Uri.file(summary.file));
 };
 var runTraceCommand = (command) => {
   void command().catch(
-    (error) => import_vscode12.window.showErrorMessage(
+    (error) => import_vscode14.window.showErrorMessage(
       `Assembly trace: ${error instanceof Error ? error.message : String(error)}`
     )
   );
@@ -67184,17 +69316,17 @@ var debugSessionTerminated = (session) => {
   if (!active || active.session.id !== session.id) return;
   activeTraceRecording = void 0;
   void active.recorder.finishIncomplete().then(
-    (summary) => import_vscode12.window.showWarningMessage(
+    (summary) => import_vscode14.window.showWarningMessage(
       `Assembly: debug session ended; preserved an incomplete ${summary.observedEvents}-event trace at ${summary.file}.`
     )
   ).catch(
-    (error) => import_vscode12.window.showErrorMessage(
+    (error) => import_vscode14.window.showErrorMessage(
       `Assembly trace finalization failed: ${error instanceof Error ? error.message : String(error)}`
     )
   );
 };
 var createLiveBackend = (configuration, folder, extensionRoot, program, log) => {
-  if (!import_vscode12.workspace.isTrusted)
+  if (!import_vscode14.workspace.isTrusted)
     throw new Error("Live Uttori ASM debugging requires a trusted workspace.");
   const kind = configuration.backend;
   if (kind !== "ares" && kind !== "mesence")
@@ -67206,7 +69338,7 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, log) => 
     "runtimeDirectory",
     folder
   );
-  const bundledSidecar = path25.join(
+  const bundledSidecar = path27.join(
     extensionRoot,
     "sidecars",
     kind === "ares" ? "ares.mjs" : "mesence.mjs"
@@ -67255,8 +69387,8 @@ var loadConfiguration = (session, extensionRoot, log) => {
   const folder = session.workspaceFolder;
   const program = resolvedPath(configuration.program, folder);
   const mapFile = resolvedPath(configuration.debugMap, folder);
-  const output = new Uint8Array(fs16.readFileSync(program));
-  const map = JSON.parse(fs16.readFileSync(mapFile, "utf8"));
+  const output = new Uint8Array(fs17.readFileSync(program));
+  const map = JSON.parse(fs17.readFileSync(mapFile, "utf8"));
   const issues = validateDebugMap(map, output);
   if (issues.length) throw new Error(issues.join(" "));
   const kind = configuration.backend ?? "replay";
@@ -67264,7 +69396,7 @@ var loadConfiguration = (session, extensionRoot, log) => {
     if (kind !== "replay")
       return createLiveBackend(configuration, folder, extensionRoot, program, log);
     const script = configuration.replay ? JSON.parse(
-      fs16.readFileSync(resolvedPath(configuration.replay, folder), "utf8")
+      fs17.readFileSync(resolvedPath(configuration.replay, folder), "utf8")
     ) : createDebugMapReplayScript(map, output);
     return new ReplayDebugBackend(script);
   })();
@@ -67286,7 +69418,7 @@ var loadConfiguration = (session, extensionRoot, log) => {
   };
 };
 var InlineDebugAdapter = class {
-  #emitter = new import_vscode12.EventEmitter();
+  #emitter = new import_vscode14.EventEmitter();
   #session;
   #backend;
   onDidSendMessage = this.#emitter.event;
@@ -67304,7 +69436,7 @@ var InlineDebugAdapter = class {
         if (message.type === "response" && !message.success) {
           log(`${message.command} failed: ${message.message}`);
           if (message.command === "launch" || message.command === "attach")
-            void import_vscode12.window.showErrorMessage(`Assembly debugger: ${message.message}`);
+            void import_vscode14.window.showErrorMessage(`Assembly debugger: ${message.message}`);
         } else if (message.type === "event" && message.event === "stopped") {
           log(
             "Paused. Inspect CALL STACK and VARIABLES in Run and Debug; use Step Into (F11) or Continue (F5). Capture commands observe execution only while it runs."
@@ -67340,7 +69472,7 @@ var UttoriDebugConfigurationProvider = class {
     const configuredProgram = typeof configuration.program === "string" ? configuration.program : void 0;
     const configuredMap = typeof configuration.debugMap === "string" ? configuration.debugMap : void 0;
     const configuredSourceRoot = typeof configuration.sourceRoot === "string" ? configuration.sourceRoot : void 0;
-    const program = configuredProgram ?? path25.join(root, "build", "rebuilt-content.sfc");
+    const program = configuredProgram ?? path27.join(root, "build", "rebuilt-content.sfc");
     return {
       ...configuration,
       type: typeof configuration.type === "string" ? configuration.type : UTTORI_ASM_DEBUG_TYPE,
@@ -67374,7 +69506,7 @@ var UttoriDebugAdapterFactory = class {
       if (session.configuration.backend === "ares") {
         const manifest = parseAresRuntimeManifest(
           JSON.parse(
-            fs16.readFileSync(
+            fs17.readFileSync(
               requiredLivePath(
                 session.configuration.runtimeManifest,
                 "runtimeManifest",
@@ -67394,7 +69526,7 @@ var UttoriDebugAdapterFactory = class {
       loaded = loadConfiguration(session, this.#extensionRoot, log);
     } catch (error) {
       log(`Launch failed: ${String(error)}`);
-      void import_vscode12.window.showErrorMessage(
+      void import_vscode14.window.showErrorMessage(
         `Assembly debugger: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
@@ -67414,14 +69546,14 @@ var UttoriDebugAdapterFactory = class {
       (error) => log(`Optional annotations unavailable: ${String(error)}`)
     );
     log("Artifacts valid. Connecting debugger; it will stop at entry\u2026");
-    return new import_vscode12.DebugAdapterInlineImplementation(
+    return new import_vscode14.DebugAdapterInlineImplementation(
       new InlineDebugAdapter(loaded, (address4) => instructionAnnotation?.(address4), log)
     );
   }
 };
 var registerDebugging = (extensionRoot, refresh = () => {
 }) => {
-  const output = import_vscode12.window.createOutputChannel("Uttori Emulator");
+  const output = import_vscode14.window.createOutputChannel("Uttori Emulator");
   return [
     output,
     ...registerBehaviorCaptures({
@@ -67431,32 +69563,32 @@ var registerDebugging = (extensionRoot, refresh = () => {
         for (const update of annotationRefreshers.values()) void update().catch(() => void 0);
       }
     }),
-    import_vscode12.debug.registerDebugConfigurationProvider(
+    import_vscode14.debug.registerDebugConfigurationProvider(
       UTTORI_ASM_DEBUG_TYPE,
       new UttoriDebugConfigurationProvider()
     ),
-    import_vscode12.debug.registerDebugAdapterDescriptorFactory(
+    import_vscode14.debug.registerDebugAdapterDescriptorFactory(
       UTTORI_ASM_DEBUG_TYPE,
       new UttoriDebugAdapterFactory(extensionRoot, output)
     ),
-    import_vscode12.commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
-    import_vscode12.commands.registerCommand(
+    import_vscode14.commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
+    import_vscode14.commands.registerCommand(
       UTTORI_TRACE_STOP_COMMAND,
       () => runTraceCommand(() => stopRuntimeTrace(false))
     ),
-    import_vscode12.commands.registerCommand(
+    import_vscode14.commands.registerCommand(
       UTTORI_TRACE_STOP_ANALYZE_COMMAND,
       () => runTraceCommand(() => stopRuntimeTrace(true))
     ),
-    import_vscode12.debug.onDidTerminateDebugSession(debugSessionTerminated)
+    import_vscode14.debug.onDidTerminateDebugSession(debugSessionTerminated)
   ];
 };
 
 // packages/vscode-extension/src/project-wizard.ts
-var fs17 = __toESM(require("node:fs"));
-var import_node_path13 = __toESM(require("node:path"));
+var fs18 = __toESM(require("node:fs"));
+var import_node_path14 = __toESM(require("node:path"));
 init_src3();
-var import_vscode13 = require("vscode");
+var import_vscode15 = require("vscode");
 var CREATE_DISASSEMBLY_PROJECT_COMMAND = "asm.createDisassemblyProject";
 var IMPORT_DIZ_PROJECT_COMMAND = "asm.importDizProject";
 var jsonFile3 = (value) => `${JSON.stringify(value, null, 2)}
@@ -67497,11 +69629,6 @@ var formatBytes3 = (bytes) => {
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
   return `${bytes} bytes`;
 };
-var probeSummary = (probe) => {
-  const mapper = probe.detection.mapper ?? "needs selection";
-  const header = probe.rom.headerSize === 0 ? "none" : `${probe.rom.headerSize} bytes`;
-  return `SNES \xB7 ${mapper} \xB7 ${formatBytes3(probe.rom.contentSize)} \xB7 copier header: ${header}`;
-};
 var mapperItems = (probe) => {
   const candidates = new Map(
     probe.detection.candidates.map((candidate) => [candidate.mapper, candidate])
@@ -67532,7 +69659,7 @@ var mapperItems = (probe) => {
 };
 var chooseMapper = async (probe) => {
   if (!probe.mapperSelectionRequired) return probe.detection.mapper;
-  const selected = await import_vscode13.window.showQuickPick(mapperItems(probe), {
+  const selected = await import_vscode15.window.showQuickPick(mapperItems(probe), {
     title: "Select the SNES cartridge mapper",
     placeHolder: probe.mapperSelectionReason ?? "ROM detection needs an explicit mapper.",
     matchOnDescription: true,
@@ -67542,7 +69669,7 @@ var chooseMapper = async (probe) => {
   return selected?.mapper;
 };
 var chooseFile = async (title, filters) => {
-  const selected = await import_vscode13.window.showOpenDialog({
+  const selected = await import_vscode15.window.showOpenDialog({
     title,
     canSelectFiles: true,
     canSelectFolders: false,
@@ -67552,9 +69679,9 @@ var chooseFile = async (title, filters) => {
   return selected?.[0]?.fsPath;
 };
 var chooseOutputDirectory = async (romFile) => {
-  const selected = await import_vscode13.window.showOpenDialog({
+  const selected = await import_vscode15.window.showOpenDialog({
     title: "Select an empty output directory",
-    defaultUri: import_vscode13.Uri.file(import_node_path13.default.dirname(romFile)),
+    defaultUri: import_vscode15.Uri.file(import_node_path14.default.dirname(romFile)),
     canSelectFiles: false,
     canSelectFolders: true,
     canSelectMany: false,
@@ -67563,31 +69690,31 @@ var chooseOutputDirectory = async (romFile) => {
   const directory = selected?.[0]?.fsPath;
   if (!directory) return void 0;
   try {
-    if (fs17.readdirSync(directory).length > 0) {
-      void import_vscode13.window.showErrorMessage("Assembly: the selected output directory must be empty.");
+    if (fs18.readdirSync(directory).length > 0) {
+      void import_vscode15.window.showErrorMessage("Assembly: the selected output directory must be empty.");
       return void 0;
     }
   } catch (error) {
-    void import_vscode13.window.showErrorMessage(
+    void import_vscode15.window.showErrorMessage(
       `Assembly: cannot read the selected output directory: ${error instanceof Error ? error.message : String(error)}`
     );
     return void 0;
   }
   return directory;
 };
-var abortController2 = (token) => {
+var abortController = (token) => {
   const controller = new AbortController();
   token.onCancellationRequested(() => controller.abort());
   return controller;
 };
-var runProbe = async (romFile, dizRawFile) => import_vscode13.window.withProgress(
+var runProbe = async (romFile, dizRawFile) => import_vscode15.window.withProgress(
   {
-    location: import_vscode13.ProgressLocation.Notification,
+    location: import_vscode15.ProgressLocation.Notification,
     title: "Assembly: inspecting disassembly inputs",
     cancellable: true
   },
   (progress, token) => {
-    const cancellation = abortController2(token);
+    const cancellation = abortController(token);
     progress.report({ message: "Reading ROM and scoring cartridge headers\u2026" });
     return Promise.resolve(
       probeSnesProject({ romFile, dizRawFile, signal: cancellation.signal })
@@ -67614,8 +69741,8 @@ var completionDetail = (result) => {
 Round trip: byte-identical ${formatBytes3(result.roundTrip.comparison.actualLength)} (${result.roundTrip.comparison.actualSha256}).`;
 };
 var runProjectWizard = async (context, outputChannel2, importDiz) => {
-  if (!import_vscode13.workspace.isTrusted) {
-    void import_vscode13.window.showErrorMessage(
+  if (!import_vscode15.workspace.isTrusted) {
+    void import_vscode15.window.showErrorMessage(
       "Assembly: trust this workspace before importing ROM-derived project files."
     );
     return;
@@ -67633,33 +69760,35 @@ var runProjectWizard = async (context, outputChannel2, importDiz) => {
     const initialProbe = await runProbe(romFile, dizRawFile);
     const mapper = await chooseMapper(initialProbe);
     if (!mapper) return;
-    const resolvedProbe = initialProbe.detection.mapper === mapper && !initialProbe.mapperSelectionRequired ? initialProbe : await import_vscode13.window.withProgress(
+    const resolvedProbe = initialProbe.detection.mapper === mapper && !initialProbe.mapperSelectionRequired ? initialProbe : await import_vscode15.window.withProgress(
       {
-        location: import_vscode13.ProgressLocation.Notification,
+        location: import_vscode15.ProgressLocation.Notification,
         title: "Assembly: applying mapper selection"
       },
       () => Promise.resolve(probeSnesProject({ romFile, dizRawFile, mapper }))
     );
     const outputDirectory = await chooseOutputDirectory(romFile);
     if (!outputDirectory) return;
-    const create = await import_vscode13.window.showInformationMessage(
-      `Create a disassembly project in '${import_node_path13.default.basename(outputDirectory)}'?`,
+    const detectedMapper = resolvedProbe.detection.mapper ?? "needs selection";
+    const header = resolvedProbe.rom.headerSize === 0 ? "none" : `${resolvedProbe.rom.headerSize} bytes`;
+    const create = await import_vscode15.window.showInformationMessage(
+      `Create a disassembly project in '${import_node_path14.default.basename(outputDirectory)}'?`,
       {
         modal: true,
-        detail: `${probeSummary(resolvedProbe)}
+        detail: `SNES \xB7 ${detectedMapper} \xB7 ${formatBytes3(resolvedProbe.rom.contentSize)} \xB7 copier header: ${header}
 ${outputDirectory}`
       },
       "Create Project"
     );
     if (create !== "Create Project") return;
-    const result = await import_vscode13.window.withProgress(
+    const result = await import_vscode15.window.withProgress(
       {
-        location: import_vscode13.ProgressLocation.Notification,
+        location: import_vscode15.ProgressLocation.Notification,
         title: "Assembly: creating disassembly project",
         cancellable: true
       },
       async (progress, token) => {
-        const cancellation = abortController2(token);
+        const cancellation = abortController(token);
         return initializeSnesDisassemblyWorkspace({
           romFile,
           dizRawFile,
@@ -67674,27 +69803,27 @@ ${outputDirectory}`
     await rememberSnesRom(context, result.probe.rom, romFile);
     outputChannel2?.info(`Disassembly project created at ${outputDirectory}`);
     outputChannel2?.info(completionDetail(result).replaceAll("\n", " "));
-    await import_vscode13.window.showInformationMessage("Assembly: disassembly project created successfully.", {
+    await import_vscode15.window.showInformationMessage("Assembly: disassembly project created successfully.", {
       modal: true,
       detail: completionDetail(result)
     });
-    await import_vscode13.commands.executeCommand("vscode.openFolder", import_vscode13.Uri.file(outputDirectory), false);
+    await import_vscode15.commands.executeCommand("vscode.openFolder", import_vscode15.Uri.file(outputDirectory), false);
   } catch (error) {
     if (error instanceof SnesProjectInitializationCancelledError) {
-      void import_vscode13.window.showInformationMessage("Assembly: project creation cancelled.");
+      void import_vscode15.window.showInformationMessage("Assembly: project creation cancelled.");
       return;
     }
     const message = error instanceof Error ? error.message : String(error);
     outputChannel2?.error(`Project creation failed: ${message}`);
-    void import_vscode13.window.showErrorMessage(`Assembly: project creation failed: ${message}`);
+    void import_vscode15.window.showErrorMessage(`Assembly: project creation failed: ${message}`);
   }
 };
 var registerProjectWizards = (context, outputChannel2) => [
-  import_vscode13.commands.registerCommand(
+  import_vscode15.commands.registerCommand(
     CREATE_DISASSEMBLY_PROJECT_COMMAND,
     () => runProjectWizard(context, outputChannel2, false)
   ),
-  import_vscode13.commands.registerCommand(
+  import_vscode15.commands.registerCommand(
     IMPORT_DIZ_PROJECT_COMMAND,
     () => runProjectWizard(context, outputChannel2, true)
   )
@@ -67713,7 +69842,7 @@ var saveListener;
 var watchTimer;
 var statusItem;
 function serverInitializationOptions() {
-  const config = import_vscode14.workspace.getConfiguration("asm");
+  const config = import_vscode16.workspace.getConfiguration("asm");
   return {
     configFile: config.get("configFile", ""),
     plugins: config.get("plugins", []),
@@ -67723,14 +69852,16 @@ function serverInitializationOptions() {
     architecture: config.get("architecture", ""),
     buildOutput: config.get("buildOutput", ""),
     baseImage: config.get("baseImage", ""),
-    workspaceTrusted: import_vscode14.workspace.isTrusted
+    workspaceTrusted: import_vscode16.workspace.isTrusted
   };
 }
 function activate(context) {
   extensionContext = context;
-  const worker = initializeAnalysisWorker(context.extensionPath);
+  const worker = initializeAnalysisWorker(context.extensionPath, {
+    maxMemoryMiB: (directory) => import_vscode16.workspace.getConfiguration("asm", import_vscode16.Uri.file(directory)).get("analysis.maxMemoryMiB", 4096)
+  });
   context.subscriptions.push(worker);
-  const serverModule = context.asAbsolutePath(path27.join("server", "server.mjs"));
+  const serverModule = context.asAbsolutePath(path29.join("server", "server.mjs"));
   const serverOptions = {
     run: {
       command: process.execPath,
@@ -67743,7 +69874,7 @@ function activate(context) {
       transport: import_node.TransportKind.stdio
     }
   };
-  outputChannel = import_vscode14.window.createOutputChannel("Uttori Assembly Language Server", {
+  outputChannel = import_vscode16.window.createOutputChannel("Uttori Assembly Language Server", {
     log: true
   });
   const clientOptions = {
@@ -67754,8 +69885,8 @@ function activate(context) {
     synchronize: {
       configurationSection: "asm",
       fileEvents: [
-        import_vscode14.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
-        import_vscode14.workspace.createFileSystemWatcher("**/uttori-asm.config.json")
+        import_vscode16.workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
+        import_vscode16.workspace.createFileSystemWatcher("**/uttori-asm.config.json")
       ]
     },
     initializationOptions: serverInitializationOptions(),
@@ -67768,7 +69899,7 @@ function activate(context) {
     serverOptions,
     clientOptions
   );
-  statusItem = import_vscode14.window.createStatusBarItem(import_vscode14.StatusBarAlignment.Left, 0);
+  statusItem = import_vscode16.window.createStatusBarItem(import_vscode16.StatusBarAlignment.Left, 0);
   statusItem.command = "asm.toggleWatch";
   updateStatusItem();
   statusItem.show();
@@ -67780,6 +69911,7 @@ function activate(context) {
   const outlineProvider = new ProjectOutlineProvider(() => client2);
   const coverageProvider = new AnalysisCoverageProvider();
   const analysisGraphProvider = new AnalysisGraphProvider();
+  const sourcesProvider = new AnalysisSourcesProvider();
   const analysisAnnotationController = new AnalysisAnnotationController();
   let analysisRefreshTimer;
   context.subscriptions.push({ dispose: () => clearTimeout(analysisRefreshTimer) });
@@ -67789,13 +69921,17 @@ function activate(context) {
       worker.invalidate();
       coverageProvider.refresh();
       analysisGraphProvider.refresh();
+      sourcesProvider.refresh();
       analysisAnnotationController.refresh();
     }, 150);
   };
-  const analysisProjectEditor = new AnalysisProjectEditor(refreshAnalysisViews);
+  const analysisProjectEditor = new AnalysisProjectEditor(
+    refreshAnalysisViews,
+    context.extensionUri
+  );
   context.subscriptions.push(analysisProjectEditor);
-  const analysisManifestWatcher = import_vscode14.workspace.createFileSystemWatcher("**/analysis.json");
-  const analysisShardWatcher = import_vscode14.workspace.createFileSystemWatcher("**/analysis/**/*.json");
+  const analysisManifestWatcher = import_vscode16.workspace.createFileSystemWatcher("**/analysis.json");
+  const analysisShardWatcher = import_vscode16.workspace.createFileSystemWatcher("**/analysis/**/*.json");
   context.subscriptions.push(
     ...registerDebugging(context.extensionPath, refreshAnalysisViews),
     ...registerProjectWizards(context, outputChannel),
@@ -67803,19 +69939,24 @@ function activate(context) {
     outputChannel,
     statusItem,
     analysisAnnotationController,
-    import_vscode14.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
+    sourcesProvider,
+    import_vscode16.window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
       webviewOptions: { retainContextWhenHidden: true }
     }),
-    import_vscode14.window.createTreeView(ProjectOutlineProvider.viewId, {
+    import_vscode16.window.createTreeView(ProjectOutlineProvider.viewId, {
       treeDataProvider: outlineProvider,
       showCollapseAll: true
     }),
-    import_vscode14.window.createTreeView(AnalysisCoverageProvider.viewId, {
+    import_vscode16.window.createTreeView(AnalysisCoverageProvider.viewId, {
       treeDataProvider: coverageProvider,
       showCollapseAll: true
     }),
-    import_vscode14.window.createTreeView(AnalysisGraphProvider.viewId, {
+    import_vscode16.window.createTreeView(AnalysisGraphProvider.viewId, {
       treeDataProvider: analysisGraphProvider,
+      showCollapseAll: true
+    }),
+    import_vscode16.window.createTreeView(AnalysisSourcesProvider.viewId, {
+      treeDataProvider: sourcesProvider,
       showCollapseAll: true
     }),
     analysisManifestWatcher,
@@ -67826,77 +69967,95 @@ function activate(context) {
     analysisShardWatcher.onDidCreate(refreshAnalysisViews),
     analysisShardWatcher.onDidChange(refreshAnalysisViews),
     analysisShardWatcher.onDidDelete(refreshAnalysisViews),
-    import_vscode14.window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
-    import_vscode14.window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
-      if (textEditor === import_vscode14.window.activeTextEditor) analysisAnnotationController.refresh(textEditor);
+    import_vscode16.window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
+    import_vscode16.window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
+      if (textEditor === import_vscode16.window.activeTextEditor) analysisAnnotationController.refresh(textEditor);
     }),
-    import_vscode14.workspace.onDidChangeTextDocument(
+    import_vscode16.window.onDidChangeTextEditorOptions(({ textEditor }) => {
+      if (textEditor === import_vscode16.window.activeTextEditor) analysisAnnotationController.refresh(textEditor);
+    }),
+    import_vscode16.workspace.onDidChangeTextDocument(
       ({ document }) => analysisAnnotationController.documentChanged(document)
     ),
-    import_vscode14.workspace.onDidSaveTextDocument(() => analysisAnnotationController.refresh()),
-    import_vscode14.debug.onDidStartDebugSession((session) => {
+    import_vscode16.workspace.onDidSaveTextDocument(() => analysisAnnotationController.refresh()),
+    import_vscode16.debug.onDidStartDebugSession((session) => {
       if (session.configuration.uttoriRunAndWatch === true) watchedDebugSession = session;
       analysisAnnotationController.refresh();
     }),
-    import_vscode14.debug.onDidTerminateDebugSession((session) => {
+    import_vscode16.debug.onDidTerminateDebugSession((session) => {
       if (watchedDebugSession?.id === session.id) watchedDebugSession = void 0;
       analysisAnnotationController.refresh();
     }),
-    import_vscode14.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
-    import_vscode14.commands.registerCommand("asm.toggleWatch", toggleWatch),
-    import_vscode14.commands.registerCommand("asm.runEmulator", () => buildAndLaunch(context, true)),
-    import_vscode14.commands.registerCommand("asm.debugEmulator", () => buildAndLaunch(context, false)),
-    import_vscode14.commands.registerCommand("asm.runAndWatch", () => runAndWatch(context)),
-    import_vscode14.commands.registerCommand(
+    import_vscode16.commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
+    import_vscode16.commands.registerCommand(
+      TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
+      () => analysisAnnotationController.toggle()
+    ),
+    import_vscode16.commands.registerCommand("asm.toggleWatch", toggleWatch),
+    import_vscode16.commands.registerCommand("asm.runEmulator", () => buildAndLaunch(context, true)),
+    import_vscode16.commands.registerCommand("asm.debugEmulator", () => buildAndLaunch(context, false)),
+    import_vscode16.commands.registerCommand("asm.runAndWatch", () => runAndWatch(context)),
+    import_vscode16.commands.registerCommand(
       "asm.configureEmulatorRuntime",
-      () => configureEmulatorRuntime(context, import_vscode14.window.activeTextEditor?.document.uri)
+      () => configureEmulatorRuntime(context, import_vscode16.window.activeTextEditor?.document.uri)
     ),
-    import_vscode14.commands.registerCommand("asm.initConfig", () => initConfig()),
-    import_vscode14.commands.registerCommand(
+    import_vscode16.commands.registerCommand("asm.initConfig", () => initConfig()),
+    import_vscode16.commands.registerCommand(
       "asm.openPanel",
-      () => import_vscode14.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
+      () => import_vscode16.commands.executeCommand(`${ProjectPanelProvider.viewId}.focus`)
     ),
-    import_vscode14.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
-    import_vscode14.commands.registerCommand("asm.coverage.refresh", refreshAnalysisViews),
-    import_vscode14.commands.registerCommand("asm.analysisGraph.refresh", refreshAnalysisViews),
-    import_vscode14.commands.registerCommand("asm.analysis.navigate", (element2) => {
+    import_vscode16.commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
+    import_vscode16.commands.registerCommand("asm.coverage.refresh", refreshAnalysisViews),
+    import_vscode16.commands.registerCommand("asm.analysisGraph.refresh", refreshAnalysisViews),
+    import_vscode16.commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
+    import_vscode16.commands.registerCommand(
+      "asm.sources.compare",
+      (element2) => sourcesProvider.compare(element2)
+    ),
+    import_vscode16.commands.registerCommand(
+      "asm.sources.resetComparison",
+      (element2) => sourcesProvider.resetComparison(element2)
+    ),
+    import_vscode16.commands.registerCommand("asm.analysis.navigate", (element2) => {
       const target = analysisGraphProvider.navigationTarget(element2);
       if (target) void navigateToAnalysisLocation(target);
     }),
-    import_vscode14.commands.registerCommand(
+    import_vscode16.commands.registerCommand(
       "asm.coverage.classifyRange",
       (element2) => analysisProjectEditor.classifyRange(coverageProvider.editTarget(element2))
     ),
-    import_vscode14.commands.registerCommand(
+    import_vscode16.commands.registerCommand(
       "asm.coverage.setStateEntryPoint",
       (element2) => analysisProjectEditor.setStateEntryPoint(coverageProvider.editTarget(element2))
     ),
-    import_vscode14.commands.registerCommand(
+    import_vscode16.commands.registerCommand(
       "asm.coverage.resolveTarget",
       (element2) => analysisProjectEditor.resolveTarget(coverageProvider.editTarget(element2))
     ),
-    import_vscode14.commands.registerCommand(
+    import_vscode16.commands.registerCommand(
       "asm.coverage.renameLabel",
       (element2) => analysisProjectEditor.renameLabel(coverageProvider.editTarget(element2))
     ),
-    import_vscode14.commands.registerCommand(
+    import_vscode16.commands.registerCommand(
       "asm.disassembly.editAnnotation",
       () => analysisProjectEditor.editAnnotation()
     ),
-    import_vscode14.commands.registerCommand(
+    import_vscode16.commands.registerCommand(
       "asm.coverage.explainEvidence",
       (element2) => analysisProjectEditor.explainEvidence(coverageProvider.editTarget(element2))
     ),
-    import_vscode14.commands.registerCommand("asm.coverage.undo", () => analysisProjectEditor.undo()),
-    import_vscode14.commands.registerCommand("asm.coverage.redo", () => analysisProjectEditor.redo()),
-    import_vscode14.workspace.onDidGrantWorkspaceTrust(() => {
+    import_vscode16.commands.registerCommand("asm.coverage.undo", () => analysisProjectEditor.undo()),
+    import_vscode16.commands.registerCommand("asm.coverage.redo", () => analysisProjectEditor.redo()),
+    import_vscode16.workspace.onDidGrantWorkspaceTrust(() => {
       void client2?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
           asm: serverInitializationOptions()
         }
       });
     }),
-    import_vscode14.workspace.onDidChangeConfiguration((event) => {
+    import_vscode16.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("asm.analysis.showAnnotations") || event.affectsConfiguration("asm.analysis.annotationColumn"))
+        analysisAnnotationController.refresh();
       if (event.affectsConfiguration("asm")) {
         void panelProvider.refresh();
         outlineProvider.refresh();
@@ -67909,7 +70068,7 @@ function activate(context) {
     if (!client2) {
       return;
     }
-    if (context.extensionMode === import_vscode14.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
+    if (context.extensionMode === import_vscode16.ExtensionMode.Development || process.env.UTTORI_ASM_LSP_TRACE === "verbose") {
       void client2.setTrace(import_node.Trace.Verbose);
     }
     context.subscriptions.push(
@@ -67928,9 +70087,6 @@ function deactivate() {
   extensionContext = void 0;
   return client2?.stop();
 }
-function activeDocumentUri() {
-  return import_vscode14.window.activeTextEditor?.document.uri.toString();
-}
 function toggleWatch() {
   if (watchEnabled) {
     stopWatch();
@@ -67940,14 +70096,14 @@ function toggleWatch() {
     watchEntryUri = resolveWatchEntry();
     if (!watchEntryUri) {
       stopWatch();
-      void import_vscode14.window.showErrorMessage(
+      void import_vscode16.window.showErrorMessage(
         "Assembly: open a source file (or set asm.entryPoints) before watching."
       );
       return;
     }
-    saveListener = import_vscode14.workspace.onDidSaveTextDocument(onDocumentSaved);
-    void import_vscode14.window.showInformationMessage(
-      `Assembly: watching ${path27.basename(import_vscode14.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+    saveListener = import_vscode16.workspace.onDidSaveTextDocument(onDocumentSaved);
+    void import_vscode16.window.showInformationMessage(
+      `Assembly: watching ${path29.basename(import_vscode16.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   }
   updateStatusItem();
@@ -67971,21 +70127,21 @@ var completeArtifacts = (result) => result.ok && result.outputPath && result.deb
 async function launchLiveBuild(context, result, noDebug, watched) {
   const artifacts = completeArtifacts(result);
   if (!artifacts) {
-    void import_vscode14.window.showErrorMessage(
+    void import_vscode16.window.showErrorMessage(
       "Assembly: successful build did not return a debug artifact pair."
     );
     return false;
   }
-  const resource = import_vscode14.Uri.file(artifacts.outputPath);
-  const folder = import_vscode14.workspace.getWorkspaceFolder(resource) ?? import_vscode14.workspace.workspaceFolders?.[0];
+  const resource = import_vscode16.Uri.file(artifacts.outputPath);
+  const folder = import_vscode16.workspace.getWorkspaceFolder(resource) ?? import_vscode16.workspace.workspaceFolders?.[0];
   const binding = configuredEmulatorRuntime(context, resource) ?? await configureEmulatorRuntime(context, resource);
   if (!binding) return false;
-  if (watched && watchedDebugSession) await import_vscode14.debug.stopDebugging(watchedDebugSession);
+  if (watched && watchedDebugSession) await import_vscode16.debug.stopDebugging(watchedDebugSession);
   const configuration = {
     ...liveDebugConfiguration(binding, artifacts, folder),
     ...watched ? { uttoriRunAndWatch: true } : {}
   };
-  return import_vscode14.debug.startDebugging(folder, configuration, { noDebug });
+  return import_vscode16.debug.startDebugging(folder, configuration, { noDebug });
 }
 async function buildAndLaunch(context, noDebug) {
   const result = await runBuild(resolveBuildEntryUri());
@@ -67996,7 +70152,7 @@ async function runAndWatch(context) {
   if (watchEnabled) stopWatch();
   const entry = resolveWatchEntry();
   if (!entry) {
-    void import_vscode14.window.showErrorMessage(
+    void import_vscode16.window.showErrorMessage(
       "Assembly: open a source file (or set asm.entryPoints) before running and watching."
     );
     return;
@@ -68004,11 +70160,11 @@ async function runAndWatch(context) {
   watchEnabled = true;
   watchMode = "emulator";
   watchEntryUri = entry;
-  saveListener = import_vscode14.workspace.onDidSaveTextDocument(onDocumentSaved);
+  saveListener = import_vscode16.workspace.onDidSaveTextDocument(onDocumentSaved);
   updateStatusItem();
   const result = await runBuild(entry);
   if (!result?.ok) {
-    void import_vscode14.window.showWarningMessage(
+    void import_vscode16.window.showWarningMessage(
       "Assembly: Run and Watch is active; fix the build error and save to launch the emulator."
     );
     return;
@@ -68019,20 +70175,20 @@ function resolveWatchEntry() {
   return resolveBuildEntryUri();
 }
 function resolveBuildEntryUri() {
-  const activeUri = import_vscode14.window.activeTextEditor?.document.uri;
-  const entryPoints = import_vscode14.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
-  const folder = activeUri ? import_vscode14.workspace.getWorkspaceFolder(activeUri) : import_vscode14.workspace.workspaceFolders?.[0];
+  const activeUri = import_vscode16.window.activeTextEditor?.document.uri;
+  const entryPoints = import_vscode16.workspace.getConfiguration("asm", activeUri).get("entryPoints", []);
+  const folder = activeUri ? import_vscode16.workspace.getWorkspaceFolder(activeUri) : import_vscode16.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    const resolved = path27.isAbsolute(first) ? import_vscode14.Uri.file(first).toString() : import_vscode14.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path29.isAbsolute(first) ? import_vscode16.Uri.file(first).toString() : import_vscode16.Uri.joinPath(folder.uri, first).toString();
     outputChannel?.info(
-      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode14.Uri.parse(resolved).fsPath}`
+      `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode16.Uri.parse(resolved).fsPath}`
     );
     return resolved;
   }
-  const active = activeDocumentUri();
+  const active = import_vscode16.window.activeTextEditor?.document.uri.toString();
   if (active) {
-    outputChannel?.info(`Build entry from active editor: ${import_vscode14.Uri.parse(active).fsPath}`);
+    outputChannel?.info(`Build entry from active editor: ${import_vscode16.Uri.parse(active).fsPath}`);
   }
   return active;
 }
@@ -68058,19 +70214,19 @@ function isAssemblyDocument(document) {
   return ASSEMBLY_LANGUAGE_IDS.includes(document.languageId) || /\.(asm|src|s|inc)$/i.test(document.fileName);
 }
 async function initConfig() {
-  const folder = import_vscode14.workspace.workspaceFolders?.[0];
+  const folder = import_vscode16.workspace.workspaceFolders?.[0];
   if (!folder) {
-    void import_vscode14.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
+    void import_vscode16.window.showErrorMessage("Assembly: open a workspace folder before initializing config.");
     return;
   }
-  const configUri = import_vscode14.Uri.joinPath(folder.uri, "uttori-asm.config.json");
-  const config = import_vscode14.workspace.getConfiguration("asm");
+  const configUri = import_vscode16.Uri.joinPath(folder.uri, "uttori-asm.config.json");
+  const config = import_vscode16.workspace.getConfiguration("asm");
   let entryPoints = config.get("entryPoints", []);
-  const active = import_vscode14.window.activeTextEditor?.document;
+  const active = import_vscode16.window.activeTextEditor?.document;
   if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
-    const relative6 = path27.relative(folder.uri.fsPath, active.fileName);
+    const relative6 = path29.relative(folder.uri.fsPath, active.fileName);
     entryPoints = [
-      relative6 && !relative6.startsWith("..") ? relative6 : path27.basename(active.fileName)
+      relative6 && !relative6.startsWith("..") ? relative6 : path29.basename(active.fileName)
     ];
   }
   const includePaths = config.get("includePaths", []);
@@ -68099,18 +70255,18 @@ async function initConfig() {
   if (buildOutput) body.buildOutput = buildOutput;
   if (baseImage) body.baseImage = baseImage;
   try {
-    await import_vscode14.workspace.fs.stat(configUri);
-    const existing = await import_vscode14.workspace.openTextDocument(configUri);
-    await import_vscode14.window.showTextDocument(existing);
-    void import_vscode14.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
+    await import_vscode16.workspace.fs.stat(configUri);
+    const existing = await import_vscode16.workspace.openTextDocument(configUri);
+    await import_vscode16.window.showTextDocument(existing);
+    void import_vscode16.window.showInformationMessage("Assembly: uttori-asm.config.json already exists.");
     return;
   } catch {
   }
-  await import_vscode14.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
+  await import_vscode16.workspace.fs.writeFile(configUri, Buffer.from(`${JSON.stringify(body, null, 2)}
 `));
-  await config.update("configFile", "uttori-asm.config.json", import_vscode14.ConfigurationTarget.Workspace);
-  const document = await import_vscode14.workspace.openTextDocument(configUri);
-  await import_vscode14.window.showTextDocument(document);
+  await config.update("configFile", "uttori-asm.config.json", import_vscode16.ConfigurationTarget.Workspace);
+  const document = await import_vscode16.workspace.openTextDocument(configUri);
+  await import_vscode16.window.showTextDocument(document);
 }
 async function runBuild(documentUri, transient = false) {
   outputChannel?.show(true);
@@ -68118,17 +70274,17 @@ async function runBuild(documentUri, transient = false) {
   if (!client2) {
     const message = "Language server is not running.";
     outputChannel?.error(message);
-    void import_vscode14.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode16.window.showErrorMessage(`Assembly: ${message}`);
     return void 0;
   }
   if (!documentUri) {
     const message = "Open a source file or set asm.entryPoints before building.";
     outputChannel?.error(message);
-    void import_vscode14.window.showErrorMessage(`Assembly: ${message}`);
+    void import_vscode16.window.showErrorMessage(`Assembly: ${message}`);
     return void 0;
   }
-  const document = import_vscode14.Uri.parse(documentUri);
-  const config = import_vscode14.workspace.getConfiguration("asm", document);
+  const document = import_vscode16.Uri.parse(documentUri);
+  const config = import_vscode16.workspace.getConfiguration("asm", document);
   const output = resolveConfiguredPath(config.get("buildOutput", ""), document);
   const baseImage = resolveConfiguredPath(config.get("baseImage", ""), document);
   outputChannel?.info(`  file: ${document.fsPath}`);
@@ -68145,20 +70301,20 @@ async function runBuild(documentUri, transient = false) {
       const message = `Assembly: built ${result.bytes ?? 0} bytes + debug map \u2192 ${result.outputPath ?? "output"}${changed}.`;
       outputChannel?.info(message);
       if (transient) {
-        import_vscode14.window.setStatusBarMessage(message, 4e3);
+        import_vscode16.window.setStatusBarMessage(message, 4e3);
       } else {
-        void import_vscode14.window.showInformationMessage(message);
+        void import_vscode16.window.showInformationMessage(message);
       }
     } else {
       const detail = result?.message ?? "unknown error";
       outputChannel?.error(`Build failed: ${detail}`);
-      void import_vscode14.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+      void import_vscode16.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     }
     return result;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     outputChannel?.error(`Build request failed: ${detail}`);
-    void import_vscode14.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
+    void import_vscode16.window.showErrorMessage(`Assembly: build failed - ${detail}.`);
     return void 0;
   }
 }
@@ -68166,11 +70322,11 @@ function resolveConfiguredPath(configuredPath, document) {
   if (!configuredPath) {
     return void 0;
   }
-  if (path27.isAbsolute(configuredPath)) {
-    return path27.normalize(configuredPath);
+  if (path29.isAbsolute(configuredPath)) {
+    return path29.normalize(configuredPath);
   }
-  const folder = import_vscode14.workspace.getWorkspaceFolder(document);
-  return path27.resolve(folder?.uri.fsPath ?? path27.dirname(document.fsPath), configuredPath);
+  const folder = import_vscode16.workspace.getWorkspaceFolder(document);
+  return path29.resolve(folder?.uri.fsPath ?? path29.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
   if (!statusItem) {

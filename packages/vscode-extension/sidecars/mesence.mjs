@@ -362,20 +362,60 @@ var init_directive_catalog = __esm({
           syntax: 'table "file",rtl'
         }
       ]),
-      descriptor("struct", "Begin a structure definition.", "struct name [extends parent]", "struct", [
-        {
-          keyword: "extends",
-          summary: "Inherit members from an existing struct.",
-          syntax: "struct name extends parent"
-        }
-      ]),
-      descriptor("endstruct", "End a structure definition.", "endstruct [align value]", "struct", [
-        {
-          keyword: "align",
-          summary: "Round the struct size/stride up to an alignment.",
-          syntax: "endstruct align value"
-        }
-      ]),
+      descriptor(
+        "struct",
+        "Define a non-emitting layout with .field: skip N or typed db/dw/dl/dd fields.",
+        "struct name [base | extends parent]",
+        "struct",
+        [
+          {
+            keyword: "extends",
+            summary: "Inherit members from an existing struct.",
+            syntax: "struct name extends parent"
+          }
+        ]
+      ),
+      descriptor(
+        "endstruct",
+        "End a structure definition.",
+        "endstruct [align value] [count value] [firstindex value]",
+        "struct",
+        [
+          {
+            keyword: "align",
+            summary: "Round the struct size/stride up to an alignment.",
+            syntax: "endstruct align value"
+          },
+          {
+            keyword: "count",
+            summary: "Number of records valid for named initialization.",
+            syntax: "endstruct count value [firstindex value]"
+          },
+          {
+            keyword: "firstindex",
+            summary: "First valid logical index (default zero); requires count.",
+            syntax: "endstruct count value firstindex value"
+          }
+        ]
+      ),
+      descriptor(
+        "datastruct",
+        "Emit one complete named record at its struct address; checks fields, widths and pc().",
+        "dataStruct Record[index], { field = value, bytes = [value, ...] }",
+        "struct"
+      ),
+      descriptor(
+        "datastructs",
+        "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+        "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
+        "struct"
+      ),
+      descriptor(
+        "enddatastructs",
+        "End a non-empty table of named records.",
+        "endDataStructs",
+        "struct"
+      ),
       ...[
         ["if", "Begin a conditional block.", "if expression"],
         ["elseif", "Begin an alternate conditional branch.", "elseif expression"],
@@ -5257,13 +5297,6 @@ var init__ = __esm({
           }
           return Number.parseInt(symbolicOperand.slice(1, 3), 16);
         })();
-        const longMode = (currentOpcode) => {
-          if (currentOpcode === "JMP") return "JML";
-          if (currentOpcode === "JSR") return "JSL";
-          return currentOpcode;
-        };
-        const shortMode = (currentOpcode) => currentOpcode;
-        const absolutePointer = (value) => value & 65535;
         const selectDirectJumpMode = (currentOpcode, resolvedAddress) => {
           if (currentOpcode === "JML" || currentOpcode === "JSL") {
             return { mode: currentOpcode, address: resolvedAddress };
@@ -5272,14 +5305,17 @@ var init__ = __esm({
             const currentBank = this.assembler.currentTargetAddress >>> 16 & 255;
             const targetBank = resolvedAddress >>> 16 & 255;
             if ((currentOpcode === "JMP" || currentOpcode === "JSR") && targetBank === currentBank) {
-              return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+              return { mode: currentOpcode, address: resolvedAddress & 65535 };
             }
             if ((currentOpcode === "JMP" || currentOpcode === "JSR") && hintedBank === currentBank) {
-              return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+              return { mode: currentOpcode, address: resolvedAddress & 65535 };
             }
-            return { mode: longMode(currentOpcode), address: resolvedAddress };
+            let mode4 = currentOpcode;
+            if (currentOpcode === "JMP") mode4 = "JML";
+            else if (currentOpcode === "JSR") mode4 = "JSL";
+            return { mode: mode4, address: resolvedAddress };
           }
-          return { mode: shortMode(currentOpcode), address: resolvedAddress };
+          return { mode: currentOpcode, address: resolvedAddress };
         };
         if (/^\d+$/.test(operand)) {
           ({ mode: mode3, address: address4 } = selectDirectJumpMode(
@@ -5293,15 +5329,15 @@ var init__ = __esm({
           ));
         } else if (loweredOperand.mode === "indirectLong") {
           mode3 = "JMP_INDIRECT_LONG";
-          address4 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address4 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
         } else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX") {
-          address4 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address4 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JSR_INDEXED_INDIRECT";
         } else if (loweredOperand.mode === "indexedIndirectX") {
-          address4 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address4 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JMP_INDEXED_INDIRECT";
         } else if (loweredOperand.mode === "directPageIndirect") {
-          address4 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address4 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JMP_INDIRECT";
         } else {
           try {
@@ -5704,12 +5740,12 @@ var init__ = __esm({
               `Error: Branch target out of range (${relativeAddress}) for ${opcode} ${operand} at $${this.assembler.currentTargetAddress.toString(16)}.`
             );
           }
-          let signedByte3 = (relativeAddress & 255) >>> 0;
+          let signedByte2 = (relativeAddress & 255) >>> 0;
           if (relativeAddress < 0) {
-            signedByte3 |= 256;
+            signedByte2 |= 256;
           }
           this.assembler.write1(branchOpcodes2[opcode]);
-          this.assembler.write1(signedByte3);
+          this.assembler.write1(signedByte2);
           return true;
         }
       }
@@ -6204,10 +6240,6 @@ function spcOpcodePlusAddressSize(operand) {
   }
   return 3;
 }
-function isMovRegisterPair(left, right) {
-  const combined = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
-  return MOV_ONE_BYTE_PAIRS.has(combined);
-}
 function isAccumulator(op2, lowered) {
   if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "A") {
     return true;
@@ -6247,12 +6279,6 @@ function parseBitBranchOpcode(opcode) {
     return { family: match[1] };
   }
   return { family: match[1], mnemonicBit: Number(match[2]) };
-}
-function bitBranchOpcodeByte(family, bit2) {
-  if (family === "BBS") {
-    return bit2 << 5 | 3;
-  }
-  return bit2 << 5 | 19;
 }
 function parseNumberedBitOpcode(opcode) {
   const match = opcode.toUpperCase().match(NUMBERED_BIT_OPCODE);
@@ -6630,7 +6656,8 @@ var init_spc700 = __esm({
        * @returns {number} Encoded size in bytes.
        */
       estimateMovSize(left, right, leftLowered, rightLowered) {
-        if (isMovRegisterPair(left, right)) {
+        const registerPair = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
+        if (MOV_ONE_BYTE_PAIRS.has(registerPair)) {
           return 1;
         }
         const rightImmediate = rightLowered?.immediate ?? right.trim().startsWith("#");
@@ -7358,7 +7385,7 @@ var init_spc700 = __esm({
         if (bit2 === void 0) {
           return false;
         }
-        const opcodeByte = bitBranchOpcodeByte(parsed.family, bit2);
+        const opcodeByte = bit2 << 5 | (parsed.family === "BBS" ? 3 : 19);
         this.assembler.write1(opcodeByte);
         this.assembler.write1(dpVal);
         if (!this.assembler.enforceResolvedLabels) {
@@ -9505,12 +9532,11 @@ function formatSuperFxInstruction(instruction) {
   }
   return operands ? `${instruction.mnemonic} ${operands}` : instruction.mnemonic;
 }
-var signedByte2, word, register3, immediate2, address3, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex3;
+var word, register3, immediate2, address3, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex3;
 var init_superfx_decoder = __esm({
   "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
-    signedByte2 = (value) => value & 128 ? value - 256 : value;
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
     register3 = (value) => ({ kind: "register", register: `R${value}` });
     immediate2 = (value, width, signed2 = false) => ({
@@ -9532,7 +9558,7 @@ var init_superfx_decoder = __esm({
           return [];
         case "relative": {
           const raw = bytes[operandOffset] ?? 0;
-          const displacement = signedByte2(raw);
+          const displacement = raw & 128 ? raw - 256 : raw;
           return [
             {
               kind: "displacement",
@@ -11743,7 +11769,7 @@ var init_common = __esm({
 });
 
 // packages/plugin-snes/src/assets/brr.ts
-var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, signedNibble, snesBrrAssetCodec;
+var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
   "packages/plugin-snes/src/assets/brr.ts"() {
     "use strict";
@@ -11768,7 +11794,6 @@ var init_brr = __esm({
       }
       throw new Error(`BRR asset '${context.request.id}' has no end block within ${maxBlocks} blocks.`);
     };
-    signedNibble = (value) => value >= 8 ? value - 16 : value;
     snesBrrAssetCodec = Object.freeze({
       id: SNES_BRR_ASSET_CODEC_ID,
       version: "1.0.0",
@@ -11794,7 +11819,8 @@ var init_brr = __esm({
           const header = bytes[offset];
           const nibbles = Array.from({ length: 16 }, (_2, sampleIndex) => {
             const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
-            return signedNibble(sampleIndex % 2 === 0 ? byte >> 4 : byte & 15);
+            const nibble2 = sampleIndex % 2 === 0 ? byte >> 4 : byte & 15;
+            return nibble2 >= 8 ? nibble2 - 16 : nibble2;
           });
           return {
             range: header >> 4,
@@ -12933,9 +12959,6 @@ var DEFAULT_DEBUG_SIDECAR_LIMITS = Object.freeze({
 var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 var nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-var assertLimit = (name, value) => {
-  if (!positiveInteger(value)) throw new Error(`${name} must be a positive safe integer.`);
-};
 var sessionPattern = /^[\w-]{32,128}$/;
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value))
@@ -13000,8 +13023,9 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
 var validateLimits = (limits) => {
-  for (const [name, value] of Object.entries(limits))
-    assertLimit(name, value);
+  for (const [name, value] of Object.entries(limits)) {
+    if (!positiveInteger(value)) throw new Error(`${name} must be a positive safe integer.`);
+  }
   if (limits.maxBufferedBytes < limits.maxFrameBytes + 4)
     throw new Error("maxBufferedBytes must hold at least one complete framed message.");
 };
@@ -14181,11 +14205,6 @@ var positiveInteger3 = (value, context) => {
     throw new Error(`${context} must be a positive safe integer.`);
   return value;
 };
-var responseRecord = (value) => {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new Error("Mesen response must be an object.");
-  return value;
-};
 var FramedMesenDebugClient = class {
   #transport;
   #token;
@@ -14341,7 +14360,9 @@ var FramedMesenDebugClient = class {
     } catch {
       throw new Error("Mesen debug response is not valid UTF-8 JSON.");
     }
-    const response = responseRecord(parsed);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+      throw new Error("Mesen response must be an object.");
+    const response = parsed;
     if (response.version !== MESEN_NATIVE_PROTOCOL_VERSION)
       throw new Error("Mesen debug response uses an unsupported protocol version.");
     const pending = this.#pending;
@@ -14507,10 +14528,6 @@ var MESEN_RUNTIME_MANIFEST_VERSION = 1;
 var MESEN_NATIVE_TOKEN_ENV = "MESEN_DEBUG_SERVER_TOKEN";
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
 var revisionPattern = /^[\dA-Fa-f]{40}$/;
-var positiveInteger4 = (value, name) => {
-  if (!Number.isSafeInteger(value) || value <= 0)
-    throw new Error(`${name} must be a positive safe integer.`);
-};
 var checkedSha256 = (value, name) => {
   if (!sha256Pattern.test(value)) throw new Error(`${name} must be a 64-digit SHA-256 value.`);
   return value.toLowerCase();
@@ -14720,8 +14737,10 @@ var MesenProcessHost = class {
       ["Mesen connect retry delay", this.#connectRetryMs],
       ["Mesen native lifetime", this.#nativeLifetimeSeconds],
       ["Mesen output limit", this.#maxOutputBytes]
-    ])
-      positiveInteger4(value, name);
+    ]) {
+      if (!Number.isSafeInteger(value) || value <= 0)
+        throw new Error(`${name} must be a positive safe integer.`);
+    }
   }
   /** @returns {MesenRuntimeManifest} Normalized immutable launch identity. */
   get manifest() {

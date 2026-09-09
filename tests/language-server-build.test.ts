@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { test } from "./ava-helper.js";
 import {
@@ -16,6 +18,49 @@ function makeWorkspace(): string {
   fs.writeFileSync(path.join(workspace, "objects/knife.asm"), "nop\n");
   return workspace;
 }
+
+test("language server bundling rejects undefined imports and preserves the previous bundle", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-bundle-build-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(directory, "src"));
+  fs.mkdirSync(path.join(directory, "out"));
+  fs.mkdirSync(path.join(directory, "node_modules"));
+  fs.symlinkSync(
+    path.dirname(fileURLToPath(import.meta.resolve("esbuild/package.json"))),
+    path.join(directory, "node_modules/esbuild"),
+    "junction",
+  );
+  const buildScript = path.join(directory, "esbuild.mjs");
+  fs.copyFileSync(path.resolve("packages/language-server/esbuild.mjs"), buildScript);
+  fs.writeFileSync(
+    path.join(directory, "src/server.ts"),
+    'import { defaultLd65ConfigText } from "./linker-config.js";\nconsole.log(defaultLd65ConfigText());\n',
+  );
+  const linker = path.join(directory, "src/linker-config.ts");
+  fs.writeFileSync(linker, "");
+  const output = path.join(directory, "out/server.mjs");
+  const previous = "// Previous working server bundle.\n";
+  fs.writeFileSync(output, previous);
+
+  const failed = spawnSync(process.execPath, [buildScript], {
+    encoding: "utf8",
+    timeout: 10_000,
+  });
+  t.is(failed.error, undefined);
+  t.is(failed.status, 1);
+  t.true(failed.stderr.includes("import-is-undefined"));
+  t.is(fs.readFileSync(output, "utf8"), previous);
+
+  fs.writeFileSync(linker, 'export const defaultLd65ConfigText = () => "valid linker config";\n');
+  const rebuilt = spawnSync(process.execPath, [buildScript], {
+    encoding: "utf8",
+    timeout: 10_000,
+  });
+  t.is(rebuilt.status, 0, rebuilt.stderr);
+  const run = spawnSync(process.execPath, [output], { encoding: "utf8", timeout: 10_000 });
+  t.is(run.status, 0, run.stderr);
+  t.is(run.stdout.trim(), "valid linker config");
+});
 
 test("resolveBuildEntry prefers the project entry point over an include", (t) => {
   const workspace = makeWorkspace();

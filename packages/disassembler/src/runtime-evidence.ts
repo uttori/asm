@@ -76,12 +76,6 @@ const sortedUnique = (values: readonly string[]): readonly string[] =>
 
 const stateValueKey = (value: RuntimeStateValue): string => `${typeof value}:${String(value)}`;
 
-const conflictKindFor = (field: string): RuntimeEvidenceConflict["kind"] => {
-  if (field === "instruction-size") return "instruction-size";
-  if (field === "opcode") return "opcode";
-  return "cpu-state";
-};
-
 interface ConflictObservation {
   readonly architecture: string;
   readonly addressSpace: string;
@@ -143,7 +137,9 @@ const conflictReport = (
       observation.address,
       observation.field,
     ].join(":");
-    groups.set(key, [...(groups.get(key) ?? []), observation]);
+    const group = groups.get(key);
+    if (group) group.push(observation);
+    else groups.set(key, [observation]);
   }
 
   const conflicts: RuntimeEvidenceConflict[] = [];
@@ -151,13 +147,16 @@ const conflictReport = (
     const byValue = new Map<string, ConflictObservation[]>();
     for (const observation of group) {
       const valueKey = stateValueKey(observation.value);
-      byValue.set(valueKey, [...(byValue.get(valueKey) ?? []), observation]);
+      const entries = byValue.get(valueKey);
+      if (entries) entries.push(observation);
+      else byValue.set(valueKey, [observation]);
     }
     if (byValue.size < 2) continue;
     const first = group[0];
     conflicts.push({
       id: `runtime-conflict:${key}`,
-      kind: conflictKindFor(first.field),
+      kind:
+        first.field === "instruction-size" || first.field === "opcode" ? first.field : "cpu-state",
       architecture: first.architecture,
       addressSpace: first.addressSpace,
       address: first.address,

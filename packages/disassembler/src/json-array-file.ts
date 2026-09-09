@@ -3,18 +3,22 @@ import { createHash } from "node:crypto";
 import { StringDecoder } from "node:string_decoder";
 
 /**
- * Reads an object-record JSON array without retaining the complete shard text beside its objects.
- * Syntax and the exact byte hash are checked before any records are returned to the caller.
+ * Parse and hash a shard one object at a time. Only read callers retain the parsed objects.
  * @param {string} file Shard path.
  * @param {string} expectedSha256 Expected hash of persisted bytes.
- * @returns {unknown[]} Parsed object records.
+ * @param {(record: unknown) => void} [onRecord] Private collector for the full-read API.
+ * @returns {number} Record count after complete syntax and hash validation.
  */
-export const readObjectArrayFile = (file: string, expectedSha256: string): unknown[] => {
+const scanObjectArrayFile = (
+  file: string,
+  expectedSha256: string,
+  onRecord?: (record: unknown) => void,
+): number => {
   const descriptor = fs.openSync(file, "r");
   const buffer = Buffer.allocUnsafe(64 * 1024);
   const decoder = new StringDecoder("utf8");
   const hash = createHash("sha256");
-  const records: unknown[] = [];
+  let records = 0;
   let mode: "start" | "value" | "record" | "comma" | "end" = "start";
   let allowEnd = true;
   let depth = 0;
@@ -44,7 +48,10 @@ export const readObjectArrayFile = (file: string, expectedSha256: string): unkno
             if (recordLength > 32 * 1024 * 1024)
               throw new Error("Analysis shard record exceeds the 32 MiB limit.");
             parts.push(tail);
-            records.push(JSON.parse(parts.join("")));
+            // Parse even in validation-only mode: a valid hash cannot establish JSON syntax.
+            const record: unknown = JSON.parse(parts.join(""));
+            onRecord?.(record);
+            records++;
             parts = [];
             recordLength = 0;
             recordStart = -1;
@@ -104,3 +111,25 @@ export const readObjectArrayFile = (file: string, expectedSha256: string): unkno
     fs.closeSync(descriptor);
   }
 };
+
+/**
+ * Reads an object-record JSON array without retaining the complete shard text beside its objects.
+ * Syntax and the exact byte hash are checked before any records are returned to the caller.
+ * @param {string} file Shard path.
+ * @param {string} expectedSha256 Expected hash of persisted bytes.
+ * @returns {unknown[]} Parsed object records.
+ */
+export const readObjectArrayFile = (file: string, expectedSha256: string): unknown[] => {
+  const records: unknown[] = [];
+  scanObjectArrayFile(file, expectedSha256, (record) => records.push(record));
+  return records;
+};
+
+/**
+ * Validates a complete object-record shard without retaining its text or object array.
+ * @param {string} file Shard path.
+ * @param {string} expectedSha256 Expected hash of persisted bytes.
+ * @returns {number} Validated record count.
+ */
+export const validateObjectArrayFile = (file: string, expectedSha256: string): number =>
+  scanObjectArrayFile(file, expectedSha256);

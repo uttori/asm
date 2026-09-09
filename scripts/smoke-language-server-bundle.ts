@@ -104,7 +104,7 @@ const build = async (client: LspClient, source: string): Promise<string> => {
   return result.outputPath;
 };
 
-const server = path.resolve("packages/language-server/out/server.mjs");
+const server = path.resolve(process.argv[2] ?? "packages/language-server/out/server.mjs");
 assert.ok(
   fs.existsSync(server),
   "Build packages/language-server/out/server.mjs before running this smoke test.",
@@ -122,6 +122,28 @@ try {
   assert.equal(path.extname(snesOutput), ".sfc");
   assert.ok(fs.statSync(snesOutput).size > 0);
   await snesClient.close();
+
+  const nesDirectory = path.join(directory, "nes");
+  fs.mkdirSync(nesDirectory);
+  const nesSource = path.join(nesDirectory, "main.asm");
+  fs.writeFileSync(nesSource, '.segment "CODE"\nStart:\nLDA #$12\n.byte $34\n');
+  fs.writeFileSync(
+    path.join(nesDirectory, "uttori-asm.config.json"),
+    JSON.stringify({
+      target: "65xx.nes",
+      architecture: "65xx.6502",
+      entryPoints: ["main.asm"],
+    }),
+  );
+  const nesClient = new LspClient(server);
+  await initialize(nesClient, nesDirectory, { workspaceTrusted: true });
+  const nesOutput = await build(nesClient, nesSource);
+  assert.equal(path.extname(nesOutput), ".nes");
+  const nesBytes = fs.readFileSync(nesOutput);
+  assert.equal(nesBytes.length, 16 + 0x8000);
+  assert.deepEqual([...nesBytes.subarray(0, 5)], [0x4e, 0x45, 0x53, 0x1a, 2]);
+  assert.deepEqual([...nesBytes.subarray(16, 19)], [0xa9, 0x12, 0x34]);
+  await nesClient.close();
 
   const nestedRoot = path.join(directory, "nested");
   const nestedProject = path.join(nestedRoot, "disassembly");
@@ -272,7 +294,7 @@ try {
   }
 
   console.log(
-    "Language-server bundle smoke test passed for bundled SNES, nested config paths, trust reload, metadata, and workspace plugin targets.",
+    "Language-server bundle smoke test passed for bundled SNES and NES, nested config paths, trust reload, metadata, and workspace plugin targets.",
   );
 } finally {
   fs.rmSync(directory, { recursive: true, force: true });

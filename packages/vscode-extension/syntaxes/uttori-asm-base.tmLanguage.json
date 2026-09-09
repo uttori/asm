@@ -157,7 +157,7 @@
         },
         {
           "name": "keyword.directive.struct.uttori-asm",
-          "match": "\\b(?i:struct|endstruct|extends|align)\\b"
+          "match": "\\b(?i:struct|endstruct|dataStruct|dataStructs|endDataStructs|extends|align|firstindex)\\b"
         },
         {
           "name": "keyword.control.diagnostic.uttori-asm",

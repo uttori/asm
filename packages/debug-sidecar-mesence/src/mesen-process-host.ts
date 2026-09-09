@@ -92,11 +92,6 @@ export interface MesenProcessHostOptions {
 const sha256Pattern = /^[\dA-Fa-f]{64}$/;
 const revisionPattern = /^[\dA-Fa-f]{40}$/;
 
-const positiveInteger = (value: number, name: string): void => {
-  if (!Number.isSafeInteger(value) || value <= 0)
-    throw new Error(`${name} must be a positive safe integer.`);
-};
-
 const checkedSha256 = (value: string, name: string): string => {
   if (!sha256Pattern.test(value)) throw new Error(`${name} must be a 64-digit SHA-256 value.`);
   return value.toLowerCase();
@@ -345,8 +340,10 @@ export class MesenProcessHost {
       ["Mesen connect retry delay", this.#connectRetryMs],
       ["Mesen native lifetime", this.#nativeLifetimeSeconds],
       ["Mesen output limit", this.#maxOutputBytes],
-    ] as const)
-      positiveInteger(value, name);
+    ] as const) {
+      if (!Number.isSafeInteger(value) || value <= 0)
+        throw new Error(`${name} must be a positive safe integer.`);
+    }
   }
 
   /** @returns {MesenRuntimeManifest} Normalized immutable launch identity. */

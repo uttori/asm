@@ -12,13 +12,13 @@ import {
   compareByteImages,
   inspectRuntimeEvidence,
   importRuntimeInstructionTrace,
+  importRuntimeInstructionTraceFile,
   loadAnalysisProject,
   loadSourceExportManifest,
   mergeRuntimeEvidence,
   validateAnalysisProject,
   validateSourceExportFiles,
   writeAnalysisProject,
-  type RuntimeInstructionTraceArtifact,
 } from "@uttori/asm-disassembler";
 import {
   loadProjectEnvironment,
@@ -75,11 +75,13 @@ export interface CliArguments {
   readonly traceMetadata?: string;
   readonly mesenLabels?: string;
   readonly instructionTrace?: string;
+  readonly traceMaxMiB?: number;
   readonly entryPoints: readonly number[];
   readonly maxWorkItems?: number;
   readonly maxCallDepth?: number;
   readonly verbose: boolean;
   readonly force: boolean;
+  readonly allowCodeRegression: boolean;
   readonly help: boolean;
 }
 
@@ -89,7 +91,7 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm analyze <project-directory> --rom <rom> [analysis-options]
   uttori-asm evidence-import <project-directory> --rom <rom> [evidence-options]
   uttori-asm evidence-report <project-directory> [report.json]
-  uttori-asm export <project-directory> [source-directory] --rom <rom> [--force]
+  uttori-asm export <project-directory> [source-directory] --rom <rom> [--force] [--allow-code-regression]
   uttori-asm mesen-labels-export <project-directory> [labels.mlb] --rom <rom>
   uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
@@ -104,10 +106,12 @@ Project options:
   --trace-metadata <path>      Required JSON identity sidecar for --mesen-trace
   --mesen-labels <path>        Import MesenCE label text
   --instruction-trace <path>   Import a native explicit instruction recording
+  --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
   --entry <address>            Repeatable 65816 CPU entry point ($/0x/decimal)
   --max-work-items <count>     Deterministic analysis work limit
   --max-call-depth <count>     Bounded call-context depth
   --force                      Replace modified generated files during export
+  --allow-code-regression       Allow export to replace existing code with raw bytes
 
 Assemble options:
   --config <uttori-asm.config.json>
@@ -121,26 +125,6 @@ Assemble options:
   --plugin-option <plugin:key=value>
   --verbose
   --help`;
-
-const parseOptionValue = (value: string): unknown => {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
-};
-
-/**
- * Splits an option into a flag and an inline value.
- * @param {string} argument The option to split.
- * @returns {{ flag: string; inlineValue?: string }} An object with the flag and inline value.
- */
-const splitOption = (argument: string): { flag: string; inlineValue?: string } => {
-  const equals = argument.indexOf("=");
-  return equals < 0
-    ? { flag: argument }
-    : { flag: argument.slice(0, equals), inlineValue: argument.slice(equals + 1) };
-};
 
 /**
  * Parses the CLI arguments and returns a CliArguments object.
@@ -183,11 +167,13 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let traceMetadata: string | undefined;
   let mesenLabels: string | undefined;
   let instructionTrace: string | undefined;
+  let traceMaxMiB: number | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
   let maxCallDepth: number | undefined;
   let verbose = false;
   let force = false;
+  let allowCodeRegression = false;
   let help = false;
 
   const requireValue = (
@@ -212,7 +198,9 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
       positional.push(argument);
       continue;
     }
-    const { flag, inlineValue } = splitOption(argument);
+    const equals = argument.indexOf("=");
+    const flag = equals < 0 ? argument : argument.slice(0, equals);
+    const inlineValue = equals < 0 ? undefined : argument.slice(equals + 1);
     if (flag === "--help") {
       help = true;
       continue;
@@ -223,6 +211,10 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     }
     if (flag === "--force") {
       force = true;
+      continue;
+    }
+    if (flag === "--allow-code-regression") {
+      allowCodeRegression = true;
       continue;
     }
     if (flag === "--debug") {
@@ -287,6 +279,17 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
       case "--instruction-trace":
         instructionTrace = value;
         break;
+      case "--trace-max-mib":
+        traceMaxMiB = Number(value);
+        if (
+          !Number.isSafeInteger(traceMaxMiB) ||
+          traceMaxMiB < 1 ||
+          !Number.isSafeInteger(traceMaxMiB * 1024 * 1024)
+        )
+          throw new Error(
+            "--trace-max-mib must be a positive integer representing a safe byte limit.",
+          );
+        break;
       case "--entry": {
         const normalized = value.startsWith("$") ? `0x${value.slice(1)}` : value;
         const address = Number(normalized);
@@ -316,9 +319,17 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
         }
         const plugin = value.slice(0, colon);
         const key = value.slice(colon + 1, equals);
+        const rawValue = value.slice(equals + 1);
+        let optionValue: unknown = rawValue;
+        // Accept JSON values while preserving unquoted strings as written.
+        try {
+          optionValue = JSON.parse(rawValue);
+        } catch {
+          // Non-JSON plugin options remain strings.
+        }
         pluginOptions[plugin] = {
           ...(pluginOptions[plugin] ?? {}),
-          [key]: parseOptionValue(value.slice(equals + 1)),
+          [key]: optionValue,
         };
         break;
       }
@@ -351,11 +362,13 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     traceMetadata,
     mesenLabels,
     instructionTrace,
+    traceMaxMiB,
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
     maxCallDepth,
     verbose,
     force,
+    allowCodeRegression,
     help,
   };
 };
@@ -460,7 +473,7 @@ const validateProject = (parsed: CliArguments, cwd: string): number => {
  * @param {string} cwd Current working directory.
  * @returns {number} Process exit code.
  */
-const importProjectEvidence = (parsed: CliArguments, cwd: string): number => {
+const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise<number> => {
   const directory = path.resolve(cwd, parsed.input!);
   if (!parsed.rom) {
     console.error("Evidence import failed: --rom is required so project identity can be verified.");
@@ -550,12 +563,13 @@ const importProjectEvidence = (parsed: CliArguments, cwd: string): number => {
     if (parsed.instructionTrace) {
       const filename = path.resolve(cwd, parsed.instructionTrace);
       merge(
-        importRuntimeInstructionTrace(
-          JSON.parse(fs.readFileSync(filename, "utf8")) as RuntimeInstructionTraceArtifact,
+        await importRuntimeInstructionTraceFile(
+          filename,
           {
             projectRomContentSha256: loaded.manifest.rom.contentSha256,
             sourceName: path.basename(filename),
           },
+          { maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024 },
         ),
       );
     }
@@ -713,6 +727,7 @@ const exportProjectSource = (parsed: CliArguments, cwd: string): number => {
       romFile: path.resolve(cwd, parsed.rom),
       sourceDirectory: outputDirectory,
       force: parsed.force,
+      allowCodeRegression: parsed.allowCodeRegression,
     });
     console.log(
       `Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s); ${result.codeBytes} byte(s) emitted as native 65816 source.`,

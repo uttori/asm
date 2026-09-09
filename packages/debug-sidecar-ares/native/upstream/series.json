@@ -1,0 +1,300 @@
+{
+  "schemaVersion": 1,
+  "upstreamRepository": "https://github.com/ares-emulator/ares",
+  "upstreamRevision": "af4cbb04f067682a8a3cf42695ff78bed634b38d",
+  "integrationBranch": "codex/ares-desktop-u6",
+  "integrationRevision": "f167edfc62b72101c873b6175855171ac5b093f8",
+  "layers": [
+    {
+      "id": "U3",
+      "base": "af4cbb04f067682a8a3cf42695ff78bed634b38d",
+      "head": "7c8a322f8d6bb9e3ea4c054abd7441a9573ac242",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0001-u3-registers.patch",
+      "sha256": "47f0527f0fa1cc2c8e864bf5bf0957f8d7b442c0d0c2ccf020c20b34a0441c9b",
+      "files": [
+        {
+          "path": "CMakeLists.txt",
+          "sha256": "756b372f485457451353b250e4b4ff1e72856c1797b783aa733541ca08646a9b"
+        },
+        {
+          "path": "ares/sfc/CMakeLists.txt",
+          "sha256": "669e94e7c3f0f4b13e9d1261ea7e957862cf66d45b400d75722fd63f14ac5235"
+        },
+        {
+          "path": "ares/sfc/system/gdb.cpp",
+          "sha256": "6989c2fd5353792bc2e2ac9575eefa10ac64d6bd02538869f5c1370023ee67be"
+        },
+        {
+          "path": "ares/sfc/system/system.cpp",
+          "sha256": "88b1439ca49435640b276ba07937cc47ae454580909c421aaff9a2faba173b44"
+        },
+        {
+          "path": "nall/nall/gdb/server.cpp",
+          "sha256": "67d2705106d4b1f8a60b57e112c83dadd8f6aef18174bc78837f539eb7a544cb"
+        },
+        {
+          "path": "nall/nall/gdb/server.hpp",
+          "sha256": "afe10bfb7db49960af511ab3e6afd18b0f11a38d18646cbbda1da738d8d33fec"
+        },
+        {
+          "path": "tests/gdb/CMakeLists.txt",
+          "sha256": "3c6d35e94fef9024b52b8e31f46af3dae2593cd6d7fe461be138eaaad7a7d046"
+        },
+        {
+          "path": "tests/gdb/README.md",
+          "sha256": "693e65d3a5c1a3f87b0fcc6e2bf33e60153261ac89827aab254004f7dd9e41af"
+        },
+        {
+          "path": "tests/gdb/gdb-registers.cpp",
+          "sha256": "4c26bc55ee13a5ff7ec9264883b5d383b9127da6982331fb1070ee6c82c325d2"
+        },
+        {
+          "path": "tests/gdb/run-tests.sh",
+          "sha256": "fdd47b1addc2f797ee02e45007b3d7a0ce599a41b7dc02c1e9372fc861ff5610"
+        }
+      ]
+    },
+    {
+      "id": "U4",
+      "base": "7c8a322f8d6bb9e3ea4c054abd7441a9573ac242",
+      "head": "9b431cecedeed3038a3e3eecaacc025fe62a8aa4",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0002-u4-safe-memory.patch",
+      "sha256": "4ecd1a7a049332f3bc8a286173f85d06f4b8a9a6fdf997f18f25f4984492b8d8",
+      "files": [
+        {
+          "path": "ares/ares/node/debugger/memory.hpp",
+          "sha256": "f338d0bac882d74f305f5a0e40f0819df9f43de472c1ddd323a1b77d9ed2ae72"
+        },
+        {
+          "path": "ares/sfc/CMakeLists.txt",
+          "sha256": "23240847945ef4ea42f0c7ca1cf486bbc1cb743ad4646deaa562c6fa0a0feb57"
+        },
+        {
+          "path": "ares/sfc/cartridge/load.cpp",
+          "sha256": "156ff8190f9b878ec4f3e364257b1943f6634a1201d9654137b137b2f5595042"
+        },
+        {
+          "path": "ares/sfc/cpu/cpu.cpp",
+          "sha256": "7e86d662e06afc6027e2bb1e95b1af07a8df507bbf4351954ffc72aa7a4d5397"
+        },
+        {
+          "path": "ares/sfc/memory/memory.cpp",
+          "sha256": "44f0342e5f17f4111f5140c06cec1a366440a9f73eccf718f77ebce7b59e916e"
+        },
+        {
+          "path": "ares/sfc/memory/memory.hpp",
+          "sha256": "b3543131e66714aa537f63a20df607d61e896601bd65eff5abb551e0ca9e545c"
+        },
+        {
+          "path": "ares/sfc/system/gdb-memory.cpp",
+          "sha256": "9849fbf6a8f5fda9aac6800f42baf3fd61f0f33f880db959d4eb666da302b4b8"
+        },
+        {
+          "path": "ares/sfc/system/system.cpp",
+          "sha256": "87b2ce96d2cba6f1cf50487f9c8962360cf8cc55a40613607e9ab84514b453d1"
+        },
+        {
+          "path": "nall/nall/gdb/server.cpp",
+          "sha256": "830424d24c88ddee0da2cdca95ebb0c1179c0277bf41eae4386b7a3480cfdfe8"
+        },
+        {
+          "path": "tests/gdb/CMakeLists.txt",
+          "sha256": "dd5c897edbb90e80fd48fa44d979608c983fa6fb66f40560b4db6173a22685c2"
+        },
+        {
+          "path": "tests/gdb/README.md",
+          "sha256": "53d0fdffa605474ebd87c089aae63394f761d020a9cf068602b261a1503aaa31"
+        },
+        {
+          "path": "tests/gdb/gdb-memory-packets.cpp",
+          "sha256": "2ecb15cdc4c0636f3c09b1a13ddf6d7b1a7cc43ecbf21e4775268c7e77986bb1"
+        },
+        {
+          "path": "tests/gdb/gdb-storage.cpp",
+          "sha256": "492091ff727c22e058ca732796cb795b8710c2fa19ba6dc58671415f2a00cd80"
+        }
+      ]
+    },
+    {
+      "id": "U5",
+      "base": "9b431cecedeed3038a3e3eecaacc025fe62a8aa4",
+      "head": "27003f0ec701f1174169e5d215e221fc045f36d3",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0003-u5-boundaries.patch",
+      "sha256": "83082b85f89a1c61729d034e589dcaf7b125f01a062ee51de8c10f4d1d48c0b9",
+      "files": [
+        {
+          "path": "ares/sfc/cpu/cpu.cpp",
+          "sha256": "15d0c8b39ae6386198328050f2ca06bef4700489f93964a42d33f38ccc07d25d"
+        },
+        {
+          "path": "ares/sfc/cpu/memory.cpp",
+          "sha256": "368f5cedaa4ae1a2938ea6ca8a53e7863163493aeb9d69abebcd7be857601494"
+        },
+        {
+          "path": "ares/sfc/system/gdb.cpp",
+          "sha256": "d224b9cd5495ffd20b935d5baff6ce47e83af3d483d327db2bef2f314454ed16"
+        },
+        {
+          "path": "desktop-ui/program/load.cpp",
+          "sha256": "8920e7ec0d979b61ea66f5907062e834f28a046c8b28472251d2751d828d9046"
+        },
+        {
+          "path": "desktop-ui/program/program.cpp",
+          "sha256": "308b0e7cf1f43a6d871293ed313ca788eed957ec44ec10f6729fbccf41249f10"
+        },
+        {
+          "path": "desktop-ui/program/program.hpp",
+          "sha256": "dd948245b47a4d5c428cec12011dac0b05eefbf195846fb85350ce840bf418bb"
+        },
+        {
+          "path": "nall/nall/gdb/server.cpp",
+          "sha256": "7b972872067981278367898a3c1877b11c18cbcea89bc2a8ad5c80716c2d5b7d"
+        },
+        {
+          "path": "nall/nall/gdb/server.hpp",
+          "sha256": "7e7bef9e4c6f317fcf87f4155b3ca1d1135e948892fddece817d741fbfa80761"
+        },
+        {
+          "path": "tests/gdb/CMakeLists.txt",
+          "sha256": "24cce17f5fcef391437845a2c3263d1b1054ddcd41b8f46a36348a6127911541"
+        },
+        {
+          "path": "tests/gdb/README.md",
+          "sha256": "73607093cce6b51e330c15a8ce97e9b744332eb1161b53a6027dd15d87bcff95"
+        },
+        {
+          "path": "tests/gdb/gdb-boundaries.cpp",
+          "sha256": "327858bf251071b6e730c1fc09e98f7f8639b08f2d3b2d6a9010acac2c52e5ec"
+        }
+      ]
+    },
+    {
+      "id": "U1",
+      "base": "27003f0ec701f1174169e5d215e221fc045f36d3",
+      "head": "91350293ac560ceff449ff263d05ba849e2352f2",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0004-u1-sdk-fallback.patch",
+      "sha256": "83c47d4a166cd5b054deb5cd4f93361f84829a87dee90ec3bb92467200fad77a",
+      "files": [
+        {
+          "path": "cmake/macos/compilerconfig.cmake",
+          "sha256": "a19096e5dc47166be3a9c110c3d9fbcd9690815385a2e463c733dd381777ebcb"
+        }
+      ]
+    },
+    {
+      "id": "U2",
+      "base": "91350293ac560ceff449ff263d05ba849e2352f2",
+      "head": "6c9ee8c6fc039e42cf76ed5ccec652e3ad105cbe",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0005-u2-polling.patch",
+      "sha256": "308b323a2b02e75e74759feb0c79a32fb659f963bace34ea82d3a88cb5744748",
+      "files": [
+        {
+          "path": "nall/nall/gdb/server.cpp",
+          "sha256": "6f6ac359985903af78f3426e8f4cc4bb7a94efc1f3413876a074153de94243a6"
+        }
+      ]
+    },
+    {
+      "id": "U2-tests",
+      "patch": "0006-u2-native-tests.patch",
+      "base": "6c9ee8c6fc039e42cf76ed5ccec652e3ad105cbe",
+      "head": "6ac8272e8baabc73d188aea7b9f6526cbcd2b482",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "sha256": "324267e86e186941469fe221e0ff05e22efbf8d2de15116054c055d56b7bcbbf",
+      "files": [
+        {
+          "path": "CMakeLists.txt",
+          "sha256": "c82ef6d232eb1924aa84964cfccbfe21bf9406d3e6db65f64d2a09affe868460"
+        },
+        {
+          "path": "tests/gdb-polling/CMakeLists.txt",
+          "sha256": "3e49e56ce7e916ac4f17ce6ad34f6c804bae666d68009d01b74c4046334c93b0"
+        },
+        {
+          "path": "tests/gdb-polling/README.md",
+          "sha256": "bbc4cd32efadbddb1e4b8374a5e7d32cbf49d7e508e2dc31c8584217e8826cb5"
+        },
+        {
+          "path": "tests/gdb-polling/gdb-polling.cpp",
+          "sha256": "326552f3a0d66510556c4bcfb18d9b23d53bdd6e01cbcbcad876ba3eb016c92f"
+        },
+        {
+          "path": "tests/gdb-polling/run-tests.sh",
+          "sha256": "dfd860a92ed52085e06836004e0d55828c9c1ad51ea94bc4374a394780b6c9af"
+        }
+      ]
+    },
+    {
+      "id": "U5-states",
+      "base": "6ac8272e8baabc73d188aea7b9f6526cbcd2b482",
+      "head": "f167edfc62b72101c873b6175855171ac5b093f8",
+      "author": "Matthew Callis <matthew.callis@gmail.com>",
+      "patch": "0007-u5-paused-states.patch",
+      "sha256": "d291d142f406692be504b3b24ec79333de57fb2720ff3b5da8a3e91634c8fb68",
+      "files": [
+        {
+          "path": "ares/sfc/cpu/cpu.cpp",
+          "sha256": "3f7ec288d2e4e98a185f043bdf8dc9226a9174ac9539756faaec6858dcdbe867"
+        },
+        {
+          "path": "ares/sfc/cpu/memory.cpp",
+          "sha256": "9365d940764127d204756d09c3924578d929118ff4a3d941925cbf6b8fe5b201"
+        },
+        {
+          "path": "ares/sfc/system/serialization.cpp",
+          "sha256": "7238f9dff2aee10b1bcace43b1ebb03b6756fede5d58ad1c4e1fca1995405ea2"
+        },
+        {
+          "path": "tests/gdb/CMakeLists.txt",
+          "sha256": "49d7686542a8c8c65f8febd650f7156ce58430b07705501a1826ee5454bd6309"
+        },
+        {
+          "path": "tests/gdb/README.md",
+          "sha256": "753a0d1d90298aad005397a29971ba00ea337db69c37917e95d5a6cfe7244cf7"
+        },
+        {
+          "path": "tests/gdb/gdb-boundaries.cpp",
+          "sha256": "3da36c4540a9978f9dd152d0109a2a85e8842d3fa12b26a3039b3e36e70397f3"
+        },
+        {
+          "path": "tests/gdb/gdb-memory-packets.cpp",
+          "sha256": "5882f60677883fe45cffa857661a1eae8bac5272ad0d547e47dde27e2b64bf03"
+        },
+        {
+          "path": "tests/gdb/gdb-registers.cpp",
+          "sha256": "88f655534979f2bdb9a89ad6c907da1c41abe9abf4586b5e5677f7e956e9309b"
+        },
+        {
+          "path": "tests/gdb/gdb-states.cpp",
+          "sha256": "08ec76d7d160e2778a4fdb16b98666dc17d8c24f679ed05c551621e0eeb087ea"
+        },
+        {
+          "path": "tests/gdb/gdb-storage.cpp",
+          "sha256": "f477d481eaaeac3173e20d7f1f0dae4a8cd7660e9108d2e08fe753cb5244820d"
+        },
+        {
+          "path": "tests/gdb/run-tests.sh",
+          "sha256": "aa49a286e7e353e269ebc365bf0b27d84b382a3bfd2b1c8356c61667e47d5b72"
+        }
+      ]
+    }
+  ],
+  "excludedTargets": [
+    "headless/",
+    "alternate CLI/runtime executable targets"
+  ],
+  "runtimePromoted": false,
+  "pollingTestFollowUp": {
+    "branch": "codex/ares-upstream-u2-tests",
+    "base": "f4e50174a14442c2075be5b9ab972595e09ac55b",
+    "head": "d06519b72ec7656b2237aba1e34dbe213c852fd7",
+    "patch": "u2-tests-followup.patch",
+    "sha256": "82f17ddb010011dc565a2af47c9052e929d429240fb8ea04daf0dd05cbbed815",
+    "published": false
+  }
+}

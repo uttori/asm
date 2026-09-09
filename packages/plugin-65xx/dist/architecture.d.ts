@@ -43,7 +43,6 @@ export declare class Arch65xx implements ArchitectureEncoder {
     private encodeResolved;
     private readCompoundValues;
     private resolveForm;
-    private readValue;
     private readExpressionValue;
     private readBranchDelta;
     private readBranchExpression;

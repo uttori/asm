@@ -1809,13 +1809,6 @@ export class Arch65816 implements ArchitectureEncoder {
       }
       return Number.parseInt(symbolicOperand.slice(1, 3), 16);
     })();
-    const longMode = (currentOpcode: string): keyof typeof jumpOpcodes => {
-      if (currentOpcode === "JMP") return "JML";
-      if (currentOpcode === "JSR") return "JSL";
-      return currentOpcode;
-    };
-    const shortMode = (currentOpcode: string): keyof typeof jumpOpcodes => currentOpcode;
-    const absolutePointer = (value: number): number => value & 0xffff;
     const selectDirectJumpMode = (
       currentOpcode: string,
       resolvedAddress: number,
@@ -1832,7 +1825,7 @@ export class Arch65816 implements ArchitectureEncoder {
         // calls. Preserve JSR/JMP when the destination remains in the current
         // program bank, and only upgrade to the long form for cross-bank jumps.
         if ((currentOpcode === "JMP" || currentOpcode === "JSR") && targetBank === currentBank) {
-          return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+          return { mode: currentOpcode, address: resolvedAddress & 0xffff };
         }
 
         // Early passes can temporarily push forward labels near a bank boundary
@@ -1841,13 +1834,16 @@ export class Arch65816 implements ArchitectureEncoder {
         // that bank hint for same-bank JMP/JSR decisions until later passes
         // converge on the final absolute address.
         if ((currentOpcode === "JMP" || currentOpcode === "JSR") && hintedBank === currentBank) {
-          return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+          return { mode: currentOpcode, address: resolvedAddress & 0xffff };
         }
 
-        return { mode: longMode(currentOpcode), address: resolvedAddress };
+        let mode = currentOpcode;
+        if (currentOpcode === "JMP") mode = "JML";
+        else if (currentOpcode === "JSR") mode = "JSL";
+        return { mode, address: resolvedAddress };
       }
 
-      return { mode: shortMode(currentOpcode), address: resolvedAddress };
+      return { mode: currentOpcode, address: resolvedAddress };
     };
 
     // **Plain numeric / hex literal mode**
@@ -1867,24 +1863,24 @@ export class Arch65816 implements ArchitectureEncoder {
     // **Absolute Indirect Long Mode: JMP [$0000]**
     else if (loweredOperand.mode === "indirectLong") {
       mode = "JMP_INDIRECT_LONG";
-      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand)); // Extract 16-bit indirect long pointer
+      address = this.assembler.operandResolver.getnum(baseOperand) & 0xffff; // Extract 16-bit indirect long pointer
     }
     // **Absolute indexed/indirect jump modes accept expressions, not just raw
     // hex literals, as long as they resolve to a 16-bit absolute pointer.**
     else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX") {
       // Local labels resolve to banked SNES addresses, but JSR (abs,X) only
       // encodes the absolute pointer within the current program bank.
-      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+      address = this.assembler.operandResolver.getnum(baseOperand) & 0xffff;
       mode = "JSR_INDEXED_INDIRECT";
     }
     // **Absolute Indexed Indirect Mode: JMP ($0000,X)**
     else if (loweredOperand.mode === "indexedIndirectX") {
-      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+      address = this.assembler.operandResolver.getnum(baseOperand) & 0xffff;
       mode = "JMP_INDEXED_INDIRECT";
     }
     // **Absolute Indirect Mode: JMP ($0000)**
     else if (loweredOperand.mode === "directPageIndirect") {
-      address = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+      address = this.assembler.operandResolver.getnum(baseOperand) & 0xffff;
       mode = "JMP_INDIRECT";
     } else {
       try {

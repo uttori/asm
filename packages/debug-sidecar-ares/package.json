@@ -34,8 +34,10 @@
     "build": "node esbuild.mjs",
     "make-types": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
+    "native:check": "sh native/tests/check.sh",
     "pack:check": "npm pack --dry-run",
-    "smoke": "node out/sidecar.mjs --help"
+    "smoke": "node out/sidecar.mjs --help",
+    "desktop-rsp:check": "tsc -p tests/desktop-rsp/tsconfig.json && oxlint tests/desktop-rsp/*.mjs && oxfmt --check tests/desktop-rsp"
   },
   "dependencies": {
     "@uttori/asm-core": "1.0.0",

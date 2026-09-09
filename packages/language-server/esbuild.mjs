@@ -13,6 +13,8 @@ await build({
   platform: "node",
   format: "esm",
   target: "node20",
+  // Never emit a runnable bundle with plugin imports replaced by `undefined`.
+  logOverride: { "import-is-undefined": "error" },
   // `debug` is an optional dependency loaded via dynamic import inside the core;
   // keep it external so the bundle works whether or not it is installed.
   external: ["debug"],

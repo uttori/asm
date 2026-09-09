@@ -5,31 +5,20 @@ import {
   ANALYSIS_PROJECT_MANIFEST,
   RomImage,
   SOURCE_EXPORT_MANIFEST,
-  commitAnalysisProjectTransaction,
-  importRuntimeInstructionTrace,
-  loadAnalysisProjectSnapshot,
+  readRuntimeTraceFileMetadata,
   loadSourceExportManifest,
-  mergeRuntimeEvidence,
   migrateManifest,
-  summarizeExecutionWindow,
-  validateRuntimeInstructionTrace,
   validateSourceExportFiles,
   validateSourceExportInputs,
   type AnalysisProjectManifest,
   type AnalysisProjectShards,
-  type RuntimeInstructionTraceArtifact,
   type ExecutionWindowSummary,
   type SourceExportManifest,
 } from "@uttori/asm-disassembler";
 import {
-  SNES_CPU_ADDRESS_SPACE,
   SNES_RAM_MAP_SOURCE,
-  analyzeSnesProject,
-  exportSnesProject,
   loadSnesRamMap,
-  verifySnesProjectRoundTrip,
-  type AnalyzeSnesProjectResult,
-  type Snes65816EntryPoint,
+  type SnesFunctionRole,
 } from "@uttori/asm-plugin-snes";
 import {
   ProgressLocation,
@@ -37,12 +26,31 @@ import {
   commands,
   window,
   workspace,
-  type CancellationToken,
   type Disposable,
   type ExtensionContext,
   type LogOutputChannel,
 } from "vscode";
 
+import {
+  DisassemblyMaintenanceClient,
+  type MaintenanceRunOptions,
+} from "./disassembly-maintenance-client.js";
+import {
+  fileChanges,
+  type DisassemblyEntrySeed,
+  type DisassemblyMaintenanceTarget,
+  type DisassemblyRegenerationSummary,
+  type ProjectChoice,
+  type ResolvedProjectSource,
+  type ResolvedTarget,
+} from "./disassembly-maintenance-data.js";
+export type {
+  DisassemblyEntrySeed,
+  DisassemblyMaintenanceTarget,
+  DisassemblyRegenerationSummary,
+} from "./disassembly-maintenance-data.js";
+
+import { analysisWorker } from "./analysis-worker-client.js";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 import { rememberedSnesRom, rememberSnesRom } from "./snes-rom-bindings.js";
 
@@ -54,61 +62,8 @@ export const DISASSEMBLY_STATUS_COMMAND = "asm.disassembly.status";
 export const IMPORT_TRACE_AND_REGENERATE_COMMAND = "asm.trace.importRegenerate";
 /** Open the user-owned RAM map consumed by source regeneration. */
 export const OPEN_RAM_MAP_COMMAND = "asm.ramMap.open";
-
-const MAX_TRACE_FILE_BYTES = 128 * 1024 * 1024;
-const MAX_RUNTIME_ENTRY_SEEDS = 100_000;
-
-export interface DisassemblyEntrySeed {
-  readonly address: number;
-  readonly evidence?: readonly string[];
-}
-
-export interface DisassemblyMaintenanceTarget {
-  readonly projectDirectory?: string;
-  readonly sourceDirectory?: string;
-  readonly entrySeeds?: readonly DisassemblyEntrySeed[];
-}
-
-interface ProjectChoice {
-  readonly directory: string;
-  readonly manifest: AnalysisProjectManifest;
-}
-
-interface ResolvedProjectSource {
-  readonly projectDirectory: string;
-  readonly sourceDirectory: string;
-  readonly sourceManifest: SourceExportManifest;
-}
-
-interface ResolvedTarget extends ResolvedProjectSource {
-  readonly romFile: string;
-}
-
-interface CoverageSnapshot {
-  readonly manifestSha256: string;
-  readonly instructions: number;
-  readonly functions: number;
-  readonly runtimeRecords: number;
-  readonly runtimeEvents: number;
-  readonly traceImports: number;
-  readonly behaviorComments: number;
-  readonly codeBytes: number;
-  readonly contentBytes: number;
-}
-
-export interface DisassemblyRegenerationSummary {
-  readonly projectDirectory: string;
-  readonly sourceDirectory: string;
-  readonly before: CoverageSnapshot;
-  readonly after: CoverageSnapshot;
-  readonly analysis: AnalyzeSnesProjectResult;
-  readonly entrySeeds: number;
-  readonly ramVariables: number;
-  readonly addedFiles: readonly string[];
-  readonly changedFiles: readonly string[];
-  readonly removedFiles: readonly string[];
-  readonly roundTripSha256: string;
-}
+export const CONFIGURE_HEURISTICS_COMMAND = "asm.heuristics.configure";
+export const PREVIEW_HEURISTICS_COMMAND = "asm.heuristics.preview";
 
 const formatBytes = (bytes: number): string => {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
@@ -117,28 +72,6 @@ const formatBytes = (bytes: number): string => {
 };
 
 const signed = (value: number): string => `${value >= 0 ? "+" : ""}${value}`;
-
-const coverageFor = (
-  shards: AnalysisProjectShards,
-  manifestSha256: string,
-  source: SourceExportManifest,
-): CoverageSnapshot => ({
-  manifestSha256,
-  instructions: shards.analysis.filter((record) => record.kind === "cfg-node").length,
-  functions: shards.analysis.filter((record) => record.kind === "function").length,
-  runtimeRecords: shards.runtime.filter((record) => record.kind === "runtime-execution").length,
-  runtimeEvents: shards.runtime
-    .filter((record) => record.kind === "runtime-execution")
-    .reduce((total, record) => total + record.count, 0),
-  traceImports: shards.imports.filter((record) => record.format === "uttori-asm-instruction-trace")
-    .length,
-  behaviorComments: shards.comments.filter((record) => record.id.startsWith("behavior-comment:"))
-    .length,
-  codeBytes: source.spans
-    .filter((span) => span.role === "code")
-    .reduce((total, span) => total + span.end - span.start, 0),
-  contentBytes: source.rom.contentSize,
-});
 
 const percent = (part: number, total: number): string =>
   total === 0 ? "0.00%" : `${((part / total) * 100).toFixed(2)}%`;
@@ -443,109 +376,55 @@ const resolveTarget = async (
   return romFile ? { ...resolved, romFile } : undefined;
 };
 
-const abortController = (token: CancellationToken): AbortController => {
-  const controller = new AbortController();
-  token.onCancellationRequested(() => controller.abort());
-  return controller;
-};
-
-const normalizedSeeds = (
-  value: readonly DisassemblyEntrySeed[] | undefined,
-  snapshot: ReturnType<typeof loadAnalysisProjectSnapshot>,
-): readonly Snes65816EntryPoint[] => {
-  if (!value?.length) return [];
-  const evidence = new Set(snapshot.shards.evidence.map((record) => record.id));
-  const unique = new Map<number, Set<string>>();
-  for (const seed of value) {
-    if (!Number.isSafeInteger(seed.address) || seed.address < 0 || seed.address > 0xffffff)
-      throw new Error("Runtime code seeds must be 24-bit integer CPU addresses.");
-    const accepted = (seed.evidence ?? []).filter((id) => evidence.has(id));
-    const prior = unique.get(seed.address) ?? new Set<string>();
-    for (const id of accepted) prior.add(id);
-    unique.set(seed.address, prior);
-  }
-  if (unique.size > MAX_RUNTIME_ENTRY_SEEDS)
-    throw new Error(
-      `Trace contains ${unique.size} unique PCs; capture a narrower window (limit ${MAX_RUNTIME_ENTRY_SEEDS}).`,
-    );
-  return [...unique]
-    .sort(([left], [right]) => left - right)
-    .map(([address, ids]) => ({
-      id: `runtime-${address.toString(16).padStart(6, "0")}`,
-      address,
-      kind: "observation" as const,
-      ...(ids.size ? { evidence: [...ids].sort() } : {}),
-    }));
-};
-
-const fileChanges = (
-  before: SourceExportManifest,
-  after: SourceExportManifest,
-): Pick<DisassemblyRegenerationSummary, "addedFiles" | "changedFiles" | "removedFiles"> => {
-  const prior = new Map(before.files.map((file) => [file.path, file.sha256]));
-  const next = new Map(after.files.map((file) => [file.path, file.sha256]));
-  return {
-    addedFiles: [...next.keys()].filter((file) => !prior.has(file)).sort(),
-    changedFiles: [...next]
-      .flatMap(([file, sha]) => (prior.has(file) && prior.get(file) !== sha ? [file] : []))
-      .sort(),
-    removedFiles: [...prior.keys()].filter((file) => !next.has(file)).sort(),
-  };
-};
-
 const regenerate = async (
+  client: DisassemblyMaintenanceClient,
   resolved: ResolvedTarget,
   seeds: readonly DisassemblyEntrySeed[] | undefined,
 ): Promise<DisassemblyRegenerationSummary> => {
-  const beforeProject = loadAnalysisProjectSnapshot(resolved.projectDirectory);
-  validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest);
-  const entryPoints = normalizedSeeds(seeds, beforeProject);
-  return window.withProgress(
-    {
-      location: ProgressLocation.Notification,
-      title: "Assembly: analyzing and regenerating disassembly",
-      cancellable: true,
-    },
-    async (progress, token) => {
-      const cancellation = abortController(token);
-      progress.report({ message: `Analyzing from ${entryPoints.length} runtime code seed(s)…` });
-      const analysis = analyzeSnesProject({
-        projectDirectory: resolved.projectDirectory,
-        romFile: resolved.romFile,
-        entryPoints,
-        signal: cancellation.signal,
+  const maxWorkItems = workspace
+    .getConfiguration("asm", Uri.file(resolved.sourceDirectory))
+    .get<number>("analysis.maxWorkItems", 100_000);
+  if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems < 1)
+    throw new Error("asm.analysis.maxWorkItems must be a positive safe integer.");
+  return withMaintenanceProgress(
+    "Assembly: analyzing and regenerating disassembly",
+    async (options) => {
+      const { before, entryPoints } = await client.run(
+        "prepare",
+        { target: resolved, seeds },
+        options,
+      );
+      options.onProgress?.({
+        message: `Analyzing from ${entryPoints.length} runtime code seed(s)…`,
       });
-      progress.report({ message: "Writing generated source…" });
-      const exported = exportSnesProject({
-        projectDirectory: resolved.projectDirectory,
-        romFile: resolved.romFile,
-        sourceDirectory: resolved.sourceDirectory,
-        signal: cancellation.signal,
-      });
-      progress.report({ message: "Rebuilding and checking every ROM byte…" });
-      const roundTrip = await verifySnesProjectRoundTrip({
-        sourceDirectory: resolved.sourceDirectory,
-        romFile: resolved.romFile,
-        signal: cancellation.signal,
-      });
+      const analysis = await client.run(
+        "analyze",
+        { target: resolved, entryPoints, maxWorkItems },
+        options,
+      );
+      options.onProgress?.({ message: "Writing generated source…" });
+      const exported = await client.run("export", resolved, options);
+      options.onProgress?.({ message: "Rebuilding and checking every ROM byte…" });
+      const roundTrip = await client.run("verify", resolved, options);
       if (!roundTrip.comparison.equal)
         throw new Error(
           `Generated source differed at ROM offset ${roundTrip.comparison.firstDifference}.`,
         );
-      const afterProject = loadAnalysisProjectSnapshot(resolved.projectDirectory);
+      options.onProgress?.({ message: "Summarizing updated analysis…" });
+      const after = await client.run(
+        "coverage",
+        { ...resolved, sourceManifest: exported.manifest },
+        options,
+      );
+      if (after.manifestSha256 !== exported.manifest.sourceProjectSha256)
+        throw new Error(
+          "Analysis changed while source was being regenerated. Run regeneration again to use the latest edits.",
+        );
       return {
         projectDirectory: resolved.projectDirectory,
         sourceDirectory: resolved.sourceDirectory,
-        before: coverageFor(
-          beforeProject.shards,
-          beforeProject.revision.manifestSha256,
-          resolved.sourceManifest,
-        ),
-        after: coverageFor(
-          afterProject.shards,
-          afterProject.revision.manifestSha256,
-          exported.manifest,
-        ),
+        before,
+        after,
         analysis,
         entrySeeds: entryPoints.length,
         ramVariables:
@@ -554,15 +433,18 @@ const regenerate = async (
         roundTripSha256: roundTrip.comparison.actualSha256,
       };
     },
+    resolved.sourceDirectory,
   );
 };
 
-const statusReport = (resolved: ResolvedProjectSource): string => {
-  const project = loadAnalysisProjectSnapshot(resolved.projectDirectory);
-  const coverage = coverageFor(
-    project.shards,
-    project.revision.manifestSha256,
-    resolved.sourceManifest,
+const statusReport = async (
+  client: DisassemblyMaintenanceClient,
+  resolved: ResolvedProjectSource,
+): Promise<string> => {
+  const coverage = await withMaintenanceProgress(
+    "Assembly: checking disassembly status",
+    (options) => client.run("coverage", resolved, options),
+    resolved.sourceDirectory,
   );
   let integrity = "all generated files match their recorded hashes";
   let generatedCurrent = true;
@@ -633,12 +515,54 @@ const traceFileFrom = async (argument?: unknown): Promise<string | undefined> =>
   return selected?.[0]?.fsPath;
 };
 
-const readTrace = (file: string): RuntimeInstructionTraceArtifact => {
-  const stat = fs.statSync(file);
-  if (stat.size > MAX_TRACE_FILE_BYTES)
-    throw new Error("Instruction trace exceeds the 128 MiB import limit.");
-  return validateRuntimeInstructionTrace(JSON.parse(fs.readFileSync(file, "utf8")));
+const traceImportMaxBytes = (sourceDirectory: string): number => {
+  const mib = workspace
+    .getConfiguration("asm", Uri.file(sourceDirectory))
+    .get<number>("trace.maxImportSizeMiB", 2048);
+  const bytes = mib * 1024 * 1024;
+  if (!Number.isSafeInteger(mib) || mib < 1 || !Number.isSafeInteger(bytes))
+    throw new Error(
+      "asm.trace.maxImportSizeMiB must be a positive integer representing a safe byte limit.",
+    );
+  return bytes;
 };
+
+const withMaintenanceProgress = async <T>(
+  title: string,
+  action: (options: MaintenanceRunOptions) => Promise<T>,
+  sourceDirectory: string,
+): Promise<T> =>
+  window.withProgress(
+    { location: ProgressLocation.Notification, title, cancellable: true },
+    async (progress, token) => {
+      const cancellation = new AbortController();
+      const subscription = token.onCancellationRequested(() => cancellation.abort());
+      let lastPercent = -1;
+      try {
+        return await action({
+          maxMemoryMiB: workspace
+            .getConfiguration("asm", Uri.file(sourceDirectory))
+            .get<number>("analysis.maxMemoryMiB", 4096),
+          signal: cancellation.signal,
+          onProgress: ({ message, bytesRead: read = 0, totalBytes: total = 0 }) => {
+            if (message) {
+              progress.report({ message });
+              return;
+            }
+            const percent = total ? Math.floor((read / total) * 100) : 100;
+            if (percent !== lastPercent) {
+              progress.report({
+                message: `${formatBytes(read)} / ${formatBytes(total)} (${percent}%)`,
+              });
+              lastPercent = percent;
+            }
+          },
+        });
+      } finally {
+        subscription.dispose();
+      }
+    },
+  );
 
 /**
  * Registers trace import, status, and deterministic analysis/source regeneration commands.
@@ -652,13 +576,29 @@ export const registerDisassemblyMaintenance = (
   refresh: () => void,
   outputChannel?: LogOutputChannel,
 ): readonly Disposable[] => {
-  const run = (operation: () => Promise<void>): Promise<void> =>
-    operation().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      outputChannel?.error(`Disassembly maintenance failed: ${message}`);
-      void window.showErrorMessage(`Assembly disassembly update: ${message}`);
-    });
+  const client = new DisassemblyMaintenanceClient(
+    path.join(context.extensionUri.fsPath, "out", "disassembly-maintenance-process.cjs"),
+  );
+  let busy = false;
+  const run = async (operation: () => Promise<void>): Promise<void> => {
+    if (busy) {
+      void window.showInformationMessage("A disassembly maintenance operation is already running.");
+      return;
+    }
+    busy = true;
+    await operation()
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        const details = error instanceof Error ? (error.stack ?? message) : message;
+        outputChannel?.error(`Disassembly maintenance failed: ${details}`);
+        void window.showErrorMessage(`Assembly disassembly update: ${message}`);
+      })
+      .finally(() => {
+        busy = false;
+      });
+  };
   return [
+    client,
     commands.registerCommand(
       REGENERATE_DISASSEMBLY_COMMAND,
       (target?: DisassemblyMaintenanceTarget) =>
@@ -667,7 +607,7 @@ export const registerDisassemblyMaintenance = (
             throw new Error("Analysis and source regeneration require a trusted workspace.");
           const resolved = await resolveTarget(context, target);
           if (!resolved) return;
-          const summary = await regenerate(resolved, target?.entrySeeds);
+          const summary = await regenerate(client, resolved, target?.entrySeeds);
           refresh();
           outputChannel?.info(
             `Disassembly updated: ${summary.before.codeBytes} -> ${summary.after.codeBytes} code bytes; ${summary.changedFiles.length} file(s) changed.`,
@@ -677,6 +617,96 @@ export const registerDisassemblyMaintenance = (
             `Assembly: disassembly is current; ${formatBytes(summary.after.codeBytes)} code (${signed(summary.after.codeBytes - summary.before.codeBytes)} bytes), exact round trip verified.`,
           );
         }),
+    ),
+    commands.registerCommand(
+      CONFIGURE_HEURISTICS_COMMAND,
+      (target?: DisassemblyMaintenanceTarget) =>
+        run(async () => {
+          if (!workspace.isTrusted)
+            throw new Error("Editing heuristic rules requires a trusted workspace.");
+          const selected = await chooseProject(target?.projectDirectory);
+          if (!selected) throw new Error("No native analysis project was found in the workspace.");
+          if (selected.manifest.target !== "snes.sfc")
+            throw new Error("Function heuristics require a SNES analysis project.");
+          const file = path.join(selected.directory, "heuristics.json");
+          try {
+            await fs.promises.writeFile(
+              file,
+              JSON.stringify(
+                {
+                  enabled: true,
+                  minimumConfidence: "medium",
+                  disabledRules: [],
+                  registerRules: [],
+                },
+                null,
+                2,
+              ) + "\n",
+              { flag: "wx" },
+            );
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+          }
+          await window.showTextDocument(Uri.file(file), { preview: false });
+        }),
+    ),
+    commands.registerCommand(PREVIEW_HEURISTICS_COMMAND, (target?: DisassemblyMaintenanceTarget) =>
+      run(async () => {
+        const selected = await chooseProject(target?.projectDirectory);
+        if (!selected) throw new Error("No native analysis project was found in the workspace.");
+        const file = path.join(selected.directory, "heuristics.json");
+        if (
+          workspace.textDocuments.some(
+            (document) => document.uri.fsPath === file && document.isDirty,
+          )
+        )
+          throw new Error("Save heuristics.json before previewing its rules.");
+        const result = await window.withProgress(
+          {
+            location: ProgressLocation.Notification,
+            title: "Running SNES heuristics",
+            cancellable: false,
+          },
+          () =>
+            analysisWorker().request<{
+              enabled: boolean;
+              total: number;
+              roles: readonly SnesFunctionRole[];
+            }>(selected.directory, "heuristics"),
+        );
+        await showMarkdown(
+          [
+            "# Heuristic findings",
+            "",
+            `Project: ${markdownCell(selected.directory)}`,
+            "",
+            result.enabled
+              ? `${result.total} findings from the current saved analysis and heuristic rules.`
+              : "Heuristics are disabled in heuristics.json.",
+            "",
+            "This preview leaves project files unchanged. Run **Analyze and Regenerate Disassembly** to apply the saved rules and include their comments in generated source.",
+            "",
+            "| Address | Role | Confidence | Evidence |",
+            "| --- | --- | --- | --- |",
+            ...result.roles.map(
+              (role) =>
+                `| ${role.addressSpace} ${hexAddress(role.address)} | ${markdownCell(role.role)}${role.relationship === "delegated" ? " (via call)" : ""} | ${role.confidence} | ${markdownCell(role.explanation)} |`,
+            ),
+            ...(result.total > result.roles.length
+              ? [
+                  "",
+                  `Showing the first ${result.roles.length} of ${result.total} findings. Raise minimumConfidence or disable rules to narrow the preview.`,
+                ]
+              : []),
+            ...(!result.total && result.enabled
+              ? [
+                  "",
+                  "No rules matched. Analyze the project or import a runtime trace to provide more instruction evidence.",
+                ]
+              : []),
+          ].join("\n"),
+        );
+      }),
     ),
     commands.registerCommand(OPEN_RAM_MAP_COMMAND, (target?: DisassemblyMaintenanceTarget) =>
       run(async () => {
@@ -694,7 +724,7 @@ export const registerDisassemblyMaintenance = (
     commands.registerCommand(DISASSEMBLY_STATUS_COMMAND, (target?: DisassemblyMaintenanceTarget) =>
       run(async () => {
         const resolved = await resolveProjectSource(target);
-        if (resolved) await showMarkdown(statusReport(resolved));
+        if (resolved) await showMarkdown(await statusReport(client, resolved));
       }),
     ),
     commands.registerCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, (argument?: unknown) =>
@@ -703,38 +733,55 @@ export const registerDisassemblyMaintenance = (
           throw new Error("Trace import and source regeneration require a trusted workspace.");
         const traceFile = await traceFileFrom(argument);
         if (!traceFile) return;
-        const trace = readTrace(traceFile);
+        // Read only the identity to select the project whose size setting applies.
+        const trace = await readRuntimeTraceFileMetadata(traceFile, {
+          maxBytes: Number.MAX_SAFE_INTEGER,
+        });
         const resolved = await resolveTarget(context, {}, trace.romContentSha256);
         if (!resolved) return;
         validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest);
-        const snapshot = loadAnalysisProjectSnapshot(resolved.projectDirectory);
-        const imported = importRuntimeInstructionTrace(trace, {
-          projectRomContentSha256: snapshot.manifest.rom.contentSha256,
-          sourceName: path.basename(traceFile),
-        });
-        const merged = mergeRuntimeEvidence(snapshot.shards, imported.batch);
-        if (merged.changed)
-          commitAnalysisProjectTransaction(resolved.projectDirectory, snapshot.revision, {
-            manifest: snapshot.manifest,
-            shards: merged.shards,
-          });
-        const seeds: DisassemblyEntrySeed[] =
-          trace.architecture === "snes.65816" && trace.addressSpace === SNES_CPU_ADDRESS_SPACE
-            ? (imported.batch.runtime?.flatMap((record) =>
-                record.kind === "runtime-execution"
-                  ? [{ address: record.address, evidence: record.evidence }]
-                  : [],
-              ) ?? [])
-            : [];
+        const maxBytes = traceImportMaxBytes(resolved.sourceDirectory);
+        const imported = await withMaintenanceProgress(
+          "Assembly: importing runtime trace",
+          (options) =>
+            client.run(
+              "import",
+              {
+                target: resolved,
+                traceFile,
+                maxBytes,
+                architecture: trace.architecture,
+                addressSpace: trace.addressSpace,
+              },
+              options,
+            ),
+          resolved.sourceDirectory,
+        );
+        const seeds = imported.seeds;
         let summary: DisassemblyRegenerationSummary;
         try {
-          summary = await regenerate(resolved, seeds);
+          summary = await regenerate(client, resolved, seeds);
         } catch (error) {
-          const execution = summarizeExecutionWindow(
-            trace,
-            loadAnalysisProjectSnapshot(resolved.projectDirectory).shards,
-          );
           refresh();
+          if (error instanceof Error && error.name === "AbortError") throw error;
+          outputChannel?.error(
+            `Disassembly regeneration failed: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
+          );
+          const executionReport = await withMaintenanceProgress(
+            "Assembly: summarizing execution capture",
+            (options) =>
+              client.run(
+                "execution",
+                { projectDirectory: resolved.projectDirectory, traceFile, maxBytes },
+                options,
+              ),
+            resolved.sourceDirectory,
+          )
+            .then(renderExecutionWindowReport)
+            .catch(
+              (reportError: unknown) =>
+                `Routine report unavailable: ${reportError instanceof Error ? reportError.message : String(reportError)}`,
+            );
           const message = error instanceof Error ? error.message : String(error);
           await showMarkdown(
             `${[
@@ -744,24 +791,30 @@ export const registerDisassemblyMaintenance = (
               "",
               message,
               "",
-              "The trace evidence was imported, but generated source may be incomplete or unverified. The routine attribution available from the current analysis is preserved below.",
+              "The trace evidence was imported. Analysis and export guards preserve previous results when an update would discard known code; other failures may leave source unverified. The error above identifies the failed step. Routine attribution from the saved analysis is preserved below.",
               "",
-              renderExecutionWindowReport(execution),
+              executionReport,
             ].join("\n")}\n`,
           );
           throw error;
         }
-        const execution = summarizeExecutionWindow(
-          trace,
-          loadAnalysisProjectSnapshot(resolved.projectDirectory).shards,
+        const execution = await withMaintenanceProgress(
+          "Assembly: summarizing execution capture",
+          (options) =>
+            client.run(
+              "execution",
+              { projectDirectory: resolved.projectDirectory, traceFile, maxBytes },
+              options,
+            ),
+          resolved.sourceDirectory,
         );
         refresh();
-        const mergeDetail = merged.changed
-          ? `${merged.added.runtime} runtime address(es) and ${merged.added.evidence} evidence record(s) added`
+        const mergeDetail = imported.changed
+          ? `${imported.added.runtime} runtime address(es) and ${imported.added.evidence} evidence record(s) added`
           : "the identical trace evidence was already present";
         const report = `${renderDisassemblyRegenerationReport(summary).replace(
           "## Result\n\n",
-          `## Trace import\n\n- File: ${traceFile}\n- Observed events: ${imported.observedEvents}\n- Unique observed PCs: ${imported.report.imported.executionRecords ?? 0}\n- Producer-dropped events: ${imported.droppedEvents}\n- Merge: ${mergeDetail}\n\n## Result\n\n`,
+          `## Trace import\n\n- File: ${traceFile}\n- Observed events: ${imported.observedEvents}\n- Unique observed PCs: ${imported.executionRecords}\n- Producer-dropped events: ${imported.droppedEvents}\n- Merge: ${mergeDetail}\n\n## Result\n\n`,
         )}\n${renderExecutionWindowReport(execution)}`;
         outputChannel?.info(
           `Trace imported: ${imported.observedEvents} event(s), ${execution.routines.length} routine candidate(s), ${seeds.length} code seed(s), ${summary.after.codeBytes - summary.before.codeBytes} code-byte delta.`,

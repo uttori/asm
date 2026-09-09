@@ -60,13 +60,6 @@ export const canonicalDebugMapJson = (value: unknown): string =>
 const sha256 = (value: string | Uint8Array): string =>
   createHash("sha256").update(value).digest("hex");
 
-const portablePath = (filename: string, root: string): string => {
-  const relative = path.relative(root, path.resolve(filename));
-  return relative && !relative.startsWith("..") && !path.isAbsolute(relative)
-    ? relative.split(path.sep).join("/")
-    : path.resolve(filename).split(path.sep).join("/");
-};
-
 /**
  * Creates a deterministic debug map whose fingerprint covers every field except itself.
  * @param {CreateDebugMapOptions} options Output and mapping inputs.
@@ -75,11 +68,14 @@ const portablePath = (filename: string, root: string): string => {
 export const createDebugMap = (options: CreateDebugMapOptions): DebugMap => {
   const sourceRoot = path.resolve(options.sourceRoot ?? process.cwd());
   const entries = options.mapping.fileList
-    .map((entry, originalId) => ({
-      entry,
-      originalId,
-      portable: portablePath(entry.name, sourceRoot),
-    }))
+    .map((entry, originalId) => {
+      const absolute = path.resolve(entry.name);
+      const relative = path.relative(sourceRoot, absolute);
+      // Keep external sources absolute and normalize separators for portable debug maps.
+      const portable =
+        relative && !relative.startsWith("..") && !path.isAbsolute(relative) ? relative : absolute;
+      return { entry, originalId, portable: portable.split(path.sep).join("/") };
+    })
     .sort((left, right) => left.portable.localeCompare(right.portable));
   const sourceIdByOriginal = new Map<number, number>();
   const sources: DebugMapSource[] = entries.map(({ entry, originalId, portable }, id) => {

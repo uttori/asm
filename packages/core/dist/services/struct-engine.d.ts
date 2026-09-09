@@ -1,4 +1,14 @@
 import { type NormalizedCommand } from "../ir/normalized-command.js";
+import { DataStructEngine, type DataStructHost } from "./data-struct-engine.js";
+/** Encoding information is separate from Asar's address-only member labels. */
+export interface StructField {
+    name: string;
+    offset: number;
+    width: number;
+    count: number;
+    /** Even db[1] is an array; skip members are opaque byte arrays. */
+    array: boolean;
+}
 export interface StructDefinition {
     name: string;
     /** The logical start address for the struct. */
@@ -15,8 +25,15 @@ export interface StructDefinition {
     parent?: string;
     /** Cached maximum child extension size, or zero when there are no extensions. */
     extensionSize: number;
+    /** Absent on legacy API-created definitions; never infer types from label distances. */
+    fields?: Map<string, StructField>;
+    /** Optional valid logical array indexes, independent of the biased base address. */
+    indexRange?: {
+        first: number;
+        count: number;
+    };
 }
-export type StructHost = {
+export type StructHost = DataStructHost & {
     readonly addressWidth: number;
     currentStruct: StructDefinition | null;
     structs: Map<string, StructDefinition>;
@@ -32,6 +49,7 @@ export type StructHost = {
 };
 export declare class StructEngine {
     readonly host: StructHost;
+    readonly data: DataStructEngine;
     constructor(host: StructHost);
     /**
      * Handles a struct mode command.

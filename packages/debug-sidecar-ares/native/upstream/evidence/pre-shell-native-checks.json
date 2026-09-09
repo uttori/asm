@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "integrationRevision": "8534f66acf88d7a1abe1478c71b1c9645d10dad4",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "checks": [
+    {
+      "name": "U1 SDK",
+      "command": "rtk proxy node packages/debug-sidecar-ares/native/tests/macos-sdk.mjs fixtures/external/ares",
+      "exitCode": 0,
+      "output": "PASS CLT fallback\nPASS full Xcode primary SDK\nPASS both xcrun calls fail\nPASS old SDK still fails\nPASS old Xcode still fails\n"
+    },
+    {
+      "name": "U2 polling",
+      "command": "rtk proxy env CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 node packages/debug-sidecar-ares/native/tests/gdb-polling.mjs fixtures/external/ares",
+      "exitCode": 0,
+      "output": "PASS inactive server does not poll\nPASS running idle budget\nPASS running queued messages\nPASS running continuous traffic is bounded\nPASS halted idle budget\nPASS halted queued messages\nPASS halted continuous traffic is bounded\nPASS message at idle boundary permits a following message\nPASS resume immediately returns control for execution\nPASS disconnect with ack\nPASS disconnect without ack\n"
+    },
+    {
+      "name": "gdb-registers.cpp",
+      "command": "rtk proxy env CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 node fixtures/external/ares/tests/gdb/run.mjs fixtures/external/ares gdb-registers.cpp",
+      "exitCode": 0,
+      "output": "Unknown-Command: qXfer (data: )\nPASS U3: little-endian p/P/g/G, banked PC, E/M/X invariants, atomic validation, chunked XML, reset, big-endian compatibility\n"
+    },
+    {
+      "name": "gdb-memory-packets.cpp",
+      "command": "rtk proxy env CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 node fixtures/external/ares/tests/gdb/run.mjs fixtures/external/ares gdb-memory-packets.cpp",
+      "exitCode": 0,
+      "output": "PASS U4 packets: invalid hex, missing fields, excess fields, overflow and oversized reads never invoke storage\n"
+    },
+    {
+      "name": "gdb-storage.cpp",
+      "command": "rtk proxy env CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 node fixtures/external/ares/tests/gdb/run.mjs fixtures/external/ares gdb-storage.cpp fixtures/external/ares/build-u3-u6",
+      "exitCode": 0,
+      "output": "PASS U4: actual SFC WRAM aliases, safe bus dispatch, mapped SRAM offsets, remap/unmap, exact RSP ranges, four physical storage boundaries\n"
+    },
+    {
+      "name": "gdb-boundaries.cpp",
+      "command": "rtk proxy env CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 node fixtures/external/ares/tests/gdb/run.mjs fixtures/external/ares gdb-boundaries.cpp",
+      "exitCode": 0,
+      "output": "GDB client connected\nGDB client disconnected\nGDB client connected\nGDB client connected\nPASS U5: deferred attach, stable repeated stop, step/continue at breakpoint, reset halt/run, Ctrl-C, disconnect/reconnect, existing-core compatibility\n"
+    },
+    {
+      "name": "Legacy tiny queue",
+      "command": "rtk proxy env CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 node packages/debug-sidecar-ares/native/tests/run-native.mjs 'Local Only/ares-current-port' lossy-baseline.cpp",
+      "exitCode": 0,
+      "output": "PASS baseline (8-slot overlay of actual legacy queue): produced=25 activeRead=1 finalDrain=7 droppedInstructions=17 retainedBusTruncations=64 unattributedBus=2 detailBytes=560\n"
+    }
+  ]
+}

@@ -1,6 +1,25 @@
 import type { RuntimeInstructionDetail } from "@uttori/asm-disassembler";
 import { open, type FileHandle } from "node:fs/promises";
 
+/**
+ * Honor the requested capture detail without silently losing execution evidence.
+ * @param {"full" | "pc"} requested User-selected capture mode.
+ * @param {boolean | undefined} instructionDetails Negotiated runtime support.
+ * @returns {"full" | "pc"} Supported capture mode.
+ */
+export const resolveEditorTraceDetail = (
+  requested: "full" | "pc",
+  instructionDetails: boolean | undefined,
+): "full" | "pc" => {
+  if (requested === "full" && !instructionDetails)
+    throw new Error(
+      "Full instruction capture requires a runtime that supplies instruction bytes and CPU state. " +
+        "The active runtime only supports PC-only capture. Check runtimeManifest and emulator in the active launch configuration, " +
+        "then restart debugging with a rich-trace runtime, or explicitly set asm.debug.traceDetail to pc.",
+    );
+  return requested;
+};
+
 /** One trace batch returned by the debugger's bounded pull protocol. */
 export interface EditorTraceBatch {
   readonly architecture: string;

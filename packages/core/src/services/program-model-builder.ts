@@ -30,6 +30,7 @@ export type IncrementalProgramParseState = {
   branchStack: ConditionalBranch[];
   inMacroDefinition: boolean;
   inFunctionDefinition: boolean;
+  inDataStructs?: boolean;
 };
 
 export type ProgramModelBuilderHost = {
@@ -84,6 +85,7 @@ export class ProgramModelBuilder {
     state.branchStack.length = 0;
     state.inMacroDefinition = false;
     state.inFunctionDefinition = false;
+    state.inDataStructs = false;
   }
 
   /**
@@ -137,7 +139,11 @@ export class ProgramModelBuilder {
     sourceFile = this.host.currentFile,
     startLine = this.host.currentLine,
   ): ExecutableNode[] {
-    const cacheKey = `${sourceFile}::${startLine}::${commandStreamKey(commands)}`;
+    // Include source line numbers so identical text at different locations has distinct cache entries.
+    const commandStream = commands
+      .map((command) => (typeof command === "string" ? command : `${command.line}:${command.text}`))
+      .join("\n");
+    const cacheKey = `${sourceFile}::${startLine}::${commandStream}`;
     const cached = this.host.passProgramCache.get(cacheKey);
     if (cached) {
       incrementInternalCounter("passProgramCacheHits");
@@ -250,6 +256,15 @@ export class ProgramModelBuilder {
       if (keyword === "endmacro") {
         state.inMacroDefinition = false;
       }
+      return;
+    }
+
+    // A record table is a data-only block. Preserve even malformed/control-like
+    // rows for its runtime validator instead of interpreting them as if/for/org.
+    if (state.inDataStructs || keyword === "datastructs") {
+      state.inDataStructs = keyword !== "enddatastructs";
+      setCommandKind(command, "structCommand");
+      this.pushToCurrent(state, command);
       return;
     }
 
@@ -402,15 +417,4 @@ export class ProgramModelBuilder {
     state.roots = state.roots.slice(completedCount);
     return ready;
   }
-}
-
-/**
- * Builds a cache key that distinguishes sourced commands from plain text streams.
- * @param {Array<string | SourcedCommand>} commands The command stream.
- * @returns {string} The cache key payload.
- */
-function commandStreamKey(commands: Array<string | SourcedCommand>): string {
-  return commands
-    .map((command) => (typeof command === "string" ? command : `${command.line}:${command.text}`))
-    .join("\n");
 }

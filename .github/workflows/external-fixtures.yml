@@ -35,7 +35,7 @@ jobs:
         with:
           submodules: false
       - name: Initialize all external submodules
-        run: git submodule update --init
+        run: git submodule update --init fixtures/external/chou fixtures/external/yoshi fixtures/external/smrpg fixtures/external/tmnt fixtures/external/snes-rom-framework fixtures/external/zelda
       - uses: actions/setup-node@v5
         with:
           node-version: "26"

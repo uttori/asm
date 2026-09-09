@@ -85,6 +85,45 @@ test("captured variants and insufficient width state remain explicit", (t) => {
   t.true(records.some((record) => record.kind === "unresolved"));
 });
 
+test("different capture states preserve compatible code while differing instruction widths remain conflicts", (t) => {
+  const shards = captured([[0xa9, 1]]);
+  const sample = shards.runtime[0] as RuntimeInstructionRecord;
+  const runtime = [
+    { ...sample, evidence: ["capture-a"] },
+    {
+      ...sample,
+      id: "x16-different-bank",
+      state: { ...sample.state, p: 0x20, db: 0x7e, d: 0x100 },
+      evidence: ["capture-b"],
+    },
+  ];
+  const rom = new RomImage(new Uint8Array(0x10000));
+  const compatible = analyzeSnesRuntimeCode({ ...shards, runtime }, rom, "lorom");
+  const nodes = compatible.filter((record) => record.kind === "cfg-node");
+  t.is(nodes.length, 2, "both execution states remain available");
+  t.deepEqual(nodes.flatMap((node) => node.evidence).sort(), ["capture-a", "capture-b"]);
+  t.false(compatible.some((record) => record.kind === "conflict"));
+  const incompatible = analyzeSnesRuntimeCode(
+    {
+      ...shards,
+      runtime: [
+        ...runtime,
+        {
+          ...sample,
+          id: "a16",
+          state: { ...sample.state, p: 0x10 },
+          bytes: [0xa9, 1, 0xea],
+          evidence: ["capture-c"],
+        },
+      ],
+    },
+    rom,
+    "lorom",
+  );
+  t.is(incompatible.filter((record) => record.kind === "cfg-node").length, 3);
+  t.true(incompatible.some((record) => record.kind === "conflict" && record.nodes.length === 3));
+});
+
 test("DMA destination requires paired setup, known width/direction, and a trigger", (t) => {
   // 16-bit LDA/STA configures DMAP7+BBAD7 together, then starts channel 7.
   const dma = (mode: number, target: number) =>

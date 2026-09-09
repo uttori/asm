@@ -41,12 +41,6 @@ const positiveInteger = (value: number, context: string): number => {
   return value;
 };
 
-const responseRecord = (value: unknown): Readonly<Record<string, unknown>> => {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new Error("Mesen response must be an object.");
-  return value as Readonly<Record<string, unknown>>;
-};
-
 /** Bounded, authenticated, sequential client for the maintained MesenCE native seam. */
 export class FramedMesenDebugClient implements MesenDebugClient {
   readonly #transport: MesenDebugTransport;
@@ -213,7 +207,9 @@ export class FramedMesenDebugClient implements MesenDebugClient {
     } catch {
       throw new Error("Mesen debug response is not valid UTF-8 JSON.");
     }
-    const response = responseRecord(parsed);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+      throw new Error("Mesen response must be an object.");
+    const response = parsed as Readonly<Record<string, unknown>>;
     if (response.version !== MESEN_NATIVE_PROTOCOL_VERSION)
       throw new Error("Mesen debug response uses an unsupported protocol version.");
     const pending = this.#pending;

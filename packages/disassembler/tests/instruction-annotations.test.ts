@@ -264,3 +264,43 @@ test("instruction annotations retain runtime-only instruction identities", (t) =
     nodeIds: [],
   });
 });
+
+test("state alternatives are canonicalized once per observation, retaining counts and provenance", (t) => {
+  const manifest = {
+    addressSpaces: [{ id: "cpu", name: "CPU", kind: "cpu" as const, addressBits: 16 }],
+  };
+  let stateReads = 0;
+  const runtime = Array.from({ length: 400 }, (_, index) => ({
+    id: `state:${index}`,
+    kind: "runtime-cpu-state" as const,
+    architecture: "fixture.cpu",
+    addressSpace: "cpu",
+    address: 0x1234,
+    state: {
+      get a() {
+        stateReads++;
+        return (index * 71) % 200;
+      },
+      x: true,
+    },
+    count: 2,
+    evidence: [`capture:${index % 2}`],
+  }));
+  const projection = buildInstructionAnalysisAnnotations(manifest, { ...emptyShards(), runtime });
+  t.is(stateReads, runtime.length, "sorting reuses aggregation keys instead of re-reading states");
+  const observations = projection.instructions[0].stateObservations;
+  t.is(observations.length, 200, "distinct observed states are not discarded to save memory");
+  for (const observation of observations) {
+    t.is(observation.count, 4);
+    t.is(observation.recordIds.length, 2);
+    t.false("stateKey" in observation, "private sort keys do not alter the public projection");
+  }
+  t.deepEqual(
+    buildInstructionAnalysisAnnotations(manifest, {
+      ...emptyShards(),
+      runtime: [...runtime].reverse(),
+    }),
+    projection,
+    "input order does not change state ordering, evidence, or execution counts",
+  );
+});

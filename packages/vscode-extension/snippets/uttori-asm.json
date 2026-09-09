@@ -1,4 +1,19 @@
 {
+  "Named struct record": {
+    "prefix": "dataStruct",
+    "body": ["dataStruct ${1:Record}[${2:0}], {", "\t${3:field} = ${4:\\$00}", "}", "$0"],
+    "description": "Emit a complete named record at its declared address"
+  },
+  "Named struct table": {
+    "prefix": "dataStructs",
+    "body": [
+      "dataStructs ${1:Record}",
+      "\t[${2:0}] = { ${3:field} = ${4:\\$00} }",
+      "endDataStructs",
+      "$0"
+    ],
+    "description": "Emit consecutive indexed named records"
+  },
   "Subroutine": {
     "prefix": "sub",
     "body": ["${1:name}:", "\t$0", "\trts"],

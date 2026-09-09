@@ -1,13 +1,16 @@
+import { renderWebviewTemplate } from "../src/webview-template.js";
 import * as assert from "node:assert/strict";
 
 import * as vscode from "vscode";
 import { AnalysisCoverageProvider } from "../src/coverage-tree.js";
+import { AnalysisSourcesProvider } from "../src/analysis-sources-tree.js";
 import { AnalysisGraphProvider } from "../src/analysis-graph-tree.js";
 import { initializeAnalysisWorker } from "../src/analysis-worker-client.js";
 
 const EXTENSION_ID = "matthewcallis.uttori-asm-vscode";
 const REQUIRED_COMMANDS = [
   "asm.build",
+  "asm.analysis.toggleAnnotations",
   "asm.runEmulator",
   "asm.debugEmulator",
   "asm.runAndWatch",
@@ -15,6 +18,9 @@ const REQUIRED_COMMANDS = [
   "asm.outline.refresh",
   "asm.coverage.refresh",
   "asm.analysisGraph.refresh",
+  "asm.sources.refresh",
+  "asm.sources.compare",
+  "asm.sources.resetComparison",
   "asm.trace.start",
   "asm.capture.idle",
   "asm.capture.behavior",
@@ -25,6 +31,8 @@ const REQUIRED_COMMANDS = [
   "asm.trace.stop",
   "asm.trace.stopAnalyze",
   "asm.trace.importRegenerate",
+  "asm.heuristics.configure",
+  "asm.heuristics.preview",
   "asm.ramMap.open",
   "asm.disassembly.status",
   "asm.disassembly.regenerate",
@@ -303,6 +311,38 @@ export async function run(): Promise<void> {
   assert.equal(document.languageId, "uttori-snes", "Assembly language association is missing.");
   await waitForLanguageServer(sourceUri);
 
+  // Exercise packaged external HTML/CSS/JS under a real webview CSP, not a DOM mock.
+  for (const name of ["annotation", "panel"] as const) {
+    const view = vscode.window.createWebviewPanel(
+      "uttori.webviewSmoke",
+      "Webview smoke",
+      vscode.ViewColumn.Beside,
+      {
+        enableScripts: true,
+        localResourceRoots: [vscode.Uri.joinPath(extension.extensionUri, "media")],
+      },
+    );
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let subscription: vscode.Disposable | undefined;
+    try {
+      const ready = new Promise<void>((resolve, reject) => {
+        subscription = view.webview.onDidReceiveMessage((message: { type?: string }) => {
+          if (message.type === "ready") resolve();
+        });
+        timer = setTimeout(
+          () => reject(new Error(`${name} webview assets did not load under CSP.`)),
+          10_000,
+        );
+      });
+      view.webview.html = renderWebviewTemplate(view.webview, extension.extensionUri, name);
+      await ready;
+    } finally {
+      clearTimeout(timer);
+      subscription?.dispose();
+      view.dispose();
+    }
+  }
+
   await vscode.commands.executeCommand("asm.outline.refresh");
   await vscode.commands.executeCommand("asm.coverage.refresh");
   await vscode.commands.executeCommand("asm.analysisGraph.refresh");
@@ -331,6 +371,28 @@ export async function run(): Promise<void> {
     const functionsOnPage = await graph.getChildren(functionPages[0]);
     assert.equal(functionsOnPage.length, 200);
     assert.equal((await graph.getChildren(functionsOnPage[0])).length, 3);
+    const sources = new AnalysisSourcesProvider();
+    try {
+      const sourceRoots = await sources.getChildren();
+      const chest = sourceRoots.find(({ label }) => label === "chest.json");
+      assert.ok(chest);
+      const groups = await sources.getChildren(chest);
+      const unique = groups.find(({ label }) => label === "Unique instructions");
+      assert.ok(unique);
+      assert.equal(sources.getTreeItem(unique).description, "400");
+      const pages = await sources.getChildren(unique);
+      assert.equal(pages.length, 2);
+      const entries = await sources.getChildren(pages[0]);
+      assert.equal(entries.length, 200);
+      assert.equal(sources.getTreeItem(entries[0]).command?.command, "asm.analysis.navigate");
+      const location = sources.getTreeItem(entries[0]).command?.arguments?.[0] as
+        | { address: number }
+        | undefined;
+      assert.equal(location?.address, 0x808064);
+      await vscode.commands.executeCommand("uttori-asm.sources.focus");
+    } finally {
+      sources.dispose();
+    }
   } finally {
     worker.dispose();
   }

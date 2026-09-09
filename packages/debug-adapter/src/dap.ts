@@ -75,6 +75,14 @@ const records = (value: unknown): readonly Record<string, unknown>[] =>
       )
     : [];
 
+const VIRTUAL_DISASSEMBLY_HEADER = [
+  "; Debugger disassembly (temporary, read-only view)",
+  "; Shown because the current instruction has no matching source line in this project.",
+  "; Instructions are decoded from the debug session; edit project source files to change code.",
+  "; Columns: address, instruction bytes, assembly instruction.",
+  "",
+];
+
 /**
  * Formats a qualified address for DAP memory/instruction references.
  * @param {DebugAddress} address Qualified logical address.
@@ -412,9 +420,10 @@ export class DebugAdapterSession {
       case "uttori/traceCapabilities":
         return this.#traceCapabilities();
       case "uttori/startTrace":
-        if (args.detail !== undefined && args.detail !== "pc" && args.detail !== "full") throw new Error("Unsupported trace detail mode.");
+        if (args.detail !== undefined && args.detail !== "pc" && args.detail !== "full")
+          throw new Error("Unsupported trace detail mode.");
         await this.#backend.startTrace({
-          ...(args.detail === undefined ? {} : { detail: args.detail as "pc" | "full" }),
+          ...(args.detail === undefined ? {} : { detail: args.detail }),
           architecture: typeof args.architecture === "string" ? args.architecture : "",
           addressSpace: typeof args.addressSpace === "string" ? args.addressSpace : "",
         });
@@ -516,7 +525,9 @@ export class DebugAdapterSession {
           addressSpace,
           maxBufferedEvents: trace.maxBufferedEvents,
           maxBatchEvents: trace.maxBatchEvents,
-          ...(trace.instructionDetails === undefined ? {} : { instructionDetails: trace.instructionDetails }),
+          ...(trace.instructionDetails === undefined
+            ? {}
+            : { instructionDetails: trace.instructionDetails }),
         });
     }
     return { traces };
@@ -548,7 +559,7 @@ export class DebugAdapterSession {
         return {
           id: frame.id,
           name: frame.currentOnly ? `${frame.name} (current frame only)` : frame.name,
-          line: 1,
+          line: VIRTUAL_DISASSEMBLY_HEADER.length + 1,
           column: 1,
           source: {
             name: `${frame.pc.architecture} disassembly`,
@@ -1069,12 +1080,13 @@ export class DebugAdapterSession {
     const address = this.#virtualSources.get(sourceReference);
     if (!address) throw new Error("Unknown source reference.");
     const instructions = await this.#backend.disassemble(address, 32);
-    const content = instructions
-      .map(
+    const content = [
+      ...VIRTUAL_DISASSEMBLY_HEADER,
+      ...instructions.map(
         (instruction) =>
           `${formatDebugAddress(instruction.address)}  ${bytesText(instruction).padEnd(12)}  ${this.#annotatedInstructionText(instruction)}`,
-      )
-      .join("\n");
+      ),
+    ].join("\n");
     return { content: `${content}\n`, mimeType: "text/x-uttori-asm" };
   }
 

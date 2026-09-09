@@ -57,11 +57,6 @@ const parseArguments = (arguments_: readonly string[]): Options => {
   return parsed;
 };
 
-const assertDirectory = (directory: string, label: string): void => {
-  if (!statSync(directory).isDirectory())
-    throw new Error(`${label} is not a directory: ${directory}`);
-};
-
 const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
 const octal = (value: number, width: number): Buffer => {
@@ -116,7 +111,8 @@ const createTar = (entries: readonly ArchiveEntry[]): Buffer => {
 };
 
 const options = parseArguments(process.argv.slice(2));
-assertDirectory(options.runtime, "Ares runtime root");
+if (!statSync(options.runtime).isDirectory())
+  throw new Error(`Ares runtime root is not a directory: ${options.runtime}`);
 const runtime = realpathSync(options.runtime);
 const manifestPath = path.join(runtime, "ares-runtime-manifest.json");
 const manifestBytes = readFileSync(manifestPath);

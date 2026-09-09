@@ -3,6 +3,8 @@ import type { AnalysisControlFlowNodeRecord, AnalysisProjectShards } from "./pro
 import {
   validateRuntimeInstructionTrace,
   type RuntimeInstructionTraceArtifact,
+  type RuntimeInstructionTraceMetadata,
+  type RuntimeInstructionTraceChunk,
 } from "./runtime-trace.js";
 
 /** One statically evidenced routine observed during an explicit trace window. */
@@ -61,6 +63,27 @@ export const summarizeExecutionWindow = (
   shards: AnalysisProjectShards,
 ): ExecutionWindowSummary => {
   const trace = validateRuntimeInstructionTrace(value);
+  const accumulator = createExecutionWindowAccumulator(trace, shards);
+  for (const chunk of trace.chunks) accumulator.push(chunk);
+  return accumulator.finish();
+};
+
+/** Ordered routine attribution without retaining the event stream. */
+export interface ExecutionWindowAccumulator {
+  push(chunk: RuntimeInstructionTraceChunk): void;
+  finish(): ExecutionWindowSummary;
+}
+
+/**
+ * Prepare routine attribution for incrementally supplied, validated trace chunks.
+ * @param {RuntimeInstructionTraceMetadata} trace Recording identity.
+ * @param {AnalysisProjectShards} shards Saved analysis.
+ * @returns {ExecutionWindowAccumulator} Chunk consumer and final report.
+ */
+export const createExecutionWindowAccumulator = (
+  trace: RuntimeInstructionTraceMetadata,
+  shards: AnalysisProjectShards,
+): ExecutionWindowAccumulator => {
   const graph = buildAnalysisCallGraph(shards);
   const nodes = shards.analysis.filter(
     (record): record is AnalysisControlFlowNodeRecord => record.kind === "cfg-node",
@@ -89,7 +112,11 @@ export const summarizeExecutionWindow = (
   let ambiguousEvents = 0;
   let priorOwner: string | undefined;
 
-  for (const chunk of trace.chunks) {
+  let complete = false;
+  let droppedEvents = 0;
+  const push = (chunk: RuntimeInstructionTraceChunk): void => {
+    complete = !chunk.active;
+    droppedEvents = chunk.droppedEvents;
     for (const [index, address] of chunk.addresses.entries()) {
       const sequence = chunk.sequenceStart + index;
       observedEvents++;
@@ -134,44 +161,47 @@ export const summarizeExecutionWindow = (
       priorOwner = functionId;
       attributedEvents++;
     }
-  }
-
-  const routines: ExecutedRoutineSummary[] = [...observedRoutines.values()]
-    .map((summary) => {
-      const labels = summary.fn.labels.map(({ name }) => name);
-      return {
-        functionId: summary.fn.id,
-        addressSpace: summary.fn.addressSpace,
-        address: summary.fn.address,
-        name: labels[0] ?? summary.fn.id,
-        labels,
-        source: summary.fn.source,
-        firstSequence: summary.firstSequence,
-        lastSequence: summary.lastSequence,
-        instructionEvents: summary.instructionEvents,
-        uniqueInstructionAddresses: summary.addresses.size,
-        executionSpans: summary.executionSpans,
-      };
-    })
-    .sort(
-      (left, right) =>
-        left.firstSequence - right.firstSequence ||
-        left.address - right.address ||
-        left.functionId.localeCompare(right.functionId),
-    );
-
-  return {
-    architecture: trace.architecture,
-    addressSpace: trace.addressSpace,
-    complete: trace.chunks.length > 0 && trace.chunks.at(-1)?.active === false,
-    observedEvents,
-    droppedEvents: trace.chunks.at(-1)?.droppedEvents ?? 0,
-    uniqueInstructionAddresses: observedAddresses.size,
-    attributedEvents,
-    unownedEvents,
-    ambiguousEvents,
-    unownedAddresses: [...unownedAddresses].sort((left, right) => left - right),
-    ambiguousAddresses: [...ambiguousAddresses].sort((left, right) => left - right),
-    routines,
   };
+
+  const finish = (): ExecutionWindowSummary => {
+    const routines: ExecutedRoutineSummary[] = [...observedRoutines.values()]
+      .map((summary) => {
+        const labels = summary.fn.labels.map(({ name }) => name);
+        return {
+          functionId: summary.fn.id,
+          addressSpace: summary.fn.addressSpace,
+          address: summary.fn.address,
+          name: labels[0] ?? summary.fn.id,
+          labels,
+          source: summary.fn.source,
+          firstSequence: summary.firstSequence,
+          lastSequence: summary.lastSequence,
+          instructionEvents: summary.instructionEvents,
+          uniqueInstructionAddresses: summary.addresses.size,
+          executionSpans: summary.executionSpans,
+        };
+      })
+      .sort(
+        (left, right) =>
+          left.firstSequence - right.firstSequence ||
+          left.address - right.address ||
+          left.functionId.localeCompare(right.functionId),
+      );
+
+    return {
+      architecture: trace.architecture,
+      addressSpace: trace.addressSpace,
+      complete,
+      observedEvents,
+      droppedEvents,
+      uniqueInstructionAddresses: observedAddresses.size,
+      attributedEvents,
+      unownedEvents,
+      ambiguousEvents,
+      unownedAddresses: [...unownedAddresses].sort((left, right) => left - right),
+      ambiguousAddresses: [...ambiguousAddresses].sort((left, right) => left - right),
+      routines,
+    };
+  };
+  return { push, finish };
 };

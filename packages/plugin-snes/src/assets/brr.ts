@@ -38,8 +38,6 @@ const blockCountAndSize = (
   throw new Error(`BRR asset '${context.request.id}' has no end block within ${maxBlocks} blocks.`);
 };
 
-const signedNibble = (value: number): number => (value >= 8 ? value - 16 : value);
-
 /** Reversible BRR blocks represented by filter/range flags and signed encoded nibbles. */
 export const snesBrrAssetCodec: AssetCodec = Object.freeze({
   id: SNES_BRR_ASSET_CODEC_ID,
@@ -66,7 +64,9 @@ export const snesBrrAssetCodec: AssetCodec = Object.freeze({
       const header = bytes[offset];
       const nibbles = Array.from({ length: 16 }, (_, sampleIndex) => {
         const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
-        return signedNibble(sampleIndex % 2 === 0 ? byte >> 4 : byte & 0x0f);
+        const nibble = sampleIndex % 2 === 0 ? byte >> 4 : byte & 0x0f;
+        // BRR samples are signed four-bit values, stored high nibble first.
+        return nibble >= 8 ? nibble - 16 : nibble;
       });
       return {
         range: header >> 4,

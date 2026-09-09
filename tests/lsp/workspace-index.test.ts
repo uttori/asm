@@ -4,8 +4,10 @@ import path from "node:path";
 import { stub } from "sinon";
 import { test } from "../ava-helper.js";
 import { Assembler } from "../../packages/core/src/assembler.js";
+import { PluginManager } from "../../packages/core/src/plugin/index.js";
 import { snesWorkspaceIndexOptions } from "../test-assembler.js";
 import { WorkspaceIndex } from "../../packages/core/src/lsp/workspace-index.js";
+import { createFixturePlugin, registerFixtureContributions } from "../plugin/fixture-plugin.js";
 
 test("workspace index reads open, disk, and missing file text", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "snes-asm-workspace-"));
@@ -139,6 +141,55 @@ test("workspace index skips unreadable roots and unexpected analysis failures", 
   } finally {
     analyzeSource.restore();
   }
+});
+
+test("workspace index contains session factory failures on open and reindex, then recovers", async (t) => {
+  let failNextSession = true;
+  const manager = new PluginManager();
+  t.teardown(() => manager.dispose());
+  await manager.activatePlugins([
+    {
+      plugin: createFixturePlugin({
+        activate(context) {
+          registerFixtureContributions(context);
+          context.registerSessionState({
+            id: "fixture.failing-state",
+            create: () => {
+              if (failNextSession) {
+                failNextSession = false;
+                throw new TypeError("session factory failed");
+              }
+              return {};
+            },
+            clone: (value) => ({ ...value }),
+          });
+        },
+      }),
+    },
+  ]);
+  const broken = path.resolve("/virtual/factory-failure.asm");
+  const healthy = path.resolve("/virtual/healthy.asm");
+  const messages: string[] = [];
+  const index = new WorkspaceIndex({
+    environment: manager.freeze(),
+    target: "fixture",
+    entryPoints: [broken, healthy],
+    logger: { info: (message) => messages.push(message) },
+  });
+
+  t.notThrows(() => index.openDocument(broken, "org 0\nRecovered:\nFIX\n"));
+  t.is(index.getFileAnalysis(broken), undefined);
+
+  index.updateDocument(healthy, "org 0\nHealthy:\nFIX\n");
+  failNextSession = true;
+  t.notThrows(() => index.reindex());
+  t.is(index.getFileAnalysis(broken), undefined);
+  t.true(index.getSymbols(healthy).some((symbol) => symbol.name === "Healthy"));
+  t.is(messages.filter((message) => message.includes("fixture.failing-state")).length, 2);
+
+  index.reindex();
+  t.true(index.getSymbols(broken).some((symbol) => symbol.name === "Recovered"));
+  t.true(index.getSymbols(healthy).some((symbol) => symbol.name === "Healthy"));
 });
 
 test("workspace index deduplicates include edges from repeated roots", (t) => {

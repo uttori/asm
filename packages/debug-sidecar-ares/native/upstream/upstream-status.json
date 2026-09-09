@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-09-08T18:25:37.554479+00:00",
+  "pullRequests": [
+    {
+      "author": {
+        "id": "MDQ6VXNlcjY3OTQ1",
+        "is_bot": false,
+        "login": "MatthewCallis",
+        "name": "Matthew Callis"
+      },
+      "baseRefOid": "af4cbb04f067682a8a3cf42695ff78bed634b38d",
+      "comments": [],
+      "headRefOid": "a1f6e6bd8fdbf2d1f250bff37b8dd81fddac3890",
+      "isDraft": false,
+      "number": 2624,
+      "reviewDecision": "",
+      "reviews": [],
+      "state": "OPEN",
+      "statusCheckRollup": [],
+      "title": "macos: fix build when show-sdk-platform-version fails",
+      "url": "https://github.com/ares-emulator/ares/pull/2624"
+    },
+    {
+      "author": {
+        "id": "MDQ6VXNlcjY3OTQ1",
+        "is_bot": false,
+        "login": "MatthewCallis",
+        "name": "Matthew Callis"
+      },
+      "baseRefOid": "af4cbb04f067682a8a3cf42695ff78bed634b38d",
+      "comments": [],
+      "headRefOid": "f4e50174a14442c2075be5b9ab972595e09ac55b",
+      "isDraft": false,
+      "number": 2625,
+      "reviewDecision": "",
+      "reviews": [],
+      "state": "OPEN",
+      "statusCheckRollup": [],
+      "title": "gdb: continue polling after processing a message",
+      "url": "https://github.com/ares-emulator/ares/pull/2625"
+    },
+    {
+      "author": {
+        "id": "MDQ6VXNlcjY1Njc1",
+        "is_bot": false,
+        "login": "josegonzalez",
+        "name": "Jose Diaz-Gonzalez"
+      },
+      "baseRefOid": "be3c7898ce1cfe0b58092c54472fa88954ba109e",
+      "comments": [],
+      "headRefOid": "f88f2d8c59b4d0f742deac20a642c8fb25d134e5",
+      "isDraft": true,
+      "number": 2454,
+      "reviewDecision": "",
+      "reviews": [],
+      "state": "OPEN",
+      "statusCheckRollup": [],
+      "title": "feat: add Network Control Interface (NCI) for UDP-based remote control",
+      "url": "https://github.com/ares-emulator/ares/pull/2454"
+    }
+  ]
+}

@@ -197,17 +197,6 @@ function extractZeldaBins(rom: Buffer, xmlText: string, binRoot: string): void {
   }
 }
 
-function keepWorktreeRequested(options?: AssembleOptions): boolean {
-  return options?.keepWorktree === true || process.env.UTTORI_FIXTURE_KEEP_WORKTREE === "1";
-}
-
-function assertReady(status: FixtureStatus): void {
-  if (status.ready) return;
-  throw new Error(
-    `External fixture '${status.id}' is not ready (${status.issues.join(", ")}).\n${status.details.join("\n")}\n${status.setupInstructions}`,
-  );
-}
-
 export function getFixtureStatus(id: ExternalFixtureId): FixtureStatus {
   const spec = getExternalFixture(id);
   const issues: FixtureIssue[] = [];
@@ -307,9 +296,13 @@ export function prepareExternalFixture(
 ): PreparedFixture {
   const spec = getExternalFixture(id);
   const status = getFixtureStatus(id);
-  assertReady(status);
+  if (!status.ready) {
+    throw new Error(
+      `External fixture '${status.id}' is not ready (${status.issues.join(", ")}).\n${status.details.join("\n")}\n${status.setupInstructions}`,
+    );
+  }
 
-  const keep = keepWorktreeRequested(options);
+  const keep = options?.keepWorktree === true || process.env.UTTORI_FIXTURE_KEEP_WORKTREE === "1";
   const needsCopy = !spec.selfContained || keep || spec.id === "tmnt" || spec.id === "zelda";
   let workspace = submoduleDir(spec);
   let ephemeral = false;

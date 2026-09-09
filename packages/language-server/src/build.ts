@@ -33,16 +33,13 @@ const sameFileContent = (file: string, content: Uint8Array): boolean => {
   }
 };
 
-const temporarySibling = (file: string): string => {
+const stageArtifact = (file: string, content: Uint8Array): string => {
   temporaryArtifactSequence += 1;
-  return path.join(
+  // Stage beside the destination so the later rename stays on the same filesystem.
+  const staged = path.join(
     path.dirname(file),
     `.${path.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`,
   );
-};
-
-const stageArtifact = (file: string, content: Uint8Array): string => {
-  const staged = temporarySibling(file);
   fs.writeFileSync(staged, content, { flag: "wx" });
   return staged;
 };

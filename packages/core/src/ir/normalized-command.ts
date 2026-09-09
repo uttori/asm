@@ -298,7 +298,15 @@ function classifyCommand(command: string, words: readonly string[]): CommandKind
   if (keyword === "undef") {
     return "defineCommand";
   }
-  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip") {
+  if (
+    keyword === "struct" ||
+    keyword === "endstruct" ||
+    keyword === "skip" ||
+    keyword === "datastruct" ||
+    keyword === "datastructs" ||
+    keyword === "enddatastructs" ||
+    /^\[[^\]]+]\s*=/.test(trimmed)
+  ) {
     return "structCommand";
   }
   if (keyword === "function") {
@@ -395,7 +403,8 @@ function deriveCommandSemantics(command: string, words: readonly string[]): Comm
       .slice((words[0] ?? "").length)
       .split(/\s+->\s+/u, 1)[0]
       .trim();
-    const rangeCandidate = extractIncbinRange(incbinSource);
+    const colonIndex = incbinSource.indexOf(":");
+    const rangeCandidate = colonIndex === -1 ? undefined : incbinSource.slice(colonIndex + 1);
     if (rangeCandidate) {
       const parsedRange = parseExpressionNode(rangeCandidate);
       if (parsedRange.type === "range") {
@@ -482,19 +491,6 @@ function extractIncludePath(raw: string): string {
   const colonIndex = trimmed.indexOf(":");
   const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
   return pathToken.replace(/^["'`]+|["'`]+$/g, "");
-}
-
-/**
- * Extracts the optional `incbin` range suffix from a file argument.
- * @param {string} argument The raw filename or filename-with-range token.
- * @returns {string | undefined} The trailing range expression when present.
- */
-function extractIncbinRange(argument: string): string | undefined {
-  const colonIndex = argument.indexOf(":");
-  if (colonIndex === -1) {
-    return undefined;
-  }
-  return argument.slice(colonIndex + 1);
 }
 
 /**

@@ -24,7 +24,6 @@ export interface SuperFxDecodeState {
   readonly programBank?: number | "unknown";
 }
 
-const signedByte = (value: number): number => (value & 0x80 ? value - 0x100 : value);
 const word = (bytes: Uint8Array, offset: number): number =>
   (bytes[offset] ?? 0) | ((bytes[offset + 1] ?? 0) << 8);
 const register = (value: number): DecodedOperand => ({ kind: "register", register: `R${value}` });
@@ -53,7 +52,8 @@ const operandsFor = (
       return [];
     case "relative": {
       const raw = bytes[operandOffset] ?? 0;
-      const displacement = signedByte(raw);
+      // Branch displacement is a signed byte.
+      const displacement = raw & 0x80 ? raw - 0x100 : raw;
       return [
         {
           kind: "displacement",

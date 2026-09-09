@@ -18,8 +18,8 @@
   "main": "out/extension.js",
   "scripts": {
     "build": "node esbuild.mjs",
-    "fmt": "oxfmt --config ../../.oxfmtrc.json src tests-host/index.ts esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
-    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src tests-host/index.ts esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
+    "fmt": "oxfmt --config ../../.oxfmtrc.json src media tests-host/index.ts esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
+    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src media tests-host/index.ts esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
     "lint": "oxlint --config ../../.oxlintrc.json src tests-host/index.ts",
     "lint:fix": "oxlint --config ../../.oxlintrc.json src tests-host/index.ts --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -35,7 +35,7 @@
     "vscode-languageclient": "^10.1.1"
   },
   "devDependencies": {
-    "@types/vscode": "^1.128.0",
+    "@types/vscode": "^1.136.0",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.2"
   },
@@ -57,6 +57,13 @@
         "command": "asm.build",
         "title": "Build Binary",
         "category": "Assembly"
+      },
+      {
+        "command": "asm.analysis.toggleAnnotations",
+        "title": "Toggle Project State Overlays",
+        "category": "Assembly",
+        "icon": "$(eye)",
+        "toggled": "config.asm.analysis.showAnnotations"
       },
       {
         "command": "asm.toggleWatch",
@@ -113,6 +120,24 @@
         "command": "asm.analysisGraph.refresh",
         "title": "Refresh Functions & Calls",
         "icon": "$(refresh)",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.sources.refresh",
+        "title": "Refresh Sources",
+        "icon": "$(refresh)",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.sources.compare",
+        "title": "Compare Source With…",
+        "icon": "$(git-compare)",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.sources.resetComparison",
+        "title": "Compare Source With All Other Captures",
+        "icon": "$(clear-all)",
         "category": "Assembly"
       },
       {
@@ -228,6 +253,17 @@
         "title": "Import Runtime Trace and Update Disassembly",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.heuristics.configure",
+        "title": "Configure SNES Heuristic Rules",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.heuristics.preview",
+        "title": "Preview SNES Heuristic Findings",
+        "category": "Assembly"
       },
       {
         "command": "asm.ramMap.open",
@@ -378,6 +414,11 @@
           "command": "asm.disassembly.regenerate",
           "when": "view == uttori-asm.analysisCoverage && isWorkspaceTrusted",
           "group": "navigation@6"
+        },
+        {
+          "command": "asm.sources.refresh",
+          "when": "view == uttori-asm.sources",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -410,6 +451,23 @@
           "command": "asm.coverage.renameLabel",
           "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
           "group": "analysis@3"
+        },
+        {
+          "command": "asm.sources.compare",
+          "when": "view == uttori-asm.sources && viewItem == analysisSource",
+          "group": "inline@1"
+        },
+        {
+          "command": "asm.sources.resetComparison",
+          "when": "view == uttori-asm.sources && viewItem == analysisSource",
+          "group": "comparison@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "asm.analysis.toggleAnnotations",
+          "when": "editorLangId == uttori-snes || editorLangId == uttori-65xx || resourceExtname == .asm || resourceExtname == .src || resourceExtname == .SRC || resourceExtname == .s || resourceExtname == .inc",
+          "group": "navigation@1"
         }
       ],
       "editor/title/run": [
@@ -690,6 +748,11 @@
           "type": "tree",
           "id": "uttori-asm.analysisGraph",
           "name": "Functions & Calls"
+        },
+        {
+          "type": "tree",
+          "id": "uttori-asm.sources",
+          "name": "Sources"
         }
       ]
     },
@@ -705,6 +768,10 @@
       {
         "view": "uttori-asm.analysisGraph",
         "contents": "No native analysis graph found. Run analysis with control-flow enabled, then refresh this view."
+      },
+      {
+        "view": "uttori-asm.sources",
+        "contents": "No native analysis project found. Import evidence into an analysis project, then inspect its sources here."
       }
     ],
     "configuration": {
@@ -783,6 +850,40 @@
           "default": "",
           "description": "Native analysis-project directory or analysis.json path, absolute or relative to each workspace folder. When empty, up to 32 workspace analysis projects are discovered automatically."
         },
+        "asm.analysis.showAnnotations": {
+          "type": "boolean",
+          "scope": "resource",
+          "default": true,
+          "description": "Show aligned project-state and runtime analysis overlays in source editors. Toggle with the eye button beside Build Binary."
+        },
+        "asm.analysis.annotationColumn": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 0,
+          "default": 80,
+          "description": "Preferred minimum source column for analysis overlays. All visible overlays align beyond the longest annotated line with a three-column gap. Tab width follows the editor setting."
+        },
+        "asm.analysis.maxWorkItems": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 1,
+          "default": 100000,
+          "description": "Maximum static-analysis work items when regenerating disassembly. This limits CPU-state and call-path exploration, not imported trace events. Increase for larger analyses; higher values require more time and memory. Incomplete analysis cannot discard known code."
+        },
+        "asm.analysis.maxMemoryMiB": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 128,
+          "default": 4096,
+          "description": "JavaScript heap budget in MiB for the isolated analysis-view process and each disassembly maintenance process. Increase for large analysis projects. Maintenance phases exit before the next starts; views reuse a validated project cache. Total process memory may exceed the heap budget."
+        },
+        "asm.trace.maxImportSizeMiB": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 1,
+          "default": 2048,
+          "description": "Maximum native runtime trace file size in MiB (2048 = 2 GiB). Set in the project workspace settings for unusually large captures. Trace chunks are read incrementally; memory use also depends on the number of distinct execution observations. This is separate from the static-analysis work budget."
+        },
         "uttoriAsmLanguageServer.trace.server": {
           "scope": "window",
           "type": "string",
@@ -796,12 +897,13 @@
         },
         "asm.debug.traceDetail": {
           "type": "string",
+          "scope": "resource",
           "enum": [
             "full",
             "pc"
           ],
           "default": "full",
-          "description": "Record execution-time instruction bytes, registers and bus accesses when supported. PC mode reduces capture size and overhead."
+          "description": "Full capture requires a runtime supplying execution-time instruction bytes, registers and bus accesses; unsupported runtimes are rejected. Select pc explicitly to record addresses only. Both modes use bounded buffers and report dropped events."
         }
       }
     },

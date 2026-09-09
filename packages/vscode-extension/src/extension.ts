@@ -27,10 +27,14 @@ import {
   type LanguageClientOptions,
   type ServerOptions,
 } from "vscode-languageclient/node";
-import { AnalysisAnnotationController } from "./analysis-annotation-controller.js";
+import {
+  AnalysisAnnotationController,
+  TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
+} from "./analysis-annotation-controller.js";
 import { initializeAnalysisWorker } from "./analysis-worker-client.js";
 import { AnalysisProjectEditor } from "./analysis-project-editor.js";
 import { AnalysisGraphProvider } from "./analysis-graph-tree.js";
+import { AnalysisSourcesProvider } from "./analysis-sources-tree.js";
 import { navigateToAnalysisLocation } from "./analysis-navigation.js";
 import { AnalysisCoverageProvider } from "./coverage-tree.js";
 import { ProjectOutlineProvider } from "./outline-tree.js";
@@ -133,7 +137,12 @@ function serverInitializationOptions(): Record<string, unknown> {
  */
 export function activate(context: ExtensionContext): void {
   extensionContext = context;
-  const worker = initializeAnalysisWorker(context.extensionPath);
+  const worker = initializeAnalysisWorker(context.extensionPath, {
+    maxMemoryMiB: (directory) =>
+      workspace
+        .getConfiguration("asm", Uri.file(directory))
+        .get<number>("analysis.maxMemoryMiB", 4096),
+  });
   context.subscriptions.push(worker);
   const serverModule = context.asAbsolutePath(path.join("server", "server.mjs"));
 
@@ -194,6 +203,7 @@ export function activate(context: ExtensionContext): void {
   const outlineProvider = new ProjectOutlineProvider(() => client);
   const coverageProvider = new AnalysisCoverageProvider();
   const analysisGraphProvider = new AnalysisGraphProvider();
+  const sourcesProvider = new AnalysisSourcesProvider();
   const analysisAnnotationController = new AnalysisAnnotationController();
   let analysisRefreshTimer: ReturnType<typeof setTimeout> | undefined;
   context.subscriptions.push({ dispose: () => clearTimeout(analysisRefreshTimer) });
@@ -203,10 +213,14 @@ export function activate(context: ExtensionContext): void {
       worker.invalidate();
       coverageProvider.refresh();
       analysisGraphProvider.refresh();
+      sourcesProvider.refresh();
       analysisAnnotationController.refresh();
     }, 150);
   };
-  const analysisProjectEditor = new AnalysisProjectEditor(refreshAnalysisViews);
+  const analysisProjectEditor = new AnalysisProjectEditor(
+    refreshAnalysisViews,
+    context.extensionUri,
+  );
   context.subscriptions.push(analysisProjectEditor);
   const analysisManifestWatcher = workspace.createFileSystemWatcher("**/analysis.json");
   const analysisShardWatcher = workspace.createFileSystemWatcher("**/analysis/**/*.json");
@@ -218,6 +232,7 @@ export function activate(context: ExtensionContext): void {
     outputChannel,
     statusItem,
     analysisAnnotationController,
+    sourcesProvider,
     window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
@@ -233,6 +248,10 @@ export function activate(context: ExtensionContext): void {
       treeDataProvider: analysisGraphProvider,
       showCollapseAll: true,
     }),
+    window.createTreeView(AnalysisSourcesProvider.viewId, {
+      treeDataProvider: sourcesProvider,
+      showCollapseAll: true,
+    }),
     analysisManifestWatcher,
     analysisShardWatcher,
     analysisManifestWatcher.onDidCreate(refreshAnalysisViews),
@@ -243,6 +262,9 @@ export function activate(context: ExtensionContext): void {
     analysisShardWatcher.onDidDelete(refreshAnalysisViews),
     window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
     window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
+      if (textEditor === window.activeTextEditor) analysisAnnotationController.refresh(textEditor);
+    }),
+    window.onDidChangeTextEditorOptions(({ textEditor }) => {
       if (textEditor === window.activeTextEditor) analysisAnnotationController.refresh(textEditor);
     }),
     workspace.onDidChangeTextDocument(({ document }) =>
@@ -258,6 +280,9 @@ export function activate(context: ExtensionContext): void {
       analysisAnnotationController.refresh();
     }),
     commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
+    commands.registerCommand(TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND, () =>
+      analysisAnnotationController.toggle(),
+    ),
     commands.registerCommand("asm.toggleWatch", toggleWatch),
     commands.registerCommand("asm.runEmulator", () => buildAndLaunch(context, true)),
     commands.registerCommand("asm.debugEmulator", () => buildAndLaunch(context, false)),
@@ -272,6 +297,13 @@ export function activate(context: ExtensionContext): void {
     commands.registerCommand("asm.outline.refresh", () => outlineProvider.refresh()),
     commands.registerCommand("asm.coverage.refresh", refreshAnalysisViews),
     commands.registerCommand("asm.analysisGraph.refresh", refreshAnalysisViews),
+    commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
+    commands.registerCommand("asm.sources.compare", (element?: unknown) =>
+      sourcesProvider.compare(element),
+    ),
+    commands.registerCommand("asm.sources.resetComparison", (element?: unknown) =>
+      sourcesProvider.resetComparison(element),
+    ),
     commands.registerCommand("asm.analysis.navigate", (element?: unknown) => {
       const target = analysisGraphProvider.navigationTarget(element);
       if (target) void navigateToAnalysisLocation(target);
@@ -304,6 +336,11 @@ export function activate(context: ExtensionContext): void {
       });
     }),
     workspace.onDidChangeConfiguration((event) => {
+      if (
+        event.affectsConfiguration("asm.analysis.showAnnotations") ||
+        event.affectsConfiguration("asm.analysis.annotationColumn")
+      )
+        analysisAnnotationController.refresh();
       if (event.affectsConfiguration("asm")) {
         void panelProvider.refresh();
         outlineProvider.refresh();
@@ -346,17 +383,6 @@ export function deactivate(): Thenable<void> | undefined {
   }
   extensionContext = undefined;
   return client?.stop();
-}
-
-/**
- * Returns the URI string of the active editor document, if any.
- * @returns {string | undefined} The document URI string.
- * @see https://code.visualstudio.com/api/references/vscode-api#window.activeTextEditor
- * @see https://code.visualstudio.com/api/references/vscode-api#TextDocument.uri
- * @see https://code.visualstudio.com/api/references/vscode-api#Uri.toString
- */
-function activeDocumentUri(): string | undefined {
-  return window.activeTextEditor?.document.uri.toString();
 }
 
 /**
@@ -502,7 +528,7 @@ function resolveBuildEntryUri(): string | undefined {
     );
     return resolved;
   }
-  const active = activeDocumentUri();
+  const active = window.activeTextEditor?.document.uri.toString();
   if (active) {
     outputChannel?.info(`Build entry from active editor: ${Uri.parse(active).fsPath}`);
   }

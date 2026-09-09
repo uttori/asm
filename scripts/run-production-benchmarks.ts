@@ -293,17 +293,13 @@ function gitRevision(): string {
   }
 }
 
-function readGoldens(): Record<string, Golden> {
-  return JSON.parse(fs.readFileSync(goldenPath, "utf8")) as Record<string, Golden>;
-}
-
 function formatMilliseconds(value: number): string {
   return `${value.toFixed(2)} ms`;
 }
 
 function main(): void {
   const options = parseOptions(process.argv.slice(2));
-  const goldens = readGoldens();
+  const goldens = JSON.parse(fs.readFileSync(goldenPath, "utf8")) as Record<string, Golden>;
   const selectedFixtures =
     options.fixtureIds.length > 0
       ? options.fixtureIds.map((fixtureId) => fixtureById.get(fixtureId) as Fixture)

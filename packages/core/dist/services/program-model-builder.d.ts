@@ -18,6 +18,7 @@ export type IncrementalProgramParseState = {
     branchStack: ConditionalBranch[];
     inMacroDefinition: boolean;
     inFunctionDefinition: boolean;
+    inDataStructs?: boolean;
 };
 export type ProgramModelBuilderHost = {
     currentFile: string;

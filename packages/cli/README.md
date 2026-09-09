@@ -85,6 +85,8 @@ uttori-asm evidence-import game.analysis --rom game.sfc \
 
 Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. Native instruction traces preserve ordered pull chunks and producer-loss metadata and use the same `snes.cpu` CPU-bus identity as native analysis projects. An identical reimport does not rewrite the project.
 
+Native trace files are read incrementally with a default 2 GiB file-size limit. Use `--trace-max-mib 4096` to permit a 4 GiB capture. This avoids JavaScript's single-string size limit; distinct instruction/state/memory observations still consume memory. The editor equivalent is the project setting `asm.trace.maxImportSizeMiB`.
+
 MesenCE trace text has no embedded ROM fingerprint, so its required identity sidecar is explicit:
 
 ```json
@@ -129,6 +131,13 @@ asset when present.
 complete file length and SHA-256. A mismatch reports its first differing file and content offset.
 Re-export refuses local changes to generated files unless `--force` is explicit; changing
 `ram-map.json` is the normal regeneration workflow and does not require `--force`.
+
+Re-export also refuses to turn any previously emitted code range into raw bytes, even if total code
+coverage increases elsewhere. Review intentional code-to-data changes before using
+`--allow-code-regression`; `--force` only bypasses the generated-file edit check. An incomplete
+analysis that loses previously decoded ROM bytes leaves the saved analysis intact. Increase
+`--max-work-items` or adjust `--max-call-depth` before retrying. A byte-identical round trip alone
+does not detect lost disassembly because `incbin` preserves the original bytes.
 
 The opt-in local Secret of Mana gate validates the private ROM hash before using it and removes all
 temporary analysis/source output afterward:

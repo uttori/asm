@@ -10,7 +10,6 @@ import type {
   PluginActivationContext,
   TargetAddressSpace,
   TargetFactoryContext,
-  TargetOutputFormat,
 } from "@uttori/asm-core/plugin";
 import type { DirectiveDescriptor } from "@uttori/asm-core";
 
@@ -190,11 +189,6 @@ const ca65ExpressionFunctions: readonly [string, string, (value: number) => numb
   ["hiword", "High word of a value.", (value) => (value >>> 16) & 0xffff],
 ];
 
-const toolingFor = (keywords: readonly string[]): DirectiveDescriptor[] => {
-  const wanted = new Set(keywords);
-  return ca65Tooling.filter((entry) => wanted.has(entry.keyword));
-};
-
 /**
  * Registers a lowered-phase 65xx directive and attaches hover/completion copy.
  * @param {string} id The directive id.
@@ -206,13 +200,16 @@ const directive = (
   id: string,
   keywords: readonly string[],
   handler: DirectiveContribution["createHandler"],
-): DirectiveContribution => ({
-  id,
-  keywords,
-  phase: "lowered",
-  createHandler: handler,
-  tooling: toolingFor(keywords),
-});
+): DirectiveContribution => {
+  const wanted = new Set(keywords);
+  return {
+    id,
+    keywords,
+    phase: "lowered",
+    createHandler: handler,
+    tooling: ca65Tooling.filter((entry) => wanted.has(entry.keyword)),
+  };
+};
 
 /**
  * 16-bit address space with no bank wrap; writes below `origin` are rejected.
@@ -256,17 +253,6 @@ function createFlat65xxAddressSpace({ options }: TargetFactoryContext): TargetAd
 }
 
 /**
- * Headerless dump of the output buffer - no checksum or padding.
- * @returns {TargetOutputFormat} The output format.
- */
-function createRaw65xxOutputFormat(): TargetOutputFormat {
-  return {
-    finalize: () => undefined,
-    getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes),
-  };
-}
-
-/**
  * Registers NMOS/CMOS/Commodore/MEGA65/Hudson/Mitsubishi architectures plus the flat raw target.
  * Used by the plugin `activate` hook and by tests that want contributions
  * without constructing a full plugin object.
@@ -299,7 +285,11 @@ export function register65xxContributions(context: PluginActivationContext): voi
   });
   context.registerOutputFormat({
     id: RAW_65XX_OUTPUT_FORMAT_ID,
-    create: createRaw65xxOutputFormat,
+    // Emit the buffer as a headerless image, without checksum or padding.
+    create: () => ({
+      finalize: () => undefined,
+      getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes),
+    }),
   });
   context.registerLifecycle({
     id: RAW_65XX_LIFECYCLE_ID,

@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "ava";
-import { readObjectArrayFile } from "../src/json-array-file.js";
+import { readObjectArrayFile, validateObjectArrayFile } from "../src/json-array-file.js";
 
 const withShard = (text: string, check: (file: string, hash: string) => void): void => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-shard-reader-"));
@@ -24,10 +24,14 @@ test("streaming shard reader preserves UTF-8, escapes, nested arrays and chunk b
     },
     { text: "z".repeat(150000) },
   ];
-  withShard(JSON.stringify(records, null, 2), (file, hash) =>
-    t.deepEqual(readObjectArrayFile(file, hash), records),
-  );
-  withShard(" \n[]\t", (file, hash) => t.deepEqual(readObjectArrayFile(file, hash), []));
+  withShard(JSON.stringify(records, null, 2), (file, hash) => {
+    t.deepEqual(readObjectArrayFile(file, hash), records);
+    t.is(validateObjectArrayFile(file, hash), records.length);
+  });
+  withShard(" \n[]\t", (file, hash) => {
+    t.deepEqual(readObjectArrayFile(file, hash), []);
+    t.is(validateObjectArrayFile(file, hash), 0);
+  });
 });
 
 test("streaming shard reader rejects invalid structure and mismatched hashes", (t) => {
@@ -45,15 +49,20 @@ test("streaming shard reader rejects invalid structure and mismatched hashes", (
     '[{"a":NaN}]',
     '[{"a":1,}]',
   ]) {
-    withShard(text, (file, hash) => t.throws(() => readObjectArrayFile(file, hash)));
+    withShard(text, (file, hash) => {
+      t.throws(() => readObjectArrayFile(file, hash));
+      t.throws(() => validateObjectArrayFile(file, hash));
+    });
   }
-  withShard('[{"id":"valid"}]', (file) =>
-    t.throws(() => readObjectArrayFile(file, "0".repeat(64)), { message: /SHA-256/ }),
-  );
+  withShard('[{"id":"valid"}]', (file) => {
+    t.throws(() => readObjectArrayFile(file, "0".repeat(64)), { message: /SHA-256/ });
+    t.throws(() => validateObjectArrayFile(file, "0".repeat(64)), { message: /SHA-256/ });
+  });
 });
 
 test("streaming shard reader bounds an individual record", (t) => {
-  withShard(JSON.stringify([{ text: "x".repeat(32 * 1024 * 1024) }]), (file, hash) =>
-    t.throws(() => readObjectArrayFile(file, hash), { message: /32 MiB/ }),
-  );
+  withShard(JSON.stringify([{ text: "x".repeat(32 * 1024 * 1024) }]), (file, hash) => {
+    t.throws(() => readObjectArrayFile(file, hash), { message: /32 MiB/ });
+    t.throws(() => validateObjectArrayFile(file, hash), { message: /32 MiB/ });
+  });
 });

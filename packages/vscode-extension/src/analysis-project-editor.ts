@@ -35,18 +35,9 @@ import {
   type TargetResolutionInverse,
 } from "@uttori/asm-disassembler";
 import { commands, Uri, window, workspace, type Disposable } from "vscode";
-import { loadSnesRamMap, snesSourceLabelNames, type SnesMapper } from "@uttori/asm-plugin-snes";
-import {
-  analysisSourceSha256,
-  currentAnalysisSourcePath,
-  findAnalysisDebugMapCandidates,
-} from "./analysis-debug-maps.js";
-import {
-  annotationLocationsForSource,
-  annotationReferenceAt,
-  namedAnnotationLocations,
-  type DisassemblyAnnotationLocation,
-} from "./disassembly-annotation-location.js";
+import { discoverAnalysisDebugMapFiles } from "./analysis-debug-maps.js";
+import { analysisWorker } from "./analysis-worker-client.js";
+import type { AnnotationLookupResult } from "./disassembly-annotation-data.js";
 import { openDisassemblyAnnotationForm } from "./disassembly-annotation-form.js";
 import {
   findAnalysisProjectDirectories,
@@ -210,7 +201,10 @@ export class AnalysisProjectEditor {
   readonly #undo: AnalysisEditHistoryEntry[] = [];
   readonly #redo: AnalysisEditHistoryEntry[] = [];
 
-  constructor(refresh: () => void) {
+  constructor(
+    refresh: () => void,
+    private readonly extensionUri: Uri,
+  ) {
     this.#refresh = refresh;
     void this.updateContexts();
   }
@@ -544,7 +538,16 @@ export class AnalysisProjectEditor {
           record.addressSpace === selected.site.addressSpace &&
           record.address === selected.site.address,
       );
-      const maximum = this.addressSpaceMaximum(snapshot, selected.site.addressSpace);
+      const addressSpace = snapshot.manifest.addressSpaces.find(
+        ({ id }) => id === selected.site.addressSpace,
+      );
+      if (!addressSpace)
+        throw new Error(`Unknown analysis address space '${selected.site.addressSpace}'.`);
+      // File offsets stop at the ROM size; CPU addresses use the full address width.
+      const maximum =
+        addressSpace.kind === "file"
+          ? snapshot.manifest.rom.contentSize
+          : 2 ** addressSpace.addressBits;
       const targetInput = await window.showInputBox({
         title: "Resolve Indirect Target",
         prompt: `Comma-separated targets in '${selected.site.addressSpace}' (use $ or 0x for hexadecimal)`,
@@ -602,111 +605,70 @@ export class AnalysisProjectEditor {
   }
 
   async editAnnotation(): Promise<void> {
+    let form: ReturnType<typeof openDisassemblyAnnotationForm> | undefined;
     try {
       if (!workspace.isTrusted)
         throw new Error("Analysis project edits require a trusted local workspace.");
       const editor = window.activeTextEditor;
-      const projectDirectory = await this.chooseProject(undefined, "Edit Disassembly Annotation");
-      if (!projectDirectory) return;
-      const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
-      let locations: readonly DisassemblyAnnotationLocation[];
-      let sourceFile: string | undefined;
-      let sourceHash: string | undefined;
-      let sourceDirectory: string | undefined;
-      if (editor && ["uttori-snes", "uttori-65xx"].includes(editor.document.languageId)) {
-        if (editor.document.uri.scheme !== "file" || editor.document.isDirty)
-          throw new Error(
-            "Use a saved, unchanged generated source file. Regenerate source if it was edited.",
-          );
-        sourceFile = path.resolve(editor.document.uri.fsPath);
-        const found: DisassemblyAnnotationLocation[] = [];
-        for (const candidate of await findAnalysisDebugMapCandidates({
-          target: snapshot.manifest.target,
-          romContentSha256: snapshot.manifest.rom.contentSha256,
-          romContentSize: snapshot.manifest.rom.contentSize,
-        })) {
-          for (const source of candidate.map.sources) {
-            if (!currentAnalysisSourcePath(source, candidate, sourceFile)) continue;
-            sourceHash = source.sha256;
-            const sourceTexts = new Map([[source.id, editor.document.getText()]]);
-            if (
-              annotationReferenceAt(
-                editor.document.getText(),
-                editor.selection.active.line + 1,
-                editor.selection.active.character,
-              )
-            ) {
-              for (const other of candidate.map.sources) {
-                if (other.id === source.id) continue;
-                const file = currentAnalysisSourcePath(other, candidate);
-                if (file) sourceTexts.set(other.id, fs.readFileSync(file, "utf8"));
-              }
-            }
-            found.push(
-              ...annotationLocationsForSource(
-                candidate.map,
-                source.id,
-                editor.document.getText(),
-                editor.selection.active.line + 1,
-                editor.selection.active.character,
-                snapshot.shards,
-                sourceTexts,
-                snapshot.manifest.addressSpaces
-                  .filter(({ kind }) => kind === "file")
-                  .map(({ id }) => id),
-              ),
-            );
-          }
-        }
-        const unique = new Map(
-          found.map((location) => [
-            `${location.addressSpace}:${location.address}:${location.labelId ?? ""}`,
-            location,
-          ]),
-        );
-        locations = [...unique.values()];
-        if (!sourceHash || locations.length === 0)
-          throw new Error(
-            "No exact current ROM/source mapping exists at the cursor. Run Analyze and Regenerate Disassembly, then select a label or instruction.",
-          );
-        for (let directory = path.dirname(sourceFile); ; directory = path.dirname(directory)) {
-          if (fs.existsSync(path.join(directory, "generated-files.json"))) {
-            sourceDirectory = directory;
-            break;
-          }
-          if (path.dirname(directory) === directory) break;
-        }
-      } else {
-        locations = namedAnnotationLocations(snapshot.shards);
-      }
-      if (locations.length === 0)
+      const sourceEditor =
+        editor && ["uttori-snes", "uttori-65xx"].includes(editor.document.languageId)
+          ? editor
+          : undefined;
+      if (
+        sourceEditor &&
+        (sourceEditor.document.uri.scheme !== "file" || sourceEditor.document.isDirty)
+      )
         throw new Error(
-          "No native labels or function candidates exist. Open generated source to annotate an instruction.",
+          "Use a saved, unchanged generated source file. Regenerate source if it was edited.",
         );
-      const location =
-        locations.length === 1
-          ? locations[0]
+      // Capture the original cursor before opening the beside panel changes focus.
+      const source = sourceEditor
+        ? {
+            file: path.resolve(sourceEditor.document.uri.fsPath),
+            sha256: createHash("sha256").update(sourceEditor.document.getText()).digest("hex"),
+            line: sourceEditor.selection.active.line + 1,
+            column: sourceEditor.selection.active.character,
+          }
+        : undefined;
+      form = openDisassemblyAnnotationForm(this.extensionUri);
+      const { panel } = form;
+      this.#annotationPanels.add(panel);
+      panel.onDidDispose(() => this.#annotationPanels.delete(panel));
+      const projectDirectory = await this.chooseProject(undefined, "Edit Disassembly Annotation");
+      if (!projectDirectory) {
+        panel.dispose();
+        return;
+      }
+      if (form.disposed) return;
+      const resolved = await analysisWorker().request<AnnotationLookupResult>(
+        projectDirectory,
+        "annotationLookup",
+        {
+          annotationLookup: { maps: source ? await discoverAnalysisDebugMapFiles() : [], source },
+        },
+      );
+      if (form.disposed) return;
+      const selected =
+        resolved.choices.length === 1
+          ? resolved.choices[0]
           : (
               await window.showQuickPick(
-                locations.map((entry) => ({
-                  label: entry.name ?? hexadecimal(entry.address),
-                  description: `${entry.addressSpace} ${hexadecimal(entry.address)}`,
-                  location: entry,
+                resolved.choices.map((choice) => ({
+                  label: choice.location.name ?? hexadecimal(choice.location.address),
+                  description: `${choice.location.addressSpace} ${hexadecimal(choice.location.address)}`,
+                  choice,
                 })),
                 {
                   title: "Edit Disassembly Annotation",
                   placeHolder: "Choose the exact label or address to annotate",
                 },
               )
-            )?.location;
-      if (!location) return;
-      const label = snapshot.shards.labels.find(({ id }) => id === location.labelId);
-      const inlineComments = snapshot.shards.comments.filter(
-        (comment) =>
-          comment.placement === "inline-instruction" &&
-          comment.addressSpace === location.addressSpace &&
-          comment.address === location.address,
-      );
+            )?.choice;
+      if (!selected) {
+        panel.dispose();
+        return;
+      }
+      const { location, label, inlineComments, hasInstruction } = selected;
       const inline =
         inlineComments.length < 2
           ? inlineComments[0]
@@ -723,16 +685,11 @@ export class AnalysisProjectEditor {
                 },
               )
             )?.comment;
-      if (inlineComments.length > 1 && !inline) return;
-      const hasInstruction = snapshot.shards.analysis.some(
-        (record) =>
-          record.kind === "cfg-node" &&
-          ((record.addressSpace === location.addressSpace && record.address === location.address) ||
-            (snapshot.manifest.addressSpaces.some(
-              (space) => space.id === location.addressSpace && space.kind === "file",
-            ) &&
-              record.fileOffset === location.address)),
-      );
+      if (inlineComments.length > 1 && !inline) {
+        panel.dispose();
+        return;
+      }
+      if (form.disposed) return;
       const identity = `${location.addressSpace}.${location.address.toString(16)}`;
       const initialFields = {
         name: label?.sourceName ?? location.name ?? "",
@@ -740,15 +697,20 @@ export class AnalysisProjectEditor {
         inlineComment: label?.inlineComment ?? "",
         instructionComment: inline?.text ?? "",
       };
-      const panel = openDisassemblyAnnotationForm(
-        `${path.basename(projectDirectory)} · ${location.addressSpace} ${hexadecimal(location.address)}`,
-        initialFields,
-        hasInstruction || Boolean(inline),
+      form.initialize(
+        {
+          location: `${path.basename(projectDirectory)} · ${location.addressSpace} ${hexadecimal(location.address)}`,
+          fields: initialFields,
+          hasInstruction: hasInstruction || Boolean(inline),
+        },
         async (fields) => {
           this.assertTrustedProject(projectDirectory);
           if (
-            sourceFile &&
-            (analysisSourceSha256(sourceFile) !== sourceHash || editor?.document.isDirty)
+            source &&
+            (createHash("sha256")
+              .update(await fs.promises.readFile(source.file))
+              .digest("hex") !== resolved.sourceHash ||
+              sourceEditor?.document.isDirty)
           )
             throw new Error(
               "The source changed while this form was open. Reopen the annotation from current generated source.",
@@ -771,26 +733,23 @@ export class AnalysisProjectEditor {
               : { comment: fields.comment, inlineComment: fields.inlineComment }),
             instructionCommentId: inline?.id ?? `manual.comment.instruction.${identity}`,
             instructionComment: fields.instructionComment,
-            evidenceId: `manual.evidence.annotation.${this.editSuffix(snapshot, { ...location, ...fields })}`,
+            evidenceId: `manual.evidence.annotation.${this.editSuffix(resolved, { ...location, ...fields })}`,
             sourceId: "vscode.disassembly-annotation",
           };
-          const applied = applyDisassemblyAnnotationEdit(snapshot, request);
-          if (snapshot.manifest.target === "snes.sfc")
-            snesSourceLabelNames(
-              applied.project.shards,
-              snapshot.manifest.mapping.mapper as SnesMapper,
-              snapshot.manifest.rom.contentSize,
-              sourceDirectory
-                ? loadSnesRamMap(sourceDirectory).variables.map(({ name }) => name)
-                : [],
-            );
-          commitAnalysisProjectTransaction(projectDirectory, snapshot.revision, applied.project);
-          this.#undo.push({
-            kind: "annotation",
+          const inverse = await analysisWorker().request<DisassemblyAnnotationInverse>(
             projectDirectory,
-            request,
-            inverse: applied.inverse,
-          });
+            "annotationSave",
+            {
+              annotationSave: {
+                revision: resolved.revision,
+                request,
+                sourceFile: resolved.sourceFile,
+                sourceHash: resolved.sourceHash,
+                sourceDirectory: resolved.sourceDirectory,
+              },
+            },
+          );
+          this.#undo.push({ kind: "annotation", projectDirectory, request, inverse });
           this.#redo.length = 0;
           await this.updateContexts();
           this.#refresh();
@@ -801,14 +760,13 @@ export class AnalysisProjectEditor {
         async () => {
           await commands.executeCommand("asm.disassembly.regenerate", {
             projectDirectory,
-            ...(sourceDirectory ? { sourceDirectory } : {}),
+            ...(resolved.sourceDirectory ? { sourceDirectory: resolved.sourceDirectory } : {}),
           });
         },
       );
-      this.#annotationPanels.add(panel);
-      panel.onDidDispose(() => this.#annotationPanels.delete(panel));
     } catch (error) {
-      await this.showFailure("Could not edit the disassembly annotation", error);
+      if (form) form.fail(error);
+      else await this.showFailure("Could not edit the disassembly annotation", error);
     }
   }
 
@@ -1019,21 +977,13 @@ export class AnalysisProjectEditor {
   }
 
   private editSuffix(
-    snapshot: AnalysisProjectSnapshot,
+    snapshot: Pick<AnalysisProjectSnapshot, "revision">,
     input: Readonly<Record<string, unknown>>,
   ): string {
     return createHash("sha256")
       .update(canonicalJson({ revision: snapshot.revision.manifestSha256, ...input }))
       .digest("hex")
       .slice(0, 20);
-  }
-
-  private addressSpaceMaximum(snapshot: AnalysisProjectSnapshot, addressSpaceId: string): number {
-    const addressSpace = snapshot.manifest.addressSpaces.find(({ id }) => id === addressSpaceId);
-    if (!addressSpace) throw new Error(`Unknown analysis address space '${addressSpaceId}'.`);
-    return addressSpace.kind === "file"
-      ? snapshot.manifest.rom.contentSize
-      : 2 ** addressSpace.addressBits;
   }
 
   private revertEdit(

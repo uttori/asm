@@ -22,11 +22,13 @@ export interface CliArguments {
     readonly traceMetadata?: string;
     readonly mesenLabels?: string;
     readonly instructionTrace?: string;
+    readonly traceMaxMiB?: number;
     readonly entryPoints: readonly number[];
     readonly maxWorkItems?: number;
     readonly maxCallDepth?: number;
     readonly verbose: boolean;
     readonly force: boolean;
+    readonly allowCodeRegression: boolean;
     readonly help: boolean;
 }
 export declare const usage: string;

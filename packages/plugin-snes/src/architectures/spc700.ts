@@ -100,17 +100,6 @@ function spcOpcodePlusAddressSize(operand: string): number {
 }
 
 /**
- * True when both MOV operands are a 1-byte register/(X) form.
- * @param {string} left Left operand.
- * @param {string} right Right operand.
- * @returns {boolean} True for 1-byte MOV pairs.
- */
-function isMovRegisterPair(left: string, right: string): boolean {
-  const combined = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
-  return MOV_ONE_BYTE_PAIRS.has(combined);
-}
-
-/**
  * True when the operand is accumulator `A` (not `(A)` or `A,x`).
  * @param {string} op the operand
  * @param {LoweredOperand} [lowered] the lowered operand metadata
@@ -363,19 +352,6 @@ function parseBitBranchOpcode(opcode: string): BitBranchOpcode | undefined {
     return { family: match[1] as BitBranchFamily };
   }
   return { family: match[1] as BitBranchFamily, mnemonicBit: Number(match[2]) };
-}
-
-/**
- * Opcode byte for BBS/BBC: bit in bits 7–5, low nibble 3 / 13.
- * @param {BitBranchFamily} family BBS or BBC.
- * @param {number} bit Bit 0–7.
- * @returns {number} Opcode byte.
- */
-function bitBranchOpcodeByte(family: BitBranchFamily, bit: number): number {
-  if (family === "BBS") {
-    return (bit << 5) | 0x03;
-  }
-  return (bit << 5) | 0x13;
 }
 
 type WordOpWithYaLeft = "CMPW" | "ADDW" | "SUBW" | "MOVW";
@@ -649,7 +625,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
     leftLowered?: LoweredOperand,
     rightLowered?: LoweredOperand,
   ): number {
-    if (isMovRegisterPair(left, right)) {
+    const registerPair = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
+    if (MOV_ONE_BYTE_PAIRS.has(registerPair)) {
       return 1;
     }
     const rightImmediate = rightLowered?.immediate ?? right.trim().startsWith("#");
@@ -1633,7 +1610,8 @@ export class ArchSPC700 implements ArchitectureEncoder {
       return false;
     }
 
-    const opcodeByte = bitBranchOpcodeByte(parsed.family, bit);
+    // The bit index occupies the upper three bits; BBS/BBC differ in bit 4.
+    const opcodeByte = (bit << 5) | (parsed.family === "BBS" ? 0x03 : 0x13);
 
     // For the second operand (label/address), we need to:
     // 1. Get the target address

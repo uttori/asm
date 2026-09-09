@@ -17,12 +17,25 @@ import {
 import { test } from "./ava-helper.js";
 
 const bundled = await build({
-  entryPoints: [path.resolve("packages/vscode-extension/src/analysis-project-editor.ts")],
+  stdin: {
+    contents:
+      'export { AnalysisProjectEditor } from "./analysis-project-editor.ts"; export { initializeAnalysisWorker } from "./analysis-worker-client.ts";',
+    resolveDir: path.resolve("packages/vscode-extension/src"),
+  },
   write: false,
   bundle: true,
   platform: "node",
   format: "cjs",
   external: ["vscode"],
+});
+const workerRoot = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotation-worker-"));
+await build({
+  entryPoints: [path.resolve("packages/vscode-extension/src/analysis-worker.ts")],
+  outfile: path.join(workerRoot, "out/analysis-worker.cjs"),
+  bundle: true,
+  platform: "node",
+  format: "cjs",
+  logLevel: "silent",
 });
 const code = bundled.outputFiles[0].text;
 const locationBundle = await build({
@@ -36,9 +49,10 @@ const { annotationLocationsForSource } = (await import(
   `data:text/javascript;base64,${Buffer.from(locationBundle.outputFiles[0].text).toString("base64")}`
 )) as typeof import("../packages/vscode-extension/src/disassembly-annotation-location.js");
 
+test.after.always(() => fs.rmSync(workerRoot, { recursive: true, force: true }));
 const nativeRequire = createRequire(import.meta.url);
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
-const uri = (file: string) => ({ scheme: "file", fsPath: file });
+const uri = (file: string) => ({ scheme: "file", fsPath: file, toString: () => `file://${file}` });
 
 const harness = (t: { teardown(callback: () => void): void }) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotation-ui-"));
@@ -81,7 +95,7 @@ const harness = (t: { teardown(callback: () => void): void }) => {
           fileOffset: 0x3002c,
           size: 1,
           opcode: 0x8b,
-          specificationId: "test",
+          specificationId: "snes.65816.phb.implied",
           mnemonic: "PHB",
           mode: "implied",
           context: [],
@@ -128,7 +142,7 @@ const harness = (t: { teardown(callback: () => void): void }) => {
   const panels: Array<{
     html: string;
     disposed: boolean;
-    messages: Array<{ type: string; message: string }>;
+    messages: Array<{ type: string; message: string; fields?: typeof fields }>;
     receive(message: unknown): Promise<void>;
   }> = [];
   const editorDocument = {
@@ -148,7 +162,11 @@ const harness = (t: { teardown(callback: () => void): void }) => {
   };
   const mock = {
     workspace,
-    Uri: { file: uri },
+    Uri: {
+      file: uri,
+      joinPath: (root: { fsPath: string }, ...parts: string[]) =>
+        uri(path.join(root.fsPath, ...parts)),
+    },
     debug: {},
     ViewColumn: { Beside: 2 },
     commands: {
@@ -177,8 +195,13 @@ const harness = (t: { teardown(callback: () => void): void }) => {
         panels.push(panel);
         return {
           webview: {
+            cspSource: "https://webview.example",
+            asWebviewUri: (value: unknown) => value,
             set html(value: string) {
               panel.html = value;
+              queueMicrotask(() => {
+                void panel.receive({ type: "ready" });
+              });
             },
             onDidReceiveMessage: (callback: typeof panel.receive) => {
               panel.receive = callback;
@@ -201,7 +224,8 @@ const harness = (t: { teardown(callback: () => void): void }) => {
     },
   };
   const module = {
-    exports: {} as typeof import("../packages/vscode-extension/src/analysis-project-editor.js"),
+    exports: {} as typeof import("../packages/vscode-extension/src/analysis-project-editor.js") &
+      typeof import("../packages/vscode-extension/src/analysis-worker-client.js"),
   };
   vm.runInNewContext(code, {
     module,
@@ -215,7 +239,12 @@ const harness = (t: { teardown(callback: () => void): void }) => {
     TextEncoder,
     TextDecoder,
   });
-  const editor = new module.exports.AnalysisProjectEditor(() => {});
+  const worker = module.exports.initializeAnalysisWorker(workerRoot);
+  t.teardown(() => worker.dispose());
+  const editor = new module.exports.AnalysisProjectEditor(
+    () => {},
+    uri(path.resolve("packages/vscode-extension")) as never,
+  );
   t.teardown(() => editor.dispose());
   return {
     directory,
@@ -227,6 +256,7 @@ const harness = (t: { teardown(callback: () => void): void }) => {
     editorDocument,
     workspace,
     editor,
+    worker,
   };
 };
 const fields = {
@@ -303,9 +333,8 @@ test("annotation cancellation and unmodified Save and Regenerate do not create m
   const h = harness(t);
   const before = loadAnalysisProjectSnapshot(h.directory).revision.manifestSha256;
   await h.editor.editAnnotation();
-  const script = h.panels[0].html.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
-  t.truthy(script);
-  t.notThrows(() => new vm.Script(script!));
+  t.regex(h.panels[0].html, /src="[^"]+annotation.js"/);
+  t.false(h.panels[0].html.includes("acquireVsCodeApi"));
   await h.panels[0].receive({ type: "cancel" });
   t.true(h.panels[0].disposed);
   t.is(loadAnalysisProjectSnapshot(h.directory).revision.manifestSha256, before);
@@ -325,7 +354,7 @@ test("VS Code resolves generated functions, validates the form, saves transactio
   await h.editor.editAnnotation();
   t.deepEqual(h.errors, []);
   const panel = h.panels[0];
-  t.regex(panel.html, /value="Fn_C3002C"/);
+  t.is(panel.messages.find(({ type }) => type === "initialize")?.fields?.name, "Fn_C3002C");
   await panel.receive({ type: "save", fields: { ...fields, name: "APUIO0" }, regenerate: false });
   t.regex(panel.messages.at(-1)!.message, /conflicts/);
   t.is(
@@ -340,6 +369,14 @@ test("VS Code resolves generated functions, validates the form, saves transactio
   t.is(saved.shards.labels[0].comment, fields.comment);
   t.is(saved.shards.comments[0].text, fields.instructionComment);
   t.is(fs.readFileSync(h.source, "utf8").includes("APU_IPL_Bootstrap"), false);
+  h.worker.invalidate();
+  await h.editor.editAnnotation();
+  t.is(
+    h.panels.at(-1)!.messages.find(({ type }) => type === "initialize")?.fields?.name,
+    fields.name,
+    "refresh keeps the committed annotation visible through the existing generated source map",
+  );
+  await h.panels.at(-1)!.receive({ type: "cancel" });
   await h.editor.undo();
   t.deepEqual(loadAnalysisProjectSnapshot(h.directory).shards, before.shards);
   await h.editor.redo();
@@ -358,8 +395,8 @@ test("VS Code annotation editing fails closed on untrusted, dirty, changed, and 
   h.editorDocument.isDirty = false;
   fs.appendFileSync(h.source, "; changed\n");
   await h.editor.editAnnotation();
-  t.is(h.panels.length, 0);
-  t.true(h.errors.some((error) => error.includes("current ROM/source mapping")));
+  t.is(h.panels.length, 1);
+  t.regex(h.panels[0].messages.at(-1)!.message, /current ROM\/source mapping/);
   const map = JSON.parse(fs.readFileSync(h.mapFile, "utf8"));
   map.output.sha256 = "f".repeat(64);
   const { fingerprint: ignored, ...payload } = map;
@@ -372,7 +409,8 @@ test("VS Code annotation editing fails closed on untrusted, dirty, changed, and 
     }),
   );
   await h.editor.editAnnotation();
-  t.is(h.panels.length, 0);
+  t.is(h.panels.length, 2);
+  t.regex(h.panels[1].messages.at(-1)!.message, /current ROM\/source mapping/);
 });
 
 test("open annotation forms preserve concurrent changes and reject changed source at save", async (t) => {
@@ -403,4 +441,141 @@ test("open annotation forms preserve concurrent changes and reject changed sourc
   await h.panels[1].receive({ type: "save", fields, regenerate: false });
   t.regex(h.panels[1].messages.at(-1)!.message, /source changed/);
   t.is(loadAnalysisProjectSnapshot(h.directory).shards.labels.length, 0);
+});
+
+test("annotation shell appears before discovery and safely ignores completion after cancellation", async (t) => {
+  const h = harness(t);
+  const opening = h.editor.editAnnotation();
+  t.is(
+    h.panels.length,
+    1,
+    "the form is created synchronously before project discovery or worker loading",
+  );
+  t.regex(h.panels[0].html, /Loading analysis/);
+  await h.panels[0].receive({ type: "cancel" });
+  await opening;
+  t.true(h.panels[0].disposed);
+  t.false(h.panels[0].messages.some(({ type }) => type === "initialize"));
+  t.deepEqual(h.errors, []);
+});
+
+test("editable webview script previews real newlines and displays annotation text literally", (t) => {
+  const nodes = new Map<
+    string,
+    {
+      value: string;
+      textContent: string;
+      hidden: boolean;
+      disabled: boolean;
+      focus(): void;
+      setAttribute(): void;
+      addEventListener(): void;
+    }
+  >();
+  const get = (id: string) => {
+    if (!nodes.has(id))
+      nodes.set(id, {
+        value: "",
+        textContent: "",
+        hidden: false,
+        disabled: false,
+        focus() {},
+        setAttribute() {},
+        addEventListener() {},
+      });
+    return nodes.get(id)!;
+  };
+  let receive: (event: unknown) => void = () => {};
+  const messages: unknown[] = [];
+  vm.runInNewContext(fs.readFileSync("packages/vscode-extension/media/annotation.js", "utf8"), {
+    acquireVsCodeApi: () => ({ postMessage: (message: unknown) => messages.push(message) }),
+    document: { getElementById: get },
+    window: {
+      addEventListener: (_type: string, callback: typeof receive) => {
+        receive = callback;
+      },
+    },
+  });
+  receive({
+    data: {
+      type: "initialize",
+      fields: { ...fields, comment: "First line\n<script>alert(1)</script>" },
+      location: "CPU $C3002C",
+      hasInstruction: true,
+    },
+  });
+  t.is(
+    get("preview").textContent,
+    "; First line\n; <script>alert(1)</script>\nAPU_IPL_Bootstrap: ; Bootstrap entry\n  <instruction> ; Save data bank",
+  );
+  t.false(get("annotation").hidden);
+  t.is((messages[0] as { type: string }).type, "ready");
+});
+
+test("cached annotation data detects same-manifest shard edits and replaced debug maps", async (t) => {
+  const h = harness(t);
+  await h.editor.editAnnotation();
+  const snapshot = loadAnalysisProjectSnapshot(h.directory);
+  const shard = snapshot.manifest.shards.find(({ kind }) => kind === "labels")!;
+  fs.appendFileSync(path.join(h.directory, shard.path), " ");
+  await h.editor.editAnnotation();
+  t.regex(h.panels[1].messages.at(-1)!.message, /hash|sha-?256|checksum/i);
+  t.false(h.panels[1].messages.some(({ type }) => type === "initialize"));
+  fs.writeFileSync(
+    path.join(h.directory, shard.path),
+    fs.readFileSync(path.join(h.directory, shard.path), "utf8").slice(0, -1),
+  );
+  const map = JSON.parse(fs.readFileSync(h.mapFile, "utf8"));
+  map.ranges[0].start++;
+  fs.writeFileSync(h.mapFile, JSON.stringify(map));
+  await h.editor.editAnnotation();
+  t.regex(h.panels[2].messages.at(-1)!.message, /current ROM\/source mapping/);
+});
+
+test("heuristic previews read saved rules, reject malformed options, and never publish project changes", async (t) => {
+  const h = harness(t);
+  const snapshot = loadAnalysisProjectSnapshot(h.directory);
+  commitAnalysisProjectTransaction(h.directory, snapshot.revision, {
+    manifest: snapshot.manifest,
+    shards: {
+      ...snapshot.shards,
+      runtime: [
+        {
+          id: "observed-vram-write",
+          kind: "runtime-memory-access",
+          architecture: "snes.65816",
+          instructionAddressSpace: "snes.cpu",
+          instructionAddress: 0xc3002c,
+          accessedAddressSpace: "snes.cpu",
+          accessedAddress: 0x2118,
+          width: 1,
+          access: "write",
+          value: 42,
+          actor: "cpu",
+          count: 1,
+          evidence: [],
+        },
+      ],
+    },
+  });
+  const before = loadAnalysisProjectSnapshot(h.directory).revision.manifestSha256;
+  const first = await h.worker.request<{ total: number; roles: { role: string }[] }>(
+    h.directory,
+    "heuristics",
+  );
+  t.true(first.total > 0);
+  t.true(first.roles.some(({ role }) => role === "graphics.vram-write"));
+  fs.writeFileSync(path.join(h.directory, "heuristics.json"), JSON.stringify({ enabled: false }));
+  const disabled = await h.worker.request<{ total: number; enabled: boolean }>(
+    h.directory,
+    "heuristics",
+  );
+  t.false(disabled.enabled);
+  t.is(disabled.total, 0);
+  fs.writeFileSync(
+    path.join(h.directory, "heuristics.json"),
+    JSON.stringify({ minimumConfidence: "certain" }),
+  );
+  await t.throwsAsync(h.worker.request(h.directory, "heuristics"), { message: /confidence/ });
+  t.is(loadAnalysisProjectSnapshot(h.directory).revision.manifestSha256, before);
 });

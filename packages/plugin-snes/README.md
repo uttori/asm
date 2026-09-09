@@ -626,6 +626,52 @@ the [SNESdev ROM-header](https://snes.nesdev.org/wiki/ROM_header) and
 register and compatibility aliases for older names. The CLI wraps this API with `uttori-asm export`
 and `uttori-asm verify-roundtrip`.
 
+An optional `struct-map.json` beside `main.asm` binds reusable layouts to RAM or ROM:
+
+```json
+{
+  "format": "uttori-asm-snes-struct-map",
+  "schemaVersion": 1,
+  "structures": [
+    {
+      "id": "LevelStats",
+      "size": 3,
+      "fields": [
+        { "name": "hp", "offset": 0, "size": 2, "type": "dw" },
+        { "name": "mp", "offset": 2, "size": 1, "type": "db" }
+      ]
+    }
+  ],
+  "bindings": [
+    {
+      "name": "Levels",
+      "structure": "LevelStats",
+      "address": 12615680,
+      "fileOffset": 32768,
+      "count": 10
+    }
+  ]
+}
+```
+
+For HiROM, this example places ten records at CPU `$C08000`, file `$008000`.
+Omit `fileOffset` for canonical WRAM bindings. Export generates and includes `structs.asm`,
+names known data operands such as `Levels.hp,x`, and emits complete ROM records as
+`dataStruct` or indexed `dataStructs` tables with built-in placement checks. Typed fields
+use `db`/`dw`/`dl`/`dd` or arrays such as `db[2]`; opaque gaps retain their original bytes.
+Interior labels/comments keep the raw field directives and address assertions so their
+addresses do not move. The optional metadata `type` must match `size`; size-only v1 inputs
+retain their previous scalar convention for sizes 1–4 and use byte arrays otherwise.
+Layout and binding names share the source symbol namespace; overlapping fields/bindings and conflicts with
+exportable code or cartridge headers are rejected. Struct names take precedence over flat
+RAM names at bound fields; unknown addresses keep the existing naming behavior.
+
+`firstIndex` defaults to zero. Set it to one for one-based tables: `address` and `fileOffset`
+still locate the first physical entry, while `Levels[1].hp` names that entry. The native
+base is reduced by one record so `Levels.hp,x` accepts the game's original index. This
+biased base is used only for indexed operand naming. The generated manifest tracks the
+struct map as a user-owned input, so edits require regeneration and survive subsequent exports.
+
 ## MesenCE Offline Evidence
 
 The plugin imports stock MesenCE artifacts without embedding or forking the emulator. The currently tested format revision is `af2342818ca81a93b346146802047760400fc7b1`.
@@ -825,6 +871,137 @@ endstruct
 ```
 
 The parent reserves enough stride for its largest extension, so `Actor[3].Enemy.health` lands in the correct record. `sizeof(name)` returns the defined struct size; `objectsize(name)` follows the expression host's object-size rules. The regression-rich examples are in [`structs.asm`](../../fixtures/asar/tests/structs.asm) and the implementation is [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts).
+
+### Typed Fields & Named Initializers
+
+Uttori also accepts typed members and complete named values. Typed fields let one struct definition describe both member addresses and how to encode record values. `dataStruct` emits one complete named record; `dataStructs` emits a sequence of explicitly indexed records. These are Uttori extensions. Existing Asar `struct`, `skip`, `extends`, `endstruct align`, member expressions, `sizeof()` and `objectsize()` remain available and keep their existing address/stride behavior:
+
+```asm
+struct MapOffsets $CD0004
+  .offset: dw
+endstruct count 1023 firstindex 1
+
+org $CD0006
+dataStructs MapOffsets
+  [1] = { offset = $0804 }
+  [2] = { offset = $080B }
+endDataStructs
+```
+
+`dataStruct MapOffsets[1], { offset = $0804 }` emits a single record. Types declare widths
+without emitting bytes; initializers write unsigned little-endian values in layout order.
+All storage fields are required. Arrays (`db[4]`, `dw[2]`) require explicit value lists;
+legacy `skip` fields require raw byte lists. The emitter checks field names, widths,
+array lengths, consecutive table indexes and `pc()`. Optional bounds affect initializers
+without changing existing Asar address expressions.
+
+#### Declare Fields
+
+| Declaration Inside a Struct | Meaning                         | Initializer Value       |
+| --------------------------- | ------------------------------- | ----------------------- |
+| `.flags: db`                | One unsigned 8-bit integer      | `$80`                   |
+| `.hp: dw`                   | One unsigned 16-bit integer     | `$1234`                 |
+| `.address: dl`              | One unsigned 24-bit integer     | `$C08000`               |
+| `.mask: dd`                 | One unsigned 32-bit integer     | `$FFFFFFFF`             |
+| `.palette: dw[3]`           | Three 16-bit integers           | `[$001F, $03E0, $7C00]` |
+| `.unknown: db[2]`           | Two explicit bytes              | `[$AB, $CD]`            |
+| `.legacy: skip 2`           | Existing opaque two-byte member | `[$AB, $CD]`            |
+
+All scalar encodings are little-endian. Arrays are contiguous and use their element width.
+`db[1]` is still an array and requires `[value]`, not a scalar. Field names retain their
+case-sensitive struct spelling; directive and type keywords are case-insensitive.
+
+Array lengths must be positive integers known when the definition is processed. A typed
+field and an initialized record are limited to 65536 bytes. Initializers accept unsigned
+integers only: for all-one bits, use `$FF`, `$FFFF`, etc., rather than `-1`. Values are not
+silently truncated. Ordinary Asar `db`/`dw` directives retain their existing behavior.
+
+Do not put default values after field types: `.hp: dw $1234` is invalid. Declare the width
+in the struct and supply the value at the emission site. `skip 2` does not imply `dw`:
+it remains an opaque byte array for initialization. Plain labels may alias field addresses,
+but aliases are not additional storage and must not appear as initializer keys.
+
+#### Tables, Bounds & Alignment
+
+```asm
+endstruct [align N] [count N] [firstindex N]
+```
+
+`align` retains Asar's size/stride rounding.
+
+`count` adds optional bounds for named
+initializers.
+
+`firstindex` defaults to zero and requires `count`; it does not adjust the struct base. Bounds do not restrict existing address expressions, so existing assembler operands can still use biased bases or compute an address beyond the initialized range.
+
+`dataStructs Name` / `endDataStructs` is a non-empty data-only block. Each row is
+`[index] = { field = value, ... }`. Duplicate, decreasing or skipped indexes fail. Labels,
+`org`, includes, conditionals, macros and nested tables cannot appear _inside_ the block.
+Put a complete block inside a macro or conditional instead. To label a record boundary,
+close the block, put the label at the current position, then start the next block.
+
+Alignment bytes must also be explicit:
+
+```asm
+struct Aligned $808000
+  .value: db
+endstruct align 4
+
+org $808000
+dataStruct Aligned, { value = 1, __padding = [$AB, $CD, $EF] }
+```
+
+`__padding` is the reserved initializer name for trailing alignment bytes, only when
+alignment actually adds bytes. It is not an additional address symbol. For ordinary unknown
+regions, use named `db[N]` fields. The emitter rejects overlapping or incomplete storage
+layouts rather than inventing bytes.
+
+This first version initializes flat records and scalar arrays. It does not initialize
+Asar extension/overlay layouts, nested record values, bitfields, strings, or signed types.
+Asar extensions remain usable for address calculations and ordinary raw data emission.
+Named initialization reports an explicit error for a layout with a parent or extensions.
+
+## SNES exporter and struct-map.json
+
+The optional `type` property makes field encoding explicit while retaining the v1 schema:
+
+```json
+{
+  "id": "Stats",
+  "size": 5,
+  "fields": [
+    { "name": "hp", "offset": 0, "size": 2, "type": "dw" },
+    { "name": "mp", "offset": 2, "size": 1, "type": "db" },
+    { "name": "unknown", "offset": 3, "size": 2, "type": "db[2]" }
+  ]
+}
+```
+
+`type` must match `size` exactly. The metadata spelling uses a literal decimal array length,
+such as `dw[3]`, rather than an assembler expression. Invalid encodings are rejected before
+generated files are replaced. Existing size-only v1 inputs are supported: sizes 1–4 retain
+the former renderer's scalar convention (`db`, `dw`, `dl`, `dd`); larger fields become
+`db[size]`. Add explicit types when a small field is actually an array. Synthesized gaps
+always become byte arrays, even if they contain only one or two bytes.
+
+Export generates typed zero-base layouts and addressed bindings in `structs.asm`. Bindings
+carry `count` and `firstindex` into `endstruct`. Complete ROM records become `dataStruct`;
+neighboring records from the same binding become `dataStructs` rows. Every literal is read
+from the immutable original ROM, including all unknown bytes and generated `__gap_*` fields.
+
+Interior labels, comments, bank cuts and region boundaries prevent record grouping. The
+exporter retains the existing `assert pc() == field` plus raw directive path for those
+records. A label or comment at a record start closes and restarts a table. These fallbacks
+are required for byte ownership and source navigation; do not remove them merely to obtain
+more initializer blocks. Manifests cover the same ROM intervals whether a record is grouped
+or fragmented. Code/header conflicts still fail before writes; generated-file/input hashes
+and code-regression protection remain in force.
+
+Edit `struct-map.json`, then regenerate. Edits made directly to generated `structs.asm` or
+bank sources are subject to the usual generated-file drift checks. Keep persistent comments
+and labels in the analysis project. The exporter never rewrites analysis evidence to enable
+record grouping.
+
 
 ## Defines, Expressions, & Functions
 
@@ -1267,67 +1444,70 @@ The files in [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsup
 
 The active SNES target combines core directives with plugin directives. “No-op” below means accepted for source compatibility without the Asar side effect.
 
-| Command                             | Syntax                                  | Status & Effect                                     |
-| ----------------------------------- | --------------------------------------- | --------------------------------------------------- |
-| `db`, `dc.b`                        | `db value[,value...]`                   | Emit 8-bit values or mapped string characters       |
-| `dw`, `dc.w`                        | `dw value[,value...]`                   | Emit little-endian 16-bit values                    |
-| `dl`, `dc.l`                        | `dl value[,value...]`                   | Emit little-endian 24-bit values                    |
-| `dd`                                | `dd value[,value...]`                   | Emit little-endian 32-bit values                    |
-| `fillbyte/word/long/dword`          | `fillbyte value`                        | Set repeating fill pattern width/value              |
-| `fill`                              | `fill count`                            | Emit bytes from the current fill pattern            |
-| `padbyte/word/long/dword`           | `padbyte value`                         | Set pad unit width/value                            |
-| `pad`                               | `pad [address]`                         | Pad to a mapped address or next 64 KiB boundary     |
-| `incsrc`                            | `incsrc "file"`                         | Assemble a source file inline                       |
-| `include`                           | `include "file"`                        | Include a source file inline                        |
-| `includeonce`                       | `includeonce`                           | Guard the current file once per stage               |
-| `incbin`                            | `incbin "file"[:range] [-> target]`     | Embed binary bytes, optionally sliced or relocated  |
-| `base`                              | `base address                           | off`                                                | Change or restore logical base address       |
-| `org`                               | `org address`                           | Set mapped write position                           |
-| `pushbase`, `pullbase`              | no operands                             | Save/restore logical base address                   |
-| `pushpc`, `pullpc`                  | no operands                             | Save/restore the full PC state                      |
-| `arch`                              | `arch name`                             | Select 65816, SPC700 mode, or Super FX              |
-| `lorom`, `hirom`                    | no operands                             | Select standard SNES ROM map                        |
-| `exlorom`, `exhirom`                | no operands                             | Select extended SNES ROM map                        |
-| `sfxrom`                            | no operands                             | Select Super FX ROM map                             |
-| `norom`                             | no operands                             | Select flat 1:1 output; disables checksum/freespace |
-| `sa1rom`                            | `sa1rom [a,b,c,d]`                      | Select SA-1 map and optional decimal bank selectors |
-| `fullsa1rom`                        | no operands                             | Select full/big SA-1 map                            |
-| `fastrom`                           | no operands                             | Accepted no-op                                      |
-| `namespace`                         | `namespace [name                        | off                                                 | nested on                                    | nested off]`                                                 | Set or configure label namespace |
-| `pushns`, `pullns`                  | no operands                             | Save/restore namespace state                        |
-| `table`                             | `table "file"[,ltr                      | rtl]`                                               | Replace character mappings from a table file |
-| `cleartable`                        | no operands                             | Restore identity fallback                           |
-| `pushtable`, `pulltable`            | no operands                             | Save/restore character mapping                      |
-| `freecode`, `freedata`, `freespace` | no operands                             | Append one RATS-protected allocation                |
-| `freespacebyte`                     | `freespacebyte value`                   | Set freespace/output expansion byte                 |
-| `prot`                              | `prot label[,label...]`                 | Emit a RATS protection record                       |
-| `spcblock`                          | `spcblock destination [nspc]`           | Begin ROM-embedded SPC block                        |
-| `endspcblock`                       | `endspcblock [execute address]`         | Finish SPC block and optionally emit execute record |
-| `startpos`                          | `startpos address`                      | Save execute address for active SPC block           |
-| `struct`                            | `struct name [base                      | extends parent]`                                    | Begin non-emitting layout definition         |
-| `skip`                              | `.member: skip size`                    | Advance current struct member offset                |
-| `endstruct`                         | `endstruct [align value]`               | Finalize struct size/stride                         |
-| `undef`                             | `undef [!]name`                         | Remove a textual define                             |
-| `global`                            | `global Label:`                         | Define a namespace-independent global label         |
-| character assignment                | `"A" = value`                           | Set one active character mapping                    |
-| `if`, `elseif`, `else`, `endif`     | block syntax                            | Conditional assembly                                |
-| `while`, `endwhile`                 | block syntax                            | Conditional repeated assembly                       |
-| `for`, `endfor`                     | `for name = start..end`                 | Inclusive counted assembly loop                     |
-| `macro`, `endmacro`                 | `macro name(args)`                      | Define a command macro                              |
-| `function`                          | `function name(args) = expression`      | Define a numeric expression function                |
-| `assert`                            | `assert condition[,message...]`         | Fail when condition is zero                         |
-| `error`                             | `error [message...]`                    | Always fail                                         |
-| `warnpc`                            | `warnpc address`                        | Fail when PC exceeds address                        |
-| `check`                             | `check title` or `check bankcross mode` | Enable reads or configure bank boundary policy      |
-| `optimize`                          | `optimize dp none                       | ram                                                 | always`                                      | Configure direct-page size optimization; other forms ignored |
-| `dpbase`                            | any                                     | Accepted no-op                                      |
-| `warnings`                          | any                                     | Accepted no-op                                      |
-| `print`                             | any                                     | Accepted no-op                                      |
-| `warn`                              | any                                     | Accepted no-op                                      |
-| `autoclean`, `autoclear`            | any                                     | Accepted no-op                                      |
-| `includefrom`                       | any                                     | Accepted no-op                                      |
-| `asar`                              | any                                     | Accepted no-op                                      |
-| `reset`, `{`, `}`                   | any                                     | Accepted no-op                                      |
+| Command                             | Syntax                                        | Status & Effect                                      |
+| ----------------------------------- | --------------------------------------------- | ---------------------------------------------------- |
+| `db`, `dc.b`                        | `db value[,value...]`                         | Emit 8-bit values or mapped string characters        |
+| `dw`, `dc.w`                        | `dw value[,value...]`                         | Emit little-endian 16-bit values                     |
+| `dl`, `dc.l`                        | `dl value[,value...]`                         | Emit little-endian 24-bit values                     |
+| `dd`                                | `dd value[,value...]`                         | Emit little-endian 32-bit values                     |
+| `fillbyte/word/long/dword`          | `fillbyte value`                              | Set repeating fill pattern width/value               |
+| `fill`                              | `fill count`                                  | Emit bytes from the current fill pattern             |
+| `padbyte/word/long/dword`           | `padbyte value`                               | Set pad unit width/value                             |
+| `pad`                               | `pad [address]`                               | Pad to a mapped address or next 64 KiB boundary      |
+| `incsrc`                            | `incsrc "file"`                               | Assemble a source file inline                        |
+| `include`                           | `include "file"`                              | Include a source file inline                         |
+| `includeonce`                       | `includeonce`                                 | Guard the current file once per stage                |
+| `incbin`                            | `incbin "file"[:range] [-> target]`           | Embed binary bytes, optionally sliced or relocated   |
+| `base`                              | `base address                                 | off`                                                 | Change or restore logical base address       |
+| `org`                               | `org address`                                 | Set mapped write position                            |
+| `pushbase`, `pullbase`              | no operands                                   | Save/restore logical base address                    |
+| `pushpc`, `pullpc`                  | no operands                                   | Save/restore the full PC state                       |
+| `arch`                              | `arch name`                                   | Select 65816, SPC700 mode, or Super FX               |
+| `lorom`, `hirom`                    | no operands                                   | Select standard SNES ROM map                         |
+| `exlorom`, `exhirom`                | no operands                                   | Select extended SNES ROM map                         |
+| `sfxrom`                            | no operands                                   | Select Super FX ROM map                              |
+| `norom`                             | no operands                                   | Select flat 1:1 output; disables checksum/freespace  |
+| `sa1rom`                            | `sa1rom [a,b,c,d]`                            | Select SA-1 map and optional decimal bank selectors  |
+| `fullsa1rom`                        | no operands                                   | Select full/big SA-1 map                             |
+| `fastrom`                           | no operands                                   | Accepted no-op                                       |
+| `namespace`                         | `namespace [name                              | off                                                  | nested on                                    | nested off]`                                                 | Set or configure label namespace |
+| `pushns`, `pullns`                  | no operands                                   | Save/restore namespace state                         |
+| `table`                             | `table "file"[,ltr                            | rtl]`                                                | Replace character mappings from a table file |
+| `cleartable`                        | no operands                                   | Restore identity fallback                            |
+| `pushtable`, `pulltable`            | no operands                                   | Save/restore character mapping                       |
+| `freecode`, `freedata`, `freespace` | no operands                                   | Append one RATS-protected allocation                 |
+| `freespacebyte`                     | `freespacebyte value`                         | Set freespace/output expansion byte                  |
+| `prot`                              | `prot label[,label...]`                       | Emit a RATS protection record                        |
+| `spcblock`                          | `spcblock destination [nspc]`                 | Begin ROM-embedded SPC block                         |
+| `endspcblock`                       | `endspcblock [execute address]`               | Finish SPC block and optionally emit execute record  |
+| `startpos`                          | `startpos address`                            | Save execute address for active SPC block            |
+| `struct`                            | `struct name [base                            | extends parent]`                                     | Begin non-emitting layout definition         |
+| `skip`                              | `.member: skip size`                          | Advance current struct member offset                 |
+| `endstruct`                         | `endstruct [align value]`                     | Finalize struct size/stride                          |
+| `dataStruct`                        | `dataStruct Record[index], { field = value }` | Emit a complete named record at its bound address    |
+| `dataStructs`                       | `dataStructs Record`                          | Begin consecutive `[index] = { field = value }` rows |
+| `endDataStructs`                    | `endDataStructs`                              | End a non-empty named-record table                   |
+| `undef`                             | `undef [!]name`                               | Remove a textual define                              |
+| `global`                            | `global Label:`                               | Define a namespace-independent global label          |
+| character assignment                | `"A" = value`                                 | Set one active character mapping                     |
+| `if`, `elseif`, `else`, `endif`     | block syntax                                  | Conditional assembly                                 |
+| `while`, `endwhile`                 | block syntax                                  | Conditional repeated assembly                        |
+| `for`, `endfor`                     | `for name = start..end`                       | Inclusive counted assembly loop                      |
+| `macro`, `endmacro`                 | `macro name(args)`                            | Define a command macro                               |
+| `function`                          | `function name(args) = expression`            | Define a numeric expression function                 |
+| `assert`                            | `assert condition[,message...]`               | Fail when condition is zero                          |
+| `error`                             | `error [message...]`                          | Always fail                                          |
+| `warnpc`                            | `warnpc address`                              | Fail when PC exceeds address                         |
+| `check`                             | `check title` or `check bankcross mode`       | Enable reads or configure bank boundary policy       |
+| `optimize`                          | `optimize dp none                             | ram                                                  | always`                                      | Configure direct-page size optimization; other forms ignored |
+| `dpbase`                            | any                                           | Accepted no-op                                       |
+| `warnings`                          | any                                           | Accepted no-op                                       |
+| `print`                             | any                                           | Accepted no-op                                       |
+| `warn`                              | any                                           | Accepted no-op                                       |
+| `autoclean`, `autoclear`            | any                                           | Accepted no-op                                       |
+| `includefrom`                       | any                                           | Accepted no-op                                       |
+| `asar`                              | any                                           | Accepted no-op                                       |
+| `reset`, `{`, `}`                   | any                                           | Accepted no-op                                       |
 
 ## Troubleshooting
 

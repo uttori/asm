@@ -1,5 +1,16 @@
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 import { maximumAddressForWidth } from "../address-width.js";
+import { DataStructEngine, type DataStructHost } from "./data-struct-engine.js";
+
+/** Encoding information is separate from Asar's address-only member labels. */
+export interface StructField {
+  name: string;
+  offset: number;
+  width: number;
+  count: number;
+  /** Even db[1] is an array; skip members are opaque byte arrays. */
+  array: boolean;
+}
 
 export interface StructDefinition {
   name: string;
@@ -17,9 +28,13 @@ export interface StructDefinition {
   parent?: string;
   /** Cached maximum child extension size, or zero when there are no extensions. */
   extensionSize: number;
+  /** Absent on legacy API-created definitions; never infer types from label distances. */
+  fields?: Map<string, StructField>;
+  /** Optional valid logical array indexes, independent of the biased base address. */
+  indexRange?: { first: number; count: number };
 }
 
-export type StructHost = {
+export type StructHost = DataStructHost & {
   readonly addressWidth: number;
   currentStruct: StructDefinition | null;
   structs: Map<string, StructDefinition>;
@@ -34,7 +49,11 @@ export type StructHost = {
 };
 
 export class StructEngine {
-  constructor(readonly host: StructHost) {}
+  readonly data: DataStructEngine;
+
+  constructor(readonly host: StructHost) {
+    this.data = new DataStructEngine(host, this);
+  }
 
   /**
    * Handles a struct mode command.
@@ -53,19 +72,55 @@ export class StructEngine {
     if (keyword.startsWith(".")) {
       const hasColon = keyword.endsWith(":");
       const labelName = keyword.replace(/:$/, "").substring(1);
+      const declaration = words.slice(1).join(" ");
+      // oxlint-disable-next-line security/detect-unsafe-regex -- Width, spaces and bracketed count do not overlap.
+      const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
+      if (typed) {
+        const width = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
+        const count = typed[2] === undefined ? 1 : this.host.operandResolver.getnum(typed[2]);
+        if (!Number.isSafeInteger(count) || count < 1 || count * width > 0x10000) {
+          throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
+        }
+        if (currentStruct.labels.has(labelName)) {
+          throw new Error(`Duplicate typed field '${currentStruct.name}.${labelName}'.`);
+        }
+        (currentStruct.fields ??= new Map()).set(labelName, {
+          name: labelName,
+          offset: currentStruct.offset,
+          width,
+          count,
+          array: typed[2] !== undefined,
+        });
+      } else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
+        throw new Error(`Invalid typed field '${currentStruct.name}.${labelName}': ${declaration}`);
+      }
       currentStruct.labels.set(labelName, currentStruct.offset);
       this.host.recordSymbolDefinition("structMember", labelName, {
         value: currentStruct.offset,
         containerName: currentStruct.name,
       });
 
-      if (words[1]?.toLowerCase() === "skip") {
+      if (typed) {
+        const field = currentStruct.fields!.get(labelName)!;
+        currentStruct.offset += field.width * field.count;
+      } else if (words[1]?.toLowerCase() === "skip") {
         if (words.length !== 3) {
           throw new Error(
             `skip directive in struct requires exactly one parameter: ${words.length}`,
           );
         }
         const skipAmount = this.host.operandResolver.getnum(words[2]);
+        // Preserve skip's historical layout behavior. Initializers accept a
+        // positive named skip only as an explicit list of raw bytes.
+        if (Number.isSafeInteger(skipAmount) && skipAmount > 0) {
+          currentStruct.fields?.set(labelName, {
+            name: labelName,
+            offset: currentStruct.offset,
+            width: 1,
+            count: skipAmount,
+            array: true,
+          });
+        }
         currentStruct.offset += skipAmount;
       }
 
@@ -123,6 +178,7 @@ export class StructEngine {
       offset: 0,
       size: 0,
       labels: new Map(),
+      fields: new Map(),
       parent,
       extensionSize: 0,
     };
@@ -140,14 +196,37 @@ export class StructEngine {
     }
 
     let align: number | undefined;
-    if (words.length >= 2 && words[1].toLowerCase() === "align") {
-      if (words.length !== 3) {
-        throw new Error("endstruct align requires a single alignment parameter.");
+    let count: number | undefined;
+    let first = 0;
+    const seen = new Set<string>();
+    for (let index = 1; index < words.length; index += 2) {
+      const option = words[index].toLowerCase();
+      if (
+        !["align", "count", "firstindex"].includes(option) ||
+        seen.has(option) ||
+        words[index + 1] === undefined
+      ) {
+        if (words[1]?.toLowerCase() === "align")
+          throw new Error("endstruct align requires a single alignment parameter.");
+        throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
       }
-      align = this.host.operandResolver.getnum(words[2]);
-      if (align < 1) {
-        throw new Error("Alignment must be at least 1.");
+      seen.add(option);
+      const value = this.host.operandResolver.getnum(words[index + 1]);
+      if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
+        throw new Error(
+          option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`,
+        );
       }
+      if (option === "align") align = value;
+      else if (option === "count") count = value;
+      else first = value;
+    }
+    if (seen.has("firstindex") && count === undefined)
+      throw new Error("endstruct firstindex requires count.");
+    if (count !== undefined) {
+      if (!Number.isSafeInteger(first + count))
+        throw new Error("Struct index range exceeds integer precision.");
+      currentStruct.indexRange = { first, count };
     }
 
     let finalSize = currentStruct.offset;

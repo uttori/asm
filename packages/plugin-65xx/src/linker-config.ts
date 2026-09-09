@@ -62,7 +62,8 @@ export function defaultLd65ConfigText(): string {
  * @returns {Ld65Config} The parsed layout.
  */
 export function parseLd65Config(source: string): Ld65Config {
-  const text = stripBlockComments(source);
+  // Replace block comments with whitespace so adjacent tokens stay separate.
+  const text = source.replace(/\/\*[\S\s]*?\*\//g, " ");
   const memories = new Map<string, Ld65MemoryRegion>();
   const segments = new Map<string, Ld65Segment>();
   const symbols: Ld65Symbol[] = [];
@@ -152,15 +153,6 @@ export function linkerDefinedSymbolNames(config: Ld65Config): string[] {
     names.push(symbol.name);
   }
   return names;
-}
-
-/**
- * Strips C-style block comments.
- * @param {string} source Raw config text.
- * @returns {string} Source without block comments.
- */
-function stripBlockComments(source: string): string {
-  return source.replace(/\/\*[\S\s]*?\*\//g, " ");
 }
 
 const LD65_BLOCK_BODY: Readonly<Record<"MEMORY" | "SEGMENTS" | "SYMBOLS", RegExp>> = {

@@ -93,6 +93,38 @@ export const findAnalysisDebugMapCandidates = async (
   const identities: readonly AnalysisDebugMapIdentity[] = Array.isArray(identity)
     ? identity
     : [identity as AnalysisDebugMapIdentity];
+  const candidates: AnalysisDebugMapCandidate[] = [];
+  for (const descriptor of await discoverAnalysisDebugMapFiles()) {
+    try {
+      const map = JSON.parse(fs.readFileSync(descriptor.file, "utf8")) as DebugMap;
+      if (
+        validateDebugMap(map).length > 0 ||
+        !identities.some(
+          (candidate) =>
+            map.target === candidate.target &&
+            map.output.sha256 === candidate.romContentSha256 &&
+            map.output.size === candidate.romContentSize,
+        )
+      )
+        continue;
+      candidates.push({ ...descriptor, map });
+    } catch {
+      // Unrelated or malformed maps are not candidates.
+    }
+  }
+  return candidates;
+};
+
+/**
+ * Discover portable map filenames without parsing or hashing on the UI thread.
+ * @returns {Promise<readonly { file: string; sourceRoots: readonly string[] }[]>} Map paths and source roots.
+ */
+export const discoverAnalysisDebugMapFiles = async (): Promise<
+  readonly {
+    file: string;
+    sourceRoots: readonly string[];
+  }[]
+> => {
   const active = debug.activeDebugSession;
   const configuredMap =
     active?.type === "uttori-asm" && typeof active.configuration.debugMap === "string"
@@ -110,46 +142,27 @@ export const findAnalysisDebugMapCandidates = async (
     ...(configuredMap ? [configuredMap] : []),
     ...discovered.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => fsPath),
   ]);
-  const candidates: AnalysisDebugMapCandidate[] = [];
-  for (const file of files) {
-    try {
-      const map = JSON.parse(fs.readFileSync(file, "utf8")) as DebugMap;
-      if (
-        validateDebugMap(map).length > 0 ||
-        !identities.some(
-          (candidate) =>
-            map.target === candidate.target &&
-            map.output.sha256 === candidate.romContentSha256 &&
-            map.output.size === candidate.romContentSize,
-        )
-      ) {
-        continue;
-      }
-      const containingWorkspace = workspace.getWorkspaceFolder(Uri.file(file));
-      const ancestors: string[] = [];
-      if (containingWorkspace) {
-        const root = containingWorkspace.uri.fsPath;
-        for (
-          let directory = path.dirname(file);
-          directory !== root && directory.startsWith(`${root}${path.sep}`);
-          directory = path.dirname(directory)
-        )
-          ancestors.push(directory);
-      }
-      candidates.push({
-        file,
-        map,
-        sourceRoots: sortedUnique([
-          ...(file === configuredMap && configuredRoot ? [configuredRoot] : []),
-          ...(containingWorkspace ? [containingWorkspace.uri.fsPath] : []),
-          ...ancestors,
-        ]),
-      });
-    } catch {
-      // Unrelated or malformed *.debug.json files are not presentation candidates.
+  return files.map((file) => {
+    const containingWorkspace = workspace.getWorkspaceFolder(Uri.file(file));
+    const ancestors: string[] = [];
+    if (containingWorkspace) {
+      const root = containingWorkspace.uri.fsPath;
+      for (
+        let directory = path.dirname(file);
+        directory !== root && directory.startsWith(`${root}${path.sep}`);
+        directory = path.dirname(directory)
+      )
+        ancestors.push(directory);
     }
-  }
-  return candidates;
+    return {
+      file,
+      sourceRoots: sortedUnique([
+        ...(file === configuredMap && configuredRoot ? [configuredRoot] : []),
+        ...(workspace.workspaceFolders ?? []).map(({ uri }) => uri.fsPath),
+        ...ancestors,
+      ]),
+    };
+  });
 };
 
 /**

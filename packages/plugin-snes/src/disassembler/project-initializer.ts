@@ -1,4 +1,3 @@
-import { createSnesAddressContext } from "./address-identities.js";
 import { analyzeSnesRuntimeCode } from "./runtime-code.js";
 import {
   analyzeSnesFunctionRoles,
@@ -15,6 +14,8 @@ import {
   RomImage,
   compareByteImages,
   loadAnalysisProject,
+  loadAnalysisProjectSnapshot,
+  commitAnalysisProjectTransaction,
   loadSourceExportManifest,
   sourceExportSha256,
   validateAnalysisProject,
@@ -38,7 +39,9 @@ import * as fs from "node:fs";
 import path from "node:path";
 
 import { analyzeSnes65816, type Snes65816EntryPoint } from "./65816-analysis.js";
+import { lostCodeRanges } from "./code-preservation.js";
 import {
+  createSnesAddressContext,
   SNES_CPU_ADDRESS_SPACE,
   SNES_FILE_ADDRESS_SPACE,
   SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR,
@@ -163,6 +166,8 @@ export interface ExportSnesProjectOptions extends SnesProjectOperationOptions {
   readonly romFile: string;
   readonly sourceDirectory: string;
   readonly force?: boolean;
+  /** Explicitly permit previously emitted instructions to become raw bytes. */
+  readonly allowCodeRegression?: boolean;
 }
 
 /** Structured source-export result. */
@@ -458,7 +463,7 @@ export const analyzeSnesProject = (
   throwIfCancelled(options.signal);
   report(options, "analyze", "Running bounded conservative 65816 analysis.");
   const projectDirectory = path.resolve(options.projectDirectory);
-  const loaded = loadAnalysisProject(projectDirectory);
+  const loaded = loadAnalysisProjectSnapshot(projectDirectory);
   const rom = RomImage.load(path.resolve(options.romFile), {
     headerSize: loaded.manifest.rom.headerSize,
   });
@@ -574,6 +579,24 @@ export const analyzeSnesProject = (
     ),
     ...capturedRecords,
   ];
+  if (result.status === "incomplete") {
+    const codeRanges = (records: AnalysisProjectShards["analysis"]) =>
+      records.flatMap((record) =>
+        record.kind === "cfg-node" && record.fileOffset !== undefined
+          ? [{ start: record.fileOffset, end: record.fileOffset + record.size }]
+          : [],
+      );
+    const lost = lostCodeRanges(codeRanges(loaded.shards.analysis), codeRanges(analysisRecords));
+    if (lost.length > 0) {
+      const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);
+      throw new Error(
+        `Incomplete analysis would discard ${bytes} known code byte(s), starting at ROM offset ` +
+          `$${lost[0].start.toString(16).toUpperCase().padStart(6, "0")}. ` +
+          `The previous analysis was preserved. ${result.incompleteReasons.map(({ message }) => message).join(" ")} ` +
+          "Increase the analysis limits or narrow the entry points before regenerating source.",
+      );
+    }
+  }
   const heuristicResult = analyzeSnesFunctionRoles(
     { ...loaded.shards, analysis: analysisRecords },
     heuristicConfig,
@@ -594,7 +617,9 @@ export const analyzeSnesProject = (
   ];
   const { shards: ignoredShards, ...manifest } = loaded.manifest;
   void ignoredShards;
-  const written = writeAnalysisProject(projectDirectory, {
+  report(options, "commit", "Publishing analysis after checking for concurrent edits.");
+  throwIfCancelled(options.signal);
+  const written = commitAnalysisProjectTransaction(projectDirectory, loaded.revision, {
     manifest,
     shards: {
       ...loaded.shards,
@@ -606,7 +631,7 @@ export const analyzeSnesProject = (
       annotations,
       evidence,
     },
-  });
+  }).manifest;
   return {
     projectDirectory,
     manifest: written,
@@ -656,6 +681,7 @@ export const exportSnesProject = (options: ExportSnesProjectOptions): ExportSnes
   const projectManifest = fs.readFileSync(path.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
   const manifest = exportSnes65816Source(loaded, rom, sourceDirectory, {
     force: options.force,
+    allowCodeRegression: options.allowCodeRegression,
     sourceProjectSha256: sourceExportSha256(projectManifest),
   });
   throwIfCancelled(options.signal);

@@ -129,6 +129,10 @@ test("CLI parses analysis project commands and validates mapper/header options",
   ]);
   t.is(exportArguments.command, "export");
   t.true(exportArguments.force);
+  t.false(exportArguments.allowCodeRegression);
+  t.true(
+    parseCliArguments(["export", "game.analysis", "--allow-code-regression"]).allowCodeRegression,
+  );
   t.is(
     parseCliArguments(["verify-roundtrip", "game.source", "--rom", "game.sfc"]).command,
     "verify-roundtrip",
@@ -142,6 +146,7 @@ test("CLI parses analysis project commands and validates mapper/header options",
     "--trace-metadata=game.trace.json",
     "--mesen-labels=game.mlb",
     "--instruction-trace=game.uttori-trace.json",
+    "--trace-max-mib=4096",
   ]);
   t.is(evidence.command, "evidence-import");
   t.is(evidence.mesenCdl, "game.cdl");
@@ -149,6 +154,10 @@ test("CLI parses analysis project commands and validates mapper/header options",
   t.is(evidence.traceMetadata, "game.trace.json");
   t.is(evidence.mesenLabels, "game.mlb");
   t.is(evidence.instructionTrace, "game.uttori-trace.json");
+  t.is(evidence.traceMaxMiB, 4096);
+  t.throws(() => parseCliArguments(["evidence-import", "game.analysis", "--trace-max-mib=0"]), {
+    message: /positive integer/,
+  });
   t.is(parseCliArguments(["evidence-report", "game.analysis"]).command, "evidence-report");
   t.is(
     parseCliArguments(["mesen-labels-export", "game.analysis", "game.mlb"]).command,
@@ -306,9 +315,9 @@ test("CLI persists conservative 65816 analysis without embedding ROM bytes", asy
     await fs.writeFile(rom, bytes);
     t.is(await runCli(["disassemble", rom, project, "--mapper=lorom"]), 0);
     t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-    const records = JSON.parse(
-      await fs.readFile(path.join(project, "analysis/control-flow.json"), "utf8"),
-    ) as Array<{ readonly kind: string; readonly mnemonic?: string }>;
+    // Transactions publish generation-specific shards through the manifest;
+    // the original conventional path is no longer the current snapshot.
+    const records = loadAnalysisProject(project).shards.analysis;
     t.true(records.some((record) => record.kind === "cfg-node" && record.mnemonic === "STP"));
     t.true(records.some((record) => record.kind === "summary"));
     t.false(JSON.stringify(records).includes("romBytes"));

@@ -5,11 +5,22 @@ import * as path from "node:path";
 import { importRuntimeInstructionTrace } from "@uttori/asm-disassembler";
 import {
   RuntimeTraceFileRecorder,
+  resolveEditorTraceDetail,
   type EditorTraceBatch,
 } from "../packages/vscode-extension/src/runtime-trace-recorder.js";
 import { test } from "./ava-helper.js";
 
 const romContentSha256 = "a".repeat(64);
+
+test("full capture rejects a PC-only runtime instead of silently downgrading", (t) => {
+  for (const support of [false, undefined])
+    t.throws(() => resolveEditorTraceDetail("full", support), {
+      message: /active runtime only supports PC-only capture/,
+    });
+  t.is(resolveEditorTraceDetail("full", true), "full");
+  t.is(resolveEditorTraceDetail("pc", false), "pc");
+  t.is(resolveEditorTraceDetail("pc", true), "pc");
+});
 
 test("VS Code recorder streams, drains, and closes an importable native trace", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-vscode-trace-"));

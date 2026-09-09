@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "runner": "tests/gdb-polling/run-tests.sh",
+  "configuration": "RelWithDebInfo",
+  "before": {
+    "failedScenarios": [
+      "halted continuous traffic is bounded",
+      "halted queued messages",
+      "message at idle boundary permits a following message",
+      "running continuous traffic is bounded",
+      "running queued messages"
+    ],
+    "exitCode": 8
+  },
+  "after": {
+    "passedScenarios": [
+      "disconnect with ack",
+      "disconnect without ack",
+      "halted continuous traffic is bounded",
+      "halted idle budget",
+      "halted queued messages",
+      "inactive server does not poll",
+      "message at idle boundary permits a following message",
+      "resume immediately returns control for execution",
+      "running continuous traffic is bounded",
+      "running idle budget",
+      "running queued messages"
+    ],
+    "exitCode": 0
+  },
+  "nativeSourceRestored": true
+}

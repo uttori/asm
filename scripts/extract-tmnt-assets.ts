@@ -116,18 +116,6 @@ function loromFileOffset(address: number, headerSize: number): number {
 }
 
 /**
- * Detects a 512-byte copier header.
- * @param {number} size ROM file size in bytes.
- * @returns {number} Header size.
- */
-function detectHeaderSize(size: number): number {
-  if (size % 1024 === 512) {
-    return 512;
-  }
-  return 0;
-}
-
-/**
  * USA ROMBit $0001: every `if !ROMVer&(...) != $00` in this file is false, so keep else.
  * @param {string} source Pointer file text.
  * @returns {string} Source with PAL/AUS branches removed.
@@ -260,7 +248,8 @@ export function extractTmntAssets(options: TmntExtractOptions): void {
   }
 
   const rom = new Uint8Array(fs.readFileSync(options.rom));
-  const headerSize = detectHeaderSize(rom.length);
+  // A 512-byte remainder identifies the optional copier header.
+  const headerSize = rom.length % 1024 === 512 ? 512 : 0;
   const source = applyUsaRomVer(fs.readFileSync(pointerFile, "utf8"));
   const filenames = parseFilenameTable(source);
 

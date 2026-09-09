@@ -16,3 +16,6 @@
 [submodule "fixtures/external/snes-rom-framework"]
 	path = fixtures/external/snes-rom-framework
 	url = https://github.com/Yoshifanatic1/SNES-ROM-Framework.git
+[submodule "fixtures/external/ares"]
+	path = fixtures/external/ares
+	url = https://github.com/uttori/ares.git

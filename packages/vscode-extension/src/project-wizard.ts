@@ -75,12 +75,6 @@ const formatBytes = (bytes: number): string => {
   return `${bytes} bytes`;
 };
 
-const probeSummary = (probe: SnesProjectProbeResult): string => {
-  const mapper = probe.detection.mapper ?? "needs selection";
-  const header = probe.rom.headerSize === 0 ? "none" : `${probe.rom.headerSize} bytes`;
-  return `SNES · ${mapper} · ${formatBytes(probe.rom.contentSize)} · copier header: ${header}`;
-};
-
 const mapperItems = (probe: SnesProjectProbeResult): readonly MapperPick[] => {
   const candidates = new Map(
     probe.detection.candidates.map((candidate) => [candidate.mapper, candidate]),
@@ -248,11 +242,14 @@ const runProjectWizard = async (
           );
     const outputDirectory = await chooseOutputDirectory(romFile);
     if (!outputDirectory) return;
+    const detectedMapper = resolvedProbe.detection.mapper ?? "needs selection";
+    const header =
+      resolvedProbe.rom.headerSize === 0 ? "none" : `${resolvedProbe.rom.headerSize} bytes`;
     const create = await window.showInformationMessage(
       `Create a disassembly project in '${path.basename(outputDirectory)}'?`,
       {
         modal: true,
-        detail: `${probeSummary(resolvedProbe)}\n${outputDirectory}`,
+        detail: `SNES · ${detectedMapper} · ${formatBytes(resolvedProbe.rom.contentSize)} · copier header: ${header}\n${outputDirectory}`,
       },
       "Create Project",
     );

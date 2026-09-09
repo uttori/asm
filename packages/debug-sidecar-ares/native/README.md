@@ -1,13 +1,32 @@
-# Execution detail supplement for the maintained ares runtime
+# Native ares sources and contributions
 
-`rich-instruction-trace.patch` extends the existing SNES debugger/trace hooks in the current ares port. It is a supplement, not a replacement for the base headless series and debugger patch. It was built against the local `ares-current-port` working tree based on `0e74a98c72017f2c1aad2319e035f3a223c4196e`, including its existing desktop instruction-boundary support.
+New desktop work lives in `fixtures/external/ares`, currently on
+`codex/ares-desktop-u6`. The [U1–U6 contribution package](upstream/README.md)
+contains separate U3 register, U4 safe-memory, and U5 execution-boundary commits,
+the submitted U1/U2 integration layers, the paused save/load follow-up, native
+tests, and exact series verification.
+See the [evidence guide](../../../docs/ares-upstream-u1-u6-evidence.md) for the
+desktop build and reproduction commands, and the [U6 RFC](../../../docs/ares-capture-rfc.md)
+for realtime discovery and lossless capture. This prepared debugger build has
+not replaced the staged rich-trace runtime.
 
-Apply it to that maintained source state, checking first:
+The active rich-trace runtime received a separate local paused save/load hotfix
+on 2026-09-09. It is installed at the existing editor launch path with verified
+manifest hashes and a retained rollback app. See the [runtime fix and desktop
+validation](../../../docs/ares-paused-state-runtime-fix.md). The original rich
+source checkout remains preserved; maintenance lives on
+`codex/ares-rich-state-load-fix` in its own checkout.
+
+## Historical execution detail supplement
+
+`rich-instruction-trace.patch` extends the historical SNES debugger/trace hooks. It depends on the archived base series and debugger patch. It was built against the local `Local Only/ares-current-port` working tree based on `0e74a98c72017f2c1aad2319e035f3a223c4196e`, including its existing desktop instruction-boundary support. The [preserved source inventory](upstream/source-inventory.json) records the exact working tree and supplement hashes. Do not apply this patch to the new U3–U5 series; trace infrastructure is the subsequent U7 work.
+
+For reproducing that historical desktop source state only, check first:
 
 ```sh
 git apply --check /path/to/rich-instruction-trace.patch
 git apply /path/to/rich-instruction-trace.patch
-cmake --build build_desktop --target desktop-ui ares-headless -j 8
+cmake --build build_desktop --target desktop-ui -j 8
 ```
 
 Stage a new runtime directory, retaining its required resources and notices. Copy the newly built executable/app; on macOS, sign the staged app before hashing it. Update `executableSha256` and every changed resource hash in the runtime manifest. Include this supplemental patch as a hashed resource, retaining the original base revision/patch identities and identifying the supplement in `buildConfiguration`. The standard base-patch drift check does not validate this supplement; `git apply --check` and the rich live tests cover it separately.
@@ -37,21 +56,27 @@ The tests require a local loopback debugger socket and a supplied ROM; no ROM is
 
 ## GDB polling-window correction (U2)
 
-`gdb-polling-window.patch` is an independent, one-line fix to `nall/nall/gdb/server.cpp`. After a complete message, reset the polling index to zero so the bounded polling window continues. The existing `maxLoopResets` guard, idle budgets, and immediate return on resume are preserved. This is implemented in the local maintained source and its desktop target builds; it does not implement lossless capture or promote the configured staged runtime. The correction is submitted as open, non-draft [ares PR #2625](https://github.com/ares-emulator/ares/pull/2625).
+The [U2 integration patch](upstream/0005-u2-polling.patch) corrects `nall/nall/gdb/server.cpp`. After a complete message, reset the polling index to zero so the bounded polling window continues. The existing `maxLoopResets` guard, idle budgets, and immediate return on resume are preserved. This is implemented in the current fixture source and its desktop target builds; it does not implement lossless capture or promote the configured staged runtime. The correction was submitted as [ares PR #2625](https://github.com/ares-emulator/ares/pull/2625).
 
-The patch applies to the recorded upstream baseline `7b51c8ab719e403a150aa700e0933d9e93a06851` independently of the project debugger and executable-target patches. PR #2625 submits the same functional change from head `f4e50174a14442c2075be5b9ab972595e09ac55b` against upstream base `af4cbb04f067682a8a3cf42695ff78bed634b38d`; its single changed file also includes trailing-whitespace cleanup.
+The [series manifest](upstream/series.json) records its current integration base. The former standalone patch against historical base `7b51c8ab` has been retired. PR #2625 submits the same functional change from head `f4e50174a14442c2075be5b9ab972595e09ac55b` against upstream base `af4cbb04f067682a8a3cf42695ff78bed634b38d`; its single changed file also includes trailing-whitespace cleanup.
 
-From this repository root, run the native scheduling regression with a C++17 compiler available:
+From this repository root, configure a normal ares build with `-DARES_BUILD_OPTIONAL_TARGETS=ON`, then run the C++/CTest scheduling regression through its shell launcher:
 
 ```sh
-node packages/debug-sidecar-ares/native/tests/gdb-polling.mjs /path/to/ares-checkout
+fixtures/external/ares/tests/gdb-polling/run-tests.sh /absolute/path/to/build
 ```
 
-The runner compiles the actual `Server::updateLoop()` method against a deterministic transport double. It does not copy the polling algorithm. Five checks fail before U2; all eleven pass afterward, covering queued messages while running/halted, a packet at the idle boundary, continuous traffic reaching the reset guard, idle budgets, resume, and disconnect acknowledgement behavior. Packet parsing and desktop/GDB interoperability require separate integration validation.
+The CMake target compiles the actual `Server::updateLoop()` method against a deterministic transport double. It does not copy the polling algorithm. Five checks fail before U2; all eleven pass afterward, covering queued messages while running/halted, a packet at the idle boundary, continuous traffic reaching the reset guard, idle budgets, resume, and disconnect acknowledgement behavior. Packet parsing and desktop/GDB interoperability require separate integration validation.
 
 On the local Command Line Tools host, the compiler needs the same explicit libc++ header path as the desktop CMake build:
 
 ```sh
 CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1 \
-  node packages/debug-sidecar-ares/native/tests/gdb-polling.mjs /path/to/ares-checkout
+  fixtures/external/ares/tests/gdb-polling/run-tests.sh /absolute/path/to/build
 ```
+
+The independent U2 test follow-up is prepared on `codex/ares-upstream-u2-tests`
+and exported as [u2-tests-followup.patch](upstream/u2-tests-followup.patch).
+It uses ares's optional CMake targets, CTest, and `run-tests.sh`; it needs no Node
+or SNES debugger patches. [Review text](upstream/u2-tests-pr.md) and exact source
+identities are in the contribution package. The public PR has not been updated.

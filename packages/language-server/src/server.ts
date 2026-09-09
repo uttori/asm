@@ -149,17 +149,15 @@ function stringArray(value: unknown): readonly string[] | undefined {
     : undefined;
 }
 
-function pluginArray(value: unknown): readonly PluginModuleSetting[] | undefined {
-  return Array.isArray(value) ? (value as readonly PluginModuleSetting[]) : undefined;
-}
-
 export function mergeServerSettings(previous: ServerSettings, value: unknown): ServerSettings {
   if (!value || typeof value !== "object") return previous;
   const next = value as Record<string, unknown>;
   const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(next, key);
   return {
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
-    plugins: pluginArray(next.plugins) ?? previous.plugins,
+    plugins: Array.isArray(next.plugins)
+      ? (next.plugins as readonly PluginModuleSetting[])
+      : previous.plugins,
     target: has("target") ? stringValue(next.target) : previous.target,
     architecture: has("architecture") ? stringValue(next.architecture) : previous.architecture,
     entryPoints: stringArray(next.entryPoints) ?? previous.entryPoints,
@@ -223,10 +221,6 @@ function currentOverlays(): Map<string, string> {
   return new Map(documents.all().map((document) => [uriToPath(document.uri), document.getText()]));
 }
 
-function diagnosticUri(next: ServerSettings): string {
-  return pathToUri(resolveAgainstWorkspace(next.configFile ?? PROJECT_CONFIG_FILENAME));
-}
-
 function setConfigurationDiagnostic(
   next: ServerSettings,
   message?: string,
@@ -235,7 +229,7 @@ function setConfigurationDiagnostic(
   const previousUri = configurationDiagnostic?.uri;
   configurationDiagnostic = message
     ? {
-        uri: diagnosticUri(next),
+        uri: pathToUri(resolveAgainstWorkspace(next.configFile ?? PROJECT_CONFIG_FILENAME)),
         message,
         diagnostic: Diagnostic.create(
           Range.create(0, 0, 0, 1),

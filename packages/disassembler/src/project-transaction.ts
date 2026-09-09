@@ -1,6 +1,7 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import * as fs from "node:fs";
 import path from "node:path";
+import { validateObjectArrayFile } from "./json-array-file.js";
 
 import {
   ANALYSIS_PROJECT_MANIFEST,
@@ -334,12 +335,10 @@ const verifyPreparedShards = (
 ): void => {
   for (const descriptor of descriptors) {
     const shardPath = path.join(directory, descriptor.path);
-    const text = fs.readFileSync(shardPath, "utf8");
-    if (sha256(text) !== descriptor.sha256) {
-      throw new Error(`Prepared analysis shard '${descriptor.path}' does not match its SHA-256.`);
-    }
-    const records = JSON.parse(text) as unknown;
-    if (!Array.isArray(records) || records.length !== descriptor.records) {
+    // Keep the full syntax/hash/count gate without creating a shard-sized string or object array.
+    // A successful earlier import can produce control-flow shards larger than V8's string limit.
+    const records = validateObjectArrayFile(shardPath, descriptor.sha256);
+    if (records !== descriptor.records) {
       throw new Error(`Prepared analysis shard '${descriptor.path}' has the wrong record count.`);
     }
   }

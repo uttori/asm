@@ -8,11 +8,15 @@ import {
   importRuntimeInstructionTrace,
   loadAnalysisProjectSnapshot,
   mergeRuntimeEvidence,
+  RomImage,
+  validateSourceExportFiles,
 } from "@uttori/asm-disassembler";
 import {
   SnesProjectInitializationCancelledError,
   analyzeSnesProject,
   exportSnesProject,
+  exportSnes65816Source,
+  analyzeSnes65816,
   initializeSnesDisassemblyWorkspace,
   probeSnesProject,
   snesHardwareDefineRecords,
@@ -130,6 +134,137 @@ test("probe reports ambiguity and initialization never merges into non-empty out
   }
 });
 
+test("incomplete reanalysis preserves known code and the saved project", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-analysis-preserve-"));
+  t.teardown(() => fs.rm(temporary, { recursive: true, force: true }));
+  const romFile = path.join(temporary, "fixture.sfc");
+  const outputDirectory = path.join(temporary, "workspace");
+  const bytes = fixtureRom();
+  bytes.fill(0, 0x7fe0);
+  bytes.set([0x00, 0x80], 0x7ffc);
+  await fs.writeFile(romFile, bytes);
+  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  const projectDirectory = path.join(outputDirectory, "analysis");
+  const before = loadAnalysisProjectSnapshot(projectDirectory);
+
+  t.throws(() => analyzeSnesProject({ projectDirectory, romFile, maxWorkItems: 1 }), {
+    message: /Incomplete analysis would discard .*known code.*previous analysis was preserved/s,
+  });
+  const after = loadAnalysisProjectSnapshot(projectDirectory);
+  t.deepEqual(after.revision, before.revision);
+  t.deepEqual(after.shards, before.shards);
+  t.notThrows(() => validateSourceExportFiles(outputDirectory));
+  const retry = analyzeSnesProject({ projectDirectory, romFile, maxWorkItems: 100_000 });
+  t.is(retry.status, "complete");
+  t.true(
+    exportSnesProject({ projectDirectory, romFile, sourceDirectory: outputDirectory }).codeBytes >
+      0,
+  );
+});
+
+test("background reanalysis does not overwrite an edit published while it was running", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-analysis-race-"));
+  t.teardown(() => fs.rm(temporary, { recursive: true, force: true }));
+  const romFile = path.join(temporary, "fixture.sfc");
+  const outputDirectory = path.join(temporary, "workspace");
+  const bytes = fixtureRom();
+  bytes.fill(0, 0x7fe0);
+  bytes.set([0, 0x80], 0x7ffc);
+  await fs.writeFile(romFile, bytes);
+  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  const projectDirectory = path.join(outputDirectory, "analysis");
+  let publishedRevision: ReturnType<typeof loadAnalysisProjectSnapshot>["revision"] | undefined;
+  t.throws(
+    () =>
+      analyzeSnesProject({
+        projectDirectory,
+        romFile,
+        onProgress: ({ stage }) => {
+          if (stage !== "commit") return;
+          const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
+          const labels = [
+            ...snapshot.shards.labels,
+            {
+              id: "concurrent-label",
+              addressSpace: "snes.cpu",
+              address: 0x8000,
+              name: "KeepConcurrentEdit",
+              evidence: [],
+            },
+          ];
+          publishedRevision = commitAnalysisProjectTransaction(
+            projectDirectory,
+            snapshot.revision,
+            {
+              manifest: snapshot.manifest,
+              shards: { ...snapshot.shards, labels },
+            },
+          ).revision;
+        },
+      }),
+    { name: "AnalysisProjectStaleError" },
+  );
+  const saved = loadAnalysisProjectSnapshot(projectDirectory);
+  t.deepEqual(saved.revision, publishedRevision);
+  t.true(saved.shards.labels.some((label) => label.name === "KeepConcurrentEdit"));
+});
+
+test("source export rejects code loss even with net gains or force, unless explicitly allowed", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-export-preserve-"));
+  t.teardown(() => fs.rm(temporary, { recursive: true, force: true }));
+  const romFile = path.join(temporary, "fixture.sfc");
+  const outputDirectory = path.join(temporary, "workspace");
+  const bytes = fixtureRom();
+  bytes.fill(0, 0x7fe0);
+  bytes.set([0x00, 0x80], 0x7ffc);
+  bytes.set([0xea, 0xea, 0xea, 0xea, 0xdb], 0x10);
+  await fs.writeFile(romFile, bytes);
+  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  const before = loadAnalysisProjectSnapshot(path.join(outputDirectory, "analysis"));
+  const rom = RomImage.load(romFile);
+  const expanded = analyzeSnes65816(rom, "lorom", {
+    entryPoints: [{ id: "new-code", address: 0x808010 }],
+  });
+  const candidate = {
+    ...before,
+    shards: {
+      ...before.shards,
+      analysis: expanded.records.filter(
+        (record) => record.kind !== "cfg-node" || record.fileOffset !== 1,
+      ),
+      annotations: expanded.annotations,
+    },
+  };
+  const manifestBefore = await fs.readFile(
+    path.join(outputDirectory, "generated-files.json"),
+    "utf8",
+  );
+  for (const force of [false, true]) {
+    t.throws(
+      () =>
+        exportSnes65816Source(candidate, rom, outputDirectory, {
+          sourceProjectSha256: "0".repeat(64),
+          force,
+        }),
+      {
+        message:
+          /replace 1 previously emitted code byte.*\$000001.*adds 5 new code byte.*net change of \+4 byte/s,
+      },
+    );
+    t.is(
+      await fs.readFile(path.join(outputDirectory, "generated-files.json"), "utf8"),
+      manifestBefore,
+    );
+    t.notThrows(() => validateSourceExportFiles(outputDirectory));
+  }
+  const permitted = exportSnes65816Source(candidate, rom, outputDirectory, {
+    sourceProjectSha256: "0".repeat(64),
+    allowCodeRegression: true,
+  });
+  t.is(permitted.spans.find((span) => span.start <= 1 && span.end > 1)?.role, "raw");
+  t.true(permitted.spans.some((span) => span.start === 0x10 && span.role === "code"));
+});
+
 test("runtime-observed PCs seed analysis and increase measurable native-source coverage", async (t) => {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-trace-update-"));
   const romFile = path.join(temporary, "fixture.sfc");
@@ -218,6 +353,81 @@ test("runtime-observed PCs seed analysis and increase measurable native-source c
   } finally {
     await fs.rm(temporary, { recursive: true, force: true });
   }
+});
+
+test("separate captures accumulate code and compatible CPU-state changes do not remove prior source", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-snes-trace-union-"));
+  t.teardown(() => fs.rm(temporary, { recursive: true, force: true }));
+  const romFile = path.join(temporary, "fixture.sfc");
+  const sourceDirectory = path.join(temporary, "workspace");
+  const bytes = fixtureRom();
+  bytes.fill(0, 0x7fe0);
+  bytes.set([0, 0x80], 0x7ffc);
+  bytes.set([0xa9, 1, 0xdb], 0x10);
+  bytes.set([0xa9, 2, 0xdb], 0x20);
+  await fs.writeFile(romFile, bytes);
+  await initializeSnesDisassemblyWorkspace({
+    romFile,
+    outputDirectory: sourceDirectory,
+    mapper: "lorom",
+  });
+  const projectDirectory = path.join(sourceDirectory, "analysis");
+  const traceIds: string[] = [];
+  let previousCode = 0;
+  for (const [index, [offset, p]] of [
+    [0x10, 0x30],
+    [0x20, 0x30],
+    [0x10, 0x20],
+  ].entries()) {
+    const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
+    const imported = importRuntimeInstructionTrace(
+      {
+        format: "uttori-asm-instruction-trace",
+        schemaVersion: 1,
+        architecture: "snes.65816",
+        addressSpace: "snes.cpu",
+        romContentSha256: snapshot.manifest.rom.contentSha256,
+        producer: { id: "test", revision: "1" },
+        chunks: [
+          {
+            sequenceStart: 1,
+            addresses: [0x808000 + offset, 0x808002 + offset],
+            droppedEvents: 0,
+            active: false,
+            details: [Array.from(bytes.subarray(offset, offset + 2)), [0xdb]].map((bytes) => ({
+              bytes,
+              state: { e: 0, p, db: 0, d: 0 },
+            })),
+          },
+        ],
+      },
+      {
+        projectRomContentSha256: snapshot.manifest.rom.contentSha256,
+        sourceName: `capture-${index}.json`,
+      },
+    );
+    traceIds.push(...(imported.batch.evidence ?? []).map(({ id }) => id));
+    const merged = mergeRuntimeEvidence(snapshot.shards, imported.batch);
+    commitAnalysisProjectTransaction(projectDirectory, snapshot.revision, {
+      manifest: snapshot.manifest,
+      shards: merged.shards,
+    });
+    analyzeSnesProject({ projectDirectory, romFile });
+    const exported = exportSnesProject({ projectDirectory, sourceDirectory, romFile });
+    t.true(exported.codeBytes >= previousCode);
+    previousCode = exported.codeBytes;
+    t.true(exported.manifest.spans.some((span) => span.role === "code" && span.start === 0x10));
+    if (index > 0)
+      t.true(exported.manifest.spans.some((span) => span.role === "code" && span.start === 0x20));
+    const saved = loadAnalysisProjectSnapshot(projectDirectory);
+    t.true(traceIds.every((id) => saved.shards.evidence.some((record) => record.id === id)));
+    t.false(
+      saved.shards.analysis.some(
+        (record) => record.kind === "conflict" && record.conflictKind === "runtime-code-variants",
+      ),
+    );
+  }
+  t.true((await verifySnesProjectRoundTrip({ sourceDirectory, romFile })).comparison.equal);
 });
 
 test("RAM-map edits regenerate documented definitions and symbolic disassembly operands", async (t) => {

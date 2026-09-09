@@ -38,15 +38,6 @@ type BinaryOperatorSpec = {
 type OperatorTable = { readonly [K in BinaryOperator]: BinaryOperatorSpec };
 
 /**
- * Escapes a string for safe use inside a regular expression pattern.
- * @param {string} value The raw string value.
- * @returns {string} The escaped regular-expression fragment.
- */
-function escapeRegExp(value: string): string {
-  return value.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
-}
-
-/**
  * Throws a math evaluation error.
  * @param {string} message The message to throw.
  * @returns {never} Never returns.
@@ -1155,10 +1146,10 @@ export class MathCore {
       const paramName = func.args[i];
       const argValue = args[i];
 
-      // Replace all occurrences of the parameter name with its value
-      // Use word boundaries to avoid partial matches
+      // Escape parameter names before matching whole words, so punctuation stays literal.
+      const escapedParamName = paramName.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
       // eslint-disable-next-line security/detect-non-literal-regexp
-      const regex = new RegExp(`\\b${escapeRegExp(paramName)}\\b`, "g");
+      const regex = new RegExp(`\\b${escapedParamName}\\b`, "g");
       const replacement =
         typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
       content = content.replace(regex, replacement);

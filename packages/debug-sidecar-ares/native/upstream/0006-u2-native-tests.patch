@@ -1,0 +1,221 @@
+From 6ac8272e8baabc73d188aea7b9f6526cbcd2b482 Mon Sep 17 00:00:00 2001
+From: Matthew Callis <matthew.callis@gmail.com>
+Date: Tue, 8 Sep 2026 12:24:14 -0700
+Subject: [PATCH] tests: cover GDB polling windows with a native CMake harness
+
+---
+ CMakeLists.txt                    |  2 +
+ tests/gdb-polling/CMakeLists.txt  | 25 ++++++++
+ tests/gdb-polling/README.md       | 27 +++++++++
+ tests/gdb-polling/gdb-polling.cpp | 99 +++++++++++++++++++++++++++++++
+ tests/gdb-polling/run-tests.sh    |  9 +++
+ 5 files changed, 162 insertions(+)
+ create mode 100644 tests/gdb-polling/CMakeLists.txt
+ create mode 100644 tests/gdb-polling/README.md
+ create mode 100644 tests/gdb-polling/gdb-polling.cpp
+ create mode 100755 tests/gdb-polling/run-tests.sh
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2984f04c1..e971db20e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -36,6 +36,7 @@ if(ARES_BUILD_OPTIONAL_TARGETS)
+   add_subdirectory(tests/i8080)
+   add_subdirectory(tests/m68000)
+   add_subdirectory(tests/gdb)
++  add_subdirectory(tests/gdb-polling)
+   if(HIRO_BACKEND STREQUAL "GTK3")
+     add_subdirectory(tools/genius)
+   else()
+@@ -48,6 +49,7 @@ else()
+   target_disable_subproject(i8080 "i8080 processor test harness")
+   target_disable_subproject(m68000 "m68000 processor test harness")
+   target_disable_subproject(gdb-tests "GDB register, storage, and lifecycle tests")
++  target_disable_subproject(gdb-polling "GDB polling-window tests")
+   target_disable_subproject(mame2bml "mame2bml (MAME manifest converter)")
+   target_disable_subproject(genius "genius (database editor)")
+ endif()
+diff --git a/tests/gdb-polling/CMakeLists.txt b/tests/gdb-polling/CMakeLists.txt
+new file mode 100644
+index 000000000..3ddbee7b1
+--- /dev/null
++++ b/tests/gdb-polling/CMakeLists.txt
+@@ -0,0 +1,25 @@
++# Compile the actual method against a deterministic transport, without a socket or wall-clock sleeps.
++set(polling_source "${CMAKE_SOURCE_DIR}/nall/nall/gdb/server.cpp")
++set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${polling_source}")
++file(READ "${polling_source}" server_source)
++string(FIND "${server_source}" "  auto Server::updateLoop() -> void {" method_begin)
++string(FIND "${server_source}" "  auto Server::getStatusText(" method_end)
++if(method_begin LESS 0 OR method_end LESS_EQUAL method_begin)
++  message(FATAL_ERROR "Cannot locate Server::updateLoop in ${polling_source}")
++endif()
++math(EXPR method_length "${method_end} - ${method_begin}")
++string(SUBSTRING "${server_source}" ${method_begin} ${method_length} polling_method)
++file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/polling-loop.inc" CONTENT "${polling_method}" @ONLY)
++
++add_executable(gdb-polling gdb-polling.cpp)
++target_include_directories(gdb-polling PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
++target_link_libraries(gdb-polling PRIVATE ares::nall)
++set_target_properties(gdb-polling PROPERTIES FOLDER tests PREFIX "")
++target_enable_subproject(gdb-polling "GDB polling-window tests")
++set(CONSOLE TRUE)
++ares_configure_executable(gdb-polling)
++
++add_test(NAME gdb-polling-window COMMAND gdb-polling)
++set_tests_properties(gdb-polling-window PROPERTIES TIMEOUT 5)
++target_sources(gdb-polling PRIVATE run-tests.sh README.md)
++source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES gdb-polling.cpp)
+diff --git a/tests/gdb-polling/README.md b/tests/gdb-polling/README.md
+new file mode 100644
+index 000000000..7f3222252
+--- /dev/null
++++ b/tests/gdb-polling/README.md
+@@ -0,0 +1,27 @@
++# GDB polling-window regression
++
++Configure ares with `-DARES_BUILD_OPTIONAL_TARGETS=ON`, then run:
++
++```sh
++tests/gdb-polling/run-tests.sh /absolute/path/to/build
++```
++
++Like the processor tests, this is a C++ executable built by CMake, with a shell
++launcher and CTest registration. It requires no Node.js, ROM, debugger client,
++socket, or SNES debugger patches.
++
++CMake extracts the actual `Server::updateLoop()` method from `nall` into a build
++include. The test supplies a deterministic transport and counts polls, messages,
++acknowledgements, and sleeps. It does not duplicate the polling algorithm or
++change the production server to expose a test interface. CMake watches the source
++and regenerates the include after edits; extraction fails if the method boundary
++cannot be identified.
++
++Checks cover inactive/idle operation, queued traffic, a message at the idle
++boundary, the reset guard under continuous traffic, immediate return on resume,
++and disconnect with/without acknowledgements. A hard poll limit and CTest timeout
++turn an unbounded loop into a failure. Explicit checks remain active in release
++builds. Restoring `i = loopCount` makes five of the eleven scenarios fail.
++
++This checks scheduling and fairness. Packet parsing and desktop/client
++interoperability are separate integration checks.
+diff --git a/tests/gdb-polling/gdb-polling.cpp b/tests/gdb-polling/gdb-polling.cpp
+new file mode 100644
+index 000000000..1c12f487c
+--- /dev/null
++++ b/tests/gdb-polling/gdb-polling.cpp
+@@ -0,0 +1,99 @@
++#include <nall/main.hpp>
++#include <cstdint>
++#include <functional>
++#include <iostream>
++#include <stdexcept>
++#include <string>
++
++namespace nall::GDB {
++unsigned sleeps = 0;
++auto usleep(unsigned) -> void { ++sleeps; }
++struct Server {
++  bool started = true, halted = false, requestDisconnect = false, noAckMode = false;
++  bool disconnected = false;
++  u32 messageCount = 0, polls = 0, delivered = 0, acknowledgements = 0;
++  std::function<void(Server&)> next;
++  auto isStarted() const -> bool { return started; }
++  auto isHalted() const -> bool { return halted; }
++  auto disconnectClient() -> void { disconnected = true; }
++  auto resumeProgram() -> void { halted = false; }
++  auto sendText(const char*) -> void { ++acknowledgements; }
++  auto packet() -> void { ++messageCount; ++delivered; }
++  auto update() -> void {
++    if(++polls > 100000) throw std::runtime_error("polling exceeded bounded test limit");
++    if(next) next(*this);
++  }
++  auto updateLoop() -> void;
++};
++#include "polling-loop.inc"
++
++}
++using nall::GDB::Server;
++auto require(bool condition, const char* message) -> void {
++  if(!condition) throw std::runtime_error(message);
++}
++auto nall::main(Arguments) -> void {
++  unsigned failures = 0;
++  auto test = [&](const char* name, auto scenario) {
++    try { nall::GDB::sleeps = 0; scenario(); std::cout << "PASS " << name << '\n'; }
++    catch(const std::exception& error) {
++      ++failures;
++      std::cerr << "FAIL " << name << ": " << error.what() << '\n';
++    }
++  };
++  test("inactive server does not poll", [] {
++    Server s; s.started = false; s.updateLoop();
++    require(s.polls == 0, "inactive server polled");
++    require(nall::GDB::sleeps == 0, "inactive server slept");
++  });
++  for(bool halted : {false, true}) {
++    test(halted ? "halted idle budget" : "running idle budget", [=] {
++      Server s; s.halted = halted; s.updateLoop();
++      require(s.polls == (halted ? 10000u : 100u), "idle budget changed");
++      require(nall::GDB::sleeps == (halted ? 20u : 0u), "idle sleep budget changed");
++    });
++    test(halted ? "halted queued messages" : "running queued messages", [=] {
++      Server s; s.halted = halted;
++      // A full initial budget of completed messages, followed by one more.
++      // Exiting the inner loop after each message leaves this queue undrained.
++      const u32 packets = halted ? 21u : 2u;
++      s.next = [=](Server& server) { if(server.polls <= packets) server.packet(); };
++      s.updateLoop();
++      require(s.delivered == packets, "queued message deferred to another updateLoop call");
++    });
++    test(halted ? "halted continuous traffic is bounded" : "running continuous traffic is bounded", [=] {
++      Server s; s.halted = halted;
++      s.next = [](Server& server) { server.packet(); };
++      s.updateLoop();
++      require(s.polls <= (halted ? 20000u : 10100u), "reset budget exceeded");
++      require(s.delivered >= 10000u, "polling exited before exercising the reset guard");
++    });
++  }
++  test("message at idle boundary permits a following message", [] {
++    Server s;
++    s.next = [](Server& server) {
++      if(server.polls == 100 || server.polls == 101) server.packet();
++    };
++    s.updateLoop();
++    require(s.delivered == 2, "boundary packet did not extend the polling window");
++  });
++  test("resume immediately returns control for execution", [] {
++    Server s; s.halted = true;
++    s.next = [](Server& server) { server.packet(); server.resumeProgram(); };
++    s.updateLoop();
++    require(s.polls == 1 && !s.halted, "polled again after resume");
++    require(nall::GDB::sleeps == 0, "slept after resume");
++  });
++  for(bool noAck : {false, true}) {
++    test(noAck ? "disconnect without ack" : "disconnect with ack", [=] {
++      Server s; s.halted = true; s.requestDisconnect = true; s.noAckMode = noAck;
++      s.updateLoop();
++      require(s.polls == 0 && s.disconnected && !s.halted && !s.requestDisconnect,
++        "disconnect lifecycle changed");
++      require(s.acknowledgements == (noAck ? 0u : 1u), "disconnect acknowledgement changed");
++    });
++  }
++  std::cout.flush();
++  std::cerr.flush();
++  std::_Exit(failures ? 1 : 0);
++}
+diff --git a/tests/gdb-polling/run-tests.sh b/tests/gdb-polling/run-tests.sh
+new file mode 100755
+index 000000000..8ad452b60
+--- /dev/null
++++ b/tests/gdb-polling/run-tests.sh
+@@ -0,0 +1,9 @@
++#!/usr/bin/env sh
++set -eu
++
++cd "$(dirname "$0")"
++build_dir=${1:-../../build}
++if [ "$#" -gt 0 ]; then shift; fi
++configuration=${CONFIGURATION:-Release}
++cmake --build "$build_dir" --config "$configuration" --target gdb-polling
++ctest --test-dir "$build_dir" -C "$configuration" --output-on-failure -R '^gdb-polling-window$' "$@"

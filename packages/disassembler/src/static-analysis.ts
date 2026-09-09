@@ -464,9 +464,6 @@ export const analyzeStaticControlFlow = <State>(
   const addConflict = (conflict: StaticAnalysisConflict): void => {
     conflicts.set(conflict.id, conflict);
   };
-  const addUnresolved = (flow: StaticUnresolvedFlow): void => {
-    unresolved.set(flow.id, flow);
-  };
   const addIncomplete = (reason: StaticAnalysisIncompleteReason): void => {
     incompleteReasons.set(`${reason.kind}:${reason.address}:${reason.limit}`, reason);
   };
@@ -665,8 +662,9 @@ export const analyzeStaticControlFlow = <State>(
           evidence: sortedUnique([...nodeEvidence, ...(override?.evidence ?? [])]),
           ...(target.explanation ? { explanation: target.explanation } : {}),
         });
-        addUnresolved({
-          id: `unresolved:${hexAddress(instruction.address)}:${target.kind}`,
+        const unresolvedId = `unresolved:${hexAddress(instruction.address)}:${target.kind}`;
+        unresolved.set(unresolvedId, {
+          id: unresolvedId,
           address: instruction.address,
           kind,
           indirect: target.indirect ?? false,

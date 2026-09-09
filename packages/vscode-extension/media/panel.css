@@ -1,12 +1,6 @@
 :root {
   color-scheme: light dark;
 }
-
-html,
-body {
-  height: 100%;
-}
-
 body {
   background-color: transparent;
   color: var(--vscode-foreground);
@@ -16,130 +10,222 @@ body {
   margin: 0;
   padding: 0 0 12px;
 }
-
+.project-header,
+.section,
+.section-content {
+  padding: 12px;
+}
+.project-header {
+  padding-bottom: 8px;
+}
+.heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+#projectName {
+  overflow-wrap: anywhere;
+}
+#projectTarget {
+  margin: 3px 0 10px;
+  overflow-wrap: anywhere;
+}
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 11px;
+}
+.summary span {
+  color: var(--vscode-descriptionForeground);
+}
+.summary .errors {
+  color: var(--vscode-errorForeground);
+}
 h2 {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
-  background: var(--vscode-sideBarSectionHeader-background, transparent);
-  border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
-  margin: 12px 0 0;
-  padding: 8px 12px 6px;
+  margin: 0 0 10px;
 }
-
-.status,
-.list {
-  display: grid;
-  gap: 0;
-  padding: 4px 12px 0;
+h3 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 16px 0 8px;
 }
-
-.row,
-.item {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  align-items: center;
-  min-height: 22px;
-  padding: 2px 4px;
-  border-radius: 2px;
+h3:first-child {
+  margin-top: 0;
 }
-
-.item:hover,
-.row:hover {
-  background: var(--vscode-list-hoverBackground);
-}
-
-.muted {
+.muted,
+.hint,
+.detail-hint {
   color: var(--vscode-descriptionForeground);
 }
-
-.item span {
-  flex: 1;
-  word-break: break-all;
+.hint {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 7px 0 10px;
 }
-
-.field {
-  padding: 4px 12px 0;
+details {
+  border-top: 1px solid var(--vscode-widget-border, transparent);
 }
-
+summary {
+  cursor: pointer;
+  padding: 11px 12px;
+  font-weight: 600;
+}
+summary:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+.detail-hint {
+  font-size: 11px;
+  font-weight: normal;
+  margin-left: 5px;
+}
+.section-content {
+  padding-top: 0;
+}
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0;
+}
 button,
 select,
 input {
-  appearance: none;
-  -webkit-appearance: none;
+  box-sizing: border-box;
   font: inherit;
-  border-radius: 2px;
-  outline: none;
+  border-radius: 3px;
 }
-
-button:focus-visible,
-select:focus-visible,
-input:focus-visible {
-  outline: 1px solid var(--vscode-focusBorder);
-  outline-offset: -1px;
-}
-
-input {
-  width: 100%;
-  box-sizing: border-box;
-  color: var(--vscode-input-foreground);
-  background: var(--vscode-input-background);
-  border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
-  padding: 4px 8px;
-}
-
-input::placeholder {
-  color: var(--vscode-input-placeholderForeground);
-}
-
-select {
-  width: 100%;
-  box-sizing: border-box;
-  color: var(--vscode-dropdown-foreground);
-  background: var(--vscode-dropdown-background);
-  border: 1px solid var(--vscode-dropdown-border, var(--vscode-widget-border));
-  padding: 4px 8px;
-}
-
-select option {
-  color: var(--vscode-dropdown-foreground);
-  background: var(--vscode-dropdown-listBackground, var(--vscode-dropdown-background));
-}
-
 button {
   color: var(--vscode-button-secondaryForeground);
   background: var(--vscode-button-secondaryBackground);
-  border: 1px solid var(--vscode-button-border, var(--vscode-widget-border, transparent));
-  padding: 3px 8px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  padding: 6px 8px;
   cursor: pointer;
+  overflow-wrap: anywhere;
 }
-
 button:hover {
   background: var(--vscode-button-secondaryHoverBackground);
 }
-
 button.primary {
-  background: var(--vscode-button-background);
   color: var(--vscode-button-foreground);
-  width: 100%;
+  background: var(--vscode-button-background);
 }
-
 button.primary:hover {
   background: var(--vscode-button-hoverBackground);
 }
-
+button.quiet {
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+  border-color: transparent;
+  padding-left: 0;
+  text-align: left;
+}
+button.quiet:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+button.full {
+  width: 100%;
+}
 button.icon {
   flex: none;
-  min-width: 22px;
-  padding: 0 6px;
-  line-height: 18px;
+  padding: 1px 6px;
 }
-
-.actions {
+:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+label {
+  display: block;
+  font-size: 12px;
+  margin: 12px 0 6px;
+}
+input,
+select {
+  width: 100%;
+  padding: 5px 8px;
+}
+input {
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+}
+input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+select {
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+}
+.list {
+  display: grid;
+  gap: 4px;
+}
+.item {
   display: flex;
-  gap: 6px;
-  margin: 6px 12px 0;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.item span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.capture-steps {
+  padding-left: 22px;
+  margin: 8px 0;
+}
+.capture-steps li {
+  padding: 3px 0;
+}
+.capture-steps button {
+  width: 100%;
+  text-align: left;
+}
+.status {
+  margin: 0;
+}
+.status .row {
+  display: grid;
+  grid-template-columns: minmax(60px, 1fr) 2fr;
+  gap: 8px;
+  padding: 4px 0;
+}
+.status dt {
+  color: var(--vscode-descriptionForeground);
+}
+.status dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.notice,
+.action-status {
+  padding: 8px 12px;
+  margin: 0;
+  line-height: 1.5;
+  background: var(--vscode-textBlockQuote-background);
+}
+.action-status.error {
+  color: var(--vscode-errorForeground);
+}
+[hidden] {
+  display: none !important;
+}
+@media (max-width: 250px) {
+  .button-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-hint {
+    display: none;
+  }
 }

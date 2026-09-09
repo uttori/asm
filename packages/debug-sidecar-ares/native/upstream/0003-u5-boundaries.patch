@@ -1,0 +1,444 @@
+From 27003f0ec701f1174169e5d215e221fc045f36d3 Mon Sep 17 00:00:00 2001
+From: Matthew Callis <matthew.callis@gmail.com>
+Date: Tue, 8 Sep 2026 11:22:35 -0700
+Subject: [PATCH] sfc: stop the desktop debugger at coherent CPU and idle
+ boundaries
+
+---
+ ares/sfc/cpu/cpu.cpp           |  3 ++
+ ares/sfc/cpu/memory.cpp        |  5 +++
+ ares/sfc/system/gdb.cpp        |  2 +
+ desktop-ui/program/load.cpp    | 12 +++---
+ desktop-ui/program/program.cpp | 18 +++++++-
+ desktop-ui/program/program.hpp |  1 +
+ nall/nall/gdb/server.cpp       | 57 +++++++++++++++++++++++---
+ nall/nall/gdb/server.hpp       |  8 +++-
+ tests/gdb/CMakeLists.txt       |  2 +-
+ tests/gdb/README.md            |  8 ++++
+ tests/gdb/gdb-boundaries.cpp   | 75 ++++++++++++++++++++++++++++++++++
+ 11 files changed, 176 insertions(+), 15 deletions(-)
+ create mode 100644 tests/gdb/gdb-boundaries.cpp
+
+diff --git a/ares/sfc/cpu/cpu.cpp b/ares/sfc/cpu/cpu.cpp
+index 4f0fc176f..68e04412b 100644
+--- a/ares/sfc/cpu/cpu.cpp
++++ b/ares/sfc/cpu/cpu.cpp
+@@ -1,4 +1,5 @@
+ #include <sfc/sfc.hpp>
++#include <nall/gdb/server.hpp>
+ 
+ namespace ares::SuperFamicom {
+ 
+@@ -31,6 +32,8 @@ auto CPU::main() -> void {
+   if(r.stp) return instructionStop();
+ 
+   if(!status.interruptPending) {
++    // Yield to the desktop worker while halted so its UI/quit guard remains live.
++    while(!nall::GDB::server.reportPC(r.pc.d)) scheduler.exit(Event::Step);
+     debugger.instruction();
+     return instruction();
+   }
+diff --git a/ares/sfc/cpu/memory.cpp b/ares/sfc/cpu/memory.cpp
+index d42401e8d..bdbd6fb0c 100644
+--- a/ares/sfc/cpu/memory.cpp
++++ b/ares/sfc/cpu/memory.cpp
+@@ -1,4 +1,9 @@
+ auto CPU::idle() -> void {
++  // WAI/STP loop inside the processor core and may never return to CPU::main.
++  // Stop at an idle boundary without treating the following PC as executed.
++  if(r.wai || r.stp) {
++    while(!nall::GDB::server.reportPC(r.pc.d, false)) scheduler.exit(Event::Step);
++  }
+   status.clockCount = 6;
+   dmaEdge();
+   step(6);
+diff --git a/ares/sfc/system/gdb.cpp b/ares/sfc/system/gdb.cpp
+index b5ef63c2e..ff9d8e75b 100644
+--- a/ares/sfc/system/gdb.cpp
++++ b/ares/sfc/system/gdb.cpp
+@@ -21,6 +21,8 @@ auto normalizeGdbRegisters() -> void {
+ 
+ auto installGdbHooks() -> void {
+   using nall::GDB::server;
++  server.hooks.instructionBoundaryStop = true;
++  server.hooks.emuReset = [] { system.power(true); };
+   server.hooks.registersLittleEndian = true;
+   server.hooks.targetXML = []() -> string {
+     return "<target version=\"1.0\">"
+diff --git a/desktop-ui/program/load.cpp b/desktop-ui/program/load.cpp
+index 2aaf4e122..49cb5410b 100644
+--- a/desktop-ui/program/load.cpp
++++ b/desktop-ui/program/load.cpp
+@@ -121,12 +121,13 @@ auto Program::load(string location) -> bool {
+     tapeViewer.reload();
+   }
+   state = {};  //reset hotkey state slot to 1
++  awaitGdbHandshake = settings.developer.debugServerEnabled && settings.boot.awaitGDBClient;
+   if(settings.boot.debugger) {
+     pause(true);
+     if(toolsWindowConstructed) toolsWindow.show("Tracer");
+     presentation.setFocused();
+-  } else if (settings.boot.awaitGDBClient) {
+-    pause(true);
++  } else if(awaitGdbHandshake) {
++    pause(false); // the handshake gate is separate from a user's pause
+   } else {
+     pause(false);
+   }
+@@ -135,10 +136,8 @@ auto Program::load(string location) -> bool {
+ 
+   if(settings.developer.debugServerEnabled) {
+     nall::GDB::server.open(settings.developer.debugServerPort, settings.developer.debugServerUseIPv4);
+-    nall::GDB::server.onClientConnectCallback = []() {
+-      if (settings.boot.awaitGDBClient)
+-        program.pause(false);
+-    };
++    // A TCP connection alone must not release the first instruction.
++    nall::GDB::server.onClientConnectCallback = {};
+   }
+ 
+   //update recent games list
+@@ -163,6 +162,7 @@ auto Program::unload() -> void {
+   Program::Guard guard;
+   if(!emulator) return;
+ 
++  awaitGdbHandshake = false;
+   nall::GDB::server.close();
+   nall::GDB::server.reset();
+ 
+diff --git a/desktop-ui/program/program.cpp b/desktop-ui/program/program.cpp
+index 0b672de11..688357b99 100644
+--- a/desktop-ui/program/program.cpp
++++ b/desktop-ui/program/program.cpp
+@@ -77,6 +77,17 @@ auto Program::emulatorRunLoop(uintptr_t) -> void {
+       continue;
+     }
+ 
++    if(awaitGdbHandshake) {
++      nall::GDB::server.updateLoop();
++      if(nall::GDB::server.hasClient()
++      && (nall::GDB::server.isHalted() || nall::GDB::server.isStopPending())) {
++        awaitGdbHandshake = false;
++      } else {
++        usleep(20 * 1000);
++        continue;
++      }
++    }
++
+     if(emulator && nall::GDB::server.isHalted()) {
+       ruby::audio.clear();
+       nall::GDB::server.updateLoop(); // sleeps internally
+@@ -85,7 +96,10 @@ auto Program::emulatorRunLoop(uintptr_t) -> void {
+ 
+     bool defocused = settings.input.defocus == "Pause" && !ruby::video.fullScreen() && !presentation.focused();
+ 
+-    if(!emulator || (paused && !program.requestFrameAdvance) || defocused) {
++    // A pending stop needs to reach the next CPU boundary, even if the desktop
++    // is paused/defocused. Once there, ordinary pause state remains unchanged.
++    if(!nall::GDB::server.isStopPending()
++    && ((paused && !program.requestFrameAdvance) || defocused)) {
+       ruby::audio.clear();
+       nall::GDB::server.updateLoop();
+       usleep(20 * 1000);
+@@ -97,7 +111,7 @@ auto Program::emulatorRunLoop(uintptr_t) -> void {
+     nall::GDB::server.updateLoop();
+ 
+     program.requestFrameAdvance = false;
+-    if(!runAhead || fastForwarding || rewinding) {
++    if(!runAhead || fastForwarding || rewinding || nall::GDB::server.hasClient()) {
+       emulator->root->run();
+     } else {
+       ares::setRunAhead(true);
+diff --git a/desktop-ui/program/program.hpp b/desktop-ui/program/program.hpp
+index 5de04c820..63b40346e 100644
+--- a/desktop-ui/program/program.hpp
++++ b/desktop-ui/program/program.hpp
+@@ -77,6 +77,7 @@ struct Program : ares::Platform {
+   std::vector<ares::Node::Audio::Stream> streams;
+ 
+   bool paused = false;
++  bool awaitGdbHandshake = false;
+   bool fastForwarding = false;
+   bool rewinding = false;
+   bool runAhead = false;
+diff --git a/nall/nall/gdb/server.cpp b/nall/nall/gdb/server.cpp
+index ecd592d64..af75d1a58 100644
+--- a/nall/nall/gdb/server.cpp
++++ b/nall/nall/gdb/server.cpp
+@@ -83,18 +83,26 @@ namespace nall::GDB {
+     }
+   }
+ 
+-  auto Server::reportPC(u64 pc) -> bool {
++  auto Server::reportPC(u64 pc, bool instruction) -> bool {
+     if(!hasActiveClient)return true;
+ 
++    bool skipBreakpoint = skipBreakpointOnce && currentPC == pc;
+     currentPC = pc;
+-    bool needHalts = forceHalt || std::ranges::find(breakpoints, pc) != breakpoints.end();
++    bool needHalts = forceHalt || (instruction && !skipBreakpoint && std::ranges::find(breakpoints, pc) != breakpoints.end());
++    skipBreakpointOnce = false;
++    stoppedAtInstructionBoundary = hooks.instructionBoundaryStop && needHalts;
+ 
+     if(needHalts) {
+       forceHalt = true; // breakpoints may get deleted after a signal, but we have to stay stopped
+ 
+       if(!haltSignalSent) {
+         haltSignalSent = true;
+-        sendSignal(Signal::TRAP);
++        if(pendingResetReply) {
++          pendingResetReply = false;
++          sendPayload("OK");
++        } else {
++          sendSignal(Signal::TRAP);
++        }
+       }
+     }
+ 
+@@ -129,11 +137,20 @@ namespace nall::GDB {
+       printf("GDB <: %s\n", cmdBuffer.data());
+     }
+ 
++    if(hooks.instructionBoundaryStop && isStopPending()
++    && (cmdPrefix == 'g' || cmdPrefix == 'G' || cmdPrefix == 'p' || cmdPrefix == 'P'
++    || cmdPrefix == 'm' || cmdPrefix == 'M')) return "E00";
++
+     switch(cmdPrefix)
+     {
+       case '!': return "OK"; // informs us that "extended remote-debugging" is used
+ 
+       case '?': // handshake: why did we halt?
++        if(hooks.instructionBoundaryStop && !stoppedAtInstructionBoundary) {
++          haltProgram();
++          shouldReply = false; // reportPC replies only after the core reaches a safe stop
++          return "";
++        }
+         haltProgram();
+         haltSignalSent = true;
+         return "T05"; // needs to be faked, otherwise the GDB-client hangs up and eats 100% CPU
+@@ -265,6 +282,30 @@ namespace nall::GDB {
+       break;
+ 
+       case 'q':
++        if(cmdName.beginsWith("qRcmd,")) {
++          if(!hooks.emuReset) return "";
++          auto encoded = cmdName.slice(6);
++          if(!encoded || encoded.size() % 2 || encoded.size() > 256) return "E00";
++          for(char c : encoded) if(!std::isxdigit(static_cast<unsigned char>(c))) return "E00";
++          string monitor;
++          for(u32 byte : range(encoded.size() / 2)) monitor.append(char(encoded.slice(byte * 2, 2).hex()));
++          bool run = monitor == "reset run";
++          if(!run && monitor != "reset" && monitor != "reset halt") return "E00";
++          if(!hooks.instructionBoundaryStop || pendingResetReply) return "E00";
++          singleStepActive = false;
++          stoppedAtInstructionBoundary = false;
++          skipBreakpointOnce = false;
++          pcOverride.reset();
++          hooks.emuReset(); // called by the frontend, outside the emulated CPU stack
++          if(run) {
++            resumeProgram();
++            return "OK";
++          }
++          haltProgram();
++          pendingResetReply = true;
++          shouldReply = false; // complete monitor reset halt at the reset-vector boundary
++          return "";
++        }
+         // This tells the client what we can and can't do
+         if(cmdName == "qSupported"){ return {
+           "PacketSize=", hex(MAX_PACKET_SIZE),
+@@ -559,6 +600,8 @@ namespace nall::GDB {
+   }
+ 
+   auto Server::resumeProgram() -> void {
++    skipBreakpointOnce = hooks.instructionBoundaryStop && stoppedAtInstructionBoundary;
++    stoppedAtInstructionBoundary = false;
+     pcOverride.reset();
+     forceHalt = false;
+     haltSignalSent = false;
+@@ -566,10 +609,9 @@ namespace nall::GDB {
+ 
+   auto Server::onConnect() -> void {
+     printf("GDB client connected\n");
+-    if (onClientConnectCallback)
+-      onClientConnectCallback();
+     resetClientData();
+     hasActiveClient = true;
++    if(onClientConnectCallback) onClientConnectCallback();
+   }
+ 
+   auto Server::onDisconnect() -> void {
+@@ -588,6 +630,8 @@ namespace nall::GDB {
+     hooks.regWriteGeneral = nullptr;
+     hooks.regRead = nullptr;
+     hooks.regWrite = nullptr;
++    hooks.instructionBoundaryStop = false;
++    hooks.emuReset = nullptr;
+     hooks.emuCacheInvalidate = nullptr;
+     hooks.targetXML = nullptr;
+ 
+@@ -612,6 +656,9 @@ namespace nall::GDB {
+     haltSignalSent = false;
+     forceHalt = false;
+     singleStepActive = false;
++    stoppedAtInstructionBoundary = false;
++    skipBreakpointOnce = false;
++    pendingResetReply = false;
+     nonStopMode = false;
+     noAckMode = false;
+ 
+diff --git a/nall/nall/gdb/server.hpp b/nall/nall/gdb/server.hpp
+index 57f27f410..acf7754f6 100644
+--- a/nall/nall/gdb/server.hpp
++++ b/nall/nall/gdb/server.hpp
+@@ -80,6 +80,8 @@ class Server : public nall::TCPText::Server {
+       std::function<bool(u32 regIdx, u64 regValue)> regWrite{};
+ 
+       // Emulator
++      bool instructionBoundaryStop = false;
++      std::function<void()> emuReset{};
+       std::function<void(u64 address)> emuCacheInvalidate{};
+       std::function<string()> targetXML{};
+ 
+@@ -92,12 +94,13 @@ class Server : public nall::TCPText::Server {
+     auto reportSignal(Signal sig, u64 originPC) -> bool;
+ 
+     // PC / Memory State Updates
+-    auto reportPC(u64 pc) -> bool;
++    auto reportPC(u64 pc, bool instruction = true) -> bool;
+     auto reportMemRead(u64 address, u32 size) -> void;
+     auto reportMemWrite(u64 address, u32 size) -> void;
+ 
+     // Breakpoints / Watchpoints
+     auto isHalted() const { return forceHalt && haltSignalSent; }
++    auto isStopPending() const { return forceHalt && !haltSignalSent; }
+     auto hasBreakpoints() const { 
+       return !breakpoints.empty() || singleStepActive || !watchpointRead.empty() || !watchpointWrite.empty();
+     }
+@@ -121,6 +124,9 @@ class Server : public nall::TCPText::Server {
+     bool haltSignalSent{false}; // marks if a signal as been sent for new halts (force-halt and breakpoints)
+     bool forceHalt{false}; // forces a halt despite no breakpoints being hit
+     bool singleStepActive{false};
++    bool stoppedAtInstructionBoundary{false};
++    bool skipBreakpointOnce{false};
++    bool pendingResetReply{false};
+ 
+     bool noAckMode{false}; // gets set if lldb prefers no acknowledgements
+     bool nonStopMode{false}; // (NOTE: Not working for now), gets set if gdb wants to switch over to async-messaging
+diff --git a/tests/gdb/CMakeLists.txt b/tests/gdb/CMakeLists.txt
+index 1b0618317..a3d2a3a93 100644
+--- a/tests/gdb/CMakeLists.txt
++++ b/tests/gdb/CMakeLists.txt
+@@ -3,7 +3,7 @@ if(NOT sfc IN_LIST ARES_CORES)
+   return()
+ endif()
+ 
+-set(gdb_targets gdb-registers gdb-memory-packets gdb-storage)
++set(gdb_targets gdb-registers gdb-memory-packets gdb-storage gdb-boundaries)
+ foreach(target IN LISTS gdb_targets)
+   add_executable(${target} ${target}.cpp)
+   target_include_directories(${target} PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/ares)
+diff --git a/tests/gdb/README.md b/tests/gdb/README.md
+index b6e2abc61..6a0bcd0c6 100644
+--- a/tests/gdb/README.md
++++ b/tests/gdb/README.md
+@@ -21,6 +21,8 @@ paths, platform libraries, and the core profile come from the normal ares build.
+   requests before invoking storage.
+ - `gdb-storage` links the real SFC core and checks WRAM aliases, device-handler
+   exclusion, cartridge RAM offsets, remap/unmap, and physical storage bounds.
++- `gdb-boundaries` checks deferred stop/reset responses, stepping off breakpoints,
++  quiescent stops, disconnect/reconnect, and legacy-core behavior.
+ 
+ Only the test translation units use `-fno-access-control` to inspect protocol
+ state; assertions remain enabled in release builds with `-UNDEBUG`. The ares
+@@ -29,3 +31,9 @@ Linux/Windows execution remains before runtime promotion.
+ 
+ The register contract targets 65816-aware RSP clients. Stock GDB has no 65816
+ architecture backend, and XML alone does not add one.
++
++The core reports instruction boundaries and idle boundaries within WAI/STP.
++Idle boundaries permit control without firing an execution breakpoint at the
++following PC. `monitor reset`/`reset halt` complete at the reset-vector boundary;
++`monitor reset run` preserves breakpoints and resumes subject to desktop pause.
++An RSP control loop must continue entering the core while a stop is pending.
+diff --git a/tests/gdb/gdb-boundaries.cpp b/tests/gdb/gdb-boundaries.cpp
+new file mode 100644
+index 000000000..d907ea945
+--- /dev/null
++++ b/tests/gdb/gdb-boundaries.cpp
+@@ -0,0 +1,75 @@
++#include <nall/nall.hpp>
++#include <nall/main.hpp>
++#include <nall/gdb/server.cpp>
++#include <cassert>
++#include <iostream>
++using namespace nall;
++using nall::GDB::server;
++bool reply;
++auto command(const string& data) -> string {
++  reply = true;
++  return server.processCommand(data, reply);
++}
++auto output() -> string {
++  string result;
++  for(auto byte : server.sendBuffer) result.append(char(byte));
++  server.sendBuffer.clear();
++  return result;
++}
++auto nall::main(Arguments) -> void {
++  server.hooks.instructionBoundaryStop = true;
++  server.onConnect();
++  assert(command("?") == "" && !reply && server.isStopPending() && !server.isHalted());
++  assert(output() == "");
++  assert(command("g") == "E00");
++  assert(!server.reportPC(0x808000) && server.isHalted());
++  assert(output().find("$S05#"));
++  assert(command("?") == "T05" && reply && server.isHalted());
++  assert(!server.reportPC(0x808000) && output() == "");
++  assert(command("Z0,808000,1") == "OK");
++  command("s"); assert(!reply);
++  assert(server.reportPC(0x808000));
++  assert(!server.reportPC(0x808001) && server.isHalted());
++  output();
++  command("c"); assert(!reply);
++  assert(server.reportPC(0x808001));
++  assert(!server.reportPC(0x808000));
++  output();
++  command("c");
++  assert(server.reportPC(0x808000)); // step off the breakpoint once
++  assert(!server.reportPC(0x808000)); // hit it on the next loop
++  output();
++  command("c");
++  assert(server.reportPC(0x808000, false)); // WAI next-PC is not a code breakpoint.
++  server.haltProgram();
++  assert(!server.reportPC(0x808000, false));
++  output();
++  unsigned resets = 0;
++  server.hooks.emuReset = [&] { ++resets; };
++  assert(command("qRcmd,zz") == "E00" && !resets);
++  assert(command("qRcmd,726573657420626164") == "E00" && !resets);
++  assert(command("qRcmd,72657365742068616c74") == "" && !reply && resets == 1);
++  assert(!server.isHalted() && server.isStopPending() && output() == "");
++  assert(command("g") == "E00");
++  assert(!server.reportPC(0x008000) && server.isHalted());
++  auto resetReply = output();
++  assert(resetReply.find("$OK#") && !resetReply.find("$S05#"));
++  assert(command("qRcmd,72657365742072756e") == "OK" && reply && resets == 2);
++  assert(server.reportPC(0x008000));
++  string interrupt{char(3)};
++  server.onText(interrupt);
++  assert(!server.isHalted() && server.isStopPending());
++  assert(!server.reportPC(0x008005));
++  output();
++  server.onDisconnect();
++  assert(server.reportPC(0x008005) && !server.isHalted() && !server.pendingResetReply);
++  server.onConnect();
++  assert(server.breakpoints.empty() && !server.singleStepActive);
++  command("?"); assert(!reply);
++  assert(!server.reportPC(0x008005));
++  server.reset();
++  assert(!server.hooks.emuReset && !server.hooks.instructionBoundaryStop);
++  server.onConnect();
++  assert(command("?") == "T05" && reply && server.isHalted()); // existing core behavior
++  std::cout << "PASS U5: deferred attach, stable repeated stop, step/continue at breakpoint, reset halt/run, Ctrl-C, disconnect/reconnect, existing-core compatibility\n";
++}

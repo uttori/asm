@@ -45,6 +45,19 @@ export interface RuntimeInstructionTraceImportResult {
     readonly observedEvents: number;
     readonly droppedEvents: number;
 }
+/** Identity shared by all chunks of one trace. */
+export type RuntimeInstructionTraceMetadata = Omit<RuntimeInstructionTraceArtifact, "chunks">;
+/**
+ * Validate the small trace envelope independently of its event stream.
+ * @param {unknown} value Untrusted metadata.
+ * @returns {RuntimeInstructionTraceMetadata} Normalized identity.
+ */
+export declare const validateRuntimeInstructionTraceMetadata: (value: unknown) => RuntimeInstructionTraceMetadata;
+/**
+ * Create validation state spanning chunk boundaries without retaining earlier events.
+ * @returns {(value: unknown) => RuntimeInstructionTraceChunk} Next-chunk validator.
+ */
+export declare const createRuntimeTraceChunkValidator: () => ((value: unknown) => RuntimeInstructionTraceChunk);
 /**
  * Validates untrusted trace data without importing project facts.
  * @param {unknown} value Untrusted trace.
@@ -59,4 +72,16 @@ export declare const validateRuntimeInstructionTrace: (value: unknown) => Runtim
  * @returns {RuntimeInstructionTraceImportResult} Deterministic batch and loss diagnostics.
  */
 export declare const importRuntimeInstructionTrace: (value: RuntimeInstructionTraceArtifact, context: RuntimeInstructionTraceImportContext) => RuntimeInstructionTraceImportResult;
+/** Incremental import state, retaining aggregated facts rather than the recording. */
+export interface RuntimeInstructionTraceImporter {
+    push(value: unknown): void;
+    finish(): RuntimeInstructionTraceImportResult;
+}
+/**
+ * Aggregate a trace one validated chunk at a time, preserving canonical import identities.
+ * @param {RuntimeInstructionTraceMetadata} value Trace identity.
+ * @param {RuntimeInstructionTraceImportContext} context Destination identity.
+ * @returns {RuntimeInstructionTraceImporter} Incremental importer; finish only after the file validates.
+ */
+export declare const createRuntimeInstructionTraceImporter: (value: RuntimeInstructionTraceMetadata, context: RuntimeInstructionTraceImportContext) => RuntimeInstructionTraceImporter;
 //# sourceMappingURL=runtime-trace.d.ts.map

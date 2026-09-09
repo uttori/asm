@@ -50,6 +50,19 @@ import {
   type SnesRamMapVariable,
 } from "./ram-map.js";
 import { parseSnesInternalRomHeader, type SnesMapper } from "./rom-header.js";
+import { lostCodeRanges } from "./code-preservation.js";
+import {
+  indexSnesStructFields,
+  loadSnesStructMap,
+  planSnesStructRomFields,
+  renderSnesStructData,
+  renderSnesStructDefines,
+  renderSnesStructInitializer,
+  SNES_STRUCT_DEFINES_SOURCE,
+  SNES_STRUCT_MAP_SOURCE,
+  type SnesStructRomField,
+  type SnesStructRomRecord,
+} from "./struct-map.js";
 
 /** Options for `exportSnes65816Source`. `sourceProjectSha256` is required provenance. */
 export interface SnesSourceExportOptions {
@@ -58,6 +71,8 @@ export interface SnesSourceExportOptions {
    * that is not a previous export, or a previous export whose files drifted, is rejected.
    */
   readonly force?: boolean;
+  /** Explicitly permit replacing previously emitted instructions with non-code spans. */
+  readonly allowCodeRegression?: boolean;
   /** SHA-256 of the analysis project that produced this export (provenance). */
   readonly sourceProjectSha256: string;
 }
@@ -76,6 +91,8 @@ interface PlannedSpan {
   readonly role: SourceExportSpanRole;
   readonly instruction?: PlannedInstruction;
   readonly structured?: StructuredRomField;
+  readonly structField?: SnesStructRomField;
+  readonly structRecord?: SnesStructRomRecord;
 }
 
 interface StructuredRomField {
@@ -324,6 +341,8 @@ const decodeState = (record: Readonly<Record<string, unknown>>): Cpu65816DecodeS
  * @param {ReadonlyMap<number, SnesRamMapVariable>} [ramVariables] Canonical WRAM locations to name.
  * @param {number} [sourceAddress] Canonical address where generated source places the instruction.
  * @param {ReadonlyMap<number, string>} [sourceLabels] Explicit names at exact exported addresses.
+ * @param {ReadonlyMap<number, string>} [structFields] Native struct expressions at known data addresses.
+ * @param {ReadonlyMap<number, string>} [indexedStructFields] Struct expressions including explicitly biased array bases.
  * @returns {string} Native source with a `.b`, `.w`, or `.l` suffix where width is selectable.
  */
 export const formatSnes65816SourceInstruction = (
@@ -331,6 +350,8 @@ export const formatSnes65816SourceInstruction = (
   ramVariables?: ReadonlyMap<number, SnesRamMapVariable>,
   sourceAddress?: number,
   sourceLabels?: ReadonlyMap<number, string>,
+  structFields?: ReadonlyMap<number, string>,
+  indexedStructFields?: ReadonlyMap<number, string>,
 ): string => {
   const decodedOperand = instruction.operands[0];
   const rebaseRelative =
@@ -384,21 +405,40 @@ export const formatSnes65816SourceInstruction = (
     dataAddress === undefined ? undefined : canonicalSnesWramAddress(dataAddress);
   const ramVariable =
     canonicalRamAddress === undefined ? undefined : ramVariables?.get(canonicalRamAddress);
-  if (ramVariable && rawValue !== undefined) {
+  const namedAddress = canonicalRamAddress ?? dataAddress;
+  const indexed = [
+    "absoluteLongIndexedX",
+    "absoluteIndexedX",
+    "absoluteIndexedY",
+    "directIndexedX",
+    "directIndexedY",
+  ].includes(instruction.mode);
+  const structField =
+    namedAddress === undefined
+      ? undefined
+      : (indexed ? (indexedStructFields ?? structFields) : structFields)?.get(namedAddress);
+  if ((structField || ramVariable) && rawValue !== undefined) {
     const rawWidth = instruction.operands[0]?.width ?? 1;
     const encoded = `$${rawValue
       .toString(16)
       .toUpperCase()
       .padStart(rawWidth * 2, "0")}`;
-    const variableOffset = canonicalRamAddress! - ramVariable.address;
+    const variableOffset = ramVariable ? canonicalRamAddress! - ramVariable.address : 0;
     const variableExpression =
-      variableOffset === 0
-        ? ramVariable.name
-        : `(${ramVariable.name} + $${variableOffset.toString(16).toUpperCase().padStart(2, "0")})`;
-    const symbolic =
-      rawWidth === 3
-        ? variableExpression
-        : `${variableExpression} & ${rawWidth === 1 ? "$FF" : "$FFFF"}`;
+      structField ??
+      (variableOffset === 0
+        ? ramVariable!.name
+        : `(${ramVariable!.name} + $${variableOffset.toString(16).toUpperCase().padStart(2, "0")})`);
+    let symbolic = variableExpression;
+    if (rawWidth === 3 && rawValue !== namedAddress) {
+      // Naming a WRAM mirror must preserve the bank encoded in the instruction.
+      // Canonical $7E variables can also be reached through $00-$3F/$80-$BF.
+      symbolic = `(${variableExpression} & $FFFF)`;
+      const encodedBank = rawValue & 0xff0000;
+      if (encodedBank !== 0) symbolic += ` | ${hex(encodedBank, 6)}`;
+    } else if (rawWidth !== 3) {
+      symbolic = `${variableExpression} & ${rawWidth === 1 ? "$FF" : "$FFFF"}`;
+    }
     renderedOperand = operandText.replace(encoded, symbolic);
   } else if (
     instruction.mode === "absolute" ||
@@ -621,6 +661,8 @@ const rejectedByAnnotation = (
  * @param {ReadonlyMap<number, SnesRamMapVariable>} ramVariables Canonical WRAM locations to name.
  * @param {StructuredRomLayout | undefined} structure Header/vector interval excluded from code.
  * @param {ReadonlyMap<number, string>} [sourceLabels] Friendly names at exact exported addresses.
+ * @param {ReadonlyMap<number, string>} [structFields] Addressed struct fields for RAM and ROM data.
+ * @param {ReadonlyMap<number, string>} [indexedStructFields] Addressed fields including biased array bases.
  * @returns {ReadonlyMap<number, PlannedInstruction>} Safe instructions keyed by start offset.
  */
 const planInstructions = (
@@ -632,6 +674,8 @@ const planInstructions = (
   ramVariables: ReadonlyMap<number, SnesRamMapVariable>,
   structure: StructuredRomLayout | undefined,
   sourceLabels?: ReadonlyMap<number, string>,
+  structFields?: ReadonlyMap<number, string>,
+  indexedStructFields?: ReadonlyMap<number, string>,
 ): ReadonlyMap<number, PlannedInstruction> => {
   const decoder = new Cpu65816Decoder();
   const source = new Uint8ArrayDecoderSource(rom.bytes());
@@ -700,6 +744,8 @@ const planInstructions = (
             ramVariables,
             sourceAddress,
             sourceLabels,
+            structFields,
+            indexedStructFields,
           ),
         };
       });
@@ -760,6 +806,7 @@ const planInstructions = (
  * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Metadata keyed by file offset.
  * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations Reusable file-space annotation index.
  * @param {StructuredRomLayout | undefined} structure Field-aligned header/vector source plan.
+ * @param {readonly SnesStructRomField[]} structFields Physical fields in explicitly bound ROM arrays.
  * @returns {readonly PlannedSpan[]} Complete, ordered, non-overlapping export plan.
  */
 const planSpans = (
@@ -770,6 +817,7 @@ const planSpans = (
   metadata: ReadonlyMap<number, readonly NamedLine[]>,
   annotations: HalfOpenIntervalIndex<IntervalAnnotation>,
   structure: StructuredRomLayout | undefined,
+  structFields: readonly SnesStructRomField[],
 ): readonly PlannedSpan[] => {
   const bankSize =
     mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
@@ -784,7 +832,18 @@ const planSpans = (
     cuts.add(field.start);
     cuts.add(field.end);
   }
+  const structIndex = new HalfOpenIntervalIndex(structFields);
+  for (const field of structFields) {
+    if (structure && field.start < structure.end && structure.start < field.end)
+      throw new Error(`Struct field '${field.expression}' overlaps the cartridge header/vectors.`);
+    cuts.add(field.start);
+    cuts.add(field.end);
+  }
   for (const [offset, instruction] of instructions) {
+    if (structIndex.overlapping(offset, instruction.end).length > 0)
+      throw new Error(
+        `ROM struct overlaps decoded code at ${hex(offset)}. Resolve the conflicting evidence before export.`,
+      );
     cuts.add(offset);
     cuts.add(instruction.end);
   }
@@ -792,8 +851,12 @@ const planSpans = (
   for (const entry of shards.annotations) {
     if (entry.addressSpace !== SNES_FILE_ADDRESS_SPACE) continue;
     if (entry.classification === "opcode" || entry.classification === "operand") continue;
-    addExternalCut(entry.start);
-    addExternalCut(entry.end);
+    // Byte-wise imported data classifications need not fragment an explicitly typed field.
+    // Labels, comments, and region boundaries still receive their own cuts above/below.
+    for (const offset of [entry.start, entry.end]) {
+      const field = structIndex.overlapping(offset, offset + 1)[0];
+      if (!field || offset === field.start) addExternalCut(offset);
+    }
   }
   for (const region of shards.regions) {
     const start = toFileOffset(region.addressSpace, region.start, mapper, rom.length);
@@ -806,17 +869,73 @@ const planSpans = (
     const end = sorted[index + 1];
     const instruction = instructions.get(start);
     const structured = structure?.byStart.get(start);
+    const structField = structIndex.overlapping(start, end)[0];
     if (instruction?.end === end) return { start, end, role: "code", instruction };
     if (structured?.end === end) return { start, end, role: structured.role, structured };
+    if (structField) return { start, end, role: "raw", structField };
     return { start, end, role: roleAt(start, end, annotations) };
   });
+};
+
+/**
+ * Regroup only whole records. The field plan remains the authority for safety:
+ * bank cuts, interior labels/comments, and region boundaries prevent grouping.
+ * In those cases the old assert + db/dw renderer preserves exact byte ownership.
+ * @param {readonly PlannedSpan[]} spans Safe field-aligned export plan.
+ * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Source labels/comments by file offset.
+ * @param {AnalysisProjectShards} shards Region boundaries that must remain visible.
+ * @param {SnesMapper} mapper Address mapping and bank size.
+ * @param {number} romSize Headerless ROM length.
+ * @returns {readonly PlannedSpan[]} Same byte coverage with complete records grouped.
+ */
+const groupStructRecords = (
+  spans: readonly PlannedSpan[],
+  metadata: ReadonlyMap<number, readonly NamedLine[]>,
+  shards: AnalysisProjectShards,
+  mapper: SnesMapper,
+  romSize: number,
+): readonly PlannedSpan[] => {
+  const protectedCuts = new Set(metadata.keys());
+  const bankSize =
+    mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
+  for (let offset = bankSize; offset < romSize; offset += bankSize) protectedCuts.add(offset);
+  for (const region of shards.regions) {
+    const start = toFileOffset(region.addressSpace, region.start, mapper, romSize);
+    const last = toFileOffset(region.addressSpace, region.end - 1, mapper, romSize);
+    if (start !== undefined) protectedCuts.add(start);
+    if (last !== undefined) protectedCuts.add(last + 1);
+  }
+  const grouped: PlannedSpan[] = [];
+  for (let index = 0; index < spans.length;) {
+    const first = spans[index];
+    const record = first.structField?.record;
+    let next = index;
+    if (record && first.start === record.start) {
+      while (
+        next < spans.length &&
+        spans[next].structField?.record === record &&
+        (next === index || !protectedCuts.has(spans[next].start))
+      )
+        next++;
+    }
+    if (record && next > index && spans[next - 1].end === record.end) {
+      grouped.push({ start: record.start, end: record.end, role: "raw", structRecord: record });
+      index = next;
+    } else {
+      grouped.push(first);
+      index++;
+    }
+  }
+  return grouped;
 };
 
 const preflight = (directory: string, force: boolean): SourceExportManifest | undefined => {
   if (!fs.existsSync(directory)) return undefined;
   const manifestFile = path.join(directory, SOURCE_EXPORT_MANIFEST);
   if (!fs.existsSync(manifestFile)) {
-    const unexpected = fs.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE);
+    const unexpected = fs
+      .readdirSync(directory)
+      .filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
     if (!force && unexpected.length > 0) {
       throw new Error(
         `Export directory '${directory}' is not empty; pass --force to write into it.`,
@@ -877,8 +996,9 @@ const regionIdsFor = (
 /**
  * Writes a deterministic 65816 source tree that can be reassembled with this plugin.
  * Confident CFG nodes become width-qualified instructions; unknown bytes remain
- * `incbin` assets. The internal/expanded SNES headers and all vector words become
- * named native data source. An optional 512-byte copier header remains an asset.
+ * `incbin` assets. The internal/expanded SNES headers, vector words, and explicitly
+ * bound ROM struct fields become native data source. An optional 512-byte copier
+ * header remains an asset. Optional struct bindings also name RAM/ROM operands.
  * Checksums are preserved, not recomputed.
  * @param {{ readonly manifest: AnalysisProjectManifest; readonly shards: AnalysisProjectShards }} project Loaded analysis project.
  * @param {RomImage} rom Immutable ROM used for asset bytes and copier-header extraction.
@@ -898,12 +1018,25 @@ export const exportSnes65816Source = (
   const previousManifest = preflight(directory, options.force ?? false);
   const ramMap = loadSnesRamMap(directory);
   const ramVariables = indexSnesRamMap(ramMap.variables);
-  const names = snesSourceLabelNames(
-    project.shards,
-    mapper,
-    rom.length,
-    ramMap.variables.map(({ name }) => name),
+  const structMap = loadSnesStructMap(directory);
+  const structRomFields = planSnesStructRomFields(structMap, rom.length, (offset) =>
+    snesRomAddressSpace.fromOutputOffset(offset, context),
   );
+  const structFields = indexSnesStructFields(structMap);
+  const indexedStructFields = indexSnesStructFields(structMap, true);
+  const structNames = [
+    ...(structMap?.structures.map(({ id }) => id) ?? []),
+    ...(structMap?.bindings.map(({ name }) => name) ?? []),
+  ];
+  const ramNames = new Set(ramMap.variables.map(({ name }) => name.toLowerCase()));
+  for (const name of structNames) {
+    if (ramNames.has(name.toLowerCase()))
+      throw new Error(`Struct-map name '${name}' conflicts with a RAM variable.`);
+  }
+  const names = snesSourceLabelNames(project.shards, mapper, rom.length, [
+    ...ramMap.variables.map(({ name }) => name),
+    ...structNames,
+  ]);
   const metadata = metadataLines(project.shards, mapper, rom.length, names);
   const sourceLabels = new Map<number, string>();
   for (const label of [...project.shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -931,8 +1064,10 @@ export const exportSnes65816Source = (
     ramVariables,
     structure,
     sourceLabels,
+    structFields,
+    indexedStructFields,
   );
-  const planned = planSpans(
+  const fieldPlan = planSpans(
     rom,
     mapper,
     project.shards,
@@ -940,7 +1075,29 @@ export const exportSnes65816Source = (
     metadata,
     annotations,
     structure,
+    structRomFields,
   );
+  const planned = groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length);
+  if (previousManifest && !options.allowCodeRegression) {
+    const previousCode = previousManifest.spans.filter((span) => span.role === "code");
+    const proposedCode = planned.filter((span) => span.role === "code");
+    const lost = lostCodeRanges(previousCode, proposedCode);
+    if (lost.length > 0) {
+      const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);
+      const added = lostCodeRanges(proposedCode, previousCode).reduce(
+        (total, range) => total + range.end - range.start,
+        0,
+      );
+      const net = added - bytes;
+      throw new Error(
+        `Source export would replace ${bytes} previously emitted code byte(s) with non-code spans, ` +
+          `starting at ROM offset ${hex(lost[0].start, 6)}. Generated source was preserved. ` +
+          `The proposal also adds ${added} new code byte(s), for a net change of ${net >= 0 ? "+" : ""}${net} byte(s). ` +
+          "Code absent from a capture is not evidence that it stopped being code. " +
+          "Resolve the analysis gaps or explicitly pass --allow-code-regression after reviewing the change.",
+      );
+    }
+  }
   const files: SourceExportFile[] = [];
   const spans: SourceExportSpan[] = [];
   const banks = new Map<number, PlannedSpan[]>();
@@ -960,17 +1117,28 @@ export const exportSnes65816Source = (
     const lines = [`; Generated bank ${bank.toString(16).toUpperCase().padStart(3, "0")}.`];
     let nextAddress: number | undefined;
     let previousState: Cpu65816DecodeState | undefined;
-    for (const span of bankSpans) {
+    let table: { name: string; nextIndex: number } | undefined;
+    for (const [spanIndex, span] of bankSpans.entries()) {
       const address = snesRomAddressSpace.fromOutputOffset(span.start, context);
       if (address < 0)
         throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex(span.start)}.`);
+      const named = span.structured
+        ? []
+        : renderedMetadata(metadata.get(span.start), Boolean(span.instruction));
+      if (
+        table &&
+        (span.structRecord?.binding.name !== table.name ||
+          span.structRecord?.index !== table.nextIndex ||
+          named.length > 0 ||
+          nextAddress !== address)
+      ) {
+        lines.push("  endDataStructs");
+        table = undefined;
+      }
       if (nextAddress !== address) {
         lines.push("", `org ${hex(address)}`);
         previousState = undefined;
       }
-      const named = span.structured
-        ? []
-        : renderedMetadata(metadata.get(span.start), Boolean(span.instruction));
       if (named.length) lines.push("", ...named);
       if (span.instruction) {
         const state = span.instruction.state;
@@ -1016,6 +1184,63 @@ export const exportSnes65816Source = (
           file: bankPath,
           regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
         });
+      } else if (span.structRecord) {
+        const record = span.structRecord;
+        const next = bankSpans[spanIndex + 1]?.structRecord;
+        // Stop/restart tables around record labels so their addresses and source
+        // lines remain independently navigable. Single records use dataStruct.
+        if (
+          !table &&
+          next?.binding === record.binding &&
+          next.start === record.end &&
+          next.index === record.index + 1 &&
+          !metadata.has(next.start)
+        ) {
+          table = { name: record.binding.name, nextIndex: record.index };
+          lines.push(`  dataStructs ${record.binding.name}`);
+        }
+        const literal = renderSnesStructInitializer(
+          record,
+          rom.read(record.start, record.end - record.start)!,
+        );
+        if (table) {
+          lines.push(`    [${record.index}] = ${literal}`);
+          table.nextIndex = record.index + 1;
+        } else {
+          const reference =
+            record.binding.count === 1 && record.index === 0
+              ? record.binding.name
+              : `${record.binding.name}[${record.index}]`;
+          lines.push(`  dataStruct ${reference}, ${literal}`);
+        }
+        spans.push({
+          id: `struct:${span.start.toString(16).padStart(6, "0")}`,
+          source: SNES_STRUCT_MAP_SOURCE,
+          addressSpace: SNES_FILE_ADDRESS_SPACE,
+          start: span.start,
+          end: span.end,
+          role: "raw",
+          file: bankPath,
+          regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
+        });
+      } else if (span.structField) {
+        lines.push(
+          ...renderSnesStructData(
+            span.structField,
+            span.start,
+            rom.read(span.start, span.end - span.start)!,
+          ),
+        );
+        spans.push({
+          id: `struct:${span.start.toString(16).padStart(6, "0")}`,
+          source: SNES_STRUCT_MAP_SOURCE,
+          addressSpace: SNES_FILE_ADDRESS_SPACE,
+          start: span.start,
+          end: span.end,
+          role: "raw",
+          file: bankPath,
+          regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
+        });
       } else {
         const assetPath = `assets/${span.role}-${span.start.toString(16).padStart(6, "0")}-${span.end.toString(16).padStart(6, "0")}.bin`;
         const bytes = rom.read(span.start, span.end - span.start)!;
@@ -1034,6 +1259,7 @@ export const exportSnes65816Source = (
       }
       nextAddress = address + span.end - span.start;
     }
+    if (table) lines.push("  endDataStructs");
     writeFile(directory, bankPath, `${lines.join("\n")}\n`, "source", files);
   }
 
@@ -1060,6 +1286,7 @@ export const exportSnes65816Source = (
     "",
     `incsrc "${SNES_HARDWARE_DEFINES_SOURCE}"`,
     `incsrc "${SNES_RAM_DEFINES_SOURCE}"`,
+    ...(structMap ? [`incsrc "${SNES_STRUCT_DEFINES_SOURCE}"`] : []),
     "",
     ...bankSources.map((source) => `incsrc "${source}"`),
     "",
@@ -1080,6 +1307,14 @@ export const exportSnes65816Source = (
     files,
   );
   writeFile(directory, "main.asm", main, "source", files);
+  if (structMap)
+    writeFile(
+      directory,
+      SNES_STRUCT_DEFINES_SOURCE,
+      renderSnesStructDefines(structMap),
+      "source",
+      files,
+    );
   const annotationIssues = [...project.shards.labels, ...project.shards.comments]
     .flatMap((record) => {
       const offset = toFileOffset(record.addressSpace, record.address, mapper, rom.length);
@@ -1139,6 +1374,17 @@ export const exportSnes65816Source = (
     finalOutput: "build/rebuilt.sfc",
     checksumPolicy: "preserve",
     inputs: [
+      ...(structMap
+        ? [
+            {
+              path: SNES_STRUCT_MAP_SOURCE,
+              kind: "metadata" as const,
+              size: structMap.sourceBytes.length,
+              records: structMap.structures.length + structMap.bindings.length,
+              sha256: sourceExportSha256(structMap.sourceBytes),
+            },
+          ]
+        : []),
       {
         path: SNES_RAM_MAP_SOURCE,
         kind: "metadata",

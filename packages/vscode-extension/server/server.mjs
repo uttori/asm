@@ -1152,7 +1152,7 @@ function classifyCommand(command, words) {
   if (keyword === "undef") {
     return "defineCommand";
   }
-  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip") {
+  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip" || keyword === "datastruct" || keyword === "datastructs" || keyword === "enddatastructs" || /^\[[^\]]+]\s*=/.test(trimmed)) {
     return "structCommand";
   }
   if (keyword === "function") {
@@ -1219,7 +1219,8 @@ function deriveCommandSemantics(command, words) {
   }
   if (bareKeyword === "incbin" && words.length >= 2) {
     const incbinSource = command.slice((words[0] ?? "").length).split(/\s+->\s+/u, 1)[0].trim();
-    const rangeCandidate = extractIncbinRange(incbinSource);
+    const colonIndex = incbinSource.indexOf(":");
+    const rangeCandidate = colonIndex === -1 ? void 0 : incbinSource.slice(colonIndex + 1);
     if (rangeCandidate) {
       const parsedRange = parseExpressionNode(rangeCandidate);
       if (parsedRange.type === "range") {
@@ -1294,13 +1295,6 @@ function extractIncludePath(raw) {
   const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
   return pathToken.replace(/^["'`]+|["'`]+$/g, "");
 }
-function extractIncbinRange(argument) {
-  const colonIndex = argument.indexOf(":");
-  if (colonIndex === -1) {
-    return void 0;
-  }
-  return argument.slice(colonIndex + 1);
-}
 function extractLabelSplit(command) {
   const trimmed = command.trim();
   const labelMatch = trimmed.match(/^([$.?A-Z_a-z][\w$.?]*):\s*(.*)$/);
@@ -1370,9 +1364,6 @@ var init_normalized_command = __esm({
 });
 
 // packages/core/src/mathcore.ts
-function escapeRegExp(value) {
-  return value.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
-}
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
@@ -2288,7 +2279,8 @@ var init_mathcore = __esm({
         for (let i = 0; i < func.args.length; i++) {
           const paramName = func.args[i];
           const argValue = args[i];
-          const regex = new RegExp(`\\b${escapeRegExp(paramName)}\\b`, "g");
+          const escapedParamName = paramName.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
+          const regex = new RegExp(`\\b${escapedParamName}\\b`, "g");
           const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
           content = content.replace(regex, replacement);
         }
@@ -3537,6 +3529,76 @@ var init_layout = __esm({
   }
 });
 
+// packages/core/src/services/struct-initializer.ts
+function splitInitializerList(text) {
+  const entries3 = [];
+  const stack = [];
+  let quote = "";
+  let start = 0;
+  for (let index2 = 0; index2 < text.length; index2++) {
+    const char = text[index2];
+    if (quote) {
+      if (char === quote && text[index2 - 1] !== "\\") quote = "";
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if ("([{".includes(char)) stack.push(char);
+    else if (")]}".includes(char)) {
+      const expected = { ")": "(", "]": "[", "}": "{" }[char];
+      if (stack.pop() !== expected) throw new Error("Mismatched initializer delimiters.");
+    } else if (char === "," && stack.length === 0) {
+      const entry = text.slice(start, index2).trim();
+      if (!entry) throw new Error("Empty initializer item.");
+      entries3.push(entry);
+      start = index2 + 1;
+    }
+  }
+  if (quote || stack.length) throw new Error("Unclosed initializer delimiter.");
+  const last = text.slice(start).trim();
+  if (last) entries3.push(last);
+  return entries3;
+}
+function parseStructInitializer(text) {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+    throw new Error("dataStruct requires a named initializer: { field = value }.");
+  }
+  const fields = /* @__PURE__ */ new Map();
+  for (const entry of splitInitializerList(trimmed.slice(1, -1))) {
+    const match = entry.match(/^([A-Z_a-z][\w.]*)\s*=\s*(.+)$/s);
+    if (!match) throw new Error(`Expected 'field = value' in initializer: ${entry}`);
+    const [, name, value] = match;
+    if (fields.has(name)) throw new Error(`Duplicate initializer field '${name}'.`);
+    if (value.startsWith("[")) {
+      if (!value.endsWith("]")) throw new Error(`Unclosed array initializer '${name}'.`);
+      fields.set(name, splitInitializerList(value.slice(1, -1)));
+    } else fields.set(name, value);
+  }
+  return fields;
+}
+function isOpenStructInitializer(text) {
+  if (!/^(?:datastruct\b|\[)/i.test(text.trimStart())) return false;
+  let depth = 0;
+  let quote = "";
+  for (let index2 = 0; index2 < text.length; index2++) {
+    const char = text[index2];
+    if (quote) {
+      if (char === quote && text[index2 - 1] !== "\\") quote = "";
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === "{") depth++;
+    else if (char === "}") depth--;
+  }
+  return depth > 0;
+}
+var init_struct_initializer = __esm({
+  "packages/core/src/services/struct-initializer.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
@@ -3650,6 +3712,7 @@ var removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparato
 var init_command_text_service = __esm({
   "packages/core/src/services/command-text-service.ts"() {
     "use strict";
+    init_struct_initializer();
     init_syntax_profile();
     removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
       let inQuote = false;
@@ -3679,7 +3742,10 @@ var init_command_text_service = __esm({
         }
         line = removeInlineComment(line, syntaxProfile);
         if (!line.trim()) continue;
-        if (line.endsWith("\\")) {
+        if (isOpenStructInitializer(nextCommandBuffer + line)) {
+          if (nextCommandBuffer === "") bufferStartLine = lineIndex;
+          nextCommandBuffer += `${line} `;
+        } else if (line.endsWith("\\")) {
           if (nextCommandBuffer === "") {
             bufferStartLine = lineIndex;
           }
@@ -4103,6 +4169,15 @@ var init_struct_binary = __esm({
       });
       registry.register("endstruct", context, ({ session }, words) => {
         session.structEngine.handleEndStruct(words);
+      });
+      registry.register("datastruct", context, ({ session }, words) => {
+        session.structEngine.data.emit(words);
+      });
+      registry.register("datastructs", context, ({ session }, words) => {
+        session.structEngine.data.begin(words);
+      });
+      registry.register("enddatastructs", context, ({ session }, words) => {
+        session.structEngine.data.end(words);
       });
     };
   }
@@ -4847,9 +4922,6 @@ var init_directive_runtime_service = __esm({
 });
 
 // packages/core/src/services/program-model-builder.ts
-function commandStreamKey(commands) {
-  return commands.map((command) => typeof command === "string" ? command : `${command.line}:${command.text}`).join("\n");
-}
 var ProgramModelBuilder;
 var init_program_model_builder = __esm({
   "packages/core/src/services/program-model-builder.ts"() {
@@ -4886,6 +4958,7 @@ var init_program_model_builder = __esm({
         state.branchStack.length = 0;
         state.inMacroDefinition = false;
         state.inFunctionDefinition = false;
+        state.inDataStructs = false;
       }
       /**
        * Builds a program model from raw source text.
@@ -4928,7 +5001,8 @@ var init_program_model_builder = __esm({
        * @returns {ExecutableNode[]} The cached or parsed nodes.
        */
       getOrBuildPassProgram(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine) {
-        const cacheKey = `${sourceFile}::${startLine}::${commandStreamKey(commands)}`;
+        const commandStream = commands.map((command) => typeof command === "string" ? command : `${command.line}:${command.text}`).join("\n");
+        const cacheKey = `${sourceFile}::${startLine}::${commandStream}`;
         const cached = this.host.passProgramCache.get(cacheKey);
         if (cached) {
           incrementInternalCounter("passProgramCacheHits");
@@ -5017,6 +5091,12 @@ var init_program_model_builder = __esm({
           if (keyword === "endmacro") {
             state.inMacroDefinition = false;
           }
+          return;
+        }
+        if (state.inDataStructs || keyword === "datastructs") {
+          state.inDataStructs = keyword !== "enddatastructs";
+          setCommandKind(command, "structCommand");
+          this.pushToCurrent(state, command);
           return;
         }
         if (state.inFunctionDefinition) {
@@ -5163,6 +5243,7 @@ var init_assembly_front_end_service = __esm({
     init_command_text_service();
     init_program_model_builder();
     init_normalized_command();
+    init_struct_initializer();
     AssemblyFrontEndService = class {
       constructor(host) {
         this.host = host;
@@ -5180,6 +5261,8 @@ var init_assembly_front_end_service = __esm({
       }
       host;
       commandBuffer = "";
+      /** Opening physical line when processCommand receives a record one line at a time. */
+      structBufferStart;
       programModelBuilder;
       /**
        * Preprocesses raw source blocks while preserving continued-line buffering.
@@ -5195,8 +5278,25 @@ var init_assembly_front_end_service = __esm({
        * @returns {SourcedCommand[]} The normalized sourced commands.
        */
       preprocessSourcedBlockCommands(block) {
+        const opening = this.structBufferStart;
+        if (opening && opening.file !== this.host.currentFile) {
+          throw new Error(`Unclosed dataStruct initializer in '${opening.file}'.`);
+        }
         const processed = preprocessBlockCommands(block, this.commandBuffer, this.host.syntaxProfile);
+        if (opening && processed.sourcedCommands.length > 0) {
+          processed.sourcedCommands[0].line = opening.line - this.host.currentLine;
+        }
         this.commandBuffer = processed.commandBuffer;
+        if (isOpenStructInitializer(this.commandBuffer)) {
+          if (!opening || processed.sourcedCommands.length > 0) {
+            const lines = block.split("\n");
+            const start = lines.findLastIndex((line) => /^(?:datastruct\b|\[)/i.test(line.trimStart()));
+            this.structBufferStart = {
+              file: this.host.currentFile,
+              line: this.host.currentLine + Math.max(0, start)
+            };
+          }
+        } else this.structBufferStart = void 0;
         return processed.sourcedCommands;
       }
       /**
@@ -6660,6 +6760,171 @@ var init_output_writer_service = __esm({
   }
 });
 
+// packages/core/src/services/data-struct-engine.ts
+var DataStructEngine;
+var init_data_struct_engine = __esm({
+  "packages/core/src/services/data-struct-engine.ts"() {
+    "use strict";
+    init_normalized_command();
+    init_command_text_service();
+    init_struct_initializer();
+    DataStructEngine = class {
+      constructor(host, structs) {
+        this.host = host;
+        this.structs = structs;
+      }
+      host;
+      structs;
+      table;
+      get inTable() {
+        return this.table !== void 0;
+      }
+      reset() {
+        this.table = void 0;
+      }
+      finish() {
+        if (this.table) throw new Error(`Missing endDataStructs for '${this.table.name}'.`);
+      }
+      /**
+       * Rewrite a row into a normal directive so it retains source/trace ownership.
+       * @param {NormalizedCommand} command Per-dispatch mutable command, never the cached node.
+       */
+      prepareRow(command) {
+        const text = command.command.trim();
+        if (/^enddatastructs\b/i.test(text)) return;
+        const match = text.match(/^\[([^\]]+)]\s*=\s*({.*})$/s);
+        if (!this.table || !match) {
+          throw new Error("dataStructs accepts only indexed records: [index] = { field = value }.");
+        }
+        const rewritten = `dataStruct ${this.table.name}[${match[1]}], ${match[2]}`;
+        setCommandWords(command, splitCommandIntoWords(rewritten), rewritten);
+      }
+      begin(words) {
+        if (this.table) throw new Error("Nested dataStructs blocks are not supported.");
+        if (words.length !== 2 || !this.host.structs.has(words[1])) {
+          throw new Error("dataStructs requires one previously defined struct name.");
+        }
+        this.table = { name: words[1], rows: 0 };
+      }
+      end(words) {
+        if (!this.table) throw new Error("endDataStructs without dataStructs.");
+        if (words.length !== 1) throw new Error("endDataStructs takes no arguments.");
+        if (this.table.rows === 0) throw new Error("dataStructs must contain at least one record.");
+        this.table = void 0;
+      }
+      /**
+       * Resolve an addressed record, keeping the established Asar index/stride rules.
+       * @param {string} reference Previously declared name with an optional logical index.
+       * @returns {{ definition: StructDefinition; index: number }} Layout and checked index.
+       */
+      resolveRecord(reference) {
+        const match = reference.match(/^([A-Z_a-z][\w.]*)(?:\[([^\]]+)])?$/);
+        const definition = match && this.host.structs.get(match[1]);
+        if (!match || !definition) throw new Error(`Unknown dataStruct record '${reference}'.`);
+        const index2 = match[2] === void 0 ? 0 : this.host.operandResolver.getnum(match[2]);
+        if (!Number.isSafeInteger(index2) || index2 < 0)
+          throw new Error(`Invalid record index '${reference}'.`);
+        if (definition.indexRange) {
+          const { first, count } = definition.indexRange;
+          if (index2 < first || index2 >= first + count)
+            throw new Error(`Record index out of bounds: '${reference}'.`);
+        }
+        return { definition, index: index2 };
+      }
+      fieldsFor(definition) {
+        if (definition.parent || definition.extensionSize > 0) {
+          throw new Error(
+            `dataStruct does not initialize extended layouts ('${definition.name}'); use raw data directives.`
+          );
+        }
+        const fields = [...definition.fields?.values() ?? []].sort((a, b) => a.offset - b.offset);
+        let end = 0;
+        for (const field of fields) {
+          if (field.offset !== end)
+            throw new Error(
+              `Layout '${definition.name}' has overlapping or unnamed bytes; name every byte before initialization.`
+            );
+          end += field.width * field.count;
+        }
+        if (definition.align && end === definition.offset && end < definition.size) {
+          if (definition.labels.has("__padding"))
+            throw new Error("The alignment padding name '__padding' is reserved.");
+          fields.push({
+            name: "__padding",
+            offset: end,
+            width: 1,
+            count: definition.size - end,
+            array: true
+          });
+          end = definition.size;
+        }
+        if (end !== definition.size || end < 1 || end > 65536) {
+          throw new Error(
+            `Layout '${definition.name}' must describe every byte and be between 1 and 65536 bytes.`
+          );
+        }
+        return fields;
+      }
+      emit(words) {
+        const args = splitInitializerList(words.slice(1).join(" "));
+        if (args.length !== 2)
+          throw new Error("dataStruct syntax: dataStruct Record[index], { field = value }.");
+        const [reference, literal] = args;
+        const { definition, index: index2 } = this.resolveRecord(reference);
+        if (this.table?.next !== void 0 && index2 !== this.table.next) {
+          throw new Error(
+            `Non-contiguous dataStructs index: expected ${this.table.next}, received ${index2}.`
+          );
+        }
+        const layout = this.fieldsFor(definition);
+        const values = parseStructInitializer(literal);
+        const names = new Set(layout.map((field) => field.name));
+        for (const name of values.keys()) {
+          if (!names.has(name))
+            throw new Error(`Unknown initializer field '${definition.name}.${name}'.`);
+        }
+        const bytes = [];
+        for (const field of layout) {
+          const value = values.get(field.name);
+          const name = `${reference}.${field.name}`;
+          if (value === void 0) throw new Error(`Missing initializer field '${name}'.`);
+          if (field.array !== Array.isArray(value))
+            throw new Error(`Field '${name}' requires ${field.array ? "an array" : "a scalar"}.`);
+          const items = typeof value === "string" ? [value] : value;
+          if (items.length !== field.count)
+            throw new Error(
+              `Field '${name}' requires ${field.count} value(s), received ${items.length}.`
+            );
+          if (!this.host.canEmitBytes) continue;
+          for (const expression of items) {
+            const number = this.host.operandResolver.getnum(expression);
+            if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
+              throw new Error(
+                `Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`
+              );
+            }
+            for (let byte = 0; byte < field.width; byte++)
+              bytes.push(Math.floor(number / 2 ** (8 * byte)) & 255);
+          }
+        }
+        if (this.host.canEmitBytes) {
+          const expected = this.structs.resolveStructLabel(reference);
+          if (this.host.currentTargetBaseAddress !== expected) {
+            throw new Error(
+              `dataStruct '${reference}' requires pc() == $${expected.toString(16).toUpperCase()}, received $${this.host.currentTargetBaseAddress.toString(16).toUpperCase()}.`
+            );
+          }
+          this.host.outputWriter.writeBytes(bytes);
+        } else this.host.outputWriter.step(definition.size);
+        if (this.table) {
+          this.table.next = index2 + 1;
+          this.table.rows++;
+        }
+      }
+    };
+  }
+});
+
 // packages/core/src/services/struct-engine.ts
 var StructEngine;
 var init_struct_engine = __esm({
@@ -6667,11 +6932,14 @@ var init_struct_engine = __esm({
     "use strict";
     init_normalized_command();
     init_address_width();
+    init_data_struct_engine();
     StructEngine = class {
       constructor(host) {
         this.host = host;
+        this.data = new DataStructEngine(host, this);
       }
       host;
+      data;
       /**
        * Handles a struct mode command.
        * @param {NormalizedCommand} command The command to handle.
@@ -6687,18 +6955,51 @@ var init_struct_engine = __esm({
         if (keyword.startsWith(".")) {
           const hasColon = keyword.endsWith(":");
           const labelName = keyword.replace(/:$/, "").substring(1);
+          const declaration = words.slice(1).join(" ");
+          const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
+          if (typed) {
+            const width = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
+            const count = typed[2] === void 0 ? 1 : this.host.operandResolver.getnum(typed[2]);
+            if (!Number.isSafeInteger(count) || count < 1 || count * width > 65536) {
+              throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
+            }
+            if (currentStruct.labels.has(labelName)) {
+              throw new Error(`Duplicate typed field '${currentStruct.name}.${labelName}'.`);
+            }
+            (currentStruct.fields ??= /* @__PURE__ */ new Map()).set(labelName, {
+              name: labelName,
+              offset: currentStruct.offset,
+              width,
+              count,
+              array: typed[2] !== void 0
+            });
+          } else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
+            throw new Error(`Invalid typed field '${currentStruct.name}.${labelName}': ${declaration}`);
+          }
           currentStruct.labels.set(labelName, currentStruct.offset);
           this.host.recordSymbolDefinition("structMember", labelName, {
             value: currentStruct.offset,
             containerName: currentStruct.name
           });
-          if (words[1]?.toLowerCase() === "skip") {
+          if (typed) {
+            const field = currentStruct.fields.get(labelName);
+            currentStruct.offset += field.width * field.count;
+          } else if (words[1]?.toLowerCase() === "skip") {
             if (words.length !== 3) {
               throw new Error(
                 `skip directive in struct requires exactly one parameter: ${words.length}`
               );
             }
             const skipAmount = this.host.operandResolver.getnum(words[2]);
+            if (Number.isSafeInteger(skipAmount) && skipAmount > 0) {
+              currentStruct.fields?.set(labelName, {
+                name: labelName,
+                offset: currentStruct.offset,
+                width: 1,
+                count: skipAmount,
+                array: true
+              });
+            }
             currentStruct.offset += skipAmount;
           }
           void hasColon;
@@ -6749,6 +7050,7 @@ var init_struct_engine = __esm({
           offset: 0,
           size: 0,
           labels: /* @__PURE__ */ new Map(),
+          fields: /* @__PURE__ */ new Map(),
           parent,
           extensionSize: 0
         };
@@ -6764,14 +7066,33 @@ var init_struct_engine = __esm({
           throw new Error("endstruct encountered but not inside a struct definition.");
         }
         let align;
-        if (words.length >= 2 && words[1].toLowerCase() === "align") {
-          if (words.length !== 3) {
-            throw new Error("endstruct align requires a single alignment parameter.");
+        let count;
+        let first = 0;
+        const seen = /* @__PURE__ */ new Set();
+        for (let index2 = 1; index2 < words.length; index2 += 2) {
+          const option = words[index2].toLowerCase();
+          if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || words[index2 + 1] === void 0) {
+            if (words[1]?.toLowerCase() === "align")
+              throw new Error("endstruct align requires a single alignment parameter.");
+            throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
           }
-          align = this.host.operandResolver.getnum(words[2]);
-          if (align < 1) {
-            throw new Error("Alignment must be at least 1.");
+          seen.add(option);
+          const value = this.host.operandResolver.getnum(words[index2 + 1]);
+          if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
+            throw new Error(
+              option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`
+            );
           }
+          if (option === "align") align = value;
+          else if (option === "count") count = value;
+          else first = value;
+        }
+        if (seen.has("firstindex") && count === void 0)
+          throw new Error("endstruct firstindex requires count.");
+        if (count !== void 0) {
+          if (!Number.isSafeInteger(first + count))
+            throw new Error("Struct index range exceeds integer precision.");
+          currentStruct.indexRange = { first, count };
         }
         let finalSize = currentStruct.offset;
         if (align !== void 0) {
@@ -8031,20 +8352,60 @@ var init_directive_catalog = __esm({
           syntax: 'table "file",rtl'
         }
       ]),
-      descriptor("struct", "Begin a structure definition.", "struct name [extends parent]", "struct", [
-        {
-          keyword: "extends",
-          summary: "Inherit members from an existing struct.",
-          syntax: "struct name extends parent"
-        }
-      ]),
-      descriptor("endstruct", "End a structure definition.", "endstruct [align value]", "struct", [
-        {
-          keyword: "align",
-          summary: "Round the struct size/stride up to an alignment.",
-          syntax: "endstruct align value"
-        }
-      ]),
+      descriptor(
+        "struct",
+        "Define a non-emitting layout with .field: skip N or typed db/dw/dl/dd fields.",
+        "struct name [base | extends parent]",
+        "struct",
+        [
+          {
+            keyword: "extends",
+            summary: "Inherit members from an existing struct.",
+            syntax: "struct name extends parent"
+          }
+        ]
+      ),
+      descriptor(
+        "endstruct",
+        "End a structure definition.",
+        "endstruct [align value] [count value] [firstindex value]",
+        "struct",
+        [
+          {
+            keyword: "align",
+            summary: "Round the struct size/stride up to an alignment.",
+            syntax: "endstruct align value"
+          },
+          {
+            keyword: "count",
+            summary: "Number of records valid for named initialization.",
+            syntax: "endstruct count value [firstindex value]"
+          },
+          {
+            keyword: "firstindex",
+            summary: "First valid logical index (default zero); requires count.",
+            syntax: "endstruct count value firstindex value"
+          }
+        ]
+      ),
+      descriptor(
+        "datastruct",
+        "Emit one complete named record at its struct address; checks fields, widths and pc().",
+        "dataStruct Record[index], { field = value, bytes = [value, ...] }",
+        "struct"
+      ),
+      descriptor(
+        "datastructs",
+        "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+        "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
+        "struct"
+      ),
+      descriptor(
+        "enddatastructs",
+        "End a non-empty table of named records.",
+        "endDataStructs",
+        "struct"
+      ),
       ...[
         ["if", "Begin a conditional block.", "if expression"],
         ["elseif", "Begin an alternate conditional branch.", "elseif expression"],
@@ -11221,6 +11582,7 @@ var init_assembler = __esm({
     init_macro_engine();
     init_output_writer_service();
     init_struct_engine();
+    init_struct_initializer();
     init_symbol_scope_service();
     init_command_text_service();
     init_syntax_profile();
@@ -11793,6 +12155,30 @@ var init_assembler = __esm({
         }
         const fallbackSpan = command.source.normalizedSpan;
         const parsed = command.parsed;
+        if (command.keyword.toLowerCase() === "datastruct") {
+          const args = splitInitializerList(command.words.slice(1).join(" "));
+          if (args.length !== 2) return;
+          const reference = args[0];
+          const containerName = reference.replace(/\[[^\]]+]$/, "");
+          if (!command.source.raw.trimStart().startsWith("[")) {
+            this.collectExpressionReferences(parseExpressionNode(reference), fallbackSpan);
+          } else {
+            const index2 = reference.match(/\[([^\]]+)]$/)?.[1];
+            if (index2) this.collectExpressionReferences(parseExpressionNode(index2), fallbackSpan);
+          }
+          for (const [field, value] of parseStructInitializer(args[1])) {
+            this.recordSymbolReference("label", field, { containerName });
+            for (const expression of typeof value === "string" ? [value] : value) {
+              this.collectExpressionReferences(parseExpressionNode(expression), fallbackSpan);
+            }
+          }
+          return;
+        }
+        if (command.keyword.toLowerCase() === "datastructs") {
+          if (command.words[1])
+            this.collectExpressionReferences(parseExpressionNode(command.words[1]), fallbackSpan);
+          return;
+        }
         this.collectExpressionReferences(parsed.assignment?.expression, fallbackSpan);
         this.collectExpressionReferences(parsed.condition?.expression, fallbackSpan);
         this.collectExpressionReferences(parsed.forLoop?.range, fallbackSpan);
@@ -12060,18 +12446,6 @@ var init_assembler = __esm({
         }
       }
       /**
-       * Creates cursor address facade.
-       * @returns {CursorAddressFacade} The result.
-       */
-      createCursorAddressFacade() {
-        return {
-          recordCurrentAddress: () => this.recordCurrentAddress(),
-          setWritePosition: (address3) => this.setWritePosition(address3),
-          syncWriteStarts: () => this.syncWriteStarts(),
-          incrementBytesWritten: (num) => this.incrementBytesWritten(num)
-        };
-      }
-      /**
        * Creates services.
        * @returns {AssemblerServiceBag} The result.
        */
@@ -12186,7 +12560,12 @@ var init_assembler = __esm({
         this.baseImage = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
         this.fileProvider = options.fileProvider ?? new NodeAssemblyFileProvider();
         this.collectSourceMetadata = options.collectSourceMetadata ?? true;
-        this.cursorAddress = this.createCursorAddressFacade();
+        this.cursorAddress = {
+          recordCurrentAddress: () => this.recordCurrentAddress(),
+          setWritePosition: (address3) => this.setWritePosition(address3),
+          syncWriteStarts: () => this.syncWriteStarts(),
+          incrementBytesWritten: (num) => this.incrementBytesWritten(num)
+        };
         this.mathCore = new MathCore();
         this.mathCore.host = this.expressionHost;
         this.installExpressionFunctions(target.expressionSets);
@@ -13092,6 +13471,10 @@ var init_assembler = __esm({
        * @returns {CommandPreprocessResult} The result.
        */
       preprocessNormalizedCommand(state) {
+        if (this.structEngine.data.inTable && !this.inMacroDefinition) {
+          this.structEngine.data.prepareRow(state);
+          return "continue";
+        }
         if (!this.inMacroDefinition && this.tryHandleCharacterMapping(state.command)) {
           setCommandKind(state, "characterMapping");
           return "handled";
@@ -13181,14 +13564,16 @@ var init_assembler = __esm({
             this.lowerAndExecuteRuntimeNodes(nodes);
           }
         } else {
-          const processedCommands = this.frontEndService.preprocessBlockCommands(command);
-          const splitCommands = this.frontEndService.splitInlineCommands(processedCommands);
+          const sourceFile = this.currentFile;
+          const sourceLine = this.currentLine;
+          const processedCommands = this.frontEndService.preprocessSourcedBlockCommands(command);
+          const splitCommands = this.frontEndService.splitSourcedInlineCommands(processedCommands);
           for (const splitCommand of splitCommands) {
             const nodes = this.programModelBuilder.consumeIncrementalCommand(
               this.incrementalProgramParseState,
-              splitCommand.trim(),
-              this.currentFile,
-              this.currentLine
+              splitCommand.text.trim(),
+              sourceFile,
+              sourceLine + splitCommand.line
             );
             this.lowerAndExecuteRuntimeNodes(nodes);
           }
@@ -13750,6 +14135,7 @@ var init_assembler = __esm({
        */
       activateStage(stage) {
         this.syncActiveStageExecutionState(stage);
+        this.structEngine.data.reset();
         if (stage === "resolveLayout") {
           this.forwardLabels = {};
           this.backwardLabels = {};
@@ -13771,6 +14157,10 @@ var init_assembler = __esm({
        * Completes the current pass, performing any necessary cleanup.
        */
       finishPass() {
+        this.structEngine.data.finish();
+        if (/^(?:datastruct\b|\[)/i.test(this.frontEndService.commandBuffer.trimStart())) {
+          throw new Error("Unclosed dataStruct initializer at end of source.");
+        }
         const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
         this.runLifecycleHook(
           "onStageEnd",
@@ -14413,7 +14803,7 @@ var init_decoder_types = __esm({
 // packages/core/src/debug-map.ts
 import { createHash as createHash2 } from "node:crypto";
 import path2 from "node:path";
-var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, portablePath, createDebugMap;
+var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, createDebugMap;
 var init_debug_map = __esm({
   "packages/core/src/debug-map.ts"() {
     "use strict";
@@ -14431,17 +14821,14 @@ var init_debug_map = __esm({
     canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue(value), null, 2)}
 `;
     sha256 = (value) => createHash2("sha256").update(value).digest("hex");
-    portablePath = (filename, root) => {
-      const relative2 = path2.relative(root, path2.resolve(filename));
-      return relative2 && !relative2.startsWith("..") && !path2.isAbsolute(relative2) ? relative2.split(path2.sep).join("/") : path2.resolve(filename).split(path2.sep).join("/");
-    };
     createDebugMap = (options) => {
       const sourceRoot = path2.resolve(options.sourceRoot ?? process.cwd());
-      const entries3 = options.mapping.fileList.map((entry, originalId) => ({
-        entry,
-        originalId,
-        portable: portablePath(entry.name, sourceRoot)
-      })).sort((left, right) => left.portable.localeCompare(right.portable));
+      const entries3 = options.mapping.fileList.map((entry, originalId) => {
+        const absolute = path2.resolve(entry.name);
+        const relative2 = path2.relative(sourceRoot, absolute);
+        const portable = relative2 && !relative2.startsWith("..") && !path2.isAbsolute(relative2) ? relative2 : absolute;
+        return { entry, originalId, portable: portable.split(path2.sep).join("/") };
+      }).sort((left, right) => left.portable.localeCompare(right.portable));
       const sourceIdByOriginal = /* @__PURE__ */ new Map();
       const sources = entries3.map(({ entry, originalId, portable }, id) => {
         sourceIdByOriginal.set(originalId, id);
@@ -15155,19 +15542,20 @@ var init_workspace_index = __esm({
           }
         }
         const started = Date.now();
-        const assembler = measureInternalPhase(
-          "lspAssemblerConstruct",
-          () => new Assembler({
-            environment: this.environment,
-            target: this.target,
-            architecture: this.architecture,
-            targetOptions: this.targetOptions,
-            fileProvider: this.#provider
-          })
-        );
-        assembler.includePaths = this.deriveIncludePaths(root);
-        assembler.followIncludes = followIncludes;
+        let assembler;
         try {
+          assembler = measureInternalPhase(
+            "lspAssemblerConstruct",
+            () => new Assembler({
+              environment: this.environment,
+              target: this.target,
+              architecture: this.architecture,
+              targetOptions: this.targetOptions,
+              fileProvider: this.#provider
+            })
+          );
+          assembler.includePaths = this.deriveIncludePaths(root);
+          assembler.followIncludes = followIncludes;
           const result = measureInternalPhase(
             "lspAnalyzeSource",
             () => assembler.analyzeSource(content, root, 0, { followIncludes })
@@ -15202,7 +15590,7 @@ var init_workspace_index = __esm({
           );
           return void 0;
         } finally {
-          assembler.dispose();
+          assembler?.dispose();
         }
       }
       /**
@@ -18362,13 +18750,6 @@ var init__ = __esm({
           }
           return Number.parseInt(symbolicOperand.slice(1, 3), 16);
         })();
-        const longMode = (currentOpcode) => {
-          if (currentOpcode === "JMP") return "JML";
-          if (currentOpcode === "JSR") return "JSL";
-          return currentOpcode;
-        };
-        const shortMode = (currentOpcode) => currentOpcode;
-        const absolutePointer = (value) => value & 65535;
         const selectDirectJumpMode = (currentOpcode, resolvedAddress) => {
           if (currentOpcode === "JML" || currentOpcode === "JSL") {
             return { mode: currentOpcode, address: resolvedAddress };
@@ -18377,14 +18758,17 @@ var init__ = __esm({
             const currentBank = this.assembler.currentTargetAddress >>> 16 & 255;
             const targetBank = resolvedAddress >>> 16 & 255;
             if ((currentOpcode === "JMP" || currentOpcode === "JSR") && targetBank === currentBank) {
-              return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+              return { mode: currentOpcode, address: resolvedAddress & 65535 };
             }
             if ((currentOpcode === "JMP" || currentOpcode === "JSR") && hintedBank === currentBank) {
-              return { mode: shortMode(currentOpcode), address: absolutePointer(resolvedAddress) };
+              return { mode: currentOpcode, address: resolvedAddress & 65535 };
             }
-            return { mode: longMode(currentOpcode), address: resolvedAddress };
+            let mode4 = currentOpcode;
+            if (currentOpcode === "JMP") mode4 = "JML";
+            else if (currentOpcode === "JSR") mode4 = "JSL";
+            return { mode: mode4, address: resolvedAddress };
           }
-          return { mode: shortMode(currentOpcode), address: resolvedAddress };
+          return { mode: currentOpcode, address: resolvedAddress };
         };
         if (/^\d+$/.test(operand)) {
           ({ mode: mode3, address: address3 } = selectDirectJumpMode(
@@ -18398,15 +18782,15 @@ var init__ = __esm({
           ));
         } else if (loweredOperand.mode === "indirectLong") {
           mode3 = "JMP_INDIRECT_LONG";
-          address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address3 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
         } else if (opcode === "JSR" && loweredOperand.mode === "indexedIndirectX") {
-          address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address3 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JSR_INDEXED_INDIRECT";
         } else if (loweredOperand.mode === "indexedIndirectX") {
-          address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address3 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JMP_INDEXED_INDIRECT";
         } else if (loweredOperand.mode === "directPageIndirect") {
-          address3 = absolutePointer(this.assembler.operandResolver.getnum(baseOperand));
+          address3 = this.assembler.operandResolver.getnum(baseOperand) & 65535;
           mode3 = "JMP_INDIRECT";
         } else {
           try {
@@ -18809,12 +19193,12 @@ var init__ = __esm({
               `Error: Branch target out of range (${relativeAddress}) for ${opcode} ${operand} at $${this.assembler.currentTargetAddress.toString(16)}.`
             );
           }
-          let signedByte3 = (relativeAddress & 255) >>> 0;
+          let signedByte2 = (relativeAddress & 255) >>> 0;
           if (relativeAddress < 0) {
-            signedByte3 |= 256;
+            signedByte2 |= 256;
           }
           this.assembler.write1(branchOpcodes2[opcode]);
-          this.assembler.write1(signedByte3);
+          this.assembler.write1(signedByte2);
           return true;
         }
       }
@@ -19218,10 +19602,6 @@ function spcOpcodePlusAddressSize(operand) {
   }
   return 3;
 }
-function isMovRegisterPair(left, right) {
-  const combined = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
-  return MOV_ONE_BYTE_PAIRS.has(combined);
-}
 function isAccumulator(op2, lowered) {
   if (lowered?.mode === "register" && lowered.registerName?.toUpperCase() === "A") {
     return true;
@@ -19261,12 +19641,6 @@ function parseBitBranchOpcode(opcode) {
     return { family: match[1] };
   }
   return { family: match[1], mnemonicBit: Number(match[2]) };
-}
-function bitBranchOpcodeByte(family, bit2) {
-  if (family === "BBS") {
-    return bit2 << 5 | 3;
-  }
-  return bit2 << 5 | 19;
 }
 function parseNumberedBitOpcode(opcode) {
   const match = opcode.toUpperCase().match(NUMBERED_BIT_OPCODE);
@@ -19644,7 +20018,8 @@ var init_spc700 = __esm({
        * @returns {number} Encoded size in bytes.
        */
       estimateMovSize(left, right, leftLowered, rightLowered) {
-        if (isMovRegisterPair(left, right)) {
+        const registerPair = `${left.trim()},${right.trim()}`.toUpperCase().replace(/\s+/g, "");
+        if (MOV_ONE_BYTE_PAIRS.has(registerPair)) {
           return 1;
         }
         const rightImmediate = rightLowered?.immediate ?? right.trim().startsWith("#");
@@ -20372,7 +20747,7 @@ var init_spc700 = __esm({
         if (bit2 === void 0) {
           return false;
         }
-        const opcodeByte = bitBranchOpcodeByte(parsed.family, bit2);
+        const opcodeByte = bit2 << 5 | (parsed.family === "BBS" ? 3 : 19);
         this.assembler.write1(opcodeByte);
         this.assembler.write1(dpVal);
         if (!this.assembler.enforceResolvedLabels) {
@@ -22341,12 +22716,11 @@ var init_superfx = __esm({
 });
 
 // packages/plugin-snes/src/architectures/superfx-decoder.ts
-var signedByte2, word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
+var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
 var init_superfx_decoder = __esm({
   "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
-    signedByte2 = (value) => value & 128 ? value - 256 : value;
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
     register3 = (value) => ({ kind: "register", register: `R${value}` });
     immediate2 = (value, width, signed2 = false) => ({
@@ -22368,7 +22742,7 @@ var init_superfx_decoder = __esm({
           return [];
         case "relative": {
           const raw = bytes[operandOffset] ?? 0;
-          const displacement = signedByte2(raw);
+          const displacement = raw & 128 ? raw - 256 : raw;
           return [
             {
               kind: "displacement",
@@ -24534,7 +24908,7 @@ var init_common = __esm({
 });
 
 // packages/plugin-snes/src/assets/brr.ts
-var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, signedNibble, snesBrrAssetCodec;
+var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
   "packages/plugin-snes/src/assets/brr.ts"() {
     "use strict";
@@ -24559,7 +24933,6 @@ var init_brr = __esm({
       }
       throw new Error(`BRR asset '${context.request.id}' has no end block within ${maxBlocks} blocks.`);
     };
-    signedNibble = (value) => value >= 8 ? value - 16 : value;
     snesBrrAssetCodec = Object.freeze({
       id: SNES_BRR_ASSET_CODEC_ID,
       version: "1.0.0",
@@ -24585,7 +24958,8 @@ var init_brr = __esm({
           const header = bytes[offset];
           const nibbles = Array.from({ length: 16 }, (_2, sampleIndex) => {
             const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
-            return signedNibble(sampleIndex % 2 === 0 ? byte >> 4 : byte & 15);
+            const nibble2 = sampleIndex % 2 === 0 ? byte >> 4 : byte & 15;
+            return nibble2 >= 8 ? nibble2 - 16 : nibble2;
           });
           return {
             range: header >> 4,
@@ -25181,7 +25555,7 @@ var init_assets = __esm({
 });
 
 // packages/plugin-snes/src/index.ts
-var SNES_TARGET_ID, toolingFor2, directive2, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin2, src_default2;
+var SNES_TARGET_ID, toolingFor, directive2, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin2, src_default2;
 var init_src2 = __esm({
   "packages/plugin-snes/src/index.ts"() {
     "use strict";
@@ -25243,7 +25617,7 @@ var init_src2 = __esm({
     init_function_heuristics();
     init_runtime_code();
     SNES_TARGET_ID = "snes.sfc";
-    toolingFor2 = (keywords) => {
+    toolingFor = (keywords) => {
       const wanted = new Set(keywords);
       return directiveCatalog2.filter((descriptor3) => wanted.has(descriptor3.keyword));
     };
@@ -25252,7 +25626,7 @@ var init_src2 = __esm({
       keywords,
       phase: "lowered",
       createHandler: handler,
-      tooling: toolingFor2(keywords)
+      tooling: toolingFor(keywords)
     });
     numericArgument = (functionName, args, index2) => {
       const value = args[index2];
@@ -25482,7 +25856,7 @@ var init_src2 = __esm({
         });
         context.registerDirectiveSet({
           id: "snes.policy-directives",
-          tooling: toolingFor2(["arch"]),
+          tooling: toolingFor(["arch"]),
           directives: [
             directive2(
               "snes.directive.check",
@@ -37856,15 +38230,6 @@ function parseMnemonic(value) {
 function modeSize(form) {
   return form.encoding.length + form.operands.reduce((size, operand) => size + operand.width, 0);
 }
-function unsignedOperandWidth(codec) {
-  if (codec === "unsigned8") return 1;
-  if (codec === "unsigned16-le") return 2;
-  if (codec === "unsigned24-le") return 3;
-  return 0;
-}
-function normalizeRelativeDelta(target, reference) {
-  return (target - reference + 32768 & 65535) - 32768;
-}
 function splitTopLevelOperands(value) {
   const operands = [];
   let depth = 0;
@@ -37951,11 +38316,19 @@ var Arch65xx = class {
     }
     const compoundOperands = form.codec === "zero-page-relative8" || form.codec === "accumulator-relative8" || form.codec === "zero-page-immediate8" || form.codec === "three-unsigned16-le" || form.codec === "immediate-unsigned8" || form.codec === "immediate-unsigned16" ? splitTopLevelOperands(operand.expanded) : [];
     const compoundValues = this.readCompoundValues(form, compoundOperands);
-    const operandWidth = unsignedOperandWidth(form.codec);
+    let operandWidth = 0;
+    if (form.codec === "unsigned8") operandWidth = 1;
+    else if (form.codec === "unsigned16-le") operandWidth = 2;
+    else if (form.codec === "unsigned24-le") operandWidth = 3;
     const operandKind = operandWidth === 1 ? "operand" : "address";
     let operandValue = 0;
     if (operandWidth !== 0) {
-      operandValue = this.readValue(operand, operandWidth, `${form.mnemonic} ${operandKind}`);
+      operandValue = this.readExpressionValue(
+        operand.baseExpression ?? operand.expanded,
+        operandWidth,
+        `${form.mnemonic} ${operandKind}`,
+        operand.mode === "immediate"
+      );
       if (form.operandConstraint === "power-of-two" && (operandValue === 0 || (operandValue & operandValue - 1) !== 0)) {
         throw this.context.diagnostics.error(`${form.mnemonic} operand must be a power of two.`);
       }
@@ -38171,10 +38544,6 @@ var Arch65xx = class {
     }
     return form;
   }
-  readValue(operand, width, description) {
-    const expression = operand.baseExpression ?? operand.expanded;
-    return this.readExpressionValue(expression, width, description, operand.mode === "immediate");
-  }
   readExpressionValue(expression, width, description, immediate3) {
     const value = this.context.operands.getnum(expression);
     const minimum = width === 1 && immediate3 ? -128 : 0;
@@ -38211,7 +38580,7 @@ var Arch65xx = class {
         `Branch target ${target} is outside the 16-bit address space.`
       );
     }
-    const delta = normalizeRelativeDelta(target, reference);
+    const delta = (target - reference + 32768 & 65535) - 32768;
     const minimum = width === 1 ? -128 : -32768;
     const maximum = width === 1 ? 127 : 32767;
     if (delta < minimum || delta > maximum) {
@@ -38846,7 +39215,7 @@ function defaultLd65ConfigText() {
   return DEFAULT_LINKER_CONFIG;
 }
 function parseLd65Config(source) {
-  const text = stripBlockComments(source);
+  const text = source.replace(/\/\*[\S\s]*?\*\//g, " ");
   const memories = /* @__PURE__ */ new Map();
   const segments = /* @__PURE__ */ new Map();
   const symbols = [];
@@ -38925,9 +39294,6 @@ function linkerDefinedSymbolNames(config) {
     names.push(symbol.name);
   }
   return names;
-}
-function stripBlockComments(source) {
-  return source.replace(/\/\*[\S\s]*?\*\//g, " ");
 }
 var LD65_BLOCK_BODY = {
   MEMORY: /memory\s*{([\S\s]*?)}/i,
@@ -39222,17 +39588,16 @@ var ca65ExpressionFunctions = [
   ["loword", "Low word of a value.", (value) => value & 65535],
   ["hiword", "High word of a value.", (value) => value >>> 16 & 65535]
 ];
-var toolingFor = (keywords) => {
+var directive = (id, keywords, handler) => {
   const wanted = new Set(keywords);
-  return ca65Tooling.filter((entry) => wanted.has(entry.keyword));
+  return {
+    id,
+    keywords,
+    phase: "lowered",
+    createHandler: handler,
+    tooling: ca65Tooling.filter((entry) => wanted.has(entry.keyword))
+  };
 };
-var directive = (id, keywords, handler) => ({
-  id,
-  keywords,
-  phase: "lowered",
-  createHandler: handler,
-  tooling: toolingFor(keywords)
-});
 function createFlat65xxAddressSpace({ options }) {
   const { origin } = createRaw65xxTargetOptions(options);
   const validate = (address3) => {
@@ -39266,12 +39631,6 @@ function createFlat65xxAddressSpace({ options }) {
     }
   };
 }
-function createRaw65xxOutputFormat() {
-  return {
-    finalize: () => void 0,
-    getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
-  };
-}
 function register65xxContributions(context) {
   for (const [cpu, forms] of [
     [nmos6502Cpu, nmos6502Forms],
@@ -39297,7 +39656,11 @@ function register65xxContributions(context) {
   });
   context.registerOutputFormat({
     id: RAW_65XX_OUTPUT_FORMAT_ID,
-    create: createRaw65xxOutputFormat
+    // Emit the buffer as a headerless image, without checksum or padding.
+    create: () => ({
+      finalize: () => void 0,
+      getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+    })
   });
   context.registerLifecycle({
     id: RAW_65XX_LIFECYCLE_ID,
@@ -40296,15 +40659,12 @@ var sameFileContent = (file, content) => {
     throw error;
   }
 };
-var temporarySibling = (file) => {
+var stageArtifact = (file, content) => {
   temporaryArtifactSequence += 1;
-  return path8.join(
+  const staged = path8.join(
     path8.dirname(file),
     `.${path8.basename(file)}.${process.pid}.${temporaryArtifactSequence}.tmp`
   );
-};
-var stageArtifact = (file, content) => {
-  const staged = temporarySibling(file);
   fs4.writeFileSync(staged, content, { flag: "wx" });
   return staged;
 };
@@ -41708,16 +42068,13 @@ function stringValue(value) {
 function stringArray(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : void 0;
 }
-function pluginArray(value) {
-  return Array.isArray(value) ? value : void 0;
-}
 function mergeServerSettings(previous, value) {
   if (!value || typeof value !== "object") return previous;
   const next = value;
   const has = (key) => Object.prototype.hasOwnProperty.call(next, key);
   return {
     configFile: has("configFile") ? stringValue(next.configFile) : previous.configFile,
-    plugins: pluginArray(next.plugins) ?? previous.plugins,
+    plugins: Array.isArray(next.plugins) ? next.plugins : previous.plugins,
     target: has("target") ? stringValue(next.target) : previous.target,
     architecture: has("architecture") ? stringValue(next.architecture) : previous.architecture,
     entryPoints: stringArray(next.entryPoints) ?? previous.entryPoints,
@@ -41766,13 +42123,10 @@ function projectSettings(next) {
 function currentOverlays() {
   return new Map(documents.all().map((document) => [uriToPath(document.uri), document.getText()]));
 }
-function diagnosticUri(next) {
-  return pathToUri(resolveAgainstWorkspace(next.configFile ?? PROJECT_CONFIG_FILENAME));
-}
 function setConfigurationDiagnostic(next, message, severity = import_node.DiagnosticSeverity.Error) {
   const previousUri = configurationDiagnostic?.uri;
   configurationDiagnostic = message ? {
-    uri: diagnosticUri(next),
+    uri: pathToUri(resolveAgainstWorkspace(next.configFile ?? PROJECT_CONFIG_FILENAME)),
     message,
     diagnostic: import_node.Diagnostic.create(
       import_node.Range.create(0, 0, 0, 1),

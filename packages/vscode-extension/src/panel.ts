@@ -2,6 +2,7 @@
  * Explorer sidebar panel for Uttori Assembly project settings.
  * @see https://code.visualstudio.com/api/extension-guides/webview
  */
+import { renderWebviewTemplate } from "./webview-template.js";
 import * as path from "node:path";
 import {
   ConfigurationTarget,
@@ -9,7 +10,6 @@ import {
   Uri,
   window,
   workspace,
-  type Webview,
   type WebviewView,
   type WebviewViewProvider,
 } from "vscode";
@@ -56,6 +56,8 @@ export class ProjectPanelProvider implements WebviewViewProvider {
 
   #view?: WebviewView;
   #metadata?: ProjectMetadata;
+  #snapshotRequest = 0;
+  readonly #pending = new Set<string>();
 
   constructor(
     private readonly extensionUri: Uri,
@@ -73,7 +75,11 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       enableScripts: true,
       localResourceRoots: [Uri.joinPath(this.extensionUri, "media")],
     };
-    webviewView.webview.html = this.renderHtml(webviewView.webview);
+    webviewView.webview.html = renderWebviewTemplate(
+      webviewView.webview,
+      this.extensionUri,
+      "panel",
+    );
     webviewView.webview.onDidReceiveMessage((message: { type?: string; value?: unknown }) => {
       void this.onMessage(message);
     });
@@ -92,12 +98,49 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     if (!this.#view) {
       return;
     }
+    const request = ++this.#snapshotRequest;
     const snapshot = await this.snapshot();
+    if (request !== this.#snapshotRequest) return;
     this.#metadata = snapshot.metadata;
-    void this.#view.webview.postMessage({ type: "snapshot", ...snapshot });
+    void this.#view.webview.postMessage({
+      type: "snapshot",
+      ...snapshot,
+      trusted: workspace.isTrusted,
+      projectName: workspace.name,
+    });
   }
 
+  /**
+   * Handles messages from the webview.
+   * @param {Object} message The message object.
+   * @param {string} message.type The type of message.
+   * @param {unknown} message.value The value of the message.
+   */
   async onMessage(message: { type?: string; value?: unknown }): Promise<void> {
+    if (!message || typeof message.type !== "string" || this.#pending.has(message.type)) return;
+    this.#pending.add(message.type);
+    let error: string | undefined;
+    try {
+      await this.executeMessage(message);
+    } catch (failure) {
+      error = failure instanceof Error ? failure.message : String(failure);
+    } finally {
+      this.#pending.delete(message.type);
+      void this.#view?.webview.postMessage({
+        type: "actionComplete",
+        command: message.type,
+        error,
+      });
+    }
+  }
+
+  /**
+   * Executes a message.
+   * @param {Object} message The message object.
+   * @param {string} message.type The type of message.
+   * @param {unknown} message.value The value of the message.
+   */
+  private async executeMessage(message: { type?: string; value?: unknown }): Promise<void> {
     switch (message.type) {
       case "ready":
       case "refresh":
@@ -120,6 +163,15 @@ export class ProjectPanelProvider implements WebviewViewProvider {
         await commands.executeCommand(`asm.capture.${command}`);
         return;
       }
+      case "editAnnotation":
+        await commands.executeCommand("asm.disassembly.editAnnotation");
+        return;
+      case "configureHeuristics":
+        await commands.executeCommand("asm.heuristics.configure");
+        return;
+      case "previewHeuristics":
+        await commands.executeCommand("asm.heuristics.preview");
+        return;
       case "disassemblyStatus":
         await commands.executeCommand("asm.disassembly.status");
         return;
@@ -175,7 +227,15 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     }
   }
 
-  async snapshot(): Promise<{ status: ProjectStatus; metadata?: ProjectMetadata }> {
+  /**
+   * Takes a snapshot of the project status and metadata.
+   * @returns {Promise<{ status: ProjectStatus; metadata?: ProjectMetadata; indexReady: boolean }>} A promise that resolves with the snapshot.
+   */
+  async snapshot(): Promise<{
+    status: ProjectStatus;
+    metadata?: ProjectMetadata;
+    indexReady: boolean;
+  }> {
     const config = workspace.getConfiguration("asm");
     const fallback: ProjectStatus = {
       fileCount: 0,
@@ -195,19 +255,24 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     };
     const client = this.getClient();
     if (!client) {
-      return { status: fallback };
+      return { status: fallback, indexReady: false };
     }
     try {
       const [status, metadata] = await Promise.all([
         client.sendRequest<ProjectStatus>("asm/status"),
         client.sendRequest<ProjectMetadata>("asm/projectMetadata"),
       ]);
-      return { status: { ...fallback, ...status }, metadata };
+      return { status: { ...fallback, ...status }, metadata, indexReady: true };
     } catch {
-      return { status: fallback };
+      return { status: fallback, indexReady: false };
     }
   }
 
+  /**
+   * Adds a path to the project.
+   * @param {string} key The key of the path to add.
+   * @param {boolean} folders Whether to add folders.
+   */
   async addPath(key: "entryPoints" | "includePaths", folders: boolean): Promise<void> {
     const picked = await window.showOpenDialog({
       canSelectFiles: !folders,
@@ -221,14 +286,22 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     const current = workspace.getConfiguration("asm").get<string[]>(key, []);
     const next = [...current];
     for (const uri of picked) {
-      const relative = toWorkspaceRelative(uri.fsPath);
-      if (!next.includes(relative)) {
-        next.push(relative);
+      const folder = workspace.workspaceFolders?.[0];
+      const relative = folder ? path.relative(folder.uri.fsPath, uri.fsPath) : undefined;
+      // Keep absolute paths for selections outside the first workspace folder or at its root.
+      const value = relative && !relative.startsWith("..") ? relative : uri.fsPath;
+      if (!next.includes(value)) {
+        next.push(value);
       }
     }
     await this.updateSetting(key, next);
   }
 
+  /**
+   * Removes a path from the project.
+   * @param {string} key The key of the path to remove.
+   * @param {string} value The value of the path to remove.
+   */
   async removePath(key: "entryPoints" | "includePaths", value: string): Promise<void> {
     const current = workspace.getConfiguration("asm").get<string[]>(key, []);
     await this.updateSetting(
@@ -256,7 +329,10 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     if (target?.defaultOutputExtension) {
       const current = config.get<string>("buildOutput", "");
       if (current) {
-        const next = replaceOutputExtension(current, target.defaultOutputExtension);
+        const suffix = target.defaultOutputExtension.startsWith(".")
+          ? target.defaultOutputExtension
+          : `.${target.defaultOutputExtension}`;
+        const next = current.replace(/\.[^.]+$/, suffix);
         if (next !== current) {
           await config.update("buildOutput", next, ConfigurationTarget.Workspace);
         }
@@ -265,167 +341,17 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     await this.refresh();
   }
 
+  /**
+   * Updates a setting in the project.
+   * @param {string} key The key of the setting to update.
+   * @param {unknown} value The value of the setting to update.
+   */
   async updateSetting(key: string, value: unknown): Promise<void> {
     await workspace.getConfiguration("asm").update(key, value, ConfigurationTarget.Workspace);
     await this.refresh();
-  }
-
-  /**
-   * Renders the themed project panel HTML.
-   * @param {Webview} webview The hosted webview used for CSP and asset URIs.
-   * @returns {string} The complete HTML document.
-   */
-  renderHtml(webview: Webview): string {
-    const nonce = getNonce();
-    const cssUri = webview.asWebviewUri(Uri.joinPath(this.extensionUri, "media", "panel.css"));
-    const styleSrc = webview.cspSource;
-    const stylesheet = cssUri.toString();
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${styleSrc}; script-src 'nonce-${nonce}';" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="${stylesheet}" />
-</head>
-<body>
-  <h2>Execution Window</h2>
-  <p class="muted">Record from an explicit start to stop point, then rebuild and list every identified routine that ran.</p>
-  <div class="actions"><button data-cmd="startExecutionCapture">Start capture</button><button data-cmd="stopExecutionCapture">Stop / show routines</button></div>
-  <h2>Behavior Capture</h2>
-  <p class="muted">Compare running idle code with an action. Start with the guide or a safe synthetic demo.</p>
-  <div class="actions"><button data-cmd="captureGuide">Guide</button><button data-cmd="captureDemo">Idle demo</button></div>
-  <div class="actions"><button data-cmd="captureIdle">1. Capture idle</button><button data-cmd="captureBehavior">2. Capture behavior</button></div>
-  <div class="actions"><button data-cmd="captureStop">Stop capture</button><button data-cmd="captureReview">3. Review / apply</button></div>
-  <h2>Disassembly</h2>
-  <p class="muted">Edit the persistent RAM map, check whether source reflects current metadata/evidence, or explicitly import a trace and rebuild.</p>
-  <div class="actions"><button data-cmd="openRamMap">Open RAM map</button><button data-cmd="disassemblyStatus">Status</button></div>
-  <div class="actions"><button data-cmd="regenerateDisassembly">Analyze / regenerate</button></div>
-  <div class="actions"><button data-cmd="importRuntimeTrace">Import trace / update</button></div>
-  <h2>Analysis</h2>
-  <div class="status" id="status"></div>
-  <h2>Entry points</h2>
-  <div class="list" id="entryPoints"></div>
-  <div class="actions"><button data-cmd="addEntryPoint">Add file</button></div>
-  <h2>Include paths</h2>
-  <div class="list" id="includePaths"></div>
-  <div class="actions"><button data-cmd="addIncludePath">Add folder</button></div>
-  <h2>Target</h2>
-  <div class="field"><select id="target"></select></div>
-  <h2>Architecture</h2>
-  <div class="field"><select id="architecture"></select></div>
-  <h2>Build output</h2>
-  <div class="field"><input id="buildOutput" placeholder="game.sfc" /></div>
-  <div class="actions">
-    <button class="primary" id="configAction" data-cmd="initConfig">Initialize uttori-asm.config.json</button>
-  </div>
-  <script nonce="${nonce}">
-    const vscode = acquireVsCodeApi();
-    const $ = (id) => document.getElementById(id);
-    const fillList = (id, items, removeType) => {
-      const root = $(id);
-      root.innerHTML = "";
-      if (!items.length) {
-        root.innerHTML = '<div class="muted">None</div>';
-        return;
-      }
-      for (const item of items) {
-        const row = document.createElement("div");
-        row.className = "item";
-        const label = document.createElement("span");
-        label.textContent = item;
-        const button = document.createElement("button");
-        button.className = "icon";
-        button.type = "button";
-        button.textContent = "×";
-        button.title = "Remove";
-        button.setAttribute("aria-label", "Remove " + item);
-        button.addEventListener("click", () => vscode.postMessage({ type: removeType, value: item }));
-        row.append(label, button);
-        root.appendChild(row);
-      }
-    };
-    const fillSelect = (id, options, value) => {
-      const select = $(id);
-      const seen = new Set();
-      select.innerHTML = "";
-      for (const entry of options) {
-        if (!entry || !entry.id || seen.has(entry.id)) continue;
-        seen.add(entry.id);
-        const option = document.createElement("option");
-        option.value = entry.id;
-        option.textContent = entry.displayName || entry.id;
-        if (entry.id === value) option.selected = true;
-        select.appendChild(option);
-      }
-      if (value && !seen.has(value)) {
-        const option = document.createElement("option");
-        option.value = value;
-        option.selected = true;
-        option.textContent = value;
-        select.prepend(option);
-      }
-    };
-    window.addEventListener("message", (event) => {
-      const { status, metadata } = event.data || {};
-      if (!status) return;
-      $("configAction").textContent = status.configFile ? "Open project configuration" : "Initialize uttori-asm.config.json";
-      $("configAction").setAttribute("data-cmd", status.configFile ? "openConfig" : "initConfig");
-      const duration = status.lastReindexDurationMs == null ? "—" : status.lastReindexDurationMs + "ms";
-      const roots = status.lastReindexRootCount || 0;
-      const cached = status.lastReindexCachedRoots || 0;
-      const analysed = status.lastReindexAnalyzedRoots || 0;
-      $("status").innerHTML = [
-        ["Files", status.fileCount],
-        ["Symbols", status.symbolCount],
-        ["Errors", status.errorCount],
-        ["Last reindex", duration],
-        ["Roots", roots + " (" + cached + " cached, " + analysed + " analysed)"],
-        ["Config", status.configFile || "—"]
-      ].map(([label, value]) => '<div class="row"><span class="muted">' + label + '</span><span>' + value + '</span></div>').join("");
-      fillList("entryPoints", status.entryPoints || [], "removeEntryPoint");
-      fillList("includePaths", status.includePaths || [], "removeIncludePath");
-      fillSelect("target", metadata?.targets || [], status.target || metadata?.activeTarget || "");
-      fillSelect("architecture", metadata?.architectures || [], status.architecture || metadata?.activeArchitecture || "");
-      $("buildOutput").value = status.buildOutput || "";
-    });
-    document.addEventListener("click", (event) => {
-      const cmd = event.target && event.target.getAttribute && event.target.getAttribute("data-cmd");
-      if (cmd) vscode.postMessage({ type: cmd });
-    });
-    $("target").addEventListener("change", (event) => vscode.postMessage({ type: "setTarget", value: event.target.value }));
-    $("architecture").addEventListener("change", (event) => vscode.postMessage({ type: "setArchitecture", value: event.target.value }));
-    $("buildOutput").addEventListener("change", (event) => vscode.postMessage({ type: "setBuildOutput", value: event.target.value }));
-    vscode.postMessage({ type: "ready" });
-  </script>
-</body>
-</html>`;
   }
 }
 
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
-}
-
-function toWorkspaceRelative(filePath: string): string {
-  const folder = workspace.workspaceFolders?.[0];
-  if (!folder) {
-    return filePath;
-  }
-  const relative = path.relative(folder.uri.fsPath, filePath);
-  return relative && !relative.startsWith("..") ? relative : filePath;
-}
-
-function replaceOutputExtension(filePath: string, extension: string): string {
-  const suffix = extension.startsWith(".") ? extension : `.${extension}`;
-  return filePath.replace(/\.[^.]+$/, suffix);
-}
-
-function getNonce(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let nonce = "";
-  for (let index = 0; index < 32; index += 1) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return nonce;
 }

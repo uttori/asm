@@ -50,6 +50,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.createDisassemblyProject",
       "asm.importDizProject",
       "asm.build",
+      "asm.analysis.toggleAnnotations",
       "asm.toggleWatch",
       "asm.runEmulator",
       "asm.debugEmulator",
@@ -60,6 +61,9 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.outline.refresh",
       "asm.coverage.refresh",
       "asm.analysisGraph.refresh",
+      "asm.sources.refresh",
+      "asm.sources.compare",
+      "asm.sources.resetComparison",
       "asm.analysis.navigate",
       "asm.coverage.classifyRange",
       "asm.coverage.setStateEntryPoint",
@@ -79,6 +83,8 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.trace.stop",
       "asm.trace.stopAnalyze",
       "asm.trace.importRegenerate",
+      "asm.heuristics.configure",
+      "asm.heuristics.preview",
       "asm.ramMap.open",
       "asm.disassembly.status",
       "asm.disassembly.regenerate",
@@ -160,6 +166,11 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
     [
       "asm.architecture",
       "asm.analysisProject",
+      "asm.analysis.maxWorkItems",
+      "asm.analysis.maxMemoryMiB",
+      "asm.analysis.showAnnotations",
+      "asm.analysis.annotationColumn",
+      "asm.trace.maxImportSizeMiB",
       "asm.baseImage",
       "asm.buildOutput",
       "asm.configFile",
@@ -354,24 +365,33 @@ test("VS Code disassembly maintenance makes trace-to-source changes explicit and
     path.join(root, "packages/vscode-extension/src/disassembly-maintenance.ts"),
     "utf8",
   );
-  const panel = fs.readFileSync(path.join(root, "packages/vscode-extension/src/panel.ts"), "utf8");
-  t.true(source.includes("importRuntimeInstructionTrace"));
-  t.true(source.includes("mergeRuntimeEvidence"));
-  t.true(source.includes("analyzeSnesProject"));
-  t.true(source.includes("exportSnesProject"));
-  t.true(source.includes("verifySnesProjectRoundTrip"));
+  const jobs = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/disassembly-maintenance-jobs.ts"),
+    "utf8",
+  );
+  const panel = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/media/panel.html"),
+    "utf8",
+  );
+  t.true(jobs.includes("importRuntimeInstructionTrace"));
+  t.true(jobs.includes("mergeRuntimeEvidence"));
+  t.true(jobs.includes("analyzeSnesProject"));
+  t.true(jobs.includes("exportSnesProject"));
+  t.true(jobs.includes("verifySnesProjectRoundTrip"));
+  t.false(source.includes("loadAnalysisProjectSnapshot"));
+  t.true(source.includes("DisassemblyMaintenanceClient"));
   t.true(source.includes("Source status:"));
   t.true(source.includes("Source emitted as code:"));
   t.true(source.includes("validateSourceExportInputs"));
   t.true(source.includes("RAM-map variables:"));
   t.true(source.includes("A positive code-byte delta"));
-  t.true(panel.includes("Open RAM map"));
-  t.true(panel.includes("Import trace / update"));
-  t.true(panel.includes("Analyze / regenerate"));
-  t.true(panel.includes("Stop / show routines"));
-  t.true(source.includes("summarizeExecutionWindow"));
+  t.true(panel.includes("RAM map"));
+  t.true(panel.includes("Import saved trace"));
+  t.true(panel.includes("Analyze and regenerate"));
+  t.true(panel.includes("Stop and analyze"));
+  t.true(jobs.includes("summarizeExecutionWindow"));
   t.true(source.includes("Executed routines (function candidates)"));
-  t.true(source.includes("The routine attribution available from the current analysis"));
+  t.true(source.includes("Routine attribution from the saved analysis"));
 });
 
 test("analysis graph preserves identity and navigates source-first", (t) => {
@@ -439,8 +459,13 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
   t.true(debugAnnotations.includes("byOutputOffset.get"));
   t.true(debugging.includes("createDebugInstructionAnnotation"));
   t.true(debugging.includes("must never prevent debugger startup"));
-  t.true(navigation.includes("buildInstructionAnalysisAnnotations"));
-  t.true(navigation.includes("formatInstructionAnnotationSummary"));
+  t.true(navigation.includes("analysisWorker()"));
+  const navigationData = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/analysis-navigation-data.ts"),
+    "utf8",
+  );
+  t.true(navigationData.includes("buildInstructionAnalysisAnnotations"));
+  t.true(navigationData.includes("formatInstructionAnnotationSummary"));
 });
 
 test("analysis coverage editing is trusted, transactional, and reversible", (t) => {
@@ -467,7 +492,7 @@ test("analysis coverage editing is trusted, transactional, and reversible", (t) 
 test("project panel CSS uses VS Code workbench tokens", (t) => {
   const css = fs.readFileSync(path.join(root, "packages/vscode-extension/media/panel.css"), "utf8");
   const panel = fs.readFileSync(path.join(root, "packages/vscode-extension/src/panel.ts"), "utf8");
-  t.true(css.includes("appearance: none"));
+  t.true(css.includes("@media (max-width: 250px)"));
   t.true(css.includes("--vscode-dropdown-background"));
   t.true(css.includes("--vscode-focusBorder"));
   t.true(css.includes("--vscode-list-hoverBackground"));
@@ -475,5 +500,5 @@ test("project panel CSS uses VS Code workbench tokens", (t) => {
   t.true(css.includes("--vscode-button-hoverBackground"));
   t.true(panel.includes("displayName"));
   t.true(panel.includes("defaultArchitecture"));
-  t.true(panel.includes("panel.css"));
+  t.true(panel.includes("renderWebviewTemplate"));
 });

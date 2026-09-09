@@ -71,6 +71,7 @@ import {
 } from "./services/program-model-builder.js";
 import { OutputWriterService } from "./services/output-writer-service.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
+import { parseStructInitializer, splitInitializerList } from "./services/struct-initializer.js";
 import {
   SymbolScopeService,
   parseUnnamedLabelReference,
@@ -872,6 +873,32 @@ export class Assembler {
     const fallbackSpan = command.source.normalizedSpan;
     const parsed = command.parsed;
 
+    if (command.keyword.toLowerCase() === "datastruct") {
+      const args = splitInitializerList(command.words.slice(1).join(" "));
+      if (args.length !== 2) return; // The directive reports its syntax error.
+      const reference = args[0];
+      const containerName = reference.replace(/\[[^\]]+]$/, "");
+      // An array row's root name was supplied by its header, not its source line.
+      if (!command.source.raw.trimStart().startsWith("[")) {
+        this.collectExpressionReferences(parseExpressionNode(reference), fallbackSpan);
+      } else {
+        const index = reference.match(/\[([^\]]+)]$/)?.[1];
+        if (index) this.collectExpressionReferences(parseExpressionNode(index), fallbackSpan);
+      }
+      for (const [field, value] of parseStructInitializer(args[1])) {
+        this.recordSymbolReference("label", field, { containerName });
+        for (const expression of typeof value === "string" ? [value] : value) {
+          this.collectExpressionReferences(parseExpressionNode(expression), fallbackSpan);
+        }
+      }
+      return;
+    }
+    if (command.keyword.toLowerCase() === "datastructs") {
+      if (command.words[1])
+        this.collectExpressionReferences(parseExpressionNode(command.words[1]), fallbackSpan);
+      return;
+    }
+
     this.collectExpressionReferences(parsed.assignment?.expression, fallbackSpan);
     this.collectExpressionReferences(parsed.condition?.expression, fallbackSpan);
     this.collectExpressionReferences(parsed.forLoop?.range, fallbackSpan);
@@ -1167,19 +1194,6 @@ export class Assembler {
   }
 
   /**
-   * Creates cursor address facade.
-   * @returns {CursorAddressFacade} The result.
-   */
-  private createCursorAddressFacade(): CursorAddressFacade {
-    return {
-      recordCurrentAddress: () => this.recordCurrentAddress(),
-      setWritePosition: (address: number) => this.setWritePosition(address),
-      syncWriteStarts: () => this.syncWriteStarts(),
-      incrementBytesWritten: (num: number) => this.incrementBytesWritten(num),
-    };
-  }
-
-  /**
    * Creates services.
    * @returns {AssemblerServiceBag} The result.
    */
@@ -1301,7 +1315,12 @@ export class Assembler {
     this.baseImage = options.baseImage ? Uint8Array.from(options.baseImage) : new Uint8Array();
     this.fileProvider = options.fileProvider ?? new NodeAssemblyFileProvider();
     this.collectSourceMetadata = options.collectSourceMetadata ?? true;
-    this.cursorAddress = this.createCursorAddressFacade();
+    this.cursorAddress = {
+      recordCurrentAddress: () => this.recordCurrentAddress(),
+      setWritePosition: (address: number) => this.setWritePosition(address),
+      syncWriteStarts: () => this.syncWriteStarts(),
+      incrementBytesWritten: (num: number) => this.incrementBytesWritten(num),
+    };
     this.mathCore = new MathCore();
     this.mathCore.host = this.expressionHost;
     this.installExpressionFunctions(target.expressionSets);
@@ -2322,6 +2341,12 @@ export class Assembler {
    * @returns {CommandPreprocessResult} The result.
    */
   preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult {
+    // Table rows are data, not static label assignments or macro definitions.
+    // Rewriting before dispatch keeps normal diagnostics, references and traces.
+    if (this.structEngine.data.inTable && !this.inMacroDefinition) {
+      this.structEngine.data.prepareRow(state);
+      return "continue";
+    }
     // Asar `'X' = $nn` inside a macro is body text, not a define-time side effect.
     // Applying it here would leak the last font table into later
     // identity `db` data and leave invoke as `cleartable` only.
@@ -2438,15 +2463,17 @@ export class Assembler {
         this.lowerAndExecuteRuntimeNodes(nodes);
       }
     } else {
-      const processedCommands = this.frontEndService.preprocessBlockCommands(command);
-      const splitCommands = this.frontEndService.splitInlineCommands(processedCommands);
+      const sourceFile = this.currentFile;
+      const sourceLine = this.currentLine;
+      const processedCommands = this.frontEndService.preprocessSourcedBlockCommands(command);
+      const splitCommands = this.frontEndService.splitSourcedInlineCommands(processedCommands);
 
       for (const splitCommand of splitCommands) {
         const nodes = this.programModelBuilder.consumeIncrementalCommand(
           this.incrementalProgramParseState,
-          splitCommand.trim(),
-          this.currentFile,
-          this.currentLine,
+          splitCommand.text.trim(),
+          sourceFile,
+          sourceLine + splitCommand.line,
         );
         this.lowerAndExecuteRuntimeNodes(nodes);
       }
@@ -3125,6 +3152,7 @@ export class Assembler {
    */
   activateStage(stage: AssemblyStageName): void {
     this.syncActiveStageExecutionState(stage);
+    this.structEngine.data.reset();
     if (stage === "resolveLayout") {
       // Rebuild relative-label tables from layout sizing only.
       this.forwardLabels = {};
@@ -3154,6 +3182,10 @@ export class Assembler {
    * Completes the current pass, performing any necessary cleanup.
    */
   finishPass(): void {
+    this.structEngine.data.finish();
+    if (/^(?:datastruct\b|\[)/i.test(this.frontEndService.commandBuffer.trimStart())) {
+      throw new Error("Unclosed dataStruct initializer at end of source.");
+    }
     const stage = this.activeStageExecutionState?.stage ?? "collectDefinitions";
     this.runLifecycleHook("onStageEnd", (lifecycle) =>
       lifecycle.onStageEnd?.({ state: this.pluginState, session: this, stage }),

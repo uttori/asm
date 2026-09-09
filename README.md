@@ -1,20 +1,20 @@
 # Uttori ASM
 
-Uttori ASM is a pluggable assembler, disassembler, and debugger toolkit for TypeScript and Node.js. Its architecture-neutral core owns parsing, the three-stage assembly pipeline, symbols, macros, includes, diagnostics, output writing, and editor analysis. Target-neutral packages add versioned analysis projects, conservative control-flow traversal, evidence, reversible source export, and an emulator-neutral debug contract. Plugins own targets, reversible instruction specifications, address spaces, output formats, mapper behavior, target directives, expression functions, lifecycle behavior, and per-session state.
+Uttori ASM is a pluggable assembler, disassembler, and debugger toolkit targeting the SNES (65816, SPC700, Super FX) and NES (6502 and similar CPUs) built in TypeScript. The architecture-neutral core owns parsing, the three-stage assembly pipeline, symbols, macros, includes, diagnostics, output writing, and editor analysis. Target-neutral packages add versioned analysis projects, conservative control-flow traversal, evidence, reversible source export, and an emulator-neutral debug contract. Plugins own targets, reversible instruction specifications, address spaces, output formats, mapper behavior, target directives, expression functions, lifecycle behavior, and per-session state.
 
-The repository contains nine publishable packages:
+The repository contains nine packages:
 
-| Package                             | Purpose                                                                                                |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `@uttori/asm-cli`                   | Installable `uttori-asm` command and Node.js host defaults                                             |
-| `@uttori/asm-core`                  | Generic assembler runtime, analysis APIs, and plugin contracts                                         |
-| `@uttori/asm-debug-adapter`         | Emulator-neutral backend, replay/conformance harness, sidecar protocol, and DAP bridge                 |
-| `@uttori/asm-debug-sidecar-ares`    | Clean-room MIT translator/process host for a separately maintained ares runtime                        |
-| `@uttori/asm-debug-sidecar-mesence` | Clean-room MIT translator/process host for a separately maintained MesenCE runtime                     |
-| `@uttori/asm-disassembler`          | Native analysis projects, evidence, conservative traversal, transactions, assets, and export contracts |
-| `@uttori/asm-plugin-loader-node`    | Trusted Node.js plugin discovery and `uttori-asm.config.json` loading                                  |
-| `@uttori/asm-plugin-snes`           | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility                                   |
-| `@uttori/asm-plugin-65xx`           | NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 encoders with native and ca65-shaped raw targets |
+| Package                             | Purpose                                                                                                        |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `@uttori/asm-cli`                   | Installable `uttori-asm` command and Node.js host defaults                                                     |
+| `@uttori/asm-core`                  | Generic assembler runtime, analysis APIs, and plugin contracts                                                 |
+| `@uttori/asm-debug-adapter`         | Emulator-neutral backend, replay/conformance harness, sidecar protocol, and DAP bridge                         |
+| `@uttori/asm-debug-sidecar-ares`    | Clean-room MIT translator/process host for a separately maintained ares runtime                                |
+| `@uttori/asm-debug-sidecar-mesence` | Clean-room MIT translator/process host for a separately maintained MesenCE runtime                             |
+| `@uttori/asm-disassembler`          | Native analysis projects, evidence, conservative traversal, transactions, assets, and export contracts         |
+| `@uttori/asm-plugin-loader-node`    | Trusted Node.js plugin discovery and `uttori-asm.config.json` loading                                          |
+| `@uttori/asm-plugin-snes`           | SNES/SFC target with 65816, SPC700, Super FX, and Asar compatibility                                           |
+| `@uttori/asm-plugin-65xx`           | 6502 likes: NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 encoders with native/ca65-shaped raw targets |
 
 Three private application/example workspaces compose those packages:
 
@@ -26,18 +26,15 @@ Three private application/example workspaces compose those packages:
 
 The current toolchain can:
 
-- assemble SNES and 65xx-family source with project-loaded or programmatic plugins;
-- create hash-verified native ROM-analysis projects without storing ROM bytes;
-- run bounded 65816 control-flow/state analysis and preserve conflicts instead of guessing;
-- import MesenCE CDL, trace, labels, and native debugger trace evidence;
-- edit classifications, entry/state facts, indirect targets, and labels with undo/redo-safe
-  project transactions;
-- inspect SNES BRR, tile, palette, and tilemap assets through reversible codecs;
-- export deterministic native source and verify a complete byte-identical rebuild;
-- provide cross-file language features, project outline, coverage, call-graph, and annotations in
-  VS Code; and
-- debug with deterministic replay or separately installed, manifest-verified ares and MesenCE
-  runtimes.
+- assemble SNES and 65xx-family source with project-loaded or programmatic plugins
+- create hash-verified native ROM-analysis projects without storing ROM bytes
+- run bounded 65816 control-flow/state analysis and preserve conflicts instead of guessing
+- import MesenCE CDL, trace, labels, and native debugger trace evidence
+- edit classifications, entry/state facts, indirect targets, and labels with undo/redo-safe project transactions
+- inspect SNES BRR, tile, palette, and tilemap assets through reversible codecs
+- export deterministic native source and verify a complete byte-identical rebuild
+- provide cross-file language features, project outline, coverage, call-graph, and annotations in VS Code
+- debug with deterministic replay or separately installed, manifest-verified [ares](https://github.com/ares-emulator/ares) and [MesenCE](https://github.com/nesdev-org/MesenCE) runtimes
 
 ## Requirements & Installation
 
@@ -47,9 +44,10 @@ The current toolchain can:
 git clone https://github.com/uttori/asm.git
 cd asm
 npm install
+npm test
 ```
 
-The packages are ESM and currently expose TypeScript source as their runtime import. Use a TypeScript-aware runtime or bundler; this repository uses `tsx` during development.
+The packages are ESM and currently expose TypeScript source as their runtime import. Use a TypeScript-aware runtime or bundler. This repository uses `tsx` during development.
 
 ## Generic Core Usage
 
@@ -320,8 +318,12 @@ resource before launch.
 
 The ares backend currently exposes live 65816 control and bounded instruction tracing; MesenCE
 exposes negotiated 65816, SPC700, and Super FX threads and state, with unsupported operations left
-explicit. Use **Assembly: Start Runtime Trace Recording** and **Stop Runtime Trace Recording** to
-write a native trace artifact, then import it with the `--instruction-trace` command above.
+explicit. Use **Assembly: Start Runtime Trace Recording** and **Stop Execution Capture and Show
+Routines** to record an explicit execution window. Stopping imports evidence, seeds analysis from
+observed PCs, regenerates source, verifies the exact ROM round trip, and opens a first-observed list
+of attributable routine candidates plus unknown or ambiguous PCs. The separate **Stop Runtime Trace
+Recording** command remains available when saving without importing is desired. The CLI
+`--instruction-trace` command above remains available for evidence-only batch imports.
 
 For configuration details and current capability limits, read the
 [VS Code debugger guide](packages/vscode-extension/README.md#live-debugging),
@@ -333,7 +335,10 @@ For configuration details and current capability limits, read the
 
 See the [SNES plugin README](packages/plugin-snes/README.md) for extensive SNES Asar compatibility and new additions.
 
-See the [65xx plugin README](packages/plugin-65xx/README.md) for extensive 65xx ca65 compatibility and new additions (including the Asar supported concept like structs, macros, ...).
+See the [65xx plugin README](packages/plugin-65xx/README.md) for extensive 65xx ca65 compatibility and new additions (including the Asar supported concepts like structs, macros, etc.).
+
+[Typed structs and named ROM data](docs/typed-struct-data.md) explains `dataStruct` and
+`dataStructs`, their Asar compatibility, exporter behavior, tests, and implementation for maintainers.
 
 ## Development
 
@@ -365,33 +370,29 @@ There are explicit Chou and SMRPG benchmark commands, they will fail with setup 
 
 ## Repository Layout
 
-```text
-fixtures/                     focused and production integration projects
-docs/                         architecture, performance, testing, and native-runtime guidance
-packages/cli/                 command-line host, executable bundle, and CLI tests
-packages/core/                architecture-neutral runtime and plugin API
-packages/debug-adapter/       emulator-neutral backend, framing, replay, conformance, and DAP
-packages/debug-sidecar-ares/  MIT ares translator and separately managed process host
-packages/debug-sidecar-mesence/ MIT MesenCE translator and separately managed process host
-packages/disassembler/        native project, evidence, analysis, edit, asset, and export primitives
-packages/language-server/     LSP transport and environment controller
-packages/plugin-65xx/         65xx-family instruction models, encoders, and fixtures
-packages/plugin-author/       runnable third-party plugin template
-packages/plugin-loader-node/  Node discovery, config loader, and JSON schema
-packages/plugin-snes/         SNES implementation and parity tests
-packages/vscode-extension/    VS Code client and bundled artifacts
-scripts/                      boundary, package, fixture, smoke, and benchmark gates
-tests/                        core, loader, LSP, and cross-package tests
-.github/workflows/            portable, external-fixture, and release-candidate CI gates
-```
+| Path                              | Description                                                            |
+| --------------------------------- | ---------------------------------------------------------------------- |
+| `fixtures/`                       | focused and production integration projects                            |
+| `docs/`                           | architecture, performance, testing, and native-runtime guidance        |
+| `packages/cli/`                   | command-line host, executable bundle, and CLI tests                    |
+| `packages/core/`                  | architecture-neutral runtime and plugin API                            |
+| `packages/debug-adapter/`         | emulator-neutral backend, framing, replay, conformance, and DAP        |
+| `packages/debug-sidecar-ares/`    | MIT ares translator and separately managed process host                |
+| `packages/debug-sidecar-mesence/` | MIT MesenCE translator and separately managed process host             |
+| `packages/disassembler/`          | native project, evidence, analysis, edit, asset, and export primitives |
+| `packages/language-server/`       | LSP transport and environment controller                               |
+| `packages/plugin-65xx/`           | 65xx-family instruction models, encoders, and fixtures                 |
+| `packages/plugin-author/`         | runnable third-party plugin template                                   |
+| `packages/plugin-loader-node/`    | Node discovery, config loader, and JSON schema                         |
+| `packages/plugin-snes/`           | SNES implementation and parity tests                                   |
+| `packages/vscode-extension/`      | VS Code client and bundled artifacts                                   |
+| `scripts/`                        | boundary, package, fixture, smoke, and benchmark gates                 |
+| `tests/`                          | core, loader, LSP, and cross-package tests                             |
+| `.github/workflows/`              | portable, external-fixture, and release-candidate CI gates             |
 
 ## Contributing
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md), then read the
-[disassembler architecture](docs/disassembler-architecture.md) and
-[testing/release guide](docs/testing-and-release.md) for the part you are changing. The contributor
-guide includes a beginner glossary, package ownership, change recipes, security/license boundaries,
-performance-comment requirements, private-fixture rules, troubleshooting, and a review checklist.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md), then read the [disassembler architecture](docs/disassembler-architecture.md) and [testing/release guide](docs/testing-and-release.md) for the part you are changing. The contributor guide includes a beginner glossary, package ownership, change recipes, security/license boundaries, performance-comment requirements, private-fixture rules, troubleshooting, and a review checklist.
 
 ## License
 

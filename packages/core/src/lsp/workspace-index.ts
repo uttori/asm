@@ -555,23 +555,23 @@ export class WorkspaceIndex {
     }
 
     const started = Date.now();
-    const assembler = measureInternalPhase(
-      "lspAssemblerConstruct",
-      () =>
-        new Assembler({
-          environment: this.environment,
-          target: this.target,
-          architecture: this.architecture,
-          targetOptions: this.targetOptions,
-          fileProvider: this.#provider,
-        }),
-    );
-    assembler.includePaths = this.deriveIncludePaths(root);
-    assembler.followIncludes = followIncludes;
-
+    let assembler: Assembler | undefined;
     try {
+      assembler = measureInternalPhase(
+        "lspAssemblerConstruct",
+        () =>
+          new Assembler({
+            environment: this.environment,
+            target: this.target,
+            architecture: this.architecture,
+            targetOptions: this.targetOptions,
+            fileProvider: this.#provider,
+          }),
+      );
+      assembler.includePaths = this.deriveIncludePaths(root);
+      assembler.followIncludes = followIncludes;
       const result = measureInternalPhase("lspAnalyzeSource", () =>
-        assembler.analyzeSource(content, root, 0, { followIncludes }),
+        assembler!.analyzeSource(content, root, 0, { followIncludes }),
       );
       const analysis: RootAnalysis = {
         followedIncludes: followIncludes,
@@ -607,7 +607,7 @@ export class WorkspaceIndex {
       // one broken root never blanks out the whole workspace index.
       return undefined;
     } finally {
-      assembler.dispose();
+      assembler?.dispose();
     }
   }
 

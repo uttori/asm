@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "fixtureSha256": "8f2da08dfd3dd891547e6ad85f9bc6ebf4f4ab3f8982886b3cb3003e15caf5d7",
+  "executableSha256": "6f5be6063ac59f6c737402575c7fcaa68f78ad4158927c51a47a5e017b80b13e",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "fixtureVariant": "quiescent",
+  "checks": [
+    "desktop attach stops at reset vector before execution",
+    "desktop register XML and safe ROM/MMIO reads",
+    "four single steps have exact instruction PCs",
+    "continue leaves breakpoint and executes one loop before stopping again",
+    "200 desktop packet round trips preserve the stopped PC",
+    "WAI and STP remain interruptible and resettable at quiescent boundaries",
+    "monitor reset halt replies at reset vector",
+    "monitor reset run reaches retained breakpoint",
+    "Ctrl-C returns a coherent loop boundary",
+    "desktop detach reconnect and step",
+    "GUI quit while debugger is halted exits cleanly"
+  ],
+  "packetRoundTrips": 200,
+  "packetBurstMs": 22.31966700000021,
+  "packetRoundTripsPerSecond": 8960.707164672222,
+  "ordinaryGdb": false,
+  "cleanup": "clean GUI quit while halted"
+}

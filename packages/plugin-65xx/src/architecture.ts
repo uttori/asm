@@ -79,29 +79,6 @@ function modeSize(form: InstructionForm): number {
 }
 
 /**
- * Operand byte width for unsigned codecs. Relative/none codecs return 0.
- * @param {InstructionForm["codec"]} codec Form codec.
- * @returns {0 | 1 | 2 | 3} Width in bytes.
- */
-function unsignedOperandWidth(codec: InstructionForm["codec"]): 0 | 1 | 2 | 3 {
-  if (codec === "unsigned8") return 1;
-  if (codec === "unsigned16-le") return 2;
-  if (codec === "unsigned24-le") return 3;
-  return 0;
-}
-
-/**
- * Normalizes a relative delta to a signed 16-bit value.
- * Sign-extend a 16-bit wrapping subtraction so 8-bit branches can range-check.
- * @param {number} target The target address.
- * @param {number} reference The reference address.
- * @returns {number} The normalized relative delta.
- */
-function normalizeRelativeDelta(target: number, reference: number): number {
-  return ((target - reference + 0x8000) & 0xffff) - 0x8000;
-}
-
-/**
  * Concatenates opcode/prefix bytes with already-encoded operand bytes.
  * Used by tests and tooling; the live encoder writes through `emission` instead.
  * @param {InstructionForm} form The instruction form.
@@ -239,11 +216,20 @@ export class Arch65xx implements ArchitectureEncoder {
         ? splitTopLevelOperands(operand.expanded)
         : [];
     const compoundValues = this.readCompoundValues(form, compoundOperands);
-    const operandWidth = unsignedOperandWidth(form.codec);
+    // Only unsigned codecs use the generic operand reader below.
+    let operandWidth: 0 | 1 | 2 | 3 = 0;
+    if (form.codec === "unsigned8") operandWidth = 1;
+    else if (form.codec === "unsigned16-le") operandWidth = 2;
+    else if (form.codec === "unsigned24-le") operandWidth = 3;
     const operandKind = operandWidth === 1 ? "operand" : "address";
     let operandValue = 0;
     if (operandWidth !== 0) {
-      operandValue = this.readValue(operand, operandWidth, `${form.mnemonic} ${operandKind}`);
+      operandValue = this.readExpressionValue(
+        operand.baseExpression ?? operand.expanded,
+        operandWidth,
+        `${form.mnemonic} ${operandKind}`,
+        operand.mode === "immediate",
+      );
       if (
         form.operandConstraint === "power-of-two" &&
         (operandValue === 0 || (operandValue & (operandValue - 1)) !== 0)
@@ -489,11 +475,6 @@ export class Arch65xx implements ArchitectureEncoder {
     return form;
   }
 
-  private readValue(operand: LoweredOperand, width: 1 | 2 | 3, description: string): number {
-    const expression = operand.baseExpression ?? operand.expanded;
-    return this.readExpressionValue(expression, width, description, operand.mode === "immediate");
-  }
-
   private readExpressionValue(
     expression: string,
     width: 1 | 2 | 3,
@@ -547,7 +528,8 @@ export class Arch65xx implements ArchitectureEncoder {
         `Branch target ${target} is outside the 16-bit address space.`,
       );
     }
-    const delta = normalizeRelativeDelta(target, reference);
+    // Sign-extend the wrapping 16-bit subtraction before checking the branch width.
+    const delta = ((target - reference + 0x8000) & 0xffff) - 0x8000;
     const minimum = width === 1 ? -128 : -32768;
     const maximum = width === 1 ? 127 : 32767;
     if (delta < minimum || delta > maximum) {
